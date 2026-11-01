@@ -308,9 +308,28 @@ impl Model {
             })
             .try_fold(0, |longest, head| head.map(|head| longest.max(head)));
         let walked = heads.unwrap_or(rows).min(rows);
+        // A masked argument's element is a zero where one of its masks is FALSE, and so is the
+        // product there, which leaves the total as it is (below): only the rows and columns that
+        // every masked argument has on are walked, in the same order (T-3732). Calipers
+        // `pv26_002`'s 1,575 masked calls each keep one column of 41 and a few rows of 1,440.
+        let masked: Vec<&MaskedBlock> = factors
+            .iter()
+            .filter_map(|factor| match factor {
+                Factors::Masked(block) => Some(block),
+                Factors::Grid(_) | Factors::Tailed { .. } => None,
+            })
+            .collect();
+        let on = |flags: fn(&MaskedBlock) -> &[bool], index: usize| {
+            masked
+                .iter()
+                .all(|block| flags(block).get(index).copied().unwrap_or(false))
+        };
+        let columns: Vec<usize> = (0..cols)
+            .filter(|&j| on(|block| &block.column_on, j))
+            .collect();
         let mut total = 0.0f64;
-        for i in 0..walked {
-            for j in 0..cols {
+        for i in (0..walked).filter(|&i| on(|block| &block.row_on, i)) {
+            for &j in &columns {
                 // Excel rounds each addition of the running total twice, as SUM does (numbers.md
                 // "double rounding", probes-numeric/double-rounding-avedev-deviations, T-1665).
                 total = extended_sum(total, product(i, j));
