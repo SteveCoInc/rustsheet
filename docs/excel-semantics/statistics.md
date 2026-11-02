@@ -5816,7 +5816,7 @@ number) before significance (`PERCENTRANK(Data!E1:E5,1963,-2.5)` is `#N/A`, 1396
 `PERCENTRANK.EXC({1,..,10},-0.0001,0)` `#N/A`, 09b47629f54b9817 A58).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 62 cells in T-2472.
 Ours: matches (T-2472).
-Settled by "PERCENTRANK: a non-numeric-text or error significance before the #N/A (T-3781)": an error significance, or one of text that does not read as a number, beats the out-of-range x `#N/A` (numeric text and booleans coerce and do not). Ours already matches that for an x outside numeric data; the gap is data with no number (T-3789).
+Settled by "PERCENTRANK: a non-numeric-text or error significance before the #N/A (T-3781)": an error significance, or one of text that does not read as a number, beats the out-of-range x `#N/A` (numeric text and booleans coerce and do not). Ours matches (T-3789 moved the significance's number check ahead of the empty-data `#N/A`).
 Status: VERIFIED (excel-graph)
 
 ## PERCENTRANK: a huge significance is #DIV/0!; truncation does not lose a digit at a cut (T-2256)
@@ -6308,7 +6308,7 @@ Evidence: gen-m9 (T-3781 arg-pairs batch, excel-graph, 2026-11-01). An x outside
 `PERCENTRANK.EXC(Data!B9:D10,-1,"abc")` (50594c61def0ea70 A103), 5e5063d014818a2d A580, A586 and 61445b60bf8539f0 A526.
 Data with no number (text, blank or boolean cells), 63 cells in T-3789: 50594c61def0ea70 A46, A109, A361; 58ae70ab5eb596c2
 A100, A157; c149b14aa61b770d A10, A82; 8cbdca3221390122, 9240e43366ea4792 and de40f308bf65d545 (18-20 cells each).
-Ours: matches for an x outside numeric data; `#N/A` in the 63 no-number cells, known failures owned by T-3789.
+Ours: matches, including the 63 no-number cells (T-3789: the significance is cast right after x, before the empty-data `#N/A`).
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3789
 

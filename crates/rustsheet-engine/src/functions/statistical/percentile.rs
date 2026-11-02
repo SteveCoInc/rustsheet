@@ -164,8 +164,8 @@ impl Model {
         )
     }
 
-    /// PERCENTRANK.INC or .EXC (`rank_of`) of one element: an error x, then an empty array `#N/A`,
-    /// then an x outside the data `#N/A`, then the significance (3 digits when omitted; below 1
+    /// PERCENTRANK.INC or .EXC (`rank_of`) of one element: an error x, then an error or non-numeric
+    /// significance, then an empty array `#N/A`, then an x outside the data `#N/A`, then the significance's domain (3 digits when omitted; below 1
     /// `#NUM!` unless the data is one value).
     fn percentrank_of(
         &self,
@@ -180,13 +180,10 @@ impl Model {
             Ok(v) => v,
             Err(e) => return e,
         };
-        if data.is_empty() {
-            return CalcResult::new_error(Error::NA, cell, String::new());
-        }
-        // No cell or coercion gives NaN; refuse one before it reaches the rank search.
-        if x.is_nan() {
-            return num_error(cell);
-        }
+        // A significance that is an error or text that does not read as a number comes before the
+        // `#N/A` of empty data or of an x outside it (T-3781 arg-pairs, gen-m9/8cbdca3221390122 and
+        // others; statistics.md "PERCENTRANK: a non-numeric-text or error significance before the
+        // #N/A"). A numeric but out-of-domain one (below 1) still loses to that `#N/A` (T-2472).
         let sig = match values.get(2) {
             Some(significance) => match self.cast_number_ref(significance, cell) {
                 Ok(v) => v.floor() as i32,
@@ -194,6 +191,13 @@ impl Model {
             },
             None => 3,
         };
+        if data.is_empty() {
+            return CalcResult::new_error(Error::NA, cell, String::new());
+        }
+        // No cell or coercion gives NaN; refuse one before it reaches the rank search.
+        if x.is_nan() {
+            return num_error(cell);
+        }
         let sorted = data.sorted();
         let (Some(first), Some(last)) = (sorted.first(), sorted.last()) else {
             return CalcResult::new_error(Error::NA, cell, String::new());
