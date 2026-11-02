@@ -401,7 +401,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `1/Jul-2025`, becomes `d-mmm-yy` (A5, A6). A clock first, `10:00 7/1/2025`, typed is 45839.4166666667 with
   `m/d/yyyy h:mm` (A10), but a leading space before it (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) leaves text with
   `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
-  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; other clock-first typed shapes (AM/PM, seconds, out-of-range, month-name dates) are unprobed and stay text: T-3852. `CELL("format", ...)` is #VALUE! on excel-graph.
+  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; every other clock-first typed shape (AM/PM, seconds, one-digit hours, out-of-range, and month-name, ISO, year-less or mixed-separator dates after the clock) is unprobed and stays text, as do mixed-separator typed formats in day-first locales: T-3852. `CELL("format", ...)` is #VALUE! on excel-graph.
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on

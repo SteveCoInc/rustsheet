@@ -501,4 +501,15 @@ fn typed_mixed_separator_date_formats() {
     assert!(fmt("10 AM 7/1/2025").is_err());
     assert!(fmt(" 10:00 7/1/2025").is_err());
     assert!(fmt(" 10:00 AM 7/1/2025").is_err());
+    for s in [
+        "10:00 July 1, 2025",
+        "10:00 1-Jul-2025",
+        "10:00 2025-07-01",
+        "10:00 7/1",
+        "23:59 7/1-2025",
+        "10:00 7/1/25",
+        "10:00  7/1/2025",
+    ] {
+        assert!(fmt(s).is_err(), "{s}");
+    }
 }

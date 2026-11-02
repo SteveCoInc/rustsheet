@@ -236,11 +236,14 @@ fn parse_separated(
     } else {
         word.splitn(4, ['/', '-']).collect()
     };
-    // (en-US evidence only; day-first locales are unprobed.)
     // A date mixing `/` and `-` takes Excel's own formats when typed, not the joined separators:
     // numeric `m/d/yyyy`, name-and-year `d-mmm-yy` (probes/date-text-mixed-separator-typed,
     // excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
-    let mixed = word.contains('/') && word.contains('-') && separator != '.';
+    // The evidence is en-US only, so day-first locales keep the joined separators; TODO(T-3852).
+    let mixed = word.contains('/')
+        && word.contains('-')
+        && separator != '.'
+        && !short_format.starts_with('d');
     let (day_str, month_str, year_str) = match parts.as_slice() {
         [first, second] => {
             return match parse_month_name(second, locale) {

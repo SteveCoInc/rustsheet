@@ -193,15 +193,27 @@ impl TypedClock {
     }
 }
 
-/// The clock typed before the date, limited to the evidenced shape `H:MM <date>` (`10:00 7/1/2025`
-/// is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10, excel-graph
-/// 2026-11-01). A leading space keeps it text (A8, A9). Other clock-first shapes (AM/PM, seconds,
-/// fractions, out-of-range) are unprobed and stay text; TODO(T-3852).
+/// The clock typed before the date, limited to the evidenced shape `HH:MM M/D/YYYY` (`10:00
+/// 7/1/2025` is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10,
+/// excel-graph 2026-11-01). A leading space keeps it text (A8, A9). Every other clock-first shape
+/// (AM/PM, seconds, one-digit hours, month-name, ISO, year-less or mixed-separator dates) is
+/// unprobed and stays text; TODO(T-3852).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
+    let digits = |s: &str, len: std::ops::RangeInclusive<usize>| {
+        len.contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit())
+    };
     let (clock, date) = text.split_once(' ')?;
     let (hour, minute) = clock.split_once(':')?;
-    let digits = |s: &str| s.len() == 2 && s.bytes().all(|b| b.is_ascii_digit());
-    if !digits(hour) || !digits(minute) || date.starts_with(' ') {
+    let date_parts: Vec<&str> = date.split('/').collect();
+    let [month, day, year] = date_parts.as_slice() else {
+        return None;
+    };
+    if !digits(hour, 2..=2)
+        || !digits(minute, 2..=2)
+        || !digits(month, 1..=2)
+        || !digits(day, 1..=2)
+        || !digits(year, 4..=4)
+    {
         return None;
     }
     let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);

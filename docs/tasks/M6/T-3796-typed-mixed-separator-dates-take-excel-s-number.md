@@ -3,7 +3,7 @@ id: T-3796
 title: "Typed mixed-separator dates take Excel's number format; typed clock-first date-time is a number (T-3751 probe misses)"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -35,11 +35,12 @@ number format Excel gives for the mixed-separator dates, and a typed clock-first
 
 ## Outcome
 Mixed `/`-`-` typed dates now take `m/d/yyyy` (numeric) or `d-mmm-yy` (day-month-name-year) in
-`date_text.rs`; a typed clock-first `H:MM <date>` (`10:00 7/1/2025`, the only evidenced shape) is a number with
+`date_text.rs` (month-first locales only: the evidence is en-US); a typed clock-first `HH:MM M/D/YYYY`
+(`10:00 7/1/2025`, the only evidenced shape; any other date after the clock stays text) is a number with
 `m/d/yyyy h:mm` (`parse_formatted.rs`, `leading_clock_shape`); a leading space stays text. Unit test
 `typed_mixed_separator_date_formats`. Eval delta: probes/date-text-mixed-separator-typed B10 and C10
 fixed (known failures -2, no regressions).
-Follow-up: T-3852 probes the other clock-first shapes (AM/PM etc.), which stay text.
+Follow-up: T-3852 probes the other clock-first shapes (AM/PM, month-name, ISO, year-less, mixed-separator dates) and day-first locales.
 
 ## Handoff (resumed)
 PR #2855, branch `agent/functions/T-3796-typed-mixed-sep-dates`, head 530c27a (reviewer rounds: excel-fidelity requested changes twice; security and design approved f38c327).
