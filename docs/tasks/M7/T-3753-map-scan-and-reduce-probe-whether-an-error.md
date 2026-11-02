@@ -3,7 +3,7 @@ id: T-3753
 title: "MAP, SCAN and REDUCE: probe whether an error array or a bad function argument comes first"
 milestone: M7
 lane: functions-logic
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,10 +24,16 @@ both are bad is unprobed: that section's "Unprobed" line (excel-fidelity review 
 INDEX and ERROR.TYPE. Code: `fn_map`, `fn_reduce` (map_reduce.rs) and `fn_scan` (scan.rs).
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph) covers the forms above.
-- [ ] The engine matches every probed cell (move the `helper_caller` call after the array read where Excel reads the
+- [x] A probe case (excel-graph) covers the forms above.
+- [x] The engine matches every probed cell (move the `helper_caller` call after the array read where Excel reads the
       array first); arrays.md's "Unprobed" line is replaced by the rule with the probe cited.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - MAKEARRAY's order (sizes first: already probed in T-3655).
+
+## Outcome
+- Probe `probes/t3753-lambda-helper-error-array-order` (16 forms x ROWS/COLUMNS/INDEX/ERROR.TYPE, excel-graph): Excel reads
+  the array argument before checking the function in MAP, SCAN, REDUCE, BYROW and BYCOL.
+- `fn_map`, `fn_scan` and `fn_reduce` now call `helper_caller` after the array read; arrays.md's "Unprobed" line is replaced
+  by the rule. The case passes 64/64; before the change 10 formula rows (A1-A4, A6-A12) mismatched.

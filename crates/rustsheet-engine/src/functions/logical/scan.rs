@@ -23,14 +23,15 @@ impl Model {
         };
 
         let function = self.evaluate_node_in_context(&args[lambda_idx], cell);
-        let mut caller = match self.helper_caller(&function, 2, cell) {
-            Ok(caller) => caller,
-            Err(error) => return error,
-        };
-
         let data = match self.lambda_cells(&args[array_idx], cell, false, false) {
             Ok(d) => d,
             Err(e) => return e,
+        };
+
+        // Array first, then the function (see MAP in map_reduce.rs).
+        let mut caller = match self.helper_caller(&function, 2, cell) {
+            Ok(caller) => caller,
+            Err(error) => return error,
         };
 
         if data.rows() == 0 || data.columns() == 0 {

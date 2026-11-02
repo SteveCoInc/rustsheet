@@ -20,11 +20,6 @@ impl Model {
         let n_arrays = args.len() - 1;
 
         let function = self.evaluate_node_in_context(&args[n_arrays], cell);
-        let mut caller = match self.helper_caller(&function, n_arrays, cell) {
-            Ok(caller) => caller,
-            Err(error) => return error,
-        };
-
         let mut arrays: Vec<LambdaGrid> = Vec::with_capacity(n_arrays);
         for (index, arg) in args[..n_arrays].iter().enumerate() {
             let data = match self.lambda_cells(arg, cell, index > 0, true) {
@@ -33,6 +28,14 @@ impl Model {
             };
             arrays.push(data);
         }
+
+        // The arrays are read before the function is checked: an error array wins over a function
+        // that cannot be called (docs/excel-semantics/arrays.md "LAMBDA helpers refuse a function
+        // they cannot call", probes/t3753-lambda-helper-error-array-order).
+        let mut caller = match self.helper_caller(&function, n_arrays, cell) {
+            Ok(caller) => caller,
+            Err(error) => return error,
+        };
 
         if arrays
             .iter()
@@ -96,14 +99,15 @@ impl Model {
         };
 
         let function = self.evaluate_node_in_context(&args[lambda_idx], cell);
-        let caller = match self.helper_caller(&function, 2, cell) {
-            Ok(caller) => caller,
-            Err(error) => return error,
-        };
-
         let data = match self.lambda_cells(&args[array_idx], cell, false, false) {
             Ok(d) => d,
             Err(e) => return e,
+        };
+
+        // Array first, then the function (see MAP).
+        let caller = match self.helper_caller(&function, 2, cell) {
+            Ok(caller) => caller,
+            Err(error) => return error,
         };
 
         let columns = data.columns();
