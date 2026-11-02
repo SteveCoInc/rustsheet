@@ -3,7 +3,7 @@ id: T-3788
 title: "SMALL, LARGE, PERCENTILE*, QUARTILE*, PERCENTRANK* and TRIMMEAN: a text k, x or significance is #VALUE! before an error cell as the data (gen-m9, 30 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
