@@ -3,7 +3,7 @@ id: T-3790
 title: "TRIMMEAN of a typed scalar: \"2.5\" is 2.5 and TRUE is 1, the percent's own result or error follows (gen-m9, 15 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
