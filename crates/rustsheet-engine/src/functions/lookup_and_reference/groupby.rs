@@ -38,8 +38,8 @@ struct GroupbyInputs {
 }
 
 /// A scalar `row_fields` or `values` that is `#VALUE!` once the options' errors are past, as far
-/// as the evidence goes: with field_headers omitted (every scalar-pair cell of the gen-m7
-/// arg-pairs batch omits it; a 1x1 array or a given field_headers is unprobed, T-3854).
+/// as the evidence goes: with `field_headers` omitted (every scalar-pair cell of the gen-m7
+/// arg-pairs batch omits it; a 1x1 array or a given `field_headers` is unprobed, T-3854).
 #[derive(Clone)]
 enum ScalarInput {
     /// Neither rule applies.
