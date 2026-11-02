@@ -85,12 +85,12 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
 - **Eval delta**: gen-m7 grows from 106 to 179 cases and from 100% (54,449 cells, 1 known failure) to 98.81% (87,701
   cells, 1,047 scored known failures, 0 regressions; `make eval-baseline`). The M7 row's visibly-off and spill-extent
   counts rise by the batch's 13,381 visibly-off cells (`extent_failures` 12,339), all engine rules below, not layout:
-  12,173 of them are the spilled tables we return where Excel's one-value filter_array gives a single `#VALUE!` (T-3844).
+  12,173 of them are the spilled tables we return for calls with a one-value filter_array that Excel answers with a single `#VALUE!` (T-3844).
   The visible-parity lock grows by the same 13,381 cells in 72 new cases. gen-m7 is below its M7 exit bar until the owners land.
 - **Owners** (`make exit-owners MILESTONE=M7`: 0 unowned; `make unowned-off ALL=1`: no gen-m7 cell): five tasks, each rule
   recorded in docs/excel-semantics/arrays.md, "GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found":
-  - **T-3842** (sonnet, 359 cells in 314 formulas): a one-cell error reference in a field or option argument is a 1x1 array (`#VALUE!`), as in T-3506.
+  - **T-3842** (sonnet, 359 cells in 314 formulas): a one-cell error reference as row_fields or col_fields is `#VALUE!` once values and options pass; its option-position cells follow T-3846's argument order.
   - **T-3843** (sonnet, 292 cells in 82 formulas): a one-cell text or blank `values` is `#VALUE!`.
-  - **T-3844** (sonnet, 12,173 cells in 43 formulas): a one-value filter_array is `#VALUE!`, not broadcast.
+  - **T-3844** (opus, 12,173 cells in 43 formulas): when a one-value filter_array is `#VALUE!` rather than broadcast is unknown (two batch cells broadcast); probe first.
   - **T-3845** (sonnet, 493 cells in 166 formulas): a multi-cell PIVOTBY relative_to lifts into one result per cell.
   - **T-3846** (opus, 68 cells in 21 formulas): argument-check order and leftovers.

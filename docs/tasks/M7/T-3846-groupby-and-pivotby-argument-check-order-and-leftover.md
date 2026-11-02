@@ -21,6 +21,7 @@ The leftover GROUPBY and PIVOTBY cells of the T-3778 arg-pairs batch match Excel
   - `GROUPBY(Data!B1:D12,Data!B1:C12,LAMBDA(z,z),0,2,Data!B11:B11,(...),#REF!)` is `#VALUE!` (we give `#REF!`).
   - `GROUPBY(...,Data!A1:B2)` as field_relationship spills Excel errors in the body where we give values (`B8054`, `B5736`, `B4150`).
   - `PIVOTBY(Data!E1:E12,Data!A1:C12,Data!B1:B12,LAMBDA(x," x "),...)`: a header text differs (`"?b, 3.14159"` against our `", ?b, 3.14159"`).
+- `GROUPBY(...,0,0,-2,(Data!A1:A12<>0.2),TRUE)` (gen-m7/2e564b1fac9bc839 A4881:C4891): a boolean field_relationship changes the row order, 18 numeric or boolean mismatches in the body.
 - Work out each rule from the cells (excel-probe skill for any that need more evidence), fix what is one rule, and file a task for any other rule.
 - Record each rule in docs/excel-semantics/arrays.md.
 - Cells (68 in 21 formulas, each anchor's failing cells as a span; all owned here):

@@ -1,6 +1,6 @@
 ---
 id: T-3842
-title: "GROUPBY and PIVOTBY read a one-cell error reference in a field or option argument as a 1x1 array, giving #VALUE! (gen-m7 arg-pairs)"
+title: "GROUPBY and PIVOTBY give #VALUE! for a one-cell error reference as row_fields or col_fields once values and the options pass (gen-m7 arg-pairs)"
 milestone: M7
 lane: functions-lookup
 status: todo
@@ -12,17 +12,18 @@ campaign: semantics
 ---
 
 ## Goal
-GROUPBY and PIVOTBY read a one-cell reference to an error cell, passed as `row_fields`, `col_fields` or an option argument (field_headers, total depths, sort orders, filter_array, field_relationship, relative_to), as a 1x1 array holding the error, the way Excel does, and so return `#VALUE!` instead of the referenced cell's error.
+GROUPBY and PIVOTBY match Excel when `row_fields` or `col_fields` is a one-cell reference to an error cell: once no error
+in `values` or an option argument has been returned, the call is `#VALUE!`, not the referenced cell's error. Where an
+earlier option is invalid, that option's `#VALUE!` wins, as Excel's argument order has it.
 
 ## Context
 - Found by the T-3778 arg-pairs batch (gen-m7, excel-graph, 2026-11-02). On the Data sheet of these cases G1 is 7, G2 0, G3 -2.5, G4 1.5, G5 the text "12", G6 "x", G7 an empty text, G8 FALSE, G9 `#DIV/0!` (a constant error cell), and H1 and H2 are blank; A1:E12 is the data block.
 - Excel, by the oracle sidecars:
-  - `GROUPBY(Data!G9,Data!A1:B12,...)` and `PIVOTBY(Data!G9,Data!B1:E12,Data!A1:D12,_xleta.MAX,...)` are `#VALUE!` (a 1x1 field against 12 rows).
-  - `PIVOTBY(Data!B1:E12,Data!C1:C12,Data!C1:D12,_xleta.AVERAGE,0,Data!G6,Data!B5:C6,0,Data!G9)` is `#VALUE!` (G9 as col_sort_order).
-  - We return `#DIV/0!`, the referenced cell's error, in each of them.
-- The other arguments are checked first (a 1x1 field against 12 data rows is a shape mismatch), and the error survives only where it fits: `GROUPBY(Data!G9,Data!G9,LAMBDA(z,z))` is `#DIV/0!` in Excel and here (gen-m7/35679b4facc62956 A11530). Excel cells: `GROUPBY(Data!G9,Data!B1:B12,_xleta.COUNT,Data!G4)` (gen-m7/18ded81711290e85 A1038), `PIVOTBY(Data!G9,Data!A1:B12,Data!G3,LAMBDA(y,0.3))` (gen-m7/01d099c3b6d6ae95 A1038), `PIVOTBY(Data!B1:E12,Data!G9,Data!B1:B12,...)` (gen-m7/66bad08e2fd0f718 A8114) and the col_sort_order case (gen-m7/cf6ab0ac7d65a5bb A2014) are `#VALUE!`.
-- The same error as a literal (`#NUM!`, `#N/A`) in those arguments is returned as itself, and a one-cell error reference as `values` keeps its error (`PIVOTBY(Data!B1:B12,Data!C1:E12,Data!G9,...)` is `#DIV/0!`); both already pass.
-- The same rule as T-3506 (TOCOL, TOROW, FILTER); quirk recorded in docs/excel-semantics/arrays.md, "GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found".
+  - `GROUPBY(Data!G9,Data!G1,_xleta.PRODUCT)` is `#VALUE!` though both arguments are 1x1 (gen-m7/35679b4facc62956 A10554; also A10676 to A11652 with G2..G8 and H2 as values), and so are `GROUPBY(Data!G9,Data!B1:B12,_xleta.COUNT,Data!G4)` (gen-m7/18ded81711290e85 A1038), `PIVOTBY(Data!G9,Data!A1:B12,Data!G3,LAMBDA(y,0.3))` (gen-m7/01d099c3b6d6ae95 A1038) and `PIVOTBY(Data!B1:E12,Data!G9,Data!B1:B12,...)` (gen-m7/66bad08e2fd0f718 A8114). We return `#DIV/0!`.
+  - An error in `values` or in an option is returned first: `GROUPBY(Data!G9,Data!G9,LAMBDA(z,z))` is `#DIV/0!` (gen-m7/35679b4facc62956 A11530), and a one-cell error reference as an option is itself returned (`GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)` is `#DIV/0!`, gen-m7/18ded81711290e85 A1648; `PIVOTBY(Data!G9,...,1,Data!G9)`, gen-m7/e4053a4410330089 A5796). These already pass and must keep passing.
+  - A G9 option that loses to an earlier invalid option is `#VALUE!` where we give `#DIV/0!`: `PIVOTBY(Data!B1:E12,Data!C1:C12,Data!C1:D12,_xleta.AVERAGE,0,Data!G6,Data!B5:C6,0,Data!G9)` has row_total_depth "x" (gen-m7/cf6ab0ac7d65a5bb A2014); likewise gen-m7/08121bee6b350ca7 A672 (field_headers ""), gen-m7/0098e1e4e5f8aa7c A10798 (blank values) and gen-m7/06c84cc76de04bae A10676 (field_headers "x"). Those cells are listed below; their rule is the argument order of T-3846, so take them with it or after it.
+- A literal error (`#NUM!`, `#N/A`) as a field is returned as itself; that already passes.
+- Quirk recorded in docs/excel-semantics/arrays.md, "GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found". Where the field read needs a 1x1-array wrapper, reuse `one_cell_error_ref_as_array` (functions/spill_functions.rs, T-3506) rather than a new helper.
 - Cells (359 in 314 formulas, each anchor's failing cells as a span; all owned here):
 - gen-m7/0098e1e4e5f8aa7c: A10798
 - gen-m7/01d099c3b6d6ae95: A794, A916, A1038, A1160, A1282, A1404, A1526, A1648, A1892, A2014

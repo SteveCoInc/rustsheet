@@ -12,7 +12,7 @@ campaign: semantics
 ---
 
 ## Goal
-PIVOTBY given a multi-cell range as `relative_to` lifts over it, the way Excel does: it spills one result per cell of that range (here a 2x2 of `#VALUE!`, since no cell holds a valid relative_to), instead of returning one `#VALUE!`.
+PIVOTBY given a multi-cell range as `relative_to` lifts over it, the way Excel does: it spills one result per cell of that range (a 2x2 of the call's error: `#VALUE!` here, since no cell holds a valid relative_to, or the error an argument gives, such as `#DIV/0!`, `#N/A`, `#NUM!`, `#NULL!`, `#REF!` or `#NAME?`), instead of returning one `#VALUE!`.
 
 ## Context
 - Found by the T-3778 arg-pairs batch (gen-m7, excel-graph, 2026-11-02). On the Data sheet of these cases G1 is 7, G2 0, G3 -2.5, G4 1.5, G5 the text "12", G6 "x", G7 an empty text, G8 FALSE, G9 `#DIV/0!` (a constant error cell), and H1 and H2 are blank; A1:E12 is the data block.

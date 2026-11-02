@@ -1,18 +1,19 @@
 ---
 id: T-3844
-title: "GROUPBY and PIVOTBY return #VALUE! for a one-cell filter_array instead of broadcasting it (gen-m7 arg-pairs)"
+title: "GROUPBY and PIVOTBY: find when a one-cell filter_array gives #VALUE! instead of broadcasting, then match it (gen-m7 arg-pairs)"
 milestone: M7
 lane: functions-lookup
 status: todo
 priority: P2
-size: S
-tier: sonnet
+size: M
+tier: opus
 depends_on: []
 campaign: semantics
 ---
 
 ## Goal
-GROUPBY and PIVOTBY return `#VALUE!` when `filter_array` is a single value (a number, a boolean, text, or a one-cell reference) instead of broadcasting it over the rows, as Excel does.
+GROUPBY and PIVOTBY match Excel on a one-value `filter_array` (a number, a boolean, or a one-cell reference): Excel
+sometimes broadcasts it over the rows and sometimes returns `#VALUE!`, and the condition is not yet known.
 
 ## Context
 - Found by the T-3778 arg-pairs batch (gen-m7, excel-graph, 2026-11-02). On the Data sheet of these cases G1 is 7, G2 0, G3 -2.5, G4 1.5, G5 the text "12", G6 "x", G7 an empty text, G8 FALSE, G9 `#DIV/0!` (a constant error cell), and H1 and H2 are blank; A1:E12 is the data block.
@@ -20,7 +21,8 @@ GROUPBY and PIVOTBY return `#VALUE!` when `filter_array` is a single value (a nu
   - `GROUPBY(Data!B1:B12,Data!B1:E12,_xleta.SUM,TRUE,-1,-2,0.5)`, `GROUPBY(Data!A1:A12,Data!B1:E12,LAMBDA(v,v),1,TRUE,-2,-1)`, `GROUPBY(Data!A1:D12,Data!C1:E12,LAMBDA(y,Data!C4),3,-2,Data!G1,Data!G1)` are `#VALUE!`.
   - `PIVOTBY(Data!C1:D12,Data!D1:E12,Data!B1:D12,_xleta.PRODUCT,3,-1,1,0,2,0.5)` and `PIVOTBY(...,TRUE)` are `#VALUE!`.
   - We broadcast the scalar and spill the whole table, so most cells here are spill members Excel leaves empty.
-- A one-cell filter is a size mismatch against the 12 data rows, like any other wrong-height filter_array.
+- Excel also broadcasts a one-value filter: `GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)` (gen-m7/07c0c130d894cfe0 A4515) and `GROUPBY(Data!E1:E12,Data!D1:D12,LAMBDA(acc,"Hello World"),2,1,2,2,Data!H1)` (gen-m7/53473f95ff58029d A6223) spill the full table, as we do. So a one-cell filter is not simply a size mismatch.
+- Many of the `#VALUE!` calls also have another doubtful argument (a sort_order beyond the result's columns, as in `GROUPBY(Data!A1:D12,Data!C1:E12,LAMBDA(y,Data!C4),3,-2,Data!G1,Data!G1)`, gen-m7/07c0c130d894cfe0 A3722; a negative total_depth with one field column), so the `#VALUE!` may come from them, not from the filter. Hold every other argument valid in a probe before deciding.
 - Quirk recorded in docs/excel-semantics/arrays.md, "GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found".
 - Cells (12173 in 43 formulas, each anchor's failing cells as a span; all owned here):
 - gen-m7/06c84cc76de04bae: A245:E255, A2563:G2575, B3783:B3784
@@ -42,6 +44,7 @@ GROUPBY and PIVOTBY return `#VALUE!` when `filter_array` is a single value (a nu
 Decision 0083: every cell listed under Context is visibly off (a wrong error type, a value where Excel has an error, or a spill where Excel has none), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the acceptance criteria state it.
 
 ## Acceptance criteria
+- [ ] An excel-probe case (excel-probe skill, excel-graph) varies `filter_array` (one-value number, boolean, one-cell reference, and a full-height column) with every other argument held valid, then each of sort_order and total_depth singly out of range; its finding replaces the rule in docs/excel-semantics/arrays.md. Any `#VALUE!` here that comes from another argument goes to T-3846 or a new task.
 - [ ] Every cell listed under Context matches Excel (`make eval-show` on each case), with unit tests in the function's module for the rule.
 - [ ] Their lines leave eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions).
 - [ ] `make check` green; reviewers approve.
