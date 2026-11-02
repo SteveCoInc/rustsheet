@@ -509,7 +509,11 @@ impl Parser {
             return None;
         }
         if self.nests_too_many_calls() {
-            return Some(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
+            // Excel's PATCH 400 leaves the cell blank, as for a formula that does not parse
+            // (probes/t3097-nesting-*-66-typed, T-3689).
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: {TOO_MANY_NESTED_CALLS_MESSAGE}"
+            ));
         }
         if let Some(name) = &self.cell_shaped_binding {
             return Some(format!(
