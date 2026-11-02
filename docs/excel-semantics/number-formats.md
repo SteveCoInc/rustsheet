@@ -87,13 +87,26 @@ below, T-1450), non-ASCII letters (only `ü` is probed; the engine treats every 
     `"ss [s]"`, `"s.0 [s]"`, with or without General. A smaller unit first is valid: `TEXT(12345.678,"s [h]")` =
     "19 472", `TEXT(5,"ss [m] General")` = "00 720 0.5", `TEXT(5,"mm:ss [h] General")` = "00:00 12 0.5". A month `mm`
     is no clock token: `TEXT(5,"mm [h] General")` = "01 12 0.5".
-  - Still unimplemented: fraction digits after `[h]` print (`TEXT(12345.678,"[h].0 General")` = "296296.2 2.500000331",
-    ours `#VALUE!`; T-3575).
+  - **Fraction digits after an hour or minute token** (T-3575). `.0`, `.00`, `.000` right after any hour or minute
+    token (`h`, `hh`, `m`, `mm`, `[h]`, `[hh]`, `[m]`, `[mm]`), with or without a colon or space before it, is the
+    fraction of the second, as after `s`; four zeros are `#VALUE!` (`"h.0000"`, as `"s.0000"`). The digit is the
+    serial's own fraction of a second: on 12345.678 (16:16:19.2) `"[h].0"` = "296296.2", `"[h].00"` "296296.20",
+    `"[h].000"` "296296.200", `"[m].0"` "17777776.2", `"[hh].0"` "296296.2", `"h.0"` "16.2", `"mm.0"` "16.2"; on
+    0.1234567 (2:57:46.659) `"h.000"` "2.659", `"hh.0"` "02.7", `"mm.00"` "57.66", `"[mm].0"` "177.7", `"h:mm.0"`
+    "2:57.7", `"hh:mm.0"` "02:57.7", `"h mm.0"` "2 57.7", `"h:mm.000"` "2:57.659", `"[h]:mm.00"` "2:57.66",
+    `"h:mm.0 AM/PM"` "2:57.7 AM"; `TEXT(5,"[h].0")` = "120.0", `"mm.0"` "00.0", `TEXT(0.6,"h.0 AM/PM")` = "2.0 PM";
+    `TEXT(12345.678,"[h].0 General")` = "296296.2 2.500000331", `TEXT(5.25,"[h].0 General")` = "126.0 0.5".
+  - **`m`/`mm` before `.0` is always a minute**, wherever it stands, even beside date tokens with no hour or colon:
+    on 12345.678 (1933-10-18) `"mm.0 yyyy"` = "16.2 1933", `"mm.0 d"` "16.2 18", `"yyyy mm.0"` "1933 16.2",
+    `"d mm.0"` "18 16.2", `"m.0"` "16.2", `"mm.0 General"` "16.2 2.500000331". Such a minute does not count for "`mm`
+    after a minute is a month" below: `TEXT(0.1234567,"mm.0 h:mm")` = "57.7 2:57" (the second `mm` is still a minute),
+    and `"mm.0 h"` = "57.7 2", `"mm.0 ss"` = "57.7 46".
   - `TEXT(5,"d 0 General")` is `#VALUE!` (a digit placeholder beside a date token), and a literal comma in a date
     section stays a literal: `TEXT(45000,"mmm d, yyyy General")` = "Mar 15, 2023 0.499999803".
   Evidence: probes/t3378-general-in-date-section (64 cells) and t3378-general-in-date-section-1904 (7 cells),
   probes/t3419-elapsed-after-date-general (30 cells), t3419-elapsed-after-date-b (25 cells) and
-  t3419-elapsed-after-clock-c (14 cells), excel-graph 2026-10-31.
+  t3419-elapsed-after-clock-c (14 cells), t3575-fraction-after-elapsed (15 cells) and t3575-fraction-after-elapsed-b
+  (30 cells), excel-graph 2026-10-31 and 2026-11-01.
 - A one-section format holding `@` and other text applies General to a number: `TEXT(5,"x@")` = "5".
 Evidence: probes/text-format-bare-literals A1-A31, A57-A76 (excel-graph, 2026-10-15, T-1262); gen-m6/2c1a6e93a1974f48
 Calc!A15, gen-m6/63012866a9d8b7db Calc!A3 (excel-graph, 2026-10-09, T-1239).
@@ -323,7 +336,7 @@ Evidence: poi/TextFormatTests.xlsx A3:A10, A12:A29; poi/GeneralFormatTests.xlsx 
 A doubled quote inside a quoted literal: `;;;"h""I"` gives "hI" in Excel (A4, A14, A23), not `h"I`, so
 it is not an escape there: see "A doubled quote in a format literal is not an escape" below.
 Status: VERIFIED
-Implemented in: `format_text_value` (formatter/format.rs) used by `fn_text` (functions/text/common.rs), scalars and array elements; a text value with a format of three sections returns the text unchanged (probed, T-2975; one or two sections unprobed). An empty 4th section (`;;;`; the parser drops the empty section after a trailing `;`, so `Parser::has_empty_text_section` detects it) gives empty text (gen-m10/0e3d8eba9432a18d T!A24). A five-section format, `TEXT(TRUE,";;;")`, `"0;0;0;"` and `"0;0;General;"` on a text value match Excel (probes/text-format-text-sections, T-2975).
+Implemented in: `format_text_value` (formatter/text_value.rs) used by `fn_text` (functions/text/common.rs), scalars and array elements; a text value with a format of one to three sections returns the text unchanged (probed, T-2975; one and two sections probes/text-value-kind-sweep F2:F69 and -b F2:F20, T-3649). An empty 4th section (`;;;`; a trailing `;` opens an empty section in `Parser::parse`, T-3649) gives empty text (gen-m10/0e3d8eba9432a18d T!A24). A five-section format, `TEXT(TRUE,";;;")`, `"0;0;0;"` and `"0;0;General;"` on a text value match Excel (probes/text-format-text-sections, T-2975).
 Tasks: T-0935, T-2945, T-2975
 
 ## TEXT of a text value is `#VALUE!` over 255 characters
@@ -336,7 +349,7 @@ apart from these cells (every input over 255 also gives a result over 255). Char
 units is unprobed. Compare the other 255-character rules in numbers.md and dates.md.
 Evidence: probes/text-format-text-limit A1-A25 (excel-graph, 2026-10-08, T-0935).
 Status: VERIFIED
-Implemented in: `format_text_value` (formatter/format.rs), `MAX_TEXT_FORMAT_CHARS`, checked as the
+Implemented in: `format_text_value` (formatter/text_value.rs), `MAX_TEXT_FORMAT_CHARS`, checked as the
 result grows so a format of many `@` cannot allocate a huge string (CLAUDE.md directive 5).
 Also probed (T-1130, probes/text-text-value-sections A1-A20, excel-graph, 2026-10-31): a text value or boolean
 with a 1-3 section format and no `@` comes back unchanged (`TEXT("x","0.0")`, `"0;-0"`, `"0;0;0"`, `"0;@"` is "x" via its `@`
@@ -371,7 +384,7 @@ Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
 - Past 9999-12-31 a fraction of a second is #VALUE! with or without an elapsed token:
   `TEXT(1234567890,"[mm]:ss.0")` and `TEXT(1234567890,"h:mm:ss.00")` (gen-m10 810fee377a42575b
   T!A16, b4f66526f822ff2c T!A20; fbdab487cb11409e T!A25 on 123456789012345). Four or more zeros
-  (`s.0000`) are unprobed; the engine keeps them #VALUE!. Also unprobed: where that cutoff sits
+  (`s.0000`, `h.0000`) are #VALUE! (probes/t3575-fraction-after-elapsed-b A6, A27). Unprobed: where that cutoff sits
   (the engine uses serial 2958466, also in a 1904 workbook) and whether a date token rolls over
   with a fraction that rounds past midnight (the engine's does not); T-2135 probes them.
 - A negative value prints one leading "-" before any literal text:
@@ -430,7 +443,9 @@ Wow", A23; `[< 10]`, A25). The same holds when the condition sits in a date sect
 tokens (`TEXT(1,"d"&<119 quoted a>&"[>5]d")` is "1", probes/text-format-length-limit-q A16) and when
 literals pad it (`TEXT(1,"[>5]0"&REPT(" ",79))` is "1", -d S!A31, -f A41:A42, -j A43). The evidence
 does not decide whether the fallback is General or the section without its literals: every probed
-value prints the same either way. The engine uses General, the simpler rule. The condition compares
+value prints the same either way. The engine uses General, the simpler rule. A condition-only
+first section with no literals at all does print General (`TEXT(1234.5,"[>100];0")` is "1234.5";
+see "A section of only a color or a condition prints General"); with literals the cut stays open. The condition compares
 the signed value, and a matched one-section format keeps the minus: `[=-10]#" Wow"` on -11 is "-11",
 `[<>-10]#" Wow"` on -11 is "-11 Wow" and on -9 "-9 Wow" (poi/FormatConditionTests A32, A35, A37).
 Two or three sections with a condition on the first: the first section takes a value its condition
@@ -449,6 +464,51 @@ S!A31, -f Sheet1!A41:A42, -j Sheet1!A43, -q Sheet1!A16 (excel-graph); poi/Format
 A3:A50 (Excel-cached).
 Status: VERIFIED
 Tasks: T-0936 (implemented), T-1734 (implemented)
+
+## A trailing `;` opens an empty section (T-3649)
+Rule: a `;` at the end of a code adds one more section, and it is empty, exactly as `;;` between two
+sections is: a value that falls in it prints "". `TEXT(-1234.5,"0;")` and `TEXT(-1234.5,"General;")`
+are "" (a positive and zero still use the first section), `TEXT(0,"0;0;")`, `TEXT(0,"0;;")`,
+`TEXT(0,"0.0;;")` and `TEXT(0,"General;;")` are "", and an empty cell reads as zero there too
+(probes/text-value-kind-sweep D58, D63, H58, H63; probes/text-value-kind-sweep-b C2, C4, D3, D5, H3,
+H5; excel-graph 2026-11-01). The 4th section after `;;;` (`TEXT("text",";;;")` is "") is the same rule.
+A text value or a boolean under one to three sections is unchanged (`TEXT("abc","0;")` is "abc").
+Status: VERIFIED
+Implemented in: `Parser::parse` (formatter/parser.rs).
+Tasks: T-3649
+
+## A section of only a color or a condition prints General (T-3649)
+Rule: a section that holds a color (`[Red]`, `[Color10]`) or a condition (`[>100]`), or both, and
+no other token prints the value in General, where a section with nothing in it, or only a locale tag,
+prints "". The sign rules pick the section as usual: `TEXT(1234.5,"[Red]")` is "1234.5" and
+`TEXT(-1234.5,"[Red]")` "-1234.5" (one section keeps the minus); `TEXT(-1234.5,"[Red];[Blue]")`,
+`"0;[Red]"` and `"[Red]0;[Blue]"` are "1234.5" (a negative section drops it); `TEXT(0,"0;0;[Red]")`
+is "0"; `TEXT(1234.5,"[>100];0")` and `"[Red][>5];0"` are "1234.5" while `"[>100];0"` on -1234.5 is
+"-1235"; `TEXT(1234.5,"[$-409];0")` is "". A text value or a boolean in a 4th section of only a
+color is unchanged (`TEXT("abc","0;;;[Red]")` and `"[Red];[Blue];[Green];[Cyan]"` are "abc",
+TRUE gives "TRUE"). Evidence: probes/text-value-kind-sweep B69:H69, probes/text-value-kind-sweep-b
+rows 6-20 (excel-graph 2026-11-01). For a condition section with no literals this settles the General-or-section question that
+"Conditional sections" leaves open; with literals it stays open.
+Status: VERIFIED
+Implemented in: `is_bracket_only_section` (formatter/sections.rs), used by `format_number` (formatter/format.rs) and
+`format_text_value` (formatter/text_value.rs). The cell keeps the section's color.
+Tasks: T-3649
+
+## Which codes are `#VALUE!` for which value kind (T-3649)
+Rule: across 68 codes, one per format-code family and section shape, the value kind changes whether
+`TEXT` is `#VALUE!` only through the sign rules and the date range: a negative number under a date or
+clock code with one section (`yyyy-mm-dd`, `d`, `mmm`, `dddd`, `hh:mm:ss`, `ss.000`, `mm:ss.0`,
+`[h]:mm`, `[mm]:ss`, `h AM/PM`, `h:mm A/P`, `AM/PM`, `[$-409]mmmm`, `[$-411]ge`) is `#VALUE!`, while `[s]`
+and `[h]` print the negative ("-106660800", "-29628"), and 45000.25 under `?/8` is `#VALUE!` while
+1234.5 gives "9876/8" (row 10; see "Fraction formats"). Every other `#VALUE!` holds for every kind,
+text, TRUE and the empty cell included: a code mixing `@` with a number or date token in one section
+(`@ 0`, `0 @`, `yyyy @`, `[h] @`, `0.0E+0 @`, rows 41-45), five sections (`0;0;0;0;0`, row 56) and a
+text section before a number section (`@;0`, row 64). A text section after a number section is fine
+for every kind (`[h];@`, `0E+0;@`, `0%;@`, `# ?/?;@`, rows 65-68). Text and TRUE are unchanged under
+any valid code with fewer than four sections, and the empty cell formats as 0. Evidence: probes/text-value-kind-sweep (B2:H69, excel-graph
+2026-11-01); the engine matched every `#VALUE!` cell there before T-3649.
+Status: VERIFIED
+Tasks: T-3649
 
 ## Scientific formats with literals after `E`
 Rule: literals may sit between `E+`/`E-` and the exponent digits; the exponent sign is printed
@@ -556,6 +616,8 @@ token came before it. `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 4500
 is "06 00|00 01"; `mm:ss|yyyy-mm` is "00:00|1900-01". With an hour but no minute yet, `mm` is a minute even after a
 date token: `h|yyyy-mm` is "6|1900-00".
 Evidence: probes/mm-after-time-and-date-token (22 cells, excel-graph 2026-10-30), probes/t2779-hebrew-saka-more E7.
+A minute read only because `.0` follows (`mm.0`) does not set it: `mm.0 h:mm` on 0.1234567 is "57.7 2:57"
+(probes/t3575-fraction-after-elapsed-b A30, T-3575).
 Status: VERIFIED (excel-graph). Implemented in: `minute_read` (formatter/parser.rs). Unprobed: `h:mm:ss mm`.
 Tasks: T-2961
 
@@ -647,7 +709,7 @@ Evidence (excel-graph, 2026-10-20, T-2114): gen-m5/25768de48ae7f2f9 Calc!A395, g
 gen-m5/651e713f5ae232ed Calc!A3, gen-m5/6b831f5e2a20bc34 Calc!A320, gen-m5/8a387c26d182e73c Calc!A281, gen-m5/8df4830f888f16ae Calc!A149,
 gen-m5/a6fec430ac350c1a Calc!A331, gen-m5/c688ca172fe533dc Calc!A139, gen-m5/d1b251fd6e9c4b4b Calc!A120, gen-m5/d9fb1e918971111b Calc!A243,
 gen-m5/f0f205865a3a4328 Calc!A262.
-Ours (T-2157): `format_text_value` (formatter/format.rs) is `#VALUE!` when a number section of the code does not parse, and
+Ours (T-2157): `format_text_value` (formatter/text_value.rs) is `#VALUE!` when a number section of the code does not parse, and
 the lexer rejects a `B1`/`B2` calendar prefix after any token that prints in its section (a locale bracket before it is
 fine, probes/text-locale-calendars; a color, condition or currency bracket before it, and `0;b1`, are accepted too,
 UNVERIFIED, T-2303), so the 11 gen-m5 cells above and the rejected probe codes pass. A bad section a number would
@@ -689,7 +751,7 @@ Tasks: T-1880
 Rule: a format whose section holds `@` is `#VALUE!` (for a text value, and for numbers too: see Sections below) when the same section also holds a date or number token, whichever side of the `@` it sits on: `y yy yyyy m mm mmm d dd ddd aaa h hh s ss b bb e ee g gg ggg`, `[h] [m] [s]`, `0 # ? . /`, `E+0`, `General`, `%` and a condition such as `[>5]`. The calendar prefixes are not among them: `TEXT(45000,"B2[$-409]@")` is "45000" (probes/t2729-hijri-locale-tag-names A289; `B1@` and a bare `B2@` too, probes/t2932-b2-calendar-twice A58, A59). These are literals, not errors: `a`, `,`, space, `\y`, `"y"`, `*-`, `_x`, `[Red]`, `[$-409]` (`TEXT("abc","x@\y")` is "xabcy"; `"x@_x"` prints a space for the spacer). `A/P` and `AM/PM` give a stray first letter or two: `TEXT("abc","x@A/P")` is "xabcA" and `"x@AM/PM"` "xabcAM" (`"A/P@"` "Aabc", `"AM/PM@"` "AMabc"). `@@` prints the text twice. A fill `*x` prints nothing in the text section (`"x@*-"` is "xabc") while `_x` leaves a space.
 Sections (probes/text-at-token-sections, 96 cells: text, 1, -1 and 0 on each format): `@` may stand only in the last section, and a format that breaks either rule is `#VALUE!` for every value, numbers included. `"@;0"`, `"x@;0"`, `"[Red]x@;0"` and `"x@\y;0;0;@"` are `#VALUE!`; `"x@y;0"`, `"0;x@y"`, `"0;0;x@y"`, `"x@y;0;0;@"`, `"0;0;x@y;@"` and `"0;x@0"` are `#VALUE!` because one section holds `@` beside a token. A last section with `@` is the text section whatever the count: `TEXT("abc","0;x@")` and `"0;0;x@"` are "xabc", and numbers use the sections before it (`TEXT(-1,"0;x@")` is "-1", `TEXT(-1,"0;0;x@")` "1", `TEXT(0,"0;0;x@")` "0"). `"0;0;0;y"` stays `#VALUE!` (4th-section rule) and `"0;0;0;x@\y"` gives "xabcy". This reconciles the poi 4th-section entry: literals in a text section print, but a number or date token beside `@` invalidates the format.
 Evidence: probes/text-at-with-tokens (89 cells), probes/text-at-token-sections (96 cells) (excel-graph, 2026-10-16, T-1656).
-Implemented in: `exceeds_complexity_limit` (formatter/complexity.rs, both placement rules, checked by TEXT before formatting); `format_text_value` and `format_number` (formatter/format.rs: a trailing `@` section, `*x`, `AM/PM` as "AM"). `A/P` and `[$-409]` pass since T-1702. The same formatter paths serve cell display, where the trailing `@` section and `*x` follow TEXT's probed behavior (inferred for display: unprobed, and a display fill would repeat to the column width).
+Implemented in: `exceeds_complexity_limit` (formatter/complexity.rs, both placement rules, checked by TEXT before formatting); `format_text_value` (formatter/text_value.rs) and `format_number` (formatter/format.rs: a trailing `@` section, `*x`, `AM/PM` as "AM"). `A/P` and `[$-409]` pass since T-1702. The same formatter paths serve cell display, where the trailing `@` section and `*x` follow TEXT's probed behavior (inferred for display: unprobed, and a display fill would repeat to the column width).
 Status: VERIFIED (excel-graph)
 Tasks: T-1656
 
@@ -818,7 +880,28 @@ Evidence: probes/text-locale-lunar-months-1900 (1206 cells), text-locale-lunar-e
 Evidence: probes/text-locale-calendars (145 cells), text-locale-calendars-detail (41), text-locale-japanese-year (20), text-locale-era-gregorian (23) (excel-graph, 2026-10-18).
 Implemented in: formatter/locale_tag.rs (`resolve_lcid`, `Calendar`, `japanese_era`), formatter/lunar_calendar.rs (lunar tables, `lunar_2101.bin` past 2100), format.rs (years, `e`, `g`).
 Status: VERIFIED (excel-graph)
-Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759
+
+### Numeral-system digits (bits 24-31 of a locale tag; T-1925)
+
+Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 1020304.05 under `[$-N000409]`; A: `yyyy-mm-dd|e|mmmm` of 45000 under `[$-N000409]`, B: the same under `[$-N000411]`, C: `0.00|#,##0` of 1234567.89 under `[$-N000409]`).
+
+- The byte N changes the digits of the probed date fields (`yyyy`, `mm`, `dd`, `e`) and of plain numbers (the grouping `,` and decimal `.` stay ASCII); `mmmm` is untouched, and so is the month number of ja-JP's `3月` (the `3` stays ASCII under every numeral byte in the B column) while `e` in the same cell becomes native. Weekday, time fields and AM/PM are unprobed. With N = 0, 1 or 20-26 the LCID still applies: `[$-1000411]` prints the `5` and `3月` of ja-JP (B column), so a numeral byte must not drop the LCID's names or era. N = 0, 1 and 20-26 print ASCII digits.
+- Positional digit sets: 2 Arabic-Indic, 3 Persian, 4 Devanagari, 5 Bengali, 6 Gurmukhi, 7 Gujarati, 8 Odia, 9 Tamil, 10 Telugu, 11 Kannada, 12 Malayalam, 13 Thai, 14 Lao, 15 Tibetan, 16 Myanmar, 17 Ethiopic, 18 Khmer, 19 Mongolian. Tamil (9) and Ethiopic (17) have no zero digit, so a zero stays ASCII `0` (N=9: `௨0௨௩-0௩-௧௫`); column D confirms it in plain numbers (N=9 `௧,0௨0,௩0௪.0௫`, N=17 `፩,0፪0,፫0፬.0፭`).
+- 27-31 are CJK numerals. Date: 27 `二〇二三-〇三-十五` (positional year, day with 十), 28 `弐〇弐参-〇参-壱拾伍`, 29 fullwidth `２０２３-０３-１５`, 30 `二○二三-○三-十五` (N=27 uses 〇 U+3007, N=30 uses ○ U+25CB), 31 `贰零贰叁-零叁-壹拾伍`. Plain numbers are positional (D, N=27 `一,〇二〇,三〇四.〇五`, N=28 `壱,〇弐〇,参〇四.〇伍`, N=31 `壹,零贰零,叁零肆.零伍`; C, 27 `一二三四五六七.八九`, 28 `壱弐参四伍六七.八九`, 31 `壹贰叁肆伍陆柒.捌玖`).
+- Fields, General and the rest (probes/t3532-numeral-digit-fields: numeral bytes 2, 9, 27-31 over date, clock, percent, scientific, fraction, General and literal codes; t3532-numeral-digit-general: General over 20 values and elapsed tokens). Every number placeholder, percent, scientific mantissa and exponent, fraction (integer, numerator, denominator), fractional second and clock field takes the native digits (`[$-2000409]0.0%|0.00E+00` on 0.1234 is "١.٢%|٣.٤٠E-٠١", `# ?/?` on 12.5 "١٢ ١/٢", `h:mm:ss.00 AM/PM` "١:٠٢:١٢.٤٨ PM"). Quoted and escaped literals stay ASCII (`0 "12"|\5` on 12.5 is "٠ 12|5"), and so do a text section (`@ "9"` on "a1" is "a1 9"), names (`ddd|dddd|mmm`) and `AM/PM`. A tag whose LCID has no locale still applies its numeral byte: `[$-fr_FR-x]` is 0x10E00AF1, Myanmar digits with en-US names and `A/P` as written ("၆ P"; probes/t1924-locale-tag-extended-hex A26, B26). The Japanese era year takes them too (`[$-8000411]e|ee|yyyy` is "୫|୦୫|୦୫"; text-locale-calendars A26).
+- **CJK date and clock fields (27, 28, 30, 31).** A field from 10 to 99 (`d`, `dd`, `m`, `mm`, `yy`, `e`, `ee`, `h`, `hh`, minutes, seconds) is written with the tens sign, every other field digit by digit: 27 `dd` of the 5th "〇五", of the 10th "十", 20th "二十", 31st "三十一"; `yy` of 2023 "二十三", of 2010 "十"; `yyyy` "二〇二三"; `h` 13 "十三", `mm` (minute) 2 "〇二", `s` 0 "〇". 28 and 31 write the one before the tens sign ("壱拾", "壹拾"), 30 does not ("十"), though 30's General does ("一十"). 29 (fullwidth) prints fields digit by digit ("１０", "２３").
+- **CJK General and elapsed counts.** `General` spells the integer part in units (十 百 千) and myriads (万 億) and prints the rest digit by digit: 27 `5` "五", `10` "十", `105` "百五", `1010` "千十", `10000` "一万", `100000` "十万", `123456789` "一億二千三百四十五万六千七百八十九", `0.5` "〇.五", `-15` "-十五", `12.05` "十二.〇五", `1E+11` "一E+一一" (the exponent digit by digit). 28 (daiji 壱弐参四伍六七八九, 拾 百 阡, 萬 億) writes every one ("壱拾", "壱百", "壱阡", "壱萬"). 29 uses fullwidth digits with 27's signs ("十１", "２十", "１万２千３百４十５"). 30 (○, 万 亿) and 31 (零壹贰叁肆伍陆柒捌玖, 拾 佰 仟, 万 亿) write every one and one zero digit for a gap ("一百○五", "一千○一十", "壹佰零伍", "壹仟零壹拾"). An elapsed count is spelled the same way (`[h]` of 1.25 under 27 "三十", `[m]` "千八百", `[s]` "十万八千", under 29 "３十"). Unprobed: a zero gap across a myriad under 30 and 31 (we write one zero, "一十万○五"), integers of 10^12 and more (we print them digit by digit), a padded elapsed count under 10 (digit by digit), and `General` beside literals or in a date section (spelled out as alone); to probe in T-3718.
+- **Which sections.** Only the first section's tag sets the digits, and they apply to the whole format: `[$-2000409]0;(0)` on -5 is "(٥)", `[$-2000409]0;General` on -15 "١٥", and a value no section takes falls back to General in them (`[$-2000409][>5]0` on 1 is "١"), while a tag in a later section changes nothing, not even its own section (`0;[$-2000409]0;0` on 0 is "0", on -5 "5"; `0;[$-2000409]0` on 5 "5"). A fixed denominator prints in them too (`[$-2000409]# ?/4` on 12.5 is "١٢ ٢/٤", `[$-1B000409]# ?/16` "一二 八/一六"), and a `B2` before a numeral tag is Hijri with the native digits (`B2[$-2000409]yyyy|mmmm` is "١٤٤٤|Sha'ban"). Evidence: probes/t3532-numeral-digit-sections.
+- Implemented (T-3532): `formatter/numerals.rs` (`Numerals`), from `locale_tag::numerals`; `resolve_lcid` ignores the byte, so the LCID's names and era stay.
+
+**Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is unprobed, filed as T-3710. (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
+
+**Unrelated quirk the probe found (column C). Rule:** `TEXT(1234567.89,"[$-409]0.00|#,##0")` is "1234567.89|0": with a `#,##0` run after the decimal point and a literal, the integer part gets no thousands grouping and the trailing run prints just `0`. We print "1,234,567.89|0". This is why C1 fails with no numeral byte (probes/t1925-numeral-digits C1, C2, C21-C27); filed as T-3598.
+
+Status: VERIFIED (excel-graph)
+Implemented in: formatter/numerals.rs, formatter/locale_tag.rs (`numerals`), formatter/format.rs, formatter/fraction.rs (T-3532)
+
+Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718
 
 ## Displayed text (`Range.text`) of a formatted cell (T-1610)
 Rule: excel-graph's `Range.text` is the cell's value under its number format, and it does not
@@ -888,7 +971,7 @@ TEXT() with the same codes. Points the earlier probes did not show:
   `_(@_)` (255 characters) show in full. A format that leaves the text unchanged shows it whole however long: no
   text section (`General`, `0.00`) or a section that is exactly `@` (`@`, `0;@`, `0;0;0;@`,
   `General;General;General;@`; 300 characters shown). `;;;` shows nothing. A literal and a formula text behave
-  the same. Implemented in formatter/format.rs `displayed_text`.
+  the same. Implemented in formatter/text_value.rs `displayed_text`.
   Unprobed (T-3314): a workbook whose cell carries a code TEXT() rejects as invalid (`42abc`, `@;0`, `x@0`) is refused whole by
   excel-graph (`FileCorruptTryRepair`, T-3282 probe attempt), so that displayed text cannot be probed; the engine
   keeps the plain text for it.

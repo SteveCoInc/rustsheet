@@ -94,6 +94,52 @@ excel-graph, 2026-10-14, T-0960).
 Status: VERIFIED (Excel for the web only)
 Tasks: T-0960
 
+## INDIRECT reference text: where spaces are allowed
+Rule: INDIRECT reads reference text more strictly than the formula parser, the same in A1 and R1C1 style:
+- Any leading whitespace is `#REF!`: `" A1"`, `"  A1 "`, `" A1:B2 "`, `" Sheet2!A1"`, `" C : A "`, `" R1C1"`,
+  and a leading tab or NBSP (`CHAR(9)`, `CHAR(160)`).
+- Trailing spaces and trailing line feeds (any number) are ignored: `"A1 "`, `"A1   "`, `"$A$1 "`, `"A1:B2 "`, `"A1"&CHAR(10)`,
+  `"R1C1 "` all resolve. A trailing tab or NBSP is `#REF!`.
+- Spaces next to the range colon are allowed: `"A1 : B2"`, `"A1: B2"`, `"A1 :B2"`, `"B2 : A1"`,
+  `"Sheet2!A1 :B2"`, `"R1C1 : R2C2"`; a line feed is allowed in the same places, alone or mixed with spaces (`"A1:"&CHAR(10)&"B2"`, `"A1"&CHAR(10)&":B2"`,
+  `"A1 "&CHAR(10)&": B2"`, `"A1:"&CHAR(10)&CHAR(10)&"B2"`, `"Sheet2!"&CHAR(10)&"A1"`, `"R1C1"&CHAR(10)&":R2C2"`;
+  probes/t3747-indirect-whitespace rows 60-70), a tab is `#REF!`.
+- A space after the `!` is allowed (`"Sheet2! A1"` = Sheet2!A1), one before it is not (`"Sheet2 !A1"`,
+  `"'My Sheet' !A1"`, `"Sheet2 !R1C1"` are `#REF!`). Inside quotes the space is part of the sheet name
+  (`"'My Sheet'!A1"` resolves; an unquoted `"My Sheet!A1"` is `#REF!`).
+- Two references separated by spaces are not an intersection: `"A1 B2"`, `"A1:B2 B1:C2"`, `"A1:C1 B1:B3"`,
+  `"R1C1 R2C2"` are `#REF!` (in a formula the space is the intersection operator).
+Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F11:I33, F47:I54, F61:I65, F68:I71 (SUM, ROWS, COLUMNS,
+CELL("address") of each text in E; oracle: excel-graph, 2026-11-01, T-3656).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_reference_text` (engine expressions/utils), applied before both parsers; the
+defined-name and structured-reference fallbacks still see the text as written (their spacing is
+unprobed; structured references are T-3394).
+Also `#REF!` (probes/t3747-indirect-whitespace, T-3747): a carriage return anywhere (leading, trailing,
+`"A1"&CHAR(13)&CHAR(10)`, `"R1C1"&CHAR(13)`), a leading line feed, a Unicode space (`UNICHAR(8195)`) leading or
+trailing, a line feed between two references (`"A1"&CHAR(10)&"B2"`, `"A1:B2"&CHAR(10)&"B1:C2"`), a line feed before the `!` (`"Sheet2"&CHAR(10)&"!A1"`), and spaces inside a reference (`"$A $1"`, `"A 1"`, `"$ A$1"`,
+`"A1 :B 2"`, `"R[ 1]C"`, `"R1 C1"`, `"R[1] C"`, `"R 1C1"`). Trailing space on a whole-column or row ref
+resolves (`"A:A "`, `"1:1 "`). A defined name's text may end in spaces or a line feed (`"MyName "`,
+`"MyName"&CHAR(10)`, `"MyName"&CHAR(10)&CHAR(10)`, `"MyName "&CHAR(10)`, `"MyName"&CHAR(10)&" "`) but not start with a space (probes/t3747-indirect-name-whitespace; the name fallback trims
+the same trailing characters). Not probed: names with a carriage return, structured references (T-3394).
+Note for probes: text naming a sheet that does not exist is resolved by Excel for the web as an
+external workbook reference (`"' My Sheet'!A1"` gave CELL address `[ My Sheet] My Sheet!$A$1` and SUM
+`#BLOCKED!`), so such cells were dropped from the case (see "INDIRECT to a sheet that does not exist").
+
+## INDIRECT of a reversed range is the range with its corners in order
+Rule: reference text whose corners are reversed in either or both directions is the same range written
+top-left first, in A1 and R1C1: `"B2:A1"`, `"A2:B1"`, `"B1:A2"` and `"R2C2:R1C1"`, `"R1C2:R2C1"`, `"R2C1:R1C2"`
+are A1:B2 (SUM 27, ROWS 2, COLUMNS 2, CELL("address") `$A$1`), `"C3:A1"` and `"C$3:$A1"` A1:C3, `"C:A"` and
+`"C3:C1"` (R1C1) columns A:C, `"3:1"` and `"R3:R1"` rows 1:3, `"Sheet2!B2:A1"` and `"Sheet2!R2C2:R1C1"`
+Sheet2!A1:B2, relative `"R[-64]C2:R[-65]C1"` from row 66 A1:B2. Unlike a formula, a sheet prefix on the second corner is
+`#REF!`, on the same sheet too (`"Sheet2!B2:Sheet2!A1"`, `"Sheet2!A1:Sheet1!B2"`, `"Sheet1!B2:Sheet2!A1"`;
+references.md "Sheet-qualified range corners: order and unprobed forms" for the formula side).
+Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F34:I46, F55:I60, F66:H67 (oracle: excel-graph,
+2026-11-01, T-3656).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_of` orders the corners with `Range::between` (before T-3656 the A1 path kept them
+reversed: `ROWS(INDIRECT("C3:A1"))` was 1.8e19 and SUM 0).
+
 ## MATCH on a 2-D lookup_array is #N/A; argument errors win
 Rule: `MATCH` with a lookup_array of more than one row and column returns `#N/A` even when the value
 is in it (`=MATCH(Data!C$5,Data!A5:C9,1)` with C5 = 2 inside A5:C9 → `#N/A`; no top-level 2-D MATCH
@@ -640,8 +686,40 @@ HLOOKUP(..,FALSE) and XMATCH(..,2) give the same first position for every key.
 XMATCH's exact mode (0) differs: it compares by the collation (coercion.md "Collation equality in lookups and
 criteria"), where `İ` equals i+U+0307 and `ẞ`/`ß` equal `ss`, but not `I` or `i`.
 Evidence: probes/t3133-lookup-criteria-case-fold Calc!A1:E35, I1:J35 (excel-graph, 2026-10-29, T-3133).
-UNVERIFIED: characters outside the list above are assumed to follow the same fold.
-Status: VERIFIED
+Beyond that list (probes/t3298-case-mapping-sweep Calc!C1:D48, excel-graph, 2026-10-31, T-3298): over the 1514
+one-to-one case pairs of every character Rust's tables case-map (Data!D upper, Data!E lower, 32 pairs per cell, each
+lower looked up among its block's uppers in C and the reverse in D), 982 pairs equal each other both ways, 374 equal
+nothing and 158 hit another position. By block:
+- fold as Rust's simple lowercase: Basic Latin, Latin-1, Latin Extended-A and -B, Cyrillic, Armenian, Latin Extended
+  Additional, the basic Greek letters, Greek Extended (most), Glagolitic, Coptic, Cyrillic Extended-B (most), the
+  Roman numerals U+2160-U+217F, the circled letters, fullwidth Latin and Georgian Asomtavruli with Nuskhuri
+  (U+10A0-U+10C5 with U+2D00-U+2D25). This fold is wider than UPPER and LOWER's table (text.md "UPPER and LOWER use an
+  old per-character case table"): MATCH folds Glagolitic, Coptic and Greek Extended, which UPPER and LOWER leave alone.
+- stay apart (each matches only itself): the supplementary-plane scripts (Deseret, Osage, Vithkuqi, Old Hungarian,
+  Garay, Warang Citi, Medefaidrin, U+16EA0-U+16ED3, Adlam; Calc!C38:D38 from position 24 and C39:D48 are all 0),
+  and as T-3133 found ı/I and ſ/S. Cherokee U+13AB-U+13EA and U+AB7B-U+ABBA do not equal each other (rows 18-19, C and D
+  0); the sweep never looks a character up against itself, so whether U+AB7B-U+ABBA are weightless (below) is open; the Greek symbol variants ϐ ϑ ϕ ϖ ϰ ϱ,
+  µ, U+0345, the Cyrillic Ext-C variants U+1C80-U+1C87 and ẛ do not equal their capital (C is 0; in D the capital finds
+  its ordinary small letter's row), while ϵ and U+1FBE equal Ε and Ι, and the titlecase digraphs ǅ ǈ ǋ ǲ equal their
+  capital and small forms (Calc!C5:D6).
+- equal one another: characters that look missing from Excel's comparison table (BMP letters Unicode added after about
+  5.0, e.g. U+0524-U+052F, U+10C7, U+10CD, U+10FD-U+10FF, U+13F5-U+13FD, U+1C88-U+1C8A, Georgian Mtavruli
+  U+1C90-U+1CBF, U+2D27, U+2D2D, much of Latin Extended-D from U+A792, U+AB53, U+AB70-U+AB7A, U+ABBB-U+ABBF) match the
+  first such character of the other column, whatever it is: Calc!C17 position 22 (U+AB70 finds U+10C7), C15 position 4
+  (U+0529 finds U+0524), C20 positions 1-5 (U+ABBB-U+ABBF find U+13F5), C37 and D37 (positions 1 and 5).
+  UNVERIFIED: that they are characters with no sort weight, which characters are weightless, and whether they also
+  equal empty text (T-3584).
+- observed, not yet explained (T-3584): in Greek Extended MATCH equals each small dasia+oxia letter with the capital
+  psili+varia letter: U+1F05 ἅ finds U+1F0A Ἂ (Calc!C25 position 29 reads 26), U+1F15 finds U+1F1A, U+1F25 U+1F2A,
+  U+1F35 U+1F3A, U+1F45 U+1F4A, U+1F65 U+1F6A, U+1F85 U+1F8A, U+1F95 U+1F9A, U+1FA5 U+1FAA (C26 positions 5, 11, 19,
+  27; C27 positions 5, 13, 21, 29). These are Unicode 1.1 letters, so the late-addition reading above does not
+  obviously cover them. Also the small U+A73B finds U+A738 (C35 position 12), U+A767 finds U+A764 (C36 position 2),
+  U+A699 and U+A69B find U+A660 (C34 positions 31-32), U+03F3 ϳ finds U+0376 Ͷ (C8 position 11) and U+1C88 finds
+  U+2CF2 (C33 position 32).
+The engine folds every pair through Rust's `to_lowercase`, so the cells of C and D listed in eval/baseline/probes.txt
+fail (T-3445).
+Status: VERIFIED (excel-graph) for the block table; the weightless-equality reading and the "observed, not yet
+explained" hits are UNVERIFIED (T-3584). Implemented for T-3133's list only; the T-3298 blocks are not (T-3445).
 Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` (`ExactKey`, the indexed exact
 search) and `WildcardPattern` (the linear one); `decompose` (collation.rs) for XMATCH's `İ`
 

@@ -130,6 +130,13 @@ pub(crate) fn rejected_clock_text_format(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Option<String> {
+    // Typed `-$3 1/2%` stays text but takes `0.00%` like the numeric mixed fractions (A15).
+    if crate::mixed_fraction::is_negative_currency_percent_fraction(
+        original.trim_matches(' '),
+        currencies,
+    ) {
+        return Some(MIXED_FRACTION_PERCENT_FORMAT.to_string());
+    }
     let (rest, word) = without_single_letter_dot(original).rsplit_once(' ')?;
     if !["am", "pm", "a", "p"]
         .iter()
@@ -253,7 +260,9 @@ pub(crate) fn parse_formatted_number(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Result<(f64, Option<String>), String> {
-    let value = original.trim();
+    // Only the space is trimmed: CHAR(160) padding is not number text (VALUE("$1"&CHAR(160)) is
+    // #VALUE!, probes/t3334-criteria-operand-forms H47, H51, H55, H59).
+    let value = original.trim_matches(' ');
 
     let symbols = &locale.numbers.symbols;
     let decimal_separator = symbols.decimal.chars().next().unwrap_or('.');
@@ -321,7 +330,7 @@ fn parse_percent_or_currency(
     // separators (`1,000%` is `0%`). Probes: typed-currency-percent-input, typed-paren-number-input;
     // docs/excel-semantics/coercion.md "Typed currency and percent formats".
     if let Some(p) = value.strip_suffix('%') {
-        let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+        let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
         if options.is_scientific {
             return Ok(Some((
                 percent_value(f),
@@ -343,7 +352,8 @@ fn parse_percent_or_currency(
             .map(|p| (p, -1.0))
             .or_else(|| value.strip_prefix(currency).map(|p| (p, 1.0)));
         if let Some((p, sign)) = prefixed {
-            let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+            let (f, options) =
+                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
             // Excel: `-$1e3` is -1000 like `$-1e3` (typed-currency-percent-input A29).
             let f = sign * f;
             if options.is_scientific {
@@ -354,7 +364,13 @@ fn parse_percent_or_currency(
                 Some(prefix_currency_format(currency, options.decimal_digits > 0)),
             )));
         } else if let Some(p) = value.strip_suffix(currency) {
-            let (f, options) = parse_number(p.trim(), decimal_separator, group_separator)?;
+            let (f, options) =
+                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+            // A trailing `$` after E-notation is not a number: VALUE("1e2$") is #VALUE!
+            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign is unprobed.
+            if options.is_scientific && *currency == "$" {
+                return Err("Cannot parse number".to_string());
+            }
             if options.is_scientific {
                 return Ok(Some((f, Some(SCIENTIFIC_FORMAT.to_string()))));
             }

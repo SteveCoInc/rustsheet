@@ -3,7 +3,7 @@ id: T-2859
 title: "Student-t quantile accurate to the last digits for df 2 to 99998: refine statrs' inverse to the crossing of T.DIST (accuracy, 220 cells; the centre is T-2724's)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -122,6 +122,14 @@ df is a sub-expression (classify them after the change; any still visibly off go
 These cells are also listed in T-0967, which keeps the bit-level target and waits on T-0969; this task is its
 accuracy stage and needs no new CDF.
 
+T-3349's fresh sweep (gap triage 2026-10-31; scored against mpmath 1.4.1 at 60+ digits, T.INV.2T at the double p by
+bisection on the regularized incomplete beta): 63 visibly-off cells of probes-numeric/t3349-t-inv-2t-sweep, df 2 to
+18731, have Excel within 5E-15 relative of the true quantile and ours 2E-15 to 5E-13 off (A110 `T.INV.2T(0.0910820637844564,100)`:
+Excel 5.2E-16 off, ours 4.8E-13; A100 at df 85: Excel 1.3E-15, ours 5.0E-13). They are this task's general-region loss.
+A241, A251 and A299 have p below 2E-5 (1.1E-16 to 4E-79), outside the Goal's range: extend the range to them or name
+the task that takes them in the Outcome.
+- probes-numeric/t3349-t-inv-2t-sweep.case.json (63): Calc!A4, A6, A7, A9, A10, A12, A15, A16, A18, A20, A21, A23, A25, A27, A28, A29, A31, A32, A36, A38, A39, A41, A45, A46, A49, A60, A63, A69, A70, A72, A73, A74, A79, A81, A82, A83, A84, A85, A86, A89, A90, A91, A92, A94, A95, A96, A97, A98, A100, A101, A105, A107, A108, A109, A110, A112, A113, A117, A119, A235, A241, A251, A299
+
 ## Acceptance criteria
 - [ ] At least 75 of the 91 gated visibly-off cells above leave eval/baseline (`make eval-baseline`), and every
       owned cell still visibly off is listed in the Outcome with its high-precision reference showing that Excel is
@@ -146,3 +154,33 @@ accuracy stage and needs no new CDF.
 Decision 0083/0114, stage `accuracy`: done when every owned cell is within half a unit of the 15th significant digit
 of Excel's value, or is shown (high-precision reference in the Outcome) to be one where Excel is the inaccurate one,
 which moves to T-0967. Bit-level residue goes to a `defer: phase-1b` follow-up.
+
+## Outcome
+Superseded: no code change. T-2511 (Excel's rounded-y crossing from df 2, `t_rounded_y_quantile`), T-3061 (the
+SQRT(df*(1/y-1)) back-transform) and T-2724 (`t_centre_quantile`) replaced statrs' tolerance-bound search that this
+task was cut against (statistics.md "Student-t quantile is SQRT(df*(1/y-1)) of the rounded beta quantile, away from
+the centre"). The AC's unit tests, bench and new statistics.md entry belonged to a kernel change that is no longer
+needed. Its two examples pass as eval cells: ironcalc CONFIDENCE.xlsx E2 `CONFIDENCE.T(0.05,1,50)` and
+m9-t-inv-2t A110 `T.INV.2T(0.25,1000)`. Re-triaged 2026-11-02 on main 56917e82 (`rustsheet-eval show`; references by
+mpmath 1.3.0 at 50 digits, P(|T| > t) = I_{df/(df+t^2)}(df/2, 1/2) solved for t):
+- **Gated (91 owned):** 55 have left the baselines; 36 remain, 29 of them 1 to 15 ulp from Excel and within 15
+  digits. 7 are visibly off, all at two-tailed p = 0.5, where Excel is 1.5E-15 to 2.9E-15 from the true quantile and
+  the engine is nearer on 6. They are T-0967's (Excel's own bits):
+  - gen-m9 0620505280d2ea6e A28 and 91e167cd8d7eb652 A393 `TINV(0.5,9)`: Excel 2.0E-15, ours 2.1E-17.
+  - 46ac3ef5e61583ca A63 and cb61169f4c033d4b A231 `T.INV.2T(0.5,5)`: Excel 1.5E-15, ours 5.2E-16.
+  - a4090567758520df A182 `T.INV.2T(0.5,8)`: Excel 1.6E-15, ours 1.5E-16.
+  - b6593d7dd13f2dac A135 `CONFIDENCE.T(0.5,3,10)`: Excel 2.1E-15, ours 8.6E-17.
+  - 4bad303d32cc3f46 A188 `CONFIDENCE.T(0.5,1E-300,29)`: Excel 2.9E-15, ours 3.9E-15. Both are off; ours has the
+    product's rounding, T-0967.
+- **probes-numeric (129 owned, plus 63 of t3349-t-inv-2t-sweep, so 192):** 139 pass and 174 are within 15 digits.
+  The 18 visibly off are:
+  - p = 0.5 (Excel off, as above): m9-t-inv A58, A60, A84, A86; m9-t-inv-2t A59, A85 (df 30: Excel 4.5E-15, ours
+    2.7E-15). To T-0967.
+  - Large df, where Excel's rounded-y form is itself far from the truth: m9-confidence-t A35, A40, A45
+    `CONFIDENCE.T(0.1,..,1000)` (Excel 2.7E-14, ours 1.4E-14) and m9-t-inv-2t A112 `T.INV.2T(0.75,1000)` (Excel
+    6.7E-13, ours 4.2E-13). Matching them is bit-level replication of Excel's form (T-0967, T-3061's model), not
+    accuracy.
+  - The centre cut: t3349 A98 `T.INV.2T(0.921314149721905,4)` (c 0.0787; Excel 2.8E-16, ours 1.4E-14), T-3477's.
+  - Last-digit cells that sit exactly on the 15-digit boundary, both sides within 4E-15 of the truth: m9-confidence-t
+    A15; m9-t-inv A17; t3349 A38, A63, A107, A109, A235. To T-0967.
+  - t3349 A241, A251 and A299 (p below 2E-5) are within 15 digits.
