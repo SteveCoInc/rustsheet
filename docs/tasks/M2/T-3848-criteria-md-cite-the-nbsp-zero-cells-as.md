@@ -3,7 +3,7 @@ id: T-3848
 title: "criteria.md: cite the NBSP zero cells as not read by VALUE, not as #VALUE!"
 milestone: M2
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
