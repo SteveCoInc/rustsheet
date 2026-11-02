@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.annuity import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, zero_pole
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -33,12 +33,6 @@ from rustsheet_tools.accuracy.sampler import log_uniform
 HUGE_SOURCE = "numbers.md#trig-of-a-huge-angle"
 POLE_SOURCE = "gen-m5 COT(0), CSC(0) #DIV/0! (excel-graph)"
 CUT = 2.0**27  # |x| at and above it is #NUM!
-
-
-def _zero_pole(args: Sequence[MathArg]) -> str | None:
-    """COT and CSC at 0: Excel's `#DIV/0!`."""
-    (x,) = scalars(args)
-    return "a pole at 0" if x == 0 else None
 
 
 def _edge(sign: float, rng: random.Random) -> float:
@@ -83,7 +77,7 @@ def _definition(
             function=function,
             params=(Param("number", "real", Interval(-CUT, CUT), source=HUGE_SOURCE),),
             value=value,
-            domain=_zero_pole if pole_at_zero else None,
+            domain=zero_pole if pole_at_zero else None,
             draw=_draw,
             sources=(HUGE_SOURCE, POLE_SOURCE) if pole_at_zero else (HUGE_SOURCE,),
         )

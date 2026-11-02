@@ -350,7 +350,7 @@ def test_cli_lists_and_generates(tmp_path: Path, capsys: pytest.CaptureFixture[s
 
 def test_defs_family_modules_are_discovered_not_listed() -> None:
     """A new family is one new module under defs/: no shared module list names the families."""
-    on_disk = sorted(m.name for m in pkgutil.iter_modules(defs.__path__))
+    on_disk = sorted(m.name for m in pkgutil.iter_modules(defs.__path__) if not m.name.startswith("_"))
     assert defs.__all__ == on_disk
     assert all(hasattr(defs, name) for name in on_disk)
     source = Path(defs.__file__ or "").read_text()
