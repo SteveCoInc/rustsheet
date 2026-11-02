@@ -3,7 +3,7 @@ id: T-3809
 title: "gen-m5 arg-pairs batch for TEXT: oracle-filled cells for the 52 unseen value x format_text class pairs, with format-code triage of each failing cell"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -43,17 +43,28 @@ gen-m5 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` that
   docs/excel-semantics/text.md or number-formats.md, citing the cells.
 
 ## Acceptance criteria
-- [ ] New gen-m5 cases from `--policy arg-pairs --milestone M5 --functions TEXT` with their excel-graph oracle
+- [x] New gen-m5 cases from `--policy arg-pairs --milestone M5 --functions TEXT` with their excel-graph oracle
       sidecars are committed.
-- [ ] After `make eval`, TEXT's `pairwise` share in report.json `argument_coverage` is at least 0.9, and format_text
+- [x] After `make eval`, TEXT's `pairwise` share in report.json `argument_coverage` is at least 0.9, and format_text
       has an error cell, or the PR lists the pairs left unseen and why.
-- [ ] Failing cells are known failures in eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions), each listed
+- [x] Failing cells are known failures in eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions), each listed
       by an open task (an existing M10 or T-3649 owner or a new one filed here), and `make exit-owners MILESTONE=M5`
       and `make unowned-off ALL=1` report no unowned cell from the batch.
-- [ ] The PR description gives the triage: for each failing cell, coercion rule or format-code rule, and its owner.
-- [ ] `make check` green; reviewers approve.
+- [x] The PR description gives the triage: for each failing cell, coercion rule or format-code rule, and its owner.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the format-code rendering the batch finds (the M10 tasks and T-3649), beyond a one-line coercion fix in
   `fn_text` that the PR also tests.
 - Other text functions (T-3510, T-3511, T-3512) and other milestones.
+
+## Outcome
+- Added gen-m5/0428ca72d3724bea (`rustsheet-gen --policy arg-pairs --milestone M5 --functions TEXT`, seed 0): 102 calls
+  over the 51 (value, format_text) class pairs still unseen on main (one of the 52 listed at triage had been covered
+  since), with its excel-graph sidecar (2026-11-02).
+- Eval delta: gen-m5 +102 scored cells, all 102 pass (`make eval-show`: 102/102, 0 deviations); 0 regressions, 0 new
+  known failures, so no triage owner and no new task was needed. TEXT's report.json `argument_coverage`: single
+  0.95 → 1.0, pairwise 0.58 → 1.0, no unseen pair left; format_text now has error cells.
+- Knowledge: docs/excel-semantics/text.md "TEXT's format_text of every argument class (T-3809)" records how a
+  non-text code is read (number as its General text, blank as empty, boolean as the rejected code `TRUE`/`FALSE`) and
+  the error order between the two arguments, citing the batch's cells.

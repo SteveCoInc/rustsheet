@@ -1809,6 +1809,8 @@ C	probes/t3276-collation-other-scripts.case.json	643
 C	probes/t3283-typed-double-star.case.json	36
 C	probes/t3283-typed-missing-paren.case.json	12
 C	probes/t3293-textjoin-own-row-limit.case.json	26
+C	probes/t3297-legacy-if-index-arm-more-shapes.case.json	151
+C	probes/t3297-legacy-if-index-arm-name-table.case.json	65
 C	probes/t3298-case-mapping-sweep.case.json	193
 C	probes/t3302-text-funcs-arrays.case.json	21
 C	probes/t3304-collation-multi-letter-accents.case.json	1896
@@ -1871,6 +1873,7 @@ C	probes/t3807-blank-criterion-padded-zero.case.json	64
 C	probes/t3807-percent-operand-cut-order.case.json	84
 C	probes/t3808-m5-aggregate-overflow.case.json	576
 C	probes/t3808-median-geomean-direct-overflow.case.json	18
+C	probes/t3814-lambda-helper-arity.case.json	248
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -4388,6 +4391,11 @@ F	probes/t3276-collation-other-scripts.case.json	Calc!G28
 F	probes/t3276-collation-other-scripts.case.json	Calc!G31
 F	probes/t3276-collation-other-scripts.case.json	Calc!G32
 F	probes/t3276-collation-other-scripts.case.json	Calc!G6
+F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I35
+F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I36
+F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!K35
+F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!K36
+F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!M35
 F	probes/t3298-case-mapping-sweep.case.json	Calc!C10
 F	probes/t3298-case-mapping-sweep.case.json	Calc!C15
 F	probes/t3298-case-mapping-sweep.case.json	Calc!C17

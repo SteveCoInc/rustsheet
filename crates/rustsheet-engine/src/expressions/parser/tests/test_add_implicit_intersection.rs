@@ -244,6 +244,70 @@ fn defined_names_and_dynamic_functions() {
     }
 }
 
+// T-3297: a single-cell INDEX arm over a 4-argument form, a union, a sheet-qualified range, an
+// out-of-range literal, a defined name or a table area shows no `@`; a negated or boolean index
+// keeps it; an array-constant CHOOSE index over cell, computed or text arms moves it to the call,
+// over a range arm keeps both (probes/t3297-legacy-if-index-arm-more-shapes and -name-table).
+#[test]
+fn single_cell_index_arms_of_every_area_kind() {
+    let worksheets = vec!["Sheet1".to_string()];
+    let names = vec![("Rng".to_string(), None, "Sheet1!$B$1:$B$6".to_string())];
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 8,
+    };
+    let cases = [
+        ("IF(TRUE,INDEX(B1:B6,3,1,1))", "IF(TRUE,INDEX(B1:B6,3,1,1))"),
+        (
+            "ABS(IF(TRUE,INDEX((B1:B6,C1:C6),3,1,2)))",
+            "ABS(IF(TRUE,INDEX((B1:B6,C1:C6),3,1,2)))",
+        ),
+        (
+            "SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))",
+            "SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))",
+        ),
+        ("IF(TRUE,INDEX(B1:B6,99))", "IF(TRUE,INDEX(B1:B6,99))"),
+        ("IF(TRUE,INDEX(B1:C6,3,99))", "IF(TRUE,INDEX(B1:C6,3,99))"),
+        (
+            "IF(TRUE,INDEX(Sheet1!B1:B6,3))",
+            "IF(TRUE,INDEX(Sheet1!B1:B6,3))",
+        ),
+        ("IF(TRUE,INDEX(Rng,3))", "IF(TRUE,INDEX(Rng,3))"),
+        ("ABS(CHOOSE(1,INDEX(Rng,3)))", "ABS(CHOOSE(1,INDEX(Rng,3)))"),
+        ("IF(TRUE,INDEX(Rng,3),5)", "IF(TRUE,INDEX(Rng,3),5)"),
+        ("IF(TRUE,INDEX(B1:B6,-3))", "@IF(TRUE,INDEX(B1:B6,-3))"),
+        ("IF(TRUE,INDEX(B1:B6,TRUE))", "@IF(TRUE,INDEX(B1:B6,TRUE))"),
+        (
+            "SUM(IF(TRUE,INDEX(B1:B6,TRUE)))",
+            "SUM(IF(TRUE,INDEX(B1:B6,TRUE)))",
+        ),
+        (
+            "CHOOSE(B1:B6,INDEX(B1:B6,3))",
+            "CHOOSE(@B1:B6,INDEX(B1:B6,3))",
+        ),
+        ("CHOOSE({1,2},A1,B1)", "@CHOOSE({1,2},A1,B1)"),
+        ("CHOOSE({1;2},A1,B1)", "@CHOOSE({1;2},A1,B1)"),
+        ("CHOOSE({1,2},A1+1,5)", "@CHOOSE({1,2},A1+1,5)"),
+        ("CHOOSE({1,2},\"a\",TRUE)", "@CHOOSE({1,2},\"a\",TRUE)"),
+        ("CHOOSE({1,2},B1:B2,5)", "@CHOOSE(@{1,2},B1:B2,5)"),
+        (
+            "CHOOSE({1,2},INDEX(B1:B6,3),B1:B2)",
+            "@CHOOSE(@{1,2},INDEX(B1:B6,3),B1:B2)",
+        ),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
 // T-2723: a unary plus is the identity, so a legacy formula gains the `@` it gains without it,
 // a literal under a plus included (`IF(+TRUE,…)`, `CHOOSE(+1,…)`).
 #[test]

@@ -242,6 +242,7 @@ probes/t3112-snap-groupby-eta-totals.case.json	2
 probes/t3112-snap-groupby-eta.case.json	21
 probes/t3211-collation-sort-cycles.case.json	43
 probes/t3276-collation-other-scripts.case.json	101
+probes/t3297-legacy-if-index-arm-name-table.case.json	5
 probes/t3298-case-mapping-sweep.case.json	55
 probes/t3348-rate-fv-nonzero.case.json	4
 probes/t3349-t-inv-2t-near-one.case.json	1

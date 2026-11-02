@@ -44,6 +44,7 @@ visibly-off pair below is within 15 digits of Excel (or the time-box outcome lis
 
 Cells:
 - probes-numeric/m9-legacy-chiinv.case.json (2): Calc!A1, A2
+- probes-numeric/t3336-chisq-df1-right-tail.case.json (291, T-3336)
 
 ## Acceptance criteria
 - [ ] Visible parity: the 2 cells above are within 15 digits of Excel (`make eval-show

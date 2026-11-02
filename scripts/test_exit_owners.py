@@ -234,6 +234,22 @@ class ExitOwners(TaskDir):
         self.assertNotIn(f"{GEN}!Calc!A1", listed)
         self.assertIn(f"{TRIG}!S!C51", listed)
 
+    def test_desktop_owned_cells_leave_the_rate(self) -> None:
+        # T-3805: a below-rate function's cell on the desktop-owned list (decision 0143) is not a
+        # `rate:` cell; one off the list still is.
+        r = report()
+        r["milestone_exit"] = [
+            {"milestone": "M9", "gen_suite": "", "gen_visibly_off_cells": [], "calc_met": None,
+             "below_rate_functions": ["IRR"], "probe_row": "none"}
+        ]
+        r["attributed_off"] = [
+            {"case": GEN, "cell": "Calc!A1", "function": "IRR", "formula": "IRR(A1:A3)"},
+            {"case": GEN, "cell": "Calc!A2", "function": "IRR", "formula": "IRR(A4:A6)"},
+        ]
+        owned = frozenset({f"{GEN}!Calc!A1"})
+        listed = [f"{c.case}!{c.key}" for c in exit_owners.exit_cells(r, "M9", owned) if c.criterion == "rate:IRR"]
+        self.assertEqual(listed, [f"{GEN}!Calc!A2"])
+
     def test_r1c_left_out_cells_leave_the_rows_and_the_rate(self) -> None:
         # Decision 0188 R1(c), R3, R7 (T-3427, T-3428): the calc row drops every left-out class
         # and the probe row lists `r1c_off_cells`. The rate drops an R3 pass and, since decision
