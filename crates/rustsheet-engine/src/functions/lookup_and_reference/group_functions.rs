@@ -265,7 +265,7 @@ impl Model {
             return self.function_grid(arg, cell);
         }
         let value = self
-            .evaluate_options(std::slice::from_ref(arg), cell)?
+            .evaluate_options(std::slice::from_ref(arg), &[], cell)?
             .pop()
             .flatten()
             .unwrap_or(CalcResult::EmptyArg);

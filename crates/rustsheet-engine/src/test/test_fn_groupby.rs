@@ -1128,3 +1128,93 @@ fn multi_cell_reference_from_a_function_lifts_like_a_written_range() {
         ["East", "East"]
     );
 }
+
+/// T-3838: an option is checked in argument order against a later option's error value. A
+/// `field_headers` or `total_depth` that is text but no number, written or in a one-cell reference
+/// (`""` too), is `#VALUE!` ahead of a later `NA()`; a blank cell there is 0 and the later error
+/// wins. A `sort_order` or `filter_array` that is a reference to a blank cell is `#VALUE!` ahead of
+/// it, where text there leaves the later error (probes/t3838-groupby-option-order G!B1-B176).
+#[test]
+fn options_are_refused_in_argument_order() {
+    let mut model = region_sales();
+    model._set("K1", "x");
+    model._set("K2", "=\"\"");
+    let cases = [
+        ("D1", "K1,,,,NA()", "#VALUE!"),
+        ("D2", "K2,,,,NA()", "#VALUE!"),
+        ("D3", "\"x\",,,,NA()", "#VALUE!"),
+        ("D4", "K3,,,,NA()", "#N/A"),
+        ("D5", ",K1,,,NA()", "#VALUE!"),
+        ("D6", ",K2,,,NA()", "#VALUE!"),
+        ("D7", ",K3,,,NA()", "#N/A"),
+        ("D8", ",,K3,,NA()", "#VALUE!"),
+        ("D9", ",,K1,,NA()", "#N/A"),
+        ("D10", ",,,K3,NA()", "#VALUE!"),
+        ("D11", ",,,K1,NA()", "#N/A"),
+        ("D12", ",,K3,NA()", "#VALUE!"),
+        ("D13", "NA(),,K3", "#N/A"),
+    ];
+    for (cell, options, _) in cases {
+        model._set(
+            cell,
+            &format!("=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{options})"),
+        );
+    }
+    model.evaluate();
+    for (cell, options, expected) in cases {
+        assert_eq!(model._get_text(cell), expected, "{options}");
+    }
+}
+
+/// T-3838: a table relationship (`field_relationship` 1) sorts by the keys `sort_order` names
+/// first, in written order, then the others ascending; a hierarchy (0) always sorts in column
+/// order; descending, the blank key sorts first in a table and last in a hierarchy
+/// (probes/t3838-groupby-option-order G!B184, B205, B217).
+#[test]
+fn a_table_sorts_by_the_named_keys_first() {
+    let mut model = new_empty_model();
+    let rows = [
+        ("East", "Apple", "10"),
+        ("West", "Pear", "20"),
+        ("East", "Pear", "30"),
+        ("West", "Apple", "40"),
+        ("", "Apple", "9"),
+        ("South", "Banana", "-3"),
+    ];
+    for (i, (region, product, sales)) in rows.iter().enumerate() {
+        if !region.is_empty() {
+            model._set(&format!("A{}", i + 1), region);
+        }
+        model._set(&format!("B{}", i + 1), product);
+        model._set(&format!("C{}", i + 1), sales);
+    }
+    model._set("E1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,1)");
+    model._set("H1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,0)");
+    model._set("K1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,1)");
+    model._set("N1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,0)");
+    model.evaluate();
+    let keys = |model: &Model, a: &str, b: &str| {
+        column(model, a, 1, 6)
+            .into_iter()
+            .zip(column(model, b, 1, 6))
+            .map(|(x, y)| format!("{x}|{y}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        keys(&model, "E", "F"),
+        "East|Pear West|Pear South|Banana East|Apple West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "H", "I"),
+        "East|Pear East|Apple South|Banana West|Pear West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "K", "L"),
+        "0|Apple West|Apple West|Pear South|Banana East|Apple East|Pear"
+    );
+    assert_eq!(
+        keys(&model, "N", "O"),
+        "West|Apple West|Pear South|Banana East|Apple East|Pear 0|Apple"
+    );
+}

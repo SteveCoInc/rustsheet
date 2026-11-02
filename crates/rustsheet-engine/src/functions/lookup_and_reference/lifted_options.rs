@@ -81,24 +81,43 @@ impl Model {
                 (_, reference) => reference,
             };
             // A one-element array lifts too: `GROUPBY(k,v,SUM,{3})` is one cell (A113).
-            let elements = match (&frozen, reference) {
+            let elements = match (&frozen, &reference) {
                 (Node::ArrayKind(elements), _) => elements.clone(),
                 (_, Some(range @ CalcResult::Range { left, right })) if left != right => {
-                    self.result_to_array(range, cell)?
+                    self.result_to_array(range.clone(), cell)?
                 }
-                (Node::RangeKind { .. }, _) => continue,
                 _ => {
                     // Text that is no number is `#VALUE!` in the option's place, ahead of a later
-                    // argument's error value, scalar or lifted (A201, A97).
-                    let frozen = match frozen {
-                        Node::StringKind(text)
-                            if self
-                                .cast_to_number(CalcResult::String(text.as_str().into()), cell)
-                                .is_err() =>
-                        {
-                            Node::ErrorKind(Error::VALUE)
+                    // argument's error value, scalar or lifted (A201, A97), written or in a
+                    // one-cell reference, `""` included (probes/t3838-groupby-option-order G!B6,
+                    // B8, B35, B38).
+                    let range = match (&frozen, reference) {
+                        (_, Some(range)) => Some(range),
+                        // A written reference stays as written (`Model::freeze`); reading it
+                        // evaluates nothing else.
+                        (Node::ReferenceKind { .. }, None) => {
+                            Some(self.evaluate_node_in_context(&frozen, cell))
+                        }
+                        _ => None,
+                    };
+                    let value = match range {
+                        Some(range @ CalcResult::Range { .. }) => {
+                            Some(self.dereference(range, cell))
                         }
                         other => other,
+                    };
+                    let text = match (&frozen, value) {
+                        (Node::StringKind(text), _) => Some(text.as_str().into()),
+                        (_, Some(CalcResult::String(text))) => Some(text),
+                        _ => None,
+                    };
+                    let not_a_number = text.is_some_and(|text| {
+                        self.cast_to_number(CalcResult::String(text), cell).is_err()
+                    });
+                    let frozen = if not_a_number {
+                        Node::ErrorKind(Error::VALUE)
+                    } else {
+                        frozen
                     };
                     if let Some(slot) = args.get_mut(index) {
                         *slot = frozen;

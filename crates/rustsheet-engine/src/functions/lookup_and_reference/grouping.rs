@@ -21,8 +21,12 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SortOrder {
     /// By the key fields, `ascending[i]` for field `i`; fields not named ascend
-    /// ([`Grouping::sort_by_keys`]).
-    Keys(Vec<bool>),
+    /// ([`Grouping::sort_by_keys`]). `named` lists the fields `sort_order` names, in written
+    /// order: a table relationship sorts by them first ([`Grouping::sort_table_by_keys`]).
+    Keys {
+        ascending: Vec<bool>,
+        named: Vec<usize>,
+    },
     /// By the aggregate of value column `column` (0-based among the value columns), with
     /// [`Grouping::sort_by_aggregate`].
     Value { column: usize, ascending: bool },
@@ -181,6 +185,44 @@ impl Grouping {
                 .enumerate()
                 .map(|(field, (x, y))| {
                     key_cmp(x, y, ascending.get(field).copied().unwrap_or(true), cell)
+                })
+                .find(|ordering| ordering.is_ne())
+                .unwrap_or(Ordering::Equal)
+        });
+    }
+
+    /// Sorts the groups of a GROUPBY table relationship (`field_relationship` 1) by their keys:
+    /// the fields `sort_order` names first, in written order, then the others ascending in column
+    /// order, so `sort_order` 2 sorts by the second key and then the first, and `{-1,2}` and
+    /// `{2,-1}` differ, where a hierarchy always sorts in column order (probes/t3838-groupby-
+    /// option-order G!B179-B216 against G!B217-B229). A descending field reverses its ascending
+    /// order whole, so the blank key sorts first there (G!B205, B207), where a hierarchy keeps it
+    /// last (G!B217). Mixed types descending in a table: unprobed, read the same way.
+    pub(crate) fn sort_table_by_keys(
+        &mut self,
+        ascending: &[bool],
+        named: &[usize],
+        cell: CellReferenceIndex,
+    ) {
+        let fields = self.groups.first().map_or(0, |group| group.keys.len());
+        let priority: Vec<usize> = named
+            .iter()
+            .copied()
+            .chain((0..fields).filter(|field| !named.contains(field)))
+            .collect();
+        self.groups.sort_by(|a, b| {
+            priority
+                .iter()
+                .map(|&field| {
+                    let (Some(x), Some(y)) = (a.keys.get(field), b.keys.get(field)) else {
+                        return Ordering::Equal;
+                    };
+                    let ordering = key_cmp(x, y, true, cell);
+                    if ascending.get(field).copied().unwrap_or(true) {
+                        ordering
+                    } else {
+                        ordering.reverse()
+                    }
                 })
                 .find(|ordering| ordering.is_ne())
                 .unwrap_or(Ordering::Equal)
@@ -521,7 +563,7 @@ impl Grouping {
     /// calls no function.
     pub(crate) fn sort_by_key_order(&mut self, order: &SortOrder, cell: CellReferenceIndex) {
         match order {
-            SortOrder::Keys(ascending) => self.sort_by_keys(ascending, cell),
+            SortOrder::Keys { ascending, .. } => self.sort_by_keys(ascending, cell),
             SortOrder::Value { .. } => self.sort_by_keys(&[], cell),
         }
     }

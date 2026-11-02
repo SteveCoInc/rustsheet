@@ -484,13 +484,117 @@
     "t": "s",
     "v": "9x3:East|Pear|30|North|Pear|7|West|Pear|20|South|Banana|-3|West|Banana|12.5|East|Apple|15|West|Apple|40|0|Apple|9|Total||130.5"
    },
+   "B204": {
+    "t": "s",
+    "v": "8x3:0|Apple|9|West|Apple|40|East|Apple|15|West|Banana|12.5|South|Banana|-3|West|Pear|20|North|Pear|7|East|Pear|30"
+   },
+   "B205": {
+    "t": "s",
+    "v": "8x3:0|Apple|9|West|Apple|40|West|Banana|12.5|West|Pear|20|South|Banana|-3|North|Pear|7|East|Apple|15|East|Pear|30"
+   },
+   "B206": {
+    "t": "s",
+    "v": "8x3:East|Pear|30|North|Pear|7|West|Pear|20|South|Banana|-3|West|Banana|12.5|East|Apple|15|West|Apple|40|0|Apple|9"
+   },
+   "B207": {
+    "t": "s",
+    "v": "8x3:0|Apple|9|West|Apple|40|West|Banana|12.5|West|Pear|20|South|Banana|-3|North|Pear|7|East|Apple|15|East|Pear|30"
+   },
+   "B208": {
+    "t": "s",
+    "v": "8x3:East|Apple|15|West|Apple|40|0|Apple|9|South|Banana|-3|West|Banana|12.5|East|Pear|30|North|Pear|7|West|Pear|20"
+   },
+   "B209": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|West|Apple|2023|0|West|Pear|2023|20|East|Pear|2024|30|North|Pear|2024|7|West|Apple|2024|40|0|Apple|2024|9|South|Banana|2025|-3|West|Banana|2025|12.5"
+   },
    "B21": {
     "t": "s",
     "v": "6x2:East|35|North|7|South|-3|West|72.5|0|9|Total|120.5"
    },
+   "B210": {
+    "t": "s",
+    "v": "9x4:East|Pear|2024|30|North|Pear|2024|7|West|Pear|2023|20|South|Banana|2025|-3|West|Banana|2025|12.5|East|Apple|2023|15|West|Apple|2023|0|West|Apple|2024|40|0|Apple|2024|9"
+   },
+   "B211": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|West|Apple|2023|0|West|Pear|2023|20|East|Pear|2024|30|North|Pear|2024|7|West|Apple|2024|40|0|Apple|2024|9|South|Banana|2025|-3|West|Banana|2025|12.5"
+   },
+   "B212": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|East|Pear|2024|30|North|Pear|2024|7|South|Banana|2025|-3|West|Apple|2023|0|West|Pear|2023|20|West|Apple|2024|40|West|Banana|2025|12.5|0|Apple|2024|9"
+   },
+   "B213": {
+    "t": "s",
+    "v": "9x4:West|Pear|2023|20|East|Apple|2023|15|West|Apple|2023|0|East|Pear|2024|30|North|Pear|2024|7|West|Apple|2024|40|0|Apple|2024|9|South|Banana|2025|-3|West|Banana|2025|12.5"
+   },
+   "B214": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|West|Apple|2023|0|West|Apple|2024|40|0|Apple|2024|9|South|Banana|2025|-3|West|Banana|2025|12.5|West|Pear|2023|20|East|Pear|2024|30|North|Pear|2024|7"
+   },
+   "B215": {
+    "t": "s",
+    "v": "9x4:South|Banana|2025|-3|West|Apple|2023|0|North|Pear|2024|7|0|Apple|2024|9|West|Banana|2025|12.5|East|Apple|2023|15|West|Pear|2023|20|East|Pear|2024|30|West|Apple|2024|40"
+   },
+   "B216": {
+    "t": "s",
+    "v": "9x4:West|Apple|2024|40|East|Pear|2024|30|West|Pear|2023|20|East|Apple|2023|15|West|Banana|2025|12.5|0|Apple|2024|9|North|Pear|2024|7|West|Apple|2023|0|South|Banana|2025|-3"
+   },
+   "B217": {
+    "t": "s",
+    "v": "8x3:West|Apple|40|West|Banana|12.5|West|Pear|20|South|Banana|-3|North|Pear|7|East|Apple|15|East|Pear|30|0|Apple|9"
+   },
+   "B218": {
+    "t": "s",
+    "v": "8x3:West|Apple|40|West|Banana|12.5|West|Pear|20|South|Banana|-3|North|Pear|7|East|Apple|15|East|Pear|30|0|Apple|9"
+   },
+   "B219": {
+    "t": "s",
+    "v": "8x3:East|Pear|30|East|Apple|15|North|Pear|7|South|Banana|-3|West|Pear|20|West|Banana|12.5|West|Apple|40|0|Apple|9"
+   },
    "B22": {
     "t": "s",
     "v": "E7"
+   },
+   "B220": {
+    "t": "s",
+    "v": "8x3:West|Apple|40|West|Banana|12.5|West|Pear|20|South|Banana|-3|North|Pear|7|East|Apple|15|East|Pear|30|0|Apple|9"
+   },
+   "B221": {
+    "t": "s",
+    "v": "8x3:East|Apple|15|East|Pear|30|North|Pear|7|South|Banana|-3|West|Apple|40|West|Banana|12.5|West|Pear|20|0|Apple|9"
+   },
+   "B222": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|East|Pear|2024|30|North|Pear|2024|7|South|Banana|2025|-3|West|Apple|2023|0|West|Apple|2024|40|West|Banana|2025|12.5|West|Pear|2023|20|0|Apple|2024|9"
+   },
+   "B223": {
+    "t": "s",
+    "v": "9x4:East|Pear|2024|30|East|Apple|2023|15|North|Pear|2024|7|South|Banana|2025|-3|West|Pear|2023|20|West|Banana|2025|12.5|West|Apple|2023|0|West|Apple|2024|40|0|Apple|2024|9"
+   },
+   "B224": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|East|Pear|2024|30|North|Pear|2024|7|South|Banana|2025|-3|West|Apple|2023|0|West|Apple|2024|40|West|Banana|2025|12.5|West|Pear|2023|20|0|Apple|2024|9"
+   },
+   "B225": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|East|Pear|2024|30|North|Pear|2024|7|South|Banana|2025|-3|West|Apple|2023|0|West|Apple|2024|40|West|Banana|2025|12.5|West|Pear|2023|20|0|Apple|2024|9"
+   },
+   "B226": {
+    "t": "s",
+    "v": "9x4:East|Pear|2024|30|East|Apple|2023|15|North|Pear|2024|7|South|Banana|2025|-3|West|Pear|2023|20|West|Banana|2025|12.5|West|Apple|2023|0|West|Apple|2024|40|0|Apple|2024|9"
+   },
+   "B227": {
+    "t": "s",
+    "v": "9x4:East|Apple|2023|15|East|Pear|2024|30|North|Pear|2024|7|South|Banana|2025|-3|West|Apple|2023|0|West|Apple|2024|40|West|Banana|2025|12.5|West|Pear|2023|20|0|Apple|2024|9"
+   },
+   "B228": {
+    "t": "s",
+    "v": "9x4:South|Banana|2025|-3|North|Pear|2024|7|0|Apple|2024|9|East|Apple|2023|15|East|Pear|2024|30|West|Banana|2025|12.5|West|Pear|2023|20|West|Apple|2023|0|West|Apple|2024|40"
+   },
+   "B229": {
+    "t": "s",
+    "v": "9x4:West|Apple|2024|40|West|Apple|2023|0|West|Pear|2023|20|West|Banana|2025|12.5|East|Pear|2024|30|East|Apple|2023|15|0|Apple|2024|9|North|Pear|2024|7|South|Banana|2025|-3"
    },
    "B23": {
     "t": "s",
@@ -832,10 +936,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "f16824a843667702e5ba352aad4cf66ec6756449154e192f89ac6190cd658965",
+  "input_sha256": "2a04f5c007c2de15a9fc2acc1e03bf357f258be7fc8d767e645bb1ab329bfc1e",
   "kind": "excel-graph",
-  "produced_at": "2026-11-02T22:06:23+00:00",
+  "produced_at": "2026-11-02T22:13:03+00:00",
   "version": null,
-  "workbook_name": "0c883473563067782b593a9bde2cd3af401af0ad7e73847727899d8a39f9cfc4.xlsx"
+  "workbook_name": "35740b16d70d84afa01d7b97e75eb11e2fc76cafb23c9cac293df944cbe9ae2e.xlsx"
  }
 }

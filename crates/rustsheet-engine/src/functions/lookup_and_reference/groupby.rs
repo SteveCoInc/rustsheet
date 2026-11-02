@@ -108,13 +108,18 @@ impl Model {
     /// `GROUPBY(k,v,SUM,,3,NA())` is `#N/A`, `GROUPBY(k,v,SUM,1/0,,NA())` `#DIV/0!` and
     /// `GROUPBY(k,v,5,,,NA())` `#N/A` (probes/groupby-sort-filter-args B61-B78). An error inside an
     /// array is not an error value here: the argument is invalid (#VALUE!, B24, B45).
+    /// A one-cell reference to a blank cell at a position in `blank_refused` is `#VALUE!` in its
+    /// place, ahead of a later option's error value: GROUPBY's `sort_order` and `filter_array`
+    /// (probes/t3838-groupby-option-order G!B81, B121, B176), where a blank `field_headers` or
+    /// `total_depth` is 0 and a later error wins (B10, B41).
     pub(crate) fn evaluate_options(
         &mut self,
         args: &[Node],
+        blank_refused: &[usize],
         cell: CellReferenceIndex,
     ) -> Result<Vec<Option<CalcResult>>, CalcResult> {
         let mut options = Vec::with_capacity(args.len());
-        for arg in args {
+        for (index, arg) in args.iter().enumerate() {
             let Some(node) = given(arg) else {
                 options.push(None);
                 continue;
@@ -127,6 +132,9 @@ impl Model {
             };
             if result.is_error() {
                 return Err(result);
+            }
+            if matches!(result, CalcResult::EmptyCell) && blank_refused.contains(&index) {
+                return Err(value_error(cell, "a blank cell is not a valid option"));
             }
             options.push(Some(result));
         }
@@ -153,7 +161,12 @@ impl Model {
     ) -> Result<SortOrder, CalcResult> {
         let invalid = || value_error(cell, "sort_order is invalid");
         let indices: Vec<ArrayNode> = match arg {
-            None => return Ok(SortOrder::Keys(Vec::new())),
+            None => {
+                return Ok(SortOrder::Keys {
+                    ascending: Vec::new(),
+                    named: Vec::new(),
+                })
+            }
             Some(CalcResult::Number(n)) => vec![ArrayNode::Number(n)],
             Some(result @ (CalcResult::Array(_) | CalcResult::Range { .. })) => {
                 self.result_to_array(result, cell)?.concat()
@@ -163,6 +176,8 @@ impl Model {
         let columns = key_columns + value_columns;
         let mut ascending = vec![true; key_columns];
         let mut named = vec![false; columns];
+        // The key fields in written order (a table relationship sorts by them first).
+        let mut written = Vec::new();
         let mut value = None;
         for index in &indices {
             let ArrayNode::Number(n) = index else {
@@ -180,6 +195,7 @@ impl Model {
             }
             if let Some(direction) = ascending.get_mut(column) {
                 *direction = *n > 0.0;
+                written.push(column);
             } else {
                 value = Some(SortOrder::Value {
                     column: column - key_columns,
@@ -188,7 +204,10 @@ impl Model {
             }
         }
         match value {
-            None => Ok(SortOrder::Keys(ascending)),
+            None => Ok(SortOrder::Keys {
+                ascending,
+                named: written,
+            }),
             Some(value) if indices.len() == 1 => Ok(value),
             Some(_) => Err(invalid()),
         }
@@ -320,9 +339,10 @@ impl Model {
         }
         let keys = self.eval_to_array(&args[0], cell)?;
         let values = self.eval_to_array(&args[1], cell)?;
-        let options = self
-            .function_elements(&args[2], cell)
-            .and_then(|function| Ok((function, self.evaluate_options(&args[3..], cell)?)));
+        let options = self.function_elements(&args[2], cell).and_then(|function| {
+            // `sort_order` and `filter_array` refuse a blank cell (G!B81, B121).
+            Ok((function, self.evaluate_options(&args[3..], &[2, 3], cell)?))
+        });
         let (function, mut options) = match options {
             Ok(options) => options,
             Err(error) => return Err(self.lifted_error(args.get(7), error, cell)),
@@ -520,7 +540,13 @@ impl Model {
         // key order, they bound the subtotals after a value sort, which keeps each parent's
         // groups together.
         let (levels, before) = (subtotal_levels(args.depth), args.depth < 0);
-        grouping.sort_by_key_order(&args.sort, cell);
+        match &args.sort {
+            // A table sorts by the keys `sort_order` names first (G!B179-B216).
+            SortOrder::Keys { ascending, named } if args.order == ParentOrder::Flat => {
+                grouping.sort_table_by_keys(ascending, named, cell);
+            }
+            sort => grouping.sort_by_key_order(sort, cell),
+        }
         let mut lines = grouping.lines(levels, before);
         if let Some(error) = check_array_size(tall(lines.len()), columns) {
             return Err(to_error(error));
@@ -536,7 +562,7 @@ impl Model {
         // A value sort keeps the values it sorted by, groups' and subtotals', so that column is
         // not computed twice.
         let sorted = match args.sort {
-            SortOrder::Keys(_) => None,
+            SortOrder::Keys { .. } => None,
             SortOrder::Value { column, ascending } => {
                 let pair = functions.pair_at(0, column);
                 let by = grouping.sort_by_aggregate(
