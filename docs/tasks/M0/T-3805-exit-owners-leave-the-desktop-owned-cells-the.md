@@ -52,7 +52,7 @@ and M10 output is unchanged. Unit test `test_desktop_owned_cells_leave_the_rate`
 full `make eval` before/after count (272 `rate:FORECAST.ETS*` cells expected to drop to 0); the
 steward's next eval shows it.
 
-## Handoff
+## Handoff (resumed)
 Implemented and both reviewers (design, security) approved head e1dce6b9 (PR #2853). CI `hygiene` fails
 `check_governance.py`: `scripts/exit_owners.py` and `scripts/test_exit_owners.py` are protected paths
 and the PR carries no decision record. A sonnet run may not add one. Next: an opus run adds a decision
