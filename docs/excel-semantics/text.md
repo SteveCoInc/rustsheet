@@ -828,7 +828,14 @@ Tasks: T-1360, T-1688, T-1272 (range lift)
 Rule (coercion, all three): an omitted, empty (`REGEXTEST("ABC","abc",)`) or blank-cell argument is 0; a number is
 truncated toward zero (0.5 and 0.9 are 0, 1.5 is 1; as occurrence -0.5 is 0, -1.5 is -1); TRUE is 1, FALSE 0; number
 text is its number ("1" probed for case_sensitivity and return_mode, "2" and "-1" for occurrence); other text, "" included, is `#VALUE!`; an error argument is returned. Arguments are read left to
-right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`).
+right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`). The range check of an option comes after the later arguments are read, though: REGEXEXTRACT's return_mode is coerced in
+its turn, but an out-of-range return_mode loses to an error case_sensitivity (`REGEXEXTRACT("abc","[0-9]",-1,#DIV/0!)`,
+`REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)`, return_mode 7 or "12" with case_sensitivity `#DIV/0!`, and a lifted return_mode of
+-2.5 or 42 with `#NUM!`, are that error), while a non-number text return_mode is still `#VALUE!` first (`"x~*"` with `#NUM!`
+is `#VALUE!`); a valid return_mode (TRUE) gives the error. Evidence: gen-m7/3d156a08a7bacf35 Calc!A8236, A9273, A9334,
+A11408 and gen-m7/781b74b7c112265f Calc!A6833:B6834 (excel-graph, 2026-11-02, T-3810). Ours since T-3810
+(`regex_option_in_range` after both coercions in `fn_regexextract`). REGEXREPLACE's occurrence and the other functions'
+order are unprobed.
 Rule (case_sensitivity, REGEXTEST's third, REGEXEXTRACT's fourth, REGEXREPLACE's fifth): after truncation 0 is
 case-sensitive and 1 case-insensitive; anything else (2, -1, 2^53) is `#VALUE!`, also for an array element (`{0;1;2}`
 gives FALSE, TRUE, `#VALUE!`). Case-insensitive matching uses Unicode case folding (`ſ` matches `s`, the Kelvin sign
