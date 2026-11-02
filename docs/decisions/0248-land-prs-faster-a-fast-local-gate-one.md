@@ -26,10 +26,10 @@
   - **One CI run per PR.** The work-loop writes `status: done` and the Outcome in the commit that
     goes to review. Once every reviewer approves, a MINOR finding never starts a push: it becomes
     a follow-up task or a note on the PR, or rides along with a push made for another reason.
-  - **Orphans within hours.** An orphan is an open, non-draft PR on an `agent/*` or `claude/*`
-    branch, not queued (auto-merge off), whose branch has not moved for 4 h, including a PR the
+  - **Orphans within hours.** An orphan is an open, non-draft PR from an `agent/*` or `claude/*`
+    branch of this repository (never a fork), not queued (auto-merge off), whose branch has not moved for 4 h, including a PR the
     queue removed. The opus worker adopts the oldest orphan at the start of each run (work-loop
-    step 0, counted as a task), and the steward adopts orphans in its daily run. Either one
+    step 0.3, counted as a task), and the steward adopts orphans in its daily run. Either one
     follows the steward skill's "Orphaned agent PRs" conditions: fix, re-review with its own
     panel, and enqueue. The 24 h minimum is dropped; the 2 h rule for closing duplicates stays.
 - **Consequences:**

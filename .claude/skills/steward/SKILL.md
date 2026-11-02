@@ -42,10 +42,11 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   are leftovers: a PR carrying either one is handled like any other open PR (enqueue it once it
   meets (a) and (b); an ejected one first gets its conflict fixed, `make check-fast` and the reviewers
   the change concerns, work-loop step 6.3), and the label is removed when it is enqueued.
-- **Orphaned agent PRs** (decisions 0050, 0248): an orphan is an open PR on an `agent/*` or
-  `claude/*` branch, opened by another session, that is not a draft, not queued (auto-merge off;
+- **Orphaned agent PRs** (decisions 0050, 0248): an orphan is an open PR from an `agent/*` or
+  `claude/*` branch of this repository (never a fork: the PR's `head.repo.full_name` is
+  `SteveCoInc/rustsheet`), opened by another session, that is not a draft, not queued (auto-merge off;
   this includes a PR the merge queue removed), and whose branch has not moved for 4 h or more.
-  The opus worker adopts the oldest one at the start of each run (work-loop step 0) and the
+  The opus worker adopts the oldest one at the start of each run (work-loop step 0.3) and the
   steward adopts them in its daily run. Adopting means fixing what blocks it (red CI, a conflict,
   missing bookkeeping) and enqueueing it once ALL of these hold:
   - its branch has not moved for 4 h or more when you adopt it. Measure when the head was pushed

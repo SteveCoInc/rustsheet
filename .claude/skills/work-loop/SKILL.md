@@ -18,9 +18,10 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
    GitHub tools) and its task is your tier, continue it (go to step 4/6) instead of starting new
    work. One task in flight per lane. A task handed off to `opus` (it has a `## Handoff` section)
    is resumed by an opus run from its pushed branch, starting from the handoff notes.
-3. Adopt an orphan (opus runs only, decision 0248): before picking a new task, look for open PRs
-   that the `steward` skill's "Orphaned agent PRs" rule calls orphans (`agent/*` or `claude/*`,
-   not draft, not queued, branch idle 4 h or more; a PR the merge queue removed counts). Take the
+3. **Step 0.3, adopt an orphan** (opus runs only, decision 0248): before picking a new task, look
+   for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an `agent/*`
+   or `claude/*` branch of this repository, never a fork; not draft, not queued, branch idle 4 h
+   or more; a PR the merge queue removed counts). Take the
    oldest one and drive it to the queue under that rule: fix red CI or a conflict, run your own
    review panel on the current diff, enqueue. It counts as one task of the session budget. Skip
    it when none exists.

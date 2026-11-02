@@ -61,6 +61,13 @@ def _under(path: str, prefixes: tuple[str, ...]) -> bool:
     return any(path.startswith(p) if p.endswith("/") else path == p for p in prefixes)
 
 
+def _known(path: str) -> bool:
+    """Whether some rule above places `path`; an unknown path runs every target."""
+    top_level_markdown = "/" not in path and path.endswith(".md")  # CLAUDE.md, UPSTREAM.md: prose
+    python = path.startswith("tools/") or path.endswith(".whl")  # tools/ and its vendored wheel
+    return top_level_markdown or python or _under(path, RUST_OR_EVAL + BASE_ONLY)
+
+
 def targets(paths: list[str]) -> list[str]:
     """The fast targets for these changed paths, in `ALL`'s order; no paths is doubt."""
     if not paths:
@@ -73,8 +80,7 @@ def targets(paths: list[str]) -> list[str]:
             wanted.add("py-check")
         if path.startswith("bindings/"):
             wanted.add("py-bindings")
-        known = _under(path, RUST_OR_EVAL + BASE_ONLY) or path.startswith("tools/") or path.endswith(".whl")
-        if not known and not ("/" not in path and path.endswith(".md")):
+        if not _known(path):
             return list(ALL)
     return [t for t in ALL if t in wanted]
 

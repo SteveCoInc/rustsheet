@@ -38,7 +38,7 @@ removes after its session ended waits for that daily run too.
 - [x] The work-loop writes `status: done` and the Outcome in the commit that goes to review, and
       does not push for MINOR findings after every reviewer approved (follow-up or noted instead).
 - [x] An orphaned PR (agent/* or claude/*, not draft, not queued, branch idle 4 h or more,
-      including one the queue removed) is adopted by the next opus worker run (work-loop step 0)
+      including one the queue removed) is adopted by the next opus worker run (work-loop step 0.3)
       and by the steward, under the existing conditions of the steward skill's "Orphaned agent
       PRs" rule minus the 24 h minimum.
 - [x] routines.md's prompts match; a decision record amends 0050, 0247 and the work-loop steps.
@@ -62,5 +62,11 @@ Decision 0248 (amends 0050, 0229 and 0247's work-loop steps).
 - Orphans: an `agent/*` or `claude/*` PR, not draft, not queued, branch idle 4 h, including one
   the queue removed, is adopted by the opus worker once per run (work-loop step 0.3, routines.md
   (2b)) and by the steward daily. The 24 h minimum is gone.
+- Timing on this PR: a full `make check-fast` (every fast target, since the diff touches the
+  Makefile) took 7.5 min, against about 25 min for `make check` in the same container.
+- Review: design and security approved bdf1207 with MINOR findings only. One push followed,
+  breaking 0248's own MINOR rule on purpose. The security finding that an orphan must come from
+  this repository, never a fork, is a real gap this PR widened: opus workers now adopt orphans
+  every run. The step 0.3 naming and the `fast_gates._known` comment rode along.
 
 No eval delta.
