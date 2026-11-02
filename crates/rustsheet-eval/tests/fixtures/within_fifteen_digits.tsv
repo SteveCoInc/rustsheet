@@ -1,0 +1,18 @@
+# expected	actual	within  -- read by closeness.rs (Rust test) and tools/tests/test_fitlab_holdout.py, so the
+# harness's within_fifteen_digits and the fit lab's port cannot drift (T-3453). Values parse as f64 / float().
+1e15	1000000000000005	1
+1e15	999999999999995	1
+1e15	1000000000000006	0
+-1e15	-1000000000000006	0
+9.99e15	9990000000000004	1
+1e16	10000000000000050	1
+1e16	10000000000000052	0
+1.0	1.000000000000004	1
+1.0	1.00000000000002	0
+0.0	-0.0	1
+0.0	1e-300	0
+1e-300	0.0	0
+inf	inf	0
+1.0	inf	0
+1.0	NaN	0
+NaN	NaN	0

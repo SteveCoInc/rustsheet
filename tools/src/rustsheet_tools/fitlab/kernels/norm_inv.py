@@ -46,6 +46,7 @@ from functools import cache
 
 from rustsheet_tools.fitlab.exact import pi_cr
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, Cell, load_sweep, numeric_arg
 
@@ -517,7 +518,7 @@ def _p(fn: Callable[[float], float]) -> Callable[..., float]:
 
 
 def norm_inv_candidates() -> list[Candidate]:
-    out: list[Candidate] = [candidate("correctly rounded", _p(correctly_rounded), "reference")]
+    out: list[Candidate] = [candidate(REFERENCE, _p(correctly_rounded), "reference")]
     for cname, coeffs in (("PPND16", PPND16), ("PPND7", PPND7)):
         for ename, ev in (("horner", horner), ("horner fma", horner_fma), ("power sum", power_sum)):
             for log1p_upper in (False, True):

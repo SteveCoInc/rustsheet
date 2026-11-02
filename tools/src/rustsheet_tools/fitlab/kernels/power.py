@@ -45,6 +45,7 @@ from rustsheet_tools.fitlab.exact import (
     x87_value,
 )
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, Cell, numeric_arg
 
@@ -143,7 +144,7 @@ def libm_pow(x: Fraction, y: float) -> float:
 MODELS: dict[str, Pow] = {
     "Excel model (doubles)": excel_model,
     "Excel model, products rounded once": excel_model_single,
-    "correctly rounded": correctly_rounded,
+    REFERENCE: correctly_rounded,
     "x87 pow (idealized)": x87_ideal,
     "x87 insn": x87_insn,
     "x87 insn, 1/ for y<0": x87_insn_recip,

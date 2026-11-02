@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from pathlib import Path
 
 from rustsheet_tools.fitlab import holdout
 from rustsheet_tools.fitlab.cli import holdout_table
@@ -101,6 +102,17 @@ def test_merging_the_sides_gives_the_score_of_the_whole_sweep() -> None:
     assert sorted(r.ulps or 0 for r in both.results) == sorted(r.ulps or 0 for r in whole.results)
 
 
+def test_within_fifteen_digits_agrees_with_the_shared_vectors() -> None:
+    # The Rust test in closeness.rs reads the same table (T-3453).
+    path = (
+        Path(__file__).resolve().parents[2] / "crates/rustsheet-eval/tests/fixtures/within_fifteen_digits.tsv"
+    )
+    rows = [ln.split("\t") for ln in path.read_text().splitlines() if ln and not ln.startswith("#")]
+    assert len(rows) == 16
+    for e, a, w in rows:
+        assert within_fifteen_digits(float(e), float(a)) == (w == "1"), (e, a)
+
+
 def test_within_fifteen_digits_matches_the_harness() -> None:
     # closeness.rs: half a unit in the 15th significant digit, boundary included.
     assert within_fifteen_digits(1.0, 1.0 + 4.8e-15)
@@ -140,3 +152,13 @@ def test_the_report_shows_both_sides_and_the_verdicts() -> None:
         "within_4_ulp": len(test),
         "within_15_digits": len(test),
     }
+
+
+def test_fit_refuses_a_margin_outside_zero_one() -> None:
+    import pytest
+
+    from rustsheet_tools.fitlab.fit import Fit
+
+    for bad in (-0.1, 1.5, math.nan, math.inf):
+        with pytest.raises(ValueError, match="margin"):
+            Fit("n", "d", [], "p", lambda: [], margin=bad)
