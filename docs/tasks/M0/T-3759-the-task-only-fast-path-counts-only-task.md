@@ -3,7 +3,7 @@ id: T-3759
 title: "The task-only fast path counts only task files that are regular files"
 milestone: M0
 lane: quality
-status: todo
+status: dropped
 priority: P2
 size: S
 tier: sonnet
@@ -35,3 +35,9 @@ into the next one on a long line, and the new one-line docstring is dense (quali
 
 ## Out of scope
 - Content checks on task text.
+
+## Outcome
+Dropped (owner, 2026-11-02). `merge_ready.py` and `review_panel.py` were read only by `make
+mark-ready`, which decision 0247 retired. Under the merge queue, the task-only skip of the review
+panel is a rule in the review skill only. T-3827 now deletes those scripts and states the rule
+precisely in the skill. #2833 was closed unmerged.
