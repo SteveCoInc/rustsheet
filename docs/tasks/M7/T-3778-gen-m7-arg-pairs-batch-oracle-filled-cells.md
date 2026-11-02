@@ -94,5 +94,6 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   is in docs/excel-semantics/arrays.md ("GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch"):
   - **T-3837** (359 cells): text or blank-cell scalar `values`, and a one-cell error reference as `row_fields`, are `#VALUE!`.
   - **T-3838** (51 cells): a text or blank option is `#VALUE!` ahead of a later option's error; a TRUE field_relationship's order.
-  - **T-3839** (2,112 cells): a scalar `filter_array` beside other options is `#VALUE!` (rule partly known; probe first).
-  - **T-3840** (15 cells): blank and FALSE elements of a lifted array option are `#VALUE!`; an early error fills the lifted shape.
+  - **T-3839** (2,114 cells): a scalar `filter_array` beside other options is `#VALUE!` (rule partly known; probe first).
+  - **T-3840** (13 cells): a FALSE element of a lifted field_relationship is `#VALUE!` (a blank one is valid); an early error fills
+    the lifted shape.

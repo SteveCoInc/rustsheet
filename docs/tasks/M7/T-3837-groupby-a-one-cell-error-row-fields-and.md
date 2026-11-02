@@ -43,7 +43,8 @@ GROUPBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
 ## Acceptance criteria
 - [ ] The owned cells match Excel; unit tests in groupby.rs cover a text, an empty-text and a blank-cell `values` scalar and a one-cell
       error reference as `row_fields`, each against a later error option.
-- [ ] Record the rules in docs/excel-semantics/arrays.md if T-3778 did not (it did: "GROUPBY scalar row_fields and values").
+- [ ] Update docs/excel-semantics/arrays.md "GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch"
+      (its `Ours:` line) when the rule is implemented.
 - [ ] Visible parity: every owned cell has Excel's type and error.
 - [ ] `make check` green; reviewers approve.
 
@@ -51,4 +52,4 @@ GROUPBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
-- PIVOTBY (its arg-pairs batch is T-3778's second PR) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+- PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.

@@ -49,4 +49,4 @@ GROUPBY reports `#VALUE!` where Excel does when a text, empty-text or blank opti
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
-- PIVOTBY (its arg-pairs batch is T-3778's second PR) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+- PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
