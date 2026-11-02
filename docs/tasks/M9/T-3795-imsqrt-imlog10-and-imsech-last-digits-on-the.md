@@ -22,6 +22,8 @@ Follow-up of T-3643 (docs/excel-semantics/engineering.md, the T-3643 entries und
   1-4·2^-53, where the engine's `sqrt(sqrt(x²+y²))` gives 1-5·2^-53. Neither `pow(·, 0.25)` nor a correctly rounded
   `exp(0.25·ln ·)` reaches 1-4·2^-53 for the real input; an extended-precision or doubly rounded root chain is the
   first lead (`arithmetic::extended_sqrt`).
+  Of these, twelve are visibly off: the engine prints a part as 0.999999999999999 where Excel prints 1
+  (t3643-imsqrt-grid B5, B15, C5, C15, D5, D15, L5, L15, M5, M15, N5, N15; owned here, decision 0245).
 - IMLOG10, 2 cells (t3643-imlog10-grid I8, S8, `10±1E8i`): imaginary part `atan2/LN_10` prints 0.682188133491472,
   Excel ...473.
 - IMSECH, 4 cells (t3643-imsech-grid H5, H15, R5, R15, `±0.999999999999999±10i`): the imaginary part one digit off.

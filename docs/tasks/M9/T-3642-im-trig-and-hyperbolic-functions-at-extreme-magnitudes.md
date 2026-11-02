@@ -29,6 +29,10 @@ fine enough to bracket each cut, ±1E10, ±1E100, ±1E300) for all ten functions
 that holds across functions sharing a kernel. Where a cut falls in a band an open task owns (T-2631, T-3616, T-2668,
 T-2914), hand the cells to it rather than duplicating it.
 
+- Owned here (decision 0245): T-3643's probes/t3643-imsech-grid IMSECH cells with |y| >= 1E20 and |x| <= 10, where
+  Excel is `#NUM!` and the engine prints a number: t3643-imsech-grid J1:J8, J12:J18, K1:K8, K12:K18, T1:T8, T12:T18,
+  U1:U8, U12:U18.
+
 ## Acceptance criteria
 - [ ] A probe case (excel-graph) covers the grid for all ten functions; each function's #NUM! region is stated in engineering.md as a rule on x and y.
 - [ ] Every grid cell outside the bands T-2631, T-3616, T-2668 and T-2914 own has Excel's type (number text versus `#NUM!`); cells inside them are listed in those tasks.
