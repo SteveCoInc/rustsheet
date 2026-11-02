@@ -2279,8 +2279,6 @@ F	probes/bond-extreme-coupon-yield.case.json	Calc!C85
 F	probes/bond-extreme-coupon-yield.case.json	Calc!C89
 F	probes/bond-extreme-coupon-yield.case.json	Calc!C91
 F	probes/coup-calendar-edges.case.json	S!J12
-F	probes/date-text-mixed-separator-typed.case.json	S!B10
-F	probes/date-text-mixed-separator-typed.case.json	S!C10
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A29
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A7
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!B8

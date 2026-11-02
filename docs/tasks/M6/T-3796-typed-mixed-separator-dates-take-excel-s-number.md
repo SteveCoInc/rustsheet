@@ -3,7 +3,7 @@ id: T-3796
 title: "Typed mixed-separator dates take Excel's number format; typed clock-first date-time is a number (T-3751 probe misses)"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,9 +26,16 @@ number format Excel gives for the mixed-separator dates, and a typed clock-first
   - A leading space before a clock-first date (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) stays text in Excel and in the engine.
 
 ## Acceptance criteria
-- [ ] The typed formats above match Excel (unit tests in test_parse_formatted_number.rs citing the probe).
-- [ ] probes/date-text-mixed-separator-typed B10 and C10 pass.
-- [ ] `make check` green; reviewers approve.
+- [x] The typed formats above match Excel (unit tests in test_parse_formatted_number.rs citing the probe).
+- [x] probes/date-text-mixed-separator-typed B10 and C10 pass.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The coerced and function readers (DATEVALUE, VALUE, `0+text`), which already match.
+
+## Outcome
+Mixed `/`-`-` typed dates now take `m/d/yyyy` (numeric) or `d-mmm-yy` (day-month-name-year) in
+`date_text.rs`; a typed clock-first date-time (`10:00 7/1/2025`, `10 AM 7/1/2025`) is a number with
+`m/d/yyyy h:mm` (`parse_formatted.rs`, `leading_clock_shape`); a leading space stays text. Unit test
+`typed_mixed_separator_date_formats`. Eval delta: probes/date-text-mixed-separator-typed B10 and C10
+fixed (known failures -2, no regressions).

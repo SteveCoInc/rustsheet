@@ -495,7 +495,7 @@ fn typed_mixed_separator_date_formats() {
     assert_eq!(fmt("2025/07/01").unwrap().1, "yyyy/mm/dd");
     assert_eq!(fmt("7/1/25").unwrap().1, "m/d/yy");
     let (v, f) = fmt("10:00 7/1/2025").unwrap();
-    assert!((v - 45839.416_666_666_7).abs() < 1e-9);
+    assert!((v - 45_839.416_666_666_7).abs() < 1e-9);
     assert_eq!(f, "m/d/yyyy h:mm");
     assert!(fmt("10 AM 7/1/2025").is_ok());
     assert!(fmt(" 10:00 7/1/2025").is_err());
