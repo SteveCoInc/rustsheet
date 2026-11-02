@@ -375,6 +375,9 @@ Evidence: none for Excel; this is a resource limit, not an Excel observation.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet/src/edit.rs (`MAX_FOOTPRINT_CELLS`)
 
+## MMULT: a blank first argument is #VALUE! even when the second is an error
+Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine propagates the second argument's error for A463 and A466; owned by T-3729.
+
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
 does the same); a blank does not count as 0. `MDETERM` of a single numeric cell is that number. A boolean is not a
@@ -2160,6 +2163,21 @@ array's shape (a one-row or one-column array) is its error, and a wrongly shaped
 still returns the error first.
 Status: VERIFIED (excel-graph)
 Tasks: T-3506
+
+## A one-cell error reference in the other array functions (T-3667)
+Rule: with C2 holding `#DIV/0!` (probes/one-cell-error-ref-array-functions, excel-graph, 2026-11-01; every cell paired with
+the literal error):
+- Read as a 1x1 array holding the error, the other arguments checked first, like TOCOL, TOROW and FILTER:
+  - `TAKE(C2,0)` is `#CALC!`, `TAKE(C2,"x")` `#VALUE!`, `DROP(C2,"x")` `#VALUE!`, `DROP(C2,1)` `#CALC!` (literal: `#DIV/0!`).
+  - `CHOOSEROWS(C2,2)`, `CHOOSECOLS(C2,2)` and `CHOOSECOLS(C2,0)` are `#VALUE!` (literal: `#DIV/0!`); `CHOOSEROWS(C2,1)` is the error.
+  - `VSTACK(D1:E1,C2)` spills `1, 4` over `#DIV/0!, #N/A`, and `HSTACK(D1:D3,C2)` stacks the error as a column, padded with
+    `#N/A`, where the literal error makes the whole call `#DIV/0!`; the error reference stays an element wherever it stands.
+- Not a 1x1 array, the reference's error returned whatever the later arguments: SORT, SORTBY, UNIQUE, EXPAND, WRAPROWS and
+  WRAPCOLS (`SORT(C2,5)`, `UNIQUE(C2,"x")`, `EXPAND(C2,"x")`, `WRAPROWS(C2,0)` are all `#DIV/0!`).
+Ours: implemented (T-3667): TAKE and DROP already kept the reference; CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK use
+`one_cell_error_ref_as_array`; the other six already match.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667
 
 ## TOCOL, TOROW and SORT: which bad argument wins (T-3497)
 Rule:
