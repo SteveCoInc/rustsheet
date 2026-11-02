@@ -1838,6 +1838,8 @@ C	probes/t3627-roundup-rounddown-t3555-cells.case.json	12
 C	probes/t3631-rand-randbetween-invariant.case.json	61
 C	probes/t3631-randarray-invariant.case.json	45
 C	probes/t3638-subnormal-upper-tail.case.json	84
+C	probes/t3653-percentof-3d.case.json	12
+C	probes/t3653-percentof-argument-kinds.case.json	103
 C	probes/t3654-filter-result-types.case.json	211
 C	probes/t3655-lambda-helper-function-argument.case.json	108
 C	probes/t3655-makearray-arity-sizes.case.json	313
