@@ -3,7 +3,7 @@ id: T-3316
 title: "Probe GAMMA.DIST's huge-shape #NUM! cuts one cell per workbook and pin them (T-3271 brackets)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 campaign: semantics
 size: S
@@ -44,8 +44,33 @@ GAMMA.DIST's two huge-shape `#NUM!` cuts sit where Excel's do, not merely at the
   intermediate of Excel's arithmetic that overflows, not for a cut.
 
 ## Acceptance criteria
-- [ ] Each cut is pinned (or narrowed by at least 10x, with the remaining bracket recorded) by excel-graph probe cells; statistics.md is updated; the constants move if the evidence says so; `make eval-check` shows no regressions and the visible-parity lock does not rise.
-- [ ] `make check` green; reviewers approve.
+- [x] Each cut is pinned (or narrowed by at least 10x, with the remaining bracket recorded) by excel-graph probe cells; statistics.md is updated; the constants move if the evidence says so; `make eval-check` shows no regressions and the visible-parity lock does not rise.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The gamma inversions (T-3070, T-3272).
+
+## Outcome
+- **Density cut pinned (mechanism, not a fit):** Excel's GAMMA.DIST density of a positive x is `#NUM!` where
+  shape / x overflows a double (cut x = shape / DBL_MAX), whatever the scale, and even where the density is about
+  1E+304. Evidence, one fill per case on excel-graph: probes-numeric/t3316-gamma-density-overflow A1:A15 (pairs
+  5.5626E-300 / 5.5628E-300 at shape 1E9 and scales 1 and 1E-200, the same pairs at shapes 1000 and 1E15, and shapes
+  5 and 10, which show the numerator is the shape, not shape - 1) and t3316-gamma-density-overflow-nonzero (`#NUM!`
+  at 5.3E-308, shape 10, scale 2.3E-308; 3.1567E+304 at 5.6E-308). The cut is pinned to 2 parts in 1E+5 at three
+  shapes. It replaces T-3271's `HUGE_SHAPE_DENSITY_CUT` (`gamma_dist_of`). It is IEEE overflow (check 7 kind (b)),
+  so there are no fitted constants.
+- **The huge-shape `#NUM!` (cdf, and the density at x/beta below 1) is not a cut:** from a shape between 1E55 and
+  1E56 at x/beta = 2E-10 (narrowed from 1E40..1.85E76), Excel turns a 0 into `#NUM!` at about a third of the
+  probed x/beta, in no order (t3316-gamma-cdf-y-sweep, 47 cells at shape 1E70; t3316-gamma-cdf-huge-shape, 20). The
+  density is `#NUM!` at exactly the cdf's points (12 of 12 pairs), and only x/beta counts (A12:A14). No rule over
+  the two arguments fits it without fitting cells, so the engine keeps T-3271's 1.85E76 cdf cut, and the density at
+  x/beta below 1 now shares it. The mechanism is filed as T-3855 (opus), which owns those cells. A third case
+  (34 cells at x/beta 2E-10, shapes 1.2E55 to 1E90) was refused twice by createSession and is not committed.
+- statistics.md "GAMMA.DIST at a huge shape" rewritten: rule 1 VERIFIED, rule 2 VERIFIED at the probed cells with
+  an UNVERIFIED mechanism.
+- Eval delta: probes-numeric (not gated) fit-audit-t3271-density-cut 47 -> 50 of 50 (A9, A43, A48 fixed);
+  fit-audit-t3271-cdf-cut 17 -> 16 of 38 (A42, `GAMMA.DIST(2,1E+70,1E+10,FALSE)`, was `#NUM!` only through the
+  refuted product rule; T-3855 owns it). New cases: t3316-gamma-density-overflow 24/26,
+  t3316-gamma-density-overflow-nonzero 2/6 exact (the other 4 numeric, not visibly off), t3316-gamma-cdf-huge-shape
+  5/20, t3316-gamma-cdf-y-sweep 32/47 (every miss owned by T-3855). Gated suites: no change (`make eval-check`).
+- Follow-up: T-3855.

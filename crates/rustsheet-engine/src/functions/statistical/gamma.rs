@@ -28,34 +28,25 @@ const HALF_SHAPE: f64 = 0.5;
 /// FITTED(T-2753, 84 cells, x/beta 1E-19..1E-11, shape 0.5..2)
 const LOG_FORM_RATIO: f64 = 1E-15;
 
-/// The smallest `(alpha - 1)·(-LN(x/beta))`, at an x/beta below 1, at which Excel's GAMMA.DIST density
-/// has been seen to be `#NUM!` rather than 0: `GAMMA.DIST(1E-300,1E+9,3,FALSE)` (6.9187E+11), while
-/// 6.9E+10 (shape 1E+8) is 0 and a huge x at a huge shape stays 0 (probes/t2435-dist-extremes A26,
-/// A92, A31). The true cut lies in that bracket, unprobed (docs/excel-semantics/statistics.md
-/// "GAMMA.DIST at a huge shape", T-3271).
-/// FITTED(T-3271, 3 cells, shape 1E8..1E9, x/beta 1E-300 and a huge x)
-const HUGE_SHAPE_DENSITY_CUT: f64 = 6.9187E+11;
-
 /// The smallest shape at which Excel's GAMMA.DIST cdf of a positive x has been seen to be `#NUM!`
-/// where it would be 0: `GAMMA.DIST(2,1.85E+76,1E+10,TRUE)`, while shapes up to 1E+40 there are 0
-/// (probes/t2435-dist-extremes A101, A100). The true cut lies in that bracket, unprobed (T-3271).
+/// where it would be 0: `GAMMA.DIST(2,1.85E+76,1E+10,TRUE)` (probes/t2435-dist-extremes A101).
+/// Excel's own pattern is not a cut: from a shape between 1E+55 and 1E+56 (x/beta = 2E-10) its 0
+/// becomes `#NUM!` at about a third of the probed x/beta, in no order the probes have explained,
+/// and the density at x/beta below 1 is `#NUM!` at exactly the same points (probes-numeric/
+/// fit-audit-t3271-cdf-cut, t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep;
+/// docs/excel-semantics/statistics.md "GAMMA.DIST at a huge shape"; the mechanism is T-3855's).
+/// Until that is found the rule stays where T-3271 put it.
 /// A cdf that is not 0 keeps its value: `GAMMA.DIST(1E300,1E300,1,TRUE)` is 0.5
 /// (probes/incomplete-gamma-cap E3).
 /// FITTED(T-3271, 2 cells, shape 1E40..1.85E76, x 2)
 const HUGE_SHAPE_CDF_CUT: f64 = 1.85E+76;
 
-/// Whether GAMMA.DIST's computed 0 is Excel's `#NUM!` at a huge shape: a density
-/// at a tiny x / beta past [`HUGE_SHAPE_DENSITY_CUT`], or a cdf of a positive x at a shape of at
-/// least [`HUGE_SHAPE_CDF_CUT`].
+/// Whether GAMMA.DIST's computed 0 is Excel's `#NUM!` at a huge shape: a cdf of a positive x, or
+/// a density at an x / beta below 1, at a shape of at least [`HUGE_SHAPE_CDF_CUT`]. The density
+/// shares the cdf's rule because Excel's density and cdf are `#NUM!` at the same points
+/// (probes-numeric/t3316-gamma-cdf-y-sweep A1:A12 and A36:A47).
 fn huge_shape_num_error(alpha: f64, x: f64, beta: f64, cumulative: bool) -> bool {
-    if x <= 0.0 {
-        return false;
-    }
-    if cumulative {
-        return alpha >= HUGE_SHAPE_CDF_CUT;
-    }
-    let y = x / beta;
-    y < 1.0 && (alpha - 1.0) * -y.ln() >= HUGE_SHAPE_DENSITY_CUT
+    x > 0.0 && alpha >= HUGE_SHAPE_CDF_CUT && (cumulative || x / beta < 1.0)
 }
 
 /// The shape below which GAMMA.DIST's density below the mode (y < a) is EXP(a LN(y)) / GAMMA(a) /
@@ -214,6 +205,13 @@ impl Model {
         // An x / beta that overflows is #NUM! for the density as for the cdf
         // (`GAMMA.DIST(1E300,1,1E-10,FALSE)` and `TRUE`, probes/incomplete-gamma-cap E18, E6; T-2982).
         if !cumulative && x > 0.0 && !(f64::MIN_POSITIVE..=f64::MAX).contains(&(x / beta_scale)) {
+            return Err(num_error(cell));
+        }
+        // So is the density of a positive x where alpha / x overflows a double, whatever the
+        // scale: `GAMMA.DIST(5.5626E-300,1E+9,1,FALSE)` is #NUM!, 5.5628E-300 is 0, at a scale of
+        // 1E-200 too, and the cut is on alpha, not alpha - 1 (probes-numeric/t3316-gamma-density-
+        // overflow; docs/excel-semantics/statistics.md "GAMMA.DIST at a huge shape", T-3316).
+        if !cumulative && x > 0.0 && (alpha / x).is_infinite() {
             return Err(num_error(cell));
         }
         let dist = Gamma::new(alpha, 1.0 / beta_scale).map_err(|_| num_error(cell))?;
