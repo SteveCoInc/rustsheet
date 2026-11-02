@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -146,6 +146,23 @@ def test_an_mpmath_value_error_drops_the_point_but_a_domain_error_does_not() -> 
     assert compute(Definition("GIVES.UP", (x,), gives_up, ("test",)), [2.0]).why == "x outside (0, 1)"
 
 
+class _InProcessPool:
+    """Stands in for `write_suite`'s process pool so a test's monkeypatches reach the jobs: its
+    `spawn` workers re-import the module and would not see them."""
+
+    def __init__(self, **_kwargs: Any) -> None:
+        pass
+
+    def __enter__(self) -> _InProcessPool:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+    def map(self, fn: Callable[[Any], Any], items: Iterable[Any]) -> Iterator[Any]:
+        return map(fn, items)
+
+
 def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -171,6 +188,7 @@ def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
         return real(definition, args)
 
     monkeypatch.setattr(eval_math, "compute", drops_a2)
+    monkeypatch.setattr(eval_math, "ProcessPoolExecutor", _InProcessPool)
     write_suite("t", workers=None)
     data = json.loads(math_path(sidecar).read_text())
     assert set(data["sheets"]["S"]) == {"A1"}
