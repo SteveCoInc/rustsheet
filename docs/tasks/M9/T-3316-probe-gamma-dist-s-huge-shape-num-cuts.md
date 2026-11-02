@@ -3,7 +3,7 @@ id: T-3316
 title: "Probe GAMMA.DIST's huge-shape #NUM! cuts one cell per workbook and pin them (T-3271 brackets)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 campaign: semantics
 size: S
