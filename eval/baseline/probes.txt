@@ -1863,6 +1863,8 @@ C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
+C	probes/t3808-m5-aggregate-overflow.case.json	576
+C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -6015,6 +6017,7 @@ F	probes/t3643-imsqrt-grid.case.json	S!M5
 F	probes/t3643-imsqrt-grid.case.json	S!N15
 F	probes/t3643-imsqrt-grid.case.json	S!N5
 F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
+F	probes/t3808-median-geomean-direct-overflow.case.json	Calc!A6
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3

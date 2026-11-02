@@ -457,12 +457,30 @@ and `AGGREGATE(9,6,F1:F3,NA())` is `#N/A` (option 6 ignores errors in the refere
 AVERAGE (also `AVERAGE(9E+307,9E+307,-9E+307)`), PRODUCT (`PRODUCT(1E+200,1E+200)`, and still `#NUM!` with a later
 factor 0 or 1E-200), SUMSQ (`SUMSQ(1E+200)`), SUBTOTAL 9, 1 and 6 (and 7, 8, 10, 11, 107, 108, 110 and 111 over three 1E+200, probes/subtotal-variance-one-vs-two-pass K10:K17), AGGREGATE 9 and 1 (option 6), SUMIF, SUMIFS,
 SERIESSUM, MMULT, SUMX2PY2, SUMXMY2, DEVSQ, STDEV and VAR, and `SUM(F1:F2)+0`, `SUM(F1:F2)&""`,
-`MAX(F1:F2)+F1` propagate it. Not an overflow: `COUNT` (3), `SUMX2MY2({9E+153},{0})` (8.1E+307, a finite near-limit result: SUMX2MY2 overflow itself is unprobed),
-`MEDIAN(F1:F2)` (9E+307) and `GEOMEAN(F1:F2)` (9E+307, exactly), F1:F2 holding 9E+307 twice (direct arguments not probed). `PERCENTOF(F1:F2,F1:F2)`
+`MAX(F1:F2)+F1` propagate it. Not an overflow: `COUNT` (3), `SUMX2MY2({9E+153},{0})` (8.1E+307, a finite near-limit result),
+`MEDIAN(F1:F2)` (9E+307) and `GEOMEAN(F1:F2)` (9E+307, exactly), F1:F2 holding 9E+307 twice. Direct arguments give the
+same: `MEDIAN(9E+307,9E+307)` and `GEOMEAN(9E+307,9E+307)` are 9E+307, and `MEDIAN(1E+200,1E+200,1E+200)` and
+`GEOMEAN(1E+200,1E+200,1E+200)` are 1E+200 (probes/t3808-median-geomean-direct-overflow A1:C5, excel-graph, 2026-11-02,
+T-3808; `GEOMEAN(9E+307,9E+307,1E-300)`, A6, is 2.0082988502465085E+105 and the engine is one ulp high, T-3847).
+SUMX2MY2 overflows on a square, not on the result: `SUMX2MY2({1.5E+154},{1.4E+154})` is `#NUM!` though the
+difference of the squares (2.9E+307) is finite, and so is `SUMX2MY2({1E+155},{0})`; the control
+`SUMXMY2({1.5E+154},{1.4E+154})` is 1.0000000000000033E+306 and `SUMXMY2({1E+155},{0})` is `#NUM!`
+(probes/t3808-m5-aggregate-overflow Calc!A178:C181).
+The other SUBTOTAL and AGGREGATE codes overflow the same way (probes/t3808-m5-aggregate-overflow, excel-graph,
+2026-11-02, T-3808; A = value, B = `&""`, C = ERROR.TYPE): SUBTOTAL 101 and 109 over F1:F2 and F1:F3 and 106 over
+F5:F6 and F1:F2 are `#NUM!` (Calc!A20:C25). AGGREGATE 1, 7, 8, 10 and 11 over F1:F2, 7, 8, 9, 10 and 11 over F1:F3,
+9 over F1:F2 and 6 over F5:F6 are `#NUM!` under every option 0-7 (Calc!A26:C177): the overflow is not an ignorable
+error. Over a range that also holds `#N/A` (F8:F10 = 9E+307, 9E+307, `#N/A`; F11:F13 = 1E+200, 1E+200, `#N/A`) options 0, 1,
+4 and 5 give `#N/A` and options 2, 3, 6 and 7, which ignore errors, give `#NUM!`. Hidden rows are left out before the
+check (Hide sheet, rows 3, 7 and 9 hidden, Hide!A20:C49): over F9:F11 = 9E+307 (hidden), 9E+307, 1, SUBTOTAL 109 is 9E+307,
+101 is 4.5E+307 and AGGREGATE 9 under options 1, 5 and 7 is 9E+307, while SUBTOTAL 9 and 1 and AGGREGATE 9 under options
+0 and 6 are `#NUM!`. Over F1:F3 = 9E+307, 9E+307, -9E+307 (hidden), SUBTOTAL 9 is `#NUM!` (overflow at the
+intermediate point, as SUM), and 109 and 101 are `#NUM!` too. Over F5:F7 = 1E+200, 1E+200, 1E-200 (hidden), SUBTOTAL 6
+and 106 and AGGREGATE 6 under options 0, 1, 5, 6 and 7 are all `#NUM!`. `PERCENTOF(F1:F2,F1:F2)`
 and `PERCENTOF(F1,F1:F2)` are `#NUM!` (an overflowing sum, like SUM; probes/percentof-snap-overflow-union (excel-graph, 2026-10-13, T-0416)).
 Implementation: `+ - * /` (T-0173), `SUM` (T-0185), and SUMPRODUCT, SUMSQ, PRODUCT, AVERAGE and SUBTOTAL 1, 6, 9
 (T-0990, `CalcResult::finite_number_or_num` on the final result, which covers a later 0 or 1E-200 factor
-since an infinity stays infinite or turns NaN; SUBTOTAL 101/106/109 share the code but are unprobed), and
+since an infinity stays infinite or turns NaN; SUBTOTAL 101/106/109 share the code, probed by T-3808), and
 SUMIF, SUMIFS, SUMX2PY2, SUMXMY2, DEVSQ, STDEV and VAR (T-0991, the same check). Probed (T-1021, probes/aggregate-overflow Calc!A49:C62): Excel gives `#NUM!` (ERROR.TYPE 6) for VAR.S, STDEV.S, VAR.P, STDEV.P, VARA and STDEVA over
 F1:F2 (9E+307 twice) and over F5:F6 (1E+200 twice), and for the spilling array-criteria SUMIF per criterion:
 `INDEX(SUMIF(F1:F3,{">0","<0"}),1,1)` is `#NUM!` while `...,1,2` is -9E+307. The engine matches for VAR.S, STDEV.S and SUMIF;

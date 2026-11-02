@@ -3,7 +3,7 @@ id: T-3808
 title: "Probe and match the unprobed M5 overflow paths: SUBTOTAL 101/106/109, AGGREGATE PRODUCT and variance numbers under every option, SUMX2MY2 overflow"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -47,13 +47,31 @@ huge direct arguments.
   visibility.
 
 ## Acceptance criteria
-- [ ] A probe case under eval/suites/probes (excel-graph sidecar) covers every bullet of "What to probe".
-- [ ] Every probed cell passes bit-exact: no new line in eval/baseline/probes.txt (`make eval-baseline`,
+- [x] A probe case under eval/suites/probes (excel-graph sidecar) covers every bullet of "What to probe".
+- [x] Every probed cell passes bit-exact: no new line in eval/baseline/probes.txt (`make eval-baseline`,
       0 regressions), or each remaining one is owned by a follow-up task filed in this PR.
-- [ ] numbers.md "Aggregate overflow" drops "SUBTOTAL 101/106/109 share the code but are unprobed", "SUMX2MY2 overflow
+- [x] numbers.md "Aggregate overflow" drops "SUBTOTAL 101/106/109 share the code but are unprobed", "SUMX2MY2 overflow
       itself is unprobed" and "direct arguments not probed", and states the probed results with their cells.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Last-digit accumulation of SUMXMY2 (T-2384) and Gate A reference tables (T-3676, T-3677).
 - Statistical aggregates (VAR, STDEV, DEVSQ: already probed; functions-stat).
+
+## Outcome
+Probed and matched. No engine change was needed: the engine already gives Excel's value or error on every M5 cell.
+- probes/t3808-m5-aggregate-overflow (M5, 576 cells, excel-graph 2026-11-02; A value, B `&""`, C ERROR.TYPE):
+  SUBTOTAL 101/106/109 are `#NUM!` (Calc!A20:C25). AGGREGATE 1, 6, 7, 8, 9, 10 and 11 are `#NUM!` under every
+  option 0-7 over F1:F2, F1:F3 and F5:F6. Over a range that also holds `#N/A`, options 0, 1, 4 and 5 give `#N/A` and
+  options 2, 3, 6 and 7 give `#NUM!` (Calc!A26:C177). SUMX2MY2 is `#NUM!` when a square overflows, even with a finite
+  difference (2.9E+307); SUMXMY2 is the control (A178:C181). On the Hide sheet (rows 3, 7, 9 hidden) the hidden rows
+  are dropped before the check: SUBTOTAL 109 and 101 and AGGREGATE 9 under options 1, 5 and 7 over 9E+307 (hidden),
+  9E+307, 1 are finite, and the codes that count hidden rows are `#NUM!` (Hide!A20:C49).
+- probes/t3808-median-geomean-direct-overflow (M9, split off because MEDIAN and GEOMEAN are M9 in the catalog;
+  18 cells): MEDIAN and GEOMEAN with direct arguments 9E+307 x2 and 1E+200 x3 match. One extra cell beyond the task,
+  `GEOMEAN(9E+307,9E+307,1E-300)` (A6), is one ulp high (product past the double range). It is filed as
+  T-3847 (phase-1b) and is the case's only baseline line.
+- numbers.md "Aggregate overflow": the three "unprobed" / "not probed" clauses are replaced with the probed results.
+- Also filed T-3848 (sonnet): criteria.md wording follow-up from the T-3807 fidelity review (MINOR).
+- Eval delta: probes +2 cases, +594 cells, 593 bit-exact. One new known failure (A6, owned by T-3847) and
+  0 regressions.
