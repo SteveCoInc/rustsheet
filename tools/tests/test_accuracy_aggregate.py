@@ -95,7 +95,7 @@ def test_params_for_repeats_only_a_variadic_last_parameter() -> None:
     assert SUM.params_for(3) == (number, number, number)
     with pytest.raises(ValueError, match="SUM takes at least 1 arguments, not 0"):
         SUM.params_for(0)  # below the required count
-    with pytest.raises(ValueError, match="T.DIST takes 3 arguments, not 5"):
+    with pytest.raises(ValueError, match=r"T\.DIST takes 3 arguments, not 5"):
         T_DIST.params_for(5)  # fixed arity: never repeated
 
 
@@ -112,7 +112,7 @@ def test_the_variadic_path_reads_any_argument_count() -> None:
 
 def test_a_fixed_arity_definition_still_rejects_another_count() -> None:
     assert fit_args(T_DIST, [1.5, 3]) == "argument count"
-    with pytest.raises(ValueError, match="T.DIST takes 3 arguments, not 2"):
+    with pytest.raises(ValueError, match=r"T\.DIST takes 3 arguments, not 2"):
         parse_formula(T_DIST, "=T.DIST(1.5,3)")
     with pytest.raises(ValueError):
         T_DIST.check_domain([mp(1.5), mp(3)])
