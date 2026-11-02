@@ -1837,6 +1837,8 @@ C	probes/t3631-randarray-invariant.case.json	45
 C	probes/t3638-subnormal-upper-tail.case.json	84
 C	probes/t3654-filter-result-types.case.json	211
 C	probes/t3656-indirect-spaces-reversed.case.json	291
+C	probes/t3657-proper-letter-sweep.case.json	4
+C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
