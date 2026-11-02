@@ -3,7 +3,7 @@ id: T-3623
 title: "exit_owners: check colon cell spans per list block, not per line"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -41,7 +41,7 @@ unit tests cover both sides (a span on a continuation line is owned; a quoted ra
 not). `make exit-owners MILESTONE=M9` on a fresh `make eval` reports 266 unowned cells before and after,
 and no t3354-f-dist cell appears in either run, so the 304-cell symptom from the 2026-11-02 triage
 could not be reproduced on this report (those cells no longer fail, or T-3479's list changed); the unit
-tests are the evidence for the fix. No eval delta.
+tests are the evidence for the fix. No eval delta. Decision 0250 records the rule change (amends 0159).
 
 ## Handoff (resumed)
 Implemented and reviewed (design and security APPROVE on 2ca5894; PR #2841). The change is done: `names_in_span`
