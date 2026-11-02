@@ -3,7 +3,7 @@ id: T-3809
 title: "gen-m5 arg-pairs batch for TEXT: oracle-filled cells for the 52 unseen value x format_text class pairs, with format-code triage of each failing cell"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
