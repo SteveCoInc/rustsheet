@@ -3,7 +3,7 @@ id: T-3810
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the spilling text functions TEXTSPLIT and REGEXEXTRACT"
 milestone: M7
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -45,16 +45,31 @@ task.
   checked for column-shaped spills (T-3497), so the run may need generator judgment before its cells can be trusted.
 
 ## Acceptance criteria
-- [ ] New gen-m7 cases from `--policy arg-pairs --milestone M7 --functions TEXTSPLIT,REGEXEXTRACT` with their
+- [x] New gen-m7 cases from `--policy arg-pairs --milestone M7 --functions TEXTSPLIT,REGEXEXTRACT` with their
       excel-graph oracle sidecars are committed, and no scored cell is a `#SPILL!` caused by the layout.
-- [ ] After `make eval`, both functions have a `pairwise` share of at least 0.9 in report.json `argument_coverage`,
+- [x] After `make eval`, both functions have a `pairwise` share of at least 0.9 in report.json `argument_coverage`,
       or the PR lists the pairs left unseen and why (a hard domain, a pair Excel refuses to load).
-- [ ] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
+- [x] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
       by an open task, and `make exit-owners MILESTONE=M7` and `make unowned-off ALL=1` report no unowned cell from
       the batch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the engine for the cells this batch finds (the owning tasks), beyond a one-line coercion fix in the
   function's own module that the PR also tests.
 - Regex-syntax probes (T-1972, T-2356, T-2478) and the single-kind probes T-2876 and T-2877.
+
+## Outcome
+- Added 21 gen-m7 cases from `rustsheet-gen --policy arg-pairs --milestone M7 --functions TEXTSPLIT,REGEXEXTRACT`
+  (seed 0; TEXTSPLIT 15 parts over 1421 unseen pairs, REGEXEXTRACT 6 parts over 559), with excel-graph sidecars
+  (2026-11-02). Layout: every formula sits in Calc column A at the 61-row spill stride, with no `check` list, so every
+  spill member is scored. Only column A holds formulas, so a TEXTSPLIT spill across columns reaches no other formula.
+  No scored cell is a layout `#SPILL!`.
+- Coverage (report.json `argument_coverage`): TEXTSPLIT pairwise 0.217 → 1.0, REGEXEXTRACT 0.230 → 1.0, no unseen pair left.
+- Triage: 5729 scored cells; 6 failed before the fix, all one REGEXEXTRACT error-order rule (gen-m7/3d156a08a7bacf35
+  Calc!A8236, A9273, A9334, A11408; gen-m7/781b74b7c112265f Calc!A6833:A6834). Excel coerces return_mode in its turn,
+  but checks its range only after case_sensitivity is read, so an out-of-range return_mode loses to an error
+  case_sensitivity, while non-number text is still `#VALUE!` first (B6833). Fixed in `fn_regexextract`
+  (functions/text/regex_functions.rs; `regex_option_in_range` split out of `regex_option`) with a unit test
+  (`test_regexextract_case_error_beats_out_of_range_return_mode`). text.md "REGEX* optional arguments" records it.
+- Eval delta: gen-m7 +21 cases (5729 cells), all pass; 0 regressions, 0 new known failures, gen-m7 known failures 2538 → 2538.
