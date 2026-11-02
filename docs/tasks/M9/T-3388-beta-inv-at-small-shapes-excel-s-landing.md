@@ -41,6 +41,7 @@ model of Excel's start and stop is fitted under decision 0188 R4, or the task re
 - The same points are rows 7, 14, 21, 22, 28, 29, 32, 33, 41 (flat) and 91, 98, 133 (miss) of
   probes-numeric/t1745-beta-inv-roundtrip, which T-3398 (T-2511's remainder) owns as a whole; at rows 7, 14, 21, 32, 33 and 41 our
   BETA.DIST already equals Excel's at x and both neighbours, so the gap is in the search, not the cdf.
+- Small-shape landing sweep (T-3387): probes-numeric/t3387-beta-inv-small-shape-landing (220 inverse points, their cdf at the landing point, the AS 109 mirror).
 - Rule and quirk: docs/excel-semantics/statistics.md "BETA.INV solves Excel's own CDF to the crossing (T-1745)" (the
   22 flat and 11 off-crossing rows; "a tolerance stop, but it is not established").
 - Hypotheses to test first: T-2555 reads Excel's BETA.INV as AS 109's structure (p > 1/2 is 1 - BETA.INV(1-p,b,a)

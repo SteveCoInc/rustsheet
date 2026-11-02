@@ -3,7 +3,7 @@ id: T-3387
 title: "Oracle sweep: where Excel's BETA.INV lands at small shapes (tiny p, and p 0.01 to 0.5 at b 10 to 1000), with BETA.DIST at its own landing point"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -57,3 +57,9 @@ today.
 ## Out of scope
 - Fitting or implementing (T-3388). Huge shapes (T-2555), p near 1 where the answer is 1 (T-3351), the crossing of
   the ported cdf (T-3398, from T-2511).
+
+## Outcome
+Added probes-numeric/t3387-beta-inv-small-shape-landing (560 cells, filled by excel-graph, sidecar has no pending
+cells). Excel's cdf at its own landing point equals p at 57 of 220 points, is within 1 ulp at 53 more and further at
+110 (largest miss 220 ulps at a=2.5, b=1000); counts recorded in statistics.md and the case linked from T-3388. No
+engine change, eval gated cells unchanged.
