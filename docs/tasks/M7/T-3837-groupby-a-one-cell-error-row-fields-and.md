@@ -71,3 +71,17 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
   99.86% bit-exact. All 359 owned cells pass, and so do 9 of T-3840's (the early-error lift); T-3840 keeps the FALSE element.
 - Also folds in the MINOR findings left on #2847: T-3778's criteria are ticked with the spill-extent deviation noted, and
   arrays.md cites 07c0c130d894cfe0 A4515.
+
+## Landing notes
+- PR #2860 (stacked on #2847, which has merged; `origin/main` merged in at 12a895dc7). Round-1 fixes pushed at 013220834 and the
+  commit adding these notes; CI pending on that head.
+- Round 1 on 63cf87648: security APPROVE, design APPROVE (MINORs: the shared `ReferenceKind` check, and the reused height
+  message, kept), excel-fidelity REQUEST_CHANGES. Fixed since then:
+  - The text/error-key rules now apply only where the evidence goes (`ScalarInput`): scalar text `values` or a one-cell
+    error `row_fields`, with `field_headers` omitted. A 1x1 array and a given `field_headers` are left as before, except
+    that another height is still `#VALUE!`; T-3854 probes them.
+  - The arrays.md "Unprobed: one row of text values" line now cross-references the new section.
+  - The test uses a same-height error-key case.
+  - Eval: gen-m7 2538 -> 2170 known failures, 0 regressions; 52 groupby unit tests pass; `make check-fast` green.
+- Next: run all three reviewers on the new head (the head moved). Then CI green, `make merge-mode` = lock, and enqueue.
+- Don't repeat: matching the rule on array shape (any 1x1 text values or 1x1 error key) was rejected as wider than the evidence.
