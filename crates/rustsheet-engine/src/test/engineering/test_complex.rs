@@ -140,6 +140,38 @@ fn imsin_imcos_small_imaginary_part_takes_the_reciprocal_form() {
     assert_eq!(model._get_text("A4"), "1E-200");
 }
 
+/// IMSIN and IMCOS of a complex number take sin x and cos x from SIN and COS's own kernel (x
+/// reduced by the x87 64-bit π), not libm: near k·π/2 the small part keeps Excel's remainder
+/// (probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1; t3726-imsin-imcos-near-half-pi-sweep
+/// A183, B183; T-3726). libm gave ...2.88917292436455E+293 and ...2223053845294390000 here.
+#[test]
+fn imsin_imcos_near_half_pi_take_the_x87_reduction() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSIN("1.5707963267949+709.7i")"#);
+    model._set("A2", r#"=IMCOS("1.5707963267949+709.7i")"#);
+    model._set("A3", r#"=IMSIN("4.71238898038469+79.1718046156471i")"#);
+    model._set("A4", r#"=IMCOS("4.71238898038469+79.1718046156471i")"#);
+
+    model.evaluate();
+
+    assert_eq!(
+        model._get_text("A1"),
+        "8.27492013840132E+307-2.88915216855774E+293i"
+    );
+    assert_eq!(
+        model._get_text("A2"),
+        "-2.88915216855774E+293-8.27492013840132E+307i"
+    );
+    assert_eq!(
+        model._get_text("A3"),
+        "-1.2101741480848E+34-2223964481544680000i"
+    );
+    assert_eq!(
+        model._get_text("A4"),
+        "-2223964481544680000+1.2101741480848E+34i"
+    );
+}
+
 #[test]
 fn fn_imaginary_misc() {
     let mut model = new_empty_model();
@@ -637,4 +669,36 @@ fn assert_texts(cases: &[(&str, &str)]) {
             "{formula}"
         );
     }
+}
+
+/// The logs' modulus is the x87 root of the double sum of squares, and an overflowing `y/x` is
+/// `#NUM!` in the logs and an angle of 0 in IMSQRT (probes/t3643-*-grid, excel-graph; T-3643).
+#[test]
+fn logs_round_the_modulus_twice_and_overflowing_quotients() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMLOG10("0.999999999999999+1E-8i")"#);
+    model._set("A2", r#"=IMLOG2("1E-8-0.999999999999999i")"#);
+    model._set("A3", r#"=IMLOG10("0.999999999999999+1i")"#);
+    model._set("A4", r#"=IMLOG10("1E-300+1E20i")"#);
+    model._set("A5", r#"=IMLOG2("-1E-300-1E20i")"#);
+    model._set("A6", r#"=IMLOG10("1E-20+1E20i")"#);
+    model._set("A7", r#"=IMSQRT("1E-300+1E20i")"#);
+    model._set("A8", r#"=IMSQRT("-1E-300-1E20i")"#);
+    model._set("A9", r#"=IMSQRT("1E-20+1E20i")"#);
+    model.evaluate();
+    assert_eq!(
+        model._get_text("A1"),
+        "-3.85730986621315E-16+4.34294481903252E-09i"
+    );
+    assert_eq!(
+        model._get_text("A2"),
+        "-1.28137060152597E-15-2.26618005648665i"
+    );
+    assert_eq!(model._get_text("A3"), "0.15051499783199+0.341094088460461i");
+    assert_eq!(model._get_text("A4"), *"#NUM!");
+    assert_eq!(model._get_text("A5"), *"#NUM!");
+    assert_eq!(model._get_text("A6"), "20+0.682188176920921i");
+    assert_eq!(model._get_text("A7"), "10000000000");
+    assert_eq!(model._get_text("A8"), "10000000000");
+    assert_eq!(model._get_text("A9"), "7071067811.86548+7071067811.86547i");
 }

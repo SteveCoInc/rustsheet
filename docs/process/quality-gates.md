@@ -1,7 +1,9 @@
 # Quality gates
 
-Every gate is automated and runs in CI (`.github/workflows/ci.yml`). `make check` runs the same
-gates locally, except `cargo deny` and `cargo machete` (`make ci`). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
+Every gate is automated and runs in CI (`.github/workflows/ci.yml`), on each PR head and again on
+the merge group. `make check` runs the same gates locally, except `cargo deny` and `cargo machete`
+(`make ci`). Before a push, workers run `make check-fast`: the gates their change can break, by
+path, never the full Rust suite (`scripts/fast_gates.py`, decision 0248). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
 decision record in `docs/decisions/` (enforced by `scripts/check_governance.py`).
 On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygiene always runs, and
 `docs/excel-semantics/` counts as code because the eval harness reads it. The rules are
@@ -16,6 +18,7 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 | **Excel compatibility** | `make eval-check` (CI and `make check`: `make eval-gates`, decision 0125) | no regressions against `eval/baseline/*.txt` (known failures); baseline must be up to date |
 | Visible parity | `make eval-check` (CI and `make check`: `make eval-gates`) | no case of the vendored gated suites may have more in-scope cells visibly off from Excel than its line allows; `eval/baseline/visible-parity.txt` (decisions 0088, 0093, 0219) |
 | Evidence floor | `make evidence-floor` | in-scope, oracle-evaluable functions with fewer than 20 Excel-evidence cells may not increase; `quality/evidence-floor.json` (decision 0062). CI and `make check` run it with `make eval-check` as `make eval-gates`, one run of the suites (decision 0125) |
+| New-case owners | `scripts/new_case_owners.py` (CI and `make check`: `make eval-gates`) | every visibly-off Excel cell (decision 0188 R1(c)) of an eval case the branch adds or refills (its case file or `.oracle.json` sidecar added or changed against the merge base with `origin/main`) is owned by an open task by `scripts/exit_owners.py`'s rule; a `defer:` owner counts (T-3793, decision 0245) |
 | Python tools | `make py-check` | ruff, mypy `--strict`, pytest |
 | Python bindings | `make py-bindings` | maturin build + pytest |
 | Duplication | `scripts/check_duplication.py` | duplicated lines (10-line normalized windows) may not increase; `quality/duplication.json` |
@@ -27,6 +30,7 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 | Spelling | `typos` | clean (Excel names allow-listed in `_typos.toml`) |
 | Docs readers | `scripts/check_docs_readers.py` | code may read `docs/` or `.claude/` only under `CODE_READ_PATHS` in `scripts/ci_changes.py`, which CI never skips (decision 0066) |
 | CI rights | `scripts/check_ci_workflow.py` | `.github/workflows/ci.yml` references no secret or job token and every `permissions` block is exactly `contents: read`; its tests pin `on.push.branches` to `main`, `merge-train/current` and `merge-train/shadow` (decision 0147) |
+| Math sidecars | `make eval-math-check` | every Gate A one-call cell of the probe suites has a math value or a recorded generator skip in its `*.math.json`, and no entry's `f` is stale; regenerate with `cd tools && uv run rustsheet-accuracy math --suite <suite>` (decision 0243) |
 | Governance | `scripts/check_governance.py origin/main` | protected-path changes need a decision record; test deletions flagged |
 
 ## Ratchet mechanics

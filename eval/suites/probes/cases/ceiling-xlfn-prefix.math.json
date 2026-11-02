@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "bdf8ae437b66dd2578509834992bc8f1a073954ed063ffefba63a861658f125f"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "n",
+    "v": "4.0",
+    "f": "=CEILING(2.5,2)"
+   }
+  }
+ }
+}

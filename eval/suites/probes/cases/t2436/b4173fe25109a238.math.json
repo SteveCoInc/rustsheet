@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "3bda38cfd423789a7f402d72df181d27713ea8975f0ce362e6de159086ea2b99"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "1.0580804899802339983220561177249632001322305831208e-4342944819032518",
+    "f": "=CSCH(1E+16)"
+   }
+  }
+ }
+}

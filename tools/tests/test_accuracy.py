@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import io
 import json
+import pkgutil
 import random
 import subprocess
 from collections.abc import Sequence
@@ -19,7 +20,7 @@ import yaml
 
 from rustsheet_tools import repo_root, snapshot
 from rustsheet_tools.accuracy import cli as accuracy_cli
-from rustsheet_tools.accuracy import literal
+from rustsheet_tools.accuracy import defs, literal
 from rustsheet_tools.accuracy.defs.annuity import RATE, rate
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf, density, quantile
 from rustsheet_tools.accuracy.model import (
@@ -336,32 +337,21 @@ def test_fill_writes_excels_values_and_leaves_the_rest_pending(
 
 def test_cli_lists_and_generates(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert accuracy_cli.main(["list"]) == 0
-    assert capsys.readouterr().out.split() == [
-        "BINOM.DIST",
-        "COS",
-        "COT",
-        "CSC",
-        "F.DIST",
-        "F.INV",
-        "IRR",
-        "NEGBINOM.DIST",
-        "NPER",
-        "POISSON.DIST",
-        "RATE",
-        "ROUND",
-        "ROUNDDOWN",
-        "ROUNDUP",
-        "SEC",
-        "SIN",
-        "T.DIST",
-        "T.INV",
-        "T.INV.2T",
-        "TAN",
-        "TINV",
-        "XIRR",
-    ]
+    listed = capsys.readouterr().out.split()
+    # The list is the registry itself, so adding a Gate A family never edits this test (T-3830).
+    assert listed == sorted(REGISTRY)
+    assert {"ACOS", "SUM", "T.DIST", "XIRR"} <= set(listed)
     assert accuracy_cli.main(["--tables", str(tmp_path), "generate", "t.dist", "--count", "5"]) == 0
     assert (tmp_path / "T.DIST" / "s1.case.json").exists()
     assert accuracy_cli.main(["--tables", str(tmp_path), "verify", "T.DIST"]) == 0
     with pytest.raises(DomainError):
         T_DIST.evaluate([mp(1), mp(0), True])
+
+
+def test_defs_family_modules_are_discovered_not_listed() -> None:
+    """A new family is one new module under defs/: no shared module list names the families."""
+    on_disk = sorted(m.name for m in pkgutil.iter_modules(defs.__path__))
+    assert defs.__all__ == on_disk
+    assert all(hasattr(defs, name) for name in on_disk)
+    source = Path(defs.__file__ or "").read_text()
+    assert "aggregate" not in source

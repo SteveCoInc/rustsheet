@@ -429,7 +429,36 @@ Tasks: T-2793, T-2810
   (below, "neither `sqrt(x²+y²)` nor `hypot`"), unexplained. See "IMPOWER past the angle cut" for bases past the cut.
 - IMLN, IMLOG10 and IMLOG2 use the same modulus: `IMLN("0.7071067811865476+0.7071067811865476i")` is
   `-6.66133814775094E-16+0.785398163397448i` (ln of 0.9999999999999993; `sqrt` would give -7.77E-16), IMLOG10 `-2.89298239965986E-16+..`,
-  IMLOG2 `-9.61027951144476E-16+..` (probes/eng-imln-modulus A1, A6, A11; T-2117). IMSQRT keeps `sqrt(x²+y²)`: its first cell cannot tell (15 digits agree) and Excel's "0" for `3E-200+4E-200i` and `1E-170+1E-170i` (x² underflows; A18, A20) matches only that form.
+  IMLOG2 `-9.61027951144476E-16+..` (probes/eng-imln-modulus A1, A6, A11; T-2117). IMSQRT keeps `sqrt(x²+y²)`: its first cell cannot tell (15 digits agree) and Excel's "0" for `3E-200+4E-200i` and `1E-170+1E-170i` (x² underflows; A18, A20) matches only that form. That modulus is the double sum of the squares with
+  its root taken in x87 extended precision and rounded again to a double (`extended_sqrt`, numbers.md "Division
+  rounds twice"), not `hypot` and not IMABS's scaled form (T-3643). The second rounding shows near |z| = 1:
+  `0.999999999999999+1E-8i` sums to 1-17·2^-53, whose extended root is the midpoint 1-8.5·2^-53, which rounds to
+  even, 1-8·2^-53, so `IMLOG10("0.999999999999999+1E-8i")` is `-3.85730986621315E-16+4.34294481903252E-09i`,
+  IMLOG2 `-1.28137060152597E-15+..` and IMLN `-8.88178419700126E-16+..` (`hypot`, the scaled modulus and a plain
+  `sqrt` give 1-9·2^-53, -4.33947359948979E-16; probes/t3643-imlog10-grid D5, E4, D15, E14, N5, O4, N15, O14,
+  t3643-imlog2-grid the same cells, t3643-imln-points A1-A3). It gives 1-6·2^-53 for the 0.707106781186547 pair,
+  as `hypot` does, and fits all 441 cells of each 21x21 log grid (0, ±1E-300, ±1E-20, ±1E-8, ±(1-1E-15), ±1,
+  ±(1+1E-15), ±10, ±1E8, ±1E20, ±1E300 for each part) except IMLOG10's `10±1E8i` (I8, S8), whose imaginary part
+  `atan2/ln 10` prints 0.682188133491472 for Excel's ...473, one digit in the 15th (phase-1b). The logs' angle is
+  libm `atan2`, not ATAN2's `atan(y/x)`, which misses `IMLOG10("0.999999999999999+1i")`'s 0.341094088460461 (F5).
+- IMLN, IMLOG10 and IMLOG2 are `#NUM!` when ATAN2's quotient `y/x` overflows (ATAN2 is `#NUM!` there, numbers.md
+  "ATAN2 is ATAN(y/x) plus or minus π"): `IMLOG10("1E-300+1E20i")`, `IMLOG10("-1E-300-1E20i")`,
+  `IMLOG2("1E-300+1E300i")` and `IMLN("1E-300+1E20i")` are `#NUM!`, while `IMLOG10("1E-20+1E20i")` is
+  `20+0.682188176920921i` and `IMLOG10("1E-300+1E8i")` is `8+0.682188176920921i` (t3643-imlog10-grid J2, J12, T2,
+  K2, J3, I2; t3643-imln-points A5-A7). The reverse quotient underflows harmlessly: `IMLOG10("1E20+1E-300i")` is 20
+  (B10). Implemented (T-3643).
+- IMSQRT takes an angle of 0 when ATAN2's `y/x` overflows, so the root is real whatever the signs:
+  `IMSQRT("1E-300+1E20i")`, `IMSQRT("-1E-300+1E20i")`, `IMSQRT("1E-300-1E20i")` and `IMSQRT("-1E-300-1E20i")` are
+  all `10000000000` (t3643-imsqrt-grid J2, J12, T2, T12), while `IMSQRT("1E-20+1E20i")` is
+  `7071067811.86548+7071067811.86547i` (J3). Implemented (T-3643). IMSQRT of a part one ulp-band below 1 prints one
+  digit high: `IMSQRT("0.999999999999999")` is `1` and `IMSQRT("-0.999999999999999")` `6.1257422745431E-17+1i`
+  (ours 0.999999999999999: the engine's root is 1-5·2^-53, Excel's at least 1-4·2^-53; A5, A15 and the 1E-300,
+  1E-20, 1E-8 imaginary columns of rows 5 and 15, 14 cells, phase-1b, unexplained).
+- IMSECH over the same grid: `#NUM!` for |y| ≥ 1E20 when |x| ≤ 10 (rows 1-8 and 12-18 of columns J, K, T, U; 60
+  cells, T-3642's argument cut), while |x| ≥ 1E8 gives "0" there (`IMSECH("1E8+1E20i")`, `IMSECH("-1E300+1E20i")`,
+  `IMSECH("1E300+1E300i")`: J9, J10, J11, J19-J21, K19; the cosh overflow wins). `IMSECH("0.999999999999999±10i")` and
+  its negation are one digit off in the 15th (H5, H15, R5, R15; phase-1b, T-3795). Every other IMSECH grid cell
+  agrees with ours (t3643-imsech-grid).
 - IMLN, IMLOG10 and IMLOG2 are `#NUM!` when both parts are nonzero and `x²+y²` is infinite or subnormal: `1E153+1E153i` works,
   `1E154+1E154i` (sum 2E308) and `1E-154+1E-154i` (sum 2E-308 < 2.2250738585072014E-308) are `#NUM!`, `1.5E-154+1.5E-154i`
   (2.25E-308), `1E-160+1i` and `1.1E154+0.1E154i` work, and a zero part exempts the number (`IMLN("1E-160+0i")`,
@@ -447,7 +476,7 @@ Tasks: T-2793, T-2810
   `flushed_square` (functions/engineering/complex/mod.rs; probes/eng-imln-modulus-range A43-A56, A79, A80,
   eng-imln-modulus A17; excel-graph). Extrapolated, not probed: parts of about 1.06E-154 to 1.49E-154, where each
   square is subnormal but their sum is normal (`IMLN("1.2E-154+1.2E-154i")`; ours `#NUM!`, IMSQRT "0"; T-2894).
-Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117).
+Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117); probes/t3643-imlog10-grid, t3643-imlog2-grid, t3643-imsqrt-grid, t3643-imsech-grid, t3643-imln-points (excel-graph, 2026-11-01, T-3643).
 Status: VERIFIED (excel-graph)
 Tasks: T-1766, T-1892, T-1950, T-2117, T-2572, T-2894
 
@@ -485,7 +514,7 @@ Status: VERIFIED (excel-graph, 2026-10-21, `im-last-digit-sweep`); the kernels a
 
 Also found by the sweep (same case; Ours is what RustSheet gives):
 - Tiny arguments lose about 8 digits in IMCSC and IMCOT: `IMCSC("1E-5+1E-5i")` is 49999.9979339908-49999.9979306575i (E70, F70; exact 50000.0000016667), `IMCSC("0.00001i")` imaginary part -99999.9917276303 (F65), IMCOT real 49999.9958596485 (Q70), imaginary -49999.9958663151 (R70) and -99999.9917326303 (R65). Reproduced by the T-2044 kernels below (before them ours gave the exact values, E70 50000.0000016667, F65 -99999.9999983333). Status: VERIFIED (excel-graph); implemented (T-2044).
-- Excel keeps tiny results where the denominator is huge: `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i (E55, F55; the IMSEC of it is -6.26263832046024E-246+6.94796703439417E-245i, G55:I55) and `IMSECH("-524.561+5.3113i")` is 1.73046857535442E-228-2.53533899849465E-228i (K42, L42). Rule: past the point where the denominator overflows (the hyperbolic argument v above about 355), cosh v and |sinh v| are both M = e^|v|/2, and the result is the trigonometric parts over M, i.e. times 2e^-|v| (IMSEC `(cos x, sgn(y)·sin x)`, IMCSC `(sin x, -sgn(y)·cos x)`, IMSECH `(cos y, -sgn(x)·sin y)`); this reproduces all 15 digits of the 6 cells. Where 2e^-|v| is subnormal the parts print 0 (`IMSEC("1.5+711i")`, `IMSECH("711+1.5i")`). Status: VERIFIED; implemented (T-2335; ours was 0 before). IMCSCH of a large non-real argument (`IMCSCH("-524.561+5.3113i")`) is unprobed and still answers 0.
+- Excel keeps tiny results where the denominator is huge: `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i (E55, F55; the IMSEC of it is -6.26263832046024E-246+6.94796703439417E-245i, G55:I55) and `IMSECH("-524.561+5.3113i")` is 1.73046857535442E-228-2.53533899849465E-228i (K42, L42). Rule: past the point where the denominator overflows (the hyperbolic argument v above about 355), cosh v and |sinh v| are both M = e^|v|/2, and the result is the trigonometric parts over M, i.e. times 2e^-|v| (IMSEC `(cos x, sgn(y)·sin x)`, IMCSC `(sin x, -sgn(y)·cos x)`, IMSECH `(cos y, -sgn(x)·sin y)`); this reproduces all 15 digits of the 6 cells. Where 2e^-|v| is subnormal the parts print 0 (`IMSEC("1.5+711i")`, `IMSECH("711+1.5i")`). Status: VERIFIED; implemented (T-2335; ours was 0 before). IMCSCH of a large non-real argument (`IMCSCH("-524.561+5.3113i")`) still answers 0; Excel keeps tiny parts there (probes/im-trig-magnitude-grid, x = 700 to 709; "IM* trig and hyperbolic functions past SIN's argument limit (T-3642)" below; T-2668).
 - `IMCSC("0")`, `IMLOG2("0")` and `IMCOT("0")` are `#NUM!` (D21, M21, P21), `IMARGUMENT("0")` is #DIV/0!. Implemented (T-2334); before it we answered the text `NaNNaNi`, `-inf`, `inf`. Status: VERIFIED.
 - Text quirks (not kernels): `IMCOT("-57.9375+18.7089i")` prints "-4.00011374673746E-17-1i" (P43): the
   imaginary part -0.9999999999999999 keeps its "1", because the coefficient is dropped only for an
@@ -617,7 +646,8 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `IMCSC("1+1E-9i")` is `1.18839510577812-7.6305972223263E-10i` and `IMCOT("1+1E-9i")`
   `0.642092615934331-1.41228292743739E-09i` (a real part of 1 keeps the kernel well conditioned).
 - UNVERIFIED: for |x| ≥ 2^27 (SIN's own `#NUM!` cut) the reciprocal kernels take libm's sine and cosine.
-- IMLOG2 (T-2231, superseding the T-2044 time-box): `ln` of IMABS's scaled modulus and the argument (`atan2`),
+- IMLOG2 (T-2231, superseding the T-2044 time-box; modulus model replaced by T-3643): `ln` of the logs' doubly
+  rounded modulus (above) and the argument (`atan2`),
   both times K = 1.4426950408889636, the double one ulp above log2 e (= `1/ln 2` with the double one ulp below ln 2).
   It fits all 103 distinct real and 103 imaginary parts of IMLOG2 cells in the eval suites (sweep N/O, COMPLEXs AH19,
   eng-im-overflow-edges A104-A109, gen-m9, eng-im-overflow-edges-2 A35-A44). The earlier candidate, dividing
@@ -708,6 +738,16 @@ Rule: DEC2BIN, DEC2HEX, DEC2OCT, BIN2OCT, BIN2HEX, HEX2BIN, HEX2OCT, OCT2BIN, OC
 Evidence: probes/eng-first-vs-second-error A1:D11 (excel-graph, 2026-10-19); probes/eng-later-argument-lift M2, M8.
 Status: VERIFIED (excel-graph)
 Tasks: T-1816, T-2545
+
+## IM* trig and hyperbolic functions past SIN's argument limit (T-3642)
+Rule: with a nonzero other part, IMTAN, IMSEC, IMCSC and IMCOT are `#NUM!` from |x| = 2^27 = 134217728, and IMSINH, IMCOSH, IMSECH and IMCSCH from |y| = 2^27, whatever the other part (1E-300, 1, 20, 700, either sign): `IMTAN("134217728+1i")`, `IMSINH("1+134217728i")`, `IMCOSH("1E-300-1E+10i")` are `#NUM!` and 134217727.99 answers. IMSIN and IMCOS cut sooner, as IMPOWER's and BESSELJ's inner sine (`EXCEL_INNER_TRIG_LIMIT`): `IMSIN("134217727+1i")` answers, `"134217727.5+1i"` and `"134217727.99+1i"` are `#NUM!`.
+Rule: the cut only applies where Excel takes the sine. IMTAN and IMCOT stay `±0 ± i` once cosh 2y overflows (`IMTAN("1E+10+700i")` is i, `IMCOT("134217728+700i")` -i, `IMTAN("1E+10+20i")` `#NUM!`). IMSEC and IMCSC are 0 once their overflowed-reciprocal scale 2e^-|y| is below the smallest normal double, |y| above about 709.09 (`IMSEC("1E+10+709.5i")` 0, `"1E+10+709i"` `#NUM!`), and IMSECH and IMCSCH the same in x (`IMSECH("709.5+1E+10i")` 0, `"709+1E+10i"` `#NUM!`); the 709.09 point is inferred from that formula, the probe brackets it in (709, 709.5]. A zero other part keeps the real rules ("IMSIN, IMCOS, ... of a real number" (T-2534): `IMCOT("134217728")` is 0).
+Not covered here: IMSIN and IMCOS at y = 709.78 are `#NUM!` for every x probed (T-3616's band). The complex IMSIN, IMCOS and IMTAN paths (and IMCSCH, IMSINH and IMCOSH for y) still take libm's sine of a large argument, so their last digits differ from Excel's x87 reduction (`IMSIN(COMPLEX(710,1E-300))` is 0.0000602887066915739, the real `IMSIN("710")` value; ours ...853), 74 grid and 37 argument-cut cells in all (T-3758).
+Rule (not implemented, T-2668 and T-2914): IMCSCH keeps normal tiny parts at x = 700, 705 and 709 where ours prints 0 (J134:J149, J153:J168, J172:J176, J180, J183, J184 and J186 of the grid). The real-axis sign is odd: `IMCSCH(COMPLEX(700,0))` and `(700,1E-308)` are 1.97193530875195E-304, `(700,1E-300)`, `(700,1E-200)` and `(700,1E-20)` -1.97193530875195E-304; `(700,1)` -1.06544119434148E-304+1.65932634623297E-304i and `(700,20)` -8.04711426558125E-305+1.80026897486721E-304i are the negation of 2e^-x(cos y, -sin y), while `(700,709.78)` is -1.92443257888109E-304-4.30218678399417E-305i. This settles the "IMCSCH ... unprobed" question of the IM* last-digit sweep entry above.
+Inferred, not bracketed: the IMTAN/IMCOT exception starts where cosh 2y overflows (|y| about 355); the grid only shows y = 20 (`#NUM!`) and y = 700 (±i) past the limit.
+Evidence: probes/im-trig-magnitude-grid (4360 cells: 19x19 magnitudes 0, 1E-308 to 1E+300 with 700 to 720 around exp overflow, plus sign variants, columns A:J = the ten functions) and probes/im-trig-argument-cut (190 cells around 2^27), excel-graph, 2026-11-01.
+Status: VERIFIED (excel-graph); implemented (`past_trig_limit`, `inner_trig_overflows`, `reciprocal_flushes` in complex/trig.rs).
+Tasks: T-3642
 
 ## IM* results that overflow (T-1827)
 
@@ -1004,7 +1044,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   real part -0.208738033086954, ours ...955): every pairing of the series, libm and form sinh with the form, libm and
   series cosh scores the same 105/111 complex IMCOSH and 71/75 complex IMCSCH texts and none fits these three (the
   other misses there are notation, T-3560). Status: VERIFIED (excel-graph) for the real IMSECH and IMCSCH kernels at
-  |x| <= 0.01; UNVERIFIED for B15, D15 and D29. Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
+  |x| <= 0.01; UNVERIFIED for B15, D15 and D29 (T-3721 tries the trig and division candidates). Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is
@@ -1013,6 +1053,9 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   when its text, with the leading `0.`, is at most 21 characters (12 digits to -8, 13 to -7, 14 to -6; one more
   digit or exponent step is E notation; a 21-character part is evidenced at exponents -6 to -8 only, the rule below -8
   is extrapolated), a character more than number-to-text coercion allows. Status: VERIFIED (excel-graph), implemented (T-3560).
+  The T-3589/T-3609 sweeps agree and pass since T-3560 (gap triage 2026-11-01, excel-graph): probes-numeric/t3589-im-hyperbolic-small-x-sweep
+  S!A4 `IMSINH("6.09023237964955E-06")` is `0.0000060902323796872` (14 digits at -6) and S!C127
+  `IMSECH("3.92937257901956E-06+0.107316538548074i")` is `1.00578618257237-0.0000004257623550779i` (13 at -7).
 - **IMSQRT of a negative real is polar through COS and ATAN2.** `IMSQRT("-1")` (`IMSQRT(TEXT(-1,"0"))`) is
   "6.1257422745431E-17+i" = COS(ATAN2(-1,0)/2) with Excel's COS (libm cos(π/2) 6.12323399573677E-17), `IMSQRT(-2.5)`
   9.68564897336834E-17+1.58113883008419i, `IMSQRT(-0.0001)` 6.1257422745431E-19+0.01i, `IMSQRT(-3.85841)`
@@ -1066,7 +1109,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   "2024-01-01", "1-2-2020", "1-Jan-2020", "2020-1-2", "1-1-1", "$-5", "2-" and "$1,000-" is `#NUM!`. Slash and
   month-name dates and clock text are read as VALUE reads them ("1/2/2020" 43832, "2024/01/01" 45292, "1/2/2020 3:00"
   43832.125, "Jan 1, 2020" 43831, "1/2/20" 43832, "12:00 PM" 0.5), and so are " -5", "- 5", "(5)", "1E-3%" 1E-05,
-  "1,000E-2" 10 and "3 1/2" 3.5. Ours matches all of these since T-2541 (`has_inner_minus`) except "3 1/2", which
+  "1,000E-2" 10 and "3 1/2" 3.5. Ours matches all of these since T-2541 (now `split_inumber`, T-3644) except "3 1/2", which
   VALUE does not read yet (text.md, T-2646).
   A currency sign, `$` or `€`, that starts the text or a part (after a `+` or `-` that is not an exponent's, spaces
   allowed on both sides) and stands before a digit or a `.` (past spaces) is dropped (probes/eng-inumber-reading A5,
@@ -1084,6 +1127,37 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   "1E$3" and "12$3i" [`#NUM!`]; leading spaces before NBSP, LF, CR or U+3000 (only tab is probed) [`#NUM!`]; one of
   the five followed by trailing spaces ("5"&tab&" ") [read]; these five inside the text; a leading tab on text over
   255 characters [`#VALUE!`]. T-3059 holds them.
+  The grammar (probes/eng-inumber-grammar A1:A65 and probes/eng-inumber-grammar-parts A1:A54, IMREAL, IMAGINARY and
+  IMSUM of one argument, excel-graph, 2026-11-02): trailing spaces are dropped and a last lower-case `i` or `j` is the
+  suffix. The first `+` or `-` past the first character (after leading spaces) that is not an exponent's sign splits
+  the rest into a real part and an imaginary coefficient, that sign is the coefficient's, and **each part is then read
+  as VALUE reads it**. So a sign run between the parts is read when the coefficient alone is VALUE text: "1+-2i" and
+  "1-+2i" are 1-2i, "1--2i" and "1++2i" 1+2i, "1+ -2i" 1-2i, "1- -2i" 1+2i, "-1+-2i" -1-2i, "1+-2E-3i" 1-0.002i,
+  "1+-$2i" 1-2i, "1--$2i" 1+2i; but "1---2i", "1+-+2i", "1+-i", "1--i" and "1-+j" are `#NUM!` ("--2", "-+2" and a lone
+  sign are not VALUE text; a lone sign is ±1 only with no real part: "i" 0+1i, "-i", "+i" "i"). A part reads what
+  VALUE reads: "1,000+2i" 1000+2i, "1+2,000i", "1,000.5-2,000.25i", "1,000,000i", "$1,000+2i", "50%+2i" 0.5+2i,
+  "1+50%i", "1%+2i" 0.01+2i, "1+2%j" "1+0.02j", "50%i", "-50%-2i", "1+-50%i", "1E2%+2i" 1+2i, "(1)+2i" -1+2i,
+  "1+(2)i" 1-2i, "1/2/2020+2i" 43832+2i, "1+1/2/2020i" 1+43832i, "1:00+2i" "0.0416666666666667+2i", "007+002i"
+  "7+2i", "1e5i" "100000i", "1E5j" "100000j", "1E+5+1E-5i" "100000+0.00001i", "1e5+2i", "1+2E3i", "1+2E-3i",
+  "1e+2+1e+2i", "-1E-2-1E-2i", "1.e2" "100", ".5i" "0.5i", "5.i" "5i", "1+5.i", "+.5-.5i", "1.+2i", spaces around
+  either part ("1 +2i", "1+ 2i", "1+2 i", "1 + 2 i", " 1+2i", "1+2i ") 1+2i; "1+0i", "-0", "-0i" and "0-0i" print
+  "0" or "1". Not read (`#NUM!`): a sign run before a lone first part ("++1", "+-1", "+-2i", "--2i", "-+2i"), a real
+  part with no suffix after a split ("1+2", "1+-2", "1+-", "1i+2", "1+2i+3"), a coefficient VALUE refuses ("1+2+3i",
+  "2i+3i", "2ii", "1+2ij", "1+2i i", "1+.i", ".i", "1+2e+i", "1+2%%i", "1 2i", "12 3i", "1+2,0i", "1,00+2i", "1,+2i",
+  ",1+2i"), a suffix that is not last or upper case ("i2", "1+i2", "1+2i3", "1+2i%", "I", "J", "1+2I", "1+2J"), an
+  exponent with two signs ("1E+-5+2i" splits at the second), "1e", "1e+", "e5", "1.2.3", "0x1", full-width digits
+  ("１+2i", "１２") and a tab on either side of the inner sign ("1+"&tab&"2i", "1"&tab&"+2i": the end-whitespace rule
+  above applies to each part). A number value is read whole (A58:A65: 1E5, 0.5, 50%, -0, 1000, -2.5E+21; the literal
+  12345678901234567 is already 1.23456789012345E+16). Ours matches every cell since T-3644 (`split_inumber`), except
+  three that are VALUE's own grammar: "1,0000+2i" 10000+2i (VALUE reads a group of four digits), "%1+2i" 0.01+2i
+  (a leading percent sign) and "1,+2i" `#NUM!` (VALUE refuses a trailing comma); coercion.md "Group commas and a
+  leading percent sign", T-3811. A part keeps 15 significant digits, as VALUE does (probes/eng-inumber-grammar-digits,
+  excel-graph, 2026-11-02): `IMREAL("1.2345678901234567+2.2345678901234567i")` is 1.23456789012345 and its IMSUM
+  "1.23456789012345+2.23456789012345i", "0.30000000000000004" is 0.3, "123456789012345678" 1.23456789012345E+17 and
+  "9007199254740993+9007199254740993i" "9007199254740990+9007199254740990i" (matched since T-3644; the lexer-based
+  reader before it kept the 17-digit double). Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
+  a tab before the suffix ("2"&tab&"i") [`#NUM!`]; year-less dates in a part ("1/2+2i"; no case keeps one, as its
+  value moves with the current year) [read as VALUE reads it].
 - **Large parts in plain notation.** An IM* part is written in plain notation up to a decimal exponent of 20, zero-padded
   past 15 significant digits (`IMPOWER("1-2i",59)` is "-331147245179666000000-252614032879411000000i";
   `IMSUM("123456789012345678901","0")` is "123456789012345000000"), and in E notation from exponent 21
@@ -1158,6 +1232,23 @@ earlier cut at ln(DBL_MIN) (T-3589).
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/mod.rs (`ENGINEERING_EXP_CUT`, shared with BESSELI), complex/trig.rs
 (`trig_exp_overflows`)
+
+## IMSIN and IMCOS reduce the real part by the x87 64-bit pi (T-3726)
+Rule: IMSIN and IMCOS of a complex x + yi (y != 0) take sin x and cos x as SIN and COS do, reducing x by the x87
+64-bit pi (numbers.md "Trig of a huge angle", "SIN / COS at multiples of 90°"), not as the correctly rounded sine and
+cosine. It shows where x is within a few 1E-15 of k·pi/2 and one factor is the tiny remainder: `IMSIN("1.5707963267949+709.7i")`
+is 8.27492013840132E+307-2.88915216855774E+293i (correctly rounded: ...-2.88917292436455E+293i, 7.2E-6 relative off),
+`IMCOS("4.71238898038469+79.1718046156471i")` is -2223964481544680000+1.2101741480848E+34i (math: -2.22305384529439E+18
+for the real part). At x = ±4.71238898038469, the 15-digit neighbour of 3·pi/2, Excel's small part is 4.1E-4 relative
+off the 50-digit math (36 of the sweep's 800 parts), the same factor as `COS(RADIANS(90))` (6.1257422745431E-17 for
+6.123E-17): matched as Excel's value, not a MATH-OVER-EXCEL case (decision 0188 R3 lists none for SIN/COS).
+Evidence: probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1, K22, L22 (excel-graph, T-3616);
+probes-numeric/t3726-imsin-imcos-near-half-pi-sweep (400 texts, excel-graph, 2026-11-01; x = k·pi/2 + d to 15 digits,
+k = ±1..±4, d = 0 or |d| log-uniform in [1E-14, 1E-3], |y| log-uniform in [1, 709]; docs/research/t3726/gen_sweep.py):
+the x87 reduction matches 400, libm 28. Every other IM* cell of the suites and the six IM* fit labs is unchanged.
+Status: VERIFIED (excel-graph)
+Implemented in: complex/trig.rs (`imsin`, `imcos` through `trig_sin_cos`)
+Tasks: T-3726
 
 ## BESSELJ and BIN2* cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `BESSELJ(1E+15,100)` is `#NUM!` (caa1eed48b1883fe A399; matched since T-2547, the phase cut), and `BIN2DEC("Hello World")` and `BIN2HEX("#N/A",1)` (text cells) are `#NUM!` (matched since T-2544); an `IMSUM` of

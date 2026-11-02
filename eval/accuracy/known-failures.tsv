@@ -16,6 +16,10 @@ accuracy/T.INV.2T/s1!Calc!A78	T-3386	Excel #NUM! at p = 2.2E-308 where the quant
 accuracy/T.INV.2T/s1!Calc!A91	T-3363	quantile at df near 1E8 to 1E10: the engine and Excel are both off the math, differently
 accuracy/TINV/s1!Calc!A68	T-3386	Excel #NUM! at p = 2.2E-308 where the quantile is finite
 accuracy/TINV/s1!Calc!A78	T-3386	Excel #NUM! at p = 2.2E-308 where the quantile is finite
+accuracy/BETA.DIST/s1!Calc!A184	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/s1!Calc!A186	T-3577	cdf at a huge beta: Excel #NUM!, the engine and the math 0
+accuracy/BETA.DIST/s1!Calc!A187	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.DIST/s1!Calc!A193	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
 accuracy/NPER/s1!Calc!A121	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A130	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A133	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
@@ -28,13 +32,8 @@ accuracy/NPER/s1!Calc!A153	T-3367	R3 point: the engine reproduces Excel's tiny-r
 accuracy/NPER/s1!Calc!A156	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A158	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A162	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/RATE/s1!Calc!A19	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A128	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A129	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A137	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A158	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A278	T-3585	Excel #NUM! where the math has a root
-accuracy/RATE/s1!Calc!A291	T-3585	Excel #NUM! where the math has a root
+accuracy/RATE/s1!Calc!A278	T-3424	Excel #NUM! on a noise-floor hold; the engine returns the held iterate (probes/t3585-rate-num-near-minus-one G, H)
+accuracy/RATE/s1!Calc!A291	T-3424	Excel #NUM! on a noise-floor hold; the engine returns the held iterate (probes/t3585-rate-num-near-minus-one G, H)
 accuracy/IRR/s1!Calc!A271	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
 accuracy/IRR/s1!Calc!A280	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
 accuracy/IRR/s1!Calc!A286	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
