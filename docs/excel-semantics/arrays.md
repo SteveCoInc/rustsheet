@@ -382,11 +382,6 @@ Evidence: probes/mmult-blank-range-vs-error Calc!A1, A4, A7, A10, A13, A16, A19,
 Status: VERIFIED (excel-graph)
 Implemented in: `fn_mmult` (crates/rustsheet-engine/src/functions/math_and_trigonometry/mmult.rs): the check after `eval_matrix_arg` of array1 matches only a 1x1 matrix whose element is `ArrayNode::Empty`.
 Tasks: T-3494, T-3729, T-3836
-The check is for a 1x1 blank first argument, whatever its form: a one-cell range counts as the single cell (`MMULT(Data!H1:H1,#NUM!)`, `MMULT(Data!H1:H1,Data!G9)` and `MMULT(Data!H1:H1,Data!G9:G9)` are `#VALUE!`), but a multi-cell first argument with blanks, all blank or partly blank, lets the second argument's error through (`MMULT(Data!H1:H2,#NUM!)` is `#NUM!`, `MMULT(Data!H1:H2,Data!G9)` and `MMULT(Data!A3:A4,Data!G9)` with A3 = 1, A4 blank are `#DIV/0!`, `MMULT(Data!A1:C1,#NUM!)` with C1 blank is `#NUM!`). With no error argument such a matrix is `#VALUE!` (`MMULT(Data!A3:A4,2)`, `MMULT(Data!H1:H2,{1})`), and so is an error matrix range against it (`MMULT(Data!H1:H2,Data!G9:G10)`, G10 blank). A blank 1x1 second argument behind an error first argument gives the error (`MMULT(#NUM!,Data!H1:H1)` is `#NUM!`). Each result is a single error, not a spilled array of errors.
-Evidence: probes/mmult-blank-range-vs-error Calc!A1, A4, A7, A10, A13, A16, A19, A22, A25, A28, A31, A34, A37, A40, A43, A46 (excel-graph, 2026-11-02, T-3836).
-Status: VERIFIED (excel-graph)
-Implemented in: `fn_mmult` (crates/rustsheet-engine/src/functions/math_and_trigonometry/mmult.rs): the check after `eval_matrix_arg` of array1 matches only a 1x1 matrix whose element is `ArrayNode::Empty`.
-Tasks: T-3494, T-3729, T-3836
 
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
