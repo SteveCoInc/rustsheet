@@ -33,8 +33,8 @@ GAMMA.INV, CHISQ.INV, CHISQ.INV.RT, BINOM.DIST, NEGBINOM.DIST, POISSON.DIST and 
 
 ## Outcome
 `cd tools && uv run rustsheet-accuracy math --suite probes` ran on main 79b239118 in 48 min 35 s.
-- **Written:** 81 new probes sidecars and 7 extended ones, covering every definition now on main (beta, gamma,
-  cashflow, discrete, fisher, rounding, student_t, trig).
+- **Written:** 81 new probes sidecars and 7 extended ones, covering every definition family on main: aggregate,
+  annuity, beta, cashflow, discrete, fisher, gamma, hyperbolic, inverse_trig, rounding, student_t and trig.
 - **Skipped:** 2,882 unparsed, 412 non-numeric argument, 377 not converged or too slow (the 10 s wall-clock cutoff,
   T-3680), 35 non-numeric array element, 7 scalar for an array.
 - **Reproducibility:** not re-run. A second 48-minute run would not show reproducibility, because the 377 time-limit
@@ -53,4 +53,8 @@ That is +69 probe cells as Phase 1b evidence. The every-suite function rate (inf
 - owners: 8,952 visibly-off cells have no open owner (8,925 of them owned only by a deferred task), and 268 milestone
   exit cells have no owner of their milestone (M9 260, M10 8);
 - met: M1, M5, M6 and M11.
+
+Follow-up: in about 100 cells of t2756 and t2715 the rounding definition's math for ROUNDUP and ROUNDDOWN of a number
+whose 15-digit cut is subnormal is 1, 10 or similar, where Excel gives 0. R1(c) still counts those cells, so nothing is
+mislabelled; T-3829 gives them no math value.
 
