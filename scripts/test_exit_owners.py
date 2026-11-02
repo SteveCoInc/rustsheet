@@ -429,6 +429,20 @@ class ExitOwners(TaskDir):
         self.assertIn(f"{PROBE}!P!B2", listed)
         self.assertNotIn(f"{PROBE}!P!B3", listed)
 
+    def test_a_colon_span_on_a_continuation_line_owns_its_rectangle(self) -> None:
+        # A wrapped cell list: the case is named on the item's first line (T-3623).
+        self.task("- probes/index-reference-args cells:\n  P!B1, P!B2:B3")
+        listed = self.listed()
+        self.assertNotIn(f"{PROBE}!P!B2", listed)
+        self.assertNotIn(f"{PROBE}!P!B3", listed)
+
+    def test_a_colon_span_in_another_block_owns_nothing(self) -> None:
+        # The case is named in one list item, the quoted range sits in the next (T-3623).
+        self.task("- probes/index-reference-args P!B1\n- quoted `=SUM(P!B2:B3)`")
+        listed = self.listed()
+        self.assertIn(f"{PROBE}!P!B2", listed)
+        self.assertIn(f"{PROBE}!P!B3", listed)
+
     def test_a_hyphen_span_names_only_its_ends(self) -> None:
         self.task("index-reference-args B1-B3")
         listed = self.listed()

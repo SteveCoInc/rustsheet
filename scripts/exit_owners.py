@@ -328,17 +328,17 @@ def names_case(text: str, names: tuple[str, ...]) -> bool:
 
 
 def names_in_span(text: str, names: tuple[str, ...], a1: str) -> bool:
-    """Whether a colon span on a line of `text` that names the case holds the cell `a1`. Per line,
-    unlike a single A1 name, because tasks quote formulas whose ranges (`Data!B6:C10`) are not
-    cells they own."""
+    """Whether a colon span in a block of `text` that names the case holds the cell `a1`. Per block
+    (a line and its continuation lines, T-3623), not per file, because tasks quote formulas whose
+    ranges (`Data!B6:C10`) are not cells they own: those sit in another block."""
     m = A1_SPLIT.fullmatch(a1)
     if m is None:
         return False
     col, row = column_number(m[1]), int(m[2])
-    for line in text.splitlines():
-        if not names_case(line, names):
+    for block in blocks(text):
+        if not names_case(block, names):
             continue
-        for s in A1_SPAN.finditer(line):
+        for s in A1_SPAN.finditer(block):
             c1, c2 = sorted((column_number(s[1]), column_number(s[3])))
             r1, r2 = sorted((int(s[2]), int(s[4])))
             if c1 <= col <= c2 and r1 <= row <= r2:
