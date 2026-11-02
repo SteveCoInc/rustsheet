@@ -3,7 +3,7 @@ id: T-3336
 title: "Oracle sweep: CHIINV and CHISQ.INV.RT at one degree of freedom in the right tail (p 1E-4 to 2^-54), with CHISQ.INV at 1-p and CHISQ.DIST at Excel's landing points"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
