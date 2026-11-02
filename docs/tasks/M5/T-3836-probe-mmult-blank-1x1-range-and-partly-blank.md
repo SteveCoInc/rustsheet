@@ -3,7 +3,7 @@ id: T-3836
 title: "Probe MMULT blank 1x1 range and partly-blank multi-cell first argument beside an error"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
