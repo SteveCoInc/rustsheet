@@ -458,7 +458,10 @@ impl Model {
                 }
             };
             list.push(Aggregator {
-                caller: self.lambda_caller(lambda, arity).keeping_references(),
+                caller: self
+                    .lambda_caller(lambda, arity)
+                    .keeping_references()
+                    .snapping_root(),
                 call,
                 label,
             });
