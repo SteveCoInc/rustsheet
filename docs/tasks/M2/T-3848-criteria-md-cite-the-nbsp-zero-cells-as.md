@@ -3,7 +3,7 @@ id: T-3848
 title: "criteria.md: cite the NBSP zero cells as not read by VALUE, not as #VALUE!"
 milestone: M2
 lane: functions-criteria
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,9 +22,12 @@ claims only what its cells show about VALUE on the two CHAR(160)-padded zero tex
 - Docs only: no case, engine or baseline change.
 
 ## Acceptance criteria
-- [ ] The sentence reads "which VALUE does not read as a number (K4, K5, L4, L5)" or equivalent, and cites the
+- [x] The sentence reads "which VALUE does not read as a number (K4, K5, L4, L5)" or equivalent, and cites the
       t3334 cells if it keeps the word `#VALUE!`.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - New probes (a bare `=VALUE(A4)` cell would settle the error code, but the t3334 cells already do).
+
+## Outcome
+Docs-only: the padded-zero paragraph of criteria.md now says VALUE does not read the two NBSP-padded zero texts as a number (K4, K5, L4, L5) and cites t3334 H47/H51/H55/H59 for the `#VALUE!` itself. No eval delta.
