@@ -3,7 +3,7 @@ id: T-3788
 title: "SMALL, LARGE, PERCENTILE*, QUARTILE*, PERCENTRANK* and TRIMMEAN: a text k, x or significance is #VALUE! before an error cell as the data (gen-m9, 30 cells)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -32,11 +32,11 @@ reference to an error cell, as Excel does; a number, a numeric-text cell or a bo
   trimmean.rs. Find the one place each reads the data before the scalar and share the fix (`rg` first; CLAUDE.md directive 3).
 
 ## Acceptance criteria
-- [ ] The 30 cells below pass.
-- [ ] Unit or probe cells pin both orders: a non-numeric text scalar with an error data cell (`#VALUE!`), and a number,
+- [x] The 30 cells below pass.
+- [x] Unit or probe cells pin both orders: a non-numeric text scalar with an error data cell (`#VALUE!`), and a number,
       numeric-text cell or boolean cell with an error data cell (the data's error); the passing cells listed above still pass.
-- [ ] statistics.md entry's Ours line updated.
-- [ ] `make check` green; reviewers approve.
+- [x] statistics.md entry's Ours line updated.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0159: the task is done when the gen-m9 cells below (T-3781's arg-pairs batch, excel-graph, 2026-11-01) pass and
@@ -59,3 +59,6 @@ their known-failure lines leave eval/baseline/gen-m9.txt (`make eval-baseline`),
 
 ## Out of scope
 - PERCENTRANK's significance against the x-not-found `#N/A` (T-3789); TRIMMEAN of a typed scalar (T-3790).
+
+## Outcome
+`lift_over_sorted` (sorted_data.rs), shared by SMALL, LARGE, PERCENTILE*, QUARTILE*, PERCENTRANK* and TRIMMEAN, now returns `#VALUE!` when the data is a cell reference holding an error and a scalar cell reference holds text that does not read as a number. A typed error as the data keeps its own error (gen-m9/5830c688df805e71 A463, A469 pin it). The eval cells pin both orders. gen-m9 known failures 2198 -> 2168 (30 fixed, 0 regressions). Unprobed forms stay documented in statistics.md.
