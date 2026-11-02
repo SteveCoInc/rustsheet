@@ -98,10 +98,12 @@ Tasks: T-0960
 Rule: INDIRECT reads reference text more strictly than the formula parser, the same in A1 and R1C1 style:
 - Any leading whitespace is `#REF!`: `" A1"`, `"  A1 "`, `" A1:B2 "`, `" Sheet2!A1"`, `" C : A "`, `" R1C1"`,
   and a leading tab or NBSP (`CHAR(9)`, `CHAR(160)`).
-- Trailing spaces and a trailing line feed are ignored: `"A1 "`, `"A1   "`, `"$A$1 "`, `"A1:B2 "`, `"A1"&CHAR(10)`,
+- Trailing spaces and trailing line feeds (any number) are ignored: `"A1 "`, `"A1   "`, `"$A$1 "`, `"A1:B2 "`, `"A1"&CHAR(10)`,
   `"R1C1 "` all resolve. A trailing tab or NBSP is `#REF!`.
 - Spaces next to the range colon are allowed: `"A1 : B2"`, `"A1: B2"`, `"A1 :B2"`, `"B2 : A1"`,
-  `"Sheet2!A1 :B2"`, `"R1C1 : R2C2"`; a tab there (`"A1:"&CHAR(9)&"B2"`) is `#REF!`.
+  `"Sheet2!A1 :B2"`, `"R1C1 : R2C2"`; a line feed is allowed in the same places, alone or mixed with spaces (`"A1:"&CHAR(10)&"B2"`, `"A1"&CHAR(10)&":B2"`,
+  `"A1 "&CHAR(10)&": B2"`, `"A1:"&CHAR(10)&CHAR(10)&"B2"`, `"Sheet2!"&CHAR(10)&"A1"`, `"R1C1"&CHAR(10)&":R2C2"`;
+  probes/t3747-indirect-whitespace rows 60-70), a tab is `#REF!`.
 - A space after the `!` is allowed (`"Sheet2! A1"` = Sheet2!A1), one before it is not (`"Sheet2 !A1"`,
   `"'My Sheet' !A1"`, `"Sheet2 !R1C1"` are `#REF!`). Inside quotes the space is part of the sheet name
   (`"'My Sheet'!A1"` resolves; an unquoted `"My Sheet!A1"` is `#REF!`).
@@ -113,7 +115,13 @@ Status: VERIFIED (Excel for the web)
 Implemented in: `indirect_reference_text` (engine expressions/utils), applied before both parsers; the
 defined-name and structured-reference fallbacks still see the text as written (their spacing is
 unprobed; structured references are T-3394).
-Not probed: a carriage return, a line feed that is not trailing, spaces inside `$A$1` or `R[1]C`.
+Also `#REF!` (probes/t3747-indirect-whitespace, T-3747): a carriage return anywhere (leading, trailing,
+`"A1"&CHAR(13)&CHAR(10)`, `"R1C1"&CHAR(13)`), a leading line feed, a Unicode space (`UNICHAR(8195)`) leading or
+trailing, a line feed between two references (`"A1"&CHAR(10)&"B2"`, `"A1:B2"&CHAR(10)&"B1:C2"`), a line feed before the `!` (`"Sheet2"&CHAR(10)&"!A1"`), and spaces inside a reference (`"$A $1"`, `"A 1"`, `"$ A$1"`,
+`"A1 :B 2"`, `"R[ 1]C"`, `"R1 C1"`, `"R[1] C"`, `"R 1C1"`). Trailing space on a whole-column or row ref
+resolves (`"A:A "`, `"1:1 "`). A defined name's text may end in spaces or a line feed (`"MyName "`,
+`"MyName"&CHAR(10)`, `"MyName"&CHAR(10)&CHAR(10)`, `"MyName "&CHAR(10)`, `"MyName"&CHAR(10)&" "`) but not start with a space (probes/t3747-indirect-name-whitespace; the name fallback trims
+the same trailing characters). Not probed: names with a carriage return, structured references (T-3394).
 Note for probes: text naming a sheet that does not exist is resolved by Excel for the web as an
 external workbook reference (`"' My Sheet'!A1"` gave CELL address `[ My Sheet] My Sheet!$A$1` and SUM
 `#BLOCKED!`), so such cells were dropped from the case (see "INDIRECT to a sheet that does not exist").
@@ -1505,3 +1513,15 @@ vector of two or more cells a scalar return is `#VALUE!` (sizes differ), found o
 return of the wrong size with a miss still gives `if_not_found`
 (`XLOOKUP("z",A1,A1:A2,"miss")` is "miss"). An invalid `match_mode` 9 is `#VALUE!`.
 Evidence: probes/t3317-xlookup-scalar-return (C1-C20, oracle-filled).
+
+## gen-m6 arg-pairs batch (T-3496): error-cell arguments of CHOOSEROWS, CHOOSECOLS and XMATCH
+Rule: CHOOSEROWS/CHOOSECOLS: a literal error array argument wins outright (`CHOOSECOLS(#DIV/0!,-1)` is #DIV/0!, 21db5363d711888d A289, A277, A283, A307).
+A referenced error cell (Data!G9 = #DIV/0!) behaves as a 1x1 array whose index is checked first: an index out of range or not numeric for it
+(7, 0, -2.5, "12", "x", "", FALSE, H2, C3:D4) gives #VALUE!, a valid one (1.5 truncating to 1) gives #DIV/0!, and an index that is itself the #DIV/0! cell G9 gives #DIV/0! too
+(21db5363d711888d A298 and A328, ad47b47c4e97019d A322 and A352 pass today and must keep passing).
+XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a number but is out of range (7, -2.5, "12"), or is a multi-cell range that Excel lifts element by element (A292 is a 2x2 spill of #DIV/0! over match_mode C3:D4, cells A292:B293), Excel returns #DIV/0!
+(315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
+Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
+Ours: CHOOSEROWS/CHOOSECOLS match all of these cells (T-3667, a one-cell error reference in arrays.md); XMATCH returns #VALUE! in the four cells above only (it already returns #DIV/0! in most G9-search_mode cells).
+Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
+Tasks: T-3667, T-3542
