@@ -13,9 +13,11 @@ on:
 permissions:
   contents: read
 
+# Decision 0249: a push to main gets a group of its own (the sha), so a later merge never cancels
+# its eval report; every other ref keeps one run, and a newer push cancels the older one.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && format('-{0}', github.sha) || '' }}
+  cancel-in-progress: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -24,7 +26,9 @@ env:
 jobs:
   # Decision 0049: a PR that touches only docs skips the rust, eval and python jobs. A skipped job
   # reports success to required checks, so this job decides safely: anything it cannot
-  # classify, every push to main and every merge-queue group (decision 0053) runs everything.
+  # classify and every merge-queue group (decision 0053) runs everything.
+  # Decision 0249: a push to main is the exact commit its merge group already tested, so `gates`
+  # is 'false' there and only the eval report runs; a dispatch on main still runs every gate.
   # The rules live in scripts/ci_changes.py (tested by make hygiene); decision 0066 runs the copy
   # from the PR's base commit, so a PR cannot change how its own files are classified.
   # Decision 0147 keys it on github.ref: a PR diffs from the merge base of its base and head shas
@@ -37,6 +41,7 @@ jobs:
       # The heavy jobs run unless this is exactly 'false': a failed or skipped classification step
       # gives 'true', and a job that never ran leaves it empty.
       run_heavy: ${{ steps.diff.outcome == 'success' && steps.diff.outputs.code || 'true' }}
+      gates: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'false' || 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -77,7 +82,7 @@ jobs:
   rust:
     name: ${{ matrix.shard == 1 && 'rust (fmt, clippy, test 1/3)' || format('rust (test {0}/3)', matrix.shard) }}
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' && needs.changes.outputs.gates != 'false' }}
     runs-on: ubuntu-24.04
     strategy:
       # Each shard reports its own failures.
@@ -113,11 +118,12 @@ jobs:
       - env:
           RESULT: ${{ needs.rust.result }}
           RUN_HEAVY: ${{ needs.changes.outputs.run_heavy }}
+          GATES: ${{ needs.changes.outputs.gates }}
         run: |
-          echo "rust shards: $RESULT, run_heavy=$RUN_HEAVY"
+          echo "rust shards: $RESULT, run_heavy=$RUN_HEAVY, gates=$GATES"
           if [ "$RESULT" = "success" ]; then exit 0; fi
-          # A docs-only PR (decision 0049) skips the shards on purpose.
-          if [ "$RESULT" = "skipped" ] && [ "$RUN_HEAVY" = "false" ]; then exit 0; fi
+          # A docs-only PR (decision 0049) and a push to main (decision 0249) skip the shards on purpose.
+          if [ "$RESULT" = "skipped" ] && { [ "$RUN_HEAVY" = "false" ] || [ "$GATES" = "false" ]; }; then exit 0; fi
           exit 1
 
   eval:
@@ -131,7 +137,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # Decision 0125: one run of the suites judges both the baseline gate (eval-check) and the
       # evidence floor; running them as two steps rebuilt the release binary and reran the suites.
-      - run: make eval-gates
+      # Decision 0249: not on a push to main, whose merge group already ran it.
+      - if: needs.changes.outputs.gates != 'false'
+        run: make eval-gates
       # Decision 0054: the report reruns every suite (about 2.5 min). PRs, merge groups, merge trains
       # and dispatches on other branches only need it to debug a failed gate (decision 0147); main
       # keeps one per merge.
@@ -148,7 +156,7 @@ jobs:
   python:
     name: python (tools + bindings)
     needs: changes
-    if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' }}
+    if: ${{ !cancelled() && needs.changes.outputs.run_heavy != 'false' && needs.changes.outputs.gates != 'false' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -160,6 +168,9 @@ jobs:
 
   hygiene:
     name: hygiene (ratchets, deny, machete, typos, governance)
+    # Decision 0249: not on a push to main (an empty output, from a failed `changes`, runs it).
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.gates != 'false' }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

@@ -227,6 +227,7 @@ probes/fin-cumipmt-tiny-rate-structure.case.json	38
 probes/fin-cumprinc-near-1e15.case.json	4
 probes/fin-cumprinc-underflow-ends.case.json	4
 probes/forecast-ets-longer-series.case.json	41
+probes/forecast-ets-optional-settings-shape.case.json	12
 probes/growth-modes.case.json	10
 probes/irr-fallback-roots.case.json	7
 probes/irr-guess-edges-2.case.json	4
@@ -281,6 +282,10 @@ probes/t3419-elapsed-after-date-b.case.json	1
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
+probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
+probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
+probes/t3627-roundup-rounddown-negative-x.case.json	18
+probes/t3627-roundup-rounddown-t3555-cells.case.json	4
 probes/table-edits/table-convert-names-this-row.case.json	3
 probes/table-edits/table-delete-rows-all-data-once.case.json	8
 probes/table-edits/table-insert-row-calc-column-above-header.case.json	6
