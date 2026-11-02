@@ -3,7 +3,7 @@ id: T-3778
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of GROUPBY and PIVOTBY"
 milestone: M7
 lane: functions-lookup
-status: done
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -66,7 +66,7 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
 - [x] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
       by an open task, and `make exit-owners MILESTONE=M7` and `make unowned-off ALL=1` report no new unowned cell
       from the batch.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine fixes for the cells this batch finds (the owning tasks make them), beyond a one-line coercion fix in the
@@ -95,16 +95,29 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   - **T-3845** (sonnet, 493 cells in 166 formulas): a multi-cell PIVOTBY relative_to lifts into one result per cell.
   - **T-3846** (opus, 68 cells in 21 formulas): argument-check order and leftovers.
 
-## Landing notes
-- PR #2852 (draft), branch agent/functions-lookup/T-3778-groupby-pivotby-arg-pairs; this head is the round-2 fix plus
-  these notes. CI went green on 33326f9 (round 0). `make check-fast` passed on the round-2 commit.
-- Reviews: round 1 on 33326f9: design and security APPROVE, Excel fidelity REQUEST_CHANGES (T-3842/T-3844 rules
-  contradicted the sidecars; fixed in eee43c1). Round 2 on eee43c1: design and security APPROVE, Excel fidelity
-  REQUEST_CHANGES (blank-vs-text `values` precedence against option errors unrecorded; two citation slips; fixed in the
-  next commit). Round 3 (all three reviewers) was launched on this head as the landing window closed; read the verdict
-  records on the PR for its outcome.
-- Next step: if round 3 approves and CI is green on this head, mark the PR ready and enqueue (`enable_pr_auto_merge`,
-  SQUASH). If Excel fidelity requests changes again, the task hits the review-round limit: block it per work-loop step 5.
-- Do not repeat: stating rules from the bucket counts alone. Each claimed rule must survive a search of all 14,440
-  anchors for counterexamples; argument precedence (an earlier invalid option, blank one-cell values) confounds most
-  `#VALUE!` cells, and a one-value filter_array sometimes broadcasts in Excel.
+## Blocked because
+Blocked because: review-round limit
+- PR #2852 (draft). Head 81d7ba5 + this commit. CI green on 33326f9; `make check-fast` green on every round's head.
+- Rounds 1 to 3: design and security APPROVE each round. Excel fidelity REQUEST_CHANGES each round, always on the
+  docs (arrays.md section and T-3842..T-3846 wording); the data, baseline, coverage and ownership pass every check
+  (eval-check 0 regressions, pairwise 1.0, no `#SPILL!`/`#CALC!`, every new F cell owned once).
+- Open findings at round 3 (verdict record on the PR, the excel-fidelity records):
+  - [MAJOR] The argument-precedence rule in arrays.md bullet 1 and the T-3842 Goal ("an earlier invalid option's
+    `#VALUE!` beats a later error") is too general. Depth and field_headers options: text "x"/"" is checked first
+    (cf6ab0ac7d65a5bb A2014, 65a4611a6242a59f A10920, f310ddb6bc8ec33a A8968, 42c026cbec22a61f A6650); numeric text and
+    blank are coerced, so the later error wins (eb01a9867300331b A8602, 65a4611a6242a59f A2380, 07c0c130d894cfe0 A2197).
+    Sort orders and filter_array: text, empty text and numeric text lose to a later error (07c0c130d894cfe0 A11164,
+    A11103; 7ab51243a366f57b A306, A11774; 0dac515958ce4371 A4820, A6162, A4759; 547d6192794dbf57 A550;
+    9c128bd4a5d1d3b9 A11042; 709913a7469ca178 A672, A2014), but blank wins (53473f95ff58029d A4088, 0dac515958ce4371
+    A9944, 7ab307dba9cb2062 A9883, A9944, 9077d156f68bf703 A11225, A11286, cb6c98a18513801b A12079, A12140,
+    5883a41f98113db2 A6406), and so does an out-of-range numeric sort_order (88f592c463d2ffb0 A7138, 547d6192794dbf57
+    A4576). Restate the precedence by position and kind, or drop it to "unknown, see T-3846", in arrays.md, T-3842 and T-3846.
+  - [MINOR] arrays.md bullet 4 and T-3845: Data!A1:B2 holds valid relative_to cells (blank and 0 are valid:
+    410128dc65d03200 A7809, febfd6901374d79c A4637, ceb2c91035864a71 A5491); drop "no valid relative_to", say a
+    valid cell's lifted result is unprobed, add a probe criterion to T-3845.
+  - [MINOR] arrays.md bullet 2 and T-3843: the one-cell number/boolean values table holds only with one-row row_fields
+    (c636506a3a65eb5d A1038, A1099 are `#VALUE!`).
+  - [MINOR] The span lists of T-3842, T-3845 and T-3846 also cover 180 passing cells (T-3845's 2x2 spans include the
+    passing anchor); counts and spans disagree. State the counts as span sizes or list only failing cells.
+- Do not repeat: stating a rule from bucket counts. Search all 14,440 anchors for counterexamples before writing any
+  precedence claim; the reviewer's scratch scripts were lib.py and own.py (not committed).
