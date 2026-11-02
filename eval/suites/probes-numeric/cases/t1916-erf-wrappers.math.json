@@ -29324,5 +29324,1569 @@
     "f": "=ERF(G1528,A1528)"
    }
   }
+ },
+ "skipped": {
+  "Calc": {
+   "C1841": {
+    "f": "=ERF(A1841,B1841)",
+    "why": "not converged or too slow"
+   },
+   "C1842": {
+    "f": "=ERF(A1842,B1842)",
+    "why": "not converged or too slow"
+   },
+   "C1843": {
+    "f": "=ERF(A1843,B1843)",
+    "why": "not converged or too slow"
+   },
+   "C1844": {
+    "f": "=ERF(A1844,B1844)",
+    "why": "not converged or too slow"
+   },
+   "C1845": {
+    "f": "=ERF(A1845,B1845)",
+    "why": "not converged or too slow"
+   },
+   "C1846": {
+    "f": "=ERF(A1846,B1846)",
+    "why": "not converged or too slow"
+   },
+   "C1847": {
+    "f": "=ERF(A1847,B1847)",
+    "why": "not converged or too slow"
+   },
+   "C1848": {
+    "f": "=ERF(A1848,B1848)",
+    "why": "not converged or too slow"
+   },
+   "C1849": {
+    "f": "=ERF(A1849,B1849)",
+    "why": "not converged or too slow"
+   },
+   "C1850": {
+    "f": "=ERF(A1850,B1850)",
+    "why": "not converged or too slow"
+   },
+   "C1851": {
+    "f": "=ERF(A1851,B1851)",
+    "why": "not converged or too slow"
+   },
+   "C1852": {
+    "f": "=ERF(A1852,B1852)",
+    "why": "not converged or too slow"
+   },
+   "C1853": {
+    "f": "=ERF(A1853,B1853)",
+    "why": "not converged or too slow"
+   },
+   "C1854": {
+    "f": "=ERF(A1854,B1854)",
+    "why": "not converged or too slow"
+   },
+   "C1855": {
+    "f": "=ERF(A1855,B1855)",
+    "why": "not converged or too slow"
+   },
+   "C1856": {
+    "f": "=ERF(A1856,B1856)",
+    "why": "not converged or too slow"
+   },
+   "C1857": {
+    "f": "=ERF(A1857,B1857)",
+    "why": "not converged or too slow"
+   },
+   "C1858": {
+    "f": "=ERF(A1858,B1858)",
+    "why": "not converged or too slow"
+   },
+   "C1859": {
+    "f": "=ERF(A1859,B1859)",
+    "why": "not converged or too slow"
+   },
+   "C1860": {
+    "f": "=ERF(A1860,B1860)",
+    "why": "not converged or too slow"
+   },
+   "C1861": {
+    "f": "=ERF(A1861,B1861)",
+    "why": "not converged or too slow"
+   },
+   "C1862": {
+    "f": "=ERF(A1862,B1862)",
+    "why": "not converged or too slow"
+   },
+   "C1863": {
+    "f": "=ERF(A1863,B1863)",
+    "why": "not converged or too slow"
+   },
+   "C1864": {
+    "f": "=ERF(A1864,B1864)",
+    "why": "not converged or too slow"
+   },
+   "C1865": {
+    "f": "=ERF(A1865,B1865)",
+    "why": "not converged or too slow"
+   },
+   "C1866": {
+    "f": "=ERF(A1866,B1866)",
+    "why": "not converged or too slow"
+   },
+   "C1867": {
+    "f": "=ERF(A1867,B1867)",
+    "why": "not converged or too slow"
+   },
+   "C1868": {
+    "f": "=ERF(A1868,B1868)",
+    "why": "not converged or too slow"
+   },
+   "C1869": {
+    "f": "=ERF(A1869,B1869)",
+    "why": "not converged or too slow"
+   },
+   "C1870": {
+    "f": "=ERF(A1870,B1870)",
+    "why": "not converged or too slow"
+   },
+   "C1871": {
+    "f": "=ERF(A1871,B1871)",
+    "why": "not converged or too slow"
+   },
+   "C1872": {
+    "f": "=ERF(A1872,B1872)",
+    "why": "not converged or too slow"
+   },
+   "C1873": {
+    "f": "=ERF(A1873,B1873)",
+    "why": "not converged or too slow"
+   },
+   "C1874": {
+    "f": "=ERF(A1874,B1874)",
+    "why": "not converged or too slow"
+   },
+   "C1875": {
+    "f": "=ERF(A1875,B1875)",
+    "why": "not converged or too slow"
+   },
+   "C1876": {
+    "f": "=ERF(A1876,B1876)",
+    "why": "not converged or too slow"
+   },
+   "C1877": {
+    "f": "=ERF(A1877,B1877)",
+    "why": "not converged or too slow"
+   },
+   "C1878": {
+    "f": "=ERF(A1878,B1878)",
+    "why": "not converged or too slow"
+   },
+   "C1879": {
+    "f": "=ERF(A1879,B1879)",
+    "why": "not converged or too slow"
+   },
+   "C1880": {
+    "f": "=ERF(A1880,B1880)",
+    "why": "not converged or too slow"
+   },
+   "C1881": {
+    "f": "=ERF(A1881,B1881)",
+    "why": "not converged or too slow"
+   },
+   "C1882": {
+    "f": "=ERF(A1882,B1882)",
+    "why": "not converged or too slow"
+   },
+   "C1883": {
+    "f": "=ERF(A1883,B1883)",
+    "why": "not converged or too slow"
+   },
+   "C1884": {
+    "f": "=ERF(A1884,B1884)",
+    "why": "not converged or too slow"
+   },
+   "C1885": {
+    "f": "=ERF(A1885,B1885)",
+    "why": "not converged or too slow"
+   },
+   "C1886": {
+    "f": "=ERF(A1886,B1886)",
+    "why": "not converged or too slow"
+   },
+   "C1887": {
+    "f": "=ERF(A1887,B1887)",
+    "why": "not converged or too slow"
+   },
+   "C1888": {
+    "f": "=ERF(A1888,B1888)",
+    "why": "not converged or too slow"
+   },
+   "C1889": {
+    "f": "=ERF(A1889,B1889)",
+    "why": "not converged or too slow"
+   },
+   "C1890": {
+    "f": "=ERF(A1890,B1890)",
+    "why": "not converged or too slow"
+   },
+   "C1891": {
+    "f": "=ERF(A1891,B1891)",
+    "why": "not converged or too slow"
+   },
+   "C1892": {
+    "f": "=ERF(A1892,B1892)",
+    "why": "not converged or too slow"
+   },
+   "C1893": {
+    "f": "=ERF(A1893,B1893)",
+    "why": "not converged or too slow"
+   },
+   "C1894": {
+    "f": "=ERF(A1894,B1894)",
+    "why": "not converged or too slow"
+   },
+   "C1895": {
+    "f": "=ERF(A1895,B1895)",
+    "why": "not converged or too slow"
+   },
+   "C1896": {
+    "f": "=ERF(A1896,B1896)",
+    "why": "not converged or too slow"
+   },
+   "C1897": {
+    "f": "=ERF(A1897,B1897)",
+    "why": "not converged or too slow"
+   },
+   "C1898": {
+    "f": "=ERF(A1898,B1898)",
+    "why": "not converged or too slow"
+   },
+   "C1899": {
+    "f": "=ERF(A1899,B1899)",
+    "why": "not converged or too slow"
+   },
+   "C1900": {
+    "f": "=ERF(A1900,B1900)",
+    "why": "not converged or too slow"
+   },
+   "C1901": {
+    "f": "=ERF(A1901,B1901)",
+    "why": "not converged or too slow"
+   },
+   "C1902": {
+    "f": "=ERF(A1902,B1902)",
+    "why": "not converged or too slow"
+   },
+   "C1903": {
+    "f": "=ERF(A1903,B1903)",
+    "why": "not converged or too slow"
+   },
+   "C1904": {
+    "f": "=ERF(A1904,B1904)",
+    "why": "not converged or too slow"
+   },
+   "C1905": {
+    "f": "=ERF(A1905,B1905)",
+    "why": "not converged or too slow"
+   },
+   "C1906": {
+    "f": "=ERF(A1906,B1906)",
+    "why": "not converged or too slow"
+   },
+   "C1907": {
+    "f": "=ERF(A1907,B1907)",
+    "why": "not converged or too slow"
+   },
+   "C1908": {
+    "f": "=ERF(A1908,B1908)",
+    "why": "not converged or too slow"
+   },
+   "C1909": {
+    "f": "=ERF(A1909,B1909)",
+    "why": "not converged or too slow"
+   },
+   "C1910": {
+    "f": "=ERF(A1910,B1910)",
+    "why": "not converged or too slow"
+   },
+   "C1911": {
+    "f": "=ERF(A1911,B1911)",
+    "why": "not converged or too slow"
+   },
+   "C1912": {
+    "f": "=ERF(A1912,B1912)",
+    "why": "not converged or too slow"
+   },
+   "C1913": {
+    "f": "=ERF(A1913,B1913)",
+    "why": "not converged or too slow"
+   },
+   "C1914": {
+    "f": "=ERF(A1914,B1914)",
+    "why": "not converged or too slow"
+   },
+   "C1915": {
+    "f": "=ERF(A1915,B1915)",
+    "why": "not converged or too slow"
+   },
+   "C1916": {
+    "f": "=ERF(A1916,B1916)",
+    "why": "not converged or too slow"
+   },
+   "C1917": {
+    "f": "=ERF(A1917,B1917)",
+    "why": "not converged or too slow"
+   },
+   "C1918": {
+    "f": "=ERF(A1918,B1918)",
+    "why": "not converged or too slow"
+   },
+   "C1919": {
+    "f": "=ERF(A1919,B1919)",
+    "why": "not converged or too slow"
+   },
+   "C1920": {
+    "f": "=ERF(A1920,B1920)",
+    "why": "not converged or too slow"
+   },
+   "C1921": {
+    "f": "=ERF(A1921,B1921)",
+    "why": "not converged or too slow"
+   },
+   "C1922": {
+    "f": "=ERF(A1922,B1922)",
+    "why": "not converged or too slow"
+   },
+   "C1923": {
+    "f": "=ERF(A1923,B1923)",
+    "why": "not converged or too slow"
+   },
+   "C1924": {
+    "f": "=ERF(A1924,B1924)",
+    "why": "not converged or too slow"
+   },
+   "C1925": {
+    "f": "=ERF(A1925,B1925)",
+    "why": "not converged or too slow"
+   },
+   "C1926": {
+    "f": "=ERF(A1926,B1926)",
+    "why": "not converged or too slow"
+   },
+   "C1927": {
+    "f": "=ERF(A1927,B1927)",
+    "why": "not converged or too slow"
+   },
+   "C1928": {
+    "f": "=ERF(A1928,B1928)",
+    "why": "not converged or too slow"
+   },
+   "C1929": {
+    "f": "=ERF(A1929,B1929)",
+    "why": "not converged or too slow"
+   },
+   "C1930": {
+    "f": "=ERF(A1930,B1930)",
+    "why": "not converged or too slow"
+   },
+   "C1931": {
+    "f": "=ERF(A1931,B1931)",
+    "why": "not converged or too slow"
+   },
+   "C1932": {
+    "f": "=ERF(A1932,B1932)",
+    "why": "not converged or too slow"
+   },
+   "C1933": {
+    "f": "=ERF(A1933,B1933)",
+    "why": "not converged or too slow"
+   },
+   "C1934": {
+    "f": "=ERF(A1934,B1934)",
+    "why": "not converged or too slow"
+   },
+   "C1935": {
+    "f": "=ERF(A1935,B1935)",
+    "why": "not converged or too slow"
+   },
+   "C1936": {
+    "f": "=ERF(A1936,B1936)",
+    "why": "not converged or too slow"
+   },
+   "C1937": {
+    "f": "=ERF(A1937,B1937)",
+    "why": "not converged or too slow"
+   },
+   "C1938": {
+    "f": "=ERF(A1938,B1938)",
+    "why": "not converged or too slow"
+   },
+   "C1939": {
+    "f": "=ERF(A1939,B1939)",
+    "why": "not converged or too slow"
+   },
+   "C1940": {
+    "f": "=ERF(A1940,B1940)",
+    "why": "not converged or too slow"
+   },
+   "C1941": {
+    "f": "=ERF(A1941,B1941)",
+    "why": "not converged or too slow"
+   },
+   "C1942": {
+    "f": "=ERF(A1942,B1942)",
+    "why": "not converged or too slow"
+   },
+   "C1943": {
+    "f": "=ERF(A1943,B1943)",
+    "why": "not converged or too slow"
+   },
+   "C1944": {
+    "f": "=ERF(A1944,B1944)",
+    "why": "not converged or too slow"
+   },
+   "C1945": {
+    "f": "=ERF(A1945,B1945)",
+    "why": "not converged or too slow"
+   },
+   "C1946": {
+    "f": "=ERF(A1946,B1946)",
+    "why": "not converged or too slow"
+   },
+   "C1947": {
+    "f": "=ERF(A1947,B1947)",
+    "why": "not converged or too slow"
+   },
+   "C1948": {
+    "f": "=ERF(A1948,B1948)",
+    "why": "not converged or too slow"
+   },
+   "C1949": {
+    "f": "=ERF(A1949,B1949)",
+    "why": "not converged or too slow"
+   },
+   "C1950": {
+    "f": "=ERF(A1950,B1950)",
+    "why": "not converged or too slow"
+   },
+   "C1951": {
+    "f": "=ERF(A1951,B1951)",
+    "why": "not converged or too slow"
+   },
+   "C1952": {
+    "f": "=ERF(A1952,B1952)",
+    "why": "not converged or too slow"
+   },
+   "C1953": {
+    "f": "=ERF(A1953,B1953)",
+    "why": "not converged or too slow"
+   },
+   "C1954": {
+    "f": "=ERF(A1954,B1954)",
+    "why": "not converged or too slow"
+   },
+   "C1955": {
+    "f": "=ERF(A1955,B1955)",
+    "why": "not converged or too slow"
+   },
+   "C1956": {
+    "f": "=ERF(A1956,B1956)",
+    "why": "not converged or too slow"
+   },
+   "C1957": {
+    "f": "=ERF(A1957,B1957)",
+    "why": "not converged or too slow"
+   },
+   "C1958": {
+    "f": "=ERF(A1958,B1958)",
+    "why": "not converged or too slow"
+   },
+   "C1959": {
+    "f": "=ERF(A1959,B1959)",
+    "why": "not converged or too slow"
+   },
+   "C1960": {
+    "f": "=ERF(A1960,B1960)",
+    "why": "not converged or too slow"
+   },
+   "C1961": {
+    "f": "=ERF(A1961,B1961)",
+    "why": "not converged or too slow"
+   },
+   "C1962": {
+    "f": "=ERF(A1962,B1962)",
+    "why": "not converged or too slow"
+   },
+   "C1963": {
+    "f": "=ERF(A1963,B1963)",
+    "why": "not converged or too slow"
+   },
+   "C1964": {
+    "f": "=ERF(A1964,B1964)",
+    "why": "not converged or too slow"
+   },
+   "C1965": {
+    "f": "=ERF(A1965,B1965)",
+    "why": "not converged or too slow"
+   },
+   "C1966": {
+    "f": "=ERF(A1966,B1966)",
+    "why": "not converged or too slow"
+   },
+   "C1967": {
+    "f": "=ERF(A1967,B1967)",
+    "why": "not converged or too slow"
+   },
+   "C1968": {
+    "f": "=ERF(A1968,B1968)",
+    "why": "not converged or too slow"
+   },
+   "C1969": {
+    "f": "=ERF(A1969,B1969)",
+    "why": "not converged or too slow"
+   },
+   "D1624": {
+    "f": "=ERF(A1624,A1625)",
+    "why": "not converged or too slow"
+   },
+   "D1637": {
+    "f": "=ERF(A1637,A1638)",
+    "why": "not converged or too slow"
+   },
+   "D1638": {
+    "f": "=ERF(A1638,A1639)",
+    "why": "not converged or too slow"
+   },
+   "D1645": {
+    "f": "=ERF(A1645,A1646)",
+    "why": "not converged or too slow"
+   },
+   "D1649": {
+    "f": "=ERF(A1649,A1650)",
+    "why": "not converged or too slow"
+   },
+   "D1652": {
+    "f": "=ERF(A1652,A1653)",
+    "why": "not converged or too slow"
+   },
+   "D1655": {
+    "f": "=ERF(A1655,A1656)",
+    "why": "not converged or too slow"
+   },
+   "D1657": {
+    "f": "=ERF(A1657,A1658)",
+    "why": "not converged or too slow"
+   },
+   "D1658": {
+    "f": "=ERF(A1658,A1659)",
+    "why": "not converged or too slow"
+   },
+   "D1659": {
+    "f": "=ERF(A1659,A1660)",
+    "why": "not converged or too slow"
+   },
+   "D1660": {
+    "f": "=ERF(A1660,A1661)",
+    "why": "not converged or too slow"
+   },
+   "D1661": {
+    "f": "=ERF(A1661,A1662)",
+    "why": "not converged or too slow"
+   },
+   "D1662": {
+    "f": "=ERF(A1662,A1663)",
+    "why": "not converged or too slow"
+   },
+   "D1663": {
+    "f": "=ERF(A1663,A1664)",
+    "why": "not converged or too slow"
+   },
+   "D1664": {
+    "f": "=ERF(A1664,A1665)",
+    "why": "not converged or too slow"
+   },
+   "D1665": {
+    "f": "=ERF(A1665,A1666)",
+    "why": "not converged or too slow"
+   },
+   "D1666": {
+    "f": "=ERF(A1666,A1667)",
+    "why": "not converged or too slow"
+   },
+   "D1667": {
+    "f": "=ERF(A1667,A1668)",
+    "why": "not converged or too slow"
+   },
+   "D1668": {
+    "f": "=ERF(A1668,A1669)",
+    "why": "not converged or too slow"
+   },
+   "D1669": {
+    "f": "=ERF(A1669,A1670)",
+    "why": "not converged or too slow"
+   },
+   "D1670": {
+    "f": "=ERF(A1670,A1671)",
+    "why": "not converged or too slow"
+   },
+   "D1671": {
+    "f": "=ERF(A1671,A1672)",
+    "why": "not converged or too slow"
+   },
+   "D1672": {
+    "f": "=ERF(A1672,A1673)",
+    "why": "not converged or too slow"
+   },
+   "D1673": {
+    "f": "=ERF(A1673,A1674)",
+    "why": "not converged or too slow"
+   },
+   "D1674": {
+    "f": "=ERF(A1674,A1675)",
+    "why": "not converged or too slow"
+   },
+   "D1675": {
+    "f": "=ERF(A1675,A1676)",
+    "why": "not converged or too slow"
+   },
+   "D1676": {
+    "f": "=ERF(A1676,A1677)",
+    "why": "not converged or too slow"
+   },
+   "D1677": {
+    "f": "=ERF(A1677,A1678)",
+    "why": "not converged or too slow"
+   },
+   "D1678": {
+    "f": "=ERF(A1678,A1679)",
+    "why": "not converged or too slow"
+   },
+   "D1679": {
+    "f": "=ERF(A1679,A1680)",
+    "why": "not converged or too slow"
+   },
+   "D1680": {
+    "f": "=ERF(A1680,A1681)",
+    "why": "not converged or too slow"
+   },
+   "D1681": {
+    "f": "=ERF(A1681,A1682)",
+    "why": "not converged or too slow"
+   },
+   "D1682": {
+    "f": "=ERF(A1682,A1683)",
+    "why": "not converged or too slow"
+   },
+   "D1683": {
+    "f": "=ERF(A1683,A1684)",
+    "why": "not converged or too slow"
+   },
+   "D1684": {
+    "f": "=ERF(A1684,A1685)",
+    "why": "not converged or too slow"
+   },
+   "D1685": {
+    "f": "=ERF(A1685,A1686)",
+    "why": "not converged or too slow"
+   },
+   "D1686": {
+    "f": "=ERF(A1686,A1687)",
+    "why": "not converged or too slow"
+   },
+   "D1687": {
+    "f": "=ERF(A1687,A1688)",
+    "why": "not converged or too slow"
+   },
+   "D1688": {
+    "f": "=ERF(A1688,A1689)",
+    "why": "not converged or too slow"
+   },
+   "D1689": {
+    "f": "=ERF(A1689,A1690)",
+    "why": "not converged or too slow"
+   },
+   "D1690": {
+    "f": "=ERF(A1690,A1691)",
+    "why": "not converged or too slow"
+   },
+   "D1691": {
+    "f": "=ERF(A1691,A1692)",
+    "why": "not converged or too slow"
+   },
+   "D1692": {
+    "f": "=ERF(A1692,A1693)",
+    "why": "not converged or too slow"
+   },
+   "D1693": {
+    "f": "=ERF(A1693,A1694)",
+    "why": "not converged or too slow"
+   },
+   "D1694": {
+    "f": "=ERF(A1694,A1695)",
+    "why": "not converged or too slow"
+   },
+   "D1695": {
+    "f": "=ERF(A1695,A1696)",
+    "why": "not converged or too slow"
+   },
+   "D1696": {
+    "f": "=ERF(A1696,A1697)",
+    "why": "not converged or too slow"
+   },
+   "D1697": {
+    "f": "=ERF(A1697,A1698)",
+    "why": "not converged or too slow"
+   },
+   "D1698": {
+    "f": "=ERF(A1698,A1699)",
+    "why": "not converged or too slow"
+   },
+   "D1699": {
+    "f": "=ERF(A1699,A1700)",
+    "why": "not converged or too slow"
+   },
+   "D1700": {
+    "f": "=ERF(A1700,A1701)",
+    "why": "not converged or too slow"
+   },
+   "D1701": {
+    "f": "=ERF(A1701,A1702)",
+    "why": "not converged or too slow"
+   },
+   "D1702": {
+    "f": "=ERF(A1702,A1703)",
+    "why": "not converged or too slow"
+   },
+   "D1703": {
+    "f": "=ERF(A1703,A1704)",
+    "why": "not converged or too slow"
+   },
+   "D1704": {
+    "f": "=ERF(A1704,A1705)",
+    "why": "not converged or too slow"
+   },
+   "D1705": {
+    "f": "=ERF(A1705,A1706)",
+    "why": "not converged or too slow"
+   },
+   "D1706": {
+    "f": "=ERF(A1706,A1707)",
+    "why": "not converged or too slow"
+   },
+   "D1707": {
+    "f": "=ERF(A1707,A1708)",
+    "why": "not converged or too slow"
+   },
+   "D1708": {
+    "f": "=ERF(A1708,A1709)",
+    "why": "not converged or too slow"
+   },
+   "D1709": {
+    "f": "=ERF(A1709,A1710)",
+    "why": "not converged or too slow"
+   },
+   "D1710": {
+    "f": "=ERF(A1710,A1711)",
+    "why": "not converged or too slow"
+   },
+   "D1711": {
+    "f": "=ERF(A1711,A1712)",
+    "why": "not converged or too slow"
+   },
+   "D1712": {
+    "f": "=ERF(A1712,A1713)",
+    "why": "not converged or too slow"
+   },
+   "D1713": {
+    "f": "=ERF(A1713,A1714)",
+    "why": "not converged or too slow"
+   },
+   "D1714": {
+    "f": "=ERF(A1714,A1715)",
+    "why": "not converged or too slow"
+   },
+   "D1715": {
+    "f": "=ERF(A1715,A1716)",
+    "why": "not converged or too slow"
+   },
+   "D1716": {
+    "f": "=ERF(A1716,A1717)",
+    "why": "not converged or too slow"
+   },
+   "D1717": {
+    "f": "=ERF(A1717,A1718)",
+    "why": "not converged or too slow"
+   },
+   "D1718": {
+    "f": "=ERF(A1718,A1719)",
+    "why": "not converged or too slow"
+   },
+   "D1719": {
+    "f": "=ERF(A1719,A1720)",
+    "why": "not converged or too slow"
+   },
+   "D1841": {
+    "f": "=ERF(B1841,A1841)",
+    "why": "not converged or too slow"
+   },
+   "D1842": {
+    "f": "=ERF(B1842,A1842)",
+    "why": "not converged or too slow"
+   },
+   "D1843": {
+    "f": "=ERF(B1843,A1843)",
+    "why": "not converged or too slow"
+   },
+   "D1844": {
+    "f": "=ERF(B1844,A1844)",
+    "why": "not converged or too slow"
+   },
+   "D1845": {
+    "f": "=ERF(B1845,A1845)",
+    "why": "not converged or too slow"
+   },
+   "D1846": {
+    "f": "=ERF(B1846,A1846)",
+    "why": "not converged or too slow"
+   },
+   "D1847": {
+    "f": "=ERF(B1847,A1847)",
+    "why": "not converged or too slow"
+   },
+   "D1848": {
+    "f": "=ERF(B1848,A1848)",
+    "why": "not converged or too slow"
+   },
+   "D1849": {
+    "f": "=ERF(B1849,A1849)",
+    "why": "not converged or too slow"
+   },
+   "D1850": {
+    "f": "=ERF(B1850,A1850)",
+    "why": "not converged or too slow"
+   },
+   "D1851": {
+    "f": "=ERF(B1851,A1851)",
+    "why": "not converged or too slow"
+   },
+   "D1852": {
+    "f": "=ERF(B1852,A1852)",
+    "why": "not converged or too slow"
+   },
+   "D1853": {
+    "f": "=ERF(B1853,A1853)",
+    "why": "not converged or too slow"
+   },
+   "D1854": {
+    "f": "=ERF(B1854,A1854)",
+    "why": "not converged or too slow"
+   },
+   "D1855": {
+    "f": "=ERF(B1855,A1855)",
+    "why": "not converged or too slow"
+   },
+   "D1856": {
+    "f": "=ERF(B1856,A1856)",
+    "why": "not converged or too slow"
+   },
+   "D1857": {
+    "f": "=ERF(B1857,A1857)",
+    "why": "not converged or too slow"
+   },
+   "D1858": {
+    "f": "=ERF(B1858,A1858)",
+    "why": "not converged or too slow"
+   },
+   "D1859": {
+    "f": "=ERF(B1859,A1859)",
+    "why": "not converged or too slow"
+   },
+   "D1860": {
+    "f": "=ERF(B1860,A1860)",
+    "why": "not converged or too slow"
+   },
+   "D1861": {
+    "f": "=ERF(B1861,A1861)",
+    "why": "not converged or too slow"
+   },
+   "D1862": {
+    "f": "=ERF(B1862,A1862)",
+    "why": "not converged or too slow"
+   },
+   "D1863": {
+    "f": "=ERF(B1863,A1863)",
+    "why": "not converged or too slow"
+   },
+   "D1864": {
+    "f": "=ERF(B1864,A1864)",
+    "why": "not converged or too slow"
+   },
+   "D1865": {
+    "f": "=ERF(B1865,A1865)",
+    "why": "not converged or too slow"
+   },
+   "D1866": {
+    "f": "=ERF(B1866,A1866)",
+    "why": "not converged or too slow"
+   },
+   "D1867": {
+    "f": "=ERF(B1867,A1867)",
+    "why": "not converged or too slow"
+   },
+   "D1868": {
+    "f": "=ERF(B1868,A1868)",
+    "why": "not converged or too slow"
+   },
+   "D1869": {
+    "f": "=ERF(B1869,A1869)",
+    "why": "not converged or too slow"
+   },
+   "D1870": {
+    "f": "=ERF(B1870,A1870)",
+    "why": "not converged or too slow"
+   },
+   "D1871": {
+    "f": "=ERF(B1871,A1871)",
+    "why": "not converged or too slow"
+   },
+   "D1872": {
+    "f": "=ERF(B1872,A1872)",
+    "why": "not converged or too slow"
+   },
+   "D1873": {
+    "f": "=ERF(B1873,A1873)",
+    "why": "not converged or too slow"
+   },
+   "D1874": {
+    "f": "=ERF(B1874,A1874)",
+    "why": "not converged or too slow"
+   },
+   "D1875": {
+    "f": "=ERF(B1875,A1875)",
+    "why": "not converged or too slow"
+   },
+   "D1876": {
+    "f": "=ERF(B1876,A1876)",
+    "why": "not converged or too slow"
+   },
+   "D1877": {
+    "f": "=ERF(B1877,A1877)",
+    "why": "not converged or too slow"
+   },
+   "D1878": {
+    "f": "=ERF(B1878,A1878)",
+    "why": "not converged or too slow"
+   },
+   "D1879": {
+    "f": "=ERF(B1879,A1879)",
+    "why": "not converged or too slow"
+   },
+   "D1880": {
+    "f": "=ERF(B1880,A1880)",
+    "why": "not converged or too slow"
+   },
+   "D1881": {
+    "f": "=ERF(B1881,A1881)",
+    "why": "not converged or too slow"
+   },
+   "D1882": {
+    "f": "=ERF(B1882,A1882)",
+    "why": "not converged or too slow"
+   },
+   "D1883": {
+    "f": "=ERF(B1883,A1883)",
+    "why": "not converged or too slow"
+   },
+   "D1884": {
+    "f": "=ERF(B1884,A1884)",
+    "why": "not converged or too slow"
+   },
+   "D1885": {
+    "f": "=ERF(B1885,A1885)",
+    "why": "not converged or too slow"
+   },
+   "D1886": {
+    "f": "=ERF(B1886,A1886)",
+    "why": "not converged or too slow"
+   },
+   "D1887": {
+    "f": "=ERF(B1887,A1887)",
+    "why": "not converged or too slow"
+   },
+   "D1888": {
+    "f": "=ERF(B1888,A1888)",
+    "why": "not converged or too slow"
+   },
+   "D1889": {
+    "f": "=ERF(B1889,A1889)",
+    "why": "not converged or too slow"
+   },
+   "D1890": {
+    "f": "=ERF(B1890,A1890)",
+    "why": "not converged or too slow"
+   },
+   "D1891": {
+    "f": "=ERF(B1891,A1891)",
+    "why": "not converged or too slow"
+   },
+   "D1892": {
+    "f": "=ERF(B1892,A1892)",
+    "why": "not converged or too slow"
+   },
+   "D1893": {
+    "f": "=ERF(B1893,A1893)",
+    "why": "not converged or too slow"
+   },
+   "D1894": {
+    "f": "=ERF(B1894,A1894)",
+    "why": "not converged or too slow"
+   },
+   "D1895": {
+    "f": "=ERF(B1895,A1895)",
+    "why": "not converged or too slow"
+   },
+   "D1896": {
+    "f": "=ERF(B1896,A1896)",
+    "why": "not converged or too slow"
+   },
+   "D1897": {
+    "f": "=ERF(B1897,A1897)",
+    "why": "not converged or too slow"
+   },
+   "D1898": {
+    "f": "=ERF(B1898,A1898)",
+    "why": "not converged or too slow"
+   },
+   "D1899": {
+    "f": "=ERF(B1899,A1899)",
+    "why": "not converged or too slow"
+   },
+   "D1900": {
+    "f": "=ERF(B1900,A1900)",
+    "why": "not converged or too slow"
+   },
+   "D1901": {
+    "f": "=ERF(B1901,A1901)",
+    "why": "not converged or too slow"
+   },
+   "D1902": {
+    "f": "=ERF(B1902,A1902)",
+    "why": "not converged or too slow"
+   },
+   "D1903": {
+    "f": "=ERF(B1903,A1903)",
+    "why": "not converged or too slow"
+   },
+   "D1904": {
+    "f": "=ERF(B1904,A1904)",
+    "why": "not converged or too slow"
+   },
+   "D1905": {
+    "f": "=ERF(B1905,A1905)",
+    "why": "not converged or too slow"
+   },
+   "D1906": {
+    "f": "=ERF(B1906,A1906)",
+    "why": "not converged or too slow"
+   },
+   "D1907": {
+    "f": "=ERF(B1907,A1907)",
+    "why": "not converged or too slow"
+   },
+   "D1908": {
+    "f": "=ERF(B1908,A1908)",
+    "why": "not converged or too slow"
+   },
+   "D1909": {
+    "f": "=ERF(B1909,A1909)",
+    "why": "not converged or too slow"
+   },
+   "D1910": {
+    "f": "=ERF(B1910,A1910)",
+    "why": "not converged or too slow"
+   },
+   "D1911": {
+    "f": "=ERF(B1911,A1911)",
+    "why": "not converged or too slow"
+   },
+   "D1912": {
+    "f": "=ERF(B1912,A1912)",
+    "why": "not converged or too slow"
+   },
+   "D1913": {
+    "f": "=ERF(B1913,A1913)",
+    "why": "not converged or too slow"
+   },
+   "D1914": {
+    "f": "=ERF(B1914,A1914)",
+    "why": "not converged or too slow"
+   },
+   "D1915": {
+    "f": "=ERF(B1915,A1915)",
+    "why": "not converged or too slow"
+   },
+   "D1916": {
+    "f": "=ERF(B1916,A1916)",
+    "why": "not converged or too slow"
+   },
+   "D1917": {
+    "f": "=ERF(B1917,A1917)",
+    "why": "not converged or too slow"
+   },
+   "D1918": {
+    "f": "=ERF(B1918,A1918)",
+    "why": "not converged or too slow"
+   },
+   "D1919": {
+    "f": "=ERF(B1919,A1919)",
+    "why": "not converged or too slow"
+   },
+   "D1920": {
+    "f": "=ERF(B1920,A1920)",
+    "why": "not converged or too slow"
+   },
+   "D1921": {
+    "f": "=ERF(B1921,A1921)",
+    "why": "not converged or too slow"
+   },
+   "D1922": {
+    "f": "=ERF(B1922,A1922)",
+    "why": "not converged or too slow"
+   },
+   "D1923": {
+    "f": "=ERF(B1923,A1923)",
+    "why": "not converged or too slow"
+   },
+   "D1924": {
+    "f": "=ERF(B1924,A1924)",
+    "why": "not converged or too slow"
+   },
+   "D1925": {
+    "f": "=ERF(B1925,A1925)",
+    "why": "not converged or too slow"
+   },
+   "D1926": {
+    "f": "=ERF(B1926,A1926)",
+    "why": "not converged or too slow"
+   },
+   "D1927": {
+    "f": "=ERF(B1927,A1927)",
+    "why": "not converged or too slow"
+   },
+   "D1928": {
+    "f": "=ERF(B1928,A1928)",
+    "why": "not converged or too slow"
+   },
+   "D1929": {
+    "f": "=ERF(B1929,A1929)",
+    "why": "not converged or too slow"
+   },
+   "D1930": {
+    "f": "=ERF(B1930,A1930)",
+    "why": "not converged or too slow"
+   },
+   "D1931": {
+    "f": "=ERF(B1931,A1931)",
+    "why": "not converged or too slow"
+   },
+   "D1932": {
+    "f": "=ERF(B1932,A1932)",
+    "why": "not converged or too slow"
+   },
+   "D1933": {
+    "f": "=ERF(B1933,A1933)",
+    "why": "not converged or too slow"
+   },
+   "D1934": {
+    "f": "=ERF(B1934,A1934)",
+    "why": "not converged or too slow"
+   },
+   "D1935": {
+    "f": "=ERF(B1935,A1935)",
+    "why": "not converged or too slow"
+   },
+   "D1936": {
+    "f": "=ERF(B1936,A1936)",
+    "why": "not converged or too slow"
+   },
+   "D1937": {
+    "f": "=ERF(B1937,A1937)",
+    "why": "not converged or too slow"
+   },
+   "D1938": {
+    "f": "=ERF(B1938,A1938)",
+    "why": "not converged or too slow"
+   },
+   "D1939": {
+    "f": "=ERF(B1939,A1939)",
+    "why": "not converged or too slow"
+   },
+   "D1940": {
+    "f": "=ERF(B1940,A1940)",
+    "why": "not converged or too slow"
+   },
+   "D1941": {
+    "f": "=ERF(B1941,A1941)",
+    "why": "not converged or too slow"
+   },
+   "D1942": {
+    "f": "=ERF(B1942,A1942)",
+    "why": "not converged or too slow"
+   },
+   "D1943": {
+    "f": "=ERF(B1943,A1943)",
+    "why": "not converged or too slow"
+   },
+   "D1944": {
+    "f": "=ERF(B1944,A1944)",
+    "why": "not converged or too slow"
+   },
+   "D1945": {
+    "f": "=ERF(B1945,A1945)",
+    "why": "not converged or too slow"
+   },
+   "D1946": {
+    "f": "=ERF(B1946,A1946)",
+    "why": "not converged or too slow"
+   },
+   "D1947": {
+    "f": "=ERF(B1947,A1947)",
+    "why": "not converged or too slow"
+   },
+   "D1948": {
+    "f": "=ERF(B1948,A1948)",
+    "why": "not converged or too slow"
+   },
+   "D1949": {
+    "f": "=ERF(B1949,A1949)",
+    "why": "not converged or too slow"
+   },
+   "D1950": {
+    "f": "=ERF(B1950,A1950)",
+    "why": "not converged or too slow"
+   },
+   "D1951": {
+    "f": "=ERF(B1951,A1951)",
+    "why": "not converged or too slow"
+   },
+   "D1952": {
+    "f": "=ERF(B1952,A1952)",
+    "why": "not converged or too slow"
+   },
+   "D1953": {
+    "f": "=ERF(B1953,A1953)",
+    "why": "not converged or too slow"
+   },
+   "D1954": {
+    "f": "=ERF(B1954,A1954)",
+    "why": "not converged or too slow"
+   },
+   "D1955": {
+    "f": "=ERF(B1955,A1955)",
+    "why": "not converged or too slow"
+   },
+   "D1956": {
+    "f": "=ERF(B1956,A1956)",
+    "why": "not converged or too slow"
+   },
+   "D1957": {
+    "f": "=ERF(B1957,A1957)",
+    "why": "not converged or too slow"
+   },
+   "D1958": {
+    "f": "=ERF(B1958,A1958)",
+    "why": "not converged or too slow"
+   },
+   "D1959": {
+    "f": "=ERF(B1959,A1959)",
+    "why": "not converged or too slow"
+   },
+   "D1960": {
+    "f": "=ERF(B1960,A1960)",
+    "why": "not converged or too slow"
+   },
+   "D1961": {
+    "f": "=ERF(B1961,A1961)",
+    "why": "not converged or too slow"
+   },
+   "D1962": {
+    "f": "=ERF(B1962,A1962)",
+    "why": "not converged or too slow"
+   },
+   "D1963": {
+    "f": "=ERF(B1963,A1963)",
+    "why": "not converged or too slow"
+   },
+   "D1964": {
+    "f": "=ERF(B1964,A1964)",
+    "why": "not converged or too slow"
+   },
+   "D1965": {
+    "f": "=ERF(B1965,A1965)",
+    "why": "not converged or too slow"
+   },
+   "D1966": {
+    "f": "=ERF(B1966,A1966)",
+    "why": "not converged or too slow"
+   },
+   "D1967": {
+    "f": "=ERF(B1967,A1967)",
+    "why": "not converged or too slow"
+   },
+   "D1968": {
+    "f": "=ERF(B1968,A1968)",
+    "why": "not converged or too slow"
+   },
+   "D1969": {
+    "f": "=ERF(B1969,A1969)",
+    "why": "not converged or too slow"
+   },
+   "E1657": {
+    "f": "=ERF(A1657,A1659)",
+    "why": "not converged or too slow"
+   },
+   "E1658": {
+    "f": "=ERF(A1658,A1660)",
+    "why": "not converged or too slow"
+   },
+   "E1659": {
+    "f": "=ERF(A1659,A1661)",
+    "why": "not converged or too slow"
+   },
+   "E1660": {
+    "f": "=ERF(A1660,A1662)",
+    "why": "not converged or too slow"
+   },
+   "E1661": {
+    "f": "=ERF(A1661,A1663)",
+    "why": "not converged or too slow"
+   },
+   "E1662": {
+    "f": "=ERF(A1662,A1664)",
+    "why": "not converged or too slow"
+   },
+   "E1663": {
+    "f": "=ERF(A1663,A1665)",
+    "why": "not converged or too slow"
+   },
+   "E1664": {
+    "f": "=ERF(A1664,A1666)",
+    "why": "not converged or too slow"
+   },
+   "E1665": {
+    "f": "=ERF(A1665,A1667)",
+    "why": "not converged or too slow"
+   },
+   "E1666": {
+    "f": "=ERF(A1666,A1668)",
+    "why": "not converged or too slow"
+   },
+   "E1667": {
+    "f": "=ERF(A1667,A1669)",
+    "why": "not converged or too slow"
+   },
+   "E1668": {
+    "f": "=ERF(A1668,A1670)",
+    "why": "not converged or too slow"
+   },
+   "E1669": {
+    "f": "=ERF(A1669,A1671)",
+    "why": "not converged or too slow"
+   },
+   "E1670": {
+    "f": "=ERF(A1670,A1672)",
+    "why": "not converged or too slow"
+   },
+   "E1671": {
+    "f": "=ERF(A1671,A1673)",
+    "why": "not converged or too slow"
+   },
+   "E1672": {
+    "f": "=ERF(A1672,A1674)",
+    "why": "not converged or too slow"
+   },
+   "E1673": {
+    "f": "=ERF(A1673,A1675)",
+    "why": "not converged or too slow"
+   },
+   "E1674": {
+    "f": "=ERF(A1674,A1676)",
+    "why": "not converged or too slow"
+   },
+   "E1675": {
+    "f": "=ERF(A1675,A1677)",
+    "why": "not converged or too slow"
+   },
+   "E1676": {
+    "f": "=ERF(A1676,A1678)",
+    "why": "not converged or too slow"
+   },
+   "E1677": {
+    "f": "=ERF(A1677,A1679)",
+    "why": "not converged or too slow"
+   },
+   "E1678": {
+    "f": "=ERF(A1678,A1680)",
+    "why": "not converged or too slow"
+   },
+   "E1679": {
+    "f": "=ERF(A1679,A1681)",
+    "why": "not converged or too slow"
+   },
+   "E1680": {
+    "f": "=ERF(A1680,A1682)",
+    "why": "not converged or too slow"
+   },
+   "E1681": {
+    "f": "=ERF(A1681,A1683)",
+    "why": "not converged or too slow"
+   },
+   "E1682": {
+    "f": "=ERF(A1682,A1684)",
+    "why": "not converged or too slow"
+   },
+   "E1683": {
+    "f": "=ERF(A1683,A1685)",
+    "why": "not converged or too slow"
+   },
+   "E1684": {
+    "f": "=ERF(A1684,A1686)",
+    "why": "not converged or too slow"
+   },
+   "E1685": {
+    "f": "=ERF(A1685,A1687)",
+    "why": "not converged or too slow"
+   },
+   "E1686": {
+    "f": "=ERF(A1686,A1688)",
+    "why": "not converged or too slow"
+   },
+   "E1687": {
+    "f": "=ERF(A1687,A1689)",
+    "why": "not converged or too slow"
+   },
+   "E1688": {
+    "f": "=ERF(A1688,A1690)",
+    "why": "not converged or too slow"
+   },
+   "E1689": {
+    "f": "=ERF(A1689,A1691)",
+    "why": "not converged or too slow"
+   },
+   "E1690": {
+    "f": "=ERF(A1690,A1692)",
+    "why": "not converged or too slow"
+   },
+   "E1691": {
+    "f": "=ERF(A1691,A1693)",
+    "why": "not converged or too slow"
+   },
+   "E1692": {
+    "f": "=ERF(A1692,A1694)",
+    "why": "not converged or too slow"
+   },
+   "E1693": {
+    "f": "=ERF(A1693,A1695)",
+    "why": "not converged or too slow"
+   },
+   "E1694": {
+    "f": "=ERF(A1694,A1696)",
+    "why": "not converged or too slow"
+   },
+   "E1695": {
+    "f": "=ERF(A1695,A1697)",
+    "why": "not converged or too slow"
+   },
+   "E1696": {
+    "f": "=ERF(A1696,A1698)",
+    "why": "not converged or too slow"
+   },
+   "E1697": {
+    "f": "=ERF(A1697,A1699)",
+    "why": "not converged or too slow"
+   },
+   "E1698": {
+    "f": "=ERF(A1698,A1700)",
+    "why": "not converged or too slow"
+   },
+   "E1699": {
+    "f": "=ERF(A1699,A1701)",
+    "why": "not converged or too slow"
+   },
+   "E1700": {
+    "f": "=ERF(A1700,A1702)",
+    "why": "not converged or too slow"
+   },
+   "E1701": {
+    "f": "=ERF(A1701,A1703)",
+    "why": "not converged or too slow"
+   },
+   "E1702": {
+    "f": "=ERF(A1702,A1704)",
+    "why": "not converged or too slow"
+   },
+   "E1703": {
+    "f": "=ERF(A1703,A1705)",
+    "why": "not converged or too slow"
+   },
+   "E1704": {
+    "f": "=ERF(A1704,A1706)",
+    "why": "not converged or too slow"
+   },
+   "E1705": {
+    "f": "=ERF(A1705,A1707)",
+    "why": "not converged or too slow"
+   },
+   "E1706": {
+    "f": "=ERF(A1706,A1708)",
+    "why": "not converged or too slow"
+   },
+   "E1707": {
+    "f": "=ERF(A1707,A1709)",
+    "why": "not converged or too slow"
+   },
+   "E1708": {
+    "f": "=ERF(A1708,A1710)",
+    "why": "not converged or too slow"
+   },
+   "E1709": {
+    "f": "=ERF(A1709,A1711)",
+    "why": "not converged or too slow"
+   },
+   "E1710": {
+    "f": "=ERF(A1710,A1712)",
+    "why": "not converged or too slow"
+   },
+   "E1711": {
+    "f": "=ERF(A1711,A1713)",
+    "why": "not converged or too slow"
+   },
+   "E1712": {
+    "f": "=ERF(A1712,A1714)",
+    "why": "not converged or too slow"
+   },
+   "E1713": {
+    "f": "=ERF(A1713,A1715)",
+    "why": "not converged or too slow"
+   },
+   "E1714": {
+    "f": "=ERF(A1714,A1716)",
+    "why": "not converged or too slow"
+   },
+   "E1715": {
+    "f": "=ERF(A1715,A1717)",
+    "why": "not converged or too slow"
+   },
+   "E1716": {
+    "f": "=ERF(A1716,A1718)",
+    "why": "not converged or too slow"
+   },
+   "E1717": {
+    "f": "=ERF(A1717,A1719)",
+    "why": "not converged or too slow"
+   },
+   "E1718": {
+    "f": "=ERF(A1718,A1720)",
+    "why": "not converged or too slow"
+   }
+  }
  }
 }
