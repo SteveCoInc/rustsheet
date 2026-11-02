@@ -338,12 +338,17 @@ def test_cli_lists_and_generates(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert accuracy_cli.main(["list"]) == 0
     assert capsys.readouterr().out.split() == [
         "AVERAGE",
+        "BETA.DIST",
+        "BETA.INV",
         "BINOM.DIST",
+        "CHISQ.INV",
+        "CHISQ.INV.RT",
         "COS",
         "COT",
         "CSC",
         "F.DIST",
         "F.INV",
+        "GAMMA.INV",
         "IRR",
         "NEGBINOM.DIST",
         "NPER",
