@@ -3,7 +3,7 @@ id: T-3869
 title: "xlsx import: refuse a workbook whose formula passes Excel's 256-parenthesis or sign cap, as Excel does"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
