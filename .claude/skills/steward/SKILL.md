@@ -44,10 +44,15 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   `claude/*` branch of this repository (never a fork: the PR's `head.repo.full_name` is
   `SteveCoInc/rustsheet`), opened by another session, that is not a draft, not queued (auto-merge off;
   this includes a PR the merge queue removed), and whose branch has not moved for 4 h or more.
-  The opus worker adopts the oldest one at the start of each run (work-loop step 0.3) and the
-  steward adopts them in its daily run. Adopting means fixing what blocks it (red CI, a conflict,
-  missing bookkeeping) and enqueueing it once ALL of these hold:
-  - its branch has not moved for 4 h or more when you adopt it. Measure when the head was pushed
+  **A dropped PR is an orphan at once** (decision 0253): the `queue-dropped` label, which
+  `.github/workflows/queue-drops.yml` adds when the queue removes a PR and clears on a push, a
+  re-enqueue or a close, waives the 4 h wait; find them with `list_pull_requests` (field `labels`).
+  The opus worker adopts every labelled PR, oldest first, and then the oldest other orphan, at the
+  start of each run (work-loop step 0.3); the steward adopts them in its daily run. Adopting
+  means fixing what blocks it (red CI, a conflict, missing bookkeeping) and enqueueing it once ALL
+  of these hold:
+  - it still has the `queue-dropped` label when you adopt it, or its branch has not moved for 4 h
+    or more. Measure when the head was pushed
     (the creation time of the latest head's first CI run, or the branch's last push event), not
     the commit date. Your own merges of `main` and bookkeeping commits (they carry your session's
     `Claude-Session` trailer) do not reset this clock;

@@ -18,13 +18,14 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
    GitHub tools) and its task is your tier, continue it (go to step 4/6) instead of starting new
    work. One task in flight per lane. A task handed off to `opus` (it has a `## Handoff` section)
    is resumed by an opus run from its pushed branch, starting from the handoff notes.
-3. **Step 0.3, adopt an orphan** (opus runs only, decision 0248): before picking a new task, look
-   for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an `agent/*`
-   or `claude/*` branch of this repository, never a fork; not draft, not queued, branch idle 4 h
-   or more; a PR the merge queue removed counts). Take the
-   oldest one and drive it to the queue under that rule: fix red CI or a conflict, run your own
-   review panel on the current diff, enqueue. It counts as one task of the session budget. Skip
-   it when none exists.
+3. **Step 0.3, adopt orphans** (opus runs only, decisions 0248, 0253): before picking a new task,
+   look for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an
+   `agent/*` or `claude/*` branch of this repository, never a fork; not draft, not queued). First
+   every open PR labelled `queue-dropped` (the merge queue removed it and nobody has pushed since;
+   no idle wait), oldest first, as long as the session budget allows new tasks; then the oldest
+   other orphan (branch idle 4 h or more), one per run. Drive each to the queue under that rule:
+   fix red CI or a conflict, run your own review panel on the current diff, enqueue. Each counts
+   as one task of the session budget. Skip the step when none exists.
 
 ## 1. Pick
 `make next-task LANE=<lane> TIER=<tier>` (P0 tasks first, then handed-off tasks; decision 0023). If
@@ -148,7 +149,9 @@ file and its acceptance criteria.
      when a line you added elsewhere names the old id: change that yourself). A conflict only in
      the eval-gated baseline lists: `make catch-up PR=<n>` (decision 0207). Then wait for green
      CI and enqueue again.
-   - **Changing a queued PR:** `disable_pr_auto_merge` first, push, wait for CI, re-run the
+   - **Changing a queued PR:** have the change committed locally first, then `disable_pr_auto_merge`
+     and push at once (the dequeue labels the PR `queue-dropped` until the push lands, decision
+     0253), wait for CI, re-run the
      reviewers the change concerns (a clean merge of `origin/main`, a catch-up or a renumber
      needs none), then enqueue again. Never push while auto-merge is armed: the new commits could
      land unreviewed.
