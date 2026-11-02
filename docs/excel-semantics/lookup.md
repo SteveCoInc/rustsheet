@@ -94,6 +94,52 @@ excel-graph, 2026-10-14, T-0960).
 Status: VERIFIED (Excel for the web only)
 Tasks: T-0960
 
+## INDIRECT reference text: where spaces are allowed
+Rule: INDIRECT reads reference text more strictly than the formula parser, the same in A1 and R1C1 style:
+- Any leading whitespace is `#REF!`: `" A1"`, `"  A1 "`, `" A1:B2 "`, `" Sheet2!A1"`, `" C : A "`, `" R1C1"`,
+  and a leading tab or NBSP (`CHAR(9)`, `CHAR(160)`).
+- Trailing spaces and trailing line feeds (any number) are ignored: `"A1 "`, `"A1   "`, `"$A$1 "`, `"A1:B2 "`, `"A1"&CHAR(10)`,
+  `"R1C1 "` all resolve. A trailing tab or NBSP is `#REF!`.
+- Spaces next to the range colon are allowed: `"A1 : B2"`, `"A1: B2"`, `"A1 :B2"`, `"B2 : A1"`,
+  `"Sheet2!A1 :B2"`, `"R1C1 : R2C2"`; a line feed is allowed in the same places, alone or mixed with spaces (`"A1:"&CHAR(10)&"B2"`, `"A1"&CHAR(10)&":B2"`,
+  `"A1 "&CHAR(10)&": B2"`, `"A1:"&CHAR(10)&CHAR(10)&"B2"`, `"Sheet2!"&CHAR(10)&"A1"`, `"R1C1"&CHAR(10)&":R2C2"`;
+  probes/t3747-indirect-whitespace rows 60-70), a tab is `#REF!`.
+- A space after the `!` is allowed (`"Sheet2! A1"` = Sheet2!A1), one before it is not (`"Sheet2 !A1"`,
+  `"'My Sheet' !A1"`, `"Sheet2 !R1C1"` are `#REF!`). Inside quotes the space is part of the sheet name
+  (`"'My Sheet'!A1"` resolves; an unquoted `"My Sheet!A1"` is `#REF!`).
+- Two references separated by spaces are not an intersection: `"A1 B2"`, `"A1:B2 B1:C2"`, `"A1:C1 B1:B3"`,
+  `"R1C1 R2C2"` are `#REF!` (in a formula the space is the intersection operator).
+Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F11:I33, F47:I54, F61:I65, F68:I71 (SUM, ROWS, COLUMNS,
+CELL("address") of each text in E; oracle: excel-graph, 2026-11-01, T-3656).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_reference_text` (engine expressions/utils), applied before both parsers; the
+defined-name and structured-reference fallbacks still see the text as written (their spacing is
+unprobed; structured references are T-3394).
+Also `#REF!` (probes/t3747-indirect-whitespace, T-3747): a carriage return anywhere (leading, trailing,
+`"A1"&CHAR(13)&CHAR(10)`, `"R1C1"&CHAR(13)`), a leading line feed, a Unicode space (`UNICHAR(8195)`) leading or
+trailing, a line feed between two references (`"A1"&CHAR(10)&"B2"`, `"A1:B2"&CHAR(10)&"B1:C2"`), a line feed before the `!` (`"Sheet2"&CHAR(10)&"!A1"`), and spaces inside a reference (`"$A $1"`, `"A 1"`, `"$ A$1"`,
+`"A1 :B 2"`, `"R[ 1]C"`, `"R1 C1"`, `"R[1] C"`, `"R 1C1"`). Trailing space on a whole-column or row ref
+resolves (`"A:A "`, `"1:1 "`). A defined name's text may end in spaces or a line feed (`"MyName "`,
+`"MyName"&CHAR(10)`, `"MyName"&CHAR(10)&CHAR(10)`, `"MyName "&CHAR(10)`, `"MyName"&CHAR(10)&" "`) but not start with a space (probes/t3747-indirect-name-whitespace; the name fallback trims
+the same trailing characters). Not probed: names with a carriage return, structured references (T-3394).
+Note for probes: text naming a sheet that does not exist is resolved by Excel for the web as an
+external workbook reference (`"' My Sheet'!A1"` gave CELL address `[ My Sheet] My Sheet!$A$1` and SUM
+`#BLOCKED!`), so such cells were dropped from the case (see "INDIRECT to a sheet that does not exist").
+
+## INDIRECT of a reversed range is the range with its corners in order
+Rule: reference text whose corners are reversed in either or both directions is the same range written
+top-left first, in A1 and R1C1: `"B2:A1"`, `"A2:B1"`, `"B1:A2"` and `"R2C2:R1C1"`, `"R1C2:R2C1"`, `"R2C1:R1C2"`
+are A1:B2 (SUM 27, ROWS 2, COLUMNS 2, CELL("address") `$A$1`), `"C3:A1"` and `"C$3:$A1"` A1:C3, `"C:A"` and
+`"C3:C1"` (R1C1) columns A:C, `"3:1"` and `"R3:R1"` rows 1:3, `"Sheet2!B2:A1"` and `"Sheet2!R2C2:R1C1"`
+Sheet2!A1:B2, relative `"R[-64]C2:R[-65]C1"` from row 66 A1:B2. Unlike a formula, a sheet prefix on the second corner is
+`#REF!`, on the same sheet too (`"Sheet2!B2:Sheet2!A1"`, `"Sheet2!A1:Sheet1!B2"`, `"Sheet1!B2:Sheet2!A1"`;
+references.md "Sheet-qualified range corners: order and unprobed forms" for the formula side).
+Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F34:I46, F55:I60, F66:H67 (oracle: excel-graph,
+2026-11-01, T-3656).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_of` orders the corners with `Range::between` (before T-3656 the A1 path kept them
+reversed: `ROWS(INDIRECT("C3:A1"))` was 1.8e19 and SUM 0).
+
 ## MATCH on a 2-D lookup_array is #N/A; argument errors win
 Rule: `MATCH` with a lookup_array of more than one row and column returns `#N/A` even when the value
 is in it (`=MATCH(Data!C$5,Data!A5:C9,1)` with C5 = 2 inside A5:C9 → `#N/A`; no top-level 2-D MATCH

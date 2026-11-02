@@ -1,23 +1,30 @@
 ---
 name: review
-description: Run RustSheet's multi-agent code review on the current branch versus main - security, architecture, quality/duplication, Excel fidelity reviewers (performance is off, decision 0081) in parallel - and consolidate verdicts. Use before opening or merging any PR.
+description: Run RustSheet's multi-agent code review on the current branch versus main - design (architecture and quality), security on executable changes, Excel fidelity reviewers (performance is off, decision 0081; panel by diff kind, decision 0236) in parallel - and consolidate verdicts. Use before opening or merging any PR.
 ---
 # Multi-agent review
 
-1. Make sure the branch is committed and `make check` passed (reviewers are not linters).
+A **task-only PR** (every changed path a `.md` file under `docs/tasks/`) gets no review: it is enqueued
+once CI is green, and the merge queue's `tasks.py validate` on the combined tree is its gate
+(decisions 0231, 0247). Any other path in the diff brings the panel of step 3 back.
+
+1. Make sure the branch is committed and `make check-fast` passed (reviewers are not linters).
 2. Collect context: `git diff --stat origin/main...HEAD`, the task id (branch name) and its file.
 3. Launch these subagents **in parallel** (one message, multiple Agent calls), each with a
    prompt containing: the task id, task file path, spec path(s), and "review `git diff
    origin/main...HEAD`":
-   - `reviewer-security` (always)
-   - `reviewer-architecture` (always)
-   - `reviewer-quality` (always)
+   - `reviewer-design` (always): architecture and code quality, one reviewer (decision 0236)
+   - `reviewer-security` (unless every path is under docs or eval/suites; docs/process keeps it):
+     a diff of only task files, decisions, specs, semantics notes and suite cases has nothing
+     executable to review (decision 0236). Docs that code reads (`ci_changes.CODE_READ_PATHS`:
+     docs/excel-semantics, docs/progress, docs/milestones.md) keep it too. Any path outside those,
+     or a list you are unsure of, gets it.
    - `reviewer-excel-fidelity` (if the diff touches crates/rustsheet-engine, crates/rustsheet-xlsx,
      eval/suites, or eval/baseline)
    - Not `reviewer-performance`: it is off while correctness comes first (decision 0081). A bench
      criterion in the task is met at no more than 50% slower than main.
-   Each reviewer runs on the model set in its agent frontmatter (decision 0015: security,
-   architecture and quality on Sonnet; Excel fidelity on Opus). Do not override it
+   Each reviewer runs on the model set in its agent frontmatter (decision 0015: security and
+   design on Sonnet; Excel fidelity on Opus). Do not override it
    per call, with one exception: the steward's weekly spot-audit launches every reviewer with
    `model: opus`, so a cheaper reviewer's miss is re-checked by the stronger model.
    As each reviewer returns, post its **verdict record** (SPEC-0027 "Verdict records (v2)",
@@ -25,7 +32,7 @@ description: Run RustSheet's multi-agent code review on the current branch versu
    - Save the report verbatim to a file in your scratchpad: the report and nothing else (no tool
      output, environment or credentials).
    - With the commit its `HEAD:` line names still checked out, run `make verdict-record PR=<n>
-     REVIEWER=<security|architecture|quality|excel-fidelity> VERDICT=<APPROVE|REQUEST_CHANGES>
+     REVIEWER=<security|design|excel-fidelity> VERDICT=<APPROVE|REQUEST_CHANGES>
      REPORT=<file>` (record a `BLOCK` as `REQUEST_CHANGES`). When `gh api` writes are refused,
      add `STEP=1` and post the printed comment body exactly as printed with the GitHub MCP tools.
    - The PR must exist: open it as a draft before the first round if it does not.
@@ -34,6 +41,13 @@ description: Run RustSheet's multi-agent code review on the current branch versu
    - A re-run on the same head posts a new record; the newest per reviewer counts.
 4. Consolidate into a table: reviewer | verdict | blocking findings. A PR is mergeable only when
    every reviewer returned `APPROVE` (MINOR findings may be deferred as follow-up tasks).
+   **Push once per round** (decision 0240): wait until every reviewer of the round has reported,
+   fix the round's blocking findings (and any MINOR ones you choose to fix) in local commits, run
+   `make check-fast`, then push once and start the next round on that head, where a reviewer whose
+   approval names an older head runs again (step 3). Do not push while a reviewer of the round is
+   still running, and do not push fix by fix: each push starts a full CI run and cancels the one
+   in flight, and a reviewer still running is then reviewing a head that no longer counts. Red-CI,
+   conflict and ejection fixes are not review-round fixes: push them when ready (steward skill).
 5. For each MINOR finding you choose not to fix, create a follow-up task or note why it is moot.
 6. Paste the table into the PR body ("Agent review" section).
 
