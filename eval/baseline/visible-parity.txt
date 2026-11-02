@@ -192,6 +192,7 @@ ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 ironcalc-calc/STATISTICAL/POISSON.xlsx	1
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/date-text-mixed-separator-typed.case.json	2
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
@@ -252,6 +253,7 @@ probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
 probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
+probes/t3638-subnormal-upper-tail.case.json	7
 probes/table-edits/table-convert-names-this-row.case.json	3
 probes/table-edits/table-insert-row-calc-column-above-header.case.json	6
 probes/table-edits/table-insert-row-calc-column-inside-data.case.json	3
