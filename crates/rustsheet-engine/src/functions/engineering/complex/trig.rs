@@ -90,7 +90,7 @@ fn hyperbolic_log_form(
     if y == 0.0 || (HYPERBOLIC_LOG_CUT_NEGATIVE..=HYPERBOLIC_LOG_CUT).contains(&x) {
         return None;
     }
-    let (sin_y, cos_y) = (y.sin(), y.cos());
+    let (sin_y, cos_y) = trig_sin_cos(y);
     if sin_y <= 0.0 || cos_y <= 0.0 {
         return Some(num_error(cell));
     }
@@ -248,11 +248,27 @@ fn real_trig(
 /// IMSIN and IMCOS of a complex number too: near k·π/2 their small part is Excel's x87 remainder
 /// (`IMSIN("1.5707963267949+709.7i")` is ...-2.88915216855774E+293i, libm ...917292436455...;
 /// 400 of 400 texts of probes-numeric/t3726-imsin-imcos-near-half-pi-sweep, libm 28; T-3726).
+/// IMCSCH's y and the y of IMSINH's and IMCOSH's log form too: `IMCSCH(COMPLEX(0,710))` is
+/// -16586.8544023646i, libm's sine ...3615i (probes/im-trig-magnitude-grid J13; T-3758).
 fn trig_sin_cos(x: f64) -> (f64, f64) {
     if x.abs() < EXCEL_TRIG_LIMIT {
         excel_sin_cos(x)
     } else {
         (x.sin(), x.cos())
+    }
+}
+
+/// The sine and cosine of `2x` for the double-angle forms of IMTAN and IMCOT, reduced as SIN
+/// reduces (the x87 π) while `x` itself is below SIN's limit, even where `2x` is past it: the
+/// reduction stays exact there (`n` has at most 28 bits). `IMTAN(COMPLEX(134217727,1))` is
+/// 0.191168356084859+1.23600163390978i and `IMTAN(COMPLEX(710,1))` has real part
+/// 0.0000253197098921901, where libm's `sin 2x` gave ...083806 and ...949
+/// (probes/im-trig-argument-cut C5, probes/im-trig-magnitude-grid C234; T-3758).
+fn double_angle_sin_cos(x: f64) -> (f64, f64) {
+    if x.abs() < EXCEL_TRIG_LIMIT {
+        excel_sin_cos(2.0 * x)
+    } else {
+        ((2.0 * x).sin(), (2.0 * x).cos())
     }
 }
 
@@ -339,7 +355,7 @@ pub(super) fn imcot((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
         return num_error(cell);
     }
     let (_, cos_x) = trig_sin_cos(x);
-    let (sin_2x, _) = trig_sin_cos(2.0 * x);
+    let (sin_2x, _) = double_angle_sin_cos(x);
     let t = cosh_2y + 1.0 - 2.0 * cos_x * cos_x;
     finite_complex_result(sin_2x / t, -sinh_2y / t, suffix, cell)
 }
@@ -399,8 +415,7 @@ pub(super) fn imcsch((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
     if past_trig_limit(y) && !reciprocal_flushes(x) {
         return num_error(cell);
     }
-    let y_cos = y.cos();
-    let y_sin = y.sin();
+    let (y_sin, y_cos) = trig_sin_cos(y);
 
     let t = x_sinh * x_sinh + y_sin * y_sin;
     if t == 0.0 {
@@ -510,16 +525,14 @@ pub(super) fn imsinh((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
 /// `cosh 2y` 1, so |y| below about 1E-8) it falls back to that kernel too; unprobed, as is the
 /// libm value past SIN's limit.
 fn tan_parts(x: f64, y: f64) -> (f64, f64) {
-    let denominator = f64::cos(2.0 * x) + f64::cosh(2.0 * y);
+    let (sin_2x, cos_2x) = double_angle_sin_cos(x);
+    let denominator = cos_2x + f64::cosh(2.0 * y);
     if denominator == 0.0 {
         (trig_tan(x), 0.0)
     } else if denominator.is_finite() {
-        (
-            f64::sin(2.0 * x) / denominator,
-            f64::sinh(2.0 * y) / denominator,
-        )
+        (sin_2x / denominator, f64::sinh(2.0 * y) / denominator)
     } else {
-        (0.0 * f64::sin(2.0 * x), y.signum())
+        (0.0 * sin_2x, y.signum())
     }
 }
 
@@ -544,8 +557,8 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 #[cfg(test)]
 mod tests {
     use super::{
-        imcos, imcosh, imcot, imcsc, imsec, imsin, imsinh, inverse_exp_sinh_cosh, CalcResult,
-        CellReferenceIndex, ComplexParts, Suffix,
+        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsin, imsinh, imtan, inverse_exp_sinh_cosh,
+        CalcResult, CellReferenceIndex, ComplexParts, Suffix,
     };
 
     /// The text a kernel prints for `x+yi`.
@@ -616,6 +629,21 @@ mod tests {
         assert_eq!(text(imcot, -57.9375, 18.7089), "-4.00011374673746E-17-1i");
         assert_eq!(text(imcsc, 1e-20, 0.0), "100000000000000000000");
         assert_eq!(text(imcot, 1e-20, 0.0), "100000000000000000000");
+    }
+
+    // probes/im-trig-magnitude-grid C234, J13 and probes/im-trig-argument-cut C5 (excel-graph, T-3758):
+    // IMTAN's double angle and IMCSCH's y are reduced by the x87 π, past 2^27 for 2x too.
+    #[test]
+    fn large_arguments_take_the_x87_reduction() {
+        assert_eq!(
+            text(imtan, 710.0, 1.0),
+            "0.0000253197098921901+0.761594157118333i"
+        );
+        assert_eq!(
+            text(imtan, 134_217_727.0, 1.0),
+            "0.191168356084859+1.23600163390978i"
+        );
+        assert_eq!(text(imcsch, 0.0, 710.0), "-16586.8544023646i");
     }
 
     #[test]

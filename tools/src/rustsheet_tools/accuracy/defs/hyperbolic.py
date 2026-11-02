@@ -28,7 +28,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.annuity import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, zero_pole
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -50,12 +50,6 @@ def _overflow(args: Sequence[MathArg]) -> str | None:
     """SINH and COSH: `#NUM!` once e^|x| overflows a double."""
     (x,) = scalars(args)
     return "e^|x| overflows a double" if abs(x) > EXP_CUT else None
-
-
-def _zero_pole(args: Sequence[MathArg]) -> str | None:
-    """COTH and CSCH at 0: Excel's `#DIV/0!`."""
-    (x,) = scalars(args)
-    return "a pole at 0" if x == 0 else None
 
 
 def _signed(rng: random.Random, magnitude: float) -> float:
@@ -124,7 +118,7 @@ COSH = _definition(
 )
 TANH = _definition("TANH", mpmath.tanh, limit=MAX_LITERAL, sources=(KERNEL_SOURCE,))
 COTH = _definition(
-    "COTH", mpmath.coth, limit=MAX_LITERAL, domain=_zero_pole, sources=(RECIPROCAL_SOURCE, POLE_SOURCE)
+    "COTH", mpmath.coth, limit=MAX_LITERAL, domain=zero_pole, sources=(RECIPROCAL_SOURCE, POLE_SOURCE)
 )
 SECH = _definition(
     "SECH",
@@ -138,6 +132,6 @@ CSCH = _definition(
     mpmath.csch,
     limit=RECIPROCAL_LIMIT,
     edge_max=RECIPROCAL_LIMIT,
-    domain=_zero_pole,
+    domain=zero_pole,
     sources=(RECIPROCAL_SOURCE, POLE_SOURCE, OVERFLOW_SOURCE),
 )

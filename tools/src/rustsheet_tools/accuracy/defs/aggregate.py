@@ -26,7 +26,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.annuity import scalars
+from rustsheet_tools.accuracy.defs._common import scalars
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform

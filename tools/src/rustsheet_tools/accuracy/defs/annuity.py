@@ -21,6 +21,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import scalars
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -97,15 +98,6 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
         return present_value(u, nper, pmt, pv, fv, due=due)
 
     return unique_rate(annuity_flows(nper, pmt, pv, fv, due), f)
-
-
-def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
-    """The numeric arguments of a definition that takes no logical or array (its sampler draws numbers only)."""
-    out: list[mpmath.mpf] = []
-    for a in args:
-        assert not isinstance(a, (bool, tuple))
-        out.append(a)
-    return out
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:

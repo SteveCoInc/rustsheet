@@ -294,7 +294,7 @@ impl Model {
         // `"%1.5"`, `"-%1.5"`, `"+%1.5"`, `"%-1.5"` and `"(%1.5)"` read; `"%%1.5"`, `"%$1.5"`,
         // `"$%1.5"`, `"%1.5$"` and `"%€1.5"` are #VALUE! (probes/t3647-numbervalue-percent-and-controls
         // A1-A8, probes/t3647-numbervalue-whitespace-decimal A17-A21). Excel's VALUE reads
-        // `"%1.5"` too, ours not yet (T-3742).
+        // `"%1.5"` too (T-3811).
         let leading = strip_leading_percent(rest);
         if let Some(stripped) = &leading {
             if stripped.contains(['$', '€']) {
@@ -307,6 +307,15 @@ impl Model {
             pct_count += 1;
         }
         let cleaned = leading.as_deref().unwrap_or(rest);
+        // The shared reader now reads one leading "%" itself (VALUE, T-3811), so a second one
+        // left here must stay #VALUE!: `"%%1.5"` (probes/t3647-numbervalue-percent-and-controls A1).
+        if cleaned.contains('%') {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Cannot parse number".to_string(),
+            ));
+        }
 
         // Reject if more than one '.' after replacement
         if cleaned.matches('.').count() > 1 {
@@ -619,6 +628,25 @@ pub(super) fn upper_case(s: &str) -> String {
         .collect()
 }
 
+/// PROPER's case for a letter that starts a word. It is UPPER's table with two exceptions:
+/// the Greek tonos vowels keep their tonos (`PROPER("άλφα")` is Άλφα, while `UPPER("ά")` is Α),
+/// and Georgian Asomtavruli U+10A0..=U+10C5 lowers to Mkhedruli as LOWER does (`PROPER("Ⴀბ")`
+/// is აბ) (docs/excel-semantics/text.md "PROPER and REGEXREPLACE case forcing";
+/// probes/t3777-proper-case-table A9:A10, C1:C7, C12, D15:D16, E1).
+fn proper_initial(c: char) -> char {
+    match c {
+        'ά' => 'Ά',
+        'έ' => 'Έ',
+        'ή' => 'Ή',
+        'ί' => 'Ί',
+        'ό' => 'Ό',
+        'ύ' => 'Ύ',
+        'ώ' => 'Ώ',
+        '\u{10A0}'..='\u{10C5}' => simple_case(c, false),
+        _ => simple_case(c, true),
+    }
+}
+
 /// A word start is a letter after a non-letter, digits included ("2Nd"). Letters are Excel's own
 /// table (`is_proper_letter`): many Unicode letters and marks are not letters to PROPER, and every
 /// non-letter is lowered, so a word-initial Ⓐ becomes ⓐ (probes/t3657-proper-word-starts B21:D21,
@@ -631,7 +659,7 @@ fn proper_case(s: &str) -> String {
     for (i, &c) in chars.iter().enumerate() {
         let letter = is_proper_letter(c);
         if letter && capitalize_next {
-            result.push(simple_case(c, true));
+            result.push(proper_initial(c));
         } else if c == 'Σ' && sigma_is_final(chars.get(i + 1).copied()) {
             result.push('ς');
         } else {

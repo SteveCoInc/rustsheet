@@ -1,0 +1,55 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "MEDIAN and GEOMEAN with huge direct arguments (T-3808). A = value, B = &\"\", C = ERROR.TYPE.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=MEDIAN(9E+307,9E+307)",
+    "B1": "=(MEDIAN(9E+307,9E+307))&\"\"",
+    "C1": "=IFERROR(ERROR.TYPE(MEDIAN(9E+307,9E+307)),0)",
+    "A2": "=MEDIAN(1E+200,1E+200,1E+200)",
+    "B2": "=(MEDIAN(1E+200,1E+200,1E+200))&\"\"",
+    "C2": "=IFERROR(ERROR.TYPE(MEDIAN(1E+200,1E+200,1E+200)),0)",
+    "A3": "=GEOMEAN(9E+307,9E+307)",
+    "B3": "=(GEOMEAN(9E+307,9E+307))&\"\"",
+    "C3": "=IFERROR(ERROR.TYPE(GEOMEAN(9E+307,9E+307)),0)",
+    "A4": "=GEOMEAN(1E+200,1E+200,1E+200)",
+    "B4": "=(GEOMEAN(1E+200,1E+200,1E+200))&\"\"",
+    "C4": "=IFERROR(ERROR.TYPE(GEOMEAN(1E+200,1E+200,1E+200)),0)",
+    "A5": "=MEDIAN(9E+307,9E+307,-9E+307)",
+    "B5": "=(MEDIAN(9E+307,9E+307,-9E+307))&\"\"",
+    "C5": "=IFERROR(ERROR.TYPE(MEDIAN(9E+307,9E+307,-9E+307)),0)",
+    "A6": "=GEOMEAN(9E+307,9E+307,1E-300)",
+    "B6": "=(GEOMEAN(9E+307,9E+307,1E-300))&\"\"",
+    "C6": "=IFERROR(ERROR.TYPE(GEOMEAN(9E+307,9E+307,1E-300)),0)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "Calc!A1",
+  "Calc!B1",
+  "Calc!C1",
+  "Calc!A2",
+  "Calc!B2",
+  "Calc!C2",
+  "Calc!A3",
+  "Calc!B3",
+  "Calc!C3",
+  "Calc!A4",
+  "Calc!B4",
+  "Calc!C4",
+  "Calc!A5",
+  "Calc!B5",
+  "Calc!C5",
+  "Calc!A6",
+  "Calc!B6",
+  "Calc!C6"
+ ]
+}

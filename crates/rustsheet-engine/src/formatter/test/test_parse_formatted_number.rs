@@ -448,3 +448,54 @@ fn script_digits_are_mapped_only_by_the_coercion_helper() {
     // The typed-input parser does not map them (unprobed, T-3325).
     assert!(parse("٣", &[]).is_err());
 }
+
+// docs/excel-semantics/coercion.md "Group commas and a leading percent sign" (T-3811).
+#[test]
+fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
+    for (text, value) in [
+        ("1,0000", 10000.0),
+        ("1,000,0000", 10_000_000.0),
+        ("1,0000.5", 10000.5),
+        ("12,0000", 120_000.0),
+        ("%1", 0.01),
+        ("%-1", -0.01),
+        ("1,0000%", 100.0),
+    ] {
+        assert_eq!(parse(text, &[]).unwrap().0, value, "{text}");
+    }
+    for text in [
+        "1,", "1,00", ",1", "2,0", "1,000,00", "1,,000", "0,0000", "0,000", "00,000", "%1%", "2%%",
+    ] {
+        assert!(parse(text, &[]).is_err(), "{text}");
+    }
+}
+
+/// Typed text and the format Excel picks (probes/typed-group-comma-leading-percent, excel-graph
+/// 2026-11-02, raw `ENTERED` log in docs/research/typed-group-comma-leading-percent-2026-11-02.md,
+/// T-3835): the same reader as VALUE, so values and formats follow the grouped digits and the percent.
+#[test]
+fn typed_group_comma_and_leading_percent_formats() {
+    for (text, value, format) in [
+        ("1,0000", 10000.0, "#,##0"),
+        ("01,0000", 10000.0, "#,##0"),
+        ("-1,0000", -10000.0, "#,##0"),
+        ("1,000,0000", 10_000_000.0, "#,##0"),
+        ("1,0000.5", 10000.5, "#,##0.00"),
+        ("%1", 0.01, "0%"),
+        ("%-1", -0.01, "0%"),
+        ("% 1", 0.01, "0%"),
+        ("%1.5", 0.015, "0.00%"),
+        ("%1,0000", 100.0, "0%"),
+        ("1,0000%", 100.0, "0%"),
+    ] {
+        assert_eq!(
+            parse(text, &["$"]),
+            Ok((value, Some(format.to_string()))),
+            "{text}"
+        );
+    }
+    // Stay text (General) when typed.
+    for text in ["1,", "0,000", "0,0000", "1,00", "%1%"] {
+        assert!(parse(text, &["$"]).is_err(), "{text}");
+    }
+}

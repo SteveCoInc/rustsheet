@@ -1653,7 +1653,7 @@ desktop Excel. Until decision 0221 the family therefore stayed `#N/IMPL!` until 
 T-1553). Since that owner ruling, it computes gridcraft's AAA model, unverified (the section "FORECAST.ETS family: the
 model before Excel evidence").
 Evidence: probes/forecast-ets-longer-series.case.json K1:K42 (excel-graph, 2026-10-14, T-1293).
-Ours: for every call that passes the argument step (next section, T-2424), FORECAST.ETS.SEASONALITY (T-3599) and FORECAST.ETS (T-3600) compute the model ("FORECAST.ETS family: the model before Excel evidence"), and CONFINT and STAT are `#N/IMPL!` until T-3601. Before that, `target_date` (FORECAST.ETS, CONFINT) or `statistic_type` (STAT) is lifted and read as a number: text there is `#VALUE!`, and an array or two-cell range gives that many `#N/IMPL!` elements (T-2028). UNVERIFIED (T-2028 follow-up probe): the optional settings (seasonality, data_completion, aggregation, confidence_level) also lift in ours, as the catalog's `value` mode says, with no Excel cell showing the shape of an array or range there (since T-2424 settled for SEASONALITY's data_completion
+Ours: for every call that passes the argument step (next section, T-2424), the four members compute the model ("FORECAST.ETS family: the model before Excel evidence"; SEASONALITY T-3599, FORECAST.ETS T-3600, CONFINT and STAT T-3601). Before that, `target_date` (FORECAST.ETS, CONFINT) or `statistic_type` (STAT) is lifted and read as a number: text there is `#VALUE!`, and an array or two-cell range gives that many elements (T-2028). UNVERIFIED (T-2028 follow-up probe): the optional settings (seasonality, data_completion, aggregation, confidence_level) also lift in ours, as the catalog's `value` mode says, with no Excel cell showing the shape of an array or range there (since T-2424 settled for SEASONALITY's data_completion
 and aggregation by gen-m9 `#SPILL!` cells 67f5e0fe790e6bec A47, A307 and 22656c225ff4f22a A60; see the T-2255 section); and text `target_date` in CONFINT and text `statistic_type` in STAT (K38 covers FORECAST.ETS only), and a boolean, number-text or error `target_date`/`statistic_type` reads by the usual scalar coercion (an error is returned as itself;
 settled by gen-m9 22656c225ff4f22a A1, fa25422d6f18c157 A181 and 43a13a091907b402 A261, see the T-2255 section).
 Status: VERIFIED (web) that the family is `#N/A` there; desktop behavior UNKNOWN
@@ -1682,7 +1682,8 @@ errors, in the order the code takes them (every ordering UNVERIFIED; T-2425's de
    `#NUM!` (the "work caps" section). More than 30% of the steps missing is `#NUM!`.
 - FORECAST.ETS (T-3600) checks `seasonality` before step 2: it truncates to 1 (detect, the default), 0 (none) or 2
   to 8,760 (that season length); anything else is `#NUM!`. After step 6, a `target_date` before the last time stamp
-  is `#NUM!` (Microsoft's documentation). Then the season is detected if asked (the cap below), and the model is fitted
+  is `#NUM!` (Microsoft's FORECAST.ETS page: "If target_date is chronologically before the end of the historical
+  timeline, FORECAST.ETS returns the #NUM! error"; a target equal to the last time stamp is the model's value there). Then the season is detected if asked (the cap below), and the model is fitted
   (the call's work budget, "work caps" section). The fit starts from Hyndman et al. §2.6.1: seasonal states from a
   classical decomposition of the first seasons (a centred moving average; under two seasons, deviations from a
   least-squares line), centred on 0. Level and trend come from the least-squares line through the first 10 seasonally
@@ -1692,6 +1693,16 @@ errors, in the order the code takes them (every ordering UNVERIFIED; T-2425's de
   steps it is the straight line between the forecasts at the steps either side. Exact data, such as a straight line
   or an exactly repeating season with a trend, forecasts exactly whatever α, β and γ come out, but noisy data may
   differ from Excel in the last digits or more.
+- FORECAST.ETS.CONFINT (T-3601) reads `confidence_level` (default 0.95) first: outside (0, 1) is `#NUM!`. Then come
+  `seasonality` and steps 2 to 6 as for FORECAST.ETS, and the target check. The result is NORM.S.INV((1 + level) / 2)
+  times the h-step forecast error's standard deviation (Hyndman et al. Table 6.1, class 1): σ²·(1 + Σ_{j=1}^{k}
+  (α + αβ·j + γ·[j mod m = 0])²), with k = ⌈h⌉ - 1 and σ² = SSE / n. So a fractional horizon has the variance of the
+  whole step at or past it, and exact data gives 0. A target equal to the last time stamp (h = 0) is z·σ, the one-step
+  interval, not 0.
+- FORECAST.ETS.STAT (T-3601) truncates `statistic_type` first: 1 α, 2 β, 3 γ (0 without a season), 4 MASE (MAE over
+  the mean absolute one-step change; `#DIV/0!` when that is 0), 5 SMAPE (the mean of |e| / ((|y| + |ŷ|) / 2) over the
+  points where it is defined), 6 MAE, 7 RMSE (σ), 8 the timeline's step (the average step for calendar months).
+  Anything else is `#NUM!`. Then come `seasonality` and steps 2 to 6; statistic 8 needs no fit.
 - FORECAST.ETS.SEASONALITY is the detected season length, or 0 when there is none. It takes the autocorrelation of
   the series' residuals from its least-squares line, at lags 2 to n/2 (at most 8,760), and returns the lag of the
   highest local peak above 2/√n. Fewer than four points is 0.
@@ -1703,8 +1714,8 @@ On probes/forecast-ets-longer-series, which has a period-4 signal, ours is 4 (K3
 `#N/A`.
 Status: UNVERIFIED (desktop probe pending, T-1553, T-2425). Decision 0221 lets the family ship it.
 Implemented in: crates/rustsheet-engine/src/functions/statistical/ets.rs (`build_series`, `detect_season`),
-statistical/ets/model.rs (`initial_states`, `filter`, `optimise`, `fit`, `Fit::forecast`) and statistical/forecast.rs
-(`forecast_ets_lifted`, `forecast_element`).
+statistical/ets/model.rs (`initial_states`, `filter`, `optimise`, `fit`, `Fit::forecast`, `Fit::forecast_sd`) and
+statistical/forecast.rs (`forecast_ets_lifted`, `forecast_element`, `confint_element`, `stat_element`).
 Tasks: T-3599, T-3600 (FORECAST.ETS), T-3601 (CONFINT, STAT), T-2425 (match desktop values)
 
 ## FORECAST.ETS family: work caps
@@ -3126,9 +3137,10 @@ bfrac (min(a,b) >= 40) takes the same brcomp = density·x·y, with λ = fl(a - f
   BEST gets 59/1,023/1,023 of 1,023 (median -1 ulp). r2-bratio rounded literals instead of truncating them, so its
   "lnB(0.6, 7.3) is 24 units high" is refuted (verify-r2-bratio/misparse.out).
 - bfrac at (100, 120): the fraction error regresses on λ's rounding with slope -0.725 (bfrac's own sensitivity -0.71),
-  and the pdf's c + 1 predicts the tie response (-10.5 against -10.58). The fraction's own arithmetic is not found:
-  white residual, sd 3.8 units, after 64 storage masks, five eps values and three precisions. bfrac cells: 146/476/685
-  of 1,316 (CR 109/466/677).
+  and the pdf's c + 1 predicts the tie response (-10.5 against -10.58). w4's white residual (sd 3.8 units, after 64
+  storage masks, five eps values and three precisions) is the fraction's loop: Excel runs TOMS's fraction through
+  Numerical Recipes' Lentz loop on closed-form terms, see "Incomplete beta bfrac is TOMS's fraction in a Lentz loop"
+  below (T-3571). bfrac cells: 146/476/685 of 1,316 (CR 109/466/677).
 - At a whole b0 (b0' = 1) with a0 > 8, bpser(a0, 1, x0)'s lnB is -LN(a0), B(1, b) = 1/b as the density takes it
   (T-2506). With the engine's own density, bup arithmetic and bpser, the L140 bup+bpser cells of r2-bratio's be, w2f
   and ix sets (bratio's dispatch as ported) score 8,800/11,696/11,721 of 11,742, the ix cells alone 995/1,344/1,362
@@ -3161,8 +3173,44 @@ correctly rounded value at that x (0.333609562829166621, nearest double 0.333609
 (decision 0141; Excel's form is unknown, r2-impact section 6);
 L140 with bgrat and bfrac on Cephes incbcf/incbd with exp(a ln x)·exp(b ln y)·Gamma ratio.
 Status: VERIFIED (excel-graph) for L140 bup+bpser to 15 digits (11,724 of 11,753; 64% bit-exact); bfrac's fraction
-UNVERIFIED
+in the next entry
 Tasks: T-2506, T-2508, T-2512
+
+## Incomplete beta bfrac is TOMS's fraction in a Lentz loop, on closed-form terms (T-3571)
+Rule: where bratio takes bfrac, on the evidenced region a, b in [40, 5000] on the unswapped call (x below the mean, z from -8 to -0.2 sd), Excel computes TOMS 708's
+continued fraction r = 1/(b0 + K(alpha_n/beta_n)) with Numerical Recipes' modified Lentz loop, not TOMS's rescaled
+forward recurrence, in doubles (a0 < 40 with b0 >= 40, shapes above 5000, the swapped call and the band within 0.2 sd
+of the mean are not probed):
+```
+lam = fl(a - fl((a+b)*x))  (also for a > b, where TOMS takes (a+b)*y - b),  y = fl(1 - x),  c = lam + 1
+b0 = c * (a/(a+1))
+alpha_n = v/s/s*u*n*(b-n)*x*x   (left to right; u = a+n-1, v = a+b+n-1, s = a+2n-1)
+beta_n  = n + fl(n*x*(b-n))/s + ((a+n)/(a+2n+1)) * (c + n*(y+1))
+f = 1e-30, C = f, D = 0; D = 1/(b0 + D), C = b0 + 1/C, f = f*(C*D); per term D = 1/(beta + alpha*D),
+C = beta + alpha/C, d = C*D, f = f*d, stop when |d - 1| <= 10*DBL_EPSILON
+cdf = fl(fl(P*fl(x*y)) * f),  P = BETA.DIST(x, a, b, FALSE)
+```
+- The residual is the fraction, not the prefactor: on runs at z = -7, -4, -1 sd, Excel's implied fraction error grows
+  with the term count (sd 1.8 at 5 terms to 4.3 at 20) and is uncorrelated with the density's own error, even where
+  that is 336 units (2,500, 3,000). brcomp is the worksheet density there too.
+- TOMS's loop shares none of Excel's noise (corr +0.04; best of 13,824 order, FMA and rescale variants 193 of 1,024
+  bit-exact on w2's (100, 120) run). The Lentz loop with NR's start, b0 = c·(a/(a+1)) (not TOMS's c/c1), the α and β
+  forms above were ranked on the tune probe; the stop at 10·DBL_EPSILON is a fit, bracketed in (2.1e-15, 2.5e-15),
+  tagged `/// FITTED(T-3571, 1536 cells, a, b 40..5000, unswapped call (x below the mean), z -8..-0.2 sd)`.
+- Scores, on Excel's own density (bit-exact/w4/w15): hold-out 1,158/1,630/1,632 of 1,632 (TOMS doubles as ported
+  162/977/1,384, CR 45/319/781); fresh sweep after the freeze, log-uniform (a, b) in [40, 5000], 694/1,177/1,188 of
+  1,200 (TOMS 86/532/844, CR 15/117/268), all 1,200 inside Gate A's envelope; the fit lab's hash split on tune+hold,
+  train 75.7% and test 75.2% bit-exact (CR test 26 of 937); w2's (100, 120) run 401/998/1,024 of
+  1,024 (w4's best 185).
+- Open: misses grow with the term count (99% bit-exact under 10 terms, 63% at 10-19, 30% at 20-29, 20% beyond),
+  mostly 1-3 ulp (23 of 1,200 fresh points beyond 4 ulp, the largest 11); one-ulp nudges of single β_n fix most of them, so one rounding inside β (or α) per term is still unmodelled.
+Evidence: probes-numeric t3571-r5-bfrac-tune, -hold, -fresh; docs/research/t2464/r5-bfrac (`model.py`,
+`score_final.out`, `score_fresh.out`, `runs.out`, `lamab.out`).
+Ours: TOMS's forward recurrence in doubles with TOMS's λ (`functions/statistical/bratio/bfrac.rs`, T-2508).
+Status: VERIFIED (excel-graph) to 15 digits on the region above, bit-level PARTIAL: 15 digits on 1,188 of 1,200 fresh points (the 12 misses are
+18-42-term points, 3-10 ulp, T-3813) and 1,632 of 1,632 hold-out cells; bit-level open past 10 terms; outside the region
+UNVERIFIED
+Tasks: T-3571, T-3812, T-3813, T-3323
 
 ## Student t tails are one kernel call, K(n/2, 1/2, y, z), with bgrat at b = 1/2 in extended precision (T-2464)
 Rule: T.DIST.RT(t,n) = L = I/2 with I = K(n/2, 1/2, y, z): y = fl(n/fl(n + fl(t·t))) and the complement
@@ -3379,6 +3427,19 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     model came from: the prefactor exp(-(algdiv + b ln ν)) rounded in any way (206-210 bit-exact), ln x by log1p
     (158, 189) or grat1's CF in doubles (200 at best, and more noise, not Excel's) (T-3567,
     docs/research/t2464/r5-bgrat-fdf1).
+  - Nor from another Q(b, z) algorithm at bgrat's start (T-3582, docs/research/t2464/r6-bgrat-q): NR's gcf by
+    modified Lentz (the loop Excel's bfrac uses) or Cephes igamc, in doubles, score 95-145 and 119-142 bit-exact against
+    191 for the exact Q, and raise the run sd to 8.3-9.1 and 15.5-22.1. Excel's Q is not one of these fractions.
+  - Excel's own lower incomplete gamma at b < 1 (probe t3582-r6-gamma-runs, GAMMA.DIST(z, b, 1, TRUE) on four runs of
+    1,024 consecutive doubles; T-3582): at b = 0.03 (the double 0.030000000000000027) it is faithfully rounded,
+    not correctly rounded (z0 = 0.3 and 1: 799 and 775 of 1,024 bit-exact, the rest 1 ulp off; residual sd 0.37 and
+    0.38 units of 2^-53 against 0.30 and 0.29 from rounding alone); at b = 0.7, z near 1 it sits +2.3 units above
+    the true value (sd 0.87; mostly 1-2 ulps from one excel-graph fill, inside the 4-ulp web/desktop floor, so
+    unconfirmed until a desktop or second fill, decision 0112); at b = 0.7, z near 0.3 it carries noise of sd 3.7 around a -3.7 mean
+    that is not white (lag-1 autocorrelation +0.60, an FFT line 30 times the mean). No series (NR gser, Cephes igam,
+    the alternating z^b/Γ(b+1) series, each in doubles and x87) and no stored ln z, b·ln z, z^b or e^-z rounding
+    explains it (residual sd 3.6 at best). The engine misses 220 of the 4,096 cells at the 15th digit (owner T-3224).
+    STATUS: UNVERIFIED model; the noise source is still open.
 - **The b = 1/2 identity cannot be tested at generic b through the worksheet (T-2512).** No worksheet function
   returns Q(b, z) there. CHISQ.DIST.RT truncates its df to an integer (2b < 1 is `#NUM!`). 1 - GAMMA.DIST loses the
   digits, because Q < 0.01 on 5,196 of the 5,228 BETA.DIST cells that reach bgrat (probe t2512-r3-bgrat-qgamma).
@@ -3393,7 +3454,7 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
 - Open: D to the bit (T-3383); the n >= 10 exponent-binade leftover of L140's n-term bup (T-3568, engine port T-3712); algdiv for b0 >= 8 (about 1 unit off TOMS, in bpser and the density; in the density it looks like rounding noise of a few ulps, not
   a smooth approximation error, T-3383 r4-algdiv); lnΓ(a0 < 1) in L
   and the bpser ceiling (55-84% for b < 1 shapes, and 66-89% for a0 < 1 < b0 < 8 too; T-3570 found no single lnΓ(a0)
-  and no series or composition variant that lifts it, T-3771); bfrac's fraction (sd 3.8 units) and bup's arithmetic in bup+bgrat;
+  and no series or composition variant that lifts it, T-3771); bfrac's fraction past 10 terms (a Lentz loop, T-3571; one rounding per term open) and bup's arithmetic in bup+bgrat;
   a0 < 1e-15 at 0.04 <= y < 0.25 (Excel 1e-14 to 3.8e-13 relative off the truth, in bgrat's incomplete-gamma ratio; T-3719);
   the densities after T-2513's round 3 (each in its entry): Loader's constant residual of 2-4 units and bd0's series,
   the T density's per-df constant, BINOM's interior pmf, NEGBINOM's final step, the F density, and the density's
@@ -4985,9 +5046,9 @@ Ours: since T-2424, the argument step (`statistical/forecast.rs` `forecast_ets_l
 reads as a number in turn, and `values` and `timeline` are evaluated once for a direct error. A reference to an
 error cell, even a one-cell one, is not a direct error here: the argument step passes it, and no oracle cell covers it
 yet (the gen-m9 Data sheets hold "#N/A" only as text; T-2425 probe). The first failure in argument order decides. A
-call with none goes on to the model: since T-3599 and T-3600, FORECAST.ETS.SEASONALITY and FORECAST.ETS compute it, and an error cell in `values`
+call with none goes on to the model, which all four members compute since T-3599 to T-3601, and an error cell in `values`
 or `timeline` is then that error (UNVERIFIED, decision 0221, the section "FORECAST.ETS family: the model before Excel
-evidence"); CONFINT and STAT stay `#N/IMPL!` until T-3601 (T-2425 the desktop values, after T-1553). FORECAST.ETS.SEASONALITY
+evidence"; T-2425 the desktop values, after T-1553). FORECAST.ETS.SEASONALITY
 lifts its data_completion and aggregation too. Counts: the task names 1,215 known-failure lines (1,196 from T-2255
 and 19 from T-2256); with the 19 visibly-off lines of T-2257 and T-2258 it owns 1,234 cells. 656 of them leave the
 baseline with T-2424, 481 had already passed on main before it, and 97 still differ. The 97 are:
@@ -6154,7 +6215,8 @@ Evidence: gen-m9 (T-3781 arg-pairs batch, excel-graph, 2026-11-01): 157db6a46ed6
 f00b7d6982c4d2fd A430, A436.
 Unprobed: an error-valued scalar against an error data cell with a different error (the batch has only the same error on
 both sides, `SMALL(Data!G9,Data!G9)` `#DIV/0!`), and an error element of a multi-cell data range.
-Ours: the data's error (`#DIV/0!`) in all 30 cells; known failures owned by T-3788.
+Ours: matches since T-3788 (`lift_over_sorted`, sorted_data.rs): only for a data cell reference with a scalar cell reference of non-numeric text. A typed error as the data keeps its error against typed text (`SMALL(#DIV/0!,"abc")` `#DIV/0!`, `SMALL(#NUM!,"")` `#NUM!`; 5830c688df805e71 A463, A469). A typed text scalar against an error data cell is unprobed.
+Implemented in: crates/rustsheet-engine/src/functions/statistical/sorted_data.rs
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3788
 
