@@ -3,7 +3,7 @@ id: T-3748
 title: "Gate A defs share one scalar-argument and zero-pole helper module"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
