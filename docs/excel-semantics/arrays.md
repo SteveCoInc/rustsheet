@@ -375,6 +375,9 @@ Evidence: none for Excel; this is a resource limit, not an Excel observation.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet/src/edit.rs (`MAX_FOOTPRINT_CELLS`)
 
+## MMULT: a blank first argument is #VALUE! even when the second is an error
+Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine matches (T-3729).
+
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
 does the same); a blank does not count as 0. `MDETERM` of a single numeric cell is that number. A boolean is not a
@@ -499,8 +502,35 @@ block, `SUM(..)` of it is 6. A blocked spill area (a value in the neighbouring c
 Evidence: probes/filter-if-empty-array (oracle: excel-graph, 2026-10-06); upstream ISREF.xlsx D9 (`#SPILL!`),
 J17:L17 (spilled 1,2,3).
 Status: VERIFIED (web)
-Implemented in: `fn_filter` (crates/rustsheet-engine/src/functions/spill_functions.rs)
+Implemented in: `fn_filter` (crates/rustsheet-engine/src/functions/lookup_and_reference/filter.rs)
 Tasks: T-0964
+
+## FILTER: the type of each include element and of the result
+Rule (with C1:C3 = 10, 20, 30 and `if_empty` "none"):
+- **include**: a number keeps its row unless 0 (`{0.5;-1;0}` keeps 10, 20; `-0.000001` keeps), TRUE keeps, FALSE
+  and a blank cell do not (`N1:N3` = 1, blank, 1 keeps 10, 30). Text is `#VALUE!` (`{"a";1;0}`, `{"1";1;0}`,
+  `{"";1;1}`, `" TRUE"`, `"yes"`, and the same as cells: `"x"`, `="1"`, `=""`) **except** text that spells
+  TRUE or FALSE in any case, which is that boolean: `{"TRUE";1;0}` and a `="TRUE"` cell keep 10, 20,
+  `{"FALSE";1;1}` 20, 30, `{"true";0;"false"}` 10. An error anywhere in include is returned, even on a row
+  that would be dropped (`{1;#N/A;0}` and `{0;#N/A;0}` `#N/A`, a `=1/0` cell `#DIV/0!`, `=NA()` with all
+  others 0 `#N/A`).
+- **array elements** keep their type in the spill: 5, a blank cell, `=""`, TRUE, "txt", `#DIV/0!`, `="7"`, -0.5
+  spill as 5, 0, "", TRUE, "txt", `#DIV/0!`, "7", -0.5. The blank's spilled cell is 0 (`TYPE` 1, `ISBLANK` FALSE,
+  `=""` FALSE), but inside the formula it is still blank: `ISBLANK(FILTER(..))` and `MAP(FILTER(..),LAMBDA(x,
+  ISBLANK(x)))` are TRUE for it, `TYPE` of the element 1. A lone blank cell as `array` stays blank too:
+  `ISBLANK(FILTER(A2,TRUE))` and `ISBLANK(FILTER(A2,1))` are TRUE, `FILTER(A2,TRUE)&"|"` is "|", `TYPE` 64.
+- **if_empty** (no row kept): omitted, with or without a trailing comma, is `#CALC!` (`ERROR.TYPE` 14, `TYPE` 16);
+  `""`, `"5"`, TRUE, 0, `NA()` and a one-cell reference are that value (`TYPE` 2, 2, 4, 1, 16; ROWS 1;
+  `ISREF` FALSE). A **blank one-cell reference is 0** (`TYPE` 1, `ISBLANK` FALSE, `&"|"` "0|", MAX 0), while a
+  blank inside a multi-cell `if_empty` range stays blank (`FILTER(..,R1:R2)` with R1 blank: `ISBLANK` TRUE,
+  `&"|"` "|", ROWS 2). An error cell is its error.
+Evidence: probes/t3654-filter-result-types D1:L12 (array elements), P20:P42 (include), P45:X55 and P60:Q67
+(if_empty, lone blank) (oracle: excel-graph, 2026-11-01, T-3654).
+Status: VERIFIED (web)
+Implemented in: `fn_filter` and `include_keeps` (crates/rustsheet-engine/src/functions/lookup_and_reference/filter.rs).
+Before T-3654 the engine refused TRUE/FALSE text in include, read a lone blank `array` cell as 0 and a blank
+one-cell `if_empty` as blank.
+Tasks: T-3654
 
 ## Dynamic-array and LAMBDA function argument modes
 Rule: the scalar arguments of the M7 functions lift over a multi-cell range and over an array, one call per element:
@@ -1543,7 +1573,8 @@ arguments), `MAKEARRAY(2,2,_xleta.POWER)` 1, 1; 2, 4, `MAKEARRAY(2,2,_xleta.IF)`
 below them in the sidecar; T-1660 spill-extent check; ours is one `#CALC!` since T-1664: `CalcResult::is_multi_value`, bycol_byrow.rs; mixed calls, BYCOL, array-constant sources and 1x1 array results are in "BYROW and BYCOL: a LAMBDA result that is an array" above, T-1670). BYROW and BYCOL refuse anything but a LAMBDA with `#VALUE!`, whatever it is: an error
 (`BYCOL(A1:B3,NA())`), a number (`BYCOL(A1:B3,1)`), an unknown `_xleta.` name, and a bare function name read from a file
 (`BYCOL(A1:B3,COUNTA)`, `BYROW(A1:B3,SUM)`: unknown names, xlsx-storage.md). `MAKEARRAY(2,2,_xleta.ABS)` (too many
-arguments) and `BYROW(A1:B3,_xleta.NOW)` give an error excel-graph cannot decode (left pending).
+arguments) and `BYROW(A1:B3,_xleta.NOW)` give an error excel-graph cannot decode (left pending); read through ROWS, COLUMNS and
+INDEX it is a whole-call `#VALUE!` ("LAMBDA helpers refuse a function they cannot call", T-3655).
 `_xleta.IF` called with one argument is accepted, not an argument-count error: it gives `#VALUE!` for a condition that is
 not an error, whatever it is (TRUE, FALSE, 1, 0, text, a blank cell; so `ISLOGICAL(f(TRUE))` is FALSE and `f(TRUE)+1`
 `#VALUE!`), passes an error on (`f(NA())` `#N/A`), and lifts over an array or range condition element by element
@@ -1749,6 +1780,53 @@ Ours: both sizes read first, then validated; columns past the grid under the cel
 Status: VERIFIED (excel-graph)
 Tasks: T-2308, T-2408, T-2452
 
+## LAMBDA helpers refuse a function they cannot call
+Rule: MAKEARRAY, MAP, BYROW, BYCOL, SCAN and REDUCE are one `#VALUE!` for the whole call (not an array of errors, and not the
+argument's own error) when their function argument is not a function that takes the number of arguments they pass (MAKEARRAY,
+SCAN and REDUCE two, BYROW and BYCOL one, MAP one per array). So:
+- a LAMBDA with too few or too many required parameters: `MAKEARRAY(2,2,LAMBDA(x,7))`, `LAMBDA(7)`, `LAMBDA(a,b,c,a+b)`,
+  `LAMBDA([r],ISOMITTED(r))` (one optional parameter cannot take two), also bound by LET (`LET(f,LAMBDA(x,x),MAKEARRAY(2,2,f))`),
+  and `MAKEARRAY(1,1,LAMBDA(x,7))` for a single element (probes/t3655-makearray-arity-sizes rows 2-4, 9, 11, 13, 27; ROWS,
+  COLUMNS and INDEX of each are `#VALUE!`, ERROR.TYPE 3); `BYROW({1;2},LAMBDA(a,b,a))`, `BYCOL({1,2},LAMBDA(a,b,a))`,
+  `MAP({1,2},LAMBDA(a,b,a))`, `MAP({1,2},{3,4},LAMBDA(a,a))`, `SCAN(0,{1,2},LAMBDA(a,a))`, `REDUCE(0,{1,2},LAMBDA(a,a))`,
+  `REDUCE(0,{1,2},LAMBDA(a,b,c,a))` and `BYROW({1;2},LAMBDA(7))` alike (rows 55-60; probes/t3655-lambda-helper-function-argument
+  rows 8, 22);
+- optional parameters may go unpassed and fill the count: `MAKEARRAY(2,2,LAMBDA(r,[c],r))` is 1, 1; 2, 2 with `ISOMITTED(c)`
+  FALSE (both passed), `LAMBDA(r,c,[d],ISOMITTED(d))` TRUE everywhere, `LAMBDA([r],[c],r+c)` and `LAMBDA(r,c,[d],[e],r+c)` 2, 3;
+  3, 4 (rows 5-8, 10); `MAP({1,2},{3,4},LAMBDA(a,b,[c],a+b))`, `MAP({1,2},LAMBDA([a],[b],a))`, `BYROW({1;2},LAMBDA([a],[b],a))` and
+  `SCAN(0,{1,2},LAMBDA(a,b,[c],a+b))` run (function-argument rows 23-26);
+- a function passed by name whose catalog argument counts exclude the count passed: `MAKEARRAY(2,2,_xleta.NOW)`,
+  `_xleta.XLOOKUP` (rows 15-16), `_xleta.ABS`, `MAP({1,2},_xleta.POWER)`, `MAP({1,2},_xleta.NOW)`, `BYROW({1;2},_xleta.NOW)` and
+  `SCAN(0,{1,2},_xleta.ABS)` (function-argument rows 15-19), while `MAKEARRAY(2,2,_xleta.ROUND)` (1, 2 on the diagonal),
+  `_xleta.SUM` and `_xleta.IF` run (row 14; function-argument rows 20-21); `_xleta.IF` with one argument is the known exception
+  ("Functions passed by name");
+- anything else: a number, text, TRUE, a cell holding a number or text, a range, an array constant, an empty argument
+  (`MAKEARRAY(2,2,)`), and an error, whose own error is not passed on: `MAKEARRAY(2,2,NA())`, `MAKEARRAY(2,2,1/0)`,
+  `MAP({1,2},NA())`, `MAP({1,2},1/0)`, `SCAN(0,{1,2},NA())`, `REDUCE(0,{1,2},NA())`, `BYROW({1;2},NA())` and `BYCOL({1,2},1/0)` are all
+  `#VALUE!` (rows 17-26, 61-62; function-argument rows 1-11).
+MAKEARRAY checks its sizes first: `MAKEARRAY(NA(),1,5)` and `MAKEARRAY(NA(),1,LAMBDA(x,1))` are `#N/A`,
+`MAKEARRAY(1,1/0,LAMBDA(x,1))` `#DIV/0!` (function-argument rows 12-14); an invalid size and a bad function are both `#VALUE!`
+(rows 48-54). A LAMBDA that returns a LAMBDA is a `#CALC!` element, not this error (`MAKEARRAY(2,2,LAMBDA(r,c,LAMBDA(x,7)))` is
+2x2, function-argument row 27). Evidence: probes/t3655-makearray-arity-sizes and probes/t3655-lambda-helper-function-argument
+(excel-graph, 2026-11-01, T-3655).
+Ours: every helper takes its caller from `Model::helper_caller` (lambda.rs), which checks the function once before any element
+(`FunctionValue` parameter counts; `eta_takes_count` reads `arg_counts::takes_count`); before T-3655 a wrong count was
+`#VALUE!` per element and MAP, SCAN, REDUCE and MAKEARRAY passed an error argument on.
+Unprobed: whether MAP's, SCAN's and REDUCE's array errors come before the function check (the engine checks the function first;
+BYROW and BYCOL read the array first).
+Status: VERIFIED (excel-graph)
+Tasks: T-3655
+
+## MAKEARRAY sizes: zero, negative, booleans, text and references
+Rule: a size is read as a number the way an arithmetic operand is, then must be a whole number of at least 1. 0, -1, 0.5 and
+-0.5 are `#VALUE!` in either position (`MAKEARRAY(0,0,..)` too), as is FALSE and a blank cell (0); TRUE is 1
+(`MAKEARRAY(TRUE,2,..)` is 1x2, `(2,TRUE,..)` 2x1, also a cell holding TRUE); numeric text, typed or in a cell, is its number
+(`"2"`, `" 2 "`, `"1.0"` and a cell holding the text "2" give 2, 2, 1 and 2), and other text (`"a"`) is `#VALUE!`; 1 is a 1x1 array
+(probes/t3655-makearray-arity-sizes rows 28-47, excel-graph, 2026-11-01, T-3655). The engine matched every cell before T-3655.
+Empty text, error kinds and range arguments are T-2874's; sizes within an ulp of a whole number T-2345's.
+Status: VERIFIED (excel-graph)
+Tasks: T-3655
+
 ## SORTBY with a single-value by_array or a fractional sort_order
 Rule: a by_array sorts the array's rows when it is one column as tall as the array, and its columns when it is one row as wide
 as the array; every by_array of the call must sort the same way, or the call is `#VALUE!`. So a single value (a number, text, a
@@ -1915,9 +1993,18 @@ A zero rows beats an invalid columns: `SEQUENCE(0,<negative>)` is `#CALC!` (c36f
 arguments, an error value in any of them winning, and only then checks rows (negative or past the grid `#VALUE!`, 0 `#CALC!`), then
 columns.
 Ours: `sequence_kernel` in that order; TAKE reads both counts before a zero one is `#CALC!` (`edge_spans`; T-2316).
-Unprobed: whether an error start beats a negative extent (ours: it does, by the reading above).
+
+Argument classes (gen-m7 arg-pairs batch, T-3682; excel-graph, 2026-11-01): SEQUENCE's extents coerce as numbers and are
+then floored, so numeric text counts (`SEQUENCE("2.5",2)` is 2x2, gen-m7/0a1faf26e7528d04 Calc!A2563; a cell holding the
+text "12" gives 12 rows, A2990), a fraction below 1 is a zero extent (`SEQUENCE("2.5",0.5)` `#CALC!`, A2929), `TRUE` is 1
+(`SEQUENCE("2.5",TRUE)` 2x1, A3417) and a `FALSE` cell or a blank cell is 0 (`#CALC!`, A3478, A3661). Empty or other
+text is `#VALUE!` in any of the four arguments, and it is read before a zero extent is checked: `SEQUENCE(0,0,"")` is
+`#VALUE!` (A11347). Of two bad arguments the leftmost wins: `SEQUENCE("",#NAME?)` is `#VALUE!` (A5979).
+An error start beats a negative extent, in rows or columns: `SEQUENCE(-1,1,#N/A)` is `#N/A` (gen-m7/b3f8ac7d2e3db3da
+A245; a -2.5 cell with a `#DIV/0!` cell start, A306) and `SEQUENCE(1,-1,#NAME?)` `#NAME?` (cc6a41457aaa5195 A11225, A11286).
+Ours: matches all 1136 formulas of the batch's six cases at their first run.
 Status: VERIFIED (excel-graph)
-Tasks: T-2316
+Tasks: T-2316, T-3682
 
 ## TOROW, TOCOL, SORT and TEXTJOIN lifted arguments (gen-m7)
 Rule: TOROW's and TOCOL's scan_by_column lift over an array, an error initial argument filling every element
@@ -2125,3 +2212,90 @@ Status: DEVIATION (decision 0014). Whether Excel accepts a CSE formula over more
 (probe pending, T-3436).
 Implemented in: crates/rustsheet-engine/src/model.rs (`set_user_array_formula`)
 Tasks: T-2896, T-3436
+
+## A one-cell error reference is a 1x1 array in TOCOL, TOROW and FILTER (T-3497)
+Rule: a one-cell reference to an error cell passed as TOCOL's or TOROW's `array`, or FILTER's `array` or `include`, is a 1x1
+array holding the error, not an error argument. The other arguments are checked first, and the error survives only as an element
+of the result. With Data!G9 holding `#DIV/0!`:
+- `TOROW(Data!G9,Data!G1)` (ignore 7) is `#VALUE!` (gen-m7/20df23f84a528470 Calc!A8724).
+- `TOCOL(Data!G9,3,Data!G2)` is `#CALC!`: ignore 3 drops the error, so nothing is left (gen-m7/7cd94f345acd55bb A8480).
+- `FILTER(Data!G9,Data!G2)` (include 0) is `#CALC!` (gen-m7/68e7f10771a7118a A10798).
+- `FILTER(Data!G9,(Data!A1:A12>0),Data!G4)` is `#VALUE!`: a 1x1 array against a 12-row include (gen-m7/ee81c689b5fde629 A1160).
+- `FILTER(Data!A1:D12,Data!G9,Data!G3)` is `#VALUE!` (gen-m7/d7a127bd9334c2b4 A2380).
+- A range ignore or scan_by lifts over the 1x1 array, with Data!C3:D4 {"abc",7;1,2.5}: `TOCOL(Data!G9,Data!C3:D4)` spills
+  `#VALUE!`, `#VALUE!`; `#DIV/0!`, `#CALC!` (invalid ignores, then ignore 1 keeping the error and 2.5, ignore 2, dropping
+  it; gen-m7/b24463215bcb1ab9 A10066:B10067), and `TOCOL(Data!G9,2,Data!C3:D4)` spills `#VALUE!` for the text scan_by
+  and `#CALC!` for each number (gen-m7/7cd94f345acd55bb A9578:B9579).
+- A literal error is not a reference and is still the error: `TOROW(#N/A,-1)` is `#N/A` (gen-m7/20df23f84a528470
+  A8907) and `FILTER(#DIV/0!,(Data!C1:C12<>0.3),-1)` is `#DIV/0!` (gen-m7/ee81c689b5fde629 A977).
+Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cell list is in T-3506.
+Ours: implemented (T-3506): `one_cell_error_ref_as_array` in functions/spill_functions.rs wraps any error read through a
+reference argument (a `ReferenceKind`, one cell by construction) as a 1x1 array, which is how a one-cell error reference
+shows up, for TOCOL's and TOROW's array and FILTER's array and include; FILTER checks the shape of an include it wrapped
+before its elements. Only stored cell errors are evidenced; other errors read through a reference (a `#REF!` for a sheet
+index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one-cell error include that fits the
+array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
+still returns the error first.
+Status: VERIFIED (excel-graph)
+Tasks: T-3506
+
+VSTACK, through a LAMBDA parameter (T-3683): with Data!G5 the text "12" and Data!G9 `#DIV/0!`,
+`SCAN(Data!G5,Data!G9,LAMBDA(x,z,VSTACK(x,z)))` is `#CALC!` (gen-m7/3f368d034700f19e Calc!A2990, excel-graph
+2026-11-01). z is a reference to Data!G9 (the walked range's cell, T-1442), and VSTACK stacks it into a 2x1 array, an
+array result of the LAMBDA, so `#CALC!`. A scalar error argument is still the whole VSTACK or HSTACK result (T-1695).
+The direct form `VSTACK("12",Data!G9)` is not probed yet. Ours: `#DIV/0!`, as `fn_vstack` returns any error argument.
+Status: VERIFIED (excel-graph) for the SCAN cell; the direct forms UNVERIFIED.
+Tasks: T-3765
+
+## A one-cell error reference in the other array functions (T-3667)
+Rule: with C2 holding `#DIV/0!` (probes/one-cell-error-ref-array-functions, excel-graph, 2026-11-01; every cell paired with
+the literal error):
+- Read as a 1x1 array holding the error, the other arguments checked first, like TOCOL, TOROW and FILTER:
+  - `TAKE(C2,0)` is `#CALC!`, `TAKE(C2,"x")` `#VALUE!`, `DROP(C2,"x")` `#VALUE!`, `DROP(C2,1)` `#CALC!` (literal: `#DIV/0!`).
+  - `CHOOSEROWS(C2,2)`, `CHOOSECOLS(C2,2)` and `CHOOSECOLS(C2,0)` are `#VALUE!` (literal: `#DIV/0!`); `CHOOSEROWS(C2,1)` is the error.
+  - `VSTACK(D1:E1,C2)` spills `1, 4` over `#DIV/0!, #N/A`, and `HSTACK(D1:D3,C2)` stacks the error as a column, padded with
+    `#N/A`, where the literal error makes the whole call `#DIV/0!`; the error reference stays an element wherever it stands.
+- Not a 1x1 array, the reference's error returned whatever the later arguments: SORT, SORTBY, UNIQUE, EXPAND, WRAPROWS and
+  WRAPCOLS (`SORT(C2,5)`, `UNIQUE(C2,"x")`, `EXPAND(C2,"x")`, `WRAPROWS(C2,0)` are all `#DIV/0!`).
+Ours: implemented (T-3667): TAKE and DROP already kept the reference; CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK use
+`one_cell_error_ref_as_array`; the other six already match.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667
+
+## TOCOL, TOROW and SORT: which bad argument wins (T-3497)
+Rule:
+- TOCOL and TOROW, `ignore` against an error in `scan_by_column`:
+  - A text ignore ("abc", "x", "") wins with `#VALUE!`: `TOROW(Data!A7:D7,"abc",#NULL!)` (gen-m7/1157e6d3a3c6ae12 Calc!A4393),
+    `TOCOL(Data!B3:C3,"",#NAME?)` (gen-m7/52ccea5df17b29a8 A5613), `TOCOL(Data!C5,Data!G6,Data!G9)` (52ccea5df17b29a8 A4454).
+  - An out-of-range number loses to the scan_by error: `TOCOL(Data!C3:E10,7,#DIV/0!)` (as Data!G1, Data!G9) is `#DIV/0!`
+    (gen-m7/7cd94f345acd55bb A11530), and so are `TOROW(Data!C5:D9,-2.5,..)` (1157e6d3a3c6ae12 A1160) and
+    `TOCOL(Data!A1:D9,-2.5,..)` (52ccea5df17b29a8 A1038).
+  - A range ignore lifts, and each element follows the two rules above. `TOCOL(Data!D$11,Data!C3:D4,Data!G9)` spills `#VALUE!`
+    for its text element and `#DIV/0!` for its 7 (52ccea5df17b29a8 A10676:B10676). `TOCOL(Data!D11:E11,Data!A1:B2,#NULL!)` is
+    `#NULL!` for the number elements and `#VALUE!` only for the text one (A10615:B10616).
+- SORT, a bad `sort_index` or `sort_order` against an error in a later argument:
+  - A blank sort_index or sort_order wins with `#VALUE!`. Examples: `SORT(0.3,Data!H1,-1,#NAME?)` (gen-m7/75534bc7e1ce6474
+    A4027); `SORT(1,Data!H2,Data!G9)` (gen-m7/91b6b88061b805b1 A5308); `SORT(Data!B3:D8,Data!A3,#DIV/0!,#NUM!)` with A3 blank
+    (gen-m7/8217549f0b417328 A611); `SORT(Data!A4:B6,2,Data!H2,Data!G9)` (8217549f0b417328 A1770);
+    `SORT(Data!D7:E12,Data!G8,Data!E7,Data!G9)` with E7 blank (75534bc7e1ce6474 A1526).
+  - A text or FALSE sort_index loses to the later error. Examples: `SORT(Data!C4,"",Data!B10:D12,#DIV/0!)` is `#DIV/0!`
+    (75534bc7e1ce6474 A245); `SORT({#DIV/0!;2;#VALUE!},"abc",#NULL!)` is `#NULL!` (91b6b88061b805b1 A367);
+    `SORT(0.5,Data!G8,Data!G9)` (FALSE index) is `#DIV/0!` (91b6b88061b805b1 A2990, passing);
+    `SORT(Data!C8,Data!A6:B8,Data!G8,Data!G9)` is `#DIV/0!` (75534bc7e1ce6474 A11652, passing).
+  - So SORT reads its arguments left to right and stops at an error or a blank sort_index or sort_order (both `#VALUE!` for
+    a blank); a value that is not a number (text, FALSE's 0, a 2-D list) fails only in validation, after by_col is read.
+Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the failing cells are listed in T-3507.
+Ours: as above since T-3507 (`lift_flatten` in tocol_torow.rs; `sort_number_list` and `fn_sort` in spill_functions.rs).
+Status: VERIFIED (excel-graph) for the cells named; implemented (T-3507). The order among more than two bad arguments is
+UNVERIFIED beyond these cells.
+Tasks: T-3507
+
+## SORT's lifted by_col spreads an argument error (T-3497)
+Rule: SORT lifts over a multi-cell `by_col` (T-2319). When it fails on another argument, the error fills `by_col`'s shape.
+`SORT(Data!B3,#NUM!,Data!B1:D1,Data!A1:B2)` spills a 2x2 of `#NUM!` (gen-m7/75534bc7e1ce6474 Calc!A3051:B3052), and
+`SORT(#REF!,Data!A7:D9,1,Data!A1:B2)` spills `#REF!` (gen-m7/d2945e939d6fe742 A5979:B5980). An error array, sort_index or
+sort_order is each lifted call's result, as a by_col error already was.
+Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cell list is in T-3508.
+Ours: as above since T-3507, whose reordering of SORT's argument checks covers it (`fn_sort`).
+Status: VERIFIED (excel-graph); implemented (T-3507)
+Tasks: T-3508

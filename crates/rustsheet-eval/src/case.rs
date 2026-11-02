@@ -188,6 +188,12 @@ pub struct TableSpec {
     /// `Txn::add_table_with_rows`).
     #[serde(default = "crate::suite::default_true")]
     pub header_row: bool,
+    /// Calculated columns as spec2xlsx writes them (`calculatedColumnFormula`, T-2969): column
+    /// letter to its formula, with or without `=`, in file form (`T[[#This Row],[Col]]`): the
+    /// adapter does not translate a `[@Col]` shorthand and refuses one. The engine adapter marks
+    /// each with `Txn::set_table_column_formula` (T-3033).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub calculated: BTreeMap<String, String>,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a
@@ -288,10 +294,16 @@ pub enum SheetOp {
     InsertColumn {
         sheet: String,
         column: String,
+        /// How many columns go in at `column` in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
     },
     DeleteColumn {
         sheet: String,
         column: String,
+        /// How many columns go from `column` on in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
     },
     DeleteSheet {
         sheet: String,
@@ -343,16 +355,33 @@ impl SheetOp {
                     addr
                 }
             }
-            SheetOp::InsertColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column).map_or(addr.col, |c| shift(addr.col, c, 1)),
+            SheetOp::InsertColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => Addr {
+                col: Addr::col_index(column).map_or(addr.col, |c| {
+                    shift(
+                        addr.col,
+                        c,
+                        i32::try_from(count.unwrap_or(1)).unwrap_or(i32::MAX),
+                    )
+                }),
                 ..addr
             },
-            SheetOp::DeleteColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column)
-                    .filter(|c| addr.col > *c)
-                    .map_or(addr.col, |_| addr.col - 1),
-                ..addr
-            },
+            SheetOp::DeleteColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => {
+                let count = count.unwrap_or(1);
+                Addr {
+                    col: Addr::col_index(column)
+                        .filter(|c| addr.col >= c.saturating_add(count))
+                        .map_or(addr.col, |_| addr.col - count),
+                    ..addr
+                }
+            }
             _ => addr,
         }
     }
@@ -557,6 +586,11 @@ mod tests {
         let del_col = op(r#"{"op":"delete_column","sheet":"S","column":"B"}"#);
         assert_eq!(del_col.moved("S", at("C1")), at("B1"));
         assert_eq!(del_col.moved("T", at("C1")), at("C1"));
+        let ins_cols = op(r#"{"op":"insert_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(ins_cols.moved("S", at("B1")), at("D1"));
+        let del_cols = op(r#"{"op":"delete_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(del_cols.moved("S", at("D1")), at("B1"));
+        assert_eq!(del_cols.moved("S", at("C1")), at("C1"));
         let table = op(r#"{"op":"delete_table","sheet":"S","table":"Sales"}"#);
         assert_eq!(table.moved("S", at("C1")), at("C1"));
     }

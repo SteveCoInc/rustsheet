@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0112e8dc86a0f222478bd9e7e52522825e5cbc938b4beb618eb558e61400319f"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A13": {
+    "t": "n",
+    "v": "-2.0",
+    "f": "=CEILING(-2.5,2)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=CEILING(2.5,-2)"
+   }
+  }
+ }
+}

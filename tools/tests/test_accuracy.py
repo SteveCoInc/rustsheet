@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import io
 import json
+import pkgutil
 import random
 import subprocess
 from collections.abc import Sequence
@@ -19,7 +20,7 @@ import yaml
 
 from rustsheet_tools import repo_root, snapshot
 from rustsheet_tools.accuracy import cli as accuracy_cli
-from rustsheet_tools.accuracy import literal
+from rustsheet_tools.accuracy import defs, literal
 from rustsheet_tools.accuracy.defs.annuity import RATE, rate
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf, density, quantile
 from rustsheet_tools.accuracy.model import (
@@ -110,6 +111,14 @@ def test_drawn_arguments_are_writable_literals_inside_the_domain_except_edges() 
     edges = {(i, v) for i, v in sampler.edges}
     assert {(0, 0.0), (0, literal.MIN_LITERAL), (0, 1.0), (0, 0.999999999999999)} <= edges
     assert {(1, 1), (1, 2), (1, 0), (1, 10**10), (1, 10**10 - 1), (1, 10**10 + 1)} <= edges
+
+
+def test_draw_hi_caps_whole_domain_draws_without_an_edge() -> None:
+    count = Param("n", "int", Interval(0, float("inf"), lo_open=False), typical=(0, 5), draw_hi=1e6)
+    definition = Definition("X", (count,), value=lambda _args: mp(0), sources=("test",))
+    sampler = Sampler(definition, random.Random(5))
+    assert all(0 <= int(sampler.whole_domain(count)) <= 10**6 for _ in range(200))
+    assert {v for _, v in sampler.edges} == {0, 1, -1}  # the cap is not a bound, so no edge sits at it
 
 
 def test_tail_map_puts_a_distribution_point_in_its_tail() -> None:
@@ -328,18 +337,21 @@ def test_fill_writes_excels_values_and_leaves_the_rest_pending(
 
 def test_cli_lists_and_generates(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert accuracy_cli.main(["list"]) == 0
-    assert capsys.readouterr().out.split() == [
-        "F.DIST",
-        "F.INV",
-        "NPER",
-        "RATE",
-        "T.DIST",
-        "T.INV",
-        "T.INV.2T",
-        "TINV",
-    ]
+    listed = capsys.readouterr().out.split()
+    # The list is the registry itself, so adding a Gate A family never edits this test (T-3830).
+    assert listed == sorted(REGISTRY)
+    assert {"ACOS", "SUM", "T.DIST", "XIRR"} <= set(listed)
     assert accuracy_cli.main(["--tables", str(tmp_path), "generate", "t.dist", "--count", "5"]) == 0
     assert (tmp_path / "T.DIST" / "s1.case.json").exists()
     assert accuracy_cli.main(["--tables", str(tmp_path), "verify", "T.DIST"]) == 0
     with pytest.raises(DomainError):
         T_DIST.evaluate([mp(1), mp(0), True])
+
+
+def test_defs_family_modules_are_discovered_not_listed() -> None:
+    """A new family is one new module under defs/: no shared module list names the families."""
+    on_disk = sorted(m.name for m in pkgutil.iter_modules(defs.__path__) if not m.name.startswith("_"))
+    assert defs.__all__ == on_disk
+    assert all(hasattr(defs, name) for name in on_disk)
+    source = Path(defs.__file__ or "").read_text()
+    assert "aggregate" not in source

@@ -84,7 +84,7 @@ def compute(definition: Definition, args: Sequence[literal.Arg]) -> MathValue:
     by more than 1e-45 relative, when one is a domain error and the other not, or past the time
     limit). NoValueError (redraw) when the value overflows the double range or has no single
     value."""
-    math_args = [math_arg(p, a) for p, a in zip(definition.params, args, strict=True)]
+    math_args = [math_arg(p, a) for p, a in zip(definition.params_for(len(args)), args, strict=True)]
     results: list[mpmath.mpf | DomainError] = []
     try:
         with time_limit(TIME_LIMIT):
@@ -175,15 +175,22 @@ def dump_json(data: dict[str, Any]) -> bytes:
 
 
 def math_sidecar_bytes(
-    case_bytes: bytes, sheets: dict[str, dict[str, dict[str, str]]], seed: int | None = None
+    case_bytes: bytes,
+    sheets: dict[str, dict[str, dict[str, str]]],
+    seed: int | None = None,
+    skipped: dict[str, dict[str, dict[str, str]]] | None = None,
 ) -> bytes:
     """A `rustsheet-math/v1` sidecar for the case file `case_bytes`: the one envelope a table
-    batch (with its `seed`) and an eval case's math references (`eval_math`, no seed) share."""
+    batch (with its `seed`) and an eval case's math references (`eval_math`, no seed, with the
+    candidates the generator dropped as `skipped` when there are any) share."""
     source: dict[str, Any] = {"generator": "rustsheet-accuracy", "version": VERSION, "dps": DPS[-1]}
     if seed is not None:
         source["seed"] = seed
     source["input_sha256"] = hashlib.sha256(case_bytes).hexdigest()
-    return dump_json({"format": MATH_FORMAT, "source": source, "sheets": sheets})
+    data: dict[str, Any] = {"format": MATH_FORMAT, "source": source, "sheets": sheets}
+    if skipped:
+        data["skipped"] = skipped
+    return dump_json(data)
 
 
 def batch_files(definition: Definition, batch: str, points: Sequence[Point]) -> tuple[bytes, bytes]:
@@ -242,14 +249,21 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
         msg = f"{text!r} is not one call of {definition.function}"
         raise ValueError(msg)
     parts = split_args(text[len(prefix) : -1])
-    if len(parts) != len(definition.params):
-        msg = f"{text!r}: {len(parts)} arguments, the definition has {len(definition.params)}"
-        raise ValueError(msg)
+    try:
+        params = definition.params_for(len(parts))
+    except ValueError as err:
+        msg = f"{text!r}: {err}"
+        raise ValueError(msg) from err
     args: list[literal.Arg] = []
-    for param, part in zip(definition.params, parts, strict=True):
+    for param, part in zip(params, parts, strict=True):
         token = part.strip()
         if param.kind == "bool":
             args.append(token.upper() == "TRUE")
+        elif param.kind == "array":
+            if not (token.startswith("{") and token.endswith("}")):
+                msg = f"{text!r}: {param.name} is not an array literal"
+                raise ValueError(msg)
+            args.append(tuple(number_literal(t) for t in split_args(token[1:-1])))
         elif param.kind == "int":
             args.append(int(number_literal(token)))
         else:

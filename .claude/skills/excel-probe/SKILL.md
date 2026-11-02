@@ -26,6 +26,10 @@ right: if the answer looks wrong, arbitrary or inconsistent, record it and match
 3. **Get oracle values**
    - If an Excel backend is available (`cd tools && uv run rustsheet-oracle status`):
      `uv run rustsheet-oracle fill -b excel-graph --suite probes` → commits `*.oracle.json`.
+     Then `uv run rustsheet-accuracy math --suite probes` (or `--suite probes-numeric`) writes the
+     `*.math.json` sidecars of the suite's Gate A one-call cells; commit them with the case.
+     `make check` fails while a case's sidecar is missing or stale (`make eval-math-check`,
+     decision 0243).
    - Otherwise leave the case pending (it shows as "pending" in reports), mark the task
      `blocked` on oracle with a link to the case, and pick other work. The scheduled oracle
      workflow (`.github/workflows/oracle.yml`) fills pending cases.
@@ -36,3 +40,7 @@ right: if the answer looks wrong, arbitrary or inconsistent, record it and match
    rule in one sentence, the probe case id as evidence, and any surprising consequences. Record
    every finding, including ones that look like Excel bugs and ones no task implements yet.
    Cite it in code comments where the quirk is implemented (`// Excel: see docs/excel-semantics/rounding.md#round-half`).
+   File or amend an owner task for every visibly-off cell the probe's cases add (name the case,
+   and its cells as single cells or colon spans, never hyphen spans); `make check` fails a branch
+   whose added or refilled cases have an unowned one (`scripts/new_case_owners.py`, decision
+   0245). `make unowned-off ALL=1` after `make eval` lists them.

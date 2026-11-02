@@ -45,10 +45,26 @@ from pathlib import Path
 
 import ci_changes
 import gh_client
+import id_renumber
 import merge_lock
 import tasks
 from gh_client import Client, GhError, field_of, int_of, label_names, text_of  # noqa: F401 (re-exported)
 from merge_lock import GitError, git
+from review_panel import (  # noqa: F401 (re-exported: the panel's one copy, decision 0236)
+    ALWAYS_REVIEWERS,
+    APPROVE,
+    DESIGN,
+    EXCEL_FIDELITY,
+    EXCEL_FIDELITY_PATHS,
+    LEGACY_DESIGN,
+    REVIEWERS,
+    SECURITY,
+    SECURITY_KEEP_PATHS,
+    SECURITY_SKIP_PATHS,
+    applicable_reviewers,
+    needs_security,
+    with_legacy_design,
+)
 from suite_meta import suites_on
 from visible_lock import RETIRED_LOCK, VISIBLE_PARITY, case_on, in_commit, visible_rises
 
@@ -62,15 +78,11 @@ BASELINE_DIR = "eval/baseline/"
 READY_LABEL = "ready-to-merge"
 EJECTED_LABEL = "merge-train-ejected"
 STOP_LABEL = "merge-train-stop"
-LABELS = (READY_LABEL, EJECTED_LABEL, STOP_LABEL)
+TRAIN_LABELS = (READY_LABEL, EJECTED_LABEL, STOP_LABEL)
+# An owner's hold against the merge janitor (decision 0224); `make merge-labels` creates it.
+HOLD_LABEL = "merge-hold"
+LABELS = (*TRAIN_LABELS, HOLD_LABEL)
 
-# Reviewer applicability. The one definition is the `review` skill (.claude/skills/review/SKILL.md,
-# step 3); scripts/test_merge_ready.py fails when this copy differs from it.
-ALWAYS_REVIEWERS = ("security", "architecture", "quality")
-EXCEL_FIDELITY = "excel-fidelity"
-EXCEL_FIDELITY_PATHS = ("crates/rustsheet-engine", "crates/rustsheet-xlsx", "eval/suites", "eval/baseline")
-REVIEWERS = (*ALWAYS_REVIEWERS, EXCEL_FIDELITY)
-APPROVE = "APPROVE"
 NOT_APPLICABLE = "n/a"
 VERDICTS = (APPROVE, "REQUEST_CHANGES", NOT_APPLICABLE)
 
@@ -149,16 +161,17 @@ def sha_field(value: str, what: str) -> str:
 
 
 def parse_reviewers(value: str) -> dict[str, str]:
-    """`name=VERDICT` pairs, each name a known reviewer at most once, each verdict a known one."""
+    """`name=VERDICT` pairs, each name a known (or pre-0236) reviewer at most once, each verdict
+    a known one; legacy names are folded into `design` (`with_legacy_design`)."""
     verdicts: dict[str, str] = {}
     for pair in value.split():
         name, _, verdict = pair.partition("=")
-        if name not in REVIEWERS or name in verdicts:
+        if name not in (*REVIEWERS, *LEGACY_DESIGN) or name in verdicts:
             raise MarkerError(f"unknown or repeated reviewer {name[:40]!r}")
         if verdict not in VERDICTS:
             raise MarkerError(f"unknown verdict for {name}")
         verdicts[name] = verdict
-    return verdicts
+    return with_legacy_design(verdicts)
 
 
 def has_marker(body: str) -> bool:
@@ -260,7 +273,7 @@ def parse_record(body: str) -> Record:
         if name != key or not sep:
             raise MarkerError(f"expected `{key}:`")
         fields[key] = value.strip()
-    if fields["reviewer"] not in REVIEWERS or fields["verdict"] not in RECORD_VERDICTS:
+    if fields["reviewer"] not in (*REVIEWERS, *LEGACY_DESIGN) or fields["verdict"] not in RECORD_VERDICTS:
         raise MarkerError("unknown reviewer or verdict")
     return Record(sha_field(fields["head"], "head"), fields["reviewer"], fields["verdict"])
 
@@ -278,7 +291,8 @@ def recorded_verdicts(comments: Sequence[object], authors: Authors, head: str) -
             record = parse_record(body)
             if record.head == head and authors.writer(comment):
                 found.append((created, int_of(comment, "id"), record))
-    return {record.reviewer: record.verdict for _, _, record in sorted(found, key=lambda f: f[:2])}
+    newest = {record.reviewer: record.verdict for _, _, record in sorted(found, key=lambda f: f[:2])}
+    return with_legacy_design(newest)
 
 
 def record_gaps(recorded: Mapping[str, str], needed: Sequence[str], head: str) -> list[str]:
@@ -302,14 +316,6 @@ def records_mode(text: str | None) -> str:
     except tomllib.TOMLDecodeError:
         return REQUIRE
     return value if value in (WARN, REQUIRE) else REQUIRE
-
-
-def applicable_reviewers(paths: Iterable[str] | None) -> tuple[str, ...]:
-    """The reviewers a diff of `paths` needs; every reviewer when the paths are unknown (None)."""
-    if paths is None:
-        return REVIEWERS
-    touches = any(p == root or p.startswith(root + "/") for p in paths for root in EXCEL_FIDELITY_PATHS)
-    return REVIEWERS if touches else ALWAYS_REVIEWERS
 
 
 def missing_approvals(verdicts: Mapping[str, str], needed: Sequence[str]) -> list[str]:
@@ -490,6 +496,8 @@ class Repo:
         lists re-recorded (decision 0093). The retired `RETIRED_LOCK` may be deleted when `main`
         has none (a PR from before decision 0219 modified it). The eval
         gate on the head, which marking requires green, checks exactly those lists (decision 0207).
+        Or, with the same exceptions, the tree is that of `prev` renumbered as `make renumber` does,
+        merged with `main` (`id_renumber.renumbered_merge`, decision 0224).
         Anything else (another file, an addition, deletion, rename or mode change) breaks the carry."""
         parents = self.git("rev-list", "--parents", "-n", "1", head).split()[1:]
         if len(parents) != 2 or parents[0] != prev:
@@ -497,14 +505,18 @@ class Repo:
         main = f"refs/merge-ready/{BASE_BRANCH}"
         if git("merge-base", "--is-ancestor", parents[1], main, root=self.root, check=False).returncode:
             return f"the merged commit is not on {BASE_BRANCH}"
-        merged = git("merge-tree", "--write-tree", "--name-only", *parents, root=self.root, check=False)
-        if merged.returncode not in (0, 1):
+        plain = merge_lock.merge_tree(self.root, *parents)
+        if plain is None:
             return "the merge could not be computed"
-        lines = merged.stdout.split("\n")
-        tree = lines[0].strip()
-        # After the tree: the conflicted paths, a blank line, then informational messages.
-        rest = lines[1:]
-        conflicted = rest[: rest.index("")] if "" in rest else rest
+        problem = self.tree_problem(*plain, parents, head)
+        try:
+            renumbered = id_renumber.renumbered_merge(self.root, parents, plain[0], head) if problem else None
+        except id_renumber.RenumberError as error:
+            return f"{problem} (as a renumber: {error})"
+        return problem if renumbered is None else self.tree_problem(*renumbered, parents, head)
+
+    def tree_problem(self, tree: str, conflicted: Sequence[str], parents: Sequence[str], head: str) -> str | None:
+        """`carry_problem`'s comparison of `head` with an expected merge `tree` and its conflicts."""
         retired = not in_commit(self.root, parents[1], RETIRED_LOCK)
         lists = self.checked_baselines() | ({RETIRED_LOCK} if retired else set())
         if any(p not in lists for p in conflicted):
@@ -694,6 +706,7 @@ LABEL_STYLES = {
     READY_LABEL: ("0e8a16", "Marked ready for the merge train (make mark-ready, SPEC-0027)"),
     EJECTED_LABEL: ("d93f0b", "Ejected from a merge train; mark again after fixing (SPEC-0027)"),
     STOP_LABEL: ("b60207", "Stops the merge train while any open PR carries it (SPEC-0027)"),
+    HOLD_LABEL: ("fbca04", "The merge janitor leaves this PR alone: no push, no re-mark (decision 0224)"),
 }
 # The step-mode actions `mark` prints (SPEC-0027 section 4, "GitHub access"); scripts/merge_step.py
 # holds the whole schema, the merger's actions included, and validates these (decision 0169).
@@ -849,9 +862,9 @@ def plan_mark(client: Client, pr: int, repo: Repo, review: str | None, carry: bo
     )
 
 
-def missing_labels(client: Client) -> list[str]:
+def missing_labels(client: Client, names: Sequence[str] = LABELS) -> list[str]:
     """The merge-train labels the repository does not have."""
-    return [name for name in LABELS if client.label(name) is None]
+    return [name for name in names if client.label(name) is None]
 
 
 def create_labels(client: Client, names: Iterable[str]) -> None:
@@ -864,7 +877,7 @@ def create_labels(client: Client, names: Iterable[str]) -> None:
 def apply(client: Client, plan: Plan) -> None:
     """Performs the plan's writes through the client (CI, or a session allowed to write), in
     `Plan.actions`' order. A push in between is caught by the caller's `verify` (V2)."""
-    create_labels(client, missing_labels(client))
+    create_labels(client, missing_labels(client, TRAIN_LABELS))  # the labels marking may write
     if plan.body is not None:
         client.comment(plan.pr, plan.body)
     if plan.label:
@@ -890,8 +903,8 @@ def main(argv: list[str], root: Path = ROOT) -> int:
     check.add_argument("--pr", required=True)
     mark = sub.add_parser("mark", help="mark a green, approved PR ready (the marker and the label)")
     mark.add_argument("--pr", required=True)
-    mark.add_argument("--review", help='"security=APPROVE architecture=APPROVE quality=APPROVE ..."')
-    mark.add_argument("--carry", action="store_true", help="carry the verdicts over a merge of main (clean, or re-recording eval-gated baseline lists)")
+    mark.add_argument("--review", help='"security=APPROVE design=APPROVE ..."')
+    mark.add_argument("--carry", action="store_true", help="carry the verdicts over a merge of main (clean, re-recording eval-gated baseline lists, or make renumber)")
     mark.add_argument("--by", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""), help="the marker id")
     mark.add_argument("--step", action="store_true", help="print the writes as step-mode actions")
     record = sub.add_parser("record", help="post a reviewer's verdict record for the local HEAD")

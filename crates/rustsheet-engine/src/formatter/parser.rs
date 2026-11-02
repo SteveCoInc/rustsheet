@@ -1,5 +1,8 @@
+use super::elapsed::takes_second_fraction;
+pub use super::fraction::{Denominator, Fraction};
 use super::lexer::{Compare, Lexer, Token};
 use super::locale_tag::{self, Calendar, DateNames, LocaleTag};
+use super::numerals::Numerals;
 use crate::locale::excel_date_names::EN_US;
 
 pub struct Digit {
@@ -81,33 +84,12 @@ pub struct NumberPart {
     pub currency: Option<char>,
     /// A fraction (`# ?/4`, `?/100`, `# ??/??`); `None` for any other section.
     pub fraction: Option<Fraction>,
-}
-
-/// Where a fraction sits among a number section's `tokens`: the digit placeholders before
-/// `numerator_start` are the integer part, those from it up to `numerator_end` the numerator.
-/// Literals may sit on either side of the `/` (`#\:#=/=#`).
-pub struct Fraction {
-    /// Index of the first numerator placeholder in `tokens`.
-    pub numerator_start: usize,
-    /// Index just past the last numerator placeholder in `tokens`.
-    pub numerator_end: usize,
-    /// Index in `tokens` where the denominator prints, after the literals that follow the `/`;
-    /// the denominator is not a token.
-    pub denominator_at: usize,
-    /// Fixed digits or placeholder kinds; see [`Denominator`].
-    pub denominator: Denominator,
+    /// The digits of the section's locale tag (`locale_tag::numerals`).
+    pub numerals: Numerals,
 }
 
 /// The most digits a fixed fraction denominator may have; more is `#VALUE!`.
 const MAX_FIXED_DENOMINATOR_DIGITS: usize = 5;
-
-/// The denominator of a fraction section.
-pub enum Denominator {
-    /// Digits as written (`16` in `# ??/16`).
-    Fixed(String),
-    /// The kinds of its digit placeholders (`??` in `# ??/??`): Excel picks the fraction.
-    Placeholders(Vec<char>),
-}
 
 pub struct DatePart {
     pub color: Option<i32>,
@@ -133,6 +115,8 @@ pub struct DatePart {
     pub b2_overridden: bool,
     /// The names from the section's first `mmm` on (`Localized::names_after_mmm`).
     pub names_after_mmm: Option<&'static DateNames>,
+    /// The digits of the section's locale tag (`locale_tag::numerals`).
+    pub numerals: Numerals,
 }
 
 #[derive(Default)]
@@ -144,7 +128,11 @@ pub struct ErrorPart {
     pub whole_code: bool,
 }
 
-pub struct GeneralPart {}
+/// A section that is `General` alone, after any locale tag.
+pub struct GeneralPart {
+    /// The digits of the section's locale tag (`[$-1B000409]General` on 12 is "十二").
+    pub numerals: Numerals,
+}
 
 pub enum ParsePart {
     Number(NumberPart),
@@ -153,87 +141,15 @@ pub enum ParsePart {
     General(GeneralPart),
 }
 
-/// How many of `parts` are number sections. A last section with `@` in a format of two or three
-/// sections is the text section: numbers use the sections before it (`TEXT(-1,"0;x@")` is "-1",
-/// `TEXT(-1,"0;0;x@")` "1"; probes/text-at-token-sections C10, C11, T-1656).
-pub(crate) fn numeric_section_count(parts: &[ParsePart]) -> usize {
-    match parts.last() {
-        Some(last) if (2..4).contains(&parts.len()) && is_text_section(last) => parts.len() - 1,
-        _ => parts.len(),
-    }
-}
-
-/// The `[cond]` of a number or date section, if it has one.
-pub(crate) fn section_condition(part: &ParsePart) -> Option<(Compare, f64)> {
-    match part {
-        ParsePart::Number(p) => p.condition,
-        ParsePart::Date(p) => p.condition,
-        ParsePart::General(_) | ParsePart::Error(_) => None,
-    }
-}
-
-/// The section a value takes when the first section carries a condition, and whether the value
-/// then prints without its sign. `None` leaves the choice to the sign rules.
-///
-/// Excel: the first section is used when its condition holds; otherwise a second condition
-/// decides the next section and the last section takes the rest (`[<100]0.0;[>=1000]#,##0;0` prints
-/// 999.9999 as "1000"; `[>=1]0.00;0.000` prints -0.5 as "-0.500"; gen-m10 039accabcfe1e6c7 F!Q1-Q20
-/// and siblings, T-1734). The sign is dropped only by a condition that holds for negatives alone
-/// (`[<=-1]0` prints -1.5 as "2"); `[<100]0.0` prints -0.5 as "-0.5" and `[<1]0.0000` prints
-/// -0.5 as "-0.5000". `[<=0]` is unprobed.
-pub(crate) fn conditional_section(
-    parts: &[ParsePart],
-    sections: usize,
-    value: f64,
-) -> Option<(usize, bool)> {
-    if !(2..=4).contains(&sections) {
-        return None;
-    }
-    let (first_cmp, first_bound) = section_condition(parts.first()?)?;
-    let index = if first_cmp.holds(value, first_bound) {
-        0
-    } else if sections == 2 {
-        1
-    } else {
-        // A third section is the "else"; a second without a condition keeps the sign rules.
-        let (cmp, bound) = section_condition(parts.get(1)?)?;
-        if cmp.holds(value, bound) {
-            1
-        } else {
-            2
-        }
-    };
-    let negatives_only = |(cmp, bound): (Compare, f64)| match cmp {
-        Compare::LessThan => bound <= 0.0,
-        Compare::LessOrEqualThan => bound < 0.0,
-        _ => false,
-    };
-    let drop_sign = parts
-        .get(index)
-        .and_then(section_condition)
-        .is_some_and(negatives_only);
-    Some((index, drop_sign))
-}
-
-/// Whether `part` holds `@`, which makes it a text section.
-pub(crate) fn is_text_section(part: &ParsePart) -> bool {
-    section_tokens(part).is_some_and(|t| t.iter().any(|t| matches!(t, TextToken::Raw)))
-}
-
-/// The tokens of a number or date section; `None` for General or an unparsable section.
-pub(crate) fn section_tokens(part: &ParsePart) -> Option<&Vec<TextToken>> {
-    match part {
-        ParsePart::Number(p) => Some(&p.tokens),
-        ParsePart::Date(p) => Some(&p.tokens),
-        ParsePart::General(_) | ParsePart::Error(_) => None,
-    }
-}
-
 pub struct Parser {
     pub parts: Vec<ParsePart>,
     /// Whether the format ends in a `;`, so an empty section follows the last part.
     ends_in_separator: bool,
     lexer: Lexer,
+    /// The numeral system of the first section's locale tag, which every section prints in: a
+    /// later section's tag changes no digits, even its own (`[$-2000409]0;(0)` on -5 is "(٥)",
+    /// `0;[$-2000409]0;0` "5"; probes/t3532-numeral-digit-fields A17, t3532-numeral-digit-sections).
+    pub numerals: Numerals,
 }
 
 /// The most digits of a second a format may show (`.000`, poi/ElapsedFormatTests A2).
@@ -343,16 +259,19 @@ impl Parser {
             parts,
             ends_in_separator: false,
             lexer,
+            numerals: Numerals::Ascii,
         }
     }
-    /// Whether the format is three sections plus an empty fourth: the parser drops the empty
-    /// section after a trailing `;`, so `;;;` has three parts. Excel prints nothing for it
-    /// (`TEXT("text",";;;")` is ""; gen-m10/0e3d8eba9432a18d T!A24).
-    pub(crate) fn has_empty_text_section(&self) -> bool {
-        self.parts.len() == 3 && self.ends_in_separator && !self.parts.iter().any(is_text_section)
-    }
+    /// Parses every section. A trailing `;` opens one more, empty section, as a `;` between two
+    /// sections does: Excel prints nothing for a value that falls in it (`TEXT(-5,"0;")`,
+    /// `TEXT(0,"0;0;")` and `TEXT("text",";;;")` are ""; probes/text-value-kind-sweep-b C2, D3,
+    /// gen-m10/0e3d8eba9432a18d T!A24). After four sections it is left to the section-count check.
     pub fn parse(&mut self) {
         while self.lexer.peek_token() != Token::EOF {
+            let part = self.parse_part();
+            self.parts.push(part);
+        }
+        if self.ends_in_separator && self.parts.len() < 4 {
             let part = self.parse_part();
             self.parts.push(part);
         }
@@ -364,6 +283,12 @@ impl Parser {
     fn minute_before_seconds(&mut self, next_token: &Token) -> bool {
         *next_token == Token::Literal(':')
             && matches!(self.lexer.peek_token(), Token::Second | Token::SecondPadded)
+    }
+
+    /// Whether `m`/`mm` before `next_token` is a minute because `.0` follows, wherever it stands
+    /// (`mm.0 yyyy` is "16.2 1933"; probes/t3575-fraction-after-elapsed-b; number-formats.md).
+    fn minute_before_fraction(&mut self, next_token: &Token) -> bool {
+        *next_token == Token::Period && self.lexer.peek_token() == Token::Zero
     }
 
     fn parse_part(&mut self) -> ParsePart {
@@ -409,6 +334,7 @@ impl Parser {
         // Excel: a second locale tag in a section is #VALUE!, even the same one
         // (`TEXT(45000,"[$-40C]mmmm [$-40C]mmmm")`; probes/text-locale-name-tables A568-A575).
         let mut repeated_locale = false;
+        let mut numerals = self.numerals;
         let mut fraction = None;
         // Excel: a plain `h` or `s`/`ss` after `[h]`/`[hh]` or `[s]`/`[ss]` shows the elapsed
         // count too ("It was 75 [yes, 75] hours", poi/ElapsedFormatTests A10, A11, A21;
@@ -445,7 +371,7 @@ impl Parser {
                 Token::General => {
                     if tokens.is_empty() && matches!(next_token, Token::EOF | Token::Separator) {
                         self.ends_in_separator = next_token == Token::Separator;
-                        return ParsePart::General(GeneralPart {});
+                        return ParsePart::General(GeneralPart { numerals });
                     }
                     // Excel: literals around `General` print around the value (`TEXT(5,"General x")`
                     // = "5 x", `TEXT(5,"x General")` = "x 5"; probes/text-format-bare-literals
@@ -476,20 +402,11 @@ impl Parser {
                     tokens.push(TextToken::Literal('%'));
                     percent += 1;
                 }
-                // `.0`, `.00`, `.000` after a seconds token are the fraction of the second
-                // (number-formats.md "Elapsed-time tokens", "Fractional seconds in clock
-                // formats"); more zeros are unprobed and stay an error.
+                // `.0`, `.00`, `.000` after an h/m/s token are the fraction of the second, and
+                // more zeros are an error (number-formats.md "Elapsed-time tokens").
                 Token::Period
                     if next_token == Token::Zero
-                        && matches!(
-                            tokens.last(),
-                            Some(
-                                TextToken::Second
-                                    | TextToken::SecondPadded
-                                    | TextToken::ElapsedSecond
-                                    | TextToken::ElapsedSecondPadded
-                            )
-                        ) =>
+                        && tokens.last().is_some_and(takes_second_fraction) =>
                 {
                     let mut digits = 0;
                     while next_token == Token::Zero {
@@ -678,12 +595,14 @@ impl Parser {
                     tokens.push(TextToken::MonthName);
                 }
                 Token::Month | Token::MonthPadded => {
-                    let padded = matches!(token, Token::MonthPadded);
-                    let minute =
+                    // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
+                    let fraction = self.minute_before_fraction(&next_token);
+                    let clock =
                         (is_time && !minute_read) || self.minute_before_seconds(&next_token);
-                    minute_read |= minute;
-                    is_date |= !minute;
-                    tokens.push(match (minute, padded) {
+                    let minute = clock || fraction;
+                    minute_read |= clock;
+                    is_date |= !minute || fraction;
+                    tokens.push(match (minute, token == Token::MonthPadded) {
                         (true, false) => TextToken::Minute,
                         (true, true) => TextToken::MinutePadded,
                         (false, false) => TextToken::Month,
@@ -790,9 +709,12 @@ impl Parser {
                     use_ampm = true;
                     tokens.push(TextToken::AP(am, pm));
                 }
-                Token::Locale(tag) => {
+                Token::Locale(tag, tag_numerals) => {
                     repeated_locale |= locale.is_some();
                     locale = Some(tag);
+                    if self.parts.is_empty() {
+                        (numerals, self.numerals) = (tag_numerals, tag_numerals);
+                    }
                 }
                 Token::Scientific | Token::ScientificMinus => {
                     if !is_scientific {
@@ -937,6 +859,7 @@ impl Parser {
                 hijri,
                 b2_overridden,
                 names_after_mmm: localized.and_then(|l| l.names_after_mmm),
+                numerals,
             })
         } else {
             ParsePart::Number(NumberPart {
@@ -956,6 +879,7 @@ impl Parser {
                 exponent_digit_count,
                 currency,
                 fraction,
+                numerals,
             })
         }
     }
@@ -980,6 +904,7 @@ impl Parser {
                 exponent_digit_count: 0,
                 currency: None,
                 fraction: None,
+                numerals: Numerals::Ascii,
             });
         }
         let mut parser = Parser::new(format);

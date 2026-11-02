@@ -2496,15 +2496,19 @@ row (`h < r <= t`, so at its first data row and its totals row too: T-2321) and
 shrinks it when the deleted rows are inside them, data edges included, with a data row left (T-2338), drops
 its totals row on a delete of exactly that row (T-2338), and then every structured reference to it keeps its
 text, in cell formulas on any sheet, conditional formats and defined names (T-2297, `table_edits.rs`). A delete
-of its only data row keeps the row and clears the table's cells of it (`Model::last_data_row`, T-2338), and a
-plain range shrinks on a delete of its edge rows (`Displacement::range_corners`, T-2338). Every other edit
-that crosses a table (a delete touching the header row, of every data row at once, a column edit inside
-it, row and column moves, cell shifts) leaves the table as it is, and an edit that changes the area a
+of exactly every data row, one row or several, keeps the first data row, clears the table's cells of it and
+deletes the others (`Model::kept_data_row`, T-2338, T-3259), and a plain range shrinks on a delete of its edge
+rows (`Displacement::range_corners`, T-2338). Every other edit that crosses a table (a delete touching the
+header row, a column edit inside it, row and column moves, cell shifts) leaves the table as it is, and an
+edit that changes the area a
 structured reference resolves to rewrites it to the displaced plain range (the fallback of SPEC-0016); one
-that leaves the area unchanged keeps the text. A `#This Row` reference keeps the fallback rule even when
-its table follows the edit: on another sheet, a row off the data rows keeps its text and so reads the
-moved or grown table's row there, but a row on them is rewritten to the plain area it read, and a moved cell
-beside or inside the table is rewritten too. Excel keeps the text in all of them (the T-2845 bullet above; T-3037).
+that leaves the area unchanged keeps the text. Through a row insert its table follows, a `#This Row` reference keeps its
+text too, on every row (T-3037): a cell on another sheet that stays put, a cell beside the table that moves with its
+row, and a formula inside the table (`Model::row_edit`, `Model::moved_text`), and each reads its cell's row in the
+edited table, as the T-2845 bullet above shows. A formula the insert moves with the table is parsed in that table
+(`Model::kept_table_holding`), so an unqualified `[@Qty]*2` or `SUM([Qty])` keeps its text where the move takes it below
+the table's old range (before T-3037 that cell did not parse, `#ERROR!`). Under every other edit a `#This Row` reference
+keeps the fallback rule (a row delete or a column edit the table follows is unprobed for it, T-3739).
 FORMULATEXT prints the long `Sales[[#This Row],[Qty]]` where Excel prints `Sales[@Qty]` (T-1683). An insert at
 the first row of a table without a header row is a fallback too (unprobed, T-3039). An insert that would
 carry a table past the last row or column is refused with an error and changes nothing, as Excel does
@@ -2520,9 +2524,10 @@ error that keeps its text and is exported as `#REF!`; a loaded formula naming an
 canonical form (`=SUM(Sales[Qty])`), whose spelling is unprobed (T-1683). Since T-1671 the eval adapter
 registers a spec table with its totals row; an insert above the totals row grows the table and keeps
 `Sales[[#Totals],[Qty]]` (T-2321), and since T-2338 the totals row's deletes (delete it or the last data row) keep it too (decision 0128).
-A `#This Row` reference keeps its text through an edit only where its cell keeps its row: a structural edit or a cut and paste
-that moves the formula to another row rewrites it to the area it read on its old row (`$A$3`, or `#VALUE!` off the data rows),
-its value before step 2. Excel keeps `Sales[@Qty]` and reads the new row through a row insert (T-2845, above; T-3037); cut and paste is desktop-only and unprobed (T-2325).
+Under an edit its table does not follow (a fallback, a row move) or a cut and paste, a `#This Row` reference keeps its text
+only where its cell keeps its row: one that moves the formula to another row rewrites it to the area it read on its old row
+(`$A$3`, or `#VALUE!` off the data rows), its value before step 2. Through a row insert the table follows, Excel keeps
+`Sales[@Qty]` and reads the new row, and so do we (T-2845, above; T-3037); a row delete is unprobed (T-3739); cut and paste is desktop-only and unprobed (T-2325).
 A copy and paste (not a cut) keeps the text, so the copy reads the row it lands on (hand expectation, unprobed; before step 2 it
 kept reading the old row). A duplicated sheet, which gets no table, lowers each `#This Row` cell on its own row, so it reads
 what it read (`#VALUE!` off the data rows). A formula on another sheet that refers to a deleted sheet's table is `#REF!` on
@@ -2563,8 +2568,9 @@ Right/Left):
   T-3019) behaves as the one-row deletes do. Rows 4-7 at once, every data row, keep the table's first data row,
   cleared: `ROWS(Sales)` 1, `#All` 2, `ROW(Sales[#Headers])` 3, `SUM(Sales[Qty])` and `COUNTA(Sales[Region])` 0,
   `=SUM(S!C4:C7)` becomes `=SUM(S!C4:C4)` (0), and the cells below move three rows, not four (`=S!C10` reads
-  `=S!C7`, `=SUM(S!C9:C10)` reads `=SUM(S!C6:C7)`) (table-delete-rows-all-data-once; the engine deletes all four
-  rows, T-3259). Rows 6-7 at once, the last two data rows, shrink the table to rows 4-5 (`ROWS(Sales)` 2,
+  `=S!C7`, `=SUM(S!C9:C10)` reads `=SUM(S!C6:C7)`) (table-delete-rows-all-data-once;
+  implemented since T-3259 by `Model::kept_data_row`, which clears the first data row and deletes the
+  rest). Rows 6-7 at once, the last two data rows, shrink the table to rows 4-5 (`ROWS(Sales)` 2,
   `SUM(Sales[Qty])` 3, `S!C4:C7` becomes `S!C4:C5`), a range wholly inside the deleted rows is `=SUM(S!#REF!)`,
   `=SUM(S!C7:C9)` straddling the bottom edge becomes `=SUM(S!C6:C7)`, and `=S!C10` reads `=S!C8`
   (table-delete-rows-last-two; the engine matches). A table without a header row (spec `"header_row": false`,
@@ -2597,6 +2603,20 @@ Right/Left):
   `=SUM(S!#REF!)`, while `COLUMNS(Sales)` is 1 and `ROWS(Sales)` 4 (table-delete-column-qty); deleting B
   (Region) makes `COUNTA(Sales[Region])` 1, a COUNTA of the `#REF!` error, printed `=COUNTA(#REF!)`
   (table-delete-column-region).
+- Column-edit shapes (excel-graph 2026-11-01, T-2899). The new column of a column insert is named with the least
+  `ColumnN` no column has, compared case-insensitively: with `Column2` present the new one is `Column1`
+  (table-insert-column-naming-gap), with `column1` present it is `Column2`, and with `Column1` and `Column3` present
+  it is `Column2` (-case-clash, -column1-column3). One insert of two columns inside the table (Graph `range('C:D')/insert`)
+  grows it by two, named `Column1`, `Column2` left to right, data cells blank (table-insert-two-columns-one-op); at the
+  first column it only moves the table right by two (-edge). Deleting every column (B:C) removes the table: every
+  reference is `#REF!` printed `=SUM(#REF!)`, `ISREF(Sales)` FALSE, `COUNTA(Sales[Region])` 1, plain `S!C4:C7`
+  `=SUM(S!#REF!)` (table-delete-all-columns). A delete that straddles an edge keeps the table without the deleted
+  columns: B:C with the table on C3:E7 leaves two columns, `INDEX(Sales[#Headers],1,1)` "Qty", `Sales[Qty]` text kept,
+  `Sales[Region]` `#REF!`, and the plain `S!D4:D7` shrinks to `=SUM(S!B4:B7)`; D:E with the table on B3:D7 drops Val the same way, the fully deleted plain `S!D4:D7` becoming `=SUM(S!#REF!)` (table-delete-columns-straddle-left,
+  -right). A column range `Sales[[Qty]:[Val]]` is `#REF!`, printed `=SUM(#REF!)`, when either end column is
+  deleted, and when both are, in one edit or two (table-column-range-delete-end, -start, -both-ends, -both-ends-separate);
+  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete. The engine matches the naming and the
+  two-column insert; the rest are T-3733 and T-3734.
 - Convert to Range (`tables/convertToRange`): every value is kept and each structured reference from another
   sheet is rewritten as an absolute, sheet-qualified range: `=SUM(S!$C$4:$C$7)`, `=COUNTA(S!$B$4:$B$7)`,
   `=COLUMN(S!$C$4:$C$7)`; `ROWS(Sales)` 4, `ROWS(Sales[#All])` 5 and `ROW(Sales[#Headers])` 3 keep their values
@@ -2609,6 +2629,10 @@ Right/Left):
   header (S!F1), below the table (S!F9) and on another sheet (T!A1) it is `#VALUE!` after the convert and
   FORMULATEXT still prints `=Sales[@Qty]`, as the structured text of a table that no longer exists
   (table-convert-names-this-row, excel-graph 2026-10-25, T-2643).
+  One on a data row is lowered to the cell on its own row, column absolute and row relative, sheet-qualified from
+  another sheet: `=Sales[[#This Row],[Qty]]` in T!A5 is 2 and prints `=S!$C5`, `=Sales[@Qty]+100` in T!A6 104
+  (`=S!$C6+100`), and `=Sales[[#This Row],[Qty]]*10` beside the table in S!F5 20 (`=$C5*10`)
+  (table-convert-cross-sheet-this-row, excel-graph 2026-11-01, T-2763).
 - Delete table (`DELETE tables('Sales')`): every structured reference is `#REF!` (`SUM`, `ROWS`, `ROW`,
   `COLUMNS`, `COLUMN`) and prints as `#REF!` (`=SUM(#REF!)`); `COUNTA(Sales[Region])` is 1; and the table's
   cells are gone too: `SUM(S!C4:C7)` is 0 (table-delete-table).
@@ -2629,12 +2653,15 @@ move and inside classes); the edge row deletes (T-2338) and the column grow and 
 too (T-2339: `column_span` and `edit_columns` in table_edits.rs grow or shrink the table and its column list,
 naming an inserted column `ColumnN` in its header cell, and `deleted_column` in stringify/structured.rs
 prints a reference to a deleted column as `#REF!`, a column range that loses both ends too; one that loses
-one end prints its displaced plain area, and a delete of every column or one straddling an edge stays a fallback, all unprobed, as are
-`ColumnN` naming with gaps or case clashes and a multi-column insert: T-2899). INDIRECT of a
+one end prints its displaced plain area, and a delete of every column or one straddling an edge, and one-end column ranges, differ from Excel: T-3733, T-3734; `ColumnN` naming and a multi-column insert match, T-2899). INDIRECT of a
 structured reference's text is `#REF!` (T-2911). Convert to range matches (T-2342): `Model::convert_table_to_range` prints each structured
 reference as the absolute area it lowered to (defined names too, T-2643). A cell with a `#This Row` reference
-off the data rows is lowered at its own row (`Model::lower_this_row_references`, T-2643), so it is `#VALUE!` as
-in Excel, but FORMULATEXT prints `=#VALUE!` where Excel keeps `=Sales[@Qty]` (T-2763). A deleted table or sheet matches
+off the data rows is kept as a *detached* structured reference (`StructuredReference::detached`, T-2763): it
+evaluates `#VALUE!` and prints `=Sales[@Qty]` as in Excel. It resolves against no table, so a later table of the
+same name does not take it back (unprobed, T-3629); it is stored with an engine-only `[!]` prefix (`[!]Sales[[#This
+Row],[Qty]]`, which typed or loaded text refuses) so it survives reparses and structural edits, and the xlsx
+export writes it as `#VALUE!` (a file never holds a structured reference without its table part; what Excel
+writes for it is unprobed, T-3629). One on a data row is lowered at its row, as Excel does (T-2643, T-2763). A deleted table or sheet matches
 (T-2340): `delete_table` and `take_sheet` rewrite the stored text of every structured reference to the
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
@@ -2646,7 +2673,7 @@ xlsx export writes `S!C4:C7` where Excel stores `#REF!C4:C7`. The `#REF!` displa
 existed (a loaded `Nope!A1`), an engine choice with no evidence. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,
@@ -2723,8 +2750,17 @@ stored cells come from spec2xlsx, which writes no `calculatedColumnFormula`):
    typed into C2 fills C2:C4, C3 is cleared (an empty entry), then `=[@Col]*3` typed into C4: only C4 changes (C2 stays 2,
    C3 stays blank with FORMULATEXT `#N/A`, C4 is 12), the same as a constant in C3 (t2957-constant-then-refill)
    (t3025-blank-beside-calculated). The engine matches (it blocks the fill for a blank beside formulas).
-(T-2969 probes a stored column formula.)
-Evidence: probes/t2957-* (excel-graph, 2026-10-27): fill-one-totals C2:C4, F2:F5, G5; refill-second C2:C4, F2:F4;
+(A stored column formula does not fill on load: xlsx-storage.md, T-2969.)
+9. **A stored `calculatedColumnFormula` makes the column a calculated column after load** (T-3033, excel-graph
+   2026-11-01). (a) As 8a, but the file's `<tableColumn>` for Calc holds `calculatedColumnFormula` `A2*2`: `=A5*3` typed
+   into the blank C5 re-fills C2:C5 (3, 6, 12, 24; F2:F5 `=A2*3` to `=A5*3`) (t3033-calculated-refill-after-load).
+   (b) The structured form, column formula `T[[#This Row],[Col]]*2` stored in C2:C4 and `=T[[#This Row],[Col]]*3`
+   typed into C5: C2:C5 all become `=[@Col]*3` (t3033-calculated-refill-after-load-structured). (c) With the column
+   formula stored in all of C2:C5, `=A4*3` typed over the occupied C4 re-fills every row too
+   (t3033-calculated-overwrite-after-load). So what makes a column calculated is the file's column formula, not its
+   cells: the same cells without it are not re-filled (rule 8a).
+Evidence: probes/t3033-calculated-refill-after-load, -refill-after-load-structured, -overwrite-after-load C2:C5,
+F2:F5 (rule 9). probes/t2957-* (excel-graph, 2026-10-27): fill-one-totals C2:C4, F2:F5, G5; refill-second C2:C4, F2:F4;
 constant-exception C2, C4, F2:F4; constant-then-refill C2, C4, F2:F4; existing-constant C3, F2:F4; a1-reference
 C2:C4, F2:F4; expand-right-data D2:D4, F1:F4, H1:H4; expand-right-header F1:F4, H1:H4.
 The constant 5 in C3 (constant-exception, constant-then-refill) and the blank C4 (existing-constant) are not
@@ -2735,13 +2771,12 @@ Ours (T-2958, T-3024): a formula typed into a table's data rows (`Model::set_typ
 one shared formula and the column is a calculated column (`Model::calculated_column`, calculated_columns.rs), by
 writing that shared formula, which is stored relative to its cell, so an A1 formula fills shifted. A column is a
 calculated column when its `TableColumn::calculated_column_formula` is set, which a typed formula that fills or
-re-fills it does (only whether it is set is read; its text, the first data row's formula in English, is an engine
-choice); a typed constant
+re-fills it does (only whether it is set is read; its text is the first data row's formula in file form, T-3033); a typed constant
 keeps it. So a column of identical stored formulas is not re-filled (rule 8a). It stays set until the column is
 removed: clearing or overwriting the column's cells does not clear it, an engine choice (what Excel does is unprobed). A blank cell beside formulas blocks the
-fill, as in Excel (rule 8e). The column formula is neither read from nor written to xlsx yet
-(T-2969 probes whether Excel honors it on load; T-3033 then imports and exports it), so a column Excel saved as
-calculated is, after import, no calculated column for a typed re-fill. A stored formula (`Input::StoredFormula`, xlsx import) never fills;
+fill, as in Excel (rule 8e). The column formula is read from and written to xlsx (T-3033; Excel does not fill on load,
+T-2969), so a column Excel saved as calculated is, after import, a calculated column for a typed re-fill, as in Excel
+(rule 9). A stored formula (`Input::StoredFormula`, xlsx import) never fills;
 the facade logs the filled cells and the table as it was, so they are one edit with the typed cell. The eval adapter
 types `entered` cells after the tables and every stored cell, as the oracle types them after load. The unqualified `[@Col]` the probes type resolves to the
 table holding the cell since T-2979 (below).

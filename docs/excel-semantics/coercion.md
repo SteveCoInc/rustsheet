@@ -312,8 +312,8 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
     `"a'"&UNICHAR(769)&"b"` and below `"áb"`, `"á-b"`, `"a"&UNICHAR(769)&"-b"` and `"á'b"` (G4 row 11;
     COUNTIF 1, Rank!H11), and `"a'"&UNICHAR(769)&"b"` is above `"a-b"` (G4!J20): `"a'b"` < `"a-b"` <
     `"a'"&UNICHAR(769)&"b"` < `"a-"&UNICHAR(769)&"b"` < `"áb"`. One mark (U+0301) was probed: how
-    other marks or several marks weigh there is open. Ours attaches the mark to the letter before
-    the hyphen (so `"a-"&UNICHAR(769)&"b"` = `"á-b"`) and fails these 47 cells (T-3329).
+    other marks or several marks weigh there is open. Ours (T-3329) drops the mark from the
+    accent pass and adds its weight to the skipped character's last-pass weight (`skipped`).
   - Open, UNVERIFIED: marks after `æ`/`ß` (T-3203).
   Ours (T-3181): `cmp_text_pairwise` applies this rule for the operators and criteria, so every
   cell of the four accent cases passes. The rule is not transitive (wrapped-run-pairs has 554
@@ -731,6 +731,22 @@ Rule (en-US, text typed into a cell; probes/typed-currency-percent-input, excel-
 Evidence: probes/typed-currency-percent-input (excel-graph, 2026-10-11).
 Status: VERIFIED
 Tasks: T-0283, T-1335
+
+## Group commas and a leading percent sign
+Rule (en-US): number text reads a comma-separated integer part in which every group after a comma has three or more
+digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "1,000,0000" 10000000, of "1,00000",
+"1,000000" and "12,0000" 100000, 1000000 and 120000, of "1,0000.5" 10000.5, of "-1,0000" -10000 and of "1,0000e2"
+1000000. A group of fewer than three digits or none is refused: "1,", "1,00", ",1", "2,0", "1,000,00", "1,000,0",
+"1,000,", "1,,000" and "1,000.5,000" are #VALUE! (IMREAL #NUM!). An integer part of only zeros before the first comma is refused whatever the group: "0,0000", "0,000", "00,0000" and "00,000" are #VALUE!, while "01,0000" is 10000. One leading percent sign divides by
+100 and may be followed by spaces, a sign, a group or a decimal: "%1", "% 1", "%-1", "%1.5" and "%1,0000" are 0.01,
+0.01, -0.01, 0.015 and 100; "1,0000%" is 100. A percent sign on both ends ("%1%") and a doubled one ("2%%") are
+#VALUE!. NUMBERVALUE strips its own percent signs first, so its "%%1.5" stays #VALUE! (the reader now reads the
+leading one, NUMBERVALUE refuses a second).
+UNPROBED: typed cell input of these texts (and the number format Excel gives it); ours shares the reader and so now reads them, with a `0%`/`0.00%` format for a leading percent that is invented.
+Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02).
+Oracle: excel-graph, 2026-11-02.
+Status: VERIFIED
+Tasks: T-3811 (implements), T-3644 (found)
 
 ## Percent text is rounded once
 Rule (en-US): number text ending in `%` (VALUE, `0+"…"`, typed cell input) is the decimal text shifted two places and rounded to the nearest double once: `VALUE("23.123%")` = 0.23123, not the double 23.123 divided by 100 (0.23123000000000002). The 15-significant-digit truncation of number text applies before the shift: `12345.6789012345678%` = 123.456789012345. All three paths agree for `23.123%`, `-23.123%`, `0.07%`, `1.005%`, `12345.6789012345678%`, and the e-notation texts `23e-12%` (2.3e-13) and `1.5E-300%` (1.5e-302), and typed input is a number (ISNUMBER TRUE). The `%` operator in a formula (`=23.123%`) is a separate path and is not covered here.

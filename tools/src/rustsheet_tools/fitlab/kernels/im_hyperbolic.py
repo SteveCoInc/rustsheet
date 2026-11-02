@@ -12,9 +12,14 @@ by part on the IM* text (`Fit.complex_text`).
   (probes-numeric/t3525-im-hyperbolic-fresh-sweep, docs/research/t3525/gen_sweep.py).
 - `im-small-imag`: IMSIN and IMCOS with |y| <= 0.0105, drawn after T-3545 froze their small-y kernel
   (probes-numeric/t3545-imsin-imcos-small-imag-sweep, docs/research/t3545/gen_sweep.py).
+- `im-hyperbolic-t3589-fresh`: IMSINH and IMCOSH at |x| <= 0.01 and IMSIN and IMCOS at |y| in [20, 709.7], drawn
+  after T-3589 froze the series sinh and the reciprocal form past 20 (docs/research/t3589/gen_sweep.py; its
+  IMSECH and IMCSCH cells fall outside the pattern and are scored by the eval).
 - `im-hyperbolic-log`: the log form's cells (|x| near 708-710.5) T-3546 chose Excel's EXP on, and
   `im-hyperbolic-log-fresh`, its sweep drawn after that choice (docs/research/t3546/libm-exp.patch
   makes the libm build).
+- `im-near-half-pi`: IMSIN and IMCOS with x near k*pi/2, drawn after T-3726 froze sin x and cos x as SIN and COS's
+  x87 reduction (docs/research/t3726/gen_sweep.py), with the T-3616 probe whose K1, L1, K22 and L22 found it.
 """
 
 from __future__ import annotations
@@ -113,6 +118,14 @@ FITS = [
         ],
     ),
     _fit(
+        "im-hyperbolic-t3589-fresh",
+        "IMSINH/IMCOSH at |x| <= 0.01, IMSIN/IMCOS at |y| >= 20: T-3589's sweeps drawn after the freeze",
+        [
+            "probes-numeric/t3589-im-hyperbolic-small-x-sweep",
+            "probes-numeric/t3589-imsin-imcos-large-imag-sweep",
+        ],
+    ),
+    _fit(
         "im-hyperbolic-log",
         "IMSINH/IMCOSH in log space: the cells T-3546 chose Excel's EXP on (cut and band probes)",
         [
@@ -127,5 +140,13 @@ FITS = [
         "im-hyperbolic-log-fresh",
         "IMSINH/IMCOSH in log space on T-3546's sweep drawn after choosing Excel's EXP (decision 0188 R4.2)",
         ["probes-numeric/t3546-im-hyperbolic-log-exp-fresh-sweep"],
+    ),
+    _fit(
+        "im-near-half-pi",
+        "IMSIN/IMCOS with x near k*pi/2: T-3726's sweep drawn after the x87 reduction was frozen, and the T-3616 probe",
+        [
+            "probes-numeric/t3726-imsin-imcos-near-half-pi-sweep",
+            "probes-numeric/t3616-imsin-imcos-positive-cut-probe",
+        ],
     ),
 ]

@@ -78,6 +78,12 @@ TEXT_SUFFIX = " text"
 WHOLE_CASE = "*"
 # The class of an R3 cell where the engine returns the math (`r1c_left_out`, decision 0188 R3).
 R3_PASS = "r3_pass"
+# The class of a cell where the engine and Excel are both within 1e-9 of the math (decision 0188
+# R1(c)); M9's every-suite function rate leaves it out too (decision 0227).
+PHASE1B = "phase1b"
+# The classes the function rate leaves out (decisions 0188 R3 and 0227); Gate B leaves out only
+# the R3 passes.
+RATE_LEFT_OUT = (R3_PASS, PHASE1B)
 PASSING = ("pass", "deviation")
 # Spec cases are `<name>.case.json` files; tasks name them without the suffix.
 SPEC_SUFFIX = ".case.json"
@@ -162,6 +168,14 @@ def counted(name: str, left_out: dict[str, str], gate_b: bool) -> bool:
     return cls is None or (gate_b and cls != R3_PASS)
 
 
+def counted_in_rate(name: str, left_out: dict[str, str]) -> bool:
+    """Whether M9's every-suite function rate counts the visibly-off cell `name`. It leaves out
+    only `r3_pass` (decision 0188 R3) and `phase1b` (decision 0227) cells. Every other class, such
+    as `m14_owned`, stays listed here, because the Rust rate handles those through its own lists
+    (decision 0143)."""
+    return left_out.get(name) not in RATE_LEFT_OUT
+
+
 def counted_cell(case: str, key: str, left_out: dict[str, str], gate_b: set[str]) -> bool:
     """`counted` for cell `key` of `case`, with Gate B's reading when the case's suite is one of
     Gate B's suites (`gate_b`): the one rule of `--all-off` and `--unattributed`."""
@@ -177,7 +191,7 @@ def exit_cells(report: dict[str, Any], milestone: str) -> list[ExitCell]:
     visibly-off lists are the report's (decision 0135): the exit row's `gen_visibly_off_cells`,
     the function-scope row's `visibly_off` less the cells decision 0188 R1(c) leaves out
     (`r1c_left_out`), the probe row's `r1c_off_cells`, and the attributed cells of the functions
-    below the rate less the R3 passes (T-3428)."""
+    below the rate less the R3 passes (T-3428) and the Phase 1b evidence (decision 0227)."""
     exit_row = next((r for r in report.get("milestone_exit") or [] if r.get("milestone") == milestone), None)
     if exit_row is None:
         raise ValueError(f"report.json has no milestone_exit row for {milestone}")
@@ -225,11 +239,12 @@ def exit_cells(report: dict[str, Any], milestone: str) -> list[ExitCell]:
             case, key = split_cell_name(str(name))
             out.append(ExitCell(CALC_SUITE, case, key, ""))
 
-    # The functions below the Phase 1 rate (M9, decision 0146 item 3): their attributed cells.
+    # The functions below the Phase 1 rate (M9, decision 0146 item 3): their attributed cells,
+    # less what the rate itself leaves out (decision 0227).
     below = set(exit_row.get("below_rate_functions") or [])
     for o in attributed_off_cells(report):
         c = o.cell
-        if c.criterion in below and counted(f"{c.case}!{c.key}", left_out, True):
+        if c.criterion in below and counted_in_rate(f"{c.case}!{c.key}", left_out):
             out.append(ExitCell(f"{RATE_PREFIX}{c.criterion}", c.case, c.key, c.formula))
 
     probe_row = exit_row.get("probe_row") or milestone
@@ -313,17 +328,17 @@ def names_case(text: str, names: tuple[str, ...]) -> bool:
 
 
 def names_in_span(text: str, names: tuple[str, ...], a1: str) -> bool:
-    """Whether a colon span on a line of `text` that names the case holds the cell `a1`. Per line,
-    unlike a single A1 name, because tasks quote formulas whose ranges (`Data!B6:C10`) are not
-    cells they own."""
+    """Whether a colon span in a block of `text` that names the case holds the cell `a1`. Per block
+    (a line and its continuation lines, T-3623), not per file, because tasks quote formulas whose
+    ranges (`Data!B6:C10`) are not cells they own: those sit in another block."""
     m = A1_SPLIT.fullmatch(a1)
     if m is None:
         return False
     col, row = column_number(m[1]), int(m[2])
-    for line in text.splitlines():
-        if not names_case(line, names):
+    for block in blocks(text):
+        if not names_case(block, names):
             continue
-        for s in A1_SPAN.finditer(line):
+        for s in A1_SPAN.finditer(block):
             c1, c2 = sorted((column_number(s[1]), column_number(s[3])))
             r1, r2 = sorted((int(s[2]), int(s[4])))
             if c1 <= col <= c2 and r1 <= row <= r2:
@@ -505,13 +520,14 @@ def split_cell_name(name: str) -> tuple[str, str]:
 
 
 def unowned_off(
-    report: dict[str, Any], tasks_dir: Path
+    report: dict[str, Any], tasks_dir: Path, names: dict[str, tuple[str, ...]] | None = None
 ) -> list[tuple[OffCell, bool]]:
     """`all_off_cells` that no open, non-deferred task owns, each with whether a deferred task
     owns it. Texts are narrowed to the ones naming the case once per case: the naive loop over
-    every cell and task is minutes on a full report."""
+    every cell and task is minutes on a full report. `names` (`case_names` of a wider case list)
+    replaces the report's own when the report is a partial run (T-3793)."""
     cells = all_off_cells(report)
-    called = report_case_names(report, [o.cell for o in cells])
+    called = names if names is not None else report_case_names(report, [o.cell for o in cells])
     live = open_task_texts(tasks_dir, None, deferred=False)
     parked = open_task_texts(tasks_dir, None, deferred=True)
     naming: dict[str, tuple[list[str], list[str]]] = {}

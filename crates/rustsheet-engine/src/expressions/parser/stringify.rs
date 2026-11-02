@@ -180,11 +180,17 @@ enum Rewrite<'a> {
     /// and restore"). A `#This Row` area is resolved at the cell's row, or at the given row when
     /// the formula is printed in R1C1 for one cell (T-1699).
     Lower(&'a [String], Option<i32>),
-    /// Prints every `#This Row` as its area on the printing cell's row (T-1699).
-    LowerThisRow,
+    /// Prints every `#This Row` as its area on the printing cell's row (T-1699), except one to
+    /// these tables (lowercase names), the tables a structural edit follows, which keeps its
+    /// text (T-3037).
+    LowerThisRow(&'a [String]),
     /// Prints `#REF!` for every structured reference to one of these tables (lowercase names):
     /// the tables a table or sheet delete removes, as Excel rewrites them (T-2340).
     RefError(&'a [String]),
+    /// Prints the formula unchanged as text the engine enters into the cell again (a cell a
+    /// structural edit moves along its row): as with no rewrite, but a detached structured
+    /// reference keeps its `[!]` prefix, which the display drops (T-2763).
+    Reenter,
 }
 
 /// Whether an R1C1 range is a whole row (`1:1`, absolute rows 1 to the last) and a whole column
@@ -227,6 +233,24 @@ pub fn to_localized_string(
     language: &Language,
 ) -> String {
     stringify(node, Some(context), &NO_REWRITE, false, locale, language)
+}
+
+/// [`to_localized_string`] for text the engine enters into the cell again
+/// ([`Rewrite::Reenter`]): a cell a structural edit moves along its row (`Model::moved_text`).
+pub(crate) fn to_localized_string_reentered(
+    node: &Node,
+    context: &CellReferenceRC,
+    locale: &Locale,
+    language: &Language,
+) -> String {
+    stringify(
+        node,
+        Some(context),
+        &Rewrite::Reenter,
+        false,
+        locale,
+        language,
+    )
 }
 
 /// This is the mode used to export the formula to Excel
@@ -593,7 +617,9 @@ fn stringify(
             }
             &DisplaceData::None
         }
-        Rewrite::Lower(..) | Rewrite::LowerThisRow | Rewrite::RefError(_) => &DisplaceData::None,
+        Rewrite::Lower(..) | Rewrite::LowerThisRow(_) | Rewrite::RefError(_) | Rewrite::Reenter => {
+            &DisplaceData::None
+        }
     };
     let sub = |n: &Node| stringify(n, context, rewrite, export_to_excel, locale, language);
     match node {
