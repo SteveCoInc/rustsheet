@@ -1869,6 +1869,8 @@ C	probes/t3777-proper-case-table.case.json	162
 C	probes/t3777-regexreplace-case-table.case.json	121
 C	probes/t3807-blank-criterion-padded-zero.case.json	64
 C	probes/t3807-percent-operand-cut-order.case.json	84
+C	probes/t3808-m5-aggregate-overflow.case.json	576
+C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -6045,6 +6047,7 @@ F	probes/t3643-imsqrt-grid.case.json	S!M5
 F	probes/t3643-imsqrt-grid.case.json	S!N15
 F	probes/t3643-imsqrt-grid.case.json	S!N5
 F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
+F	probes/t3808-median-geomean-direct-overflow.case.json	Calc!A6
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3
