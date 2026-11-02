@@ -3,7 +3,7 @@ id: T-3582
 title: "Incomplete beta: the white noise in Excel's direct bgrat increment at b != 1/2 (Excel's own Q(b, z) inside bgrat)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
