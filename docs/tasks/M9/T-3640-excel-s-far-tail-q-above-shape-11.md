@@ -51,6 +51,10 @@ Cells this task owns:
 - probes-numeric/t3269-fresh-sweep.case.json (37): Calc!A3, A5, A6, A16, A18, A20, A21, A34, A39, A47, A55, A62, A67,
   A71, A84, A91, A94, A95, A97, A109, A117, A130, A132, A138, A146, A148, A151, A157, A158, A184, A185, A188, A192, A206,
   A224, A229, A231
+- probes/t3638-subnormal-upper-tail.case.json (7, past x = 600 on the normal side of the subnormal cut; T-3638's probe,
+  last-digit misses, ours minus Excel's value): Sheet1!A17 `CHISQ.DIST.RT(1412.0,7)` and A18 `CHIDIST(1412.0,7)`,
+  A23 `CHISQ.DIST.RT(1479.2,21)` and A24 `CHIDIST(1479.2,21)`, A36 `POISSON(3,708.7,TRUE)`, A39 `POISSON(9,737.4,TRUE)`,
+  A42 `POISSON(19,777.9,TRUE)`
 
 ## Acceptance criteria
 - [ ] A model of Excel's switch (or form) above shape 11 and past x = 600 fitted on T-3639's train case and the

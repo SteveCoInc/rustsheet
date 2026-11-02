@@ -707,6 +707,11 @@ mantissa, with relative error +1.92E-20.
 
 Evidence: probes-numeric (on branch `agent/research/T-1778-kernel-map`) `kmyst-erfc-expcol`, `kmyst-erfc-runs1..4`, `kmyst-erfc-stepmap1/2`, `kmyst-erfc-chiruns1..3`
 (excel-graph, 2026-10-18). Status: VERIFIED (structure); the last mismatches are OPEN.
+Below the smallest normal double (a < -708.4) excel-graph shows 0: `EXP(-714.100700559872)` (a true 7.4E-311) and 14
+other accuracy/EXP/s1 points down to `EXP(-1000)` (Calc!A50-A52, A57-A61, A64-A67, A69, A79, A80; seven of them below even
+the smallest subnormal) (excel-graph, 2026-11-01, T-3672). Graph reports a kept subnormal as 0 too, so
+these cells do not tell whether EXP flushes; the worksheet-EXP paragraph below (probes/subnormal-function-results) shows it
+keeps the subnormal.
 Ours: `crates/rustsheet-engine/src/x87_exp.rs` `excel_exp` implements V6 with integer x87 rounding and a double-double
 F2XM1 (T-1916). It reproduces the reference model, scoring 62,013 of 62,100 `EXP(A)` cells of `kmyst-erfc-r5expmap1/2`
 and every `EXP(-(x*x))` cell up to x = 26.55 except the near-ties. The ERFC kernel and, since T-1931, the worksheet EXP
@@ -884,6 +889,14 @@ does (test/statistical/test_subnormal_results.rs). Unprobed and flushed by exten
 (`1 - EXP(-x/2)`, subnormal from x below 4.4E-308) and at 1 degree (an ERF form, never subnormal from a normal x), the
 BETA.DIST cdf at alpha = 1, and BETADIST at beta = 1 off (2, 1). Row 25's #NUM! is GAMMA.DIST's subnormal x / beta
 (statistics.md "GAMMA.DIST's density is #NUM! at a subnormal x / beta", T-2738).
+Subnormal right tail Q(a, x) (T-3638, probes/t3638-subnormal-upper-tail, excel-graph 2026-11-01, column A the call, B its
+`(x)=0` companion): CHISQ.DIST.RT and CHIDIST are a true 0 at 1, 7, 21 and 39 degrees of freedom (true values near 1E-310
+and 1E-316; B1-B4, B13-B16, B19-B22, B25-B28) but KEEP the subnormal at 2 degrees, the exp closed form (B7-B10, FALSE);
+POISSON(k,mean,TRUE) is 0 at k = 3, 9 and 19 (B34, B35, B37, B38, B40, B41) and keeps it at k = 0 (B31, B32). Normal
+neighbours near 1E-300 are kept (FALSE) on every path. Every probed point has x/2 past 600, since a subnormal Q needs
+x/2 above about 700 at any df up to 40, so the 30 < x/2 <= 600 band never reaches a subnormal. Implemented: both
+functions pass the tail through `arithmetic::flush_subnormal` except df 2 / k = 0. See also statistics.md "Excel's far
+upper tail (T-3269)".
 Subnormal tails of functions (T-1143, VERIFIED at the probed arguments only, probes/subnormal-text-and-tail-companions, excel-graph
 2026-10-08): these return a true 0 (companion `(x)=0` TRUE) at `CSCH(710)`, `NORM.S.DIST(k,TRUE)` for k = -37.6, -37.75 and -38,
 `NORM.S.DIST(k,FALSE)` for k = -37.75 and -38, `PHI(-37.7)`, `NORM.DIST(19,0,0.5,FALSE)`, `ERFC(26.7)` and `ERFC.PRECISE(26.7)`.
@@ -1158,9 +1171,13 @@ Probe `probes-numeric/m9-hyperbolic` (268 cells, 255 distinct formulas, oracle: 
   `-ln(-x + sqrt(x*x + 1))`) and `ln(x + sqrt(x*x - 1))` bit-for-bit in IEEE doubles. So small arguments lose precision:
   ASINH(1E-10) = 1.000000082690371E-10 (relative error 8e-8), ASINH(3E-10) = 3.000000247771113E-10,
   ASINH(1E-9) = 1.000000082240371E-9, and ACOSH(1.000000000001) = 1.414276423083533E-6 (about 7e-11 relative below the
-  true value 1.4142764231805424E-6). The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc
-  TRIGONOMETRIC.xlsx sheet ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate
-  these formulas.
+  true value 1.4142764231805424E-6). Below half an ulp of 1 (about 1.1E-16) `x + sqrt(x*x + 1)` rounds to 1 and ASINH is 0, of
+  either sign: `ASINH(1.61207503113639E-17)`, `ASINH(±1E-20)` and every argument down to `ASINH(8.48916619031883E-285)`
+  are 0, and above the cut `ASINH(6.3701662356807E-14)` is 6.372680161348195E-14 (3.9e-4 relative off). Evidence:
+  accuracy/ASINH/s1 Calc!A115, A70, A83, A112, A59 (excel-graph, 2026-11-01, T-3671). The engine's formula gives the same
+  values; Gate A counts these points as R3-eligible but unmarked (decision 0188 R3 needs an owner ruling).
+  The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc TRIGONOMETRIC.xlsx sheet
+  ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate these formulas.
 - Where `x*x` overflows a double (|x| above about 1.3407807929942596E154) ASINH and ACOSH return `#NUM!` (ln of infinity), for
   both signs of ASINH: probes-numeric/t2062-asinh-acosh-overflow (excel-graph, 2026-10-20). ASINH(+-1E154) = +-355.291251501643
   and ASINH(+-1.3E154) = +-355.55361576611045 are still finite; 1.35E154, 1.4E154, 1E200, 1E308 and 1.7976931348623157E308 are
@@ -1224,6 +1241,8 @@ off libm the reciprocals follow them. All 66 pairs of `probes-numeric/t0917-hype
 negatives, including x where TANH or SINH is 1 to 1.8 ulp from the true value) agree bit for bit; the earlier note that the
 exp forms regressed COTH_CSCH_SECH B10, B47 and C54 came from the engine's TANH/SINH misses, not from the reciprocal.
 The division is the worksheet `/` (twice-rounded, like COT/CSC/SEC); no probed cell tells it from a plain division.
+At 0 the division is 1/0, so `COTH(0)` and `CSCH(0)` are `#DIV/0!`: accuracy/COTH/s1 Calc!A68, A70, A74 and A76
+(excel-graph, 2026-11-01, T-3670) and gen-m5/4a971c8636db937d Calc!A289.
 Status: VERIFIED (excel-graph). Implemented in `fn_coth`, `fn_csch`, `fn_sech` (mathematical.rs) on `hyperbolic::{tanh, sinh, cosh}`.
 
 ### SINH and COSH overflow is `#NUM!` at once; SECH there is 0 (T-2169)
@@ -1241,7 +1260,14 @@ gen-m5/38b1b8e51dbad326 Calc!A331, gen-m5/bbbd316c346ce645 Calc!A327, gen-m5/977
 gen-m5/4febabc66cfdf9a1 Calc!A156, gen-m5/6ba5e4aceeef8209 Calc!A316, gen-m5/d9fb1e918971111b Calc!A108, gen-m5/fc81c2f704bef138 Calc!A46,
 gen-m5/ecd1b828aebad1e8 Calc!A185; the full list of 37 cells is in T-2169. A156 still fails, for ARRAYTOTEXT's own reason
 (text.md, T-2250).
-Unprobed: COSH and SECH on (700, 710). libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
+Past the smallest normal double the reciprocals read 0 too: `SECH(709.78)`, `SECH(-709.78)`, `CSCH(709.78)` and
+`CSCH(-709.78)` are 0 (accuracy/SECH/s1 Calc!A83, A84; accuracy/CSCH/s1 Calc!A84, A72, A79; excel-graph, 2026-11-01, T-3670),
+where the true values ±1.1156E-308 are subnormal (as are CSCH(-713.44) and CSCH(-717.64), 2.9E-310 and 4.3E-312). Graph
+reports a kept subnormal as 0 as well and those tables hold no `(x)=0` companion, so whether Excel flushes these is not
+told. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
+correctly rounded double and no flush question arises.
+COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); the cut in
+(709.78, 710) stays unprobed for COSH and SECH as for SINH. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
 Status: VERIFIED (excel-graph) for SINH, COSH and EXP. Implemented (T-2169): `hyperbolic::{sinh,cosh}` overflow to infinity and
 `number_fn` maps a non-finite result to `#NUM!`. That mapping applies to every one-number math function through `number_fn`
 (DEGREES, RADIANS, FACT, the reciprocal trig functions, ...); outside SINH, COSH and EXP it is unprobed (hand: Excel has no
@@ -1411,6 +1437,9 @@ itself, not 1/n: `(-8)^(1/3+8·2^-54)` is -2.0000000000000018.
 - `1/101 ± 28·2^-59` counts and `± 29·2^-59` does not (the 15th digit of 101.000000000000).
 - Literals: `0.333333333333333` counts (-1.9999999999999984), `0.33333333333333` does not; `0.0909090909090909` (1/11) counts,
   `0.142857142857143` (1/7, 1/y = 6.999999999999993) does not.
+  A negative exponent follows the same 15-digit cut, and 1/9 too: `POWER(-0.00297317823308491,-0.142857142857143)` and
+  `POWER(-0.362795461331778,0.111111111111111)` (1/y = 9.000000000000009) are `#NUM!` (accuracy/POWER/s1 Calc!A54, A53;
+  excel-graph, 2026-11-01, T-3672), while `POWER(-8,-0.333333333333333)` counts (-0.5000000000000004, A80).
 - Size: `1/(2^31-3)` and `1/(2^31-5)` count; `1/(2^31-1)`, `1/(2^31+1)`, `1/(2^40+1)` and `1/(2^52+1)` are #NUM!, although
   1/y is exactly the odd integer there. Not probed: negative exponents at the limit (`-1/(2^31-1)`, `-1/(2^31-3)`); the engine
   takes the limit on |1/y|.
@@ -2554,6 +2583,7 @@ gen-m5/b0ecb7ca78460b77 Calc!A320 and the other 10 cells listed in T-2170. Imple
 ATANH(1) and ATANH(-1) are `#NUM!` too, at once: `IFERROR(ATANH(1),"err")` is "err", `ISERR(ATANH(1))` TRUE,
 `SUM(ATANH(1),1)` `#NUM!`; ATANH(0.9999999999999999) is 17.616361586450413 and ATANH(1.0000000000000002) `#NUM!`.
 ACOTH(1) and ACOTH(-1) are `#NUM!`. Evidence: probes/atanh-unit-argument (excel-graph, 2026-10-17, T-1569).
+ACOTH inside (-1, 1) is `#NUM!` as well: `ACOTH(0)` (accuracy/ACOTH/s1 Calc!A68, A69; excel-graph, 2026-11-01, T-3671).
 `f64::atanh` returns an infinity at +-1 (not NaN), so ATANH has its own check beside the macro's NaN mapping.
 
 ## SUBTOTAL 6 over no numbers is 0 (T-2269)

@@ -24,6 +24,8 @@ Every other piece of GAMMA, GAMMALN and LN is already bit-exact or reduces exact
   - K2: `k2_ref.py`, 0.950 / 0.978. Reviewer 3's stored cand9 is 0.993 near 2 (HANDOFF2 §12.1). Structure: stored
     is favoured by the near-2 ladders; the far-only transfer control is still to run.
   - K1: `w4/k1r/plain1.txt`, 0.776 / 0.878. The [1.8,2) dip is 0.50 and looks like a coefficient problem.
+    K1's [1.8,2) dip shows in T-3570's probes-numeric t3570-r5-bpser-lg-aux: its LN(GAMMA(a)) side column at a
+    near 1.85 is off at the 15th digit on 45 cells (owned here, decision 0245): E130, E131, E132, E148, E149, E150, E151, E152, E153, E154, E155, E157, E158, E159, E168, E298, E299, E300, E316, E317, E318, E319, E320, E321, E322, E323, E325, E326, E327, E336, E466, E467, E468, E484, E485, E486, E487, E488, E489, E490, E491, E493, E494, E495, E504.
   - K3: `w5/p5` / `w5/p4/ss_fc.txt`, 0.33. Ladder probes `kmyst-gam-k3l*` are filling, with an unwrap tool ready.
   - (1.5,2]: W6's chain in `w6/data/`, 42.7% exact on R.
 - Engine shipping of the current best models was T-2123, split into T-2128 (GAMMALN) and T-2129 (GAMMA); `gamma_kernels.rs` holds the coefficient arrays to swap.

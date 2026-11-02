@@ -192,6 +192,7 @@ ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 ironcalc-calc/STATISTICAL/POISSON.xlsx	1
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/date-text-mixed-separator-typed.case.json	2
 probes/eng-inumber-grammar-parts.case.json	9
 probes/eng-inumber-grammar-value.case.json	15
 probes/fin-cumipmt-gate-edges.case.json	14
@@ -203,6 +204,8 @@ probes/fin-cumprinc-underflow-ends.case.json	4
 probes/forecast-ets-longer-series.case.json	41
 probes/forecast-ets-optional-settings-shape.case.json	12
 probes/growth-modes.case.json	10
+probes/im-trig-argument-cut.case.json	37
+probes/im-trig-magnitude-grid.case.json	147
 probes/irr-fallback-roots.case.json	7
 probes/irr-guess-edges-2.case.json	4
 probes/irr-guess-edges.case.json	5
@@ -248,16 +251,19 @@ probes/t3406-irr-num-boundary.case.json	76
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
+probes/t3579-rate-residual-nper1.case.json	4
 probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
 probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
+probes/t3638-subnormal-upper-tail.case.json	7
 probes/table-edits/table-convert-names-this-row.case.json	3
 probes/table-edits/table-insert-row-calc-column-above-header.case.json	6
 probes/table-edits/table-insert-row-calc-column-inside-data.case.json	3
 probes/table-edits/table-insert-row-this-row-above-header.case.json	15
 probes/table-edits/table-insert-row-this-row-inside-data.case.json	13
 probes/text-locale-calendars.case.json	1
+probes/text-locale-regional-lcids-2.case.json	21
 probes/xirr-back-dated-stop.case.json	1
 probes/xnpv-empty-values-cell.case.json	1
 probes/yield-below-par-sweep.case.json	3
