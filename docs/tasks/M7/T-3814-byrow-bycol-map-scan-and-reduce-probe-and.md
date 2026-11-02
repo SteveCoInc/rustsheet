@@ -3,7 +3,7 @@ id: T-3814
 title: "BYROW, BYCOL, MAP, SCAN and REDUCE: probe and match a LAMBDA of the wrong arity, optional parameters and eta-reduced functions"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
