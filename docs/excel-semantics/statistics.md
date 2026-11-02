@@ -6215,7 +6215,8 @@ Evidence: gen-m9 (T-3781 arg-pairs batch, excel-graph, 2026-11-01): 157db6a46ed6
 f00b7d6982c4d2fd A430, A436.
 Unprobed: an error-valued scalar against an error data cell with a different error (the batch has only the same error on
 both sides, `SMALL(Data!G9,Data!G9)` `#DIV/0!`), and an error element of a multi-cell data range.
-Ours: the data's error (`#DIV/0!`) in all 30 cells; known failures owned by T-3788.
+Ours: matches since T-3788 (`lift_over_sorted`, sorted_data.rs): only for a data cell reference with a scalar cell reference of non-numeric text. A typed error as the data keeps its error against typed text (`SMALL(#DIV/0!,"abc")` `#DIV/0!`, `SMALL(#NUM!,"")` `#NUM!`; 5830c688df805e71 A463, A469). A typed text scalar against an error data cell is unprobed.
+Implemented in: crates/rustsheet-engine/src/functions/statistical/sorted_data.rs
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3788
 
