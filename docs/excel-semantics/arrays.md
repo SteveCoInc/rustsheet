@@ -986,7 +986,9 @@ T-1326 follow-up (probes/pivotby-followup, 63 PIVOTBY questions over the same Da
 - Cells: errors in values make their cells and totals that error (P!A321); a LAMBDA array result is `#VALUE!` per cell (shown; the cell holds a nested array, see the T-2360 paragraph above), `""`
   where there are no records (P!A341); text results show as text (P!A541). An array relative_to (here a filter column put one
   argument too far) is lifted per element: a 10x1 array (P!A681).
-Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data), and where
+Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data; a scalar text
+`values` with field_headers omitted is `#VALUE!`, see "GROUPBY scalar inputs, option order and scalar filters in the gen-m7
+arg-pairs batch" below, and T-3854 probes the rest), and where
 error keys sort against text, booleans and the blank key (the engine uses `sort_key_cmp`'s order: after booleans,
 before blank).
 T-1323 follow-up (probes/groupby-sort-filter-args, 83 questions summarised in one cell each, excel-graph, 2026-10-16;
@@ -2169,9 +2171,10 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
   has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
-`Model::groupby_args`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
+`Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
 (`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
-`#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. The other rules are known failures in
+`#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
+reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
 eval/baseline/gen-m7.txt.
 Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
 lifted `field_headers`, are UNVERIFIED

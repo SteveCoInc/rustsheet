@@ -1156,12 +1156,12 @@ fn scalar_inputs_and_the_order_of_their_errors() {
         // A one-cell reference to an error as row_fields is #VALUE!, a literal error that error,
         // and an error in values comes first.
         ("=GROUPBY(Z1,Z4,_xleta.SUM)", "#VALUE!"),
-        ("=GROUPBY(Z1,B1:B3,_xleta.SUM,0)", "#VALUE!"),
         ("=GROUPBY(#REF!,2,_xleta.SUM)", "#REF!"),
         ("=GROUPBY(Z1,Z1,_xleta.SUM)", "#DIV/0!"),
         ("=GROUPBY(Z4,Z1,_xleta.SUM)", "#DIV/0!"),
-        // The error row_fields loses to a later option's error.
+        // The error row_fields loses to a later option's error, at the same height too.
         ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
         model._set(&format!("D{}", 3 * i + 1), formula);

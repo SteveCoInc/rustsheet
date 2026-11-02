@@ -33,6 +33,21 @@ struct GroupbyInputs {
     /// `field_headers`, `total_depth`, `sort_order` and `filter_array`, `None` when omitted.
     options: Vec<Option<CalcResult>>,
     relationship: Option<CalcResult>,
+    /// A scalar input Excel rejects after the options' errors ([`Model::groupby_fields`]).
+    scalar: ScalarInput,
+}
+
+/// A scalar `row_fields` or `values` that is `#VALUE!` once the options' errors are past, as far
+/// as the evidence goes: with field_headers omitted (every scalar-pair cell of the gen-m7
+/// arg-pairs batch omits it; a 1x1 array or a given field_headers is unprobed, T-3854).
+#[derive(Clone)]
+enum ScalarInput {
+    /// Neither rule applies.
+    Other,
+    /// `values` is scalar text (`"abc"`, a one-cell reference to text).
+    Text,
+    /// `row_fields` is a one-cell reference to this error.
+    ErrorCell(CalcResult),
 }
 
 /// The GROUPBY options after the checks ([`Model::groupby_args`]).
@@ -319,7 +334,7 @@ impl Model {
         if !(3..=8).contains(&args.len()) {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let (keys, values) = match self.groupby_fields(&args[0], &args[1], cell) {
+        let (keys, values, scalar) = match self.groupby_fields(&args[0], &args[1], cell) {
             Ok(fields) => fields,
             Err(error) => return Err(self.lifted_error(args.get(7), error, cell)),
         };
@@ -338,6 +353,7 @@ impl Model {
             function,
             options,
             relationship,
+            scalar,
         })
     }
 
@@ -356,7 +372,7 @@ impl Model {
         row_fields: &Node,
         values: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<(Elements, Elements), CalcResult> {
+    ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
         // A one-cell reference is read as its value here, so the node tells it from a literal.
         let is_cell =
             |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
@@ -375,12 +391,19 @@ impl Model {
         // A one-cell reference to an error is one error key, `#VALUE!` later
         // ([`Model::groupby_args`]).
         if keys.is_error() {
-            let key = vec![vec![calc_result_to_array_node(keys)]];
-            return Ok((key, self.result_to_array(values, cell)?));
+            let key = vec![vec![calc_result_to_array_node(keys.clone())]];
+            let values = self.result_to_array(values, cell)?;
+            return Ok((key, values, ScalarInput::ErrorCell(keys)));
         }
+        let scalar = if matches!(values, CalcResult::String(_)) {
+            ScalarInput::Text
+        } else {
+            ScalarInput::Other
+        };
         Ok((
             self.result_to_array(keys, cell)?,
             self.result_to_array(values, cell)?,
+            scalar,
         ))
     }
 
@@ -473,6 +496,7 @@ impl Model {
         let (keys, values) = (&inputs.keys, &inputs.values);
         let mut options = inputs.options.iter().cloned();
         let field_headers = options.next().flatten();
+        let field_headers_given = field_headers.is_some();
         let total_depth = options.next().flatten();
         let sort_order = options.next().flatten();
         let filter = options.next().flatten();
@@ -483,17 +507,24 @@ impl Model {
         let depth_given = total_depth.is_some();
         let total_depth = self.total_depth(total_depth, key_columns, cell)?;
         // Values of another height than the keys are #VALUE! (G!AB193, followup G!A1-A41).
-        // One text value is #VALUE! too, even beside one key (`GROUPBY(2,"abc",..)`,
+        // Scalar text values are #VALUE! too, even beside one key (`GROUPBY(2,"abc",..)`,
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
         // one-cell reference to an error ([`Model::groupby_fields`]; `GROUPBY(Data!G9,Data!G1,..)`),
         // both after the options' errors: `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is
         // `#NUM!` (d03de506903f5a35 A11835), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
         // `#DIV/0!` (18ded81711290e85 A1648).
-        let text_value =
-            matches!(values.as_slice(), [row] if matches!(row.as_slice(), [ArrayNode::String(_)]));
-        let error_key =
-            matches!(keys.as_slice(), [row] if matches!(row.as_slice(), [ArrayNode::Error(_)]));
-        if keys.len() != values.len() || key_columns == 0 || text_value || error_key {
+        match (&inputs.scalar, field_headers_given) {
+            (ScalarInput::Text | ScalarInput::ErrorCell(_), false) => {
+                return Err(value_error(cell, "GROUPBY of scalar text or an error cell"));
+            }
+            // Unprobed beside a field_headers (T-3854): at the values' height the error key keeps
+            // its error, as before T-3837; text values are grouped. Another height is #VALUE! below.
+            (ScalarInput::ErrorCell(error), true) if keys.len() == values.len() => {
+                return Err(error.clone());
+            }
+            _ => {}
+        }
+        if keys.len() != values.len() || key_columns == 0 {
             return Err(value_error(
                 cell,
                 "row_fields and values must have the same height",
