@@ -21,7 +21,7 @@ def kf(*lines: str) -> str:
 
 
 def gate(*lines: str, known: list[str] | None = None) -> list[list[str]]:
-    return gov.failures(list(lines), lambda _p: ["M2"], flip=False, has_issue=lambda _p: False, known_failures=known or [])
+    return gov.failures(list(lines), lambda _p: ["M2"], has_issue=lambda _p: False, known_failures=known or [])
 
 
 class Tables(unittest.TestCase):

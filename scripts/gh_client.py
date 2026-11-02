@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""The one GitHub client of the merge scripts (SPEC-0027 section 4, decision 0148).
+"""The one GitHub client of the repository's scripts (decision 0148).
 
-`Client` builds every request the merge lock, the readiness handoff and the merge train make;
+`Client` builds the requests; `make catch-up` and `make renumber` read the PR with it. The merge
+lock, readiness handoff and merge train that made most of the others were deleted (decision 0247,
+T-3827); trimming what they alone used is TODO(T-3866).
 `GhApi` sends them with `gh api` (REST only: the session proxy refuses GraphQL), and `FakeGh`
 answers them from a table for tests. Both subclasses share the request building, so a test of the
 fake exercises the same request shapes the real client sends (scripts/test_gh_client.py).

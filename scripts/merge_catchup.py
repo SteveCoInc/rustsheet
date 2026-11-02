@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Catch up a PR the merge train ejected for a conflict with main, when the conflict is only in
-the eval-gated known-failure lists (decision 0207).
+"""Catch up a PR that conflicts with main (the merge queue removed it, or GitHub reports a
+conflict), when the conflict is only in the eval-gated known-failure lists (decision 0207).
 
   scripts/merge_catchup.py --pr N   # exit 0: pushed; 1: refused (nothing pushed); 2: error
 
 In this checkout, which must have no local changes, it does the following:
 - merges `main` into the PR's branch without committing;
-- refuses any conflict outside the lists CI's eval gate checks (`Repo.checked_baselines`: the
+- refuses any conflict outside the lists CI's eval gate checks (`checked_baselines`: the
   gated suites the eval job runs without a fetch, and the visible-parity lock);
 - takes `main`'s side of each conflicted known-failure list, resolves a conflicted visible-parity
   lock three-way per case from the merge base (`visible_lock.merge_visible`, decision 0219), and
@@ -17,11 +17,10 @@ In this checkout, which must have no local changes, it does the following:
 - commits everything as one merge commit and pushes it to the PR branch (never forced);
 - returns to the checkout's original branch or commit.
 
-When CI is green on the pushed head, `make mark-ready PR=N CARRY=1` re-marks the PR: the carry rule
-(`merge_ready.Repo.carry_problem`) accepts exactly this shape, a merge of `main` whose only
-difference from the plain merge is the content of those lists. The re-record builds and runs the
-PR's merged tree with this session's credentials; forks are refused, so that tree is an agent
-branch of this repository.
+When CI is green on the pushed head, the PR is enqueued again without a re-review (work-loop step
+6.3, decision 0247): the push is a merge of `main` whose only difference from the plain merge is
+the content of those lists. The re-record builds and runs the PR's merged tree with this session's
+credentials; forks are refused, so that tree is an agent branch of this repository.
 """
 
 from __future__ import annotations
@@ -34,13 +33,14 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import gh_client
-import merge_lock
-import merge_ready
 import visible_lock
-from merge_lock import GitError, git
+from gh_client import field_of, text_of
+from git_ops import BASE_BRANCH, REMOTE, ROOT, GitError, git, merge_tree
+from suite_meta import suites_on
 
-ROOT = Path(__file__).resolve().parent.parent
-REMOTE = "origin"
+BASELINE_DIR = "eval/baseline/"
+# `main` is fetched here, for the same reason as the PR head below.
+BASE_REF = f"refs/merge-catchup/{BASE_BRANCH}"
 RERECORD = ("make", "-s", "eval-baseline")
 # The PR head is fetched here, not into a remote-tracking ref a single-branch clone may lack.
 HEAD_REF = "refs/merge-catchup/head"
@@ -55,22 +55,38 @@ def outside_lists(paths: Sequence[str], lists: set[str]) -> list[str]:
     return [p for p in paths if p not in lists]
 
 
-def conflicts_outside(repo: merge_ready.Repo, head: str, main: str) -> list[str] | None:
+def fetch_base(root: Path) -> None:
+    """Fetches `main` into `BASE_REF`, first turning a shallow clone into a full one (T-3499,
+    decision 0201): cloud sessions clone shallow, and a merge base cannot be trusted there."""
+    shallow = git("rev-parse", "--is-shallow-repository", root=root).stdout.strip() == "true"
+    deepen = ("--unshallow",) if shallow else ()
+    git("fetch", "-q", "--no-tags", *deepen, REMOTE, f"+refs/heads/{BASE_BRANCH}:{BASE_REF}", root=root)
+
+
+def checked_baselines(root: Path) -> set[str]:
+    """The lists CI's eval gate checks against the engine, on the `main` that `fetch_base`
+    fetched: `eval/baseline/<suite>.txt` of every suite with `gate = true` and no `[fetch]` (the
+    eval job fetches nothing), and the visible-parity lock (decision 0219). Fetched suites (poi,
+    corpus-bench) and ungated ones are out."""
+    suites = suites_on(root, BASE_REF)
+    # CI names each list after the suite's `name`.
+    return {visible_lock.VISIBLE_PARITY} | {f"{BASELINE_DIR}{s.name}.txt" for s in suites if s.gated and not s.fetched}
+
+
+def conflicts_outside(root: Path, head: str, main: str) -> list[str] | None:
     """The one "does the merge conflict only in the lists?" check, before any merge is made (`make
-    renumber`, the janitor): the paths where merging `main` into `head` conflicts outside
-    `resolvable_lists`; None when the merge cannot be computed. Needs `repo.fetch_base` first."""
-    merged = merge_lock.merge_tree(repo.root, head, main)
-    return None if merged is None else outside_lists(merged[1], resolvable_lists(repo))
+    renumber`): the paths where merging `main` into `head` conflicts outside `resolvable_lists`;
+    None when the merge cannot be computed. Needs `fetch_base` first."""
+    merged = merge_tree(root, head, main)
+    return None if merged is None else outside_lists(merged[1], resolvable_lists(root))
 
 
-def resolvable_lists(repo: merge_ready.Repo) -> set[str]:
-    """The paths whose conflicts the catch-up resolves, on the `main` that `repo.fetch_base`
-    fetched: the eval-gated lists (`Repo.checked_baselines`) and, when `main` has deleted it, the
-    retired json lock a PR from before decision 0219 modified. `make renumber` and the janitor's
-    check use the same set."""
-    main = f"refs/merge-ready/{merge_ready.BASE_BRANCH}"
-    retired = not visible_lock.in_commit(repo.root, main, visible_lock.RETIRED_LOCK)
-    return repo.checked_baselines() | ({visible_lock.RETIRED_LOCK} if retired else set())
+def resolvable_lists(root: Path) -> set[str]:
+    """The paths whose conflicts the catch-up resolves, on the `main` that `fetch_base` fetched:
+    the eval-gated lists (`checked_baselines`) and, when `main` has deleted it, the retired json
+    lock a PR from before decision 0219 modified. `make renumber` uses the same set."""
+    retired = not visible_lock.in_commit(root, BASE_REF, visible_lock.RETIRED_LOCK)
+    return checked_baselines(root) | ({visible_lock.RETIRED_LOCK} if retired else set())
 
 
 def rerecord(root: Path, new_cases: Path) -> int:
@@ -89,7 +105,7 @@ Rewrite = Callable[[Path, str, str], tuple[str, str]]
 
 def plain(root: Path, head: str, main: str) -> tuple[str, str]:
     """The catch-up's own `Rewrite`: the PR head itself."""
-    return head, f"Merge {merge_ready.BASE_BRANCH} (make catch-up, decision 0207)"
+    return head, f"Merge {BASE_BRANCH} (make catch-up, decision 0207)"
 
 
 def catch_up(
@@ -98,33 +114,29 @@ def catch_up(
     record: Callable[[Path, Path], int] = rerecord,
     rewrite: Rewrite = plain,
     record_clean: bool = True,
-    before_push: Callable[[str], None] | None = None,
 ) -> str:
-    """Merges `main` into `branch` as the module docstring says, as one merge commit that the carry
-    rule accepts, and pushes it; returns the pushed head. Raises Refused when it cannot (nothing
-    pushed). The checkout's branch, or detached HEAD, is restored either way. `rewrite` gives the
+    """Merges `main` into `branch` as the module docstring says, as one merge commit, and pushes
+    it; returns the pushed head. Raises Refused when it cannot (nothing pushed). The checkout's branch, or detached HEAD, is restored either way. `rewrite` gives the
     commit the merge starts from (the merge commit's parents are still the PR head and `main`);
-    without `record_clean`, the lists are re-recorded only when one conflicted. `before_push` gets
-    the merge commit's sha before it is pushed."""
+    without `record_clean`, the lists are re-recorded only when one conflicted."""
     branch = gh_client.branch_name(branch)
     if git("status", "--porcelain", "--untracked-files=no", root=root).stdout.strip():
         raise Refused("the checkout has local changes")
     on = git("symbolic-ref", "-q", "--short", "HEAD", root=root, check=False).stdout.strip()
     start = on or git("rev-parse", "HEAD", root=root).stdout.strip()
-    repo = merge_ready.Repo(root)
-    repo.fetch_base()
-    main = f"refs/merge-ready/{merge_ready.BASE_BRANCH}"
+    fetch_base(root)
+    main = BASE_REF
     git("fetch", "-q", "--no-tags", REMOTE, f"+refs/heads/{branch}:{HEAD_REF}", root=root)
-    lists = resolvable_lists(repo)
+    lists = resolvable_lists(root)
     head, main_sha = (git("rev-parse", ref, root=root).stdout.strip() for ref in (HEAD_REF, main))
     try:
         if git("merge-base", "--is-ancestor", main, HEAD_REF, root=root, check=False).returncode == 0:
-            raise Refused(f"{branch} already contains {merge_ready.BASE_BRANCH}")
+            raise Refused(f"{branch} already contains {BASE_BRANCH}")
         start_at, message = rewrite(root, head, main_sha)
         git("checkout", "-q", "--detach", start_at, root=root)
         git("merge", "-q", "--no-ff", "--no-commit", main, root=root, check=False)
         if git("rev-parse", "-q", "--verify", "MERGE_HEAD", root=root, check=False).returncode:
-            raise Refused(f"git could not start merging {merge_ready.BASE_BRANCH} into {branch}")
+            raise Refused(f"git could not start merging {BASE_BRANCH} into {branch}")
         conflicted = git("diff", "--name-only", "--diff-filter=U", root=root).stdout.split()
         outside = outside_lists(conflicted, lists)
         if outside:
@@ -151,8 +163,8 @@ def catch_up(
                 listed.write_text("".join(f"{p}\n" for p in added), encoding="utf-8")
                 if record(root, listed) != 0:
                     raise Refused("make eval-baseline refused (a regression, or the eval did not run)")
-        # The carry rule's visible-parity check, before anything is pushed: a line above main's
-        # for one of main's cases (a PR's sanctioned raise) needs a merge by hand (decision 0219).
+        # The visible-parity check, before anything is pushed: a line above main's for one of
+        # main's cases (a PR's sanctioned raise) needs a merge by hand (decision 0219).
         lock_path = root / visible_lock.VISIBLE_PARITY
         lock = lock_path.read_text(encoding="utf-8") if lock_path.exists() else ""
         main_lock = git("show", f"{main}:{visible_lock.VISIBLE_PARITY}", root=root, check=False).stdout
@@ -162,15 +174,13 @@ def catch_up(
         recorded = git("diff", "--name-only", root=root).stdout.split()
         others = sorted(p for p in recorded if p not in lists)
         if others:
-            raise Refused(f"the re-record changed files the carry rule does not accept: {', '.join(others)}")
+            raise Refused(f"the re-record changed files outside the eval-gated lists: {', '.join(others)}")
         if recorded:
             git("add", "--", *recorded, root=root)
         # One merge commit of the PR head and main: main merged, lists re-recorded (and, from
         # `make renumber`, ids renumbered). A push the branch moved under is refused, not forced.
         tree = git("write-tree", root=root).stdout.strip()
         pushed = git("commit-tree", tree, "-p", head, "-p", main_sha, "-m", message, root=root).stdout.strip()
-        if before_push is not None:
-            before_push(pushed)  # the janitor records the head before it exists, never after
         git("push", "-q", REMOTE, f"{pushed}:refs/heads/{branch}", root=root)
         return pushed
     finally:
@@ -183,20 +193,20 @@ def pr_branch(client: gh_client.Client, pr: int) -> str:
     `main` (forks are refused: the tools build and push the PR's tree with this session's
     credentials)."""
     pull = client.pull(pr)
-    if merge_ready.field_of(pull, "merged") is True or merge_ready.text_of(pull, "state") != "open":
+    if field_of(pull, "merged") is True or text_of(pull, "state") != "open":
         raise Refused(f"#{pr} is not open")
-    if merge_ready.text_of(pull, "head", "repo", "full_name") != merge_ready.text_of(pull, "base", "repo", "full_name"):
+    if text_of(pull, "head", "repo", "full_name") != text_of(pull, "base", "repo", "full_name"):
         raise Refused(f"#{pr} comes from a fork")
-    if merge_ready.text_of(pull, "base", "ref") != merge_ready.BASE_BRANCH:
-        raise Refused(f"#{pr} is not based on {merge_ready.BASE_BRANCH}")
-    return merge_ready.text_of(pull, "head", "ref")
+    if text_of(pull, "base", "ref") != BASE_BRANCH:
+        raise Refused(f"#{pr} is not based on {BASE_BRANCH}")
+    return text_of(pull, "head", "ref")
 
 
 def run_cli(argv: Sequence[str] | None, doc: str, name: str, verb: str, push: Callable[[Path, str], str]) -> int:
     """The command line of `make catch-up` and `make renumber`: `push(ROOT, branch)` on the PR
     `--pr` names (`pr_branch`); exit 0 pushed, 1 refused, 2 error."""
     parser = argparse.ArgumentParser(description=doc, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--pr", required=True, help="the ejected PR's number")
+    parser.add_argument("--pr", required=True, help="the PR's number")
     args = parser.parse_args(argv)
     client = gh_client.from_remote(ROOT)
     if client is None:
@@ -211,7 +221,7 @@ def run_cli(argv: Sequence[str] | None, doc: str, name: str, verb: str, push: Ca
     except (gh_client.GhError, GitError) as error:
         print(f"{name}: {error}", file=sys.stderr)
         return 2
-    print(f"#{pr}: pushed {head}; when CI is green, run make mark-ready PR={pr} CARRY=1")
+    print(f"#{pr}: pushed {head}; when CI is green, enqueue it again (work-loop step 6.3)")
     return 0
 
 
