@@ -134,5 +134,13 @@
     "f": "=CHISQ.INV.RT(0.5,1)"
    }
   }
+ },
+ "skipped": {
+  "Calc": {
+   "A27": {
+    "f": "=CHISQ.INV.RT(0.5,1E10)",
+    "why": "no single value"
+   }
+  }
  }
 }

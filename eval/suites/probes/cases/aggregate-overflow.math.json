@@ -1,0 +1,38 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0e6d0b011cf4e39852902bfd689814cca41864f471dd68acc411d9554c42a794"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=SUM(9E+307,9E+307,-9E+307)"
+   },
+   "A14": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=AVERAGE(9E+307,9E+307)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=AVERAGE(9E+307,9E+307,-9E+307)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "9.0000000000000004979796345719080610879188504783258e+307",
+    "f": "=SUM(9E+307,-9E+307,9E+307)"
+   },
+   "A9": {
+    "t": "e",
+    "why": "a running total is beyond the double range",
+    "f": "=SUM(F1,F2,F3)"
+   }
+  }
+ }
+}

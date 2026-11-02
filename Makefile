@@ -79,12 +79,15 @@ eval-show: build ## Show one case: make eval-show CASE=ironcalc-calc/FINANCIAL/I
 	$(EVAL) show $(CASE)
 
 # ---------------------------------------------------------------- Python tooling
-.PHONY: py-sync py-check py-bindings progress-report
+.PHONY: py-sync py-check py-bindings progress-report eval-math-check
 py-sync:
 	cd tools && $(UV) sync -q
 
 py-check: py-sync ## Lint, type-check and test tools/ (pytest on every core, decision 0233)
 	cd tools && $(UV) run ruff check src tests && $(UV) run ruff format --check src tests && $(UV) run mypy && $(UV) run pytest -q -n auto
+
+eval-math-check: build py-sync ## The probe suites' math sidecars are current: every Gate A one-call cell has a math value or a recorded generator skip, and no entry is stale (T-3588, decision 0243)
+	cd tools && $(UV) run rustsheet-accuracy math --check --suite probes --suite probes-numeric
 
 progress-report: py-sync ## Regenerate docs/progress.md and docs/progress/ from eval/runs/latest/ (after make eval; SPEC-0022, decision 0120)
 	mkdir -p eval/runs/latest
@@ -124,7 +127,7 @@ governance: ## Protected-path changes need a decision record
 
 # ---------------------------------------------------------------- Aggregates
 .PHONY: check check-fast ci
-check: fmt-check clippy test eval-gates py-check py-bindings hygiene typos ## Every gate CI runs on a PR (typos too: CI fails on it)
+check: fmt-check clippy test eval-gates eval-math-check py-check py-bindings hygiene typos ## Every gate CI runs on a PR (typos too: CI fails on it)
 
 check-fast: ## The local pre-push gate: the gates of `make check` the change can break, never the full test suite (scripts/fast_gates.py; BASE=origin/main)
 	targets="$$($(PY) scripts/fast_gates.py --base $(or $(BASE),origin/main))" && $(MAKE) --no-print-directory $$targets

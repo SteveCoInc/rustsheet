@@ -48,6 +48,11 @@
     "v": "0.44351501788053557767196542610634998665995270487924",
     "f": "=BETA.DIST(0.269881043590364,162,432,TRUE)"
    },
+   "A150": {
+    "t": "n",
+    "v": "0.91980652255360678338222108623292104448897324893122",
+    "f": "=BETA.INV(0.994902001456526,4554.003,452)"
+   },
    "A156": {
     "t": "n",
     "v": "0.9923261527475431169585951011671592774946411101078",
@@ -292,6 +297,170 @@
     "t": "n",
     "v": "0.37156610859648216799628735443574114322293429441496",
     "f": "=F.DIST(0.990442641090015,194426,2209,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=BETA.DIST(0.084975577868026,5886,63641.285,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A142": {
+    "f": "=BETA.INV(6.33924715019511e-08,72448.319,5879)",
+    "why": "not converged or too slow"
+   },
+   "A144": {
+    "f": "=BETA.INV(0.843319869640427,40592,191.718)",
+    "why": "no single value"
+   },
+   "A146": {
+    "f": "=BETA.INV(0.608279430110029,2638,4530)",
+    "why": "not converged or too slow"
+   },
+   "A147": {
+    "f": "=BETA.INV(0.999999249260609,9399,304.728)",
+    "why": "not converged or too slow"
+   },
+   "A149": {
+    "f": "=BETA.INV(0.928482481573264,16430.666,20836.342)",
+    "why": "not converged or too slow"
+   },
+   "A151": {
+    "f": "=BETA.INV(0.787464058767015,60711.583,724.899)",
+    "why": "not converged or too slow"
+   },
+   "A152": {
+    "f": "=BETA.INV(0.647896194677065,626,58056.393)",
+    "why": "not converged or too slow"
+   },
+   "A153": {
+    "f": "=BETA.INV(0.390670894975148,8675.818,34392.092)",
+    "why": "not converged or too slow"
+   },
+   "A154": {
+    "f": "=BETA.INV(3.65454504781665e-07,1351,24876)",
+    "why": "not converged or too slow"
+   },
+   "A155": {
+    "f": "=BETA.INV(0.344697636295487,1825.87,74149.078)",
+    "why": "not converged or too slow"
+   },
+   "A158": {
+    "f": "=BETA.INV(0.147965452046883,2015,4371.374)",
+    "why": "not converged or too slow"
+   },
+   "A160": {
+    "f": "=BETA.INV(0.832449456817625,60538.399,11710)",
+    "why": "not converged or too slow"
+   },
+   "A161": {
+    "f": "=BETA.INV(0.28175281623959,7410,2493.922)",
+    "why": "not converged or too slow"
+   },
+   "A164": {
+    "f": "=BETA.INV(2.04995344028596e-06,255,11370)",
+    "why": "not converged or too slow"
+   },
+   "A166": {
+    "f": "=BETA.INV(0.499385195299079,101.133,10176)",
+    "why": "not converged or too slow"
+   },
+   "A170": {
+    "f": "=BETA.INV(0.456670254970253,1433,10689)",
+    "why": "not converged or too slow"
+   },
+   "A171": {
+    "f": "=BETA.INV(0.101432590315546,46617,1261)",
+    "why": "not converged or too slow"
+   },
+   "A172": {
+    "f": "=BETA.INV(2.59369293169918e-05,5956,26150.483)",
+    "why": "not converged or too slow"
+   },
+   "A173": {
+    "f": "=BETA.INV(0.546330421282141,5314,21831)",
+    "why": "not converged or too slow"
+   },
+   "A176": {
+    "f": "=BETA.INV(0.282838252252167,3042.976,3741.209)",
+    "why": "not converged or too slow"
+   },
+   "A178": {
+    "f": "=BETA.INV(0.734422370228277,13296.059,6205)",
+    "why": "not converged or too slow"
+   },
+   "A179": {
+    "f": "=BETA.INV(0.105066099012256,4690.669,8543)",
+    "why": "not converged or too slow"
+   },
+   "A180": {
+    "f": "=BETA.INV(0.2620909924204,7077.665,2237)",
+    "why": "not converged or too slow"
+   },
+   "A29": {
+    "f": "=BETA.DIST(0.418912192480846,66379.302,91710.612,TRUE)",
+    "why": "no single value"
+   },
+   "A34": {
+    "f": "=BETA.DIST(0.609866947853393,4754,3091,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A36": {
+    "f": "=BETA.DIST(0.0382192967292471,3079.719,79529,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A45": {
+    "f": "=BETA.DIST(0.692841433871932,19744.405,8909,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A55": {
+    "f": "=F.DIST(1.00524318470884,21877,157224,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A56": {
+    "f": "=F.DIST(1.00236045291228,6353,29431,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A59": {
+    "f": "=F.DIST(0.992783301389968,7356,15468,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A60": {
+    "f": "=F.DIST(0.996284124033257,44770,60799,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A62": {
+    "f": "=F.DIST(0.986782722533557,7142,41701,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A64": {
+    "f": "=F.DIST(1.00574870209118,8722,173815,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A65": {
+    "f": "=F.DIST(1.02649810983468,173116,1348,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A66": {
+    "f": "=F.DIST(1.00649731123259,15917,143205,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A7": {
+    "f": "=BETA.DIST(0.92245255199541,79376,6723,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A70": {
+    "f": "=F.DIST(0.994133380737818,59025,22488,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A74": {
+    "f": "=F.DIST(1.01959441267063,21103,53648,TRUE)",
+    "why": "not converged or too slow"
+   },
+   "A75": {
+    "f": "=F.DIST(1.00377991979984,88523,20974,TRUE)",
+    "why": "not converged or too slow"
    }
   }
  }

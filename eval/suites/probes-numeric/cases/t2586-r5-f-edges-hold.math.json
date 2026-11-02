@@ -6919,5 +6919,13 @@
     "f": "=F.DIST(A99,2,1,FALSE)"
    }
   }
+ },
+ "skipped": {
+  "Calc": {
+   "B5": {
+    "f": "=F.DIST(A5,1,3,FALSE)",
+    "why": "no single value"
+   }
+  }
  }
 }

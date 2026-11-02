@@ -859,5 +859,29 @@
     "f": "=BETA.INV(1e-10,2.5,100)"
    }
   }
+ },
+ "skipped": {
+  "Calc": {
+   "A112": {
+    "f": "=BETA.INV(0.9999999999,10,0.5)",
+    "why": "no single value"
+   },
+   "A147": {
+    "f": "=BETA.INV(0.9999999999,100,0.5)",
+    "why": "no single value"
+   },
+   "A42": {
+    "f": "=BETA.INV(0.9999999999,1,0.5)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=BETA.INV(0.9999999999,0.5,0.5)",
+    "why": "no single value"
+   },
+   "A77": {
+    "f": "=BETA.INV(0.9999999999,2.5,0.5)",
+    "why": "no single value"
+   }
+  }
  }
 }
