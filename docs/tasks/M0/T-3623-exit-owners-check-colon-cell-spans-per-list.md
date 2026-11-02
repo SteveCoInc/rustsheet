@@ -3,7 +3,7 @@ id: T-3623
 title: "exit_owners: check colon cell spans per list block, not per line"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -43,7 +43,7 @@ and no t3354-f-dist cell appears in either run, so the 304-cell symptom from the
 could not be reproduced on this report (those cells no longer fail, or T-3479's list changed); the unit
 tests are the evidence for the fix. No eval delta.
 
-## Handoff
+## Handoff (resumed)
 Implemented and reviewed (design and security APPROVE on 2ca5894; PR #2841). The change is done: `names_in_span`
 iterates `blocks()` and two unit tests cover both sides. CI `hygiene` fails on governance:
 "protected paths changed without a decision record in docs/decisions/: scripts/exit_owners.py,
