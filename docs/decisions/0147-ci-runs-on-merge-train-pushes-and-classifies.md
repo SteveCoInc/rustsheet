@@ -2,7 +2,8 @@
 
 - **Status:** accepted (2026-10-28, T-2988). It amends 0049 and 0066 and implements SPEC-0027
   section 9 ("CI on train branches"). Nothing pushes to the train branches until `mode` says so
-  (SPEC-0027, Rollout), so until then only the PR classification change is in force.
+  (SPEC-0027, Rollout), so until then only the PR classification change is in force. Amended by
+  0249: a push to `main` runs only the eval report, not every gate.
 - **Context:**
   - The merge train (SPEC-0027) tests the exact sha it builds on `merge-train/current` or
     `merge-train/shadow`, so CI must run on pushes to those branches. Today only `main` triggers
