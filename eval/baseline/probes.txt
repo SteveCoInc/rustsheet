@@ -449,7 +449,7 @@ C	probes/eng-inumber-grammar.case.json	260
 C	probes/eng-inumber-reading.case.json	26
 C	probes/eng-later-argument-lift.case.json	75
 C	probes/eng-leading-plus-oct-bool.case.json	65
-C	probes/eng-number-text-group-comma-edges.case.json	54
+C	probes/eng-number-text-group-comma-edges.case.json	66
 C	probes/error-arg-vs-range-check.case.json	10
 C	probes/error-literals-new.case.json	18
 C	probes/error-literals-new2.case.json	15

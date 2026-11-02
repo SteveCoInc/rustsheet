@@ -346,7 +346,8 @@ fn parse_percent_or_currency(
     }
 
     // A leading percent sign shifts the number after it: `%1` is 0.01, `%-1` -0.01, `% 1` 0.01,
-    // while `%1%` is refused (probes/eng-inumber-grammar-value B3, eng-number-text-group-comma-edges).
+    // while `%1%` is refused (probes/eng-inumber-grammar-value B3, eng-number-text-group-comma-edges A15-A18). Typed cell input
+    // shares this reader and is unprobed (T-3835).
     if let Some(p) = value.strip_prefix('%') {
         let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
         let format = if options.is_scientific {
@@ -524,8 +525,9 @@ fn parse_number(
         position += 1;
     }
     // Excel: every group after a comma has three or more digits, so `1,0000` is 10000 and
-    // `1,000,0000` is 10000000, while `1,`, `1,00`, `1,000,00` and `1,000,` are refused; a lone
-    // `0` before the first comma only takes a group of exactly three (`0,0000` is #VALUE!).
+    // `1,000,0000` is 10000000, while `1,`, `1,00`, `1,000,00` and `1,000,` are refused; an integer
+    // part of only zeros before the first comma is refused whatever the group (`0,0000`, `0,000`,
+    // `00,000` are #VALUE!, `01,0000` is 10000).
     // Probes eng-inumber-grammar-value, eng-number-text-group-comma-edges; coercion.md "Group
     // commas and a leading percent sign".
     for (n, index) in group_separator_index.iter().enumerate() {
@@ -535,7 +537,7 @@ fn parse_number(
             .unwrap_or(chars.len());
         let group = end - index;
         let zero_lead = n == 0 && chars[..*index].trim_start_matches('0').is_empty();
-        if group < 3 || (zero_lead && group != 3) {
+        if group < 3 || zero_lead {
             return Err("Cannot parse number".to_string());
         }
     }

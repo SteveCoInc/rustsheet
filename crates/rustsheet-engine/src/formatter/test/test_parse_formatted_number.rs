@@ -464,7 +464,7 @@ fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
         assert_eq!(parse(text, &[]).unwrap().0, value, "{text}");
     }
     for text in [
-        "1,", "1,00", ",1", "2,0", "1,000,00", "1,,000", "0,0000", "%1%", "2%%",
+        "1,", "1,00", ",1", "2,0", "1,000,00", "1,,000", "0,0000", "0,000", "00,000", "%1%", "2%%",
     ] {
         assert!(parse(text, &[]).is_err(), "{text}");
     }
