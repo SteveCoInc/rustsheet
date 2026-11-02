@@ -3,7 +3,7 @@ id: T-3698
 title: "RATE on a flat secant: when Excel restarts from the older iterate instead of holding"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
