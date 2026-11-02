@@ -102,6 +102,23 @@ open, from an engine-faithful replica (Python, the engine's twice-rounded operat
   run in Excel; test a restart from the flat point (offset 1E-3 or the guess offset) or the fallback from v = 0 at
   that point, scored on class (a) only, before touching class (b).
 
+2026-11-02 22:40 UTC, opus run (time-boxed experiment; no engine change kept): tried the "next step" above, a
+restart of the secant at a flat step (class a), as a temporary switch in `irr_secant`. Scored cell by cell with
+`rustsheet-eval show` (passed cells of t3406 / t3347 holdout / t3478 wide / t3411 fresh / fresh-2):
+- main (cap 50): 68 / 101 / 229 / 80 / 76. Cap 213, no restart: 70 / 106 / 251 / 88 / 83.
+- At a flat secant (f1 == f0), restart with d0 = the flat point and d1 = d0 -+ 1E-3 (the start rule), up to
+  1 or 3 times, steps counted on: cap 50 gives 68..70 / 101 / 229 / 80 / 76; cap 213 gives 70..72 / 106 / 250..251 /
+  88 / 83. The same restart with the step count reset (fresh 50 steps per restart, 1 or 5 restarts): 68..70 / 101 /
+  229..230 / 80 / 76.
+- At a flat secant, restart from d = 0 (v = 1, r = 0) once: cap 50 68 / 101 / 227 / 80 / 76; cap 213 70 / 106 / 248 /
+  88 / 84.
+- So a restart at the flat point, from the flat point or from r = 0, does not reproduce Excel's returns on class
+  (a): at most +2 cells on t3406, and it loses cells on t3478. Refuted. Do not repeat.
+- Next step, not yet tried: class (a)'s first step jumps d from about -2 to -1.7E+7 (|NPV| up to 1E+290). Test
+  whether Excel clamps or rejects that far first step, for example by treating |NPV| above a bound or a
+  non-representable discount power (T-3407's `#DIV/0!` sign) as a failed trial and halving the step toward d1.
+  Score that on class (a) only, cell by cell, at cap 213.
+
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
 - Branch head: the claim commit plus these notes. Nothing is implemented; CI and reviewers have not run.
