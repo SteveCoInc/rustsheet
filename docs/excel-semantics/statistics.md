@@ -6328,7 +6328,7 @@ A range as the percent lifts TRIMMEAN over it, one result per cell: `TRIMMEAN("2
 a FALSE cell percent is 0, the non-numeric text "TRUE" `#VALUE!`, while the numeric text "1" and TRUE read as 1, out of range.
 Evidence: gen-m9/4fc6bdaec0e5583d (T-3781 arg-pairs batch, excel-graph, 2026-11-01) A199-A253 and A391-A439 (the 15 cells in
 T-3790), A259-A385 for the non-numeric text.
-Ours: `#VALUE!` for the numeric text and boolean literals; known failures owned by T-3790.
+Ours: matches (T-3790): `trimmean.rs` reads a non-cell numeric-text or boolean literal as one number; FALSE as 0 is unprobed.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3790
 
