@@ -3,10 +3,10 @@ id: T-3623
 title: "exit_owners: check colon cell spans per list block, not per line"
 milestone: M0
 lane: harness
-status: done
+status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -42,3 +42,13 @@ not). `make exit-owners MILESTONE=M9` on a fresh `make eval` reports 266 unowned
 and no t3354-f-dist cell appears in either run, so the 304-cell symptom from the 2026-11-02 triage
 could not be reproduced on this report (those cells no longer fail, or T-3479's list changed); the unit
 tests are the evidence for the fix. No eval delta.
+
+## Handoff
+Implemented and reviewed (design and security APPROVE on 2ca5894; PR #2841). The change is done: `names_in_span`
+iterates `blocks()` and two unit tests cover both sides. CI `hygiene` fails on governance:
+"protected paths changed without a decision record in docs/decisions/: scripts/exit_owners.py,
+scripts/test_exit_owners.py" (run 41492397079). A sonnet run may not add a decision record, so next:
+create one with `make new-decision TITLE="..."` (cite decision 0159 and the per-block rule for spans), push,
+re-run the reviewers the change concerns, then enqueue. Also note the Outcome: the 304-cell t3354-f-dist
+symptom did not reproduce on a fresh `make eval` (266 unowned before and after); the Outcome says `status: done`
+text, reset to todo here until the decision lands.
