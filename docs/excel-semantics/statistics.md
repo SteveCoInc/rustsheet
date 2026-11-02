@@ -2991,6 +2991,22 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   within 2 ulp) follow x at a0 near 0.3 (model 1 ulp high), and partly follow a0 at 0.5 and 0.7, where no constant
   L shift fits (T-3769). The port needs Excel's GAMMALN exact at the shape
   arguments; the engine model is exact on 274 of 771 in [1, 2) and 1,738 of 2,585 below 1 (t2464-r2-bpser-small-gl).
+- T-3570's second probe (docs/research/t2464/r5-bpser-lg) stepped a0 by single ulps at seven centers, three b0 and 8 x each, with
+  Excel's GAMMALN columns beside the cells. Over this wider a0 range no single lnΓ(a0) form is exact everywhere:
+  - GL(a0) = fl(GAMMALN(fl(1 + a0)) - LN(a0)) (exact on 360 of 360 a0 below 0.7, as T-1941's GAMMALN entry says) is
+    bpser's g at a0 0.15 and 0.3 (in the best set on 143 of 144 a0). It also leads from 0.7 up.
+  - Just above 0.5 (GAMMALN's (1.5, 2] side), fl(gamln1(a0) - LN(a0)) is right more often: 19 a0 against 7.
+  - Nothing tried wins on 0.4-0.6: correctly rounded, LN(GAMMA), the kernel on t = a0 itself, or K3 kept past 1.5.
+  - On a0 where the two give different L, GL wins on 52 and gamln1 on 36 (tune); on the hold-out half it is 51 to 19.
+    So GL stays the best single form.
+- The constant-L ceiling also holds for a0 < 1 < b0 < 8: the best g per a0 makes 3,355 of 4,032 cells exact (66% at
+  a0 = 0.15, 82-89% from 0.3 up). The misses are ±1-2 ulp, vary with x at fixed a0 and are not product near-ties, so
+  the piece sits in alx, s or EXP, not in L.
+  - It is not the b < 1 first factor (1 - b)·x.
+  - It is not a register-held series (s, c or t unstored, or SSE doubles).
+  - It is not LN(s) folded into EXP's argument, a 1/a split of the product, or x^a times a constant. Each of these is
+    at or below 264 of 432, against the model's 299.
+  - Follow-up: T-3771.
 - An isolated miss at 1 < b0 < 8 (gap triage 2026-10-30, T-3331): `BETA.DIST(0.1,2.5,5,TRUE)` (probes-numeric/
   m9-beta-dist-a2p5 Calc!A31, a bpser point: b0·x0 = 0.5) is 0.05533381860850995 in Excel and 0.055333818608509895 in
   the engine, visibly off. Against a 60-digit mpmath value, 0.055333818608509839059, Excel is 16.1 ulp high and the
@@ -2999,7 +3015,8 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
 Evidence: probes-numeric t2464-r2-bpser-small-shapes, -runs, -tiny, -tiny2, -gl, t2464-w2f-*, t3570-r5-bpser-lngamma-beta,
 -gl (excel-graph 2026-11-01); docs/research/t2464/r5-bpser-lngamma (`score_forms.py`, `residual.py`, `lshift.py`); docs/research/t2464/
 w3-series (`model.py`, `accum2.py`, `control2.py`), r2-bpser-small (`lib.py`, `zforms.py`, `bscore.py`,
-`tiny_noapser.py`), verify-r2-bpser-small/verify.out, old_sets.out.
+`tiny_noapser.py`), verify-r2-bpser-small/verify.out, old_sets.out; probes-numeric t3570-r5-bpser-lg (5,043 cells) and
+t3570-r5-bpser-lg-aux (2,520) with docs/research/t2464/r5-bpser-lg (excel-graph, 2026-11-01).
 Implemented in: `functions/statistical/bratio/bpser.rs` `bpser` (T-2505) through `ported_tails`, for BETA.DIST's cdf
 (`beta_dist_lower_tail`), F.DIST, F.DIST.RT and FDIST (`fisher.rs::f_tail`), BINOM.DIST's cdf and NEGBINOM.DIST's cdf
 (`binom.rs`; T-2847), and F.TEST's tail with its own L (`f_test_tail.rs`, T-2681): the w3 series and
@@ -3042,7 +3059,7 @@ TOMS `betaln` at every shape (half-integers included) scores bit-exact +150, vis
 A9 (A18 is now within 4 ulp): T-2924's k plus whole fl(a·LN x) steps, as above.
 Status: PARTIAL (excel-graph): within 15 digits in every bpser sub-branch of the shapes probe (2,861 of 2,868 at
 b0 >= 8, all others); bit-exact 52-75%; both > 1 with max > 8 a provisional form (T-3007)
-Tasks: T-2505, T-2512, T-2122, T-3007, T-3331
+Tasks: T-2505, T-2512, T-2122, T-3007, T-3331, T-3570, T-3771
 
 ## Incomplete beta at a shape near the double range: no overflowing fl(a LN x), and bpser is #NUM! once 1/B overflows (T-3007)
 Rule: Excel never evaluates a bpser whose fl(a·LN x) overflows: Excel for the web refuses a workbook that holds
@@ -3364,7 +3381,8 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
   (cumulative incomplete-gamma last digits on the probes-numeric sweeps; its owned-cells list names this probe).
 - Open: D to the bit (T-3383); the n >= 10 exponent-binade leftover of L140's n-term bup (T-3568, engine port T-3712); algdiv for b0 >= 8 (about 1 unit off TOMS, in bpser and the density; in the density it looks like rounding noise of a few ulps, not
   a smooth approximation error, T-3383 r4-algdiv); lnΓ(a0 < 1) in L
-  and the 55-84% ceiling of b < 1 bpser shapes; bfrac's fraction (sd 3.8 units) and bup's arithmetic in bup+bgrat;
+  and the bpser ceiling (55-84% for b < 1 shapes, and 66-89% for a0 < 1 < b0 < 8 too; T-3570 found no single lnΓ(a0)
+  and no series or composition variant that lifts it, T-3771); bfrac's fraction (sd 3.8 units) and bup's arithmetic in bup+bgrat;
   a0 < 1e-15 at 0.04 <= y < 0.25 (Excel 1e-14 to 3.8e-13 relative off the truth, in bgrat's incomplete-gamma ratio; T-3719);
   the densities after T-2513's round 3 (each in its entry): Loader's constant residual of 2-4 units and bd0's series,
   the T density's per-df constant, BINOM's interior pmf, NEGBINOM's final step, the F density, and the density's
@@ -3389,7 +3407,7 @@ verify-r2-impact/v2_plan.out; T-2512: probes-numeric t2512-r3-bgrat-qgamma, -spl
 `bupdens.out`, `engdens.out`, `epsscan.out`, `bgld.out`, `ident.out`, `zstore.out`, `split.out`, `qsize.out`); T-3568: probes-numeric t3568-r5-bup-tune, -hold, -fresh, -terms-tune, -terms-hold and r5-bup
 (RESULTS.md, `score_hold.out`, `resid2_*.out`, `powforms2_*.out`, `terms_*.out`, `fsplit.out`, `tbup.out`).
 Status: PARTIAL (excel-graph)
-Tasks: T-2464, T-2504 to T-2511, T-2512, T-2513, T-2585, T-2586, T-3382, T-3383, T-3568, T-3712
+Tasks: T-2464, T-2504 to T-2511, T-2512, T-2513, T-2585, T-2586, T-3382, T-3383, T-3568, T-3570, T-3712, T-3771
 
 ## Incomplete beta in the ironcalc-calc workbooks: F tails and densities (T-0970)
 Rule (VERIFIED on the cells named): Excel's F.DIST.RT is the upper tail of the incomplete beta,
@@ -5405,7 +5423,21 @@ whole df/2 failed the same way, with the same edges (T-3505, probes/t3505-gamma-
 all but 5 are within 15 digits of Excel. The 5 are GAMMA.INV at p = 1E-300 (A1, A13, A85, A97, A145, shapes 2.9E5
 to 3.5E7), where Excel is not the true quantile (up to 2.6E-14 off the 50-digit math at A97, the deep lower-tail root of T-3294).
 Status: VERIFIED (excel-graph) for the cells; the band's edges and the closed form's terms are fits (UNVERIFIED as forms)
-Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505
+Excel's band is not the engine's (T-3530 fit audit, probes-numeric/fit-audit-t3070-*, excel-graph 2026-10-31, scored on
+main after T-3350):
+- Below the huge shape, Excel is already `#NUM!` at a tiny p, from shape 6E8 at p = 1E-300, 7E8 at 1E-250 and 9E8 at
+  1E-200 (fit-audit-t3070-shape-min A19, A22, A23, A25, A26, A28, A29, A30; A20, A21, A24 and A27 are numbers), where
+  the engine gives the true
+  quantile. At 1.2E8 and p = 1E-300 Excel is a number, 2.5E-14 off the math.
+- In the upper tail at shapes 3E9 to 5E9 Excel is `#NUM!` inside the engine's band (fit-audit-t3070-band-upper A1 to A13,
+  8 cells). In the lower tail at 7E9 to 9E9 Excel is a number where the engine is `#NUM!` (A26, A32, A33, A38, A39), and
+  at 1.1E10 the reverse (A47 to A49).
+- T-3350's lower edge separates all 42 cells of fit-audit-t3070-band-lower.
+- The closed form holds exactly where the density at the start is below the smallest normal double: 59 of 59 cells
+  of fit-audit-t3070-closed-form-cut at shapes 1.3E10 to 2.3E10, ln density at the start -760 to -695, are within 15
+  digits of Excel.
+So `HUGE_SHAPE_MIN` and the upper edge are not Excel's cut points (T-3409 models the search).
+Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505, T-3530
 
 ## GAMMA.DIST at a huge shape: #NUM! for a density at a tiny x, for the cdf above about 1E+76 (T-2435)
 Rule: GAMMA.DIST's density is `#NUM!`, not 0, where the shape is large and x/beta tiny:
@@ -5424,9 +5456,24 @@ Ours (T-3271): a computed 0 is `#NUM!` for a density at x/beta below 1 with (alp
 smallest `#NUM!` seen). Between the bracket ends (density 6.9E+10 to 6.9187E+11, cdf 1E+40 to 1.85E+76) the cut is
 UNVERIFIED: excel-graph refused workbooks holding those cells (FileCorruptTryRepair, T-2982).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
+The density cut's variable is not (alpha - 1)·(-LN(x/beta)) (T-3530 fit audit, probes-numeric/fit-audit-t3271-density-cut,
+50 cells): `GAMMA.DIST(0.5,1E+15,1,FALSE)` (A43, product 3.5E14) is 0, while `GAMMA.DIST(2.17173678289098E-300,1E+9,1,FALSE)`
+(A9, product 6.9E11) and `GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)` (A48, 6.77E11) are `#NUM!`, and the scale does not count
+(`GAMMA.DIST(1E-200,1E+9,1E+100,FALSE)`, A45, x/beta 1E-300, is 0). At the probed shapes 1E8 to 1E15 every cell,
+t2435's included, fits `#NUM!` where x/shape is below a cut between 2.17E-309 and 1E-308, else 0: about where x/shape
+stops being a normal double (UNVERIFIED as a form, T-3316). The rule does not explain fit-audit-t3271-cdf-cut A41
+`GAMMA.DIST(2,1.85E+76,1E+10,FALSE)` and A42 `GAMMA.DIST(2,1E+70,1E+10,FALSE)`, `#NUM!` densities at x/shape about
+1E-76 and 2E-70 (the engine agrees there), so from a shape of 1E70 something else makes the density `#NUM!`. The
+engine is wrong-type at A9, A43 and A48.
+The cdf cut is not a shape cut either (fit-audit-t3271-cdf-cut, filled one cell per workbook, 38 of 42 cells; A5, A8,
+A31 and A33 have no value): at
+x = 2, beta = 1E10, Excel is `#NUM!` from shape 1E60 to 1.8E76 but 0 at 1E76 and 1.84E76; at beta = 1 it is 0 for
+shapes 1E60 to 1E200 (x = 1 and 1E50), and for x = 1E-100 it is 0 except at shape 1.85E76 (`#NUM!`). A refill in
+fresh workbooks reproduced A4, A12 and A18. The engine has the wrong type at 21 of the 38 (UNVERIFIED rule, T-3316).
 Status: VERIFIED (excel-graph) at the probed cells; the cut positions inside each bracket UNVERIFIED
-Tasks: T-2435, T-1891, T-2982, T-3271
-Implemented in: `huge_shape_num_error`, `HUGE_SHAPE_DENSITY_CUT`, `HUGE_SHAPE_CDF_CUT`
+Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530
+Implemented in: `huge_shape_num_error`, `HUGE_SHAPE_DENSITY_CUT`, `HUGE_SHAPE_CDF_CUT` (both rules refuted by the T-3530
+fit audit; T-3316 replaces them)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
