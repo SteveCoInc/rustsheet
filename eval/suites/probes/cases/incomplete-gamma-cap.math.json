@@ -14,5 +14,25 @@
     "f": "=POISSON.DIST(337672413111,337672000000,TRUE)"
    }
   }
+ },
+ "skipped": {
+  "Sheet1": {
+   "E14": {
+    "f": "=CHISQ.INV(0.26774,1312890000)",
+    "why": "no single value"
+   },
+   "E15": {
+    "f": "=CHISQ.INV(5.6221E-26,4715100000)",
+    "why": "no single value"
+   },
+   "E19": {
+    "f": "=GAMMA.INV(0.5,1E9,1)",
+    "why": "no single value"
+   },
+   "E5": {
+    "f": "=GAMMA.INV(0.5,1E300,1E-300)",
+    "why": "no single value"
+   }
+  }
  }
 }

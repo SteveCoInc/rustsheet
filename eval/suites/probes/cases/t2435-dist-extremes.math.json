@@ -13,6 +13,31 @@
     "why": "pmf at k = 0 with p = 1 (Excel's LN(1 - p) closed form)",
     "f": "=BINOM.DIST(0,2,1,FALSE)"
    },
+   "A103": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(0,1.5,2,FALSE)"
+   },
+   "A104": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(0,1.0000001,2,FALSE)"
+   },
+   "A105": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(1,2,1.5,FALSE)"
+   },
+   "A106": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(1,2,1.0000001,FALSE)"
+   },
+   "A107": {
+    "t": "n",
+    "v": "5.0512994632337542140096339574931224665237216316952e-30101",
+    "f": "=BETA.DIST(0.5,0.5,1E+5,FALSE)"
+   },
    "A11": {
     "t": "n",
     "v": "1.0",
@@ -58,10 +83,55 @@
     "v": "1.0",
     "f": "=BINOM.DIST(2,2,1,FALSE)"
    },
+   "A59": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,0.5,1E+5,FALSE)"
+   },
    "A6": {
     "t": "n",
     "v": "1.0",
     "f": "=BINOM.DIST(2,2,1,TRUE)"
+   },
+   "A60": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,0.5,1,FALSE)"
+   },
+   "A61": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,0.5,2,FALSE)"
+   },
+   "A62": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,1,2,FALSE)"
+   },
+   "A63": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(0,2,2,FALSE)"
+   },
+   "A64": {
+    "t": "e",
+    "why": "density at x = 1 with beta <= 1",
+    "f": "=BETA.DIST(1,2,0.5,FALSE)"
+   },
+   "A65": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(0,0.5,1E+5,TRUE)"
+   },
+   "A66": {
+    "t": "n",
+    "v": "1.7841218859990197568981125597924628850133122386259e+152",
+    "f": "=BETA.DIST(1E-300,0.5,1E+5,FALSE)"
+   },
+   "A67": {
+    "t": "e",
+    "why": "density at x = 1 with beta <= 1",
+    "f": "=BETA.DIST(1,2,1,FALSE)"
    },
    "A7": {
     "t": "n",
@@ -87,6 +157,14 @@
     "t": "n",
     "v": "4.5000000027000003386577399782969081265868882998802e-900",
     "f": "=F.DIST(1E-300,6,1E+10,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "S": {
+   "A110": {
+    "f": "=BETA.INV(1E-20,1E-300,30)",
+    "why": "no single value"
    }
   }
  }

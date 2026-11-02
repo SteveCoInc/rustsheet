@@ -331,6 +331,54 @@
     "f": "=F.INV(0.3,5,1E6)",
     "why": "not converged or too slow"
    },
+   "A133": {
+    "f": "=BETA.INV(0.5,2.5,5E9)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=BETA.INV(0.5,3,5E9)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=BETA.INV(0.025,2.5,5E9)",
+    "why": "no single value"
+   },
+   "A139": {
+    "f": "=BETA.INV(0.025,3,5E9)",
+    "why": "no single value"
+   },
+   "A142": {
+    "f": "=BETA.INV(0.975,5E9,2.5)",
+    "why": "no single value"
+   },
+   "A144": {
+    "f": "=BETA.INV(0.975,5E9,3)",
+    "why": "no single value"
+   },
+   "A145": {
+    "f": "=BETA.INV(1E-6,2.5,5E9)",
+    "why": "no single value"
+   },
+   "A147": {
+    "f": "=BETA.INV(1E-6,3,5E9)",
+    "why": "no single value"
+   },
+   "A150": {
+    "f": "=BETA.INV(0.999999,5E9,2.5)",
+    "why": "no single value"
+   },
+   "A152": {
+    "f": "=BETA.INV(0.999999,5E9,3)",
+    "why": "no single value"
+   },
+   "A153": {
+    "f": "=BETA.INV(0.3,2.5,5E9)",
+    "why": "not converged or too slow"
+   },
+   "A155": {
+    "f": "=BETA.INV(0.3,3,5E9)",
+    "why": "not converged or too slow"
+   },
    "A23": {
     "f": "=F.INV(0.025,5,1E10)",
     "why": "not converged or too slow"
