@@ -159,8 +159,9 @@ parses, as Excel's does, and 257 or more is refused (`MAX_PARENTHESES`, T-3191, 
 `=(1+((...)))`) count together: more than 256 open at once is refused. Like the sign cap below, the
 refusal is Excel's syntax, not a resource limit (`TOO_MANY_PARENTHESES_MESSAGE`, T-3689): typed, the
 formula does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`), so the cell keeps its content, as Excel's
-PATCH 400 leaves A1 blank (probes/t3172-paren-257-typed, t3266-nested-paren-257-typed); stored, it
-loads as a parse error. Excel counts split runs
+PATCH 400 leaves A1 blank (probes/t3172-paren-257-typed, t3266-nested-paren-257-typed); stored in a
+cell, it makes the xlsx importer refuse the workbook (`XlsxError::Workbook`, T-3869), as Excel for the
+web refuses it (createSession 501, below). Excel counts split runs
 the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). A group holding more than the group inside it
 (`((x)+1)`) still costs an operand's two levels. The first operand of a group's content, unless a
 group itself, reserves one and a half levels of the parser's bound instead of two, and a call there
@@ -173,7 +174,10 @@ rule below: every sign counts, a plus folded into a number too, and the operand 
 literal written directly after the signs, 2 for a parenthesis or a function call (a LAMBDA, a called
 name and a called group are unprobed and cost 2 too), 1 otherwise; one more sign is refused. Typed, the
 refusal is a formula that does not parse (`TOO_MANY_SIGNS_MESSAGE`, not a resource limit), so the cell
-stays blank, as Excel's PATCH 400 leaves it; stored, it loads as a parse error. Signs in
+stays blank, as Excel's PATCH 400 leaves it; stored in a cell, the importer refuses the workbook, as
+Excel does (T-3869). A defined-name body or a conditional-format or data-validation formula past
+either cap still loads as a parse error: Excel's handling of those is unprobed (the call cap's
+refusal there was probed separately, T-3143, T-3263). Signs in
 several runs on one path (`=-(-(...))`) count together, as in Excel. A group whose content is exactly a
 signed group (`(-(x))`, whitespace around the signs allowed) is read in the same loop as a run of
 parentheses and adds no depth level, as a merged run does: the evaluator walks signs and groups in one

@@ -1,9 +1,10 @@
 //! Excel's cap on nested function calls, applied on load wherever a formula is stored: cells,
 //! defined-name bodies, and conditional-format and data-validation rules (syntax.md "Formula
-//! nesting depth cap"; T-3097, T-3143, T-3263).
+//! nesting depth cap"; T-3097, T-3143, T-3263), and its parenthesis and sign caps, applied to cell
+//! formulas (T-3869).
 
 use rustsheet_engine::expressions::{
-    parser::{Parser, MAX_NESTED_CALLS},
+    parser::{Node, Parser, MAX_NESTED_CALLS},
     types::CellReferenceRC,
 };
 
@@ -20,6 +21,19 @@ pub(super) fn refuse_too_many_calls(parser: &Parser, what: &str) -> Result<(), X
         )));
     }
     Ok(())
+}
+
+/// The workbook error for a cell formula (`what`, e.g. `Formula in Sheet1!A1`) whose tree is a
+/// parse error past Excel's 256-parenthesis or 1,024-sign cap ([`Node::syntax_cap_error`]): a
+/// stored formula past either makes Excel for the web refuse the workbook (createSession 501
+/// `FileCorruptTryRepair`; probes/t3172-paren-257, t3172-minus-*, t3266-*, T-3172, T-3266; syntax.md
+/// "Formula nesting depth cap"). Only cell formulas were probed; a defined-name body or a rule
+/// formula past either cap still loads as a parse error (unprobed).
+pub(super) fn refuse_past_syntax_cap(tree: &Node, what: &str) -> Result<(), XlsxError> {
+    match tree.syntax_cap_error() {
+        Some(message) => Err(XlsxError::Workbook(format!("{what}: {message}"))),
+        None => Ok(()),
+    }
 }
 
 /// Refuses the workbook when a formula conditional format (`<cfRule type="expression">`) or a
