@@ -22,6 +22,9 @@ T-2899 probes (excel-graph 2026-11-01, docs/excel-semantics/references.md "Struc
 - table-delete-all-columns (delete B:C, the whole table): every reference is `#REF!`, `ISREF(Sales)` FALSE, `COUNTA(Sales[Region])` 1;
   the engine matches in value but FORMULATEXT prints `=SUM(S!#REF!)` where Excel prints `=SUM(#REF!)`.
 Code: table_edits.rs `edit_columns`, `column_span`; stringify/structured.rs `deleted_column`.
+- Cells (`make eval-show CASE=<case>`):
+  - probes/table-edits/table-delete-columns-straddle-left.case.json (6): F!A2, A3, A4, A6, A8, A9
+  - probes/table-edits/table-delete-columns-straddle-right.case.json (4): F!A3, A4, A6, A9
 
 ## Acceptance criteria
 - [ ] The three probes above (eval/suites/probes/cases/table-edits/) pass and leave eval/baseline/probes.txt.
