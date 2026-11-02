@@ -3,7 +3,7 @@ id: T-3817
 title: "CONVERT unit names: sweep which unit and prefix strings Excel accepts (prefixes per unit, binary prefixes, time units, powers, case and aliases)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
