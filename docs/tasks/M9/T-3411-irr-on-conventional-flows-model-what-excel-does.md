@@ -102,7 +102,7 @@ open, from an engine-faithful replica (Python, the engine's twice-rounded operat
   run in Excel; test a restart from the flat point (offset 1E-3 or the guess offset) or the fallback from v = 0 at
   that point, scored on class (a) only, before touching class (b).
 
-2026-11-02 22:40 UTC, opus run (time-boxed experiment; no engine change kept): tried the "next step" above, a
+2026-11-02 22:30 UTC, opus run (time-boxed experiment; no engine change kept): tried the "next step" above, a
 restart of the secant at a flat step (class a), as a temporary switch in `irr_secant`. Scored cell by cell with
 `rustsheet-eval show` (passed cells of t3406 / t3347 holdout / t3478 wide / t3411 fresh / fresh-2):
 - main (cap 50): 68 / 101 / 229 / 80 / 76. Cap 213, no restart: 70 / 106 / 251 / 88 / 83.
