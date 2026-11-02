@@ -3,7 +3,7 @@ id: T-3827
 title: "Delete the retired merge train, merge lock and step-mode code"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
