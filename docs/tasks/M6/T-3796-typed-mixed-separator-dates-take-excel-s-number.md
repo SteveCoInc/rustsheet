@@ -35,7 +35,8 @@ number format Excel gives for the mixed-separator dates, and a typed clock-first
 
 ## Outcome
 Mixed `/`-`-` typed dates now take `m/d/yyyy` (numeric) or `d-mmm-yy` (day-month-name-year) in
-`date_text.rs`; a typed clock-first date-time (`10:00 7/1/2025`, `10 AM 7/1/2025`) is a number with
+`date_text.rs`; a typed clock-first `H:MM <date>` (`10:00 7/1/2025`, the only evidenced shape) is a number with
 `m/d/yyyy h:mm` (`parse_formatted.rs`, `leading_clock_shape`); a leading space stays text. Unit test
 `typed_mixed_separator_date_formats`. Eval delta: probes/date-text-mixed-separator-typed B10 and C10
 fixed (known failures -2, no regressions).
+Follow-up: T-3852 probes the other clock-first shapes (AM/PM etc.), which stay text.

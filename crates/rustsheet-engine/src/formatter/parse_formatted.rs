@@ -193,27 +193,19 @@ impl TypedClock {
     }
 }
 
-/// [`typed_clock_shape`] for a clock typed before the date (`10:00 7/1/2025`, `10 AM 7/1/2025`):
-/// a number with `m/d/yyyy h:mm` like the clock-last text (probes/date-text-mixed-separator-typed
-/// B10, C10, excel-graph 2026-11-01). A leading space keeps it text. The clock is the first word,
-/// or the first two when the second is an `AM`/`PM` suffix.
+/// The clock typed before the date, limited to the evidenced shape `H:MM <date>` (`10:00 7/1/2025`
+/// is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10, excel-graph
+/// 2026-11-01). A leading space keeps it text (A8, A9). Other clock-first shapes (AM/PM, seconds,
+/// fractions, out-of-range) are unprobed and stay text; TODO(T-3852).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
-    if text.starts_with(' ') {
+    let (clock, date) = text.split_once(' ')?;
+    let (hour, minute) = clock.split_once(':')?;
+    let digits = |s: &str| s.len() == 2 && s.bytes().all(|b| b.is_ascii_digit());
+    if !digits(hour) || !digits(minute) || date.starts_with(' ') {
         return None;
     }
-    let (first, rest) = text.split_once(' ')?;
-    let rest = rest.trim_start_matches(' ');
-    let second = rest.split(' ').next().unwrap_or("");
-    // The dummy date makes the clock a trailing one for `typed_clock_shape`.
-    let with_suffix = ["am", "pm", "a", "p"]
-        .iter()
-        .any(|s| second.eq_ignore_ascii_case(s));
-    if with_suffix {
-        if let Some(shape) = typed_clock_shape(&format!("1/1/2000 {first} {second}")) {
-            return Some(shape);
-        }
-    }
-    typed_clock_shape(&format!("1/1/2000 {first}"))
+    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
+    (value(hour) < 24 && value(minute) < 60).then_some(TypedClock::Time)
 }
 
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or

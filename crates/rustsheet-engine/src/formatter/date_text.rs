@@ -236,6 +236,7 @@ fn parse_separated(
     } else {
         word.splitn(4, ['/', '-']).collect()
     };
+    // (en-US evidence only; day-first locales are unprobed.)
     // A date mixing `/` and `-` takes Excel's own formats when typed, not the joined separators:
     // numeric `m/d/yyyy`, name-and-year `d-mmm-yy` (probes/date-text-mixed-separator-typed,
     // excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
