@@ -3,7 +3,7 @@ id: T-3811
 title: "Number text: a group comma with four or more digits after it, a trailing comma and a leading percent sign"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -32,3 +32,12 @@ both ends ("%1%").
 
 ## Out of scope
 - Typed cell input formats for these texts.
+
+## Outcome
+`parse_number` (formatter/parse_formatted.rs) now accepts any comma group of three or more digits, refuses a short or
+empty one (`1,`), and `parse_percent_or_currency` reads one leading `%`. Probed the edges first
+(probes/eng-number-text-group-comma-edges, excel-graph): 5-7 digit groups read, `1,000,00`, `1,,000`, `1,000.5,000` and
+`%1%` refuse, `0,0000` refuses (a zero lead only takes a group of three). NUMBERVALUE refuses a second leading `%`
+itself. Eval: probes known failures 3925 -> 3900 (25 fixed, 0 regressions), the listed cells pass. Typed cell input
+shares the reader and now reads these texts too (typed input is unprobed; not verified here). Also lands T-3742's VALUE
+leading percent.

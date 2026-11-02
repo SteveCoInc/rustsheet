@@ -448,3 +448,24 @@ fn script_digits_are_mapped_only_by_the_coercion_helper() {
     // The typed-input parser does not map them (unprobed, T-3325).
     assert!(parse("٣", &[]).is_err());
 }
+
+// docs/excel-semantics/coercion.md "Group commas and a leading percent sign" (T-3811).
+#[test]
+fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
+    for (text, value) in [
+        ("1,0000", 10000.0),
+        ("1,000,0000", 10_000_000.0),
+        ("1,0000.5", 10000.5),
+        ("12,0000", 120_000.0),
+        ("%1", 0.01),
+        ("%-1", -0.01),
+        ("1,0000%", 100.0),
+    ] {
+        assert_eq!(parse(text, &[]).unwrap().0, value, "{text}");
+    }
+    for text in [
+        "1,", "1,00", ",1", "2,0", "1,000,00", "1,,000", "0,0000", "%1%", "2%%",
+    ] {
+        assert!(parse(text, &[]).is_err(), "{text}");
+    }
+}

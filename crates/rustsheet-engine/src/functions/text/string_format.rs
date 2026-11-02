@@ -294,7 +294,7 @@ impl Model {
         // `"%1.5"`, `"-%1.5"`, `"+%1.5"`, `"%-1.5"` and `"(%1.5)"` read; `"%%1.5"`, `"%$1.5"`,
         // `"$%1.5"`, `"%1.5$"` and `"%€1.5"` are #VALUE! (probes/t3647-numbervalue-percent-and-controls
         // A1-A8, probes/t3647-numbervalue-whitespace-decimal A17-A21). Excel's VALUE reads
-        // `"%1.5"` too, ours not yet (T-3742).
+        // `"%1.5"` too (T-3811).
         let leading = strip_leading_percent(rest);
         if let Some(stripped) = &leading {
             if stripped.contains(['$', '€']) {
@@ -307,6 +307,15 @@ impl Model {
             pct_count += 1;
         }
         let cleaned = leading.as_deref().unwrap_or(rest);
+        // The shared reader now reads one leading "%" itself (VALUE, T-3811), so a second one
+        // left here must stay #VALUE!: `"%%1.5"` (probes/t3647-numbervalue-percent-and-controls A1).
+        if cleaned.contains('%') {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Cannot parse number".to_string(),
+            ));
+        }
 
         // Reject if more than one '.' after replacement
         if cleaned.matches('.').count() > 1 {
