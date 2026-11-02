@@ -3,7 +3,7 @@ id: T-3336
 title: "Oracle sweep: CHIINV and CHISQ.INV.RT at one degree of freedom in the right tail (p 1E-4 to 2^-54), with CHISQ.INV at 1-p and CHISQ.DIST at Excel's landing points"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,7 +31,7 @@ freedom in the right tail, instead of the one visibly-off pair it has today.
   to 1 and the call is `#NUM!`), and no CHISQ.DIST at Excel's landing points.
 
 ## Acceptance criteria
-- [ ] A new probes-numeric case, `eval/suites/probes-numeric/cases/t3336-chisq-df1-right-tail.case.json`
+- [x] A new probes-numeric case, `eval/suites/probes-numeric/cases/t3336-chisq-df1-right-tail.case.json`
       (`rustsheet-case/v1`, sheet `Calc`, one formula per cell, a `hypotheses` label per cell naming the inputs, as in
       `m9-fin-power.case.json`), is filled with
       `cd tools && uv run rustsheet-oracle fill -b excel-graph --suite probes-numeric` (excel-probe skill). Its grid:
@@ -43,13 +43,19 @@ freedom in the right tail, instead of the one visibly-off pair it has today.
         8 adjacent multiples of 2.2E-7 on each side of 37.3248930 (the step Excel took at 1E-9);
       - `CHISQ.INV.RT(p,1.5)` at p = 1E-9 and 1E-10 (df truncation).
       Keep each call at valid arity (an invalid one makes Excel for the web reject the whole workbook, T-0040).
-- [ ] The `.oracle.json` sidecar is committed with no pending cells.
-- [ ] docs/excel-semantics/statistics.md "CHISQ.INV.RT and CHIINV quirks" cites the case in its Evidence and records
+- [x] The `.oracle.json` sidecar is committed with no pending cells.
+- [x] docs/excel-semantics/statistics.md "CHISQ.INV.RT and CHIINV quirks" cites the case in its Evidence and records
       at which p Excel's value is one cdf step off the complement crossing (a table of p, Excel, ours, the step count).
-- [ ] T-3337 links the case.
-- [ ] Fixtures hold only formulas and Excel values. No RUSTSHEET_ORACLE_* values in logs or commits.
-- [ ] If the oracle is unavailable, the task is `status: blocked` with the reason.
-- [ ] `make check` green; reviewers approve.
+- [x] T-3337 links the case.
+- [x] Fixtures hold only formulas and Excel values. No RUSTSHEET_ORACLE_* values in logs or commits.
+- [x] If the oracle is unavailable, the task is `status: blocked` with the reason.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fitting or implementing (T-3337). df 2 and above (T-3311, T-3146, T-3310, T-3232).
+
+## Outcome
+Added probes-numeric/t3336-chisq-df1-right-tail (291 cells) filled on excel-graph with no pending cells. Excel's df-1
+landing is off the complement crossing at only some p (table in statistics.md); the `#NUM!` edge lies between 8E-17
+(`#NUM!`) and 9E-17 (value). The case is ungated: no baseline change (our engine passes 79 of 291; the rest is T-3337).
+T-3337 now links the case.

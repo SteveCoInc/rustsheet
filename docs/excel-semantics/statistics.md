@@ -4209,6 +4209,31 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     5.128E-10: Excel stops in the band below the one holding 1 - p. At 1E-10 and 1E-4 Excel is within
     2 ulp of the crossing (m9-chisq-inv-rt A1, m9-legacy-chiinv A12), so the step is not taken at every p. Where it is
     taken is unprobed: T-3336 sweeps p at df 1, T-3337 fits the landing.
+  - T-3336 sweep (probes-numeric/t3336-chisq-df1-right-tail, excel-graph; CHISQ.INV.RT, CHIINV and CHISQ.INV(1-p) at
+    p = m*10^-k, m in 1, 1.5, 2, 3, 5, 7, k 4 to 16; 2^-j, j 40 to 54; CHISQ.DIST at the landing points). Excel
+    stays within a few ulp of the complement crossing (ours) at almost every p; the p where Excel lands visibly
+    off it (Excel, ours, the gap in steps of the cdf's resolution, about 2.2E-7 near p 1E-9) are:
+
+    | p | Excel | ours | gap |
+    |---|---|---|---|
+    | 7E-4 | 11.489246754004064 | 11.48924675400377 | 2.9E-13 |
+    | 1E-5 | 19.51142096464506 | 19.511420964666264 | 2.1E-11 |
+    | 1E-6 | 23.92812697709321 | 23.92812697687947 | -2.1E-10 |
+    | 1E-8 | 32.84125337305113 | 32.84125335146885 | -2.2E-8 (one step) |
+    | 2E-9 | 35.9736890443827 | 35.973688936219375 | -1.1E-7 (half a step) |
+    | 1E-9 | 37.324892889999234 | 37.324893106518715 | 2.2E-7 (one step) |
+    | 7E-10 | 38.02064491290999 | 38.02064522235828 | 3.1E-7 |
+    | 1E-13 | 55.36859656626361 | 55.36641369262503 | -2.2E-3 |
+    | 2E-13 | 54.00419329358049 | 54.00528397040475 | 1.1E-3 |
+    | 7E-14 | 56.06977788787475 | 56.06665959069312 | -3.1E-3 |
+    | 5E-16 | 66.03009909468959 | 65.59030558869873 | -0.44 |
+
+    So the step is taken at some p only, from 1E-6 down; below 1E-13 the lower cdf's resolution is coarse and Excel
+    returns plateau values: CHISQ.INV.RT(p,1) is 67.39648382445009 at 1.5E-16, 2E-16 and 3E-16 alike, and
+    66.03009909468959 at 5E-16 and 4.44E-16. CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation).
+    The `#NUM!` edge: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
+    CHISQ.DIST(x,1,TRUE) is 0.9999999989999999 at Excel's 37.324892889999234 and 0.999999999 at ours. Full cells in
+    the case's oracle sidecar.
   - Excel's search gives up in the far right tail. Below an edge that depends on df, CHISQ.INV.RT and CHIINV are
     `#NUM!`, though the quantile exists and CHISQ.DIST.RT past it is a plain number. With p = 1E-k, the last k that
     is still a value is, for df 3 to 42: 20, 27, 35, 43, 52, 62, 72, 81, 87, 90, 94, 99, 104, 110, 116, 121, 127,
