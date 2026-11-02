@@ -3,7 +3,7 @@ id: T-3297
 title: "Legacy IF and CHOOSE: probe and match the @ display of the INDEX-arm and CHOOSE-array shapes T-3134 and T-3168 left unprobed (named or table INDEX, negative or out-of-range index, bare range condition)"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -40,16 +40,36 @@ decided by excel-graph evidence for every shape references.md still lists as UNV
   The implementation follows whatever Excel shows, so the probe comes first in this PR.
 
 ## Acceptance criteria
-- [ ] A new probes case `probes/t3297-legacy-if-index-arm-more-shapes` with an excel-graph oracle sidecar. It has one
+- [x] A new probes case `probes/t3297-legacy-if-index-arm-more-shapes` with an excel-graph oracle sidecar. It has one
       row per shape above, with value and FORMULATEXT columns at the root, under ABS and under SUM, as in t3134. At least
       100 scored cells.
-- [ ] Every cell of the new case passes, and every cell of probes/t3134-legacy-if-index-arm-shapes and
+- [x] Every cell of the new case passes, and every cell of probes/t3134-legacy-if-index-arm-shapes and
       probes/legacy-choose-array-index still passes. `make eval-check`: 0 regressions; `make eval-baseline` run.
-- [ ] references.md states Excel's rule for each shape with cell citations and drops the UNVERIFIED items the probe
+- [x] references.md states Excel's rule for each shape with cell citations and drops the UNVERIFIED items the probe
       settles. Any shape Excel refuses to load is recorded as such.
-- [ ] Unit tests in the static-analysis tests pin each new shape's display.
-- [ ] `make check` green; reviewers approve.
+- [x] Unit tests in the static-analysis tests pin each new shape's display.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Dynamic-array (`cm`) formulas and typed entry (no `@` question there).
 - IFS: every IFS takes the `@` (verified by T-3134).
+
+## Outcome
+- Probe split in two by milestone: probes/t3297-legacy-if-index-arm-more-shapes (M2, 151 cells, excel-graph
+  2026-11-02, every cell passes) and probes/t3297-legacy-if-index-arm-name-table (M8, because defined names and
+  tables are M8 subjects (decision 0057), 65 cells, 60 pass). Rows are laid out as in t3134 (root, ABS, SUM, each
+  with its FORMULATEXT). Excel refuses a workbook with a one-argument INDEX arm (`IF(TRUE,INDEX(B3))`,
+  `FileCorruptTryRepair`), so that shape is recorded in references.md and left out of the case.
+- Excel: a single-cell INDEX arm may be over a union, a sheet-qualified range, a defined name or a table area, may
+  take a fourth (area) argument, and may be out of range (`INDEX(B1:B6,99)`). None of these shows an `@`. A negated
+  or boolean index keeps the `@` on the call. A bare range condition or CHOOSE index takes its own `@` and the call
+  none. An array-constant CHOOSE index over cell, computed or text arms moves the `@` to the call; over a range arm
+  it keeps both. Ours already matched everything except the union, four-argument and defined-name INDEX shapes.
+  `is_single_cell_index` now accepts those, and `is_range_arm` counts a single-cell INDEX of a union as a reference
+  arm. These are an extension of the existing classifier, not a second one.
+- Not matched, owned by the new T-3856 (M8): a one-cell name (`=IF(TRUE,One)`) and a constant name as INDEX's index
+  (`INDEX(B1:B6,Three)`) show no `@` in Excel (name-table I35, K35, M35, I36, K36). That needs a name-body lookup,
+  which is a design question.
+- t3134 and legacy-choose-array-index still pass every cell. Unit test `single_cell_index_arms_of_every_area_kind`.
+- Eval delta: +2 probe cases, 216 scored cells (211 pass); probes known failures 3923 -> 3928 (the 5 new-coverage
+  cells above), 0 regressions.
