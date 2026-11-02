@@ -3,7 +3,7 @@ id: T-3769
 title: "bpser's x-linked one-ulp misses at 1 < b0 < 8 (a0 near 0.3) and the a0-linked residual at 0.5 and 0.7 (T-3570)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -38,12 +38,32 @@ their counts), and the a0-linked residual at a0 near 0.5 and 0.7 is explained or
   the r2 `lcover` inversion applies; separate s from E by also probing EXP at the z values the model computes.
 
 ## Acceptance criteria
-- [ ] A RESULTS.md records a model with exact, within-4-ulp and within-15-digit counts on a held-out probe, or the
+- [x] A RESULTS.md records a model with exact, within-4-ulp and within-15-digit counts on a held-out probe, or the
       negatives tried with their counts, for both residuals.
-- [ ] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
-- [ ] statistics.md's T-2464 bpser entry is updated with what is found.
-- [ ] Engine follow-ups are filed for any solved piece.
-- [ ] `make check` green; reviewers approve.
+- [x] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
+- [x] statistics.md's T-2464 bpser entry is updated with what is found.
+- [x] Engine follow-ups are filed for any solved piece.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - b0 >= 8 algdiv (T-3569), engine GAMMALN accuracy (T-3042), engine changes.
+
+## Outcome
+Both residuals are one effect, located but not modelled (docs/research/t2464/r6-bpser-xlinked/RESULTS.md).
+- GL53's bpser is bit-exact wherever z = fl(a0 LN x) - L is a double: 0 misses of 1,143 cells on r5's probe, 2 of 1,923
+  on the new t3769-r6-bpser-beta (tune b0 2.5 and 6.25, hold-out b0 4.75). There E is Excel's measured worksheet EXP of
+  the same double, so s, alx, L and the product are Excel's.
+- Every other miss (417 of 777 and 1,317 of 2,685) has a z that is not a double, nearly always halfway between two
+  doubles. z's last bits follow alx's (x-linked) and L's (a0-linked). The best constant L along x is GL53's L wherever
+  it can be pinned.
+- Negatives with counts:
+  - z rounded nearest (won on r5's data, lost on the fresh probe: 2,072 against 2,332 tune, 670 against 957
+    hold-out), down or up;
+  - L kept extended and five other groupings of z; seven product splits; series forms and stop rules;
+  - GAMMALN + 1 ulp at a0 = 0.5, which scores higher only by moving z onto the double grid and misses 47-163 double-z
+    cells.
+- Excel's E for a non-double z goes to T-3873, with T-3570's two review items (old w2f re-score, other a0/b0 ranges).
+  T-3771's Context now points to the LN/EXP split. No engine follow-up: no piece is solved for the engine.
+- A refill of t3570-r5-bpser-lngamma-beta matched the first fill on 1,920 of 1,920 cells (decision 0112).
+- Eval delta: new probes-numeric cases t3769-r6-bpser-beta (4,608), -aux (2,059) and -exp (10,848), excel-graph
+  2026-11-02. The engine passes 16,196 of 17,515 of their cells. Gated suites and baselines are unchanged.
