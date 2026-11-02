@@ -2299,3 +2299,31 @@ Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cel
 Ours: as above since T-3507, whose reordering of SORT's argument checks covers it (`fn_sort`).
 Status: VERIFIED (excel-graph); implemented (T-3507)
 Tasks: T-3508
+
+## GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found
+Rules, from 14,440 GROUPBY and PIVOTBY calls over the unseen argument-class pairs (gen-m7 arg-pairs, excel-graph, 2026-11-02;
+Data!G9 holds `#DIV/0!`, H1 and H2 are blank, A1:E12 is the data block):
+- A one-cell reference to an error cell as `row_fields`, `col_fields` or an option argument is a 1x1 array, not an error
+  argument, as in TOCOL, TOROW and FILTER (T-3497): the shape and option checks come first, so
+  `GROUPBY(Data!G9,Data!B1:B12,_xleta.COUNT,Data!G4)` is `#VALUE!` (gen-m7/18ded81711290e85 A1038) and
+  `PIVOTBY(Data!B1:E12,Data!C1:C12,Data!C1:D12,_xleta.AVERAGE,0,Data!G6,Data!B5:C6,0,Data!G9)` is `#VALUE!`
+  (gen-m7/cf6ab0ac7d65a5bb A2014), while `GROUPBY(Data!G9,Data!G9,LAMBDA(z,z))`, where the shapes fit, is `#DIV/0!`
+  (gen-m7/35679b4facc62956 A11530). A literal error there is still that error:
+  `PIVOTBY(Data!C1:E12,Data!A1:A12,0,LAMBDA(w,w),0,2,#NULL!)` is `#NULL!` (gen-m7/0098e1e4e5f8aa7c A1). (T-3842)
+- A one-cell `values` holding text, numeric text, an empty text or nothing is `#VALUE!`, whatever the function:
+  `GROUPBY(0,"abc",LAMBDA(z,z))` (gen-m7/35679b4facc62956 A1831) and `GROUPBY(Data!G2,Data!H2,_xleta.SUM)` (A2380). A
+  one-cell number or boolean still spills a table: `GROUPBY(0,0.5,LAMBDA(x,x))` spills 0, `#VALUE!`; "Total", `#VALUE!`
+  (A1587:B1588) and `GROUPBY("abc",TRUE,_xleta.AVERAGE)` spills "abc", `#DIV/0!`; "Total", `#DIV/0!` (A7321:B7322). Multi-cell text-only values are unprobed. (T-3843)
+- A one-value `filter_array` (a number, boolean or one-cell reference) is not broadcast over the rows: it is a size mismatch
+  and the call is `#VALUE!`. `GROUPBY(Data!B1:B12,Data!B1:E12,_xleta.SUM,TRUE,-1,-2,0.5)` (gen-m7/06c84cc76de04bae A245),
+  `PIVOTBY(Data!C1:D12,Data!D1:E12,Data!B1:D12,_xleta.PRODUCT,3,-1,1,0,2,0.5)` (gen-m7/9c128bd4a5d1d3b9 A3783). (T-3844)
+- A multi-cell `relative_to` lifts PIVOTBY into one result per cell: with Data!A1:B2 (no valid relative_to in it)
+  `PIVOTBY(Data!D1:E12,Data!A1:D12,Data!A1:D12,LAMBDA(v,v),2,1,0,2,2,(Data!E1:E12=123456789.123),Data!A1:B2)` spills a
+  2x2 of `#VALUE!` (gen-m7/ceb2c91035864a71 A6589:B6590). (T-3845)
+- Leftovers whose rule is not yet clear (argument-check order between a literal error in a late option and an earlier
+  invalid option, a range field_relationship, one PIVOTBY header text) are listed in T-3846.
+Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-11-02, T-3778); the full cell lists are in T-3842 to T-3846.
+Ours: we return the referenced error for the first rule, group the one-cell text values, broadcast a one-value
+filter_array, and return one `#VALUE!` for a range relative_to.
+Status: VERIFIED (excel-graph); not implemented
+Tasks: T-3842, T-3843, T-3844, T-3845, T-3846

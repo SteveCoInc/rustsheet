@@ -3,7 +3,7 @@ id: T-3778
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of GROUPBY and PIVOTBY"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -56,20 +56,41 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   the cells.
 
 ## Acceptance criteria
-- [ ] New gen-m7 cases from `--policy arg-pairs --functions GROUPBY,PIVOTBY --spill` are committed with their
+- [x] New gen-m7 cases from `--policy arg-pairs --functions GROUPBY,PIVOTBY --spill` are committed with their
       excel-graph oracle sidecars and 0 fill failures.
-- [ ] After `make eval`, GROUPBY and PIVOTBY each have a `pairwise` share of at least 0.9 in report.json
+- [x] After `make eval`, GROUPBY and PIVOTBY each have a `pairwise` share of at least 0.9 in report.json
       `argument_coverage`, or the PR lists the pairs left unseen and why (a pair Excel refuses to load, a layout
       limit).
-- [ ] No scored cell of the batch is a `#SPILL!` caused by the case layout; spill-extent failures in the M7 exit row
+- [x] No scored cell of the batch is a `#SPILL!` caused by the case layout; spill-extent failures in the M7 exit row
       stay at 0.
-- [ ] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
+- [x] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
       by an open task, and `make exit-owners MILESTONE=M7` and `make unowned-off ALL=1` report no new unowned cell
       from the batch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine fixes for the cells this batch finds (the owning tasks make them), beyond a one-line coercion fix in the
   function's own module that the PR also tests.
 - RANDARRAY (volatile), TEXTSPLIT and REGEXEXTRACT pairs, the single-kind probes named above, and other functions or
   milestones.
+
+## Outcome
+- **Batch**: 73 new gen-m7 cases from `rustsheet-gen --policy arg-pairs --milestone M7 --functions GROUPBY,PIVOTBY --spill`
+  (default seed; 23 GROUPBY parts, 50 PIVOTBY parts, 14,440 calls, no pair skipped), filled by
+  `rustsheet-oracle fill -b excel-graph --suite gen-m7`: 73 sidecars, 0 fill failures. One PR, not two: the fill took 11 minutes.
+- **Coverage**: after `make eval`, GROUPBY and PIVOTBY each have a pairwise share of 1.0 with 0 unseen pairs (before:
+  0.11 with 2256 unseen, 0.09 with 4964).
+- **Layout**: no Excel value in the batch is `#SPILL!` (every oracle sidecar checked), so no failure comes from the case
+  layout; the 61-row spill stride holds every GROUPBY and PIVOTBY result.
+- **Eval delta**: gen-m7 grows from 106 to 179 cases and from 100% (54,449 cells, 1 known failure) to 98.81% (87,701
+  cells, 1,047 scored known failures, 0 regressions; `make eval-baseline`). The M7 row's visibly-off and spill-extent
+  counts rise by the batch's 13,381 visibly-off cells (`extent_failures` 12,339), all engine rules below, not layout:
+  12,173 of them are the spilled tables we return where Excel's one-value filter_array gives a single `#VALUE!` (T-3844).
+  The visible-parity lock grows by the same 13,381 cells in 72 new cases. gen-m7 is below its M7 exit bar until the owners land.
+- **Owners** (`make exit-owners MILESTONE=M7`: 0 unowned; `make unowned-off ALL=1`: no gen-m7 cell): five tasks, each rule
+  recorded in docs/excel-semantics/arrays.md, "GROUPBY and PIVOTBY: what the T-3778 arg-pairs batch found":
+  - **T-3842** (sonnet, 359 cells in 314 formulas): a one-cell error reference in a field or option argument is a 1x1 array (`#VALUE!`), as in T-3506.
+  - **T-3843** (sonnet, 292 cells in 82 formulas): a one-cell text or blank `values` is `#VALUE!`.
+  - **T-3844** (sonnet, 12,173 cells in 43 formulas): a one-value filter_array is `#VALUE!`, not broadcast.
+  - **T-3845** (sonnet, 493 cells in 166 formulas): a multi-cell PIVOTBY relative_to lifts into one result per cell.
+  - **T-3846** (opus, 68 cells in 21 formulas): argument-check order and leftovers.
