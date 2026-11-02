@@ -270,6 +270,7 @@ probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
 probes/t3579-rate-residual-nper1.case.json	4
+probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
 probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
