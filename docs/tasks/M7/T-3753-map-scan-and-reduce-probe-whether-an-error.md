@@ -3,7 +3,7 @@ id: T-3753
 title: "MAP, SCAN and REDUCE: probe whether an error array or a bad function argument comes first"
 milestone: M7
 lane: functions-logic
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
