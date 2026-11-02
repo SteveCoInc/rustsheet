@@ -1834,10 +1834,16 @@ MAKEARRAY checks its sizes first: `MAKEARRAY(NA(),1,5)` and `MAKEARRAY(NA(),1,LA
 Ours: every helper takes its caller from `Model::helper_caller` (lambda.rs), which checks the function once before any element
 (`FunctionValue` parameter counts; `eta_takes_count` reads `arg_counts::takes_count`); before T-3655 a wrong count was
 `#VALUE!` per element and MAP, SCAN, REDUCE and MAKEARRAY passed an error argument on.
-Unprobed: whether MAP's, SCAN's and REDUCE's array errors come before the function check (the engine checks the function first;
-BYROW and BYCOL read the array first).
+Order of the two checks: the array argument is read before the function is checked, in all five helpers. An array argument that
+is an error gives its own error even when the function cannot be called: `MAP(NA(),LAMBDA(a,b,a))` and `MAP(NA(),5)` are
+`#N/A`, `MAP(1/0,5)` `#DIV/0!`, `SCAN(0,NA(),LAMBDA(a,a))`, `SCAN(0,NA(),NA())`, `REDUCE(0,NA(),NA())` and
+`REDUCE(0,NA(),5)` `#N/A`, `SCAN(0,1/0,5)` and `REDUCE(0,1/0,LAMBDA(a,a))` `#DIV/0!`, as `BYROW(NA(),LAMBDA(a,b,a))` and
+`BYCOL(1/0,5)` already were (ROWS, COLUMNS and INDEX of each give the error, ERROR.TYPE 7 and 2). A second MAP array that is an
+error is `#VALUE!` (`MAP({1,2},NA(),LAMBDA(a,b,a))`). Evidence: probes/t3753-lambda-helper-error-array-order (excel-graph,
+2026-11-02, T-3753). Ours: `fn_map`, `fn_scan` and `fn_reduce` call `helper_caller` after reading the arrays; before T-3753 they
+checked the function first and gave `#VALUE!`.
 Status: VERIFIED (excel-graph)
-Tasks: T-3655
+Tasks: T-3655, T-3753
 
 ## MAKEARRAY sizes: zero, negative, booleans, text and references
 Rule: a size is read as a number the way an arithmetic operand is, then must be a whole number of at least 1. 0, -1, 0.5 and
