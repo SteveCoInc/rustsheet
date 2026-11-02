@@ -1176,8 +1176,8 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       loses this probe's A43 and A46 (scale 2^10) and 32 held cells of t3348-rate-fv-nonzero (A15 to A26, A74 to
       A184 among them, including the distinct-iterate holds A182 to A184). It also loses 17 cells of
       probes-numeric/t3348-rate-gate-a-fresh, 10 of t3348-rate-gate-a-sweep and 4 of t3478-rate-r4-wide.
-    - So Excel sometimes restarts and sometimes holds. What separates the two is open (T-3698). A1, A2, A41 and
-      A42 are known failures owned by T-3698.
+    - So Excel sometimes restarts and sometimes holds. T-3698's rule ("RATE restarts once on an early flat secant"
+      below) separates them on these cells: A1, A2, A41 and A42 restart and pass, A43 and A46 do not restart.
   - Right type, last digits, on the training sweep (gap triage 2026-11-01c; T-3607): probes-numeric/
     t3348-rate-gate-a-sweep A228, A269, A271, A273 and A285 (terms 1e9 to 2e11) are 1 to 3 ulp from Excel. Excel
     is not the correctly rounded root there either: A228 `RATE(102,2166497722.99291,-207421358353.562,
@@ -1203,7 +1203,56 @@ Evidence (excel-graph, 2026-10-31, T-3348):
 Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
 Status: VERIFIED (excel-graph) / UNVERIFIED (Excel's residual in the noise floor; a non-integer nper below -1; a held
 point with |f1| < 1e-7)
-Tasks: T-3348, T-3389, T-3424, T-3579
+Tasks: T-3348, T-3389, T-3424, T-3579, T-3698
+
+## RATE restarts once on an early flat secant
+Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
+restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
+- the two iterates differ (r1 ≠ r0; a zero-step stall holds as before);
+- it is at step 16 or earlier of the run;
+- |f1| < 1e-4, the cap's bound;
+- r0 > -1.
+
+Otherwise the run holds at r1 as before. The restarted run has its own 200 steps, and a flat secant in it holds;
+it never restarts again. The step bound is FITTED (T-3698). It approximates a path difference, and on many
+noise-floor cells Excel's value matches neither the hold nor the restart.
+Why it matters: on runs that land next to the root at once (nper 1, t3348-rate-fv-nonzero A171), Excel's value is
+the restarted run's value. Holding returned an iterate up to 3e-11 relative from Excel's.
+Evidence (excel-graph, 2026-11-02, T-3698):
+- probes/t3698-rate-flat-restart (54 cells): flat-secant cells of t3348-rate-fv-nonzero, t3348-rate-gate-a-fresh
+  and t3348-rate-gate-a-sweep, re-run with other guesses so that the first flat secant comes at steps 3 to 154, plus
+  t3579's nper-1 example scaled by 2^3 to 2^11. Each cell was chosen because the hold and the restart from r0 give
+  different results there.
+  - The hold is bit-exact on 11 cells and an unconditional restart on 17.
+  - The nper-1 family splits on |f|: it restarts at |f| 1.3e-6 to 4.3e-5 (A3:A8), and at 1.7e-4 and 3.4e-4
+    (A1, A2, scales 2^10 and 2^11) it is `#NUM!`, as the hold is.
+  - On one source series (t3348-rate-gate-a-fresh A296) the restart is Excel's at step 13 (A23) and step 16 (A26)
+    and the hold is Excel's at step 30 (A38). On A187 the hold is Excel's at steps 18, 30, 38 and 70 (A28, A37,
+    A40, A49). Step 17 (A27) matches neither. So the step bound lies in 16..17.
+  - Late restarts that Excel takes (A35 step 27, A39 step 33, A42 step 41) are not covered by the rule.
+- Score of the frozen rule (restart once, r0 ≠ r1, step ≤ 16, |f1| < 1e-4) on the 1,573 literal RATE oracle cells
+  of probes and probes-numeric: 1,459 bit-exact against 1,437 for the hold, with 22 gained and none lost. The
+  gains are t3579-rate-residual-nper1 A1, A2, A41 and A42, t3348-rate-fv-nonzero A171 and A175,
+  t3348-rate-gate-a-fresh A296, 11 cells of t3698-rate-flat-restart and 4 of the fresh sweep.
+  - Hold-out, using the fit lab's hash split (decision 0188 R4.1; 30% by case and cell): the rule is bit-exact on
+    1,016 of 1,077 train cells (94.3%) and 422 of 445 test cells (94.8%), where the hold has 1,007 and 413. On the
+    201 test cells with a 50-digit value, the rule is bit-exact on 189 and the correctly rounded root on 18. The
+    split was applied after the candidates were scored, so it is not a blind hold-out; the fresh sweep below is
+    the out-of-sample check.
+- probes/t3698-rate-flat-restart-fresh (51 cells, drawn and oracle-filled after the rule was frozen): flat-secant
+  cells not used to choose the rule, with guesses not used before.
+  - The rule is bit-exact on 21 cells and the hold on 17. On the 21 points where they differ, the rule matches
+    Excel on 4 (A14, A29, A30, A32), the hold on 0, and neither on 17.
+  - Within 4 ulp, the rule has 26 and the hold 29. That gap is in the noise floor, where neither is Excel's path.
+  - Excel's type (number or error) matches on 43 under both. On the Gate A envelope (15 digits of Excel, or 1e-9 of
+    the 50-digit root), both have 42 of 51 inside, and the same 9 number-against-error cells are outside.
+- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. A count of
+  restarts within a run, a bound relative to the residual's terms, and the restart point are not probed beyond r0
+  against the guess. Restarting from the guess instead of r0 changes nothing, because the run repeats.
+Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
+Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
+restarts)
+Tasks: T-3698, T-3424
 
 ## YIELD with one coupon period left is closed form
 Rule: when at most one coupon period is left, Excel evaluates the documented formula

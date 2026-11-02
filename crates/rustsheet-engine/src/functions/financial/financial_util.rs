@@ -47,7 +47,9 @@ pub(crate) const RATE_MAX_STEPS: u32 = 200;
 /// (probes/rate-cap-return-rule, rate-pmt-zero-cap, rate-step-cap A30). The modelled outcome of a
 /// flat secant (f1 = f0) is a hold at r1, judged by the same two tests, and an iterate at or below
 /// -1 runs on (T-3348, decision 0198; the rule, its evidence and its known misses are in
-/// financial.md "RATE holds on a flat secant and runs on below -1"). A residual Excel's `^`
+/// financial.md "RATE holds on a flat secant and runs on below -1"). An early flat secant on two
+/// distinct iterates with |f1| < 1e-4 restarts the run once from the older iterate instead
+/// (T-3698, financial.md "RATE restarts once on an early flat secant"). A residual Excel's `^`
 /// cannot form and a run that has not stopped by then are `#NUM!`. Microsoft documents Newton's
 /// method and 20 steps; neither fits. The fit, its scores and the rules not yet probed are in
 /// financial.md "RATE is a secant on the FV residual" (T-2005).
@@ -58,6 +60,21 @@ pub(crate) fn compute_rate(
     pmt: f64,
     annuity_type: i32,
     guess: f64,
+) -> Result<f64, Error> {
+    if guess <= -1.0 {
+        return Err(Error::VALUE);
+    }
+    let args = (nper, pmt, pv, fv);
+    rate_secant(args, annuity_type != 0, guess, true)
+}
+
+/// One secant run of [`compute_rate`] from `guess`; `restart` allows the one restart of an early
+/// flat secant (T-3698), which the restarted run does not get again.
+fn rate_secant(
+    args: (f64, f64, f64, f64),
+    period_start: bool,
+    guess: f64,
+    restart: bool,
 ) -> Result<f64, Error> {
     // The start offset was chosen by scoring (T-2005; fit lab `rate_candidates` scores +-1E-3 and
     // 1E-4): on the 782 cells of the fit lab's `rate` set the model is bit-exact on all, with
@@ -87,11 +104,13 @@ pub(crate) fn compute_rate(
     // on the cells of the three cap probes (T-3395 counted them).
     /// FITTED(T-2689, 178 cells, RATE at the 200-step cap; one cut for all three tests bracketed 9.4E-5..1.02E-4)
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
-    if guess <= -1.0 {
-        return Err(Error::VALUE);
-    }
-    let args = (nper, pmt, pv, fv);
-    let period_start = annuity_type != 0;
+    // A flat secant on two distinct iterates at this step or earlier, with |f1| below the cap's
+    // bound, restarts the run from the older iterate r0 (T-3698): probes/t3698-rate-flat-restart
+    // brackets it between A26 (step 16, restarts) and A28 (step 18, holds); A27 (step 17) is off
+    // both, so 16 is the step where the score is highest and 17 scores the same. |f1| 1.7e-4
+    // (A1, nper 1 at scale 2^10) is `#NUM!` and 8.6e-5 (A9) a number. Later flat secants hold at r1.
+    /// FITTED(T-3698, 1573 cells, RATE first flat secant at steps 3..154 with |f1| 1.3E-7..9.5E-4; fresh sweep t3698-rate-flat-restart-fresh, 51 cells)
+    const RATE_RESTART_STEPS: u32 = 16;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
     let mut r1 = r0 - OFFSET.copysign(f0);
@@ -110,6 +129,16 @@ pub(crate) fn compute_rate(
         let (r2, f2) = if flat {
             if f1 == 0.0 {
                 return Err(Error::NUM);
+            }
+            // The restart (T-3698): a fresh run from r0, as if r0 were the guess
+            // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
+            if restart
+                && r1 != r0
+                && step <= RATE_RESTART_STEPS
+                && f1.abs() < RATE_CAP_TOLERANCE
+                && r0 > -1.0
+            {
+                return rate_secant(args, period_start, r0, false);
             }
             (r1, f1)
         } else {
