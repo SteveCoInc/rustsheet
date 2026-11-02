@@ -3,7 +3,7 @@ id: T-3866
 title: "Trim scripts/gh_client.py to what make catch-up uses"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -46,7 +46,8 @@ catch-up`, and `make renumber` through it) imports `gh_client`, for `from_remote
 imports). All request builders, paging, cursor, label and time helpers and their tests were deleted;
 `TODO(T-3866)` is gone. `test_gh_client.py` keeps the fake-vs-`gh api` same-request check and the
 refusal checks for what remains. Eval delta: none (scripts only). `make check-fast` green;
-`check_duplication.py --update` left the count unchanged.
+`check_duplication.py --update` left the count unchanged. Decision 0254 records the trim of these
+protected paths (resumed by an opus run after the sonnet handoff).
 
 ## Handoff (resumed)
 Implementation is complete and pushed on `agent/harness/T-3866-trim-gh-client` (PR #2892, head
