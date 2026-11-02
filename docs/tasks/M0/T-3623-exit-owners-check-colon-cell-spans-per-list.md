@@ -3,7 +3,7 @@ id: T-3623
 title: "exit_owners: check colon cell spans per list block, not per line"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
