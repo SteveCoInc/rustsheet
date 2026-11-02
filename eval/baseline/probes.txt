@@ -1851,6 +1851,7 @@ C	probes/t3643-imsqrt-grid.case.json	441
 C	probes/t3647-numbervalue-percent-and-controls.case.json	31
 C	probes/t3647-numbervalue-separator-placement.case.json	264
 C	probes/t3647-numbervalue-whitespace-decimal.case.json	27
+C	probes/t3648-arabic-numeral-shapes.case.json	232
 C	probes/t3653-percentof-3d.case.json	12
 C	probes/t3653-percentof-argument-kinds.case.json	103
 C	probes/t3654-filter-result-types.case.json	211
