@@ -130,6 +130,21 @@ restart of the secant at a flat step (class a), as a temporary switch in `irr_se
   one outlay family (t3406 A122-A132) has to come later in the run. Next, log the exact iterate sequence of a
   returning cell and its `#NUM!` neighbour with the engine's operators (a throwaway test printing d, NPV per step at
   cap 213) and compare where they part.
+- Traced it (22:45 UTC; a throwaway test, not committed, printing d and NPV per step with `irr_npv` from guess 0.1)
+  on t3406 A124 (Excel returns), A125 (`#NUM!`), A126 (returns) and A127 (`#NUM!`). All four take the same path:
+  d0 = 0.0909..., d1 = 0.0919..., step 0 jumps to d2 = -7.45..-7.58 (NPV 8E+27..1.1E+28), step 1 comes back to
+  0.09190909090909116 and step 2 to 0.09190909090909109 (7E-17 apart). What decides the run is whether NPV at
+  those two d's rounds to the same double. In ours, A124's two values differ by 1 ulp (-7.60477028807863E+10 and
+  ...629E+10), so the secant goes on and converges at d = -0.2360957 (it then stalls at |NPV| 3E-5, class b). For
+  A125, A126 and A127 the two values are equal, so the secant is flat and the run fails. Excel returns A126, so its
+  NPV at one of those two points differs from ours in the last ulp. The flat at step 2/3 is the whole of class
+  (a): no rule on the step, cap or restart can reproduce it (consistent with the refutations above). Only an NPV
+  that is bit-exact at d about 0.0919 can.
+- Next step: compare `irr_npv`'s operators (the `discounted_sum` product at x = 1/v, extended quotients) with
+  Excel's NPV on these exact points. Probe `NPV(1/(1-d)-1, flows)` style cells, or better IRR's own evaluations,
+  for the A122..A132 family at d = 0.09190909090909116 and 0.09190909090909109. Then look for a summation order or
+  a precision under which A122/A123/A124/A126/A128/A129/A132 step on and A125/A127/A130/A131 go flat. That is a
+  bit-level fit (R4 applies).
 
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
