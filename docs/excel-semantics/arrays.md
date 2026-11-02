@@ -2308,14 +2308,21 @@ Data!G9 holds `#DIV/0!`, H1 and H2 are blank, A1:E12 is the data block):
   arguments are 1x1 (gen-m7/35679b4facc62956 A10554), while `GROUPBY(Data!G9,Data!G9,LAMBDA(z,z))` is `#DIV/0!` (A11530)
   and `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`, G9 as field_headers, is `#DIV/0!`
   (gen-m7/18ded81711290e85 A1648). A one-cell error reference as an option is returned as its error unless an earlier
-  option is invalid, which gives `#VALUE!` first:
+  option is invalid or `values` is a blank one-cell reference (next bullet), either of which gives `#VALUE!` first:
   `PIVOTBY(Data!B1:E12,Data!C1:C12,Data!C1:D12,_xleta.AVERAGE,0,Data!G6,Data!B5:C6,0,Data!G9)`, with row_total_depth
   "x", is `#VALUE!` (gen-m7/cf6ab0ac7d65a5bb A2014). A literal error as a field is itself:
-  `PIVOTBY(Data!C1:E12,Data!A1:A12,0,LAMBDA(w,w),0,2,#NULL!)` is `#NULL!` (gen-m7/0098e1e4e5f8aa7c A1). (T-3842)
+  `GROUPBY(#NUM!,Data!A1:A12,_xleta.MAX,2,0,-1,2)` is `#NUM!` (gen-m7/17d3231584884628 A4759), and so is a literal error
+  option: `PIVOTBY(Data!C1:E12,Data!A1:A12,0,LAMBDA(w,w),0,2,#NULL!)` is `#NULL!` (gen-m7/0098e1e4e5f8aa7c A1). (T-3842)
 - A one-cell `values` holding text, numeric text, an empty text or nothing is `#VALUE!`, whatever the function:
   `GROUPBY(0,"abc",LAMBDA(z,z))` (gen-m7/35679b4facc62956 A1831) and `GROUPBY(Data!G2,Data!H2,_xleta.SUM)` (A2380). A
   one-cell number or boolean still spills a table: `GROUPBY(0,0.5,LAMBDA(x,x))` spills 0, `#VALUE!`; "Total", `#VALUE!`
-  (A1587:B1588) and `GROUPBY("abc",TRUE,_xleta.AVERAGE)` spills "abc", `#DIV/0!`; "Total", `#DIV/0!` (A7321:B7322). Multi-cell text-only values are unprobed. (T-3843)
+  (A1587:B1588) and `GROUPBY("abc",TRUE,_xleta.AVERAGE)` spills "abc", `#DIV/0!`; "Total", `#DIV/0!` (A7321:B7322).
+  The two kinds rank differently against an error option: a blank one-cell `values` gives `#VALUE!` before any option
+  error, literal or referenced (`GROUPBY(Data!C1:C12,Data!H1,_xleta.PRODUCT,#NUM!)` and
+  `GROUPBY(Data!B1:B12,Data!H2,LAMBDA(z,Data!E8),Data!G9)` are `#VALUE!`, gen-m7/0a91d5918d798930 A10127 and A10188),
+  while a text, numeric-text or empty-text one returns the option's error (`GROUPBY(Data!B1:E12,Data!G5,_xleta.COUNT,Data!G9)`
+  is `#DIV/0!`, A3600). A literal error field beats both (`PIVOTBY(Data!C1:E12,#N/A,Data!H1,LAMBDA(v,"?b"))` is `#N/A`,
+  gen-m7/18d737e85dbda437 A4027). Multi-cell text-only values are unprobed. (T-3843)
 - A one-value `filter_array` (a number, boolean or one-cell reference) is sometimes broadcast over the rows and sometimes
   `#VALUE!`; the condition is unknown. `GROUPBY(Data!B1:B12,Data!B1:E12,_xleta.SUM,TRUE,-1,-2,0.5)` (gen-m7/06c84cc76de04bae
   A245) and `PIVOTBY(Data!C1:D12,Data!D1:E12,Data!B1:D12,_xleta.PRODUCT,3,-1,1,0,2,0.5)` (gen-m7/9c128bd4a5d1d3b9 A3783)
