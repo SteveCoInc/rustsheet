@@ -3,7 +3,7 @@ id: T-3571
 title: "Incomplete beta: bfrac's fraction arithmetic"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -65,10 +65,4 @@ bfrac's continued-fraction arithmetic is modelled as Excel evaluates it.
 - Follow-ups: T-3812 (engine port, functions-stat, sonnet), T-3813 (the per-term rounding, research, opus).
 - Eval delta: none (research and probes only; the new probe cases have no engine-side expectations changed).
 
-## Blocked because
-Resumed after the review-round limit (step 5c).
-- PR #2825, head after this commit. Round 3 on a07bfa8de: security, architecture, quality APPROVE; excel-fidelity
-  REQUEST_CHANGES on the follow-up tasks only (T-3813 needs `defer: phase-1b` and the R4.4 reproducibility floor;
-  T-3812 an R5 reason; the Status wording). This commit applies all three; the research, probes and model are
-  unchanged since round 2, which raised no finding on them. Next: re-run the full panel (step 5c) on this head and
-  mark ready if all approve. `make check` was green on a07bfa8de.
+Resumed after the review-round limit (step 5c): the full panel approved on 6335597d5 (PR #2825).

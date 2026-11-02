@@ -29,13 +29,16 @@ Lentz loop on closed-form terms, with Excel's λ, as docs/research/t2464/r5-bfra
   `/// FITTED(T-3571, 1536 cells, a, b 40..5000, unswapped call (x below the mean), z -8..-0.2 sd)` at the constant (decision 0188 R4.3). Gate the whole Lentz path to that region; everywhere else in bfrac's
   region (a0 < 40 with b0 >= 40, a or b above 5000, the swapped call, within 0.2 sd of the mean) keep today's TOMS
   recurrence, the accurate path, and say so in a comment. TINY = 1e-30 is NR's FPMIN (not a fit).
+- NR's loop replaces D or C by FPMIN when its magnitude falls below FPMIN. model.py omits these guards and nothing on
+  the probed region depends on them; the port keeps them so the engine cannot divide by zero (directive 5). That is a
+  safety choice, not a claim from evidence.
 - The engine's density (T-3244) is not Excel's at large shapes, so engine bit-exact counts stay below the model's
   (which reads Excel's density off the sheet); score both with the engine's density and record them.
 
 ## Acceptance criteria
 - [ ] `bfrac.rs` evaluates r with the Lentz loop, b0 = c·(a/(a+1)), α = v/s/s·u·n·(b-n)·x·x, β = n + fl(n·x·(b-n))/s +
       ((a+n)/(a+2n+1))·(c + n·(y+1)), stop |C·D - 1| <= 10·DBL_EPSILON, cdf = fl(brc·f), on the gated region only, with the FITTED tag
-      line above; the term bound and `None` path stay (directive 5); outside the region the TOMS recurrence is unchanged.
+      line above and NR's FPMIN guards on D and C kept; the term bound and `None` path stay (directive 5); outside the region the TOMS recurrence is unchanged.
 - [ ] Unit tests pin a few cells of t3571-r5-bfrac-hold where the engine's density equals Excel's.
 - [ ] Eval: probes-numeric t3571-r5-bfrac-* and t2464-w2f-xruns-1's bfrac cells counted before and after in the
       Outcome; no eval regressions (or a decision record per decision 0082 for cells lost to the better model).
