@@ -848,9 +848,13 @@ the digits are a decimal number, a group if it is below 10 or no more than the p
 error), else, if it starts with three octal digits, those as a character up to `\377` (one or two such digits are an error) (`\101` is `A`, `\1010` is `A0`; with 12
 groups `\10` is group 10 but `\20` and `\77` are errors; `\400` an error; `\18`, `\181` errors).
 Case forcing: `\U` and `\L` set a mode for the rest of this match's replacement (literals, groups and the characters
-the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` upper-cases the next character only and keeps the mode
-(`\L\uxyz` is `Xyz`, `\u\L$1` too); `\l` is unlike PCRE2's: it lower-cases the next character and sets the `\L` mode, so
-`\Uab\lcd` is `ABcd` and `\U\lxyz` is `xyz` (and `\u\lxyz` is `xyz`, `\l\uxyz` is `Xyz`, `\l\Uabc` is `aBC`); `\E`
+the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` and `\l` change the case of the next character only and,
+unlike PCRE2's, end a `\U` or `\L` mode: `\L$0\uCD` with `$0` = AB is `abCD`, `\L$0\lCD` is `abcD`, `\U$0\lCD` with
+`$0` = ab is `ABcD`, `\l$0` with `$0` = ΩA is `ωA` and `\L\l$0CD` with `$0` = AB is `aBCD` (T-3777, VERIFIED,
+probes/t3777-regexreplace-case-table C7:C10, C17:C24, excel-graph 2026-11-02; T-1897's earlier reading, that `\l` sets
+the `\L` mode, came from lower-case literals that cannot tell the two apart). A `\U` or `\L` after a pending `\u` or `\l`
+keeps it (`\u\L$1` is `Xyz` for xyz, `\l\Uabc` is `aBC`), and the later of two pending escapes wins (`\u\lxyz` is `xyz`,
+`\l\uxyz` is `Xyz`); `\E`
 ends the mode and a pending `\u`; an empty group or text keeps a pending `\u` for the text after it (`\u$2b` with
 `$2` empty is `B`); the state starts afresh with each match (`REGEXREPLACE("abab","(a)(b)","$2\U$1")` is `bAbA`); only
 the replacement is case-forced, never the subject text around the match. Case mapping is the one-to-one mapping of UPPER and
@@ -1071,7 +1075,21 @@ unchanged, as T-1747 found.
 Evidence: probes/t3298-case-mapping-sweep Calc!A1:A50 (UPPER of 1580 characters, 32 per cell, Data!A) and
 Calc!B1:B47 (LOWER of 1488, Data!B) (excel-graph, 2026-10-31).
 Status: VERIFIED (excel-graph). Implemented in: `simple_case` with the `UPPER_UNMAPPED` and `LOWER_UNMAPPED` range tables
-(functions/text/string_format.rs). PROPER's word-start/other letters (`simple_case`) and REGEXREPLACE's `\U \L \u \l` (`upper_case`/`lower_case`) go through the same table in the engine, but that is UNVERIFIED: the sweep covered UPPER and LOWER only (`PROPER("άλφα")` is Αλφα in the engine, probe pending, T-3777). Tasks: T-3298 (probe), T-3583 (engine), T-3777 (PROPER/REGEXREPLACE probe).
+(functions/text/string_format.rs). Tasks: T-3298 (probe), T-3583 (engine), T-3777 (PROPER/REGEXREPLACE probe).
+
+### PROPER and REGEXREPLACE case forcing use the same table, except PROPER's word starts (T-3777)
+Rule: REGEXREPLACE's `\U \L \u \l` map every swept character exactly as UPPER and LOWER do. PROPER lowers a letter
+inside a word exactly as LOWER does, and upper-cases a word-initial letter as UPPER does with two exceptions: the
+Greek tonos vowels ά έ ή ί ό ύ ώ keep their tonos (Ά Έ Ή Ί Ό Ύ Ώ; UPPER gives Α Ε Η Ι Ο Υ Ω), and a word-initial Georgian
+Asomtavruli capital U+10A0-U+10C5 is lowered to Mkhedruli U+10D0-U+10F5, as LOWER does (`PROPER("Ⴀბ")` is აბ;
+U+10C7 and U+10CD stay, as in LOWER). ΐ ΰ still give Ϊ Ϋ at a word start, and every other capital stays a capital.
+Evidence: probes/t3777-proper-case-table (excel-graph, 2026-11-02): Calc!A1:A50 (every UPPER-swept character
+word-initial), B1:B47 (every LOWER-swept character after "a"), D1:D47 (every LOWER-swept character word-initial),
+E1 (Asomtavruli word-initial), C1:C16 (spot checks: `PROPER("άλφα")` is Άλφα, A9:A10 and C1:C7 the tonos,
+C12, D15:D16 and E1 the Asomtavruli); probes/t3777-regexreplace-case-table Calc!A1:A50 (`\U$0` over the UPPER-swept
+strings), B1:B47 (`\L$0` over the LOWER-swept strings), C1:C16 spot checks (`\u`, `\l`, İ, final sigma, ß, ﬁ).
+Status: VERIFIED (excel-graph). Implemented in: `proper_initial` (functions/text/string_format.rs) for PROPER's word
+starts; REGEXREPLACE goes through `upper_case`/`lower_case`.
 
 ## ARRAYTOTEXT: a single empty cell is #VALUE!, an empty cell in a larger range is empty text
 Rule: `ARRAYTOTEXT` of a reference to one empty cell is `#VALUE!` in both formats, and so are a 1x1 range of an empty

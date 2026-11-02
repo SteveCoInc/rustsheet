@@ -1862,6 +1862,8 @@ C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
+C	probes/t3777-proper-case-table.case.json	162
+C	probes/t3777-regexreplace-case-table.case.json	121
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

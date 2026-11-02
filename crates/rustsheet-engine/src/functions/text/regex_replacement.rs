@@ -28,10 +28,12 @@ enum CaseOp {
     Upper,
     /// `\L`: lower-case what follows.
     Lower,
-    /// `\u`: upper-case the next character only; a mode set by `\U` or `\L` goes on after it.
+    /// `\u`: upper-case the next character only and, unlike PCRE2's, end a `\U` or `\L` mode:
+    /// `\L$0\uCD` with `$0` = AB is `abCD` (probes/t3777-regexreplace-case-table C18:C19).
     UpperNext,
-    /// `\l`: lower-case the next character and, unlike PCRE2's, everything after it, like `\L`
-    /// (probes/regexreplace-extended-escapes B1, B9, B11, I1).
+    /// `\l`: lower-case the next character only and end a `\U` or `\L` mode, like `\u`: `\l$0`
+    /// with `$0` = ΩA is `ωA`, `\U$0\lCD` with `$0` = ab is `ABcD` (probes/t3777-regexreplace-case-table
+    /// C7:C10, C17, C20, C22, C24; probes/regexreplace-extended-escapes B1, B9, B11, I1).
     LowerNext,
     /// `\E`: stop forcing case, a pending `\u` or `\l` included.
     End,
@@ -63,9 +65,12 @@ impl CaseState {
         match op {
             CaseOp::Upper => self.mode = Some(Force::Upper),
             CaseOp::Lower => self.mode = Some(Force::Lower),
-            CaseOp::UpperNext => self.next = Some(Force::Upper),
+            CaseOp::UpperNext => {
+                self.mode = None;
+                self.next = Some(Force::Upper);
+            }
             CaseOp::LowerNext => {
-                self.mode = Some(Force::Lower);
+                self.mode = None;
                 self.next = Some(Force::Lower);
             }
             CaseOp::End => *self = CaseState::default(),
@@ -519,6 +524,24 @@ mod tests {
             "abCd"
         );
         assert_eq!(forced(&[(Some(UpperNext), ""), (None, "b")]), "B");
+        // T-3777: `\u` and `\l` end the mode (probes/t3777-regexreplace-case-table C17:C24).
+        assert_eq!(
+            forced(&[(Some(Lower), "AB"), (Some(LowerNext), "CD")]),
+            "abcD"
+        );
+        assert_eq!(
+            forced(&[(Some(Lower), "AB"), (Some(UpperNext), "CD")]),
+            "abCD"
+        );
+        assert_eq!(
+            forced(&[(Some(Upper), "ab"), (Some(LowerNext), "CD")]),
+            "ABcD"
+        );
+        assert_eq!(forced(&[(Some(LowerNext), "ABCD")]), "aBCD");
+        assert_eq!(
+            forced(&[(Some(Lower), ""), (Some(LowerNext), "ABCD")]),
+            "aBCD"
+        );
         assert_eq!(forced(&[(Some(UpperNext), "x"), (Some(End), "y")]), "Xy");
     }
 
