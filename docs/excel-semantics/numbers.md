@@ -307,6 +307,43 @@ Status: VERIFIED
 Implemented in: `effective_digits` in crates/rustsheet-engine/src/decimal_round.rs (T-0218).
 Tasks: T-0218, T-0268
 
+## ROUNDUP and ROUNDDOWN round at 100 places past a 16-bit num_digits
+Rule: ROUNDUP and ROUNDDOWN narrow `num_digits` to k as above (sign kept, magnitude modulo 65,536). When |k| is
+32,768 or more, which no longer fits a signed 16-bit integer, they round the 15-digit cut at 100 places instead of k:
+at 10^-100 for positive k and at 10^100 for negative k. ROUNDUP still adds its unit 10^-k as a double (see "ROUNDUP adds
+the unit in binary"). For positive k that unit underflows to 0, so ROUNDUP returns the rounded-down value. For negative
+k it overflows, so ROUNDUP is `#NUM!` whenever a digit is dropped. Excel is right, however odd:
+- `ROUNDDOWN(1.23456789012345E-95,65535)` = `ROUNDUP(…,65535)` = 1.23456E-95.
+- `ROUNDUP(1.5E-100,65535)` = 1E-100, and `ROUNDUP(1.5E-120,65535)` = 0.
+- `ROUNDDOWN(1.23456789012345E+105,-32768)` = 1.23456E+105, but `ROUNDUP(…)` = `#NUM!`.
+- `ROUNDDOWN(1.5E+80,-65535)` = 0, as is `ROUNDDOWN(123.456,-65535)` above, and `ROUNDUP(123.456,-65535)` is `#NUM!`.
+- `ROUNDUP(1.5E+120,-65535)` = 1.5E+120, and `ROUNDUP(6.4421516092447E+265,-43376)` = 6.4421516092447E+265 (the T-3555
+  observation): nothing is dropped at 10^100, so no unit is added.
+- k = 40,000 and 98,304 (narrowed to 32,768) act the same. Below 32,768 the plain rule holds: `ROUNDDOWN(1.5E-300,32767)`
+  = 1.5E-300, every k = -32,767 cell is 0 (ROUNDDOWN) or `#NUM!` (ROUNDUP), and so are T-3555's
+  `ROUNDUP(-3.41521682833705E-207,-11541)` and `ROUNDUP(6.4421516092447E+265,-320)` (`#NUM!`), while
+  `ROUNDUP(4.72880001004526E+149,22178)` is the value.
+ROUND's narrowing differs and shows no such step: every probed ROUND cell follows the 32-bit rule above. TRUNC was not
+probed past 32,767.
+Evidence: probes/t3627-roundup-rounddown-digits-by-exponent (x = 1.5E-300 to 1.5E+300 in steps of 10^20; k = ±400,
+±1000, ±32767, ±32768, ±65535) and probes/t3627-roundup-rounddown-huge-digits-place (x = 1.23456789012345E∓90 to
+E∓112; k = ±32768, ±40000, ±65535, 98304), excel-graph, 2026-11-01. Negative values round their magnitude
+and keep the sign: probes/t3627-roundup-rounddown-negative-x (x = -1.5E-300 to -1.5E+120, k = ±32768, ±65535 and 32767).
+probes/t3627-roundup-rounddown-t3555-cells re-probes T-3555's draw cells quoted above, plus k = -32769 and -43376.
+The rule fits all 1,024 formula cells of the four cases.
+Status: VERIFIED (excel-graph)
+Implemented in: not yet in the engine (T-3635).
+Tasks: T-3555, T-3627, T-3635
+
+## ROUND one ulp above the nearest double (observation)
+Observation (T-3555): `ROUND(4.91499999999999E-06,8)` is 4.9100000000000004E-06 in Excel, 1 ulp above 4.91E-06, the
+double nearest the decimal result. That contradicts "ROUND family rounds in two decimal stages", which says ROUND returns
+the nearest double. It is the only such cell among the 120 ROUND points. The engine returns 4.91E-06, which is within
+Gate A's envelope and below the reproducibility floor, so it is not a fit target.
+Evidence: eval/accuracy/tables/ROUND/s1 Calc!A61 (excel-graph, 2026-11-01).
+Status: UNVERIFIED (one cell)
+Tasks: T-3555
+
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
 `MOD(1125899999999,1)` = 0, `MOD(1125900000000,1)` = `#NUM!`. It depends only on the quotient, not on
@@ -1058,6 +1095,9 @@ probes/t2771-roundup-subnormal-cuts (20 subnormal arguments from 5E-324 to 2.2E-
 num_digits rows 22-33), t2771-roundup-subnormal-sign (eleven arguments from 1E-320 to 2E-309, ten forms each) and
 t2771-roundup-subnormal-threshold (k = 2^48 - 2 to 2^49) and t2771-roundup-subnormal-sign-controls (negative arguments
 built without unary minus, cell references, huge num_digits), all excel-graph, 2026-10-27.
+Also eval/accuracy/tables/ROUNDUP/s1 Calc!A76 (excel-graph, 2026-11-01, T-3555): `ROUNDUP(8.90029543402884E-308,309)` is
+8.9E-308. The rounded-down part stays normal and the unit 1E-309 is flushed, so the result is below its argument.
+ROUND/s1 A73 and ROUNDDOWN/s1 A81 and A84 (±2.22507385850721E-308 at 320) are 0.
 Status: VERIFIED (excel-graph)
 Implemented in: `round_function` and `round_decimal` in crates/rustsheet-engine/src/decimal_round.rs
 Tasks: T-2756, T-2771
@@ -1066,7 +1106,7 @@ Tasks: T-2756, T-2771
 Rule: `-x` of a positive subnormal x below 2^-1026 (k·2^-1074 with k < 2^48) is +x; from 2^-1026 up it is -x. `0-x`
 keeps the sign at every size, and `-1*x` is 0 (a subnormal product is flushed, "Subnormal results become 0"). Every
 probed operand is an inline expression; unary minus on a cell reference, range or array, a tiny negative operand and
-a chain such as `--x` are unprobed. The engine applies the rule to the whole chain's parity and to every operand kind (T-2942 probes the rest).
+a chain such as `--x` are unprobed. The engine applies the rule to the whole chain's parity per group, as when each group was evaluated alone (T-3338: `-(-x)` of a tiny negative x is +|x|, `--x` is x), and to every operand kind (T-2942 probes the rest, the group forms included; pinned by `unary_minus_of_a_tiny_subnormal_through_groups`).
 Evidence: probes/t2771-roundup-subnormal-sign-controls B and C (k = 12345 and 2^48 - 1 against 2^48 and 2^50 + 3),
 excel-graph, 2026-10-27; t2771-roundup-subnormal-sign and -threshold read the same switch through the ROUND family.
 Status: VERIFIED (excel-graph) for a positive operand
@@ -1400,7 +1440,8 @@ Tasks: T-0915
 
 ## ACOS is PI()/2 - ASIN(x)
 Rule: Excel's `ACOS(x)` is `π/2 - ASIN(x)` in doubles, on ASIN's kernel ("ASIN's formulation"). So `ACOS(0.5)` =
-1.0471975511965976, the double nearest π/3, where libm gives 1.0471975511965979.
+1.0471975511965976, one ulp below the double nearest π/3: libm's 1.0471975511965979 is the correctly rounded value
+(1.07E-16 from π/3 against 1.15E-16; corrected in T-3669).
 Evidence: all 240 ACOS cells of probes/asin-atan-sign-source (`ACOS(x)` and `ACOS(-x)`, H and I; excel-graph, 2026-10-18, T-1797),
 where libm `acos` fits 157; poi/48539.xlsx Instance1!E23 (oracle: excel-graph, 2026-10-04); poi/FormulaEvalTestData_Copy.xlsx Q104.
 Implemented in: `fn_acos` (functions/math_and_trigonometry/mathematical.rs) as `FRAC_PI_2 - excel_asin(x)` since T-0939.
@@ -2277,6 +2318,7 @@ Status: VERIFIED. Implemented (T-1318, T-1584): A2, A6, A8, A12, A13, B9, B10, B
 Operands of the lift (probes/randbetween-lift-operands, 18 cells, all scalar-returning so nothing spills; excel-graph, 2026-10-16, T-1316): a boolean element of an array bound is an error element, not 1 or 0 (`COUNT(RANDBETWEEN({TRUE;1},{2;2}))` = 1, `SUM(...)` `#VALUE!`), like a scalar boolean; text elements read as number text (`{"5";"6"}` gives 2 numbers) and `"x"` or `""` elements are errors; a scalar error beside an array bound spreads over the broadcast shape (`ROWS(RANDBETWEEN(SEQUENCE(3),NA()))` = 3). A multi-cell range bound is `#VALUE!` as a whole (`RANDBETWEEN(D1:D3,10)`, even from a row the range intersects: no lift and no implicit intersection), so only array values lift, never ranges; a single-cell reference is a scalar.
 T-1782 (probes/randbetween-bound-errors, 22 cells, excel-graph, 2026-10-17): a scalar `TRUE` or `FALSE` beside an array bound is `#VALUE!` in every element, in either position (`ERROR.TYPE(INDEX(RANDBETWEEN(SEQUENCE(3),TRUE),1))` = 3, likewise `FALSE`, `RANDBETWEEN(TRUE,SEQUENCE(3,1,5))`, `RANDBETWEEN({1;1},{TRUE;TRUE})`), not 1 or 0 (so `COUNT(RANDBETWEEN(SEQUENCE(3),TRUE))` = 0); `ROWS` keeps the broadcast shape. When both bounds are errors the **top's error wins**, whatever the kinds and whether lifted or scalar: `RANDBETWEEN({#N/A},{"x"})` is `#VALUE!` but `RANDBETWEEN({"x"},{#N/A})` is `#N/A`; `({#DIV/0!},{#N/A})` is `#N/A`, `({#N/A},{#DIV/0!})` is `#DIV/0!`; `({TRUE},{#N/A})` `#N/A`, `({#N/A},{TRUE})` `#VALUE!`; scalars `(#N/A,"x")` `#VALUE!`, `("x",#N/A)` `#N/A`, `(#DIV/0!,#N/A)` `#N/A`; a scalar `NA()` beside `{"x";"y"}` follows the same order. Per element, `({"x";#N/A},{#DIV/0!;"x"})` is `#DIV/0!` then `#VALUE!`. Ours: implemented (T-1782) by reading the top first in `fn_randbetween`.
 T-1793 (probes/randbetween-range-error-bounds, 20 cells, excel-graph, 2026-10-17): a multi-cell range bound is an operand that is `#VALUE!` and takes its turn in the same top-first order: `RANDBETWEEN(D1:D3,NA())` is `#N/A` (the top error wins over the range), `RANDBETWEEN(D1:D3,1/0)` `#DIV/0!`, `RANDBETWEEN(NA(),D1:D3)` and `(1/0,D1:D3)` `#VALUE!` (the range top wins); a range beside text or a boolean is `#VALUE!` either way. Beside an array bound the range is broadcast, not a whole-result error: `ROWS(RANDBETWEEN(D1:D3,{5;6}))` = 2 (also with the range on top and for `SEQUENCE(4)`: 4), and per element the top's error wins, so `RANDBETWEEN(D1:D3,{5;#N/A})` is `#VALUE!` at row 1 and `#N/A` at row 2, `RANDBETWEEN({5;#N/A},D1:D3)` is `#VALUE!` at row 2 (A19; the range on top is always `#VALUE!`). The range counts as one scalar error, not by its own shape: `RANDBETWEEN(D1:D3,{5,#N/A})` is a 1x2 result whose element 2 is `#N/A` (A20). Ours: implemented (T-1793): a range bound is an error operand of `lift_number_operands`.
+T-3631 (probes/t3631-rand-randbetween-invariant R!A1:A30, B1:B31 and probes/t3631-randarray-invariant A!A1:A36, B1:B5, D1:E2; 106 scored cells, excel-graph, 2026-11-01, each filled twice with identical values; decision 0225 reads Gate B for the three functions on them): unlike RANDBETWEEN, RANDARRAY takes **boolean bounds and counts as numbers**: `RANDARRAY(1,1,TRUE,TRUE)` is 1 and `RANDARRAY(TRUE)` is a 1x1 draw, not `#VALUE!` (`IFERROR(AND(RANDARRAY(TRUE)>=0),"err")` is TRUE), while `RANDBETWEEN(1,FALSE)` is `#VALUE!` like `(TRUE,TRUE)`. RANDBETWEEN reads padded number text (`RANDBETWEEN(" 4 ","4")` = 4), rejects `""` (`#VALUE!`), passes a literal error through (`(#DIV/0!,1)`, `(1,#N/A)`), and the CEILING/FLOOR rule above also holds for `(0.5,0.9)` = 1, `(-2.5,-2.5)` = -2 and `(2.0000001,2.9)` = 3; `RANDBETWEEN(1E15,1E15)` is exactly 1E15 on every one of 1000 draws (`MIN` and `MAX` of `RANDBETWEEN(SEQUENCE(1000,1,1E15,0),1E15)`, R!B24 and R!B31), although the double spacing there is 0.125, so `bottom + r` unclamped would round to 1E15+1 for r >= 0.9375: Excel's draw never leaves `[bottom, top]` at that scale (ours clamps to `top`, `randbetween_draw`). Likewise RANDARRAY with min = max returns exactly that value on 1000 draws (0.5, -2 and `"1.5"`: A!A31:A36). RANDARRAY gives `#CALC!` for 0 columns (`RANDARRAY(1,0)`) as for 0 rows, passes `#N/A` through (`RANDARRAY(#N/A)`), reads number text bounds (`"1.5"` gives 1.5 without whole_number), and `AND(RANDARRAY(5,5)>=0)`, `AND(RANDARRAY(4,4)<1)` and the whole-number range checks hold. RAND is in [0,1) for every comparison form probed (LET, IFS, SWITCH, `RAND()^1<1`, `SUM(RAND(),RAND())<2`). Ours matches all 106 cells.
 
 ## SERIESSUM with x = 0
 Rule: SERIESSUM with x = 0 (a literal 0 or a blank) is `#NUM!` when any term's power `n + i*m` is zero or negative, whatever its
@@ -2446,8 +2488,9 @@ Tasks: T-1282, T-1785
 SIN, COS, TAN, COT, SEC and CSC return `#NUM!` when |x| >= 2^27 (134217728); 2^27-1 still gives a
 number, and the cut is the same for negative arguments and for 1E+300. The error is a real error
 (`ISERROR(N(SIN(1E+15)))` is TRUE). Evidence: probes/trig-huge-argument (T-1201). T-1201 probed only the integers 2^27-1 and 2^27 (and their negatives) at the cut; T-2172 adds fractions: the
-cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (-134217728.25 itself unprobed) (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172). COSH(1E+15) is also
-`#NUM!` (probe cell A85).
+cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172), and -134217728.25 is `#NUM!` too (`SIN(-134217728.25)` and `CSC(-134217728.25)`, accuracy/SIN/s1 A78 and accuracy/CSC/s1 A70, excel-graph, T-3668). COSH(1E+15) is also
+`#NUM!` (probe cell A85). At 0, `COT(0)` and `CSC(0)` are `#DIV/0!` and `SEC(0)` is 1 (gen-m5 50d8a085335c05e6 A38 and A125,
+dde5ea295a38fb16 A289, cf893ec19f53a7fc A113; c7d88fa6defcfb8e A175, excel-graph): 0 is the only pole a double reaches.
 Excel reduces every trig argument by multiples of `π₆₄/2`, where `π₆₄` is π rounded to a 64-bit
 significand (the x87 `FLDPI` constant `0xC90FDAA22168C235·2^-62`, π₆₄ − π ≈ 5.0166e-20), and
 then rounds the true sine, cosine or tangent of that remainder once. So SIN(x) is the correctly
@@ -2532,3 +2575,7 @@ Rule: `TEXT(2^1023*(2-2^-52),"0.00E+00")` is `1.80E+308`: the mantissa rounds up
 Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digit analogues gen-m10/4398098060a7fa9d A13 ("01.2E+14") and gen-m5/c0651f0e0fb544d0 A74 ("1.0E+15").
 Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
+
+## PERCENTOF: an error cell argument is #NUM!
+Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). Other error kinds are unprobed. The engine propagates `#DIV/0!`; owned by T-3728.
+Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.

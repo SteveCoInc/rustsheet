@@ -1,5 +1,6 @@
 //! The circular and hyperbolic IM* functions (IMSIN … IMCOT, IMSINH … IMCSCH), of a parsed number.
 
+use super::super::ENGINEERING_EXP_CUT;
 use super::{complex_result, finite_complex_result, ComplexParts, Suffix};
 use crate::calc_result::CalcResult;
 use crate::expressions::types::CellReferenceIndex;
@@ -7,16 +8,18 @@ use crate::functions::lift::num_error;
 use crate::functions::math_and_trigonometry::{excel_sin_cos, excel_tan, EXCEL_TRIG_LIMIT};
 use crate::x87_exp::excel_exp;
 
-/// IMSIN and IMCOS are `#NUM!` once `exp(|y|)` overflows (|y| above about 709.78), whatever the
-/// real part, although `cosh y` is still finite there: `IMSIN("1.5+710.4i")`, `IMCOS("710.4i")`
-/// (probes/eng-im-overflow-edges A25-A27, A33-A35). For negative y they are `#NUM!` sooner, once
-/// `u = EXP(y)` of [`trig_sinh_cosh`] leaves the normal range (y below `ln(DBL_MIN)` =
-/// -708.3964185322641): Excel's EXP gives 0 there and the reciprocal `1/u` overflows.
-/// `IMSIN("0.5-708.39641853i")` answers and `IMSIN("0.5-708.396419i")` is `#NUM!`, while
-/// `IMSIN("1.2+709.7i")` answers (probes-numeric/t3589-imsin-imcos-negative-cut-probe,
-/// t3589-imsin-imcos-subnormal-exp-probe; engineering.md, T-3589).
+/// IMSIN and IMCOS are `#NUM!` once the imaginary part y exceeds [`ENGINEERING_EXP_CUT`] (709.7),
+/// whatever the real part, although `cosh y` is finite up to about 709.78: `IMSIN("0.5+709.7i")`
+/// answers and `IMSIN("0.5+709.700000000001i")`, `IMCOS("709.75i")` are `#NUM!`
+/// (probes-numeric/t3616-imsin-imcos-positive-cut-probe, x = 0 to 3; engineering.md, T-3616).
+/// For negative y they are `#NUM!` once `u = EXP(y)` of [`trig_sinh_cosh`] leaves the normal range
+/// (y below `ln(DBL_MIN)` = -708.3964185322641): Excel's EXP gives 0 there and the reciprocal
+/// `1/u` overflows. `IMSIN("0.5-708.39641853i")` answers and `IMSIN("0.5-708.396419i")` is `#NUM!`
+/// (probes-numeric/t3589-imsin-imcos-negative-cut-probe, t3589-imsin-imcos-subnormal-exp-probe;
+/// engineering.md, T-3589). Both cuts also give `#NUM!` for every |y| past exp's overflow
+/// (probes/eng-im-overflow-edges A25-A27, A33-A35).
 fn trig_exp_overflows(y: f64) -> bool {
-    y.abs().exp().is_infinite() || excel_exp(y) < f64::MIN_POSITIVE
+    y > ENGINEERING_EXP_CUT || excel_exp(y) < f64::MIN_POSITIVE
 }
 
 /// IMCOSH and IMSINH are `#NUM!` for a zero imaginary part once `exp(|x|)` overflows, although
@@ -104,7 +107,8 @@ const SINH_SERIES_TERMS: u32 = 16;
 
 /// sinh x as the Taylor series `x + x³/3! + x⁵/5! + ...`, summed in that order in doubles, each
 /// term the one before times `x²/((2k)(2k+1))`, until a term leaves the sum unchanged: the sinh x
-/// of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <= `INVERSE_EXP_LOW`. With the `1/u` cosh it fits
+/// of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <= `INVERSE_EXP_LOW` (a real IMSECH there takes
+/// libm's cosh instead and needs no sinh, T-3609). With the `1/u` cosh it fits
 /// all 114 IMSINH and IMCOSH oracle texts with 0 < |x| <= 0.01, where libm's sinh misses
 /// `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm ...477) and the real part of
 /// `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626, libm ...625), and
@@ -214,6 +218,9 @@ fn real_trig(
 /// libm's beyond 2^27, where the reciprocal IM* functions are unprobed. IMCSC, IMSEC, IMSECH and
 /// IMCOT take these: the sweep's rows with a large real part (`956.615+0.00387493i`,
 /// `-9447.72-0.00486262i`) need Excel's reduction (probes-numeric im-last-digit-sweep, T-2044).
+/// IMSIN and IMCOS of a complex number too: near k·π/2 their small part is Excel's x87 remainder
+/// (`IMSIN("1.5707963267949+709.7i")` is ...-2.88915216855774E+293i, libm ...917292436455...;
+/// 400 of 400 texts of probes-numeric/t3726-imsin-imcos-near-half-pi-sweep, libm 28; T-3726).
 fn trig_sin_cos(x: f64) -> (f64, f64) {
     if x.abs() < EXCEL_TRIG_LIMIT {
         excel_sin_cos(x)
@@ -263,7 +270,8 @@ pub(super) fn imcos((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
         return num_error(cell);
     }
     let (y_sinh, y_cosh) = trig_sinh_cosh(y);
-    finite_complex_result(x.cos() * y_cosh, -x.sin() * y_sinh, suffix, cell)
+    let (x_sin, x_cos) = trig_sin_cos(x);
+    finite_complex_result(x_cos * y_cosh, -x_sin * y_sinh, suffix, cell)
 }
 
 pub(super) fn imcosh((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
@@ -344,6 +352,16 @@ pub(super) fn imcsc((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 /// included, where libm's parts fit 33 of 44 (T-2841).
 pub(super) fn imcsch((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
     let (x_sinh, x_cosh) = inverse_exp_sinh_cosh(x);
+    // A small real IMCSCH is `1/sinh x`, not `sinh x/sinh²x`: all 75 real IMCSCH texts at
+    // 0 < |x| <= `INVERSE_EXP_LOW`, `IMCSCH("-1.05118886127103E-06")` -951303.839721704 included
+    // (the quotient's ...703; t3589-im-hyperbolic-small-x-sweep D102), against 74 (T-3609). It holds
+    // down to the smallest normal x, past where sinh²x underflows: `IMCSCH("1E-200")` is 1E+200 and
+    // `IMCSCH("1E-307")` 1E+307, while a subnormal x (`IMCSCH("1E-308")`, "2E-309") is `#NUM!`, which
+    // the quotient below gives (probes-numeric/t3609-imcsch-tiny-real-probe). So the reciprocal never
+    // exceeds 1/DBL_MIN, about 4.5E+307.
+    if y == 0.0 && x.abs() <= INVERSE_EXP_LOW && x.abs() >= f64::MIN_POSITIVE {
+        return complex_result(1.0 / x_sinh, 0.0, suffix);
+    }
 
     let y_cos = y.cos();
     let y_sin = y.sin();
@@ -395,7 +413,16 @@ pub(super) fn imsec((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 pub(super) fn imsech((x, y, suffix): ComplexParts, _: CellReferenceIndex) -> CalcResult {
     let (x_sinh, x_cosh) = inverse_exp_sinh_cosh(x);
     if y == 0.0 {
-        return complex_result(1.0 / x_cosh, 0.0, suffix);
+        // At |x| <= `INVERSE_EXP_LOW` a real IMSECH is 1 over libm's cosh, not over the `1/u`
+        // form's: all 75 real IMSECH texts there, `IMSECH("6.17632662504393E-06")` 0.999999999980927
+        // included (the form's ...926; probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58,
+        // C68), against 72 (engineering.md "IMSECH and IMCSCH of a small real number", T-3609).
+        let cosh = if x.abs() <= INVERSE_EXP_LOW {
+            x.cosh()
+        } else {
+            x_cosh
+        };
+        return complex_result(1.0 / cosh, 0.0, suffix);
     }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
@@ -414,7 +441,8 @@ pub(super) fn imsin((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
         return num_error(cell);
     }
     let (y_sinh, y_cosh) = trig_sinh_cosh(y);
-    finite_complex_result(x.sin() * y_cosh, x.cos() * y_sinh, suffix, cell)
+    let (x_sin, x_cos) = trig_sin_cos(x);
+    finite_complex_result(x_sin * y_cosh, x_cos * y_sinh, suffix, cell)
 }
 
 pub(super) fn imsinh((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {

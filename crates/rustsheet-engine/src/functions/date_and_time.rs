@@ -11,7 +11,7 @@ mod workday;
 mod yearfrac;
 use weekend::WeekendPattern;
 
-use crate::formatter::date_clock::{parse_date_clock_serial, SECONDS_PER_DAY_F64};
+use crate::formatter::date_clock::{parse_date_clock_serial, trim_spaces, SECONDS_PER_DAY_F64};
 
 pub(crate) fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0)
@@ -213,7 +213,9 @@ impl Model {
     /// (probes/date-text-grammar B53: `DATEVALUE("1/2/2020 25:00")` is 43833, 3 Jan), with
     /// year-less text in [`Model::current_year`]. Excel: see docs/excel-semantics/dates.md.
     pub(crate) fn parse_datevalue_text(&self, value: &str) -> Option<i32> {
-        let (text, year) = (value.trim(), &|| self.current_year());
+        // Only the space character is trimmed: a tab, line break, no-break or ideographic space
+        // around the text is #VALUE!, as in VALUE (probes/date-text-shape-survey rows 84-88, 91).
+        let (text, year) = (trim_spaces(value), &|| self.current_year());
         let serial = if let Ok((serial, _)) = parse_date(text, self.locale, year) {
             serial
         } else {
@@ -696,16 +698,36 @@ impl Model {
 
     pub(crate) fn fn_days(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // Lifts over a range or array in both arguments (probes/date-argument-modes F11:F14).
-        self.numbers_fn(Function::Days, args, [0.0; 2], cell, |[end, start]| {
-            let (end_serial, start_serial) = (end.floor() as i64, start.floor() as i64);
+        // Error order: an error-valued argument first (leftmost), then #NUM! for a readable
+        // argument off the calendar, then #VALUE! for unreadable text (gen-m6/a4a301d00b46acf3
+        // A79, A241, A493; dates.md "DAYS error order", T-3536).
+        self.lift_call(Function::Days, args, cell, &mut |model, values| {
+            let read = [0, 1].map(|i| model.kernel_number_or(values.get(i), 0.0, cell));
+            let given_error =
+                (0..2).find(|&i| matches!(values.get(i), Some(CalcResult::Error { .. })));
+            if let Some(i) = given_error {
+                if let Err(error) = &read[i] {
+                    return error.clone();
+                }
+            }
             // Excel accepts any serial in 0..=MAXIMUM (a 0 serial is 1900-01-00) and
             // reports #NUM! otherwise. DAYS works directly on serials, so the dates
             // themselves are never materialised.
             let range = 0..=MAXIMUM_DATE_SERIAL_NUMBER as i64;
-            if !range.contains(&start_serial) || !range.contains(&end_serial) {
-                return Err(Error::NUM);
+            let [end, start] = read;
+            // Then the arguments left to right: unreadable text is #VALUE!, a number off the
+            // calendar #NUM! (`DAYS(-1,"abc")` #NUM!, `DAYS("abc",-1)` #VALUE!).
+            let mut serials = [0_i64; 2];
+            for (slot, arg) in serials.iter_mut().zip([end, start]) {
+                match arg {
+                    Err(error) => return error,
+                    Ok(n) if !range.contains(&(n.floor() as i64)) => {
+                        return CalcResult::new_error(Error::NUM, cell, String::new());
+                    }
+                    Ok(n) => *slot = n.floor() as i64,
+                }
             }
-            Ok((end_serial - start_serial) as f64)
+            number_result(Ok((serials[0] - serials[1]) as f64), cell)
         })
     }
 

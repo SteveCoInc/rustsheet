@@ -1158,6 +1158,26 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     - Step forms tried, none of which gives any of the 7: plain doubles, rounded once, kept at 64 bits, r1 -
       f1·((r1-r0)/(f1-f0)), and r1 - f1/((f1-f0)/(r1-r0)).
     The 4 stay known failures. T-3579 probes Excel's residual bits directly (guess-seeded runs at nper 1).
+  - **The residual is not the cause at nper 1; the flat-secant outcome is** (probes/t3579-rate-residual-nper1, 53
+    cells on A171's arguments, excel-graph, 2026-11-01, T-3579). The model is bit-exact on 49:
+    - every guess other than 0.1 (16 near the root, root ± 1e-14 to 1e-9, and 17 from -0.9 to 1, A3:A35), whose
+      values read Excel's residual at the guess, at the guess ± 0.001 and near the root, so Excel's residual there
+      has the model's bits, f(0.1)'s partner points 0.099 (A29) and 0.101 (A30) included;
+    - pv, pmt and fv scaled by 2^-40 to 2^-1 (A36:A40) and the two #NUM! runs at 2^10 and 2^20 (A43, A44).
+    The model's run at guess 0.1 reaches r2 = 0.0020941704345913 with f(r2) = -1.674e-7, steps to
+    0.0020941704345254896 with the same residual, and holds there on the flat secant. Scaled by 2^-1 or less,
+    |f| < 1e-7 stops the run at that iterate before the flat secant, and Excel agrees. At scales 1, 2 and 4 (A1, A2,
+    A41, A42) Excel does not hold. Its value at scales 1 and 2 (0.002094170434484841) is, bit for bit, the model's run
+    restarted from the flat step's older iterate r2 (`RATE(..,0.0020941704345913)`, A6). At scale 4 it is
+    0.0020941704344770674, which the same restart also gives once its third iterate fails |f| < 1e-7. Restarting
+    from the newer iterate gives 0.0020941704344399933 instead (A5).
+    - As a blanket rule ("on a flat secant that has not converged, restart the secant from r0 with r0 ∓ 0.001"),
+      the restart is wrong. In a scratch build it gets A1, A2, A41 and A42 and t3348-rate-fv-nonzero A171, but
+      loses this probe's A43 and A46 (scale 2^10) and 32 held cells of t3348-rate-fv-nonzero (A15 to A26, A74 to
+      A184 among them, including the distinct-iterate holds A182 to A184). It also loses 17 cells of
+      probes-numeric/t3348-rate-gate-a-fresh, 10 of t3348-rate-gate-a-sweep and 4 of t3478-rate-r4-wide.
+    - So Excel sometimes restarts and sometimes holds. What separates the two is open (T-3698). A1, A2, A41 and
+      A42 are known failures owned by T-3698.
   - Right type, last digits, on the training sweep (gap triage 2026-11-01c; T-3607): probes-numeric/
     t3348-rate-gate-a-sweep A228, A269, A271, A273 and A285 (terms 1e9 to 2e11) are 1 to 3 ulp from Excel. Excel
     is not the correctly rounded root there either: A228 `RATE(102,2166497722.99291,-207421358353.562,
@@ -1973,13 +1993,54 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   -999.0303135033106 against C1 `PPMT(2E-5,3,100,100000,0,1)` -999.0303135033108, B4 -999.0902565209652 against C4
   ...9655, I1 `CUMPRINC(1E-4,60,100000,3,3,0)` -1662.087365975419 against J1 -1662.0873659754193 (I2 and J2 agree).
   Our PPMT has Excel's bits on every C and J cell. Our CUMPRINC is 1 to 3 ulps off on 59 of the case's 104 principals,
-  so 38 of its CUMIPMT cells are visibly off (F2 is T-3413's; the other 37 and their principals are T-3552's).
+  so 38 of its CUMIPMT cells are visibly off (F2 is T-3413's; the other 37 and their principals were T-3552's, now T-3776's).
+- T-3731 attempt 2 (2026-11-01) found no form either. On the 425 type 0 one-period principals of the three tiny-rate
+  cases, the best of about 30 forms (attempt 1's two hypotheses: the interest on an L-error-free balance, and the
+  amortization loop in doubles and in x87 registers; PPMT's kernel on `log1p` or on the unrounded x87 L; double-double
+  payments; `pmt - IPMT`) is 145 bit-exact, against the engine's 120. Against `pmt·exp(-j·log1p)` the miss is a per-rate
+  value from -3 to +3 ulps with ±1 ulp of scatter within a rate. The table is in the T-3731 task file.
+- How one period of CUMPRINC differs from PPMT, measured (T-3552 attempt 1, excel-graph 2026-11-01:
+  probes/fin-cumprinc-dyadic-rates, 296 cells, and probes/fin-cumprinc-single-period-rate-scan, 720 cells):
+  - At rates that are powers of two (2^-16, 2^-14, 2^-10), where every `·r` and `/r` is exact, a one-period
+    CUMPRINC is PPMT of that period within ±1 ulp, and the mean gap is 0.0 to 0.3 ulp. At 3·2^-17, where `1+r` is
+    exact too but `·r` rounds, it is +1.2 ulp off PPMT on average (smaller in magnitude). So the extra step is
+    not the rounding of `1+r`.
+  - Over 60 log-spaced rates from 1E-6 to 1E-2 (type 0, nper 100, periods 3 to 6, 50 and 98), `CUMPRINC/PPMT - 1`
+    is `+δL`: CUMPRINC = PPMT·(1+δL). Here δL = (L − ln(1+r))/ln(1+r), the relative error of `growth_log`'s L against the exact log (PPMT's
+    `ln(1+r)`). Measured as `(CUMPRINC - PPMT)/|PPMT|`, which is `-δL` because both values are negative, the
+    regression slope is -1.04 (correlation -0.69). So where L is low (δL < 0), Excel's principal is smaller in
+    magnitude than PPMT. The gap does not depend on the period. Against the correctly rounded payment
+    `pmt·v^(n-k+1)` the bias is gone (mean +0.14 ulp), but the spread is ±3 ulps. In words: Excel's principal
+    does not carry the L error that PPMT's balance `pv/(1-v^n)` carries, and its own last bits are from another
+    chain.
+  - What it is not, scored bit-exact on the 504 one-period principals of the three cases (type 1 from period 2)
+    and, for the constant searches, on the 60 rates of the scan:
+    - `C·G_k` or `(C·G_k)·Y`, for any constant C within ±16 ulps of the value the first period implies, with:
+      - G_k one of 15 per-period discounts: Excel's or libm's EXP of `(k-1-n)L` or `(k-n)L`; the exponent split
+        or held in an x87 register; the reciprocal of the opposite power; a product or quotient of two powers.
+      - Y one of 1, r, `1-v`, `1+r` and `expm1(L)`.
+      - L one of `growth_log`, `log1p`, Excel's LN of `1+r` and the correctly rounded log.
+      No rate of the 60 has such a C for more than 3 of these forms. With PPMT's own discount and any balance
+      within ±64 ulps of PPMT's, 1 rate of 60 fits.
+    - `P' - IPMT_k`, for any constant P' within ±64 ulps of PMT, with Excel's IPMT bits or three orderings of
+      `A·(1-Q(x))·r`: no rate.
+    - The correctly rounded payment or balance times Excel's discount: 182 of the 504.
+    - Every left-to-right order of `pv, /(1-v^n), Q, ·r, ·(1-v), /r, ·(1+r)`, and of the sets without `·r/r`
+      (the balance drop), each with Excel's or libm's exp and expm1: the best has 267 of 425 (`pv/(1-v^n)·r/r·(1-v)·Q·(1+r)`) type 0 principals.
+    - Toward-zero rounding on any subset of five operations of PPMT's form: at most 101 of the 144 one-period
+      principals of the dyadic and tiny-rate cases, where PPMT's form itself has 83. With PPMT's discount and a
+      free balance (±64 ulps) per rate and type, 6 of 72 rate groups fit.
+    - Evaluation in x87 extended precision with one final rounding: unbiased, but only 19 of 82 bit-exact.
+  - The kernel's current form gets 81 of the 192 dyadic-rate principals, 84 of the 360 scan principals and 45 of
+    the 104 tiny-rate principals. The best geometric sum over all three cases (both types, ranges up to 12 periods) has
+    339 of 634 (the task file lists the families). Multi-period values are not the double sum of the probe's own one-period values
+    either: they agree up to m = 5 and then drift by 1 to 2 ulps.
 Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
 A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
-E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3552; T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
+E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
 `CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2) and T-3141 (the
 underflowed principal's bits); the short sums' last digits in T-1374)
-Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-1374
+Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-3731, T-3776, T-1374
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
@@ -2481,9 +2542,51 @@ of the same flows ÷ f; MDURATION = DURATION/q; each cell's distance from it in 
   gen-m9 0a957119475760c5 A279's `PRICE(38136,44737,1E+300,7,100,2)` (Calc!A181) is Excel +0.5 ulp, ours +8.5 (
 against the double that 1E+300 parses to).
 So a more accurate kernel would fix the short-stub DURATION and MDURATION cells but not the grid's PRICE cells,
-where only Excel's own operation order gives its digits: T-2733 keeps the `visible` stage.
+where only Excel's own operation order gives its digits: T-2733 keeps the `visible` stage. T-2733 found that order
+("PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield").
 Status: VERIFIED (excel-graph)
 Tasks: T-2207, T-2732, T-2733
+
+## PRICE, DURATION and MDURATION sum order at a huge coupon rate and yield
+Rule: PRICE takes the accrued interest as `rate/f · A/E · 100` (left to right, `A/E` one quotient) and discounts
+coupon k (k = 0..N-1) at the exponent `k + DSC/E`; the redemption keeps `DSC/E + N - 1`, and each discount is
+Excel's `^` ("PRICE and ODDFPRICE discount with Excel's `^`"). The single-coupon (N = 1) branch, which discounts
+linearly, keeps the accrued `coupon · (A/E)`: on the post-freeze fresh sweep probes-numeric/t2733-price-r4-fresh
+(excel-graph, 2026-11-01) all 78 PRICE rows with COUPNUM = 1 are bit-exact with it and 62 with `rate/f · A/E · 100`
+(A56 `PRICE(38927,38971,0.828072,1.77301,1.21553,1,2)` is Excel -3.3520514477410757, 32 ulp from the latter); the
+re-check sweep probes-numeric/t2733-price-n1-fresh confirms it (T-2733 Outcome). DURATION and MDURATION discount
+coupon k at the same `k + DSC/E`. Written this way every cell of probes/bond-extreme-coupon-yield is within half a
+unit of Excel's 15th significant digit, among them the probe rows that mirror gen-m9 0a957119475760c5 A279,
+a91bad4e84f49739 A142 and 30e20ba3302fea8b A90 with literal arguments: `PRICE(38136,44737,1E+300,7,100,2)`
+(Calc!A181) is 8.95449454935698e+300, `PRICE(43830,45293,100,278,50,4,1)` (Calc!A182) -133.76680342333566 and
+`MDURATION(39697,44449,58988,44270,2,0)` (Calc!C183) 5.029680055838246e-07; the three gen-m9 cells pass too. The order before (accrued `coupon · (A/E)`,
+exponent `DSC/E + k - 1` for k = 1..N) left 62 cells visibly off, Calc!A20 `PRICE(38136,44737,1E+10,7,100,1,0)` at
+55709579072.88501 against Excel's 55709579072.88489.
+Offline fit (T-2733: the candidate orders scored outside the engine, over 239 PRICE cells of the case with more
+than one coupon left, plain doubles unless named; bit-exact / within 15 digits by display; it ranks the candidates and
+is not the eval result, below):
+- before: 63 / 176; exponent `k + DSC/E` with accrued `coupon·A/E`: 146 / 215; with `coupon·(A/E)`: 142 / 214;
+- accrued `rate/f·(A/E)·100`, `rate·(A/E)·(100/f)` or `A/E·rate·100/f` (the same doubles here): **196 / 238**;
+  `rate·A/E·100/f`: 166 / 223; every other order of the five factors scored lower;
+- each operation rounded twice (x87, "Division rounds twice"): the same 196 / 238; an extended (64-bit) accumulator:
+  65 / 191; everything exact with one final rounding: 61 / 189;
+- the power: Excel's `^` 196, `EXP(t·LN v)` with libm or Excel's kernels and a double product 181, the product in an
+  x87 register 164, `1/EXP(-t·LN v)` 154, libm `pow` and a correctly rounded pow 119 (with the earlier accrued);
+- the coupon `100·rate/f`, `rate·(100/f)` or `rate/f·100`: tie; summing from the last coupon: 85 at best; a
+  closed-form annuity, `v^k·v^(DSC/E)`, a running product of `v`, or discounting the coupon-date value by
+  `v^(DSC/E)` once: 79 at best; the exponent written `(k·E + DSC)/E` (one rounding): no change.
+Eval (the engine at T-2733, `rustsheet-eval show`): every one of the case's 240 PRICE cells (Calc!A1-A198,
+Parts!B1-B6 and E1-J6) is bit-exact. The redemption term alone (rate 0, Parts!B1-B6) is 100 over the worksheet's
+`(1+yld/2)^(COUPDAYSNC/COUPDAYS+COUPNUM-1)` (Parts!D1-D6, Excel's own `^`) to the bit in all six rows in Excel, and
+the engine matches; for example `PRICE(38136,44737,0,42,100,2,0)` (Parts!B3) is 3.012159688249292e-47 = 100/Parts!D3.
+The 47 cells of the case left are all DURATION or MDURATION (Calc columns B and C), numeric and within 2 ulp:
+last-digit residue, T-2972's except Calc!B7, B43, C7 and C43, which T-2733 moved by 1 or 2 ulp (T-2973). YIELD
+prices with the same sum: on top of T-3215's start it fixes 16 cells of the yield-* probes and moves none.
+Evidence: probes/bond-extreme-coupon-yield (579 cells, excel-graph, 2026-10-26, T-2732); gen-m9/0a957119475760c5
+Calc!A279, a91bad4e84f49739 Calc!A142, 30e20ba3302fea8b Calc!A90 (excel-graph, 2026-10-23).
+Ours: `CouponSchedule::price` and `duration_of` in functions/financial/financial_bonds.rs since T-2733.
+Status: VERIFIED (excel-graph)
+Tasks: T-2733, T-2972, T-2973
 
 ## PMT when (1+rate)^nper overflows or underflows
 Rule: when `pv*P` overflows (`P = (1+rate)^nper`, overflowing or not), PMT is not an error but the annuity quotient
@@ -3642,9 +3745,9 @@ cells (`XIRR(1E+21,<#VALUE!>,<#NUM!>)` is `#NUM!`, 1dce4774f5c0e736 A189; `XIRR(
 `#N/A`, 1b60bf99d71424e7 A29; `XIRR(<text cells>,<5 dates>,<#VALUE!>)` `#VALUE!`, b72d952c5f52cb4d A50, whose guess is
 itself `#VALUE!`); then an error dates argument, before the values' cells are read (`XIRR(Data!B11:E11,<#N/A>)` with E11
 the text `" x "` is `#N/A`, 67a4c03afd63f988 A241). Ours reads a non-numeric text guess as its `#VALUE!` at the guess's
-point too, and a boolean guess as 1 or 0 that only skips the size checks, as before T-2611; neither order is evidenced
-(b6a02893a8d6b151 A226, a TRUE guess beside 6 values and 3 dates, is `#VALUE!`, but its values range holds the numeric
-text `"1.5"`, so it does not separate the guess from the reading). In the size checks one empty or numeric-text cell is not "a text, boolean
+point too. A boolean guess beside values and dates of different counts is `#VALUE!` (a guess cell holding TRUE beside 6
+values and 3 dates, b6a02893a8d6b151 A226); beside equal counts it is read as 1 or 0 as before T-2611 (unprobed), and a
+literal TRUE guess is unprobed too (T-3267). In the size checks one empty or numeric-text cell is not "a text, boolean
 or empty cell": one empty values cell against several dates (`XIRR(Data!D10:D10,Data!B7:E8)`, 1dce4774f5c0e736 A91;
 89f0aee953a55a45 A36; ba4ddb817a8e700e A339), one empty date cell against several values (`XIRR(Data!B6:C11,<empty>,0.5)`,
 89f0aee953a55a45 A330; d0854366830dcdee A133) and one numeric-text date `"1"` against 14 values (c0681a8b150ce301 A266) are
@@ -3652,8 +3755,12 @@ the count's `#NUM!`; one FALSE date stays `#VALUE!` (1cd3096e3e87c965 A48). 1db1
 empty date cell's `#VALUE!`, is a nested cell with a FALSE guess and other `#VALUE!` arguments, so it does not show
 the empty date's error (unconfirmed which argument decides it). Unprobed: an error values argument beside an error guess
 (ours: the values'); a numeric-text guess beside different counts (ours: the old reading); numeric text inside a values
-range (`XIRR(Data!C9:C11,{39448,39508,39859},0.1)` with C11 `"1"` is `#NUM!`, 31474c20fc1dafd6 A351, ours `#VALUE!`; text
-read as 1, skipped or refused all give `#NUM!` there; T-3312).
+range, array or typed argument (T-3312). Settled for range cells (T-3267): numeric text reads as its number, in both
+the values and the dates (`XIRR(G1:G13,H1:H13)` over text cells equals the number flows, probes/xirr-back-dated-stop
+A31; `XIRR(Data!C9:C11,{39448,39508,39859},0.1)` with C11 `"1"` is `#NUM!`, 31474c20fc1dafd6 A351); non-numeric text is
+`#VALUE!`. A TRUE guess beside 6 values and 3 dates is `#VALUE!` (b6a02893a8d6b151 A226, whose range text `"1.5"` is
+numeric, so the guess decides it). Formatted numeric text in XIRR ranges (dates, currency, percent) is unprobed; ours
+reads it with the engine's text-to-number coercion.
 Order (XNPV, T-2428): the rate first, per element, where a boolean is `#VALUE!` (a cell, `XNPV(<TRUE>,..)`,
 1dce4774f5c0e736 A22, or an array element, `XNPV(SORT(<FALSE>),..)`, 5c6a23c4f6597f1c A258); then one values cell that is
 non-numeric text or a boolean is `#VALUE!`, before an error dates argument (`XNPV(-1,<FALSE>,<#N/A>)`, 3aa168259335be54

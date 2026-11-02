@@ -140,6 +140,38 @@ fn imsin_imcos_small_imaginary_part_takes_the_reciprocal_form() {
     assert_eq!(model._get_text("A4"), "1E-200");
 }
 
+/// IMSIN and IMCOS of a complex number take sin x and cos x from SIN and COS's own kernel (x
+/// reduced by the x87 64-bit π), not libm: near k·π/2 the small part keeps Excel's remainder
+/// (probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1; t3726-imsin-imcos-near-half-pi-sweep
+/// A183, B183; T-3726). libm gave ...2.88917292436455E+293 and ...2223053845294390000 here.
+#[test]
+fn imsin_imcos_near_half_pi_take_the_x87_reduction() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSIN("1.5707963267949+709.7i")"#);
+    model._set("A2", r#"=IMCOS("1.5707963267949+709.7i")"#);
+    model._set("A3", r#"=IMSIN("4.71238898038469+79.1718046156471i")"#);
+    model._set("A4", r#"=IMCOS("4.71238898038469+79.1718046156471i")"#);
+
+    model.evaluate();
+
+    assert_eq!(
+        model._get_text("A1"),
+        "8.27492013840132E+307-2.88915216855774E+293i"
+    );
+    assert_eq!(
+        model._get_text("A2"),
+        "-2.88915216855774E+293-8.27492013840132E+307i"
+    );
+    assert_eq!(
+        model._get_text("A3"),
+        "-1.2101741480848E+34-2223964481544680000i"
+    );
+    assert_eq!(
+        model._get_text("A4"),
+        "-2223964481544680000+1.2101741480848E+34i"
+    );
+}
+
 #[test]
 fn fn_imaginary_misc() {
     let mut model = new_empty_model();
@@ -404,6 +436,33 @@ fn fn_imcsc_imlog2_imcot_of_zero_are_num() {
     assert_eq!(model._get_text("A1"), "#NUM!");
     assert_eq!(model._get_text("A2"), "#NUM!");
     assert_eq!(model._get_text("A3"), "#NUM!");
+}
+
+// Excel: probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58, C68 and D102 (excel-graph, T-3609): a small real
+// IMSECH is 1 over libm's cosh and a small real IMCSCH 1 over the series sinh, down to the smallest normal x; a
+// subnormal x is #NUM! (probes-numeric/t3609-imcsch-tiny-real-probe A9, A11, A12, A14).
+#[test]
+fn small_real_imsech_imcsch_take_the_reciprocal() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSECH("6.17632662504393E-06")"#);
+    model._set("A2", r#"=IMSECH("-1.71603860095587E-05")"#);
+    model._set("A3", r#"=IMSECH("9.70217965965262E-05")"#);
+    model._set("A4", r#"=IMCSCH("-1.05118886127103E-06")"#);
+    model._set("A5", r#"=IMCSCH("1E-200")"#);
+    model._set("A6", r#"=IMCSCH("1E-307")"#);
+    model._set("A7", r#"=IMCSCH("1E-308")"#);
+    model._set("A8", r#"=IMCSCH("2E-309")"#);
+
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), "0.999999999980927");
+    assert_eq!(model._get_text("A2"), "0.999999999852761");
+    assert_eq!(model._get_text("A3"), "0.999999995293386");
+    assert_eq!(model._get_text("A4"), "-951303.839721704");
+    assert_eq!(model._get_text("A5"), "1E+200");
+    assert_eq!(model._get_text("A6"), "1E+307");
+    assert_eq!(model._get_text("A7"), "#NUM!");
+    assert_eq!(model._get_text("A8"), "#NUM!");
 }
 
 // Excel: gen-m9 (excel-graph, T-2258): IMLN and IMLOG10 of 0 or 0i are #NUM!, not "-inf" (T-2389).
