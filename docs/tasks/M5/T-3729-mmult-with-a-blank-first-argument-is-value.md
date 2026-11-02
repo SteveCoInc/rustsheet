@@ -3,7 +3,7 @@ id: T-3729
 title: "MMULT with a blank first argument is #VALUE! even when the second argument is an error"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,10 +23,13 @@ Found by the T-3494 arg-pairs batch (excel-graph oracle), gen-m5/842a0aebcb17b83
 Decision 0083: a wrong error type is visible to every user of the function; the acceptance criteria below are already the visible-parity stage.
 
 ## Acceptance criteria
-- [ ] A463 and A466 of gen-m5/842a0aebcb17b83d match Excel, and every other MMULT cell of that case that passes today still passes.
-- [ ] MDETERM/MINVERSE with a blank argument beside an error probed and documented if different.
-- [ ] The cells above leave eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] A463 and A466 of gen-m5/842a0aebcb17b83d match Excel, and every other MMULT cell of that case that passes today still passes.
+- [x] MDETERM/MINVERSE with a blank argument beside an error probed and documented if different.
+- [x] The cells above leave eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other functions' error handling.
+
+## Outcome
+MMULT now returns `#VALUE!` for a single blank first argument before evaluating the second (mmult.rs). gen-m5/842a0aebcb17b83d A463 and A466 now match Excel; baseline updated with 0 regressions. MDETERM/MINVERSE take one argument, so the blank-beside-error question does not arise.
