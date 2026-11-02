@@ -1,41 +1,15 @@
-"""Gate A definitions by family; importing this package registers every definition."""
+"""Gate A definitions by family; importing this package registers every definition.
 
-from rustsheet_tools.accuracy.defs import (
-    aggregate,
-    annuity,
-    beta,
-    cashflow,
-    ceiling_floor,
-    discrete,
-    erf,
-    exp_log,
-    fisher,
-    gamma,
-    hyperbolic,
-    integer,
-    inverse_hyperbolic,
-    inverse_trig,
-    rounding,
-    student_t,
-    trig,
-)
+Family modules are discovered, not listed: adding a family means adding one module here, with no
+edit to a shared file (T-3830). Discovery is sorted, and an import failure propagates.
+"""
+
+import importlib
+import pkgutil
 
 __all__ = [
-    "aggregate",
-    "annuity",
-    "beta",
-    "cashflow",
-    "ceiling_floor",
-    "discrete",
-    "erf",
-    "exp_log",
-    "fisher",
-    "gamma",
-    "hyperbolic",
-    "integer",
-    "inverse_hyperbolic",
-    "inverse_trig",
-    "rounding",
-    "student_t",
-    "trig",
+    name for name in sorted(i.name for i in pkgutil.iter_modules(__path__)) if not name.startswith("_")
 ]
+
+for _name in __all__:
+    importlib.import_module(f"{__name__}.{_name}")

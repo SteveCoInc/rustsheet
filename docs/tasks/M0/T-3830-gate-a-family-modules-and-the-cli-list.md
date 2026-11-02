@@ -3,7 +3,7 @@ id: T-3830
 title: "Gate A family modules and the CLI list test stop being shared hand-kept lists"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -27,14 +27,21 @@ Each merge forced the next Gate A PR through another repair and CI round, and th
 land the 8 open Gate A PRs one at a time.
 
 ## Acceptance criteria
-- [ ] `defs/__init__.py` discovers its family modules itself (e.g. `pkgutil.iter_modules` over the
+- [x] `defs/__init__.py` discovers its family modules itself (e.g. `pkgutil.iter_modules` over the
       package, importing each so that it registers its definitions), with no hand-kept module list.
       Discovery is deterministic (sorted), and a module that fails to import fails loudly.
-- [ ] `test_cli_lists_and_generates` no longer pins the whole literal list: it checks that the CLI
+- [x] `test_cli_lists_and_generates` no longer pins the whole literal list: it checks that the CLI
       lists exactly the registered definitions, sorted, plus a few fixed spot entries.
-- [ ] Adding a new family touches only its own new module (shown by a test, or by a note in the
+- [x] Adding a new family touches only its own new module (shown by a test, or by a note in the
       Outcome on the diff an existing family would have needed).
-- [ ] `make check-fast` green; CI green.
+- [x] `make check-fast` green; CI green.
 
 ## Out of scope
 - Splitting the eval baselines or `eval/accuracy/` tables (generated files).
+
+## Outcome
+`defs/__init__.py` now discovers family modules with `pkgutil.iter_modules` (sorted, `_`-prefixed
+skipped, import errors propagate), with no hand-kept list. `test_cli_lists_and_generates` checks the
+CLI output equals `sorted(REGISTRY)` plus spot entries; a new test pins discovery against the files on
+disk and that `__init__.py` names no family. A new family is now one new module: previously it also
+edited the import tuple and `__all__` in `__init__.py` and the literal list in the CLI test. No eval delta.
