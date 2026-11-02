@@ -99,7 +99,7 @@ exact UTF-16 units throughout:
 - 32,767 limit: `LEN(REPT("a",32766)&"😀")` is 32767 (the kept unit is the high half, coercion.md "Truncation inside a surrogate pair"); `REPT("😀",16384)` is `#VALUE!`;
   CONCAT and TEXTJOIN one unit over (a pair straddling the limit) are `#CALC!`, not truncated (existing entry below).
 Evidence: probes/text-lone-surrogates A1-A81, B1-B6 (excel-graph, 2026-10-15, T-1582).
-Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, unprobed). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/text_value.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
+Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, unprobed, as a supplementary character does: "PROPER word starts: Excel's own letter table (T-3657)"). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/text_value.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
 Status: VERIFIED
 **Criteria and wildcards (VERIFIED, probes/criteria-lone-surrogates, excel-graph 2026-10-16, T-1642).** Excel's criteria (SUMIF, COUNTIFS) and wildcard MATCH/XMATCH read lone units exactly, unit by unit. Data: H, L, "😀", U+FFFD, "x", H&"a", "a"&L, "a".
 - A lone-half criterion (`H`, `"="&H`) matches H only. It does not match U+FFFD or the other half. `"<>"&H` matches everything else.
@@ -686,10 +686,48 @@ separator matches case (`NUMBERVALUE("1a5","A","b")` is `#VALUE!`). A letter dec
 the rest differs: `NUMBERVALUE("1A5","A","AB")` is `#VALUE!` (A20).
 Evidence: probes/numbervalue-separator-edges A1:A20 (excel-graph, 2026-10-22, T-2379). Whether the 255 counts characters or
 UTF-16 units is unprobed (the engine counts as for the text, `number_text_too_long`).
-Unprobed: date text with spaces (`"29 Feb 2024"`, `"Feb 29, 2024"`; ours reads it without its spaces), a group separator after the decimal separator, `%` with custom separators, whitespace-only text and `"%"` (ours: spaces-only is 0, `"%"` is `#VALUE!`), a separator outside the BMP (ours: first code point, Excel counts UTF-16 units).
+Unprobed: date text with spaces (`"29 Feb 2024"`, `"Feb 29, 2024"`; ours reads it without its spaces), a separator outside the BMP (ours: first code point, Excel counts UTF-16 units). A group separator after the decimal separator, `%` with custom separators, whitespace-only text and `"%"` are probed: next section (T-3647).
 Status: VERIFIED (excel-graph); implemented: first-character separators and empty text (T-2152), VALUE-like parsing
 after the separators with every space removed (T-2151, `numbervalue_of` in text/string_format.rs), the trailing
 colon after a bare hour (T-2352, in the shared clock parser).
+
+## NUMBERVALUE removes group separators only before the decimal separator (T-3647)
+Rule: the group separator's first character is removed only from the text before the first decimal separator. After
+it, the character stays, so a digit reads as a digit and anything else leaves text VALUE cannot read (`#VALUE!`):
+- `NUMBERVALUE("1.5,2")`, `("1.5,")`, `(".,5")` and `("1,2.3,4")` are `#VALUE!` (ours 1.52, 1.5, 0.5, 12.34), while
+  `("1,2.3")` = 12.3, `("1,234.")` = 1234 and `("1,0E3")` = 10000.
+- With the default separators against a custom pair, `NUMBERVALUE("1,234.5",",",".")` and `NUMBERVALUE("1.234,5")` are
+  `#VALUE!` (ours 1.2345 for both).
+- A digit separator: `NUMBERVALUE("17582","7","8")` = 1.582, `("1758","7","8")` = 1.58, `("785","7","8")` = 0.85 and
+  `("18275","7","8")` = 12.5.
+- Before the decimal separator anything goes: leading, trailing, repeated and unevenly spaced group separators are
+  removed (`",123"` = `"123,"` = 123, `",,1"` = 1, `"1,,234"` = 1234, `"1,2,3"` = 123, `"12,34.5"` = 1234.5).
+Whitespace: every space, tab, line feed and carriage return is removed first, wherever it is, even when it is a
+separator, so the decimal separator is looked for in the text without it: `NUMBERVALUE("1"&CHAR(9)&"234.5")`,
+`"1"&CHAR(10)&…` and `"1"&CHAR(13)&…` are 1234.5 (ours `#VALUE!`), `NUMBERVALUE("1.5"&CHAR(9)&"2",".",CHAR(9))` = 1.52,
+`CHAR(10)` alone is 0, and a whitespace decimal separator is never found: `NUMBERVALUE("1 5"," ",",")` = 15 (also with
+CHAR(9), CHAR(10) and CHAR(13)), and `NUMBERVALUE("1 2,5"," ",",")` = 125, its "," a group separator with no decimal
+separator after it. Other characters are not removed, nor trimmed at the ends: CHAR(1), CHAR(11), CHAR(12), NBSP
+(CHAR(160)), U+3000 and U+202F inside the digits are `#VALUE!`, and so are `NUMBERVALUE(UNICHAR(160)&"1.5")`,
+`("1.5"&UNICHAR(160))` and `(UNICHAR(12288)&"1.5")` (ours 1.5; VALUE's shared reader trims them). CHAR(11), CHAR(12)
+and U+202F at the ends are unprobed. VALUE does not remove a tab: `VALUE("1"&CHAR(9)&"234")` is `#VALUE!`.
+Percent: one leading `%` divides by 100 as a trailing one does, also after a sign or `(`: `NUMBERVALUE("%1.5")` =
+0.015, `("%1.5%")` = 0.00015, `("-%1.5")` = `("%-1.5")` = `("(%1.5)")` = `("%(1.5)")` = -0.015, `("+%1.5")` =
+`("%+1.5")` = 0.015, `("%1,234.5")` = 12.345, and `("%1d5","d","g")` = 0.015. Two leading `%`, a leading `%` with
+currency anywhere, or `%` inside a sign and parentheses are `#VALUE!`: `"%%1.5"`, `"%$1.5"`, `"$%1.5"`, `"%1.5$"`,
+`"%€1.5"`, `"€%1.5"`, `"-(%1.5)"`. Text of `%` signs alone is 0: `NUMBERVALUE("%")` = `NUMBERVALUE("%%")` = 0 (ours
+`#VALUE!`). The decimal separator is read before any `%`: with the decimal separator "%", `NUMBERVALUE("%5","%")` =
+0.5, `("1%5","%")` = 1.5, `("5%","%")` = 5 and `("%5%","%")` is `#VALUE!` (two decimal separators). VALUE takes the
+leading `%` too: `VALUE("%1.5")` = 0.015 (ours `#VALUE!`; T-3742 owns it). A trailing currency sign is `#VALUE!`:
+`NUMBERVALUE("1.5$")` (ours 1.5; T-3742 owns it, with VALUE's reading of it unprobed).
+The same shapes hold for the pairs ","/".", "."/" ", ";"/"'", "d"/"g" and "7"/"8" (264 cells, all matching).
+Evidence: probes/t3647-numbervalue-separator-placement (44 text shapes × 6 separator pairs),
+probes/t3647-numbervalue-percent-and-controls A1:A31 and probes/t3647-numbervalue-whitespace-decimal A1:A27,
+excel-graph, 2026-11-01.
+Status: VERIFIED (excel-graph)
+Implemented in: `numbervalue_text` and `strip_leading_percent` in functions/text/string_format.rs (T-3647); VALUE's
+leading `%` and NUMBERVALUE's trailing currency are not (T-3742).
+Tasks: T-3647, T-3742
 
 ## REPT, CODE, UNICODE and T refuse a text argument over 255 UTF-16 units (T-2155; T of a cell reference gives "", T-2305)
 Rule: REPT's text, CODE's and UNICODE's argument are `#VALUE!` when the text is longer than 255 characters, whatever the
@@ -961,10 +999,39 @@ Tasks: T-1688, T-1898, T-1899, T-1900, T-1972, T-1973, T-1974, T-2354, T-2355, T
 
 ## CLEAN character set and PROPER word starts and case mapping (T-1307)
 Rule (CLEAN): code points 0-31 and the C1 controls 128-159 (`CHAR(129)`, 141, 143, 144, 157 and `UNICHAR(133)` included) are removed; 32, DEL (127), NBSP (160), the soft hyphen (173), U+200B, U+2028 and U+FEFF stay. TAB, LF and CR go (`CLEAN("a"&CHAR(10)&"b"&CHAR(1)&"c")` is "abc"). The engine already matched all 38 CLEAN cells.
-Rule (PROPER; UPPER, LOWER and further characters in the T-1747 section below): a letter after any non-letter, digits, apostrophes (straight or curly), `_` and `-` included, is upper-cased and the other letters lowered (`2Nd Place`, `O'Neil Mc-Donald`, `It'S 3Rd`, `A1B2C3`, `Hello_World`; full-width letters follow the same rule). Case mapping is per character and one-to-one: the characters whose full mapping expands stay as they are (`PROPER("ßa straße")` is `ßa Straße`, ŉ, ǰ and the ﬁ/ﬂ ligatures unchanged), where Rust's `to_uppercase` gives "SS", "ʼN" and "FI". İ folds to ASCII (`PROPER("İstanbul")` is `Istanbul`, `PROPER("aİb")` `Aib`) and ΐ, ΰ upper-case to Ϊ, Ϋ. Titlecase digraphs map to their capital (`ǅ ǈ ǋ ǲ` give `Ǆ Ǉ Ǌ Ǳ`). A capital sigma ending a word lowers to the final ς, with no letter or digit after it (`ΣΊΣΥΦΟΣ` is `Σίσυφος`, `ΑΣ.ΑΣ-Σ ΑΣ1` is `Ας.Ας-Σ Ασ1`, so a following digit keeps σ and a word-initial Σ stays). A combining mark is not a letter, so the next letter is capitalised (`e` + U+0301 + `cole` is `ÉCole`), and a zero-width space (U+200B) is not a letter either (`PROPER(U+200B&"abc def")` is `<U+200B>Abc Def`).
+Rule (PROPER; UPPER, LOWER and further characters in the T-1747 section below; which characters are letters is in "PROPER word starts: Excel's own letter table (T-3657)" below): a letter after any non-letter, digits, apostrophes (straight or curly), `_` and `-` included, is upper-cased and the other letters lowered (`2Nd Place`, `O'Neil Mc-Donald`, `It'S 3Rd`, `A1B2C3`, `Hello_World`; full-width letters follow the same rule). Case mapping is per character and one-to-one: the characters whose full mapping expands stay as they are (`PROPER("ßa straße")` is `ßa Straße`, ŉ, ǰ and the ﬁ/ﬂ ligatures unchanged), where Rust's `to_uppercase` gives "SS", "ʼN" and "FI". İ folds to ASCII (`PROPER("İstanbul")` is `Istanbul`, `PROPER("aİb")` `Aib`) and ΐ, ΰ upper-case to Ϊ, Ϋ. Titlecase digraphs map to their capital (`ǅ ǈ ǋ ǲ` give `Ǆ Ǉ Ǌ Ǳ`). A capital sigma ending a word lowers to the final ς, with no letter or digit after it (`ΣΊΣΥΦΟΣ` is `Σίσυφος`, `ΑΣ.ΑΣ-Σ ΑΣ1` is `Ας.Ας-Σ Ασ1`, so a following digit keeps σ and a word-initial Σ stays). A combining mark is not a letter, so the next letter is capitalised (`e` + U+0301 + `cole` is `ÉCole`), and a zero-width space (U+200B) is not a letter either (`PROPER(U+200B&"abc def")` is `<U+200B>Abc Def`).
 Evidence: probes/clean-proper-chars (excel-graph, 2026-10-16, 88 cells; engine matches all after T-1307). Implemented in `proper_case` (functions/text/string_format.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-1307
+
+## PROPER word starts: Excel's own letter table (T-3657)
+Rule: PROPER upper-cases a letter that follows a non-letter (or starts the text) and lowers every other character,
+non-letters included, and "letter" is Excel's own table, not Unicode's Alphabetic property or general category. Swept
+over every BMP code point U+0020-U+FFFD (surrogates excluded): 47,717 are letters, in 328 ranges (the table is in
+`proper_letters.rs`). Every letter is in a Unicode letter category (Lu, Ll, Lt, Lm, Lo) or Nl, except 18 Mn marks: the
+Thai vowel and tone marks U+0E31, U+0E34-U+0E3A, U+0E47-U+0E4E and the Mongolian U+1885-U+1886. Every other combining
+mark is not a letter, including those Unicode calls Alphabetic: `PROPER("a"&UNICHAR(1456)&"bc")` (Hebrew sheva) is
+`A`+U+05B0+`Bc`, and so are Arabic U+0610 and U+064B, Devanagari U+0901, U+0903 and U+093C, Greek U+0345, Cyrillic U+0483
+and U+3099. 1,321 Unicode letters are not letters to PROPER, mostly ones the newer Unicode versions added (so
+`PROPER("aꟺbc")` is `AꟺBc`): among them the modifier letters ʹ and ʺ, the letters of U+02C6-U+02CF (`PROPER("aˆbc")` is `AˆBc`), U+0524-U+052F,
+U+0800-U+08C9 (Samaritan, Mandaic, Syriac supplement, extended Arabic), Georgian Mtavruli U+1C90-U+1CBF and U+10FD-U+10FF,
+Cherokee small letters U+13F8-U+13FD and U+AB70-U+ABBF, Latin Extended-D U+A788 and U+A78D-U+A7FA, U+A960-U+A97C,
+U+D7B0-U+D7FB, and the Bamum numerals U+A6E6-U+A6EF (Nl). Ordinary letters of every older script are letters
+(`PROPER("aאbc")`, `"a一bc"`, `"a가bc"`, `"aʰbc"`, `"a々bc"`, `"aⅰbc"` all keep `b` lower). Digits of every script,
+modifier symbols (`^`, `` ` ``, `´`, `¨`), the zero-width and bidi format characters, every space, control character and
+punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter
+(`PROPER("a𝐚bc")` is `A𝐚Bc`; probably each surrogate is read alone). Circled letters are not letters, so they are lowered
+wherever they stand: `PROPER(UNICHAR(9398)&"x")` (Ⓐ) is `ⓐX`, `PROPER("aⒶB")` is `AⓐB`, `PROPER("1Ⓐ")` is `1ⓐ`. The
+titlecase digraphs map to their capital at a word start, also after a digit (`PROPER("1ǆ")` is `1Ǆ`), and to their small
+form inside a word (`PROPER("aǅB")` is `Aǆb`); the Greek letters with ypogegrammeni stay unchanged at a word start
+(ᾀ, ᾳ, ῃ, ῳ) and, as LOWER does, their capitals ᾈ ᾼ ῌ ῼ stay capital inside a word; Ⅰ stays Ⅰ and ⅰ stays ⅰ in every
+position (the case-table gaps of "UPPER and LOWER use an old per-character case table" below).
+Evidence: probes/t3657-proper-word-starts (excel-graph, 2026-11-01, 177 cells: column A word starts after 105
+characters, B:D the word-start, mid-word and after-digit mapping of 24 titlecase-sensitive characters) and
+probes/t3657-proper-letter-sweep (excel-graph, 2026-11-01: Calc!A1:A4 give one digit per code point, 63,454 in all).
+Status: VERIFIED (excel-graph). Implemented in: `is_proper_letter` (functions/text/proper_letters.rs) and `proper_case`
+(functions/text/string_format.rs). The 7 cells that need Excel's case table (t3657-proper-word-starts S!B24, C14, C16,
+C18, C20, C23, D24) wait for T-3583. Tasks: T-3657
 
 ## UPPER, LOWER and PROPER: one-to-one case mapping, final-sigma context (T-1747)
 Rule: UPPER, LOWER and PROPER all use the simple one-to-one mapping, so characters whose full mapping expands stay unchanged in every case (ᾳ, ẖ, ẘ, ﬀ, ﬃ, ﬆ, և, ß, ŉ, ǰ, ﬁ; `UPPER("ß")` is `ß`, not "SS"). ΐ upper-cases to Ϊ in UPPER and PROPER (LOWER leaves it), and ΰ to Ϋ in UPPER (probes/t3298-case-mapping-sweep; see "UPPER and LOWER use an old per-character case table" below for every other character). İ is the exception to consistency: PROPER and LOWER fold it to I / i (`LOWER("aİb İc")` is `aib ic`) but UPPER leaves it as İ. A capital Σ lowers to the final ς in LOWER and PROPER when the next character is the end of the text, a space, a straight apostrophe or `-`, and to σ when a letter or digit, a combining mark (probed: U+0301, U+0308; the rest of U+0300-U+036F is assumed, other combining blocks and U+200C/U+200D/U+2018 are unprobed and give ς), a curly apostrophe (U+2019) or a zero-width space (U+200B) follows. In LOWER a lone `Σ`, `Σ ` and `1Σ` give ς (no preceding letter needed), but `Σ`+U+0308 gives σ̈; lower-case σ is never changed (`LOWER("ασ")` is `ασ`). PROPER keeps a word-initial Σ capital.

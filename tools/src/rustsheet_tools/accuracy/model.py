@@ -63,7 +63,8 @@ class Param:
     the magnitude of whole-domain draws where the math cannot evaluate the domain's far end (a
     50-digit incomplete beta at a count of 1E+300) or the oracle cannot hold a point (a huge
     negative POISSON.DIST mean); unlike a domain bound it claims nothing about Excel, so it gets no
-    edge points.
+    edge points. An `optional` parameter (trailing ones only) may be left out of a call, as ERF's
+    `upper_limit`: a point then has fewer arguments, and only a definition's own `draw` omits one.
     """
 
     name: str
@@ -74,6 +75,7 @@ class Param:
     edges: tuple[float, ...] = ()
     source: str = ""
     draw_hi: float | None = None
+    optional: bool = False
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -112,11 +114,29 @@ class Definition:
     solver: bool = False
     variadic: bool = False
 
+    def __post_init__(self) -> None:
+        flags = [p.optional for p in self.params]
+        if flags != sorted(flags):
+            msg = f"{self.function}: an optional parameter is followed by a required one"
+            raise ValueError(msg)
+
     def params_for(self, count: int) -> tuple[Param, ...]:
-        """The parameters of a call with `count` arguments: `params`, with a variadic definition's
-        last parameter repeated to fill `count`."""
-        if not self.variadic or count <= len(self.params):
-            return self.params
+        """The parameters a call with `count` arguments passes: every required one and the first
+        optional ones, with a variadic definition's last parameter repeated to fill `count`.
+        ValueError when `count` is fewer than the required, or more than all for a definition
+        that is not variadic."""
+        required = sum(1 for p in self.params if not p.optional)
+        if count < required or (count > len(self.params) and not self.variadic):
+            if self.variadic:
+                takes = f"at least {required}"
+            elif required == len(self.params):
+                takes = f"{required}"
+            else:
+                takes = f"{required} to {len(self.params)}"
+            msg = f"{self.function} takes {takes} arguments, not {count}"
+            raise ValueError(msg)
+        if count <= len(self.params):
+            return self.params[:count]
         return self.params + (self.params[-1],) * (count - len(self.params))
 
     def numeric_arity(self) -> int:

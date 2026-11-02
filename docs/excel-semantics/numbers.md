@@ -255,6 +255,10 @@ forming with companions, 1E-15 and 1E+15 controls, and the cutoff sweep); genera
 predicts all 213 cells. Rivals that miss: a 15-digit cut of `q` (145 or 146 of 213, by cut variant: misses 1234.5 - 1 ulp and most seeded pairs), a
 tolerance of 4.5E-15 or 4.9E-15 (196, 207) or 5.3E-15 (203), an x87 quotient, and a decimal product (the products are
 binary). gen-m5/043ee562f32eb901 Calc!A199 is `MROUND(0.3,0.2)`.
+The sign and zero checks: a zero multiple gives 0 (`MROUND(1.1E-05,0)`, `MROUND(-0.005901617,0)`), a zero number gives 0
+whatever the multiple's sign (`MROUND(0,-0.0042017)`), and a nonzero number with a multiple of the opposite sign is `#NUM!`
+(`MROUND(17.9707,-0.0126)`, `MROUND(0.49999999999999,-1)`; 9 cells). Evidence: accuracy/MROUND/s1 (excel-graph,
+2026-11-02, T-3674).
 Status: VERIFIED (excel-graph, 213 cells); implemented (T-2167, `mround_value` in ceiling_floor.rs).
 
 ## ROUNDUP adds the unit in binary
@@ -707,6 +711,11 @@ mantissa, with relative error +1.92E-20.
 
 Evidence: probes-numeric (on branch `agent/research/T-1778-kernel-map`) `kmyst-erfc-expcol`, `kmyst-erfc-runs1..4`, `kmyst-erfc-stepmap1/2`, `kmyst-erfc-chiruns1..3`
 (excel-graph, 2026-10-18). Status: VERIFIED (structure); the last mismatches are OPEN.
+Below the smallest normal double (a < -708.4) excel-graph shows 0: `EXP(-714.100700559872)` (a true 7.4E-311) and 14
+other accuracy/EXP/s1 points down to `EXP(-1000)` (Calc!A50-A52, A57-A61, A64-A67, A69, A79, A80; seven of them below even
+the smallest subnormal) (excel-graph, 2026-11-01, T-3672). Graph reports a kept subnormal as 0 too, so
+these cells do not tell whether EXP flushes; the worksheet-EXP paragraph below (probes/subnormal-function-results) shows it
+keeps the subnormal.
 Ours: `crates/rustsheet-engine/src/x87_exp.rs` `excel_exp` implements V6 with integer x87 rounding and a double-double
 F2XM1 (T-1916). It reproduces the reference model, scoring 62,013 of 62,100 `EXP(A)` cells of `kmyst-erfc-r5expmap1/2`
 and every `EXP(-(x*x))` cell up to x = 26.55 except the near-ties. The ERFC kernel and, since T-1931, the worksheet EXP
@@ -884,6 +893,14 @@ does (test/statistical/test_subnormal_results.rs). Unprobed and flushed by exten
 (`1 - EXP(-x/2)`, subnormal from x below 4.4E-308) and at 1 degree (an ERF form, never subnormal from a normal x), the
 BETA.DIST cdf at alpha = 1, and BETADIST at beta = 1 off (2, 1). Row 25's #NUM! is GAMMA.DIST's subnormal x / beta
 (statistics.md "GAMMA.DIST's density is #NUM! at a subnormal x / beta", T-2738).
+Subnormal right tail Q(a, x) (T-3638, probes/t3638-subnormal-upper-tail, excel-graph 2026-11-01, column A the call, B its
+`(x)=0` companion): CHISQ.DIST.RT and CHIDIST are a true 0 at 1, 7, 21 and 39 degrees of freedom (true values near 1E-310
+and 1E-316; B1-B4, B13-B16, B19-B22, B25-B28) but KEEP the subnormal at 2 degrees, the exp closed form (B7-B10, FALSE);
+POISSON(k,mean,TRUE) is 0 at k = 3, 9 and 19 (B34, B35, B37, B38, B40, B41) and keeps it at k = 0 (B31, B32). Normal
+neighbours near 1E-300 are kept (FALSE) on every path. Every probed point has x/2 past 600, since a subnormal Q needs
+x/2 above about 700 at any df up to 40, so the 30 < x/2 <= 600 band never reaches a subnormal. Implemented: both
+functions pass the tail through `arithmetic::flush_subnormal` except df 2 / k = 0. See also statistics.md "Excel's far
+upper tail (T-3269)".
 Subnormal tails of functions (T-1143, VERIFIED at the probed arguments only, probes/subnormal-text-and-tail-companions, excel-graph
 2026-10-08): these return a true 0 (companion `(x)=0` TRUE) at `CSCH(710)`, `NORM.S.DIST(k,TRUE)` for k = -37.6, -37.75 and -38,
 `NORM.S.DIST(k,FALSE)` for k = -37.75 and -38, `PHI(-37.7)`, `NORM.DIST(19,0,0.5,FALSE)`, `ERFC(26.7)` and `ERFC.PRECISE(26.7)`.
@@ -1058,6 +1075,38 @@ Status: VERIFIED (excel-graph)
 Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
 Tasks: T-2715, T-2756 (ROUNDUP)
 
+## CEILING and FLOOR cut the binary quotient, so CEILING can fall below its argument and FLOOR above it (T-3673)
+Rule: the CEILING/FLOOR family's 15-digit cut ("FLOOR.PRECISE: a 16th-digit tie in the ratio cut goes away from zero")
+is taken of the double quotient `number/significance`, not of the decimal ratio of the written arguments. Where the
+two sit on different sides of a 16th-digit tie, Excel's result is one unit of the cut's 15th digit away from the
+decimal reading, and a CEILING can come back below its own argument: `CEILING(9023487987474.29,0.002)` is
+9023487987474.28 (the exact ratio is the tie 4511743993737145, which would go up to 9023487987474.3, but the double
+quotient is 4511743993737144), and `FLOOR.MATH(405202879656.803,-0.0002,-1)` is 405202879656.802 (decimal reading
+405202879656.804). Above 1E+105 the same shows at `CEILING.MATH(7.34460155063567E+168,-2E-70,-1)` = 7.34460155063566E+168
+and `FLOOR.MATH(9.096E-120,-3.995E-225,-1)` = 9.096000000000019E-120.
+Evidence: eval/accuracy/tables CEILING/s1 A58, FLOOR.MATH/s1 A99, A173, CEILING.MATH/s1 A170 (excel-graph, 2026-11-01,
+T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches to the bit (`snap_ratio` cuts the double `value / significance`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
+## CEILING and FLOOR are #NUM! when number/significance overflows (T-3673)
+Rule: CEILING, CEILING.MATH (both modes), CEILING.PRECISE, FLOOR, FLOOR.MATH (both modes) and FLOOR.PRECISE are `#NUM!`
+when the ratio `number/significance` is beyond the double range, although the mathematical result (a multiple of the
+significance next to the number) is an ordinary double: `CEILING(6.78566159557368E+283,5.05874381382903E-127)` and
+`FLOOR.PRECISE(1.447176044413E+249,-1.38029997006174E-96)` are `#NUM!`. The tables bracket the boundary between 0.556 and 49 times the double range:
+`CEILING(-9.99999999999999E+307,-1)` and `FLOOR(-9.99999999999999E+307,-1)` (ratio 0.556 x DBL_MAX) are numbers, and
+`FLOOR.PRECISE(-3.85290564465378E+92,-4.37553180951326E-218)` (ratio 49 x DBL_MAX) is `#NUM!`. Where exactly it lies (the
+binary quotient overflowing, or its 15-digit cut) is not pinned.
+Evidence: eval/accuracy/tables CEILING/s1 A110, A120; CEILING.MATH/s1 A185, A198, A199; CEILING.PRECISE/s1 A111, A112;
+FLOOR.MATH/s1 A183, A184, A186, A191; FLOOR.PRECISE/s1 A114, A117, A119, A120; FLOOR/e-T-3673 A9, A29, A32, A41, A52
+(20 cells), and the numbers CEILING/s1 A75 and FLOOR/s1 A72 (excel-graph, 2026-11-01, T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches (the infinite ratio gives a non-finite result, which `numbers_fn` turns into `#NUM!`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
 ## ROUNDUP and ROUNDDOWN of a number whose 15-digit cut is subnormal (T-2756)
 Rule: the ROUND family first cuts x to 15 significant digits (round to nearest, "ROUND family rounds in two decimal
 stages"). When that cut, as a double, is subnormal (below 2^-1022), ROUNDUP, ROUNDDOWN and TRUNC return a nonzero
@@ -1158,9 +1207,13 @@ Probe `probes-numeric/m9-hyperbolic` (268 cells, 255 distinct formulas, oracle: 
   `-ln(-x + sqrt(x*x + 1))`) and `ln(x + sqrt(x*x - 1))` bit-for-bit in IEEE doubles. So small arguments lose precision:
   ASINH(1E-10) = 1.000000082690371E-10 (relative error 8e-8), ASINH(3E-10) = 3.000000247771113E-10,
   ASINH(1E-9) = 1.000000082240371E-9, and ACOSH(1.000000000001) = 1.414276423083533E-6 (about 7e-11 relative below the
-  true value 1.4142764231805424E-6). The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc
-  TRIGONOMETRIC.xlsx sheet ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate
-  these formulas.
+  true value 1.4142764231805424E-6). Below half an ulp of 1 (about 1.1E-16) `x + sqrt(x*x + 1)` rounds to 1 and ASINH is 0, of
+  either sign: `ASINH(1.61207503113639E-17)`, `ASINH(±1E-20)` and every argument down to `ASINH(8.48916619031883E-285)`
+  are 0, and above the cut `ASINH(6.3701662356807E-14)` is 6.372680161348195E-14 (3.9e-4 relative off). Evidence:
+  accuracy/ASINH/s1 Calc!A115, A70, A83, A112, A59 (excel-graph, 2026-11-01, T-3671). The engine's formula gives the same
+  values; Gate A counts these points as R3-eligible but unmarked (decision 0188 R3 needs an owner ruling).
+  The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc TRIGONOMETRIC.xlsx sheet
+  ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate these formulas.
 - Where `x*x` overflows a double (|x| above about 1.3407807929942596E154) ASINH and ACOSH return `#NUM!` (ln of infinity), for
   both signs of ASINH: probes-numeric/t2062-asinh-acosh-overflow (excel-graph, 2026-10-20). ASINH(+-1E154) = +-355.291251501643
   and ASINH(+-1.3E154) = +-355.55361576611045 are still finite; 1.35E154, 1.4E154, 1E200, 1E308 and 1.7976931348623157E308 are
@@ -1420,6 +1473,9 @@ itself, not 1/n: `(-8)^(1/3+8·2^-54)` is -2.0000000000000018.
 - `1/101 ± 28·2^-59` counts and `± 29·2^-59` does not (the 15th digit of 101.000000000000).
 - Literals: `0.333333333333333` counts (-1.9999999999999984), `0.33333333333333` does not; `0.0909090909090909` (1/11) counts,
   `0.142857142857143` (1/7, 1/y = 6.999999999999993) does not.
+  A negative exponent follows the same 15-digit cut, and 1/9 too: `POWER(-0.00297317823308491,-0.142857142857143)` and
+  `POWER(-0.362795461331778,0.111111111111111)` (1/y = 9.000000000000009) are `#NUM!` (accuracy/POWER/s1 Calc!A54, A53;
+  excel-graph, 2026-11-01, T-3672), while `POWER(-8,-0.333333333333333)` counts (-0.5000000000000004, A80).
 - Size: `1/(2^31-3)` and `1/(2^31-5)` count; `1/(2^31-1)`, `1/(2^31+1)`, `1/(2^40+1)` and `1/(2^52+1)` are #NUM!, although
   1/y is exactly the odd integer there. Not probed: negative exponents at the limit (`-1/(2^31-1)`, `-1/(2^31-3)`); the engine
   takes the limit on |1/y|.
@@ -2580,6 +2636,7 @@ gen-m5/b0ecb7ca78460b77 Calc!A320 and the other 10 cells listed in T-2170. Imple
 ATANH(1) and ATANH(-1) are `#NUM!` too, at once: `IFERROR(ATANH(1),"err")` is "err", `ISERR(ATANH(1))` TRUE,
 `SUM(ATANH(1),1)` `#NUM!`; ATANH(0.9999999999999999) is 17.616361586450413 and ATANH(1.0000000000000002) `#NUM!`.
 ACOTH(1) and ACOTH(-1) are `#NUM!`. Evidence: probes/atanh-unit-argument (excel-graph, 2026-10-17, T-1569).
+ACOTH inside (-1, 1) is `#NUM!` as well: `ACOTH(0)` (accuracy/ACOTH/s1 Calc!A68, A69; excel-graph, 2026-11-01, T-3671).
 `f64::atanh` returns an infinity at +-1 (not NaN), so ATANH has its own check beside the macro's NaN mapping.
 
 ## SUBTOTAL 6 over no numbers is 0 (T-2269)
@@ -2602,6 +2659,30 @@ Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digi
 Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
 
+## PERCENTOF: an error inside a reference or array is #NUM! (T-3653)
+Rule: PERCENTOF(data_subset, data_all) reads its two arguments as SUM does, in one walk with SUM's error ranking
+(syntax.md "Aggregate error precedence"): a direct error in either argument returns as itself, the first in argument order,
+ahead of anything inside a reference or an array; and an error inside a reference or an array (a cell, a range, a union, a
+reference through IF, INDEX, OFFSET or LET, an array constant or a computed array) is not handed on but turned into `#NUM!`,
+ahead of a zero total. A direct error is an error value or a scalar computed from one (`NA()`, `1/0`, `Data!B1+0`,
+`SUM(Data!B1)`) and non-numeric typed text (`"x"`, `""`, both `#VALUE!`).
+So `PERCENTOF(NA(),1/0)` is `#N/A`, `PERCENTOF(1/0,NA())` `#DIV/0!`, `PERCENTOF(Data!B1,NA())` (B1 `#N/A`) `#N/A`,
+`PERCENTOF(Data!B1,"x")` `#VALUE!`, but `PERCENTOF(Data!B1,Data!B2)`, `PERCENTOF(1,Data!B1)`, `PERCENTOF(Data!B1,Data!D1:D2)`
+(a zero total), `PERCENTOF({1,#N/A},4)`, `PERCENTOF({1,2}+NA(),1)`, `PERCENTOF(IF(TRUE,Data!B1),1)` and
+`PERCENTOF(Data!A1,(Data!A1:A2,Data!B1))` are all `#NUM!`; `PERCENTOF(Data!G2,1)` with G2 `#NULL!` too.
+Coercion is SUM's: typed numeric text counts (`"3"`, `" 3 "`, `"1E1"`, `"$5"`, `"50%"`), typed TRUE and FALSE count as 1 and 0;
+text, numeric text and booleans in cells or inside arrays are skipped (`PERCENTOF(Data!C2,6)` with C2 the text "3" is 0,
+`PERCENTOF({"3",1},8)` 0.125, `PERCENTOF({1,TRUE},4)` 0.25, `PERCENTOF(IF(TRUE,Data!C2),6)` 0); a blank cell or an omitted
+argument is 0 (`PERCENTOF(,2)` 0, `PERCENTOF(2,)` `#DIV/0!`). A total of 0 is `#DIV/0!`; the subset need not lie inside
+data_all, and the arguments may have any shapes (`PERCENTOF({1,2;3,4},{1})` = 10, `PERCENTOF(SEQUENCE(3),SEQUENCE(2,2))` = 0.6).
+Ours before T-3653: each argument summed on its own, so the first argument's error came first and an error inside a
+reference or array was handed on (`#N/A`, `#DIV/0!`); ours since: as Excel (`Model::percentof_sums`).
+A 3-D reference is refused as a direct `#VALUE!` in its place, whatever the span holds: `PERCENTOF(S1!A1,S1:S2!A1)`,
+`PERCENTOF(1,S1:S2!B1)`, `PERCENTOF(S1:S2!B1,NA())` and `PERCENTOF(S2!B1,S1:S2!A1)` (S2!B1 `#N/A`) are `#VALUE!`, while
+`PERCENTOF(NA(),S1:S2!A1)` is `#N/A`.
+Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11.
+Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
+
 ## PERCENTOF: an error cell argument is #NUM!
-Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). Other error kinds are unprobed. The engine propagates `#DIV/0!`; owned by T-3728.
+Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). The general rule, for every error kind, is the entry above (T-3653), which also fixed these 21 cells (T-3728).
 Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.
