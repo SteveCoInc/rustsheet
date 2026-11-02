@@ -3,10 +3,10 @@ id: T-3866
 title: "Trim scripts/gh_client.py to what make catch-up uses"
 milestone: M0
 lane: harness
-status: done
+status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: [T-3827]
 ---
 
@@ -47,3 +47,14 @@ imports). All request builders, paging, cursor, label and time helpers and their
 `TODO(T-3866)` is gone. `test_gh_client.py` keeps the fake-vs-`gh api` same-request check and the
 refusal checks for what remains. Eval delta: none (scripts only). `make check-fast` green;
 `check_duplication.py --update` left the count unchanged.
+
+## Handoff
+Implementation is complete and pushed on `agent/harness/T-3866-trim-gh-client` (PR #2892, head
+`ac5ef04`): `make check-fast` green locally, design and security reviewers APPROVE. CI job
+`hygiene` fails at `scripts/check_governance.py origin/main`: "protected paths changed without a
+decision record in docs/decisions/: scripts/gh_client.py, scripts/test_gh_client.py". A sonnet run
+may not touch protected paths (work-loop 5b), so I stopped. Next: `make new-decision
+TITLE="Trim gh_client.py to what make catch-up uses"` (a short record citing T-3866 and decision
+0252), commit it, rerun `python3 scripts/check_governance.py origin/main`, push, rerun the
+reviewers on the new head if needed, then enqueue. Set the task back to `status: done` once the
+record lands (the Outcome section is already written).
