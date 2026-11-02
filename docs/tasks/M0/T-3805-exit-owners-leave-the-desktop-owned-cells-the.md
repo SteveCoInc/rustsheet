@@ -3,7 +3,7 @@ id: T-3805
 title: "exit_owners: leave the desktop-owned cells the Phase 1 rate leaves out (decision 0143) out of M9's rate: criterion"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -43,3 +43,11 @@ as gaps with no owner.
 
 ## Out of scope
 - Changing which cells are desktop-owned (`desktop_owned.py`'s rule) or the Rust rate.
+
+## Outcome
+`exit_owners.exit_cells` now leaves a `rate:` cell out when its `case!Sheet!A1` is on
+eval/runs/desktop-owned.tsv, the list `make eval` writes and `rustsheet-eval run --desktop-owned`
+reads (`read_desktop_owned`; no ownership is recomputed). Other criteria are untouched, so M2, M5-M8
+and M10 output is unchanged. Unit test `test_desktop_owned_cells_leave_the_rate` added. Not run: the
+full `make eval` before/after count (272 `rate:FORECAST.ETS*` cells expected to drop to 0); the
+steward's next eval shows it.
