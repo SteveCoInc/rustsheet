@@ -3,7 +3,7 @@ id: T-3756
 title: "DURATION, MDURATION and PRICE last digits on T-2733's two fresh sweeps (120 cells, Phase 1b)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: dropped
 priority: P3
 size: M
 tier: opus
@@ -66,3 +66,6 @@ bits cannot be derived is listed in the Outcome with Excel, ours, the 50-digit m
 - The 43 cells of T-2972 and the 6 of T-2973, except as a shared fix recorded in both. YIELD (T-1592).
 
 `defer: phase-1b`: every cell here is inside Gate A, and all but one are within Excel's 15 digits (decision 0188 R5).
+
+## Outcome
+Dropped before work began, as a duplicate. While this task's PR (#2778) waited to merge, T-3722 (the one-coupon DURATION and MDURATION cells of T-2733's two fresh sweeps) and T-3723 (the PRICE, DURATION and MDURATION cells with more than one coupon on the r4 fresh sweep) landed on main; together they own the same 120 cells, so the work goes there.

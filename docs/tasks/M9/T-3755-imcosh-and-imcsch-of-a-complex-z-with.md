@@ -3,7 +3,7 @@ id: T-3755
 title: "IMCOSH and IMCSCH of a complex z with |x| <= 0.01: the 3 t3589 texts one unit off in the 15th digit (attempt 2 after T-3609)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -86,3 +86,6 @@ stay UNVERIFIED.
 - Notation of small parts (`0.0000060902323796872` against `6.0902323796872E-06`): T-3560.
 - The real-argument IMSECH and IMCSCH kernels (T-3609, verified), the 0.01 band edge (T-2797), and extreme magnitudes
   (T-3642).
+
+## Outcome
+Dropped before work began, as a duplicate. T-3721 landed on main while this task's PR (#2778) waited to merge, and it owns the same three cells (probes-numeric/t3589-im-hyperbolic-small-x-sweep S!B15, D15, D29) with the same goal; engineering.md now points to T-3721.
