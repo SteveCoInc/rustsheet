@@ -24,6 +24,8 @@ error in `row_fields` or `values` fills the lifted shape as Excel does.
     FALSE field_relationship is 0 (probes/groupby-pivotby-followup G!A941), so this is lift-specific.
   - An error `row_fields` or `values` (`GROUPBY(#NULL!,..,Data!A1:B2)`, `GROUPBY(Data!D1:D12,#REF!,..,Data!A1:B2)`,
     `GROUPBY(Data!A1:C12,Data!G9,..,Data!C3:D4)`) fills the 2x2 lifted shape with that error in Excel; ours returns one cell.
+- The early-error lift (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564, A2624:B2625) was done by T-3837, which routes
+  the `row_fields`/`values` errors through `Model::lifted_error`; what is left is the FALSE element.
 - Owned cells:
 - gen-m7/06c84cc76de04bae.case.json Calc!B5736
 - gen-m7/45c197dc0b22cf2b.case.json Calc!A7565:B7566
