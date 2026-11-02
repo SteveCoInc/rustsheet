@@ -89,7 +89,7 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
     by T-3850.
 - **Follow-up:** T-3850 (late restarts and noise-floor paths).
 
-## Landing notes
+## Landing notes (resumed 2026-11-02)
 - **PR #2858** (draft), head e94a0ddc7c40c1966944553397ed743f42b08bcd before this notes commit. CI was running
   when the window closed.
 - **Review round 1:** design APPROVE and security APPROVE on e94a0ddc; excel-fidelity REQUEST_CHANGES (verdict
