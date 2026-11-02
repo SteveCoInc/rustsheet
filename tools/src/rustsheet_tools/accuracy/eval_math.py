@@ -247,6 +247,13 @@ def sidecar_bytes(case_path: Path, math: CaseMath) -> bytes:
     return math_sidecar_bytes(case_path.read_bytes(), sheets, skipped=dropped)
 
 
+def _pool(workers: int | None = None) -> ProcessPoolExecutor:
+    """The process pool `write_suite` and `check_suite` share. `spawn`, not the platform default:
+    forking a multi-threaded parent (a pytest-xdist worker, decision 0233) can deadlock the child,
+    and `spawn` exists on every platform (Windows too)."""
+    return ProcessPoolExecutor(max_workers=workers, mp_context=multiprocessing.get_context("spawn"))
+
+
 def _job(entry: dict[str, Any]) -> tuple[dict[str, Any], CaseMath]:
     return entry, case_math(entry["id"], Path(entry["path"]), Path(entry["sidecar"]))
 
@@ -257,10 +264,7 @@ def write_suite(suite: str, workers: int | None = None) -> list[CaseMath]:
     files give the same bytes."""
     entries = _spec_entries(suite)
     results: list[CaseMath] = []
-    # `spawn`, not the platform default: forking a multi-threaded parent (a pytest-xdist worker,
-    # decision 0233) can deadlock the child, and `spawn` exists on every platform (Windows too).
-    context = multiprocessing.get_context("spawn")
-    with ProcessPoolExecutor(max_workers=workers, mp_context=context) as pool:
+    with _pool(workers) as pool:
         for entry, math in pool.map(_job, entries):
             path = math_path(Path(entry["sidecar"]))
             if math.written or math.dropped:
@@ -315,7 +319,7 @@ def check_suite(suite: str) -> list[str]:
     """`check_case` over every spec case of `suite`; each problem names its case, and the last
     line the command that regenerates the sidecars."""
     problems: list[str] = []
-    with ProcessPoolExecutor() as pool:  # parsing every argument is the cost: one case per process
+    with _pool() as pool:  # parsing every argument is the cost: one case per process
         for found in pool.map(_check_job, _spec_entries(suite)):
             problems += found
     if problems:

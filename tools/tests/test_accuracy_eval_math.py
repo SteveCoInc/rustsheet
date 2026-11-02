@@ -147,10 +147,10 @@ def test_an_mpmath_value_error_drops_the_point_but_a_domain_error_does_not() -> 
 
 
 class _InProcessPool:
-    """Stands in for `write_suite`'s process pool so a test's monkeypatches reach the jobs: its
-    `spawn` workers re-import the module and would not see them."""
+    """Stands in for `eval_math._pool` so a test's monkeypatches reach the jobs: its `spawn`
+    workers re-import the module and would not see them."""
 
-    def __init__(self, **_kwargs: Any) -> None:
+    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
         pass
 
     def __enter__(self) -> _InProcessPool:
@@ -172,7 +172,8 @@ def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
     regenerate = "regenerate: cd tools && uv run rustsheet-accuracy math --suite t"
 
-    # No sidecar: both candidates are missing; A3 (non-integer df) is no candidate.
+    # No sidecar: both candidates are missing; A3 (non-integer df) is no candidate. This call goes
+    # through the real `spawn` pool (its jobs need no monkeypatch); the later ones run in process.
     assert check_suite("t") == [
         "t/c: S!A1 =T.DIST(1.5,3,TRUE) has no math value and is not listed as skipped",
         "t/c: S!A2 =T.DIST(2.5,3,TRUE) has no math value and is not listed as skipped",
@@ -188,7 +189,7 @@ def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
         return real(definition, args)
 
     monkeypatch.setattr(eval_math, "compute", drops_a2)
-    monkeypatch.setattr(eval_math, "ProcessPoolExecutor", _InProcessPool)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
     write_suite("t", workers=None)
     data = json.loads(math_path(sidecar).read_text())
     assert set(data["sheets"]["S"]) == {"A1"}
