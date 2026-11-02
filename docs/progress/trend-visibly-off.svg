@@ -17,13 +17,14 @@
 <rect class="grid" fill="#d1d9e0" x="70" y="66.0" width="542" height="1"/>
 <text x="62.0" y="66.0" class="muted num" fill="#59636e" text-anchor="end" dominant-baseline="middle">150,000</text>
 <text x="70.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-25</text>
-<text x="224.9" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-27</text>
-<text x="379.7" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-29</text>
-<text x="612.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-01</text>
-<polyline class="s-numeric" stroke="#e34948" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,88.4 147.4,119.9 224.9,126.0 302.3,126.7 379.7,149.0 457.1,196.3 534.6,160.6 612.0,144.7"><title>Number</title></polyline>
-<circle class="b-numeric" fill="#e34948" cx="612.0" cy="144.7" r="3.5"><title>Number, 2026-11-01: 84,387</title></circle>
-<polyline class="s-other" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,222.0 147.4,244.2 224.9,244.6 302.3,245.0 379.7,244.8 457.1,245.0 534.6,245.1 612.0,244.9"><title>Type, error or text</title></polyline>
-<circle class="b-other" fill="#4b5563" cx="612.0" cy="244.9" r="3.5"><title>Type, error or text, 2026-11-01: 936</title></circle>
-<text x="622.0" y="144.7" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">84,387</text>
-<text x="622.0" y="244.9" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">936</text>
+<text x="205.5" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-27</text>
+<text x="341.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-29</text>
+<text x="476.5" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-31</text>
+<text x="612.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-02</text>
+<polyline class="s-numeric" stroke="#e34948" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,88.4 137.8,119.9 205.5,126.0 273.2,126.7 341.0,149.0 408.8,196.3 476.5,160.6 544.2,144.7 612.0,142.8"><title>Number</title></polyline>
+<circle class="b-numeric" fill="#e34948" cx="612.0" cy="142.8" r="3.5"><title>Number, 2026-11-02: 85,988</title></circle>
+<polyline class="s-other" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,222.0 137.8,244.2 205.5,244.6 273.2,245.0 341.0,244.8 408.8,245.0 476.5,245.1 544.2,244.9 612.0,244.9"><title>Type, error or text</title></polyline>
+<circle class="b-other" fill="#4b5563" cx="612.0" cy="244.9" r="3.5"><title>Type, error or text, 2026-11-02: 904</title></circle>
+<text x="622.0" y="142.8" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">85,988</text>
+<text x="622.0" y="244.9" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">904</text>
 </g></svg>
