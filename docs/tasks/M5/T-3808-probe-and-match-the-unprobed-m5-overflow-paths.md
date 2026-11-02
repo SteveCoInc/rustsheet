@@ -3,7 +3,7 @@ id: T-3808
 title: "Probe and match the unprobed M5 overflow paths: SUBTOTAL 101/106/109, AGGREGATE PRODUCT and variance numbers under every option, SUMX2MY2 overflow"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
