@@ -278,6 +278,8 @@ probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
 probes/t3638-subnormal-upper-tail.case.json	7
+probes/t3647-numbervalue-percent-and-controls.case.json	1
+probes/t3647-numbervalue-whitespace-decimal.case.json	1
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3

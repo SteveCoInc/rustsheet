@@ -1843,6 +1843,9 @@ C	probes/t3627-roundup-rounddown-t3555-cells.case.json	12
 C	probes/t3631-rand-randbetween-invariant.case.json	61
 C	probes/t3631-randarray-invariant.case.json	45
 C	probes/t3638-subnormal-upper-tail.case.json	84
+C	probes/t3647-numbervalue-percent-and-controls.case.json	31
+C	probes/t3647-numbervalue-separator-placement.case.json	264
+C	probes/t3647-numbervalue-whitespace-decimal.case.json	27
 C	probes/t3653-percentof-3d.case.json	12
 C	probes/t3653-percentof-argument-kinds.case.json	103
 C	probes/t3654-filter-result-types.case.json	211
@@ -6009,6 +6012,8 @@ F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
+F	probes/t3647-numbervalue-percent-and-controls.case.json	Sheet1!A13
+F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3
