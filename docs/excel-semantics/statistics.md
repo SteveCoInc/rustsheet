@@ -4200,7 +4200,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
   - At one degree of freedom (df is truncated, so 1.5 too) the right-tail quantile is the left one of 1 - p:
     `CHISQ.INV.RT(1E-10,1)` = 41.82145620298276 = `CHISQ.INV(0.9999999999,1)` (the true right-tail quantile is
     41.82145636476129), and a p of 2^-54 (about 5.55E-17) or less, where 1 - p rounds to 1, is `#NUM!`
-    (`CHISQ.INV.RT(1E-20,1)`; p between 5.55E-17 and 1E-16 is unprobed). The rule is exact only to Excel's search
+    (`CHISQ.INV.RT(1E-20,1)`; the edge between 5.55E-17 and 1E-16 is probed by T-3336 below). The rule is exact only to Excel's search
     on its double-valued lower cdf: `CHIINV(1E-9,1)` (probes-numeric/m9-legacy-chiinv A1, A2) is 37.324892889999234
     in Excel, about 2.2E-7 (one step of the cdf's resolution near 1) below the complement crossing
     37.324893106518715 (ours) and the true quantile 37.32489305136234 (T-2561). At 50 digits (gap triage
@@ -4208,30 +4208,41 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     ulp below it (0.9999999989999999), and the gap between them is exactly one band, 2^-53 over the density
     5.128E-10: Excel stops in the band below the one holding 1 - p. At 1E-10 and 1E-4 Excel is within
     2 ulp of the crossing (m9-chisq-inv-rt A1, m9-legacy-chiinv A12), so the step is not taken at every p. Where it is
-    taken is unprobed: T-3336 sweeps p at df 1, T-3337 fits the landing.
+    taken: T-3336 sweep below; T-3337 fits the landing.
   - T-3336 sweep (probes-numeric/t3336-chisq-df1-right-tail, excel-graph; CHISQ.INV.RT, CHIINV and CHISQ.INV(1-p) at
-    p = m*10^-k, m in 1, 1.5, 2, 3, 5, 7, k 4 to 16; 2^-j, j 40 to 54; CHISQ.DIST at the landing points). Excel
-    stays within a few ulp of the complement crossing (ours) at almost every p; the p where Excel lands visibly
-    off it (Excel, ours, the gap in steps of the cdf's resolution, about 2.2E-7 near p 1E-9) are:
+    p = m*10^-k, m in 1, 1.5, 2, 3, 5, 7, k 4 to 16; 2^-j, j 40 to 54; CHISQ.DIST at the landing points). CHIINV
+    equals CHISQ.INV.RT at every p. Excel's CHISQ.INV.RT(p,1) is within a few ulp of the complement crossing (ours)
+    at all but 17 p, where it is one step off it. The step is 2^-53 in the lower cdf (the spacing of doubles just
+    below 1), i.e. 2^-53 over the density in x; the column is (ours - Excel) in steps, and the last column is
+    Excel's own CHISQ.INV(1-p,1), which at each of these p sits at the complement crossing:
 
-    | p | Excel | ours | gap |
-    |---|---|---|---|
-    | 7E-4 | 11.489246754004064 | 11.48924675400377 | 2.9E-13 |
-    | 1E-5 | 19.51142096464506 | 19.511420964666264 | 2.1E-11 |
-    | 1E-6 | 23.92812697709321 | 23.92812697687947 | -2.1E-10 |
-    | 1E-8 | 32.84125337305113 | 32.84125335146885 | -2.2E-8 (one step) |
-    | 2E-9 | 35.9736890443827 | 35.973688936219375 | -1.1E-7 (half a step) |
-    | 1E-9 | 37.324892889999234 | 37.324893106518715 | 2.2E-7 (one step) |
-    | 7E-10 | 38.02064491290999 | 38.02064522235828 | 3.1E-7 |
-    | 1E-13 | 55.36859656626361 | 55.36641369262503 | -2.2E-3 |
-    | 2E-13 | 54.00419329358049 | 54.00528397040475 | 1.1E-3 |
-    | 7E-14 | 56.06977788787475 | 56.06665959069312 | -3.1E-3 |
-    | 5E-16 | 66.03009909468959 | 65.59030558869873 | -0.44 |
+    | p | Excel INV.RT | ours | Excel INV(1-p) | steps |
+    |---|---|---|---|---|
+    | 7E-4 | 11.489246754004064 | 11.48924675400377 | 11.489246754003771 | -1.00 |
+    | 1E-5 | 19.51142096464506 | 19.511420964666264 | 19.511420964666268 | +1.00 |
+    | 1E-6 | 23.92812697709321 | 23.92812697687947 | 23.92812697687947 | -1.00 |
+    | 2E-6 | 22.595042659653224 | 22.595042659759855 | 22.595042659759866 | +1.00 |
+    | 1E-7 | 28.373987360648858 | 28.373987362798125 | 28.373987362798143 | +1.00 |
+    | 5E-7 | 25.263820725638585 | 25.263820726066868 | 25.263820726066864 | +1.00 |
+    | 1E-8 | 32.84125337305113 | 32.84125335146885 | 32.84125335146885 | -1.00 |
+    | 5E-8 | 29.716785492935664 | 29.716785488631203 | 29.71678548863122 | -1.00 |
+    | 1E-9 | 37.324892889999234 | 37.324893106518715 | 37.324893106518736 | +1.00 |
+    | 2E-9 | 35.9736890443827 | 35.973688936219375 | 35.97368893621938 | -1.00 |
+    | 7E-10 | 38.02064491290999 | 38.02064522235828 | 38.020645222358276 | +1.00 |
+    | 1E-13 | 55.36859656626361 | 55.36641369262503 | 55.36641369262503 | -1.00 |
+    | 2E-13 | 54.00419329358049 | 54.00528397040475 | 54.00528397040475 | +1.00 |
+    | 7E-14 | 56.06977788787475 | 56.06665959069312 | 56.06665959069312 | -1.00 |
+    | 1.5E-16 | 67.39648382445009 | 68.7632522116684 | 68.7632522116684 | +1.39 |
+    | 3E-16 | 67.39648382445009 | 66.59715246385076 | 66.59715246385078 | -0.81 |
+    | 5E-16 | 66.03009909468959 | 65.59030558869873 | 65.59030558869874 | -0.89 |
 
-    So the step is taken at some p only, from 1E-6 down; below 1E-13 the lower cdf's resolution is coarse and Excel
-    returns plateau values: CHISQ.INV.RT(p,1) is 67.39648382445009 at 1.5E-16, 2E-16 and 3E-16 alike, and
-    66.03009909468959 at 5E-16 and 4.44E-16. CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation).
-    The `#NUM!` edge: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
+    So the one-step landing is a property of INV.RT's own search, not of 1-p: Excel's CHISQ.INV.RT(p,1) and
+    CHISQ.INV(1-p,1) disagree at exactly these p, and the rule above holds only up to that step. It occurs at
+    scattered p from 7E-4 down (not at 1E-4 to 5E-4, 3E-6 to 7E-6 or 7E-7), with either sign. Past 1E-13 the lower
+    cdf's resolution is coarse and Excel returns plateau values: CHISQ.INV.RT(p,1) is 67.39648382445009 at 1.5E-16,
+    2E-16 and 3E-16 alike, and 66.03009909468959 at 5E-16 and 4.44E-16 (rows 1.5E-16, 3E-16 and 5E-16 above are
+    plateau offsets, not single steps). CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation). The `#NUM!`
+    edge, probed here: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
     CHISQ.DIST(x,1,TRUE) is 0.9999999989999999 at Excel's 37.324892889999234 and 0.999999999 at ours. Full cells in
     the case's oracle sidecar.
   - Excel's search gives up in the far right tail. Below an edge that depends on df, CHISQ.INV.RT and CHIINV are

@@ -48,7 +48,7 @@ freedom in the right tail, instead of the one visibly-off pair it has today.
       at which p Excel's value is one cdf step off the complement crossing (a table of p, Excel, ours, the step count).
 - [x] T-3337 links the case.
 - [x] Fixtures hold only formulas and Excel values. No RUSTSHEET_ORACLE_* values in logs or commits.
-- [x] If the oracle is unavailable, the task is `status: blocked` with the reason.
+- [x] If the oracle is unavailable, the task is `status: blocked` with the reason (n/a: the oracle was available).
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
