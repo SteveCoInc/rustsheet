@@ -69,4 +69,4 @@ The hypothesis in Context was half right; the rules (arrays.md "GROUPBY and PIVO
 Unit tests: `options_are_refused_in_argument_order`, `a_table_sorts_by_the_named_keys_first` (test_fn_groupby.rs).
 Every owned gen-m7 cell now matches Excel, A4881:C4891 included.
 
-Eval delta: gen-m7 known failures 2,538 -> 2,486 (52 cells fixed), probes +1 passing case (232 cells), 0 regressions.
+Eval delta (after merging main, T-3837 in): gen-m7 known failures 2,170 -> 2,119 (51 cells fixed), probes +1 passing case (232 cells), 0 regressions.
