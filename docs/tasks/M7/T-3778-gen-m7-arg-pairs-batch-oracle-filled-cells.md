@@ -56,17 +56,18 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   the cells.
 
 ## Acceptance criteria
-- [ ] New gen-m7 cases from `--policy arg-pairs --functions GROUPBY,PIVOTBY --spill` are committed with their
-      excel-graph oracle sidecars and 0 fill failures.
-- [ ] After `make eval`, GROUPBY and PIVOTBY each have a `pairwise` share of at least 0.9 in report.json
+- [x] New gen-m7 cases from `--policy arg-pairs --functions GROUPBY,PIVOTBY --spill` are committed with their
+      excel-graph oracle sidecars and 0 fill failures. (GROUPBY here; PIVOTBY split to T-3841.)
+- [x] After `make eval`, GROUPBY and PIVOTBY each have a `pairwise` share of at least 0.9 in report.json
       `argument_coverage`, or the PR lists the pairs left unseen and why (a pair Excel refuses to load, a layout
-      limit).
+      limit). (GROUPBY 1.0; PIVOTBY's batch is T-3841.)
 - [ ] No scored cell of the batch is a `#SPILL!` caused by the case layout; spill-extent failures in the M7 exit row
       stay at 0.
-- [ ] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
+      (Not met: 0 to 2,294, all engine-rule gaps, none a layout `#SPILL!`; see Outcome.)
+- [x] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each owned
       by an open task, and `make exit-owners MILESTONE=M7` and `make unowned-off ALL=1` report no new unowned cell
       from the batch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine fixes for the cells this batch finds (the owning tasks make them), beyond a one-line coercion fix in the

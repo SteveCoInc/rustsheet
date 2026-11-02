@@ -10,6 +10,7 @@ use super::grouping::{
     Relative, SetId, SortOrder,
 };
 use super::lifted_options::Bound;
+use super::relative_to::Elements;
 use crate::{
     calc_result::CalcResult,
     cast::calc_result_to_array_node,
@@ -355,7 +356,7 @@ impl Model {
         row_fields: &Node,
         values: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<(Vec<Vec<ArrayNode>>, Vec<Vec<ArrayNode>>), CalcResult> {
+    ) -> Result<(Elements, Elements), CalcResult> {
         // A one-cell reference is read as its value here, so the node tells it from a literal.
         let is_cell =
             |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
