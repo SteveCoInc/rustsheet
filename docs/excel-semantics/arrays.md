@@ -2156,6 +2156,33 @@ Ours: the PIVOTBY shapes since T-2578; the GROUPBY blank keys are T-2460's, the 
 Status: VERIFIED (excel-graph)
 Tasks: T-2578, T-2460, T-2593, T-2594
 
+## GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch (T-3778)
+Rule (gen-m7 arg-pairs batch for GROUPBY, excel-graph, 2026-11-02; each Data sheet has G1=7, G2=0, G3=-2.5, G4=1.5, G5="12",
+G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
+- Scalar `values` that are text (`"2.5"`, `"abc"`, `""`, or a one-cell reference to text) or a one-cell reference to a blank
+  cell make GROUPBY `#VALUE!`, whatever `row_fields` is, unless `row_fields` is a literal error (that error). Numbers and
+  booleans work: `GROUPBY(2,TRUE,_xleta.MIN)` is the row 2, 0 (gen-m7 35679b4facc62956, a full grid of scalar pairs).
+- `row_fields` that is a one-cell reference to an error (`Data!G9`) is `#VALUE!`, but a literal error there is that error
+  (`GROUPBY(#REF!,2,..)` `#REF!`), and `GROUPBY(Data!G9,Data!G9,..)` is the values' `#DIV/0!` (35679b4facc62956 A10554-A11774).
+- A text, empty-text or blank option is `#VALUE!` ahead of a later option's error value
+  (`GROUPBY(Data!A1:A12,Data!D1:E12,_xleta.AVERAGE,Data!G7,Data!G9)` is `#VALUE!`, eb01a9867300331b A11164;
+  `GROUPBY(Data!D1:E12,Data!C1:E12,_xleta.AVERAGE,Data!G6,-2,0,(Data!A1:A12<0.1),Data!G9)` too, 06c84cc76de04bae A10676), though an invalid number loses to the later error (probes/groupby-sort-filter-args B61-B78). Text or blank
+  `values` also win over a later error option (0a91d5918d798930 A10127).
+- A scalar `filter_array` keeps every row when the options before it are omitted (TRUE, 2: "GROUPBY and PIVOTBY" above), but
+  beside given options it is often `#VALUE!` (`GROUPBY(Data!A1:C12,Data!B1:C12,_xleta.MAX,1,-1,1,-1)`, 3a4c7294ff5c4af3 A5125;
+  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`);
+  which argument decides is not yet known.
+- Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
+  (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
+  blank element is valid (B5735 0.3, B8053 TRUE), as it is in a lifted `field_headers` (the entry above, A185). An error
+  `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
+  array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
+  has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
+Ours: none of these yet (the cells are known failures in eval/baseline/gen-m7.txt).
+Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
+lifted `field_headers`, are UNVERIFIED
+Tasks: T-3837, T-3838, T-3839, T-3840
+
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
 excel-graph, 2026-10-24, T-2579; there D!A1:A6 = 1, blank, TRUE, "x", 5, =1/0 and D!B1:B6 = 2, 4, .., 12):
