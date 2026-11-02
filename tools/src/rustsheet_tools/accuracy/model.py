@@ -99,8 +99,9 @@ class Definition:
     `NoValueError` where no single value exists; `domain` adds rules beyond the parameters'
     intervals (returns why the point is invalid, or None). `tail` sets parameter `tail_param`
     from a tail probability (a distribution's x). `draw` replaces the per-parameter sampler for a
-    solver (`solver`: the 300-point count). `sources` cite where the definition's math and
-    ranges come from."""
+    solver (`solver`: the 300-point count). With `variadic` the last parameter repeats (SUM's
+    number2, number3, ...) and `draw` sets the argument count. `sources` cite where the
+    definition's math and ranges come from."""
 
     function: str
     params: tuple[Param, ...]
@@ -111,6 +112,7 @@ class Definition:
     tail_param: str | None = None
     draw: Draw | None = None
     solver: bool = False
+    variadic: bool = False
 
     def __post_init__(self) -> None:
         flags = [p.optional for p in self.params]
@@ -120,12 +122,22 @@ class Definition:
 
     def params_for(self, count: int) -> tuple[Param, ...]:
         """The parameters a call with `count` arguments passes: every required one and the first
-        optional ones. ValueError when `count` is fewer than the required or more than all."""
+        optional ones, with a variadic definition's last parameter repeated to fill `count`.
+        ValueError when `count` is fewer than the required, or more than all for a definition
+        that is not variadic."""
         required = sum(1 for p in self.params if not p.optional)
-        if not required <= count <= len(self.params):
-            msg = f"{self.function} takes {required} to {len(self.params)} arguments, not {count}"
+        if count < required or (count > len(self.params) and not self.variadic):
+            if self.variadic:
+                takes = f"at least {required}"
+            elif required == len(self.params):
+                takes = f"{required}"
+            else:
+                takes = f"{required} to {len(self.params)}"
+            msg = f"{self.function} takes {takes} arguments, not {count}"
             raise ValueError(msg)
-        return self.params[:count]
+        if count <= len(self.params):
+            return self.params[:count]
+        return self.params + (self.params[-1],) * (count - len(self.params))
 
     def numeric_arity(self) -> int:
         """The number of real or integer parameters."""

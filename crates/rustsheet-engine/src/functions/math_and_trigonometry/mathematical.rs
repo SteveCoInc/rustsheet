@@ -334,7 +334,7 @@ impl Model {
     /// first and wraps huge digit counts the same way (docs/excel-semantics/numbers.md
     /// "TRUNC is ROUNDDOWN", probes/trunc-decimal-stages).
     pub(crate) fn fn_trunc(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.round_family(Function::Trunc, args, cell, RoundMode::Down)
+        self.round_family(Function::Trunc, args, cell, RoundMode::Trunc)
     }
 
     // (number, divisor); lifts element-wise over arrays and ranges (probes/geomean-overflow-cut-3 E4)
@@ -763,12 +763,17 @@ impl Model {
     // PERCENTOF(part, total) — returns SUM(part) / SUM(total) as a decimal fraction. Both sums snap
     // near zero like SUM: `PERCENTOF(A1:A3,1)` over 0.1, 0.2, -0.3 is 0 and `PERCENTOF(1,A1:A3)` is
     // #DIV/0! (probes/percentof-snap-overflow-union, excel-graph; numbers.md "Near-zero snapping").
+    // Its errors are ranked across both arguments ([`Model::percentof_sums`]).
     pub(crate) fn fn_percentof(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.len() != 2 {
+        let [part, total] = args else {
             return CalcResult::new_args_number_error(cell);
+        };
+        match self.percentof_sums(part, total, cell) {
+            Ok((part, total)) => {
+                percent_of(CalcResult::Number(part), || CalcResult::Number(total), cell)
+            }
+            Err(error) => error,
         }
-        let part = self.fn_sum(&args[0..1], cell);
-        percent_of(part, || self.fn_sum(&args[1..2], cell), cell)
     }
 }
 
