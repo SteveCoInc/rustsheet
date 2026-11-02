@@ -3,7 +3,7 @@ id: T-3796
 title: "Typed mixed-separator dates take Excel's number format; typed clock-first date-time is a number (T-3751 probe misses)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
