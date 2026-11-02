@@ -3,7 +3,7 @@ id: T-3466
 title: "Move lower_structured_reference out of expressions/parser/operands.rs (997 of its 1,000 lines) into its own parser module"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
