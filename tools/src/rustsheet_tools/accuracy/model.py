@@ -218,7 +218,9 @@ LOG_SMALLEST_DOUBLE = math.log(5e-324)
 no double to record (Excel gives 0 or #NUM! there, statistics.md "BETAINV is #NUM! where its quantile underflows")."""
 
 
-def solve_log_bracket(f: Callable[[mpmath.mpf], mpmath.mpf], lo: float, hi: float) -> mpmath.mpf:
+def solve_log_bracket(
+    f: Callable[[mpmath.mpf], mpmath.mpf], lo: float | mpmath.mpf, hi: float | mpmath.mpf
+) -> mpmath.mpf:
     """The s in [lo, hi] where `f` changes sign, for a quantile solved in log scale (x = ±e^s), so
     a 1E-300 tail is as well conditioned as the centre. NoValueError when the root is not in the
     bracket: the quantile is outside the double range (the sampler redraws)."""

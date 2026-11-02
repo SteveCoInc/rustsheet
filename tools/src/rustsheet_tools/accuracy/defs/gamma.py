@@ -112,9 +112,10 @@ def upper_tail(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     return 1 - _series(y, a) if y < a + 1 else _continued_fraction(y, a)
 
 
-def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
+def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool, scale: mpmath.mpf | int = 1) -> mpmath.mpf:
     """The unit-scale y with P(a, y) = p (or Q(a, y) = p when `upper`), 0 < p < 1: solves the smaller tail
-    ln tail(e^s) = ln q in s. NoValueError when the root is beyond the double range."""
+    ln tail(e^s) = ln q in s. NoValueError when the root is beyond the double range, or when `scale` * y, the
+    caller's value, is below the smallest double (T-3578)."""
     lower = (p <= mpmath.mpf(1) / 2) != upper
     q = p if (lower != upper) else 1 - p
     target = mpmath.log(q)
@@ -124,7 +125,7 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
         # the lower tail grows with s and the upper falls: opposite signs at the bracket ends
         return (mpmath.log(lower_tail(y, a)) - target) if lower else (target - mpmath.log(upper_tail(y, a)))
 
-    return mpmath.exp(solve_log_bracket(f, LOG_SMALLEST_DOUBLE, 710))
+    return mpmath.exp(solve_log_bracket(f, LOG_SMALLEST_DOUBLE - mpmath.log(scale), 710))
 
 
 def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -135,7 +136,7 @@ def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:
         and not isinstance(beta, (bool, tuple))
     )
     # The quantile of probability 0 is the support's lower end.
-    return mpmath.mpf(0) if p == 0 else beta * quantile(p, alpha, upper=False)
+    return mpmath.mpf(0) if p == 0 else beta * quantile(p, alpha, upper=False, scale=beta)
 
 
 def _chisq(upper: bool) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
@@ -144,7 +145,7 @@ def _chisq(upper: bool) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
         assert not isinstance(p, (bool, tuple)) and not isinstance(df, (bool, tuple))
         if p == (1 if upper else 0):
             return mpmath.mpf(0)
-        return CHI_SCALE * quantile(p, mpmath.floor(df) / 2, upper=upper)
+        return CHI_SCALE * quantile(p, mpmath.floor(df) / 2, upper=upper, scale=CHI_SCALE)
 
     return value
 
