@@ -1,6 +1,7 @@
 """Gate A definitions by family; importing this package registers every definition."""
 
 from rustsheet_tools.accuracy.defs import (
+    aggregate,
     annuity,
     beta,
     cashflow,
@@ -13,6 +14,7 @@ from rustsheet_tools.accuracy.defs import (
 )
 
 __all__ = [
+    "aggregate",
     "annuity",
     "beta",
     "cashflow",
