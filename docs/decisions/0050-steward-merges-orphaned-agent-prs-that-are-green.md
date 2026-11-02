@@ -8,6 +8,8 @@
   steward marks orphaned PRs ready instead of merging them; in `lock` mode it may merge or
   unlabel `ready-to-merge` PRs without the 24 h clock. Amended by 0224: in `train` mode a PR is
   orphaned once its branch is idle 6 h (no 24 h age), and `claude/*` branches count too.
+  Amended by 0248: with the merge queue, a PR is orphaned once its branch is idle 4 h (no 24 h
+  age), `claude/*` branches count, and the opus worker adopts one per run as well.
 - **Context:**
   - Worker sessions stop on a time budget (decision 0025). Some stop with a PR open that is
     finished or nearly finished.
