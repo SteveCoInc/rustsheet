@@ -3,7 +3,7 @@ id: T-3324
 title: "Collate Hebrew, Arabic, Indic, Thai, Lao, Hangul, CJK, symbols and astral characters as Excel does (T-3276 probe)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
