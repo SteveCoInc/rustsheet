@@ -1035,6 +1035,23 @@ Error precedence: every error value among the arguments wins over any invalid ar
 error values the first argument wins (field_headers or total_depth `1/0` before sort_order `NA()`, sort_order before
 filter_array before field_relationship): B61-B78. field_relationship: 3, -1, 0.5 are `#VALUE!`, `NA()` `#N/A`, and the
 text "1" counts as 1 (with one total row, the default layout): B79-B83.
+Exceptions to that precedence, checked in argument order like an error value (T-3838, probes/t3838-groupby-option-order,
+232 questions in column B, excel-graph, 2026-11-02; "order Bn" below): a field_headers or total_depth that is text but
+no number, written or in a one-cell reference, `""` and a reference to `=""` included, is `#VALUE!` in its place, ahead
+of a later option's `NA()` or a reference to `=1/0` (order B2-B8, B27-B38, B67, B174-B178), where a blank cell, FALSE,
+TRUE and "1" there are numbers (0, 0, 1, 1) and the later error wins (B10-B22, B41-B59); and a sort_order or filter_array
+that is a one-cell reference to a blank cell is `#VALUE!` ahead of a later error (B81, B121, B176), where text, `""`, a
+reference to text, FALSE or TRUE there leaves the later error (B69-B79, B84-B105, B109-B118, B124-B145). An earlier error still wins over all of them (every "field_headers NA(),
+then ..." row of B30-B173). Alone, a blank sort_order is `#VALUE!` (B80), and field_headers
+TRUE, FALSE or "1" read as 1, 0 or 1 (B11-B21).
+field_relationship 1 (a table) sorts by the keys sort_order names first, in written order, then the other keys ascending
+in column order, each over the whole table: with two keys, sort_order -2 is Product descending, then Region ascending
+(order B179, B184, B199, the same for TRUE and "1"), `{2,-1}` Product ascending then Region descending and `{-1,2}`
+Region descending then Product ascending (B204-B205), and over three keys `{3,-2}` Year, then Product descending, then
+Region (B213); a hierarchy (0, FALSE or omitted) sorts in column order whatever the array's order (B189-B198,
+B217-B229: `{2,-1}` and `{-1,2}` are both Region descending then Product). Descending in a table reverses the ascending
+order whole, so the blank key sorts first (B205, B207), where a hierarchy keeps it last (B217, B220). A value sort in a
+table is flat (B215-B216), as before.
 Review follow-up (probes/groupby-sort-filter-args2, 37 questions in column B, excel-graph, 2026-10-16; "args2 Bn"
 below): the filter element beside a header row is never read, so text, `""` or an error there is ignored (args2 B1, B3,
 B5, B29-B30), while an error beside a record is `#VALUE!` (B31-B35). A filter `VSTACK(NA(),Data!C2:C11=2023)` is `#N/A`
@@ -1211,7 +1228,7 @@ the keys or values themselves (the engine: one error), a lifted field_relationsh
 per element, as the row and column probed), and a 1x1 array field_relationship such as `{0}` or `{1}` (the engine lifts it
 to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
-Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327
+Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
 ## GROUPBY and PIVOTBY: column totals over several value columns
 Rule: with one function over two or more value columns (`width` w), PIVOTBY puts its column subtotal and total cells as
