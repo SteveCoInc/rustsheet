@@ -377,6 +377,16 @@ Implemented in: crates/rustsheet/src/edit.rs (`MAX_FOOTPRINT_CELLS`)
 
 ## MMULT: a blank first argument is #VALUE! even when the second is an error
 Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine matches (T-3729).
+A one-cell range counts as a single blank, but a larger range does not, even when every cell is blank
+(probes/t3836-mmult-blank-range-first-arg, excel-graph, 2026-11-02, T-3836; H1:H3 blank, A1 = 1, A2 blank, G9 = `#DIV/0!`).
+`MMULT(Data!H1:H1,#NUM!)` and `MMULT(Data!H1:H1,Data!G9)` are `#VALUE!` (Calc!A1, A2), and so is
+`MMULT(Data!H1:H1,{#N/A})` (A17). The second argument's error passes through over the all-blank
+`MMULT(Data!H1:H2,#NUM!)` (`#NUM!`, A3) and `MMULT(Data!H1:I1,Data!G9)` (`#DIV/0!`, A14), and over the partly-blank
+`MMULT(Data!A1:A2,...)` and `MMULT(Data!A1:B1,...)` (A5-A8), even where the dimensions do not match. Without an
+error, a blank anywhere is `#VALUE!` (`MMULT(Data!H1:H1,2)`, `MMULT(Data!H1:H2,Data!H3)`, `MMULT(Data!A1:A2,Data!A1:B1)`).
+An error first argument still wins over a blank one-cell range second (`MMULT(Data!G9,Data!H1:H1)` `#DIV/0!`, A11).
+Implemented in: `Model::fn_mmult` (crates/rustsheet-engine/src/functions/math_and_trigonometry/mmult.rs; its 1x1
+`ArrayNode::Empty` check before the second argument is evaluated, T-3729)
 
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
