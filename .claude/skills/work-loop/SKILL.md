@@ -78,11 +78,13 @@ First mark the task `status: done` with its "Outcome" section (what changed, eva
 commit that goes to review, so an approved head needs no bookkeeping push and no second CI run
 (decision 0248). Do not add a line to `docs/status.md` (decision 0024). Push, and open the PR as a
 draft (step 6.2's template) if none exists, so CI starts and the reviewers' verdict records have a
-PR to go on. Use the `review` skill. Fix every BLOCKING / REQUEST_CHANGES finding (update the
-Outcome in the same commit if it changed), re-run `make check-fast`, and re-run only the reviewers
-that did not approve. Once every reviewer approves, a MINOR finding never starts a push: file it
-as a follow-up task (it goes in your next PR) or note on the PR why it stays. Max 3 review rounds; if still blocked,
-set the task `status: blocked` (not `done`) with a "Blocked because" section, push the branch, keep the PR a
+PR to go on. Use the `review` skill. Fix every BLOCKING / REQUEST_CHANGES finding of the round
+(update the Outcome in the same commit if it changed), re-run `make check-fast`, push the round's
+fixes once (the `review` skill's step 4, decision 0240), and re-run only the reviewers that did
+not approve. Once every reviewer approves, a MINOR finding never starts a push: file it as a
+follow-up task (it goes in your next PR) or note on the PR why it stays. Max 3 review rounds; if
+still blocked, set the task `status: blocked` (not `done`) with a "Blocked because" section, push
+the branch, keep the PR a
 draft, and stop work on this task (pick the next one at step 1 while the session budget allows).
 When the round limit is the only blocker, the section's first line is exactly
 `Blocked because: review-round limit` (no other block uses it); if the task file already says
