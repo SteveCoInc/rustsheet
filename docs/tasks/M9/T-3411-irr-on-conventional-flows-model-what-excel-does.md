@@ -118,6 +118,18 @@ restart of the secant at a flat step (class a), as a temporary switch in `irr_se
   whether Excel clamps or rejects that far first step, for example by treating |NPV| above a bound or a
   non-representable discount power (T-3407's `#DIV/0!` sign) as a failed trial and halving the step toward d1.
   Score that on class (a) only, cell by cell, at cap 213.
+- Then tried that next step (22:40 UTC): a damped secant step, halving d2 toward d1 (up to 60 halvings) when the
+  trial (1) fails or has |NPV| above |NPV(d1)|, (2) fails or has d2 >= 1, or (3) fails or has |NPV| above 1E+100.
+  Passed cells, t3406 / t3347 holdout / t3478 / fresh / fresh-2 / t2565 / irr-fallback-roots / m9-fin-irr-rate /
+  t2927 / guess-edges / guess-edges-2 (main at cap 50: 68 / 101 / 229 / 80 / 76 / 180 / 40 / 691 / 40 / 42 / 40):
+  (1) 29 / 84 / 177..192 / 68..76 / 67..71 / 173 / 36 / 655 / 52 / 40 / 26, which breaks the fit set;
+  (2) and (3) at cap 50: 68 / 101 / 224 / 80 / 76 / 180 / 36 / 691 / 52 / 41..42 / 40; at cap 213: 70 / 106 / 238 /
+  88 / 83 / 180 / 36 / 691 / 55 / 41..42 / 40. No damping rule moves t3406, and all lose t3478 cells and
+  irr-fallback-roots cells (-4). Refuted: Excel does not shorten a far first step. Do not repeat.
+- What is left: the far first step stands in Excel too, so what tells Excel's returns apart from its `#NUM!` inside
+  one outlay family (t3406 A122-A132) has to come later in the run. Next, log the exact iterate sequence of a
+  returning cell and its `#NUM!` neighbour with the engine's operators (a throwaway test printing d, NPV per step at
+  cap 213) and compare where they part.
 
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
