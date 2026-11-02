@@ -386,3 +386,69 @@ fn names_read_as_r1c1_cells() {
         assert!(!reads_as_r1c1_cell(name), "{name}");
     }
 }
+
+#[test]
+fn indirect_reference_text_keeps_only_the_spaces_excel_accepts() {
+    // probes/t3656-indirect-spaces-reversed; docs/excel-semantics/lookup.md
+    let accepted = [
+        ("A1 ", "A1"),
+        ("A1\n", "A1"),
+        ("A1 : B2", "A1:B2"),
+        ("A1 :B2", "A1:B2"),
+        ("Sheet2! A1", "Sheet2!A1"),
+        ("Sheet2!A1 :B2", "Sheet2!A1:B2"),
+        ("'My Sheet'!A1", "'My Sheet'!A1"),
+        ("R1C1 : R2C2", "R1C1:R2C2"),
+    ];
+    for (text, expected) in accepted {
+        assert_eq!(
+            indirect_reference_text(text).as_deref(),
+            Some(expected),
+            "{text:?}"
+        );
+    }
+    let refused = [
+        " A1",
+        "\tA1",
+        "\u{a0}A1",
+        "A1\t",
+        "A1\u{a0}",
+        "A1:\tB2",
+        "Sheet2 !A1",
+        "'My Sheet' !A1",
+        "A1 B2",
+        "R1C1 R2C2",
+    ];
+    for text in refused {
+        assert_eq!(indirect_reference_text(text), None, "{text:?}");
+    }
+}
+
+#[test]
+fn indirect_reference_text_line_feed_and_inner_spaces() {
+    // probes/t3747-indirect-whitespace rows 20-73 (Excel for the web, T-3747)
+    for (text, expected) in [
+        ("A1:\nB2", "A1:B2"),
+        ("A1\n:B2", "A1:B2"),
+        ("A1 \n: B2", "A1:B2"),
+        ("Sheet2!\nA1", "Sheet2!A1"),
+        ("A1\n\n", "A1"),
+    ] {
+        assert_eq!(
+            indirect_reference_text(text).as_deref(),
+            Some(expected),
+            "{text:?}"
+        );
+    }
+    for text in [
+        "A1\r",
+        "\nA1",
+        "A1\u{2003}",
+        "A 1",
+        "$A $1",
+        "A1\nB2",
+        "R1 C1",
+    ] {
+        assert_eq!(indirect_reference_text(text), None, "{text:?}");
+    }
+}
