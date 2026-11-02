@@ -37,6 +37,18 @@ evidence. Today the rest of Unicode keeps an inferred "code-point order after th
   and Cyrillic accent weights (T-3203, T-3305), `İ` (T-3180), script digits in VALUE and typed input (T-3446), and
   the case-fold sweep (T-3298).
 
+- T-3324 (PR #2875) extended the probed points to whole ranges with no evidence. Each is UNVERIFIED in coercion.md
+  "Other scripts, their marks and digits, symbols and astral characters", and this probe should settle it:
+  - every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat (U+2600 to U+27BF) sorts after `•` and before
+    the digits (from `← ☺ ♥ ✓`);
+  - all Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670) and Thai
+    tone marks U+0E48 to U+0E4B are accents weighing their code point (from U+05B7, U+05BC, U+064E, U+0651, U+0E48);
+  - the Thai prevowels `โ ใ ไ` sort before the consonants, as `เ แ` do;
+  - `™` is not equal to `"tm"` (the `assert_ne!` in `t3276_other_scripts`, crates/rustsheet-engine/src/test/test_collation.rs);
+  - Thai and other digit blocks keep code-point order, unlike the Arabic-Indic and Devanagari digits.
+  The engine now orders the rest of Unicode with `script_order` (crates/rustsheet-engine/src/functions/util/collation/scripts.rs),
+  not by `OTHER_BASE + code point`.
+
 ## Acceptance criteria
 - [ ] `eval/suites/probes/cases/t3559-collation-unprobed-blocks.case.json` (with its `.oracle.json` sidecar) is committed and
       filled on excel-graph. It ranks at least two letters per block (first and last code point, plus one with a
