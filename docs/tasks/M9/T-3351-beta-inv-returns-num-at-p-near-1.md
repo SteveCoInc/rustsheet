@@ -29,6 +29,9 @@ the answer is 1.0.
 - Related: T-1871 (statrs saturation and panics), T-2511 (crossing of the ported CDF), T-2555 (BETA.INV's early
   Newton stop at a huge shape), T-2633 (BETA.INV chained on BETA.DIST). Name any of their cells this
   moves in the Outcome.
+- Gate A (T-3578): accuracy/BETA.INV/s1 A83, A86, A98, A100, A103, A106 and A123 (Excel 1 - 2^-53 where the quantile
+  rounds to 1) and A88, A97 and A108 (Excel 2^-53 by the flip) are known failures owned by this task; remove their lines
+  from eval/accuracy/known-failures.tsv when they pass (statistics.md "BETA.INV's Gate A table").
 
 ## Acceptance criteria
 - [ ] BETA.INV at p from 1 − 1e-6 to 1 − 1e-15 with b from 1e-3 to 1 returns Excel's value (1.0 where Excel gives it).
