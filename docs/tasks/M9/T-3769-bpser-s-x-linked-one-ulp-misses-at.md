@@ -3,7 +3,7 @@ id: T-3769
 title: "bpser's x-linked one-ulp misses at 1 < b0 < 8 (a0 near 0.3) and the a0-linked residual at 0.5 and 0.7 (T-3570)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
