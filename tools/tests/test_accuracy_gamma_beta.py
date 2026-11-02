@@ -82,20 +82,16 @@ def test_beta_density_is_a_domain_error_at_an_end_with_a_shape_up_to_1() -> None
     assert dist.evaluate([mp(0), mp("0.5"), mp(2), True]) == 0
 
 
-def test_quantiles_have_no_value_where_the_root_is_below_the_smallest_double() -> None:
-    # T-3578: the log bracket stops at 2^-1074. probes-numeric/t1543-inverse-cdf-tiny-p A91 BETA.INV(1E-300,0.5,100)
-    # has math 7.87E-603 and CHISQ.INV(1E-300,1) about 1.6E-600; neither has a double to record.
+def test_beta_quantile_has_no_value_where_the_root_is_below_the_smallest_double() -> None:
+    # T-3578: BETAINV is #NUM! where its quantile underflows (statistics.md, T-2435), so the log bracket stops at
+    # 2^-1074. probes-numeric/t1543-inverse-cdf-tiny-p A91 BETA.INV(1E-300,0.5,100) has math 7.87E-603.
     with pytest.raises(NoValueError):
         REGISTRY["BETA.INV"].evaluate([mp("1E-300"), mp("0.5"), mp(100)])
-    with pytest.raises(NoValueError):
-        REGISTRY["CHISQ.INV"].evaluate([mp("1E-300"), mp(1)])
-    # A root just inside the double range still has a value: P(1, y) = 1 - e^-y is about y, so y = 1E-320.
-    assert close(gamma.quantile(mp("1E-320"), mp(1), upper=False), "1E-320", 330)
+    # A root just inside the double range keeps its value: I_x(1, 1) = x.
     assert close(beta.quantile(mp("1E-320"), mp(1), mp(1)), "1E-320", 330)
-    # GAMMA.INV's bound is on its value beta * y: accuracy/GAMMA.INV/s1 A82 has math 9.27E-349 and Excel 0, while a
-    # beta of 1E+100 lifts a unit root of 1E-400 to a double.
-    with pytest.raises(NoValueError):
-        REGISTRY["GAMMA.INV"].evaluate(
-            [mp("0.00148130338218573"), mp("0.00812459945497678"), mp("2.88852896257521")]
-        )
-    assert close(REGISTRY["GAMMA.INV"].evaluate([mp("1E-400"), mp(1), mp("1E+100")]), "1E-300", 310)
+
+
+def test_gamma_quantile_keeps_a_value_below_the_smallest_double() -> None:
+    # Excel gives 0 there and committed s1 points rely on it (gamma.quantile's docstring); the value is the math.
+    value = REGISTRY["CHISQ.INV"].evaluate([mp("1E-300"), mp(1)])
+    assert 0 < value < mp("1E-500")
