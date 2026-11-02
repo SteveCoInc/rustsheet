@@ -38,7 +38,8 @@ def q_cf(b, x, r, eps, T=LD):
 
 
 def bgrat_ld(a, b, lnx, qmode, eps, efn=None):
-    """efn(a, b, nu) -> E overrides the extended E = exp(-(algdiv(b, a) + b ln nu)) (T-3567 r5-bgrat-fdf1)."""
+    """qmode: "exact", "cf", "cfd" or a callable (b, z, r) -> j0 (T-3582). efn(a, b, nu) -> E overrides the extended
+    E = exp(-(algdiv(b, a) + b ln nu)) (T-3567 r5-bgrat-fdf1)."""
     bL = LD(b)
     nu = LD(a) + LD(0.5) * (bL - 1)
     zd = float(-nu * LD(lnx))
@@ -49,8 +50,12 @@ def bgrat_ld(a, b, lnx, qmode, eps, efn=None):
     r = np.exp(bL * np.log(z) - z) * rg
     E = np.exp(-(xlk._algdiv_ld(b, a) + bL * np.log(nu))) if efn is None else LD(efn(a, b, nu))
     u = r * E
-    q = qx if qmode == "exact" else LD(q_cf(bL, z, r, eps, np.float64 if qmode == "cfd" else LD))
-    j = q / r
+    if callable(qmode):
+        # T-3582 r6-bgrat-q: qmode(b, z, r) returns j0 = Q / r from a candidate Q algorithm.
+        j = LD(qmode(b, zd, r))
+    else:
+        q = qx if qmode == "exact" else LD(q_cf(bL, z, r, eps, np.float64 if qmode == "cfd" else LD))
+        j = q / r
     s = j
     v = LD(0.25) / (nu * nu)
     t2 = LD(0.25) * L * L
