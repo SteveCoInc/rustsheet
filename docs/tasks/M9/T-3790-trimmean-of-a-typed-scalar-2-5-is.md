@@ -3,7 +3,7 @@ id: T-3790
 title: "TRIMMEAN of a typed scalar: \"2.5\" is 2.5 and TRUE is 1, the percent's own result or error follows (gen-m9, 15 cells)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -29,9 +29,9 @@ percent is then `#NUM!` and an error percent is that error.
 - Recorded in statistics.md "TRIMMEAN of a typed scalar (T-3781)". Code: trimmean.rs `fn_trimmean`.
 
 ## Acceptance criteria
-- [ ] The 15 cells below pass.
-- [ ] statistics.md entry's Ours line updated.
-- [ ] `make check` green; reviewers approve.
+- [x] The 15 cells below pass.
+- [x] statistics.md entry's Ours line updated.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0159: the task is done when the gen-m9 cells below (T-3781's arg-pairs batch, excel-graph, 2026-11-01) pass and
@@ -40,3 +40,6 @@ their known-failure lines leave eval/baseline/gen-m9.txt (`make eval-baseline`),
 
 ## Out of scope
 - An error cell as the data against a text percent (T-3788).
+
+## Outcome
+TRIMMEAN reads a non-reference numeric-text or boolean scalar data argument as one number (trimmean.rs). gen-m9/4fc6bdaec0e5583d passes 192/192; its known-failure lines left eval/baseline/gen-m9.txt; regressions 0.
