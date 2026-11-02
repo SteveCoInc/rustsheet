@@ -733,12 +733,17 @@ Status: VERIFIED
 Tasks: T-0283, T-1335
 
 ## Group commas and a leading percent sign
-Rule (en-US): number text reads a group comma followed by four or more digits, and a leading percent sign: VALUE,
-`A1+0` and IMREAL of "1,0000" are 10000, of "1,000,0000" 10000000, of "1,0000.5" 10000.5 and of "%1" 0.01. A comma
-followed by fewer than three digits or by nothing, a leading comma and a doubled percent sign are refused: "1,",
-"1,00", ",1", "2,0" and "2%%" are #VALUE! (IMREAL #NUM!). Ours refuses "1,0000", "1,000,0000", "1,0000.5" and "%1",
-and reads "1," as 1.
-Evidence: probes/eng-inumber-grammar-value (excel-graph, 2026-11-02).
+Rule (en-US): number text reads a comma-separated integer part in which every group after a comma has three or more
+digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "1,000,0000" 10000000, of "1,00000",
+"1,000000" and "12,0000" 100000, 1000000 and 120000, of "1,0000.5" 10000.5, of "-1,0000" -10000 and of "1,0000e2"
+1000000. A group of fewer than three digits or none is refused: "1,", "1,00", ",1", "2,0", "1,000,00", "1,000,0",
+"1,000,", "1,,000" and "1,000.5,000" are #VALUE! (IMREAL #NUM!). An integer part of only zeros before the first comma is refused whatever the group: "0,0000", "0,000", "00,0000" and "00,000" are #VALUE!, while "01,0000" is 10000. One leading percent sign divides by
+100 and may be followed by spaces, a sign, a group or a decimal: "%1", "% 1", "%-1", "%1.5" and "%1,0000" are 0.01,
+0.01, -0.01, 0.015 and 100; "1,0000%" is 100. A percent sign on both ends ("%1%") and a doubled one ("2%%") are
+#VALUE!. NUMBERVALUE strips its own percent signs first, so its "%%1.5" stays #VALUE! (the reader now reads the
+leading one, NUMBERVALUE refuses a second).
+UNPROBED: typed cell input of these texts (and the number format Excel gives it); ours shares the reader and so now reads them, with a `0%`/`0.00%` format for a leading percent that is invented.
+Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED
 Tasks: T-3811 (implements), T-3644 (found)
