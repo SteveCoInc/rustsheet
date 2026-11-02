@@ -3,7 +3,7 @@ id: T-3817
 title: "CONVERT unit names: sweep which unit and prefix strings Excel accepts (prefixes per unit, binary prefixes, time units, powers, case and aliases)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -42,11 +42,28 @@ The factors themselves are evidenced ("CONVERT constants and evaluation order"):
 parse, never a factor.
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph, canary-verified) covers the unit strings above, both as from_unit and as to_unit.
-- [ ] The engine matches every probed cell; the prefix rule is stated in engineering.md per unit class with the probe
+- [x] A probe case (excel-graph, canary-verified) covers the unit strings above, both as from_unit and as to_unit.
+- [x] The engine matches every probed cell; the prefix rule is stated in engineering.md per unit class with the probe
       cells cited (VERIFIED), and the duplicate entries of the prefix table are gone.
-- [ ] No ironcalc-calc CONVERT.xlsx or convert-* probe cell changes verdict.
-- [ ] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
+- [x] No ironcalc-calc CONVERT.xlsx or convert-* probe cell changes verdict.
+- [x] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
 
 ## Out of scope
 - CONVERT's last digits (T-2046, T-2047), temperature forms (evidenced) and argument kinds (T-3124, T-3214).
+
+## Outcome
+- New probe probes/convert-unit-names (excel-graph, 1549 unit strings, each as from_unit in column A and
+  as to_unit in column B, 3098 cells): every unit bare and with `k`, `ki`, `m`, `da`, `e`, `M`, `Gi`, all
+  29 prefixes on fifteen units, and every string the task listed.
+- Findings (engineering.md "CONVERT unit names", VERIFIED): the units that take a decimal prefix are
+  the engine's old list plus `sec` and `s`; binary prefixes go on `bit` and `byte` only; a string is
+  read within the other unit's class (`"pc"` is pico-calories against `"c"`, `"J"`, `"eV"`); case,
+  spaces and the empty string are `#N/A`; accepted strings read the same on both sides.
+- Engine: `parse_unit` replaces the hand loop in `fn_convert`. The prefix tables are fixed arrays
+  (the duplicate `Yi`/`Ei` entries are gone, the `Ei` = 2^70 one was dead) and the classes are scanned
+  in a fixed order, so the result no longer depends on HashMap iteration order.
+- Eval delta: probes/convert-unit-names 2581 → 2979 of 3098 cells with the fix (new case, all 398
+  newly matched cells are unit-string acceptance). ironcalc-calc CONVERT.xlsx (509), convert-targets
+  (84), convert-temperature-* and eng-convert-boolean-unit keep their verdicts.
+- The 119 cells still off are NumericUlp: 116 are prefix-scale last digits (follow-up T-3861), 3 are
+  non-base factors (T-2047, cells added to its context).
