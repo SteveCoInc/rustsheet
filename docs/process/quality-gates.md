@@ -1,7 +1,9 @@
 # Quality gates
 
-Every gate is automated and runs in CI (`.github/workflows/ci.yml`). `make check` runs the same
-gates locally, except `cargo deny` and `cargo machete` (`make ci`). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
+Every gate is automated and runs in CI (`.github/workflows/ci.yml`), on each PR head and again on
+the merge group. `make check` runs the same gates locally, except `cargo deny` and `cargo machete`
+(`make ci`). Before a push, workers run `make check-fast`: the gates their change can break, by
+path, never the full Rust suite (`scripts/fast_gates.py`, decision 0248). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
 decision record in `docs/decisions/` (enforced by `scripts/check_governance.py`).
 On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygiene always runs, and
 `docs/excel-semantics/` counts as code because the eval harness reads it. The rules are

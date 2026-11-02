@@ -1013,6 +1013,9 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   when its text, with the leading `0.`, is at most 21 characters (12 digits to -8, 13 to -7, 14 to -6; one more
   digit or exponent step is E notation; a 21-character part is evidenced at exponents -6 to -8 only, the rule below -8
   is extrapolated), a character more than number-to-text coercion allows. Status: VERIFIED (excel-graph), implemented (T-3560).
+  The T-3589/T-3609 sweeps agree and pass since T-3560 (gap triage 2026-11-01, excel-graph): probes-numeric/t3589-im-hyperbolic-small-x-sweep
+  S!A4 `IMSINH("6.09023237964955E-06")` is `0.0000060902323796872` (14 digits at -6) and S!C127
+  `IMSECH("3.92937257901956E-06+0.107316538548074i")` is `1.00578618257237-0.0000004257623550779i` (13 at -7).
 - **IMSQRT of a negative real is polar through COS and ATAN2.** `IMSQRT("-1")` (`IMSQRT(TEXT(-1,"0"))`) is
   "6.1257422745431E-17+i" = COS(ATAN2(-1,0)/2) with Excel's COS (libm cos(π/2) 6.12323399573677E-17), `IMSQRT(-2.5)`
   9.68564897336834E-17+1.58113883008419i, `IMSQRT(-0.0001)` 6.1257422745431E-19+0.01i, `IMSQRT(-3.85841)`
@@ -1158,6 +1161,23 @@ earlier cut at ln(DBL_MIN) (T-3589).
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/mod.rs (`ENGINEERING_EXP_CUT`, shared with BESSELI), complex/trig.rs
 (`trig_exp_overflows`)
+
+## IMSIN and IMCOS reduce the real part by the x87 64-bit pi (T-3726)
+Rule: IMSIN and IMCOS of a complex x + yi (y != 0) take sin x and cos x as SIN and COS do, reducing x by the x87
+64-bit pi (numbers.md "Trig of a huge angle", "SIN / COS at multiples of 90°"), not as the correctly rounded sine and
+cosine. It shows where x is within a few 1E-15 of k·pi/2 and one factor is the tiny remainder: `IMSIN("1.5707963267949+709.7i")`
+is 8.27492013840132E+307-2.88915216855774E+293i (correctly rounded: ...-2.88917292436455E+293i, 7.2E-6 relative off),
+`IMCOS("4.71238898038469+79.1718046156471i")` is -2223964481544680000+1.2101741480848E+34i (math: -2.22305384529439E+18
+for the real part). At x = ±4.71238898038469, the 15-digit neighbour of 3·pi/2, Excel's small part is 4.1E-4 relative
+off the 50-digit math (36 of the sweep's 800 parts), the same factor as `COS(RADIANS(90))` (6.1257422745431E-17 for
+6.123E-17): matched as Excel's value, not a MATH-OVER-EXCEL case (decision 0188 R3 lists none for SIN/COS).
+Evidence: probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1, K22, L22 (excel-graph, T-3616);
+probes-numeric/t3726-imsin-imcos-near-half-pi-sweep (400 texts, excel-graph, 2026-11-01; x = k·pi/2 + d to 15 digits,
+k = ±1..±4, d = 0 or |d| log-uniform in [1E-14, 1E-3], |y| log-uniform in [1, 709]; docs/research/t3726/gen_sweep.py):
+the x87 reduction matches 400, libm 28. Every other IM* cell of the suites and the six IM* fit labs is unchanged.
+Status: VERIFIED (excel-graph)
+Implemented in: complex/trig.rs (`imsin`, `imcos` through `trig_sin_cos`)
+Tasks: T-3726
 
 ## BESSELJ and BIN2* cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `BESSELJ(1E+15,100)` is `#NUM!` (caa1eed48b1883fe A399; matched since T-2547, the phase cut), and `BIN2DEC("Hello World")` and `BIN2HEX("#N/A",1)` (text cells) are `#NUM!` (matched since T-2544); an `IMSUM` of

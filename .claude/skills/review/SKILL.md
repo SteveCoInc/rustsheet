@@ -4,11 +4,11 @@ description: Run RustSheet's multi-agent code review on the current branch versu
 ---
 # Multi-agent review
 
-A **task-only PR** (every changed path a `.md` file under `docs/tasks/`) gets no review: `make mark-ready`
-needs no verdict for it once CI is green, and the merge train's `tasks.py validate` on the
-combined tree is its gate (decision 0231). Any other path in the diff brings the panel of step 3 back.
+A **task-only PR** (every changed path a `.md` file under `docs/tasks/`) gets no review: it is enqueued
+once CI is green, and the merge queue's `tasks.py validate` on the combined tree is its gate
+(decisions 0231, 0247). Any other path in the diff brings the panel of step 3 back.
 
-1. Make sure the branch is committed and `make check` passed (reviewers are not linters).
+1. Make sure the branch is committed and `make check-fast` passed (reviewers are not linters).
 2. Collect context: `git diff --stat origin/main...HEAD`, the task id (branch name) and its file.
 3. Launch these subagents **in parallel** (one message, multiple Agent calls), each with a
    prompt containing: the task id, task file path, spec path(s), and "review `git diff
@@ -43,7 +43,7 @@ combined tree is its gate (decision 0231). Any other path in the diff brings the
    every reviewer returned `APPROVE` (MINOR findings may be deferred as follow-up tasks).
    **Push once per round** (decision 0240): wait until every reviewer of the round has reported,
    fix the round's blocking findings (and any MINOR ones you choose to fix) in local commits, run
-   `make check`, then push once and start the next round on that head, where a reviewer whose
+   `make check-fast`, then push once and start the next round on that head, where a reviewer whose
    approval names an older head runs again (step 3). Do not push while a reviewer of the round is
    still running, and do not push fix by fix: each push starts a full CI run and cancels the one
    in flight, and a reviewer still running is then reviewing a head that no longer counts. Red-CI,
