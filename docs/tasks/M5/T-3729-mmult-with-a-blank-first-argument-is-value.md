@@ -3,7 +3,7 @@ id: T-3729
 title: "MMULT with a blank first argument is #VALUE! even when the second argument is an error"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
