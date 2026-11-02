@@ -3,7 +3,7 @@ id: T-3807
 title: "Criteria: probe and match a blank or omitted criterion over padded and formatted zero text, and the percent operand's 15-digit cut order"
 milestone: M2
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
