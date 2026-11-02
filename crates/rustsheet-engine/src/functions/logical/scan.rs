@@ -12,25 +12,8 @@ impl Model {
     /// rather than just the final one. The output has the same shape as `array`.
     /// With 2 arguments the first element seeds the accumulator (not included in output).
     pub(crate) fn fn_scan(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.len() < 2 || args.len() > 3 {
-            return CalcResult::new_args_number_error(cell);
-        }
-
-        let (array_idx, lambda_idx, has_initial) = if args.len() == 3 {
-            (1, 2, true)
-        } else {
-            (0, 1, false)
-        };
-
-        let function = self.evaluate_node_in_context(&args[lambda_idx], cell);
-        let data = match self.lambda_cells(&args[array_idx], cell, false, false) {
-            Ok(d) => d,
-            Err(e) => return e,
-        };
-
-        // Array first, then the function (see MAP in map_reduce.rs).
-        let mut caller = match self.helper_caller(&function, 2, cell) {
-            Ok(caller) => caller,
+        let (data, mut caller, has_initial) = match self.fold_operands(args, cell) {
+            Ok(operands) => operands,
             Err(error) => return error,
         };
 
