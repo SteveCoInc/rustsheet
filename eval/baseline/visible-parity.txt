@@ -213,6 +213,8 @@ ironcalc-calc/STATISTICAL/POISSON.xlsx	1
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
 probes/date-text-mixed-separator-typed.case.json	2
+probes/eng-inumber-grammar-parts.case.json	9
+probes/eng-inumber-grammar-value.case.json	15
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
