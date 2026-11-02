@@ -1088,6 +1088,726 @@
     "v": "0.0",
     "f": "=CEILING.PRECISE(A9,B9)"
    },
+   "G1": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=ISO.CEILING(A1,B1)"
+   },
+   "G10": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A10,B10)"
+   },
+   "G11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A11,B11)"
+   },
+   "G12": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A12,B12)"
+   },
+   "G13": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A13,B13)"
+   },
+   "G14": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A14,B14)"
+   },
+   "G15": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A15,B15)"
+   },
+   "G16": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A16,B16)"
+   },
+   "G17": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A17,B17)"
+   },
+   "G18": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A18,B18)"
+   },
+   "G19": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A19,B19)"
+   },
+   "G2": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=ISO.CEILING(A2,B2)"
+   },
+   "G20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A20,B20)"
+   },
+   "G21": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A21,B21)"
+   },
+   "G22": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A22,B22)"
+   },
+   "G23": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A23,B23)"
+   },
+   "G24": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A24,B24)"
+   },
+   "G25": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=ISO.CEILING(A25,B25)"
+   },
+   "G26": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=ISO.CEILING(A26,B26)"
+   },
+   "G27": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A27,B27)"
+   },
+   "G28": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A28,B28)"
+   },
+   "G29": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A29,B29)"
+   },
+   "G3": {
+    "t": "n",
+    "v": "4.0",
+    "f": "=ISO.CEILING(A3,B3)"
+   },
+   "G30": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A30,B30)"
+   },
+   "G31": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A31,B31)"
+   },
+   "G32": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A32,B32)"
+   },
+   "G33": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A33,B33)"
+   },
+   "G34": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A34,B34)"
+   },
+   "G35": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A35,B35)"
+   },
+   "G36": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A36,B36)"
+   },
+   "G37": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A37,B37)"
+   },
+   "G38": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A38,B38)"
+   },
+   "G39": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A39,B39)"
+   },
+   "G4": {
+    "t": "n",
+    "v": "4.0",
+    "f": "=ISO.CEILING(A4,B4)"
+   },
+   "G40": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A40,B40)"
+   },
+   "G41": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A41,B41)"
+   },
+   "G42": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A42,B42)"
+   },
+   "G43": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A43,B43)"
+   },
+   "G44": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A44,B44)"
+   },
+   "G45": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A45,B45)"
+   },
+   "G46": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A46,B46)"
+   },
+   "G47": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A47,B47)"
+   },
+   "G48": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A48,B48)"
+   },
+   "G49": {
+    "t": "n",
+    "v": "10000000.0",
+    "f": "=ISO.CEILING(A49,B49)"
+   },
+   "G5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A5,B5)"
+   },
+   "G50": {
+    "t": "n",
+    "v": "10000000.0",
+    "f": "=ISO.CEILING(A50,B50)"
+   },
+   "G51": {
+    "t": "n",
+    "v": "40000000.0",
+    "f": "=ISO.CEILING(A51,B51)"
+   },
+   "G52": {
+    "t": "n",
+    "v": "40000000.0",
+    "f": "=ISO.CEILING(A52,B52)"
+   },
+   "G53": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A53,B53)"
+   },
+   "G54": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A54,B54)"
+   },
+   "G55": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A55,B55)"
+   },
+   "G56": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A56,B56)"
+   },
+   "G57": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A57,B57)"
+   },
+   "G58": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A58,B58)"
+   },
+   "G59": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A59,B59)"
+   },
+   "G6": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A6,B6)"
+   },
+   "G60": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A60,B60)"
+   },
+   "G61": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A61,B61)"
+   },
+   "G62": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A62,B62)"
+   },
+   "G63": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A63,B63)"
+   },
+   "G64": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A64,B64)"
+   },
+   "G65": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A65,B65)"
+   },
+   "G66": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A66,B66)"
+   },
+   "G67": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A67,B67)"
+   },
+   "G68": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A68,B68)"
+   },
+   "G69": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A69,B69)"
+   },
+   "G7": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A7,B7)"
+   },
+   "G70": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A70,B70)"
+   },
+   "G71": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A71,B71)"
+   },
+   "G72": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A72,B72)"
+   },
+   "G8": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A8,B8)"
+   },
+   "G9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ISO.CEILING(A9,B9)"
+   },
+   "H1": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=ECMA.CEILING(A1,B1)"
+   },
+   "H10": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A10,B10)"
+   },
+   "H11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A11,B11)"
+   },
+   "H12": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A12,B12)"
+   },
+   "H13": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A13,B13)"
+   },
+   "H14": {
+    "t": "n",
+    "v": "-1.0",
+    "f": "=ECMA.CEILING(A14,B14)"
+   },
+   "H15": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A15,B15)"
+   },
+   "H16": {
+    "t": "n",
+    "v": "-4.0",
+    "f": "=ECMA.CEILING(A16,B16)"
+   },
+   "H17": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A17,B17)"
+   },
+   "H18": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A18,B18)"
+   },
+   "H19": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A19,B19)"
+   },
+   "H2": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A2,B2)"
+   },
+   "H20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A20,B20)"
+   },
+   "H21": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A21,B21)"
+   },
+   "H22": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A22,B22)"
+   },
+   "H23": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A23,B23)"
+   },
+   "H24": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A24,B24)"
+   },
+   "H25": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=ECMA.CEILING(A25,B25)"
+   },
+   "H26": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A26,B26)"
+   },
+   "H27": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A27,B27)"
+   },
+   "H28": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A28,B28)"
+   },
+   "H29": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A29,B29)"
+   },
+   "H3": {
+    "t": "n",
+    "v": "4.0",
+    "f": "=ECMA.CEILING(A3,B3)"
+   },
+   "H30": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A30,B30)"
+   },
+   "H31": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A31,B31)"
+   },
+   "H32": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A32,B32)"
+   },
+   "H33": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A33,B33)"
+   },
+   "H34": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A34,B34)"
+   },
+   "H35": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A35,B35)"
+   },
+   "H36": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A36,B36)"
+   },
+   "H37": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A37,B37)"
+   },
+   "H38": {
+    "t": "n",
+    "v": "-0.5",
+    "f": "=ECMA.CEILING(A38,B38)"
+   },
+   "H39": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A39,B39)"
+   },
+   "H4": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A4,B4)"
+   },
+   "H40": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A40,B40)"
+   },
+   "H41": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A41,B41)"
+   },
+   "H42": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A42,B42)"
+   },
+   "H43": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A43,B43)"
+   },
+   "H44": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A44,B44)"
+   },
+   "H45": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A45,B45)"
+   },
+   "H46": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A46,B46)"
+   },
+   "H47": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A47,B47)"
+   },
+   "H48": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A48,B48)"
+   },
+   "H49": {
+    "t": "n",
+    "v": "10000000.0",
+    "f": "=ECMA.CEILING(A49,B49)"
+   },
+   "H5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A5,B5)"
+   },
+   "H50": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A50,B50)"
+   },
+   "H51": {
+    "t": "n",
+    "v": "40000000.0",
+    "f": "=ECMA.CEILING(A51,B51)"
+   },
+   "H52": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A52,B52)"
+   },
+   "H53": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A53,B53)"
+   },
+   "H54": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A54,B54)"
+   },
+   "H55": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A55,B55)"
+   },
+   "H56": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A56,B56)"
+   },
+   "H57": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A57,B57)"
+   },
+   "H58": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A58,B58)"
+   },
+   "H59": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A59,B59)"
+   },
+   "H6": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A6,B6)"
+   },
+   "H60": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A60,B60)"
+   },
+   "H61": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A61,B61)"
+   },
+   "H62": {
+    "t": "n",
+    "v": "-10000000.0",
+    "f": "=ECMA.CEILING(A62,B62)"
+   },
+   "H63": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A63,B63)"
+   },
+   "H64": {
+    "t": "n",
+    "v": "-40000000.0",
+    "f": "=ECMA.CEILING(A64,B64)"
+   },
+   "H65": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A65,B65)"
+   },
+   "H66": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A66,B66)"
+   },
+   "H67": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A67,B67)"
+   },
+   "H68": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A68,B68)"
+   },
+   "H69": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A69,B69)"
+   },
+   "H7": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A7,B7)"
+   },
+   "H70": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A70,B70)"
+   },
+   "H71": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A71,B71)"
+   },
+   "H72": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A72,B72)"
+   },
+   "H8": {
+    "t": "e",
+    "why": "CEILING of a positive number by a negative significance (#NUM!)",
+    "f": "=ECMA.CEILING(A8,B8)"
+   },
+   "H9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ECMA.CEILING(A9,B9)"
+   },
    "I1": {
     "t": "n",
     "v": "0.0",
@@ -2167,6 +2887,366 @@
     "t": "n",
     "v": "0.0",
     "f": "=FLOOR.PRECISE(A9,B9)"
+   },
+   "M1": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A1,B1)"
+   },
+   "M10": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A10,B10)"
+   },
+   "M11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A11,B11)"
+   },
+   "M12": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A12,B12)"
+   },
+   "M13": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A13,B13)"
+   },
+   "M14": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A14,B14)"
+   },
+   "M15": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A15,B15)"
+   },
+   "M16": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A16,B16)"
+   },
+   "M17": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A17,B17)"
+   },
+   "M18": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A18,B18)"
+   },
+   "M19": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A19,B19)"
+   },
+   "M2": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A2,B2)"
+   },
+   "M20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A20,B20)"
+   },
+   "M21": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A21,B21)"
+   },
+   "M22": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A22,B22)"
+   },
+   "M23": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A23,B23)"
+   },
+   "M24": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A24,B24)"
+   },
+   "M25": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A25,B25)"
+   },
+   "M26": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A26,B26)"
+   },
+   "M27": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A27,B27)"
+   },
+   "M28": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A28,B28)"
+   },
+   "M29": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A29,B29)"
+   },
+   "M3": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A3,B3)"
+   },
+   "M30": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A30,B30)"
+   },
+   "M31": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A31,B31)"
+   },
+   "M32": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A32,B32)"
+   },
+   "M33": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A33,B33)"
+   },
+   "M34": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A34,B34)"
+   },
+   "M35": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A35,B35)"
+   },
+   "M36": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A36,B36)"
+   },
+   "M37": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A37,B37)"
+   },
+   "M38": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A38,B38)"
+   },
+   "M39": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A39,B39)"
+   },
+   "M4": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A4,B4)"
+   },
+   "M40": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A40,B40)"
+   },
+   "M41": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A41,B41)"
+   },
+   "M42": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A42,B42)"
+   },
+   "M43": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A43,B43)"
+   },
+   "M44": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A44,B44)"
+   },
+   "M45": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A45,B45)"
+   },
+   "M46": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A46,B46)"
+   },
+   "M47": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A47,B47)"
+   },
+   "M48": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A48,B48)"
+   },
+   "M49": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A49,B49)"
+   },
+   "M5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A5,B5)"
+   },
+   "M50": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A50,B50)"
+   },
+   "M51": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A51,B51)"
+   },
+   "M52": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A52,B52)"
+   },
+   "M53": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A53,B53)"
+   },
+   "M54": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A54,B54)"
+   },
+   "M55": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A55,B55)"
+   },
+   "M56": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A56,B56)"
+   },
+   "M57": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A57,B57)"
+   },
+   "M58": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A58,B58)"
+   },
+   "M59": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A59,B59)"
+   },
+   "M6": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A6,B6)"
+   },
+   "M60": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A60,B60)"
+   },
+   "M61": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A61,B61)"
+   },
+   "M62": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A62,B62)"
+   },
+   "M63": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A63,B63)"
+   },
+   "M64": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A64,B64)"
+   },
+   "M65": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A65,B65)"
+   },
+   "M66": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A66,B66)"
+   },
+   "M67": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A67,B67)"
+   },
+   "M68": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A68,B68)"
+   },
+   "M69": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A69,B69)"
+   },
+   "M7": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A7,B7)"
+   },
+   "M70": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A70,B70)"
+   },
+   "M71": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A71,B71)"
+   },
+   "M72": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A72,B72)"
+   },
+   "M8": {
+    "t": "e",
+    "why": "MROUND of a number and a multiple of opposite signs (#NUM!)",
+    "f": "=MROUND(A8,B8)"
+   },
+   "M9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=MROUND(A9,B9)"
    }
   }
  }
