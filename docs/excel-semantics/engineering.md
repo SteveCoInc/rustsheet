@@ -485,7 +485,7 @@ Status: VERIFIED (excel-graph, 2026-10-21, `im-last-digit-sweep`); the kernels a
 
 Also found by the sweep (same case; Ours is what RustSheet gives):
 - Tiny arguments lose about 8 digits in IMCSC and IMCOT: `IMCSC("1E-5+1E-5i")` is 49999.9979339908-49999.9979306575i (E70, F70; exact 50000.0000016667), `IMCSC("0.00001i")` imaginary part -99999.9917276303 (F65), IMCOT real 49999.9958596485 (Q70), imaginary -49999.9958663151 (R70) and -99999.9917326303 (R65). Reproduced by the T-2044 kernels below (before them ours gave the exact values, E70 50000.0000016667, F65 -99999.9999983333). Status: VERIFIED (excel-graph); implemented (T-2044).
-- Excel keeps tiny results where the denominator is huge: `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i (E55, F55; the IMSEC of it is -6.26263832046024E-246+6.94796703439417E-245i, G55:I55) and `IMSECH("-524.561+5.3113i")` is 1.73046857535442E-228-2.53533899849465E-228i (K42, L42). Rule: past the point where the denominator overflows (the hyperbolic argument v above about 355), cosh v and |sinh v| are both M = e^|v|/2, and the result is the trigonometric parts over M, i.e. times 2e^-|v| (IMSEC `(cos x, sgn(y)·sin x)`, IMCSC `(sin x, -sgn(y)·cos x)`, IMSECH `(cos y, -sgn(x)·sin y)`); this reproduces all 15 digits of the 6 cells. Where 2e^-|v| is subnormal the parts print 0 (`IMSEC("1.5+711i")`, `IMSECH("711+1.5i")`). Status: VERIFIED; implemented (T-2335; ours was 0 before). IMCSCH of a large non-real argument (`IMCSCH("-524.561+5.3113i")`) is unprobed and still answers 0.
+- Excel keeps tiny results where the denominator is huge: `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i (E55, F55; the IMSEC of it is -6.26263832046024E-246+6.94796703439417E-245i, G55:I55) and `IMSECH("-524.561+5.3113i")` is 1.73046857535442E-228-2.53533899849465E-228i (K42, L42). Rule: past the point where the denominator overflows (the hyperbolic argument v above about 355), cosh v and |sinh v| are both M = e^|v|/2, and the result is the trigonometric parts over M, i.e. times 2e^-|v| (IMSEC `(cos x, sgn(y)·sin x)`, IMCSC `(sin x, -sgn(y)·cos x)`, IMSECH `(cos y, -sgn(x)·sin y)`); this reproduces all 15 digits of the 6 cells. Where 2e^-|v| is subnormal the parts print 0 (`IMSEC("1.5+711i")`, `IMSECH("711+1.5i")`). Status: VERIFIED; implemented (T-2335; ours was 0 before). IMCSCH of a large non-real argument (`IMCSCH("-524.561+5.3113i")`) still answers 0; Excel keeps tiny parts there (probes/im-trig-magnitude-grid, x = 700 to 709; "IM* trig and hyperbolic functions past SIN's argument limit (T-3642)" below; T-2668).
 - `IMCSC("0")`, `IMLOG2("0")` and `IMCOT("0")` are `#NUM!` (D21, M21, P21), `IMARGUMENT("0")` is #DIV/0!. Implemented (T-2334); before it we answered the text `NaNNaNi`, `-inf`, `inf`. Status: VERIFIED.
 - Text quirks (not kernels): `IMCOT("-57.9375+18.7089i")` prints "-4.00011374673746E-17-1i" (P43): the
   imaginary part -0.9999999999999999 keeps its "1", because the coefficient is dropped only for an
@@ -694,11 +694,30 @@ Evidence: probes/eng-dec2base-empty-text A1:A18 (excel-graph, 2026-10-31); gen-m
 Status: VERIFIED (excel-graph); implemented (`dec_digits` in number_basis.rs).
 Tasks: T-3498
 
+## Base conversions: digit text, two's-complement ranges and places (T-3651)
+Rule: the `number` of every BIN2*, OCT2* and HEX2* conversion is read as text, a number as its displayed text, and must be at most ten characters, each a digit of the base (hex in either case: `HEX2DEC("1f")` is 31); anything else is `#NUM!`. So an 11-character input is `#NUM!` even when leading zeros make it a valid 10-digit value (`BIN2DEC("00000000001")`, `HEX2DEC("0FFFFFFFFFF")`, `OCT2BIN("00000000001")`; the number `BIN2DEC(11111111111)` too), and so are a sign (`BIN2DEC("+101")`, `"-101"`, `HEX2DEC("+1F")`, `HEX2DEC(-1)`), a leading or trailing space (`BIN2DEC(" 101")`, `"101 "`), a decimal point (`BIN2DEC("1.0")`, `"101.0"`, `BIN2DEC(1.5)`, `0.1`), an exponent in text (`BIN2DEC("1E2")`, `"1e2"`), `"0x1F"`, `"(101)"` and a number displayed in E notation (`HEX2DEC(1E+20)`, `BIN2DEC(1E+15)`). Unlike text, a typed number is read through its display: `BIN2DEC(1E2)` reads "100" and is 4, `HEX2DEC(1E3)` reads "1000" and is 4096, `OCT2DEC(1E3)` 512, while `HEX2DEC("1E3")` is 483 (hex digits) and `OCT2DEC("1E3")` `#NUM!`.
+Rule: the ten digits are two's complement: the top half of the span is negative (`BIN2DEC("1000000000")` -512, `"0111111111"` 511; `OCT2DEC("4000000000")` -536870912; `HEX2DEC("8000000000")` -549755813888, `"7FFFFFFFFF"` 549755813887). The target range of DEC2*, HEX2*, OCT2* and BIN2* alike is that of the target base: BIN -512..511 (`DEC2BIN(512)`, `HEX2BIN("200")`, `HEX2BIN("FFFFFFFDFF")`, `OCT2BIN("7777776777")`, `OCT2BIN("1000")` are `#NUM!`; `HEX2BIN("FFFFFFFE00")` is "1000000000"), OCT -536870912..536870911 (`HEX2OCT("20000000")` and `"FFDFFFFFFF"` `#NUM!`, `HEX2OCT("FFE0000000")` "4000000000", `DEC2OCT(536870912)` `#NUM!`), HEX -549755813888..549755813887 (`DEC2HEX(549755813888)` and `(-549755813889)` `#NUM!`).
+Rule: DEC2* truncate the number toward zero before the range check: `DEC2BIN(-1.5)` is "1111111111", `DEC2BIN(-0.5)` and `(0.5)` "0", `DEC2BIN(-512.9)` "1000000000", `DEC2BIN(511.9)` "111111111", `DEC2HEX(-549755813888.9)` "8000000000", `DEC2BIN(-1E-300)` "0". Numeric text is a number there, unlike in the other nine: `DEC2BIN(" 5")`, `"5 "`, `"+5"`, `"$5"`, `"5.5"` are "101", `DEC2BIN("1E1")` "1010", `DEC2BIN("-5")` "1111111011". (A date text such as "1/2" is its serial, which moves with the current year, so the probe leaves it out.)
+Rule: `places` is truncated and must be 1 to 10 (`DEC2BIN(5,0)`, `(5,11)`, `(5,-1)` `#NUM!`, also with a negative number: `DEC2BIN(-5,0)`, `(-5,11)`); it is read as a number, so numeric text works (`BIN2HEX("1","3")`, `(" 3")`, `("3.9")` "001", `("1E1")` "0000000001") while a boolean or other text is `#VALUE!` (`BIN2HEX("1",TRUE)`, `("1","x")`). A non-negative result shorter than `places` is zero-padded and one longer is `#NUM!` (`DEC2BIN(5,2)`, `DEC2BIN(5,2.9)`, `HEX2BIN("1F",2)`, `HEX2BIN("1F"," 3")`, `BIN2HEX("11111",1)`); a negative result is always ten digits whatever valid `places` is given (`DEC2BIN(-5,1)`, `HEX2OCT("FFFFFFFFFF",1)`, `OCT2HEX("7777777777",2.9)`).
+Evidence: probes/base-conv-boundaries A1:A425 (excel-graph, 2026-11-01; A322, A363, A404 left out).
+Status: VERIFIED (excel-graph); implemented (`signed_base_value`, `write_base` and `number_and_places` in number_basis.rs, one path for all twelve).
+Tasks: T-3651
+
 ## The second argument's error wins in the two-argument base conversions, DELTA and GESTEP
 Rule: DEC2BIN, DEC2HEX, DEC2OCT, BIN2OCT, BIN2HEX, HEX2BIN, HEX2OCT, OCT2BIN, OCT2HEX, DELTA and GESTEP read the second argument (`places`, `number2`, `step`) before the first, scalar or inside one array element. `DEC2BIN("x",NA())` is `#N/A` and `DEC2BIN(NA(),"x")` is `#VALUE!`; the same for all eleven. BESSELJ, BITLSHIFT, CONVERT, COMPLEX, IMPOWER and ERF instead report the first argument's error. In the nine base conversions an invalid places value wins too, not only its error: `DEC2BIN(NA(),0)` is `#NUM!` (gen-m9 sweep, "Base conversions" below; T-2545). Whether DELTA's and GESTEP's second argument also wins by value is unprobed.
 Evidence: probes/eng-first-vs-second-error A1:D11 (excel-graph, 2026-10-19); probes/eng-later-argument-lift M2, M8.
 Status: VERIFIED (excel-graph)
 Tasks: T-1816, T-2545
+
+## IM* trig and hyperbolic functions past SIN's argument limit (T-3642)
+Rule: with a nonzero other part, IMTAN, IMSEC, IMCSC and IMCOT are `#NUM!` from |x| = 2^27 = 134217728, and IMSINH, IMCOSH, IMSECH and IMCSCH from |y| = 2^27, whatever the other part (1E-300, 1, 20, 700, either sign): `IMTAN("134217728+1i")`, `IMSINH("1+134217728i")`, `IMCOSH("1E-300-1E+10i")` are `#NUM!` and 134217727.99 answers. IMSIN and IMCOS cut sooner, as IMPOWER's and BESSELJ's inner sine (`EXCEL_INNER_TRIG_LIMIT`): `IMSIN("134217727+1i")` answers, `"134217727.5+1i"` and `"134217727.99+1i"` are `#NUM!`.
+Rule: the cut only applies where Excel takes the sine. IMTAN and IMCOT stay `±0 ± i` once cosh 2y overflows (`IMTAN("1E+10+700i")` is i, `IMCOT("134217728+700i")` -i, `IMTAN("1E+10+20i")` `#NUM!`). IMSEC and IMCSC are 0 once their overflowed-reciprocal scale 2e^-|y| is below the smallest normal double, |y| above about 709.09 (`IMSEC("1E+10+709.5i")` 0, `"1E+10+709i"` `#NUM!`), and IMSECH and IMCSCH the same in x (`IMSECH("709.5+1E+10i")` 0, `"709+1E+10i"` `#NUM!`); the 709.09 point is inferred from that formula, the probe brackets it in (709, 709.5]. A zero other part keeps the real rules ("IMSIN, IMCOS, ... of a real number" (T-2534): `IMCOT("134217728")` is 0).
+Not covered here: IMSIN and IMCOS at y = 709.78 are `#NUM!` for every x probed (T-3616's band). The complex IMSIN, IMCOS and IMTAN paths (and IMCSCH, IMSINH and IMCOSH for y) still take libm's sine of a large argument, so their last digits differ from Excel's x87 reduction (`IMSIN(COMPLEX(710,1E-300))` is 0.0000602887066915739, the real `IMSIN("710")` value; ours ...853), 74 grid and 37 argument-cut cells in all (T-3758).
+Rule (not implemented, T-2668 and T-2914): IMCSCH keeps normal tiny parts at x = 700, 705 and 709 where ours prints 0 (J134:J149, J153:J168, J172:J176, J180, J183, J184 and J186 of the grid). The real-axis sign is odd: `IMCSCH(COMPLEX(700,0))` and `(700,1E-308)` are 1.97193530875195E-304, `(700,1E-300)`, `(700,1E-200)` and `(700,1E-20)` -1.97193530875195E-304; `(700,1)` -1.06544119434148E-304+1.65932634623297E-304i and `(700,20)` -8.04711426558125E-305+1.80026897486721E-304i are the negation of 2e^-x(cos y, -sin y), while `(700,709.78)` is -1.92443257888109E-304-4.30218678399417E-305i. This settles the "IMCSCH ... unprobed" question of the IM* last-digit sweep entry above.
+Inferred, not bracketed: the IMTAN/IMCOT exception starts where cosh 2y overflows (|y| about 355); the grid only shows y = 20 (`#NUM!`) and y = 700 (±i) past the limit.
+Evidence: probes/im-trig-magnitude-grid (4360 cells: 19x19 magnitudes 0, 1E-308 to 1E+300 with 700 to 720 around exp overflow, plus sign variants, columns A:J = the ten functions) and probes/im-trig-argument-cut (190 cells around 2^27), excel-graph, 2026-11-01.
+Status: VERIFIED (excel-graph); implemented (`past_trig_limit`, `inner_trig_overflows`, `reciprocal_flushes` in complex/trig.rs).
+Tasks: T-3642
 
 ## IM* results that overflow (T-1827)
 
@@ -995,7 +1014,7 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   real part -0.208738033086954, ours ...955): every pairing of the series, libm and form sinh with the form, libm and
   series cosh scores the same 105/111 complex IMCOSH and 71/75 complex IMCSCH texts and none fits these three (the
   other misses there are notation, T-3560). Status: VERIFIED (excel-graph) for the real IMSECH and IMCSCH kernels at
-  |x| <= 0.01; UNVERIFIED for B15, D15 and D29. Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
+  |x| <= 0.01; UNVERIFIED for B15, D15 and D29 (T-3721 tries the trig and division candidates). Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is
@@ -1004,6 +1023,9 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   when its text, with the leading `0.`, is at most 21 characters (12 digits to -8, 13 to -7, 14 to -6; one more
   digit or exponent step is E notation; a 21-character part is evidenced at exponents -6 to -8 only, the rule below -8
   is extrapolated), a character more than number-to-text coercion allows. Status: VERIFIED (excel-graph), implemented (T-3560).
+  The T-3589/T-3609 sweeps agree and pass since T-3560 (gap triage 2026-11-01, excel-graph): probes-numeric/t3589-im-hyperbolic-small-x-sweep
+  S!A4 `IMSINH("6.09023237964955E-06")` is `0.0000060902323796872` (14 digits at -6) and S!C127
+  `IMSECH("3.92937257901956E-06+0.107316538548074i")` is `1.00578618257237-0.0000004257623550779i` (13 at -7).
 - **IMSQRT of a negative real is polar through COS and ATAN2.** `IMSQRT("-1")` (`IMSQRT(TEXT(-1,"0"))`) is
   "6.1257422745431E-17+i" = COS(ATAN2(-1,0)/2) with Excel's COS (libm cos(π/2) 6.12323399573677E-17), `IMSQRT(-2.5)`
   9.68564897336834E-17+1.58113883008419i, `IMSQRT(-0.0001)` 6.1257422745431E-19+0.01i, `IMSQRT(-3.85841)`
@@ -1149,6 +1171,23 @@ earlier cut at ln(DBL_MIN) (T-3589).
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/mod.rs (`ENGINEERING_EXP_CUT`, shared with BESSELI), complex/trig.rs
 (`trig_exp_overflows`)
+
+## IMSIN and IMCOS reduce the real part by the x87 64-bit pi (T-3726)
+Rule: IMSIN and IMCOS of a complex x + yi (y != 0) take sin x and cos x as SIN and COS do, reducing x by the x87
+64-bit pi (numbers.md "Trig of a huge angle", "SIN / COS at multiples of 90°"), not as the correctly rounded sine and
+cosine. It shows where x is within a few 1E-15 of k·pi/2 and one factor is the tiny remainder: `IMSIN("1.5707963267949+709.7i")`
+is 8.27492013840132E+307-2.88915216855774E+293i (correctly rounded: ...-2.88917292436455E+293i, 7.2E-6 relative off),
+`IMCOS("4.71238898038469+79.1718046156471i")` is -2223964481544680000+1.2101741480848E+34i (math: -2.22305384529439E+18
+for the real part). At x = ±4.71238898038469, the 15-digit neighbour of 3·pi/2, Excel's small part is 4.1E-4 relative
+off the 50-digit math (36 of the sweep's 800 parts), the same factor as `COS(RADIANS(90))` (6.1257422745431E-17 for
+6.123E-17): matched as Excel's value, not a MATH-OVER-EXCEL case (decision 0188 R3 lists none for SIN/COS).
+Evidence: probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1, K22, L22 (excel-graph, T-3616);
+probes-numeric/t3726-imsin-imcos-near-half-pi-sweep (400 texts, excel-graph, 2026-11-01; x = k·pi/2 + d to 15 digits,
+k = ±1..±4, d = 0 or |d| log-uniform in [1E-14, 1E-3], |y| log-uniform in [1, 709]; docs/research/t3726/gen_sweep.py):
+the x87 reduction matches 400, libm 28. Every other IM* cell of the suites and the six IM* fit labs is unchanged.
+Status: VERIFIED (excel-graph)
+Implemented in: complex/trig.rs (`imsin`, `imcos` through `trig_sin_cos`)
+Tasks: T-3726
 
 ## BESSELJ and BIN2* cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `BESSELJ(1E+15,100)` is `#NUM!` (caa1eed48b1883fe A399; matched since T-2547, the phase cut), and `BIN2DEC("Hello World")` and `BIN2HEX("#N/A",1)` (text cells) are `#NUM!` (matched since T-2544); an `IMSUM` of

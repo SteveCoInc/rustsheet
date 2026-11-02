@@ -17,7 +17,7 @@ depends_on: [T-0100]
 spec: docs/specs/SPEC-0002-criteria.md   # optional
 campaign: semantics        # optional: semantics | accuracy | visible, picked in that order before milestone order (decisions 0083, 0114)
 defer: phase-1b            # optional: never picked until Phase 1 exits (decision 0114)
-issue: 42                  # optional: the steveash/rustsheet GitHub issue it came from, a positive integer (decision 0158)
+issue: 42                  # optional: the SteveCoInc/rustsheet GitHub issue it came from, a positive integer (decision 0158)
 issue_author: octocat      # with issue: (required then): the login that opened the issue (decision 0158)
 issue_origin: 42           # optional, never with issue:: a follow-up filed while working issue 42 (decision 0158)
 ---
