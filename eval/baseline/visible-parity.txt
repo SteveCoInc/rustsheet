@@ -251,6 +251,7 @@ probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
 probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
+probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3643-imlog10-grid.case.json	2
 probes/t3643-imsech-grid.case.json	64
 probes/t3643-imsqrt-grid.case.json	14

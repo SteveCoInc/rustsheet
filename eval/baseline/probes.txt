@@ -878,6 +878,11 @@ C	probes/near-zero-snap-name-bodies.case.json	7
 C	probes/near-zero-sum-forms.case.json	17
 C	probes/negative-date-sections-1900.case.json	23
 C	probes/negative-date-sections-1904.case.json	23
+C	probes/networkdays-intl-early-holidays.case.json	88
+C	probes/networkdays-intl-holiday-forms.case.json	22
+C	probes/networkdays-intl-holiday-weekend-dedupe.case.json	112
+C	probes/networkdays-intl-holiday-weekend-masks.case.json	45
+C	probes/networkdays-intl-serial-zero-holiday.case.json	120
 C	probes/not-array-cast.case.json	38
 C	probes/npv-fvschedule-edges.case.json	6
 C	probes/npv-fvschedule-typed.case.json	16
@@ -1829,6 +1834,7 @@ C	probes/t3627-roundup-rounddown-negative-x.case.json	70
 C	probes/t3627-roundup-rounddown-t3555-cells.case.json	12
 C	probes/t3631-rand-randbetween-invariant.case.json	61
 C	probes/t3631-randarray-invariant.case.json	45
+C	probes/t3638-subnormal-upper-tail.case.json	84
 C	probes/t3643-imln-points.case.json	10
 C	probes/t3643-imlog10-grid.case.json	441
 C	probes/t3643-imlog2-grid.case.json	441
@@ -1836,6 +1842,8 @@ C	probes/t3643-imsech-grid.case.json	441
 C	probes/t3643-imsqrt-grid.case.json	441
 C	probes/t3654-filter-result-types.case.json	211
 C	probes/t3656-indirect-spaces-reversed.case.json	291
+C	probes/t3657-proper-letter-sweep.case.json	4
+C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
@@ -5831,6 +5839,15 @@ F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A1
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A2
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A41
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A42
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A17
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A18
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A23
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A24
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A29
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
 F	probes/t3643-imlog10-grid.case.json	S!I8
 F	probes/t3643-imlog10-grid.case.json	S!S8
 F	probes/t3643-imsech-grid.case.json	S!H15
