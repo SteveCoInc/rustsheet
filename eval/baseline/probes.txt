@@ -813,6 +813,7 @@ C	probes/min-max-value-args.case.json	16
 C	probes/minverse-overflow-computed-pivot.case.json	43
 C	probes/minverse-singular-near-singular.case.json	46
 C	probes/mm-after-time-and-date-token.case.json	22
+C	probes/mmult-blank-range-vs-error.case.json	16
 C	probes/mod-array-lift.case.json	25
 C	probes/mod-huge-opposite-divisor.case.json	183
 C	probes/mod-huge-quotient.case.json	83

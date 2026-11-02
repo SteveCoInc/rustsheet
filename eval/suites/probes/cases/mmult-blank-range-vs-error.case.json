@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "MMULT with a blank 1x1 range or a partly-blank multi-cell first argument beside an error second argument: which wins, #VALUE! or the error (T-3836).",
+  "tags": ["M5", "matrix", "probe"],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": 1,
+        "B1": 2,
+        "A3": 1,
+        "G9": {"t": "e", "v": "#DIV/0!"}
+      }
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=MMULT(Data!H1:H1,#NUM!)",
+        "A4": "=MMULT(Data!H1:H1,Data!G9)",
+        "A7": "=MMULT(Data!H1:H1,2)",
+        "A10": "=MMULT(Data!H1:H2,#NUM!)",
+        "A13": "=MMULT(Data!H1:H2,Data!G9)",
+        "A16": "=MMULT(Data!A3:A4,#NUM!)",
+        "A19": "=MMULT(Data!A3:A4,Data!G9)",
+        "A22": "=MMULT(Data!A1:C1,#NUM!)",
+        "A25": "=MMULT(Data!A3:A4,2)",
+        "A28": "=MMULT(Data!H1:H2,{1})",
+        "A31": "=MMULT(#NUM!,Data!H1:H1)",
+        "A34": "=MMULT(2,Data!H1:H1)",
+        "A37": "=MMULT(Data!H1:H1,Data!G9:G9)",
+        "A40": "=MMULT(Data!H1:H2,Data!G9:G10)",
+        "A43": "=MMULT(Data!A1:B1,Data!H1:H2)",
+        "A46": "=MMULT(Data!A1:C1,{1;2;3})"
+      }
+    }
+  ],
+  "check": [
+    "Calc!A1", "Calc!A4", "Calc!A7", "Calc!A10", "Calc!A11", "Calc!A13", "Calc!A14",
+    "Calc!A16", "Calc!A17", "Calc!A19", "Calc!A20", "Calc!A22", "Calc!A25", "Calc!A26",
+    "Calc!A28", "Calc!A29", "Calc!A31", "Calc!A34", "Calc!A37", "Calc!A40", "Calc!A41",
+    "Calc!A43", "Calc!A46"
+  ],
+  "expected": {}
+}
