@@ -423,6 +423,11 @@
     "why": "number outside (-1.34218e+08, 1.34218e+08)",
     "f": "=CSC(1E+300)"
    },
+   "A85": {
+    "t": "e",
+    "why": "e^|x| overflows a double",
+    "f": "=COSH(1E+15)"
+   },
    "A9": {
     "t": "e",
     "why": "number outside (-1.34218e+08, 1.34218e+08)",
