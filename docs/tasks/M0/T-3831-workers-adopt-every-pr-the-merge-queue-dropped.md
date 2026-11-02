@@ -3,7 +3,7 @@ id: T-3831
 title: "Workers adopt every PR the merge queue dropped, without the 4 h idle wait"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
