@@ -3,7 +3,7 @@ id: T-3637
 title: "DSUM's four t3334 criteria cells follow T-3404's 1e2$ rule (M9 owner)"
 milestone: M9
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -24,8 +24,16 @@ attributed cells there have an M9 owner and pass.
 - Found by `make exit-owners MILESTONE=M9` on 2026-11-01.
 
 ## Acceptance criteria
-- [ ] probes/t3334-criteria-operand-forms Calc!G39:G42 pass (`make eval-baseline` drops them).
+- [x] probes/t3334-criteria-operand-forms Calc!G39:G42 pass (`make eval-baseline` drops them).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The non-DSUM cells of rows 39 to 42 (T-3404).
+
+## Outcome
+Nothing to implement: T-3404 (done) already gives these cells Excel's results. On origin/main at
+41c51bef, `rustsheet-eval show probes/t3334-criteria-operand-forms.case.json` reports
+`status=Pass checked=983 passed=983` (source excel-graph), Calc!G39:G42 included
+(`=DSUM(Data!$F$1:$G$15,"w",DC!A77:A78)` and the next three), and `eval/baseline/probes.txt` has
+no `F` line for the case. Closed as confirmed; DSUM's four cells keep their M9 owner here.
+Eval delta: none (already passing).
