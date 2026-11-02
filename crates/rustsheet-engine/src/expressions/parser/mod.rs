@@ -63,6 +63,7 @@ mod sheet_span;
 mod spacing;
 pub mod static_analysis;
 pub mod stringify;
+mod structured_lowering;
 mod structured_reference;
 mod unparsed;
 

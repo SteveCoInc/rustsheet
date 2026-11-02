@@ -3,7 +3,7 @@ id: T-3466
 title: "Move lower_structured_reference out of expressions/parser/operands.rs (997 of its 1,000 lines) into its own parser module"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -44,3 +44,8 @@ to split the file. The structured-reference lowering moves, unchanged, into a mo
 ## Out of scope
 - Any behavior change in structured-reference lowering.
 - Splitting parser/mod.rs or reference_operators.rs (T-3440, T-3439).
+
+## Outcome
+`lower_structured_reference` moved unchanged (only `fn` became `pub(super)`) into `expressions/parser/structured_lowering.rs`
+(244 lines); operands.rs is 763 lines. Imports are split between the two files, no new definitions. Eval delta: none
+(refactor only).
