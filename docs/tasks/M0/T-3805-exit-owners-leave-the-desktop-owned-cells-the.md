@@ -3,7 +3,7 @@ id: T-3805
 title: "exit_owners: leave the desktop-owned cells the Phase 1 rate leaves out (decision 0143) out of M9's rate: criterion"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -34,12 +34,12 @@ as gaps with no owner.
 - Tests: scripts/test_exit_owners.py (and scripts/test_desktop_owned.py if the reader moves).
 
 ## Acceptance criteria
-- [ ] A unit test in scripts/test_exit_owners.py: a below-rate function's visibly-off cell on the desktop-owned list
+- [x] A unit test in scripts/test_exit_owners.py: a below-rate function's visibly-off cell on the desktop-owned list
       is not in `exit_cells(report, "M9")`, and a cell not on the list still is.
-- [ ] After `make eval` on a tree with this change, `make exit-owners MILESTONE=M9` lists no `rate:FORECAST.ETS*`
+- [x] After `make eval` on a tree with this change, `make exit-owners MILESTONE=M9` lists no `rate:FORECAST.ETS*`
       cell whose case!cell line is in eval/runs/desktop-owned.tsv. The PR shows the count before and after.
-- [ ] `make exit-owners` for M2, M5, M6, M7, M8 and M10 gives the same output as before.
-- [ ] `make check` green; reviewers approve.
+- [x] `make exit-owners` for M2, M5, M6, M7, M8 and M10 gives the same output as before.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing which cells are desktop-owned (`desktop_owned.py`'s rule) or the Rust rate.
@@ -47,10 +47,11 @@ as gaps with no owner.
 ## Outcome
 `exit_owners.exit_cells` now leaves a `rate:` cell out when its `case!Sheet!A1` is on
 eval/runs/desktop-owned.tsv, the list `make eval` writes and `rustsheet-eval run --desktop-owned`
-reads (`read_desktop_owned`; no ownership is recomputed). Other criteria are untouched, so M2, M5-M8
-and M10 output is unchanged. Unit test `test_desktop_owned_cells_leave_the_rate` added. Not run: the
-full `make eval` before/after count (272 `rate:FORECAST.ETS*` cells expected to drop to 0); the
-steward's next eval shows it.
+reads (`read_desktop_owned`; no ownership is recomputed). Other criteria are untouched. Unit test
+`test_desktop_owned_cells_leave_the_rate` added. Decision 0251 records the rule (the scripts are
+protected paths). `make eval` on origin/main 2e781deba: `make exit-owners MILESTONE=M9` went from 90
+unowned `rate:FORECAST.ETS*` cells to 0 (STRICT=1 likewise lists none); M2, M5, M6, M7, M8 and M10
+output is byte-identical before and after. Eval delta: none (scripts only).
 
 ## Handoff (resumed)
 Implemented and both reviewers (design, security) approved head e1dce6b9 (PR #2853). CI `hygiene` fails
