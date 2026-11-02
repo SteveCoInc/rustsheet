@@ -3,7 +3,7 @@ id: T-3387
 title: "Oracle sweep: where Excel's BETA.INV lands at small shapes (tiny p, and p 0.01 to 0.5 at b 10 to 1000), with BETA.DIST at its own landing point"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
