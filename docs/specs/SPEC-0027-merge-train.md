@@ -1433,7 +1433,7 @@ force-pushed branches keep none:
 - `gh run list --workflow ci.yml --branch merge-train/shadow --created ">=<date>" --json
   headSha,conclusion,createdAt` lists the shadow CI runs;
 - each run's `headSha` is read through the commits API (`gh api
-  repos/steveash/rustsheet/commits/<sha>`) to get the batch and the predicted outcome from the
+  repos/SteveCoInc/rustsheet/commits/<sha>`) to get the batch and the predicted outcome from the
   commit message.
 
 *As built (T-3076, decision 0167):* the prediction is a `[skip ci]` commit with no run of its own,
@@ -1454,7 +1454,7 @@ runs), and the red-train rate against the p = 0.09 estimate.
 
 ### Owner steps
 1. Create the routine **rustsheet merger** in claude.ai → Code → Routines:
-   - repository `steveash/rustsheet` attached, with GitHub access;
+   - repository `SteveCoInc/rustsheet` attached, with GitHub access;
    - "new session each run";
    - model Sonnet 5.5;
    - schedule `5,35 * * * *` (UTC);

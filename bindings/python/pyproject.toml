@@ -20,7 +20,7 @@ classifiers = [
 authors = [{ name = "RustSheet contributors" }]
 
 [project.urls]
-Source = "https://github.com/steveash/rustsheet"
+Source = "https://github.com/SteveCoInc/rustsheet"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
