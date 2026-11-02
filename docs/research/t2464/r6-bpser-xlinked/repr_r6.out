@@ -1,0 +1,20 @@
+hold b0=4.75 a0=0.3        double z      miss    0 /  397
+hold b0=4.75 a0=0.3        non-double z  miss   57 /  115
+hold b0=4.75 a0=0.5        non-double z  miss  264 /  512
+hold b0=4.75 a0=0.5 g+1    double z      miss  163 /  484
+hold b0=4.75 a0=0.5 g+1    non-double z  miss   13 /   28
+hold b0=4.75 a0=0.7        non-double z  miss  258 /  512
+tune b0=2.5 a0=0.3         double z      miss    0 /  350
+tune b0=2.5 a0=0.3         non-double z  miss   71 /  162
+tune b0=2.5 a0=0.5         non-double z  miss  228 /  512
+tune b0=2.5 a0=0.5 g+1     double z      miss   47 /  393
+tune b0=2.5 a0=0.5 g+1     non-double z  miss   70 /  119
+tune b0=2.5 a0=0.7         double z      miss    0 /  258
+tune b0=2.5 a0=0.7         non-double z  miss  106 /  254
+tune b0=6.25 a0=0.3        double z      miss    0 /  406
+tune b0=6.25 a0=0.3        non-double z  miss   44 /  106
+tune b0=6.25 a0=0.5        non-double z  miss  289 /  512
+tune b0=6.25 a0=0.5 g+1    double z      miss  157 /  512
+tune b0=6.25 a0=0.7        double z      miss    2 /  512
+all GL53                   double z      miss    2 / 1923
+all GL53                   non-double z  miss 1317 / 2685

@@ -1,0 +1,9 @@
+hold b0=4.75 a0=0.3: n=512 inverted=506  best L covers 455 at -2.593 (width 0.002);  GL53 L covers 455 at -2.593
+hold b0=4.75 a0=0.5: n=512 inverted=488  best L covers 343 at -1.152 (width 0.005);  GL53 L covers 248 at -2.008
+hold b0=4.75 a0=0.7: n=512 inverted=452  best L covers 329 at -6.609 (width 0.007);  GL53 L covers 254 at -7.018
+tune b0=2.5 a0=0.3: n=512 inverted=505  best L covers 441 at +1.666 (width 0.006);  GL53 L covers 439 at +1.662
+tune b0=2.5 a0=0.5: n=512 inverted=509  best L covers 408 at +0.185 (width 0.001);  GL53 L covers 284 at -0.649
+tune b0=2.5 a0=0.7: n=512 inverted=471  best L covers 407 at -3.292 (width 0.004);  GL53 L covers 406 at -3.263
+tune b0=6.25 a0=0.3: n=512 inverted=512  best L covers 468 at +6.600 (width 0.011);  GL53 L covers 468 at +6.605
+tune b0=6.25 a0=0.5: n=512 inverted=439  best L covers 364 at +6.542 (width 0.001);  GL53 L covers 223 at +5.579
+tune b0=6.25 a0=0.7: n=512 inverted=511  best L covers 510 at -2.394 (width 0.006);  GL53 L covers 510 at -2.395
