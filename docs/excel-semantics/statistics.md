@@ -5444,6 +5444,27 @@ Ours: the search's floor rather than 0 (`BETAINV(1E-20,1E-300,30)` is 3.33333333
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2808
 
+## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
+Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
+classes, all where the quantile is at or beyond the ends of the doubles in (0, 1):
+- Where the true quantile rounds to 1 (a small second shape: b from 1.2E-3 down to 1.7E-15, or p = 0.999999999999999),
+  Excel is 0.9999999999999999 = 1 - 2^-53, the largest double below 1, not 1 and not `#NUM!` (A83, A86, A98, A100,
+  A103, A106, A123); for example `BETA.INV(0.119217778495381,3.73375717051303,5.34676484504691E-07)`.
+- Where p is above 1/2 and a tiny first shape (1.5E-15 to 2E-9) puts the quantile at 0, Excel is 1.1102230246251565E-16
+  = 2^-53 (A88, A97, A108): 1 minus the flipped search's 1 - 2^-53, as the flip 1 - BETA.INV(1 - p, b, a) of
+  "BETA.INV at a huge shape is AS 109's Newton search" gives. So "BETAINV is #NUM! where its quantile underflows"
+  holds only for p up to 1/2.
+- With either shape 2.22507385850721E-308 (DBL_MIN), Excel is exactly 0.5 at p from 0.0023 to 0.82 (A115, A118, A125,
+  A128, A138): the midpoint of [0, 1], as at alpha 1E-300 in "BETAINV is #NUM! where its quantile underflows", here
+  also for a tiny beta and for p below 1/2.
+- At a huge first shape (5E+161 to 4E+296) with a tiny p (1E-277 to 8E-10), Excel is `#NUM!` where the true quantile is
+  1 - 2^-53 (A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198); the shapes of 5E9 to 1E10 in
+  the AS 109 entry converge, so the search fails somewhere above them (boundary unprobed).
+Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
+Ours: `#NUM!` in the first three classes, 1 - 2^-53 in the fourth; 27 known failures in eval/accuracy/known-failures.tsv
+Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
+Tasks: T-3578, T-3351 (classes 1 and 2), T-2808 (class 3), T-3862 (class 4)
+
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
 value that depends only on df1: `F.INV.RT(1E-200,1,1.9)`, `F.INV.RT(1E-200,1,1.99)`,
