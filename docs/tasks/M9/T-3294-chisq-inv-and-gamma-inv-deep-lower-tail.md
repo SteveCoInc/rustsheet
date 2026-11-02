@@ -35,6 +35,9 @@ docs/excel-semantics/statistics.md, in the T-2561 entry.
   - A85 `GAMMA.INV(1E-300,7990464.81598859,1)`: Excel 7886198.933526138, ours 7886198.933525968;
   - A97 `GAMMA.INV(1E-300,8000000,1)`: Excel 7895671.652693168, ours 7895671.652692964;
   - A145 `GAMMA.INV(1E-300,35481338.9233576,1)`: Excel 35261120.321770474, ours 35261120.3217704.
+- From T-3530 (2026-11-01): probes-numeric/fit-audit-t3070-shape-min A1 `GAMMA.INV(1E-300,1.2E+8,1)`: Excel
+  119594626.4274513, ours 119594626.4274483 (Excel 2.5E-14 off the 50-digit math; the same deep lower tail at shape
+  1.2E8).
 
 Evidence from T-3311 (docs/excel-semantics/statistics.md, T-3311 paragraphs of "Deep lower tail at a shape above
 1"): Excel's deep-tail quantile is Newton steps from the leading-factor root on the leading-factor series form, and
