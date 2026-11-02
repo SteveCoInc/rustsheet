@@ -79,8 +79,12 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
   Otherwise nothing ships and the task is blocked with these notes.
 
 ## Progress notes
-2026-11-02, opus run (resumed from the landing notes below): the secant's cap moved to its own task, T-3806 (done in
-the same PR: Excel's cap is 136..214, the engine uses 213). The R4 sections above record the two rounds. What is still
+2026-11-02, opus run (resumed from the landing notes below): the secant's cap moved to its own task, T-3806. The R4
+sections above record the two rounds. T-3806 was dropped in its review: round 2's cap of 213 loses
+probes-numeric/t3478-irr-r4-wide A227 (Excel `#NUM!`, the guess run converges at step 189), and A201/A221 need a cap
+of 195/200 or more, so no step cap alone is Excel's rule (financial.md "IRR's secant runs longer than 50 steps, but no
+step cap is Excel's rule"). Round 2's own criterion 1 was judged on per-case counts, which hid A227; compare cell by
+cell, probes-numeric included. What is still
 open, from an engine-faithful replica (Python, the engine's twice-rounded operators; scratch, not committed):
 - After the cap, the failing returns fall in two classes. (a) The secant's first step jumps far (d from -2 to -1.7E+7,
   |NPV| up to 1E+290), the next step comes back to within a few ulp of d1 and the secant goes exactly flat: 38 cells
