@@ -41,10 +41,3 @@ Mixed `/`-`-` typed dates now take `m/d/yyyy` (numeric) or `d-mmm-yy` (day-month
 `typed_mixed_separator_date_formats`. Eval delta: probes/date-text-mixed-separator-typed B10 and C10
 fixed (known failures -2, no regressions).
 Follow-up: T-3852 probes the other clock-first shapes (AM/PM, month-name, ISO, year-less, mixed-separator dates) and day-first locales.
-
-## Handoff (resumed)
-PR #2855, branch `agent/functions/T-3796-typed-mixed-sep-dates`, head 530c27a (reviewer rounds: excel-fidelity requested changes twice; security and design approved f38c327).
-- Done: mixed-separator typed formats (`date_text.rs`, evidenced A1-A7) and eval B10/C10 fixed; baseline updated; `make check-fast` green.
-- Open (excel-fidelity round 2, MAJOR): `leading_clock_shape` in `parse_formatted.rs` checks only the clock, so `10:00 July 1, 2025`, `10:00 1-Jul-2025`, `10:00 2025-07-01`, `10:00 7/1`, `23:59 7/1-2025` become numbers with no evidence, contradicting dates.md ("stay text", T-3852). Next step: restrict the date part to the evidenced numeric `m/d/yyyy` (1-2 digit month and day, 4-digit year, `/` only), add negative asserts for those shapes, and list year-less, ISO and mixed-separator dates after a clock in T-3852.
-- Open (MINOR): `mixed` in `date_text.rs` changes the format in every locale though the comment says en-US evidence only; restrict it or name the gap in T-3852.
-- Then re-run excel-fidelity only, set `status: done`, mark the PR ready and enqueue.

@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
-    date_text::{parse_date, CurrentYear},
+    date_text::{is_digits, parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
 
@@ -199,23 +199,21 @@ impl TypedClock {
 /// (AM/PM, seconds, one-digit hours, month-name, ISO, year-less or mixed-separator dates) is
 /// unprobed and stays text; TODO(T-3852).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
-    let digits = |s: &str, len: std::ops::RangeInclusive<usize>| {
-        len.contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit())
-    };
     let (clock, date) = text.split_once(' ')?;
     let (hour, minute) = clock.split_once(':')?;
     let date_parts: Vec<&str> = date.split('/').collect();
     let [month, day, year] = date_parts.as_slice() else {
         return None;
     };
-    if !digits(hour, 2..=2)
-        || !digits(minute, 2..=2)
-        || !digits(month, 1..=2)
-        || !digits(day, 1..=2)
-        || !digits(year, 4..=4)
+    if !is_digits(hour, 2..=2)
+        || !is_digits(minute, 2..=2)
+        || !is_digits(month, 1..=2)
+        || !is_digits(day, 1..=2)
+        || !is_digits(year, 4..=4)
     {
         return None;
     }
+    // Two ASCII digits always parse; the fallback only keeps the code panic-free.
     let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
     (value(hour) < 24 && value(minute) < 60).then_some(TypedClock::Time)
 }

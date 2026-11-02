@@ -23,7 +23,7 @@ const DAY_MONTH_NAME_FORMAT: &str = "d-mmm";
 pub(crate) type CurrentYear<'a> = &'a dyn Fn() -> Option<i32>;
 const NO_CLOCK: &str = "Year-less date text needs the current year";
 
-fn is_digits(s: &str, lengths: std::ops::RangeInclusive<usize>) -> bool {
+pub(crate) fn is_digits(s: &str, lengths: std::ops::RangeInclusive<usize>) -> bool {
     lengths.contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit())
 }
 
