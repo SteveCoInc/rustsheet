@@ -3,7 +3,7 @@ id: T-3861
 title: "CONVERT prefix last digits: target prefixes y..n and Y, and squared or cubed prefixes (probes/convert-unit-names)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
