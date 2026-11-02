@@ -48,7 +48,8 @@ same rounding, same quirks — including behavior Excel never documented. The pr
 
 ## Commands
 ```
-make check                 # everything required before a PR (fmt, clippy, tests, eval gate, python, hygiene)
+make check                 # every gate CI runs on a PR (fmt, clippy, tests, eval gate, python, hygiene)
+make check-fast            # the local pre-push gate: the gates your change can break (decision 0248)
 make eval                  # full compatibility report → eval/runs/latest/report.md (gap list by function)
 make eval-show CASE=<id>   # per-cell expected/actual for one case
 make eval-baseline         # record fixes in eval/baseline (refuses regressions)
@@ -59,13 +60,15 @@ cd tools && uv run rustsheet-gen --milestone M2 --count 20 # synthetic cases
 
 ## How work flows
 Follow the `work-loop` skill: pick a ready task for your lane → branch `agent/<lane>/T-XXXX-slug`
-→ test-first implementation → `make check` → `review` skill (parallel reviewer agents) → PR →
-CI green + all reviewers APPROVE → squash-merge (no human approval needed) → update board/status.
+→ test-first implementation → `make check-fast` → `review` skill (parallel reviewer agents) → PR →
+CI green + all reviewers APPROVE → enqueue in the merge queue (no human approval needed; decision
+0247) → update board/status.
 Full process: `docs/process/agent-workflow.md`. Gates: `docs/process/quality-gates.md`.
 
 ## Definition of done
 - Acceptance criteria in the task file are met and demonstrated (tests / eval cases).
-- `make check` green locally and in CI; eval known-failures only shrank (baseline updated).
+- `make check-fast` green locally and every required check green in CI (CI runs all of `make
+  check`); eval known-failures only shrank (baseline updated).
 - Reviewers approved; follow-ups filed as tasks; task file `status: done` with an Outcome note.
 
 ## Conventions

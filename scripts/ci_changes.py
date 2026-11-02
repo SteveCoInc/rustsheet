@@ -75,7 +75,7 @@ def classify(raw: bytes) -> bool:
 REVISION = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./-]*")
 
 
-def _git(cwd: Path | None, *args: str) -> bytes | None:
+def git_bytes(cwd: Path | None, *args: str) -> bytes | None:
     """stdout of `git args` in `cwd`, or None when git fails or cannot run."""
     try:
         run = subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=False, timeout=120)
@@ -94,15 +94,15 @@ def classify_range(base: str, head: str, cwd: Path | None = None) -> bool:
     if not all(REVISION.fullmatch(rev) for rev in (base, head)):
         return True
     # A shallow clone can hide the true merge base or report a wrong one; so can a failed check.
-    if _git(cwd, "rev-parse", "--is-shallow-repository") != b"false\n":
+    if git_bytes(cwd, "rev-parse", "--is-shallow-repository") != b"false\n":
         return True
-    bases = _git(cwd, "merge-base", "--all", base, head)
+    bases = git_bytes(cwd, "merge-base", "--all", base, head)
     if bases is None or len(bases.split()) != 1:
         return True
     merge_base = bases.decode("ascii", "replace").strip()
     # --no-renames lists both sides of a rename, so moving code into docs/ still counts as code;
     # -z keeps unusual file names intact.
-    changed = _git(cwd, "diff", "-z", "--no-renames", "--name-only", merge_base, head, "--")
+    changed = git_bytes(cwd, "diff", "-z", "--no-renames", "--name-only", merge_base, head, "--")
     if changed is None:
         return True
     # File names are attacker-controlled: log only their count (workflow-command injection).
