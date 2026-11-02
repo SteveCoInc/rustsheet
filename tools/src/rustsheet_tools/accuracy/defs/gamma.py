@@ -18,6 +18,7 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs.student_t import DF_CUT
 from rustsheet_tools.accuracy.model import (
+    LOG_SMALLEST_DOUBLE,
     Definition,
     Interval,
     MathArg,
@@ -123,7 +124,7 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
         # the lower tail grows with s and the upper falls: opposite signs at the bracket ends
         return (mpmath.log(lower_tail(y, a)) - target) if lower else (target - mpmath.log(upper_tail(y, a)))
 
-    return mpmath.exp(solve_log_bracket(f, -1500, 710))
+    return mpmath.exp(solve_log_bracket(f, LOG_SMALLEST_DOUBLE, 710))
 
 
 def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:
