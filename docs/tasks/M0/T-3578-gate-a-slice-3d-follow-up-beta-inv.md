@@ -3,7 +3,7 @@ id: T-3578
 title: "Gate A slice 3d follow-up: BETA.INV s1 table (excel-graph refuses the generated workbook) and the GAMMA.INV/CHISQ huge-shape batch with its R3 points"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
