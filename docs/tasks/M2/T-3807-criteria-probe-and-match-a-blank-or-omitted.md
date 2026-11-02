@@ -3,7 +3,7 @@ id: T-3807
 title: "Criteria: probe and match a blank or omitted criterion over padded and formatted zero text, and the percent operand's 15-digit cut order"
 milestone: M2
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -46,18 +46,37 @@ or after its division by 100.
   the orders apart.
 
 ## Acceptance criteria
-- [ ] A probe case under eval/suites/probes (excel-graph sidecar) covers the nine padded zero texts above against a
+- [x] A probe case under eval/suites/probes (excel-graph sidecar) covers the nine padded zero texts above against a
       blank-cell and an omitted criterion, in COUNTIF, SUMIF, SUMIFS and COUNTIFS, on a short range and on an
       80-cell range.
-- [ ] The same or a second probe case holds at least four percent operands that the two cut orders read as
+- [x] The same or a second probe case holds at least four percent operands that the two cut orders read as
       different doubles (the PR lists each operand with both doubles from the 50-digit search), with VALUE of each.
-- [ ] Every probed cell passes bit-exact: no new line in eval/baseline/probes.txt (`make eval-baseline`,
+- [x] Every probed cell passes bit-exact: no new line in eval/baseline/probes.txt (`make eval-baseline`,
       0 regressions).
-- [ ] criteria.md drops "padded text such as `" 0"` is not probed" and "it stays open" and replaces them with the
+- [x] criteria.md drops "padded text such as `" 0"` is not probed" and "it stays open" and replaces them with the
       probed rules, citing the probe cells, in the same PR. Any engine change in criteria.rs has a unit test.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Non-en-US decimal and group separators (criteria.md: out of scope).
 - D-function criteria (there a blank criterion cell means "match all", a different rule).
 - VALUE's own `1e2$` and NBSP rules (T-3404).
+
+## Outcome
+Probed and matched; no engine change was needed, so no unit test (the engine already met every cell).
+- probes/t3807-blank-criterion-padded-zero (64 cells, excel-graph 2026-11-02): a blank-cell (`$Z$1`, `INDEX`), an
+  omitted, a `0` and a `"0"` criterion all match the same ten cells of `" 0"`, `"0 "`, `" 0 "`, NBSP+`0`,
+  `0`+NBSP, `"+0"`, `"0.0"`, `"-0"`, `"0E0"`, `"00"`, 0, `"0"`: everything but the two NBSP-padded texts
+  (COUNTIF/COUNTIFS 10, SUMIF/SUMIFS 4071), on the 12-cell walk and the 80-cell cached range.
+- probes/t3807-percent-operand-cut-order (84 cells): six operands found by a 60-digit decimal search where the
+  cut-first order and at least one other order (binary `x/100` then cut, once-rounded `x/100` then cut, double of
+  `x` cut then shifted) give different 15-digit values. Excel takes the cut-first value on all six (cut-first value /
+  other order's value):
+  `1681.2415868344901%` 16.8124158683449 / 16.8124158683448 (binary, once-rounded);
+  `9.3960306202786801%` 0.0939603062027868 / 0.0939603062027867 (all three others);
+  `5712.2807073685301%` 57.1228070736853 / 57.1228070736852 (double first);
+  `21513.191086314701%` 215.131910863147 / 215.131910863146 (once-rounded);
+  `5706.1463389694002%` 57.061463389694 / 57.0614633896939 (binary, double first);
+  `4.5404674510462395%` 0.0454046745104623 / 0.0454046745104624 (binary).
+- criteria.md: the "not probed" and "stays open" clauses are replaced by the probed rules.
+- Eval delta: +148 probe cells, all passing; no known-failure line; `eval/baseline/probes.txt` gains the two cases' coverage lines (64, 84).
