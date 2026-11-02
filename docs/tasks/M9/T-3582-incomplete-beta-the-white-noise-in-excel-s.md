@@ -3,7 +3,7 @@ id: T-3582
 title: "Incomplete beta: the white noise in Excel's direct bgrat increment at b != 1/2 (Excel's own Q(b, z) inside bgrat)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -30,12 +30,28 @@ evidence.
   digits as Excel does.
 
 ## Acceptance criteria
-- [ ] A RESULTS.md records a model of D with exact, within-4-ulp and within-15-digit counts on a held-out probe, or
+- [x] A RESULTS.md records a model of D with exact, within-4-ulp and within-15-digit counts on a held-out probe, or
       the negatives tried with their counts.
-- [ ] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
-- [ ] statistics.md's "Incomplete beta: the integrated model" entry is updated with what is found.
-- [ ] Engine follow-ups are filed for any solved piece.
-- [ ] `make check` green; reviewers approve.
+- [x] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
+- [x] statistics.md's "Incomplete beta: the integrated model" entry is updated with what is found.
+- [x] Engine follow-ups are filed for any solved piece.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine changes; F's arguments (T-3580); the other T-3468 items (T-3568 to T-3572).
+
+## Outcome
+- docs/research/t2464/r6-bgrat-q/RESULTS.md: negatives. D's noise is not a different Q(b, z) fraction at bgrat's
+  start: NR's gcf by modified Lentz (the bfrac loop of T-3571) and Cephes igamc, in doubles, score 145 and 142
+  bit-exact at best of the 2,908 split points against 191 for the exact Q and 206 for r3-bgrat's x87 grat1, and raise
+  the run sd (to 8.3-9.1 and 15.5-22.1 from 6.6 and 8.4). r3-bgrat's `bgld.bgrat_ld` now takes a callable Q mode.
+- New probe probes-numeric t3582-r6-gamma-runs (4,096 cells, excel-graph 2026-11-02): GAMMA.DIST(z, b, 1, TRUE) on
+  runs of 1,024 consecutive doubles. Excel's P is correctly rounded at b = 0.03, +2.3 units of 2^-53 high at b = 0.7
+  near z = 1, and noisy (sd 3.7, autocorrelated, not white) at b = 0.7 near z = 0.3. No series (NR gser, Cephes igam,
+  the alternating series; doubles or x87) and no stored intermediate explains that noise. So D's b = 0.03 noise
+  (sd 8.5) does not come from a noisy lower incomplete gamma at that b; the source stays open.
+- statistics.md "Incomplete beta: the integrated model" updated (the T-2512 "Why TOMS bgrat lost" item).
+- Engine follow-ups: none solved. The probe's 220 visibly-off engine cells are added to T-3224's owned cells.
+- Fits: none (every candidate is a cited algorithm; nothing chosen by scoring is kept).
+- Eval delta: none (research and one probe; probes-numeric is gate = false).
+
