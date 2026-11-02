@@ -1848,6 +1848,9 @@ C	probes/t3643-imlog10-grid.case.json	441
 C	probes/t3643-imlog2-grid.case.json	441
 C	probes/t3643-imsech-grid.case.json	441
 C	probes/t3643-imsqrt-grid.case.json	441
+C	probes/t3647-numbervalue-percent-and-controls.case.json	31
+C	probes/t3647-numbervalue-separator-placement.case.json	264
+C	probes/t3647-numbervalue-whitespace-decimal.case.json	27
 C	probes/t3653-percentof-3d.case.json	12
 C	probes/t3653-percentof-argument-kinds.case.json	103
 C	probes/t3654-filter-result-types.case.json	211
@@ -6034,6 +6037,8 @@ F	probes/t3643-imsqrt-grid.case.json	S!M15
 F	probes/t3643-imsqrt-grid.case.json	S!M5
 F	probes/t3643-imsqrt-grid.case.json	S!N15
 F	probes/t3643-imsqrt-grid.case.json	S!N5
+F	probes/t3647-numbervalue-percent-and-controls.case.json	Sheet1!A13
+F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3
