@@ -68,3 +68,5 @@ The hypothesis in Context was half right; the rules (arrays.md "GROUPBY and PIVO
   `Grouping::sort_table_by_keys` sorts a table (grouping.rs).
 Unit tests: `options_are_refused_in_argument_order`, `a_table_sorts_by_the_named_keys_first` (test_fn_groupby.rs).
 Every owned gen-m7 cell now matches Excel, A4881:C4891 included.
+
+Eval delta: gen-m7 known failures 2,538 -> 2,486 (52 cells fixed), probes +1 passing case (232 cells), 0 regressions.
