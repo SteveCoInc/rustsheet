@@ -1,0 +1,36 @@
+
+b0.03-z0.3: eps mean +0.07 sd 0.37; const + slope residual sd 0.375
+  + ln z abs                   coef   +0.036  feat sd  0.569  residual sd 0.374
+  + b*ln z abs (stored ln z)   coef   +1.009  feat sd  0.018  residual sd 0.374
+  + z^b=exp(b ln z) rel        coef   -0.035  feat sd  0.301  residual sd 0.375
+  + pow(z,b) rel               coef   -0.006  feat sd  0.300  residual sd 0.375
+  + b ln z - z abs             coef   -0.016  feat sd  0.147  residual sd 0.375
+  + e^-z rel                   coef   -0.019  feat sd  0.390  residual sd 0.375
+  + ln z - z abs               coef   +0.017  feat sd  0.838  residual sd 0.375
+
+b0.03-z1: eps mean +0.09 sd 0.38; const + slope residual sd 0.380
+  + ln z abs                   coef   +0.000  feat sd  0.000  residual sd 0.380
+  + b*ln z abs (stored ln z)   coef   -0.000  feat sd  0.000  residual sd 0.380
+  + z^b=exp(b ln z) rel        coef   -0.031  feat sd  0.579  residual sd 0.379
+  + pow(z,b) rel               coef   -0.031  feat sd  0.579  residual sd 0.379
+  + b ln z - z abs             coef   -0.031  feat sd  0.579  residual sd 0.379
+  + e^-z rel                   coef   +0.010  feat sd  0.392  residual sd 0.380
+  + ln z - z abs               coef +662399203.642  feat sd  0.000  residual sd 0.380
+
+b0.7-z0.3: eps mean -3.67 sd 3.67; const + slope residual sd 3.666
+  + ln z abs                   coef   +0.415  feat sd  0.569  residual sd 3.659
+  + b*ln z abs (stored ln z)   coef   +2.009  feat sd  0.298  residual sd 3.617
+  + z^b=exp(b ln z) rel        coef   +0.760  feat sd  0.603  residual sd 3.638
+  + pow(z,b) rel               coef   -0.194  feat sd  0.346  residual sd 3.666
+  + b ln z - z abs             coef   +1.009  feat sd  0.638  residual sd 3.609
+  + e^-z rel                   coef   -0.196  feat sd  0.390  residual sd 3.666
+  + ln z - z abs               coef   +0.520  feat sd  0.838  residual sd 3.640
+
+b0.7-z1: eps mean +2.28 sd 0.87; const + slope residual sd 0.872
+  + ln z abs                   coef   -0.000  feat sd  0.000  residual sd 0.872
+  + b*ln z abs (stored ln z)   coef   -0.000  feat sd  0.000  residual sd 0.872
+  + z^b=exp(b ln z) rel        coef   -0.336  feat sd  0.574  residual sd 0.850
+  + pow(z,b) rel               coef   -0.336  feat sd  0.574  residual sd 0.850
+  + b ln z - z abs             coef   -0.336  feat sd  0.574  residual sd 0.850
+  + e^-z rel                   coef   -0.021  feat sd  0.392  residual sd 0.872
+  + ln z - z abs               coef +3386431166.303  feat sd  0.000  residual sd 0.870

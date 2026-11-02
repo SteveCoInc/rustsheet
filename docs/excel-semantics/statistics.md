@@ -3390,6 +3390,19 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     model came from: the prefactor exp(-(algdiv + b ln ν)) rounded in any way (206-210 bit-exact), ln x by log1p
     (158, 189) or grat1's CF in doubles (200 at best, and more noise, not Excel's) (T-3567,
     docs/research/t2464/r5-bgrat-fdf1).
+  - Nor from another Q(b, z) algorithm at bgrat's start (T-3582, docs/research/t2464/r6-bgrat-q): NR's gcf by
+    modified Lentz (the loop Excel's bfrac uses) or Cephes igamc, in doubles, score 95-145 and 119-142 bit-exact against
+    191 for the exact Q, and raise the run sd to 8.3-9.1 and 15.5-22.1. Excel's Q is not one of these fractions.
+  - Excel's own lower incomplete gamma at b < 1 (probe t3582-r6-gamma-runs, GAMMA.DIST(z, b, 1, TRUE) on four runs of
+    1,024 consecutive doubles; T-3582): at b = 0.03 (the double 0.030000000000000027) it is faithfully rounded,
+    not correctly rounded (z0 = 0.3 and 1: 799 and 775 of 1,024 bit-exact, the rest 1 ulp off; residual sd 0.37 and
+    0.38 units of 2^-53 against 0.30 and 0.29 from rounding alone); at b = 0.7, z near 1 it sits +2.3 units above
+    the true value (sd 0.87; mostly 1-2 ulps from one excel-graph fill, inside the 4-ulp web/desktop floor, so
+    unconfirmed until a desktop or second fill, decision 0112); at b = 0.7, z near 0.3 it carries noise of sd 3.7 around a -3.7 mean
+    that is not white (lag-1 autocorrelation +0.60, an FFT line 30 times the mean). No series (NR gser, Cephes igam,
+    the alternating z^b/Γ(b+1) series, each in doubles and x87) and no stored ln z, b·ln z, z^b or e^-z rounding
+    explains it (residual sd 3.6 at best). The engine misses 220 of the 4,096 cells at the 15th digit (owner T-3224).
+    STATUS: UNVERIFIED model; the noise source is still open.
 - **The b = 1/2 identity cannot be tested at generic b through the worksheet (T-2512).** No worksheet function
   returns Q(b, z) there. CHISQ.DIST.RT truncates its df to an integer (2b < 1 is `#NUM!`). 1 - GAMMA.DIST loses the
   digits, because Q < 0.01 on 5,196 of the 5,228 BETA.DIST cells that reach bgrat (probe t2512-r3-bgrat-qgamma).
