@@ -65,7 +65,8 @@ Owned cells:
   the miss is in how Excel forms 1 - Q, not only in the lower series.
 - probes-numeric/t3582-r6-gamma-runs.case.json column A (220 visibly off of 4,096: 203 on the b = 0.7, z0 = 1 run,
   13 on b = 0.03, z0 = 1, 4 on b = 0.7, z0 = 0.3; `GAMMA.DIST(z, b, 1, TRUE)` on runs of consecutive doubles in z,
-  T-3582): Excel is correctly rounded at b = 0.03, a steady +2.3 units of 2^-53 above it at b = 0.7, z near 1, and
+  T-3582): Excel is faithfully rounded at b = 0.03 (22-24% of cells 1 ulp off CR), +2.3 units of 2^-53 high at b = 0.7, z near 1
+  (web fill, inside the web/desktop floor), and
   autocorrelated noise of sd 3.7 at b = 0.7, z near 0.3 (docs/research/t2464/r6-bgrat-q/RESULTS.md).
 - probes-numeric/t1048-gammadist.case.json (14): Calc!A5, B5, A11, B11, A13, B13, A21, B21, A22, B22, A25, B25, A26, B26
 - probes-numeric/t1049-chisqdist.case.json (11): Calc!A5, A7, A15, A29, A31, A37, A45, A55, A58, A59, A63

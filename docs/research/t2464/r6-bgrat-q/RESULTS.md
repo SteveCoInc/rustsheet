@@ -35,9 +35,12 @@ directory. `qscan.py` needs r3-bgrat's caches first (`r3-bgrat/branches.py`, the
    | b 0.7, z0 0.3 | 0.420 | mean -3.67, sd 3.67 | -12 to +5 | +0.60 |
    | b 0.7, z0 1 | 0.761 | mean +2.28, sd 0.87 | 0 to +4, mostly +1/+2 | +0.18 |
 
-   So Excel's incomplete gamma is correctly rounded at b = 0.03 (the ±1 ulp cells are rounding ties of a smooth
-   curve: high autocorrelation), steadily biased at b = 0.7 near z = 1, and noisy with structure (FFT line 30x the
-   mean) at b = 0.7 near z = 0.3. The engine scores 1,126/3,605/3,876 of 4,096 (CR 1,678/3,711/4,092).
+   So Excel's incomplete gamma is faithfully rounded at b = 0.03 (b is the double 0.030000000000000027): every cell
+   within 1 ulp, 22-24% of cells 1 ulp off the correctly rounded value, and a residual sd of 0.37-0.38 units against
+   0.29-0.30 from rounding alone, so about 0.2 units of Excel's own error. It sits +2.3 units high at b = 0.7 near
+   z = 1 (mostly 1-2 ulps: one excel-graph fill, inside the 4-ulp web/desktop floor of
+   docs/research/oracle-calibration.md, so unconfirmed until a desktop or second fill, decision 0112), and is noisy
+   with structure (FFT line 30x the mean) at b = 0.7 near z = 0.3. The engine scores 1,126/3,605/3,876 of 4,096 (CR 1,678/3,711/4,092).
 3. **No series model explains the b = 0.7 residual.** NR gser, Cephes igam and the alternating z^b/Γ(b+1) series, in
    doubles and in x87, all leave the b = 0.7, z0 = 0.3 residual at sd 3.68-3.73 (CR 3.69). The x87 forms reach CR
    (alt series ld 1,684/3,703/4,091); the doubles forms are worse (NR gser 248, Cephes 376, alternating 845
@@ -46,7 +49,7 @@ directory. `qscan.py` needs r3-bgrat's caches first (`r3-bgrat/branches.py`, the
 
 ## 2. What this says about D
 
-D at b = 0.03 has a noise sd of 8.5 units while Excel's P at b = 0.03 is correctly rounded, and D at b = 0.7 (sd 5.7)
+D at b = 0.03 has a noise sd of 8.5 units while Excel's P at b = 0.03 adds only about 0.2 units to rounding, and D at b = 0.7 (sd 5.7)
 is noisier than P's worst run (3.7). If bgrat took Q from Excel's own incomplete gamma, Q's upper-tail computation
 would have to carry noise that the lower tail at the same b does not. That cannot be excluded (the worksheet cannot
 show Q at b < 1, statistics.md "The b = 1/2 identity cannot be tested"), but nothing seen supports it. The source of

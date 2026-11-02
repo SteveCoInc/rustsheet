@@ -46,10 +46,10 @@ evidence.
   bit-exact at best of the 2,908 split points against 191 for the exact Q and 206 for r3-bgrat's x87 grat1, and raise
   the run sd (to 8.3-9.1 and 15.5-22.1 from 6.6 and 8.4). r3-bgrat's `bgld.bgrat_ld` now takes a callable Q mode.
 - New probe probes-numeric t3582-r6-gamma-runs (4,096 cells, excel-graph 2026-11-02): GAMMA.DIST(z, b, 1, TRUE) on
-  runs of 1,024 consecutive doubles. Excel's P is correctly rounded at b = 0.03, +2.3 units of 2^-53 high at b = 0.7
-  near z = 1, and noisy (sd 3.7, autocorrelated, not white) at b = 0.7 near z = 0.3. No series (NR gser, Cephes igam,
+  runs of 1,024 consecutive doubles. Excel's P is faithfully rounded at b = 0.03 (22-24% of cells 1 ulp off CR, about
+  0.2 units of its own error), +2.3 units of 2^-53 high at b = 0.7 near z = 1 (one web fill, inside the web/desktop floor), and noisy (sd 3.7, autocorrelated, not white) at b = 0.7 near z = 0.3. No series (NR gser, Cephes igam,
   the alternating series; doubles or x87) and no stored intermediate explains that noise. So D's b = 0.03 noise
-  (sd 8.5) does not come from a noisy lower incomplete gamma at that b; the source stays open.
+  (sd 8.5) does not come from Excel's lower incomplete gamma at that b, which adds only about 0.2 units; the source stays open.
 - statistics.md "Incomplete beta: the integrated model" updated (the T-2512 "Why TOMS bgrat lost" item).
 - Engine follow-ups: none solved. The probe's 220 visibly-off engine cells are added to T-3224's owned cells.
 - Fits: none (every candidate is a cited algorithm; nothing chosen by scoring is kept).
