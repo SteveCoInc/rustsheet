@@ -3,7 +3,7 @@ id: T-3324
 title: "Collate Hebrew, Arabic, Indic, Thai, Lao, Hangul, CJK, symbols and astral characters as Excel does (T-3276 probe)"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -38,3 +38,15 @@ the collation cells of probes/t3276-collation-other-scripts.
 ## Out of scope
 - Digits in VALUE and numeric criteria (T-3325).
 - Kana and full-width forms (T-3321).
+
+## Outcome
+`collation.rs` places the characters after the letters by `script_order`: Latin, Greek and Cyrillic,
+then kana, Hebrew, Arabic, Devanagari, Thai (prevowels before the consonants), Lao, astral planes
+before the ideographs, Hangul, CJK ideographs, then the astral ideographs. Lone surrogates are units
+in the same order, so probes/text-lone-surrogates still passes. Hebrew points, Arabic harakat and
+Thai tone marks are accents. Arabic-Indic and Devanagari digits are their digit with a variant
+tiebreak. Arrows, symbols and dingbats sort after the punctuation, `∞` between `9` and `a`, and `™`
+as `tm` with a variant weight. The primary bases moved up to make room for the symbols.
+Unit test `t3276_other_scripts`. The unprobed choices are listed in docs/excel-semantics/coercion.md.
+Eval delta: probes known failures 3865 -> 3764 (101 fixed, all
+probes/t3276-collation-other-scripts, now 643/643), 0 regressions in every suite.

@@ -537,3 +537,40 @@ fn the_pairwise_sort_ends_on_intransitive_texts() {
         }
     }
 }
+
+/// probes/t3276-collation-other-scripts (T-3276, excel-graph; T-3324): block order, marks as
+/// accents, Thai prevowels, other-script digits and the symbols above `€`.
+#[test]
+fn t3276_other_scripts() {
+    // Block order (ranks A18:A21, A44, A79, A95, A96; G2:G8, G35).
+    assert_increasing(&[
+        "ω", "я", "ア", "あ", "א", "ת", "ا", "ي", "क", "ह", "ก", "ฮ", "ກ", "ກເ", "ຂ", "ເກ", "𝐀",
+        "𝐀b", "😀", "가", "힣", "一", "龍", "𠀀",
+    ]);
+    // Marks are accents (G13:G16, G19, G20); Devanagari matras and virama are letters (G17, G18).
+    assert_increasing(&["ב", "ב\u{5b7}", "ב\u{5bc}", "בא", "ב\u{5bc}א", "בב"]);
+    assert_increasing(&["ب", "ب\u{64e}", "ب\u{651}", "با", "ب\u{64e}ا", "بب"]);
+    assert_increasing(&["ก", "ก\u{e48}", "กก", "ก\u{e48}ก", "กข"]);
+    assert_increasing(&["क", "कख", "का", "कि", "क्", "ख"]);
+    // Thai prevowels before the consonants, Thai `า` after them (G21:G23).
+    assert_increasing(&["เก", "เข", "แก", "ก", "กเ", "กก", "กข", "กา", "ข"]);
+    // Other-script digits are their digit plus a tiebreak (G25:G27).
+    assert_increasing(&["3", "٣", "३", "3a", "٣a", "३a", "3b"]);
+    assert_increasing(&["2", "٢", "3", "4", "٤", "9"]);
+    // Symbols above `€` (G29:G31; ranks A89, A91).
+    assert_increasing(&[
+        "~", "€", "+", ">", "←", "☺", "♥", "✓", "0", "9", "∞", "a", "Ab", "™", "ÿ",
+    ]);
+    assert_ne!(cmp_text_excel("™", "tm"), Ordering::Equal);
+    // A lone surrogate stays above U+FFFD and brackets the pair it belongs to
+    // (probes/text-lone-surrogates A18:A24).
+    let smile: Vec<u16> = "😀".encode_utf16().collect();
+    let high = Text::from_utf16(smile[..1].to_vec());
+    let low = Text::from_utf16(smile[1..].to_vec());
+    let fffd = Text::from("\u{fffd}");
+    let pair = Text::from("😀");
+    assert_eq!(cmp_text(&high, &pair), Ordering::Less);
+    assert_eq!(cmp_text(&pair, &low), Ordering::Less);
+    assert_eq!(cmp_text(&high, &fffd), Ordering::Greater);
+    assert_eq!(cmp_text(&low, &fffd), Ordering::Greater);
+}

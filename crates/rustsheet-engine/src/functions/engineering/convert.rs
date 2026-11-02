@@ -7,6 +7,112 @@ use crate::{
     model::Model,
 };
 
+/// Excel's decimal prefixes ("da" and its alias "e" are deka).
+const DECIMAL_PREFIXES: [(&str, f64); 21] = [
+    ("Y", 1E+24),
+    ("Z", 1E+21),
+    ("E", 1E+18),
+    ("P", 1E+15),
+    ("T", 1E+12),
+    ("G", 1E+9),
+    ("M", 1E+6),
+    ("k", 1E+3),
+    ("h", 1E+2),
+    ("da", 1E+1),
+    ("e", 1E+1),
+    ("d", 1E-1),
+    ("c", 1E-2),
+    ("m", 1E-3),
+    ("u", 1E-6),
+    ("n", 1E-9),
+    ("p", 1E-12),
+    ("f", 1E-15),
+    ("a", 1E-18),
+    ("z", 1E-21),
+    ("y", 1E-24),
+];
+
+/// Excel's binary prefixes, `2^10` to `2^80`.
+const BINARY_PREFIXES: [(&str, f64); 8] = [
+    ("ki", 1024.0),
+    ("Mi", 1_048_576.0),
+    ("Gi", 1_073_741_824.0),
+    ("Ti", 1_099_511_627_776.0),
+    ("Pi", 1_125_899_906_842_624.0),
+    ("Ei", 1_152_921_504_606_846_976.0),
+    ("Zi", 1_180_591_620_717_411_303_424.0),
+    ("Yi", 1_208_925_819_614_629_174_706_176.0),
+];
+
+// Excel: these units, and only these, take a decimal prefix; every other unit is `#N/A` with any
+// prefix (probes/convert-unit-names, every unit with k, m, da, e and M, and the 21 decimal
+// prefixes on fifteen of them; docs/excel-semantics/engineering.md "CONVERT unit names").
+const DECIMAL_PREFIXED: [&str; 52] = [
+    "Pa", "p", "atm", "at", "mmHg", "g", "u", "m", "ang", "ly", "parsec", "pc", "ang2", "ang^2",
+    "ar", "m2", "m^2", "N", "dyn", "dy", "pond", "J", "e", "c", "cal", "eV", "ev", "Wh", "wh", "W",
+    "w", "T", "ga", "uk_pt", "l", "L", "lt", "ang3", "ang^3", "m3", "m^3", "bit", "byte", "m/h",
+    "m/hr", "m/s", "m/sec", "mph", "K", "kel", "sec", "s",
+];
+
+// Excel: only bit and byte take a binary prefix (`kibyte`, `Gibit`); `kim`, `Mig`, `kiJ`, `kiK`
+// are `#N/A` (probes/convert-unit-names).
+const BINARY_PREFIXED: [&str; 2] = ["bit", "byte"];
+
+/// A unit string read within one class: the unit's name, its factor in the class's internal
+/// base and the prefix scale (already raised to the power for square and cubic units).
+struct ParsedUnit {
+    name: &'static str,
+    factor: f64,
+    scale: f64,
+}
+
+/// Reads `text` as a unit of the class `kind`: the unit itself, or one prefix the unit takes
+/// followed by the unit (case-sensitive, nothing around it). `None` if neither reads.
+fn parse_unit(kind: &str, class: &HashMap<&'static str, f64>, text: &str) -> Option<ParsedUnit> {
+    if let Some((&name, &factor)) = class.get_key_value(text) {
+        return Some(ParsedUnit {
+            name,
+            factor,
+            scale: 1.0,
+        });
+    }
+    // Two unit names of a class could both end `text`: try the longest name first, so the reading
+    // does not depend on the map's iteration order.
+    let mut names: Vec<_> = class.iter().collect();
+    names.sort_unstable_by_key(|(name, _)| (std::cmp::Reverse(name.len()), **name));
+    names.into_iter().find_map(|(&name, &factor)| {
+        let prefix = text.strip_suffix(name)?;
+        let lookup =
+            |table: &[(&str, f64)]| table.iter().find_map(|&(p, m)| (p == prefix).then_some(m));
+        let modifier = if DECIMAL_PREFIXED.contains(&name) {
+            lookup(&DECIMAL_PREFIXES)
+        } else {
+            None
+        }
+        .or_else(|| {
+            if BINARY_PREFIXED.contains(&name) {
+                lookup(&BINARY_PREFIXES)
+            } else {
+                None
+            }
+        })?;
+        // A prefix on a square unit scales its length, so it is squared ("km2" is 1E6 m2; "ar" is
+        // not a square of a length and takes it once); likewise cubed for "ang3" and "m3".
+        let scale = if kind == "area" && name != "ar" {
+            modifier * modifier
+        } else if kind == "volume" && ["ang3", "ang^3", "m3", "m^3"].contains(&name) {
+            modifier * modifier * modifier
+        } else {
+            modifier
+        };
+        Some(ParsedUnit {
+            name,
+            factor,
+            scale,
+        })
+    })
+}
+
 enum Temperature {
     Kelvin,
     Celsius,
@@ -96,40 +202,6 @@ impl Model {
             Ok(s) => s,
             Err(error) => return error,
         };
-        let prefix = HashMap::from([
-            ("Y", 1E+24),
-            ("Z", 1E+21),
-            ("E", 1000000000000000000.0),
-            ("P", 1000000000000000.0),
-            ("T", 1000000000000.0),
-            ("G", 1000000000.0),
-            ("M", 1000000.0),
-            ("k", 1000.0),
-            ("h", 100.0),
-            ("da", 10.0),
-            ("e", 10.0),
-            ("d", 0.1),
-            ("c", 0.01),
-            ("m", 0.001),
-            ("u", 0.000001),
-            ("n", 0.000000001),
-            ("p", 1E-12),
-            ("f", 1E-15),
-            ("a", 1E-18),
-            ("z", 1E-21),
-            ("y", 1E-24),
-            ("Yi", 2.0_f64.powf(80.0)),
-            ("Ei", 2.0_f64.powf(70.0)),
-            ("Yi", 2.0_f64.powf(80.0)),
-            ("Zi", 2.0_f64.powf(70.0)),
-            ("Ei", 2.0_f64.powf(60.0)),
-            ("Pi", 2.0_f64.powf(50.0)),
-            ("Ti", 2.0_f64.powf(40.0)),
-            ("Gi", 2.0_f64.powf(30.0)),
-            ("Mi", 2.0_f64.powf(20.0)),
-            ("ki", 2.0_f64.powf(10.0)),
-        ]);
-
         let mut units = HashMap::new();
 
         let weight = HashMap::from([
@@ -336,105 +408,36 @@ impl Model {
         ]);
         units.insert("temperature", temperature);
 
-        // only some units admit prefixes (the is no kC, kilo Celsius, for instance)
-        let mks = [
-            "Pa", "p", "atm", "at", "mmHg", "g", "u", "m", "ang", "ly", "parsec", "pc", "ang2",
-            "ang^2", "ar", "m2", "m^2", "N", "dyn", "dy", "pond", "J", "e", "c", "cal", "eV", "ev",
-            "Wh", "wh", "W", "w", "T", "ga", "uk_pt", "l", "L", "lt", "ang3", "ang^3", "m3", "m^3",
-            "bit", "byte", "m/h", "m/hr", "m/s", "m/sec", "mph", "K", "kel",
-        ];
-        let volumes = ["ang3", "ang^3", "m3", "m^3"];
-
-        // We need all_units to make sure tha pc is interpreted as parsec and not pico centimeters
-        // We could have this list hard coded, of course.
-        let mut all_units = Vec::new();
-        for unit in units.values() {
-            for &unit_name in unit.keys() {
-                all_units.push(unit_name);
-            }
-        }
-
-        // A unit's factor (in its class's internal base) and its prefix scale are kept apart:
-        // Excel applies the prefix last (see the end of this function).
-        let mut to_unit_factor = 1.0;
-        let mut from_unit_factor = 1.0;
-        let mut to_unit_scale = 1.0;
-        let mut from_unit_scale = 1.0;
-
-        // kind of units (weight, distance, time, ...)
-        let mut to_unit_kind = "";
-        let mut from_unit_kind = "";
-
-        let mut to_unit_name = "";
-        let mut from_unit_name = "";
-
-        for (&name, unit) in &units {
-            for (&unit_name, unit_value) in unit {
-                if let Some(pk) = from_unit.strip_suffix(unit_name) {
-                    if pk.is_empty() {
-                        from_unit_kind = name;
-                        from_unit_factor = *unit_value;
-                        from_unit_name = unit_name;
-                    } else if let Some(modifier) = prefix.get(pk) {
-                        if mks.contains(&unit_name) && !all_units.contains(&from_unit.as_str()) {
-                            // We make sure:
-                            // 1. It is a unit that admits a modifier (like metres or grams)
-                            // 2. from_unit is not itself a unit
-                            let scale = if name == "area" && unit_name != "ar" {
-                                // 1 km2 is actually 10^6 m2
-                                *modifier * modifier
-                            } else if name == "volume" && volumes.contains(&unit_name) {
-                                // don't look at me I don't make the rules!
-                                *modifier * modifier * modifier
-                            } else {
-                                *modifier
-                            };
-                            from_unit_kind = name;
-                            from_unit_factor = *unit_value;
-                            from_unit_scale = scale;
-                            from_unit_name = unit_name;
-                        }
-                    }
-                }
-                if let Some(pk) = to_unit.strip_suffix(unit_name) {
-                    if pk.is_empty() {
-                        to_unit_kind = name;
-                        to_unit_factor = *unit_value;
-                        to_unit_name = unit_name;
-                    } else if let Some(modifier) = prefix.get(pk) {
-                        if mks.contains(&unit_name) && !all_units.contains(&to_unit.as_str()) {
-                            let scale = if name == "area" && unit_name != "ar" {
-                                *modifier * modifier
-                            } else if name == "volume" && volumes.contains(&unit_name) {
-                                *modifier * modifier * modifier
-                            } else {
-                                *modifier
-                            };
-                            to_unit_kind = name;
-                            to_unit_factor = *unit_value;
-                            to_unit_scale = scale;
-                            to_unit_name = unit_name;
-                        }
-                    }
-                }
-                if !from_unit_kind.is_empty() && !to_unit_kind.is_empty() {
-                    break;
-                }
-            }
-            if !from_unit_kind.is_empty() && !to_unit_kind.is_empty() {
-                break;
-            }
-        }
-        if from_unit_kind != to_unit_kind {
+        // Excel reads each unit string within one class at a time and takes the class in which both
+        // strings parse: "pc" is the parsec against "m" but pico-calories against "J" or "eV"
+        // (probes/convert-unit-names; docs/excel-semantics/engineering.md "CONVERT unit names").
+        // Within a class an exact unit name wins over a prefixed reading. No two classes give both
+        // strings a reading with different values (only "pc" parses in two classes, and
+        // "pc" to "pc" is the identity in either), so the class order only makes the scan
+        // deterministic.
+        let mut classes: Vec<_> = units.iter().collect();
+        classes.sort_unstable_by_key(|(name, _)| **name);
+        let Some((kind, from, to)) = classes.into_iter().find_map(|(&kind, class)| {
+            Some((
+                kind,
+                parse_unit(kind, class, &from_unit)?,
+                parse_unit(kind, class, &to_unit)?,
+            ))
+        }) else {
             return CalcResult::new_error(Error::NA, cell, String::new());
-        }
+        };
+        let ParsedUnit {
+            name: from_unit_name,
+            factor: from_unit_factor,
+            scale: from_unit_scale,
+        } = from;
+        let ParsedUnit {
+            name: to_unit_name,
+            factor: to_unit_factor,
+            scale: to_unit_scale,
+        } = to;
 
-        // Let's check if it is temperature;
-        if from_unit_kind.is_empty() {
-            return CalcResult::new_error(Error::NA, cell, String::new());
-        }
-
-        if from_unit_kind == "temperature" {
+        if kind == "temperature" {
             // Temperature requires formula conversion
             // Kelvin (K, k), Celsius (C,cel), Rankine (Rank), Réaumur (Reau)
             let to_temperature = match to_unit_name {

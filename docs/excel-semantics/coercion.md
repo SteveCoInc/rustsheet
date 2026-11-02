@@ -94,9 +94,10 @@ hyphen. `þ`, `ð`, `œ` and the Latin-1 symbols were placed later (T-1590, T-15
 below), and the Latin Extended-A, Greek and Cyrillic letters by T-3114 (next section); full-width and
 half-width forms and kana are probed by T-3275 (below; implemented by T-3321). Hebrew, Arabic,
 Devanagari, Thai, Lao, Hangul, CJK ideographs, symbols above `€` and astral characters are probed by
-T-3276 (below; not yet implemented, T-3324). Every other character (other scripts, such as Bengali,
+T-3276 (below; implemented by T-3324). Every other character (other scripts, such as Bengali,
 Tamil, Georgian, Armenian and Ethiopic, and other symbol blocks) keeps code-point order after the
-letters, UNVERIFIED.
+letters, UNVERIFIED; `script_order` in crates/rustsheet-engine/src/functions/util/collation.rs lists
+the groups the unprobed blocks fall in.
 
 ### Letters beyond Latin-1 and combining marks (T-3114)
 Evidence: probes/t3114-collation-beyond-latin1 (excel-graph, 2026-10-29), 282 strings ranked against
@@ -404,7 +405,7 @@ letters (it sorts above `"ab"`, below the kana: U8).
 Evidence: probes/t3276-collation-other-scripts (excel-graph, 2026-10-31): 99 strings in Data!A; Calc!A =
 count less, B = count equal, C = exact MATCH position, D = XMATCH position, E = COUNTIF `"="&x`,
 G1:G36 = `(x<y)+2*(x=y)+4*(x>y)` for chosen pairs, H1:H13 single cells. "Rank" cites Calc!A by Data row.
-The engine fails the collation cells (T-3324); the digit cells pass (T-3325): `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
+The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
 date text is mapped by inference (`"٢٠٢٠-١-١"+0` reads as a date) while clock text is not (`"١٢:٣٠"+0` is
 `#VALUE!`); percent, currency, parenthesis, group-separator and exponent forms, NUMBERVALUE and TEXT's
 reading of number text follow the mapping through `number_text_in` without evidence. VERIFIED (cells cited):
@@ -448,7 +449,14 @@ reading of number text follow the mapping through `number_text_in` without evide
 UNVERIFIED: whether `™` is an expansion (`"tm"`) or a symbol placed between `a` and `y` (only `"Ab"` and
 `"ÿ"` bracket it); where `∞` sits against the punctuation other than digits; where other astral
 characters (other planes, emoji with modifiers) sit; whether Thai vowels other than `เ แ า` and other
-Lao vowels follow the same split; Hebrew and Arabic letters other than those probed.
+Lao vowels follow the same split; Hebrew and Arabic letters other than those probed. T-3324's
+choices where the probe is silent (each UNVERIFIED): the Thai prevowels `โ ใ ไ` go with `เ แ`; all
+Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670)
+and Thai tone marks U+0E48 to U+0E4B are accents weighing their code point; Thai and other digit
+blocks keep code-point order; every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
+(U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
+(so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
+between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by
