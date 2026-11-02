@@ -62,7 +62,7 @@ long series near a root of 0) return Excel's digits instead of falling through t
     both cases' cells (seeds "T-3411/r4-fresh", "T-3411/r4-fresh-2").
 - Directive 5: the cap stays a bound (213 steps of an O(n) NPV per run, two runs).
 
-## Landing notes
+## Landing notes (resumed 2026-11-02 19:58, opus run)
 2026-11-02 01:05, opus run (session landing window; PR #2822 stays a draft, not marked ready).
 - Head: the commit adding these notes, on top of 2f54f03e6 (round-1 review fixes: FITTED tag format, comment wrap,
   `check_fitted.py --update`, `check_duplication.py --update`). `make check` was running on 2b6f50979 when the window
