@@ -3,7 +3,7 @@ id: T-3758
 title: "IMSIN, IMCOS and IMTAN of a complex number reduce a large real part as SIN does"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
