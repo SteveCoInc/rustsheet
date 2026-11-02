@@ -3,7 +3,7 @@ id: T-3838
 title: "GROUPBY: a text or blank option is #VALUE! ahead of a later option's error, and a TRUE field_relationship's order"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
