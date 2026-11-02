@@ -208,6 +208,43 @@ Status: VERIFIED (nine values per pair; overflowing results unprobed)
 Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922)
 Tasks: T-0922, T-1297, T-1860
 
+## CONVERT unit names
+Rule: a unit string is a unit name, or one prefix followed by a unit name, exactly (case-sensitive, no
+spaces; an empty string, `" m"`, `"m "`, `"KM"`, `"Km"`, `"kM"`, `"BYTE"`, `"Byte"`, `"pa"`, `"j"` are `#N/A`).
+Per unit class:
+- Decimal prefixes (`Y` .. `y`, with `da` and its alias `e` for deka; all 21) go on exactly these units:
+  `m`, `ang`, `ly`, `parsec`/`pc` (distance); `g`, `u` (weight); `sec`, `s` (time); `Pa`, `p`, `atm`, `at`,
+  `mmHg` (pressure); `N`, `dyn`, `dy`, `pond` (force); `J`, `e`, `c`, `cal`, `eV`, `ev`, `Wh`, `wh` (energy);
+  `W`, `w` (power); `T`, `ga` (magnetism); `K`, `kel` (temperature); `l`, `L`, `lt`, `uk_pt`, `m3`, `m^3`,
+  `ang3`, `ang^3` (volume); `m2`, `m^2`, `ang2`, `ang^2`, `ar` (area); `bit`, `byte`; `m/h`, `m/hr`, `m/s`,
+  `m/sec`, `mph` (speed). Every other unit is `#N/A` with any prefix: `kmi`, `kin`, `kft`, `kNmi`, `kyr`,
+  `kday`, `khr`, `kmin`, `kHP`, `kPS`, `kBTU`, `kflb`, `kHPh`, `klbm`, `kTorr`, `kpsi`, `kgal`, `ktsp`, `kha`,
+  `kMorgen`, `kkn`, `kadmkn`, `kft2`, `kmi2`, `kly2`, `kly3`, `kin3`, `kft3`. So `ms`, `msec`, `ks` are
+  seconds, `kmph` is 447.04 m/s, `katm`, `kmmHg`, `kcal`, `keV`, `kly`, `kpc`, `kT`, `kga`, `kuk_pt`
+  convert, `dam`, `daar` and `eatm` are deka.
+- Binary prefixes (`ki` .. `Yi`, 2^10 .. 2^80) go on `bit` and `byte` only: `kibyte` is 8192 bit, while
+  `kim`, `Mig`, `kiJ`, `kiK`, `kiC`, `Gim2` are `#N/A`. Bit and byte take the decimal prefixes too
+  (`Mbit`, `Gbyte`).
+- Powers are spelled into the unit names: `km2` and `km^2` are 1E6 m2 (the prefix is squared on `m2`,
+  `ang2` and cubed on `m3`, `ang3`; `kang2` is 1E-14 m2), but `ar` takes it once (`kar` 1E5 m2, `daar`
+  1000). Non-metric powers take no prefix.
+- No stacked prefixes (`mym`, `dym`, `kpc` as kilo-pico-calorie, `mmmHg` is milli-mmHg: 0.133322 Pa).
+- A string is read within the class of the other unit: `"pc"` is the parsec against `"m"` or `"parsec"`,
+  but pico-calories against `"c"`, `"J"` or `"eV"` (`CONVERT(1,"pc","c")` is 1E-12). Within one class
+  a unit name beats a prefixed reading (`"Pica"` is the pica point, `"mm"` the millimetre, `"min"` is
+  minutes against `"sec"` and `#N/A` against `"m"`, since `in` takes no prefix).
+- Every accepted string reads the same as from_unit and as to_unit (no cell differs between the
+  probe's two columns).
+Evidence: probes/convert-unit-names (excel-graph, 1549 strings in both directions: every unit bare and
+with `k`, `ki`, `m`, `da`, `e`, `M`, `Gi`; all 29 prefixes on fifteen units; the ambiguous, power, case and
+spacing strings above). Probes convert-temperature-prefix-a/-b agree for temperature.
+Open: 116 of the probe's cells are one or two ulps off in the prefix scale (a target prefix of
+`Y`, `n` or smaller, and squared or cubed prefixes), T-3861; three more are non-base factors, T-2047.
+Backend: excel-graph.
+Status: VERIFIED
+Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
+Tasks: T-3817, T-3861
+
 ## Engineering function argument modes
 Rule: every argument of the M9 engineering functions lifts elementwise over an array literal. All
 `ROWS(F(..{v;v}..))` cells are 2, including the `places`, `suffix`, unit, order and shift arguments.
