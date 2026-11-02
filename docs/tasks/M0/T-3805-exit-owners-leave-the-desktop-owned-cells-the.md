@@ -3,7 +3,7 @@ id: T-3805
 title: "exit_owners: leave the desktop-owned cells the Phase 1 rate leaves out (decision 0143) out of M9's rate: criterion"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
