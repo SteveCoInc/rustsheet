@@ -140,7 +140,8 @@ file and its acceptance criteria.
    - **Old `ready-to-merge` / `merge-train-ejected` PRs** from the retired train are enqueued the
      same way; an ejected one first gets its conflict or red CI fixed, `make check` and the
      reviewers the change concerns. Remove the old label when you enqueue it.
-   - **Revert PRs** are reviewed by the full panel (no waiver) and enqueued with P0 priority.
+   - **Revert PRs** are reviewed by the full panel (no waiver) and enqueued first, before your
+     other work (the queue has no priorities: watch it through).
 4. GitHub deletes the head branch after the merge if the repository is set to; otherwise leave it.
 5. Go back to step 1 for the next task (fetch `origin/main`, then branch from it) while the
    session budget allows new tasks (80 minutes, 10 tasks; decisions 0025, 0229); the opus tier

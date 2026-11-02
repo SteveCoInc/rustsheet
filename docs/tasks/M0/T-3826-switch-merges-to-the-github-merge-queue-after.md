@@ -3,7 +3,7 @@ id: T-3826
 title: "Switch merges to the GitHub merge queue after the move to SteveCoInc"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P0
 size: M
 tier: opus
@@ -32,22 +32,39 @@ This PR is the switch-over: it lands first, through the queue, before the routin
 not a one-file flip (decision 0157), so it takes the full panel and a decision record.
 
 ## Acceptance criteria
-- [ ] `scripts/merge_train.toml` says `mode = "lock"`.
-- [ ] A decision record reactivates 0053 and amends 0075 and 0157: in `lock` mode agents enqueue
+- [x] `scripts/merge_train.toml` says `mode = "lock"`.
+- [x] A decision record reactivates 0053 and amends 0075 and 0157: in `lock` mode agents enqueue
       with `enable_pr_auto_merge` and take no merge lock for merges; 0053's rule (disable
       auto-merge before pushing to a queued PR, re-review, enqueue again) is kept.
-- [ ] The work-loop and steward skills make enqueueing the primary merge path and drop
+- [x] The work-loop and steward skills make enqueueing the primary merge path and drop
       merge-lock acquisition for merges.
-- [ ] `docs/process/routines.md`: the worker, steward and issue-intake prompts enqueue instead of
+- [x] `docs/process/routines.md`: the worker, steward and issue-intake prompts enqueue instead of
       `make mark-ready` and the train fallback; the merger routine is marked retired.
-- [ ] `steveash/rustsheet` is replaced by `SteveCoInc/rustsheet` in skills, `docs/process/`,
+- [x] `steveash/rustsheet` is replaced by `SteveCoInc/rustsheet` in skills, `docs/process/`,
       `scripts/tasks.py`, `Cargo.toml` and `bindings/python/pyproject.toml` (historical
       decisions and tasks are left alone).
 - [ ] The PR merges through the merge queue (the live test that the queue is on).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Deleting the merge-train code (scripts/merge_*.py, the janitor, step mode, SPEC-0027): a
   follow-up task.
 - Enqueueing the open `ready-to-merge` and `merge-train-ejected` PRs: done after this merges.
 - Repository settings and routines (owner steps).
+
+## Outcome
+PR SteveCoInc/rustsheet#2835. Decision 0247 reactivates 0053 and amends 0075 and 0157, with
+back-notes in all three. `scripts/merge_train.toml` is `lock`, which the skills now read as
+"enqueue". The work-loop step 6, steward, review and issue-intake skills, agent-workflow.md and
+routines.md enqueue with `enable_pr_auto_merge` (SQUASH): no merge lock, no `mark-ready`, no
+up-to-date check of the agent's own, and the merger routine is retired. 0053's rule stays: turn
+off auto-merge before pushing to a queued PR. A refused enqueue goes to the owner with no
+fallback. `steveash/rustsheet` became `SteveCoInc/rustsheet` in the skills, `docs/process/`,
+`scripts/tasks.py`, `Cargo.toml`, `pyproject.toml` and SPEC-0027.
+
+No eval delta (docs, skills and one TOML value). CI was green on 07370e6. Design and security
+approved on that head with MINOR findings only: the "P0 priority" wording and the 0157 wrap are
+fixed, and the verdict-record caveat went into T-3827. The last criterion, merging through the
+queue, is checked when this PR merges.
+
+Follow-up: T-3827 deletes the retired train, lock and step-mode code.

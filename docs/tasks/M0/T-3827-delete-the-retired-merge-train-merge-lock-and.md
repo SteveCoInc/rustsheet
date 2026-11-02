@@ -32,6 +32,10 @@ train sections of the steward, work-loop and review skills.
       `--update` where they shrink.
 - [ ] No skill or `docs/process/` text names a deleted target or mode.
 - [ ] SPEC-0027 is marked superseded by 0247 (kept as history) or removed with a pointer.
+- [ ] The verdict records (0178) are the only machine check of reviewer verdicts: delete them only
+      with a replacement (e.g. a required status check posted by the review step), or have the
+      decision record say outright that the panel's verdicts are an agent attestation, unchecked
+      (security review of T-3826).
 - [ ] A decision record amends 0247 with what was removed.
 - [ ] `make check` green; reviewers approve.
 
