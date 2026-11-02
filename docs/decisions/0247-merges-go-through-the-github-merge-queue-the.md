@@ -1,6 +1,7 @@
 # 0247 — Merges go through the GitHub merge queue; the merge train and the merge lock are retired for merges
 
-- **Status:** accepted (2026-11-02, owner request, T-3826). It reactivates 0053 and amends 0075
+- **Status:** accepted (2026-11-02, owner request, T-3826; amended by 0252, which deletes the
+  train and lock code). It reactivates 0053 and amends 0075
   and 0157. The repository moved from `steveash/rustsheet` (a personal account, which cannot turn
   the queue on: 0075's reason) to the `SteveCoInc/rustsheet` organization so that the queue can
   be used.

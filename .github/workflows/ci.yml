@@ -4,10 +4,10 @@ on:
   pull_request:
   # Decision 0053: the merge queue tests each group merged with current main; every job runs.
   merge_group:
-  # Decision 0147 (SPEC-0027 section 9): the merge train's two branches, by literal name, so
-  # merge-train/revert-* and merge-train/probe start nothing (scripts/test_check_ci_workflow.py).
+  # Only main, by literal name (scripts/test_check_ci_workflow.py): the merge train's branches
+  # (decision 0147) were retired with the train (decision 0247, T-3827).
   push:
-    branches: [main, merge-train/current, merge-train/shadow]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -31,9 +31,8 @@ jobs:
   # is 'false' there and only the eval report runs; a dispatch on main still runs every gate.
   # The rules live in scripts/ci_changes.py (tested by make hygiene); decision 0066 runs the copy
   # from the PR's base commit, so a PR cannot change how its own files are classified.
-  # Decision 0147 keys it on github.ref: a PR diffs from the merge base of its base and head shas
-  # to its head, a merge-train push or dispatch from the merge base of origin/main and HEAD (the
-  # classifier read from that base); every other ref runs everything.
+  # A PR diffs from the merge base of its base and head shas to its head; every other event runs
+  # everything.
   changes:
     name: changes (docs-only?)
     runs-on: ubuntu-24.04
@@ -49,7 +48,6 @@ jobs:
       - id: diff
         env:
           EVENT: ${{ github.event_name }}
-          REF: ${{ github.ref }}
           BASE: ${{ github.event.pull_request.base.sha }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
@@ -57,13 +55,7 @@ jobs:
           # from/to: ci_changes.py diffs the single merge base of the two to `to` (it requires
           # exactly one, and a full clone). src: the commit whose classifier runs (decision 0066).
           from='' to='' src=''
-          case "$REF" in
-            refs/heads/merge-train/current | refs/heads/merge-train/shadow)
-              from=origin/main to=HEAD
-              src=$(git merge-base origin/main HEAD) || src='' ;;
-            *)
-              if [ "$EVENT" = "pull_request" ]; then from=$BASE to=$PR_HEAD src=$BASE; fi ;;
-          esac
+          if [ "$EVENT" = "pull_request" ]; then from=$BASE to=$PR_HEAD src=$BASE; fi
           # Every failure leaves code=true. A base whose classifier predates --merge-base reads
           # the empty stdin and says code=true.
           if [ -n "$from" ] && [ -n "$to" ] && [ -n "$src" ] \

@@ -8,7 +8,7 @@ id, and the merge train ejected the later PR (2026-10-31: T-3467, T-3476, T-3479
 The registry is the branch `id-registry` on origin: an orphan commit with an empty tree whose
 message lists the most recent claims, one per line (`T-3541`, `0213`). A claim reads it, picks
 the next id with the caller's rule over everything taken *plus* the registry's claims, and
-pushes the registry with the new claim appended under `--force-with-lease` (merge_lock's CAS).
+pushes the registry with the new claim appended under `--force-with-lease` (`git_ops.push_lease`).
 Of two racing allocators exactly one push wins; the other re-reads and picks the next id. The
 list keeps the newest KEEP claims plus each task block's and the decisions' highest claim
 (`kept`), so pruning never lets an id be handed out twice.
@@ -28,8 +28,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import merge_lock  # noqa: E402 (the sys.path line above must run first)
-from merge_lock import GitError, git  # noqa: E402
+import git_ops  # noqa: E402 (the sys.path line above must run first)
+from git_ops import GitError, git  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 REF = "refs/heads/id-registry"
@@ -50,7 +50,7 @@ class RegistryError(Exception):
 def read(root: Path = ROOT) -> tuple[str, list[str]]:
     """(sha, claims oldest first) of the registry on origin; ("", []) when the branch is absent.
     Lines that are not a claim are ignored, so a malformed registry cannot block allocation."""
-    fetched = git("fetch", "-q", "--no-tags", merge_lock.REMOTE, f"+{REF}:{SEEN_REF}", root=root, check=False)
+    fetched = git("fetch", "-q", "--no-tags", git_ops.REMOTE, f"+{REF}:{SEEN_REF}", root=root, check=False)
     if fetched.returncode != 0:
         if "couldn't find remote ref" in fetched.stderr:
             return "", []
@@ -94,7 +94,7 @@ def claim(pick: Callable[[set[str]], str], kind: re.Pattern[str], root: Path = R
             chosen = pick({c for c in claims if kind.fullmatch(c)})
             if not kind.fullmatch(chosen) or chosen in claims:
                 raise RegistryError(f"refusing to claim {chosen!r}")
-            if merge_lock.push_lease(sha, commit([*claims, chosen], root), root, ref=REF):
+            if git_ops.push_lease(sha, commit([*claims, chosen], root), root, ref=REF):
                 return chosen
     except GitError as e:
         raise RegistryError(str(e)) from e

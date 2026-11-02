@@ -8,12 +8,10 @@ undecodable input, is `code=true`: a wrong skip looks exactly like a pass, so do
 
 With `--merge-base A B` it lists the paths itself: the diff from the single merge base of A and B
 to B (decision 0147). A pull request passes its `base.sha` and `head.sha`, so only the PR's own
-changes count even when its branch is behind `main`; a merge-train push passes `origin/main` and
-`HEAD`. Several merge bases, none, a failed git command, a shallow clone or a malformed revision
+changes count even when its branch is behind `main`. Several merge bases, none, a failed git command, a shallow clone or a malformed revision
 give `code=true`. Any other arguments also give `code=true`.
 
-Standard library only: CI runs the copy from the PR's base commit, or from a train's merge base
-(decision 0066), so a PR can never change how its own files are classified.
+Standard library only: CI runs the copy from the PR's base commit (decision 0066), so a PR can never change how its own files are classified.
 """
 
 from __future__ import annotations
@@ -32,8 +30,7 @@ DOC_DIRS = ("docs/", ".claude/")
 # (crates/rustsheet-eval/src/deviations.rs). docs/milestones.md, docs/progress.md and
 # docs/progress/: the progress report generator reads them (tools/src/rustsheet_tools/
 # progress_report/, SPEC-0022, decision 0120), so a steward PR that changes only the page or its
-# history still runs the python job. .claude/skills/review/SKILL.md: scripts/test_merge_ready.py
-# checks that merge_ready.py's reviewer-applicability list matches the skill's (decision 0149).
+# history still runs the python job.
 # An entry ending in `/` is a directory and matches every path under it; any other entry is one
 # file and matches only itself, so docs/progress.md does not also claim docs/progress.mdx.
 CODE_READ_PATHS = (
@@ -41,7 +38,6 @@ CODE_READ_PATHS = (
     "docs/milestones.md",
     "docs/progress.md",
     "docs/progress/",
-    ".claude/skills/review/SKILL.md",
 )
 CODE_READ_DIRS = tuple(p for p in CODE_READ_PATHS if p.endswith("/"))
 

@@ -1,6 +1,7 @@
 # 0178 — Merge-train verdict records: one head-bound comment per reviewer, rolled out warn then require
 
-- **Status:** accepted (2026-10-30, T-2997). It amends SPEC-0027 section 2 ("Verdict records (v2)").
+- **Status:** superseded by 0252 (2026-11-02, T-3827: the verdict records were deleted with the
+  merge train). Was: accepted (2026-10-30, T-2997). It amends SPEC-0027 section 2 ("Verdict records (v2)").
 - **Context:** SPEC-0027 v1 treats the marker's verdicts as the marking session's attestation (V4). T-2997 asked
   for verdict records that make a fabricated or stale verdict detectable. All sessions and their reviewer
   subagents share the owner's GitHub account and machine, and reviewers have no GitHub write tools, so the marking
