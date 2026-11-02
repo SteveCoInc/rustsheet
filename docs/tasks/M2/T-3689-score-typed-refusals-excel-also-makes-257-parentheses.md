@@ -3,7 +3,7 @@ id: T-3689
 title: "Score typed refusals Excel also makes (257 parentheses, 66 nested calls) as blank cells and restore the dropped typed-refusal probes"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
