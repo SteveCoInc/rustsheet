@@ -11,14 +11,13 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   PR needs no panel, decision 0231). The queue tests the PR merged with the current `main` and the
   PRs ahead of it, so it provides 0028's "tested against current `main`": agents run no up-to-date
   check of their own.
-- **Enqueue** (decision 0247): run `make merge-mode` (it reads `scripts/merge_train.toml` from a
-  freshly fetched `origin/main`); it should print `lock`, which now means "enqueue". On a head that
-  meets (a) and (b), call `enable_pr_auto_merge` with `mergeMethod: SQUASH`, then move on: the PR
-  merges when its merge-group CI passes. Stay subscribed to the PR.
-  - Never call `merge_pull_request` on a PR to `main`, and never take the merge lock (`make
-    merge-lock-*`) or mark a PR ready (`make mark-ready`): the merge train and the lock are
-    retired for merges (decisions 0247, 0157, 0075). If `make merge-mode` prints `shadow` or
-    `train`, stop and report it: that needs the owner.
+- **Enqueue** (decision 0247): on a head that meets (a) and (b), call `enable_pr_auto_merge` with
+  `mergeMethod: SQUASH`, then move on: the PR merges when its merge-group CI passes. Stay
+  subscribed to the PR. `make merge-mode` always prints `lock`, meaning "enqueue"; it is kept only
+  because the routines' stored prompts ask for it (decision 0252).
+  - Never call `merge_pull_request` on a PR to `main`. The merge train, the merge lock and their
+    tooling were deleted (decisions 0247, 0252); if a routine prompt or note asks for one of
+    them, report it for the owner instead.
   - If `enable_pr_auto_merge` is refused because auto-merge or the merge queue is not enabled on
     the repository, leave the PR green and approved, comment the refusal on it, and list it under
     "Needs owner"; do not fall back to merging it yourself.
@@ -36,12 +35,11 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   local test-merge, or the queue removed the PR for it), and the PR renumbers its own file (`make
   renumber PR=<n>`, decision 0224, or by hand per the work-loop skill). Never merge it in only
   because the branch is behind: the queue tests the PR against the current `main` anyway.
-- **Retired: the merge train and the merge lock** (decision 0247). `make mark-ready`, `make
-  merge-train`, `make janitor`, `make merge-lock-*`, step mode and the `merge-flip-check` flip PR
-  are no longer used; T-3827 deletes them. The `ready-to-merge` and `merge-train-ejected` labels
-  are leftovers: a PR carrying either one is handled like any other open PR (enqueue it once it
-  meets (a) and (b); an ejected one first gets its conflict fixed, `make check-fast` and the reviewers
-  the change concerns, work-loop step 6.3), and the label is removed when it is enqueued.
+- **Deleted: the merge train and the merge lock** (decisions 0247, 0252, T-3827). Their scripts
+  and Makefile targets are gone; `make catch-up` and `make renumber` stay, for a PR that conflicts
+  with `main` or that the merge queue removed. Nothing applies or reads the `ready-to-merge`,
+  `merge-train-ejected`, `merge-train-stop` or `merge-hold` labels or the `merge-lock` and
+  `merge-train/*` branches: a PR still carrying such a label is handled like any other open PR.
 - **Orphaned agent PRs** (decisions 0050, 0248): an orphan is an open PR from an `agent/*` or
   `claude/*` branch of this repository (never a fork: the PR's `head.repo.full_name` is
   `SteveCoInc/rustsheet`), opened by another session, that is not a draft, not queued (auto-merge off;

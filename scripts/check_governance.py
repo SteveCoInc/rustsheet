@@ -25,7 +25,6 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import accuracy_governance as accuracy
-import merge_flip
 import tasks
 
 PROTECTED = (
@@ -180,13 +179,11 @@ def deleted_test_files(changed: list[str]) -> list[str]:
 def failures(
     changed: list[str],
     read_tags: Callable[[str], list[str]],
-    flip: bool,
     has_issue: Callable[[str], bool] = task_has_issue,
     added: Callable[[], list[tuple[str, str]]] = list,
     known_failures: Iterable[str] = (),
 ) -> list[list[str]]:
-    """The failed rules for a diff's `--name-status` lines, each as its report lines. `flip` says
-    the diff is a lock flip (decision 0157): it waives the decision-record rule and nothing else.
+    """The failed rules for a diff's `--name-status` lines, each as its report lines.
     `has_issue(path)` says whether a task file on HEAD came from a GitHub issue, and `added()`
     gives the diff's added Rust lines, read only for such a diff (decision 0158). A committed Gate A
     batch the diff changes, deletes or renames counts as a protected path, and `known_failures`
@@ -195,7 +192,7 @@ def failures(
     protected = [p for p in paths if is_protected(p)] + accuracy.table_edits(changed)
     decisions = [p for p in paths if p.startswith("docs/decisions/") and p.endswith(".md")]
     found = []
-    if protected and not decisions and not flip:
+    if protected and not decisions:
         found.append(
             [
                 "FAIL governance: protected paths changed without a decision record in docs/decisions/:",
@@ -276,11 +273,8 @@ def main() -> int:
         print(f"note: base {base} not found; skipping governance check")
         return 0
     changed = git("diff", "--name-status", merge_base, "HEAD").splitlines()
-    flip = not merge_flip.local_problems(merge_flip.ROOT, merge_base, "HEAD")
-    if flip:
-        print(f"governance: a lock flip of {merge_flip.SWITCH} (decision 0157); no decision record needed")
     found = failures(
-        changed, case_tags, flip,
+        changed, case_tags,
         added=lambda: added_rust_lines(git("diff", "-U0", "--no-color", merge_base, "HEAD", "--", "*.rs")),
         known_failures=accuracy.known_failure_problems(
             file_at(merge_base, accuracy.KNOWN_FAILURES),

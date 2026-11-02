@@ -29,6 +29,6 @@ FINDINGS:
 - [BLOCKING|MAJOR|MINOR] path:line — problem — fix
 SUMMARY: ...
 ```
-The `HEAD:` line names the commit you reviewed: it goes into the verdict record of your report
-(SPEC-0027 "Verdict records (v2)"), and a report for another commit does not count.
+The `HEAD:` line names the commit you reviewed: your verdict counts only for that commit, and a
+report for another commit does not count (the `review` skill, step 3).
 If the PR does not touch performance-relevant code, reply `VERDICT: APPROVE`, `SUMMARY: not applicable`.

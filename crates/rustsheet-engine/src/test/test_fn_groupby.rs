@@ -1216,5 +1216,76 @@ fn a_table_sorts_by_the_named_keys_first() {
     assert_eq!(
         keys(&model, "N", "O"),
         "West|Apple West|Pear South|Banana East|Apple East|Pear 0|Apple"
+
+#[test]
+fn scalar_inputs_and_the_order_of_their_errors() {
+    // gen-m7 arg-pairs batch (T-3778, excel-graph; docs/excel-semantics/arrays.md "GROUPBY
+    // scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch", T-3837).
+    // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 keys, B1:B3 values.
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("Z2", "x");
+    model._set("Z4", "7");
+    for (row, (key, value)) in [("a", "1"), ("b", "2"), ("a", "3")].iter().enumerate() {
+        model._set(&format!("A{}", row + 1), key);
+        model._set(&format!("B{}", row + 1), value);
+    }
+    let cases = [
+        // Text values, literal or referenced, are #VALUE!; numbers and booleans work.
+        ("=GROUPBY(2,\"abc\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(Z4,Z2,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,\"\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,TRUE,_xleta.MIN)", "2"),
+        // A blank-cell values is #VALUE!, ahead of a later option's error.
+        ("=GROUPBY(2,Z3,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(A1:A3,Z3,_xleta.SUM,#NUM!)", "#VALUE!"),
+        // Text values lose to a later option's error.
+        ("=GROUPBY(A1:A3,\"abc\",_xleta.SUM,1,#NUM!)", "#NUM!"),
+        // A one-cell reference to an error as row_fields is #VALUE!, a literal error that error,
+        // and an error in values comes first.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(#REF!,2,_xleta.SUM)", "#REF!"),
+        ("=GROUPBY(Z1,Z1,_xleta.SUM)", "#DIV/0!"),
+        ("=GROUPBY(Z4,Z1,_xleta.SUM)", "#DIV/0!"),
+        // The error row_fields loses to a later option's error, at the same height too.
+        ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("D{}", 3 * i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("D{}", 3 * i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
+fn an_early_input_error_fills_an_array_field_relationship() {
+    // gen-m7 45c197dc0b22cf2b A7565:B7566 and 35679b4facc62956-style inputs under a lifted
+    // field_relationship: the error fills the lifted shape (T-3837).
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("A1", "a");
+    model._set("B1", "1");
+    model._set("D1", "=GROUPBY(#NULL!,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model._set("D4", "=GROUPBY(Z1,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model.evaluate();
+    assert_eq!(
+        [
+            model._get_text("D1"),
+            model._get_text("E1"),
+            model._get_text("D2"),
+            model._get_text("E2")
+        ],
+        ["#NULL!", "#NULL!", "#NULL!", "#NULL!"]
+    );
+    assert_eq!(
+        [model._get_text("D4"), model._get_text("E5")],
+        ["#VALUE!", "#VALUE!"]
     );
 }

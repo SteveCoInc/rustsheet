@@ -1008,7 +1008,9 @@ T-1326 follow-up (probes/pivotby-followup, 63 PIVOTBY questions over the same Da
 - Cells: errors in values make their cells and totals that error (P!A321); a LAMBDA array result is `#VALUE!` per cell (shown; the cell holds a nested array, see the T-2360 paragraph above), `""`
   where there are no records (P!A341); text results show as text (P!A541). An array relative_to (here a filter column put one
   argument too far) is lifted per element: a 10x1 array (P!A681).
-Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data), and where
+Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data; a scalar text
+`values` with field_headers omitted is `#VALUE!`, see "GROUPBY scalar inputs, option order and scalar filters in the gen-m7
+arg-pairs batch" below, and T-3854 probes the rest), and where
 error keys sort against text, booleans and the blank key (the engine uses `sort_key_cmp`'s order: after booleans,
 before blank).
 T-1323 follow-up (probes/groupby-sort-filter-args, 83 questions summarised in one cell each, excel-graph, 2026-10-16;
@@ -1851,10 +1853,16 @@ MAKEARRAY checks its sizes first: `MAKEARRAY(NA(),1,5)` and `MAKEARRAY(NA(),1,LA
 Ours: every helper takes its caller from `Model::helper_caller` (lambda.rs), which checks the function once before any element
 (`FunctionValue` parameter counts; `eta_takes_count` reads `arg_counts::takes_count`); before T-3655 a wrong count was
 `#VALUE!` per element and MAP, SCAN, REDUCE and MAKEARRAY passed an error argument on.
-Unprobed: whether MAP's, SCAN's and REDUCE's array errors come before the function check (the engine checks the function first;
-BYROW and BYCOL read the array first).
+Order of the two checks: the array argument is read before the function is checked, in all five helpers. An array argument that
+is an error gives its own error even when the function cannot be called: `MAP(NA(),LAMBDA(a,b,a))` and `MAP(NA(),5)` are
+`#N/A`, `MAP(1/0,5)` `#DIV/0!`, `SCAN(0,NA(),LAMBDA(a,a))`, `SCAN(0,NA(),NA())`, `REDUCE(0,NA(),NA())` and
+`REDUCE(0,NA(),5)` `#N/A`, `SCAN(0,1/0,5)` and `REDUCE(0,1/0,LAMBDA(a,a))` `#DIV/0!`, as `BYROW(NA(),LAMBDA(a,b,a))` and
+`BYCOL(1/0,5)` already were (ROWS, COLUMNS and INDEX of each give the error, ERROR.TYPE 7 and 2). A second MAP array that is an
+error is `#VALUE!` (`MAP({1,2},NA(),LAMBDA(a,b,a))`). Evidence: probes/t3753-lambda-helper-error-array-order (excel-graph,
+2026-11-02, T-3753). Ours: `fn_map`, `fn_scan` and `fn_reduce` call `helper_caller` after reading the arrays; before T-3753 they
+checked the function first and gave `#VALUE!`.
 Status: VERIFIED (excel-graph)
-Tasks: T-3655
+Tasks: T-3655, T-3753
 
 ## MAKEARRAY sizes: zero, negative, booleans, text and references
 Rule: a size is read as a number the way an arithmetic operand is, then must be a whole number of at least 1. 0, -1, 0.5 and
@@ -2188,7 +2196,8 @@ Rule (gen-m7 arg-pairs batch for GROUPBY, excel-graph, 2026-11-02; each Data she
 G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
 - Scalar `values` that are text (`"2.5"`, `"abc"`, `""`, or a one-cell reference to text) or a one-cell reference to a blank
   cell make GROUPBY `#VALUE!`, whatever `row_fields` is, unless `row_fields` is a literal error (that error). Numbers and
-  booleans work: `GROUPBY(2,TRUE,_xleta.MIN)` is the row 2, 0 (gen-m7 35679b4facc62956, a full grid of scalar pairs).
+  booleans work: `GROUPBY(2,TRUE,_xleta.MIN)` is the row 2, 0 (gen-m7 35679b4facc62956, a full grid of scalar pairs). Text
+  `values` lose to a later option's error value, a blank-cell `values` does not (below).
 - `row_fields` that is a one-cell reference to an error (`Data!G9`) is `#VALUE!`, but a literal error there is that error
   (`GROUPBY(#REF!,2,..)` `#REF!`), and `GROUPBY(Data!G9,Data!G9,..)` is the values' `#DIV/0!` (35679b4facc62956 A10554-A11774).
 - A text, empty-text or blank option is `#VALUE!` ahead of a later option's error value
@@ -2197,7 +2206,8 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   `values` also win over a later error option (0a91d5918d798930 A10127).
 - A scalar `filter_array` keeps every row when the options before it are omitted (TRUE, 2: "GROUPBY and PIVOTBY" above), but
   beside given options it is often `#VALUE!` (`GROUPBY(Data!A1:C12,Data!B1:C12,_xleta.MAX,1,-1,1,-1)`, 3a4c7294ff5c4af3 A5125;
-  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`);
+  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`,
+  07c0c130d894cfe0 A4515);
   which argument decides is not yet known.
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
   (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
@@ -2205,7 +2215,12 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
   array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
   has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
-Ours: none of these yet (the cells are known failures in eval/baseline/gen-m7.txt).
+Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
+`Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
+(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+`#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
+reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
+eval/baseline/gen-m7.txt.
 Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
 lifted `field_headers`, are UNVERIFIED
 Tasks: T-3837, T-3838, T-3839, T-3840
