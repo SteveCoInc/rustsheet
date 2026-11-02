@@ -3,7 +3,7 @@ id: T-3728
 title: "PERCENTOF with an error cell argument is #NUM! in Excel (engine propagates the error)"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -25,9 +25,12 @@ Found by the T-3494 arg-pairs batch (excel-graph oracle). Data!G9 is `#DIV/0!` i
 Decision 0083: a wrong error type is visible to every user of the function; the acceptance criteria below are already the visible-parity stage.
 
 ## Acceptance criteria
-- [ ] The 21 PERCENTOF cells above match Excel, with the rule probed for at least `#N/A` and `#VALUE!` and documented.
-- [ ] The cells above leave eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] The 21 PERCENTOF cells above match Excel, with the rule probed for at least `#N/A` and `#VALUE!` and documented.
+- [x] The cells above leave eval/baseline/gen-m5.txt (`make eval-baseline`, 0 regressions).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other functions' error handling.
+
+## Outcome
+Done by T-3653 (PR #2768), which probed PERCENTOF for every error kind (probes/t3653-percentof-argument-kinds) and made an error inside a reference or array `#NUM!` while a literal error passes through. Merging `main` into that PR and re-running `make eval-baseline` fixed the 21 gen-m5/f17765c5247b826e cells (gen-m5 known failures 26 -> 5, 0 regressions); the rule is in numbers.md "PERCENTOF: an error inside a reference or array is #NUM! (T-3653)".

@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c6ebc084ff0b4c8e0f18023a70f5dd636793cf3b79f616682a4fbd84ac981328"
+ },
+ "sheets": {
+  "Calc": {
+   "A136": {
+    "t": "n",
+    "v": "2.2204460492503132041067797769647443436194654401306e-16",
+    "f": "=CHISQ.INV.RT(1-1E-16,2)"
+   }
+  }
+ }
+}

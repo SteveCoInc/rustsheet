@@ -39,6 +39,8 @@ train sections of the steward, work-loop and review skills.
       with a replacement (e.g. a required status check posted by the review step), or have the
       decision record say outright that the panel's verdicts are an agent attestation, unchecked
       (security review of T-3826).
+- [ ] The `merge-train-ejected` and `ready-to-merge` labels are deleted from the repository (none is
+      in use after the 2026-11-02 cleanup), and nothing in the repo applies or reads them.
 - [ ] A decision record amends 0247 with what was removed.
 - [ ] `make check` green; reviewers approve.
 

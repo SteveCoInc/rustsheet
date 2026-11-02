@@ -143,6 +143,11 @@ jobs:
       # Decision 0249: not on a push to main, whose merge group already ran it.
       - if: needs.changes.outputs.gates != 'false'
         run: make eval-gates
+      # Decision 0243: the math sidecar check needs the release binary eval-gates built and tools/.
+      - if: needs.changes.outputs.gates != 'false'
+        uses: astral-sh/setup-uv@v6
+      - if: needs.changes.outputs.gates != 'false'
+        run: make eval-math-check
       # Decision 0054: the report reruns every suite (about 2.5 min). PRs, merge groups, merge trains
       # and dispatches on other branches only need it to debug a failed gate (decision 0147); main
       # keeps one per merge.
