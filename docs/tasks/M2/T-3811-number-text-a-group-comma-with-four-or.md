@@ -3,7 +3,7 @@ id: T-3811
 title: "Number text: a group comma with four or more digits after it, a trailing comma and a leading percent sign"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
