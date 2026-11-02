@@ -278,7 +278,13 @@ probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
 probes/t3638-subnormal-upper-tail.case.json	7
+probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
+probes/table-edits/table-column-range-delete-end.case.json	5
+probes/table-edits/table-column-range-delete-start.case.json	3
 probes/table-edits/table-convert-names-this-row.case.json	3
+probes/table-edits/table-delete-all-columns.case.json	1
+probes/table-edits/table-delete-columns-straddle-left.case.json	6
+probes/table-edits/table-delete-columns-straddle-right.case.json	4
 probes/table-edits/table-insert-row-calc-column-above-header.case.json	6
 probes/table-edits/table-insert-row-calc-column-inside-data.case.json	3
 probes/table-edits/table-insert-row-this-row-above-header.case.json	15
