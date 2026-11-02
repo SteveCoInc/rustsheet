@@ -375,6 +375,9 @@ Evidence: none for Excel; this is a resource limit, not an Excel observation.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet/src/edit.rs (`MAX_FOOTPRINT_CELLS`)
 
+## MMULT: a blank first argument is #VALUE! even when the second is an error
+Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine propagates the second argument's error for A463 and A466; owned by T-3729.
+
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
 does the same); a blank does not count as 0. `MDETERM` of a single numeric cell is that number. A boolean is not a
@@ -499,8 +502,35 @@ block, `SUM(..)` of it is 6. A blocked spill area (a value in the neighbouring c
 Evidence: probes/filter-if-empty-array (oracle: excel-graph, 2026-10-06); upstream ISREF.xlsx D9 (`#SPILL!`),
 J17:L17 (spilled 1,2,3).
 Status: VERIFIED (web)
-Implemented in: `fn_filter` (crates/rustsheet-engine/src/functions/spill_functions.rs)
+Implemented in: `fn_filter` (crates/rustsheet-engine/src/functions/lookup_and_reference/filter.rs)
 Tasks: T-0964
+
+## FILTER: the type of each include element and of the result
+Rule (with C1:C3 = 10, 20, 30 and `if_empty` "none"):
+- **include**: a number keeps its row unless 0 (`{0.5;-1;0}` keeps 10, 20; `-0.000001` keeps), TRUE keeps, FALSE
+  and a blank cell do not (`N1:N3` = 1, blank, 1 keeps 10, 30). Text is `#VALUE!` (`{"a";1;0}`, `{"1";1;0}`,
+  `{"";1;1}`, `" TRUE"`, `"yes"`, and the same as cells: `"x"`, `="1"`, `=""`) **except** text that spells
+  TRUE or FALSE in any case, which is that boolean: `{"TRUE";1;0}` and a `="TRUE"` cell keep 10, 20,
+  `{"FALSE";1;1}` 20, 30, `{"true";0;"false"}` 10. An error anywhere in include is returned, even on a row
+  that would be dropped (`{1;#N/A;0}` and `{0;#N/A;0}` `#N/A`, a `=1/0` cell `#DIV/0!`, `=NA()` with all
+  others 0 `#N/A`).
+- **array elements** keep their type in the spill: 5, a blank cell, `=""`, TRUE, "txt", `#DIV/0!`, `="7"`, -0.5
+  spill as 5, 0, "", TRUE, "txt", `#DIV/0!`, "7", -0.5. The blank's spilled cell is 0 (`TYPE` 1, `ISBLANK` FALSE,
+  `=""` FALSE), but inside the formula it is still blank: `ISBLANK(FILTER(..))` and `MAP(FILTER(..),LAMBDA(x,
+  ISBLANK(x)))` are TRUE for it, `TYPE` of the element 1. A lone blank cell as `array` stays blank too:
+  `ISBLANK(FILTER(A2,TRUE))` and `ISBLANK(FILTER(A2,1))` are TRUE, `FILTER(A2,TRUE)&"|"` is "|", `TYPE` 64.
+- **if_empty** (no row kept): omitted, with or without a trailing comma, is `#CALC!` (`ERROR.TYPE` 14, `TYPE` 16);
+  `""`, `"5"`, TRUE, 0, `NA()` and a one-cell reference are that value (`TYPE` 2, 2, 4, 1, 16; ROWS 1;
+  `ISREF` FALSE). A **blank one-cell reference is 0** (`TYPE` 1, `ISBLANK` FALSE, `&"|"` "0|", MAX 0), while a
+  blank inside a multi-cell `if_empty` range stays blank (`FILTER(..,R1:R2)` with R1 blank: `ISBLANK` TRUE,
+  `&"|"` "|", ROWS 2). An error cell is its error.
+Evidence: probes/t3654-filter-result-types D1:L12 (array elements), P20:P42 (include), P45:X55 and P60:Q67
+(if_empty, lone blank) (oracle: excel-graph, 2026-11-01, T-3654).
+Status: VERIFIED (web)
+Implemented in: `fn_filter` and `include_keeps` (crates/rustsheet-engine/src/functions/lookup_and_reference/filter.rs).
+Before T-3654 the engine refused TRUE/FALSE text in include, read a lone blank `array` cell as 0 and a blank
+one-cell `if_empty` as blank.
+Tasks: T-3654
 
 ## Dynamic-array and LAMBDA function argument modes
 Rule: the scalar arguments of the M7 functions lift over a multi-cell range and over an array, one call per element:
@@ -2160,6 +2190,21 @@ array's shape (a one-row or one-column array) is its error, and a wrongly shaped
 still returns the error first.
 Status: VERIFIED (excel-graph)
 Tasks: T-3506
+
+## A one-cell error reference in the other array functions (T-3667)
+Rule: with C2 holding `#DIV/0!` (probes/one-cell-error-ref-array-functions, excel-graph, 2026-11-01; every cell paired with
+the literal error):
+- Read as a 1x1 array holding the error, the other arguments checked first, like TOCOL, TOROW and FILTER:
+  - `TAKE(C2,0)` is `#CALC!`, `TAKE(C2,"x")` `#VALUE!`, `DROP(C2,"x")` `#VALUE!`, `DROP(C2,1)` `#CALC!` (literal: `#DIV/0!`).
+  - `CHOOSEROWS(C2,2)`, `CHOOSECOLS(C2,2)` and `CHOOSECOLS(C2,0)` are `#VALUE!` (literal: `#DIV/0!`); `CHOOSEROWS(C2,1)` is the error.
+  - `VSTACK(D1:E1,C2)` spills `1, 4` over `#DIV/0!, #N/A`, and `HSTACK(D1:D3,C2)` stacks the error as a column, padded with
+    `#N/A`, where the literal error makes the whole call `#DIV/0!`; the error reference stays an element wherever it stands.
+- Not a 1x1 array, the reference's error returned whatever the later arguments: SORT, SORTBY, UNIQUE, EXPAND, WRAPROWS and
+  WRAPCOLS (`SORT(C2,5)`, `UNIQUE(C2,"x")`, `EXPAND(C2,"x")`, `WRAPROWS(C2,0)` are all `#DIV/0!`).
+Ours: implemented (T-3667): TAKE and DROP already kept the reference; CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK use
+`one_cell_error_ref_as_array`; the other six already match.
+Status: VERIFIED (excel-graph)
+Tasks: T-3667
 
 ## TOCOL, TOROW and SORT: which bad argument wins (T-3497)
 Rule:

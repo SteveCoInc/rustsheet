@@ -1,7 +1,8 @@
 # 0054 — PR CI runs the full eval report only when the gate fails or on main
 
 - **Status:** accepted (2026-10-14, owner request to cut CI time, T-1520). It narrows when an
-  informational step runs and changes no gate.
+  informational step runs and changes no gate. Amended by 0249: a push to `main` runs only the
+  report, never cancelled; the merge group already ran the gates on that commit.
 - **Context:** The merge queue (decision 0053) is not available for a personal-account repository,
   so decision 0028's "test against current `main`" rule still costs a full CI round whenever `main`
   moves. Shorter CI makes that rarer. On 2026-10-13 (#714) the jobs took: python 12 min (11 in

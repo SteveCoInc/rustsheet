@@ -72,7 +72,7 @@ CAMPAIGNS = ["semantics", "accuracy", "visible"]
 # `defer:` values: a deferred task is never ready (decision 0114 parks bit-level work until
 # Phase 1 exits).
 DEFERRALS = ["phase-1b"]
-# `issue:` value (matched whole): the number of the steveash/rustsheet GitHub issue the task came
+# `issue:` value (matched whole): the number of the SteveCoInc/rustsheet GitHub issue the task came
 # from; `issue_author:` is the login that opened it (decision 0158). ASCII only, never `\d`.
 ISSUE = re.compile(r"[1-9][0-9]*")
 # `issue_origin:` (same values) marks a follow-up filed while working an issue: it keeps the
