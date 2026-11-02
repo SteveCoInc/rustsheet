@@ -2,13 +2,26 @@
 
 from rustsheet_tools.accuracy.defs import (
     annuity,
+    beta,
     cashflow,
     discrete,
     fisher,
+    gamma,
     inverse_trig,
     rounding,
     student_t,
     trig,
 )
 
-__all__ = ["annuity", "cashflow", "discrete", "fisher", "inverse_trig", "rounding", "student_t", "trig"]
+__all__ = [
+    "annuity",
+    "beta",
+    "cashflow",
+    "discrete",
+    "fisher",
+    "gamma",
+    "inverse_trig",
+    "rounding",
+    "student_t",
+    "trig",
+]

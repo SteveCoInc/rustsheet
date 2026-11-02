@@ -406,6 +406,39 @@ Status: UNVERIFIED (probe pending: T-2422 commits the probe case; the cells that
 gen-m9 sweep, T-2258)
 Tasks: T-2249, T-2422, T-2258
 
+## D-function front end across all twelve functions (VERIFIED, T-3650)
+Rule: the twelve D-functions (DAVERAGE, DCOUNT, DCOUNTA, DGET, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DSUM, DVAR,
+DVARP) share one front end; every shape below gives the same result family-wide (each function's own value over the
+same set of matched records).
+- Grammar: a criteria range of one row (headers only, one header, two headers, a single blank cell) is `#VALUE!`. A
+  header over a blank row, a wholly blank two-row block, a header the database does not have, an error header
+  (`=NA()` over 1) and an OR block whose middle row is blank match every record. A criteria header matches a database
+  header ignoring case (`qty`) but not with a leading or trailing space (` Qty`, `Qty `), and a numeric header (2) is not
+  a column position: those, and a blank header over a value (beside a real one or alone), match no record. Duplicate
+  headers AND their conditions (`Qty >1` and `Qty <5`). An error value under a header (`=NA()`) matches no record. A
+  criteria range overlapping the database (B1:B2, A1:B3) is read like any other block.
+- Field: text matches a header ignoring case but not with padding; numeric text (`"2"`, `"1"`), `""`, 0, -1, 0.5, FALSE,
+  a blank cell, a position past the columns and a two-cell range are `#VALUE!`; 2.7 truncates to 2; TRUE is column 1
+  (DCOUNTA 5, DCOUNT 0); an omitted field is `#VALUE!` except in DCOUNT and DCOUNTA, which count matched records.
+- Database: the header row alone is `#VALUE!`; two trailing blank rows (A1:C8 over the A1:C6 data, row 73) change no
+  result of the twelve (the probe cannot tell whether they are records; see "Database edge-pool smoke check (T-2249)").
+- Error order: an error field is the result (`#N/A`) even with a header-only database, header-only criteria or an
+  error criterion. Every other front-end failure (an unresolvable field, a one-row criteria range, a header-only
+  database) is `#VALUE!`, alone or combined (also with an error criteria header or no matching record), so their
+  relative order is not observable.
+- An error in a matched record's field is the result for DAVERAGE, DMAX, DMIN, DPRODUCT, DSTDEV, DSTDEVP, DSUM, DVAR and
+  DVARP (`#N/A` or `#DIV/0!` from the cell), the first one in record order when two differ (`#DIV/0!` above `#N/A` gives
+  `#DIV/0!`, the reverse `#N/A`); an error in a record that does not match is ignored, as is one in a criteria column
+  (the record simply does not match). DCOUNT skips it, DCOUNTA counts it as filled, and DGET returns it when its record
+  is the only match (`#NUM!` with more than one filled match). Before T-3650 ours skipped the error like a text cell.
+- Excel for the web refused (createSession `unsupportedWorkbook`) a workbook in which a D-function's database or criteria
+  argument was a function call (`NA()`, `1/0`) rather than a reference, as it does for an array-literal database
+  (db-argument-modes); those shapes are not probed.
+Evidence: probes/db-front-end-sweep rows 30-90 (A describes each row; B:M are the twelve functions in the order above;
+excel-graph, 2026-11-01). Implemented in `db_fold_numbers` (functions/database.rs).
+Status: VERIFIED
+Tasks: T-3650
+
 ## D* computed criteria and an unknown header in the gen-m9 database sweep (T-2258)
 Rule: observed D* values over the same Db sheet (Db!A1:D9 as in "Database edge-pool smoke check (T-2249)"; rows 2-9 hold
 Qty 4, 10, 0, 2, 1, -4, 7, 5, Price 2.5, "x", 4, TRUE, 10, 0.5, 100, -1 and Date 45351, 45000, empty, 45657, 45322,
@@ -514,7 +547,7 @@ Verified in text.md (T-3178): `- 5`, `1-1-1` and mixed fractions in a criterion.
 - An operand VALUE rejects is text, and `<` / `>` then compare it as text against the text cells only:
   `Jan 1 2020 12:00` (H19 #VALUE!; rows 19-22: `<Jan 1 2020 12:00` matches all ten text cells, no number) and
   `1e2$` (H39 #VALUE!; rows 39-42: plain and `=` match nothing, `<1e2$` eight text cells, `>1e2$` the two that
-  sort after it). A trailing `$` is not a currency form. Ours reads `1e2$` as 100 (VALUE and criteria; follow-up T-3404).
+  sort after it). A trailing `$` is not a currency form. Implemented (T-3404): `1e2$` is text in VALUE and as an operand, and VALUE is #VALUE! for number text padded with CHAR(160) (H47, H51, H55, H59); only the space character is trimmed.
 - Month-name dates with a time are numbers when VALUE reads them: `January 1, 2020 0:00` (H27 43831; rows 27-30),
   `>=January 2, 2020 12:00` (row 63), and `1-Jan 6:00 PM`, read in the current year (H23 is its offset 0.75 from
   January 1; rows 23-26).
