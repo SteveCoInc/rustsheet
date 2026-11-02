@@ -3,7 +3,7 @@ id: T-3835
 title: "Probe typed cell input of group-comma and leading-percent texts"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,9 @@ T-3811 made the shared reader `parse_formatted_number` read these texts for VALU
 
 ## Out of scope
 -
+
+## Outcome
+Probe `probes/typed-group-comma-leading-percent` filled from excel-graph (16 texts). Typed values and
+formats already matched the shared reader, so no engine change; added unit test
+`typed_group_comma_and_leading_percent_formats` and recorded the finding in coercion.md. Eval delta: none
+(new probe case passes 32/32).
