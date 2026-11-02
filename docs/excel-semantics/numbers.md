@@ -1071,6 +1071,38 @@ Status: VERIFIED (excel-graph)
 Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
 Tasks: T-2715, T-2756 (ROUNDUP)
 
+## CEILING and FLOOR cut the binary quotient, so CEILING can fall below its argument and FLOOR above it (T-3673)
+Rule: the CEILING/FLOOR family's 15-digit cut ("FLOOR.PRECISE: a 16th-digit tie in the ratio cut goes away from zero")
+is taken of the double quotient `number/significance`, not of the decimal ratio of the written arguments. Where the
+two sit on different sides of a 16th-digit tie, Excel's result is one unit of the cut's 15th digit away from the
+decimal reading, and a CEILING can come back below its own argument: `CEILING(9023487987474.29,0.002)` is
+9023487987474.28 (the exact ratio is the tie 4511743993737145, which would go up to 9023487987474.3, but the double
+quotient is 4511743993737144), and `FLOOR.MATH(405202879656.803,-0.0002,-1)` is 405202879656.802 (decimal reading
+405202879656.804). Above 1E+105 the same shows at `CEILING.MATH(7.34460155063567E+168,-2E-70,-1)` = 7.34460155063566E+168
+and `FLOOR.MATH(9.096E-120,-3.995E-225,-1)` = 9.096000000000019E-120.
+Evidence: eval/accuracy/tables CEILING/s1 A58, FLOOR.MATH/s1 A99, A173, CEILING.MATH/s1 A170 (excel-graph, 2026-11-01,
+T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches to the bit (`snap_ratio` cuts the double `value / significance`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
+## CEILING and FLOOR are #NUM! when number/significance overflows (T-3673)
+Rule: CEILING, CEILING.MATH (both modes), CEILING.PRECISE, FLOOR, FLOOR.MATH (both modes) and FLOOR.PRECISE are `#NUM!`
+when the ratio `number/significance` is beyond the double range, although the mathematical result (a multiple of the
+significance next to the number) is an ordinary double: `CEILING(6.78566159557368E+283,5.05874381382903E-127)` and
+`FLOOR.PRECISE(1.447176044413E+249,-1.38029997006174E-96)` are `#NUM!`. The tables bracket the boundary between 0.556 and 49 times the double range:
+`CEILING(-9.99999999999999E+307,-1)` and `FLOOR(-9.99999999999999E+307,-1)` (ratio 0.556 x DBL_MAX) are numbers, and
+`FLOOR.PRECISE(-3.85290564465378E+92,-4.37553180951326E-218)` (ratio 49 x DBL_MAX) is `#NUM!`. Where exactly it lies (the
+binary quotient overflowing, or its 15-digit cut) is not pinned.
+Evidence: eval/accuracy/tables CEILING/s1 A110, A120; CEILING.MATH/s1 A185, A198, A199; CEILING.PRECISE/s1 A111, A112;
+FLOOR.MATH/s1 A183, A184, A186, A191; FLOOR.PRECISE/s1 A114, A117, A119, A120; FLOOR/e-T-3673 A9, A29, A32, A41, A52
+(20 cells), and the numbers CEILING/s1 A75 and FLOOR/s1 A72 (excel-graph, 2026-11-01, T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches (the infinite ratio gives a non-finite result, which `numbers_fn` turns into `#NUM!`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
 ## ROUNDUP and ROUNDDOWN of a number whose 15-digit cut is subnormal (T-2756)
 Rule: the ROUND family first cuts x to 15 significant digits (round to nearest, "ROUND family rounds in two decimal
 stages"). When that cut, as a double, is subnormal (below 2^-1022), ROUNDUP, ROUNDDOWN and TRUNC return a nonzero
@@ -2606,6 +2638,30 @@ Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digi
 Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
 
+## PERCENTOF: an error inside a reference or array is #NUM! (T-3653)
+Rule: PERCENTOF(data_subset, data_all) reads its two arguments as SUM does, in one walk with SUM's error ranking
+(syntax.md "Aggregate error precedence"): a direct error in either argument returns as itself, the first in argument order,
+ahead of anything inside a reference or an array; and an error inside a reference or an array (a cell, a range, a union, a
+reference through IF, INDEX, OFFSET or LET, an array constant or a computed array) is not handed on but turned into `#NUM!`,
+ahead of a zero total. A direct error is an error value or a scalar computed from one (`NA()`, `1/0`, `Data!B1+0`,
+`SUM(Data!B1)`) and non-numeric typed text (`"x"`, `""`, both `#VALUE!`).
+So `PERCENTOF(NA(),1/0)` is `#N/A`, `PERCENTOF(1/0,NA())` `#DIV/0!`, `PERCENTOF(Data!B1,NA())` (B1 `#N/A`) `#N/A`,
+`PERCENTOF(Data!B1,"x")` `#VALUE!`, but `PERCENTOF(Data!B1,Data!B2)`, `PERCENTOF(1,Data!B1)`, `PERCENTOF(Data!B1,Data!D1:D2)`
+(a zero total), `PERCENTOF({1,#N/A},4)`, `PERCENTOF({1,2}+NA(),1)`, `PERCENTOF(IF(TRUE,Data!B1),1)` and
+`PERCENTOF(Data!A1,(Data!A1:A2,Data!B1))` are all `#NUM!`; `PERCENTOF(Data!G2,1)` with G2 `#NULL!` too.
+Coercion is SUM's: typed numeric text counts (`"3"`, `" 3 "`, `"1E1"`, `"$5"`, `"50%"`), typed TRUE and FALSE count as 1 and 0;
+text, numeric text and booleans in cells or inside arrays are skipped (`PERCENTOF(Data!C2,6)` with C2 the text "3" is 0,
+`PERCENTOF({"3",1},8)` 0.125, `PERCENTOF({1,TRUE},4)` 0.25, `PERCENTOF(IF(TRUE,Data!C2),6)` 0); a blank cell or an omitted
+argument is 0 (`PERCENTOF(,2)` 0, `PERCENTOF(2,)` `#DIV/0!`). A total of 0 is `#DIV/0!`; the subset need not lie inside
+data_all, and the arguments may have any shapes (`PERCENTOF({1,2;3,4},{1})` = 10, `PERCENTOF(SEQUENCE(3),SEQUENCE(2,2))` = 0.6).
+Ours before T-3653: each argument summed on its own, so the first argument's error came first and an error inside a
+reference or array was handed on (`#N/A`, `#DIV/0!`); ours since: as Excel (`Model::percentof_sums`).
+A 3-D reference is refused as a direct `#VALUE!` in its place, whatever the span holds: `PERCENTOF(S1!A1,S1:S2!A1)`,
+`PERCENTOF(1,S1:S2!B1)`, `PERCENTOF(S1:S2!B1,NA())` and `PERCENTOF(S2!B1,S1:S2!A1)` (S2!B1 `#N/A`) are `#VALUE!`, while
+`PERCENTOF(NA(),S1:S2!A1)` is `#N/A`.
+Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11.
+Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
+
 ## PERCENTOF: an error cell argument is #NUM!
-Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). Other error kinds are unprobed. The engine propagates `#DIV/0!`; owned by T-3728.
+Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). The general rule, for every error kind, is the entry above (T-3653), which also fixed these 21 cells (T-3728).
 Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.

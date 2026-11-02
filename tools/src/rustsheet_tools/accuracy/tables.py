@@ -249,10 +249,11 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
         msg = f"{text!r} is not one call of {definition.function}"
         raise ValueError(msg)
     parts = split_args(text[len(prefix) : -1])
-    params = definition.params_for(len(parts))
-    if len(parts) != len(params):
-        msg = f"{text!r}: {len(parts)} arguments, the definition has {len(params)}"
-        raise ValueError(msg)
+    try:
+        params = definition.params_for(len(parts))
+    except ValueError as err:
+        msg = f"{text!r}: {err}"
+        raise ValueError(msg) from err
     args: list[literal.Arg] = []
     for param, part in zip(params, parts, strict=True):
         token = part.strip()
