@@ -66,3 +66,14 @@ a function whose argument range covers the count runs. The engine already matche
 one rule shared by the five helpers), so no engine change. No form was undecodable: wrapping in ROWS/ERROR.TYPE/
 TEXTJOIN avoids the error excel-graph cannot decode. arrays.md records the rule. Eval delta: +1 probe case, 248
 cells, all bit-exact; no regressions, no new known failures.
+
+## Landing notes
+- PR #2856. The merge queue removed it at 19:18 UTC on 2026-11-02 for a MERGE_CONFLICT in eval/baseline/probes.txt
+  (T-3777's lines landed ahead of it). `make catch-up PR=2856` (decision 0207) merged main and re-recorded the baseline:
+  head e1c7cf96580bba5b9cb84a9dd85349edbad8e271, plus this notes commit. CI was pending when the window closed.
+- Reviewers: security, design and excel-fidelity all APPROVE on f5e9c81 (verdict records on the PR). The catch-up merge
+  and this notes commit need no new review.
+- Next step: once CI is green on the latest head and `mergeable_state` is clean, run `make merge-mode` (expect `lock`)
+  and call `enable_pr_auto_merge` with SQUASH. If it conflicts again in the baseline only, run `make catch-up PR=2856` again.
+- Do not repeat: the MINOR wording findings (arrays.md: name BYCOL for `_xleta.ABS` `#CALC!`, narrow MAP's 1x1 claim,
+  re-wrap) are noted on the PR and deliberately not pushed.
