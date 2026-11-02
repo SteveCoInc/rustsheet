@@ -3,7 +3,7 @@ id: T-3830
 title: "Gate A family modules and the CLI list test stop being shared hand-kept lists"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: sonnet
