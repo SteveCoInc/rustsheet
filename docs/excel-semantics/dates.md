@@ -394,6 +394,15 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   sum falls on (`DATEVALUE("1/2/2020 25:00")` = 43833, 3 Jan), and TIMEVALUE takes the time
   (D30, D55: 0.41666666666424135, 0.6909722222189885, with the serial-subtraction error). Anything else after the date is
   #VALUE! (`"2026-01-01 garbage"`, ISO `"2026-07-01T10:00"`).
+- **Typed mixed-separator dates and a leading-space clock** (T-3751; probes/date-text-mixed-separator-typed, excel-graph
+  2026-11-01; formats from the ENTERED log, docs/research/typed-mixed-separator-dates-2026-11-01.md): a date mixing `/`
+  and `-` typed into a cell is a number, and its format follows the date's shape, not the first separator: `7/1-2025`,
+  `7-1/2025`, `2025/07-01`, `2025-07/01` and `7/1-25` all become `m/d/yyyy` (A1-A4, A7); a month-name date, `1-Jul/2025`
+  and `1/Jul-2025`, becomes `d-mmm-yy` (A5, A6). A clock first, `10:00 7/1/2025`, typed is 45839.4166666667 with
+  `m/d/yyyy h:mm` (A10), but a leading space before it (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) leaves text with
+  `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
+  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine's typed formats differ (`yyyy/mm/dd`,
+  `d/mmm/yyyy`, `m/d/yy`) and it keeps `10:00 7/1/2025` as text: T-3796. `CELL("format", ...)` is #VALUE! on excel-graph.
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on
@@ -1367,6 +1376,28 @@ Evidence: gen-m6 a4a301d00b46acf3 (A79 A82 A85 A88 A241 A244 A307 A310 A493 A499
 Ours: DAYS matches all ten (T-3536, see "DAYS error order" below); NETWORKDAYS.INTL is one day off in the other direction.
 Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
 Tasks: T-3536, T-3537
+
+## NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument
+Rule (VERIFIED, excel-graph, 2026-11-01, T-3537): a holiday given to NETWORKDAYS.INTL as a **scalar value** (a number
+literal, an arithmetic expression or a function result such as `SUM(C1)`) is dropped only when it falls on a
+Saturday or Sunday, whatever the weekend argument is: `NETWORKDAYS.INTL(45000,45100,13,45003)` (Saturday, weekend 13 =
+Tuesday only) is 87, the no-holiday count, and the Tuesday `45006` takes one off (86), as does any Monday-to-Friday
+holiday under weekend `"0000000"`, 11, 12, 17 or `"1111100"`. A holiday given as a **cell reference (even one cell), a range or an
+array** is dropped on the weekend's own days as usual: `NETWORKDAYS.INTL(45000,45100,13,C1)` with C1 = 45003 is 86 and
+with C1 = 45006 is 87, `{45003}` 86, `{45006}` 87, and a fractional `45003.5` follows the same split (scalar 87, cell 86).
+Early serials follow the same rules on the weekday-faithful calendar (serial 0 Saturday, 1 Sunday): holidays 0, 0.5 and 1
+never subtract and 2-6, 9-13, 58-62 do, with weekend 1, 3, 11, 13, 14 or 15. WORKDAY.INTL does not have the split: its scalar
+holiday shifts the result when it is a workday of the weekend (`WORKDAY.INTL(45000,10,13,45003)` is 45012, the Tuesday `45006` is 45011).
+So the six gen-m6 arg-pairs cells (`NETWORKDAYS.INTL(0.5,54115,3,0.5)`, `(39539,0,3,2)` ...) were off by the scalar holiday of 0, 0.5 or 2,
+not by the day-0 start/end.
+Evidence: probes/networkdays-intl-holiday-forms (22 cells), networkdays-intl-holiday-weekend-masks (45),
+networkdays-intl-holiday-weekend-dedupe (112), networkdays-intl-early-holidays (88), networkdays-intl-serial-zero-holiday (120);
+gen-m6 102b2df13f6891d2 A547, 1b4963f7cb42e2fa A385, ade135f51e0b7a36 A31 and A385, b91dcfba0176956e A493 and A499.
+Ours: implemented (T-3537): `Holidays::scalar`, set from the argument's node (`is_scalar_node`), read by `networkdays_of`.
+UNVERIFIED: a holidays argument that is a function returning a reference (INDEX, OFFSET, INDIRECT, CHOOSE, IF) is treated
+as a reference; only SUM, literals and `+` are probed. A named range is a reference.
+Status: VERIFIED for the probed forms
+Tasks: T-3537
 
 ## DAYS error order
 Rule: DAYS reports an error-valued argument first, then goes through the arguments left to
