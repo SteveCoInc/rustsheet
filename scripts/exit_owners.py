@@ -68,6 +68,9 @@ from rustsheet_tools.sheetop import column_number  # noqa: E402
 T = TypeVar("T")
 ROOT = Path(__file__).resolve().parent.parent
 REPORT = ROOT / "eval" / "runs" / "latest" / "report.json"
+# The desktop-owned cells (decision 0143) that `make eval` writes (scripts/desktop_owned.py) and
+# the Rust rate reads (`rustsheet-eval run --desktop-owned`): one `case!Sheet!A1<TAB>T-id` per line.
+DESKTOP_OWNED = ROOT / "eval" / "runs" / "desktop-owned.tsv"
 CALC_SUITE = "ironcalc-calc"
 PROBES_SUITE = "probes"
 # The criterion of an M9 function below the Phase 1 rate: `rate:IRR`.
@@ -168,12 +171,20 @@ def counted(name: str, left_out: dict[str, str], gate_b: bool) -> bool:
     return cls is None or (gate_b and cls != R3_PASS)
 
 
-def counted_in_rate(name: str, left_out: dict[str, str]) -> bool:
+def read_desktop_owned(path: Path = DESKTOP_OWNED) -> frozenset[str]:
+    """The `case!Sheet!A1` names on the desktop-owned list the Phase 1 rate reads; empty when
+    `make eval` has not written it."""
+    if not path.is_file():
+        return frozenset()
+    return frozenset(line.split("\t")[0] for line in path.read_text().splitlines() if line)
+
+
+def counted_in_rate(name: str, left_out: dict[str, str], desktop_owned: frozenset[str]) -> bool:
     """Whether M9's every-suite function rate counts the visibly-off cell `name`. It leaves out
-    only `r3_pass` (decision 0188 R3) and `phase1b` (decision 0227) cells. Every other class, such
-    as `m14_owned`, stays listed here, because the Rust rate handles those through its own lists
-    (decision 0143)."""
-    return left_out.get(name) not in RATE_LEFT_OUT
+    `r3_pass` (decision 0188 R3) and `phase1b` (decision 0227) cells, and the cells on the
+    desktop-owned list (decision 0143, which the Rust rate reads from the same file). Every other
+    class, such as a probe row's `m14_owned`, stays listed here."""
+    return left_out.get(name) not in RATE_LEFT_OUT and name not in desktop_owned
 
 
 def counted_cell(case: str, key: str, left_out: dict[str, str], gate_b: set[str]) -> bool:
@@ -186,7 +197,9 @@ def formula_of(cell: dict[str, Any]) -> str:
     return str(cell.get("formula") or cell.get("anchor_formula") or "")
 
 
-def exit_cells(report: dict[str, Any], milestone: str) -> list[ExitCell]:
+def exit_cells(
+    report: dict[str, Any], milestone: str, desktop_owned: frozenset[str] | None = None
+) -> list[ExitCell]:
     """Every visibly-off cell of `milestone`'s exit criteria, in report order per criterion. The
     visibly-off lists are the report's (decision 0135): the exit row's `gen_visibly_off_cells`,
     the function-scope row's `visibly_off` less the cells decision 0188 R1(c) leaves out
@@ -197,6 +210,8 @@ def exit_cells(report: dict[str, Any], milestone: str) -> list[ExitCell]:
         raise ValueError(f"report.json has no milestone_exit row for {milestone}")
     by_case = failing_cells(report)
     left_out = r1c_left_out(report)
+    if desktop_owned is None:
+        desktop_owned = read_desktop_owned()
     formulas = {
         (case, f"{c['sheet']}!{c['cell']}"): formula_of(c) for case, cells in by_case.items() for c in cells
     }
@@ -244,7 +259,7 @@ def exit_cells(report: dict[str, Any], milestone: str) -> list[ExitCell]:
     below = set(exit_row.get("below_rate_functions") or [])
     for o in attributed_off_cells(report):
         c = o.cell
-        if c.criterion in below and counted_in_rate(f"{c.case}!{c.key}", left_out):
+        if c.criterion in below and counted_in_rate(f"{c.case}!{c.key}", left_out, desktop_owned):
             out.append(ExitCell(f"{RATE_PREFIX}{c.criterion}", c.case, c.key, c.formula))
 
     probe_row = exit_row.get("probe_row") or milestone
@@ -328,17 +343,17 @@ def names_case(text: str, names: tuple[str, ...]) -> bool:
 
 
 def names_in_span(text: str, names: tuple[str, ...], a1: str) -> bool:
-    """Whether a colon span on a line of `text` that names the case holds the cell `a1`. Per line,
-    unlike a single A1 name, because tasks quote formulas whose ranges (`Data!B6:C10`) are not
-    cells they own."""
+    """Whether a colon span in a block of `text` that names the case holds the cell `a1`. Per block
+    (a line and its continuation lines, T-3623), not per file, because tasks quote formulas whose
+    ranges (`Data!B6:C10`) are not cells they own: those sit in another block."""
     m = A1_SPLIT.fullmatch(a1)
     if m is None:
         return False
     col, row = column_number(m[1]), int(m[2])
-    for line in text.splitlines():
-        if not names_case(line, names):
+    for block in blocks(text):
+        if not names_case(block, names):
             continue
-        for s in A1_SPAN.finditer(line):
+        for s in A1_SPAN.finditer(block):
             c1, c2 = sorted((column_number(s[1]), column_number(s[3])))
             r1, r2 = sorted((int(s[2]), int(s[4])))
             if c1 <= col <= c2 and r1 <= row <= r2:

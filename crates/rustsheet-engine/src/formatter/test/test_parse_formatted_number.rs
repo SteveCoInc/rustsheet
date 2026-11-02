@@ -513,3 +513,33 @@ fn typed_mixed_separator_date_formats() {
         assert!(fmt(s).is_err(), "{s}");
     }
 }
+
+/// Typed text and the format Excel picks (probes/typed-group-comma-leading-percent, excel-graph
+/// 2026-11-02, raw `ENTERED` log in docs/research/typed-group-comma-leading-percent-2026-11-02.md,
+/// T-3835): the same reader as VALUE, so values and formats follow the grouped digits and the percent.
+#[test]
+fn typed_group_comma_and_leading_percent_formats() {
+    for (text, value, format) in [
+        ("1,0000", 10000.0, "#,##0"),
+        ("01,0000", 10000.0, "#,##0"),
+        ("-1,0000", -10000.0, "#,##0"),
+        ("1,000,0000", 10_000_000.0, "#,##0"),
+        ("1,0000.5", 10000.5, "#,##0.00"),
+        ("%1", 0.01, "0%"),
+        ("%-1", -0.01, "0%"),
+        ("% 1", 0.01, "0%"),
+        ("%1.5", 0.015, "0.00%"),
+        ("%1,0000", 100.0, "0%"),
+        ("1,0000%", 100.0, "0%"),
+    ] {
+        assert_eq!(
+            parse(text, &["$"]),
+            Ok((value, Some(format.to_string()))),
+            "{text}"
+        );
+    }
+    // Stay text (General) when typed.
+    for text in ["1,", "0,000", "0,0000", "1,00", "%1%"] {
+        assert!(parse(text, &["$"]).is_err(), "{text}");
+    }
+}

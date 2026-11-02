@@ -3,7 +3,7 @@ id: T-3778
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of GROUPBY and PIVOTBY"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -73,3 +73,27 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   function's own module that the PR also tests.
 - RANDARRAY (volatile), TEXTSPLIT and REGEXEXTRACT pairs, the single-kind probes named above, and other functions or
   milestones.
+
+## Outcome
+- **Split** (allowed by Context): this PR runs the GROUPBY half; PIVOTBY's batch is follow-up T-3841 (opus, functions-lookup).
+- **Batch**: 23 new gen-m7 cases from `rustsheet-gen --policy arg-pairs --milestone M7 --functions GROUPBY --spill` (seed 0,
+  about 4,600 calls, no pair skipped), with excel-graph sidecars filled with 0 failures. No oracle cell is a `#SPILL!`, so no
+  scored cell is a layout `#SPILL!`.
+- **Coverage**: after `make eval`, GROUPBY has a pairwise share of 1.0 and 0 unseen pairs (before: 0.11, 2256 unseen).
+  PIVOTBY is unchanged (0.088, 4964 unseen) and moves to T-3841.
+- **Eval delta**: gen-m7 grows from 106 to 129 cases and from 54,449 to 61,414 scored cells (+6,965). 0 regressions;
+  2,537 new-coverage failures, recorded by `make eval-baseline` (eval/baseline/gen-m7.txt; visible-parity lock +22 cases).
+  gen-m7 drops from 0 to 2,538 visibly off (rate 0.9587, allowance 61), under the M7 bar of 99.9%, as T-3497's batch did,
+  until the owners land.
+- **Spill extents: criterion not met as written.** The M7 exit row's spill-extent failures go from 0 to 2,294. None is a layout
+  `#SPILL!`. In every one of them Excel returns a single `#VALUE!` and the engine spills a whole table (an engine rule gap,
+  so each one is owned below). Fixing them is out of scope here (Out of scope: engine fixes belong to the owning tasks).
+  T-3839 owns about 2,100 of them and requires 0 spill-extent failures for its anchors.
+- **Owners** (every failing cell, by the anchor of its call; `make exit-owners MILESTONE=M7`, `make unowned-off ALL=1` and
+  `scripts/new_case_owners.py` report 0 unowned). Each task is opus, functions-lookup, `campaign: semantics`, and each rule
+  is in docs/excel-semantics/arrays.md ("GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch"):
+  - **T-3837** (359 cells): text or blank-cell scalar `values`, and a one-cell error reference as `row_fields`, are `#VALUE!`.
+  - **T-3838** (51 cells): a text or blank option is `#VALUE!` ahead of a later option's error; a TRUE field_relationship's order.
+  - **T-3839** (2,114 cells): a scalar `filter_array` beside other options is `#VALUE!` (rule partly known; probe first).
+  - **T-3840** (13 cells): a FALSE element of a lifted field_relationship is `#VALUE!` (a blank one is valid); an early error fills
+    the lifted shape.

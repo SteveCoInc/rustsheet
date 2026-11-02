@@ -742,7 +742,7 @@ digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "
 0.01, -0.01, 0.015 and 100; "1,0000%" is 100. A percent sign on both ends ("%1%") and a doubled one ("2%%") are
 #VALUE!. NUMBERVALUE strips its own percent signs first, so its "%%1.5" stays #VALUE! (the reader now reads the
 leading one, NUMBERVALUE refuses a second).
-UNPROBED: typed cell input of these texts (and the number format Excel gives it); ours shares the reader and so now reads them, with a `0%`/`0.00%` format for a leading percent that is invented.
+Typed into a cell (probes/typed-group-comma-leading-percent, excel-graph 2026-11-02, T-3835, formats in docs/research/typed-group-comma-leading-percent-2026-11-02.md): the same texts give the same numbers and the refused ones stay text (General). Formats: grouped integers `#,##0` (`1,0000`, `01,0000`, `-1,0000`, `1,000,0000`), `#,##0.00` with a decimal (`1,0000.5`); a leading percent `0%` (`%1`, `%-1`, `% 1`, `%1,0000`), `0.00%` with decimals (`%1.5`); `1,0000%` `0%`. The engine matches (the reader is shared with VALUE; test `typed_group_comma_and_leading_percent_formats`).
 Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED

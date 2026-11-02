@@ -580,7 +580,19 @@ A function passed by name (eta-reduced, stored `_xleta.SUM`) works wherever a LA
 arguments as the LAMBDA would: `BYROW(A1:B3,SUM)` = `BYROW(A1:B3,LAMBDA(r,SUM(r)))` (3x1, first 11),
 `GROUPBY(D1:D3,A1:A3,SUM)` (3x2, first "x": two groups and a total row), `BYCOL(A1:B3,MAX)` 1x2, first 3,
 `SCAN(0,A1:A3,MAX)` 3x1, `MAKEARRAY(2,2,SUM)` 2x2, first 2 (SUM(row,col)). REDUCE's initial_value may be left
-empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
+empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). A LAMBDA helper (BYROW, BYCOL, MAP over 1-3 arrays, SCAN, REDUCE) whose function cannot take the number of
+arguments it passes (one for BYROW/BYCOL, one per array for MAP, two for SCAN/REDUCE) is one `#VALUE!` for the whole
+result, never an error per element, over a 3x2 and a 1x1 source alike: too few or too many parameters, `LAMBDA(1)`, a
+LET-bound or a defined-name LAMBDA of the wrong arity, and an eta-reduced function whose argument range excludes the
+count (`_xleta.PI` everywhere, `_xleta.MOD` and `_xleta.ROUND` in BYROW/BYCOL/MAP over 1 or 3 arrays, `_xleta.ABS` in
+SCAN/REDUCE and MAP over 2 or 3 arrays). A function whose range takes the count runs: optional parameters fill the
+gap (`LAMBDA([r],SUM(r))`, `LAMBDA(r,[s],SUM(r))`, `LAMBDA([a],[b],a+b)` and `LAMBDA(a,b,[c],a+b)` all work), and so do
+`_xleta.SUM` everywhere, `_xleta.ROUND`/`_xleta.MOD` with two arguments (SCAN from 0 gives all 0) and `_xleta.ABS` with
+one; `BYROW(A1:B3,_xleta.ABS)` is `#CALC!` (each row's ABS is a row, see "a BYROW LAMBDA that returns a row" below), but
+over a 1x1 source it is the value. Evidence: probes/t3814-lambda-helper-arity Calc!B1:C124 (B the shape or the whole
+error's ERROR.TYPE, C the elements; excel-graph, 2026-11-02, T-3814); the engine matched every cell before the probe
+(`check_arg_count`, functions/logical/lambda.rs). Status: VERIFIED.
+An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
 `#CALC!`); a BYROW LAMBDA that returns a row is `#CALC!`; `ISOMITTED(A1)` outside a LAMBDA is FALSE;
 `REGEXTEST(A1,1)` with A1 = 1 is TRUE (both numbers read as text); `TOCOL(A1:E1,"1")` reads "1" as ignore = 1 (4 rows past the blank E1, ignore 0 gives 5);
 `SEQUENCE(0)` and the mismatched `SORTBY(A1:A3,B1:B2)` are `#CALC!` and `#VALUE!`.
@@ -2143,6 +2155,33 @@ Evidence: probes/t2436 (excel-graph, 2026-10-24), the cases named in T-2578; pro
 Ours: the PIVOTBY shapes since T-2578; the GROUPBY blank keys are T-2460's, the LAMBDA(x,x) cells T-2594's.
 Status: VERIFIED (excel-graph)
 Tasks: T-2578, T-2460, T-2593, T-2594
+
+## GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch (T-3778)
+Rule (gen-m7 arg-pairs batch for GROUPBY, excel-graph, 2026-11-02; each Data sheet has G1=7, G2=0, G3=-2.5, G4=1.5, G5="12",
+G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
+- Scalar `values` that are text (`"2.5"`, `"abc"`, `""`, or a one-cell reference to text) or a one-cell reference to a blank
+  cell make GROUPBY `#VALUE!`, whatever `row_fields` is, unless `row_fields` is a literal error (that error). Numbers and
+  booleans work: `GROUPBY(2,TRUE,_xleta.MIN)` is the row 2, 0 (gen-m7 35679b4facc62956, a full grid of scalar pairs).
+- `row_fields` that is a one-cell reference to an error (`Data!G9`) is `#VALUE!`, but a literal error there is that error
+  (`GROUPBY(#REF!,2,..)` `#REF!`), and `GROUPBY(Data!G9,Data!G9,..)` is the values' `#DIV/0!` (35679b4facc62956 A10554-A11774).
+- A text, empty-text or blank option is `#VALUE!` ahead of a later option's error value
+  (`GROUPBY(Data!A1:A12,Data!D1:E12,_xleta.AVERAGE,Data!G7,Data!G9)` is `#VALUE!`, eb01a9867300331b A11164;
+  `GROUPBY(Data!D1:E12,Data!C1:E12,_xleta.AVERAGE,Data!G6,-2,0,(Data!A1:A12<0.1),Data!G9)` too, 06c84cc76de04bae A10676), though an invalid number loses to the later error (probes/groupby-sort-filter-args B61-B78). Text or blank
+  `values` also win over a later error option (0a91d5918d798930 A10127).
+- A scalar `filter_array` keeps every row when the options before it are omitted (TRUE, 2: "GROUPBY and PIVOTBY" above), but
+  beside given options it is often `#VALUE!` (`GROUPBY(Data!A1:C12,Data!B1:C12,_xleta.MAX,1,-1,1,-1)`, 3a4c7294ff5c4af3 A5125;
+  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`);
+  which argument decides is not yet known.
+- Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
+  (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
+  blank element is valid (B5735 0.3, B8053 TRUE), as it is in a lifted `field_headers` (the entry above, A185). An error
+  `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
+  array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
+  has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
+Ours: none of these yet (the cells are known failures in eval/baseline/gen-m7.txt).
+Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
+lifted `field_headers`, are UNVERIFIED
+Tasks: T-3837, T-3838, T-3839, T-3840
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
