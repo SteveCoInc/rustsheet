@@ -6,6 +6,8 @@ import math
 import random
 from pathlib import Path
 
+import pytest
+
 from rustsheet_tools.fitlab import holdout
 from rustsheet_tools.fitlab.cli import holdout_table
 from rustsheet_tools.fitlab.fit import Fit, FitResult, Sides
@@ -155,10 +157,6 @@ def test_the_report_shows_both_sides_and_the_verdicts() -> None:
 
 
 def test_fit_refuses_a_margin_outside_zero_one() -> None:
-    import pytest
-
-    from rustsheet_tools.fitlab.fit import Fit
-
     for bad in (-0.1, 1.5, math.nan, math.inf):
         with pytest.raises(ValueError, match="margin"):
             Fit("n", "d", [], "p", lambda: [], margin=bad)
