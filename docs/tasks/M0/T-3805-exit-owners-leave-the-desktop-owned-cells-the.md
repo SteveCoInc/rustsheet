@@ -3,10 +3,10 @@ id: T-3805
 title: "exit_owners: leave the desktop-owned cells the Phase 1 rate leaves out (decision 0143) out of M9's rate: criterion"
 milestone: M0
 lane: harness
-status: done
+status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -51,3 +51,11 @@ reads (`read_desktop_owned`; no ownership is recomputed). Other criteria are unt
 and M10 output is unchanged. Unit test `test_desktop_owned_cells_leave_the_rate` added. Not run: the
 full `make eval` before/after count (272 `rate:FORECAST.ETS*` cells expected to drop to 0); the
 steward's next eval shows it.
+
+## Handoff
+Implemented and both reviewers (design, security) approved head e1dce6b9 (PR #2853). CI `hygiene` fails
+`check_governance.py`: `scripts/exit_owners.py` and `scripts/test_exit_owners.py` are protected paths
+and the PR carries no decision record. A sonnet run may not add one. Next: an opus run adds a decision
+record (`make new-decision TITLE="..."`, ruling that M9's `rate:` list leaves out the desktop-owned
+list per decision 0143), re-runs the reviewers on the new head, confirms the `make eval` before/after
+count (272 `rate:FORECAST.ETS*` cells expected to drop to 0), then enqueues. The code needs no change.
