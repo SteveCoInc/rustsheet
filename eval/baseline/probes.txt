@@ -1829,6 +1829,7 @@ C	probes/t3627-roundup-rounddown-negative-x.case.json	70
 C	probes/t3627-roundup-rounddown-t3555-cells.case.json	12
 C	probes/t3631-rand-randbetween-invariant.case.json	61
 C	probes/t3631-randarray-invariant.case.json	45
+C	probes/t3654-filter-result-types.case.json	211
 C	probes/t3656-indirect-spaces-reversed.case.json	291
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
