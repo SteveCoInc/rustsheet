@@ -3,7 +3,7 @@ id: T-3866
 title: "Trim scripts/gh_client.py to what make catch-up uses"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
