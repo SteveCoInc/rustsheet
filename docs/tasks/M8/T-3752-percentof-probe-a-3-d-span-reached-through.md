@@ -3,7 +3,7 @@ id: T-3752
 title: "PERCENTOF: probe a 3-D span reached through IF, CHOOSE or a union"
 milestone: M8
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
