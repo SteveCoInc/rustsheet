@@ -3,7 +3,7 @@ id: T-3453
 title: "Fit lab: kernels name the reference candidate through holdout.REFERENCE; pin within_fifteen_digits against closeness.rs vectors"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
