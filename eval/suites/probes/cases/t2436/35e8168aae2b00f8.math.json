@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c291a4dda3b6fdb91536e1ef5ddb9c4fa911b96beb0156d409ddaf1a7f68e335"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,0.5,1E+5,FALSE)"
+   }
+  }
+ }
+}

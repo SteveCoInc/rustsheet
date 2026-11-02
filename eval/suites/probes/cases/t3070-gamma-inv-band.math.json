@@ -1,0 +1,93 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c225604ab21338e538a9d505520d225fc7a2a8ef62310168656af23ab22fdb7e"
+ },
+ "sheets": {
+  "S": {
+   "A223": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1.5E10)"
+   },
+   "A224": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1.5E10)"
+   },
+   "A238": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E10)"
+   },
+   "A239": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E10)"
+   },
+   "A253": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,4E10)"
+   },
+   "A254": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,4E10)"
+   },
+   "A268": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E11)"
+   },
+   "A269": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E11)"
+   },
+   "A283": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E11)"
+   },
+   "A284": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E11)"
+   },
+   "A298": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E12)"
+   },
+   "A299": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E12)"
+   },
+   "A313": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E13)"
+   },
+   "A314": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E13)"
+   },
+   "A328": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E15)"
+   },
+   "A329": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E15)"
+   }
+  }
+ }
+}

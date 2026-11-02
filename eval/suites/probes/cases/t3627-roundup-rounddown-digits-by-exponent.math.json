@@ -1,0 +1,633 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "7035ac7951d7b0466b5abebdb57b83ee771e8f59ca753a327120aa5d1ca1d39d"
+ },
+ "sheets": {
+  "Sheet1": {
+   "R1": {
+    "t": "n",
+    "v": "1.5e-300",
+    "f": "=ROUNDUP(1.5E-300,400)"
+   },
+   "R10": {
+    "t": "n",
+    "v": "1.5e-120",
+    "f": "=ROUNDUP(1.5E-120,400)"
+   },
+   "R11": {
+    "t": "n",
+    "v": "1.5e-100",
+    "f": "=ROUNDUP(1.5E-100,400)"
+   },
+   "R12": {
+    "t": "n",
+    "v": "1.5e-80",
+    "f": "=ROUNDUP(1.5E-80,400)"
+   },
+   "R13": {
+    "t": "n",
+    "v": "1.5e-60",
+    "f": "=ROUNDUP(1.5E-60,400)"
+   },
+   "R14": {
+    "t": "n",
+    "v": "1.5e-40",
+    "f": "=ROUNDUP(1.5E-40,400)"
+   },
+   "R15": {
+    "t": "n",
+    "v": "1.5e-20",
+    "f": "=ROUNDUP(1.5E-20,400)"
+   },
+   "R16": {
+    "t": "n",
+    "v": "1.5",
+    "f": "=ROUNDUP(1.5E+00,400)"
+   },
+   "R17": {
+    "t": "n",
+    "v": "150000000000000000000.0",
+    "f": "=ROUNDUP(1.5E+20,400)"
+   },
+   "R18": {
+    "t": "n",
+    "v": "15000000000000000000000000000000000000000.0",
+    "f": "=ROUNDUP(1.5E+40,400)"
+   },
+   "R19": {
+    "t": "n",
+    "v": "1.5e+60",
+    "f": "=ROUNDUP(1.5E+60,400)"
+   },
+   "R2": {
+    "t": "n",
+    "v": "1.5e-280",
+    "f": "=ROUNDUP(1.5E-280,400)"
+   },
+   "R20": {
+    "t": "n",
+    "v": "1.5e+80",
+    "f": "=ROUNDUP(1.5E+80,400)"
+   },
+   "R21": {
+    "t": "n",
+    "v": "1.5e+100",
+    "f": "=ROUNDUP(1.5E+100,400)"
+   },
+   "R22": {
+    "t": "n",
+    "v": "1.5e+120",
+    "f": "=ROUNDUP(1.5E+120,400)"
+   },
+   "R23": {
+    "t": "n",
+    "v": "1.5e+140",
+    "f": "=ROUNDUP(1.5E+140,400)"
+   },
+   "R24": {
+    "t": "n",
+    "v": "1.5e+160",
+    "f": "=ROUNDUP(1.5E+160,400)"
+   },
+   "R25": {
+    "t": "n",
+    "v": "1.5e+180",
+    "f": "=ROUNDUP(1.5E+180,400)"
+   },
+   "R26": {
+    "t": "n",
+    "v": "1.5e+200",
+    "f": "=ROUNDUP(1.5E+200,400)"
+   },
+   "R27": {
+    "t": "n",
+    "v": "1.5e+220",
+    "f": "=ROUNDUP(1.5E+220,400)"
+   },
+   "R28": {
+    "t": "n",
+    "v": "1.5e+240",
+    "f": "=ROUNDUP(1.5E+240,400)"
+   },
+   "R29": {
+    "t": "n",
+    "v": "1.5e+260",
+    "f": "=ROUNDUP(1.5E+260,400)"
+   },
+   "R3": {
+    "t": "n",
+    "v": "1.5e-260",
+    "f": "=ROUNDUP(1.5E-260,400)"
+   },
+   "R30": {
+    "t": "n",
+    "v": "1.5e+280",
+    "f": "=ROUNDUP(1.5E+280,400)"
+   },
+   "R31": {
+    "t": "n",
+    "v": "1.5e+300",
+    "f": "=ROUNDUP(1.5E+300,400)"
+   },
+   "R4": {
+    "t": "n",
+    "v": "1.5e-240",
+    "f": "=ROUNDUP(1.5E-240,400)"
+   },
+   "R5": {
+    "t": "n",
+    "v": "1.5e-220",
+    "f": "=ROUNDUP(1.5E-220,400)"
+   },
+   "R6": {
+    "t": "n",
+    "v": "1.5e-200",
+    "f": "=ROUNDUP(1.5E-200,400)"
+   },
+   "R7": {
+    "t": "n",
+    "v": "1.5e-180",
+    "f": "=ROUNDUP(1.5E-180,400)"
+   },
+   "R8": {
+    "t": "n",
+    "v": "1.5e-160",
+    "f": "=ROUNDUP(1.5E-160,400)"
+   },
+   "R9": {
+    "t": "n",
+    "v": "1.5e-140",
+    "f": "=ROUNDUP(1.5E-140,400)"
+   },
+   "S1": {
+    "t": "n",
+    "v": "1.5e-300",
+    "f": "=ROUNDDOWN(1.5E-300,400)"
+   },
+   "S10": {
+    "t": "n",
+    "v": "1.5e-120",
+    "f": "=ROUNDDOWN(1.5E-120,400)"
+   },
+   "S11": {
+    "t": "n",
+    "v": "1.5e-100",
+    "f": "=ROUNDDOWN(1.5E-100,400)"
+   },
+   "S12": {
+    "t": "n",
+    "v": "1.5e-80",
+    "f": "=ROUNDDOWN(1.5E-80,400)"
+   },
+   "S13": {
+    "t": "n",
+    "v": "1.5e-60",
+    "f": "=ROUNDDOWN(1.5E-60,400)"
+   },
+   "S14": {
+    "t": "n",
+    "v": "1.5e-40",
+    "f": "=ROUNDDOWN(1.5E-40,400)"
+   },
+   "S15": {
+    "t": "n",
+    "v": "1.5e-20",
+    "f": "=ROUNDDOWN(1.5E-20,400)"
+   },
+   "S16": {
+    "t": "n",
+    "v": "1.5",
+    "f": "=ROUNDDOWN(1.5E+00,400)"
+   },
+   "S17": {
+    "t": "n",
+    "v": "150000000000000000000.0",
+    "f": "=ROUNDDOWN(1.5E+20,400)"
+   },
+   "S18": {
+    "t": "n",
+    "v": "15000000000000000000000000000000000000000.0",
+    "f": "=ROUNDDOWN(1.5E+40,400)"
+   },
+   "S19": {
+    "t": "n",
+    "v": "1.5e+60",
+    "f": "=ROUNDDOWN(1.5E+60,400)"
+   },
+   "S2": {
+    "t": "n",
+    "v": "1.5e-280",
+    "f": "=ROUNDDOWN(1.5E-280,400)"
+   },
+   "S20": {
+    "t": "n",
+    "v": "1.5e+80",
+    "f": "=ROUNDDOWN(1.5E+80,400)"
+   },
+   "S21": {
+    "t": "n",
+    "v": "1.5e+100",
+    "f": "=ROUNDDOWN(1.5E+100,400)"
+   },
+   "S22": {
+    "t": "n",
+    "v": "1.5e+120",
+    "f": "=ROUNDDOWN(1.5E+120,400)"
+   },
+   "S23": {
+    "t": "n",
+    "v": "1.5e+140",
+    "f": "=ROUNDDOWN(1.5E+140,400)"
+   },
+   "S24": {
+    "t": "n",
+    "v": "1.5e+160",
+    "f": "=ROUNDDOWN(1.5E+160,400)"
+   },
+   "S25": {
+    "t": "n",
+    "v": "1.5e+180",
+    "f": "=ROUNDDOWN(1.5E+180,400)"
+   },
+   "S26": {
+    "t": "n",
+    "v": "1.5e+200",
+    "f": "=ROUNDDOWN(1.5E+200,400)"
+   },
+   "S27": {
+    "t": "n",
+    "v": "1.5e+220",
+    "f": "=ROUNDDOWN(1.5E+220,400)"
+   },
+   "S28": {
+    "t": "n",
+    "v": "1.5e+240",
+    "f": "=ROUNDDOWN(1.5E+240,400)"
+   },
+   "S29": {
+    "t": "n",
+    "v": "1.5e+260",
+    "f": "=ROUNDDOWN(1.5E+260,400)"
+   },
+   "S3": {
+    "t": "n",
+    "v": "1.5e-260",
+    "f": "=ROUNDDOWN(1.5E-260,400)"
+   },
+   "S30": {
+    "t": "n",
+    "v": "1.5e+280",
+    "f": "=ROUNDDOWN(1.5E+280,400)"
+   },
+   "S31": {
+    "t": "n",
+    "v": "1.5e+300",
+    "f": "=ROUNDDOWN(1.5E+300,400)"
+   },
+   "S4": {
+    "t": "n",
+    "v": "1.5e-240",
+    "f": "=ROUNDDOWN(1.5E-240,400)"
+   },
+   "S5": {
+    "t": "n",
+    "v": "1.5e-220",
+    "f": "=ROUNDDOWN(1.5E-220,400)"
+   },
+   "S6": {
+    "t": "n",
+    "v": "1.5e-200",
+    "f": "=ROUNDDOWN(1.5E-200,400)"
+   },
+   "S7": {
+    "t": "n",
+    "v": "1.5e-180",
+    "f": "=ROUNDDOWN(1.5E-180,400)"
+   },
+   "S8": {
+    "t": "n",
+    "v": "1.5e-160",
+    "f": "=ROUNDDOWN(1.5E-160,400)"
+   },
+   "S9": {
+    "t": "n",
+    "v": "1.5e-140",
+    "f": "=ROUNDDOWN(1.5E-140,400)"
+   },
+   "T1": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-300,-400)"
+   },
+   "T10": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-120,-400)"
+   },
+   "T11": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-100,-400)"
+   },
+   "T12": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-80,-400)"
+   },
+   "T13": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-60,-400)"
+   },
+   "T14": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-40,-400)"
+   },
+   "T15": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-20,-400)"
+   },
+   "T16": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+00,-400)"
+   },
+   "T17": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+20,-400)"
+   },
+   "T18": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+40,-400)"
+   },
+   "T19": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+60,-400)"
+   },
+   "T2": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-280,-400)"
+   },
+   "T20": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+80,-400)"
+   },
+   "T21": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+100,-400)"
+   },
+   "T22": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+120,-400)"
+   },
+   "T23": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+140,-400)"
+   },
+   "T24": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+160,-400)"
+   },
+   "T25": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+180,-400)"
+   },
+   "T26": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+200,-400)"
+   },
+   "T27": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+220,-400)"
+   },
+   "T28": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+240,-400)"
+   },
+   "T29": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+260,-400)"
+   },
+   "T3": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-260,-400)"
+   },
+   "T30": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+280,-400)"
+   },
+   "T31": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E+300,-400)"
+   },
+   "T4": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-240,-400)"
+   },
+   "T5": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-220,-400)"
+   },
+   "T6": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-200,-400)"
+   },
+   "T7": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-180,-400)"
+   },
+   "T8": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-160,-400)"
+   },
+   "T9": {
+    "t": "e",
+    "why": "the rounded value 1.000E+400 overflows the double range",
+    "f": "=ROUNDUP(1.5E-140,-400)"
+   },
+   "U1": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-300,-400)"
+   },
+   "U10": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-120,-400)"
+   },
+   "U11": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-100,-400)"
+   },
+   "U12": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-80,-400)"
+   },
+   "U13": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-60,-400)"
+   },
+   "U14": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-40,-400)"
+   },
+   "U15": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-20,-400)"
+   },
+   "U16": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+00,-400)"
+   },
+   "U17": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+20,-400)"
+   },
+   "U18": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+40,-400)"
+   },
+   "U19": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+60,-400)"
+   },
+   "U2": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-280,-400)"
+   },
+   "U20": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+80,-400)"
+   },
+   "U21": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+100,-400)"
+   },
+   "U22": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+120,-400)"
+   },
+   "U23": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+140,-400)"
+   },
+   "U24": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+160,-400)"
+   },
+   "U25": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+180,-400)"
+   },
+   "U26": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+200,-400)"
+   },
+   "U27": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+220,-400)"
+   },
+   "U28": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+240,-400)"
+   },
+   "U29": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+260,-400)"
+   },
+   "U3": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-260,-400)"
+   },
+   "U30": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+280,-400)"
+   },
+   "U31": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E+300,-400)"
+   },
+   "U4": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-240,-400)"
+   },
+   "U5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-220,-400)"
+   },
+   "U6": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-200,-400)"
+   },
+   "U7": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-180,-400)"
+   },
+   "U8": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-160,-400)"
+   },
+   "U9": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(1.5E-140,-400)"
+   }
+  }
+ }
+}

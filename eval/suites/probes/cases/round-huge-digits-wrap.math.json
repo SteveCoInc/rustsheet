@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "1752bef76f338ac00b18f08b7f3d87f5a6747d3fcb7610841f33fa8ee74aa028"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A42": {
+    "t": "n",
+    "v": "123.456",
+    "f": "=ROUNDUP(123.456,3)"
+   },
+   "A43": {
+    "t": "n",
+    "v": "1000.0",
+    "f": "=ROUNDUP(123.456,-3)"
+   },
+   "B42": {
+    "t": "n",
+    "v": "123.456",
+    "f": "=ROUNDDOWN(123.456,3)"
+   },
+   "B43": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUNDDOWN(123.456,-3)"
+   },
+   "C42": {
+    "t": "n",
+    "v": "123.456",
+    "f": "=ROUND(123.456,3)"
+   },
+   "C43": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=ROUND(123.456,-3)"
+   }
+  }
+ }
+}
