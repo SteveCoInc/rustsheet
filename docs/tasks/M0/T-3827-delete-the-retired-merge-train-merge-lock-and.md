@@ -31,6 +31,9 @@ train sections of the steward, work-loop and review skills.
       stated reason; `scripts/check_duplication.py` and the other ratchets are updated with
       `--update` where they shrink.
 - [ ] No skill or `docs/process/` text names a deleted target or mode.
+- [ ] `scripts/review_panel.py` goes with `merge_ready.py`, and the review skill says precisely what
+      a task-only PR is: every changed path a regular-file task file (matching `tasks.TASK_FILE`)
+      under `docs/tasks/`, so not `docs/tasks/README.md` and not a symlink (T-3759, dropped).
 - [ ] SPEC-0027 is marked superseded by 0247 (kept as history) or removed with a pointer.
 - [ ] The verdict records (0178) are the only machine check of reviewer verdicts: delete them only
       with a replacement (e.g. a required status check posted by the review step), or have the
