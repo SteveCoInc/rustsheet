@@ -148,7 +148,8 @@ C2, C3, C8; excel-graph, 2026-10-29, T-3151; see "Criterion operands and text ce
 Padded zero text follows the number criterion 0 too: over A1:A12 = `" 0"`, `"0 "`, `" 0 "`, CHAR(160)&"0", "0"&CHAR(160),
 "+0", "0.0", "-0", "0E0", "00", the number 0 and the text "0" (weights 2^0..2^11), a blank-cell criterion (from this
 sheet or picked by `INDEX`), an omitted one, the number 0 and the text criterion "0" all give COUNTIF and COUNTIFS 10 and
-SUMIF and SUMIFS 4071: every cell except the two CHAR(160)-padded ones, which VALUE reads as `#VALUE!` (L4, L5) and
+SUMIF and SUMIFS 4071: every cell except the two CHAR(160)-padded ones, which VALUE does not read as a number (K4, K5, L4, L5; its error is `#VALUE!` for NBSP-padded number text per
+probes/t3334-criteria-operand-forms H47, H51, H55, H59) and
 which no numeric criterion matches ("Numeric criteria against text cells and non-ASCII spaces"). The 80-cell range
 A21:A100 that the *IFS cache indexes gives the same. Evidence: probes/t3807-blank-criterion-padded-zero D1:H4, D21:H24,
 K1:L12. Oracle: excel-graph, 2026-11-02 (T-3807).

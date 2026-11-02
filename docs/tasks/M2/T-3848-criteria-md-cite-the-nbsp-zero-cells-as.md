@@ -3,7 +3,7 @@ id: T-3848
 title: "criteria.md: cite the NBSP zero cells as not read by VALUE, not as #VALUE!"
 milestone: M2
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,7 @@ claims only what its cells show about VALUE on the two CHAR(160)-padded zero tex
 
 ## Out of scope
 - New probes (a bare `=VALUE(A4)` cell would settle the error code, but the t3334 cells already do).
+
+## Outcome
+- criteria.md now says the two CHAR(160)-padded zero cells are ones VALUE does not read as a number (K4, K5, L4, L5)
+  and cites t3334 H47, H51, H55, H59 for the `#VALUE!` itself. Docs only; no eval delta.
