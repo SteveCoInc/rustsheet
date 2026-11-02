@@ -1871,6 +1871,7 @@ C	probes/t3807-blank-criterion-padded-zero.case.json	64
 C	probes/t3807-percent-operand-cut-order.case.json	84
 C	probes/t3808-m5-aggregate-overflow.case.json	576
 C	probes/t3808-median-geomean-direct-overflow.case.json	18
+C	probes/t3814-lambda-helper-arity.case.json	248
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

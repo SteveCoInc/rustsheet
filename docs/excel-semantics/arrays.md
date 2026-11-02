@@ -580,7 +580,19 @@ A function passed by name (eta-reduced, stored `_xleta.SUM`) works wherever a LA
 arguments as the LAMBDA would: `BYROW(A1:B3,SUM)` = `BYROW(A1:B3,LAMBDA(r,SUM(r)))` (3x1, first 11),
 `GROUPBY(D1:D3,A1:A3,SUM)` (3x2, first "x": two groups and a total row), `BYCOL(A1:B3,MAX)` 1x2, first 3,
 `SCAN(0,A1:A3,MAX)` 3x1, `MAKEARRAY(2,2,SUM)` 2x2, first 2 (SUM(row,col)). REDUCE's initial_value may be left
-empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
+empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). A LAMBDA helper (BYROW, BYCOL, MAP over 1-3 arrays, SCAN, REDUCE) whose function cannot take the number of
+arguments it passes (one for BYROW/BYCOL, one per array for MAP, two for SCAN/REDUCE) is one `#VALUE!` for the whole
+result, never an error per element, over a 3x2 and a 1x1 source alike: too few or too many parameters, `LAMBDA(1)`, a
+LET-bound or a defined-name LAMBDA of the wrong arity, and an eta-reduced function whose argument range excludes the
+count (`_xleta.PI` everywhere, `_xleta.MOD` and `_xleta.ROUND` in BYROW/BYCOL/MAP over 1 or 3 arrays, `_xleta.ABS` in
+SCAN/REDUCE and MAP over 2 or 3 arrays). A function whose range takes the count runs: optional parameters fill the
+gap (`LAMBDA([r],SUM(r))`, `LAMBDA(r,[s],SUM(r))`, `LAMBDA([a],[b],a+b)` and `LAMBDA(a,b,[c],a+b)` all work), and so do
+`_xleta.SUM` everywhere, `_xleta.ROUND`/`_xleta.MOD` with two arguments (SCAN from 0 gives all 0) and `_xleta.ABS` with
+one; `BYROW(A1:B3,_xleta.ABS)` is `#CALC!` (each row's ABS is a row, see "a BYROW LAMBDA that returns a row" below), but
+over a 1x1 source it is the value. Evidence: probes/t3814-lambda-helper-arity Calc!B1:C124 (B the shape or the whole
+error's ERROR.TYPE, C the elements; excel-graph, 2026-11-02, T-3814); the engine matched every cell before the probe
+(`check_arg_count`, functions/logical/lambda.rs). Status: VERIFIED.
+An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
 `#CALC!`); a BYROW LAMBDA that returns a row is `#CALC!`; `ISOMITTED(A1)` outside a LAMBDA is FALSE;
 `REGEXTEST(A1,1)` with A1 = 1 is TRUE (both numbers read as text); `TOCOL(A1:E1,"1")` reads "1" as ignore = 1 (4 rows past the blank E1, ignore 0 gives 5);
 `SEQUENCE(0)` and the mismatched `SORTBY(A1:A3,B1:B2)` are `#CALC!` and `#VALUE!`.
