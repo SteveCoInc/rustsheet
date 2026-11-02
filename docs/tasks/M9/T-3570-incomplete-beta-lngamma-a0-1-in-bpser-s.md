@@ -42,6 +42,7 @@ bpser's L is modelled where it takes lnGamma(a0 < 1), and the stored intermediat
   (bpser's lnGamma and b < 1 ceiling), T-3571 (bfrac), T-3572 (GAMMA.DIST near P = 1); one each.
 
 ## Outcome
+### First half (#2795, r5-bpser-lngamma)
 - **lnGamma(a0 < 1) inside bpser's L is Excel's GAMMALN** (docs/research/t2464/r5-bpser-lngamma/RESULTS.md). New probe
   probes-numeric t3570-r5-bpser-lngamma-beta (1,920 BETA.DIST cells): b0 2.5 and 6.25, a0 stepping by single ulps around
   0.3, 0.5 and 0.7, two x each. Its -gl companion has Excel's GAMMALN at all 620 shape arguments. Both were filled from
@@ -61,3 +62,22 @@ bpser's L is modelled where it takes lnGamma(a0 < 1), and the stored intermediat
   t3570 cell. The gated suites and their baselines are unchanged.
 - No fitted value: the comparison is between two fixed formulas, so decision 0188 R4 has no `FITTED` range to record.
   The tune/hold-out split by b0 was fixed before scoring.
+
+### Second half (r5-bpser-lg)
+Done 2026-11-01 (research; negatives with counts, nothing solved for the engine).
+- docs/research/t2464/r5-bpser-lg/RESULTS.md. Probes t3570-r5-bpser-lg (5,043 cells: 504 a0 in single-ulp steps at
+  7 centers × 3 b0, 8 x each, with Excel's GAMMALN columns) and t3570-r5-bpser-lg-aux (2,520) were filled from
+  excel-graph. The positive control recovers the planted g on 504 of 504 a0.
+- lnΓ(a0) in bpser's L is still a negative:
+  - GL is right at 0.15 and 0.3 (in the best set on 143 of 144 a0) and leads from 0.7 up.
+  - Just above 0.5, fl(gamln1 - LN) is right more often: 19 a0 against 7.
+  - Five other distinct forms lose (CR lnΓ(a0), fl(CR lnΓ(1 + a0) - LN a0) and three LN(GAMMA) forms; fl(GAMMALN(1 +
+    a0) - LN a0) equals GL below 0.7 and the fl64 gamln1 form equals g1ln53), and so do the raw-t kernel and K3 kept
+    past 1.5.
+  - Overall GL wins 52 to 36 (tune) and 51 to 19 (hold), so the engine's GL53 stays.
+- The ceiling also holds for a0 < 1 < b0 < 8: 3,355 of 4,032 cells, at 66-89%. It sits in alx, s or EXP, not in L.
+  None of the series or composition variants tried lifts it.
+- Confirmed T-1941's identity GAMMALN(v) = fl(GAMMALN(fl(1 + v)) - LN v) below 0.7 (360 of 360).
+- No engine follow-up: nothing is solved. Research follow-up T-3771 (pin lnΓ on (0.5, 0.56]; LN and EXP side columns
+  for the ceiling).
+- Eval delta: none (research; probes-numeric is not gated, and no engine code changed).
