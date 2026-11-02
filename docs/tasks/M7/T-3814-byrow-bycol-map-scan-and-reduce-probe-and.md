@@ -3,7 +3,7 @@ id: T-3814
 title: "BYROW, BYCOL, MAP, SCAN and REDUCE: probe and match a LAMBDA of the wrong arity, optional parameters and eta-reduced functions"
 milestone: M7
 lane: functions-logic
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -45,13 +45,24 @@ Coordinate with T-3655 (MAKEARRAY arity and sizes, functions-logic): whichever l
 check; neither adds a second one (directive 3).
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph, canary-verified) covers the forms above for all five helpers; undecodable or refused
+- [x] A probe case (excel-graph, canary-verified) covers the forms above for all five helpers; undecodable or refused
       forms are listed in the semantics entry, not committed as cells.
-- [ ] The engine matches every probed cell through one arity rule shared by the five helpers (and MAKEARRAY's, if
+- [x] The engine matches every probed cell through one arity rule shared by the five helpers (and MAKEARRAY's, if
       T-3655 has landed).
-- [ ] docs/excel-semantics/arrays.md states the rule with the probe cells cited, in the same PR.
-- [ ] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
+- [x] docs/excel-semantics/arrays.md states the rule with the probe cells cited, in the same PR.
+- [x] `make check` green; eval known failures only shrink (baseline updated, no new lines); reviewers approve.
 
 ## Out of scope
 - MAKEARRAY (T-3655) and GROUPBY/PIVOTBY eta arity (T-1706, T-2644).
 - LAMBDA results that are arrays or references (evidenced; arrays.md).
+
+## Outcome
+Probe `probes/t3814-lambda-helper-arity` (M7, excel-graph 2026-11-02, canary-verified, 248 cells over 124 forms):
+BYROW and BYCOL (3x2 and 1x1 sources), MAP over 1, 2 and 3 arrays, SCAN and REDUCE (3x2 and 1x1) with LAMBDA(1),
+one parameter fewer and one more, optional parameters (needed and extra), LET-bound and defined-name LAMBDAs of the
+wrong arity, and `_xleta.ABS/MOD/PI/SUM/ROUND`. Column B gives the result's shape or the whole error's ERROR.TYPE,
+column C the elements. Excel's rule: any arity mismatch is one `#VALUE!` for the whole result (never per element);
+a function whose argument range covers the count runs. The engine already matched every cell (`check_arg_count`,
+one rule shared by the five helpers), so no engine change. No form was undecodable: wrapping in ROWS/ERROR.TYPE/
+TEXTJOIN avoids the error excel-graph cannot decode. arrays.md records the rule. Eval delta: +1 probe case, 248
+cells, all bit-exact; no regressions, no new known failures.
