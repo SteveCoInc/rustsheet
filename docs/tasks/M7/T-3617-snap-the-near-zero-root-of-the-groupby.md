@@ -3,7 +3,7 @@ id: T-3617
 title: "Snap the near-zero root of the GROUPBY and PIVOTBY aggregation LAMBDA"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -19,10 +19,13 @@ GROUPBY and PIVOTBY snap the near-zero `+`/`-` root of their aggregation LAMBDA 
 - Reuse `Model::evaluate_formula_root` as T-3105 did for `call_lambda`.
 
 ## Acceptance criteria
-- [ ] Every cell above passes and leaves eval/baseline/probes.txt.
-- [ ] k = 8 cells (B19-B27) still keep 1.7763568394002505e-15.
-- [ ] `make check` green; reviewers approve.
+- [x] Every cell above passes and leaves eval/baseline/probes.txt.
+- [x] k = 8 cells (B19-B27) still keep 1.7763568394002505e-15.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `GROUPBY(..,SUM)` (Calc!B44, B45): `#NAME?` in both Excel (graph) and the engine, already passing.
 - The helpers MAP, MAKEARRAY, BYROW, BYCOL, REDUCE, SCAN (T-3111).
+
+## Outcome
+GROUPBY/PIVOTBY aggregation callers now use `LambdaCaller::snapping_root` (group_functions.rs). probes/t3112-snap-groupby-eta (47/47) and -totals (23/23) pass; 23 known failures left eval/baseline/probes.txt; no regressions. The bare-`SUM` MAP cells (B37, B38) already pass.
