@@ -1216,6 +1216,8 @@ fn a_table_sorts_by_the_named_keys_first() {
     assert_eq!(
         keys(&model, "N", "O"),
         "West|Apple West|Pear South|Banana East|Apple East|Pear 0|Apple"
+    );
+}
 
 #[test]
 fn scalar_inputs_and_the_order_of_their_errors() {
