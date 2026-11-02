@@ -202,9 +202,10 @@ fn test_fn_gamma_inv_huge_shape() {
     assert_eq!(model._get_text("A4"), *"999999999.7");
 }
 
-/// GAMMA.DIST at a huge shape is `#NUM!` for a density at a tiny x / beta and for a cdf above a
-/// shape of about 1E+76, and 0 on the near side of each cut and for a huge x
-/// (probes/t2435-dist-extremes A25:A31, A92:A102; T-3271).
+/// GAMMA.DIST's density is `#NUM!` where shape / x overflows, whatever the scale and the density
+/// (probes-numeric/t3316-gamma-density-overflow, -nonzero; T-3316), and its cdf is `#NUM!` from a
+/// shape of 1.85E+76 (T-3271's interim cut, T-3855); 0 on the near side of each and for a huge x
+/// (probes/t2435-dist-extremes A25:A31, A92:A102; fit-audit-t3271-density-cut A43, A45, A48).
 #[test]
 fn test_fn_gamma_dist_huge_shape_cuts() {
     let mut model = new_empty_model();
@@ -218,6 +219,16 @@ fn test_fn_gamma_dist_huge_shape_cuts() {
         ("A7", "=GAMMA.DIST(1E-300,1E+9,3,TRUE)", "0"),
         ("A8", "=GAMMA.DIST(2,1E+40,1E+10,TRUE)", "0"),
         ("A9", "=GAMMA.DIST(1E+307,1E+10,0.5,FALSE)", "0"),
+        ("A10", "=GAMMA.DIST(5.5626E-300,1E+9,1,FALSE)", "#NUM!"),
+        ("A11", "=GAMMA.DIST(5.5628E-300,1E+9,1,FALSE)", "0"),
+        ("A12", "=GAMMA.DIST(5.5626E-300,1E+9,1E-200,FALSE)", "#NUM!"),
+        ("A13", "=GAMMA.DIST(5.3E-308,10,1E-5,FALSE)", "#NUM!"),
+        ("A14", "=GAMMA.DIST(5.6E-308,10,1E-5,FALSE)", "0"),
+        ("A15", "=GAMMA.DIST(5.3E-308,10,2.3E-308,FALSE)", "#NUM!"),
+        ("A16", "=GAMMA.DIST(0.5,1E+15,1,FALSE)", "0"),
+        ("A17", "=GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)", "#NUM!"),
+        ("A18", "=GAMMA.DIST(1E-200,1E+9,1E+100,FALSE)", "0"),
+        ("A19", "=GAMMA.DIST(2,1.85E+76,1E+10,FALSE)", "#NUM!"),
     ];
     for (cell, formula, _) in cells {
         model._set(cell, formula);

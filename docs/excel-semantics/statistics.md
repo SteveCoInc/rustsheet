@@ -5554,41 +5554,50 @@ main after T-3350):
 So `HUGE_SHAPE_MIN` and the upper edge are not Excel's cut points (T-3409 models the search).
 Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505, T-3530
 
-## GAMMA.DIST at a huge shape: #NUM! for a density at a tiny x, for the cdf above about 1E+76 (T-2435)
-Rule: GAMMA.DIST's density is `#NUM!`, not 0, where the shape is large and x/beta tiny:
-`GAMMA.DIST(1E-300,1E+9,3,FALSE)` and `GAMMA.DIST(1E-300,1E+10,3,FALSE)` are `#NUM!`, while a shape
-of 1E+8 at the same x, and a shape of 1E+9 at x = 1E-10 or 1, are 0; the cut sits between
-(alpha - 1)|LN(x/beta)| of 6.9E+10 (0) and 6.9E+11 (`#NUM!`). The cdf is 0 for shapes up to 1E+40 at
-x/beta = 2E-10 but `#NUM!` at 1.85E+76 (`GAMMA.DIST(2,1.85E+76,1E+10,TRUE)`,
-`GAMMADIST(2,1.85E+76,1E+10,TRUE)`).
-Evidence: probes/t2435-dist-extremes A25:A34, A92:A102 (excel-graph, 2026-10-26); gen-m9
-2801c1c11c21e134 A241 (`GAMMADIST(1E-300,10000000001,3,FALSE)`) and 40425341c5034eed A265
-(`GAMMADIST(2,1.85E+76,1E+10,"TRUE")`).
-The cdf cut only turns a 0 into `#NUM!`: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
+## GAMMA.DIST at a huge shape: #NUM! where shape/x overflows; an unexplained #NUM! from about 1E+56 (T-2435, T-3316)
+Rule 1 (density): GAMMA.DIST's density of a positive x is `#NUM!` where shape / x overflows a double, whatever the
+scale and whatever the density would be: `GAMMA.DIST(5.5626E-300,1E+9,1,FALSE)` is `#NUM!` and 5.5628E-300 is 0 (1E+9 / x
+is 1.79772E+308 against 1.79766E+308, either side of DBL_MAX 1.7976931E+308), at a scale of 1E-200 too, at shapes
+1000 and 1E+15 the same way, and at shape 10 `GAMMA.DIST(5.3E-308,10,1E-5,FALSE)` and 4.9E-308 are `#NUM!` while 5.6E-308
+is 0, so the numerator is the shape, not shape - 1. It holds where the density is far from 0:
+`GAMMA.DIST(5.3E-308,10,2.3E-308,FALSE)` is `#NUM!` while `GAMMA.DIST(5.6E-308,10,2.3E-308,FALSE)` is 3.1567E+304, and the
+cdf there keeps its value (`GAMMA.DIST(5.3E-308,10,2.3E-308,TRUE)` is 0.000146). This is the "x/shape below a cut in
+(2.17E-309, 1E-308]" the T-3530 fit audit saw: the cut is 1/DBL_MAX, 5.56E-309, and it explains every density cell of
+probes-numeric/fit-audit-t3271-density-cut and probes/t2435-dist-extremes A25:A34, A92 (`GAMMA.DIST(1E-300,1E+9,3,FALSE)`
+is `#NUM!` because 1E+9 / 1E-300 overflows; the shape 1E+8 is 0 because 1E+308 does not).
+Evidence: probes-numeric/t3316-gamma-density-overflow A1:A15, t3316-gamma-density-overflow-nonzero (excel-graph,
+2026-11-02); fit-audit-t3271-density-cut A9, A47:A49 and A43 (`GAMMA.DIST(0.5,1E+15,1,FALSE)` is 0); gen-m9
+2801c1c11c21e134 A241 (`GAMMADIST(1E-300,10000000001,3,FALSE)`).
+A scale that makes x / beta subnormal or infinite is `#NUM!` by its own rule (T-2738; `GAMMA.DIST(5.5628E-300,1E+9,1E+200,
+FALSE)`, t3316-gamma-density-overflow A5).
+Rule 2 (both columns, UNVERIFIED mechanism): from a shape between 1E+55 and 1E+56 (at x/beta = 2E-10) Excel's computed 0
+is `#NUM!` at some points and not others, with no threshold in either argument, and the density at an x/beta below 1 is
+`#NUM!` at exactly the cdf's points (12 of 12 pairs at shape 1E+70):
+- shape 1E+70, beta 1, the cdf (t3316-gamma-cdf-y-sweep): `#NUM!` at x = 1E-2, 1E-10, 1E-26, 1E-42, 1E-54, 1E-66, 1E-86,
+  1E-98, 2E-10, 3E-10, 1E-5, 2E-5, 2E-20 and 1E-100; 0 at 1E-6, 1E-14, 1E-18, 1E-22, 1E-30, 1E-34, 1E-38, 1E-46,
+  1E-50, 1E-58, 1E-62, 1E-70 to 1E-82, 1E-90, 1E-94, 5E-10, 2E-9, 2E-11, 2E-15, 2E-30, 2E-50, 2E-100 and 0.1.
+  Only x/beta counts: `GAMMA.DIST(2E+90,1E+70,1E+100,TRUE)` and `GAMMA.DIST(1E-90,1E+70,1E+10,TRUE)` follow 2E-10 and 1E-100.
+- x/beta = 2E-10 (x = 2, beta = 1E+10, and x = 2E-10, beta = 1): 0 at shapes 1E+45, 1E+50 and 1E+55, `#NUM!` from 1E+56
+  to 1.8E+76 except 0 at 1E+76, then 0 at 1.84E+76 and `#NUM!` at 1.85E+76; densities 0 up to 1E+50 and `#NUM!` at 1E+60 and 1E+70.
+- x/beta = 1E-100: 0 at shapes 1E+60, 1E+75, 1.5E+76, 1E+100 and 1E+200, `#NUM!` at 1E+70 and 1.85E+76; x/beta of 0.5, 1,
+  2 and 1E+50 gave 0 at every probed shape.
+A refill in fresh workbooks reproduced fit-audit A4, A12 and A18, so the pattern is deterministic. It looks like the
+rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looks for it.
+Evidence: probes-numeric/fit-audit-t3271-cdf-cut (one cell per workbook; A5, A8, A31 and A33 have no value),
+t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep, t3316-gamma-density-overflow A16:A26 (excel-graph, 2026-11-02);
+probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at x/beta = 2E-10 and shapes 1.2E+55 to
+1E+90 was refused twice (createSession retries exhausted), as T-2982 saw for other mixes of these cells.
+A cdf that is not 0 keeps its value: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
 x at a huge shape keeps its density of 0 (`GAMMA.DIST(1E+307,1E+10,0.5,FALSE)` is 0, t2435-dist-extremes A31).
-Ours (T-3271): a computed 0 is `#NUM!` for a density at x/beta below 1 with (alpha - 1)·(-LN(x/beta)) of at least
-6.9187E+11 (A26's value, the smallest `#NUM!` seen), and for a cdf of a positive x at a shape of at least 1.85E+76 (the
-smallest `#NUM!` seen). Between the bracket ends (density 6.9E+10 to 6.9187E+11, cdf 1E+40 to 1.85E+76) the cut is
-UNVERIFIED: excel-graph refused workbooks holding those cells (FileCorruptTryRepair, T-2982).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
-The density cut's variable is not (alpha - 1)·(-LN(x/beta)) (T-3530 fit audit, probes-numeric/fit-audit-t3271-density-cut,
-50 cells): `GAMMA.DIST(0.5,1E+15,1,FALSE)` (A43, product 3.5E14) is 0, while `GAMMA.DIST(2.17173678289098E-300,1E+9,1,FALSE)`
-(A9, product 6.9E11) and `GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)` (A48, 6.77E11) are `#NUM!`, and the scale does not count
-(`GAMMA.DIST(1E-200,1E+9,1E+100,FALSE)`, A45, x/beta 1E-300, is 0). At the probed shapes 1E8 to 1E15 every cell,
-t2435's included, fits `#NUM!` where x/shape is below a cut between 2.17E-309 and 1E-308, else 0: about where x/shape
-stops being a normal double (UNVERIFIED as a form, T-3316). The rule does not explain fit-audit-t3271-cdf-cut A41
-`GAMMA.DIST(2,1.85E+76,1E+10,FALSE)` and A42 `GAMMA.DIST(2,1E+70,1E+10,FALSE)`, `#NUM!` densities at x/shape about
-1E-76 and 2E-70 (the engine agrees there), so from a shape of 1E70 something else makes the density `#NUM!`. The
-engine is wrong-type at A9, A43 and A48.
-The cdf cut is not a shape cut either (fit-audit-t3271-cdf-cut, filled one cell per workbook, 38 of 42 cells; A5, A8,
-A31 and A33 have no value): at
-x = 2, beta = 1E10, Excel is `#NUM!` from shape 1E60 to 1.8E76 but 0 at 1E76 and 1.84E76; at beta = 1 it is 0 for
-shapes 1E60 to 1E200 (x = 1 and 1E50), and for x = 1E-100 it is 0 except at shape 1.85E76 (`#NUM!`). A refill in
-fresh workbooks reproduced A4, A12 and A18. The engine has the wrong type at 21 of the 38 (UNVERIFIED rule, T-3316).
-Status: VERIFIED (excel-graph) at the probed cells; the cut positions inside each bracket UNVERIFIED
-Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530
-Implemented in: `huge_shape_num_error`, `HUGE_SHAPE_DENSITY_CUT`, `HUGE_SHAPE_CDF_CUT` (both rules refuted by the T-3530
-fit audit; T-3316 replaces them)
+Ours: rule 1 exactly (T-3316). For rule 2 the engine keeps T-3271's shape cut of 1.85E+76 for the cdf of a positive x and,
+since T-3316, for the density at an x/beta below 1 as well; it replaces T-3271's (shape - 1)·(-LN(x/beta)) density cut,
+which the fit audit refuted. Below 1.85E+76 the engine is 0 where Excel is `#NUM!` (and, from there up, `#NUM!` where Excel
+is 0 at beta = 1).
+Status: VERIFIED (excel-graph) for rule 1, its cut pinned to 2 parts in 1E+5; rule 2 VERIFIED at the probed cells, its
+mechanism UNVERIFIED
+Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530, T-3855
+Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_CDF_CUT` (rule 2, interim)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
