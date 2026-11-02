@@ -3,7 +3,7 @@ id: T-3866
 title: "Trim scripts/gh_client.py to what make catch-up uses"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -27,14 +27,23 @@ catch-up`, and `make renumber` through it) imports `gh_client`, for `from_remote
 `gh_client.py` carries `TODO(T-3866)`.
 
 ## Acceptance criteria
-- [ ] Every public function, method and constant of `gh_client.py` has a caller outside its own
+- [x] Every public function, method and constant of `gh_client.py` has a caller outside its own
       test, or is a part of the request machinery (`Request`, `send`, `call`, `GhApi`, `FakeGh`)
       those callers need; the rest and their tests are deleted.
-- [ ] `scripts/test_gh_client.py` still checks that the fake and `gh api` build the same requests
+- [x] `scripts/test_gh_client.py` still checks that the fake and `gh api` build the same requests
       for every method kept, and that no caller text reaches another API path.
-- [ ] The `TODO(T-3866)` in the module docstring is gone; `scripts/check_duplication.py --update`
+- [x] The `TODO(T-3866)` in the module docstring is gone; `scripts/check_duplication.py --update`
       if it shrinks.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `make catch-up` and `make renumber` behavior.
+
+## Outcome
+`scripts/gh_client.py` shrank from 484 to ~190 lines: only `Request`, the validators `number`,
+`branch_name`, `checked`, `as_dict`, `Client` (`call`, `pull`), `GhApi`, `FakeGh`, `Reply`,
+`from_remote`, `owner_repo`, `field_of`, `text_of` and `GhError` remain (what `merge_catchup.py`
+imports). All request builders, paging, cursor, label and time helpers and their tests were deleted;
+`TODO(T-3866)` is gone. `test_gh_client.py` keeps the fake-vs-`gh api` same-request check and the
+refusal checks for what remains. Eval delta: none (scripts only). `make check-fast` green;
+`check_duplication.py --update` left the count unchanged.
