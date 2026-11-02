@@ -307,21 +307,33 @@ Status: VERIFIED
 Implemented in: `effective_digits` in crates/rustsheet-engine/src/decimal_round.rs (T-0218).
 Tasks: T-0218, T-0268
 
-## ROUNDUP of a huge value at a huge negative num_digits
-Observation (T-3555): `ROUNDUP(6.4421516092447E+265,-43376)` is 6.4421516092447E+265, the value unchanged. The rule
-above says ROUNDUP keeps the sign of `num_digits` and takes its magnitude modulo 65,536, which leaves -43,376. The unit
-10^43376 then overflows, so the rule predicts `#NUM!`, which is what the engine returns. In the same draw,
-`ROUNDUP(-3.41521682833705E-207,-11541)`, `ROUNDUP(-2.33253918200575E+106,-678)` and `ROUNDUP(7712487.6865209,-400)`
-were `#NUM!`, and `ROUNDUP(4.72880001004526E+149,22178)` was the value. Every earlier huge-`num_digits` probe used a
-small value. The same value at -320 is `#NUM!` (committed: eval/accuracy/tables/ROUNDUP/s1 Calc!A111, `ROUNDUP(6.4421516092447E+265,-320)`).
-One candidate fits every cell above: a 16-bit count of the kept digits, `num_digits` + e + 1. At -320 the count is -54
-(`#NUM!`); at -43,376 it is -43,110, which wraps to +22,426 (the value comes back). But it does not fit
-`ROUNDUP(123.456,-65535)`, which is `#NUM!` (probes/round-huge-digits-wrap) though its count -65,532 wraps to +4, so
-the count alone is not the rule.
-Evidence: excel-graph, 2026-11-01, T-3555's first ROUNDUP Gate A draw. That batch was replaced before commit (its
-point was a math domain error against an Excel number), so T-3627 re-probes the cell.
-Status: UNVERIFIED (one cell; T-3627 probes for the rule)
-Tasks: T-3627
+## ROUNDUP and ROUNDDOWN round at 100 places past a 16-bit num_digits
+Rule: ROUNDUP and ROUNDDOWN narrow `num_digits` to k as above (sign kept, magnitude modulo 65,536). When |k| is
+32,768 or more, which no longer fits a signed 16-bit integer, they round the 15-digit cut at 100 places instead of k:
+at 10^-100 for positive k and at 10^100 for negative k. ROUNDUP still adds its unit 10^-k as a double (see "ROUNDUP adds
+the unit in binary"). For positive k that unit underflows to 0, so ROUNDUP returns the rounded-down value. For negative
+k it overflows, so ROUNDUP is `#NUM!` whenever a digit is dropped. Excel is right, however odd:
+- `ROUNDDOWN(1.23456789012345E-95,65535)` = `ROUNDUP(…,65535)` = 1.23456E-95.
+- `ROUNDUP(1.5E-100,65535)` = 1E-100, and `ROUNDUP(1.5E-120,65535)` = 0.
+- `ROUNDDOWN(1.23456789012345E+105,-32768)` = 1.23456E+105, but `ROUNDUP(…)` = `#NUM!`.
+- `ROUNDDOWN(1.5E+80,-65535)` = 0, as is `ROUNDDOWN(123.456,-65535)` above, and `ROUNDUP(123.456,-65535)` is `#NUM!`.
+- `ROUNDUP(1.5E+120,-65535)` = 1.5E+120, and `ROUNDUP(6.4421516092447E+265,-43376)` = 6.4421516092447E+265 (the T-3555
+  observation): nothing is dropped at 10^100, so no unit is added.
+- k = 40,000 and 98,304 (narrowed to 32,768) act the same. Below 32,768 the plain rule holds: `ROUNDDOWN(1.5E-300,32767)`
+  = 1.5E-300, every k = -32,767 cell is 0 (ROUNDDOWN) or `#NUM!` (ROUNDUP), and so are T-3555's
+  `ROUNDUP(-3.41521682833705E-207,-11541)` and `ROUNDUP(6.4421516092447E+265,-320)` (`#NUM!`), while
+  `ROUNDUP(4.72880001004526E+149,22178)` is the value.
+ROUND's narrowing differs and shows no such step: every probed ROUND cell follows the 32-bit rule above. TRUNC was not
+probed past 32,767.
+Evidence: probes/t3627-roundup-rounddown-digits-by-exponent (x = 1.5E-300 to 1.5E+300 in steps of 10^20; k = ±400,
+±1000, ±32767, ±32768, ±65535) and probes/t3627-roundup-rounddown-huge-digits-place (x = 1.23456789012345E∓90 to
+E∓112; k = ±32768, ±40000, ±65535, 98304), excel-graph, 2026-11-01. Negative values round their magnitude
+and keep the sign: probes/t3627-roundup-rounddown-negative-x (x = -1.5E-300 to -1.5E+120, k = ±32768, ±65535 and 32767).
+probes/t3627-roundup-rounddown-t3555-cells re-probes T-3555's draw cells quoted above, plus k = -32769 and -43376.
+The rule fits all 1,024 formula cells of the four cases.
+Status: VERIFIED (excel-graph)
+Implemented in: not yet in the engine (T-3635).
+Tasks: T-3555, T-3627, T-3635
 
 ## ROUND one ulp above the nearest double (observation)
 Observation (T-3555): `ROUND(4.91499999999999E-06,8)` is 4.9100000000000004E-06 in Excel, 1 ulp above 4.91E-06, the
@@ -1428,7 +1440,8 @@ Tasks: T-0915
 
 ## ACOS is PI()/2 - ASIN(x)
 Rule: Excel's `ACOS(x)` is `π/2 - ASIN(x)` in doubles, on ASIN's kernel ("ASIN's formulation"). So `ACOS(0.5)` =
-1.0471975511965976, the double nearest π/3, where libm gives 1.0471975511965979.
+1.0471975511965976, one ulp below the double nearest π/3: libm's 1.0471975511965979 is the correctly rounded value
+(1.07E-16 from π/3 against 1.15E-16; corrected in T-3669).
 Evidence: all 240 ACOS cells of probes/asin-atan-sign-source (`ACOS(x)` and `ACOS(-x)`, H and I; excel-graph, 2026-10-18, T-1797),
 where libm `acos` fits 157; poi/48539.xlsx Instance1!E23 (oracle: excel-graph, 2026-10-04); poi/FormulaEvalTestData_Copy.xlsx Q104.
 Implemented in: `fn_acos` (functions/math_and_trigonometry/mathematical.rs) as `FRAC_PI_2 - excel_asin(x)` since T-0939.
@@ -2492,8 +2505,9 @@ Tasks: T-1282, T-1785
 SIN, COS, TAN, COT, SEC and CSC return `#NUM!` when |x| >= 2^27 (134217728); 2^27-1 still gives a
 number, and the cut is the same for negative arguments and for 1E+300. The error is a real error
 (`ISERROR(N(SIN(1E+15)))` is TRUE). Evidence: probes/trig-huge-argument (T-1201). T-1201 probed only the integers 2^27-1 and 2^27 (and their negatives) at the cut; T-2172 adds fractions: the
-cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (-134217728.25 itself unprobed) (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172). COSH(1E+15) is also
-`#NUM!` (probe cell A85).
+cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172), and -134217728.25 is `#NUM!` too (`SIN(-134217728.25)` and `CSC(-134217728.25)`, accuracy/SIN/s1 A78 and accuracy/CSC/s1 A70, excel-graph, T-3668). COSH(1E+15) is also
+`#NUM!` (probe cell A85). At 0, `COT(0)` and `CSC(0)` are `#DIV/0!` and `SEC(0)` is 1 (gen-m5 50d8a085335c05e6 A38 and A125,
+dde5ea295a38fb16 A289, cf893ec19f53a7fc A113; c7d88fa6defcfb8e A175, excel-graph): 0 is the only pole a double reaches.
 Excel reduces every trig argument by multiples of `π₆₄/2`, where `π₆₄` is π rounded to a 64-bit
 significand (the x87 `FLDPI` constant `0xC90FDAA22168C235·2^-62`, π₆₄ − π ≈ 5.0166e-20), and
 then rounds the true sine, cosine or tangent of that remainder once. So SIN(x) is the correctly
@@ -2578,3 +2592,7 @@ Rule: `TEXT(2^1023*(2-2^-52),"0.00E+00")` is `1.80E+308`: the mantissa rounds up
 Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digit analogues gen-m10/4398098060a7fa9d A13 ("01.2E+14") and gen-m5/c0651f0e0fb544d0 A74 ("1.0E+15").
 Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
+
+## PERCENTOF: an error cell argument is #NUM!
+Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). Other error kinds are unprobed. The engine propagates `#DIV/0!`; owned by T-3728.
+Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.
