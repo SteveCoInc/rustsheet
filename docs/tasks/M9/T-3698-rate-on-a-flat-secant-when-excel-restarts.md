@@ -3,7 +3,7 @@ id: T-3698
 title: "RATE on a flat secant: when Excel restarts from the older iterate instead of holding"
 milestone: M9
 lane: functions-financial
-status: done
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -35,9 +35,9 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
 ## Acceptance criteria
 - [x] A probe that separates the restart from the hold (e.g. flat secants at different steps and |f|, with and
       without a prior restart), oracle-filled, and a rule that fits it.
-- [x] `compute_rate` implements the rule; the 4 cells above pass and no RATE cell regresses
+- [ ] `compute_rate` implements the rule; the 4 cells above pass and no RATE cell regresses
       (t3348-rate-fv-nonzero, the Gate A sweeps, t3478-rate-r4-wide); R4 hold-out and fresh sweep recorded.
-- [x] financial.md updated; `make check` green; reviewers approve.
+- [ ] financial.md updated; `make check` green; reviewers approve.
 
 ## Out of scope
 - RATE's residual form (ruled out at nper 1 by T-3579).
@@ -88,3 +88,29 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
   - The two new probe cases add 105 cells. The noise-floor cells among them are new-coverage known failures owned
     by T-3850.
 - **Follow-up:** T-3850 (late restarts and noise-floor paths).
+
+## Landing notes
+- **PR #2858** (draft), head e94a0ddc7c40c1966944553397ed743f42b08bcd before this notes commit. CI was running
+  when the window closed.
+- **Review round 1:** design APPROVE and security APPROVE on e94a0ddc; excel-fidelity REQUEST_CHANGES (verdict
+  record on the PR). Its three MAJOR findings:
+  - **R4.1:** the hash split was applied after every candidate had been scored on all 1,522 cells, so it is not a
+    blind hold-out. The correctly rounded candidate's train, 4-ulp and 15-digit counts are also missing.
+  - **R4.2:** the fresh sweep is a targeted probes case, not a log-uniform probes-numeric sweep. A1:A7 are trivial
+    `RATE(1,0,0,0,0,g)` cells, and the mpmath values are not committed. `rustsheet-accuracy math` skips RATE calls
+    with a guess.
+  - **R4.3:** the restart fires outside the `FITTED` range: steps 1-2 and |f1| < 1.3e-7.
+- **Next steps:**
+  1. Restrict the branch to the evidenced range (3 ≤ step ≤ 16, 1.3e-7 ≤ |f1| < 1e-4).
+  2. Redo the choice of K and the |f1| cut on the `holdout.py` train side only, with the 5-point margin stated
+     first. Report train and test (bit-exact / 4 ulp / 15 digits) for the rule and for the correctly rounded root.
+  3. Generate a log-uniform probes-numeric RATE sweep with guesses after that freeze, fill it from the oracle,
+     and report its Gate A envelope with the mpmath values committed.
+- **Scratch rig (not committed):** a temporary `compute_rate` env-var switch plus an in-crate test that prints
+  per-step traces. The scorer and patch were in the session scratchpad and are gone; rebuild them from this
+  description.
+- **Do not repeat:**
+  - An unconditional restart scores +8/-108.
+  - A restart from the guess changes nothing.
+  - The step bound is not the mechanism: Excel restarts at steps 27, 33 and 41 on some series (t3698 A35, A39,
+    A42).
