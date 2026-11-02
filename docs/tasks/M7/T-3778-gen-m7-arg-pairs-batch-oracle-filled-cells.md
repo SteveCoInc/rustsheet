@@ -94,3 +94,17 @@ argument coverage of GROUPBY and PIVOTBY, and every Excel cell the engine fails 
   - **T-3844** (opus, 12,173 cells in 43 formulas): when a one-value filter_array is `#VALUE!` rather than broadcast is unknown (two batch cells broadcast); probe first.
   - **T-3845** (sonnet, 493 cells in 166 formulas): a multi-cell PIVOTBY relative_to lifts into one result per cell.
   - **T-3846** (opus, 68 cells in 21 formulas): argument-check order and leftovers.
+
+## Landing notes
+- PR #2852 (draft), branch agent/functions-lookup/T-3778-groupby-pivotby-arg-pairs; this head is the round-2 fix plus
+  these notes. CI went green on 33326f9 (round 0). `make check-fast` passed on the round-2 commit.
+- Reviews: round 1 on 33326f9: design and security APPROVE, Excel fidelity REQUEST_CHANGES (T-3842/T-3844 rules
+  contradicted the sidecars; fixed in eee43c1). Round 2 on eee43c1: design and security APPROVE, Excel fidelity
+  REQUEST_CHANGES (blank-vs-text `values` precedence against option errors unrecorded; two citation slips; fixed in the
+  next commit). Round 3 (all three reviewers) was launched on this head as the landing window closed; read the verdict
+  records on the PR for its outcome.
+- Next step: if round 3 approves and CI is green on this head, mark the PR ready and enqueue (`enable_pr_auto_merge`,
+  SQUASH). If Excel fidelity requests changes again, the task hits the review-round limit: block it per work-loop step 5.
+- Do not repeat: stating rules from the bucket counts alone. Each claimed rule must survive a search of all 14,440
+  anchors for counterexamples; argument precedence (an earlier invalid option, blank one-cell values) confounds most
+  `#VALUE!` cells, and a one-value filter_array sometimes broadcasts in Excel.
