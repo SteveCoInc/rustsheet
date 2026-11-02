@@ -61,7 +61,7 @@ pub(crate) fn parse_typed_number(
             };
             return Ok((v, Some(format.to_string())));
         }
-        let Some(shape) = typed_clock_shape(text) else {
+        let Some(shape) = typed_clock_shape(text).or_else(|| leading_clock_shape(text)) else {
             return Err(err);
         };
         parse_date_clock_serial_in(text, locale, current_year, date_system)
@@ -191,6 +191,29 @@ impl TypedClock {
             Self::OutOfRange => None,
         }
     }
+}
+
+/// [`typed_clock_shape`] for a clock typed before the date (`10:00 7/1/2025`, `10 AM 7/1/2025`):
+/// a number with `m/d/yyyy h:mm` like the clock-last text (probes/date-text-mixed-separator-typed
+/// B10, C10, excel-graph 2026-11-01). A leading space keeps it text. The clock is the first word,
+/// or the first two when the second is an `AM`/`PM` suffix.
+fn leading_clock_shape(text: &str) -> Option<TypedClock> {
+    if text.starts_with(' ') {
+        return None;
+    }
+    let (first, rest) = text.split_once(' ')?;
+    let rest = rest.trim_start_matches(' ');
+    let second = rest.split(' ').next().unwrap_or("");
+    // The dummy date makes the clock a trailing one for `typed_clock_shape`.
+    let with_suffix = ["am", "pm", "a", "p"]
+        .iter()
+        .any(|s| second.eq_ignore_ascii_case(s));
+    if with_suffix {
+        if let Some(shape) = typed_clock_shape(&format!("1/1/2000 {first} {second}")) {
+            return Some(shape);
+        }
+    }
+    typed_clock_shape(&format!("1/1/2000 {first}"))
 }
 
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or

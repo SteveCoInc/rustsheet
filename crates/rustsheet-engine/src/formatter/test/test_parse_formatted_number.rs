@@ -469,3 +469,35 @@ fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
         assert!(parse(text, &[]).is_err(), "{text}");
     }
 }
+
+/// Typed mixed-separator dates and clock-first date-times (probes/date-text-mixed-separator-typed,
+/// excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
+#[test]
+fn typed_mixed_separator_date_formats() {
+    let fmt = |s: &str| {
+        let locale = get_default_locale();
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            locale,
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_default()))
+    };
+    for s in ["2025/07-01", "2025-07/01", "7/1-25", "7/1-2025", "7-1/2025"] {
+        assert_eq!(fmt(s).unwrap().1, "m/d/yyyy", "{s}");
+    }
+    for s in ["1-Jul/2025", "1/Jul-2025"] {
+        assert_eq!(fmt(s).unwrap().1, "d-mmm-yy", "{s}");
+    }
+    // Pure separators keep their own formats.
+    assert_eq!(fmt("2025/07/01").unwrap().1, "yyyy/mm/dd");
+    assert_eq!(fmt("7/1/25").unwrap().1, "m/d/yy");
+    let (v, f) = fmt("10:00 7/1/2025").unwrap();
+    assert!((v - 45839.416_666_666_7).abs() < 1e-9);
+    assert_eq!(f, "m/d/yyyy h:mm");
+    assert!(fmt("10 AM 7/1/2025").is_ok());
+    assert!(fmt(" 10:00 7/1/2025").is_err());
+    assert!(fmt(" 10:00 AM 7/1/2025").is_err());
+}

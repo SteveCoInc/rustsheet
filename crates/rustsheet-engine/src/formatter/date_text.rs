@@ -236,6 +236,10 @@ fn parse_separated(
     } else {
         word.splitn(4, ['/', '-']).collect()
     };
+    // A date mixing `/` and `-` takes Excel's own formats when typed, not the joined separators:
+    // numeric `m/d/yyyy`, name-and-year `d-mmm-yy` (probes/date-text-mixed-separator-typed,
+    // excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
+    let mixed = word.contains('/') && word.contains('-') && separator != '.';
     let (day_str, month_str, year_str) = match parts.as_slice() {
         [first, second] => {
             return match parse_month_name(second, locale) {
@@ -255,13 +259,23 @@ fn parse_separated(
             let (day, day_format) = parse_day(day)?;
             let (month, month_format) = parse_month_number(month)?;
             let (year, _) = parse_year(year)?;
-            return Ok((
-                serial_of(day, month, year)?,
-                format!("yyyy{separator}{month_format}{separator}{day_format}"),
-            ));
+            let format = if mixed {
+                "m/d/yyyy".to_string()
+            } else {
+                format!("yyyy{separator}{month_format}{separator}{day_format}")
+            };
+            return Ok((serial_of(day, month, year)?, format));
         }
         [day, name, year] if !is_digits(name, 1..=2) => {
-            return day_name_year(day, name, year, locale, separator);
+            let (serial, format) = day_name_year(day, name, year, locale, separator)?;
+            return Ok((
+                serial,
+                if mixed {
+                    DAY_MONTH_NAME_YEAR_FORMAT.to_string()
+                } else {
+                    format
+                },
+            ));
         }
         // Numeric order follows the locale: month first in en-US, where "13/1/2026" and
         // "26-01-01" are #VALUE! (probes/date-text-grammar A32, probes/date-text-locale B1).
@@ -275,7 +289,9 @@ fn parse_separated(
     // (docs/excel-semantics/text.md "VALUE reads a sign before a space...",
     // probes/value-sign-space-mixed-fraction-dash-date A13, A14, A18, A19).
     let (year, year_format) = parse_year(year_str)?;
-    let format = if short_format.starts_with('d') {
+    let format = if mixed {
+        "m/d/yyyy".to_string()
+    } else if short_format.starts_with('d') {
         format!("{day_format}{separator}{month_format}{separator}{year_format}")
     } else {
         format!("{month_format}{separator}{day_format}{separator}{year_format}")
