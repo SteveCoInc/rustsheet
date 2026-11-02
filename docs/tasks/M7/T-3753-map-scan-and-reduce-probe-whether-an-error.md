@@ -36,4 +36,11 @@ INDEX and ERROR.TYPE. Code: `fn_map`, `fn_reduce` (map_reduce.rs) and `fn_scan` 
 - Probe `probes/t3753-lambda-helper-error-array-order` (16 forms x ROWS/COLUMNS/INDEX/ERROR.TYPE, excel-graph): Excel reads
   the array argument before checking the function in MAP, SCAN, REDUCE, BYROW and BYCOL.
 - `fn_map`, `fn_scan` and `fn_reduce` now call `helper_caller` after the array read; arrays.md's "Unprobed" line is replaced
-  by the rule. The case passes 64/64; before the change 10 formula rows (A1-A4, A6-A12) mismatched.
+  by the rule. The case passes 64/64; before the change 11 formula rows (A1-A4, A6-A12) mismatched.
+
+## Landing notes
+- PR #2882. The reviewers (security, design, excel-fidelity) all approved head 302454d; the catch-up merge of main (baseline lists only,
+  e0ed525) needs no re-review. CI had just restarted on that head when the session window closed.
+- Next step: when CI is green on the latest head, `make merge-mode` (should print `lock`) then enable auto-merge (SQUASH). Do not run
+  `make mark-ready`.
+- A conflict in `eval/baseline/probes.txt` is cleared with `make catch-up PR=2882`, not by hand.
