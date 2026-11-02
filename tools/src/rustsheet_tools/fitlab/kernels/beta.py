@@ -36,6 +36,7 @@ from typing import TypeVar
 
 from rustsheet_tools.fitlab.exact import pi_cr
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, numeric_arg
 
@@ -509,7 +510,7 @@ def libreoffice_beta_dist(x: float, alpha: float, beta_: float, *, excel_closed_
 
 def ibeta_candidates() -> list[tuple[str, str, Ibeta]]:
     """(name, family, I_x(a,b)) for every candidate; the fits map their arguments onto these."""
-    out: list[tuple[str, str, Ibeta]] = [("correctly rounded", "reference", ibeta_reference)]
+    out: list[tuple[str, str, Ibeta]] = [(REFERENCE, "reference", ibeta_reference)]
     for log1p_tail in (False, True):
         for eps in (3e-16, 1e-15, 1e-14):
             name = f"NR betai eps={eps:g}, ln(1-x) by {'log1p' if log1p_tail else 'log'}"
@@ -638,7 +639,7 @@ def t_dist_candidates() -> list[Candidate]:
         return t_cdf_reference(t, n)
 
     # The reference maps exactly, not through a double y (see `t_cdf_reference`).
-    return [candidate("correctly rounded", reference, "reference")] + [
+    return [candidate(REFERENCE, reference, "reference")] + [
         candidate(name, wrap(fn), family) for name, family, fn in ibeta_candidates() if family != "reference"
     ]
 
