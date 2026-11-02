@@ -3,7 +3,7 @@ id: T-3561
 title: "BETA.DIST cdf on L140 bup+bgrat with two or more bup terms: BETADIST_BETAINV G5 is 2.5E-14 off where Excel is correctly rounded"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
