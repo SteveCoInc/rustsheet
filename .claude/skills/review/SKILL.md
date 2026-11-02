@@ -8,7 +8,7 @@ A **task-only PR** (every changed path a `.md` file under `docs/tasks/`) gets no
 once CI is green, and the merge queue's `tasks.py validate` on the combined tree is its gate
 (decisions 0231, 0247). Any other path in the diff brings the panel of step 3 back.
 
-1. Make sure the branch is committed and `make check` passed (reviewers are not linters).
+1. Make sure the branch is committed and `make check-fast` passed (reviewers are not linters).
 2. Collect context: `git diff --stat origin/main...HEAD`, the task id (branch name) and its file.
 3. Launch these subagents **in parallel** (one message, multiple Agent calls), each with a
    prompt containing: the task id, task file path, spec path(s), and "review `git diff

@@ -121,8 +121,11 @@ governance: ## Protected-path changes need a decision record
 	$(PY) scripts/check_governance.py $(BASE)
 
 # ---------------------------------------------------------------- Aggregates
-.PHONY: check ci
-check: fmt-check clippy test eval-gates py-check py-bindings hygiene typos ## Everything an agent must pass before a PR (typos too: CI fails on it)
+.PHONY: check check-fast ci
+check: fmt-check clippy test eval-gates py-check py-bindings hygiene typos ## Every gate CI runs on a PR (typos too: CI fails on it)
+
+check-fast: ## The local pre-push gate: the gates of `make check` the change can break, never the full test suite (scripts/fast_gates.py; BASE=origin/main)
+	targets="$$($(PY) scripts/fast_gates.py --base $(or $(BASE),origin/main))" && $(MAKE) --no-print-directory $$targets
 
 ci: check deny machete
 

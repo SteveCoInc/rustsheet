@@ -40,14 +40,19 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   merge-train`, `make janitor`, `make merge-lock-*`, step mode and the `merge-flip-check` flip PR
   are no longer used; T-3827 deletes them. The `ready-to-merge` and `merge-train-ejected` labels
   are leftovers: a PR carrying either one is handled like any other open PR (enqueue it once it
-  meets (a) and (b); an ejected one first gets its conflict fixed, `make check` and the reviewers
+  meets (a) and (b); an ejected one first gets its conflict fixed, `make check-fast` and the reviewers
   the change concerns, work-loop step 6.3), and the label is removed when it is enqueued.
-- **Orphaned agent PRs** (decision 0050): the steward may enqueue a task PR (branch
-  `agent/<lane>/T-XXXX-*`) opened by another session only when ALL of these hold:
-  - it has been open 24 h or more, and its branch has not moved for 2 h or more. Measure when the
-    head was pushed (the creation time of the latest head's first CI run, or the branch's last push
-    event), not the commit date. Your own merges of `main` and bookkeeping commits (they carry your
-    session's `Claude-Session` trailer) do not reset this clock;
+- **Orphaned agent PRs** (decisions 0050, 0248): an orphan is an open PR from an `agent/*` or
+  `claude/*` branch of this repository (never a fork: the PR's `head.repo.full_name` is
+  `SteveCoInc/rustsheet`), opened by another session, that is not a draft, not queued (auto-merge off;
+  this includes a PR the merge queue removed), and whose branch has not moved for 4 h or more.
+  The opus worker adopts the oldest one at the start of each run (work-loop step 0.3) and the
+  steward adopts them in its daily run. Adopting means fixing what blocks it (red CI, a conflict,
+  missing bookkeeping) and enqueueing it once ALL of these hold:
+  - its branch has not moved for 4 h or more when you adopt it. Measure when the head was pushed
+    (the creation time of the latest head's first CI run, or the branch's last push event), not
+    the commit date. Your own merges of `main` and bookkeeping commits (they carry your session's
+    `Claude-Session` trailer) do not reset this clock;
   - it is not a draft, and its task is not `status: blocked`;
   - CI is green on the latest head;
   - it has no conflict with `main` (merge `main` in only to fix a conflict or an id collision,
@@ -59,12 +64,13 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   - the task file on the branch is `status: done` with an Outcome. If not, finish that
     bookkeeping (then wait for CI on the new head) or leave the PR alone.
   Then enqueue it ("Enqueue" above).
+  A `claude/*` branch may have no task file: then the last condition is that its PR body says what
+  it does, and an adopter that cannot tell leaves a comment and moves on.
   Duplicates: when two open PRs implement the same task id, pick the survivor: the one that is
   green and reviewed, or, only if neither is, the newer one. Close the other (with a comment
   linking the survivor, deleting nothing) only after the survivor has merged, and only when the
-  other's branch has not moved for 2 h, so a live session is never cut off. The 24 h age does not
-  apply to closing a duplicate. When any condition fails, do what you did before: fix CI, comment
-  the blocker, or mark the task blocked with reasons.
+  other's branch has not moved for 2 h, so a live session is never cut off. When any condition
+  fails, do what you did before: fix CI, comment the blocker, or mark the task blocked with reasons.
 - **Merge style**: squash merge; title `T-XXXX: <task title>`; keep the Co-Authored-By trailer.
   Exception: the daily steward PR uses branch `agent/steward/<YYYY-MM-DD>` and title
   `steward: <YYYY-MM-DD> health` (docs/process/routines.md).
@@ -81,7 +87,7 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   - whenever a pushed head has no check runs a few minutes later.
   If it is `dirty`: `git fetch origin main`, merge `origin/main` into the branch now, resolve
   (keep both sides' features; status-log conflicts keep both lines; regenerate baselines with
-  `make eval-baseline` and take `main`'s side of generated files first), run `make check`, push.
+  `make eval-baseline` and take `main`'s side of generated files first), run `make check-fast`, push.
   If the PR is queued, `disable_pr_auto_merge` first and enqueue again once CI is green (decision
   0121; "Enqueue" above). A PR that is `clean` or `behind` is left alone: the queue tests it
   against the current `main`.

@@ -106,7 +106,8 @@ todo ──(worker claims: branch + status in-progress)──▶ in-progress ─
    - Read the task, its spec, the code, `docs/excel-semantics/`, and the failing cases (`make eval-show`).
    - Search for existing helpers before writing new ones.
 4. **Test first:** add eval spec cases or unit tests that fail.
-5. **Implement:** the smallest change. Run `make fmt && make check`.
+5. **Implement:** the smallest change. Run `make fmt && make check-fast` and the tests of the code
+   you changed; CI runs every gate (decision 0248).
 6. **Ratchet:** run `make eval-baseline` when cells newly pass, and `scripts/check_*.py --update`
    when debt went down.
    A protected-path change needs a decision record: create it with `make new-decision TITLE="..."`
