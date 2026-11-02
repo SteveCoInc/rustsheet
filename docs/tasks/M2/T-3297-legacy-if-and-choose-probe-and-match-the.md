@@ -3,7 +3,7 @@ id: T-3297
 title: "Legacy IF and CHOOSE: probe and match the @ display of the INDEX-arm and CHOOSE-array shapes T-3134 and T-3168 left unprobed (named or table INDEX, negative or out-of-range index, bare range condition)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
