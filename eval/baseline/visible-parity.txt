@@ -192,6 +192,7 @@ ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 ironcalc-calc/STATISTICAL/POISSON.xlsx	1
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/date-text-mixed-separator-typed.case.json	2
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
@@ -201,6 +202,8 @@ probes/fin-cumprinc-underflow-ends.case.json	4
 probes/forecast-ets-longer-series.case.json	41
 probes/forecast-ets-optional-settings-shape.case.json	12
 probes/growth-modes.case.json	10
+probes/im-trig-argument-cut.case.json	37
+probes/im-trig-magnitude-grid.case.json	147
 probes/irr-fallback-roots.case.json	7
 probes/irr-guess-edges-2.case.json	4
 probes/irr-guess-edges.case.json	5
@@ -251,6 +254,7 @@ probes/t3627-roundup-rounddown-digits-by-exponent.case.json	86
 probes/t3627-roundup-rounddown-huge-digits-place.case.json	223
 probes/t3627-roundup-rounddown-negative-x.case.json	18
 probes/t3627-roundup-rounddown-t3555-cells.case.json	4
+probes/t3638-subnormal-upper-tail.case.json	7
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3
