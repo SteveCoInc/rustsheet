@@ -2700,7 +2700,13 @@ reference or array was handed on (`#N/A`, `#DIV/0!`); ours since: as Excel (`Mod
 A 3-D reference is refused as a direct `#VALUE!` in its place, whatever the span holds: `PERCENTOF(S1!A1,S1:S2!A1)`,
 `PERCENTOF(1,S1:S2!B1)`, `PERCENTOF(S1:S2!B1,NA())` and `PERCENTOF(S2!B1,S1:S2!A1)` (S2!B1 `#N/A`) are `#VALUE!`, while
 `PERCENTOF(NA(),S1:S2!A1)` is `#N/A`.
-Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11.
+A 3-D span reached indirectly is refused the same way (T-3752): `PERCENTOF(IF(TRUE,S1:S2!A1),1)`, `PERCENTOF(CHOOSE(1,S1:S2!A1),1)` and
+`PERCENTOF((S1:S2!A1,S1!A2),1)` are `#VALUE!`, as is the span in either argument position beside a number or a trailing `NA()`
+(`PERCENTOF(IF(TRUE,S1:S2!A1),NA())` is `#VALUE!`, not `#N/A`); a direct error placed before the span wins, `PERCENTOF(NA(),<form>)` is `#N/A`.
+Not probed: a defined name whose body is a 3-D span (excel-graph answers `FileCorruptTryRepair` / unsupportedWorkbook for any workbook
+holding one; desktop-only question, M14). The engine already matches the three probed forms.
+Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11;
+(2026-11-02) probes/t3752-percentof-3d-indirect Calc!A1:A12.
 Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
 
 ## PERCENTOF: an error cell argument is #NUM!

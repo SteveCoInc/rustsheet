@@ -3,7 +3,7 @@ id: T-3752
 title: "PERCENTOF: probe a 3-D span reached through IF, CHOOSE or a union"
 milestone: M8
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,3 +27,10 @@ through CHOOSE, inside a union (`(S1:S2!A1,S1!A2)`), and a defined name whose bo
 
 ## Out of scope
 - SUM and the other aggregates over 3-D spans.
+
+## Outcome
+Probed IF, CHOOSE and a union on excel-graph (probes/t3752-percentof-3d-indirect, 12 cells, each form alone, after a direct
+`NA()` and before one): every indirect span is `#VALUE!` exactly like the bare span, and a direct error before it wins (`#N/A`).
+The engine already matched all 12 cells, so no code change; numbers.md's PERCENTOF entry records the results. The defined-name
+form could not be probed: excel-graph rejects any workbook holding a 3-D name body (`unsupportedWorkbook`), so it is a desktop
+question for M14 and recorded as not probed. Eval delta: +12 probe cells, all passing; no baseline change.
