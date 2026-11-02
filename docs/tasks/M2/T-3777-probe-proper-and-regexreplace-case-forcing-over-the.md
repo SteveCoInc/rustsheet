@@ -3,7 +3,7 @@ id: T-3777
 title: "Probe PROPER and REGEXREPLACE case forcing over the old UPPER/LOWER case table characters"
 milestone: M2
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
