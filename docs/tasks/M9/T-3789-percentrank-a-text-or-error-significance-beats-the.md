@@ -3,7 +3,7 @@ id: T-3789
 title: "PERCENTRANK*: a text or error significance beats the x-not-found or no-number #N/A (gen-m9, 63 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
