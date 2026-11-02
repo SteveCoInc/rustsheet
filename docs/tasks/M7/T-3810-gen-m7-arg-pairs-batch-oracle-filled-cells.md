@@ -3,7 +3,7 @@ id: T-3810
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the spilling text functions TEXTSPLIT and REGEXEXTRACT"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
