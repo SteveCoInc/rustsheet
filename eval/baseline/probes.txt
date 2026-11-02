@@ -1834,6 +1834,7 @@ C	probes/t3627-roundup-rounddown-negative-x.case.json	70
 C	probes/t3627-roundup-rounddown-t3555-cells.case.json	12
 C	probes/t3631-rand-randbetween-invariant.case.json	61
 C	probes/t3631-randarray-invariant.case.json	45
+C	probes/t3638-subnormal-upper-tail.case.json	84
 C	probes/t3654-filter-result-types.case.json	211
 C	probes/t3656-indirect-spaces-reversed.case.json	291
 C	probes/t3747-indirect-name-whitespace.case.json	14
@@ -5831,6 +5832,15 @@ F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A1
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A2
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A41
 F	probes/t3579-rate-residual-nper1.case.json	Sheet1!A42
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A17
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A18
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A23
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A24
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A29
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
+F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
 F	probes/table-edits/table-convert-names-this-row.case.json	S!F10
 F	probes/table-edits/table-convert-names-this-row.case.json	S!F2
 F	probes/table-edits/table-convert-names-this-row.case.json	T!A2
