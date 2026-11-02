@@ -3,7 +3,7 @@ id: T-3835
 title: "Probe typed cell input of group-comma and leading-percent texts"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
