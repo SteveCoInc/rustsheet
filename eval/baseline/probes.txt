@@ -1918,6 +1918,7 @@ C	probes/t3839-groupby-scalar-filter.case.json	678
 C	probes/t3840-groupby-lifted-beside-filter.case.json	134
 C	probes/t3840-groupby-lifted-false-element.case.json	141
 C	probes/t3840-groupby-lifted-filter-consumed.case.json	46
+C	probes/t3889-pivotby-option-order.case.json	52
 C	probes/t3894-bare-24h-clock.case.json	54
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
