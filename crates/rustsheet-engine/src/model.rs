@@ -174,6 +174,10 @@ pub struct Model {
     pub(crate) nested_budget: crate::nested_array::NestedBudget,
     /// Aggregate arguments being read as a head and a tail (`tailed_array.rs`).
     pub(crate) tail_views: Vec<crate::tailed_array::TailView>,
+    /// Whether a GROUPBY call has dropped rows with its `filter_array` since the GROUPBY lift
+    /// running now started (`Model::lift_by_class`): Excel's later elements are `#VALUE!` then
+    /// (docs/excel-semantics/arrays.md "A lifted GROUPBY's filter serves one element", T-3840).
+    pub(crate) groupby_filter_spent: bool,
     /// Where the stack was when the outermost LAMBDA call running now started
     /// (`Model::lambda_stack_base`), `None` while no call runs.
     pub(crate) lambda_calls_base: Option<usize>,
