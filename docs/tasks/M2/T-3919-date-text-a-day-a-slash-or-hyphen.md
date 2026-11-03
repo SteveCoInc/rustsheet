@@ -3,7 +3,7 @@ id: T-3919
 title: "Date text: a day, a slash or hyphen, then a month glued to a one- or two-digit year (1-Jul24, 1/Jul24, 1-Jul5) is a date"
 milestone: M2
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
