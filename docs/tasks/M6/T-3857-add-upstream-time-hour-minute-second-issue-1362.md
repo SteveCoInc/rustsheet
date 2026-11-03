@@ -3,7 +3,7 @@ id: T-3857
 title: "Add upstream TIME_HOUR_MINUTE_SECOND_issue_1362.xlsx to calc_tests"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -32,10 +32,13 @@ fix it here if S-sized, or else file a follow-up naming the cells and leave the 
 Record any new quirk in `docs/excel-semantics/dates.md`.
 
 ## Acceptance criteria
-- [ ] The workbook passes in full and is in calc_tests (`rustsheet-eval show` on it shows every
+- [x] The workbook passes in full and is in calc_tests (`rustsheet-eval show` on it shows every
       cell passing; baseline updated, 0 regressions), or it is left out with a filed follow-up
       task naming its failing cells.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Porting upstream's code change (ours already covers both bounds).
+
+## Outcome
+Added `TIME_HOUR_MINUTE_SECOND_issue_1362.xlsx` (ironcalc `15ecfecb`) to calc_tests. `rustsheet-eval show`: Pass, 22/22 cells, 0 deviations (excel-cached). No engine change, no new quirk. Eval delta: +22 passing cells, 0 regressions.
