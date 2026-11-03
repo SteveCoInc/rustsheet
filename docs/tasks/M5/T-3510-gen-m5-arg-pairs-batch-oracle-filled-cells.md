@@ -3,7 +3,7 @@ id: T-3510
 title: "gen-m5 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M5 text search and replace functions (FIND, SEARCH, REPLACE, SUBSTITUTE, REPT, EXACT)"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -48,3 +48,9 @@ gen-m5 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
 - Fixing the engine for the cells this batch finds (the owning tasks), beyond a one-line coercion fix in the
   function's own module that the PR also tests.
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
+
+## Outcome
+18 new gen-m5 cases (arg-pairs policy, FIND/SEARCH/REPLACE/SUBSTITUTE/REPT/EXACT) with excel-graph sidecars. The
+`pairwise` share of all six functions is 1.0 (0 unseen pairs). gen-m5: 59916 cells, 59890 bit-exact; known failures
+3 -> 26, all 23 new ones SUBSTITUTE with a boolean `TRUE` instance_num (Excel `#VALUE!`), owned by T-3927 and
+documented in docs/excel-semantics/text.md. 0 regressions.
