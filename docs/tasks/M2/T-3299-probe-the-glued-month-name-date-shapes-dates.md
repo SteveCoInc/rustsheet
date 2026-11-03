@@ -3,7 +3,7 @@ id: T-3299
 title: "Probe the glued month-name date shapes dates.md leaves UNVERIFIED after T-1906 (1Jul5, 1/Jul2026, 1-Jul26, July1 , 2026 5) and the typed format of 1-Jul2026"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
