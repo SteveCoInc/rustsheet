@@ -3322,6 +3322,8 @@ exact: at y0 = 0.5 with many terms Excel sits 1 to 3 ulp off it, and no candidat
   both.
 - BETA.INV's search does not cross the power sum: crossing it moves ironcalc-calc `BETADIST_BETAINV.xlsx` H32
   (`BETA.INV` at (5, 5), Excel 0.555) to 0.5550000000000002. With today's recurrence in the search it stays exact.
+  The evidence is that one cell: swapped to the power sum, the search changes no other cell in any suite, and it gains
+  none. T-3947 revisits the split.
 - `F.DIST.RT(3,50,100)` moves from 1.5167866644968792E-06 to 1.5167866644968803E-06 under the power sum. That is closer
   to the 50-digit value (1.51678666449688947E-06) than Excel's 1.516786664496894E-06, so it is still not Excel's 15th digit.
 Evidence: probes-numeric t3198-f-l140-args and t3198-l140-power-sweep (excel-graph); T-3198's Outcome has the scoring.

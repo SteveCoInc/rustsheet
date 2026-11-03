@@ -23,7 +23,7 @@ the forms scored, but not Excel's exact arithmetic:
   `bratio::tests::l140_whole_b0_takes_ln_beta_of_one`) and (10, 10) at 0.5 (skipped in
   `ported_tails_rise_with_x_where_excel_does`). At y0 = 0.5 with k = 3 or 6, Excel follows the power sum. Both
   carry `TODO(T-3947)`.
-- probes-numeric t3198-l140-power-sweep, visibly off (15th digit): Calc!A24, A45, A70, A85, A132, A155, A158, A173,
+- probes-numeric t3198-l140-power-sweep, more than 4 ulp off Excel (the harness's NumericClose): Calc!A24, A45, A70, A85, A132, A155, A158, A173,
   A181, A204, A224, A241, A289, A356, A384, A394, A398. Most have b0 >= 20, so they sit deep in bup's sum (many terms).
   Main's recurrence left 16 of the case's cells visibly off.
 - Candidates T-3198 ruled out are listed in statistics.md: x87-extended powers, libm `pow`, Excel's integer POWER,
@@ -32,8 +32,10 @@ the forms scored, but not Excel's exact arithmetic:
 ## Acceptance criteria
 - [ ] The y0 = 0.5 cells above are bit-exact without losing the power sum's cells elsewhere (t3198-f-l140-args columns
       C and D: 674 of 816 bit-exact today; t3198-l140-power-sweep 259 of 400), or a measured reason why not.
-- [ ] Every t3198-l140-power-sweep cell listed above is within 15 digits of Excel, or named in the Outcome and handed
+- [ ] Every t3198-l140-power-sweep cell listed above is within 4 ulp of Excel, or named in the Outcome and handed
       to a task that owns it.
+- [ ] Revisit BETA.INV's search on this branch (`BupSum::Recurrence`, `bratio::beta_search_tails`). Its only evidence is
+      ironcalc-calc BETADIST_BETAINV.xlsx H32.
 - [ ] Any cut or constant chosen by scoring meets decision 0188's R4 guards.
 - [ ] `make check` green; reviewers approve.
 
