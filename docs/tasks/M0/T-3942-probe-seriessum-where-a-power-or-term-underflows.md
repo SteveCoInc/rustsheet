@@ -3,7 +3,7 @@ id: T-3942
 title: "Probe SERIESSUM where a power or term underflows (the flush T-3676's definition infers)"
 milestone: M0
 lane: research
-status: done
+status: blocked
 priority: P3
 size: S
 tier: sonnet
@@ -40,3 +40,15 @@ Excel's `^`). No oracle cell checks it.
   (VERIFIED, limited to the probed bases and exponents). Follow-ups: T-3949 (SERIESSUM term) and T-3950 (`^`), each owning its cells.
 - The acceptance item "if Excel does not flush, file a task to change defs/seriessum.py" does not apply: Excel flushes.
 - Eval delta: none gated; 10 new known-failing cells, all owned (T-3949: power-and-term A2, B2, A9, B9, term-sum A1; T-3950: power-and-term A16, B15, B16, term-sum B3, B4).
+
+## Blocked because
+Blocked because: review-round limit
+
+Three review rounds ran on this branch (heads b828edb14, 73ce0f947, 20d32fb86). The design reviewer approved the last head.
+The Excel-fidelity reviewer asked for changes each round, each time about how far the numbers.md claims reach:
+1. The `^` claim was broader than the probe (C16 shows a negative exponent flushes).
+2. The per-term SERIESSUM flush was not separated from a result flush (fixed with the term-sum case).
+3. `x^2` keeping its subnormal conflicts with `power-large-integer-exponents` B103, B107, B117, B119 (positive-exponent chains flush).
+The third round's fixes are committed after this note (numbers.md and T-3950 narrowed to the probed x^2 points, cross-notes added),
+but that head has had no reviewer run. Next step: an opus run resumes this branch per work-loop step 5c, runs `make check-fast` and
+both reviewers from round 1 on the current head, then enqueues. Do not widen the `^` claim beyond x^2 at 1E-160, 1E-155, 1.1E-155.

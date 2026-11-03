@@ -1,6 +1,6 @@
 ---
 id: T-3950
-title: "The ^ operator keeps a subnormal result (1E-160^2 is not flushed; POWER is) (probes seriessum-subnormal-power-and-term)"
+title: "The ^ operator keeps a subnormal at x^2 for x = 1E-160, 1E-155, 1.1E-155 (probes seriessum-subnormal-power-and-term)"
 milestone: M5
 lane: engine
 status: todo
@@ -11,7 +11,7 @@ depends_on: []
 ---
 
 ## Goal
-The ^ operator returns Excel's value where the result is subnormal: the subnormal is kept, not flushed to 0.
+The ^ operator returns Excel's value at x^2 for x = 1E-160, 1E-155 and 1.1E-155, where Excel keeps the subnormal, and keeps flushing where Excel flushes.
 
 ## Context
 Found by T-3942's probe (probes/seriessum-subnormal-power-and-term, excel-graph, 2026-11-03; docs/excel-semantics/numbers.md
@@ -21,6 +21,8 @@ Found by T-3942's probe (probes/seriessum-subnormal-power-and-term, excel-graph,
 - `POWER(1E-160,2)*1E+300` (A17) is 0: POWER flushes, `^` does not.
 - `=1E-155^2` and `=(1.1E-155)^2` (term-sum case A3:B4) keep the subnormal too. Only base 1E-160, 1E-155 and 1.1E-155 with exponent 2 were probed;
   probe other positive and non-integer exponents first if the fix needs them.
+- Positive-exponent chains flush and must keep passing: probes-numeric/power-large-integer-exponents B103, B107, B117, B119 (`0.5^1074`,
+  `0.1^310`, `(-0.5)^1073`). Why x^2 differs is unknown: probe `1E-160*1E-160`, `1E-160^3` and `0.1^310` against `(0.1^155)^2` first.
 - A negative exponent whose result is subnormal gives a true 0: `=(2^-1023)=0` (term-sum case B5, 2^1023 finite) and `=(SUM(2^-1074))=0`
   (subnormal-function-results C16, where 2^1074 overflows) are TRUE, and the engine matches. Keep term-sum B5 and C16 passing; do not
   remove the flush from `^` as a whole.
