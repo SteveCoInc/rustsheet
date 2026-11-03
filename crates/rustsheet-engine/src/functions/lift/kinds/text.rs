@@ -34,8 +34,9 @@ const TEXTJOIN: ArgKinds = ArgKinds {
     result: CallResult::Value,
 };
 
-/// `ARRAYTOTEXT(array, [format])`: the array is read whole by the function and `format` lifts over a
-/// range and an array, spilling to its shape (T-3884).
+/// `ARRAYTOTEXT(array, [format])`: the array is read whole by the function and `format` lifts over
+/// a range or an array literal, spilling to its shape (gen-m5/af89ea54bae02c71 Calc!A31:B32,
+/// probes/arraytotext-array-literal-format A1:B1; T-3884).
 const ARRAYTOTEXT: ArgKinds = ArgKinds {
     required: 1,
     params: &[WholeByCaller, Lift],

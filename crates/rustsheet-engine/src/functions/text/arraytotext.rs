@@ -13,9 +13,10 @@ impl Model {
     /// format=0 (default, concise): values joined with "," (columns) and ";" (rows)
     /// format=1 (strict): same but wrapped in {} and strings are quoted
     ///
-    /// The array is read whole; `format` lifts over a range (an array literal is unprobed) and spills to its shape,
-    /// one text per element (docs/excel-semantics/text.md "ARRAYTOTEXT: a range format argument",
-    /// gen-m5/af89ea54bae02c71 Calc!A31:B32, A529:B530; T-3884).
+    /// The array is read whole; `format` lifts over a range or an array literal and spills to its
+    /// shape, one text per element (docs/excel-semantics/text.md "ARRAYTOTEXT: a range format
+    /// argument", gen-m5/af89ea54bae02c71 Calc!A31:B32, A529:B530,
+    /// probes/arraytotext-array-literal-format A1:B1; T-3884).
     pub(crate) fn fn_arraytotext(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         if !Function::Arraytotext
             .arg_kinds()
