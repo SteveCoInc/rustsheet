@@ -3,7 +3,7 @@ id: T-3896
 title: "Collation: the middle dot U+00B7 sorts among the punctuation, not after the letters (T-3465 sweep)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
