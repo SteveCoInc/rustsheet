@@ -353,7 +353,14 @@ impl Model {
         // option beats an invalid one before or after it and a non-function
         // (probes/pivotby-followup P!A1401-A1461, P!A1261, P!A1281).
         let function = self.function_elements(&args[3], cell)?;
-        let mut options = self.evaluate_options(&args[4..], &[], cell)?.into_iter();
+        // A one-cell reference to a blank cell as `row_sort_order`, `col_sort_order` or
+        // `filter_array` is `#VALUE!` in its place, ahead of a later option's error, as in
+        // GROUPBY; a blank total depth or field_headers, text, `""` or FALSE there, a scalar
+        // `row_fields` and a short or `""` `col_fields` leave the later error
+        // (probes/t3889-pivotby-option-order P!B1-B46, excel-graph, 2026-11-03).
+        let mut options = self
+            .evaluate_options(&args[4..], &[2, 4, 5], cell)?
+            .into_iter();
         if row_error_cell || col_error_cell {
             return Err(value_error(
                 cell,
