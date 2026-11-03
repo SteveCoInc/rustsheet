@@ -24,18 +24,12 @@ owns them:
   1.46367164609607386819, so Excel is 0.77 ulp below it, ours 0.23 ulp above: ours is correctly rounded).
 - D832 `COSH(8.697490026177835E-07)`: Excel 1.0000000000003784, ours 1.0000000000003781 (exact
   1.00000000000037823166; Excel 0.60 ulp above, ours 0.40 ulp below).
-<<<<<<< HEAD
-- Gap triage 2026-11-03b, the same small-x region, no other owner: probes-numeric/t3720-im-reciprocal-small-x-complex
-  S!H222 `COSH(0.00584055964120653)`: Excel 1.0000170561169464, ours 1.0000170561169461 (the math sidecar's value is
-  ours, so ours is correctly rounded and Excel is 1 ulp above).
-=======
 A third point, added by gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8; no open task named it): the COSH
 companion column of T-3720's IMCOSH sweep, probes-numeric/t3720-im-reciprocal-small-x-complex S!H222
 `COSH(0.00584055964120653)`: Excel 1.0000170561169464, ours 1.0000170561169461 (exact 1.0000170561169462123, so
 Excel is 0.65 ulp above, ours 0.35 ulp below: ours is correctly rounded, the same pattern as D634 and D832).
 - probes-numeric/t3720-im-reciprocal-small-x-complex.case.json (1): S!H222
 
->>>>>>> origin/main
 All three cells are within 15 significant digits, so the task is deferred (decision 0114). Excel is the inaccurate
 one, so this is a fit of Excel's formulation (time-boxed, decision 0056), not an accuracy fix.
 Candidates, scored on all 1035 sweep cells: `excel_exp` (crates/rustsheet-engine/src/x87_exp.rs) in place of
@@ -46,12 +40,7 @@ Code: `cosh` in crates/rustsheet-engine/src/functions/math_and_trigonometry/hype
 so check SECH's cells (ironcalc-calc TRIGONOMETRIC.xlsx COTH_CSCH_SECH) for regressions.
 
 ## Acceptance criteria
-<<<<<<< HEAD
-- [ ] probes-numeric/t3720-im-reciprocal-small-x-complex S!H222 passes bit-exact, or the time-box record below covers it.
-- [ ] D634 and D832 of probes-numeric/t2178-hyperbolic-unit-sweep pass bit-exact and every COSH cell of that
-=======
 - [ ] D634 and D832 of probes-numeric/t2178-hyperbolic-unit-sweep, and t3720-im-reciprocal-small-x-complex S!H222, pass bit-exact and every COSH cell of that
->>>>>>> origin/main
       sweep that passes on main still passes (`make eval-show CASE=probes-numeric/t2178-hyperbolic-unit-sweep.case.json`),
       or, at the time-box, the candidates and their sweep scores are recorded in numbers.md "SINH / COSH / TANH".
 - [ ] No new known-failure lines in any eval/baseline file (`make eval-baseline`).
