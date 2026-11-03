@@ -3272,6 +3272,36 @@ Status: VERIFIED (excel-graph) for L140 bup+bpser to 15 digits (11,724 of 11,753
 in the next entry
 Tasks: T-2506, T-2508, T-2512
 
+## Incomplete beta L140 bup+bpser at the F points: the F tails are not BETA.DIST's call, and bup's sum is open (T-3198)
+Rule (partial): Excel's F tails on bratio's L140 bup+bpser branch take bratio's (x, y) as two separately formed
+arguments, u = 1/(1 + d2/(d1 x)) and v = 1/(1 + d1 x/d2) ("Incomplete beta is TOMS 708 `bratio`" above), not one argument
+and its complement. How Excel sums bup's terms on this branch is still open: it is neither TOMS's recurrence nor the
+L140 bup+bgrat power sum alone (T-3568).
+- Probe: probes-numeric t3198-f-l140-args, 414 F calls on this branch (every literal one of probes-numeric, probes and
+  gen-m9 whose x has at most 15 digits). Per row it asks for u and v as worksheet formulas, then BETA.DIST(u, a, b, TRUE),
+  BETA.DIST(v, b, a, TRUE) and both F tails (excel-graph). u and v are the doubles the engine forms, 414 of 414 each.
+- `F.DIST.RT(x, d1, d2)` = `BETA.DIST(v, d2/2, d1/2, TRUE)` bit for bit on 300 of 414, and `F.DIST(x, d1, d2, TRUE)` =
+  `BETA.DIST(u, d1/2, d2/2, TRUE)` on 309 of 414. Where bratio swaps and u = fl(1 - v), so the two calls are at the same
+  point, they still differ on 13 of 150. So the F functions do not call BETA.DIST's kernel with y = 1 - x.
+- Where u differs from fl(1 - v), the tails follow the separately formed y on most rows: on bratio's computed tail w,
+  the engine's (u, v) is bit-exact on 99 of 238 swapped and 83 of 176 unswapped rows. (1 - v, v) gets 88 and 50,
+  (u, 1 - u) 65 and 72, and (d1 x/(d1 x + d2), d2/(d1 x + d2)) 98 and 79. Over every F cell of the eval on the ported
+  branches, (u, v) stays best or tied on each branch (L140 bup+bpser 520 of 812 bit-exact). `F.DIST.RT(3,50,100)` =
+  1.516786664496894E-06 is an exception: it equals `BETA.DIST(0.4,50,25,TRUE)`, at y0 = 0.6, while
+  u = 0.6000000000000001, which takes the engine 70 ulp low (bup's density multiplies ln(1 - y0) by 49).
+- The kernel itself is the larger error at these points: on Excel's own BETA.DIST at the probe's 816 L140 points
+  (columns C and D), the engine's bup + bpser is bit-exact on 596. Unswapped with n >= 10 bup terms it is 56 of 166,
+  against the bratio fixture's 91 of 122, which has few large-n rows. Candidates for bup's W at the same 816 points and the
+  fixture's 122 rows:
+  - TOMS's recurrence as ported: 596 and 91.
+  - T-3568's power sum `Σ R_i·EXP(i·LN y0)` with ret stored: 669 and 99. On the gated eval it fixes 14 cells and moves
+    one off (ironcalc-calc BETADIST_BETAINV.xlsx H32, `BETA.INV` at (5, 5), 1 ulp). It also moves BETA.DIST at x0 = 0.5
+    off Excel: `BETA.DIST(0.5,100,10,TRUE)` by 1 ulp, and (10, 10) at 0.5 to 0.5000000000000003. There fl(i·LN 0.5)
+    under the engine's EXP is not a power of two (i = 3, 6, 7, 8).
+  - Correctly rounded powers: 636 and 102. These keep x0 = 0.5 and H32, but move `BETA.DIST(0.1,100,10,TRUE)` 2 ulp off.
+  - x^i by repeated products: 593 and 86.
+Evidence: probes-numeric t3198-f-l140-args (excel-graph); T-3198's Outcome has the scoring.
+
 ## Incomplete beta bfrac is TOMS's fraction in a Lentz loop, on closed-form terms (T-3571)
 Rule: where bratio takes bfrac, on the evidenced region a, b in [40, 5000] on the unswapped call (x below the mean, z from -8 to -0.2 sd), Excel computes TOMS 708's
 continued fraction r = 1/(b0 + K(alpha_n/beta_n)) with Numerical Recipes' modified Lentz loop, not TOMS's rescaled
