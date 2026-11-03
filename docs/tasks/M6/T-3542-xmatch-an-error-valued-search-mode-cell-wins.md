@@ -3,7 +3,7 @@ id: T-3542
 title: "XMATCH: an error-valued search_mode cell wins over an out-of-range numeric match_mode, and a multi-cell match_mode is lifted into a spill (non-numeric text match_mode still wins) (gen-m6 arg-pairs cells)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
