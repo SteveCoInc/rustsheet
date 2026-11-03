@@ -24,10 +24,15 @@ or the 1,024-sign cap: refuse the workbook (createSession 501) or load it.
   `check_rule_formulas`, and the name-body parse in `import/mod.rs`).
 - Use the `excel-probe` skill: probe 256 and 257 parentheses and 1,024 and 1,025 minus signs before
   `1`, for a name body, a CF rule and a DV rule (stored).
+- Also probe, stored in a cell, the unprobed sign-cap operand costs (syntax.md assumes 2 for each):
+  1,022 and 1,023 minus signs before a LAMBDA call (`_xlfn.LAMBDA(_xlpm.x,_xlpm.x)(1)`), a called
+  defined name, and a called group. Since T-3869, a wrong cost refuses the whole workbook instead of
+  one `#ERROR!` cell (T-3869 fidelity review, MINOR).
 
 ## Acceptance criteria
 - [ ] Probe cases for the three forms at and one past each cap, run on excel-graph (the refused ones
       recorded and dropped, as T-3172's were).
+- [ ] Cell probes for the three sign-cost shapes at 1,022 and 1,023 signs.
 - [ ] syntax.md "Formula nesting depth cap" records the result; if Excel refuses, an engine-lane
       follow-up task extends the importer's check.
 - [ ] `make check` green; reviewers approve.
