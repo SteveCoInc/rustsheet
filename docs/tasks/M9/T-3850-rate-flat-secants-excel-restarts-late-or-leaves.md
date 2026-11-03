@@ -3,7 +3,7 @@ id: T-3850
 title: "RATE flat secants Excel restarts late or leaves in the noise floor (after T-3698)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
