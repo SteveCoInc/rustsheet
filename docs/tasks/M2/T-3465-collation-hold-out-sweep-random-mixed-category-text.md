@@ -3,7 +3,7 @@ id: T-3465
 title: "Collation hold-out sweep: random mixed-category text pairs compared in Excel (<, =) to measure whether the fitted cmp_text_excel rules generalize past their probes"
 milestone: M2
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -53,16 +53,31 @@ coercion.md "Text comparison uses Excel's collation, not code-point order".
   all rules on random pairs, which none of them does; overlap of a few drawn pairs with their cells is harmless.
 
 ## Acceptance criteria
-- [ ] Probe case `probes/t3465-collation-holdout` (milestone M2) committed with its excel-graph oracle sidecar,
+- [x] Probe case `probes/t3465-collation-holdout` (milestone M2) committed with its excel-graph oracle sidecar,
       at least 500 pairs and their `<` and `=` readers, with the seed and the category of each text recorded.
-- [ ] coercion.md "Text comparison uses Excel's collation, not code-point order" records the agreement rate (pairs
+- [x] coercion.md "Text comparison uses Excel's collation, not code-point order" records the agreement rate (pairs
       the engine orders as Excel, out of all, before any fix) and lists each new rule or corrected UNVERIFIED choice
       with its cells.
-- [ ] Every failing cell is a known failure in eval/baseline/probes.txt (`make eval-baseline`, 0 regressions) and
+- [x] Every failing cell is a known failure in eval/baseline/probes.txt (`make eval-baseline`, 0 regressions) and
       is owned: `make exit-owners MILESTONE=M2` reports 0.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the engine for the pairs that fail (the owning tasks).
 - SORT, SORTBY and UNIQUE orders (T-3211) and lookup folds (T-3133, T-3298).
 - Locales other than en-US.
+
+## Outcome
+- Design: 600 pairs, seed 3465, 23 categories (the task's list; the T-3276 scripts split into Hebrew, Arabic,
+  Devanagari, Thai, Lao, Hangul, CJK, astral), texts of 1 to 6 characters from 1 to 3 categories (combining marks
+  and skipped characters never first), every third pair "near" (a substitution within the character's category,
+  an inserted skipped character or an inserted U+0300..U+0362 mark). Texts are UNICHAR formulas, so nothing is
+  typed. Readers C = A<B, D = B<A, E = A=B. Generator tools/src/rustsheet_tools/gen/collation_holdout.py (ruff,
+  mypy strict); per-row categories in eval/suites/probes/cases/t3465-collation-holdout.draws.tsv.
+- Result (excel-graph 2026-11-03): the engine agrees on 569 of 600 pairs (94.8%), 1738 of 1800 cells, before any
+  fix; Excel is antisymmetric on every pair. Recorded in coercion.md "Text comparison uses Excel's collation, not
+  code-point order"; the UNVERIFIED "Thai and other digit blocks keep code-point order" is marked REFUTED for
+  Thai and Lao.
+- Owners of the 62 failing cells: new T-3895 (Thai and Lao digits, 19 pairs), new T-3896 (middle dot, 1 pair),
+  amended T-3662 (soft hyphen, 9 pairs), T-3305 (U+034F, 1 pair), T-3381 (leading `々` against U+20000, 1 pair).
+- Eval delta: probes +1 case, 1738 new passing cells, 62 new known failures (all owned), 0 regressions.
