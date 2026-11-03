@@ -424,6 +424,15 @@ fn excel_form_lower(a: f64, x: f64, exponent: f64) -> Option<f64> {
 /// operations at any shape (T-1891).
 const TEMME_SHAPE_MIN: f64 = 1e8;
 
+/// The shape from which the pair is [`temme_pair`] within [`NEAR_MODE`] of x = a, below
+/// [`TEMME_SHAPE_MIN`] too. There the series and continued fraction after `rcomp` lose up to 16 ulp
+/// (`POISSON.DIST(46040,46071,TRUE)` 0.4438020698095398, Excel's 0.4438020698095389 is correctly
+/// rounded: ironcalc-calc POISSON.xlsx D55; T-3286), while the expansion's first dropped term,
+/// about C_4(0)/a^4 · e^(-a phi)/sqrt(2 pi a) with |C_4(0)| < 1E-3, is below 1E-17 from here; at
+/// shape 101 it is 3E-13. Within an ulp of 60-digit values at shapes 1E3 to 1E8, 0.6a to 1.4a
+/// (tests.rs `near_mode_pair_is_within_an_ulp_from_shape_1e3`).
+const TEMME_NEAR_MODE_MIN: f64 = 1e3;
+
 /// The shape from which [`gamma_quantile`]'s cdfs are [`temme_pair`] (one term each). One
 /// inversion's cdfs share [`MAX_TERMS`], and a series cdf near the median takes about 7.3 * sqrt(a)
 /// terms, so its cdfs could pass it from about 2.6E5; they did from about 5E6 (`CHISQ.INV(0.5,2E7)`
@@ -501,7 +510,7 @@ const TEMME_C: [&[f64]; 4] = [
 ];
 
 /// (P(a, x), Q(a, x)) by Temme's uniform asymptotic expansion, for a shape of at least
-/// [`TEMME_SHAPE_MIN`] (T-1891). With phi = (x - a)/a - ln(x/a) and z = ±sqrt(2 phi) (the sign of
+/// [`TEMME_SHAPE_MIN`] (T-1891), or [`TEMME_NEAR_MODE_MIN`] near the mode (T-3286). With phi = (x - a)/a - ln(x/a) and z = ±sqrt(2 phi) (the sign of
 /// x - a), the smaller tail is erfc(sqrt(a phi))/2 ± e^(-a phi)/sqrt(2 pi a) · sum `C_k(z)/a^k`
 /// (- for P below a, + for Q from a on), and the other tail 1 minus it. Excel is close to
 /// correctly rounded here: `GAMMA.DIST(1E10,1E10,1,TRUE)` = 0.5000013298076014 and
@@ -565,7 +574,7 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
     if a == 1.0 {
         return (-(-x).exp_m1(), (-x).exp());
     }
-    if a >= TEMME_SHAPE_MIN {
+    if a >= TEMME_SHAPE_MIN || (a >= TEMME_NEAR_MODE_MIN && (x - a).abs() <= a * NEAR_MODE) {
         return charged_temme_pair(a, x, terms);
     }
     let prefactor = gamma_prefactor(a, x, exponent);

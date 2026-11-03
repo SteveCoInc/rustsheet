@@ -69,3 +69,23 @@ Cells this task owns:
 
 ## Out of scope
 - Where Excel's large-shape ratio form starts (T-3252, T-3270). The deep upper tail (T-3269). Shapes 1.5 and 2.5 (T-3285).
+
+## Landing notes
+- State (2026-11-03, session window closed): WIP on branch agent/functions-stat/T-3286-near-mode-temme, draft PR. Not
+  reviewed. `make check-fast` not run; `cargo test -p rustsheet_engine --lib incomplete_gamma` passes with the
+  measuring test below (it prints, it does not yet assert the 1-ulp bound).
+- Change so far: `pair_with` takes `temme_pair` when `a >= TEMME_NEAR_MODE_MIN` (1E3) and |x - a| <= NEAR_MODE·a.
+  `make eval-check` on it: ironcalc-calc 298 -> 296 (fixed 2, presumably POISSON.xlsx D55 and D31), probes 4354 ->
+  4353 (fixed 1, presumably t2982 A144), 0 regressions in every suite. `a_call_past_its_cap_is_nan` was moved to shape
+  999 (the series is one Temme term near the mode from 1E3 now). T-3985 (follow-up of T-3964) is filed on this branch.
+- Measured (ulps from mpmath 60 digits, `near_mode_pair_is_within_an_ulp_from_shape_1e3`, new vs main): at the centre
+  Temme wins (a=1000, x=1000: 0 vs 9; a=46041, x=a: 0 vs 6; x=1.01a: 0.97 vs 4.8; a=1E6, x=a: 0 vs 1), but in the
+  band's tails both are tens to hundreds of ulps off and Temme is sometimes worse: a=1000 x=600 P 59 vs 17, x=1200 Q
+  9.4 vs 2.9, x=1300 Q 13 vs 0, x=1400 Q 98 vs 82; a=46041 x=0.9a P 230 vs 157, 0.95a P 82 vs 52, 1.05a Q 59 vs 29.
+  The tail loss looks like the rounding of a·phi in exp(-a·phi) (relative error about a·phi·eps), shared by both paths.
+- Next step: restrict the Temme switch by a criterion derived from the error model, not fitted to these points (for
+  example a·phi below a bound where erfc's and the correction's rounding dominate), or form a·phi in double-double so
+  both tails improve; then assert the 1-ulp bound only where it holds, and say in the Outcome which acceptance points
+  (shapes 21 and 101 are out of reach of the 4-term expansion: 3E-13 at 101) need a follow-up. mpmath's `gammainc`
+  does not converge at shape 99999999 for most x (NoConvergence); the grid has only one such point.
+- Do not: pick the a·phi cut by scoring these grid points without decision 0056's hold-out (it would be a FITTED cut).
