@@ -3,7 +3,7 @@ id: T-3279
 title: "gen-m2 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M2 functions (MID, LEFT, RIGHT, ROUND*, INDEX, HLOOKUP, VLOOKUP, MATCH, IF, IFERROR)"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -36,3 +36,11 @@ pairwise argument coverage of the M2 functions, with every Excel cell the engine
 ## Out of scope
 - Fixing the engine for the cells this batch finds (the owning tasks).
 - Batches for other milestones.
+
+## Outcome
+`rustsheet-gen --milestone M2 --policy arg-pairs` produced 17 new gen-m2 cases (`0410af7b8cb2a41b`,
+`0a675b089f6f9b27`, `2a6542ea8e30f37d`, `3be70b7007db73eb` and 13 more; 17 excel-graph sidecars filled,
+0 failures). After `make eval` every listed function (MID, LEFT, RIGHT, ROUND, ROUNDUP, ROUNDDOWN,
+INDEX, HLOOKUP, VLOOKUP, MATCH, IF, IFERROR) has `pairwise` 1.0 with no unseen pairs. Every new cell
+passes: gen-m2 baseline gained only `C` lines (no `F`), `make exit-owners MILESTONE=M2` reports 0.
+No new Excel quirk found.
