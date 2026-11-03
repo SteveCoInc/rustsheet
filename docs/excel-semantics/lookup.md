@@ -753,12 +753,19 @@ weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp
 - Georgian: `გ` U+10D2 with U+10FA (Calc!T1075, T1115).
 - Cyrillic Extended-C U+1C80-U+1C88 and Georgian Mtavruli U+1C90-U+1CBF are weightless, so they equal each other
   and not their ordinary letters (Calc!K13:O21, K40:O85).
-The engine folds every pair through Rust's `to_lowercase` and has no weightless class, so the cells of C and D listed
-in eval/baseline/probes.txt fail, and so do the T-3584 cells listed there (T-3445).
-Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above. Implemented for
-T-3133's list only; the T-3298 blocks, the weightless class and the T-3584 classes are not (T-3445).
-Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` (`ExactKey`, the indexed exact
-search) and `WildcardPattern` (the linear one); `decompose` (collation.rs) for XMATCH's `İ`
+Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
+position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
+Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
+Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
+one, supplementary characters stay themselves, the classes above, then SEARCH's `fold_char` unless it lands on a
+weightless character), through `folded_units` (`ExactKey`, the indexed exact search) and `WildcardPattern` (the linear
+one, XMATCH's wildcard mode and wildcard criteria); `decompose` (collation.rs) for XMATCH's `İ`. UNVERIFIED
+(inferred): XMATCH/XLOOKUP's wildcard mode and wildcard criteria take the same fold because they share
+`WildcardPattern` with exact MATCH; the evidence above is exact MATCH, VLOOKUP and HLOOKUP only (probe: T-3929).
+SEARCH, the D-function prefix criteria and TEXTSPLIT/TEXTBEFORE keep `fold_case` (unprobed for the weightless class;
+T-3929 covers the prefix criteria). Not implemented: `=` and COUNTIF's weightless equality (T-3904) and MATCH's U+0001
+key, which matches U+0524 and empty text like `*` (t3584 Calc!R1, digit 3; T-3921). The 54 Calc!R cells whose `=`
+digit or U+0001's digit differs stay in eval/baseline/probes.txt; the other 202 pass.
 
 ## XMATCH, XLOOKUP and LOOKUP compare numbers as exact doubles (T-3106)
 Rule: XMATCH and XLOOKUP equate and order numbers as exact doubles, not at 15 digits like the comparison operators, in

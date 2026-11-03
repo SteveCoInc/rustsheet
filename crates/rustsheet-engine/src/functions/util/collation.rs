@@ -55,11 +55,13 @@ use std::cmp::{Ordering, Reverse};
 use std::iter::Peekable;
 
 mod kana;
+mod lookup_fold;
 mod scripts;
 
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
+pub(crate) use lookup_fold::fold_lookup;
 use scripts::{
     digit_variant, script_mark, script_order, symbol, unit, ARABIC_INDIC_DIGIT, BENGALI_DIGIT,
     DEVANAGARI_DIGIT, EXTENDED_ARABIC_INDIC_DIGIT, GURMUKHI_DIGIT, IDEOGRAPHS, KHMER_DIGIT,
