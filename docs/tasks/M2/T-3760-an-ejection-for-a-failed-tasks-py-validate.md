@@ -3,7 +3,7 @@ id: T-3760
 title: "An ejection for a failed tasks.py validate names the failure instead of an id collision"
 milestone: M2
 lane: harness
-status: in-progress
+status: dropped
 priority: P2
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ triage PRs). Whoever picked it up would look for an id to renumber that does not
 
 ## Out of scope
 - Changing what validate checks.
+
+## Outcome
+Dropped: the merge train (`merge_train.id_collision`) was deleted by T-3827 (decision 0247), so no ejection comment exists to improve. No code change.
