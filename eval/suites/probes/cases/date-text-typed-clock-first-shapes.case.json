@@ -122,7 +122,62 @@
      "entered": "10:00 AM 7-1-2025"
     },
     "B22": "=ISNUMBER(A22)",
-    "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))"
+    "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))",
+    "A23": {
+     "entered": "10:00 A 7/1/2025"
+    },
+    "B23": "=ISNUMBER(A23)",
+    "C23": "=IF(ISNUMBER(A23),MONTH(A23)*100+DAY(A23)+MOD(A23,1),LEN(A23))",
+    "A24": {
+     "entered": "10:00 P 7/1/2025"
+    },
+    "B24": "=ISNUMBER(A24)",
+    "C24": "=IF(ISNUMBER(A24),MONTH(A24)*100+DAY(A24)+MOD(A24,1),LEN(A24))",
+    "A25": {
+     "entered": "10:00 Jul 2025"
+    },
+    "B25": "=ISNUMBER(A25)",
+    "C25": "=IF(ISNUMBER(A25),MONTH(A25)*100+DAY(A25)+MOD(A25,1),LEN(A25))",
+    "A26": {
+     "entered": "10:00 Jul-2025"
+    },
+    "B26": "=ISNUMBER(A26)",
+    "C26": "=IF(ISNUMBER(A26),MONTH(A26)*100+DAY(A26)+MOD(A26,1),LEN(A26))",
+    "A27": {
+     "entered": "10:00 7/2025"
+    },
+    "B27": "=ISNUMBER(A27)",
+    "C27": "=IF(ISNUMBER(A27),MONTH(A27)*100+DAY(A27)+MOD(A27,1),LEN(A27))",
+    "A28": {
+     "entered": "10:00 12/2025"
+    },
+    "B28": "=ISNUMBER(A28)",
+    "C28": "=IF(ISNUMBER(A28),MONTH(A28)*100+DAY(A28)+MOD(A28,1),LEN(A28))",
+    "A29": {
+     "entered": "10:00 July 1"
+    },
+    "B29": "=ISNUMBER(A29)",
+    "C29": "=IF(ISNUMBER(A29),MONTH(A29)*100+DAY(A29)+MOD(A29,1),LEN(A29))",
+    "A30": {
+     "entered": "10  AM 7/1/2025"
+    },
+    "B30": "=ISNUMBER(A30)",
+    "C30": "=IF(ISNUMBER(A30),MONTH(A30)*100+DAY(A30)+MOD(A30,1),LEN(A30))",
+    "A31": {
+     "entered": "10:00 AM  7/1/2025"
+    },
+    "B31": "=ISNUMBER(A31)",
+    "C31": "=IF(ISNUMBER(A31),MONTH(A31)*100+DAY(A31)+MOD(A31,1),LEN(A31))",
+    "A32": {
+     "entered": "10:00:30 AM 7/1/2025"
+    },
+    "B32": "=ISNUMBER(A32)",
+    "C32": "=IF(ISNUMBER(A32),MONTH(A32)*100+DAY(A32)+MOD(A32,1),LEN(A32))",
+    "A33": {
+     "entered": "10:00 7/1/2025  "
+    },
+    "B33": "=ISNUMBER(A33)",
+    "C33": "=IF(ISNUMBER(A33),MONTH(A33)*100+DAY(A33)+MOD(A33,1),LEN(A33))"
    }
   }
  ]

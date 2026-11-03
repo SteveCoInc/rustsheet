@@ -28,4 +28,17 @@ ENTERED S!A21 '10:00 1/Jul/2025': values=[[45839.4166666667]] numberFormat=[['m/
 ENTERED S!A22 '10:00 AM 7-1-2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
 FAIL /home/user/rustsheet/eval/suites/probes/cases/t0481-curly-quote-names-c.case.json: POST https://graph.microsoft.com/v1.0/sites/musicalretreat.sharepoint.com%2C7553f6ba-abeb-414f-8efe-5d0fc479e66f%2Cad1bbda5-6807-40b8-981b-2c888e7cbe8e/drive/items/01VPIWYNK7OJFSOTH425FITKX24EC7V3I2/workbook/createSession -> 501: {"error":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file.","innerError":{"code":"unsupportedWorkbook","message":"The request failed. The workbook contains unsupported features or exceeds the size limit.","innerError":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file."},"date":"2026-11-03T04:27:23","request-id":"c525f5f5-ff09-4731-8ae4-adf65d1608ce","client-request-id":"c525f5f5-ff09-4731-8ae4-adf65d1608ce
 FAIL /home/user/rustsheet/eval/suites/probes/cases/typed-if-one-argument.case.json: POST https://graph.microsoft.com/v1.0/sites/musicalretreat.sharepoint.com%2C7553f6ba-abeb-414f-8efe-5d0fc479e66f%2Cad1bbda5-6807-40b8-981b-2c888e7cbe8e/drive/items/01VPIWYNNHEYM3SO2REZDJUIICXE6O33PO/workbook/createSession -> 501: {"error":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file.","innerError":{"code":"unsupportedWorkbook","message":"The request failed. The workbook contains unsupported features or exceeds the size limit.","innerError":{"code":"FileCorruptTryRepair","message":"We're sorry, but something went wrong with this file."},"date":"2026-11-03T04:27:27","request-id":"1714a932-53c5-45fa-a20a-6ffd92550849","client-request-id":"1714a932-53c5-45fa-a20a-6ffd92550849
+ENTERED S!A23 '10:00 A 7/1/2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A24 '10:00 P 7/1/2025': values=[[45839.9166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A25 '10:00 Jul 2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A26 '10:00 Jul-2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A27 '10:00 7/2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A28 '10:00 12/2025': values=[[45992.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A29 '10:00 July 1': values=[[46204.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A30 '10  AM 7/1/2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A31 '10:00 AM  7/1/2025': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A32 '10:00:30 AM 7/1/2025': values=[[45839.4170138889]] numberFormat=[['m/d/yyyy h:mm']]
+ENTERED S!A33 '10:00 7/1/2025  ': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
 ```
+
+A1-A22 come from the first fill (A14's value is year-dependent there: the case was then changed so C14 reads month, day and time only, and refilled); A23-A33 were added after the fidelity review and filled the same day.
