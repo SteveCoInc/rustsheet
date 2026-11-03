@@ -3,7 +3,7 @@ id: T-3910
 title: "Fix the T-3889 probe citations in pivotby.rs and arrays.md"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
