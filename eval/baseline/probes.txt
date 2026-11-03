@@ -284,6 +284,7 @@ C	probes/criteria-padded-operand.case.json	18
 C	probes/criteria-padded-text.case.json	14
 C	probes/criteria-sparse-cross-sheet.case.json	9
 C	probes/criteria-tilde-blank-single-cell-edges.case.json	88
+C	probes/criteria-tilde-positive-match.case.json	6
 C	probes/criteria-wildcard-newline.case.json	17
 C	probes/criteria-wildcard-tilde.case.json	16
 C	probes/d-function-prefix-lone-surrogates.case.json	35
