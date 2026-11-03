@@ -1871,6 +1871,7 @@ C	probes/t3419-elapsed-after-date-general.case.json	30
 C	probes/t3444-binom-range-inv-large-n.case.json	756
 C	probes/t3446-script-digits-forms.case.json	516
 C	probes/t3465-collation-holdout.case.json	1800
+C	probes/t3490-legacy-spill-ref-shapes.case.json	33
 C	probes/t3505-gamma-inv-budget-band.case.json	525
 C	probes/t3532-numeral-digit-fields.case.json	161
 C	probes/t3532-numeral-digit-general.case.json	145
