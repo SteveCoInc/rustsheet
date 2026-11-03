@@ -2037,6 +2037,7 @@ C	probes/t3920-typed-a-period-unprobed-edges.case.json	160
 C	probes/t3921-match-u0001-wildcard.case.json	135
 C	probes/t3944-datevalue-bare-clock-1900.case.json	40
 C	probes/t3944-datevalue-bare-clock-1904.case.json	40
+C	probes/t3945-atan-near-midpoint.case.json	214
 C	probes/t3946-aggregate-array-element-kinds.case.json	80
 C	probes/t3948-letter-period-gate-edges.case.json	112
 C	probes/t3957-letter-period-colon-tail.case.json	168
@@ -6657,6 +6658,15 @@ F	probes/t3906-rate-restart-oos.case.json	Sheet1!A96
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A97
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A98
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A99
+F	probes/t3945-atan-near-midpoint.case.json	S!B203
+F	probes/t3945-atan-near-midpoint.case.json	S!B204
+F	probes/t3945-atan-near-midpoint.case.json	S!C1
+F	probes/t3945-atan-near-midpoint.case.json	S!C10
+F	probes/t3945-atan-near-midpoint.case.json	S!C3
+F	probes/t3945-atan-near-midpoint.case.json	S!C5
+F	probes/t3945-atan-near-midpoint.case.json	S!C7
+F	probes/t3945-atan-near-midpoint.case.json	S!C8
+F	probes/t3945-atan-near-midpoint.case.json	S!C9
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B1
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B10
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B11
