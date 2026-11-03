@@ -42,14 +42,33 @@ pub(super) fn bup_takes_terms(b0: f64) -> bool {
     n > 1.0 || c == 1.0
 }
 
+/// How L140 bup+bpser forms bup's sum W.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum BupSum {
+    /// T-3568's power sum ([`bup_power_sum`]), BETA.DIST's and F's (T-3198).
+    Powers,
+    /// TOMS's recurrence ([`bup`]), BETA.INV's search.
+    Recurrence,
+}
+
 /// bratio's L140 for x0 <= 0.7 (a, b > 1, b0 < 40, b0·x0 > 0.7): with n = int(b0) and
 /// b0' = b0 - n (b0' = 1 and n - 1 at an integer b0), w = bup(b0', a0, y0, x0, n) + bpser(a0, b0', x0)
 /// (statistics.md "Incomplete beta L140 and bfrac: the prefactor is Excel's own density times x·y";
 /// model `w4-fractions/tomsx.py` `l140_best`, `bratio_excel.py` `bup` with `bup_arith = "w4"` and
 /// `brcmp1 = "pdf"`).
-pub(super) fn l140_bup_bpser(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> {
+///
+/// bup's sum W is T-3568's power sum ([`bup_power_sum`]), not TOMS's recurrence: on the L140
+/// bup+bpser BETA.DIST cells of probes-numeric t3198-f-l140-args it is bit-exact on 674 of 816
+/// against 601 (hold-out half: 341 of 408 against 299), and on the bratio fixture's rows on 99 of
+/// 122 against 91 (T-3198; statistics.md "Incomplete beta L140 bup+bpser at the F points").
+///
+/// BETA.INV's search takes `BupSum::Recurrence` (`bratio::beta_search_tails`).
+pub(super) fn l140_bup_bpser(a0: f64, b0: f64, x0: f64, y0: f64, sum: BupSum) -> Option<f64> {
     let (n, b0_frac) = bup_split(b0);
-    let up = bup(b0_frac, a0, y0, x0, n)?;
+    let up = match sum {
+        BupSum::Powers => bup_with_power_sum(b0_frac, a0, y0, x0, n)?,
+        BupSum::Recurrence => bup(b0_frac, a0, y0, x0, n)?,
+    };
     let series = bpser(a0, b0_frac, x0)?;
     Some(up + series)
 }
@@ -96,9 +115,10 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
 }
 
 /// bup's sum S = 1 + `Σ_{i<n} t_i` of `bup(a, b, x, y, n)` as Excel forms it in L140 bup+bgrat
-/// (T-3568, r5-bup `model.py` `bup_sum`): `t_i = fl(R_i·EXP(fl(i·LN(x))))` with Excel's EXP and LN,
-/// `R_i` the running double product of the stored ratios fl(fl(apb + l)/fl(ap1 + l)), each partial sum
-/// stored, and TOMS's k and eps break ([`bup_break_after`]). TOMS's recurrence d·(r·x) in any
+/// (T-3568, r5-bup `model.py` `bup_sum`) and, for BETA.DIST and F, L140 bup+bpser (T-3198):
+/// `t_i = fl(R_i·EXP(fl(i·LN(x))))` with Excel's EXP and LN, `R_i` the running double product of
+/// the stored ratios fl(fl(apb + l)/fl(ap1 + l)), each partial sum stored, and TOMS's k and eps
+/// break ([`bup_break_after`]). TOMS's recurrence d·(r·x) in any
 /// arithmetic leaves an sd of 17.8 units on its cells against 1.6 for this form at n <= 9
 /// (statistics.md "L140 bup+bgrat with n >= 2 bup terms").
 fn bup_power_sum(a: f64, b: f64, x: f64, y: f64, n: f64) -> f64 {
@@ -152,6 +172,22 @@ fn bup_break_after(a: f64, b: f64, x: f64, y: f64, nm1: f64) -> f64 {
     }
 }
 
+/// [`bup`] with its sum W formed as [`bup_power_sum`] (L140 bup+bpser, T-3198): the same stored
+/// prefactor fl(fl(P·fl(x·y))/a), times S.
+fn bup_with_power_sum(a: f64, b: f64, x: f64, y: f64, n: f64) -> Option<f64> {
+    let ret = bup_prefactor(a, b, x, y)?;
+    if n == 1.0 || ret == 0.0 {
+        return Some(ret);
+    }
+    Some(ret * bup_power_sum(a, b, x, y, n))
+}
+
+/// bup's prefactor fl(fl(P·fl(x·y))/a), P Excel's own beta density of Beta(a, b) at x ([`bup`]).
+fn bup_prefactor(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
+    let density = beta_density_small_shape(x, a, b)?;
+    Some(density * (x * y) / a)
+}
+
 /// TOMS 708 `bup(a, b, x, y, n)` = `I_x(a, b) - I_x(a + n, b)` for a whole n >= 1 and a <= 1, as
 /// Excel computes it (`bratio_excel.py` `bup` and `_bup_term`, `bup_arith = "w4"`):
 /// - the prefactor is Excel's own beta density P of Beta(a, b) at x (T-2503, a <= 1) times x·y, so
@@ -160,8 +196,7 @@ fn bup_break_after(a: f64, b: f64, x: f64, y: f64, nm1: f64) -> f64 {
 ///   held in a register; each partial sum stored;
 /// - the sum stops after term k (TOMS's (b - 1)x/y - a) once d <= eps·W.
 pub(super) fn bup(a: f64, b: f64, x: f64, y: f64, n: f64) -> Option<f64> {
-    let density = beta_density_small_shape(x, a, b)?;
-    let ret = density * (x * y) / a;
+    let ret = bup_prefactor(a, b, x, y)?;
     if n == 1.0 || ret == 0.0 {
         return Some(ret);
     }
