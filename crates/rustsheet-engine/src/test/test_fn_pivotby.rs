@@ -728,6 +728,39 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
     }
 }
 
+/// T-3889: as in GROUPBY, a `row_sort_order`, `col_sort_order` or `filter_array` that is a
+/// one-cell reference to a blank cell is `#VALUE!` in its place, ahead of a later option's error;
+/// a blank total depth or `field_headers` is 0 and a text sort order is invalid only after it, and
+/// a scalar `row_fields`, a short or `""` `col_fields` lose to the later error
+/// (probes/t3889-pivotby-option-order P!B1-B46).
+#[test]
+fn blank_options_are_refused_before_a_later_error() {
+    let mut model = records();
+    model._set("K1", "x");
+    let cases = [
+        ("G1", "A2:A11,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
+        ("G2", "A2:A11,B2:B11", ",,,,K3,,NA()", "#VALUE!"),
+        ("G3", "A2:A11,B2:B11", ",,,,,K3,NA()", "#VALUE!"),
+        ("G4", "A2:A11,B2:B11", ",,K3:K3,,,K1", "#VALUE!"),
+        ("G5", "A2:A11,B2:B11", ",K3,,,,,NA()", "#N/A"),
+        ("G6", "A2:A11,B2:B11", ",,,K3,,,NA()", "#N/A"),
+        ("G7", "A2:A11,B2:B11", ",,K1,,,,NA()", "#N/A"),
+        ("G8", "A2:A11,B2:B11", ",K1,,,,,NA()", "#VALUE!"),
+        ("G9", "A2:A11,B2:B11", ",,NA(),,K3", "#N/A"),
+        ("G10", "2,B2:B11", ",,,,,,NA()", "#N/A"),
+        ("G11", "A2:A11,B2:B3", ",,NA()", "#N/A"),
+        ("G12", "A2:A11,\"\"", "NA()", "#N/A"),
+        ("G13", "2,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
+    ];
+    for (cell, fields, options, _) in cases {
+        model._set(cell, &format!("=PIVOTBY({fields},D2:D11,{SUM},{options})"));
+    }
+    model.evaluate();
+    for (cell, fields, options, expected) in cases {
+        assert_eq!(model._get_text(cell), expected, "{fields} / {options}");
+    }
+}
+
 /// T-3890: one filter value keeps or drops every row only beside one row field, one column field,
 /// one value column and no header row, as in GROUPBY; beside two of any of them, or with a header
 /// row, it is `#VALUE!`, TRUE and 2 included (probes/t3890-pivotby-scalar-filter P!B1-B50).
