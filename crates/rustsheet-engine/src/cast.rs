@@ -169,10 +169,11 @@ pub(crate) fn number_text_too_long(text: &str) -> bool {
     text.len() > MAX_NUMBER_TEXT_LEN && text.chars().count() > MAX_NUMBER_TEXT_LEN
 }
 
-/// Whether `text` ends in a dollar sign, trailing spaces aside: coercion refuses such text
+/// Whether `text` ends in a dollar sign, trailing spaces aside, the one definition of the refusal:
+/// coercion refuses such text
 /// ([`number_text_in`]) and so does typed input (`parse_typed_number`); only the formula test
 /// [`Model::typed_sign_text_is_number`] still reads it, so `-200$` stays text, not a formula.
-fn ends_with_dollar(text: &str) -> bool {
+pub(crate) fn ends_with_dollar(text: &str) -> bool {
     text.trim_end_matches(' ').ends_with('$')
 }
 

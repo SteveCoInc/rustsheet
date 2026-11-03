@@ -1,6 +1,7 @@
 //! Reading typed text as a number together with the format it implies ("$1,234.50" ->
 //! (1234.5, "$#,##0.00")), split from format.rs, which renders numbers.
 
+use crate::cast::ends_with_dollar;
 use crate::mixed_fraction::mixed_fraction;
 use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem};
 
@@ -46,7 +47,7 @@ pub(crate) fn parse_typed_number(
 ) -> Result<(f64, Option<String>), String> {
     // A trailing `$` stays text when typed: `1.5$`, `1.5 $` and `-200$` are General text
     // (probes/t3980-typed-percent-currency A4:C6), as coercion refuses them too.
-    if original.trim_matches(' ').ends_with('$') {
+    if ends_with_dollar(original) {
         return Err("Cannot parse number".to_string());
     }
     parse_formatted_number(original, currencies, locale, current_year, date_system).or_else(|err| {
