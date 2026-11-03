@@ -3,7 +3,7 @@ id: T-3882
 title: "Excel's date names and day halves for LCIDs 0x21, 0x24, 0x27, 0x28, 0x2F and 0x3F (id, sl, lt, tg, mk, kk): probe the tables and add them (8 t1924 and text-locale-calendars cells)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
