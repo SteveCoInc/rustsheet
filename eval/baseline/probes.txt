@@ -244,6 +244,7 @@ C	probes/colon-hash-value-operands.case.json	6
 C	probes/combin-algorithm-sweep.case.json	844
 C	probes/concatenate-after-cut.case.json	9
 C	probes/concatenate-limit-spill.case.json	68
+C	probes/convert-mixed-prefix.case.json	672
 C	probes/convert-targets.case.json	84
 C	probes/convert-temperature-ov00.case.json	1
 C	probes/convert-temperature-ov01.case.json	1
@@ -2038,6 +2039,7 @@ C	probes/t3921-match-u0001-wildcard.case.json	135
 C	probes/t3944-datevalue-bare-clock-1900.case.json	40
 C	probes/t3944-datevalue-bare-clock-1904.case.json	40
 C	probes/t3945-atan-near-midpoint.case.json	214
+C	probes/t3946-aggregate-array-element-kinds.case.json	80
 C	probes/t3948-letter-period-gate-edges.case.json	112
 C	probes/t3957-letter-period-colon-tail.case.json	168
 C	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	244
