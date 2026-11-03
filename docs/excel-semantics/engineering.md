@@ -517,9 +517,9 @@ Tasks: T-2793, T-2810
   `flushed_square` (functions/engineering/complex/mod.rs; probes/eng-imln-modulus-range A43-A56, A79, A80,
   eng-imln-modulus A17; excel-graph). Extrapolated, not probed: parts of about 1.06E-154 to 1.49E-154, where each
   square is subnormal but their sum is normal (`IMLN("1.2E-154+1.2E-154i")`; ours `#NUM!`, IMSQRT "0"; T-2894).
-Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117); probes/t3643-imlog10-grid, t3643-imlog2-grid, t3643-imsqrt-grid, t3643-imsech-grid, t3643-imln-points (excel-graph, 2026-11-01, T-3643).
+Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117); probes/t3643-imlog10-grid, t3643-imlog2-grid, t3643-imsqrt-grid, t3643-imsech-grid, t3643-imln-points (excel-graph, 2026-11-01, T-3643); probes-numeric/t3643-r4-log-modulus (excel-graph, T-3643), t3795-r4-im-last-digits (excel-graph, 2026-11-03, T-3795).
 Status: VERIFIED (excel-graph)
-Tasks: T-1766, T-1892, T-1950, T-2117, T-2572, T-2894
+Tasks: T-1766, T-1892, T-1950, T-2117, T-2572, T-2894, T-3643, T-3795
 
 ## IMPOWER past the angle cut
 Rule: once IMPOWER's angle `atan2(y,x)·n` passes the cut (about 134217727), Excel's sine and cosine both read as the
@@ -719,10 +719,10 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   eng-im-overflow-edges A95) and `atan2·(1/LN_10)` misses `IMLOG10("1.5+710.4i")` (0.68127117135401); the division fits
   all 36 IMLOG10 cells (T-2231). Its real part stays `log10 |z|` (`ln/LN_10` fits the same cells).
 Evidence: probes-numeric `im-last-digit-sweep` (excel-graph, 2026-10-21); COMPLEXs.xlsx G7, G8, G14, G23, H14, H23,
-T14, V4, V15, W4, W7, W21, Z25, AB7; probes/eng-argument-modes A45; probes/eng-im-overflow-edges A47.
+T14, V4, V15, W4, W7, W21, Z25, AB7; probes/eng-argument-modes A45; probes/eng-im-overflow-edges A47; probes-numeric/t3643-r4-log-modulus, t3795-r4-im-last-digits, probes/t3643-imsech-grid (excel-graph, T-3795).
 Status: VERIFIED (excel-graph)
 Implemented in: `imcsc`, `imsec`, `imsech`, `imcot` in functions/engineering/complex/trig.rs, `imabs`, `imargument` in functions/engineering/complex/mod.rs (T-2044); `imlog2_parts`, `imlog10_parts` (T-2231, T-3795)
-Tasks: T-2044, T-2231
+Tasks: T-2044, T-2231, T-3795
 
 ## IMTAN and IMCOT use the double-angle form (T-0907)
 Rule: IMTAN computes tan(x+iy), y nonzero, as `(sin 2x + i·sinh 2y) / (cos 2x + cosh 2y)` (a

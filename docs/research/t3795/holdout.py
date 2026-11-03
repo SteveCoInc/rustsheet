@@ -1,41 +1,41 @@
-"""T-3795 R4.1 hold-out: the chosen models against the correctly rounded value, per function.
+"""T-3795 R4.1 hold-out on the fit lab's split (`fitlab.holdout`, T-3360): the chosen models (the
+engine at the branch head) against the correctly rounded candidate, per function.
 
 Population: every IMSQRT, IMLOG10, IMLOG2 and IMSECH cell of the eval suites whose argument is a
-literal or COMPLEX(x, y) of literals and whose oracle value is text. Split fixed before scoring:
-hold-out = sha1("<case>!<cell>") first byte % 10 < 3 (about 30%); margin 5 points of exact rate.
-"Exact" is the 15-digit text (the only precision a text result carries). The engine's misses come
-from `rustsheet-eval show` (one "<case>!<sheet>!<cell>" per line in FAILS).
+literal or COMPLEX(x, y) of literals and whose oracle value is text, except the fresh sweep
+probes-numeric/t3795-r4-im-last-digits (R4.2 is its own guard). Both candidates answer with text:
+the engine its own printed text (Excel's where the cell passes, the `actual` of `rustsheet-eval
+show` where it does not), the correctly rounded one each 50-digit part rounded to a double and
+printed to 15 significant digits. Scored part by part by `fitlab.score` (exact, within 4 ulp,
+within 15 digits); margin `DEFAULT_MARGIN` (5 points).
 
-Run (from tools/, mpmath): uv run python ../docs/research/t3795/holdout.py FAILS
+Run (from tools/): uv run python ../docs/research/t3795/holdout.py ACTUALS
+ACTUALS: one "<case id>\t<Sheet!A1>\t<engine text>" line per engine miss.
 """
+
 import glob
-import hashlib
 import json
 import re
 import sys
 
-from mpmath import atan2, cos, cosh, log, mp, mpc, mpf, sech, sin, sqrt
+from mpmath import atan2, log, mp, mpc, mpf, sech, sqrt
+from rustsheet_tools.fitlab.holdout import DEFAULT_MARGIN, split, verdict
+from rustsheet_tools.fitlab.score import Candidate, score
+from rustsheet_tools.fitlab.sweep import Cell, parse_complex_text
 
 mp.dps = 50
 ROOT = "../eval/suites"
-fails = set(line.strip() for line in open(sys.argv[1]))
+SWEEP = "probes-numeric/t3795-r4-im-last-digits"
+actual = {}
+for line in open(sys.argv[1]):
+    case, key, text = line.rstrip("\n").split("\t")
+    actual[(case, key)] = text
 
 
-def parse(t):
-    t = t.strip()
-    if not t.endswith(("i", "j")):
-        return float(t), 0.0
-    b = t[:-1]
-    for i in range(len(b) - 1, 0, -1):
-        if b[i] in "+-" and b[i - 1] not in "Ee":
-            im = b[i:]
-            return float(b[:i]), float(im + "1" if im in "+-" else im)
-    im = b
-    return 0.0, float(im + "1" if im in ("", "+", "-") else im)
-
-
-def text(v):
-    return float(f"{float(v):.15g}")
+def literal_parts(t):
+    """A literal's parts as Excel reads them: 15 significant digits each."""
+    re_part, im_part = parse_complex_text(t.strip())
+    return float(f"{re_part:.15g}"), float(f"{im_part:.15g}")
 
 
 def truth(fn, x, y):
@@ -50,36 +50,54 @@ def truth(fn, x, y):
     return log(sqrt(x * x + y * y)) / base, atan2(y, x) / base
 
 
+def text15(v):
+    return f"{float(v):.15g}".replace("e", "E")
+
+
 pat = re.compile(r'^=(IMSQRT|IMLOG10|IMLOG2|IMSECH)\((?:COMPLEX\(([^,()]+),([^,()]+)\)|"([^"]*)")\)$')
-stats = {}
+cells, rounded_text, oracle_text = {}, {}, {}
 for cf in sorted(glob.glob(ROOT + "/**/*.case.json", recursive=True)):
-    of = cf.replace(".case.json", ".oracle.json")
     try:
-        case, oracle = json.load(open(cf)), json.load(open(of))
+        case = json.load(open(cf))
+        oracle = json.load(open(cf.replace(".case.json", ".oracle.json")))
     except (OSError, ValueError):
         continue
-    cid = cf.split("suites/")[1].replace("/cases/", "/")
+    cid = cf.split("suites/")[1].replace("/cases/", "/").removesuffix(".case.json")
+    if cid == SWEEP:
+        continue
     for sheet in case.get("sheets", []):
         osh = oracle.get("sheets", {}).get(sheet["name"], {})
-        for cell, formula in sheet.get("cells", {}).items():
+        for address, formula in sheet.get("cells", {}).items():
             m = pat.match(formula) if isinstance(formula, str) else None
-            if not m or osh.get(cell, {}).get("t") != "s":
+            if not m or osh.get(address, {}).get("t") != "s":
                 continue
             fn = m.group(1)
             try:
                 if m.group(4) is not None:
-                    x, y = (float(f"{v:.15g}") for v in parse(m.group(4)))
+                    x, y = literal_parts(m.group(4))
                 else:
                     x, y = float(m.group(2)), float(m.group(3))
-                er, ei = parse(osh[cell]["v"])
+                er, ei = parse_complex_text(osh[address]["v"])
                 tr, ti = truth(fn, x, y)
             except (ValueError, ZeroDivisionError):
                 continue
-            key = f"{cid}!{sheet['name']}!{cell}"
-            part = "hold" if hashlib.sha1(f"{cid}!{cell}".encode()).digest()[0] % 10 < 3 else "train"
-            s = stats.setdefault((fn, part), [0, 0, 0])
-            s[0] += 1
-            s[1] += key not in fails
-            s[2] += text(tr) == er and text(ti) == ei
-for (fn, part), (n, chosen, rounded) in sorted(stats.items()):
-    print(f"{fn:8} {part:5} n={n:4}  chosen {chosen:4} ({chosen / n:.1%})  correctly rounded {rounded:4} ({rounded / n:.1%})")
+            cell = Cell(cid, sheet["name"], address, formula, (x, y), er, None, ei)
+            cells.setdefault(fn, []).append(cell)
+            sign = "+" if float(ti) >= 0 else "-"
+            rounded_text[(cid, cell.key)] = f"{text15(tr)}{sign}{text15(abs(ti))}i"
+            oracle_text[(cid, cell.key)] = osh[address]["v"]
+
+chosen = Candidate("chosen", lambda c: actual.get((c.case, c.key), oracle_text[(c.case, c.key)]))
+rounded = Candidate("correctly rounded", lambda c: rounded_text[(c.case, c.key)])
+print("function  side   n     chosen exact/4ulp/15dig   correctly rounded exact/4ulp/15dig")
+for fn in sorted(cells):
+    train, test = split(cells[fn])
+    scores = {}
+    for side, part in (("train", train), ("test", test)):
+        for cand in (chosen, rounded):
+            s = score(part, cand)
+            scores[(side, cand.name)] = s
+        c, r = scores[(side, "chosen")], scores[(side, "correctly rounded")]
+        print(f"{fn:8}  {side:5} {c.total:4}   {c.exact:4} {c.ulp:4} {c.digits15:4}   {r.exact:4} {r.ulp:4} {r.digits15:4}")
+    v = verdict(scores[("train", "chosen")], scores[("test", "chosen")], scores[("test", "correctly rounded")], DEFAULT_MARGIN)
+    print(f"{fn:8}  verdict: {v.text()}")

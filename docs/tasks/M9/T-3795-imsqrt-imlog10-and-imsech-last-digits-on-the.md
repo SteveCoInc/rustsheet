@@ -79,26 +79,30 @@ it): Excel's CRT `atan` is not correctly rounded there. Tried: `π/2 - atan(1/q)
 The cell stays in the baseline. It is visibly off, so it is owned by follow-up T-3945 (Excel's `atan` last bit).
 
 **R4 guards**
-- Hold-out (manual split, `docs/research/t3795/holdout.py`: sha1 of `<case>!<cell>`, first byte % 10 < 3 → hold-out,
-  about 30%, margin 5 points; text results carry 15 digits, so "exact" is the 15-digit text; the population
-  includes the fresh sweep below). The split was fixed after the candidates above were ranked on all cells (no fit
-  lab split exists for these functions yet), so the fresh sweep is the uncontaminated guard.
+- Hold-out (R4.1) on the fit lab's split (`fitlab.holdout.split`, T-3360: salted sha256, 300 per mille held out;
+  margin `DEFAULT_MARGIN`, 5 points), scored by `fitlab.score` part by part, `docs/research/t3795/holdout.py`.
+  Population: every IMSQRT, IMLOG10, IMLOG2 and IMSECH text cell of the suites with literal or COMPLEX arguments,
+  except the fresh sweep. Both candidates answer with text: the engine its printed text, the correctly rounded
+  one each 50-digit part rounded to a double and printed to 15 digits. The candidates were ranked on all cells
+  before this split was scored (the lab split was not tuned on, but it is not a clean hold-out), so the fresh sweep
+  below is the uncontaminated guard. Counts are exact / within 4 ulp / within 15 digits:
 
-  | function | split | n | chosen | correctly rounded |
-  |---|---|---|---|---|
-  | IMLOG10 | hold | 293 | 293 (100.0%) | 245 (83.6%) |
-  | IMLOG10 | train | 753 | 753 (100.0%) | 616 (81.8%) |
-  | IMLOG2 | hold | 328 | 328 (100.0%) | 233 (71.0%) |
-  | IMLOG2 | train | 746 | 745 (99.9%) | 561 (75.2%) |
-  | IMSECH | hold | 874 | 873 (99.9%) | 727 (83.2%) |
-  | IMSECH | train | 1942 | 1939 (99.8%) | 1626 (83.7%) |
-  | IMSQRT | hold | 294 | 294 (100.0%) | 230 (78.2%) |
-  | IMSQRT | train | 608 | 608 (100.0%) | 436 (71.7%) |
+  | function | side | n | chosen | correctly rounded | verdict |
+  |---|---|---|---|---|---|
+  | IMLOG10 | train | 631 | 631 / 631 / 631 | 536 / 536 / 536 | accept |
+  | IMLOG10 | test | 265 | 265 / 265 / 265 | 230 / 230 / 230 | |
+  | IMLOG2 | train | 634 | 634 / 634 / 634 | 472 / 472 / 472 | accept |
+  | IMLOG2 | test | 290 | 289 / 289 / 289 | 231 / 231 / 231 | |
+  | IMSECH | train | 1910 | 1907 / 1907 / 1907 | 1609 / 1609 / 1609 | accept |
+  | IMSECH | test | 776 | 775 / 775 / 775 | 638 / 638 / 640 | |
+  | IMSQRT | train | 516 | 516 / 516 / 516 | 366 / 366 / 371 | accept |
+  | IMSQRT | test | 236 | 236 / 236 / 236 | 180 / 180 / 180 | |
 - Fresh sweep: probes-numeric/t3795-r4-im-last-digits (seed 3795, `docs/research/t3795/gensweep.py`, generated and
   filled from excel-graph after the models froze at 584b6fb63): 580 of 580 cells match Excel's text (150 IMSQRT,
   150 IMLOG10, 150 IMLOG2, 130 IMSECH).
 - Gate A envelope: all 580 fresh-sweep cells are within 15 significant digits of Excel, so inside the envelope;
-  no point outside.
+  no point outside. No `r4-T-3795` Gate A table batch exists because eval/accuracy has no IM* table (complex
+  text results), so the fresh sweep is a probes-numeric case, as in T-3721 and T-3883.
 - Reproducibility floor: each fixed cell is a 15th-digit text difference, a whole printed digit, not a sub-4-ulp
   numeric difference. No keep-matched branch: each model applies to the whole domain.
 
