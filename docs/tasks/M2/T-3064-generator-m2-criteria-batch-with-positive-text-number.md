@@ -3,7 +3,7 @@ id: T-3064
 title: "Generator M2 criteria batch with positive text-number, tilde and boolean-text matches"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
