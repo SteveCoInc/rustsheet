@@ -75,3 +75,16 @@ cells listed under Context, where one part is one digit off today.
     not where the old form matched.
 - Unit test `overflowed_reciprocals_divide_by_cosh`.
 - Eval delta: probes known failures 4995 -> 4967 (fixed 28: 24 here, 4 of T-3851; regressions 0, no new line).
+
+## Landing notes
+- PR #2964. All three reviewers (design, security, excel-fidelity) returned APPROVE on 98b3cac3 with MINOR findings
+  only. Those findings are filed in T-3915.
+- After #2955 merged, `make catch-up PR=2964` merged origin/main in. The conflict was only in eval/baseline/probes.txt.
+  That push was 6cdd336d, and a catch-up needs no re-review. This commit adds only these notes and T-3915's wider
+  scope (task files).
+- CI was pending on this head when the session's landing window closed (11:04 UTC). Next step: once CI is green,
+  enqueue with `enable_pr_auto_merge` (SQUASH). Run no reviewer again, since the only changes after the approved head
+  are a clean merge of main and task-file text.
+- Do not repeat: the comment-move fix the reviewers asked for was deliberately not pushed (a MINOR never starts a push
+  once all approve). It is in T-3915.
+
