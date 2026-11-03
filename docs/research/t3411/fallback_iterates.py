@@ -4,10 +4,13 @@ For every IRR cell with an oracle value in eval/suites, this replays the engine'
 NPV as `discounted_sum` at x = 1/v with Excel's twice-rounded operators, 50 steps, retry from 0.1) and keeps the cells
 where both runs fail. For those it runs `irr_fallback`'s Newton on P(v) = sum c_i v^i (plain doubles, Horner) from
 v = 0 without its cap, and reports whether Excel's value is 1/v - 1 at some iterate, and where: at the engine's stop
-(the first step under 1e-7 max(|v|, 1)), one iterate later, or elsewhere.
+(the first step under 1e-7 max(|v|, 1)), one iterate later, both (the two give the same rate, so the cell cannot
+tell them apart) or elsewhere. It also tallies the cells by case, by how the last secant run fails, and, on the
+cells where Excel is an error, whether that Newton search converges to a root under the far-root bound.
 
-The secant replay is exact rational arithmetic rounded to 64 then 53 bits; it differs from the engine on 7 of the
-703 cells it keeps (a root where the engine's run fails). Stdlib only, a few minutes:
+The secant replay is exact rational arithmetic rounded to 64 then 53 bits (a few cells may differ from the engine
+in the last bit of a step). The rounding mirrors tools' `fitlab.exact.rounded_to`, kept here so the script is
+stdlib only. A few minutes:
 
     python3 -I docs/research/t3411/fallback_iterates.py <repo>
 """
@@ -65,8 +68,9 @@ def npv(flows: list[Fraction], v: Fraction) -> Fraction | None:
     return total if abs(total) < LIMIT else None
 
 
-def secant_finds_root(flows: list[Fraction], guess: float) -> bool:
-    """Whether the secant run decides the call (a root, or `#DIV/0!` at v = 0)."""
+def secant_run(flows: list[Fraction], guess: float) -> str:
+    """How one secant run ends: "decided" (a root, or `#DIV/0!` at v = 0, which skips the retry and the fallback),
+    or the way it fails: "flat", "cap" or "iterate" (outside (0, 1) in d, or an NPV out of range)."""
 
     def at(d: Fraction) -> Fraction | None:
         v = plain(1 - d)
@@ -76,24 +80,25 @@ def secant_finds_root(flows: list[Fraction], guess: float) -> bool:
     d0 = twice(g / plain(1 + g))
     f0 = at(d0)
     if f0 is None:
-        return False
+        return "iterate"
     d1 = plain(d0 - (Fraction(1e-3) if f0 > 0 else -Fraction(1e-3)))
     f1 = at(d1)
     largest = max(abs(c) for c in flows)
     for _ in range(50):
-        if f1 is None or f1 == f0:
-            return False
+        if f1 is None:
+            return "iterate"
+        if f1 == f0:
+            return "flat"
         d2 = plain(d1 - twice(plain(f1 * plain(d1 - d0)) / plain(f1 - f0)))
         if d2 >= 1:
-            # d2 = 1 is `#DIV/0!` without the retry or the fallback: not a fallback cell
-            return d2 == 1
+            return "decided" if d2 == 1 else "iterate"
         f2 = at(d2)
         if f2 is not None and abs(d2 - d1) < Fraction(1e-7):
             stalled = d2 == d1 and abs(f2) < Fraction(1e-7) * largest
             if abs(f2) < Fraction(1e-7) or stalled:
-                return float(twice(1 / plain(1 - d2))) < 1e7
+                return "decided" if float(twice(1 / plain(1 - d2))) < 1e7 else "iterate"
         d0, f0, d1, f1 = d1, f1, d2, f2
-    return False
+    return "cap"
 
 
 def newton_iterates(flows: list[float], cap: int = 5000) -> list[tuple[float, float]]:
@@ -118,6 +123,22 @@ def newton_iterates(flows: list[float], cap: int = 5000) -> list[tuple[float, fl
 
 def rate(v: float) -> float:
     return float(twice(1 / Fraction(v))) - 1.0
+
+
+def classify(its: list[tuple[float, float]], stop: int | None, value: float) -> str:
+    """Which iterate Excel's `value` is, relative to the engine's stop (Excel's value is some iterate)."""
+    if stop is None:
+        return "another iterate"
+    at_stop = its[stop][0] > 0 and rate(its[stop][0]) == value
+    after = stop + 1 < len(its) and its[stop + 1][0] > 0
+    at_next = after and rate(its[stop + 1][0]) == value
+    if at_stop and (at_next or not after):
+        return "the iterate at the engine's stop and the next one (same rate): ambiguous"
+    if at_stop:
+        return "the iterate at the engine's stop, not the next one"
+    if at_next:
+        return "the iterate one after the engine's stop, not the one at it"
+    return "another iterate"
 
 
 def main() -> None:
@@ -145,24 +166,27 @@ def main() -> None:
                 if not -1 < guess < 2.0**53 or all(c >= 0 for c in values) or all(c <= 0 for c in values):
                     continue  # `#VALUE!` or `#NUM!` before any search
                 exact = [Fraction(c) for c in values]
-                if secant_finds_root(exact, guess) or (guess != 0.1 and secant_finds_root(exact, 0.1)):
+                end = secant_run(exact, guess)
+                if end != "decided" and guess != 0.1:
+                    end = secant_run(exact, 0.1)
+                if end == "decided":
                     continue
-                if cell["t"] != "n":
-                    tally[f"secant fails, Excel {cell['v']}"] += 1
-                    continue
+                name = case.stem.removesuffix(".case")
+                excel = "returns" if cell["t"] == "n" else cell["v"]
+                tally[f"case {name}: secant fails"] += 1
+                tally[f"last run {end}, Excel {excel}"] += 1
                 its = newton_iterates(values)
-                hit = next((k for k, (v, _) in enumerate(its) if v > 0 and rate(v) == cell["v"]), None)
                 stop = next((k for k, (v, s) in enumerate(its) if s < 1e-7 * max(abs(v), 1)), None)
-                if hit is None:
-                    kind = "no iterate"
-                elif stop is not None and rate(its[stop][0]) == cell["v"]:
-                    kind = "iterate at the engine's stop"
-                elif stop is not None and stop + 1 < len(its) and rate(its[stop + 1][0]) == cell["v"]:
-                    kind = "iterate one after the engine's stop"
-                else:
-                    kind = "another iterate"
-                tally[f"secant fails, Excel returns: {kind}"] += 1
-                print(case.stem.removesuffix(".case"), addr, kind, hit, stop, flush=True)
+                if cell["t"] != "n":
+                    root = its[stop][0] if stop is not None else None
+                    converged = root is not None and root > 0 and float(twice(1 / Fraction(root))) < 1e7
+                    tally[f"Excel {excel}, Newton {'converges' if converged else 'fails'}"] += 1
+                    continue
+                hit = next((k for k, (v, _) in enumerate(its) if v > 0 and rate(v) == cell["v"]), None)
+                kind = classify(its, stop, cell["v"]) if hit is not None else "no iterate"
+                tally[f"secant fails, Excel returns {kind}"] += 1
+                step = its[stop][1] if stop is not None else math.nan
+                print(name, addr, kind, "hit", hit, "stop", stop, f"step {step:.3g}", flush=True)
     for key, count in sorted(tally.items()):
         print(f"{count:5d}  {key}")
 

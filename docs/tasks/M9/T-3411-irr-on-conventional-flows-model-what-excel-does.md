@@ -156,8 +156,8 @@ with docs/research/t3411/fallback_iterates.py; no engine change:
   digits) and keeping the two smallest-|NPV| points (85).
 - New lead: where both secant runs fail and Excel returns, Excel's double is very often exactly an iterate of
   `irr_fallback`'s Newton from v = 0 (see the financial.md entry and the script's output for the counts), at steps
-  up to about 630: the fallback's 50-step cap is not Excel's, and Excel sometimes returns the iterate one past the
-  engine's 1e-7 stop. Neither the step size nor |P| decides that extra step, and Newton converges on most `#NUM!`
+  up to about 630: the fallback's 50-step cap is not Excel's, and where the cells can tell, Excel mostly returns the
+  iterate one past the engine's 1e-7 stop (51 cells against 4). Neither the step size nor |P| decides that extra step, and Newton converges on most `#NUM!`
   cells too, so the type rule is still open.
 - Next step: the type split, on the cells where Excel's value is a Newton iterate. Inside t3406 A122-A132 the
   returning and `#NUM!` cells share the secant path and the Newton path (126 steps); find what differs, for example
