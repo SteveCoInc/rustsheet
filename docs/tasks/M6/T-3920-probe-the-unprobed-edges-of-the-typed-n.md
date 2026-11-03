@@ -3,7 +3,7 @@ id: T-3920
 title: "Probe the unprobed edges of the typed 'N A. F/D/Y' reading (AM., H:M hours from 24, 1904 day 0, formula readers of text-staying shapes)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
