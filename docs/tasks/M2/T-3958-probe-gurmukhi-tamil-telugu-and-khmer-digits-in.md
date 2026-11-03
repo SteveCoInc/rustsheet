@@ -3,7 +3,7 @@ id: T-3958
 title: "Probe Gurmukhi, Tamil, Telugu and Khmer digits in number text and collation; fix T-3917's rank-cell citations"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
