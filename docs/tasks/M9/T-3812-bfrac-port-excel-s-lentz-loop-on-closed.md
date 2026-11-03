@@ -86,4 +86,7 @@ t3571-r5-bfrac-* cells before and after as the acceptance criteria say.
   are 1.1e-14 to 2.1e-14 from a 60-digit continued fraction). Tune and hold: 1,536 and 1,632 inside. BETA.DIST has no
   Gate A table yet (T-3529).
 - Eval: `make eval-check` REGRESSIONS 0 in every suite, fixed 0 (the t3571 and xruns probes-numeric cases are not
-  gated). statistics.md "Incomplete beta bfrac is TOMS's fraction in a Lentz loop" Ours line updated.
+  gated). statistics.md "Incomplete beta bfrac is TOMS's fraction in a Lentz loop" Ours line updated. Decision 0257
+  records the fitted lock and accepts the 11 lost ungated xruns-1 cells and the 2 removed test pins (round 2's
+  excel-fidelity finding).
+- Follow-up filed: T-3913 (F.DIST and BINOM.DIST on the Lentz region, round 2's MINOR).

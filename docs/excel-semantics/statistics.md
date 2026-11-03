@@ -3268,7 +3268,9 @@ Evidence: probes-numeric t3571-r5-bfrac-tune, -hold, -fresh; docs/research/t2464
 Ours: the model above on the evidenced region (`functions/statistical/bratio/bfrac.rs` `lentz_region`,
 `lentz_fraction`, T-3812; bit for bit `model.py` given the same density, all 4,368 tune, hold and fresh points), NR's
 FPMIN floors on |D| and |C| kept (a safety choice, directive 5; no probed point reaches them); TOMS's forward recurrence
-with TOMS's λ elsewhere (T-2508). With the engine's density (T-3244, not Excel's at large shapes) the cdf cells score
+with TOMS's λ elsewhere (T-2508). The gate reads only bratio's dispatch, so every caller that reaches bfrac on the
+region takes the loop (F.DIST and FDIST through fisher.rs, BINOM.DIST, BETA.INV's crossings); the evidence is BETA.DIST
+only (y = fl(1 - x)), so those callers are UNVERIFIED there, as they were on TOMS's recurrence (T-3913). With the engine's density (T-3244, not Excel's at large shapes) the cdf cells score
 63/578/1,069 of 1,536 tune, 102/635/978 of 1,632 hold and 39/252/490 of 1,200 fresh (TOMS before: 44/466/1,055,
 45/428/913, 18/175/431; w15 here is half a unit of the 15th digit); fresh is 1,200 of 1,200 inside Gate A's envelope.
 On w2's (100, 120) run (t2464-w2f-xruns-1, 865 cells on the region) it is 32/351/496 against 43/325/480: 11 TOMS
