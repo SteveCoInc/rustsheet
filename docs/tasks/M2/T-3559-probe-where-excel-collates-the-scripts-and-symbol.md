@@ -3,7 +3,7 @@ id: T-3559
 title: "Probe where Excel collates the scripts and symbol blocks T-3276 left unprobed (Bengali, Tamil, Georgian, Armenian, Ethiopic, math and box symbols, emoji sequences, other planes)"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
