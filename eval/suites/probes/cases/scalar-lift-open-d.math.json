@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "a58a4625a54382bfd10ca3a751e0c5f3907d13f5bf4b730cc809b39613490455"
+ },
+ "sheets": {
+  "Sheet1": {
+   "W31": {
+    "t": "n",
+    "v": "7.0",
+    "f": "=SERIESSUM(2,0,1,B1:B3)"
+   }
+  }
+ }
+}

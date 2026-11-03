@@ -13,6 +13,7 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Draw, MathArg
+from rustsheet_tools.accuracy.sampler import log_uniform
 
 
 def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
@@ -57,3 +58,9 @@ def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
+
+
+def signed_log_uniform(rng: random.Random, lo: float, hi: float, negative: float = 0.3) -> float:
+    """A log-uniform magnitude in [lo, hi], negated with probability `negative` (the aggregate families' draws)."""
+    x = log_uniform(rng, lo, hi)
+    return -x if rng.random() < negative else x
