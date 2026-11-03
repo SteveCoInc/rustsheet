@@ -3,10 +3,10 @@ id: T-3884
 title: "ARRAYTOTEXT: a multi-cell range format argument lifts and spills, and a blank first argument gives #VALUE! over an error format"
 milestone: M5
 lane: functions-text
-status: done
+status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 campaign: semantics
 ---
@@ -34,3 +34,10 @@ Every cell this task owns has the right type, error and text (decision 0083).
 
 ## Outcome
 ARRAYTOTEXT is a lifting-table function (array `WholeByCaller`, `format` `Lift`); `fn_arraytotext` renders at most two texts and the driver spills them to the format's shape. A blank first argument is `#VALUE!` before the format is read. Eval: gen-m5/af89ea54bae02c71 now passes all 178 cells (the 20 owned cells leave eval/baseline/gen-m5.txt); no regressions.
+
+## Handoff
+PR #2929. Range-format behaviour is done and oracle-backed (gen-m5/af89ea54bae02c71 178/178, the 20 cells leave the baseline, spills A31:B32, A529:B530, A463:B464, A466:B467 match); design and security approved on 7a682310. excel-fidelity requested changes twice (7a682310: an error/blank first argument must spill its error over a range format, fixed in 6ce00a0c; 6ce00a0c: one open MAJOR). CI was green on 6ce00a0c.
+Open finding on 6ce00a0c:
+- MAJOR giving `format` the `Lift` kind (lift/kinds/text.rs) makes an array-literal format spill (`ARRAYTOTEXT(7,{0,1})`), where it used to be read as one number. No Excel evidence; the unit test in test/text_functions/lift_driver.rs (B11, B12) pins it and cites a range-format cell. Either probe `ARRAYTOTEXT(x,{0,1})`, `{0;1}`, `{0,2}` with excel-probe (excel-graph is available) and cite the cells, or mark the array-literal part UNVERIFIED in text.md and the comments, drop the citation from the test, and add "array-literal format" to T-2863.
+- MINOR make the doc comment in functions/text/arraytotext.rs and the ARRAYTOTEXT comment in kinds/text.rs agree with text.md on what lifts.
+Set `status: done` again after fixing; re-run fidelity only.
