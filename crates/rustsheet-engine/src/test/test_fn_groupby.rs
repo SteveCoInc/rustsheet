@@ -738,6 +738,26 @@ fn a_lifted_groupby_filter_serves_one_element() {
 }
 
 #[test]
+fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
+    // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
+    // itself has no filter, so every element keeps its value (T-3840 review).
+    let mut model = records();
+    model._set(
+        "Z2",
+        "=D2+IFERROR(INDEX(GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023),1,1)*0,0)",
+    );
+    for row in 3..=11 {
+        model._set(&format!("Z{row}"), &format!("=D{row}"));
+    }
+    model._set("H1", "=GROUPBY(A2:A11,Z2:Z11,_xleta.SUM,{0,1;0,1},1)");
+    model._set("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{0,1;0,1},1)");
+    model.evaluate();
+    assert_eq!(row(&model, 1, 'H', 'I'), row(&model, 1, 'K', 'L'));
+    assert_eq!(row(&model, 2, 'H', 'I'), row(&model, 2, 'K', 'L'));
+    assert_ne!(model._get_text("I2"), "#VALUE!");
+}
+
+#[test]
 fn error_values_of_arguments_come_first_in_argument_order() {
     // groupby-sort-filter-args B61-B78: an error value in any argument wins over an invalid other
     // argument, earlier or later, and the first error in argument order wins.

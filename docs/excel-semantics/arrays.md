@@ -2255,8 +2255,11 @@ so the later calls meet a filter taller than them.
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
-every later element `#VALUE!`. PIVOTBY's lift is unprobed (T-3841).
-Status: VERIFIED (excel-graph)
+every later element `#VALUE!`; a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
+lift is unprobed (T-3841).
+Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
+row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
+that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
 Tasks: T-3840
 
 ## Array-value edges in the gen-m9 sweep (T-2436)

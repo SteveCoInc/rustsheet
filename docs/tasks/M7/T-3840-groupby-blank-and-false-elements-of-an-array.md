@@ -61,6 +61,10 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
   after it, which is Excel's order here (both are `#VALUE!`, so no other cell changes). PIVOTBY's lift is unprobed
   (T-3841) and doesn't set the flag.
 - The early-error lift (A7565:B7566, A2563:B2564, A2624:B2625) and 53473f95ff58029d A9090 already passed on main (T-3837).
+- Review round 1 (excel-fidelity): a cell read on demand during an element's call could set the flag. `evaluate_formula_cell`
+  now saves and restores it around `run_top`, and the unit test `a_cell_read_on_demand_spends_no_filter_of_a_lift` shows
+  the leak on round 1's head. The unprobed edges are UNVERIFIED in the arrays.md entry: a filter keeping no row, a table
+  relationship with subtotals, and a nested lift.
 - Unit test `a_lifted_groupby_filter_serves_one_element`.
 - Eval delta: gen-m7 known failures 4 -> 1 (B5736, B8054, B4150 fixed; the one left, 3f368d034700f19e A2990, is T-3765's
   SCAN cell). 0 regressions. The three new probe cases pass in full.

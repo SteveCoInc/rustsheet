@@ -594,7 +594,7 @@ impl Model {
         // spends it (probes/t3840-groupby-lifted-filter-consumed G!A5, G!A41).
         let relationship = self.relationship(relationship, cell)?;
         let rows = self.filter_rows(filter, keys.len(), first, one_keeps_all, cell)?;
-        if rows.len() < keys.len() - first {
+        if rows.len() < keys.len().saturating_sub(first) {
             self.groupby_filter_spent = true;
         }
         let total_depth = self.total_depth(total_depth, key_columns, cell)?;
