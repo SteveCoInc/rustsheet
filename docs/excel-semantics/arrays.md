@@ -2259,7 +2259,9 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   record, a 1x1 filter is that record's own element, as a filter as tall as the records is, so TRUE, 2, `{TRUE}` and a
   one-cell reference to TRUE keep the record and FALSE or `{FALSE}` keep none (`#VALUE!`), whatever the key width
   (`GROUPBY(S!A1:A2,S!B1:B2,_xleta.SUM,1,,,{TRUE})` is x, 5; Total, 5: G!A1:A41; two key columns G!A37); with two records
-  it is `#VALUE!` (G!A29). A detected header row counts as a header row: `GROUPBY(S!A1:A4,S!B1:B4,_xleta.SUM,,,,TRUE)` and
+  it is `#VALUE!` (G!A29). Two value columns change nothing: `GROUPBY(S!A1:A2,S!B1:C2,_xleta.SUM,1,,,{TRUE})` is x, 5, 6;
+  Total, 5, 6 with field_headers 1 or 3, TRUE, `{TRUE}`, 2 or a one-cell reference to TRUE, `{FALSE}` is `#VALUE!`, and two
+  records or field_headers 0 over the header row are `#VALUE!` (probes/t3964-groupby-filter-lift-errors G!A1:C42, T-3964). A detected header row counts as a header row: `GROUPBY(S!A1:A4,S!B1:B4,_xleta.SUM,,,,TRUE)` and
   `{TRUE}` are `#VALUE!` though the call without the filter spills (G!A45:A57), and beside one record TRUE keeps it
   (G!A63:A74); a detected none keeps every row (G!A78). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), the FALSE element is `#VALUE!`
@@ -2279,7 +2281,7 @@ eval/baseline/gen-m7.txt.
 Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`); since
 T-3880 its records-height arm comes before the one-value arm, so a header row with one record keeps the record.
 Status: VERIFIED (excel-graph) for the cells named
-Tasks: T-3837, T-3838, T-3839, T-3840, T-3880
+Tasks: T-3837, T-3838, T-3839, T-3840, T-3880, T-3964
 
 ## PIVOTBY in the gen-m7 arg-pairs batch (T-3841)
 Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
@@ -2367,18 +2369,26 @@ so the later calls meet a filter taller than them.
 - An error element of the lifted `field_relationship` is its own error before and after the filter is spent, and spends
   nothing: S!H1:I2 = {0,1;#N/A,1} beside `(Data!C1:C12<0.2)` is -1, `#VALUE!`; `#N/A`, `#VALUE!`, and S!H4:I5 =
   {#N/A,0;0,1} is `#N/A`, -1; `#VALUE!`, `#VALUE!`; without the filter or with TRUE every other element is -1
-  (probes/t3880-groupby-scalar-filter-edges G!A89:B102, T-3880; ranges because an array constant cannot hold `NA()`). An
-  error element of a lifted `field_headers` or total depth is unprobed.
-Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), and t3880-groupby-scalar-filter-edges (T-3880).
+  (probes/t3880-groupby-scalar-filter-edges G!A89:B102, T-3880; ranges because an array constant cannot hold `NA()`).
+  `#DIV/0!` (a `=1/0` cell) and `#REF!` (an error value) elements do the same: {0,1;#DIV/0!,1} is -1, `#VALUE!`; `#DIV/0!`,
+  `#VALUE!`, and {#REF!,0;0,1} is `#REF!`, -1; `#VALUE!`, `#VALUE!` (probes/t3964-groupby-filter-lift-errors G!A47:B69, T-3964).
+- So does an error element of a lifted `field_headers` or total depth: `GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,S!K1:L2,1,,
+  (Data!C1:C12<0.2))` with S!K1:L2 = {0,#N/A;0,0} is -1, `#N/A`; `#VALUE!`, `#VALUE!`, {#N/A,0;0,0} is `#N/A`, -1; `#VALUE!`,
+  `#VALUE!`, and a `=1/0` element is `#DIV/0!` in either place; total depths {1,#N/A;1,1}, {#N/A,1;1,1} and {1,#DIV/0!;1,1}
+  give the same; without the filter every other element is -1 (probes/t3964-groupby-filter-lift-errors G!A71:B105,
+  T-3964). Unprobed: a position where two lifted options hold an error and text, or two errors.
+Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
+t3964-groupby-filter-lift-errors (T-3964).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
-argument, T-3880); a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
+argument, T-3880), and, since T-3964, a lifted option position whose first error comes before any text element
+(`Model::lift_options`); a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
 lift beside a filter column is unprobed (T-3892).
 Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
 row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
 that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880
+Tasks: T-3840, T-3880, T-3964
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,

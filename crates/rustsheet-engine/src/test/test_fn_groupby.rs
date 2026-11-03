@@ -813,6 +813,49 @@ fn an_error_relationship_element_is_its_own_error_after_the_filter_is_spent() {
 }
 
 #[test]
+fn an_error_option_element_is_its_own_error_after_the_filter_is_spent() {
+    // probes/t3964-groupby-filter-lift-errors G!A71:B105: an error element of a lifted
+    // field_headers or total depth is that error after another element spends the filter, and
+    // spends nothing itself.
+    let mut model = records();
+    model._set("Z1", "0");
+    model._set("AA1", "=NA()");
+    model._set("Z2", "0");
+    model._set("AA2", "0");
+    model._set("Z4", "1");
+    model._set("AA4", "1");
+    model._set("Z5", "=1/0");
+    model._set("AA5", "1");
+    model._set("Z7", "=1/0");
+    model._set("AA7", "1");
+    model._set("Z8", "1");
+    model._set("AA8", "1");
+    model._set(
+        "H1",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,Z1:AA2,1,,C2:C11=2023)",
+    );
+    model._set(
+        "H4",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z4:AA5,,C2:C11=2023)",
+    );
+    model._set(
+        "H7",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z7:AA8,,C2:C11=2023)",
+    );
+    model.evaluate();
+    let first = model._get_text("H1");
+    assert_ne!(first, "#VALUE!");
+    let value = "#VALUE!".to_owned();
+    let div0 = "#DIV/0!".to_owned();
+    assert_eq!(row(&model, 1, 'H', 'I'), [first.clone(), "#N/A".to_owned()]);
+    assert_eq!(row(&model, 2, 'H', 'I'), [value.clone(), value.clone()]);
+    assert_eq!(row(&model, 4, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 5, 'H', 'I'), [div0.clone(), value.clone()]);
+    assert_eq!(row(&model, 7, 'H', 'I'), [div0, first]);
+    assert_eq!(row(&model, 8, 'H', 'I'), [value.clone(), value]);
+}
+
+#[test]
 fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
     // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
     // itself has no filter, so every element keeps its value (T-3840 review).
