@@ -3,7 +3,7 @@ id: T-3839
 title: "GROUPBY: a scalar filter_array beside other options is #VALUE! (probe and fix)"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,13 +39,27 @@ GROUPBY returns `#VALUE!` where Excel does for a scalar `filter_array` given bes
 - gen-m7/53473f95ff58029d.case.json Calc!A5308:D5316, Calc!A5979:F5990, Calc!A6284:G6296, Calc!A8968:E8989
 
 ## Acceptance criteria
-- [ ] An excel-graph probe states which scalar filters keep all rows beside which options; the rule is in docs/excel-semantics/arrays.md.
-- [ ] The owned cells match Excel; spill-extent failures of these anchors are 0.
-- [ ] Visible parity: every owned cell has Excel's type, error and value.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe states which scalar filters keep all rows beside which options; the rule is in docs/excel-semantics/arrays.md.
+- [x] The owned cells match Excel; spill-extent failures of these anchors are 0.
+- [x] Visible parity: every owned cell has Excel's type, error and value.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+
+## Outcome
+- Probe probes/t3839-groupby-scalar-filter (879 cells, excel-graph, 2026-11-03): a scalar or 1x1 `filter_array` that is not as
+  tall as the fields keeps or drops every row only beside one key column, one value column and no header row (field_headers 0
+  or 2, or detected none); otherwise GROUPBY is `#VALUE!` whatever the filter holds. total_depth and sort_order do not matter
+  (a 5x6x4 field_headers x total_depth x sort_order grid over two bases, with and without a TRUE filter), nor does the filter
+  value (TRUE, 1, 2, 0.5, -1, 7, `{TRUE}`). The rule is in docs/excel-semantics/arrays.md ("GROUPBY scalar inputs, option order
+  and scalar filters in the gen-m7 arg-pairs batch", and a pointer from the groupby-sort-filter-args paragraph).
+- `Model::filter_rows` takes `one_keeps_all`; `Model::groupby_args` sets it from the key and value widths and the header row.
+  PIVOTBY passes `true` (unchanged; its rule is T-3841's probe). A filter as tall as the fields wins over the one-value rule, so
+  a one-row GROUPBY keeps its old behavior.
+- Unit test `one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header`.
+- Eval delta: gen-m7 known failures 2119 -> 4 (2115 fixed, every owned anchor and its spilled table; the 4 left are T-3840's
+  and others'), 0 regressions; the new probe case passes all its cells.

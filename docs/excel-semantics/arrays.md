@@ -1026,7 +1026,9 @@ value last ascending and first descending (B36-B37); with two keys -3 orders par
 children descending inside each (B22). The header row and a top Total stay in place (B38-B40).
 filter_array: each element counts like a condition, a number is TRUE unless 0, a blank is FALSE, the text "TRUE"/"FALSE"
 counts (B42, B44, B52); other text, `""`, any error element (even on a row the filter drops) are `#VALUE!` and not the
-error (B43, B45-B46, B53); a scalar keeps or drops everything (2 keeps, `"x"` is `#VALUE!`, `NA()` is `#N/A`: B47, B54-B55);
+error (B43, B45-B46, B53); a scalar keeps or drops everything (2 keeps, `"x"` is `#VALUE!`, `NA()` is `#N/A`: B47, B54-B55), but only beside one key
+column, one value column and no header row (otherwise `#VALUE!`: "GROUPBY scalar inputs, option order and scalar filters in the
+gen-m7 arg-pairs batch" below, T-3839);
 a row of 10, a 10x2 array, a longer one and an all-blank range are `#VALUE!` (B48-B51). With a header row the filter
 may be as tall as the fields (the header's element is ignored, whatever it holds: args2 B1-B5, B29-B30 below) or as tall as the
 records, aligned with them (B56-B59); field_headers 3 still shows the headers.
@@ -2204,25 +2206,32 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   (`GROUPBY(Data!A1:A12,Data!D1:E12,_xleta.AVERAGE,Data!G7,Data!G9)` is `#VALUE!`, eb01a9867300331b A11164;
   `GROUPBY(Data!D1:E12,Data!C1:E12,_xleta.AVERAGE,Data!G6,-2,0,(Data!A1:A12<0.1),Data!G9)` too, 06c84cc76de04bae A10676), though an invalid number loses to the later error (probes/groupby-sort-filter-args B61-B78). Text or blank
   `values` also win over a later error option (0a91d5918d798930 A10127).
-- A scalar `filter_array` keeps every row when the options before it are omitted (TRUE, 2: "GROUPBY and PIVOTBY" above), but
-  beside given options it is often `#VALUE!` (`GROUPBY(Data!A1:C12,Data!B1:C12,_xleta.MAX,1,-1,1,-1)`, 3a4c7294ff5c4af3 A5125;
-  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`,
-  07c0c130d894cfe0 A4515);
-  which argument decides is not yet known.
+- A scalar `filter_array` (or a 1x1 array) that is not as tall as the fields keeps or drops every row only when `row_fields` and
+  `values` are each one column wide and there is no header row (field_headers 0 or 2, or a detected none); otherwise GROUPBY is
+  `#VALUE!` whatever the filter holds, TRUE, 1, 2, 0.5, -1, `Data!G1` (7) and `{TRUE}` included. The other options do not decide
+  it: total_depth and sort_order change nothing (probes/t3839-groupby-scalar-filter G!B2:E121, a field_headers x total_depth x
+  sort_order grid: one key and one value column keep all 12 rows beside field_headers 0 or 2 and are `#VALUE!` beside 1 or 3;
+  one key and two value columns are `#VALUE!` for every combination, though the same calls without the filter spill; F!B2:K19:
+  three key columns and one value column are `#VALUE!` too, `GROUPBY(Data!B1:D12,Data!D1:D12,LAMBDA(y,"ABC"),0,-2,2,TRUE)`,
+  3db804a002b664b1 A5003, while `GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)` keeps every row, 07c0c130d894cfe0
+  A4515; excel-graph, 2026-11-03, T-3839). The earlier keep-all evidence has one key and one value column with no header row
+  ("GROUPBY and PIVOTBY" above). FALSE as field_headers is 0 here (F!B15:K15). A lifted `field_headers` beside a scalar TRUE
+  filter is `#VALUE!` in every element (L!A1:B2, 06c84cc76de04bae B3783:B3784), since the call has two key columns; without the
+  filter its blank elements give 0.3 (L!D1:E2). Whether PIVOTBY follows the same rule is T-3841's.
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
   (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
   blank element is valid (B5735 0.3, B8053 TRUE), as it is in a lifted `field_headers` (the entry above, A185). An error
   `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
   array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
-  has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
+  has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
 `Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
 (`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
 `#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
 reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
 eval/baseline/gen-m7.txt.
-Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
-lifted `field_headers`, are UNVERIFIED
+Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`).
+Status: VERIFIED (excel-graph) for the cells named; a FALSE element of a lifted `field_headers` is UNVERIFIED
 Tasks: T-3837, T-3838, T-3839, T-3840
 
 ## Array-value edges in the gen-m9 sweep (T-2436)

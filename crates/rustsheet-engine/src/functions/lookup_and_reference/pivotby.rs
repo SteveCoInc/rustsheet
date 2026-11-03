@@ -396,8 +396,9 @@ impl Model {
         }
         // GROUPBY's filter rules hold too: another height, errors and text are #VALUE!, a header
         // row may be left out of the filter, and keeping no record is #VALUE! (P!A281,
-        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133).
-        let records = self.filter_rows(filter, height, first, cell)?;
+        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133). Whether one
+        // filter value beside several fields or a header row is #VALUE! here too is T-3841's probe.
+        let records = self.filter_rows(filter, height, first, true, cell)?;
         let (relative_to, lifted) = self.relative_to_arg(relative_to, cell)?;
         let row_depth = effective_depth(row_depth, row_depth_given, &row_sort, row_fields);
         let col_depth = effective_depth(col_depth, col_depth_given, &col_sort, col_fields);

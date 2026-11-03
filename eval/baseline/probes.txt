@@ -1899,6 +1899,7 @@ C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/t3814-lambda-helper-arity.case.json	248
 C	probes/t3836-mmult-blank-range-first-arg.case.json	19
 C	probes/t3838-groupby-option-order.case.json	232
+C	probes/t3839-groupby-scalar-filter.case.json	678
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
