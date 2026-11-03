@@ -3,7 +3,7 @@ id: T-3942
 title: "Probe SERIESSUM where a power or term underflows (the flush T-3676's definition infers)"
 milestone: M0
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
