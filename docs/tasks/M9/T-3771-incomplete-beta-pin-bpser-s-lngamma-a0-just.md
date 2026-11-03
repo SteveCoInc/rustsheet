@@ -3,7 +3,7 @@ id: T-3771
 title: "Incomplete beta: pin bpser's lnGamma(a0) just above 0.5 and split the bpser ceiling between LN and EXP"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
