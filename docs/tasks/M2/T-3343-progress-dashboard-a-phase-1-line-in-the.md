@@ -3,7 +3,7 @@ id: T-3343
 title: "Progress dashboard: a Phase 1 line in the goals block from make phase1-exit --json"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
