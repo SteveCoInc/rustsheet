@@ -101,11 +101,12 @@ and the oracle. Do not fit Excel's last bits.
   is 1.8 ulp from exact; moved to T-3877 (`defer: phase-1b`; decision 0083: bit-level criteria not met at visible
   parity).
 - Eval delta: gen-m9 fixed 15, regressions 2; ironcalc-calc regressions 2; no other suite moves; visible parity unchanged.
-  The four regressions are numeric, 1 ulp each and not visibly off, so they fall under decision 0083's standing
+  The four regressions are numeric, 1 or 2 ulp from Excel and not visibly off, so they fall under decision 0083's standing
   ulp-regression allowance (`update-baseline --allow-regressions`). The PR fixes 6 visibly-off cells and makes none
   visibly off. Regressed cells, all df 1, where Excel is 0.6 to 1.6 ulp from the exact tail:
-  ironcalc-calc/STATISTICAL/T_DIST.xlsx `T.DIST T.INV T.DIST.RT!F2` and `T.DIST.2T T.INV.2T!C2` (t = 60, -0.69 ulp),
-  gen-m9/bbab6562e88b70e8 Calc!A113 (t = 7.1, +0.62 ulp), gen-m9/5919660b7bb4d195 Calc!A336 (t = 1.005, +1.56 ulp).
+  ironcalc-calc/STATISTICAL/T_DIST.xlsx `T.DIST T.INV T.DIST.RT!F2` and `T.DIST.2T T.INV.2T!C2` (t = 60; Excel -0.69
+  ulp from exact, ours +0.31: 1 ulp apart), gen-m9/bbab6562e88b70e8 Calc!A113 (t = 7.1; Excel +0.62, ours -0.38: 1 ulp),
+  gen-m9/5919660b7bb4d195 Calc!A336 (t = 1.005; Excel +1.56, ours -0.43: 2 ulp).
   Follow-up: T-3877.
 - Test: `low_df_tails_past_the_cut_are_exact_at_t`. statistics.md "T.DIST.RT at df 2 is BETA.DIST's closed form down
   to y = 0.1" records the form that ships, the df-1 evidence and the cells.

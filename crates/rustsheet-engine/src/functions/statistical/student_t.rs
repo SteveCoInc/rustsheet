@@ -183,12 +183,13 @@ fn kernel_tail(t: f64, n: f64) -> Option<f64> {
 
 /// L beyond t = 1 at df 1, and at df 2 where [`closed_form_tail`] does not take it (fl(1 - y) > 0.9,
 /// t above about 4.24), as the exact tail at t rounded once: atan(1/t)/pi at df 1 and
-/// 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2, both in double-double. Excel is within about an
-/// ulp of the exact tail there (`T.DIST.2T(1E15,1)` = 6.366197723675813E-16, `T.DIST.RT(2,1)` =
-/// 0.14758361765043326, `T.DIST.RT(1E6,2)`; gen-m9, probes-numeric m9-t-dist-rt, m9-t-dist-2t,
-/// m9-t-nonint-df, t0969-t-df2-cut; T-3187; docs/excel-semantics/statistics.md "T.DIST.RT at df 2
-/// is BETA.DIST's closed form down to y = 0.1"), where the tail at the rounded y was up to 24 ulp
-/// off. `None` elsewhere, and where t^2 overflows.
+/// 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2, both in double-double. Excel is within 1.8 ulp of
+/// the exact tail on the probed cells there, most within one (`T.DIST.2T(1E15,1)` =
+/// 6.366197723675813E-16, `T.DIST.RT(2,1)` = 0.14758361765043326, `T.DIST.RT(1E6,2)`; gen-m9,
+/// probes-numeric m9-t-dist-rt, m9-t-dist-2t, m9-t-nonint-df, t0969-t-df2-cut; T-3187;
+/// docs/excel-semantics/statistics.md "T.DIST.RT at df 2 is BETA.DIST's closed form down to
+/// y = 0.1"), where the tail at the rounded y was up to 24 ulp off. `None` elsewhere, and where t^2
+/// overflows.
 fn exact_low_df_tail(t: f64, n: f64) -> Option<f64> {
     if t <= 1.0 || !(t * t).is_finite() {
         return None;
