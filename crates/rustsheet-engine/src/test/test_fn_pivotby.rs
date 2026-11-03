@@ -797,3 +797,48 @@ fn a_scalar_filter_needs_one_column_each_and_no_header() {
         assert_eq!(model._get_text(cell), *expected, "{args}");
     }
 }
+
+/// T-3892: an early error fills the shape of an array `relative_to` the call lifts over, as each
+/// element's PIVOTBY meets it first: a text `row_fields` is `#VALUE!` and an error option its own
+/// error in all four cells of a 2x2 `relative_to` (gen-m7 arg-pairs batch, excel-graph:
+/// 05cf579cc6560867 A10859:B10860, 4ad4b1c6b2c2b01d A1:B2, 37041df35489e178 A4942:B4943).
+#[test]
+fn an_early_error_fills_an_array_relative_to() {
+    let mut model = records();
+    let cases = [
+        ("G1", "\"abc\",C2:C11,D2:D11,{SUM},0,,,,,,A1:B2", "#VALUE!"),
+        (
+            "G4",
+            "A2:A11,C2:C11,D2:D11,{SUM},0,#NULL!,,,,,A1:B2",
+            "#NULL!",
+        ),
+        (
+            "G7",
+            "A2:A11,C2:C11,D2:D11,{SUM},0,,SQRT(-1),,,,A1:B2",
+            "#NUM!",
+        ),
+        ("G10", "1/0,C2:C11,D2:D11,{SUM},0,,,,,,A1:B2", "#DIV/0!"),
+    ];
+    for (cell, args, _) in &cases {
+        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+    }
+    // Without an array relative_to the error stays in one cell.
+    model._set(
+        "K1",
+        &format!("=PIVOTBY(\"abc\",C2:C11,D2:D11,{SUM},0,,,,,,1)"),
+    );
+    model.evaluate();
+    for (cell, args, expected) in &cases {
+        let row: i32 = cell[1..].parse().unwrap_or_default();
+        for filled in [
+            format!("G{row}"),
+            format!("H{row}"),
+            format!("G{}", row + 1),
+            format!("H{}", row + 1),
+        ] {
+            assert_eq!(model._get_text(&filled), *expected, "{filled}: {args}");
+        }
+    }
+    assert_eq!(model._get_text("K1"), "#VALUE!");
+    assert_eq!(model._get_text("K2"), "");
+}
