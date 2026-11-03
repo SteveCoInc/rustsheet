@@ -6732,17 +6732,10 @@ F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B6
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B7
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B8
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B9
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A1
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A2
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A3
 F	probes/table-edits/table-column-range-delete-end.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-end.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-start.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-start.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-start.case.json	F!A5
 F	probes/table-edits/table-insert-row-this-row-above-header.case.json	F!B4
