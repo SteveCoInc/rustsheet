@@ -221,17 +221,14 @@ impl Model {
         let date_system = self.workbook.settings.date_system;
         let serial = if let Ok((serial, _)) = parse_date(text, self.locale, year) {
             serial
-        } else if let Some(serial) =
-            parse_letter_period_serial_in(text, self.locale, year, date_system)
-        {
-            // Read in the workbook's system: in a 1904 workbook `DATEVALUE("10 A. 5")` is 49710,
-            // the no-date form's day 0 unshifted (probes/t3920-typed-a-period-1904 G1).
-            let day = serial.floor();
-            let last =
-                date_system.serial_from_1900_serial(i64::from(MAXIMUM_DATE_SERIAL_NUMBER))?;
-            return (day <= last as f64).then_some(day as i32);
         } else {
-            let serial = parse_date_clock_serial(text, self.locale, year)?.floor();
+            // `N A. F/D/Y` text is read in the workbook's system and its day mapped back to the
+            // 1900 count, so the shift below restores it: in a 1904 workbook `DATEVALUE("10 A. 5")`
+            // is 49710, the no-date form's day 0 unshifted (probes/t3920-typed-a-period-1904 G1).
+            let serial = match parse_letter_period_serial_in(text, self.locale, year, date_system) {
+                Some(serial) => date_system.to_1900_serial(serial.floor() as i64)? as f64,
+                None => parse_date_clock_serial(text, self.locale, year)?.floor(),
+            };
             if !(f64::from(MINIMUM_DATE_SERIAL_NUMBER)..=f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
                 .contains(&serial)
             {
