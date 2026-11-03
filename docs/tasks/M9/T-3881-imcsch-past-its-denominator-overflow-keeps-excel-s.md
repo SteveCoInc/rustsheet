@@ -3,7 +3,7 @@ id: T-3881
 title: "IMCSCH past its denominator overflow keeps Excel's tiny parts and their sign (41 im-trig-magnitude-grid cells and argument-cut J16, ours 0)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
