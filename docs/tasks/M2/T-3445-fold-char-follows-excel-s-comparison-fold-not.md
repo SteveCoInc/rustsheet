@@ -58,8 +58,12 @@ comparison table, so every cell of probes/t3298-case-mapping-sweep column C and 
   cell of C1:D48 now passing; t3584-match-fold-weightless 540), REGRESSIONS 0 in every suite;
   probes/t3133-lookup-criteria-case-fold still 426 of 426; visible parity 2821 in-scope cells off.
 - Not fixed, kept in eval/baseline/probes.txt:
-  - t3584 Calc!R1:R256: their MATCH digits now all match Excel's except U+0001's (follow-up T-3921). The `=` digit
-    is T-3904's.
+  - 54 of t3584's Calc!R1:R256: their MATCH digits now all match Excel's except U+0001's (follow-up T-3921), and the
+    `=` digit is T-3904's. The other 202 R cells pass.
   - the `=` cells B, D, F, P of t3584: T-3904.
 - Unit tests: `lookup_fold::tests` (one character per class: folds, stays apart, wider classes, weightless).
-- Follow-up filed: T-3921 (MATCH's U+0001 key).
+- Review round 1 (excel-fidelity): the wildcard paths (criteria, XMATCH mode 2) take the fold by inference, because
+  they share `WildcardPattern`. criteria.md and lookup.md mark this UNVERIFIED; T-3929 probes it.
+- Merging origin/main (CI's baseline check) also took 2 cells of probes/t3559-collation-unprobed-blocks (Calc!C62,
+  C126) off eval/baseline/probes.txt: they pass on the merged tree.
+- Follow-ups filed: T-3921 (MATCH's U+0001 key), T-3929 (probe the wildcard paths).

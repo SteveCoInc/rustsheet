@@ -6276,8 +6276,6 @@ F	probes/t3559-collation-unprobed-blocks.case.json	Calc!B35
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!B62
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!B97
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!B98
-F	probes/t3559-collation-unprobed-blocks.case.json	Calc!C126
-F	probes/t3559-collation-unprobed-blocks.case.json	Calc!C62
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!C98
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!D110
 F	probes/t3559-collation-unprobed-blocks.case.json	Calc!D126
