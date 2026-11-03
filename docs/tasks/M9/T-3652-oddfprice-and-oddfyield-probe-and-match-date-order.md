@@ -3,7 +3,7 @@ id: T-3652
 title: "ODDFPRICE and ODDFYIELD: probe and match date-order and domain validation across rate, yld, frequency and basis, against ODDL*"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
