@@ -2217,7 +2217,7 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   A4515; excel-graph, 2026-11-03, T-3839). The earlier keep-all evidence has one key and one value column with no header row
   ("GROUPBY and PIVOTBY" above). FALSE as field_headers is 0 here (F!B15:K15). A lifted `field_headers` beside a scalar TRUE
   filter is `#VALUE!` in every element (L!A1:B2, 06c84cc76de04bae B3783:B3784), since the call has two key columns; without the
-  filter its blank elements give 0.3 (L!D1:E2). Whether PIVOTBY follows the same rule is T-3841's.
+  filter its blank elements give 0.3 (L!D1:E2). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), the FALSE element is `#VALUE!`
   (06c84cc76de04bae B5736, 7ab51243a366f57b B8054, and as `field_headers` f310ddb6bc8ec33a B4150), not because it is FALSE:
   each of those calls has a filter column that drops rows, and only the first element that filters gets a value ("A lifted
@@ -2234,6 +2234,33 @@ eval/baseline/gen-m7.txt.
 Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`).
 Status: VERIFIED (excel-graph) for the cells named; a FALSE element of a lifted `field_headers` is UNVERIFIED
 Tasks: T-3837, T-3838, T-3839, T-3840
+
+## PIVOTBY in the gen-m7 arg-pairs batch (T-3841)
+Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
+G2=0, G3=-2.5, G4=1.5, G5="12", G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank). GROUPBY's batch rules carry over,
+with `col_fields` beside `row_fields`:
+- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the options hold, a later error
+  option included: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
+  `PIVOTBY(Data!B1:E12,Data!G9,Data!A1:D12,_xleta.MIN,1,1,1,Data!G5)` (d7b4849a4fbe3485 A10798) are `#VALUE!`; 181 calls.
+  A blank-cell or text `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
+  _xleta.MAX,Data!G9)`, 13 calls). Owner T-3888.
+- An invalid earlier argument's `#VALUE!` wins over a later option's error: a blank-cell sort order or total depth, a text
+  option, a scalar `row_fields` (`2`, `Data!G4`) or a short `col_fields` (`Data!A1:B2`) beside 12-row fields, `""` as
+  `col_fields` (`PIVOTBY(Data!A1:C12,Data!D1:D12,Data!D1:E12,_xleta.PRODUCT,3,1,Data!H2,Data!G9)` is `#VALUE!`; 23 calls).
+  Owner T-3889.
+- A scalar `filter_array` (0.5, -1, 1, 2, TRUE, `Data!G4`) beside a multi-column field or values, or a header row, is
+  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). Owner T-3890.
+- An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
+  Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
+  A10859:B10860; 169 calls). Owner T-3892.
+- Rows sorted by a values column holding `#VALUE!` aggregates come out in an order of their own (febfd6901374d79c
+  A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
+  B8785). Owner T-3893.
+Evidence: the gen-m7 cases of T-3841 (excel-graph, 2026-11-03); each owner task lists its calls.
+Ours: the GROUPBY rules of T-3837..T-3840 are GROUPBY's only; PIVOTBY's cells are known failures in eval/baseline/gen-m7.txt.
+Status: VERIFIED (excel-graph) for the cells named; the order between these rules and each rule's exact domain are UNVERIFIED
+(the owners probe them)
+Tasks: T-3888, T-3889, T-3890, T-3892, T-3893
 
 ## A lifted GROUPBY's filter serves one element (T-3840)
 Rule: when GROUPBY lifts over an array `field_relationship`, `field_headers` or total depth and its `filter_array` is a
@@ -2256,7 +2283,7 @@ Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`; a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
-lift is unprobed (T-3841).
+lift beside a filter column is unprobed (T-3892).
 Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
 row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
 that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
