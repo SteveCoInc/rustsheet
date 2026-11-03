@@ -3,7 +3,7 @@ id: T-3887
 title: "VSTACK/HSTACK: probe a variable bound to a blank cell; name T-3765's helpers in arrays.md"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
