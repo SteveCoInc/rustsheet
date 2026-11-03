@@ -309,6 +309,7 @@ def _part_definition(function: str, index: int) -> Definition:
             value=value,
             domain=_domain(value),
             draw=_PARTS_DRAW,
+            serials_1900=True,
             sources=(DECISION, PARTS_SOURCE, PARTS_BOUND_SOURCE),
         )
     )

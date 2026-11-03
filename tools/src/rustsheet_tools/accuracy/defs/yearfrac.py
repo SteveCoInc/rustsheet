@@ -289,6 +289,7 @@ YEARFRAC = register(
             },
             "YEARFRAC draws: date pairs by stratum on every basis, month ends, year-apart pairs and serial 0.",
         ),
+        serials_1900=True,
         sources=(DECISION, ZERO_SOURCE, SWAP_SOURCE, EARLY_SOURCE, BASIS1_SOURCE),
     )
 )

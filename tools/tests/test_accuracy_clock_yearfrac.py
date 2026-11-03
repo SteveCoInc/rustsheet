@@ -3,12 +3,15 @@ excel-graph values."""
 
 from __future__ import annotations
 
+import json
 from fractions import Fraction
+from pathlib import Path
 
 import pytest
 
 from rustsheet_tools.accuracy.defs.clock import clock_parts, time_value
 from rustsheet_tools.accuracy.defs.yearfrac import yearfrac_value
+from rustsheet_tools.accuracy.eval_math import case_math
 from rustsheet_tools.accuracy.model import DomainError
 
 DAY = 86400
@@ -138,3 +141,28 @@ def test_yearfrac_swaps_and_averages() -> None:
 def test_yearfrac_num(start: float, end: float, basis: int) -> None:
     with pytest.raises(DomainError):
         yearfrac_value(start, end, basis)
+
+
+def test_a_1904_workbook_gets_no_serial_math(tmp_path: Path) -> None:
+    """YEARFRAC and HOUR read 1900-system serials, so a 1904 case's cells are skipped; TIME's are not."""
+    cells = {"A1": "=YEARFRAC(0,365,1)", "A2": "=HOUR(0.5)", "A3": "=TIME(1,0,0)"}
+    for date_system, held in ((1900, {"A1", "A2", "A3"}), (1904, {"A3"})):
+        case = tmp_path / f"c{date_system}.case.json"
+        case.write_text(
+            json.dumps(
+                {
+                    "format": "rustsheet-case/v1",
+                    "date_system": date_system,
+                    "sheets": [{"name": "S", "cells": cells}],
+                    "expected": {},
+                }
+            )
+        )
+        sidecar = tmp_path / f"c{date_system}.oracle.json"
+        sidecar.write_text(
+            json.dumps(
+                {"format": "rustsheet-oracle/v1", "sheets": {"S": {a: {"t": "n", "v": 1} for a in cells}}}
+            )
+        )
+        math = case_math("t/c.case.json", case, sidecar)
+        assert set(math.cells.get("S", {})) == held
