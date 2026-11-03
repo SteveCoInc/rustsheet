@@ -5,7 +5,7 @@ use crate::{expressions::types::Area, test::user_model::util::new_empty_user_mod
 #[test]
 fn basic() {
     let mut model = new_empty_user_model();
-    model.set_user_input(0, 1, 1, "100$").unwrap();
+    model.set_user_input(0, 1, 1, "$100").unwrap();
     model
         .range_clear_contents(&Area {
             sheet: 0,
@@ -19,7 +19,7 @@ fn basic() {
     model.undo().unwrap();
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
-        Ok("100$".to_string())
+        Ok("$100 ".to_string())
     );
     model.redo().unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));
@@ -28,7 +28,7 @@ fn basic() {
     // clear contents keeps the formatting
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
-        Ok("300$".to_string())
+        Ok("$300 ".to_string())
     );
 
     model
@@ -44,7 +44,7 @@ fn basic() {
     model.undo().unwrap();
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
-        Ok("300$".to_string())
+        Ok("$300 ".to_string())
     );
     model.redo().unwrap();
     assert_eq!(model.get_formatted_cell_value(0, 1, 1), Ok("".to_string()));

@@ -170,7 +170,8 @@ pub(crate) fn number_text_too_long(text: &str) -> bool {
 }
 
 /// Whether `text` ends in a dollar sign, trailing spaces aside: coercion refuses such text
-/// ([`number_text_in`]), typed input reads it ([`Model::typed_sign_text_is_number`]).
+/// ([`number_text_in`]) and so does typed input (`parse_typed_number`); only the formula test
+/// [`Model::typed_sign_text_is_number`] still reads it, so `-200$` stays text, not a formula.
 fn ends_with_dollar(text: &str) -> bool {
     text.trim_end_matches(' ').ends_with('$')
 }
@@ -189,8 +190,8 @@ pub(crate) fn number_text_in(
     let digits = ascii_script_digits(text);
     // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE! for VALUE,
     // `+0` and NUMBERVALUE and match nothing as a criterion, while a trailing euro sign reads
-    // (probes/t3742-value-percent-currency A10-A13, A25-A28, A31-A34, B1:B4). Typed cell input
-    // shares `parse_formatted_number` and is unprobed, so the refusal lives here (T-3835).
+    // (probes/t3742-value-percent-currency A10-A13, A25-A28, A31-A34, B1:B4); typed input refuses it
+    // in `parse_typed_number` (probes/t3980-typed-percent-currency).
     if ends_with_dollar(&digits) {
         return None;
     }
@@ -274,8 +275,8 @@ impl Model {
     }
 
     /// Whether the text after a typed leading sign reads as a number, which keeps `-200$` a
-    /// number rather than a formula. Coercion refuses a trailing `$` ([`number_text_in`]), typed
-    /// input does not (unprobed, T-3835).
+    /// number rather than a formula; typed `-200$` is then text (probes/t3980-typed-percent-currency
+    /// A6).
     /// Script digits are not read here, as typed input reads none (TODO(T-3891)).
     pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
         let trailing_dollar = ends_with_dollar(s)
