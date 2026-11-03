@@ -125,6 +125,12 @@ impl NestedArray {
         self.cells
     }
 
+    /// Its own grid's elements in row-major order, a nested element as itself (a GROUPBY and
+    /// PIVOTBY value sort compares array results by them, `aggregate_cmp` in grouping.rs).
+    pub(crate) fn elements(&self) -> impl Iterator<Item = &ArrayNode> {
+        self.rows.iter().flatten()
+    }
+
     /// Its own grid's cells, the memory it adds: a nested element is shared, not copied.
     pub(crate) fn grid_cells(&self) -> usize {
         self.rows

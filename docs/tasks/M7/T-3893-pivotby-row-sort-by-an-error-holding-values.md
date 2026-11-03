@@ -3,7 +3,7 @@ id: T-3893
 title: "PIVOTBY: row sort by an error-holding values column, and a blank relative_to's header text"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -33,10 +33,10 @@ PIVOTBY matches Excel on two cells of the batch: rows sorted by a values column 
 - gen-m7/febfd6901374d79c.case.json Calc!A11225:F11232
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel; a unit test covers each rule.
-- [ ] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel; a unit test covers each rule.
+- [x] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
@@ -54,3 +54,14 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
     reverse of its descending one, and it is not key order. Find what breaks that tie: probe the same call with other
     filters and LAMBDAs that return a scalar for some rows. Then fix gen-m7/febfd6901374d79c.case.json
     Calc!A11225:F11232 and probes/t3893-pivotby-error-sort-header.case.json Calc!A61:G69, Calc!A71:G79.
+
+## Outcome
+- Header rule landed in #2980. Sort rule (this PR): the tie was never a tie. Excel sorts an array aggregate
+  (a LAMBDA's array result, shown as `#VALUE!`) by the array, not by `#VALUE!`: after numbers, text and TRUE, before
+  errors, two arrays element by element (blank element greatest, a prefix first). `LAMBDA(acc,acc)` therefore sorts the
+  rows by their first records' values. New probe probes/t3893-pivotby-error-tie-order (excel-graph, 2026-11-03, 66
+  calls) pins it for GROUPBY and PIVOTBY rows and columns; error aggregates keep their old rules.
+- Code: `grouping.rs` `aggregate_cmp` (value sorts only; key sorts unchanged), `NestedArray::elements`. Unit test
+  `array_aggregates_sort_by_their_elements_between_true_and_errors`. arrays.md updated.
+- Eval delta: gen-m7 −11 known-failure cells (febfd6901374d79c A11225:F11232 passes), probes −22
+  (t3893-pivotby-error-sort-header A61:G79); the new probe passes 710/710. No regressions.

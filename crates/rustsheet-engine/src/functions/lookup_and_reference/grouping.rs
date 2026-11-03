@@ -9,11 +9,11 @@ use std::collections::HashMap;
 
 use std::borrow::Cow;
 
+use super::group_order::{compare_aggregates, key_cmp};
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
-    functions::spill_functions::{cell_key, sort_key_cmp, CellKey},
-    functions::util::collation::cmp_text,
+    functions::spill_functions::{cell_key, CellKey},
 };
 
 /// How the groups are ordered: GROUPBY's `sort_order` (PIVOTBY's `row_sort_order` and
@@ -377,20 +377,6 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
     })
 }
 
-/// [`key_cmp`] for two aggregates that may be missing (they never are: the indices come from
-/// the same groups).
-fn compare_aggregates(
-    a: Option<&ArrayNode>,
-    b: Option<&ArrayNode>,
-    ascending: bool,
-    cell: CellReferenceIndex,
-) -> Ordering {
-    match (a, b) {
-        (Some(a), Some(b)) => key_cmp(a, b, ascending, cell),
-        _ => Ordering::Equal,
-    }
-}
-
 /// A key cell as it groups: `cell_key`, except that -0 is 0. Excel stores a cell `=-0` as 0, so
 /// 0, `=-0` and `=0` are one group (probes/groupby-pivotby-followup G!A781); the engine keeps the
 /// sign of a computed -0.
@@ -406,22 +392,6 @@ fn positive_zero(node: &ArrayNode) -> ArrayNode {
     match node {
         ArrayNode::Number(n) if *n == 0.0 => ArrayNode::Number(0.0),
         other => other.clone(),
-    }
-}
-
-/// [`sort_key_cmp`] with numbers compared exactly (see [`Grouping::sort_by_keys`]), and text
-/// compared in place with the comparator `sort_key_cmp` reaches (`cmp_text`, through
-/// `compare_values`) instead of converting and cloning both strings on every comparison.
-fn key_cmp(a: &ArrayNode, b: &ArrayNode, ascending: bool, cell: CellReferenceIndex) -> Ordering {
-    let ordering = match (a, b) {
-        (ArrayNode::Number(x), ArrayNode::Number(y)) => x.total_cmp(y),
-        (ArrayNode::String(x), ArrayNode::String(y)) => cmp_text(x, y),
-        _ => return sort_key_cmp(a, b, ascending, cell),
-    };
-    if ascending {
-        ordering
-    } else {
-        ordering.reverse()
     }
 }
 
@@ -951,7 +921,7 @@ mod tests {
                 sort_key_cmp(a, b, ascending, CELL)
             });
             assert_total_order(&pool, "key_cmp", |a, b| {
-                super::key_cmp(a, b, ascending, CELL)
+                super::super::group_order::key_cmp(a, b, ascending, CELL)
             });
         }
     }
