@@ -3,7 +3,7 @@ id: T-3742
 title: "VALUE reads one leading percent sign, and NUMBERVALUE refuses a trailing currency sign"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
