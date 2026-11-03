@@ -3,7 +3,7 @@ id: T-3445
 title: "fold_char follows Excel's comparison fold, not Rust's case tables (probes/t3298-case-mapping-sweep C and D)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
