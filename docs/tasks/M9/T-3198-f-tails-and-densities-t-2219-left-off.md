@@ -3,7 +3,7 @@ id: T-3198
 title: "F tails and densities T-2219 left off: F.DIST.RT(3,50,100) on L140 and F.DIST densities at (50,100); T-2219's gen-m9 cells below a + b = 10"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
