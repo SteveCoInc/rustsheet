@@ -781,11 +781,11 @@ Status: VERIFIED (excel-graph) for the block table, the weightless set and the c
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
 one, supplementary characters stay themselves, the classes above, then SEARCH's `fold_char` unless it lands on a
 weightless character), through `folded_units` (`ExactKey`, the indexed exact search) and `WildcardPattern` (the linear
-one, XMATCH's wildcard mode and wildcard criteria); `decompose` (collation.rs) for XMATCH's `İ`. UNVERIFIED
-(inferred): XMATCH/XLOOKUP's wildcard mode and wildcard criteria take the same fold because they share
-`WildcardPattern` with exact MATCH; the evidence above is exact MATCH, VLOOKUP and HLOOKUP only (probe: T-3929).
-SEARCH, the D-function prefix criteria and TEXTSPLIT/TEXTBEFORE keep `fold_case` (unprobed for the weightless class;
-T-3929 covers the prefix criteria). Not implemented: `=` and COUNTIF's weightless equality (T-3904) and MATCH's U+0001
+one, XMATCH's wildcard mode and wildcard criteria); `decompose` (collation.rs) for XMATCH's `İ`.
+XMATCH/XLOOKUP's wildcard mode, wildcard criteria and the D-function criteria take the same fold
+(probes/t3929-wildcard-fold-xmatch Calc!B1:D30 and criteria.md "Case beyond ASCII", T-3929). In wildcard mode a
+pattern without `*` or `?` is still folded this way: XMATCH(ab, a&U+0524&b, 2) is `#N/A` though XMATCH(.., 0) finds
+it (Calc!B3, E3). SEARCH and TEXTSPLIT/TEXTBEFORE keep `fold_case` (unprobed for the weightless class). Not implemented: `=` and COUNTIF's weightless equality (T-3904) and MATCH's U+0001
 key, which matches U+0524 and empty text like `*` (t3584 Calc!R1, digit 3; T-3921). The 54 Calc!R cells whose `=`
 digit or U+0001's digit differs stay in eval/baseline/probes.txt; the other 202 pass.
 

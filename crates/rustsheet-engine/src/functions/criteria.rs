@@ -7,7 +7,7 @@ use crate::{
     cast::value_number_text_with,
     expressions::token::{is_english_error_string, Error},
     formatter::date_text::{parse_date, CurrentYear},
-    functions::util::collation::{cmp_text_pairwise, fold_case, fold_lookup},
+    functions::util::collation::{cmp_text_pairwise, fold_lookup},
     locale::Locale,
     number_format::{cmp_excel_precision, parse_excel_number, parse_finite_number},
     text::Text,
@@ -214,11 +214,14 @@ fn result_is_equal_to_string(calc_result: &CalcResult, target: &Text) -> bool {
 
 // D-function plain text criteria match by prefix, unit by unit, case-insensitively, so a lone
 // surrogate is a unit of its own and never U+FFFD (probes/d-function-prefix-lone-surrogates).
-// `target` is the operand's UTF-16 units, lower-cased.
+// They fold like exact MATCH (`fold_lookup`): `"ϳ"` counts Ͷx, `"ϴ"` counts ϑx but not θx, a
+// weightless character stands for any other one and `"𐐀"` does not count 𐐨x
+// (probes/t3929-wildcard-fold-dfunctions Calc!B7, C11:C30). `target` is the operand's UTF-16
+// units, folded the same way.
 fn result_starts_with_units(calc_result: &CalcResult, target: &[u16]) -> bool {
     match calc_result {
         CalcResult::String(s) => {
-            let folded = s.map_runs(fold_case);
+            let folded = s.map_runs(fold_lookup);
             let mut units = folded.units();
             target.iter().all(|unit| units.next() == Some(*unit))
         }
@@ -531,7 +534,14 @@ pub(crate) fn build_criteria_with<'a>(
                     } else if is_english_error_string(v) {
                         Box::new(move |x| result_is_equal_to_error(x, v))
                     } else if v.contains('*') || v.contains('?') {
-                        let pattern = WildcardPattern::new(&operand_text(s, prefix));
+                        let mut pattern = WildcardPattern::new(&operand_text(s, prefix));
+                        if flavor == CriteriaFlavor::Database && !explicit_equals {
+                            // Excel: a D-function wildcard criterion matches by prefix, like its
+                            // plain text (`"a?"` counts abc, `"?"` an astral character; `"=a?"` does
+                            // not; docs/excel-semantics/criteria.md "D-function plain-text equality
+                            // matches by prefix", probes/t3929-dfunction-wildcard-prefix).
+                            pattern.match_any_tail();
+                        }
                         Box::new(move |x| pattern.matches_result(x))
                     } else if flavor == CriteriaFlavor::Standard && explicit_equals && v.is_empty()
                     {
@@ -539,7 +549,7 @@ pub(crate) fn build_criteria_with<'a>(
                         // Sheet1!C4); a blank cell still matches (probes/criteria-gaps C2).
                         Box::new(move |x| matches!(x, CalcResult::EmptyCell))
                     } else if flavor == CriteriaFlavor::Database && !explicit_equals {
-                        let folded = operand_text(s, "").map_runs(fold_case);
+                        let folded = operand_text(s, "").map_runs(fold_lookup);
                         let prefix: Vec<u16> = folded.units().collect();
                         Box::new(move |x| result_starts_with_units(x, &prefix))
                     } else {
@@ -658,6 +668,14 @@ impl WildcardPattern {
         compiled
     }
 
+    /// Lets the pattern match any text that starts with a match, as a trailing `*` would (a
+    /// D-function criterion without `=`).
+    pub(crate) fn match_any_tail(&mut self) {
+        if self.tokens.last() != Some(&WildcardToken::AnyRun) {
+            self.tokens.push(WildcardToken::AnyRun);
+        }
+    }
+
     fn soh_as_star(&mut self) {
         for token in &mut self.tokens {
             if *token == WildcardToken::Unit(SOH) {
@@ -667,7 +685,7 @@ impl WildcardPattern {
     }
 
     /// Compiles a pattern whose units the caller has already case-folded (SEARCH folds the whole
-    /// text once with [`fold_case`] and searches its units), U+0001 kept literal.
+    /// text once with [`fold_case`](crate::functions::util::collation::fold_case) and searches its units), U+0001 kept literal.
     fn from_units(units: impl Iterator<Item = u16>) -> WildcardPattern {
         let mut units = units;
         let mut tokens = Vec::new();

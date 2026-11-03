@@ -47,13 +47,23 @@ Evidence: probes/t3133-lookup-criteria-case-fold Calc!B1:B35, F1:I35, K1:L35, N1
 D-function prefix criteria fold `ς` too: DCOUNTA over `σx`, `ςx`, `Σ` counts 3 for `ς`, `σ` and `ς*` and 1 for `=ς`
 (probes/t3154-collation-accents Calc!H12:H15, T-3154). UNVERIFIED: the D-function fold of `İ` (T-3180); characters outside this
 list (other Greek and Cyrillic final forms, `ϐ`/`β`, `ﬀ`) are assumed to follow it.
-UNVERIFIED (inferred, T-3445): wildcard criteria fold as exact MATCH does (lookup.md "MATCH, VLOOKUP and HLOOKUP
-exact-match keys fold case one character to one": weightless characters one class, supplementary scripts apart, the
-wider classes such as `ϳ`/`Ͷ` and `ϴ`/`ϑ`), because exact MATCH's text keys share `WildcardPattern`; no probe covers
-those characters in criteria (T-3929). D-function prefix criteria keep SEARCH's fold.
-Status: VERIFIED for the list above
+Wildcard criteria and D-function criteria (wildcard or plain prefix) fold as exact MATCH does (lookup.md "MATCH,
+VLOOKUP and HLOOKUP exact-match keys fold case one character to one"), one UTF-16 unit at a time
+(probes/t3929-wildcard-fold-criteria, -xmatch, -dfunctions, excel-graph 2026-11-03, T-3929; COUNTIF, SUMIF,
+COUNTIFS, MATCH(..,0), XMATCH(..,2), XLOOKUP(..,2) and DCOUNTA agree on every wildcard row):
+- weightless characters are one class, counted one for one: `"a?b"` matches a&U+0524&b and a&U+00AD&b,
+  `U+0525&"*"` matches U+0524, and DCOUNTA's prefix a&U+0525 counts a&U+0524&b (rows 1:8); `"a"&U+0524&"*"` does
+  not match ab (row 9), and DCOUNTA's prefix `ab` does not count a&U+0524&b (Calc!C3 of -dfunctions);
+- supplementary letters stay apart from their case pair (`"𐐀*"` does not match 𐐨x nor `"𐐨*"` 𐐀x, rows 11:12), and
+  `?` is one unit, so `"?"` does not match 𐐨 and `"??"` does (rows 14:15);
+- the wider classes hold: `"ϳ*"` matches Ͷx and ͷx, `"Ͷ*"` ϳx, `"ϴ*"` ϑx but not θx, `"θ*"` not ϴx, `"Ε*"` ϵx,
+  `"צ*"` ץx, U+1C91&`"*"` U+1C90&x (both weightless) but not `"ა*"`; `Ɒ`/`ɒ` stay apart (rows 16:28).
+Without a wildcard, COUNTIF, SUMIF, COUNTIFS and XMATCH(..,0) keep the `=` collation instead: a&U+0524&b equals ab
+there (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH"; -criteria Calc!B3:D3, -xmatch Calc!E3), while
+the wildcard and D-function paths do not.
+Status: VERIFIED (excel-graph) for the list and the T-3929 rows above
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445), through `folded_units` and
-`WildcardPattern::new`; D-function prefix criteria through `fold_case` (functions/util/collation.rs)
+`WildcardPattern::new`; D-function prefix criteria through `result_starts_with_units` (functions/criteria.rs, T-3929)
 
 ## Tildes inside wildcard patterns and wildcard-mode lookups
 Rule: once a criterion holds `*` or `?`, or always for a MATCH(..,0)/XMATCH(..,2) text lookup value, `~` makes the next
@@ -88,7 +98,11 @@ Evidence: probes/criteria-grammar C11 (`DCOUNTA` with criterion "ab" over ab, ab
 The prefix is read unit by unit, so a lone surrogate is a unit of its own (probes/d-function-prefix-lone-surrogates, excel-graph 2026-10-16, T-1667): over H, L, "😀", U+FFFD, "x", H&"a", "a"&L, "a" (v = 1, 2, 4, ..., 128), `DSUM` with criterion H gives 37 (H, "😀", H&"a"), L gives 2 (L only, not "a"&L), "😀" gives 4, U+FFFD gives 8 (never a lone half), H&"a" gives 32, "a"&L gives 64, "a" gives 192 ("a" and "a"&L), `"="&H` gives 1 and `"="&L` gives 2, "x" gives 16; `DCOUNTA` counts agree (H 3, "a" 2).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
-Implemented in: functions::criteria::build_criteria_with (CriteriaFlavor::Database)
+A wildcard criterion without `=` matches by prefix too, as if it ended in `*`: over one cell each, DCOUNTA counts abc
+for `a?`, abcd for `a?c` and `a*c`, ab for `?`, xab for `?a`, abc for `*b` and `??`, ab?x for `ab~?`, and the astral
+𐐨 (two units) for `?`, where COUNTIF counts none of them; `=a?` over abc, `=a*c` over abcd and `=?` over 𐐨 count 0,
+and `a?` does not count a (probes/t3929-dfunction-wildcard-prefix Calc!B1:C15, excel-graph 2026-11-03, T-3929).
+Implemented in: functions::criteria::build_criteria_with (CriteriaFlavor::Database; `WildcardPattern::match_any_tail`)
 
 ## D-function criteria are not trimmed into an operator criterion
 Rule: leading spaces stop a criterion from being an operator criterion: `"  > 1 "` and `" >1"` are
