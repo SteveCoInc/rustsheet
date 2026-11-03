@@ -3,7 +3,7 @@ id: T-3895
 title: "Collation: Thai and Lao digits sort as their digits, before the letters, not in their script's code-point run (T-3465 sweep)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
