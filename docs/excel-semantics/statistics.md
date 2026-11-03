@@ -3049,7 +3049,10 @@ in the next bullets are for that older form unless they say otherwise.
     double, zl = z - zh, I = fl(fl(EXP(zh)·s)·fl(1 + zl)) (the rule above). Chosen on r6's tune shapes, exact on
     1,546 of 1,546 non-double-z tune cells, then on 1,139 of 1,139 at r6's b0 = 4.75 hold-out, 777 of 777 on r5,
     2,410 of 2,413 on t3570-r5-bpser-lg (a0 0.15-0.85), and 1,079 of 1,079 on the old w2f (0.5, 6.25) cells with
-    measured GAMMALN. The order matters: (1 + zl) applied before s, or E + E·zl, or the product kept extended, all
+    measured GAMMALN. T-3879's fresh sweep (probes-numeric t3879-bpser-split-fresh, 2,301 log-uniform cells at
+    min(a, b) < 1, b0 < 8 drawn after the freeze, excel-graph 2026-11-03, docs/research/t3879): exact on 2,300 of
+    2,301 (1,729 of 1,730 non-double z) against 1,566 for the unsplit z and 446 for the correctly rounded value. The
+    order matters: (1 + zl) applied before s, or E + E·zl, or the product kept extended, all
     lose 200-750 of the 1,546. No rounding of z alone can work: on many cells no double E gives Excel's I as fl(E·s).
     Earlier negatives: z rounded nearest without zl (z53) won on r5's data, 1,628 against 1,503, but lost on r6,
     2,072 against 2,332 tune; rounding down or up fits no rule across shapes.
@@ -3100,7 +3103,8 @@ docs/research/t2464/r7-bpser-nondouble-z (`forms.py`, `lg.py`, `w2f.py`, `shapes
 Implemented in: `functions/statistical/bratio/bpser.rs` `bpser` (T-2505) through `ported_tails`, for BETA.DIST's cdf
 (`beta_dist_lower_tail`), F.DIST, F.DIST.RT and FDIST (`fisher.rs::f_tail`), BINOM.DIST's cdf and NEGBINOM.DIST's cdf
 (`binom.rs`; T-2847), and F.TEST's tail with its own L (`f_test_tail.rs`, T-2681): the w3 series and
-EXP of the extended z (not yet the split of a non-double z: T-3879), with GL53/glalgdiv's L for min(a, b) < 1
+EXP of z, split as zh + zl where min(a, b) < 1 and b0 < 8 (T-3879, `bpser_series`; elsewhere, and in F.TEST's tail,
+EXP of the extended z: L is held extended or unsolved there), with GL53/glalgdiv's L for min(a, b) < 1
 and the extended GAMMALN sum for min >= 1, max <= 8.
 Its algdiv (b0 >= 8) is `beta_density::algdiv` in doubles, where the model runs TOMS algdiv x87 stored.
 A caller's shape of exactly 1 stays on Cephes' fractions (both shapes > 1 with max > 8 did until T-3007, below); L140's bpser(a0, 1, x0) at a whole b0 takes L = -LN(a0) (T-2506 above a0 = 8, T-2847 at every a0). On
