@@ -3,7 +3,7 @@ id: T-3074
 title: "Generator: VLOOKUP/HLOOKUP keys from the table's first column or row, and VLOOKUP/HLOOKUP/INDEX indexes inside the drawn range"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,14 +30,22 @@ column_num usually lie inside the array, so generated cells exercise the search 
   so `#N/A`, `#REF!` and `#VALUE!` from a bad key or index remain in the stream.
 
 ## Acceptance criteria
-- [ ] A catalog knob (for example `probe_edge: first_column | first_row` on the `probe` param, and an index bound tied
+- [x] A catalog knob (for example `probe_edge: first_column | first_row` on the `probe` param, and an index bound tied
       to a range param's width or height) is documented in the functions.yaml header and used by VLOOKUP, HLOOKUP and
       INDEX; MATCH's existing `probe:` behaves as before.
-- [ ] tools/tests/test_generator.py: over a seeded run of 200 VLOOKUP, HLOOKUP and INDEX calls each, at least 80% of
+- [x] tools/tests/test_generator.py: over a seeded run of 200 VLOOKUP, HLOOKUP and INDEX calls each, at least 80% of
       keys come from the first column/row of the drawn table and at least 80% of indexes lie inside it, and some draws
       are still outside (both asserted); any recorded generator digest is re-recorded in the same PR.
-- [ ] `make py-check` (ruff, mypy strict, pytest) passes; `make check` green; reviewers approve.
+- [x] `make py-check` (ruff, mypy strict, pytest) passes; `make check` green; reviewers approve.
 
 ## Out of scope
 - Generating and oracle-filling the new gen-m2 batch (T-3075).
 - XLOOKUP, LOOKUP and other M6 lookups.
+
+## Outcome
+Added catalog knobs `probe_edge: first_column | first_row` and `index_of: {param, axis}` (documented in the
+functions.yaml header and synthetic-generator.md), extending the T-2719 `probe` path in `Gen.call_args`
+(`edge_cell_in`, `index_in`, `INDEX_HIT_RATE` 90%). VLOOKUP/HLOOKUP keys and indexes and INDEX's row/column now
+usually land inside the drawn table; the rest stay free. New test over 200 calls each; the unfocused digest was
+re-recorded; the lambda-parameter test samples 120 seeds because the draws moved. Eval delta: none (no new oracle
+cells; the new batch is T-3075).
