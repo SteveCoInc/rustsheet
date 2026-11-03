@@ -3,7 +3,7 @@ id: T-3840
 title: "GROUPBY: a FALSE element of an array field_relationship is #VALUE!, and an early error lifts over the array"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
