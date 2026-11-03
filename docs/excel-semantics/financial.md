@@ -947,6 +947,8 @@ Against the exact roots (mpmath, 50 digits; gap triage 2026-10-27), Excel is the
 root is -0.74670447665374079 and `{-400,1,1,1,1,1}`'s is -0.67373667518084225. Excel is 3.7E-15 and 1.8E-15 above
 them, while ours is within 1E-16, correctly rounded. Matching Excel means reproducing where its iteration stops
 (T-2928, after the T-2927 sweep).
+The 50-step bound is not Excel's: Excel returns Newton iterates from v = 0 after up to 632 steps (T-3411; "IRR's
+returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop").
 Sweep (T-2927; probes-numeric/t2927-irr-fallback-sweep, 150 flows where the fitted secant fails from guess 0.1 and
 its retry, excel-graph 2026-10-27; exact roots of the flows' binary values and the signed offset of Excel's double in ulps in
 t2927-irr-fallback-sweep.roots.tsv, decimal bisection to 30 digits; both files are written by tools'
@@ -3919,6 +3921,47 @@ Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_secant` keeps its 50-step cap ("The IRR and XIRR solver caps"); a 213-step cap was tried (T-3806) and dropped
 because it loses A227.
 Tasks: T-3411, T-3806 (dropped)
+
+## IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop
+Rule (partial): where both runs of the engine's secant fail and Excel returns a number, Excel's double is often
+bit for bit 1/v - 1 at an iterate of `irr_fallback`'s Newton search (P(v) = sum c_i v^i by Horner in plain doubles,
+from v = 0), after many more steps than its 50-step cap, and, where the cells can tell, mostly the iterate one past
+the engine's stop. What decides which iterate Excel returns, and when it is `#NUM!` instead, is not known.
+- Over the numeric IRR cells of eval with oracle values, both secant runs of an exact replay of the engine fail on
+  710: t2927-irr-fallback-sweep 162, t3406-irr-num-boundary 139, t3478-irr-r4-wide 105, t3411-irr-r4-fresh-2 94,
+  t3411-irr-r4-fresh 89, t3347-irr-conventional-holdout 66, irr-fallback-roots 31, irr-guess-edges-2 20 and
+  irr-guess-edges 4. Excel returns on 405 of them, is `#NUM!` on 249 and `#DIV/0!` on 56.
+- On 181 of the 405 Excel's value is a Newton iterate, after 4 to 632 steps (69 within 50): the n = 20 annuity A11 of
+  t3406-irr-num-boundary at step 126, the n = 60 one A78 at 579, the outlay family A122-A132 (but not the `#NUM!`
+  A125, A127, A130, A131) at 127-128, and A134, A136, A138-A140, A142-A144 at 438-441 (A133, A135, A137 and A141
+  return, but no iterate is their value). The other 224 are no Newton iterate; the earlier finding that longer
+  secant runs give many of them ("IRR's secant runs longer than 50 steps") still stands.
+- Against the engine's stop (the first step under 1e-7 max(|v|, 1)): on 123 of the 181 the iterate at the stop and
+  the next one give the same rate, so the cell cannot tell them apart. Of the rest, Excel returns the next iterate on
+  51, the one at the stop on 4 (t3347-irr-conventional-holdout A39, t3411-irr-r4-fresh A102 and A129,
+  t3411-irr-r4-fresh-2 A2) and another iterate on 3. The size of the stopping step does not separate them: Excel
+  stops after a step of 2.29E-11 (fresh-2 A2) but takes one more after 2.92E-12 (fresh-2 A44), and stops after
+  1.54E-10 (fresh A102) but takes one more after 1.6E-10 (fresh-2 A14). Nor does |P|: on fresh-2 A14 Excel takes
+  another step at |P| 2.86E-15 of the largest flow and stops at 3.03E-15. So the extra step is decided by something
+  the replica does not see (perhaps Excel's own residual arithmetic at the noise floor). The fallback's stop rule is
+  unchanged: no rule on the step or |P| fits both groups.
+- `#NUM!` is not where Newton fails: it converges to a positive root under the far-root bound on 196 of the 249
+  `#NUM!` cells (and on 2 of the 56 `#DIV/0!` ones). Nor is it the way the secant fails: by how the last run fails,
+  the cells split 151 / 168 / 20 (returns / `#NUM!` / `#DIV/0!`) for a flat secant, 116 / 46 / 1 for the 50-step
+  cap and 138 / 35 / 35 for an iterate outside (0, 1) in d or an NPV out of range.
+- On t3406-irr-num-boundary A97-A144, twelve NPV evaluations (the engine's twice-rounded running product, plain
+  doubles, an 80-bit accumulator, products by v instead of quotients by x, Horner in v or in x, each with plain,
+  twice-rounded or 80-bit operators) take the secant down the same path: flat at step 3 on A109-A144 for all twelve.
+  So a last-ulp difference in NPV at d = 0.0919 is not what separates A126 (returns) from A125 (`#NUM!`).
+- Also refuted on t3406 (type agreement of the secant alone, 144 cells, cap 213): Illinois regula falsi once a step
+  brackets the root 104 (plain secant 92), but none of its returns has Excel's digits; keeping the two points of
+  smallest |NPV| 85.
+Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/fallback_iterates.py .` prints the
+counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
+secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
+Tasks: T-3411
 
 ## IRR over an error element
 Rule: IRR (probes/fin-irr-error-array, T-2390, excel-graph) gives `#VALUE!`, whatever the kind, when its values hold an

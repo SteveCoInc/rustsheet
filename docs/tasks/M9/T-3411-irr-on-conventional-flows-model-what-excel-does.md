@@ -102,6 +102,69 @@ open, from an engine-faithful replica (Python, the engine's twice-rounded operat
   run in Excel; test a restart from the flat point (offset 1E-3 or the guess offset) or the fallback from v = 0 at
   that point, scored on class (a) only, before touching class (b).
 
+2026-11-02 22:30 UTC, opus run (time-boxed experiment; no engine change kept): tried the "next step" above, a
+restart of the secant at a flat step (class a), as a temporary switch in `irr_secant`. Scored cell by cell with
+`rustsheet-eval show` (passed cells of t3406 / t3347 holdout / t3478 wide / t3411 fresh / fresh-2):
+- main (cap 50): 68 / 101 / 229 / 80 / 76. Cap 213, no restart: 70 / 106 / 251 / 88 / 83.
+- At a flat secant (f1 == f0), restart with d0 = the flat point and d1 = d0 -+ 1E-3 (the start rule), up to
+  1 or 3 times, steps counted on: cap 50 gives 68..70 / 101 / 229 / 80 / 76; cap 213 gives 70..72 / 106 / 250..251 /
+  88 / 83. The same restart with the step count reset (fresh 50 steps per restart, 1 or 5 restarts): 68..70 / 101 /
+  229..230 / 80 / 76.
+- At a flat secant, restart from d = 0 (v = 1, r = 0) once: cap 50 68 / 101 / 227 / 80 / 76; cap 213 70 / 106 / 248 /
+  88 / 84.
+- So a restart at the flat point, from the flat point or from r = 0, does not reproduce Excel's returns on class
+  (a): at most +2 cells on t3406, and it loses cells on t3478. Refuted. Do not repeat.
+- Next step, not yet tried: class (a)'s first step jumps d from about -2 to -1.7E+7 (|NPV| up to 1E+290). Test
+  whether Excel clamps or rejects that far first step, for example by treating |NPV| above a bound or a
+  non-representable discount power (T-3407's `#DIV/0!` sign) as a failed trial and halving the step toward d1.
+  Score that on class (a) only, cell by cell, at cap 213.
+- Then tried that next step (22:40 UTC): a damped secant step, halving d2 toward d1 (up to 60 halvings) when the
+  trial (1) fails or has |NPV| above |NPV(d1)|, (2) fails or has d2 >= 1, or (3) fails or has |NPV| above 1E+100.
+  Passed cells, t3406 / t3347 holdout / t3478 / fresh / fresh-2 / t2565 / irr-fallback-roots / m9-fin-irr-rate /
+  t2927 / guess-edges / guess-edges-2 (main at cap 50: 68 / 101 / 229 / 80 / 76 / 180 / 40 / 691 / 40 / 42 / 40):
+  (1) 29 / 84 / 177..192 / 68..76 / 67..71 / 173 / 36 / 655 / 52 / 40 / 26, which breaks the fit set;
+  (2) and (3) at cap 50: 68 / 101 / 224 / 80 / 76 / 180 / 36 / 691 / 52 / 41..42 / 40; at cap 213: 70 / 106 / 238 /
+  88 / 83 / 180 / 36 / 691 / 55 / 41..42 / 40. No damping rule moves t3406, and all lose t3478 cells and
+  irr-fallback-roots cells (-4). Refuted: Excel does not shorten a far first step. Do not repeat.
+- What is left: the far first step stands in Excel too, so what tells Excel's returns apart from its `#NUM!` inside
+  one outlay family (t3406 A122-A132) has to come later in the run. Next, log the exact iterate sequence of a
+  returning cell and its `#NUM!` neighbour with the engine's operators (a throwaway test printing d, NPV per step at
+  cap 213) and compare where they part.
+- Traced it (22:45 UTC; a throwaway test, not committed, printing d and NPV per step with `irr_npv` from guess 0.1)
+  on t3406 A124 (Excel returns), A125 (`#NUM!`), A126 (returns) and A127 (`#NUM!`). All four take the same path:
+  d0 = 0.0909..., d1 = 0.0919..., step 0 jumps to d2 = -7.45..-7.58 (NPV 8E+27..1.1E+28), step 1 comes back to
+  0.09190909090909116 and step 2 to 0.09190909090909109 (7E-17 apart). What decides the run is whether NPV at
+  those two d's rounds to the same double. In ours, A124's two values differ by 1 ulp (-7.60477028807863E+10 and
+  ...629E+10), so the secant goes on and converges at d = -0.2360957 (it then stalls at |NPV| 3E-5, class b). For
+  A125, A126 and A127 the two values are equal, so the secant is flat and the run fails. Excel returns A126, so its
+  NPV at one of those two points differs from ours in the last ulp. The flat at step 2/3 is the whole of class
+  (a): no rule on the step, cap or restart can reproduce it (consistent with the refutations above). Only an NPV
+  that is bit-exact at d about 0.0919 can.
+- Next step: compare `irr_npv`'s operators (the `discounted_sum` product at x = 1/v, extended quotients) with
+  Excel's NPV on these exact points. Probe `NPV(1/(1-d)-1, flows)` style cells, or better IRR's own evaluations,
+  for the A122..A132 family at d = 0.09190909090909116 and 0.09190909090909109. Then look for a summation order or
+  a precision under which A122/A123/A124/A126/A128/A129/A132 step on and A125/A127/A130/A131 go flat. That is a
+  bit-level fit (R4 applies).
+
+2026-11-03, opus run (resumed, branch idle 23 h; merged origin/main in for the current IRR code). Findings, landed
+in financial.md "IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop"
+with docs/research/t3411/fallback_iterates.py; no engine change:
+- The "next step" above (a last-ulp NPV difference at d = 0.0919) is refuted: twelve NPV evaluations (plain,
+  twice-rounded, 80-bit; quotients by x, products by v, Horner in v or x) all go flat at step 3 on t3406 A109-A144,
+  so no NPV arithmetic separates A126 (returns) from A125 (`#NUM!`). Do not repeat.
+- Also refuted on t3406 (secant alone, cap 213): Illinois once bracketed (types 104/144 against 92, but no Excel
+  digits) and keeping the two smallest-|NPV| points (85).
+- New lead: where both secant runs fail and Excel returns, Excel's double is very often exactly an iterate of
+  `irr_fallback`'s Newton from v = 0 (see the financial.md entry and the script's output for the counts), at steps
+  up to about 630: the fallback's 50-step cap is not Excel's, and where the cells can tell, Excel mostly returns the
+  iterate one past the engine's 1e-7 stop (51 cells against 4). Neither the step size nor |P| decides that extra step, and Newton converges on most `#NUM!`
+  cells too, so the type rule is still open.
+- Next step: the type split, on the cells where Excel's value is a Newton iterate. Inside t3406 A122-A132 the
+  returning and `#NUM!` cells share the secant path and the Newton path (126 steps); find what differs, for example
+  a check Excel makes on the root before returning it (a residual of its own NPV at the root against a bound, or
+  the root against the secant's last bracket), and probe it with excel-probe on a family whose outlay moves by
+  1E-4 steps.
+
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
 - Branch head: the claim commit plus these notes. Nothing is implemented; CI and reviewers have not run.
