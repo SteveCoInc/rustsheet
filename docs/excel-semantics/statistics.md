@@ -3168,8 +3168,13 @@ I = w(x) for x <= 0.9,   I = (0.5 - w(y)) + 0.5 for x > 0.9   (y = fl(1 - x))
   remaining 1-2 ulp misses (40 and 54 cells) have no form yet. The same form fixes df-1 cells of
   t0969-t-beta-link (BETA.DIST at shapes 1/2 and df/2 = 1/2); whether T.DIST at df 1 takes it is T-2930's.
 Evidence: probes-numeric t3192-beta-half-half (BETA.DIST, BETADIST and the worksheet form, 321 x) and
-t3192-beta-half-half-2 (341 x, 0.8-1 dense), excel-graph 2026-11-03; docs/research/t3192 (`make_probe.py`,
+t3192-beta-half-half-2 (341 x, 0.8-1 dense) and t3192-beta-half-half-3 (300 x, log-uniform toward 0 and 1; the
+direct form 239 bit-exact, the switch 287), excel-graph 2026-11-03; docs/research/t3192 (`make_probe.py`,
 `score_half.py`, RESULTS.md).
+Ours: the direct form w(x) for every x; the switch is not ported. It is a cut placed by scoring cells whose two forms
+differ by 1 ulp, below decision 0112's floor, so it is last-digit (Phase 1b) work (decision 0188 R4.4, R5; T-3886).
+The direct form on the fit lab's hold-out split (decision 0188 R4.1) of both sweeps' B and C cells: train 522 of 679
+bit-exact (76.9%), test 246 of 304 (80.9%), against the correctly rounded value's 176 of 304; every cell within 2 ulp.
 Implemented in: `functions/statistical/incomplete_beta.rs` `half_half_cdf`, called by `bratio::beta_dist_lower_tail`
 (BETA.DIST and BETADIST's cdf, and the F.INV crossing `inverse_beta::beta_lower_crossing` at d1 = d2 = 1, where no
 cell on file moved; F's tails, the Student t and BETA.INV's search keep their kernels).

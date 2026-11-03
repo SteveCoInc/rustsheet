@@ -31,9 +31,11 @@ New from T-3192: `BETA.DIST(0.5,0.5,0.5,TRUE)` is 0.5000000000000001 in Excel (m
 m9-legacy-betadist A19, A20, t1745-beta-inv-roundtrip I4, I180) and 0.5 in the arctangent form; the form's other
 1-2 ulp misses (40 cells of probes-numeric/t3192-beta-half-half, 54 of t3192-beta-half-half-2) have no model.
 Whether T.DIST at df 1 takes the same form (it fixed t0969-t-beta-link's df-1 BETA.DIST cells) is T-2930's.
-A change to the a = b = 1/2 form owes decision 0188 R4.2 a Gate A batch: T-3192 checked the envelope on its two
-sweeps (1,304 of 1,304 inside) because `rustsheet-accuracy generate BETA.DIST` draws the shapes and cannot pin
-a = b = 1/2; add a shape pin to tools/src/rustsheet_tools/accuracy (defs/beta.py, cli.py) and generate `r4-T-3886`.
+T-3192 ported the direct form only; Excel's reflection above x near 0.9 (the switch: 281 of 321 and 287 of 341
+bit-exact against the direct form's 270 and 228) is a 1-ulp cut below decision 0112's floor, so porting it needs a
+desktop-backed reproducibility check or an owner ruling (decision 0188 R4.4), the R4.1 split and an `r4-T-3886` Gate A
+batch: `rustsheet-accuracy generate BETA.DIST` draws the shapes and cannot pin a = b = 1/2, so add a shape pin to
+tools/src/rustsheet_tools/accuracy (defs/beta.py, cli.py) first.
 Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs; `docs/research/t3192/score_half.py`.
 
 ## Acceptance criteria

@@ -78,14 +78,6 @@ pub(crate) const A1_EXPM1_MAX_X: f64 = 0.1;
 /// FITTED(T-2464, 803 cells, T.DIST.RT df 2 t 2..6, BETA.DIST y0 0.9)
 const A1_CLOSED_FORM_MAX_Y: f64 = 0.9;
 
-/// [`half_half_cdf`]'s switch to the reflected form: the direct form wins up to x = 0.888 and the
-/// reflected one from x = 0.900 on the first sweep (probes-numeric/t3192-beta-half-half; 1 cell of
-/// 51 at x 0.837 against it); frozen at 0.9 before the second sweep tested it (t3192-beta-half-half-2:
-/// 287 of 341 against 228 direct and 253 reflected at 0.5). Below the floor of decision 0112 (1 ulp),
-/// but a second excel-graph fill of both sweeps matched the first on all 1,304 cells.
-/// FITTED(T-3192, 321 cells, a = b = 1/2, x 1E-300..1-1E-15; dense 0.8..1 on the 341-cell hold-out)
-const HALF_HALF_REFLECT_ABOVE: f64 = 0.9;
-
 /// `I_x(a, b)` for shapes a, b > 0; 0 at x <= 0 and 1 at x >= 1. NaN in, NaN out.
 #[cfg(test)]
 pub(crate) fn beta_reg(x: f64, a: f64, b: f64) -> f64 {
@@ -186,24 +178,16 @@ pub(crate) fn closed_form_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, 
 
 /// BETA.DIST's cdf at a = b = 1/2 for 0 < x < 1, y = fl(1 - x) from the caller: Excel's arcsine
 /// closed form, not bratio's bpser (statistics.md "BETA.DIST at a = b = 1/2 is an arctangent closed
-/// form", T-3192): w(t) = 2·ATAN(SQRT(t)/SQRT(1 - t))/PI in doubles, w(x) up to x = 0.9 and
-/// (0.5 - w(y)) + 0.5 above. Bit-exact on 42 of the 49 cells on file before T-3192 (bpser 16), 281
-/// of 321 on the first fresh sweep and 287 of 341 on the second, every cell within 2 ulp
-/// (probes-numeric t3192-beta-half-half, -2; excel-graph), where bpser is
+/// form", T-3192): 2·atan(sqrt(x)/sqrt(y))/pi in doubles, with libm's atan as the worksheet's ATAN
+/// takes it; not `fisher.rs`'s 2·asin(sqrt(x))/pi, which Excel's cells rank lower here. bpser is
 /// 12 ulp low at `BETA.DIST(2.4674011002723394E-20,0.5,0.5,TRUE)` (Excel 9.999999999999999E-11,
 /// probes-numeric/t1745-beta-inv-roundtrip G1): fl(LN x) loses 3E-15 that the square root keeps.
+/// Bit-exact on 270 of 321, 228 of 341 and 239 of 300 cells of three excel-graph sweeps
+/// (probes-numeric t3192-beta-half-half, -2, -3), every cell within 2 ulp. Excel's remaining 1-ulp
+/// bits fit a reflection above x near 0.9 that is not ported: a cut chosen below the 1-ulp floor
+/// of decision 0112 is Phase 1b work (decision 0188 R4.4, R5; T-3886).
 pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
-    if x > HALF_HALF_REFLECT_ABOVE {
-        (0.5 - arcsine_w(y, 1.0 - y)) + 0.5
-    } else {
-        arcsine_w(x, y)
-    }
-}
-
-/// [`half_half_cdf`]'s unreflected form 2·atan(sqrt(t)/sqrt(complement))/pi, with libm's atan as
-/// the worksheet's ATAN takes it.
-fn arcsine_w(t: f64, complement: f64) -> f64 {
-    2.0 * (t.sqrt() / complement.sqrt()).atan() / std::f64::consts::PI
+    2.0 * (x.sqrt() / y.sqrt()).atan() / std::f64::consts::PI
 }
 
 /// (`I_x(a, b)`, 1 - `I_x(a, b)`) at a shape of 1 where [`closed_form_tails`] does not apply, for
@@ -708,8 +692,7 @@ mod tests {
     }
 
     /// BETA.DIST at a = b = 1/2, Excel's cells (probes-numeric t1745-beta-inv-roundtrip G1;
-    /// t3192-beta-half-half-2 B321 at x = 0.9, and B104 and B83, both reflected; T-3192). B104 is
-    /// 1 ulp off the direct form: the reflection above x = 0.9 is what matches it.
+    /// t3192-beta-half-half-2 B321 at x = 0.9, and B83; T-3192).
     #[test]
     fn half_half_cdf_matches_excel() {
         for (x, expected) in [
@@ -718,15 +701,11 @@ mod tests {
                 9.999_999_999_999_999e-11_f64,
             ),
             (0.9_f64, 0.795_167_235_300_866_5_f64),
-            (0.906_416_450_342_901_6, 0.802_075_800_888_622_5),
             (0.997_292_735_257_305_6, 0.966_860_829_015_333),
         ] {
             let got = half_half_cdf(x, 1.0 - x);
             assert_eq!(got.to_bits(), expected.to_bits(), "{x}: {got}");
         }
-        let x: f64 = 0.906_416_450_342_901_6;
-        let direct = arcsine_w(x, 1.0 - x);
-        assert_ne!(direct.to_bits(), 0.802_075_800_888_622_5_f64.to_bits());
     }
 
     /// The a0 = 1 cut, y0 <= 0.9: x0 = fl(1 - 0.9) takes the closed form, and x0 = 0.0998999751

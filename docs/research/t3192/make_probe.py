@@ -4,8 +4,11 @@
 B =BETA.DIST(x,0.5,0.5,TRUE), C =BETADIST(x,0.5,0.5), D =2*ATAN(SQRT(x)/SQRT(1-x))/PI() (Excel's own worksheet ops).
 --sweep 2 writes t3192-beta-half-half-2.case.json (column B only), filled after the 0.9 switch was frozen on sweep 1:
 the out-of-sample test of the switch, dense on 0.8-1.
+--sweep 3 writes t3192-beta-half-half-3.case.json (column B only), drawn after review round 2 froze the direct form
+(no switch): the R4.2 fresh sweep, log-uniform toward 0 (1E-300..0.1) and toward 1 (1 - 1E-16..1 - 0.1), uniform
+between.
 Seeded per sweep, so rerunning reproduces both cases. Usage (repo root):
-  python3 docs/research/t3192/make_probe.py --sweep 1|2
+  python3 docs/research/t3192/make_probe.py --sweep 1|2|3
 """
 import argparse
 import json
@@ -44,6 +47,14 @@ def sweep_2() -> list[float]:
     return xs + ulp_steps(0.9, 10)
 
 
+def sweep_3() -> list[float]:
+    rng = random.Random(31923)
+    xs = [10 ** rng.uniform(-300, -1) for _ in range(100)]
+    xs += [rng.uniform(0.1, 0.9) for _ in range(100)]
+    xs += [1 - 10 ** rng.uniform(-16, -1) for _ in range(100)]
+    return [x for x in xs if 0 < x < 1]
+
+
 SWEEPS = {
     1: (
         sweep_1,
@@ -58,6 +69,13 @@ SWEEPS = {
         False,
         "T-3192: BETA.DIST at a = b = 1/2 along x, second fresh sweep (out-of-sample test of the x = 0.9 "
         "switch between the direct and the reflected arctangent form)",
+    ),
+    3: (
+        sweep_3,
+        "t3192-beta-half-half-3",
+        False,
+        "T-3192: BETA.DIST at a = b = 1/2 along x, third fresh sweep (decision 0188 R4.2 for the direct arctangent "
+        "form), log-uniform toward 0 and toward 1",
     ),
 }
 

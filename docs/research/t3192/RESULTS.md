@@ -19,17 +19,38 @@ bpser's arithmetic but a different kernel: Excel takes an arctangent closed form
    228 (direct) and 253 (reflected at 0.5); every cell within 2 ulp. This is the R4 hold-out of the switch.
 
 ## Scores (bit-exact)
-| set | cells | engine before (bpser) | direct | reflect > 0.5 | switch 0.9 (ported) |
+| set | cells | engine before (bpser) | direct | reflect > 0.5 | switch 0.9 (not ported) |
 |---|---|---|---|---|---|
 | on file before T-3192 (tune) | 49 | 16 | 37 | 42 | 42 |
 | t3192-beta-half-half (sweep 1; fixed the switch) | 321 | - | 270 | 248 | 281 |
 | t3192-beta-half-half-2 (sweep 2; hold-out) | 341 | - | 228 | 253 | 287 |
 
-Full eval A/B of the port against main (before the new cases): 54 cells better (BETA.DIST, BETADIST and
-t0969-t-beta-link's df-1 cells), 0 worse.
+Full eval A/B of the switch form against main (before the new cases): 54 cells better (BETA.DIST, BETADIST and
+t0969-t-beta-link's df-1 cells), 0 worse. Of the direct form that review round 2 ported instead, on the cases on
+file: 52 better, 4 worse by 1 ulp (t1745-beta-inv-roundtrip G5, H5, G6, G186; ungated).
 
 ## Open
 - x = 0.5: Excel 0.5000000000000001 (5 cells), the form 0.5.
 - The remaining 1-2 ulp misses (40 on sweep 1, 54 on sweep 2) have no form yet.
 
 Usage: `tools/.venv/bin/python docs/research/t3192/score_half.py` (repo root).
+
+## Fit-lab hold-out (review round 2)
+The fit lab's sha256 split (decision 0188 R4.1; `holdout()` in score_half.py, case ids `probes-numeric/<case>`,
+keys `Calc!B<row>`, `Calc!C<row>`), margin 5 points stated before scoring. Bit-exact / within 4 ulp / within 15
+digits:
+
+| form | train (679) | test (304) |
+|---|---|---|
+| direct 2·atan(√x/√y)/π (ported) | 522 / 679 / 679 (76.9%) | 246 / 304 / 304 (80.9%) |
+| switch 0.9 (not ported) | 583 / 679 / 679 (85.9%) | 266 / 304 / 304 (87.5%) |
+| correctly rounded | 397 / 679 / 679 (58.5%) | 176 / 304 / 304 (57.9%) |
+
+The direct form is accepted (no drop from train to test; beats the correctly rounded value on test). The switch
+separates forms that differ by 1 ulp on every cell, below decision 0112's floor, so it is left to Phase 1b (T-3886).
+
+## Sweep 3 (R4.2 fresh sweep of the direct form)
+probes-numeric/t3192-beta-half-half-3 (`make_probe.py --sweep 3`, seed 31923), drawn and filled (excel-graph,
+2026-11-03) after review round 2 froze the direct form: 100 x log-uniform on 1E-300..0.1, 100 uniform on 0.1..0.9,
+100 at 1 - 10^U(-16, -1). Bit-exact of 300: direct 239, switch 0.9 287, correctly rounded 212; every cell within
+2 ulp; Gate A envelope 300 of 300 inside.
