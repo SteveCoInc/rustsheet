@@ -1941,6 +1941,7 @@ C	probes/t3881-imcsch-overflow-band.case.json	416
 C	probes/t3885-textjoin-error-delimiter-text-ignore-empty.case.json	136
 C	probes/t3890-pivotby-scalar-filter.case.json	59
 C	probes/t3894-bare-24h-clock.case.json	54
+C	probes/t3896-collation-middle-dot.case.json	272
 C	probes/t3898-typed-circular-readers.case.json	28
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -5808,7 +5809,6 @@ F	probes/t3446-script-digits-forms.case.json	Sheet1!B97
 F	probes/t3446-script-digits-forms.case.json	Sheet1!B98
 F	probes/t3446-script-digits-forms.case.json	Sheet1!B99
 F	probes/t3465-collation-holdout.case.json	Sheet1!C103
-F	probes/t3465-collation-holdout.case.json	Sheet1!C110
 F	probes/t3465-collation-holdout.case.json	Sheet1!C128
 F	probes/t3465-collation-holdout.case.json	Sheet1!C132
 F	probes/t3465-collation-holdout.case.json	Sheet1!C153
@@ -5837,7 +5837,6 @@ F	probes/t3465-collation-holdout.case.json	Sheet1!C597
 F	probes/t3465-collation-holdout.case.json	Sheet1!C599
 F	probes/t3465-collation-holdout.case.json	Sheet1!C76
 F	probes/t3465-collation-holdout.case.json	Sheet1!D103
-F	probes/t3465-collation-holdout.case.json	Sheet1!D110
 F	probes/t3465-collation-holdout.case.json	Sheet1!D117
 F	probes/t3465-collation-holdout.case.json	Sheet1!D128
 F	probes/t3465-collation-holdout.case.json	Sheet1!D172
