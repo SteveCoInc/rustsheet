@@ -97,11 +97,11 @@ fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
 /// `12:30`, `9:05`, `1:2` and `10:00:` are `h:mm`, `10:00:30` is `h:mm:ss`, a fractional second is
-/// `mm:ss.0`, `24:00`, `25:00` and `100:00` are `[h]:mm:ss`, and `10:60` and `10:00:60` are
+/// `mm:ss.0`, `24:00`, `25:00:30` and `100:00` are `[h]:mm:ss`, and `10:60`, `10:99` and `10:00:60` are
 /// numbers with General; `:30` and ` 10:00` (a leading space) stay text
 /// (probes/t3894-bare-24h-clock, excel-graph 2026-11-03;
-/// docs/research/t3894-bare-24h-clock-2026-11-03.md). Shapes beyond those probed (an hour of 24
-/// or more with seconds or an out-of-range minute) stay text (T-3903).
+/// docs/research/t3894-bare-24h-clock-2026-11-03.md; probes/t3903-bare-24h-clock-extra). An hour
+/// of 24 or more with an out-of-range minute or second stays text (`25:60`, `25:00:60`).
 fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
     let first = text.bytes().next()?;
     if !first.is_ascii_digit()
@@ -125,6 +125,9 @@ fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
         [hour, minute] if *hour >= 24 && *minute < 60 => Some("[h]:mm:ss"),
         [hour, minute] if *hour < 24 && *minute < 60 => Some("h:mm"),
         [hour, minute, second] if *hour < 24 && *minute < 60 && *second < 60 => Some("h:mm:ss"),
+        // Hours of 24 or more take the elapsed-hours format with seconds too; an out-of-range
+        // minute or second there stays text (probes/t3903-bare-24h-clock-extra A1:A21, T-3903).
+        [hour, minute, second] if *hour >= 24 && *minute < 60 && *second < 60 => Some("[h]:mm:ss"),
         // An out-of-range minute or second with an hour below 24 is a number with General.
         [hour, ..] if *hour < 24 => None,
         _ => return None,
