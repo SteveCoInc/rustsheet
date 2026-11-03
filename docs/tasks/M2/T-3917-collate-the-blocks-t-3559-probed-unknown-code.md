@@ -37,8 +37,7 @@ that case passes with no known failures.
      Tamil U+0BE6, Telugu U+0C66 and Khmer U+17E0 digits (T-3446 covered eight other blocks).
 - Failing cells (eval/baseline/probes.txt, one case):
   - probes/t3559-collation-unprobed-blocks: Calc!A2:A27, A30:A145, A154, A155; B35, B62, B97, B98,
-    B109, B110, B126; C62, C98, C126; D62, D98, D110, D126; E11, E35, E62, E97, E98, E109, E110, E126,
-    E136:E145; G5, G13, G14, G16, G18.
+    B109, B110, B126; C62, C98, C126; D62, D98, D110, D126; E35, E62, E97, E98, E109, E110, E126; G5, G13, G14, G16, G18.
 - If this is larger than size M, split it by the numbered rules above (planner), keeping 7 with T-3895.
 
 ## Acceptance criteria
@@ -51,3 +50,10 @@ that case passes with no known failures.
 ## Out of scope
 - The Thai and Lao digit order (T-3895) and the middle dot (T-3896).
 - Collation of scripts neither T-3276 nor T-3559 probed.
+
+## Progress
+- Rule 7 done (2026-11-03, PR "T-3917 (partial)"): `element` gives the Gurmukhi U+0A66, Tamil U+0BE6, Telugu
+  U+0C66 and Khmer U+17E0 digits a `digit_variant` weight, all twelve blocks in code-point order (Thai and Lao
+  from T-3895), and `script_digit_to_ascii` reads them as digits. Unit test `script_digits_tiebreak_by_block`.
+  Fixed E11 and E136:E145 (probes 5102 → 5091, 0 regressions). The rank cells A30:A41 still fail on rules 1 to 6
+  (other characters ranked wrong around them), so they stay in the list above.

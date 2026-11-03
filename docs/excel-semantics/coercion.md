@@ -524,6 +524,9 @@ row. VERIFIED for the cells cited:
   so below every letter: `"3" < "٣" < "৩" < "੩" < "௩" < "౩" < "๓" < "໓" < "༣" < "၃" < "៣" < "9"`
   (ranks 30 to 41; G21:G25 = 4), never equal under `=` (Calc!B = 1), but COUNTIF `"="&x` counts all
   eleven spellings of 3 (E11 and E136:E145 = 11): the criterion reads each as the number 3.
+  Implemented by T-3917 (rule 7): `element` gives the Gurmukhi, Tamil, Telugu and Khmer digits a
+  `digit_variant` weight in this order, and `script_digit_to_ascii` reads them, so number-text coercion
+  takes them in every form of the T-3446 blocks (only the COUNTIF criterion is probed for these four).
 - **Astral characters and emoji sequences compare unit by unit**, no sequence is one element:
   `"𐀀" < "𝐀" < "🀄" < "🇺" < "🇺🇸" < "👍" < "👍🏽" < "👨" < "👨‍👩‍👧" < "😀"` (ranks 140 to 149);
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
