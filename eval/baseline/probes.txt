@@ -1705,6 +1705,7 @@ C	probes/t3100-snap-operand-order.case.json	540
 C	probes/t3101-b2-calendar-names.case.json	194
 C	probes/t3102-r1c1-ws-after-bang.case.json	16
 C	probes/t3106-lookup-xmatch-near-equal.case.json	786
+C	probes/t3109-groupby-options-ref-forms.case.json	150
 C	probes/t3112-snap-groupby-eta-totals.case.json	23
 C	probes/t3112-snap-groupby-eta.case.json	47
 C	probes/t3113-entered-r1c1.case.json	4
