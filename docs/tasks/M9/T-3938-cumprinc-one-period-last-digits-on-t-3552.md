@@ -16,7 +16,7 @@ CUMPRINC returns Excel's bits on the 387 one- and few-period principals of T-355
 known-failure lines leave eval/baseline/probes.txt with no new ones.
 
 ## Context
-- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe fin-cumipmt-tiny-rate-structure: 0 of 226 cells changed over three fills; see docs/research/t3992/README.md.
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (CUMPRINC/CUMIPMT) measured on fin-cumipmt-tiny-rate-structure, 0 of 226 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task, deferred ones included, and every unmerged branch's task files). T-3552 and
   T-3731 (done) built these probes as evidence for the CUMIPMT fit and named them only in Context; T-3776 (blocked,

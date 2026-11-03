@@ -3,7 +3,7 @@ id: T-3992
 title: "Measure excel-graph's fill-to-fill bit stability on the kernels the open R4 fits target (incomplete beta, lnGamma, gamma and t quantiles, RATE/IRR, CUMPRINC), so fits below the 4-ulp floor know which cells are targets"
 milestone: M9
 lane: research
-status: done
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -34,7 +34,7 @@ T-1553).
   - LN: T-2143 filled one 380-point workbook three times within 35 s (probes-numeric/t2143-ln-near-ties-fill1..3). 23
     points differ, always between adjacent doubles (decision 0112, numbers.md "LN is FLDLN2 then FYL2X").
   - ERFC/EXP: the T-1916 re-fill changed 9 of 20 ERFC near-tie cells (T-1940's Context).
-  - AMORDEGRC: gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills of the same bytes (T-3610).
+  - AMORDEGRC: gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in one later fill of the same bytes and in a near-copy (T-3610).
   - RATE: one refill of T-3963's same-state probe reproduced every bit (T-3963).
   No fit-target kernel other than LN has a measured rate.
 - The question is evidence, not a fit. A cell whose bits change between fills cannot be a fitting target (decision
@@ -91,10 +91,26 @@ T-1553).
   points, not all of them. No run deviated today (no positive control). The other variations on file (ln-fyl2x-kernel
   against T-1941, ERFC T-1916, AMORDEGRC A76) are listed in the README. Recorded in docs/excel-semantics/numbers.md: a
   refill bullet under "LN is FLDLN2 then FYL2X", and a new entry, "excel-graph refills of the same bytes".
-- The 58 open tasks that cite R4.4 or the reproducibility floor are listed in the README, each with its measured status
-  (7 on their own probe, 20 by kernel family only, 31 not measured), and each got a one-line Context note.
+- The 63 open tasks that cite R4.4 or the reproducibility floor (case-insensitive) are listed in the README, each with its
+  measured status (5 on their own probe, 23 by kernel family only, 35 not measured), and each got a one-line Context note.
 - Input to T-3610 (not decided here): one possible criterion is that two excel-graph runs on different days agree on a
   cell's bits. Six probes meet it already. RATE's t3850 and bfrac's t3953 have all three runs on 2026-11-03, so they need
   a refill on a later day. The web-against-desktop floor under R4.4 stays open.
 - No sidecar under eval/ changed (the refill sidecars were copied aside and the committed ones restored). Eval delta:
   none.
+
+## Blocked because
+Blocked because: review-round limit
+
+Round 3 (head 3dff011b): security APPROVE. Design and Excel fidelity requested changes. Their findings are fixed in the
+commit that set this status, which no reviewer has seen yet:
+- design (BLOCKING): T-2047 cites R4.4 and was missing from the inventory. Added.
+- fidelity (BLOCKING): T-2047, T-3722, T-3723, T-3730 and T-3764 were missing, because the first search was
+  case-sensitive. Added with notes; the inventory is now 63 tasks (5 own probe / 23 family / 35 not measured).
+- fidelity (BLOCKING): T-3659 and T-3938 own no cells in the refilled probes. Reclassified as family only, and their notes
+  corrected.
+- fidelity (MINOR, fixed): owned-cell wording for the own-probe tasks (with the cells left unrefilled); AMORDEGRC A76 is
+  one later fill of the same bytes plus a near-copy, unexplained and not a near-tie; refill timing (a third batch for
+  T-2143's fill 2 and fill 3); 11.4 days; the escaped `|d|` in T-3774's row.
+- design (MINOR, fixed): an explicit clustering line in Results.
+Next (work-loop step 5c): run the full panel from round 1 on the current head.

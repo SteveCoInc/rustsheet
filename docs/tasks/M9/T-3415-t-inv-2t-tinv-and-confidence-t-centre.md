@@ -17,7 +17,7 @@ which are 1E-15 to 4E-15 relative off the true quantile, inside the measured ran
 outside it; or the forms tried are recorded in docs/excel-semantics/statistics.md.
 
 ## Context
-- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe t3349-t-inv-2t-sweep: 0 of 300 cells changed over three fills; see docs/research/t3992/README.md.
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe t3349-t-inv-2t-sweep: 0 of its 300 cells changed over three fills (its 21 cells there; probes/t3349-t-inv-2t-near-one A5 not refilled); see docs/research/t3992/README.md.
 - Gap triage 2026-10-31 (`make eval` on main fbcd47e96). T-2724's centre crossing (`student_t_centre` in
   crates/rustsheet-engine/src/functions/statistical/t_dist.rs) is within 4E-16 of the true quantile at every cell
   below (mpmath 1.4.1 at 60+ digits, T.INV.2T at the double p). Excel is not: 0.8E-15 to 3.7E-15 relative off, so the

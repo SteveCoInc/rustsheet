@@ -5,8 +5,9 @@ R4.4 forbids fitting below the oracle's reproducibility floor without a reproduc
 evidence on file was T-2143's LN probe, which decision 0112 read as "the last bit of an FYL2X near-tie varies between
 runs". This note measures that on the kernels the open last-digit fits target.
 
-**Method.** Each case below was refilled twice on 2026-11-03 (round 1 22:16-22:18 UTC, round 2 22:18-22:20 UTC) with `rustsheet-oracle fill -b excel-graph
---force`, with the local oracle cache (`eval/.cache/oracle/excel-graph`) emptied before each round. Every refill was a
+**Method.** Each of the eight kernel cases, and T-2143's fill 1, was refilled twice on 2026-11-03 (round 1 22:16-22:18 UTC, round 2
+22:18-22:20 UTC). T-2143's fill 2 and fill 3 workbooks were refilled once each in a third batch (22:20:54 and 22:21:05 UTC) with `rustsheet-oracle fill -b excel-graph
+--force`, with the local oracle cache (`eval/.cache/oracle/excel-graph`) emptied before each round and before the third batch. Every refill was a
 fresh upload and recalculation: each sidecar carries a new `produced_at` and a new uploaded `workbook_name`, with the same
 `input_sha256` as the committed fill. After each fill its sidecar was copied aside and the committed one restored, so no
 sidecar under `eval/` changes. The committed fill is the first of the three, and it dates from 2026-10-22 to 2026-11-03 (column
@@ -31,16 +32,17 @@ values and their spread in ulps. The copied refill sidecars were not committed: 
 | LN (control) | probes-numeric/t2143-ln-near-ties-fill2 | 2026-10-22 12:58 | 2 | 380 | 0 | 0 |
 | LN (control) | probes-numeric/t2143-ln-near-ties-fill3 | 2026-10-22 12:58 | 2 | 380 | **23** | 1 ulp |
 
-Across the eight fit-target kernels, 15,128 cells were compared over three fills each, and not one bit differed. The two
-fills of a case ran two minutes apart; the committed fill ran between about 6.5 hours and 12 days earlier.
+Across the eight fit-target kernels, 15,128 cells were compared over three fills each, and not one bit differed, so
+there is no clustering to report for them. The control's 23 differing cells all lie inside decision 0112's window. The two
+fills of a case ran two minutes apart; the committed fill ran between about 6.5 hours and 11.4 days earlier (12.4 days for the LN control).
 
 **The control.** On 2026-10-22, T-2143 filled three workbooks that differ only in a text label in D1 (added so that the oracle
 cache would not return fill 1), each with the same 380 LN formulas. Fill 3 differed from fills 1 and 2 at 23 near-tie cells
 (18 of the 30 FYL2X near-ties in B1:B30, and B172, B187, B205, B206 and B217 among the 300 new near-ties), each by one ulp. Fills 1 and 2 agree on every cell. Refilling all three
 workbooks today gives fill 1's bits every time: fill 1's bytes twice and fill 2's and fill 3's bytes once each, with no
 difference at any cell. So fill 3's 2026-10-22 bits were one deviating *run*, not a property of its bytes. Today the 23
-cells come back as fills 1 and 2 had them. On this probe, then, the variation seen on 2026-10-22 belonged to that run: the
-same bytes did not vary in four later runs. That run changed 23 cells, all inside decision 0112's window (d 2.19e-4 to
+cells come back as fills 1 and 2 had them. On this probe, then, the variation seen on 2026-10-22 belonged to that run: four later runs over the
+three workbooks (fill 3's bytes once) all returned fill 1's bits. That run changed 23 cells, all inside decision 0112's window (d 2.19e-4 to
 3.86e-4 from a midpoint) and all by one ulp. It did not change every point in the window. Of the window's 69 points, 46
 returned the same bits in all fills (34 of them the model's), and 12 of the 30 old near-ties were unchanged.
 
@@ -48,15 +50,17 @@ returned the same bits in all fills (34 of them the model's), and 12 of the 30 o
 - LN: probes/ln-fyl2x-kernel (2026-10-20) and the T-1941 research run (2026-10-19) differ at 3 of the 30 near-ties and agree
   on the other 250 cells. That is a partial difference between two runs ("LN is FLDLN2 then FYL2X" in numbers.md).
 - ERFC/EXP: the T-1916 re-fill changed 9 of 20 ERFC near-tie cells (T-1940's Context).
-- AMORDEGRC: gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills of the same input sha256 (T-3610).
+- AMORDEGRC: gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in one later fill of the same bytes
+  (probes/amordegrc-a76-bisect-a) and in a near-copy (-h, one unrelated constant added). It is a single cell, recorded as
+  UNEXPLAINED in financial.md and not shown to be a rounding near-tie (T-3610).
 
 **What this shows and what it does not.**
 - On the eight probes measured, three runs of the same bytes returned the same bits at every cell. On LN, four runs today
   of T-2143's bytes agreed with each other and with fills 1 and 2 of 2026-10-22.
 - No run today deviated, so this session had no positive control. Two runs a few minutes apart say little about how
-  often deviating runs occur. The variations on file are rare, change some near-tie cells and not others, and are each one
-  or two ulps: LN's by one ulp, the T-1916 ERFC re-fill by one to two (`kmyst-erfc-r8c11!B12999` by 2), and AMORDEGRC's
-  by one step in an integer result. Nothing here shows whether the measured probes contain cells close
+  often deviating runs occur. The LN and ERFC variations on file are rare and change some near-tie cells and not others: LN's by
+  one ulp, the T-1916 ERFC re-fill by one to two (`kmyst-erfc-r8c11!B12999` by 2). AMORDEGRC's A76 is one integer step of
+  one cell, cause unexplained. Nothing here shows whether the measured probes contain cells close
   enough to a rounding tie to vary.
 - Different days: six cases have a committed fill from an earlier day that agrees with today's refills. RATE
   (t3850-rate-same-state, committed 2026-11-03 15:30) and incomplete beta bfrac (t3953-f-tail-bfrac-tiny, committed
@@ -77,14 +81,16 @@ returned the same bits in all fills (34 of them the model's), and 12 of the 30 o
 
 ## Open tasks that cite R4.4 or the reproducibility floor
 
-"Measured" means the task's own probe was refilled. "Family only" means a probe of the same kernel family was refilled but
+Open means `todo`, `blocked` or `in-progress` (T-3755 and T-3756 cite R4.4 but are dropped). The search is case-insensitive.
+63 tasks: 5 measured on their own probe, 23 by kernel family only, 35 not measured. "Measured" means the task's own probe was refilled. "Family only" means a probe of the same kernel family was refilled but
 the task's own cells were not. The unstable count applies only to a task's own probe. Every one of these tasks got a
 one-line note under its Context that links this page.
 
-| task | title | measured | own cells fill-unstable |
+| task | title | measured | owned cells fill-unstable |
 |---|---|---|---|
+| T-2047 | CONVERT to a non-base unit: fit Excel's last digit (m to ft is 3.2808398950131235) | no | - |
 | T-2647 | F.DIST pdf at a tiny x: Excel's last digits where Y = density·x is subnormal (probes-numer | no | - |
-| T-3415 | T.INV.2T, TINV and CONFIDENCE.T centre at p near 1, df 2 up: Excel is 1E-15 to 4E-15 off t | yes, own probe `t3349-t-inv-2t-sweep` | 0 of 300 |
+| T-3415 | T.INV.2T, TINV and CONFIDENCE.T centre at p near 1, df 2 up: Excel is 1E-15 to 4E-15 off t | yes, own probe `t3349-t-inv-2t-sweep` | 0 (its 21 cells there; probes/t3349-t-inv-2t-near-one A5 not refilled; no cell of the probe's 300 varied) |
 | T-3421 | T.INV.2T, TINV, T.INV and CONFIDENCE.T at a tiny central probability, df 2 up: Excel's cen | family only (`t3349-t-inv-2t-sweep`) | not refilled |
 | T-3434 | COMPLEXs.xlsx IMARGUMENT H2, H3, H10: Mac-cached ATAN2 digits the web does not give; name  | no | - |
 | T-3435 | BETA.DIST cdf at shapes 2.5 to 100 on the BETA.INV round trip: 13 cells where Excel is 4 t | family only (`t2464-r2-bpser-small-gl`) | not refilled |
@@ -106,17 +112,21 @@ one-line note under its Context that links this page.
 | T-3619 | GAMMA.DIST density on t2753-gamma-density-switch and m9-gamma-dist-a1 A28: 64 cells 1 to 7 | no | - |
 | T-3620 | YIELD one-step bonds: yield-one-step-start A162, B19 and B24 are 1 to 4 ulp off Excel afte | no | - |
 | T-3640 | Excel's far-tail Q above shape 11 and past x = 600: the 37 t3269-fresh-sweep cells T-3269' | no | - |
-| T-3659 | GAMMA.INV and CHISQ.INV deep lower tail outside T-3311's cut: which Newton iterate or sear | yes, own probe `t3311-gamma-inv-lower-tail-cdf` | 0 of 899 |
+| T-3659 | GAMMA.INV and CHISQ.INV deep lower tail outside T-3311's cut: which Newton iterate or sear | family only (`t3311-gamma-inv-lower-tail-cdf`) | not refilled |
 | T-3681 | POISSON cdf deep upper tail at shapes 2 to 11: the 13 gated gen-m9 cells T-3269 left 1 to  | no | - |
 | T-3696 | BETA.INV at a shape of 1: Excel's last bit where the closed form is 1-3 ulp off (T-3664 re | no | - |
+| T-3722 | DURATION and MDURATION with one coupon left: 55 cells of T-2733's fresh sweeps, 1 to 2 ulp | no | - |
+| T-3723 | PRICE, DURATION and MDURATION with more than one coupon on T-2733's r4 fresh sweep: 65 cel | no | - |
+| T-3730 | T.TEST and TTEST: the 9 visibly-off gen-m9 cells only time-boxed T-0969 owns stray 5 to 19 | no | - |
 | T-3735 | BETA.DIST cdf with a shape within 16 ulp of 1 (t2464 w2f unit-shape): 127 bit-level cells  | family only (`t2464-r2-bpser-small-gl`) | not refilled |
 | T-3740 | BINOM.DIST.RANGE past the mean: Excel's exact upper-tail form (21 probe rows within 6E-14) | no | - |
 | T-3757 | Owners for 177 unowned last-digit cells of the F density r4-wide sweep (Phase 1b) | no | - |
+| T-3764 | BETA.DIST cdf at b = 1 and a shape of 136 to 1414: Excel's w on the a0 = 1 complement is o | family only (`t2464-r2-bpser-small-gl`) | not refilled |
 | T-3767 | BETA.DIST density on the t3568 bup-terms probes: 7,026 unowned visibly-off cells at b from | no | - |
 | T-3768 | BETA.DIST density on the t3568 bup-terms probes: the 4,281 bit-level cells within 15 digit | no | - |
 | T-3772 | BETA.DIST density at shapes c+j against a0 > 15: owner for the 7,026 last-digit t3568 term | no | - |
-| T-3774 | BINOM.DIST and NEGBINOM.DIST at a large n: Excel's unidentified |d| 2^-53 bd0 term and the | no | - |
-| T-3776 | CUMPRINC at a tiny rate over short ranges, attempt 3 (decision 0056): solve for Excel's pe | yes, own probe `fin-cumipmt-tiny-rate-structure` | 0 of 226 |
+| T-3774 | BINOM.DIST and NEGBINOM.DIST at a large n: Excel's unidentified \|d\| 2^-53 bd0 term and the | no | - |
+| T-3776 | CUMPRINC at a tiny rate over short ranges, attempt 3 (decision 0056): solve for Excel's pe | yes, own probe `fin-cumipmt-tiny-rate-structure` | 0 (its cells there; no cell of the probe's 226 varied) |
 | T-3779 | gen-m9 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M9  | no | - |
 | T-3780 | gen-m9 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M9  | no | - |
 | T-3782 | gen-m9 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M9  | no | - |
@@ -129,15 +139,15 @@ one-line note under its Context that links this page.
 | T-3933 | BETA.DIST cdf on bratio's direct bgrat branch at 0 < a0 < 1, a0 != 1/2: take bgrat_increme | family only (`t2464-r2-bpser-small-gl`) | not refilled |
 | T-3935 | BETA.DIST density with both shapes large past n = 256: the 1,168 unowned t3571-r5-bfrac-fr | no | - |
 | T-3936 | BETA.DIST cdf on the bfrac Lentz region once the density matches: the 1,157 unowned t3571- | family only (`t3953-f-tail-bfrac-tiny`) | not refilled |
-| T-3937 | GAMMALN, GAMMA and LN(GAMMA) last digits on T-3570's lg-aux and lngamma-gl probes once T-2 | yes, own probe `t3570-r5-bpser-lg-aux` | 0 of 2520 |
-| T-3938 | CUMPRINC one-period last digits on T-3552's evidence probes (387 gated probes cells, Phase | yes, own probe `fin-cumipmt-tiny-rate-structure` | 0 of 226 |
+| T-3937 | GAMMALN, GAMMA and LN(GAMMA) last digits on T-3570's lg-aux and lngamma-gl probes once T-2 | yes, own probe `t3570-r5-bpser-lg-aux` | 0 (its 594 cells there; its 125 t3570-r5-bpser-lngamma-gl cells not refilled; no cell of the probe's 2520 varied) |
+| T-3938 | CUMPRINC one-period last digits on T-3552's evidence probes (387 gated probes cells, Phase | family only (`fin-cumipmt-tiny-rate-structure`) | not refilled |
 | T-3939 | GAMMA.DIST and GAMMA.INV last digits on the fit-audit and t3316 probes (58 cells within 15 | family only (`t3311-gamma-inv-lower-tail-cdf`) | not refilled |
 | T-3940 | BETA.DIST at a = b = 1/2: the 61 one-ulp cells of T-3192's fresh sweep t3192-beta-half-hal | family only (`t2464-r2-bpser-small-gl`) | not refilled |
 | T-3941 | RATE one ulp off at t3698-rate-r4-fresh A233 (nper 795, guess 0.124; Phase 1b) | family only (`t3850-rate-same-state`) | not refilled |
 | T-3952 | F.DIST density at x = 123456789.123, df (8, 8): Excel 2.2E-15 and ours 6.6E-15 off the mat | no | - |
-| T-3954 | FDIST(1E+15,4490,6) on bfrac at x0 = 1.3E-18: Excel 1.2E-14 off the math, ours 4.6E-15 (ge | yes, own probe `t3953-f-tail-bfrac-tiny` | 0 of 4800 |
+| T-3954 | FDIST(1E+15,4490,6) on bfrac at x0 = 1.3E-18: Excel 1.2E-14 off the math, ours 4.6E-15 (ge | yes, own probe `t3953-f-tail-bfrac-tiny` | 0 (its cells there; gen-m9 8f2ac25945af87da A92 not refilled; no cell of the probe's 4800 varied) |
 | T-3956 | bpser last digits T-3879 left to GAMMALN: 1,093 unowned cells of t3879-bpser-split-fresh,  | family only (`t3570-r5-bpser-lg-aux`) | not refilled |
 | T-3959 | BINOM.DIST and NEGBINOM.DIST cdf at a large n: Excel's cdf arithmetic on T-3774's never-at | no | - |
 | T-3961 | BINOM.DIST and NEGBINOM.DIST cdf at p below 0.01 and a huge n: Excel is 269 to 64,789 ulp  | no | - |
-| T-3963 | RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-s | yes, own probe `t3850-rate-same-state` | 0 of 240 |
+| T-3963 | RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-s | yes, own probe `t3850-rate-same-state` | 0 (its cells there; no cell of the probe's 240 varied) |
 | T-3982 | IMSECH's two T-3930 leftover texts (t3721 C386 complex, C390 real): find Excel's cosh wher | no | - |

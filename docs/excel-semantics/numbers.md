@@ -2823,15 +2823,16 @@ Counter-cases (same case): a literal error argument passes through, `PERCENTOF("
 
 ## excel-graph refills of the same bytes: no variation on eight fit kernels (2026-11-03)
 Rule: refilling the same workbook bytes with Excel for the web gave the same bits at every cell of the eight probes below,
-over three runs each. Fill-to-fill variation still happens, rarely and at near-ties, so this is a measurement of these
-probes on these dates, not a guarantee. Each variation on file moved some near-tie cells and not others. LN's moved
-by one ulp, ERFC's by one to two ulps, and AMORDEGRC's by one step in an integer result:
+over three runs each. Fill-to-fill variation still happens, rarely, so this is a measurement of these probes on these
+dates, not a guarantee. The LN and ERFC variations on file moved some near-tie cells and not others: LN's by one ulp,
+ERFC's by one to two. AMORDEGRC's is one cell's integer result, cause unexplained:
 - T-2143's fill 3 of 2026-10-22 changed 23 LN cells, all inside decision 0112's window. Four refills of the same bytes
   today returned fills 1 and 2's bits ("LN is FLDLN2 then FYL2X" above).
 - probes/ln-fyl2x-kernel and the T-1941 run differ at 3 of their 30 shared LN near-ties.
 - The T-1916 re-fill changed 9 of 20 ERFC near-tie cells by 1 to 2 ulp (`kmyst-erfc-r8c11!B12999` by 2; statistics.md
   T-1916 table; T-1940).
-- AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills (T-3610).
+- AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in one later fill of the same bytes
+  (probes/amordegrc-a76-bisect-a) and in a near-copy (-h); UNEXPLAINED in financial.md, not shown to be a near-tie (T-3610).
 Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each of the eight kernel
 cases got two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
 three fills, with zero differing cells:
