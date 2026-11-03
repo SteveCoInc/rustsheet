@@ -40,7 +40,7 @@ time box).
 - Cells (eval/suites/probes-numeric, which has no baseline file: a fixed cell leaves the report's failing list):
 - probes-numeric/m9-beta-dist-a0p5.case.json (9): Calc!A1, A3, A5, A7, A9, A11, A19, A25, A31
 - probes-numeric/m9-beta-dist-a5.case.json (5): Calc!A1, A3, A9, A19, A25
-- probes-numeric/m9-beta-dist-a10.case.json (6): Calc!A5, A7, A9, A19, A37, A49
+- probes-numeric/m9-beta-dist-a10.case.json (7): Calc!A5, A7, A9, A19, A37, A39, A49 (A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours ...003, math 0.5: added by gap triage 2026-11-03, no other open task named it)
 - probes/stat-argument-modes.case.json (1): Sheet1!H374
 
 `NEGBINOM.DIST(5,5,0.4,TRUE)` (H374) is I_0.4(5, 6): Excel 0.3668967424000001, ours 0.36689674240000014, 1 ulp. It is in

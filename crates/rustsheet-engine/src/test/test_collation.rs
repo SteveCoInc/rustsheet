@@ -315,6 +315,35 @@ fn final_sigma_folds_in_exact_and_wildcard_matches() {
     );
 }
 
+/// U+0001 is `*` in a pattern that starts with it and holds no `*`, and in SEARCH always
+/// (probes/t3921-match-u0001-wildcard).
+#[test]
+fn soh_reads_as_a_star() {
+    use crate::functions::criteria::WildcardPattern;
+    let matches = |pattern: &str, text: &str| {
+        WildcardPattern::new(&Text::from(pattern)).matches(&Text::from(text))
+    };
+    assert!(matches("\u{1}", "zzz") && matches("\u{1}", ""));
+    assert!(matches("\u{1}b", "ab") && !matches("\u{1}b", "abc"));
+    assert!(matches("\u{1}b\u{1}", "abc"));
+    assert!(matches("~\u{1}", "zzz"));
+    assert!(
+        !matches("a\u{1}", "abc") && matches("a\u{1}c", "a\u{1}c") && !matches("a\u{1}c", "abc")
+    );
+    assert!(!matches("\u{1}*", "abc") && !matches("*\u{1}", "abc"));
+    assert_eq!(
+        WildcardPattern::new(&Text::from("\u{1}")).literal_units(),
+        None
+    );
+    let search = |pattern: &str| {
+        WildcardPattern::for_search(pattern.encode_utf16())
+            .find_from(&"xabcx".encode_utf16().collect::<Vec<_>>(), 0)
+    };
+    assert_eq!(search("a\u{1}"), Some(1));
+    assert_eq!(search("\u{1}*"), Some(0));
+    assert_eq!(search("q\u{1}"), None);
+}
+
 /// The evaluated `Data` strings of the probes case `stem` (each a formula such as
 /// `="a"&REPT(UNICHAR(769),22)`).
 fn probe_data_strings(stem: &str) -> Vec<Text> {
@@ -576,7 +605,7 @@ fn t3276_other_scripts() {
 }
 
 /// T-3917 rule 7: every other-script digit is its digit plus a tiebreak in code-point order of
-/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks A30:A41,
+/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks Calc!A11, A136:A145,
 /// G21:G25; probes/t3895-collation-script-digits A151:A178).
 #[test]
 fn script_digits_tiebreak_by_block() {
