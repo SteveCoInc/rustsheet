@@ -3,7 +3,7 @@ id: T-3875
 title: "GROUPBY/PIVOTBY snap: probe the two-argument aggregation LAMBDA and list the callers in snapping_root docs"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,3 +27,8 @@ The GROUPBY/PIVOTBY aggregation-LAMBDA snap is probed for the two-argument form,
 
 ## Out of scope
 - The PERCENTOF internal sum caller (stays unsnapped).
+
+## Outcome
+- Probe `probes/t3875-snap-groupby-two-arg` (30 cells, excel-graph 2026-11-03) covers two-parameter GROUPBY and PIVOTBY aggregation LAMBDAs over one and two groups; the engine already matched all 30 cells, so no engine change was needed. No Gate A sidecar is owed (no one-call numeric cells).
+- `snapping_root` doc comment now names GROUPBY/PIVOTBY aggregation; numbers.md records the two-argument result.
+- Eval delta: +30 passing cells (new probe), no regressions.
