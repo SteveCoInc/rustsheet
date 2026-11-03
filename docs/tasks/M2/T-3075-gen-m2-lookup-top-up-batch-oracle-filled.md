@@ -3,7 +3,7 @@ id: T-3075
 title: "gen-m2 lookup top-up batch: oracle-filled VLOOKUP, HLOOKUP and INDEX cells that find and pick (after T-3074)"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -23,11 +23,20 @@ value rather than an error, so the gate's M2 lookup evidence covers the search a
   and `make eval-baseline` (no regressions allowed).
 
 ## Acceptance criteria
-- [ ] Two new gen-m2 cases with excel-graph sidecars (canary-verified); in them at most 35% of the VLOOKUP, HLOOKUP
+- [x] Two new gen-m2 cases with excel-graph sidecars (canary-verified); in them at most 35% of the VLOOKUP, HLOOKUP
       and INDEX outer-call cells are errors, counted the way T-3074's Context counts them and reported in the Outcome.
-- [ ] gen-m2 stays at 100% (no visibly-off cell); any new-coverage failure is a known failure owned by a filed M2 task
+- [x] gen-m2 stays at 100% (no visibly-off cell); any new-coverage failure is a known failure owned by a filed M2 task
       named in the Outcome, and `make exit-owners MILESTONE=M2` reports 0.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Generator changes (T-3074). Engine fixes for any mismatch found (file them).
+
+## Outcome
+- Added two gen-m2 cases (`844da2526152d8b9`, `88b15985ecd294e4`) with excel-graph sidecars:
+  `rustsheet-gen --milestone M2 --focus --functions VLOOKUP,HLOOKUP,INDEX --count 2 --formulas 300 --seed 3076`.
+  Seed 3075 (the suggested one) gave 35.2% errors (211/600), over the 35% limit, so it was dropped unused for 3076.
+- Outer-call error cells, counted as in T-3074's Context (outer function name of each `Calc` formula, `t == "e"` in the
+  sidecar): VLOOKUP 68/200 (34%), HLOOKUP 64/200 (32%), INDEX 58/200 (29%); total 190/600 = 31.7%.
+- gen-m2: 105 cases, 26001/26001 cells, 100.00%, 0 visibly off; no new known failures; `make exit-owners MILESTONE=M2`
+  reports 0. `eval/baseline/gen-m2.txt` regenerated with `make eval-baseline`.
