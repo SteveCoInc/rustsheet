@@ -2627,7 +2627,11 @@ Right/Left):
   columns `Column1`, `Column2` as the file names them; `Sales` on S!B3:C6, data rows 3-6, Qty 1,2,4,8;
   excel-graph 2026-10-31, T-3260): `ROWS(Sales)` and `ROWS(Sales[#All])` are both 4, `Sales[Column2]` reads the
   data, and `ROW(Sales[#Headers])` is `#REF!`, as `#Totals` is on a table without a totals row
-  (table-no-header-baseline). A delete of its first row (row 3, its first data row) shrinks it as a delete of a
+  (table-no-header-baseline). The combined forms (probes/table-edits table-no-header-headers-combined, excel-graph
+  2026-11-03, T-3661): `Sales[[#Headers],[Column1]]` is `#REF!` for ROWS, ROW and SUM and ISREF is FALSE, while
+  `Sales[[#Headers],[#Data]]`, `Sales[[#Headers],[#Data],[Column2]]` and `Sales[[#All],[Column1]]` are references to
+  the 4 data rows (ROWS 4, first row 3, SUM 15, 15 and 0 for the text column, ISREF TRUE). The engine matches.
+  A delete of its first row (row 3, its first data row) shrinks it as a delete of a
   first data row does: `ROWS(Sales)` 3, `SUM(Sales[Column2])` 14, `INDEX(Sales[Column1],1)` "W", `=SUM(S!C3:C6)`
   becomes `=SUM(S!C3:C5)`, `=SUM(S!C3:C3)` is `=SUM(S!#REF!)`, `=S!C10` reads `=S!C9`, and a cell above the
   table stays (table-no-header-delete-first-row). The engine matches both.

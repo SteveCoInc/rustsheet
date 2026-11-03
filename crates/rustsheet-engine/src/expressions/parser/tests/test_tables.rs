@@ -583,3 +583,34 @@ fn a_padded_bare_column_is_ours_only() {
         assert!(matches!(typed, Node::ParseErrorKind { .. }), "{formula}");
     }
 }
+
+/// On a table without a header row, `[#Headers]` combined with a column is `#REF!` and
+/// `[#Headers],[#Data]` / `[#All]` read the data rows (probes/table-edits
+/// table-no-header-headers-combined, excel-graph 2026-11-03, T-3661).
+#[test]
+fn headers_combined_forms_on_a_table_without_a_header_row() {
+    let mut tables = create_test_table("T", &["Jan", "Feb"], "A1", 3);
+    if let Some(table) = tables.get_mut("T") {
+        table.header_row_count = 0;
+    }
+    let mut parser = new_parser(vec!["Sheet One".to_string()], vec![], tables);
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet One".to_string(),
+        row: 9,
+        column: 9,
+    };
+    let mut text = |formula: &str| {
+        let t = parser.parse(formula, &cell_reference);
+        to_excel_string(&t, &cell_reference)
+    };
+    assert_eq!(text("ROWS(T[[#Headers],[Jan]])"), "ROWS(#REF!)");
+    assert_eq!(text("ROWS(T[#Headers])"), "ROWS(#REF!)");
+    // The data forms stay table references (the eval case checks their values).
+    for formula in [
+        "ROWS(T[[#Headers],[#Data]])",
+        "ROWS(T[[#All],[Jan]])",
+        "ROWS(T[[#Headers],[#Data],[Jan]])",
+    ] {
+        assert_ne!(text(formula), "ROWS(#REF!)", "{formula}");
+    }
+}

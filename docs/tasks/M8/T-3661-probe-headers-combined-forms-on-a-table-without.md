@@ -3,7 +3,7 @@ id: T-3661
 title: "Probe [#Headers] combined forms on a table without a header row"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -25,14 +25,20 @@ Both are plausible and both are unprobed. `docs/excel-semantics/references.md` r
 results next to which the answer belongs.
 
 ## Acceptance criteria
-- [ ] A new probes/table-edits case (a sibling of `table-no-header-baseline`, same `"header_row":
+- [x] A new probes/table-edits case (a sibling of `table-no-header-baseline`, same `"header_row":
       false` table) asks Excel, through the oracle, for at least `ROWS`/`ROW`/`SUM`/`ISREF` over
       `Sales[[#Headers],[Column1]]`, `Sales[[#Headers],[#Data]]`, `Sales[[#Headers],[#Data],[Column2]]`
       and `Sales[[#All],[Column1]]`; the `.oracle.json` sidecar is committed.
-- [ ] The engine matches every oracle cell (fix the parser arms if not), with a parser unit test next
+- [x] The engine matches every oracle cell (fix the parser arms if not), with a parser unit test next
       to the `#Totals` ones in `parser/tests/test_tables.rs`.
-- [ ] The results are recorded in `docs/excel-semantics/references.md` beside the T-3260 entry.
-- [ ] `make check` green; reviewers approve.
+- [x] The results are recorded in `docs/excel-semantics/references.md` beside the T-3260 entry.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Header-less tables imported from xlsx files Excel wrote (T-3260 left import unchanged).
+
+## Outcome
+Probed the four combined forms (probes/table-edits/table-no-header-headers-combined, 16 cells, excel-graph). Engine already matched every cell, so no parser change; added parser unit test `headers_combined_forms_on_a_table_without_a_header_row` and the references.md entry. Eval: 1 new probe case, 16/16 pass.
+
+## Outcome
+Probed the four combined forms (probes/table-edits/table-no-header-headers-combined, 16 cells, excel-graph). Engine already matched every cell, so no parser change; added parser unit test `headers_combined_forms_on_a_table_without_a_header_row` and the references.md entry. Eval: 1 new probe case, 16/16 pass.
