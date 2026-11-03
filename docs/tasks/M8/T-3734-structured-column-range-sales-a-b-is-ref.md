@@ -3,7 +3,7 @@ id: T-3734
 title: "Structured column range Sales[[A]:[B]] is #REF! when either end column is deleted"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
