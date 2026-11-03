@@ -3,7 +3,7 @@ id: T-3883
 title: "IMSECH past its denominator overflow: 12 cells with a last-digit part off (T-3881's band probe)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
