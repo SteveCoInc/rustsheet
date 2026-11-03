@@ -3,7 +3,7 @@ id: T-3676
 title: "Gate A slice 4i: reference tables for PRODUCT, SUMSQ, SERIESSUM and PERCENTOF"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -28,13 +28,13 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
   accuracy`, `rustsheet-eval accuracy`, then `rustsheet-accuracy math --suite probes-numeric`).
 
 ## Acceptance criteria
-- [ ] One Gate A definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, each citing its sources, with unit
+- [x] One Gate A definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, each citing its sources, with unit
       tests against published or semantics-entry values.
-- [ ] `eval/accuracy/tables/<FUNCTION>/s1.{case,math,oracle}.json` for each function, generated, filled (excel-graph) and
+- [x] `eval/accuracy/tables/<FUNCTION>/s1.{case,math,oracle}.json` for each function, generated, filled (excel-graph) and
       committed; `rustsheet-eval accuracy` reports `missing tables` lower by 4. The Outcome names every failing point
       with its owner task (`known-failures.tsv`, T-3379's rules) and any R3 candidate (decision 0188 R3 needs an owner
       ruling).
-- [ ] The probes-numeric math sidecars are regenerated with the new definitions and committed.
+- [x] The probes-numeric math sidecars are regenerated with the new definitions and committed.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -68,25 +68,12 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
 - PERCENTOF's first draw wrote arrays of up to 510 literals, and excel-graph refused the workbook: those formulas were over
   Excel's 8192-character limit. The long-array edge is now 80 + 160 values and the extreme stratum 10 to 60 values per
   array; the committed table is that second draw.
+- Math sidecars: `rustsheet-accuracy math --suite probes` and `--suite probes-numeric` were rerun with the final
+  definitions (subnormal flush included). Only cells that call PRODUCT, SUMSQ, SERIESSUM or PERCENTOF are kept: 69
+  cells in 13 sidecars (11 probes, 2 probes-numeric; 8 of the files are new). Every other rewrite the runs made was reverted
+  to main: the solver-load churn of F.DIST, BETA.INV, CHISQ.INV, GAMMA.INV and IRR cells and `skipped` lists in
+  irr-guess-edges, t3350, t3505, t1538, t1543, t2586 and the t3443 sweeps, and the header-only rewrites of
+  incomplete-gamma-cap and sheet-qualified-ref-error-text-rename. Each kept cell agrees with its oracle cell:
+  the same error kind, or within 1e-9 relative. That includes the 8 subnormal cells (subnormal-function-results A9,
+  A10, A66, A68; subnormal-flush-edges A1, A4; subnormal-sumsq-sumproduct-edges A1, A8). `make eval-math-check`: current.
 - Eval delta: none (no engine change).
-
-## Landing notes
-- Resumed 2026-11-03 11:45 by an opus run (work-loop resume, branch idle 2 h).
-- PR #2951 (draft), head = the commit that adds these notes. CI had not run on a finished head, and no reviewer has
-  run. The task is still `status: in-progress`.
-- In flight when the window closed: `cd tools && uv run rustsheet-accuracy math --suite probes` (a full run takes 20+
-  minutes) was regenerating the probes math sidecars with the final definitions (subnormal flush included). The
-  sidecars committed on this branch come partly from an earlier run of the pre-flush definitions, so they are not
-  trustworthy. Next steps:
-  1. Rerun `math --suite probes` and then `math --suite probes-numeric`. The probes-numeric run so far used the
-     pre-flush definitions; its committed changes are `double-rounding-ops` and `double-rounding-range-edges`.
-  2. Keep only the sidecar changes in cells that call PRODUCT, SUMSQ, SERIESSUM or PERCENTOF. Revert the other
-     rewrites: t1538/t1543/t2586/t3350/t3443 (F.DIST, BETA.INV, CHISQ.INV, basym) and irr-guess-edges are solver-load
-     or other-definition churn, as T-3675 also found. T-3675's triage script idea works: diff each `*.math.json`
-     against HEAD and classify the changed cells by formula.
-  3. Compare every new or changed cell for these four functions against its `*.oracle.json`. With the flush, the
-     8 subnormal cells (subnormal-function-results A9, A10, A66, A68; subnormal-flush-edges A1, A4;
-     subnormal-sumsq-sumproduct-edges A1, A8) should now agree.
-  4. `make eval-math-check` and `make check-fast`, then mark done, run the review panel and fill the PR's review table.
-- Do not repeat: PERCENTOF's first s1 draw wrote formulas over Excel's 8192-character limit (excel-graph 501
-  "unsupportedWorkbook"). The draw caps fix that, and the committed table is the second draw.

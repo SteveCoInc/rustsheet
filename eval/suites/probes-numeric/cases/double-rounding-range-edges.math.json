@@ -1,0 +1,48 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "75dfc2240995072493eea23e913ae12b03714a9f80bc4b2cff118361227bbb51"
+ },
+ "sheets": {
+  "Calc": {
+   "D1": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(B1,C1)"
+   },
+   "D2": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(B2,C2)"
+   },
+   "D3": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(B3,C3)"
+   },
+   "D5": {
+    "t": "n",
+    "v": "1.7976931348623158078589645751064527870671050185188e+308",
+    "f": "=PRODUCT(B5,C5)"
+   },
+   "D6": {
+    "t": "n",
+    "v": "2.2250738585072011360441811443822300076441252483555e-308",
+    "f": "=PRODUCT(B6,C6)"
+   },
+   "D7": {
+    "t": "n",
+    "v": "2.2250738585072011360320387916172019760235477759324e-308",
+    "f": "=PRODUCT(B7,C7)"
+   },
+   "D8": {
+    "t": "n",
+    "v": "2.2250738585072011360497815063213692160497909753183e-308",
+    "f": "=PRODUCT(B8,C8)"
+   }
+  }
+ }
+}
