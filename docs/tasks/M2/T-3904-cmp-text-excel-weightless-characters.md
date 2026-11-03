@@ -26,6 +26,9 @@ pair U+10400 and U+10428 is not equal.
 - Failing cells: probes/t3584-match-fold-weightless Calc!B1:D32, F1:F32, P1:P85. Most are weightless pairs; B21, D21,
   F21 (Greek Extended class), B25, D25, F25 (Deseret case pair apart), P7 (`ϵ=ε`) and P9 (U+1FBE `=ι`) are not:
   coercion.md "Weightless characters in `=`, COUNTIF and XMATCH (T-3584)", its second-to-last bullet.
+- Also owned (T-3929): probes/t3929-wildcard-fold-criteria Calc!B3:D3, B7:D7, B29:D30 and
+  probes/t3929-wildcard-fold-xmatch Calc!E3, E7, E29:E30: COUNTIF, SUMIF, COUNTIFS and XMATCH(..,0) without a wildcard
+  equate a&U+0524&b with ab, U+0524 with U+10C7, `Ͷ` with `ϳ` and `ϑ` with `ϴ` (the T-3584 classes, lookup.md).
 - Also owned: probes/t3895-collation-script-digits A185 (`UNICHAR(3715)&"a"="a"` TRUE). T-3895 maps U+0E83, a
   weightless character, to a skipped one (collation.rs `UNASSIGNED`) for the hold-out's row 599; replace that
   stand-in with the weightless rule and keep A179:A188 of that case passing.

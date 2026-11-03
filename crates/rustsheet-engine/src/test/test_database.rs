@@ -698,3 +698,43 @@ fn formula_condition_on_the_header_row_fails() {
     assert_eq!(model._get_text("F4"), *"4");
     assert_eq!(model._get_text("F5"), *"7");
 }
+
+// Excel: a D-function criterion without `=` matches by prefix, wildcard or not, and folds like
+// exact MATCH (docs/excel-semantics/criteria.md, probes/t3929-dfunction-wildcard-prefix and
+// probes/t3929-wildcard-fold-dfunctions).
+#[test]
+fn criteria_prefix_wildcards_and_lookup_fold() {
+    let mut model = new_empty_model();
+    model._set("A1", "k");
+    model._set("A2", "abcd");
+    model._set("A3", "=UNICHAR(886)&\"x\"");
+    model._set("A4", "=UNICHAR(952)&\"x\"");
+    model._set("A5", "=UNICHAR(66600)");
+    // (criteria column, criterion, expected DCOUNTA over A1:A5)
+    let cases = [
+        ("C", "a?c", "1"),
+        ("D", "=\"=a?c\"", "0"),
+        ("E", "?", "4"),
+        ("F", "=\"=?\"", "0"),
+        ("G", "=UNICHAR(1011)", "1"),
+        ("H", "=UNICHAR(1012)", "0"),
+        ("I", "=UNICHAR(66560)", "0"),
+        ("J", "=UNICHAR(66600)", "1"),
+    ];
+    for (column, criterion, _) in cases {
+        model._set(&format!("{column}1"), "k");
+        model._set(&format!("{column}2"), criterion);
+        model._set(
+            &format!("{column}3"),
+            &format!("=DCOUNTA(A1:A5,1,{column}1:{column}2)"),
+        );
+    }
+    model.evaluate();
+    for (column, criterion, expected) in cases {
+        assert_eq!(
+            model._get_text(&format!("{column}3")),
+            *expected,
+            "{criterion}"
+        );
+    }
+}
