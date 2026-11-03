@@ -3,7 +3,7 @@ id: T-3675
 title: "Gate A slice 4h: reference tables for COMBIN, COMBINA, FACT, FACTDOUBLE, MULTINOMIAL, QUOTIENT and MOD"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
