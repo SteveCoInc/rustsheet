@@ -3,7 +3,7 @@ id: T-3109
 title: "Probe GROUPBY and PIVOTBY options given as an OFFSET, CHOOSE or IF reference and PIVOTBY's field_headers as an INDEX reference"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
