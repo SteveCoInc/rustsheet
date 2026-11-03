@@ -1691,6 +1691,7 @@ C	probes/t3097-nesting-sum-65-typed.case.json	2
 C	probes/t3097-nesting-sum-66-typed.case.json	1
 C	probes/t3100-snap-operand-order.case.json	540
 C	probes/t3101-b2-calendar-names.case.json	194
+C	probes/t3102-r1c1-ws-after-bang.case.json	16
 C	probes/t3106-lookup-xmatch-near-equal.case.json	786
 C	probes/t3112-snap-groupby-eta-totals.case.json	23
 C	probes/t3112-snap-groupby-eta.case.json	47

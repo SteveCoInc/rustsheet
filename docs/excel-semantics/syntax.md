@@ -482,6 +482,12 @@ More shapes (probes/t2776-formula-text-whitespace-shapes, t2776-ws-after-at, -af
   read as 1 and print `='My S'!B1` / `=S!B1`. An external prefix takes it too (`=[1]S! A1` is accepted and prints
   `'...[1]S'!A1` (the quote closes the file path Excel prepends) with no space; the value is Graph's `#BLOCKED!` because the link has no target, so no case is kept; excel-graph only, desktop unprobed).
   `=S! R1C2` (R1C1 text after a prefix and a space, typed in A1 mode) is refused: PATCH answers `400 InvalidArgument`.
+  Typed in R1C1 mode (`formulasR1C1`), the drop holds too (probes/t3102-r1c1-ws-after-bang, excel-graph 2026-11-02,
+  T-3102): `=S! R1C4`, `=S!` LF `R1C4` and `=S!  R1C4+1` read S!D1 and FORMULATEXT prints `=S!$D$1` (`=S!$D$1+1`), no
+  whitespace kept; `=S!` TAB `R1C4` is refused (PATCH 400, the cell left blank), as a TAB anywhere is in A1 mode
+  ("Remaining whitespace shapes" below), and so is `=S! R1C4` typed in A1 mode. Ours matches all of it since T-3102:
+  a typed formula whose whitespace between tokens holds a TAB or an NBSP is refused as one that does not parse
+  (`TYPED_FORMULA_DOES_NOT_PARSE`), in either mode; before, ours read it, dropping the TAB.
 - **A run keeps only its line feeds and the spaces after the last one**: `=1+ ` LF ` 2` prints `=1+` LF ` 2`,
   `=1+` LF ` ` LF `2` prints `=1+` LF LF `2`, 10 spaces, 3 line feeds and 2 spaces print as the 3 line feeds and 2
   spaces.
@@ -520,7 +526,7 @@ Typed (FORMULATEXT prints):
 - LAMBDA parameter names: whitespace on both sides of a parameter name is dropped, while the body keeps its leading whitespace. `=LAMBDA( x , x)(1)` prints `=LAMBDA(x, x)(1)` (typed and stored alike; the kept space is the body's), `=LAMBDA(x, y ,x+y)(1,2)` prints `=LAMBDA(x,y,x+y)(1,2)`; a LF before the body is kept (`=LAMBDA(x,` LF `x)(1)`).
 - LET names: the whitespace before a name is kept and the whitespace after it is dropped: `=LET( a ,1,a)` prints `=LET( a,1,a)`, `=LET(a ,1,a)` prints `=LET(a,1,a)`, `=LET(a,1, b ,2,a+b)` prints `=LET(a,1, b,2,a+b)`, `=LET(a,1,b ,2,a+b)` prints `=LET(a,1,b,2,a+b)`, a LF before the name is kept.
 - Groups and signs print as typed: `=( (1) )`, `=( (B1) )`, `=((1) )`, `=- 5 %`, `=-5 %`, `=- 5%`, `=-  5 %`.
-- excel-graph refuses (PATCH 400 InvalidArgument; probe run 2026-10-29, T-2949, cases not kept; desktop Excel unprobed): a TAB or NBSP anywhere (`=1+` TAB `2`, `=` TAB `1+2`, `=1` TAB `+2`, NBSP forms, `=B1:B2` TAB ` B2`). LET with an even argument count (`=LET( a ,1, b ,a+1)`) is refused for its arity, not its whitespace.
+- excel-graph refuses (PATCH 400 InvalidArgument; probe run 2026-10-29, T-2949, cases not kept; desktop Excel unprobed): a TAB or NBSP anywhere (`=1+` TAB `2`, `=` TAB `1+2`, `=1` TAB `+2`, NBSP forms, `=B1:B2` TAB ` B2`). Ours refuses them too since T-3102 (before, it read them, printing no TAB); a TAB inside a string literal is text, not whitespace, and stays. LET with an even argument count (`=LET( a ,1, b ,a+1)`) is refused for its arity, not its whitespace.
 Stored in the file (`<f>` text): a leading TAB or LF is dropped like leading spaces (`<f>` TAB `1+2</f>` and `<f>` LF `1+2</f>` print `=1+2`). Workbooks holding a TAB or NBSP between tokens, or a leading NBSP, are refused at createSession (501 FileCorruptTryRepair). Interior shapes load and print as typed (`=( (1) )`, `=- 5 %`, `=B1:B2` LF ` B2`, `=LAMBDA( x , x)(1)` prints `=LAMBDA(x, x)(1)`). A stored even-arity `=LET( a ,1, b ,a+1)` loads and prints `=LET( a,1, b,a+1,b)` (Excel appends the last name as the result).
 Inferred, not probed (only the single-LF separator and `LET( a ,1, b ,a+1)` have oracle values): several line feeds in an intersection separator, other LET arities (`LET(a,1)`, `LET(a,1,b,2,c,3,d,4)`) and a stored even LET whose second-to-last argument is not a name.
 Ours (2026-10-30, T-3169): every t2949 shape matches. An intersection separator holding a line feed keeps it whole (the line feed is the operator, so no space is printed beside it), the parser drops a stored leading LF with the leading spaces, and a stored even-arity LET gets its last name appended as the result.
