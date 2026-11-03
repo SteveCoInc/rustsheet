@@ -307,6 +307,12 @@ impl Node {
             .map_or(Cow::Borrowed(node), Cow::Owned)
     }
 
+    /// Whether the node, as [`Node::ungrouped_at`] gives it at `row`, is a one-cell reference: the
+    /// evaluator reads one as its value, so only the node tells `Data!G9` from the literal `#DIV/0!`.
+    pub(crate) fn is_cell_reference_at(&self, row: i32) -> bool {
+        matches!(*self.ungrouped_at(row), Node::ReferenceKind { .. })
+    }
+
     /// The node itself, but a `#This Row` structured reference (or its bare area) is its area at
     /// `row`, as [`Node::ungrouped_at`] gives it; any other wrapper is kept. For the sites that
     /// match on the kind of the node as written.

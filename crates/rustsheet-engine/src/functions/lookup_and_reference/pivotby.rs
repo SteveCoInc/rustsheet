@@ -328,14 +328,38 @@ impl Model {
         if !(4..=11).contains(&args.len()) {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let row_keys = self.eval_to_array(&args[0], cell)?;
-        let col_keys = self.eval_to_array(&args[1], cell)?;
-        let values = self.eval_to_array(&args[2], cell)?;
+        // A field that is a one-cell reference to an error is `#VALUE!`, but only once every
+        // error value is past (the values' and the options'), with or without field_headers:
+        // `PIVOTBY(Data!G9,Data!A1:B12,Data!G3,LAMBDA(y,0.3))` is `#VALUE!`,
+        // `PIVOTBY(Data!G9,Data!A1:D12,Data!G9,..)` and `PIVOTBY(Data!G9,..,LAMBDA(x,0),0,0,Data!G9)`
+        // `#DIV/0!` (gen-m7 arg-pairs batch, excel-graph: 01d099c3b6d6ae95 A1038, A1770,
+        // 542087608aa65000 A7382). A literal error field is that error at once (A1221).
+        let (row_keys, row_error_cell) = self.pivot_field(&args[0], cell)?;
+        let (col_keys, col_error_cell) = self.pivot_field(&args[1], cell)?;
+        let values = self.evaluate_node_in_context(&args[2], cell);
+        if values.is_error() {
+            return Err(values);
+        }
+        // Values that are a one-cell reference to a blank cell are `#VALUE!` ahead of every
+        // option's error, as in GROUPBY (`PIVOTBY(Data!A1:D12,Data!C1:C12,Data!H1,_xleta.MIN,1,-2,
+        // #NUM!)`, 0098e1e4e5f8aa7c A10737); a literal error field still wins (01d099c3b6d6ae95
+        // A1831). Text values lose to the options' errors (`Data!G6` beside a later `Data!G9` is
+        // `#DIV/0!`, 0098e1e4e5f8aa7c A5430), as their height check below does.
+        if matches!(values, CalcResult::EmptyCell) && args[2].is_cell_reference_at(cell.row) {
+            return Err(value_error(cell, "values must not be a blank cell"));
+        }
+        let values = self.result_to_array(values, cell)?;
         // Every error value first, in argument order, then the validation, as in GROUPBY: an error
         // option beats an invalid one before or after it and a non-function
         // (probes/pivotby-followup P!A1401-A1461, P!A1261, P!A1281).
         let function = self.function_elements(&args[3], cell)?;
         let mut options = self.evaluate_options(&args[4..], &[], cell)?.into_iter();
+        if row_error_cell || col_error_cell {
+            return Err(value_error(
+                cell,
+                "row_fields and col_fields must not be one error cell",
+            ));
+        }
         let field_headers = options.next().flatten();
         let row_depth = options.next().flatten();
         let row_sort = options.next().flatten();
@@ -417,6 +441,24 @@ impl Model {
             lifted,
         };
         Ok((pivot, functions))
+    }
+
+    /// `row_fields` or `col_fields` as an array, and whether it is a one-cell reference to an error,
+    /// which [`Model::pivotby_args`] rejects only after the error values; any other error is
+    /// returned at once.
+    fn pivot_field(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> Result<(Vec<Vec<ArrayNode>>, bool), CalcResult> {
+        let field = self.evaluate_node_in_context(node, cell);
+        if field.is_error() {
+            if node.is_cell_reference_at(cell.row) {
+                return Ok((Vec::new(), true));
+            }
+            return Err(field);
+        }
+        Ok((self.result_to_array(field, cell)?, false))
     }
 
     /// Sorts the row or column groups of a pivot by `order`. A key order is already applied

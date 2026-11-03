@@ -35,7 +35,7 @@ PIVOTBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
   these cells before reusing `Model::groupby_fields` / `Model::groupby_args`: here the error-reference field wins over every option.
 - Code: `crates/rustsheet-engine/src/functions/lookup_and_reference/pivotby.rs` (`fn_pivotby`), sharing `Model::filter_rows`
   and the GROUPBY helpers in `groupby.rs`.
-- Owned cells (194 calls, 218 failing cells; each span runs from the call's anchor over
+- Owned cells (193 calls, 217 failing cells; each span runs from the call's anchor over
   the failing cells of its spill or lift):
 - gen-m7/0098e1e4e5f8aa7c.case.json Calc!A10737, Calc!A10798
 - gen-m7/01d099c3b6d6ae95.case.json Calc!A794, Calc!A916, Calc!A1038, Calc!A1160, Calc!A1282, Calc!A1404, Calc!A1526, Calc!A1648, Calc!A1892, Calc!A2014
@@ -56,7 +56,6 @@ PIVOTBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
 - gen-m7/78330db25d7a3822.case.json Calc!A794, Calc!A2136
 - gen-m7/79b07511f8e77743.case.json Calc!A5857, Calc!A5918
 - gen-m7/8145169c978856f2.case.json Calc!A8602, Calc!A8724, Calc!A8846, Calc!A8968, Calc!A9090, Calc!A9212, Calc!A9334, Calc!A9456, Calc!A9700, Calc!A9822
-- gen-m7/88f592c463d2ffb0.case.json Calc!A7138
 - gen-m7/96ebcfc607f7eaa7.case.json Calc!A245, Calc!A306
 - gen-m7/a77b7647f69bcd5a.case.json Calc!A7565, Calc!A7626
 - gen-m7/b4486fce63db71a2.case.json Calc!A11896, Calc!A12018, Calc!A12140
