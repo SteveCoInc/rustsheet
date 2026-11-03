@@ -93,6 +93,7 @@ progress-report: py-sync ## Regenerate docs/progress.md and docs/progress/ from 
 	mkdir -p eval/runs/latest
 	$(PY) scripts/tasks.py stats --json > eval/runs/latest/tasks.json.tmp || { rm -f eval/runs/latest/tasks.json.tmp; exit 1; }
 	mv eval/runs/latest/tasks.json.tmp eval/runs/latest/tasks.json
+	$(PY) scripts/phase1_exit.py --json > eval/runs/latest/phase1-exit.json || [ $$? -eq 1 ] || rm -f eval/runs/latest/phase1-exit.json
 	cd tools && $(UV) run rustsheet-progress-report --out-dir ../docs
 
 py-bindings: ## Build the PyO3 bindings into bindings/python/.venv and run their tests
