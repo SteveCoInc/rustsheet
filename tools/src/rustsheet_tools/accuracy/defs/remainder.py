@@ -26,7 +26,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, fraction_to_mpf, one_of, scalars
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import decimal_literal, log_uniform, random_sign
@@ -39,10 +39,6 @@ QUOTIENT_SOURCE = "numbers.md#quotient-truncates-the-double-quotient-t-3675"
 DECISION = "decision 0228"
 MOD_QUOTIENT_LIMIT = 1.1259e12  # MOD is #NUM! from this |n/d| up (the decimal, not a power of two)
 SMALLEST_NORMAL = 2.0**-1022
-
-
-def _mpf(r: Fraction) -> mpmath.mpf:
-    return mpmath.mpf(r.numerator) / r.denominator
 
 
 def quotient_value(numerator: float, denominator: float) -> int:
@@ -96,7 +92,7 @@ def _quotient(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _mod(args: Sequence[MathArg]) -> mpmath.mpf:
     n, d = (float(a) for a in scalars(args))
-    return _mpf(mod_value(n, d))
+    return fraction_to_mpf(mod_value(n, d))
 
 
 def _pair(rng: random.Random, n_exp: tuple[int, int], gap: tuple[int, int]) -> list[Arg]:

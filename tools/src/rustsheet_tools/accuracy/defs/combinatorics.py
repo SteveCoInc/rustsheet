@@ -31,7 +31,7 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy import model
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars, trunc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Draw, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -122,8 +122,8 @@ def _combina_args(args: Sequence[MathArg]) -> tuple[int, int]:
     """(n, k) as COMBINA reads them: `number` truncated, `number_chosen` floored, or truncated
     when `number` is 0."""
     x, y = scalars(args)
-    n = int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
-    k = (int(mpmath.floor(y)) if y >= 0 else -int(mpmath.floor(-y))) if n == 0 else int(mpmath.floor(y))
+    n = trunc(x)
+    k = trunc(y) if n == 0 else int(mpmath.floor(y))
     return n, k
 
 

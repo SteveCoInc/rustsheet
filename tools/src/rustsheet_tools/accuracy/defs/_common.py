@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable, Sequence
+from fractions import Fraction
 
 import mpmath
 
@@ -45,3 +46,14 @@ def by_stratum(draws: StratumDraws, doc: str) -> Draw:
 def one_of(rng: random.Random, shapes: Sequence[Callable[[], list[Arg]]]) -> list[Arg]:
     """One of the edge `shapes`, drawn uniformly."""
     return rng.choice(shapes)()
+
+
+def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
+    """An exact rational as an mpf at the working precision."""
+    r = Fraction(r)
+    return mpmath.mpf(r.numerator) / r.denominator
+
+
+def trunc(x: mpmath.mpf) -> int:
+    """`x` truncated toward zero."""
+    return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
