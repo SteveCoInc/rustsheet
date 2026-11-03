@@ -169,8 +169,28 @@ prefix first fits 150.
 Conversions to a non-base unit, to a prefixed unit and between two non-base units follow the same
 rule (probes/convert-targets, excel-graph, T-1297): `CONVERT(5,"cal","eV")` is 1.3065976295281882E+20,
 `CONVERT(1,"uk_pt","gal")` 0.15011874068810688, `CONVERT(1,"tsp","tbs")` 0.3333333333333333. The
-target prefix is applied as a reciprocal multiply: `CONVERT(0.0002,"m3","Mm3")` is
-2.0000000000000003E-22 (`* 1/1E18`; dividing gives 2E-22). The lbf factor is 444822.16152605
+two prefixes are applied as one factor: the nearest double to their combined power of ten (a
+squared or cubic unit multiplies its prefix's exponent by 2 or 3), times the binary prefixes' exact
+ratio, multiplied into the factor ratio last. Neither prefix is a product, power or quotient of the
+prefix constants (T-3861, probes/convert-unit-names and probes-numeric/t3861-convert-prefix-sweep,
+excel-graph): `CONVERT(1,"m","nm")` is 1E9 (1/1E-9 is 999999999.9999999), `CONVERT(1,"dm2","m2")`
+0.01 (0.1 × 0.1 is 0.010000000000000002), `CONVERT(1,"cm3","l")` 0.001, `CONVERT(1,"Pm3","l")`
+9.999999999999999E+47 (1000 × 1E45; 1E15³ gives 1E48), `CONVERT(0.0002,"m3","Mm3")`
+2.0000000000000003E-22 (× 1E-18; dividing by 1E18 gives 2E-22), `CONVERT(1E290,"Ym","Ym")` 1E+290 and
+`CONVERT(1E300,"Ym","Zm")` 1E+303 (probes/convert-temperature-ov00, -ov20; 1E24 × 1E-24 is
+1 - 2^-53), while `CONVERT(1E300,"Ym","m")` overflows to `#NUM!` (ov02). Of 18 forms scored on the
+1,145 prefixed literal CONVERT cells with oracle values (product or nearest constant for each
+prefix's power; multiply by the reciprocal, divide, or form the ratio first), this one fits 1,137;
+the next best, each prefix and the target's reciprocal as its own nearest constant, fits 1,103, and
+the engine's previous form (prefix products, `* 1/P_to`) 979. Hold-out by cell hash (30%, SHA-256
+of case and cell): 336 of 338 bit-exact, against 314 for the correctly rounded conversion; train
+801 of 807 against 742. Fresh sweep generated after the model was frozen (t3861-convert-prefix-sweep,
+150 seeded calls with prefixes on one or both units): 142 of 150 bit-exact, against 123 correctly
+rounded and 97 for the previous form; all 150 within 4 ulp, 15 digits and Gate A's envelope.
+Open gaps: seven of the eight misses have a light-year or parsec factor (T-2047's digits), and one mixes a
+binary and a decimal prefix, `CONVERT(4.73E-10,"Gibyte","zbyte")`, 5.0787988275200007E+20 in Excel
+and 5.07879882752E+20 here (1E21 × 2^30; `* 2^30 * (1/1E-21)` gives Excel's; T-3975).
+The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
 probes/eng-convert-boolean-unit A7; T-2046, T-2047).
@@ -181,8 +201,8 @@ product is infinite; every probed value fits, but whether Excel does this or use
 precision is not distinguishable from the probes.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
-Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297)
-Tasks: T-0922, T-1297
+Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861)
+Tasks: T-0922, T-1297, T-3861
 
 ## CONVERT temperature
 Rule: every temperature pair has its own last-digit form; there is no shared pivot unit. The forms
@@ -238,8 +258,8 @@ Per unit class:
 Evidence: probes/convert-unit-names (excel-graph, 1549 strings in both directions: every unit bare and
 with `k`, `ki`, `m`, `da`, `e`, `M`, `Gi`; all 29 prefixes on fifteen units; the ambiguous, power, case and
 spacing strings above). Probes convert-temperature-prefix-a/-b agree for temperature.
-Open: 116 of the probe's cells are one or two ulps off in the prefix scale (a target prefix of
-`Y`, `n` or smaller, and squared or cubed prefixes), T-3861; three more are non-base factors, T-2047.
+The prefix scale (a target prefix of `Y`, `n` or smaller, and squared or cubed prefixes) follows
+"CONVERT constants and evaluation order" (T-3861). Open: three cells are non-base factors, T-2047.
 Backend: excel-graph.
 Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)

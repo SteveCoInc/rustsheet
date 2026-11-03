@@ -71,6 +71,35 @@ fn convert_matches_excel_bits() {
     assert_eq!(bits("A12"), 1.111_111_111_111_111_f64.to_bits());
 }
 
+/// Excel: the two prefixes are one factor, the nearest double to their combined power of ten,
+/// not a product or quotient of the prefixes (probes/convert-unit-names, probes/convert-temperature-
+/// ov00 and ov20, probes-numeric/t3861-convert-prefix-sweep; excel-graph; T-3861).
+#[test]
+fn prefixes_are_one_power_of_ten() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=CONVERT(1,"m","nm")"#); // convert-unit-names, 1/1E-9 is 999999999.9999999
+    model._set("A2", r#"=CONVERT(1,"dm2","m2")"#); // 0.1 x 0.1 is 0.010000000000000002
+    model._set("A3", r#"=CONVERT(1,"cm3","l")"#); // 0.01^3 x 1000 is 0.0010000000000000002
+    model._set("A4", r#"=CONVERT(1,"Pm3","l")"#); // 1E15^3 x 1000 is 1E48
+    model._set("A5", r#"=CONVERT(0.0002,"m3","Mm3")"#); // x 1E-18, not / 1E18
+    model._set("A6", r#"=CONVERT(1E290,"Ym","Ym")"#); // ov00: 1E24 x 1E-24 is 1 - 2^-53
+    model._set("A7", r#"=CONVERT(1E300,"Ym","Zm")"#); // ov20
+    model._set("A8", r#"=CONVERT(1E300,"Ym","m")"#); // ov02: overflows
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A1"), 1e9_f64.to_bits());
+    assert_eq!(bits("A2"), 0.01_f64.to_bits());
+    assert_eq!(bits("A3"), 0.001_f64.to_bits());
+    assert_eq!(bits("A4"), 9.999_999_999_999_999e47_f64.to_bits());
+    assert_eq!(bits("A5"), 2.000_000_000_000_000_3e-22_f64.to_bits());
+    assert_eq!(bits("A6"), 1e290_f64.to_bits());
+    assert_eq!(bits("A7"), 1e303_f64.to_bits());
+    assert_eq!(model._get_text("A8"), "#NUM!");
+}
+
 /// Excel: a boolean number is `#VALUE!`, before an unknown unit's `#N/A`
 /// (probes/eng-gen-sample-edges A8, A11:A14).
 #[test]

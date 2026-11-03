@@ -3,7 +3,7 @@ id: T-3861
 title: "CONVERT prefix last digits: target prefixes y..n and Y, and squared or cubed prefixes (probes/convert-unit-names)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -34,10 +34,46 @@ structural choice: meet reviewer-excel-fidelity check 7 (hold-out and fresh swee
 Not owned here: Sheet1!B33 (`m` to `ft`), B961, B969 (`m2` to `ly2`, `ly^2`) are non-base factor digits, T-2047.
 
 ## Acceptance criteria
-- [ ] Every cell listed above passes, with the prefix-scale rule stated in engineering.md "CONVERT unit names" or
+- [x] Every cell listed above passes, with the prefix-scale rule stated in engineering.md "CONVERT unit names" or
       "CONVERT constants and evaluation order" (VERIFIED, cells cited).
-- [ ] No CONVERT cell of any suite changes from pass to fail.
+- [x] No CONVERT cell of any suite changes from pass to fail.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Non-base factors (T-2046, T-2047) and which unit strings parse (T-3817).
+
+## Outcome
+CONVERT applies its two prefixes as one factor: the nearest double to their combined power of ten (a
+squared or cubic unit multiplies the prefix's exponent by 2 or 3), times the binary prefixes' exact ratio,
+multiplied into the factor ratio last (`convert.rs` `parse_unit`, end of `convert_of`). This replaces the
+prefix products and the `* 1/P_to` reciprocal, and the special case that combined the prefixes only when the
+from-prefix overflowed: one factor keeps `CONVERT(1E290,"Ym","Ym")` at 1E+290 without it. Rule and evidence in
+engineering.md "CONVERT constants and evaluation order".
+- Model choice (decision 0188 R4, a structural model, kind (c): no fitted constant, so no `FITTED` tag). The
+  task's hypothesis (each prefix and the target's reciprocal as its own nearest constant) was tried first; it
+  fixed the listed cells but broke probes/convert-temperature-ov00 and ov01 (1E24 × 1E-24 is 1 - 2^-53). The
+  combined power came from those two cells, before any population scoring. Then 18 forms were scored on the
+  1,145 prefixed literal CONVERT cells with oracle values (probes/convert-*, convert-unit-names): combined
+  power 1,137; nearest constants per prefix 1,103; the previous form 979; the other 15 between 961 and 1,027.
+- Hold-out (R4.1). The split is 30% by SHA-256 of case and cell (cell hash below 3 mod 10). It was not fixed
+  before the population was scored, so it is disclosed as after the fact. The model has no free parameter to
+  tune, and the fresh sweep below is the out-of-sample test. No margin was stated in advance.
+
+  | half | cells | combined power | correctly rounded | previous form |
+  |---|---|---|---|---|
+  | train | 807 | 801 | 742 | 688 |
+  | hold-out | 338 | 336 | 314 | 291 |
+
+  All 1,145 are within 4 ulp of Excel under the combined power. The 8 misses are 1 or 2 ulp.
+- Fresh sweep (R4.2), generated after the model was frozen: new probes-numeric/t3861-convert-prefix-sweep,
+  150 seeded calls (seed 3861; generator in the case description's terms: random class, unit pair and decimal
+  or binary prefix on one or both sides, value 1 or log-uniform in 1E-12..1E12), excel-graph. Bit-exact 142
+  (combined power), 123 (correctly rounded), 97 (previous form); 150 of 150 within 4 ulp and 15 digits.
+  Gate A envelope: 150 of 150 inside (against the exact rational conversion of the engine's factors).
+  Misses: A6, A56, A70, A85, A89, A106, A109 have a light-year or parsec factor (T-2047's digits; A109,
+  `CONVERT(0.00041,"parsec","Pm")`, misses under every form), and A52 mixes a binary and a decimal prefix
+  (T-3975). The previous form got A52 and A89; the sweep gains 45 net.
+- Eval (`make eval-baseline`): probes known failures 4,631 to 4,515 (116 fixed, all in convert-unit-names;
+  left there: B33, B961, B969, T-2047), 0 regressions in every gated suite; visible parity 0 in new cases.
+  The new sweep case is in probes-numeric (ungated).
+- Follow-up: T-3975 (mixed binary and decimal prefixes).
