@@ -27,6 +27,8 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
   YIELD H343. (TBILLEQ H313 and the other TBILL cells moved to T-1475 on 2026-10-13.)
 - Added by T-1842: probes/fin-yield-odd-lift A1 and I5 (YIELD, about 1e-13 relative), A3 and I7 (ODDFPRICE, a few
   ulps), A5 and I9 (ODDFYIELD, about 1e-10 relative): the same base values as above, reached through the lift.
+- Added by T-3652: probes/oddf-date-order-domain-sweep P!A29 and E29 (ODDFPRICE at a yld of 1E-12, annual, bases
+  0 and 4; Excel 131.2499999992618, ours 131.24999999926183), NumericUlp.
 - Moved from T-1493 on 2026-10-13: YIELD A8-E8, A19-E19, A30-E30 and DURATION A20/C20 of
   probes/date-system-1900-financial-readers and its -shifted twin, and the 4 DURATION ulp cells of
   probes/coupdays-feb-month-end. probes/yield-solver-sweep (66 cells, excel-graph) is the YIELD sweep: Excel stops
