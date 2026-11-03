@@ -293,6 +293,7 @@ probes/t3212-r1c1-bare-offsets.case.json	2
 probes/t3276-collation-other-scripts.case.json	101
 probes/t3297-legacy-if-index-arm-name-table.case.json	5
 probes/t3298-case-mapping-sweep.case.json	55
+probes/t3299-date-text-glued-month-3.case.json	89
 probes/t3348-rate-fv-nonzero.case.json	4
 probes/t3349-t-inv-2t-near-one.case.json	1
 probes/t3350-chisq-inv-huge-df.case.json	14
