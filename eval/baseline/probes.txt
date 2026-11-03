@@ -2148,6 +2148,7 @@ C	probes/type-one-cell-range-kinds.case.json	20
 C	probes/typed-currency-percent-input.case.json	66
 C	probes/typed-group-comma-leading-percent.case.json	32
 C	probes/typed-input-sign-space-mixed-fraction.case.json	63
+C	probes/typed-missing-sheet-ref-error-text.case.json	3
 C	probes/typed-mixed-fraction-number-format.case.json	31
 C	probes/typed-number-tiny.case.json	24
 C	probes/typed-paren-number-input.case.json	24
