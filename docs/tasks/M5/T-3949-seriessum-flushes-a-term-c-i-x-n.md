@@ -3,7 +3,7 @@ id: T-3949
 title: "SERIESSUM flushes a term c_i·x^(n+i·m) that is subnormal to 0 (probes seriessum-subnormal-power-and-term)"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet

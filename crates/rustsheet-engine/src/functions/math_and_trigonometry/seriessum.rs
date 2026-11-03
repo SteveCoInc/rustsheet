@@ -1,5 +1,5 @@
 use crate::{
-    arithmetic::power,
+    arithmetic::{flush_subnormal, power},
     calc_result::CalcResult,
     expressions::{
         parser::{is_multi_sheet_span, ArrayNode, Node},
@@ -148,7 +148,9 @@ impl Model {
                 0.0
             } else {
                 match power(x, exponent) {
-                    Ok(p) => coeff * p,
+                    // Excel drops a subnormal term c_i*x^k before the sum (probes/seriessum-subnormal-power-and-term
+                    // Sheet1!A2, A9; probes/seriessum-subnormal-term-sum-and-power-points A1; T-3949).
+                    Ok(p) => flush_subnormal(coeff * p),
                     Err(_) => return num_error(cell),
                 }
             };
