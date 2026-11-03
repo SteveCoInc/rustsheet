@@ -50,6 +50,7 @@ Cells:
   C8 fixed; the new case passes 24/24). 0 regressions.
 
 ## Landing notes
+- **Resumed** 2026-11-03 13:35 UTC by an opus run (worker step 2: branch idle 2 h).
 - **PR:** #2970, a draft. Head 30b78d744 is the round-1 fix: skip the dates scan on a count mismatch and clip it to
   the used area, plus the unit test `xnpv_first_value_refused_bounded`. CI was running at 11:24 UTC; hygiene and python
   were green.
