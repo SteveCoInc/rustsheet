@@ -26,11 +26,15 @@ cells listed under Context, where one part is one digit off today.
   `2.0 * (-v.abs()).exp()` with libm's exp. Candidates: Excel's own EXP (`x87_exp`), or exp(-|x|) times sin y before
   the factor 2 (and the same for cos y in the real part). Ranking candidates is a structural (kind (c)) choice: the
   R4 guards of reviewer-excel-fidelity check 7 apply (hold-out, fresh sweep, Gate A envelope).
-- T-3881 found that inside this band Excel's IMCSCH of a non-real z equals -sgn(x)·IMSECH(z) digit for digit, so a
-  fix here should carry to T-3881's IMCSCH texts if IMCSCH reuses this form.
+- T-3881 found that inside this band Excel's IMCSCH of a non-real z equals -sgn(x)·IMSECH(z) digit for digit, and
+  IMCSCH now reuses IMSECH's parts there (`sech_parts`). So this task also owns the IMCSCH twins of the 12 cells,
+  probes/t3881-imcsch-overflow-band.case.json Calc!A45, A51, A70, A76, A82, A88, A149, A155, A174, A180, A186 and A192,
+  and probes/t3881-imcsch-flip-start-negative.case.json Calc!A3 (`IMCSCH(COMPLEX(-354.03,1))`, ours
+  ...2.97025484453414E-154i against Excel's ...453415E-154i). A3 is in IMSECH's finite-t form (t = sinh²x + cos²y does
+  not overflow at x = -354.03), not `overflowed_reciprocal`; its IMSECH twin is unprobed.
 
 ## Acceptance criteria
-- [ ] The 12 cells match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
+- [ ] The 12 cells (and the 13 IMCSCH cells above) match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
       regresses; their known-failure lines leave eval/baseline/probes.txt.
 - [ ] R4 guards recorded in the Outcome if candidates are ranked.
 - [ ] `make check` green; reviewers approve.
