@@ -2527,7 +2527,7 @@ beside a normal one is dropped (`SERIESSUM(1E-150,2,0,{1E-10,23000})` is exactly
 "Integer exponents beyond 360" item 1), and so is a negative exponent whose result is subnormal (`=(2)^-1074` B89, `=(2^-1023)=0`
 term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C16); `5^-440` (2.839213766779712E-308) is normal.
 Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
-`1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine). SERIESSUM's power follows POWER, not `^`.
+`1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
 Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
 Ours: the power matches (every power cell passes); a subnormal term is kept (power-and-term A2, A9; beside another term, term-sum A1; T-3949) and `^` flushes
 the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).

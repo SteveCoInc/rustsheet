@@ -22,7 +22,7 @@ Found by T-3942's probe (probes/seriessum-subnormal-power-and-term, excel-graph,
 - `=1E-155^2` and `=(1.1E-155)^2` (term-sum case A3:B4) keep the subnormal too. Only base 1E-160, 1E-155 and 1.1E-155 with exponent 2 were probed;
   probe other positive and non-integer exponents first if the fix needs them.
 - Positive-exponent chains flush and must keep passing: probes-numeric/power-large-integer-exponents B103, B107, B117, B119 (`0.5^1074`,
-  `0.1^310`, `(-0.5)^1073`). Why x^2 differs is unknown: probe `1E-160*1E-160`, `1E-160^3` and `0.1^310` against `(0.1^155)^2` first.
+  `0.1^310`, `(-0.5)^1073`). Why x^2 differs is unknown: probe `1E-160*1E-160`, `1E-160^3` and `0.1^310` against `(0.1^155)^2` first. A plain product is not enough to explain it: `*` (`1E-307/10`) and `SUMSQ(1E-160)` flush (numbers.md "Subnormal results become 0", per function group).
 - A negative exponent whose result is subnormal gives a true 0: `=(2^-1023)=0` (term-sum case B5, 2^1023 finite) and `=(SUM(2^-1074))=0`
   (subnormal-function-results C16, where 2^1074 overflows) are TRUE, and the engine matches. Keep term-sum B5 and C16 passing; do not
   remove the flush from `^` as a whole.
