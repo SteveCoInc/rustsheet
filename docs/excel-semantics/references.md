@@ -896,11 +896,27 @@ body (`=#N/A`, `=#DIV/0!`, `=#REF!`) evaluate to that error; and `SHEET(name)` o
 Status: VERIFIED
 The formula text keeps the prefix: FORMULATEXT prints `=SUM(S!#REF!)` (probes/table-edits
 plain-range-delete-row-first F!A6 and table-delete-column-qty F!A7, excel-graph; T-2855).
-Unprobed (T-3062): the text after the sheet is renamed or deleted, a wholly deleted range with no sheet
-prefix (printed `#REF!`), and the case of a typed sheet name.
+T-3062 (excel-graph, 2026-11-03), FORMULATEXT: renaming S to T turns `=SUM(S!#REF!)` into `=SUM(T!#REF!)`
+(probes/sheet-qualified-ref-error-text-rename F!A2); deleting S turns it into `=SUM(#REF!#REF!)`, as a live
+`=SUM(S!C5)` becomes `=SUM(#REF!C4)` (probes/sheet-qualified-ref-error-text-delete-sheet F!A2, A4); a wholly
+deleted range with no sheet prefix prints a bare `=SUM(#REF!)` (probes/unqualified-ref-error-text-and-typed
+S!A2); a typed `=sheet1!#REF!` / `=SUM(SHEET1!#REF!)` prints the sheet as the workbook spells it,
+`=Sheet1!#REF!` (Sheet1!A2, A6). A typed `=NoSuchSheet!#REF!` (no sheet of that name) is read as a
+reference into an external workbook named `NoSuchSheet`: its value is `#REF!`, `SUM` of it is `#REF!` and
+`ISREF` of it is FALSE (probes/typed-missing-sheet-ref-error-text Sheet1!A1, A3, A5, excel-graph), and
+FORMULATEXT prints `='<folder URL>/[NoSuchSheet]NoSuchSheet'!#REF!` and `=SUM('<folder URL>/[NoSuchSheet]NoSuchSheet'!#REF!)`,
+where `<folder URL>` is the https URL of the folder holding the workbook (excel-graph, 2026-11-03, T-3062).
+Those two text cells are not in the probe because the URL is the oracle drive's; the engine prints
+`=#REF!#REF!` and `=SUM(#REF!#REF!)` instead (it cannot tell a deleted sheet from one that never
+existed), which does not match Excel. Desktop text for the same cells is unprobed (T-3899).
+Unprobed (T-3899, desktop): a defined-name body `S!#REF!` after a rename, and a duplicated
+sheet holding `S!#REF!` (the copy's name is rewritten, as for any reference to the source).
 Implemented in: `consume_range` in crates/rustsheet-engine/src/expressions/lexer/mod.rs (formula; the
-prefix is kept as `Node::SheetRefErrorKind` in the written tree only), `ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
-Tasks: T-0152, T-0169, T-2855
+prefix is kept as `Node::SheetRefErrorKind` in the written tree only; the parser's `SheetRefError` arm in
+parser/mod.rs spells the sheet as the workbook does and sets `missing`), `rename_sheet_in_node` in
+parser/stringify/sheet_edits.rs (rename), `ref_error_text` and `sheet_ref_error_text` in parser/stringify/wrong_reference.rs (text),
+`ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
+Tasks: T-0152, T-0169, T-2855, T-3062, T-3899
 
 ## Disjoint intersection is #NULL!
 Rule: an intersection of references that share no cell is `#NULL!` (all 51 `intersection/disjoint` cells):

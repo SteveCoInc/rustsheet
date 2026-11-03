@@ -106,6 +106,7 @@ mod tables;
 mod tailed_array;
 mod typed_input;
 mod tz;
+mod unary_chain;
 mod units;
 mod used_area;
 mod user_model;

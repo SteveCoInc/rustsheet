@@ -24,11 +24,19 @@ pub const MAX_FORMULA_DEPTH: usize = 256;
 
 /// Most written groups a formula may nest (`((...(x)...))`): Excel loads 256 directly nested
 /// parentheses and refuses 257, stored and typed (probes/t3172-paren-256, T-3172). Groups split
-/// into several runs (`(1+((...)))`) count together (unprobed), and so do levels of `-(`, which
-/// Excel also nests to 256 and refuses at 257 (probes/t3266-nested-paren-*, T-3338). A run, signs
+/// into several runs (`( ((...)))`, `(1+((...)))`) count together, and a call's own parenthesis
+/// is not a group (`ABS(` around 256 groups loads; probes/t3870-*, T-3870), and so do levels of
+/// `-(`, which Excel also nests to 256 and refuses at 257 (probes/t3266-nested-paren-*, T-3338). A run, signs
 /// between its `(`s included, is parsed in a loop ([`Parser::parse_parenthesis_run`]), so this
 /// bound is Excel's, not the stack's.
 pub const MAX_PARENTHESES: usize = 256;
+
+/// Message of the parse error for a formula past [`MAX_PARENTHESES`]. Like
+/// [`TOO_MANY_SIGNS_MESSAGE`], not a resource limit ([`is_limit_error`]) but Excel's syntax: typed,
+/// Excel refuses 257 parentheses as it refuses a formula that does not parse (Graph PATCH 400
+/// `InvalidArgument`, the cell left blank; probes/t3172-paren-257-typed,
+/// t3266-nested-paren-257-typed), and so does the API (`TYPED_FORMULA_DOES_NOT_PARSE`, T-3689).
+pub const TOO_MANY_PARENTHESES_MESSAGE: &str = "Formula nests more than 256 parentheses";
 
 /// Most unary signs (`-`, `+`) open at an operand plus the operand's cost: every sign on its path
 /// not yet applied, across nested runs (`=-(-(...))`), counts. A number literal written directly
@@ -104,9 +112,10 @@ pub const TOO_MANY_OPERATORS_MESSAGE: &str = "Formula has too many operators";
 /// `@` and `#`); parentheses and operators, the `@` and `#` operators included, add no level
 /// (docs/excel-semantics/syntax.md "Formula nesting depth cap", probes/t3097-nesting-*,
 /// probes/t3143-*, T-3097, T-3143). Unlike
-/// [`MAX_FORMULA_DEPTH`] this is not a parse error: the API refuses a typed formula past it
-/// ([`Parser::typed_refusal`]) and the xlsx importer refuses the workbook, for a cell formula or a
-/// defined-name body.
+/// [`MAX_FORMULA_DEPTH`] this is not a parse error: the API refuses a typed formula past it as one
+/// that does not parse ([`Parser::typed_refusal`], `TYPED_FORMULA_DOES_NOT_PARSE`, T-3689: Excel's
+/// PATCH 400 leaves the cell blank, probes/t3097-nesting-*-66-typed) and the xlsx importer refuses
+/// the workbook, for a cell formula or a defined-name body.
 pub const MAX_NESTED_CALLS: usize = 65;
 
 /// Why a formula nesting more than [`MAX_NESTED_CALLS`] calls is refused.
@@ -115,8 +124,9 @@ pub const TOO_MANY_NESTED_CALLS_MESSAGE: &str = "Formula nests more than 65 func
 /// Whether a parse error `message` is a resource limit ([`TOO_DEEP_MESSAGE`] or
 /// [`TOO_MANY_OPERATORS_MESSAGE`] or the lexer's string-literal limit, T-2762) rather than a syntax error: no edit of the
 /// formula's ending makes it parse.
-/// [`TOO_MANY_SIGNS_MESSAGE`] is deliberately not one: the sign cap is Excel's syntax, which Excel
-/// refuses typed as a formula that does not parse (T-3338).
+/// [`TOO_MANY_SIGNS_MESSAGE`] and [`TOO_MANY_PARENTHESES_MESSAGE`] are deliberately not ones: those
+/// caps are Excel's syntax, which Excel refuses typed as a formula that does not parse (T-3338,
+/// T-3689).
 pub(crate) fn is_limit_error(message: &str) -> bool {
     message == TOO_DEEP_MESSAGE
         || message == TOO_MANY_OPERATORS_MESSAGE
@@ -127,6 +137,11 @@ impl Parser {
     /// The parse error for a formula deeper than [`MAX_FORMULA_DEPTH`].
     pub(super) fn too_deep(&self) -> Node {
         self.limit_error(TOO_DEEP_MESSAGE)
+    }
+
+    /// The parse error for a formula nesting more than [`MAX_PARENTHESES`] groups.
+    pub(super) fn too_many_parentheses(&self) -> Node {
+        self.limit_error(TOO_MANY_PARENTHESES_MESSAGE)
     }
 
     fn limit_error(&self, message: &str) -> Node {

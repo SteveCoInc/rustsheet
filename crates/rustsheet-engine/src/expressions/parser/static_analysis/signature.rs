@@ -72,14 +72,6 @@ pub(super) fn args_signature_let(arg_count: usize) -> Vec<Signature> {
         .collect()
 }
 
-pub(super) fn args_signature_arraytotext(arg_count: usize) -> Vec<Signature> {
-    match arg_count {
-        1 => vec![Signature::Vector],
-        2 => vec![Signature::Vector, Signature::Scalar],
-        _ => vec![Signature::Error; arg_count],
-    }
-}
-
 pub(super) fn args_signature_one_vector(arg_count: usize) -> Vec<Signature> {
     if arg_count == 1 {
         vec![Signature::Vector]

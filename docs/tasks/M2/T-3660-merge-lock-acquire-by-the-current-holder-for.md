@@ -3,7 +3,7 @@ id: T-3660
 title: "Merge lock: acquire by the current holder for a different PR must queue, not silently retarget the held lock"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P1
 size: S
 tier: sonnet
@@ -48,3 +48,6 @@ instead of having its held lock renewed and relabelled to B.
 
 ## Out of scope
 - The merge train (T-2987 onward).
+
+## Outcome
+Dropped (obsolete). `scripts/merge_lock.py` and the merge train were deleted by T-3827 (decision 0252), so there is nothing left to change.

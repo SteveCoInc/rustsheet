@@ -1,0 +1,12 @@
+2.5:0.3   miss  35  43 both   9 indep   9.4  offsets {1: 78}
+    fixes {'s-1 E-1 z-1': 19, 's-1 E-1': 17, 's-2 s-1 E-1 z-1': 10, 's-2 E-2 z-1': 10, 's-2 E-2': 6, 's-2 E-2 s-1 E-1 z-1': 4}
+2.5:0.5   miss  41  32 both  18 indep   8.2  offsets {1: 73}
+    fixes {'s-1': 26, 's-1 E-1 z-1': 11, 's-2 E-1 z-1': 10, 's-1 E-1': 10, 's-2 s-1 E-1 z-1': 5, 's-2 s-1 E-1': 4}
+2.5:0.7   miss  19  21 both   9 indep   2.5  offsets {1: 40}
+    fixes {'s-1 E-1 z-1': 24, 's-1': 8, 'none': 6, 's-1 E-1': 2}
+6.25:0.3  miss   0  33 both   0 indep   0.0  offsets {1: 33}
+    fixes {'s-1 E-1': 15, 's-2 E-2 z-1': 8, 's-1 E-1 z-1': 3, 's-2 E-2 s-1 z-1': 2, 'E-2 s-1 E-1 z-1': 2, 's-2 E-2 s-1 E-1 z-1': 2}
+6.25:0.5  miss  32  36 both  14 indep   7.2  offsets {1: 68}
+    fixes {'s-1': 32, 's-1 E-1': 13, 's-1 E-1 z-1': 9, 's-2 s-1 E-1': 6, 's-2 E-1 z-1': 2, 's-2 E-2 E-1 z-1': 2}
+6.25:0.7  miss   0   0 both   0 indep   0.0  offsets {}
+    fixes {}

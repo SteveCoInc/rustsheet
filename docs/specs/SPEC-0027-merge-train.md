@@ -1,6 +1,10 @@
 # SPEC-0027 — Merge train: batched merges under the merge lock
 
-- **Status:** draft (revision 4: addresses review rounds 1 on 4802b41, 2 on a622e22 and 3 on 746cb01)
+- **Status:** superseded by decisions 0247 and 0252 (2026-11-02, T-3827). Merges go through
+  GitHub's merge queue; the train, the lock, step mode, the readiness marker and the verdict
+  records this spec describes were deleted from the repository. Kept as history only: none of
+  the scripts, Makefile targets, labels or branches it names exist any more. (Last revision: 4,
+  addressing review rounds 1 on 4802b41, 2 on a622e22 and 3 on 746cb01.)
 - **Milestone / lane:** M2 / harness (policy and process slices: quality)
 - **Tasks:**
   - T-2984: this spec.

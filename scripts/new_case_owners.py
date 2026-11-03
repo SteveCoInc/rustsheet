@@ -25,7 +25,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import exit_owners  # noqa: E402 (the sys.path line above must run first)
-import merge_lock  # noqa: E402
+import git_ops  # noqa: E402
 import suite_meta  # noqa: E402
 import tasks  # noqa: E402
 
@@ -41,8 +41,8 @@ class GateError(Exception):
 
 def git(root: Path, *args: str) -> str:
     try:
-        return merge_lock.git(*args, root=root).stdout
-    except (OSError, merge_lock.GitError) as e:
+        return git_ops.git(*args, root=root).stdout
+    except (OSError, git_ops.GitError) as e:
         raise GateError(f"git {' '.join(args)} failed: {e}") from e
 
 

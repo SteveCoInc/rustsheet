@@ -24,12 +24,12 @@ mod reference_result;
 mod row_column;
 mod signature;
 use signature::{
-    args_signature_arraytotext, args_signature_bycol_byrow, args_signature_cell,
-    args_signature_choose, args_signature_choosecols, args_signature_fieldvalue,
-    args_signature_filter, args_signature_getpivotdata, args_signature_groupby,
-    args_signature_hlookup, args_signature_ifs, args_signature_index, args_signature_lambda,
-    args_signature_let, args_signature_lookup, args_signature_map, args_signature_match,
-    args_signature_npv, args_signature_offset, args_signature_one_vector, args_signature_pivotby,
+    args_signature_bycol_byrow, args_signature_cell, args_signature_choose,
+    args_signature_choosecols, args_signature_fieldvalue, args_signature_filter,
+    args_signature_getpivotdata, args_signature_groupby, args_signature_hlookup,
+    args_signature_ifs, args_signature_index, args_signature_lambda, args_signature_let,
+    args_signature_lookup, args_signature_map, args_signature_match, args_signature_npv,
+    args_signature_offset, args_signature_one_vector, args_signature_pivotby,
     args_signature_randarray, args_signature_reduce, args_signature_row, args_signature_scalars,
     args_signature_scan, args_signature_sumif, args_signature_textafter, args_signature_textsplit,
     args_signature_trimrange, args_signature_xlookup, args_signature_xmatch, Signature,
@@ -547,7 +547,6 @@ fn fallback_signature(kind: &Function, arg_count: usize) -> Option<Vec<Signature
         Function::Formulatext => args_signature_scalars(arg_count, 1, 0),
         Function::Clean => args_signature_scalars(arg_count, 1, 0),
         Function::Asc | Function::Dbcs => args_signature_scalars(arg_count, 1, 0),
-        Function::Arraytotext => args_signature_arraytotext(arg_count),
         Function::Image => args_signature_scalars(arg_count, 1, 4),
         Function::Stockhistory => args_signature_scalars(arg_count, 2, 9),
         Function::Fieldvalue => args_signature_fieldvalue(arg_count),
@@ -791,7 +790,6 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Clean => scalar_arguments(args),
         Function::Asc | Function::Dbcs => scalar_arguments(args),
         Function::Phonetic => not_implemented(args),
-        Function::Arraytotext => not_implemented(args),
         // All three lift over an array or range `source`/`stock`/`value` (T-1179).
         Function::Image | Function::Stockhistory | Function::Fieldvalue => StaticResult::Unknown,
         Function::Proper => scalar_arguments(args),

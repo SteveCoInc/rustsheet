@@ -1,0 +1,9 @@
+tune b0=2.5 a0=0.3: GL err a0/b0/a0+b0 = +0.397/+0.189/+0.184;  L: GL53 +1.662  best +1.666  exact-at-fl(a0+b0) +1.261  ulp(L) 1.000
+hold b0=4.75 a0=0.3: GL err a0/b0/a0+b0 = +0.397/-0.522/+4.744;  L: GL53 -2.593  best -2.593  exact-at-fl(a0+b0) +2.276  ulp(L) 1.000
+tune b0=6.25 a0=0.3: GL err a0/b0/a0+b0 = +0.397/+0.015/-3.490;  L: GL53 +6.605  best +6.600  exact-at-fl(a0+b0) +2.702  ulp(L) 1.000
+tune b0=2.5 a0=0.5: GL err a0/b0/a0+b0 = -0.046/+0.189/+0.791;  L: GL53 -0.649  best +0.185  exact-at-fl(a0+b0) -0.000  ulp(L) 0.250
+hold b0=4.75 a0=0.5: GL err a0/b0/a0+b0 = -0.046/-0.522/+1.440;  L: GL53 -2.008  best -1.152  exact-at-fl(a0+b0) +0.000  ulp(L) 0.250
+tune b0=6.25 a0=0.5: GL err a0/b0/a0+b0 = -0.046/+0.015/-5.610;  L: GL53 +5.579  best +6.542  exact-at-fl(a0+b0) -0.000  ulp(L) 0.500
+tune b0=2.5 a0=0.7: GL err a0/b0/a0+b0 = -0.747/+0.189/+0.708;  L: GL53 -3.263  best -3.292  exact-at-fl(a0+b0) -1.998  ulp(L) 0.500
+hold b0=4.75 a0=0.7: GL err a0/b0/a0+b0 = -0.747/-0.522/+2.547;  L: GL53 -7.018  best -6.609  exact-at-fl(a0+b0) -3.202  ulp(L) 1.000
+tune b0=6.25 a0=0.7: GL err a0/b0/a0+b0 = -0.747/+0.015/-3.067;  L: GL53 -2.395  best -2.394  exact-at-fl(a0+b0) -3.730  ulp(L) 2.000

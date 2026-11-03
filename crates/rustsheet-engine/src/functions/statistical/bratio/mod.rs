@@ -20,7 +20,7 @@ use basym::basym;
 use bfrac::bfrac;
 use bgrat::bgrat_half;
 use bpser::bpser;
-use bup::{bup, l140_bup_bgrat, l140_bup_bpser};
+use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -208,8 +208,24 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// a = 170, b = 1.5, x = 0.99), so the search takes the bounded Cephes kernel there instead
 /// (`incomplete_beta::search_tails`, at most two 300-step fractions), as it did before T-3398:
 /// 129 cdfs of the series would cost 8 ms an element, past BETA.INV's lift weight.
+///
+/// L140 bup+bgrat with n >= 2 bup terms or c = 1 (T-3561) is BETA.DIST's only: there the search
+/// keeps the Cephes kernel, because crossing the new cdf moves gated ironcalc-calc
+/// `BETADIST_BETAINV.xlsx` H28 (`BETA.INV` at shapes 6 and 1000) from Excel's bit to 1 ulp off
+/// (T-3867 owns the search there).
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
-    closed_or_ported_with(x, y, a, b, true).unwrap_or_else(|| search_tails(x, y, a, b))
+    let ported = || {
+        let many_terms = dispatch(a, b, x, y)
+            .is_some_and(|d| d.branch == Branch::L140BupBgrat && bup_takes_terms(d.b0));
+        if many_terms {
+            None
+        } else {
+            ported_tails_with(a, b, x, y, true)
+        }
+    };
+    closed_form_tails(x, y, a, b)
+        .or_else(ported)
+        .unwrap_or_else(|| search_tails(x, y, a, b))
 }
 
 /// (w, w1) of K(a, b, x, y), x and y formed by the caller per SPEC-0025's caller table:
@@ -256,8 +272,8 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat with one bup
-/// term (BETA.DIST's and the Student t's callers) when `half_bgrat`.
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat (BETA.DIST's and
+/// the Student t's callers) when `half_bgrat`.
 // TODO(T-3580): drop `half_bgrat` once F takes its own arguments and bgrat at b = 1/2 (T-3567).
 fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option<(f64, f64)> {
     if a == 1.0 || b == 1.0 {
@@ -284,7 +300,7 @@ fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option
             let w1 = bgrat_half(d.b0 + BUP_BGRAT_TERMS, d.y0, d.x0, up)?;
             (other(w1), w1)
         }
-        // One bup term, 1 < b0 < 2 (T-3382); BETA.DIST's callers only, as at b = 1/2.
+        // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
         Branch::L140BupBgrat if half_bgrat => {
             let w = l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?;
             (w, other(w))
@@ -294,7 +310,7 @@ fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option
             (w, other(w))
         }
         Branch::Bfrac => {
-            let w = bfrac(d.a0, d.b0, d.x0, d.y0, d.lambda, BFRAC_EPS_FACTOR * EPS)?;
+            let w = bfrac(&d, BFRAC_EPS_FACTOR * EPS)?;
             (w, other(w))
         }
         Branch::Basym => basym_oriented(&d)?,
