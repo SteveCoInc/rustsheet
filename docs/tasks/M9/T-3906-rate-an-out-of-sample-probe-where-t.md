@@ -38,8 +38,8 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
 ## Acceptance criteria
 - [x] A probes case of fresh, oracle-filled (excel-graph) RATE calls where the frozen rule restarts, with the
       draw's seed and filter recorded. Scored rule vs hold vs correctly rounded root.
-- [x] The rule is kept if it beats the hold out of sample; otherwise narrowed or reverted, with no RATE cell regressing
-      beyond what the evidence justifies, recorded in financial.md. (Recorded: the rule fails the Gate A envelope item on
+- [x] The rule is kept if it beats the hold out of sample; otherwise the narrow-or-revert decision is recorded in
+      financial.md and handed on. (Recorded: the rule fails the Gate A envelope item on
       A152 and A194; the narrow-or-revert decision is a binding acceptance criterion of T-3850.)
 - [x] `make check` green; reviewers approve.
 
@@ -87,29 +87,6 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
   - Decision 0255 gains a dated amendment line: the cut is now `RATE_RESTART_F_MAX`, still under the one tag.
 - **financial.md.** "RATE restarts once on an early flat secant" now says the Gate A batch never fires the restart,
   and gains the out-of-sample bullet.
-- **Eval delta.** No existing cell changes. The new case's off cells are new coverage, owned by T-3850.
+- **Eval delta.** No existing cell changes. probes: 192 new-coverage known failures, all in the new case (after the
+  catch-up onto 3a9b85de), owned by T-3850; 0 regressions, 0 fixed.
 
-## Landing notes
-- **PR:** #2941, head 2545a3a8a (before this note). Still a draft and not enqueued.
-- **Reviews:** all three approved on 2545a3a8a after three rounds (security, design, excel-fidelity). Their MINORs are
-  below.
-- **CI:** no CI ran on that head, because the PR conflicts with main (`mergeable_state: dirty`) after main moved
-  to 0ae48d5ac.
-- **Conflicts** (a test merge of origin/main at 07:15 UTC):
-  - `eval/baseline/probes.txt` and `eval/baseline/visible-parity.txt`: resolve with `make catch-up PR=2941`
-    (decision 0207). Never hand-edit them.
-  - `docs/tasks/M9/T-3850-...md`, Acceptance criteria: main added "A blind fresh probe that targets flat secants
-    ... checks the restart rule out of sample", from the T-3698 review follow-ups. Keep both criteria. This PR's probe
-    meets main's, so tick it with "(T-3906: probes/t3906-rate-restart-oos)". Main's new "Review follow-ups of T-3698"
-    block also lists the `RATE_CAP_TOLERANCE` coupling and the `F_MIN` evidence, which this PR fixes; mark those as
-    done by T-3906.
-- **Next steps:**
-  - Run the catch-up and the T-3850 merge above, then `make check-fast`, and push.
-  - A clean merge or catch-up needs no new review. The T-3850 edit is task text only.
-  - Once CI is green, mark the PR ready, paste the review table (all APPROVE on 2545a3a8a), and enqueue.
-- **Open MINORs** (fidelity, round 3):
-  - Reword T-3906's second acceptance criterion to "decision recorded and handed to T-3850", since nothing was
-    narrowed or reverted.
-  - Commit the generator and filter, or file a follow-up for them.
-  - Consider splitting T-3850's narrow-or-revert criterion into its own small P1 task.
-- **Design MINORs:** reflow the comment in `financial_util.rs` and the long bullet in financial.md.
