@@ -3,7 +3,7 @@ id: T-3888
 title: "PIVOTBY: a one-cell error row_fields or col_fields and text or blank scalar values are #VALUE!"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
