@@ -26,7 +26,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, signed_log_uniform
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -94,11 +94,6 @@ def _average(args: Sequence[MathArg]) -> mpmath.mpf:
 # -- draws -------------------------------------------------------------------------------------
 
 
-def _signed(rng: random.Random, lo: float, hi: float, negative: float = 0.3) -> float:
-    x = log_uniform(rng, lo, hi)
-    return -x if rng.random() < negative else x
-
-
 def _decimal(rng: random.Random) -> float:
     """A short decimal (0.1, 2.75, 0.0003): the literals whose doubles leave a residue when they cancel. The drawn
     double need not be the decimal's nearest double: the sampler writes `round15` of it (`Sampler.finish`), and the
@@ -130,14 +125,17 @@ def _edge(rng: random.Random) -> list[float]:
     if shape == 1:  # the same addends in an order that never overflows
         return [big, -big, big]
     if shape == 2:  # one argument: no addition, no snap
-        return [_signed(rng, 1e-3, 1e6)]
+        return [signed_log_uniform(rng, 1e-3, 1e6)]
     if shape == 3:  # zeros among the addends
-        return [0.0 if rng.random() < 0.5 else _signed(rng, 1e-3, 1e6) for _ in range(rng.randint(2, 6))]
+        return [
+            0.0 if rng.random() < 0.5 else signed_log_uniform(rng, 1e-3, 1e6)
+            for _ in range(rng.randint(2, 6))
+        ]
     if shape == 4:  # an exact cancellation
-        x = _signed(rng, 1e-3, 1e6)
+        x = signed_log_uniform(rng, 1e-3, 1e6)
         return [x, -x]
     # shape 5, the argument limit: 255 mixed-sign addends
-    return [_signed(rng, 1e-3, 1e6) for _ in range(MAX_ARGS)]
+    return [signed_log_uniform(rng, 1e-3, 1e6) for _ in range(MAX_ARGS)]
 
 
 def _draw(stratum: str, rng: random.Random) -> list[Arg]:
@@ -146,10 +144,12 @@ def _draw(stratum: str, rng: random.Random) -> list[Arg]:
     if stratum == "edge":
         return list(_edge(rng))
     if stratum == "extreme":  # long sums of mixed magnitudes and signs: left-to-right order shows
-        return [_signed(rng, 1e-20, 1e20, 0.5) for _ in range(rng.randint(50, MAX_ARGS))]
+        return [signed_log_uniform(rng, 1e-20, 1e20, 0.5) for _ in range(rng.randint(50, MAX_ARGS))]
     if stratum == "log-uniform":
-        return [_signed(rng, 1e-300, 1e300, 0.5) for _ in range(round(log_uniform(rng, 1, MAX_ARGS)))]
-    return [_signed(rng, 1e-3, 1e6) for _ in range(rng.randint(2, 10))]
+        return [
+            signed_log_uniform(rng, 1e-300, 1e300, 0.5) for _ in range(round(log_uniform(rng, 1, MAX_ARGS)))
+        ]
+    return [signed_log_uniform(rng, 1e-3, 1e6) for _ in range(rng.randint(2, 10))]
 
 
 def _definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Definition:

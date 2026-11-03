@@ -26,15 +26,14 @@ import math
 import random
 import sys
 from collections.abc import Sequence
-from fractions import Fraction
 
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import by_stratum, one_of
+from rustsheet_tools.accuracy.defs.aggregate import running_total
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
-from rustsheet_tools.fitlab.exact import double_round
 
 X_ZERO_SOURCE = "numbers.md#seriessum-with-x--0"
 NEGATIVE_X_SOURCE = "numbers.md#seriessum-a-negative-x-to-a-non-integer-power-is-a-term-of-0-t-2380"
@@ -75,13 +74,8 @@ def terms(args: Sequence[MathArg]) -> list[mpmath.mpf]:
 
 
 def _running_overflow(values: Sequence[mpmath.mpf]) -> bool:
-    total = 0.0
-    for v in values:
-        try:
-            total = double_round(Fraction(total) + Fraction(float(v)))
-        except OverflowError:
-            return True
-    return False
+    """Whether SUM's x87 running total of the terms leaves the double range (`aggregate.running_total`)."""
+    return not math.isfinite(running_total([float(v) for v in values])[1])
 
 
 def _domain(args: Sequence[MathArg]) -> str | None:

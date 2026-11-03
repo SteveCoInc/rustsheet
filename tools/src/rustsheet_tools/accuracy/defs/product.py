@@ -29,10 +29,9 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, scalars, signed_log_uniform
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
-from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.exact import double_round
 
 OVERFLOW_SOURCE = "numbers.md#overflow-in------is-num-where-it-happens"
@@ -130,11 +129,6 @@ def _sumsq(args: Sequence[MathArg]) -> mpmath.mpf:
 # -- draws -------------------------------------------------------------------------------------
 
 
-def _signed(rng: random.Random, lo: float, hi: float, negative: float = 0.3) -> float:
-    x = log_uniform(rng, lo, hi)
-    return -x if rng.random() < negative else x
-
-
 def _normal(values: list[float]) -> bool:
     """Whether no running value is a nonzero below the smallest normal double (underflow is not claimed)."""
     return all(v == 0 or abs(v) >= sys.float_info.min for v in values)
@@ -165,9 +159,10 @@ def _product_edge(rng: random.Random) -> list[Arg]:
             lambda: [big, big, 0.0],  # overflow at the second factor; a later 0 stays #NUM! (T-0990)
             lambda: [big, big, small],  # the same with a later tiny factor
             lambda: [big, small, big],  # the same factors in an order that never overflows
-            lambda: [_signed(rng, 1e-3, 1e6)],  # one argument
+            lambda: [signed_log_uniform(rng, 1e-3, 1e6)],  # one argument
             lambda: [
-                0.0 if rng.random() < 0.4 else _signed(rng, 1e-3, 1e3) for _ in range(rng.randint(2, 6))
+                0.0 if rng.random() < 0.4 else signed_log_uniform(rng, 1e-3, 1e3)
+                for _ in range(rng.randint(2, 6))
             ],
             lambda: [_near_one(rng) for _ in range(MAX_ARGS)],  # the argument limit
         ],
@@ -187,11 +182,12 @@ def _sumsq_edge(rng: random.Random) -> list[Arg]:
                 under,
             ],  # finite squares; the running sum may overflow
             lambda: [-under],  # the largest finite squares
-            lambda: [_signed(rng, 1e-3, 1e6)],  # one argument
+            lambda: [signed_log_uniform(rng, 1e-3, 1e6)],  # one argument
             lambda: [
-                0.0 if rng.random() < 0.4 else _signed(rng, 1e-3, 1e3) for _ in range(rng.randint(2, 6))
+                0.0 if rng.random() < 0.4 else signed_log_uniform(rng, 1e-3, 1e3)
+                for _ in range(rng.randint(2, 6))
             ],
-            lambda: [_signed(rng, 1e-3, 1e3, 0.5) for _ in range(MAX_ARGS)],  # the argument limit
+            lambda: [signed_log_uniform(rng, 1e-3, 1e3, 0.5) for _ in range(MAX_ARGS)],  # the argument limit
         ],
     )
 
@@ -200,7 +196,9 @@ def _product_draw() -> Callable[[str, random.Random], list[Arg]]:
     return by_stratum(
         {
             "typical": lambda rng: _redraw(
-                rng, lambda r: [_signed(r, 1e-3, 1e6) for _ in range(r.randint(2, 10))], running_product
+                rng,
+                lambda r: [signed_log_uniform(r, 1e-3, 1e6) for _ in range(r.randint(2, 10))],
+                running_product,
             ),
             "tail": lambda rng: _redraw(
                 rng, lambda r: [_near_one(r) for _ in range(r.randint(2, 40))], running_product
@@ -210,7 +208,9 @@ def _product_draw() -> Callable[[str, random.Random], list[Arg]]:
                 rng, lambda r: [_near_one(r) for _ in range(r.randint(50, MAX_ARGS))], running_product
             ),
             "log-uniform": lambda rng: _redraw(
-                rng, lambda r: [_signed(r, 1e-100, 1e100) for _ in range(r.randint(1, 6))], running_product
+                rng,
+                lambda r: [signed_log_uniform(r, 1e-100, 1e100) for _ in range(r.randint(1, 6))],
+                running_product,
             ),
         },
         "PRODUCT draws: the arity and magnitudes by stratum; running products stay normal or overflow.",
@@ -221,19 +221,25 @@ def _sumsq_draw() -> Callable[[str, random.Random], list[Arg]]:
     return by_stratum(
         {
             "typical": lambda rng: _redraw(
-                rng, lambda r: [_signed(r, 1e-3, 1e6) for _ in range(r.randint(2, 10))], running_sumsq
+                rng,
+                lambda r: [signed_log_uniform(r, 1e-3, 1e6) for _ in range(r.randint(2, 10))],
+                running_sumsq,
             ),
             "tail": lambda rng: _redraw(
-                rng, lambda r: [_signed(r, 1e-6, 1e6, 0.5) for _ in range(r.randint(2, 40))], running_sumsq
+                rng,
+                lambda r: [signed_log_uniform(r, 1e-6, 1e6, 0.5) for _ in range(r.randint(2, 40))],
+                running_sumsq,
             ),
             "edge": _sumsq_edge,
             "extreme": lambda rng: _redraw(
                 rng,
-                lambda r: [_signed(r, 1e-20, 1e20, 0.5) for _ in range(r.randint(50, MAX_ARGS))],
+                lambda r: [signed_log_uniform(r, 1e-20, 1e20, 0.5) for _ in range(r.randint(50, MAX_ARGS))],
                 running_sumsq,
             ),
             "log-uniform": lambda rng: _redraw(
-                rng, lambda r: [_signed(r, 1e-150, 1e150, 0.5) for _ in range(r.randint(1, 6))], running_sumsq
+                rng,
+                lambda r: [signed_log_uniform(r, 1e-150, 1e150, 0.5) for _ in range(r.randint(1, 6))],
+                running_sumsq,
             ),
         },
         "SUMSQ draws: the arity and magnitudes by stratum; squares and running sums stay normal or overflow.",
