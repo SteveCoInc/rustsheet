@@ -3,7 +3,7 @@ id: T-3853
 title: "Doc fixes from the T-3758 and T-3808 reviews: reduce's 28-bit n and T-3847's product"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
