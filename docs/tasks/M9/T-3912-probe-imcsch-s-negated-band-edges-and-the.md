@@ -3,7 +3,7 @@ id: T-3912
 title: "Probe IMCSCH's negated-band edges and the subnormal-y cut finer; tidy T-3881's R4 and citation wording"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
