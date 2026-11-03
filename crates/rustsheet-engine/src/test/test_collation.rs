@@ -605,7 +605,7 @@ fn t3276_other_scripts() {
 }
 
 /// T-3917 rule 7: every other-script digit is its digit plus a tiebreak in code-point order of
-/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks A30:A41,
+/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks Calc!A11, A136:A145,
 /// G21:G25; probes/t3895-collation-script-digits A151:A178).
 #[test]
 fn script_digits_tiebreak_by_block() {
