@@ -17,7 +17,10 @@ Desktop Excel evidence for three shapes of a sheet-qualified `#REF!` that T-3062
 T-3062 made `S!#REF!` follow a sheet rename and print `#REF!#REF!` once S is missing. Unprobed (excel-graph cannot
 duplicate sheets and prints a typed unknown sheet as an external-link path): (1) a defined-name body `S!#REF!`
 after S is renamed; (2) duplicating a sheet whose formulas or global names hold `S!#REF!` (the engine now
-rewrites the copy's name and gives a global name a sheet-local copy); (3) a typed `=NoSuchSheet!#REF!`.
+rewrites the copy's name and gives a global name a sheet-local copy); (3) the FORMULATEXT of a typed
+`=NoSuchSheet!#REF!`: excel-graph reads it as an external workbook `NoSuchSheet` and prints the workbook's
+folder URL before `[NoSuchSheet]NoSuchSheet` (values in probes/typed-missing-sheet-ref-error-text), while the
+engine prints `#REF!#REF!`; desktop text decides what the engine should print for a file with no URL.
 See docs/excel-semantics/references.md "A sheet-qualified #REF! is #REF!".
 
 ## Acceptance criteria

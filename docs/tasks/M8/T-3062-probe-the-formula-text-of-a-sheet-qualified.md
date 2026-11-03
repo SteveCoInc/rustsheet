@@ -3,7 +3,7 @@ id: T-3062
 title: "Probe the formula text of a sheet-qualified #REF! after a sheet rename or delete, unqualified and typed"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -37,8 +37,11 @@ Use the `excel-probe` skill (FORMULATEXT cells), then match the engine to the ev
 Three probe cases fill the four shapes (excel-graph). The engine now keeps `S!#REF!` in step with a
 rename (`rename_sheet_in_node` takes the old name), prints `#REF!#REF!` once S is deleted
 (`Node::SheetRefErrorKind::missing`, set by the parser) and spells a typed sheet name as the workbook
-does. The unqualified wholly-deleted range already matched. A typed `NoSuchSheet!#REF!` is a Graph
-external-link artifact and is left out of the probe. Eval: the three new probes pass (15 checked cells).
+does. The unqualified wholly-deleted range already matched. A typed `NoSuchSheet!#REF!` is read by Excel as
+an external workbook: a fourth probe (typed-missing-sheet-ref-error-text) records its values, and references.md
+records its FORMULATEXT shape (`='<folder URL>/[NoSuchSheet]NoSuchSheet'!#REF!`, URL kept out of the repo) and
+that the engine's `#REF!#REF!` text for it does not match (owner T-3899). Eval: the four new probes pass
+(18 checked cells).
 
 ## Handoff (resumed)
 Engine change and three probes (rename, delete-sheet, unqualified/typed) are done on PR #2926 and pass 15/15 cells; design and security approved. excel-fidelity requested changes twice (round 1 on 6357da18, round 2 on 05d85543), so I stopped (work-loop 5b). Open findings of round 2:

@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-3062: FORMULATEXT of S!#REF! (made by delete_row 4 of S) after S is renamed to T; F!A1 =SUM(S!C4:C4), A2 its FORMULATEXT, A3 =S!C4:C5 SUM control.",
+  "description": "T-3062: FORMULATEXT of S!#REF! (made by delete_row 4 of S) after S is renamed to T; F!A1 =SUM(S!C4:C4), A2 its FORMULATEXT, A3 =SUM(S!C5) control (a live S reference), A4 its FORMULATEXT.",
   "tags": [
     "M8",
     "probe"
