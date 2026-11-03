@@ -3390,7 +3390,6 @@ F	probes/irr-guess-edges.case.json	P!A27
 F	probes/irr-guess-edges.case.json	P!A28
 F	probes/irr-guess-edges.case.json	P!A29
 F	probes/irr-guess-edges.case.json	P!A38
-F	probes/irr-guess-edges.case.json	P!A39
 F	probes/linest-modes.case.json	Sheet1!K1
 F	probes/linest-modes.case.json	Sheet1!K10
 F	probes/linest-modes.case.json	Sheet1!K100

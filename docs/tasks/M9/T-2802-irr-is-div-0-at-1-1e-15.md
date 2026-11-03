@@ -3,7 +3,7 @@ id: T-2802
 title: "IRR is #DIV/0! at {-1,1E+15}, {-1,1E+300} and a zero-first-flow gen-m9 set where ours is #NUM!"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -38,3 +38,13 @@ Cells:
 
 ## Out of scope
 - IRR's returned digits (T-2131).
+
+## Outcome
+- Partial, remainder split out: `IRR({-1,1E+300})` (probes/irr-guess-edges A39) is explained and fixed. The secant's
+  second iterate lands on d = 1 exactly (v = 0), where Excel's NPV divides by zero: `irr_secant` now stops with
+  `SecantStop::DivZero` and `compute_irr` returns `#DIV/0!` without the retry or the fallback. Test
+  `irr_is_div0_where_the_secant_reaches_a_zero_discount_factor`; financial.md "IRR's far-root bound" updated.
+- Not explained: the `{-1,1E+15}` cells and the zero-first-flow gen-m9 set. The fitted secant stalls at their far
+  root as at their `#NUM!` neighbours' and never reaches d = 1. Handed to T-3900 with the trace and its candidate
+  probes; the cells are listed there.
+- Eval delta: probes fixed 1 (irr-guess-edges A39), new-coverage 0, regressions 0.

@@ -176,6 +176,15 @@ fn irr_is_num_at_a_far_root() {
 }
 
 #[test]
+fn irr_is_div0_where_the_secant_reaches_a_zero_discount_factor() {
+    // probes/irr-guess-edges A39 (T-2802): from the guess 0.1 the secant's second step lands on
+    // d = 1 exactly (v = 0), and Excel's 1/v is #DIV/0!.
+    assert_errors(&[("=IRR({-1,1E+300})", "#DIV/0!")]);
+    // A far root the secant stalls at, short of d = 1, stays #NUM! (irr-guess-edges-2 A19, A21).
+    assert_num_errors(&["=IRR({-1,9E+14})", "=IRR({-1,2E+15})"]);
+}
+
+#[test]
 fn irr_where_the_secant_fails_is_num_at_a_root_near_minus_one() {
     // probes/irr-fallback-roots A1, A5, A8, A10: the NPV polynomial's root nearest v = 0 is negative
     assert_num_errors(&[
