@@ -3,7 +3,7 @@ id: T-3678
 title: "Gate A slice 4k: reference tables for TIME, HOUR, MINUTE, SECOND and YEARFRAC"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
