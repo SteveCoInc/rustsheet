@@ -29,7 +29,7 @@ Every cell this task owns has the right type, error and text (decision 0083).
 ## Out of scope
 - Other TEXTJOIN argument kinds (T-2863).
 
-## Handoff
+## Handoff (resumed)
 Tried: in `fn_textjoin` (functions/text/concatenate.rs), when the delimiter is an error and the
 `ignore_empty` value is `CalcResult::String`, return `#VALUE!`; other kinds keep the delimiter's
 error. Unit test `error_delimiter_with_text_ignore_empty` passes and A310/A316/A322 of
