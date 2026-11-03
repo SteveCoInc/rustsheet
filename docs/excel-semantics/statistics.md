@@ -3104,7 +3104,10 @@ Implemented in: `functions/statistical/bratio/bpser.rs` `bpser` (T-2505) through
 (`beta_dist_lower_tail`), F.DIST, F.DIST.RT and FDIST (`fisher.rs::f_tail`), BINOM.DIST's cdf and NEGBINOM.DIST's cdf
 (`binom.rs`; T-2847), and F.TEST's tail with its own L (`f_test_tail.rs`, T-2681): the w3 series and
 EXP of z, split as zh + zl where min(a, b) < 1 and b0 < 8 (T-3879, `bpser_series`; elsewhere, and in F.TEST's tail,
-EXP of the extended z: L is held extended or unsolved there), with GL53/glalgdiv's L for min(a, b) < 1
+EXP of the extended z: L is held extended or unsolved there). The split's probes are direct bpser calls; the swapped
+w1 = bpser(b0, a0, y0) and L140 calls take it because L is the same GL53 double in either order, evidenced only through
+eval cells (ironcalc-calc T_DIST.xlsx F18 and BETADIST_BETAINV.xlsx G25-G26 among the 10 it fixes; T.DIST and T.INV
+take bpser through `t_kernel_tails`). L is GL53/glalgdiv's for min(a, b) < 1
 and the extended GAMMALN sum for min >= 1, max <= 8.
 Its algdiv (b0 >= 8) is `beta_density::algdiv` in doubles, where the model runs TOMS algdiv x87 stored.
 A caller's shape of exactly 1 stays on Cephes' fractions (both shapes > 1 with max > 8 did until T-3007, below); L140's bpser(a0, 1, x0) at a whole b0 takes L = -LN(a0) (T-2506 above a0 = 8, T-2847 at every a0). On

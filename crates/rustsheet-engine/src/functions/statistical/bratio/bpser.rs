@@ -24,8 +24,9 @@ const BPSER_GAMMALN_FORM_MAX: f64 = 8.0;
 /// series times EXP(fl(a LN x) - lnB)"; model `r2-bpser-small/lib.py` `bpser_w3` with GL53):
 /// - s = fl(1/a) + sum `c_n/(a + n)`, `c_n = (c_{n-1}·((0.5 - b/n) + 0.5))·x`, every op an x87 op
 ///   stored to a double, summed forward until s stops changing (no TOMS tolerance);
-/// - z = fl64(fl(a·LN x) - L), never stored, and I = fl(EXP(z)·s) with Excel's EXP of the
-///   extended argument (T-2645).
+/// - z = fl(a·LN x) - L exact; for min(a, b) < 1 and b0 < 8, zh = z rounded to nearest, zl = z - zh
+///   and I = fl(fl(EXP(zh)·s)·fl(1 + zl)) (T-3879); elsewhere z = fl64(fl(a·LN x) - L), never
+///   stored, and I = fl(EXP(z)·s) with Excel's EXP of the extended argument (T-2645).
 ///
 /// `None` where L is not ported (both shapes >= 1 and one above 8), and where
 /// [`bpser_with_ln_beta`] gives `None`.
