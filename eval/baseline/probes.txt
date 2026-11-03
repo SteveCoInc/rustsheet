@@ -1899,6 +1899,7 @@ C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/t3814-lambda-helper-arity.case.json	248
 C	probes/t3836-mmult-blank-range-first-arg.case.json	19
 C	probes/t3838-groupby-option-order.case.json	232
+C	probes/t3839-groupby-scalar-filter.case.json	678
 C	probes/t3881-imcsch-band-edge.case.json	80
 C	probes/t3881-imcsch-flip-start-negative.case.json	24
 C	probes/t3881-imcsch-flip-start.case.json	56
