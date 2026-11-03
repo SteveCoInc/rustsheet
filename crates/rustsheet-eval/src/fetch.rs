@@ -181,6 +181,16 @@ pub fn fetch_suite(suite: &Suite) -> Result<usize> {
     result
 }
 
+/// `--fetch-missing`: fetches a selected suite whose cache is missing or stale (its marker differs
+/// from the pin) so the run can score it. Returns the file count, or the line to print when the
+/// suite must be skipped: a failed fetch (bad URL, hash mismatch, no network) never aborts a run.
+///
+/// # Errors
+/// The `skipping <name>: fetch failed: <error>` line for a failed fetch.
+pub fn fetch_missing(suite: &Suite) -> std::result::Result<usize, String> {
+    fetch_suite(suite).map_err(|e| format!("skipping {}: fetch failed: {e:#}", suite.manifest.name))
+}
+
 fn fetch_into(spec: &FetchSpec, stage: &Path, cache_dir: &Path) -> Result<usize> {
     let src = stage.join("src");
     match (&spec.rev, &spec.sha256) {
@@ -294,5 +304,31 @@ mod tests {
         assert!(fetch_suite(&s).is_err());
         assert!(!dir.join("evil.case.json").exists());
         fs::remove_dir_all(&dir).expect("cleanup");
+    }
+
+    #[test]
+    fn fetch_missing_fetches_missing_and_stale_and_skips_failures() {
+        let dir = scratch("missing");
+        let zip = dir.join("src.zip");
+        write_zip(&zip, &[("pkg/x.case.json", "{}")]);
+        let sha = sha256_hex(&zip).expect("sha");
+        let url = format!("file://{}", zip.display());
+        let s = suite(&dir, &url, &sha);
+        // Missing cache: fetched and usable.
+        assert_eq!(fetch_missing(&s), Ok(1));
+        assert_eq!(s.fetch_state(), FetchState::Fetched);
+        // Stale marker: refetched.
+        fs::write(s.cache_dir.join(FETCH_MARKER), "old-pin").expect("marker");
+        assert_eq!(s.fetch_state(), FetchState::NotFetched);
+        assert_eq!(fetch_missing(&s), Ok(1));
+        assert_eq!(s.fetch_state(), FetchState::Fetched);
+        // Hash mismatch: skipped without panicking, other suites unaffected.
+        let bad_dir = scratch("missing-bad");
+        let bad = suite(&bad_dir, &url, &"0".repeat(64));
+        let msg = fetch_missing(&bad).expect_err("mismatch");
+        assert!(msg.starts_with("skipping ext: fetch failed: "), "{msg}");
+        assert_eq!(bad.fetch_state(), FetchState::NotFetched);
+        fs::remove_dir_all(&dir).expect("cleanup");
+        fs::remove_dir_all(&bad_dir).expect("cleanup");
     }
 }
