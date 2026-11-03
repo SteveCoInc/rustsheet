@@ -3,7 +3,7 @@ id: T-3677
 title: "Gate A slice 4j: reference tables for SUMPRODUCT, SUMX2MY2, SUMX2PY2 and SUMXMY2"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
