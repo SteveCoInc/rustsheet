@@ -3,7 +3,7 @@ id: T-3873
 title: "bpser: Excel's EXP of a non-double z = fl(a0 LN x) - L (the one residual of T-3769)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
