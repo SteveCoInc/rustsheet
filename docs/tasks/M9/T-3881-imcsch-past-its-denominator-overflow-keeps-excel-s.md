@@ -54,12 +54,12 @@ whole overflow band, not as a list of points.
 - Cells owned:
   - probes/im-trig-magnitude-grid.case.json (41): Calc!J134:J149, J153:J168, J172:J176, J180, J183, J184, J186
   - probes/im-trig-argument-cut.case.json (1): Calc!J16
-  - probes/t3881-imcsch-overflow-band.case.json: Calc!A3:A7, A9:A104, A107:A111, A113:A208 (every IMCSCH cell but
+  - probes/t3881-imcsch-overflow-band.case.json (202): Calc!A3:A7, A9:A104, A107:A111, A113:A208 (every IMCSCH cell but
     the six real ones at x = ±355, which pass). The 12 failing IMSECH cells of column B are T-3883's.
-  - probes/t3881-imcsch-band-edge.case.json: Calc!A3, A5, A7, A9, A11, A13, A15, A17:A20, A23, A25, A27, A29, A31,
+  - probes/t3881-imcsch-band-edge.case.json (22): Calc!A3, A5, A7, A9, A11, A13, A15, A17:A20, A23, A25, A27, A29, A31,
     A33, A35, A37:A40
-  - probes/t3881-imcsch-flip-start.case.json: Calc!A9:A28
-  - probes/t3881-imcsch-flip-start-negative.case.json: Calc!A1:A12
+  - probes/t3881-imcsch-flip-start.case.json (20): Calc!A9:A28
+  - probes/t3881-imcsch-flip-start-negative.case.json (12): Calc!A1:A12
 
 ## Acceptance criteria
 - [ ] A probe case (excel-graph, canary-verified) covers the band and signs listed under Context. Its Excel values
@@ -108,6 +108,8 @@ The probe of the first acceptance item is done: four cases, filled from excel-gr
   overflow (354.8914) and sinh²x's (355.6). The grid's x = 700-709 cells are the same rule.
 - The 12 IMSECH cells one digit off in this band are T-3883's. Reusing IMSECH's `overflowed_reciprocal` for IMCSCH
   would inherit those digits; Excel's IMCSCH texts are the exact negation of its IMSECH texts.
+The acceptance criteria's "42 owned cells" and "42 known-failure lines" now cover these four cases too: 298 cells in
+all (42 + 202 + 22 + 20 + 12).
 Next step: pin the negative edge more finely (probe -354.001 to -354.009), look for the mechanism behind 354.5 and
 354 (perhaps a test on exp(2x) or exp(-2x) against a cut), then implement in `imcsch` and drop the new cases'
 known-failure lines.
