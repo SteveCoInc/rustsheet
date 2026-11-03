@@ -20,7 +20,8 @@ number, DATEVALUE 2982616 and TIMEVALUE 0.5792303238995373 (probes/t3948-letter-
 B10:H10, excel-graph 2026-11-03). Without the colon (`10 A. 5`) the base is 2^32 - 22 seconds plus 10 minutes plus
 0.5 s (docs/excel-semantics/dates.md "Typed clock-first date-times"), so the colon looks like it moves every unit up
 one place (base in minutes, the clock in hours) with the `30` unaccounted for. One point cannot fix the rule: probe a
-sweep (`10 A. 5:0`, `5:59`, `5:60`, `0:30`, `10:00 A. 5:30`, `10 P. 5:30`, `10 A. 5:30:15`, `10 A. 5:30 7/1/2025`)
+sweep (`10 A. 5:0`, `5:59`, `5:60`, `0:30`, `10:00 A. 5:30`, `10 P. 5:30`, `10 A. 5:30:15`, `10 A. 5:30 7/1/2025`;
+and, for T-3948's any-tail gate, `10 a.m.`, `10:00 a.m.`, `10 A. x`, `10 A. 5x 7/1/2025`, review MINOR of #2996)
 typed and through the four readers, decode it, then implement it in `date_clock::letter_period_parts` (the engine
 leaves the text a string, and the readers give #VALUE!, via `is_letter_period_shape`).
 
