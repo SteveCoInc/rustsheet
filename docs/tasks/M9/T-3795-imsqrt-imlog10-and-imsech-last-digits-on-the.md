@@ -3,7 +3,7 @@ id: T-3795
 title: "IMSQRT, IMLOG10, IMLOG2 and IMSECH last digits on the T-3643 probes: 31 cells one 15-digit unit off"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
