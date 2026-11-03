@@ -1076,22 +1076,29 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   the reciprocal down to the smallest normal x, past where sinh²x underflows: `IMCSCH("1E-200")` is 1E+200,
   `IMCSCH("1E-307")` 1E+307, `IMCSCH("1E-20")` 100000000000000000000; a subnormal x is `#NUM!` (`IMCSCH("1E-308")`,
   "2E-308", "2E-309", "1E-320"), and IMSECH of a tiny real is 1 except `IMSECH("1E-320")` `#NUM!`
-  (probes-numeric/t3609-imcsch-tiny-real-probe, excel-graph, 30 cells, all passing). Still unexplained at complex x:
-  `IMCOSH("-0.00908725305283191-0.897991007302082i")` imaginary part 0.00710702505540606 (ours ...607; B15) and
-  IMCSCH D15 (`-0.00925756264826299` real, ours -0.009257562648263) and D29 (`IMCSCH("-0.00994266897763484-0.217145289213716i")`
-  real part -0.208738033086954, ours ...955): every pairing of the series, libm and form sinh with the form, libm and
-  series cosh scores the same 105/111 complex IMCOSH and 71/75 complex IMCSCH texts and none fits these three (the
-  other misses there are notation, T-3560). T-3720 sweep (probes-numeric/t3720-im-reciprocal-small-x-complex, excel-graph 2026-11-03, 400 complex
-  z with 0 < |x| <= 0.01 plus the two t3589 arguments and their conjugates in rows 401-404, with Excel's own SIN(y), COS(y),
-  SINH(x), COSH(x), EXP(-x) in E:I): of 404 complex texts the current engine's parts equal Excel's for 395 IMCOSH and 398
-  IMCSCH; the plain-double product from the E:I companions (IMCOSH cosh x·cos y + i·sinh x·sin y; IMCSCH the conjugate over
-  a²+b² with a = sinh x·cos y, b = cosh x·sin y, 15 significant digits) equals them for 384 IMCOSH and 366 IMCSCH, so the
-  naive product from Excel's factors is worse than the engine (T-3721 ranks kernels). The originals miss again (A401, B401,
-  B403) and so do their conjugates (A402, B402, B404). The engine also misses 4 complex IMSECH cells (C203, C217, C256,
-  C292) and 2 IMSINH cells (D7, D265), all 15th digit off by one. Worksheet COSH differs at H222:
-  `=COSH(0.00584055964120653)` is 1.0000170561169464 in Excel, ours ...461 (one ulp; T-3721 to check, with the
-  SINH/COSH entry in numbers.md). Status: VERIFIED (excel-graph) for the real IMSECH and IMCSCH kernels at
-  |x| <= 0.01; UNVERIFIED for B15, D15 and D29 (T-3721 tries the trig and division candidates). Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
+  (probes-numeric/t3609-imcsch-tiny-real-probe, excel-graph, 30 cells, all passing). At complex x the
+  sinh series stops after three terms, `x + x³/3! + x⁵/5!` (T-3721): T-3609 left
+  `IMCOSH("-0.00908725305283191-0.897991007302082i")` (imaginary part 0.00710702505540606, a sum run until a term no
+  longer changes it gave ...607; B15), IMCSCH D15 (real part -0.00925756264826299, ...300) and D29
+  (`IMCSCH("-0.00994266897763484-0.217145289213716i")` real part -0.208738033086954, ...955) unexplained, and all
+  three are one 15-digit tie off from a fourth term `x⁷/7!`, which moves the last bit only above |x| ≈ 0.005. T-3720
+  sweep (probes-numeric/t3720-im-reciprocal-small-x-complex, excel-graph 2026-11-03, 400 complex z with 0 < |x| <= 0.01
+  plus the two t3589 arguments and their conjugates in rows 401-404, with Excel's own SIN(y), COS(y), SINH(x), COSH(x),
+  EXP(-x) in E:I): with the three-term series the engine's texts equal Excel's for 403 IMCOSH, 402 IMCSCH, 404 IMSECH and
+  403 IMSINH of 404, against 395, 398, 400 and 402 for the four-term sum; two terms fit 136 or fewer. Other candidates
+  ranked on the same sweep from Excel's own factors moved nothing: Excel's SIN(y) against libm's or the exact sine, an
+  x87 (64-bit) or exact product, the series summed in x87 or in reverse order, Horner's form, libm's or the worksheet
+  SINH, and for cosh x libm's, the worksheet COSH, `sqrt(1 + sinh²x)` or a 2-4 term series (the `1/u` form stays
+  best). Hold-out (fit lab split, decision 0188 R4.1, 5-point margin): train 1128 of 1131 texts, test 484 of 485,
+  against 1052 and 448 correctly rounded. Frozen and checked on a sweep drawn after it
+  (probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep, 400 rows, |x| log-uniform in [1E-6, 0.01] and uniform in
+  [0.004, 0.01] on alternate rows, y = 0 on every fifth, excel-graph): 1596 of 1600 texts, the four-term sum 1580,
+  correctly rounded 1505; every text is within 1e-9 relative of the 50-digit value (Gate A envelope, 0 outside). The
+  four left over there (C311, C386, D169 and the real C390) and four on the T-3720 sweep (A3 real part, D7, B25, B148
+  imaginary parts) miss the same way with either series: at each of these x both series give the same double (a real
+  IMSECH takes no series at all), so they are cosh x or division residue, not the series. Status: VERIFIED (excel-graph) for the
+  real IMSECH and IMCSCH kernels at |x| <= 0.01 and for the three-term series at complex x; UNVERIFIED for the 8
+  leftovers named above. Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is
