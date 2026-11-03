@@ -48,7 +48,8 @@ fn sheet_ref_error_text(
     }
 }
 
-/// The text of a `WrongReferenceKind` or `WrongRangeKind` node and of a written `S!#REF!` (empty for any other node).
+/// The text of a `WrongReferenceKind` or `WrongRangeKind` node and of a written `S!#REF!`
+/// (empty for any other node).
 pub(super) fn text(
     node: &Node,
     context: Option<&CellReferenceRC>,

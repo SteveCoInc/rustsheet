@@ -2,6 +2,7 @@
 
 use crate::expressions::parser::{for_each_chain_operand_mut, Node};
 use crate::expressions::utils::rename_defined_name_sheet;
+use crate::types::sheet_names_match;
 
 /// Calls `f` on every node of `node` that names a sheet (a reference, a 3-D span, a wrong
 /// reference or a defined name) and walks through every other node to reach them.
@@ -92,7 +93,7 @@ pub(crate) fn rename_sheet_in_node(
             }
         }
         Node::SheetRefErrorKind { sheet_name, .. } => {
-            if sheet_name.to_uppercase() == old_name.to_uppercase() {
+            if sheet_names_match(sheet_name, old_name) {
                 new_name.clone_into(sheet_name);
             }
         }

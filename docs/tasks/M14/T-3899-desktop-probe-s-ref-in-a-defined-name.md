@@ -21,6 +21,9 @@ rewrites the copy's name and gives a global name a sheet-local copy); (3) the FO
 `=NoSuchSheet!#REF!`: excel-graph reads it as an external workbook `NoSuchSheet` and prints the workbook's
 folder URL before `[NoSuchSheet]NoSuchSheet` (values in probes/typed-missing-sheet-ref-error-text), while the
 engine prints `#REF!#REF!`; desktop text decides what the engine should print for a file with no URL.
+Also unprobed: the engine sets `missing` when it parses, so after S is deleted and a new sheet S is
+added, a reparsed `S!#REF!` prints `S!#REF!` again, where Excel rewrote the text to `#REF!#REF!` at the
+delete. Probe that sequence too.
 See docs/excel-semantics/references.md "A sheet-qualified #REF! is #REF!".
 
 ## Acceptance criteria

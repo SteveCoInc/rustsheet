@@ -912,8 +912,11 @@ existed), which does not match Excel. Desktop text for the same cells is unprobe
 Unprobed (T-3899, desktop): a defined-name body `S!#REF!` after a rename, and a duplicated
 sheet holding `S!#REF!` (the copy's name is rewritten, as for any reference to the source).
 Implemented in: `consume_range` in crates/rustsheet-engine/src/expressions/lexer/mod.rs (formula; the
-prefix is kept as `Node::SheetRefErrorKind` in the written tree only), `ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
-Tasks: T-0152, T-0169, T-2855
+prefix is kept as `Node::SheetRefErrorKind` in the written tree only; the parser's `SheetRefError` arm in
+parser/mod.rs spells the sheet as the workbook does and sets `missing`), `rename_sheet_in_node` in
+parser/stringify/sheet_edits.rs (rename), `ref_error_text` and `sheet_ref_error_text` in parser/stringify/wrong_reference.rs (text),
+`ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
+Tasks: T-0152, T-0169, T-2855, T-3062, T-3899
 
 ## Disjoint intersection is #NULL!
 Rule: an intersection of references that share no cell is `#NULL!` (all 51 `intersection/disjoint` cells):

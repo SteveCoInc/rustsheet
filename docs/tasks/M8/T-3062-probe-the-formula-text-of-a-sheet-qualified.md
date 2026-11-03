@@ -44,6 +44,8 @@ that the engine's `#REF!#REF!` text for it does not match (owner T-3899). Eval: 
 (18 checked cells).
 
 ## Handoff (resumed)
+Resolved on resume: the round-2 findings below are fixed (typed missing-sheet probe, references.md text shape, rename case description, shared `sheet_names_match`).
+
 Engine change and three probes (rename, delete-sheet, unqualified/typed) are done on PR #2926 and pass 15/15 cells; design and security approved. excel-fidelity requested changes twice (round 1 on 6357da18, round 2 on 05d85543), so I stopped (work-loop 5b). Open findings of round 2:
 - MAJOR references.md "A sheet-qualified #REF! is #REF!": the typed `=NoSuchSheet!#REF!` cell was dropped from the probe and Graph's text (an external-link path `='https://.../[NoSuchSheet]NoSuchSheet'!#REF!`) was not recorded. Put that cell back in the probe (oracle value recorded, engine cell a known failure with an owner) or record the exact text in references.md; drop the "Graph artifact" wording; say plainly that the engine's `#REF!#REF!` for a sheet no sheet has is unverified (the parser cannot tell a deleted sheet from a never-existing one).
 - MINOR sheet-qualified-ref-error-text-rename.case.json description says "A3 =S!C4:C5 SUM control"; A3 is `=SUM(S!C5)`.
