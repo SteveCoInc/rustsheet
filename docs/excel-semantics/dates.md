@@ -409,7 +409,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   45840, `10:60` is 45839.4583333333). Any date the readers accept may follow: month-name (`July 1, 2025`, `1-Jul-2025`,
   `1/Jul/2025`), ISO, two-digit year, `-` or mixed separators, and a year-less `10:00 7/1` takes the current year; double
   spaces between clock and date and a trailing space are accepted (a leading space stays text). Untyped `2025/7-1` is
-  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed.
+  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed (T-3901).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on

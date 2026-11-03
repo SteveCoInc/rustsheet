@@ -28,4 +28,4 @@ Probed 22 en-US shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2
 is a number with the clock's format (`m/d/yyyy h:mm`, `mm:ss.0` for fractions, General out of range) for any readable date
 after it. `leading_clock_shape` now classifies the clock with `typed_clock_shape` and lets the date reader decide the rest;
 trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. Eval delta: see PR.
-Not probed (stay open): day-first locales (clock-first and mixed-separator typed dates); no probe backend for locale yet.
+Not probed: day-first locales, filed as T-3901.
