@@ -1081,7 +1081,16 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   IMCSCH D15 (`-0.00925756264826299` real, ours -0.009257562648263) and D29 (`IMCSCH("-0.00994266897763484-0.217145289213716i")`
   real part -0.208738033086954, ours ...955): every pairing of the series, libm and form sinh with the form, libm and
   series cosh scores the same 105/111 complex IMCOSH and 71/75 complex IMCSCH texts and none fits these three (the
-  other misses there are notation, T-3560). Status: VERIFIED (excel-graph) for the real IMSECH and IMCSCH kernels at
+  other misses there are notation, T-3560). T-3720 sweep (probes-numeric/t3720-im-reciprocal-small-x-complex, excel-graph 2026-11-03, 400 complex
+  z with 0 < |x| <= 0.01 plus the two t3589 arguments and their conjugates in rows 401-404, with Excel's own SIN(y), COS(y),
+  SINH(x), COSH(x), EXP(-x) in E:I): of 404 complex texts the current engine's parts equal Excel's for 395 IMCOSH and 398
+  IMCSCH; the plain-double product from the E:I companions (IMCOSH cosh x·cos y + i·sinh x·sin y; IMCSCH the conjugate over
+  a²+b² with a = sinh x·cos y, b = cosh x·sin y, 15 significant digits) equals them for 384 IMCOSH and 366 IMCSCH, so the
+  naive product from Excel's factors is worse than the engine (T-3721 ranks kernels). The originals miss again (A401, B401,
+  B403) and so do their conjugates (A402, B402, B404). The engine also misses 4 complex IMSECH cells (C203, C217, C256,
+  C292) and 2 IMSINH cells (D7, D265), all 15th digit off by one. Worksheet COSH differs at H222:
+  `=COSH(0.00584055964120653)` is 1.0000170561169464 in Excel, ours ...461 (one ulp; T-3721 to check, with the
+  SINH/COSH entry in numbers.md). Status: VERIFIED (excel-graph) for the real IMSECH and IMCSCH kernels at
   |x| <= 0.01; UNVERIFIED for B15, D15 and D29 (T-3721 tries the trig and division candidates). Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
