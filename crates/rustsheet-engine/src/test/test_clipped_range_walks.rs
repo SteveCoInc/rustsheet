@@ -550,3 +550,31 @@ fn single_ranges_either_side_of_the_sparse_walk_size_agree() {
     assert_eq!(model._get_text("Sheet2!E3"), "7");
     assert_eq!(model._get_text("Sheet2!E4"), "6");
 }
+
+// The regression functions read every cell of a data range (a blank is `#VALUE!`), so a huge
+// range is refused by the array limit instead of being sized from the grid (T-2557).
+#[test]
+fn regression_functions_bound_huge_ranges() {
+    let mut model = sample();
+    model._set("Sheet2!E1", "=LINEST(Sheet1!A:A,Sheet1!B:B)");
+    model._set("Sheet2!E2", "=LINEST(Sheet1!A1:A3,Sheet1!B1:B3)");
+    model._set(
+        "Sheet2!E3",
+        "=TREND(Sheet1!A1:XFD1048576,Sheet1!A1:XFD1048576)",
+    );
+    model._set("Sheet2!E4", "=GROWTH(Sheet1!A1:XFD1048576)");
+    model._set("Sheet2!E5", "=LOGEST(Sheet1!A1:XFD1048576)");
+    let start = Instant::now();
+    model.evaluate();
+    assert!(start.elapsed() < Duration::from_secs(10), "not bounded");
+    // A:A has blanks, so it is #VALUE!, as the used rows with a blank are.
+    assert_eq!(model._get_text("Sheet2!E1"), "#VALUE!");
+    assert_eq!(model._get_text("Sheet2!E2"), "#VALUE!");
+    for cell in ["E3", "E4", "E5"] {
+        assert_eq!(
+            model._get_text(&format!("Sheet2!{cell}")),
+            "#ERROR!",
+            "{cell}"
+        );
+    }
+}
