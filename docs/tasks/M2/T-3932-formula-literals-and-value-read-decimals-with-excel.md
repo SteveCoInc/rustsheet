@@ -26,6 +26,7 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   S!C7:C10 (`0.190581435720431` reads one ulp above the nearest double as a literal, through VALUE and through the
   complex functions' text parse), and probes-numeric/t3643-r4-log-modulus C111, which is the same ulp reaching
   IMLOG2 through COMPLEX's text (engineering.md "IMLOG10 and IMLOG2 scale IMLN").
+  T-3997 (M5) also lists S!C8 and S!C10 as their M5 exit owner and checks them once this task lands.
 - Stored xlsx numbers do not follow this model (numbers.md "Stored numbers in an xlsx are not always parsed to the
   nearest double", OPEN); their off cells are listed here so they have an owner, but changing the xlsx reader is
   out of scope until that rule is derived: probes-numeric/t3658-round-scaling Hits!G1:G6, Hits!G8, Hits!G10:G11, Hits!G14:G16, Hits!G18:G19, Hits!G22:G26, Hits!G29:G41, Hits!G45:G47, Hits!G49:G58, Hits!G60:G61
