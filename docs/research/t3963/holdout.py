@@ -1,13 +1,73 @@
-import sys,subprocess,os,hashlib,struct,collections
-cells=[l.rstrip('\n').split('\t') for l in open(sys.argv[1])]
-def ho(c): 
-    d=hashlib.sha256(f"rustsheet-fitlab-holdout/v1\0{c[0]}\0{c[1]}".encode()).digest(); return int.from_bytes(d[:8],'big')%1000<300
-def run(v):
-    p=subprocess.run([sys.argv[2]],input="\n".join(c[2] for c in cells)+"\n",capture_output=True,text=True,env={**os.environ,"RS_V":str(v)},check=True)
-    return p.stdout.split("\n")
-def norm(x): return 'ERR' if x.startswith('E:') else repr(float(x))
-for v in sys.argv[3:]:
-    o=run(v); s=collections.Counter()
-    for c,g in zip(cells,o):
-        side='test' if ho(c) else 'train'; s[side+'_n']+=1; s[side]+= norm(c[3])==norm(g)
-    print(v, f"train {s['train']}/{s['train_n']} ({s['train']/s['train_n']:.3f})  test {s['test']}/{s['test_n']} ({s['test']/s['test_n']:.3f})")
+"""T-3963: score RS_V variants of the temporary switch (trace.diff) on the fit lab's hash split.
+
+Prints, per variant, train and hold-out counts of bit-exact, within 4 ulp and within 15 significant digits
+(Excel's displayed precision), plus the wrong-type cells of an optional fresh sweep. Errors count as equal only
+when their text is the same.
+
+Run: python3 -I docs/research/t3963/holdout.py <cells.tsv> <probe-binary> <variant>...
+(cells.tsv: case, cell, formula, oracle value as `repr(float)` or `E:<error>`; extract.py writes it)
+"""
+
+import collections
+import hashlib
+import os
+import struct
+import subprocess
+import sys
+
+
+def is_holdout(case: str, cell: str) -> bool:
+    d = hashlib.sha256(f"rustsheet-fitlab-holdout/v1\0{case}\0{cell}".encode()).digest()
+    return int.from_bytes(d[:8], "big") % 1000 < 300
+
+
+def norm(x: str) -> str:
+    if x.startswith("E:"):
+        # The probe prints String("#NUM!"); the sidecar extract prints #NUM!.
+        return "E:" + x[2:].replace('String("', "").replace('")', "")
+    return x
+
+
+def bits(x: float) -> int:
+    return int(struct.unpack("<q", struct.pack("<d", x))[0])
+
+
+def grade(expected: str, got: str) -> set[str]:
+    e, g = norm(expected), norm(got)
+    if e.startswith("E:") or g.startswith("E:"):
+        return {"exact", "ulp4", "d15"} if e == g else {"type"}
+    x, y = float(e), float(g)
+    out = set()
+    if x == y:
+        out |= {"exact", "ulp4", "d15"}
+    elif abs(bits(x) - bits(y)) <= 4:
+        out |= {"ulp4"}
+    if f"{x:.14e}" == f"{y:.14e}":
+        out.add("d15")
+    return out
+
+
+def main() -> None:
+    cells = [line.rstrip("\n").split("\t") for line in open(sys.argv[1])]
+    for variant in sys.argv[3:]:
+        p = subprocess.run(
+            [sys.argv[2]], input="\n".join(c[2] for c in cells) + "\n", capture_output=True, text=True,
+            env={**os.environ, "RS_V": variant}, check=True,
+        )
+        out = p.stdout.split("\n")
+        n: collections.Counter[str] = collections.Counter()
+        for c, g in zip(cells, out):
+            side = "test" if is_holdout(c[0], c[1]) else "train"
+            n[side] += 1
+            for k in grade(c[3], g):
+                n[f"{side}_{k}"] += 1
+        row = []
+        for side in ("train", "test"):
+            row.append(
+                f"{side} {n[side + '_exact']}/{n[side + '_ulp4']}/{n[side + '_d15']} of {n[side]}"
+                f" (wrong type {n[side + '_type']})"
+            )
+        print(f"RS_V={variant}: " + "; ".join(row))
+
+
+main()

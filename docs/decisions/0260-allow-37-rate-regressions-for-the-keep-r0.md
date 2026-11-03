@@ -20,6 +20,17 @@
     - 5 are of the wrong type: t3698-rate-flat-restart A1, A2, t3579-rate-residual-nper1 A43 and
       t3698-rate-flat-restart-fresh A21 (a number where Excel is `#NUM!`; the run ends on a zero step that the cap's
       test returns), and t3906-rate-restart-oos A143 (`#NUM!` where Excel returns a number).
+  - Envelope: Gate A's RATE table stays at 0 failing points, with the new fresh batch r4-T-3963 (300 points, all
+    inside). On the ungated fresh probe probes/t3963-rate-keep-r0-fresh the model has 8 numbers where Excel is
+    `#NUM!` (21 under the merged rule). 4 of the 8 were the merged rule's `#NUM!`, so the model moves them out of
+    agreement:
+    - A59 and A60: `RATE(40,1666.174974724,217139.066904346,-79546.9586107545,0,g)`, -0.0384523999680222;
+    - A73: `RATE(44,962.6445623078,-9.045250526913,-42372.09571075,0,-0.217304)`, 2.72e-5;
+    - A188: `RATE(1,-304238646703.053,303193515237.441,2004026157.19246,1,0.0343348)`, 0.917487151742148, a zero
+      step.
+
+    The new case has no baseline yet, so these 4 are recorded as its known failures (owned by T-3970), not as
+    regressions. They are accepted on the same terms as the 37: the case's wrong-type cells fall from 21 to 8.
   - No refinement scored on the evidence keeps both: a hybrid that restarts like T-3698 inside its steps and |f|
     band is worse on train (-2), test (-3) and the fresh sweep (46 against 59). Keeping the old outcome only where it
     matched would be a keep-matched branch (decisions 0056, 0082).

@@ -65,12 +65,25 @@ because T-3850 showed that no rule on the model's state at the flat step does it
 - **Engine:** `rate_secant` keeps r0 on f2 = f1 and sends a zero step (r2 = r1) to the cap's test at once; T-3698's
   restart (`RATE_RESTART_*`, its FITTED tag and the `restart` parameter) is gone. A flat secant now only comes on the
   start pair, which still holds (T-3348).
-- **Decision 0188 R4 (structural model, kind (c)):** candidates ranked on all 2,400 literal cells (seen before, so
-  not blind). Hold-out by the fit lab's hash split (30% test, 5-point margin): train 1,416/1,704 (merged 1,357),
-  test 576/696 (557); test rate 82.8% vs train 83.1%. Fresh sweep after the freeze:
-  probes/t3963-rate-keep-r0-fresh (240 calls, `docs/research/t3963/gen_fresh.py`, committed before the oracle fill):
-  59 bit-exact vs 9 for the merged rule; misses beyond 4 ulp or of the wrong type 149 vs 174. Gate A: 0 failing.
-  No constant was fitted.
+- **Decision 0188 R4 (structural model, kind (c)):** no constant was fitted.
+  - R4.1 hold-out (the fit lab's hash split, 30% test, 5-point margin; `docs/research/t3963/holdout.py`), as
+    bit-exact / within 4 ulp / within 15 digits:
+    - keep-r0: train 1,416 / 1,524 / 1,549 of 1,704; test 576 / 616 / 630 of 696. The test exact rate is 82.8%,
+      against 83.1% on train.
+    - The merged rule: train 1,357 / 1,498 / 1,521; test 557 / 610 / 617.
+  - The candidates were first ranked on all 2,400 cells, hold-out side included. Ranked on train alone (bit-exact,
+    the fit lab's order), keep-r0 is still first: 1,416, then the secant on the iterate before r0 at 1,402
+    (1,528 / 1,552 within 4 ulp / 15 digits), then an unconditional restart at 1,394.
+  - R4.2 fresh sweep: Gate A batch accuracy/RATE/r4-T-3963, 300 points of `rustsheet-accuracy generate RATE --batch
+    r4-T-3963`, drawn and filled (excel-graph) after the freeze. All 300 are inside the envelope, bit-exact under both
+    models: the table's RATE takes no guess, so the rule seldom fires. The batch stays in the gate.
+  - Where the rule fires: probes/t3963-rate-keep-r0-fresh. It is 240 calls on the existing probe series' args with
+    new guesses, kept where the two models differ (`gen_fresh.py`, committed before the fill). It has no math
+    sidecar, so its check is against Excel alone:
+    - keep-r0: bit-exact / 4 ulp / 15 digits 59 / 91 / 104 of 240, 8 of the wrong type;
+    - the merged rule: 9 / 66 / 77, 21 of the wrong type.
+    - Of the 8 keep-r0 misses (a number where Excel is `#NUM!`), 4 were the merged rule's `#NUM!` too: A59, A60, A73
+      and A188. Only A188 ends on a zero step. Decision 0260 lists all 4.
 - **Eval delta:** probes fixed 107, regressions 37 (decision 0260: 19 within 4 ulp, 13 beyond, 5 of the wrong type),
   new case t3963-rate-keep-r0-fresh 59/240. Literal RATE cells 1,914 -> 1,992 bit-exact.
 - **Acceptance:** on the 12 solid t3850-rate-same-state groups (72 cells) the model gets 19 bit-exact, the merged

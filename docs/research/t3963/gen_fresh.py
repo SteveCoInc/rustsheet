@@ -34,7 +34,10 @@ def main() -> None:
     seen = set()
     for line in open(cells_tsv):
         f = line.split("\t")[2]
-        args = re.match(r"=RATE\((.*)\)$", f).group(1).split(",")  # type: ignore[union-attr]
+        m = re.match(r"=RATE\((.*)\)$", f)
+        if m is None:  # extract.py writes only literal RATE calls; skip anything else
+            continue
+        args = m.group(1).split(",")
         key = ",".join(args[:5] + [""] * (5 - len(args[:5])))
         if len(args) >= 4 and key not in seen:
             seen.add(key)

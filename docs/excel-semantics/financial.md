@@ -1414,7 +1414,10 @@ Evidence (excel-graph, 2026-11-03, T-3963; scorers and the temporary switch in d
   the fill). Bit-exact: the frozen model 59, the merged rule 9. Misses beyond 4 ulp or of the wrong type: 149 and
   174. A hybrid (keep r0, but T-3698's restart inside its steps and |f| band) scores 46 there and is worse on train
   and test too, so it was not taken.
-- Gate A stays green: `rustsheet-eval accuracy` reports 0 failing points.
+- Gate A stays green: `rustsheet-eval accuracy` reports 0 failing points, with the new batch
+  accuracy/RATE/r4-T-3963 (300 points drawn after the freeze, all inside the envelope; the table's RATE takes no
+  guess, so the rule seldom fires there). On the fresh probe, 8 calls are a number where Excel is `#NUM!` (21 under the
+  merged rule). 4 of them were the merged rule's `#NUM!`: A59, A60, A73 and A188. Only A188 ends on a zero step.
 - Losses (decision 0260): 37 cells the merged rule had bit-exact. 19 are 1 to 4 ulp, under decision 0112's floor.
   13 are more than 4 ulp, 10 of them nper-1 or nper-2 calls of t3906-rate-restart-oos whose residual is all rounding
   noise (`RATE(1,18770705030.2495,-18770705030.2495,0,1,g)`, A15, where Excel's value is T-3698's restart). 5 are a
