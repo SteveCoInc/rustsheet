@@ -830,9 +830,18 @@ fn an_error_option_element_is_its_own_error_after_the_filter_is_spent() {
     model._set("AA7", "1");
     model._set("Z8", "1");
     model._set("AA8", "1");
-    model._set("H1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,Z1:AA2,1,,C2:C11=2023)");
-    model._set("H4", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z4:AA5,,C2:C11=2023)");
-    model._set("H7", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z7:AA8,,C2:C11=2023)");
+    model._set(
+        "H1",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,Z1:AA2,1,,C2:C11=2023)",
+    );
+    model._set(
+        "H4",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z4:AA5,,C2:C11=2023)",
+    );
+    model._set(
+        "H7",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,Z7:AA8,,C2:C11=2023)",
+    );
     model.evaluate();
     let first = model._get_text("H1");
     assert_ne!(first, "#VALUE!");
