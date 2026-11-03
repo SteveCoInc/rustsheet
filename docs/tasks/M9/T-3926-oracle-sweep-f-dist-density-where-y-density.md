@@ -3,7 +3,7 @@ id: T-3926
 title: "Oracle sweep: F.DIST density where Y = density·x is subnormal, at power-of-two and general x, with a hold-out, for T-2647"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
