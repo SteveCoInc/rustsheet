@@ -162,7 +162,16 @@ formula does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`), so the cell keeps its c
 PATCH 400 leaves A1 blank (probes/t3172-paren-257-typed, t3266-nested-paren-257-typed); stored in a
 cell, it makes the xlsx importer refuse the workbook (`XlsxError::Workbook`, T-3869), as Excel for the
 web refuses it (createSession 501, below). Excel counts split runs
-the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). A group holding more than the group inside it
+the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). So do
+the other splits (T-3870, probes/t3870-*, excel-graph 2026-11-03, stored and typed alike): 256 groups
+with a space after the first `(` (`=( ((...(1)...))`) or an operand between the first `(` and the rest
+(`=(1+((...(1)...)))`) load and evaluate (space-256, operand-256), and 257 are refused (space-257,
+operand-257). A function call's own parenthesis is not a group and does not count: 256 groups inside
+`ABS(` (257 `(` open at the innermost `1`) load, and 257 are refused (call-255, -256, -257), and so do
+256 groups with 128 outside the call and the rest inside it (call-mid-255, -256, -257). Each refused
+stored formula made Excel for the web refuse the workbook (createSession 501 `FileCorruptTryRepair`), so
+those four cases were dropped after the run; the typed ones are PATCH 400 `InvalidArgument` and are
+kept. Ours counts the same (the parser's `open_groups` counter, `Parser::parse_parenthesis_run`, counts groups only) and matches all of them. A group holding more than the group inside it
 (`((x)+1)`) still costs an operand's two levels. The first operand of a group's content, unless a
 group itself, reserves one and a half levels of the parser's bound instead of two, and a call there
 adds one level to the tree, so a level of `(ABS(` costs three and a half: Excel's 64 and 65 levels
@@ -205,7 +214,8 @@ before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed
 ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
 error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
 typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
-leaves, so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
 2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
 minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
@@ -325,7 +335,7 @@ for them, in the derived `Clone`/`Drop` of the tree (T-3338 measured; T-3691 mak
 the process. A new recursive consumer of the tree (or a heavier evaluator frame) must be
 re-measured against these limits (the at-limit tests run on a 1 MiB stack in release builds), and
 must walk operator chains with `expressions/parser/chain.rs`.
-Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338; the typed refusals restored by T-3689 score as blank cells); this is a resource limit.
+Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338; the typed refusals restored by T-3689 score as blank cells) and probes/t3870-* (the parenthesis cap over split runs; a call's parenthesis is not counted); this is a resource limit.
 Status: DEVIATION (decision 0014)
 Implemented in: expressions/parser/depth.rs (`MAX_FORMULA_DEPTH`, `MAX_VALUE_OPERATORS`, `MAX_NESTED_CALLS`, `MAX_PARENTHESES`, `MAX_SIGNS`, `TOO_MANY_SIGNS_MESSAGE`, `TOO_MANY_PARENTHESES_MESSAGE`, `Parser::in_call`, `Parser::parse_primary`, `Parser::parse_signs`, `Parser::parse_signed_operand`, `Parser::grow`, `Parser::grow_chain`); expressions/parser/mod.rs (`Parser::parse_power`); cast.rs (`Model::apply_unary_chain`); expressions/parser/chain.rs; expressions/parser/reference_operators.rs (`Parser::parse_parenthesis_run`); model.rs (`Model::parse_cell_formula`, `Model::evaluate_operator_chain`); rustsheet-xlsx `import::worksheets::from_a1_to_rc` and `import::call_cap` (`refuse_too_many_calls`, `check_rule_formulas`) (the call cap on load: cells, name bodies, rule formulas)
 
