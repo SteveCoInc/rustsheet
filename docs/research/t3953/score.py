@@ -48,7 +48,10 @@ for key, hyp in case["hypotheses"].items():
         act = float(shown[key]["actual"])
     except (KeyError, ValueError):
         act = None
-    m = math_cells.get(cell, {}).get("v")
+    # The math tool defines no F.DIST.RT / FDIST, so A and B take row's C value: the same exact quantity,
+    # I_v(d2/2, TRUNC(d1)/2) at v = d2/(TRUNC(d1)*X + d2).
+    m = math_cells.get(cell, {}).get("v") or math_cells.get("C" + cell[1:], {}).get("v")
+    c_ex = num(oracle.get("C" + cell[1:], {}).get("v"))
     for group in (f"{kind}/{split}", f"{kind}/all"):
         t = tot.setdefault(group, {})
 
@@ -62,6 +65,8 @@ for key, hyp in case["hypotheses"].items():
         bump("engine=excel exact", act == ex)
         bump("engine~excel <=4ulp", ulp_distance(act, ex) <= 4)
         bump("engine~excel 15d", within_fifteen_digits(ex, act))
+        if kind in ("fdistrt", "fdist", "beta-literal-v") and c_ex is not None:
+            bump("excel = excel's C (sheet-v BETA.DIST) exact", ex == c_ex)
         if m is not None:
             ref = Decimal(m)
             cr = float(ref)

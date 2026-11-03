@@ -3,7 +3,7 @@ id: T-3953
 title: "Oracle sweep: F.DIST.RT and FDIST far right tail on bfrac (df1 >= 80, df2 <= 200, kernel x0 below 1E-6), with a hold-out, for the FDIST(1E+15,4490,6) fit"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -27,21 +27,43 @@ with a hold-out fixed before any scoring, so T-3954 can find Excel's arithmetic 
   one), hence this sweep (decision 0031; the excel-probe skill).
 
 ## Acceptance criteria
-- [ ] A generator under docs/research/t3953/ (seeded, committed) writes probes-numeric `t3953-f-tail-bfrac-tiny`:
+- [x] A generator under docs/research/t3953/ (seeded, committed) writes probes-numeric `t3953-f-tail-bfrac-tiny`:
       about 1,200 rows, d1 log-uniform in [80, 20000] (integers and some non-integers, which Excel truncates), d2
       log-uniform in [1, 200], X chosen so that x0 = d2/(d1·X + d2) is log-uniform in [1E-280, 1E-6], keeping only rows
       where the engine's dispatch is `Branch::Bfrac` and the tail is a normal double above 1E-300. Columns per row:
       `F.DIST.RT(X,d1,d2)`, `FDIST(X,d1,d2)`, `BETA.DIST(v,d2/2,d1/2,TRUE)` with v computed in the sheet as
       `d2/(d1*X+d2)`, and the same BETA.DIST at v given as an exact literal, to separate the argument form from the
       kernel.
-- [ ] Before any scoring, about 30% of the rows by row hash are marked hold-out in the generator (decision 0188 R4.1),
+- [x] Before any scoring, about 30% of the rows by row hash are marked hold-out in the generator (decision 0188 R4.1),
       and the split is recorded in the case description.
-- [ ] Filled from excel-graph and canary-verified; a second fill matches the first (decision 0112), or the cells that
+- [x] Filled from excel-graph and canary-verified; a second fill matches the first (decision 0112), or the cells that
       differ are listed and dropped as targets.
-- [ ] A math sidecar from `rustsheet-accuracy math` (50 digits) is committed for the case, and the Outcome gives Excel's
+- [x] A math sidecar from `rustsheet-accuracy math` (50 digits) is committed for the case, and the Outcome gives Excel's
       and the engine's exact / 4 ulp / 15-digit counts against Excel and Excel's error distribution against the math.
-- [ ] Every visibly-off cell of the new case has an open owner (T-3954 lists the case), so `new_case_owners.py` passes.
-- [ ] `make check` green; reviewers approve.
+- [x] Every visibly-off cell of the new case has an open owner (T-3954 lists the case), so `new_case_owners.py` passes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any engine change (T-3954), bfrac's Lentz region near the mean (T-3913), basym (T-3597).
+
+## Outcome
+- Added probes-numeric `t3953-f-tail-bfrac-tiny`: 1,200 rows × 4 columns (A F.DIST.RT, B FDIST, C BETA.DIST with v
+  formed in the sheet, D BETA.DIST at the engine's x0 as a 15-digit literal), generator docs/research/t3953/mksweep.py
+  (seed 3953; 7,490 draws rejected as not bfrac, a duplicate, or a tail at or below 1E-300). Hold-out fixed before
+  scoring: rows with sha256("t3953/<d1>/<d2>/<X>")[0] < 77, 364 rows (836 tune), marked in each hypothesis and the
+  case description.
+- Deviations: d2 is integer only (the task asked non-integers of d1 only); a row with TRUNC(d2) <= 2 is never bfrac
+  (a shape <= 1), so d2 starts at 3 in practice. Literal v has 15 significant digits, the most a formula literal
+  carries (numbers.md), so column D is "the engine's x0 to 15 digits", not the exact double.
+- Filled from excel-graph (canary-verified by the fill); a second uncached recalc matched on all 4,800 cells.
+- Math sidecar (`rustsheet-accuracy math`) committed; it covers C and D only, since the accuracy tool defines no
+  F.DIST.RT / FDIST. docs/research/t3953/score.py scores A and B against the row's C math (the same exact quantity).
+  Output: docs/research/t3953/score.out.
+- Counts (all / tune / hold), F.DIST.RT, engine against Excel: exact 4/2/2, 4 ulp 82/51/31, 15 digits 189/125/64.
+  FDIST is identical. Excel against the correctly rounded math: exact 8, 4 ulp 75, 15 digits 180; engine: 13, 87, 235.
+  Excel's relative error against the math: median 1.1E-14, p90 4.4E-14, p99 1.1E-13, max 1.5E-13, unbiased
+  (623 high, 577 low); ours median 6.5E-15, max 1.1E-13. None above 1E-4 (no R3 case).
+- Excel's F.DIST.RT = its sheet-v BETA.DIST on 1,015 of 1,200 rows; FDIST = F.DIST.RT on all. Recorded in
+  statistics.md, "F right tail on bfrac at a tiny kernel argument".
+- Visibly-off cells (about 1,011 per column) are all owned by T-3954, which names the whole case. Eval delta: none
+  (probes-numeric is ungated).

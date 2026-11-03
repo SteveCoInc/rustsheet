@@ -1,0 +1,180 @@
+second fill: 0 of 4800 cells differ: none
+{
+ "fdistrt/hold": {
+  "cells": 364,
+  "excel numeric": 364,
+  "engine=excel exact": 2,
+  "engine~excel <=4ulp": 31,
+  "engine~excel 15d": 64,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 303,
+  "excel=math(cr) exact": 2,
+  "excel~math <=4ulp": 27,
+  "excel~math 15d": 50,
+  "engine=math(cr) exact": 2,
+  "engine~math <=4ulp": 26,
+  "engine~math 15d": 75
+ },
+ "fdistrt/all": {
+  "cells": 1200,
+  "excel numeric": 1200,
+  "engine=excel exact": 4,
+  "engine~excel <=4ulp": 82,
+  "engine~excel 15d": 189,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 1015,
+  "excel=math(cr) exact": 8,
+  "excel~math <=4ulp": 75,
+  "excel~math 15d": 180,
+  "engine=math(cr) exact": 13,
+  "engine~math <=4ulp": 87,
+  "engine~math 15d": 235
+ },
+ "fdist/hold": {
+  "cells": 364,
+  "excel numeric": 364,
+  "engine=excel exact": 2,
+  "engine~excel <=4ulp": 31,
+  "engine~excel 15d": 64,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 303,
+  "excel=math(cr) exact": 2,
+  "excel~math <=4ulp": 27,
+  "excel~math 15d": 50,
+  "engine=math(cr) exact": 2,
+  "engine~math <=4ulp": 26,
+  "engine~math 15d": 75
+ },
+ "fdist/all": {
+  "cells": 1200,
+  "excel numeric": 1200,
+  "engine=excel exact": 4,
+  "engine~excel <=4ulp": 82,
+  "engine~excel 15d": 189,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 1015,
+  "excel=math(cr) exact": 8,
+  "excel~math <=4ulp": 75,
+  "excel~math 15d": 180,
+  "engine=math(cr) exact": 13,
+  "engine~math <=4ulp": 87,
+  "engine~math 15d": 235
+ },
+ "beta-sheet-v/hold": {
+  "cells": 364,
+  "excel numeric": 364,
+  "engine=excel exact": 1,
+  "engine~excel <=4ulp": 31,
+  "engine~excel 15d": 61,
+  "excel=math(cr) exact": 2,
+  "excel~math <=4ulp": 26,
+  "excel~math 15d": 49,
+  "engine=math(cr) exact": 2,
+  "engine~math <=4ulp": 25,
+  "engine~math 15d": 73
+ },
+ "beta-sheet-v/all": {
+  "cells": 1200,
+  "excel numeric": 1200,
+  "engine=excel exact": 4,
+  "engine~excel <=4ulp": 83,
+  "engine~excel 15d": 186,
+  "excel=math(cr) exact": 10,
+  "excel~math <=4ulp": 73,
+  "excel~math 15d": 179,
+  "engine=math(cr) exact": 11,
+  "engine~math <=4ulp": 90,
+  "engine~math 15d": 233
+ },
+ "beta-literal-v/hold": {
+  "cells": 364,
+  "excel numeric": 364,
+  "engine=excel exact": 1,
+  "engine~excel <=4ulp": 30,
+  "engine~excel 15d": 64,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 28,
+  "excel=math(cr) exact": 2,
+  "excel~math <=4ulp": 22,
+  "excel~math 15d": 52,
+  "engine=math(cr) exact": 4,
+  "engine~math <=4ulp": 30,
+  "engine~math 15d": 69
+ },
+ "beta-literal-v/all": {
+  "cells": 1200,
+  "excel numeric": 1200,
+  "engine=excel exact": 3,
+  "engine~excel <=4ulp": 82,
+  "engine~excel 15d": 190,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 82,
+  "excel=math(cr) exact": 4,
+  "excel~math <=4ulp": 61,
+  "excel~math 15d": 175,
+  "engine=math(cr) exact": 10,
+  "engine~math <=4ulp": 99,
+  "engine~math 15d": 242
+ },
+ "fdistrt/tune": {
+  "cells": 836,
+  "excel numeric": 836,
+  "engine=excel exact": 2,
+  "engine~excel <=4ulp": 51,
+  "engine~excel 15d": 125,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 712,
+  "excel=math(cr) exact": 6,
+  "excel~math <=4ulp": 48,
+  "excel~math 15d": 130,
+  "engine=math(cr) exact": 11,
+  "engine~math <=4ulp": 61,
+  "engine~math 15d": 160
+ },
+ "fdist/tune": {
+  "cells": 836,
+  "excel numeric": 836,
+  "engine=excel exact": 2,
+  "engine~excel <=4ulp": 51,
+  "engine~excel 15d": 125,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 712,
+  "excel=math(cr) exact": 6,
+  "excel~math <=4ulp": 48,
+  "excel~math 15d": 130,
+  "engine=math(cr) exact": 11,
+  "engine~math <=4ulp": 61,
+  "engine~math 15d": 160
+ },
+ "beta-sheet-v/tune": {
+  "cells": 836,
+  "excel numeric": 836,
+  "engine=excel exact": 3,
+  "engine~excel <=4ulp": 52,
+  "engine~excel 15d": 125,
+  "excel=math(cr) exact": 8,
+  "excel~math <=4ulp": 47,
+  "excel~math 15d": 130,
+  "engine=math(cr) exact": 9,
+  "engine~math <=4ulp": 65,
+  "engine~math 15d": 160
+ },
+ "beta-literal-v/tune": {
+  "cells": 836,
+  "excel numeric": 836,
+  "engine=excel exact": 2,
+  "engine~excel <=4ulp": 52,
+  "engine~excel 15d": 126,
+  "excel = excel's C (sheet-v BETA.DIST) exact": 54,
+  "excel=math(cr) exact": 2,
+  "excel~math <=4ulp": 39,
+  "excel~math 15d": 123,
+  "engine=math(cr) exact": 6,
+  "engine~math <=4ulp": 69,
+  "engine~math 15d": 173
+ }
+}
+fdistrt: Excel rel. error vs math: median 1.1e-14, p90 4.4e-14, p99 1.1e-13, max 1.5e-13; > 1E-14: 621, > 1E-12: 0, > 1E-4: 0
+fdist: Excel rel. error vs math: median 1.1e-14, p90 4.4e-14, p99 1.1e-13, max 1.5e-13; > 1E-14: 621, > 1E-12: 0, > 1E-4: 0
+beta-sheet-v: Excel rel. error vs math: median 1.1e-14, p90 4.5e-14, p99 1.1e-13, max 1.5e-13; > 1E-14: 621, > 1E-12: 0, > 1E-4: 0
+beta-literal-v: Excel rel. error vs math: median 1.1e-14, p90 4.5e-14, p99 1.1e-13, max 1.6e-13; > 1E-14: 623, > 1E-12: 0, > 1E-4: 0
+worst D239 1.56e-13 t3953/tune/d1=133/d2=40/X=6.79205763163E12/a0=20/b0=66.5/x0=4.42799e-14/beta-literal-v
+worst B766 1.54e-13 t3953/hold/d1=100/d2=17/X=3.58641216674E34/a0=8.5/b0=50/x0=4.74011e-36/fdist
+worst A766 1.54e-13 t3953/hold/d1=100/d2=17/X=3.58641216674E34/a0=8.5/b0=50/x0=4.74011e-36/fdistrt
+worst C766 1.53e-13 t3953/hold/d1=100/d2=17/X=3.58641216674E34/a0=8.5/b0=50/x0=4.74011e-36/beta-sheet-v
+worst C132 1.53e-13 t3953/tune/d1=1111/d2=14/X=6.6902147051E40/a0=7/b0=555.5/x0=1.88354e-43/beta-sheet-v
+worst B132 1.53e-13 t3953/tune/d1=1111/d2=14/X=6.6902147051E40/a0=7/b0=555.5/x0=1.88354e-43/fdist
+worst A132 1.53e-13 t3953/tune/d1=1111/d2=14/X=6.6902147051E40/a0=7/b0=555.5/x0=1.88354e-43/fdistrt
+worst D911 1.48e-13 t3953/tune/d1=1496/d2=11/X=6.52133114656E54/a0=5.5/b0=748/x0=1.12752e-57/beta-literal-v
