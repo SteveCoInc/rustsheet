@@ -3,7 +3,7 @@ id: T-3511
 title: "gen-m5 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M5 byte text functions (MIDB, LEFTB, RIGHTB, FINDB, SEARCHB, REPLACEB)"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -48,3 +48,9 @@ gen-m5 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
 - Fixing the engine for the cells this batch finds (the owning tasks), beyond a one-line coercion fix in the
   function's own module that the PR also tests.
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
+
+## Outcome
+- Added 17 gen-m5 arg-pairs cases (`--policy arg-pairs --milestone M5 --functions MIDB,LEFTB,RIGHTB,FINDB,SEARCHB,REPLACEB`) with excel-graph oracle sidecars (0 fill failures).
+- Pairwise share is 1.0 with 0 unseen pairs for all six functions (was 0.19-0.23).
+- gen-m5 after the batch: 54785/54788 cells bit-exact; the 3 failing cells are not from this batch (baseline gained only 17 clean-case lines, no new known failures).
+- No engine fixes needed; no new Excel quirk found.
