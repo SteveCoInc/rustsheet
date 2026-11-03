@@ -55,12 +55,30 @@ cells listed under Context, where one part is one digit off today.
   by outcome). 2e^-|v| product (today) 1,465; the product with Excel's EXP or with the factors regrouped 1,465;
   libm `exp(|v|)/2`, `2p/exp(|v|)`, libm `cosh |v|` and IMSECH's own cosh as the divisor 1,493; Excel's `EXP(|v|)/2`
   as divisor 1,493; log-space `EXP(ln 2|p| - |v|)` 1,010; Smith's complex reciprocal of IMCOSH-like parts 685 to 824.
-  Hold-out / fresh sweep: the 1,493 cells tied the divisor forms, so a fresh sweep was frozen before any Excel value
-  was seen: probes/t3883-im-overflow-reciprocal-sweep rows 1-100, from a fixed-seed generator (|v| 356..708 at 3
-  decimals, the other part ±15 at 4 decimals, the four functions in turn), 60 rows where libm's divisor and Excel's
-  EXP divisor print different text and 40 where the divisor forms agree but today's product differs. Result: Excel's
-  EXP divisor 100/100, libm divisor forms 40/100, today's product 24/100. Gate A: these cells are past the double range
-  of the accuracy tables (results below 1E-154), no envelope point moves; `make check` runs the accuracy gate.
+  The divisor forms tied, so the tie was broken on probes/t3883-im-overflow-reciprocal-sweep rows 1-100 (fixed-seed
+  points chosen where the candidates print different text; part of the fit data, not a fresh sweep): Excel's EXP
+  divisor 100/100, libm divisor forms 40/100, today's product 24/100. Model frozen there.
+- Hold-out (R4.1), manual split fixed before scoring: hold-out = cells whose md5 of `<case>!<sheet>!<cell>` has first
+  byte < 77 (about 30%), the rest train; margin: hold-out text-exact rate within 2 points of train. Counts are text-exact
+  (within 15 digits; the oracle gives 15-digit text, so bit-exact and 4-ulp counts are not observable):
+
+  | set | cells | chosen (EXP(\|v\|)/2 divisor) | correctly rounded |
+  |---|---|---|---|
+  | train | 1,023 | 1,023 (100%) | 1,000 (97.8%) |
+  | hold-out | 470 | 470 (100%) | 461 (98.1%) |
+  | tie-break probe rows 1-100 | 100 | 100 | 48 |
+
+  The chosen form beats the correctly rounded value on hold-out (470 against 461), and its hold-out rate equals its
+  train rate. The correctly rounded value is IMSECH, IMSEC, IMCSC or (inside T-3881's band) -sgn(x)·IMSECH at 400-bit
+  mpmath, rounded once to a double and printed by the engine's own formatter.
+- Fresh sweep (R4.2), generated after the freeze: probes-numeric/t3883-im-overflow-reciprocal-fresh-sweep (240 cells,
+  docs/research/t3883/gen_sweep.py, seed 3883, |v| log-uniform in [356, 709.7], other part log-uniform in [1e-3, 1e3],
+  signs random, unfiltered; excel-graph 2026-11-03). Chosen form 240/240, correctly rounded 220/240.
+- Gate A envelope (R2) on the fresh sweep: 240 of 240 inside (every cell prints Excel's 15-digit text); points
+  outside: none.
+- `reciprocal_flushes` keeps its own cut (libm `2e^-|v|` below the smallest normal double, about 709.09), now
+  worded as a cut of its own rather than the scale `overflowed_parts` uses; the cut is unchanged and bracketed by
+  probes/im-trig-magnitude-grid in (709, 709.5].
 - Not done: probes/t3881-imcsch-flip-start-negative A3 (`IMCSCH(COMPLEX(-354.03,1))`) is IMSECH's finite-t form, not
   this one. The sweep's A101 (its IMSECH twin) is off the same way while A102/A103 at +354.03 pass, so Excel's digit
   depends on the sign of x; no candidate tried fits both signs. Filed as T-3914 with the forms tried.

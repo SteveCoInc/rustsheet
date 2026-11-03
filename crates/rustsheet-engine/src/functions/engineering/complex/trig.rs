@@ -42,8 +42,9 @@ fn inner_trig_overflows(x: f64) -> bool {
 }
 
 /// IMSEC, IMCSC (other part y), IMSECH and IMCSCH (other part x) are `0` past the sine limit once
-/// the overflowed-reciprocal scale `2e^-|v|` is below the smallest normal double (|v| above about
-/// 709.09), where Excel never takes the sine: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
+/// `2e^-|v|` is below the smallest normal double (|v| above about 709.09), where Excel never takes
+/// the sine. This is a cut of its own, inferred from that bracket, not the divisor
+/// [`overflowed_parts`] uses: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
 /// are 0, `IMSEC("1E+10+709i")` is `#NUM!` (probes/im-trig-magnitude-grid, T-3642).
 fn reciprocal_flushes(v: f64) -> bool {
     2.0 * (-v.abs()).exp() < f64::MIN_POSITIVE

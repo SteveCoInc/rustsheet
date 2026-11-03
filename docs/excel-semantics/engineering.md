@@ -1368,9 +1368,11 @@ divided by libm's exp(|v|)/2 or cosh |v|. Examples: `IMSECH(COMPLEX(400,20))` is
 product ...015E-304; probes/t3881-imcsch-overflow-band B45, B82). So the digit is Excel's EXP's, not the true value's.
 Evidence (excel-graph, 2026-11-03): the 1,493 older cells of every suite that take this form (IMSEC, IMCSC, IMSECH and
 IMCSCH, |v| 356 to 709) all fit, against 1,465 for the 2e^-|v| product and 1,493 for libm's exp(|v|)/2 or cosh |v|; on
-the fresh sweep probes/t3883-im-overflow-reciprocal-sweep (rows 1 to 100, |v| 356 to 708, the other part in ±15,
+the tie-break probe probes/t3883-im-overflow-reciprocal-sweep (rows 1 to 100, |v| 356 to 708, the other part in ±15,
 chosen where the candidates print different text) Excel's EXP fits 100 of 100, libm's exp(|v|)/2 and cosh |v| 40, the
-product 24. Ours: `overflowed_parts` in complex/trig.rs (T-3883). Status: VERIFIED; implemented.
+product 24; the correctly rounded value 48. On the fresh unfiltered sweep generated after that choice,
+probes-numeric/t3883-im-overflow-reciprocal-fresh-sweep (240 cells, |v| 356 to 709.7, other part 1e-3 to 1e3), Excel's
+EXP divisor fits 240 of 240 and the correctly rounded value 220. Ours: `overflowed_parts` in complex/trig.rs (T-3883). Status: VERIFIED; implemented.
 Also found: just below that overflow, in IMSECH's finite-t form, `IMSECH(COMPLEX(-354.03,1))` is
 1.90717870311855E-154+2.97025484453415E-154i while `IMSECH(COMPLEX(354.03,1))` is
 1.90717870311855E-154-2.97025484453414E-154i (A101, A102): the last imaginary digit depends on the sign of x. No
