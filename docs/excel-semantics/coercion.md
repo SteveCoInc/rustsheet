@@ -61,6 +61,17 @@ Rule: `<`, `>`, `>=` between texts follow Excel's collation: "x" >= "ü" is TRUE
 (code-point order says otherwise for both: "x" < "ü" and "1" < "?").
 Evidence: gen-m2/2cfe279fe77a000d Calc!A318, 96a0952412cefa6c Calc!A284. Oracle: excel-graph, 2026-10-04 (gen-m2 sidecars, T-0203).
 Status: VERIFIED (two cells here; the full order is below, T-1469 probes/text-collation-order)
+Hold-out agreement (T-3465, probes/t3465-collation-holdout, excel-graph 2026-11-03): on 600 random text pairs
+(seed 3465, texts of 1 to 6 characters from 1 to 3 of 23 categories, every third pair one edit apart; generator
+tools/src/rustsheet_tools/gen/collation_holdout.py, categories per row in t3465-collation-holdout.draws.tsv),
+`cmp_text_excel` orders **569 of 600 pairs (94.8%)** as Excel does (1738 of 1800 `<`, `>` and `=` cells), before
+any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B holds). The 31 misses, by cause:
+19 pairs put a Thai or Lao digit below the letters (refutes the UNVERIFIED "Thai and other digit blocks keep
+code-point order" below; T-3895), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
+1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
+T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
+rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
+T-3276 scripts mixed with Latin all agree.
 CHAR(160) and spaces (T-0244, VERIFIED, probes/text-order-nbsp-space, 333 cells, excel-graph
 2026-10-09): texts compare character by character, with the space first, CHAR(160) right after it,
 then digits and letters: `" 1" < CHAR(160)&"1" < "0" < "1" < "1"&CHAR(160)`, `" " < CHAR(160)`,
@@ -450,7 +461,8 @@ Lao vowels follow the same split; Hebrew and Arabic letters other than those pro
 choices where the probe is silent (each UNVERIFIED): the Thai prevowels `โ ใ ไ` go with `เ แ`; all
 Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670)
 and Thai tone marks U+0E48 to U+0E4B are accents weighing their code point; Thai and other digit
-blocks keep code-point order; every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
+blocks keep code-point order (REFUTED for Thai and Lao by probes/t3465-collation-holdout: Excel puts them below
+the letters, `"ณ" > "๘"`, `"NPOECV" > "໖66"`; engine gap T-3895); every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
 (U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
 (so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
 between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
