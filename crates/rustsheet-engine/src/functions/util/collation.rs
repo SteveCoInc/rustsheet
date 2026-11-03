@@ -41,9 +41,9 @@
 //! (probes/t3114-collation-beyond-latin1, probes/t3154-collation-accents; coercion.md "Letters
 //! beyond Latin-1 and combining marks"). Hebrew, Arabic, Devanagari, Thai, Lao, Hangul, the CJK
 //! ideographs and astral characters follow Excel's block order ([`script_order`]); Hebrew points,
-//! Arabic harakat and Thai tone marks are accents; Arabic-Indic and Devanagari digits are their
-//! digit; arrows, symbols and dingbats sort after the punctuation (probes/t3276-collation-other-scripts,
-//! T-3324). Every other character keeps code-point order after the letters, as before T-0220.
+//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and four
+//! other blocks' digits are their digit (T-3895); arrows, symbols and dingbats sort after the
+//! punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps code-point order after the letters, as before T-0220.
 //!
 //! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs as the same unit of a pair does
 //! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
@@ -346,11 +346,18 @@ const SUPERSCRIPT: u8 = 1;
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
 
-/// The variant pass weights of the Arabic-Indic and Devanagari digits: after the ASCII digit, in
-/// this order (probes/t3276-collation-other-scripts G25:G27). Their order against
-/// [`FULL_WIDTH`] is unprobed.
+/// The variant pass weights of the other scripts' digits: after the ASCII digit and its
+/// [`FULL_WIDTH`] form, in code-point order of their blocks: Arabic-Indic, Extended
+/// Arabic-Indic, Devanagari, Bengali, Thai, Lao, Tibetan, Myanmar (probes/t3276-collation-other-scripts
+/// G25:G27; probes/t3895-collation-script-digits A4:A6, A129:A131, A151:A178).
 const ARABIC_INDIC_DIGIT: u8 = 3;
-const DEVANAGARI_DIGIT: u8 = 4;
+const EXTENDED_ARABIC_INDIC_DIGIT: u8 = 4;
+const DEVANAGARI_DIGIT: u8 = 5;
+const BENGALI_DIGIT: u8 = 6;
+const THAI_DIGIT: u8 = 7;
+const LAO_DIGIT: u8 = 8;
+const TIBETAN_DIGIT: u8 = 9;
+const MYANMAR_DIGIT: u8 = 10;
 
 /// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
 /// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
@@ -389,6 +396,8 @@ const HYPHEN: u8 = APOSTROPHE + 2;
 const FULL_WIDTH_HYPHEN: u8 = APOSTROPHE + 3;
 const EN_DASH: u8 = APOSTROPHE + 4;
 const EM_DASH: u8 = APOSTROPHE + 5;
+/// The skipped weight of U+0E83 (a weightless character, T-3904): after the em dash, unprobed.
+const UNASSIGNED: u8 = APOSTROPHE + 6;
 
 fn letter(base: char) -> u32 {
     LETTER_BASE + (u32::from(base) - u32::from('a'))
@@ -566,7 +575,21 @@ fn element(c: Char) -> Element {
         // Other-script digits are their digit, after it in the variant pass (`"3" < "٣" < "३" <
         // "3a"`; probes/t3276-collation-other-scripts ranks A10, A81:A86, G25:G27).
         '\u{660}'..='\u{669}' => digit_variant(u32::from(c) - 0x660, ARABIC_INDIC_DIGIT),
+        '\u{6f0}'..='\u{6f9}' => digit_variant(u32::from(c) - 0x6f0, EXTENDED_ARABIC_INDIC_DIGIT),
         '\u{966}'..='\u{96f}' => digit_variant(u32::from(c) - 0x966, DEVANAGARI_DIGIT),
+        // The Bengali, Thai, Lao, Tibetan and Myanmar digits too, below every letter (`"2z" <
+        // "๓" < "3a"`, `"๓" < "a"`; probes/t3895-collation-script-digits A1:A150).
+        '\u{9e6}'..='\u{9ef}' => digit_variant(u32::from(c) - 0x9e6, BENGALI_DIGIT),
+        '\u{e50}'..='\u{e59}' => digit_variant(u32::from(c) - 0xe50, THAI_DIGIT),
+        '\u{ed0}'..='\u{ed9}' => digit_variant(u32::from(c) - 0xed0, LAO_DIGIT),
+        '\u{f20}'..='\u{f29}' => digit_variant(u32::from(c) - 0xf20, TIBETAN_DIGIT),
+        '\u{1040}'..='\u{1049}' => digit_variant(u32::from(c) - 0x1040, MYANMAR_DIGIT),
+        // U+0E83, unassigned in the Lao block, is one of T-3584's weightless characters
+        // (docs/research/t3584/weightless-bmp.txt). Skipping it matches Excel alone (above `""`,
+        // below `" "`) and trailing (`"a"&U+0E83 > "a"`; probes/t3895-collation-script-digits
+        // A179:A184, A187), but not leading: Excel finds U+0E83&"a" equal to "a" (A185). T-3904
+        // owns the weightless set and replaces this one-point stand-in.
+        '\u{e83}' => Element::Skipped(UNASSIGNED),
         // Hebrew points and cantillation, Arabic harakat and the Thai tone marks are accents on
         // their letter, weighed by code point (`"ב" < "ב"&UNICHAR(1463) < "ב"&UNICHAR(1468) <
         // "בא"`, `"ب" < "ب"&UNICHAR(1614) < "ب"&UNICHAR(1617) < "با"`, `"ก" < "ก"&UNICHAR(3656) <
