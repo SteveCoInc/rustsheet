@@ -13,7 +13,7 @@ impl Model {
     /// format=0 (default, concise): values joined with "," (columns) and ";" (rows)
     /// format=1 (strict): same but wrapped in {} and strings are quoted
     ///
-    /// The array is read whole; `format` lifts over a range or an array and spills to its shape,
+    /// The array is read whole; `format` lifts over a range (an array literal is unprobed) and spills to its shape,
     /// one text per element (docs/excel-semantics/text.md "ARRAYTOTEXT: a range format argument",
     /// gen-m5/af89ea54bae02c71 Calc!A31:B32, A529:B530; T-3884).
     pub(crate) fn fn_arraytotext(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
@@ -30,40 +30,45 @@ impl Model {
         // probes/arraytotext-error-vs-format).
         let first = self.evaluate_node_in_context(&args[0], cell);
         let from_range = matches!(first, CalcResult::Range { .. });
-        let array: Vec<Vec<ArrayNode>> = match first {
-            error @ CalcResult::Error { .. } => return error,
+        // `Err` is what every format element gives instead of text: the first argument's error,
+        // or `#VALUE!` for a blank, read before the element's own format, so a range format spills
+        // that error to its shape (gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512,
+        // A514:B515).
+        let source: Result<Vec<Vec<ArrayNode>>, CalcResult> = match first {
+            error @ CalcResult::Error { .. } => Err(error),
             CalcResult::Range { left, right } => match self.evaluate_range(left, right, cell) {
                 // Excel: a 1x1 range holding an empty cell is as much an empty cell as a bare reference;
                 // only a range, not an array (GROUPBY hands a one-blank group over as an array, which
                 // gives "": probes/groupby-blank-values).
-                Ok(array) if matches!(array.as_slice(), [row] if matches!(row.as_slice(), [ArrayNode::Empty])) =>
-                {
-                    return empty_cell_error(cell);
+                Ok(array) if matches!(array.as_slice(), [row] if matches!(row.as_slice(), [ArrayNode::Empty])) => {
+                    Err(empty_cell_error(cell))
                 }
-                Ok(array) => array,
-                Err(error) => return error,
+                Ok(array) => Ok(array),
+                Err(error) => Err(error),
             },
-            CalcResult::Array(a) => a,
+            CalcResult::Array(a) => Ok(a),
             // Excel: a scalar is a one-element array, so strict form braces it
             // (docs/excel-semantics/text.md#arraytotext-number-text, probes/arraytotext-number-text).
-            CalcResult::Number(n) => vec![vec![ArrayNode::Number(n)]],
-            CalcResult::String(s) => vec![vec![ArrayNode::String(s)]],
-            CalcResult::Boolean(b) => vec![vec![ArrayNode::Boolean(b)]],
+            CalcResult::Number(n) => Ok(vec![vec![ArrayNode::Number(n)]]),
+            CalcResult::String(s) => Ok(vec![vec![ArrayNode::String(s)]]),
+            CalcResult::Boolean(b) => Ok(vec![vec![ArrayNode::Boolean(b)]]),
             // Excel: a single empty cell (also a 1x1 range, INDEX/IF result or an omitted argument) is
             // #VALUE!, even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, gen-m5/af89ea54bae02c71
             // Calc!A499), while an empty cell inside a larger range is empty text
             // (docs/excel-semantics/text.md#arraytotext-empty-cell, probes/arraytotext-empty-ref).
-            CalcResult::EmptyCell | CalcResult::EmptyArg => return empty_cell_error(cell),
-            CalcResult::Lambda(_) => {
-                return CalcResult::new_error(
-                    Error::VALUE,
-                    cell,
-                    "Lambda not supported".to_string(),
-                );
-            }
+            CalcResult::EmptyCell | CalcResult::EmptyArg => Err(empty_cell_error(cell)),
+            CalcResult::Lambda(_) => Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Lambda not supported".to_string(),
+            )),
         };
         let mut texts: [Option<CalcResult>; 2] = [None, None];
         self.lift_call(Function::Arraytotext, args, cell, &mut |model, values| {
+            let array = match &source {
+                Ok(array) => array,
+                Err(error) => return error.clone(),
+            };
             let format = match values.get(1) {
                 Some(format) => match model.calc_result_to_number(format) {
                     Ok(f) => f.floor() as i32,
@@ -91,7 +96,7 @@ impl Model {
             }
             // An element reads only as 0 or 1, so at most two texts are built.
             texts[format as usize]
-                .get_or_insert_with(|| arraytotext_render(&array, format == 1, cell))
+                .get_or_insert_with(|| arraytotext_render(array, format == 1, cell))
                 .clone()
         })
     }
