@@ -76,4 +76,8 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
   incomplete-gamma-cap and sheet-qualified-ref-error-text-rename. Each kept cell agrees with its oracle cell:
   the same error kind, or within 1e-9 relative. That includes the 8 subnormal cells (subnormal-function-results A9,
   A10, A66, A68; subnormal-flush-edges A1, A4; subnormal-sumsq-sumproduct-edges A1, A8). `make eval-math-check`: current.
+- Review round 1. Design: the draw helper `_signed`, copied from aggregate.py, is now `signed_log_uniform` in
+  `defs/_common.py`, shared by both modules. SERIESSUM's running-sum overflow test reuses `aggregate.running_total`.
+  `verify` finds 0 differences on SUM, PRODUCT, SUMSQ, SERIESSUM and PERCENTOF. Fidelity (MINOR): SERIESSUM's flush of
+  an underflowing power or term is inferred from numbers.md, not probed. Follow-up T-3942.
 - Eval delta: none (no engine change).
