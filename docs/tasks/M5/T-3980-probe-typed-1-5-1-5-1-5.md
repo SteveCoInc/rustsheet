@@ -3,7 +3,7 @@ id: T-3980
 title: "Probe typed -%1.5, -%-1.5, 1.5$ and -200$, and VALUE of +%1.5 (T-3742 follow-up)"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
