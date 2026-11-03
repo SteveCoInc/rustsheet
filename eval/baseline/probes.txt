@@ -1971,6 +1971,7 @@ C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3677-sumx-running-overflow-snap.case.json	40
 C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
+C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
@@ -6210,7 +6211,6 @@ F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
-F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A10
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A11
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A12
