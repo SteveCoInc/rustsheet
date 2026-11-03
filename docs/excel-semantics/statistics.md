@@ -3374,6 +3374,31 @@ Status: VERIFIED (excel-graph) to 15 digits on the region above, bit-level PARTI
 UNVERIFIED
 Tasks: T-3571, T-3812, T-3813, T-3323
 
+## F right tail on bfrac at a tiny kernel argument: Excel's error is noise of about 1E-14 (T-3953)
+
+Status: VERIFIED (excel-graph, two fills)
+Tasks: T-3953, T-3954
+
+Rule: where F's right tail I_v(d2/2, d1/2) dispatches to bratio's bfrac at x0 = d2/(d1·X + d2) between 1E-280 and
+1E-6 (d1 >= 80, 2 < d2 <= 200), Excel's F.DIST.RT and FDIST are off the 50-digit math by an unbiased relative error:
+median 1.1E-14, p90 4.4E-14, max 1.5E-13, 623 cells high and 577 low of 1,200. BETA.DIST with v formed in the sheet is
+the same (max 1.5E-13), and with v typed as a literal max 1.6E-13. That is far above a correctly rounded result (8 of 1,200 bit-exact
+against the math) and far below decision 0188 R3's 1E-4, so it is Excel's arithmetic to reproduce, not math to
+follow. Ours is noise too (F.DIST.RT median 6.5E-15, max 1.1E-13, 574 high, 626 low), but different noise: 4 of
+1,200 bit-exact against Excel, 82 within 4 ulp, 189 within 15 digits.
+- FDIST equals F.DIST.RT on all 1,200 rows. F.DIST.RT equals BETA.DIST(d2/(TRUNC(d1)·X + d2), d2/2, TRUNC(d1)/2, TRUE)
+  on 1,015 of 1,200, so F's tail is almost always that BETA.DIST call with v formed as d2/(d1·X + d2); the other 185
+  differ in the last bits (an argument form or rounding T-3954 has to explain). BETA.DIST at v typed as a
+  15-digit literal matches the sheet-v call on only 82 rows: a 15-digit v is not the engine's exact x0 and moves the
+  tail by up to a0·5E-16 relative, visible at this noise level, so that column does not test the kernel at an exact v.
+- A second excel-graph fill matched the first on all 4,800 cells (decision 0112).
+- Evidence: probes-numeric/t3953-f-tail-bfrac-tiny (1,200 rows × 4 columns). A fit uses column A only, on the fit lab's
+  hold-out (369 A cells, marked `/hold/` in the row's hypotheses); B, C and D repeat A's value on most rows and are
+  diagnostics. Generator, scorer and output: docs/research/t3953/. The math sidecar covers the BETA.DIST columns only
+  (the accuracy tool defines no F.DIST.RT or FDIST); the scorer measures A and B against the row's column C math, the
+  same exact quantity.
+- Ours: the bfrac port (T-2508); T-3954 owns the visibly-off cells.
+
 ## Student t tails are one kernel call, K(n/2, 1/2, y, z), with bgrat at b = 1/2 in extended precision (T-2464)
 Rule: T.DIST.RT(t,n) = L = I/2 with I = K(n/2, 1/2, y, z): y = fl(n/fl(n + fl(t·t))) and the complement
 z = fl(fl(t·t)/fl(n + fl(t·t))), not fl(1 - y); at df 2 the complement is fl(1 - y). T.DIST.2T and TDIST(.,.,2) are I;

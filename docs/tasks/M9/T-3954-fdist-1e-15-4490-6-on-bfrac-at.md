@@ -42,6 +42,10 @@ Cells this task owns:
 - gen-m9/8f2ac25945af87da.case.json (1): Calc!A92
 
 Once T-3953 adds probes-numeric `t3953-f-tail-bfrac-tiny`, every visibly-off cell of that case is this task's too.
+Fit on that case's column A (F.DIST.RT) only, on the fit lab's per-cell hold-out (369 A cells, marked `/hold/` in the
+hypotheses), with the default margin of 5 percentage points, fixed by T-3953 before any candidate is scored. Columns B,
+C and D repeat A's value on most rows and are diagnostics; D's v is a 15-digit literal, not the exact x0
+(statistics.md "F right tail on bfrac at a tiny kernel argument").
 
 ## Visible-parity stage
 `campaign: visible` (decisions 0083, 0114). Done when gen-m9 8f2ac25945af87da A92 and the visibly-off cells of
