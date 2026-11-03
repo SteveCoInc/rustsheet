@@ -1,0 +1,169 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3907: edges of the typed `N A. F/D/Y` reading (lowercase letters, spacing, fraction length, minutes over 59, the date tail) and the formula readers (VALUE, DATEVALUE, TIMEVALUE, unary coercion) of the same text.",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3907"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 a. 7/1/2025"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A2": {
+     "entered": "10 p. 7/1/2025"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A3": {
+     "entered": "10:00 P. 7/1/2025"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+    "D3": "=IF(ISNUMBER(A3),TEXT(A3,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A4": {
+     "entered": "10 A. 70/1/2025"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+    "D4": "=IF(ISNUMBER(A4),TEXT(A4,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A5": {
+     "entered": "10 A. 07/1/2025"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+    "D5": "=IF(ISNUMBER(A5),TEXT(A5,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A6": {
+     "entered": "10 A. 7/13/2025"
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+    "D6": "=IF(ISNUMBER(A6),TEXT(A6,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A7": {
+     "entered": "10 A.  7/1/2025"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+    "D7": "=IF(ISNUMBER(A7),TEXT(A7,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A8": {
+     "entered": "10  A. 7/1/2025"
+    },
+    "B8": "=ISNUMBER(A8)",
+    "C8": "=IF(ISNUMBER(A8),A8,LEN(A8))",
+    "D8": "=IF(ISNUMBER(A8),TEXT(A8,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A9": {
+     "entered": "10 A. 7/1/2025 "
+    },
+    "B9": "=ISNUMBER(A9)",
+    "C9": "=IF(ISNUMBER(A9),A9,LEN(A9))",
+    "D9": "=IF(ISNUMBER(A9),TEXT(A9,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A10": {
+     "entered": "99 A. 7/1/2025"
+    },
+    "B10": "=ISNUMBER(A10)",
+    "C10": "=IF(ISNUMBER(A10),A10,LEN(A10))",
+    "D10": "=IF(ISNUMBER(A10),TEXT(A10,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A11": {
+     "entered": "10 A.. 7/1/2025"
+    },
+    "B11": "=ISNUMBER(A11)",
+    "C11": "=IF(ISNUMBER(A11),A11,LEN(A11))",
+    "D11": "=IF(ISNUMBER(A11),TEXT(A11,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A12": {
+     "entered": "10 A. 7"
+    },
+    "B12": "=ISNUMBER(A12)",
+    "C12": "=IF(ISNUMBER(A12),A12,LEN(A12))",
+    "D12": "=IF(ISNUMBER(A12),TEXT(A12,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A13": {
+     "entered": "10 A. 123456789/1/2025"
+    },
+    "B13": "=ISNUMBER(A13)",
+    "C13": "=IF(ISNUMBER(A13),A13,LEN(A13))",
+    "D13": "=IF(ISNUMBER(A13),TEXT(A13,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A14": {
+     "entered": "10 A. 1234567890/1/2025"
+    },
+    "B14": "=ISNUMBER(A14)",
+    "C14": "=IF(ISNUMBER(A14),A14,LEN(A14))",
+    "D14": "=IF(ISNUMBER(A14),TEXT(A14,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A15": {
+     "entered": "10 A. 7 1/1/2025"
+    },
+    "B15": "=ISNUMBER(A15)",
+    "C15": "=IF(ISNUMBER(A15),A15,LEN(A15))",
+    "D15": "=IF(ISNUMBER(A15),TEXT(A15,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A16": {
+     "entered": "10 A. 7-2025"
+    },
+    "B16": "=ISNUMBER(A16)",
+    "C16": "=IF(ISNUMBER(A16),A16,LEN(A16))",
+    "D16": "=IF(ISNUMBER(A16),TEXT(A16,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A17": {
+     "entered": "10 A. 7/Jul/2025"
+    },
+    "B17": "=ISNUMBER(A17)",
+    "C17": "=IF(ISNUMBER(A17),A17,LEN(A17))",
+    "D17": "=IF(ISNUMBER(A17),TEXT(A17,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A18": {
+     "entered": "10 A. 7/1/2025 10:00"
+    },
+    "B18": "=ISNUMBER(A18)",
+    "C18": "=IF(ISNUMBER(A18),A18,LEN(A18))",
+    "D18": "=IF(ISNUMBER(A18),TEXT(A18,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A19": {
+     "entered": "24 A. 7/1/2025"
+    },
+    "B19": "=ISNUMBER(A19)",
+    "C19": "=IF(ISNUMBER(A19),A19,LEN(A19))",
+    "D19": "=IF(ISNUMBER(A19),TEXT(A19,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A20": {
+     "entered": "10 PM. 7/1/2025"
+    },
+    "B20": "=ISNUMBER(A20)",
+    "C20": "=IF(ISNUMBER(A20),A20,LEN(A20))",
+    "D20": "=IF(ISNUMBER(A20),TEXT(A20,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A21": {
+     "entered": "10 A. 7/0/2025"
+    },
+    "B21": "=ISNUMBER(A21)",
+    "C21": "=IF(ISNUMBER(A21),A21,LEN(A21))",
+    "D21": "=IF(ISNUMBER(A21),TEXT(A21,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A22": {
+     "entered": "10 A. 7/1/1899"
+    },
+    "B22": "=ISNUMBER(A22)",
+    "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))",
+    "D22": "=IF(ISNUMBER(A22),TEXT(A22,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A23": {
+     "entered": "60 A. 7/1/2025"
+    },
+    "B23": "=ISNUMBER(A23)",
+    "C23": "=IF(ISNUMBER(A23),A23,LEN(A23))",
+    "D23": "=IF(ISNUMBER(A23),TEXT(A23,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A24": {
+     "entered": "1:2 A. 7/1/2025"
+    },
+    "B24": "=ISNUMBER(A24)",
+    "C24": "=IF(ISNUMBER(A24),A24,LEN(A24))",
+    "D24": "=IF(ISNUMBER(A24),TEXT(A24,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A25": "=VALUE(\"10 A. 7/1/2025\")",
+    "A26": "=DATEVALUE(\"10 A. 7/1/2025\")",
+    "A27": "=TIMEVALUE(\"10 A. 7/1/2025\")",
+    "A28": "=0+\"10 A. 7/1/2025\"",
+    "A29": "=VALUE(\"10 A. 5\")",
+    "A30": "=VALUE(\"10 A.\")"
+   }
+  }
+ ]
+}
