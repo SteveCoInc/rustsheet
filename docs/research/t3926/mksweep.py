@@ -1,6 +1,6 @@
 """T-3926: F.DIST density where Y = density*x is subnormal (for the fit task T-2647).
 
-Per df pair, 30 x values whose exact Y/2^-1074 is log-uniform in [1, 2^52]: 15 powers of two (`2^-k`, where Y/x is
+Per df pair, 30 x values (15 in the hold-out) whose exact Y/2^-1074 is log-uniform in [1, 2^52]: 15 powers of two (`2^-k`, where Y/x is
 exact in double) and 15 general literals of at most 10 significant digits. The tune case and the hold-out case use
 different seeds and share no (df pair, x).
 Usage (repo root): uv run --with mpmath python docs/research/t3926/mksweep.py [--write]"""
@@ -15,23 +15,33 @@ from pathlib import Path
 
 import mpmath
 
-mpmath.mp.dps = 60
+mpmath.mp.dps = 40
 DIR = Path("eval/suites/probes-numeric/cases")
 PAIRS = [(3, 5), (5, 3), (3, 1000), (4, 1000), (5, 130), (10, 1000), (3, 3), (6, 20)]
 TINY = mpmath.mpf(2) ** -1074
 SEEDS = {"": 3926, "-hold": 39260}
+PER_PAIR = {"": 30, "-hold": 15}
+
+
+_BETA: dict = {}
+
+
+def _beta(d1: int, d2: int) -> mpmath.mpf:
+    if (d1, d2) not in _BETA:
+        _BETA[(d1, d2)] = mpmath.beta(mpmath.mpf(d1) / 2, mpmath.mpf(d2) / 2)
+    return _BETA[(d1, d2)]
 
 
 def y_of(x: mpmath.mpf, d1: int, d2: int) -> mpmath.mpf:
     """Y = density * x, exact."""
     a, b = mpmath.mpf(d1) / 2, mpmath.mpf(d2) / 2
-    return (mpmath.mpf(d1) / d2) ** a * x**a * (1 + mpmath.mpf(d1) * x / d2) ** (-(a + b)) / mpmath.beta(a, b)
+    return (mpmath.mpf(d1) / d2) ** a * x**a * (1 + mpmath.mpf(d1) * x / d2) ** (-(a + b)) / _beta(d1, d2)
 
 
 def solve_x(target: mpmath.mpf, d1: int, d2: int) -> mpmath.mpf:
     """x with Y(x) = target (Y rises with x near 0)."""
     lo, hi = mpmath.mpf(-1000), mpmath.mpf(0)  # ln x; Y(e^hi) >> any subnormal
-    for _ in range(300):
+    for _ in range(120):
         mid = (lo + hi) / 2
         if y_of(mpmath.exp(mid), d1, d2) < target:
             lo = mid
@@ -46,8 +56,15 @@ def build(suffix: str, used: set) -> tuple[dict, dict, dict]:
     row = 1
     for d1, d2 in PAIRS:
         pts: list[tuple[str, mpmath.mpf]] = []
-        for kind in ("pow2", "gen"):
-            while sum(1 for k, _, _ in pts if k == kind) < 15:
+        # Y spans 2^52, i.e. x spans 2^(52/a): a pair with large d1 has few distinct powers of two, shared by both
+        # cases, so each case takes at most half of them; general literals fill the 30.
+        n_pow2 = min(PER_PAIR[suffix] // 2, int(52 / (d1 / 2) / 2))
+        for kind, want in (("pow2", n_pow2), ("gen", PER_PAIR[suffix] - n_pow2)):
+            tries = 0
+            while sum(1 for k, _, _ in pts if k == kind) < want:
+                tries += 1
+                if tries > 4000:
+                    raise SystemExit(f"cannot fill {kind} for {(d1, d2)}")
                 q = mpmath.mpf(2) ** (rng.uniform(0, 52))
                 x = solve_x(q * TINY, d1, d2)
                 if kind == "pow2":
@@ -76,8 +93,8 @@ def main() -> None:
         case = {
             "format": "rustsheet-case/v1",
             "description": (
-                f"T-3926 ({label}): F.DIST(x,d1,d2,FALSE) where Y = density*x is subnormal, df pairs {PAIRS}, per pair 30 x "
-                "with exact Y/2^-1074 log-uniform in [1, 2^52], half powers of two (2^-k), half general literals of at "
+                f"T-3926 ({label}): F.DIST(x,d1,d2,FALSE) where Y = density*x is subnormal, df pairs {PAIRS}, per pair {PER_PAIR[suffix]} x "
+                "with exact Y/2^-1074 log-uniform in [1, 2^52], powers of two (2^-k, as many as the pair's Y range holds, at most half) and general literals of at "
                 f"most 10 significant digits; seed {SEEDS[suffix]} (docs/research/t3926/mksweep.py), {len(cells)} cells."
                 + (" Never used for fitting." if suffix else "")
             ),
