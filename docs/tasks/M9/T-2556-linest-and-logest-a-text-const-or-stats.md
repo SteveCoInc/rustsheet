@@ -3,7 +3,7 @@ id: T-2556
 title: "LINEST and LOGEST: a text const or stats is #VALUE!"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
