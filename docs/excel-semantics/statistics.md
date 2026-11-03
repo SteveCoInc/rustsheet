@@ -2742,17 +2742,17 @@ same amount (up to 4.4E-12 from Excel, T-3447).
 
   | case, family (cells) | ours = Excel bit-exact | within 4 ulp | within 15 digits | Excel correctly rounded | Excel > 100 ulp off math |
   |---|---|---|---|---|---|
-  | train BINOM.DIST (220) | 43 | 108 | 139 | 9 | 114 |
-  | train NEGBINOM.DIST (220) | 4 | 44 | 119 | 4 | 89 |
-  | hold-out BINOM.DIST (100) | 21 | 53 | 67 | 4 | 46 |
-  | hold-out NEGBINOM.DIST (100) | 3 | 19 | 59 | 2 | 32 |
+  | train BINOM.DIST (220) | 43 | 108 | 139 | 9 | 109 |
+  | train NEGBINOM.DIST (220) | 4 | 44 | 119 | 3 | 88 |
+  | hold-out BINOM.DIST (100) | 21 | 53 | 67 | 3 | 43 |
+  | hold-out NEGBINOM.DIST (100) | 3 | 19 | 59 | 2 | 31 |
 
-  "Correctly rounded" is within half an ulp of the math. Ours is correctly rounded on 21 and 131 train cells (BINOM and
-  NEGBINOM), 12 and 61 hold-out cells; where Excel is more than 100 ulp off, ours is within 4 ulp of the math on 7 and
-  58 train cells, 0 and 16 hold-out cells. The math sidecars skip about half the cells ("not converged or too slow",
+  "Correctly rounded" is within half an ulp of the math. Ours is correctly rounded on 20 and 132 train cells (BINOM and
+  NEGBINOM), 12 and 61 hold-out cells; where Excel is more than 100 ulp off, ours is within 4 ulp of the math on 6 and
+  57 train cells, 0 and 20 hold-out cells. The math sidecars skip about half the cells ("not converged or too slow",
   every large-n one), so the counts use `docs/research/t3960/score.py`: the sidecar value where it exists, else an
-  outward pmf sum at 45 digits (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p), which agrees with the sidecar and with
-  T-3961's mpmath values for A132 and A171). The error is not confined to the 11 owned cells. Its model is T-3961's.
+  outward pmf sum at 45 digits at the double nearest p (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p)), which
+  agrees with the sidecar to 1E-12 relative on the overlap it checks. The error is not confined to the 11 owned cells. Its model is T-3961's.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
 scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and

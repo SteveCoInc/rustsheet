@@ -41,7 +41,7 @@ def binom_cdf(k: int, n: int, p):
 def reference_value(formula: str) -> Fraction | None:
     """50-digit-class value for a cdf cell the math sidecar skipped ("not converged or too slow"), by mpmath.
 
-    the cdf as an outward pmf sum from k (mpmath's betainc series is not convergent at these sizes). The p literal is exact.
+    the cdf as an outward pmf sum from k, since mpmath's betainc series does not converge at these sizes. p is the double nearest the literal, as Excel reads it and as the math sidecars use it.
     """
     import mpmath as mp  # noqa: PLC0415
 
@@ -49,7 +49,7 @@ def reference_value(formula: str) -> Fraction | None:
     g = re.match(r"=(\w+\.DIST)\((\d+),(\d+),([^,]+),TRUE\)", formula)
     if not g:
         return None
-    fn, k, n, p = g[1], int(g[2]), int(g[3]), mp.mpf(g[4].replace("E", "e"))
+    fn, k, n, p = g[1], int(g[2]), int(g[3]), mp.mpf(float(g[4]))
     if fn == "BINOM.DIST":
         v = binom_cdf(k, n, p)
     else:
@@ -66,12 +66,16 @@ def main(math_path: str, show_path: str) -> None:
             cur = cells.setdefault(g[1], {})
         elif cur is not None and (g := re.match(r"\s+(formula|expected|actual)\s*: (.*)", line)):
             cur[g[1]] = g[2].strip()
+    check_refs = set(list(m)[:8])
     rows = defaultdict(lambda: defaultdict(int))
     for ref, c in cells.items():
         fam = "BINOM" if c["formula"].startswith("=BINOM.") else "NEGBINOM"
         try:
             x, o = float(c["expected"]), float(c["actual"])
             t = Fraction(m[ref]["v"]) if ref in m else reference_value(c["formula"])
+            if ref in m and ref in check_refs:  # overlap check: our reference must agree with the sidecar
+                alt = reference_value(c["formula"])
+                assert abs(float(alt - t)) <= 1e-12 * abs(float(t)) or t == 0, ref
         except (ValueError, KeyError):
             rows[fam]["nonnumeric"] += 1
             continue
