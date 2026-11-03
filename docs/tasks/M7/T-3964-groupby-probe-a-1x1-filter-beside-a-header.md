@@ -3,7 +3,7 @@ id: T-3964
 title: "GROUPBY: probe a 1x1 filter beside a header row, one record and two value columns, and non-#N/A error relationship elements"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
