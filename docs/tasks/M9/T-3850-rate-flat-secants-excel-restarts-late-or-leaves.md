@@ -4,7 +4,7 @@ title: "RATE flat secants Excel restarts late or leaves in the noise floor (afte
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P3
+priority: P1
 size: M
 tier: opus
 depends_on: [T-3698]
@@ -34,6 +34,10 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   (T-3906, 2026-11-03), and on 180 of them Excel matches neither the hold nor the restart. They are mostly noise-floor
   runs of large annuities, so they are this task's evidence.
   - The case is named on a line with no cell address, so this task owns every cell of it.
+- R4 decision owed (T-3906): on that case T-3698's rule moves A152 and A194 out of the Gate A envelope (A194 becomes
+  `#NUM!`), which fails decision 0188 R4.2's guard, though it brings five other points in.
+  - Narrow the rule so that neither point leaves, or revert it.
+  - Also compute the train-side bit-exact rate on firing cells only (R4.1), to compare with this probe's 48 of 240.
 
 ## Acceptance criteria
 - [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding

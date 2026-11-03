@@ -15,3 +15,5 @@
   `scripts/check_fitted.py --update`.
 - **Consequences:** none beyond the one counted tag. The fitted ratchet stays one-way for new fits, each with its own
   record. The PR loses no gated cell (eval delta in T-3698's Outcome).
+- **Amended 2026-11-03 (T-3906):** the |f1| cut is now its own constant `RATE_RESTART_F_MAX` (1e-4, unchanged), covered
+  by the same T-3698 tag; it no longer reuses `RATE_CAP_TOLERANCE`. The fitted count is unchanged.

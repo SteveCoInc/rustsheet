@@ -106,15 +106,15 @@ fn rate_secant(
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
     // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
     // |f1| from RATE_RESTART_F_MIN up to RATE_RESTART_F_MAX, restarts the run from the older iterate
-    // r0 (T-3698). Out of sample (probes/t3906-rate-restart-oos, 240 fresh calls where the rule and
-    // the hold differ) the rule is bit-exact on 48 and the hold on 12 (T-3906). The step bound and the |f1| cut were chosen on the train side of the fit lab's
+    // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
     // hash split only (holdout.py, margin 5 points stated before scoring; docs/research/t3698):
     // over K in 3..200 and the cut in 1E-5..1E-3, K = 16 or 17 is best on train (1,395 of 1,477
-    // bit-exact) and the smaller is taken. The cut (RATE_RESTART_F_MAX) is the cap's value, inside the bracket the
-    // evidence gives: probes/t3698-rate-flat-restart restarts at |f1| up to 4.3E-5 (A3:A8) and
-    // holds at 1.7E-4 (A1). Outside the evidenced range (the first two steps, |f1| below the
-    // smallest probed flat secant) the run holds as before. `r0 > -1` is a guard, not evidence:
-    // a restart from r0 <= -1 would be a guess that RATE refuses.
+    // bit-exact) and the smaller is taken. The evidence brackets the cut: probes/t3698-rate-flat-
+    // restart restarts at |f1| up to 4.3E-5 (A3:A8) and holds at 1.7E-4 (A1). Out of sample
+    // (probes/t3906-rate-restart-oos, 240 fresh calls where the rule and the hold differ) the rule
+    // is bit-exact on 48 and the hold on 12 (T-3906). Outside the evidenced range (the first two
+    // steps, |f1| below the smallest probed flat secant) the run holds as before. `r0 > -1` is a
+    // guard, not evidence: a restart from r0 <= -1 would be a guess that RATE refuses.
     /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
     const RATE_RESTART_STEPS: u32 = 16;
     /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).
