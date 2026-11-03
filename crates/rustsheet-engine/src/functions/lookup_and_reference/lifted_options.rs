@@ -224,17 +224,30 @@ impl Model {
     /// `elements` lifted: each element's value is `run` of the first element of its class, so
     /// `run` is called once per class whatever the array's size (GROUPBY's `field_relationship`
     /// and the options of [`Model::lift_options`]).
+    ///
+    /// Excel's GROUPBY filter serves one element: once an element's call has dropped rows with
+    /// its `filter_array` ([`Model::groupby_filter_spent`]), every later element, in row-major
+    /// order, is `#VALUE!`, whatever it holds, a blank included; an element refused before the
+    /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
+    /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
+    /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
+    /// filter serves one element").
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
+        let outer_spent = std::mem::replace(&mut self.groupby_filter_spent, false);
         let mut known: Vec<(K, ArrayNode)> = Vec::new();
         let mut lifted = Vec::with_capacity(elements.len());
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
+                if self.groupby_filter_spent {
+                    cells.push(ArrayNode::Error(Error::VALUE));
+                    continue;
+                }
                 let class = classify(self, element);
                 if let Some((_, value)) = known.iter().find(|(c, _)| *c == class) {
                     cells.push(value.clone());
@@ -246,6 +259,7 @@ impl Model {
             }
             lifted.push(cells);
         }
+        self.groupby_filter_spent = outer_spent;
         CalcResult::Array(lifted)
     }
 
