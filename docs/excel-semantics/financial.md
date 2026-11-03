@@ -4125,15 +4125,16 @@ whatever the later cells hold. `XNPV(1,A4:A5,B11:B12)` with A4 empty and A5 = 5 
 5, "x", 6 (C21).
 - It comes after the counts and the rate: `XNPV(1,A2:A3,B11)` and a 2-against-3 call are `#NUM!` (C2, C12), and
   `XNPV(-1,A2:A3,B11:B12)` is `#NUM!` (C13).
-- Dates whose first cell is a number come first when a date cell is a boolean, non-numeric text or past the last date
-  serial. Those calls stay `#NUM!`: gen-m9/3aa168259335be54 A236 (text dates), 76b07b57099ccc8d A263 (FALSE and
-  123456789.123) and b6a02893a8d6b151 A114 (1E+15).
+- Dates whose first cell is a number come first when a date cell is a boolean or non-numeric text. Those calls stay
+  `#NUM!`: gen-m9/3aa168259335be54 A236 (text dates), 76b07b57099ccc8d A263 (FALSE, with 123456789.123) and
+  b6a02893a8d6b151 A114 (the text 'abc', with 1E+15).
 - An empty date or one before the first date does not take precedence: dates 100, 0 and an empty cell give `#VALUE!`
   (C1, C7). Neither do dates whose first cell is no number: all empty (C5) or FALSE, 123456789.123 (C14).
 - `EXPONDIST(1E+307,EXP(XNPV(100,<FALSE, empty>,<FALSE, 123456789.123>)),"x")` is XNPV's `#VALUE!` passed on (C16;
   gen-m9/58e3253bbd3a7a82 A189). EXPONDIST does not read "x" first: `EXPONDIST(1,1/0,"x")` is `#DIV/0!` (C15).
 - Unprobed (they keep the older reading): numeric text in the first cell (C23 has it second), arrays, dates that are
-  no range, and negative dates (they only came with one of the blockers above).
+  no range, and dates past the last serial or negative (they only came with a boolean or text date, so they do not
+  block).
 
 Evidence: probes/t2603-xnpv-no-number-values C1-C24 (excel-graph, 2026-11-03), probes/xnpv-empty-values-cell C8.
 Status: VERIFIED (excel-graph)

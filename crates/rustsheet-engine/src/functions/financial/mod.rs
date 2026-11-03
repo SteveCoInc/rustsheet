@@ -1,5 +1,5 @@
 use crate::{
-    calc_result::CalcResult,
+    calc_result::{CalcResult, Range},
     constants::{LAST_COLUMN, LAST_ROW, MAXIMUM_DATE_SERIAL_NUMBER, MINIMUM_DATE_SERIAL_NUMBER},
     expressions::{
         parser::{ArrayNode, Node},
@@ -405,27 +405,33 @@ impl Model {
     /// (C3, also with later text or booleans, C18-C20), but `XNPV(1,A5:A6,..)` with A6 empty is
     /// `#NUM!` (C4).
     ///
-    /// The dates come first when their first cell is a number and a date cell is a boolean,
-    /// non-numeric text or past the last date serial: those calls stay `#NUM!`
-    /// (gen-m9/3aa168259335be54 A236, text; 76b07b57099ccc8d A263, FALSE and 123456789.123;
-    /// b6a02893a8d6b151 A114, 1E+15). An empty date or one before the first does not (100, 0
-    /// and an empty cell, C7), nor do dates whose first cell is no number (C5, C14). A negative
-    /// date only came with one of those, so it is unprobed and does not block. Numeric
-    /// text, arrays and dates that are no range are unprobed and keep the older reading.
-    fn xnpv_first_value_refused(&mut self, values: &CalcResult, dates: &CalcResult) -> bool {
+    /// The dates come first when their first cell is a number and a later date cell is a boolean
+    /// or non-numeric text: those calls stay `#NUM!` (gen-m9/3aa168259335be54 A236, text;
+    /// 76b07b57099ccc8d A263, FALSE; b6a02893a8d6b151 A114, 'abc'). An empty date or one before
+    /// the first does not block (100, 0 and an empty cell, C7), nor do dates whose first cell is
+    /// no number (C5, C14). A date past the last serial or a negative one only came with a
+    /// boolean or text, so both are unprobed and do not block. Numeric text, arrays and dates
+    /// that are no range are unprobed and keep the older reading.
+    fn xnpv_first_value_refused(
+        &mut self,
+        values: &CalcResult,
+        dates: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> bool {
         let CalcResult::Range { left, right } = values else {
             return false;
         };
         if left == right || left.sheet != right.sheet {
             return false;
         }
-        let refused = |model: &mut Self, value: CalcResult| match value {
-            CalcResult::String(text) => model.cast_number(&text).is_none(),
-            CalcResult::Boolean(_) | CalcResult::EmptyCell => true,
-            _ => false,
+        let refused = |model: &mut Self, position: CellReferenceIndex| {
+            let value = CalcResult::Range {
+                left: position,
+                right: position,
+            };
+            model.empty_cell(&value) || model.non_numeric_text_or_boolean_cell(&value)
         };
-        let first_value = self.evaluate_cell(*left);
-        if !refused(self, first_value) {
+        if !refused(self, *left) {
             return false;
         }
         let CalcResult::Range {
@@ -438,43 +444,41 @@ impl Model {
         if date_left.sheet != date_right.sheet {
             return false;
         }
-        let first_date = self.evaluate_cell(*date_left);
-        if refused(self, first_date) {
+        if refused(self, *date_left) {
             return true;
         }
         // Values and dates of different counts are the size check's `#NUM!` (C2, C12), so the
-        // dates are not scanned. The scan stops at the sheet's used area: a cell past it is empty
-        // and blocks nothing, so `B11:XFD1048576` costs no more than the cells the sheet holds.
+        // dates are not scanned.
         if self.flow_element_count(values) != self.flow_element_count(dates) {
             return false;
         }
         let Some((row2, column2)) = self.flow_range_end(date_left, date_right) else {
             return false;
         };
-        let Ok(worksheet) = self.workbook.worksheet(date_left.sheet) else {
-            return false;
+        let range = Range {
+            left: *date_left,
+            right: CellReferenceIndex {
+                sheet: date_left.sheet,
+                row: row2,
+                column: column2,
+            },
         };
-        let (used_row, used_column) = worksheet.used_area_end();
-        for row in date_left.row..=row2.min(used_row) {
-            for column in date_left.column..=column2.min(used_column) {
-                let date = self.evaluate_cell(CellReferenceIndex {
-                    sheet: date_left.sheet,
-                    row,
-                    column,
-                });
-                let blocks = match date {
-                    CalcResult::String(text) => self.cast_number(&text).is_none(),
-                    CalcResult::Boolean(_) => true,
-                    // Whole days, as `xnpv_dates` reads a date.
-                    CalcResult::Number(date) => date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64,
-                    _ => false,
-                };
-                if blocks {
-                    return false;
-                }
+        // Only the stored cells are read: an empty date blocks nothing, so two far-apart cells
+        // cost two reads, not the area between them (directive 5).
+        let mut blocked = false;
+        let walked = self.for_each_existing_cell(&range, cell, &mut |model, position| {
+            let value = CalcResult::Range {
+                left: position,
+                right: position,
+            };
+            if model.non_numeric_text_or_boolean_cell(&value) {
+                blocked = true;
+                // Stops the walk: the first blocking date settles it.
+                return Err(CalcResult::EmptyCell);
             }
-        }
-        true
+            Ok(())
+        });
+        !blocked && walked.is_ok()
     }
 
     /// Whether a one-cell range or scalar is empty.
@@ -656,7 +660,7 @@ impl Model {
         let values = self.evaluate_node_in_context(values, cell);
         let dates = self.evaluate_node_in_context(dates, cell);
         let size_error = self.xnpv_size_error(&values, &dates, cell);
-        let first_value_refused = self.xnpv_first_value_refused(&values, &dates);
+        let first_value_refused = self.xnpv_first_value_refused(&values, &dates, cell);
         // The dates are truncated and checked once, not per element: each element is charged
         // only the values' count.
         let flows = self

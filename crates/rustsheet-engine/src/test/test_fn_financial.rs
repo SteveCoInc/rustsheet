@@ -1156,3 +1156,16 @@ fn xnpv_first_value_refused_bounded() {
         ],
     );
 }
+
+/// T-2603 review: the dates scan behind a refused first value reads only the stored cells, so two
+/// far-apart dates cost two reads, not the 327-million-cell area between them.
+#[test]
+fn xnpv_first_value_refused_sparse_dates() {
+    check_cells(
+        &[("A300", "100"), ("XFD20299", "5"), ("XFD20298", "FALSE")],
+        &[
+            ("B1", "=XNPV(1,A1:XFD20000,A300:XFD20299)", "#NUM!"),
+            ("B2", "=XNPV(1,A1:XFD19998,A300:XFD20297)", "#VALUE!"),
+        ],
+    );
+}

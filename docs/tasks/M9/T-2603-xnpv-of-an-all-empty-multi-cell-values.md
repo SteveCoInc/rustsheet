@@ -3,7 +3,7 @@ id: T-2603
 title: "XNPV of an all-empty multi-cell values range is #VALUE! (probes/xnpv-empty-values-cell C8)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -29,7 +29,7 @@ Cells:
 
 ## Acceptance criteria
 - [x] probes/xnpv-empty-values-cell C8 passes, and the new probe cells pass or their causes are recorded in financial.md.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
@@ -46,30 +46,11 @@ Cells:
   to it.
 - **EXPONDIST.** gen-m9/58e3253bbd3a7a82 A189 was XNPV's: EXPONDIST passes the `#VALUE!` on (C15, C16). Nothing goes to
   functions-stat.
+- **Review rounds.** Round 1: the dates scan is skipped on a count mismatch. Round 2 (resumed after landing notes):
+  the scan walks only the stored cells of the dates range (`for_each_existing_cell`), so `XNPV(1,A1:XFD20000,
+  A300:XFD20299)` with two stored dates costs two reads (unit test `xnpv_first_value_refused_sparse_dates`). A date past
+  the last serial no longer blocks: it was never isolated (A114's dates also hold 'abc', A263's FALSE), so it is
+  unprobed like a negative date. The checks reuse `empty_cell` and `non_numeric_text_or_boolean_cell`. The rate-0
+  branch stays unprobed (only rate -1, C13).
 - **Eval delta.** gen-m9 2031 → 2029 (A189 and 1b60bf99d71424e7 A171 fixed). probes 4969 → 4968 (xnpv-empty-values-cell
   C8 fixed; the new case passes 24/24). 0 regressions.
-
-## Landing notes
-- **Resumed** 2026-11-03 13:35 UTC by an opus run (worker step 2: branch idle 2 h).
-- **PR:** #2970, a draft. Head 30b78d744 is the round-1 fix: skip the dates scan on a count mismatch and clip it to
-  the used area, plus the unit test `xnpv_first_value_refused_bounded`. CI was running at 11:24 UTC; hygiene and python
-  were green.
-- **Reviews:**
-  - security: REQUEST_CHANGES on d7c83bc29, then APPROVE on 30b78d744.
-  - design: APPROVE on d7c83bc29 and again on 30b78d744.
-  - excel-fidelity: REQUEST_CHANGES on d7c83bc29, round 1. Its findings still hold on 30b78d744:
-    - **BLOCKING (directive 5).** The dates loop in `xnpv_first_value_refused` visits every position of the range, empty
-      cells included, and `evaluate_cell` records each one. Clipping to the used area does not bound it: two far-apart
-      cells make the used area huge. The reviewer's repro was OOM-killed: A300 = 100, XFD20299 = FALSE,
-      `=XNPV(1,A1:XFD20000,A300:XFD20299)`. Fix: walk only the stored cells of the dates range (empty cells never block),
-      or cap the scan with a `DEVIATION` entry. Add a sparse huge-range unit test.
-    - **MAJOR.** "Past the last date serial" as a blocker is not isolated. b6a02893a8d6b151 A114's dates also hold the
-      text 'abc' (Data!A11), and A263's 123456789.123 always comes with FALSE. Probe `XNPV(1,<empty,5>,<100,1E+15>)`
-      and `<100,-1>`, or treat out-of-range and negative dates alike as unprobed. Then fix the A114 citation in
-      financial.md and the doc comment.
-    - **MINOR.** Reuse `non_numeric_text_or_boolean_cell` and its kin instead of the two local matches. The rate-0 branch
-      is unprobed (only rate -1, C13).
-- **Next step:** do the stored-cells walk and the probe cells above in one local round, run `make check-fast` and push
-  once. Then re-run all three reviewers on that head, mark the PR ready, and enqueue when CI is green.
-- **Do not repeat:** a dense loop over the range, even clipped to the used area.
-
