@@ -47,6 +47,8 @@ PIVOTBY fills the lifted shape with an early error, as Excel does, when it lifts
 - gen-m7/ceb2c91035864a71.case.json Calc!A6589:B6590, Calc!A6650:B6651, Calc!A7931:B7932, Calc!A7992:B7993, Calc!A8907:B8908, Calc!A8968:B8969, Calc!A10249:B10250, Calc!A10310:B10311, Calc!A11591:B11592, Calc!A11652:B11653
 - gen-m7/e8a89caaafba1c89.case.json Calc!A11347:B11348, Calc!A11408:B11409
 - gen-m7/febfd6901374d79c.case.json Calc!A3661:B3662, Calc!A3722:B3723, Calc!A4759:B4760, Calc!A4820:B4821, Calc!A5857:B5858, Calc!A5918:B5919, Calc!A7199:B7200, Calc!A7260:B7261, Calc!A8541:B8542, Calc!A8602:B8603, Calc!A9761:B9762, Calc!A9822:B9823, Calc!A11103:B11104, Calc!A11164:B11165
+- Since T-3890 a filter refusal fills an array `relative_to` (`Model::error_over` in `Model::pivotby_args`), so
+  gen-m7/410128dc65d03200.case.json Calc!A7931:B7932 already passes; build on that for the other early errors.
 
 ## Acceptance criteria
 - [ ] The owned cells match Excel; a unit test covers an early `#VALUE!` and an early error option lifted over a 2x2 `relative_to`.

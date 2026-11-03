@@ -3,7 +3,7 @@ id: T-3890
 title: "PIVOTBY: a scalar filter_array beside multi-column fields or a header row is #VALUE!"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -43,13 +43,28 @@ PIVOTBY returns `#VALUE!` where Excel does for a scalar `filter_array`, instead 
 - gen-m7/f84158fac01b5cb5.case.json Calc!A7931:AO7955
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel, with 0 spill-extent failures for their anchors; unit tests cover a scalar filter beside a two-column `row_fields`, a two-column `col_fields`, two `values` columns and a header row.
-- [ ] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel, with 0 spill-extent failures for their anchors; unit tests cover a scalar filter beside a two-column `row_fields`, a two-column `col_fields`, two `values` columns and a header row.
+- [x] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY's other batch rules (T-3888, T-3889); GROUPBY.
+
+## Outcome
+- Probe probes/t3890-pivotby-scalar-filter (56 questions, excel-graph, 2026-11-03): GROUPBY's T-3839 rule with `col_fields`
+  added. One filter value keeps or drops every row only beside one row field, one column field, one values column and no
+  header row, given or detected. Otherwise it is `#VALUE!`, TRUE and 2 included, and error values still come first.
+- `Model::pivotby_args` passes `one_keeps_all` to `Model::filter_rows`. A filter refusal fills the shape of an array
+  `relative_to`, as Excel does over `Data!A1:B2`, through `Model::error_over`, which was factored out of GROUPBY's
+  `Model::lifted_error` (no copy).
+- Unit test `a_scalar_filter_needs_one_column_each_and_no_header` covers a two-column `row_fields`, a two-column
+  `col_fields`, two values columns, a header row, a later error, and the filled relative_to shape. arrays.md's PIVOTBY
+  batch bullet records the rule, the probe and the `Ours:` note.
+- Eval delta: gen-m7 known failures 10607 -> 544 (10063 fixed: the 10060 owned cells plus T-3892's 410128dc65d03200
+  A7931:B7932, a filter that keeps no row over a 2x2 relative_to; 0 regressions); probes +1 case (59 cells, all pass).
+- Follow-ups filed with this PR: T-3910 (T-3889's probe citations), T-3911 (the eval harness's typed-entry order, from
+  T-3898's review).

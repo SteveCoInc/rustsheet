@@ -6,12 +6,14 @@ cosh x the `1/u` form (u = EXP(-x)), the same parts for IMCOSH, IMSECH and IMCSC
 take sinh y and cosh y as (u - 1/u)/2 and (u + 1/u)/2 with u = EXP(y) for every |y|, the EXP pair
 past |y| = 20 gone.
 
-Deterministic. Writes two cases to eval/suites/probes-numeric/cases/:
+Deterministic. Writes three cases to eval/suites/probes-numeric/cases/:
 - t3589-im-hyperbolic-small-x-sweep (seed 3589): 150 rows, |x| log-uniform in [1e-6, 0.01] with a random
   sign, 15 significant digits; y = 0 on even rows, |y| uniform in [0.1, 1.4] with a random sign on odd
   rows. A IMSINH, B IMCOSH, C IMSECH, D IMCSCH of x+yi.
 - t3589-imsin-imcos-large-imag-sweep (seed 35891): 150 rows, |y| uniform in [20, 709.7] with a random
   sign; x = 0 on rows divisible by 4, else uniform in (-3.1, 3.1). A IMSIN, B IMCOS of x+yi.
+- t3720-im-reciprocal-small-x-complex (seed 3720, T-3720): 404 rows of IMCOSH, IMCSCH, IMSECH, IMSINH of a
+  complex z with 0 < |x| <= 0.01 and the worksheet SIN(y), COS(y), SINH(x), COSH(x), EXP(-x) companions.
 """
 
 from __future__ import annotations
@@ -38,11 +40,11 @@ def complex_text(x: str, y: str) -> str:
     return f"{x}{y if y.startswith('-') else '+' + y}i"
 
 
-def write(name: str, cells: dict[str, str], description: str) -> None:
+def write(name: str, cells: dict[str, str], description: str, task: str = "T-3589") -> None:
     case = {
         "format": "rustsheet-case/v1",
         "description": description,
-        "tags": ["M9", "engineering", "probe", "T-3589"],
+        "tags": ["M9", "engineering", "probe", task],
         "expected": {},
         "sheets": [{"name": "S", "cells": cells}],
     }
@@ -85,6 +87,44 @@ def large_y() -> None:
     )
 
 
+def reciprocal_complex() -> None:
+    """T-3720: complex z with 0 < |x| <= 0.01 and the worksheet SIN/COS/SINH/COSH/EXP companions."""
+    rng = random.Random(3720)
+    cells: dict[str, str] = {}
+
+    def row_cells(row: int, x: str, y: str) -> None:
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMCOSH", "IMCSCH", "IMSECH", "IMSINH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+        for col, fn, arg in (("E", "SIN", y), ("F", "COS", y), ("G", "SINH", x), ("H", "COSH", x)):
+            cells[f"{col}{row}"] = f"={fn}({arg})"
+        cells[f"I{row}"] = f"=EXP(-({x}))"
+
+    for row in range(1, 401):
+        if row <= 200:
+            mag = math.exp(rng.uniform(math.log(1e-6), math.log(0.01)))
+        else:
+            mag = rng.uniform(0.003, 0.01)
+        row_cells(row, signed(rng, mag), signed(rng, rng.uniform(0.05, 1.5)))
+    pairs = ("-0.00908725305283191", "-0.897991007302082"), ("-0.00994266897763484", "-0.217145289213716")
+    row = 401
+    for x, y in pairs:
+        row_cells(row, x, y)
+        row_cells(row + 1, x, y[1:])
+        row += 2
+    write(
+        "t3720-im-reciprocal-small-x-complex",
+        cells,
+        "T-3720: IMCOSH (A), IMCSCH (B), IMSECH (C), IMSINH (D) of complex x+yi with 0 < |x| <= 0.01 and the "
+        "worksheet companions SIN(y) (E), COS(y) (F), SINH(x) (G), COSH(x) (H), EXP(-x) (I). Rows 1-200 |x| "
+        "log-uniform in [1E-6, 0.01], rows 201-400 |x| in [0.003, 0.01], |y| in [0.05, 1.5]; rows 401-404 the two "
+        "t3589 arguments (S!B15/D15, S!D29) and their conjugates. Generator: docs/research/t3589/gen_sweep.py "
+        "(seed 3720).",
+        "T-3720",
+    )
+
+
 if __name__ == "__main__":
     small_x()
     large_y()
+    reciprocal_complex()

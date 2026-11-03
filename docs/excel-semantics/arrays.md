@@ -2268,7 +2268,19 @@ with `col_fields` beside `row_fields`:
   and short values are `#VALUE!` alone (B36, B40, B43) but lose to any option's `NA()`, `#N/A` (B37-B39, B41-B42,
   B44-B46). Owner T-3889.
 - A scalar `filter_array` (0.5, -1, 1, 2, TRUE, `Data!G4`) beside a multi-column field or values, or a header row, is
-  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). Owner T-3890.
+  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). It is GROUPBY's T-3839 rule
+  with `col_fields` added (probes/t3890-pivotby-scalar-filter, 56 questions in P!B1:B56, excel-graph, 2026-11-03):
+  one value (TRUE, 2, 0.5, -1, `{TRUE}`, a reference to 3 or to TRUE) keeps every row only when `row_fields`,
+  `col_fields` and `values` are each one column wide and there is no header row (P!B1, B6, B16, B21, B26, B31, B36,
+  B49-B51). A second row field, column field or values column, or both of the first two, makes it `#VALUE!` (P!B2:B5 and
+  the same rows for each value). So does a header row, given (field_headers 1 or 3) or detected (omitted) (P!B43:B48).
+  With field_headers 0 over the header rows, the headers are records and the value keeps them (P!B41:B42). FALSE keeps
+  no record, `#VALUE!` (P!B11:B15). Text is `#VALUE!` in either shape (P!B54:B55). Error values come first: a later
+  `relative_to` `NA()` and an `NA()` filter are `#N/A` (P!B52:B53). Beside an array `relative_to` the refusal fills its
+  shape, as the next-but-one bullet's early errors do (547d6192794dbf57 A10188:B10189, A11469:B11470, 5883a41f98113db2
+  A4637:B4638, each `#VALUE!` over a 2x2 `Data!A1:B2`). Owner T-3890. Ours: since T-3890 (`Model::pivotby_args` passes
+  `one_keeps_all` to `Model::filter_rows`, and fills an array `relative_to` with any filter refusal through
+  `Model::error_over`, which also clears 410128dc65d03200 A7931:B7932, a filter that keeps no row, of T-3892's list).
 - An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
   Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
   A10859:B10860; 169 calls). Owner T-3892.
