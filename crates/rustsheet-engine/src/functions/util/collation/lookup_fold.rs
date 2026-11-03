@@ -402,8 +402,10 @@ const WEIGHTLESS_RANGES: [(u16, u16); 381] = [
 /// first member): `Ͷ ͷ ϳ`, `Ε ε ϵ`, `Σ ς σ`, `ϑ ϴ` (not θ), Greek Extended's psili+varia with
 /// dasia+oxia letters, the ypogegrammeni pairs, `Ꜹ ꜹ Ꜻ ꜻ`, `Ꝥ ꝥ Ꝧ ꝧ`, `Ꝯ ꝯ ꝰ` and `გ` with U+10FA
 /// (probes/t3584-match-fold-weightless Calc!T1:U1232); and the prosgegrammeni U+1FBE with `Ι ι`
-/// (Calc!K9:L9; probes/t3298-case-mapping-sweep Calc!C8 position 32). Sorted by member.
-const CLASSES: [(u16, u16); 67] = [
+/// (Calc!K9:L9; probes/t3298-case-mapping-sweep Calc!C8 position 32); and Hebrew `צ` with its final
+/// form `ץ` (probes/t3559-collation-unprobed-blocks Calc!C98 = 97; the other final letters are
+/// unprobed). Sorted by member.
+const CLASSES: [(u16, u16); 68] = [
     (0x0377, 0x0376),
     (0x03B5, 0x0395),
     (0x03C2, 0x03A3),
@@ -411,6 +413,7 @@ const CLASSES: [(u16, u16); 67] = [
     (0x03F3, 0x0376),
     (0x03F4, 0x03D1),
     (0x03F5, 0x0395),
+    (0x05E6, 0x05E5),
     (0x10FA, 0x10D2),
     (0x1F05, 0x1F02),
     (0x1F0A, 0x1F02),
