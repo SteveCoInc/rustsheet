@@ -437,15 +437,26 @@ fn typed_currency_and_percent_formats() {
 
 #[test]
 fn script_digits_are_mapped_only_by_the_coercion_helper() {
-    use crate::formatter::format::script_digit_to_ascii;
-    let map = |s: &str| s.chars().map(script_digit_to_ascii).collect::<String>();
+    use crate::formatter::format::ascii_script_digits;
+    let map = |s: &str| ascii_script_digits(s).into_owned();
     assert_eq!(map("٣٫"), "3٫");
     assert_eq!(map("१२३"), "123");
     assert_eq!(map("๓.๕"), "3.5");
     assert_eq!(map("1٣"), "13");
+    // The five blocks T-3446 added: Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar
+    // (probes/t3446-script-digits-forms rows 23:33, 45:55, 67:99).
+    assert_eq!(map("۱۲۳"), "123");
+    assert_eq!(map("১২৩"), "123");
+    assert_eq!(map("໑໒໓"), "123");
+    assert_eq!(map("༡༢༣"), "123");
+    assert_eq!(map("၁၂၃"), "123");
+    assert_eq!(
+        map("\u{0669}\u{06F9}\u{096F}\u{09EF}\u{0E59}\u{0ED9}\u{0F29}\u{1049}"),
+        "99999999"
+    );
     // Full-width digits stay text (probes/t3276-collation-other-scripts Calc!H6).
     assert_eq!(map("３"), "３");
-    // The typed-input parser does not map them (unprobed, T-3325).
+    // The typed-input parser does not map them yet (TODO(T-3891)).
     assert!(parse("٣", &[]).is_err());
 }
 

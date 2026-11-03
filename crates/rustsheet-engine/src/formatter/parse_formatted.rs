@@ -474,19 +474,36 @@ fn parse_plain_number(
     Ok((f, None))
 }
 
-/// Excel reads Arabic-Indic (U+0660..), Devanagari (U+0966..) and Thai (U+0E50..) digits as their
-/// values, alone or mixed with ASCII digits; full-width digits stay text. Applied by number-text
-/// coercion only (`cast::number_text_in`), not to text typed into a cell, which is unprobed. Evidence:
-/// docs/excel-semantics/coercion.md "Other scripts ... (T-3276)", probes/t3276-collation-other-scripts
-/// Calc!H1:H8 and Calc!E.
+/// Excel reads the digits of eight scripts as their values, alone or mixed with ASCII digits and
+/// with each other: Arabic-Indic (U+0660..), Extended Arabic-Indic (U+06F0..), Devanagari
+/// (U+0966..), Bengali (U+09E6..), Thai (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..) and Myanmar
+/// (U+1040..); full-width digits stay text. Applied by number-text coercion only
+/// (`cast::number_text_in`, the mixed fraction readers), not to text typed into a cell
+/// (TODO(T-3891)). Evidence: docs/excel-semantics/coercion.md "Script digits in number text
+/// (T-3446)", probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms.
 pub(crate) fn script_digit_to_ascii(c: char) -> char {
     let zero = match c {
         '\u{0660}'..='\u{0669}' => 0x0660,
+        '\u{06F0}'..='\u{06F9}' => 0x06F0,
         '\u{0966}'..='\u{096F}' => 0x0966,
+        '\u{09E6}'..='\u{09EF}' => 0x09E6,
         '\u{0E50}'..='\u{0E59}' => 0x0E50,
+        '\u{0ED0}'..='\u{0ED9}' => 0x0ED0,
+        '\u{0F20}'..='\u{0F29}' => 0x0F20,
+        '\u{1040}'..='\u{1049}' => 0x1040,
         _ => return c,
     };
     char::from_digit(c as u32 - zero, 10).unwrap_or(c)
+}
+
+/// `text` with every script digit ([`script_digit_to_ascii`]) replaced by its ASCII digit;
+/// borrowed unchanged when it is ASCII.
+pub(crate) fn ascii_script_digits(text: &str) -> std::borrow::Cow<'_, str> {
+    if text.is_ascii() {
+        std::borrow::Cow::Borrowed(text)
+    } else {
+        std::borrow::Cow::Owned(text.chars().map(script_digit_to_ascii).collect())
+    }
 }
 
 struct NumberOptions {
