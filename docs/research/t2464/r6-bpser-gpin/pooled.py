@@ -29,7 +29,7 @@ def main() -> None:
                 tab[key]["dz"] += dz
                 tab[key]["miss"] += miss
     print(f"{'form':8} {'a0 band':9} {'split':5} {'double-z cells':>15} {'misses':>7}")
-    for key in sorted(tab, key=lambda k: (list(lforms.forms.__code__.co_consts).count(k[0]), k)):
+    for key in sorted(tab):
         t = tab[key]
         print(f"{key[0]:8} {key[1]:9} {key[2]:5} {t['dz']:>15} {t['miss']:>7}")
 
