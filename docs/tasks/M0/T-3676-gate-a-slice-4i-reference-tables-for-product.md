@@ -71,6 +71,7 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
 - Eval delta: none (no engine change).
 
 ## Landing notes
+- Resumed 2026-11-03 11:45 by an opus run (work-loop resume, branch idle 2 h).
 - PR #2951 (draft), head = the commit that adds these notes. CI had not run on a finished head, and no reviewer has
   run. The task is still `status: in-progress`.
 - In flight when the window closed: `cd tools && uv run rustsheet-accuracy math --suite probes` (a full run takes 20+
