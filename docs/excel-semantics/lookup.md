@@ -698,28 +698,65 @@ nothing and 158 hit another position. By block:
 - stay apart (each matches only itself): the supplementary-plane scripts (Deseret, Osage, Vithkuqi, Old Hungarian,
   Garay, Warang Citi, Medefaidrin, U+16EA0-U+16ED3, Adlam; Calc!C38:D38 from position 24 and C39:D48 are all 0),
   and as T-3133 found ı/I and ſ/S. Cherokee U+13AB-U+13EA and U+AB7B-U+ABBA do not equal each other (rows 18-19, C and D
-  0); the sweep never looks a character up against itself, so whether U+AB7B-U+ABBA are weightless (below) is open; the Greek symbol variants ϐ ϑ ϕ ϖ ϰ ϱ,
+  0); U+AB7B-U+ABBA are weightless (below; T-3584 Calc!B17:H18), so they find nothing among the weighted capitals; the Greek symbol variants ϐ ϑ ϕ ϖ ϰ ϱ,
   µ, U+0345, the Cyrillic Ext-C variants U+1C80-U+1C87 and ẛ do not equal their capital (C is 0; in D the capital finds
   its ordinary small letter's row), while ϵ and U+1FBE equal Ε and Ι, and the titlecase digraphs ǅ ǈ ǋ ǲ equal their
   capital and small forms (Calc!C5:D6).
-- equal one another: characters that look missing from Excel's comparison table (BMP letters Unicode added after about
-  5.0, e.g. U+0524-U+052F, U+10C7, U+10CD, U+10FD-U+10FF, U+13F5-U+13FD, U+1C88-U+1C8A, Georgian Mtavruli
-  U+1C90-U+1CBF, U+2D27, U+2D2D, much of Latin Extended-D from U+A792, U+AB53, U+AB70-U+AB7A, U+ABBB-U+ABBF) match the
-  first such character of the other column, whatever it is: Calc!C17 position 22 (U+AB70 finds U+10C7), C15 position 4
-  (U+0529 finds U+0524), C20 positions 1-5 (U+ABBB-U+ABBF find U+13F5), C37 and D37 (positions 1 and 5).
-  UNVERIFIED: that they are characters with no sort weight, which characters are weightless, and whether they also
-  equal empty text (T-3584).
-- observed, not yet explained (T-3584): in Greek Extended MATCH equals each small dasia+oxia letter with the capital
-  psili+varia letter: U+1F05 ἅ finds U+1F0A Ἂ (Calc!C25 position 29 reads 26), U+1F15 finds U+1F1A, U+1F25 U+1F2A,
-  U+1F35 U+1F3A, U+1F45 U+1F4A, U+1F65 U+1F6A, U+1F85 U+1F8A, U+1F95 U+1F9A, U+1FA5 U+1FAA (C26 positions 5, 11, 19,
-  27; C27 positions 5, 13, 21, 29). These are Unicode 1.1 letters, so the late-addition reading above does not
-  obviously cover them. Also the small U+A73B finds U+A738 (C35 position 12), U+A767 finds U+A764 (C36 position 2),
-  U+A699 and U+A69B find U+A660 (C34 positions 31-32), U+03F3 ϳ finds U+0376 Ͷ (C8 position 11) and U+1C88 finds
-  U+2CF2 (C33 position 32).
-The engine folds every pair through Rust's `to_lowercase`, so the cells of C and D listed in eval/baseline/probes.txt
-fail (T-3445).
-Status: VERIFIED (excel-graph) for the block table; the weightless-equality reading and the "observed, not yet
-explained" hits are UNVERIFIED (T-3584). Implemented for T-3133's list only; the T-3298 blocks are not (T-3445).
+- equal one another: the characters Excel's comparison table gives no weight (below). They match the first such
+  character of the other column, whatever it is: Calc!C17 position 22 (U+AB70 finds U+10C7), C15 position 4
+  (U+0529 finds U+0524), C20 positions 1-5 (U+ABBB-U+ABBF find U+13F5), C37 and D37 (positions 1 and 5), and the
+  hits T-3298 left unexplained that pair two weightless characters: U+A699 and U+A69B find U+A660 (C34 positions
+  31-32) and U+1C88 finds U+2CF2 (C33 position 32).
+- the rest of T-3298's unexplained hits are classes of Excel's table (below): Greek Extended's dasia+oxia letters
+  (U+1F05 ...) equal the psili+varia ones (C25:C27), U+A73B finds U+A738 (C35 position 12), U+A767 finds U+A764 (C36
+  position 2) and U+03F3 ϳ finds U+0376 Ͷ (C8 position 11).
+
+**Weightless characters** (T-3584, probes/t3584-match-fold-weightless, excel-graph 2026-11-03). 2568 BMP code points
+have no weight in Excel's comparison table; `docs/research/t3584/weightless-bmp.txt` lists them as 381 ranges
+(decoded from Calc!R1:R256 by `docs/research/t3584/decode.py`). Rule for exact MATCH, VLOOKUP and HLOOKUP: each
+weightless character is one character that equals every other weightless character and nothing else, so the
+one-to-one fold above still keeps the length:
+- Two different weightless characters are equal under MATCH, XMATCH(..,0), VLOOKUP(..,FALSE), HLOOKUP(..,FALSE),
+  COUNTIF and `=`, but not EXACT: U+0524 with U+10C7, with its own small U+0525, with the unassigned U+0378 and with
+  the soft hyphen U+00AD; U+AB70 with U+1C90; U+AB7B with U+AB70 and U+13F5 (Calc!B1:H3, B8:H8, B14:H14, B17:H18).
+  Calc!R1:R256 agree code point by code point: every character MATCH equals U+0524 `=` equals too (digit 9).
+- A weightless character never equals empty text, in any of those (Calc!B4:H4, B9:H9, B12:H12, B19:H19, B32:H32;
+  no code point of Calc!R1:R256 has bit 2 or 4 except the wildcards below), and `"a"&U+0524` never equals `"a"`
+  (Calc!B5:H5, and `"a"&U+00AD`, B13:H13).
+- It is not ignored by exact MATCH: `"a"&U+0524&"b"` against `"ab"` and `U+0524&U+10C7` against `U+0525` are
+  `#N/A` in MATCH, VLOOKUP and HLOOKUP (Calc!E6:H7), while `=`, COUNTIF and XMATCH(..,0) call both pairs equal
+  (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
+- Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
+  versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
+  Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
+  Unicode 3.2 (format characters, variation selectors and a few marks and symbols): U+00AD, U+034F, U+0640, U+0ECC, U+1806, U+180B-U+180D, U+200C-U+200F, U+202A-U+202E,
+  U+2060-U+2063, U+206A-U+206F, U+3190-U+3191, U+FE00-U+FE0F, U+FEFF and U+FFF9-U+FFFD. Not weightless: U+200B
+  (Calc!B16:H16 FALSE against U+0524), the private-use U+E000 (B30:H30), and every supplementary character
+  (U+10400 equals neither U+10401, U+10428, U+0524 nor empty text; B25:H28).
+- In Calc!R the wildcards show as matches, not weights: `*` (U+002A) and U+0001 MATCH both U+0524 and empty text, `?`
+  (U+003F) finds U+0524 by MATCH, and `~` (U+007E) finds empty text (digits 3, 1 and 2); `=` equals none of them to
+  either. UNICHAR is an error at U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF (the e digits).
+
+**Equivalence classes beyond one-to-one case pairs** (Calc!T1:U1232, every character of Greek, Greek Extended, Latin
+Extended-D, Cyrillic Extended-B, Coptic, Cherokee and its supplement, Georgian, Cyrillic Extended-C with Georgian
+Mtavruli and Georgian Supplement, each looked up against its whole block; the relation is symmetric). Besides the
+weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp.txt` lists them):
+- Greek: `Ͷ ͷ ϳ` (U+0376, U+0377, U+03F3; Calc!T7, T8, T132), `Ε ε ϵ` (T38, T70, T134), `Σ ς σ` (T52, T83, T84),
+  `ϑ ϴ` (U+03D1 with U+03F4, but not θ; T98, T133). ϐ ϕ ϖ ϰ ϱ and U+0345 equal only themselves; so do µ, ı, ſ and
+  ẛ against their letters (Calc!K1:M10, K22:M23, K28:M28).
+- Greek Extended: psili+varia and dasia+oxia are one letter, in both cases: `ἂ ἅ Ἂ Ἅ` (U+1F02, U+1F05, U+1F0A,
+  U+1F0D; Calc!T147, T150, T155, T158), and the same for ε η ι ο ω (U+1F12, U+1F22, U+1F32, U+1F42, U+1F62 rows),
+  for υ without its capital psili form (U+1F52, U+1F55, U+1F5D), and for the ypogegrammeni rows U+1F82, U+1F92,
+  U+1FA2 (with U+1F85 ...). Every other Greek Extended letter pairs only with its capital (U+1F88 with U+1F80,
+  U+1FBC with U+1FB3, and so on).
+- Latin Extended-D: `Ꜹ ꜹ Ꜻ ꜻ` (U+A738-U+A73B), `Ꝥ ꝥ Ꝧ ꝧ` (U+A764-U+A767), `Ꝯ ꝯ ꝰ` (U+A76E-U+A770).
+- Georgian: `გ` U+10D2 with U+10FA (Calc!T1075, T1115).
+- Cyrillic Extended-C U+1C80-U+1C88 and Georgian Mtavruli U+1C90-U+1CBF are weightless, so they equal each other
+  and not their ordinary letters (Calc!K13:O21, K40:O85).
+The engine folds every pair through Rust's `to_lowercase` and has no weightless class, so the cells of C and D listed
+in eval/baseline/probes.txt fail, and so do the T-3584 cells listed there (T-3445).
+Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above. Implemented for
+T-3133's list only; the T-3298 blocks, the weightless class and the T-3584 classes are not (T-3445).
 Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` (`ExactKey`, the indexed exact
 search) and `WildcardPattern` (the linear one); `decompose` (collation.rs) for XMATCH's `İ`
 
