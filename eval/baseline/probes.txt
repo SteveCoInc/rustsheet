@@ -1757,6 +1757,7 @@ C	probes/t3188-b1-huge-tagged.case.json	6
 C	probes/t3201-collation-long-mark-runs.case.json	1506
 C	probes/t3201-collation-wrapped-run-pairs.case.json	1406
 C	probes/t3211-collation-sort-cycles.case.json	377
+C	probes/t3212-r1c1-bare-offsets.case.json	127
 C	probes/t3213-typed-parse-errors.case.json	25
 C	probes/t3248-snap-running-total-below-last.case.json	384
 C	probes/t3262-anchor-typed-refused.case.json	12
@@ -4467,6 +4468,8 @@ F	probes/t3211-collation-sort-cycles.case.json	Calc!D36
 F	probes/t3211-collation-sort-cycles.case.json	Calc!G4
 F	probes/t3211-collation-sort-cycles.case.json	Calc!H4
 F	probes/t3211-collation-sort-cycles.case.json	Calc!I4
+F	probes/t3212-r1c1-bare-offsets.case.json	S!J39
+F	probes/t3212-r1c1-bare-offsets.case.json	S!J50
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I35
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I36
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!K35
