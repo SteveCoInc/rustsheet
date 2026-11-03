@@ -1,0 +1,734 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "seed": 2554094061765681502,
+  "input_sha256": "4f188370448025bfb7cfd1034b8456781a5ff5156946030bb76c4a335a3c105d"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "4785342061500.0",
+    "f": "=MULTINOMIAL(4,8,4,10.999)",
+    "s": "typical"
+   },
+   "A2": {
+    "t": "n",
+    "v": "400400.0",
+    "f": "=MULTINOMIAL(3,9,4,0)",
+    "s": "typical"
+   },
+   "A3": {
+    "t": "n",
+    "v": "4204200.0",
+    "f": "=MULTINOMIAL(0,4,3,0,4.25,3)",
+    "s": "typical"
+   },
+   "A4": {
+    "t": "n",
+    "v": "55.0",
+    "f": "=MULTINOMIAL(0,2,9)",
+    "s": "typical"
+   },
+   "A5": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(11)",
+    "s": "typical"
+   },
+   "A6": {
+    "t": "n",
+    "v": "78.0",
+    "f": "=MULTINOMIAL(11,2)",
+    "s": "typical"
+   },
+   "A7": {
+    "t": "n",
+    "v": "5145940800.0",
+    "f": "=MULTINOMIAL(0,6.5,3,4,3,2)",
+    "s": "typical"
+   },
+   "A8": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(29)",
+    "s": "typical"
+   },
+   "A9": {
+    "t": "n",
+    "v": "1550450827926000.0",
+    "f": "=MULTINOMIAL(8,1,7,4,8)",
+    "s": "typical"
+   },
+   "A10": {
+    "t": "n",
+    "v": "20951330400.0",
+    "f": "=MULTINOMIAL(8,2,3,2.5,5)",
+    "s": "typical"
+   },
+   "A11": {
+    "t": "n",
+    "v": "522695735364552750.0",
+    "f": "=MULTINOMIAL(8.9,5,8,2,8)",
+    "s": "typical"
+   },
+   "A12": {
+    "t": "n",
+    "v": "4686825.0",
+    "f": "=MULTINOMIAL(18.25,9)",
+    "s": "typical"
+   },
+   "A13": {
+    "t": "n",
+    "v": "1260.0",
+    "f": "=MULTINOMIAL(4.9,2,3)",
+    "s": "typical"
+   },
+   "A14": {
+    "t": "n",
+    "v": "55440.0",
+    "f": "=MULTINOMIAL(6,3,0,1,2)",
+    "s": "typical"
+   },
+   "A15": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(8)",
+    "s": "typical"
+   },
+   "A16": {
+    "t": "n",
+    "v": "7207200.0",
+    "f": "=MULTINOMIAL(4.25,4,1,7.5)",
+    "s": "typical"
+   },
+   "A17": {
+    "t": "n",
+    "v": "4620.0",
+    "f": "=MULTINOMIAL(6.25,3.25,2)",
+    "s": "typical"
+   },
+   "A18": {
+    "t": "n",
+    "v": "4620.0",
+    "f": "=MULTINOMIAL(2,6,3.5)",
+    "s": "typical"
+   },
+   "A19": {
+    "t": "n",
+    "v": "232792560.0",
+    "f": "=MULTINOMIAL(7.25,9,5)",
+    "s": "typical"
+   },
+   "A20": {
+    "t": "n",
+    "v": "3603600.0",
+    "f": "=MULTINOMIAL(1,2.9,0,4,3,3)",
+    "s": "typical"
+   },
+   "A21": {
+    "t": "n",
+    "v": "45.0",
+    "f": "=MULTINOMIAL(8.25,2,0)",
+    "s": "typical"
+   },
+   "A22": {
+    "t": "n",
+    "v": "27686621927250.0",
+    "f": "=MULTINOMIAL(8,3,8,8)",
+    "s": "typical"
+   },
+   "A23": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(26)",
+    "s": "typical"
+   },
+   "A24": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(27)",
+    "s": "typical"
+   },
+   "A25": {
+    "t": "n",
+    "v": "20.0",
+    "f": "=MULTINOMIAL(3,3)",
+    "s": "typical"
+   },
+   "A26": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(22)",
+    "s": "typical"
+   },
+   "A27": {
+    "t": "n",
+    "v": "69837768000.0",
+    "f": "=MULTINOMIAL(2,3.999,7,4,4)",
+    "s": "typical"
+   },
+   "A28": {
+    "t": "n",
+    "v": "7567560.0",
+    "f": "=MULTINOMIAL(2,5,3,0.25,5,0)",
+    "s": "typical"
+   },
+   "A29": {
+    "t": "n",
+    "v": "617512896.0",
+    "f": "=MULTINOMIAL(1,6,5,0,1,5.25)",
+    "s": "typical"
+   },
+   "A30": {
+    "t": "n",
+    "v": "10291881600.0",
+    "f": "=MULTINOMIAL(2,2,2,5,3,3)",
+    "s": "typical"
+   },
+   "A31": {
+    "t": "n",
+    "v": "13967553600.0",
+    "f": "=MULTINOMIAL(0,7,4.999,3,7)",
+    "s": "typical"
+   },
+   "A32": {
+    "t": "n",
+    "v": "110270160.0",
+    "f": "=MULTINOMIAL(1,1,6,8,2.999)",
+    "s": "typical"
+   },
+   "A33": {
+    "t": "n",
+    "v": "3960.0",
+    "f": "=MULTINOMIAL(7.5,4,0,1.5)",
+    "s": "typical"
+   },
+   "A34": {
+    "t": "n",
+    "v": "57657600.0",
+    "f": "=MULTINOMIAL(3.999,7,3,2,1)",
+    "s": "typical"
+   },
+   "A35": {
+    "t": "n",
+    "v": "24310.0",
+    "f": "=MULTINOMIAL(8.9,9.999)",
+    "s": "typical"
+   },
+   "A36": {
+    "t": "n",
+    "v": "5250960.0",
+    "f": "=MULTINOMIAL(7,3,0,8)",
+    "s": "typical"
+   },
+   "A37": {
+    "t": "n",
+    "v": "1540.0",
+    "f": "=MULTINOMIAL(3.999,19)",
+    "s": "typical"
+   },
+   "A38": {
+    "t": "n",
+    "v": "5040.0",
+    "f": "=MULTINOMIAL(3,0,0.999,3,1,2)",
+    "s": "typical"
+   },
+   "A39": {
+    "t": "n",
+    "v": "48886437600.0",
+    "f": "=MULTINOMIAL(1,6,5,4,0,4)",
+    "s": "typical"
+   },
+   "A40": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(8,0)",
+    "s": "typical"
+   },
+   "A41": {
+    "t": "n",
+    "v": "252.0",
+    "f": "=MULTINOMIAL(5,5)",
+    "s": "typical"
+   },
+   "A42": {
+    "t": "n",
+    "v": "10601373182400.0",
+    "f": "=MULTINOMIAL(7,4,3,8,2.25)",
+    "s": "typical"
+   },
+   "A43": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(7)",
+    "s": "typical"
+   },
+   "A44": {
+    "t": "n",
+    "v": "7207200.0",
+    "f": "=MULTINOMIAL(8,2,3.999,3.25,0)",
+    "s": "typical"
+   },
+   "A45": {
+    "t": "n",
+    "v": "10010.0",
+    "f": "=MULTINOMIAL(4,1,9)",
+    "s": "typical"
+   },
+   "A46": {
+    "t": "n",
+    "v": "1163962800.0",
+    "f": "=MULTINOMIAL(7,1,4.9,9)",
+    "s": "typical"
+   },
+   "A47": {
+    "t": "n",
+    "v": "18821278476000.0",
+    "f": "=MULTINOMIAL(6,3,4,4,1,4.5)",
+    "s": "typical"
+   },
+   "A48": {
+    "t": "n",
+    "v": "853572720.0",
+    "f": "=MULTINOMIAL(6,9,7.999)",
+    "s": "typical"
+   },
+   "A49": {
+    "t": "n",
+    "v": "1.1817555448541264457928299872388018821263556386368e+52",
+    "f": "=MULTINOMIAL(42,63,8,7)",
+    "s": "tail"
+   },
+   "A50": {
+    "t": "n",
+    "v": "45735778775688053039771980458577065128770091040.0",
+    "f": "=MULTINOMIAL(1,57,105)",
+    "s": "tail"
+   },
+   "A51": {
+    "t": "n",
+    "v": "1.4267753299961777113027322319872247894799893636014e+63",
+    "f": "=MULTINOMIAL(32,103,29)",
+    "s": "tail"
+   },
+   "A52": {
+    "t": "n",
+    "v": "1.3583518710734217243339050991377566798679030489263e+92",
+    "f": "=MULTINOMIAL(11,34,46,17,40)",
+    "s": "tail"
+   },
+   "A53": {
+    "t": "n",
+    "v": "3.003017468089377939964173079057766141825309516268e+51",
+    "f": "=MULTINOMIAL(72,1,67,5)",
+    "s": "tail"
+   },
+   "A54": {
+    "t": "n",
+    "v": "6.1174098548885436369280643696095978762347441195006e+65",
+    "f": "=MULTINOMIAL(30,0,11,14,58,7)",
+    "s": "tail"
+   },
+   "A55": {
+    "t": "n",
+    "v": "9.7409945814179484667361781763071700451318270768124e+65",
+    "f": "=MULTINOMIAL(64,89,16)",
+    "s": "tail"
+   },
+   "A56": {
+    "t": "n",
+    "v": "5.4338960336769974049344484929928627013736636737119e+67",
+    "f": "=MULTINOMIAL(78,52,0,9,12)",
+    "s": "tail"
+   },
+   "A57": {
+    "t": "n",
+    "v": "1.1748953698952513350751236827991180433119871633575e+77",
+    "f": "=MULTINOMIAL(30,9,42,19,21,1)",
+    "s": "tail"
+   },
+   "A58": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(120)",
+    "s": "tail"
+   },
+   "A59": {
+    "t": "n",
+    "v": "108339407128172162219868590884530854304096000.0",
+    "f": "=MULTINOMIAL(102,9,15,8)",
+    "s": "tail"
+   },
+   "A60": {
+    "t": "n",
+    "v": "5.04946899920135553900410500589198639835224640136e+62",
+    "f": "=MULTINOMIAL(7,43,13,81)",
+    "s": "tail"
+   },
+   "A61": {
+    "t": "n",
+    "v": "7.2531980452154361841814048310433284799474297968772e+55",
+    "f": "=MULTINOMIAL(25,62,42)",
+    "s": "tail"
+   },
+   "A62": {
+    "t": "n",
+    "v": "313319857634115245750972650239584242667011728000.0",
+    "f": "=MULTINOMIAL(12,33,95)",
+    "s": "tail"
+   },
+   "A63": {
+    "t": "n",
+    "v": "18299071375179660465584469908406284987562956880000.0",
+    "f": "=MULTINOMIAL(28,3,114,9)",
+    "s": "tail"
+   },
+   "A64": {
+    "t": "n",
+    "v": "31550740061935877639718207127211380162784071500.0",
+    "f": "=MULTINOMIAL(73,72,2)",
+    "s": "tail"
+   },
+   "A65": {
+    "t": "n",
+    "v": "1018997829132682765893646929312256644.0",
+    "f": "=MULTINOMIAL(67,57)",
+    "s": "tail"
+   },
+   "A66": {
+    "t": "n",
+    "v": "1.4459269049156096958578928903884996707669504210179e+99",
+    "f": "=MULTINOMIAL(13,1,15,30,49,51)",
+    "s": "tail"
+   },
+   "A67": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(86,0)",
+    "s": "edge"
+   },
+   "A68": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(4)",
+    "s": "edge"
+   },
+   "A69": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(1)",
+    "s": "edge"
+   },
+   "A70": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(6)",
+    "s": "edge"
+   },
+   "A71": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(85,0)",
+    "s": "edge"
+   },
+   "A72": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(0,0,0,0)",
+    "s": "edge"
+   },
+   "A73": {
+    "t": "n",
+    "v": "1260.0",
+    "f": "=MULTINOMIAL(2.5,3,4.999)",
+    "s": "edge"
+   },
+   "A74": {
+    "t": "e",
+    "why": "a negative argument (#NUM!)",
+    "f": "=MULTINOMIAL(-0.5,4)",
+    "s": "edge"
+   },
+   "A75": {
+    "t": "n",
+    "v": "86.0",
+    "f": "=MULTINOMIAL(85,1)",
+    "s": "edge"
+   },
+   "A76": {
+    "t": "e",
+    "why": "a negative argument (#NUM!)",
+    "f": "=MULTINOMIAL(-0.5,1)",
+    "s": "edge"
+   },
+   "A77": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(171)",
+    "s": "edge"
+   },
+   "A78": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(5)",
+    "s": "edge"
+   },
+   "A79": {
+    "t": "e",
+    "why": "a negative argument (#NUM!)",
+    "f": "=MULTINOMIAL(-0.5,9)",
+    "s": "edge"
+   },
+   "A80": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(86,85)",
+    "s": "edge"
+   },
+   "A81": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(0,0,0,0,0)",
+    "s": "edge"
+   },
+   "A82": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=MULTINOMIAL(6)",
+    "s": "edge"
+   },
+   "A83": {
+    "t": "e",
+    "why": "a negative argument (#NUM!)",
+    "f": "=MULTINOMIAL(-0.5,2)",
+    "s": "edge"
+   },
+   "A84": {
+    "t": "n",
+    "v": "1260.0",
+    "f": "=MULTINOMIAL(2.5,3,4.999)",
+    "s": "edge"
+   },
+   "A85": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+15,3)",
+    "s": "extreme"
+   },
+   "A86": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,1)",
+    "s": "extreme"
+   },
+   "A87": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,0)",
+    "s": "extreme"
+   },
+   "A88": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,1)",
+    "s": "extreme"
+   },
+   "A89": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,2)",
+    "s": "extreme"
+   },
+   "A90": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,2)",
+    "s": "extreme"
+   },
+   "A91": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,2)",
+    "s": "extreme"
+   },
+   "A92": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,0)",
+    "s": "extreme"
+   },
+   "A93": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,2)",
+    "s": "extreme"
+   },
+   "A94": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,3)",
+    "s": "extreme"
+   },
+   "A95": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,1)",
+    "s": "extreme"
+   },
+   "A96": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,2)",
+    "s": "extreme"
+   },
+   "A97": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,3)",
+    "s": "extreme"
+   },
+   "A98": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,3)",
+    "s": "extreme"
+   },
+   "A99": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,1)",
+    "s": "extreme"
+   },
+   "A100": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+15,0)",
+    "s": "extreme"
+   },
+   "A101": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,1)",
+    "s": "extreme"
+   },
+   "A102": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,3)",
+    "s": "extreme"
+   },
+   "A103": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+15,0)",
+    "s": "extreme"
+   },
+   "A104": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1000,0)",
+    "s": "extreme"
+   },
+   "A105": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,0)",
+    "s": "extreme"
+   },
+   "A106": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+300,0)",
+    "s": "extreme"
+   },
+   "A107": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(1E+15,3)",
+    "s": "extreme"
+   },
+   "A108": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(2147483648,0)",
+    "s": "extreme"
+   },
+   "A109": {
+    "t": "n",
+    "v": "3.0736571572060551839224346284863959662976982175375e+68",
+    "f": "=MULTINOMIAL(49,5,49,1,10,12)",
+    "s": "log-uniform"
+   },
+   "A110": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(49,4,59,72)",
+    "s": "log-uniform"
+   },
+   "A111": {
+    "t": "n",
+    "v": "93695990326214159520.0",
+    "f": "=MULTINOMIAL(22,62)",
+    "s": "log-uniform"
+   },
+   "A112": {
+    "t": "n",
+    "v": "104809030326000.0",
+    "f": "=MULTINOMIAL(8,2,3,14,2)",
+    "s": "log-uniform"
+   },
+   "A113": {
+    "t": "n",
+    "v": "2508067240848.0",
+    "f": "=MULTINOMIAL(35,1,12)",
+    "s": "log-uniform"
+   },
+   "A114": {
+    "t": "n",
+    "v": "6.0",
+    "f": "=MULTINOMIAL(2,2)",
+    "s": "log-uniform"
+   },
+   "A115": {
+    "t": "n",
+    "v": "314747160.0",
+    "f": "=MULTINOMIAL(3,2,1,36)",
+    "s": "log-uniform"
+   },
+   "A116": {
+    "t": "n",
+    "v": "3.3800278296508562158983028983161846358710001009728e+89",
+    "f": "=MULTINOMIAL(43,65,53,2,7)",
+    "s": "log-uniform"
+   },
+   "A117": {
+    "t": "n",
+    "v": "35960.0",
+    "f": "=MULTINOMIAL(28,4)",
+    "s": "log-uniform"
+   },
+   "A118": {
+    "t": "n",
+    "v": "1.4992609882049272691902895759682440958907539929573e+73",
+    "f": "=MULTINOMIAL(40,5,36,3,49,1)",
+    "s": "log-uniform"
+   },
+   "A119": {
+    "t": "e",
+    "why": "the arguments add up to more than 170 (#NUM!)",
+    "f": "=MULTINOMIAL(57,8,79,82,2,12)",
+    "s": "log-uniform"
+   },
+   "A120": {
+    "t": "n",
+    "v": "34119232711873280938957893903000.0",
+    "f": "=MULTINOMIAL(74,11,16)",
+    "s": "log-uniform"
+   }
+  }
+ }
+}

@@ -1,0 +1,178 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "1415eb1e5ce3e386858c23e125fdf38af744735dbd560ab174b00140f1e51fca"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A20": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=COMBIN(2147483646,0)"
+   },
+   "A21": {
+    "t": "n",
+    "v": "2147483646.0",
+    "f": "=COMBIN(2147483646,1)"
+   },
+   "A22": {
+    "t": "n",
+    "v": "2305843003844984835.0",
+    "f": "=COMBIN(2147483646,2)"
+   },
+   "A23": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483647,0)"
+   },
+   "A24": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483647,1)"
+   },
+   "A25": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483647,2)"
+   },
+   "A26": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483648,0)"
+   },
+   "A27": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483648,1)"
+   },
+   "A28": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483648,2)"
+   },
+   "A29": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483649,0)"
+   },
+   "A30": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483649,1)"
+   },
+   "A31": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483649,2)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(4294967296,0)"
+   },
+   "A33": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(4294967296,1)"
+   },
+   "A34": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(4294967296,2)"
+   },
+   "A35": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483647,2)"
+   },
+   "A36": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483638,20)"
+   },
+   "A37": {
+    "t": "e",
+    "why": "number at or above 2^31-1 (#NUM!)",
+    "f": "=COMBIN(2147483649,2147483649)"
+   },
+   "B20": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=COMBINA(2147483646,0)"
+   },
+   "B21": {
+    "t": "n",
+    "v": "2147483646.0",
+    "f": "=COMBINA(2147483646,1)"
+   },
+   "B22": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483646,2)"
+   },
+   "B23": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=COMBINA(2147483647,0)"
+   },
+   "B24": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483647,1)"
+   },
+   "B25": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483647,2)"
+   },
+   "B26": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483648,0)"
+   },
+   "B27": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483648,1)"
+   },
+   "B28": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483648,2)"
+   },
+   "B29": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483649,0)"
+   },
+   "B30": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483649,1)"
+   },
+   "B31": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2147483649,2)"
+   },
+   "B32": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(4294967296,0)"
+   },
+   "B33": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(4294967296,1)"
+   },
+   "B34": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(4294967296,2)"
+   }
+  }
+ }
+}

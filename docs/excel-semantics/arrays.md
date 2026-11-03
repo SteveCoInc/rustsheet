@@ -2217,10 +2217,11 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   A4515; excel-graph, 2026-11-03, T-3839). The earlier keep-all evidence has one key and one value column with no header row
   ("GROUPBY and PIVOTBY" above). FALSE as field_headers is 0 here (F!B15:K15). A lifted `field_headers` beside a scalar TRUE
   filter is `#VALUE!` in every element (L!A1:B2, 06c84cc76de04bae B3783:B3784), since the call has two key columns; without the
-  filter its blank elements give 0.3 (L!D1:E2). Whether PIVOTBY follows the same rule is T-3841's.
-- Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
-  (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
-  blank element is valid (B5735 0.3, B8053 TRUE), as it is in a lifted `field_headers` (the entry above, A185). An error
+  filter its blank elements give 0.3 (L!D1:E2). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
+- Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), the FALSE element is `#VALUE!`
+  (06c84cc76de04bae B5736, 7ab51243a366f57b B8054, and as `field_headers` f310ddb6bc8ec33a B4150), not because it is FALSE:
+  each of those calls has a filter column that drops rows, and only the first element that filters gets a value ("A lifted
+  GROUPBY's filter serves one element" below, T-3840). Without a filter a FALSE element is 0, as a scalar FALSE is. An error
   `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
   array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
   has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
@@ -2233,6 +2234,71 @@ eval/baseline/gen-m7.txt.
 Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`).
 Status: VERIFIED (excel-graph) for the cells named; a FALSE element of a lifted `field_headers` is UNVERIFIED
 Tasks: T-3837, T-3838, T-3839, T-3840
+
+## PIVOTBY in the gen-m7 arg-pairs batch (T-3841)
+Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
+G2=0, G3=-2.5, G4=1.5, G5="12", G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank). GROUPBY's batch rules carry over,
+with `col_fields` beside `row_fields`:
+- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the other options hold, with or
+  without `field_headers`: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
+  `PIVOTBY(Data!B1:E12,Data!G9,Data!A1:D12,_xleta.MIN,1,1,1,Data!G5)` (d7b4849a4fbe3485 A10798) are `#VALUE!`; 181 calls.
+  It comes only after every error value, as GROUPBY's error key does: an error `values`
+  (`PIVOTBY(Data!G9,Data!A1:D12,Data!G9,LAMBDA(x,Data!C$12))`, 01d099c3b6d6ae95 A1770) or a later error option
+  (`PIVOTBY(Data!G9,Data!B1:E12,Data!A1:D12,LAMBDA(x,0),0,0,Data!G9)`, 542087608aa65000 A7382; `PIVOTBY(Data!B1:C12,Data!G9,
+  Data!E1:E12,LAMBDA(acc,(-2.5)),3,2,#N/A,Data!H2)`, d7b4849a4fbe3485 A11408 `#N/A`) keeps its error: 17 calls, and no call
+  with an error value past the field is `#VALUE!`. A literal error field is that error (`PIVOTBY(#REF!,..)`).
+  A blank-cell `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
+  _xleta.MAX,Data!G9)`, 15 calls), after a literal error field (`PIVOTBY(#NULL!,Data!C1:E12,Data!H1,..)` is `#NULL!`,
+  01d099c3b6d6ae95 A1831). Text `values`, literal or referenced (`Data!G5`, `Data!G6`, `Data!G7`), are `#VALUE!` too, but
+  lose to a later option's error as in GROUPBY (`PIVOTBY(Data!A1:A12,Data!B1:E12,Data!G6,LAMBDA(y,y),2,1,Data!G9)` is
+  `#DIV/0!`, 0098e1e4e5f8aa7c A5430; 26 calls). The one exception, `PIVOTBY(Data!B1:E12,Data!C1:D12,Data!G6,LAMBDA(v,v),0,1,
+  Data!A10,Data!G9)` `#VALUE!` (88f592c463d2ffb0 A7138), has a blank-cell `row_sort_order` (`Data!A10`) before the error,
+  the next bullet's rule. Owner T-3888.
+- An invalid earlier argument's `#VALUE!` wins over a later option's error: a blank-cell sort order or total depth, a text
+  option, a scalar `row_fields` (`2`, `Data!G4`) or a short `col_fields` (`Data!A1:B2`) beside 12-row fields, `""` as
+  `col_fields` (`PIVOTBY(Data!A1:C12,Data!D1:D12,Data!D1:E12,_xleta.PRODUCT,3,1,Data!H2,Data!G9)` is `#VALUE!`; 23 calls).
+  Owner T-3889.
+- A scalar `filter_array` (0.5, -1, 1, 2, TRUE, `Data!G4`) beside a multi-column field or values, or a header row, is
+  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). Owner T-3890.
+- An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
+  Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
+  A10859:B10860; 169 calls). Owner T-3892.
+- Rows sorted by a values column holding `#VALUE!` aggregates come out in an order of their own (febfd6901374d79c
+  A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
+  B8785). Owner T-3893.
+Evidence: the gen-m7 cases of T-3841 (excel-graph, 2026-11-03); each owner task lists its calls.
+Ours: the first bullet since T-3888 (`Model::pivotby_args`, `Model::pivot_field`); the GROUPBY rules of T-3838..T-3840 are
+GROUPBY's only, and the other bullets' cells are known failures in eval/baseline/gen-m7.txt.
+Status: VERIFIED (excel-graph) for the cells named; the order between these rules and each rule's exact domain are UNVERIFIED
+(the owners probe them)
+Tasks: T-3888, T-3889, T-3890, T-3892, T-3893
+
+## A lifted GROUPBY's filter serves one element (T-3840)
+Rule: when GROUPBY lifts over an array `field_relationship`, `field_headers` or total depth and its `filter_array` is a
+column that drops at least one row, only the first element (in row-major order) whose call filters gets its value; every
+later element is `#VALUE!`, whatever it holds: 0, 1, TRUE, FALSE, 2 as field_headers, a blank cell. An element refused
+before the filter (text, a `field_relationship` of 2) does not use the filter up, so the next element gets the value; one
+refused after it (a total depth of 5 over one key column) does. A filter column that keeps every row (`C1:C12<>"zz"`), a
+scalar filter and no filter leave every element its own value. It looks as if the first call left the fields filtered,
+so the later calls meet a filter taller than them.
+- `GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,(Data!C1:C12<0.2),{0,1;FALSE,TRUE})` is -1, `#VALUE!`; `#VALUE!`, `#VALUE!`,
+  while the same call without the filter, with the all-TRUE column or with TRUE is -1 in all four (probes/t3840-groupby-
+  lifted-beside-filter G!A1:B11, A13:B23; field_headers G!A73:B83, total depth G!A97:B107).
+- `{2,0;0,1}` and `{"x",0;0,1}` are `#VALUE!`, -1; `#VALUE!`, `#VALUE!`; `{5,1;1,1}` as total depth is `#VALUE!` in all
+  four; two blank cells (Data!H1:H2) are -1, `#VALUE!`; a filter keeping one row, dropping one row, or as tall as the
+  records under a header row is spent the same way (probes/t3840-groupby-lifted-filter-consumed G!A1:C47).
+- The gen-m7 cells: Data!A1:B2 lifted with a filter column is `#VALUE!` ("a*"), the blank's value, `#VALUE!` ("?b"),
+  `#VALUE!` (FALSE) (probes/t3840-groupby-lifted-false-element G!A1:B8, the calls of 06c84cc76de04bae B5735,
+  7ab51243a366f57b B8053 and f310ddb6bc8ec33a B4149); without the filter the FALSE element is -1 (G!A10:B29).
+Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840).
+Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
+before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
+every later element `#VALUE!`; a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
+lift beside a filter column is unprobed (T-3892).
+Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
+row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
+that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
+Tasks: T-3840
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
@@ -2347,10 +2413,15 @@ the literal error):
     `#N/A`, where the literal error makes the whole call `#DIV/0!`; the error reference stays an element wherever it stands.
 - Not a 1x1 array, the reference's error returned whatever the later arguments: SORT, SORTBY, UNIQUE, EXPAND, WRAPROWS and
   WRAPCOLS (`SORT(C2,5)`, `UNIQUE(C2,"x")`, `EXPAND(C2,"x")`, `WRAPROWS(C2,0)` are all `#DIV/0!`).
+- VSTACK and HSTACK also read a variable bound to a one-cell reference (LET, or a LAMBDA parameter that SCAN, REDUCE or MAP
+  pass as the walked range's cell) as that 1x1 array, and a literal error as the whole call's error: with A1 `#DIV/0!`,
+  `SCAN(B1,A1,LAMBDA(x,z,VSTACK(x,z)))` is `#CALC!`, `ROWS(VSTACK("12",A1))` 2, `INDEX(VSTACK("12",A1),2)` `#DIV/0!`,
+  `MAP(A1,LAMBDA(z,ROWS(VSTACK(z,1))))` 2, `LET(z,A1,ROWS(VSTACK(z,1)))` 2, against `ROWS(VSTACK("12",#DIV/0!))`
+  `#DIV/0!` (probes/t3765-stack-error-reference D1:D23, excel-graph, 2026-11-02, T-3765).
 Ours: implemented (T-3667): TAKE and DROP already kept the reference; CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK use
 `one_cell_error_ref_as_array`; the other six already match.
 Status: VERIFIED (excel-graph)
-Tasks: T-3667
+Tasks: T-3667, T-3765
 
 ## TOCOL, TOROW and SORT: which bad argument wins (T-3497)
 Rule:

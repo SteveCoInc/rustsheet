@@ -3,7 +3,7 @@ id: T-3840
 title: "GROUPBY: a FALSE element of an array field_relationship is #VALUE!, and an early error lifts over the array"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -35,13 +35,36 @@ error in `row_fields` or `values` fills the lifted shape as Excel does.
 - gen-m7/f310ddb6bc8ec33a.case.json Calc!B4150
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel, spill extent included; unit tests cover a FALSE element (`#VALUE!`), a blank element (valid) and an early error under an array field_relationship.
-- [ ] Record the rule in docs/excel-semantics/arrays.md ("GROUPBY and PIVOTBY lift over an array field_headers or total depth").
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel, spill extent included; unit tests cover a FALSE element (`#VALUE!`), a blank element (valid) and an early error under an array field_relationship.
+- [x] Record the rule in docs/excel-semantics/arrays.md ("GROUPBY and PIVOTBY lift over an array field_headers or total depth").
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+
+## Outcome
+- The FALSE element was never the cause. Three excel-graph probes (2026-11-03) show it: t3840-groupby-lifted-false-element,
+  -lifted-beside-filter and -lifted-filter-consumed. When GROUPBY lifts over an array field_relationship, field_headers or
+  total depth beside a filter column that drops rows, only the first element whose call filters gets a value. Every later
+  element is `#VALUE!`, whatever it holds (0, 1, TRUE, FALSE, a blank). An element refused before the filter (text, a
+  relationship of 2) leaves the filter to the next element. An out-of-range depth spends it. A filter that keeps every row,
+  a scalar filter and no filter change nothing. Without a filter a FALSE element is 0. The rule is in
+  docs/excel-semantics/arrays.md, "A lifted GROUPBY's filter serves one element (T-3840)", and the gen-m7 entry now points
+  to it.
+- `Model::groupby_filter_spent` is set by `Model::groupby_args` when its filter dropped rows. A GROUPBY inside the function
+  doesn't count (`Model::groupby_with` restores the flag). `Model::lift_by_class` makes every element after it `#VALUE!` and
+  restores the outer flag. groupby_args now reads field_relationship before the filter and checks the total depth's range
+  after it, which is Excel's order here (both are `#VALUE!`, so no other cell changes). PIVOTBY's lift is unprobed
+  (T-3841) and doesn't set the flag.
+- The early-error lift (A7565:B7566, A2563:B2564, A2624:B2625) and 53473f95ff58029d A9090 already passed on main (T-3837).
+- Review round 1 (excel-fidelity): a cell read on demand during an element's call could set the flag. `evaluate_formula_cell`
+  now saves and restores it around `run_top`, and the unit test `a_cell_read_on_demand_spends_no_filter_of_a_lift` shows
+  the leak on round 1's head. The unprobed edges are UNVERIFIED in the arrays.md entry: a filter keeping no row, a table
+  relationship with subtotals, and a nested lift.
+- Unit test `a_lifted_groupby_filter_serves_one_element`.
+- Eval delta: gen-m7 known failures 4 -> 1 (B5736, B8054, B4150 fixed; the one left, 3f368d034700f19e A2990, is T-3765's
+  SCAN cell). 0 regressions. The three new probe cases pass in full.

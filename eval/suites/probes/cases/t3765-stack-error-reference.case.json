@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3765: VSTACK and HSTACK with a one-cell error reference (direct, via LET, via a LAMBDA parameter of SCAN, REDUCE, MAP) vs a literal error.",
+  "tags": [
+    "M7",
+    "probe",
+    "T-3765"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=1/0",
+        "B1": "12",
+        "B2": "x",
+        "B3": "y",
+        "D1": "=ROWS(VSTACK(\"12\",A1))",
+        "D2": "=ROWS(VSTACK(\"12\",#DIV/0!))",
+        "D3": "=ROWS(VSTACK(A1,\"12\"))",
+        "D4": "=ROWS(VSTACK(\"12\",A1,\"13\"))",
+        "D5": "=INDEX(VSTACK(\"12\",A1),2)",
+        "D6": "=ROWS(HSTACK(\"12\",A1))",
+        "D7": "=COLUMNS(HSTACK(\"12\",A1))",
+        "D8": "=COLUMNS(HSTACK(\"12\",#DIV/0!))",
+        "D9": "=INDEX(HSTACK(\"12\",A1),1,2)",
+        "D10": "=SCAN(B1,A1,LAMBDA(x,z,VSTACK(x,z)))",
+        "D11": "=SCAN(B1,A1,LAMBDA(x,z,HSTACK(x,z)))",
+        "D12": "=SCAN(B1,A1,LAMBDA(x,z,ROWS(VSTACK(x,z))))",
+        "D13": "=SCAN(B1,A1,LAMBDA(x,z,COLUMNS(HSTACK(x,z))))",
+        "D14": "=REDUCE(B1,A1,LAMBDA(x,z,VSTACK(x,z)))",
+        "D15": "=REDUCE(B1,A1,LAMBDA(x,z,ROWS(VSTACK(x,z))))",
+        "D16": "=REDUCE(B1,A1,LAMBDA(x,z,HSTACK(x,z)))",
+        "D17": "=MAP(A1,LAMBDA(z,VSTACK(z,1)))",
+        "D18": "=MAP(A1,LAMBDA(z,ROWS(VSTACK(z,1))))",
+        "D19": "=MAP(A1,LAMBDA(z,ROWS(HSTACK(z,1))))",
+        "D20": "=MAP(A1,LAMBDA(z,COLUMNS(HSTACK(z,1))))",
+        "D21": "=SCAN(B1,A1,LAMBDA(x,z,ROWS(VSTACK(x,#DIV/0!))))",
+        "D22": "=LET(z,A1,ROWS(VSTACK(z,1)))",
+        "D23": "=LET(z,A1,COLUMNS(HSTACK(z,1)))"
+      }
+    }
+  ],
+  "expected": {}
+}

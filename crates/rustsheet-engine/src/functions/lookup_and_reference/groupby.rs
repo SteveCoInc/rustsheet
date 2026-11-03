@@ -403,9 +403,7 @@ impl Model {
         values: &Node,
         cell: CellReferenceIndex,
     ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
-        // A one-cell reference is read as its value here, so the node tells it from a literal.
-        let is_cell =
-            |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_cell = |node: &Node| node.is_cell_reference_at(cell.row);
         let keys = self.evaluate_node_in_context(row_fields, cell);
         if keys.is_error() && !is_cell(row_fields) {
             return Err(keys);
@@ -513,7 +511,11 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
         let args = self.groupby_args(inputs, relationship, cell)?;
-        self.groupby(inputs, args, cell)
+        // A GROUPBY inside the function runs later and spends no filter of this call.
+        let spent = self.groupby_filter_spent;
+        let output = self.groupby(inputs, args, cell);
+        self.groupby_filter_spent = spent;
+        output
     }
 
     /// Checks the GROUPBY options in Excel's order (each check's evidence is beside it).
@@ -535,7 +537,6 @@ impl Model {
         let headers = self.field_headers(field_headers, cell)?;
         let key_columns = width(keys);
         let depth_given = total_depth.is_some();
-        let total_depth = self.total_depth(total_depth, key_columns, cell)?;
         // Values of another height than the keys are #VALUE! (G!AB193, followup G!A1-A41).
         // Scalar text values are #VALUE! too, even beside one key (`GROUPBY(2,"abc",..)`,
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
@@ -586,8 +587,15 @@ impl Model {
         // and no header row; otherwise it is #VALUE!, whatever the value, TRUE and 2 included
         // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19).
         let one_keeps_all = first == 0 && key_columns == 1 && width(values) == 1;
-        let rows = self.filter_rows(filter, keys.len(), first, one_keeps_all, cell)?;
+        // Excel reads field_relationship before it filters, and checks the total depth's range
+        // after: a lifted relationship of 2 leaves the filter to the next element, a depth of 5
+        // spends it (probes/t3840-groupby-lifted-filter-consumed G!A5, G!A41).
         let relationship = self.relationship(relationship, cell)?;
+        let rows = self.filter_rows(filter, keys.len(), first, one_keeps_all, cell)?;
+        if rows.len() < keys.len().saturating_sub(first) {
+            self.groupby_filter_spent = true;
+        }
+        let total_depth = self.total_depth(total_depth, key_columns, cell)?;
         // A table relationship cannot have subtotals (followup G!A181, G!A261: ERROR.TYPE 3).
         if relationship == Relationship::Table && subtotal_levels(total_depth) > 0 {
             return Err(value_error(cell, "field_relationship 1 has no subtotals"));

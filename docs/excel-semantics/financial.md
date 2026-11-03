@@ -906,12 +906,18 @@ The 2^-53 grid in v ("IRR is a secant in d = 1 - v", T-2565 and T-3120 bullets) 
   9999998.994161328 for X = 1E+14).
 T-3120 found where: the secant's state is d = 1 - v, whose spacing in [0.5, 1) is 2^-53, and with NPV by
 worksheet NPV's running product the secant reaches those grid points itself (A25-A28 and A36-A39 bit for bit).
-Not explained: `IRR({-1,1E+15})` is `#DIV/0!` from guesses 0.05, 0.1, 5E+14 and 1E+15, and so are `IRR({-1,1E+300})`
-and IRR over gen-m9 bc04c1f478c9896c's Data!A1:D12 (first flow 0) from guesses 0.05, 0.1 and 0.5; ours is `#NUM!`
-(T-2802). `IRR({0,1E+15,2,42,1E+15,-0.0001})`, also a zero first flow, is `#NUM!` as ours.
+`IRR({-1,1E+300})` is `#DIV/0!` (probes/irr-guess-edges A39): from the guess 0.1 the secant's second iterate is
+d = 1 exactly, so v = 0 and NPV's 1/v divides by zero. The engine ends the call with `#DIV/0!` there (T-2802;
+whether the retry from 0.1 would run after such a stop from another guess is unprobed). Not explained:
+`IRR({-1,1E+15})` is `#DIV/0!` from guesses 0.05, 0.1, 5E+14 and 1E+15 (irr-guess-edges-2 A20, A28, A29,
+irr-guess-edges A38), while `IRR({-1,9E+14})` and `IRR({-1,2E+15})` are `#NUM!` (A19, A21): the fitted secant
+reaches none of them at d = 1; it stalls at the far root (d = 0.999999999999999 for 1E+15, 1 - 9 or 10 grid steps)
+in all three, so the rule that separates 1E+15 is elsewhere. IRR over gen-m9 bc04c1f478c9896c's Data!A1:D12 (first flow 0) from
+guesses 0.05, 0.1 and 0.5 is `#DIV/0!` too; ours is `#NUM!` (T-3900).
+`IRR({0,1E+15,2,42,1E+15,-0.0001})`, also a zero first flow, is `#NUM!` as ours.
 Evidence: probes/irr-fallback-roots A25-A40, probes/irr-guess-edges-2 A15-A34, probes/irr-guess-edges A27-A39
 (excel-graph, 2026-10-25 and 2026-10-26).
-Status: VERIFIED (excel-graph) for the bound; the `#DIV/0!` cases are UNVERIFIED
+Status: VERIFIED (excel-graph) for the bound and the d = 1 `#DIV/0!`; the other `#DIV/0!` cases are unexplained (T-3900)
 Implemented in: `IRR_FAR_ROOT_BOUND`, `irr_from_discount` (functions/financial/financial_util.rs)
 Tasks: T-2727, T-2802, T-3120
 
@@ -1176,8 +1182,8 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       loses this probe's A43 and A46 (scale 2^10) and 32 held cells of t3348-rate-fv-nonzero (A15 to A26, A74 to
       A184 among them, including the distinct-iterate holds A182 to A184). It also loses 17 cells of
       probes-numeric/t3348-rate-gate-a-fresh, 10 of t3348-rate-gate-a-sweep and 4 of t3478-rate-r4-wide.
-    - So Excel sometimes restarts and sometimes holds. What separates the two is open (T-3698). A1, A2, A41 and
-      A42 are known failures owned by T-3698.
+    - So Excel sometimes restarts and sometimes holds. T-3698's rule ("RATE restarts once on an early flat secant"
+      below) separates them on these cells: A1, A2, A41 and A42 restart and pass, A43 and A46 do not restart.
   - Right type, last digits, on the training sweep (gap triage 2026-11-01c; T-3607): probes-numeric/
     t3348-rate-gate-a-sweep A228, A269, A271, A273 and A285 (terms 1e9 to 2e11) are 1 to 3 ulp from Excel. Excel
     is not the correctly rounded root there either: A228 `RATE(102,2166497722.99291,-207421358353.562,
@@ -1203,7 +1209,74 @@ Evidence (excel-graph, 2026-10-31, T-3348):
 Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
 Status: VERIFIED (excel-graph) / UNVERIFIED (Excel's residual in the noise floor; a non-integer nper below -1; a held
 point with |f1| < 1e-7)
-Tasks: T-3348, T-3389, T-3424, T-3579
+Tasks: T-3348, T-3389, T-3424, T-3579, T-3698
+
+## RATE restarts once on an early flat secant
+Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
+restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
+- the two iterates differ (r1 ≠ r0; a zero-step stall holds as before);
+- it is at step 3 to 16 of the run;
+- 1.3e-7 <= |f1| < 1e-4 (the upper cut is the cap's bound);
+- r0 > -1.
+
+Otherwise the run holds at r1 as before. The restarted run has its own 200 steps, and a flat secant in it holds;
+it never restarts again. The step bound is FITTED (T-3698). It approximates a path difference, and on many
+noise-floor cells Excel's value matches neither the hold nor the restart. Steps 1 and 2 and |f1| below 1.3e-7 are
+outside the evidence (no probed flat secant comes there), so the rule is not applied there and the run holds.
+Why it matters: on runs that land next to the root at once (nper 1, t3348-rate-fv-nonzero A171), Excel's value is
+the restarted run's value. Holding returned an iterate up to 3e-11 relative from Excel's.
+Evidence (excel-graph, 2026-11-02, T-3698):
+- probes/t3698-rate-flat-restart (54 cells): flat-secant cells of t3348-rate-fv-nonzero, t3348-rate-gate-a-fresh
+  and t3348-rate-gate-a-sweep, re-run with other guesses so that the first flat secant comes at steps 3 to 154, plus
+  t3579's nper-1 example scaled by 2^3 to 2^11. Each cell was chosen because the hold and the restart from r0 give
+  different results there.
+  - The hold is bit-exact on 11 cells and an unconditional restart on 17.
+  - The nper-1 family splits on |f|: it restarts at |f| 1.3e-6 to 4.3e-5 (A3:A8), and at 1.7e-4 and 3.4e-4
+    (A1, A2, scales 2^10 and 2^11) it is `#NUM!`, as the hold is.
+  - On one source series (t3348-rate-gate-a-fresh A296) the restart is Excel's at step 13 (A23) and step 16 (A26)
+    and the hold is Excel's at step 30 (A38). On A187 the hold is Excel's at steps 18, 30, 38 and 70 (A28, A37,
+    A40, A49). Step 17 (A27) matches neither. So the step bound lies in 16..17.
+  - Late restarts that Excel takes (A35 step 27, A39 step 33, A42 step 41) are not covered by the rule.
+  - probes/t3698-rate-flat-restart-fresh (51 cells) was drawn after a first freeze of the rule and is part of the
+    fit set below, not a fresh sweep.
+- Choice of the step bound and the |f1| cut (decision 0188 R4.1; scorers in docs/research/t3698/). The fit set is
+  every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide (another fit's fresh sweep). It is
+  split by the fit lab's hash (`holdout.py`, 30% test), with the 5-point margin stated before scoring. The candidates
+  (K in 3..200, cut 1e-5..1e-3, steps from 3, |f1| from 1.3e-7) were ranked on the 1,477 train cells only. K = 16
+  or 17 is best:
+  - The evidence brackets the cut. The nper-1 family restarts at |f1| up to 4.3e-5 (t3698-rate-flat-restart A3:A8)
+    and holds at 1.7e-4 and 3.4e-4 (A1, A2). So the cut lies in (4.3e-5, 1.7e-4), and the cap's bound 1e-4 is taken.
+    On train, the cuts 1e-4 and 3e-4 tie bit-exact. 3e-4 is outside the bracket: it restarts A1, and it loses
+    t3579-rate-residual-nper1 A43.
+  - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+  - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold. The test exact rate is 94.8% against 94.4%
+    on train, inside the margin. K = 18 to 22 is one cell behind on train.
+  - Correctly rounded root, on the cells with a 50-digit sidecar: 35 / 80 / 98 of 637 on train and 16 / 33 / 44 of
+    251 on test. On the same cells the rule gets 610 / 623 / 623 and 239 / 245 / 245.
+  - The cells were seen before (an earlier freeze scored them all), so this is a train-only choice on a fixed split,
+    not a blind hold-out. The fresh batch below is the out-of-sample check.
+- Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
+  generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
+  and the batch stays in Gate A.
+  - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
+    log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
+    within 15 digits on 299. The one outside is A201, below.
+  - Neither sweep makes many flat secants. They show that the rule moves nothing elsewhere; they do not measure the
+    restart itself.
+- Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
+  in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
+  Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
+- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. A count of
+  restarts within a run, a bound relative to the residual's terms, and the restart point are not probed beyond r0
+  against the guess. Restarting from the guess instead of r0 changes nothing, because the run repeats.
+- Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
+  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351, and the model returns `#NUM!`. The
+  zero-residual probe's `RATE(1,0,0,0,0,0.3)` is `#NUM!` in Excel, so a residual that is noise and not exactly 0
+  behaves differently. The restart cannot fire here, because these residuals are far below 1.3e-7. T-3876 owns it.
+Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
+Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
+Tasks: T-3698, T-3424, T-3876
 
 ## YIELD with one coupon period left is closed form
 Rule: when at most one coupon period is left, Excel evaluates the documented formula
@@ -2752,7 +2825,8 @@ Rule: the four odd-coupon functions read their arguments in order and check few 
    or 4 as it is read (`ODDLPRICE(..,100,3,NA())` is `#NUM!`).
 3. basis: an error, text or boolean is returned, then outside 0-4 `#NUM!`.
 4. Only then the date order and value checks, all `#NUM!`: a settlement not before the maturity, an issue not before the
-   first coupon, a coupon date not before the maturity, ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
+   first coupon, a coupon date not before the maturity, ODDFPRICE's and ODDFYIELD's settlement on or before the issue or on
+   or after the first coupon (see "ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon"), ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
    (`ODDLPRICE(42917,43200,42917,..)` is `#NUM!`, `ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)` = 99.44775142683748),
    a negative rate, a negative yld (ODDFYIELD and ODDLYIELD: a price of 0 or less), a redemption of 0 or less. So
    `ODDFPRICE(43832,43831,..,NA(),2,0)` is `#N/A` and `ODDLPRICE(43000,43200,42917,-0.05,..,TRUE)` `#VALUE!`.
@@ -2765,6 +2839,29 @@ that only the move takes past 9999-12-31 is `#NUM!` after the reads, as before T
 Ours: matches since T-2483 (`odd_args` and `odd_last_of` in financial_bonds.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-2483
+
+## ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon
+Rule: ODDFPRICE and ODDFYIELD are `#NUM!` unless issue < settlement < first_coupon < maturity, at every frequency and
+basis. A settlement equal to the issue, before it (a day or a year), equal to the first coupon, a day after it, or
+anywhere between the first coupon and the maturity is `#NUM!`, as are a settlement on or after the maturity, an issue
+on or after the first coupon, and a first coupon on or after the maturity. This is ODDLPRICE's and ODDLYIELD's
+last_interest < settlement < maturity with the odd period moved to the front: both pairs price only a settlement inside
+the odd period. A settlement on a quasi-coupon date inside a long first period is a value.
+The domain checks match the ODDL* pair's: a negative rate is `#NUM!` and a rate of 0 is a value; ODDFPRICE's yld of
+0, 1E-12 and 2 are values and -0.01 `#NUM!`; ODDFYIELD's pr of 0 and -1 are `#NUM!` and 1E-6 a value (a yield of
+3.7 to 94), and a pr of 150 above a redemption of 100 is a negative yield, not `#NUM!`; a redemption of 0 or -100
+is `#NUM!` and 1E-9 a value.
+- `ODDFPRICE(DATE(2024,3,15),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` (settlement = issue)
+  and `ODDFPRICE(DATE(2027,1,1),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` are `#NUM!`.
+Evidence: probes/oddf-date-order-domain-sweep (1260 cells: 26 date and domain scenarios plus the yld or pr edges, at
+frequency 1, 2 and 4 by basis 0-4; maturity 2030-06-15, first coupon 2024-06-15, a short and a long first period;
+excel-graph, 2026-11-03, T-3652): P!A5:O19 and Y!A5:O19 `#NUM!`, P!A3:O3 the quasi-coupon settlement.
+Ours: matches since T-3652 (`odd_first_of` in financial_bonds.rs); before it a settlement outside the odd period was
+priced (P!A5:O11 and Y!A5:O11, 162 cells). The sweep's other off cells are ODDFYIELD's solver digits on the long
+first period with a settlement before the quasi-coupon date (Y!A2:O2, A22:O22, A33:O33, A34:O34, T-3031) and last
+ulps (P!A29, E29, T-1374; Y!I29, N29, T-3043).
+Status: VERIFIED (excel-graph)
+Tasks: T-3652
 
 ## ODDFPRICE and ODDFYIELD need the first coupon on the maturity's schedule
 

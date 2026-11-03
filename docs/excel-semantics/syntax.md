@@ -626,9 +626,34 @@ Tasks: T-1178, T-1244 (spec for keeping groups in the parse tree), T-1200 (the `
   Excel refuses (`=1+`, in A1 or R1C1 mode) is a PATCH 400 `InvalidArgument` and leaves the cell
   blank (`ISBLANK` is TRUE).
 - **Evidence:** probes/t3113-entered-r1c1, probes/t3113-entered-refused (excel-graph, 2026-10-30).
-- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the engine's R1C1 reader
-  does not take bare `R`/`C` offsets (`RC`, `R[-1]C`) yet, T-3212. The engine refuses a typed
+- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the short forms (`RC`,
+  `R[-1]C`, whole rows and columns) since T-3212 (next entry). The engine refuses a typed
   `=1+` in A1 mode too since T-3213 (see "A typed formula that does not parse is refused" below).
+
+## Short R1C1 forms typed in R1C1 mode
+Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms in any letter case.
+- A bare `R` or `C` is an offset of 0. In S!H10:H44, `=RC[-6]` is `=B23` (written lower case, `rc[-6]`), `=R2C` is `=H$2`,
+  `=RC2` is `=$B18`, `=R[-17]C2` is `=$B3` and `=ROW(RC)` is `=ROW(H24)`.
+- A row alone is the whole row, and a column alone is the whole column. `=SUM(R2)` is `=SUM($2:$2)`, `=SUM(R[-9])` is
+  `=SUM(3:3)`, `=ROWS(R)` is `=ROWS(26:26)`, `=SUM(C3)` is `=SUM($C:$C)`, `=COLUMNS(C)` is `=COLUMNS(H:H)`,
+  `=SUM(R[-29]:R[-27])` is `=SUM(11:13)`, `=SUM(C2:C3)` is `=SUM($B:$C)`, and `=SUM(T!C1)` is `=SUM(T!$A:$A)`.
+- A relative offset smaller than the grid wraps around it. `=R[-12]C[-5]+RC[-100]` in H16 is `=C4+XBP16`, and
+  `=R[-100]C[-7]` in H45 is `=A1048521`. An offset of a whole grid or more is refused (`RC[16384]`,
+  `R[1048576]C[-7]`; the cell stays blank).
+- An absolute column past the grid is refused (`R2C16385`), but `R0C1` and `R1048577C1` stay names (`#NAME?`, as stored
+  text reads them, T-1657).
+- A LET name or LAMBDA parameter that reads as a reference in R1C1 mode is refused: `r`, `c`, `rc` and `r1c1`
+  (`=LET(rc,5,rc+1)`, `=LAMBDA(c,c+1)(2)`), as `f1` is refused typed in A1 mode (decision 0103). `f1` itself is
+  accepted in R1C1 mode (`=LET(f1,5,f1+1)` is 6, seen in a draft of the probe; T-3897).
+Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
+ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
+Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
+(`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
+reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
+parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
+Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
+whole-row range's second corner.
+Tasks: T-3212, T-3897, T-3898
 
 ## A typed formula that does not parse is refused; a call's missing `)` is added
 Rule: Excel refuses a formula typed through the API (Graph PATCH 400 `InvalidArgument`) that does

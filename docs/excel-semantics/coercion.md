@@ -61,6 +61,17 @@ Rule: `<`, `>`, `>=` between texts follow Excel's collation: "x" >= "ü" is TRUE
 (code-point order says otherwise for both: "x" < "ü" and "1" < "?").
 Evidence: gen-m2/2cfe279fe77a000d Calc!A318, 96a0952412cefa6c Calc!A284. Oracle: excel-graph, 2026-10-04 (gen-m2 sidecars, T-0203).
 Status: VERIFIED (two cells here; the full order is below, T-1469 probes/text-collation-order)
+Hold-out agreement (T-3465, probes/t3465-collation-holdout, excel-graph 2026-11-03): on 600 random text pairs
+(seed 3465, texts of 1 to 6 characters from 1 to 3 of 23 categories, every third pair one edit apart; generator
+tools/src/rustsheet_tools/gen/collation_holdout.py, categories per row in t3465-collation-holdout.draws.tsv),
+`cmp_text_excel` orders **569 of 600 pairs (94.8%)** as Excel does (1738 of 1800 `<`, `>` and `=` cells), before
+any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B holds). The 31 misses, by cause:
+19 pairs put a Thai or Lao digit below the letters (refutes the UNVERIFIED "Thai and other digit blocks keep
+code-point order" below; T-3895), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
+1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
+T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
+rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
+T-3276 scripts mixed with Latin all agree.
 CHAR(160) and spaces (T-0244, VERIFIED, probes/text-order-nbsp-space, 333 cells, excel-graph
 2026-10-09): texts compare character by character, with the space first, CHAR(160) right after it,
 then digits and letters: `" 1" < CHAR(160)&"1" < "0" < "1" < "1"&CHAR(160)`, `" " < CHAR(160)`,
@@ -405,10 +416,7 @@ letters (it sorts above `"ab"`, below the kana: U8).
 Evidence: probes/t3276-collation-other-scripts (excel-graph, 2026-10-31): 99 strings in Data!A; Calc!A =
 count less, B = count equal, C = exact MATCH position, D = XMATCH position, E = COUNTIF `"="&x`,
 G1:G36 = `(x<y)+2*(x=y)+4*(x>y)` for chosen pairs, H1:H13 single cells. "Rank" cites Calc!A by Data row.
-The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
-date text is mapped by inference (`"٢٠٢٠-١-١"+0` reads as a date) while clock text is not (`"١٢:٣٠"+0` is
-`#VALUE!`); percent, currency, parenthesis, group-separator and exponent forms, NUMBERVALUE and TEXT's
-reading of number text follow the mapping through `number_text_in` without evidence. VERIFIED (cells cited):
+The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. T-3446 probed the other forms and blocks (next section "Script digits in number text (T-3446)"). VERIFIED (cells cited):
 - **Block order is not code-point order.** Lowest first: Latin, Greek, Cyrillic, **kana**, Hebrew,
   Arabic, Devanagari, Thai, Lao, the astral `𝐀` (U+1D400) and `😀` (U+1F600), Hangul, CJK ideographs,
   then the astral ideograph `𠀀` (U+20000): `"я" < "ア" < "あ" < "א"` (ranks A18, A20, A19, A21 = 32,
@@ -453,10 +461,42 @@ Lao vowels follow the same split; Hebrew and Arabic letters other than those pro
 choices where the probe is silent (each UNVERIFIED): the Thai prevowels `โ ใ ไ` go with `เ แ`; all
 Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670)
 and Thai tone marks U+0E48 to U+0E4B are accents weighing their code point; Thai and other digit
-blocks keep code-point order; every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
+blocks keep code-point order (REFUTED for Thai and Lao by probes/t3465-collation-holdout: Excel puts them below
+the letters, `"ณ" > "๘"`, `"NPOECV" > "໖66"`; engine gap T-3895); every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
 (U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
 (so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
 between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
+
+### Script digits in number text (T-3446)
+Evidence: probes/t3446-script-digits-forms (excel-graph, 2026-11-03); formats from the oracle's ENTERED log,
+docs/research/t3446-script-digits-forms-2026-11-03.md. Rows 1:99 are nine scripts (ASCII, then Arabic-Indic
+U+0660, Extended Arabic-Indic U+06F0, Devanagari U+0966, Bengali U+09E6, Thai U+0E50, Lao U+0ED0, Tibetan
+U+0F20, Myanmar U+1040) of eleven forms each (`123`, `-12`, `1.5`, `12%`, `$12`, `(12)`, `1,234`, `1e3`,
+`2020-1-1`, `12:30`, `1 1/2`, digits in the row's script, the rest ASCII); A = typed, B = ISNUMBER(A),
+D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same text as a formula string.
+Status: VERIFIED.
+- **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
+  the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
+  `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
+  which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+- **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
+  separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
+  VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+  a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
+  `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
+  `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
+  `[$-,200]mm/dd/yyyy`, `١٢:٣٠` → `[$-,200]h:mm`; `-١٢` and `(١٢)` → `[$-ar-SA,200]0`; the exponent form keeps
+  `0.00E+00` and the mixed fraction `# ?/?`, untagged. The tag per block: `ar-SA,200`, `ar-SA,300` (Extended
+  Arabic-Indic), `hi-IN,400`, `bn-IN,500`, `th-TH,D00`, `lo-LA,E00`, `bo-CN,F00`, `my-MM,1000`; `1٢3` takes
+  `ar-SA,200` and `١२` takes `hi-IN,400`. The engine keeps typed script digits as text (engine gap T-3891).
+- In passing: a bare typed ASCII clock `12:30` is a number with `h:mm` in Excel (B10); the engine keeps it
+  text (engine gap T-3894). `NUMBERVALUE("1 1/2")` is 46328 in 2026: NUMBERVALUE drops every space
+  (text.md), so it reads the date `11/2` of the current year; the case does not score F on those rows.
+Implemented in: `script_digit_to_ascii` and `ascii_script_digits` (formatter/parse_formatted.rs), applied in
+`cast::number_text_in` before the formatted-number and clock readers and before both mixed-fraction readers
+(`cast_number_in`, `value_number_text_with`).
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by
@@ -506,6 +546,31 @@ evaluates it (element-wise over ranges and arrays); `stringify`/`move_formula` p
 parenthesise a lower-precedence operand (T-0132, `Ported-From: ironcalc@9b1ae3fd`). `--"12:00"`
 (MINUS_MINUS.xlsx C12, Excel 0.5) still fails: time text coercion is T-0146, which adds that workbook.
 Tasks: T-0132
+
+## Weightless characters in `=`, COUNTIF and XMATCH (T-3584)
+Rule: the 2568 BMP code points Excel's comparison table gives no weight (lookup.md "Weightless characters",
+listed in `docs/research/t3584/weightless-bmp.txt`) compare equal to one another under `=`, COUNTIF and
+XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count them one for one:
+- `UNICHAR(1316)=UNICHAR(4295)` (U+0524 with U+10C7), U+0524 with U+0525, U+0378 and U+00AD, U+AB70 with
+  U+1C90: TRUE (probes/t3584-match-fold-weightless Calc!B1:B3, B8, B14, B17:B18; COUNTIF and XMATCH agree, D:F).
+- `"a"&UNICHAR(1316)&"b"="ab"` and `UNICHAR(1316)&UNICHAR(4295)=UNICHAR(1317)` are TRUE (Calc!B6:B7, D6:D7,
+  F6:F7), where exact MATCH says `#N/A` (E6:E7).
+- But a weightless character is never equal to empty text (`UNICHAR(1316)=""` FALSE, Calc!B4, B9, B12, B19, B32),
+  and `"a"&UNICHAR(1316)="a"` and `"a"&UNICHAR(173)="a"` are FALSE (Calc!B5, B13; COUNTIF 0, XMATCH `#N/A`).
+- Over the whole BMP (Calc!R1:R256, digit 9 = bits 1 and 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH
+  finds U+0524 (wildcards aside).
+- Not about weightless characters, found by the same probe: `=`, COUNTIF and XMATCH(..,0) also equate Greek
+  Extended's dasia+oxia and psili+varia letters (`UNICHAR(7941)=UNICHAR(7946)`, U+1F05 with U+1F0A, TRUE; Calc!B21,
+  D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
+  keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
+  whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
+  same weight).
+UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
+one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
+positions and neighbours make it count is open (T-3904).
+Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
+probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
 
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with

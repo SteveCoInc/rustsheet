@@ -455,3 +455,212 @@ pub(super) static HI: DateNames = DateNames {
     am: "पूर्वाह्न",
     pm: "अपराह्न",
 };
+
+// Six more languages from probes/text-locale-six-languages (excel-graph, 2026-11-03, T-3882):
+// rows 1-12 give `mmm|mmmm|mmmmm`, rows 13-19 `ddd|dddd` from Sunday, rows 20-21 the day halves;
+// each language's LCID and BCP-47 columns agree cell for cell.
+
+/// Indonesian, `[$-421]` and `[$-id-ID]`, columns A and B.
+pub(super) static ID: DateNames = DateNames {
+    months_short: [
+        "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+    ],
+    months: [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+    ],
+    days_short: ["Mgg", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
+    days: [
+        "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
+    ],
+    am: "AM",
+    pm: "PM",
+};
+
+/// Slovenian, `[$-424]` and `[$-sl-SI]`, columns C and D.
+pub(super) static SL: DateNames = DateNames {
+    months_short: [
+        "jan.", "feb.", "mar.", "apr.", "maj", "jun.", "jul.", "avg.", "sep.", "okt.", "nov.",
+        "dec.",
+    ],
+    months: [
+        "januar",
+        "februar",
+        "marec",
+        "april",
+        "maj",
+        "junij",
+        "julij",
+        "avgust",
+        "september",
+        "oktober",
+        "november",
+        "december",
+    ],
+    days_short: ["ned.", "pon.", "tor.", "sre.", "čet.", "pet.", "sob."],
+    days: [
+        "nedelja",
+        "ponedeljek",
+        "torek",
+        "sreda",
+        "četrtek",
+        "petek",
+        "sobota",
+    ],
+    am: "dop.",
+    pm: "pop.",
+};
+
+/// Lithuanian, `[$-427]` and `[$-lt-LT]`, columns E and F.
+pub(super) static LT: DateNames = DateNames {
+    months_short: [
+        "saus.", "vas.", "kov.", "bal.", "geg.", "birž.", "liep.", "rugp.", "rugs.", "spal.",
+        "lapkr.", "gruod.",
+    ],
+    months: [
+        "sausis",
+        "vasaris",
+        "kovas",
+        "balandis",
+        "gegužė",
+        "birželis",
+        "liepa",
+        "rugpjūtis",
+        "rugsėjis",
+        "spalis",
+        "lapkritis",
+        "gruodis",
+    ],
+    days_short: ["sk", "pr", "an", "tr", "kt", "pn", "št"],
+    days: [
+        "sekmadienis",
+        "pirmadienis",
+        "antradienis",
+        "trečiadienis",
+        "ketvirtadienis",
+        "penktadienis",
+        "šeštadienis",
+    ],
+    am: "priešpiet",
+    pm: "popiet",
+};
+
+/// Tajik, `[$-428]` and `[$-tg-Cyrl-TJ]`, columns G and H.
+pub(super) static TG: DateNames = DateNames {
+    months_short: [
+        "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек",
+    ],
+    months: [
+        "январ",
+        "феврал",
+        "март",
+        "апрел",
+        "май",
+        "июн",
+        "июл",
+        "август",
+        "сентябр",
+        "октябр",
+        "ноябр",
+        "декабр",
+    ],
+    days_short: ["пкш", "дшб", "сшб", "чшб", "пшб", "ҷум", "шнб"],
+    days: [
+        "Якшанбе",
+        "душанбе",
+        "сешанбе",
+        "чоршанбе",
+        "панҷшанбе",
+        "ҷумъа",
+        "шанбе",
+    ],
+    am: "AM",
+    pm: "PM",
+};
+
+/// Macedonian, `[$-42F]` and `[$-mk-MK]`, columns I and J.
+pub(super) static MK: DateNames = DateNames {
+    months_short: [
+        "јан.",
+        "фев.",
+        "мар.",
+        "апр.",
+        "мај",
+        "јун.",
+        "јул.",
+        "авг.",
+        "септ.",
+        "окт.",
+        "ноем.",
+        "дек.",
+    ],
+    months: [
+        "јануари",
+        "февруари",
+        "март",
+        "април",
+        "мај",
+        "јуни",
+        "јули",
+        "август",
+        "септември",
+        "октомври",
+        "ноември",
+        "декември",
+    ],
+    days_short: ["нед.", "пон.", "вт.", "сре.", "чет.", "пет.", "саб."],
+    days: [
+        "недела",
+        "понеделник",
+        "вторник",
+        "среда",
+        "четврток",
+        "петок",
+        "сабота",
+    ],
+    am: "претпл.",
+    pm: "попл.",
+};
+
+/// Kazakh, `[$-43F]` and `[$-kk-KZ]`, columns K and L.
+pub(super) static KK: DateNames = DateNames {
+    months_short: [
+        "қаң", "ақп", "нау", "сәу", "мам", "мау", "шіл", "там", "қыр", "қаз", "қар", "жел",
+    ],
+    months: [
+        "Қаңтар",
+        "Ақпан",
+        "Наурыз",
+        "Сәуір",
+        "Мамыр",
+        "Маусым",
+        "Шілде",
+        "Тамыз",
+        "Қыркүйек",
+        "Қазан",
+        "Қараша",
+        "Желтоқсан",
+    ],
+    days_short: ["жек", "дүй", "сей", "сәр", "бей", "жұм", "сен"],
+    days: [
+        "жексенбі",
+        "дүйсенбі",
+        "сейсенбі",
+        "сәрсенбі",
+        "бейсенбі",
+        "жұма",
+        "сенбі",
+    ],
+    am: "AM",
+    pm: "PM",
+};

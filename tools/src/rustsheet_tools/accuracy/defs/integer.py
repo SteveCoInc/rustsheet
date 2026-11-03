@@ -36,6 +36,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy import model
+from rustsheet_tools.accuracy.defs._common import fraction_to_mpf
 from rustsheet_tools.accuracy.defs.ceiling_floor import cut15
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg, exponent10
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
@@ -93,16 +94,11 @@ def mround_value(number: float, multiple: float) -> Fraction:
     return result if number >= 0 else -result
 
 
-def _mpf(r: Fraction | int) -> mpmath.mpf:
-    r = Fraction(r)
-    return mpmath.mpf(r.numerator) / r.denominator
-
-
 def _unary(rule: Callable[[float], int]) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
         (x,) = args
         assert not isinstance(x, bool | tuple)
-        return _mpf(rule(float(x)))
+        return fraction_to_mpf(rule(float(x)))
 
     return value
 
@@ -110,7 +106,7 @@ def _unary(rule: Callable[[float], int]) -> Callable[[Sequence[MathArg]], mpmath
 def _mround(args: Sequence[MathArg]) -> mpmath.mpf:
     number, multiple = args
     assert not isinstance(number, bool | tuple) and not isinstance(multiple, bool | tuple)
-    return _mpf(mround_value(float(number), float(multiple)))
+    return fraction_to_mpf(mround_value(float(number), float(multiple)))
 
 
 def _near_whole(rng: random.Random) -> float:

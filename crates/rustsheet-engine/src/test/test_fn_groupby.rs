@@ -690,6 +690,74 @@ fn one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header()
 }
 
 #[test]
+fn a_lifted_groupby_filter_serves_one_element() {
+    // probes/t3840-groupby-lifted-beside-filter, t3840-groupby-lifted-filter-consumed: beside a
+    // filter that drops rows, every element after the first one whose call filtered is #VALUE!,
+    // whatever it holds; one refused before the filter (2 as field_relationship) leaves it for the
+    // next element, an out-of-range depth spends it, and a filter keeping every row is never spent.
+    let mut model = records();
+    let calls = [
+        ("H1", "0,1,,C2:C11=2023,{0,1;0,1}"),
+        ("H4", "0,1,,C2:C11>0,{0,1;0,1}"),
+        ("H7", "0,1,,C2:C11=2023,{2,0;0,1}"),
+        ("H10", "{0,2;0,0},1,,C2:C11=2023"),
+        ("H13", "0,{5,1},,C2:C11=2023"),
+        ("H16", "0,1,,,{0,1;0,1}"),
+    ];
+    for (anchor, options) in calls {
+        model._set(
+            anchor,
+            &format!("=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{options})"),
+        );
+    }
+    model.evaluate();
+    let first = model._get_text("H16");
+    assert_ne!(first, "#VALUE!");
+    let grid =
+        |model: &Model, top: usize| [row(model, top, 'H', 'I'), row(model, top + 1, 'H', 'I')];
+    let value = "#VALUE!".to_owned();
+    assert_eq!(
+        grid(&model, 1),
+        [
+            [first.clone(), value.clone()],
+            [value.clone(), value.clone()]
+        ]
+    );
+    assert_eq!(model._get_text("H4"), first);
+    assert_eq!(model._get_text("I5"), first);
+    assert_eq!(
+        grid(&model, 7),
+        [
+            [value.clone(), first.clone()],
+            [value.clone(), value.clone()]
+        ]
+    );
+    assert_eq!(row(&model, 10, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 13, 'H', 'I'), [value.clone(), value.clone()]);
+    assert_eq!(model._get_text("I17"), first);
+}
+
+#[test]
+fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
+    // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
+    // itself has no filter, so every element keeps its value (T-3840 review).
+    let mut model = records();
+    model._set(
+        "Z2",
+        "=D2+IFERROR(INDEX(GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023),1,1)*0,0)",
+    );
+    for row in 3..=11 {
+        model._set(&format!("Z{row}"), &format!("=D{row}"));
+    }
+    model._set("H1", "=GROUPBY(A2:A11,Z2:Z11,_xleta.SUM,{0,1;0,1},1)");
+    model._set("K1", "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,{0,1;0,1},1)");
+    model.evaluate();
+    assert_eq!(row(&model, 1, 'H', 'I'), row(&model, 1, 'K', 'L'));
+    assert_eq!(row(&model, 2, 'H', 'I'), row(&model, 2, 'K', 'L'));
+    assert_ne!(model._get_text("I2"), "#VALUE!");
+}
+
+#[test]
 fn error_values_of_arguments_come_first_in_argument_order() {
     // groupby-sort-filter-args B61-B78: an error value in any argument wins over an invalid other
     // argument, earlier or later, and the first error in argument order wins.
