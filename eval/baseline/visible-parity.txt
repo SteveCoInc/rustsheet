@@ -214,6 +214,7 @@ probes/irr-guess-edges-2.case.json	4
 probes/irr-guess-edges.case.json	5
 probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
+probes/oddf-date-order-domain-sweep.case.json	60
 probes/stat-argument-modes.case.json	9
 probes/stat-order-floor-batch.case.json	1
 probes/stat-quantile-lift.case.json	9
@@ -254,6 +255,7 @@ probes/t3352-binom-negbinom-large-n.case.json	69
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	222
 probes/t3406-irr-num-boundary.case.json	76
 probes/t3444-binom-range-inv-large-n.case.json	111
+probes/t3446-script-digits-forms.case.json	92
 probes/t3465-collation-holdout.case.json	62
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14

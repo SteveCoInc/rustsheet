@@ -2752,7 +2752,8 @@ Rule: the four odd-coupon functions read their arguments in order and check few 
    or 4 as it is read (`ODDLPRICE(..,100,3,NA())` is `#NUM!`).
 3. basis: an error, text or boolean is returned, then outside 0-4 `#NUM!`.
 4. Only then the date order and value checks, all `#NUM!`: a settlement not before the maturity, an issue not before the
-   first coupon, a coupon date not before the maturity, ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
+   first coupon, a coupon date not before the maturity, ODDFPRICE's and ODDFYIELD's settlement on or before the issue or on
+   or after the first coupon (see "ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon"), ODDLPRICE's and ODDLYIELD's settlement on or before `last_interest`
    (`ODDLPRICE(42917,43200,42917,..)` is `#NUM!`, `ODDLPRICE(42918,43200,42917,0.0575,0.065,100,2,0)` = 99.44775142683748),
    a negative rate, a negative yld (ODDFYIELD and ODDLYIELD: a price of 0 or less), a redemption of 0 or less. So
    `ODDFPRICE(43832,43831,..,NA(),2,0)` is `#N/A` and `ODDLPRICE(43000,43200,42917,-0.05,..,TRUE)` `#VALUE!`.
@@ -2765,6 +2766,29 @@ that only the move takes past 9999-12-31 is `#NUM!` after the reads, as before T
 Ours: matches since T-2483 (`odd_args` and `odd_last_of` in financial_bonds.rs).
 Status: VERIFIED (excel-graph)
 Tasks: T-2483
+
+## ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon
+Rule: ODDFPRICE and ODDFYIELD are `#NUM!` unless issue < settlement < first_coupon < maturity, at every frequency and
+basis. A settlement equal to the issue, before it (a day or a year), equal to the first coupon, a day after it, or
+anywhere between the first coupon and the maturity is `#NUM!`, as are a settlement on or after the maturity, an issue
+on or after the first coupon, and a first coupon on or after the maturity. This is ODDLPRICE's and ODDLYIELD's
+last_interest < settlement < maturity with the odd period moved to the front: both pairs price only a settlement inside
+the odd period. A settlement on a quasi-coupon date inside a long first period is a value.
+The domain checks match the ODDL* pair's: a negative rate is `#NUM!` and a rate of 0 is a value; ODDFPRICE's yld of
+0, 1E-12 and 2 are values and -0.01 `#NUM!`; ODDFYIELD's pr of 0 and -1 are `#NUM!` and 1E-6 a value (a yield of
+3.7 to 94), and a pr of 150 above a redemption of 100 is a negative yield, not `#NUM!`; a redemption of 0 or -100
+is `#NUM!` and 1E-9 a value.
+- `ODDFPRICE(DATE(2024,3,15),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` (settlement = issue)
+  and `ODDFPRICE(DATE(2027,1,1),DATE(2030,6,15),DATE(2024,3,15),DATE(2024,6,15),0.05,0.06,100,2,0)` are `#NUM!`.
+Evidence: probes/oddf-date-order-domain-sweep (1260 cells: 26 date and domain scenarios plus the yld or pr edges, at
+frequency 1, 2 and 4 by basis 0-4; maturity 2030-06-15, first coupon 2024-06-15, a short and a long first period;
+excel-graph, 2026-11-03, T-3652): P!A5:O19 and Y!A5:O19 `#NUM!`, P!A3:O3 the quasi-coupon settlement.
+Ours: matches since T-3652 (`odd_first_of` in financial_bonds.rs); before it a settlement outside the odd period was
+priced (P!A5:O11 and Y!A5:O11, 162 cells). The sweep's other off cells are ODDFYIELD's solver digits on the long
+first period with a settlement before the quasi-coupon date (Y!A2:O2, A22:O22, A33:O33, A34:O34, T-3031) and last
+ulps (P!A29, E29, T-1374; Y!I29, N29, T-3043).
+Status: VERIFIED (excel-graph)
+Tasks: T-3652
 
 ## ODDFPRICE and ODDFYIELD need the first coupon on the maturity's schedule
 
