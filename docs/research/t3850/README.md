@@ -70,7 +70,7 @@ the owner rules otherwise, the rule stays as merged.
 The question: does any rule on what the model sees at a flat secant (the step, |f1|, |r1 - r0|, f1 relative to the
 terms) separate the late restarts Excel takes from its holds?
 
-Tools: `trace.diff` is a temporary, uncommitted patch. It adds an env switch and a trace line to `rate_secant`, plus
+Tools: `trace.diff` is a temporary patch, kept here for reproduction and never applied to the engine. It adds an env switch and a trace line to `rate_secant`, plus
 an example binary `t3850_probe` that evaluates one formula per stdin line. Build it with
 `cargo build --release -p rustsheet_engine --example t3850_probe`. `gen_late.py` draws the probe (its docstring
 gives the run line).
@@ -81,8 +81,13 @@ gives the run line).
    state ..." lists them).
 2. **A blind probe confirms it.** probes/t3850-rate-same-state was drawn by `gen_late.py` and committed before the
    oracle fill: 240 calls in 40 groups of identical state, at steps 6 to 200. 25 groups get more than one Excel
-   value, and 21 mix the hold, the restart and neither. Excel is the hold on 29 cells, the restart on 111 and
-   neither on 100. T-3698's rule gets 55.
+   value.
+   - Solid: 4 groups mix `#NUM!` with a number (A55, A109, A175, A229 and the 5 cells after each) and 8 spread over
+     more than 4 ulp.
+   - Under decision 0112's 4-ulp floor: 13 groups, although a second excel-graph fill reproduced all 240 cells bit
+     for bit.
+   - Excel is the hold on 29 cells, the restart on 111 and neither on 100 (mostly last bits). T-3698's rule gets 55.
+   - financial.md gives the split by band.
 3. **Widening the restart is a sampling artefact.** Score of step bound K in {16, 24, 32, 48, 64, 100, 200} by |f1|
    cut in {1e-4, 2e-4, 1e-3, none} by floor in {1.3e-7, 0}, on the 2,160 other RATE oracle cells:
    - the best gains 2 cells (cut 2e-4 at K 16), below the 5-point margin;

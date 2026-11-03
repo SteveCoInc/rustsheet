@@ -1329,20 +1329,28 @@ Evidence (excel-graph, 2026-11-03, T-3850; tools in docs/research/t3850/):
     0.4683193131486107, f1 3.05e-5: step 10 (A15) is Excel's r0, step 17 (A27) 0.4683193131486108 (neither path),
     step 22 (A33) r0 again, step 24 (A34) the restart's 0.46831931314861086.
   - `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)`, f1 6.1e-5: step 11 (A16) and step 41 (A42)
-    are the restart's value and step 15 (A25) is `#NUM!`.
+    are the restart's value and step 15 (A25) is `#NUM!` (an error against a number, so not fill noise).
   - `RATE(294,5227.362063958,-6908028.229217,29809043.9559,0,g)`, f1 1.3e-7: steps 46, 61, 84 and 154 (A43, A47,
     A51, A54) give 4 different Excel values; only A47 is the restart's.
 - probes/t3850-rate-same-state (240 calls, drawn blind by `gen_late.py` before the fill): 40 groups of 6 calls with
   the same model state, at steps 6 to 200 (98 calls at steps up to 16, 142 later).
-  - 25 groups get more than one Excel value, and 21 mix the hold, the restart and neither. For example,
-    `RATE(3,-267689164.281276,19899925.9637451,2874407835.94809,1,g)` (A199:A204) at steps 9, 11, 13, 15, 17 and 21
-    is the restart, hold, restart, restart, hold and restart.
-  - Excel is the hold on 29 cells, the restart from r0 on 111, and neither on 100. T-3698's rule gets 55.
+  - 25 groups get more than one Excel value. 12 of them are solid evidence: 4 mix `#NUM!` with a number and 8 spread
+    over more than 4 ulp, up to 3,196 ulp (A193:A198). The other 13 differ by 1 to 4 ulp. That is under the
+    reproducibility floor decision 0112 sets for excel-graph bits, although a second fill (16:11 UTC) gave all 240
+    cells bit for bit.
+  - Example: `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)` (A55:A60) is `#NUM!` in Excel at step
+    12 (A56). At steps 7, 16, 20, 61 and 79 it is the restart's 0.07120577478278645. A step bound can't give both.
+  - Excel is the hold on 29 cells, the restart from r0 on 111, and neither on 100; T-3698's rule gets 55. "Neither"
+    is mostly last bits: 120 of the 185 off cells are a few ulp from Excel and 54 more agree to 15 digits.
+    - On the 12 solid groups (72 cells): hold 8, restart 15, neither 49.
+    - On the 1-to-4-ulp groups (78 cells): hold 21, restart 30, neither 27.
+    - On the 15 groups with one Excel value (90 cells): restart 66, neither 24.
 - A wider restart is not a rule. Restarting at every step to 200 with |f1| unbounded gains 70 and loses 14 cells on
   the new probe. On the 2,160 other RATE oracle cells it gains 8 and loses 12, and the best step and |f1| bounds
   there gain 2 with none lost, below the 5-point margin. Which cells win depends on how the series were sampled.
 Ours: `rate_secant` (functions/financial/financial_util.rs), unchanged by T-3850.
-Status: VERIFIED (excel-graph, the groups above) / UNVERIFIED (Excel's residual in the noise floor)
+Status: VERIFIED (excel-graph, the error-against-number and over-4-ulp groups above) / UNVERIFIED (the splits of
+4 ulp or less, under decision 0112's floor; Excel's residual in the noise floor)
 Tasks: T-3850, T-3963, T-3916, T-3424
 
 ## YIELD with one coupon period left is closed form

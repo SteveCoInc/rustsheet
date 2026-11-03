@@ -89,9 +89,10 @@ Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here)
   - In the older cases: 4 of the 9 repeated states (t3698-rate-flat-restart A15, A27, A33, A34; A16, A25, A42; A43,
     A47, A51, A54; A13, A48).
   - New blind probe probes/t3850-rate-same-state: 240 calls, 40 same-state groups at steps 6 to 200, drawn by
-    `gen_late.py` and committed (6de64ea8) before the excel-graph fill. 25 groups get more than one Excel value, and
-    21 mix the hold, the restart and neither. Excel is the hold on 29, the restart on 111, neither on 100; T-3698's
-    rule gets 55.
+    `gen_late.py` and committed (6de64ea8) before the excel-graph fill. 25 groups get more than one Excel value.
+    12 of them are solid (4 mix `#NUM!` with a number, 8 spread over more than 4 ulp). 13 differ by 1 to 4 ulp,
+    under decision 0112's floor, although a second fill reproduced all 240 cells bit for bit. Excel is the hold on
+    29, the restart on 111, neither on 100 (mostly last bits); T-3698's rule gets 55.
 - No rule is implemented and the engine is unchanged. Wider restarts (K up to 200, |f1| cut up to none) were scored
   on the 2,160 older RATE oracle cells. The best gains 2 (under the 5-point margin), and K 200 gains 8 and loses 12.
   On the new probe it gains 70 and loses 14. That contradiction says the count follows the sampling, so no fit was
