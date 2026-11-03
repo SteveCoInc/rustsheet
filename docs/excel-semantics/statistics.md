@@ -2696,6 +2696,10 @@ same amount (up to 4.4E-12 from Excel, T-3447).
     autocorrelation 0.56). It is not the rounding of v, k + M, s v or M v, nor fl(2 k v) on a 64-bit v (coefficients
     near 0), nor of d v (a negligible regressor: unstable coefficients and no fall in the residual). It is UNVERIFIED
     and it is what keeps these cells off.
+  - T-3774 (attempt 2, docs/research/t3774) ruled out four more sources. Constant per run: removing each run's mean
+    leaves 2,003 → 1,993 units of 2^-53, so the cause is not lf (R's log1p(-k/n) form) or a stirlerr term. bd0's
+    series with every partial sum stored, every ej = ej v^2 stored, or v^2 stored once: each leaves the rms at 0.77,
+    with unstable coefficients.
   - The evidence for these terms is statistical: a fit over the 704 excel-graph cells, not single cells. The fl(n p)
     coefficient's standard error is about 0.07.
   - The same fit on the engine's values returns exactly its own model (1, 1, -1, -1, residual 0.04), which checks the
