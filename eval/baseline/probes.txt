@@ -1895,6 +1895,11 @@ C	probes/t3533-lift-stdeva-num.case.json	1
 C	probes/t3533-lift-stdeva-text.case.json	1
 C	probes/t3533-lift-stdevp-blank.case.json	1
 C	probes/t3533-lift-stdevp-bool.case.json	1
+C	probes/t3533-lift-stdevp-compat-blank.case.json	1
+C	probes/t3533-lift-stdevp-compat-bool.case.json	1
+C	probes/t3533-lift-stdevp-compat-multi.case.json	1
+C	probes/t3533-lift-stdevp-compat-num.case.json	1
+C	probes/t3533-lift-stdevp-compat-text.case.json	1
 C	probes/t3533-lift-stdevp-multi.case.json	1
 C	probes/t3533-lift-stdevp-num.case.json	1
 C	probes/t3533-lift-stdevp-text.case.json	1
@@ -1915,6 +1920,11 @@ C	probes/t3533-lift-vara-num.case.json	1
 C	probes/t3533-lift-vara-text.case.json	1
 C	probes/t3533-lift-varp-blank.case.json	1
 C	probes/t3533-lift-varp-bool.case.json	1
+C	probes/t3533-lift-varp-compat-blank.case.json	1
+C	probes/t3533-lift-varp-compat-bool.case.json	1
+C	probes/t3533-lift-varp-compat-multi.case.json	1
+C	probes/t3533-lift-varp-compat-num.case.json	1
+C	probes/t3533-lift-varp-compat-text.case.json	1
 C	probes/t3533-lift-varp-multi.case.json	1
 C	probes/t3533-lift-varp-num.case.json	1
 C	probes/t3533-lift-varp-text.case.json	1

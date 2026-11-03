@@ -5,6 +5,7 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 // STDEV.* is the square root of the matching VAR.* (`excel_variance`).
 impl Model {
     pub(crate) fn fn_stdev_p(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // Legacy STDEVP shares this function (probes/t3533-lift-stdevp-compat-*, T-3533).
         self.variance_of_values(args, cell, VarianceKind::Population, true, false, "STDEV.P")
     }
 

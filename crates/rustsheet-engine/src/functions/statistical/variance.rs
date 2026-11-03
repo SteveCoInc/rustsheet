@@ -118,6 +118,7 @@ impl Model {
     }
 
     pub(crate) fn fn_var_p(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        // Legacy VARP shares this function (probes/t3533-lift-varp-compat-*, T-3533).
         self.variance_of_values(args, cell, VarianceKind::Population, false, false, "VAR.P")
     }
 

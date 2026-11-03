@@ -1511,9 +1511,9 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
   `MAXA(OFFSET(A5,{0;1},0))` 0. This also explains the 0 of the probe below (text 0, blank and TRUE skipped).
 - `AVERAGEA` and `MAXA(OFFSET(A4,{0;1;2},0))` over "5", blank, TRUE are 0: the text is not read as 5 and TRUE not as 1; which elements count is open (the data holds no number).
 - T-3533 (probes/t3533-lift-*, E1, excel-graph 2026-11-03, one formula per workbook, same data plus A8 -3): VAR.P,
-  STDEV.P, legacy VAR, MINA, VARA, VARPA, STDEVA and STDEVPA all read each element's top-left cell (`MINA(OFFSET(A1,{0;1},0,1,2))`
-  is 1, `STDEV.P(..)` 49.5, `VARA(..)` 4900.5) and skip a text, blank or TRUE element, the A-variants too, which count
-  text as 0 and TRUE as 1 in a reference argument: `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7, -3 is 50 (the variance of 7
+  STDEV.P, legacy VAR, VARP and STDEVP, MINA, VARA, VARPA, STDEVA and STDEVPA all read each element's top-left cell (`MINA(OFFSET(A1,{0;1},0,1,2))`
+  is 1, `STDEV.P(..)` 49.5, `VARA(..)` 4900.5) and skip a text, blank or TRUE element, the A-variants too (as a plain
+  reference argument they count text as 0 and TRUE as 1; references.md T-1003/T-1211): `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7, -3 is 50 (the variance of 7
   and -3; with text as 0 it would be 26.33, as 5 it would be 28), `VARPA(OFFSET(A6,{0;1;2},0))` over TRUE,
   7, -3 25, `MINA(OFFSET(A4,{0;3},0))` over "5", 7 is 7 and `MAXA(OFFSET(A4,{0;4},0))` over "5", -3 is -3, so MAXA's
   text is skipped, not 0. Only AVERAGEA counts a text element as 0 (above).
@@ -1521,8 +1521,8 @@ Status: VERIFIED (excel-graph) for the values above. COUNTIFS, AVERAGEIF and MAX
 VAR.S and SUMSQ implemented (T-2824, `GridReading::TopLeft`: each element's top-left cell, as SUM), and AVERAGEA and
 MAXA (`GridReading::TopLeftElements`: that cell read as an array element, so a blank or TRUE is skipped and AVERAGEA's
 text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). T-3533: VAR.P and STDEV.P
-take `GridReading::TopLeft` (legacy VAR already shared VAR.S's), MINA and the VARA family `GridReading::TopLeftElements`
-(their array rule counts only numbers, so text, blanks and TRUE are skipped); all 51 t3533 probes pass.
+take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and STDEVP share VAR.P's and STDEV.P's), MINA and the VARA family `GridReading::TopLeftElements`
+(their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
 Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ

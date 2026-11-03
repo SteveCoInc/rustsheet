@@ -2,7 +2,7 @@
 (probes/t2816-lift-*) plus A8 = -3.
 
 Element kinds (A4 "5" text, A5 blank, A6 TRUE, A7 7, A8 -3):
-- variance family (VAR.P, STDEV.P, VARA, VARPA, STDEVA, STDEVPA, VAR): three elements, so text or a blank read as 0,
+- variance family (VAR.P, STDEV.P, VARA, VARPA, STDEVA, STDEVPA, VAR, VARP, STDEVP): three elements, so text or a blank read as 0,
   skipped, or read as its value all give different results: num {A1;A2;A3}, multi {A1:B1;A2:B2} (top-left or
   #VALUE!), text {A4;A7;A8}, blank {A5;A7;A8}, bool {A6;A7;A8}.
 - MAXA / MINA: two elements, the other one -3 (A8) and 7 (A7), so that the extremum tells a skipped element
@@ -33,7 +33,7 @@ EXT = {
     "bool-neg": "OFFSET(A6,{0;2},0)",
     "bool-pos": "OFFSET(A6,{0;1},0)",
 }
-FUNCS = {f: VAR3 for f in ("VAR.P", "STDEV.P", "VARA", "VARPA", "STDEVA", "STDEVPA", "VAR")} | {"MAXA": EXT, "MINA": EXT}
+FUNCS = {f: VAR3 for f in ("VAR.P", "STDEV.P", "VARA", "VARPA", "STDEVA", "STDEVPA", "VAR", "VARP", "STDEVP")} | {"MAXA": EXT, "MINA": EXT}
 
 n = 0
 for fn, kinds in FUNCS.items():
@@ -48,7 +48,8 @@ for fn, kinds in FUNCS.items():
             "sheets": [{"name": "Sheet1", "cells": {**DATA, "E1": f"={fn}({arg})"}}],
             "expected": {},
         }
-        slug = fn.lower().replace(".", "")
+        # Legacy VARP / STDEVP would collide with VAR.P / STDEV.P without the suffix.
+        slug = fn.lower().replace(".", "") + ("-compat" if fn in ("VARP", "STDEVP") else "")
         (DIR / f"t3533-lift-{slug}-{kind}.case.json").write_text(json.dumps(case, indent=1) + "\n")
         n += 1
 print(n, "cases")
