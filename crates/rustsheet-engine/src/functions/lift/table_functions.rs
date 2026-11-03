@@ -386,6 +386,7 @@ macro_rules! lifting_table_functions {
             | Function::Replaceb
             | Function::Concatenate
             | Function::Textjoin
+            | Function::Arraytotext
             | Function::Dollar
             | Function::Fixed
             | Function::Numbervalue

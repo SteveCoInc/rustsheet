@@ -3,7 +3,7 @@ id: T-3837
 title: "GROUPBY: a one-cell error row_fields and text or blank scalar values are #VALUE!"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -41,15 +41,47 @@ GROUPBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
 - gen-m7/ec5094d09c82f94d.case.json Calc!A11591, Calc!A11652
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel; unit tests in groupby.rs cover a text, an empty-text and a blank-cell `values` scalar and a one-cell
+- [x] The owned cells match Excel; unit tests in groupby.rs cover a text, an empty-text and a blank-cell `values` scalar and a one-cell
       error reference as `row_fields`, each against a later error option.
-- [ ] Update docs/excel-semantics/arrays.md "GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch"
+- [x] Update docs/excel-semantics/arrays.md "GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch"
       (its `Ours:` line) when the rule is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+
+## Outcome
+- `Model::groupby_fields` (groupby.rs) reads `row_fields` and `values` in Excel's order, and every error it finds is lifted
+  over an array `field_relationship` through `Model::lifted_error`:
+  - a literal error `row_fields` is that error;
+  - then an error `values`, a one-cell reference included, is its error;
+  - then a blank-cell `values` is `#VALUE!`, ahead of every option's error (0a91d5918d798930 A10127).
+- `Model::groupby_args` turns text `values` (one text element) and one error key (a one-cell reference to an error as
+  `row_fields`) into `#VALUE!` beside the height check, so after the options' errors. This order is evidence the first
+  attempt got wrong: 25 batch cells such as `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` (ec5094d09c82f94d A6223, `#NUM!`)
+  and 5 such as `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)` (18ded81711290e85 A1648, `#DIV/0!`) show the options'
+  error winning. Recorded in docs/excel-semantics/arrays.md.
+- Unit tests: `scalar_inputs_and_the_order_of_their_errors` and `an_early_input_error_fills_an_array_field_relationship`
+  (test_fn_groupby.rs).
+- **Eval delta**: gen-m7 known failures go from 2538 to 2170 (368 fixed, 0 regressions, `make eval-baseline`), 99.70% to
+  99.86% bit-exact. All 359 owned cells pass, and so do 9 of T-3840's (the early-error lift); T-3840 keeps the FALSE element.
+- Also folds in the MINOR findings left on #2847: T-3778's criteria are ticked with the spill-extent deviation noted, and
+  arrays.md cites 07c0c130d894cfe0 A4515.
+
+## Landing notes
+- PR #2860 (stacked on #2847, which has merged; `origin/main` merged in at 12a895dc7). Round-1 fixes pushed at 013220834 and the
+  commit adding these notes; CI pending on that head.
+- Round 1 on 63cf87648: security APPROVE, design APPROVE (MINORs: the shared `ReferenceKind` check, and the reused height
+  message, kept), excel-fidelity REQUEST_CHANGES. Fixed since then:
+  - The text/error-key rules now apply only where the evidence goes (`ScalarInput`): scalar text `values` or a one-cell
+    error `row_fields`, with `field_headers` omitted. A 1x1 array and a given `field_headers` are left as before, except
+    that another height is still `#VALUE!`; T-3854 probes them.
+  - The arrays.md "Unprobed: one row of text values" line now cross-references the new section.
+  - The test uses a same-height error-key case.
+  - Eval: gen-m7 2538 -> 2170 known failures, 0 regressions; 52 groupby unit tests pass; `make check-fast` green.
+- Next: run all three reviewers on the new head (the head moved). Then CI green, `make merge-mode` = lock, and enqueue.
+- Don't repeat: matching the rule on array shape (any 1x1 text values or 1x1 error key) was rejected as wider than the evidence.

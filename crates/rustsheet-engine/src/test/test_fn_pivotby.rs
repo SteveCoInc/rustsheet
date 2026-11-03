@@ -94,6 +94,15 @@ fn shown_and_generated_headers() {
 }
 
 #[test]
+fn a_blank_header_is_left_out_of_the_joined_column_name() {
+    // probes/t3893-pivotby-error-sort-header B121, gen-m7 ceb2c91035864a71 B8785: col_fields
+    // headed (blank, "?b", 3.14159) are named "?b, 3.14159". Here the header row is row 9:
+    // A9 blank, Apple, 2024.
+    let grid = pivot(&format!("=PIVOTBY(B9:B11,A9:C11,D9:D11,{SUM},3)"), 1, 2);
+    assert_eq!(grid[0], ["", "Apple, 2024"]);
+}
+
+#[test]
 fn totals_off_and_first() {
     // P!Y1 and P!A25: no total row, no total column.
     let grid = pivot(&format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM},,0,,0)"), 7, 5);
@@ -675,4 +684,170 @@ fn array_field_headers_and_depths_lift_to_top_left_cells() {
         2,
     );
     assert_eq!(rows, [["#VALUE!", "#VALUE!"]]);
+}
+
+#[test]
+fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
+    // gen-m7 arg-pairs batch (T-3841, excel-graph; docs/excel-semantics/arrays.md "PIVOTBY in
+    // the gen-m7 arg-pairs batch", first bullet, T-3888).
+    // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 row keys, B1:B3 column keys, C1:C3
+    // values.
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("Z2", "x");
+    model._set("Z4", "7");
+    for (row, (key, col, value)) in [("a", "p", "1"), ("b", "q", "2"), ("a", "q", "3")]
+        .iter()
+        .enumerate()
+    {
+        model._set(&format!("A{}", row + 1), key);
+        model._set(&format!("B{}", row + 1), col);
+        model._set(&format!("C{}", row + 1), value);
+    }
+    let cases = [
+        // A one-cell reference to an error as row_fields or col_fields is #VALUE!, with or
+        // without field_headers; a literal error is that error.
+        ("=PIVOTBY(Z1,B1:B3,Z4,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,Z1,C1:C3,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(Z1,B1:B3,C1:C3,_xleta.SUM,3,-1)", "#VALUE!"),
+        ("=PIVOTBY(#REF!,B1:B3,C1:C3,_xleta.SUM)", "#REF!"),
+        // ... but only after the error values: the values' and every later option's.
+        ("=PIVOTBY(Z1,B1:B3,Z1,_xleta.SUM)", "#DIV/0!"),
+        ("=PIVOTBY(Z1,B1:B3,C1:C3,_xleta.SUM,0,0,Z1)", "#DIV/0!"),
+        ("=PIVOTBY(A1:A3,Z1,C1:C3,_xleta.SUM,3,1,#N/A)", "#N/A"),
+        // A blank-cell values is #VALUE!, ahead of a later option's error, after a literal error
+        // field.
+        ("=PIVOTBY(A1:A3,B1:B3,Z3,_xleta.MIN,1,-2,#NUM!)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,B1:B3,Z3,_xleta.SUM,1,1,Z1)", "#VALUE!"),
+        ("=PIVOTBY(#NULL!,B1:B3,Z3,_xleta.SUM)", "#NULL!"),
+        // Text values are #VALUE! too, but lose to a later option's error.
+        ("=PIVOTBY(A1:A3,B1:B3,Z2,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,B1:B3,Z2,_xleta.SUM,2,1,Z1)", "#DIV/0!"),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("E{}", 5 * i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("E{}", 5 * i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+/// T-3889: as in GROUPBY, a `row_sort_order`, `col_sort_order` or `filter_array` that is a
+/// one-cell reference to a blank cell is `#VALUE!` in its place, ahead of a later option's error;
+/// a blank total depth or `field_headers` is 0 and a text sort order is invalid only after it, and
+/// a scalar `row_fields`, a short or `""` `col_fields` lose to the later error
+/// (probes/t3889-pivotby-option-order P!B1-B49).
+#[test]
+fn blank_options_are_refused_before_a_later_error() {
+    let mut model = records();
+    model._set("K1", "x");
+    let cases = [
+        ("G1", "A2:A11,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
+        ("G2", "A2:A11,B2:B11", ",,,,K3,,NA()", "#VALUE!"),
+        ("G3", "A2:A11,B2:B11", ",,,,,K3,NA()", "#VALUE!"),
+        ("G4", "A2:A11,B2:B11", ",,K3:K3,,,K1", "#VALUE!"),
+        ("G5", "A2:A11,B2:B11", ",K3,,,,,NA()", "#N/A"),
+        ("G6", "A2:A11,B2:B11", ",,,K3,,,NA()", "#N/A"),
+        ("G7", "A2:A11,B2:B11", ",,K1,,,,NA()", "#N/A"),
+        ("G8", "A2:A11,B2:B11", ",K1,,,,,NA()", "#VALUE!"),
+        ("G9", "A2:A11,B2:B11", ",,NA(),,K3", "#N/A"),
+        ("G10", "2,B2:B11", ",,,,,,NA()", "#N/A"),
+        ("G11", "A2:A11,B2:B3", ",,NA()", "#N/A"),
+        ("G12", "A2:A11,\"\"", "NA()", "#N/A"),
+        ("G13", "2,B2:B11", ",,K3,,,,NA()", "#VALUE!"),
+    ];
+    for (cell, fields, options, _) in cases {
+        model._set(cell, &format!("=PIVOTBY({fields},D2:D11,{SUM},{options})"));
+    }
+    model.evaluate();
+    for (cell, fields, options, expected) in cases {
+        assert_eq!(model._get_text(cell), expected, "{fields} / {options}");
+    }
+}
+
+/// T-3890: one filter value keeps or drops every row only beside one row field, one column field,
+/// one value column and no header row, as in GROUPBY; beside two of any of them, or with a header
+/// row, it is `#VALUE!`, TRUE and 2 included (probes/t3890-pivotby-scalar-filter P!B1-B50).
+#[test]
+fn a_scalar_filter_needs_one_column_each_and_no_header() {
+    let mut model = records();
+    let cases = [
+        ("G1", "A2:A11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "7 rows"),
+        ("G2", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G3", "A2:A11,B2:C11,D2:D11,{SUM},,,,,,2", "#VALUE!"),
+        ("G4", "A2:A11,C2:C11,D2:E11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G5", "A1:A11,C1:C11,D1:D11,{SUM},1,,,,,TRUE", "#VALUE!"),
+        ("G6", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,NA()", "#N/A"),
+    ];
+    // G1 is the one valid call: it spills, so it goes last, out of the way of the others.
+    for (cell, args, _) in cases.iter().skip(1) {
+        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+    }
+    model._set(
+        "K1",
+        &format!("=ROWS(PIVOTBY({}))", cases[0].1.replace("{SUM}", SUM)),
+    );
+    // The refusal fills the shape of an array relative_to (gen-m7 547d6192794dbf57 A10188:B10189).
+    model._set(
+        "M1",
+        &format!("=PIVOTBY(A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,A1:B2)"),
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("K1"), "7");
+    for filled in ["M1", "N1", "M2", "N2"] {
+        assert_eq!(model._get_text(filled), "#VALUE!", "{filled}");
+    }
+    for (cell, args, expected) in cases.iter().skip(1) {
+        assert_eq!(model._get_text(cell), *expected, "{args}");
+    }
+}
+
+/// T-3892: an early error fills the shape of an array `relative_to` the call lifts over, as each
+/// element's PIVOTBY meets it first: a text `row_fields` is `#VALUE!` and an error option its own
+/// error in all four cells of a 2x2 `relative_to` (gen-m7 arg-pairs batch, excel-graph:
+/// 05cf579cc6560867 A10859:B10860, 4ad4b1c6b2c2b01d A1:B2, 37041df35489e178 A4942:B4943).
+#[test]
+fn an_early_error_fills_an_array_relative_to() {
+    let mut model = records();
+    let cases = [
+        ("G1", "\"abc\",C2:C11,D2:D11,{SUM},0,,,,,,A1:B2", "#VALUE!"),
+        (
+            "G4",
+            "A2:A11,C2:C11,D2:D11,{SUM},0,#NULL!,,,,,A1:B2",
+            "#NULL!",
+        ),
+        (
+            "G7",
+            "A2:A11,C2:C11,D2:D11,{SUM},0,,SQRT(-1),,,,A1:B2",
+            "#NUM!",
+        ),
+        ("G10", "1/0,C2:C11,D2:D11,{SUM},0,,,,,,A1:B2", "#DIV/0!"),
+    ];
+    for (cell, args, _) in &cases {
+        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+    }
+    // Without an array relative_to the error stays in one cell.
+    model._set(
+        "K1",
+        &format!("=PIVOTBY(\"abc\",C2:C11,D2:D11,{SUM},0,,,,,,1)"),
+    );
+    model.evaluate();
+    for (cell, args, expected) in &cases {
+        let row: i32 = cell[1..].parse().unwrap_or_default();
+        for filled in [
+            format!("G{row}"),
+            format!("H{row}"),
+            format!("G{}", row + 1),
+            format!("H{}", row + 1),
+        ] {
+            assert_eq!(model._get_text(&filled), *expected, "{filled}: {args}");
+        }
+    }
+    assert_eq!(model._get_text("K1"), "#VALUE!");
+    assert_eq!(model._get_text("K2"), "");
 }

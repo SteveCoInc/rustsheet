@@ -71,6 +71,35 @@ fn convert_matches_excel_bits() {
     assert_eq!(bits("A12"), 1.111_111_111_111_111_f64.to_bits());
 }
 
+/// Excel: the two prefixes are one factor, the nearest double to their combined power of ten,
+/// not a product or quotient of the prefixes (probes/convert-unit-names, probes/convert-temperature-
+/// ov00 and ov20, probes-numeric/t3861-convert-prefix-sweep; excel-graph; T-3861).
+#[test]
+fn prefixes_are_one_power_of_ten() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=CONVERT(1,"m","nm")"#); // convert-unit-names, 1/1E-9 is 999999999.9999999
+    model._set("A2", r#"=CONVERT(1,"dm2","m2")"#); // 0.1 x 0.1 is 0.010000000000000002
+    model._set("A3", r#"=CONVERT(1,"cm3","l")"#); // 0.01^3 x 1000 is 0.0010000000000000002
+    model._set("A4", r#"=CONVERT(1,"Pm3","l")"#); // 1E15^3 x 1000 is 1E48
+    model._set("A5", r#"=CONVERT(0.0002,"m3","Mm3")"#); // x 1E-18, not / 1E18
+    model._set("A6", r#"=CONVERT(1E290,"Ym","Ym")"#); // ov00: 1E24 x 1E-24 is 1 - 2^-53
+    model._set("A7", r#"=CONVERT(1E300,"Ym","Zm")"#); // ov20
+    model._set("A8", r#"=CONVERT(1E300,"Ym","m")"#); // ov02: overflows
+    model.evaluate();
+    let bits = |c: &str| match model.get_cell_value_by_ref(&format!("Sheet1!{c}")) {
+        Ok(CellValue::Number(n)) => n.to_bits(),
+        other => panic!("expected number, got {other:?}"),
+    };
+    assert_eq!(bits("A1"), 1e9_f64.to_bits());
+    assert_eq!(bits("A2"), 0.01_f64.to_bits());
+    assert_eq!(bits("A3"), 0.001_f64.to_bits());
+    assert_eq!(bits("A4"), 9.999_999_999_999_999e47_f64.to_bits());
+    assert_eq!(bits("A5"), 2.000_000_000_000_000_3e-22_f64.to_bits());
+    assert_eq!(bits("A6"), 1e290_f64.to_bits());
+    assert_eq!(bits("A7"), 1e303_f64.to_bits());
+    assert_eq!(model._get_text("A8"), "#NUM!");
+}
+
 /// Excel: a boolean number is `#VALUE!`, before an unknown unit's `#N/A`
 /// (probes/eng-gen-sample-edges A8, A11:A14).
 #[test]
@@ -106,4 +135,56 @@ fn boolean_unit_cell_is_value_error() {
     for cell in ["A1", "A2", "A3", "A4"] {
         assert_eq!(model._get_text(cell), *"#VALUE!");
     }
+}
+
+#[test]
+fn unit_names_follow_excel() {
+    // Excel (excel-graph): probes/convert-unit-names (docs/excel-semantics/engineering.md "CONVERT
+    // unit names"). Each pair: formula, Excel's value.
+    let cases = [
+        // Seconds take a decimal prefix.
+        (r#"=CONVERT(1,"ms","sec")"#, "0.001"),
+        (r#"=CONVERT(1,"sec","ksec")"#, "0.001"),
+        // Binary prefixes only on bit and byte.
+        (r#"=CONVERT(1,"kibyte","bit")"#, "8192"),
+        (r#"=CONVERT(1,"kim","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"Mig","g")"#, "#N/A"),
+        (r#"=CONVERT(1,"kiK","K")"#, "#N/A"),
+        // "pc" is the parsec against a distance and pico-calories against an energy.
+        (r#"=CONVERT(1,"pc","parsec")"#, "1"),
+        (r#"=CONVERT(1,"pc","c")"#, "1E-12"),
+        (r#"=CONVERT(1,"kpc","c")"#, "#N/A"),
+        // Units outside the prefixable list, case and surrounding spaces.
+        (r#"=CONVERT(1,"kft","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"KM","m")"#, "#N/A"),
+        (r#"=CONVERT(1," m","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"daar","m2")"#, "1000"),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
+fn convert_mixed_binary_decimal_prefixes() {
+    // Excel (excel-graph): probes/convert-mixed-prefix and probes-numeric/t3861-convert-prefix-sweep
+    // A52 (T-3975). With a binary prefix on either unit, a decimal prefix on the target enters as
+    // the rounded reciprocal of its constant (× 2^30 × (1/1E-21), not × 2^30 × 1E21).
+    let mut model = new_empty_model();
+    model._set("A1", r#"=CONVERT(4.73E-10,"Gibyte","zbyte")"#);
+    model.evaluate();
+    let CellValue::Number(n) = model.get_cell_value_by_ref("Sheet1!A1").unwrap() else {
+        panic!("A1 is not a number");
+    };
+    assert_eq!(n.to_bits(), 5.078_798_827_520_000_7e20_f64.to_bits());
+    assert_ne!(n.to_bits(), 5.078_798_827_52e20_f64.to_bits());
 }

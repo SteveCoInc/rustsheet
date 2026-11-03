@@ -3,7 +3,7 @@ id: T-3692
 title: "Move apply_unary_chain and apply_number_unary out of cast.rs (at the 1,000-line limit)"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,8 +22,11 @@ evaluation lives in a module of its own.
   move with no behaviour change.
 
 ## Acceptance criteria
-- [ ] The two functions and their docs move unchanged; callers compile; cast.rs well under 1,000 lines.
-- [ ] `make check` green (eval unchanged); reviewers approve.
+- [x] The two functions and their docs move unchanged; callers compile; cast.rs well under 1,000 lines.
+- [x] `make check` green (eval unchanged); reviewers approve.
 
 ## Out of scope
 - Any change to the unary semantics.
+
+## Outcome
+Moved `apply_unary_chain` and `apply_number_unary` unchanged into `unary_chain.rs`; cast.rs is now 900 lines. No behaviour change; eval unchanged.

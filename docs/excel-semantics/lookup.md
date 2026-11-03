@@ -698,30 +698,96 @@ nothing and 158 hit another position. By block:
 - stay apart (each matches only itself): the supplementary-plane scripts (Deseret, Osage, Vithkuqi, Old Hungarian,
   Garay, Warang Citi, Medefaidrin, U+16EA0-U+16ED3, Adlam; Calc!C38:D38 from position 24 and C39:D48 are all 0),
   and as T-3133 found ı/I and ſ/S. Cherokee U+13AB-U+13EA and U+AB7B-U+ABBA do not equal each other (rows 18-19, C and D
-  0); the sweep never looks a character up against itself, so whether U+AB7B-U+ABBA are weightless (below) is open; the Greek symbol variants ϐ ϑ ϕ ϖ ϰ ϱ,
+  0); U+AB7B-U+ABBA are weightless (below; T-3584 Calc!B17:H18), so they find nothing among the weighted capitals; the Greek symbol variants ϐ ϑ ϕ ϖ ϰ ϱ,
   µ, U+0345, the Cyrillic Ext-C variants U+1C80-U+1C87 and ẛ do not equal their capital (C is 0; in D the capital finds
   its ordinary small letter's row), while ϵ and U+1FBE equal Ε and Ι, and the titlecase digraphs ǅ ǈ ǋ ǲ equal their
   capital and small forms (Calc!C5:D6).
-- equal one another: characters that look missing from Excel's comparison table (BMP letters Unicode added after about
-  5.0, e.g. U+0524-U+052F, U+10C7, U+10CD, U+10FD-U+10FF, U+13F5-U+13FD, U+1C88-U+1C8A, Georgian Mtavruli
-  U+1C90-U+1CBF, U+2D27, U+2D2D, much of Latin Extended-D from U+A792, U+AB53, U+AB70-U+AB7A, U+ABBB-U+ABBF) match the
-  first such character of the other column, whatever it is: Calc!C17 position 22 (U+AB70 finds U+10C7), C15 position 4
-  (U+0529 finds U+0524), C20 positions 1-5 (U+ABBB-U+ABBF find U+13F5), C37 and D37 (positions 1 and 5).
-  UNVERIFIED: that they are characters with no sort weight, which characters are weightless, and whether they also
-  equal empty text (T-3584).
-- observed, not yet explained (T-3584): in Greek Extended MATCH equals each small dasia+oxia letter with the capital
-  psili+varia letter: U+1F05 ἅ finds U+1F0A Ἂ (Calc!C25 position 29 reads 26), U+1F15 finds U+1F1A, U+1F25 U+1F2A,
-  U+1F35 U+1F3A, U+1F45 U+1F4A, U+1F65 U+1F6A, U+1F85 U+1F8A, U+1F95 U+1F9A, U+1FA5 U+1FAA (C26 positions 5, 11, 19,
-  27; C27 positions 5, 13, 21, 29). These are Unicode 1.1 letters, so the late-addition reading above does not
-  obviously cover them. Also the small U+A73B finds U+A738 (C35 position 12), U+A767 finds U+A764 (C36 position 2),
-  U+A699 and U+A69B find U+A660 (C34 positions 31-32), U+03F3 ϳ finds U+0376 Ͷ (C8 position 11) and U+1C88 finds
-  U+2CF2 (C33 position 32).
-The engine folds every pair through Rust's `to_lowercase`, so the cells of C and D listed in eval/baseline/probes.txt
-fail (T-3445).
-Status: VERIFIED (excel-graph) for the block table; the weightless-equality reading and the "observed, not yet
-explained" hits are UNVERIFIED (T-3584). Implemented for T-3133's list only; the T-3298 blocks are not (T-3445).
-Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` (`ExactKey`, the indexed exact
-search) and `WildcardPattern` (the linear one); `decompose` (collation.rs) for XMATCH's `İ`
+- equal one another: the characters Excel's comparison table gives no weight (below). They match the first such
+  character of the other column, whatever it is: Calc!C17 position 22 (U+AB70 finds U+10C7), C15 position 4
+  (U+0529 finds U+0524), C20 positions 1-5 (U+ABBB-U+ABBF find U+13F5), C37 and D37 (positions 1 and 5), and the
+  hits T-3298 left unexplained that pair two weightless characters: U+A699 and U+A69B find U+A660 (C34 positions
+  31-32) and U+1C88 finds U+2CF2 (C33 position 32).
+- the rest of T-3298's unexplained hits are classes of Excel's table (below): Greek Extended's dasia+oxia letters
+  (U+1F05 ...) equal the psili+varia ones (C25:C27), U+A73B finds U+A738 (C35 position 12), U+A767 finds U+A764 (C36
+  position 2) and U+03F3 ϳ finds U+0376 Ͷ (C8 position 11).
+
+**Weightless characters** (T-3584, probes/t3584-match-fold-weightless, excel-graph 2026-11-03). 2568 BMP code points
+have no weight in Excel's comparison table; `docs/research/t3584/weightless-bmp.txt` lists them as 381 ranges
+(decoded from Calc!R1:R256 by `docs/research/t3584/decode.py`). Rule for exact MATCH, VLOOKUP and HLOOKUP: each
+weightless character is one character that equals every other weightless character and nothing else, so the
+one-to-one fold above still keeps the length:
+- Two different weightless characters are equal under MATCH, XMATCH(..,0), VLOOKUP(..,FALSE), HLOOKUP(..,FALSE),
+  COUNTIF and `=`, but not EXACT: U+0524 with U+10C7, with its own small U+0525, with the unassigned U+0378 and with
+  the soft hyphen U+00AD; U+AB70 with U+1C90; U+AB7B with U+AB70 and U+13F5 (Calc!B1:H3, B8:H8, B14:H14, B17:H18).
+  Calc!R1:R256 agree code point by code point: every character MATCH equals U+0524 `=` equals too (digit 9).
+- A weightless character never equals empty text, in any of those (Calc!B4:H4, B9:H9, B12:H12, B19:H19, B32:H32;
+  no code point of Calc!R1:R256 has bit 2 or 4 except the wildcards below), and `"a"&U+0524` never equals `"a"`
+  (Calc!B5:H5, and `"a"&U+00AD`, B13:H13).
+- It is not ignored by exact MATCH: `"a"&U+0524&"b"` against `"ab"` and `U+0524&U+10C7` against `U+0525` are
+  `#N/A` in MATCH, VLOOKUP and HLOOKUP (Calc!E6:H7), while `=`, COUNTIF and XMATCH(..,0) call both pairs equal
+  (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
+- Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
+  versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
+  Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
+  Unicode 3.2 (format characters, variation selectors and a few marks and symbols): U+00AD, U+034F, U+0640, U+0ECC, U+1806, U+180B-U+180D, U+200C-U+200F, U+202A-U+202E,
+  U+2060-U+2063, U+206A-U+206F, U+3190-U+3191, U+FE00-U+FE0F, U+FEFF and U+FFF9-U+FFFD. Not weightless: U+200B
+  (Calc!B16:H16 FALSE against U+0524), the private-use U+E000 (B30:H30), and every supplementary character
+  (U+10400 equals neither U+10401, U+10428, U+0524 nor empty text; B25:H28).
+- In Calc!R the wildcards show as matches, not weights: `*` (U+002A) and U+0001 MATCH both U+0524 and empty text, `?`
+  (U+003F) finds U+0524 by MATCH, and `~` (U+007E) finds empty text (digits 3, 1 and 2); `=` equals none of them to
+  either. UNICHAR is an error at U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF (the e digits).
+
+**U+0001 is a wildcard** (T-3921, probes/t3921-match-u0001-wildcard, excel-graph 2026-11-03; D1:D6 = zzz, abc, ab, empty
+text, U+0524, a+U+0001+c; S = U+0001). Rule:
+- In MATCH (type 0), VLOOKUP and HLOOKUP (FALSE) and XMATCH's wildcard mode (2), every S acts as `*` when the key, read
+  after its `~` escapes, starts with S and holds no `*`; otherwise S is a literal character. So `S` and `S&S` find
+  zzz (1), `S&"b"` ab (3), `S&"B"` ab (3), `S&"c"` and `S&"bc"` abc (2), `S&"b"&S` and `S&"a"&S&"c"` abc (2), `S&"?"`
+  zzz (1) and `"~"&S` zzz (1), while `S&"x"`, `"a"&S`, `"ab"&S`, `"z"&S`, `"q"&S`, `" "&S&"b"` and, with a `*`,
+  `S&"*"` and `"*"&S` are `#N/A`. `"a"&S&"c"` finds only the a+U+0001+c cell (6), not abc (Calc!A11:C20, O11:O20,
+  A21:B34).
+- COUNTIF uses the same rule, but only for a criterion that has a `*` or `?` and so is a wildcard criterion at all:
+  `COUNTIF(D1:D6,S&"?")` is 5 (every non-empty text, as `*?`), `S&"*"` 0, and keys without `*` or `?` compare
+  literally (`S` 0, `"a"&S&"c"` 1; Calc!P11:P20, N21:N34).
+- SEARCH reads every S as `*`, wherever it sits and beside a `*` too: in "xabcx", `"a"&S` and `"ab"&S` are 2, `S&"*"`,
+  `"*"&S` and `"~"&S` 1, `"q"&S`, `"z"&S` and `S&"zz"` `#VALUE!` (Calc!Q11:Q20, C21:C34).
+- XMATCH's exact mode (0) never does: only `"a"&S&"c"` matches (the same cell, 6; Calc!N11:N20). U+0002 is never a
+  wildcard (row 20).
+Implemented in `WildcardPattern::new` and `WildcardPattern::for_search` (crates/rustsheet-engine/src/functions/criteria.rs).
+Status: VERIFIED (excel-graph).
+
+**Equivalence classes beyond one-to-one case pairs** (Calc!T1:U1232, every character of Greek, Greek Extended, Latin
+Extended-D, Cyrillic Extended-B, Coptic, Cherokee and its supplement, Georgian, Cyrillic Extended-C with Georgian
+Mtavruli and Georgian Supplement, each looked up against its whole block; the relation is symmetric). Besides the
+weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp.txt` lists them):
+- Greek: `Ͷ ͷ ϳ` (U+0376, U+0377, U+03F3; Calc!T7, T8, T132), `Ε ε ϵ` (T38, T70, T134), `Σ ς σ` (T52, T83, T84),
+  `ϑ ϴ` (U+03D1 with U+03F4, but not θ; T98, T133). ϐ ϕ ϖ ϰ ϱ and U+0345 equal only themselves; so do µ, ı, ſ and
+  ẛ against their letters (Calc!K1:M10, K22:M23, K28:M28).
+- Greek Extended: psili+varia and dasia+oxia are one letter, in both cases: `ἂ ἅ Ἂ Ἅ` (U+1F02, U+1F05, U+1F0A,
+  U+1F0D; Calc!T147, T150, T155, T158), and the same for ε η ι ο ω (U+1F12, U+1F22, U+1F32, U+1F42, U+1F62 rows),
+  for υ without its capital psili form (U+1F52, U+1F55, U+1F5D), and for the ypogegrammeni rows U+1F82, U+1F92,
+  U+1FA2 (with U+1F85 ...). Every other Greek Extended letter pairs only with its capital (U+1F88 with U+1F80,
+  U+1FBC with U+1FB3, and so on).
+- Latin Extended-D: `Ꜹ ꜹ Ꜻ ꜻ` (U+A738-U+A73B), `Ꝥ ꝥ Ꝧ ꝧ` (U+A764-U+A767), `Ꝯ ꝯ ꝰ` (U+A76E-U+A770).
+- Georgian: `გ` U+10D2 with U+10FA (Calc!T1075, T1115).
+- Cyrillic Extended-C U+1C80-U+1C88 and Georgian Mtavruli U+1C90-U+1CBF are weightless, so they equal each other
+  and not their ordinary letters (Calc!K13:O21, K40:O85).
+Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
+position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
+Hebrew `צ` equals its final form `ץ`: exact MATCH of `"צ"` finds the `ץ` row before its own
+(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other final letters are unprobed and stay apart
+(UNVERIFIED). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
+(C110 = 110), while `=` and XMATCH equal them (coercion.md "Scripts and symbol blocks beyond T-3276").
+Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
+Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
+one, supplementary characters stay themselves, the classes above, then SEARCH's `fold_char` unless it lands on a
+weightless character), through `folded_units` (`ExactKey`, the indexed exact search) and `WildcardPattern` (the linear
+one, XMATCH's wildcard mode and wildcard criteria); `decompose` (collation.rs) for XMATCH's `İ`.
+XMATCH/XLOOKUP's wildcard mode, wildcard criteria and the D-function criteria take the same fold
+(probes/t3929-wildcard-fold-xmatch Calc!B1:D30 and criteria.md "Case beyond ASCII", T-3929). In wildcard mode a
+pattern without `*` or `?` is still folded this way: XMATCH(ab, a&U+0524&b, 2) is `#N/A` though XMATCH(.., 0) finds
+it (Calc!B3, E3). SEARCH and TEXTSPLIT/TEXTBEFORE keep `fold_case` (unprobed for the weightless class). Not implemented: `=` and COUNTIF's weightless equality (T-3904) and MATCH's U+0001
+key, which matches U+0524 and empty text like `*` (t3584 Calc!R1, digit 3; T-3921). The 54 Calc!R cells whose `=`
+digit or U+0001's digit differs stay in eval/baseline/probes.txt; the other 202 pass.
 
 ## XMATCH, XLOOKUP and LOOKUP compare numbers as exact doubles (T-3106)
 Rule: XMATCH and XLOOKUP equate and order numbers as exact doubles, not at 15 digits like the comparison operators, in
@@ -1168,7 +1234,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   values), and a lifted count over such a grid is unprobed (T-2212). Full table with cells: SPEC-0014 "Excel behavior to match" (probes/reference-lift-consumers,
   -b1c, -b1d, -b2, excel-graph, 2026-10-19, T-1955). COUNTIFS, AVERAGEIF and MAXIFS lift per element too
   (T-2065 probes; ours since T-2823); see "Statistical aggregates over a lifted OFFSET" below for STDEV.S,
-  VAR.S, SUMSQ, AVERAGEA, MAXA, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
+  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
 - Per element, the scalar rules hold: an element off the sheet is `#REF!` (`OFFSET(A1,{0;-1},0)`, second element);
   `INDIRECT("R2C1",{TRUE;FALSE})` is `#REF!`, A2; a scalar error argument next to the lifted one is that error in every
   element (`INDEX(OFFSET(A1,{0;1},NA()),1,1)` is `#N/A`).
@@ -1473,12 +1539,19 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
   `MAXA(OFFSET(A4,{0;3},0))` 7, `AVERAGEA(OFFSET(A5,{0;1},0))` (blank, TRUE) `#DIV/0!` (TRUE not counted as 1) and
   `MAXA(OFFSET(A5,{0;1},0))` 0. This also explains the 0 of the probe below (text 0, blank and TRUE skipped).
 - `AVERAGEA` and `MAXA(OFFSET(A4,{0;1;2},0))` over "5", blank, TRUE are 0: the text is not read as 5 and TRUE not as 1; which elements count is open (the data holds no number).
+- T-3533 (probes/t3533-lift-*, E1, excel-graph 2026-11-03, one formula per workbook, same data plus A8 -3): VAR.P,
+  STDEV.P, legacy VAR, VARP and STDEVP, MINA, VARA, VARPA, STDEVA and STDEVPA all read each element's top-left cell (`MINA(OFFSET(A1,{0;1},0,1,2))`
+  is 1, `STDEV.P(..)` 49.5, `VARA(..)` 4900.5) and skip a text, blank or TRUE element, the A-variants too (as a plain
+  reference argument they count text as 0 and TRUE as 1; references.md T-1003/T-1211): `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7, -3 is 50 (the variance of 7
+  and -3; with text as 0 it would be 26.33, as 5 it would be 28), `VARPA(OFFSET(A6,{0;1;2},0))` over TRUE,
+  7, -3 25, `MINA(OFFSET(A4,{0;3},0))` over "5", 7 is 7 and `MAXA(OFFSET(A4,{0;4},0))` over "5", -3 is -3, so MAXA's
+  text is skipped, not 0. Only AVERAGEA counts a text element as 0 (above).
 Status: VERIFIED (excel-graph) for the values above. COUNTIFS, AVERAGEIF and MAXIFS implemented (T-2823). STDEV.S,
 VAR.S and SUMSQ implemented (T-2824, `GridReading::TopLeft`: each element's top-left cell, as SUM), and AVERAGEA and
 MAXA (`GridReading::TopLeftElements`: that cell read as an array element, so a blank or TRUE is skipped and AVERAGEA's
-text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). UNVERIFIED: legacy VAR
-(as VAR.S) and MAXA's text (skipped, or 0, the probes cannot tell). VAR.P, STDEV.P, MINA and the VARA family keep
-the value view, unprobed (T-3533).
+text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). T-3533: VAR.P and STDEV.P
+take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and STDEVP share VAR.P's and STDEV.P's), MINA and the VARA family `GridReading::TopLeftElements`
+(their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
 Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ
@@ -1522,6 +1595,6 @@ A referenced error cell (Data!G9 = #DIV/0!) behaves as a 1x1 array whose index i
 XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a number but is out of range (7, -2.5, "12"), or is a multi-cell range that Excel lifts element by element (A292 is a 2x2 spill of #DIV/0! over match_mode C3:D4, cells A292:B293), Excel returns #DIV/0!
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
-Ours: CHOOSEROWS/CHOOSECOLS match all of these cells (T-3667, a one-cell error reference in arrays.md); XMATCH returns #VALUE! in the four cells above only (it already returns #DIV/0! in most G9-search_mode cells).
+Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
 Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
 Tasks: T-3667, T-3542

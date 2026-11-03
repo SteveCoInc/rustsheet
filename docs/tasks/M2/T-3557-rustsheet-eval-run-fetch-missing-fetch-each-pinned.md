@@ -3,7 +3,7 @@ id: T-3557
 title: "rustsheet-eval run --fetch-missing: fetch each pinned external suite that is missing or stale before scoring, instead of skipping it"
 milestone: M2
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,18 +31,26 @@ checkout then scores poi, calipers and corpus-bench in one pass, with no second 
   (Makefile and `.github/` are protected paths); this task does not touch them.
 
 ## Acceptance criteria
-- [ ] `Selection` gains `--fetch-missing` (doc comment on the flag). With it, `select` calls `fetch_suite` for each
+- [x] `Selection` gains `--fetch-missing` (doc comment on the flag). With it, `select` calls `fetch_suite` for each
       selected suite that is `NotFetched`, prints `fetched <name> (<n> files)`, and keeps the suite. Without it,
       behavior and output are unchanged.
-- [ ] A failed fetch (bad URL, hash mismatch, no network) does not abort the run: it prints
+- [x] A failed fetch (bad URL, hash mismatch, no network) does not abort the run: it prints
       `skipping <name>: fetch failed: <error>` and skips the suite as today. The exit code is unchanged.
-- [ ] Unit tests in the eval crate, built like fetch.rs's `archive_fetch_verifies_pin_filters_and_marks_fetched`
+- [x] Unit tests in the eval crate, built like fetch.rs's `archive_fetch_verifies_pin_filters_and_marks_fetched`
       (local archive, no network): a missing suite is fetched and selected; a stale marker is refetched; a hash
       mismatch is skipped with the message above and the other suites still run.
-- [ ] `rustsheet-eval run --help` lists the flag. docs/architecture/eval-harness.md, where it
+- [x] `rustsheet-eval run --help` lists the flag. docs/architecture/eval-harness.md, where it
       documents `rustsheet-eval fetch`, describes the flag.
-- [ ] `make check` green; eval 0 regressions, 0 fixed; reviewers approve.
+- [x] `make check` green; eval 0 regressions, 0 fixed; reviewers approve.
 
 ## Out of scope
 - Makefile, CI and steward-skill changes that use the flag (T-3556's rollout).
 - Fetching suites the selection does not name, or retrying failed downloads.
+
+## Outcome
+`Selection` gains `--fetch-missing` (run, check, update-baseline, show-free paths). `select` fetches each selected
+`NotFetched` suite (missing or stale marker) through `fetch::fetch_missing`, which wraps `fetch_suite` and returns the
+`skipping <name>: fetch failed: <error>` line on failure; the suite is then skipped and the exit code is unchanged.
+Unselected suites and runs without the flag behave as before. Unit test
+`fetch_missing_fetches_missing_and_stale_and_skips_failures` covers missing, stale and hash-mismatch with local
+archives. Documented in docs/architecture/eval-harness.md. Eval delta: 0 fixed, 0 regressions.

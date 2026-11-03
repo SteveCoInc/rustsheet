@@ -650,7 +650,8 @@ Tasks: T-0138, T-0148
 Rule: Excel decides when it parses the formula whether each operand of an intersection is a reference
 expression. A reference, a parenthesized reference, `#REF!`, `@ref`, a union and a call to a
 reference-returning function (INDEX, OFFSET, IF, ANCHORARRAY, INDIRECT, CHOOSE, XLOOKUP, LET, SWITCH,
-IFS, TAKE, DROP, TRIMRANGE) are accepted. Number, string, boolean and error literals other than `#REF!`,
+IFS, TAKE, DROP, TRIMRANGE), on either side, and a call whose result kind Excel cannot know (a LAMBDA
+call, an unknown or future function name) are accepted. Number, string, boolean and error literals other than `#REF!`,
 a parenthesized value (`(1)`, `(1/0)`), a parenthesized value operator and value functions make Excel
 for the web refuse the workbook: `=1 A1`, `=(1) A1`, `=A1 (1)`, `=A1 TRUE`, `=A1 "a"`, `=#N/A A1`, `=A1
 #N/A`, `=A1 #DIV/0!`, `=(1/0) A1`, `=A1 (1/0)`, `=(1/0) (NA())`, `=(1/0) Z99`, `=#REF! #N/A`, `=A1
@@ -673,7 +674,24 @@ operands. Accepted forms:
   `=@A1:A3 A2:B2 + 1` is 3 and `=SUM(@A1:A3 A2:B2)` is 2.
 - `=A1:A3 INDEX(A1:B3,2,0)`, `OFFSET(A2,0,0,1,2)` and `IF(TRUE,A2:B2)` give 2, on either side;
   `INDIRECT("A2:B2")`, `CHOOSE(1,A2:B2)`, `XLOOKUP(2,A1:A3,A1:B3)`, `SWITCH(1,1,A2:B2)`,
-  `IFS(TRUE,A2:B2)`, `TAKE(A2:B3,1)`, `DROP(A1:B2,1)`, `TRIMRANGE(A2:B2)` and `LET(x,A2:B2,x)` give 2 as right operands.
+  `IFS(TRUE,A2:B2)`, `TAKE(A2:B3,1)`, `DROP(A1:B2,1)`, `TRIMRANGE(A2:B2)` and `LET(x,A2:B2,x)` give 2 as right operands,
+  and as left operands too: `=INDIRECT("A2:B2") A1:A3` and the same eight calls before `A1:A3` are 2
+  (probes/t3308-intersection-function-operands H1:H9, oracle: excel-graph, 2026-11-03, T-3308).
+- Calls whose result kind Excel cannot know at parse time are accepted on either side: an inline
+  `LAMBDA(x,x)(A2:B2)`, a defined-name LAMBDA `IDFN(A2:B2)` (`IDFN` = `=LAMBDA(x,x)`) and a LET-bound
+  `LET(f,LAMBDA(x,x),f(A2:B2))` give 2 as right (H10:H12) and left (H15:H17) operands; an unknown name
+  `FOO(A2:B2)` and an unknown `_xlfn.FOOBAR(A2:B2)` load and give `#NAME?` (H13, H14, H18, H19). The kind
+  is checked when the formula runs: `=A1:A3 LAMBDA(x,x+1)(A2)` and `=A1:A3 IDFN(5)` are `#VALUE!` (H20,
+  H21), and `=A1:A3 LAMBDA(x,x)(A2:B3)` and `=A1:A3 IDFN(A2:B3)` spill the cut A2:A3, 2 and 3 (J1:K2)
+  (same case and run).
+- Refused on either side (`FileCorruptTryRepair`, one scratch workbook per formula, excel-graph,
+  2026-11-03, T-3308), with A1:B3 as above: `=A1:A3 EXPAND(A2:B2,1,2)`, `TOCOL(A2:B2)`, `TOROW(A2:B2)`,
+  `WRAPROWS(A2:B2,2)`, `WRAPCOLS(A2:B2,1)`, `HSTACK(A2:B2)`, `SORTBY(A2:B2,A2:B2)`, `XMATCH(2,A1:A3)`,
+  `AREAS(A2:B2)`, `CELL("address",A2)`, `HYPERLINK("#Sheet1!A2",A2)`, `IMAGE("https://example.com/a.png")`
+  and `GROUPBY(A1:A3,B1:B3,LAMBDA(x,SUM(x)))`, and each of them before `A1:A3`. Each call loads on its
+  own in the same kind of run (EXPAND, TOROW, WRAPROWS, WRAPCOLS, HSTACK and SORTBY spill 2, 20 across;
+  TOCOL spills 2, 20 down; XMATCH and HYPERLINK give 2, AREAS 1, CELL `$A$2`, IMAGE `#BLOCKED!`, GROUPBY
+  its 4-row table), so the refusal is the operand's, not the builder's.
 - The stored form of `@` is accepted as an operand: `=A1 _xlfn.SINGLE(A1:A3)` = 1 and
   `=_xlfn.SINGLE(A1:A3) A2:B2` = 2 (row 2) load and evaluate, `=A1:A3 _xlfn.SINGLE(A2:B2)` in row 3 is `#VALUE!`
   (no cell of `A2:B2` in that row), `=A1 _xlfn.SINGLE(A1)` = 1 (probes/intersection-single-operands, oracle:
@@ -685,7 +703,8 @@ operands. Accepted forms:
   parenthesized operand". With a space, `=(A1) (A2)` is the intersection, `#NULL!`.
 - `=Data!A1 Other!Z99` (different sheets, no shared coordinates) is `#VALUE!`, like overlapping cross-sheet
   operands: the sheet check comes before the disjoint check.
-Evidence: probes/intersection-operands H1:H15, I11 and probes/intersection-function-operands H1:H5
+Evidence: probes/t3308-intersection-function-operands H1:H21, J1:K2 (excel-graph, 2026-11-03, T-3308),
+probes/intersection-operands H1:H15, I11 and probes/intersection-function-operands H1:H5
 (oracle: excel-graph, 2026-10-05, T-0138), H6:H12 (2026-10-06, T-0161). H13 `=A1:A3 LET(x,A2:B2,x)` and
 H14 `=A1:A3 TRIMRANGE(A2:B2)` are both 2 (2026-10-06, T-0166; the case builder now writes `_xlpm.` bound
 names and `_xlfn.` prefixes; without them Excel refuses the file or gives `#NAME?`). The refused
@@ -695,8 +714,9 @@ UNVERIFIED builder edge: a LET name that equals a function name or is used befor
 still written with `_xlpm.`; how Excel stores that is not probed.
 Status: VERIFIED (load-time refusal observed in Excel for the web only)
 Implemented in: expressions/parser/reference_operators.rs (`is_reference_operand`: only the accepted
-functions above. UNVERIFIED by inference: built-in functions not probed are refused, while unknown or
-future function names, LAMBDA definitions and calls, and `@` operands are accepted); `Parser::parse_implicit`
+built-ins above, on either side; unknown and future function names and LAMBDA calls are accepted, as
+probed by T-3308. UNVERIFIED by inference: built-ins in neither list above are refused, and an
+uncalled LAMBDA definition as an operand is accepted); `Parser::parse_implicit`
 (`@` takes the intersection after it, T-0149). The engine prints an `@` operand of an intersection as Excel's FORMULATEXT does, `=A1 @A1` and
 `=@A1:A3 A2:B2` (probes/intersection-at-formulatext, T-1098), except that a left operand ending in `@` keeps its
 parentheses, `(A1 @A1) B1`, since the bare text would re-parse as `A1 @(A1 B1)` (engine choice; Excel's text for it is not probed). The same text is printed when a formula is moved or pasted (`to_string_moved`); since T-1342 that includes the parentheses around a cut of a union, `=SUM(((A1,B1) B1))` moves as `=SUM(((J10,K10) K10))`, which the moved text used to drop (UNVERIFIED for Excel's cut/paste text, which is not probed; it matches FORMULATEXT, F6 below). As intersection operands, XLOOKUP, TAKE,
@@ -709,7 +729,7 @@ and a not-found XLOOKUP with a range `if_not_found` is that reference (`=C1:C3 X
 C1, and ISREF of it TRUE) (probes/intersection-lookup-operand-errors, excel-graph 2026-10-07).
 - FORMULATEXT of an `@` operand of `:` or `@` keeps the written parentheses: `=A1:(@B1)` stays `=A1:(@B1)` (spills `1, 2` across H10:I10), `=(@(A1 B1)):C3` stays `=(@(A1 B1)):C3` and `=@(@(A1 B1))` stays `=@(@(A1 B1))` (both `#NULL!`). The engine drops the inner parentheses on the last two (probes/at-operand-formulatext, T-1104; T-1116).
 - `=ANCHORARRAY(D1)` prints `=D1#` and `=ANCHORARRAY(INDEX(D1:D2,1))` prints `=INDEX(D1:D2,1)#`, `ANCHORARRAY(D1)` and `D1#` are the same stored file text (`_xlfn.ANCHORARRAY(D1)`), so this is how Excel prints that stored form; how a typed `ANCHORARRAY(D1)` prints is not probed. Engine requirement for T-1109: xlsx import must not print the automatic `@` it adds inside `#`. Stored as `_xlfn.ANCHORARRAY((@A1:B2))`, `=(@A1:B2)#` loads, prints as `=(@A1:B2)#` and is `#VALUE!` from D20 (no intersecting cell) (probes/anchorarray-at-operand, T-1111; the engine matches since T-1115). UNVERIFIED: the engine passes any `@` error through `#` (`=(@(A1 B1))#` gives `#NULL!`), and gives the left error when both operands of `:` are errors; only the `#VALUE!` and right-operand cases are probed. `=ANCHORARRAY(1)` is refused: Excel for the web will not open a workbook holding it (`FileCorruptTryRepair`, T-1111); the engine reads it as a syntax error since T-1117. `=@D1#` prints as `=@D1#` and evaluates to `#VALUE!` (probes/at-operand-formulatext, T-1104). Value operands of `:` and `#` that T-1111 did not probe (T-1216): see the entry "FORMULATEXT keeps the parentheses of an `@` operand" below.
-Tasks: T-0138, T-0148, T-0149, T-0042, T-0161, T-0165, T-1094, T-1098, T-1103, T-1104, T-1109, T-1111, T-1115, T-1117, T-1216
+Tasks: T-0138, T-0148, T-0149, T-0042, T-0161, T-0165, T-1094, T-1098, T-1103, T-1104, T-1109, T-1111, T-1115, T-1117, T-1216, T-3308
 
 ## Calling a parenthesized operand
 Rule: a parenthesized operand written directly before `(`, with no space, is called like a LAMBDA
@@ -896,11 +916,27 @@ body (`=#N/A`, `=#DIV/0!`, `=#REF!`) evaluate to that error; and `SHEET(name)` o
 Status: VERIFIED
 The formula text keeps the prefix: FORMULATEXT prints `=SUM(S!#REF!)` (probes/table-edits
 plain-range-delete-row-first F!A6 and table-delete-column-qty F!A7, excel-graph; T-2855).
-Unprobed (T-3062): the text after the sheet is renamed or deleted, a wholly deleted range with no sheet
-prefix (printed `#REF!`), and the case of a typed sheet name.
+T-3062 (excel-graph, 2026-11-03), FORMULATEXT: renaming S to T turns `=SUM(S!#REF!)` into `=SUM(T!#REF!)`
+(probes/sheet-qualified-ref-error-text-rename F!A2); deleting S turns it into `=SUM(#REF!#REF!)`, as a live
+`=SUM(S!C5)` becomes `=SUM(#REF!C4)` (probes/sheet-qualified-ref-error-text-delete-sheet F!A2, A4); a wholly
+deleted range with no sheet prefix prints a bare `=SUM(#REF!)` (probes/unqualified-ref-error-text-and-typed
+S!A2); a typed `=sheet1!#REF!` / `=SUM(SHEET1!#REF!)` prints the sheet as the workbook spells it,
+`=Sheet1!#REF!` (Sheet1!A2, A6). A typed `=NoSuchSheet!#REF!` (no sheet of that name) is read as a
+reference into an external workbook named `NoSuchSheet`: its value is `#REF!`, `SUM` of it is `#REF!` and
+`ISREF` of it is FALSE (probes/typed-missing-sheet-ref-error-text Sheet1!A1, A3, A5, excel-graph), and
+FORMULATEXT prints `='<folder URL>/[NoSuchSheet]NoSuchSheet'!#REF!` and `=SUM('<folder URL>/[NoSuchSheet]NoSuchSheet'!#REF!)`,
+where `<folder URL>` is the https URL of the folder holding the workbook (excel-graph, 2026-11-03, T-3062).
+Those two text cells are not in the probe because the URL is the oracle drive's; the engine prints
+`=#REF!#REF!` and `=SUM(#REF!#REF!)` instead (it cannot tell a deleted sheet from one that never
+existed), which does not match Excel. Desktop text for the same cells is unprobed (T-3899).
+Unprobed (T-3899, desktop): a defined-name body `S!#REF!` after a rename, and a duplicated
+sheet holding `S!#REF!` (the copy's name is rewritten, as for any reference to the source).
 Implemented in: `consume_range` in crates/rustsheet-engine/src/expressions/lexer/mod.rs (formula; the
-prefix is kept as `Node::SheetRefErrorKind` in the written tree only), `ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
-Tasks: T-0152, T-0169, T-2855
+prefix is kept as `Node::SheetRefErrorKind` in the written tree only; the parser's `SheetRefError` arm in
+parser/mod.rs spells the sheet as the workbook does and sets `missing`), `rename_sheet_in_node` in
+parser/stringify/sheet_edits.rs (rename), `ref_error_text` and `sheet_ref_error_text` in parser/stringify/wrong_reference.rs (text),
+`ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
+Tasks: T-0152, T-0169, T-2855, T-3062, T-3899
 
 ## Disjoint intersection is #NULL!
 Rule: an intersection of references that share no cell is `#NULL!` (all 51 `intersection/disjoint` cells):
@@ -1839,10 +1875,14 @@ position is intersected. With A1 `=SEQUENCE(3)`:
   `=SIN(A1#)`;
 - the legacy `=SIN(A1:A3)` beside it, in D2 and D5, is SIN(2) and `#VALUE!`, with FORMULATEXT `=SIN(@A1:A3)`.
 It joins the legacy forms with no automatic `@` (SWITCH, the dynamic-array functions, LAMBDA calls; "Legacy formulas
-put `@` on array-valued calls and array constants"). Unprobed, and handled by the engine as it handles SWITCH, with
-the rule applied to the whole formula: a formula mixing a spill reference with a plain range (`=SIN(A1#)+B1:B3`), a
-bare `=A1#`, and a scalar host (`=SUM(A1#)+B1:B3`); probe pending, T-3490.
-Evidence: probes/legacy-formula-spill-ref (excel-graph, 2026-10-31, 19 cells).
+put `@` on array-valued calls and array constants"). The rule covers the whole formula, as for SWITCH: a plain
+range beside the spill reference takes no `@` either. With B1:B3 holding 10, 20, 30, each legacy form below spills
+three rows from row 2 and from row 5 alike, and its FORMULATEXT is the formula as written, with no `@`:
+- `=SIN(A1#)+B1:B3` (a spill reference mixed with a plain range) spills 10+SIN(1), 20+SIN(2), 30+SIN(3);
+- the bare `=A1#` spills 1, 2, 3;
+- the scalar host `=SUM(A1#)+B1:B3` spills 16, 26, 36 (not the intersected 26 or `#VALUE!`).
+Evidence: probes/legacy-formula-spill-ref (excel-graph, 2026-10-31, 19 cells); probes/t3490-legacy-spill-ref-shapes
+(excel-graph, 2026-11-03, 33 cells: C2:E7, FORMULATEXT F2:H5, ISBLANK I2:K5; T-3490). Ours matches every cell.
 Engine: `removes_automatic_at` (parser/static_analysis/legacy.rs) holds for a spill reference.
 `Model::promote_dynamic_formula_cells` (formula_cells.rs) loads a plain formula cell that has no automatic `@` and a
 non-scalar static result as a dynamic anchor, as typing it does. This covers an xlsx `<f>` without `cm` and a decoded
@@ -2591,7 +2631,11 @@ Right/Left):
   columns `Column1`, `Column2` as the file names them; `Sales` on S!B3:C6, data rows 3-6, Qty 1,2,4,8;
   excel-graph 2026-10-31, T-3260): `ROWS(Sales)` and `ROWS(Sales[#All])` are both 4, `Sales[Column2]` reads the
   data, and `ROW(Sales[#Headers])` is `#REF!`, as `#Totals` is on a table without a totals row
-  (table-no-header-baseline). A delete of its first row (row 3, its first data row) shrinks it as a delete of a
+  (table-no-header-baseline). The combined forms (probes/table-edits table-no-header-headers-combined, excel-graph
+  2026-11-03, T-3661): `Sales[[#Headers],[Column1]]` is `#REF!` for ROWS, ROW and SUM and ISREF is FALSE, while
+  `Sales[[#Headers],[#Data]]`, `Sales[[#Headers],[#Data],[Column2]]` and `Sales[[#All],[Column1]]` are references to
+  the 4 data rows (ROWS 4, first row 3, SUM 15, 15 and 0 for the text column, ISREF TRUE). The engine matches.
+  A delete of its first row (row 3, its first data row) shrinks it as a delete of a
   first data row does: `ROWS(Sales)` 3, `SUM(Sales[Column2])` 14, `INDEX(Sales[Column1],1)` "W", `=SUM(S!C3:C6)`
   becomes `=SUM(S!C3:C5)`, `=SUM(S!C3:C3)` is `=SUM(S!#REF!)`, `=S!C10` reads `=S!C9`, and a cell above the
   table stays (table-no-header-delete-first-row). The engine matches both.
@@ -2629,8 +2673,11 @@ Right/Left):
   `Sales[Region]` `#REF!`, and the plain `S!D4:D7` shrinks to `=SUM(S!B4:B7)`; D:E with the table on B3:D7 drops Val the same way, the fully deleted plain `S!D4:D7` becoming `=SUM(S!#REF!)` (table-delete-columns-straddle-left,
   -right). A column range `Sales[[Qty]:[Val]]` is `#REF!`, printed `=SUM(#REF!)`, when either end column is
   deleted, and when both are, in one edit or two (table-column-range-delete-end, -start, -both-ends, -both-ends-separate);
-  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete. The engine matches the naming and the
-  two-column insert; the rest are T-3733 and T-3734.
+  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete, and is `=SUM(S!#REF!)` when both ends go in two edits. The `#This Row` and item-specifier forms of a range that loses one end are unprobed. The engine matches the naming and the
+  two-column insert, the straddling deletes and the delete of every column (T-3733: `column_span` shrinks the
+  table, `Displacement::deleted_tables` prints its structured references `#REF!`) and the column range that loses
+  either end (T-3734: `deleted_column` prints `#REF!`); only the plain-range shrink after a one-column delete is
+  T-3978's.
 - Convert to Range (`tables/convertToRange`): every value is kept and each structured reference from another
   sheet is rewritten as an absolute, sheet-qualified range: `=SUM(S!$C$4:$C$7)`, `=COUNTA(S!$B$4:$B$7)`,
   `=COLUMN(S!$C$4:$C$7)`; `ROWS(Sales)` 4, `ROWS(Sales[#All])` 5 and `ROW(Sales[#Headers])` 3 keep their values

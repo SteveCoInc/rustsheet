@@ -36,6 +36,8 @@ Owned gen-m9 cells (T-2435 split, 2026-10-26): 4 known-failure lines in eval/bas
 - gen-m9/abc2939ebd1e2365 Calc!A11 `=CHIDIST(F.INV.RT(1E-200,1,1.999),10)`: Excel 0.0, ours #NUM!
 - gen-m9/a612e89321a6df9c Calc!A23 `=GAMMALN.PRECISE(F.INV.RT(1E-20,3,9))`: Excel 1087085.7102783846, ours ...853
 - gen-m9/01523d247594952e Calc!A377 `=SYD(15023,(AVEDEV(Data!A11:A11,{1;2;3;4;5})*F.INV.RT(1E-20,9,3)),33,1)`: Excel -1987062826671.328, ours -1987062826671.3352 (the F.INV.RT far tail, T-2491 hand-off)
+- Gate A (T-3578): accuracy/BETA.INV/s1 A115, A118, A125, A128 and A138 (Excel 0.5 with a shape of DBL_MIN) are known
+  failures owned by this task; remove their lines from eval/accuracy/known-failures.tsv when they pass.
 
 ## Acceptance criteria
 - [ ] These 4 gen-m9 known-failure lines disappear from eval/baseline/gen-m9.txt, with no new

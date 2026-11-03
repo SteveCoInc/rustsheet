@@ -212,10 +212,11 @@ fn fn_offset_lifted_into_top_left_aggregates() {
 }
 
 // STDEV.S, VAR.S and SUMSQ read each element of an array of references by its top-left cell, as
-// SUM does; AVERAGEA and MAXA read that cell as an array element, so a blank or TRUE is skipped
-// and AVERAGEA counts text as 0; MAXA's text reading is unprobed (T-3533). Evidence: T-2824,
-// probes/t2065-lift-* and probes/t2816-lift-*, excel-graph. The data is the probes': A1:A3 1, 100,
-// 10000, B1:B3 2, 200, 20000, A4 "5", A5 blank, A6 TRUE, A7 7.
+// SUM does, and so do VAR.P, STDEV.P and legacy VAR; AVERAGEA, MAXA, MINA and the VARA family read
+// that cell as an array element, so a blank or TRUE is skipped, AVERAGEA counts text as 0 and the
+// others skip it. Evidence: T-2824, probes/t2065-lift-* and probes/t2816-lift-*; T-3533,
+// probes/t3533-lift-*; excel-graph. The data is the probes': A1:A3 1, 100, 10000, B1:B3 2, 200,
+// 20000, A4 "5", A5 blank, A6 TRUE, A7 7, A8 -3 (t3533 only).
 #[test]
 fn fn_offset_lifted_into_the_statistical_aggregates_reads_top_left_cells() {
     let mut model = new_empty_model();
@@ -229,6 +230,7 @@ fn fn_offset_lifted_into_the_statistical_aggregates_reads_top_left_cells() {
         ("A4", "'5"),
         ("A6", "TRUE"),
         ("A7", "7"),
+        ("A8", "-3"),
     ] {
         model._set(cell, value);
     }
@@ -249,6 +251,18 @@ fn fn_offset_lifted_into_the_statistical_aggregates_reads_top_left_cells() {
         ("=MAXA(OFFSET(A4,{0;3},0))", "7"),
         ("=AVERAGEA(OFFSET(A5,{0;1},0))", "#DIV/0!"),
         ("=MAXA(OFFSET(A5,{0;1},0))", "0"),
+        // t3533: text, a blank and TRUE are skipped, multi-cell elements read their top-left cell.
+        ("=MAXA(OFFSET(A4,{0;4},0))", "-3"),
+        ("=MINA(OFFSET(A4,{0;3},0))", "7"),
+        ("=MINA(OFFSET(A6,{0;1},0))", "7"),
+        ("=MINA(OFFSET(A1,{0;1},0,1,2))", "1"),
+        ("=VAR.P(OFFSET(A4,{0;3;4},0))", "25"),
+        ("=STDEV.P(OFFSET(A1,{0;1},0,1,2))", "49.5"),
+        ("=VAR(OFFSET(A5,{0;2;3},0))", "50"),
+        ("=VARA(OFFSET(A4,{0;3;4},0))", "50"),
+        ("=VARPA(OFFSET(A6,{0;1;2},0))", "25"),
+        ("=STDEVA(OFFSET(A5,{0;2;3},0))", "7.071067812"),
+        ("=STDEVPA(OFFSET(A1,{0;1},0,1,2))", "49.5"),
     ];
     for (row, (formula, _)) in cases.iter().enumerate() {
         model._set(&format!("E{}", row + 1), formula);
@@ -263,22 +277,16 @@ fn fn_offset_lifted_into_the_statistical_aggregates_reads_top_left_cells() {
     }
 }
 
-// The aggregates no probe has read an array of references with keep the value view, every
-// reference element `#VALUE!`: MEDIAN, as Excel (probes/t2065-lift-median, lookup.md "MEDIAN,
-// LARGE and SMALL over a lifted OFFSET"), and VAR.P, STDEV.P and MINA, which are unprobed (T-3533).
+// MEDIAN keeps the value view of an array of references, every reference element `#VALUE!`, as
+// Excel (probes/t2065-lift-median, lookup.md "MEDIAN, LARGE and SMALL over a lifted OFFSET").
 #[test]
-fn fn_offset_lifted_into_other_aggregates_is_its_value_view() {
+fn fn_offset_lifted_into_median_is_its_value_view() {
     let mut model = new_empty_model();
     model._set("A1", "1");
     model._set("A2", "100");
     model._set("C1", "=MEDIAN(OFFSET(A1,{0;1},0))");
-    model._set("C2", "=VAR.P(OFFSET(A1,{0;1},0))");
-    model._set("C3", "=STDEV.P(OFFSET(A1,{0;1},0))");
-    model._set("C4", "=MINA(OFFSET(A1,{0;1},0))");
     model.evaluate();
-    for cell in ["C1", "C2", "C3", "C4"] {
-        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
-    }
+    assert_eq!(model._get_text("C1"), *"#VALUE!");
 }
 
 // LET, a LAMBDA parameter, IF and CHOOSE hand an array of references on, and OFFSET over one

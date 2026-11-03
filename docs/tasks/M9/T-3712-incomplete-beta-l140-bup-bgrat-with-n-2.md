@@ -17,6 +17,9 @@ Today's engine is visibly off on 1,371 of the 1,650 column-A cells of t3568-r5-b
 672 of 825; docs/research/t2464/r5-bup `engcols.py` → `engcols.out`, from `make eval` on the T-3568 branch).
 
 ## Context
+- T-3561 ported this composition for BETA.DIST's cdf and BETA.INV's search (`bratio/bup.rs` `l140_bup_bgrat`,
+  `bup_power_sum`, `power_increment`). What is left here is F, BINOM and NEGBINOM, which reach L140 through
+  `kernel_tails`, and their scores on the three cases: extend that path to them, do not copy it.
 - T-3568 (docs/research/t2464/r5-bup/RESULTS.md; statistics.md "Incomplete beta: the integrated model", bullet "L140
   bup+bgrat with n >= 2 bup terms"): with n = int(b0), c = b0 - n (c = 1 and n - 1 at an integer b0), the cell is
   RN(fl(ret · S) + D):

@@ -26,17 +26,19 @@ exact root (Excel / ours):
   (-0.86 / +0.14), A185 `=GEOMEAN({1,2,3,4,5,6,7,8,9,10})` (-0.24 / +0.76), A320 P=588 n=3 (+0.15 / -0.85)
 - gen-m9/f81bd3b6dc373e5c Calc!A9 P=152.681 n=6 (-0.49 / +0.51), A14 P=26.389 n=4 (-0.39 / +0.61), A59 P=0.05 n=2
   (-0.43 / +0.57), A249 P=1701 n=6 (-0.94 / +0.06), A294 P=2.222E+09 n=5 (-0.40 / +0.60), A319 P=168 n=3 (+0.19 / -0.81)
+- gen-m9/f81bd3b6dc373e5c Calc!A204 `=GEOMEAN(Data!A6,Data!C4:C8)`: Excel 3910.5355750302137, ours ...133 (1 ulp;
+  gap triage 2026-11-03m found it unowned in eval/baseline/gen-m9.txt; P and n not yet measured).
 A55 and A249 are cells where Excel is the farther one (0.86 and 0.94 ulp), more evidence that Excel's root is a library
 power with its own error, not the correctly rounded root. The multi-ulp cells of that sweep, where r is not faithful,
 are T-2794's.
 Cells:
 - gen-m9/290180acf017709c.case.json (1): Calc!A326
 - gen-m9/932b33b1ef8b7608.case.json (5): Calc!A30, A55, A75, A185, A320
-- gen-m9/f81bd3b6dc373e5c.case.json (6): Calc!A9, A14, A59, A249, A294, A319
+- gen-m9/f81bd3b6dc373e5c.case.json (7): Calc!A9, A14, A59, A204, A249, A294, A319
 
 ## Acceptance criteria
 - [ ] `GEOMEAN(5,7)` matches Excel bit-exactly, with a probe case added (or the -d case extended) as evidence and no existing GEOMEAN case regressing.
-- [ ] The 12 T-2676 known-failure lines listed in Context leave eval/baseline/gen-m9.txt with no new ones, or the
+- [ ] The 13 known-failure lines (12 from T-2676, A204 from gap triage 2026-11-03m) listed in Context leave eval/baseline/gen-m9.txt with no new ones, or the
       Outcome lists the ones still open with the model tried.
 - [ ] `make check` green; reviewers approve.
 

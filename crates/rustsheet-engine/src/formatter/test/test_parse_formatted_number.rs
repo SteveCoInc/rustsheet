@@ -437,15 +437,26 @@ fn typed_currency_and_percent_formats() {
 
 #[test]
 fn script_digits_are_mapped_only_by_the_coercion_helper() {
-    use crate::formatter::format::script_digit_to_ascii;
-    let map = |s: &str| s.chars().map(script_digit_to_ascii).collect::<String>();
+    use crate::formatter::format::ascii_script_digits;
+    let map = |s: &str| ascii_script_digits(s).into_owned();
     assert_eq!(map("٣٫"), "3٫");
     assert_eq!(map("१२३"), "123");
     assert_eq!(map("๓.๕"), "3.5");
     assert_eq!(map("1٣"), "13");
+    // The five blocks T-3446 added: Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar
+    // (probes/t3446-script-digits-forms rows 23:33, 45:55, 67:99).
+    assert_eq!(map("۱۲۳"), "123");
+    assert_eq!(map("১২৩"), "123");
+    assert_eq!(map("໑໒໓"), "123");
+    assert_eq!(map("༡༢༣"), "123");
+    assert_eq!(map("၁၂၃"), "123");
+    assert_eq!(
+        map("\u{0669}\u{06F9}\u{096F}\u{09EF}\u{0E59}\u{0ED9}\u{0F29}\u{1049}"),
+        "99999999"
+    );
     // Full-width digits stay text (probes/t3276-collation-other-scripts Calc!H6).
     assert_eq!(map("３"), "３");
-    // The typed-input parser does not map them (unprobed, T-3325).
+    // The typed-input parser does not map them yet (TODO(T-3891)).
     assert!(parse("٣", &[]).is_err());
 }
 
@@ -468,6 +479,67 @@ fn group_commas_of_three_or_more_digits_and_a_leading_percent() {
     ] {
         assert!(parse(text, &[]).is_err(), "{text}");
     }
+}
+
+/// Typed mixed-separator dates and clock-first date-times (probes/date-text-mixed-separator-typed,
+/// excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
+#[test]
+fn typed_mixed_separator_date_formats() {
+    let fmt = |s: &str| {
+        let locale = get_default_locale();
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            locale,
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_default()))
+    };
+    for s in ["2025/07-01", "2025-07/01", "7/1-25", "7/1-2025", "7-1/2025"] {
+        assert_eq!(fmt(s).unwrap().1, "m/d/yyyy", "{s}");
+    }
+    for s in ["1-Jul/2025", "1/Jul-2025"] {
+        assert_eq!(fmt(s).unwrap().1, "d-mmm-yy", "{s}");
+    }
+    // Pure separators keep their own formats.
+    assert_eq!(fmt("2025/07/01").unwrap().1, "yyyy/mm/dd");
+    assert_eq!(fmt("7/1/25").unwrap().1, "m/d/yy");
+    let (v, f) = fmt("10:00 7/1/2025").unwrap();
+    assert!((v - 45_839.416_666_666_7).abs() < 1e-9);
+    assert_eq!(f, "m/d/yyyy h:mm");
+    // A leading space keeps it text.
+    assert!(fmt(" 10:00 7/1/2025").is_err());
+    assert!(fmt(" 10:00 AM 7/1/2025").is_err());
+    // Other clock-first shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2026-11-03).
+    for (s, value, format) in [
+        ("10 AM 7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 PM 7/1/2025", 45_839.916_666_666_7, "m/d/yyyy h:mm"),
+        ("9:00 7/1/2025", 45_839.375, "m/d/yyyy h:mm"),
+        ("10:00:30 7/1/2025", 45_839.417_013_888_9, "m/d/yyyy h:mm"),
+        ("10:00:30.5 7/1/2025", 45_839.417_019_675_9, "mm:ss.0"),
+        ("10:00.5 7/1/2025", 45_839.006_950_231_5, "mm:ss.0"),
+        ("24:00 7/1/2025", 45_840.0, ""),
+        ("10:60 7/1/2025", 45_839.458_333_333_3, ""),
+        ("10:00  7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 July 1, 2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1-Jul-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 2025-07-01", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1", 46_204.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/25", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("23:59 7/1-2025", 45_839.999_305_555_6, "m/d/yyyy h:mm"),
+        ("10:00 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/2025 ", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1/Jul/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 AM 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+    ] {
+        let (v, f) = fmt(s).unwrap_or_else(|e| panic!("{s}: {e}"));
+        assert!((v - value).abs() < 1e-9, "{s}: {v}");
+        assert_eq!(f, format, "{s}");
+    }
+    // Untyped mixed shapes.
+    assert_eq!(fmt("2025/7-1").unwrap().1, "m/d/yyyy");
+    assert_eq!(fmt("1-Jul/25").unwrap().1, "d-mmm-yy");
 }
 
 /// Typed text and the format Excel picks (probes/typed-group-comma-leading-percent, excel-graph
@@ -497,5 +569,57 @@ fn typed_group_comma_and_leading_percent_formats() {
     // Stay text (General) when typed.
     for text in ["1,", "0,000", "0,0000", "1,00", "%1%"] {
         assert!(parse(text, &["$"]).is_err(), "{text}");
+    }
+}
+
+/// A bare typed 24-hour clock is a number with Excel's clock format (probes/t3894-bare-24h-clock,
+/// excel-graph 2026-11-03; docs/excel-semantics/dates.md).
+#[test]
+fn typed_bare_24_hour_clock() {
+    let fmt = |s: &str| {
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_else(|| "General".to_string())))
+    };
+    let cases = [
+        ("12:30", 0.520_833_333_333_333, "h:mm"),
+        ("9:05", 0.378_472_222_222_222, "h:mm"),
+        ("0:00", 0.0, "h:mm"),
+        ("1:2", 0.043_055_555_555_555_6, "h:mm"),
+        ("10:00:", 0.416_666_666_666_667, "h:mm"),
+        ("10:00:30", 0.417_013_888_888_889, "h:mm:ss"),
+        ("01:02:03", 0.043_090_277_777_777_8, "h:mm:ss"),
+        ("24:00", 1.0, "[h]:mm:ss"),
+        ("100:00", 4.166_666_666_666_67, "[h]:mm:ss"),
+        ("10:60", 0.458_333_333_333_333, "General"),
+        ("10:00:60", 0.417_361_111_111_111, "General"),
+        // T-3903: probes/t3903-bare-24h-clock-extra.
+        ("25:00:30", 1.042_013_888_888_89, "[h]:mm:ss"),
+        ("24:00:00", 1.0, "[h]:mm:ss"),
+        ("99:59:59", 4.166_655_092_592_59, "[h]:mm:ss"),
+        ("24:01", 1.000_694_444_444_44, "[h]:mm:ss"),
+        ("10:60:00", 0.458_333_333_333_333, "General"),
+        ("10:61", 0.459_027_777_777_778, "General"),
+        ("10:99", 0.485_416_666_666_667, "General"),
+        ("0:00:75", 0.000_868_055_555_555_556, "General"),
+        ("1:100", 0.111_111_111_111_111, "General"),
+        ("10:00.5", 0.006_950_231_481_481_48, "mm:ss.0"),
+        ("10:00:30.5", 0.417_019_675_925_926, "mm:ss.0"),
+    ];
+    for (text, value, format) in cases {
+        let (v, f) = fmt(text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert!((v - value).abs() < 1e-12, "{text}: {v}");
+        assert_eq!(f, format, "{text}");
+    }
+    assert!(fmt(":30").is_err());
+    assert!(fmt(" 10:00").is_err());
+    // An hour of 24 or more with an out-of-range minute or second stays text (T-3903).
+    for text in ["25:60", "24:60", "25:00:60", "25:61:00"] {
+        assert!(fmt(text).is_err(), "{text}");
     }
 }

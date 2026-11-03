@@ -655,6 +655,70 @@ fn imsqrt_of_a_negative_real_takes_excel_atan2_cos_and_sin() {
     assert_texts(&cases);
 }
 
+// IMSQRT roots twice in x87 precision, each root rounded to 64 bits and then to a double:
+// 0.999999999999999 (1-9·2^-53) squares to 1-18·2^-53, whose root is 1-9·2^-53 and whose second
+// root rounds to the midpoint 1-4.5·2^-53 and then to even, 1-4·2^-53, which prints as 1 (two
+// plain roots give 1-5·2^-53, 0.999999999999999). IMLOG10 and IMLOG2 multiply IMLN's parts, with
+// Excel's ATAN2 kernel as the argument, by one double constant (probes/t3643-imsqrt-grid,
+// t3643-imlog10-grid, probes-numeric/t3643-r4-log-modulus; excel-graph, T-3795).
+#[test]
+fn imsqrt_roots_twice_and_the_logs_scale_imln() {
+    let cases = [
+        (r#"=IMSQRT("0.999999999999999")"#, "1"),
+        (r#"=IMSQRT("-0.999999999999999")"#, "6.1257422745431E-17+1i"),
+        (r#"=IMSQRT("0.999999999999999+1E-300i")"#, "1+5E-301i"),
+        (
+            r#"=IMSQRT("-0.999999999999999-1E-8i")"#,
+            "5.00000003087007E-09-1i",
+        ),
+        (r#"=IMLOG10("10+1E8i")"#, "8+0.682188133491473i"),
+        (r#"=IMLOG10("10-1E8i")"#, "8-0.682188133491473i"),
+        (
+            "=IMLOG10(COMPLEX(-2.07417486058375E-29,26460080.1885507))",
+            "7.42259115600387+0.682188176920921i",
+        ),
+        (
+            "=IMLOG10(COMPLEX(1.60320693480002E-123,-1.63498510023214E-91))",
+            "-90.7864862007507-0.682188176920921i",
+        ),
+        (
+            "=IMLOG10(COMPLEX(-0.561651839159889,-0.827373683149484))",
+            "6.17169578594099E-15-0.941193126217726i",
+        ),
+        (
+            "=IMLOG2(COMPLEX(-9.69305538978777E-145,-6.94261454462663E-149))",
+            "-478.402622259513-4.53225680933651i",
+        ),
+        (
+            "=IMLOG2(COMPLEX(-1,1.05859478337023E-09))",
+            "4.53236014029996i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
+// Below |x| 1E-4 the hyperbolic kernels take libm's cosh, where the `1/u` form prints one digit off
+// (probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C311, t3720-im-reciprocal-small-x-complex
+// A3, B25; excel-graph, T-3930).
+#[test]
+fn tiny_x_hyperbolics_take_libm_cosh() {
+    let cases = [
+        (
+            r#"=IMSECH("-8.74352867749883E-05+1.16398498777952i")"#,
+            "2.52727602503685+0.000512882556578914i",
+        ),
+        (
+            r#"=IMCOSH("3.58722248184392E-06+0.256378854055322i")"#,
+            "0.967314566321166+9.0964584974296E-07i",
+        ),
+        (
+            r#"=IMCSCH("2.5814545068154E-05-0.118602492728453i")"#,
+            "0.00183084854010124+8.45132516126195i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
 /// Each `(formula, text)` in its own cell of column A: the formula prints that text.
 fn assert_texts(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();

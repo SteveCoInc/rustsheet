@@ -3,7 +3,7 @@ id: T-3789
 title: "PERCENTRANK*: a text or error significance beats the x-not-found or no-number #N/A (gen-m9, 63 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -34,9 +34,9 @@ that does not read as a number (including empty text), before the `#N/A` of an x
   the neighbour; check its cells still pass.
 
 ## Acceptance criteria
-- [ ] The 63 cells below pass, and the T-2472 cells (numeric bad significance after `#N/A`) still pass.
-- [ ] statistics.md: the UNVERIFIED line is replaced by the rule, and the new entry's Ours line updated.
-- [ ] `make check` green; reviewers approve.
+- [x] The 63 cells below pass, and the T-2472 cells (numeric bad significance after `#N/A`) still pass.
+- [x] statistics.md: the UNVERIFIED line is replaced by the rule, and the new entry's Ours line updated.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0159: the task is done when the gen-m9 cells below (T-3781's arg-pairs batch, excel-graph, 2026-11-01) pass and
@@ -50,3 +50,6 @@ their known-failure lines leave eval/baseline/gen-m9.txt (`make eval-baseline`),
 
 ## Out of scope
 - A text x or significance against an error data cell (T-3788).
+
+## Outcome
+`percentrank_of` (percentile.rs) now casts the significance right after x, so an error or non-numeric-text significance beats the empty-data `#N/A`; numeric out-of-domain significance (below 1) still loses to the x-range `#N/A` (T-2472). statistics.md updated (UNVERIFIED line settled, Ours line). Eval: gen-m9 baseline -63 known failures, no new failures, no regressions.

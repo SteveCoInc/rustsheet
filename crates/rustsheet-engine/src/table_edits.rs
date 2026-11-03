@@ -26,6 +26,8 @@ struct TableEdits {
     /// The table columns a column delete removes, as lowercase (table, column) names: the
     /// structured references to them print `#REF!` (T-2339).
     deleted_columns: Vec<(String, String)>,
+    /// The lowercase names of the tables a column delete removes whole (T-3733).
+    deleted_tables: Vec<String>,
     /// The data blocks of the tables that grow with a row insert at their first data row or at
     /// their totals row, onto which plain ranges grow too (T-2321).
     grown_edges: Vec<DataBlock>,
@@ -101,9 +103,9 @@ fn row_span(
 /// `at..at - delta`) gives the table on columns `left..=right`: an edit wholly left of it moves
 /// it, one wholly right of it leaves it, an insert right of its first column grows it and a
 /// delete inside it that leaves a column shrinks it (T-2324 table-insert-column-inside:
-/// `COLUMNS(Sales)` 3; table-delete-column-qty and -region: 1). A delete of every column, one
-/// straddling an edge (unprobed) or an insert that would push the table off the sheet is a
-/// fallback.
+/// `COLUMNS(Sales)` 3; table-delete-column-qty and -region: 1), and so does one straddling an edge
+/// (T-2899 table-delete-columns-straddle-left and -right). A delete of every column or an insert
+/// that would push the table off the sheet is a fallback.
 fn column_span((left, right): (i32, i32), at: i32, delta: i32) -> Span {
     if at > right {
         return Span::Unchanged;
@@ -120,9 +122,17 @@ fn column_span((left, right): (i32, i32), at: i32, delta: i32) -> Span {
         let end = at - delta - 1;
         if end < left {
             Span::Changed(left + delta, right + delta)
-        } else if left <= at && end <= right && (left < at || end < right) {
+        } else if at < left && end < right {
+            // Straddling the left edge, leaving a column (T-3733 table-delete-columns-straddle-left):
+            // the table keeps its remaining columns, now starting at the delete.
+            Span::Changed(at, right + delta)
+        } else if at >= left && end <= right && (left < at || end < right) {
             // Inside the table, leaving at least one of its columns.
             Span::Changed(left, right + delta)
+        } else if at > left && end > right {
+            // Straddling the right edge (table-delete-columns-straddle-right): the last
+            // columns are dropped.
+            Span::Changed(left, at - 1)
         } else {
             Span::Fallback
         }
@@ -190,6 +200,15 @@ impl ColumnEdit {
     }
 }
 
+/// Whether the edit `displace_data` is a column delete covering every column of `table`.
+fn deletes_every_column(table: &Table, displace_data: &DisplaceData) -> bool {
+    let (Some(b), DisplaceData::Column { column, delta, .. }) = (bounds(table), displace_data)
+    else {
+        return false;
+    };
+    *delta < 0 && *column <= b.left && column.saturating_sub(*delta) > b.right
+}
+
 /// What the edit `displace_data`, on the sheet of `table`, does to it.
 fn follow(table: &Table, displace_data: &DisplaceData) -> Follow {
     followed(table, displace_data).unwrap_or(Follow::Fallback)
@@ -214,11 +233,23 @@ fn followed(table: &Table, displace_data: &DisplaceData) -> Option<Follow> {
             let span = column_span((left, right), column, delta);
             // An insert right of the first column, or a delete from the first column on, is
             // inside the table: it changes the column list, not only the table's place.
-            let inside = (delta > 0 && left < column) || (delta < 0 && left <= column);
-            let edit = (inside && matches!(span, Span::Changed(..))).then(|| ColumnEdit {
-                index: usize::try_from(column - left).unwrap_or(usize::MAX),
-                delta,
-            });
+            let edit = match span {
+                Span::Changed(..) if delta > 0 && left < column => Some(ColumnEdit {
+                    index: usize::try_from(column - left).unwrap_or(usize::MAX),
+                    delta,
+                }),
+                // A delete removes the columns it overlaps (a straddling one fewer than
+                // `-delta`).
+                Span::Changed(..) if delta < 0 && column - delta > left => {
+                    let first = column.max(left);
+                    let last = (column - delta - 1).min(right);
+                    Some(ColumnEdit {
+                        index: usize::try_from(first - left).unwrap_or(usize::MAX),
+                        delta: first - last - 1,
+                    })
+                }
+                _ => None,
+            };
             (Span::Unchanged, span, edit)
         }
         _ => return None,
@@ -372,6 +403,7 @@ impl Model {
             kept_tables: &edits.kept,
             grown_edges: &edits.grown_edges,
             deleted_columns: &edits.deleted_columns,
+            deleted_tables: &edits.deleted_tables,
         };
         self.displace_cells(displacement)?;
         self.displace_cf_ranges(sheet, displacement);
@@ -466,7 +498,12 @@ impl Model {
                 continue;
             }
             match follow(table, displace_data) {
-                Follow::Fallback => continue,
+                Follow::Fallback => {
+                    if deletes_every_column(table, displace_data) {
+                        edits.deleted_tables.push(name.to_lowercase());
+                    }
+                    continue;
+                }
                 Follow::Unchanged => {}
                 Follow::Resized(resized) => {
                     edits
@@ -620,8 +657,10 @@ mod tests {
         assert_eq!(column_span((2, 4), 3, -1), Span::Changed(2, 3));
         // Every column, or across an edge: a fallback.
         assert_eq!(column_span((2, 3), 2, -2), Span::Fallback);
-        assert_eq!(column_span((2, 3), 1, -2), Span::Fallback);
-        assert_eq!(column_span((2, 3), 3, -2), Span::Fallback);
+        assert_eq!(column_span((2, 4), 1, -2), Span::Changed(1, 2));
+        assert_eq!(column_span((2, 3), 1, -2), Span::Changed(1, 1));
+        assert_eq!(column_span((2, 3), 1, -3), Span::Fallback);
+        assert_eq!(column_span((2, 3), 3, -2), Span::Changed(2, 2));
         assert_eq!(column_span((2, 3), 4, -1), Span::Unchanged);
         // A table that would leave the sheet does not follow.
         let last = crate::constants::LAST_COLUMN;

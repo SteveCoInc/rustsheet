@@ -154,10 +154,24 @@ error ("Formula is nested too deeply"); typed into a cell through the API it is 
 one, so the depth bound admits up to 127 nested function calls; union operand lists too
 (T-0134). A run of directly nested parentheses (`((...(x)...))`, nothing between the `(`s) is
 parsed in a loop and is one group node, so it costs no level per parenthesis; a run of up to 256
-parses, as Excel's does, and 257 or more is too deep (`MAX_PARENTHESES`, T-3191, decision 0173;
+parses, as Excel's does, and 257 or more is refused (`MAX_PARENTHESES`, T-3191, decision 0173;
 `=((...(0.1+0.2-0.3+B1)...))` too, T-1169). Groups split into several runs (`=( ((...)))`,
-`=(1+((...)))`) count together: more than 256 open at once is too deep. Excel counts split runs
-the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). A group holding more than the group inside it
+`=(1+((...)))`) count together: more than 256 open at once is refused. Like the sign cap below, the
+refusal is Excel's syntax, not a resource limit (`TOO_MANY_PARENTHESES_MESSAGE`, T-3689): typed, the
+formula does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`), so the cell keeps its content, as Excel's
+PATCH 400 leaves A1 blank (probes/t3172-paren-257-typed, t3266-nested-paren-257-typed); stored in a
+cell, it makes the xlsx importer refuse the workbook (`XlsxError::Workbook`, T-3869), as Excel for the
+web refuses it (createSession 501, below). Excel counts split runs
+the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). So do
+the other splits (T-3870, probes/t3870-*, excel-graph 2026-11-03, stored and typed alike): 256 groups
+with a space after the first `(` (`=( ((...(1)...))`) or an operand between the first `(` and the rest
+(`=(1+((...(1)...)))`) load and evaluate (space-256, operand-256), and 257 are refused (space-257,
+operand-257). A function call's own parenthesis is not a group and does not count: 256 groups inside
+`ABS(` (257 `(` open at the innermost `1`) load, and 257 are refused (call-255, -256, -257), and so do
+256 groups with 128 outside the call and the rest inside it (call-mid-255, -256, -257). Each refused
+stored formula made Excel for the web refuse the workbook (createSession 501 `FileCorruptTryRepair`), so
+those four cases were dropped after the run; the typed ones are PATCH 400 `InvalidArgument` and are
+kept. Ours counts the same (the parser's `open_groups` counter, `Parser::parse_parenthesis_run`, counts groups only) and matches all of them. A group holding more than the group inside it
 (`((x)+1)`) still costs an operand's two levels. The first operand of a group's content, unless a
 group itself, reserves one and a half levels of the parser's bound instead of two, and a call there
 adds one level to the tree, so a level of `(ABS(` costs three and a half: Excel's 64 and 65 levels
@@ -169,7 +183,10 @@ rule below: every sign counts, a plus folded into a number too, and the operand 
 literal written directly after the signs, 2 for a parenthesis or a function call (a LAMBDA, a called
 name and a called group are unprobed and cost 2 too), 1 otherwise; one more sign is refused. Typed, the
 refusal is a formula that does not parse (`TOO_MANY_SIGNS_MESSAGE`, not a resource limit), so the cell
-stays blank, as Excel's PATCH 400 leaves it; stored, it loads as a parse error. Signs in
+stays blank, as Excel's PATCH 400 leaves it; stored in a cell, the importer refuses the workbook, as
+Excel does (T-3869). A defined-name body or a conditional-format or data-validation formula past
+either cap still loads as a parse error: Excel's handling of those is unprobed (the call cap's
+refusal there was probed separately, T-3143, T-3263). Signs in
 several runs on one path (`=-(-(...))`) count together, as in Excel. A group whose content is exactly a
 signed group (`(-(x))`, whitespace around the signs allowed) is read in the same loop as a run of
 parentheses and adds no depth level, as a merged run does: the evaluator walks signs and groups in one
@@ -192,14 +209,15 @@ outer signs stay open and the parentheses add nothing: 200 levels of `-(` around
 refused stored formula makes Excel for the web refuse the workbook (createSession 501
 `FileCorruptTryRepair`), so it keeps no sidecar and was dropped after the run, as T-3172's were. A
 refused typed one is a PATCH 400 `InvalidArgument` that leaves A1 blank, so its sidecar has no A1 and
-`ISFORMULA(A1)` FALSE. Four such typed cases are kept, the ones where ours disagreed before T-3338:
-minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed. The typed refusals ours shared
-(the 1,024 and 1,025 sign runs, nested-200-825, nested-50-975, nested-paren-257) were dropped, because
-the harness then scored a typed input the engine refuses as an engine error, not as a blank cell. Since
-T-3338 a sign-cap refusal is a typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and
-scores as the blank cell Excel leaves, so the sign-run ones (1,024, 1,025, nested-200-825, nested-50-975)
-could be kept; nested-paren-257 and the 66-call refusal are still limit errors, scored as engine errors
-(T-3689 makes them blank too and restores the dropped cases). Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
+`ISFORMULA(A1)` FALSE. Four such typed cases were kept from the first run, the ones where ours disagreed
+before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed. The typed refusals
+ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
+error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
+typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
+leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
+minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
 not running, `EngineError`, stored and typed). In ours a plus directly before a
 number literal folds into it and adds no node. Typed whitespace adds no
@@ -215,8 +233,11 @@ IF, SUM, a mixed ABS/SUM/INT/ROUND chain, an operator between levels (`=ABS(1+AB
 wrapped in parentheses (`=(ABS((ABS(...))))`), and a LET or a called LAMBDA at the innermost level
 (both count as a level). Parentheses add no level: `=((...(1)...))` loads and evaluates at 64, 65, 127,
 128 and 255 levels. The 66-call inputs (`abs`, `if`, `sum`, `mixed`, `op-abs`, `paren-abs`, `let`,
-`lambda`, stored and typed) cannot keep a sidecar, so they were dropped after the run, as T-1091's
-were. The committed 63- to 65-call cases evaluate on both sides.
+`lambda`, stored and typed) were dropped after the run, as T-1091's were: the stored ones cannot keep
+a sidecar, and the harness then scored the typed ones as engine errors. T-3689 restored the typed ones
+(probes/t3097-nesting-{abs,if,sum,mixed,op-abs,paren-abs,let,lambda}-66-typed, excel-graph 2026-11-02:
+PATCH 400 `InvalidArgument` each, A1 blank, `ISFORMULA(A1)` FALSE; the `mixed` one wraps the 65-call
+chain in one more `SUM(`). The committed 63- to 66-call cases match on both sides.
 `@` and `#` (T-3143, probes/t3143-*, excel-graph 2026-10-30): stored, `_xlfn.SINGLE(` (the file form of
 `@`) and `_xlfn.ANCHORARRAY(` (of `#`) are calls like any other. 64 ABS calls around `_xlfn.SINGLE(C1:C2)`,
 `ABS(_xlfn.SINGLE(` around 63 more, and 63 ABS calls around `SUM(_xlfn.ANCHORARRAY(C1))` load (65 calls
@@ -256,11 +277,13 @@ plus the operand's cost at most 1,024, a number literal costing 0). Accepted and
 at 256 (`1`); minus runs of 255 (`-1`), 256 and 1,024 (`1`); plus runs of 255, 256 and 1,023 (`a`);
 alternating runs of 255, 256 and 1,023 (`2`). Refused (createSession 501 `FileCorruptTryRepair`
 stored, Graph PATCH 400 `InvalidArgument` typed; dropped after the run, no sidecar can exist):
-parentheses at 257, 258, 280, 300, 384, 448, 511, 512 and 4,095 (257 typed too); minus runs of 1,025
-(typed too), 1,500, 2,000, 2,047, 2,048, 4,096, 6,144 and 8,190; plus runs of 1,024 and 8,188;
-alternating runs of 1,024 and 8,189. So no run reaches the 8,192-character text limit.
+parentheses at 257, 258, 280, 300, 384, 448, 511, 512 and 4,095 (257 typed too, kept since T-3689 as probes/t3172-paren-257-typed); minus runs of 1,025
+(typed too, probes/t3172-minus-1025-typed since T-3689), 1,500, 2,000, 2,047, 2,048, 4,096, 6,144 and 8,190; plus runs of 1,024 and 8,188;
+alternating runs of 1,024 and 8,189 (the 1,024 plus and alternating runs typed are kept since T-3689 as
+probes/t3172-plus-1024-typed and -alt-1024-typed). So no run reaches the 8,192-character text limit.
 RustSheet counts the same calls (`MAX_NESTED_CALLS`, depth.rs): a typed formula nesting 66 or more is
-refused through the API (`EditError::InvalidInput`, the cell keeps its content) and the xlsx importer
+refused through the API as one that does not parse (`EditError::InvalidInput` starting with
+`TYPED_FORMULA_DOES_NOT_PARSE`, T-3689; the cell keeps its content) and the xlsx importer
 refuses a workbook holding one (`XlsxError::Workbook`), T-3097. `TRUE()`, `FALSE()` and a call of a
 LET name or of a cell-shaped callee count as calls, and so do `SINGLE(x)` and `ANCHORARRAY(x)` spelled
 as calls (the stored `@` and `#`), while the `@` and `#` operators do not (T-3143, above). The importer
@@ -312,9 +335,9 @@ for them, in the derived `Clone`/`Drop` of the tree (T-3338 measured; T-3691 mak
 the process. A new recursive consumer of the tree (or a heavier evaluator frame) must be
 re-measured against these limits (the at-limit tests run on a 1 MiB stack in release builds), and
 must walk operator chains with `expressions/parser/chain.rs`.
-Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338); this is a resource limit.
+Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338; the typed refusals restored by T-3689 score as blank cells) and probes/t3870-* (the parenthesis cap over split runs; a call's parenthesis is not counted); this is a resource limit.
 Status: DEVIATION (decision 0014)
-Implemented in: expressions/parser/depth.rs (`MAX_FORMULA_DEPTH`, `MAX_VALUE_OPERATORS`, `MAX_NESTED_CALLS`, `MAX_PARENTHESES`, `MAX_SIGNS`, `TOO_MANY_SIGNS_MESSAGE`, `Parser::in_call`, `Parser::parse_primary`, `Parser::parse_signs`, `Parser::parse_signed_operand`, `Parser::grow`, `Parser::grow_chain`); expressions/parser/mod.rs (`Parser::parse_power`); cast.rs (`Model::apply_unary_chain`); expressions/parser/chain.rs; expressions/parser/reference_operators.rs (`Parser::parse_parenthesis_run`); model.rs (`Model::parse_cell_formula`, `Model::evaluate_operator_chain`); rustsheet-xlsx `import::worksheets::from_a1_to_rc` and `import::call_cap` (`refuse_too_many_calls`, `check_rule_formulas`) (the call cap on load: cells, name bodies, rule formulas)
+Implemented in: expressions/parser/depth.rs (`MAX_FORMULA_DEPTH`, `MAX_VALUE_OPERATORS`, `MAX_NESTED_CALLS`, `MAX_PARENTHESES`, `MAX_SIGNS`, `TOO_MANY_SIGNS_MESSAGE`, `TOO_MANY_PARENTHESES_MESSAGE`, `Parser::in_call`, `Parser::parse_primary`, `Parser::parse_signs`, `Parser::parse_signed_operand`, `Parser::grow`, `Parser::grow_chain`); expressions/parser/mod.rs (`Parser::parse_power`); cast.rs (`Model::apply_unary_chain`); expressions/parser/chain.rs; expressions/parser/reference_operators.rs (`Parser::parse_parenthesis_run`); model.rs (`Model::parse_cell_formula`, `Model::evaluate_operator_chain`); rustsheet-xlsx `import::worksheets::from_a1_to_rc` and `import::call_cap` (`refuse_too_many_calls`, `check_rule_formulas`) (the call cap on load: cells, name bodies, rule formulas)
 
 ## Input left over after a complete formula is a syntax error
 Rule: text after a complete expression (`=1 2`, `=1+2 3`, `=SUM(A1:A2))`, `="a" "b"`, `=SIN(1)(3)`,
@@ -469,6 +492,12 @@ More shapes (probes/t2776-formula-text-whitespace-shapes, t2776-ws-after-at, -af
   read as 1 and print `='My S'!B1` / `=S!B1`. An external prefix takes it too (`=[1]S! A1` is accepted and prints
   `'...[1]S'!A1` (the quote closes the file path Excel prepends) with no space; the value is Graph's `#BLOCKED!` because the link has no target, so no case is kept; excel-graph only, desktop unprobed).
   `=S! R1C2` (R1C1 text after a prefix and a space, typed in A1 mode) is refused: PATCH answers `400 InvalidArgument`.
+  Typed in R1C1 mode (`formulasR1C1`), the drop holds too (probes/t3102-r1c1-ws-after-bang, excel-graph 2026-11-02,
+  T-3102): `=S! R1C4`, `=S!` LF `R1C4` and `=S!  R1C4+1` read S!D1 and FORMULATEXT prints `=S!$D$1` (`=S!$D$1+1`), no
+  whitespace kept; `=S!` TAB `R1C4` is refused (PATCH 400, the cell left blank), as a TAB anywhere is in A1 mode
+  ("Remaining whitespace shapes" below), and so is `=S! R1C4` typed in A1 mode. Ours matches all of it since T-3102:
+  a typed formula whose whitespace between tokens holds a TAB or an NBSP is refused as one that does not parse
+  (`TYPED_FORMULA_DOES_NOT_PARSE`), in either mode; before, ours read it, dropping the TAB.
 - **A run keeps only its line feeds and the spaces after the last one**: `=1+ ` LF ` 2` prints `=1+` LF ` 2`,
   `=1+` LF ` ` LF `2` prints `=1+` LF LF `2`, 10 spaces, 3 line feeds and 2 spaces print as the 3 line feeds and 2
   spaces.
@@ -507,7 +536,7 @@ Typed (FORMULATEXT prints):
 - LAMBDA parameter names: whitespace on both sides of a parameter name is dropped, while the body keeps its leading whitespace. `=LAMBDA( x , x)(1)` prints `=LAMBDA(x, x)(1)` (typed and stored alike; the kept space is the body's), `=LAMBDA(x, y ,x+y)(1,2)` prints `=LAMBDA(x,y,x+y)(1,2)`; a LF before the body is kept (`=LAMBDA(x,` LF `x)(1)`).
 - LET names: the whitespace before a name is kept and the whitespace after it is dropped: `=LET( a ,1,a)` prints `=LET( a,1,a)`, `=LET(a ,1,a)` prints `=LET(a,1,a)`, `=LET(a,1, b ,2,a+b)` prints `=LET(a,1, b,2,a+b)`, `=LET(a,1,b ,2,a+b)` prints `=LET(a,1,b,2,a+b)`, a LF before the name is kept.
 - Groups and signs print as typed: `=( (1) )`, `=( (B1) )`, `=((1) )`, `=- 5 %`, `=-5 %`, `=- 5%`, `=-  5 %`.
-- excel-graph refuses (PATCH 400 InvalidArgument; probe run 2026-10-29, T-2949, cases not kept; desktop Excel unprobed): a TAB or NBSP anywhere (`=1+` TAB `2`, `=` TAB `1+2`, `=1` TAB `+2`, NBSP forms, `=B1:B2` TAB ` B2`). LET with an even argument count (`=LET( a ,1, b ,a+1)`) is refused for its arity, not its whitespace.
+- excel-graph refuses (PATCH 400 InvalidArgument; probe run 2026-10-29, T-2949, cases not kept; desktop Excel unprobed): a TAB or NBSP anywhere (`=1+` TAB `2`, `=` TAB `1+2`, `=1` TAB `+2`, NBSP forms, `=B1:B2` TAB ` B2`). Ours refuses them too since T-3102 (before, it read them, printing no TAB); a TAB inside a string literal is text, not whitespace, and stays. LET with an even argument count (`=LET( a ,1, b ,a+1)`) is refused for its arity, not its whitespace.
 Stored in the file (`<f>` text): a leading TAB or LF is dropped like leading spaces (`<f>` TAB `1+2</f>` and `<f>` LF `1+2</f>` print `=1+2`). Workbooks holding a TAB or NBSP between tokens, or a leading NBSP, are refused at createSession (501 FileCorruptTryRepair). Interior shapes load and print as typed (`=( (1) )`, `=- 5 %`, `=B1:B2` LF ` B2`, `=LAMBDA( x , x)(1)` prints `=LAMBDA(x, x)(1)`). A stored even-arity `=LET( a ,1, b ,a+1)` loads and prints `=LET( a,1, b,a+1,b)` (Excel appends the last name as the result).
 Inferred, not probed (only the single-LF separator and `LET( a ,1, b ,a+1)` have oracle values): several line feeds in an intersection separator, other LET arities (`LET(a,1)`, `LET(a,1,b,2,c,3,d,4)`) and a stored even LET whose second-to-last argument is not a name.
 Ours (2026-10-30, T-3169): every t2949 shape matches. An intersection separator holding a line feed keeps it whole (the line feed is the operator, so no space is printed beside it), the parser drops a stored leading LF with the leading spaces, and a stored even-arity LET gets its last name appended as the result.
@@ -607,9 +636,34 @@ Tasks: T-1178, T-1244 (spec for keeping groups in the parse tree), T-1200 (the `
   Excel refuses (`=1+`, in A1 or R1C1 mode) is a PATCH 400 `InvalidArgument` and leaves the cell
   blank (`ISBLANK` is TRUE).
 - **Evidence:** probes/t3113-entered-r1c1, probes/t3113-entered-refused (excel-graph, 2026-10-30).
-- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the engine's R1C1 reader
-  does not take bare `R`/`C` offsets (`RC`, `R[-1]C`) yet, T-3212. The engine refuses a typed
+- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the short forms (`RC`,
+  `R[-1]C`, whole rows and columns) since T-3212 (next entry). The engine refuses a typed
   `=1+` in A1 mode too since T-3213 (see "A typed formula that does not parse is refused" below).
+
+## Short R1C1 forms typed in R1C1 mode
+Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms in any letter case.
+- A bare `R` or `C` is an offset of 0. In S!H10:H44, `=RC[-6]` is `=B23` (written lower case, `rc[-6]`), `=R2C` is `=H$2`,
+  `=RC2` is `=$B18`, `=R[-17]C2` is `=$B3` and `=ROW(RC)` is `=ROW(H24)`.
+- A row alone is the whole row, and a column alone is the whole column. `=SUM(R2)` is `=SUM($2:$2)`, `=SUM(R[-9])` is
+  `=SUM(3:3)`, `=ROWS(R)` is `=ROWS(26:26)`, `=SUM(C3)` is `=SUM($C:$C)`, `=COLUMNS(C)` is `=COLUMNS(H:H)`,
+  `=SUM(R[-29]:R[-27])` is `=SUM(11:13)`, `=SUM(C2:C3)` is `=SUM($B:$C)`, and `=SUM(T!C1)` is `=SUM(T!$A:$A)`.
+- A relative offset smaller than the grid wraps around it. `=R[-12]C[-5]+RC[-100]` in H16 is `=C4+XBP16`, and
+  `=R[-100]C[-7]` in H45 is `=A1048521`. An offset of a whole grid or more is refused (`RC[16384]`,
+  `R[1048576]C[-7]`; the cell stays blank).
+- An absolute column past the grid is refused (`R2C16385`), but `R0C1` and `R1048577C1` stay names (`#NAME?`, as stored
+  text reads them, T-1657).
+- A LET name or LAMBDA parameter that reads as a reference in R1C1 mode is refused: `r`, `c`, `rc` and `r1c1`
+  (`=LET(rc,5,rc+1)`, `=LAMBDA(c,c+1)(2)`), as `f1` is refused typed in A1 mode (decision 0103). `f1` itself is
+  accepted in R1C1 mode (`=LET(f1,5,f1+1)` is 6, seen in a draft of the probe; T-3897).
+Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
+ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
+Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
+(`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
+reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
+parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
+Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
+whole-row range's second corner.
+Tasks: T-3212, T-3897, T-3898
 
 ## A typed formula that does not parse is refused; a call's missing `)` is added
 Rule: Excel refuses a formula typed through the API (Graph PATCH 400 `InvalidArgument`) that does

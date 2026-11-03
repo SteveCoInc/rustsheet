@@ -1,10 +1,9 @@
-"""The visible-parity lock as the merge tooling reads it (decision 0219).
+"""The visible-parity lock as `make catch-up` reads it (decision 0219).
 
 `eval/baseline/visible-parity.txt` holds one `case<TAB>count` line per case; `rustsheet-eval`
 writes it and CI's eval gate checks it. `make catch-up` (`merge_catchup.py`) resolves a
 conflict on it three-way per case (`merge_visible`) and re-records only the PR's added case files
-as new (`added_case_files`). Neither it nor a carry-over merge (`merge_ready.Repo.carry_problem`)
-may record a line above `main`'s for a case whose case file `main` has (`visible_rises`). The lock
+as new (`added_case_files`). It may not record a line above `main`'s for a case whose case file `main` has (`visible_rises`). The lock
 replaced `eval/baseline/visible-parity.json` (`RETIRED_LOCK`), which PRs from before it still
 modify; a merge with `main` resolves that by deleting it.
 """
@@ -16,7 +15,7 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from merge_lock import git
+from git_ops import git
 from suite_meta import suites_on
 
 VISIBLE_PARITY = "eval/baseline/visible-parity.txt"

@@ -145,6 +145,13 @@ pub(super) fn reference_text(
         };
     }
     match rewrite {
+        // A column delete of every column of the table (T-2899 table-delete-all-columns: A1
+        // `=SUM(Sales[Qty])` reads `=SUM(#REF!)`, where a plain range prints `=SUM(S!#REF!)`).
+        Rewrite::Displace(Displacement { deleted_tables, .. })
+            if deleted_tables.contains(&reference.table_name.to_lowercase()) =>
+        {
+            return token::Error::REF.to_string();
+        }
         Rewrite::Displace(Displacement {
             data: DisplaceData::None,
             ..
@@ -165,12 +172,11 @@ pub(super) fn reference_text(
         {
             // A column delete inside the table turns a reference to a deleted column into
             // `#REF!` (T-2324 table-delete-column-qty: `=SUM(#REF!)`, -region: `=COUNTA(#REF!)`).
-            // A column range that loses one end is printed as the area it is displaced to below,
-            // as under a fallback: what Excel does to it is unprobed.
+            // A column range that loses either end is `#REF!` too (T-2899 table-column-range-
+            // delete-end, -delete-start: `=SUM(#REF!)`, value and FORMULATEXT).
             match deleted_column(reference, deleted_columns) {
                 DeletedColumn::Whole => return token::Error::REF.to_string(),
                 DeletedColumn::None => return written(),
-                DeletedColumn::RangeEnd => {}
             }
         }
         Rewrite::Lower(tables, row) => {
@@ -224,10 +230,8 @@ pub(super) fn reference_text(
 enum DeletedColumn {
     /// It names no deleted column.
     None,
-    /// It names one deleted column, or a range both of whose ends are deleted.
+    /// It names one deleted column, or a column range either of whose ends is deleted.
     Whole,
-    /// It names a column range one of whose ends is deleted.
-    RangeEnd,
 }
 
 /// How the columns `deleted` (lowercase (table, column) names) touch `reference`.
@@ -244,9 +248,8 @@ fn deleted_column(reference: &StructuredReference, deleted: &[(String, String)])
         Some(TableReference::ColumnReference(column)) if is_deleted(column) => DeletedColumn::Whole,
         Some(TableReference::RangeReference((first, last))) => {
             match (is_deleted(first), is_deleted(last)) {
-                (true, true) => DeletedColumn::Whole,
                 (false, false) => DeletedColumn::None,
-                _ => DeletedColumn::RangeEnd,
+                _ => DeletedColumn::Whole,
             }
         }
         _ => DeletedColumn::None,

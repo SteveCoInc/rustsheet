@@ -126,6 +126,9 @@ pub struct Lexer {
     /// Whether `**` is a number's exponent marker, as `E` is: text a user types, which Excel
     /// reads so (`=2**3` stores `=2000`; see [`Lexer::set_typed`]).
     double_star_exponent: bool,
+    /// Whether whitespace between tokens of the formula last set held a TAB or an NBSP, which
+    /// Excel refuses in typed text ([`Lexer::skipped_refused_whitespace`]).
+    refused_whitespace: bool,
     /// The last token [`peek_token`](Self::peek_token) read: the parser peeks at most tokens
     /// several times before taking them, and long imported formulas spent most of their parse
     /// lexing the same token again (T-0499). A token depends only on the text, the start
@@ -157,6 +160,7 @@ impl Lexer {
             language,
             engine_text: true,
             double_star_exponent: false,
+            refused_whitespace: false,
             peeked: None,
             number_text: String::new(),
         }
@@ -230,6 +234,16 @@ impl Lexer {
         self.position = 0;
         self.next_token_position = None;
         self.peeked = None;
+        self.refused_whitespace = false;
+    }
+
+    /// Whether the whitespace skipped between tokens of the formula so far held a TAB or an NBSP.
+    /// Typed, Excel refuses such a formula in A1 and R1C1 mode alike (Graph PATCH 400
+    /// `InvalidArgument`: `=1+` TAB `2`, `=` TAB `1+2`, NBSP forms, T-2949; `=S!` TAB `R1C4` in
+    /// R1C1 mode, probes/t3102-r1c1-ws-after-bang, T-3102; docs/excel-semantics/syntax.md
+    /// "Remaining whitespace shapes"). A string literal's own text is not skipped whitespace.
+    pub(crate) fn skipped_refused_whitespace(&self) -> bool {
+        self.refused_whitespace
     }
 
     /// Returns an error if the token is not the expected one.
@@ -808,6 +822,7 @@ impl Lexer {
             if !x.is_whitespace() {
                 break;
             }
+            self.refused_whitespace |= matches!(x, '\t' | '\u{a0}');
             position += 1;
         }
         self.position = position;

@@ -126,9 +126,14 @@ fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
         assert_eq!(after, moved.trim_end(), "{open} {levels}");
         assert_eq!(value_after, value, "{open} {levels}");
     }
+    // Past the cap the formula is Excel's syntax error, not a resource limit (T-3689): typed it is
+    // refused as not parsing, stored it is kept as a parse error, as the sign cap's is.
     let mut model = new_empty_model();
     let past = nested("-(", "1", ")", limit + 1);
-    assert!(model.set_user_input(0, 1, 1, past).is_err());
+    assert!(model.set_typed_user_input(0, 1, 1, past.clone()).is_err());
+    assert_eq!(model.set_user_input(0, 1, 1, past), Ok(()));
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#ERROR!");
 }
 
 /// SPEC-0023: whitespace costs no nesting level, so a shape typed with spaces at every level, a
@@ -199,9 +204,10 @@ fn alternating_calls_and_groups_at_the_nesting_limit_evaluate_on_a_2_mib_stack()
 
 /// T-1169: the reported shape, `=` + N `(` + `0.1+0.2-0.3+B1` + N `)`, on the default test thread
 /// (2 MiB) in whatever build runs the tests. Up to the limit it parses, evaluates, prints, and
-/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is
-/// refused as too deep. Either way the process does not abort. The parentheses are one run, one
-/// group node, so the limit is Excel's 256 (T-3191).
+/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is a
+/// parse error: typed it is refused, stored it is kept as one (Excel's syntax, T-3689). Either
+/// way the process does not abort. The parentheses are one run, one group node, so the limit is
+/// Excel's 256 (T-3191).
 #[test]
 fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
     let limit = MAX_PARENTHESES;
@@ -215,11 +221,15 @@ fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
         };
         let formula = nested_over("B1");
         let mut model = new_empty_model();
-        let result = model.set_user_input(0, 1, 1, formula.clone());
         if levels > limit {
-            assert!(result.is_err(), "{levels} levels were accepted");
+            let typed = model.set_typed_user_input(0, 1, 1, formula.clone());
+            assert!(typed.is_err(), "{levels} levels were accepted");
+            assert_eq!(model.set_user_input(0, 1, 1, formula), Ok(()), "{levels}");
+            model.evaluate();
+            assert_eq!(model._get_text("A1"), "#ERROR!", "{levels}");
             continue;
         }
+        let result = model.set_user_input(0, 1, 1, formula.clone());
         assert!(result.is_ok(), "{levels} levels were refused: {result:?}");
         model.evaluate();
         assert_eq!(model._get_text("A1"), "5.55112E-17", "{levels}");

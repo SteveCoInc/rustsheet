@@ -33,6 +33,9 @@ where it differs.
   its decomposition (`"ĉ"` vs `"c"&UNICHAR(770)`), against the base letter and against the base
   letter of the next code point.
 - Leave U+0363-U+036F to T-3203 (item 1), and the multi-letter rule to T-3304.
+- T-3465 sweep evidence (probes/t3465-collation-holdout, excel-graph 2026-11-03): U+034F (combining grapheme
+  joiner) inserted after `»` is ignored by Excel (`"»±©" = "»"&UNICHAR(847)&"±©"`); the engine weighs it. Owned
+  cells: probes/t3465-collation-holdout C237, E237
 
 ## Acceptance criteria
 - [ ] Probe case `probes/t3305-collation-table-weights` (milestone M2) committed with its

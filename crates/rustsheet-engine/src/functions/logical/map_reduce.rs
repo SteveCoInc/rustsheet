@@ -1,4 +1,5 @@
 use super::bycol_byrow::LambdaGrid;
+use super::lambda::LambdaCaller;
 use crate::cast::calc_result_to_element;
 use crate::{
     calc_result::CalcResult,
@@ -20,11 +21,6 @@ impl Model {
         let n_arrays = args.len() - 1;
 
         let function = self.evaluate_node_in_context(&args[n_arrays], cell);
-        let mut caller = match self.helper_caller(&function, n_arrays, cell) {
-            Ok(caller) => caller,
-            Err(error) => return error,
-        };
-
         let mut arrays: Vec<LambdaGrid> = Vec::with_capacity(n_arrays);
         for (index, arg) in args[..n_arrays].iter().enumerate() {
             let data = match self.lambda_cells(arg, cell, index > 0, true) {
@@ -33,6 +29,14 @@ impl Model {
             };
             arrays.push(data);
         }
+
+        // The arrays are read before the function is checked: an error array wins over a function
+        // that cannot be called (docs/excel-semantics/arrays.md "LAMBDA helpers refuse a function
+        // they cannot call", probes/t3753-lambda-helper-error-array-order).
+        let mut caller = match self.helper_caller(&function, n_arrays, cell) {
+            Ok(caller) => caller,
+            Err(error) => return error,
+        };
 
         if arrays
             .iter()
@@ -79,31 +83,38 @@ impl Model {
         CalcResult::Array(result)
     }
 
+    /// The array and the function of SCAN and REDUCE (`[initial_value], array, lambda`), and
+    /// whether an initial value was given. The array is read before the function is checked: an
+    /// error array wins over a function that cannot be called (docs/excel-semantics/arrays.md
+    /// "LAMBDA helpers refuse a function they cannot call", probes/t3753-lambda-helper-error-array-order).
+    pub(super) fn fold_operands(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+    ) -> Result<(LambdaGrid, LambdaCaller, bool), CalcResult> {
+        if args.len() < 2 || args.len() > 3 {
+            return Err(CalcResult::new_args_number_error(cell));
+        }
+        let (array_idx, lambda_idx, has_initial) = if args.len() == 3 {
+            (1, 2, true)
+        } else {
+            (0, 1, false)
+        };
+        let function = self.evaluate_node_in_context(&args[lambda_idx], cell);
+        let data = self.lambda_cells(&args[array_idx], cell, false, false)?;
+        let caller = self.helper_caller(&function, 2, cell)?;
+        Ok((data, caller, has_initial))
+    }
+
     /// `=REDUCE([initial_value], array, lambda)`
     ///
     /// Accumulates a result by applying the lambda to each element of `array`.
     /// The lambda takes `(accumulator, current_value)` and returns the new accumulator.
     /// With 2 arguments the first element of the array seeds the accumulator.
     pub(crate) fn fn_reduce(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.len() < 2 || args.len() > 3 {
-            return CalcResult::new_args_number_error(cell);
-        }
-
-        let (array_idx, lambda_idx, has_initial) = if args.len() == 3 {
-            (1, 2, true)
-        } else {
-            (0, 1, false)
-        };
-
-        let function = self.evaluate_node_in_context(&args[lambda_idx], cell);
-        let caller = match self.helper_caller(&function, 2, cell) {
-            Ok(caller) => caller,
+        let (data, caller, has_initial) = match self.fold_operands(args, cell) {
+            Ok(operands) => operands,
             Err(error) => return error,
-        };
-
-        let data = match self.lambda_cells(&args[array_idx], cell, false, false) {
-            Ok(d) => d,
-            Err(e) => return e,
         };
 
         let columns = data.columns();

@@ -1,0 +1,45 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3062: FORMULATEXT of a wholly deleted unqualified range (S!A1 =SUM(C4:C4), delete_row 4 of S) and of typed =sheet1!#REF! on Sheet1 (case differs from the sheet name).",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "A1": "=SUM(C4:C4)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(C4:C5)"
+      }
+    },
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=sheet1!#REF!",
+        "A2": "=FORMULATEXT(A1)",
+        "A5": "=SUM(SHEET1!#REF!)",
+        "A6": "=FORMULATEXT(A5)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 4
+    }
+  ],
+  "expected": {},
+  "check": [
+    "S!A1",
+    "S!A2",
+    "S!A3",
+    "Sheet1!A1",
+    "Sheet1!A2",
+    "Sheet1!A5",
+    "Sheet1!A6"
+  ]
+}

@@ -24,6 +24,10 @@ has no UNVERIFIED line on error order, and financial.md "T-bills settled in 9999
 - Use the excel-probe skill: one new 1904 case (error order: ACCRINT with a 9996-9999 first_interest or settlement
   before `NA()`, COUPNUM and TBILL* with a 9996 settlement before `NA()`/text, and a 1904 serial past 2957003 before an
   error), and mid-year 9999 settlements (9999-06-30, 9999-07-01) in both systems.
+- Added by gap triage 2026-11-03 (same 9999 calendar edge, so it goes in the same case): financial.md "ACCRINT with
+  calc_method TRUE: a next coupon past the calendar is #NUM!" is probed on bases 0 and 1 only, and the engine applies
+  it to every basis (UNVERIFIED). Repeat its cut cells, `ACCRINT(2956276,2956456,2958283,0.05,1000,2,b,TRUE)` (#NUM!)
+  and settlement 2958282 (a value), for b = 2, 3, 4 in both systems, and record the result in that entry.
 
 ## Acceptance criteria
 - [ ] The new probe cases are filled through excel-graph and committed; every cell passes or has a filed task.

@@ -113,7 +113,10 @@ def upper_tail(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
 
 def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
     """The unit-scale y with P(a, y) = p (or Q(a, y) = p when `upper`), 0 < p < 1: solves the smaller tail
-    ln tail(e^s) = ln q in s. NoValueError when the root is beyond the double range."""
+    ln tail(e^s) = ln q in s. NoValueError when the root is beyond the double range. Unlike BETA.INV, a root below
+    the smallest double keeps its value: Excel gives 0 there (accuracy/GAMMA.INV/s1 A82, A85, A145, A155 and A172;
+    CHISQ.INV(1E-300,1)), which the Gate A envelope's absolute floor of 1E-300 already accepts, and s1 is immutable
+    (SPEC-0029), so the bracket stays at e^-1500 (T-3578)."""
     lower = (p <= mpmath.mpf(1) / 2) != upper
     q = p if (lower != upper) else 1 - p
     target = mpmath.log(q)

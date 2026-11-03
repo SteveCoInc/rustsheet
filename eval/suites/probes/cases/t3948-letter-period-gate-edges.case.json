@@ -1,0 +1,179 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3948: the letter-period shape gate (T-3920) beyond its probed shapes: multi-colon, leading-zero and empty-part clocks (rows 1-7), tails with letters, a clock, a period or a second word after the digits (rows 8-12, 15), and neighbours without a digit after the period (rows 13, 14) or with a month-name tail (row 16). A typed, B ISNUMBER, C value or LEN, D TEXT; E VALUE, F 0+, G DATEVALUE, H TIMEVALUE of the literal.",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3948"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "1:2:3:4 A. 5"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E1": "=VALUE(\"1:2:3:4 A. 5\")",
+    "F1": "=0+\"1:2:3:4 A. 5\"",
+    "G1": "=DATEVALUE(\"1:2:3:4 A. 5\")",
+    "H1": "=TIMEVALUE(\"1:2:3:4 A. 5\")",
+    "A2": {
+     "entered": "10:00:00 P. 5"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E2": "=VALUE(\"10:00:00 P. 5\")",
+    "F2": "=0+\"10:00:00 P. 5\"",
+    "G2": "=DATEVALUE(\"10:00:00 P. 5\")",
+    "H2": "=TIMEVALUE(\"10:00:00 P. 5\")",
+    "A3": {
+     "entered": "1:2:3 A. 5"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+    "D3": "=IF(ISNUMBER(A3),TEXT(A3,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E3": "=VALUE(\"1:2:3 A. 5\")",
+    "F3": "=0+\"1:2:3 A. 5\"",
+    "G3": "=DATEVALUE(\"1:2:3 A. 5\")",
+    "H3": "=TIMEVALUE(\"1:2:3 A. 5\")",
+    "A4": {
+     "entered": "010 A. 5"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+    "D4": "=IF(ISNUMBER(A4),TEXT(A4,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E4": "=VALUE(\"010 A. 5\")",
+    "F4": "=0+\"010 A. 5\"",
+    "G4": "=DATEVALUE(\"010 A. 5\")",
+    "H4": "=TIMEVALUE(\"010 A. 5\")",
+    "A5": {
+     "entered": "00010:00 A. 5"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+    "D5": "=IF(ISNUMBER(A5),TEXT(A5,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E5": "=VALUE(\"00010:00 A. 5\")",
+    "F5": "=0+\"00010:00 A. 5\"",
+    "G5": "=DATEVALUE(\"00010:00 A. 5\")",
+    "H5": "=TIMEVALUE(\"00010:00 A. 5\")",
+    "A6": {
+     "entered": "10: A. 5"
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+    "D6": "=IF(ISNUMBER(A6),TEXT(A6,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E6": "=VALUE(\"10: A. 5\")",
+    "F6": "=0+\"10: A. 5\"",
+    "G6": "=DATEVALUE(\"10: A. 5\")",
+    "H6": "=TIMEVALUE(\"10: A. 5\")",
+    "A7": {
+     "entered": ":10 A. 5"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+    "D7": "=IF(ISNUMBER(A7),TEXT(A7,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E7": "=VALUE(\":10 A. 5\")",
+    "F7": "=0+\":10 A. 5\"",
+    "G7": "=DATEVALUE(\":10 A. 5\")",
+    "H7": "=TIMEVALUE(\":10 A. 5\")",
+    "A8": {
+     "entered": "10 A. 5x"
+    },
+    "B8": "=ISNUMBER(A8)",
+    "C8": "=IF(ISNUMBER(A8),A8,LEN(A8))",
+    "D8": "=IF(ISNUMBER(A8),TEXT(A8,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E8": "=VALUE(\"10 A. 5x\")",
+    "F8": "=0+\"10 A. 5x\"",
+    "G8": "=DATEVALUE(\"10 A. 5x\")",
+    "H8": "=TIMEVALUE(\"10 A. 5x\")",
+    "A9": {
+     "entered": "10 A. 5 PM"
+    },
+    "B9": "=ISNUMBER(A9)",
+    "C9": "=IF(ISNUMBER(A9),A9,LEN(A9))",
+    "D9": "=IF(ISNUMBER(A9),TEXT(A9,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E9": "=VALUE(\"10 A. 5 PM\")",
+    "F9": "=0+\"10 A. 5 PM\"",
+    "G9": "=DATEVALUE(\"10 A. 5 PM\")",
+    "H9": "=TIMEVALUE(\"10 A. 5 PM\")",
+    "A10": {
+     "entered": "10 A. 5:30"
+    },
+    "B10": "=ISNUMBER(A10)",
+    "C10": "=IF(ISNUMBER(A10),A10,LEN(A10))",
+    "D10": "=IF(ISNUMBER(A10),TEXT(A10,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E10": "=VALUE(\"10 A. 5:30\")",
+    "F10": "=0+\"10 A. 5:30\"",
+    "G10": "=DATEVALUE(\"10 A. 5:30\")",
+    "H10": "=TIMEVALUE(\"10 A. 5:30\")",
+    "A11": {
+     "entered": "10 A. 5.5"
+    },
+    "B11": "=ISNUMBER(A11)",
+    "C11": "=IF(ISNUMBER(A11),A11,LEN(A11))",
+    "D11": "=IF(ISNUMBER(A11),TEXT(A11,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E11": "=VALUE(\"10 A. 5.5\")",
+    "F11": "=0+\"10 A. 5.5\"",
+    "G11": "=DATEVALUE(\"10 A. 5.5\")",
+    "H11": "=TIMEVALUE(\"10 A. 5.5\")",
+    "A12": {
+     "entered": "10 A. 05"
+    },
+    "B12": "=ISNUMBER(A12)",
+    "C12": "=IF(ISNUMBER(A12),A12,LEN(A12))",
+    "D12": "=IF(ISNUMBER(A12),TEXT(A12,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E12": "=VALUE(\"10 A. 05\")",
+    "F12": "=0+\"10 A. 05\"",
+    "G12": "=DATEVALUE(\"10 A. 05\")",
+    "H12": "=TIMEVALUE(\"10 A. 05\")",
+    "A13": {
+     "entered": "10 A. July 1, 2025"
+    },
+    "B13": "=ISNUMBER(A13)",
+    "C13": "=IF(ISNUMBER(A13),A13,LEN(A13))",
+    "D13": "=IF(ISNUMBER(A13),TEXT(A13,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E13": "=VALUE(\"10 A. July 1, 2025\")",
+    "F13": "=0+\"10 A. July 1, 2025\"",
+    "G13": "=DATEVALUE(\"10 A. July 1, 2025\")",
+    "H13": "=TIMEVALUE(\"10 A. July 1, 2025\")",
+    "A14": {
+     "entered": "10 A.  "
+    },
+    "B14": "=ISNUMBER(A14)",
+    "C14": "=IF(ISNUMBER(A14),A14,LEN(A14))",
+    "D14": "=IF(ISNUMBER(A14),TEXT(A14,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E14": "=VALUE(\"10 A.  \")",
+    "F14": "=0+\"10 A.  \"",
+    "G14": "=DATEVALUE(\"10 A.  \")",
+    "H14": "=TIMEVALUE(\"10 A.  \")",
+    "A15": {
+     "entered": "10 A. 7/1/2025 PM"
+    },
+    "B15": "=ISNUMBER(A15)",
+    "C15": "=IF(ISNUMBER(A15),A15,LEN(A15))",
+    "D15": "=IF(ISNUMBER(A15),TEXT(A15,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E15": "=VALUE(\"10 A. 7/1/2025 PM\")",
+    "F15": "=0+\"10 A. 7/1/2025 PM\"",
+    "G15": "=DATEVALUE(\"10 A. 7/1/2025 PM\")",
+    "H15": "=TIMEVALUE(\"10 A. 7/1/2025 PM\")",
+    "A16": {
+     "entered": "10 A. Jul-2025"
+    },
+    "B16": "=ISNUMBER(A16)",
+    "C16": "=IF(ISNUMBER(A16),A16,LEN(A16))",
+    "D16": "=IF(ISNUMBER(A16),TEXT(A16,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E16": "=VALUE(\"10 A. Jul-2025\")",
+    "F16": "=0+\"10 A. Jul-2025\"",
+    "G16": "=DATEVALUE(\"10 A. Jul-2025\")",
+    "H16": "=TIMEVALUE(\"10 A. Jul-2025\")"
+   }
+  }
+ ]
+}

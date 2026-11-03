@@ -174,6 +174,9 @@ pub struct Model {
     pub(crate) nested_budget: crate::nested_array::NestedBudget,
     /// Aggregate arguments being read as a head and a tail (`tailed_array.rs`).
     pub(crate) tail_views: Vec<crate::tailed_array::TailView>,
+    /// A GROUPBY in the running lift has filtered rows (`Model::lift_by_class`, T-3840); saved and
+    /// restored around each lift, a GROUPBY's function calls and a cell evaluated on demand.
+    pub(crate) groupby_filter_spent: bool,
     /// Where the stack was when the outermost LAMBDA call running now started
     /// (`Model::lambda_stack_base`), `None` while no call runs.
     pub(crate) lambda_calls_base: Option<usize>,
@@ -423,8 +426,7 @@ impl Model {
                 return None;
             }
             // Read with no clock, so "-4-2" stays a formula although "4-2" is a date now.
-            (!stripped.is_empty() && self.cast_number_in(stripped, &|| None).is_none())
-                .then_some(value)
+            (!stripped.is_empty() && !self.typed_sign_text_is_number(stripped)).then_some(value)
         } else {
             None
         }
