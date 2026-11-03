@@ -89,10 +89,7 @@ fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
 /// as without the suffix (N24-N25, T-2053).
 fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
     let (clock, word) = text.rsplit_once(' ')?;
-    let ap_word = is_single_letter_ap(word)
-        || word.eq_ignore_ascii_case("am")
-        || word.eq_ignore_ascii_case("pm");
-    if clock.contains(' ') || !ap_word {
+    if clock.contains(' ') || !is_am_pm_word(word) {
         return None;
     }
     let serial = parse_clock_text(text).or_else(|| parse_hour_only_am_pm(text))?;
@@ -122,6 +119,11 @@ fn is_single_letter_ap(word: &str) -> bool {
     word.eq_ignore_ascii_case("a") || word.eq_ignore_ascii_case("p")
 }
 
+/// Whether `word` is a clock's `AM`/`PM` or single-letter `A`/`P` word, in any case.
+fn is_am_pm_word(word: &str) -> bool {
+    is_single_letter_ap(word) || word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm")
+}
+
 /// Cell format of typed text that stays text because its clock is rejected: a date followed by a
 /// number-like clock and a spaced `AM`/`PM` or single-letter `A`/`P` (`1/2/2020 13:00 PM`, `13 PM`, `1300 PM`, `99:00 PM`)
 /// carries the format of its date part (`m/d/yyyy`, `d-mmm-yy` for `July 1, 2026 13:00 PM`), while
@@ -143,10 +145,7 @@ pub(crate) fn rejected_clock_text_format(
         return Some(MIXED_FRACTION_PERCENT_FORMAT.to_string());
     }
     let (rest, word) = without_single_letter_dot(original).rsplit_once(' ')?;
-    if !["am", "pm", "a", "p"]
-        .iter()
-        .any(|s| word.eq_ignore_ascii_case(s))
-    {
+    if !is_am_pm_word(word) {
         return None;
     }
     let rest = rest.trim_end_matches(' ');
@@ -208,18 +207,12 @@ impl TypedClock {
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
     let (clock, rest) = text.split_once(' ')?;
     let rest = rest.trim_start_matches(' ');
-    // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock (`10 A
-    // 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other number
-    // (probes/date-text-typed-clock-first-a-period;
-    // T-3907), which the engine leaves as text.
+    // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock
+    // (`10 A 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other
+    // number (probes/date-text-typed-clock-first-a-period; T-3907), which the engine leaves as
+    // text.
     let clock_end = match rest.split_once(' ') {
-        Some((word, _))
-            if ["am", "pm", "a", "p"]
-                .iter()
-                .any(|s| word.eq_ignore_ascii_case(s)) =>
-        {
-            text.len() - rest.len() + word.len()
-        }
+        Some((word, _)) if is_am_pm_word(word) => text.len() - rest.len() + word.len(),
         _ => clock.len(),
     };
     let clock = text.get(..clock_end)?;
@@ -245,10 +238,7 @@ fn typed_clock_shape(text: &str) -> Option<TypedClock> {
     let mut text = text.trim_end_matches(' ');
     let mut suffixed = false;
     if let Some((rest, word)) = text.rsplit_once(' ') {
-        if ["am", "pm", "a", "p"]
-            .iter()
-            .any(|s| word.eq_ignore_ascii_case(s))
-        {
+        if is_am_pm_word(word) {
             suffixed = true;
             text = rest.trim_end_matches(' ');
         }
