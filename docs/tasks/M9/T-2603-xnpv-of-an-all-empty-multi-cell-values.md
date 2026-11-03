@@ -3,7 +3,7 @@ id: T-2603
 title: "XNPV of an all-empty multi-cell values range is #VALUE! (probes/xnpv-empty-values-cell C8)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
