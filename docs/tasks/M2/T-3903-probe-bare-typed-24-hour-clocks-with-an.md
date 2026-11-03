@@ -11,7 +11,7 @@ depends_on: []
 ---
 
 ## Goal
-Bare typed 24-hour clocks beyond T-3894's probed shapes (`25:00:30`, `25:60`, `100:00:00`, `24:00:00`) are typed as Excel does instead of staying text.
+Bare typed 24-hour clocks beyond T-3894's probed shapes (`25:00:30`, `25:60`, `100:00:00`, `24:00:00`, and the out-of-range minute shapes `10:60:00`, `10:61`, `10:99`, `0:00:75`, which T-3894 types as General by extrapolation from `10:60` and `10:00:60`) are typed as Excel does instead of staying text.
 
 ## Context
 `parse_bare_clock` (crates/rustsheet-engine/src/formatter/parse_formatted.rs) leaves these text because T-3894's probe did not cover them; dates.md "bare typed clock" records the probed shapes.
