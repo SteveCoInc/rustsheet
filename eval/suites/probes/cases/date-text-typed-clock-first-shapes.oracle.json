@@ -114,14 +114,6 @@
     "t": "b",
     "v": true
    },
-   "B35": {
-    "t": "b",
-    "v": true
-   },
-   "B36": {
-    "t": "b",
-    "v": true
-   },
    "B37": {
     "t": "b",
     "v": true
@@ -294,14 +286,6 @@
     "t": "n",
     "v": 45839.416666666664
    },
-   "C35": {
-    "t": "n",
-    "v": 95368.2763275463
-   },
-   "C36": {
-    "t": "n",
-    "v": 95368.68604976853
-   },
    "C37": {
     "t": "n",
     "v": 45843.125
@@ -361,23 +345,15 @@
    "C9": {
     "t": "n",
     "v": 45839.458333333336
-   },
-   "D35": {
-    "t": "s",
-    "v": "2161-02-07 06:37:55"
-   },
-   "D36": {
-    "t": "s",
-    "v": "2161-02-07 16:27:55"
    }
   }
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "3ba1b51b0530a126a939f55baf2f264bd650e8b088dd2ac76ac58627912d8289",
+  "input_sha256": "7d610cda8d09a1d8b364c70bee24f65fc522db816cb6e94e82ef3e5f8fc1ebc8",
   "kind": "excel-graph",
-  "produced_at": "2026-11-03T06:07:17+00:00",
+  "produced_at": "2026-11-03T06:28:17+00:00",
   "version": null,
-  "workbook_name": "45fd57e6dfc6255311eeccab45296e33c7c18f05c3d36bb782404339b71ba9d5.xlsx"
+  "workbook_name": "85565f2eaacffae1a42a66f01a9ebd4271f9b055c372506c8a13f76c57313f9a.xlsx"
  }
 }

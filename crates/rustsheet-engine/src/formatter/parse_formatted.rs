@@ -210,7 +210,8 @@ fn leading_clock_shape(text: &str) -> Option<TypedClock> {
     let rest = rest.trim_start_matches(' ');
     // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock (`10 A
     // 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other number
-    // (A35, A36; T-3907), which the engine leaves as text.
+    // (probes/date-text-typed-clock-first-a-period;
+    // T-3907), which the engine leaves as text.
     let clock_end = match rest.split_once(' ') {
         Some((word, _))
             if ["am", "pm", "a", "p"]

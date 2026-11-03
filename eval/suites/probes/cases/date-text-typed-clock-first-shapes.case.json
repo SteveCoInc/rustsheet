@@ -183,16 +183,6 @@
     },
     "B34": "=ISNUMBER(A34)",
     "C34": "=IF(ISNUMBER(A34),A34,LEN(A34))",
-    "A35": {
-     "entered": "10 A. 7/1/2025"
-    },
-    "B35": "=ISNUMBER(A35)",
-    "C35": "=IF(ISNUMBER(A35),A35,LEN(A35))",
-    "A36": {
-     "entered": "10:00 A. 7/1/2025"
-    },
-    "B36": "=ISNUMBER(A36)",
-    "C36": "=IF(ISNUMBER(A36),A36,LEN(A36))",
     "A37": {
      "entered": "99:00 7/1/2025"
     },
@@ -237,9 +227,7 @@
      "entered": "10 AM 7/1"
     },
     "B45": "=ISNUMBER(A45)",
-    "C45": "=IF(ISNUMBER(A45),MONTH(A45)*100+DAY(A45)+MOD(A45,1),LEN(A45))",
-    "D35": "=IF(ISNUMBER(A35),TEXT(A35,\"yyyy-mm-dd hh:mm:ss\"),\"\")",
-    "D36": "=IF(ISNUMBER(A36),TEXT(A36,\"yyyy-mm-dd hh:mm:ss\"),\"\")"
+    "C45": "=IF(ISNUMBER(A45),MONTH(A45)*100+DAY(A45)+MOD(A45,1),LEN(A45))"
    }
   }
  ]

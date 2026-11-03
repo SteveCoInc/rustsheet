@@ -30,8 +30,9 @@ after it. `leading_clock_shape` now classifies the clock with `typed_clock_shape
 trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. On resume, rows A34-A45 (excel-graph) added: the hour-only single letter `10 A 7/1/2025` (now a number in the
 engine too: `leading_clock_shape` takes `A`/`P` as a clock word), out-of-range and fractional clocks with AM/PM, `0 AM`,
 `12 PM`, `yyyy/m/d`, and year-less `Jul-25`, `1-Jul`, `7/1`. Dated rows score the full serial. `10 A. 7/1/2025` and
-`10:00 A. 7/1/2025` are Excel numbers in 2161 with `mm:ss.0` (S!B35:D36), which the engine leaves as text: 6 known failures, owned by T-3907.
-Eval delta: the probe case passes 86 of 92 cells; 6 new-coverage known failures (owned); no regressions.
+`10:00 A. 7/1/2025` are Excel numbers in 2161 with `mm:ss.0`; they are in their own new case, probes/date-text-typed-clock-first-a-period,
+which the engine leaves as text: 6 known failures, owned by T-3907.
+Eval delta: date-text-typed-clock-first-shapes passes 86/86 cells; the new a-period case has 6 new-coverage known failures (owned); no regressions.
 Not probed: day-first locales, filed as T-3901.
 
 ## Handoff (resumed)
