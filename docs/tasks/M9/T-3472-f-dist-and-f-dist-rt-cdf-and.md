@@ -3,7 +3,7 @@ id: T-3472
 title: "F.DIST and F.DIST.RT cdf, and BETA.DIST(0.5,100,100,TRUE): 6 cells where Excel is within 1.6 ulp of the math and ours is 3.6 to 13.8 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
