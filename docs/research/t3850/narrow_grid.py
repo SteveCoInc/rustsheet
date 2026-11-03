@@ -75,7 +75,7 @@ def num(s: str) -> float | None:
 
 def math_roots() -> dict[str, float]:
     roots = {}
-    with open(ROOT / f"eval/suites/{CASE.replace('/', '/cases/')}.math.tsv") as fh:
+    with (ROOT / f"eval/suites/{CASE.replace('/', '/cases/')}.math.tsv").open() as fh:
         for r in csv.DictReader(fh, delimiter="\t"):
             v = num(r["math"])
             if v is not None:
@@ -99,13 +99,11 @@ def main() -> None:
     mode, binary, out = sys.argv[1], sys.argv[2], Path(sys.argv[3])
     if mode == "dump":
         cells = show(binary, rate_cases(), {})
-        json.dump(
-            {k: [c["expected"], c["actual"]] for k, c in cells.items()},
-            open(out / f"{sys.argv[4]}.json", "w"),
-        )
+        dump = {k: [c["expected"], c["actual"]] for k, c in cells.items()}
+        (out / f"{sys.argv[4]}.json").write_text(json.dumps(dump))
         return
-    rule = json.load(open(out / "rule.json"))
-    hold = json.load(open(out / "hold.json"))
+    rule = json.loads((out / "rule.json").read_text())
+    hold = json.loads((out / "hold.json").read_text())
     cases = sorted({k.split()[0] for k in rule if rule[k][1] != hold[k][1]})
     roots = math_roots()
     for env in json.loads(sys.argv[4]):
