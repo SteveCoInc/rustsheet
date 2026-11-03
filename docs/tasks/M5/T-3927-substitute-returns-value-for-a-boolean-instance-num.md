@@ -3,7 +3,7 @@ id: T-3927
 title: "SUBSTITUTE returns #VALUE! for a boolean instance_num (gen-m5 arg-pairs, T-3510)"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 campaign: semantics
 size: S
