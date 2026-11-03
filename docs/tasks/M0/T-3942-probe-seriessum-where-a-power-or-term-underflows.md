@@ -3,7 +3,7 @@ id: T-3942
 title: "Probe SERIESSUM where a power or term underflows (the flush T-3676's definition infers)"
 milestone: M0
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -41,8 +41,8 @@ Excel's `^`). No oracle cell checks it.
 - The acceptance item "if Excel does not flush, file a task to change defs/seriessum.py" does not apply: Excel flushes.
 - Eval delta: none gated; 10 new known-failing cells, all owned (T-3949: power-and-term A2, B2, A9, B9, term-sum A1; T-3950: power-and-term A16, B15, B16, term-sum B3, B4).
 
-## Blocked because
-Resumed after the review-round limit (step 5c).
+## Review history
+Resumed after the review-round limit (step 5c); the full panel re-ran from round 1 on the resumed head.
 
 Three review rounds ran on this branch (heads b828edb14, 73ce0f947, 20d32fb86). The design reviewer approved the last head.
 The Excel-fidelity reviewer asked for changes each round, each time about how far the numbers.md claims reach:
