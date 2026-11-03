@@ -2150,6 +2150,14 @@ of the call with that element in the argument's place, or that call's error. A o
   ERROR.TYPE spills 3, 3, `#N/A`, `#N/A` (A37:A39, A49, A51:D51), and under PROB's data it is `#N/A`, one cell against four
   (A44, A60; gen-m9/17c110a53924beb8 A330). Ours matches: an option whose function returns a multi-cell reference lifts
   over it (`Model::freeze` keeps the reference it evaluated to; T-3088).
+- Every reference-returning form lifts the same way (VERIFIED excel-graph, 2026-11-03, probes/t3109-groupby-options-ref-forms;
+  T-3109). GROUPBY's field_headers and total_depth given as `OFFSET(..,1,2)`, `CHOOSE(1,range)` or `IF(TRUE,range)` give
+  the written range's result: field_headers over 1, 3 is `a`, `Key` (A1:B10), total_depth over 0, -1 is `a`, `Total`
+  (A22:B31), and over 0, "x" the second element is `#VALUE!` (A13:B19, A34:B40). A column (`OFFSET(..,2,1)`,
+  `CHOOSE(2,..,J3:J4)`, `IF(FALSE,0,J3:J4)`) lifts to a column of two (A43:A50). PIVOTBY's field_headers, row_total_depth
+  and col_total_depth given as `INDEX(range,0)` or `INDEX(range,1,0)` lift as the written range does: the empty corner `""`
+  and `#VALUE!` for 0, "x" (A52:B58, A64:B70, A76:B82). A -1 field_headers element is `#VALUE!` in PIVOTBY (B61), while
+  -1 as a total depth is valid (B73, B85). Ours matches all 150 cells.
 - An invalid number comes after a later argument's error value (`GROUPBY(k,v,SUM,0,{5},,,1/0)` and the scalar
   `...,0,5,,,1/0)` are `#DIV/0!`: A193, A217), but text that is no number, typed or computed, comes before it,
   scalar or lifted (`GROUPBY(k,v,SUM,0,"x",,,1/0)` is `#VALUE!`: A201). Text read from a one-cell reference is unprobed (ours
