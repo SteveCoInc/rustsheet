@@ -53,7 +53,7 @@ T-1553).
   - CUMPRINC/CUMIPMT: probes/fin-cumipmt-tiny-rate-structure (226; Sheet1!A10, owners T-3776, T-3938);
   - control: probes-numeric/t2143-ln-near-ties-fill1 (380; Calc!B10, owner T-2651), whose instability is known.
 - Method: `cd tools && uv run rustsheet-oracle fill -b excel-graph --suite <suite> --case <id> --force`. That
-  overwrites the committed sidecar, so copy each fill's sidecar to docs/research/T-3992/ and restore the committed one
+  overwrites the committed sidecar, so copy each fill's sidecar to docs/research/t3992/ and restore the committed one
   with `git checkout`. Space at least two fills apart in time (separate sessions, ideally separate days), because
   server or CPU differences are the leading hypothesis for decision 0112. Compare with
   `rustsheet-eval snapshot`/`compare`; tools never parse xlsx values themselves.
@@ -61,7 +61,7 @@ T-1553).
 
 ## Acceptance criteria
 - [x] At least three fills of each chosen case (the committed fill counts as one) are compared cell by cell. For each
-      kernel family, docs/research/T-3992/README.md gives: cells compared, cells whose bits differ in any fill, the
+      kernel family, docs/research/t3992/README.md gives: cells compared, cells whose bits differ in any fill, the
       largest difference in ulp, and whether the differing cells cluster (near-ties, one branch, one argument range).
 - [x] The control (T-2143's probe) reproduces decision 0112's instability, or the README explains why it does not.
 - [x] For every open task that cites R4.4 or "reproducibility floor" (rg them; list each id), the README states
@@ -83,7 +83,7 @@ T-1553).
 
 ## Outcome
 - Refilled eight fit-target kernel probes twice each with excel-graph on 2026-11-03 (fresh uploads, oracle cache emptied
-  before each round). Against each committed fill (2026-10-22 to 2026-11-03), **0 of 15,328 cells changed bits** over
+  before each round). Against each committed fill (2026-10-22 to 2026-11-03), **0 of 15,128 cells changed bits** over
   three fills: t quantile, IRR, RATE, CUMPRINC, gamma quantile, lnGamma, and incomplete beta (bfrac and bpser). Details are
   in docs/research/t3992/README.md; `compare_fills.py` and `diffs.json` are beside it.
 - Control: T-2143's LN probe. Refilling all three of its 2026-10-22 workbooks returns fill 1's bits at every cell, so

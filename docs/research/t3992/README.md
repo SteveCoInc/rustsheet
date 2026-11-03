@@ -31,7 +31,7 @@ values and their spread in ulps. The copied refill sidecars were not committed: 
 | LN (control) | probes-numeric/t2143-ln-near-ties-fill2 | 2026-10-22 12:58 | 2 | 380 | 0 | 0 |
 | LN (control) | probes-numeric/t2143-ln-near-ties-fill3 | 2026-10-22 12:58 | 2 | 380 | **23** | 1 ulp |
 
-Across the eight fit-target kernels, 15,328 cells were compared over three fills each, and not one bit differed. The two
+Across the eight fit-target kernels, 15,128 cells were compared over three fills each, and not one bit differed. The two
 fills of a case ran two minutes apart; the committed fill ran between about 6.5 hours and 12 days earlier.
 
 **The control.** On 2026-10-22, T-2143 filled three workbooks that differ only in a text label in D1 (added so that the oracle
