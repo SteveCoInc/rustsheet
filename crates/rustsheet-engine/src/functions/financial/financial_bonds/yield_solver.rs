@@ -158,21 +158,28 @@ pub(super) fn odd_first_yield(odd: &OddArgs<4>, schedule: &OddFirstSchedule) -> 
 }
 
 impl OddFirstSchedule {
-    /// The slope ODDFYIELD's Newton takes at `yld`: d/dy of [`Self::price`], except that the odd
-    /// first coupon weighs as a regular one (`coupon` at the lead's exponent, not `lead`), as if the
-    /// bond's first period were regular. Excel: fitted on probes/oddfyield-solver-sweep, where this
-    /// slope from YIELD's start puts 323 of 324 coupon-bond cells within 1e-13 of Excel and the exact
-    /// slope 15 (financial.md "ODDFYIELD stops short of ODDFPRICE's root", T-2007).
+    /// The slope ODDFYIELD's Newton takes at `yld`: not d/dy of [`Self::price`]. Every coupon in it
+    /// is a regular one (`coupon`, also for the odd first coupon, not `lead`), there is one at each
+    /// quasi-coupon date from the settlement's next one on (`slope_quasi` of them before the
+    /// lead), and every exponent is `slope_shift` later than in the price. For a short first period
+    /// (no shift, no extra coupon) this is the bond's slope as if its first period were regular:
+    /// fitted on probes/oddfyield-solver-sweep, where it puts 323 of 324 coupon-bond cells within
+    /// 1e-13 of Excel and the exact slope 15 (T-2007). For a long one the shift and the extra
+    /// coupons take ironcalc-calc PRICE_YIELD.xlsx from 339 to 352 of 352 cells and
+    /// probes/oddf-date-order-domain-sweep from 1196 to 1256 of 1260 (a zero coupon there is
+    /// bit-exact only with the shift, 366/365 on basis 1 for a leap-year quasi period), and a
+    /// fresh sweep drawn after the model was frozen passes 157 of 160 (financial.md "ODDFYIELD
+    /// stops short of ODDFPRICE's root", T-3031).
     fn dprice(&self, yld: f64) -> f64 {
         let x = yld / self.m + 1.0;
         let mut slope = 0.0;
-        // The lead at its own exponent, then the regular coupons, one period apart: index
-        // `first_index - 1` is the lead's (`lead_exponent` is `offset + y` there, short or long).
-        for index in (self.first_index - 1)..=self.last_index {
-            let t = index as f64 + self.offset + self.y;
+        // Index `first_index - 1` is the lead's (`lead_exponent` is `offset + y` there, short or
+        // long); the `slope_quasi` indexes before it are the quasi-coupon dates after settlement.
+        for index in (self.first_index - 1 - self.slope_quasi)..=self.last_index {
+            let t = index as f64 + self.offset + self.y + self.slope_shift;
             slope -= t * self.coupon / discount_growth(x, t + 1.0) / self.m;
         }
-        let t = self.front_exponent;
+        let t = self.front_exponent + self.slope_shift;
         slope - t * self.redemption / discount_growth(x, t + 1.0) / self.m
     }
 }
@@ -226,6 +233,27 @@ mod tests {
             year_days: 360.0,
         };
         assert!(yield_start(0.05, 98.0, &zero).is_nan());
+    }
+
+    #[test]
+    fn a_long_first_period_shifts_the_slope_by_the_quasi_periods_after_settlement() {
+        // probes/oddf-date-order-domain-sweep Y!B22's bond: settlement 2023-03-16, maturity
+        // 2030-06-15, issue 2022-12-15, first coupon 2024-06-15, annual, 0%, basis 1. One quasi
+        // period (2023-06-15 to 2024-06-15, 366 days) lies between the settlement's next
+        // quasi-coupon date and the first coupon; E is 365 (T-3031).
+        let long = OddFirstSchedule::new(45001, 47649, 44910, 45458, 0.0, 100.0, 1, 1).unwrap();
+        assert_eq!(long.slope_quasi, 1);
+        assert_eq!(long.slope_shift, 366.0 / 365.0);
+        // A zero coupon's slope is the redemption's alone, at the shifted exponent.
+        let (y, x) = (0.05, 1.05);
+        let t = long.front_exponent + long.slope_shift;
+        assert_eq!(
+            long.dprice(y),
+            -(t * 100.0 / discount_growth(x, t + 1.0) / 1.0)
+        );
+        // A short first period has neither.
+        let short = sweep_bond(0.05);
+        assert_eq!((short.slope_quasi, short.slope_shift), (0, 0.0));
     }
 
     #[test]

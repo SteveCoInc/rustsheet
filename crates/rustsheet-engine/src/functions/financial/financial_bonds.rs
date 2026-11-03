@@ -288,6 +288,13 @@ struct OddFirstSchedule {
     offset: f64,
     y: f64,
     accrued: f64,
+    /// What ODDFYIELD's slope adds to every exponent ([`Self::dprice`]): 0 for a short first
+    /// period, and for a long one the basis' days from the settlement's next quasi-coupon date to
+    /// the first coupon over `E` (financial.md "ODDFYIELD stops short of ODDFPRICE's root", T-3031).
+    slope_shift: f64,
+    /// The regular coupons ODDFYIELD's slope adds before the lead: one at each quasi-coupon date
+    /// from the settlement's next one to the first coupon (`nq`; 0 for a short first period).
+    slope_quasi: i64,
 }
 
 impl OddFirstSchedule {
@@ -346,6 +353,8 @@ impl OddFirstSchedule {
                 offset: -1.0,
                 y,
                 accrued: a / e * (rate / m) * 100.0,
+                slope_shift: 0.0,
+                slope_quasi: 0,
             })
         } else {
             // --- Long odd first coupon period (spans several quasi-coupon periods) ---
@@ -383,6 +392,11 @@ impl OddFirstSchedule {
             };
 
             let nq = coup_number(first_coupon, settlement, num_months, true)?;
+            // The quasi-coupon periods between the settlement's next quasi-coupon date and the
+            // first coupon, in the basis' days (actual days on bases 1-3) over E.
+            let next_quasi =
+                from_excel_date(next_coupon_date(settlement, first_coupon, frequency)?)?;
+            let slope_shift = days_between_not_neg(next_quasi, first_coupon_d, basis) / e;
             let n = coupon_count(first_coupon, maturity, frequency)? as f64;
             let y = dsc / e;
             Ok(OddFirstSchedule {
@@ -397,6 +411,8 @@ impl OddFirstSchedule {
                 offset: nq,
                 y,
                 accrued: 100.0 * rate / m * anl,
+                slope_shift,
+                slope_quasi: nq as i64,
             })
         }
     }
