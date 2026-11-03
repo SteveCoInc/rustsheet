@@ -3,7 +3,7 @@ id: T-3944
 title: "DATEVALUE of a bare clock: 0 in a 1904 workbook (DATEVALUE(\"10 A.\")), probe both systems"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
