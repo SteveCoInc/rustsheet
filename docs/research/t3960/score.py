@@ -58,6 +58,14 @@ def reference_value(formula: str) -> Fraction | None:
     return Fraction(str(mp.nstr(v, 40)))
 
 
+def within_fifteen_digits(expected: float, actual: float) -> bool:
+    """The harness's rule (closeness.rs `within_fifteen_digits`, decision 0083): half a unit in the 15th digit."""
+    if expected == 0.0:
+        return actual == 0.0
+    exponent = int(f"{abs(expected):.16e}".split("e")[1])  # the decimal exponent (never rounds up to the next power)
+    return abs(actual - expected) <= float(f"5e{exponent - 15}")
+
+
 def main(math_path: str, show_path: str) -> None:
     m = json.load(open(math_path))["sheets"]["Calc"]
     cells, cur = {}, None
@@ -66,14 +74,14 @@ def main(math_path: str, show_path: str) -> None:
             cur = cells.setdefault(g[1], {})
         elif cur is not None and (g := re.match(r"\s+(formula|expected|actual)\s*: (.*)", line)):
             cur[g[1]] = g[2].strip()
-    check_refs = set(list(m)[:8])
+    worst = []
     rows = defaultdict(lambda: defaultdict(int))
     for ref, c in cells.items():
         fam = "BINOM" if c["formula"].startswith("=BINOM.") else "NEGBINOM"
         try:
             x, o = float(c["expected"]), float(c["actual"])
             t = Fraction(m[ref]["v"]) if ref in m else reference_value(c["formula"])
-            if ref in m and ref in check_refs:  # overlap check: our reference must agree with the sidecar
+            if ref in m:  # overlap check: our reference must agree with the sidecar
                 alt = reference_value(c["formula"])
                 assert abs(float(alt - t)) <= 1e-12 * abs(float(t)) or t == 0, ref
         except (ValueError, KeyError):
@@ -84,14 +92,16 @@ def main(math_path: str, show_path: str) -> None:
         d = ulps(o, x)
         r["ours=excel bit-exact"] += d == 0
         r["ours within 4 ulp of excel"] += d <= 4
-        r["ours within 15 digits of excel"] += abs(o - x) <= 5e-15 * abs(x)
+        r["ours within 15 digits of excel"] += within_fifteen_digits(x, o)
         e_math = abs(float(Fraction(x) - t)) / math.ulp(x) if x else 0
         o_math = abs(float(Fraction(o) - t)) / math.ulp(x) if x else 0
         r["excel correctly rounded (<= 0.5 ulp of math)"] += e_math <= 0.5
+        worst.append((abs(float((Fraction(x) - t) / t)) if t else 0.0, ref, c["formula"]))
         r["excel within 4 ulp of math"] += e_math <= 4
         r["ours correctly rounded"] += o_math <= 0.5
         r["excel visibly off (> 100 ulp of math)"] += e_math > 100
         r["excel off and ours close (>100 / <=4)"] += e_math > 100 and o_math <= 4
+    print("worst Excel relative error vs math:", max(worst))
     print(json.dumps({k: dict(v) for k, v in rows.items()}, indent=1))
 
 
