@@ -32,6 +32,10 @@ Cells:
 - probes/irr-guess-edges-2 A20, A28, A29; probes/irr-guess-edges A27, A28, A29, A38
 
 ## Acceptance criteria
+- [ ] Probe the d = 1 rule T-2802 implemented from one cell (probes/irr-guess-edges A39), per the T-2802
+      Excel-fidelity review: `IRR({-1,1E+300},g)` from guesses other than 0.1 (does the call stop at `#DIV/0!`
+      or retry from 0.1?), other flows whose secant lands on d = 1 exactly, and flows whose iterate passes d > 1
+      (kept as a failed run from the fit, unprobed); then reword financial.md's Status line to what the cells show.
 - [ ] The cells above pass (`make eval-baseline` drops them) with no new known-failure lines; the rule is in financial.md.
 - [ ] `make check` green; reviewers approve.
 
