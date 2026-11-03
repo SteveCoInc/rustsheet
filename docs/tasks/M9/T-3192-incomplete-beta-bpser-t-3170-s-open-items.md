@@ -75,7 +75,7 @@ Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs.
 - Items 1-3 (b0 >= 8 L, T-2505's 987 cells, the 6 shape-of-1 cells) were not reached; they moved unchanged to T-3886
   with the open a = b = 1/2 points (x = 0.5 is 0.5000000000000001 in Excel, 0.5 here).
 
-## Landing notes
+## Landing notes (resumed 2026-11-03)
 - PR #2918 (draft), branch agent/functions-stat/T-3192-bpser-open-items. Round 1 reviewed head 933333170: security
   APPROVE; design REQUEST_CHANGES (duplication ratchet: the two probe generators); excel-fidelity REQUEST_CHANGES (R4
   guards). The head after this commit has had no review.
