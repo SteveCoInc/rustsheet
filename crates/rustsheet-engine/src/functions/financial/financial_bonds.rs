@@ -799,7 +799,15 @@ impl Model {
     ) -> Result<(OddArgs<4>, OddFirstSchedule), CalcResult> {
         let odd = self.odd_args::<4>(values, price_given, cell, |dates, frequency| {
             let [settlement, maturity, issue, first_coupon] = *dates;
-            if issue >= first_coupon || first_coupon >= maturity || settlement >= maturity {
+            // Excel wants issue < settlement < first_coupon < maturity: a settlement on or
+            // before the issue, or on or after the first coupon, is #NUM! at every frequency
+            // and basis (probes/oddf-date-order-domain-sweep P!A5:O11, Y!A5:O11, T-3652;
+            // financial.md "ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon").
+            if settlement <= issue
+                || settlement >= first_coupon
+                || issue >= first_coupon
+                || first_coupon >= maturity
+            {
                 return Err(num_error(cell));
             }
             check_odd_first_coupon(issue, first_coupon, maturity, frequency, cell)

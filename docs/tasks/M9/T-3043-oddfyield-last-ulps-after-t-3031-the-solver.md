@@ -36,6 +36,7 @@ digits, and none is visibly off. All are known-failure F lines in eval/baseline/
     F56, F57, F59, F61.
   Example (`make eval-show CASE=probes/oddfyield-solver-sweep.case.json`): S!E2, the ODDFYIELD of an ODDFPRICE at a
   yield of 0.005, is Excel 0.005000000002369702 and ours 0.0050000000023697.
+- probes/oddf-date-order-domain-sweep (T-3652) Y!I29, N29 (ODDFYIELD at a pr of 1E-6), NumericUlp.
 - probes/date-system-1900-odd-years S!A3, B3, C3, D3, E3, F3, G3, H3, I3, J3, K3, L3, M3, N3, O3, P3, Q3, R3, S3 (19).
   These are one bond in different years. For example A3
   `ODDFYIELD(DATE(2095,2,1),DATE(2096,6,30),DATE(2095,1,1),DATE(2095,6,30),0.05,98,100,2,0)`: Excel
