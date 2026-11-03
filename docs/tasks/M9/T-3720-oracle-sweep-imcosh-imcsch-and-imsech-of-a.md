@@ -3,7 +3,7 @@ id: T-3720
 title: "Oracle sweep: IMCOSH, IMCSCH and IMSECH of a complex z with 0 < |x| <= 0.01, with SIN, COS, SINH and COSH companions"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
