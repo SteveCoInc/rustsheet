@@ -39,6 +39,3 @@ results next to which the answer belongs.
 
 ## Outcome
 Probed the four combined forms (probes/table-edits/table-no-header-headers-combined, 16 cells, excel-graph). Engine already matched every cell, so no parser change; added parser unit test `headers_combined_forms_on_a_table_without_a_header_row` and the references.md entry. Eval: 1 new probe case, 16/16 pass.
-
-## Outcome
-Probed the four combined forms (probes/table-edits/table-no-header-headers-combined, 16 cells, excel-graph). Engine already matched every cell, so no parser change; added parser unit test `headers_combined_forms_on_a_table_without_a_header_row` and the references.md entry. Eval: 1 new probe case, 16/16 pass.

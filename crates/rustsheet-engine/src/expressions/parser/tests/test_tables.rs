@@ -605,12 +605,12 @@ fn headers_combined_forms_on_a_table_without_a_header_row() {
     };
     assert_eq!(text("ROWS(T[[#Headers],[Jan]])"), "ROWS(#REF!)");
     assert_eq!(text("ROWS(T[#Headers])"), "ROWS(#REF!)");
-    // The data forms stay table references (the eval case checks their values).
+    // The data forms stay table references, printed as typed (the eval case checks their values).
     for formula in [
         "ROWS(T[[#Headers],[#Data]])",
         "ROWS(T[[#All],[Jan]])",
         "ROWS(T[[#Headers],[#Data],[Jan]])",
     ] {
-        assert_ne!(text(formula), "ROWS(#REF!)", "{formula}");
+        assert_eq!(text(formula), formula, "{formula}");
     }
 }
