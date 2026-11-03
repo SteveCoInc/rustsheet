@@ -3,7 +3,7 @@ id: T-3774
 title: "BINOM.DIST and NEGBINOM.DIST at a large n: Excel's unidentified |d| 2^-53 bd0 term and the basym last digits (T-3447 fit attempt 2)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
