@@ -2669,7 +2669,7 @@ Right/Left):
   `Sales[Region]` `#REF!`, and the plain `S!D4:D7` shrinks to `=SUM(S!B4:B7)`; D:E with the table on B3:D7 drops Val the same way, the fully deleted plain `S!D4:D7` becoming `=SUM(S!#REF!)` (table-delete-columns-straddle-left,
   -right). A column range `Sales[[Qty]:[Val]]` is `#REF!`, printed `=SUM(#REF!)`, when either end column is
   deleted, and when both are, in one edit or two (table-column-range-delete-end, -start, -both-ends, -both-ends-separate);
-  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete. The engine matches the naming and the
+  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete, and is `=SUM(S!#REF!)` when both ends go in two edits. The `#This Row` and item-specifier forms of a range that loses one end are unprobed. The engine matches the naming and the
   two-column insert, the straddling deletes and the delete of every column (T-3733: `column_span` shrinks the
   table, `Displacement::deleted_tables` prints its structured references `#REF!`) and the column range that loses
   either end (T-3734: `deleted_column` prints `#REF!`); only the plain-range shrink after a one-column delete is

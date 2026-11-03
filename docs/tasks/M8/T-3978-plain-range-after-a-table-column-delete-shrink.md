@@ -27,4 +27,4 @@ T-2851 (research) probes more plain-range shapes but does not list these cells.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
--
+- Whole-row ranges and multi-row deletes (T-2851).
