@@ -67,3 +67,14 @@ comparison table, so every cell of probes/t3298-case-mapping-sweep column C and 
 - Merging origin/main (CI's baseline check) also took 2 cells of probes/t3559-collation-unprobed-blocks (Calc!C62,
   C126) off eval/baseline/probes.txt: they pass on the merged tree.
 - Follow-ups filed: T-3921 (MATCH's U+0001 key), T-3929 (probe the wildcard paths).
+
+## Landing notes
+- PR #2968, ready for review, not enqueued. Head before this note: ba634ea67 (`make catch-up` of 5c7c21c0a,
+  baseline-only conflict, decision 0207). CI was still running at 11:38 UTC when the session's window closed; this push
+  restarts it.
+- Reviews: security, design and excel-fidelity all APPROVE on 5c7c21c0a (round 2). The catch-up and this note need no
+  re-review. Their MINORs are recorded in the PR body and belong in T-3929's PR.
+- Next step: once CI is green on the head, enqueue with `enable_pr_auto_merge` (SQUASH). If main moves the baseline
+  again, run `make catch-up PR=2968` and re-enqueue.
+- Do not repeat: excel-fidelity round 1 rejected applying the fold to wildcard criteria as verified. Keep the UNVERIFIED
+  notes until T-3929's probe lands.
