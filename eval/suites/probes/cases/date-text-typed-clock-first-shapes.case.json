@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-3852: typed clock-first date-time shapes and untyped mixed shapes (value, type; formats from the ENTERED log).",
+ "description": "T-3852: typed clock-first date-time shapes and untyped mixed shapes (value, type; formats from the ENTERED log). The year-less row A14 is read as month, day and time only: its year is the current one.",
  "tags": [
   "M2",
   "probe",
@@ -82,7 +82,7 @@
      "entered": "10:00 7/1"
     },
     "B14": "=ISNUMBER(A14)",
-    "C14": "=IF(ISNUMBER(A14),A14,LEN(A14))",
+    "C14": "=IF(ISNUMBER(A14),MONTH(A14)*100+DAY(A14)+MOD(A14,1),LEN(A14))",
     "A15": {
      "entered": "10:00 7/1/25"
     },
