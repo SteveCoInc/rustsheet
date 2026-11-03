@@ -5,7 +5,7 @@ R4.4 forbids fitting below the oracle's reproducibility floor without a reproduc
 evidence on file was T-2143's LN probe, which decision 0112 read as "the last bit of an FYL2X near-tie varies between
 runs". This note measures that on the kernels the open last-digit fits target.
 
-**Method.** Each case below was refilled twice on 2026-11-03 (22:16 and 22:18 UTC) with `rustsheet-oracle fill -b excel-graph
+**Method.** Each case below was refilled twice on 2026-11-03 (round 1 22:16-22:18 UTC, round 2 22:18-22:20 UTC) with `rustsheet-oracle fill -b excel-graph
 --force`, with the local oracle cache (`eval/.cache/oracle/excel-graph`) emptied before each round. Every refill was a
 fresh upload and recalculation: each sidecar carries a new `produced_at` and a new uploaded `workbook_name`, with the same
 `input_sha256` as the committed fill. After each fill its sidecar was copied aside and the committed one restored, so no
@@ -32,38 +32,47 @@ values and their spread in ulps. The copied refill sidecars were not committed: 
 | LN (control) | probes-numeric/t2143-ln-near-ties-fill3 | 2026-10-22 12:58 | 2 | 380 | **23** | 1 ulp |
 
 Across the eight fit-target kernels, 15,328 cells were compared over three fills each, and not one bit differed. The two
-fills of a case ran two minutes apart; the committed fill ran between 7 hours and 12 days earlier.
+fills of a case ran two minutes apart; the committed fill ran between about 6.5 hours and 12 days earlier.
 
 **The control.** On 2026-10-22, T-2143 filled three workbooks that differ only in a text label in D1 (added so that the oracle
 cache would not return fill 1), each with the same 380 LN formulas. Fill 3 differed from fills 1 and 2 at 23 near-tie cells
 (18 of the 30 FYL2X near-ties in B1:B30, and B172, B187, B205, B206 and B217 among the 300 new near-ties), each by one ulp. Fills 1 and 2 agree on every cell. Refilling all three
 workbooks today gives fill 1's bits every time: fill 1's bytes twice and fill 2's and fill 3's bytes once each, with no
 difference at any cell. So fill 3's 2026-10-22 bits were one deviating *run*, not a property of its bytes. Today the 23
-cells come back as fills 1 and 2 had them. Over all the LN runs on file (three on 2026-10-22 and four today), one run in
-seven deviated, and it moved all 23 near-ties together.
+cells come back as fills 1 and 2 had them. On this probe, then, the variation seen on 2026-10-22 belonged to that run: the
+same bytes did not vary in four later runs. That run changed 23 cells, all inside decision 0112's window (d 2.19e-4 to
+3.86e-4 from a midpoint) and all by one ulp. It did not change every point in the window. Of the window's 69 points, 34
+returned the same bits in all fills, and 12 of the 30 old near-ties were unchanged.
+
+**Other fill-to-fill variations on file** (not refilled here):
+- LN: probes/ln-fyl2x-kernel (2026-10-20) and the T-1941 research run (2026-10-19) differ at 3 of the 30 near-ties and agree
+  on the other 250 cells. That is a partial difference between two runs ("LN is FLDLN2 then FYL2X" in numbers.md).
+- ERFC/EXP: the T-1916 re-fill changed 9 of 20 ERFC near-tie cells (T-1940's Context).
+- AMORDEGRC: gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills of the same input sha256 (T-3610).
 
 **What this shows and what it does not.**
-- Same bytes give the same bits on every measured kernel in every run today, including the LN near-ties that decision
-  0112 records as unstable. Fill-to-fill variation is not a per-cell coin flip.
-- It does happen at the level of a whole run: one LN run in seven (2026-10-22 12:58:12) rounded a block of near-ties the
-  other way. The likeliest cause is a different server or CPU behind that one run, which is decision 0112's hypothesis. A
-  deviating run changes many near-tie cells at once, in the same direction relative to its neighbours, so comparing two
-  runs shows it at once.
-- Three fills, two of them two minutes apart, do not bound how often such a run occurs on these kernels. The committed
-  fills were made 7 hours to 12 days earlier, so each case has at least two runs on different days that agree. None of
-  this is a web against desktop comparison: R4.4's 4-ulp web-against-desktop floor (oracle-calibration.md) is a
-  different question (T-1075, M14).
+- On the eight probes measured, three runs of the same bytes returned the same bits at every cell. On LN, four runs today
+  of T-2143's bytes agreed with each other and with fills 1 and 2 of 2026-10-22.
+- No run today deviated, so this session had no positive control. Two runs a few minutes apart say little about how
+  often deviating runs occur. The variations on file are rare, change some near-tie cells and not others, and are each one
+  ulp (AMORDEGRC's is a step in an integer result). Nothing here shows whether the measured probes contain cells close
+  enough to a rounding tie to vary.
+- Different days: six cases have a committed fill from an earlier day that agrees with today's refills. RATE
+  (t3850-rate-same-state, committed 2026-11-03 15:30) and incomplete beta bfrac (t3953-f-tail-bfrac-tiny, committed
+  2026-11-03 15:43) have all three runs on 2026-11-03, so they do not yet have two days that agree.
+- None of this compares web against desktop. R4.4's 4-ulp web-against-desktop floor (oracle-calibration.md) is a separate
+  question (T-1075, M14).
 
 ## Recommendation for T-3610 (input, not a decision)
 
-- Treat a cell as a fitting target when at least two excel-graph runs on different days agree on its bits. Every case
-  measured here already meets that: its committed fill and today's refills agree. A fit can then cite this note in place of
-  "one refill doesn't clear the floor" for these kernels.
-- Treat a whole run as suspect, not single cells. When a refill differs, it differs at a block of near-tie cells. Refill
-  once more and keep the majority's bits. That is what the LN control shows (two of three byte variants, then four of four
-  refills, agree on fill 1's bits).
-- This does not settle R4.4's web-against-desktop floor: that still needs a desktop check or an owner ruling. What it
-  removes is fill-to-fill noise on the web oracle as a reason not to fit below 4 ulp on these eight kernel families.
+- One possible criterion: a cell is a fitting target once at least two excel-graph runs on different days agree on its
+  bits. Six of the measured probes meet it for every cell: t3349, t3478, fin-cumipmt-tiny-rate-structure, t3311, t3570
+  and t2464. RATE's t3850 and bfrac's t3953 need a refill on a later day.
+- Where a refill differs, the cells that differ are the ones to drop (decision 0112). The LN control suggests refilling
+  once more: there, the deviating run was alone, and later runs agreed with the earlier majority. One case is too little
+  to make that a rule.
+- This covers only the probes and dates measured. It does not cover the cells of "family only" tasks, which were not
+  refilled, and it does not settle R4.4's web-against-desktop floor, which still needs a desktop check or an owner ruling.
 
 ## Open tasks that cite R4.4 or the reproducibility floor
 

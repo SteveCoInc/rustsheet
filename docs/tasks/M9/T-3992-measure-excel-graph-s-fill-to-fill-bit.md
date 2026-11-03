@@ -86,15 +86,15 @@ T-1553).
   before each round). Against each committed fill (2026-10-22 to 2026-11-03), **0 of 15,328 cells changed bits** over
   three fills: t quantile, IRR, RATE, CUMPRINC, gamma quantile, lnGamma, and incomplete beta (bfrac and bpser). Details are
   in docs/research/t3992/README.md; `compare_fills.py` and `diffs.json` are beside it.
-- Control: T-2143's LN probe reproduced today, but not the way decision 0112 read it. Refilling all three of its 2026-10-22
-  workbooks returns fill 1's bits at every cell. Fill 3's 23 one-ulp differences were one deviating run (1 run in 7 on
-  file), not a per-cell coin flip and not a property of the bytes. Recorded in docs/excel-semantics/numbers.md: the
-  "LN is FLDLN2 then FYL2X" refill bullet and the new entry "excel-graph refills reproduce the same bits; a deviation hits
-  a whole run".
+- Control: T-2143's LN probe. Refilling all three of its 2026-10-22 workbooks returns fill 1's bits at every cell, so
+  fill 3's 23 one-ulp differences belonged to that one run, not to its bytes. That run changed 23 of the window's 69
+  points, not all of them. No run deviated today (no positive control). The other variations on file (ln-fyl2x-kernel
+  against T-1941, ERFC T-1916, AMORDEGRC A76) are listed in the README. Recorded in docs/excel-semantics/numbers.md: a
+  refill bullet under "LN is FLDLN2 then FYL2X", and a new entry, "excel-graph refills of the same bytes".
 - The 58 open tasks that cite R4.4 or the reproducibility floor are listed in the README, each with its measured status
   (7 on their own probe, 20 by kernel family only, 31 not measured), and each got a one-line Context note.
-- Input to T-3610 (not decided here): a cell is a target when two excel-graph runs on different days agree on its bits.
-  A refill that differs is a run-level event, so refill once more and keep the majority. The web-against-desktop floor
-  under R4.4 stays open.
+- Input to T-3610 (not decided here): one possible criterion is that two excel-graph runs on different days agree on a
+  cell's bits. Six probes meet it already. RATE's t3850 and bfrac's t3953 have all three runs on 2026-11-03, so they need
+  a refill on a later day. The web-against-desktop floor under R4.4 stays open.
 - No sidecar under eval/ changed (the refill sidecars were copied aside and the committed ones restored). Eval delta:
   none.

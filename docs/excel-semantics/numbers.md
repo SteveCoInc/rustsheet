@@ -1680,8 +1680,8 @@ product `RN64(ln 2) * log2 x` from the nearest 53-bit midpoint, in 53-bit ulps, 
 - Refills (T-3992, excel-graph, 2026-11-03 22:16-22:21 UTC, fresh uploads with the oracle cache emptied): fill 1's bytes twice,
   and fill 2's and fill 3's bytes once each, all return fill 1's bits at every one of the 380 cells. So fill 3's 2026-10-22
   bits at the 23 unstable cells were one deviating run, not a property of its bytes (only the D1 label differs). Today's runs
-  give the neighbour fills 1 and 2 gave, which is mostly not the model's. One LN run in seven on file deviated, and it moved
-  all 23 near-ties together. See "excel-graph refills reproduce the same bits" below.
+  give the neighbour fills 1 and 2 gave, which is mostly not the model's. So the 357 fill-stable points above are also the
+  points where the majority of runs agree. See "excel-graph refills of the same bytes" below.
 
 T-2144 fit (docs/research/t1941/ln_guard_bits.py): a k-bit internal product, truncated (tz) or rounded (rn), before RN64
 and RN53. Matches out of the 357 fill-stable points of T-2143's case / the fixture's 4,000 sampled points / its 30 near-ties
@@ -2821,12 +2821,18 @@ Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
 Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). The general rule, for every error kind, is the entry above (T-3653), which also fixed these 21 cells (T-3728).
 Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.
 
-## excel-graph refills reproduce the same bits; a deviation hits a whole run
-Rule: Excel for the web, recalculating the same workbook bytes again, returns the same bits on the kernels measured below,
-including at last-digit near-ties. The one fill-to-fill variation on file is a whole run: every LN near-tie in its window
-rounded the other way at once (decision 0112's cells), and later runs of the same bytes returned the majority's bits.
+## excel-graph refills of the same bytes: no variation on eight fit kernels (2026-11-03)
+Rule: refilling the same workbook bytes with Excel for the web gave the same bits at every cell of the eight probes below,
+over three runs each. Fill-to-fill variation still happens, rarely and at near-ties, so this is a measurement of these
+probes on these dates, not a guarantee. Variations on file are each one ulp, or a step in an integer result for AMORDEGRC.
+Each touches some near-tie cells and not others:
+- T-2143's fill 3 of 2026-10-22 changed 23 LN cells, all inside decision 0112's window. Four refills of the same bytes
+  today returned fills 1 and 2's bits ("LN is FLDLN2 then FYL2X" above).
+- probes/ln-fyl2x-kernel and the T-1941 run differ at 3 of their 30 shared LN near-ties.
+- The T-1916 re-fill changed 9 of 20 ERFC near-tie cells (T-1940).
+- AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills (T-3610).
 Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each case got
-two refills on 2026-11-03 (22:16 and 22:18 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
+two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
 three fills, with zero differing cells:
 - Student t quantile, probes-numeric/t3349-t-inv-2t-sweep (300 cells; committed 2026-10-31);
 - IRR, probes-numeric/t3478-irr-r4-wide (300 cells; 2026-10-31);
@@ -2838,7 +2844,9 @@ three fills, with zero differing cells:
 - incomplete beta bpser, probes-numeric/t2464-r2-bpser-small-gl (5,843 cells; 2026-10-23);
 - LN, probes-numeric/t2143-ln-near-ties-fill1 (380 cells; 2026-10-22), whose fill 3 workbook deviated at 23 cells on
   2026-10-22 and returned fill 1's bits on refill ("LN is FLDLN2 then FYL2X" above).
-Three fills, two of them two minutes apart, do not bound how often a deviating run occurs. They are not a web against desktop
-check either: that floor (docs/research/oracle-calibration.md, up to 4 ulp) is separate (T-1075).
+RATE and bfrac had all three runs on 2026-11-03; the others' committed fills come from earlier days. No run deviated in
+this session, so there was no positive control. Two refills minutes apart do not bound how often a deviating run occurs.
+This is not a web-against-desktop check either: that floor (docs/research/oracle-calibration.md, up to 4 ulp) is a
+separate question (T-1075).
 Status: VERIFIED (excel-graph)
 Tasks: T-3992, T-2143
