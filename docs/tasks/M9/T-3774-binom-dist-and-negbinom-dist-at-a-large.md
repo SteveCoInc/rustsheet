@@ -71,9 +71,9 @@ method still holds. No candidate raises the bit-exact count, so no code changes.
 ## Blocked because: time-boxed (decision 0056)
 Two fit attempts found no term for the rest of rms 0.77 |d| 2^-53 in Excel's pmf error. Reopen only on a new
 hypothesis recorded here, one that is neither a rounding inside bd0's series loop nor a per-run constant. Untried:
-- the stirlerr terms at a large n held at another precision (smooth along p only through k and n: not per run, so
-  not ruled out by `runconst.out`);
-- the cdf cells' basym arithmetic.
+- a bd0 form other than R's series past the first term (Excel's arithmetic for d v + 2k Σ v^(2j+1)/(2j+1) as a
+  whole, for example a log1pmx-style evaluation), scored on the pmf cells directly rather than by regression;
+- the cdf cells' basym arithmetic (not attempted).
 
 ## Out of scope
 - Bit parity on cells already within 15 digits (Phase 1b, decision 0188 R5).
