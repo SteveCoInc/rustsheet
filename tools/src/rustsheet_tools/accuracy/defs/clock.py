@@ -36,7 +36,15 @@ import mpmath
 
 from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, scalars
 from rustsheet_tools.accuracy.literal import Arg, round15
-from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
+from rustsheet_tools.accuracy.model import (
+    Definition,
+    DomainError,
+    Interval,
+    MathArg,
+    NoValueError,
+    Param,
+    register,
+)
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 TIME_BOUND_SOURCE = (
@@ -50,6 +58,7 @@ DECISION = "decision 0228"
 NEAR_INTEGER_TOLERANCE = 2.0**-22 + 2.0**-33  # the engine's `NEAR_INTEGER_TOLERANCE`
 ARGUMENT_MIN, ARGUMENT_MAX = -32768, 32767  # TIME's argument range, after the near-integer read
 WRAP = 65536  # an argument below -32768 wraps by this into the range
+WRAP_EVIDENCED = -131072  # the lowest probed argument: below it the math claims no value
 SECONDS_PER_DAY = 86400
 LAST_DAY = 2958465  # 9999-12-31
 HALF_SECOND = 0.5 / SECONDS_PER_DAY  # the double Excel adds before it splits the time of day
@@ -67,6 +76,9 @@ def time_argument(x: float) -> int:
     if whole > ARGUMENT_MAX:
         msg = f"a TIME argument reads as {whole}, above 32767"
         raise DomainError(msg)
+    if whole < WRAP_EVIDENCED:
+        msg = f"a TIME argument of {whole}: the wrap is unprobed below -131072"
+        raise NoValueError(msg)
     if whole < ARGUMENT_MIN:
         whole = (whole - ARGUMENT_MIN) % WRAP + ARGUMENT_MIN
     return whole

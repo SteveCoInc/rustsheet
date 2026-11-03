@@ -20,9 +20,8 @@ dates.md states Excel reads it (excel-graph cells):
   `YEARFRAC(0,33752,1)` averages 1900-1992, `YEARFRAC(59,60,1)` is 1/365). Dates more than a year
   apart take the average length of the calendar years from the start's to the end's, both
   included; dates at most a year apart take 366 when both are in one leap year, when the end is a
-  29 February, or when a 29 February lies between them, else 365. That within-a-year rule is the
-  ExcelFinancialFunctions port the engine carries (`year_fraction_parts`), not a semantics entry:
-  this table is its first oracle sweep.
+  29 February, or when a 29 February lies between them, else 365 (dates.md "YEARFRAC basis 1's year
+  length", probes/t3678-yearfrac-basis1-within-a-year, every branch evidenced).
 """
 
 from __future__ import annotations

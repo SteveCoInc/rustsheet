@@ -52,8 +52,9 @@ TIME, HOUR, MINUTE, SECOND and YEARFRAC each get a committed, oracle-filled `s1`
     - the swap of a reversed pair;
     - basis 1's real-calendar year length.
 
-    Basis 1's within-a-year rule is the engine's ExcelFinancialFunctions port, not a semantics entry. This table is
-    its first oracle sweep, and all 200 points match.
+    Basis 1's within-a-year rule had no semantics entry. probes/t3678-yearfrac-basis1-within-a-year (19 cells,
+    excel-graph, 2026-11-03) evidences every branch, and all 19 cells match. It is recorded in dates.md as
+    "YEARFRAC basis 1's year length". (The s1 table alone reached only two of the three 366 branches.)
   - Unit tests: `tools/tests/test_accuracy_clock_yearfrac.py` (71 cases from dates.md's excel-graph values and the
     new probe).
 - **Excel changed. TIME wraps an argument below -32768 by 65536.**
@@ -94,3 +95,26 @@ TIME, HOUR, MINUTE, SECOND and YEARFRAC each get a committed, oracle-filled `s1`
   SECOND) makes `eval_math` skip those cells in a 1904 workbook ("a 1904 workbook").
 - Eval delta: no engine change. The new probe case adds the visibly-off cells where Excel wraps and the engine
   gives `#NUM!`. T-3983 owns them; they are recorded through `make eval-baseline`.
+
+## Landing notes
+- **PR:** #3047, a draft. **Head:** the commit after ed0d631 that adds these notes. CI was green on 2c8bb18 so far;
+  on ed0d631 it was pending when the window closed.
+- **Reviewers on ed0d631:**
+  - security: APPROVE;
+  - design: APPROVE, with one MINOR: the 30/360 day count in `defs/yearfrac.py` is close to
+    `fitlab/kernels/solvers.py` `days360`. File a follow-up or add a comment;
+  - excel-fidelity: REQUEST_CHANGES, one MAJOR: basis 1's within-a-year rule had no evidence.
+- **What I did after that round** (in the last commit, not yet reviewed):
+  - Probed basis 1 (probes/t3678-yearfrac-basis1-within-a-year): all 19 cells match the definition. Added the
+    dates.md entry and its math sidecar.
+  - Fixed the fidelity MINORs: dated the old `#NUM!` values in the TIME "Bound" bullet, added a staged-rollout note,
+    and made `time_argument` raise NoValueError below -131072, the lowest probed argument.
+- **Next steps:**
+  1. Run `make eval-baseline` (about 25 minutes). The new basis-1 probe case needs its `C` line in
+     `eval/baseline/probes.txt`. The engine should pass all 19 cells (same rule), so no `F` lines are expected.
+  2. Commit, push, and re-run all three reviewers on that head.
+  3. Handle design's MINOR (a follow-up task or a comment).
+  4. Tick the last acceptance box, mark the PR ready, and enqueue (SQUASH).
+- **Do not repeat** a full `rustsheet-accuracy math --suite probes` run: it takes more than 30 minutes and churns
+  F/BETA solver sidecars that are unrelated to this PR. Write single cases with `case_math`, as the Outcome
+  describes. Do not add YEARFRAC, HOUR, MINUTE or SECOND math to the 1904 cases (`serials_1900`).

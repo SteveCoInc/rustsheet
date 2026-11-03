@@ -1163,6 +1163,27 @@ on `month_arithmetic_date`, bases 1-3 serial differences; YEARFRAC and ACCRINTM 
 Status: VERIFIED (excel-graph)
 Tasks: T-1409, T-2237
 
+## YEARFRAC basis 1's year length (T-3678)
+Rule: basis 1 divides the serial day count by a year length that it reads on the real calendar. Dates more than a year
+apart take the average length of the calendar years from the start's year to the end's, both included. Dates at most a
+year apart take 366 days in three cases, and 365 otherwise:
+- both dates are in one leap year;
+- the end is a 29 February;
+- a 29 February lies between them.
+
+"At most a year apart" means the same year, or the next year on or before the anniversary.
+- `YEARFRAC(DATE(2024,1,10),DATE(2024,12,20),1)` = 345/366 (one leap year).
+- `(DATE(2023,6,1),DATE(2024,2,29),1)` = 273/366 (the end is 29 February).
+- `(DATE(2023,3,1),DATE(2024,3,1),1)` = 1, and one day on is 367/366 (A6).
+- `(DATE(2024,2,29),DATE(2025,3,1),1)` = 366/365.75: past the anniversary, so the average of 2024 and 2025.
+- `(DATE(2024,3,1),DATE(2025,2,28),1)` = 364/365 (no 29 February between).
+
+Evidence: probes/t3678-yearfrac-basis1-within-a-year A1:A19 (excel-graph, 2026-11-03). Every cell matches the rule
+above, which the Gate A definition `accuracy/defs/yearfrac.py` and the engine's `year_fraction_parts` both use. YEARFRAC/s1's
+basis-1 points match too.
+Status: VERIFIED (excel-graph)
+Tasks: T-3678
+
 ## DATEDIF argument errors before date checks
 Rule: an error in DATEDIF's unit argument wins over an invalid start date: `DATEDIF(-1,38627,CHOOSE(3,x))` (the unit is
 `#VALUE!`) is `#VALUE!`, not the `#NUM!` of a negative date.
@@ -1332,9 +1353,9 @@ for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_
 an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
 - Bound: `TIME(32767,0,0)` = 0.29166666666674246, `TIME(600,32767,0)` = 0.7548611111111114, `TIME(10,0,32767)` =
-  0.7959143518518519; the same with 32767.5 or 32767.9999; 32768, 65535, 65536 and -32769 in any position are `#NUM!`;
+  0.7959143518518519; the same with 32767.5 or 32767.9999; 32768, 65535, 65536 in any position are `#NUM!`, and so was -32769 on 2026-10-21 (now it wraps, see the update below);
   `TIME(600,-32768,0)` = 0.24444444444444446, `TIME(10,0,-32768)` = 0.03740740740740741; `TIME(32767,32767,32767)` =
-  0.4257754629629744; `TIME(600,-32768.5,0)` and `TIME(10,0,-32768.5)` are `#NUM!` (floored to -32769), while
+  0.4257754629629744; `TIME(600,-32768.5,0)` and `TIME(10,0,-32768.5)` were `#NUM!` on 2026-10-21 (floored to -32769; now they wrap), while
   `TIME(600,-32768-1E-7,0)` is a number (inside the window). `TIME("32768",0,0)` is `#NUM!`, `TIME("32767",0,0)` a number.
   (probes/time-argument-bound A1-A35, A77-A79; time-argument-window A73-A76.)
 - Window: `TIME(1-2^-22,0,0)` = 1:00 and `TIME(1-2.4E-7,0,0)` = 0:00; the same edge for the minute (`TIME(0,1-2^-22,0)` =
@@ -1362,7 +1383,7 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
   `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
   Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
-  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072.
+  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
 Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
 -32768, which T-3983 owns.
 Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
