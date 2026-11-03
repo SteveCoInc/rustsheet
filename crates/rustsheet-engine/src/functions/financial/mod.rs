@@ -442,11 +442,21 @@ impl Model {
         if refused(self, first_date) {
             return true;
         }
+        // Values and dates of different counts are the size check's `#NUM!` (C2, C12), so the
+        // dates are not scanned. The scan stops at the sheet's used area: a cell past it is empty
+        // and blocks nothing, so `B11:XFD1048576` costs no more than the cells the sheet holds.
+        if self.flow_element_count(values) != self.flow_element_count(dates) {
+            return false;
+        }
         let Some((row2, column2)) = self.flow_range_end(date_left, date_right) else {
             return false;
         };
-        for row in date_left.row..=row2 {
-            for column in date_left.column..=column2 {
+        let Ok(worksheet) = self.workbook.worksheet(date_left.sheet) else {
+            return false;
+        };
+        let (used_row, used_column) = worksheet.used_area_end();
+        for row in date_left.row..=row2.min(used_row) {
+            for column in date_left.column..=column2.min(used_column) {
                 let date = self.evaluate_cell(CellReferenceIndex {
                     sheet: date_left.sheet,
                     row,
@@ -455,6 +465,7 @@ impl Model {
                 let blocks = match date {
                     CalcResult::String(text) => self.cast_number(&text).is_none(),
                     CalcResult::Boolean(_) => true,
+                    // Whole days, as `xnpv_dates` reads a date.
                     CalcResult::Number(date) => date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64,
                     _ => false,
                 };

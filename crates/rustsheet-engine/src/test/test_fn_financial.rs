@@ -1138,3 +1138,21 @@ fn fn_xirr_reads_numeric_text_in_range_cells() {
     assert_eq!(model._get_text("A2"), *"#VALUE!");
     assert_eq!(model._get_text("A3"), *"#VALUE!");
 }
+
+/// T-2603: a values range whose first cell is no number is `#VALUE!` (probes/t2603-xnpv-no-number-values),
+/// and the dates scan behind it stops at the used area, so a dates range to the sheet's last cell is
+/// read at once.
+#[test]
+fn xnpv_first_value_refused_bounded() {
+    check_cells(
+        &[("A5", "5"), ("B11", "100"), ("B12", "0")],
+        &[
+            ("C1", "=XNPV(1,A4:A5,B11:B12)", "#VALUE!"),
+            ("C2", "=XNPV(1,A5:A6,B11:B12)", "#NUM!"),
+            // 2 values against a 17-billion-cell dates range: the count's #NUM!, with no scan.
+            ("C3", "=XNPV(1,A2:A3,B11:XFD1048576)", "#NUM!"),
+            // Equal counts, both ranges far past the used area.
+            ("C4", "=XNPV(1,A2:A1048567,B11:B1048576)", "#VALUE!"),
+        ],
+    );
+}
