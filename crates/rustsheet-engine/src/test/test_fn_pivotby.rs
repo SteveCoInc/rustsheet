@@ -94,6 +94,15 @@ fn shown_and_generated_headers() {
 }
 
 #[test]
+fn a_blank_header_is_left_out_of_the_joined_column_name() {
+    // probes/t3893-pivotby-error-sort-header B121, gen-m7 ceb2c91035864a71 B8785: col_fields
+    // headed (blank, "?b", 3.14159) are named "?b, 3.14159". Here the header row is row 9:
+    // A9 blank, Apple, 2024.
+    let grid = pivot(&format!("=PIVOTBY(B9:B11,A9:C11,D9:D11,{SUM},3)"), 1, 2);
+    assert_eq!(grid[0], ["", "Apple, 2024"]);
+}
+
+#[test]
 fn totals_off_and_first() {
     // P!Y1 and P!A25: no total row, no total column.
     let grid = pivot(&format!("=PIVOTBY(A2:A11,C2:C11,D2:D11,{SUM},,0,,0)"), 7, 5);

@@ -43,3 +43,14 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
 
 ## Out of scope
 - PIVOTBY's other batch rules (T-3888, T-3889, T-3890, T-3892); GROUPBY.
+
+## Progress (2026-11-03, header rule PR)
+- Header: done. A blank col_fields header cell is left out of the joined column name (`joined_names`). This fixes
+  gen-m7/ceb2c91035864a71.case.json Calc!A8785:B8785; arrays.md has the rule.
+- Sort: still open. probes/t3893-pivotby-error-sort-header (excel-graph) shows:
+  - GROUPBY and PIVOTBY value sorts already match Excel on error aggregates. Errors are greatest, and a descending sort
+    reverses the whole order (A1:A55).
+  - The owned call's rows tie: every Total aggregate is `#VALUE!`. Excel's ascending order 0, 42, 2.5, 1E+15 is the exact
+    reverse of its descending one, and it is not key order. Find what breaks that tie: probe the same call with other
+    filters and LAMBDAs that return a scalar for some rows. Then fix gen-m7/febfd6901374d79c.case.json
+    Calc!A11225:F11232 and probes/t3893-pivotby-error-sort-header.case.json Calc!A61:G69, Calc!A71:G79.

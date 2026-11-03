@@ -742,13 +742,16 @@ fn column_names_row(pivot: &Pivot, slots: &[Slot]) -> Vec<ArrayNode> {
     row
 }
 
-/// Header cells joined with ", " as text. An error cell makes the name that error (unprobed). A
-/// name longer than a cell can hold, 32,767 characters (docs/excel-semantics/coercion.md "Text
-/// longer than 32,767 characters"), is `#VALUE!` (unprobed for PIVOTBY).
+/// Header cells joined with ", " as text. A blank header cell is left out: `col_fields` headed
+/// (blank, "?b", 3.14159) are "?b, 3.14159", with `relative_to` a blank cell or 1 (gen-m7
+/// ceb2c91035864a71 B8785; probes/t3893-pivotby-error-sort-header B121; T-3893). An error cell
+/// makes the name that error (unprobed). A name longer than a cell can hold, 32,767 characters
+/// (docs/excel-semantics/coercion.md "Text longer than 32,767 characters"), is `#VALUE!`
+/// (unprobed for PIVOTBY).
 fn joined_names(names: impl Iterator<Item = ArrayNode>) -> ArrayNode {
     let mut parts = Vec::new();
     let mut units = 0usize;
-    for name in names {
+    for name in names.filter(|name| !matches!(name, ArrayNode::Empty)) {
         match array_node_to_string(&name) {
             Ok(text) => {
                 units = units.saturating_add(text.encode_utf16().count() + 2);
