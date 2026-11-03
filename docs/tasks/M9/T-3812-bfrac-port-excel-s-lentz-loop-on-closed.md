@@ -3,7 +3,7 @@ id: T-3812
 title: "bfrac: port Excel's Lentz loop on closed-form terms (T-3571 model)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -50,7 +50,7 @@ Lentz loop on closed-form terms, with Excel's λ, as docs/research/t2464/r5-bfra
 ## Out of scope
 - The open per-term rounding past 10 terms (T-3813); the density itself (T-3244); basym (T-3322).
 
-## Handoff
+## Handoff (resumed)
 Sonnet run (no code written): handed off before starting because the task is a numeric fit under decisions 0056 and
 0188 R4 (FITTED tag, hold-out split, fresh sweep, Gate A envelope recheck with the engine's density). Next steps: read
 docs/research/t2464/r5-bfrac/model.py and RESULTS.md, port the Lentz loop in `bratio/bfrac.rs` gated to a, b in
