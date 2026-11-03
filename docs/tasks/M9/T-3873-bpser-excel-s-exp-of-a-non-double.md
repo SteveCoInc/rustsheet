@@ -31,6 +31,9 @@ recorded with their counts.
 - Also from T-3570's review, moved here by T-3769: re-score r2-bpser-small's old w2f (0.5, 6.25) shapes with measured
   GAMMALN, and compare GL53 with the gamln1 form at small a0, b0 <= 1 and b0 >= 8. Split cells by double z first: only
   the double-z cells can judge L.
+- When editing statistics.md's bpser entry, also apply the wording fixes deferred on #2897 and #2906 (their PR
+  comments). Most important: g is Excel's GAMMALN(a0); the GAMMALN(fl(1 + a0)) - LN a0 construction equals it only
+  below 0.7.
 - Method: docs/research/excel-kernel-playbook.md; a new docs/research/t2464/r7-* directory importing r6's `common.py`.
   Positive controls first, a real hold-out, record negatives (decision 0056).
 
