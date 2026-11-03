@@ -267,6 +267,22 @@ impl Model {
         }
     }
 
+    /// Whether the text after a typed leading sign reads as a number, which keeps `-200$` a
+    /// number rather than a formula. Coercion refuses a trailing `$` ([`number_text_in`]), typed
+    /// input does not (unprobed, T-3835).
+    pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
+        let trailing_dollar = s.trim_end_matches(' ').ends_with('$')
+            && parse_formatted_number(
+                s,
+                &["$"],
+                self.locale,
+                &|| None,
+                self.workbook.settings.date_system,
+            )
+            .is_ok();
+        trailing_dollar || self.cast_number_in(s, &|| None).is_some()
+    }
+
     pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {
         self.cast_number_in(s, &|| self.current_year())
     }
