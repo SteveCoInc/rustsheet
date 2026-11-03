@@ -3,7 +3,7 @@ id: T-3889
 title: "PIVOTBY: a #VALUE! argument (blank or text option, mismatched fields) wins over a later option's error"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
