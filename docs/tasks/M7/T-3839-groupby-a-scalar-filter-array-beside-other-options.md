@@ -3,7 +3,7 @@ id: T-3839
 title: "GROUPBY: a scalar filter_array beside other options is #VALUE! (probe and fix)"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
