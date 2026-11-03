@@ -61,44 +61,54 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
   - probes/t3698-rate-flat-restart-fresh, 51 cells, drawn after a first freeze. Because that freeze was scored on
     every cell, it is now part of the fit set.
   - probes-numeric/t3698-rate-r4-fresh, 300 cells, the R4.2 fresh sweep (below).
-- **R4.1 hold-out** (review round 1 asked for a train-only choice):
+- **R4.1 hold-out** (review round 1 asked for a train-only choice; scorers in docs/research/t3698/):
   - Kind: (a) fit for the step bound and the |f1| cut; (c) structural for the restart.
   - Fit set: every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide.
   - Split: the fit lab's hash (`holdout.py`, 30% test). The 5-point margin was stated before scoring.
   - Candidates: K in {3, 8, 12, 14..18, 20, 22, 30, 60, 200} × cut in {1e-5, 3e-5, 1e-4, 3e-4, 1e-3}, all with
-    step >= 3 and |f1| >= 1.3e-7. They were ranked on the 1,477 train cells only. A candidate that loses a cell
-    main passes was excluded (the acceptance criterion).
+    step >= 3 and |f1| >= 1.3e-7, ranked on the 1,477 train cells only.
   - Chosen: K 16 with cut 1e-4.
-    - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+    - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477, against 1,378 / 1,412 / 1,413 for the
+      hold.
     - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold.
     - Rates: 94.4% train, 94.8% test.
   - K 17 ties; the smaller bound is taken.
-  - Cut 3e-4 ties on train bit-exact and is +1 within 4 ulp, but it loses t3579-rate-residual-nper1 A43 (a main
-    pass), so it is excluded. Note: I froze 3e-4 by the tie-break first and drew the fresh sweep under it, then
-    found the loss and moved to 1e-4. The fresh sweep scores the same under both (below).
-  - Correctly rounded root, on the cells with 50-digit math: train 35 / 80 / 98 of 637, test 16 / 33 / 44 of 251.
-    The rule is bit-exact on 610 and 239 of those cells, so it beats the root on test.
-  - Caveat: these cells had all been scored under the first freeze. So this is a train-only choice on a fixed
-    split, not a blind hold-out. The fresh sweep is the out-of-sample check.
-- **R4.2 fresh sweep** (probes-numeric/t3698-rate-r4-fresh, generated after the freeze):
-  - 300 points of Gate A's RATE draw (`rustsheet-accuracy` sampler, batch seed `r4-T-3698-fresh`, every stratum),
-    each with a guess log-uniform in ±1e-4..0.9 (80%) or 0.9..10.
-  - `math.tsv` commits the 50-digit roots: one sign change makes the root unique, so the guess does not matter.
-    Scored with docs/research/t3478/score_sweep.py.
-  - Results: bit-exact 298, within 4 ulp 299, within 15 digits 299. Correctly rounded: 22 / 29 / 34.
-- **Gate A envelope** on the fresh sweep: 299 of 300 inside, under both the 1e-4 and the 3e-4 build.
-  - The one outside is A201, `RATE(1,13501.684222927,-13501.684222927,0,1,1.74874265618351)`. Excel returns the
-    guess, the model `#NUM!`.
-  - Every residual there is rounding noise (about 1e-12, from pv + pmt = 0), far below the restart's 1.3e-7
-    floor. So the rule cannot move it, and it is the same under the hold.
-  - T-3876 owns it; financial.md records the quirk.
-  - The sweep rarely makes a flat secant. It shows the rule moves nothing elsewhere, not the restart itself.
+  - The cut follows the evidence bracket (4.3e-5, 1.7e-4) of t3698-rate-flat-restart A3:A8 against A1 and A2. The
+    cap's bound 1e-4 lies inside it.
+  - 3e-4 ties on train bit-exact and is +1 within 4 ulp. But it lies outside the bracket, and it loses
+    t3579-rate-residual-nper1 A43.
+    - Disclosure: a first freeze took 3e-4 by the tie-break, and the probes-numeric sweep was drawn under it. The
+      Gate A batch was drawn after the final 1e-4 freeze.
+  - Correctly rounded root, on the cells with a 50-digit sidecar:
+    - train: 35 / 80 / 98 of 637, where the rule gets 610 / 623 / 623;
+    - test: 16 / 33 / 44 of 251, where the rule gets 239 / 245 / 245.
+    - So the rule beats the root on test.
+  - Caveat: the cells were all scored under the first freeze. This is a train-only choice on a fixed split, not a
+    blind hold-out.
+- **R4.2 fresh sweep:** accuracy/RATE/r4-T-3698, a Gate A batch (`rustsheet-accuracy generate RATE --batch
+  r4-T-3698`). It is 300 points drawn and oracle-filled after the final freeze, and it stays in the gate.
+  - Guesses: the table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh is the same kind of draw, each
+    point with a log-uniform guess (docs/research/t3698/gen_fresh.py; 50-digit roots in `math.tsv`).
+  - Results on that probes sweep: 298 bit-exact and 299 within 15 digits. The correctly rounded root gets 22 / 29
+    / 34.
+- **Gate A envelope:**
+  - r4-T-3698: 300 of 300 inside (`rustsheet-eval accuracy`: 10,105 points, 0 failing, 0 table defects).
+  - Probes sweep: 299 of 300 inside. The one outside is A201, which is noise-only (below).
+- **Table defect fixed:**
+  - The first draw of r4-T-3698 held two points with every flow 0, e.g. `RATE(1,702.59374702126,
+    -702.59374702126,0,1)`. Excel returns 0.09577777777777774 there, and the definition said "domain error".
+  - `unique_rate` (tools/src/rustsheet_tools/accuracy/defs/annuity.py) now raises NoValueError there ("every rate
+    is a root"), and the batch was redrawn per SPEC-0029. A test is added.
+  - `rustsheet-accuracy verify RATE`: 0 differences, so s1 is unchanged.
+  - The probes sweep's A201 is the same shape. Excel returns the guess there and the model `#NUM!`; its residuals
+    are rounding noise, far below the restart's 1.3e-7 floor, so the rule cannot move it. T-3876 owns it.
 - **R4.4:** the gains are 5 ulp to 3e-11 relative, above the 4-ulp web-desktop floor.
 - **Eval delta:**
   - probes: 6 fixed (t3579-rate-residual-nper1 A1, A2, A41, A42; t3348-rate-fv-nonzero A171, A175), 0
     regressions.
   - probes-numeric: t3348-rate-gate-a-fresh A296 fixed.
-  - New cases: t3698-rate-flat-restart, t3698-rate-flat-restart-fresh and t3698-rate-r4-fresh add 405 cells. The
+  - New cases: t3698-rate-flat-restart, t3698-rate-flat-restart-fresh and t3698-rate-r4-fresh add 405 cells, and
+    the Gate A batch accuracy/RATE/r4-T-3698 adds 300 points, all inside. The
     noise-floor misses are owned by T-3850 and A201 by T-3876.
 - **Follow-ups:**
   - T-3850: late restarts and noise-floor paths.

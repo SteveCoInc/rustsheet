@@ -107,12 +107,13 @@ fn rate_secant(
     // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
     // |f1| from RATE_RESTART_F_MIN up to the cap's bound, restarts the run from the older iterate
     // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
-    // hash split only (holdout.py, margin 5 points stated before scoring), among the candidates
-    // that lose no cell main passes (the task's acceptance criterion): over K in 3..200 and the
-    // cut in 1E-5..1E-3, K = 16 or 17 with the cut 1E-4 is best on train (1,395 of 1,477
-    // bit-exact; 3E-4 ties there but loses t3579-rate-residual-nper1 A43). The smaller K is
-    // taken. Outside the evidenced range (the first two steps, |f1| below the smallest probed flat
-    // secant) the run holds as before.
+    // hash split only (holdout.py, margin 5 points stated before scoring; docs/research/t3698):
+    // over K in 3..200 and the cut in 1E-5..1E-3, K = 16 or 17 is best on train (1,395 of 1,477
+    // bit-exact) and the smaller is taken. The cut is the cap's bound, inside the bracket the
+    // evidence gives: probes/t3698-rate-flat-restart restarts at |f1| up to 4.3E-5 (A3:A8) and
+    // holds at 1.7E-4 (A1). Outside the evidenced range (the first two steps, |f1| below the
+    // smallest probed flat secant) the run holds as before. `r0 > -1` is a guard, not evidence:
+    // a restart from r0 <= -1 would be a guess that RATE refuses.
     /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
     const RATE_RESTART_STEPS: u32 = 16;
     /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).

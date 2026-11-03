@@ -185,6 +185,8 @@ def test_rate_against_published_values() -> None:
     assert compute(RATE, [10, 100.0, 1000.0, 0.0, 0]).why is not None  # one sign: no rate
     with pytest.raises(NoValueError):  # two sign changes: no evidenced root choice
         rate(3, mp(-100), mp(100), mp(150), False)
+    with pytest.raises(NoValueError):  # every flow 0 (T-3698): every rate is a root, Excel returns a number
+        rate(1, mp("702.59374702126"), mp("-702.59374702126"), mp(0), True)
     assert abs(value(RATE, [12, -100.0, 1200.0, 0.0, 0])) < 1e-300  # pv + n·pmt = 0: the root is 0
     # type 1 (payments at the start): 900 = 100·(1+r)·(1 - (1+r)^-10)/r
     due = value(RATE, [10, -100.0, 900.0, 0.0, 1])

@@ -1233,29 +1233,33 @@ Evidence (excel-graph, 2026-11-02, T-3698):
   - Late restarts that Excel takes (A35 step 27, A39 step 33, A42 step 41) are not covered by the rule.
   - probes/t3698-rate-flat-restart-fresh (51 cells) was drawn after a first freeze of the rule and is part of the
     fit set below, not a fresh sweep.
-- Choice of the step bound and the |f1| cut (decision 0188 R4.1). The fit set is every `=RATE(` oracle cell of
-  probes and probes-numeric except t3478-rate-r4-wide (another fit's fresh sweep). It is split by the fit lab's
-  hash (`holdout.py`, 30% test), with the 5-point margin stated before scoring. The candidates (K in 3..200, cut
-  1e-5..1e-3, steps from 3, |f1| from 1.3e-7) were ranked on the 1,477 train cells only, and those that lose a
-  cell main passes were excluded (the task's acceptance criterion). K = 16 or 17 with the cut 1e-4 is best:
-  - train: 1,395 bit-exact, 1,422 within 4 ulp, 1,422 within 15 digits, of 1,477 (the hold has 1,378 / 1,412 /
-    1,413);
-  - test: 551 / 561 / 561 of 581 (the hold has 546 / 554 / 557). The test exact rate is 94.8% against 94.4% on
-    train, inside the margin.
-  - The cut 3e-4 ties on train bit-exact and is one cell ahead within 4 ulp, but it loses
-    t3579-rate-residual-nper1 A43. K = 18 to 22 is one cell behind on train.
-  - Correctly rounded root, on the cells with a 50-digit value: 35 / 80 / 98 of 637 on train and 16 / 33 / 44 of
-    251 on test. The rule is bit-exact on 610 and 239 of the same cells.
-  - The cells were seen before (an earlier freeze scored them all), so this hold-out is a train-only choice on
-    a fixed split, not a blind one. The fresh sweep below is the out-of-sample check.
-- Fresh sweep (decision 0188 R4.2), probes-numeric/t3698-rate-r4-fresh: 300 points of Gate A's RATE draw
-  (`rustsheet-accuracy`, every stratum), each with a log-uniform guess, drawn and oracle-filled after the freeze.
-  `math.tsv` holds the 50-digit roots.
-  - The rule is bit-exact on 298, within 4 ulp and 15 digits on 299.
-  - Gate A envelope: 299 of 300 inside. The one outside is A201, `RATE(1,13501.684222927,-13501.684222927,0,1,
-    1.74874265618351)`, below.
-  - The sweep's draw rarely makes a flat secant, so it checks that the rule moves nothing elsewhere. It does not
-    measure the restart itself.
+- Choice of the step bound and the |f1| cut (decision 0188 R4.1; scorers in docs/research/t3698/). The fit set is
+  every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide (another fit's fresh sweep). It is
+  split by the fit lab's hash (`holdout.py`, 30% test), with the 5-point margin stated before scoring. The candidates
+  (K in 3..200, cut 1e-5..1e-3, steps from 3, |f1| from 1.3e-7) were ranked on the 1,477 train cells only. K = 16
+  or 17 is best:
+  - The evidence brackets the cut. The nper-1 family restarts at |f1| up to 4.3e-5 (t3698-rate-flat-restart A3:A8)
+    and holds at 1.7e-4 and 3.4e-4 (A1, A2). So the cut lies in (4.3e-5, 1.7e-4), and the cap's bound 1e-4 is taken.
+    On train, the cuts 1e-4 and 3e-4 tie bit-exact. 3e-4 is outside the bracket: it restarts A1, and it loses
+    t3579-rate-residual-nper1 A43.
+  - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+  - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold. The test exact rate is 94.8% against 94.4%
+    on train, inside the margin. K = 18 to 22 is one cell behind on train.
+  - Correctly rounded root, on the cells with a 50-digit sidecar: 35 / 80 / 98 of 637 on train and 16 / 33 / 44 of
+    251 on test. On the same cells the rule gets 610 / 623 / 623 and 239 / 245 / 245.
+  - The cells were seen before (an earlier freeze scored them all), so this is a train-only choice on a fixed split,
+    not a blind hold-out. The fresh batch below is the out-of-sample check.
+- Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
+  generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
+  and the batch stays in Gate A.
+  - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
+    log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
+    within 15 digits on 299. The one outside is A201, below.
+  - Neither sweep makes many flat secants. They show that the rule moves nothing elsewhere; they do not measure the
+    restart itself.
+- Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
+  in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
+  Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
 - Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. A count of
   restarts within a run, a bound relative to the residual's terms, and the restart point are not probed beyond r0
   against the guess. Restarting from the guess instead of r0 changes nothing, because the run repeats.
@@ -1265,7 +1269,7 @@ Evidence (excel-graph, 2026-11-02, T-3698):
   behaves differently. The restart cannot fire here, because these residuals are far below 1.3e-7. T-3876 owns it.
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
-restarts; flat secants before step 3 or below |f1| 1.3e-7; a noise-only residual)
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
 Tasks: T-3698, T-3424, T-3876
 
 ## YIELD with one coupon period left is closed form
