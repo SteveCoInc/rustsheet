@@ -77,3 +77,15 @@ engineering.md "CONVERT constants and evaluation order".
   left there: B33, B961, B969, T-2047), 0 regressions in every gated suite; visible parity 0 in new cases.
   The new sweep case is in probes-numeric (ungated).
 - Follow-up: T-3975 (mixed binary and decimal prefixes).
+
+## Hold-out plan (round 2, stated before the batch exists)
+Fidelity review round 1 found the hash split above contaminated: it was fixed after the population was scored.
+This plan is committed before the new batch is generated, filled or scored.
+- Hold-out: a new probes-numeric case t3861-convert-prefix-holdout, 150 calls from the sweep generator with seed
+  38612 (the sweep used 3861), filled on excel-graph after this commit. Nothing is scored on it before the fill.
+- Train: the 1,145 prefixed literal cells the model was chosen on (rate 801 + 336 = 1,137, 99.3% bit-exact).
+- Margin, fixed now: the combined power passes if (1) its hold-out bit-exact count beats the correctly rounded
+  conversion's on the same cells, and (2) its hold-out bit-exact rate is at least 91.3%, train's rate less 8 points.
+  Why 8 points: the generator draws light-year and parsec units far more often than the train population does, and
+  those factors miss under every form (T-2047). The post-freeze sweep lost 4.6 points that way, and 8 allows for
+  that share varying between two draws of 150.
