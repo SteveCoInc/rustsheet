@@ -89,3 +89,6 @@ Cells this task owns:
   (shapes 21 and 101 are out of reach of the 4-term expansion: 3E-13 at 101) need a follow-up. mpmath's `gammainc`
   does not converge at shape 99999999 for most x (NoConvergence); the grid has only one such point.
 - Do not: pick the a·phi cut by scoring these grid points without decision 0056's hold-out (it would be a FITTED cut).
+- CI on 94e8eda2e: hygiene fails, `check_duplication.py` 2912 lines against baseline 2880 (+32, the size of the
+  `NEAR_MODE_EXACT` table in incomplete_gamma/tests.rs): shrink that table (fewer points, or one row per shape with
+  the x factors computed) rather than updating any baseline. Other jobs were green or pending at the window's close.
