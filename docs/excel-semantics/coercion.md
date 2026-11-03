@@ -526,7 +526,11 @@ row. VERIFIED for the cells cited:
   eleven spellings of 3 (E11 and E136:E145 = 11): the criterion reads each as the number 3.
   Implemented by T-3917 (rule 7): `element` gives the Gurmukhi, Tamil, Telugu and Khmer digits a
   `digit_variant` weight in this order, and `script_digit_to_ascii` reads them, so number-text coercion
-  takes them in every form of the T-3446 blocks (only the COUNTIF criterion is probed for these four).
+  takes them in every form of the T-3446 blocks. T-3958 probed them (probes/t3958-gurmukhi-tamil-telugu-khmer-digits,
+  excel-graph, 2026-11-03): the forms are in "Script digits in number text (T-3446)" below, and the pairs
+  (Pairs!C1:C28) place the digit 3 of each of the four blocks below `"3a"`, `"4"` and the Arabic-Indic 9, and above
+  `"3"`, the Extended Arabic-Indic 3 and the Devanagari 3 (code-point order of the blocks, weight of the digit
+  first). The engine passes them.
 - **Astral characters and emoji sequences compare unit by unit**, no sequence is one element:
   `"𐀀" < "𝐀" < "🀄" < "🇺" < "🇺🇸" < "👍" < "👍🏽" < "👨" < "👨‍👩‍👧" < "😀"` (ranks 140 to 149);
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
@@ -566,7 +570,13 @@ U+0660, Extended Arabic-Indic U+06F0, Devanagari U+0966, Bengali U+09E6, Thai U+
 U+0F20, Myanmar U+1040) of eleven forms each (`123`, `-12`, `1.5`, `12%`, `$12`, `(12)`, `1,234`, `1e3`,
 `2020-1-1`, `12:30`, `1 1/2`, digits in the row's script, the rest ASCII); A = typed, B = ISNUMBER(A),
 D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same text as a formula string.
-Status: VERIFIED.
+Status: VERIFIED. T-3958 adds the Gurmukhi (U+0A66), Tamil (U+0BE6), Telugu (U+0C66) and Khmer (U+17E0) blocks
+(probes/t3958-gurmukhi-tamil-telugu-khmer-digits, same layout, four blocks of eleven forms): all twelve blocks
+behave alike. `+0`, VALUE, NUMBERVALUE and TEXT read every form (the engine passes), and typed text is a number
+(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats (ENTERED log): `១២៣`-style integers
+`[$-km-KH,1200]0`, group commas `[$-km-KH,1200]#,##0`, parentheses `(១២)` = -12 with `[$-km-KH,1200]0`,
+exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction `# ?/?`; the other three
+blocks' tags were not logged (the oracle prints ENTERED only on a first fill).
 - **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
