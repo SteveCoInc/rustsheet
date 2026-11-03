@@ -50,14 +50,36 @@ Owned cells (all cdf or right tail):
 - probes-numeric/t2220-f-dist-sweep-rt.case.json (4): Calc!A467, A504, A954, A984
 - probes-numeric/m9-beta-dist-a100.case.json (1): Calc!A51
 
+Cells added by gap triage (2026-11-03, `make eval` on origin/main c2062e5c8, excel-graph): four gen-m9 F cells that
+`scripts/exit_owners.py --all-off` lists as visibly off and owned only by deferred T-2221 ("Cells added from T-3198",
+which judged them within 15 digits; the report does not). gen-m9 is a Gate B suite, so FDIST is below Gate B's rate
+until they pass. Each is an accuracy cell: Excel within 2 ulp of the 50-digit math (mpmath 1.3, dps 50, `betainc` at
+the double arguments), ours 2 to 8 ulp off, and the correctly rounded value is within half a unit of Excel's 15th
+digit. Relative errors Excel / ours, and the branch `bratio::dispatch` gives (F as I_x(d1/2, d2/2), right tail
+I_v(d2/2, d1/2)):
+- gen-m9/2801c1c11c21e134 Calc!A374 `FDIST(3.14159,9,6)`: Excel 0.0884857396733851, ours 0.08848573967338502;
+  -1.8E-16 / -1.12E-15; I_v(3, 4.5) at v = 0.175, `L140BupBpser` (A467's branch; T-3198's L140 power-sum work may
+  move it first, re-measure after it lands).
+- gen-m9/285d87cea1aaa73c Calc!A34 `FDIST(40,7,MINUTE(0.2))` = `FDIST(40,7,48)`: Excel 6.448979666396885E-18, ours
+  6.448979666396879E-18; -3E-17 / -9.9E-16; I_v(24, 3.5) at v = 0.146, `BpserLarge` (b0·x0 = 0.51).
+- gen-m9/3a25a03eb94fcfbd Calc!A181 `F.DIST(Data!$B9,MONTH(17720),1,TRUE)` = `F.DIST(1,7,1,TRUE)`: Excel
+  0.3506166628202075, ours 0.35061666282020815; -1.3E-16 / +1.77E-15; swapped to a0 = 0.5, b0 = 3.5, x0 = 0.125,
+  `BupBgrat`: the complement of A504 `F.DIST.RT(1,7,1)` above, so one fix should land both.
+- gen-m9/b6593d7dd13f2dac Calc!A50 `FDIST(Data!$E6,5,1.5)` = `FDIST(1.005,5,1)` (Excel truncates the df): Excel
+  0.6356868721336002, ours 0.6356868721336008; -3.9E-16 / +4.9E-16; a0 = 0.5, b0 = 2.5, x0 = 0.166, `BupBgrat`.
+- gen-m9/2801c1c11c21e134.case.json (1): Calc!A374
+- gen-m9/285d87cea1aaa73c.case.json (1): Calc!A34
+- gen-m9/3a25a03eb94fcfbd.case.json (1): Calc!A181
+- gen-m9/b6593d7dd13f2dac.case.json (1): Calc!A50
+
 ## Visible-parity stage
-Decision 0083 / 0114 (`accuracy`): met when the 6 cells above are within half a unit of the 15th significant digit
+Decision 0083 / 0114 (`accuracy`): met when the 10 cells above (6 probe cells and 4 gen-m9 cells) are within half a unit of the 15th significant digit
 of Excel's value, and no cell of the three cases that is within 15 digits today moves off. Bit-level criteria still
 unmet then move to a follow-up with `defer: phase-1b`.
 - Split (T-3229 check): 5 of the cells below are also listed by T-3592, which owns them; this task keeps the rest.
 
 ## Acceptance criteria
-- [ ] The 6 cells above are within half a unit of the 15th significant digit of Excel's value (`make eval-show` output
+- [ ] The 10 cells above (6 probe cells and the 4 gen-m9 cells added 2026-11-03) are within half a unit of the 15th significant digit of Excel's value (`make eval-show` output
       for each case in the Outcome), with the branch each takes named.
 - [ ] On t2220-f-dist-sweep-d2-1, t2220-f-dist-sweep-rt and m9-beta-dist-a100 the count within 15 digits of Excel does
       not fall, and no probes-numeric or gated cell goes from within 15 digits to visibly off; any that does is listed

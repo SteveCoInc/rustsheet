@@ -66,6 +66,7 @@ Examples:
 Cells:
 - gen-m9/0a957119475760c5.case.json (1): Calc!A279
 - gen-m9/30e20ba3302fea8b.case.json (2): Calc!A90, A310
+  (Calc!A310's visible-parity work is T-1871's since gap triage 2026-11-03: the gap is its inner FINV(1E-100,2,3); this task keeps its bit-level residue.)
 - gen-m9/3c06f9298f65a3ba.case.json (1): Calc!A326
 - gen-m9/a91bad4e84f49739.case.json (1): Calc!A142
 - gen-m9/b6a02893a8d6b151.case.json (1): Calc!A260

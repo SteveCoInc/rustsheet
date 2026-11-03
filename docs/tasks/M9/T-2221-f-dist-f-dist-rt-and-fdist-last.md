@@ -165,6 +165,12 @@ it not named by another open task is this task's.
 These are T-2219's gen-m9 cells that T-3198 owned. For each, Excel and ours are about equally far from the 50-digit
 reference, between 1e-16 and 1e-14 relative and usually on the same side, so matching them is fitting Excel's last bits.
 None is visibly off. T-3198's "Triage (2026-11-03)" has the per-cell table.
+Correction (gap triage 2026-11-03, `make eval` on origin/main c2062e5c8): eight of them are visibly off by the report's
+rule (more than half a unit in the 15th digit of Excel's value), and gen-m9 is a Gate B suite, so a deferred owner
+leaves them unworked in Phase 1. Their visible-parity work moved to non-deferred tasks; this task keeps only their
+bit-level residue: Calc!A374 of 2801c1c11c21e134, A34 of 285d87cea1aaa73c, A181 of 3a25a03eb94fcfbd and A50 of
+b6593d7dd13f2dac to T-3472 (accuracy); A151 of 60b0b6e69ad35a45 to T-3183; A219 of 2801c1c11c21e134 to T-3952;
+A92 of 8f2ac25945af87da to T-3954; A259 of 2a18b2f5a4dc43ac to T-1871 (its inner F.INV.RT).
 - gen-m9/2801c1c11c21e134.case.json (2): Calc!A219, A374
 - gen-m9/285d87cea1aaa73c.case.json (1): Calc!A34
 - gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259
