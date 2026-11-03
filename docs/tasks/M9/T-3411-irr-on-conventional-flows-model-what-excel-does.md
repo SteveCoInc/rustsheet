@@ -3,7 +3,7 @@ id: T-3411
 title: "IRR on conventional flows: model what Excel does after its secant fails (Newton from v = 1 and the T-3406 candidates are refuted)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: todo
 priority: P1
 size: M
 tier: opus
@@ -146,7 +146,24 @@ restart of the secant at a flat step (class a), as a temporary switch in `irr_se
   a precision under which A122/A123/A124/A126/A128/A129/A132 step on and A125/A127/A130/A131 go flat. That is a
   bit-level fit (R4 applies).
 
-2026-11-03 21:50 UTC, opus run: resumed (branch idle 23 h).
+2026-11-03, opus run (resumed, branch idle 23 h; merged origin/main in for the current IRR code). Findings, landed
+in financial.md "IRR's returns where the secant fails are Newton iterates on P(v) from v = 0, past the 1e-7 stop"
+with docs/research/t3411/fallback_iterates.py; no engine change:
+- The "next step" above (a last-ulp NPV difference at d = 0.0919) is refuted: twelve NPV evaluations (plain,
+  twice-rounded, 80-bit; quotients by x, products by v, Horner in v or x) all go flat at step 3 on t3406 A109-A144,
+  so no NPV arithmetic separates A126 (returns) from A125 (`#NUM!`). Do not repeat.
+- Also refuted on t3406 (secant alone, cap 213): Illinois once bracketed (types 104/144 against 92, but no Excel
+  digits) and keeping the two smallest-|NPV| points (85).
+- New lead: where both secant runs fail and Excel returns, Excel's double is very often exactly an iterate of
+  `irr_fallback`'s Newton from v = 0 (see the financial.md entry and the script's output for the counts), at steps
+  up to about 630: the fallback's 50-step cap is not Excel's, and Excel sometimes returns the iterate one past the
+  engine's 1e-7 stop. Neither the step size nor |P| decides that extra step, and Newton converges on most `#NUM!`
+  cells too, so the type rule is still open.
+- Next step: the type split, on the cells where Excel's value is a Newton iterate. Inside t3406 A122-A132 the
+  returning and `#NUM!` cells share the secant path and the Newton path (126 steps); find what differs, for example
+  a check Excel makes on the root before returning it (a residual of its own NPV at the root against a bound, or
+  the root against the secant's last bracket), and probe it with excel-probe on a family whose outlay moves by
+  1E-4 steps.
 
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
