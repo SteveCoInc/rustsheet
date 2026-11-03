@@ -109,7 +109,16 @@ impl Model {
         } else {
             self.collect_freq_values(&args[0], true, cell)
         };
-        let bins_raw = self.collect_freq_values(&args[1], false, cell);
+        // A one-cell reference to an error cell as the bins is a bin with no number, not that
+        // error; a typed error is still the result (gen-m9/d56012c9341cd0ff, T-3791).
+        let bins_value = self.evaluate_node_in_context(&args[1], cell);
+        let bins_by_reference =
+            matches!(*args[1].ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let bins_raw = if bins_by_reference && matches!(bins_value, CalcResult::Error { .. }) {
+            Ok(vec![])
+        } else {
+            self.freq_values_of(bins_value, false, cell)
+        };
         // Excel: a scalar error argument is the result, data before bins, and beats an error
         // element of the data array (`FREQUENCY({1;#DIV/0!},NA())` is `#N/A`,
         // `FREQUENCY(NA(),{1;#DIV/0!})` is `#N/A`; gen-m9/589f42e67f4b4b8d A338;
@@ -122,14 +131,14 @@ impl Model {
             (Err(e), _) | (_, Err(e)) => return e.error,
         };
 
-        // Excel: with no numeric bin the result is still two rows, 0 then every data value
-        // (probes/frequency-bins A16-A25; docs/excel-semantics/statistics.md, T-2427).
-        if bins_raw.is_empty() {
-            return CalcResult::Array(vec![
-                vec![ArrayNode::Number(0.0)],
-                vec![ArrayNode::Number(data.len() as f64)],
-            ]);
-        }
+        // Excel: with no numeric bin the result is still two rows, and the lone missing bin acts
+        // as 0: the values <= 0, then the rest (probes/frequency-bins A16-A25, T-2427;
+        // gen-m9/d56012c9341cd0ff, T-3791).
+        let bins_raw = if bins_raw.is_empty() {
+            vec![0.0]
+        } else {
+            bins_raw
+        };
 
         let n_bins = bins_raw.len();
 

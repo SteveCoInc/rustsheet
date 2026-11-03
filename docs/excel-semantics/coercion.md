@@ -547,6 +547,31 @@ parenthesise a lower-precedence operand (T-0132, `Ported-From: ironcalc@9b1ae3fd
 (MINUS_MINUS.xlsx C12, Excel 0.5) still fails: time text coercion is T-0146, which adds that workbook.
 Tasks: T-0132
 
+## Weightless characters in `=`, COUNTIF and XMATCH (T-3584)
+Rule: the 2568 BMP code points Excel's comparison table gives no weight (lookup.md "Weightless characters",
+listed in `docs/research/t3584/weightless-bmp.txt`) compare equal to one another under `=`, COUNTIF and
+XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count them one for one:
+- `UNICHAR(1316)=UNICHAR(4295)` (U+0524 with U+10C7), U+0524 with U+0525, U+0378 and U+00AD, U+AB70 with
+  U+1C90: TRUE (probes/t3584-match-fold-weightless Calc!B1:B3, B8, B14, B17:B18; COUNTIF and XMATCH agree, D:F).
+- `"a"&UNICHAR(1316)&"b"="ab"` and `UNICHAR(1316)&UNICHAR(4295)=UNICHAR(1317)` are TRUE (Calc!B6:B7, D6:D7,
+  F6:F7), where exact MATCH says `#N/A` (E6:E7).
+- But a weightless character is never equal to empty text (`UNICHAR(1316)=""` FALSE, Calc!B4, B9, B12, B19, B32),
+  and `"a"&UNICHAR(1316)="a"` and `"a"&UNICHAR(173)="a"` are FALSE (Calc!B5, B13; COUNTIF 0, XMATCH `#N/A`).
+- Over the whole BMP (Calc!R1:R256, digit 9 = bits 1 and 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH
+  finds U+0524 (wildcards aside).
+- Not about weightless characters, found by the same probe: `=`, COUNTIF and XMATCH(..,0) also equate Greek
+  Extended's dasia+oxia and psili+varia letters (`UNICHAR(7941)=UNICHAR(7946)`, U+1F05 with U+1F0A, TRUE; Calc!B21,
+  D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
+  keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
+  whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
+  same weight).
+UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
+one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
+positions and neighbours make it count is open (T-3904).
+Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
+probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
+
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with
 D7 = " 2 " (spaces around the digit) is 2 and `Data!D3:D3/0` with the same text is `#DIV/0!`. Every

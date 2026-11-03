@@ -1,0 +1,65 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3898: readers of a circular formula typed after the workbook loads (`entered`/`entered_r1c1`, as the oracle types them): stored readers ISBLANK, ISNUMBER, =, ISFORMULA, TYPE, &, IFERROR, COUNTBLANK, ISTEXT of a typed self-reference H10; typed readers before (H5) and after (H12:H14) it; a typed two-cell cycle H17:H18; a typed non-circular H15; a stored self-reference D1 and its readers for comparison; readers of readers (C1, C3).",
+  "tags": [
+    "M2",
+    "probe",
+    "recalc",
+    "T-3898"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "stored readers of typed H10 =H10+1 (typed after load)",
+        "B1": "=ISBLANK(H10)",
+        "B2": "=ISNUMBER(H10)",
+        "B3": "=H10",
+        "B4": "=ISFORMULA(H10)",
+        "B5": "=TYPE(H10)",
+        "B6": "=H10&\"x\"",
+        "B7": "=IFERROR(H10,\"e\")",
+        "B8": "=COUNTBLANK(H10)",
+        "B9": "=ISTEXT(H10)",
+        "H5": {
+          "entered": "=ISBLANK(H10)"
+        },
+        "H10": {
+          "entered": "=H10+1"
+        },
+        "H11": {
+          "entered_r1c1": "=RC*0+1"
+        },
+        "B11": "=ISBLANK(H11)",
+        "H12": {
+          "entered": "=ISBLANK(H10)"
+        },
+        "H13": {
+          "entered": "=H10"
+        },
+        "H14": {
+          "entered": "=ISNUMBER(H10)"
+        },
+        "H15": {
+          "entered": "=1+1"
+        },
+        "B15": "=ISBLANK(H15)",
+        "H17": {
+          "entered": "=H18+1"
+        },
+        "H18": {
+          "entered": "=H17+1"
+        },
+        "B17": "=ISBLANK(H17)",
+        "B18": "=H18",
+        "B19": "=ISBLANK(H18)",
+        "D1": "=D1+1",
+        "D2": "=ISBLANK(D1)",
+        "D3": "=D1",
+        "C1": "=ISBLANK(B1)",
+        "C3": "=B3+1"
+      }
+    }
+  ]
+}

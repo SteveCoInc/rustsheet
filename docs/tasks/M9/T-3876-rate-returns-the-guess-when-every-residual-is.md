@@ -25,6 +25,10 @@ probes-numeric/t3698-rate-r4-fresh A201), without losing the exact-zero cells of
   residuals on A201 first: is f(guess) exactly 0 while f(r1) is not, or the reverse?
 - Probe noise-only annuities with other scales, guesses and nper 1 against 2 before changing the code.
 
+Review follow-up of T-3698 (PR #2858): financial.md's "every flow 0" bullet says Excel returns 0.09577777777777774
+for `RATE(1,702.59374702126,-702.59374702126,0,1)`, but no committed oracle file holds that value (the first r4-T-3698
+draw was discarded). Commit the cell in this task's probe, or cite t3698-rate-r4-fresh A201 for the shape.
+
 ## Acceptance criteria
 - [ ] A probe that separates a noise-only residual from an exactly-zero one, oracle-filled.
 - [ ] t3698-rate-r4-fresh A201 passes and no RATE cell regresses; financial.md updated.
