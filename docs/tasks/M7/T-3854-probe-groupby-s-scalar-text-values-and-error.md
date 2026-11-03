@@ -3,7 +3,7 @@ id: T-3854
 title: "Probe GROUPBY's scalar text values and error-cell row_fields beside field_headers and as 1x1 arrays"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -29,9 +29,24 @@ engine can apply them as widely as Excel does or no wider.
 - Code: `Model::groupby_fields` / `ScalarInput` in crates/rustsheet-engine/src/functions/lookup_and_reference/groupby.rs.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe case covers the rows above; docs/excel-semantics/arrays.md records the rule and settles the
+- [x] An excel-graph probe case covers the rows above; docs/excel-semantics/arrays.md records the rule and settles the
       "one row of text values" question.
-- [ ] The engine matches every probe cell (widen or keep `ScalarInput`'s domain); `make check` green; reviewers approve.
+- [x] The engine matches every probe cell (widen or keep `ScalarInput`'s domain); `make check` green; reviewers approve.
 
 ## Out of scope
 - PIVOTBY (T-3841).
+
+## Outcome
+- Probe probes/t3854-groupby-scalar-inputs (excel-graph, 2026-11-03, 32 calls, 83 cells) settles it:
+  - A one-cell reference to an error as row_fields is `#VALUE!` with field_headers 0, 1, 2, 3 and omitted. A 1x1 array
+    holding an error is an ordinary key (`GROUPBY({#N/A},{1},SUM)` groups).
+  - Scalar text values are not a special case. With field_headers omitted, one row of text values is taken as the header,
+    so no record is left: `#VALUE!` for scalar text, a 1x1 text array and a FILTER giving one text row. With 0 or 2 they
+    group; with 1 or 3 the header takes the only row. PIVOTBY's detection does the same (A169:A189).
+  - A one-cell range of a blank cell as values (`S!A3:A3`) is `#VALUE!`, as the cell is.
+- Code (groupby.rs): `ScalarInput` became `error_cell: bool`, `#VALUE!` whatever field_headers is. `values_have_header` takes
+  one text row alone as a header, which GROUPBY and PIVOTBY share, and that subsumes the old scalar-text rule. A blank
+  one-cell range is refused like a blank cell. Unit cases are added to `scalar_inputs_and_the_order_of_their_errors`, and
+  arrays.md is updated (the "one row of text values" question is settled).
+- Eval delta: the new probe passes 83/83; no other cell changed and there are no regressions.
+- Follow-up filed: T-3946 (the MINOR findings of PR #2986, T-3893).
