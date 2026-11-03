@@ -705,7 +705,11 @@ impl Model {
             self.evaluation.unwinding = true;
             return CalcResult::EmptyCell;
         }
+        // A GROUPBY lift's filter state belongs to the call running it, not to a cell it reads
+        // on demand (`Model::groupby_filter_spent`, T-3840).
+        let filter_spent = std::mem::replace(&mut self.groupby_filter_spent, false);
         let result = self.run_top(cell_reference, cell);
+        self.groupby_filter_spent = filter_spent;
         if self.evaluation.depth == 0 && self.evaluation.blocked_on.is_some() {
             // The root stopped at a read (Excel order): it is not evaluated in this pass yet.
             self.evaluation.unwinding = false;

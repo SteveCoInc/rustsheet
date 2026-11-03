@@ -853,6 +853,7 @@ impl Model {
             captured_cells: 0,
             nested_budget: crate::nested_array::NestedBudget::default(),
             tail_views: Vec::new(),
+            groupby_filter_spent: false,
             lambda_calls_base: None,
             last_lambda_id: 0,
             defined_names_running: Default::default(),

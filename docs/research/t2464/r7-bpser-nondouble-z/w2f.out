@@ -1,0 +1,5 @@
+t2464-w2f-absweep GAMMALN measured dz: cells 10, z64 exact 10, split exact 10
+t2464-w2f-absweep GAMMALN measured nd: cells 55, z64 exact 27, split exact 55
+t2464-w2f-absweep GAMMALN(a0) modelled dz: cells 13, z64 exact 3, split exact 3
+t2464-w2f-absweep GAMMALN(a0) modelled nd: cells 10, z64 exact 2, split exact 5
+t2464-w2f-xruns-1 GAMMALN measured nd: cells 1024, z64 exact 494, split exact 1024

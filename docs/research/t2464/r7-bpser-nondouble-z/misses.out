@@ -1,0 +1,5 @@
+miss tune b0=6.25 a0=0.7 x=0.0394 nd=False q=0.0 excel=0.3730440143059333 model=0.37304401430593337 (+1 ulp)
+miss tune b0=6.25 a0=0.7 x=0.0409 nd=False q=0.0 excel=0.38171718918418146 model=0.3817171891841815 (+1 ulp)
+r6 hold: cells 1536, exact 1536, within 4 ulp 1536, within 15 digits 1536
+r6 tune: cells 3072, exact 3070, within 4 ulp 3072, within 15 digits 3072
+r5 r5: cells 1920, exact 1920, within 4 ulp 1920, within 15 digits 1920
