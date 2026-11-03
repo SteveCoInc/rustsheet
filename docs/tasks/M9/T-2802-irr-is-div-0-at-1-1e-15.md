@@ -3,7 +3,7 @@ id: T-2802
 title: "IRR is #DIV/0! at {-1,1E+15}, {-1,1E+300} and a zero-first-flow gen-m9 set where ours is #NUM!"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
