@@ -42,7 +42,9 @@ pub fn r1c1_formula_to_a1(
         column,
     };
     let node = parser.parse(formula, &context);
-    if matches!(node, Node::ParseErrorKind { .. }) {
+    // The A1 text printed below drops the whitespace, so a TAB or NBSP Excel refuses typed
+    // (`=S!` TAB `R1C4`, probes/t3102-r1c1-ws-after-bang, T-3102) is refused here.
+    if matches!(node, Node::ParseErrorKind { .. }) || parser.skipped_refused_whitespace() {
         return None;
     }
     Some(format!("={}", to_english_string(&node, &context)))

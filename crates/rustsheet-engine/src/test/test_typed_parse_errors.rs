@@ -3,7 +3,7 @@
 //! Stored text keeps today's parse-error cell.
 
 use crate::test::util::new_empty_model;
-use crate::typed_input::open_parenthesis_is_a_call;
+use crate::typed_input::{open_parenthesis_is_a_call, r1c1_formula_to_a1};
 use crate::TYPED_FORMULA_DOES_NOT_PARSE;
 
 #[test]
@@ -205,4 +205,41 @@ fn typed_formulas_past_the_parenthesis_or_call_cap_are_refused_as_not_parsing() 
         // An even count of minus signs: 1 either way.
         assert_eq!(model._get_text("A2"), "1", "{open}");
     }
+}
+
+// T-3102: typed, Excel refuses a TAB or an NBSP between tokens (Graph PATCH 400, the cell left
+// blank; T-2949, probes/t3102-r1c1-ws-after-bang A3), in A1 and R1C1 mode. A TAB inside a string
+// literal is text, and stored text keeps loading.
+#[test]
+fn typed_tab_or_nbsp_between_tokens_is_refused() {
+    let mut model = new_empty_model();
+    model._set("A1", "7");
+    model._set("D1", "4");
+    for formula in ["=1+\t2", "=\t1+2", "=1\t+2", "=1+\u{a0}2", "=Sheet1!\tD1"] {
+        let result = model.set_typed_user_input(0, 1, 1, formula.to_string());
+        let message = result.err().unwrap_or_default();
+        assert!(
+            message.starts_with(TYPED_FORMULA_DOES_NOT_PARSE),
+            "{formula:?}: {message}"
+        );
+    }
+    for (row, formula) in [(2, "=LEN(\"a\tb\")"), (3, "=1+ \n2")] {
+        let result = model.set_typed_user_input(0, row, 1, formula.to_string());
+        assert_eq!(result, Ok(()), "{formula:?}");
+    }
+    model._set("A4", "=1+\t2");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "7");
+    assert_eq!(model._get_text("A2"), "3");
+    assert_eq!(model._get_text("A3"), "3");
+    assert_eq!(model._get_text("A4"), "3");
+    let sheets = ["Sheet1".to_string()];
+    assert_eq!(
+        r1c1_formula_to_a1("=Sheet1! R1C4", &sheets, "Sheet1", 1, 1),
+        Some("=Sheet1!$D$1".to_string())
+    );
+    assert_eq!(
+        r1c1_formula_to_a1("=Sheet1!\tR1C4", &sheets, "Sheet1", 1, 1),
+        None
+    );
 }
