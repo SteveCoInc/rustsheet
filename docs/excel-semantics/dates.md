@@ -1327,9 +1327,9 @@ for a negative value the window is half as wide, about 1.2E-7. Measured edges: p
 INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which lies inside the measured (2^-22+1E-12, 2.4E-7);
 we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
 for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
-2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then any argument outside
--32768..32767 is `#NUM!` (but see the 2026-11-03 update below: below -32768 Excel now wraps) (before the total is formed, so a minute of -32768 is legal and one of -32769 is not, whatever the
-hour), and so is a negative total; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
+2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
+2026-10-21 an argument below -32768 was `#NUM!` too, so a minute of -32768 was legal and one of -32769 was not. Since 2026-11-03 such
+an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
 - Bound: `TIME(32767,0,0)` = 0.29166666666674246, `TIME(600,32767,0)` = 0.7548611111111114, `TIME(10,0,32767)` =
   0.7959143518518519; the same with 32767.5 or 32767.9999; 32768, 65535, 65536 and -32769 in any position are `#NUM!`;

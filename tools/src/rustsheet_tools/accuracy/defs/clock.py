@@ -34,7 +34,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, fraction_to_mpf, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of, scalars
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -111,17 +111,6 @@ def _part(index: int) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
         return mpmath.mpf(clock_parts(float(serial))[index])
 
     return value
-
-
-def _domain(value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Callable[[Sequence[MathArg]], str | None]:
-    def domain(args: Sequence[MathArg]) -> str | None:
-        try:
-            value(args)
-        except DomainError as why:
-            return str(why)
-        return None
-
-    return domain
 
 
 # -- TIME draws --------------------------------------------------------------------------------
@@ -209,7 +198,7 @@ TIME = register(
             Param("second", "real", Interval(), source=TIME_BOUND_SOURCE),
         ),
         value=_time,
-        domain=_domain(_time),
+        domain=domain_of(_time),
         draw=by_stratum(
             {
                 "typical": _clock_args,
@@ -307,7 +296,7 @@ def _part_definition(function: str, index: int) -> Definition:
             function=function,
             params=(Param("serial_number", "real", Interval(), source=PARTS_SOURCE),),
             value=value,
-            domain=_domain(value),
+            domain=domain_of(value),
             draw=_PARTS_DRAW,
             serials_1900=True,
             sources=(DECISION, PARTS_SOURCE, PARTS_BOUND_SOURCE),

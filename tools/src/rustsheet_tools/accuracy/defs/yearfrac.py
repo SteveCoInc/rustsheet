@@ -35,7 +35,8 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, fraction_to_mpf, one_of
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, fraction_to_mpf, one_of
+from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -50,7 +51,6 @@ BASIS1_SOURCE = (
     "crates/rustsheet-engine/src/functions/date_and_time/yearfrac.rs (ExcelFinancialFunctions port)"
 )
 DECISION = "decision 0228"
-LAST_DAY = 2958465  # 9999-12-31
 FICTITIOUS_DAY = 60  # 1900-02-29
 
 YMD = tuple[int, int, int]
@@ -163,14 +163,6 @@ def _value(args: Sequence[MathArg]) -> mpmath.mpf:
     return fraction_to_mpf(yearfrac_value(float(start), float(end), basis))
 
 
-def _domain(args: Sequence[MathArg]) -> str | None:
-    try:
-        _value(args)
-    except DomainError as why:
-        return str(why)
-    return None
-
-
 # -- draws -------------------------------------------------------------------------------------
 
 
@@ -278,7 +270,7 @@ YEARFRAC = register(
             Param("basis", "int", Interval(), source=SWAP_SOURCE, optional=True),
         ),
         value=_value,
-        domain=_domain,
+        domain=domain_of(_value),
         draw=by_stratum(
             {
                 "typical": _typical,

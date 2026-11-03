@@ -20,7 +20,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of
 from rustsheet_tools.accuracy.defs.aggregate import SNAP_SOURCE, running_total, sum_value
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
@@ -52,14 +52,6 @@ def _quotient(args: Sequence[MathArg]) -> mpmath.mpf:
     if abs(q) > sys.float_info.max:
         raise DomainError("the quotient is beyond the double range")
     return mpmath.mpf(0) if abs(q) < sys.float_info.min else q  # D14: the flush
-
-
-def _domain(args: Sequence[MathArg]) -> str | None:
-    try:
-        _quotient(args)
-    except DomainError as why:
-        return str(why)
-    return None
 
 
 # -- draws -------------------------------------------------------------------------------------
@@ -137,7 +129,7 @@ PERCENTOF = register(
         function="PERCENTOF",
         params=(Param("data_subset", "array", source=SOURCE), Param("data_all", "array", source=SOURCE)),
         value=_quotient,
-        domain=_domain,
+        domain=domain_of(_quotient),
         draw=DRAW,
         sources=(SOURCE, SNAP_SOURCE, EVIDENCE, "decision 0228"),
     )
