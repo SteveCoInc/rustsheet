@@ -20,6 +20,9 @@ imaginary digit at x = -354.03 and +354.03, which differ in the 15th digit altho
   `IMSECH(COMPLEX(354.03,1))` 1.90717870311855E-154-2.97025484453414E-154i and A103 `IMCSCH(COMPLEX(354.03,1))`
   the same text (both pass). probes/t3881-imcsch-flip-start-negative A3 `IMCSCH(COMPLEX(-354.03,1))` is the IMCSCH twin of
   A101 (-IMSECH there, T-3881) with the same off digit.
+- probes/t3912-imcsch-band-edges (excel-graph, 2026-11-03, T-3912) adds one more: Calc!B25 `IMSECH(COMPLEX(-354.007,1))`
+  1.9515521518382E-154+3.03936239633971E-154i (ours ...633972E-154i) and its IMCSCH twin Calc!A25 (negated band, the
+  same text). The other 34 points at x = -354.0001 to -354.009 and +354.5001 to +354.50009 pass.
 - Code: `sech_parts` in crates/rustsheet-engine/src/functions/engineering/complex/trig.rs, finite-t branch
   `(x_cosh * y_cos / t, -x_sinh * y_sin / t)` with `t = x_sinh.mul_add(x_sinh, y_cos²)`; past |x| = 20 sinh and cosh are
   libm's (`inverse_exp_sinh_cosh`).
@@ -31,7 +34,8 @@ imaginary digit at x = -354.03 and +354.03, which differ in the 15th digit altho
   guards of reviewer-excel-fidelity check 7 apply.
 
 ## Acceptance criteria
-- [ ] probes/t3883-im-overflow-reciprocal-sweep A101 and probes/t3881-imcsch-flip-start-negative A3 match Excel's text,
+- [ ] probes/t3883-im-overflow-reciprocal-sweep A101 and probes/t3881-imcsch-flip-start-negative A3 (and
+      probes/t3912-imcsch-band-edges Calc!A25 and B25) match Excel's text,
       with no other IMSECH or IMCSCH cell regressing; their known-failure lines leave eval/baseline/probes.txt.
 - [ ] `make check` green; reviewers approve.
 

@@ -229,6 +229,7 @@ probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
 probes/t3895-collation-script-digits.case.json	1
 probes/t3906-rate-restart-oos.case.json	137
+probes/t3912-imcsch-band-edges.case.json	2
 probes/t3929-wildcard-fold-criteria.case.json	12
 probes/t3929-wildcard-fold-xmatch.case.json	4
 probes/t3945-atan-near-midpoint.case.json	2
