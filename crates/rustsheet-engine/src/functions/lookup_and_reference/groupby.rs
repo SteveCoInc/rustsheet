@@ -403,9 +403,7 @@ impl Model {
         values: &Node,
         cell: CellReferenceIndex,
     ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
-        // A one-cell reference is read as its value here, so the node tells it from a literal.
-        let is_cell =
-            |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_cell = |node: &Node| node.is_cell_reference_at(cell.row);
         let keys = self.evaluate_node_in_context(row_fields, cell);
         if keys.is_error() && !is_cell(row_fields) {
             return Err(keys);

@@ -1088,8 +1088,9 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   `0.655352852954647+0.0000010757975078242i`; all 14 digits at exponent -6), where the
   15-digit `1.23456789012345E-06` is E notation (probes/eng-im-small-part, T-2056 above). Probed over 12-15 digits at exponents -6 to -10 (probes/eng-im-part-plain-boundary, T-3560): a part below 1 is plain
   when its text, with the leading `0.`, is at most 21 characters (12 digits to -8, 13 to -7, 14 to -6; one more
-  digit or exponent step is E notation; a 21-character part is evidenced at exponents -6 to -8 only, the rule below -8
-  is extrapolated), a character more than number-to-text coercion allows. Status: VERIFIED (excel-graph), implemented (T-3560).
+  digit or exponent step is E notation; a 21-character part is plain at every exponent -6 to -12: probes/eng-im-part-plain-boundary-2, T-3715, excel-graph
+  2026-11-03: 10, 11 and 12 digits at -9 (20, 21 and 22 characters) are plain, plain, E; 9, 10, 11 at -10; 8, 9, 10 at -11;
+  7, 8, 9 at -12, imaginary and real parts alike), a character more than number-to-text coercion allows. Status: VERIFIED (excel-graph), implemented (T-3560).
   The T-3589/T-3609 sweeps agree and pass since T-3560 (gap triage 2026-11-01, excel-graph): probes-numeric/t3589-im-hyperbolic-small-x-sweep
   S!A4 `IMSINH("6.09023237964955E-06")` is `0.0000060902323796872` (14 digits at -6) and S!C127
   `IMSECH("3.92937257901956E-06+0.107316538548074i")` is `1.00578618257237-0.0000004257623550779i` (13 at -7).

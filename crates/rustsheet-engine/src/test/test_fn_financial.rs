@@ -143,6 +143,42 @@ fn fn_rate_holds_on_a_flat_secant() {
     );
 }
 
+/// An early flat secant on two distinct iterates with |f1| < 1e-4 restarts the run once from the
+/// older iterate (financial.md "RATE restarts once on an early flat secant", T-3698).
+#[test]
+fn fn_rate_restarts_on_an_early_flat_secant() {
+    check_cells(
+        &[],
+        &[
+            // probes/t3579-rate-residual-nper1 A1: flat at step 3, |f| 1.7e-7; the restarted run is
+            // A6's, whose guess is the flat step's older iterate 0.0020941704345913
+            (
+                "A1",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0)",
+                "0.002094170434484841",
+            ),
+            (
+                "A2",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0,0.0020941704345913)",
+                "0.002094170434484841",
+            ),
+            // probes/t3698-rate-flat-restart A1: the same run at 2^10 the scale, |f| 1.7e-4, holds
+            // and fails the cap's test
+            (
+                "A3",
+                "=RATE(1,2560574.93*2^10,-2543613.41*2^10,-11634.76*2^10,0)",
+                "#NUM!",
+            ),
+            // probes/t3698-rate-flat-restart A49 (gate-a-fresh A187): flat at step 70, past the bound, holds
+            (
+                "A4",
+                "=RATE(2,4670416862.51754,-9176930088.60565,-157419359.724444,0,0.1)",
+                "0.0004737270505260268",
+            ),
+        ],
+    );
+}
+
 /// RATE's secant runs on past an iterate at or below -1 and only its result must be above -1
 /// (financial.md "RATE holds on a flat secant and runs on below -1", T-3348).
 #[test]

@@ -46,6 +46,9 @@ pub(crate) fn parse_typed_number(
         if let Some(parsed) = parse_bare_letter_clock(text) {
             return Ok(parsed);
         }
+        if let Some(parsed) = parse_bare_clock(original) {
+            return Ok(parsed);
+        }
         // A mixed fraction, signed, with `$` or `%`, is a number (probes/typed-input-sign-space-
         // mixed-fraction B6, B7, B9-B12). Its format is `# ?/?`, `# ??/??` for a denominator of 10 or more, or `0.00%` with a `%` (ENTERED
         // numberFormat, probes/typed-mixed-fraction-number-format, excel-graph 2026-10-30;
@@ -76,6 +79,43 @@ pub(crate) fn parse_typed_number(
 fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
     text.rsplit_once('/')
         .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
+}
+
+/// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
+/// `12:30`, `9:05`, `1:2` and `10:00:` are `h:mm`, `10:00:30` is `h:mm:ss`, a fractional second is
+/// `mm:ss.0`, `24:00`, `25:00` and `100:00` are `[h]:mm:ss`, and `10:60` and `10:00:60` are
+/// numbers with General; `:30` and ` 10:00` (a leading space) stay text
+/// (probes/t3894-bare-24h-clock, excel-graph 2026-11-03;
+/// docs/research/t3894-bare-24h-clock-2026-11-03.md). Shapes beyond those probed (an hour of 24
+/// or more with seconds or an out-of-range minute) stay text (T-3903).
+fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
+    let first = text.bytes().next()?;
+    if !first.is_ascii_digit()
+        || !text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b == b':' || b == b'.')
+    {
+        return None;
+    }
+    let body = text.strip_suffix(':').unwrap_or(text);
+    if !body.contains(':') {
+        return None;
+    }
+    let serial = parse_clock_text(text)?;
+    if body.contains('.') {
+        return Some((serial, Some(FRACTION_CLOCK_FORMAT.to_string())));
+    }
+    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
+    let parts: Vec<u32> = body.split(':').map(value).collect();
+    let format = match parts.as_slice() {
+        [hour, minute] if *hour >= 24 && *minute < 60 => Some("[h]:mm:ss"),
+        [hour, minute] if *hour < 24 && *minute < 60 => Some("h:mm"),
+        [hour, minute, second] if *hour < 24 && *minute < 60 && *second < 60 => Some("h:mm:ss"),
+        // An out-of-range minute or second with an hour below 24 is a number with General.
+        [hour, ..] if *hour < 24 => None,
+        _ => return None,
+    };
+    Some((serial, format.map(str::to_string)))
 }
 
 /// A bare typed clock with an `A`/`P` or `AM`/`PM` suffix as a time of day with its AM/PM clock
