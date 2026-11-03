@@ -214,3 +214,22 @@ fn array_or_range_ignore_empty_lifts_one_join_per_element() {
     assert_eq!(model._get_text("D5"), "#N/A");
     assert_eq!(model._get_text("D6"), "a,b");
 }
+
+/// A text ignore_empty is #VALUE! even over an error delimiter; other kinds keep the delimiter's
+/// error (gen-m5/d0c5e5dff134d787 A286-A334, A310-A322; T-3885).
+#[test]
+fn error_delimiter_with_text_ignore_empty() {
+    let mut model = new_empty_model();
+    model._set("A1", "=TEXTJOIN(1/0,\"x\",\"a\")");
+    model._set("A2", "=TEXTJOIN(1/0,\"\",\"a\")");
+    model._set("A3", "=TEXTJOIN(1/0,1,\"a\")");
+    model._set("A4", "=TEXTJOIN(1/0,TRUE,\"a\")");
+    model._set("A5", "=TEXTJOIN(1/0,,\"a\")");
+    model._set("A6", "=TEXTJOIN(1/0,NA(),\"a\")");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#VALUE!");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    for cell in ["A3", "A4", "A5", "A6"] {
+        assert_eq!(model._get_text(cell), *"#DIV/0!");
+    }
+}

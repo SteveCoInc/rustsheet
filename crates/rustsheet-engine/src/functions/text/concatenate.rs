@@ -320,7 +320,19 @@ impl Model {
         self.lift_call(Function::Textjoin, args, cell, &mut |model, values| {
             let delimiters = match &delimiters {
                 Ok(delimiters) => delimiters,
-                Err(error) => return error.clone(),
+                // Excel reads a text ignore_empty before the delimiter error: it is #VALUE!;
+                // a number, boolean, blank or error ignore_empty keeps the delimiter's error
+                // (docs/excel-semantics/text.md, T-3885).
+                Err(error) => {
+                    return match values.get(1) {
+                        Some(CalcResult::String(_)) => CalcResult::new_error(
+                            Error::VALUE,
+                            cell,
+                            "Expecting boolean value".to_string(),
+                        ),
+                        _ => error.clone(),
+                    };
+                }
             };
             let ignore_empty = match values.get(1).map(|value| Self::cast_bool_ref(value, cell)) {
                 Some(Ok(ignore_empty)) => ignore_empty,
