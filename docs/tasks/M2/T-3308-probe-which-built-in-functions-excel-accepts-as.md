@@ -3,7 +3,7 @@ id: T-3308
 title: "Probe which built-in functions Excel accepts as an intersection operand, to replace the engine's inferred refuse-by-default list"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
