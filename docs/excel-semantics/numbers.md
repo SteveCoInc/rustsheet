@@ -2546,7 +2546,7 @@ term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C
 Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
 `1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
 Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
-Ours: the power matches (every power cell passes); a subnormal term is kept (power-and-term A2, A9; beside another term, term-sum A1; T-3949) and `^` flushes
+Ours: the power matches (every power cell passes); a subnormal term is flushed per term since T-3949 (power-and-term A2, A9; beside another term, term-sum A1), and `^` flushes
 the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
 Status: VERIFIED (excel-graph)
 Tasks: T-3942, T-3949, T-3950
