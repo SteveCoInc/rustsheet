@@ -3,7 +3,7 @@ id: T-3557
 title: "rustsheet-eval run --fetch-missing: fetch each pinned external suite that is missing or stale before scoring, instead of skipping it"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
