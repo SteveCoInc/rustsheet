@@ -620,7 +620,7 @@ def reserve_id(pick: Callable[[set[str]], str], fetch: bool) -> tuple[str, str]:
     if here not in sys.path:
         sys.path.insert(0, here)
     try:
-        import id_registry  # here, not at the top: id_registry imports merge_lock, which imports tasks
+        import id_registry  # here, not at the top: the fallback below needs the ImportError
     except ImportError:
         print("warning: no id registry beside tasks.py; the id is not reserved", file=sys.stderr)
         return pick(set()), "NOT reserved: commit and push it now to claim it"
@@ -830,9 +830,9 @@ def arg(name: str) -> str | None:
 
 
 def set_root(root: Path) -> None:
-    """Judge the tree at `root` instead of this checkout: the merge train runs `main`'s copy of
-    this script against a train worktree, so a PR cannot change how its own tree is judged
-    (`validate --root`, SPEC-0027 section 4 step 4, decision 0066)."""
+    """Judge the tree at `root` instead of this checkout: a caller can run `main`'s copy of this
+    script against another worktree, so a PR cannot change how its own tree is judged
+    (`validate --root`, decision 0066)."""
     global ROOT, TASKS
     ROOT = root.resolve()
     TASKS = ROOT / "docs" / "tasks"
@@ -851,7 +851,7 @@ def main() -> int:
     if cmd == "validate":
         errors = check(tasks)
         new_ids = new_task_ids()
-        # Warn, never fail: merge-train id checks and their tests run validate in trees with no origin/main.
+        # Warn, never fail: some tests run validate in trees with no origin/main.
         if new_ids is None:
             print("warning: no origin/main merge base; skipped the new-task cell-overlap check", file=sys.stderr)
         else:

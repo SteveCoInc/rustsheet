@@ -132,7 +132,7 @@ Tasks: T-0227, T-0246
 ## A blank-cell or omitted criterion is the criterion 0
 Rule: a criterion that is a blank cell (`COUNTIF(r,Z1)` with Z1 empty, on this sheet, another sheet or picked by
 `INDEX`) or an omitted argument (`COUNTIF(r,)`, `IF(FALSE,1,)`) matches what the number criterion `0` does on
-every probed cell kind (padded text such as `" 0"` is not probed; the engine treats it as `0` does), in COUNTIF, SUMIF, AVERAGEIF, COUNTIFS, SUMIFS, AVERAGEIFS, MINIFS and MAXIFS: number cells equal to 0 at 15
+every probed cell kind, padded and formatted zero text included, in COUNTIF, SUMIF, AVERAGEIF, COUNTIFS, SUMIFS, AVERAGEIFS, MINIFS and MAXIFS: number cells equal to 0 at 15
 digits (0 and `=-0`; `=2^-1074` is 0 in Excel) and the text `"0"`. It never matches a blank cell, an empty-string
 cell, FALSE, `" "`, 1E-17, -1E-300 or 5E-16. So it is neither `""` (which matches blanks and empty strings) nor
 `"="` (blanks only). With no matching cell, AVERAGEIF and AVERAGEIFS are `#DIV/0!`.
@@ -145,6 +145,14 @@ Like the number criterion 0, it also matches the text cells VALUE reads as 0: ov
 "0:00", "12:00 AM", "1 1/2", "1", "0" (weights 2^0..2^9), a blank-cell and an omitted SUMIF criterion and a blank-cell
 SUMIFS criterion all give 632, the "0%", "$0", "0:00", "12:00 AM" and "0" rows (probes/t3151-number-criterion-formatted-text
 C2, C3, C8; excel-graph, 2026-10-29, T-3151; see "Criterion operands and text cells read numbers with VALUE's grammar").
+Padded zero text follows the number criterion 0 too: over A1:A12 = `" 0"`, `"0 "`, `" 0 "`, CHAR(160)&"0", "0"&CHAR(160),
+"+0", "0.0", "-0", "0E0", "00", the number 0 and the text "0" (weights 2^0..2^11), a blank-cell criterion (from this
+sheet or picked by `INDEX`), an omitted one, the number 0 and the text criterion "0" all give COUNTIF and COUNTIFS 10 and
+SUMIF and SUMIFS 4071: every cell except the two CHAR(160)-padded ones, which VALUE does not read as a number (K4, K5, L4, L5; the `#VALUE!` itself is shown for NBSP-padded text by
+probes/t3334-criteria-operand-forms H47, H51, H55, H59, T-3404) and
+which no numeric criterion matches ("Numeric criteria against text cells and non-ASCII spaces"). The 80-cell range
+A21:A100 that the *IFS cache indexes gives the same. Evidence: probes/t3807-blank-criterion-padded-zero D1:H4, D21:H24,
+K1:L12. Oracle: excel-graph, 2026-11-02 (T-3807).
 Status: VERIFIED
 Implemented in: `indexed_criterion` (`crates/rustsheet-engine/src/functions/criteria.rs`), which turns the empty
 criterion into the number criterion 0 for both the walk and the indexed *IFS path.
@@ -573,9 +581,20 @@ Verified in text.md (T-3178): `- 5`, `1-1-1` and mixed fractions in a criterion.
   (0.33333333333333359..., 0.33333333333333376...) round to 0.333333333333334, settle it: VALUE reads both as
   0.333333333333333 (H77, H81), they match the four 1/3 cells and the text cell `33.3333333333333%` under plain
   and `=` (A77 15360, B77 512), and `<` / `>` exclude those cells (A79 68, A80 955; rows 77-84). So the operand is
-  truncated to 15 significant digits, not rounded, and the cell side compares at 15 digits. Whether the cut comes
-  before or after the division by 100 is not separable with these operands (both orders give the same value for
-  every probed row); it stays open.
+  truncated to 15 significant digits, not rounded, and the cell side compares at 15 digits. The cut comes before the
+  division by 100, on the decimal text: the operand's digits are cut to 15 significant digits, shifted two places
+  and rounded to a double once. probes/t3807-percent-operand-cut-order sets six operands where the other orders give a
+  different 15-digit value (cutting the double of `x/100` computed in binary, cutting the double nearest `x/100`, or
+  cutting the double of `x` before the shift), each against the three cells one unit apart in the 15th digit:
+  `1681.2415868344901%` (cut first 16.8124158683449; the binary and once-rounded orders 16.8124158683448),
+  `9.3960306202786801%` (0.0939603062027868; the other three orders 0.0939603062027867), `5712.2807073685301%`
+  (57.1228070736853; cutting the double of `x` first 57.1228070736852), `21513.191086314701%` (215.131910863147;
+  the once-rounded order 215.131910863146), `5706.1463389694002%` (57.061463389694; binary and double-first
+  57.0614633896939) and `4.5404674510462395%` (0.0454046745104623; the binary order 0.0454046745104624). Each one
+  matches only its cut-first cell under plain and `=` in SUMIF, SUMIFS, COUNTIF and COUNTIFS, from a literal or a cell,
+  on the walk and on the 80-cell cached range (C1:D6, G1:J6, L1:L6, O1:P6); under `<` it takes the lower neighbour and
+  under `>` the upper one, never the cut-first cell (E1:F6, M1:N6); VALUE of each is the cut-first value (K1:K6).
+  Oracle: excel-graph, 2026-11-02 (T-3807).
 UNVERIFIED: non-en-US locales (out of scope).
 Ours: the operand and the text cells read with the plain parser, then VALUE's reader (`criterion_text_number` in
 functions/criteria.rs over `value_number_text` in cast.rs, which VALUE uses too), then the date parser; text padded with a

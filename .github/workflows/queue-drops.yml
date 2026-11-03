@@ -1,0 +1,54 @@
+name: Merge-queue drops
+
+# Decision 0253 (T-3831): label a PR `queue-dropped` when GitHub's merge queue removes it, so the
+# next opus worker adopts it at once instead of after the 4 h orphan wait (decision 0248). The
+# label goes again when the PR is enqueued, its branch moves (a push: someone is on it) or it
+# closes, so a labelled PR is always one the queue dropped and nobody has touched since.
+#
+# The job checks out nothing and runs no code from the PR: it only calls the labels API with the
+# job token, for PRs from this repository (a fork's token is read-only, and forks are never
+# adopted, decision 0248).
+
+on:
+  pull_request:
+    types: [enqueued, dequeued, synchronize, closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: queue-drops-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  label:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      ACTION: ${{ github.event.action }}
+      STATE: ${{ github.event.pull_request.state }}
+      LABEL: queue-dropped
+    steps:
+      - name: Add or remove the label
+        run: |
+          set -euo pipefail
+          case "$PR" in ''|*[!0-9]*) echo "not a PR number"; exit 1 ;; esac
+          if [ "$ACTION" = dequeued ] && [ "$STATE" = open ]; then
+            # Creating a label that exists fails with 422; that is fine.
+            gh api -X POST "repos/$REPO/labels" -f name="$LABEL" -f color=d93f0b \
+              -f description="The merge queue removed this PR; any opus worker adopts it (decision 0253)" \
+              > /dev/null 2>&1 || true
+            gh api -X POST "repos/$REPO/issues/$PR/labels" -f "labels[]=$LABEL" > /dev/null
+            echo "labelled #$PR $LABEL"
+          else
+            # Absent already is the common case (404).
+            gh api -X DELETE "repos/$REPO/issues/$PR/labels/$LABEL" > /dev/null 2>&1 || true
+            echo "#$PR: $ACTION, $LABEL cleared"
+          fi

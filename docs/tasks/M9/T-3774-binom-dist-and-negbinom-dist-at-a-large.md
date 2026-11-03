@@ -3,7 +3,7 @@ id: T-3774
 title: "BINOM.DIST and NEGBINOM.DIST at a large n: Excel's unidentified |d| 2^-53 bd0 term and the basym last digits (T-3447 fit attempt 2)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: blocked
 priority: P1
 size: M
 tier: opus
@@ -50,6 +50,30 @@ attempt, which owns its cells after attempt 1 (decision 0056).
   - no keep-matched branch.
 - [ ] What was found is in docs/excel-semantics/statistics.md, and the attempt (candidates and counts) is in this file.
 - [ ] `make check` green; reviewers approve.
+
+## Fit attempts (decision 0056)
+### Attempt 2 (2026-11-03): no form; the engine's model stays
+Regressors were added to attempt 1's fit (`docs/research/t3447/pmf_regress.py`) on the same 704 large-n pmf cells of
+probes-numeric/t2513-r3-binom-pmf-n, with Excel's relative error in units of |d| 2^-53:
+
+| candidate (docs/research/t3774) | rest after the fit |
+|---|---|
+| attempt 1's four terms (fl(n p), fl(n q), -r(fl(2kv)) per side) | rms 0.77 (reproduced) |
+| + every series partial sum stored (`psum`) | 0.77 (coefficients +2.09 and +0.62) |
+| + every ej = ej v^2 stored (`ejs`) | 0.77 (+56 and +604: unstable) |
+| + v^2 stored once (`v2`) | 0.77 (-43 and +248: unstable) |
+| all three together | 0.77 |
+| a constant per (k, n) run (lf as R's log1p(-k/n), stirlerr) | 2,003 → 1,993 units of 2^-53 (`runconst.out`) |
+
+On the engine's own values each new regressor has a coefficient near 0 or noise, and the rest stays 0.04, so the
+method still holds. No candidate raises the bit-exact count, so no code changes.
+
+## Blocked because: time-boxed (decision 0056)
+Two fit attempts found no term for the rest of rms 0.77 |d| 2^-53 in Excel's pmf error. Reopen only on a new
+hypothesis recorded here, one that is neither a rounding inside bd0's series loop nor a per-run constant. Untried:
+- the stirlerr terms at a large n held at another precision (smooth along p only through k and n: not per run, so
+  not ruled out by `runconst.out`);
+- the cdf cells' basym arithmetic.
 
 ## Out of scope
 - Bit parity on cells already within 15 digits (Phase 1b, decision 0188 R5).

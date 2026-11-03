@@ -19,6 +19,7 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.model import (
+    LOG_SMALLEST_DOUBLE,
     Definition,
     Interval,
     MathArg,
@@ -67,7 +68,9 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
     inside (0, 1) to record)."""
     if p <= mpmath.mpf(1) / 2:
         target = mpmath.log(p)
-        s = solve_log_bracket(lambda s: mpmath.log(lower_tail(mpmath.exp(s), a, b)) - target, -1500, 0)
+        s = solve_log_bracket(
+            lambda s: mpmath.log(lower_tail(mpmath.exp(s), a, b)) - target, LOG_SMALLEST_DOUBLE, 0
+        )
         return mpmath.exp(s)
     target = mpmath.log(1 - p)
     # 1 - x = e^s: the upper tail I_{e^s}(b, a) grows with s

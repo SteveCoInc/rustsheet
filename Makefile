@@ -164,70 +164,17 @@ phase1-exit: ## One verdict per Phase 1 exit criterion after a full make eval; e
 board: ## Write docs/tasks/BOARD.md locally (git-ignored; decision 0017)
 	$(PY) scripts/tasks.py board
 
-# ---------------------------------------------------------------- Merge lock (decisions 0075, 0145)
-.PHONY: merge-lock-acquire merge-lock-wait merge-lock-release merge-lock-status
-merge-lock-acquire: ## Take (or renew) the merge lock before merging a PR: make merge-lock-acquire PR=123 [RENEW=1] (exit 1: busy, you are queued; 3: PR already done; 4: lost; 5: refused, train mode)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_lock.py acquire --pr '$(PR)' $(if $(RENEW),--renew)
+# ---------------------------------------------------------------- Merge queue (decisions 0053, 0247)
+.PHONY: merge-mode catch-up renumber
+# Kept for the routines' stored prompts, which ask for `lock` before enqueueing (decision 0247):
+# merges always go through GitHub's merge queue now, so it always prints `lock`.
+merge-mode: ## Always `lock`, meaning "enqueue with enable_pr_auto_merge" (decision 0247; the merge train and its switch were deleted, T-3827)
+	@echo lock
 
-merge-lock-wait: ## Wait in the queue until the merge lock is yours (run it in the background): make merge-lock-wait PR=123 [TIMEOUT=45] (exit 0: held; 1: timed out; 2: error; 3: PR already done; 5: refused, train mode)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_lock.py wait --pr '$(PR)' --timeout '$(or $(TIMEOUT),45)'
-
-merge-lock-release: ## Free your merge lock (after the merge, a red CI, or any stop)
-	$(PY) scripts/merge_lock.py release
-
-merge-lock-status: ## Who holds the merge lock, since when, and the queue of waiters
-	$(PY) scripts/merge_lock.py status
-
-.PHONY: merge-ready-verify
-merge-ready-verify: ## Check a PR's readiness marker, V1-V6 of SPEC-0027 (reads only): make merge-ready-verify PR=123 (exit 0: ready; 1: not ready; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_ready.py verify --pr '$(PR)'
-
-.PHONY: mark-ready merge-labels verdict-record
-catch-up: ## Clear a merge-train ejection for a conflict with main that lies only in eval/baseline/ (decision 0207): make catch-up PR=123 merges main into the PR, re-records the lists and pushes; then make mark-ready PR=123 CARRY=1 once CI is green (exit 0: pushed; 1: refused; 2: error)
+catch-up: ## Clear a merge-queue removal or a conflict with main that lies only in eval/baseline/ (decision 0207): make catch-up PR=123 merges main into the PR, re-records the lists and pushes; enqueue it again once CI is green (exit 0: pushed; 1: refused; 2: error)
 	$(if $(PR),,$(error PR=<number> is required))
 	$(PY) scripts/merge_catchup.py --pr '$(PR)'
 
-renumber: ## Clear a merge-train ejection for an id collision (decision 0224): make renumber PR=123 gives the PR's colliding task and decision files fresh ids from the id registry, rewrites the old id only under docs/ in what the PR added (refusing when a line it added elsewhere names it), merges main in and pushes; then make mark-ready PR=123 CARRY=1 once CI is green (exit 0: pushed; 1: refused; 2: error)
+renumber: ## Clear an id collision with main (decision 0224): make renumber PR=123 gives the PR's colliding task and decision files fresh ids from the id registry, rewrites the old id only under docs/ in what the PR added (refusing when a line it added elsewhere names it), merges main in and pushes; enqueue it again once CI is green (exit 0: pushed; 1: refused; 2: error)
 	$(if $(PR),,$(error PR=<number> is required))
 	$(PY) scripts/merge_renumber.py --pr '$(PR)'
-
-janitor: ## After a merger pass, in train mode (decision 0224): catch up or renumber idle ejected PRs, re-mark them with CARRY once CI is green, re-mark or unlabel stale markers, and comment orphans once; DRY_RUN=1 lists the actions only; STEP=1 prints each GitHub write as a step-mode action to perform and ack with make merge-train-ack (exit 0: done; 2: an error)
-	$(PY) scripts/merge_janitor.py $(if $(DRY_RUN),--dry-run) $(if $(STEP),--step)
-
-mark-ready: ## Mark a green, approved PR ready for the merge train (SPEC-0027 section 2): make mark-ready PR=123, its verdicts from the verdict records on the head [REVIEW="[security=APPROVE] design=APPROVE [excel-fidelity=APPROVE]" for a reviewer with no record, while verdict_records = warn] (or CARRY=1 after a merge of main that is clean, only re-records eval-gated baseline lists (decision 0207) or comes from make renumber (decision 0224)) [STEP=1: print the writes as step-mode actions] (exit 0: marked; 1: refused; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_ready.py mark --pr '$(PR)' $(if $(CARRY),--carry) $(if $(REVIEW),--review '$(REVIEW)') $(if $(STEP),--step)
-
-verdict-record: ## Post one reviewer's verdict record for the local HEAD, which must be the PR head (decision 0178): make verdict-record PR=123 REVIEWER=security VERDICT=APPROVE REPORT=<file with the reviewer's report> [STEP=1: print the comment as a step-mode action] (exit 0: posted; 1: refused; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(if $(REVIEWER),,$(error REVIEWER=<security|design|excel-fidelity> is required))
-	$(if $(VERDICT),,$(error VERDICT=<APPROVE|REQUEST_CHANGES> is required))
-	$(if $(REPORT),,$(error REPORT=<file> is required))
-	$(PY) scripts/merge_ready.py record --pr '$(PR)' --reviewer '$(REVIEWER)' --verdict '$(VERDICT)' --report '$(REPORT)' $(if $(STEP),--step)
-
-merge-labels: ## Create the merge-train labels that are missing (ready-to-merge, merge-train-ejected, merge-train-stop, merge-hold)
-	$(PY) scripts/merge_ready.py labels --create
-
-.PHONY: merge-mode merge-train merge-train-ack merge-train-next merge-flip-check merge-train-stats catch-up renumber janitor
-merge-train: ## The merge train (SPEC-0027): DRY_RUN=1 prints the batch and writes nothing; SHADOW=1 tests and predicts on merge-train/shadow, in shadow mode only; TRAIN=1 merges a green train, in train mode only; STEP=1 (with SHADOW or TRAIN) prints each write as a JSON action for the session to perform and ack
-	$(if $(DRY_RUN)$(TRAIN)$(SHADOW),,$(error DRY_RUN=1 or SHADOW=1 or TRAIN=1 is required))
-	$(PY) scripts/merge_train.py $(if $(DRY_RUN),--dry-run,$(if $(SHADOW),--shadow,--train) $(if $(STEP),--step))
-
-merge-train-ack: ## Step mode (decision 0169): the session performed the pending action: make merge-train-ack SEQ=3 [REFUSED=1: GitHub refused the write]; then waits up to NEXT=90 s for the next action and prints it (decision 0238) (exit 1: not the pending action)
-	$(PY) scripts/merge_step.py ack --seq '$(SEQ)' $(if $(REFUSED),--refused) --next '$(or $(NEXT),90)'
-
-merge-train-next: ## Step mode: wait up to WAIT=300 s for the run's next action and print it (decision 0238) (exit 3: none pending in that time)
-	$(PY) scripts/merge_step.py next --wait '$(or $(WAIT),300)'
-
-merge-flip-check: ## Whether a PR only sets the merge-train switch to lock (SPEC-0027 "The switch", decision 0157); prints the head sha to merge with expectedHeadSha: make merge-flip-check PR=123 (exit 0: a flip PR; 1: not one; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_flip.py check '$(PR)'
-
-merge-train-stats: ## The merge train's metrics, the shadow agreement score and T-2991's evidence and load bar, from the GitHub API (SPEC-0027 "Metrics"): make merge-train-stats [SINCE=2026-10-29] [STRANDED=1: only the stranded-PR line, fast]
-	$(PY) scripts/merge_train_stats.py $(if $(SINCE),--since '$(SINCE)') $(if $(STRANDED),--stranded)
-
-merge-mode: ## The merge-train mode on a freshly fetched origin/main: lock, shadow or train (anything else reads as lock; SPEC-0027); `train (stop pending: #n)` while a valid merge-train-stop label is on PR n
-	$(PY) scripts/merge_train.py mode

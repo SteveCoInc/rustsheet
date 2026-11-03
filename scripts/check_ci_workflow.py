@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Fails when `.github/workflows/ci.yml` holds more rights than PR CI needs (decision 0147).
 
-CI runs untrusted code: every PR's, and since SPEC-0027 section 9 every merge train's pushed to
-`merge-train/current` or `merge-train/shadow`. So `ci.yml` must not read a secret or the job
-token (`secrets.`, `secrets[...]`, `secrets:`, `github.token`), and every `permissions` block,
-including the required workflow-level one, must be exactly `contents: read`.
+CI runs untrusted code: every PR's, and every merge-queue group's. So `ci.yml` must not read a
+secret or the job token (`secrets.`, `secrets[...]`, `secrets:`, `github.token`), and every
+`permissions` block, including the required workflow-level one, must be exactly `contents: read`.
 
 `push_branches` also reads the workflow's `on.push.branches`, which `test_check_ci_workflow.py`
 pins. Standard library only (the hygiene job has no PyYAML), so it parses only the block-style

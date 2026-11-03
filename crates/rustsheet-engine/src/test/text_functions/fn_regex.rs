@@ -428,3 +428,23 @@ fn empty_match_iteration_over_long_text_stays_within_budget() {
     assert_eq!(model._get_text("A4"), "8001");
     assert_eq!(model._get_text("A5"), "40001");
 }
+
+#[test]
+fn test_regexextract_case_error_beats_out_of_range_return_mode() {
+    // Excel (gen-m7/3d156a08a7bacf35 A9273, A9334; 781b74b7c112265f A6833:B6834, T-3810):
+    // return_mode is coerced first, but range-checked after case_sensitivity.
+    let mut model = new_empty_model();
+    model._set("A1", "=REGEXEXTRACT(\"abc\",\"[0-9]\",-1,#DIV/0!)");
+    model._set("A2", "=REGEXEXTRACT(\"abc\",\"^.\",-2.5,#DIV/0!)");
+    model._set("A3", "=REGEXEXTRACT(\"Hello\",\"x*\",\"12\",#DIV/0!)");
+    model._set("A4", "=REGEXEXTRACT(\"abc\",\"[a-z]+\",\"x\",#NUM!)");
+    model._set("A5", "=REGEXEXTRACT(\"abc\",\"[a-z]+\",7,1)");
+    model._set("A6", "=REGEXEXTRACT(\"abc\",\"[a-z]+\",TRUE,#NUM!)");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#DIV/0!");
+    assert_eq!(model._get_text("A2"), "#DIV/0!");
+    assert_eq!(model._get_text("A3"), "#DIV/0!");
+    assert_eq!(model._get_text("A4"), "#VALUE!");
+    assert_eq!(model._get_text("A5"), "#VALUE!");
+    assert_eq!(model._get_text("A6"), "#NUM!");
+}

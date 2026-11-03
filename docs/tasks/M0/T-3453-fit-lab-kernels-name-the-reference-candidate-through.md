@@ -3,7 +3,7 @@ id: T-3453
 title: "Fit lab: kernels name the reference candidate through holdout.REFERENCE; pin within_fifteen_digits against closeness.rs vectors"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,11 @@ Python 15-digit count cannot drift from the harness's.
 
 ## Out of scope
 - Changing the split, the margin or the accept rule.
+
+## Outcome
+- All kernels name the correctly rounded candidate through `holdout.REFERENCE` (the remaining `"correctly rounded"`
+  strings in annuity.py are candidate descriptions, not names).
+- `crates/rustsheet-eval/tests/fixtures/within_fifteen_digits.tsv` is read by a Rust test in `closeness.rs` and by
+  `tools/tests/test_fitlab_holdout.py`, so the two implementations cannot drift.
+- `Fit.__post_init__` refuses a margin that is non-finite or outside [0, 1].
+- Eval delta: none (tools and tests only).

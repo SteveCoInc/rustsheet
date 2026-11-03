@@ -580,6 +580,26 @@ Status: VERIFIED (excel-graph, probes/text-format-array, T-1458)
 Implemented in: `fn_text` (functions/text/common.rs); the format argument is evaluated once (TEXT nested in a format must not be exponential).
 Tasks: T-1451
 
+## TEXT's format_text of every argument class (T-3809)
+Rule: a format_text that is not text is read as the text it would display, then used as a code. A number
+is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-1,-1)` is "--1": the code `-1` is a literal `-`
+before a digit, and the value's sign is added), a blank cell or blank range element is empty text (an empty code shows nothing
+but a negative's minus: number-formats.md "An empty format string returns empty text"), and a boolean is the code `TRUE`/`FALSE`, which the code check rejects, so `TEXT("",TRUE)`,
+`TEXT(TRUE,TRUE)` and `TEXT(A1:B2,TRUE)` are `#VALUE!` (see number-formats.md "TEXT checks the code before it looks at a
+text or boolean value"). A boolean value prints as its text under a numeric code (`TEXT(TRUE,0)` is "TRUE"). Errors:
+an error value wins over an error format (`TEXT(#NAME?,#NUM!)` is `#NAME?`), over a boolean format (`TEXT(#NAME?,TRUE)`
+is `#NAME?`) and over a range format; an error format wins over any other value, text, empty text and blank included
+(`TEXT("abc",#VALUE!)`, `TEXT("",#NAME?)` and `TEXT(blank,#DIV/0!)` are that error). Ranges in either argument lift
+(text.md "Text function argument modes").
+Evidence: gen-m5/0428ca72d3724bea (excel-graph, 2026-11-02; `--policy arg-pairs --functions TEXT`, 102 cells over the 51
+unseen (value, format_text) class pairs, Calc!A1:A304 every third row): `TEXT(2,0)` A1, `TEXT(-1,Data!A1:B2)` A31
+("--1.5", the top-left code -0.5), `TEXT("2.5",0)` A55, `TEXT("",TRUE)` A109, `TEXT(TRUE,0)` A139, `TEXT(#NAME?,#NUM!)`
+A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-").
+Status: VERIFIED (excel-graph)
+Ours: matches (102/102 cells).
+Implemented in: `fn_text` (functions/text/common.rs).
+Tasks: T-3809
+
 ## CLEAN and CODE scalar edges
 Rule: CLEAN removes code points 0-31 and the C1 controls U+0080-U+009F (128-159; including the Windows-1252
 holes 129, 141, 143, 144, 157; CHAR(128..159) strings were not probed by that case; CODE of them is in the next entry), and no other probed code point: DEL (127), NBSP (160) and U+200B stay. CODE of a character
@@ -808,7 +828,14 @@ Tasks: T-1360, T-1688, T-1272 (range lift)
 Rule (coercion, all three): an omitted, empty (`REGEXTEST("ABC","abc",)`) or blank-cell argument is 0; a number is
 truncated toward zero (0.5 and 0.9 are 0, 1.5 is 1; as occurrence -0.5 is 0, -1.5 is -1); TRUE is 1, FALSE 0; number
 text is its number ("1" probed for case_sensitivity and return_mode, "2" and "-1" for occurrence); other text, "" included, is `#VALUE!`; an error argument is returned. Arguments are read left to
-right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`).
+right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`). The range check of an option comes after the later arguments are read, though: REGEXEXTRACT's return_mode is coerced in
+its turn, but an out-of-range return_mode loses to an error case_sensitivity (`REGEXEXTRACT("abc","[0-9]",-1,#DIV/0!)`,
+`REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)`, return_mode 7 or "12" with case_sensitivity `#DIV/0!`, and a lifted return_mode of
+-2.5 or 42 with `#NUM!`, are that error), while a non-number text return_mode is still `#VALUE!` first (`"x~*"` with `#NUM!`
+is `#VALUE!`); a valid return_mode (TRUE) gives the error. Evidence: gen-m7/3d156a08a7bacf35 Calc!A8236, A9273, A9334,
+A11408 and gen-m7/781b74b7c112265f Calc!A6833:B6834 (excel-graph, 2026-11-02, T-3810). Ours since T-3810
+(`regex_option_in_range` after both coercions in `fn_regexextract`). REGEXREPLACE's occurrence and the other functions'
+order are unprobed.
 Rule (case_sensitivity, REGEXTEST's third, REGEXEXTRACT's fourth, REGEXREPLACE's fifth): after truncation 0 is
 case-sensitive and 1 case-insensitive; anything else (2, -1, 2^53) is `#VALUE!`, also for an array element (`{0;1;2}`
 gives FALSE, TRUE, `#VALUE!`). Case-insensitive matching uses Unicode case folding (`ſ` matches `s`, the Kelvin sign
@@ -848,9 +875,13 @@ the digits are a decimal number, a group if it is below 10 or no more than the p
 error), else, if it starts with three octal digits, those as a character up to `\377` (one or two such digits are an error) (`\101` is `A`, `\1010` is `A0`; with 12
 groups `\10` is group 10 but `\20` and `\77` are errors; `\400` an error; `\18`, `\181` errors).
 Case forcing: `\U` and `\L` set a mode for the rest of this match's replacement (literals, groups and the characters
-the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` upper-cases the next character only and keeps the mode
-(`\L\uxyz` is `Xyz`, `\u\L$1` too); `\l` is unlike PCRE2's: it lower-cases the next character and sets the `\L` mode, so
-`\Uab\lcd` is `ABcd` and `\U\lxyz` is `xyz` (and `\u\lxyz` is `xyz`, `\l\uxyz` is `Xyz`, `\l\Uabc` is `aBC`); `\E`
+the escapes above make alike: `\L\x41\U\x61` is `aA`); `\u` and `\l` change the case of the next character only and,
+unlike PCRE2's, end a `\U` or `\L` mode: `\L$0\uCD` with `$0` = AB is `abCD`, `\L$0\lCD` is `abcD`, `\U$0\lCD` with
+`$0` = ab is `ABcD`, `\l$0` with `$0` = ΩA is `ωA` and `\L\l$0CD` with `$0` = AB is `aBCD` (T-3777, VERIFIED,
+probes/t3777-regexreplace-case-table C7:C10, C17:C24, excel-graph 2026-11-02; T-1897's earlier reading, that `\l` sets
+the `\L` mode, came from lower-case literals that cannot tell the two apart). A `\U` or `\L` after a pending `\u` or `\l`
+keeps it (`\u\L$1` is `Xyz` for xyz, `\l\Uabc` is `aBC`), and the later of two pending escapes wins (`\u\lxyz` is `xyz`,
+`\l\uxyz` is `Xyz`); `\E`
 ends the mode and a pending `\u`; an empty group or text keeps a pending `\u` for the text after it (`\u$2b` with
 `$2` empty is `B`); the state starts afresh with each match (`REGEXREPLACE("abab","(a)(b)","$2\U$1")` is `bAbA`); only
 the replacement is case-forced, never the subject text around the match. Case mapping is the one-to-one mapping of UPPER and
@@ -1071,7 +1102,21 @@ unchanged, as T-1747 found.
 Evidence: probes/t3298-case-mapping-sweep Calc!A1:A50 (UPPER of 1580 characters, 32 per cell, Data!A) and
 Calc!B1:B47 (LOWER of 1488, Data!B) (excel-graph, 2026-10-31).
 Status: VERIFIED (excel-graph). Implemented in: `simple_case` with the `UPPER_UNMAPPED` and `LOWER_UNMAPPED` range tables
-(functions/text/string_format.rs). PROPER's word-start/other letters (`simple_case`) and REGEXREPLACE's `\U \L \u \l` (`upper_case`/`lower_case`) go through the same table in the engine, but that is UNVERIFIED: the sweep covered UPPER and LOWER only (`PROPER("άλφα")` is Αλφα in the engine, probe pending, T-3777). Tasks: T-3298 (probe), T-3583 (engine), T-3777 (PROPER/REGEXREPLACE probe).
+(functions/text/string_format.rs). Tasks: T-3298 (probe), T-3583 (engine), T-3777 (PROPER/REGEXREPLACE probe).
+
+### PROPER and REGEXREPLACE case forcing use the same table, except PROPER's word starts (T-3777)
+Rule: REGEXREPLACE's `\U \L \u \l` map every swept character exactly as UPPER and LOWER do. PROPER lowers a letter
+inside a word exactly as LOWER does, and upper-cases a word-initial letter as UPPER does with two exceptions: the
+Greek tonos vowels ά έ ή ί ό ύ ώ keep their tonos (Ά Έ Ή Ί Ό Ύ Ώ; UPPER gives Α Ε Η Ι Ο Υ Ω), and a word-initial Georgian
+Asomtavruli capital U+10A0-U+10C5 is lowered to Mkhedruli U+10D0-U+10F5, as LOWER does (`PROPER("Ⴀბ")` is აბ;
+U+10C7 and U+10CD stay, as in LOWER). ΐ ΰ still give Ϊ Ϋ at a word start, and every other capital stays a capital.
+Evidence: probes/t3777-proper-case-table (excel-graph, 2026-11-02): Calc!A1:A50 (every UPPER-swept character
+word-initial), B1:B47 (every LOWER-swept character after "a"), D1:D47 (every LOWER-swept character word-initial),
+E1 (Asomtavruli word-initial), C1:C16 (spot checks: `PROPER("άλφα")` is Άλφα, A9:A10 and C1:C7 the tonos,
+C12, D15:D16 and E1 the Asomtavruli); probes/t3777-regexreplace-case-table Calc!A1:A50 (`\U$0` over the UPPER-swept
+strings), B1:B47 (`\L$0` over the LOWER-swept strings), C1:C16 spot checks (`\u`, `\l`, İ, final sigma, ß, ﬁ).
+Status: VERIFIED (excel-graph). Implemented in: `proper_initial` (functions/text/string_format.rs) for PROPER's word
+starts; REGEXREPLACE goes through `upper_case`/`lower_case`.
 
 ## ARRAYTOTEXT: a single empty cell is #VALUE!, an empty cell in a larger range is empty text
 Rule: `ARRAYTOTEXT` of a reference to one empty cell is `#VALUE!` in both formats, and so are a 1x1 range of an empty

@@ -1,0 +1,8 @@
+excel: 3 runs, 704 cells; rest in 2^-53 units: rms 2003.1, after each run's mean 1992.8
+    k=3000 n=10000 cells=256 mean -6.7 rms within 237.6
+    k=30000 n=100000 cells=192 mean -86.7 rms within 714.0
+    k=300000 n=1000000 cells=256 mean -326.4 rms within 3237.7
+engine: 3 runs, 704 cells; rest in 2^-53 units: rms 34.7, after each run's mean 34.4
+    k=3000 n=10000 cells=256 mean +7.3 rms within 13.2
+    k=30000 n=100000 cells=192 mean +2.1 rms within 19.6
+    k=300000 n=1000000 cells=256 mean -1.6 rms within 52.9

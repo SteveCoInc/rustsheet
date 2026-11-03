@@ -1,0 +1,96 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Typed cell input of group-comma and leading-percent texts: value (B) and ISNUMBER (C); the number format Excel picks is in the oracle's ENTERED log (T-3835).",
+ "tags": [
+  "M2",
+  "coercion",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": {
+     "entered": "1,0000"
+    },
+    "B1": "=A1",
+    "C1": "=ISNUMBER(A1)",
+    "A2": {
+     "entered": "%1"
+    },
+    "B2": "=A2",
+    "C2": "=ISNUMBER(A2)",
+    "A3": {
+     "entered": "%-1"
+    },
+    "B3": "=A3",
+    "C3": "=ISNUMBER(A3)",
+    "A4": {
+     "entered": "1,"
+    },
+    "B4": "=A4",
+    "C4": "=ISNUMBER(A4)",
+    "A5": {
+     "entered": "0,000"
+    },
+    "B5": "=A5",
+    "C5": "=ISNUMBER(A5)",
+    "A6": {
+     "entered": "% 1"
+    },
+    "B6": "=A6",
+    "C6": "=ISNUMBER(A6)",
+    "A7": {
+     "entered": "%1.5"
+    },
+    "B7": "=A7",
+    "C7": "=ISNUMBER(A7)",
+    "A8": {
+     "entered": "%1,0000"
+    },
+    "B8": "=A8",
+    "C8": "=ISNUMBER(A8)",
+    "A9": {
+     "entered": "1,0000%"
+    },
+    "B9": "=A9",
+    "C9": "=ISNUMBER(A9)",
+    "A10": {
+     "entered": "%1%"
+    },
+    "B10": "=A10",
+    "C10": "=ISNUMBER(A10)",
+    "A11": {
+     "entered": "1,000,0000"
+    },
+    "B11": "=A11",
+    "C11": "=ISNUMBER(A11)",
+    "A12": {
+     "entered": "0,0000"
+    },
+    "B12": "=A12",
+    "C12": "=ISNUMBER(A12)",
+    "A13": {
+     "entered": "01,0000"
+    },
+    "B13": "=A13",
+    "C13": "=ISNUMBER(A13)",
+    "A14": {
+     "entered": "1,00"
+    },
+    "B14": "=A14",
+    "C14": "=ISNUMBER(A14)",
+    "A15": {
+     "entered": "-1,0000"
+    },
+    "B15": "=A15",
+    "C15": "=ISNUMBER(A15)",
+    "A16": {
+     "entered": "1,0000.5"
+    },
+    "B16": "=A16",
+    "C16": "=ISNUMBER(A16)"
+   }
+  }
+ ]
+}

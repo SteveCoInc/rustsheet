@@ -94,9 +94,10 @@ hyphen. `þ`, `ð`, `œ` and the Latin-1 symbols were placed later (T-1590, T-15
 below), and the Latin Extended-A, Greek and Cyrillic letters by T-3114 (next section); full-width and
 half-width forms and kana are probed by T-3275 (below; implemented by T-3321). Hebrew, Arabic,
 Devanagari, Thai, Lao, Hangul, CJK ideographs, symbols above `€` and astral characters are probed by
-T-3276 (below; not yet implemented, T-3324). Every other character (other scripts, such as Bengali,
+T-3276 (below; implemented by T-3324). Every other character (other scripts, such as Bengali,
 Tamil, Georgian, Armenian and Ethiopic, and other symbol blocks) keeps code-point order after the
-letters, UNVERIFIED.
+letters, UNVERIFIED; `script_order` in crates/rustsheet-engine/src/functions/util/collation.rs lists
+the groups the unprobed blocks fall in.
 
 ### Letters beyond Latin-1 and combining marks (T-3114)
 Evidence: probes/t3114-collation-beyond-latin1 (excel-graph, 2026-10-29), 282 strings ranked against
@@ -404,7 +405,7 @@ letters (it sorts above `"ab"`, below the kana: U8).
 Evidence: probes/t3276-collation-other-scripts (excel-graph, 2026-10-31): 99 strings in Data!A; Calc!A =
 count less, B = count equal, C = exact MATCH position, D = XMATCH position, E = COUNTIF `"="&x`,
 G1:G36 = `(x<y)+2*(x=y)+4*(x>y)` for chosen pairs, H1:H13 single cells. "Rank" cites Calc!A by Data row.
-The engine fails the collation cells (T-3324); the digit cells pass (T-3325): `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
+The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
 date text is mapped by inference (`"٢٠٢٠-١-١"+0` reads as a date) while clock text is not (`"١٢:٣٠"+0` is
 `#VALUE!`); percent, currency, parenthesis, group-separator and exponent forms, NUMBERVALUE and TEXT's
 reading of number text follow the mapping through `number_text_in` without evidence. VERIFIED (cells cited):
@@ -448,7 +449,14 @@ reading of number text follow the mapping through `number_text_in` without evide
 UNVERIFIED: whether `™` is an expansion (`"tm"`) or a symbol placed between `a` and `y` (only `"Ab"` and
 `"ÿ"` bracket it); where `∞` sits against the punctuation other than digits; where other astral
 characters (other planes, emoji with modifiers) sit; whether Thai vowels other than `เ แ า` and other
-Lao vowels follow the same split; Hebrew and Arabic letters other than those probed.
+Lao vowels follow the same split; Hebrew and Arabic letters other than those probed. T-3324's
+choices where the probe is silent (each UNVERIFIED): the Thai prevowels `โ ใ ไ` go with `เ แ`; all
+Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670)
+and Thai tone marks U+0E48 to U+0E4B are accents weighing their code point; Thai and other digit
+blocks keep code-point order; every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
+(U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
+(so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
+between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by
@@ -733,12 +741,17 @@ Status: VERIFIED
 Tasks: T-0283, T-1335
 
 ## Group commas and a leading percent sign
-Rule (en-US): number text reads a group comma followed by four or more digits, and a leading percent sign: VALUE,
-`A1+0` and IMREAL of "1,0000" are 10000, of "1,000,0000" 10000000, of "1,0000.5" 10000.5 and of "%1" 0.01. A comma
-followed by fewer than three digits or by nothing, a leading comma and a doubled percent sign are refused: "1,",
-"1,00", ",1", "2,0" and "2%%" are #VALUE! (IMREAL #NUM!). Ours refuses "1,0000", "1,000,0000", "1,0000.5" and "%1",
-and reads "1," as 1.
-Evidence: probes/eng-inumber-grammar-value (excel-graph, 2026-11-02).
+Rule (en-US): number text reads a comma-separated integer part in which every group after a comma has three or more
+digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "1,000,0000" 10000000, of "1,00000",
+"1,000000" and "12,0000" 100000, 1000000 and 120000, of "1,0000.5" 10000.5, of "-1,0000" -10000 and of "1,0000e2"
+1000000. A group of fewer than three digits or none is refused: "1,", "1,00", ",1", "2,0", "1,000,00", "1,000,0",
+"1,000,", "1,,000" and "1,000.5,000" are #VALUE! (IMREAL #NUM!). An integer part of only zeros before the first comma is refused whatever the group: "0,0000", "0,000", "00,0000" and "00,000" are #VALUE!, while "01,0000" is 10000. One leading percent sign divides by
+100 and may be followed by spaces, a sign, a group or a decimal: "%1", "% 1", "%-1", "%1.5" and "%1,0000" are 0.01,
+0.01, -0.01, 0.015 and 100; "1,0000%" is 100. A percent sign on both ends ("%1%") and a doubled one ("2%%") are
+#VALUE!. NUMBERVALUE strips its own percent signs first, so its "%%1.5" stays #VALUE! (the reader now reads the
+leading one, NUMBERVALUE refuses a second).
+Typed into a cell (probes/typed-group-comma-leading-percent, excel-graph 2026-11-02, T-3835, formats in docs/research/typed-group-comma-leading-percent-2026-11-02.md): the same texts give the same numbers and the refused ones stay text (General). Formats: grouped integers `#,##0` (`1,0000`, `01,0000`, `-1,0000`, `1,000,0000`), `#,##0.00` with a decimal (`1,0000.5`); a leading percent `0%` (`%1`, `%-1`, `% 1`, `%1,0000`), `0.00%` with decimals (`%1.5`); `1,0000%` `0%`. The engine matches (the reader is shared with VALUE; test `typed_group_comma_and_leading_percent_formats`).
+Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED
 Tasks: T-3811 (implements), T-3644 (found)

@@ -63,6 +63,7 @@ mod sheet_span;
 mod spacing;
 pub mod static_analysis;
 pub mod stringify;
+mod structured_lowering;
 mod structured_reference;
 mod unparsed;
 
@@ -73,7 +74,7 @@ pub(crate) use depth::is_limit_error;
 pub use depth::{
     MAX_FORMULA_DEPTH, MAX_NESTED_CALLS, MAX_PARENTHESES, MAX_SIGNS, MAX_VALUE_OPERATORS,
     TOO_DEEP_MESSAGE, TOO_MANY_NESTED_CALLS_MESSAGE, TOO_MANY_OPERATORS_MESSAGE,
-    TOO_MANY_SIGNS_MESSAGE,
+    TOO_MANY_PARENTHESES_MESSAGE, TOO_MANY_SIGNS_MESSAGE,
 };
 pub use node::{ArrayNode, CompletionContext, ExpectedTokens, NamedVariable, Node};
 pub(crate) use spacing::Run;

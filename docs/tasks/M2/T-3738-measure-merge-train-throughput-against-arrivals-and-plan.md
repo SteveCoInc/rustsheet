@@ -3,7 +3,7 @@ id: T-3738
 title: "Measure merge-train throughput against arrivals and plan SPEC-0027's revisit (pipelined trains or a larger batch)"
 milestone: M2
 lane: harness
-status: todo
+status: done
 priority: P0
 size: S
 tier: opus
@@ -38,3 +38,13 @@ arrivals exceed what one 5-PR batch per merger run can carry (SPEC-0027 section 
 ## Out of scope
 - Changing CI wall time (T-3699 to T-3705).
 - Changing the stranded threshold (needs a decision record).
+
+## Outcome
+Superseded: no code or spec change. Decision 0247 (T-3826, 2026-11-02) made the measurement this task asked for and
+chose its remedy: on 2026-11-01/02 the train merged about 4.1-4.25 PRs an hour against about 5.5 arrivals an hour
+(ready queue about 45 to 54, ready-to-merged 16-19 h), with an hourly merger run, `BATCH_MAX` 5 and a serial
+`collect()` taking about 19 min of the 40-min hold. Throughput was below arrivals, and instead of a SPEC-0027
+amendment (larger `BATCH_MAX`, pipelined trains or more frequent merger runs), 0247 retired the train for merges and
+moved them to GitHub's merge queue (groups of 1-5, no lock, no merger routine). A SPEC-0027 revisit no longer has a
+subject; SPEC-0027 itself is deleted with the train code under T-3827. The per-hour arithmetic for 2026-11-01 is in
+0247's Context, and T-3488's Outcome holds the batch times this task's Context cites.

@@ -376,7 +376,17 @@ Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet/src/edit.rs (`MAX_FOOTPRINT_CELLS`)
 
 ## MMULT: a blank first argument is #VALUE! even when the second is an error
-Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine propagates the second argument's error for A463 and A466; owned by T-3729.
+Rule: arguments are checked in order, and a blank first argument gives `#VALUE!` (the blank-cell rule below) before the second argument's error is looked at: `MMULT(Data!H1,#NUM!)` (A463) and `MMULT(Data!H2,Data!G9)` (A466, G9 = `#DIV/0!`) are `#VALUE!`, with H1 and H2 blank (excel-graph, 2026-10-31; gen-m5/842a0aebcb17b83d; T-3494). Anywhere else an error argument passes through unchanged: `MMULT(2,#NUM!)` (A19) is `#NUM!`, `MMULT(Data!G1,Data!G9)` (A22) and `MMULT(Data!A1:B2,#DIV/0!)` (A475) are `#DIV/0!`, `MMULT(0,#REF!)` (A67) is `#REF!`, and an error first argument wins over a blank second, `MMULT(Data!G9,Data!H2)` (A418) is `#DIV/0!`. A text first argument does not beat the second's error: `MMULT(Data!G5,Data!G9)` (A208) is `#DIV/0!`. The engine matches (T-3729).
+A one-cell range counts as a single blank, but a larger range does not, even when every cell is blank
+(probes/t3836-mmult-blank-range-first-arg, excel-graph, 2026-11-02, T-3836; H1:H3 blank, A1 = 1, A2 blank, G9 = `#DIV/0!`).
+`MMULT(Data!H1:H1,#NUM!)` and `MMULT(Data!H1:H1,Data!G9)` are `#VALUE!` (Calc!A1, A2), and so is
+`MMULT(Data!H1:H1,{#N/A})` (A17). The second argument's error passes through over the all-blank
+`MMULT(Data!H1:H2,#NUM!)` (`#NUM!`, A3) and `MMULT(Data!H1:I1,Data!G9)` (`#DIV/0!`, A14), and over the partly-blank
+`MMULT(Data!A1:A2,...)` and `MMULT(Data!A1:B1,...)` (A5-A8), even where the dimensions do not match. Without an
+error, a blank anywhere is `#VALUE!` (`MMULT(Data!H1:H1,2)`, `MMULT(Data!H1:H2,Data!H3)`, `MMULT(Data!A1:A2,Data!A1:B1)`).
+An error first argument still wins over a blank one-cell range second (`MMULT(Data!G9,Data!H1:H1)` `#DIV/0!`, A11).
+Implemented in: `Model::fn_mmult` (crates/rustsheet-engine/src/functions/math_and_trigonometry/mmult.rs; its 1x1
+`ArrayNode::Empty` check before the second argument is evaluated, T-3729)
 
 ## MDETERM / MINVERSE: a blank cell in the matrix is #VALUE!
 Rule: MDETERM and MINVERSE return `#VALUE!` when any cell of the matrix range is blank (MMULT
@@ -580,7 +590,19 @@ A function passed by name (eta-reduced, stored `_xleta.SUM`) works wherever a LA
 arguments as the LAMBDA would: `BYROW(A1:B3,SUM)` = `BYROW(A1:B3,LAMBDA(r,SUM(r)))` (3x1, first 11),
 `GROUPBY(D1:D3,A1:A3,SUM)` (3x2, first "x": two groups and a total row), `BYCOL(A1:B3,MAX)` 1x2, first 3,
 `SCAN(0,A1:A3,MAX)` 3x1, `MAKEARRAY(2,2,SUM)` 2x2, first 2 (SUM(row,col)). REDUCE's initial_value may be left
-empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
+empty (`REDUCE(,A1:A3,LAMBDA(a,v,a+v))` = 6). A LAMBDA helper (BYROW, BYCOL, MAP over 1-3 arrays, SCAN, REDUCE) whose function cannot take the number of
+arguments it passes (one for BYROW/BYCOL, one per array for MAP, two for SCAN/REDUCE) is one `#VALUE!` for the whole
+result, never an error per element, over a 3x2 and a 1x1 source alike: too few or too many parameters, `LAMBDA(1)`, a
+LET-bound or a defined-name LAMBDA of the wrong arity, and an eta-reduced function whose argument range excludes the
+count (`_xleta.PI` everywhere, `_xleta.MOD` and `_xleta.ROUND` in BYROW/BYCOL/MAP over 1 or 3 arrays, `_xleta.ABS` in
+SCAN/REDUCE and MAP over 2 or 3 arrays). A function whose range takes the count runs: optional parameters fill the
+gap (`LAMBDA([r],SUM(r))`, `LAMBDA(r,[s],SUM(r))`, `LAMBDA([a],[b],a+b)` and `LAMBDA(a,b,[c],a+b)` all work), and so do
+`_xleta.SUM` everywhere, `_xleta.ROUND`/`_xleta.MOD` with two arguments (SCAN from 0 gives all 0) and `_xleta.ABS` with
+one; `BYROW(A1:B3,_xleta.ABS)` is `#CALC!` (each row's ABS is a row, see "a BYROW LAMBDA that returns a row" below), but
+over a 1x1 source it is the value. Evidence: probes/t3814-lambda-helper-arity Calc!B1:C124 (B the shape or the whole
+error's ERROR.TYPE, C the elements; excel-graph, 2026-11-02, T-3814); the engine matched every cell before the probe
+(`check_arg_count`, functions/logical/lambda.rs). Status: VERIFIED.
+An uncalled `LAMBDA(x,x)` is one value (`ROWS` 1, `INDEX(..,1,1)`
 `#CALC!`); a BYROW LAMBDA that returns a row is `#CALC!`; `ISOMITTED(A1)` outside a LAMBDA is FALSE;
 `REGEXTEST(A1,1)` with A1 = 1 is TRUE (both numbers read as text); `TOCOL(A1:E1,"1")` reads "1" as ignore = 1 (4 rows past the blank E1, ignore 0 gives 5);
 `SEQUENCE(0)` and the mismatched `SORTBY(A1:A3,B1:B2)` are `#CALC!` and `#VALUE!`.
@@ -986,7 +1008,9 @@ T-1326 follow-up (probes/pivotby-followup, 63 PIVOTBY questions over the same Da
 - Cells: errors in values make their cells and totals that error (P!A321); a LAMBDA array result is `#VALUE!` per cell (shown; the cell holds a nested array, see the T-2360 paragraph above), `""`
   where there are no records (P!A341); text results show as text (P!A541). An array relative_to (here a filter column put one
   argument too far) is lifted per element: a 10x1 array (P!A681).
-Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data), and where
+Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data; a scalar text
+`values` with field_headers omitted is `#VALUE!`, see "GROUPBY scalar inputs, option order and scalar filters in the gen-m7
+arg-pairs batch" below, and T-3854 probes the rest), and where
 error keys sort against text, booleans and the blank key (the engine uses `sort_key_cmp`'s order: after booleans,
 before blank).
 T-1323 follow-up (probes/groupby-sort-filter-args, 83 questions summarised in one cell each, excel-graph, 2026-10-16;
@@ -1011,6 +1035,23 @@ Error precedence: every error value among the arguments wins over any invalid ar
 error values the first argument wins (field_headers or total_depth `1/0` before sort_order `NA()`, sort_order before
 filter_array before field_relationship): B61-B78. field_relationship: 3, -1, 0.5 are `#VALUE!`, `NA()` `#N/A`, and the
 text "1" counts as 1 (with one total row, the default layout): B79-B83.
+Exceptions to that precedence, checked in argument order like an error value (T-3838, probes/t3838-groupby-option-order,
+232 questions in column B, excel-graph, 2026-11-02; "order Bn" below): a field_headers or total_depth that is text but
+no number, written or in a one-cell reference, `""` and a reference to `=""` included, is `#VALUE!` in its place, ahead
+of a later option's `NA()` or a reference to `=1/0` (order B2-B8, B27-B38, B67, B174-B178), where a blank cell, FALSE,
+TRUE and "1" there are numbers (0, 0, 1, 1) and the later error wins (B10-B22, B41-B59); and a sort_order or filter_array
+that is a one-cell reference to a blank cell is `#VALUE!` ahead of a later error (B81, B121, B176), where text, `""`, a
+reference to text, FALSE or TRUE there leaves the later error (B69-B79, B84-B105, B109-B118, B124-B145). An earlier error still wins over all of them (every "field_headers NA(),
+then ..." row of B30-B173). Alone, a blank sort_order is `#VALUE!` (B80), and field_headers
+TRUE, FALSE or "1" read as 1, 0 or 1 (B11-B21).
+field_relationship 1 (a table) sorts by the keys sort_order names first, in written order, then the other keys ascending
+in column order, each over the whole table: with two keys, sort_order -2 is Product descending, then Region ascending
+(order B179, B184, B199, the same for TRUE and "1"), `{2,-1}` Product ascending then Region descending and `{-1,2}`
+Region descending then Product ascending (B204-B205), and over three keys `{3,-2}` Year, then Product descending, then
+Region (B213); a hierarchy (0, FALSE or omitted) sorts in column order whatever the array's order (B189-B198,
+B217-B229: `{2,-1}` and `{-1,2}` are both Region descending then Product). Descending in a table reverses the ascending
+order whole, so the blank key sorts first (B205, B207), where a hierarchy keeps it last (B217, B220). A value sort in a
+table is flat (B215-B216), as before.
 Review follow-up (probes/groupby-sort-filter-args2, 37 questions in column B, excel-graph, 2026-10-16; "args2 Bn"
 below): the filter element beside a header row is never read, so text, `""` or an error there is ignored (args2 B1, B3,
 B5, B29-B30), while an error beside a record is `#VALUE!` (B31-B35). A filter `VSTACK(NA(),Data!C2:C11=2023)` is `#N/A`
@@ -1187,7 +1228,7 @@ the keys or values themselves (the engine: one error), a lifted field_relationsh
 per element, as the row and column probed), and a 1x1 array field_relationship such as `{0}` or `{1}` (the engine lifts it
 to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
-Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327
+Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
 ## GROUPBY and PIVOTBY: column totals over several value columns
 Rule: with one function over two or more value columns (`width` w), PIVOTBY puts its column subtotal and total cells as
@@ -1812,10 +1853,16 @@ MAKEARRAY checks its sizes first: `MAKEARRAY(NA(),1,5)` and `MAKEARRAY(NA(),1,LA
 Ours: every helper takes its caller from `Model::helper_caller` (lambda.rs), which checks the function once before any element
 (`FunctionValue` parameter counts; `eta_takes_count` reads `arg_counts::takes_count`); before T-3655 a wrong count was
 `#VALUE!` per element and MAP, SCAN, REDUCE and MAKEARRAY passed an error argument on.
-Unprobed: whether MAP's, SCAN's and REDUCE's array errors come before the function check (the engine checks the function first;
-BYROW and BYCOL read the array first).
+Order of the two checks: the array argument is read before the function is checked, in all five helpers. An array argument that
+is an error gives its own error even when the function cannot be called: `MAP(NA(),LAMBDA(a,b,a))` and `MAP(NA(),5)` are
+`#N/A`, `MAP(1/0,5)` `#DIV/0!`, `SCAN(0,NA(),LAMBDA(a,a))`, `SCAN(0,NA(),NA())`, `REDUCE(0,NA(),NA())` and
+`REDUCE(0,NA(),5)` `#N/A`, `SCAN(0,1/0,5)` and `REDUCE(0,1/0,LAMBDA(a,a))` `#DIV/0!`, as `BYROW(NA(),LAMBDA(a,b,a))` and
+`BYCOL(1/0,5)` already were (ROWS, COLUMNS and INDEX of each give the error, ERROR.TYPE 7 and 2). A second MAP array that is an
+error is `#VALUE!` (`MAP({1,2},NA(),LAMBDA(a,b,a))`). Evidence: probes/t3753-lambda-helper-error-array-order (excel-graph,
+2026-11-02, T-3753). Ours: `fn_map`, `fn_scan` and `fn_reduce` call `helper_caller` after reading the arrays; before T-3753 they
+checked the function first and gave `#VALUE!`.
 Status: VERIFIED (excel-graph)
-Tasks: T-3655
+Tasks: T-3655, T-3753
 
 ## MAKEARRAY sizes: zero, negative, booleans, text and references
 Rule: a size is read as a number the way an arithmetic operand is, then must be a whole number of at least 1. 0, -1, 0.5 and
@@ -2143,6 +2190,40 @@ Evidence: probes/t2436 (excel-graph, 2026-10-24), the cases named in T-2578; pro
 Ours: the PIVOTBY shapes since T-2578; the GROUPBY blank keys are T-2460's, the LAMBDA(x,x) cells T-2594's.
 Status: VERIFIED (excel-graph)
 Tasks: T-2578, T-2460, T-2593, T-2594
+
+## GROUPBY scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch (T-3778)
+Rule (gen-m7 arg-pairs batch for GROUPBY, excel-graph, 2026-11-02; each Data sheet has G1=7, G2=0, G3=-2.5, G4=1.5, G5="12",
+G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
+- Scalar `values` that are text (`"2.5"`, `"abc"`, `""`, or a one-cell reference to text) or a one-cell reference to a blank
+  cell make GROUPBY `#VALUE!`, whatever `row_fields` is, unless `row_fields` is a literal error (that error). Numbers and
+  booleans work: `GROUPBY(2,TRUE,_xleta.MIN)` is the row 2, 0 (gen-m7 35679b4facc62956, a full grid of scalar pairs). Text
+  `values` lose to a later option's error value, a blank-cell `values` does not (below).
+- `row_fields` that is a one-cell reference to an error (`Data!G9`) is `#VALUE!`, but a literal error there is that error
+  (`GROUPBY(#REF!,2,..)` `#REF!`), and `GROUPBY(Data!G9,Data!G9,..)` is the values' `#DIV/0!` (35679b4facc62956 A10554-A11774).
+- A text, empty-text or blank option is `#VALUE!` ahead of a later option's error value
+  (`GROUPBY(Data!A1:A12,Data!D1:E12,_xleta.AVERAGE,Data!G7,Data!G9)` is `#VALUE!`, eb01a9867300331b A11164;
+  `GROUPBY(Data!D1:E12,Data!C1:E12,_xleta.AVERAGE,Data!G6,-2,0,(Data!A1:A12<0.1),Data!G9)` too, 06c84cc76de04bae A10676), though an invalid number loses to the later error (probes/groupby-sort-filter-args B61-B78). Text or blank
+  `values` also win over a later error option (0a91d5918d798930 A10127).
+- A scalar `filter_array` keeps every row when the options before it are omitted (TRUE, 2: "GROUPBY and PIVOTBY" above), but
+  beside given options it is often `#VALUE!` (`GROUPBY(Data!A1:C12,Data!B1:C12,_xleta.MAX,1,-1,1,-1)`, 3a4c7294ff5c4af3 A5125;
+  `..,0,-2,2,TRUE)`, 3db804a002b664b1 A5003) and sometimes keeps every row (`GROUPBY(Data!C1:C12,Data!C1:C12,LAMBDA(x,x),2,1,2,TRUE)`,
+  07c0c130d894cfe0 A4515);
+  which argument decides is not yet known.
+- Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), a FALSE element is `#VALUE!`
+  (06c84cc76de04bae B5736, 7ab51243a366f57b B8054), though a scalar FALSE is 0 (probes/groupby-pivotby-followup G!A941), while a
+  blank element is valid (B5735 0.3, B8053 TRUE), as it is in a lifted `field_headers` (the entry above, A185). An error
+  `row_fields` or `values` fills the lifted shape (45c197dc0b22cf2b A7565:B7566, eb01a9867300331b A2563:B2564). The same
+  array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
+  has a scalar TRUE filter beside other options (the rule above), so those cells are T-3839's.
+Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
+`Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
+(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+`#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
+reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
+eval/baseline/gen-m7.txt.
+Status: VERIFIED (excel-graph) for the cells named; which argument decides the scalar-filter rule, and a FALSE element of a
+lifted `field_headers`, are UNVERIFIED
+Tasks: T-3837, T-3838, T-3839, T-3840
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,

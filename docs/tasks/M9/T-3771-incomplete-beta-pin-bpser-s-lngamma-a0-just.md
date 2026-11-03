@@ -32,6 +32,10 @@ or to EXP's argument, or both are recorded as negatives with counts.
 - Probe 1: a0 through (0.5, 0.56] in consecutive doubles at one b0, with 16 x per a0, so that each a0's g is pinned
   despite the ceiling. Take Excel's GAMMALN(a0), GAMMALN(fl(a0 + b0)) and GAMMALN(b0) from probe columns, as
   r5-bpser-lg did.
+- T-3769 (docs/research/t2464/r6-bpser-xlinked) answers probe 2's question at a0 0.3, 0.5 and 0.7 with b0 2.5, 4.75
+  and 6.25. Excel's LN is exact there (511 of 511). bpser's misses are only on cells where z = fl(a0 LN x) - L is not a
+  double, so the ceiling is EXP of a non-double z (T-3873). Split cells by double z before pinning g: only double-z
+  cells judge L.
 - Probe 2: next to each BETA.DIST cell, Excel's LN(x) and EXP(fl(a0*LN(x)) - L) as side columns, to tell an LN miss
   from an EXP-argument miss.
 

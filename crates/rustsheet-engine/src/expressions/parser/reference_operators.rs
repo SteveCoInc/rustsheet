@@ -90,7 +90,7 @@ impl Parser {
                 break;
             };
             if self.open_groups + levels.len() + 1 > MAX_PARENTHESES {
-                return self.too_deep();
+                return self.too_many_parentheses();
             }
             self.lexer.advance_token();
             levels.push(RunLevel {
@@ -99,7 +99,7 @@ impl Parser {
             });
         }
         if self.open_groups + levels.len() > MAX_PARENTHESES {
-            return self.too_deep();
+            return self.too_many_parentheses();
         }
         let (outer_groups, outer_signs) = (self.open_groups, self.open_signs);
         self.open_groups += levels.len();

@@ -107,3 +107,40 @@ fn boolean_unit_cell_is_value_error() {
         assert_eq!(model._get_text(cell), *"#VALUE!");
     }
 }
+
+#[test]
+fn unit_names_follow_excel() {
+    // Excel (excel-graph): probes/convert-unit-names (docs/excel-semantics/engineering.md "CONVERT
+    // unit names"). Each pair: formula, Excel's value.
+    let cases = [
+        // Seconds take a decimal prefix.
+        (r#"=CONVERT(1,"ms","sec")"#, "0.001"),
+        (r#"=CONVERT(1,"sec","ksec")"#, "0.001"),
+        // Binary prefixes only on bit and byte.
+        (r#"=CONVERT(1,"kibyte","bit")"#, "8192"),
+        (r#"=CONVERT(1,"kim","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"Mig","g")"#, "#N/A"),
+        (r#"=CONVERT(1,"kiK","K")"#, "#N/A"),
+        // "pc" is the parsec against a distance and pico-calories against an energy.
+        (r#"=CONVERT(1,"pc","parsec")"#, "1"),
+        (r#"=CONVERT(1,"pc","c")"#, "1E-12"),
+        (r#"=CONVERT(1,"kpc","c")"#, "#N/A"),
+        // Units outside the prefixable list, case and surrounding spaces.
+        (r#"=CONVERT(1,"kft","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"KM","m")"#, "#N/A"),
+        (r#"=CONVERT(1," m","m")"#, "#N/A"),
+        (r#"=CONVERT(1,"daar","m2")"#, "1000"),
+    ];
+    let mut model = new_empty_model();
+    for (row, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("A{}", row + 1), formula);
+    }
+    model.evaluate();
+    for (row, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("A{}", row + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}

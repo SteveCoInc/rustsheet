@@ -1128,3 +1128,166 @@ fn multi_cell_reference_from_a_function_lifts_like_a_written_range() {
         ["East", "East"]
     );
 }
+
+/// T-3838: an option is checked in argument order against a later option's error value. A
+/// `field_headers` or `total_depth` that is text but no number, written or in a one-cell reference
+/// (`""` too), is `#VALUE!` ahead of a later `NA()`; a blank cell there is 0 and the later error
+/// wins. A `sort_order` or `filter_array` that is a reference to a blank cell is `#VALUE!` ahead of
+/// it, where text there leaves the later error (probes/t3838-groupby-option-order G!B1-B176).
+#[test]
+fn options_are_refused_in_argument_order() {
+    let mut model = region_sales();
+    model._set("K1", "x");
+    model._set("K2", "=\"\"");
+    let cases = [
+        ("D1", "K1,,,,NA()", "#VALUE!"),
+        ("D2", "K2,,,,NA()", "#VALUE!"),
+        ("D3", "\"x\",,,,NA()", "#VALUE!"),
+        ("D4", "K3,,,,NA()", "#N/A"),
+        ("D5", ",K1,,,NA()", "#VALUE!"),
+        ("D6", ",K2,,,NA()", "#VALUE!"),
+        ("D7", ",K3,,,NA()", "#N/A"),
+        ("D8", ",,K3,,NA()", "#VALUE!"),
+        ("D9", ",,K1,,NA()", "#N/A"),
+        ("D10", ",,,K3,NA()", "#VALUE!"),
+        ("D11", ",,,K1,NA()", "#N/A"),
+        ("D12", ",,K3,NA()", "#VALUE!"),
+        ("D13", "NA(),,K3", "#N/A"),
+    ];
+    for (cell, options, _) in cases {
+        model._set(
+            cell,
+            &format!("=GROUPBY(A2:A11,B2:B11,LAMBDA(x,SUM(x)),{options})"),
+        );
+    }
+    model.evaluate();
+    for (cell, options, expected) in cases {
+        assert_eq!(model._get_text(cell), expected, "{options}");
+    }
+}
+
+/// T-3838: a table relationship (`field_relationship` 1) sorts by the keys `sort_order` names
+/// first, in written order, then the others ascending; a hierarchy (0) always sorts in column
+/// order; descending, the blank key sorts first in a table and last in a hierarchy
+/// (probes/t3838-groupby-option-order G!B184, B205, B217).
+#[test]
+fn a_table_sorts_by_the_named_keys_first() {
+    let mut model = new_empty_model();
+    let rows = [
+        ("East", "Apple", "10"),
+        ("West", "Pear", "20"),
+        ("East", "Pear", "30"),
+        ("West", "Apple", "40"),
+        ("", "Apple", "9"),
+        ("South", "Banana", "-3"),
+    ];
+    for (i, (region, product, sales)) in rows.iter().enumerate() {
+        if !region.is_empty() {
+            model._set(&format!("A{}", i + 1), region);
+        }
+        model._set(&format!("B{}", i + 1), product);
+        model._set(&format!("C{}", i + 1), sales);
+    }
+    model._set("E1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,1)");
+    model._set("H1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,-2,,0)");
+    model._set("K1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,1)");
+    model._set("N1", "=GROUPBY(A1:B6,C1:C6,LAMBDA(x,SUM(x)),0,0,{-1,2},,0)");
+    model.evaluate();
+    let keys = |model: &Model, a: &str, b: &str| {
+        column(model, a, 1, 6)
+            .into_iter()
+            .zip(column(model, b, 1, 6))
+            .map(|(x, y)| format!("{x}|{y}"))
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+    assert_eq!(
+        keys(&model, "E", "F"),
+        "East|Pear West|Pear South|Banana East|Apple West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "H", "I"),
+        "East|Pear East|Apple South|Banana West|Pear West|Apple 0|Apple"
+    );
+    assert_eq!(
+        keys(&model, "K", "L"),
+        "0|Apple West|Apple West|Pear South|Banana East|Apple East|Pear"
+    );
+    assert_eq!(
+        keys(&model, "N", "O"),
+        "West|Apple West|Pear South|Banana East|Apple East|Pear 0|Apple"
+    );
+}
+
+#[test]
+fn scalar_inputs_and_the_order_of_their_errors() {
+    // gen-m7 arg-pairs batch (T-3778, excel-graph; docs/excel-semantics/arrays.md "GROUPBY
+    // scalar inputs, option order and scalar filters in the gen-m7 arg-pairs batch", T-3837).
+    // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 keys, B1:B3 values.
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("Z2", "x");
+    model._set("Z4", "7");
+    for (row, (key, value)) in [("a", "1"), ("b", "2"), ("a", "3")].iter().enumerate() {
+        model._set(&format!("A{}", row + 1), key);
+        model._set(&format!("B{}", row + 1), value);
+    }
+    let cases = [
+        // Text values, literal or referenced, are #VALUE!; numbers and booleans work.
+        ("=GROUPBY(2,\"abc\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(Z4,Z2,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,\"\",_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(2,TRUE,_xleta.MIN)", "2"),
+        // A blank-cell values is #VALUE!, ahead of a later option's error.
+        ("=GROUPBY(2,Z3,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(A1:A3,Z3,_xleta.SUM,#NUM!)", "#VALUE!"),
+        // Text values lose to a later option's error.
+        ("=GROUPBY(A1:A3,\"abc\",_xleta.SUM,1,#NUM!)", "#NUM!"),
+        // A one-cell reference to an error as row_fields is #VALUE!, a literal error that error,
+        // and an error in values comes first.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM)", "#VALUE!"),
+        ("=GROUPBY(#REF!,2,_xleta.SUM)", "#REF!"),
+        ("=GROUPBY(Z1,Z1,_xleta.SUM)", "#DIV/0!"),
+        ("=GROUPBY(Z4,Z1,_xleta.SUM)", "#DIV/0!"),
+        // The error row_fields loses to a later option's error, at the same height too.
+        ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("D{}", 3 * i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("D{}", 3 * i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+#[test]
+fn an_early_input_error_fills_an_array_field_relationship() {
+    // gen-m7 45c197dc0b22cf2b A7565:B7566 and 35679b4facc62956-style inputs under a lifted
+    // field_relationship: the error fills the lifted shape (T-3837).
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("A1", "a");
+    model._set("B1", "1");
+    model._set("D1", "=GROUPBY(#NULL!,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model._set("D4", "=GROUPBY(Z1,B1,_xleta.SUM,,,,,{0,1;1,0})");
+    model.evaluate();
+    assert_eq!(
+        [
+            model._get_text("D1"),
+            model._get_text("E1"),
+            model._get_text("D2"),
+            model._get_text("E2")
+        ],
+        ["#NULL!", "#NULL!", "#NULL!", "#NULL!"]
+    );
+    assert_eq!(
+        [model._get_text("D4"), model._get_text("E5")],
+        ["#VALUE!", "#VALUE!"]
+    );
+}

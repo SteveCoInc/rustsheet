@@ -22,7 +22,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.annuity import scalars
+from rustsheet_tools.accuracy.defs._common import scalars
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,

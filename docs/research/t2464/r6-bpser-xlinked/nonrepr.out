@@ -1,0 +1,10 @@
+hold b0=4.75 a0=0.3 {'E64 between: X': 25, 'E64 between: Xd': 16, 'E64 between: d': 32, 'E64 between: none': 6, 'E64=hi: Xdu': 2, 'E64=hi: d': 15, 'E64=hi: none': 3, 'E64=lo: Xd': 13, 'E64=lo: Xdu': 2, 'E64=lo: none': 1}
+hold b0=4.75 a0=0.3 by z position {'0.5: X': 25, '0.5: Xd': 29, '0.5: Xdu': 4, '0.5: d': 47, '0.5: none': 10}
+hold b0=4.75 a0=0.7 {'E64 between: X': 142, 'E64 between: Xd': 58, 'E64 between: d': 76, 'E64 between: none': 25, 'E64=hi: d': 69, 'E64=hi: none': 47, 'E64=lo: Xd': 54, 'E64=lo: none': 41}
+hold b0=4.75 a0=0.7 by z position {'0.5: X': 106, '0.5: Xd': 112, '0.5: d': 145, '0.5: none': 67, '0.75: X': 36, '0.75: none': 46}
+tune b0=2.5 a0=0.3 {'E64 between: X': 47, 'E64 between: Xd': 6, 'E64 between: d': 17, 'E64 between: none': 16, 'E64 between: u': 1, 'E64=hi: Xdu': 6, 'E64=hi: d': 36, 'E64=hi: none': 1, 'E64=lo: Xd': 29, 'E64=lo: Xdu': 3}
+tune b0=2.5 a0=0.3 by z position {'0.5: X': 47, '0.5: Xd': 35, '0.5: Xdu': 9, '0.5: d': 53, '0.5: none': 17, '0.5: u': 1}
+tune b0=2.5 a0=0.7 {'E64 between: X': 148, 'E64 between: d': 3, 'E64 between: none': 100, 'E64 between: u': 3}
+tune b0=2.5 a0=0.7 by z position {'0.5: X': 148, '0.5: d': 3, '0.5: none': 100, '0.5: u': 3}
+tune b0=6.25 a0=0.3 {'E64 between: X': 28, 'E64 between: Xd': 19, 'E64 between: d': 31, 'E64=hi: d': 13, 'E64=lo: Xd': 15}
+tune b0=6.25 a0=0.3 by z position {'0.5: X': 28, '0.5: Xd': 34, '0.5: d': 44}

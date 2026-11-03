@@ -28,6 +28,9 @@ VALUE gives Excel's value for text with a leading percent sign, as NUMBERVALUE a
 - The shared reader is `parse_number_text` (coercion.md); a change there reaches every text-to-number coercion, so
   probe the arithmetic coercion too.
 
+- T-3811 landed the plain `VALUE("%1.5")` read in the shared reader (probes/t3647 A13 passes); what remains is the
+  sign, parenthesis, doubled-percent and currency shapes and NUMBERVALUE's trailing currency sign.
+
 ## Acceptance criteria
 - [ ] A probe case (excel-graph) covers the shapes above under VALUE and under `+0`.
 - [ ] The engine matches every probed cell, including probes/t3647-numbervalue-percent-and-controls A13 and

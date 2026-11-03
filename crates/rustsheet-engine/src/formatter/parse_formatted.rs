@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
-    date_text::{parse_date, CurrentYear},
+    date_text::{is_digits, parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
 
@@ -61,7 +61,7 @@ pub(crate) fn parse_typed_number(
             };
             return Ok((v, Some(format.to_string())));
         }
-        let Some(shape) = typed_clock_shape(text) else {
+        let Some(shape) = typed_clock_shape(text).or_else(|| leading_clock_shape(text)) else {
             return Err(err);
         };
         parse_date_clock_serial_in(text, locale, current_year, date_system)
@@ -191,6 +191,31 @@ impl TypedClock {
             Self::OutOfRange => None,
         }
     }
+}
+
+/// The clock typed before the date, limited to the evidenced shape `HH:MM M/D/YYYY` (`10:00
+/// 7/1/2025` is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10,
+/// excel-graph 2026-11-01). A leading space keeps it text (A8, A9). Every other clock-first shape
+/// (AM/PM, seconds, one-digit hours, month-name, ISO, year-less or mixed-separator dates) is
+/// unprobed and stays text; TODO(T-3852).
+fn leading_clock_shape(text: &str) -> Option<TypedClock> {
+    let (clock, date) = text.split_once(' ')?;
+    let (hour, minute) = clock.split_once(':')?;
+    let date_parts: Vec<&str> = date.split('/').collect();
+    let [month, day, year] = date_parts.as_slice() else {
+        return None;
+    };
+    if !is_digits(hour, 2..=2)
+        || !is_digits(minute, 2..=2)
+        || !is_digits(month, 1..=2)
+        || !is_digits(day, 1..=2)
+        || !is_digits(year, 4..=4)
+    {
+        return None;
+    }
+    // Two ASCII digits always parse; the fallback only keeps the code panic-free.
+    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
+    (value(hour) < 24 && value(minute) < 60).then_some(TypedClock::Time)
 }
 
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or
@@ -338,6 +363,21 @@ fn parse_percent_or_currency(
             )));
         }
         let format = if options.decimal_digits > 0 {
+            "0.00%"
+        } else {
+            "0%"
+        };
+        return Ok(Some((percent_value(f), Some(format.to_string()))));
+    }
+
+    // A leading percent sign shifts the number after it: `%1` is 0.01, `%-1` -0.01, `% 1` 0.01,
+    // while `%1%` is refused (probes/eng-inumber-grammar-value B3, eng-number-text-group-comma-edges A15-A18). Typed cell input
+    // shares this reader and is unprobed (T-3835).
+    if let Some(p) = value.strip_prefix('%') {
+        let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+        let format = if options.is_scientific {
+            SCIENTIFIC_FORMAT
+        } else if options.decimal_digits > 0 {
             "0.00%"
         } else {
             "0%"
@@ -509,9 +549,20 @@ fn parse_number(
         }
         position += 1;
     }
-    // Check the group separator is in multiples of three
-    for index in &group_separator_index {
-        if (chars.len() - index) % 3 != 0 {
+    // Excel: every group after a comma has three or more digits, so `1,0000` is 10000 and
+    // `1,000,0000` is 10000000, while `1,`, `1,00`, `1,000,00` and `1,000,` are refused; an integer
+    // part of only zeros before the first comma is refused whatever the group (`0,0000`, `0,000`,
+    // `00,000` are #VALUE!, `01,0000` is 10000).
+    // Probes eng-inumber-grammar-value, eng-number-text-group-comma-edges; coercion.md "Group
+    // commas and a leading percent sign".
+    for (n, index) in group_separator_index.iter().enumerate() {
+        let end = group_separator_index
+            .get(n + 1)
+            .copied()
+            .unwrap_or(chars.len());
+        let group = end - index;
+        let zero_lead = n == 0 && chars[..*index].trim_start_matches('0').is_empty();
+        if group < 3 || zero_lead {
             return Err("Cannot parse number".to_string());
         }
     }

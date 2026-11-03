@@ -1,6 +1,6 @@
 # 0159 — Exit-owner rule: a single A1 name owns a cell only in the block that names its case
 
-- **Status:** accepted (2026-10-29, T-0099). Amends decisions 0096 ("Ownership rule") and 0136.
+- **Status:** accepted (2026-10-29, T-0099). Amends decisions 0096 ("Ownership rule") and 0136. Amended by decision 0250: a colon span owns in the block that names its case, not only on its line.
 - **Context:**
   - Under 0096 and 0136 a single A1 name counts "anywhere in the task". `scripts/exit_owners.py` `owned` accepts the
     case named anywhere together with the A1 name anywhere. So a task that lists cells for one case and also names a

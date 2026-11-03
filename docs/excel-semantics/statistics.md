@@ -1653,7 +1653,7 @@ desktop Excel. Until decision 0221 the family therefore stayed `#N/IMPL!` until 
 T-1553). Since that owner ruling, it computes gridcraft's AAA model, unverified (the section "FORECAST.ETS family: the
 model before Excel evidence").
 Evidence: probes/forecast-ets-longer-series.case.json K1:K42 (excel-graph, 2026-10-14, T-1293).
-Ours: for every call that passes the argument step (next section, T-2424), FORECAST.ETS.SEASONALITY (T-3599) and FORECAST.ETS (T-3600) compute the model ("FORECAST.ETS family: the model before Excel evidence"), and CONFINT and STAT are `#N/IMPL!` until T-3601. Before that, `target_date` (FORECAST.ETS, CONFINT) or `statistic_type` (STAT) is lifted and read as a number: text there is `#VALUE!`, and an array or two-cell range gives that many `#N/IMPL!` elements (T-2028). UNVERIFIED (T-2028 follow-up probe): the optional settings (seasonality, data_completion, aggregation, confidence_level) also lift in ours, as the catalog's `value` mode says, with no Excel cell showing the shape of an array or range there (since T-2424 settled for SEASONALITY's data_completion
+Ours: for every call that passes the argument step (next section, T-2424), the four members compute the model ("FORECAST.ETS family: the model before Excel evidence"; SEASONALITY T-3599, FORECAST.ETS T-3600, CONFINT and STAT T-3601). Before that, `target_date` (FORECAST.ETS, CONFINT) or `statistic_type` (STAT) is lifted and read as a number: text there is `#VALUE!`, and an array or two-cell range gives that many elements (T-2028). UNVERIFIED (T-2028 follow-up probe): the optional settings (seasonality, data_completion, aggregation, confidence_level) also lift in ours, as the catalog's `value` mode says, with no Excel cell showing the shape of an array or range there (since T-2424 settled for SEASONALITY's data_completion
 and aggregation by gen-m9 `#SPILL!` cells 67f5e0fe790e6bec A47, A307 and 22656c225ff4f22a A60; see the T-2255 section); and text `target_date` in CONFINT and text `statistic_type` in STAT (K38 covers FORECAST.ETS only), and a boolean, number-text or error `target_date`/`statistic_type` reads by the usual scalar coercion (an error is returned as itself;
 settled by gen-m9 22656c225ff4f22a A1, fa25422d6f18c157 A181 and 43a13a091907b402 A261, see the T-2255 section).
 Status: VERIFIED (web) that the family is `#N/A` there; desktop behavior UNKNOWN
@@ -1682,7 +1682,8 @@ errors, in the order the code takes them (every ordering UNVERIFIED; T-2425's de
    `#NUM!` (the "work caps" section). More than 30% of the steps missing is `#NUM!`.
 - FORECAST.ETS (T-3600) checks `seasonality` before step 2: it truncates to 1 (detect, the default), 0 (none) or 2
   to 8,760 (that season length); anything else is `#NUM!`. After step 6, a `target_date` before the last time stamp
-  is `#NUM!` (Microsoft's documentation). Then the season is detected if asked (the cap below), and the model is fitted
+  is `#NUM!` (Microsoft's FORECAST.ETS page: "If target_date is chronologically before the end of the historical
+  timeline, FORECAST.ETS returns the #NUM! error"; a target equal to the last time stamp is the model's value there). Then the season is detected if asked (the cap below), and the model is fitted
   (the call's work budget, "work caps" section). The fit starts from Hyndman et al. §2.6.1: seasonal states from a
   classical decomposition of the first seasons (a centred moving average; under two seasons, deviations from a
   least-squares line), centred on 0. Level and trend come from the least-squares line through the first 10 seasonally
@@ -1692,6 +1693,16 @@ errors, in the order the code takes them (every ordering UNVERIFIED; T-2425's de
   steps it is the straight line between the forecasts at the steps either side. Exact data, such as a straight line
   or an exactly repeating season with a trend, forecasts exactly whatever α, β and γ come out, but noisy data may
   differ from Excel in the last digits or more.
+- FORECAST.ETS.CONFINT (T-3601) reads `confidence_level` (default 0.95) first: outside (0, 1) is `#NUM!`. Then come
+  `seasonality` and steps 2 to 6 as for FORECAST.ETS, and the target check. The result is NORM.S.INV((1 + level) / 2)
+  times the h-step forecast error's standard deviation (Hyndman et al. Table 6.1, class 1): σ²·(1 + Σ_{j=1}^{k}
+  (α + αβ·j + γ·[j mod m = 0])²), with k = ⌈h⌉ - 1 and σ² = SSE / n. So a fractional horizon has the variance of the
+  whole step at or past it, and exact data gives 0. A target equal to the last time stamp (h = 0) is z·σ, the one-step
+  interval, not 0.
+- FORECAST.ETS.STAT (T-3601) truncates `statistic_type` first: 1 α, 2 β, 3 γ (0 without a season), 4 MASE (MAE over
+  the mean absolute one-step change; `#DIV/0!` when that is 0), 5 SMAPE (the mean of |e| / ((|y| + |ŷ|) / 2) over the
+  points where it is defined), 6 MAE, 7 RMSE (σ), 8 the timeline's step (the average step for calendar months).
+  Anything else is `#NUM!`. Then come `seasonality` and steps 2 to 6; statistic 8 needs no fit.
 - FORECAST.ETS.SEASONALITY is the detected season length, or 0 when there is none. It takes the autocorrelation of
   the series' residuals from its least-squares line, at lags 2 to n/2 (at most 8,760), and returns the lag of the
   highest local peak above 2/√n. Fewer than four points is 0.
@@ -1703,8 +1714,8 @@ On probes/forecast-ets-longer-series, which has a period-4 signal, ours is 4 (K3
 `#N/A`.
 Status: UNVERIFIED (desktop probe pending, T-1553, T-2425). Decision 0221 lets the family ship it.
 Implemented in: crates/rustsheet-engine/src/functions/statistical/ets.rs (`build_series`, `detect_season`),
-statistical/ets/model.rs (`initial_states`, `filter`, `optimise`, `fit`, `Fit::forecast`) and statistical/forecast.rs
-(`forecast_ets_lifted`, `forecast_element`).
+statistical/ets/model.rs (`initial_states`, `filter`, `optimise`, `fit`, `Fit::forecast`, `Fit::forecast_sd`) and
+statistical/forecast.rs (`forecast_ets_lifted`, `forecast_element`, `confint_element`, `stat_element`).
 Tasks: T-3599, T-3600 (FORECAST.ETS), T-3601 (CONFINT, STAT), T-2425 (match desktop values)
 
 ## FORECAST.ETS family: work caps
@@ -2685,6 +2696,10 @@ same amount (up to 4.4E-12 from Excel, T-3447).
     autocorrelation 0.56). It is not the rounding of v, k + M, s v or M v, nor fl(2 k v) on a 64-bit v (coefficients
     near 0), nor of d v (a negligible regressor: unstable coefficients and no fall in the residual). It is UNVERIFIED
     and it is what keeps these cells off.
+  - T-3774 (attempt 2, docs/research/t3774) ruled out four more sources. Constant per run: removing each run's mean
+    leaves 2,003 → 1,993 units of 2^-53, so the cause is not lf (R's log1p(-k/n) form) or a stirlerr term. bd0's
+    series with every partial sum stored, every ej = ej v^2 stored, or v^2 stored once: each leaves the rms at 0.77,
+    with unstable coefficients.
   - The evidence for these terms is statistical: a fit over the 704 excel-graph cells, not single cells. The fl(n p)
     coefficient's standard error is about 0.07.
   - The same fit on the engine's values returns exactly its own model (1, 1, -1, -1, residual 0.04), which checks the
@@ -2992,16 +3007,34 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   on r2-bratio's three held-out sets).
 - Open: L at b0 >= 8 (Excel's algdiv is about 1 unit from TOMS's: implied L -1.88, +1.65, +6.05 units on three runs);
   on the old 1 < b0 < 8 cells GL53's L loses to r2-bratio's (3,365 against 4,038 of 7,455, verifier); b < 1 shapes top
-  out at 55-84% bit-exact for any constant L (one stored intermediate, unidentified; T-3769).
+  out at 55-84% bit-exact for any constant L (one stored intermediate, unidentified; at 1 < b0 < 8 T-3769 found it
+  is EXP of a non-double z, see below; b < 1 is not yet split that way, T-3873).
 - At 1 < b0 < 8 and a0 near 0.3, 0.5 and 0.7 (direct w_bpser), lnΓ(a0 < 1) inside L is Excel's GAMMALN, GL(a0), not
   fl(gamln1(a0) - LN a0) (T-3570, r5-bpser-lngamma). Small a0, b0 <= 1 and b0 >= 8 are not probed this way. With b0
   and x fixed and a0 stepped by single ulps around 0.3, 0.5 and 0.7, so only a0 moves, GL53 beats the gamln1 form in all
   12 runs: 672 against 573 of 960 bit-exact at b0 2.5 (tune) and 831 against 691 at b0 6.25 (hold-out). On the 457
   cells where the two forms differ, GL53 matches 331 and gamln1 92. This replaces r2-bpser-small's "shape-dependent"
   reading, which came from shape sets where everything varied at once. The rest of GL53's misses (417 of 1,920, all
-  within 2 ulp) follow x at a0 near 0.3 (model 1 ulp high), and partly follow a0 at 0.5 and 0.7, where no constant
-  L shift fits (T-3769). The port needs Excel's GAMMALN exact at the shape
+  within 2 ulp) follow x at a0 near 0.3 (model 1 ulp high), and partly follow a0 at 0.5 and 0.7. Both are one
+  effect (next bullet). The port needs Excel's GAMMALN exact at the shape
   arguments; the engine model is exact on 274 of 771 in [1, 2) and 1,738 of 2,585 below 1 (t2464-r2-bpser-small-gl).
+- **GL53 is exact wherever z = fl(a0 LN x) - L is a double** (T-3769, docs/research/t2464/r6-bpser-xlinked). At
+  1 < b0 < 8 it misses 0 of 1,143 such cells on t3570-r5-bpser-lngamma-beta and 2 of 1,923 on t3769-r6-bpser-beta.
+  On those cells E is Excel's own worksheet EXP of the same double, measured (t3769-r6-bpser-exp), so s, alx, L and
+  fl(E s) are Excel's. Every other miss (417 of 777 and 1,317 of 2,685) has a z that needs 54-55 bits, nearly always
+  exactly halfway between two doubles. Whether z is a double depends on alx's last bit (so the misses follow x at a
+  fixed shape) and on L's (so they follow a0). That explains both of T-3570's residuals: on r5, all 93 a0 where both x
+  miss have a non-double z at both x. The best constant L along x equals GL53's L on every shape where it can be
+  pinned (a0 0.3, and 0.7 at b0 2.5 and 6.25).
+  - Excel's E for a non-double z is not modelled. It is no rounding of z to a double: nearest (z53) won on r5's data,
+    1,628 against 1,503, but lost on the fresh probe, 2,072 against 2,332 tune and 670 against 957 hold-out. Down and
+    up fit no rule across shapes. On tie cells Excel matches EXP of the extended z on some, EXP of z rounded down on
+    others, and neither on the rest. Follow-up: T-3873.
+  - At exactly a0 = 0.5, g = GAMMALN(0.5) + 1 ulp (TOMS's gamln1 form) scores higher than GAMMALN (395, 355 and 336
+    against 284, 223 and 248) only because it moves z onto the double grid. It misses 47-163 cells whose z is then a
+    double, so it is not Excel's L.
+  - A second excel-graph fill of t3570-r5-bpser-lngamma-beta (2026-11-02) matched the first on all 1,920 cells
+    (decision 0112).
 - T-3570's second probe (docs/research/t2464/r5-bpser-lg) stepped a0 by single ulps at seven centers, three b0 and 8 x each, with
   Excel's GAMMALN columns beside the cells. Over this wider a0 range no single lnΓ(a0) form is exact everywhere:
   - GL(a0) = fl(GAMMALN(fl(1 + a0)) - LN(a0)) (exact on 360 of 360 a0 below 0.7, as T-1941's GAMMALN entry says) is
@@ -3024,7 +3057,8 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   engine 8.1 ulp high, so here Excel is the inaccurate one, and by more than the shapes probe's sub-branch suggests
   (all 4,602 of its 1 < b0 < 8 cells within 15 digits).
 Evidence: probes-numeric t2464-r2-bpser-small-shapes, -runs, -tiny, -tiny2, -gl, t2464-w2f-*, t3570-r5-bpser-lngamma-beta,
--gl (excel-graph 2026-11-01); docs/research/t2464/r5-bpser-lngamma (`score_forms.py`, `residual.py`, `lshift.py`); docs/research/t2464/
+-gl (excel-graph 2026-11-01), t3769-r6-bpser-beta, -aux, -exp (excel-graph 2026-11-02) with
+docs/research/t2464/r6-bpser-xlinked; docs/research/t2464/r5-bpser-lngamma (`score_forms.py`, `residual.py`, `lshift.py`); docs/research/t2464/
 w3-series (`model.py`, `accum2.py`, `control2.py`), r2-bpser-small (`lib.py`, `zforms.py`, `bscore.py`,
 `tiny_noapser.py`), verify-r2-bpser-small/verify.out, old_sets.out; probes-numeric t3570-r5-bpser-lg (5,043 cells) and
 t3570-r5-bpser-lg-aux (2,520) with docs/research/t2464/r5-bpser-lg (excel-graph, 2026-11-01).
@@ -3126,9 +3160,10 @@ bfrac (min(a,b) >= 40) takes the same brcomp = density·x·y, with λ = fl(a - f
   BEST gets 59/1,023/1,023 of 1,023 (median -1 ulp). r2-bratio rounded literals instead of truncating them, so its
   "lnB(0.6, 7.3) is 24 units high" is refuted (verify-r2-bratio/misparse.out).
 - bfrac at (100, 120): the fraction error regresses on λ's rounding with slope -0.725 (bfrac's own sensitivity -0.71),
-  and the pdf's c + 1 predicts the tie response (-10.5 against -10.58). The fraction's own arithmetic is not found:
-  white residual, sd 3.8 units, after 64 storage masks, five eps values and three precisions. bfrac cells: 146/476/685
-  of 1,316 (CR 109/466/677).
+  and the pdf's c + 1 predicts the tie response (-10.5 against -10.58). w4's white residual (sd 3.8 units, after 64
+  storage masks, five eps values and three precisions) is the fraction's loop: Excel runs TOMS's fraction through
+  Numerical Recipes' Lentz loop on closed-form terms, see "Incomplete beta bfrac is TOMS's fraction in a Lentz loop"
+  below (T-3571). bfrac cells: 146/476/685 of 1,316 (CR 109/466/677).
 - At a whole b0 (b0' = 1) with a0 > 8, bpser(a0, 1, x0)'s lnB is -LN(a0), B(1, b) = 1/b as the density takes it
   (T-2506). With the engine's own density, bup arithmetic and bpser, the L140 bup+bpser cells of r2-bratio's be, w2f
   and ix sets (bratio's dispatch as ported) score 8,800/11,696/11,721 of 11,742, the ix cells alone 995/1,344/1,362
@@ -3161,8 +3196,44 @@ correctly rounded value at that x (0.333609562829166621, nearest double 0.333609
 (decision 0141; Excel's form is unknown, r2-impact section 6);
 L140 with bgrat and bfrac on Cephes incbcf/incbd with exp(a ln x)·exp(b ln y)·Gamma ratio.
 Status: VERIFIED (excel-graph) for L140 bup+bpser to 15 digits (11,724 of 11,753; 64% bit-exact); bfrac's fraction
-UNVERIFIED
+in the next entry
 Tasks: T-2506, T-2508, T-2512
+
+## Incomplete beta bfrac is TOMS's fraction in a Lentz loop, on closed-form terms (T-3571)
+Rule: where bratio takes bfrac, on the evidenced region a, b in [40, 5000] on the unswapped call (x below the mean, z from -8 to -0.2 sd), Excel computes TOMS 708's
+continued fraction r = 1/(b0 + K(alpha_n/beta_n)) with Numerical Recipes' modified Lentz loop, not TOMS's rescaled
+forward recurrence, in doubles (a0 < 40 with b0 >= 40, shapes above 5000, the swapped call and the band within 0.2 sd
+of the mean are not probed):
+```
+lam = fl(a - fl((a+b)*x))  (also for a > b, where TOMS takes (a+b)*y - b),  y = fl(1 - x),  c = lam + 1
+b0 = c * (a/(a+1))
+alpha_n = v/s/s*u*n*(b-n)*x*x   (left to right; u = a+n-1, v = a+b+n-1, s = a+2n-1)
+beta_n  = n + fl(n*x*(b-n))/s + ((a+n)/(a+2n+1)) * (c + n*(y+1))
+f = 1e-30, C = f, D = 0; D = 1/(b0 + D), C = b0 + 1/C, f = f*(C*D); per term D = 1/(beta + alpha*D),
+C = beta + alpha/C, d = C*D, f = f*d, stop when |d - 1| <= 10*DBL_EPSILON
+cdf = fl(fl(P*fl(x*y)) * f),  P = BETA.DIST(x, a, b, FALSE)
+```
+- The residual is the fraction, not the prefactor: on runs at z = -7, -4, -1 sd, Excel's implied fraction error grows
+  with the term count (sd 1.8 at 5 terms to 4.3 at 20) and is uncorrelated with the density's own error, even where
+  that is 336 units (2,500, 3,000). brcomp is the worksheet density there too.
+- TOMS's loop shares none of Excel's noise (corr +0.04; best of 13,824 order, FMA and rescale variants 193 of 1,024
+  bit-exact on w2's (100, 120) run). The Lentz loop with NR's start, b0 = c·(a/(a+1)) (not TOMS's c/c1), the α and β
+  forms above were ranked on the tune probe; the stop at 10·DBL_EPSILON is a fit, bracketed in (2.1e-15, 2.5e-15),
+  tagged `/// FITTED(T-3571, 1536 cells, a, b 40..5000, unswapped call (x below the mean), z -8..-0.2 sd)`.
+- Scores, on Excel's own density (bit-exact/w4/w15): hold-out 1,158/1,630/1,632 of 1,632 (TOMS doubles as ported
+  162/977/1,384, CR 45/319/781); fresh sweep after the freeze, log-uniform (a, b) in [40, 5000], 694/1,177/1,188 of
+  1,200 (TOMS 86/532/844, CR 15/117/268), all 1,200 inside Gate A's envelope; the fit lab's hash split on tune+hold,
+  train 75.7% and test 75.2% bit-exact (CR test 26 of 937); w2's (100, 120) run 401/998/1,024 of
+  1,024 (w4's best 185).
+- Open: misses grow with the term count (99% bit-exact under 10 terms, 63% at 10-19, 30% at 20-29, 20% beyond),
+  mostly 1-3 ulp (23 of 1,200 fresh points beyond 4 ulp, the largest 11); one-ulp nudges of single β_n fix most of them, so one rounding inside β (or α) per term is still unmodelled.
+Evidence: probes-numeric t3571-r5-bfrac-tune, -hold, -fresh; docs/research/t2464/r5-bfrac (`model.py`,
+`score_final.out`, `score_fresh.out`, `runs.out`, `lamab.out`).
+Ours: TOMS's forward recurrence in doubles with TOMS's λ (`functions/statistical/bratio/bfrac.rs`, T-2508).
+Status: VERIFIED (excel-graph) to 15 digits on the region above, bit-level PARTIAL: 15 digits on 1,188 of 1,200 fresh points (the 12 misses are
+18-42-term points, 3-10 ulp, T-3813) and 1,632 of 1,632 hold-out cells; bit-level open past 10 terms; outside the region
+UNVERIFIED
+Tasks: T-3571, T-3812, T-3813, T-3323
 
 ## Student t tails are one kernel call, K(n/2, 1/2, y, z), with bgrat at b = 1/2 in extended precision (T-2464)
 Rule: T.DIST.RT(t,n) = L = I/2 with I = K(n/2, 1/2, y, z): y = fl(n/fl(n + fl(t·t))) and the complement
@@ -3345,7 +3416,7 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
   3.6E-15 off the math, ours 1.8E-15). These cells stay Excel-targeted: ours being nearer the math is not a licence.
   W rounds once in a register here where `bup`'s other callers store twice (fl(fl(P·fl(xy))/b0)): on this branch the
   register form wins the hold-out, 1,306 of 1,613 bit-exact against 1,046 (`bupdens.out`); T-3568's n >= 2 bup+bgrat research
-  takes the same register form (below); on L140 bup+bpser, `bup`'s other caller, it is unscored (T-3770). n > 1 bup terms stay on today's kernel (T-3383).
+  takes the same register form (below); on L140 bup+bpser, `bup`'s other caller, it is unscored (T-3770). n > 1 bup terms: the next bullet.
 - **L140 bup+bgrat with n >= 2 bup terms (2 <= b0 < 40, a0 > 15, x0 > 0.7) is the same RN(W + D), with bup's powers
   of x through Excel's EXP (T-3568).** With n = int(b0) and c = b0 - n (c = 1 and n - 1 at an integer b0):
   - W = fl(ret · S). Here ret = x87(P·fl(x0·y0)/c), P is Excel's BETA.DIST(y0, c, a0, FALSE) (the density at the
@@ -3366,6 +3437,10 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     from those densities), and one exponent per term, EXP(fl(i·LN y0) + LN R_i). The form does not carry to the
     min <= 1 bup+bgrat branch (T at n <= 30: 411 against 412 for the recurrence and 598 for the exact sum, of 1,344)
     (docs/research/t2464/r5-bup).
+  - The engine takes it for BETA.DIST's cdf and BETA.INV's search (T-3561, `bratio/bup.rs` `l140_bup_bgrat`) on its
+    own density for P, with D the bgrat increment for c < 1 and x0^a0 in double-double for c = 1. Where that density
+    is not a normal double (it underflows while W, times S's large powers, does not) or x0^a0 is past e^-650, today's
+    kernel answers. F, BINOM and NEGBINOM stay on today's kernel (T-3712).
 - **Why TOMS bgrat lost at b ≠ 1/2 (T-2512).** TOMS passes bgrat's 15·eps = 15e-15 to grat1, whose continued fraction
   (z >= 1.1 on every such cell) stops tens of ulps short. On 2,908 direct bgrat cells (t2512-r3-bgrat-split):
   - TOMS in doubles with Excel's pieces scores 13/142/162, and 139/1,263/1,834 at eps 1e-15.
@@ -3379,6 +3454,19 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     model came from: the prefactor exp(-(algdiv + b ln ν)) rounded in any way (206-210 bit-exact), ln x by log1p
     (158, 189) or grat1's CF in doubles (200 at best, and more noise, not Excel's) (T-3567,
     docs/research/t2464/r5-bgrat-fdf1).
+  - Nor from another Q(b, z) algorithm at bgrat's start (T-3582, docs/research/t2464/r6-bgrat-q): NR's gcf by
+    modified Lentz (the loop Excel's bfrac uses) or Cephes igamc, in doubles, score 95-145 and 119-142 bit-exact against
+    191 for the exact Q, and raise the run sd to 8.3-9.1 and 15.5-22.1. Excel's Q is not one of these fractions.
+  - Excel's own lower incomplete gamma at b < 1 (probe t3582-r6-gamma-runs, GAMMA.DIST(z, b, 1, TRUE) on four runs of
+    1,024 consecutive doubles; T-3582): at b = 0.03 (the double 0.030000000000000027) it is faithfully rounded,
+    not correctly rounded (z0 = 0.3 and 1: 799 and 775 of 1,024 bit-exact, the rest 1 ulp off; residual sd 0.37 and
+    0.38 units of 2^-53 against 0.30 and 0.29 from rounding alone); at b = 0.7, z near 1 it sits +2.3 units above
+    the true value (sd 0.87; mostly 1-2 ulps from one excel-graph fill, inside the 4-ulp web/desktop floor, so
+    unconfirmed until a desktop or second fill, decision 0112); at b = 0.7, z near 0.3 it carries noise of sd 3.7 around a -3.7 mean
+    that is not white (lag-1 autocorrelation +0.60, an FFT line 30 times the mean). No series (NR gser, Cephes igam,
+    the alternating z^b/Γ(b+1) series, each in doubles and x87) and no stored ln z, b·ln z, z^b or e^-z rounding
+    explains it (residual sd 3.6 at best). The engine misses 220 of the 4,096 cells at the 15th digit (owner T-3224).
+    STATUS: UNVERIFIED model; the noise source is still open.
 - **The b = 1/2 identity cannot be tested at generic b through the worksheet (T-2512).** No worksheet function
   returns Q(b, z) there. CHISQ.DIST.RT truncates its df to an integer (2b < 1 is `#NUM!`). 1 - GAMMA.DIST loses the
   digits, because Q < 0.01 on 5,196 of the 5,228 BETA.DIST cells that reach bgrat (probe t2512-r3-bgrat-qgamma).
@@ -3393,7 +3481,7 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
 - Open: D to the bit (T-3383); the n >= 10 exponent-binade leftover of L140's n-term bup (T-3568, engine port T-3712); algdiv for b0 >= 8 (about 1 unit off TOMS, in bpser and the density; in the density it looks like rounding noise of a few ulps, not
   a smooth approximation error, T-3383 r4-algdiv); lnΓ(a0 < 1) in L
   and the bpser ceiling (55-84% for b < 1 shapes, and 66-89% for a0 < 1 < b0 < 8 too; T-3570 found no single lnΓ(a0)
-  and no series or composition variant that lifts it, T-3771); bfrac's fraction (sd 3.8 units) and bup's arithmetic in bup+bgrat;
+  and no series or composition variant that lifts it, T-3771); bfrac's fraction past 10 terms (a Lentz loop, T-3571; one rounding per term open) and bup's arithmetic in bup+bgrat;
   a0 < 1e-15 at 0.04 <= y < 0.25 (Excel 1e-14 to 3.8e-13 relative off the truth, in bgrat's incomplete-gamma ratio; T-3719);
   the densities after T-2513's round 3 (each in its entry): Loader's constant residual of 2-4 units and bd0's series,
   the T density's per-df constant, BINOM's interior pmf, NEGBINOM's final step, the F density, and the density's
@@ -3528,9 +3616,9 @@ within 4 ulp. Two stay far:
 - `BETA.DIST(33587,3,600,TRUE,2000,5489582)` (G5) is the correctly rounded 0.6734553797493481.
   Cephes' fraction loses about 160 ulp there (t = 0.0058, reflected to I_0.994(600,3)), and so do
   Numerical Recipes' fraction and Cephes' power series.
-  The TOMS 708 port leaves it there too (gap triage 2026-11-01): bratio sends (3, 600, 0.0058) to L140 with two bup terms
-  then bgrat, a branch the port does not cover yet, so the old kernel answers. Ours is 0.6734553797493648, 2.5E-14
-  off, against the 50-digit 0.67345537974934809577 (T-3561).
+  bratio sends (3, 600, 0.0058) to L140 with two bup terms then bgrat (c = 1). Before T-3561 the port did not cover
+  that branch and the old kernel answered 0.6734553797493648, 2.5E-14 off the 50-digit 0.67345537974934809577.
+  T-3568's n-term composition (below, "L140 bup+bgrat with n >= 2 bup terms") gives Excel's value bit for bit.
 - `BETA.DIST(0.234,0.0001,0.0001,TRUE,0.15,1.2)` (G26) is 0.4998779049300665, 34 ulp from the
   correctly rounded value. The best combination is 30 ulp off.
 
@@ -4139,7 +4227,8 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
   - At one degree of freedom (df is truncated, so 1.5 too) the right-tail quantile is the left one of 1 - p:
     `CHISQ.INV.RT(1E-10,1)` = 41.82145620298276 = `CHISQ.INV(0.9999999999,1)` (the true right-tail quantile is
     41.82145636476129), and a p of 2^-54 (about 5.55E-17) or less, where 1 - p rounds to 1, is `#NUM!`
-    (`CHISQ.INV.RT(1E-20,1)`; p between 5.55E-17 and 1E-16 is unprobed). The rule is exact only to Excel's search
+    (`CHISQ.INV.RT(1E-20,1)`); but `#NUM!` also reaches p where 1 - p is 1 - 2^-53, so "1 - p rounds to 1" is not
+    the whole mechanism (the T-3336 sweep below puts the edge between 8E-17 and 9E-17). The rule is exact only to Excel's search
     on its double-valued lower cdf: `CHIINV(1E-9,1)` (probes-numeric/m9-legacy-chiinv A1, A2) is 37.324892889999234
     in Excel, about 2.2E-7 (one step of the cdf's resolution near 1) below the complement crossing
     37.324893106518715 (ours) and the true quantile 37.32489305136234 (T-2561). At 50 digits (gap triage
@@ -4147,7 +4236,47 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     ulp below it (0.9999999989999999), and the gap between them is exactly one band, 2^-53 over the density
     5.128E-10: Excel stops in the band below the one holding 1 - p. At 1E-10 and 1E-4 Excel is within
     2 ulp of the crossing (m9-chisq-inv-rt A1, m9-legacy-chiinv A12), so the step is not taken at every p. Where it is
-    taken is unprobed: T-3336 sweeps p at df 1, T-3337 fits the landing.
+    taken: T-3336 sweep below; T-3337 fits the landing.
+  - T-3336 sweep (probes-numeric/t3336-chisq-df1-right-tail, excel-graph; CHISQ.INV.RT, CHIINV and CHISQ.INV(1-p) at
+    p = m*10^-k, m in 1, 1.5, 2, 3, 5, 7, k 4 to 16; 2^-j, j 40 to 54; CHISQ.DIST at the landing points). CHIINV
+    equals CHISQ.INV.RT at every p. Excel's CHISQ.INV.RT(p,1) is within a few ulp of the complement crossing (ours)
+    at all but 17 p, where it is one step off it. The step is 2^-53 in the lower cdf (the spacing of doubles just
+    below 1), i.e. 2^-53 over the density in x, the density taken at Excel's x; the column is (ours - Excel) in steps, and the last column is
+    Excel's own CHISQ.INV(1-p,1), which at each of these p sits at the complement crossing:
+
+    | p | Excel INV.RT | ours | Excel INV(1-p) | steps |
+    |---|---|---|---|---|
+    | 7E-4 | 11.489246754004064 | 11.48924675400377 | 11.489246754003771 | -1.00 |
+    | 1E-5 | 19.51142096464506 | 19.511420964666264 | 19.511420964666268 | +1.00 |
+    | 1E-6 | 23.92812697709321 | 23.92812697687947 | 23.92812697687947 | -1.00 |
+    | 2E-6 | 22.595042659653224 | 22.595042659759855 | 22.595042659759866 | +1.00 |
+    | 1E-7 | 28.373987360648858 | 28.373987362798125 | 28.373987362798143 | +1.00 |
+    | 5E-7 | 25.263820725638585 | 25.263820726066868 | 25.263820726066864 | +1.00 |
+    | 1E-8 | 32.84125337305113 | 32.84125335146885 | 32.84125335146885 | -1.00 |
+    | 5E-8 | 29.716785492935664 | 29.716785488631203 | 29.71678548863122 | -1.00 |
+    | 1E-9 | 37.324892889999234 | 37.324893106518715 | 37.324893106518736 | +1.00 |
+    | 2E-9 | 35.9736890443827 | 35.973688936219375 | 35.97368893621938 | -1.00 |
+    | 7E-10 | 38.02064491290999 | 38.02064522235828 | 38.020645222358276 | +1.00 |
+    | 1E-13 | 55.36859656626361 | 55.36641369262503 | 55.36641369262503 | -1.00 |
+    | 2E-13 | 54.00419329358049 | 54.00528397040475 | 54.00528397040475 | +1.00 |
+    | 7E-14 | 56.06977788787475 | 56.06665959069312 | 56.06665959069312 | -1.00 |
+    | 1.5E-16 | 67.39648382445009 | 68.7632522116684 | 68.7632522116684 | +1.39 |
+    | 3E-16 | 67.39648382445009 | 66.59715246385076 | 66.59715246385078 | -0.81 |
+    | 5E-16 | 66.03009909468959 | 65.59030558869873 | 65.59030558869874 | -0.89 |
+
+    So the one-step landing is a property of INV.RT's own search, not of 1-p: Excel's CHISQ.INV.RT(p,1) and
+    CHISQ.INV(1-p,1) disagree at exactly these p, and the rule above holds only up to that step. It occurs at
+    scattered p from 7E-4 down, with either sign; the other grid p (e.g. 1E-4 to 5E-4, 1.5E-5 to 7E-5, 1.5E-6, 3E-6
+    to 7E-6, 7E-7, 1.5E-7 to 3E-7, 7E-8; the sidecar has the full set) are within a few ulp of the crossing. Past 1E-13 the lower
+    cdf's resolution is coarse and Excel returns plateau values: CHISQ.INV.RT(p,1) is 67.39648382445009 at 1.5E-16,
+    2E-16 and 3E-16 alike, and 66.03009909468959 at 5E-16 and 4.44E-16 (these are Excel's values at 2^-52 and 2^-51, A247 and A246; rows 1.5E-16, 3E-16 and 5E-16 above are
+    plateau offsets, not single steps). CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation). The `#NUM!`
+    edge, probed here: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
+    In doubles 1 - 6E-17, 1 - 7E-17, 1 - 8E-17 and 1 - 9E-17 are all 1 - 2^-53, not 1, so the cutoff is not
+    "1 - p rounds to 1" and our engine, which follows that rule, returns 68.7632522116684 at 6E-17 to 8E-17 (A250 to
+    A252). `CHISQ.INV(1-8E-17,1)` is unprobed, so whether the cutoff sits in INV.RT's own p check or in its search is open.
+    CHISQ.DIST(x,1,TRUE) is 0.9999999989999999 at Excel's 37.324892889999234 and 0.999999999 at ours. Full cells in
+    the case's oracle sidecar.
   - Excel's search gives up in the far right tail. Below an edge that depends on df, CHISQ.INV.RT and CHIINV are
     `#NUM!`, though the quantile exists and CHISQ.DIST.RT past it is a plain number. With p = 1E-k, the last k that
     is still a value is, for df 3 to 42: 20, 27, 35, 43, 52, 62, 72, 81, 87, 90, 94, 99, 104, 110, 116, 121, 127,
@@ -4985,9 +5114,9 @@ Ours: since T-2424, the argument step (`statistical/forecast.rs` `forecast_ets_l
 reads as a number in turn, and `values` and `timeline` are evaluated once for a direct error. A reference to an
 error cell, even a one-cell one, is not a direct error here: the argument step passes it, and no oracle cell covers it
 yet (the gen-m9 Data sheets hold "#N/A" only as text; T-2425 probe). The first failure in argument order decides. A
-call with none goes on to the model: since T-3599 and T-3600, FORECAST.ETS.SEASONALITY and FORECAST.ETS compute it, and an error cell in `values`
+call with none goes on to the model, which all four members compute since T-3599 to T-3601, and an error cell in `values`
 or `timeline` is then that error (UNVERIFIED, decision 0221, the section "FORECAST.ETS family: the model before Excel
-evidence"); CONFINT and STAT stay `#N/IMPL!` until T-3601 (T-2425 the desktop values, after T-1553). FORECAST.ETS.SEASONALITY
+evidence"; T-2425 the desktop values, after T-1553). FORECAST.ETS.SEASONALITY
 lifts its data_completion and aggregation too. Counts: the task names 1,215 known-failure lines (1,196 from T-2255
 and 19 from T-2256); with the 19 visibly-off lines of T-2257 and T-2258 it owns 1,234 cells. 656 of them leave the
 baseline with T-2424, 481 had already passed on main before it, and 97 still differ. The 97 are:
@@ -5342,6 +5471,27 @@ Ours: the search's floor rather than 0 (`BETAINV(1E-20,1E-300,30)` is 3.33333333
 Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2808
 
+## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
+Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
+classes, all where the quantile is at or beyond the ends of the doubles in (0, 1):
+- Where the true quantile rounds to 1 (a small second shape: b from 1.2E-3 down to 1.7E-15, or p = 0.999999999999999),
+  Excel is 0.9999999999999999 = 1 - 2^-53, the largest double below 1, not 1 and not `#NUM!` (A83, A86, A98, A100,
+  A103, A106, A123); for example `BETA.INV(0.119217778495381,3.73375717051303,5.34676484504691E-07)`.
+- Where p is above 1/2 and a tiny first shape (1.5E-15 to 2E-9) puts the quantile at 0, Excel is 1.1102230246251565E-16
+  = 2^-53 (A88, A97, A108): 1 minus the flipped search's 1 - 2^-53, as the flip 1 - BETA.INV(1 - p, b, a) of
+  "BETA.INV at a huge shape is AS 109's Newton search" gives. So "BETAINV is #NUM! where its quantile underflows"
+  holds only for p up to 1/2.
+- With either shape 2.22507385850721E-308 (DBL_MIN), Excel is exactly 0.5 at p from 0.0023 to 0.82 (A115, A118, A125,
+  A128, A138): the midpoint of [0, 1], as at alpha 1E-300 in "BETAINV is #NUM! where its quantile underflows", here
+  also for a tiny beta and for p below 1/2.
+- At a huge first shape (5E+161 to 4E+296) with a tiny p (1E-277 to 8E-10), Excel is `#NUM!` where the true quantile is
+  1 - 2^-53 (A180, A181, A187, A188, A190, A191, A192, A193, A194, A196, A197, A198); the shapes of 5E9 to 1E10 in
+  the AS 109 entry converge, so the search fails somewhere above them (boundary unprobed).
+Evidence: eval/accuracy/tables/BETA.INV/s1 (oracle and 50-digit math sidecars; `rustsheet-eval accuracy`)
+Ours: `#NUM!` in the first three classes, 1 - 2^-53 in the fourth; 27 known failures in eval/accuracy/known-failures.tsv
+Status: VERIFIED (excel-graph) for the cells; the reasons (flip, start) UNVERIFIED
+Tasks: T-3578, T-3351 (classes 1 and 2), T-2808 (class 3), T-3862 (class 4)
+
 ## F.INV.RT saturates at 3.696066238512854E+150/df1 in the far tail (T-2435)
 Rule: for a probability far in the tail and a df2 below 2, Excel's F quantile search stops at a
 value that depends only on df1: `F.INV.RT(1E-200,1,1.9)`, `F.INV.RT(1E-200,1,1.99)`,
@@ -5452,41 +5602,50 @@ main after T-3350):
 So `HUGE_SHAPE_MIN` and the upper edge are not Excel's cut points (T-3409 models the search).
 Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505, T-3530
 
-## GAMMA.DIST at a huge shape: #NUM! for a density at a tiny x, for the cdf above about 1E+76 (T-2435)
-Rule: GAMMA.DIST's density is `#NUM!`, not 0, where the shape is large and x/beta tiny:
-`GAMMA.DIST(1E-300,1E+9,3,FALSE)` and `GAMMA.DIST(1E-300,1E+10,3,FALSE)` are `#NUM!`, while a shape
-of 1E+8 at the same x, and a shape of 1E+9 at x = 1E-10 or 1, are 0; the cut sits between
-(alpha - 1)|LN(x/beta)| of 6.9E+10 (0) and 6.9E+11 (`#NUM!`). The cdf is 0 for shapes up to 1E+40 at
-x/beta = 2E-10 but `#NUM!` at 1.85E+76 (`GAMMA.DIST(2,1.85E+76,1E+10,TRUE)`,
-`GAMMADIST(2,1.85E+76,1E+10,TRUE)`).
-Evidence: probes/t2435-dist-extremes A25:A34, A92:A102 (excel-graph, 2026-10-26); gen-m9
-2801c1c11c21e134 A241 (`GAMMADIST(1E-300,10000000001,3,FALSE)`) and 40425341c5034eed A265
-(`GAMMADIST(2,1.85E+76,1E+10,"TRUE")`).
-The cdf cut only turns a 0 into `#NUM!`: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
+## GAMMA.DIST at a huge shape: #NUM! where shape/x overflows; an unexplained #NUM! from about 1E+56 (T-2435, T-3316)
+Rule 1 (density): GAMMA.DIST's density of a positive x is `#NUM!` where shape / x overflows a double, whatever the
+scale and whatever the density would be: `GAMMA.DIST(5.5626E-300,1E+9,1,FALSE)` is `#NUM!` and 5.5628E-300 is 0 (1E+9 / x
+is 1.79772E+308 against 1.79766E+308, either side of DBL_MAX 1.7976931E+308), at a scale of 1E-200 too, at shapes
+1000 and 1E+15 the same way, and at shape 10 `GAMMA.DIST(5.3E-308,10,1E-5,FALSE)` and 4.9E-308 are `#NUM!` while 5.6E-308
+is 0, so the numerator is the shape, not shape - 1. It holds where the density is far from 0:
+`GAMMA.DIST(5.3E-308,10,2.3E-308,FALSE)` is `#NUM!` while `GAMMA.DIST(5.6E-308,10,2.3E-308,FALSE)` is 3.1567E+304, and the
+cdf there keeps its value (`GAMMA.DIST(5.3E-308,10,2.3E-308,TRUE)` is 0.000146). This is the "x/shape below a cut in
+(2.17E-309, 1E-308]" the T-3530 fit audit saw: the cut is 1/DBL_MAX, 5.56E-309, and it explains every density cell of
+probes-numeric/fit-audit-t3271-density-cut and probes/t2435-dist-extremes A25:A34, A92 (`GAMMA.DIST(1E-300,1E+9,3,FALSE)`
+is `#NUM!` because 1E+9 / 1E-300 overflows; the shape 1E+8 is 0 because 1E+308 does not).
+Evidence: probes-numeric/t3316-gamma-density-overflow A1:A15, t3316-gamma-density-overflow-nonzero (excel-graph,
+2026-11-02); fit-audit-t3271-density-cut A9, A47:A49 and A43 (`GAMMA.DIST(0.5,1E+15,1,FALSE)` is 0); gen-m9
+2801c1c11c21e134 A241 (`GAMMADIST(1E-300,10000000001,3,FALSE)`).
+A scale that makes x / beta subnormal or infinite is `#NUM!` by its own rule (T-2738; `GAMMA.DIST(5.5628E-300,1E+9,1E+200,
+FALSE)`, t3316-gamma-density-overflow A5).
+Rule 2 (both columns, UNVERIFIED mechanism): from a shape between 1E+55 and 1E+56 (at x/beta = 2E-10) Excel's computed 0
+is `#NUM!` at some points and not others, with no threshold in either argument, and the density at an x/beta below 1 is
+`#NUM!` at exactly the cdf's points (12 of 12 pairs at shape 1E+70):
+- shape 1E+70, beta 1, the cdf (t3316-gamma-cdf-y-sweep): `#NUM!` at x = 1E-2, 1E-10, 1E-26, 1E-42, 1E-54, 1E-66, 1E-86,
+  1E-98, 2E-10, 3E-10, 1E-5, 2E-5, 2E-20 and 1E-100; 0 at 1E-6, 1E-14, 1E-18, 1E-22, 1E-30, 1E-34, 1E-38, 1E-46,
+  1E-50, 1E-58, 1E-62, 1E-70 to 1E-82, 1E-90, 1E-94, 5E-10, 2E-9, 2E-11, 2E-15, 2E-30, 2E-50, 2E-100 and 0.1.
+  Only x/beta counts: `GAMMA.DIST(2E+90,1E+70,1E+100,TRUE)` and `GAMMA.DIST(1E-90,1E+70,1E+10,TRUE)` follow 2E-10 and 1E-100.
+- x/beta = 2E-10 (x = 2, beta = 1E+10, and x = 2E-10, beta = 1): 0 at shapes 1E+45, 1E+50 and 1E+55, `#NUM!` from 1E+56
+  to 1.8E+76 except 0 at 1E+76, then 0 at 1.84E+76 and `#NUM!` at 1.85E+76; densities 0 up to 1E+50 and `#NUM!` at 1E+60 and 1E+70.
+- x/beta = 1E-100: 0 at shapes 1E+60, 1E+75, 1.5E+76, 1E+100 and 1E+200, `#NUM!` at 1E+70 and 1.85E+76; x/beta of 0.5, 1,
+  2 and 1E+50 gave 0 at every probed shape.
+A refill in fresh workbooks reproduced fit-audit A4, A12 and A18, so the pattern is deterministic. It looks like the
+rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looks for it.
+Evidence: probes-numeric/fit-audit-t3271-cdf-cut (one cell per workbook; A5, A8, A31 and A33 have no value),
+t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep, t3316-gamma-density-overflow A16:A26 (excel-graph, 2026-11-02);
+probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at x/beta = 2E-10 and shapes 1.2E+55 to
+1E+90 was refused twice (createSession retries exhausted), as T-2982 saw for other mixes of these cells.
+A cdf that is not 0 keeps its value: at a shape of 1E+300, x = 1E+300 is 0.5 (probes/incomplete-gamma-cap E3), and a huge
 x at a huge shape keeps its density of 0 (`GAMMA.DIST(1E+307,1E+10,0.5,FALSE)` is 0, t2435-dist-extremes A31).
-Ours (T-3271): a computed 0 is `#NUM!` for a density at x/beta below 1 with (alpha - 1)·(-LN(x/beta)) of at least
-6.9187E+11 (A26's value, the smallest `#NUM!` seen), and for a cdf of a positive x at a shape of at least 1.85E+76 (the
-smallest `#NUM!` seen). Between the bracket ends (density 6.9E+10 to 6.9187E+11, cdf 1E+40 to 1.85E+76) the cut is
-UNVERIFIED: excel-graph refused workbooks holding those cells (FileCorruptTryRepair, T-2982).
 `GAMMA.DIST(1E+10,1E+10,1,TRUE)` is Excel's 0.5000013298076014 since T-1891 (Temme's expansion).
-The density cut's variable is not (alpha - 1)·(-LN(x/beta)) (T-3530 fit audit, probes-numeric/fit-audit-t3271-density-cut,
-50 cells): `GAMMA.DIST(0.5,1E+15,1,FALSE)` (A43, product 3.5E14) is 0, while `GAMMA.DIST(2.17173678289098E-300,1E+9,1,FALSE)`
-(A9, product 6.9E11) and `GAMMA.DIST(1E-300,1E+9,1E-6,FALSE)` (A48, 6.77E11) are `#NUM!`, and the scale does not count
-(`GAMMA.DIST(1E-200,1E+9,1E+100,FALSE)`, A45, x/beta 1E-300, is 0). At the probed shapes 1E8 to 1E15 every cell,
-t2435's included, fits `#NUM!` where x/shape is below a cut between 2.17E-309 and 1E-308, else 0: about where x/shape
-stops being a normal double (UNVERIFIED as a form, T-3316). The rule does not explain fit-audit-t3271-cdf-cut A41
-`GAMMA.DIST(2,1.85E+76,1E+10,FALSE)` and A42 `GAMMA.DIST(2,1E+70,1E+10,FALSE)`, `#NUM!` densities at x/shape about
-1E-76 and 2E-70 (the engine agrees there), so from a shape of 1E70 something else makes the density `#NUM!`. The
-engine is wrong-type at A9, A43 and A48.
-The cdf cut is not a shape cut either (fit-audit-t3271-cdf-cut, filled one cell per workbook, 38 of 42 cells; A5, A8,
-A31 and A33 have no value): at
-x = 2, beta = 1E10, Excel is `#NUM!` from shape 1E60 to 1.8E76 but 0 at 1E76 and 1.84E76; at beta = 1 it is 0 for
-shapes 1E60 to 1E200 (x = 1 and 1E50), and for x = 1E-100 it is 0 except at shape 1.85E76 (`#NUM!`). A refill in
-fresh workbooks reproduced A4, A12 and A18. The engine has the wrong type at 21 of the 38 (UNVERIFIED rule, T-3316).
-Status: VERIFIED (excel-graph) at the probed cells; the cut positions inside each bracket UNVERIFIED
-Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530
-Implemented in: `huge_shape_num_error`, `HUGE_SHAPE_DENSITY_CUT`, `HUGE_SHAPE_CDF_CUT` (both rules refuted by the T-3530
-fit audit; T-3316 replaces them)
+Ours: rule 1 exactly (T-3316). For rule 2 the engine keeps T-3271's shape cut of 1.85E+76 for the cdf of a positive x and,
+since T-3316, for the density at an x/beta below 1 as well; it replaces T-3271's (shape - 1)·(-LN(x/beta)) density cut,
+which the fit audit refuted. Below 1.85E+76 the engine is 0 where Excel is `#NUM!` (and, from there up, `#NUM!` where Excel
+is 0 at beta = 1).
+Status: VERIFIED (excel-graph) for rule 1, its cut pinned to 2 parts in 1E+5; rule 2 VERIFIED at the probed cells, its
+mechanism UNVERIFIED
+Tasks: T-2435, T-1891, T-2982, T-3271, T-3316, T-3530, T-3855
+Implemented in: `gamma_dist_of` (rule 1), `huge_shape_num_error` and `HUGE_SHAPE_CDF_CUT` (rule 2, interim)
 (crates/rustsheet-engine/src/functions/statistical/gamma.rs)
 
 ## LINEST and LOGEST: shapes, one point, collinear columns, exact fits and check order (T-1741)
@@ -5684,7 +5843,7 @@ number) before significance (`PERCENTRANK(Data!E1:E5,1963,-2.5)` is `#N/A`, 1396
 `PERCENTRANK.EXC({1,..,10},-0.0001,0)` `#N/A`, 09b47629f54b9817 A58).
 Evidence: gen-m9 (excel-graph, 2026-10-23, T-2256); 62 cells in T-2472.
 Ours: matches (T-2472).
-Settled by "PERCENTRANK: a non-numeric-text or error significance before the #N/A (T-3781)": an error significance, or one of text that does not read as a number, beats the out-of-range x `#N/A` (numeric text and booleans coerce and do not). Ours already matches that for an x outside numeric data; the gap is data with no number (T-3789).
+Settled by "PERCENTRANK: a non-numeric-text or error significance before the #N/A (T-3781)": an error significance, or one of text that does not read as a number, beats the out-of-range x `#N/A` (numeric text and booleans coerce and do not). Ours matches (T-3789 moved the significance's number check ahead of the empty-data `#N/A`).
 Status: VERIFIED (excel-graph)
 
 ## PERCENTRANK: a huge significance is #DIV/0!; truncation does not lose a digit at a cut (T-2256)
@@ -6154,7 +6313,8 @@ Evidence: gen-m9 (T-3781 arg-pairs batch, excel-graph, 2026-11-01): 157db6a46ed6
 f00b7d6982c4d2fd A430, A436.
 Unprobed: an error-valued scalar against an error data cell with a different error (the batch has only the same error on
 both sides, `SMALL(Data!G9,Data!G9)` `#DIV/0!`), and an error element of a multi-cell data range.
-Ours: the data's error (`#DIV/0!`) in all 30 cells; known failures owned by T-3788.
+Ours: matches since T-3788 (`lift_over_sorted`, sorted_data.rs): only for a data cell reference with a scalar cell reference of non-numeric text. A typed error as the data keeps its error against typed text (`SMALL(#DIV/0!,"abc")` `#DIV/0!`, `SMALL(#NUM!,"")` `#NUM!`; 5830c688df805e71 A463, A469). A typed text scalar against an error data cell is unprobed.
+Implemented in: crates/rustsheet-engine/src/functions/statistical/sorted_data.rs
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3788
 
@@ -6175,7 +6335,7 @@ Evidence: gen-m9 (T-3781 arg-pairs batch, excel-graph, 2026-11-01). An x outside
 `PERCENTRANK.EXC(Data!B9:D10,-1,"abc")` (50594c61def0ea70 A103), 5e5063d014818a2d A580, A586 and 61445b60bf8539f0 A526.
 Data with no number (text, blank or boolean cells), 63 cells in T-3789: 50594c61def0ea70 A46, A109, A361; 58ae70ab5eb596c2
 A100, A157; c149b14aa61b770d A10, A82; 8cbdca3221390122, 9240e43366ea4792 and de40f308bf65d545 (18-20 cells each).
-Ours: matches for an x outside numeric data; `#N/A` in the 63 no-number cells, known failures owned by T-3789.
+Ours: matches, including the 63 no-number cells (T-3789: the significance is cast right after x, before the empty-data `#N/A`).
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3789
 
@@ -6191,7 +6351,7 @@ A range as the percent lifts TRIMMEAN over it, one result per cell: `TRIMMEAN("2
 a FALSE cell percent is 0, the non-numeric text "TRUE" `#VALUE!`, while the numeric text "1" and TRUE read as 1, out of range.
 Evidence: gen-m9/4fc6bdaec0e5583d (T-3781 arg-pairs batch, excel-graph, 2026-11-01) A199-A253 and A391-A439 (the 15 cells in
 T-3790), A259-A385 for the non-numeric text.
-Ours: `#VALUE!` for the numeric text and boolean literals; known failures owned by T-3790.
+Ours: matches (T-3790): `trimmean.rs` reads a non-cell numeric-text or boolean literal as one number; FALSE as 0 is unprobed.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3790
 

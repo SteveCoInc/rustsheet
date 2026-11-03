@@ -208,6 +208,43 @@ Status: VERIFIED (nine values per pair; overflowing results unprobed)
 Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922)
 Tasks: T-0922, T-1297, T-1860
 
+## CONVERT unit names
+Rule: a unit string is a unit name, or one prefix followed by a unit name, exactly (case-sensitive, no
+spaces; an empty string, `" m"`, `"m "`, `"KM"`, `"Km"`, `"kM"`, `"BYTE"`, `"Byte"`, `"pa"`, `"j"` are `#N/A`).
+Per unit class:
+- Decimal prefixes (`Y` .. `y`, with `da` and its alias `e` for deka; all 21) go on exactly these units:
+  `m`, `ang`, `ly`, `parsec`/`pc` (distance); `g`, `u` (weight); `sec`, `s` (time); `Pa`, `p`, `atm`, `at`,
+  `mmHg` (pressure); `N`, `dyn`, `dy`, `pond` (force); `J`, `e`, `c`, `cal`, `eV`, `ev`, `Wh`, `wh` (energy);
+  `W`, `w` (power); `T`, `ga` (magnetism); `K`, `kel` (temperature); `l`, `L`, `lt`, `uk_pt`, `m3`, `m^3`,
+  `ang3`, `ang^3` (volume); `m2`, `m^2`, `ang2`, `ang^2`, `ar` (area); `bit`, `byte`; `m/h`, `m/hr`, `m/s`,
+  `m/sec`, `mph` (speed). Every other unit is `#N/A` with any prefix: `kmi`, `kin`, `kft`, `kNmi`, `kyr`,
+  `kday`, `khr`, `kmin`, `kHP`, `kPS`, `kBTU`, `kflb`, `kHPh`, `klbm`, `kTorr`, `kpsi`, `kgal`, `ktsp`, `kha`,
+  `kMorgen`, `kkn`, `kadmkn`, `kft2`, `kmi2`, `kly2`, `kly3`, `kin3`, `kft3`. So `ms`, `msec`, `ks` are
+  seconds, `kmph` is 447.04 m/s, `katm`, `kmmHg`, `kcal`, `keV`, `kly`, `kpc`, `kT`, `kga`, `kuk_pt`
+  convert, `dam`, `daar` and `eatm` are deka.
+- Binary prefixes (`ki` .. `Yi`, 2^10 .. 2^80) go on `bit` and `byte` only: `kibyte` is 8192 bit, while
+  `kim`, `Mig`, `kiJ`, `kiK`, `kiC`, `Gim2` are `#N/A`. Bit and byte take the decimal prefixes too
+  (`Mbit`, `Gbyte`).
+- Powers are spelled into the unit names: `km2` and `km^2` are 1E6 m2 (the prefix is squared on `m2`,
+  `ang2` and cubed on `m3`, `ang3`; `kang2` is 1E-14 m2), but `ar` takes it once (`kar` 1E5 m2, `daar`
+  1000). Non-metric powers take no prefix.
+- No stacked prefixes (`mym`, `dym`, `kpc` as kilo-pico-calorie, `mmmHg` is milli-mmHg: 0.133322 Pa).
+- A string is read within the class of the other unit: `"pc"` is the parsec against `"m"` or `"parsec"`,
+  but pico-calories against `"c"`, `"J"` or `"eV"` (`CONVERT(1,"pc","c")` is 1E-12). Within one class
+  a unit name beats a prefixed reading (`"Pica"` is the pica point, `"mm"` the millimetre, `"min"` is
+  minutes against `"sec"` and `#N/A` against `"m"`, since `in` takes no prefix).
+- Every accepted string reads the same as from_unit and as to_unit (no cell differs between the
+  probe's two columns).
+Evidence: probes/convert-unit-names (excel-graph, 1549 strings in both directions: every unit bare and
+with `k`, `ki`, `m`, `da`, `e`, `M`, `Gi`; all 29 prefixes on fifteen units; the ambiguous, power, case and
+spacing strings above). Probes convert-temperature-prefix-a/-b agree for temperature.
+Open: 116 of the probe's cells are one or two ulps off in the prefix scale (a target prefix of
+`Y`, `n` or smaller, and squared or cubed prefixes), T-3861; three more are non-base factors, T-2047.
+Backend: excel-graph.
+Status: VERIFIED
+Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
+Tasks: T-3817, T-3861
+
 ## Engineering function argument modes
 Rule: every argument of the M9 engineering functions lifts elementwise over an array literal. All
 `ROWS(F(..{v;v}..))` cells are 2, including the `places`, `suffix`, unit, order and shift arguments.
@@ -742,7 +779,7 @@ Tasks: T-1816, T-2545
 ## IM* trig and hyperbolic functions past SIN's argument limit (T-3642)
 Rule: with a nonzero other part, IMTAN, IMSEC, IMCSC and IMCOT are `#NUM!` from |x| = 2^27 = 134217728, and IMSINH, IMCOSH, IMSECH and IMCSCH from |y| = 2^27, whatever the other part (1E-300, 1, 20, 700, either sign): `IMTAN("134217728+1i")`, `IMSINH("1+134217728i")`, `IMCOSH("1E-300-1E+10i")` are `#NUM!` and 134217727.99 answers. IMSIN and IMCOS cut sooner, as IMPOWER's and BESSELJ's inner sine (`EXCEL_INNER_TRIG_LIMIT`): `IMSIN("134217727+1i")` answers, `"134217727.5+1i"` and `"134217727.99+1i"` are `#NUM!`.
 Rule: the cut only applies where Excel takes the sine. IMTAN and IMCOT stay `±0 ± i` once cosh 2y overflows (`IMTAN("1E+10+700i")` is i, `IMCOT("134217728+700i")` -i, `IMTAN("1E+10+20i")` `#NUM!`). IMSEC and IMCSC are 0 once their overflowed-reciprocal scale 2e^-|y| is below the smallest normal double, |y| above about 709.09 (`IMSEC("1E+10+709.5i")` 0, `"1E+10+709i"` `#NUM!`), and IMSECH and IMCSCH the same in x (`IMSECH("709.5+1E+10i")` 0, `"709+1E+10i"` `#NUM!`); the 709.09 point is inferred from that formula, the probe brackets it in (709, 709.5]. A zero other part keeps the real rules ("IMSIN, IMCOS, ... of a real number" (T-2534): `IMCOT("134217728")` is 0).
-Not covered here: IMSIN and IMCOS at y = 709.78 are `#NUM!` for every x probed (T-3616's band). The complex IMSIN, IMCOS and IMTAN paths (and IMCSCH, IMSINH and IMCOSH for y) still take libm's sine of a large argument, so their last digits differ from Excel's x87 reduction (`IMSIN(COMPLEX(710,1E-300))` is 0.0000602887066915739, the real `IMSIN("710")` value; ours ...853), 74 grid and 37 argument-cut cells in all (T-3758).
+Not covered here: IMSIN and IMCOS at y = 709.78 are `#NUM!` for every x probed (T-3616's band). Rule: every sine and cosine inside the complex IM* trig and hyperbolic paths is SIN's and COS's own (the x87 64-bit π reduction) while the argument is below SIN's limit: IMSIN and IMCOS of x (`IMSIN(COMPLEX(710,1E-300))` is 0.0000602887066915739, the real `IMSIN("710")` value; libm gave ...853), IMTAN's and IMCOT's double angle 2x, which keeps the x87 reduction even where 2x is past 2^27 (`IMTAN(COMPLEX(710,1))` has real part 0.0000253197098921901, libm ...949; `IMTAN(COMPLEX(134217727,1))` is 0.191168356084859+1.23600163390978i, libm ...083806; `IMCOT(COMPLEX(134217727.5,1))` real part -0.0840591307346528), and y in IMCSCH and in IMSINH's and IMCOSH's log form past x = 709 (`IMCSCH(COMPLEX(0,710))` is -16586.8544023646i, libm ...3615i). With that, the grid's text cells match except T-3616's band, T-2668/T-2914's IMCSCH zeros (including argument-cut J16) and three 15th-digit cells at 705+705i (D161, E161, I161; T-3851); the argument-cut case passes 189 of 190. Implemented: `trig_sin_cos` and `double_angle_sin_cos` in complex/trig.rs (T-3758).
 Rule (not implemented, T-2668 and T-2914): IMCSCH keeps normal tiny parts at x = 700, 705 and 709 where ours prints 0 (J134:J149, J153:J168, J172:J176, J180, J183, J184 and J186 of the grid). The real-axis sign is odd: `IMCSCH(COMPLEX(700,0))` and `(700,1E-308)` are 1.97193530875195E-304, `(700,1E-300)`, `(700,1E-200)` and `(700,1E-20)` -1.97193530875195E-304; `(700,1)` -1.06544119434148E-304+1.65932634623297E-304i and `(700,20)` -8.04711426558125E-305+1.80026897486721E-304i are the negation of 2e^-x(cos y, -sin y), while `(700,709.78)` is -1.92443257888109E-304-4.30218678399417E-305i. This settles the "IMCSCH ... unprobed" question of the IM* last-digit sweep entry above.
 Inferred, not bracketed: the IMTAN/IMCOT exception starts where cosh 2y overflows (|y| about 355); the grid only shows y = 20 (`#NUM!`) and y = 700 (±i) past the limit.
 Evidence: probes/im-trig-magnitude-grid (4360 cells: 19x19 magnitudes 0, 1E-308 to 1E+300 with 700 to 720 around exp overflow, plus sign variants, columns A:J = the ten functions) and probes/im-trig-argument-cut (190 cells around 2^27), excel-graph, 2026-11-01.

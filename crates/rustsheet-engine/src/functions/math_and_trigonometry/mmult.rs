@@ -37,6 +37,11 @@ impl Model {
             Ok(d) => d,
             Err(e) => return e,
         };
+        // A blank first argument is #VALUE! before the second argument's error is looked at:
+        // MMULT(Data!H1,#NUM!) is #VALUE! (arrays.md "MMULT: a blank first argument", T-3729).
+        if matches!(a.as_slice(), [row] if matches!(row.as_slice(), [ArrayNode::Empty])) {
+            return CalcResult::new_error(Error::VALUE, cell, "MMULT array1 is blank".to_string());
+        }
         let b = match self.eval_matrix_arg(&args[1], cell) {
             Ok(d) => d,
             Err(e) => return e,

@@ -25,6 +25,8 @@ Needs an oracle sweep: T-2046 (only two m→ft points exist).
   known ft cells (m→ft at 1 and 2.5, ft→m at 1 and 4); x / 0.0254 / 12 fits the two m→ft cells but
   not ft→m. Decide per unit or per class with the sweep, and keep every currently passing
   CONVERT cell passing.
+- T-3817 probe (excel-graph), one ulp off: probes/convert-unit-names Sheet1!B33 `CONVERT(1,"m","ft")`,
+  B961 and B969 (`"m2"` to `"ly2"`, `"ly^2"`).
 - T-2676 sweep (gen-m9 round 2, gap triage 2026-10-26, excel-graph), not visibly off: gen-m9/932b33b1ef8b7608 Calc!A14
   `=CONVERT((0--(-0.0001)),"in","mi")` (the number is -0.0001): Excel -1.5782828282828283E-9, ours -1.578282828282828E-9
   (one ulp). A non-base to non-base pair (in to mi), so the same factor question as m to ft; add in and mi to the

@@ -7,6 +7,7 @@ twice.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -57,6 +58,11 @@ class Fit:
     notes: list[str] = field(default_factory=list)
     margin: float = DEFAULT_MARGIN
     complex_text: bool = False  # score IM* text results part by part (sweep.parse_complex_text)
+
+    def __post_init__(self) -> None:
+        if not (math.isfinite(self.margin) and 0.0 <= self.margin <= 1.0):
+            msg = f"fit {self.name!r}: margin must be a finite number in [0, 1], got {self.margin!r}"
+            raise ValueError(msg)
 
 
 def engine_candidate(case_ids: list[str], binary: Path | None = None, name: str = ENGINE) -> Candidate:

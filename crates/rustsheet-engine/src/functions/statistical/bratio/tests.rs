@@ -195,6 +195,22 @@ fn l140_one_term_bup_bgrat_matches_excel() {
     }
 }
 
+// L140 bup+bgrat with n >= 2 bup terms (2 <= b0 < 40, a0 > 15, x0 > 0.7): W = fl(ret·S) with bup's
+// powers of y0 through Excel's EXP and LN, D = x0^a0 at a whole b0 (T-3568's model, T-3561).
+#[test]
+fn l140_many_term_bup_bgrat() {
+    let x = (33587.0 - 2000.0) / (5_489_582.0 - 2000.0);
+    // Swapped to (a0, b0) = (600, 3): n = 2 terms at c = 1.
+    assert_eq!(branch(3.0, 600.0, x), (Branch::L140BupBgrat, true));
+    // ironcalc-calc STATISTICAL/BETADIST_BETAINV.xlsx Sheet1!G5,
+    // BETA.DIST(33587,3,600,TRUE,2000,5489582): Excel's value, correctly rounded (50-digit
+    // 0.67345537974934809577); today's kernel gave 0.6734553797493648.
+    assert_eq!(
+        cdf(x, 3.0, 600.0).to_bits(),
+        0.673_455_379_749_348_1_f64.to_bits()
+    );
+}
+
 // L140 at a whole b0 and a0 > 8 runs bpser(a0, 1, x0) with ln B(a0, 1) = -LN(a0): Excel's
 // values (probes-numeric, excel-graph), each on today's kernel and off before T-2506.
 #[test]
