@@ -1,0 +1,90 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3920: the typed `N A. F/D/Y` reading (T-3907) in a 1904 workbook. Row 1: no date (day 0 is before the 1904 epoch in the 1900 decode); rows 2-5: dated shapes, row 5 a date before 1904; row 6 `10 A.` alone; row 7 a plain clock-first control. A typed, B ISNUMBER, C value or LEN, D TEXT; E VALUE, F 0+, G DATEVALUE, H TIMEVALUE of the literal.",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3920"
+ ],
+ "expected": {},
+ "date_system": 1904,
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 A. 5"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A2": {
+     "entered": "10 A. 7/1/2025"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A3": {
+     "entered": "10:00 P. 7/1/2025"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+    "D3": "=IF(ISNUMBER(A3),TEXT(A3,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A4": {
+     "entered": "10 A. 1/1904"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+    "D4": "=IF(ISNUMBER(A4),TEXT(A4,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A5": {
+     "entered": "10 A. 12/1903"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+    "D5": "=IF(ISNUMBER(A5),TEXT(A5,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A6": {
+     "entered": "10 A."
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+    "D6": "=IF(ISNUMBER(A6),TEXT(A6,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "A7": {
+     "entered": "10 AM 7/1/2025"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+    "D7": "=IF(ISNUMBER(A7),TEXT(A7,\"yyyy-mm-dd hh:mm:ss.000\"),\"\")",
+    "E1": "=VALUE(\"10 A. 5\")",
+    "F1": "=0+\"10 A. 5\"",
+    "G1": "=DATEVALUE(\"10 A. 5\")",
+    "H1": "=TIMEVALUE(\"10 A. 5\")",
+    "E2": "=VALUE(\"10 A. 7/1/2025\")",
+    "F2": "=0+\"10 A. 7/1/2025\"",
+    "G2": "=DATEVALUE(\"10 A. 7/1/2025\")",
+    "H2": "=TIMEVALUE(\"10 A. 7/1/2025\")",
+    "E3": "=VALUE(\"10:00 P. 7/1/2025\")",
+    "F3": "=0+\"10:00 P. 7/1/2025\"",
+    "G3": "=DATEVALUE(\"10:00 P. 7/1/2025\")",
+    "H3": "=TIMEVALUE(\"10:00 P. 7/1/2025\")",
+    "E4": "=VALUE(\"10 A. 1/1904\")",
+    "F4": "=0+\"10 A. 1/1904\"",
+    "G4": "=DATEVALUE(\"10 A. 1/1904\")",
+    "H4": "=TIMEVALUE(\"10 A. 1/1904\")",
+    "E5": "=VALUE(\"10 A. 12/1903\")",
+    "F5": "=0+\"10 A. 12/1903\"",
+    "G5": "=DATEVALUE(\"10 A. 12/1903\")",
+    "H5": "=TIMEVALUE(\"10 A. 12/1903\")",
+    "E6": "=VALUE(\"10 A.\")",
+    "F6": "=0+\"10 A.\"",
+    "G6": "=DATEVALUE(\"10 A.\")",
+    "H6": "=TIMEVALUE(\"10 A.\")",
+    "E7": "=VALUE(\"10 AM 7/1/2025\")",
+    "F7": "=0+\"10 AM 7/1/2025\"",
+    "G7": "=DATEVALUE(\"10 AM 7/1/2025\")",
+    "H7": "=TIMEVALUE(\"10 AM 7/1/2025\")"
+   }
+  }
+ ]
+}
