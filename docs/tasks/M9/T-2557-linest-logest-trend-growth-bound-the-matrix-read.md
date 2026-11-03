@@ -3,7 +3,7 @@ id: T-2557
 title: "LINEST/LOGEST/TREND/GROWTH: bound the matrix read of a huge range"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,9 @@ The regression functions never allocate a dense matrix for a range far larger th
 
 ## Out of scope
 - Changing the error order recorded in statistics.md "LINEST and LOGEST report error values first".
+
+## Outcome
+`Model::read_data` (regression.rs, shared by LINEST, LOGEST, TREND, GROWTH) now checks the range extent with
+`check_array_cells` before allocating, so a range over the array limit is `#ERROR!` (DEVIATION entry in
+arrays.md). Clipping to the used area was rejected: blanks are `#VALUE!` in Excel, so a clipped column would give a
+value where Excel gives `#VALUE!`. Test: `regression_functions_bound_huge_ranges`. Eval delta: none expected.
