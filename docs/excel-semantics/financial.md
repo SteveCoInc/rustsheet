@@ -3493,6 +3493,23 @@ maturity (321).
   below the root, and none of the iterates one to three steps back meets the coupon rate, 0, 0.1 or YIELD's fitted
   start. So whatever explains the above-root cells (a non-analytic slope, or a price inside ODDFYIELD that differs
   from ODDFPRICE's by about 1e-9 near the root) also has to explain these.
+- Long first periods, zero coupon (T-3031 attempt 1, probes/oddf-date-order-domain-sweep Y!A22:O22, excel-graph
+  2026-11-03: rate 0, price 98, all frequencies and bases). With no coupon the price is `redemption / x^front_exponent`
+  and the committed slope is its exact derivative, so the slope's lead-coupon term cannot be the cause there, yet
+  Excel's values sit 1e-11 to 9e-11 from the root (both sides) while ours stop 4e-14 to 2e-11 from it. Excel's value
+  is the root of the same exponent (the exponent that makes it exact differs from `front_exponent` by at most 7e-7,
+  i.e. Newton noise, not a different schedule), but it is not on our Newton path from YIELD's start: G22, I22, K22
+  and L22 are *above* the root although YIELD's start is above it there too, and an exact analytic step on this
+  convex, decreasing price always ends below the root.
+  So for a long first period Excel's Newton differs before the lead-coupon term matters: a slope about 1.5e-5
+  (annual) to 6e-5 (quarterly) relative steeper than the exact one at the last iterate, or a different path (start).
+  Tried with no change to any long-first cell (PRICE_YIELD.xlsx 339 cells passing, the date-order sweep 1196, the
+  solver sweep 545, every variant): 12 lead-term slopes (the exact lead `lead` at `lead_exponent`, a regular coupon
+  at `y` or `y + 1`, no lead, `(offset + 1)` coupons, `lead` at `y`, a regular coupon at every quasi-coupon date
+  from settlement, the lead less `offset` coupons, the order `/ m` before the power); and YIELD's start over the
+  terms issue-maturity, first coupon-maturity, settlement-first coupon and issue-first coupon, and the coupon rate as
+  the start (0 of the 73 long-first cells reproduced). One exact-slope step from any start, or a forward difference
+  of a fixed `h`, reproduces the zero-coupon cells only with a start or `h` that changes from cell to cell.
 Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs
 `excel_yield_newton` with `OddFirstSchedule::dprice`, the slope above; before T-2007 it was a central-difference Newton
 from the coupon rate with a bisection fallback, landing on the root.
