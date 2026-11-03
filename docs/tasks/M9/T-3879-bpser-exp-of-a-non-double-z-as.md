@@ -6,7 +6,7 @@ lane: functions-stat
 status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 campaign: accuracy
 ---
@@ -42,3 +42,12 @@ b0 = max(a, b) < 8.
 
 ## Out of scope
 - b0 >= 8 L (T-3569); min(a, b) >= 1; GAMMALN accuracy (T-3042).
+
+## Handoff
+Done on this branch: the split-z form in `bpser.rs` (`bpser_series(.., split)`; `split` = min(a, b) < 1 and b0 < 8,
+F.TEST's `bpser_with_ln_beta` keeps `split = false`). `make eval` + `make eval-baseline`: 0 regressions; fixed 71 cells
+in gen-m9 and 10 in ironcalc-calc (baseline files committed; the eval run's other suites unchanged). `cargo clippy` clean.
+Not done (needs an opus run: numeric-fit guards of decision 0188 R4): the three non-double-z unit tests + one
+double-z test from t3769-r6-bpser-beta; the R4.2 fresh sweep through excel-graph (exact / 4 ulp / 15 digits for split
+and CR, Gate A envelope result) recorded in the Outcome; the statistics.md "Incomplete beta bpser" `Implemented in`
+line; `make check-fast`, the review panel (design, security, excel-fidelity), then `status: done` and enqueue.
