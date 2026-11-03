@@ -55,21 +55,23 @@ engineering.md "CONVERT constants and evaluation order".
   combined power came from those two cells, before any population scoring. Then 18 forms were scored on the
   1,145 prefixed literal CONVERT cells with oracle values (probes/convert-*, convert-unit-names): combined
   power 1,137; nearest constants per prefix 1,103; the previous form 979; the other 15 between 961 and 1,027.
-- Hold-out (R4.1). The split is 30% by SHA-256 of case and cell (cell hash below 3 mod 10). It was not fixed
-  before the population was scored, so it is disclosed as after the fact. The model has no free parameter to
-  tune, and the fresh sweep below is the out-of-sample test. No margin was stated in advance.
+- Population scoring split (not the R4.1 guard; see "Hold-out plan" below and its result): 30% by SHA-256 of
+  the string `<case file stem>!<cell>` (for example `convert-unit-names!B1153`; the cell without its sheet), held
+  out when the hash is 0, 1 or 2 mod 10. It was fixed after the population was scored, so it is contaminated, and
+  the round-2 batch below replaces it as the hold-out.
 
-  | half | cells | combined power | correctly rounded | previous form |
+  | half | cells | combined power (exact / 4 ulp / 15 digits) | correctly rounded (exact / 4 ulp / 15 digits) | previous form (exact) |
   |---|---|---|---|---|
-  | train | 807 | 801 | 742 | 688 |
-  | hold-out | 338 | 336 | 314 | 291 |
+  | train | 807 | 801 / 807 / 807 | 742 / 807 / 807 | 688 |
+  | hold-out | 338 | 336 / 338 / 338 | 314 / 338 / 338 | 291 |
 
-  All 1,145 are within 4 ulp of Excel under the combined power. The 8 misses are 1 or 2 ulp.
+  The 8 misses of the combined power are 1 or 2 ulp.
 - Fresh sweep (R4.2), generated after the model was frozen: new probes-numeric/t3861-convert-prefix-sweep,
   150 seeded calls (seed 3861; generator in the case description's terms: random class, unit pair and decimal
   or binary prefix on one or both sides, value 1 or log-uniform in 1E-12..1E12), excel-graph. Bit-exact 142
   (combined power), 123 (correctly rounded), 97 (previous form); 150 of 150 within 4 ulp and 15 digits.
-  Gate A envelope: 150 of 150 inside (against the exact rational conversion of the engine's factors).
+  Gate A envelope: 150 of 150 inside: all 150 are within 15 digits of Excel, which R2 counts as inside (the
+  math reference used was the exact rational conversion of the engine's unit factors, not 50-digit unit constants).
   Misses: A6, A56, A70, A85, A89, A106, A109 have a light-year or parsec factor (T-2047's digits; A109,
   `CONVERT(0.00041,"parsec","Pm")`, misses under every form), and A52 mixes a binary and a decimal prefix
   (T-3975). The previous form got A52 and A89; the sweep gains 45 net.
@@ -89,3 +91,18 @@ This plan is committed before the new batch is generated, filled or scored.
   Why 8 points: the generator draws light-year and parsec units far more often than the train population does, and
   those factors miss under every form (T-2047). The post-freeze sweep lost 4.6 points that way, and 8 allows for
   that share varying between two draws of 150.
+
+### Hold-out result (round 2)
+t3861-convert-prefix-holdout was generated, filled on excel-graph and then scored, after the plan above was
+committed (aab865a4).
+
+| candidate | bit-exact | within 4 ulp | within 15 digits | Gate A envelope |
+|---|---|---|---|---|
+| combined power (chosen) | 148 | 150 | 150 | 150 |
+| correctly rounded | 111 | 150 | 150 | 150 |
+| previous form (main) | 100 | 150 | 150 | 150 |
+
+Against the stated margin: (1) 148 beats 111; (2) the hold-out rate is 98.7%, which is above the 91.3% floor
+(train 99.3%). The guard passes. The two misses are A34 `CONVERT(0.0230580314,"mang","parsec")` and A63
+`CONVERT(1,"mly","hang")`, both 1 ulp, both on the light-year or parsec factor (T-2047). No mixed binary and
+decimal pair misses. The batch's three such cells pass, so T-3975 rests on sweep A52 alone.
