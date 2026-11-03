@@ -3,7 +3,7 @@ id: T-3760
 title: "An ejection for a failed tasks.py validate names the failure instead of an id collision"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
