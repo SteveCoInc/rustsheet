@@ -2304,9 +2304,9 @@ with `col_fields` beside `row_fields`:
   leaves the later `NA()` (B7-B9, B13-B15, B19-B21, B33), while text or `""` as a total depth or field_headers is
   `#VALUE!` ahead of it (B10-B12, B16-B18, B34-B35) and FALSE there is 0 (B22-B24); an earlier error wins over a blank
   (B30); `row_fields` 2 or `Data!C2` beside 10-row fields, a short `col_fields` (`Data!B2:B3`), `""` as `col_fields`
-  and short values are `#VALUE!` alone (older evidence: probes/groupby-pivotby-followup G!A81,
-  probes/pivotby-followup P!A301) but lose to any option's `NA()`, `#N/A` (B37-B39, B41-B42, B44-B46; short values
-  losing is B46). Owner T-3889.
+  and short values are `#VALUE!` alone (B36, B40, B43 for the scalar `row_fields`, short `col_fields` and `""` shapes;
+  short values: probes/groupby-pivotby-followup G!A81, ERROR.TYPE 3 in G!AC81) but lose to any option's `NA()`,
+  `#N/A` (B37-B39, B41-B42, B44-B46; short values losing is B46). Owner T-3889.
 - A scalar `filter_array` (0.5, -1, 1, 2, TRUE, `Data!G4`) beside a multi-column field or values, or a header row, is
   `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). It is GROUPBY's T-3839 rule
   with `col_fields` added (probes/t3890-pivotby-scalar-filter, 56 questions in P!B1:B56, excel-graph, 2026-11-03):
