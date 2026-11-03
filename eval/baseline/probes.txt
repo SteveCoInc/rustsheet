@@ -1923,6 +1923,7 @@ C	probes/t3881-imcsch-flip-start-negative.case.json	24
 C	probes/t3881-imcsch-flip-start.case.json	56
 C	probes/t3881-imcsch-overflow-band.case.json	416
 C	probes/t3894-bare-24h-clock.case.json	54
+C	probes/t3898-typed-circular-readers.case.json	28
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -4491,8 +4492,6 @@ F	probes/t3211-collation-sort-cycles.case.json	Calc!D36
 F	probes/t3211-collation-sort-cycles.case.json	Calc!G4
 F	probes/t3211-collation-sort-cycles.case.json	Calc!H4
 F	probes/t3211-collation-sort-cycles.case.json	Calc!I4
-F	probes/t3212-r1c1-bare-offsets.case.json	S!J39
-F	probes/t3212-r1c1-bare-offsets.case.json	S!J50
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I35
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!I36
 F	probes/t3297-legacy-if-index-arm-name-table.case.json	Sheet1!K35
