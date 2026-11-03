@@ -3,7 +3,7 @@ id: T-3676
 title: "Gate A slice 4i: reference tables for PRODUCT, SUMSQ, SERIESSUM and PERCENTOF"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
