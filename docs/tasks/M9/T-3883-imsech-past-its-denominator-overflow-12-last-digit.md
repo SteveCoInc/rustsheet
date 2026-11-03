@@ -3,7 +3,7 @@ id: T-3883
 title: "IMSECH past its denominator overflow: 12 cells with a last-digit part off (T-3881's band probe)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -34,10 +34,33 @@ cells listed under Context, where one part is one digit off today.
   not overflow at x = -354.03), not `overflowed_reciprocal`; its IMSECH twin is unprobed.
 
 ## Acceptance criteria
-- [ ] The 12 cells (and the 13 IMCSCH cells above) match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
+- [x] The 12 cells (A3 moved to T-3914, see the Outcome) (and the 13 IMCSCH cells above) match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
       regresses; their known-failure lines leave eval/baseline/probes.txt.
-- [ ] R4 guards recorded in the Outcome if candidates are ranked.
+- [x] R4 guards recorded in the Outcome if candidates are ranked.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - IMCSCH's band and sign (T-3881).
+
+## Outcome
+- `overflowed_parts` (complex/trig.rs) divides each part by `M = excel_exp(|v|)/2` instead of multiplying it by libm's
+  `2e^-|v|`. Rule and evidence in docs/excel-semantics/engineering.md "IM* reciprocals past the denominator's overflow
+  (T-3883)"; unit test `overflowed_reciprocal_divides_by_excel_exp`.
+- Eval delta: 28 known failures leave eval/baseline/probes.txt, 0 regressions: the 12 IMSECH and 12 IMCSCH cells of
+  probes/t3881-imcsch-overflow-band named above, and probes/im-trig-magnitude-grid D161, E161, I161 and J161 (705+705i,
+  T-3851's cells; T-3851 closed as done by this change). New probe probes/t3883-im-overflow-reciprocal-sweep (103
+  cells, excel-graph): 102 pass, A101 is off (one known failure, owned by T-3914).
+- R4 (structural choice, kind (c); no `FITTED` tag, no constant was fitted). Candidates, ranked on the older cells: the
+  1,493 cells of every suite whose evaluation reaches `overflowed_parts` (|v| 300..709, collected by formula, not chosen
+  by outcome). 2e^-|v| product (today) 1,465; the product with Excel's EXP or with the factors regrouped 1,465;
+  libm `exp(|v|)/2`, `2p/exp(|v|)`, libm `cosh |v|` and IMSECH's own cosh as the divisor 1,493; Excel's `EXP(|v|)/2`
+  as divisor 1,493; log-space `EXP(ln 2|p| - |v|)` 1,010; Smith's complex reciprocal of IMCOSH-like parts 685 to 824.
+  Hold-out / fresh sweep: the 1,493 cells tied the divisor forms, so a fresh sweep was frozen before any Excel value
+  was seen: probes/t3883-im-overflow-reciprocal-sweep rows 1-100, from a fixed-seed generator (|v| 356..708 at 3
+  decimals, the other part ±15 at 4 decimals, the four functions in turn), 60 rows where libm's divisor and Excel's
+  EXP divisor print different text and 40 where the divisor forms agree but today's product differs. Result: Excel's
+  EXP divisor 100/100, libm divisor forms 40/100, today's product 24/100. Gate A: these cells are past the double range
+  of the accuracy tables (results below 1E-154), no envelope point moves; `make check` runs the accuracy gate.
+- Not done: probes/t3881-imcsch-flip-start-negative A3 (`IMCSCH(COMPLEX(-354.03,1))`) is IMSECH's finite-t form, not
+  this one. The sweep's A101 (its IMSECH twin) is off the same way while A102/A103 at +354.03 pass, so Excel's digit
+  depends on the sign of x; no candidate tried fits both signs. Filed as T-3914 with the forms tried.
