@@ -3,7 +3,7 @@ id: T-3917
 title: "Collate the blocks T-3559 probed: unknown code points, symbol order, more scripts, Lao and Gurmukhi exceptions, equal forms, other-script digits"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
