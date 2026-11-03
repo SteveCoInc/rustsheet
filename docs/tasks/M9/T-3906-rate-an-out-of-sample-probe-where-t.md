@@ -39,8 +39,8 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
 - [x] A probes case of fresh, oracle-filled (excel-graph) RATE calls where the frozen rule restarts, with the
       draw's seed and filter recorded. Scored rule vs hold vs correctly rounded root.
 - [x] The rule is kept if it beats the hold out of sample; otherwise narrowed or reverted, with no RATE cell regressing
-      beyond what the evidence justifies, recorded in financial.md. (Recorded: the rule fails R4.2's envelope guard on
-      A152 and A194; the narrow-or-revert decision went to T-3850.)
+      beyond what the evidence justifies, recorded in financial.md. (Recorded: the rule fails the Gate A envelope item on
+      A152 and A194; the narrow-or-revert decision is a binding acceptance criterion of T-3850.)
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -52,7 +52,7 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
     the generator was a scratch script and is not committed.
   - Filtered with a scratch test that runs the frozen rule and the hold (`rate_secant(.., false)`) on every call.
     15,850 calls give different results, and 240 were sampled from them.
-  - The 50-digit roots come from mpmath `findroot` on the FV residual, seeded at Excel's value, and are committed as
+  - The 50-digit roots come from mpmath `findroot` on the FV residual, seeded at Excel's value, at the double nearest each literal (SPEC-0029). They are committed as
     `t3906-rate-restart-oos.math.tsv`.
 - **Scores.** Bit-exact / 4 ulp / 15 digits:
 
@@ -60,7 +60,7 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
   |---|---|---|---|
   | rule, of 240 | 48 | 84 | 103 |
   | hold, of 240 | 12 | 76 | 104 |
-  | correctly rounded root, of the 232 numeric cells | 17 | 64 | 91 |
+  | correctly rounded root, of the 232 numeric cells | 15 | 66 | 91 |
 
 - **Gate A envelope** (half a unit of Excel's 15th digit, or 1e-9 relative to the math; an error against a number is
   outside). The 50-digit roots are committed as the case's `math.tsv`.
@@ -71,7 +71,9 @@ saw and where the restart actually fires. The rule is kept, narrowed, or reverte
     where Excel and the hold return a number.
 - **Verdict: the rule is not cleared.**
   - It beats the hold on the bit and at 4 ulp, and is one cell behind at 15 digits.
-  - But moving two points out of the envelope fails decision 0188 R4.2's guard. A net +3 inside cannot overrule that.
+  - But moving two points out of the envelope fails the Gate A envelope item (decision 0188 R2, reviewer check 7). A
+    net +3 inside cannot overrule that. With decimal-literal roots the non-error point that leaves is A144, not A152;
+    A194 leaves either way.
   - Also missing is a train-side rate on firing cells only, comparable to this probe's 20% bit-exact (R4.1, the
     overfitting check).
   - The rule stays in the code as merged by T-3698, and the narrow-or-revert decision goes to T-3850. T-3850 is raised

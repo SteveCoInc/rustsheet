@@ -35,11 +35,14 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   runs of large annuities, so they are this task's evidence.
   - The case is named on a line with no cell address, so this task owns every cell of it.
 - R4 decision owed (T-3906): on that case T-3698's rule moves A152 and A194 out of the Gate A envelope (A194 becomes
-  `#NUM!`), which fails decision 0188 R4.2's guard, though it brings five other points in.
+  `#NUM!`), which fails the Gate A envelope item (decision 0188 R2, reviewer check 7), though it brings five other points in.
   - Narrow the rule so that neither point leaves, or revert it.
   - Also compute the train-side bit-exact rate on firing cells only (R4.1), to compare with this probe's 48 of 240.
 
 ## Acceptance criteria
+- [ ] T-3698's restart is narrowed so that no point of probes/t3906-rate-restart-oos leaves the Gate A envelope (A152 and
+      A194 today; re-score on the case's math.tsv), or reverted under a regression decision record (decision 0082's
+      precedent); a revert is the exception to "no RATE cell regressing" below (T-3906).
 - [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
       that no rule on the run's visible state does.
 - [ ] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded.
