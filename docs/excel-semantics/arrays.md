@@ -1192,10 +1192,18 @@ Value sorts with error aggregates (same probe):
 - A descending sort reverses the whole order, so the errors come first. Equal aggregates keep key order in both
   directions (A1:A55).
 - Ours already matches.
-- Open (T-3893): PIVOTBY's row value sort when every row's Total aggregate is `#VALUE!` (an array-returning LAMBDA).
-  Excel orders `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`'s
-  rows 0, 42, 2.5, 1E+15 ascending and exactly the reverse descending. That is neither key order nor first appearance
-  (42, 2.5, 0, 1E+15), so the ties break on something else. Ours keeps key order in both directions (probe A61:G79).
+- An array result (a LAMBDA returning an array, shown as `#VALUE!`) is not sorted as the `#VALUE!` it shows but
+  by the array: after every number, text and TRUE and before every error, and two arrays element by element in
+  row-major order, a blank element greatest and a shorter array first when it is the start of the other (`{"a";1}`
+  before `{TRUE;1}`, `{1;6}` before `{2;4}`, `{blank}` before `{blank;-0.5}`). So `LAMBDA(x,x)` sorts the groups by
+  their first record's value, and a descending sort reverses that order. Equal arrays keep key order both ways
+  (probes/t3893-pivotby-error-tie-order A461-A651, GROUPBY and PIVOTBY rows and columns, excel-graph, 2026-11-03;
+  the blank element and the prefix: the owned call
+  `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`, rows 0, 42,
+  2.5, 1E+15 ascending, t3893-pivotby-error-sort-header A61:G79, gen-m7 febfd6901374d79c A11225).
+  An error aggregate keeps the error rules above, `relative_to` included (A1-A351, A361-A371, A501-A511).
+  Unprobed: a blank element against text, booleans or errors (the engine: greatest), and a one-cell reference result
+  (the engine: compared like an array). Ours: implemented (`grouping.rs` `aggregate_cmp`).
 Unprobed (PIVOTBY): an error header cell in a joined column name (the engine: that error); a joined column name longer
 than a cell holds (the engine: `#VALUE!`, after the 32,767-character cell limit in coercion.md "Text longer than 32,767
 characters"); value sorts over three or more fields (rows: every level by its aggregate; columns: the last); and
