@@ -1,0 +1,234 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3852: typed clock-first date-time shapes and untyped mixed shapes (value, type; formats from the ENTERED log). The year-less row A14 is read as month, day and time only: its year is the current one.",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3852"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 AM 7/1/2025"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "A2": {
+     "entered": "10:00 AM 7/1/2025"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "A3": {
+     "entered": "10:00 PM 7/1/2025"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+    "A4": {
+     "entered": "9:00 7/1/2025"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+    "A5": {
+     "entered": "10:00:30 7/1/2025"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+    "A6": {
+     "entered": "10:00:30.5 7/1/2025"
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+    "A7": {
+     "entered": "10:00.5 7/1/2025"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+    "A8": {
+     "entered": "24:00 7/1/2025"
+    },
+    "B8": "=ISNUMBER(A8)",
+    "C8": "=IF(ISNUMBER(A8),A8,LEN(A8))",
+    "A9": {
+     "entered": "10:60 7/1/2025"
+    },
+    "B9": "=ISNUMBER(A9)",
+    "C9": "=IF(ISNUMBER(A9),A9,LEN(A9))",
+    "A10": {
+     "entered": "10:00  7/1/2025"
+    },
+    "B10": "=ISNUMBER(A10)",
+    "C10": "=IF(ISNUMBER(A10),A10,LEN(A10))",
+    "A11": {
+     "entered": "10:00 July 1, 2025"
+    },
+    "B11": "=ISNUMBER(A11)",
+    "C11": "=IF(ISNUMBER(A11),A11,LEN(A11))",
+    "A12": {
+     "entered": "10:00 1-Jul-2025"
+    },
+    "B12": "=ISNUMBER(A12)",
+    "C12": "=IF(ISNUMBER(A12),A12,LEN(A12))",
+    "A13": {
+     "entered": "10:00 2025-07-01"
+    },
+    "B13": "=ISNUMBER(A13)",
+    "C13": "=IF(ISNUMBER(A13),A13,LEN(A13))",
+    "A14": {
+     "entered": "10:00 7/1"
+    },
+    "B14": "=ISNUMBER(A14)",
+    "C14": "=IF(ISNUMBER(A14),MONTH(A14)*100+DAY(A14)+MOD(A14,1),LEN(A14))",
+    "A15": {
+     "entered": "10:00 7/1/25"
+    },
+    "B15": "=ISNUMBER(A15)",
+    "C15": "=IF(ISNUMBER(A15),A15,LEN(A15))",
+    "A16": {
+     "entered": "23:59 7/1-2025"
+    },
+    "B16": "=ISNUMBER(A16)",
+    "C16": "=IF(ISNUMBER(A16),A16,LEN(A16))",
+    "A17": {
+     "entered": "10:00 7-1-2025"
+    },
+    "B17": "=ISNUMBER(A17)",
+    "C17": "=IF(ISNUMBER(A17),A17,LEN(A17))",
+    "A18": {
+     "entered": "10:00 7/1/2025 "
+    },
+    "B18": "=ISNUMBER(A18)",
+    "C18": "=IF(ISNUMBER(A18),A18,LEN(A18))",
+    "A19": {
+     "entered": "2025/7-1"
+    },
+    "B19": "=ISNUMBER(A19)",
+    "C19": "=IF(ISNUMBER(A19),A19,LEN(A19))",
+    "A20": {
+     "entered": "1-Jul/25"
+    },
+    "B20": "=ISNUMBER(A20)",
+    "C20": "=IF(ISNUMBER(A20),A20,LEN(A20))",
+    "A21": {
+     "entered": "10:00 1/Jul/2025"
+    },
+    "B21": "=ISNUMBER(A21)",
+    "C21": "=IF(ISNUMBER(A21),A21,LEN(A21))",
+    "A22": {
+     "entered": "10:00 AM 7-1-2025"
+    },
+    "B22": "=ISNUMBER(A22)",
+    "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))",
+    "A23": {
+     "entered": "10:00 A 7/1/2025"
+    },
+    "B23": "=ISNUMBER(A23)",
+    "C23": "=IF(ISNUMBER(A23),A23,LEN(A23))",
+    "A24": {
+     "entered": "10:00 P 7/1/2025"
+    },
+    "B24": "=ISNUMBER(A24)",
+    "C24": "=IF(ISNUMBER(A24),A24,LEN(A24))",
+    "A25": {
+     "entered": "10:00 Jul 2025"
+    },
+    "B25": "=ISNUMBER(A25)",
+    "C25": "=IF(ISNUMBER(A25),A25,LEN(A25))",
+    "A26": {
+     "entered": "10:00 Jul-2025"
+    },
+    "B26": "=ISNUMBER(A26)",
+    "C26": "=IF(ISNUMBER(A26),A26,LEN(A26))",
+    "A27": {
+     "entered": "10:00 7/2025"
+    },
+    "B27": "=ISNUMBER(A27)",
+    "C27": "=IF(ISNUMBER(A27),A27,LEN(A27))",
+    "A28": {
+     "entered": "10:00 12/2025"
+    },
+    "B28": "=ISNUMBER(A28)",
+    "C28": "=IF(ISNUMBER(A28),MONTH(A28)*100+DAY(A28)+MOD(A28,1),LEN(A28))",
+    "A29": {
+     "entered": "10:00 July 1"
+    },
+    "B29": "=ISNUMBER(A29)",
+    "C29": "=IF(ISNUMBER(A29),MONTH(A29)*100+DAY(A29)+MOD(A29,1),LEN(A29))",
+    "A30": {
+     "entered": "10  AM 7/1/2025"
+    },
+    "B30": "=ISNUMBER(A30)",
+    "C30": "=IF(ISNUMBER(A30),A30,LEN(A30))",
+    "A31": {
+     "entered": "10:00 AM  7/1/2025"
+    },
+    "B31": "=ISNUMBER(A31)",
+    "C31": "=IF(ISNUMBER(A31),A31,LEN(A31))",
+    "A32": {
+     "entered": "10:00:30 AM 7/1/2025"
+    },
+    "B32": "=ISNUMBER(A32)",
+    "C32": "=IF(ISNUMBER(A32),A32,LEN(A32))",
+    "A33": {
+     "entered": "10:00 7/1/2025  "
+    },
+    "B33": "=ISNUMBER(A33)",
+    "C33": "=IF(ISNUMBER(A33),A33,LEN(A33))",
+    "A34": {
+     "entered": "10 A 7/1/2025"
+    },
+    "B34": "=ISNUMBER(A34)",
+    "C34": "=IF(ISNUMBER(A34),A34,LEN(A34))",
+    "A37": {
+     "entered": "99:00 7/1/2025"
+    },
+    "B37": "=ISNUMBER(A37)",
+    "C37": "=IF(ISNUMBER(A37),A37,LEN(A37))",
+    "A38": {
+     "entered": "10:99 7/1/2025"
+    },
+    "B38": "=ISNUMBER(A38)",
+    "C38": "=IF(ISNUMBER(A38),A38,LEN(A38))",
+    "A39": {
+     "entered": "10:00:30.5 AM 7/1/2025"
+    },
+    "B39": "=ISNUMBER(A39)",
+    "C39": "=IF(ISNUMBER(A39),A39,LEN(A39))",
+    "A40": {
+     "entered": "0 AM 7/1/2025"
+    },
+    "B40": "=ISNUMBER(A40)",
+    "C40": "=IF(ISNUMBER(A40),A40,LEN(A40))",
+    "A41": {
+     "entered": "12 PM 7/1/2025"
+    },
+    "B41": "=ISNUMBER(A41)",
+    "C41": "=IF(ISNUMBER(A41),A41,LEN(A41))",
+    "A42": {
+     "entered": "10:00 2025/7/1"
+    },
+    "B42": "=ISNUMBER(A42)",
+    "C42": "=IF(ISNUMBER(A42),A42,LEN(A42))",
+    "A43": {
+     "entered": "10:00 Jul-25"
+    },
+    "B43": "=ISNUMBER(A43)",
+    "C43": "=IF(ISNUMBER(A43),MONTH(A43)*100+DAY(A43)+MOD(A43,1),LEN(A43))",
+    "A44": {
+     "entered": "10:00 1-Jul"
+    },
+    "B44": "=ISNUMBER(A44)",
+    "C44": "=IF(ISNUMBER(A44),MONTH(A44)*100+DAY(A44)+MOD(A44,1),LEN(A44))",
+    "A45": {
+     "entered": "10 AM 7/1"
+    },
+    "B45": "=ISNUMBER(A45)",
+    "C45": "=IF(ISNUMBER(A45),MONTH(A45)*100+DAY(A45)+MOD(A45,1),LEN(A45))"
+   }
+  }
+ ]
+}
