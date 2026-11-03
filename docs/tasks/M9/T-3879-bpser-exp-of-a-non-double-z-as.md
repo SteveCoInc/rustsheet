@@ -3,7 +3,7 @@ id: T-3879
 title: "bpser: EXP of a non-double z as fl(fl(EXP(zh)·s)·fl(1 + zl)) at min(a, b) < 1, b0 < 8"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -43,7 +43,7 @@ b0 = max(a, b) < 8.
 ## Out of scope
 - b0 >= 8 L (T-3569); min(a, b) >= 1; GAMMALN accuracy (T-3042).
 
-## Handoff
+## Handoff (resumed)
 Done on this branch: the split-z form in `bpser.rs` (`bpser_series(.., split)`; `split` = min(a, b) < 1 and b0 < 8,
 F.TEST's `bpser_with_ln_beta` keeps `split = false`). `make eval` + `make eval-baseline`: 0 regressions; fixed 71 cells
 in gen-m9 and 10 in ironcalc-calc (baseline files committed; the eval run's other suites unchanged). `cargo clippy` clean.
