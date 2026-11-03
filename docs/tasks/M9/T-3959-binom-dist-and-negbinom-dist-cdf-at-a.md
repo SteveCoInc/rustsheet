@@ -17,6 +17,7 @@ significant digits of Excel, from a model of the arithmetic Excel's bratio branc
 off is recorded as UNVERIFIED in statistics.md with the hypotheses ruled out and their counts.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03b (`make eval` on origin/main c2062e5c8, excel-graph evidence; `scripts/exit_owners.py` per-cell
   ownership against every open task). The M9 exit and the Phase 1 rate (rate:BINOM.DIST, rate:NEGBINOM.DIST) count these
   cells. Their only owner is T-3774, which is `blocked` (time-boxed, decision 0056) after two attempts at the **pmf**

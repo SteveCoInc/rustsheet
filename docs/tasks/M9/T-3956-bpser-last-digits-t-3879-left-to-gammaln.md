@@ -16,6 +16,7 @@ BETA.DIST on bpser (min(a, b) < 1, b0 < 8) and GAMMALN at the shapes of the four
 T-2122's GAMMALN kernels ship through T-3042, or the Outcome names each cell left with its GAMMALN region.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (lnGamma/GAMMA) measured on t3570-r5-bpser-lg-aux, 0 of 2520 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8, excel-graph; `scripts/exit_owners.py`'s `owned` rule
   over every failing cell against every open task, deferred ones included). These 1,093 cells have no open owner at all.
   T-3879 (done) shipped Excel's split EXP for bpser and filled the fresh sweep; T-3570, T-3769 and T-3873 (done) filled

@@ -17,6 +17,7 @@ The 13 BETA.DIST cdf cells below agree with Excel to 15 significant digits. Toda
 visibly off at these values near a power of ten. No cell that agrees today is lost.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Decision 0188 R5 (owner's 2026-10-31 rulings): parked as Phase 1b. Each cell is a dense probes-numeric cell inside
   Gate A's envelope (SPEC-0029: ours is within 1.3E-14 of the 50-digit math on all 13), and Excel itself is off the math
   on every one, so this is reproducing Excel's last digits, not accuracy. A point that Gate A's tables show outside the

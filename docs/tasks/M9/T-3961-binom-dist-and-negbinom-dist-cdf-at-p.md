@@ -17,6 +17,7 @@ are within 15 significant digits of Excel, from a model of how Excel forms or ev
 found, the cells are an UNVERIFIED statistics.md entry with the hypotheses ruled out.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03b (`make eval` on origin/main c2062e5c8, excel-graph). Split from T-3774, which is blocked
   (time-boxed on the pmf; its cdf cells were never attempted), together with T-3959. T-3959 takes the other cdf
   cells. These 11 are a separate regime. Ours minus Excel is hundreds to tens of thousands of ulp, always positive

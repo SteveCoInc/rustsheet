@@ -3,7 +3,7 @@ id: T-3992
 title: "Measure excel-graph's fill-to-fill bit stability on the kernels the open R4 fits target (incomplete beta, lnGamma, gamma and t quantiles, RATE/IRR, CUMPRINC), so fits below the 4-ulp floor know which cells are targets"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -60,23 +60,41 @@ T-1553).
 - excel-graph only. Nothing here needs excel-desktop.
 
 ## Acceptance criteria
-- [ ] At least three fills of each chosen case (the committed fill counts as one) are compared cell by cell. For each
+- [x] At least three fills of each chosen case (the committed fill counts as one) are compared cell by cell. For each
       kernel family, docs/research/T-3992/README.md gives: cells compared, cells whose bits differ in any fill, the
       largest difference in ulp, and whether the differing cells cluster (near-ties, one branch, one argument range).
-- [ ] The control (T-2143's probe) reproduces decision 0112's instability, or the README explains why it does not.
-- [ ] For every open task that cites R4.4 or "reproducibility floor" (rg them; list each id), the README states
+- [x] The control (T-2143's probe) reproduces decision 0112's instability, or the README explains why it does not.
+- [x] For every open task that cites R4.4 or "reproducibility floor" (rg them; list each id), the README states
       whether its kernel was measured and, if so, how many of its owned cells are fill-unstable. Each such task gets a
       one-line note under its Context that links the README. Adding that note is the only edit to other tasks.
-- [ ] A docs/excel-semantics/ entry (numbers.md, beside "LN is FLDLN2 then FYL2X", or the kernel's own file) records each
+- [x] A docs/excel-semantics/ entry (numbers.md, beside "LN is FLDLN2 then FYL2X", or the kernel's own file) records each
       kernel found fill-unstable, citing cells. A kernel found stable is recorded as "stable over N fills" with the
       dates.
-- [ ] No committed `.oracle.json` sidecar changes: `git diff --stat origin/main -- eval/` is empty, and `make eval-baseline`
+- [x] No committed `.oracle.json` sidecar changes: `git diff --stat origin/main -- eval/` is empty, and `make eval-baseline`
       records nothing.
-- [ ] The Outcome recommends input to T-3610 (for example, "a cell is a target when N fills agree; kernels X and Y
+- [x] The Outcome recommends input to T-3610 (for example, "a cell is a target when N fills agree; kernels X and Y
       measured stable"). It does not make that decision itself.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The scoring decision itself (T-3610) and any change to R4.4 (a decision record that needs an owner ruling).
 - Any engine or fit change.
 - Web against desktop comparisons (T-1075, M14).
+
+## Outcome
+- Refilled eight fit-target kernel probes twice each with excel-graph on 2026-11-03 (fresh uploads, oracle cache emptied
+  before each round). Against each committed fill (2026-10-22 to 2026-11-03), **0 of 15,328 cells changed bits** over
+  three fills: t quantile, IRR, RATE, CUMPRINC, gamma quantile, lnGamma, and incomplete beta (bfrac and bpser). Details are
+  in docs/research/t3992/README.md; `compare_fills.py` and `diffs.json` are beside it.
+- Control: T-2143's LN probe reproduced today, but not the way decision 0112 read it. Refilling all three of its 2026-10-22
+  workbooks returns fill 1's bits at every cell. Fill 3's 23 one-ulp differences were one deviating run (1 run in 7 on
+  file), not a per-cell coin flip and not a property of the bytes. Recorded in docs/excel-semantics/numbers.md: the
+  "LN is FLDLN2 then FYL2X" refill bullet and the new entry "excel-graph refills reproduce the same bits; a deviation hits
+  a whole run".
+- The 58 open tasks that cite R4.4 or the reproducibility floor are listed in the README, each with its measured status
+  (7 on their own probe, 20 by kernel family only, 31 not measured), and each got a one-line Context note.
+- Input to T-3610 (not decided here): a cell is a target when two excel-graph runs on different days agree on its bits.
+  A refill that differs is a run-level event, so refill once more and keep the majority. The web-against-desktop floor
+  under R4.4 stays open.
+- No sidecar under eval/ changed (the refill sidecars were copied aside and the committed ones restored). Eval delta:
+  none.

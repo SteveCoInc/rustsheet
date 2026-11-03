@@ -18,6 +18,7 @@ defer: phase-1b
 Excel's density there.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bfrac) measured on t3953-f-tail-bfrac-tiny, 0 of 4800 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task and every unmerged branch's task files). T-3812 (done) ported Excel's Lentz
   loop and used this case as its fresh sweep; no open task owns its cdf column except T-3680's four cells with no

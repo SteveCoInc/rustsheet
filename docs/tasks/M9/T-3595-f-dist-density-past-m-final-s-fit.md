@@ -18,6 +18,7 @@ probes-numeric/t3478-f-density-r4-wide are within half a unit of the 15th digit 
 per cell, why the shapes past M-final's fit set need more than those models.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on main 408444f20, excel-graph). T-3478 (done) drew this 300-point sweep after
   the F density's small-shape constants were frozen, to check them past their fit set. It kept the constants:
   statistics.md "F density's small-shape constant past its fit set" has the per-stratum table. It filed no owner for

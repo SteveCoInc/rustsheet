@@ -18,6 +18,7 @@ the densities of the T-3568 bup-terms probes, matches Excel's value to 15 digits
 cell left over is named with its reason and an owner.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-02 (report of `make eval` on 2026-11-02, excel-graph; `python3 scripts/exit_owners.py --all-off`):
   these are the only large unowned visibly-off group. T-3568 (done, research) committed the probes to test its "loop of
   one-term bups" hypothesis (docs/research/t2464/r5-bup/RESULTS.md, `mkterms.py`, `terms.py`); its engine follow-up

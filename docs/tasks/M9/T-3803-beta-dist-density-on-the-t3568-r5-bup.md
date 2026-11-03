@@ -18,6 +18,7 @@ narrower density task that names its branch (both files name each other), or is 
 ours and the 50-digit math and the reason Excel's digits cannot be derived.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-02 (`make eval` on origin/main 56917e82c, excel-graph). `make unowned-off ALL=1` and
   `make exit-owners MILESTONE=M9` list these two cases as the only BETA.DIST cells with no open owner: 7,026 visibly
   off (all in the M9 rate criterion as `rate:BETA.DIST`) and 4,281 more within 15 digits.

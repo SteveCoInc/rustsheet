@@ -16,6 +16,7 @@ Find Excel's own BETA.INV formulation at a shape of exactly 1 (p >= 1E-15) to th
 closed form leaves 1 to 12 ulp from Excel become bit-exact without moving any cell off 15 digits.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - T-3664 replaced the crossing search at a shape of 1 with the libm closed form (p; -expm1(log1p(-p)/beta);
   exp(ln(p)/alpha)). Every shape-1 cell is within 15 digits, but Excel is not that closed form to the bit
   (docs/excel-semantics/statistics.md "BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more

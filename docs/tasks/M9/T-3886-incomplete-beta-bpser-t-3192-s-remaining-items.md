@@ -17,6 +17,7 @@ The bratio port's bpser items T-3192 did not reach are ported where Excel's form
 results with their scores; and BETA.DIST at a = b = 1/2, x = 0.5 is explained.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 T-3192 took its fourth item (t1745-beta-inv-roundtrip G1) and found BETA.DIST at a = b = 1/2 is an arctangent closed
 form, not bpser (statistics.md "BETA.DIST at a = b = 1/2 is an arctangent closed form, reflected above x = 0.9";
 docs/research/t3192). Its other three items carry over unchanged (read T-3192's Context for the detail):
