@@ -3,7 +3,7 @@ id: T-3198
 title: "F tails and densities T-2219 left off: F.DIST.RT(3,50,100) on L140 and F.DIST densities at (50,100); T-2219's gen-m9 cells below a + b = 10"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P2
 size: S
 tier: opus
@@ -98,3 +98,24 @@ probe cells stay open. The finding is in statistics.md, "Incomplete beta L140 bu
   - If BETA.INV still moves H32, keep its search on today's recurrence, as T-3561 did for L140 bup+bgrat
     (`bratio::beta_search_tails`).
   - Then re-measure A19 at the chosen kernel.
+
+## Progress (2026-11-03, power-sum PR)
+This opus run moved L140 bup+bpser's bup sum to T-3568's power sum (`bratio/bup.rs` `l140_bup_bpser`,
+`BupSum::Powers`). The three probe cells stay open, so the task stays `todo`.
+- Scoring (structural model from ranked candidates, decision 0188 R4: no fitted constant, so no `FITTED` tag). The hold-out
+  split was fixed before scoring: even rows of t3198-f-l140-args to fit, odd rows held out. Today's recurrence got 302 and
+  299 of 408, the power sum 333 and 341. Six other forms of the power and an exact-at-0.5 rule scored lower on both halves
+  (statistics.md lists them). No cut on n wins. Bratio fixture: 91 to 99 of 122 (ratchet raised).
+- Fresh sweep after the freeze: new probes-numeric t3198-l140-power-sweep, 400 seeded random BETA.DIST points on the branch
+  (excel-graph). 259 bit-exact against 244 for the recurrence.
+- Gated eval: 13 cells fixed (gen-m9 4, ironcalc-calc 8, probes 1), no regression. BETA.INV's search keeps the recurrence
+  (`BupSum::Recurrence`, `bratio::beta_search_tails`): crossing the power sum moved ironcalc-calc BETADIST_BETAINV.xlsx H32
+  to 0.5550000000000002.
+- Two unit expectations at y0 = 0.5 lose: `BETA.DIST(0.5,100,10,TRUE)` is 1 ulp high, and (10, 10) at 0.5 is not monotone
+  against the next double. Both are marked `TODO(T-3947)`, filed with the sweep's 17 visibly-off cells.
+- A19 `F.DIST.RT(3,50,100)`: 1.5167866644968792E-06 becomes 1.5167866644968803E-06. That is closer to the 50-digit
+  reference than Excel (-6e-16 against +3.0e-15) but still not Excel's 15th digit.
+- Left for the next run:
+  - A19: Excel equals `BETA.DIST(0.4,50,25,TRUE)` at y0 = 0.6, not at u = 0.6000000000000001. That is the F argument
+    question, and one cell is not enough evidence to change the argument rule.
+  - A26 and A30: `f_density.rs`.
