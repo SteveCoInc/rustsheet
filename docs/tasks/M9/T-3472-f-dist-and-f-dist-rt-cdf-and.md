@@ -3,12 +3,13 @@ id: T-3472
 title: "F.DIST and F.DIST.RT cdf, and BETA.DIST(0.5,100,100,TRUE): 6 cells where Excel is within 1.6 ulp of the math and ours is 3.6 to 13.8 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P2
 size: S
 tier: opus
 depends_on: []
 campaign: accuracy
+defer: phase-1b
 ---
 
 ## Goal
@@ -91,3 +92,38 @@ unmet then move to a follow-up with `defer: phase-1b`.
 ## Out of scope
 - The F.DIST density (T-3173, T-3174, T-3474) and every cell where Excel is off the math (T-3474, T-3592; Phase 1b).
 - F.INV and F.INV.RT (T-3398), which invert whatever cdf this lands.
+
+## Progress notes
+2026-11-03, opus run (findings; task deferred to Phase 1b, no engine change). Every one of the 10 cells is already
+inside Gate A's envelope (ours 2 to 14 ulp from the 50-digit math, far within SPEC-0029's 1e-9), so this is
+last-digit work on dense-sweep F and BETA.DIST cells, which decision 0188 R5 parks in Phase 1b: `defer: phase-1b`.
+What was measured, so the Phase 1b run does not repeat it (scratch, not committed; full `rustsheet-eval run` on
+origin/main d8640a46, compared cell by cell against the same run without the change):
+- **Branches today** (`bratio::dispatch` on `fisher.rs` `f_beta_arguments`; two Context guesses were wrong):
+  A400 `W1Bpser` swapped (a0 0.5, b0 3.5, x0 0.373; the split-z bpser, T-3879); A467 and gen-m9 A374
+  `L140BupBpser` swapped (a0 5, b0 2.5, x0 0.4; a0 3, b0 4.5, x0 0.175); A984 `L140BupBpser` unswapped (a0 50,
+  b0 25, x0 2/3: 24 bup terms of T-3198's power sum plus bpser(50, 1, x0)), not bup+bgrat; A954 `Bfrac` swapped
+  (a0 3.5, b0 50, x0 0.0654), not L140; A51 `Bfrac` at the mean (a0 = b0 = 100, outside T-3571's Lentz region,
+  so TOMS's recurrence); gen-m9 A34 `BpserLarge`; A504, gen-m9 A181 and A50 `BupBgrat` at a0 = 1/2, which F does
+  not port (`half_bgrat` false), so they are Cephes (`beta_reg_tails`).
+- **F through bup + `bgrat_half` on `BupBgrat`** (the BETA.DIST path, every a0 = 1/2 point): A504, gen-m9 A181 and
+  A50 land (0.6493833371797926, 0.3506166628202074, 0.6356868721336002), but net it is even: gen-m9 6 visibly-off
+  cells come within 15 digits and 6 go off, two of them bit-exact today (gen-m9 7c20351562a2d71d A205 and
+  c18dbf21f11093f3 A151, `FDIST(x,1,9)`: 0.19094711716972382 against Excel's 0.190947117169724, so
+  `make eval-baseline` refuses it); probes-numeric 22 on, 21 off (t2220 cdf/rt/d1-1/d2-1, t3567-r5-fdf1-hold).
+  This is T-2510's result again, unchanged by T-3382/T-3567. On the d2 = 1 cells mpmath puts Excel itself 5 to 12
+  ulp off (`F.DIST(0.24,20,1,TRUE)` -11.8, `F.DIST(0.621,20,1,TRUE)` -12.2), our bgrat_half -6 to +10: Excel's
+  bgrat there is neither ours nor the math (T-3474's cells).
+- **bfrac's error, decomposed** (mpmath 1.3, dps 50): A954 brcomp (Excel's density times x·y) +4.3 ulp, TOMS's
+  double recurrence r -10.0 ulp, w -3.6 ulp; A51 brcomp +0.03, r +5.7, w +4. With the same recurrence in double-double
+  (exact λ and y = 1 - x0, stop at 1e-3·eps) both land (0.5640919724091793, 0.49999999999999994), but taken on
+  every non-Lentz bfrac point it moves 2,300 cells: probes-numeric 45 within 15 digits, 23 off (t3953 tiny bfrac
+  tails, t2220 rt at df1 100, t1530 at df 1E10, BINOM.DIST(66,100,0.7,TRUE)), and 5 bit-exact gated cells to
+  1 ulp (probes t2435-dist-extremes A35, A36, A38 `FDIST(1,6,1E+10)`; gen-m9 7c20351562a2d71d A254,
+  f2bd5f380ec002bf A29). Excel's fraction is neither TOMS in doubles nor the math, so any narrowing is a fit
+  (R4 guards). T-3571's Lentz loop also lands both cells (0.5640919724091793, 0.49999999999999967) but is
+  `FITTED` only for the unswapped call at z in [-8, -0.2], which neither point is.
+- The L140 bup+bpser, split-z bpser and BpserLarge cells sit in the residual of bit-exact models (T-3198's power
+  sum: 674 of 816 exact; T-3879: 1,139 of 1,139), so moving them toward the math costs exact cells; not tried.
+What Phase 1b would do next: an R4 study of Excel's bfrac arithmetic off the Lentz region (swapped calls with a0 < 40,
+and |z| < 0.2), with A954 and A51 among its cells, and the d2 = 1 `BupBgrat` cells with T-3474.
