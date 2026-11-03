@@ -3,7 +3,7 @@ id: T-3903
 title: "Probe bare typed 24-hour clocks with an hour of 24 or more and seconds or an out-of-range minute (T-3894 follow-up)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
