@@ -3,7 +3,7 @@ id: T-3892
 title: "PIVOTBY: an early error fills the shape of an array relative_to or option it lifts over"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
