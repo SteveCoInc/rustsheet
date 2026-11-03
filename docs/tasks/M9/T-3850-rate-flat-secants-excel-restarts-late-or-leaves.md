@@ -4,7 +4,7 @@ title: "RATE flat secants Excel restarts late or leaves in the noise floor (afte
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P1
+priority: P3
 size: M
 tier: opus
 depends_on: [T-3698]
@@ -30,19 +30,21 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   are off Excel.
   - The cases are named here on lines with no cell address, so this task owns every cell of them.
   - Overlaps with T-3424 (noise-floor type) on the error-against-number cells.
-- Also owned: every cell of probes/t3906-rate-restart-oos that is off Excel. It holds 240 fresh flat-secant calls
-  (T-3906, 2026-11-03), and on 180 of them Excel matches neither the hold nor the restart. They are mostly noise-floor
-  runs of large annuities, so they are this task's evidence.
-  - The case is named on a line with no cell address, so this task owns every cell of it.
-- R4 decision owed (T-3906): on that case T-3698's rule moves A152 and A194 out of the Gate A envelope (A194 becomes
-  `#NUM!`), which fails the Gate A envelope item (decision 0188 R2, reviewer check 7), though it brings five other points in.
-  - Narrow the rule so that neither point leaves, or revert it.
-  - Also compute the train-side bit-exact rate on firing cells only (R4.1), to compare with this probe's 48 of 240.
+
+Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here):
+- The restart's |f1| cut reuses `RATE_CAP_TOLERANCE` (T-2689's FITTED cap), so refitting that tolerance would move
+  the restart too. Give the restart its own constant, or state the coupling, and make decision 0255 and the T-3698
+  Outcome classify the cut the same way.
+- `RATE_RESTART_F_MIN = 1.3e-7` comes from flat secants at step 46 and later (t3698-rate-flat-restart A43, A46, A47,
+  A51-A54), outside the 3..16 band. The smallest |f1| evidenced inside the band is 1.7e-7 (t3579-rate-residual-nper1 A1).
+- financial.md "RATE restarts once on an early flat secant" should list the misses inside the rule's region:
+  t3698-rate-flat-restart A9 (|f1| 8.57e-5, step 3; Excel 0.002094170434467432 matches neither path), A17, A21, A25 and
+  -fresh A22 (Excel `#NUM!`, both paths a number).
+- Optional (design): move the restart constants to module level, next to `RATE_CAP_TOLERANCE`.
 
 ## Acceptance criteria
-- [ ] T-3698's restart is narrowed so that no point of probes/t3906-rate-restart-oos leaves the Gate A envelope (A152 and
-      A194 today; re-score on the case's math.tsv), or reverted under a regression decision record (decision 0082's
-      precedent); a revert is the exception to "no RATE cell regressing" below (T-3906).
+- [ ] A blind fresh probe that targets flat secants, drawn and filled before any rescoring, checks the restart rule out
+      of sample (the T-3698 fresh sweeps hardly ever reach a flat secant).
 - [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
       that no rule on the run's visible state does.
 - [ ] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded.
