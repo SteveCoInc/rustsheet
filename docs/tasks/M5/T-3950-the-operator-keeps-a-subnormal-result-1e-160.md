@@ -18,15 +18,17 @@ Found by T-3942's probe (probes/seriessum-subnormal-power-and-term, excel-graph,
 "SERIESSUM: a power or term below the smallest normal double is 0"):
 - `=1E-160^2` keeps the subnormal 1E-320 in Excel: its `=0` companion B15 is FALSE and `=1E-160^2*1E+300` (A16) is
   9.99988867182683E-21, not 0. Ours flushes (B15 TRUE, A16 0).
-- `POWER(1E-160,2)*1E+300` (A17) is 0: POWER flushes, `^` does not. numbers.md "Subnormal results become 0" lists `=2^-1074`
-  as 0 on a Graph value that reads 0 for a kept subnormal too (decision 0042), so it does not conflict.
+- `POWER(1E-160,2)*1E+300` (A17) is 0: POWER flushes, `^` does not.
+- This is probed for a positive integer exponent only. A negative exponent still gives a true 0 (probes/subnormal-function-results
+  C16, `=(SUM(2^-1074))=0` TRUE: one over the positive power, and division flushes), so C16 must keep passing; do not remove the
+  flush from `^` as a whole. Probe other positive and non-integer exponents first if the fix needs them.
 Code path: the `^` operator in crates/rustsheet-engine (arithmetic power).
 
 Owned cells:
 - probes/seriessum-subnormal-power-and-term.case.json (3): Sheet1!A16, B15, B16
 
 ## Acceptance criteria
-- [ ] probes/seriessum-subnormal-power-and-term Sheet1!B15, A16, B16 pass, and no passing cell of any suite changes.
+- [ ] probes/seriessum-subnormal-power-and-term Sheet1!B15, A16, B16 pass, and no passing cell of any suite changes (subnormal-function-results C16 included).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

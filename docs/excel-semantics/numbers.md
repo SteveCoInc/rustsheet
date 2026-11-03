@@ -875,6 +875,9 @@ Evidence: probes/precision-and-rounding A14; probes-numeric `number-to-text/*/1e
 probes/text-number-words H6, H7, K1, K4, K5 (`="1e-308"+0` is 0).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
+Exception (T-3942, probes/seriessum-subnormal-power-and-term B15, A16): the `^` operator with a positive integer exponent keeps its
+subnormal result (`=1E-160^2`), see "SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal"; `=2^-1074` is
+a true 0 (a negative exponent, subnormal-function-results C16).
 Per function group (T-0189, VERIFIED, probes/subnormal-function-results, excel-graph 2026-10-06;
 `C` companion cells `(x)=0` tell a true 0 from a kept subnormal, since the saved file, and so the Graph value,
 holds 0 (decision 0089) and
@@ -2509,10 +2512,13 @@ Rule: SERIESSUM flushes both a power `x^(n+i*m)` and a term `c_i*x^(n+i*m)` that
 `SERIESSUM(1E-154,2,0,{1E-10})` (power 1E-308, subnormal) are 0; so is `SERIESSUM(1E-150,2,0,{1E-10})`, whose power 1E-300 is
 normal and whose term 1E-310 is subnormal. A subnormal power is flushed before the coefficient multiplies it, not after:
 `SERIESSUM(1E-160,2,0,{1,1E+300})` and `SERIESSUM(1E-160,2,0,{1E+300})` are 0, not 1E-20. A flushed term beside a normal one
-drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200). This confirms the flush T-3676's Gate A definition
-(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator does not flush: `=1E-160^2` keeps the subnormal 1E-320
-(`=(1E-160^2)=0` is FALSE) and `=1E-160^2*1E+300` is 9.99988867182683E-21, where `POWER(1E-160,2)*1E+300` is 0. So SERIESSUM's power is
-not Excel's `^` here, whatever T-2163 found for ordinary values; it follows POWER.
+drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200); its second power 1E-400 is 0 in any
+arithmetic, so that cell shows a zero term dropping out, not the flush. This confirms the flush T-3676's Gate A definition
+(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator with a positive integer exponent does not flush:
+`=1E-160^2` keeps the subnormal 1E-320 (`=(1E-160^2)=0` is FALSE) and `=1E-160^2*1E+300` is 9.99988867182683E-21, where
+`POWER(1E-160,2)*1E+300` is 0. A negative exponent still gives a true 0 (`=(SUM(2^-1074))=0` is TRUE, probes/subnormal-function-results
+C16; a negative exponent is one over the positive power, "Division rounds twice", and division flushes): only the positive exponent
+was probed here, so the `^` rule is limited to it, and SERIESSUM's power follows POWER, not `^`.
 Evidence: probes/seriessum-subnormal-power-and-term A1:B17 (excel-graph, 2026-11-03, T-3942).
 Ours: the power matches (every power cell passes); a subnormal term from a normal power is kept (A2, A9; T-3949) and `^` flushes its
 result (B15, A16, B16; T-3950).
