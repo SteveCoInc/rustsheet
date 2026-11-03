@@ -64,7 +64,8 @@ t3571-r5-bfrac-* cells before and after as the acceptance criteria say.
   fl(brc·f). NR's FPMIN floors on D and C are kept (directive 5); the `BFRAC_MAX_TERMS` bound and `None` path stay.
   `lentz_region` gates it to the unswapped call with a, b in [40, 5000] and z = (x - mu)/sd in [-8, -0.2] (mkprobe.py's
   mu and sd); everywhere else TOMS's recurrence is unchanged. `bfrac` now takes the `Dispatch`. `quality/fitted.json`
-  updated with `check_fitted.py --update` (bfrac.rs 0 -> 1; it also recorded gamma.rs 7 -> 6, main's own drift).
+  updated with `check_fitted.py --update` (bfrac.rs 0 -> 1; it also recorded gamma.rs 7 -> 6, main's own drift), under
+  decision 0257.
 - Port check: given the same density, the engine's cdf equals `model.py` `cdf` bit for bit on all 1,536 tune, 1,632
   hold and 1,200 fresh points; `model.py` on Excel's density reproduces RESULTS.md's 1,236, 1,158 and 694 bit-exact.
 - Hold-out and fresh sweep: T-3571's (split fixed in 65189a46d before scoring; fresh sweep built after the freeze);
