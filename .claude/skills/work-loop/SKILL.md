@@ -18,13 +18,14 @@ Read `docs/process/agent-workflow.md` once per session if you have not.
    GitHub tools) and its task is your tier, continue it (go to step 4/6) instead of starting new
    work. One task in flight per lane. A task handed off to `opus` (it has a `## Handoff` section)
    is resumed by an opus run from its pushed branch, starting from the handoff notes.
-3. **Step 0.3, adopt an orphan** (opus runs only, decision 0248): before picking a new task, look
-   for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an `agent/*`
-   or `claude/*` branch of this repository, never a fork; not draft, not queued, branch idle 4 h
-   or more; a PR the merge queue removed counts). Take the
-   oldest one and drive it to the queue under that rule: fix red CI or a conflict, run your own
-   review panel on the current diff, enqueue. It counts as one task of the session budget. Skip
-   it when none exists.
+3. **Step 0.3, adopt orphans** (opus runs only, decisions 0248, 0253): before picking a new task,
+   look for open PRs that the `steward` skill's "Orphaned agent PRs" rule calls orphans (an
+   `agent/*` or `claude/*` branch of this repository, never a fork; not draft, not queued). First
+   every open PR labelled `queue-dropped` (the merge queue removed it and nobody has pushed since;
+   no idle wait), oldest first, as long as the session budget allows new tasks; then the oldest
+   other orphan (branch idle 4 h or more), one per run. Drive each to the queue under that rule:
+   fix red CI or a conflict, run your own review panel on the current diff, enqueue. Each counts
+   as one task of the session budget. Skip the step when none exists.
 
 ## 1. Pick
 `make next-task LANE=<lane> TIER=<tier>` (P0 tasks first, then handed-off tasks; decision 0023). If
@@ -77,8 +78,8 @@ If the task is bigger than size M, split it (planner) instead of doing it.
 First mark the task `status: done` with its "Outcome" section (what changed, eval delta) in the
 commit that goes to review, so an approved head needs no bookkeeping push and no second CI run
 (decision 0248). Do not add a line to `docs/status.md` (decision 0024). Push, and open the PR as a
-draft (step 6.2's template) if none exists, so CI starts and the reviewers' verdict records have a
-PR to go on. Use the `review` skill. Fix every BLOCKING / REQUEST_CHANGES finding of the round
+draft (step 6.2's template) if none exists, so CI starts while the reviewers run. Use the `review`
+skill. Fix every BLOCKING / REQUEST_CHANGES finding of the round
 (update the Outcome in the same commit if it changed), re-run `make check-fast`, push the round's
 fixes once (the `review` skill's step 4, decision 0240), and re-run only the reviewers that did
 not approve. Once every reviewer approves, a MINOR finding never starts a push: file it as a
@@ -133,13 +134,11 @@ file and its acceptance criteria.
    on CI"). Merge `origin/main` in only as the `steward` skill's "When to merge `main` in" allows
    (decision 0121): never just because the branch is behind. Then wait for CI (subscribe to PR
    activity and arm a check-in; do not poll with sleep). Fix failures per the `steward` skill.
-   When CI is green and all reviewers approve, run `make merge-mode` (it reads the switch from a
-   freshly fetched `origin/main`, never your branch). It should print `lock`, which now means
-   **enqueue** (decision 0247, reactivating 0053): call `enable_pr_auto_merge` with
-   `mergeMethod: SQUASH`, stay subscribed, and move on to the next task. GitHub's merge queue
-   tests the PR merged with the current `main` and the PRs ahead of it and squash-merges it; do
-   not merge it yourself, take the merge lock or run `make mark-ready` (the merge train and the
-   lock are retired). If it prints `shadow` or `train`, do not merge: report it for the owner.
+   When CI is green and all reviewers approve, **enqueue** (decision 0247, reactivating 0053):
+   call `enable_pr_auto_merge` with `mergeMethod: SQUASH`, stay subscribed, and move on to the
+   next task. GitHub's merge queue tests the PR merged with the current `main` and the PRs ahead
+   of it and squash-merges it; do not merge it yourself. (`make merge-mode` always prints `lock`,
+   meaning "enqueue": it stays only for the routines' stored prompts, decision 0252.)
    - **Refused:** if `enable_pr_auto_merge` is refused because auto-merge or the merge queue is
      off, leave the PR green and approved, comment the refusal on it, and report it for the
      owner. Never fall back to merging it yourself.
@@ -150,13 +149,12 @@ file and its acceptance criteria.
      when a line you added elsewhere names the old id: change that yourself). A conflict only in
      the eval-gated baseline lists: `make catch-up PR=<n>` (decision 0207). Then wait for green
      CI and enqueue again.
-   - **Changing a queued PR:** `disable_pr_auto_merge` first, push, wait for CI, re-run the
+   - **Changing a queued PR:** have the change committed locally first, then `disable_pr_auto_merge`
+     and push at once (the dequeue labels the PR `queue-dropped` until the push lands, decision
+     0253), wait for CI, re-run the
      reviewers the change concerns (a clean merge of `origin/main`, a catch-up or a renumber
      needs none), then enqueue again. Never push while auto-merge is armed: the new commits could
      land unreviewed.
-   - **Old `ready-to-merge` / `merge-train-ejected` PRs** from the retired train are enqueued the
-     same way; an ejected one first gets its conflict or red CI fixed, `make check-fast` and the
-     reviewers the change concerns. Remove the old label when you enqueue it.
    - **Revert PRs** are reviewed by the full panel (no waiver) and enqueued first, before your
      other work (the queue has no priorities: watch it through).
 4. GitHub deletes the head branch after the merge if the repository is set to; otherwise leave it.

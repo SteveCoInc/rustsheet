@@ -275,7 +275,10 @@ pub(super) fn from_a1_to_rc(
     }
     // Excel refuses a workbook nesting more function calls than it takes (createSession 501;
     // syntax.md "Formula nesting depth cap", T-3097).
-    call_cap::refuse_too_many_calls(parser, &format!("Formula in {context}"))?;
+    // So it does one past the 256-parenthesis or the sign cap (T-3869).
+    let what = format!("Formula in {context}");
+    call_cap::refuse_too_many_calls(parser, &what)?;
+    call_cap::refuse_past_syntax_cap(&t, &what)?;
     // Tree equality holds `-0` equal to `0`, which print differently (`{-0}`, `{0}`): such a
     // tree is neither looked up nor kept.
     let key = key.filter(|_| !t.has_parse_error());

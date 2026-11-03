@@ -14,7 +14,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, merge-train/current]
+    branches: [main, other/x]
   workflow_dispatch:
 
 permissions:
@@ -86,20 +86,15 @@ class Rights(unittest.TestCase):
 
 
 class Trigger(unittest.TestCase):
-    def test_push_branches_are_exactly_main_and_the_two_trains(self) -> None:
-        # SPEC-0027 section 9, decision 0147: merge-train/revert-* and merge-train/probe get no
-        # push CI (a revert PR gets pull_request CI), and merge-lock triggers nothing.
-        branches = check.push_branches(check.CI_YML.read_text(encoding="utf-8"))
-        self.assertEqual(branches, ["main", "merge-train/current", "merge-train/shadow"])
-        # Literal names: a glob character would let other branches match.
-        self.assertFalse(any(c in b for b in branches for c in "*?[]!+"))
-        for other in ["merge-train/revert-x", "merge-train/probe", "merge-lock", "merge-train/current-2"]:
-            self.assertNotIn(other, branches)
+    def test_push_branches_are_exactly_main(self) -> None:
+        # Decision 0247 (T-3827): the merge train's branches are retired; only main gets push CI
+        # (PRs get pull_request CI, merge-queue groups merge_group CI).
+        self.assertEqual(check.push_branches(check.CI_YML.read_text(encoding="utf-8")), ["main"])
 
     def test_push_branches_parses_flow_and_block_lists(self) -> None:
-        self.assertEqual(check.push_branches(GOOD), ["main", "merge-train/current"])
+        self.assertEqual(check.push_branches(GOOD), ["main", "other/x"])
         block = GOOD.replace(
-            "branches: [main, merge-train/current]", "branches:\n      - main\n      - 'x/y'"
+            "branches: [main, other/x]", "branches:\n      - main\n      - 'x/y'"
         )
         self.assertEqual(check.push_branches(block), ["main", "x/y"])
         self.assertIsNone(check.push_branches(GOOD.replace("  push:\n", "  pushed:\n")))

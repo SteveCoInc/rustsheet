@@ -279,7 +279,8 @@ def test_moderately_nested_formula(wb):
 
 
 def test_too_deeply_nested_formula_is_rejected(wb):
-    # The parser bounds the depth (MAX_FORMULA_DEPTH, T-0931): the edit fails and rolls back.
+    # Past Excel's 256-parenthesis cap a typed formula does not parse (T-3689): the edit fails
+    # and rolls back.
     wb.set("A1", 7)
     with pytest.raises(rs.EditError):
         wb.set("A1", rs.Formula("=" + "(" * 10_000 + "1" + ")" * 10_000))

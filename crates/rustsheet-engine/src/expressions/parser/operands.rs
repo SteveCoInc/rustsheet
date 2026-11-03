@@ -499,17 +499,34 @@ impl Parser {
         self.typed
     }
 
+    /// Whether the formula just parsed held a TAB or an NBSP between tokens, which Excel refuses
+    /// typed ([`crate::expressions::lexer::Lexer::skipped_refused_whitespace`]): read by
+    /// [`Parser::typed_refusal`] and by the R1C1 entry, which parses before the typed A1 text.
+    pub(crate) fn skipped_refused_whitespace(&self) -> bool {
+        self.lexer.skipped_refused_whitespace()
+    }
+
     /// Why Excel refuses the formula just parsed when it is typed: a LET name or LAMBDA parameter
     /// spelled like a cell (T-2040, decision 0103), a call with a wrong argument count (`=PV(1)`,
     /// T-2567, T-2568), too many nested calls ([`MAX_NESTED_CALLS`], T-3097), or `ANCHORARRAY(`
-    /// spelled as a call (T-3262, probes/t3262-anchor-typed-refused). `None` when parsing stored
-    /// text or nothing is refused.
+    /// spelled as a call (T-3262, probes/t3262-anchor-typed-refused), or a TAB or NBSP between
+    /// tokens ([`Parser::skipped_refused_whitespace`], T-3102). `None`
+    /// when parsing stored text or nothing is refused.
     pub(crate) fn typed_refusal(&self) -> Option<String> {
         if !self.typed {
             return None;
         }
         if self.nests_too_many_calls() {
-            return Some(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
+            // Excel's PATCH 400 leaves the cell blank, as for a formula that does not parse
+            // (probes/t3097-nesting-*-66-typed, T-3689).
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: {TOO_MANY_NESTED_CALLS_MESSAGE}"
+            ));
+        }
+        if self.skipped_refused_whitespace() {
+            return Some(format!(
+                "{TYPED_FORMULA_DOES_NOT_PARSE}: a TAB or no-break space between tokens"
+            ));
         }
         if let Some(name) = &self.cell_shaped_binding {
             return Some(format!(

@@ -97,7 +97,10 @@ impl Model {
         // Rows sort by a value only when there is a Total column: with col_total_depth 0 they keep
         // the key order (probes/pivotby-followup P!A781, P!A1221; with it, P!M121, P!A801).
         // Columns sort by a value with or without the Total row (P!A821, P!A841).
-        let key_order = SortOrder::Keys(Vec::new());
+        let key_order = SortOrder::Keys {
+            ascending: Vec::new(),
+            named: Vec::new(),
+        };
         let row_sort = match pivot.row_sort {
             SortOrder::Value { .. } if pivot.col_depth == 0 => &key_order,
             ref order => order,
@@ -332,7 +335,7 @@ impl Model {
         // option beats an invalid one before or after it and a non-function
         // (probes/pivotby-followup P!A1401-A1461, P!A1261, P!A1281).
         let function = self.function_elements(&args[3], cell)?;
-        let mut options = self.evaluate_options(&args[4..], cell)?.into_iter();
+        let mut options = self.evaluate_options(&args[4..], &[], cell)?.into_iter();
         let field_headers = options.next().flatten();
         let row_depth = options.next().flatten();
         let row_sort = options.next().flatten();
@@ -393,8 +396,9 @@ impl Model {
         }
         // GROUPBY's filter rules hold too: another height, errors and text are #VALUE!, a header
         // row may be left out of the filter, and keeping no record is #VALUE! (P!A281,
-        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133).
-        let records = self.filter_rows(filter, height, first, cell)?;
+        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133). Whether one
+        // filter value beside several fields or a header row is #VALUE! here too is T-3841's probe.
+        let records = self.filter_rows(filter, height, first, true, cell)?;
         let (relative_to, lifted) = self.relative_to_arg(relative_to, cell)?;
         let row_depth = effective_depth(row_depth, row_depth_given, &row_sort, row_fields);
         let col_depth = effective_depth(col_depth, col_depth_given, &col_sort, col_fields);

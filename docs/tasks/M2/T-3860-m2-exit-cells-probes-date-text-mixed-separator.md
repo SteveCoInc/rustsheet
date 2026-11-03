@@ -3,7 +3,7 @@ id: T-3860
 title: "M2 exit cells probes/date-text-mixed-separator-typed B10 and C10 pass"
 milestone: M2
 lane: functions-date
-status: todo
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -25,9 +25,17 @@ work: once T-3796 merges, check the two cells with
 fail, fix the remainder here (S) or file a follow-up naming them.
 
 ## Acceptance criteria
-- [ ] probes/date-text-mixed-separator-typed B10 and C10 pass in `make eval`.
-- [ ] `make exit-owners MILESTONE=M2` does not list them.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/date-text-mixed-separator-typed B10 and C10 pass in `make eval`.
+- [x] `make exit-owners MILESTONE=M2` does not list them.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Anything T-3796 already covers beyond these two cells.
+
+## Outcome
+T-3796 (merged) fixed typed clock-first date-time text. On `origin/main` (4d89ce39b)
+`rustsheet-eval show --all probes/date-text-mixed-separator-typed.case.json` reports 23/23
+cells Pass, including `S!B10` and `S!C10`. No code change was needed. `make eval-baseline`
+changed nothing (the probes baseline has no known failures for the case). The stale
+`visible-parity.txt` line (`...mixed-separator-typed.case.json 2`) is lowered by the steward's
+`make eval-lower-visible-lock`, not by a task PR (decision 0093).

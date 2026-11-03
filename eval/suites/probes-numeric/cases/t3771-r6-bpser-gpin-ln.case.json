@@ -1,0 +1,33 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3771 r6-bpser-gpin: LN at every x of t3570-r5-bpser-lg (docs/research/t2464/r6-bpser-gpin)",
+ "tags": [
+  "M9",
+  "probe",
+  "statistics",
+  "T-3771",
+  "incomplete-beta"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=LN(0.00057)",
+    "A2": "=LN(0.00083)",
+    "A3": "=LN(0.0013)",
+    "A4": "=LN(0.0027)",
+    "A5": "=LN(0.0041)",
+    "A6": "=LN(0.0063)",
+    "A7": "=LN(0.0089)",
+    "A8": "=LN(0.013)",
+    "A9": "=LN(0.019)",
+    "A10": "=LN(0.027)",
+    "A11": "=LN(0.037)",
+    "A12": "=LN(0.051)",
+    "A13": "=LN(0.071)",
+    "A14": "=LN(0.093)"
+   }
+  }
+ ],
+ "expected": {}
+}

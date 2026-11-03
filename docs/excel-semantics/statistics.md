@@ -2175,10 +2175,23 @@ t1049-ttest A44, `T.TEST({1,2,3},{2,4,7},2,1)`, and A48, `T.TEST({1,1,1},{2,3,4}
   gen-m9/bbab6562e88b70e8 A181 `T.DIST.2T(123456780.723,2.5)` = 6.561000999157746E-17 (0; ours +19), and
   `T.DIST.RT(100,1)` (m9-t-dist-rt A10, 0; ours +5). Every failing df-1 or df-2 cell with literal arguments in the
   report (49) has Excel within 1 ulp of the exact tail. Task: T-3187.
+- At df 1 from t = 1 up Excel is mostly within an ulp of the exact tail at t too: `T.DIST.RT(2,1)` = 0.14758361765043326
+  (m9-t-dist-rt A5, and the t = 2 cells of m9-t-dist-2t and m9-t-nonint-df) is the exact tail correctly rounded
+  (-0.40 ulp). Excel is more than 1 ulp from the exact tail at `T.DIST.RT(3,1)` (A6, +1.80), gen-m9/5919660b7bb4d195
+  A336 `TDIST(1.005,1,2)` (+1.56), `T.DIST.RT(30,1)` (A9, +1.24) and `T.DIST.RT(5,1)` (A7, +1.01), and at df 2 below the
+  cut at `T.DIST.RT(5,2)` (A22, -1.30) and `T.DIST.RT(100,2)` (A25, +1.18); so "within 1 ulp" above reads "within
+  about 1.8 ulp". No form tried gives those bits and also the rest (T-3187; T-3877).
 Ours: `student_t.rs` `closed_form_tail` (since T-0969 attempt 8), the kernel's oriented closed form with the
-y0 <= 0.9 cut since T-2502; below it the general tail.
-Status: VERIFIED (excel-graph) from y = 0.100112 up and below y = 0.099900. The exact cut is UNVERIFIED: whether y = 0.1
-itself takes the closed form, and whether Excel tests y or z = 1 - y, need a dense probe near t = sqrt(18).
+y0 <= 0.9 cut since T-2502. Beyond t = 1 at df 1, and at df 2 below that cut (fl(1 - y) > 0.9), the tail is the exact one
+at t rounded once (`exact_low_df_tail`, T-3187): atan(1/t)/pi at df 1 and 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2,
+in double-double, within 0.5 ulp of the exact tail on every cell checked (mpmath, 50 digits). That fixes the six
+visibly-off gen-m9 cells above and lifts t0969-t-df2-cut from 560 to 602 of 801 bit-exact. Four df-1 cells where Excel is
+0.6 to 1.6 ulp from the exact tail moved off Excel's bits (decision 0083 allowance; T-3877): `T_DIST.xlsx` F2 and C2
+(`T.DIST.RT(60,1)`, `T.DIST.2T(60,1)`, 1 ulp) and gen-m9/bbab6562e88b70e8 A113 (`T.DIST.2T(7.1,1)`, 1 ulp), and
+gen-m9/5919660b7bb4d195 A336 (`TDIST(1.005,1,2)`, 2 ulp).
+Status: VERIFIED (excel-graph) from y = 0.100112 up and below y = 0.099900; at df 1 beyond t = 1, VERIFIED
+(excel-graph) within about 1.8 ulp of the exact tail on the probed cells (t = 1.005 to 1E15), Excel's own form
+UNVERIFIED. The exact cut is UNVERIFIED: whether y = 0.1 itself takes the closed form, and whether Excel tests y or z = 1 - y, need a dense probe near t = sqrt(18).
 T-2464 places the cut. It is the kernel's a0 = 1 test y0 <= 0.9 on the oriented arguments, and BETA.DIST at
 x0 = fl(1 - 0.9) takes the closed form. See "Incomplete beta closed forms act on the oriented arguments".
 Tasks: T-0969, T-2502, T-3187
@@ -2696,6 +2709,10 @@ same amount (up to 4.4E-12 from Excel, T-3447).
     autocorrelation 0.56). It is not the rounding of v, k + M, s v or M v, nor fl(2 k v) on a 64-bit v (coefficients
     near 0), nor of d v (a negligible regressor: unstable coefficients and no fall in the residual). It is UNVERIFIED
     and it is what keeps these cells off.
+  - T-3774 (attempt 2, docs/research/t3774) ruled out four more sources. Constant per run: removing each run's mean
+    leaves 2,003 → 1,993 units of 2^-53, so the cause is not lf (R's log1p(-k/n) form) or a stirlerr term. bd0's
+    series with every partial sum stored, every ej = ej v^2 stored, or v^2 stored once: each leaves the rms at 0.77,
+    with unstable coefficients.
   - The evidence for these terms is statistical: a fit over the 704 excel-graph cells, not single cells. The fl(n p)
     coefficient's standard error is about 0.07.
   - The same fit on the engine's values returns exactly its own model (1, 1, -1, -1, residual 0.04), which checks the
@@ -2984,8 +3001,12 @@ and tiny b0: Excel has no fpser) is, in x87 stored ops:
 s = fl(1/a); c = 1; n = 1, 2, ...: c = c·(((0.5 - b/n) + 0.5)·x); s = s + c/(a+n)   until s stops changing
 L = fl(GL(a0) + fl(GL(b0) - GL(fl(a0 + b0))))   b0 < 8, (a0, b0) = (min, max), GL = Excel's GAMMALN
 L = fl(GL(a0) + algdiv(a0, b0))                 b0 >= 8 (best tried, not solved)
-z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the extended argument)
+z = fl(a·LN(x)) - L  (exact);  zh = fl(z) (nearest, ties to even);  zl = z - zh  (exact; 0 where z is a double)
+I = fl(fl(EXP(zh)·s)·fl(1 + zl))   (Excel's EXP of a double; fl(1 + zl) = the EXP model's EXP(zl) on every such zl)
 ```
+The split of z is T-3873's (docs/research/t2464/r7-bpser-nondouble-z), evidenced at min(a, b) < 1 with b0 < 8; it
+replaces "z = fl64(fl(a·LN x) - L) extended, I = fl(EXP(z)·s)", which is the same I wherever z is a double. The counts
+in the next bullets are for that older form unless they say otherwise.
 - On the 2,000-shape probe t2464-r2-bpser-small-shapes (never tuned on; verifier-confirmed), exact/4 ulp/15 digits:
   b0 <= 1 2,311/3,082/3,083 of 3,083 (CR 918/2,959/3,052); 1 < b0 < 8 3,369/4,602/4,602 of 4,602 (CR
   1,219/3,646/4,152); b0 >= 8 1,489/2,840/2,861 of 2,868 (CR 781/1,751/2,074). Shape hold-out exact: 1,229, 1,628 and
@@ -3003,16 +3024,40 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   on r2-bratio's three held-out sets).
 - Open: L at b0 >= 8 (Excel's algdiv is about 1 unit from TOMS's: implied L -1.88, +1.65, +6.05 units on three runs);
   on the old 1 < b0 < 8 cells GL53's L loses to r2-bratio's (3,365 against 4,038 of 7,455, verifier); b < 1 shapes top
-  out at 55-84% bit-exact for any constant L (one stored intermediate, unidentified; T-3769).
+  out at 55-84% bit-exact for any constant L under the unsplit z (one stored intermediate; T-3769 found it is EXP of a
+  non-double z, and T-3873's split of z removes the ceiling: r2's b0 <= 1 cells go to 2,211 of 2,212 on the shapes
+  probe and 2,047 of 2,048 on the runs, see below).
 - At 1 < b0 < 8 and a0 near 0.3, 0.5 and 0.7 (direct w_bpser), lnΓ(a0 < 1) inside L is Excel's GAMMALN, GL(a0), not
   fl(gamln1(a0) - LN a0) (T-3570, r5-bpser-lngamma). Small a0, b0 <= 1 and b0 >= 8 are not probed this way. With b0
   and x fixed and a0 stepped by single ulps around 0.3, 0.5 and 0.7, so only a0 moves, GL53 beats the gamln1 form in all
   12 runs: 672 against 573 of 960 bit-exact at b0 2.5 (tune) and 831 against 691 at b0 6.25 (hold-out). On the 457
   cells where the two forms differ, GL53 matches 331 and gamln1 92. This replaces r2-bpser-small's "shape-dependent"
   reading, which came from shape sets where everything varied at once. The rest of GL53's misses (417 of 1,920, all
-  within 2 ulp) follow x at a0 near 0.3 (model 1 ulp high), and partly follow a0 at 0.5 and 0.7, where no constant
-  L shift fits (T-3769). The port needs Excel's GAMMALN exact at the shape
+  within 2 ulp) follow x at a0 near 0.3 (model 1 ulp high on 158 of r6's 172 such misses), and partly follow a0
+  at 0.5 and 0.7. Both are one effect (next bullet). The port needs Excel's GAMMALN exact at the shape
   arguments; the engine model is exact on 274 of 771 in [1, 2) and 1,738 of 2,585 below 1 (t2464-r2-bpser-small-gl).
+- **GL53 is exact wherever z = fl(a0 LN x) - L is a double** (T-3769, docs/research/t2464/r6-bpser-xlinked). At
+  1 < b0 < 8 it misses 0 of 1,143 such cells on t3570-r5-bpser-lngamma-beta and 2 of 1,923 on t3769-r6-bpser-beta
+  (both at (6.25, 0.7); moving s down one ulp fixes both, an s-side residual).
+  On those cells E is Excel's own worksheet EXP of the same double, measured (t3769-r6-bpser-exp), so s, alx, L and
+  fl(E s) are Excel's. Every other miss (417 of 777 and 1,317 of 2,685) has a z that needs 54-55 bits, nearly always
+  exactly halfway between two doubles. Whether z is a double depends on alx's last bit (so the misses follow x at a
+  fixed shape) and on L's (so they follow a0). That explains both of T-3570's residuals: on r5, all 93 a0 where both x
+  miss have a non-double z at both x. The best constant L along x equals GL53's L on every shape where it can be
+  pinned (a0 0.3, and 0.7 at b0 2.5 and 6.25).
+  - **Excel splits a non-double z** (T-3873, docs/research/t2464/r7-bpser-nondouble-z): zh = z to the nearest
+    double, zl = z - zh, I = fl(fl(EXP(zh)·s)·fl(1 + zl)) (the rule above). Chosen on r6's tune shapes, exact on
+    1,546 of 1,546 non-double-z tune cells, then on 1,139 of 1,139 at r6's b0 = 4.75 hold-out, 777 of 777 on r5,
+    2,410 of 2,413 on t3570-r5-bpser-lg (a0 0.15-0.85), and 1,079 of 1,079 on the old w2f (0.5, 6.25) cells with
+    measured GAMMALN. The order matters: (1 + zl) applied before s, or E + E·zl, or the product kept extended, all
+    lose 200-750 of the 1,546. No rounding of z alone can work: on many cells no double E gives Excel's I as fl(E·s).
+    Earlier negatives: z rounded nearest without zl (z53) won on r5's data, 1,628 against 1,503, but lost on r6,
+    2,072 against 2,332 tune; rounding down or up fits no rule across shapes.
+  - At exactly a0 = 0.5, g = GAMMALN(0.5) + 1 ulp (TOMS's gamln1 form) scores higher than GAMMALN (395, 355 and 336
+    against 284, 223 and 248) only because it moves z onto the double grid. It misses 47-163 cells whose z is then a
+    double, so it is not Excel's L.
+  - A second excel-graph fill of t3570-r5-bpser-lngamma-beta (2026-11-02) matched the first on all 1,920 cells
+    (decision 0112).
 - T-3570's second probe (docs/research/t2464/r5-bpser-lg) stepped a0 by single ulps at seven centers, three b0 and 8 x each, with
   Excel's GAMMALN columns beside the cells. Over this wider a0 range no single lnΓ(a0) form is exact everywhere:
   - GL(a0) = fl(GAMMALN(fl(1 + a0)) - LN(a0)) (exact on 360 of 360 a0 below 0.7, as T-1941's GAMMALN entry says) is
@@ -3021,6 +3066,13 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   - Nothing tried wins on 0.4-0.6: correctly rounded, LN(GAMMA), the kernel on t = a0 itself, or K3 kept past 1.5.
   - On a0 where the two give different L, GL wins on 52 and gamln1 on 36 (tune); on the hold-out half it is 51 to 19.
     So GL stays the best single form.
+  - T-3771 (docs/research/t2464/r6-bpser-gpin) settles it: g is Excel's GAMMALN(a0) at every center. The
+    GAMMALN(fl(1 + a0)) - LN a0 construction equals it below 0.7 (360 of 360 a0 at the 0.15-0.6 centers) and differs
+    from 0.7 up, where GAMMALN switches kernels; take g from GAMMALN(a0), not from that construction. Judged only on
+    cells whose z = fl(a0 LN x) - L is a double, GL53 misses 1 of 770 tune and 0 of 849 hold-out cells. The gamln1
+    form misses 92 of 903 and 128 of 896, and g from GAMMALN(fl(1 + a0)) - LN a0 (stored or extended) and an extended
+    L miss 4-69, all of those misses at a0 >= 0.7. The per-a0 wins above were confounded: where GL puts every z
+    between doubles, a neighbouring g can land z on the grid and match Excel's E for that tie (T-3769, T-3873).
 - The constant-L ceiling also holds for a0 < 1 < b0 < 8: the best g per a0 makes 3,355 of 4,032 cells exact (66% at
   a0 = 0.15, 82-89% from 0.3 up). The misses are ±1-2 ulp, vary with x at fixed a0 and are not product near-ties, so
   the piece sits in alx, s or EXP, not in L.
@@ -3028,21 +3080,28 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   - It is not a register-held series (s, c or t unstored, or SSE doubles).
   - It is not LN(s) folded into EXP's argument, a 1/a split of the product, or x^a times a constant. Each of these is
     at or below 264 of 432, against the model's 299.
-  - Follow-up: T-3771.
+  - T-3771 split GL53's 1,168 misses on t3570-r5-bpser-lg: 1,167 have a non-double z (EXP's argument), 1 is fixed by
+    moving s one ulp, and 0 are LN (Excel's =LN(x) equals the model at all 14 x, probes-numeric
+    t3771-r6-bpser-gpin-ln). So the ceiling is EXP's argument, not LN, s or L. For the 1,167 that holds by elimination
+    (the double-z test and the LN control), not by a per-cell test; T-3873's split model then makes 2,410 of the
+    probe's 2,413 non-double-z cells exact.
 - An isolated miss at 1 < b0 < 8 (gap triage 2026-10-30, T-3331): `BETA.DIST(0.1,2.5,5,TRUE)` (probes-numeric/
   m9-beta-dist-a2p5 Calc!A31, a bpser point: b0·x0 = 0.5) is 0.05533381860850995 in Excel and 0.055333818608509895 in
   the engine, visibly off. Against a 60-digit mpmath value, 0.055333818608509839059, Excel is 16.1 ulp high and the
   engine 8.1 ulp high, so here Excel is the inaccurate one, and by more than the shapes probe's sub-branch suggests
   (all 4,602 of its 1 < b0 < 8 cells within 15 digits).
 Evidence: probes-numeric t2464-r2-bpser-small-shapes, -runs, -tiny, -tiny2, -gl, t2464-w2f-*, t3570-r5-bpser-lngamma-beta,
--gl (excel-graph 2026-11-01); docs/research/t2464/r5-bpser-lngamma (`score_forms.py`, `residual.py`, `lshift.py`); docs/research/t2464/
+-gl (excel-graph 2026-11-01), t3769-r6-bpser-beta, -aux, -exp (excel-graph 2026-11-02) with
+docs/research/t2464/r6-bpser-xlinked; docs/research/t2464/r5-bpser-lngamma (`score_forms.py`, `residual.py`, `lshift.py`); docs/research/t2464/
 w3-series (`model.py`, `accum2.py`, `control2.py`), r2-bpser-small (`lib.py`, `zforms.py`, `bscore.py`,
 `tiny_noapser.py`), verify-r2-bpser-small/verify.out, old_sets.out; probes-numeric t3570-r5-bpser-lg (5,043 cells) and
-t3570-r5-bpser-lg-aux (2,520) with docs/research/t2464/r5-bpser-lg (excel-graph, 2026-11-01).
+t3570-r5-bpser-lg-aux (2,520) with docs/research/t2464/r5-bpser-lg (excel-graph, 2026-11-01); the split of z:
+docs/research/t2464/r7-bpser-nondouble-z (`forms.py`, `lg.py`, `w2f.py`, `shapes.py`), scored on those fills.
 Implemented in: `functions/statistical/bratio/bpser.rs` `bpser` (T-2505) through `ported_tails`, for BETA.DIST's cdf
 (`beta_dist_lower_tail`), F.DIST, F.DIST.RT and FDIST (`fisher.rs::f_tail`), BINOM.DIST's cdf and NEGBINOM.DIST's cdf
 (`binom.rs`; T-2847), and F.TEST's tail with its own L (`f_test_tail.rs`, T-2681): the w3 series and
-EXP of the extended z, with GL53/glalgdiv's L for min(a, b) < 1 and the extended GAMMALN sum for min >= 1, max <= 8.
+EXP of the extended z (not yet the split of a non-double z: T-3879), with GL53/glalgdiv's L for min(a, b) < 1
+and the extended GAMMALN sum for min >= 1, max <= 8.
 Its algdiv (b0 >= 8) is `beta_density::algdiv` in doubles, where the model runs TOMS algdiv x87 stored.
 A caller's shape of exactly 1 stays on Cephes' fractions (both shapes > 1 with max > 8 did until T-3007, below); L140's bpser(a0, 1, x0) at a whole b0 takes L = -LN(a0) (T-2506 above a0 = 8, T-2847 at every a0). On
 probes-numeric it moves a net 12,408 cells to bit-exact and takes visibly-off numbers from 104,206 to 100,013; 987
@@ -3393,7 +3452,7 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
   3.6E-15 off the math, ours 1.8E-15). These cells stay Excel-targeted: ours being nearer the math is not a licence.
   W rounds once in a register here where `bup`'s other callers store twice (fl(fl(P·fl(xy))/b0)): on this branch the
   register form wins the hold-out, 1,306 of 1,613 bit-exact against 1,046 (`bupdens.out`); T-3568's n >= 2 bup+bgrat research
-  takes the same register form (below); on L140 bup+bpser, `bup`'s other caller, it is unscored (T-3770). n > 1 bup terms stay on today's kernel (T-3383).
+  takes the same register form (below); on L140 bup+bpser, `bup`'s other caller, it is unscored (T-3770). n > 1 bup terms: the next bullet.
 - **L140 bup+bgrat with n >= 2 bup terms (2 <= b0 < 40, a0 > 15, x0 > 0.7) is the same RN(W + D), with bup's powers
   of x through Excel's EXP (T-3568).** With n = int(b0) and c = b0 - n (c = 1 and n - 1 at an integer b0):
   - W = fl(ret · S). Here ret = x87(P·fl(x0·y0)/c), P is Excel's BETA.DIST(y0, c, a0, FALSE) (the density at the
@@ -3414,6 +3473,10 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     from those densities), and one exponent per term, EXP(fl(i·LN y0) + LN R_i). The form does not carry to the
     min <= 1 bup+bgrat branch (T at n <= 30: 411 against 412 for the recurrence and 598 for the exact sum, of 1,344)
     (docs/research/t2464/r5-bup).
+  - The engine takes it for BETA.DIST's cdf and BETA.INV's search (T-3561, `bratio/bup.rs` `l140_bup_bgrat`) on its
+    own density for P, with D the bgrat increment for c < 1 and x0^a0 in double-double for c = 1. Where that density
+    is not a normal double (it underflows while W, times S's large powers, does not) or x0^a0 is past e^-650, today's
+    kernel answers. F, BINOM and NEGBINOM stay on today's kernel (T-3712).
 - **Why TOMS bgrat lost at b ≠ 1/2 (T-2512).** TOMS passes bgrat's 15·eps = 15e-15 to grat1, whose continued fraction
   (z >= 1.1 on every such cell) stops tens of ulps short. On 2,908 direct bgrat cells (t2512-r3-bgrat-split):
   - TOMS in doubles with Excel's pieces scores 13/142/162, and 139/1,263/1,834 at eps 1e-15.
@@ -3589,9 +3652,9 @@ within 4 ulp. Two stay far:
 - `BETA.DIST(33587,3,600,TRUE,2000,5489582)` (G5) is the correctly rounded 0.6734553797493481.
   Cephes' fraction loses about 160 ulp there (t = 0.0058, reflected to I_0.994(600,3)), and so do
   Numerical Recipes' fraction and Cephes' power series.
-  The TOMS 708 port leaves it there too (gap triage 2026-11-01): bratio sends (3, 600, 0.0058) to L140 with two bup terms
-  then bgrat, a branch the port does not cover yet, so the old kernel answers. Ours is 0.6734553797493648, 2.5E-14
-  off, against the 50-digit 0.67345537974934809577 (T-3561).
+  bratio sends (3, 600, 0.0058) to L140 with two bup terms then bgrat (c = 1). Before T-3561 the port did not cover
+  that branch and the old kernel answered 0.6734553797493648, 2.5E-14 off the 50-digit 0.67345537974934809577.
+  T-3568's n-term composition (below, "L140 bup+bgrat with n >= 2 bup terms") gives Excel's value bit for bit.
 - `BETA.DIST(0.234,0.0001,0.0001,TRUE,0.15,1.2)` (G26) is 0.4998779049300665, 34 ulp from the
   correctly rounded value. The best combination is 30 ulp off.
 
@@ -6324,7 +6387,7 @@ A range as the percent lifts TRIMMEAN over it, one result per cell: `TRIMMEAN("2
 a FALSE cell percent is 0, the non-numeric text "TRUE" `#VALUE!`, while the numeric text "1" and TRUE read as 1, out of range.
 Evidence: gen-m9/4fc6bdaec0e5583d (T-3781 arg-pairs batch, excel-graph, 2026-11-01) A199-A253 and A391-A439 (the 15 cells in
 T-3790), A259-A385 for the non-numeric text.
-Ours: `#VALUE!` for the numeric text and boolean literals; known failures owned by T-3790.
+Ours: matches (T-3790): `trimmean.rs` reads a non-cell numeric-text or boolean literal as one number; FALSE as 0 is unprobed.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3790
 
