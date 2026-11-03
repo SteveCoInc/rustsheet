@@ -3,7 +3,7 @@ id: T-3964
 title: "GROUPBY: probe a 1x1 filter beside a header row, one record and two value columns, and non-#N/A error relationship elements"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -27,10 +27,26 @@ GROUPBY's 1x1-filter and lifted-error rules from T-3880 are evidenced past the s
 - NA() and other functions cannot sit in an array constant: use ranges holding the errors.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe answers the three questions; ours matches every cell (change `filter_rows` or the `settled`
+- [x] An excel-graph probe answers the three questions; ours matches every cell (change `filter_rows` or the `settled`
       closures if not).
-- [ ] arrays.md cites the new cells in the T-3778 scalar-filter entry and the T-3840 lifted-filter entry.
-- [ ] `make check` green; reviewers approve.
+- [x] arrays.md cites the new cells in the T-3778 scalar-filter entry and the T-3840 lifted-filter entry.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - PIVOTBY's scalar filter and lifts (T-3841, T-3892).
+
+## Outcome
+- New excel-graph probe `probes/t3964-groupby-filter-lift-errors` (144 cells, 2026-11-03) answers the three questions.
+- Q1: a 1x1 filter beside a header row and one record keeps the record with two value columns too (field_headers 1
+  and 3; TRUE, `{TRUE}`, 2, a TRUE cell); `{FALSE}`, two records and field_headers 0 are `#VALUE!` (G!A1:C42). Ours
+  already matched.
+- Q2: `#DIV/0!` (`=1/0` cell) and `#REF!` field_relationship elements stay their own error before and after the filter
+  is spent and spend nothing (G!A47:B69). Ours already matched.
+- Q3: an error element of a lifted field_headers or total depth stays its error after the filter is spent (G!B71, B83,
+  B89, B101; ours was `#VALUE!`) and spends nothing before it (G!A77, A95). Fixed: `Model::lift_options` passes a
+  `settled` closure to `Model::lift_by_class` (which now gets whether the filter is spent) that answers a spent
+  position's first error when no text element precedes it. Unit test
+  `an_error_option_element_is_its_own_error_after_the_filter_is_spent`.
+- arrays.md: the T-3778 scalar-filter entry and the T-3840 lifted-filter entry cite the new cells; a position with an
+  error and a text element, or two errors, across two lifted options stays unprobed (noted there).
+- Eval delta: new probe case 144/144 (4 cells fixed by the change); no other case changed (see PR).
