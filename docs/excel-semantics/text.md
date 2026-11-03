@@ -1369,7 +1369,7 @@ agree; the only gap was `CHAR`, fixed in T-3302.
 
 ## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
 
-Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN not yet, T-3885):
+Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN T-3885):
 
 - A multi-cell range as ARRAYTOTEXT's format lifts per element and spills to the range's shape; the array
   argument is read whole. `ARRAYTOTEXT(2,Data!A1:B2)` (A1:B2 = 0, FALSE, blank, 1) fills A31:B32 with
@@ -1379,9 +1379,27 @@ Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEX
   The eval scores only the anchor cell, so a "first element" model would pass but spill wrongly.
 - `ARRAYTOTEXT(<blank ref>,#DIV/0!)` is `#VALUE!` for every format kind (A469-A514, A499, A502): the
   existing rule that a reference to one empty cell is `#VALUE!` (above) and T-2250's error-first rule apply.
-- TEXTJOIN with an error delimiter keeps the delimiter's own error (`#DIV/0!`) when ignore_empty is a number,
-  boolean, blank or error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328, A334), but a text ignore_empty,
-  even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322; alone A349, A352).
+- TEXTJOIN with an error delimiter given as a reference keeps the delimiter's own error (`#DIV/0!`) when
+  ignore_empty is a number, boolean, blank or the same error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328,
+  A334), but a text ignore_empty, even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322;
+  alone A349, A352). The rule depends on the delimiter being a reference; see the next section.
+
+## TEXTJOIN: ignore_empty is read before a reference delimiter's error, after an error value
+Rule: when TEXTJOIN's delimiter is a reference to an error cell (a cell, a range holding an error, or an IF or
+INDEX that returns such a reference), ignore_empty is read first: a text ignore_empty (`"x"`, `"12"`, `""`, a
+text cell, `LOWER(...)`) is `#VALUE!`, and an error ignore_empty is its own error (`TEXTJOIN(<#DIV/0! cell>,
+<#N/A cell>,"a")` is `#N/A`); a number, boolean or blank ignore_empty leaves the delimiter's error. When the
+delimiter is an error *value* (a literal `#DIV/0!`, `1/0`, `NA()`, `VLOOKUP(TRUE,{1,2},2)`), that error is the
+result whatever ignore_empty is, text and error ignore_empty included.
+Consequence: `TEXTJOIN(VLOOKUP(...),LOWER(...),...)` is the VLOOKUP's `#N/A`
+(gen-m5/1d22a002d4f380b3 Calc!A274), while `TEXTJOIN(Data!G9,Data!G6,...)` with G9 `#DIV/0!` and G6 "x" is
+`#VALUE!`.
+Evidence: probes/t3885-textjoin-error-delimiter-text-ignore-empty B2:M13 (12 delimiter forms by 10 ignore_empty
+forms), B15:F15, B16:G16 (excel-graph, 2026-11-03; T-3885); gen-m5/d0c5e5dff134d787 Calc!A310, A316, A322;
+gen-m5/1d22a002d4f380b3 Calc!A274.
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` and `Model::textjoin_delimiters` (functions/text/concatenate.rs).
+Tasks: T-3885
 
 ## ARRAYTOTEXT: a range format argument
 Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.

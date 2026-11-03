@@ -215,21 +215,32 @@ fn array_or_range_ignore_empty_lifts_one_join_per_element() {
     assert_eq!(model._get_text("D6"), "a,b");
 }
 
-/// A text ignore_empty is #VALUE! even over an error delimiter; other kinds keep the delimiter's
-/// error (gen-m5/d0c5e5dff134d787 A286-A334, A310-A322; T-3885).
+/// A bad `ignore_empty` wins over the error of a delimiter given as a reference, never over an error
+/// value (probes/t3885-textjoin-error-delimiter-text-ignore-empty; T-3885).
 #[test]
 fn error_delimiter_with_text_ignore_empty() {
     let mut model = new_empty_model();
-    model._set("A1", "=TEXTJOIN(1/0,\"x\",\"a\")");
-    model._set("A2", "=TEXTJOIN(1/0,\"\",\"a\")");
-    model._set("A3", "=TEXTJOIN(1/0,1,\"a\")");
-    model._set("A4", "=TEXTJOIN(1/0,TRUE,\"a\")");
-    model._set("A5", "=TEXTJOIN(1/0,,\"a\")");
-    model._set("A6", "=TEXTJOIN(1/0,NA(),\"a\")");
+    model._set("B1", "=1/0");
+    model._set("B2", "=NA()");
+    model._set("A1", "=TEXTJOIN(B1,\"x\",\"a\")");
+    model._set("A2", "=TEXTJOIN(B1,\"\",\"a\")");
+    model._set("A3", "=TEXTJOIN(IF(TRUE,B1),\"12\",\"a\")");
+    model._set("A4", "=TEXTJOIN(B1:B2,\"x\",\"a\")");
+    model._set("A5", "=TEXTJOIN(B1,B2,\"a\")");
+    model._set("A6", "=TEXTJOIN(B1,TRUE,\"a\")");
+    model._set("A7", "=TEXTJOIN(B1,1,\"a\")");
+    model._set("A8", "=TEXTJOIN(B1,,\"a\")");
+    model._set("A9", "=TEXTJOIN(B1:B2,TRUE,\"a\")");
+    model._set("A10", "=TEXTJOIN(1/0,\"x\",\"a\")");
+    model._set("A11", "=TEXTJOIN(NA(),B2,\"a\")");
+    model._set("A12", "=TEXTJOIN(#DIV/0!,\"x\",\"a\")");
     model.evaluate();
-    assert_eq!(model._get_text("A1"), *"#VALUE!");
-    assert_eq!(model._get_text("A2"), *"#VALUE!");
-    for cell in ["A3", "A4", "A5", "A6"] {
-        assert_eq!(model._get_text(cell), *"#DIV/0!");
+    for cell in ["A1", "A2", "A3", "A4"] {
+        assert_eq!(model._get_text(cell), *"#VALUE!", "{cell}");
     }
+    assert_eq!(model._get_text("A5"), *"#N/A");
+    for cell in ["A6", "A7", "A8", "A9", "A10", "A12"] {
+        assert_eq!(model._get_text(cell), *"#DIV/0!", "{cell}");
+    }
+    assert_eq!(model._get_text("A11"), *"#N/A");
 }
