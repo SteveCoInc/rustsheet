@@ -420,9 +420,23 @@ impl Model {
         }
         // GROUPBY's filter rules hold too: another height, errors and text are #VALUE!, a header
         // row may be left out of the filter, and keeping no record is #VALUE! (P!A281,
-        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133). Whether one
-        // filter value beside several fields or a header row is #VALUE! here too is T-3841's probe.
-        let records = self.filter_rows(filter, height, first, true, cell)?;
+        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133). One filter
+        // value keeps or drops every row only beside one row field, one column field, one value
+        // column and no header row, as in GROUPBY; otherwise it is #VALUE!, whatever the value
+        // (probes/t3890-pivotby-scalar-filter P!B1-B50).
+        let one_keeps_all = first == 0 && row_fields == 1 && col_fields == 1 && value_columns == 1;
+        // The refusal fills the shape of an array relative_to the call lifts over: `#VALUE!` in
+        // each of the four cells of a `Data!A1:B2` (gen-m7 547d6192794dbf57 A10188:B10189,
+        // A11469:B11470; 5883a41f98113db2 A4637:B4638).
+        let records = match self.filter_rows(filter, height, first, one_keeps_all, cell) {
+            Ok(records) => records,
+            Err(error) => {
+                return Err(match relative_to {
+                    Some(array) => self.error_over(array, error, cell),
+                    None => error,
+                })
+            }
+        };
         let (relative_to, lifted) = self.relative_to_arg(relative_to, cell)?;
         let row_depth = effective_depth(row_depth, row_depth_given, &row_sort, row_fields);
         let col_depth = effective_depth(col_depth, col_depth_given, &col_sort, col_fields);

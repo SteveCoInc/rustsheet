@@ -727,3 +727,40 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
         );
     }
 }
+
+/// T-3890: one filter value keeps or drops every row only beside one row field, one column field,
+/// one value column and no header row, as in GROUPBY; beside two of any of them, or with a header
+/// row, it is `#VALUE!`, TRUE and 2 included (probes/t3890-pivotby-scalar-filter P!B1-B50).
+#[test]
+fn a_scalar_filter_needs_one_column_each_and_no_header() {
+    let mut model = records();
+    let cases = [
+        ("G1", "A2:A11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "7 rows"),
+        ("G2", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G3", "A2:A11,B2:C11,D2:D11,{SUM},,,,,,2", "#VALUE!"),
+        ("G4", "A2:A11,C2:C11,D2:E11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G5", "A1:A11,C1:C11,D1:D11,{SUM},1,,,,,TRUE", "#VALUE!"),
+        ("G6", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,NA()", "#N/A"),
+    ];
+    // G1 is the one valid call: it spills, so it goes last, out of the way of the others.
+    for (cell, args, _) in cases.iter().skip(1) {
+        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+    }
+    model._set(
+        "K1",
+        &format!("=ROWS(PIVOTBY({}))", cases[0].1.replace("{SUM}", SUM)),
+    );
+    // The refusal fills the shape of an array relative_to (gen-m7 547d6192794dbf57 A10188:B10189).
+    model._set(
+        "M1",
+        &format!("=PIVOTBY(A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,A1:B2)"),
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("K1"), "7");
+    for filled in ["M1", "N1", "M2", "N2"] {
+        assert_eq!(model._get_text(filled), "#VALUE!", "{filled}");
+    }
+    for (cell, args, expected) in cases.iter().skip(1) {
+        assert_eq!(model._get_text(cell), *expected, "{args}");
+    }
+}
