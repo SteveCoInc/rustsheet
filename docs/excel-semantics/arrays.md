@@ -2239,11 +2239,21 @@ Tasks: T-3837, T-3838, T-3839, T-3840
 Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
 G2=0, G3=-2.5, G4=1.5, G5="12", G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank). GROUPBY's batch rules carry over,
 with `col_fields` beside `row_fields`:
-- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the options hold, a later error
-  option included: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
+- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the other options hold, with or
+  without `field_headers`: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
   `PIVOTBY(Data!B1:E12,Data!G9,Data!A1:D12,_xleta.MIN,1,1,1,Data!G5)` (d7b4849a4fbe3485 A10798) are `#VALUE!`; 181 calls.
-  A blank-cell or text `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
-  _xleta.MAX,Data!G9)`, 13 calls). Owner T-3888.
+  It comes only after every error value, as GROUPBY's error key does: an error `values`
+  (`PIVOTBY(Data!G9,Data!A1:D12,Data!G9,LAMBDA(x,Data!C$12))`, 01d099c3b6d6ae95 A1770) or a later error option
+  (`PIVOTBY(Data!G9,Data!B1:E12,Data!A1:D12,LAMBDA(x,0),0,0,Data!G9)`, 542087608aa65000 A7382; `PIVOTBY(Data!B1:C12,Data!G9,
+  Data!E1:E12,LAMBDA(acc,(-2.5)),3,2,#N/A,Data!H2)`, d7b4849a4fbe3485 A11408 `#N/A`) keeps its error: 17 calls, and no call
+  with an error value past the field is `#VALUE!`. A literal error field is that error (`PIVOTBY(#REF!,..)`).
+  A blank-cell `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
+  _xleta.MAX,Data!G9)`, 15 calls), after a literal error field (`PIVOTBY(#NULL!,Data!C1:E12,Data!H1,..)` is `#NULL!`,
+  01d099c3b6d6ae95 A1831). Text `values`, literal or referenced (`Data!G5`, `Data!G6`, `Data!G7`), are `#VALUE!` too, but
+  lose to a later option's error as in GROUPBY (`PIVOTBY(Data!A1:A12,Data!B1:E12,Data!G6,LAMBDA(y,y),2,1,Data!G9)` is
+  `#DIV/0!`, 0098e1e4e5f8aa7c A5430; 26 calls). The one exception, `PIVOTBY(Data!B1:E12,Data!C1:D12,Data!G6,LAMBDA(v,v),0,1,
+  Data!A10,Data!G9)` `#VALUE!` (88f592c463d2ffb0 A7138), has a blank-cell `row_sort_order` (`Data!A10`) before the error,
+  the next bullet's rule. Owner T-3888.
 - An invalid earlier argument's `#VALUE!` wins over a later option's error: a blank-cell sort order or total depth, a text
   option, a scalar `row_fields` (`2`, `Data!G4`) or a short `col_fields` (`Data!A1:B2`) beside 12-row fields, `""` as
   `col_fields` (`PIVOTBY(Data!A1:C12,Data!D1:D12,Data!D1:E12,_xleta.PRODUCT,3,1,Data!H2,Data!G9)` is `#VALUE!`; 23 calls).
@@ -2257,7 +2267,8 @@ with `col_fields` beside `row_fields`:
   A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
   B8785). Owner T-3893.
 Evidence: the gen-m7 cases of T-3841 (excel-graph, 2026-11-03); each owner task lists its calls.
-Ours: the GROUPBY rules of T-3837..T-3840 are GROUPBY's only; PIVOTBY's cells are known failures in eval/baseline/gen-m7.txt.
+Ours: the first bullet since T-3888 (`Model::pivotby_args`, `Model::pivot_field`); the GROUPBY rules of T-3838..T-3840 are
+GROUPBY's only, and the other bullets' cells are known failures in eval/baseline/gen-m7.txt.
 Status: VERIFIED (excel-graph) for the cells named; the order between these rules and each rule's exact domain are UNVERIFIED
 (the owners probe them)
 Tasks: T-3888, T-3889, T-3890, T-3892, T-3893

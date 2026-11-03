@@ -1182,8 +1182,8 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       loses this probe's A43 and A46 (scale 2^10) and 32 held cells of t3348-rate-fv-nonzero (A15 to A26, A74 to
       A184 among them, including the distinct-iterate holds A182 to A184). It also loses 17 cells of
       probes-numeric/t3348-rate-gate-a-fresh, 10 of t3348-rate-gate-a-sweep and 4 of t3478-rate-r4-wide.
-    - So Excel sometimes restarts and sometimes holds. What separates the two is open (T-3698). A1, A2, A41 and
-      A42 are known failures owned by T-3698.
+    - So Excel sometimes restarts and sometimes holds. T-3698's rule ("RATE restarts once on an early flat secant"
+      below) separates them on these cells: A1, A2, A41 and A42 restart and pass, A43 and A46 do not restart.
   - Right type, last digits, on the training sweep (gap triage 2026-11-01c; T-3607): probes-numeric/
     t3348-rate-gate-a-sweep A228, A269, A271, A273 and A285 (terms 1e9 to 2e11) are 1 to 3 ulp from Excel. Excel
     is not the correctly rounded root there either: A228 `RATE(102,2166497722.99291,-207421358353.562,
@@ -1209,7 +1209,74 @@ Evidence (excel-graph, 2026-10-31, T-3348):
 Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
 Status: VERIFIED (excel-graph) / UNVERIFIED (Excel's residual in the noise floor; a non-integer nper below -1; a held
 point with |f1| < 1e-7)
-Tasks: T-3348, T-3389, T-3424, T-3579
+Tasks: T-3348, T-3389, T-3424, T-3579, T-3698
+
+## RATE restarts once on an early flat secant
+Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
+restarts the run once, as a fresh run whose guess is the flat step's older iterate r0, when all of these hold:
+- the two iterates differ (r1 ≠ r0; a zero-step stall holds as before);
+- it is at step 3 to 16 of the run;
+- 1.3e-7 <= |f1| < 1e-4 (the upper cut is the cap's bound);
+- r0 > -1.
+
+Otherwise the run holds at r1 as before. The restarted run has its own 200 steps, and a flat secant in it holds;
+it never restarts again. The step bound is FITTED (T-3698). It approximates a path difference, and on many
+noise-floor cells Excel's value matches neither the hold nor the restart. Steps 1 and 2 and |f1| below 1.3e-7 are
+outside the evidence (no probed flat secant comes there), so the rule is not applied there and the run holds.
+Why it matters: on runs that land next to the root at once (nper 1, t3348-rate-fv-nonzero A171), Excel's value is
+the restarted run's value. Holding returned an iterate up to 3e-11 relative from Excel's.
+Evidence (excel-graph, 2026-11-02, T-3698):
+- probes/t3698-rate-flat-restart (54 cells): flat-secant cells of t3348-rate-fv-nonzero, t3348-rate-gate-a-fresh
+  and t3348-rate-gate-a-sweep, re-run with other guesses so that the first flat secant comes at steps 3 to 154, plus
+  t3579's nper-1 example scaled by 2^3 to 2^11. Each cell was chosen because the hold and the restart from r0 give
+  different results there.
+  - The hold is bit-exact on 11 cells and an unconditional restart on 17.
+  - The nper-1 family splits on |f|: it restarts at |f| 1.3e-6 to 4.3e-5 (A3:A8), and at 1.7e-4 and 3.4e-4
+    (A1, A2, scales 2^10 and 2^11) it is `#NUM!`, as the hold is.
+  - On one source series (t3348-rate-gate-a-fresh A296) the restart is Excel's at step 13 (A23) and step 16 (A26)
+    and the hold is Excel's at step 30 (A38). On A187 the hold is Excel's at steps 18, 30, 38 and 70 (A28, A37,
+    A40, A49). Step 17 (A27) matches neither. So the step bound lies in 16..17.
+  - Late restarts that Excel takes (A35 step 27, A39 step 33, A42 step 41) are not covered by the rule.
+  - probes/t3698-rate-flat-restart-fresh (51 cells) was drawn after a first freeze of the rule and is part of the
+    fit set below, not a fresh sweep.
+- Choice of the step bound and the |f1| cut (decision 0188 R4.1; scorers in docs/research/t3698/). The fit set is
+  every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide (another fit's fresh sweep). It is
+  split by the fit lab's hash (`holdout.py`, 30% test), with the 5-point margin stated before scoring. The candidates
+  (K in 3..200, cut 1e-5..1e-3, steps from 3, |f1| from 1.3e-7) were ranked on the 1,477 train cells only. K = 16
+  or 17 is best:
+  - The evidence brackets the cut. The nper-1 family restarts at |f1| up to 4.3e-5 (t3698-rate-flat-restart A3:A8)
+    and holds at 1.7e-4 and 3.4e-4 (A1, A2). So the cut lies in (4.3e-5, 1.7e-4), and the cap's bound 1e-4 is taken.
+    On train, the cuts 1e-4 and 3e-4 tie bit-exact. 3e-4 is outside the bracket: it restarts A1, and it loses
+    t3579-rate-residual-nper1 A43.
+  - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+  - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold. The test exact rate is 94.8% against 94.4%
+    on train, inside the margin. K = 18 to 22 is one cell behind on train.
+  - Correctly rounded root, on the cells with a 50-digit sidecar: 35 / 80 / 98 of 637 on train and 16 / 33 / 44 of
+    251 on test. On the same cells the rule gets 610 / 623 / 623 and 239 / 245 / 245.
+  - The cells were seen before (an earlier freeze scored them all), so this is a train-only choice on a fixed split,
+    not a blind hold-out. The fresh batch below is the out-of-sample check.
+- Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
+  generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
+  and the batch stays in Gate A.
+  - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
+    log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
+    within 15 digits on 299. The one outside is A201, below.
+  - Neither sweep makes many flat secants. They show that the rule moves nothing elsewhere; they do not measure the
+    restart itself.
+- Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
+  in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
+  Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
+- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. A count of
+  restarts within a run, a bound relative to the residual's terms, and the restart point are not probed beyond r0
+  against the guess. Restarting from the guess instead of r0 changes nothing, because the run repeats.
+- Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
+  noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351, and the model returns `#NUM!`. The
+  zero-residual probe's `RATE(1,0,0,0,0,0.3)` is `#NUM!` in Excel, so a residual that is noise and not exactly 0
+  behaves differently. The restart cannot fire here, because these residuals are far below 1.3e-7. T-3876 owns it.
+Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
+Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
+restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
+Tasks: T-3698, T-3424, T-3876
 
 ## YIELD with one coupon period left is closed form
 Rule: when at most one coupon period is left, Excel evaluates the documented formula

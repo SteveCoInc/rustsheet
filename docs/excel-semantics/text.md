@@ -1369,7 +1369,7 @@ agree; the only gap was `CHAR`, fixed in T-3302.
 
 ## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
 
-Oracle-filled cells of the arg-pairs batch, not yet implemented (T-3884, T-3885):
+Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN not yet, T-3885):
 
 - A multi-cell range as ARRAYTOTEXT's format lifts per element and spills to the range's shape; the array
   argument is read whole. `ARRAYTOTEXT(2,Data!A1:B2)` (A1:B2 = 0, FALSE, blank, 1) fills A31:B32 with
@@ -1382,3 +1382,12 @@ Oracle-filled cells of the arg-pairs batch, not yet implemented (T-3884, T-3885)
 - TEXTJOIN with an error delimiter keeps the delimiter's own error (`#DIV/0!`) when ignore_empty is a number,
   boolean, blank or error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328, A334), but a text ignore_empty,
   even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322; alone A349, A352).
+
+## ARRAYTOTEXT: a range format argument
+Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
+An error or blank first argument spills its error to the format's shape: `ARRAYTOTEXT(#N/A,Data!A1:B2)` fills A463:B464 with `#N/A`, `ARRAYTOTEXT(Data!G9,Data!C3:D4)` A466:B467 with `#DIV/0!`, a blank reference A511:B512 and A514:B515 with `#VALUE!`.
+An array-literal format lifts the same way: `ARRAYTOTEXT(7,{0,1})` spills "7", "{7}" across, `{0;1}` down, and `{0,2}` gives "7", `#VALUE!` (an element outside 0 and 1 is `#VALUE!` in its own cell only); `ARRAYTOTEXT({1,"x"},{0,1})` gives "1, x", `{1,"x"}`; `ARRAYTOTEXT(NA(),{0,1})` spills `#N/A` twice.
+Evidence: gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512, A514:B515, A31:B32, A34:B35, A529:B530, A532:B533, A499, A502 (excel-graph oracle sidecar; T-3884); probes/arraytotext-array-literal-format A1:B1, A4:A5, A7:B7, A10:B10, A13:A15, A17:B17, A20:B20 (excel-graph, 2026-11-03; T-3884).
+Status: VERIFIED
+Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
+Tasks: T-3884
