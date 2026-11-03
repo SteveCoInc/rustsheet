@@ -3,7 +3,7 @@ id: T-3946
 title: "Point the aggregate_cmp references at group_order.rs and probe non-number elements across array aggregates"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
