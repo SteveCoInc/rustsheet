@@ -3,7 +3,7 @@ id: T-3566
 title: "Oracle sweep: BETA.INV at shapes below 0.01 near p = 1/2 and at range-scaled quantiles, with BETA.DIST at Excel's landing point (for T-3562)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
