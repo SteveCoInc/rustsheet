@@ -532,8 +532,14 @@ row. VERIFIED for the cells cited:
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
   Plane 3's `𰀀` (U+30000) sorts after `😀` and before Hangul (rank 150), plane 2's `𪜀` (U+2A700)
   after `𠀀` (154).
-The engine fails 181 of the 955 cells (known failures in eval/baseline/probes.txt); engine gap T-3917
-(the Thai and Lao digits were T-3895's, fixed there).
+Implemented by T-3917 (every cell of the case passes): `element` (crates/rustsheet-engine/src/functions/util/collation.rs)
+skips `➿ ᡸ ₿` like U+0E83 (a stand-in for T-3904's weightless rule), places `、 。 「 ₩ ₹` in
+`PUNCTUATION`, `symbol` (collation/scripts.rs) orders the math operators `≠ ∑ ∫ ≤`, the geometric shapes, arrows,
+box drawing and the symbols and dingbats, then `•`; `™` is `t` with a weight above every letter, `℃` and `№` the
+letters `c` and `no` with the superscript variant (their places beyond the probed neighbours are UNVERIFIED);
+`ץ` weighs as `צ` and `ﻻ` as `لا`; `script_order` puts Georgian after Armenian (Mkhedruli first), reorders U+0E00
+to U+18AF by Excel's block order with the Gurmukhi `ਹ` and Lao `ໄ ໃ` exceptions, and sorts plane 3 and above with
+planes 1 before Hangul. The unprobed blocks keep code-point order inside the span they fall in (UNVERIFIED).
 
 ### Thai, Lao and the other script digits (T-3895)
 Evidence: probes/t3895-collation-script-digits (excel-graph, 2026-11-03), 191 cells: Calc!A =

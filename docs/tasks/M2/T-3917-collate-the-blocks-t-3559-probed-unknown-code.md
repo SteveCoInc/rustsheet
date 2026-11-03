@@ -3,7 +3,7 @@ id: T-3917
 title: "Collate the blocks T-3559 probed: unknown code points, symbol order, more scripts, Lao and Gurmukhi exceptions, equal forms, other-script digits"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -41,10 +41,10 @@ that case passes with no known failures.
 - If this is larger than size M, split it by the numbered rules above (planner), keeping 7 with T-3895.
 
 ## Acceptance criteria
-- [ ] Every cell of probes/t3559-collation-unprobed-blocks passes, its lines leave
+- [x] Every cell of probes/t3559-collation-unprobed-blocks passes, its lines leave
       eval/baseline/probes.txt, and probes/t3276-collation-other-scripts and
       probes/t3465-collation-holdout regress no cell.
-- [ ] Unit tests in crates/rustsheet-engine/src/test/test_collation.rs pin each rule 1 to 7.
+- [x] Unit tests in crates/rustsheet-engine/src/test/test_collation.rs pin each rule 1 to 7.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -57,3 +57,25 @@ that case passes with no known failures.
   from T-3895), and `script_digit_to_ascii` reads them as digits. Unit test `script_digits_tiebreak_by_block`.
   Fixed E11 and E136:E145 (probes 5102 → 5091, 0 regressions). The rank cells A30:A41 still fail on rules 1 to 6
   (other characters ranked wrong around them), so they stay in the list above.
+
+## Outcome
+- Rules 1 to 6 (rule 7 landed earlier, see Progress). Every cell of probes/t3559-collation-unprobed-blocks
+  passes and its lines leave eval/baseline/probes.txt.
+  - collation.rs `element`: `➿ ᡸ ₿` take the U+0E83 skipped stand-in (T-3904 owns the general weightless rule).
+    `、 。 「 ₩ ₹` go into `PUNCTUATION` in Excel's order and `•` moves after the symbols (`BULLET`). `™` is `t`
+    plus a weight above every letter; `℃` and `№` are `c` and `no` with the superscript variant. `ץ` weighs as
+    `צ`, and `ﻻ` as `لا`.
+  - scripts.rs `symbol`: `≠ ∑ ∫ ≤`, then the geometric shapes, arrows, box drawing and block elements, and the
+    symbols and dingbats.
+  - scripts.rs `script_order`: Georgian after Armenian (Mkhedruli before Asomtavruli/Nuskhuri); U+0E00..U+18AF
+    reordered as Thai, Myanmar, Mongolian, Tibetan, Lao, Khmer, Ethiopic (`BLOCKS`), with the Gurmukhi `ਹ` and
+    Lao `ໄ ໃ` exceptions (`in_block`); high surrogates from U+D880 (plane 3 and above) sort with planes 1, before
+    Hangul.
+  - lookup_fold.rs: `צ` and `ץ` form a class, for exact MATCH (C98).
+  - The unprobed neighbours (other final letters, other math operators, other blocks of the span) are recorded
+    as UNVERIFIED in coercion.md and lookup.md.
+- Eval delta, `make eval-check`: probes known failures 4631 -> 4463 (fixed 168, all of t3559), REGRESSIONS 0 in
+  every suite. probes/t3276-collation-other-scripts and probes/t3465-collation-holdout pass unchanged.
+- Unit tests in test_collation.rs: `t3559_unknown_characters_weigh_alike`, `t3559_symbol_order`,
+  `t3559_letterlike_symbols`, `t3559_block_order`, `t3559_equal_forms` (rules 1 to 6), and
+  `script_digits_tiebreak_by_block` (rule 7).
