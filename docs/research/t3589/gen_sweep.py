@@ -38,11 +38,11 @@ def complex_text(x: str, y: str) -> str:
     return f"{x}{y if y.startswith('-') else '+' + y}i"
 
 
-def write(name: str, cells: dict[str, str], description: str) -> None:
+def write(name: str, cells: dict[str, str], description: str, task: str = "T-3589") -> None:
     case = {
         "format": "rustsheet-case/v1",
         "description": description,
-        "tags": ["M9", "engineering", "probe", "T-3589"],
+        "tags": ["M9", "engineering", "probe", task],
         "expected": {},
         "sheets": [{"name": "S", "cells": cells}],
     }
@@ -85,6 +85,44 @@ def large_y() -> None:
     )
 
 
+def reciprocal_complex() -> None:
+    """T-3720: complex z with 0 < |x| <= 0.01 and the worksheet SIN/COS/SINH/COSH/EXP companions."""
+    rng = random.Random(3720)
+    cells: dict[str, str] = {}
+
+    def row_cells(row: int, x: str, y: str) -> None:
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMCOSH", "IMCSCH", "IMSECH", "IMSINH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+        for col, fn, arg in (("E", "SIN", y), ("F", "COS", y), ("G", "SINH", x), ("H", "COSH", x)):
+            cells[f"{col}{row}"] = f"={fn}({arg})"
+        cells[f"I{row}"] = f"=EXP(-({x}))"
+
+    for row in range(1, 401):
+        if row <= 200:
+            mag = math.exp(rng.uniform(math.log(1e-6), math.log(0.01)))
+        else:
+            mag = rng.uniform(0.003, 0.01)
+        row_cells(row, signed(rng, mag), signed(rng, rng.uniform(0.05, 1.5)))
+    pairs = ("-0.00908725305283191", "-0.897991007302082"), ("-0.00994266897763484", "-0.217145289213716")
+    row = 401
+    for x, y in pairs:
+        row_cells(row, x, y)
+        row_cells(row + 1, x, y[1:])
+        row += 2
+    write(
+        "t3720-im-reciprocal-small-x-complex",
+        cells,
+        "T-3720: IMCOSH (A), IMCSCH (B), IMSECH (C), IMSINH (D) of complex x+yi with 0 < |x| <= 0.01 and the "
+        "worksheet companions SIN(y) (E), COS(y) (F), SINH(x) (G), COSH(x) (H), EXP(-x) (I). Rows 1-200 |x| "
+        "log-uniform in [1E-6, 0.01], rows 201-400 |x| in [0.003, 0.01], |y| in [0.05, 1.5]; rows 401-404 the two "
+        "t3589 arguments (S!B15/D15, S!D29) and their conjugates. Generator: docs/research/t3589/gen_sweep.py "
+        "(seed 3720).",
+        "T-3720",
+    )
+
+
 if __name__ == "__main__":
     small_x()
     large_y()
+    reciprocal_complex()
