@@ -69,7 +69,7 @@ comparison table, so every cell of probes/t3298-case-mapping-sweep column C and 
 - Follow-ups filed: T-3921 (MATCH's U+0001 key), T-3929 (probe the wildcard paths).
 
 ## Landing notes
-- PR #2968, ready for review, not enqueued. Head before this note: ba634ea67 (`make catch-up` of 5c7c21c0a,
+- PR #2968, ready for review, not enqueued. Head before this note: the catch-up merge (`make catch-up` of 5c7c21c0a,
   baseline-only conflict, decision 0207). CI was still running at 11:38 UTC when the session's window closed; this push
   restarts it.
 - Reviews: security, design and excel-fidelity all APPROVE on 5c7c21c0a (round 2). The catch-up and this note need no
