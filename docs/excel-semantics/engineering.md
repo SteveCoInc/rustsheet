@@ -730,9 +730,14 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `IMLOG10(COMPLEX(-0.561651839159889,-0.827373683149484))`'s -0.941193126217726i and
   `IMLOG2(COMPLEX(-1,1.05859478337023E-09))`'s 4.53236014029996i (B101, C173); dividing by `LN_10` misses 8 imaginary
   parts, the product with libm `atan2` 3, and x87 extended forms (fpatan, 64-bit constants) 6 or more. The one miss,
-  `IMLOG2(COMPLEX(0.190581435720431,0.981671389192299))` (C111, Excel 1.98953694302209i, ours ...210), is Excel's
-  `atan(5.15092871182028)` one ulp below the correctly rounded 1.3790419226756176 (true value 0.37 ulp below it):
-  `π/2 - atan(x/y)` reproduces it but misses I8 and B101, so Excel's CRT `atan` is not modelled (time-boxed, T-3795).
+  `IMLOG2(COMPLEX(0.190581435720431,0.981671389192299))` (C111, Excel 1.98953694302209i, ours ...210), is not
+  Excel's `atan` (T-3945): Excel reads the real part's text `0.190581435720431` one ulp above the nearest double
+  (0.19058143572043101, numbers.md "Decimals reach a double through an x87 multiply by 10^-n"), so `y/x` is
+  5.150928711820279, one ulp below the quotient of the nearest doubles, and its correctly rounded `atan` is Excel's
+  1.3790419226756174. Excel's ATAN is correctly rounded at all 202 points of probes/t3945-atan-near-midpoint B1:B202
+  (q a stored double, true value within 0.15 ulp of a rounding midpoint), and `IMLOG2(COMPLEX(A204,A205))` over the
+  stored nearest doubles still prints ...209i (C10), because COMPLEX writes 15-digit text that IMLOG2 reads back
+  the same way. C111 is fixed with the literal and text conversion (T-3932), not in the IM kernels.
   The fresh sweep probes-numeric/t3795-r4-im-last-digits (seed 3795, after the freeze) matches all 300 of its
   IMLOG10 and IMLOG2 cells (columns B, C). IMLN prints the same digits with either angle.
 - Superseded by the entry above (T-3795): IMLOG10's imaginary part is `atan2 / LN_10`: `atan2·log10 e` misses `IMLOG10("711+1.5i")` (0.000916231724847909,
