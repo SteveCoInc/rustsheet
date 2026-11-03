@@ -490,6 +490,17 @@ impl Model {
             return error;
         };
         let array = self.evaluate_node_in_context(node, cell);
+        self.error_over(array, error, cell)
+    }
+
+    /// `error` in every element of `array` when it is an array or a multi-cell range that the call
+    /// lifts over (GROUPBY's `field_relationship`, PIVOTBY's `relative_to`), else `error` itself.
+    pub(crate) fn error_over(
+        &mut self,
+        array: CalcResult,
+        error: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         if !array.is_multi_value() {
             return error;
         }
