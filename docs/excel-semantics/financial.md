@@ -1281,9 +1281,23 @@ Evidence (excel-graph, 2026-11-02, T-3698):
   - Moving two points out of the envelope fails the Gate A envelope item (decision 0188 R2, as reviewer check 7 applies
     it), so the rule is not cleared. Which non-error point leaves is sensitive at the 1e-9 level: with roots computed
     from the decimal literals it is A144, not A152. A194 leaves either way. It stays in
-    the code for now, and T-3850 must narrow it or revert it. A train-side rate on firing cells only, comparable to
-    this probe's 20% bit-exact, has not been computed yet (R4.1); T-3850 owns that too.
+    the code for now; the narrow-or-revert choice is below (T-3850, T-3916).
   - On 180 of the 240 Excel's value is neither path's: in the noise floor its iterates leave the model's (T-3850).
+  - No narrowing clears it (T-3850, docs/research/t3850, 2026-11-03).
+    - Of 48 variants (restarts per call, falling back to the hold when the restarted run errs, last step, |f1| cut and
+      floor), each with 0 regressions still moves a point out: A152, A194 or A204. Each with no point leaving
+      regresses 9 to 16 bit-exact cells of the fit set.
+    - A revert moves A15, A26, A64, A76 and A121 out.
+    - A152 leaves inside its root's rounding-noise width: eps·Σ|terms| / |f'(r)| / |r| is 7.7e-9, almost 8 times
+      ε = 1e-9, with the rule at 1.36e-9 from the math root and the hold at 7.9e-10. Excel's own A144 is 1.4e-8 off.
+    - A194 is a real exit. The restarted run wanders 92 steps to a second flat secant with |f| 1.65e-4, above the cap's
+      1e-4, so it is `#NUM!`. Its last iterate, 0.01268668355857748, is within 1e-10 of Excel's value, so Excel likely
+      restarts too and then ends with a number.
+    - Falling back to the hold there would lose A26: its restarted run converges to -1 + 3e-12, which is `#NUM!` in
+      Excel as here (the 1 + r floor), and the hold is a number.
+    - R4.1 on firing cells only: the rule is bit-exact on 17 of 40 train and 5 of 14 test cells (the hold on 0 of
+      each), against 48 of 240 out of sample.
+    - The choice of keep, narrow or revert waits on the owner's ruling (T-3916).
 - Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
   in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
   Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.

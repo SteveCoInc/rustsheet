@@ -3,7 +3,7 @@ id: T-3851
 title: "IMSEC, IMCSC and IMSECH of 705+705i are one ulp off Excel in the 3.768E-307 part"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -28,9 +28,14 @@ IMSEC, IMCSC and IMSECH of 705+705i print Excel's last digit, or the task record
 - Phase 1b under decision 0188 R5: one digit at the 15th place, not visibly off.
 
 ## Acceptance criteria
-- [ ] D161, E161 and I161 of probes/im-trig-magnitude-grid pass with no other IM* cell moving, or an Outcome lists the
+- [x] D161, E161 and I161 of probes/im-trig-magnitude-grid pass with no other IM* cell moving, or an Outcome lists the
       forms tried.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - IMCSCH's tiny parts (T-2668, T-2914) and T-3616's y = 709.78 band.
+
+## Outcome
+Fixed by T-3883's change to `overflowed_parts` (each part divided by Excel's EXP(|v|)/2, engineering.md "IM*
+reciprocals past the denominator's overflow (T-3883)"): D161, E161, I161 and J161 of probes/im-trig-magnitude-grid now
+pass and their known-failure lines left eval/baseline/probes.txt; no other cell moved. No separate PR.

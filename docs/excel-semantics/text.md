@@ -1401,6 +1401,18 @@ Status: VERIFIED
 Implemented in: `Model::fn_textjoin` and `Model::textjoin_delimiters` (functions/text/concatenate.rs).
 Tasks: T-3885
 
+## TEXTJOIN: an array or range ignore_empty is lifted per element, with the scalar rule applied to each
+Rule: an array or range ignore_empty makes TEXTJOIN spill one result per element, and each element follows the
+scalar rule above. With a reference delimiter (a cell or a range of error cells) the elements give: boolean or
+number -> the delimiter's error (`#DIV/0!`), text (`"x"`, `""`) -> `#VALUE!`, error -> its own error (`#N/A`). With an
+error value delimiter (`1/0`) every element is `#DIV/0!`. With a plain delimiter: boolean or number -> `"a"`, text
+-> `#VALUE!`, error -> that error. An array literal and a range holding the same values agree.
+Evidence: probes/t3909-textjoin-lifted-ignore-empty A1:E8 (4 delimiters by array and range ignore_empty, 5 elements
+each; excel-graph, 2026-11-03; T-3909).
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` via `lift_call`; all 40 formula cells (44 scored) already match, no engine change.
+Tasks: T-3909
+
 ## ARRAYTOTEXT: a range format argument
 Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
 An error or blank first argument spills its error to the format's shape: `ARRAYTOTEXT(#N/A,Data!A1:B2)` fills A463:B464 with `#N/A`, `ARRAYTOTEXT(Data!G9,Data!C3:D4)` A466:B467 with `#DIV/0!`, a blank reference A511:B512 and A514:B515 with `#VALUE!`.
@@ -1409,3 +1421,14 @@ Evidence: gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512, A514:B51
 Status: VERIFIED
 Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
 Tasks: T-3884
+
+## SUBSTITUTE with a boolean instance_num is #VALUE! (T-3510, T-3927)
+Rule: any boolean instance_num is `#VALUE!`: literal `TRUE` and `FALSE`, a boolean from a cell (`B1`/`B2`), a comparison
+(`1=1`), and each boolean element of an array (`{TRUE,FALSE,1}` gives `#VALUE!`, `#VALUE!`, "xaa"). A blank-cell instance_num is
+also `#VALUE!` (like 0); `"2"` text coerces ("axa"). A boolean as text, old_text or new_text is coerced to "TRUE"
+(`SUBSTITUTE("TRUE",TRUE,"x")` "x", `SUBSTITUTE("aaa","a",TRUE,2)` "a", then TRUE as text, then "a"). The gen-m5 pairs `SUBSTITUTE("abc",0,"abc",TRUE)`,
+`SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)` are all that one rule (23 cells, see T-3927 for the list).
+An error in text, old_text or new_text wins over the boolean `#VALUE!` (`SUBSTITUTE("abc",#REF!,"Hello",TRUE)` `#REF!`, `SUBSTITUTE(#N/A,"abc","abc",TRUE)` `#N/A`).
+Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03); probes/substitute-boolean-instance A1:A12, B12:C12 (excel-graph, 2026-11-03, T-3927).
+Status: VERIFIED
+Implemented in: `fn_substitute` (functions/text/common.rs), T-3927.

@@ -42,8 +42,9 @@ fn inner_trig_overflows(x: f64) -> bool {
 }
 
 /// IMSEC, IMCSC (other part y), IMSECH and IMCSCH (other part x) are `0` past the sine limit once
-/// the overflowed-reciprocal scale `2e^-|v|` is below the smallest normal double (|v| above about
-/// 709.09), where Excel never takes the sine: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
+/// `2e^-|v|` is below the smallest normal double (|v| above about 709.09), where Excel never takes
+/// the sine. This is a cut of its own, inferred from that bracket, not the divisor
+/// [`overflowed_parts`] uses: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
 /// are 0, `IMSEC("1E+10+709i")` is `#NUM!` (probes/im-trig-magnitude-grid, T-3642).
 fn reciprocal_flushes(v: f64) -> bool {
     2.0 * (-v.abs()).exp() < f64::MIN_POSITIVE
@@ -127,31 +128,30 @@ fn inverse_exp_sinh_cosh(x: f64) -> (f64, f64) {
     (sinh, cosh)
 }
 
-/// A hard cap on [`sinh_series`]'s loop, not a tuned value: at |x| <= `INVERSE_EXP_LOW` the fourth
-/// term is below 1E-22 of the first and no longer changes the sum, so the loop exits after at most
-/// 4 terms long before the cap.
-const SINH_SERIES_TERMS: u32 = 16;
+/// The number of terms [`sinh_series`] sums, a structural choice among ranked candidates (decision 0188
+/// R4 kind (c), no fitted constant): Excel stops after `x⁵/5!` even where `x⁷/7!` would still move the
+/// last bit (|x| above about 0.005). On the 404 complex texts of
+/// probes-numeric/t3720-im-reciprocal-small-x-complex, three terms fit 403 IMCOSH, 403 IMSINH, 402 IMCSCH
+/// and 404 IMSECH texts, against 395, 402, 398 and 400 for the sum run until a term no longer changes it
+/// (four terms near 0.01) and 136 or fewer for two (engineering.md "IMSECH and IMCSCH of a small real
+/// number", T-3721).
+const SINH_SERIES_TERMS: u32 = 3;
 
-/// sinh x as the Taylor series `x + x³/3! + x⁵/5! + ...`, summed in that order in doubles, each
-/// term the one before times `x²/((2k)(2k+1))`, until a term leaves the sum unchanged: the sinh x
-/// of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <= `INVERSE_EXP_LOW` (a real IMSECH there takes
-/// libm's cosh instead and needs no sinh, T-3609). With the `1/u` cosh it fits
-/// all 114 IMSINH and IMCOSH oracle texts with 0 < |x| <= 0.01, where libm's sinh misses
-/// `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm ...477) and the real part of
-/// `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626, libm ...625), and
-/// Horner's `x(1 + x²(1/6 + x²/120))` misses two (probes-numeric/t3525-im-hyperbolic-fresh-sweep
-/// A12, A7, A93). On a sweep drawn after the freeze it fits 299 of 300 IMSINH and IMCOSH texts by
-/// digits, libm 291 (probes-numeric/t3589-im-hyperbolic-small-x-sweep; engineering.md, T-3589).
+/// sinh x as the Taylor series `x + x³/3! + x⁵/5!`, summed in that order in doubles, each term the one
+/// before times `x²/((2k)(2k+1))`: the sinh x of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <=
+/// `INVERSE_EXP_LOW` (a real IMSECH there takes libm's cosh instead and needs no sinh, T-3609). The
+/// series fits where libm's sinh misses `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm
+/// ...477) and the real part of `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626,
+/// libm ...625), and Horner's `x(1 + x²(1/6 + x²/120))` misses two (probes-numeric/t3525-im-hyperbolic-fresh-sweep
+/// A12, A7, A93; T-3589). Its length is [`SINH_SERIES_TERMS`]: the fourth term put
+/// `IMCOSH("-0.00908725305283191-0.897991007302082i")`'s imaginary part at ...607 where Excel has
+/// 0.00710702505540606 (t3589-im-hyperbolic-small-x-sweep B15, T-3721).
 fn sinh_series(x: f64) -> f64 {
     let square = x * x;
     let (mut sum, mut term) = (x, x);
-    for k in 1..=SINH_SERIES_TERMS {
+    for k in 1..SINH_SERIES_TERMS {
         term = term * square / f64::from(2 * k * (2 * k + 1));
-        let next = sum + term;
-        if next == sum {
-            break;
-        }
-        sum = next;
+        sum += term;
     }
     sum
 }
@@ -284,20 +284,28 @@ fn trig_tan(x: f64) -> f64 {
 
 /// IMSEC, IMCSC and IMSECH where the denominator `t` overflows (the hyperbolic argument `v` past
 /// about 355): cosh v and |sinh v| are then both `M = e^|v|/2` and `t` is M², so the result is the
-/// trigonometric parts `(re, im)` over M, computed as `2e^-|v|` so that it stays finite. Excel
-/// keeps these tiny parts: `IMCSC("-724.227-562.884i")` is
-/// -6.94796703439417E-245-6.26263832046024E-246i and `IMSECH("-524.561+5.3113i")`
-/// 1.73046857535442E-228-2.53533899849465E-228i (probes-numeric im-last-digit-sweep E55:F55,
-/// K42:L42). Past |v| ≈ 708 the parts are subnormal and print as 0 (`IMSEC("1.5+711i")`).
+/// trigonometric parts `(re, im)` over M. Excel keeps these tiny parts:
+/// `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i and
+/// `IMSECH("-524.561+5.3113i")` 1.73046857535442E-228-2.53533899849465E-228i (probes-numeric
+/// im-last-digit-sweep E55:F55, K42:L42). Past |v| ≈ 708 the parts are subnormal and print as 0
+/// (`IMSEC("1.5+711i")`).
 fn overflowed_reciprocal(re: f64, im: f64, v: f64, suffix: Suffix) -> CalcResult {
     let (re, im) = overflowed_parts(re, im, v);
     complex_result(re, im, suffix)
 }
 
-/// The parts of [`overflowed_reciprocal`].
+/// The parts of [`overflowed_reciprocal`]: each part divided by `M = EXP(|v|)/2`, with Excel's EXP.
+/// `IMSECH(COMPLEX(400,20))` is 1.56309271549875E-174-3.49688997531599E-174i and
+/// `IMSECH(COMPLEX(699,1))` has real part 2.89616943787016E-304, where the earlier product with
+/// libm's `2e^-|v|` printed ...316E-174i and ...015E-304 (probes/t3881-imcsch-overflow-band B45,
+/// B82). It fits all 1,493 older cells that take this form and all 100 of the fresh sweep
+/// probes/t3883-im-overflow-reciprocal-sweep, against 1,465 and 24 for that product and 1,493 and 40
+/// for libm's `exp(|v|)/2` or `cosh |v|` as M (engineering.md "IM* reciprocals past the
+/// denominator's overflow", T-3883). Past |v| ≈ 709.78 M is infinite and the parts are ±0, as the
+/// product's underflow gave.
 fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
-    let scale = 2.0 * (-v.abs()).exp();
-    (re * scale, im * scale)
+    let m = excel_exp(v.abs()) / 2.0;
+    (re / m, im / m)
 }
 
 /// IMCSCH's band of large |x| where Excel's result for a non-real z is the negation of csch z,
@@ -593,8 +601,8 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 #[cfg(test)]
 mod tests {
     use super::{
-        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsin, imsinh, imtan, inverse_exp_sinh_cosh,
-        CalcResult, CellReferenceIndex, ComplexParts, Suffix,
+        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsech, imsin, imsinh, imtan,
+        inverse_exp_sinh_cosh, CalcResult, CellReferenceIndex, ComplexParts, Suffix,
     };
 
     /// The text a kernel prints for `x+yi`.
@@ -682,6 +690,25 @@ mod tests {
         assert_eq!(text(imcsch, 0.0, 710.0), "-16586.8544023646i");
     }
 
+    // probes/t3881-imcsch-overflow-band B45, B82, A82 and probes/t3883-im-overflow-reciprocal-sweep
+    // (excel-graph, T-3883): past the denominator's overflow each part is divided by Excel's
+    // EXP(|v|)/2.
+    #[test]
+    fn overflowed_reciprocal_divides_by_excel_exp() {
+        assert_eq!(
+            text(imsech, 400.0, 20.0),
+            "1.56309271549875E-174-3.49688997531599E-174i"
+        );
+        assert_eq!(
+            text(imsech, 699.0, 1.0),
+            "2.89616943787016E-304-4.51051665444843E-304i"
+        );
+        assert_eq!(
+            text(imcsch, 699.0, 1.0),
+            "-2.89616943787016E-304+4.51051665444843E-304i"
+        );
+    }
+
     #[test]
     fn libm_above_the_band() {
         for x in [20.000_000_000_000_004, 100.0, -100.0] {
@@ -711,6 +738,24 @@ mod tests {
         assert_eq!(
             text(imsin, 0.981_793_650_815_856, -183.167_307_387_565),
             "1.47021409465799E+79-9.82267943792204E+78i"
+        );
+    }
+
+    // probes-numeric/t3589-im-hyperbolic-small-x-sweep B15, D15, D29 (excel-graph, T-3721): the series
+    // stops after x⁵/5!; a fourth term moved each of these last digits by one.
+    #[test]
+    fn series_sinh_stops_after_three_terms() {
+        assert_eq!(
+            text(imcosh, -0.009_087_253_052_831_91, -0.897_991_007_302_082),
+            "0.623208141637039+0.00710702505540606i"
+        );
+        assert_eq!(
+            text(imcsch, -0.009_087_253_052_831_91, -0.897_991_007_302_082),
+            "-0.00925756264826299+1.27852743654627i"
+        );
+        assert_eq!(
+            text(imcsch, -0.009_942_668_977_634_84, -0.217_145_289_213_716),
+            "-0.208738033086954+4.63196641538457i"
         );
     }
 

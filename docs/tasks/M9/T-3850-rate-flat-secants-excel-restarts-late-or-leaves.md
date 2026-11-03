@@ -38,6 +38,19 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   `#NUM!`), which fails the Gate A envelope item (decision 0188 R2, reviewer check 7), though it brings five other points in.
   - Narrow the rule so that neither point leaves, or revert it.
   - Also compute the train-side bit-exact rate on firing cells only (R4.1), to compare with this probe's 48 of 240.
+- Findings of the first pass (2026-11-03, docs/research/t3850; PR "T-3850 (partial)"):
+  - No narrowing meets the criterion. Of 48 variants (restart count, fall back to the hold on an error, last step,
+    |f1| cut and floor), each one with 0 regressions still moves a t3906 point out (A152, A194 or A204). Each one
+    with no point leaving regresses 9 to 16 existing bit-exact cells.
+  - A revert moves A15, A26, A64, A76 and A121 out and loses T-3698's 22 cells.
+  - A152 lies within its root's rounding-noise width (7.7e-9 relative, almost 8 times ε). A194 is a real exit: the
+    restarted run meets a second flat secant at step 92 with |f| 1.65e-4 and is `#NUM!`.
+  - So the narrow-or-revert criterion moved to **T-3916**, blocked on an owner ruling ("Needs owner" in
+    docs/status.md).
+  - R4.1, firing cells only (the rule and the hold differ; the fit set without the R4 sweeps and t3906): on the train
+    side of the hash split the rule is bit-exact on 17 of 40 and the hold on 0. On the test side it is 5 of 14 and 0.
+    Out of sample (t3906) it is 48 of 240 (20%) and 12. So the out-of-sample rate is about half the train rate
+    (42%): mostly the large-annuity noise floor the fit set lacks. T-3916 weighs this too.
 
 Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here):
 - Done by T-3906 (`RATE_RESTART_F_MAX`, decision 0255 amendment): the restart's |f1| cut reused
@@ -55,9 +68,9 @@ Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here)
 ## Acceptance criteria
 - [x] A blind fresh probe that targets flat secants, drawn and filled before any rescoring, checks the restart rule out
       of sample (the T-3698 fresh sweeps hardly ever reach a flat secant). (T-3906: probes/t3906-rate-restart-oos)
-- [ ] T-3698's restart is narrowed so that no point of probes/t3906-rate-restart-oos leaves the Gate A envelope (A152 and
-      A194 today; re-score on the case's math.tsv), or reverted under a regression decision record (decision 0082's
-      precedent); a revert is the exception to "no RATE cell regressing" below (T-3906).
+- [x] Moved to T-3916 (it was: narrow T-3698's restart so that no point of probes/t3906-rate-restart-oos leaves the
+      Gate A envelope, or revert it under a regression decision record). Neither is possible without a point leaving
+      (docs/research/t3850), so the choice waits on the owner's ruling.
 - [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
       that no rule on the run's visible state does.
 - [ ] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded.

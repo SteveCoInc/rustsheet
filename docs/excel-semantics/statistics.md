@@ -3049,7 +3049,10 @@ in the next bullets are for that older form unless they say otherwise.
     double, zl = z - zh, I = fl(fl(EXP(zh)·s)·fl(1 + zl)) (the rule above). Chosen on r6's tune shapes, exact on
     1,546 of 1,546 non-double-z tune cells, then on 1,139 of 1,139 at r6's b0 = 4.75 hold-out, 777 of 777 on r5,
     2,410 of 2,413 on t3570-r5-bpser-lg (a0 0.15-0.85), and 1,079 of 1,079 on the old w2f (0.5, 6.25) cells with
-    measured GAMMALN. The order matters: (1 + zl) applied before s, or E + E·zl, or the product kept extended, all
+    measured GAMMALN. T-3879's fresh sweep (probes-numeric t3879-bpser-split-fresh, 2,301 log-uniform cells at
+    min(a, b) < 1, b0 < 8 drawn after the freeze, excel-graph 2026-11-03, docs/research/t3879): exact on 2,300 of
+    2,301 (1,729 of 1,730 non-double z) against 1,566 for the unsplit z and 446 for the correctly rounded value. The
+    order matters: (1 + zl) applied before s, or E + E·zl, or the product kept extended, all
     lose 200-750 of the 1,546. No rounding of z alone can work: on many cells no double E gives Excel's I as fl(E·s).
     Earlier negatives: z rounded nearest without zl (z53) won on r5's data, 1,628 against 1,503, but lost on r6,
     2,072 against 2,332 tune; rounding down or up fits no rule across shapes.
@@ -3100,7 +3103,11 @@ docs/research/t2464/r7-bpser-nondouble-z (`forms.py`, `lg.py`, `w2f.py`, `shapes
 Implemented in: `functions/statistical/bratio/bpser.rs` `bpser` (T-2505) through `ported_tails`, for BETA.DIST's cdf
 (`beta_dist_lower_tail`), F.DIST, F.DIST.RT and FDIST (`fisher.rs::f_tail`), BINOM.DIST's cdf and NEGBINOM.DIST's cdf
 (`binom.rs`; T-2847), and F.TEST's tail with its own L (`f_test_tail.rs`, T-2681): the w3 series and
-EXP of the extended z (not yet the split of a non-double z: T-3879), with GL53/glalgdiv's L for min(a, b) < 1
+EXP of z, split as zh + zl where min(a, b) < 1 and b0 < 8 (T-3879, `bpser_series`; elsewhere, and in F.TEST's tail,
+EXP of the extended z: L is held extended or unsolved there). The split's probes are direct bpser calls; the swapped
+w1 = bpser(b0, a0, y0) and L140 calls take it because L is the same GL53 double in either order, evidenced only through
+eval cells (ironcalc-calc T_DIST.xlsx F18 and BETADIST_BETAINV.xlsx G25-G26 among the 10 it fixes; T.DIST and T.INV
+take bpser through `t_kernel_tails`). L is GL53/glalgdiv's for min(a, b) < 1
 and the extended GAMMALN sum for min >= 1, max <= 8.
 Its algdiv (b0 >= 8) is `beta_density::algdiv` in doubles, where the model runs TOMS algdiv x87 stored.
 A caller's shape of exactly 1 stays on Cephes' fractions (both shapes > 1 with max > 8 did until T-3007, below); L140's bpser(a0, 1, x0) at a whole b0 takes L = -LN(a0) (T-2506 above a0 = 8, T-2847 at every a0). On
@@ -3141,6 +3148,43 @@ A9 (A18 is now within 4 ulp): T-2924's k plus whole fl(a·LN x) steps, as above.
 Status: PARTIAL (excel-graph): within 15 digits in every bpser sub-branch of the shapes probe (2,861 of 2,868 at
 b0 >= 8, all others); bit-exact 52-75%; both > 1 with max > 8 a provisional form (T-3007)
 Tasks: T-2505, T-2512, T-2122, T-3007, T-3331, T-3570, T-3771
+
+## BETA.DIST at a = b = 1/2 is an arctangent closed form, reflected above x = 0.9 (T-3192)
+Rule: BETA.DIST's cdf (and BETADIST's) at a = b = 1/2 is not bratio's bpser but, in doubles with libm's atan,
+```
+w(t) = 2*ATAN(SQRT(t)/SQRT(1 - t))/PI
+I = w(x) for x <= 0.9,   I = (0.5 - w(y)) + 0.5 for x > 0.9   (y = fl(1 - x))
+```
+- Bit-exact on 42 of the 49 a = b = 1/2 cdf cells on file before T-3192 (the engine's bpser 16, the correctly
+  rounded value 27), 281 of 321 on the first fresh sweep (probes-numeric/t3192-beta-half-half) and 287 of 341 on the
+  second (t3192-beta-half-half-2), every cell within 2 ulp. BETA.DIST equals BETADIST on all 321 cells of the first.
+- The bpser miss that started it: `BETA.DIST(2.4674011002723394E-20,0.5,0.5,TRUE)` (t1745-beta-inv-roundtrip G1) is
+  9.999999999999999E-11 in Excel, the correctly rounded value, and 12 ulp low through bpser: fl(LN x) is 3.1E-15 off
+  ln x at x = 2.5E-20, which EXP(0.5 LN x) carries into the result, and the square root does not. An extended LN in
+  bpser itself is not Excel's: it fixes these cells but moves 13,322 other BETA.DIST cells off (T-3192 A/B).
+- The switch: on the first sweep the direct form wins every cell where the two differ up to x = 0.888 and the reflected
+  one from x = 0.900 (one cell against it, x = 0.837). It was frozen at 0.9 before the second sweep, which tested it:
+  287 against 228 for the direct form everywhere and 253 for the reflection at x > 0.5 (bratio's own swap). Below the
+  switch, rows where only the reflection is right exist (9 in (0.8, 0.9] on the second sweep), so 0.9 is the best
+  single cut, not an exact rule.
+- Ranked forms on the first sweep (bit-exact of 321): the direct libm form 270 (with the switch 281), Excel's own
+  worksheet `2*ATAN(SQRT(x)/SQRT(1-x))/PI()` equals BETA.DIST on 270, asin forms 237-247 (`2*asin(sqrt x)/pi`, F.TEST's
+  form, 247; the exact asin of the double sqrt over the double pi 238), the correctly rounded value 179. Exact
+  arctangents of the double ratio, sqrt(x/y) and the extended pi are lower (180-228).
+- Open: x = 0.5 is 0.5000000000000001 in Excel (5 cells on file, e.g. m9-beta-dist-a0p5 A9) and 0.5 here; the
+  remaining 1-2 ulp misses (40 and 54 cells) have no form yet. The same form fixes df-1 cells of
+  t0969-t-beta-link (BETA.DIST at shapes 1/2 and df/2 = 1/2); whether T.DIST at df 1 takes it is T-2930's.
+Evidence: probes-numeric t3192-beta-half-half (BETA.DIST, BETADIST and the worksheet form, 321 x) and
+t3192-beta-half-half-2 (341 x, 0.8-1 dense) and t3192-beta-half-half-3 (300 x, log-uniform toward 0 and 1; the
+direct form 239 bit-exact, the switch 287), excel-graph 2026-11-03; docs/research/t3192 (`make_probe.py`,
+`score_half.py`, RESULTS.md).
+Ours: the direct form w(x) for every x; the switch is not ported. It is a cut placed by scoring cells whose two forms
+differ by 1 ulp, below decision 0112's floor, so it is last-digit (Phase 1b) work (decision 0188 R4.4, R5; T-3886).
+The direct form on the fit lab's hold-out split (decision 0188 R4.1) of both sweeps' B and C cells: train 522 of 679
+bit-exact (76.9%), test 246 of 304 (80.9%), against the correctly rounded value's 176 of 304; every cell within 2 ulp.
+Implemented in: `functions/statistical/incomplete_beta.rs` `half_half_cdf`, called by `bratio::beta_dist_lower_tail`
+(BETA.DIST and BETADIST's cdf, and the F.INV crossing `inverse_beta::beta_lower_crossing` at d1 = d2 = 1, where no
+cell on file moved; F's tails, the Student t and BETA.INV's search keep their kernels).
 
 ## Incomplete beta at a shape near the double range: no overflowing fl(a LN x), and bpser is #NUM! once 1/B overflows (T-3007)
 Rule: Excel never evaluates a bpser whose fl(a·LN x) overflows: Excel for the web refuses a workbook that holds
@@ -3234,6 +3278,36 @@ L140 with bgrat and bfrac on Cephes incbcf/incbd with exp(a ln x)·exp(b ln y)·
 Status: VERIFIED (excel-graph) for L140 bup+bpser to 15 digits (11,724 of 11,753; 64% bit-exact); bfrac's fraction
 in the next entry
 Tasks: T-2506, T-2508, T-2512
+
+## Incomplete beta L140 bup+bpser at the F points: the F tails are not BETA.DIST's call, and bup's sum is open (T-3198)
+Rule (partial): Excel's F tails on bratio's L140 bup+bpser branch take bratio's (x, y) as two separately formed
+arguments, u = 1/(1 + d2/(d1 x)) and v = 1/(1 + d1 x/d2) ("Incomplete beta is TOMS 708 `bratio`" above), not one argument
+and its complement. How Excel sums bup's terms on this branch is still open: it is neither TOMS's recurrence nor the
+L140 bup+bgrat power sum alone (T-3568).
+- Probe: probes-numeric t3198-f-l140-args, 414 F calls on this branch (every literal one of probes-numeric, probes and
+  gen-m9 whose x has at most 15 digits). Per row it asks for u and v as worksheet formulas, then BETA.DIST(u, a, b, TRUE),
+  BETA.DIST(v, b, a, TRUE) and both F tails (excel-graph). u and v are the doubles the engine forms, 414 of 414 each.
+- `F.DIST.RT(x, d1, d2)` = `BETA.DIST(v, d2/2, d1/2, TRUE)` bit for bit on 300 of 414, and `F.DIST(x, d1, d2, TRUE)` =
+  `BETA.DIST(u, d1/2, d2/2, TRUE)` on 309 of 414. Where bratio swaps and u = fl(1 - v), so the two calls are at the same
+  point, they still differ on 13 of 150. So the F functions do not call BETA.DIST's kernel with y = 1 - x.
+- Where u differs from fl(1 - v), the tails follow the separately formed y on most rows: on bratio's computed tail w,
+  the engine's (u, v) is bit-exact on 99 of 238 swapped and 83 of 176 unswapped rows. (1 - v, v) gets 88 and 50,
+  (u, 1 - u) 65 and 72, and (d1 x/(d1 x + d2), d2/(d1 x + d2)) 98 and 79. Over every F cell of the eval on the ported
+  branches, (u, v) stays best or tied on each branch (L140 bup+bpser 520 of 812 bit-exact). `F.DIST.RT(3,50,100)` =
+  1.516786664496894E-06 is an exception: it equals `BETA.DIST(0.4,50,25,TRUE)`, at y0 = 0.6, while
+  u = 0.6000000000000001, which takes the engine 70 ulp low (bup's density multiplies ln(1 - y0) by 49).
+- The kernel itself is the larger error at these points: on Excel's own BETA.DIST at the probe's 816 L140 points
+  (columns C and D), the engine's bup + bpser is bit-exact on 596. Unswapped with n >= 10 bup terms it is 56 of 166,
+  against the bratio fixture's 91 of 122, which has few large-n rows. Candidates for bup's W at the same 816 points and the
+  fixture's 122 rows:
+  - TOMS's recurrence as ported: 596 and 91.
+  - T-3568's power sum `Σ R_i·EXP(i·LN y0)` with ret stored: 669 and 99. On the gated eval it fixes 14 cells and moves
+    one off (ironcalc-calc BETADIST_BETAINV.xlsx H32, `BETA.INV` at (5, 5), 1 ulp). It also moves BETA.DIST at x0 = 0.5
+    off Excel: `BETA.DIST(0.5,100,10,TRUE)` by 1 ulp, and (10, 10) at 0.5 to 0.5000000000000003. There fl(i·LN 0.5)
+    under the engine's EXP is not a power of two (i = 3, 6, 7, 8).
+  - Correctly rounded powers: 636 and 102. These keep x0 = 0.5 and H32, but move `BETA.DIST(0.1,100,10,TRUE)` 2 ulp off.
+  - x^i by repeated products: 593 and 86.
+Evidence: probes-numeric t3198-f-l140-args (excel-graph); T-3198's Outcome has the scoring.
 
 ## Incomplete beta bfrac is TOMS's fraction in a Lentz loop, on closed-form terms (T-3571)
 Rule: where bratio takes bfrac, on the evidenced region a, b in [40, 5000] on the unswapped call (x below the mean, z from -8 to -0.2 sd), Excel computes TOMS 708's

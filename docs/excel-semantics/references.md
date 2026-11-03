@@ -650,7 +650,8 @@ Tasks: T-0138, T-0148
 Rule: Excel decides when it parses the formula whether each operand of an intersection is a reference
 expression. A reference, a parenthesized reference, `#REF!`, `@ref`, a union and a call to a
 reference-returning function (INDEX, OFFSET, IF, ANCHORARRAY, INDIRECT, CHOOSE, XLOOKUP, LET, SWITCH,
-IFS, TAKE, DROP, TRIMRANGE) are accepted. Number, string, boolean and error literals other than `#REF!`,
+IFS, TAKE, DROP, TRIMRANGE), on either side, and a call whose result kind Excel cannot know (a LAMBDA
+call, an unknown or future function name) are accepted. Number, string, boolean and error literals other than `#REF!`,
 a parenthesized value (`(1)`, `(1/0)`), a parenthesized value operator and value functions make Excel
 for the web refuse the workbook: `=1 A1`, `=(1) A1`, `=A1 (1)`, `=A1 TRUE`, `=A1 "a"`, `=#N/A A1`, `=A1
 #N/A`, `=A1 #DIV/0!`, `=(1/0) A1`, `=A1 (1/0)`, `=(1/0) (NA())`, `=(1/0) Z99`, `=#REF! #N/A`, `=A1
@@ -673,7 +674,24 @@ operands. Accepted forms:
   `=@A1:A3 A2:B2 + 1` is 3 and `=SUM(@A1:A3 A2:B2)` is 2.
 - `=A1:A3 INDEX(A1:B3,2,0)`, `OFFSET(A2,0,0,1,2)` and `IF(TRUE,A2:B2)` give 2, on either side;
   `INDIRECT("A2:B2")`, `CHOOSE(1,A2:B2)`, `XLOOKUP(2,A1:A3,A1:B3)`, `SWITCH(1,1,A2:B2)`,
-  `IFS(TRUE,A2:B2)`, `TAKE(A2:B3,1)`, `DROP(A1:B2,1)`, `TRIMRANGE(A2:B2)` and `LET(x,A2:B2,x)` give 2 as right operands.
+  `IFS(TRUE,A2:B2)`, `TAKE(A2:B3,1)`, `DROP(A1:B2,1)`, `TRIMRANGE(A2:B2)` and `LET(x,A2:B2,x)` give 2 as right operands,
+  and as left operands too: `=INDIRECT("A2:B2") A1:A3` and the same eight calls before `A1:A3` are 2
+  (probes/t3308-intersection-function-operands H1:H9, oracle: excel-graph, 2026-11-03, T-3308).
+- Calls whose result kind Excel cannot know at parse time are accepted on either side: an inline
+  `LAMBDA(x,x)(A2:B2)`, a defined-name LAMBDA `IDFN(A2:B2)` (`IDFN` = `=LAMBDA(x,x)`) and a LET-bound
+  `LET(f,LAMBDA(x,x),f(A2:B2))` give 2 as right (H10:H12) and left (H15:H17) operands; an unknown name
+  `FOO(A2:B2)` and an unknown `_xlfn.FOOBAR(A2:B2)` load and give `#NAME?` (H13, H14, H18, H19). The kind
+  is checked when the formula runs: `=A1:A3 LAMBDA(x,x+1)(A2)` and `=A1:A3 IDFN(5)` are `#VALUE!` (H20,
+  H21), and `=A1:A3 LAMBDA(x,x)(A2:B3)` and `=A1:A3 IDFN(A2:B3)` spill the cut A2:A3, 2 and 3 (J1:K2)
+  (same case and run).
+- Refused on either side (`FileCorruptTryRepair`, one scratch workbook per formula, excel-graph,
+  2026-11-03, T-3308), with A1:B3 as above: `=A1:A3 EXPAND(A2:B2,1,2)`, `TOCOL(A2:B2)`, `TOROW(A2:B2)`,
+  `WRAPROWS(A2:B2,2)`, `WRAPCOLS(A2:B2,1)`, `HSTACK(A2:B2)`, `SORTBY(A2:B2,A2:B2)`, `XMATCH(2,A1:A3)`,
+  `AREAS(A2:B2)`, `CELL("address",A2)`, `HYPERLINK("#Sheet1!A2",A2)`, `IMAGE("https://example.com/a.png")`
+  and `GROUPBY(A1:A3,B1:B3,LAMBDA(x,SUM(x)))`, and each of them before `A1:A3`. Each call loads on its
+  own in the same kind of run (EXPAND, TOROW, WRAPROWS, WRAPCOLS, HSTACK and SORTBY spill 2, 20 across;
+  TOCOL spills 2, 20 down; XMATCH and HYPERLINK give 2, AREAS 1, CELL `$A$2`, IMAGE `#BLOCKED!`, GROUPBY
+  its 4-row table), so the refusal is the operand's, not the builder's.
 - The stored form of `@` is accepted as an operand: `=A1 _xlfn.SINGLE(A1:A3)` = 1 and
   `=_xlfn.SINGLE(A1:A3) A2:B2` = 2 (row 2) load and evaluate, `=A1:A3 _xlfn.SINGLE(A2:B2)` in row 3 is `#VALUE!`
   (no cell of `A2:B2` in that row), `=A1 _xlfn.SINGLE(A1)` = 1 (probes/intersection-single-operands, oracle:
@@ -685,7 +703,8 @@ operands. Accepted forms:
   parenthesized operand". With a space, `=(A1) (A2)` is the intersection, `#NULL!`.
 - `=Data!A1 Other!Z99` (different sheets, no shared coordinates) is `#VALUE!`, like overlapping cross-sheet
   operands: the sheet check comes before the disjoint check.
-Evidence: probes/intersection-operands H1:H15, I11 and probes/intersection-function-operands H1:H5
+Evidence: probes/t3308-intersection-function-operands H1:H21, J1:K2 (excel-graph, 2026-11-03, T-3308),
+probes/intersection-operands H1:H15, I11 and probes/intersection-function-operands H1:H5
 (oracle: excel-graph, 2026-10-05, T-0138), H6:H12 (2026-10-06, T-0161). H13 `=A1:A3 LET(x,A2:B2,x)` and
 H14 `=A1:A3 TRIMRANGE(A2:B2)` are both 2 (2026-10-06, T-0166; the case builder now writes `_xlpm.` bound
 names and `_xlfn.` prefixes; without them Excel refuses the file or gives `#NAME?`). The refused
@@ -695,8 +714,9 @@ UNVERIFIED builder edge: a LET name that equals a function name or is used befor
 still written with `_xlpm.`; how Excel stores that is not probed.
 Status: VERIFIED (load-time refusal observed in Excel for the web only)
 Implemented in: expressions/parser/reference_operators.rs (`is_reference_operand`: only the accepted
-functions above. UNVERIFIED by inference: built-in functions not probed are refused, while unknown or
-future function names, LAMBDA definitions and calls, and `@` operands are accepted); `Parser::parse_implicit`
+built-ins above, on either side; unknown and future function names and LAMBDA calls are accepted, as
+probed by T-3308. UNVERIFIED by inference: built-ins in neither list above are refused, and an
+uncalled LAMBDA definition as an operand is accepted); `Parser::parse_implicit`
 (`@` takes the intersection after it, T-0149). The engine prints an `@` operand of an intersection as Excel's FORMULATEXT does, `=A1 @A1` and
 `=@A1:A3 A2:B2` (probes/intersection-at-formulatext, T-1098), except that a left operand ending in `@` keeps its
 parentheses, `(A1 @A1) B1`, since the bare text would re-parse as `A1 @(A1 B1)` (engine choice; Excel's text for it is not probed). The same text is printed when a formula is moved or pasted (`to_string_moved`); since T-1342 that includes the parentheses around a cut of a union, `=SUM(((A1,B1) B1))` moves as `=SUM(((J10,K10) K10))`, which the moved text used to drop (UNVERIFIED for Excel's cut/paste text, which is not probed; it matches FORMULATEXT, F6 below). As intersection operands, XLOOKUP, TAKE,
@@ -709,7 +729,7 @@ and a not-found XLOOKUP with a range `if_not_found` is that reference (`=C1:C3 X
 C1, and ISREF of it TRUE) (probes/intersection-lookup-operand-errors, excel-graph 2026-10-07).
 - FORMULATEXT of an `@` operand of `:` or `@` keeps the written parentheses: `=A1:(@B1)` stays `=A1:(@B1)` (spills `1, 2` across H10:I10), `=(@(A1 B1)):C3` stays `=(@(A1 B1)):C3` and `=@(@(A1 B1))` stays `=@(@(A1 B1))` (both `#NULL!`). The engine drops the inner parentheses on the last two (probes/at-operand-formulatext, T-1104; T-1116).
 - `=ANCHORARRAY(D1)` prints `=D1#` and `=ANCHORARRAY(INDEX(D1:D2,1))` prints `=INDEX(D1:D2,1)#`, `ANCHORARRAY(D1)` and `D1#` are the same stored file text (`_xlfn.ANCHORARRAY(D1)`), so this is how Excel prints that stored form; how a typed `ANCHORARRAY(D1)` prints is not probed. Engine requirement for T-1109: xlsx import must not print the automatic `@` it adds inside `#`. Stored as `_xlfn.ANCHORARRAY((@A1:B2))`, `=(@A1:B2)#` loads, prints as `=(@A1:B2)#` and is `#VALUE!` from D20 (no intersecting cell) (probes/anchorarray-at-operand, T-1111; the engine matches since T-1115). UNVERIFIED: the engine passes any `@` error through `#` (`=(@(A1 B1))#` gives `#NULL!`), and gives the left error when both operands of `:` are errors; only the `#VALUE!` and right-operand cases are probed. `=ANCHORARRAY(1)` is refused: Excel for the web will not open a workbook holding it (`FileCorruptTryRepair`, T-1111); the engine reads it as a syntax error since T-1117. `=@D1#` prints as `=@D1#` and evaluates to `#VALUE!` (probes/at-operand-formulatext, T-1104). Value operands of `:` and `#` that T-1111 did not probe (T-1216): see the entry "FORMULATEXT keeps the parentheses of an `@` operand" below.
-Tasks: T-0138, T-0148, T-0149, T-0042, T-0161, T-0165, T-1094, T-1098, T-1103, T-1104, T-1109, T-1111, T-1115, T-1117, T-1216
+Tasks: T-0138, T-0148, T-0149, T-0042, T-0161, T-0165, T-1094, T-1098, T-1103, T-1104, T-1109, T-1111, T-1115, T-1117, T-1216, T-3308
 
 ## Calling a parenthesized operand
 Rule: a parenthesized operand written directly before `(`, with no space, is called like a LAMBDA

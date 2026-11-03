@@ -7,6 +7,28 @@
   "input_sha256": "2fad460ddbf50d38f959b319ce0c9bda7dac45eb98384b63931ae54db34cc568"
  },
  "sheets": {
+  "Calc": {
+   "A15": {
+    "t": "e",
+    "why": "the total is 0 (a snapped total too)",
+    "f": "=PERCENTOF(Data!E1:E2,Data!E1:E2)"
+   },
+   "A57": {
+    "t": "n",
+    "v": "0.3",
+    "f": "=PERCENTOF({1,2},{1,2,3,4})"
+   },
+   "A58": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=PERCENTOF({1;2},{1,2,3})"
+   },
+   "A59": {
+    "t": "n",
+    "v": "10.0",
+    "f": "=PERCENTOF({1,2;3,4},{1})"
+   }
+  },
   "Data": {
    "G1": {
     "t": "e",

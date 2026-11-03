@@ -122,8 +122,8 @@ impl Model {
     /// probes/pivotby-followup P!A681, probes/groupby-pivotby-functions P!A721): each element is
     /// the top-left cell of the PIVOTBY for that element, which is the `""` corner of the header
     /// rows, or the element's error (`{5;1}` is `#VALUE!` over `""`: P!A741). The other arguments
-    /// are checked first, an error among them is the whole result (unprobed), and no function is
-    /// called.
+    /// are checked first, an error among them fills the array's shape (`Model::pivotby`), and no
+    /// function is called.
     pub(crate) fn lifted_relative_to(
         &mut self,
         elements: Vec<Vec<ArrayNode>>,

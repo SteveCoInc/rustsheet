@@ -480,7 +480,7 @@ impl Model {
     /// The error value of an option before `field_relationship`, lifted over it when it is an
     /// array: that error in every element, since each element's GROUPBY meets it first
     /// (`GROUPBY(k,v,SUM,,,NA(),,{0;1})` is two `#N/A`, probes/groupby-subtotals G!A1351).
-    fn lifted_error(
+    pub(crate) fn lifted_error(
         &mut self,
         relationship: Option<&Node>,
         error: CalcResult,
@@ -495,7 +495,7 @@ impl Model {
 
     /// `error` in every element of `array` when it is an array or a multi-cell range that the call
     /// lifts over (GROUPBY's `field_relationship`, PIVOTBY's `relative_to`), else `error` itself.
-    pub(crate) fn error_over(
+    fn error_over(
         &mut self,
         array: CalcResult,
         error: CalcResult,
@@ -553,7 +553,7 @@ impl Model {
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
         // one-cell reference to an error ([`Model::groupby_fields`]; `GROUPBY(Data!G9,Data!G1,..)`),
         // both after the options' errors: `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is
-        // `#NUM!` (d03de506903f5a35 A11835), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+        // `#NUM!` (ec5094d09c82f94d A6223), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
         // `#DIV/0!` (18ded81711290e85 A1648).
         match (&inputs.scalar, field_headers_given) {
             (ScalarInput::Text | ScalarInput::ErrorCell(_), false) => {

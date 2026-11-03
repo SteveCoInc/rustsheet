@@ -1,0 +1,71 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A10": {
+    "t": "s",
+    "v": "aTRUEa"
+   },
+   "A11": {
+    "t": "s",
+    "v": "TxUE"
+   },
+   "A12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A2": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A4": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A5": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A6": {
+    "t": "s",
+    "v": "xaa"
+   },
+   "A7": {
+    "t": "s",
+    "v": "axa"
+   },
+   "A8": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A9": {
+    "t": "s",
+    "v": "x"
+   },
+   "B12": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "C12": {
+    "t": "s",
+    "v": "xaa"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "2a631f9b2056ecdbe8f4cbb788cbbf3572dac3aaaa0d166b599cffb68340c747",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-03T11:38:33+00:00",
+  "version": null,
+  "workbook_name": "e3b202b278132c86d90eeffc52398a7aa41385eb85ee2feb3b5d4f0074ba547b.xlsx"
+ }
+}

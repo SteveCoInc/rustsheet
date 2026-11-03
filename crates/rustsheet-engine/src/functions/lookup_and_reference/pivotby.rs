@@ -80,7 +80,15 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-        let (mut pivot, mut functions) = self.pivotby_args(args, cell)?;
+        // An early error fills the shape of an array `relative_to` the call lifts over, since each
+        // element's PIVOTBY meets it first, as GROUPBY's does: `#VALUE!` in all four cells of a
+        // `Data!C3:D4` behind a text `row_fields`, an error option or an error-cell field, and a
+        // filter refusal (gen-m7 arg-pairs batch, excel-graph: 4ad4b1c6b2c2b01d A1:B2,
+        // 37041df35489e178 A4942:B4943, 547d6192794dbf57 A10188:B10189).
+        let (mut pivot, mut functions) = match self.pivotby_args(args, cell) {
+            Ok(parsed) => parsed,
+            Err(error) => return Err(self.lifted_error(args.get(10), error, cell)),
+        };
         let (mut rows, mut cols, height) = pivot_groupings(&pivot, cell)?;
         if let Some(elements) = pivot.lifted.take() {
             return Ok(self.lifted_relative_to(elements, cell));
@@ -432,18 +440,7 @@ impl Model {
         // column and no header row, as in GROUPBY; otherwise it is #VALUE!, whatever the value
         // (probes/t3890-pivotby-scalar-filter P!B1-B50).
         let one_keeps_all = first == 0 && row_fields == 1 && col_fields == 1 && value_columns == 1;
-        // The refusal fills the shape of an array relative_to the call lifts over: `#VALUE!` in
-        // each of the four cells of a `Data!A1:B2` (gen-m7 547d6192794dbf57 A10188:B10189,
-        // A11469:B11470; 5883a41f98113db2 A4637:B4638).
-        let records = match self.filter_rows(filter, height, first, one_keeps_all, cell) {
-            Ok(records) => records,
-            Err(error) => {
-                return Err(match relative_to {
-                    Some(array) => self.error_over(array, error, cell),
-                    None => error,
-                })
-            }
-        };
+        let records = self.filter_rows(filter, height, first, one_keeps_all, cell)?;
         let (relative_to, lifted) = self.relative_to_arg(relative_to, cell)?;
         let row_depth = effective_depth(row_depth, row_depth_given, &row_sort, row_fields);
         let col_depth = effective_depth(col_depth, col_depth_given, &col_sort, col_fields);
@@ -745,13 +742,16 @@ fn column_names_row(pivot: &Pivot, slots: &[Slot]) -> Vec<ArrayNode> {
     row
 }
 
-/// Header cells joined with ", " as text. An error cell makes the name that error (unprobed). A
-/// name longer than a cell can hold, 32,767 characters (docs/excel-semantics/coercion.md "Text
-/// longer than 32,767 characters"), is `#VALUE!` (unprobed for PIVOTBY).
+/// Header cells joined with ", " as text. A blank header cell is left out: `col_fields` headed
+/// (blank, "?b", 3.14159) are "?b, 3.14159", with `relative_to` a blank cell or 1 (gen-m7
+/// ceb2c91035864a71 B8785; probes/t3893-pivotby-error-sort-header B121; T-3893). An error cell
+/// makes the name that error (unprobed). A name longer than a cell can hold, 32,767 characters
+/// (docs/excel-semantics/coercion.md "Text longer than 32,767 characters"), is `#VALUE!`
+/// (unprobed for PIVOTBY).
 fn joined_names(names: impl Iterator<Item = ArrayNode>) -> ArrayNode {
     let mut parts = Vec::new();
     let mut units = 0usize;
-    for name in names {
+    for name in names.filter(|name| !matches!(name, ArrayNode::Empty)) {
         match array_node_to_string(&name) {
             Ok(text) => {
                 units = units.saturating_add(text.encode_utf16().count() + 2);

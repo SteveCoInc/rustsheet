@@ -1181,6 +1181,20 @@ and a column selection, `RelativeSets` builds every set the grid uses once, afte
 per pair of key-prefix levels (groups, subtotals and totals alike; `Grouping::prefix_ids`), the grid cells, subtotal
 lines included, look theirs up, value sorts take `RelativeTo::of_sort` (the parent group from
 `Grouping::sort_by_aggregate`), and an array is lifted by `Model::lifted_relative_to` without any call.
+PIVOTBY's joined column name leaves a blank header cell out (T-3893; probes/t3893-pivotby-error-sort-header, excel-graph,
+2026-11-03). col_fields Data!A1:C12 headed (blank, "?b", 3.14159) with field_headers 3 are named "?b, 3.14159", whether
+relative_to is a blank cell or 1 (gen-m7 ceb2c91035864a71 B8785; probe B121). An empty-text header is unprobed.
+Ours: implemented (`pivotby.rs` `joined_names`).
+Value sorts with error aggregates (same probe):
+- GROUPBY and PIVOTBY order a value column the way SORT does: numbers, text, TRUE, then errors by error code
+  (#VALUE! before #N/A).
+- A descending sort reverses the whole order, so the errors come first. Equal aggregates keep key order in both
+  directions (A1:A55).
+- Ours already matches.
+- Open (T-3893): PIVOTBY's row value sort when every row's Total aggregate is `#VALUE!` (an array-returning LAMBDA).
+  Excel orders `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`'s
+  rows 0, 42, 2.5, 1E+15 ascending and exactly the reverse descending. That is neither key order nor first appearance
+  (42, 2.5, 0, 1E+15), so the ties break on something else. Ours keeps key order in both directions (probe A61:G79).
 Unprobed (PIVOTBY): an error header cell in a joined column name (the engine: that error); a joined column name longer
 than a cell holds (the engine: `#VALUE!`, after the 32,767-character cell limit in coercion.md "Text longer than 32,767
 characters"); value sorts over three or more fields (rows: every level by its aggregate; columns: the last); and
@@ -2227,7 +2241,7 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
 `Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
-(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, ec5094d09c82f94d A6223; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
 `#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
 reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
 eval/baseline/gen-m7.txt.
@@ -2283,7 +2297,11 @@ with `col_fields` beside `row_fields`:
   `Model::error_over`, which also clears 410128dc65d03200 A7931:B7932, a filter that keeps no row, of T-3892's list).
 - An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
   Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
-  A10859:B10860; 169 calls). Owner T-3892.
+  A10859:B10860; 169 calls). So do a scalar or error-cell `row_fields` (`Data!G6`, `2`, `Data!G9`) and an error option
+  (`#N/A`, `#NULL!`, `#REF!`, `SQRT(-1)`, `Data!G9`), each its own error in every cell (4ad4b1c6b2c2b01d A1:B2,
+  37041df35489e178 A4942:B4943), as GROUPBY's early errors fill a lifted `field_relationship`. Owner T-3892. Ours: since
+  T-3892 (`Model::pivotby` lifts every error of `Model::pivotby_args` over `relative_to` through
+  `Model::lifted_error`; the filter refusal above is one of them).
 - Rows sorted by a values column holding `#VALUE!` aggregates come out in an order of their own (febfd6901374d79c
   A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
   B8785). Owner T-3893.
@@ -2413,9 +2431,16 @@ shows up, for TOCOL's and TOROW's array and FILTER's array and include; FILTER c
 before its elements. Only stored cell errors are evidenced; other errors read through a reference (a `#REF!` for a sheet
 index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one-cell error include that fits the
 array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
-still returns the error first.
+still returns the error first. T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+(spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
+Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
+(D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"
+as the direct-reference case of T-2413 (arrays.md, above): ISBLANK TRUE, COUNT 1, `&"x"` gives "x", TYPE 1 (LET A1:A4 and
+A10:A13, MAP A5:A8 and A14:A17). VSTACK and HSTACK do not differ. One-argument INDEX of the 2x1 or 1x2 stack is an
+array, not the element: TYPE 64 for VSTACK (A9), TYPE 1 for HSTACK (A18, a single row indexes straight to the element).
+The engine matches all 18 cells.
 Status: VERIFIED (excel-graph)
-Tasks: T-3506
+Tasks: T-3506, T-3765, T-3887
 
 VSTACK, through a LAMBDA parameter (T-3683): with Data!G5 the text "12" and Data!G9 `#DIV/0!`,
 `SCAN(Data!G5,Data!G9,LAMBDA(x,z,VSTACK(x,z)))` is `#CALC!` (gen-m7/3f368d034700f19e Calc!A2990, excel-graph

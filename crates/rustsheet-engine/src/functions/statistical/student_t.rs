@@ -744,12 +744,12 @@ mod tests {
         // T_DIST.xlsx `T.DIST T.INV T.DIST.RT`: D15 and D16 are bit-exact.
         assert_eq!(student_t_tails(1.0, 1.0).0, 0.75);
         assert_eq!(student_t_tails(1.0, 2.0).0, 0.788_675_134_594_812_9);
-        // F18: the deep tail keeps its digits, one ulp from Excel's 1.230468749943611E-56 (the
-        // exact value is 33 ulp away).
+        // F18: the deep tail (bpser(5, 1/2, y)) keeps its digits and is Excel's
+        // 1.230468749943611E-56 bit for bit since bpser splits a non-double z (T-3879; it was
+        // 1 ulp off before). The exact value is 33 ulp away.
         let deep = student_t_tails(1e6, 10.0);
-        assert_eq!(deep.1, 1.230_468_749_943_610_7e-56);
+        assert_eq!(deep.1, 1.230_468_749_943_611e-56);
         assert_eq!(student_t_tails(-1e6, 10.0).0, deep.1);
-        assert_eq!(ulps(deep.1, 1.230_468_749_943_611e-56), 1);
     }
 
     #[test]

@@ -140,7 +140,9 @@ Tasks: T-0110 (implementation), T-3092 (AVERAGEA addends, SUBTOTAL 1/101), T-113
 ## ROUND family rounds in two decimal stages
 Rule: ROUND, ROUNDUP and ROUNDDOWN never scale by a binary power of ten. They (1) cut the exact
 binary value to 15 significant digits, then (2) round that decimal at `num_digits` (ROUND: half
-away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return the nearest double.
+away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return that decimal as a double,
+which is the nearest double except about 1 in 5,000 times (see "Decimals reach a double through an x87
+multiply by 10^-n").
 Stage 1 rounds to nearest, but an **exact tie at the 16th digit** goes toward zero for ROUND and
 away from zero for ROUNDUP/ROUNDDOWN (inconsistent; Excel is right):
 `ROUND(999999999999957.5,0)` = 999999999999957 and `ROUND(999999999999956.5,0)` = …956, yet
@@ -271,8 +273,8 @@ decimal one, in either direction: `ROUNDUP(123.456,2)` = 123.45 + 0.01 = 123.460
 `ROUNDUP(0.29,1)` = 0.30000000000000004, `ROUNDUP(2.675,2)` = 2.6799999999999997,
 `ROUNDUP(8.255,1)` = 8.299999999999999, `ROUNDUP(7.123,1)` = 7.199999999999999. When nothing is
 dropped there is no add (`ROUNDUP(0.29,2)` = 0.29). Negative values round the magnitude and keep the
-sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal-correct
-double. A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
+sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal as a
+double (one ulp off it at rare points, see "Decimals reach a double through an x87 multiply by 10^-n"). A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
 `ROUNDUP(x,2^31+k)` and `ROUNDUP(x,k)` agree on every probed cell.
 Evidence: probes/roundup-wrapped-scaling (480 cells: 20 values × k = 1..4, plain, 65536+k, 2^31+k
 and -(65536+k), ROUNDUP and ROUNDDOWN); probes/round-huge-digits-wrap A16, A35, A38 (excel-graph,
@@ -341,14 +343,45 @@ Status: VERIFIED (excel-graph)
 Implemented in: not yet in the engine (T-3635).
 Tasks: T-3555, T-3627, T-3635
 
-## ROUND one ulp above the nearest double (observation)
-Observation (T-3555): `ROUND(4.91499999999999E-06,8)` is 4.9100000000000004E-06 in Excel, 1 ulp above 4.91E-06, the
-double nearest the decimal result. That contradicts "ROUND family rounds in two decimal stages", which says ROUND returns
-the nearest double. It is the only such cell among the 120 ROUND points. The engine returns 4.91E-06, which is within
-Gate A's envelope and below the reproducibility floor, so it is not a fit target.
-Evidence: eval/accuracy/tables/ROUND/s1 Calc!A61 (excel-graph, 2026-11-01).
-Status: UNVERIFIED (one cell)
-Tasks: T-3555
+## Decimals reach a double through an x87 multiply by 10^-n (T-3658)
+Rule: a decimal `m × 10^-n` (integer m, n ≥ 0) that Excel builds from text or from ROUND/ROUNDDOWN's
+stage 2 does not become the nearest double. Excel multiplies m by 10^-n rounded to a 64-bit significand
+(x87 extended), rounds that product to a 64-bit significand, then rounds to a double (each step to
+nearest, ties to even). The result is one ulp from the nearest double for about 1 in 5,000 short
+decimals; the probe's search found 61 among m < 20000, n = 1..15. Which m and n enter depends on the
+caller (inconsistent, and Excel is right):
+- **Literals** in a formula (`=16659E-15`, `=4.91E-06`, `=0.00000491`) and **VALUE** of the same text
+  use the digits as written: m = 4910 at n = 9 for `4910E-9`. Hits!C1:C61 and E1:E61 fit, 122/122
+  literal cells in all.
+- **ROUNDDOWN** uses the kept digits as they are, trailing zeros included: `ROUNDDOWN(4910.4E-9,9)` is
+  4910 × 10^-9 (Hits!B, 362/362 ROUNDDOWN cells).
+- **ROUND** first drops the trailing zeros of the kept digits: `ROUND(4910.4E-9,9)` is 491 × 10^-8, and
+  `ROUND(14550.4E-15,15)` is 1455 × 10^-14 = 1.4549999999999999E-11 where `=14550E-15` and
+  `ROUNDDOWN(14550.4E-15,15)` are 1.4550000000000001E-11 (Hits!A59, B59, C59). 1,871/1,871 ROUND cells fit.
+- Division is not this conversion: `=m/10^n` follows "Division rounds twice", the exact quotient rounded to
+  64 bits and then to a double (Hits!D1:D61, 61/61); it differs from the literal at 9 of the 61 points.
+So `=4.91E-06`, `=491/100000000` and `ROUND(4.91499999999999E-06,8)` are all 4.9100000000000004E-06 (bits
+…8e7a, one ulp above the nearest double …8e79), while `=4.91*10^-6` is …8e79, and `=B1*2^70-5796000000000000`
+with B1 = `=4.91E-06` is 704857722490 against 704857722489 for `=4.91*10^-6` (scratch run, excel-graph,
+2026-11-03; uncommitted, the case cells above carry the same bits): the value inside Excel is that double, not an artefact of the oracle transport. This is the
+T-3555 observation: eval/accuracy/tables/ROUND/s1 Calc!A61 is the 491 × 10^-8 point. Stored xlsx numbers do
+not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as written and 51 with trailing zeros
+stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
+to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
+`ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
+Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
+literals of more than 5 digits are not probed.
+Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
+m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
+controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
+and Hits!A1:K61, the 61 search hits with neighbours m+1 as controls (J, K).
+Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh (724 cells, excel-graph,
+2026-11-03): all 151 points with m in 20001..79999, n = 1..15 where the model leaves the nearest double, and 30
+trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
+(677 of them are not the nearest double).
+Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
+Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
+Tasks: T-3555, T-3658, T-3931, T-3932
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
