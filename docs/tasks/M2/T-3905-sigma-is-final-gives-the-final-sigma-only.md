@@ -3,7 +3,7 @@ id: T-3905
 title: "sigma_is_final gives the final sigma only at the end of text or before Excel's 30 ASCII separators (probes/t3820-lower-sigma-next-char)"
 milestone: M2
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
