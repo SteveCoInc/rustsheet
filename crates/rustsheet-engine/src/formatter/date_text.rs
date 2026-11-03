@@ -248,10 +248,13 @@ fn parse_separated(
         [first, second] => {
             return match parse_month_name(second, locale) {
                 Some((month, _)) => parse_day_month(first, month, current_year),
-                // "1-Jul2026": a day, then a month name glued to a four-digit year
-                // (probes/date-text-glued-month-2 row 8).
+                // "1-Jul2026", "1-Jul24", "1-Jul5": a day, then a month name glued to a one-,
+                // two- or four-digit year (probes/date-text-glued-month-2 row 8,
+                // probes/t3299-date-text-glued-month-3; a three-digit year is not covered).
                 None => match split_glued_month(second, locale) {
-                    Some((["", name, year], true)) if is_digits(year, 4..=4) => {
+                    Some((["", name, year], true))
+                        if is_digits(year, 4..=4) || is_digits(year, 1..=2) =>
+                    {
                         day_name_year(first, name, year, locale, separator)
                     }
                     _ => parse_month_year(first, second, locale, true, current_year),
@@ -606,6 +609,25 @@ mod tests {
         // UNVERIFIED, hand-derived (not oracle-observed): a glued day with more than the year
         // after the comma, a day-first glued month with a comma, a doubled comma.
         for text in ["July1 , 2026 5", "1Jul1 , 2026", "July1,, 2026"] {
+            assert_eq!(en(text), None, "{text}");
+        }
+    }
+
+    #[test]
+    fn glued_month_with_short_year_after_separator() {
+        // probes/t3299-date-text-glued-month-3: 1-Jul24, 1/Jul24 and 1-Jul5 are dates; a period
+        // or comma separator is #VALUE!.
+        for (text, serial) in [
+            ("1-Jul24", 45474),
+            ("1/Jul24", 45474),
+            ("1-JUL24", 45474),
+            ("31-Jul24", 45504),
+            ("1-Jul5", 38534),
+            ("1-Jul05", 38534),
+        ] {
+            assert_eq!(en(text), Some(serial), "{text}");
+        }
+        for text in ["1.Jul24", "1,Jul24", "1.Jul2024"] {
             assert_eq!(en(text), None, "{text}");
         }
     }
