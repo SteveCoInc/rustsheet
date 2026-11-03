@@ -3043,6 +3043,11 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   - Nothing tried wins on 0.4-0.6: correctly rounded, LN(GAMMA), the kernel on t = a0 itself, or K3 kept past 1.5.
   - On a0 where the two give different L, GL wins on 52 and gamln1 on 36 (tune); on the hold-out half it is 51 to 19.
     So GL stays the best single form.
+  - T-3771 (docs/research/t2464/r6-bpser-gpin) settles it: g is GL at every center, including 0.5-0.7. Judged only on
+    cells whose z = fl(a0 LN x) - L is a double, GL53 misses 1 of 770 tune and 0 of 849 hold-out cells. The gamln1
+    form misses 92 of 903 and 128 of 896, and g from GAMMALN(fl(1 + a0)) - LN a0 (stored or extended) and an extended
+    L miss 4-69. The per-a0 wins above were confounded: where GL puts every z between doubles, a neighbouring g can
+    land z on the grid and match Excel's E for that tie (T-3769, T-3873).
 - The constant-L ceiling also holds for a0 < 1 < b0 < 8: the best g per a0 makes 3,355 of 4,032 cells exact (66% at
   a0 = 0.15, 82-89% from 0.3 up). The misses are ±1-2 ulp, vary with x at fixed a0 and are not product near-ties, so
   the piece sits in alx, s or EXP, not in L.
@@ -3050,7 +3055,9 @@ z = fl64(fl(a·LN(x)) - L)  (extended);   I = fl(EXP(z)·s)  (Excel's EXP of the
   - It is not a register-held series (s, c or t unstored, or SSE doubles).
   - It is not LN(s) folded into EXP's argument, a 1/a split of the product, or x^a times a constant. Each of these is
     at or below 264 of 432, against the model's 299.
-  - Follow-up: T-3771.
+  - T-3771 split GL53's 1,168 misses on t3570-r5-bpser-lg: 1,167 have a non-double z (EXP's argument), 1 is fixed by
+    moving s one ulp, and 0 are LN (Excel's =LN(x) equals the model at all 14 x, probes-numeric
+    t3771-r6-bpser-gpin-ln). So the ceiling is EXP's argument (T-3873), not LN, s or L.
 - An isolated miss at 1 < b0 < 8 (gap triage 2026-10-30, T-3331): `BETA.DIST(0.1,2.5,5,TRUE)` (probes-numeric/
   m9-beta-dist-a2p5 Calc!A31, a bpser point: b0·x0 = 0.5) is 0.05533381860850995 in Excel and 0.055333818608509895 in
   the engine, visibly off. Against a 60-digit mpmath value, 0.055333818608509839059, Excel is 16.1 ulp high and the

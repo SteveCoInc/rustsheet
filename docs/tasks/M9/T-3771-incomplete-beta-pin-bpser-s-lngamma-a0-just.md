@@ -3,7 +3,7 @@ id: T-3771
 title: "Incomplete beta: pin bpser's lnGamma(a0) just above 0.5 and split the bpser ceiling between LN and EXP"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -40,13 +40,29 @@ or to EXP's argument, or both are recorded as negatives with counts.
   from an EXP-argument miss.
 
 ## Acceptance criteria
-- [ ] A RESULTS.md records, with exact counts on a held-out half, either the lnΓ(a0) form on (0.5, 0.7) or the
+- [x] A RESULTS.md records, with exact counts on a held-out half, either the lnΓ(a0) form on (0.5, 0.7) or the
       negatives tried.
-- [ ] The ceiling's cell misses are split between LN, EXP's argument and the rest, with counts.
-- [ ] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
-- [ ] statistics.md's "Incomplete beta bpser" entry is updated.
-- [ ] `make check` green; reviewers approve.
+- [x] The ceiling's cell misses are split between LN, EXP's argument and the rest, with counts.
+- [x] New oracle probes are committed under eval/suites/probes-numeric/cases/ with their sidecars.
+- [x] statistics.md's "Incomplete beta bpser" entry is updated.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine changes. The engine's bpser L is ported separately once a form is pinned.
 - b0 >= 8 (algdiv, T-3383 line of work).
+
+## Outcome
+Both questions are answered on r5-bpser-lg's existing probe plus one new LN probe (docs/research/t2464/r6-bpser-gpin/
+RESULTS.md).
+- **g is Excel's GAMMALN on (0.5, 0.7) and at every other center.** Using T-3769's rule (a right L leaves no miss where
+  z = fl(a0 LN x) - L is a double), GL53 misses 1 of 770 tune and 0 of 849 hold-out double-z cells. TOMS's gamln1 form
+  misses 92 of 903 and 128 of 896; g from GAMMALN(fl(1 + a0)) - LN a0, stored or extended, misses 47-69 per half;
+  an extended L misses 4 per half. r5-bpser-lg's "gamln1 wins just above 0.5" was a confound. Where GL puts all of an
+  a0's z between doubles, a neighbouring g lands z on the grid and matches Excel's tie value.
+- **The ceiling is EXP's argument.** Of GL53's 1,168 misses, 1,167 have a non-double z, 1 is fixed by moving s one ulp,
+  and 0 are LN (Excel's =LN(x) equals the model at all 14 x). Excel's E for a non-double z is T-3873's (filed by
+  T-3769).
+- No fit: six fixed forms were compared on r5-bpser-lg's md5 hold-out, which was fixed in that round.
+- No engine change: the engine's bpser already uses GL53 (`bratio/bpser.rs`).
+- Eval delta: new probes-numeric case t3771-r6-bpser-gpin-ln (14 cells, excel-graph 2026-11-03). Gated suites are
+  unchanged.
