@@ -3,7 +3,7 @@ id: T-3882
 title: "Excel's date names and day halves for LCIDs 0x21, 0x24, 0x27, 0x28, 0x2F and 0x3F (id, sl, lt, tg, mk, kk): probe the tables and add them (8 t1924 and text-locale-calendars cells)"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -55,17 +55,30 @@ en-US. Every string comes from a probe, never from CLDR or memory.
   - probes/text-locale-calendars.case.json (1): S!A140
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph, canary-verified) holds the full name tables and day halves of the six languages
+- [x] A probe case (excel-graph, canary-verified) holds the full name tables and day halves of the six languages
       described under Context. Its values are recorded in docs/excel-semantics/number-formats.md, and the
       "missing tables ... are T-1875's" sentence is updated.
-- [ ] The six tables are in crates/rustsheet-engine/src/locale/ (`LOCALES`, or `regional_date_names.rs` beside
+- [x] The six tables are in crates/rustsheet-engine/src/locale/ (`LOCALES`, or `regional_date_names.rs` beside
       the other probed tables), each string cited to the probe. There are no CLDR-derived strings.
-- [ ] The 8 owned cells pass, and so does the new probe case. Their known-failure lines disappear from
+- [x] The 8 owned cells pass, and so does the new probe case. Their known-failure lines disappear from
       eval/baseline/probes.txt. `make eval-baseline` records no new known-failure line in any
       eval/baseline/<suite>.txt.
-- [ ] T-3666's t1924 cells that pass after this change are listed in the Outcome, and T-3666's Context drops them.
-- [ ] `make check` green; reviewers approve.
+- [x] T-3666's t1924 cells that pass after this change are listed in the Outcome, and T-3666's Context drops them.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The 0x2412 and 0xF409 language-fallback rule (T-3666). Numeral-system digits (T-1925, T-3532). Calendar digits
   over these LCIDs.
+
+## Outcome
+- Probe probes/text-locale-six-languages (276 cells, excel-graph, canary-verified, 2026-11-03): all 12 months
+  (`mmm|mmmm|mmmmm`), all 7 days (`ddd|dddd`), the day halves (`AM/PM`, `A/P`, `a/p`, `am/pm` at 06:00 and 18:00)
+  and day-month contexts of the six languages, each under its full LCID and its BCP-47 tag. The two columns of
+  each language agree cell for cell, and no language declines a month after a day (Excel prints the nominative).
+- Tables `ID`, `SL`, `LT`, `TG`, `MK`, `KK` in locale/regional_date_names.rs, added to `LOCALES` (48 entries),
+  every string from the probe. number-formats.md has the new entry, and the "missing tables ... T-1875's" sentence
+  is updated.
+- Eval delta: probes known failures 3858 -> 3843 (fixed 15), +1 case (276 cells, all pass); no regressions.
+  Fixed: the 8 owned cells (t1924-locale-tag-extended-hex S!A1, A4, A10, A28, A29, B1, B4; text-locale-calendars
+  S!A140) and T-3666's t1924 cells S!A2, A3, B2, B3, B10, B28, B29. T-3666 keeps only S!B22 (`[$-_409]h A/P`), and
+  its Context says so.
