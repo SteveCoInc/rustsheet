@@ -1328,7 +1328,7 @@ INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which 
 we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
 for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
 2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then any argument outside
--32768..32767 is `#NUM!` (before the total is formed, so a minute of -32768 is legal and one of -32769 is not, whatever the
+-32768..32767 is `#NUM!` (but see the 2026-11-03 update below: below -32768 Excel now wraps) (before the total is formed, so a minute of -32768 is legal and one of -32769 is not, whatever the
 hour), and so is a negative total; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
 - Bound: `TIME(32767,0,0)` = 0.29166666666674246, `TIME(600,32767,0)` = 0.7548611111111114, `TIME(10,0,32767)` =
@@ -1348,9 +1348,25 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-negative-window.)
 - gen-m6 cells (34 in T-2267): `TIME(9,DATEVALUE("1/15/2024"),39)`, `TIME(DATEVALUE("2023-03-01"),27,26)`, `TIME(18,33,FACT(13))`,
   `TIME(1E+15,44,15)`, `SECOND(TIME(1E+15,10,48))` are `#NUM!`; `TIME(COLUMNS(A9)/POWER(0.1,2),12,35)` = 0.17540509259259274.
-Ours: `time_argument` in `functions/date_and_time.rs` (T-2267).
-Status: VERIFIED (excel-graph probes above, 2026-10-21).
-Tasks: T-2267
+- **Update 2026-11-03: Excel changed. An argument below -32768 now wraps by 65536** (T-3678,
+  probes/t3678-time-argument-far-negative, excel-graph, 2026-11-03). After the near-integer read, a whole value
+  below -32768 is moved by 65536 into -32768..32767, in any position. A value above 32767 is still `#NUM!`
+  (`TIME(0,32769,0)` through `TIME(0,131072,0)`, E1:E14). Examples:
+  - `TIME(600,-32769,0)` = `TIME(600,32767,0)` = 0.7548611111111114, and `TIME(-32769,0,0)` = 0.29166666666674246.
+  - `TIME(10,0,-98304)` = 0.03740740740740741 (-98304 wraps to -32768), and `TIME(14120,-131072,0)` =
+    `TIME(14120,0,0)`.
+  - `TIME(-65537,0,0)` is `#NUM!`: it wraps to -1 and the total is negative. `TIME(-32800,0,0)` = 0 (32736 hours).
+  - `TIME(600,-32768.5,0)` floors to -32769 and so reads 32767 (G4).
+
+  Column G of that probe repeats the cells that were `#NUM!` on 2026-10-21: time-argument-bound A22:A24,
+  time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
+  `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
+  Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
+  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072.
+Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
+-32768, which T-3983 owns.
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
 Rule (excel-graph, 2026-10-21): DATE reads its year, month and day as TIME reads its arguments ("TIME: an argument past 32767 is
