@@ -143,15 +143,15 @@ fn fn_rate_holds_on_a_flat_secant() {
     );
 }
 
-/// An early flat secant on two distinct iterates with |f1| < 1e-4 restarts the run once from the
-/// older iterate (financial.md "RATE restarts once on an early flat secant", T-3698).
+/// A secant step whose residual equals the last one keeps the older iterate r0 (financial.md
+/// "RATE keeps its older iterate when a step leaves the residual unchanged", T-3963).
 #[test]
-fn fn_rate_restarts_on_an_early_flat_secant() {
+fn fn_rate_keeps_the_older_iterate_on_an_unchanged_residual() {
     check_cells(
         &[],
         &[
-            // probes/t3579-rate-residual-nper1 A1: flat at step 3, |f| 1.7e-7; the restarted run is
-            // A6's, whose guess is the flat step's older iterate 0.0020941704345913
+            // probes/t3579-rate-residual-nper1 A1 and A6: the same root from the default guess
+            // and from the older iterate of the step whose residual repeats
             (
                 "A1",
                 "=RATE(1,2560574.93,-2543613.41,-11634.76,0)",
@@ -162,18 +162,30 @@ fn fn_rate_restarts_on_an_early_flat_secant() {
                 "=RATE(1,2560574.93,-2543613.41,-11634.76,0,0.0020941704345913)",
                 "0.002094170434484841",
             ),
-            // probes/t3698-rate-flat-restart A1: the same run at 2^10 the scale, |f| 1.7e-4, holds
-            // and fails the cap's test
+            // probes/t3698-rate-flat-restart A49 (gate-a-fresh A187)
             (
                 "A3",
-                "=RATE(1,2560574.93*2^10,-2543613.41*2^10,-11634.76*2^10,0)",
-                "#NUM!",
-            ),
-            // probes/t3698-rate-flat-restart A49 (gate-a-fresh A187): flat at step 70, past the bound, holds
-            (
-                "A4",
                 "=RATE(2,4670416862.51754,-9176930088.60565,-157419359.724444,0,0.1)",
                 "0.0004737270505260268",
+            ),
+            // probes/t3850-rate-same-state A114: the run reaches the state of A56's group by
+            // another path and is `#NUM!` in Excel, where the old hold-or-restart rule returned
+            // 0.0712057747827863
+            (
+                "A4",
+                "=RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,-0.0530733)",
+                "#NUM!",
+            ),
+            // probes/t3963-rate-keep-r0-fresh A4 (old rule `#NUM!`) and A147 (old rule a number)
+            (
+                "A5",
+                "=RATE(206,85.5289405220094,-838.239460063662,192823.712387381,1,0.728256)",
+                "0.1136279398700572",
+            ),
+            (
+                "A6",
+                "=RATE(19,793995.009048765,-15084468.3917452,0,0,-0.00528496)",
+                "#NUM!",
             ),
         ],
     );
