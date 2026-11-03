@@ -12,12 +12,13 @@ depends_on: [T-3906]
 
 ## Goal
 A ruling on T-3698's flat-secant restart in RATE: keep it, narrow it or revert it. Every option moves some point of
-probes/t3906-rate-restart-oos out of the Gate A envelope, and the points that move lie inside the root's own rounding
-noise.
+probes/t3906-rate-restart-oos out of the Gate A envelope. Most of the points that move lie inside their root's own
+rounding noise.
 
 ## Context
 - T-3906 (probes/t3906-rate-restart-oos, 240 fresh calls where the rule fires) scored the restart out of sample.
-  The rule is bit-exact on 48 and the hold (no restart) on 12. The rule has 207 points inside the envelope, the hold 204.
+  The rule is bit-exact on 48 and the hold (no restart) on 12. The rule has 207 points inside the envelope, the
+  hold 204.
   - The rule moves A152 and A194 out (A194 becomes `#NUM!` where Excel returns a number).
   - The hold moves A15, A26, A64, A76 and A121 out.
   - Decision 0188 R2 as reviewer check 7 applies it: "A fit that moves a point out of the envelope fails this item".
@@ -34,6 +35,9 @@ noise.
   - A194 is not noise: the restarted run meets a second flat secant at step 92 with |f| 1.65e-4 (above the cap's
     1e-4) and is `#NUM!`. Falling back to the hold there fixes A194 but loses A26, where Excel and the restart are
     `#NUM!` and the hold is a number.
+- R4.1, firing cells only: on the fit set's train side the rule is bit-exact on 17 of 40 (hold 0), on its test side 5
+  of 14 (hold 0), and out of sample on t3906 48 of 240 (hold 12). The out-of-sample rate is about half the train
+  rate, mostly from the large-annuity noise floor the fit set lacks (T-3850's notes).
 - How decision 0188 applies here is the owner's call (decision 0188 is an owner decision). This task waits on that.
 
 ## Blocked because
