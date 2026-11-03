@@ -1890,6 +1890,7 @@ C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
 C	probes/t3752-percentof-3d-indirect.case.json	12
 C	probes/t3753-lambda-helper-error-array-order.case.json	64
+C	probes/t3765-stack-error-reference.case.json	25
 C	probes/t3777-proper-case-table.case.json	162
 C	probes/t3777-regexreplace-case-table.case.json	121
 C	probes/t3807-blank-criterion-padded-zero.case.json	64
