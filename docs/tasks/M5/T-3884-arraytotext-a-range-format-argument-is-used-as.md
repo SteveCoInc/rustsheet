@@ -3,7 +3,7 @@ id: T-3884
 title: "ARRAYTOTEXT: a multi-cell range format argument lifts and spills, and a blank first argument gives #VALUE! over an error format"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
