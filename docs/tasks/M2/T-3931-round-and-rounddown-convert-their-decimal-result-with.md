@@ -26,6 +26,7 @@ ROUND and ROUNDDOWN return the double Excel returns at every cell of probes-nume
 ## Acceptance criteria
 - [ ] Every ROUND and ROUNDDOWN cell of probes-numeric/t3658-round-scaling and t3658-round-scaling-fresh passes (baseline shrinks by those cells), with no regression in probes/round-family, the ROUND-family Gate A tables or gen-m5 numeric-fp.
 - [ ] ROUNDUP keeps its own path ("ROUNDUP adds the unit in binary") unless evidence says otherwise.
+- [ ] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

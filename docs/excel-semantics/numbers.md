@@ -363,9 +363,10 @@ caller (inconsistent, and Excel is right):
 So `=4.91E-06`, `=491/100000000` and `ROUND(4.91499999999999E-06,8)` are all 4.9100000000000004E-06 (bits
 …8e7a, one ulp above the nearest double …8e79), while `=4.91*10^-6` is …8e79, and `=B1*2^70-5796000000000000`
 with B1 = `=4.91E-06` is 704857722490 against 704857722489 for `=4.91*10^-6` (scratch run, excel-graph,
-2026-11-03): the value inside Excel is that double, not an artefact of the oracle transport. This is the
+2026-11-03; uncommitted, the case cells above carry the same bits): the value inside Excel is that double, not an artefact of the oracle transport. This is the
 T-3555 observation: eval/accuracy/tables/ROUND/s1 Calc!A61 is the 491 × 10^-8 point. Stored xlsx numbers do
-not follow this model (Hits!G1:G61 match it at 47 of 61; see "Stored numbers in an xlsx are not always parsed
+not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as written and 51 with trailing zeros
+stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and

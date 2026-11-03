@@ -29,6 +29,7 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
 ## Acceptance criteria
 - [ ] Every literal (Hits!C) and VALUE (Hits!E) cell of probes-numeric/t3658-round-scaling, and columns C and D of t3658-round-scaling-fresh, pass, with a probe first for positive exponents and longer literals if the change reaches them.
 - [ ] No regression in the literal-parsing probes (numbers.md "15-digit literal parsing") or gen suites.
+- [ ] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
