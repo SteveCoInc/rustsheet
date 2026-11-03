@@ -1301,9 +1301,10 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 - Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
   in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
   Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
-- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. A count of
-  restarts within a run, a bound relative to the residual's terms, and the restart point are not probed beyond r0
-  against the guess. Restarting from the guess instead of r0 changes nothing, because the run repeats.
+- Not separated: why Excel restarts late on some series (A35, A39, A42) and holds early on others. T-3850 found that
+  no rule on the model's state at the flat step separates them (next entry).
+- Misses inside the rule's region (T-3698 review): t3698-rate-flat-restart A9 (|f1| 8.57e-5, step 3; Excel
+  0.002094170434467432 matches neither path), and A17, A21, A25 and -fresh A22 (Excel `#NUM!`, both paths a number).
 - Found in passing (T-3698's fresh sweep A201): with nper 1, type 1, fv 0 and pmt = -pv, every residual is rounding
   noise (pv + pmt = 0 at t = 0). Excel returns the guess, 1.74874265618351, and the model returns `#NUM!`. The
   zero-residual probe's `RATE(1,0,0,0,0,0.3)` is `#NUM!` in Excel, so a residual that is noise and not exactly 0
@@ -1312,6 +1313,45 @@ Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), 
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
 restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
 Tasks: T-3698, T-3424, T-3876
+
+## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
+Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
+and differ only in the guess, and so in the step of the flat secant, get different Excel values, in no step order.
+So no rule on what the model sees at that step (the step, |f1|, |r1 - r0|, f1 relative to the residual's terms) can
+choose between the hold and the restart. Excel's own iterates differ from the model's before that step. The model
+keeps T-3698's restart rule ("RATE restarts once on an early flat secant" above) unchanged.
+Why it matters: on many flat-secant cells where the hold and the restart differ, Excel is neither (100 of the new
+probe's 240, 250 of 344 in the older cases). Late restarts can't be added as a rule: they need a model of Excel's residual in the noise floor (T-3963).
+Evidence (excel-graph, 2026-11-03, T-3850; tools in docs/research/t3850/):
+- The fit set's same-state groups (probes/t3698-rate-flat-restart). In each group the args and the model's r0, r1
+  and f1 are the same:
+  - `RATE(10,807899972.923294,-1390492.12506236,-78566555703.1099,0,g)`, flat at r0 0.46831931314861075, r1
+    0.4683193131486107, f1 3.05e-5: step 10 (A15) is Excel's r0, step 17 (A27) 0.4683193131486108 (neither path),
+    step 22 (A33) r0 again, step 24 (A34) the restart's 0.46831931314861086.
+  - `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)`, f1 6.1e-5: step 11 (A16) and step 41 (A42)
+    are the restart's value and step 15 (A25) is `#NUM!` (an error against a number, so not fill noise).
+  - `RATE(294,5227.362063958,-6908028.229217,29809043.9559,0,g)`, f1 1.3e-7: steps 46, 61, 84 and 154 (A43, A47,
+    A51, A54) give 4 different Excel values; only A47 is the restart's.
+- probes/t3850-rate-same-state (240 calls, drawn blind by `gen_late.py` before the fill): 40 groups of 6 calls with
+  the same model state, at steps 6 to 200 (98 calls at steps up to 16, 142 later).
+  - 25 groups get more than one Excel value. 12 of them are solid evidence: 4 mix `#NUM!` with a number and 8 spread
+    over more than 4 ulp, up to 3,196 ulp (A193:A198). The other 13 differ by 1 to 4 ulp. That is under the
+    reproducibility floor decision 0112 sets for excel-graph bits, although a second fill (16:11 UTC) gave all 240
+    cells bit for bit.
+  - Example: `RATE(22,368004296.87717,-30770197366.4562,120137665952.442,1,g)` (A55:A60) is `#NUM!` in Excel at step
+    12 (A56). At steps 7, 16, 20, 61 and 79 it is the restart's 0.07120577478278645. A step bound can't give both.
+  - Excel is the hold on 29 cells, the restart from r0 on 111, and neither on 100; T-3698's rule gets 55. "Neither"
+    is mostly last bits: 120 of the 185 off cells are a few ulp from Excel and 54 more agree to 15 digits.
+    - On the 12 solid groups (72 cells): hold 8, restart 15, neither 49.
+    - On the 1-to-4-ulp groups (78 cells): hold 21, restart 30, neither 27.
+    - On the 15 groups with one Excel value (90 cells): restart 66, neither 24.
+- A wider restart is not a rule. Restarting at every step to 200 with |f1| unbounded gains 70 and loses 14 cells on
+  the new probe. On the 2,160 other RATE oracle cells it gains 8 and loses 12, and the best step and |f1| bounds
+  there gain 2 with none lost, below the 5-point margin. Which cells win depends on how the series were sampled.
+Ours: `rate_secant` (functions/financial/financial_util.rs), unchanged by T-3850.
+Status: VERIFIED (excel-graph, the error-against-number and over-4-ulp groups above) / UNVERIFIED (the splits of
+4 ulp or less, under decision 0112's floor; Excel's residual in the noise floor)
+Tasks: T-3850, T-3963, T-3916, T-3424
 
 ## YIELD with one coupon period left is closed form
 Rule: when at most one coupon period is left, Excel evaluates the documented formula
