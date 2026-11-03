@@ -425,7 +425,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   (`10 A. 5` is 49710.2763252315). A bare `N` before the word is N minutes (`24 A.` adds 24 minutes); `H:M` is hours
   and minutes (`10:30`, `1:2`). On top sits a constant: 2^32 - 22 seconds for `A`, one second more for `P`
   (4294967274 s, 49710.269375 days). So `10 A. 7/1/2025` is 45658 (January 2025) + (2^32 - 22 + 600 + 0.7) / 86400.
-  The word is `A`, `P` or `PM` in any case (`a.`, `p.`, `PM.` probed; `AM.` is unprobed, and the engine reads it as `A.`); spaces after the period, extra
+  The word is `A`, `AM`, `P` or `PM` in any case (`a.`, `p.`, `PM.`, `AM.`, `am.`, `Am.` probed; `AM.` reads as `A.`); spaces after the period, extra
   spaces before the word and trailing spaces are accepted, and `A.7/1/2025` with no space too. Typed, the value takes
   `mm:ss.0`. These stay text: no digits after the period (`10 A.. 7/1/2025`, `10 a.m. 7/1/2025`, `10 A. July 1, 2025`),
   no clock (`A. 7/1/2025`), another letter (`10 B. 7/1/2025`), seconds in the clock (`10:00:30 A. 7/1/2025`), a tail
@@ -433,9 +433,27 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   carries a clock (`10 A. 7/1/2025 10:00`), and 60 minutes or more (`60 A. 7/1/2025` and `99 A. 7/1/2025` stay text
   but take `mmm-yy`, which the engine does not give a text cell). `10 A.` alone is 10 AM (`h:mm AM/PM`). The formula
   readers agree: `VALUE` and `0+` give the typed number, `DATEVALUE` its day (95368) and `TIMEVALUE` its fraction
-  (edges A25-A30). Unprobed: the formula readers of the shapes that stay typed text (the engine reads `10 A. 7-2025` as `10 A.` before July 2025, as before), an hour of 24 or more in `H:M` (the engine leaves it text), `AM.`, and a 1904 workbook
-  (with no date the day 0 is before that epoch, so the engine leaves it text). Where -22 comes from is unknown.
-  Status: the engine matches every probed cell (T-3907).
+  (edges A25-A30). The rest (T-3920; probes/t3920-typed-a-period-unprobed-edges A1-H23 and t3920-typed-a-period-1904
+  A1-H7, excel-graph 2026-11-03): an `H:M` clock with an hour of 24 or more stays text (`24:00 A. 7/1/2025`,
+  `25:00 A. 5`, `99:00`, `100:00`, `24:30 P.`; `23:59 A. 7/1/2025` is 95369.2686886574), as do 60 minutes
+  (`10:60 A.`). Text with the shape (a clock of digits and colons, the spaced word, its period and a digit) has no other
+  reading: VALUE, `0+`, DATEVALUE and TIMEVALUE are #VALUE! on every shape that stays typed text (`10 A. 7-2025`,
+  `10 A. 5/1`, `10 A. 7/13/2025`, `10 A. 7/1`, `60 A. 7/1/2025`, `10:00:30 A. 7/1/2025`, `24:00 A. 7/1/2025`; also
+  `10 A.. 7/1/2025` and `10 B. 7/1/2025`), not `10 A.` followed by a date. In a 1904 workbook the constant and clock
+  are the same and the date shifts to the 1904 serial: `10 A. 5` (no date) is 49710.2763252315 as in 1900 (TEXT
+  `2040-02-06 06:37:54.500`), `10 A. 7/1/2025` 93906.2763275463 (DATEVALUE 93906), and a date that lands on
+  1904 day 0 or before stays text (`10 A. 1/1904`, `10 A. 12/1903`; the readers are #VALUE!). Also there:
+  `DATEVALUE("10 A.")` is 0 (the engine gives #VALUE!, T-3944), as is `DATEVALUE("10 A.  ")` in 1900.
+  The shape is wider than a digit after the period (T-3948; probes/t3948-letter-period-gate-edges A1-H16, excel-graph
+  2026-11-03): any text after it commits the reading, so `10 A. July 1, 2025`, `10 A. Jul-2025`, `10 A. 5x`,
+  `10 A. 5 PM`, `10 A. 5.5` and `10 A. 7/1/2025 PM` stay text and are #VALUE! to the four readers, as are the clocks
+  `1:2:3:4 A. 5`, `10:00:00 P. 5`, `1:2:3 A. 5`, `010 A. 5` (a leading zero), `00010:00 A. 5`, `10: A. 5` and
+  `:10 A. 5`. `10 A. 05` is 0.05 s. `10 A.  ` (spaces after the period, nothing else) is 10 AM, typed too. The odd one:
+  typed `10 A. 5:30` is the number 2982616.579230324, 60 x (2^32 - 22) s + 10 h + 5.5 s, read the same by VALUE and
+  `0+` (DATEVALUE 2982616, TIMEVALUE 0.5792303238995373; TEXT with a date format is #VALUE!); undecoded, the engine
+  leaves it text (T-3957).
+  Where -22 comes from is unknown.
+  Status: the engine matches every probed cell (T-3907, T-3920) but t3920-typed-a-period-1904 G6 (T-3944).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on

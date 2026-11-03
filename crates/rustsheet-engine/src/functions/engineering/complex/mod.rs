@@ -722,11 +722,14 @@ fn flushed_square(part: f64) -> f64 {
 ///   ([`flushed_square`]), so the log is `#NUM!` when both squares flush to 0 or their sum
 ///   overflows (`IMLN("1E-154+1E-154i")`, `IMLN("1E154+1E154i")`);
 /// - a pure real or imaginary number keeps its part (`IMLN("1E-160+0i")` is -368.413614879047);
-/// - the argument is libm `atan2`, but an overflowing `y/x` is `#NUM!`, as in ATAN2
-///   ([`angle_quotient_overflows`]): `IMLOG10("1E-300+1E20i")` and `IMLOG2("1E-300-1E300i")` are
-///   `#NUM!` while `IMLOG10("1E-20+1E20i")` answers (probes/t3643-imlog10-grid J2, J3, U2;
-///   T-3643). ATAN2's `atan(y/x)` as the value misses `IMLOG10("0.999999999999999+1i")`'s
-///   0.341094088460461 by one digit (t3643-imlog10-grid F5), where `atan2` fits.
+/// - the argument is Excel's ATAN2 kernel, `atan(y/x)` plus or minus π ([`atan2_or_libm`]),
+///   and an overflowing `y/x` is `#NUM!`, as in ATAN2 ([`angle_quotient_overflows`]):
+///   `IMLOG10("1E-300+1E20i")` and `IMLOG2("1E-300-1E300i")` are `#NUM!` while
+///   `IMLOG10("1E-20+1E20i")` answers (probes/t3643-imlog10-grid J2, J3, U2; T-3643). libm
+///   `atan2` misses `IMLOG10("-0.561651839159889-0.827373683149484i")`'s -0.941193126217726 and
+///   `IMLOG2(COMPLEX(-1,1.05859478337023E-09))`'s 4.53236014029996i by one digit
+///   (probes-numeric/t3643-r4-log-modulus B101, C173; T-3795); IMLN prints the same digits with
+///   either.
 ///
 /// The log of 0 is `#NUM!`, not "-inf" (T-2389).
 fn complex_log(
@@ -741,7 +744,7 @@ fn complex_log(
     if angle_quotient_overflows(x, y) {
         return num_error(c);
     }
-    let (re, im) = parts(log_modulus(x, y), f64::atan2(y, x));
+    let (re, im) = parts(log_modulus(x, y), atan2_or_libm(x, y, None));
     finite_complex_result(re, im, suffix, c)
 }
 
@@ -768,19 +771,26 @@ fn imln_parts(modulus: f64, angle: f64) -> (f64, f64) {
     (modulus.ln(), angle)
 }
 
-/// IMLOG10 divides the argument by ln 10: multiplying by log10 e misses
-/// `IMLOG10("711+1.5i")`'s 0.000916231724847909 (probes/eng-im-overflow-edges A95) and the
-/// reciprocal `1/ln 10` misses `IMLOG10("1.5+710.4i")`; the division fits all 36 IMLOG10 cells
-/// of the eval suites (T-2231).
+/// IMLOG10 is IMLN's parts times the double `log10 e` (T-3795): `ln |z|·log10 e` and the
+/// argument (Excel's ATAN2 kernel, [`complex_log`]) times `log10 e`. With that argument, the
+/// product fits every IMLOG10 cell of the eval suites (896, among them
+/// `IMLOG10("10+1E8i")`'s 0.682188133491473 and `IMLOG10("711+1.5i")`'s 0.000916231724847909,
+/// probes/t3643-imlog10-grid I8, eng-im-overflow-edges A95), where dividing by `LN_10` misses
+/// eight imaginary parts and `log10 |z|` two real ones (probes-numeric/t3643-r4-log-modulus B29,
+/// B52, B56, B99, B101).
 fn imlog10_parts(modulus: f64, angle: f64) -> (f64, f64) {
-    (modulus.log10(), angle / std::f64::consts::LN_10)
+    let k = std::f64::consts::LOG10_E;
+    (modulus.ln() * k, angle * k)
 }
 
 /// IMLOG2 is `ln` of the [`log_modulus`] and the argument, both times the double one ulp
 /// above log2 e (`1/ln 2` rounded from the double below ln 2): `IMLOG2("710.4+0i")`
 /// 9.47248777146275 and `IMLOG2("1E-20")` -66.4385618977473, where `log2` and `atan2·log2 e` print
 /// the digit below (probes/eng-im-overflow-edges A104, A107, A109; probes-numeric
-/// im-last-digit-sweep N, O; T-2231).
+/// im-last-digit-sweep N, O; T-2231). With Excel's ATAN2 kernel as the argument
+/// ([`complex_log`]) it fits all IMLOG2 cells of the eval suites but
+/// probes-numeric/t3643-r4-log-modulus C111, whose `atan(5.15092871182028)` Excel takes one ulp
+/// below the correctly rounded 1.3790419226756176 (T-3795).
 fn imlog2_parts(modulus: f64, angle: f64) -> (f64, f64) {
     let k = std::f64::consts::LOG2_E.next_up();
     (modulus.ln() * k, angle * k)
@@ -832,7 +842,7 @@ fn imsqrt((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult 
     if !(xx + yy).is_finite() {
         return complex_result(0.0, 0.0, suffix);
     }
-    let r = f64::sqrt(xx + yy).sqrt();
+    let r = extended_sqrt(extended_sqrt(xx + yy));
     let a = atan2_or_libm(x, y, Some(0.0));
     let (sin, cos) = excel_sin_cos(a / 2.0);
     complex_result(r * cos, r * sin, suffix)
