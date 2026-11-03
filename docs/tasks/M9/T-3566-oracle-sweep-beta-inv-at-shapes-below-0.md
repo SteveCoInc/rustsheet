@@ -3,7 +3,7 @@ id: T-3566
 title: "Oracle sweep: BETA.INV at shapes below 0.01 near p = 1/2 and at range-scaled quantiles, with BETA.DIST at Excel's landing point (for T-3562)"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -49,3 +49,10 @@ point comes with Excel's own cdf at it.
 
 ## Out of scope
 - Fitting or implementing (T-3562, T-3388). Shapes from 0.5 up on [0, 1] (T-3387).
+
+## Outcome
+Added probes-numeric `t3566-beta-inv-tiny-shape-and-range` (248 cells, excel-graph filled, oracle and math sidecars
+committed). Findings in docs/excel-semantics/statistics.md (BETA.INV section): #NUM! at 21 of 66 tiny-shape points;
+at the 45 numeric ones BETA.DIST(BETA.INV(p)) equals p at 24, within one ulp at 4, further at 17; the scaled quantile
+equals A + (B - A)*BETA.INV(p,a,b) bit for bit at all 40 points. T-3562 links the case. Eval delta: none (probe cases
+only).
