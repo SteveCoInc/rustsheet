@@ -3,7 +3,7 @@ id: T-3926
 title: "Oracle sweep: F.DIST density where Y = density·x is subnormal, at power-of-two and general x, with a hold-out, for T-2647"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -60,3 +60,14 @@ not attempted blind.
 ## Out of scope
 - Any engine change or fit (T-2647).
 - The huge-x side, where F is below 2^-1022 (statistics.md, already evidenced by t2586-r5-f-edges).
+
+## Outcome
+- Added probes-numeric `t3926-f-density-subnormal-y` (240 cells) and `t3926-f-density-subnormal-y-hold` (120 cells, never
+  used for fitting), filled by excel-graph (no pending cells), with math sidecars. Generator: docs/research/t3926/mksweep.py
+  (seeds 3926 and 39260); scorer: docs/research/t3926/score.py.
+- Deviation from the grid: a pair with large d1 has few distinct powers of two in the Y range (d1 = 10 about 10), so
+  each case takes at most half of what the pair can supply and general literals fill 30 (15) per pair. 91 of 240 and
+  54 of 120 cells are powers of two.
+- Result against today's engine: 0/240 bit-exact, 0 within 4 ulp, 1 within 15 digits; hold-out 0/120 on all three.
+  Excel's F·x/2^-1074 is an integer at only 4 of 145 power-of-two cells, so plain fl(Y/x) of a subnormal Y is refuted.
+- statistics.md F density entry cites both cases; T-2647 owns them whole. Eval delta: none (probes-numeric is ungated).
