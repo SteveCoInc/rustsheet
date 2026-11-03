@@ -162,7 +162,16 @@ formula does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`), so the cell keeps its c
 PATCH 400 leaves A1 blank (probes/t3172-paren-257-typed, t3266-nested-paren-257-typed); stored in a
 cell, it makes the xlsx importer refuse the workbook (`XlsxError::Workbook`, T-3869), as Excel for the
 web refuses it (createSession 501, below). Excel counts split runs
-the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). A group holding more than the group inside it
+the same way: 256 levels of `-(` around `1` load and evaluate, 257 are refused (T-3266, below). So do
+the other splits (T-3870, probes/t3870-*, excel-graph 2026-11-03, stored and typed alike): 256 groups
+with a space after the first `(` (`=( ((...(1)...))`) or an operand between the first `(` and the rest
+(`=(1+((...(1)...)))`) load and evaluate (space-256, operand-256), and 257 are refused (space-257,
+operand-257). A function call's own parenthesis is not a group and does not count: 256 groups inside
+`ABS(` (257 `(` open at the innermost `1`) load, and 257 are refused (call-255, -256, -257), and so do
+256 groups with 128 outside the call and the rest inside it (call-mid-255, -256, -257). Each refused
+stored formula made Excel for the web refuse the workbook (createSession 501 `FileCorruptTryRepair`), so
+those four cases were dropped after the run; the typed ones are PATCH 400 `InvalidArgument` and are
+kept. Ours counts the same (the parser's `open_groups` counter, `Parser::parse_parenthesis_run`, counts groups only) and matches all of them. A group holding more than the group inside it
 (`((x)+1)`) still costs an operand's two levels. The first operand of a group's content, unless a
 group itself, reserves one and a half levels of the parser's bound instead of two, and a call there
 adds one level to the tree, so a level of `(ABS(` costs three and a half: Excel's 64 and 65 levels
@@ -205,7 +214,8 @@ before T-3338: minus-paren-, minus-paren2-, plus-paren- and minus-abs-1023-typed
 ours shared were dropped then, because the harness scored a typed input the engine refuses as an engine
 error, not as a blank cell. Since T-3338 (sign cap) and T-3689 (parenthesis and call caps) each is a
 typed formula that does not parse (`TYPED_FORMULA_DOES_NOT_PARSE`) and scores as the blank cell Excel
-leaves, so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
+leaves (T-3870 added `ISBLANK(A1)` to every restored typed refusal, the t3097-*-66-typed and the t3172 and
+t3266 ones, and refilled them, excel-graph 2026-11-03: TRUE on all 23, so A1 is blank, not text), so T-3689 restored them, one past each accepted neighbour, and re-ran them (excel-graph
 2026-11-02, every one PATCH 400, B1 FALSE): t3266-plus-num-1025-, minus-ref-1024-, minus-true-1024-,
 minus-spaced-1024-, nested-200-825-, nested-50-975- and nested-paren-257-typed. Ours matches all of it since T-3338 (the 2026-11-01 eval had the four typed
 1,023 cases above failing on S!B1 and nested-paren-128, -200, -255, -256 and nested-200-823, -824
@@ -325,7 +335,7 @@ for them, in the derived `Clone`/`Drop` of the tree (T-3338 measured; T-3691 mak
 the process. A new recursive consumer of the tree (or a heavier evaluator frame) must be
 re-measured against these limits (the at-limit tests run on a 1 MiB stack in release builds), and
 must walk operator chains with `expressions/parser/chain.rs`.
-Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338; the typed refusals restored by T-3689 score as blank cells); this is a resource limit.
+Evidence: probes/operator-chain-limit (chains at and one character past the published limit), the T-1091 refusals above and probes/t3097-nesting-* (Excel's 65-call cap; all of them match since T-3191 and T-3197) and probes/t3172-* (Excel's 256-parenthesis and 1,023/1,024-sign caps, T-3172) and probes/t3266-* (the sign cap's operand costs and `-(` to 256 levels; all of them match since T-3338; the typed refusals restored by T-3689 score as blank cells) and probes/t3870-* (the parenthesis cap over split runs; a call's parenthesis is not counted); this is a resource limit.
 Status: DEVIATION (decision 0014)
 Implemented in: expressions/parser/depth.rs (`MAX_FORMULA_DEPTH`, `MAX_VALUE_OPERATORS`, `MAX_NESTED_CALLS`, `MAX_PARENTHESES`, `MAX_SIGNS`, `TOO_MANY_SIGNS_MESSAGE`, `TOO_MANY_PARENTHESES_MESSAGE`, `Parser::in_call`, `Parser::parse_primary`, `Parser::parse_signs`, `Parser::parse_signed_operand`, `Parser::grow`, `Parser::grow_chain`); expressions/parser/mod.rs (`Parser::parse_power`); cast.rs (`Model::apply_unary_chain`); expressions/parser/chain.rs; expressions/parser/reference_operators.rs (`Parser::parse_parenthesis_run`); model.rs (`Model::parse_cell_formula`, `Model::evaluate_operator_chain`); rustsheet-xlsx `import::worksheets::from_a1_to_rc` and `import::call_cap` (`refuse_too_many_calls`, `check_rule_formulas`) (the call cap on load: cells, name bodies, rule formulas)
 
@@ -626,9 +636,34 @@ Tasks: T-1178, T-1244 (spec for keeping groups in the parse tree), T-1200 (the `
   Excel refuses (`=1+`, in A1 or R1C1 mode) is a PATCH 400 `InvalidArgument` and leaves the cell
   blank (`ISBLANK` is TRUE).
 - **Evidence:** probes/t3113-entered-r1c1, probes/t3113-entered-refused (excel-graph, 2026-10-30).
-- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the engine's R1C1 reader
-  does not take bare `R`/`C` offsets (`RC`, `R[-1]C`) yet, T-3212. The engine refuses a typed
+- **Status:** R1C1 entry implemented in the eval adapter (decision 0179); the short forms (`RC`,
+  `R[-1]C`, whole rows and columns) since T-3212 (next entry). The engine refuses a typed
   `=1+` in A1 mode too since T-3213 (see "A typed formula that does not parse is refused" below).
+
+## Short R1C1 forms typed in R1C1 mode
+Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms in any letter case.
+- A bare `R` or `C` is an offset of 0. In S!H10:H44, `=RC[-6]` is `=B23` (written lower case, `rc[-6]`), `=R2C` is `=H$2`,
+  `=RC2` is `=$B18`, `=R[-17]C2` is `=$B3` and `=ROW(RC)` is `=ROW(H24)`.
+- A row alone is the whole row, and a column alone is the whole column. `=SUM(R2)` is `=SUM($2:$2)`, `=SUM(R[-9])` is
+  `=SUM(3:3)`, `=ROWS(R)` is `=ROWS(26:26)`, `=SUM(C3)` is `=SUM($C:$C)`, `=COLUMNS(C)` is `=COLUMNS(H:H)`,
+  `=SUM(R[-29]:R[-27])` is `=SUM(11:13)`, `=SUM(C2:C3)` is `=SUM($B:$C)`, and `=SUM(T!C1)` is `=SUM(T!$A:$A)`.
+- A relative offset smaller than the grid wraps around it. `=R[-12]C[-5]+RC[-100]` in H16 is `=C4+XBP16`, and
+  `=R[-100]C[-7]` in H45 is `=A1048521`. An offset of a whole grid or more is refused (`RC[16384]`,
+  `R[1048576]C[-7]`; the cell stays blank).
+- An absolute column past the grid is refused (`R2C16385`), but `R0C1` and `R1048577C1` stay names (`#NAME?`, as stored
+  text reads them, T-1657).
+- A LET name or LAMBDA parameter that reads as a reference in R1C1 mode is refused: `r`, `c`, `rc` and `r1c1`
+  (`=LET(rc,5,rc+1)`, `=LAMBDA(c,c+1)(2)`), as `f1` is refused typed in A1 mode (decision 0103). `f1` itself is
+  accepted in R1C1 mode (`=LET(f1,5,f1+1)` is 6, seen in a draft of the probe; T-3897).
+Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
+ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
+Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
+(`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
+reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
+parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
+Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
+whole-row range's second corner.
+Tasks: T-3212, T-3897, T-3898
 
 ## A typed formula that does not parse is refused; a call's missing `)` is added
 Rule: Excel refuses a formula typed through the API (Graph PATCH 400 `InvalidArgument`) that does

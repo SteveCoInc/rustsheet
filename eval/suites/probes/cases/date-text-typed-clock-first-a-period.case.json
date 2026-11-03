@@ -1,0 +1,31 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3852/T-3907: a typed clock-first date-time with an `A.` (single letter and period) clock word: Excel reads `10 A. 7/1/2025` and `10:00 A. 7/1/2025` as numbers in 2161 formatted mm:ss.0; the engine keeps them as text (owner T-3907).",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3852"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 A. 7/1/2025"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"yyyy-mm-dd hh:mm:ss\"),\"\")",
+    "A2": {
+     "entered": "10:00 A. 7/1/2025"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"yyyy-mm-dd hh:mm:ss\"),\"\")"
+   }
+  }
+ ]
+}

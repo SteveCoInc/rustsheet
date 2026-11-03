@@ -1,0 +1,734 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "seed": 6144172885530899169,
+  "input_sha256": "ead96e2f0260604ea07276223f8b35f73ebc1d751c918003d09468fe304742c9"
+ },
+ "sheets": {
+  "Calc": {
+   "A1": {
+    "t": "n",
+    "v": "945.0",
+    "f": "=FACTDOUBLE(9)",
+    "s": "typical"
+   },
+   "A2": {
+    "t": "n",
+    "v": "81749606400.0",
+    "f": "=FACTDOUBLE(22)",
+    "s": "typical"
+   },
+   "A3": {
+    "t": "n",
+    "v": "213458046676875.0",
+    "f": "=FACTDOUBLE(27.9)",
+    "s": "typical"
+   },
+   "A4": {
+    "t": "n",
+    "v": "81749606400.0",
+    "f": "=FACTDOUBLE(22)",
+    "s": "typical"
+   },
+   "A5": {
+    "t": "n",
+    "v": "185794560.0",
+    "f": "=FACTDOUBLE(18)",
+    "s": "typical"
+   },
+   "A6": {
+    "t": "n",
+    "v": "945.0",
+    "f": "=FACTDOUBLE(9)",
+    "s": "typical"
+   },
+   "A7": {
+    "t": "n",
+    "v": "51011754393600.0",
+    "f": "=FACTDOUBLE(26)",
+    "s": "typical"
+   },
+   "A8": {
+    "t": "n",
+    "v": "1961990553600.0",
+    "f": "=FACTDOUBLE(24.9)",
+    "s": "typical"
+   },
+   "A9": {
+    "t": "n",
+    "v": "15.0",
+    "f": "=FACTDOUBLE(5)",
+    "s": "typical"
+   },
+   "A10": {
+    "t": "n",
+    "v": "3840.0",
+    "f": "=FACTDOUBLE(10)",
+    "s": "typical"
+   },
+   "A11": {
+    "t": "n",
+    "v": "48.0",
+    "f": "=FACTDOUBLE(6)",
+    "s": "typical"
+   },
+   "A12": {
+    "t": "n",
+    "v": "384.0",
+    "f": "=FACTDOUBLE(8)",
+    "s": "typical"
+   },
+   "A13": {
+    "t": "n",
+    "v": "13749310575.0",
+    "f": "=FACTDOUBLE(21.999)",
+    "s": "typical"
+   },
+   "A14": {
+    "t": "n",
+    "v": "105.0",
+    "f": "=FACTDOUBLE(7)",
+    "s": "typical"
+   },
+   "A15": {
+    "t": "n",
+    "v": "42849873690624000.0",
+    "f": "=FACTDOUBLE(30)",
+    "s": "typical"
+   },
+   "A16": {
+    "t": "n",
+    "v": "46080.0",
+    "f": "=FACTDOUBLE(12)",
+    "s": "typical"
+   },
+   "A17": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=FACTDOUBLE(3)",
+    "s": "typical"
+   },
+   "A18": {
+    "t": "n",
+    "v": "42849873690624000.0",
+    "f": "=FACTDOUBLE(30)",
+    "s": "typical"
+   },
+   "A19": {
+    "t": "n",
+    "v": "46080.0",
+    "f": "=FACTDOUBLE(12)",
+    "s": "typical"
+   },
+   "A20": {
+    "t": "n",
+    "v": "135135.0",
+    "f": "=FACTDOUBLE(13)",
+    "s": "typical"
+   },
+   "A21": {
+    "t": "n",
+    "v": "6190283353629375.0",
+    "f": "=FACTDOUBLE(29)",
+    "s": "typical"
+   },
+   "A22": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(0)",
+    "s": "typical"
+   },
+   "A23": {
+    "t": "n",
+    "v": "34459425.0",
+    "f": "=FACTDOUBLE(17)",
+    "s": "typical"
+   },
+   "A24": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(0)",
+    "s": "typical"
+   },
+   "A25": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(1.999)",
+    "s": "typical"
+   },
+   "A26": {
+    "t": "n",
+    "v": "185794560.0",
+    "f": "=FACTDOUBLE(18)",
+    "s": "typical"
+   },
+   "A27": {
+    "t": "n",
+    "v": "13749310575.0",
+    "f": "=FACTDOUBLE(21)",
+    "s": "typical"
+   },
+   "A28": {
+    "t": "n",
+    "v": "185794560.0",
+    "f": "=FACTDOUBLE(18.999)",
+    "s": "typical"
+   },
+   "A29": {
+    "t": "n",
+    "v": "13749310575.0",
+    "f": "=FACTDOUBLE(21)",
+    "s": "typical"
+   },
+   "A30": {
+    "t": "n",
+    "v": "3715891200.0",
+    "f": "=FACTDOUBLE(20)",
+    "s": "typical"
+   },
+   "A31": {
+    "t": "n",
+    "v": "1428329123020800.0",
+    "f": "=FACTDOUBLE(28)",
+    "s": "typical"
+   },
+   "A32": {
+    "t": "n",
+    "v": "645120.0",
+    "f": "=FACTDOUBLE(14.999)",
+    "s": "typical"
+   },
+   "A33": {
+    "t": "n",
+    "v": "316234143225.0",
+    "f": "=FACTDOUBLE(23)",
+    "s": "typical"
+   },
+   "A34": {
+    "t": "n",
+    "v": "3840.0",
+    "f": "=FACTDOUBLE(10)",
+    "s": "typical"
+   },
+   "A35": {
+    "t": "n",
+    "v": "1961990553600.0",
+    "f": "=FACTDOUBLE(24)",
+    "s": "typical"
+   },
+   "A36": {
+    "t": "n",
+    "v": "7905853580625.0",
+    "f": "=FACTDOUBLE(25)",
+    "s": "typical"
+   },
+   "A37": {
+    "t": "n",
+    "v": "48.0",
+    "f": "=FACTDOUBLE(6.25)",
+    "s": "typical"
+   },
+   "A38": {
+    "t": "n",
+    "v": "185794560.0",
+    "f": "=FACTDOUBLE(18)",
+    "s": "typical"
+   },
+   "A39": {
+    "t": "n",
+    "v": "34459425.0",
+    "f": "=FACTDOUBLE(17)",
+    "s": "typical"
+   },
+   "A40": {
+    "t": "n",
+    "v": "6190283353629375.0",
+    "f": "=FACTDOUBLE(29)",
+    "s": "typical"
+   },
+   "A41": {
+    "t": "n",
+    "v": "42849873690624000.0",
+    "f": "=FACTDOUBLE(30)",
+    "s": "typical"
+   },
+   "A42": {
+    "t": "n",
+    "v": "46080.0",
+    "f": "=FACTDOUBLE(12.5)",
+    "s": "typical"
+   },
+   "A43": {
+    "t": "n",
+    "v": "135135.0",
+    "f": "=FACTDOUBLE(13)",
+    "s": "typical"
+   },
+   "A44": {
+    "t": "n",
+    "v": "3840.0",
+    "f": "=FACTDOUBLE(10)",
+    "s": "typical"
+   },
+   "A45": {
+    "t": "n",
+    "v": "13749310575.0",
+    "f": "=FACTDOUBLE(21)",
+    "s": "typical"
+   },
+   "A46": {
+    "t": "n",
+    "v": "645120.0",
+    "f": "=FACTDOUBLE(14)",
+    "s": "typical"
+   },
+   "A47": {
+    "t": "n",
+    "v": "654729075.0",
+    "f": "=FACTDOUBLE(19)",
+    "s": "typical"
+   },
+   "A48": {
+    "t": "n",
+    "v": "7905853580625.0",
+    "f": "=FACTDOUBLE(25)",
+    "s": "typical"
+   },
+   "A49": {
+    "t": "n",
+    "v": "8.7336839596766957690697974005654481699211681087118e+275",
+    "f": "=FACTDOUBLE(274)",
+    "s": "tail"
+   },
+   "A50": {
+    "t": "n",
+    "v": "2.7181380231268647818538323063144120712183741281539e+305",
+    "f": "=FACTDOUBLE(298)",
+    "s": "tail"
+   },
+   "A51": {
+    "t": "n",
+    "v": "1.8763306880026058363137247618616399801087918826067e+283",
+    "f": "=FACTDOUBLE(280)",
+    "s": "tail"
+   },
+   "A52": {
+    "t": "n",
+    "v": "8.9388709072954692736948036844708849204039471075652e+281",
+    "f": "=FACTDOUBLE(279)",
+    "s": "tail"
+   },
+   "A53": {
+    "t": "n",
+    "v": "8.9388709072954692736948036844708849204039471075652e+281",
+    "f": "=FACTDOUBLE(279)",
+    "s": "tail"
+   },
+   "A54": {
+    "t": "n",
+    "v": "4.2977669632255271118546366376200856499908536348142e+290",
+    "f": "=FACTDOUBLE(286)",
+    "s": "tail"
+   },
+   "A55": {
+    "t": "n",
+    "v": "1.2552756225993063389092267843059817144865229178846e+304",
+    "f": "=FACTDOUBLE(297)",
+    "s": "tail"
+   },
+   "A56": {
+    "t": "n",
+    "v": "1.0481325305643003911957298157641662961827293990927e+298",
+    "f": "=FACTDOUBLE(292.9)",
+    "s": "tail"
+   },
+   "A57": {
+    "t": "n",
+    "v": "1.1718661388574355636901295352841144495922563477769e+271",
+    "f": "=FACTDOUBLE(270.9)",
+    "s": "tail"
+   },
+   "A58": {
+    "t": "n",
+    "v": "1.6803510445582878468434233707497828989421693171695e+294",
+    "f": "=FACTDOUBLE(289)",
+    "s": "tail"
+   },
+   "A59": {
+    "t": "n",
+    "v": "1.4327177111217329668541080686023873931250618248983e+299",
+    "f": "=FACTDOUBLE(293)",
+    "s": "tail"
+   },
+   "A60": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(302)",
+    "s": "tail"
+   },
+   "A61": {
+    "t": "n",
+    "v": "2.4104967728707680322632640825560636948982423980045e+278",
+    "f": "=FACTDOUBLE(276)",
+    "s": "tail"
+   },
+   "A62": {
+    "t": "n",
+    "v": "8.9388709072954692736948036844708849204039471075652e+281",
+    "f": "=FACTDOUBLE(279)",
+    "s": "tail"
+   },
+   "A63": {
+    "t": "n",
+    "v": "3.5894949676859602438209925197402955348723609557968e+295",
+    "f": "=FACTDOUBLE(290)",
+    "s": "tail"
+   },
+   "A64": {
+    "t": "n",
+    "v": "6.7011810285807351296918741495058570718171138664524e+280",
+    "f": "=FACTDOUBLE(278)",
+    "s": "tail"
+   },
+   "A65": {
+    "t": "n",
+    "v": "4.2265172478091122522196188023770428097189323834499e+301",
+    "f": "=FACTDOUBLE(295.999)",
+    "s": "tail"
+   },
+   "A66": {
+    "t": "n",
+    "v": "8.1544140693805943455614969189432362136551223844617e+307",
+    "f": "=FACTDOUBLE(300)",
+    "s": "tail"
+   },
+   "A67": {
+    "t": "n",
+    "v": "8.1544140693805943455614969189432362136551223844617e+307",
+    "f": "=FACTDOUBLE(300)",
+    "s": "edge"
+   },
+   "A68": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(-0.5)",
+    "s": "edge"
+   },
+   "A69": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(1.5)",
+    "s": "edge"
+   },
+   "A70": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(1)",
+    "s": "edge"
+   },
+   "A71": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(0.5)",
+    "s": "edge"
+   },
+   "A72": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(1.5)",
+    "s": "edge"
+   },
+   "A73": {
+    "t": "n",
+    "v": "2.0",
+    "f": "=FACTDOUBLE(2)",
+    "s": "edge"
+   },
+   "A74": {
+    "t": "n",
+    "v": "8.1544140693805943455614969189432362136551223844617e+307",
+    "f": "=FACTDOUBLE(300)",
+    "s": "edge"
+   },
+   "A75": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(-1)",
+    "s": "edge"
+   },
+   "A76": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(301)",
+    "s": "edge"
+   },
+   "A77": {
+    "t": "e",
+    "why": "a number below -1 (#NUM!)",
+    "f": "=FACTDOUBLE(-2)",
+    "s": "edge"
+   },
+   "A78": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=FACTDOUBLE(3)",
+    "s": "edge"
+   },
+   "A79": {
+    "t": "n",
+    "v": "8.1544140693805943455614969189432362136551223844617e+307",
+    "f": "=FACTDOUBLE(300.9)",
+    "s": "edge"
+   },
+   "A80": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(-1)",
+    "s": "edge"
+   },
+   "A81": {
+    "t": "e",
+    "why": "a number below -1 (#NUM!)",
+    "f": "=FACTDOUBLE(-2)",
+    "s": "edge"
+   },
+   "A82": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(301)",
+    "s": "edge"
+   },
+   "A83": {
+    "t": "n",
+    "v": "8.1544140693805943455614969189432362136551223844617e+307",
+    "f": "=FACTDOUBLE(300)",
+    "s": "edge"
+   },
+   "A84": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=FACTDOUBLE(0.5)",
+    "s": "edge"
+   },
+   "A85": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(275341)",
+    "s": "extreme"
+   },
+   "A86": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(688792)",
+    "s": "extreme"
+   },
+   "A87": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(856912)",
+    "s": "extreme"
+   },
+   "A88": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(618870)",
+    "s": "extreme"
+   },
+   "A89": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(656942)",
+    "s": "extreme"
+   },
+   "A90": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(278540)",
+    "s": "extreme"
+   },
+   "A91": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(372333)",
+    "s": "extreme"
+   },
+   "A92": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(515511)",
+    "s": "extreme"
+   },
+   "A93": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(328544)",
+    "s": "extreme"
+   },
+   "A94": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(252505)",
+    "s": "extreme"
+   },
+   "A95": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(994608)",
+    "s": "extreme"
+   },
+   "A96": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(93869)",
+    "s": "extreme"
+   },
+   "A97": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(334048)",
+    "s": "extreme"
+   },
+   "A98": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(593262)",
+    "s": "extreme"
+   },
+   "A99": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(484167)",
+    "s": "extreme"
+   },
+   "A100": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(467922)",
+    "s": "extreme"
+   },
+   "A101": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(181879)",
+    "s": "extreme"
+   },
+   "A102": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(4656)",
+    "s": "extreme"
+   },
+   "A103": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(227659)",
+    "s": "extreme"
+   },
+   "A104": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(231664)",
+    "s": "extreme"
+   },
+   "A105": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(445742)",
+    "s": "extreme"
+   },
+   "A106": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(455038)",
+    "s": "extreme"
+   },
+   "A107": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(117577)",
+    "s": "extreme"
+   },
+   "A108": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(885645)",
+    "s": "extreme"
+   },
+   "A109": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(2.65385804833339E+93)",
+    "s": "log-uniform"
+   },
+   "A110": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(4.72717640284224E+70)",
+    "s": "log-uniform"
+   },
+   "A111": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(2.72669700572297E+131)",
+    "s": "log-uniform"
+   },
+   "A112": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(2.88623365815946E+143)",
+    "s": "log-uniform"
+   },
+   "A113": {
+    "t": "n",
+    "v": "3.4942066022971404334945339688987944872570076585428e+75",
+    "f": "=FACTDOUBLE(96.4156036689937)",
+    "s": "log-uniform"
+   },
+   "A114": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(8.82699569752302E+263)",
+    "s": "log-uniform"
+   },
+   "A115": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(8.43074809021422E+252)",
+    "s": "log-uniform"
+   },
+   "A116": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(1.00603943809944E+246)",
+    "s": "log-uniform"
+   },
+   "A117": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(6.55261112149269E+272)",
+    "s": "log-uniform"
+   },
+   "A118": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(4.49768615666355E+291)",
+    "s": "log-uniform"
+   },
+   "A119": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(4.4983584716831E+285)",
+    "s": "log-uniform"
+   },
+   "A120": {
+    "t": "e",
+    "why": "n!! overflows a double (#NUM!)",
+    "f": "=FACTDOUBLE(9.36520800359247E+150)",
+    "s": "log-uniform"
+   }
+  }
+ }
+}

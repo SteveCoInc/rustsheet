@@ -81,6 +81,14 @@ def test_arithmetic_arguments_use_excels_operator_model() -> None:
     assert sweep.arithmetic("0.05/12") == 0.05 / 12
     assert sweep.arithmetic("-2^2") == 4.0  # a unary sign binds tighter than ^
     assert sweep.arithmetic("2^3^2") == 64.0  # ^ is left-associative
+    # numbers.md "Subnormal results become 0": `*`, `/`, `^` and literals flush, `+`/`-` keep
+    assert sweep.arithmetic("2^-1074") == 0.0
+    assert sweep.arithmetic("2^-1000+2^-1052") == 2.0**-1000
+    assert sweep.arithmetic("1E-307/10") == 0.0
+    assert sweep.arithmetic("3E-308*0.5") == 0.0
+    assert sweep.arithmetic("1E-308") == 0.0
+    assert sweep.arithmetic("3E-308-2.5E-308") == 3e-308 - 2.5e-308
+    assert sweep.arithmetic("2^-1022") == 2.0**-1022
     assert sweep.arithmetic("(1+0.2)") == 1.2
     for bad in (
         "2^0.5",

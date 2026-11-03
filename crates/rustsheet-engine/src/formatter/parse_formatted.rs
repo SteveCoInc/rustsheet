@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
-    date_text::{is_digits, parse_date, CurrentYear},
+    date_text::{parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
 
@@ -46,6 +46,9 @@ pub(crate) fn parse_typed_number(
         if let Some(parsed) = parse_bare_letter_clock(text) {
             return Ok(parsed);
         }
+        if let Some(parsed) = parse_bare_clock(original) {
+            return Ok(parsed);
+        }
         // A mixed fraction, signed, with `$` or `%`, is a number (probes/typed-input-sign-space-
         // mixed-fraction B6, B7, B9-B12). Its format is `# ?/?`, `# ??/??` for a denominator of 10 or more, or `0.00%` with a `%` (ENTERED
         // numberFormat, probes/typed-mixed-fraction-number-format, excel-graph 2026-10-30;
@@ -61,8 +64,13 @@ pub(crate) fn parse_typed_number(
             };
             return Ok((v, Some(format.to_string())));
         }
-        let Some(shape) = typed_clock_shape(text).or_else(|| leading_clock_shape(text)) else {
-            return Err(err);
+        // A clock-first date-time tolerates trailing spaces (probes/date-text-typed-clock-first-shapes A18).
+        let (shape, text) = match typed_clock_shape(text) {
+            Some(shape) => (shape, text),
+            None => match leading_clock_shape(text) {
+                Some(shape) => (shape, text.trim_end_matches(' ')),
+                None => return Err(err),
+            },
         };
         parse_date_clock_serial_in(text, locale, current_year, date_system)
             .map(|serial| (serial, shape.format()))
@@ -78,16 +86,50 @@ fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
         .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
 }
 
+/// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
+/// `12:30`, `9:05`, `1:2` and `10:00:` are `h:mm`, `10:00:30` is `h:mm:ss`, a fractional second is
+/// `mm:ss.0`, `24:00`, `25:00` and `100:00` are `[h]:mm:ss`, and `10:60` and `10:00:60` are
+/// numbers with General; `:30` and ` 10:00` (a leading space) stay text
+/// (probes/t3894-bare-24h-clock, excel-graph 2026-11-03;
+/// docs/research/t3894-bare-24h-clock-2026-11-03.md). Shapes beyond those probed (an hour of 24
+/// or more with seconds or an out-of-range minute) stay text (T-3903).
+fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
+    let first = text.bytes().next()?;
+    if !first.is_ascii_digit()
+        || !text
+            .bytes()
+            .all(|b| b.is_ascii_digit() || b == b':' || b == b'.')
+    {
+        return None;
+    }
+    let body = text.strip_suffix(':').unwrap_or(text);
+    if !body.contains(':') {
+        return None;
+    }
+    let serial = parse_clock_text(text)?;
+    if body.contains('.') {
+        return Some((serial, Some(FRACTION_CLOCK_FORMAT.to_string())));
+    }
+    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
+    let parts: Vec<u32> = body.split(':').map(value).collect();
+    let format = match parts.as_slice() {
+        [hour, minute] if *hour >= 24 && *minute < 60 => Some("[h]:mm:ss"),
+        [hour, minute] if *hour < 24 && *minute < 60 => Some("h:mm"),
+        [hour, minute, second] if *hour < 24 && *minute < 60 && *second < 60 => Some("h:mm:ss"),
+        // An out-of-range minute or second with an hour below 24 is a number with General.
+        [hour, ..] if *hour < 24 => None,
+        _ => return None,
+    };
+    Some((serial, format.map(str::to_string)))
+}
+
 /// A bare typed clock with an `A`/`P` or `AM`/`PM` suffix as a time of day with its AM/PM clock
 /// format: `10:00 A`, `10:00 AM` and `10 A` are `h:mm AM/PM`, `10:00:30 A` is `h:mm:ss AM/PM`
 /// (probes/date-text-single-letter-ap N9, N13-N15, N19-N29). A fractional second takes `mm:ss.0`,
 /// as without the suffix (N24-N25, T-2053).
 fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
     let (clock, word) = text.rsplit_once(' ')?;
-    let ap_word = is_single_letter_ap(word)
-        || word.eq_ignore_ascii_case("am")
-        || word.eq_ignore_ascii_case("pm");
-    if clock.contains(' ') || !ap_word {
+    if clock.contains(' ') || !is_am_pm_word(word) {
         return None;
     }
     let serial = parse_clock_text(text).or_else(|| parse_hour_only_am_pm(text))?;
@@ -117,6 +159,11 @@ fn is_single_letter_ap(word: &str) -> bool {
     word.eq_ignore_ascii_case("a") || word.eq_ignore_ascii_case("p")
 }
 
+/// Whether `word` is a clock's `AM`/`PM` or single-letter `A`/`P` word, in any case.
+fn is_am_pm_word(word: &str) -> bool {
+    is_single_letter_ap(word) || word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm")
+}
+
 /// Cell format of typed text that stays text because its clock is rejected: a date followed by a
 /// number-like clock and a spaced `AM`/`PM` or single-letter `A`/`P` (`1/2/2020 13:00 PM`, `13 PM`, `1300 PM`, `99:00 PM`)
 /// carries the format of its date part (`m/d/yyyy`, `d-mmm-yy` for `July 1, 2026 13:00 PM`), while
@@ -138,10 +185,7 @@ pub(crate) fn rejected_clock_text_format(
         return Some(MIXED_FRACTION_PERCENT_FORMAT.to_string());
     }
     let (rest, word) = without_single_letter_dot(original).rsplit_once(' ')?;
-    if !["am", "pm", "a", "p"]
-        .iter()
-        .any(|s| word.eq_ignore_ascii_case(s))
-    {
+    if !is_am_pm_word(word) {
         return None;
     }
     let rest = rest.trim_end_matches(' ');
@@ -193,29 +237,34 @@ impl TypedClock {
     }
 }
 
-/// The clock typed before the date, limited to the evidenced shape `HH:MM M/D/YYYY` (`10:00
-/// 7/1/2025` is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10,
-/// excel-graph 2026-11-01). A leading space keeps it text (A8, A9). Every other clock-first shape
-/// (AM/PM, seconds, one-digit hours, month-name, ISO, year-less or mixed-separator dates) is
-/// unprobed and stays text; TODO(T-3852).
+/// The clock typed before the date (`10:00 7/1/2025`, `10 AM 7/1/2025`, `9:00:30 July 1, 2025`):
+/// a number whose format follows the clock like a clock typed after the date, `m/d/yyyy h:mm`
+/// except a fractional second (`mm:ss.0`) and an out-of-range component (General). Whatever date
+/// shape the reader accepts may follow, with extra spaces around it, and a year-less date takes
+/// the current year (probes/date-text-typed-clock-first-shapes A1-A45, excel-graph 2026-11-03;
+/// docs/excel-semantics/dates.md "Typed clock-first date-times"). A leading space keeps it text
+/// (probes/date-text-mixed-separator-typed A8, A9).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
-    let (clock, date) = text.split_once(' ')?;
-    let (hour, minute) = clock.split_once(':')?;
-    let date_parts: Vec<&str> = date.split('/').collect();
-    let [month, day, year] = date_parts.as_slice() else {
-        return None;
+    let (clock, rest) = text.split_once(' ')?;
+    let rest = rest.trim_start_matches(' ');
+    // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock
+    // (`10 A 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other
+    // number (probes/date-text-typed-clock-first-a-period; T-3907), which the engine leaves as
+    // text.
+    let clock_end = match rest.split_once(' ') {
+        Some((word, _)) if is_am_pm_word(word) => text.len() - rest.len() + word.len(),
+        _ => clock.len(),
     };
-    if !is_digits(hour, 2..=2)
-        || !is_digits(minute, 2..=2)
-        || !is_digits(month, 1..=2)
-        || !is_digits(day, 1..=2)
-        || !is_digits(year, 4..=4)
-    {
+    let clock = text.get(..clock_end)?;
+    if clock.is_empty() || !clock.bytes().next()?.is_ascii_digit() {
         return None;
     }
-    // Two ASCII digits always parse; the fallback only keeps the code panic-free.
-    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
-    (value(hour) < 24 && value(minute) < 60).then_some(TypedClock::Time)
+    // An hour alone needs its AM/PM word (`10 AM`, A1); `typed_clock_shape` leaves that to the
+    // bare-clock reader.
+    if parse_hour_only_am_pm(clock).is_some() {
+        return Some(TypedClock::Time);
+    }
+    typed_clock_shape(clock)
 }
 
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or
@@ -229,10 +278,7 @@ fn typed_clock_shape(text: &str) -> Option<TypedClock> {
     let mut text = text.trim_end_matches(' ');
     let mut suffixed = false;
     if let Some((rest, word)) = text.rsplit_once(' ') {
-        if ["am", "pm", "a", "p"]
-            .iter()
-            .any(|s| word.eq_ignore_ascii_case(s))
-        {
+        if is_am_pm_word(word) {
             suffixed = true;
             text = rest.trim_end_matches(' ');
         }
@@ -474,19 +520,36 @@ fn parse_plain_number(
     Ok((f, None))
 }
 
-/// Excel reads Arabic-Indic (U+0660..), Devanagari (U+0966..) and Thai (U+0E50..) digits as their
-/// values, alone or mixed with ASCII digits; full-width digits stay text. Applied by number-text
-/// coercion only (`cast::number_text_in`), not to text typed into a cell, which is unprobed. Evidence:
-/// docs/excel-semantics/coercion.md "Other scripts ... (T-3276)", probes/t3276-collation-other-scripts
-/// Calc!H1:H8 and Calc!E.
+/// Excel reads the digits of eight scripts as their values, alone or mixed with ASCII digits and
+/// with each other: Arabic-Indic (U+0660..), Extended Arabic-Indic (U+06F0..), Devanagari
+/// (U+0966..), Bengali (U+09E6..), Thai (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..) and Myanmar
+/// (U+1040..); full-width digits stay text. Applied by number-text coercion only
+/// (`cast::number_text_in`, the mixed fraction readers), not to text typed into a cell
+/// (TODO(T-3891)). Evidence: docs/excel-semantics/coercion.md "Script digits in number text
+/// (T-3446)", probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms.
 pub(crate) fn script_digit_to_ascii(c: char) -> char {
     let zero = match c {
         '\u{0660}'..='\u{0669}' => 0x0660,
+        '\u{06F0}'..='\u{06F9}' => 0x06F0,
         '\u{0966}'..='\u{096F}' => 0x0966,
+        '\u{09E6}'..='\u{09EF}' => 0x09E6,
         '\u{0E50}'..='\u{0E59}' => 0x0E50,
+        '\u{0ED0}'..='\u{0ED9}' => 0x0ED0,
+        '\u{0F20}'..='\u{0F29}' => 0x0F20,
+        '\u{1040}'..='\u{1049}' => 0x1040,
         _ => return c,
     };
     char::from_digit(c as u32 - zero, 10).unwrap_or(c)
+}
+
+/// `text` with every script digit ([`script_digit_to_ascii`]) replaced by its ASCII digit;
+/// borrowed unchanged when it is ASCII.
+pub(crate) fn ascii_script_digits(text: &str) -> std::borrow::Cow<'_, str> {
+    if text.is_ascii() {
+        std::borrow::Cow::Borrowed(text)
+    } else {
+        std::borrow::Cow::Owned(text.chars().map(script_digit_to_ascii).collect())
+    }
 }
 
 struct NumberOptions {

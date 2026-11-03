@@ -243,3 +243,52 @@ fn typed_tab_or_nbsp_between_tokens_is_refused() {
         None
     );
 }
+
+/// Excel's short R1C1 forms typed in R1C1 mode, as probes/t3212-r1c1-bare-offsets shows them
+/// (FORMULATEXT of the typed cell, excel-graph, 2026-11-03, T-3212); `None` is a refusal.
+#[test]
+fn short_r1c1_forms_typed_in_r1c1_mode() {
+    let sheets = vec!["S".to_string(), "T".to_string()];
+    // (typed text, row, column of the typed cell in S, the A1 text Excel shows)
+    let cases: [(&str, i32, i32, Option<&str>); 27] = [
+        ("=R[-8]C[-6]", 10, 8, Some("=B2")),
+        ("=SUM(R2)", 11, 8, Some("=SUM($2:$2)")),
+        ("=SUM(R[-9])", 12, 8, Some("=SUM(3:3)")),
+        ("=SUM(C3)", 13, 8, Some("=SUM($C:$C)")),
+        ("=SUM(C[-5])", 14, 8, Some("=SUM(C:C)")),
+        ("=R2C", 15, 8, Some("=H$2")),
+        ("=R[-12]C[-5]+RC[-100]", 16, 8, Some("=C4+XBP16")),
+        ("=RC2", 18, 8, Some("=$B18")),
+        ("=R2C[-5]", 19, 8, Some("=C$2")),
+        ("=R[-17]C2", 20, 8, Some("=$B3")),
+        ("=SUM(R2C:R4C)", 22, 8, Some("=SUM(H$2:H$4)")),
+        ("=rc[-6]", 23, 8, Some("=B23")),
+        ("=ROW(RC)", 24, 8, Some("=ROW(H24)")),
+        ("=ROWS(R)", 26, 8, Some("=ROWS(26:26)")),
+        ("=COLUMNS(C)", 27, 8, Some("=COLUMNS(H:H)")),
+        ("=T!RC", 28, 8, Some("=T!H28")),
+        ("=LET(rc,5,rc+1)", 30, 8, None),
+        ("=LET(r,5,r+1)", 31, 8, None),
+        ("=LAMBDA(c,c+1)(2)", 33, 8, None),
+        ("=LET(r1c1,5,r1c1+1)", 35, 8, None),
+        ("=LET(x,5,x+1)", 36, 8, Some("=LET(x,5,x+1)")),
+        ("=R0C1", 38, 8, Some("=R0C1")),
+        ("=SUM(R[-29]:R[-27])", 40, 8, Some("=SUM(11:13)")),
+        ("=SUM(C2:C3)", 41, 8, Some("=SUM($B:$C)")),
+        ("=R[-100]C[-7]", 45, 8, Some("=A1048521")),
+        ("=RC[16384]", 46, 8, None),
+        ("=R2C16385", 47, 8, None),
+    ];
+    for (typed, row, column, a1) in cases {
+        assert_eq!(
+            r1c1_formula_to_a1(typed, &sheets, "S", row, column).as_deref(),
+            a1,
+            "{typed}"
+        );
+    }
+    // Quoted text and bracketed parts are copied as they are.
+    assert_eq!(
+        r1c1_formula_to_a1("=\"RC\"&'T'!RC", &sheets, "S", 1, 1).as_deref(),
+        Some("=\"RC\"&T!A1")
+    );
+}

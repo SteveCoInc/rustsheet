@@ -676,3 +676,91 @@ fn array_field_headers_and_depths_lift_to_top_left_cells() {
     );
     assert_eq!(rows, [["#VALUE!", "#VALUE!"]]);
 }
+
+#[test]
+fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
+    // gen-m7 arg-pairs batch (T-3841, excel-graph; docs/excel-semantics/arrays.md "PIVOTBY in
+    // the gen-m7 arg-pairs batch", first bullet, T-3888).
+    // Z1 is an error, Z2 text, Z3 blank, Z4 a number; A1:A3 row keys, B1:B3 column keys, C1:C3
+    // values.
+    let mut model = new_empty_model();
+    model._set("Z1", "=1/0");
+    model._set("Z2", "x");
+    model._set("Z4", "7");
+    for (row, (key, col, value)) in [("a", "p", "1"), ("b", "q", "2"), ("a", "q", "3")]
+        .iter()
+        .enumerate()
+    {
+        model._set(&format!("A{}", row + 1), key);
+        model._set(&format!("B{}", row + 1), col);
+        model._set(&format!("C{}", row + 1), value);
+    }
+    let cases = [
+        // A one-cell reference to an error as row_fields or col_fields is #VALUE!, with or
+        // without field_headers; a literal error is that error.
+        ("=PIVOTBY(Z1,B1:B3,Z4,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,Z1,C1:C3,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(Z1,B1:B3,C1:C3,_xleta.SUM,3,-1)", "#VALUE!"),
+        ("=PIVOTBY(#REF!,B1:B3,C1:C3,_xleta.SUM)", "#REF!"),
+        // ... but only after the error values: the values' and every later option's.
+        ("=PIVOTBY(Z1,B1:B3,Z1,_xleta.SUM)", "#DIV/0!"),
+        ("=PIVOTBY(Z1,B1:B3,C1:C3,_xleta.SUM,0,0,Z1)", "#DIV/0!"),
+        ("=PIVOTBY(A1:A3,Z1,C1:C3,_xleta.SUM,3,1,#N/A)", "#N/A"),
+        // A blank-cell values is #VALUE!, ahead of a later option's error, after a literal error
+        // field.
+        ("=PIVOTBY(A1:A3,B1:B3,Z3,_xleta.MIN,1,-2,#NUM!)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,B1:B3,Z3,_xleta.SUM,1,1,Z1)", "#VALUE!"),
+        ("=PIVOTBY(#NULL!,B1:B3,Z3,_xleta.SUM)", "#NULL!"),
+        // Text values are #VALUE! too, but lose to a later option's error.
+        ("=PIVOTBY(A1:A3,B1:B3,Z2,_xleta.SUM)", "#VALUE!"),
+        ("=PIVOTBY(A1:A3,B1:B3,Z2,_xleta.SUM,2,1,Z1)", "#DIV/0!"),
+    ];
+    for (i, (formula, _)) in cases.iter().enumerate() {
+        model._set(&format!("E{}", 5 * i + 1), formula);
+    }
+    model.evaluate();
+    for (i, (formula, expected)) in cases.iter().enumerate() {
+        assert_eq!(
+            model._get_text(&format!("E{}", 5 * i + 1)),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+/// T-3890: one filter value keeps or drops every row only beside one row field, one column field,
+/// one value column and no header row, as in GROUPBY; beside two of any of them, or with a header
+/// row, it is `#VALUE!`, TRUE and 2 included (probes/t3890-pivotby-scalar-filter P!B1-B50).
+#[test]
+fn a_scalar_filter_needs_one_column_each_and_no_header() {
+    let mut model = records();
+    let cases = [
+        ("G1", "A2:A11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "7 rows"),
+        ("G2", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G3", "A2:A11,B2:C11,D2:D11,{SUM},,,,,,2", "#VALUE!"),
+        ("G4", "A2:A11,C2:C11,D2:E11,{SUM},,,,,,TRUE", "#VALUE!"),
+        ("G5", "A1:A11,C1:C11,D1:D11,{SUM},1,,,,,TRUE", "#VALUE!"),
+        ("G6", "A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,NA()", "#N/A"),
+    ];
+    // G1 is the one valid call: it spills, so it goes last, out of the way of the others.
+    for (cell, args, _) in cases.iter().skip(1) {
+        model._set(cell, &format!("=PIVOTBY({})", args.replace("{SUM}", SUM)));
+    }
+    model._set(
+        "K1",
+        &format!("=ROWS(PIVOTBY({}))", cases[0].1.replace("{SUM}", SUM)),
+    );
+    // The refusal fills the shape of an array relative_to (gen-m7 547d6192794dbf57 A10188:B10189).
+    model._set(
+        "M1",
+        &format!("=PIVOTBY(A2:B11,C2:C11,D2:D11,{SUM},,,,,,TRUE,A1:B2)"),
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("K1"), "7");
+    for filled in ["M1", "N1", "M2", "N2"] {
+        assert_eq!(model._get_text(filled), "#VALUE!", "{filled}");
+    }
+    for (cell, args, expected) in cases.iter().skip(1) {
+        assert_eq!(model._get_text(cell), *expected, "{args}");
+    }
+}

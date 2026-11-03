@@ -247,7 +247,11 @@ pub enum Node {
     /// `S!#REF!`, printed with its sheet (references.md "A sheet-qualified #REF! is #REF!"). Only
     /// in the tree as written: [`Node::strip_spaces`] makes it a bare `#REF!` (T-2855).
     SheetRefErrorKind {
+        /// The sheet as the workbook spells it, or as written when no sheet has that name.
         sheet_name: String,
+        /// No sheet has that name (a deleted one): Excel prints `#REF!#REF!` for `S!#REF!` once
+        /// S is deleted (probes/sheet-qualified-ref-error-text-delete-sheet F!A2).
+        missing: bool,
     },
     ParseErrorKind {
         formula: String,
@@ -305,6 +309,12 @@ impl Node {
         let node = self.ungrouped();
         node.this_row_at(row)
             .map_or(Cow::Borrowed(node), Cow::Owned)
+    }
+
+    /// Whether the node, as [`Node::ungrouped_at`] gives it at `row`, is a one-cell reference: the
+    /// evaluator reads one as its value, so only the node tells `Data!G9` from the literal `#DIV/0!`.
+    pub(crate) fn is_cell_reference_at(&self, row: i32) -> bool {
+        matches!(*self.ungrouped_at(row), Node::ReferenceKind { .. })
     }
 
     /// The node itself, but a `#This Row` structured reference (or its bare area) is its area at

@@ -240,11 +240,16 @@ impl Model {
     /// (B43-B46, B53-B54; args2 B8-B9, B31-B35), a 1x1 array holding an error (args2 B12, B14),
     /// and a filter that keeps no record, `#VALUE!` rather than FILTER's `#CALC!` (G!A241,
     /// followup3 G!A1-A109). A one-cell reference to an error is that error (args2 B17).
+    /// One value (a scalar or a 1x1 array) that is not as tall as the fields keeps or drops every
+    /// row only when `one_keeps_all`; otherwise it is `#VALUE!`, whatever it holds (GROUPBY:
+    /// probes/t3839-groupby-scalar-filter; docs/excel-semantics/arrays.md, the entry on scalar
+    /// filters in the gen-m7 arg-pairs batch).
     pub(crate) fn filter_rows(
         &mut self,
         filter: Option<CalcResult>,
         height: usize,
         first: usize,
+        one_keeps_all: bool,
         cell: CellReferenceIndex,
     ) -> Result<Vec<usize>, CalcResult> {
         let invalid = |message: &str| value_error(cell, message);
@@ -283,8 +288,13 @@ impl Model {
         // The element for source row `row`: the one value, or the row's, counted from the top
         // of the fields or of the records.
         let offset = match keep.len() {
-            1 => None,
             n if n == height => Some(0),
+            1 if one_keeps_all => None,
+            1 => {
+                return Err(invalid(
+                    "a single filter_array value needs one key and one value column",
+                ))
+            }
             n if first > 0 && n + first == height => Some(first),
             _ => return Err(invalid("filter_array must be as tall as the fields")),
         };
@@ -393,9 +403,7 @@ impl Model {
         values: &Node,
         cell: CellReferenceIndex,
     ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
-        // A one-cell reference is read as its value here, so the node tells it from a literal.
-        let is_cell =
-            |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_cell = |node: &Node| node.is_cell_reference_at(cell.row);
         let keys = self.evaluate_node_in_context(row_fields, cell);
         if keys.is_error() && !is_cell(row_fields) {
             return Err(keys);
@@ -482,6 +490,17 @@ impl Model {
             return error;
         };
         let array = self.evaluate_node_in_context(node, cell);
+        self.error_over(array, error, cell)
+    }
+
+    /// `error` in every element of `array` when it is an array or a multi-cell range that the call
+    /// lifts over (GROUPBY's `field_relationship`, PIVOTBY's `relative_to`), else `error` itself.
+    pub(crate) fn error_over(
+        &mut self,
+        array: CalcResult,
+        error: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         if !array.is_multi_value() {
             return error;
         }
@@ -503,7 +522,11 @@ impl Model {
         cell: CellReferenceIndex,
     ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
         let args = self.groupby_args(inputs, relationship, cell)?;
-        self.groupby(inputs, args, cell)
+        // A GROUPBY inside the function runs later and spends no filter of this call.
+        let spent = self.groupby_filter_spent;
+        let output = self.groupby(inputs, args, cell);
+        self.groupby_filter_spent = spent;
+        output
     }
 
     /// Checks the GROUPBY options in Excel's order (each check's evidence is beside it).
@@ -525,7 +548,6 @@ impl Model {
         let headers = self.field_headers(field_headers, cell)?;
         let key_columns = width(keys);
         let depth_given = total_depth.is_some();
-        let total_depth = self.total_depth(total_depth, key_columns, cell)?;
         // Values of another height than the keys are #VALUE! (G!AB193, followup G!A1-A41).
         // Scalar text values are #VALUE! too, even beside one key (`GROUPBY(2,"abc",..)`,
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
@@ -572,8 +594,19 @@ impl Model {
             // A header row and no records: probes/groupby-lambda-forms G!S193 (ERROR.TYPE 3).
             return Err(value_error(cell, "GROUPBY has no records"));
         }
-        let rows = self.filter_rows(filter, keys.len(), first, cell)?;
+        // One filter value keeps or drops every row only beside one key column, one value column
+        // and no header row; otherwise it is #VALUE!, whatever the value, TRUE and 2 included
+        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19).
+        let one_keeps_all = first == 0 && key_columns == 1 && width(values) == 1;
+        // Excel reads field_relationship before it filters, and checks the total depth's range
+        // after: a lifted relationship of 2 leaves the filter to the next element, a depth of 5
+        // spends it (probes/t3840-groupby-lifted-filter-consumed G!A5, G!A41).
         let relationship = self.relationship(relationship, cell)?;
+        let rows = self.filter_rows(filter, keys.len(), first, one_keeps_all, cell)?;
+        if rows.len() < keys.len().saturating_sub(first) {
+            self.groupby_filter_spent = true;
+        }
+        let total_depth = self.total_depth(total_depth, key_columns, cell)?;
         // A table relationship cannot have subtotals (followup G!A181, G!A261: ERROR.TYPE 3).
         if relationship == Relationship::Table && subtotal_levels(total_depth) > 0 {
             return Err(value_error(cell, "field_relationship 1 has no subtotals"));

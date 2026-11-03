@@ -842,7 +842,7 @@ fn stringify(
             right,
         } => format!("{}%", wrap(sub(right), binding(right) < binding(node))),
         ErrorKind(kind) => format!("{kind}"),
-        SheetRefErrorKind { sheet_name } => wrong_reference::ref_error_text(Some(sheet_name)),
+        SheetRefErrorKind { .. } => wrong_reference::text(node, context, export_to_excel),
         ParseErrorKind { message, .. }
             if export_to_excel && is_unresolved_structured_reference(message) =>
         {

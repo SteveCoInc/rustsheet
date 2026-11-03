@@ -844,3 +844,21 @@ fn helpers_refuse_a_function_they_cannot_call() {
     assert_eq!(model._get_text("B3"), "#N/A");
     assert_eq!(model._get_text("B4"), "6");
 }
+
+#[test]
+fn stack_keeps_a_lambda_parameter_error_reference_as_an_element() {
+    // Excel (probes/t3765-stack-error-reference D10, D12, D17): a one-cell error reference passed
+    // through a LAMBDA parameter is a 1x1 array in VSTACK, not the call's error (T-3765).
+    let mut model = new_empty_model();
+    model._set("A1", "=1/0");
+    model._set("B1", "12");
+    model._set("D1", "=SCAN(B1,A1,LAMBDA(x,z,VSTACK(x,z)))");
+    model._set("D5", "=SCAN(B1,A1,LAMBDA(x,z,ROWS(VSTACK(x,z))))");
+    model._set("D6", "=MAP(A1,LAMBDA(z,ROWS(HSTACK(z,1))))");
+    model._set("D7", "=ROWS(VSTACK(\"12\",#DIV/0!))");
+    model.evaluate();
+    assert_eq!(model._get_text("D1"), "#CALC!");
+    assert_eq!(model._get_text("D5"), "2");
+    assert_eq!(model._get_text("D6"), "1");
+    assert_eq!(model._get_text("D7"), "#DIV/0!");
+}

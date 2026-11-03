@@ -23,6 +23,8 @@ IMSEC, IMCSC and IMSECH of 705+705i print Excel's last digit, or the task record
   crates/rustsheet-engine/src/functions/engineering/complex/trig.rs): the trig parts times 2e^-|v| with v = 705, which
   lands near the bottom of the normal range. Likely the scaling (`2·EXP(-v)` vs `EXP(ln 2 - v)`, or the order of the
   product), not the sine; sin 705 and cos 705 are SIN's and COS's own.
+- IMCSCH of 705+705i (grid J161) has the same digit since T-3881: inside IMCSCH's negated band it is -IMSECH(z)
+  through IMSECH's parts, Excel -3.76819332944316E-307+1.27412580321457E-306i, ours ...317E-307+.... It follows I161.
 - Phase 1b under decision 0188 R5: one digit at the 15th place, not visibly off.
 
 ## Acceptance criteria

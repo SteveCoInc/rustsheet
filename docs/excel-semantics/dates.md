@@ -401,7 +401,22 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `1/Jul-2025`, becomes `d-mmm-yy` (A5, A6). A clock first, `10:00 7/1/2025`, typed is 45839.4166666667 with
   `m/d/yyyy h:mm` (A10), but a leading space before it (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) leaves text with
   `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
-  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; every other clock-first typed shape (AM/PM, seconds, one-digit hours, out-of-range, and month-name, ISO, year-less or mixed-separator dates after the clock) is unprobed and stays text, as do mixed-separator typed formats in day-first locales: T-3852. `CELL("format", ...)` is #VALUE! on excel-graph.
+  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; clock-first shapes beyond that are in "Typed clock-first date-times" below (T-3852); mixed-separator typed formats in day-first locales stay unprobed. `CELL("format", ...)` is #VALUE! on excel-graph.
+- **Typed clock-first date-times** (T-3852; probes/date-text-typed-clock-first-shapes A1-A45 (rows A35, A36 moved to probes/date-text-typed-clock-first-a-period, below), excel-graph 2026-11-03; formats
+  from docs/research/typed-clock-first-shapes-2026-11-03.md, which also lists A34-A45 and the a-period rows): a clock typed before a date is a number
+  whenever the same clock after the date would be (one probed exception, `A.`, below), and takes the clock's format: `m/d/yyyy h:mm` for `10 AM`, `10:00 AM/PM`, one-digit hours, seconds
+  (`10:00:30`), `mm:ss.0` for a fractional second (`10:00:30.5`; `10:00.5` reads as M:SS.f, 10 minutes 0.5 seconds, 45839.0069502315), General for an out-of-range component (`24:00` is
+  45840, `10:60` is 45839.4583333333). Any date the readers accept may follow: month-name (`July 1, 2025`, `1-Jul-2025`,
+  `1/Jul/2025`), ISO, two-digit year, `-` or mixed separators, and a year-less `10:00 7/1` takes the current year; double
+  spaces between clock and date (also around AM/PM) and trailing spaces are accepted; single-letter `A`/`P`, month-year dates (`Jul 2025`, `7/2025`, `12/2025`), a year-less `July 1`, and seconds with AM/PM (A23-A33) are numbers too (a leading space stays text). Untyped `2025/7-1` is
+  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed (T-3901).
+  Also numbers, `m/d/yyyy h:mm` unless noted (A34-A45): the hour-only single letter `10 A 7/1/2025` (45839.4166666667),
+  `99:00 7/1/2025` (45843.125, General), `10:99 7/1/2025` (45839.4854166667, General), `10:00:30.5 AM 7/1/2025`
+  (`mm:ss.0`), `0 AM 7/1/2025` (45839), `12 PM 7/1/2025` (45839.5), `10:00 2025/7/1`, and the year-less `10:00 1-Jul`
+  and `10 AM 7/1` (current year). `10:00 Jul-25` is 25 July of the current year, not July 2025 (MONTH*100+DAY 725).
+  The exception: with `A.` (single letter and period) before the date, `10 A. 7/1/2025` is 95368.2763275463
+  (`2161-02-07 06:37:55`) and `10:00 A. 7/1/2025` 95368.68604976853 (`2161-02-07 16:27:55`), both `mm:ss.0` (probes/date-text-typed-clock-first-a-period A1, A2; the value repeats over three fills).
+  Status: the engine leaves both as text (known failure, T-3907).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on
@@ -1142,8 +1157,13 @@ but `10:00:30 A` is 0.41701... with `h:mm:ss AM/PM` (N9, N13-N15, N19, N20; exce
 Further bare shapes (N21-N29, T-2053): `10 A.`, `10 AM` and `10 PM` are numbers with `h:mm AM/PM`; `0:00 A` and
 `12:00 A` are 0 with `h:mm AM/PM`; `10:00:30 AM` has `h:mm:ss AM/PM`; a fractional second keeps its own format,
 `10:00:30.5 A` is 0.41701... and `10:00.5 A` 0.00695... with `mm:ss.0`; bare `13:00 A` stays text with General.
+A bare 24-hour clock typed with no date and no AM/PM is a number too (probes/t3894-bare-24h-clock, excel-graph
+2026-11-03, T-3894): `12:30`, `9:05`, `1:2`, `0:00` and `10:00:` are time of day with `h:mm`, `10:00:30` with `h:mm:ss`,
+`24:00`, `25:00` and `100:00` with `[h]:mm:ss`, a fractional second (`10:00.5`, `10:00:30.5`) with `mm:ss.0`, and
+`10:60` and `10:00:60` are numbers with General. `:30` and ` 10:00` (leading space) stay text.
+Evidence note: docs/research/t3894-bare-24h-clock-2026-11-03.md
 Status: VERIFIED (web)
-Implemented in: `typed_clock_shape`, `rejected_clock_text_format`, `parse_typed_number`, `parse_bare_letter_clock` and `without_single_letter_dot` in `crates/rustsheet-engine/src/formatter/parse_formatted.rs`
+Implemented in: `typed_clock_shape`, `rejected_clock_text_format`, `parse_bare_clock`, `parse_typed_number`, `parse_bare_letter_clock` and `without_single_letter_dot` in `crates/rustsheet-engine/src/formatter/parse_formatted.rs`
 Evidence note: docs/research/single-letter-ap-typed-clock-2026-10-19.md
 Tasks: T-1994, T-2011
 

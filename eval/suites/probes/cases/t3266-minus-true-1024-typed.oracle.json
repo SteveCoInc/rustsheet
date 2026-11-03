@@ -5,15 +5,19 @@
    "B1": {
     "t": "b",
     "v": false
+   },
+   "D1": {
+    "t": "b",
+    "v": true
    }
   }
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "12b6fc6de6258776b06bdb04fa547ca3e28815d90450f1edc98746f8a84db758",
+  "input_sha256": "254ceaf91e37dcfebf505bcdcb6e0a6f323f5b32895304e614fb73fa48224980",
   "kind": "excel-graph",
-  "produced_at": "2026-11-02T21:20:02+00:00",
+  "produced_at": "2026-11-03T09:20:03+00:00",
   "version": null,
-  "workbook_name": "c941b974be33f4b4f512f184b86df0ba2f87b5ac5331939a3a0896f375cd49f5.xlsx"
+  "workbook_name": "a02f29c6f6bfe9cf63f88839bbe7879457a9964c5fc5871ad25c9933f4f81616.xlsx"
  }
 }

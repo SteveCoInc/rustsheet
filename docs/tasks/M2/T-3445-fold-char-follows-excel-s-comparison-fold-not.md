@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: M
 tier: opus
-depends_on: [T-3584]
+depends_on: []
 ---
 
 ## Goal
@@ -18,7 +18,10 @@ comparison table, so every cell of probes/t3298-case-mapping-sweep column C and 
 - Failing cells: probes/t3298-case-mapping-sweep Calc!C8, C10, C15, C17:C21, C25:C27, C32:C48 and D8, D10, D15,
   D17:D21, D25:D27, D32, D34:D48.
 - lookup.md "MATCH, VLOOKUP and HLOOKUP exact-match keys fold case one character to one" has the block summary
-  (T-3298); T-3584 pins the per-character rule and the weightless characters that compare equal to one another.
+  (T-3298); T-3584 pinned the weightless set (docs/research/t3584/weightless-bmp.txt) and the
+  equivalence classes beyond case pairs (lookup.md "Weightless characters" and "Equivalence classes").
+- Failing cells (T-3584): probes/t3584-match-fold-weightless Calc!E1:E32, G1:H32, K1:O85, R1:R256, T1:T1232.
+  Calc!R1 also shows MATCH taking U+0001 as matching any text (mask 3 at U+0001), which the engine does not.
 - Code: `fold_char` and `fold_case` (crates/rustsheet-engine/src/functions/util/collation.rs), reached through
   `folded_units` (`ExactKey`) and `WildcardPattern`. Today they take Rust's `to_lowercase`, which folds Cherokee,
   Mtavruli, Latin Ext-D and the supplementary scripts that Excel keeps apart.
@@ -26,7 +29,8 @@ comparison table, so every cell of probes/t3298-case-mapping-sweep column C and 
   weightless-equal rule; keep the fold per UTF-16 unit or scalar consistent with surrogate pairs (they never fold).
 
 ## Acceptance criteria
-- [ ] Calc!C1:D48 of probes/t3298-case-mapping-sweep pass and leave eval/baseline/probes.txt, 0 regressions;
+- [ ] Calc!C1:D48 of probes/t3298-case-mapping-sweep and the T-3584 cells above pass and leave
+      eval/baseline/probes.txt, 0 regressions;
       probes/t3133-lookup-criteria-case-fold keeps passing.
 - [ ] Unit tests cover one character per block class (folds, stays apart, weightless).
 - [ ] lookup.md's section says "Implemented in" with this task.
