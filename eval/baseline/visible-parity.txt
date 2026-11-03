@@ -292,7 +292,9 @@ probes/t3881-imcsch-flip-start.case.json	20
 probes/t3881-imcsch-overflow-band.case.json	214
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
 probes/t3893-pivotby-error-sort-header.case.json	22
+probes/t3895-collation-script-digits.case.json	1
 probes/t3906-rate-restart-oos.case.json	137
+probes/t3920-typed-a-period-1904.case.json	1
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3

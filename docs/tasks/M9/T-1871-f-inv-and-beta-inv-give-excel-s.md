@@ -98,6 +98,23 @@ Cells:
 - gen-m9/f34f66fb7f81e673.case.json (1): Calc!A295
 - gen-m9/fd9fa22d212080d6.case.json (1): Calc!A209
 - gen-m9/fec39efaba9284c3.case.json (3): Calc!A14, A76, A206
+- Composite cells added by gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8, excel-graph;
+  `scripts/exit_owners.py --all-off` lists both as visibly off and owned only by deferred tasks, T-2221 and T-1374). The
+  outer function passes the inner quantile's relative error through (1:1 for PRICEMAT, which is linear in its rate; 5:1
+  for FDIST at d1 = 2, (1 + x/5)^-5), so each passes when the inner tiny-p quantile matches Excel's to about 1 ulp.
+  50-digit references are mpmath 1.3 (dps 50):
+  - gen-m9/2a18b2f5a4dc43ac Calc!A259 `=FDIST(F.INV.RT(1E-10,(3.14159/0.2),5),2,10)` (df1 truncated to 15): Excel
+    2.2275627603805864E-18, ours 2.2275627603805707E-18, math 2.2275627603805911E-18 (Excel -2.1E-15, ours -9.2E-15).
+    The inner quantile F.INV.RT(1E-10,15,5) is 16954.1473883429075 (math); the values the outer closed form implies are
+    Excel 16954.147388342913 (+3E-16, about 1.6 ulp) and ours 16954.147388342937 (+1.8E-15, about 8 ulp).
+  - gen-m9/30e20ba3302fea8b Calc!A310 `=PRICEMAT(39955,45657,34754,FINV(1E-100,2,3),0.05,1)`: Excel
+    1.7583339520153275E+69, ours 1.7583339520153015E+69 (1.5E-14 apart). FINV(1E-100,2,3) is 1.5·(1E-100^(-2/3) - 1) =
+    6.9623832504191683E+66 exactly; Excel's FINV at this p is not that closed form: the gen-m9 cells above show
+    `FINV(1E-100,2,9)` Excel 7.506452417400285E+22 against the exact 7.5064524174002644E+22 (+2.8E-15) and ours
+    7.506452417400256E+22 (-1.1E-15). So the PRICEMAT gap is the inner FINV; add `FINV(1E-100,2,3)` as a probe cell
+    if the outer still misses after the quantile change.
+- gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259
+- gen-m9/30e20ba3302fea8b.case.json (1): Calc!A310
 - Cells this task owns that an earlier owner rule credited to it or to another task only by an A1
   name written beside a different case (decision 0159, T-0099):
   - gen-m9/7c20351562a2d71d.case.json: Calc!A37, A254
@@ -107,7 +124,7 @@ Cells:
   - gen-m9/c2974c061384fdd9.case.json: Calc!A267
 
 ## Acceptance criteria
-- [ ] Visible parity (gen-m9, T-2255): these 118 known-failure lines disappear from eval/baseline/gen-m9.txt
+- [ ] Visible parity (gen-m9, T-2255): these 118 known-failure lines (120 with the two composite cells added 2026-11-03) disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
 - [ ] probes/stat-quantile-lift E1-E7 pass or are within 4 ulp (named in the Outcome), and E8, E10-E12 pass or are
   no further off than today; E9 matches or its rule is

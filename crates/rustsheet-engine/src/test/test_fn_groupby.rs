@@ -1369,6 +1369,17 @@ fn scalar_inputs_and_the_order_of_their_errors() {
         // first case, the same height (1 row each) in the second.
         ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
         ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
+        // probes/t3854-groupby-scalar-inputs (T-3854): one row of text values is a header when
+        // field_headers is omitted, data with 0, and the header with 1; a 1x1 text array alike.
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,0)", "2"),
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,1)", "#VALUE!"),
+        ("=GROUPBY({\"a\"},{\"x\"},_xleta.COUNTA)", "#VALUE!"),
+        // The error-reference key is #VALUE! whatever field_headers is; a 1x1 error array is a key.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,0)", "#VALUE!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,2)", "#VALUE!"),
+        ("=GROUPBY({#N/A},{1},_xleta.SUM)", "#N/A"),
+        // A one-cell range of a blank cell is a blank cell.
+        ("=GROUPBY(Z4,Z3:Z3,_xleta.SUM)", "#VALUE!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
         model._set(&format!("D{}", 3 * i + 1), formula);
