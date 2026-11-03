@@ -126,7 +126,7 @@ impl NestedArray {
     }
 
     /// Its own grid's elements in row-major order, a nested element as itself (a GROUPBY and
-    /// PIVOTBY value sort compares array results by them, `aggregate_cmp` in grouping.rs).
+    /// PIVOTBY value sort compares array results by them, `aggregate_cmp` in `group_order.rs`).
     pub(crate) fn elements(&self) -> impl Iterator<Item = &ArrayNode> {
         self.rows.iter().flatten()
     }

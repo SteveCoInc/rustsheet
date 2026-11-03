@@ -1202,8 +1202,10 @@ Value sorts with error aggregates (same probe):
   `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`, rows 0, 42,
   2.5, 1E+15 ascending, t3893-pivotby-error-sort-header A61:G79, gen-m7 febfd6901374d79c A11225).
   An error aggregate keeps the error rules above, `relative_to` included (A1-A351, A361-A371, A501-A511).
-  Unprobed: a blank element against text, booleans or errors (the engine: greatest), and a one-cell reference result
-  (the engine: compared like an array). Ours: implemented (`grouping.rs` `aggregate_cmp`).
+  The first elements compare as the values do: a number before text, TRUE and an error, and a blank element after
+  all of them, errors and numbers included, ascending and descending (probes/t3946-aggregate-array-element-kinds,
+  80 cells, A1-A94, excel-graph, 2026-11-03).
+  Unprobed: a one-cell reference result (the engine: compared like an array). Ours: implemented (`group_order.rs` `aggregate_cmp`).
 Unprobed (PIVOTBY): an error header cell in a joined column name (the engine: that error); a joined column name longer
 than a cell holds (the engine: `#VALUE!`, after the 32,767-character cell limit in coercion.md "Text longer than 32,767
 characters"); value sorts over three or more fields (rows: every level by its aggregate; columns: the last); and
