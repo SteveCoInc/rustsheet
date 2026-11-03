@@ -3,7 +3,7 @@ id: T-3343
 title: "Progress dashboard: a Phase 1 line in the goals block from make phase1-exit --json"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,9 +22,15 @@ the function-rate criterion. It should show the overall verdict and the failing 
 whole exit.
 
 ## Acceptance criteria
-- [ ] The goals block has a Phase 1 line with the overall verdict and the failing criteria, from `--json` on
+- [x] The goals block has a Phase 1 line with the overall verdict and the failing criteria, from `--json` on
       the same report the dashboard reads; a test with a fixture JSON pins the line for `met` and `not met`.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing any criterion or measure of decision 0187.
+
+## Outcome
+`goals.phase1_exit_line` renders the overall verdict and failing criteria from `scripts/phase1_exit.py --json`;
+`make progress-report` writes `eval/runs/latest/phase1-exit.json` (exit 1 = not met is accepted) and the generator
+reads it via `--phase1-exit` (missing file: the line says "not measured"). Test pins `met`, `not met` and missing.
+No eval delta (tooling only).
