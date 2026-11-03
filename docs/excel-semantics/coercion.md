@@ -405,10 +405,7 @@ letters (it sorts above `"ab"`, below the kana: U8).
 Evidence: probes/t3276-collation-other-scripts (excel-graph, 2026-10-31): 99 strings in Data!A; Calc!A =
 count less, B = count equal, C = exact MATCH position, D = XMATCH position, E = COUNTIF `"="&x`,
 G1:G36 = `(x<y)+2*(x=y)+4*(x>y)` for chosen pairs, H1:H13 single cells. "Rank" cites Calc!A by Data row.
-The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. UNPROBED (follow-up T-3446): text typed into a cell stays text; other digit blocks are not mapped;
-date text is mapped by inference (`"٢٠٢٠-١-١"+0` reads as a date) while clock text is not (`"١٢:٣٠"+0` is
-`#VALUE!`); percent, currency, parenthesis, group-separator and exponent forms, NUMBERVALUE and TEXT's
-reading of number text follow the mapping through `number_text_in` without evidence. VERIFIED (cells cited):
+The engine passes every cell: the collation cells since T-3324, the digit cells since T-3325: `cast::number_text_in` maps the three digit blocks, so VALUE, arithmetic coercion and criteria read them. T-3446 probed the other forms and blocks (next section "Script digits in number text (T-3446)"). VERIFIED (cells cited):
 - **Block order is not code-point order.** Lowest first: Latin, Greek, Cyrillic, **kana**, Hebrew,
   Arabic, Devanagari, Thai, Lao, the astral `𝐀` (U+1D400) and `😀` (U+1F600), Hangul, CJK ideographs,
   then the astral ideograph `𠀀` (U+20000): `"я" < "ア" < "あ" < "א"` (ranks A18, A20, A19, A21 = 32,
@@ -457,6 +454,37 @@ blocks keep code-point order; every arrow (U+2190 to U+21FF), miscellaneous symb
 (U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
 (so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
 between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
+
+### Script digits in number text (T-3446)
+Evidence: probes/t3446-script-digits-forms (excel-graph, 2026-11-03); formats from the oracle's ENTERED log,
+docs/research/t3446-script-digits-forms-2026-11-03.md. Rows 1:99 are nine scripts (ASCII, then Arabic-Indic
+U+0660, Extended Arabic-Indic U+06F0, Devanagari U+0966, Bengali U+09E6, Thai U+0E50, Lao U+0ED0, Tibetan
+U+0F20, Myanmar U+1040) of eleven forms each (`123`, `-12`, `1.5`, `12%`, `$12`, `(12)`, `1,234`, `1e3`,
+`2020-1-1`, `12:30`, `1 1/2`, digits in the row's script, the rest ASCII); A = typed, B = ISNUMBER(A),
+D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same text as a formula string.
+Status: VERIFIED.
+- **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
+  the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
+  `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
+  which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+- **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
+  separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
+  VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+  a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
+  `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
+  `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
+  `[$-,200]mm/dd/yyyy`, `١٢:٣٠` → `[$-,200]h:mm`; `-١٢` and `(١٢)` → `[$-ar-SA,200]0`; the exponent form keeps
+  `0.00E+00` and the mixed fraction `# ?/?`, untagged. The tag per block: `ar-SA,200`, `ar-SA,300` (Extended
+  Arabic-Indic), `hi-IN,400`, `bn-IN,500`, `th-TH,D00`, `lo-LA,E00`, `bo-CN,F00`, `my-MM,1000`; `1٢3` takes
+  `ar-SA,200` and `١२` takes `hi-IN,400`. The engine keeps typed script digits as text (engine gap T-3891).
+- In passing: a bare typed ASCII clock `12:30` is a number with `h:mm` in Excel (B10); the engine keeps it
+  text (engine gap T-3894). `NUMBERVALUE("1 1/2")` is 46328 in 2026: NUMBERVALUE drops every space
+  (text.md), so it reads the date `11/2` of the current year; the case does not score F on those rows.
+Implemented in: `script_digit_to_ascii` and `ascii_script_digits` (formatter/parse_formatted.rs), applied in
+`cast::number_text_in` before the formatted-number and clock readers and before both mixed-fraction readers
+(`cast_number_in`, `value_number_text_with`).
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by
