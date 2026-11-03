@@ -3,7 +3,7 @@ id: T-3533
 title: "Probe MAXA's lifted text, MINA, VAR.P, STDEV.P, the VARA family and legacy VAR over a lifted OFFSET (T-2824 follow-up)"
 milestone: M6
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
