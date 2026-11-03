@@ -1,0 +1,126 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3893: where an error aggregate sorts in GROUPBY's and PIVOTBY's value sorts (ascending and descending, against numbers, text and TRUE), and whether PIVOTBY's joined column header drops a blank field header or reacts to a blank relative_to. Each call starts at A1, A11, ... with room for its spill.",
+ "tags": [
+  "M7",
+  "probe",
+  "dynamic-arrays",
+  "T-3893"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=_xlfn.GROUPBY(S!A1:A5,S!B1:B5,LAMBDA(x,INDEX(x,1)),0,0,2)",
+    "A11": "=_xlfn.GROUPBY(S!A1:A5,S!B1:B5,LAMBDA(x,INDEX(x,1)),0,0,-2)",
+    "A21": "=_xlfn.PIVOTBY(S!A1:A5,S!C1:C5,S!B1:B5,LAMBDA(x,INDEX(x,1)),0,0,2,1)",
+    "A31": "=_xlfn.PIVOTBY(S!A1:A5,S!C1:C5,S!B1:B5,LAMBDA(x,INDEX(x,1)),0,0,-2,1)",
+    "A41": "=_xlfn.GROUPBY(S!A1:A5,S!B1:B5*1,LAMBDA(x,INDEX(x,1)),0,0,2)",
+    "A51": "=_xlfn.GROUPBY(S!A1:A5,S!B1:B5*1,LAMBDA(x,INDEX(x,1)),0,0,-2)",
+    "A61": "=_xlfn.PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,-2,TRUE,1,(Data!B1:B12<0.5),2)",
+    "A71": "=_xlfn.PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,2,TRUE,1,(Data!B1:B12<0.5),2)",
+    "A81": "=_xlfn.PIVOTBY(Data!E1:E12,Data!A1:C12,Data!B1:B12,LAMBDA(x,\" x \"),3,1,-2,0,-1,(Data!B1:B12<>2),Data!H1)",
+    "A91": "=_xlfn.PIVOTBY(Data!E1:E12,Data!A1:C12,Data!B1:B12,LAMBDA(x,\" x \"),3,1,-2,0,-1,(Data!B1:B12<>2))",
+    "A101": "=_xlfn.PIVOTBY(Data!E1:E12,Data!A1:C12,Data!B1:B12,LAMBDA(x,\" x \"),3,1,-2,0,-1)",
+    "A111": "=_xlfn.PIVOTBY(Data!E1:E12,Data!B1:C12,Data!B1:B12,LAMBDA(x,\" x \"),3,1,-2,0,-1)",
+    "A121": "=_xlfn.PIVOTBY(Data!E1:E12,Data!A1:C12,Data!B1:B12,LAMBDA(x,\" x \"),3,1,-2,0,-1,,1)"
+   }
+  },
+  {
+   "name": "S",
+   "cells": {
+    "A1": "k1",
+    "A2": "k2",
+    "A3": "k3",
+    "A4": "k4",
+    "A5": "k5",
+    "B1": 3,
+    "B2": "t",
+    "B3": true,
+    "B4": "=NA()",
+    "B5": 1,
+    "C1": "c",
+    "C2": "c",
+    "C3": "c",
+    "C4": "c",
+    "C5": "c"
+   }
+  },
+  {
+   "cells": {
+    "A11": 0.2,
+    "A12": "1.5",
+    "A2": 1000000000000000.0,
+    "A3": 42,
+    "A4": false,
+    "A5": 1.005,
+    "A6": false,
+    "A7": 7,
+    "A8": 123456789.123,
+    "B1": "?b",
+    "B10": 42,
+    "B11": -0.5,
+    "B12": "#N/A",
+    "B2": 2.5,
+    "B3": 0.3,
+    "B4": " x ",
+    "B6": -0.5,
+    "B7": 1,
+    "B9": "a*",
+    "C1": 3.14159,
+    "C10": 1e-15,
+    "C11": 1000000000000000.0,
+    "C12": 7,
+    "C2": -0.5,
+    "C3": 0.2,
+    "C4": 1,
+    "C6": 0.1,
+    "C7": 0.2,
+    "C8": -0.0001,
+    "C9": "\u00fc",
+    "D1": "1.5",
+    "D10": "abc",
+    "D11": "TRUE",
+    "D12": -1,
+    "D2": 0.3,
+    "D3": 100,
+    "D4": 2,
+    "D5": "#N/A",
+    "D6": -1,
+    "D7": 100,
+    "D8": 0,
+    "D9": 0.3,
+    "E10": 1000000000000000.0,
+    "E11": 1000000000000000.0,
+    "E12": 7,
+    "E2": 100,
+    "E3": 42,
+    "E4": "#N/A",
+    "E5": 2.5,
+    "E7": false,
+    "E8": 1000000000000000.0,
+    "E9": 1000000000000000.0,
+    "G1": 7,
+    "G2": 0,
+    "G3": -2.5,
+    "G4": 1.5,
+    "G5": {
+     "t": "s",
+     "v": "12"
+    },
+    "G6": {
+     "t": "s",
+     "v": "x"
+    },
+    "G7": "",
+    "G8": false,
+    "G9": {
+     "t": "e",
+     "v": "#DIV/0!"
+    }
+   },
+   "name": "Data"
+  }
+ ],
+ "expected": {}
+}

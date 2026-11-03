@@ -1181,6 +1181,20 @@ and a column selection, `RelativeSets` builds every set the grid uses once, afte
 per pair of key-prefix levels (groups, subtotals and totals alike; `Grouping::prefix_ids`), the grid cells, subtotal
 lines included, look theirs up, value sorts take `RelativeTo::of_sort` (the parent group from
 `Grouping::sort_by_aggregate`), and an array is lifted by `Model::lifted_relative_to` without any call.
+PIVOTBY's joined column name leaves a blank header cell out (T-3893; probes/t3893-pivotby-error-sort-header, excel-graph,
+2026-11-03). col_fields Data!A1:C12 headed (blank, "?b", 3.14159) with field_headers 3 are named "?b, 3.14159", whether
+relative_to is a blank cell or 1 (gen-m7 ceb2c91035864a71 B8785; probe B121). An empty-text header is unprobed.
+Ours: implemented (`pivotby.rs` `joined_names`).
+Value sorts with error aggregates (same probe):
+- GROUPBY and PIVOTBY order a value column the way SORT does: numbers, text, TRUE, then errors by error code
+  (#VALUE! before #N/A).
+- A descending sort reverses the whole order, so the errors come first. Equal aggregates keep key order in both
+  directions (A1:A55).
+- Ours already matches.
+- Open (T-3893): PIVOTBY's row value sort when every row's Total aggregate is `#VALUE!` (an array-returning LAMBDA).
+  Excel orders `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`'s
+  rows 0, 42, 2.5, 1E+15 ascending and exactly the reverse descending. That is neither key order nor first appearance
+  (42, 2.5, 0, 1E+15), so the ties break on something else. Ours keeps key order in both directions (probe A61:G79).
 Unprobed (PIVOTBY): an error header cell in a joined column name (the engine: that error); a joined column name longer
 than a cell holds (the engine: `#VALUE!`, after the 32,767-character cell limit in coercion.md "Text longer than 32,767
 characters"); value sorts over three or more fields (rows: every level by its aggregate; columns: the last); and
