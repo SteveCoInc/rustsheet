@@ -3,7 +3,7 @@ id: T-3679
 title: "Regenerate the probes suite's math sidecars with the beta, gamma and discrete definitions (after #2698 and #2668)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
