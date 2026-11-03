@@ -1401,6 +1401,18 @@ Status: VERIFIED
 Implemented in: `Model::fn_textjoin` and `Model::textjoin_delimiters` (functions/text/concatenate.rs).
 Tasks: T-3885
 
+## TEXTJOIN: an array or range ignore_empty is lifted per element, with the scalar rule applied to each
+Rule: an array or range ignore_empty makes TEXTJOIN spill one result per element, and each element follows the
+scalar rule above. With a reference delimiter (a cell or a range of error cells) the elements give: boolean or
+number -> the delimiter's error (`#DIV/0!`), text (`"x"`, `""`) -> `#VALUE!`, error -> its own error (`#N/A`). With an
+error value delimiter (`1/0`) every element is `#DIV/0!`. With a plain delimiter: boolean or number -> `"a"`, text
+-> `#VALUE!`, error -> that error. An array literal and a range holding the same values agree.
+Evidence: probes/t3909-textjoin-lifted-ignore-empty A1:E8 (4 delimiters by array and range ignore_empty, 5 elements
+each; excel-graph, 2026-11-03; T-3909).
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` via `lift_call`; all 40 formula cells (44 scored) already match, no engine change.
+Tasks: T-3909
+
 ## ARRAYTOTEXT: a range format argument
 Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
 An error or blank first argument spills its error to the format's shape: `ARRAYTOTEXT(#N/A,Data!A1:B2)` fills A463:B464 with `#N/A`, `ARRAYTOTEXT(Data!G9,Data!C3:D4)` A466:B467 with `#DIV/0!`, a blank reference A511:B512 and A514:B515 with `#VALUE!`.

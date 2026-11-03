@@ -1955,6 +1955,7 @@ C	probes/t3898-typed-circular-readers.case.json	28
 C	probes/t3906-rate-restart-oos.case.json	240
 C	probes/t3907-typed-clock-a-period-edges.case.json	78
 C	probes/t3907-typed-clock-a-period-shapes.case.json	78
+C	probes/t3909-textjoin-lifted-ignore-empty.case.json	44
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
