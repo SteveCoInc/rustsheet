@@ -1425,8 +1425,9 @@ Evidence (excel-graph, 2026-11-03, T-3963; scorers and the temporary switch in d
   and 2^11): the run ends on a zero step at |f| 2.3e-7, the cap's test returns it, and Excel is `#NUM!`, like the
   zero-step holds of decision 0198.
 Ours: `rate_secant` (functions/financial/financial_util.rs).
-Status: VERIFIED (the structural rule, excel-graph, hold-out and fresh sweep above) / UNVERIFIED (why Excel still
-restarts on some noise-only residuals, and why it errs on some zero steps)
+Status: UNVERIFIED (a partial model on branch T-3963, not merged: it beats the merged rule, 59 against 9 of 240 fresh
+calls bit-exact, but misses most of them; why Excel still restarts on some noise-only residuals and errs on some zero
+steps is open; waits on the owner's ruling, T-3916)
 Tasks: T-3963, T-3424, T-3916
 
 ## RATE and IRR secant constants past their fit sets

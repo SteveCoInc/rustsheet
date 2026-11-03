@@ -3,7 +3,7 @@ id: T-3963
 title: "RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-secant state fits (after T-3850)"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P2
 size: M
 tier: opus
@@ -71,7 +71,9 @@ because T-3850 showed that no rule on the model's state at the flat step does it
     - keep-r0: train 1,416 / 1,524 / 1,549 of 1,704; test 576 / 616 / 630 of 696. The test exact rate is 82.8%,
       against 83.1% on train.
     - The merged rule: train 1,357 / 1,498 / 1,521; test 557 / 610 / 617.
-  - The candidates were first ranked on all 2,400 cells, hold-out side included. Ranked on train alone (bit-exact,
+  - This split is not a clean hold-out: the candidates were first ranked on all 2,400 cells, hold-out side included,
+    and the margin was not stated before that scoring. The only blind out-of-sample evidence is the fresh probe below,
+    committed before its fill. Ranked on train alone (bit-exact,
     the fit lab's order), keep-r0 is still first: 1,416, then the secant on the iterate before r0 at 1,402
     (1,528 / 1,552 within 4 ulp / 15 digits), then an unconditional restart at 1,394.
   - R4.2 fresh sweep: Gate A batch accuracy/RATE/r4-T-3963, 300 points of `rustsheet-accuracy generate RATE --batch
@@ -93,3 +95,28 @@ because T-3850 showed that no rule on the model's state at the flat step does it
   RATE cell regressing" is not met; decision 0260 allows them.
 - **Follow-up:** T-3424 keeps the wrong-type cells (zero steps Excel errs on). The noise-only nper-1/2 residuals where
   Excel still restarts (t3906 A15, A64) are filed as a new task.
+
+## Blocked because
+Blocked because: owner ruling (T-3916). The model removes T-3698's restart, and that changes which noise-floor points
+are inside the Gate A envelope: on probes/t3906-rate-restart-oos 206 points are inside, against the merged rule's 207
+(A15, A64, A121 and A143 move out, A17, A194 and A195 move in). On the fresh probe A59, A60, A73 and A188 become numbers
+where Excel is `#NUM!`. Keep, narrow or revert of T-3698's restart is the owner's call under T-3916, so keep-r0 is
+added there as option 4. Excel-fidelity review of round 2 (head 5fcba30): BLOCK on that ground. Security and design
+APPROVE on 5fcba30.
+
+Also open from that review, for whoever resumes after the ruling:
+- add the correctly rounded (50-digit root) candidate's train and test counts to the R4.1 record (t3906 and the Gate
+  A tables carry math sidecars);
+- financial.md's status for the new entry should read partial (it is bit-exact on 59 of 240 fresh calls);
+- `docs/research/t3963/holdout.py` should import the fit lab's split (tools/src/rustsheet_tools/fitlab/holdout.py)
+  instead of copying it;
+- design MINOR: the zero-step branch repeats the cap's test; fold it into `flat || r2 == r1`.
+
+## Landing notes
+- PR #3019 (draft). The head before this note is 5fcba30: CI green on eb0424e, CI on 5fcba30 was running when the
+  window closed. Security and design APPROVE on 5fcba30; Excel-fidelity BLOCK on 5fcba30 (owner ruling, above).
+- Next step: wait for the owner's ruling on T-3916. If it picks option 4, unblock this task, fix the open items under
+  "Blocked because", re-run the full panel and enqueue. If it does not, close #3019 and keep its findings
+  (financial.md entry, research tools, probe case) in a docs-only PR.
+- Do not repeat: the hybrid (keep-r0 plus T-3698's restart) scored worse on train, test and the fresh probe; residual
+  variants (x87 registers, other powers, factor orders) lose 360 to 920 cells.

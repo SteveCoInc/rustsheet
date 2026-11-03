@@ -49,6 +49,16 @@ Owner ruling needed (docs/status.md "Needs owner", 2026-11-03). Choose one:
 3. **Rule on R2 at the noise floor.** For example: a point whose root noise width exceeds ε is judged against Excel's
    15 digits only. Then the rule is re-scored with A194 as its only real exit.
 
+4. **Replace the restart with T-3963's keep-r0 rule** (PR #3019, draft; financial.md "RATE keeps its older iterate
+   when a step leaves the residual unchanged" on that branch). A secant step whose residual repeats keeps the older
+   iterate, which explains T-3850's path dependence. Bit-exact on the 2,400 literal RATE cells goes from 1,914 to
+   1,992, and on a blind fresh probe of 240 calls where the two differ from 9 to 59. The cost:
+   - t3906: 206 points inside the envelope against the rule's 207. It moves A15, A64, A121 and A143 out (A143
+     becomes `#NUM!` where Excel returns a number) and brings A17, A194 and A195 back in.
+   - On the fresh probe it gives a number where Excel is `#NUM!` at A59, A60, A73 and A188. The merged rule is right
+     at all four, but it has 21 cells of the wrong type there against the new model's 8.
+   - 37 gated regressions (decision 0260 on that branch).
+
 Once the ruling is recorded, unblock this task and implement it.
 
 ## Acceptance criteria
