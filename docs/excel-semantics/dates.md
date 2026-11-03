@@ -401,7 +401,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `1/Jul-2025`, becomes `d-mmm-yy` (A5, A6). A clock first, `10:00 7/1/2025`, typed is 45839.4166666667 with
   `m/d/yyyy h:mm` (A10), but a leading space before it (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) leaves text with
   `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
-  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; clock-first shapes beyond that are in "Typed clock-first date-times" below (T-3852); mixed-separator typed formats in day-first locales stay unprobed. `CELL("format", ...)` is #VALUE! on excel-graph.
+  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; clock-first shapes beyond that are in "Typed clock-first date-times" below (T-3852); mixed-separator typed formats in day-first locales stay unprobed (desktop-only, T-3901). `CELL("format", ...)` is #VALUE! on excel-graph.
 - **Typed clock-first date-times** (T-3852; probes/date-text-typed-clock-first-shapes A1-A45 (rows A35, A36 moved to probes/date-text-typed-clock-first-a-period, below), excel-graph 2026-11-03; formats
   from docs/research/typed-clock-first-shapes-2026-11-03.md, which also lists A34-A45 and the a-period rows): a clock typed before a date is a number
   whenever the same clock after the date would be (one probed exception, `A.`, below), and takes the clock's format: `m/d/yyyy h:mm` for `10 AM`, `10:00 AM/PM`, one-digit hours, seconds
@@ -409,7 +409,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   45840, `10:60` is 45839.4583333333). Any date the readers accept may follow: month-name (`July 1, 2025`, `1-Jul-2025`,
   `1/Jul/2025`), ISO, two-digit year, `-` or mixed separators, and a year-less `10:00 7/1` takes the current year; double
   spaces between clock and date (also around AM/PM) and trailing spaces are accepted; single-letter `A`/`P`, month-year dates (`Jul 2025`, `7/2025`, `12/2025`), a year-less `July 1`, and seconds with AM/PM (A23-A33) are numbers too (a leading space stays text). Untyped `2025/7-1` is
-  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed (T-3901).
+  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed and excel-graph cannot probe them: it calculates in its SharePoint site's regional settings, which its canary pins to en-US (docs/architecture/oracle.md), so the question waits for the desktop backend (T-3901, M14).
   Also numbers, `m/d/yyyy h:mm` unless noted (A34-A45): the hour-only single letter `10 A 7/1/2025` (45839.4166666667),
   `99:00 7/1/2025` (45843.125, General), `10:99 7/1/2025` (45839.4854166667, General), `10:00:30.5 AM 7/1/2025`
   (`mm:ss.0`), `0 AM 7/1/2025` (45839), `12 PM 7/1/2025` (45839.5), `10:00 2025/7/1`, and the year-less `10:00 1-Jul`
