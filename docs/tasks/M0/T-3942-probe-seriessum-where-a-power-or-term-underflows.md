@@ -33,9 +33,10 @@ Excel's `^`). No oracle cell checks it.
 - Changing the engine's SERIESSUM.
 
 ## Outcome
-- Added probes/seriessum-subnormal-power-and-term (34 cells, A1:B17, each call with its `=0` companion), filled by excel-graph.
-- Excel flushes a subnormal SERIESSUM power and a subnormal term to 0, so T-3676's definition is right. It also found that
-  `^` keeps its subnormal while POWER flushes, and that the engine keeps a subnormal SERIESSUM term and flushes `^`.
-  numbers.md records all of it (VERIFIED). Follow-ups: T-3949 (SERIESSUM term) and T-3950 (`^`), each owning its cells.
+- Added probes/seriessum-subnormal-power-and-term (34 cells, A1:B17) and probes/seriessum-subnormal-term-sum-and-power-points (12 cells, A1:B6), each call with its `=0` companion, filled by excel-graph.
+- Excel flushes a subnormal SERIESSUM power and a subnormal term to 0, per term and not on the sum (term-sum case A1, A2), so T-3676's
+  per-term definition is right. It also found that `^` with a positive exponent keeps its subnormal while POWER and a negative
+  exponent (2^-1023) flush, and that the engine keeps a subnormal SERIESSUM term and flushes `^`. numbers.md records all of it
+  (VERIFIED, limited to the probed bases and exponents). Follow-ups: T-3949 (SERIESSUM term) and T-3950 (`^`), each owning its cells.
 - The acceptance item "if Excel does not flush, file a task to change defs/seriessum.py" does not apply: Excel flushes.
-- Eval delta: none gated (probes cases score 4 + 3 new off cells, each owned by T-3949/T-3950).
+- Eval delta: none gated; 10 new known-failing cells, all owned (T-3949: power-and-term A2, B2, A9, B9, term-sum A1; T-3950: power-and-term A16, B15, B16, term-sum B3, B4).

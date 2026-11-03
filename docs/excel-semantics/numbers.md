@@ -876,8 +876,8 @@ probes/text-number-words H6, H7, K1, K4, K5 (`="1e-308"+0` is 0).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
 Exception (T-3942, probes/seriessum-subnormal-power-and-term B15, A16): the `^` operator with a positive integer exponent keeps its
-subnormal result (`=1E-160^2`), see "SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal"; `=2^-1074` is
-a true 0 (a negative exponent, subnormal-function-results C16).
+subnormal result (`=1E-160^2`), see "SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal"; `=2^-1074` and `=2^-1023` are
+a true 0 (a negative exponent, subnormal-function-results C16, probes/seriessum-subnormal-term-sum-and-power-points B5).
 Per function group (T-0189, VERIFIED, probes/subnormal-function-results, excel-graph 2026-10-06;
 `C` companion cells `(x)=0` tell a true 0 from a kept subnormal, since the saved file, and so the Graph value,
 holds 0 (decision 0089) and
@@ -2513,15 +2513,20 @@ Rule: SERIESSUM flushes both a power `x^(n+i*m)` and a term `c_i*x^(n+i*m)` that
 normal and whose term 1E-310 is subnormal. A subnormal power is flushed before the coefficient multiplies it, not after:
 `SERIESSUM(1E-160,2,0,{1,1E+300})` and `SERIESSUM(1E-160,2,0,{1E+300})` are 0, not 1E-20. A flushed term beside a normal one
 drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200); its second power 1E-400 is 0 in any
-arithmetic, so that cell shows a zero term dropping out, not the flush. This confirms the flush T-3676's Gate A definition
-(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator with a positive integer exponent does not flush:
-`=1E-160^2` keeps the subnormal 1E-320 (`=(1E-160^2)=0` is FALSE) and `=1E-160^2*1E+300` is 9.99988867182683E-21, where
-`POWER(1E-160,2)*1E+300` is 0. A negative exponent still gives a true 0 (`=(SUM(2^-1074))=0` is TRUE, probes/subnormal-function-results
-C16; a negative exponent is one over the positive power, "Division rounds twice", and division flushes): only the positive exponent
-was probed here, so the `^` rule is limited to it, and SERIESSUM's power follows POWER, not `^`.
-Evidence: probes/seriessum-subnormal-power-and-term A1:B17 (excel-graph, 2026-11-03, T-3942).
-Ours: the power matches (every power cell passes); a subnormal term from a normal power is kept (A2, A9; T-3949) and `^` flushes its
-result (B15, A16, B16; T-3950).
+arithmetic, so that cell shows a zero term dropping out, not the flush. The flush is per term, not on the sum: a subnormal term
+beside a normal one is dropped (`SERIESSUM(1E-150,2,0,{1E-10,23000})` is exactly 2.3E-296, where the sum would be
+2.30000000000001E-296; probes/seriessum-subnormal-term-sum-and-power-points A1), and normal terms that cancel to a subnormal sum keep it (`SERIESSUM(1E-150,2,0,{3E-8,-2.99999E-8})`,
+`=0` companion FALSE; seriessum-subnormal-term-sum-and-power-points A2, B2). This confirms the per-term flush T-3676's Gate A definition
+(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator does not flush a positive exponent's result: `=1E-160^2`
+keeps the subnormal 1E-320 (`=(1E-160^2)=0` is FALSE), `=1E-155^2` and `=(1.1E-155)^2` too (seriessum-subnormal-term-sum-and-power-points A3:B4), and `=1E-160^2*1E+300` is
+9.99988867182683E-21, where `POWER(1E-160,2)*1E+300` is 0. A negative exponent gives a true 0 when the result is subnormal:
+`=(2^-1023)=0` is TRUE (seriessum-subnormal-term-sum-and-power-points B5; 2^1023 is finite, so this is a flushed quotient, not an overflow), as is `=(SUM(2^-1074))=0` (probes/subnormal-function-results
+C16, where 2^1074 overflows); `5^-440` (2.839213766779712E-308) is normal. A negative exponent is one over the positive power, and
+division flushes ("Division rounds twice"). Only base 1E-160, 1E-155 and 1.1E-155 with exponent 2 were probed for the positive
+exponent, so the `^` rule is limited to those; SERIESSUM's power follows POWER, not `^`.
+Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
+Ours: the power matches (every power cell passes); a subnormal term beside another term is kept (power-and-term A2, A9 and term-sum A1; T-3949) and `^` flushes
+a positive exponent's result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
 Status: VERIFIED (excel-graph)
 Tasks: T-3942, T-3949, T-3950
 
