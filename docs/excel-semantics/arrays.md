@@ -2413,9 +2413,13 @@ shows up, for TOCOL's and TOROW's array and FILTER's array and include; FILTER c
 before its elements. Only stored cell errors are evidenced; other errors read through a reference (a `#REF!` for a sheet
 index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one-cell error include that fits the
 array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
-still returns the error first.
+still returns the error first. T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
+(spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
+Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): `VSTACK(z,1)` and `HSTACK(z,1)`
+with z bound to a blank cell, via LET or MAP, keep the element blank in the LET form (ISBLANK TRUE, COUNT 0 for VSTACK,
+`&"x"` gives "x") and the engine matches every cell; the MAP form yields #CALC! for the `&` form. HSTACK(LET) COUNT is 1.
 Status: VERIFIED (excel-graph)
-Tasks: T-3506
+Tasks: T-3506, T-3765, T-3887
 
 VSTACK, through a LAMBDA parameter (T-3683): with Data!G5 the text "12" and Data!G9 `#DIV/0!`,
 `SCAN(Data!G5,Data!G9,LAMBDA(x,z,VSTACK(x,z)))` is `#CALC!` (gen-m7/3f368d034700f19e Calc!A2990, excel-graph

@@ -3,7 +3,7 @@ id: T-3887
 title: "VSTACK/HSTACK: probe a variable bound to a blank cell; name T-3765's helpers in arrays.md"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,9 @@ reference, and the engine matches it; docs/excel-semantics/arrays.md names T-376
 
 ## Out of scope
 - Other stacking functions (TOCOL, TOROW, CHOOSECOLS).
+
+## Outcome
+Added probe `probes/t3887-stack-blank-variable` (16 cells, excel-graph oracle): VSTACK/HSTACK of a LET variable and a MAP
+parameter bound to a blank cell. The engine already matched all 16 cells, so no engine change; arrays.md records the
+findings and names T-3765's helpers. The shared-helper fold-in was not needed (no engine change). Eval delta: +16 passing
+probe cells, none failing.

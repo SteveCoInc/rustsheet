@@ -1,0 +1,40 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3887: VSTACK/HSTACK of a LET variable or MAP LAMBDA parameter bound to a one-cell blank reference (D!Z1): ISBLANK, COUNT, &, TYPE of the first element.",
+ "tags": [
+  "M7",
+  "probe",
+  "dynamic-arrays",
+  "T-3887"
+ ],
+ "sheets": [
+  {
+   "name": "P",
+   "cells": {
+    "A1": "=ISBLANK(INDEX(LET(z,D!Z1,VSTACK(z,1)),1))",
+    "A2": "=COUNT(INDEX(LET(z,D!Z1,VSTACK(z,1)),1))",
+    "A3": "=INDEX(LET(z,D!Z1,VSTACK(z,1)),1)&\"x\"",
+    "A4": "=TYPE(INDEX(LET(z,D!Z1,VSTACK(z,1)),1))",
+    "A5": "=ISBLANK(INDEX(MAP(D!Z1,LAMBDA(z,VSTACK(z,1))),1))",
+    "A6": "=COUNT(INDEX(MAP(D!Z1,LAMBDA(z,VSTACK(z,1))),1))",
+    "A7": "=INDEX(MAP(D!Z1,LAMBDA(z,VSTACK(z,1))),1)&\"x\"",
+    "A8": "=TYPE(INDEX(MAP(D!Z1,LAMBDA(z,VSTACK(z,1))),1))",
+    "A9": "=ISBLANK(INDEX(LET(z,D!Z1,HSTACK(z,1)),1))",
+    "A10": "=COUNT(INDEX(LET(z,D!Z1,HSTACK(z,1)),1))",
+    "A11": "=INDEX(LET(z,D!Z1,HSTACK(z,1)),1)&\"x\"",
+    "A12": "=TYPE(INDEX(LET(z,D!Z1,HSTACK(z,1)),1))",
+    "A13": "=ISBLANK(INDEX(MAP(D!Z1,LAMBDA(z,HSTACK(z,1))),1))",
+    "A14": "=COUNT(INDEX(MAP(D!Z1,LAMBDA(z,HSTACK(z,1))),1))",
+    "A15": "=INDEX(MAP(D!Z1,LAMBDA(z,HSTACK(z,1))),1)&\"x\"",
+    "A16": "=TYPE(INDEX(MAP(D!Z1,LAMBDA(z,HSTACK(z,1))),1))"
+   }
+  },
+  {
+   "name": "D",
+   "cells": {
+    "A1": "x"
+   }
+  }
+ ],
+ "expected": {}
+}
