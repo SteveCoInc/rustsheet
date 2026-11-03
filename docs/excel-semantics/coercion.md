@@ -529,6 +529,8 @@ row. VERIFIED for the cells cited:
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
   Plane 3's `𰀀` (U+30000) sorts after `😀` and before Hangul (rank 150), plane 2's `𪜀` (U+2A700)
   after `𠀀` (154).
+The engine fails 181 of the 955 cells (known failures in eval/baseline/probes.txt); engine gap T-3917
+(the Thai and Lao digits stay T-3895's).
 
 ### Script digits in number text (T-3446)
 Evidence: probes/t3446-script-digits-forms (excel-graph, 2026-11-03); formats from the oracle's ENTERED log,
