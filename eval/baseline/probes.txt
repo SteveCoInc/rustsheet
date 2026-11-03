@@ -1844,6 +1844,7 @@ C	probes/t3298-case-mapping-sweep.case.json	193
 C	probes/t3299-date-text-glued-month-3.case.json	363
 C	probes/t3302-text-funcs-arrays.case.json	21
 C	probes/t3304-collation-multi-letter-accents.case.json	1896
+C	probes/t3308-intersection-function-operands.case.json	25
 C	probes/t3317-xlookup-scalar-return.case.json	20
 C	probes/t3334-criteria-operand-forms.case.json	983
 C	probes/t3335-textbefore-overlapping-instances.case.json	78
