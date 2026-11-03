@@ -69,3 +69,23 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
   Excel's 8192-character limit. The long-array edge is now 80 + 160 values and the extreme stratum 10 to 60 values per
   array; the committed table is that second draw.
 - Eval delta: none (no engine change).
+
+## Landing notes
+- PR #2951 (draft), head = the commit that adds these notes. CI had not run on a finished head, and no reviewer has
+  run. The task is still `status: in-progress`.
+- In flight when the window closed: `cd tools && uv run rustsheet-accuracy math --suite probes` (a full run takes 20+
+  minutes) was regenerating the probes math sidecars with the final definitions (subnormal flush included). The
+  sidecars committed on this branch come partly from an earlier run of the pre-flush definitions, so they are not
+  trustworthy. Next steps:
+  1. Rerun `math --suite probes` and then `math --suite probes-numeric`. The probes-numeric run so far used the
+     pre-flush definitions; its committed changes are `double-rounding-ops` and `double-rounding-range-edges`.
+  2. Keep only the sidecar changes in cells that call PRODUCT, SUMSQ, SERIESSUM or PERCENTOF. Revert the other
+     rewrites: t1538/t1543/t2586/t3350/t3443 (F.DIST, BETA.INV, CHISQ.INV, basym) and irr-guess-edges are solver-load
+     or other-definition churn, as T-3675 also found. T-3675's triage script idea works: diff each `*.math.json`
+     against HEAD and classify the changed cells by formula.
+  3. Compare every new or changed cell for these four functions against its `*.oracle.json`. With the flush, the
+     8 subnormal cells (subnormal-function-results A9, A10, A66, A68; subnormal-flush-edges A1, A4;
+     subnormal-sumsq-sumproduct-edges A1, A8) should now agree.
+  4. `make eval-math-check` and `make check-fast`, then mark done, run the review panel and fill the PR's review table.
+- Do not repeat: PERCENTOF's first s1 draw wrote formulas over Excel's 8192-character limit (excel-graph 501
+  "unsupportedWorkbook"). The draw caps fix that, and the committed table is the second draw.
