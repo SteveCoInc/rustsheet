@@ -3,7 +3,7 @@ id: T-3893
 title: "PIVOTBY: row sort by an error-holding values column, and a blank relative_to's header text"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
