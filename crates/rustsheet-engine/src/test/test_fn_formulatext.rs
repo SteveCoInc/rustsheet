@@ -116,6 +116,9 @@ fn test_sign_prefixed() {
         model._set(cell, input);
         assert_eq!(model._get_formula(cell), *"", "{input}");
     }
+    // Typed `-%1.5` shares VALUE's reader: the number -0.015, no formula (T-3742).
+    model._set("A12", "-%1.5");
+    assert_eq!(model._get_formula("A12"), *"");
 
     model._set("A7", "-B");
     assert_eq!(model._get_formula("A7"), *"=-B");
@@ -129,6 +132,7 @@ fn test_sign_prefixed() {
     assert_eq!(model._get_text("A5"), *"-42");
     assert_eq!(model._get_text("A6"), *"42");
     assert_eq!(model._get_text("A7"), *"#NAME?");
+    assert_eq!(model._get_text("A12"), *"-1.50%");
 }
 
 #[test]

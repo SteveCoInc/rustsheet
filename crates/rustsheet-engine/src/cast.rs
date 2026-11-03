@@ -276,6 +276,7 @@ impl Model {
     /// Whether the text after a typed leading sign reads as a number, which keeps `-200$` a
     /// number rather than a formula. Coercion refuses a trailing `$` ([`number_text_in`]), typed
     /// input does not (unprobed, T-3835).
+    /// Script digits are not read here, as typed input reads none (TODO(T-3891)).
     pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
         let trailing_dollar = ends_with_dollar(s)
             && parse_formatted_number(
@@ -289,11 +290,6 @@ impl Model {
         trailing_dollar || self.cast_number_in(s, &|| None).is_some()
     }
 
-    pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {
-        self.cast_number_in(s, &|| self.current_year())
-    }
-
-    /// [`Model::cast_number`] with year-less date text read in `current_year`.
     /// The currency symbols number-text coercion reads: `$`, `€` and the locale's own.
     fn coercion_currencies(&self) -> Vec<&str> {
         let currency = self.locale.currency.symbol.as_str();
@@ -304,6 +300,11 @@ impl Model {
         currencies
     }
 
+    pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {
+        self.cast_number_in(s, &|| self.current_year())
+    }
+
+    /// [`Model::cast_number`] with year-less date text read in `current_year`.
     pub(crate) fn cast_number_in(&self, s: &str, current_year: CurrentYear) -> Option<f64> {
         if number_text_too_long(s) {
             return None;
@@ -314,6 +315,8 @@ impl Model {
                 let currencies = self.coercion_currencies();
                 self.parse_number_text(s, &currencies, current_year)
                     .or_else(|| {
+                        // Not `coercion_currencies`: the mixed-fraction grammar reads `$` and `€`
+                        // only, not the locale's own symbol (unchanged here).
                         mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])
                     })
             }
