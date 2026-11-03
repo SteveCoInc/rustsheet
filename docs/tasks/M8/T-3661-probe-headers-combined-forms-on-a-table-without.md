@@ -3,7 +3,7 @@ id: T-3661
 title: "Probe [#Headers] combined forms on a table without a header row"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
