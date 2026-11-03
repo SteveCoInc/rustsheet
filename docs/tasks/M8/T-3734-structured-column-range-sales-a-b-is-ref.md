@@ -40,5 +40,5 @@ Code: stringify/structured.rs `deleted_column`.
 `RangeEnd` variant is gone. Eval: 7 probe cells newly pass and left `eval/baseline/probes.txt`
 (delete-end F!A1-A3, delete-start F!A2, delete-both-ends-separate F!A1-A3). The plain-range cells
 F!A4/F!A5 of these probes (`S!C4:D7` shrinking to `S!C4:C7` after a one-column delete) still fail:
-they need the plain-range column-delete shrink of T-2851, which lists them, so they stay in the
+they need the plain-range column-delete shrink, filed as T-3978 with the oracle evidence (T-2851 does not list them), so they stay in the
 baseline and are not part of this change.
