@@ -3,7 +3,7 @@ id: T-3746
 title: "NUMBERVALUE with NBSP or U+3000 as a separator at the start or end of the text"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
