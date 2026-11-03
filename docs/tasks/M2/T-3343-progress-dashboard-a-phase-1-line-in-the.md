@@ -35,7 +35,7 @@ whole exit.
 reads it via `--phase1-exit` (missing file: the line says "not measured"). Test pins `met`, `not met` and missing.
 No eval delta (tooling only).
 
-## Handoff
+## Handoff (resumed)
 Implemented and green locally (`make check-fast`, both reviewers APPROVE at 7397485; PR #2972): `goals.phase1_exit_line`
 plus `--phase1-exit` option in `tools/.../progress_report/`, tests in `tools/tests/test_progress_goals.py`.
 CI `hygiene` fails: `scripts/check_governance.py` says `Makefile` is a protected path changed without a decision
