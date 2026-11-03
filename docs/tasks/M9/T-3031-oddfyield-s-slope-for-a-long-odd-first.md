@@ -111,7 +111,7 @@ ODDFPRICE's root"). A short first period, and a long one with the settlement in 
 - Eval delta: +73 cells (13 PRICE_YIELD, 60 oddf-date-order-domain-sweep); new case t3031-r4-oddfyield-long-first
   (157 of 160).
 
-## Landing notes
+## Landing notes (resumed 2026-11-04 by an opus run)
 - PR #3046 (draft), head before these notes d549ee3b9 (a docs-only conflict merge of origin/main onto 0ac4b487b).
   CI was pending at the time of writing. Review round 1 on 0ac4b487b: reviewer-security APPROVE, reviewer-design
   APPROVE (MINOR only), reviewer-excel-fidelity REQUEST_CHANGES. The code needs no change; two evidence items are
