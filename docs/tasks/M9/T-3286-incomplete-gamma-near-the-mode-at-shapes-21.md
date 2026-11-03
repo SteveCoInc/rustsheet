@@ -70,7 +70,7 @@ Cells this task owns:
 ## Out of scope
 - Where Excel's large-shape ratio form starts (T-3252, T-3270). The deep upper tail (T-3269). Shapes 1.5 and 2.5 (T-3285).
 
-## Landing notes
+## Landing notes (resumed 2026-11-03 by an opus run)
 - State (2026-11-03, session window closed): WIP on branch agent/functions-stat/T-3286-near-mode-temme, draft PR. Not
   reviewed. `make check-fast` not run; `cargo test -p rustsheet_engine --lib incomplete_gamma` passes with the
   measuring test below (it prints, it does not yet assert the 1-ulp bound).
