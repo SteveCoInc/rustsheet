@@ -403,7 +403,7 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
   45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; clock-first shapes beyond that are in "Typed clock-first date-times" below (T-3852); mixed-separator typed formats in day-first locales stay unprobed. `CELL("format", ...)` is #VALUE! on excel-graph.
 - **Typed clock-first date-times** (T-3852; probes/date-text-typed-clock-first-shapes A1-A45 (rows A35, A36 moved to probes/date-text-typed-clock-first-a-period, below), excel-graph 2026-11-03; formats
-  from docs/research/typed-clock-first-shapes-2026-11-03.md and the oracle fill log): a clock typed before a date is a number
+  from docs/research/typed-clock-first-shapes-2026-11-03.md, which also lists A34-A45 and the a-period rows): a clock typed before a date is a number
   whenever the same clock after the date would be (one probed exception, `A.`, below), and takes the clock's format: `m/d/yyyy h:mm` for `10 AM`, `10:00 AM/PM`, one-digit hours, seconds
   (`10:00:30`), `mm:ss.0` for a fractional second (`10:00:30.5`; `10:00.5` reads as M:SS.f, 10 minutes 0.5 seconds, 45839.0069502315), General for an out-of-range component (`24:00` is
   45840, `10:60` is 45839.4583333333). Any date the readers accept may follow: month-name (`July 1, 2025`, `1-Jul-2025`,

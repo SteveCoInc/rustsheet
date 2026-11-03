@@ -41,4 +41,26 @@ ENTERED S!A32 '10:00:30 AM 7/1/2025': values=[[45839.4170138889]] numberFormat=[
 ENTERED S!A33 '10:00 7/1/2025  ': values=[[45839.4166666667]] numberFormat=[['m/d/yyyy h:mm']]
 ```
 
+Rows A34-A45 (T-3852 resume) and probes/date-text-typed-clock-first-a-period A1, A2: formats read from the cell
+styles of the excel-graph recalculated workbook (eval/.cache/oracle, the sidecars' input_sha256; built-in id 22 is
+`m/d/yyyy h:mm` (openpyxl spells it `m/d/yy h:mm`) and id 47 is `mm:ss.0`). The fill log printed the same formats for
+A34, A35, A36, A43, A44 and A45.
+
+```
+A34 '10 A 7/1/2025'           45839.4166666667  id 22 m/d/yyyy h:mm
+A37 '99:00 7/1/2025'          45843.125         General
+A38 '10:99 7/1/2025'          45839.4854166667  General
+A39 '10:00:30.5 AM 7/1/2025'  45839.4170196759  id 47 mm:ss.0
+A40 '0 AM 7/1/2025'           45839             id 22 m/d/yyyy h:mm
+A41 '12 PM 7/1/2025'          45839.5           id 22 m/d/yyyy h:mm
+A42 '10:00 2025/7/1'          45839.4166666667  id 22 m/d/yyyy h:mm
+A43 '10:00 Jul-25'            2026-07-25 10:00  id 22 m/d/yyyy h:mm (year-less: current year)
+A44 '10:00 1-Jul'             2026-07-01 10:00  id 22 m/d/yyyy h:mm
+A45 '10 AM 7/1'               2026-07-01 10:00  id 22 m/d/yyyy h:mm
+a-period A1 '10 A. 7/1/2025'     95368.2763275463   id 47 mm:ss.0 (2161-02-07 06:37:54.7)
+a-period A2 '10:00 A. 7/1/2025'  95368.68604976853  id 47 mm:ss.0 (2161-02-07 16:27:54.7)
+```
+
+The a-period values were the same in each of the three fills on 2026-11-03.
+
 A1-A22 come from the first fill (A14's value is year-dependent there: the case was then changed so C14 reads month, day and time only, and refilled); A23-A33 were added after the fidelity review and filled the same day.

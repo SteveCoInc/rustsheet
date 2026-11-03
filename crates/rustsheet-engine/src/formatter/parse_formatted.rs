@@ -201,7 +201,7 @@ impl TypedClock {
 /// a number whose format follows the clock like a clock typed after the date, `m/d/yyyy h:mm`
 /// except a fractional second (`mm:ss.0`) and an out-of-range component (General). Whatever date
 /// shape the reader accepts may follow, with extra spaces around it, and a year-less date takes
-/// the current year (probes/date-text-typed-clock-first-shapes A1-A22, excel-graph 2026-11-03;
+/// the current year (probes/date-text-typed-clock-first-shapes A1-A45, excel-graph 2026-11-03;
 /// docs/excel-semantics/dates.md "Typed clock-first date-times"). A leading space keeps it text
 /// (probes/date-text-mixed-separator-typed A8, A9).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
