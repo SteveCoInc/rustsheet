@@ -261,17 +261,17 @@ impl Model {
         node: &Node,
         cell: CellReferenceIndex,
     ) -> Result<Vec<String>, (CalcResult, bool)> {
-        let value = self.evaluate_node_in_context(node, cell);
+        // One evaluation, in reference context, tells both the value and whether the delimiter
+        // was a reference (`B1`, `B1:B2`, `IF(TRUE,B1)`, `INDEX(B1:B2,1)`); evaluating it again
+        // on the error path would double the work at every nested TEXTJOIN delimiter.
+        let delimiter = self.evaluate_reference_arg(node, cell);
+        let is_reference = matches!(delimiter, RefArg::Ranges(_));
+        let value = delimiter.into_single_area(cell);
         if matches!(value, CalcResult::Lambda(_)) {
             return Err((lambda_text_error(cell), false));
         }
-        self.textjoin_delimiter_list(value, cell).map_err(|error| {
-            // A value context reads a single-cell reference as its value, so only a rare error
-            // pays for asking the reference context whether the delimiter was a reference
-            // (`B1`, `B1:B2`, `IF(TRUE,B1)`, `INDEX(B1:B2,1)`).
-            let is_reference = matches!(self.evaluate_reference_arg(node, cell), RefArg::Ranges(_));
-            (error, is_reference)
-        })
+        self.textjoin_delimiter_list(value, cell)
+            .map_err(|error| (error, is_reference))
     }
 
     /// The delimiter list of an evaluated TEXTJOIN delimiter ([`Self::textjoin_delimiters`]).

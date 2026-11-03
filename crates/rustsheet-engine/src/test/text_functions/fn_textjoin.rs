@@ -244,3 +244,18 @@ fn error_delimiter_with_text_ignore_empty() {
     }
     assert_eq!(model._get_text("A11"), *"#N/A");
 }
+
+/// A nested error delimiter is evaluated once per level: 30 levels of
+/// `TEXTJOIN(TEXTJOIN(...(1/0,1,"a")...),1,"a")` keep the innermost `#DIV/0!` within the evaluation
+/// budget (T-3885 review).
+#[test]
+fn nested_error_delimiters_are_evaluated_once() {
+    let mut model = new_empty_model();
+    let mut formula = "1/0".to_string();
+    for _ in 0..30 {
+        formula = format!("TEXTJOIN({formula},1,\"a\")");
+    }
+    model._set("A1", &format!("={formula}"));
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"#DIV/0!");
+}

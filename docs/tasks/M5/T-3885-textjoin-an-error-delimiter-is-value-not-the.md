@@ -54,8 +54,12 @@ a range, IF or INDEX returning one) Excel reads ignore_empty first: text is `#VA
 its own error (`<#DIV/0! cell>,<#N/A cell>` is `#N/A`); with an error *value* (literal, `1/0`, `NA()`,
 VLOOKUP) the delimiter's error always wins, which is why gen-m5/1d22a002d4f380b3 A274 stays `#N/A`.
 Error kind and whether ignore_empty is a reference or computed do not matter.
-`Model::textjoin_delimiters` now reports, for an error only, whether the delimiter was a reference
-(`evaluate_reference_arg`), and `fn_textjoin` lets ignore_empty's cast error win only then. Rule in
+`Model::textjoin_delimiters` now evaluates the delimiter once in reference context
+(`evaluate_reference_arg`, as the texts are read), so it knows both the value and whether it was a reference,
+and `fn_textjoin` lets ignore_empty's cast error win only for a reference. Review round 1 (excel-fidelity) found
+that round 1's second evaluation on the error path doubled the work at each nested TEXTJOIN delimiter (2^depth;
+`#VALUE!` from the evaluation budget at depth 24). Test `nested_error_delimiters_are_evaluated_once` (depth 30) covers it.
+Follow-up: T-3909 (lifted ignore_empty with a reference error delimiter, unprobed). Rule in
 docs/excel-semantics/text.md "TEXTJOIN: ignore_empty is read before a reference delimiter's error".
 Eval delta: gen-m5/d0c5e5dff134d787 Calc!A310, A316, A322 leave the baseline (-3 known failures);
 the new probe passes 136/136; no regression.
