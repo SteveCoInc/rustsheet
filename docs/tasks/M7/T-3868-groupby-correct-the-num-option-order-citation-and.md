@@ -3,7 +3,7 @@ id: T-3868
 title: "GROUPBY: correct the #NUM! option-order citation and a same-height test comment from T-3837"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
