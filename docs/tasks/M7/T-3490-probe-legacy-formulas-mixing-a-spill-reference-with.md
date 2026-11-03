@@ -3,7 +3,7 @@ id: T-3490
 title: "Probe legacy formulas mixing a spill reference with a plain range, a bare spill reference and a scalar host"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
