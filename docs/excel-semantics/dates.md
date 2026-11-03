@@ -456,8 +456,20 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   `1:2:3:4 A. 5`, `10:00:00 P. 5`, `1:2:3 A. 5`, `010 A. 5` (a leading zero), `00010:00 A. 5`, `10: A. 5` and
   `:10 A. 5`. `10 A. 05` is 0.05 s. `10 A.  ` (spaces after the period, nothing else) is 10 AM, typed too. The odd one:
   typed `10 A. 5:30` is the number 2982616.579230324, 60 x (2^32 - 22) s + 10 h + 5.5 s, read the same by VALUE and
-  `0+` (DATEVALUE 2982616, TIMEVALUE 0.5792303238995373; TEXT with a date format is #VALUE!); undecoded, the engine
-  leaves it text (T-3957).
+  `0+` (DATEVALUE 2982616, TIMEVALUE 0.5792303238995373; TEXT with a date format is #VALUE!).
+  Decoded by T-3957 (probes/t3957-letter-period-colon-tail A1-H24, excel-graph 2026-11-03): a colon after the
+  period's digits, `N A. F:G`, moves every unit up one place. The word's constant counts in minutes (60 x (2^32 - 22) s
+  for `A`, 60 s more for `P`, row 6), the clock `N` in hours (`0 A. 5:30` adds 5.5 s only, row 13), and `F` is read
+  twice, as whole seconds and as the fraction, like the `f` of `H:M.f:S` clock text: `5:30` adds 5.5 s, `7:30` 7.7 s,
+  `05:30` 5.05 s, `12:00` 12.12 s, `0:30` and `0:0` nothing (rows 4, 14-18). `G` is read and ignored (`5:0`, `5:3`,
+  `5:59`, `5:60` all equal `5:30`, rows 1-3, 15). A trailing space or no space after the period is accepted (rows 23,
+  24), and a date after a space adds its serial (`10 A. 5:30 7/1/2025` is 45839 more, row 8). These stay text and are
+  #VALUE! to the readers: an `H:M` clock (`10:00 A. 5:30`, `1:2 A. 5:30`), `24 A. 5:30`, a second colon
+  (`5:30:15`), a fraction after `G` (`5:30.5`) and `100:30` (rows 5, 7, 19-22). DATEVALUE of letter-period text is not
+  range-checked: 2982616 is past 9999-12-31. Unprobed, kept text by the engine: `F` or `G` of three digits or more
+  other than `100:30`, and a `/` or `-` right after `G`.
+  The any-tail gate holds on T-3948's review neighbours: `10 a.m.`, `10:00 a.m.`, `10 A. x` and `10 A. 5x 7/1/2025`
+  stay text (rows 9-12). Implemented in `colon_tail_parts` (crates/rustsheet-engine/src/formatter/date_clock.rs).
   Where -22 comes from is unknown.
   Status: the engine matches every probed cell (T-3907, T-3920) but t3920-typed-a-period-1904 G6 (T-3944).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2

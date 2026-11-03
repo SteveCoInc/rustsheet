@@ -332,4 +332,6 @@ fn empty_text_section_is_empty() {
     assert_eq!(format_text_value("x", "4;b").text, "x");
     assert_eq!(format_text_value("x", "0;0;General").text, "x");
     assert_eq!(format_text_value("x", "0;0;0;").text, "");
+    assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
+    assert_eq!(format_text_value("abc", "0;").text, "abc");
 }
