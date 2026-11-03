@@ -50,3 +50,4 @@ as `tm` with a variant weight. The primary bases moved up to make room for the s
 Unit test `t3276_other_scripts`. The unprobed choices are listed in docs/excel-semantics/coercion.md.
 Eval delta: probes known failures 3865 -> 3764 (101 fixed, all
 probes/t3276-collation-other-scripts, now 643/643), 0 regressions in every suite.
+Follow-up: T-3917 orders the blocks T-3559 probed (probes/t3559-collation-unprobed-blocks) in `element`.
