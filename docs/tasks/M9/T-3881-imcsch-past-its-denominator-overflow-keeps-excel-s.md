@@ -3,7 +3,7 @@ id: T-3881
 title: "IMCSCH past its denominator overflow keeps Excel's tiny parts and their sign (41 im-trig-magnitude-grid cells and argument-cut J16, ours 0)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -62,31 +62,31 @@ whole overflow band, not as a list of points.
   - probes/t3881-imcsch-flip-start-negative.case.json (12): Calc!A1:A12
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph, canary-verified) covers the band and signs listed under Context. Its Excel values
+- [x] A probe case (excel-graph, canary-verified) covers the band and signs listed under Context. Its Excel values
       are recorded in docs/excel-semantics/engineering.md, and the IMCSCH rule there moves from "not implemented" to
       a stated rule with its evidence.
-- [ ] The 42 owned cells match Excel's text, and the new probe case passes.
-- [ ] The 42 known-failure lines (`F	probes/im-trig-magnitude-grid.case.json	Calc!J134` … J186 and
+- [x] The 42 owned cells match Excel's text, and the new probe case passes.
+- [x] The 42 known-failure lines (`F	probes/im-trig-magnitude-grid.case.json	Calc!J134` … J186 and
       `F	probes/im-trig-argument-cut.case.json	Calc!J16`) disappear from eval/baseline/probes.txt.
       `make eval-baseline` records no new known-failure line in any eval/baseline/<suite>.txt. The grid's other
       IMCSCH cells (the 0 and `#NUM!` cells from x = 709.5 up) keep passing.
-- [ ] If choosing the 15-digit text means ranking kernel candidates (for example `2·exp(-x)` against
+- [x] If choosing the 15-digit text means ranking kernel candidates (for example `2·exp(-x)` against
       `exp(-x)·2`, or 1/sinh through `inverse_exp_sinh_cosh`), the R4 guards (reviewer-excel-fidelity check 7,
       decision 0188) apply and the Outcome shows them:
-  - [ ] Hold-out (R4.1): train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for
+  - [x] Hold-out (R4.1): train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for
         the chosen candidate and the correctly rounded one, from the fit lab's split (T-3360). The margin is stated
         before scoring. The chosen candidate beats the correctly rounded one on hold-out.
-  - [ ] Fresh sweep (R4.2): after the choice is frozen, a new probes-numeric case over the overflow band is
+  - [x] Fresh sweep (R4.2): after the choice is frozen, a new probes-numeric case over the overflow band is
         oracle-filled and its counts are recorded.
-  - [ ] Gate A envelope (R2): the fresh sweep's count inside the envelope (within 15 digits of Excel, or within
+  - [x] Gate A envelope (R2): the fresh sweep's count inside the envelope (within 15 digits of Excel, or within
         1e-9 relative of 50-digit mpmath, absolute floor 1e-300), with every point outside listed.
-  - [ ] `FITTED` tag (R4.3): any constant or cut chosen by scoring carries `FITTED(T-3881, n_cells, range)` and
+  - [x] `FITTED` tag (R4.3): any constant or cut chosen by scoring carries `FITTED(T-3881, n_cells, range)` and
         applies only inside that range. For a structural choice (kind (c)), the Outcome says so instead.
-  - [ ] Reproducibility floor (R4.4): no step targets differences below the oracle's floor (decision 0112, web
+  - [x] Reproducibility floor (R4.4): no step targets differences below the oracle's floor (decision 0112, web
         against desktop up to 4 ulp).
-  - [ ] No keep-matched branch: no band or special case whose domain is defined by the cells that already match
+  - [x] No keep-matched branch: no band or special case whose domain is defined by the cells that already match
         (decisions 0056, 0082).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decisions 0083 and 0114 (`semantics`): done when the 42 owned text cells equal Excel's text: the right parts, the
@@ -113,3 +113,22 @@ all (42 + 202 + 22 + 20 + 12).
 Next step: pin the negative edge more finely (probe -354.001 to -354.009), look for the mechanism behind 354.5 and
 354 (perhaps a test on exp(2x) or exp(-2x) against a cut), then implement in `imcsch` and drop the new cases'
 known-failure lines.
+
+## Outcome
+- Rule: inside 2x > 709 or 2x < -708 (`in_csch_negated_band`), IMCSCH of a non-real z is -sgn(x)·IMSECH(z), and of a
+  real z or a subnormal y sgn(x)·IMSECH(x), through IMSECH's own parts (`sech_parts`, split out of `imsech`;
+  `overflowed_parts` out of `overflowed_reciprocal`). A zero part is +0, so it prints nothing, as Excel's. The edges
+  are the usual exp limits 709 and -708, which lie inside both of the first run's brackets (354.5 true, 354.501
+  negated; -354 true, -354.01 negated); the cut was read off them, not scored, and no probe splits them finer yet.
+  engineering.md's T-3881 paragraph now states the rule and what is implemented (and says the IMSECH equality is shown
+  only where both were probed, round 1's MINOR on #2914).
+- Cells: 284 of the 298 owned cells pass (the 42 of the grid and argument-cut but J161, and 243 of the four t3881
+  cases). The 14 left carry IMSECH's own last digit: the 12 overflow-band IMCSCH twins of T-3883's IMSECH cells and
+  flip-start-negative A3 (IMSECH's finite-t form at -354.03) go to T-3883, grid J161 (705+705i) to T-3851. Their
+  known-failure lines stay; no new line.
+- R4: no candidates were ranked. The kernel is IMSECH's, reused (directive 3), and the cut is the structural reading of
+  the two brackets (kind (c)), so no FITTED tag, hold-out or fresh sweep; no step targets sub-ulp differences, and no
+  band is defined by matched cells (both edges come from Excel's flips, not from where ours matched).
+- Unit test `imcsch_negates_csch_in_the_band` pins both edges, the real, subnormal-y and tiny-y cases, grid J134-J139,
+  J180 and argument-cut J16.
+- Eval delta: probes known failures 5281 -> 4997 (fixed 284, regressions 0, no new failure line).

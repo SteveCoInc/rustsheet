@@ -290,14 +290,31 @@ fn trig_tan(x: f64) -> f64 {
 /// 1.73046857535442E-228-2.53533899849465E-228i (probes-numeric im-last-digit-sweep E55:F55,
 /// K42:L42). Past |v| ≈ 708 the parts are subnormal and print as 0 (`IMSEC("1.5+711i")`).
 fn overflowed_reciprocal(re: f64, im: f64, v: f64, suffix: Suffix) -> CalcResult {
+    let (re, im) = overflowed_parts(re, im, v);
+    complex_result(re, im, suffix)
+}
+
+/// The parts of [`overflowed_reciprocal`].
+fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
     let scale = 2.0 * (-v.abs()).exp();
-    complex_result(re * scale, im * scale, suffix)
+    (re * scale, im * scale)
+}
+
+/// IMCSCH's band of large |x| where Excel's result for a non-real z is the negation of csch z,
+/// -sgn(x)·IMSECH(z) digit for digit, and a real z (y = 0 or subnormal) is sgn(x)·IMSECH(x):
+/// 2x above 709 or below -708, the limits of a test on exp(2x) (engineering.md "IMCSCH's negated
+/// band", T-3881). Excel brackets both edges: `IMCSCH(COMPLEX(354.5,1))` is
+/// 1.19199101546952E-154-1.85641601521147E-154i, the true csch, and `(354.501,1)` is negated;
+/// `(-354,1)` is true and `(-354.01,1)` negated (probes/t3881-imcsch-flip-start,
+/// -flip-start-negative, -band-edge, excel-graph).
+fn in_csch_negated_band(x: f64) -> bool {
+    2.0 * x > 709.0 || 2.0 * x < -708.0
 }
 
 /// The result of a reciprocal (IMCSCH) whose denominator `t` overflowed to
 /// infinity or NaN: Excel answers `0` where `inf / inf` is NaN. A zero or finite `t` is not this
 /// case and stays an error. Example: `IMCSCH("710.4+0i")` (probes/eng-im-overflow-edges A64).
-/// Whether IMCSCH keeps normal tiny parts as IMSECH does (`overflowed_reciprocal`) is unprobed.
+/// Inside [`in_csch_negated_band`] IMCSCH does not get here: it keeps IMSECH's tiny parts.
 fn reciprocal_result(x: f64, y: f64, t: f64, suffix: Suffix) -> CalcResult {
     if !t.is_finite() && (x.is_nan() || y.is_nan()) {
         return complex_result(0.0, 0.0, suffix);
@@ -415,6 +432,17 @@ pub(super) fn imcsch((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
     if past_trig_limit(y) && !reciprocal_flushes(x) {
         return num_error(cell);
     }
+    if in_csch_negated_band(x) {
+        // A subnormal y counts as real: `IMCSCH(COMPLEX(700,1E-308))` is 1.97193530875195E-304,
+        // as (700,0), while (700,1E-300) is -1.97193530875195E-304 (t3881-imcsch-overflow-band).
+        let real = y.abs() < f64::MIN_POSITIVE;
+        let sign = if real { x.signum() } else { -x.signum() };
+        return match sech_parts(x, if real { 0.0 } else { y }) {
+            // + 0.0 turns a negated zero part back into +0, which prints as Excel's 0.
+            Some((re, im)) => complex_result(sign * re + 0.0, sign * im + 0.0, suffix),
+            None => num_error(cell),
+        };
+    }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
     let t = x_sinh * x_sinh + y_sin * y_sin;
@@ -465,6 +493,14 @@ pub(super) fn imsec((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 /// The unfused sum (T-2044) misses only `IMSECH("1.34384-77.6742i")`, whose imaginary part Excel
 /// prints as ...306336 (J34; exact 0.37667538230633553); fusing cos²y instead also misses it.
 pub(super) fn imsech((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
+    match sech_parts(x, y) {
+        Some((re, im)) => complex_result(re, im, suffix),
+        None => num_error(cell),
+    }
+}
+
+/// The parts of [`imsech`], `None` where it is `#NUM!`.
+fn sech_parts(x: f64, y: f64) -> Option<(f64, f64)> {
     let (x_sinh, x_cosh) = inverse_exp_sinh_cosh(x);
     if y == 0.0 {
         // At |x| <= `INVERSE_EXP_LOW` a real IMSECH is 1 over libm's cosh, not over the `1/u`
@@ -476,18 +512,18 @@ pub(super) fn imsech((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
         } else {
             x_cosh
         };
-        return complex_result(1.0 / cosh, 0.0, suffix);
+        return Some((1.0 / cosh, 0.0));
     }
     if past_trig_limit(y) && !reciprocal_flushes(x) {
-        return num_error(cell);
+        return None;
     }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
     let t = x_sinh.mul_add(x_sinh, y_cos * y_cos);
     if !t.is_finite() {
-        return overflowed_reciprocal(y_cos, -y_sin * x.signum(), x, suffix);
+        return Some(overflowed_parts(y_cos, -y_sin * x.signum(), x));
     }
-    complex_result(x_cosh * y_cos / t, -x_sinh * y_sin / t, suffix)
+    Some((x_cosh * y_cos / t, -x_sinh * y_sin / t))
 }
 
 pub(super) fn imsin((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
@@ -699,5 +735,36 @@ mod tests {
             imcos((0.5, -708.396_419, Suffix::I), cell),
             CalcResult::Error { .. }
         ));
+    }
+
+    // IMCSCH's negated band (T-3881; probes/t3881-imcsch-flip-start, -flip-start-negative,
+    // -overflow-band, im-trig-magnitude-grid J134:J180 and im-trig-argument-cut J16, excel-graph):
+    // past 2x = 709 or below 2x = -708 a non-real z gives -csch z, a real or subnormal-y z the true
+    // sign, and a part below the smallest normal double prints nothing.
+    #[test]
+    fn imcsch_negates_csch_in_the_band() {
+        for (x, y, excel) in [
+            (354.5, 1.0, "1.19199101546952E-154-1.85641601521147E-154i"),
+            (
+                354.501,
+                1.0,
+                "-1.19079962025097E-154+1.85456052709499E-154i",
+            ),
+            (-354.0, 1.0, "-1.96526094168804E-154-3.06071257154752E-154i"),
+            (-354.01, 1.0, "1.945706268592E-154+3.03025797261464E-154i"),
+            (-354.01, 0.0, "-3.60114374390037E-154"),
+            (700.0, 0.0, "1.97193530875195E-304"),
+            (700.0, 1e-308, "1.97193530875195E-304"),
+            (700.0, 1e-300, "-1.97193530875195E-304"),
+            (700.0, 1.0, "-1.06544119434148E-304+1.65932634623297E-304i"),
+            (709.0, 705.0, "2.33364281104964E-308i"),
+            (
+                700.0,
+                134_217_727.0,
+                "5.78542952153839E-305-1.88515699993814E-304i",
+            ),
+        ] {
+            assert_eq!(text(imcsch, x, y), excel, "IMCSCH(COMPLEX({x},{y}))");
+        }
     }
 }
