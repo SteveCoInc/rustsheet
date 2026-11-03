@@ -3,7 +3,7 @@ id: T-3957
 title: "Decode Excel's typed '10 A. 5:30' (2982616.579, 60 x (2^32-22) s + 10 h + 5.5 s): a colon in the letter-period tail"
 milestone: M6
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,8 +26,21 @@ typed and through the four readers, decode it, then implement it in `date_clock:
 leaves the text a string, and the readers give #VALUE!, via `is_letter_period_shape`).
 
 ## Acceptance criteria
-- [ ] A sweep case decodes the colon tail; probes/t3948-letter-period-gate-edges B10:H10 pass, or dates.md records why not with evidence.
+- [x] A sweep case decodes the colon tail; probes/t3948-letter-period-gate-edges B10:H10 pass, or dates.md records why not with evidence.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- New probe probes/t3957-letter-period-colon-tail (24 rows A-H, 168 cells, excel-graph 2026-11-03). Decoded: with a
+  colon after the period's digits (`N A. F:G`) every unit moves up one place. The word's constant counts in minutes
+  (60 x (2^32 - 22) s, `P` 60 s more), the clock `N` in hours, and `F` once as whole seconds and once as the fraction;
+  `G` is ignored. A date after a space adds its serial. An `H:M` clock, `N` from 24, a second colon, a fraction after
+  `G` and `100:30` stay text. The any-tail gate holds on `10 a.m.`, `10:00 a.m.`, `10 A. x`, `10 A. 5x 7/1/2025`.
+- Engine: `colon_tail_parts` in formatter/date_clock.rs (reusing `fraction_as_seconds`); DATEVALUE no longer
+  range-checks the letter-period day (Excel's 2982616 is past 9999-12-31).
+- dates.md "Typed clock-first date-times" records the rule and the unprobed neighbours (F or G of three digits or
+  more, `/` or `-` after G: kept text).
+- Eval delta, `make eval-check`: probes known failures 4641 -> 4634 (fixed 7: t3948-letter-period-gate-edges B10:H10),
+  1 new case, all 168 of its cells passing, REGRESSIONS 0 in every suite.

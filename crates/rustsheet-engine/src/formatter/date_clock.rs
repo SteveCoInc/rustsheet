@@ -200,6 +200,9 @@ fn letter_period_parts(
         return None;
     }
     let (fraction, tail) = rest.split_at(digits);
+    if let Some(after_colon) = tail.strip_prefix(':') {
+        return colon_tail_parts(clock, is_pm, fraction, after_colon, locale, current_year);
+    }
     let tail = tail.trim_end_matches(' ');
     let days = if tail.is_empty() {
         None
@@ -211,6 +214,43 @@ fn letter_period_parts(
     // Below 2^53 ms, so exact, and divided as `parse_clock_text` divides.
     let total_ms = whole * 1000 + u64::from(fraction_digits_to_ms(fraction));
     Some((days, total_ms as f64 / 1000.0 / SECONDS_PER_DAY_F64))
+}
+
+/// `N A. F:G[ DATE]`, a colon after the letter-period digits: every unit moves up one place. The
+/// word's constant counts in minutes (60 x (2^32 - 22) s for `A`, 60 s more for `P`), the clock `N`
+/// in hours, and the digits `F` once as whole seconds and once as the fraction
+/// ([`fraction_as_seconds`]); `G` is read and ignored. So `10 A. 5:30` is 60 x (2^32 - 22) s plus
+/// 10 h and 5.5 s (2982616.579230324), `05:30` adds 5.05 s and `12:00` 12.12 s, and a date after a space
+/// adds its serial (probes/t3957-letter-period-colon-tail rows 1-4, 6, 8, 13-18, 23, 24;
+/// docs/excel-semantics/dates.md "Typed clock-first date-times"). These stay text: an `H:M` clock
+/// or `N` from 24 (rows 5, 20, 21), a second colon or a fraction after `G` (rows 7, 22) and `F` of
+/// three digits (row 19). `F` and `G` past two digits are unprobed beyond `100:30` and kept text.
+fn colon_tail_parts(
+    clock: &str,
+    is_pm: bool,
+    fraction: &str,
+    after_colon: &str,
+    locale: &Locale,
+    current_year: CurrentYear,
+) -> Option<(Option<i32>, f64)> {
+    let hour =
+        Some(parse_clock_component(clock)?).filter(|hour| *hour < 24 && !clock.contains(':'))?;
+    let ignored = after_colon.bytes().take_while(u8::is_ascii_digit).count();
+    if fraction.len() > 2 || !(1..=2).contains(&ignored) {
+        return None;
+    }
+    let tail = after_colon[ignored..].trim_end_matches(' ');
+    let days = if tail.is_empty() {
+        None
+    } else {
+        let date = tail.strip_prefix(' ')?;
+        Some(parse_date(trim_spaces(date), locale, current_year).ok()?.0)
+    };
+    let (seconds, ms) = fraction_as_seconds(fraction);
+    let base = 60 * (LETTER_PERIOD_BASE_SECONDS + u64::from(is_pm)) + u64::from(hour) * 3600;
+    // `seconds` is at most 99 (two digits), so the sum stays an exact integer below 2^53 ms.
+    let total_ms = (base * 1000) as f64 + seconds * 1000.0 + f64::from(ms);
+    Some((days, total_ms / 1000.0 / SECONDS_PER_DAY_F64))
 }
 
 /// Whether `word` is an `AM`/`A` (false) or `PM`/`P` (true) clock word, in any case.
