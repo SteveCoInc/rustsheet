@@ -9,13 +9,15 @@ Per row r, four cells:
   C: =BETA.DIST(d2/(d1t*X+d2),d2/2,d1t/2,TRUE)   (v formed in the sheet; d1t = TRUNC(d1))
   D: =BETA.DIST(v15,d2/2,d1t/2,TRUE)             (v15: the engine's x0 = 1/(1+d1t*X/d2) at 15 significant digits,
                                                   the most a formula literal carries)
-Hold-out (decision 0188 R4.1), fixed here before any scoring: a row is hold-out when the first byte of
-sha256("t3953/<d1 text>/<d2>/<X text>") is below 77 (77/256 = 30%). Each cell's hypothesis carries /tune/ or /hold/.
-Usage (repo root): uv run --with mpmath python docs/research/t3953/mksweep.py [--write]"""
+Hold-out (decision 0188 R4.1): the fit lab's own split (`fitlab/holdout.py`, T-3360), which is per cell. Columns B, C and
+D repeat A's value on most rows (B always), so a per-cell split over all four would put a row's A on one side and its
+copy on the other. T-3954 therefore fits on column A only; B, C and D are diagnostics, never fitted. A row's /tune/ or
+/hold/ in each hypothesis is the fit lab's side of its A cell, and the accept margin is the fit lab's default, 5
+percentage points, fixed here before any scoring.
+Usage: cd tools && uv run --with mpmath python ../docs/research/t3953/mksweep.py [--write]"""
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import random
@@ -23,12 +25,14 @@ import sys
 from pathlib import Path
 
 import mpmath
+from rustsheet_tools.fitlab.holdout import DEFAULT_MARGIN, is_holdout
+from rustsheet_tools.fitlab.sweep import Cell
 
 mpmath.mp.dps = 60
-CASE = Path("eval/suites/probes-numeric/cases/t3953-f-tail-bfrac-tiny.case.json")
+CASE_ID = "probes-numeric/t3953-f-tail-bfrac-tiny.case.json"
+CASE = Path(__file__).resolve().parents[3] / "eval" / "suites" / "probes-numeric" / "cases" / CASE_ID.split("/")[1]
 SEED = 3953
 ROWS = 1200
-HOLD_BYTE = 77
 
 
 def branch(d1: float, d2: float, x_lit: float) -> tuple[str, float, float, float]:
@@ -88,10 +92,9 @@ def main() -> None:
             counts["rejected"] += 1
             continue
         seen.add((d1_text, d2, x_text))
-        key = f"t3953/{d1_text}/{d2}/{x_text}"
-        split = "hold" if hashlib.sha256(key.encode()).digest()[0] < HOLD_BYTE else "tune"
-        counts[split] += 1
         row += 1
+        split = "hold" if is_holdout(Cell(CASE_ID, "Calc", f"A{row}", "", (), math.nan)) else "tune"
+        counts[split] += 1
         v15 = lit(x0, 15)
         base = f"t3953/{split}/d1={d1_text}/d2={d2}/X={x_text}/a0={a0:g}/b0={b0:g}/x0={x0:.6g}"
         forms = {
@@ -110,9 +113,9 @@ def main() -> None:
             "docs/research/t3953/mksweep.py): d1 log-uniform in [80, 20000] (a fifth non-integer), d2 log-uniform in "
             "[1, 200], x0 = d2/(d1*X+d2) log-uniform in [1E-280, 1E-6], kept where the engine dispatches bfrac and the "
             "tail is above 1E-300. Columns: A F.DIST.RT, B FDIST, C BETA.DIST(v formed in the sheet, d2/2, TRUNC(d1)/2), "
-            "D BETA.DIST(the engine's x0 at 15 digits, ...). Hold-out fixed before scoring (decision 0188 R4.1): rows "
-            f"with sha256('t3953/<d1>/<d2>/<X>')[0] < {HOLD_BYTE}, {counts['hold']} rows, marked /hold/ in each "
-            "hypothesis; never used for fitting."
+            "D BETA.DIST(the engine's x0 at 15 digits, ...). Fit on column A only (B, C, D are diagnostics); its hold-out "
+            f"is the fit lab's per-cell split (decision 0188 R4.1, T-3360), {counts['hold']} A cells, marked /hold/ "
+            f"in the row's hypotheses; accept margin {DEFAULT_MARGIN:.0%} points, fixed before scoring."
         ),
         "tags": ["M9", "probe", "statistics", "T-3953", "T-3954"],
         "expected": {},

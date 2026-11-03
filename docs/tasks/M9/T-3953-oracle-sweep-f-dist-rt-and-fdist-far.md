@@ -49,21 +49,25 @@ with a hold-out fixed before any scoring, so T-3954 can find Excel's arithmetic 
 ## Outcome
 - Added probes-numeric `t3953-f-tail-bfrac-tiny`: 1,200 rows × 4 columns (A F.DIST.RT, B FDIST, C BETA.DIST with v
   formed in the sheet, D BETA.DIST at the engine's x0 as a 15-digit literal), generator docs/research/t3953/mksweep.py
-  (seed 3953; 7,490 draws rejected as not bfrac, a duplicate, or a tail at or below 1E-300). Hold-out fixed before
-  scoring: rows with sha256("t3953/<d1>/<d2>/<X>")[0] < 77, 364 rows (836 tune), marked in each hypothesis and the
-  case description.
+  (seed 3953; 7,490 draws rejected as not bfrac, a duplicate, or a tail at or below 1E-300).
+- Hold-out (decision 0188 R4.1): the fit lab's mandatory per-cell split (`fitlab/holdout.py`), on column A only.
+  B always equals A and C equals A on 1,015 rows, so a per-cell split over every column would put copies of a cell on
+  both sides; T-3954 fits A and keeps B, C and D as diagnostics. 369 A cells are hold-out (831 tune), marked in the
+  row's hypotheses and the case description; the accept margin is the fit lab's default, 5 percentage points, stated
+  before any scoring of a candidate (the counts below score today's engine only).
 - Deviations: d2 is integer only (the task asked non-integers of d1 only); a row with TRUNC(d2) <= 2 is never bfrac
   (a shape <= 1), so d2 starts at 3 in practice. Literal v has 15 significant digits, the most a formula literal
-  carries (numbers.md), so column D is "the engine's x0 to 15 digits", not the exact double.
+  carries (numbers.md), so column D is "the engine's x0 to 15 digits", not the exact double, and does not test the
+  kernel at an exact v.
 - Filled from excel-graph (canary-verified by the fill); a second uncached recalc matched on all 4,800 cells.
 - Math sidecar (`rustsheet-accuracy math`) committed; it covers C and D only, since the accuracy tool defines no
-  F.DIST.RT / FDIST. docs/research/t3953/score.py scores A and B against the row's C math (the same exact quantity).
-  Output: docs/research/t3953/score.out.
-- Counts (all / tune / hold), F.DIST.RT, engine against Excel: exact 4/2/2, 4 ulp 82/51/31, 15 digits 189/125/64.
-  FDIST is identical. Excel against the correctly rounded math: exact 8, 4 ulp 75, 15 digits 180; engine: 13, 87, 235.
-  Excel's relative error against the math: median 1.1E-14, p90 4.4E-14, p99 1.1E-13, max 1.5E-13, unbiased
-  (623 high, 577 low); ours median 6.5E-15, max 1.1E-13. None above 1E-4 (no R3 case).
-- Excel's F.DIST.RT = its sheet-v BETA.DIST on 1,015 of 1,200 rows; FDIST = F.DIST.RT on all. Recorded in
-  statistics.md, "F right tail on bfrac at a tiny kernel argument".
-- Visibly-off cells (about 1,011 per column) are all owned by T-3954, which names the whole case. Eval delta: none
+  F.DIST.RT / FDIST. docs/research/t3953/score.py scores A and B against the row's C math (the same exact quantity);
+  every figure here is in docs/research/t3953/score.out.
+- F.DIST.RT, engine against Excel (all / tune / hold): exact 4/2/2, 4 ulp 82/61/21, 15 digits 189/135/54. FDIST is
+  identical. Against the correctly rounded math, Excel: exact 8, 4 ulp 75, 15 digits 180; engine: 13, 87, 235.
+- Excel's relative error against the math (F.DIST.RT): median 1.1E-14, p90 4.4E-14, p99 1.1E-13, max 1.5E-13, 623 high
+  and 577 low (column D's max is 1.6E-13); ours median 6.5E-15, max 1.1E-13, 574 high and 626 low. None above 1E-4
+  (no R3 case).
+- Recorded in statistics.md, "F right tail on bfrac at a tiny kernel argument".
+- Visibly-off cells (1,011 per F column) are all owned by T-3954, which names the whole case. Eval delta: none
   (probes-numeric is ungated).

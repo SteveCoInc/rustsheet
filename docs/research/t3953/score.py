@@ -29,7 +29,8 @@ def num(v: object) -> float | None:
 
 
 def rel(x: float, ref: Decimal) -> float:
-    return float(abs((Decimal(x) - ref) / ref)) if ref else float("inf")
+    """Signed relative error of x against ref."""
+    return float((Decimal(x) - ref) / ref) if ref else float("inf")
 
 
 if len(sys.argv) > 2:
@@ -38,7 +39,7 @@ if len(sys.argv) > 2:
     print(f"second fill: {len(diff)} of {len(oracle)} cells differ: {' '.join(diff) or 'none'}")
 
 tot: dict[str, dict[str, int]] = {}
-errs: dict[str, list[float]] = {}
+errs: dict[str, dict[str, list[float]]] = {"Excel": {}, "engine": {}}
 worst: list[tuple[float, str, str]] = []
 for key, hyp in case["hypotheses"].items():
     cell = key.split("!")[1]
@@ -78,16 +79,19 @@ for key, hyp in case["hypotheses"].items():
             bump("engine~math 15d", within_fifteen_digits(cr, act))
             if group.endswith("/all"):
                 e = rel(ex, ref)
-                errs.setdefault(kind, []).append(e)
-                worst.append((e, cell, hyp))
+                errs["Excel"].setdefault(kind, []).append(e)
+                errs["engine"].setdefault(kind, []).append(rel(act, ref))
+                worst.append((abs(e), cell, hyp))
 
 print(json.dumps(tot, indent=1))
-for kind, es in errs.items():
-    es.sort()
-    q = {p: es[min(len(es) - 1, int(p * len(es)))] for p in (0.5, 0.9, 0.99)}
-    print(
-        f"{kind}: Excel rel. error vs math: median {q[0.5]:.2g}, p90 {q[0.9]:.2g}, p99 {q[0.99]:.2g}, max {es[-1]:.2g}; "
-        f"> 1E-14: {sum(e > 1e-14 for e in es)}, > 1E-12: {sum(e > 1e-12 for e in es)}, > 1E-4: {sum(e > 1e-4 for e in es)}"
-    )
+for who, by_kind in errs.items():
+    for kind, signed in by_kind.items():
+        es = sorted(abs(e) for e in signed)
+        q = {p: es[min(len(es) - 1, int(p * len(es)))] for p in (0.5, 0.9, 0.99)}
+        print(
+            f"{kind}: {who} |rel. error| vs math: median {q[0.5]:.2g}, p90 {q[0.9]:.2g}, p99 {q[0.99]:.2g}, "
+            f"max {es[-1]:.2g}; high {sum(e > 0 for e in signed)}, low {sum(e < 0 for e in signed)}; "
+            f"> 1E-14: {sum(e > 1e-14 for e in es)}, > 1E-12: {sum(e > 1e-12 for e in es)}, > 1E-4: {sum(e > 1e-4 for e in es)}"
+        )
 for e, cell, hyp in sorted(worst, reverse=True)[:8]:
     print(f"worst {cell} {e:.3g} {hyp}")
