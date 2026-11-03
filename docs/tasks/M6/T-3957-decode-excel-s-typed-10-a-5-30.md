@@ -3,7 +3,7 @@ id: T-3957
 title: "Decode Excel's typed '10 A. 5:30' (2982616.579, 60 x (2^32-22) s + 10 h + 5.5 s): a colon in the letter-period tail"
 milestone: M6
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
