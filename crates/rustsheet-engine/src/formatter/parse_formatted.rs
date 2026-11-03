@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{
-        parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
+        am_pm_word, parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
         parse_letter_period_serial_in,
     },
     date_text::{parse_date, CurrentYear},
@@ -170,7 +170,7 @@ fn is_single_letter_ap(word: &str) -> bool {
 
 /// Whether `word` is a clock's `AM`/`PM` or single-letter `A`/`P` word, in any case.
 fn is_am_pm_word(word: &str) -> bool {
-    is_single_letter_ap(word) || word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm")
+    am_pm_word(word).is_some()
 }
 
 /// Cell format of typed text that stays text because its clock is rejected: a date followed by a
