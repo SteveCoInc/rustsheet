@@ -3,7 +3,7 @@ id: T-3910
 title: "Fix the T-3889 probe citations in pivotby.rs and arrays.md"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,6 @@ The T-3889 evidence citations name the right probe cells.
 
 ## Out of scope
 - Any behavior change.
+
+## Outcome
+Comments and docs only: B1-B49 in pivotby.rs and test_fn_pivotby.rs; arrays.md bullet cites `P!Bn`, B25/B26 split, B48-B49 added, short-values cites fixed. No eval delta.
