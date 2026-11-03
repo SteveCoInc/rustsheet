@@ -3,7 +3,7 @@ id: T-3212
 title: "Read Excel's bare R1C1 offsets (RC, R[-1]C, RC[2]) in R1C1 typed entry, with oracle probes"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
