@@ -1258,6 +1258,16 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 - Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
   generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
   and the batch stays in Gate A.
+  The batch never fires the restart, though: an instrumented build counted 121 flat secants and 0 restarts in Gate A's
+  RATE tables, and 0 restarts on probes-numeric/t3698-rate-r4-fresh (T-3906).
+- Out of sample where the restart fires (T-3906, excel-graph, 2026-11-03): probes/t3906-rate-restart-oos.
+  - It holds 240 calls sampled from the 15,850 of 1,000,000 fresh annuities where the frozen rule's result differs
+    from the hold's (draw and seeds in the case's description). They are mostly large annuities (|pv| to 1e12) whose
+    run reaches the noise floor.
+  - Bit-exact / 4 ulp / 15 digits: the rule 48 / 84 / 103 of 240, the hold 12 / 76 / 104. Of the 232 cells where
+    Excel returns a number, the correctly rounded root gets 17 / 64 / 91.
+  - So the rule beats the hold on the bit and ties it at 15 digits, and it stays.
+  - On 180 of the 240 Excel's value is neither path's: in the noise floor its iterates leave the model's (T-3850).
   - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
     log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
     within 15 digits on 299. The one outside is A201, below.

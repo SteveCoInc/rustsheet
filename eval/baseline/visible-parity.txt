@@ -313,6 +313,7 @@ probes/t3643-imsqrt-grid.case.json	14
 probes/t3647-numbervalue-whitespace-decimal.case.json	1
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3906-rate-restart-oos.case.json	137
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3

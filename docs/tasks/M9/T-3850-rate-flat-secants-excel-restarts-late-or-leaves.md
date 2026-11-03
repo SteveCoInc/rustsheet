@@ -30,6 +30,10 @@ Excel takes, and noise-floor runs where Excel's value is neither the hold nor th
   are off Excel.
   - The cases are named here on lines with no cell address, so this task owns every cell of them.
   - Overlaps with T-3424 (noise-floor type) on the error-against-number cells.
+- Also owned: every cell of probes/t3906-rate-restart-oos that is off Excel. It holds 240 fresh flat-secant calls
+  (T-3906, 2026-11-03), and on 180 of them Excel matches neither the hold nor the restart. They are mostly noise-floor
+  runs of large annuities, so they are this task's evidence.
+  - The case is named on a line with no cell address, so this task owns every cell of it.
 
 ## Acceptance criteria
 - [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
