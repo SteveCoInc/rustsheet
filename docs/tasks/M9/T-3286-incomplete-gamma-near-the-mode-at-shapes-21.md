@@ -3,7 +3,7 @@ id: T-3286
 title: "Incomplete gamma near the mode at shapes 21 to 1E8: POISSON.xlsx D55 is 16 ulp off where Excel is correctly rounded (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
