@@ -428,7 +428,7 @@ const TEMME_SHAPE_MIN: f64 = 1e8;
 /// [`TEMME_SHAPE_MIN`] too. There the series and continued fraction after `rcomp` lose up to 16 ulp
 /// (`POISSON.DIST(46040,46071,TRUE)` 0.4438020698095398, Excel's 0.4438020698095389 is correctly
 /// rounded: ironcalc-calc POISSON.xlsx D55; T-3286), while the expansion's first dropped term,
-/// about C_4(0)/a^4 · e^(-a phi)/sqrt(2 pi a) with |C_4(0)| < 1E-3, is below 1E-17 from here; at
+/// about `C_4(0)/a^4 · e^(-a phi)/sqrt(2 pi a)` with `|C_4(0)| < 1E-3`, is below 1E-17 from here; at
 /// shape 101 it is 3E-13. Within an ulp of 60-digit values at shapes 1E3 to 1E8, 0.6a to 1.4a
 /// (tests.rs `near_mode_pair_is_within_an_ulp_from_shape_1e3`).
 const TEMME_NEAR_MODE_MIN: f64 = 1e3;
