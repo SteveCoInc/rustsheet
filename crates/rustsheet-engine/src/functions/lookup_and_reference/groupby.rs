@@ -553,7 +553,7 @@ impl Model {
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
         // one-cell reference to an error ([`Model::groupby_fields`]; `GROUPBY(Data!G9,Data!G1,..)`),
         // both after the options' errors: `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is
-        // `#NUM!` (d03de506903f5a35 A11835), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+        // `#NUM!` (ec5094d09c82f94d A6223), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
         // `#DIV/0!` (18ded81711290e85 A1648).
         match (&inputs.scalar, field_headers_given) {
             (ScalarInput::Text | ScalarInput::ErrorCell(_), false) => {

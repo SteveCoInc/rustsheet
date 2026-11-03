@@ -14,7 +14,7 @@ pub(super) mod bpser;
 mod bup;
 pub(super) mod ln_beta;
 
-use super::incomplete_beta::{beta_reg_tails, closed_form_tails, search_tails};
+use super::incomplete_beta::{beta_reg_tails, closed_form_tails, half_half_cdf, search_tails};
 use crate::arithmetic::extended_sum;
 use basym::basym;
 use bfrac::bfrac;
@@ -194,11 +194,15 @@ fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
 }
 
 /// BETA.DIST's cdf, w of K(a, b, x, y) with y = fl(1 - x) formed by the caller (SPEC-0025's caller
-/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`).
+/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`),
+/// and Excel's arcsine form at a = b = 1/2 (`incomplete_beta::half_half_cdf`, T-3192).
 /// Those are a net visible gain for BETA.DIST (T-2510: 30 fewer visibly-off cells, none more), not
 /// for F (see [`t_kernel_tails`]), so F's callers (`fisher.rs`) keep [`kernel_tails`].
 /// BETA.INV's search (`beta.rs`) crosses it where it is closed or ported ([`beta_search_tails`]).
 pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
+    if a == 0.5 && b == 0.5 && x > 0.0 && y > 0.0 {
+        return half_half_cdf(x, y);
+    }
     kernel_tails_with(x, y, a, b, true).0
 }
 

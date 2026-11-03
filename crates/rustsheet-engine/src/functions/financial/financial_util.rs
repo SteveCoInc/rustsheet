@@ -105,21 +105,30 @@ fn rate_secant(
     /// FITTED(T-2689, 178 cells, RATE at the 200-step cap; one cut for all three tests bracketed 9.4E-5..1.02E-4)
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
     // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
-    // |f1| from RATE_RESTART_F_MIN up to the cap's bound, restarts the run from the older iterate
+    // |f1| from RATE_RESTART_F_MIN up to RATE_RESTART_F_MAX, restarts the run from the older iterate
     // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
     // hash split only (holdout.py, margin 5 points stated before scoring; docs/research/t3698):
     // over K in 3..200 and the cut in 1E-5..1E-3, K = 16 or 17 is best on train (1,395 of 1,477
-    // bit-exact) and the smaller is taken. The cut is the cap's bound, inside the bracket the
-    // evidence gives: probes/t3698-rate-flat-restart restarts at |f1| up to 4.3E-5 (A3:A8) and
-    // holds at 1.7E-4 (A1). Outside the evidenced range (the first two steps, |f1| below the
-    // smallest probed flat secant) the run holds as before. `r0 > -1` is a guard, not evidence:
-    // a restart from r0 <= -1 would be a guess that RATE refuses.
+    // bit-exact) and the smaller is taken. The evidence brackets the cut: probes/t3698-rate-flat-
+    // restart restarts at |f1| up to 4.3E-5 (A3:A8) and holds at 1.7E-4 (A1). Out of sample
+    // (probes/t3906-rate-restart-oos, 240 fresh calls where the rule and the hold differ) the rule
+    // is bit-exact on 48 and the hold on 12, but the rule moves A152 and A194 out of the Gate A
+    // envelope (A194 becomes #NUM!), so it is not cleared: T-3850 must narrow or revert it
+    // (T-3906). Outside the evidenced range (the first two
+    // steps, |f1| below the smallest probed flat secant) the run holds as before. `r0 > -1` is a
+    // guard, not evidence: a restart from r0 <= -1 would be a guess that RATE refuses.
     /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
     const RATE_RESTART_STEPS: u32 = 16;
     /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).
     const RATE_RESTART_FIRST: u32 = 3;
-    /// The smallest |f1| of a probed flat secant (T-3698; financial.md "Unprobed").
+    /// The evidence floor of the restart's |f1| (T-3698). It sits just above 1.27E-7, the smallest |f1| of a
+    /// probed flat secant on distinct iterates (step 58). Inside the rule's own steps 3..16 the smallest probed
+    /// |f1| is 1.67E-7 (the nper-1 family at step 3), so 1.3E-7..1.67E-7 there is unprobed (T-3906 review).
     const RATE_RESTART_F_MIN: f64 = 1.3e-7;
+    /// The |f1| cut of the restart: part of T-3698's fit (the FITTED tag on `RATE_RESTART_STEPS` covers it,
+    /// scored over 1E-5..1E-3). It equals the cap's bound `RATE_CAP_TOLERANCE` but is not tied to it, so
+    /// a change to that fit does not move this one (T-3906).
+    const RATE_RESTART_F_MAX: f64 = 1e-4;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
     let mut r1 = r0 - OFFSET.copysign(f0);
@@ -144,7 +153,7 @@ fn rate_secant(
             if restart
                 && r1 != r0
                 && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
-                && (RATE_RESTART_F_MIN..RATE_CAP_TOLERANCE).contains(&f1.abs())
+                && (RATE_RESTART_F_MIN..RATE_RESTART_F_MAX).contains(&f1.abs())
                 && r0 > -1.0
             {
                 return rate_secant(args, period_start, r0, false);
