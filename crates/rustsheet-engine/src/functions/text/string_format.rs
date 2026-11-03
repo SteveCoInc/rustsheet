@@ -744,21 +744,6 @@ mod tests {
 
     // Expected strings come from docs/excel-semantics/text.md "FIXED, DOLLAR and BAHTTEXT cut to
     // 15 significant digits first" (excel-graph, gen-m5) and from ROUND's decimal rules.
-    // Classes from docs/excel-semantics/text.md (T-3820, probes/t3820-lower-sigma-next-char).
-    #[test]
-    fn sigma_is_final_only_before_the_listed_separators() {
-        assert!(sigma_is_final(None));
-        for c in ['\t', ' ', '-', '\'', '}', '_'] {
-            assert!(sigma_is_final(Some(c)), "{c:?}");
-        }
-        for c in [
-            '(', '\u{a0}', '\u{301}', '\u{2018}', '\u{2019}', '😀', 'a', '1',
-        ] {
-            assert!(!sigma_is_final(Some(c)), "{c:?}");
-        }
-        assert_eq!(lower_case("Σ(Σ"), "σ(ς");
-    }
-
     #[test]
     fn cuts_to_15_digits_before_rounding() {
         assert_eq!(format_abs(1.005, 2, true), "1.01");
@@ -774,6 +759,21 @@ mod tests {
             format_abs(4_999_999_999_999_995.0, 2, true),
             "4,999,999,999,999,990.00"
         );
+    }
+
+    // Classes from docs/excel-semantics/text.md (T-3820, probes/t3820-lower-sigma-next-char).
+    #[test]
+    fn sigma_is_final_only_before_the_listed_separators() {
+        assert!(sigma_is_final(None));
+        for c in ['\t', ' ', '-', '\'', '}', '_'] {
+            assert!(sigma_is_final(Some(c)), "{c:?}");
+        }
+        for c in [
+            '(', '\u{a0}', '\u{301}', '\u{2018}', '\u{2019}', '😀', 'a', '1',
+        ] {
+            assert!(!sigma_is_final(Some(c)), "{c:?}");
+        }
+        assert_eq!(lower_case("Σ(Σ"), "σ(ς");
     }
 
     #[test]
