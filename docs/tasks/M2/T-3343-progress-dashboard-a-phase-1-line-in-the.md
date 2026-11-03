@@ -3,7 +3,7 @@ id: T-3343
 title: "Progress dashboard: a Phase 1 line in the goals block from make phase1-exit --json"
 milestone: M2
 lane: harness
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,7 +33,7 @@ whole exit.
 `goals.phase1_exit_line` renders the overall verdict and failing criteria from `scripts/phase1_exit.py --json`;
 `make progress-report` writes `eval/runs/latest/phase1-exit.json` (exit 1 = not met is accepted) and the generator
 reads it via `--phase1-exit` (missing file: the line says "not measured"). Test pins `met`, `not met` and missing.
-No eval delta (tooling only).
+The Makefile line is covered by decision 0258 (protected path). No eval delta (tooling only).
 
 ## Handoff (resumed)
 Implemented and green locally (`make check-fast`, both reviewers APPROVE at 7397485; PR #2972): `goals.phase1_exit_line`
