@@ -116,7 +116,8 @@ fn hyperbolic_log_form(
 /// `IMCOSH("100+1.5i")`, where `1/u` is one ulp below `EXP(100)` (eng-im-overflow-edges-2 A60).
 /// At or below `INVERSE_EXP_LOW` sinh is [`sinh_series`], where the form's cancellation would show
 /// (`IMSINH("0.00012+1.23456789i")`, probes/t2535-imsinh-imcosh-kernel-sweep A6), and cosh keeps
-/// the form: `IMCOSH("0.001258575663522")` is 1.00000079200646, libm's cosh ...645 (T-3589).
+/// the form: `IMCOSH("0.001258575663522")` is 1.00000079200646, libm's cosh ...645 (T-3589), except
+/// below [`LIBM_COSH_BELOW`], where cosh is libm's (T-3930).
 fn inverse_exp_sinh_cosh(x: f64) -> (f64, f64) {
     if x.abs() > INVERSE_EXP_HIGH {
         return (x.sinh(), x.cosh());
