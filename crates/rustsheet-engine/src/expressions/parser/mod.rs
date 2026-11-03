@@ -497,7 +497,24 @@ impl Parser {
             }
             TokenType::Ident(name) => self.parse_identifier(name),
             TokenType::Error(kind) => Node::ErrorKind(kind),
-            TokenType::SheetRefError(sheet_name) => Node::SheetRefErrorKind { sheet_name },
+            TokenType::SheetRefError(sheet_name) => {
+                // Excel prints the sheet as the workbook spells it, whatever case was typed
+                // (probes/unqualified-ref-error-text-and-typed Sheet1!A2, A6).
+                let found = self
+                    .worksheets
+                    .iter()
+                    .find(|name| name.to_uppercase() == sheet_name.to_uppercase());
+                match found {
+                    Some(name) => Node::SheetRefErrorKind {
+                        sheet_name: name.clone(),
+                        missing: false,
+                    },
+                    None => Node::SheetRefErrorKind {
+                        sheet_name,
+                        missing: true,
+                    },
+                }
+            }
             TokenType::Illegal(error) => Node::ParseErrorKind {
                 formula: self.lexer.get_formula(),
                 expecting: vec![ExpectedTokens::Other],

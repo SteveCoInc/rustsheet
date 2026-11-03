@@ -3,7 +3,7 @@ id: T-3062
 title: "Probe the formula text of a sheet-qualified #REF! after a sheet rename or delete, unqualified and typed"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -26,9 +26,16 @@ sheet-qualified #REF! is #REF!"). Only `=SUM(S!#REF!)` after a row or column del
 Use the `excel-probe` skill (FORMULATEXT cells), then match the engine to the evidence.
 
 ## Acceptance criteria
-- [ ] A probe case records FORMULATEXT for the four shapes (oracle values filled).
-- [ ] The engine matches every probed cell; references.md records the rule with the evidence.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case records FORMULATEXT for the four shapes (oracle values filled).
+- [x] The engine matches every probed cell; references.md records the rule with the evidence.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Values: a sheet-qualified `#REF!` already evaluates to `#REF!` (VERIFIED).
+
+## Outcome
+Three probe cases fill the four shapes (excel-graph). The engine now keeps `S!#REF!` in step with a
+rename (`rename_sheet_in_node` takes the old name), prints `#REF!#REF!` once S is deleted
+(`Node::SheetRefErrorKind::missing`, set by the parser) and spells a typed sheet name as the workbook
+does. The unqualified wholly-deleted range already matched. A typed `NoSuchSheet!#REF!` is a Graph
+external-link artifact and is left out of the probe. Eval: the three new probes pass (+16 cells).

@@ -896,8 +896,14 @@ body (`=#N/A`, `=#DIV/0!`, `=#REF!`) evaluate to that error; and `SHEET(name)` o
 Status: VERIFIED
 The formula text keeps the prefix: FORMULATEXT prints `=SUM(S!#REF!)` (probes/table-edits
 plain-range-delete-row-first F!A6 and table-delete-column-qty F!A7, excel-graph; T-2855).
-Unprobed (T-3062): the text after the sheet is renamed or deleted, a wholly deleted range with no sheet
-prefix (printed `#REF!`), and the case of a typed sheet name.
+T-3062 (excel-graph, 2026-11-03), FORMULATEXT: renaming S to T turns `=SUM(S!#REF!)` into `=SUM(T!#REF!)`
+(probes/sheet-qualified-ref-error-text-rename F!A2); deleting S turns it into `=SUM(#REF!#REF!)`, as a live
+`=SUM(S!C5)` becomes `=SUM(#REF!C4)` (probes/sheet-qualified-ref-error-text-delete-sheet F!A2, A4); a wholly
+deleted range with no sheet prefix prints a bare `=SUM(#REF!)` (probes/unqualified-ref-error-text-and-typed
+S!A2); a typed `=sheet1!#REF!` / `=SUM(SHEET1!#REF!)` prints the sheet as the workbook spells it,
+`=Sheet1!#REF!` (Sheet1!A2, A6). Not evidence: Graph prints a typed `=NoSuchSheet!#REF!` as an
+external-link path (a Graph artifact, so that cell is not in the probe); the engine treats a name
+no sheet has like a deleted sheet (`#REF!#REF!`).
 Implemented in: `consume_range` in crates/rustsheet-engine/src/expressions/lexer/mod.rs (formula; the
 prefix is kept as `Node::SheetRefErrorKind` in the written tree only), `ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
 Tasks: T-0152, T-0169, T-2855

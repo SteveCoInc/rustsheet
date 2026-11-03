@@ -247,7 +247,11 @@ pub enum Node {
     /// `S!#REF!`, printed with its sheet (references.md "A sheet-qualified #REF! is #REF!"). Only
     /// in the tree as written: [`Node::strip_spaces`] makes it a bare `#REF!` (T-2855).
     SheetRefErrorKind {
+        /// The sheet as the workbook spells it, or as written when no sheet has that name.
         sheet_name: String,
+        /// No sheet has that name (a deleted one): Excel prints `#REF!#REF!` for `S!#REF!` once
+        /// S is deleted (probes/sheet-qualified-ref-error-text-delete-sheet F!A2).
+        missing: bool,
     },
     ParseErrorKind {
         formula: String,
