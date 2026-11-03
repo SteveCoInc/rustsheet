@@ -3,7 +3,7 @@ id: T-3853
 title: "Doc fixes from the T-3758 and T-3808 reviews: reduce's 28-bit n and T-3847's product"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ Two comments and a task file say what the code and the evidence show, after MINO
 
 ## Out of scope
 - Any engine behaviour change.
+
+## Outcome
+Doc-only: `reduce` comments say |n| < 2^28 and name the double-angle callers; T-3847 says 8.1E+315 with the 50-digit reference. No eval change.

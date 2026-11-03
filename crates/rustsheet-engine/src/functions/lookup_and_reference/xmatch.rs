@@ -299,20 +299,19 @@ impl Model {
         }
         // A fractional mode is floored, but one just below an integer reads that integer:
         // `XMATCH(FALSE,{1,2,3},0,0.5^1E-15)` is #N/A, not #VALUE! (probes/t2656-xmatch-mode-*).
+        // An out-of-range number is reported only after search_mode's own cast error: with
+        // search_mode a #DIV/0! cell, match_mode 7, "12" or a lifted C3:D4 give #DIV/0!, while a
+        // match_mode that does not convert to a number (text "x", "") still wins with #VALUE!
+        // (gen-m6/315644f84093cf49 A292:B293, A64; 75b38d80dd3152b2 A388, A448, A544, A598;
+        // T-3542).
         let match_mode = match self.cast_number_ref(match_mode, cell) {
             Ok(n) => match near_integer_whole(n) as i32 {
-                -1 => MatchMode::ExactMatchSmaller,
-                0 => MatchMode::Exact,
-                1 => MatchMode::ExactMatchLarger,
-                2 => MatchMode::Wildcard,
-                3 => MatchMode::Regex,
-                _ => {
-                    return CalcResult::new_error(
-                        Error::VALUE,
-                        cell,
-                        "Invalid match_mode".to_string(),
-                    )
-                }
+                -1 => Some(MatchMode::ExactMatchSmaller),
+                0 => Some(MatchMode::Exact),
+                1 => Some(MatchMode::ExactMatchLarger),
+                2 => Some(MatchMode::Wildcard),
+                3 => Some(MatchMode::Regex),
+                _ => None,
             },
             Err(e) => return e,
         };
@@ -331,6 +330,9 @@ impl Model {
                 }
             },
             Err(e) => return e,
+        };
+        let Some(match_mode) = match_mode else {
+            return CalcResult::new_error(Error::VALUE, cell, "Invalid match_mode".to_string());
         };
         let array = match array {
             Ok(array) => array,
