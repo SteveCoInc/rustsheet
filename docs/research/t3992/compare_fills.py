@@ -15,18 +15,22 @@ import struct
 import sys
 from pathlib import Path
 
+# suite/case, then the kernel family it measures.
+TABLE = """
+probes-numeric/t3349-t-inv-2t-sweep Student t quantile
+probes-numeric/t3478-irr-r4-wide IRR
+probes/t3850-rate-same-state RATE
+probes/fin-cumipmt-tiny-rate-structure CUMPRINC/CUMIPMT
+probes-numeric/t2143-ln-near-ties-fill1 LN (control)
+probes-numeric/t2143-ln-near-ties-fill2 LN (control, D1 label 2)
+probes-numeric/t2143-ln-near-ties-fill3 LN (control, D1 label 3)
+probes-numeric/t3311-gamma-inv-lower-tail-cdf gamma quantile
+probes-numeric/t3570-r5-bpser-lg-aux lnGamma/GAMMA
+probes-numeric/t3953-f-tail-bfrac-tiny incomplete beta (bfrac)
+probes-numeric/t2464-r2-bpser-small-gl incomplete beta (bpser)
+"""
 CASES = [
-    ("Student t quantile", "probes-numeric", "t3349-t-inv-2t-sweep"),
-    ("IRR", "probes-numeric", "t3478-irr-r4-wide"),
-    ("RATE", "probes", "t3850-rate-same-state"),
-    ("CUMPRINC/CUMIPMT", "probes", "fin-cumipmt-tiny-rate-structure"),
-    ("LN (control)", "probes-numeric", "t2143-ln-near-ties-fill1"),
-    ("LN (control, D1 label 2)", "probes-numeric", "t2143-ln-near-ties-fill2"),
-    ("LN (control, D1 label 3)", "probes-numeric", "t2143-ln-near-ties-fill3"),
-    ("gamma quantile", "probes-numeric", "t3311-gamma-inv-lower-tail-cdf"),
-    ("lnGamma/GAMMA", "probes-numeric", "t3570-r5-bpser-lg-aux"),
-    ("incomplete beta (bfrac)", "probes-numeric", "t3953-f-tail-bfrac-tiny"),
-    ("incomplete beta (bpser)", "probes-numeric", "t2464-r2-bpser-small-gl"),
+    (kernel, *path.split("/")) for path, kernel in (row.split(" ", 1) for row in TABLE.strip().splitlines())
 ]
 
 
