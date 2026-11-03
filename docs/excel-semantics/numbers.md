@@ -370,7 +370,14 @@ stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
-literals of more than 5 digits are not probed.
+literals of more than 5 digits are not probed, except one 15-digit point (T-3945): `=0.190581435720431`
+(m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
+and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
+the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
+`=0.981671389192299` is the nearest double, as the model gives (probes/t3945-atan-near-midpoint C1:C9, excel-graph,
+2026-11-03). So the complex functions' text parse (COMPLEX's output read back, a complex literal) converts the same
+way, and quotients and functions of such literals inherit the ulp: `=ATAN(0.981671389192299/0.190581435720431)` is
+1.3790419226756174 (B203) where ATAN of the stored quotient of the nearest doubles is ...176 (B1).
 Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
 m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
 controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
@@ -381,7 +388,7 @@ trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, l
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
 Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
-Tasks: T-3555, T-3658, T-3931, T-3932
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
