@@ -3,7 +3,7 @@ id: T-3880
 title: "GROUPBY scalar filter: probe a header row with one record and a detected header row; narrow arrays.md"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
