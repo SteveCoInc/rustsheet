@@ -728,8 +728,8 @@ one-to-one fold above still keeps the length:
   (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
 - Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
   versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
-  Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 50 format and filler characters of
-  Unicode 3.2: U+00AD, U+034F, U+0640, U+0ECC, U+1806, U+180B-U+180D, U+200C-U+200F, U+202A-U+202E,
+  Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
+  Unicode 3.2 (format characters, variation selectors and a few marks and symbols): U+00AD, U+034F, U+0640, U+0ECC, U+1806, U+180B-U+180D, U+200C-U+200F, U+202A-U+202E,
   U+2060-U+2063, U+206A-U+206F, U+3190-U+3191, U+FE00-U+FE0F, U+FEFF and U+FFF9-U+FFFD. Not weightless: U+200B
   (Calc!B16:H16 FALSE against U+0524), the private-use U+E000 (B30:H30), and every supplementary character
   (U+10400 equals neither U+10401, U+10428, U+0524 nor empty text; B25:H28).

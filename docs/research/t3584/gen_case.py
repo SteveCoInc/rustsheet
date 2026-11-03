@@ -1,4 +1,8 @@
-"""One-off generator for probes/t3584-match-fold-weightless (T-3584)."""
+"""Generator for probes/t3584-match-fold-weightless (T-3584).
+
+Run from the repository root:
+`python3 docs/research/t3584/gen_case.py eval/suites/probes/cases/t3584-match-fold-weightless.case.json`.
+"""
 
 import json
 import sys

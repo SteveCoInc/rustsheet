@@ -58,7 +58,7 @@ compare equal to one another.
   its whole block (Calc!T1:U1232).
 - Answers:
   - The weightless set is 2568 BMP code points (381 ranges). It is not a Unicode-version cut; it holds every code
-    point unassigned in Unicode 14, the later letters Excel's table lacks, and 50 format characters of Unicode 3.2.
+    point unassigned in Unicode 14, the later letters Excel's table lacks, and 51 characters already assigned by Unicode 3.2 (format characters, variation selectors, a few marks).
     Supplementary characters, U+200B and private use are not weightless.
   - Weightless characters equal one another in MATCH, XMATCH(..,0), VLOOKUP, HLOOKUP, COUNTIF and `=`, never in
     EXACT, and never equal empty text. `"a"&c` is not `"a"`. Exact MATCH counts them one for one (`"a"&c&"b"` is not
@@ -66,12 +66,14 @@ compare equal to one another.
   - U+AB7B-U+ABBA and U+1C80-U+1C88 are weightless. Greek Extended's psili+varia and dasia+oxia letters are one
     class; the other unexplained T-3298 hits are classes of Excel's table (A738-A73B, A764-A767, A76E-A770, Ͷ ͷ ϳ,
     ϑ ϴ, 10D2/10FA) or pairs of weightless characters (A660/A699/A69B, 1C88/2CF2).
+- `=`, COUNTIF and XMATCH(..,0) also equate the Greek Extended class, `ϵ` with `ε` and U+1FBE with `ι`, and keep
+  Deseret's case pair apart (coercion.md).
 - Docs: lookup.md "MATCH, VLOOKUP and HLOOKUP exact-match keys fold case one character to one" now states the
   weightless rule and the class table (VERIFIED); coercion.md has a new section "Weightless characters in `=`,
   COUNTIF and XMATCH (T-3584)".
 - Owners: the engine fails 673 of the 3602 cells, all known failures. T-3445 owns the MATCH, VLOOKUP and HLOOKUP
   cells (Calc!E, G, H, K:O, R, T) and no longer depends on this task. New T-3904 (engine, opus) owns the `=`,
-  COUNTIF and XMATCH cells (Calc!B:D, F, P). It depends on T-3662, which now also probes U+0524 for where a
+  COUNTIF and XMATCH cells (Calc!B:D, F, P), the non-weightless ones (B21, B25, D21, D25, F21, F25, P7, P9) included. It depends on T-3662, which now also probes U+0524 for where a
   weightless character counts in `=`.
 - Eval delta: probes +1 case, +3602 scored cells, 2929 passing; 673 new known failures, all in the new case;
   0 regressions, 0 fixed.

@@ -557,12 +557,19 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
   F6:F7), where exact MATCH says `#N/A` (E6:E7).
 - But a weightless character is never equal to empty text (`UNICHAR(1316)=""` FALSE, Calc!B4, B9, B12, B19, B32),
   and `"a"&UNICHAR(1316)="a"` and `"a"&UNICHAR(173)="a"` are FALSE (Calc!B5, B13; COUNTIF 0, XMATCH `#N/A`).
-- Over the whole BMP (Calc!R1:R256, bit 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH finds U+0524.
+- Over the whole BMP (Calc!R1:R256, digit 9 = bits 1 and 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH
+  finds U+0524 (wildcards aside).
+- Not about weightless characters, found by the same probe: `=`, COUNTIF and XMATCH(..,0) also equate Greek
+  Extended's dasia+oxia and psili+varia letters (`UNICHAR(7941)=UNICHAR(7946)`, U+1F05 with U+1F0A, TRUE; Calc!B21,
+  D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
+  keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
+  whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
+  same weight).
 UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
 one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
 positions and neighbours make it count is open (T-3904).
 Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
-probe's failing cells are known failures owned by T-3445 (MATCH) and T-3662 (`=`, COUNTIF, XMATCH).
+probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
 Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
 
 ## Text in a range operand of arithmetic is coerced
