@@ -3,7 +3,7 @@ id: T-3698
 title: "RATE on a flat secant: when Excel restarts from the older iterate instead of holding"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -35,9 +35,9 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
 ## Acceptance criteria
 - [x] A probe that separates the restart from the hold (e.g. flat secants at different steps and |f|, with and
       without a prior restart), oracle-filled, and a rule that fits it.
-- [ ] `compute_rate` implements the rule; the 4 cells above pass and no RATE cell regresses
+- [x] `compute_rate` implements the rule; the 4 cells above pass and no RATE cell regresses
       (t3348-rate-fv-nonzero, the Gate A sweeps, t3478-rate-r4-wide); R4 hold-out and fresh sweep recorded.
-- [ ] financial.md updated; `make check` green; reviewers approve.
+- [x] financial.md updated; `make check` green; reviewers approve.
 
 ## Out of scope
 - RATE's residual form (ruled out at nper 1 by T-3579).
@@ -46,71 +46,60 @@ t3348-rate-fv-nonzero A171 match Excel without losing the held cells.
 - **Rule** (financial.md "RATE restarts once on an early flat secant"). A flat secant (f1 = f0, f1 ≠ 0) restarts
   the run once as a fresh run from the older iterate r0 when all of these hold:
   - r1 ≠ r0;
-  - it comes at step 16 or earlier;
-  - |f1| < 1e-4;
+  - it comes at step 3 to 16;
+  - 1.3e-7 <= |f1| < 1e-4;
   - r0 > -1.
 
   Otherwise it holds as before. The restarted run holds on its own flat secants.
 - **Code:** `compute_rate` now calls `rate_secant(args, period_start, guess, restart)`, which recurses at most
-  once. `RATE_RESTART_STEPS = 16` carries a `FITTED` tag, and `quality/fitted.json` is updated by
-  `check_fitted.py --update`.
+  once. `RATE_RESTART_STEPS = 16` carries `FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1|
+  1.3E-7..1E-4)`. Outside that range the run holds (R4.3: steps 1 and 2 and |f1| below 1.3e-7 have no evidence).
+  `quality/fitted.json` is updated by `check_fitted.py --update`.
 - **Probes** (excel-graph, 2026-11-02):
   - probes/t3698-rate-flat-restart, 54 cells where the hold and the restart differ. The first flat secant comes at
-    steps 3 to 154, and the nper-1 example is scaled by 2^3 to 2^11. The rule was chosen on this probe.
-  - probes/t3698-rate-flat-restart-fresh, 51 cells, drawn and filled after the rule was frozen.
-- **Candidates scored** on the 1,522 pre-fresh RATE cells, as bit-exact gains/losses against the hold:
-  - unconditional restart: +8/-108;
-  - distinct iterates only: +25/-15;
-  - adding |f1| < 1e-4: +21/-10;
-  - adding step ≤ 3: +11/-0;
-  - step bound K with distinct iterates and |f1| < 1e-4: K = 16 or 17 gives +18/-0, K = 18 to 22 gives +18/-1
-    (t3698 A28), K = 30 gives +19/-3;
-  - restart from the guess instead of r0: +0, because it repeats the run.
-- **R4:**
-  - Kind: (a) fit for the step bound, (c) structural for the restart.
-  - Hold-out: the fit lab's hash split (`holdout.py`, 30%, 5-point margin), applied after scoring, so it is not
-    blind. Train is 1,016/1,077 bit-exact (94.3%; 1,038 within 4 ulp) and test 422/445 (94.8%; 432). The hold
-    has 1,007 and 413. On the 201 test cells with 50-digit math, the rule has 189 and the correctly rounded root
-    18.
-  - Fresh sweep (t3698-rate-flat-restart-fresh): the rule is bit-exact on 21/51 and the hold on 17/51. Within
-    4 ulp they are 26 and 29, and Excel's type matches on 43 under both.
-  - Gate A envelope on the fresh sweep (within 15 significant digits of Excel, or 1e-9 relative of the 50-digit
-    root from mpmath `findroot` on the FV residual at 50 digits; an error against a number fails): 42 of 51 for the
-    rule and for the hold. The same 9 are outside under both (A15, A20, A22, A34, A37, A39, A41, A46, A48), all
-    number against error: the noise-floor type that T-3424 and T-3850 own. The rule moves no point out.
-    `rustsheet-accuracy math` skips RATE calls with a guess ("argument count"), so the sidecars hold only the
-    first probe's 9 guess-free cells. `make eval-math-check` passes.
-  - The fresh sweep is a probes case, not a probes-numeric/Gate A batch. Gate A's T-3357/T-3358 batches have not
-    landed.
-  - Reproducibility floor: the gains are 5 ulp to 3e-11 relative, above the 4-ulp web-desktop floor.
-- **Eval delta:** probes 6 fixed (t3579-rate-residual-nper1 A1, A2, A41, A42; t3348-rate-fv-nonzero A171,
-  A175), 0 regressions. probes-numeric t3348-rate-gate-a-fresh A296 is also fixed.
-  - The two new probe cases add 105 cells. The noise-floor cells among them are new-coverage known failures owned
-    by T-3850.
-- **Follow-up:** T-3850 (late restarts and noise-floor paths).
-
-## Landing notes (resumed 2026-11-02)
-- **PR #2858** (draft), head e94a0ddc7c40c1966944553397ed743f42b08bcd before this notes commit. CI was running
-  when the window closed.
-- **Review round 1:** design APPROVE and security APPROVE on e94a0ddc; excel-fidelity REQUEST_CHANGES (verdict
-  record on the PR). Its three MAJOR findings:
-  - **R4.1:** the hash split was applied after every candidate had been scored on all 1,522 cells, so it is not a
-    blind hold-out. The correctly rounded candidate's train, 4-ulp and 15-digit counts are also missing.
-  - **R4.2:** the fresh sweep is a targeted probes case, not a log-uniform probes-numeric sweep. A1:A7 are trivial
-    `RATE(1,0,0,0,0,g)` cells, and the mpmath values are not committed. `rustsheet-accuracy math` skips RATE calls
-    with a guess.
-  - **R4.3:** the restart fires outside the `FITTED` range: steps 1-2 and |f1| < 1.3e-7.
-- **Next steps:**
-  1. Restrict the branch to the evidenced range (3 ≤ step ≤ 16, 1.3e-7 ≤ |f1| < 1e-4).
-  2. Redo the choice of K and the |f1| cut on the `holdout.py` train side only, with the 5-point margin stated
-     first. Report train and test (bit-exact / 4 ulp / 15 digits) for the rule and for the correctly rounded root.
-  3. Generate a log-uniform probes-numeric RATE sweep with guesses after that freeze, fill it from the oracle,
-     and report its Gate A envelope with the mpmath values committed.
-- **Scratch rig (not committed):** a temporary `compute_rate` env-var switch plus an in-crate test that prints
-  per-step traces. The scorer and patch were in the session scratchpad and are gone; rebuild them from this
-  description.
-- **Do not repeat:**
-  - An unconditional restart scores +8/-108.
-  - A restart from the guess changes nothing.
-  - The step bound is not the mechanism: Excel restarts at steps 27, 33 and 41 on some series (t3698 A35, A39,
-    A42).
+    steps 3 to 154, and the nper-1 example is scaled by 2^3 to 2^11.
+  - probes/t3698-rate-flat-restart-fresh, 51 cells, drawn after a first freeze. Because that freeze was scored on
+    every cell, it is now part of the fit set.
+  - probes-numeric/t3698-rate-r4-fresh, 300 cells, the R4.2 fresh sweep (below).
+- **R4.1 hold-out** (review round 1 asked for a train-only choice):
+  - Kind: (a) fit for the step bound and the |f1| cut; (c) structural for the restart.
+  - Fit set: every `=RATE(` oracle cell of probes and probes-numeric except t3478-rate-r4-wide.
+  - Split: the fit lab's hash (`holdout.py`, 30% test). The 5-point margin was stated before scoring.
+  - Candidates: K in {3, 8, 12, 14..18, 20, 22, 30, 60, 200} × cut in {1e-5, 3e-5, 1e-4, 3e-4, 1e-3}, all with
+    step >= 3 and |f1| >= 1.3e-7. They were ranked on the 1,477 train cells only. A candidate that loses a cell
+    main passes was excluded (the acceptance criterion).
+  - Chosen: K 16 with cut 1e-4.
+    - Train bit-exact / 4 ulp / 15 digits: 1,395 / 1,422 / 1,422 of 1,477. The hold gets 1,378 / 1,412 / 1,413.
+    - Test: 551 / 561 / 561 of 581, against 546 / 554 / 557 for the hold.
+    - Rates: 94.4% train, 94.8% test.
+  - K 17 ties; the smaller bound is taken.
+  - Cut 3e-4 ties on train bit-exact and is +1 within 4 ulp, but it loses t3579-rate-residual-nper1 A43 (a main
+    pass), so it is excluded. Note: I froze 3e-4 by the tie-break first and drew the fresh sweep under it, then
+    found the loss and moved to 1e-4. The fresh sweep scores the same under both (below).
+  - Correctly rounded root, on the cells with 50-digit math: train 35 / 80 / 98 of 637, test 16 / 33 / 44 of 251.
+    The rule is bit-exact on 610 and 239 of those cells, so it beats the root on test.
+  - Caveat: these cells had all been scored under the first freeze. So this is a train-only choice on a fixed
+    split, not a blind hold-out. The fresh sweep is the out-of-sample check.
+- **R4.2 fresh sweep** (probes-numeric/t3698-rate-r4-fresh, generated after the freeze):
+  - 300 points of Gate A's RATE draw (`rustsheet-accuracy` sampler, batch seed `r4-T-3698-fresh`, every stratum),
+    each with a guess log-uniform in ±1e-4..0.9 (80%) or 0.9..10.
+  - `math.tsv` commits the 50-digit roots: one sign change makes the root unique, so the guess does not matter.
+    Scored with docs/research/t3478/score_sweep.py.
+  - Results: bit-exact 298, within 4 ulp 299, within 15 digits 299. Correctly rounded: 22 / 29 / 34.
+- **Gate A envelope** on the fresh sweep: 299 of 300 inside, under both the 1e-4 and the 3e-4 build.
+  - The one outside is A201, `RATE(1,13501.684222927,-13501.684222927,0,1,1.74874265618351)`. Excel returns the
+    guess, the model `#NUM!`.
+  - Every residual there is rounding noise (about 1e-12, from pv + pmt = 0), far below the restart's 1.3e-7
+    floor. So the rule cannot move it, and it is the same under the hold.
+  - T-3876 owns it; financial.md records the quirk.
+  - The sweep rarely makes a flat secant. It shows the rule moves nothing elsewhere, not the restart itself.
+- **R4.4:** the gains are 5 ulp to 3e-11 relative, above the 4-ulp web-desktop floor.
+- **Eval delta:**
+  - probes: 6 fixed (t3579-rate-residual-nper1 A1, A2, A41, A42; t3348-rate-fv-nonzero A171, A175), 0
+    regressions.
+  - probes-numeric: t3348-rate-gate-a-fresh A296 fixed.
+  - New cases: t3698-rate-flat-restart, t3698-rate-flat-restart-fresh and t3698-rate-r4-fresh add 405 cells. The
+    noise-floor misses are owned by T-3850 and A201 by T-3876.
+- **Follow-ups:**
+  - T-3850: late restarts and noise-floor paths.
+  - T-3876: a noise-only residual returns the guess.

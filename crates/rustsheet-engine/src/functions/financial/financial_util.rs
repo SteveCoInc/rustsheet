@@ -48,7 +48,7 @@ pub(crate) const RATE_MAX_STEPS: u32 = 200;
 /// flat secant (f1 = f0) is a hold at r1, judged by the same two tests, and an iterate at or below
 /// -1 runs on (T-3348, decision 0198; the rule, its evidence and its known misses are in
 /// financial.md "RATE holds on a flat secant and runs on below -1"). An early flat secant on two
-/// distinct iterates with |f1| < 1e-4 restarts the run once from the older iterate instead
+/// distinct iterates with a small |f1| restarts the run once from the older iterate instead
 /// (T-3698, financial.md "RATE restarts once on an early flat secant"). A residual Excel's `^`
 /// cannot form and a run that has not stopped by then are `#NUM!`. Microsoft documents Newton's
 /// method and 20 steps; neither fits. The fit, its scores and the rules not yet probed are in
@@ -104,13 +104,21 @@ fn rate_secant(
     // on the cells of the three cap probes (T-3395 counted them).
     /// FITTED(T-2689, 178 cells, RATE at the 200-step cap; one cut for all three tests bracketed 9.4E-5..1.02E-4)
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
-    // A flat secant on two distinct iterates at this step or earlier, with |f1| below the cap's
-    // bound, restarts the run from the older iterate r0 (T-3698): probes/t3698-rate-flat-restart
-    // brackets it between A26 (step 16, restarts) and A28 (step 18, holds); A27 (step 17) is off
-    // both, so 16 is the step where the score is highest and 17 scores the same. |f1| 1.7e-4
-    // (A1, nper 1 at scale 2^10) is `#NUM!` and 8.6e-5 (A9) a number. Later flat secants hold at r1.
-    /// FITTED(T-3698, 1573 cells, RATE first flat secant at steps 3..154 with |f1| 1.3E-7..9.5E-4; fresh sweep t3698-rate-flat-restart-fresh, 51 cells)
+    // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
+    // |f1| from RATE_RESTART_F_MIN up to the cap's bound, restarts the run from the older iterate
+    // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
+    // hash split only (holdout.py, margin 5 points stated before scoring), among the candidates
+    // that lose no cell main passes (the task's acceptance criterion): over K in 3..200 and the
+    // cut in 1E-5..1E-3, K = 16 or 17 with the cut 1E-4 is best on train (1,395 of 1,477
+    // bit-exact; 3E-4 ties there but loses t3579-rate-residual-nper1 A43). The smaller K is
+    // taken. Outside the evidenced range (the first two steps, |f1| below the smallest probed flat
+    // secant) the run holds as before.
+    /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
     const RATE_RESTART_STEPS: u32 = 16;
+    /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).
+    const RATE_RESTART_FIRST: u32 = 3;
+    /// The smallest |f1| of a probed flat secant (T-3698; financial.md "Unprobed").
+    const RATE_RESTART_F_MIN: f64 = 1.3e-7;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
     let mut r1 = r0 - OFFSET.copysign(f0);
@@ -134,8 +142,8 @@ fn rate_secant(
             // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
             if restart
                 && r1 != r0
-                && step <= RATE_RESTART_STEPS
-                && f1.abs() < RATE_CAP_TOLERANCE
+                && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
+                && (RATE_RESTART_F_MIN..RATE_CAP_TOLERANCE).contains(&f1.abs())
                 && r0 > -1.0
             {
                 return rate_secant(args, period_start, r0, false);
