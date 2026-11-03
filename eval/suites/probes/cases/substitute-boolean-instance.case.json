@@ -1,0 +1,28 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3927: SUBSTITUTE with a boolean instance_num: literal TRUE/FALSE, booleans from cells, a comparison result, and TRUE as the text/old_text/new_text arguments for contrast.",
+  "tags": ["M5", "probe"],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "B1": true,
+        "B2": false,
+        "A1": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",TRUE)",
+        "A2": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",FALSE)",
+        "A3": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",B1)",
+        "A4": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",B2)",
+        "A5": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",1=1)",
+        "A6": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",1)",
+        "A7": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",\"2\")",
+        "A8": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",B3)",
+        "A9": "=SUBSTITUTE(\"TRUE\",TRUE,\"x\")",
+        "A10": "=SUBSTITUTE(\"aaa\",\"a\",TRUE,2)",
+        "A11": "=SUBSTITUTE(TRUE,\"R\",\"x\")",
+        "A12": "=SUBSTITUTE(\"aaa\",\"a\",\"x\",{TRUE,FALSE,1})"
+      }
+    }
+  ],
+  "expected": {},
+  "check": ["Sheet1!A1","Sheet1!A2","Sheet1!A3","Sheet1!A4","Sheet1!A5","Sheet1!A6","Sheet1!A7","Sheet1!A8","Sheet1!A9","Sheet1!A10","Sheet1!A11","Sheet1!A12","Sheet1!B12","Sheet1!C12"]
+}
