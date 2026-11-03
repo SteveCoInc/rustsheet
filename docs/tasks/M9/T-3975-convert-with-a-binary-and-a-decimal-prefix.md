@@ -3,7 +3,7 @@ id: T-3975
 title: "CONVERT with a binary and a decimal prefix: Gibyte to zbyte (t3861-convert-prefix-sweep A52)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
