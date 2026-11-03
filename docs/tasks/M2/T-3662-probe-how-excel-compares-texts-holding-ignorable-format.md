@@ -34,6 +34,9 @@ current treatment is either VERIFIED or owned by an engine task.
 - Characters to cover (build each with UNICHAR so the workbook stays ASCII): U+00AD soft hyphen,
   U+200B zero-width space, U+200C ZWNJ, U+200D ZWJ, U+200E LRM, U+200F RLM, U+2060 word joiner,
   U+FEFF BOM/ZWNBSP, U+FE0F variation selector 16, U+0085 NEL and U+0081/U+009F (C1 controls).
+- T-3584 (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH") found U+00AD weightless with
+  U+0524 and the other unweighted letters: `"a"&c&"b"="ab"` TRUE but `"a"&c="a"` and `c=""` FALSE. Add
+  U+0524 (an unweighted letter, not a format character) to the characters below; T-3904 implements the result.
 - Questions, each answered by at least two cells per character:
   1. Equality: `"a"&c&"b"="ab"`, `c=""` (the character alone against empty text), `"ab"&c="ab"`.
   2. Order when not equal: rank against the ladder `""`, `"a"`, `"ab"`, `"a-b"`, `"a'b"`,

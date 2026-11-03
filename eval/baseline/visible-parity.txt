@@ -305,6 +305,7 @@ probes/t3465-collation-holdout.case.json	62
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
 probes/t3579-rate-residual-nper1.case.json	4
+probes/t3584-match-fold-weightless.case.json	673
 probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3643-imlog10-grid.case.json	2

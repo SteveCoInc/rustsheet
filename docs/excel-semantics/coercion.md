@@ -547,6 +547,24 @@ parenthesise a lower-precedence operand (T-0132, `Ported-From: ironcalc@9b1ae3fd
 (MINUS_MINUS.xlsx C12, Excel 0.5) still fails: time text coercion is T-0146, which adds that workbook.
 Tasks: T-0132
 
+## Weightless characters in `=`, COUNTIF and XMATCH (T-3584)
+Rule: the 2568 BMP code points Excel's comparison table gives no weight (lookup.md "Weightless characters",
+listed in `docs/research/t3584/weightless-bmp.txt`) compare equal to one another under `=`, COUNTIF and
+XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count them one for one:
+- `UNICHAR(1316)=UNICHAR(4295)` (U+0524 with U+10C7), U+0524 with U+0525, U+0378 and U+00AD, U+AB70 with
+  U+1C90: TRUE (probes/t3584-match-fold-weightless Calc!B1:B3, B8, B14, B17:B18; COUNTIF and XMATCH agree, D:F).
+- `"a"&UNICHAR(1316)&"b"="ab"` and `UNICHAR(1316)&UNICHAR(4295)=UNICHAR(1317)` are TRUE (Calc!B6:B7, D6:D7,
+  F6:F7), where exact MATCH says `#N/A` (E6:E7).
+- But a weightless character is never equal to empty text (`UNICHAR(1316)=""` FALSE, Calc!B4, B9, B12, B19, B32),
+  and `"a"&UNICHAR(1316)="a"` and `"a"&UNICHAR(173)="a"` are FALSE (Calc!B5, B13; COUNTIF 0, XMATCH `#N/A`).
+- Over the whole BMP (Calc!R1:R256, bit 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH finds U+0524.
+UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
+one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
+positions and neighbours make it count is open (T-3904).
+Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
+probe's failing cells are known failures owned by T-3445 (MATCH) and T-3662 (`=`, COUNTIF, XMATCH).
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
+
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with
 D7 = " 2 " (spaces around the digit) is 2 and `Data!D3:D3/0` with the same text is `#DIV/0!`. Every
