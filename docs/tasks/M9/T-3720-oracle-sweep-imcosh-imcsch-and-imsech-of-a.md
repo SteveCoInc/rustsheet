@@ -3,7 +3,7 @@ id: T-3720
 title: "Oracle sweep: IMCOSH, IMCSCH and IMSECH of a complex z with 0 < |x| <= 0.01, with SIN, COS, SINH and COSH companions"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -66,3 +66,6 @@ companions give the full double of every factor.
 ## Out of scope
 - Choosing or implementing a kernel (T-3721). Real x (T-3609, done). Where the 0.01 cut lies (T-2797). Notation of
   parts below 1 (T-3560).
+
+## Outcome
+Case `t3720-im-reciprocal-small-x-complex` (404 rows, generator `docs/research/t3589/gen_sweep.py` seed 3720) filled by excel-graph, no pending cells. Engine matches Excel text on 395/404 IMCOSH and 398/404 IMCSCH; the plain-double product from Excel's own companions matches 384 and 366. Counts recorded in engineering.md; T-3721 links the case. Eval: new probe case 3614/3636 cells pass; its 22 failing cells are new known failures (not baselined here; no engine change). 
