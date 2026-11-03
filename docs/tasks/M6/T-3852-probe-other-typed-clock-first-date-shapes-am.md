@@ -3,7 +3,7 @@ id: T-3852
 title: "Probe other typed clock-first date shapes (AM/PM, seconds, out-of-range, month-name dates) and extend leading_clock_shape"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -30,7 +30,7 @@ after it. `leading_clock_shape` now classifies the clock with `typed_clock_shape
 trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. Eval delta: new probe case passes 66/66 (probes baseline +0 failures); no regressions.
 Not probed: day-first locales, filed as T-3901.
 
-## Handoff
+## Handoff (resumed)
 PR #2928, head 36028661600d (CI not yet seen green on it). Implemented and probed (case rows A1-A33, all excel-graph, 66/66 pass; `make check-fast` green).
 Security and design reviewers approved. excel-fidelity requested changes twice (round 1: unprobed shapes, fixed by A23-A33; round 2 open):
 - MAJOR: doc rule "a clock before a date is a number whenever the same clock after it would be" breaks for the hour-only single-letter clock: `10 A 7/1/2025`, `10 A. 7/1/2025`, `10:00 A. 7/1/2025` stay text in the engine (`clock_end` in `leading_clock_shape` only takes a full AM/PM word). Next: add these three rows to the case, fill from excel-graph (`rustsheet-oracle fill -b excel-graph --suite probes --force --case probes/date-text-typed-clock-first-shapes.case.json`), match the result.
