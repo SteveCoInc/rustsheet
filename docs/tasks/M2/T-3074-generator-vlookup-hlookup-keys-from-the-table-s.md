@@ -3,7 +3,7 @@ id: T-3074
 title: "Generator: VLOOKUP/HLOOKUP keys from the table's first column or row, and VLOOKUP/HLOOKUP/INDEX indexes inside the drawn range"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
