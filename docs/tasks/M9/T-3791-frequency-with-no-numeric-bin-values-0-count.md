@@ -3,7 +3,7 @@ id: T-3791
 title: "FREQUENCY with no numeric bin: values <= 0 count in the first row, and an error cell as the bins is skipped (gen-m9, 46 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -40,3 +40,8 @@ their known-failure lines leave eval/baseline/gen-m9.txt (`make eval-baseline`),
 
 ## Out of scope
 - An error cell inside a multi-cell bins range, and the corpus-bench re-measure (T-3046).
+
+## Outcome
+frequency.rs: a one-cell reference to an error cell as the bins is skipped (typed error bins stay the result),
+and empty bins now act as a lone bin at 0 (values <= 0, then the rest). gen-m9/d56012c9341cd0ff passes 298/298;
+gen-m9 known failures 2077 -> 2031 (fixed 46, regressions 0). statistics.md entry and T-3046 note updated.

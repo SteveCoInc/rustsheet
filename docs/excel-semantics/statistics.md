@@ -6407,7 +6407,8 @@ error cell as the bins is such a bin, not that error: `FREQUENCY(Data!G2,Data!G9
 `FREQUENCY(Data!G4,Data!G9)` with G4 = 1.5 {0;1}, `FREQUENCY(Data!G5,Data!G9)` with text data {0;0}. A typed error bin is still
 the result (`FREQUENCY("2.5",#NUM!)` `#NUM!`), and an error cell as the data is its error (`FREQUENCY(Data!G9,Data!G1)` `#DIV/0!`).
 Evidence: gen-m9/d56012c9341cd0ff (T-3781 arg-pairs batch, excel-graph, 2026-11-01), 46 cells in T-3791 (A794-A9945).
-Ours: every value in the second row, and the error cell's `#DIV/0!`; known failures owned by T-3791. Part of T-3046's
+Ours: matches (T-3791: no numeric bin is a lone bin at 0, and a one-cell reference to an error cell as the bins is skipped,
+a typed error bin still the result). Part of T-3046's
 question (an error cell in the bins) is answered for a one-cell reference.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3791
