@@ -3,7 +3,7 @@ id: T-3854
 title: "Probe GROUPBY's scalar text values and error-cell row_fields beside field_headers and as 1x1 arrays"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
