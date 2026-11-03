@@ -39,3 +39,29 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
 
 ## Out of scope
 - Changing the engine's kernels: each failing point gets its own task (`known-failures.tsv`).
+
+## Outcome
+- Definitions (decision 0228), each citing numbers.md:
+  - `defs/product.py`: PRODUCT is the exact product and SUMSQ the exact sum of squares of the literals' doubles, both
+    `variadic`. Domain: a running product, square or running sum of squares past the double range (x87 running values
+    as SUM's, T-0990), so `PRODUCT(1E+200,1E+200,0)` and `SUMSQ(1E+200)` are domain errors.
+  - `defs/seriessum.py`: the exact sum of c_i·x^(n+i·m) over an array literal of coefficients, with numbers.md's x = 0
+    rule (`#NUM!` for a power at or below 0), the T-2380 zero term (negative x, non-integer power) and the T-2163
+    overflow (power, term or running sum past the double range).
+  - `defs/percentof.py`: SUM(subset)/SUM(all) through SUM's own definition (`aggregate.sum_value`, the snap), so a
+    snapped or zero total is a domain error (`#DIV/0!`, probes/percentof-snap-overflow-union D2, D10), like an
+    overflowing sum (D6) or quotient.
+  - No definition claims underflow: the draws keep every running value, power and quotient normal or zero, since no
+    oracle cell pins subnormal results for these functions.
+  - Unit tests: `tools/tests/test_accuracy_product_seriessum.py`, against the values numbers.md and the T-0416 probe cite.
+- Tables: `s1` for each (PRODUCT, SUMSQ and PERCENTOF 120 points, SERIESSUM 200), filled from excel-graph on 2026-11-03.
+  `rustsheet-accuracy verify` finds 0 differences on all four. `rustsheet-eval accuracy` reports 11704 points in 81 tables,
+  0 failing and 0 table defects. Missing tables went from 213 to 209 (−4). No point fails, so there is no `known-failures.tsv` line.
+- Excel against the math: every Excel error is a math domain error and every math domain error an Excel error. That
+  covers PRODUCT 7 `#NUM!`, SUMSQ 5 `#NUM!`, SERIESSUM 15 `#NUM!` and PERCENTOF 7 `#DIV/0!`. The widest gaps are
+  1.5e-15 (PRODUCT), 7.6e-16 (SUMSQ), 3.3e-14 (SERIESSUM) and 1.1e-13 relative (PERCENTOF, a near-cancelling total).
+  None is an R3 candidate. The engine differs from Excel on 2 PRODUCT points and 1 PERCENTOF point, all inside the envelope.
+- PERCENTOF's first draw wrote arrays of up to 510 literals, and excel-graph refused the workbook: those formulas were over
+  Excel's 8192-character limit. The long-array edge is now 80 + 160 values and the extreme stratum 10 to 60 values per
+  array; the committed table is that second draw.
+- Eval delta: none (no engine change).
