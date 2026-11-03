@@ -3,7 +3,7 @@ id: T-2557
 title: "LINEST/LOGEST/TREND/GROWTH: bound the matrix read of a huge range"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
