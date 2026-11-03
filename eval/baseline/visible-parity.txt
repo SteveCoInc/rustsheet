@@ -295,6 +295,7 @@ probes/t3893-pivotby-error-sort-header.case.json	22
 probes/t3895-collation-script-digits.case.json	1
 probes/t3906-rate-restart-oos.case.json	137
 probes/t3920-typed-a-period-1904.case.json	1
+probes/t3948-letter-period-gate-edges.case.json	8
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3

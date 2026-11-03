@@ -59,10 +59,12 @@ pub(crate) fn parse_letter_period_serial_in(
 }
 
 /// Whether `text` starts like `N A. F/D/Y` text (see [`letter_period_parts`]): a clock word of
-/// digits and colons, a spaced `A`/`P`/`AM`/`PM` word, its period and (after optional spaces) a
-/// digit. Such text either reads that way or is #VALUE! to every formula reader: `10 A. 7-2025`,
-/// `10 A. 5/1`, `10 A. 7/13/2025` and `10 A. 7/1` are not `10 A.` followed by a date
-/// (probes/t3920-typed-a-period-unprobed-edges rows 15-23, excel-graph 2026-11-03).
+/// digits and colons, a spaced `A`/`P`/`AM`/`PM` word, its period and (after optional spaces)
+/// anything. Such text either reads that way or is #VALUE! to every formula reader: `10 A. 7-2025`,
+/// `10 A. 5/1`, `10 A. 7/1`, `10 A. July 1, 2025` and `10 A. Jul-2025` are not `10 A.` followed
+/// by a date, nor `1:2:3:4 A. 5` or `10 A. 5x` anything else (probes/t3920-typed-a-period-unprobed-edges
+/// rows 15-23, t3948-letter-period-gate-edges, excel-graph 2026-11-03). `10 A.` with nothing
+/// after the period is 10 AM.
 fn is_letter_period_shape(text: &str) -> bool {
     let Some((clock, rest)) = text.split_once(' ') else {
         return false;
@@ -73,9 +75,7 @@ fn is_letter_period_shape(text: &str) -> bool {
     clock.bytes().any(|b| b.is_ascii_digit())
         && clock.bytes().all(|b| b.is_ascii_digit() || b == b':')
         && am_pm_word(word).is_some()
-        && rest
-            .trim_start_matches(' ')
-            .starts_with(|c: char| c.is_ascii_digit())
+        && !rest.trim_start_matches(' ').is_empty()
 }
 
 /// Hour-only "N AM" / "N PM" text (hour 0-12, no minutes) as a time-of-day serial: `"0 PM"` is
@@ -492,6 +492,11 @@ mod tests {
             "10 A. 7/1/2025 10:00",
             "10 A. 7/13/2025",
             "10 A. 7/1",
+            // probes/t3948-letter-period-gate-edges rows 1, 8, 13, 16.
+            "1:2:3:4 A. 5",
+            "10 A. 5x",
+            "10 A. July 1, 2025",
+            "10 A. Jul-2025",
         ] {
             assert_eq!(serial(text), None, "{text}");
         }

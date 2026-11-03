@@ -443,7 +443,15 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   are the same and the date shifts to the 1904 serial: `10 A. 5` (no date) is 49710.2763252315 as in 1900 (TEXT
   `2040-02-06 06:37:54.500`), `10 A. 7/1/2025` 93906.2763275463 (DATEVALUE 93906), and a date that lands on
   1904 day 0 or before stays text (`10 A. 1/1904`, `10 A. 12/1903`; the readers are #VALUE!). Also there:
-  `DATEVALUE("10 A.")` is 0 (the engine gives #VALUE!; bare-clock DATEVALUE is unprobed in 1900, T-3944).
+  `DATEVALUE("10 A.")` is 0 (the engine gives #VALUE!, T-3944), as is `DATEVALUE("10 A.  ")` in 1900.
+  The shape is wider than a digit after the period (T-3948; probes/t3948-letter-period-gate-edges A1-H16, excel-graph
+  2026-11-03): any text after it commits the reading, so `10 A. July 1, 2025`, `10 A. Jul-2025`, `10 A. 5x`,
+  `10 A. 5 PM`, `10 A. 5.5` and `10 A. 7/1/2025 PM` stay text and are #VALUE! to the four readers, as are the clocks
+  `1:2:3:4 A. 5`, `10:00:00 P. 5`, `1:2:3 A. 5`, `010 A. 5` (a leading zero), `00010:00 A. 5`, `10: A. 5` and
+  `:10 A. 5`. `10 A. 05` is 0.05 s. `10 A.  ` (spaces after the period, nothing else) is 10 AM, typed too. The odd one:
+  typed `10 A. 5:30` is the number 2982616.579230324, 60 x (2^32 - 22) s + 10 h + 5.5 s, read the same by VALUE and
+  `0+` (DATEVALUE 2982616, TIMEVALUE 0.5792303238995373; TEXT with a date format is #VALUE!); undecoded, the engine
+  leaves it text (T-3957).
   Where -22 comes from is unknown.
   Status: the engine matches every probed cell (T-3907, T-3920) but t3920-typed-a-period-1904 G6 (T-3944).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2

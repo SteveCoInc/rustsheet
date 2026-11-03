@@ -153,9 +153,11 @@ fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
 }
 
 /// `text` without the dot after a trailing single-letter `A`/`P` suffix (`10:00 A.` -> `10:00 A`):
-/// typed text accepts it (probes/date-text-single-letter-ap N12).
+/// typed text accepts it (probes/date-text-single-letter-ap N12), also before trailing spaces
+/// (`10 A.  ` is 10 AM, probes/t3948-letter-period-gate-edges A14).
 fn without_single_letter_dot(text: &str) -> &str {
     match text
+        .trim_end_matches(' ')
         .strip_suffix('.')
         .and_then(|rest| rest.rsplit_once(' '))
     {
