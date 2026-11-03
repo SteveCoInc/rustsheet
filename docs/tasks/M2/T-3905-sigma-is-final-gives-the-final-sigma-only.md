@@ -3,7 +3,7 @@ id: T-3905
 title: "sigma_is_final gives the final sigma only at the end of text or before Excel's 30 ASCII separators (probes/t3820-lower-sigma-next-char)"
 milestone: M2
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -34,3 +34,6 @@ Excel does: at the end of the text or before one of 30 ASCII characters, and to 
 
 ## Out of scope
 - UPPER and LOWER's mapping table (T-3583); PROPER's word starts (T-3657).
+
+## Outcome
+`sigma_is_final` now tests the fixed 30-character list (end of text, TAB/LF/CR, space and 26 ASCII punctuation); unit test added; text.md updated. Eval: probes/t3820-lower-sigma-next-char 216 known failures fixed, 0 regressions.

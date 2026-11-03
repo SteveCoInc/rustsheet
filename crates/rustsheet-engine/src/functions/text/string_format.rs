@@ -594,13 +594,45 @@ fn simple_case(c: char, upper: bool) -> char {
     }
 }
 
-/// Whether a capital sigma followed by `next` lowers to the final ς: not before a letter or digit,
-/// a combining mark (U+0300..U+036F), a right single quote (U+2019) or a zero-width space, while
-/// a straight apostrophe, space, `-` and the end of the text all give ς (probes/case-mapping-expanding
-/// A14:C27). The rule is the same in PROPER and LOWER, and a lone Σ lowers to ς in LOWER.
+/// Whether a capital sigma followed by `next` lowers to the final ς: only at the end of the text or
+/// before one of 30 ASCII characters (TAB, LF, CR, space and ``! " # $ % & ' + , - . / : ; < = > ?
+/// @ [ \ ] _ { | }``); every other character, letters, marks, U+00A0, U+2018, emoji included, gives σ
+/// (probes/t3820-lower-sigma-next-char, Calc!A1:C50 and the whole-BMP sweep E1:F256). The rule is
+/// the same in PROPER, LOWER and TEXTBEFORE/TEXTAFTER's case-insensitive mode.
 pub(super) fn sigma_is_final(next: Option<char>) -> bool {
     next.is_none_or(|n| {
-        !(n.is_alphanumeric() || matches!(n, '\u{300}'..='\u{36f}' | '\u{2019}' | '\u{200b}'))
+        matches!(
+            n,
+            '\t' | '\n'
+                | '\r'
+                | ' '
+                | '!'
+                | '"'
+                | '#'
+                | '$'
+                | '%'
+                | '&'
+                | '\''
+                | '+'
+                | ','
+                | '-'
+                | '.'
+                | '/'
+                | ':'
+                | ';'
+                | '<'
+                | '='
+                | '>'
+                | '?'
+                | '@'
+                | '['
+                | '\\'
+                | ']'
+                | '_'
+                | '{'
+                | '|'
+                | '}'
+        )
     })
 }
 
@@ -708,10 +740,25 @@ fn strip_leading_percent(text: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::format_abs;
+    use super::{format_abs, lower_case, sigma_is_final};
 
     // Expected strings come from docs/excel-semantics/text.md "FIXED, DOLLAR and BAHTTEXT cut to
     // 15 significant digits first" (excel-graph, gen-m5) and from ROUND's decimal rules.
+    // Classes from docs/excel-semantics/text.md (T-3820, probes/t3820-lower-sigma-next-char).
+    #[test]
+    fn sigma_is_final_only_before_the_listed_separators() {
+        assert!(sigma_is_final(None));
+        for c in ['\t', ' ', '-', '\'', '}', '_'] {
+            assert!(sigma_is_final(Some(c)), "{c:?}");
+        }
+        for c in [
+            '(', '\u{a0}', '\u{301}', '\u{2018}', '\u{2019}', '😀', 'a', '1',
+        ] {
+            assert!(!sigma_is_final(Some(c)), "{c:?}");
+        }
+        assert_eq!(lower_case("Σ(Σ"), "σ(ς");
+    }
+
     #[test]
     fn cuts_to_15_digits_before_rounding() {
         assert_eq!(format_abs(1.005, 2, true), "1.01");
