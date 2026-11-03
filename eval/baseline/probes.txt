@@ -1142,6 +1142,8 @@ C	probes/sheet-ops/sheet-ops-workbook-name-via-prefix-no-rename.case.json	7
 C	probes/sheet-qualified-both-corners.case.json	9
 C	probes/sheet-qualified-corner-order.case.json	13
 C	probes/sheet-qualified-ref-error-forms.case.json	10
+C	probes/sheet-qualified-ref-error-text-delete-sheet.case.json	4
+C	probes/sheet-qualified-ref-error-text-rename.case.json	4
 C	probes/single-typed-01.case.json	2
 C	probes/single-typed-02.case.json	2
 C	probes/single-typed-03.case.json	2
@@ -2151,6 +2153,7 @@ C	probes/type-one-cell-range-kinds.case.json	20
 C	probes/typed-currency-percent-input.case.json	66
 C	probes/typed-group-comma-leading-percent.case.json	32
 C	probes/typed-input-sign-space-mixed-fraction.case.json	63
+C	probes/typed-missing-sheet-ref-error-text.case.json	3
 C	probes/typed-mixed-fraction-number-format.case.json	31
 C	probes/typed-number-tiny.case.json	24
 C	probes/typed-paren-number-input.case.json	24
@@ -2170,6 +2173,7 @@ C	probes/unknown-function-name-folds-2.case.json	64
 C	probes/unknown-function-name-folds.case.json	40
 C	probes/unknown-function-name-reach.case.json	52
 C	probes/unknown-function-name-spelling.case.json	36
+C	probes/unqualified-ref-error-text-and-typed.case.json	7
 C	probes/value-argument-lift.case.json	22
 C	probes/value-clock-text.case.json	135
 C	probes/value-sign-space-mixed-fraction-dash-date.case.json	35
