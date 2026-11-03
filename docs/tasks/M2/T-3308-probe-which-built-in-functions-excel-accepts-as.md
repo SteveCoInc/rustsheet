@@ -3,7 +3,7 @@ id: T-3308
 title: "Probe which built-in functions Excel accepts as an intersection operand, to replace the engine's inferred refuse-by-default list"
 milestone: M2
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -41,17 +41,33 @@ VERIFIED, and every engine difference is a filed task.
   on its own outside the intersection, as the doc does for CHOOSEROWS and IFERROR).
 
 ## Acceptance criteria
-- [ ] Probe case `probes/t3308-intersection-function-operands` (milestone M2) committed with its
+- [x] Probe case `probes/t3308-intersection-function-operands` (milestone M2) committed with its
       excel-graph sidecar, holding every accepted shape from groups 1-3 with its value.
-- [ ] references.md lists each shape of groups 1-3 as accepted (with case and cell) or refused (with
+- [x] references.md lists each shape of groups 1-3 as accepted (with case and cell) or refused (with
       the scratch-run date), and drops the "UNVERIFIED by inference" sentence or narrows it to what is
       still unprobed.
-- [ ] Every committed cell passes, or the failing cells are known failures recorded by `make
+- [x] Every committed cell passes, or the failing cells are known failures recorded by `make
       eval-baseline` (0 regressions). A shape the engine accepts but Excel refuses, or the reverse, is
       listed in a filed engine task (case stem and A1 names in one bullet, decision 0159, or the
       refused formulas for a refusal).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing `may_be_reference` or the parser (the follow-up engine task).
 - Whitespace in the operator (T-3284, T-3307); the `@` operand cases already probed (T-0149, T-1103).
+
+## Outcome
+- Scratch runs (one workbook per formula, excel-graph, 2026-11-03) sorted the three groups: every
+  group 1 call is accepted as a left operand (=2); every group 3 call (inline, defined-name and
+  LET-bound LAMBDA, unknown name, unknown `_xlfn.` name) is accepted on either side; every group 2
+  built-in (EXPAND, TOCOL, TOROW, WRAPROWS, WRAPCOLS, HSTACK, SORTBY, XMATCH, AREAS, CELL, HYPERLINK,
+  IMAGE, GROUPBY) is refused (`FileCorruptTryRepair`) on either side, while each loads on its own.
+- Committed `probes/t3308-intersection-function-operands` (M2, 25 checked cells, excel-graph sidecar):
+  the accepted shapes plus value-returning LAMBDA calls (`#VALUE!`) and two spilling cuts. The engine
+  passes all 25 cells; the refused shapes were already parse errors in the engine and are now pinned
+  in `intersection_operands_must_be_references` (both sides). No engine difference, so no follow-up
+  engine task.
+- references.md "Intersection operands must be references" lists every shape with case and cell or
+  scratch-run date, and the "UNVERIFIED by inference" sentence is narrowed to built-ins in neither
+  list and an uncalled LAMBDA operand.
+- Eval delta: +1 case, +25 passing cells, 0 new known failures, 0 regressions.
