@@ -1962,6 +1962,8 @@ C	probes/t3907-typed-clock-a-period-shapes.case.json	78
 C	probes/t3909-textjoin-lifted-ignore-empty.case.json	44
 C	probes/t3920-typed-a-period-1904.case.json	49
 C	probes/t3920-typed-a-period-unprobed-edges.case.json	160
+C	probes/t3944-datevalue-bare-clock-1900.case.json	40
+C	probes/t3944-datevalue-bare-clock-1904.case.json	40
 C	probes/t3948-letter-period-gate-edges.case.json	112
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -7270,14 +7272,12 @@ F	probes/t3906-rate-restart-oos.case.json	Sheet1!A96
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A97
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A98
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A99
-F	probes/t3920-typed-a-period-1904.case.json	S!G6
 F	probes/t3948-letter-period-gate-edges.case.json	S!B10
 F	probes/t3948-letter-period-gate-edges.case.json	S!C10
 F	probes/t3948-letter-period-gate-edges.case.json	S!D10
 F	probes/t3948-letter-period-gate-edges.case.json	S!E10
 F	probes/t3948-letter-period-gate-edges.case.json	S!F10
 F	probes/t3948-letter-period-gate-edges.case.json	S!G10
-F	probes/t3948-letter-period-gate-edges.case.json	S!G14
 F	probes/t3948-letter-period-gate-edges.case.json	S!H10
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
