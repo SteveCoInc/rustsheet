@@ -3,7 +3,7 @@ id: T-3465
 title: "Collation hold-out sweep: random mixed-category text pairs compared in Excel (<, =) to measure whether the fitted cmp_text_excel rules generalize past their probes"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
