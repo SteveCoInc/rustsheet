@@ -41,18 +41,17 @@ pub(crate) const RATE_MAX_STEPS: u32 = 200;
 
 /// RATE as Excel computes it: a secant on the residual [`rate_residual`] from r0 = guess and
 /// r1 = r0 - 0.001·sign(f(r0)), each step `r2 = r1 - f1·(r1-r0)/(f1-f0)` with Excel's
-/// twice-rounded `-`, `*` and `/`. It stops at the first iterate with |r2 - r1| < 1e-7 and
-/// |f(r2)| < 1e-7. The iterate of step [`RATE_MAX_STEPS`] is returned unconverged when it passes
-/// a looser test: |r2 - r1|, |f(r2)| and 1 + r2 against 1e-4, all absolute
-/// (probes/rate-cap-return-rule, rate-pmt-zero-cap, rate-step-cap A30). The modelled outcome of a
-/// flat secant (f1 = f0) is a hold at r1, judged by the same two tests, and an iterate at or below
-/// -1 runs on (T-3348, decision 0198; the rule, its evidence and its known misses are in
-/// financial.md "RATE holds on a flat secant and runs on below -1"). An early flat secant on two
-/// distinct iterates with a small |f1| restarts the run once from the older iterate instead
-/// (T-3698, financial.md "RATE restarts once on an early flat secant"). A residual Excel's `^`
-/// cannot form and a run that has not stopped by then are `#NUM!`. Microsoft documents Newton's
-/// method and 20 steps; neither fits. The fit, its scores and the rules not yet probed are in
-/// financial.md "RATE is a secant on the FV residual" (T-2005).
+/// twice-rounded `-`, `*` and `/`. A step whose residual equals the last one (f2 = f1) keeps the
+/// older iterate: the next secant runs on r0 and r2 (T-3963, financial.md "RATE keeps its older
+/// iterate when a step leaves the residual unchanged"). It stops at the first iterate with
+/// |r2 - r1| < 1e-7 and |f(r2)| < 1e-7. The iterate of step [`RATE_MAX_STEPS`] is returned
+/// unconverged when it passes a looser test: |r2 - r1|, |f(r2)| and 1 + r2 against 1e-4, all
+/// absolute (probes/rate-cap-return-rule, rate-pmt-zero-cap, rate-step-cap A30). A flat start
+/// (f(r1) = f(guess)) holds at r1, judged by the same two tests, and an iterate at or below -1
+/// runs on (T-3348, decision 0198; financial.md "RATE holds on a flat secant and runs on below
+/// -1"). A residual Excel's `^` cannot form and a run that has not stopped by then are `#NUM!`.
+/// Microsoft documents Newton's method and 20 steps; neither fits. The fit, its scores and the
+/// rules not yet probed are in financial.md "RATE is a secant on the FV residual" (T-2005).
 pub(crate) fn compute_rate(
     pv: f64,
     fv: f64,
@@ -65,17 +64,11 @@ pub(crate) fn compute_rate(
         return Err(Error::VALUE);
     }
     let args = (nper, pmt, pv, fv);
-    rate_secant(args, annuity_type != 0, guess, true)
+    rate_secant(args, annuity_type != 0, guess)
 }
 
-/// One secant run of [`compute_rate`] from `guess`; `restart` allows the one restart of an early
-/// flat secant (T-3698), which the restarted run does not get again.
-fn rate_secant(
-    args: (f64, f64, f64, f64),
-    period_start: bool,
-    guess: f64,
-    restart: bool,
-) -> Result<f64, Error> {
+/// The secant run of [`compute_rate`] from `guess`.
+fn rate_secant(args: (f64, f64, f64, f64), period_start: bool, guess: f64) -> Result<f64, Error> {
     // The start offset was chosen by scoring (T-2005; fit lab `rate_candidates` scores +-1E-3 and
     // 1E-4): on the 782 cells of the fit lab's `rate` set the model is bit-exact on all, with
     // nper 1..1000, |pmt| 1E-6..1E+6, pv -100..1E+7, guess -0.5..10 and rates -0.75..2. T-3478
@@ -104,59 +97,23 @@ fn rate_secant(
     // on the cells of the three cap probes (T-3395 counted them).
     /// FITTED(T-2689, 178 cells, RATE at the 200-step cap; one cut for all three tests bracketed 9.4E-5..1.02E-4)
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
-    // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
-    // |f1| from RATE_RESTART_F_MIN up to RATE_RESTART_F_MAX, restarts the run from the older iterate
-    // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
-    // hash split only (holdout.py, margin 5 points stated before scoring; docs/research/t3698):
-    // over K in 3..200 and the cut in 1E-5..1E-3, K = 16 or 17 is best on train (1,395 of 1,477
-    // bit-exact) and the smaller is taken. The evidence brackets the cut: probes/t3698-rate-flat-
-    // restart restarts at |f1| up to 4.3E-5 (A3:A8) and holds at 1.7E-4 (A1). Out of sample
-    // (probes/t3906-rate-restart-oos, 240 fresh calls where the rule and the hold differ) the rule
-    // is bit-exact on 48 and the hold on 12, but the rule moves A152 and A194 out of the Gate A
-    // envelope (A194 becomes #NUM!), so it is not cleared: T-3850 must narrow or revert it
-    // (T-3906). Outside the evidenced range (the first two
-    // steps, |f1| below the smallest probed flat secant) the run holds as before. `r0 > -1` is a
-    // guard, not evidence: a restart from r0 <= -1 would be a guess that RATE refuses.
-    /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
-    const RATE_RESTART_STEPS: u32 = 16;
-    /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).
-    const RATE_RESTART_FIRST: u32 = 3;
-    /// The evidence floor of the restart's |f1| (T-3698). It sits just above 1.27E-7, the smallest |f1| of a
-    /// probed flat secant on distinct iterates (step 58). Inside the rule's own steps 3..16 the smallest probed
-    /// |f1| is 1.67E-7 (the nper-1 family at step 3), so 1.3E-7..1.67E-7 there is unprobed (T-3906 review).
-    const RATE_RESTART_F_MIN: f64 = 1.3e-7;
-    /// The |f1| cut of the restart: part of T-3698's fit (the FITTED tag on `RATE_RESTART_STEPS` covers it,
-    /// scored over 1E-5..1E-3). It equals the cap's bound `RATE_CAP_TOLERANCE` but is not tied to it, so
-    /// a change to that fit does not move this one (T-3906).
-    const RATE_RESTART_F_MAX: f64 = 1e-4;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
     let mut r1 = r0 - OFFSET.copysign(f0);
     let mut f1 = residual(r1)?;
     for step in 1..=RATE_MAX_STEPS {
         // A flat secant (f1 = f0) has no finite step: 0/0 after a zero-step stall (r1 = r0),
-        // a nonzero number over 0 otherwise. Holding at r1 is the modelled outcome that fits the
-        // evidence; the engine stopped with `#NUM!` here before T-3348. The held point is judged
-        // by the convergence test and by the cap's test, as the 200th iterate would be. Near the
-        // root of a long annuity |f| is rounding noise above 1e-7: `RATE(239,-14841.27102594,
-        // 344293.4825124,-155496.6323522,0)` is held at |f| 3.2e-7 and is 0.04310546919282547
-        // in Excel (probes/t3348-rate-fv-nonzero A1). A residual of exactly 0 on both sides is
-        // `#NUM!` (`RATE(1,0,0,0)`, probes/rate-zero-residual-guess A1, A2). Excel errs on 13
-        // holds the rule returns (decision 0198, T-3424).
+        // a nonzero number over 0 otherwise. Since a step that leaves the residual unchanged keeps
+        // r0 (below), this happens only on the start pair. Holding at r1 is the modelled outcome
+        // that fits the evidence; the engine stopped with `#NUM!` here before T-3348. The held
+        // point is judged by the convergence test and by the cap's test, as the 200th iterate
+        // would be. A residual of exactly 0 on both sides is `#NUM!` (`RATE(1,0,0,0)`,
+        // probes/rate-zero-residual-guess A1, A2). Excel errs on some holds the rule returns
+        // (decision 0198, T-3424).
         let flat = f1 == f0;
         let (r2, f2) = if flat {
             if f1 == 0.0 {
                 return Err(Error::NUM);
-            }
-            // The restart (T-3698): a fresh run from r0, as if r0 were the guess
-            // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
-            if restart
-                && r1 != r0
-                && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
-                && (RATE_RESTART_F_MIN..RATE_RESTART_F_MAX).contains(&f1.abs())
-                && r0 > -1.0
-            {
-                return rate_secant(args, period_start, r0, false);
             }
             (r1, f1)
         } else {
@@ -199,7 +156,34 @@ fn rate_secant(
         if flat {
             return Err(Error::NUM);
         }
-        (r0, f0, r1, f1) = (r1, f1, r2, f2);
+        if f2 == f1 {
+            // The residual did not change: Excel keeps the older iterate r0 and replaces r1, so the
+            // next secant runs on r0 and r2 (T-3963). Calls whose runs reach the same r0, r1 and f1
+            // by different paths get different Excel values (probes/t3850-rate-same-state), which
+            // no rule on that state can give; this rule depends on the path. It replaces T-3698's
+            // restart and T-3348's hold on two distinct iterates (with it, a flat secant comes only
+            // on the start pair). Structural model, frozen before the fresh sweep: on the 2,400
+            // literal RATE oracle cells it is bit-exact on 1,992 (train 1,416 of 1,704, test 576 of
+            // 696; the merged rule 1,357 and 557), and on 240 fresh calls drawn after the freeze
+            // where the two differ, 59 against 9 (probes/t3963-rate-keep-r0-fresh). Its 37 lost
+            // cells are in decision 0260.
+            // A zero step (r2 = r1) repeats itself to the cap, so it goes to the cap's test at
+            // once; Excel errs on some of those the test returns (probes/t3698-rate-flat-restart
+            // A1, A2), as it does on some of T-3348's holds (T-3424).
+            if r2 == r1 {
+                return if step_size < RATE_CAP_TOLERANCE
+                    && f2.abs() < RATE_CAP_TOLERANCE
+                    && 1.0 + r2 > RATE_CAP_TOLERANCE
+                {
+                    Ok(r2)
+                } else {
+                    Err(Error::NUM)
+                };
+            }
+            (r1, f1) = (r2, f2);
+        } else {
+            (r0, f0, r1, f1) = (r1, f1, r2, f2);
+        }
     }
     Err(Error::NUM)
 }

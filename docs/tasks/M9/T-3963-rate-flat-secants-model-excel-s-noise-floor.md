@@ -3,7 +3,7 @@ id: T-3963
 title: "RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-secant state fits (after T-3850)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -44,12 +44,39 @@ because T-3850 showed that no rule on the model's state at the flat step does it
     restart).
 
 ## Acceptance criteria
-- [ ] A probe or finding that pins Excel's residual (or another cause) at the noise floor of at least two of the
+- [x] A probe or finding that pins Excel's residual (or another cause) at the noise floor of at least two of the
       12 solid t3850-rate-same-state groups (an error against a number, or more than 4 ulp apart). Splits of 4 ulp
       or less are not targets (decision 0112, R4.4).
-- [ ] A model that fits it, implemented with no RATE cell regressing, R4 hold-out and fresh sweep recorded; or a
+- [x] A model that fits it, implemented with no RATE cell regressing, R4 hold-out and fresh sweep recorded; or a
       recorded finding that none on the evidenced inputs does.
-- [ ] financial.md updated; `make check` green; reviewers approve.
+- [x] financial.md updated; `make check` green; reviewers approve.
 
 ## Out of scope
 - The narrow-or-revert ruling on T-3698's restart (T-3916, needs owner).
+
+## Outcome
+- **Finding:** the cause is not Excel's residual but the secant's path. A step whose new residual equals the last
+  one (f2 = f1) keeps the older iterate r0 and replaces r1, so the next secant runs on r0 and r2. That makes Excel's
+  value depend on the iterate before r0, which is why T-3850's same-state groups split. financial.md "RATE keeps its
+  older iterate when a step leaves the residual unchanged"; the older restart and no-rule entries are marked
+  superseded/resolved.
+- **Residual candidates** (x87-register residual or secant, libm `pow`, Excel's exp-ln power, two factor orders) each
+  lose 360 to 920 of the 2,400 literal RATE oracle cells, so the twice-rounded residual stands.
+- **Engine:** `rate_secant` keeps r0 on f2 = f1 and sends a zero step (r2 = r1) to the cap's test at once; T-3698's
+  restart (`RATE_RESTART_*`, its FITTED tag and the `restart` parameter) is gone. A flat secant now only comes on the
+  start pair, which still holds (T-3348).
+- **Decision 0188 R4 (structural model, kind (c)):** candidates ranked on all 2,400 literal cells (seen before, so
+  not blind). Hold-out by the fit lab's hash split (30% test, 5-point margin): train 1,416/1,704 (merged 1,357),
+  test 576/696 (557); test rate 82.8% vs train 83.1%. Fresh sweep after the freeze:
+  probes/t3963-rate-keep-r0-fresh (240 calls, `docs/research/t3963/gen_fresh.py`, committed before the oracle fill):
+  59 bit-exact vs 9 for the merged rule; misses beyond 4 ulp or of the wrong type 149 vs 174. Gate A: 0 failing.
+  No constant was fitted.
+- **Eval delta:** probes fixed 107, regressions 37 (decision 0260: 19 within 4 ulp, 13 beyond, 5 of the wrong type),
+  new case t3963-rate-keep-r0-fresh 59/240. Literal RATE cells 1,914 -> 1,992 bit-exact.
+- **Acceptance:** on the 12 solid t3850-rate-same-state groups (72 cells) the model gets 19 bit-exact, the merged
+  rule 11. In A55:A60 and A229:A234 every numeric cell is now Excel's (5 of 6 each, from 2 and 3; the one `#NUM!`
+  in each is still missed) and A187:A192 goes from 2 to 4; A114's `#NUM!` is now Excel's. So the cause is pinned on
+  those groups (item 1), not on all 12. Item 2: implemented with the R4 record above, but 37 cells regress, so "no
+  RATE cell regressing" is not met; decision 0260 allows them.
+- **Follow-up:** T-3424 keeps the wrong-type cells (zero steps Excel errs on). The noise-only nper-1/2 residuals where
+  Excel still restarts (t3906 A15, A64) are filed as a new task.
