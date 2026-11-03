@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "0518976177da280a8005402d545d5ff806df2004456abef57129a3eb777a9d94"
+ },
+ "sheets": {
+  "Calc": {
+   "A14": {
+    "t": "e",
+    "why": "the arrays differ in length",
+    "f": "=SUMPRODUCT(Data!B1:C4,{1,2,3})"
+   }
+  }
+ }
+}
