@@ -3,7 +3,7 @@ id: T-3192
 title: "Incomplete beta bpser: T-3170's open items (b0 >= 8 L diff, the 987 cells T-2505's port moved off, 6 shape-of-1 cells)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -38,9 +38,27 @@ Open:
 Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs.
 
 ## Acceptance criteria
-- [ ] Each item above is ported (no gated cell regresses), or recorded as a negative result in statistics.md with
-      its scores.
-- [ ] `make check` green; reviewers approve.
+- [x] Each item above is ported (no gated cell regresses), or recorded as a negative result in statistics.md with
+      its scores. Item 4 (G1) is ported; items 1-3 moved unchanged to T-3886 (see Outcome).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - bfrac/basym (T-2508), the bgrat family (T-2509, T-2510), the inverses (T-2511), T-2924's fit of Excel's ln B.
+
+## Outcome
+- Item 4 (t1745-beta-inv-roundtrip G1) was not bpser's arithmetic: BETA.DIST at a = b = 1/2 is an arctangent closed
+  form, 2*ATAN(SQRT(x)/SQRT(1-x))/PI in doubles, reflected as (0.5 - w(y)) + 0.5 above x = 0.9 (statistics.md "BETA.DIST
+  at a = b = 1/2 is an arctangent closed form, reflected above x = 0.9"). Ported as `incomplete_beta::half_half_cdf`,
+  called from `bratio::beta_dist_lower_tail`.
+- First ruled out: bpser with an extended LN fixes G1 but moves 13,322 BETA.DIST cells off (full-eval A/B).
+- Model selection (decision 0188 R4: a structural form chosen from ranked candidates, so a hold-out and fresh sweep, no
+  FITTED tag): tune set the 49 a = b = 1/2 cells on file (frozen choice: reflection at 0.5, 42 of 49); fresh sweep 1
+  (probes-numeric/t3192-beta-half-half, 321 x) rejected the 0.5 reflection (248) and placed the switch between 0.888
+  and 0.900; frozen at 0.9; fresh sweep 2 (t3192-beta-half-half-2, 341 x) tested it: 287 bit-exact against 228 direct
+  and 253 reflected at 0.5. Ported form: 42/49, 281/321, 287/341 bit-exact, every cell within 2 ulp (bpser: 16/49).
+  Scripts and table: docs/research/t3192.
+- Eval delta: full-eval A/B against main before the new cases: 54 cells better (BETA.DIST, BETADIST and
+  t0969-t-beta-link df-1 cells, G1, H1, I1 among them), 0 worse; gated baselines unchanged (all probes-numeric). New
+  coverage: 2 probe cases, 1,304 Excel cells (B, C, D columns), all within 2 ulp; no visibly-off cell unowned.
+- Items 1-3 (b0 >= 8 L, T-2505's 987 cells, the 6 shape-of-1 cells) were not reached; they moved unchanged to T-3886
+  with the open a = b = 1/2 points (x = 0.5 is 0.5000000000000001 in Excel, 0.5 here).
