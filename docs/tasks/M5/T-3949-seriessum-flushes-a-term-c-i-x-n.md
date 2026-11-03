@@ -3,7 +3,7 @@ id: T-3949
 title: "SERIESSUM flushes a term c_i·x^(n+i·m) that is subnormal to 0 (probes seriessum-subnormal-power-and-term)"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,6 @@ Owned cells:
 
 ## Out of scope
 - The `^` operator (T-3950).
+
+## Outcome
+`seriessum_of` flushes each term `coeff * x^k` with `arithmetic::flush_subnormal` before summing. Eval delta: probes 5 cells fixed (seriessum-subnormal-power-and-term Sheet1!A2, A9, B2, B9; seriessum-subnormal-term-sum-and-power-points Sheet1!A1), 0 regressions.
