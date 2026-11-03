@@ -14,8 +14,10 @@ rules of numbers.md that depend only on those values:
 The coefficients are an array literal (the `array` kind, T-3586); the T-1802 argument-mode rules
 ("QUOTIENT, FACTDOUBLE and SERIESSUM argument modes") do not arise for scalar x, n and m.
 
+- "Subnormal results become 0": `^` (POWER) and `*` flush a result below the smallest normal double, so
+  such a power or term is 0.
 The draws keep every power an exact sum (n and m are integers or multiples of 1/4, so `n + i*m` is
-the double Excel forms) and keep every nonzero x^p normal: an underflowing power is not claimed.
+the double Excel forms) and keep every nonzero x^p normal, so the s1 table scores the series itself.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ X_ZERO_SOURCE = "numbers.md#seriessum-with-x--0"
 NEGATIVE_X_SOURCE = "numbers.md#seriessum-a-negative-x-to-a-non-integer-power-is-a-term-of-0-t-2380"
 OVERFLOW_SOURCE = "numbers.md#seriessum-blank-coefficient-cells-are-dropped-an-overflowing-term-beats-a-text-coefficient-t-2163"
 MAX_DOUBLE = sys.float_info.max
+MIN_NORMAL = sys.float_info.min
 
 
 def _parts(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf, mpmath.mpf, tuple[mpmath.mpf, ...]]:
@@ -65,7 +68,9 @@ def terms(args: Sequence[MathArg]) -> list[mpmath.mpf]:
         power = mpmath.power(x, p)
         if abs(power) > MAX_DOUBLE or abs(c * power) > MAX_DOUBLE:
             raise DomainError("a power or a term is beyond the double range")
-        out.append(c * power)
+        term = c * power
+        # "Subnormal results become 0": a power or term below the smallest normal is 0
+        out.append(mpmath.mpf(0) if abs(power) < MIN_NORMAL or abs(term) < MIN_NORMAL else term)
     return out
 
 

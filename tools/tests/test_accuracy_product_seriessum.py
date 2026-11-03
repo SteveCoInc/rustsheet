@@ -88,3 +88,14 @@ def test_draws_stay_inside_the_argument_limit() -> None:
                 assert 1 <= len(args) <= 255  # Excel's argument limit
                 # every array literal holds at most 255 values
                 assert all(len(a) <= 255 for a in args if isinstance(a, tuple))
+
+
+def test_subnormal_results_become_zero() -> None:
+    # numbers.md "Subnormal results become 0": probes/subnormal-function-results, -flush-edges, -sumsq-sumproduct-edges
+    for args in ((1e-308, 1), (3e-308, 0.5), (1e-200, 1e-110), (1e-308, 1e300), (1e-200, 1e-110, 1e300)):
+        assert PRODUCT.evaluate([mp(a) for a in args]) == 0
+    assert SUMSQ.evaluate([mp(1e-160)]) == 0
+    for args in ((1e-155, 1e-150), (1e-150, 1e-155)):
+        assert SUMSQ.evaluate([mp(a) for a in args]) == mp(1e-150) ** 2  # the 1E-310 square is dropped
+    assert PERCENTOF.evaluate([arr(1e-300), arr(1e300)]) == 0  # probes/percentof-snap-overflow-union D14
+    assert SERIESSUM.evaluate([mp(1e-200), mp(2), mp(1), arr(1)]) == 0  # the power 1E-400 is flushed

@@ -8,8 +8,8 @@ two array literals' doubles, with the evidence of probes/percentof-snap-overflow
   `#DIV/0!` (`PERCENTOF(A1:A2,A1:A3)`, D2), like a zero total (D10): a domain error;
 - an overflowing sum is `#NUM!` (`PERCENTOF(F1:F2,F1:F2)`, D6): a domain error, and so is a quotient
   beyond the double range;
-- `PERCENTOF(1E-300,1E+300)` is 0 (D14), an underflowing quotient flushed: the draws keep the quotient
-  normal or zero, so that rule is not claimed for other values.
+- `PERCENTOF(1E-300,1E+300)` is 0 (D14): a quotient below the smallest normal double is flushed, as `/`
+  flushes (numbers.md "Subnormal results become 0"). The s1 draws keep the quotient normal or zero.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ def _quotient(args: Sequence[MathArg]) -> mpmath.mpf:
     q = part / whole
     if abs(q) > sys.float_info.max:
         raise DomainError("the quotient is beyond the double range")
-    return q
+    return mpmath.mpf(0) if abs(q) < sys.float_info.min else q  # D14: the flush
 
 
 def _domain(args: Sequence[MathArg]) -> str | None:

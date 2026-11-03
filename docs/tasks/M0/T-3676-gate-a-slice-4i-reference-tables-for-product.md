@@ -51,8 +51,12 @@ PRODUCT, SUMSQ, SERIESSUM and PERCENTOF each get a committed, oracle-filled `s1`
   - `defs/percentof.py`: SUM(subset)/SUM(all) through SUM's own definition (`aggregate.sum_value`, the snap), so a
     snapped or zero total is a domain error (`#DIV/0!`, probes/percentof-snap-overflow-union D2, D10), like an
     overflowing sum (D6) or quotient.
-  - No definition claims underflow: the draws keep every running value, power and quotient normal or zero, since no
-    oracle cell pins subnormal results for these functions.
+  - Underflow follows numbers.md "Subnormal results become 0" (T-0189, T-1007, T-1057). A subnormal literal reads as
+    0. PRODUCT flushes every running product, so `PRODUCT(1E-200,1E-110,1E+300)` is 0. SUMSQ flushes each square
+    (`SUMSQ(1E-155,1E-150)` is exactly 1E-300). PERCENTOF flushes its quotient (T-0416 D14), and SERIESSUM its power
+    and its term. Round 0 left the flush out. Comparing the new probes math sidecars with their oracle cells showed the
+    gap: 8 cells of subnormal-function-results, subnormal-flush-edges and subnormal-sumsq-sumproduct-edges disagreed.
+    The s1 draws keep every value normal, so the tables did not change.
   - Unit tests: `tools/tests/test_accuracy_product_seriessum.py`, against the values numbers.md and the T-0416 probe cite.
 - Tables: `s1` for each (PRODUCT, SUMSQ and PERCENTOF 120 points, SERIESSUM 200), filled from excel-graph on 2026-11-03.
   `rustsheet-accuracy verify` finds 0 differences on all four. `rustsheet-eval accuracy` reports 11704 points in 81 tables,

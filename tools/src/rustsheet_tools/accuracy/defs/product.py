@@ -8,9 +8,12 @@ whose running product, square or running sum of squares leaves the double range 
 domain error. The running values follow Excel's x87 model (each operation rounded to a 64-bit
 significand, then to a double; `fitlab.exact.double_round`), left to right, as SUM's do.
 
-Underflow is not claimed: a product or square below the smallest normal double would meet
-numbers.md "Subnormal results become 0" on some operations and not on others, and no oracle cell
-pins it for these two functions, so the draws keep every running value normal (`_normal`).
+Underflow follows numbers.md "Subnormal results become 0" (T-0189, T-1007, T-1057): a subnormal literal reads
+as 0, PRODUCT flushes every running product below the smallest normal double to 0 (so
+`PRODUCT(1E-200,1E-110,1E+300)` is 0, not 1E-10), and SUMSQ flushes each square while its sum keeps
+subnormals (`SUMSQ(1E-155,1E-150)` is exactly 1E-300). The s1 draws keep every running value normal
+(`_normal`), so the tables score the products and sums themselves; the probes math sidecars carry
+the flush cells.
 
 The arity is drawn per stratum (`variadic`): 2 to 10 scalars (typical), 2 to 40 near 1 (tail), 1 to
 6 or 255 (edge), 50 to 255 near 1 (extreme) and 1 to 6 wide-magnitude ones (log-uniform).
@@ -36,6 +39,11 @@ OVERFLOW_SOURCE = "numbers.md#overflow-in------is-num-where-it-happens"
 MAX_ARGS = 255  # Excel's argument limit
 
 
+def flush(v: float) -> float:
+    """`v`, or 0 when it is a nonzero below the smallest normal double (numbers.md "Subnormal results become 0")."""
+    return 0.0 if v != 0 and abs(v) < sys.float_info.min else v
+
+
 def running(xs: Sequence[float], step: Callable[[float, float], Fraction], start: float) -> list[float]:
     """Each running value of a left-to-right fold, x87-rounded; a value beyond the double range is
     `math.inf` (with its sign), and the fold stops there."""
@@ -53,16 +61,25 @@ def running(xs: Sequence[float], step: Callable[[float, float], Fraction], start
 
 
 def running_product(xs: Sequence[float]) -> list[float]:
-    """PRODUCT's running products."""
-    return running(xs, lambda acc, x: Fraction(acc) * Fraction(x), 1.0)
+    """PRODUCT's running products, each flushed, of the flushed literals (T-1007)."""
+    out: list[float] = []
+    acc = 1.0
+    for x in xs:
+        step = running([flush(x)], lambda a, b: Fraction(a) * Fraction(b), acc)
+        acc = flush(step[-1])
+        out.append(acc)
+        if not math.isfinite(acc):
+            break
+    return out
 
 
 def squares(xs: Sequence[float]) -> list[float]:
-    """SUMSQ's squares, each x87-rounded (`math.inf` past the double range)."""
+    """SUMSQ's squares of the flushed literals, each x87-rounded and flushed (T-1057; `math.inf` past the double
+    range)."""
     out: list[float] = []
     for x in xs:
         try:
-            out.append(double_round(Fraction(x) ** 2))
+            out.append(flush(double_round(Fraction(flush(x)) ** 2)))
         except OverflowError:
             out.append(math.inf)
     return out
@@ -96,11 +113,18 @@ def _sumsq_domain(args: Sequence[MathArg]) -> str | None:
 
 
 def _product(args: Sequence[MathArg]) -> mpmath.mpf:
-    return mpmath.fprod(scalars(args))
+    """The exact product, or 0 where a literal or running product is flushed."""
+    xs = scalars(args)
+    products = running_product([float(x) for x in xs])
+    return mpmath.mpf(0) if products and products[-1] == 0 else mpmath.fprod(xs)
 
 
 def _sumsq(args: Sequence[MathArg]) -> mpmath.mpf:
-    return mpmath.fsum(x * x for x in scalars(args))
+    """The exact sum of the squares that are not flushed."""
+    xs = scalars(args)
+    return mpmath.fsum(
+        x * x for x, square in zip(xs, squares([float(x) for x in xs]), strict=True) if square != 0
+    )
 
 
 # -- draws -------------------------------------------------------------------------------------
