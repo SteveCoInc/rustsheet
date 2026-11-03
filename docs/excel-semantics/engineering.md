@@ -1123,6 +1123,20 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   IMSECH takes no series at all), so they are cosh x or division residue, not the series. Status: VERIFIED (excel-graph) for the
   real IMSECH and IMCSCH kernels at |x| <= 0.01 and for the three-term series at complex x; UNVERIFIED for the 8
   leftovers named above. Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
+- **IMSINH, IMCOSH, IMSECH and IMCSCH take libm's cosh below |x| 1E-4 (T-3930).** At 0 < |x| <= 0.01 sinh x is
+  the three-term series (T-3721) and cosh x the `1/u` form, except below |x| 1E-4, where cosh x is libm's:
+  `IMSECH("-8.74352867749883E-05+1.16398498777952i")` is 2.52727602503685+0.000512882556578914i (form ...684),
+  `IMCOSH("3.58722248184392E-06+0.256378854055322i")` has real part 0.967314566321166 (form ...165) and
+  `IMCSCH("2.5814545068154E-05-0.118602492728453i")` imaginary part 8.45132516126195 (form ...194;
+  probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C311, D169, t3720-im-reciprocal-small-x-complex A3, D7,
+  B25, B148). Above the cut the form is right: libm's cosh everywhere breaks 33 texts at
+  |x| 1.09E-04..0.01. The cut is fitted, bracketed 8.8E-05..1.09E-04 (`LIBM_COSH_BELOW`, FITTED). Fit lab, train and
+  test exact: cut 1131 and 485 of im-small-x-complex, against 1128 and 484 for the form alone, 1117 and 482 for libm,
+  1052 and 448 correctly rounded. The fresh sweep drawn after the freeze (probes-numeric/t3930-r4-im-small-x-cosh,
+  480 texts, half of them at |x| 3E-5..3E-4) gives cut 480, form 475, libm 476. Still off, UNVERIFIED (T-3930):
+  `IMSECH("-0.00529114829570232-0.0605498694819928i")` (C386, Excel -0.00032135183420584i, every candidate ...841)
+  and the real `IMSECH("-0.00802240437783925")` (C390, Excel 0.99996782137691), which the `1/u` form's `1/cosh` fits
+  but T-3609's libm `1/cosh` (all 75 of T-3609's real texts, against the form's 72) does not.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is

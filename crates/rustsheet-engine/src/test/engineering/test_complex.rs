@@ -697,6 +697,28 @@ fn imsqrt_roots_twice_and_the_logs_scale_imln() {
     assert_texts(&cases);
 }
 
+// Below |x| 1E-4 the hyperbolic kernels take libm's cosh, where the `1/u` form prints one digit off
+// (probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C311, t3720-im-reciprocal-small-x-complex
+// A3, B25; excel-graph, T-3930).
+#[test]
+fn tiny_x_hyperbolics_take_libm_cosh() {
+    let cases = [
+        (
+            r#"=IMSECH("-8.74352867749883E-05+1.16398498777952i")"#,
+            "2.52727602503685+0.000512882556578914i",
+        ),
+        (
+            r#"=IMCOSH("3.58722248184392E-06+0.256378854055322i")"#,
+            "0.967314566321166+9.0964584974296E-07i",
+        ),
+        (
+            r#"=IMCSCH("2.5814545068154E-05-0.118602492728453i")"#,
+            "0.00183084854010124+8.45132516126195i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
 /// Each `(formula, text)` in its own cell of column A: the formula prints that text.
 fn assert_texts(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
