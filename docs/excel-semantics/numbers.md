@@ -2534,6 +2534,20 @@ COMBINA lifts over arrays (T-2414, probes/t2414-gen-m7-unexplained, excel-graph,
 (`VSTACK({1;2},CHOOSE(3,1,2))` is `#VALUE!`, ours agrees). Implemented (T-2453): COMBINA lifts both arguments.
 Status: VERIFIED (excel-graph); implemented (T-2154).
 
+## QUOTIENT truncates the double quotient (T-3675)
+Rule: `QUOTIENT(n,d)` is the double `n/d` truncated toward zero, not the integer part of the exact ratio of the two
+doubles: `QUOTIENT(-46.22552,8E-05)` is -577819 and `QUOTIENT(7789451.97564,0.00108)` 7212455533, where the exact ratio
+of the doubles is just inside -577819 and 7212455533 (its integer parts are -577818 and 7212455532); the double quotient
+rounds onto the whole number. Over all 120 points of the table, Excel equals the truncated double quotient (largest
+relative gap 2E-16, a quotient past 2^53, where the double is already whole). A zero denominator is `#DIV/0!`.
+`QUOTIENT(1,0.1)` is 10 (the double quotient is exactly 10; the exact ratio is a little under it) and `QUOTIENT(0.3,0.1)` is 2
+(0.3/0.1 is the double 2.9999999999999996).
+Evidence: accuracy/QUOTIENT/s1 A31 and A66 (excel-graph, 2026-11-03, T-3675) for the two cells named, and the whole table;
+probes-numeric/double-rounding-ops A86, A87.
+Ours: `fn_quotient` (mathematical.rs) truncates `value / divisor`; matches.
+Status: VERIFIED (excel-graph)
+Tasks: T-3675
+
 ## QUOTIENT, FACTDOUBLE and SERIESSUM argument modes
 Rule: QUOTIENT (both arguments), FACTDOUBLE and SERIESSUM's `x`, `n` and `m` are Analysis ToolPak arguments. They lift
 over an array, one scalar call per element, and refuse a multi-cell range with `#VALUE!`, even on the range's own rows.
