@@ -81,7 +81,9 @@ const A1_CLOSED_FORM_MAX_Y: f64 = 0.9;
 /// [`half_half_cdf`]'s switch to the reflected form: the direct form wins up to x = 0.888 and the
 /// reflected one from x = 0.900 on the first sweep (probes-numeric/t3192-beta-half-half; 1 cell of
 /// 51 at x 0.837 against it); frozen at 0.9 before the second sweep tested it (t3192-beta-half-half-2:
-/// 287 of 341 against 228 direct and 253 reflected at 0.5).
+/// 287 of 341 against 228 direct and 253 reflected at 0.5). Below the floor of decision 0112 (1 ulp),
+/// but a second excel-graph fill of both sweeps matched the first on all 1,304 cells.
+/// FITTED(T-3192, 321 cells, a = b = 1/2, x 1E-300..1-1E-15; dense 0.8..1 on the 341-cell hold-out)
 const HALF_HALF_REFLECT_ABOVE: f64 = 0.9;
 
 /// `I_x(a, b)` for shapes a, b > 0; 0 at x <= 0 and 1 at x >= 1. NaN in, NaN out.
@@ -191,16 +193,17 @@ pub(crate) fn closed_form_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, 
 /// 12 ulp low at `BETA.DIST(2.4674011002723394E-20,0.5,0.5,TRUE)` (Excel 9.999999999999999E-11,
 /// probes-numeric/t1745-beta-inv-roundtrip G1): fl(LN x) loses 3E-15 that the square root keeps.
 pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
-    // atan(sqrt(t)/sqrt(1 - t)) with libm's atan, as the worksheet's ATAN takes it; the tie of
-    // the two forms near x = 0.9 is where Excel's own switch was measured (score_half.py).
-    let w = |t: f64, complement: f64| {
-        2.0 * (t.sqrt() / complement.sqrt()).atan() / std::f64::consts::PI
-    };
     if x > HALF_HALF_REFLECT_ABOVE {
-        (0.5 - w(y, 1.0 - y)) + 0.5
+        (0.5 - arcsine_w(y, 1.0 - y)) + 0.5
     } else {
-        w(x, y)
+        arcsine_w(x, y)
     }
+}
+
+/// [`half_half_cdf`]'s unreflected form 2·atan(sqrt(t)/sqrt(complement))/pi, with libm's atan as
+/// the worksheet's ATAN takes it.
+fn arcsine_w(t: f64, complement: f64) -> f64 {
+    2.0 * (t.sqrt() / complement.sqrt()).atan() / std::f64::consts::PI
 }
 
 /// (`I_x(a, b)`, 1 - `I_x(a, b)`) at a shape of 1 where [`closed_form_tails`] does not apply, for
@@ -722,7 +725,7 @@ mod tests {
             assert_eq!(got.to_bits(), expected.to_bits(), "{x}: {got}");
         }
         let x: f64 = 0.906_416_450_342_901_6;
-        let direct = 2.0 * (x.sqrt() / (1.0 - x).sqrt()).atan() / std::f64::consts::PI;
+        let direct = arcsine_w(x, 1.0 - x);
         assert_ne!(direct.to_bits(), 0.802_075_800_888_622_5_f64.to_bits());
     }
 

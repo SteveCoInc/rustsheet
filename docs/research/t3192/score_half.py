@@ -43,8 +43,8 @@ def load(case_path):
     rows = []
     i = 1
     while f"A{i}" in case:
-        get = lambda col: oracle.get(f"{col}{i}", {}).get("v")  # noqa: E731
-        rows.append((case[f"A{i}"], get("B"), get("C"), get("D")))
+        row = [oracle.get(f"{col}{i}", {}).get("v") for col in "BCD"]
+        rows.append((case[f"A{i}"], *row))
         i += 1
     return rows
 
@@ -61,10 +61,8 @@ def main():
 def score(rows):
     for name, f in FORMS.items():
         ok = [f(x) == b for x, b, _, _ in rows]
-        miss = [(x, b, f(x)) for (x, b, _, _), k in zip(rows, ok) if not k]
         within = sum(abs(f(x) - b) <= 4 * math.ulp(b) for x, b, _, _ in rows)
         print(f"{name:34s} bit-exact {sum(ok)}/{len(rows)}  within 4 ulp {within}")
-        del miss
 
 
 main()

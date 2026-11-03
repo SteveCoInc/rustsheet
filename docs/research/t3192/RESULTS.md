@@ -12,10 +12,10 @@ bpser's arithmetic but a different kernel: Excel takes an arctangent closed form
 3. Tune set: the 49 a = b = 1/2 cdf cells on file. Closed forms in doubles (`brute.py`-style ranking, not committed;
    the forms are in `score_half.py`): reflected `2*atan(sqrt(x)/sqrt(y))/pi` 42, the direct form 37, the engine 16,
    correctly rounded 27. Frozen choice: reflected at x > 0.5.
-4. First fresh sweep (`make_probe.py`, 321 x): the frozen choice 248, the direct form 270, Excel's own worksheet ATAN
+4. First fresh sweep (`make_probe.py --sweep 1`, 321 x): the frozen choice 248, the direct form 270, Excel's own worksheet ATAN
    form equals BETA.DIST on 270. The reflection is right only near 1: on all 370 cells the two differ only above 0.5,
    the direct form wins up to 0.888 and the reflection from 0.900 (one exception at 0.837).
-5. Switch frozen at x > 0.9, then a second fresh sweep (`make_probe2.py`, 341 x, dense on 0.8-1): 287 bit-exact against
+5. Switch frozen at x > 0.9, then a second fresh sweep (`make_probe.py --sweep 2`, 341 x, dense on 0.8-1): 287 bit-exact against
    228 (direct) and 253 (reflected at 0.5); every cell within 2 ulp. This is the R4 hold-out of the switch.
 
 ## Scores (bit-exact)

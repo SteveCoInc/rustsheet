@@ -3153,7 +3153,7 @@ I = w(x) for x <= 0.9,   I = (0.5 - w(y)) + 0.5 for x > 0.9   (y = fl(1 - x))
   t0969-t-beta-link (BETA.DIST at shapes 1/2 and df/2 = 1/2); whether T.DIST at df 1 takes it is T-2930's.
 Evidence: probes-numeric t3192-beta-half-half (BETA.DIST, BETADIST and the worksheet form, 321 x) and
 t3192-beta-half-half-2 (341 x, 0.8-1 dense), excel-graph 2026-11-03; docs/research/t3192 (`make_probe.py`,
-`make_probe2.py`, `score_half.py`, RESULTS.md).
+`score_half.py`, RESULTS.md).
 Implemented in: `functions/statistical/incomplete_beta.rs` `half_half_cdf`, called by `bratio::beta_dist_lower_tail`
 (BETA.DIST and BETADIST's cdf, and the F.INV crossing `inverse_beta::beta_lower_crossing` at d1 = d2 = 1, where no
 cell on file moved; F's tails, the Student t and BETA.INV's search keep their kernels).
