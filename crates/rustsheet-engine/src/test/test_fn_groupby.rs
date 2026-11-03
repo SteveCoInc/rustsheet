@@ -642,6 +642,54 @@ fn invalid_filters_are_value_errors() {
 }
 
 #[test]
+fn one_filter_value_keeps_all_rows_only_beside_one_key_one_value_and_no_header() {
+    // probes/t3839-groupby-scalar-filter: TRUE (or 2, or {TRUE}) keeps every row beside one key
+    // column, one value column and field_headers 0 or 2, whatever the depth and sort (G!C26, G!C74,
+    // F!B2:K7); a header row (field_headers 1 or 3), a second value column or a second key column
+    // is #VALUE!, though the same call without the filter spills (G!C50, G!C98, G!E26, F!C5).
+    let mut model = records();
+    let kept = [
+        "A2:A11,D2:D11,_xleta.SUM,0,,,TRUE",
+        "A2:A11,D2:D11,_xleta.SUM,2,-1,2,2",
+        "A2:A11,D2:D11,_xleta.SUM,0,1,-1,{TRUE}",
+    ];
+    let refused = [
+        "A1:A11,D1:D11,_xleta.SUM,1,,,TRUE",
+        "A1:A11,D1:D11,_xleta.SUM,3,1,2,TRUE",
+        "A2:A11,D2:E11,_xleta.SUM,0,,,TRUE",
+        "A2:B11,D2:D11,_xleta.SUM,0,,,TRUE",
+        "A2:A11,D2:E11,_xleta.SUM,2,-1,2,0.5",
+        "A2:B11,D2:D11,_xleta.SUM,0,-2,2,{TRUE}",
+    ];
+    let unfiltered = |args: &str| {
+        args.rsplit_once(',')
+            .map_or(args, |(head, _)| head)
+            .to_owned()
+    };
+    for (i, args) in kept.iter().enumerate() {
+        model._set(&format!("Z{}", i + 1), &format!("=ROWS(GROUPBY({args}))"));
+        let all = unfiltered(args);
+        model._set(&format!("Y{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+    }
+    for (i, args) in refused.iter().enumerate() {
+        model._set(&format!("AA{}", i + 1), &format!("=GROUPBY({args})"));
+        let all = unfiltered(args);
+        model._set(&format!("AB{}", i + 1), &format!("=ROWS(GROUPBY({all}))"));
+    }
+    model.evaluate();
+    let kept_rows = column(&model, "Z", 1, kept.len());
+    assert_eq!(kept_rows, column(&model, "Y", 1, kept.len()));
+    assert!(kept_rows.iter().all(|rows| rows.parse::<u32>().is_ok()));
+    assert_eq!(
+        column(&model, "AA", 1, refused.len()),
+        vec!["#VALUE!"; refused.len()]
+    );
+    for row in 1..=refused.len() {
+        assert!(model._get_text(&format!("AB{row}")).parse::<u32>().is_ok());
+    }
+}
+
+#[test]
 fn error_values_of_arguments_come_first_in_argument_order() {
     // groupby-sort-filter-args B61-B78: an error value in any argument wins over an invalid other
     // argument, earlier or later, and the first error in argument order wins.

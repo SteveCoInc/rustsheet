@@ -240,11 +240,16 @@ impl Model {
     /// (B43-B46, B53-B54; args2 B8-B9, B31-B35), a 1x1 array holding an error (args2 B12, B14),
     /// and a filter that keeps no record, `#VALUE!` rather than FILTER's `#CALC!` (G!A241,
     /// followup3 G!A1-A109). A one-cell reference to an error is that error (args2 B17).
+    /// One value (a scalar or a 1x1 array) that is not as tall as the fields keeps or drops every
+    /// row only when `one_keeps_all`; otherwise it is `#VALUE!`, whatever it holds (GROUPBY:
+    /// probes/t3839-groupby-scalar-filter; docs/excel-semantics/arrays.md, the entry on scalar
+    /// filters in the gen-m7 arg-pairs batch).
     pub(crate) fn filter_rows(
         &mut self,
         filter: Option<CalcResult>,
         height: usize,
         first: usize,
+        one_keeps_all: bool,
         cell: CellReferenceIndex,
     ) -> Result<Vec<usize>, CalcResult> {
         let invalid = |message: &str| value_error(cell, message);
@@ -283,8 +288,13 @@ impl Model {
         // The element for source row `row`: the one value, or the row's, counted from the top
         // of the fields or of the records.
         let offset = match keep.len() {
-            1 => None,
             n if n == height => Some(0),
+            1 if one_keeps_all => None,
+            1 => {
+                return Err(invalid(
+                    "a single filter_array value needs one key and one value column",
+                ))
+            }
             n if first > 0 && n + first == height => Some(first),
             _ => return Err(invalid("filter_array must be as tall as the fields")),
         };
@@ -572,7 +582,11 @@ impl Model {
             // A header row and no records: probes/groupby-lambda-forms G!S193 (ERROR.TYPE 3).
             return Err(value_error(cell, "GROUPBY has no records"));
         }
-        let rows = self.filter_rows(filter, keys.len(), first, cell)?;
+        // One filter value keeps or drops every row only beside one key column, one value column
+        // and no header row; otherwise it is #VALUE!, whatever the value, TRUE and 2 included
+        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19).
+        let one_keeps_all = first == 0 && key_columns == 1 && width(values) == 1;
+        let rows = self.filter_rows(filter, keys.len(), first, one_keeps_all, cell)?;
         let relationship = self.relationship(relationship, cell)?;
         // A table relationship cannot have subtotals (followup G!A181, G!A261: ERROR.TYPE 3).
         if relationship == Relationship::Table && subtotal_levels(total_depth) > 0 {
