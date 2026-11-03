@@ -146,6 +146,8 @@ restart of the secant at a flat step (class a), as a temporary switch in `irr_se
   a precision under which A122/A123/A124/A126/A128/A129/A132 step on and A125/A127/A130/A131 go flat. That is a
   bit-level fit (R4 applies).
 
+2026-11-03 21:50 UTC, opus run: resumed (branch idle 23 h).
+
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
 - Branch head: the claim commit plus these notes. Nothing is implemented; CI and reviewers have not run.
