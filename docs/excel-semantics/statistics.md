@@ -2734,13 +2734,32 @@ same amount (up to 4.4E-12 from Excel, T-3447).
   has b = 1/2.
 - BINOM.DIST.RANGE and BINOM.INV still take statrs past the walk: `BINOM.DIST.RANGE(1000000000,0.3,300000000,300000100)`
   is 1.47 and `BINOM.INV(1000000000,0.3,0.5)` 299998246 (T-3444).
+- Small p with a huge n or r is a different regime (T-3960): Excel's cdf is hundreds to tens of thousands of ulp off
+  the math, more often than not. On probes-numeric/t3960-binom-negbinom-small-p-cdf (440 cells, seed 3960: p
+  log-uniform on [1E-5, 1E-2], n on [1E5, 1E9] or r on [10, 1E4], k from -3 to +2 sd of the mean, plus 40 controls around
+  the 11 owned cells of T-3961) and its hold-out t3960-binom-negbinom-small-p-cdf-hold (200 cells, seed 3961, no shared
+  point; T-3961's hold-out, never for fitting), counted against today's engine (excel-graph, 2026-11-03):
+
+  | case, family (cells) | ours = Excel bit-exact | within 4 ulp | within 15 digits | Excel correctly rounded | Excel > 100 ulp off math |
+  |---|---|---|---|---|---|
+  | train BINOM.DIST (220) | 43 | 108 | 139 | 9 | 114 |
+  | train NEGBINOM.DIST (220) | 4 | 44 | 119 | 4 | 89 |
+  | hold-out BINOM.DIST (100) | 21 | 53 | 67 | 4 | 46 |
+  | hold-out NEGBINOM.DIST (100) | 3 | 19 | 59 | 2 | 32 |
+
+  "Correctly rounded" is within half an ulp of the math. Ours is correctly rounded on 21 and 131 train cells (BINOM and
+  NEGBINOM), 12 and 61 hold-out cells; where Excel is more than 100 ulp off, ours is within 4 ulp of the math on 7 and
+  58 train cells, 0 and 16 hold-out cells. The math sidecars skip about half the cells ("not converged or too slow",
+  every large-n one), so the counts use `docs/research/t3960/score.py`: the sidecar value where it exists, else an
+  outward pmf sum at 45 digits (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p), which agrees with the sidecar and with
+  T-3961's mpmath values for A132 and A171). The error is not confined to the 11 owned cells. Its model is T-3961's.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
-scored against 50-digit mpmath; T-3352's Outcome).
+scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and
 `binom_dist_of` and `negbinom_dist_of` (`loader_pmf`) in `binom.rs`.
 Status: VERIFIED (excel-graph) to 1E-11 of the math; last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
 kernel at a large n not identified)
-Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146
+Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961
 
 ## BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's own cdf (T-3444)
 Rule: Excel's BINOM.INV (and CRITBINOM, equal on every probe row) is the smallest k whose BINOM.DIST(k, n, p, TRUE) is
