@@ -3,7 +3,7 @@ id: T-3930
 title: "IMSECH, IMSINH, IMCOSH and IMCSCH at |x| <= 0.01: the 8 last-digit texts the three-term series leaves (t3721, t3720)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
