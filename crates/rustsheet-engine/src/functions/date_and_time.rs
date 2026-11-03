@@ -574,6 +574,7 @@ impl Model {
             &mut |model, values| match values {
                 [CalcResult::String(s)] => model
                     .parse_datevalue_text(s)
+                    .or_else(|| time_text::parse_bare_clock_days(s))
                     .map(|serial| ArrayNode::Number(f64::from(serial)))
                     .ok_or(Error::VALUE),
                 [CalcResult::Error { error, .. }] => Err(error.clone()),

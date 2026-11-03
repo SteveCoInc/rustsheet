@@ -3,7 +3,7 @@ id: T-3944
 title: "DATEVALUE of a bare clock: 0 in a 1904 workbook (DATEVALUE(\"10 A.\")), probe both systems"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,8 +22,11 @@ behave the same, is unprobed: write a probe case with DATEVALUE of a handful of 
 1904 workbook, fill it, then make the engine match and record the rule in docs/excel-semantics/dates.md.
 
 ## Acceptance criteria
-- [ ] A probe case records DATEVALUE of clock-only text in both date systems; probes/t3920-typed-a-period-1904 G6 and t3948-letter-period-gate-edges G14 pass and the engine matches the new case.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case records DATEVALUE of clock-only text in both date systems; probes/t3920-typed-a-period-1904 G6 and t3948-letter-period-gate-edges G14 pass and the engine matches the new case.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Probed DATEVALUE of ten clock-only texts in a 1900 and a 1904 workbook (probes/t3944-datevalue-bare-clock-1900, -1904): Excel gives the whole days of the clock serial (0, or 1 for 24:00 and 25:00) in both systems. `fn_datevalue` falls back to `time_text::parse_bare_clock_days` when no date is read. Rule recorded in docs/excel-semantics/dates.md. Both new cases pass 80/80; Other readers of date text (DATEDIF, conditional formatting) are unprobed and unchanged.
