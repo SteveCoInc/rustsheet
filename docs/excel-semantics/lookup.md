@@ -737,6 +737,24 @@ one-to-one fold above still keeps the length:
   (U+003F) finds U+0524 by MATCH, and `~` (U+007E) finds empty text (digits 3, 1 and 2); `=` equals none of them to
   either. UNICHAR is an error at U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF (the e digits).
 
+**U+0001 is a wildcard** (T-3921, probes/t3921-match-u0001-wildcard, excel-graph 2026-11-03; D1:D6 = zzz, abc, ab, empty
+text, U+0524, a+U+0001+c; S = U+0001). Rule:
+- In MATCH (type 0), VLOOKUP and HLOOKUP (FALSE) and XMATCH's wildcard mode (2), every S acts as `*` when the key, read
+  after its `~` escapes, starts with S and holds no `*`; otherwise S is a literal character. So `S` and `S&S` find
+  zzz (1), `S&"b"` ab (3), `S&"B"` ab (3), `S&"c"` and `S&"bc"` abc (2), `S&"b"&S` and `S&"a"&S&"c"` abc (2), `S&"?"`
+  zzz (1) and `"~"&S` zzz (1), while `S&"x"`, `"a"&S`, `"ab"&S`, `"z"&S`, `"q"&S`, `" "&S&"b"` and, with a `*`,
+  `S&"*"` and `"*"&S` are `#N/A`. `"a"&S&"c"` finds only the a+U+0001+c cell (6), not abc (Calc!A11:C20, O11:O20,
+  A21:B34).
+- COUNTIF uses the same rule, but only for a criterion that has a `*` or `?` and so is a wildcard criterion at all:
+  `COUNTIF(D1:D6,S&"?")` is 5 (every non-empty text, as `*?`), `S&"*"` 0, and keys without `*` or `?` compare
+  literally (`S` 0, `"a"&S&"c"` 1; Calc!P11:P20, N21:N34).
+- SEARCH reads every S as `*`, wherever it sits and beside a `*` too: in "xabcx", `"a"&S` and `"ab"&S` are 2, `S&"*"`,
+  `"*"&S` and `"~"&S` 1, `"q"&S`, `"z"&S` and `S&"zz"` `#VALUE!` (Calc!Q11:Q20, C21:C34).
+- XMATCH's exact mode (0) never does: only `"a"&S&"c"` matches (the same cell, 6; Calc!N11:N20). U+0002 is never a
+  wildcard (row 20).
+Implemented in `WildcardPattern::new` and `WildcardPattern::for_search` (crates/rustsheet-engine/src/functions/criteria.rs).
+Status: VERIFIED (excel-graph).
+
 **Equivalence classes beyond one-to-one case pairs** (Calc!T1:U1232, every character of Greek, Greek Extended, Latin
 Extended-D, Cyrillic Extended-B, Coptic, Cherokee and its supplement, Georgian, Cyrillic Extended-C with Georgian
 Mtavruli and Georgian Supplement, each looked up against its whole block; the relation is symmetric). Besides the

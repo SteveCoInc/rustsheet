@@ -3,7 +3,7 @@ id: T-3921
 title: "MATCH's U+0001 lookup key matches U+0524 and empty text like a wildcard (probes/t3584-match-fold-weightless R1)"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -24,9 +24,21 @@ as the key `*` does (probes/t3584-match-fold-weightless Calc!R1, digit 3 at U+00
   lookup_and_reference/lookup_table.rs).
 
 ## Acceptance criteria
-- [ ] A probe settles where U+0001 acts as a wildcard; the engine matches it, and t3584 Calc!R1's MATCH digits
+- [x] A probe settles where U+0001 acts as a wildcard; the engine matches it, and t3584 Calc!R1's MATCH digits
       pass.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - `=` and COUNTIF's weightless equality (T-3904).
+
+## Outcome
+- Probe probes/t3921-match-u0001-wildcard (135 cells, excel-graph, 2026-11-03), recorded in lookup.md as "U+0001 is a
+  wildcard". In MATCH, VLOOKUP, HLOOKUP, XMATCH mode 2 and COUNTIF (in wildcard mode), every U+0001 is `*` when the key
+  starts with U+0001 and has no `*`. Otherwise U+0001 is literal. In SEARCH it is always `*`, and in XMATCH mode 0 never.
+- Engine: `WildcardPattern::new` applies the leading-U+0001 rule, and SEARCH compiles through the new
+  `WildcardPattern::for_search`, which reads every U+0001 as `*`. `from_units` is private now. Unit test:
+  `soh_reads_as_a_star` (test_collation.rs).
+- Eval: t3921 passes 135/135. t3584-match-fold-weightless Calc!R1's U+0001 digit is now Excel's 3 (it was 0). R1
+  stays in the baseline until T-3904 fixes the U+00AD `=` digit (9). No other cell changed (`make eval-check`).
+- Dropped from the probe: `MATCH(..,1)` on the unsorted list. That is a binary-search question, not a U+0001 one: the engine
+  gave 4 where Excel gave 6 on three cells.
