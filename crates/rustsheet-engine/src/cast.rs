@@ -169,6 +169,12 @@ pub(crate) fn number_text_too_long(text: &str) -> bool {
     text.len() > MAX_NUMBER_TEXT_LEN && text.chars().count() > MAX_NUMBER_TEXT_LEN
 }
 
+/// Whether `text` ends in a dollar sign, trailing spaces aside: coercion refuses such text
+/// ([`number_text_in`]), typed input reads it ([`Model::typed_sign_text_is_number`]).
+fn ends_with_dollar(text: &str) -> bool {
+    text.trim_end_matches(' ').ends_with('$')
+}
+
 /// [`Model::parse_number_text`] in an explicit `locale` and `date_system`, for readers that run
 /// without the model (the criteria matchers).
 pub(crate) fn number_text_in(
@@ -182,10 +188,10 @@ pub(crate) fn number_text_in(
     // text included (T-3325, T-3446), not by typed input (TODO(T-3891)).
     let digits = ascii_script_digits(text);
     // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE! for VALUE,
-    // `+0` and NUMBERVALUE and match nothing as a criterion (B1:B4), while a trailing euro sign reads (probes/t3742-value-percent-currency
-    // A10-A13, A25-A28, A31-A34). Typed cell input shares `parse_formatted_number` and is
-    // unprobed, so the refusal lives here, not there (T-3835).
-    if digits.trim_end_matches(' ').ends_with('$') {
+    // `+0` and NUMBERVALUE and match nothing as a criterion, while a trailing euro sign reads
+    // (probes/t3742-value-percent-currency A10-A13, A25-A28, A31-A34, B1:B4). Typed cell input
+    // shares `parse_formatted_number` and is unprobed, so the refusal lives here (T-3835).
+    if ends_with_dollar(&digits) {
         return None;
     }
     if let Ok((v, _number_format)) =
@@ -271,10 +277,10 @@ impl Model {
     /// number rather than a formula. Coercion refuses a trailing `$` ([`number_text_in`]), typed
     /// input does not (unprobed, T-3835).
     pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
-        let trailing_dollar = s.trim_end_matches(' ').ends_with('$')
+        let trailing_dollar = ends_with_dollar(s)
             && parse_formatted_number(
                 s,
-                &["$"],
+                &self.coercion_currencies(),
                 self.locale,
                 &|| None,
                 self.workbook.settings.date_system,
@@ -288,6 +294,16 @@ impl Model {
     }
 
     /// [`Model::cast_number`] with year-less date text read in `current_year`.
+    /// The currency symbols number-text coercion reads: `$`, `€` and the locale's own.
+    fn coercion_currencies(&self) -> Vec<&str> {
+        let currency = self.locale.currency.symbol.as_str();
+        let mut currencies = vec!["$", "€"];
+        if !currencies.contains(&currency) {
+            currencies.push(currency);
+        }
+        currencies
+    }
+
     pub(crate) fn cast_number_in(&self, s: &str, current_year: CurrentYear) -> Option<f64> {
         if number_text_too_long(s) {
             return None;
@@ -295,11 +311,7 @@ impl Model {
         match parse_excel_number(s.trim()) {
             Some(f) => Some(f),
             _ => {
-                let currency = &self.locale.currency.symbol;
-                let mut currencies = vec!["$", "€"];
-                if !currencies.iter().any(|e| *e == currency) {
-                    currencies.push(currency);
-                }
+                let currencies = self.coercion_currencies();
                 self.parse_number_text(s, &currencies, current_year)
                     .or_else(|| {
                         mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])

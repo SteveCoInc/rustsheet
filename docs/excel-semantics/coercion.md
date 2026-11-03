@@ -914,7 +914,7 @@ Sign before the percent sign and a trailing `$` (probes/t3742-value-percent-curr
 Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02), probes/t3742-value-percent-currency (excel-graph, 2026-11-03). Unverified extrapolations: `-%-1.5`, `-% 1.5` and `-%1e2` follow the `%` reader; typed `1.5$`, `-200$` and typed `-%1.5` are unprobed and keep the old typed behavior or share the reader (the `$` refusal is coercion and criteria only: COUNTIF of 1.5 against "1.5$", "=1.5$", "1.5 $", "-1.5$" and "1.5€" is 0, "$1.5" is 1, probes/t3742-value-percent-currency B1:B6).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED
-Tasks: T-3811 (implements), T-3644 (found)
+Tasks: T-3811 (implements), T-3644 (found), T-3742 (sign before the percent, trailing `$`)
 
 ## Percent text is rounded once
 Rule (en-US): number text ending in `%` (VALUE, `0+"…"`, typed cell input) is the decimal text shifted two places and rounded to the nearest double once: `VALUE("23.123%")` = 0.23123, not the double 23.123 divided by 100 (0.23123000000000002). The 15-significant-digit truncation of number text applies before the shift: `12345.6789012345678%` = 123.456789012345. All three paths agree for `23.123%`, `-23.123%`, `0.07%`, `1.005%`, `12345.6789012345678%`, and the e-notation texts `23e-12%` (2.3e-13) and `1.5E-300%` (1.5e-302), and typed input is a number (ISNUMBER TRUE). The `%` operator in a formula (`=23.123%`) is a separate path and is not covered here.
