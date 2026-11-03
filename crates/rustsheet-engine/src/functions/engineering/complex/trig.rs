@@ -123,6 +123,12 @@ fn inverse_exp_sinh_cosh(x: f64) -> (f64, f64) {
     }
     let (sinh, cosh) = inverse_exp_form(x);
     if x.abs() <= INVERSE_EXP_LOW {
+        // Below `LIBM_COSH_BELOW` cosh is libm's, not the `1/u` form's (T-3930).
+        let cosh = if x.abs() < LIBM_COSH_BELOW {
+            x.cosh()
+        } else {
+            cosh
+        };
         return (sinh_series(x), cosh);
     }
     (sinh, cosh)
@@ -217,6 +223,12 @@ fn in_inverse_exp_band(x: f64) -> bool {
 /// 18.2..100: 110 cells), so neither cut is pinned further (docs/excel-semantics/engineering.md).
 /// FITTED(T-3525, 1942 cells, |x| 0.0001..100; cuts bracketed 0.01..0.0105 and 18.2..100)
 const INVERSE_EXP_LOW: f64 = 0.01;
+/// Below this |x| IMSINH, IMCOSH, IMSECH or IMCSCH takes libm's cosh x: 20 texts of
+/// t3720-im-reciprocal-small-x-complex, t3721-im-hyperbolic-small-x-fresh-sweep and gen-m9 at
+/// |x| <= 8.8E-05 print Excel's digit with it and the `1/u` form's one off, while 33 at
+/// |x| >= 1.09E-04 need the form (T-3930).
+/// FITTED(T-3930, 53 cells, |x| 3.6E-06..0.01; cut bracketed 8.8E-05..1.09E-04)
+const LIBM_COSH_BELOW: f64 = 1e-4;
 /// See [`INVERSE_EXP_LOW`].
 /// FITTED(T-3525, 1942 cells, |x| 0.0001..100; cuts bracketed 0.01..0.0105 and 18.2..100)
 const INVERSE_EXP_HIGH: f64 = 20.0;
