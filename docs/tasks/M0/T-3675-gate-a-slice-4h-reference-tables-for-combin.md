@@ -68,7 +68,7 @@ COMBIN, COMBINA, FACT, FACTDOUBLE, MULTINOMIAL, QUOTIENT and MOD each get a comm
 - Also filed T-3880 (follow-up of T-3839's excel-fidelity review).
 - Eval delta: none (no engine change).
 
-## Landing notes
+## Landing notes (resumed)
 - PR #2916. The pushed head carries round 1's design fix (`fraction_to_mpf` and `trunc` in `defs/_common.py`, replacing
   the `_mpf` copies in integer.py and remainder.py) and the two MINOR doc fixes. Round 1 verdicts (head 99140b7):
   security APPROVE; design REQUEST_CHANGES (the `_mpf` duplicate, fixed on this head); excel-fidelity REQUEST_CHANGES.
