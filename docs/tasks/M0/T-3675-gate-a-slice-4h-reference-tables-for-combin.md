@@ -65,23 +65,15 @@ COMBIN, COMBINA, FACT, FACTDOUBLE, MULTINOMIAL, QUOTIENT and MOD each get a comm
 - probes-numeric math sidecars regenerated: `double-rounding-ops` gains math for its MOD and QUOTIENT cells (A84:A87). The
   run also rewrote BETA.INV cells of `t1538-f-inv-huge-df` (A153, A155) and `t1543-inverse-cdf-tiny-p` (A91, A92) to "no
   single value", the effect of T-3578's BETA.INV definition change, not of this task's; they are left as committed.
+- `fitlab.sweep.arithmetic` (used by `eval_math.py` for exact inputs) now follows numbers.md "Subnormal results become
+  0": a nonzero result of `*`, `/` or `^` below the smallest normal double, and such a literal, is 0, while `+` and `-`
+  keep it (`_flush_subnormal`; unit tests in tools/tests/test_fitlab.py). Before, it evaluated `2^-1074` and
+  `1E-307/10` exactly, so 57 of the 68 cells of `t2714-mod-near-smallest-normal-b.math.json` disagreed with the oracle
+  (round 1's excel-fidelity finding). Regenerating the probes math sidecars changed only cells with such an argument:
+  t2714-mod-near-smallest-normal-b (57), subnormal-function-results (5), t2756-roundup-smallest-normal-threshold (3),
+  radians-sqrtpi-munit (2) and trunc-decimal-stages (1), each now 0 where Excel flushes. The same run also filled
+  CHISQ.INV and GAMMA.INV cells of t3350-chisq-inv-huge-df and t3505-gamma-inv-budget-band that had timed out before;
+  that depends on solver load, not on this change, so they are left as committed.
 - Also filed T-3880 (follow-up of T-3839's excel-fidelity review).
 - Eval delta: none (no engine change).
 
-## Landing notes (resumed)
-- PR #2916. The pushed head carries round 1's design fix (`fraction_to_mpf` and `trunc` in `defs/_common.py`, replacing
-  the `_mpf` copies in integer.py and remainder.py) and the two MINOR doc fixes. Round 1 verdicts (head 99140b7):
-  security APPROVE; design REQUEST_CHANGES (the `_mpf` duplicate, fixed on this head); excel-fidelity REQUEST_CHANGES.
-  None has run on this head. The PR is still a draft; CI was green on 99140b7 when last checked.
-- Open blocking finding (excel-fidelity): `eval/suites/probes/cases/t2714-mod-near-smallest-normal-b.math.json` has 57
-  of 68 cells against the oracle. `fitlab.sweep.arithmetic` (which `eval_math.py` uses for exact inputs) evaluates
-  `2^-1074`, `2^-1052` and other subnormal intermediates exactly, where Excel gives 0 (numbers.md "Subnormal results
-  become 0", probes/precision-and-rounding A14). Examples: row 60 (`=2^-1000+2^-1052` over `=-(2^-1000)`) is Excel 0, the
-  sidecar `#NUM!`; row 5 is Excel 0, the sidecar 2.2250738585072029e-308. The MOD definition is not at fault.
-- Next step: make `arithmetic` treat a nonzero subnormal result of `^`, `+`, `-`, `*` or `/` as Excel does (flush to 0,
-  or raise UnparsedError so the cell is skipped; check which numbers.md supports), add a unit test, then rerun
-  `rustsheet-accuracy math --suite probes` and `--suite probes-numeric` and commit every sidecar that changes. It is
-  slow (the probes pass takes 30+ minutes; CHISQ.INV, BETA.INV and BINOM sweeps time out under load). Revert sidecar
-  rewrites that only swap a value for "not converged or too slow" or "no single value" in BETA.INV and CHISQ.INV cells;
-  they come from solver timeouts, not from this task. Then run `math --check` and the full panel.
-- Don't delete the t2714-b sidecar to get past it: `math --check` fails on a missing sidecar.
