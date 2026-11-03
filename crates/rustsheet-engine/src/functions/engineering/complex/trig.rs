@@ -128,31 +128,30 @@ fn inverse_exp_sinh_cosh(x: f64) -> (f64, f64) {
     (sinh, cosh)
 }
 
-/// A hard cap on [`sinh_series`]'s loop, not a tuned value: at |x| <= `INVERSE_EXP_LOW` the fourth
-/// term is below 1E-22 of the first and no longer changes the sum, so the loop exits after at most
-/// 4 terms long before the cap.
-const SINH_SERIES_TERMS: u32 = 16;
+/// The number of terms [`sinh_series`] sums, a structural choice among ranked candidates (decision 0188
+/// R4 kind (c), no fitted constant): Excel stops after `x⁵/5!` even where `x⁷/7!` would still move the
+/// last bit (|x| above about 0.005). On the 404 complex texts of
+/// probes-numeric/t3720-im-reciprocal-small-x-complex, three terms fit 403 IMCOSH, 403 IMSINH, 402 IMCSCH
+/// and 404 IMSECH texts, against 395, 402, 398 and 400 for the sum run until a term no longer changes it
+/// (four terms near 0.01) and 136 or fewer for two (engineering.md "IMSECH and IMCSCH of a small real
+/// number", T-3721).
+const SINH_SERIES_TERMS: u32 = 3;
 
-/// sinh x as the Taylor series `x + x³/3! + x⁵/5! + ...`, summed in that order in doubles, each
-/// term the one before times `x²/((2k)(2k+1))`, until a term leaves the sum unchanged: the sinh x
-/// of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <= `INVERSE_EXP_LOW` (a real IMSECH there takes
-/// libm's cosh instead and needs no sinh, T-3609). With the `1/u` cosh it fits
-/// all 114 IMSINH and IMCOSH oracle texts with 0 < |x| <= 0.01, where libm's sinh misses
-/// `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm ...477) and the real part of
-/// `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626, libm ...625), and
-/// Horner's `x(1 + x²(1/6 + x²/120))` misses two (probes-numeric/t3525-im-hyperbolic-fresh-sweep
-/// A12, A7, A93). On a sweep drawn after the freeze it fits 299 of 300 IMSINH and IMCOSH texts by
-/// digits, libm 291 (probes-numeric/t3589-im-hyperbolic-small-x-sweep; engineering.md, T-3589).
+/// sinh x as the Taylor series `x + x³/3! + x⁵/5!`, summed in that order in doubles, each term the one
+/// before times `x²/((2k)(2k+1))`: the sinh x of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <=
+/// `INVERSE_EXP_LOW` (a real IMSECH there takes libm's cosh instead and needs no sinh, T-3609). The
+/// series fits where libm's sinh misses `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm
+/// ...477) and the real part of `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626,
+/// libm ...625), and Horner's `x(1 + x²(1/6 + x²/120))` misses two (probes-numeric/t3525-im-hyperbolic-fresh-sweep
+/// A12, A7, A93; T-3589). Its length is [`SINH_SERIES_TERMS`]: the fourth term put
+/// `IMCOSH("-0.00908725305283191-0.897991007302082i")`'s imaginary part at ...607 where Excel has
+/// 0.00710702505540606 (t3589-im-hyperbolic-small-x-sweep B15, T-3721).
 fn sinh_series(x: f64) -> f64 {
     let square = x * x;
     let (mut sum, mut term) = (x, x);
-    for k in 1..=SINH_SERIES_TERMS {
+    for k in 1..SINH_SERIES_TERMS {
         term = term * square / f64::from(2 * k * (2 * k + 1));
-        let next = sum + term;
-        if next == sum {
-            break;
-        }
-        sum = next;
+        sum += term;
     }
     sum
 }
@@ -497,10 +496,13 @@ pub(super) fn imsec((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
     complex_result(x_cos * (y_cosh / t), x_sin * (y_sinh / t), suffix)
 }
 
-/// sech(x+iy) = `(cosh x·cos y, -sinh x·sin y) / t` with `t = cos²y + sinh²x`, sinh²x fused into the
-/// sum (one rounding, `mul_add`): all 62 finite cells of probes-numeric im-last-digit-sweep (T-2750).
-/// The unfused sum (T-2044) misses only `IMSECH("1.34384-77.6742i")`, whose imaginary part Excel
-/// prints as ...306336 (J34; exact 0.37667538230633553); fusing cos²y instead also misses it.
+/// sech(x+iy) = `(cosh x·cos y, -sinh x·sin y) / t` with `t = sinh²x + cos²y`, each square rounded
+/// and then summed (T-3795): `IMSECH("0.999999999999999+10i")` has imaginary part 0.306614713343964
+/// and `IMSECH("-0.999999999999999+10i")` -0.306614713343963 (probes/t3643-imsech-grid H5, H15),
+/// where fusing sinh²x into the sum (`mul_add`, T-2750) swaps those last digits. T-2750 fused it
+/// for `IMSECH("1.34384-77.6742i")` (probes-numeric im-last-digit-sweep J34), which the unfused
+/// sum fits since the later sin, cos and sinh kernels; it changes no other cell of the 100 cases
+/// with IMSECH or IMCSCH.
 pub(super) fn imsech((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
     match sech_parts(x, y) {
         Some((re, im)) => complex_result(re, im, suffix),
@@ -528,7 +530,7 @@ fn sech_parts(x: f64, y: f64) -> Option<(f64, f64)> {
     }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
-    let t = x_sinh.mul_add(x_sinh, y_cos * y_cos);
+    let t = x_sinh * x_sinh + y_cos * y_cos;
     if !t.is_finite() {
         return Some(overflowed_parts(y_cos, -y_sin * x.signum(), x));
     }
@@ -739,6 +741,24 @@ mod tests {
         assert_eq!(
             text(imsin, 0.981_793_650_815_856, -183.167_307_387_565),
             "1.47021409465799E+79-9.82267943792204E+78i"
+        );
+    }
+
+    // probes-numeric/t3589-im-hyperbolic-small-x-sweep B15, D15, D29 (excel-graph, T-3721): the series
+    // stops after x⁵/5!; a fourth term moved each of these last digits by one.
+    #[test]
+    fn series_sinh_stops_after_three_terms() {
+        assert_eq!(
+            text(imcosh, -0.009_087_253_052_831_91, -0.897_991_007_302_082),
+            "0.623208141637039+0.00710702505540606i"
+        );
+        assert_eq!(
+            text(imcsch, -0.009_087_253_052_831_91, -0.897_991_007_302_082),
+            "-0.00925756264826299+1.27852743654627i"
+        );
+        assert_eq!(
+            text(imcsch, -0.009_942_668_977_634_84, -0.217_145_289_213_716),
+            "-0.208738033086954+4.63196641538457i"
         );
     }
 

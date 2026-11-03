@@ -12,7 +12,7 @@ campaign: visible
 ---
 
 ## Goal
-The seven F.DIST.RT cells below are within half a unit of the 15th significant digit of Excel's value. If no form
+The eight F.DIST.RT cells below (seven in the table and gen-m9 60b0b6e69ad35a45 A151) are within half a unit of the 15th significant digit of Excel's value. If no form
 gets them there inside the time box (decision 0056), the forms tried and their scores go in
 docs/excel-semantics/statistics.md.
 
@@ -38,6 +38,14 @@ is named only by T-2221, which carries `defer: phase-1b` and so is never picked 
   ulps from the accurate ln B (T-2924, probes/t2829-ftest-ln-beta-grid). The other is whole steps of the
   fl(a·LN y) grid. T-2847 found that at A7 the w5 form y = 1/(1 + d1·X/d2) moves fl(a·LN y) by -2.84E-14 relative against
   d2/(d1·X + d2), which is most of A7's gap. Its Outcome lists the y forms per cell.
+- Added by gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8, excel-graph; `scripts/exit_owners.py --all-off`
+  lists it as visibly off and owned only by deferred T-2221's "Cells added from T-3198"): gen-m9/60b0b6e69ad35a45
+  Calc!A151 `F.DIST.RT(1E+10,9,9)`, Excel 6.622462439866629E-44, ours 6.622462439866635E-44. Against 50-digit mpmath
+  (6.6224624398666040618E-44) Excel is +3.8E-15 and ours +4.7E-15, the same side, so Excel is the inaccurate one, as at
+  A1-A9. It is the same branch: bpser (`BpserLarge`) at a = b = 4.5, y = 9/(9 + 9E+10) = 1E-10, both shapes above 1.
+  It is F.DIST.RT's only visibly-off Gate B cell (gen-m9 is a Gate B suite, decision 0188 R1(b)), so it alone keeps
+  F.DIST.RT below Gate B's rate. This task takes it out of T-2221's list (T-2221 names this task).
+  - gen-m9/60b0b6e69ad35a45.case.json (1): Calc!A151
 - A19 is on the ported L140 bup+bpser branch (T-2981 routing note), at a = 50, b = 25, x = 3.
 - Code: crates/rustsheet-engine/src/functions/statistical/ (the F tail in `fisher.rs` / `f_test_tail.rs` and the
   `bratio` port, SPEC-0025).
@@ -49,15 +57,15 @@ is named only by T-2221, which carries `defer: phase-1b` and so is never picked 
 
 ## Visible-parity stage
 `campaign: visible` (decisions 0083, 0114). Excel's ln B is the inaccurate side for A1-A9 (T-2924), so this means
-reproducing Excel's form, time-boxed. The task is done when every cell in the table is within half a unit of the 15th
+reproducing Excel's form, time-boxed. The task is done when every cell in the table, and gen-m9 60b0b6e69ad35a45 A151, is within half a unit of the 15th
 significant digit of Excel's value and no cell is newly visibly off. Bit-level matches are not required. Cells then
 within 15 digits but not bit-exact go to T-2221 (`defer: phase-1b`).
 
 ## Acceptance criteria
-- [ ] These 7 known-failure lines leave eval/baseline (probes.txt and probes-numeric.txt) at visible parity, with no
+- [ ] These 8 known-failure lines leave eval/baseline (probes.txt, probes-numeric.txt and gen-m9.txt) at visible parity, with no
       new visibly-off cell in any suite. Or, if the time box ends first, statistics.md records each form tried with its
       per-cell score, and a follow-up task names the cells left.
-- [ ] `make unowned-off ALL=1` lists none of the 7 cells (each is fixed or named by its follow-up).
+- [ ] `make unowned-off ALL=1` lists none of the 8 cells (each is fixed or named by its follow-up).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

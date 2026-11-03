@@ -57,6 +57,24 @@ pub(super) fn symbol(c: char) -> Option<u32> {
     matches!(code, 0x2190..=0x21ff | 0x2600..=0x27bf).then(|| SYMBOL_BASE + code - 0x2190)
 }
 
+/// The variant pass weights of the other scripts' digits: after the ASCII digit and its
+/// [`super::FULL_WIDTH`] form, in code-point order of their blocks: Arabic-Indic, Extended
+/// Arabic-Indic, Devanagari, Bengali, Gurmukhi, Tamil, Telugu, Thai, Lao, Tibetan, Myanmar, Khmer
+/// (probes/t3276-collation-other-scripts G25:G27; probes/t3895-collation-script-digits A4:A6,
+/// A129:A131, A151:A178; probes/t3559-collation-unprobed-blocks ranks A30:A41).
+pub(super) const ARABIC_INDIC_DIGIT: u8 = 3;
+pub(super) const EXTENDED_ARABIC_INDIC_DIGIT: u8 = 4;
+pub(super) const DEVANAGARI_DIGIT: u8 = 5;
+pub(super) const BENGALI_DIGIT: u8 = 6;
+pub(super) const GURMUKHI_DIGIT: u8 = 7;
+pub(super) const TAMIL_DIGIT: u8 = 8;
+pub(super) const TELUGU_DIGIT: u8 = 9;
+pub(super) const THAI_DIGIT: u8 = 10;
+pub(super) const LAO_DIGIT: u8 = 11;
+pub(super) const TIBETAN_DIGIT: u8 = 12;
+pub(super) const MYANMAR_DIGIT: u8 = 13;
+pub(super) const KHMER_DIGIT: u8 = 14;
+
 /// A digit of another script: digit `value` with `variant` in the variant pass.
 pub(super) fn digit_variant(value: u32, variant: u8) -> Element {
     Element::Weights {

@@ -1,0 +1,77 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Intersection operands whose acceptance the engine inferred (T-3308): the reference-returning calls INDIRECT, CHOOSE, XLOOKUP, SWITCH, IFS, TAKE, DROP, TRIMRANGE and LET as left operands (H1:H9), and calls Excel cannot type at parse time - an inline, defined-name (IDFN = LAMBDA(x,x)) and LET-bound LAMBDA, an unknown name and an unknown _xlfn. name - on either side (H10:H19), with value-returning LAMBDA calls (H20:H21) and spilling cuts (J1:K2). EXPAND, TOCOL, TOROW, WRAPROWS, WRAPCOLS, HSTACK, SORTBY, XMATCH, AREAS, CELL, HYPERLINK, IMAGE and GROUPBY make Excel for the web refuse the workbook on either side, so they are recorded in references.md, not here.",
+  "tags": [
+    "M2",
+    "references",
+    "intersection",
+    "probe"
+  ],
+  "names": {
+    "IDFN": "=LAMBDA(x,x)"
+  },
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": 1,
+        "A2": 2,
+        "A3": 3,
+        "B1": 10,
+        "B2": 20,
+        "B3": 30,
+        "H1": "=INDIRECT(\"A2:B2\") A1:A3",
+        "H2": "=CHOOSE(1,A2:B2) A1:A3",
+        "H3": "=XLOOKUP(2,A1:A3,A1:B3) A1:A3",
+        "H4": "=SWITCH(1,1,A2:B2) A1:A3",
+        "H5": "=IFS(TRUE,A2:B2) A1:A3",
+        "H6": "=TAKE(A2:B3,1) A1:A3",
+        "H7": "=DROP(A1:B2,1) A1:A3",
+        "H8": "=TRIMRANGE(A2:B2) A1:A3",
+        "H9": "=LET(x,A2:B2,x) A1:A3",
+        "H10": "=A1:A3 LAMBDA(x,x)(A2:B2)",
+        "H11": "=A1:A3 IDFN(A2:B2)",
+        "H12": "=A1:A3 LET(f,LAMBDA(x,x),f(A2:B2))",
+        "H13": "=A1:A3 FOO(A2:B2)",
+        "H14": "=A1:A3 _xlfn.FOOBAR(A2:B2)",
+        "H15": "=LAMBDA(x,x)(A2:B2) A1:A3",
+        "H16": "=IDFN(A2:B2) A1:A3",
+        "H17": "=LET(f,LAMBDA(x,x),f(A2:B2)) A1:A3",
+        "H18": "=FOO(A2:B2) A1:A3",
+        "H19": "=_xlfn.FOOBAR(A2:B2) A1:A3",
+        "H20": "=A1:A3 LAMBDA(x,x+1)(A2)",
+        "H21": "=A1:A3 IDFN(5)",
+        "J1": "=A1:A3 LAMBDA(x,x)(A2:B3)",
+        "K1": "=A1:A3 IDFN(A2:B3)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!H1",
+    "Sheet1!H2",
+    "Sheet1!H3",
+    "Sheet1!H4",
+    "Sheet1!H5",
+    "Sheet1!H6",
+    "Sheet1!H7",
+    "Sheet1!H8",
+    "Sheet1!H9",
+    "Sheet1!H10",
+    "Sheet1!H11",
+    "Sheet1!H12",
+    "Sheet1!H13",
+    "Sheet1!H14",
+    "Sheet1!H15",
+    "Sheet1!H16",
+    "Sheet1!H17",
+    "Sheet1!H18",
+    "Sheet1!H19",
+    "Sheet1!H20",
+    "Sheet1!H21",
+    "Sheet1!J1",
+    "Sheet1!J2",
+    "Sheet1!K1",
+    "Sheet1!K2"
+  ]
+}

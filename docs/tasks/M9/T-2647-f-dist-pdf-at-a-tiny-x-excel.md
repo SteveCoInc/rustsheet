@@ -42,11 +42,13 @@ t2586 edge sweeps:
   ("Y = density·x is subnormal (T-2647)"), so this task owns these cells, and the Phase 1 `owners` criterion stops
   reading them as unowned.
 
-Owned cells (the evidence of T-3926's sweep joins them when it lands):
+Owned cells:
 - probes-numeric/t1864-f-pdf-tiny-x.case.json (5): Calc!A5, A6, A10, A17, A20
 - probes-numeric/t2586-r5-f-edges-a.case.json (52): Calc!B771:B783, Calc!B811:B823, Calc!B851:B863, Calc!B891:B903
 - probes-numeric/t2586-r5-f-edges-hold.case.json (26): Calc!B217:B229, Calc!B257:B269
 - probes-numeric/t2586-verify-r5-f-edges-hold.case.json (8): Calc!B519, B520, B534, B535, B549, B550, B564, B565
+
+T-3926's cases t3926-f-density-subnormal-y (fit) and t3926-f-density-subnormal-y-hold (hold-out, never used for fitting) are owned whole by this task.
 
 Needs an oracle sweep: the cached cells are all at a general x, where the candidates for Excel's Y/x step give nearly
 the same value. T-3926 adds power-of-two x, where Y/x is exact in double, and a hold-out.

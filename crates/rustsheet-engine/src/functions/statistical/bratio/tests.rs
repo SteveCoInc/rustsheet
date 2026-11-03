@@ -83,6 +83,31 @@ fn bpser_branches_match_excel() {
     }
 }
 
+// The split-z EXP at min(a, b) < 1, b0 < 8 (T-3873, docs/research/t2464/r7-bpser-nondouble-z):
+// zh = z rounded to nearest, zl = z - zh, I = fl(fl(EXP(zh)·s)·fl(1 + zl)). Excel's values
+// (probes-numeric t3769-r6-bpser-beta, excel-graph); the unsplit fl(EXP(z)·s) is 1 ulp off on the
+// three non-double-z cells and the same on the double-z one (zl = 0).
+#[test]
+fn bpser_splits_a_non_double_z() {
+    let cells: [(f64, f64, f64, f64); 4] = [
+        // A15: z 1/2 ulp above a double, ties to even round it down: zl = +2^-53.
+        (0.037_100_000_000_000_1, 0.3, 2.5, 0.516_384_441_219_475),
+        // A2: a tie rounding up: zl = -2^-53.
+        (0.037_100_000_000_000_01, 0.3, 2.5, 0.516_384_441_219_474_7),
+        // A642: z 3/4 ulp above a double (q = 0.75): zl = -2^-53.
+        (0.0101, 0.5, 2.5, 0.169_751_703_820_125_86),
+        // A400: z is a double (zl = 0): today's form.
+        (0.0371, 0.3, 2.5, 0.516_384_441_219_474_7),
+    ];
+    for (x, a, b, excel) in cells {
+        assert_eq!(
+            cdf(x, a, b).to_bits(),
+            excel.to_bits(),
+            "BETA.DIST({x},{a},{b},TRUE)"
+        );
+    }
+}
+
 // bgrat and bup+bgrat at a0 = 1/2 (T-2509's `bgrat_half`): Excel's values, bit-exact since
 // BETA.DIST takes them (T-2510) and 1 to 7 ulp off on today's kernel before.
 #[test]

@@ -73,3 +73,28 @@ reference; values are Excel's and ours on main 93a939d2.
     chosen by scoring, so it was not attempted in this run.
 - **A26.** Ours is 1.2e-15 off the reference and Excel 3.2e-16 off, inside Excel's chain-model density (`f_density.rs`).
 - **A30.** Both are about 1e-14 off on the same side, so it is likely the chain model's own error.
+
+## Progress (2026-11-03, evidence PR)
+This opus run measured the L140 bup+bpser branch and probed Excel at its F points. It changed no code, so the three
+probe cells stay open. The finding is in statistics.md, "Incomplete beta L140 bup+bpser at the F points".
+- New probe: probes-numeric t3198-f-l140-args, 414 rows, on excel-graph. Its visibly-off cells A1:F414 are this task's
+  (columns E and F are the F tails; C and D are BETA.DIST at u and v).
+- The F argument form is not the main error. (u, v) stays the best of four forms on every ported branch. A19
+  (`F.DIST.RT(3,50,100)`) is the exception: Excel there equals `BETA.DIST(0.4,50,25,TRUE)`, at y0 = 0.6, not
+  u = 0.6000000000000001.
+- The kernel is the main error: our L140 bup+bpser is bit-exact on 596 of Excel's 816 BETA.DIST values at these points.
+  The scoring was run in throwaway tests on the probe's columns C and D and the bratio fixture's L140 rows:
+  - T-3568's power sum `Σ R_i·EXP(i·LN y0)` gets 669 on the probe and 99 of 122 on the fixture (91 today).
+    `make eval-check` gives 14 gated cells fixed, in gen-m9, ironcalc-calc and probes. It also gives 1 gated
+    regression, ironcalc-calc BETADIST_BETAINV.xlsx H32 (`BETA.INV` at (5, 5) crosses this kernel).
+  - The same power sum fails two unit tests that hold Excel values at x0 = 0.5: `l140_whole_b0_takes_ln_beta_of_one`
+    (`BETA.DIST(0.5,100,10,TRUE)`) and `ported_tails_rise_with_x_where_excel_does` ((10, 10) at 0.5).
+  - Correctly rounded powers (libm `pow`) get 636 and 102. They keep H32 and x0 = 0.5, but move
+    `BETA.DIST(0.1,100,10,TRUE)` 2 ulp off.
+- Next step. Find the power Excel takes in bup's sum: exact at x0 = 0.5, and EXP·LN-like elsewhere. Candidates are an
+  x87-extended EXP(i·LN y0) stored once, or a cut on n.
+  - Choose it with decision 0188's R4 guards: fix the hold-out half of the probe rows before scoring, then a fresh
+    excel-graph sweep.
+  - If BETA.INV still moves H32, keep its search on today's recurrence, as T-3561 did for L140 bup+bgrat
+    (`bratio::beta_search_tails`).
+  - Then re-measure A19 at the chosen kernel.

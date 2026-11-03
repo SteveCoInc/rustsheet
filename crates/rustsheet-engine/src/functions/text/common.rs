@@ -435,12 +435,15 @@ impl Model {
             let [text, old_text, new_text, instance_num @ ..] = values else {
                 return Err(Error::ERROR);
             };
-            substitute_element(
-                text,
-                old_text,
-                new_text,
-                instance_num.first().map(|n| model.calc_result_to_number(n)),
-            )
+            // Excel: a boolean instance_num (literal, cell or array element, TRUE or FALSE) is
+            // #VALUE!, but an error in text, old_text or new_text wins over it (gen-m5 5136e04c4ce978c3
+            // Calc!A397, A400); see docs/excel-semantics/text.md, "SUBSTITUTE with a boolean
+            // instance_num is #VALUE!". `substitute_element` reads the three texts first.
+            let instance_num = instance_num.first().map(|n| match n {
+                CalcResult::Boolean(_) => Err(Error::VALUE),
+                n => model.calc_result_to_number(n),
+            });
+            substitute_element(text, old_text, new_text, instance_num)
         })
     }
 

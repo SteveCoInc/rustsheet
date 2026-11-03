@@ -1,0 +1,64 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3854: GROUPBY with scalar inputs: scalar text values and a one-cell reference to an error as row_fields, with field_headers 0-3 and omitted; 1x1 arrays; a FILTER giving one text row; a 1x1 range of a blank cell as values against the cell itself; two rows of text values (header detection). S!A1 =1/0, S!A2 \"abc\", S!A3 blank, S!A4 2. Each call starts at A1, A7, ... A169 on: PIVOTBY with one row of text values, field_headers omitted and 0, and one numeric row.",
+  "tags": [
+    "M7",
+    "probe",
+    "dynamic-arrays",
+    "T-3854"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=_xlfn.GROUPBY(2,\"abc\",_xleta.COUNTA,0)",
+        "A7": "=_xlfn.GROUPBY(S!A4,S!A2,_xleta.COUNTA,0)",
+        "A13": "=_xlfn.GROUPBY(S!A1,S!A4,_xleta.SUM,0)",
+        "A19": "=_xlfn.GROUPBY(2,\"abc\",_xleta.COUNTA,1)",
+        "A25": "=_xlfn.GROUPBY(S!A4,S!A2,_xleta.COUNTA,1)",
+        "A31": "=_xlfn.GROUPBY(S!A1,S!A4,_xleta.SUM,1)",
+        "A37": "=_xlfn.GROUPBY(2,\"abc\",_xleta.COUNTA,2)",
+        "A43": "=_xlfn.GROUPBY(S!A4,S!A2,_xleta.COUNTA,2)",
+        "A49": "=_xlfn.GROUPBY(S!A1,S!A4,_xleta.SUM,2)",
+        "A55": "=_xlfn.GROUPBY(2,\"abc\",_xleta.COUNTA,3)",
+        "A61": "=_xlfn.GROUPBY(S!A4,S!A2,_xleta.COUNTA,3)",
+        "A67": "=_xlfn.GROUPBY(S!A1,S!A4,_xleta.SUM,3)",
+        "A73": "=_xlfn.GROUPBY(2,\"abc\",_xleta.COUNTA)",
+        "A79": "=_xlfn.GROUPBY(S!A4,S!A2,_xleta.COUNTA)",
+        "A85": "=_xlfn.GROUPBY(S!A1,S!A4,_xleta.SUM)",
+        "A91": "=_xlfn.GROUPBY({\"a\"},{\"x\"},_xleta.COUNTA)",
+        "A97": "=_xlfn.GROUPBY(2,{\"abc\"},_xleta.COUNTA)",
+        "A103": "=_xlfn.GROUPBY({#N/A},{1},_xleta.SUM)",
+        "A109": "=_xlfn.GROUPBY({\"a\"},{\"x\"},_xleta.COUNTA,1)",
+        "A115": "=_xlfn.GROUPBY(2,{\"abc\"},_xleta.COUNTA,0)",
+        "A121": "=_xlfn.GROUPBY({#N/A},{1},_xleta.SUM,0)",
+        "A127": "=_xlfn.GROUPBY(_xlfn._xlws.FILTER(S!B1:B3,S!C1:C3=\"x\"),_xlfn._xlws.FILTER(S!C1:C3,S!C1:C3=\"x\"),_xleta.COUNTA)",
+        "A133": "=_xlfn.GROUPBY(_xlfn._xlws.FILTER(S!B1:B3,S!C1:C3=\"x\"),_xlfn._xlws.FILTER(S!C1:C3,S!C1:C3=\"x\"),_xleta.COUNTA,0)",
+        "A139": "=_xlfn.GROUPBY(S!B1,S!A3:A3,_xleta.COUNTA)",
+        "A145": "=_xlfn.GROUPBY(S!B1,S!A3,_xleta.COUNTA)",
+        "A151": "=_xlfn.GROUPBY(S!B1,S!A3:A3,_xleta.COUNTA,0)",
+        "A157": "=_xlfn.GROUPBY(S!B1:B2,S!A2:A3,_xleta.COUNTA)",
+        "A163": "=_xlfn.GROUPBY(S!B1:B2,S!C1:C2,_xleta.COUNTA)",
+        "A169": "=_xlfn.PIVOTBY(2,\"c\",\"abc\",_xleta.COUNTA)",
+        "A175": "=_xlfn.PIVOTBY(2,\"c\",\"abc\",_xleta.COUNTA,0)",
+        "A181": "=_xlfn.PIVOTBY({2},{\"c\"},{\"abc\"},_xleta.COUNTA)",
+        "A187": "=_xlfn.PIVOTBY(2,\"c\",5,_xleta.COUNTA)"
+      }
+    },
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=1/0",
+        "A2": "abc",
+        "A4": 2,
+        "B1": "k",
+        "B2": "k",
+        "B3": "m",
+        "C1": "x",
+        "C2": "y",
+        "C3": "z"
+      }
+    }
+  ],
+  "expected": {}
+}

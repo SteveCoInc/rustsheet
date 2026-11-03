@@ -3,7 +3,7 @@ id: T-3909
 title: "TEXTJOIN: probe an array or range ignore_empty with a reference error delimiter"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,9 +23,14 @@ mixing booleans, numbers, text, blanks and errors, against a cell, a range and a
 INDEX and ROWS to read each element.
 
 ## Acceptance criteria
-- [ ] A probe case with excel-graph oracle values covers lifted ignore_empty against reference and value error delimiters.
-- [ ] The finding is in docs/excel-semantics/text.md, and any cell the engine misses has an owner task or is fixed here.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case with excel-graph oracle values covers lifted ignore_empty against reference and value error delimiters.
+- [x] The finding is in docs/excel-semantics/text.md, and any cell the engine misses has an owner task or is fixed here.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Scalar ignore_empty (T-3885).
+
+## Outcome
+Added probe `t3909-textjoin-lifted-ignore-empty` (40 formula cells, 44 scored, excel-graph oracle) covering array-literal and range
+ignore_empty against reference, range, error-value and plain delimiters. The engine already matches every cell, so no
+engine change; the finding is in docs/excel-semantics/text.md. Eval delta: +44 passing probe cells, no regressions.
