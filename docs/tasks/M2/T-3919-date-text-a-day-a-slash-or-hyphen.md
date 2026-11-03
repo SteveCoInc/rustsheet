@@ -3,7 +3,7 @@ id: T-3919
 title: "Date text: a day, a slash or hyphen, then a month glued to a one- or two-digit year (1-Jul24, 1/Jul24, 1-Jul5) is a date"
 milestone: M2
 lane: functions-date
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -41,3 +41,10 @@ criteria and typed input, as the four-digit `"1-Jul2024"` and `"1/Jul2024"` alre
 ## Out of scope
 - Separators and shapes the probe did not cover (dates.md UNVERIFIED list).
 - Locales other than en-US.
+
+## Outcome
+`parse_separated` (crates/rustsheet-engine/src/formatter/date_text.rs) now takes a day, a `/` or `-`,
+and a month name glued to a one-, two- or four-digit year as a date, through the same `day_name_year`
+path as the four-digit form. Period and comma forms stay `#VALUE!`. Unit test
+`glued_month_with_short_year_after_separator` added. Eval delta: probes/t3299-date-text-glued-month-3
+89 failing cells fixed (all of them; baseline/probes.txt shrank by 89 lines), no regressions.
