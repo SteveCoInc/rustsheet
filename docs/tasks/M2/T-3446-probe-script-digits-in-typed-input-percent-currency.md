@@ -3,7 +3,7 @@ id: T-3446
 title: "Probe script digits in typed input, percent, currency, parentheses, groups and exponents (T-3325 follow-up)"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
