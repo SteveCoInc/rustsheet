@@ -1,0 +1,43 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "NUMBERVALUE with NBSP or U+3000 as the decimal or group separator at the start, end and inside the text (T-3746).",
+  "tags": [
+    "M5",
+    "text",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=NUMBERVALUE(\"1\"&UNICHAR(160)&\"5\",UNICHAR(160),\",\")",
+        "A2": "=NUMBERVALUE(\"1\"&UNICHAR(160)&\"234.5\",\".\",UNICHAR(160))",
+        "A3": "=NUMBERVALUE(UNICHAR(160)&\"5\",UNICHAR(160),\",\")",
+        "A4": "=NUMBERVALUE(UNICHAR(160)&\"234.5\",\".\",UNICHAR(160))",
+        "A5": "=NUMBERVALUE(\"1\"&UNICHAR(160),UNICHAR(160),\",\")",
+        "A6": "=NUMBERVALUE(\"234.5\"&UNICHAR(160),\".\",UNICHAR(160))",
+        "A7": "=NUMBERVALUE(\"1\"&UNICHAR(12288)&\"5\",UNICHAR(12288),\",\")",
+        "A8": "=NUMBERVALUE(\"1\"&UNICHAR(12288)&\"234.5\",\".\",UNICHAR(12288))",
+        "A9": "=NUMBERVALUE(UNICHAR(12288)&\"5\",UNICHAR(12288),\",\")",
+        "A10": "=NUMBERVALUE(UNICHAR(12288)&\"234.5\",\".\",UNICHAR(12288))",
+        "A11": "=NUMBERVALUE(\"1\"&UNICHAR(12288),UNICHAR(12288),\",\")",
+        "A12": "=NUMBERVALUE(\"234.5\"&UNICHAR(12288),\".\",UNICHAR(12288))"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!A1",
+    "Sheet1!A2",
+    "Sheet1!A3",
+    "Sheet1!A4",
+    "Sheet1!A5",
+    "Sheet1!A6",
+    "Sheet1!A7",
+    "Sheet1!A8",
+    "Sheet1!A9",
+    "Sheet1!A10",
+    "Sheet1!A11",
+    "Sheet1!A12"
+  ]
+}
