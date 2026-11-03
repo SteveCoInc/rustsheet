@@ -1680,8 +1680,8 @@ product `RN64(ln 2) * log2 x` from the nearest 53-bit midpoint, in 53-bit ulps, 
 - Refills (T-3992, excel-graph, 2026-11-03 22:16-22:21 UTC, fresh uploads with the oracle cache emptied): fill 1's bytes twice,
   and fill 2's and fill 3's bytes once each, all return fill 1's bits at every one of the 380 cells. So fill 3's 2026-10-22
   bits at the 23 unstable cells were one deviating run, not a property of its bytes (only the D1 label differs). Today's runs
-  give the neighbour fills 1 and 2 gave, which is mostly not the model's. So the 357 fill-stable points above are also the
-  points where the majority of runs agree. See "excel-graph refills of the same bytes" below.
+  give the neighbour fills 1 and 2 gave, which is mostly not the model's. At the 23 unstable cells the majority of runs (6 of 7)
+  agrees on fills 1 and 2's bits. See "excel-graph refills of the same bytes" below.
 
 T-2144 fit (docs/research/t1941/ln_guard_bits.py): a k-bit internal product, truncated (tz) or rounded (rn), before RN64
 and RN53. Matches out of the 357 fill-stable points of T-2143's case / the fixture's 4,000 sampled points / its 30 near-ties
@@ -2824,15 +2824,16 @@ Counter-cases (same case): a literal error argument passes through, `PERCENTOF("
 ## excel-graph refills of the same bytes: no variation on eight fit kernels (2026-11-03)
 Rule: refilling the same workbook bytes with Excel for the web gave the same bits at every cell of the eight probes below,
 over three runs each. Fill-to-fill variation still happens, rarely and at near-ties, so this is a measurement of these
-probes on these dates, not a guarantee. Variations on file are each one ulp, or a step in an integer result for AMORDEGRC.
-Each touches some near-tie cells and not others:
+probes on these dates, not a guarantee. Each variation on file moved some near-tie cells and not others. LN's moved
+by one ulp, ERFC's by one to two ulps, and AMORDEGRC's by one step in an integer result:
 - T-2143's fill 3 of 2026-10-22 changed 23 LN cells, all inside decision 0112's window. Four refills of the same bytes
   today returned fills 1 and 2's bits ("LN is FLDLN2 then FYL2X" above).
 - probes/ln-fyl2x-kernel and the T-1941 run differ at 3 of their 30 shared LN near-ties.
-- The T-1916 re-fill changed 9 of 20 ERFC near-tie cells (T-1940).
+- The T-1916 re-fill changed 9 of 20 ERFC near-tie cells by 1 to 2 ulp (`kmyst-erfc-r8c11!B12999` by 2; statistics.md
+  T-1916 table; T-1940).
 - AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in two later fills (T-3610).
-Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each case got
-two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
+Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each of the eight kernel
+cases got two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
 three fills, with zero differing cells:
 - Student t quantile, probes-numeric/t3349-t-inv-2t-sweep (300 cells; committed 2026-10-31);
 - IRR, probes-numeric/t3478-irr-r4-wide (300 cells; 2026-10-31);

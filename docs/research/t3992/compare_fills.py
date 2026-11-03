@@ -63,7 +63,9 @@ def main() -> None:
         base = runs["committed"]
         differ = {}
         max_ulp = 0
-        for key, v in base.items():
+        # Every cell any fill reports, so a cell missing from one fill counts as a difference.
+        for key in sorted(set().union(*runs.values())):
+            v = base.get(key)
             seen = {tag: r.get(key) for tag, r in runs.items()}
             if all(x == v for x in seen.values()):
                 continue

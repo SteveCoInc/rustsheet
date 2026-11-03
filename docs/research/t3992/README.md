@@ -41,8 +41,8 @@ workbooks today gives fill 1's bits every time: fill 1's bytes twice and fill 2'
 difference at any cell. So fill 3's 2026-10-22 bits were one deviating *run*, not a property of its bytes. Today the 23
 cells come back as fills 1 and 2 had them. On this probe, then, the variation seen on 2026-10-22 belonged to that run: the
 same bytes did not vary in four later runs. That run changed 23 cells, all inside decision 0112's window (d 2.19e-4 to
-3.86e-4 from a midpoint) and all by one ulp. It did not change every point in the window. Of the window's 69 points, 34
-returned the same bits in all fills, and 12 of the 30 old near-ties were unchanged.
+3.86e-4 from a midpoint) and all by one ulp. It did not change every point in the window. Of the window's 69 points, 46
+returned the same bits in all fills (34 of them the model's), and 12 of the 30 old near-ties were unchanged.
 
 **Other fill-to-fill variations on file** (not refilled here):
 - LN: probes/ln-fyl2x-kernel (2026-10-20) and the T-1941 research run (2026-10-19) differ at 3 of the 30 near-ties and agree
@@ -55,7 +55,8 @@ returned the same bits in all fills, and 12 of the 30 old near-ties were unchang
   of T-2143's bytes agreed with each other and with fills 1 and 2 of 2026-10-22.
 - No run today deviated, so this session had no positive control. Two runs a few minutes apart say little about how
   often deviating runs occur. The variations on file are rare, change some near-tie cells and not others, and are each one
-  ulp (AMORDEGRC's is a step in an integer result). Nothing here shows whether the measured probes contain cells close
+  or two ulps: LN's by one ulp, the T-1916 ERFC re-fill by one to two (`kmyst-erfc-r8c11!B12999` by 2), and AMORDEGRC's
+  by one step in an integer result. Nothing here shows whether the measured probes contain cells close
   enough to a rounding tie to vary.
 - Different days: six cases have a committed fill from an earlier day that agrees with today's refills. RATE
   (t3850-rate-same-state, committed 2026-11-03 15:30) and incomplete beta bfrac (t3953-f-tail-bfrac-tiny, committed
