@@ -3,7 +3,7 @@ id: T-3865
 title: "PERCENTOF: desktop probe of a defined name whose body is a 3-D span"
 milestone: M14
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
