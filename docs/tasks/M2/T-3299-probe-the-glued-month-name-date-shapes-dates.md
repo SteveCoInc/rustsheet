@@ -3,7 +3,7 @@ id: T-3299
 title: "Probe the glued month-name date shapes dates.md leaves UNVERIFIED after T-1906 (1Jul5, 1/Jul2026, 1-Jul26, July1 , 2026 5) and the typed format of 1-Jul2026"
 milestone: M2
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -39,17 +39,37 @@ family, and every engine cell that disagrees has an owning task.
   upper and lower case). Then the section can state a rule rather than a list.
 
 ## Acceptance criteria
-- [ ] A new probes case `probes/t3299-date-text-glued-month-3` (milestone M2) with an excel-graph oracle sidecar. It
+- [x] A new probes case `probes/t3299-date-text-glued-month-3` (milestone M2) with an excel-graph oracle sidecar. It
       covers every shape above with the neighbours, through DATEVALUE, VALUE, MONTH/DAY, a criterion and typed input.
       At least 80 scored cells.
-- [ ] dates.md's section states Excel's result for each shape with cell citations and drops the UNVERIFIED items the
+- [x] dates.md's section states Excel's result for each shape with cell citations and drops the UNVERIFIED items the
       probe settles; the typed format of `"1-Jul2026"` is recorded.
-- [ ] Every cell the engine fails is a known failure in eval/baseline/probes.txt (`make eval-baseline`,
+- [x] Every cell the engine fails is a known failure in eval/baseline/probes.txt (`make eval-baseline`,
       0 regressions). Each is owned by a task filed in this PR (`functions-date` or `engine` for
       `split_glued_month`) or by an existing open one, and `make exit-owners MILESTONE=M2` reports 0.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the engine (the owning tasks).
 - Clock-year values for clocks other than the oracle's, and other locales.
 - Non-glued date text (dates.md's other sections).
+
+## Outcome
+- New probe `probes/t3299-date-text-glued-month-3` (excel-graph, 2026-11-03): 35 text shapes through
+  DATEVALUE (MONTH/DAY/YEAR), VALUE and `0+` minus DATEVALUE, MONTH/DAY of the text, COUNTIF and SUMIF
+  criteria, plus 10 typed-input cells. 363 scored cells. Every year is 2024, so no scored cell depends
+  on the oracle's clock. A first fill used 2026, the clock's year, which made the year and criteria
+  cells ambiguous, so the case was moved and refilled.
+- dates.md records Excel's rule for each shape and drops the settled UNVERIFIED items:
+  - `"1Jul5"` is 2005-07-01, confirming T-1906's inference.
+  - A slash or space before a glued month-year is a date; a period or comma is `#VALUE!`.
+  - A hyphen or slash takes a one- or two-digit glued year (`"1-Jul24"`, `"1/Jul24"`, `"1-Jul5"`).
+  - The hand-derived `#VALUE!` shapes are `#VALUE!`.
+  - Typed `"1-Jul2024"`, `"1-Jul24"`, `"1/Jul2024"`, `"1/Jul24"`, `"1-JULY2024"` and `"1Jul5"` are dates
+    with format `d-mmm-yy`.
+  - The raw ENTERED log is in docs/research/t3299-glued-month-typed-input-2026-11-03.md.
+- The engine fails 89 cells: the slash or hyphen shapes with a one- or two-digit glued year (rows 14,
+  19-26; typed N2, N10). They are known failures owned by the new T-3919 (M2, functions-date, sonnet).
+- Also filed T-3922 (M2, research, sonnet): the three MINOR coercion.md wording findings from the
+  fidelity review of T-3559 (#2963).
+- Eval delta: probes +1 case, 274/363 cells pass, 89 new known failures, 0 regressions.
