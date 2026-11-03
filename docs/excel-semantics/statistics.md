@@ -3896,6 +3896,11 @@ Evidence: probes-numeric m9-beta-inv, m9-legacy-betainv, t1745-beta-inv-roundtri
 and its neighbours as constants, BETA.DIST of each, and BETA.INV again), m9-f-inv, t1049-finv,
 m9-f-inv-rt, m9-legacy-finv, t1049-finvrt, m9-t-inv, m9-t-inv-2t, t1048-tinv. Fits `beta-inv`,
 `f-inv`, `f-inv-rt`, `t-inv`, `t-inv-2t` (`fitlab/kernels/beta_inv.py`).
+Small-shape sweep (T-3387, probes-numeric t3387-beta-inv-small-shape-landing, a in {0.5, 1, 2.5, 10}, b in {1, 2.5,
+10, 100, 1000}, p from 1E-10 to 0.5, 220 points): `BETA.DIST(BETA.INV(p,a,b),a,b,TRUE)` equals p at 57 points, is
+within one ulp of p at 53 more, and is further at 110. Largest miss in ulps of p, per (a, b): a=0.5: 11, 9, 10, 10, 11;
+a=1: 11, 1, 1, 1, 1; a=2.5: 24, 15, 32, 188, 220; a=10: 24, 11, 27, 14, 16 (for b = 1, 2.5, 10, 100, 1000 in each
+row). The case also holds the AS 109 mirror (`BETA.INV(1-p,b,a)` and `1-BETA.INV(1-p,b,a)` for p in 0.05, 0.2, 0.5).
 Tiny shapes and scaled ranges (T-3566, probes-numeric t3566-beta-inv-tiny-shape-and-range, excel-graph): of the 66
 tiny-shape points (a, b in 1E-5..0.01, p near 1/2 and 0.1/0.9), Excel's BETA.INV returns #NUM! at 21 (a = b = 1E-5: 4,
 1E-4: 4, 1E-3: 2; (1E-4, 0.01): 6; (0.01, 1E-4): 5; the plain and the [0.15, 1.2] calls agree on every one). At the 45
@@ -3904,7 +3909,7 @@ further the cdf is flat or saturated (it reads 1.0, or 0.98646998669861 for ever
 point is not a crossing of p. The scaled quantile BETA.INV(p,a,b,A,B) equals A + (B - A)*BETA.INV(p,a,b) bit for bit
 at all 40 points ((3, 600) and (2, 2.5) on four ranges, five p each).
 Status: VERIFIED (crossing at 155/188); the 11 misses and the solver's start, step and stop are UNVERIFIED
-Tasks: T-1745, T-0974
+Tasks: T-1745, T-0974, T-3387
 
 ## BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more (T-3664)
 Rule: with alpha = 1 or beta = 1 and 1E-15 <= p < 1, Excel's BETA.INV(p,alpha,beta) (and BETAINV) is within half a
