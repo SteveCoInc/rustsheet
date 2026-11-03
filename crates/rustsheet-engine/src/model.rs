@@ -20,7 +20,10 @@ use crate::{
         utils::{self, check_block, is_valid_column_number, is_valid_row},
     },
     formatter::{
-        format::{displayed_text, format_number, parse_typed_number, rejected_clock_text_format},
+        format::{
+            displayed_text, format_number, parse_formatted_number, parse_typed_number,
+            rejected_clock_text_format,
+        },
         lexer::is_likely_date_number_format,
     },
     implicit_intersection::implicit_intersection,
@@ -426,8 +429,21 @@ impl Model {
                 return None;
             }
             // Read with no clock, so "-4-2" stays a formula although "4-2" is a date now.
-            (!stripped.is_empty() && self.cast_number_in(stripped, &|| None).is_none())
-                .then_some(value)
+            // Coercion refuses a trailing `$` (cast.rs `number_text_in`), typed input does not
+            // (unprobed, T-3835): `-200$` typed stays a number, not a formula.
+            let typed_trailing_dollar = stripped.trim_end_matches(' ').ends_with('$')
+                && parse_formatted_number(
+                    stripped,
+                    &["$"],
+                    self.locale,
+                    &|| None,
+                    self.workbook.settings.date_system,
+                )
+                .is_ok();
+            (!stripped.is_empty()
+                && !typed_trailing_dollar
+                && self.cast_number_in(stripped, &|| None).is_none())
+            .then_some(value)
         } else {
             None
         }

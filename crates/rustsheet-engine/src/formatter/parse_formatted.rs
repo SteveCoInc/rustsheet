@@ -464,16 +464,10 @@ fn parse_percent_or_currency(
                 Some(prefix_currency_format(currency, options.decimal_digits > 0)),
             )));
         } else if let Some(p) = value.strip_suffix(currency) {
-            // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE!
-            // for VALUE, `+0` and NUMBERVALUE, while a trailing euro sign reads
-            // (probes/t3742-value-percent-currency A10-A13, A25-A28, A31-A34).
-            if *currency == "$" {
-                return Err("Cannot parse number".to_string());
-            }
             let (f, options) =
                 parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
             // A trailing `$` after E-notation is not a number: VALUE("1e2$") is #VALUE!
-            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign is unprobed.
+            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign reads by coercion (probes/t3742-value-percent-currency A11).
             if options.is_scientific && *currency == "$" {
                 return Err("Cannot parse number".to_string());
             }
