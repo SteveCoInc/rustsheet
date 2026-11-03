@@ -281,15 +281,19 @@ impl Model {
         };
         // The element for source row `row`: the one value, or the row's, counted from the top
         // of the fields or of the records.
+        // The records-height arm comes before the one-value arm: beside a header row and exactly
+        // one record, a 1x1 filter is that record's element, whatever the key and value widths
+        // and whether the header row was given or detected (probes/t3880-groupby-scalar-filter-
+        // edges G!A1:A41, G!A63:A74).
         let offset = match keep.len() {
             n if n == height => Some(0),
+            n if first > 0 && n + first == height => Some(first),
             1 if one_keeps_all => None,
             1 => {
                 return Err(invalid(
                     "a single filter_array value needs one key and one value column",
                 ))
             }
-            n if first > 0 && n + first == height => Some(first),
             _ => return Err(invalid("filter_array must be as tall as the fields")),
         };
         let rows: Vec<usize> = (first..height)
@@ -452,6 +456,9 @@ impl Model {
         };
         self.lift_by_class(
             &elements,
+            // An error element is its own error even once an earlier element has spent the
+            // filter (probes/t3880-groupby-scalar-filter-edges G!A89:B93).
+            |element| matches!(element, ArrayNode::Error(_)).then(|| element.clone()),
             |model, element| match element {
                 ArrayNode::Error(_) => None,
                 _ => Some(
@@ -463,9 +470,6 @@ impl Model {
                 ),
             },
             |model, element| {
-                if matches!(element, ArrayNode::Error(_)) {
-                    return element.clone();
-                }
                 let scalar = array_node_to_calc_result(element, cell);
                 match model.groupby_with(inputs, Some(scalar), cell) {
                     Ok(output) => at(&output, 0, 0),
@@ -586,7 +590,9 @@ impl Model {
         }
         // One filter value keeps or drops every row only beside one key column, one value column
         // and no header row; otherwise it is #VALUE!, whatever the value, TRUE and 2 included
-        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19).
+        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19), a detected header row too
+        // (probes/t3880-groupby-scalar-filter-edges G!A51, G!A57), unless the header row has
+        // exactly one record below it ([`Model::filter_rows`]).
         let one_keeps_all = first == 0 && key_columns == 1 && width(values) == 1;
         // Excel reads field_relationship before it filters, and checks the total depth's range
         // after: a lifted relationship of 2 leaves the filter to the next element, a depth of 5
