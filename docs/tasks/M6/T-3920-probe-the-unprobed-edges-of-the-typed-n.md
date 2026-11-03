@@ -45,5 +45,5 @@ And (design MINOR) `parse_formatted::is_am_pm_word` could call `date_clock::am_p
   DATEVALUE reads the letter-period serial in the workbook's system. `is_am_pm_word` reuses `am_pm_word`.
 - Shapes rows 11 and 22 (year-less tails) now score the offset from the current year's date (C, D), so no refill
   year moves them; the case was refilled.
-- Eval delta: the two new cases add 205 cells, 204 pass; t3920-typed-a-period-1904 G6 (`DATEVALUE("10 A.")` is 0 in
+- Eval delta: the two new cases add 209 scored cells (row 23 C, E-G and shapes C11, D11, C22, D22 are `invariant`: offsets from a current-year date), 208 pass; t3920-typed-a-period-1904 G6 (`DATEVALUE("10 A.")` is 0 in
   1904, a bare-clock question) is owned by T-3944. Before the fix 25 of them failed (the readers' fallback and 1904).

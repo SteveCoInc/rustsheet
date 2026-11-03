@@ -9,6 +9,12 @@
   "T-3920"
  ],
  "expected": {},
+ "invariant": [
+  "S!C23",
+  "S!E23",
+  "S!F23",
+  "S!G23"
+ ],
  "sheets": [
   {
    "name": "S",

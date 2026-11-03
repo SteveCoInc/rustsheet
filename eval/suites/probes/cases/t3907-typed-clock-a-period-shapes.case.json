@@ -9,6 +9,12 @@
   "T-3907"
  ],
  "expected": {},
+ "invariant": [
+  "S!C11",
+  "S!D11",
+  "S!C22",
+  "S!D22"
+ ],
  "sheets": [
   {
    "name": "S",
