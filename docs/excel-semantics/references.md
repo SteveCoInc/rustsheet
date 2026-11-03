@@ -2671,8 +2671,9 @@ Right/Left):
   deleted, and when both are, in one edit or two (table-column-range-delete-end, -start, -both-ends, -both-ends-separate);
   the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete. The engine matches the naming and the
   two-column insert, the straddling deletes and the delete of every column (T-3733: `column_span` shrinks the
-  table, `Displacement::deleted_tables` prints its structured references `#REF!`); a column range that loses one
-  end is T-3734.
+  table, `Displacement::deleted_tables` prints its structured references `#REF!`) and the column range that loses
+  either end (T-3734: `deleted_column` prints `#REF!`); only the plain-range shrink after a one-column delete is
+  T-2851's.
 - Convert to Range (`tables/convertToRange`): every value is kept and each structured reference from another
   sheet is rewritten as an absolute, sheet-qualified range: `=SUM(S!$C$4:$C$7)`, `=COUNTA(S!$B$4:$B$7)`,
   `=COLUMN(S!$C$4:$C$7)`; `ROWS(Sales)` 4, `ROWS(Sales[#All])` 5 and `ROW(Sales[#Headers])` 3 keep their values

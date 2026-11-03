@@ -28,7 +28,7 @@ Code: stringify/structured.rs `deleted_column`.
 - [x] table-column-range-delete-end, -delete-start and -delete-both-ends-separate: the structured cells (F!A1-A3) pass.
 - [x] The plain-range cells F!A4/F!A5 of those probes pass too (`S!C4:D7` shrinks to `S!C4:C7` after a one-column delete), or, if
       that needs T-2851's wider probe first, move to a task that lists them.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Plain-range shrink beyond these probes: whole-row ranges and multi-row deletes (T-2851).
