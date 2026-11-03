@@ -3,7 +3,7 @@ id: T-3542
 title: "XMATCH: an error-valued search_mode cell wins over an out-of-range numeric match_mode, and a multi-cell match_mode is lifted into a spill (non-numeric text match_mode still wins) (gen-m6 arg-pairs cells)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,3 +28,9 @@ Decision 0083: every cell below returns a wrong error; only some count in the in
 Cells:
 - 315644f84093cf49 A292
 - 75b38d80dd3152b2 A388 A448 A544
+
+## Outcome
+xmatch.rs: an out-of-range numeric match_mode is now reported after search_mode's cast error, so an error-valued
+search_mode cell wins (also per element of a lifted match_mode range); a non-numeric match_mode still gives #VALUE!.
+gen-m6/315644f84093cf49 and 75b38d80dd3152b2 pass fully (A292:B293, A388, A448, A544, with A64/A598 kept). The general
+rule is not separately probed (lookup.md entry stays UNVERIFIED beyond the oracle cells).
