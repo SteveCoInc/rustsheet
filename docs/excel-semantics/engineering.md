@@ -187,9 +187,19 @@ of case and cell): 336 of 338 bit-exact, against 314 for the correctly rounded c
 801 of 807 against 742. Fresh sweep generated after the model was frozen (t3861-convert-prefix-sweep,
 150 seeded calls with prefixes on one or both units): 142 of 150 bit-exact, against 123 correctly
 rounded and 97 for the previous form; all 150 within 4 ulp, 15 digits and Gate A's envelope.
-Open gaps: seven of the eight misses have a light-year or parsec factor (T-2047's digits), and one mixes a
-binary and a decimal prefix, `CONVERT(4.73E-10,"Gibyte","zbyte")`, 5.0787988275200007E+20 in Excel
-and 5.07879882752E+20 here (1E21 × 2^30; `* 2^30 * (1/1E-21)` gives Excel's; T-3975).
+Open gap: seven of the eight misses have a light-year or parsec factor (T-2047's digits).
+The eighth mixes a binary and a decimal prefix, and mixed pairs follow another rule (T-3975,
+probes/convert-mixed-prefix, excel-graph): with a binary prefix on either unit the prefixes are each
+unit's own constant, `(P_from × B_from) / (P_to × B_to)`, so a decimal prefix on the target enters as
+the rounded reciprocal of its constant rather than as the nearest double to the inverse power.
+`CONVERT(4.73E-10,"Gibyte","zbyte")` is 5.0787988275200007E+20 (× 2^30 × (1/1E-21); × 2^30 × 1E21
+gives 5.07879882752E+20). A decimal prefix on the source is the same either way. The probe pairs every
+binary prefix with the 21 decimal prefixes in both directions, bit and byte, 672 cells; with the
+sweeps' seven mixed cells that is 679, and all 679 fit (the pure-decimal rule fits 599). Hold-out by cell
+hash (30%, SHA-256 of case and cell): 204 of 204 bit-exact, against 151 correctly rounded and 184 for the
+pure-decimal rule; train 475 of 475 against 338 and 415. Fresh sweep after the rule was frozen
+(probes-numeric/t3975-convert-mixed-prefix-sweep, 150 seeded calls, values ±1E-250..1E250): 150 of 150
+bit-exact, against 108 correctly rounded and 125 for the pure-decimal rule; all inside Gate A's envelope.
 The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,

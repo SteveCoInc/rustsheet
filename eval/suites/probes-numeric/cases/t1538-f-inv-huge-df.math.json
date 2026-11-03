@@ -373,11 +373,11 @@
    },
    "A153": {
     "f": "=BETA.INV(0.3,2.5,5E9)",
-    "why": "not converged or too slow"
+    "why": "no single value"
    },
    "A155": {
     "f": "=BETA.INV(0.3,3,5E9)",
-    "why": "not converged or too slow"
+    "why": "no single value"
    },
    "A23": {
     "f": "=F.INV(0.025,5,1E10)",

@@ -244,6 +244,7 @@ C	probes/colon-hash-value-operands.case.json	6
 C	probes/combin-algorithm-sweep.case.json	844
 C	probes/concatenate-after-cut.case.json	9
 C	probes/concatenate-limit-spill.case.json	68
+C	probes/convert-mixed-prefix.case.json	672
 C	probes/convert-targets.case.json	84
 C	probes/convert-temperature-ov00.case.json	1
 C	probes/convert-temperature-ov01.case.json	1
