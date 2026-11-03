@@ -34,6 +34,11 @@ periods and the annual long ones, but not:
   near 124-132, its yield near 0; listed one by one because a hyphen span names its ends only, decision 0136),
   B1, C21, C35, C50, C52, C85, E1 and F1 (the inverted ODDFPRICE at a yield of 0), E32, E33, E40, F24, F32, F33, F46,
   F50 (NumericClose or NumericMismatch on the 2026-10-28 run).
+- probes/oddf-date-order-domain-sweep (T-3652, excel-graph 2026-11-03) Y!A2:O2, A22:O22, A33:O33, A34:O34: a long
+  first period with the settlement before the quasi-coupon date, at frequency 1, 2 and 4 and every basis (prices 98,
+  1E-6 and 150, and a 0% coupon at 98). Ours is off by about 1e-9 relative on both sides; annual is off too, so the
+  committed slope is wrong for any long first period whose settlement precedes the quasi-coupon date, not only at
+  frequency 2 and 4.
 - The rest of the sweep is within a few ulps; YIELD's slope operation order (`t * 100 * rate / m`) is worse (319
   sweep cells pass against 320).
 Lab: the T-2007 method (dump `OddFirstSchedule`'s fields from `fn_oddfyield`, re-run Newton in Python with

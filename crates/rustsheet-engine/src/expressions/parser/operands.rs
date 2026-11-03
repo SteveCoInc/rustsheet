@@ -440,6 +440,15 @@ impl Parser {
             return node;
         }
         if !self.lexer.is_a1_mode() {
+            // Typed in R1C1 mode, a name that reads as a reference there (`r`, `c`, `rc`, `r1c1`:
+            // a row, a column or a cell) is refused, as `f1` is typed in A1 mode
+            // (probes/t3212-r1c1-bare-offsets H30:H33, H35; T-3212). Stored text binds it.
+            if self.typed
+                && self.cell_shaped_binding.is_none()
+                && matches!(token, TokenType::Reference { .. } | TokenType::Range { .. })
+            {
+                self.cell_shaped_binding = Some(text.to_string());
+            }
             return node;
         }
         let bound = match (token, &node) {

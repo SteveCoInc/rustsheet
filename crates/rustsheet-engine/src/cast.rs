@@ -13,7 +13,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    formatter::format::{parse_formatted_number, script_digit_to_ascii},
+    formatter::format::{ascii_script_digits, parse_formatted_number},
     limits::check_range_size,
     model::Model,
     text::Text,
@@ -178,20 +178,20 @@ pub(crate) fn number_text_in(
     year: CurrentYear,
     date_system: DateSystem,
 ) -> Option<f64> {
-    // Script digits are read as numbers by coercion, VALUE and criteria (T-3325), not by typed input.
-    let mapped: String;
-    let digits = if text.is_ascii() {
-        text
-    } else {
-        mapped = text.chars().map(script_digit_to_ascii).collect();
-        &mapped
-    };
+    // Script digits are read as numbers by coercion, VALUE and criteria in every form, clock
+    // text included (T-3325, T-3446), not by typed input (TODO(T-3891)).
+    let digits = ascii_script_digits(text);
     if let Ok((v, _number_format)) =
-        parse_formatted_number(digits, currencies, locale, year, date_system)
+        parse_formatted_number(&digits, currencies, locale, year, date_system)
     {
         return Some(flush_subnormal(v));
     }
-    crate::functions::date_and_time::time_text::parse_time_serial(text, locale, year, date_system)
+    crate::functions::date_and_time::time_text::parse_time_serial(
+        &digits,
+        locale,
+        year,
+        date_system,
+    )
 }
 
 /// Text read as VALUE reads it (`Model::value_text_number`): `None` when it is over the
@@ -222,7 +222,7 @@ pub(crate) fn value_number_text_with(
     }
     let trimmed = text.trim_matches(' ');
     number_text_in(trimmed, currencies, locale, year, date_system)
-        .or_else(|| mixed_fraction(trimmed, fraction_currencies))
+        .or_else(|| mixed_fraction(&ascii_script_digits(trimmed), fraction_currencies))
 }
 
 /// The `#N/IMPL!` of a range, an array or a LAMBDA where a scalar cast expects a value.
@@ -278,7 +278,9 @@ impl Model {
                     currencies.push(currency);
                 }
                 self.parse_number_text(s, &currencies, current_year)
-                    .or_else(|| mixed_fraction(s.trim_matches(' '), &["$", "€"]))
+                    .or_else(|| {
+                        mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])
+                    })
             }
         }
     }

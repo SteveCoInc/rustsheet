@@ -1,0 +1,31 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A1": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A2": {
+    "t": "s",
+    "v": "=SUM(#REF!#REF!)"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#REF!"
+   },
+   "A4": {
+    "t": "s",
+    "v": "=SUM(#REF!C4)"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "ea722b702cb02a4d9aab09529be2ce848dc3100db8f706d91470b7bda9f1fad5",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-03T03:54:30+00:00",
+  "version": null,
+  "workbook_name": "7faa20265f7441949cd2195917342834ce8583b5bcab42df99e218044015cc04.xlsx"
+ }
+}

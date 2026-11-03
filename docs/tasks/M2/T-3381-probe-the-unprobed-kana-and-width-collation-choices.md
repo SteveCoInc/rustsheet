@@ -35,6 +35,10 @@ each one is either confirmed or filed as a fix task.
   non-transitive texts (`SORT({"aー";"ab";"aa";"Ａa"})`; the engine sorts `"aー"` as `"aa"`).
 - Code: crates/rustsheet-engine/src/functions/util/collation.rs (`resolve`, `kana`,
   `fold_exact_lookup`).
+- T-3465 sweep evidence (probes/t3465-collation-holdout, excel-graph 2026-11-03): Excel orders the astral
+  ideograph U+20000 below `"々"&UNICHAR(863)&"ヲ"&UNICHAR(811)&UNICHAR(848)&"ゞ"` (a leading `々` followed by
+  combining marks and kana); the engine puts it above. Settle how a leading `々` before marks and kana sorts
+  against the ideographs. Owned cells: probes/t3465-collation-holdout C313, D313
 
 ## Acceptance criteria
 - [ ] A probe case under eval/suites/probes covers every choice above, with oracle values.

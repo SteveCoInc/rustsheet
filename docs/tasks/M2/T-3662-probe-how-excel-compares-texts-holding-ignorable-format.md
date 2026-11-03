@@ -49,6 +49,9 @@ current treatment is either VERIFIED or owned by an engine task.
 - Method: the `excel-probe` skill, excel-graph, laid out like probes/t3276-collation-other-scripts (a Data
   column of strings, `SUMPRODUCT(--(range<x))` ranks and `=` counts, then chosen pairs and the criteria
   and lookup columns). Keep it under about 600 formula cells. Milestone tag M2 (decision 0051).
+- T-3465 sweep evidence (probes/t3465-collation-holdout, excel-graph 2026-11-03): an inserted soft hyphen
+  U+00AD is ignored by Excel's `<` and `=` (`"ĳĳ" = "ĳ"&UNICHAR(173)&"ĳ"`, `"¡" = "¡"&UNICHAR(173)`, a tab run with
+  and without it); the engine counts it. Owned cells: probes/t3465-collation-holdout C18, E18, D69, E69, D117, E117, C132, E132, C153, E153, C222, E222, C234, E234, C579, E579, C597, E597
 
 ## Acceptance criteria
 - [ ] A probe case `probes/t3662-collation-ignorables` (milestone M2) is committed with its excel-graph

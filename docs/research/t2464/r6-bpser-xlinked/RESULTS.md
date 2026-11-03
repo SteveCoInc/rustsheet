@@ -29,15 +29,17 @@ how bpser's EXP treats an argument that needs more than 53 bits. With alx near -
 in 54-55 bits. Nearly every non-double z sits exactly halfway between two doubles (`nonrepr.out`).
 
 - **x-linked (a0 near 0.3).** At a fixed shape L is constant, and the cell misses when alx's last bit leaves z
-  between doubles. Every such miss has the model 1 ulp above Excel.
+  between doubles. Nearly every such miss has the model 1 ulp above Excel: 158 of 172 (`misspos.out`).
 - **a0-linked (0.5, 0.7).** z's low bits also depend on L's last bits, which move with a0. When L puts z between
   doubles at both x, both x miss together. On r5, all 93 a0 where both x miss have a non-double z at both x.
 - **This is not an L error.** On every r6 shape at a0 0.3, and at (2.5, 0.7) and (6.25, 0.7), the best constant L along
   x is GL53's own L (`lcover_r6.out`). At a0 = 0.5 every z is non-double under GL53 (512 of 512 per shape), so
   `lcover_r6.py` cannot pin L there.
 
-Not solved: Excel's E for a non-double z. It is not a double rounding of z. Per tie cell, Excel's I is matched by EXP of
-the extended z on some cells, by EXP of z rounded down on others, and by neither on the rest (`nonrepr.out`).
+Solved in T-3873 (docs/research/t2464/r7-bpser-nondouble-z): Excel splits z into zh + zl and multiplies fl(EXP(zh) s)
+by fl(1 + zl). This round found only that Excel's E for a non-double z is not a double rounding of z. Per tie
+cell, Excel's I is matched by EXP of the extended z on some cells, by EXP of z rounded down on others, and by neither
+on the rest (`nonrepr.out`).
 
 ## 1. Probes (excel-graph, 2026-11-02, 0 failures)
 
