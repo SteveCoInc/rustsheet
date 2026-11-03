@@ -3,7 +3,7 @@ id: T-3198
 title: "F tails and densities T-2219 left off: F.DIST.RT(3,50,100) on L140 and F.DIST densities at (50,100); T-2219's gen-m9 cells below a + b = 10"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P2
 size: S
 tier: opus
@@ -159,3 +159,12 @@ This opus run moved L140 bup+bpser's bup sum to T-3568's power sum (`bratio/bup.
 - Next step: re-run reviewer-excel-fidelity on the new head, and design and security too, since the head moved. Once CI
   is green and all three approve, mark the PR ready and enqueue it (`enable_pr_auto_merge`, SQUASH).
 - Do not repeat: deleting or skipping a test expectation. Fidelity rejected that without a decision record.
+
+## Released (2026-11-03, opus run, no PR)
+An opus run claimed this branch, measured, and released it; it carries no code. On main b9dac1c1 the three cells are:
+A19 65 ulp below Excel (visibly off), A26 5 ulp above (visibly off), A30 8 ulp below but within half a unit of the 15th
+digit (no longer visibly off, so A30 meets the first criterion). A throwaway score of bratio's (x, y) forms over
+t3198-f-l140-args' 414 F rows (both tails bit-exact) gave (u, v) 158, (u, 1 - u) 110, (1 - v, v) 116, "smaller argument
+formed directly, the other as 1 - it" 145, and its opposite 81. So no argument rule explains A19 without losing rows;
+it stays the single-cell exception statistics.md names. A26 needs a refit of `f_density.rs` in the |P| in [4, 32) band,
+which is larger than one session. This branch can be deleted; main's task file is the record.
