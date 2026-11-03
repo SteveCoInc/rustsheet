@@ -1366,3 +1366,13 @@ intersected. An error element (`CHAR(0)` is `#VALUE!`, a `#N/A` cell) is the joi
 Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe shows
 `CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
 agree; the only gap was `CHAR`, fixed in T-3302.
+
+## ARRAYTOTEXT and TEXTJOIN: range format, error format and error delimiter (T-3512 batch)
+
+Oracle-filled cells of the arg-pairs batch, not yet implemented (T-3884, T-3885):
+
+- A multi-cell range as ARRAYTOTEXT's format is accepted, not `#VALUE!`: `ARRAYTOTEXT(2,Data!A1:B2)` is
+  `"2"`, `ARRAYTOTEXT(Data!A1:B2,Data!A1:B2)` is `"0, FALSE, , 1"` (gen-m5/af89ea54bae02c71 Calc!A31, A529).
+- `ARRAYTOTEXT(<blank ref>,#DIV/0!)` is `#VALUE!`, not the format's error (Calc!A499, A502).
+- `TEXTJOIN(<#DIV/0! ref>,<scalar>,<values>)` is `#VALUE!`, not the delimiter's error
+  (gen-m5/d0c5e5dff134d787 Calc!A310, A316, A322).
