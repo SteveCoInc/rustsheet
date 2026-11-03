@@ -48,7 +48,7 @@ Lab: the T-2007 method (dump `OddFirstSchedule`'s fields from `fn_oddfyield`, re
 - [x] The listed cells are within half a unit of the 15th significant digit of Excel, or the task is blocked
       time-boxed (decision 0056) with the candidates recorded in financial.md.
 - [x] ODDFYIELD lines in eval/baseline only shrink.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - YIELD (T-1592) and ODDFPRICE's own digits (T-1374).
@@ -110,3 +110,23 @@ ODDFPRICE's root"). A short first period, and a long one with the settlement in 
   a scratch dump like T-2007's), T-3990 (probe ODDFYIELD's `#NUM!` at extreme prices).
 - Eval delta: +73 cells (13 PRICE_YIELD, 60 oddf-date-order-domain-sweep); new case t3031-r4-oddfyield-long-first
   (157 of 160).
+
+## Landing notes
+- PR #3046 (draft), head before these notes d549ee3b9 (a docs-only conflict merge of origin/main onto 0ac4b487b).
+  CI was pending at the time of writing. Review round 1 on 0ac4b487b: reviewer-security APPROVE, reviewer-design
+  APPROVE (MINOR only), reviewer-excel-fidelity REQUEST_CHANGES. The code needs no change; two evidence items are
+  missing:
+  1. R4.1 hold-out: split the 73 long-first cells with `nq` >= 1 (PRICE_YIELD.xlsx ODDFPRICE_ODDFYIELD K8-K11,
+     K29-K33, K49-K52; probes/oddf-date-order-domain-sweep Y rows 2, 22, 33, 34) with
+     tools/src/rustsheet_tools/fitlab/holdout.py `is_holdout` (T-3360 has landed). Report train and test counts as
+     bit-exact, within 4 ulp and within 15 digits, for this slope and for the correctly rounded candidate (ODDFPRICE's
+     root). State the margin. The fresh sweep is R4.2 only and cannot also be the hold-out.
+  2. Gate A: give 50-digit (mpmath) roots of ODDFPRICE(y) = pr at least for probes-numeric/t3031-r4-oddfyield-long-first
+     S!A61 and S!A70, replacing "the engine's ODDFPRICE residual over its central-difference slope". File a task for an
+     ODDFYIELD math model and Gate A table. mpmath is not installed system-wide here; try the tools/ uv venv.
+- MINOR, to fix in the same push: financial.md should say "`nq` on regular 30/360 schedules" (month-end 30/360 day
+  counts can differ, see T-3988). Tick the "reviewers approve" criterion only after every reviewer approves.
+- Do not repeat: the shift alone, on any subset of coupon terms, leaves the coupon cells 1e-12 to 1e-10 off (the
+  extra quasi coupons are needed). Attempt 1's lead-term and start candidates are above.
+- Next step: add items 1 and 2 to the Outcome (and to financial.md where it cites Gate A), push once, re-run
+  reviewer-excel-fidelity (and design only if code changes), then mark the PR ready and enqueue it once CI is green.
