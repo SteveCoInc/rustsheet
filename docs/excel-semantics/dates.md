@@ -416,7 +416,26 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `10 AM 7/1` (current year). `10:00 Jul-25` is 25 July of the current year, not July 2025 (MONTH*100+DAY 725).
   The exception: with `A.` (single letter and period) before the date, `10 A. 7/1/2025` is 95368.2763275463
   (`2161-02-07 06:37:55`) and `10:00 A. 7/1/2025` 95368.68604976853 (`2161-02-07 16:27:55`), both `mm:ss.0` (probes/date-text-typed-clock-first-a-period A1, A2; the value repeats over three fills).
-  Status: the engine leaves both as text (known failure, T-3907).
+  The rule (T-3907; probes/t3907-typed-clock-a-period-shapes A1-A26 decoded it, t3907-typed-clock-a-period-edges
+  A1-A30 confirmed it as a fresh sweep, excel-graph 2026-11-03; formats in docs/research/t3907-typed-clock-a-period-2026-11-03.md):
+  `CLOCK A. DIGITS[SEP DATE]` is no date-time at all. The digits right after the period are a fraction of a second
+  (`.7`, `.07`, `.70`, `.17`; rounded half up to the millisecond, `.2025` is 0.203 s and `.123456789` 0.123 s). A `/`,
+  `-` or space after them starts a date that must read on its own as a date without a clock: `1/2025` is January 2025,
+  `1/25` 25 January of the current year, `Jul/2025` July 2025, and with nothing after the digits the date is 0
+  (`10 A. 5` is 49710.2763252315). A bare `N` before the word is N minutes (`24 A.` adds 24 minutes); `H:M` is hours
+  and minutes (`10:30`, `1:2`). On top sits a constant: 2^32 - 22 seconds for `A`, one second more for `P`
+  (4294967274 s, 49710.269375 days). So `10 A. 7/1/2025` is 45658 (January 2025) + (2^32 - 22 + 600 + 0.7) / 86400.
+  The word is `A`, `P` or `PM` in any case (`a.`, `p.`, `PM.` probed; `AM.` is unprobed, and the engine reads it as `A.`); spaces after the period, extra
+  spaces before the word and trailing spaces are accepted, and `A.7/1/2025` with no space too. Typed, the value takes
+  `mm:ss.0`. These stay text: no digits after the period (`10 A.. 7/1/2025`, `10 a.m. 7/1/2025`, `10 A. July 1, 2025`),
+  no clock (`A. 7/1/2025`), another letter (`10 B. 7/1/2025`), seconds in the clock (`10:00:30 A. 7/1/2025`), a tail
+  that is no date (`10 A. 7/1`, `10 A. 5/1`, `10 A. 7-2025`, `10 A. 7/13/2025`, `10 A. 7/0/2025`, `10 A. 7/1/1899`) or
+  carries a clock (`10 A. 7/1/2025 10:00`), and 60 minutes or more (`60 A. 7/1/2025` and `99 A. 7/1/2025` stay text
+  but take `mmm-yy`, which the engine does not give a text cell). `10 A.` alone is 10 AM (`h:mm AM/PM`). The formula
+  readers agree: `VALUE` and `0+` give the typed number, `DATEVALUE` its day (95368) and `TIMEVALUE` its fraction
+  (edges A25-A30). Unprobed: the formula readers of the shapes that stay typed text (the engine reads `10 A. 7-2025` as `10 A.` before July 2025, as before), an hour of 24 or more in `H:M` (the engine leaves it text), `AM.`, and a 1904 workbook
+  (with no date the day 0 is before that epoch, so the engine leaves it text). Where -22 comes from is unknown.
+  Status: the engine matches every probed cell (T-3907).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on

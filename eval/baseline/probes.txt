@@ -1926,6 +1926,8 @@ C	probes/t3885-textjoin-error-delimiter-text-ignore-empty.case.json	136
 C	probes/t3890-pivotby-scalar-filter.case.json	59
 C	probes/t3894-bare-24h-clock.case.json	54
 C	probes/t3898-typed-circular-readers.case.json	28
+C	probes/t3907-typed-clock-a-period-edges.case.json	78
+C	probes/t3907-typed-clock-a-period-shapes.case.json	78
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -2465,12 +2467,6 @@ F	probes/convert-unit-names.case.json	Sheet1!B772
 F	probes/convert-unit-names.case.json	Sheet1!B961
 F	probes/convert-unit-names.case.json	Sheet1!B969
 F	probes/coup-calendar-edges.case.json	S!J12
-F	probes/date-text-typed-clock-first-a-period.case.json	S!B1
-F	probes/date-text-typed-clock-first-a-period.case.json	S!B2
-F	probes/date-text-typed-clock-first-a-period.case.json	S!C1
-F	probes/date-text-typed-clock-first-a-period.case.json	S!C2
-F	probes/date-text-typed-clock-first-a-period.case.json	S!D1
-F	probes/date-text-typed-clock-first-a-period.case.json	S!D2
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A29
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A7
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!B8

@@ -5,7 +5,10 @@ use crate::mixed_fraction::mixed_fraction;
 use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem};
 
 use super::{
-    date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
+    date_clock::{
+        parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
+        parse_letter_period_serial_in,
+    },
     date_text::{parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
@@ -65,6 +68,12 @@ pub(crate) fn parse_typed_number(
             return Ok((v, Some(format.to_string())));
         }
         // A clock-first date-time tolerates trailing spaces (probes/date-text-typed-clock-first-shapes A18).
+        let trimmed = text.trim_end_matches(' ');
+        if let Some(serial) =
+            parse_letter_period_serial_in(trimmed, locale, current_year, date_system)
+        {
+            return Ok((serial, Some(FRACTION_CLOCK_FORMAT.to_string())));
+        }
         let (shape, text) = match typed_clock_shape(text) {
             Some(shape) => (shape, text),
             None => match leading_clock_shape(text) {
@@ -248,9 +257,8 @@ fn leading_clock_shape(text: &str) -> Option<TypedClock> {
     let (clock, rest) = text.split_once(' ')?;
     let rest = rest.trim_start_matches(' ');
     // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock
-    // (`10 A 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other
-    // number (probes/date-text-typed-clock-first-a-period; T-3907), which the engine leaves as
-    // text.
+    // (`10 A 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as another number
+    // (`parse_letter_period_serial_in`).
     let clock_end = match rest.split_once(' ') {
         Some((word, _)) if is_am_pm_word(word) => text.len() - rest.len() + word.len(),
         _ => clock.len(),
