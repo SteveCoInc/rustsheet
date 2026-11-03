@@ -3,7 +3,7 @@ id: T-3921
 title: "MATCH's U+0001 lookup key matches U+0524 and empty text like a wildcard (probes/t3584-match-fold-weightless R1)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
