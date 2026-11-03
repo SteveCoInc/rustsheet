@@ -182,7 +182,7 @@ pub(crate) fn number_text_in(
     // text included (T-3325, T-3446), not by typed input (TODO(T-3891)).
     let digits = ascii_script_digits(text);
     // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE! for VALUE,
-    // `+0` and NUMBERVALUE, while a trailing euro sign reads (probes/t3742-value-percent-currency
+    // `+0` and NUMBERVALUE and match nothing as a criterion (B1:B4), while a trailing euro sign reads (probes/t3742-value-percent-currency
     // A10-A13, A25-A28, A31-A34). Typed cell input shares `parse_formatted_number` and is
     // unprobed, so the refusal lives here, not there (T-3835).
     if digits.trim_end_matches(' ').ends_with('$') {

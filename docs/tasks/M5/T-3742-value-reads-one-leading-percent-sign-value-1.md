@@ -42,8 +42,8 @@ VALUE gives Excel's value for text with a leading percent sign, as NUMBERVALUE a
 - NUMBERVALUE (T-3647).
 
 ## Outcome
-Probe `probes/t3742-value-percent-currency` (34 cells, excel-graph 2026-11-03) covers the shapes under VALUE, `+0`
-and NUMBERVALUE. Two changes in `parse_percent_or_currency` (formatter/parse_formatted.rs): a minus sign may precede
-the leading `%` (`-%1.5` = -0.015), and a trailing `$` is refused (`1.5$`, `1.5 $`, `-1.5$`); the euro stays
-readable. Rule in docs/excel-semantics/coercion.md. Eval: probes known failures 5139 -> 5138, 34/34 cells of the new
-case pass, 0 regressions.
+Probe `probes/t3742-value-percent-currency` (40 cells, excel-graph 2026-11-03) covers the shapes under VALUE, `+0`,
+NUMBERVALUE and COUNTIF criteria. Changes: a minus sign may precede the leading `%` (`-%1.5` = -0.015;
+`parse_percent_or_currency`), and number-text coercion and criteria refuse a trailing `$` (`number_text_in` in cast.rs);
+typed cell input is unchanged (`Model::typed_sign_text_is_number` keeps typed `-200$` a number). Fixes t3647 A24
+(NUMBERVALUE("1.5$")). Rule in docs/excel-semantics/coercion.md. Eval: probes known failures 5139 -> 5138, 0 regressions.

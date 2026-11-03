@@ -137,15 +137,39 @@
    "A9": {
     "t": "n",
     "v": 0.015
+   },
+   "B1": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B2": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B3": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B4": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B5": {
+    "t": "n",
+    "v": 0.0
+   },
+   "B6": {
+    "t": "n",
+    "v": 1.0
    }
   }
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "b0455a608a8c0345af56744f7c077a4c1028365f1c9f2178916d9d3a8efe831c",
+  "input_sha256": "5a12cd5e06288e7cd5a0ee3cc39928c6bb6973e0d1fbb33df4f8c30075272420",
   "kind": "excel-graph",
-  "produced_at": "2026-11-03T13:57:30+00:00",
+  "produced_at": "2026-11-03T15:26:21+00:00",
   "version": null,
-  "workbook_name": "875a4ca72f2a904c7b7301e2a2b84dc6a8636277f7d6e3769dfb7fd7a753be1d.xlsx"
+  "workbook_name": "0bc0ee73c32c09204488f78d788870be17a5ba433bd2b2171f426bf1ffa81448.xlsx"
  }
 }
