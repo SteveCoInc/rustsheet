@@ -3,7 +3,7 @@ id: T-3890
 title: "PIVOTBY: a scalar filter_array beside multi-column fields or a header row is #VALUE!"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
