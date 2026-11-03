@@ -6781,17 +6781,10 @@ F	probes/t3948-letter-period-gate-edges.case.json	S!E10
 F	probes/t3948-letter-period-gate-edges.case.json	S!F10
 F	probes/t3948-letter-period-gate-edges.case.json	S!G10
 F	probes/t3948-letter-period-gate-edges.case.json	S!H10
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A1
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A2
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A3
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A1
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A2
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A3
 F	probes/table-edits/table-column-range-delete-end.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-end.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-start.case.json	F!A2
 F	probes/table-edits/table-column-range-delete-start.case.json	F!A4
 F	probes/table-edits/table-column-range-delete-start.case.json	F!A5
 F	probes/table-edits/table-insert-row-this-row-above-header.case.json	F!B4
