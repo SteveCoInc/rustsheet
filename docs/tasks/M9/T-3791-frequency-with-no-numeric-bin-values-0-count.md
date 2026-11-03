@@ -3,7 +3,7 @@ id: T-3791
 title: "FREQUENCY with no numeric bin: values <= 0 count in the first row, and an error cell as the bins is skipped (gen-m9, 46 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
