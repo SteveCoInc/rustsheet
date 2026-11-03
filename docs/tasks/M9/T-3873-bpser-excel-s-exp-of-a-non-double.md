@@ -56,6 +56,10 @@ stored double. fl(1 + zl) equals Excel's EXP(zl) on every such zl. Where z is a 
   exact); T-3771's t3570-r5-bpser-lg 2,410 of 2,413; old w2f (0.5, 6.25) with measured GAMMALN 1,079 of 1,079;
   r2-bpser-small b0 <= 1 3,088 of 3,089 (shapes and runs). Split model exact / 4 ulp / 15 digits on r6's hold-out:
   1,536 / 1,536 / 1,536 of 1,536.
+- R4 record (RESULTS.md section 4): R4.1 hold-out against CR, exact / 4 ulp / 15 digits: tune CR 534 / 2,467 / 2,822,
+  split 3,070 / 3,072 / 3,072; hold-out CR 178 / 1,353 / 1,536, split 1,536 / 1,536 / 1,536. No margin was stated
+  before scoring. The R4.2 fresh probe (filled after the freeze) and its Gate A envelope are T-3879's acceptance items.
+  These are excel-graph bits; the effect (1-2 ulp) is below the web-against-desktop floor.
 - Negatives with counts: 14 ways of carrying zl times 4 roundings of zh (`forms_*.out`). Every other order or
   precision loses 226-743 of the 1,546 tune cells.
 - Also done: r2's old w2f shapes re-scored with measured GAMMALN (the "prefer g1ln53" reading came from the unsplit

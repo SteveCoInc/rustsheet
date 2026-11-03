@@ -18,8 +18,8 @@ def main() -> None:
             d = (got - want) / math.ulp(want)
             n[(c["part"], "cells")] += 1
             n[(c["part"], "exact")] += got == want
-            n[(c["part"], "4ulp")] += abs(d) <= 4
-            n[(c["part"], "15dig")] += abs(got - want) <= 5e-16 * abs(want)
+            n[(c["part"], "4ulp")] += c7.cm.lib.sl.ulpd(got, want) <= 4
+            n[(c["part"], "15dig")] += c7.cm.lib.sl.w15(got, want)
             if got != want:
                 print(f"miss {c7.shape(c)} x={c['x']!r} nd={c['nd']} q={c['q']} excel={want!r} model={got!r} "
                       f"({d:+.0f} ulp)")

@@ -18,9 +18,10 @@ I = fl( fl(EXP(zh) · s) · fl(1 + zl) )      every operation a stored double; E
 ```
 
 Where z is a double, zl = 0 and this is GL53's I = fl(EXP(z) s) unchanged. The order is fixed by the data: s first,
-then the (1 + zl) factor. fl(1 + zl) equals Excel's EXP(zl) on every zl the split leaves (|zl| <= 2^-53 here: Excel's
-EXP(2^-53) is 1.0 by double rounding, EXP(-2^-53) is 1 - 2^-53), so BETA.DIST cells cannot tell
-fl(EXP(zh) s)·EXP(zl) from fl(EXP(zh) s)·fl(1 + zl). Either is Excel's form.
+then the (1 + zl) factor. On every zl the split leaves on r6, r5, T-3771's probe and r2 (|zl| is 2^-54, 2^-53 or
+2^-52, of either sign), fl(1 + zl) equals the measured EXP model's EXP(zl): for example the model's EXP(2^-53) is 1.0
+by double rounding and EXP(-2^-53) is 1 - 2^-53. So BETA.DIST cells cannot tell fl(EXP(zh) s)·EXP(zl) from
+fl(EXP(zh) s)·fl(1 + zl). No worksheet =EXP(±2^-53) cell was probed; the rule uses fl(1 + zl), so nothing rests on it.
 
 | set | cells | double z: GL53 / split | non-double z: GL53 (z64) / split |
 |---|---|---|---|
@@ -59,7 +60,8 @@ statistics.md entry's Open bullet). The unidentified stored intermediate was the
   toward zero) times 14 ways to carry zl. Only nearest-even with the factor applied last, as a stored double, is
   exact everywhere. On the tune non-double cells, against its 1,546:
   - extended (1 + zl), or P + P·zl with P = fl(E s), stored or extended: 999;
-  - fl(E·fl(1 + zl))·s: 1,320; E·fl(s·fl(1 + zl)): 1,277; the extended products (E f) s and (E s) f: 1,275 and 1,278;
+  - fl(E·fl(1 + zl))·s: 1,320; E·fl(s·fl(1 + zl)): 1,277; the extended products (E f) s and (E s) f: 1,275 and
+    1,278;
   - E + E·zl, stored or extended, then times s: 803 and 853; E·(s + s zl): 824;
   - zh rounded down: at most 1,111; up or toward zero: at most 1,192.
 - The form was chosen on the tune shapes only. The r6 hold-out, r5, T-3771's probe, the old w2f run and r2's b0 <= 1
@@ -82,17 +84,37 @@ statistics.md entry's Open bullet). The unidentified stored intermediate was the
   g = fl(gamln1(a0) - LN a0) loses at b0 <= 1: shapes 1,759 against 2,211 of 2,212, runs 1,536 against 2,047 of 2,048.
   On T-3771's probe the a0 = 0.15 center is exact with GL (67 + 197 hold-out, 76 + 236 tune). So g is Excel's
   GAMMALN(a0) at b0 <= 1 too.
-- **b0 >= 8** (`shapes.out`). The split does not help there yet. L is unsolved (T-3569): GL53 is exact on 0 of 235
-  double-z cells of the runs. Once L is right, the split should apply as it does below 8. On 870 of the shapes and runs
-  b0 >= 8 cells the kernel's algdiv L differs from `MODEL.lnb_w3`, so they are not scored.
+- **b0 >= 8** (`shapes.out`). L is unsolved there (T-3569): GL53 is exact on 0 of 235 double-z cells of the runs and
+  142 of 241 of the shapes. With that L the split loses on the runs' non-double cells (50 exact with z64, 0 with the
+  split) and gains on the shapes' (400 to 556 of 1,204). That the split applies at b0 >= 8 once L is right is a
+  hypothesis, not evidenced here; T-3879 leaves b0 >= 8 unchanged. On 870 of the shapes and runs b0 >= 8 cells the
+  kernel's algdiv L differs from `MODEL.lnb_w3`, so they are not scored.
 
 ## 4. Method notes
 
-- No fitted constant (decision 0056): the forms are fixed structures, scored as wholes. The structural choice (which
-  rounding of zh, where the factor goes) was made on r6's tune shapes, then frozen. The hold-out (r6 b0 4.75, fixed in
-  r6's `make_probe.py` before its fill) and four independent probes (r5, T-3771's, w2f, r2) are the fresh sweep. All
-  were scored after the freeze.
-- Not a Gate A envelope question: the result is a bit-exact form, with no accuracy trade-off.
+- No fitted constant (decision 0056): the forms are fixed structures, scored as wholes. The split is a structural
+  model chosen from 56 ranked candidates (4 roundings of zh times 14 ways of carrying zl), so it owes R4's hold-out and
+  fresh sweep (decision 0188 R4, reviewer-excel-fidelity check 7), but no `FITTED` tag.
+- **R4.1 hold-out.** The choice was made on r6's tune shapes, then frozen. The hold-out is r6's b0 = 4.75, fixed in r6's
+  `make_probe.py` before its fill. No margin was stated before scoring; at these rates it decides nothing. Against
+  the correctly rounded value (`cr.py`, `cr.out`), exact / 4 ulp / 15 digits:
+
+  | set | cells | CR | split |
+  |---|---|---|---|
+  | r6 tune | 3,072 | 534 / 2,467 / 2,822 | 3,070 / 3,072 / 3,072 |
+  | r6 hold-out | 1,536 | 178 / 1,353 / 1,536 | 1,536 / 1,536 / 1,536 |
+  | r5 | 1,920 | 370 / 1,629 / 1,806 | 1,920 / 1,920 / 1,920 |
+
+- **R4.2 fresh sweep: not done here.** r5, T-3771's probe, w2f and r2 are independent of the tune shapes and were
+  scored after the freeze. But every one was filled before it, so none is a fresh probe. A log-uniform probe over
+  min(a, b) < 1, b0 < 8, generated and filled after the freeze, is an acceptance item of T-3879, where the model
+  reaches code.
+- **Gate A envelope.** Every scored cell of r6 and r5 is within 15 digits of Excel under the split (`misses.out`), so
+  all are inside the envelope. T-3879 records the envelope on its fresh probe.
+- **Reproducibility floor (R4.4).** The whole effect is 1-2 ulp, below the 4-ulp web-against-desktop floor. These are
+  excel-graph (Excel for the web) bits. Five independent excel-graph fills agree with the split bit for bit, and r5 was
+  refilled with identical results (r6 RESULTS.md section 1). That is evidence that the bits are deterministic on this
+  backend, not that desktop Excel gives the same ones (decision 0112).
 - Mechanism: the data fix the arithmetic, not the source. A bpser that holds z as a double pair (zh, zl) and applies
   EXP(zl) or (1 + zl) to the product would produce it.
 
@@ -106,5 +128,5 @@ statistics.md entry's Open bullet). The unidentified stored intermediate was the
 ## 6. Files
 
 - `c7.py`: loaders (`cells`, `cell`) and `e_ok` (the E doubles consistent with Excel's I).
-- `implied.py`, `forms.py`, `misses.py`, `w2f.py`, `lg.py`, `shapes.py`. Each `X.py` writes `X.out`, and `forms.py`
-  writes `forms_<set>.out` (`forms.py tune|hold|r5`).
+- `implied.py`, `forms.py`, `misses.py`, `cr.py`, `w2f.py`, `lg.py`, `shapes.py`. Each `X.py` writes `X.out`, and
+  `forms.py` writes `forms_<set>.out` (`forms.py tune|hold|r5`).

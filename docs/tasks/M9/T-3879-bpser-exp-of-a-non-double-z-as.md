@@ -32,6 +32,10 @@ b0 = max(a, b) < 8.
 ## Acceptance criteria
 - [ ] bpser at min(a, b) < 1 < b0 < 8 and b0 <= 1 uses the split form; unit tests pin three non-double-z cells from
       t3769-r6-bpser-beta (one positive zl, one negative, one q = 0.75) and one double-z cell.
+- [ ] R4.2 fresh sweep (decision 0188 R4; T-3873 chose the split on r6's tune shapes, and every set it scored was
+      filled before the freeze): generate a log-uniform BETA.DIST probe over min(a, b) < 1, b0 < 8 (direct bpser
+      cells, with Excel's GAMMALN at each shape's arguments), fill it from excel-graph, and record before merge its
+      exact / 4 ulp / 15 digits for the split and for CR, and its Gate A envelope result.
 - [ ] Eval known failures only shrink; `make eval-baseline` committed; the eval delta is in the Outcome.
 - [ ] statistics.md's "Incomplete beta bpser" `Implemented in` line says the split is implemented.
 - [ ] `make check` green; reviewers approve.

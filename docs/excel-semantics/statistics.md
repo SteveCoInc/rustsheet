@@ -3002,7 +3002,7 @@ s = fl(1/a); c = 1; n = 1, 2, ...: c = c·(((0.5 - b/n) + 0.5)·x); s = s + c/(a
 L = fl(GL(a0) + fl(GL(b0) - GL(fl(a0 + b0))))   b0 < 8, (a0, b0) = (min, max), GL = Excel's GAMMALN
 L = fl(GL(a0) + algdiv(a0, b0))                 b0 >= 8 (best tried, not solved)
 z = fl(a·LN(x)) - L  (exact);  zh = fl(z) (nearest, ties to even);  zl = z - zh  (exact; 0 where z is a double)
-I = fl(fl(EXP(zh)·s)·fl(1 + zl))   (Excel's EXP of a double; fl(1 + zl) = Excel's EXP(zl) on every such zl)
+I = fl(fl(EXP(zh)·s)·fl(1 + zl))   (Excel's EXP of a double; fl(1 + zl) = the EXP model's EXP(zl) on every such zl)
 ```
 The split of z is T-3873's (docs/research/t2464/r7-bpser-nondouble-z), evidenced at min(a, b) < 1 with b0 < 8; it
 replaces "z = fl64(fl(a·LN x) - L) extended, I = fl(EXP(z)·s)", which is the same I wherever z is a double. The counts
