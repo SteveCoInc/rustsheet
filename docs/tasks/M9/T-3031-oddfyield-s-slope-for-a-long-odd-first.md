@@ -3,7 +3,7 @@ id: T-3031
 title: "ODDFYIELD's slope for a long odd first period at frequency 2 and 4 (T-2007 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
