@@ -1382,3 +1382,10 @@ Oracle-filled cells of the arg-pairs batch, not yet implemented (T-3884, T-3885)
 - TEXTJOIN with an error delimiter keeps the delimiter's own error (`#DIV/0!`) when ignore_empty is a number,
   boolean, blank or error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328, A334), but a text ignore_empty,
   even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322; alone A349, A352).
+
+## ARRAYTOTEXT: a range format argument
+Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
+Evidence: gen-m5/af89ea54bae02c71 Calc!A31:B32, A34:B35, A529:B530, A532:B533, A499, A502 (excel-graph oracle sidecar; T-3884).
+Status: VERIFIED
+Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
+Tasks: T-3884

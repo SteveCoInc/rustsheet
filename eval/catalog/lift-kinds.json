@@ -10,6 +10,7 @@
   {"name":"AMORDEGRC","required":6,"params":["LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays"],"repeat":[],"max":7,"work":"ByValue(Amortization { degressive: true, weight: 1048576 })"},
   {"name":"AMORLINC","required":6,"params":["LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays","LiftArrays"],"repeat":[],"max":7,"work":"ByValue(Amortization { degressive: false, weight: 512 })"},
   {"name":"ARABIC","required":1,"params":["Lift"],"repeat":[],"max":1,"work":"Constant"},
+  {"name":"ARRAYTOTEXT","required":1,"params":["WholeByCaller","Lift"],"repeat":[],"max":2,"work":"Constant"},
   {"name":"ASIN","required":1,"params":["Lift"],"repeat":[],"max":1,"work":"Constant"},
   {"name":"ASINH","required":1,"params":["Lift"],"repeat":[],"max":1,"work":"Constant"},
   {"name":"ATAN","required":1,"params":["Lift"],"repeat":[],"max":1,"work":"Constant"},
