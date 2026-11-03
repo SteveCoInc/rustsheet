@@ -3,7 +3,7 @@ id: T-3960
 title: "Oracle sweep: BINOM.DIST and NEGBINOM.DIST cdf at p below 0.01 with a huge n or failure count, with a hold-out, for T-3961"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
