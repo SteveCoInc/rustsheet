@@ -1100,6 +1100,18 @@ Excel's ratio form outside it (below, T-2638); P is the power series below
 x = a + 1, with the geometric sum of the terms it leaves (near x = a they add up to thousands of times the last one:
 7E-15 of P(1E6, 1E6)), and Q the modified-Lentz continued fraction above it; below a shape of 1/2 and x of 1 Q is formed
 directly (TOMS 654's small-shape Q, with ln Gamma(1 + a) from its zeta series); a = 1 is (-expm1(-x), exp(-x)).
+Near the mode at a large shape Excel is correctly rounded (T-3286; ulps against 60-digit mpmath `gammainc`):
+`POISSON.DIST(46040,46071,TRUE)` = Q(46041, 46071) 0.4438020698095389, -0.2 (ironcalc-calc STATISTICAL/POISSON.xlsx
+D55), `POISSON.DIST(1000000,1000000,TRUE)` 0.5002659614862837, +0.1 (D31), `POISSON.DIST(100,100,TRUE)`
+0.5265621985299984, -0.5 (D19), and `GAMMA.DIST(99990000,99999999,1,TRUE)` 0.15867945221382798, -1.2 (probes/t2982
+A144); at shape 21 `POISSON(20,25,TRUE)` 0.18549230269414177 is +1.5 (probes-numeric/t1048-poisson A9, B9). The series
+and continued fraction after `rcomp` were 1.5 to 16 ulp off there (D55 +15.8), so from a shape of 1E3 within 0.4a of the
+mode the pair is Temme's uniform expansion (`temme_pair`, 4 terms, `TEMME_NEAR_MODE_MIN`), with a phi formed in
+double-double (`temme_exponent`): a tail's relative error is about the absolute error of a phi, which a double phi
+leaves at a phi eps (230 ulps of P(46041, 0.9 46041)). That makes D31 and D55 Excel's bits and is within a double of the
+rounded 60-digit P and Q from 0.6a to 1.4a at shapes 1E3, 46041 and 1E6, except P at shape 1E3 from 0.8a down, two
+doubles low: the 4-term expansion's own truncation (2.6 eps at 0.6a in 60-digit arithmetic). Below 1E3 (D19, t1048 A9
+and B9) the 4 terms are not enough (3E-13 at shape 101); T-3998 owns them.
 At a half-integer shape from 3/2 to 20 and a + 1 <= x <= 650, CHISQ.DIST.RT's Q (odd df from 3; df 1 is ERFC, T-1778)
 is taken in double-double and rounded once (T-3285, `incomplete_gamma/half_integer.rs`): the prefactor as
 sqrt(x) e^-x / sqrt(pi) times 2x / (2j - 1), and the continued fraction evaluated backward. The forward (Lentz) fraction

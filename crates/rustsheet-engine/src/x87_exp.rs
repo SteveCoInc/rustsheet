@@ -624,6 +624,16 @@ pub(crate) fn dd_exp(a: (f64, f64)) -> (f64, f64) {
     (sum.0 * scale, sum.1 * scale)
 }
 
+/// ln of a positive double-double in double-double (about 2^-98 relative to |ln a| away from 1;
+/// absolute about 2^-100 near 1), for e^-650 < a < e^650: the double ln and one Newton step on
+/// [`dd_exp`], which squares the double's error.
+pub(crate) fn dd_ln(a: (f64, f64)) -> (f64, f64) {
+    let guess = a.0.ln();
+    let power = dd_exp((guess, 0.0));
+    let step = dd_div(dd_add(a, dd_neg(power)), power);
+    dd_add((guess, 0.0), step)
+}
+
 /// RN64 of a positive double-double `hi + lo`: the 64-bit significand and its exponent.
 pub(crate) fn dd_to_extended((hi, lo): (f64, f64)) -> (u128, i32) {
     let (significand, exponent) = significand_and_exponent(hi);

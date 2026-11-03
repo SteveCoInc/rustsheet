@@ -49,7 +49,7 @@ use super::gammaln::excel_gammaln;
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::special::refine_increasing;
 use crate::functions::util::poly;
-use crate::x87_exp::excel_exp;
+use crate::x87_exp::{dd_add, dd_div, dd_ln, dd_mul, dd_neg, dd_sqrt, excel_exp};
 use crate::x87_log10::excel_ln;
 
 /// The most series or continued-fraction terms one cdf, or one whole inversion, may take. The
@@ -445,6 +445,12 @@ const QUANTILE_TEMME_SHAPE_MIN: f64 = 1e5;
 /// and the expansion's polynomials are not evaluated (their variable may overflow there).
 const TEMME_EXPONENT_MAX: f64 = 800.0;
 
+/// [`temme_exponent`] forms a·phi in double-double for x within this factor of a.
+const TEMME_DD_RATIO: f64 = 2.0;
+
+/// [`temme_exponent`] takes phi's series up to this |t| = |x - a|/a (2^-10) and `dd_ln` above it.
+const TEMME_SERIES_T_MAX: f64 = 1.0 / 1024.0;
+
 /// Temme's coefficients `C_k(z)` of the expansion, as polynomials in z, lowest power first (Temme
 /// 1979; Didonato and Morris 1986; the 53-bit table of Boost's `igamma_temme_large`). From a shape
 /// of [`TEMME_SHAPE_MIN`] each `C_k/a^k` falls by about 1/a, so the `C_3` term is about 1E-28 of the
@@ -516,10 +522,9 @@ const TEMME_C: [&[f64]; 4] = [
 /// correctly rounded here: `GAMMA.DIST(1E10,1E10,1,TRUE)` = 0.5000013298076014 and
 /// `GAMMA.DIST(1E16,1E16,1,TRUE)` = 0.5000000013298076 (probes/incomplete-gamma-cap E8, E1).
 fn temme_pair(a: f64, x: f64) -> (f64, f64) {
-    let phi = rlog(a, x);
-    let exponent = a * phi;
+    let (phi, exponent) = temme_exponent(a, x);
     let below = x < a;
-    let small = if exponent > TEMME_EXPONENT_MAX {
+    let small = if exponent.0 > TEMME_EXPONENT_MAX {
         0.0
     } else {
         let z = if below {
@@ -532,11 +537,20 @@ fn temme_pair(a: f64, x: f64) -> (f64, f64) {
             .iter()
             .rev()
             .fold(0.0, |acc, c| acc * inverse + poly(c, z));
-        let correction = series * (-exponent).exp() / (2.0 * std::f64::consts::PI * a).sqrt();
+        // e^-(hi + lo) = e^-hi (1 - lo): the tail word carries what a·phi's rounding lost.
+        let decay = (-exponent.0).exp();
+        let correction =
+            series * decay * (1.0 - exponent.1) / (2.0 * std::f64::consts::PI * a).sqrt();
         // libm's erfc, within an ulp, not Excel's ERFC.PRECISE (`erf::erfc`), whose
         // EXP(-fl(x*x)) loses about 2x^2 ulps in the tail: this family is close to correctly
-        // rounded in Excel (decision 0114, accuracy stage).
-        let base = libm::erfc(exponent.sqrt()) / 2.0;
+        // rounded in Excel (decision 0114, accuracy stage). Its argument sqrt(a phi) is a
+        // double-double, the tail word applied to first order: erfc'(y) = -2/sqrt(pi) e^(-y^2).
+        let root = if exponent.0 > 0.0 {
+            dd_sqrt(exponent)
+        } else {
+            (0.0, 0.0)
+        };
+        let base = (libm::erfc(root.0) - root.1 * std::f64::consts::FRAC_2_SQRT_PI * decay) / 2.0;
         if below {
             base - correction
         } else {
@@ -548,6 +562,31 @@ fn temme_pair(a: f64, x: f64) -> (f64, f64) {
     } else {
         (1.0 - small, small)
     }
+}
+
+/// (phi, a·phi) for [`temme_pair`], a·phi as a double-double within [`TEMME_DD_RATIO`] of the
+/// mode (T-3286). There its tails' relative error is about the absolute error of a·phi, and a·phi
+/// from a double phi carries a·phi·eps (230 ulps of P(46041, 0.9·46041)). With t = (x - a)/a in
+/// double-double (x - a is exact there, Sterbenz), phi = t - ln(1 + t) is formed in double-double
+/// too: for |t| up to [`TEMME_SERIES_T_MAX`] as r t - 2 (r^3/3 + r^5/5 + r^7/7) with r = t/(2 + t)
+/// (the series of `rlog1`; ln(1 + t) = 2 artanh r), whose double tail is below 2^-12 eps of phi;
+/// above it as t - [`dd_ln`](1 + t), whose absolute 2^-98 is below 2^-77 of phi there. Outside
+/// the band (only from [`TEMME_SHAPE_MIN`]) the smaller tail is below e^-(a·0.15) = 0 in doubles.
+fn temme_exponent(a: f64, x: f64) -> (f64, (f64, f64)) {
+    if x < a / TEMME_DD_RATIO || x > a * TEMME_DD_RATIO {
+        let phi = rlog(a, x);
+        return (phi, (a * phi, 0.0));
+    }
+    let t = dd_div((x - a, 0.0), (a, 0.0));
+    let phi = if t.0.abs() <= TEMME_SERIES_T_MAX {
+        let r = dd_div(t, dd_add((2.0, 0.0), t));
+        let r2 = r.0 * r.0;
+        let tail = 2.0 * r.0 * r2 * (1.0 / 3.0 + r2 * (1.0 / 5.0 + r2 / 7.0));
+        dd_add(dd_mul(r, t), (-tail, 0.0))
+    } else {
+        dd_add(t, dd_neg(dd_ln(dd_add((1.0, 0.0), t))))
+    };
+    (phi.0, dd_mul((a, 0.0), phi))
 }
 
 /// The regularized incomplete gamma pair (P(a, x), Q(a, x)) for a > 0, x > 0 (T-0971), with

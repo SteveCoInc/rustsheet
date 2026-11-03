@@ -3,7 +3,7 @@ id: T-3286
 title: "Incomplete gamma near the mode at shapes 21 to 1E8: POISSON.xlsx D55 is 16 ulp off where Excel is correctly rounded (accuracy)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -52,8 +52,9 @@ bit-level cells below are this task's too: report how many become bit-exact.
   `NEAR_MODE` or `RATIO_FORM_MIN`.
 
 Cells this task owns:
-- ironcalc-calc/STATISTICAL/POISSON.xlsx (3): POISSON.DIST!D19, D31, D55
-- probes-numeric/t1048-poisson.case.json (2): Calc!A9, B9
+- ironcalc-calc/STATISTICAL/POISSON.xlsx (2): POISSON.DIST!D31, D55
+
+(D19 and t1048-poisson A9, B9, at shapes 101 and 21, moved to T-3998.)
 
 ## Acceptance criteria
 - [ ] POISSON.xlsx D55 matches Excel to 15 significant digits; its known-failure line leaves
@@ -70,25 +71,22 @@ Cells this task owns:
 ## Out of scope
 - Where Excel's large-shape ratio form starts (T-3252, T-3270). The deep upper tail (T-3269). Shapes 1.5 and 2.5 (T-3285).
 
-## Landing notes (resumed 2026-11-03 by an opus run)
-- State (2026-11-03, session window closed): WIP on branch agent/functions-stat/T-3286-near-mode-temme, draft PR. Not
-  reviewed. `make check-fast` not run; `cargo test -p rustsheet_engine --lib incomplete_gamma` passes with the
-  measuring test below (it prints, it does not yet assert the 1-ulp bound).
-- Change so far: `pair_with` takes `temme_pair` when `a >= TEMME_NEAR_MODE_MIN` (1E3) and |x - a| <= NEAR_MODE·a.
-  `make eval-check` on it: ironcalc-calc 298 -> 296 (fixed 2, presumably POISSON.xlsx D55 and D31), probes 4354 ->
-  4353 (fixed 1, presumably t2982 A144), 0 regressions in every suite. `a_call_past_its_cap_is_nan` was moved to shape
-  999 (the series is one Temme term near the mode from 1E3 now). T-3985 (follow-up of T-3964) is filed on this branch.
-- Measured (ulps from mpmath 60 digits, `near_mode_pair_is_within_an_ulp_from_shape_1e3`, new vs main): at the centre
-  Temme wins (a=1000, x=1000: 0 vs 9; a=46041, x=a: 0 vs 6; x=1.01a: 0.97 vs 4.8; a=1E6, x=a: 0 vs 1), but in the
-  band's tails both are tens to hundreds of ulps off and Temme is sometimes worse: a=1000 x=600 P 59 vs 17, x=1200 Q
-  9.4 vs 2.9, x=1300 Q 13 vs 0, x=1400 Q 98 vs 82; a=46041 x=0.9a P 230 vs 157, 0.95a P 82 vs 52, 1.05a Q 59 vs 29.
-  The tail loss looks like the rounding of a·phi in exp(-a·phi) (relative error about a·phi·eps), shared by both paths.
-- Next step: restrict the Temme switch by a criterion derived from the error model, not fitted to these points (for
-  example a·phi below a bound where erfc's and the correction's rounding dominate), or form a·phi in double-double so
-  both tails improve; then assert the 1-ulp bound only where it holds, and say in the Outcome which acceptance points
-  (shapes 21 and 101 are out of reach of the 4-term expansion: 3E-13 at 101) need a follow-up. mpmath's `gammainc`
-  does not converge at shape 99999999 for most x (NoConvergence); the grid has only one such point.
-- Do not: pick the a·phi cut by scoring these grid points without decision 0056's hold-out (it would be a FITTED cut).
-- CI on 94e8eda2e: hygiene fails, `check_duplication.py` 2912 lines against baseline 2880 (+32, the size of the
-  `NEAR_MODE_EXACT` table in incomplete_gamma/tests.rs): shrink that table (fewer points, or one row per shape with
-  the x factors computed) rather than updating any baseline. Other jobs were green or pending at the window's close.
+## Outcome
+- From shape 1E3 within 0.4a of the mode the pair is Temme's expansion (`TEMME_NEAR_MODE_MIN`), and Temme's a·phi is a
+  double-double within a factor 2 of the mode (`temme_exponent`: t = (x - a)/a in double-double, phi by the artanh
+  series up to |t| = 2^-10 and by the new `x87_exp::dd_ln` above it). The double a·phi had been the tails' main
+  error (a·phi·eps relative: 59 to 230 ulps at 0.6a-0.9a) on both the series path and Temme's. A first cut with
+  `dd_ln` everywhere lost POISSON(1E10,1E10) and four other huge-shape cells (its 2^-98 is absolute, too coarse for
+  phi ≈ t^2/2 at |t| = 1E-10), hence the series below 2^-10.
+- Unit test `near_mode_pair_is_within_an_ulp_from_shape_1e3`: 22 points at shapes 1E3, 46041 and 1E6 (x from 0.6a to
+  1.4a, without those where P and Q are 0 or 1), within a double of rounded 60-digit mpmath, except P at shape 1E3
+  from 0.8a down, two doubles low: the 4-term expansion's truncation (2.6 eps at 0.6a with the same rows in 60-digit
+  arithmetic). Not met from the acceptance list: shapes 21 and 101 (out of reach of 4 terms, 3E-13 at 101) and 99999999
+  (mpmath's `gammainc` does not converge there; the eval cells A144-A146 stand in). Both go to T-3998 with D19, A9, B9.
+  `dd_ln_is_double_double_accurate` covers the new helper.
+- Eval: ironcalc-calc known failures 298 -> 296 (POISSON.xlsx D31, D55 now bit-exact), 0 regressions in every suite;
+  `make eval-check` main-vs-HEAD. Bit-exact among the five owned cells and t2982 A144-A146: 0 -> 2 of 8 (D31, D55).
+  A144 0.15867945221382823 -> ...804 (Excel ...798), A146 2.856123416018922E-07 -> ...8933E-07 (Excel ...8864E-07), both
+  closer and still with T-3070; A145 (shape 1E8) ...6256E-07, Excel ...6357E-07 (Excel +18 ulp off exact).
+- statistics.md "Incomplete gamma: accurate kernel (T-0971)" records Excel's correct rounding near the mode with the
+  cells. Follow-up: T-3998 (shapes 21 to 999).

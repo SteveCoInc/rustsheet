@@ -422,3 +422,18 @@ fn dd_exp_is_double_double_accurate() {
         assert!((one.0 - 1.0 + one.1).abs() < 1e-28, "{a}: {one:?}");
     }
 }
+
+/// `dd_ln` inverts `dd_exp` to about 2^-98, and ln 2 is mpmath's double-double (T-3286).
+#[test]
+fn dd_ln_is_double_double_accurate() {
+    let ln_two = dd_ln((2.0, 0.0));
+    assert_eq!(ln_two.0, LN_2_HI);
+    assert!((ln_two.1 - LN_2_LO).abs() < 1e-30, "{ln_two:?}");
+    for a in [-600.0, -0.4, -1e-9, 0.25, 1.75, 600.0] {
+        let back = dd_add(dd_ln(dd_exp((a, 0.0))), (-a, 0.0));
+        assert!(
+            (back.0 + back.1).abs() < 1e-28 * f64::max(1.0, a.abs()),
+            "{a}: {back:?}"
+        );
+    }
+}
