@@ -54,11 +54,13 @@ use std::cmp::{Ordering, Reverse};
 use std::iter::Peekable;
 
 mod kana;
+mod lookup_fold;
 mod scripts;
 
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
+pub(crate) use lookup_fold::fold_lookup;
 use scripts::{digit_variant, script_mark, script_order, symbol, unit, IDEOGRAPHS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
