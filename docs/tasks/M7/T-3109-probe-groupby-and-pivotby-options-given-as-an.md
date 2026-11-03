@@ -3,7 +3,7 @@ id: T-3109
 title: "Probe GROUPBY and PIVOTBY options given as an OFFSET, CHOOSE or IF reference and PIVOTBY's field_headers as an INDEX reference"
 milestone: M7
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -22,11 +22,20 @@ OFFSET, CHOOSE or IF lifts as a written range does, and that PIVOTBY's options d
 - Reuse Data!A4:D4 / Data!D1:E1 shapes from probes/t2707-prob-orders and probes/groupby-lifted-args via `excel-probe`.
 
 ## Acceptance criteria
-- [ ] An oracle-filled probe covers GROUPBY total_depth and field_headers as `OFFSET(..)`, `CHOOSE(1,range)`,
+- [x] An oracle-filled probe covers GROUPBY total_depth and field_headers as `OFFSET(..)`, `CHOOSE(1,range)`,
       `IF(TRUE,range)`, and PIVOTBY field_headers/row_total_depth/col_total_depth as `INDEX(range,0)`, with ROWS/COLUMNS
       and ERROR.TYPE readings.
-- [ ] arrays.md records the result; any engine mismatch has a functions-lookup follow-up with its cells.
-- [ ] `make check` green; reviewers approve.
+- [x] arrays.md records the result; any engine mismatch has a functions-lookup follow-up with its cells.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the engine (follow-up task).
+
+## Outcome
+New probe `eval/suites/probes/cases/t3109-groupby-options-ref-forms` (30 calls, 150 cells, excel-graph filled
+2026-11-03): GROUPBY field_headers/total_depth as OFFSET, CHOOSE and IF references (row and column shapes, valid and
+invalid elements) and PIVOTBY field_headers/row_total_depth/col_total_depth as `INDEX(range,0)` and `INDEX(range,1,0)`,
+each read by its spill, ROWS x COLUMNS and the ERROR.TYPE of both elements. Every form lifts as the written range does;
+a -1 field_headers element is `#VALUE!` in PIVOTBY. Recorded in arrays.md ("GROUPBY and PIVOTBY lift over an array
+field_headers or total depth"). The engine matches all 150 cells, so no functions-lookup follow-up is needed.
+Eval delta: probes +1 case, +150 passing cells, known failures unchanged, regressions 0.

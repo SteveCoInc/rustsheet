@@ -3509,6 +3509,8 @@ maturity (321).
   period and `nq` 0 to 4, every frequency and basis, excel-graph 2026-11-03: 157 pass bit-exact or within the harness' ulp
   tolerance (the model without the extra coupons passes 72). Off: S!A80 (1 ulp) and S!A61, S!A70, both a
   28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3031 follow-up).
+  T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
+  cell gained, and found the zero-coupon cells off Excel's Newton path, some above the root: the shift explains both.
 Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs
 `excel_yield_newton` with `OddFirstSchedule::dprice`, the slope above; before T-2007 it was a central-difference Newton
 from the coupon rate with a bisection fallback, landing on the root.

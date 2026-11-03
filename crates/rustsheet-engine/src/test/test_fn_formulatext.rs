@@ -110,6 +110,16 @@ fn test_sign_prefixed() {
         assert_eq!(model._get_formula(cell), *"", "{input}");
     }
 
+    // Coercion refuses a trailing `$` (T-3742), typed input keeps reading it: `-200$` is no
+    // formula (unprobed, T-3835).
+    for (cell, input) in [("A10", "-200$"), ("A11", "-200 $")] {
+        model._set(cell, input);
+        assert_eq!(model._get_formula(cell), *"", "{input}");
+    }
+    // Typed `-%1.5` shares VALUE's reader: the number -0.015, no formula (T-3742).
+    model._set("A12", "-%1.5");
+    assert_eq!(model._get_formula("A12"), *"");
+
     model._set("A7", "-B");
     assert_eq!(model._get_formula("A7"), *"=-B");
 
@@ -122,6 +132,7 @@ fn test_sign_prefixed() {
     assert_eq!(model._get_text("A5"), *"-42");
     assert_eq!(model._get_text("A6"), *"42");
     assert_eq!(model._get_text("A7"), *"#NAME?");
+    assert_eq!(model._get_text("A12"), *"-1.50%");
 }
 
 #[test]
@@ -257,4 +268,18 @@ fn pick_calls_read_the_cell_they_pick() {
     assert_eq!(model._get_text("C2"), *"#N/A");
     assert_eq!(model._get_text("D2"), *"=H1+1");
     assert_eq!(model._get_text("E2"), *"#REF!");
+}
+
+/// Number-text coercion of a sign before a leading percent and of a trailing `$`
+/// (probes/t3742-value-percent-currency A1, A10-A13, excel-graph 2026-11-03).
+#[test]
+fn coercion_sign_percent_and_trailing_dollar() {
+    let model = new_empty_model();
+    assert_eq!(model.cast_number("-%1.5"), Some(-0.015));
+    assert_eq!(model.cast_number("% 1.5"), Some(0.015));
+    for text in ["1.5$", "1.5 $", "-1.5$", "%%1.5", "%1.5%"] {
+        assert_eq!(model.cast_number(text), None, "{text}");
+    }
+    assert_eq!(model.cast_number("1.5€"), Some(1.5));
+    assert_eq!(model.cast_number("-$1.5"), Some(-1.5));
 }

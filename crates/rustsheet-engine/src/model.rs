@@ -426,8 +426,7 @@ impl Model {
                 return None;
             }
             // Read with no clock, so "-4-2" stays a formula although "4-2" is a date now.
-            (!stripped.is_empty() && self.cast_number_in(stripped, &|| None).is_none())
-                .then_some(value)
+            (!stripped.is_empty() && !self.typed_sign_text_is_number(stripped)).then_some(value)
         } else {
             None
         }

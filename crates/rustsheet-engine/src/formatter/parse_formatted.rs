@@ -430,10 +430,17 @@ fn parse_percent_or_currency(
     }
 
     // A leading percent sign shifts the number after it: `%1` is 0.01, `%-1` -0.01, `% 1` 0.01,
-    // while `%1%` is refused (probes/eng-inumber-grammar-value B3, eng-number-text-group-comma-edges A15-A18). Typed cell input
-    // shares this reader and is unprobed (T-3835).
-    if let Some(p) = value.strip_prefix('%') {
+    // while `%1%` is refused (probes/eng-inumber-grammar-value B3,
+    // eng-number-text-group-comma-edges A15-A18). A minus sign may precede it: `-%1.5` is -0.015
+    // (probes/t3742-value-percent-currency A1, A16). Typed cell input shares this reader and is
+    // unprobed (T-3835).
+    let leading_percent = value
+        .strip_prefix('%')
+        .map(|p| (p, 1.0))
+        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0)));
+    if let Some((p, sign)) = leading_percent {
         let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+        let f = sign * f;
         let format = if options.is_scientific {
             SCIENTIFIC_FORMAT
         } else if options.decimal_digits > 0 {
@@ -466,7 +473,8 @@ fn parse_percent_or_currency(
             let (f, options) =
                 parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
             // A trailing `$` after E-notation is not a number: VALUE("1e2$") is #VALUE!
-            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign is unprobed.
+            // (probes/t3334-criteria-operand-forms H39). A trailing euro sign reads by coercion
+            // (probes/t3742-value-percent-currency A11).
             if options.is_scientific && *currency == "$" {
                 return Err("Cannot parse number".to_string());
             }

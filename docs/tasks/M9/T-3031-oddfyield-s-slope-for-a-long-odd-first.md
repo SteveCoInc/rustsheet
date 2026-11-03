@@ -48,16 +48,38 @@ Lab: the T-2007 method (dump `OddFirstSchedule`'s fields from `fn_oddfyield`, re
 - [x] The listed cells are within half a unit of the 15th significant digit of Excel, or the task is blocked
       time-boxed (decision 0056) with the candidates recorded in financial.md.
 - [x] ODDFYIELD lines in eval/baseline only shrink.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - YIELD (T-1592) and ODDFPRICE's own digits (T-1374).
 
+## Attempt 1 (2026-11-03, decision 0056)
+No bit-exact gain; the time-box's second attempt is still open. Method: an env-gated lab hook in
+`OddFirstSchedule::dprice` (not committed) scored in the engine with `rustsheet-eval show` on PRICE_YIELD.xlsx,
+probes/oddf-date-order-domain-sweep and probes/oddfyield-solver-sweep, plus a schedule dump (`OddFirstSchedule`
+fields and the start) re-run in Python/mpmath.
+- Candidates (long first periods only, `offset > 0`), cells passing per case (committed: 339 / 1196 / 545): the
+  exact lead `lead` at `lead_exponent`; a regular coupon at `y`; no lead; `(offset + 1)` coupons at the lead's
+  exponent; `lead` at `y`; a regular coupon at every quasi-coupon date from settlement; `/ m` before the power;
+  a regular coupon at `y + 1`; one at `lead_exponent - 1`; `y * lead` at the lead's exponent; `lead - offset ×
+  coupon`. Every one: 339 / 1196 / 545, 0 long-first cells gained (max relative error moves between 1.3e-9 and
+  3.5e-9 on PRICE_YIELD.xlsx).
+- Starts: YIELD's start over issue-maturity, first coupon-maturity, settlement-first coupon, issue-first coupon, and
+  the coupon rate: 0 of the 73 long-first cells (13 PRICE_YIELD.xlsx, 60 sweep Y rows 2, 22, 33, 34).
+- Finding (financial.md "ODDFYIELD stops short of ODDFPRICE's root", long first periods, zero coupon): on Y!A22:O22
+  (rate 0, so the committed slope is exact) Excel still differs, and ends above the root in G22, I22, K22, L22,
+  where an exact step from YIELD's start (above the root) ends below it, so the long-first difference is in the Newton itself (its slope's other terms or its start), not in the
+  lead coupon's weight. Next: a second attempt should fit the zero-coupon long-first cells alone first (one term,
+  no lead), e.g. the redemption term's exponent in the slope (`front_exponent` from a different `nq`/`y`, or
+  `t` vs `t + 1` in the power), then carry the result to the coupon rows.
+- Not done: the fitlab `oddfyield` kernel and the extreme-price #NUM! probe (still acceptance work).
+
 ## Outcome
+Attempt 2 (the time-box's second attempt, decision 0056) found it; attempt 1 is above.
 ODDFYIELD's slope for a long first period is found (a structural model, decision 0188 R4 kind (c)): T-2007's
 regular-coupon slope plus a regular coupon at every quasi-coupon date from the settlement's next one Q (`nq` more
 coupons ahead of the odd one), with every exponent of the slope, the redemption's too, shifted by the basis' days from
-Q to the first coupon over E (`OddFirstSchedule::slope_shift`, `slope_quasi`; financial.md "ODDFYIELD stops short of
+Q to the first coupon over E (`OddFirstSchedule::slope_shift` from `yield_solver::quasi_shift`, and `nq` extra coupons in `dprice`; financial.md "ODDFYIELD stops short of
 ODDFPRICE's root"). A short first period, and a long one with the settlement in its last quasi period, are unchanged.
 - How it was found: on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22 the slope is the
   redemption's alone and the start and price are known, so a Newton run in a scratch lab (engine schedule fields

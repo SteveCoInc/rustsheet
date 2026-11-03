@@ -154,6 +154,9 @@ class Catalog:
 SHAPE_MISMATCH_RATE = 0.1
 # Share of `probe` values drawn from the probed range's own cells, so the search can find them.
 PROBE_HIT_RATE = 0.95
+# Share of `index_of` values drawn inside the table's height or width; the rest stay free so the out-of-range
+# #REF! stays covered (T-3074).
+INDEX_HIT_RATE = 0.9
 
 
 def pool_rate(p: dict[str, Any]) -> float:
@@ -210,6 +213,26 @@ class Gen:
             return self.cell_ref()
         c0, r0, c1, r1 = ord(m[2]), int(m[3]), ord(m[4]), int(m[5])
         return f"Data!{chr(self.rng.randint(c0, c1))}{self.rng.randint(r0, r1)}"
+
+    def edge_cell_in(self, ref: str, edge: str) -> str:
+        """A cell in the first column (`first_column`) or first row (`first_row`) of the range `ref`, where
+        VLOOKUP and HLOOKUP search; a free cell reference when `ref` is not a plain range."""
+        m = re.fullmatch(r"(Data!)([A-Z])(\d+):([A-Z])(\d+)", ref)
+        if m is None:
+            return self.cell_ref()
+        c0, r0, c1, r1 = ord(m[2]), int(m[3]), ord(m[4]), int(m[5])
+        if edge == "first_row":
+            return f"Data!{chr(self.rng.randint(c0, c1))}{r0}"
+        return f"Data!{chr(c0)}{self.rng.randint(r0, r1)}"
+
+    def index_in(self, ref: str, p: dict[str, Any]) -> int | None:
+        """An index inside the height or width of the range `ref` for an `index_of: {axis}` param, or None
+        when `ref` is not a plain range."""
+        m = re.fullmatch(r"Data!([A-Z])(\d+):([A-Z])(\d+)", ref)
+        if m is None:
+            return None
+        size = ord(m[3]) - ord(m[1]) + 1 if p["index_of"]["axis"] == "columns" else int(m[4]) - int(m[2]) + 1
+        return self.rng.randint(1, max(size, 1))
 
     # -- literals --------------------------------------------------------------------------
     def literal(self, typ: str) -> str:
@@ -287,9 +310,11 @@ class Gen:
         # A `probe: <param>` value is drawn from the cells of that range param, so the search finds something
         # (MATCH's lookup_value); the range is drawn first and reused when its turn comes (T-2719).
         by_name = {q["name"]: q for q in params}
-        drawn: dict[str, str] = {
-            q["probe"]: self.argument(by_name[q["probe"]], depth) for q in params if q.get("probe")
+        # `index_of: {param, axis}` ties an index to the same drawn range's width or height (T-3074).
+        sources = {q["probe"] for q in params if q.get("probe")} | {
+            q["index_of"]["param"] for q in params if q.get("index_of")
         }
+        drawn: dict[str, str] = {name: self.argument(by_name[name], depth) for name in sorted(sources)}
         i = 0
         while i < len(params):
             p = params[i]
@@ -320,7 +345,13 @@ class Gen:
             if p["name"] in drawn:
                 args.append(drawn[p["name"]])
             elif p.get("probe") and self.rng.random() < PROBE_HIT_RATE:
-                args.append(self.cell_in(drawn[p["probe"]]))
+                edge = p.get("probe_edge")
+                args.append(
+                    self.edge_cell_in(drawn[p["probe"]], edge) if edge else self.cell_in(drawn[p["probe"]])
+                )
+            elif p.get("index_of") and self.rng.random() < INDEX_HIT_RATE:
+                idx = self.index_in(drawn[p["index_of"]["param"]], p)
+                args.append(str(idx) if idx is not None else self.argument(p, depth))
             else:
                 args.extend(self.argument(p, depth, arity=repeated) for _ in range(count))
             if p.get("mode") == "name":
