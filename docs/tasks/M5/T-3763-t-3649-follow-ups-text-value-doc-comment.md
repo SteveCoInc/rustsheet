@@ -3,7 +3,7 @@ id: T-3763
 title: "T-3649 follow-ups: text-value doc comment, display color of a color-only section, test split"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,11 +22,18 @@ These are the MINOR review findings on PR #2780, filed rather than fixed there t
 - A trailing `;` now adds an empty part, so `parts.last()` for `x@;` / `@;` is that empty section. Cell display of those shapes is unprobed. Add cells for them to a probe (TEXT and display).
 
 ## Acceptance criteria
-- [ ] The doc comment cites the probes; no "unprobed" claim remains for one to three sections.
-- [ ] The color sentence is marked inferred, or backed by a probe.
-- [ ] The numeral-tag combination and the `x@;` shapes are probed, or marked unprobed in number-formats.md.
-- [ ] One test per rule; behavior unchanged (no eval change).
-- [ ] `make check` green; reviewers approve.
+- [x] The doc comment cites the probes; no "unprobed" claim remains for one to three sections.
+- [x] The color sentence is marked inferred, or backed by a probe.
+- [x] The numeral-tag combination and the `x@;` shapes are probed, or marked unprobed in number-formats.md.
+- [x] One test per rule; behavior unchanged (no eval change).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any behavior change.
+
+## Outcome
+Doc comment of `format_text_value` cites the sweeps for fewer than four sections; number-formats.md marks the cell color
+as inferred and lists the numeral-tag combination and the `x@;` / `@;` shapes as unprobed (no new probe, no oracle
+needed); the mixed test is split into `trailing_separator_opens_an_empty_section` and
+`bracket_only_section_prints_general`, and the text-value assertions moved to `empty_text_section_is_empty`
+(test_locale_tag.rs). No behavior or eval change.
