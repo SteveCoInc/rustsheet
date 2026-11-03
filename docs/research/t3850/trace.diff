@@ -1,0 +1,48 @@
+diff --git a/crates/rustsheet-engine/examples/t3850_probe.rs b/crates/rustsheet-engine/examples/t3850_probe.rs
+new file mode 100644
+index 000000000..6220b3f84
+--- /dev/null
++++ b/crates/rustsheet-engine/examples/t3850_probe.rs
+@@ -0,0 +1,18 @@
++use rustsheet_engine::{cell::CellValue, Model};
++use std::io::BufRead;
++
++fn main() -> Result<(), Box<dyn std::error::Error>> {
++    for line in std::io::stdin().lock().lines() {
++        let f = line?;
++        let mut m = Model::new_empty("p", "en", "UTC", "en")?;
++        m.set_user_input(0, 1, 1, f.clone())?;
++        eprintln!("### {f}");
++        m.evaluate();
++        let v = match m.get_cell_value_by_index(0, 1, 1)? {
++            CellValue::Number(x) => format!("{x:e}"),
++            o => format!("{o:?}"),
++        };
++        eprintln!("=== {v}");
++    }
++    Ok(())
++}
+diff --git a/crates/rustsheet-engine/src/functions/financial/financial_util.rs b/crates/rustsheet-engine/src/functions/financial/financial_util.rs
+index e2f25991f..2d8b462ac 100644
+--- a/crates/rustsheet-engine/src/functions/financial/financial_util.rs
++++ b/crates/rustsheet-engine/src/functions/financial/financial_util.rs
+@@ -150,11 +150,17 @@ fn rate_secant(
+             }
+             // The restart (T-3698): a fresh run from r0, as if r0 were the guess
+             // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
++            let envf = |k: &str, d: f64| std::env::var(k).ok().and_then(|v| v.parse::<f64>().ok()).unwrap_or(d);
++            if std::env::var("RS_TRACE").is_ok() {
++                eprintln!("FLAT restart={restart} step={step} r0={r0:e} r1={r1:e} f1={f1:e}");
++            }
++            let k = envf("RS_K", f64::from(RATE_RESTART_STEPS));
+             if restart
+                 && r1 != r0
+-                && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
+-                && (RATE_RESTART_F_MIN..RATE_RESTART_F_MAX).contains(&f1.abs())
++                && step >= RATE_RESTART_FIRST && f64::from(step) <= k
++                && (envf("RS_FLO", RATE_RESTART_F_MIN)..envf("RS_FHI", RATE_RESTART_F_MAX)).contains(&f1.abs())
+                 && r0 > -1.0
++                && std::env::var("RS_OFF").is_err()
+             {
+                 return rate_secant(args, period_start, r0, false);
+             }
