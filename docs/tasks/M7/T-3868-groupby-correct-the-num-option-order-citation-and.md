@@ -3,7 +3,7 @@ id: T-3868
 title: "GROUPBY: correct the #NUM! option-order citation and a same-height test comment from T-3837"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,8 @@ Excel-fidelity review of #2860 (T-3837), MINOR findings on de3e461:
 
 ## Out of scope
 - Any behavior change.
+
+## Outcome
+The three citations (groupby.rs, arrays.md, T-3837 task file) now name gen-m7 ec5094d09c82f94d A6223
+(oracle `#NUM!`; 0a91d5918d798930 A4759, also `#NUM!`, supports it). The test comment now says which
+case is at the same height. No behavior change; eval delta none.
