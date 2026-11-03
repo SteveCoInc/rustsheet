@@ -14,6 +14,10 @@ Deterministic. Writes three cases to eval/suites/probes-numeric/cases/:
   sign; x = 0 on rows divisible by 4, else uniform in (-3.1, 3.1). A IMSIN, B IMCOS of x+yi.
 - t3720-im-reciprocal-small-x-complex (seed 3720, T-3720): 404 rows of IMCOSH, IMCSCH, IMSECH, IMSINH of a
   complex z with 0 < |x| <= 0.01 and the worksheet SIN(y), COS(y), SINH(x), COSH(x), EXP(-x) companions.
+- t3721-im-hyperbolic-small-x-fresh-sweep (seed 3721, T-3721): drawn after T-3721 froze the series at three
+  terms (x + x^3/3! + x^5/5!, no stopping test): 400 rows of IMCOSH, IMCSCH, IMSECH, IMSINH with |x| log-uniform
+  in [1e-6, 0.01] on odd rows and uniform in [0.004, 0.01] (where a fourth term moves the last bit) on even rows,
+  y = 0 on rows divisible by 5, else |y| uniform in [0.05, 1.5]; signs random.
 """
 
 from __future__ import annotations
@@ -124,7 +128,33 @@ def reciprocal_complex() -> None:
     )
 
 
+def three_term_fresh() -> None:
+    """T-3721: the fresh sweep after the three-term series was frozen (decision 0188 R4.2)."""
+    rng = random.Random(3721)
+    cells: dict[str, str] = {}
+    for row in range(1, 401):
+        if row % 2:
+            mag = math.exp(rng.uniform(math.log(1e-6), math.log(0.01)))
+        else:
+            mag = rng.uniform(0.004, 0.01)
+        x = signed(rng, mag)
+        y = "0" if row % 5 == 0 else signed(rng, rng.uniform(0.05, 1.5))
+        z = complex_text(x, y)
+        for col, fn in zip("ABCD", ("IMCOSH", "IMCSCH", "IMSECH", "IMSINH"), strict=True):
+            cells[f"{col}{row}"] = f'={fn}("{z}")'
+    write(
+        "t3721-im-hyperbolic-small-x-fresh-sweep",
+        cells,
+        "T-3721: fresh sweep after the three-term sinh series was frozen (decision 0188 R4.2) of IMCOSH (A), "
+        "IMCSCH (B), IMSECH (C), IMSINH (D) of x+yi, |x| log-uniform in [1E-6, 0.01] on odd rows and uniform in "
+        "[0.004, 0.01] on even rows, y = 0 on rows divisible by 5, else |y| uniform in [0.05, 1.5]. "
+        "Generator: docs/research/t3589/gen_sweep.py (seed 3721).",
+        "T-3721",
+    )
+
+
 if __name__ == "__main__":
     small_x()
     large_y()
     reciprocal_complex()
+    three_term_fresh()
