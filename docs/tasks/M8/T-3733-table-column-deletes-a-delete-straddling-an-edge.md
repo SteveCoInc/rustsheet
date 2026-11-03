@@ -3,7 +3,7 @@ id: T-3733
 title: "Table column deletes: a delete straddling an edge or removing every column match Excel"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
