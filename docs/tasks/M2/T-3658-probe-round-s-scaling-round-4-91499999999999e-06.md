@@ -3,7 +3,7 @@ id: T-3658
 title: "Probe ROUND's scaling: ROUND(4.91499999999999E-06,8) is 1 ulp above the nearest double"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
