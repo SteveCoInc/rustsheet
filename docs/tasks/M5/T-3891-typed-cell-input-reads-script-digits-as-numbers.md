@@ -37,6 +37,7 @@ docs/excel-semantics/coercion.md "Script digits in number text (T-3446)".
       which block tags a three-script mix, and how the tagged formats render through TEXT/displayed text.
 - [ ] Typed script-digit text is a number with Excel's format for every probed shape; probes/t3446-script-digits-forms
       B12:B102 and probes/t3958-gurmukhi-tamil-telugu-khmer-digits Sheet1!B1:B44 (Gurmukhi, Tamil, Telugu, Khmer typed text) pass; the engine's number formatter accepts the `[$-xx-YY,N00]` tags it now stores.
+- [ ] Probe the typed-format tags of the Gurmukhi, Tamil and Telugu blocks and the Khmer shapes T-3958 did not log (a fresh fill of a new case prints the ENTERED lines; commit them under docs/research/).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

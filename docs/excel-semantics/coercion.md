@@ -573,10 +573,10 @@ D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same
 Status: VERIFIED. T-3958 adds the Gurmukhi (U+0A66), Tamil (U+0BE6), Telugu (U+0C66) and Khmer (U+17E0) blocks
 (probes/t3958-gurmukhi-tamil-telugu-khmer-digits, same layout, four blocks of eleven forms): all twelve blocks
 behave alike. `+0`, VALUE, NUMBERVALUE and TEXT read every form (the engine passes), and typed text is a number
-(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats (ENTERED log): `១២៣`-style integers
-`[$-km-KH,1200]0`, group commas `[$-km-KH,1200]#,##0`, parentheses `(១២)` = -12 with `[$-km-KH,1200]0`,
-exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction `# ?/?`; the other three
-blocks' tags were not logged (the oracle prints ENTERED only on a first fill).
+(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats seen (A39:A44, raw lines in
+docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)` = -12 `[$-km-KH,1200]0`, `១,២៣៤`
+`[$-km-KH,1200]#,##0`, exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction
+`# ?/?`. The formats of the other shapes and of the Gurmukhi, Tamil and Telugu blocks are UNVERIFIED (not logged).
 - **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
