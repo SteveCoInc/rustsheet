@@ -3,7 +3,7 @@ id: T-3963
 title: "RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-secant state fits (after T-3850)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
