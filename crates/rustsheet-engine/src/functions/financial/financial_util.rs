@@ -47,7 +47,9 @@ pub(crate) const RATE_MAX_STEPS: u32 = 200;
 /// (probes/rate-cap-return-rule, rate-pmt-zero-cap, rate-step-cap A30). The modelled outcome of a
 /// flat secant (f1 = f0) is a hold at r1, judged by the same two tests, and an iterate at or below
 /// -1 runs on (T-3348, decision 0198; the rule, its evidence and its known misses are in
-/// financial.md "RATE holds on a flat secant and runs on below -1"). A residual Excel's `^`
+/// financial.md "RATE holds on a flat secant and runs on below -1"). An early flat secant on two
+/// distinct iterates with a small |f1| restarts the run once from the older iterate instead
+/// (T-3698, financial.md "RATE restarts once on an early flat secant"). A residual Excel's `^`
 /// cannot form and a run that has not stopped by then are `#NUM!`. Microsoft documents Newton's
 /// method and 20 steps; neither fits. The fit, its scores and the rules not yet probed are in
 /// financial.md "RATE is a secant on the FV residual" (T-2005).
@@ -58,6 +60,21 @@ pub(crate) fn compute_rate(
     pmt: f64,
     annuity_type: i32,
     guess: f64,
+) -> Result<f64, Error> {
+    if guess <= -1.0 {
+        return Err(Error::VALUE);
+    }
+    let args = (nper, pmt, pv, fv);
+    rate_secant(args, annuity_type != 0, guess, true)
+}
+
+/// One secant run of [`compute_rate`] from `guess`; `restart` allows the one restart of an early
+/// flat secant (T-3698), which the restarted run does not get again.
+fn rate_secant(
+    args: (f64, f64, f64, f64),
+    period_start: bool,
+    guess: f64,
+    restart: bool,
 ) -> Result<f64, Error> {
     // The start offset was chosen by scoring (T-2005; fit lab `rate_candidates` scores +-1E-3 and
     // 1E-4): on the 782 cells of the fit lab's `rate` set the model is bit-exact on all, with
@@ -87,11 +104,22 @@ pub(crate) fn compute_rate(
     // on the cells of the three cap probes (T-3395 counted them).
     /// FITTED(T-2689, 178 cells, RATE at the 200-step cap; one cut for all three tests bracketed 9.4E-5..1.02E-4)
     const RATE_CAP_TOLERANCE: f64 = 1e-4;
-    if guess <= -1.0 {
-        return Err(Error::VALUE);
-    }
-    let args = (nper, pmt, pv, fv);
-    let period_start = annuity_type != 0;
+    // A flat secant on two distinct iterates at steps RATE_RESTART_FIRST..=RATE_RESTART_STEPS, with
+    // |f1| from RATE_RESTART_F_MIN up to the cap's bound, restarts the run from the older iterate
+    // r0 (T-3698). The step bound and the |f1| cut were chosen on the train side of the fit lab's
+    // hash split only (holdout.py, margin 5 points stated before scoring; docs/research/t3698):
+    // over K in 3..200 and the cut in 1E-5..1E-3, K = 16 or 17 is best on train (1,395 of 1,477
+    // bit-exact) and the smaller is taken. The cut is the cap's bound, inside the bracket the
+    // evidence gives: probes/t3698-rate-flat-restart restarts at |f1| up to 4.3E-5 (A3:A8) and
+    // holds at 1.7E-4 (A1). Outside the evidenced range (the first two steps, |f1| below the
+    // smallest probed flat secant) the run holds as before. `r0 > -1` is a guard, not evidence:
+    // a restart from r0 <= -1 would be a guess that RATE refuses.
+    /// FITTED(T-3698, 1477 cells, RATE flat secant at steps 3..16 with |f1| 1.3E-7..1E-4)
+    const RATE_RESTART_STEPS: u32 = 16;
+    /// The first step the restart is evidenced at (no probed flat secant comes earlier; T-3698).
+    const RATE_RESTART_FIRST: u32 = 3;
+    /// The smallest |f1| of a probed flat secant (T-3698; financial.md "Unprobed").
+    const RATE_RESTART_F_MIN: f64 = 1.3e-7;
     let residual = |rate: f64| rate_residual(rate, args, period_start).ok_or(Error::NUM);
     let (mut r0, mut f0) = (guess, residual(guess)?);
     let mut r1 = r0 - OFFSET.copysign(f0);
@@ -110,6 +138,16 @@ pub(crate) fn compute_rate(
         let (r2, f2) = if flat {
             if f1 == 0.0 {
                 return Err(Error::NUM);
+            }
+            // The restart (T-3698): a fresh run from r0, as if r0 were the guess
+            // (probes/t3579-rate-residual-nper1: A1's run is A6's, whose guess is A1's r0).
+            if restart
+                && r1 != r0
+                && (RATE_RESTART_FIRST..=RATE_RESTART_STEPS).contains(&step)
+                && (RATE_RESTART_F_MIN..RATE_CAP_TOLERANCE).contains(&f1.abs())
+                && r0 > -1.0
+            {
+                return rate_secant(args, period_start, r0, false);
             }
             (r1, f1)
         } else {
