@@ -35,15 +35,10 @@ the right cells.
       or each off cell has an owner.
 - [x] The four citations say Calc!A11, A136:A145 instead of A30:A41.
 - [x] coercion.md's T-3446 and T-3559 entries cite the new probe.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
-
-## Outcome
-- Probe probes/t3958-gurmukhi-tamil-telugu-khmer-digits (excel-graph, 2026-11-03, 244 checked cells): four blocks x the eleven T-3446 forms (typed, ISNUMBER, +0, VALUE, NUMBERVALUE, TEXT) and 28 collation pairs. The engine passes 200; the 44 off cells are the typed-input ISNUMBER cells Sheet1!B1:B44, owned by T-3891 (amended).
-- The four rank-cell citations now name Calc!A11, A136:A145 (collation/scripts.rs x2, test_collation.rs; T-3917's Progress note). coercion.md's T-3446 and T-3559 entries cite the probe.
-- Open: the typed-format tags of Gurmukhi, Tamil and Telugu were not logged (T-3891).
 
 ## Outcome
 - Probe probes/t3958-gurmukhi-tamil-telugu-khmer-digits (excel-graph, 2026-11-03, 244 checked cells): four blocks x the eleven T-3446 forms (typed, ISNUMBER, +0, VALUE, NUMBERVALUE, TEXT) and 28 collation pairs. The engine passes 200; the 44 off cells are the typed-input ISNUMBER cells Sheet1!B1:B44, owned by T-3891 (amended).
