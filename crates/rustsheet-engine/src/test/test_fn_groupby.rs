@@ -1365,7 +1365,8 @@ fn scalar_inputs_and_the_order_of_their_errors() {
         ("=GROUPBY(#REF!,2,_xleta.SUM)", "#REF!"),
         ("=GROUPBY(Z1,Z1,_xleta.SUM)", "#DIV/0!"),
         ("=GROUPBY(Z4,Z1,_xleta.SUM)", "#DIV/0!"),
-        // The error row_fields loses to a later option's error, at the same height too.
+        // The error row_fields loses to a later option's error: 1 key row against 3 value rows in the
+        // first case, the same height (1 row each) in the second.
         ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
         ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
     ];

@@ -2227,7 +2227,7 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
 `Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
-(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, ec5094d09c82f94d A6223; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
 `#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
 reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
 eval/baseline/gen-m7.txt.

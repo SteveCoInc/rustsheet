@@ -62,7 +62,7 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
   - then a blank-cell `values` is `#VALUE!`, ahead of every option's error (0a91d5918d798930 A10127).
 - `Model::groupby_args` turns text `values` (one text element) and one error key (a one-cell reference to an error as
   `row_fields`) into `#VALUE!` beside the height check, so after the options' errors. This order is evidence the first
-  attempt got wrong: 25 batch cells such as `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` (d03de506903f5a35 A11835, `#NUM!`)
+  attempt got wrong: 25 batch cells such as `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` (ec5094d09c82f94d A6223, `#NUM!`)
   and 5 such as `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)` (18ded81711290e85 A1648, `#DIV/0!`) show the options'
   error winning. Recorded in docs/excel-semantics/arrays.md.
 - Unit tests: `scalar_inputs_and_the_order_of_their_errors` and `an_early_input_error_fills_an_array_field_relationship`
