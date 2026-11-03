@@ -1419,6 +1419,7 @@ C	probes/t2592-nested-groupby-cells.case.json	61
 C	probes/t2594-nested-aggregates.case.json	32
 C	probes/t2598-engineering-scientific.case.json	12
 C	probes/t2601-index-scalar-forms-t-n.case.json	56
+C	probes/t2603-xnpv-no-number-values.case.json	24
 C	probes/t2606-pivotby-total-gate-layouts.case.json	42
 C	probes/t2622-take-let-reference-lambda-text.case.json	40
 C	probes/t2625-nested-consumers.case.json	32
@@ -7384,7 +7385,6 @@ F	probes/text-locale-regional-lcids-2.case.json	S!M6
 F	probes/text-locale-regional-lcids-2.case.json	S!M7
 F	probes/text-locale-regional-lcids-2.case.json	S!M8
 F	probes/text-locale-regional-lcids-2.case.json	S!M9
-F	probes/xnpv-empty-values-cell.case.json	Sheet1!C8
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
