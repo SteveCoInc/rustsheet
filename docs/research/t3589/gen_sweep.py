@@ -6,12 +6,14 @@ cosh x the `1/u` form (u = EXP(-x)), the same parts for IMCOSH, IMSECH and IMCSC
 take sinh y and cosh y as (u - 1/u)/2 and (u + 1/u)/2 with u = EXP(y) for every |y|, the EXP pair
 past |y| = 20 gone.
 
-Deterministic. Writes two cases to eval/suites/probes-numeric/cases/:
+Deterministic. Writes three cases to eval/suites/probes-numeric/cases/:
 - t3589-im-hyperbolic-small-x-sweep (seed 3589): 150 rows, |x| log-uniform in [1e-6, 0.01] with a random
   sign, 15 significant digits; y = 0 on even rows, |y| uniform in [0.1, 1.4] with a random sign on odd
   rows. A IMSINH, B IMCOSH, C IMSECH, D IMCSCH of x+yi.
 - t3589-imsin-imcos-large-imag-sweep (seed 35891): 150 rows, |y| uniform in [20, 709.7] with a random
   sign; x = 0 on rows divisible by 4, else uniform in (-3.1, 3.1). A IMSIN, B IMCOS of x+yi.
+- t3720-im-reciprocal-small-x-complex (seed 3720, T-3720): 404 rows of IMCOSH, IMCSCH, IMSECH, IMSINH of a
+  complex z with 0 < |x| <= 0.01 and the worksheet SIN(y), COS(y), SINH(x), COSH(x), EXP(-x) companions.
 """
 
 from __future__ import annotations
