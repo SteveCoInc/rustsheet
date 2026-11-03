@@ -61,7 +61,7 @@ Decision 0083: the cells listed under Context are visibly off (a wrong error, or
   errors, two arrays element by element (blank element greatest, a prefix first). `LAMBDA(acc,acc)` therefore sorts the
   rows by their first records' values. New probe probes/t3893-pivotby-error-tie-order (excel-graph, 2026-11-03, 66
   calls) pins it for GROUPBY and PIVOTBY rows and columns; error aggregates keep their old rules.
-- Code: `grouping.rs` `aggregate_cmp` (value sorts only; key sorts unchanged), `NestedArray::elements`. Unit test
+- Code: `group_order.rs` `aggregate_cmp` (value sorts only; key sorts unchanged), `NestedArray::elements`. Unit test
   `array_aggregates_sort_by_their_elements_between_true_and_errors`. arrays.md updated.
 - Eval delta: gen-m7 −11 known-failure cells (febfd6901374d79c A11225:F11232 passes), probes −22
   (t3893-pivotby-error-sort-header A61:G79); the new probe passes 710/710. No regressions.

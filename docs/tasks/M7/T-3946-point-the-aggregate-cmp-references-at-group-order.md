@@ -3,7 +3,7 @@ id: T-3946
 title: "Point the aggregate_cmp references at group_order.rs and probe non-number elements across array aggregates"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,10 +24,16 @@ The docs name the right file for `aggregate_cmp`, and Excel evidence says how tw
   a boolean and an error, and a blank element against text, a boolean and an error.
 
 ## Acceptance criteria
-- [ ] The three references name group_order.rs.
-- [ ] An excel-graph probe covers the element pairs above; arrays.md records the result, and the engine matches every
+- [x] The three references name group_order.rs.
+- [x] An excel-graph probe covers the element pairs above; arrays.md records the result, and the engine matches every
       probe cell.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Key sorts; error aggregates (already probed).
+
+## Outcome
+- The three references (arrays.md, `NestedArray::elements`, the T-3893 Outcome) name group_order.rs.
+- Probe `t3946-aggregate-array-element-kinds` (excel-graph, 80 cells): a number sorts before text, TRUE and an error,
+  and a blank element after all of them, ascending and descending. The engine already matched every cell; no code
+  change. arrays.md records it. Eval delta: +80 probe cells passing (new case), no regressions.
