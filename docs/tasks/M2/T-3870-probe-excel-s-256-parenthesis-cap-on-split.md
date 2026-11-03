@@ -3,7 +3,7 @@ id: T-3870
 title: "Probe Excel's 256-parenthesis cap on split runs (space, operand, call between groups) and re-probe the typed refusals with ISBLANK/LEN"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
