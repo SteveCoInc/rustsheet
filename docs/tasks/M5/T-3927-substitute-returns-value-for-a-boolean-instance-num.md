@@ -3,7 +3,7 @@ id: T-3927
 title: "SUBSTITUTE returns #VALUE! for a boolean instance_num (gen-m5 arg-pairs, T-3510)"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P2
 campaign: semantics
 size: S
@@ -26,12 +26,18 @@ depends_on: []
   (`excel-probe` skill) before implementing.
 
 ## Acceptance criteria
-- [ ] The 23 cells above pass and leave eval/baseline/gen-m5.txt; 0 regressions.
-- [ ] docs/excel-semantics/text.md entry "SUBSTITUTE boolean instance_num" says "Implemented in" this task.
-- [ ] `make check` green; reviewers approve.
+- [x] The 23 cells above pass and leave eval/baseline/gen-m5.txt; 0 regressions.
+- [x] docs/excel-semantics/text.md entry "SUBSTITUTE boolean instance_num" says "Implemented in" this task.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Wrong error: the engine returns text where Excel gives `#VALUE!`.
 
 ## Out of scope
 - SUBSTITUTE's other argument kinds (all other pairs of the T-3510 batch pass).
+
+## Outcome
+`fn_substitute` maps a boolean instance_num (literal, cell, comparison or array element, TRUE or FALSE) to `#VALUE!`
+after the three text arguments are read, so their errors win (gen-m5 A397/A400 pattern). Probed FALSE, cell booleans,
+blank and array elements: probes/substitute-boolean-instance (excel-graph). gen-m5 known failures 26 -> 3 (23 fixed,
+0 regressions); semantics entry now VERIFIED.

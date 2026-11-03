@@ -1411,9 +1411,12 @@ Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the
 Tasks: T-3884
 
 ## SUBSTITUTE with a boolean instance_num is #VALUE! (T-3510, T-3927)
-Rule: `SUBSTITUTE("abc",0,"abc",TRUE)`, `SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)`
-are `#VALUE!` in Excel; every other argument kind of the first three arguments pairs normally with a numeric
-instance_num. All 23 evidenced cells have the literal `TRUE` fourth argument (gen-m5 5136e04c4ce978c3 A79 ..., see
-T-3927 for the list). Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03).
-Ours: the fourth argument goes through `calc_result_to_number`, so `TRUE` is instance 1 (known failure, T-3927). FALSE and a
-boolean from a cell are UNVERIFIED.
+Rule: any boolean instance_num is `#VALUE!`: literal `TRUE` and `FALSE`, a boolean from a cell (`B1`/`B2`), a comparison
+(`1=1`), and each boolean element of an array (`{TRUE,FALSE,1}` gives `#VALUE!`, `#VALUE!`, "xaa"). A blank-cell instance_num is
+also `#VALUE!` (like 0); `"2"` text coerces ("axa"). A boolean as text, old_text or new_text is coerced to "TRUE"
+(`SUBSTITUTE("TRUE",TRUE,"x")` "x", `SUBSTITUTE("aaa","a",TRUE,2)` "a", then TRUE as text, then "a"). The gen-m5 pairs `SUBSTITUTE("abc",0,"abc",TRUE)`,
+`SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)` are all that one rule (23 cells, see T-3927 for the list).
+An error in text, old_text or new_text wins over the boolean `#VALUE!` (`SUBSTITUTE("abc",#REF!,"Hello",TRUE)` `#REF!`, `SUBSTITUTE(#N/A,"abc","abc",TRUE)` `#N/A`).
+Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03); probes/substitute-boolean-instance A1:A12, B12:C12 (excel-graph, 2026-11-03, T-3927).
+Status: VERIFIED
+Implemented in: `fn_substitute` (functions/text/common.rs), T-3927.
