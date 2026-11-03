@@ -2503,6 +2503,22 @@ Implemented in: `seriessum_of` (crates/rustsheet-engine/src/functions/math_and_t
 Status: VERIFIED (excel-graph)
 Tasks: T-2380
 
+## SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal (T-3942)
+Rule: SERIESSUM flushes both a power `x^(n+i*m)` and a term `c_i*x^(n+i*m)` that falls below the smallest normal double to a true 0
+(the `=0` companion is TRUE, decision 0042), for a positive and a negative x. `SERIESSUM(1E-200,2,1,{1})` (power 1E-400) and
+`SERIESSUM(1E-154,2,0,{1E-10})` (power 1E-308, subnormal) are 0; so is `SERIESSUM(1E-150,2,0,{1E-10})`, whose power 1E-300 is
+normal and whose term 1E-310 is subnormal. A subnormal power is flushed before the coefficient multiplies it, not after:
+`SERIESSUM(1E-160,2,0,{1,1E+300})` and `SERIESSUM(1E-160,2,0,{1E+300})` are 0, not 1E-20. A flushed term beside a normal one
+drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200). This confirms the flush T-3676's Gate A definition
+(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator does not flush: `=1E-160^2` keeps the subnormal 1E-320
+(`=(1E-160^2)=0` is FALSE) and `=1E-160^2*1E+300` is 9.99988867182683E-21, where `POWER(1E-160,2)*1E+300` is 0. So SERIESSUM's power is
+not Excel's `^` here, whatever T-2163 found for ordinary values; it follows POWER.
+Evidence: probes/seriessum-subnormal-power-and-term A1:B17 (excel-graph, 2026-11-03, T-3942).
+Ours: the power matches (every power cell passes); a subnormal term from a normal power is kept (A2, A9; T-3949) and `^` flushes its
+result (B15, A16, B16; T-3950).
+Status: VERIFIED (excel-graph)
+Tasks: T-3942, T-3949, T-3950
+
 ## SUMXMY2 is 1 ulp above the correctly rounded sum on a 1.5E+16 result (T-2384)
 Observation: `SUMXMY2(C10:E12,C6:E8)`, whose numeric pairs are (-1, 123456789.123), (7, 1E-15) and (-1, 0.3), is
 1.5241579027474522E+16; the exact sum of the squared differences rounds to 1.524157902747452E+16, and so do the left-to-right
