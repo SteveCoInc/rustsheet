@@ -208,9 +208,15 @@ impl TypedClock {
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
     let (clock, rest) = text.split_once(' ')?;
     let rest = rest.trim_start_matches(' ');
-    // An `AM`/`PM` word between the clock and the date belongs to the clock.
+    // An `AM`/`PM`/`A`/`P` word between the clock and the date belongs to the clock (`10 A
+    // 7/1/2025`, A34). `A.` is not one: Excel reads `10 A. 7/1/2025` as some other number
+    // (A35, A36; T-3907), which the engine leaves as text.
     let clock_end = match rest.split_once(' ') {
-        Some((word, _)) if word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm") => {
+        Some((word, _))
+            if ["am", "pm", "a", "p"]
+                .iter()
+                .any(|s| word.eq_ignore_ascii_case(s)) =>
+        {
             text.len() - rest.len() + word.len()
         }
         _ => clock.len(),

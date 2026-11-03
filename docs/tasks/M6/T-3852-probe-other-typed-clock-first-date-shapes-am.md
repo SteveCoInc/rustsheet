@@ -3,7 +3,7 @@ id: T-3852
 title: "Probe other typed clock-first date shapes (AM/PM, seconds, out-of-range, month-name dates) and extend leading_clock_shape"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -27,10 +27,16 @@ T-3796 limited `leading_clock_shape` (crates/rustsheet-engine/src/formatter/pars
 Probed 33 en-US shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2026-11-03): a typed clock-first date-time
 is a number with the clock's format (`m/d/yyyy h:mm`, `mm:ss.0` for fractions, General out of range) for any readable date
 after it. `leading_clock_shape` now classifies the clock with `typed_clock_shape` and lets the date reader decide the rest;
-trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. Eval delta: new probe case passes 66/66 (probes baseline +0 failures); no regressions.
+trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. On resume, rows A34-A45 (excel-graph) added: the hour-only single letter `10 A 7/1/2025` (now a number in the
+engine too: `leading_clock_shape` takes `A`/`P` as a clock word), out-of-range and fractional clocks with AM/PM, `0 AM`,
+`12 PM`, `yyyy/m/d`, and year-less `Jul-25`, `1-Jul`, `7/1`. Dated rows score the full serial. `10 A. 7/1/2025` and
+`10:00 A. 7/1/2025` are Excel numbers in 2161 with `mm:ss.0` (S!B35:D36), which the engine leaves as text: 6 known failures, owned by T-3907.
+Eval delta: the probe case passes 86 of 92 cells; 6 new-coverage known failures (owned); no regressions.
 Not probed: day-first locales, filed as T-3901.
 
 ## Handoff (resumed)
+Resolved on resume: the hour-only single-letter rows are probed and matched (A34), `A.` is recorded with its owner T-3907, the inherited shapes are probed (A37-A45), and dated rows score full serials.
+
 PR #2928, head 36028661600d (CI not yet seen green on it). Implemented and probed (case rows A1-A33, all excel-graph, 66/66 pass; `make check-fast` green).
 Security and design reviewers approved. excel-fidelity requested changes twice (round 1: unprobed shapes, fixed by A23-A33; round 2 open):
 - MAJOR: doc rule "a clock before a date is a number whenever the same clock after it would be" breaks for the hour-only single-letter clock: `10 A 7/1/2025`, `10 A. 7/1/2025`, `10:00 A. 7/1/2025` stay text in the engine (`clock_end` in `leading_clock_shape` only takes a full AM/PM word). Next: add these three rows to the case, fill from excel-graph (`rustsheet-oracle fill -b excel-graph --suite probes --force --case probes/date-text-typed-clock-first-shapes.case.json`), match the result.
