@@ -1001,7 +1001,7 @@ SUMPRODUCT with three arrays flushes after each factor, left to right: `SUMPRODU
 SUMX2MY2, SUMX2PY2 and SUMXMY2 flush each square the same way (probes/t3677-sumx-running-overflow-snap A12:A15,
 excel-graph, 2026-11-03, T-3677): with M1:M2 = 1E-155, 1E-150 and N1:N2 = 0, `SUMX2PY2(M1:M2,N1:N2)`,
 `SUMX2MY2(M1:M2,N1:N2)` and `SUMXMY2(M1:M2,N1:N2)` are exactly 1E-300 and `SUMX2MY2(N1:N2,M1:M2)` is -1E-300 (the 1E-310
-square is dropped). The engine keeps it (1.0000000001E-300): T-3969.
+square is dropped). The engine matches since T-3969.
 A subnormal cell constant reads as 0 (T-2016, T-2228, VERIFIED, probes/subnormal-cell-constants, excel-graph 2026-10-21): a
 number constant of magnitude below 2.2250738585072014E-308 (5E-324, 2.2E-308, 1E-310, and the negatives -5E-324, -1E-310) in a loaded workbook (an xlsx `<v>`; typing
 one in is unprobed) is `=0` TRUE and `ISNUMBER` TRUE, `*1E+300`
