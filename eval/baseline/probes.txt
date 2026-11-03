@@ -334,7 +334,8 @@ C	probes/date-text-rejected-clock-formats.case.json	16
 C	probes/date-text-shape-survey-2.case.json	128
 C	probes/date-text-shape-survey.case.json	360
 C	probes/date-text-single-letter-ap.case.json	48
-C	probes/date-text-typed-clock-first-shapes.case.json	66
+C	probes/date-text-typed-clock-first-a-period.case.json	6
+C	probes/date-text-typed-clock-first-shapes.case.json	86
 C	probes/date-text-typed-clock-shapes.case.json	85
 C	probes/date-text-weekend-3d.case.json	129
 C	probes/date-text-yearless-2.case.json	64
@@ -2442,6 +2443,12 @@ F	probes/convert-unit-names.case.json	Sheet1!B772
 F	probes/convert-unit-names.case.json	Sheet1!B961
 F	probes/convert-unit-names.case.json	Sheet1!B969
 F	probes/coup-calendar-edges.case.json	S!J12
+F	probes/date-text-typed-clock-first-a-period.case.json	S!B1
+F	probes/date-text-typed-clock-first-a-period.case.json	S!B2
+F	probes/date-text-typed-clock-first-a-period.case.json	S!C1
+F	probes/date-text-typed-clock-first-a-period.case.json	S!C2
+F	probes/date-text-typed-clock-first-a-period.case.json	S!D1
+F	probes/date-text-typed-clock-first-a-period.case.json	S!D2
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A29
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A7
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!B8
