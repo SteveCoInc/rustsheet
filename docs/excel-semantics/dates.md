@@ -416,7 +416,26 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `10 AM 7/1` (current year). `10:00 Jul-25` is 25 July of the current year, not July 2025 (MONTH*100+DAY 725).
   The exception: with `A.` (single letter and period) before the date, `10 A. 7/1/2025` is 95368.2763275463
   (`2161-02-07 06:37:55`) and `10:00 A. 7/1/2025` 95368.68604976853 (`2161-02-07 16:27:55`), both `mm:ss.0` (probes/date-text-typed-clock-first-a-period A1, A2; the value repeats over three fills).
-  Status: the engine leaves both as text (known failure, T-3907).
+  The rule (T-3907; probes/t3907-typed-clock-a-period-shapes A1-A26 decoded it, t3907-typed-clock-a-period-edges
+  A1-A30 confirmed it as a fresh sweep, excel-graph 2026-11-03; formats in docs/research/t3907-typed-clock-a-period-2026-11-03.md):
+  `CLOCK A. DIGITS[SEP DATE]` is no date-time at all. The digits right after the period are a fraction of a second
+  (`.7`, `.07`, `.70`, `.17`; rounded half up to the millisecond, `.2025` is 0.203 s and `.123456789` 0.123 s). A `/`,
+  `-` or space after them starts a date that must read on its own as a date without a clock: `1/2025` is January 2025,
+  `1/25` 25 January of the current year, `Jul/2025` July 2025, and with nothing after the digits the date is 0
+  (`10 A. 5` is 49710.2763252315). A bare `N` before the word is N minutes (`24 A.` adds 24 minutes); `H:M` is hours
+  and minutes (`10:30`, `1:2`). On top sits a constant: 2^32 - 22 seconds for `A`, one second more for `P`
+  (4294967274 s, 49710.269375 days). So `10 A. 7/1/2025` is 45658 (January 2025) + (2^32 - 22 + 600 + 0.7) / 86400.
+  The word is `A`, `P` or `PM` in any case (`a.`, `p.`, `PM.` probed; `AM.` is unprobed, and the engine reads it as `A.`); spaces after the period, extra
+  spaces before the word and trailing spaces are accepted, and `A.7/1/2025` with no space too. Typed, the value takes
+  `mm:ss.0`. These stay text: no digits after the period (`10 A.. 7/1/2025`, `10 a.m. 7/1/2025`, `10 A. July 1, 2025`),
+  no clock (`A. 7/1/2025`), another letter (`10 B. 7/1/2025`), seconds in the clock (`10:00:30 A. 7/1/2025`), a tail
+  that is no date (`10 A. 7/1`, `10 A. 5/1`, `10 A. 7-2025`, `10 A. 7/13/2025`, `10 A. 7/0/2025`, `10 A. 7/1/1899`) or
+  carries a clock (`10 A. 7/1/2025 10:00`), and 60 minutes or more (`60 A. 7/1/2025` and `99 A. 7/1/2025` stay text
+  but take `mmm-yy`, which the engine does not give a text cell). `10 A.` alone is 10 AM (`h:mm AM/PM`). The formula
+  readers agree: `VALUE` and `0+` give the typed number, `DATEVALUE` its day (95368) and `TIMEVALUE` its fraction
+  (edges A25-A30). Unprobed: the formula readers of the shapes that stay typed text (the engine reads `10 A. 7-2025` as `10 A.` before July 2025, as before), an hour of 24 or more in `H:M` (the engine leaves it text), `AM.`, and a 1904 workbook
+  (with no date the day 0 is before that epoch, so the engine leaves it text). Where -22 comes from is unknown.
+  Status: the engine matches every probed cell (T-3907).
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on
@@ -550,13 +569,36 @@ Probed (probes/date-text-glued-month-2, excel-graph 2026-10-18, T-1879; rows ref
   `"Jul1 , 2026"` and `"1JUN2021"` -> d-mmm-yy dates (2026-07-01, 2026-07-01, 2021-06-01); `"July1 10:00"` ->
   46204.41666..., format `m/d/yyyy h:mm`; `"Jun1.5"` stays text (General). The engine matches (T-1907 made typed
   date+time text a number with `m/d/yyyy h:mm`; only a typed `H:MM` clock is converted). Typed non-glued date + clock text is a number with the same format `m/d/yyyy h:mm` (`1/2/2020 10:00` -> 43832.41666..., `2020-01-02 10:00`, `July 1, 2026 10:00`, year-less `7/1 10:00` -> 46204.41666..., the serial inferred from the oracle's 2026 clock and not scored), and so are clocks with seconds (`1/2/2020 10:00:30` -> 43832.41701...) or AM/PM (`1/2/2020 10:00 AM`); a bare typed date `1/2/2020` is 43832 with format `m/d/yyyy`. In a 1904 workbook `1/2/1904 10:00` is 1.41666... and `12/31/1903 10:00` stays text (General) (probes/date-text-non-glued-timevalue rows 11-17, probes/date-system-1904-timevalue-non-glued rows 11-13, excel-graph, T-1952; formats from the ENTERED log in docs/research/non-glued-typed-input-2026-10-19.md). Further typed clock shapes after a date (probes/date-text-typed-clock-shapes, excel-graph, T-1979; formats from docs/research/typed-clock-shapes-2026-10-19.md): `H:MM:SS AM/PM`, lowercase or mixed-case `pm`, several spaces before AM/PM and an hour-only `10 AM`/`10 PM` are numbers with `m/d/yyyy h:mm`; a fractional second (`10:00:30.5`, `10:00.5` read as minutes and seconds) is a number with format `mm:ss.0`; a component out of its usual range (`24:00` -> 43833, `25:00`, `10:60`, `10:00:60`) is a number with format General; `13:00 PM` and a glued `10:00AM` stay text. Implemented in `typed_clock_shape` (formatter/parse_formatted.rs); the value is the date-clock serial of coercion. `0:00 AM`, `12:00 AM` and `12:30 PM` after a date are numbers with `m/d/yyyy h:mm` (0:00 AM is accepted; 12 AM is midnight, 12 PM noon). Text that stays text can still carry a format (T-1986, probes/date-text-rejected-clock-formats N1-N16 and date-text-typed-clock-shapes N14-N15, excel-graph; formats from docs/research/rejected-clock-text-formats-2026-10-19.md): a date followed by a number-like clock (digits and colons only) and a spaced `AM`/`PM` that is rejected (`13:00 PM`, `13:00 AM`, `24:00 PM`, `13 PM`, `25:00 PM`, `13:00:00 PM`, `99:00 PM`, `1300 PM`) is text whose cell format is that of its date part: `m/d/yyyy` for slash and ISO dates, `d-mmm-yy` for `July 1, 2026 13:00 PM`. Everything else stays General: a glued `10:00AM`, `10:00 XM`, `10:00 PM PM`, `1/2/2020 abc` and a clock with no date (`13:00 PM`). Implemented in `rejected_clock_text_format` (formatter/parse_formatted.rs); `1/2/2020 10:00 A` is a number with `m/d/yyyy h:mm` (N7; engine gap T-1994); the format of a bare typed ISO date (`2020-01-02`) is unprobed, and the engine's `yyyy-mm-dd` for it is not Excel evidence. UNVERIFIED (engine extrapolations, not probed): hours or minutes of 99 (`99:00`, `10:99`) as numbers, a fraction followed by AM/PM, `24:00 AM` as text, hour-only `0 AM`/`12 PM`, trailing spaces after the clock (including after a rejected `13:00 PM`), a rejected clock after a percent, currency or grouped number (`$5 13:00 PM`; the engine leaves General), a year-less date before a rejected clock, a malformed clock of digits and colons (`:5 PM`, `1:2:3:4 PM`), a date part that already carries a time (`1/2/2020 10:00 13:00 PM`), several spaces between the date and the clock (the engine gives all of these the date part's format), a date typed into an already date-formatted cell (the engine keeps its format), and fractions of 3-9 digits.
+Probed (probes/t3299-date-text-glued-month-3, excel-graph 2026-11-03, T-3299; rows refer to Sheet1 of that case,
+columns B:D MONTH/DAY/YEAR of DATEVALUE, E and F VALUE and `0+` minus DATEVALUE, G:H MONTH/DAY of the text, J:K
+COUNTIF/SUMIF criteria, N:R typed input; years are 2024 so no cell depends on the clock). DATEVALUE, VALUE, `0+`,
+MONTH/DAY of the text and the criteria agree on every row (E, F = 0 and K = 0 wherever DATEVALUE parses):
+- **A glued one-digit year after day and month is the two-digit year 0d**, as T-1906 inferred: `"1Jul5"`,
+  `"1July5"`, `"1jul5"`, `"1JUL5"`, `"1Jul05"` are 2005-07-01, `"1Jul9"` 2009-07-01, `"1Jul0"` 2000-07-01,
+  `"15Jul5"` 2005-07-15 (rows 1-8); `"1Jul24"` is 2024-07-01 (row 9).
+- **A slash before a glued month-year is a date; a period or a comma is not**: `"1/Jul2024"`, `"1/July2024"`,
+  `"1/jul2024"` and `"1/Jul24"` are 2024-07-01 (rows 10, 13, 14, 17), and so is a space (`"1 Jul2024"`, row
+  18); `"1.Jul2024"`, `"1,Jul2024"`, `"1.Jul24"` and `"1,Jul24"` are `#VALUE!` (rows 11, 12, 15, 16).
+- **A hyphen takes a one- or two-digit glued year too**: `"1-Jul24"`, `"1-July24"`, `"1-jul24"`, `"1-JUL24"`,
+  `"01-Jul24"` are 2024-07-01, `"31-Jul24"` 2024-07-31, `"1-Jul05"` and `"1-Jul5"` 2005-07-01 (rows 19-26), next
+  to the four-digit `"1-Jul2024"` and `"1-JULY2024"` (rows 27-28).
+- **The hand-derived `#VALUE!` shapes are `#VALUE!`**: `"July1 , 2024 5"`, `"1Jul1 , 2024"`, `"July1,, 2024"`
+  (rows 29-31), and so are `"1Jul1, 2024"` (row 34: a day before the glued month and day) and `"Jul1 ,2024"`
+  (row 35: no space after the comma); `"Jul1 , 2024"` and `"July1 , 24"` are 2024-07-01 (rows 32-33).
+- **Typed input** (formats from the oracle's ENTERED log, docs/research/t3299-glued-month-typed-input-2026-11-03.md):
+  `"1-Jul2024"`, `"1-Jul24"`, `"1/Jul2024"`, `"1/Jul24"`, `"1-JULY2024"` -> 45474 (2024-07-01) and `"1Jul5"`
+  -> 38534 (2005-07-01), each with format `d-mmm-yy`; `"1.Jul2024"`, `"1,Jul2024"`, `"1Jul1 , 2024"` and
+  `"July1 , 2024 5"` stay text (General) (N1:N10, O:R).
+The engine reads the slash or hyphen shapes with a one- or two-digit glued year as `#VALUE!` and keeps them
+text when typed (rows 14, 19-26, N2, N10: engine gap T-3919); every other row matches.
 UNVERIFIED:
-- shapes the glued-month rules accept or reject beyond the probed rows (T-1906): `"1Jul5"` (any glued single digit after a day reads as year 0d), `"1/Jul2026"` and other separators, `"1-Jul26"`, the format typed `"1-Jul2026"` gets, and the hand-derived `#VALUE!` of `"July1 , 2026 5"`, `"1Jul1 , 2026"` and `"July1,, 2026"`;
+- separators other than space, slash, hyphen, period and comma before a glued month-year, and a slash or hyphen
+  before a glued month with no year (`"1/Jul"`);
 - the clock-year results (`"July1"`, `"July01"`, criteria K6-K8) for clocks other than the oracle's 2026;
 - locales other than en-US (the split uses the locale's month names).
-Status: VERIFIED (web) for probes/date-text-glued-month rows 1-24 and probes/date-text-glued-month-2; engine gaps are tasks (below).
+Status: VERIFIED (web) for probes/date-text-glued-month rows 1-24, probes/date-text-glued-month-2 and probes/t3299-date-text-glued-month-3; engine gaps are tasks (below).
 Implemented in: `split_glued_month` in `crates/rustsheet-engine/src/formatter/date_text.rs` (used by `parse_date`)
-Tasks: T-1788, T-1789, T-1879
+Tasks: T-1788, T-1789, T-1879, T-3299, T-3919
 
 ## WORKDAY holidays take the whole range
 Rule: in a legacy (non-dynamic-array) formula, WORKDAY's `holidays` range is read whole, with no
