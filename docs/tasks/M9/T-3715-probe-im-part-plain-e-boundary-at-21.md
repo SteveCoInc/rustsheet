@@ -3,7 +3,7 @@ id: T-3715
 title: "Probe IM* part plain/E boundary at 21 characters for exponents -9 to -12"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
