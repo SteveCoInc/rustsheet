@@ -294,8 +294,19 @@ fn overflowed_reciprocal(re: f64, im: f64, v: f64, suffix: Suffix) -> CalcResult
     complex_result(re, im, suffix)
 }
 
-/// The parts of [`overflowed_reciprocal`].
+/// The parts of [`overflowed_reciprocal`]: each part divided by M = cosh |v| (libm's, as
+/// [`inverse_exp_sinh_cosh`] takes it past `INVERSE_EXP_HIGH`), not multiplied by `2e^-|v|`, while M
+/// is finite. The product is one digit off on 24 IMSECH and IMCSCH texts of
+/// probes/t3881-imcsch-overflow-band (`IMSECH(COMPLEX(400,20))` is
+/// 1.56309271549875E-174-3.49688997531599E-174i, the product's imaginary part ...3.496889975316E-174)
+/// and on the 705+705i cells of probes/im-trig-magnitude-grid (D161, E161, I161, J161); the quotient
+/// fits all 1474 oracle texts of this path (T-3883, engineering.md "Tiny results"). Past
+/// |v| ≈ 710.48 M overflows and the scale `2e^-|v|` stays, whose parts are subnormal or 0 there.
 fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
+    let m = v.abs().cosh();
+    if m.is_finite() {
+        return (re / m, im / m);
+    }
     let scale = 2.0 * (-v.abs()).exp();
     (re * scale, im * scale)
 }
@@ -593,8 +604,8 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 #[cfg(test)]
 mod tests {
     use super::{
-        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsin, imsinh, imtan, inverse_exp_sinh_cosh,
-        CalcResult, CellReferenceIndex, ComplexParts, Suffix,
+        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsech, imsin, imsinh, imtan,
+        inverse_exp_sinh_cosh, CalcResult, CellReferenceIndex, ComplexParts, Suffix,
     };
 
     /// The text a kernel prints for `x+yi`.
@@ -741,6 +752,31 @@ mod tests {
     // -overflow-band, im-trig-magnitude-grid J134:J180 and im-trig-argument-cut J16, excel-graph):
     // past 2x = 709 or below 2x = -708 a non-real z gives -csch z, a real or subnormal-y z the true
     // sign, and a part below the smallest normal double prints nothing.
+    #[test]
+    fn overflowed_reciprocals_divide_by_cosh() {
+        // probes/t3881-imcsch-overflow-band B45, A45, B82; probes/im-trig-magnitude-grid D161, E161.
+        assert_eq!(
+            text(imsech, 400.0, 20.0),
+            "1.56309271549875E-174-3.49688997531599E-174i"
+        );
+        assert_eq!(
+            text(imcsch, 400.0, 20.0),
+            "-1.56309271549875E-174+3.49688997531599E-174i"
+        );
+        assert_eq!(
+            text(imsech, 699.0, 1.0),
+            "2.89616943787016E-304-4.51051665444843E-304i"
+        );
+        assert_eq!(
+            text(imsec, 705.0, 705.0),
+            "3.76819332944316E-307+1.27412580321457E-306i"
+        );
+        assert_eq!(
+            text(imcsc, 705.0, 705.0),
+            "1.27412580321457E-306-3.76819332944316E-307i"
+        );
+    }
+
     #[test]
     fn imcsch_negates_csch_in_the_band() {
         for (x, y, excel) in [

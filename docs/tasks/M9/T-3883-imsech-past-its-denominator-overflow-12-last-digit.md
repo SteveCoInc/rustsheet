@@ -3,7 +3,7 @@ id: T-3883
 title: "IMSECH past its denominator overflow: 12 cells with a last-digit part off (T-3881's band probe)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -34,10 +34,44 @@ cells listed under Context, where one part is one digit off today.
   not overflow at x = -354.03), not `overflowed_reciprocal`; its IMSECH twin is unprobed.
 
 ## Acceptance criteria
-- [ ] The 12 cells (and the 13 IMCSCH cells above) match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
+- [x] The 12 cells (and 12 of the 13 IMCSCH cells above; A3 to T-3918) match Excel's text, and no other IMSECH, IMSEC or IMCSC cell (the users of `overflowed_reciprocal`)
       regresses; their known-failure lines leave eval/baseline/probes.txt.
-- [ ] R4 guards recorded in the Outcome if candidates are ranked.
-- [ ] `make check` green; reviewers approve.
+- [x] R4 guards recorded in the Outcome if candidates are ranked.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - IMCSCH's band and sign (T-3881).
+
+## Outcome
+- `overflowed_parts` (complex/trig.rs), the overflowed form of IMSEC, IMCSC, IMSECH and IMCSCH's band, now divides the
+  trigonometric parts by M = cosh |v| (libm's) while M is finite, where it multiplied them by 2e^-|v|. Past
+  |v| ≈ 710.48 cosh overflows and the old scale stays. engineering.md "Tiny results" (the T-2335 entry) states it.
+- Cells: the 12 IMSECH cells and 12 of the 13 IMCSCH twins pass, and so do T-3851's four 705+705i cells (grid D161,
+  E161, I161, J161; T-3851 closed with this PR). flip-start-negative A3 is in IMSECH's finite-t form, not this one,
+  and stays: T-3918 (phase-1b).
+- R4 (kind (c), structural: an operation order, so no `FITTED` tag). Candidates ranked on all 4,140 oracle texts of
+  the four functions: 2e^-|v| times the parts (libm or Excel's EXP, either order) 4,030; parts over e^|v|/2, over
+  libm cosh or over `inverse_exp_sinh_cosh`'s cosh 4,058 (tied); Smith's complex division of 1/cosh z 4,026.
+  - Hold-out (R4.1): the fit lab's split (`fitlab.holdout`, T-3360) over the 1,474 cells that take this path; margin
+    5 points (the default), fixed before scoring.
+
+    | candidate | side | exact | 4 ulp | 15 digits | total |
+    |---|---|---|---|---|---|
+    | chosen (parts / cosh) | train | 1017 | 1017 | 1017 | 1017 |
+    | chosen (parts / cosh) | hold-out | 457 | 457 | 457 | 457 |
+    | correctly rounded | train | 288 | 332 | 446 | 1017 |
+    | correctly rounded | hold-out | 113 | 137 | 192 | 457 |
+    | old (2e^-v product) | train | 994 | 994 | 994 | 1017 |
+    | old (2e^-v product) | hold-out | 452 | 452 | 452 | 457 |
+
+    The correctly rounded column is low because Excel's IMCSCH is negated in its band (T-3881) and Excel flushes
+    subnormal parts.
+  - Fresh sweep (R4.2): probes-numeric/t3883-overflow-reciprocal-sweep, 200 cells (IMSECH, IMCSCH of h+ti; IMSEC,
+    IMCSC of t+hi; |h| log-uniform in [355, 711], |t| in [1e-3, 1e4]; docs/research/t3883/gen_sweep.py, seed 3883),
+    generated and filled from excel-graph after the choice was frozen: 200 of 200 pass (main's product 192).
+  - Gate A envelope (R2): all 200 within 15 digits of Excel (each text equal), none outside.
+  - Reproducibility floor (R4.4): each change is a whole 15th digit of the printed text, above the 4 ulp floor.
+  - No keep-matched branch: the cosh form applies to the whole path; the 2e^-|v| fallback is where cosh overflows,
+    not where the old form matched.
+- Unit test `overflowed_reciprocals_divide_by_cosh`.
+- Eval delta: probes known failures 4995 -> 4967 (fixed 28: 24 here, 4 of T-3851; regressions 0, no new line).
