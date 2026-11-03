@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-3907: typed clock-first date-times with a single-letter-and-period clock word (`A.`, `P.`) and neighbours, to find the rule behind `10 A. 7/1/2025` being a 2161 serial in mm:ss.0 (value, type, TEXT). Rows 11 and 22 end in a year-less date (`1/25`, `07-01`): their year is the current one, so they are read as month, day and time only.",
+ "description": "T-3907: typed clock-first date-times with a single-letter-and-period clock word (`A.`, `P.`) and neighbours, to find the rule behind `10 A. 7/1/2025` being a 2161 serial in mm:ss.0 (value, type, TEXT). Rows 11 and 22 end in a year-less date (`1/25`, `07-01`): their year is the current one, so C and D score the offset from that date (25 January, 1 July of the current year), which no refill year can move (T-3920).",
  "tags": [
   "M2",
   "probe",
@@ -9,6 +9,12 @@
   "T-3907"
  ],
  "expected": {},
+ "invariant": [
+  "S!C11",
+  "S!D11",
+  "S!C22",
+  "S!D22"
+ ],
  "sheets": [
   {
    "name": "S",
@@ -77,8 +83,8 @@
      "entered": "10 A. 7/1/25"
     },
     "B11": "=ISNUMBER(A11)",
-    "C11": "=IF(ISNUMBER(A11),MONTH(A11)*100+DAY(A11)+MOD(A11,1),LEN(A11))",
-    "D11": "=IF(ISNUMBER(A11),TEXT(A11,\"mm-dd hh:mm:ss.000\"),\"\")",
+    "C11": "=IF(ISNUMBER(A11),A11-DATE(YEAR(TODAY()),1,25),LEN(A11))",
+    "D11": "=IF(ISNUMBER(A11),TEXT(A11-DATE(YEAR(TODAY()),1,25),\"hh:mm:ss.000\"),\"\")",
     "A12": {
      "entered": "10 A. 7/1"
     },
@@ -143,8 +149,8 @@
      "entered": "10 A. 2025-07-01"
     },
     "B22": "=ISNUMBER(A22)",
-    "C22": "=IF(ISNUMBER(A22),MONTH(A22)*100+DAY(A22)+MOD(A22,1),LEN(A22))",
-    "D22": "=IF(ISNUMBER(A22),TEXT(A22,\"mm-dd hh:mm:ss.000\"),\"\")",
+    "C22": "=IF(ISNUMBER(A22),A22-DATE(YEAR(TODAY()),7,1),LEN(A22))",
+    "D22": "=IF(ISNUMBER(A22),TEXT(A22-DATE(YEAR(TODAY()),7,1),\"hh:mm:ss.000\"),\"\")",
     "A23": {
      "entered": "10 A. July 1, 2025"
     },

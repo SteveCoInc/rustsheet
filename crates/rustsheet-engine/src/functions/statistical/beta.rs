@@ -316,7 +316,8 @@ mod tests {
             0.2 + beta_quantile(2.0, 2.0, 0.499_999_999_999_999_9) * 1.0,
             0.7
         );
-        // H32: BETA.INV(0.5136696247356396,5,5,0.1,1) = 0.555.
+        // H32: BETA.INV(0.5136696247356396,5,5,0.1,1) = 0.555, where the search crosses bup's
+        // recurrence on L140 bup+bpser, not the power sum BETA.DIST takes there (T-3198).
         assert_eq!(
             0.1 + beta_quantile(5.0, 5.0, 0.513_669_624_735_639_6) * 0.9,
             0.555

@@ -1,5 +1,5 @@
 use crate::{
-    calc_result::CalcResult,
+    calc_result::{CalcResult, Range},
     constants::{LAST_COLUMN, LAST_ROW, MAXIMUM_DATE_SERIAL_NUMBER, MINIMUM_DATE_SERIAL_NUMBER},
     expressions::{
         parser::{ArrayNode, Node},
@@ -399,6 +399,88 @@ impl Model {
         )
     }
 
+    /// Whether XNPV is `#VALUE!` for the first cell of a multi-cell values range (T-2603,
+    /// probes/t2603-xnpv-no-number-values). That cell is empty, a boolean or non-numeric text.
+    /// Only the first cell counts: `XNPV(1,A4:A5,..)` with A4 empty and A5 = 5 is `#VALUE!`
+    /// (C3, also with later text or booleans, C18-C20), but `XNPV(1,A5:A6,..)` with A6 empty is
+    /// `#NUM!` (C4).
+    ///
+    /// The dates come first when their first cell is a number and a later date cell is a boolean
+    /// or non-numeric text: those calls stay `#NUM!` (gen-m9/3aa168259335be54 A236, text;
+    /// 76b07b57099ccc8d A263, FALSE; b6a02893a8d6b151 A114, 'abc'). An empty date or one before
+    /// the first does not block (100, 0 and an empty cell, C7), nor do dates whose first cell is
+    /// no number (C5, C14). A date past the last serial or a negative one only came with a
+    /// boolean or text, so both are unprobed and do not block. Numeric text, arrays and dates
+    /// that are no range are unprobed and keep the older reading.
+    fn xnpv_first_value_refused(
+        &mut self,
+        values: &CalcResult,
+        dates: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> bool {
+        let CalcResult::Range { left, right } = values else {
+            return false;
+        };
+        if left == right || left.sheet != right.sheet {
+            return false;
+        }
+        let refused = |model: &mut Self, position: CellReferenceIndex| {
+            let value = CalcResult::Range {
+                left: position,
+                right: position,
+            };
+            model.empty_cell(&value) || model.non_numeric_text_or_boolean_cell(&value)
+        };
+        if !refused(self, *left) {
+            return false;
+        }
+        let CalcResult::Range {
+            left: date_left,
+            right: date_right,
+        } = dates
+        else {
+            return false;
+        };
+        if date_left.sheet != date_right.sheet {
+            return false;
+        }
+        if refused(self, *date_left) {
+            return true;
+        }
+        // Values and dates of different counts are the size check's `#NUM!` (C2, C12), so the
+        // dates are not scanned.
+        if self.flow_element_count(values) != self.flow_element_count(dates) {
+            return false;
+        }
+        let Some((row2, column2)) = self.flow_range_end(date_left, date_right) else {
+            return false;
+        };
+        let range = Range {
+            left: *date_left,
+            right: CellReferenceIndex {
+                sheet: date_left.sheet,
+                row: row2,
+                column: column2,
+            },
+        };
+        // Only the stored cells are read: an empty date blocks nothing, so two far-apart cells
+        // cost two reads, not the area between them (directive 5).
+        let mut blocked = false;
+        let walked = self.for_each_existing_cell(&range, cell, &mut |model, position| {
+            let value = CalcResult::Range {
+                left: position,
+                right: position,
+            };
+            if model.non_numeric_text_or_boolean_cell(&value) {
+                blocked = true;
+                // Stops the walk: the first blocking date settles it.
+                return Err(CalcResult::EmptyCell);
+            }
+            Ok(())
+        });
+        !blocked && walked.is_ok()
+    }
+
     /// Whether a one-cell range or scalar is empty.
     fn empty_cell(&mut self, arg: &CalcResult) -> bool {
         matches!(*self.single_cell_value(arg), CalcResult::EmptyCell)
@@ -578,6 +660,7 @@ impl Model {
         let values = self.evaluate_node_in_context(values, cell);
         let dates = self.evaluate_node_in_context(dates, cell);
         let size_error = self.xnpv_size_error(&values, &dates, cell);
+        let first_value_refused = self.xnpv_first_value_refused(&values, &dates, cell);
         // The dates are truncated and checked once, not per element: each element is charged
         // only the values' count.
         let flows = self
@@ -604,6 +687,18 @@ impl Model {
                 };
                 if let (Ok(_), Some(size_error)) = (&rate, &size_error) {
                     return size_error.clone();
+                }
+                // A values range whose first cell is no number is `#VALUE!`, after the counts and
+                // a rate at or below 0 (`XNPV(1,A2:A3,B11)` and `XNPV(-1,A2:A3,B11:B12)` with A2:A3
+                // empty are `#NUM!`; probes/t2603-xnpv-no-number-values C2, C13). The dates are
+                // not read first: all-empty dates are `#VALUE!` too (C5).
+                if let (Ok(rate), true) = (&rate, first_value_refused) {
+                    let error = if *rate <= 0.0 {
+                        Error::NUM
+                    } else {
+                        Error::VALUE
+                    };
+                    return CalcResult::new_error(error, cell, String::new());
                 }
                 match (rate, &flows) {
                     (Err(error), _) => error,

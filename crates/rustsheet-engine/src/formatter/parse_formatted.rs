@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{
-        parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
+        am_pm_word, parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm,
         parse_letter_period_serial_in,
     },
     date_text::{parse_date, CurrentYear},
@@ -97,11 +97,11 @@ fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
 /// `12:30`, `9:05`, `1:2` and `10:00:` are `h:mm`, `10:00:30` is `h:mm:ss`, a fractional second is
-/// `mm:ss.0`, `24:00`, `25:00` and `100:00` are `[h]:mm:ss`, and `10:60` and `10:00:60` are
+/// `mm:ss.0`, `24:00`, `25:00:30` and `100:00` are `[h]:mm:ss`, and `10:60`, `10:99` and `10:00:60` are
 /// numbers with General; `:30` and ` 10:00` (a leading space) stay text
 /// (probes/t3894-bare-24h-clock, excel-graph 2026-11-03;
-/// docs/research/t3894-bare-24h-clock-2026-11-03.md). Shapes beyond those probed (an hour of 24
-/// or more with seconds or an out-of-range minute) stay text (T-3903).
+/// docs/research/t3894-bare-24h-clock-2026-11-03.md; probes/t3903-bare-24h-clock-extra). An hour
+/// of 24 or more with an out-of-range minute or second stays text (`25:60`, `25:00:60`).
 fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
     let first = text.bytes().next()?;
     if !first.is_ascii_digit()
@@ -125,6 +125,9 @@ fn parse_bare_clock(text: &str) -> Option<(f64, Option<String>)> {
         [hour, minute] if *hour >= 24 && *minute < 60 => Some("[h]:mm:ss"),
         [hour, minute] if *hour < 24 && *minute < 60 => Some("h:mm"),
         [hour, minute, second] if *hour < 24 && *minute < 60 && *second < 60 => Some("h:mm:ss"),
+        // Hours of 24 or more take the elapsed-hours format with seconds too; an out-of-range
+        // minute or second there stays text (probes/t3903-bare-24h-clock-extra A1:A21, T-3903).
+        [hour, minute, second] if *hour >= 24 && *minute < 60 && *second < 60 => Some("[h]:mm:ss"),
         // An out-of-range minute or second with an hour below 24 is a number with General.
         [hour, ..] if *hour < 24 => None,
         _ => return None,
@@ -153,9 +156,11 @@ fn parse_bare_letter_clock(text: &str) -> Option<(f64, Option<String>)> {
 }
 
 /// `text` without the dot after a trailing single-letter `A`/`P` suffix (`10:00 A.` -> `10:00 A`):
-/// typed text accepts it (probes/date-text-single-letter-ap N12).
+/// typed text accepts it (probes/date-text-single-letter-ap N12), also before trailing spaces
+/// (`10 A.  ` is 10 AM, probes/t3948-letter-period-gate-edges A14).
 fn without_single_letter_dot(text: &str) -> &str {
     match text
+        .trim_end_matches(' ')
         .strip_suffix('.')
         .and_then(|rest| rest.rsplit_once(' '))
     {
@@ -170,7 +175,7 @@ fn is_single_letter_ap(word: &str) -> bool {
 
 /// Whether `word` is a clock's `AM`/`PM` or single-letter `A`/`P` word, in any case.
 fn is_am_pm_word(word: &str) -> bool {
-    is_single_letter_ap(word) || word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm")
+    am_pm_word(word).is_some()
 }
 
 /// Cell format of typed text that stays text because its clock is rejected: a date followed by a
@@ -534,10 +539,12 @@ fn parse_plain_number(
     Ok((f, None))
 }
 
-/// Excel reads the digits of eight scripts as their values, alone or mixed with ASCII digits and
+/// Excel reads the digits of twelve scripts as their values, alone or mixed with ASCII digits and
 /// with each other: Arabic-Indic (U+0660..), Extended Arabic-Indic (U+06F0..), Devanagari
 /// (U+0966..), Bengali (U+09E6..), Thai (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..) and Myanmar
-/// (U+1040..); full-width digits stay text. Applied by number-text coercion only
+/// (U+1040..) in every probed form; Gurmukhi (U+0A66..), Tamil (U+0BE6..), Telugu (U+0C66..) and
+/// Khmer (U+17E0..) as a COUNTIF criterion (probes/t3559-collation-unprobed-blocks E136:E145, their
+/// other forms unprobed); full-width digits stay text. Applied by number-text coercion only
 /// (`cast::number_text_in`, the mixed fraction readers), not to text typed into a cell
 /// (TODO(T-3891)). Evidence: docs/excel-semantics/coercion.md "Script digits in number text
 /// (T-3446)", probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms.
@@ -547,10 +554,14 @@ pub(crate) fn script_digit_to_ascii(c: char) -> char {
         '\u{06F0}'..='\u{06F9}' => 0x06F0,
         '\u{0966}'..='\u{096F}' => 0x0966,
         '\u{09E6}'..='\u{09EF}' => 0x09E6,
+        '\u{0A66}'..='\u{0A6F}' => 0x0A66,
+        '\u{0BE6}'..='\u{0BEF}' => 0x0BE6,
+        '\u{0C66}'..='\u{0C6F}' => 0x0C66,
         '\u{0E50}'..='\u{0E59}' => 0x0E50,
         '\u{0ED0}'..='\u{0ED9}' => 0x0ED0,
         '\u{0F20}'..='\u{0F29}' => 0x0F20,
         '\u{1040}'..='\u{1049}' => 0x1040,
+        '\u{17E0}'..='\u{17E9}' => 0x17E0,
         _ => return c,
     };
     char::from_digit(c as u32 - zero, 10).unwrap_or(c)

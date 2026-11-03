@@ -77,11 +77,13 @@ pub(crate) enum GridReading {
     /// probes/t2816-lift-*, T-2824).
     TopLeft,
     /// Each element's top-left cell read as an array element, so text follows the consumer's
-    /// array rule and booleans are skipped, unlike a referenced cell (AVERAGEA, MAXA:
+    /// array rule and booleans are skipped, unlike a referenced cell (AVERAGEA, MAXA, MINA and the
+    /// VARA family:
     /// `AVERAGEA(OFFSET(A4,{0;3},0))` over "5" and 7 is 3.5, over a blank and TRUE `#DIV/0!`, and
-    /// `MAXA(..)` over a blank and TRUE 0; probes/t2816-lift-averagea-*, -maxa-*, T-2824). For
-    /// MAXA, whose array rule skips text, no probe yet tells skipped text from text as 0
-    /// (UNVERIFIED, T-3533). Blanks and errors are as under `TopLeft`.
+    /// `MAXA(..)` over a blank and TRUE 0; probes/t2816-lift-averagea-*, -maxa-*, T-2824). MAXA,
+    /// MINA and the VARA family skip text, as their array rule does: `MAXA(OFFSET(A4,{0;4},0))`
+    /// over "5" and -3 is -3, `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7 and -3 is 50
+    /// (probes/t3533-lift-*, T-3533). Blanks and errors are as under `TopLeft`.
     TopLeftElements,
 }
 

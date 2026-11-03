@@ -26,6 +26,9 @@ pair U+10400 and U+10428 is not equal.
 - Failing cells: probes/t3584-match-fold-weightless Calc!B1:D32, F1:F32, P1:P85. Most are weightless pairs; B21, D21,
   F21 (Greek Extended class), B25, D25, F25 (Deseret case pair apart), P7 (`ϵ=ε`) and P9 (U+1FBE `=ι`) are not:
   coercion.md "Weightless characters in `=`, COUNTIF and XMATCH (T-3584)", its second-to-last bullet.
+- Also owned: probes/t3895-collation-script-digits A185 (`UNICHAR(3715)&"a"="a"` TRUE). T-3895 maps U+0E83, a
+  weightless character, to a skipped one (collation.rs `UNASSIGNED`) for the hold-out's row 599; replace that
+  stand-in with the weightless rule and keep A179:A188 of that case passing.
 - Code: `cmp_text_excel` and `element` (crates/rustsheet-engine/src/functions/util/collation.rs) give these
   characters a code-point primary weight today. Exact MATCH, VLOOKUP and HLOOKUP are T-3445's (they count each
   weightless character one for one).

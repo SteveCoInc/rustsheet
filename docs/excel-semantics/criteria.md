@@ -47,8 +47,13 @@ Evidence: probes/t3133-lookup-criteria-case-fold Calc!B1:B35, F1:I35, K1:L35, N1
 D-function prefix criteria fold `ς` too: DCOUNTA over `σx`, `ςx`, `Σ` counts 3 for `ς`, `σ` and `ς*` and 1 for `=ς`
 (probes/t3154-collation-accents Calc!H12:H15, T-3154). UNVERIFIED: the D-function fold of `İ` (T-3180); characters outside this
 list (other Greek and Cyrillic final forms, `ϐ`/`β`, `ﬀ`) are assumed to follow it.
-Status: VERIFIED
-Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` and `WildcardPattern::new`
+UNVERIFIED (inferred, T-3445): wildcard criteria fold as exact MATCH does (lookup.md "MATCH, VLOOKUP and HLOOKUP
+exact-match keys fold case one character to one": weightless characters one class, supplementary scripts apart, the
+wider classes such as `ϳ`/`Ͷ` and `ϴ`/`ϑ`), because exact MATCH's text keys share `WildcardPattern`; no probe covers
+those characters in criteria (T-3929). D-function prefix criteria keep SEARCH's fold.
+Status: VERIFIED for the list above
+Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445), through `folded_units` and
+`WildcardPattern::new`; D-function prefix criteria through `fold_case` (functions/util/collation.rs)
 
 ## Tildes inside wildcard patterns and wildcard-mode lookups
 Rule: once a criterion holds `*` or `?`, or always for a MATCH(..,0)/XMATCH(..,2) text lookup value, `~` makes the next

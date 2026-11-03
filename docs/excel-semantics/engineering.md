@@ -476,8 +476,9 @@ Tasks: T-2793, T-2810
   t3643-imlog2-grid the same cells, t3643-imln-points A1-A3). It gives 1-6·2^-53 for the 0.707106781186547 pair,
   as `hypot` does, and fits all 441 cells of each 21x21 log grid (0, ±1E-300, ±1E-20, ±1E-8, ±(1-1E-15), ±1,
   ±(1+1E-15), ±10, ±1E8, ±1E20, ±1E300 for each part) except IMLOG10's `10±1E8i` (I8, S8), whose imaginary part
-  `atan2/ln 10` prints 0.682188133491472 for Excel's ...473, one digit in the 15th (phase-1b). The logs' angle is
-  libm `atan2`, not ATAN2's `atan(y/x)`, which misses `IMLOG10("0.999999999999999+1i")`'s 0.341094088460461 (F5).
+  `atan2/ln 10` printed 0.682188133491472 for Excel's ...473 until T-3795 took `atan(y/x)·log10 e` (below, "IMLOG10
+  and IMLOG2 scale IMLN"). With that product the angle is ATAN2's `atan(y/x)` plus or minus π, which also fits
+  `IMLOG10("0.999999999999999+1i")`'s 0.341094088460461 (F5).
 - IMLN, IMLOG10 and IMLOG2 are `#NUM!` when ATAN2's quotient `y/x` overflows (ATAN2 is `#NUM!` there, numbers.md
   "ATAN2 is ATAN(y/x) plus or minus π"): `IMLOG10("1E-300+1E20i")`, `IMLOG10("-1E-300-1E20i")`,
   `IMLOG2("1E-300+1E300i")` and `IMLN("1E-300+1E20i")` are `#NUM!`, while `IMLOG10("1E-20+1E20i")` is
@@ -489,13 +490,16 @@ Tasks: T-2793, T-2810
   all `10000000000` (t3643-imsqrt-grid J2, J12, T2, T12), while `IMSQRT("1E-20+1E20i")` is
   `7071067811.86548+7071067811.86547i` (J3). Implemented (T-3643). IMSQRT of a part one ulp-band below 1 prints one
   digit high: `IMSQRT("0.999999999999999")` is `1` and `IMSQRT("-0.999999999999999")` `6.1257422745431E-17+1i`
-  (ours 0.999999999999999: the engine's root is 1-5·2^-53, Excel's at least 1-4·2^-53; A5, A15 and the 1E-300,
-  1E-20, 1E-8 imaginary columns of rows 5 and 15, 14 cells, phase-1b, unexplained).
+  (A5, A15 and the 1E-300, 1E-20, 1E-8 imaginary columns of rows 5 and 15, 14 cells). IMSQRT's modulus root is two
+  x87 roots, each rounded to 64 bits and then to a double (`extended_sqrt` twice, T-3795): 1-9·2^-53 squares to
+  1-18·2^-53, whose root is 1-9·2^-53, whose root is the midpoint 1-4.5·2^-53 in extended precision and rounds to
+  even, 1-4·2^-53, which prints as 1. Two plain roots give 1-5·2^-53 (0.999999999999999). It fits all 441 cells of
+  the grid and all 150 IMSQRT cells of probes-numeric/t3795-r4-im-last-digits (column A). Implemented (T-3795).
 - IMSECH over the same grid: `#NUM!` for |y| ≥ 1E20 when |x| ≤ 10 (rows 1-8 and 12-18 of columns J, K, T, U; 60
   cells, T-3642's argument cut), while |x| ≥ 1E8 gives "0" there (`IMSECH("1E8+1E20i")`, `IMSECH("-1E300+1E20i")`,
   `IMSECH("1E300+1E300i")`: J9, J10, J11, J19-J21, K19; the cosh overflow wins). `IMSECH("0.999999999999999±10i")` and
-  its negation are one digit off in the 15th (H5, H15, R5, R15; phase-1b, T-3795). Every other IMSECH grid cell
-  agrees with ours (t3643-imsech-grid).
+  its negation (H5, H15, R5, R15) need the unfused `sinh²x + cos²y` (below, T-3795). Every IMSECH grid cell agrees
+  with ours (t3643-imsech-grid).
 - IMLN, IMLOG10 and IMLOG2 are `#NUM!` when both parts are nonzero and `x²+y²` is infinite or subnormal: `1E153+1E153i` works,
   `1E154+1E154i` (sum 2E308) and `1E-154+1E-154i` (sum 2E-308 < 2.2250738585072014E-308) are `#NUM!`, `1.5E-154+1.5E-154i`
   (2.25E-308), `1E-160+1i` and `1.1E154+0.1E154i` work, and a zero part exempts the number (`IMLN("1E-160+0i")`,
@@ -513,9 +517,9 @@ Tasks: T-2793, T-2810
   `flushed_square` (functions/engineering/complex/mod.rs; probes/eng-imln-modulus-range A43-A56, A79, A80,
   eng-imln-modulus A17; excel-graph). Extrapolated, not probed: parts of about 1.06E-154 to 1.49E-154, where each
   square is subnormal but their sum is normal (`IMLN("1.2E-154+1.2E-154i")`; ours `#NUM!`, IMSQRT "0"; T-2894).
-Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117); probes/t3643-imlog10-grid, t3643-imlog2-grid, t3643-imsqrt-grid, t3643-imsech-grid, t3643-imln-points (excel-graph, 2026-11-01, T-3643).
+Evidence: probes/eng-impower, eng-imsub, eng-imdiv (excel-graph, 2026-10-17, T-1625); probes/eng-impower-imdiv-edges, eng-impower-angle-cut (excel-graph, 2026-10-19, T-1892); probes/eng-impower-past-cut (excel-graph, 2026-10-20, T-1950); probes/eng-imln-modulus, eng-imln-modulus-range (excel-graph, 2026-10-21, T-2117); probes/t3643-imlog10-grid, t3643-imlog2-grid, t3643-imsqrt-grid, t3643-imsech-grid, t3643-imln-points (excel-graph, 2026-11-01, T-3643); probes-numeric/t3643-r4-log-modulus (excel-graph, T-3643), t3795-r4-im-last-digits (excel-graph, 2026-11-03, T-3795).
 Status: VERIFIED (excel-graph)
-Tasks: T-1766, T-1892, T-1950, T-2117, T-2572, T-2894
+Tasks: T-1766, T-1892, T-1950, T-2117, T-2572, T-2894, T-3643, T-3795
 
 ## IMPOWER past the angle cut
 Rule: once IMPOWER's angle `atan2(y,x)·n` passes the cut (about 134217727), Excel's sine and cosine both read as the
@@ -578,7 +582,12 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   4.33329584706818-0.178960935839407i (G29; exact real part 4.3332958470681874). IMCSC's `(cosh 2y − 1)/2`
   (T-2044) missed G29 and G33; `cos²x·cosh²y + sin²x·(cosh²y − 1)` with `cosh²y = cosh y·cosh y` gets them but
   misses rows 45 and 79 (`-9.51393+8.31084i`, `1+0.5i`); `cos²x + (cosh y·cosh y − 1)` misses rows 20, 36, 45.
-- IMSECH (T-2750): `t = fma(sinh x, sinh x, cos²y)`, i.e. `cos²y + sinh²x` (sinh squared itself, unlike IMSEC) with the
+- IMSECH, superseded (T-3795): `t = sinh²x + cos²y` with each square rounded, unfused. The fused sum below swaps the
+  last digits of `IMSECH("0.999999999999999+10i")` (Excel +0.306614713343964i) and `IMSECH("-0.999999999999999+10i")`
+  (-0.306614713343963i; probes/t3643-imsech-grid H5, H15, R5, R15), and J34 below now fits unfused too (the sin, cos
+  and sinh kernels changed since T-2750); the unfused sum changes no other cell of the 100 cases with IMSECH or
+  IMCSCH, and fits all 130 IMSECH cells of the fresh sweep probes-numeric/t3795-r4-im-last-digits (column D).
+- IMSECH (T-2750, superseded by T-3795 above): `t = fma(sinh x, sinh x, cos²y)`, i.e. `cos²y + sinh²x` (sinh squared itself, unlike IMSEC) with the
   product sinh²x fused into the sum (one rounding), result `(cosh x·cos y/t, −sinh x·sin y/t)`: all 62 finite cells.
   The unfused sum (T-2044) misses only J34/L34, `IMSECH("1.34384-77.6742i")`, Excel -0.367433538630135+0.376675382306336i
   (exact imaginary part 0.37667538230633553, unfused ...306335); fusing cos²y into the sum instead (`fma(cos y, cos y,
@@ -691,14 +700,29 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `ln |z|` by the double below ln 2, fails on A108 `IMLOG2("712+3i")` because the division and the multiplication
   round differently; `hypot` as the modulus misses only `-0.66925-0.233532i` (sweep row 53). `log2`, `ln/LN_2` and
   `ln·log2 e` fit 92-94 of the 103 real parts.
-- IMLOG10's imaginary part is `atan2 / LN_10`: `atan2·log10 e` misses `IMLOG10("711+1.5i")` (0.000916231724847909,
+- IMLOG10 and IMLOG2 scale IMLN (T-3795, superseding the two T-2231 kernels here): each is IMLN's parts, `ln` of
+  the doubly rounded modulus and the argument `atan(y/x)` plus or minus π (Excel's ATAN2 kernel), times one double
+  constant: `log10 e` (0.4342944819032518) for IMLOG10, the double one ulp above `log2 e` for IMLOG2. It fits all 896
+  IMLOG10 texts of the eval suites (literal or COMPLEX arguments) and all 924 IMLOG2 texts but one:
+  `IMLOG10("10+1E8i")` is `8+0.682188133491473i` (t3643-imlog10-grid I8; `atan2/LN_10` ...472) and
+  `IMLOG10(COMPLEX(-2.07417486058375E-29,26460080.1885507))` has real part 7.42259115600387 (probes-numeric
+  t3643-r4-log-modulus B29; `log10 |z|` misses it). libm `atan2` instead of ATAN2's kernel misses
+  `IMLOG10(COMPLEX(-0.561651839159889,-0.827373683149484))`'s -0.941193126217726i and
+  `IMLOG2(COMPLEX(-1,1.05859478337023E-09))`'s 4.53236014029996i (B101, C173); dividing by `LN_10` misses 8 imaginary
+  parts, the product with libm `atan2` 3, and x87 extended forms (fpatan, 64-bit constants) 6 or more. The one miss,
+  `IMLOG2(COMPLEX(0.190581435720431,0.981671389192299))` (C111, Excel 1.98953694302209i, ours ...210), is Excel's
+  `atan(5.15092871182028)` one ulp below the correctly rounded 1.3790419226756176 (true value 0.37 ulp below it):
+  `π/2 - atan(x/y)` reproduces it but misses I8 and B101, so Excel's CRT `atan` is not modelled (time-boxed, T-3795).
+  The fresh sweep probes-numeric/t3795-r4-im-last-digits (seed 3795, after the freeze) matches all 300 of its
+  IMLOG10 and IMLOG2 cells (columns B, C). IMLN prints the same digits with either angle.
+- Superseded by the entry above (T-3795): IMLOG10's imaginary part is `atan2 / LN_10`: `atan2·log10 e` misses `IMLOG10("711+1.5i")` (0.000916231724847909,
   eng-im-overflow-edges A95) and `atan2·(1/LN_10)` misses `IMLOG10("1.5+710.4i")` (0.68127117135401); the division fits
   all 36 IMLOG10 cells (T-2231). Its real part stays `log10 |z|` (`ln/LN_10` fits the same cells).
 Evidence: probes-numeric `im-last-digit-sweep` (excel-graph, 2026-10-21); COMPLEXs.xlsx G7, G8, G14, G23, H14, H23,
-T14, V4, V15, W4, W7, W21, Z25, AB7; probes/eng-argument-modes A45; probes/eng-im-overflow-edges A47.
+T14, V4, V15, W4, W7, W21, Z25, AB7; probes/eng-argument-modes A45; probes/eng-im-overflow-edges A47; probes-numeric/t3643-r4-log-modulus, t3795-r4-im-last-digits, probes/t3643-imsech-grid (excel-graph, T-3795).
 Status: VERIFIED (excel-graph)
-Implemented in: `imcsc`, `imsec`, `imsech`, `imcot` in functions/engineering/complex/trig.rs, `imabs`, `imargument` in functions/engineering/complex/mod.rs (T-2044); `imlog2_parts`, `imlog10_parts` (T-2231)
-Tasks: T-2044, T-2231
+Implemented in: `imcsc`, `imsec`, `imsech`, `imcot` in functions/engineering/complex/trig.rs, `imabs`, `imargument` in functions/engineering/complex/mod.rs (T-2044); `imlog2_parts`, `imlog10_parts` (T-2231, T-3795)
+Tasks: T-2044, T-2231, T-3795
 
 ## IMTAN and IMCOT use the double-angle form (T-0907)
 Rule: IMTAN computes tan(x+iy), y nonzero, as `(sin 2x + i·sinh 2y) / (cos 2x + cosh 2y)` (a
@@ -1099,6 +1123,20 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   IMSECH takes no series at all), so they are cosh x or division residue, not the series. Status: VERIFIED (excel-graph) for the
   real IMSECH and IMCSCH kernels at |x| <= 0.01 and for the three-term series at complex x; UNVERIFIED for the 8
   leftovers named above. Ours: `imsech`, `imcsch` in functions/engineering/complex/trig.rs.
+- **IMSINH, IMCOSH, IMSECH and IMCSCH take libm's cosh below |x| 1E-4 (T-3930).** At 0 < |x| <= 0.01 sinh x is
+  the three-term series (T-3721) and cosh x the `1/u` form, except below |x| 1E-4, where cosh x is libm's:
+  `IMSECH("-8.74352867749883E-05+1.16398498777952i")` is 2.52727602503685+0.000512882556578914i (form ...684),
+  `IMCOSH("3.58722248184392E-06+0.256378854055322i")` has real part 0.967314566321166 (form ...165) and
+  `IMCSCH("2.5814545068154E-05-0.118602492728453i")` imaginary part 8.45132516126195 (form ...194;
+  probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C311, D169, t3720-im-reciprocal-small-x-complex A3, D7,
+  B25, B148). Above the cut the form is right: libm's cosh everywhere breaks 33 texts at
+  |x| 1.09E-04..0.01. The cut is fitted, bracketed 8.8E-05..1.09E-04 (`LIBM_COSH_BELOW`, FITTED). Fit lab, train and
+  test exact: cut 1131 and 485 of im-small-x-complex, against 1128 and 484 for the form alone, 1117 and 482 for libm,
+  1052 and 448 correctly rounded. The fresh sweep drawn after the freeze (probes-numeric/t3930-r4-im-small-x-cosh,
+  480 texts, half of them at |x| 3E-5..3E-4) gives cut 480, form 475, libm 476. Still off, UNVERIFIED (T-3930):
+  `IMSECH("-0.00529114829570232-0.0605498694819928i")` (C386, Excel -0.00032135183420584i, every candidate ...841)
+  and the real `IMSECH("-0.00802240437783925")` (C390, Excel 0.99996782137691), which the `1/u` form's `1/cosh` fits
+  but T-3609's libm `1/cosh` (all 75 of T-3609's real texts, against the form's 72) does not.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is

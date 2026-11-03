@@ -4,6 +4,7 @@
 
 use crate::expressions::parser::ArrayNode;
 use crate::expressions::types::CellReferenceIndex;
+use crate::limits::check_array_cells;
 use crate::{
     calc_result::CalcResult, expressions::parser::Node, expressions::token::Error, model::Model,
 };
@@ -61,6 +62,11 @@ impl Model {
             CalcResult::Range { left, right } => {
                 let n_rows = (right.row - left.row + 1) as usize;
                 let n_cols = (right.column - left.column + 1) as usize;
+                // Every cell is read into a dense grid, so the range is held to the array
+                // limit before anything is allocated (`LINEST(A1:XFD1048576,..)`, directive 5).
+                if let Some((error, message)) = check_array_cells(n_rows, n_cols) {
+                    return Err(CalcResult::new_error(error, cell, message));
+                }
                 let mut rows = Vec::with_capacity(n_rows);
                 for r in 0..n_rows {
                     let mut row = Vec::with_capacity(n_cols);

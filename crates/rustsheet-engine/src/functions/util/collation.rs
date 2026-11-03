@@ -41,9 +41,10 @@
 //! (probes/t3114-collation-beyond-latin1, probes/t3154-collation-accents; coercion.md "Letters
 //! beyond Latin-1 and combining marks"). Hebrew, Arabic, Devanagari, Thai, Lao, Hangul, the CJK
 //! ideographs and astral characters follow Excel's block order ([`script_order`]); Hebrew points,
-//! Arabic harakat and Thai tone marks are accents; Arabic-Indic and Devanagari digits are their
-//! digit; arrows, symbols and dingbats sort after the punctuation (probes/t3276-collation-other-scripts,
-//! T-3324). Every other character keeps code-point order after the letters, as before T-0220.
+//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and eight
+//! other blocks' digits are their digit (T-3895, T-3917); arrows, symbols and dingbats sort after
+//! the punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps
+//! code-point order after the letters, as before T-0220.
 //!
 //! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs as the same unit of a pair does
 //! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
@@ -54,12 +55,14 @@ use std::cmp::{Ordering, Reverse};
 use std::iter::Peekable;
 
 mod kana;
+mod lookup_fold;
 mod scripts;
 
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
-use scripts::{digit_variant, script_mark, script_order, symbol, unit, IDEOGRAPHS};
+pub(crate) use lookup_fold::fold_lookup;
+use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -239,8 +242,11 @@ const NBSP: u32 = SPACE + 1;
 /// and CHAR(12), unprobed, are kept with them in code-point order.
 const WHITESPACE_BASE: u32 = NBSP + 1;
 const PUNCTUATION_BASE: u32 = WHITESPACE_BASE + 5;
-/// The symbols after [`PUNCTUATION`] ([`symbol`]), by code point from U+2190.
+/// The symbols after [`PUNCTUATION`] ([`symbol`]).
 const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
+/// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
+/// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
+const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
 const DIGIT_BASE: u32 = 0x800;
 /// `∞` sorts between `"9"` and `"a"` (probes/t3276-collation-other-scripts rank A91 = 24).
 const INFINITY: u32 = digit(9) + 4;
@@ -264,12 +270,16 @@ const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
 /// `+` and `0` only. So the Latin-1 marks, quotes and currency signs go between `~` and `+`, and
 /// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed). The middle dot
 /// `·` sits between `µ` and `…` and is neither skipped nor equal to `""`
-/// (probes/t3896-collation-middle-dot Calc!A29 = 31, A54 = 30, A28 = 32).
-const PUNCTUATION: [char; 60] = [
+/// (probes/t3896-collation-middle-dot Calc!A29 = 31, A54 = 30, A28 = 32). The CJK marks `、 。`
+/// sort between `%` and `~`, `「` after `~`, and the currency signs `₩ € ₹` in that order before
+/// `+` (probes/t3559-collation-unprobed-blocks ranks 7 to 15); their places against the unprobed
+/// ASCII marks and the Latin-1 signs are UNVERIFIED. [`punctuation`] lists the marks above `€`.
+const PUNCTUATION: [char; 64] = [
     '!', '"', '#', '$', '%', '&', '(', ')', '*', ',', '.', '/', ':', ';', '?', '@', '[', '\\', ']',
-    '^', '_', '`', '{', '|', '}', '~', '¡', '¦', '¨', '¯', '´', '¸', '¿', '\u{2018}', '\u{2019}',
-    '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '€', '+', '<', '=', '>', '±', '«', '»', '×', '÷',
-    '§', '©', '¬', '®', '°', 'µ', '\u{b7}', '…', '•',
+    '^', '_', '`', '{', '|', '}', '\u{3001}', '\u{3002}', '~', '\u{300c}', '¡', '¦', '¨', '¯', '´',
+    '¸', '¿', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '\u{20a9}', '€',
+    '\u{20b9}', '+', '<', '=', '>', '±', '«', '»', '×', '÷', '§', '©', '¬', '®', '°', 'µ',
+    '\u{b7}', '…',
 ];
 
 /// What one case-folded character contributes to each pass.
@@ -346,12 +356,6 @@ const SUPERSCRIPT: u8 = 1;
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
 
-/// The variant pass weights of the Arabic-Indic and Devanagari digits: after the ASCII digit, in
-/// this order (probes/t3276-collation-other-scripts G25:G27). Their order against
-/// [`FULL_WIDTH`] is unprobed.
-const ARABIC_INDIC_DIGIT: u8 = 3;
-const DEVANAGARI_DIGIT: u8 = 4;
-
 /// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
 /// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
 /// probes/t3275-collation-width-kana Calc!G12:G14, ranks A90:A95).
@@ -389,6 +393,8 @@ const HYPHEN: u8 = APOSTROPHE + 2;
 const FULL_WIDTH_HYPHEN: u8 = APOSTROPHE + 3;
 const EN_DASH: u8 = APOSTROPHE + 4;
 const EM_DASH: u8 = APOSTROPHE + 5;
+/// The skipped weight of U+0E83 (a weightless character, T-3904): after the em dash, unprobed.
+const UNASSIGNED: u8 = APOSTROPHE + 6;
 
 fn letter(base: char) -> u32 {
     LETTER_BASE + (u32::from(base) - u32::from('a'))
@@ -432,10 +438,10 @@ fn expansion(first: char, second: char) -> Element {
     }
 }
 
-/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark is at or
-/// below `€`, so text in other scripts skips the scan.
+/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark but `₹`,
+/// `、`, `。` and `「` is at or below `€`, so text in other scripts skips the scan.
 fn punctuation(c: char) -> Option<u32> {
-    if c > '€' {
+    if c > '€' && !matches!(c, '\u{20b9}' | '\u{3001}' | '\u{3002}' | '\u{300c}') {
         return None;
     }
     PUNCTUATION
@@ -540,6 +546,9 @@ fn element(c: Char) -> Element {
         Char::Scalar(c) => fold(c),
         Char::Lone(lone) => return single(unit(lone)),
     };
+    if let Some(element) = script_element(c) {
+        return element;
+    }
     match c {
         '\'' => Element::Skipped(APOSTROPHE),
         '-' => Element::Skipped(HYPHEN),
@@ -563,33 +572,26 @@ fn element(c: Char) -> Element {
         '\u{363}'..='\u{36f}' => combining_letter(c)
             .map_or_else(|| single(other(c)), |base| accented(base, COMBINING_LETTER)),
         '\u{300}'..='\u{362}' => Element::Mark(mark_weight(c).unwrap_or(0)),
-        // Other-script digits are their digit, after it in the variant pass (`"3" < "٣" < "३" <
-        // "3a"`; probes/t3276-collation-other-scripts ranks A10, A81:A86, G25:G27).
-        '\u{660}'..='\u{669}' => digit_variant(u32::from(c) - 0x660, ARABIC_INDIC_DIGIT),
-        '\u{966}'..='\u{96f}' => digit_variant(u32::from(c) - 0x966, DEVANAGARI_DIGIT),
-        // Hebrew points and cantillation, Arabic harakat and the Thai tone marks are accents on
-        // their letter, weighed by code point (`"ב" < "ב"&UNICHAR(1463) < "ב"&UNICHAR(1468) <
-        // "בא"`, `"ب" < "ب"&UNICHAR(1614) < "ب"&UNICHAR(1617) < "با"`, `"ก" < "ก"&UNICHAR(3656) <
-        // "กก"`; probes/t3276-collation-other-scripts G13:G16, G19, G20). Only U+05B7, U+05BC,
-        // U+064E, U+0651 and U+0E48 are probed.
-        '\u{591}'..='\u{5bd}'
-        | '\u{5bf}'
-        | '\u{5c1}'
-        | '\u{5c2}'
-        | '\u{5c4}'
-        | '\u{5c5}'
-        | '\u{5c7}' => script_mark(c, 0x590),
-        '\u{610}'..='\u{61a}' | '\u{64b}'..='\u{65f}' | '\u{670}' => script_mark(c, 0x600),
-        '\u{e48}'..='\u{e4b}' => script_mark(c, 0xe00),
         '\u{221e}' => single(INFINITY),
-        // `™` sorts between `"Ab"` and `"ÿ"` (rank A89 = 28): placed as the letters `tm` with the
-        // superscript variant, so it is not equal to `"tm"` (unprobed).
+        // `™` sorts after `"t"`, `"tm"` and `"tn"` and before `"z"` (probes/t3559-collation-unprobed-blocks
+        // G1:G5, ranks 46 to 50), so it is not `tm` with a variant weight: placed as `t` and a weight
+        // above every letter, before `"u"` (where it sits between `"tn"` and `"z"` is unprobed).
         '\u{2122}' => Element::Weights {
-            primary: [letter('t'), letter('m')],
+            primary: [letter('t'), letter('z') + 1],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: 0,
+        },
+        // `℃` and `№` sort after `"a"` and before `"tm"` (ranks 43 to 46): placed as the letters `c`
+        // and `no` of their compatibility forms with the superscript variant (UNVERIFIED).
+        '\u{2103}' => superscript(letter('c'), NO_ACCENT),
+        '\u{2116}' => Element::Weights {
+            primary: [letter('n'), letter('o')],
             accent: NO_ACCENT,
             kana: NORMAL_KANA,
             variant: SUPERSCRIPT,
         },
+        '\u{2022}' => single(BULLET),
         '¼' => single(digit(0) + 1),
         '½' => single(digit(0) + 2),
         '¾' => single(digit(0) + 3),

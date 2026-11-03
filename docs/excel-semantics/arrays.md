@@ -1008,9 +1008,10 @@ T-1326 follow-up (probes/pivotby-followup, 63 PIVOTBY questions over the same Da
 - Cells: errors in values make their cells and totals that error (P!A321); a LAMBDA array result is `#VALUE!` per cell (shown; the cell holds a nested array, see the T-2360 paragraph above), `""`
   where there are no records (P!A341); text results show as text (P!A541). An array relative_to (here a filter column put one
   argument too far) is lifted per element: a 10x1 array (P!A681).
-Unprobed: whether one row of text values with no rows below is a header (the engine takes it as data; a scalar text
-`values` with field_headers omitted is `#VALUE!`, see "GROUPBY scalar inputs, option order and scalar filters in the gen-m7
-arg-pairs batch" below, and T-3854 probes the rest), and where
+One row of text values with no rows below is a header when field_headers is omitted, so no record is left and GROUPBY is
+`#VALUE!`: scalar text, a 1x1 array of text and a FILTER giving one text row alike; with field_headers 0 or 2 they group
+(probes/t3854-groupby-scalar-inputs, excel-graph, 2026-11-03, T-3854; see "GROUPBY scalar inputs, option order and scalar
+filters in the gen-m7 arg-pairs batch" below). Unprobed: where
 error keys sort against text, booleans and the blank key (the engine uses `sort_key_cmp`'s order: after booleans,
 before blank).
 T-1323 follow-up (probes/groupby-sort-filter-args, 83 questions summarised in one cell each, excel-graph, 2026-10-16;
@@ -1191,10 +1192,18 @@ Value sorts with error aggregates (same probe):
 - A descending sort reverses the whole order, so the errors come first. Equal aggregates keep key order in both
   directions (A1:A55).
 - Ours already matches.
-- Open (T-3893): PIVOTBY's row value sort when every row's Total aggregate is `#VALUE!` (an array-returning LAMBDA).
-  Excel orders `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`'s
-  rows 0, 42, 2.5, 1E+15 ascending and exactly the reverse descending. That is neither key order nor first appearance
-  (42, 2.5, 0, 1E+15), so the ties break on something else. Ours keeps key order in both directions (probe A61:G79).
+- An array result (a LAMBDA returning an array, shown as `#VALUE!`) is not sorted as the `#VALUE!` it shows but
+  by the array: after every number, text and TRUE and before every error, and two arrays element by element in
+  row-major order, a blank element greatest and a shorter array first when it is the start of the other (`{"a";1}`
+  before `{TRUE;1}`, `{1;6}` before `{2;4}`, `{blank}` before `{blank;-0.5}`). So `LAMBDA(x,x)` sorts the groups by
+  their first record's value, and a descending sort reverses that order. Equal arrays keep key order both ways
+  (probes/t3893-pivotby-error-tie-order A461-A651, GROUPBY and PIVOTBY rows and columns, excel-graph, 2026-11-03;
+  the blank element and the prefix: the owned call
+  `PIVOTBY(Data!E1:E12,Data!B1:E12,Data!B1:B12,LAMBDA(acc,acc),0,-1,±2,TRUE,1,(Data!B1:B12<0.5),2)`, rows 0, 42,
+  2.5, 1E+15 ascending, t3893-pivotby-error-sort-header A61:G79, gen-m7 febfd6901374d79c A11225).
+  An error aggregate keeps the error rules above, `relative_to` included (A1-A351, A361-A371, A501-A511).
+  Unprobed: a blank element against text, booleans or errors (the engine: greatest), and a one-cell reference result
+  (the engine: compared like an array). Ours: implemented (`grouping.rs` `aggregate_cmp`).
 Unprobed (PIVOTBY): an error header cell in a joined column name (the engine: that error); a joined column name longer
 than a cell holds (the engine: `#VALUE!`, after the 32,767-character cell limit in coercion.md "Text longer than 32,767
 characters"); value sorts over three or more fields (rows: every level by its aggregate; columns: the last); and
@@ -2216,6 +2225,12 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   `values` lose to a later option's error value, a blank-cell `values` does not (below).
 - `row_fields` that is a one-cell reference to an error (`Data!G9`) is `#VALUE!`, but a literal error there is that error
   (`GROUPBY(#REF!,2,..)` `#REF!`), and `GROUPBY(Data!G9,Data!G9,..)` is the values' `#DIV/0!` (35679b4facc62956 A10554-A11774).
+  It is `#VALUE!` with field_headers 0, 1, 2 and 3 too, while a 1x1 array holding an error is an ordinary key
+  (`GROUPBY({#N/A},{1},_xleta.SUM)` is the row `#N/A`, 1 and its total; probes/t3854-groupby-scalar-inputs A13-A67, A103, A121).
+- Why scalar text `values` are `#VALUE!` with field_headers omitted: one row of text is taken as the header, leaving no record.
+  With field_headers 0 or 2 `GROUPBY(2,"abc",_xleta.COUNTA,0)` is the row 2, 1 and its total; with 1 or 3 the header takes
+  the only row and it is `#VALUE!`. A 1x1 array of text and a FILTER giving one text row behave the same (t3854 A1-A133).
+- A one-cell range of a blank cell as `values` (`S!A3:A3`) is `#VALUE!` as the cell is (t3854 A139-A151).
 - A text, empty-text or blank option is `#VALUE!` ahead of a later option's error value
   (`GROUPBY(Data!A1:A12,Data!D1:E12,_xleta.AVERAGE,Data!G7,Data!G9)` is `#VALUE!`, eb01a9867300331b A11164;
   `GROUPBY(Data!D1:E12,Data!C1:E12,_xleta.AVERAGE,Data!G6,-2,0,(Data!A1:A12<0.1),Data!G9)` too, 06c84cc76de04bae A10676), though an invalid number loses to the later error (probes/groupby-sort-filter-args B61-B78). Text or blank
@@ -2231,7 +2246,14 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   A4515; excel-graph, 2026-11-03, T-3839). The earlier keep-all evidence has one key and one value column with no header row
   ("GROUPBY and PIVOTBY" above). FALSE as field_headers is 0 here (F!B15:K15). A lifted `field_headers` beside a scalar TRUE
   filter is `#VALUE!` in every element (L!A1:B2, 06c84cc76de04bae B3783:B3784), since the call has two key columns; without the
-  filter its blank elements give 0.3 (L!D1:E2). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
+  filter its blank element (L!E1) and its FALSE element (L!E2) give 0.3, and its text elements are `#VALUE!` (L!D1:D2).
+  Two edges (probes/t3880-groupby-scalar-filter-edges, excel-graph, 2026-11-03, T-3880): beside a header row and exactly one
+  record, a 1x1 filter is that record's own element, as a filter as tall as the records is, so TRUE, 2, `{TRUE}` and a
+  one-cell reference to TRUE keep the record and FALSE or `{FALSE}` keep none (`#VALUE!`), whatever the key width
+  (`GROUPBY(S!A1:A2,S!B1:B2,_xleta.SUM,1,,,{TRUE})` is x, 5; Total, 5: G!A1:A41; two key columns G!A37); with two records
+  it is `#VALUE!` (G!A29). A detected header row counts as a header row: `GROUPBY(S!A1:A4,S!B1:B4,_xleta.SUM,,,,TRUE)` and
+  `{TRUE}` are `#VALUE!` though the call without the filter spills (G!A45:A57), and beside one record TRUE keeps it
+  (G!A63:A74); a detected none keeps every row (G!A78). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), the FALSE element is `#VALUE!`
   (06c84cc76de04bae B5736, 7ab51243a366f57b B8054, and as `field_headers` f310ddb6bc8ec33a B4150), not because it is FALSE:
   each of those calls has a filter column that drops rows, and only the first element that filters gets a value ("A lifted
@@ -2240,14 +2262,16 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   array as `field_headers` gave `#VALUE!` for its blank and FALSE elements (06c84cc76de04bae B3783:B3784), but that call also
   has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
-`Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
+`Model::groupby_args`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
 (`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, ec5094d09c82f94d A6223; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
 `#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
-reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
+reference). Since T-3854 the error-reference rule holds whatever field_headers is, the text rule is header detection
+(`values_have_header`: one text row alone is a header), and a one-cell blank range is a blank cell. The other rules are known failures in
 eval/baseline/gen-m7.txt.
-Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`).
-Status: VERIFIED (excel-graph) for the cells named; a FALSE element of a lifted `field_headers` is UNVERIFIED
-Tasks: T-3837, T-3838, T-3839, T-3840
+Ours: the scalar-filter rule since T-3839 (`Model::filter_rows`, its `one_keeps_all` from `Model::groupby_args`); since
+T-3880 its records-height arm comes before the one-value arm, so a header row with one record keeps the record.
+Status: VERIFIED (excel-graph) for the cells named
+Tasks: T-3837, T-3838, T-3839, T-3840, T-3880
 
 ## PIVOTBY in the gen-m7 arg-pairs batch (T-3841)
 Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
@@ -2330,15 +2354,21 @@ so the later calls meet a filter taller than them.
 - The gen-m7 cells: Data!A1:B2 lifted with a filter column is `#VALUE!` ("a*"), the blank's value, `#VALUE!` ("?b"),
   `#VALUE!` (FALSE) (probes/t3840-groupby-lifted-false-element G!A1:B8, the calls of 06c84cc76de04bae B5735,
   7ab51243a366f57b B8053 and f310ddb6bc8ec33a B4149); without the filter the FALSE element is -1 (G!A10:B29).
-Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840).
+- An error element of the lifted `field_relationship` is its own error before and after the filter is spent, and spends
+  nothing: S!H1:I2 = {0,1;#N/A,1} beside `(Data!C1:C12<0.2)` is -1, `#VALUE!`; `#N/A`, `#VALUE!`, and S!H4:I5 =
+  {#N/A,0;0,1} is `#N/A`, -1; `#VALUE!`, `#VALUE!`; without the filter or with TRUE every other element is -1
+  (probes/t3880-groupby-scalar-filter-edges G!A89:B102, T-3880; ranges because an array constant cannot hold `NA()`). An
+  error element of a lifted `field_headers` or total depth is unprobed.
+Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), and t3880-groupby-scalar-filter-edges (T-3880).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
-every later element `#VALUE!`; a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
+every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
+argument, T-3880); a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
 lift beside a filter column is unprobed (T-3892).
 Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
 row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
 that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840
+Tasks: T-3840, T-3880
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
@@ -2507,3 +2537,18 @@ Evidence: gen-m7 arg-pairs batch (excel-graph, 2026-10-31, T-3497); the full cel
 Ours: as above since T-3507, whose reordering of SORT's argument checks covers it (`fn_sort`).
 Status: VERIFIED (excel-graph); implemented (T-3507)
 Tasks: T-3508
+
+## LINEST, LOGEST, TREND and GROWTH: a data range over the array limit is #ERROR! (T-2557)
+Rule: the four functions read every cell of a `known_y`, `known_x` or `new_x` range into a dense grid (a blank cell
+is `#VALUE!`, so the used area cannot stand for the range). A range of more than 1,048,576 cells (`MAX_SIZE` = `LAST_ROW`, the
+`check_array_cells` bound; `A:A` is exactly at it, `A:B` is over) is `#ERROR!`, refused from its extent before any allocation:
+`LINEST(A1:XFD1048576,..)` no longer sizes a matrix from the full grid. A whole column, within the bound, is read
+and is `#VALUE!` when it holds blanks, as the used rows with a blank do (unit test
+`regression_functions_bound_huge_ranges`).
+The refusal comes when the argument is read, so it precedes a later argument's error value and the `#REF!` shape check:
+`LINEST(A1:XFD1048576,1/0)` is `#ERROR!`, where "LINEST and LOGEST report error values first" (statistics.md) gives
+`#DIV/0!` for a range within the limit. This override of the evidenced order is part of the deviation.
+Evidence: none for Excel; this is a resource limit (CLAUDE.md directive 5).
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/functions/statistical/regression.rs (`Model::read_data`)
+Tasks: T-2557

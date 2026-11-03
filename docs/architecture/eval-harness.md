@@ -24,6 +24,7 @@ side by side.
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
 differs from the pin) is listed as `not fetched` and skipped, with a note, by `run`/`check`/`update-baseline`.
+`run`/`check`/`update-baseline` take `--fetch-missing`: each *selected* suite whose cache is missing or stale is then fetched (as `fetch` does, printing `fetched <name> (<n> files)`) before scoring; a failed fetch prints `skipping <name>: fetch failed: <error>`, skips that suite and does not change the exit code. Without the flag nothing is fetched.
 Use this for sources that are too large or not redistributable (GPL / CC-BY-SA); never vendor them.
 
 Current suites:

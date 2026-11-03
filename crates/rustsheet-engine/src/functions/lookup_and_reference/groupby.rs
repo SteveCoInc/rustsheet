@@ -33,21 +33,9 @@ struct GroupbyInputs {
     /// `field_headers`, `total_depth`, `sort_order` and `filter_array`, `None` when omitted.
     options: Vec<Option<CalcResult>>,
     relationship: Option<CalcResult>,
-    /// A scalar input Excel rejects after the options' errors ([`Model::groupby_fields`]).
-    scalar: ScalarInput,
-}
-
-/// A scalar `row_fields` or `values` that is `#VALUE!` once the options' errors are past, as far
-/// as the evidence goes: with `field_headers` omitted (every scalar-pair cell of the gen-m7
-/// arg-pairs batch omits it; a 1x1 array or a given `field_headers` is unprobed, T-3854).
-#[derive(Clone)]
-enum ScalarInput {
-    /// Neither rule applies.
-    Other,
-    /// `values` is scalar text (`"abc"`, a one-cell reference to text).
-    Text,
-    /// `row_fields` is a one-cell reference to this error.
-    ErrorCell(CalcResult),
+    /// Whether `row_fields` is a one-cell reference to an error, `#VALUE!` once the options'
+    /// errors are past ([`Model::groupby_fields`], [`Model::groupby_args`]).
+    error_cell: bool,
 }
 
 /// The GROUPBY options after the checks ([`Model::groupby_args`]).
@@ -93,14 +81,20 @@ pub(crate) enum FieldHeaders {
 /// value cell decides (the keys are not looked at): text over rows whose first cells are none of
 /// them text is a header, text over all-text rows is data, and text over rows that mix text with
 /// other values is `#VALUE!` (`None`); anything but text is data (probes/groupby-pivotby-followup3
-/// G!A145-A421, -followup2 G!A341-A521). One row of text alone is data (unprobed).
+/// G!A145-A421, -followup2 G!A341-A521). One row of text alone is a header, so no record is left
+/// and GROUPBY is `#VALUE!`: scalar text, a 1x1 array of text and a FILTER giving one text row
+/// alike (probes/t3854-groupby-scalar-inputs A73, A91, A97, A127; with `field_headers` 0 or 2
+/// they group: A1, A37, A115, A133).
 pub(crate) fn values_have_header(values: &[Vec<ArrayNode>]) -> Option<bool> {
     let is_text = |row: &Vec<ArrayNode>| matches!(row.first(), Some(ArrayNode::String(_)));
     let Some((first, below)) = values.split_first() else {
         return Some(false);
     };
-    if !is_text(first) || below.is_empty() {
+    if !is_text(first) {
         return Some(false);
+    }
+    if below.is_empty() {
+        return Some(true);
     }
     let text_rows = below.iter().filter(|row| is_text(row)).count();
     if text_rows == below.len() {
@@ -287,15 +281,19 @@ impl Model {
         };
         // The element for source row `row`: the one value, or the row's, counted from the top
         // of the fields or of the records.
+        // The records-height arm comes before the one-value arm: beside a header row and exactly
+        // one record, a 1x1 filter is that record's element, whatever the key and value widths
+        // and whether the header row was given or detected (probes/t3880-groupby-scalar-filter-
+        // edges G!A1:A41, G!A63:A74).
         let offset = match keep.len() {
             n if n == height => Some(0),
+            n if first > 0 && n + first == height => Some(first),
             1 if one_keeps_all => None,
             1 => {
                 return Err(invalid(
                     "a single filter_array value needs one key and one value column",
                 ))
             }
-            n if first > 0 && n + first == height => Some(first),
             _ => return Err(invalid("filter_array must be as tall as the fields")),
         };
         let rows: Vec<usize> = (first..height)
@@ -363,7 +361,7 @@ impl Model {
         if !(3..=8).contains(&args.len()) {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let (keys, values, scalar) = match self.groupby_fields(&args[0], &args[1], cell) {
+        let (keys, values, error_cell) = match self.groupby_fields(&args[0], &args[1], cell) {
             Ok(fields) => fields,
             Err(error) => return Err(self.lifted_error(args.get(7), error, cell)),
         };
@@ -383,7 +381,7 @@ impl Model {
             function,
             options,
             relationship,
-            scalar,
+            error_cell,
         })
     }
 
@@ -395,14 +393,15 @@ impl Model {
     /// one-cell reference to a blank cell are `#VALUE!` (`GROUPBY(2,Data!H1,..)`), ahead of every
     /// option's error (`GROUPBY(Data!C1:C12,Data!H1,_xleta.PRODUCT,#NUM!)` is `#VALUE!`; gen-m7
     /// 35679b4facc62956, 0a91d5918d798930 A10127). `row_fields` that is a one-cell reference to
-    /// an error and text `values` are `#VALUE!` too, but after the options' errors
-    /// ([`Model::groupby_args`]).
+    /// an error is `#VALUE!` too, but after the options' errors ([`Model::groupby_args`]); a
+    /// one-cell range of a blank cell is `#VALUE!` as the cell is (`GROUPBY(k,S!A3:A3,..)`,
+    /// probes/t3854-groupby-scalar-inputs A139, A151).
     fn groupby_fields(
         &mut self,
         row_fields: &Node,
         values: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
+    ) -> Result<(Elements, Elements, bool), CalcResult> {
         let is_cell = |node: &Node| node.is_cell_reference_at(cell.row);
         let keys = self.evaluate_node_in_context(row_fields, cell);
         if keys.is_error() && !is_cell(row_fields) {
@@ -413,7 +412,15 @@ impl Model {
         if values.is_error() {
             return Err(values);
         }
-        if matches!(values, CalcResult::EmptyCell) && is_cell(values_node) {
+        let blank_cell = match &values {
+            CalcResult::EmptyCell => is_cell(values_node),
+            CalcResult::Range { left, right } if left == right => matches!(
+                self.dereference(values.clone(), cell),
+                CalcResult::EmptyCell
+            ),
+            _ => false,
+        };
+        if blank_cell {
             return Err(value_error(cell, "values must not be a blank cell"));
         }
         // A one-cell reference to an error is one error key, `#VALUE!` later
@@ -421,17 +428,12 @@ impl Model {
         if keys.is_error() {
             let key = vec![vec![calc_result_to_array_node(keys.clone())]];
             let values = self.result_to_array(values, cell)?;
-            return Ok((key, values, ScalarInput::ErrorCell(keys)));
+            return Ok((key, values, true));
         }
-        let scalar = if matches!(values, CalcResult::String(_)) {
-            ScalarInput::Text
-        } else {
-            ScalarInput::Other
-        };
         Ok((
             self.result_to_array(keys, cell)?,
             self.result_to_array(values, cell)?,
-            scalar,
+            false,
         ))
     }
 
@@ -454,6 +456,9 @@ impl Model {
         };
         self.lift_by_class(
             &elements,
+            // An error element is its own error even once an earlier element has spent the
+            // filter (probes/t3880-groupby-scalar-filter-edges G!A89:B93).
+            |element| matches!(element, ArrayNode::Error(_)).then(|| element.clone()),
             |model, element| match element {
                 ArrayNode::Error(_) => None,
                 _ => Some(
@@ -465,9 +470,6 @@ impl Model {
                 ),
             },
             |model, element| {
-                if matches!(element, ArrayNode::Error(_)) {
-                    return element.clone();
-                }
                 let scalar = array_node_to_calc_result(element, cell);
                 match model.groupby_with(inputs, Some(scalar), cell) {
                     Ok(output) => at(&output, 0, 0),
@@ -539,7 +541,6 @@ impl Model {
         let (keys, values) = (&inputs.keys, &inputs.values);
         let mut options = inputs.options.iter().cloned();
         let field_headers = options.next().flatten();
-        let field_headers_given = field_headers.is_some();
         let total_depth = options.next().flatten();
         let sort_order = options.next().flatten();
         let filter = options.next().flatten();
@@ -548,23 +549,16 @@ impl Model {
         let headers = self.field_headers(field_headers, cell)?;
         let key_columns = width(keys);
         let depth_given = total_depth.is_some();
-        // Values of another height than the keys are #VALUE! (G!AB193, followup G!A1-A41).
-        // Scalar text values are #VALUE! too, even beside one key (`GROUPBY(2,"abc",..)`,
-        // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
-        // one-cell reference to an error ([`Model::groupby_fields`]; `GROUPBY(Data!G9,Data!G1,..)`),
-        // both after the options' errors: `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is
-        // `#NUM!` (ec5094d09c82f94d A6223), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
-        // `#DIV/0!` (18ded81711290e85 A1648).
-        match (&inputs.scalar, field_headers_given) {
-            (ScalarInput::Text | ScalarInput::ErrorCell(_), false) => {
-                return Err(value_error(cell, "GROUPBY of scalar text or an error cell"));
-            }
-            // Unprobed beside a field_headers (T-3854): at the values' height the error key keeps
-            // its error, as before T-3837; text values are grouped. Another height is #VALUE! below.
-            (ScalarInput::ErrorCell(error), true) if keys.len() == values.len() => {
-                return Err(error.clone());
-            }
-            _ => {}
+        // Values of another height than the keys are #VALUE! (G!AB193, followup G!A1-A41). So is
+        // one error key, a one-cell reference to an error ([`Model::groupby_fields`];
+        // `GROUPBY(Data!G9,Data!G1,..)`, gen-m7 35679b4facc62956), whatever `field_headers` is
+        // (probes/t3854-groupby-scalar-inputs A13, A31, A49, A67, A85), but after the options'
+        // errors: `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)` is `#DIV/0!`
+        // (18ded81711290e85 A1648). A 1x1 array holding an error is a key like any other
+        // (`GROUPBY({#N/A},{1},SUM)`, A103, A121). Scalar text values are a header row when
+        // `field_headers` is omitted ([`values_have_header`]).
+        if inputs.error_cell {
+            return Err(value_error(cell, "GROUPBY of an error cell"));
         }
         if keys.len() != values.len() || key_columns == 0 {
             return Err(value_error(
@@ -596,7 +590,9 @@ impl Model {
         }
         // One filter value keeps or drops every row only beside one key column, one value column
         // and no header row; otherwise it is #VALUE!, whatever the value, TRUE and 2 included
-        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19).
+        // (probes/t3839-groupby-scalar-filter G!B2:E121, F!B2:K19), a detected header row too
+        // (probes/t3880-groupby-scalar-filter-edges G!A51, G!A57), unless the header row has
+        // exactly one record below it ([`Model::filter_rows`]).
         let one_keeps_all = first == 0 && key_columns == 1 && width(values) == 1;
         // Excel reads field_relationship before it filters, and checks the total depth's range
         // after: a lifted relationship of 2 leaves the filter to the next element, a depth of 5

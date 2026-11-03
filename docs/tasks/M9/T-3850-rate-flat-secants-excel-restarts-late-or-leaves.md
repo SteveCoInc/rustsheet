@@ -3,7 +3,7 @@ id: T-3850
 title: "RATE flat secants Excel restarts late or leaves in the noise floor (after T-3698)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -71,10 +71,37 @@ Review follow-ups of T-3698 (PR #2858, fidelity and design MINORs, carried here)
 - [x] Moved to T-3916 (it was: narrow T-3698's restart so that no point of probes/t3906-rate-restart-oos leaves the
       Gate A envelope, or revert it under a regression decision record). Neither is possible without a point leaving
       (docs/research/t3850), so the choice waits on the owner's ruling.
-- [ ] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
-      that no rule on the run's visible state does.
-- [ ] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded.
-- [ ] financial.md updated; `make check` green; reviewers approve.
+- [x] A probe that separates late restarts from holds, oracle-filled, and a rule that fits it, or a recorded finding
+      that no rule on the run's visible state does. (Finding: probes/t3850-rate-same-state, below.)
+- [x] Any rule is implemented with no RATE cell regressing; R4 hold-out and fresh sweep recorded. (No rule: none
+      fits, see the Outcome.)
+- [x] financial.md updated; `make check` green; reviewers approve.
 
 ## Out of scope
 - RATE's residual form (ruled out at nper 1 by T-3579).
+
+## Outcome
+- The finding (financial.md "RATE flat secants: no rule on the model's state separates Excel's restarts from its
+  holds"; docs/research/t3850/README.md, second pass): no rule on the run's visible state at the flat step (step,
+  |f1|, |r1 - r0|, f1 relative to the terms) separates Excel's late restarts from its holds. Calls whose model run
+  meets the same flat secant (same args, r0, r1 and f1) and differ only in the guess get different Excel values, in
+  no step order.
+  - In the older cases: 4 of the 9 repeated states (t3698-rate-flat-restart A15, A27, A33, A34; A16, A25, A42; A43,
+    A47, A51, A54; A13, A48).
+  - New blind probe probes/t3850-rate-same-state: 240 calls, 40 same-state groups at steps 6 to 200, drawn by
+    `gen_late.py` and committed (6de64ea8) before the excel-graph fill. 25 groups get more than one Excel value.
+    12 of them are solid (4 mix `#NUM!` with a number, 8 spread over more than 4 ulp). 13 differ by 1 to 4 ulp,
+    under decision 0112's floor, although a second fill reproduced all 240 cells bit for bit. Excel is the hold on
+    29, the restart on 111, neither on 100 (mostly last bits); T-3698's rule gets 55.
+- No rule is implemented and the engine is unchanged. Wider restarts (K up to 200, |f1| cut up to none) were scored
+  on the 2,160 older RATE oracle cells. The best gains 2 (under the 5-point margin), and K 200 gains 8 and loses 12.
+  On the new probe it gains 70 and loses 14. That contradiction says the count follows the sampling, so no fit was
+  picked and the R4 hold-out and sweep do not apply.
+- Also recorded: the T-3698 review's misses inside the rule's region, in financial.md "RATE restarts once on an early
+  flat secant" (A9, A17, A21, A25, -fresh A22).
+- Follow-up: T-3963 (opus) models Excel's residual in the noise floor. It now owns the off cells of
+  t3698-rate-flat-restart, -fresh, t3906-rate-restart-oos and t3850-rate-same-state. The narrow-or-revert ruling
+  stays with T-3916 (needs owner).
+- Eval delta: no fix and no regression. One new probe case (240 cells), of which 55 pass, added to the baseline as
+  known failures.
+

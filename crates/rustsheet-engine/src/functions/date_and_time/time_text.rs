@@ -28,6 +28,16 @@ impl Model {
     }
 }
 
+/// DATEVALUE's reading of text that is a bare clock (no date): the whole days of its serial, so
+/// `DATEVALUE("10:00")` and `DATEVALUE("10 A.")` are 0 and `DATEVALUE("25:00")` and
+/// `DATEVALUE("24:00")` are 1, in both date systems (probes/t3944-datevalue-bare-clock-1900 and
+/// -1904 column B, excel-graph 2026-11-03). Excel: see docs/excel-semantics/dates.md#time-text.
+pub(super) fn parse_bare_clock_days(raw: &str) -> Option<i32> {
+    let text = trim_spaces(raw);
+    let serial = parse_limited_clock_text(raw, text).or_else(|| parse_hour_only_am_pm(text))?;
+    Some(serial.floor() as i32)
+}
+
 /// Time of day for TIMEVALUE text: the fractional part of the serial the text denotes, so clock
 /// text past 24 hours wraps (`TIMEVALUE("25:00")` is 1.0416666666666667 - 1) and "date time" text
 /// keeps the subtraction's float error; the date part is read in `date_system`, a pre-epoch 1904 day being no date (probes/date-system-1904-timevalue). Excel: see docs/excel-semantics/dates.md#time-text.

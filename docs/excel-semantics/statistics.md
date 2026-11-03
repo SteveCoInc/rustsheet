@@ -3279,11 +3279,12 @@ Status: VERIFIED (excel-graph) for L140 bup+bpser to 15 digits (11,724 of 11,753
 in the next entry
 Tasks: T-2506, T-2508, T-2512
 
-## Incomplete beta L140 bup+bpser at the F points: the F tails are not BETA.DIST's call, and bup's sum is open (T-3198)
+## Incomplete beta L140 bup+bpser at the F points: the F tails are not BETA.DIST's call, and bup's sum is mostly the power sum (T-3198)
 Rule (partial): Excel's F tails on bratio's L140 bup+bpser branch take bratio's (x, y) as two separately formed
 arguments, u = 1/(1 + d2/(d1 x)) and v = 1/(1 + d1 x/d2) ("Incomplete beta is TOMS 708 `bratio`" above), not one argument
-and its complement. How Excel sums bup's terms on this branch is still open: it is neither TOMS's recurrence nor the
-L140 bup+bgrat power sum alone (T-3568).
+and its complement. bup's sum W on this branch is best modelled by the L140 bup+bgrat power sum (T-3568)
+`1 + Σ_{i<n} R_i·EXP(fl(i·LN y0))`, with Excel's EXP and LN and bup's stored prefactor fl(fl(P·fl(x0·y0))/b0'). It is not
+exact: at y0 = 0.5 with many terms Excel sits 1 to 3 ulp off it, and no candidate below explains those points (T-3947).
 - Probe: probes-numeric t3198-f-l140-args, 414 F calls on this branch (every literal one of probes-numeric, probes and
   gen-m9 whose x has at most 15 digits). Per row it asks for u and v as worksheet formulas, then BETA.DIST(u, a, b, TRUE),
   BETA.DIST(v, b, a, TRUE) and both F tails (excel-graph). u and v are the doubles the engine forms, 414 of 414 each.
@@ -3307,7 +3308,25 @@ L140 bup+bgrat power sum alone (T-3568).
     under the engine's EXP is not a power of two (i = 3, 6, 7, 8).
   - Correctly rounded powers: 636 and 102. These keep x0 = 0.5 and H32, but move `BETA.DIST(0.1,100,10,TRUE)` 2 ulp off.
   - x^i by repeated products: 593 and 86.
-Evidence: probes-numeric t3198-f-l140-args (excel-graph); T-3198's Outcome has the scoring.
+- The power sum, scored again on 2026-11-03 against a hold-out split fixed before scoring (even probe rows to fit, odd
+  rows held out): today's recurrence 302 and 299 of 408, the power sum 333 and 341. Other forms of the power, each worse
+  than fl(i·LN y0) under EXP on both halves: an x87-extended EXP of RN64(ln y0)·i (319 and 318), the same with the stored
+  LN (324 and 322), libm `pow` (319 and 319), Excel's integer POWER, square-and-multiply (301 and 298), 2^RN64(i·log2 y0)
+  (319 and 318), and the power sum with exact powers at y0 = 0.5 only (331 and 335). No cut on n wins: the power sum is
+  as good or better than the recurrence in each band of n on the fit half. Fresh sweep after the model was frozen,
+  probes-numeric t3198-l140-power-sweep (400 seeded random points on the branch, excel-graph): 259 bit-exact against
+  244 on the recurrence.
+- At y0 = 0.5 the evidence splits. With few terms (k = 3 or 6) Excel follows EXP·LN, and exact powers are 1 to 3 ulp off.
+  With k >= 8 Excel is 1 to 3 ulp off the power sum: `BETA.DIST(0.5,100,10,TRUE)` is 7.203401329871238E-21, the power
+  sum 1 ulp above, and (10, 10) at 0.5 is 0.5000000000000002, the power sum 0.5000000000000003. TOMS's recurrence hits
+  both.
+- BETA.INV's search does not cross the power sum: crossing it moves ironcalc-calc `BETADIST_BETAINV.xlsx` H32
+  (`BETA.INV` at (5, 5), Excel 0.555) to 0.5550000000000002. With today's recurrence in the search it stays exact.
+  The evidence is that one cell: swapped to the power sum, the search changes no other cell in any suite, and it gains
+  none. T-3947 revisits the split.
+- `F.DIST.RT(3,50,100)` moves from 1.5167866644968792E-06 to 1.5167866644968803E-06 under the power sum. That is closer
+  to the 50-digit value (1.51678666449688947E-06) than Excel's 1.516786664496894E-06, so it is still not Excel's 15th digit.
+Evidence: probes-numeric t3198-f-l140-args and t3198-l140-power-sweep (excel-graph); T-3198's Outcome has the scoring.
 
 ## Incomplete beta bfrac is TOMS's fraction in a Lentz loop, on closed-form terms (T-3571)
 Rule: where bratio takes bfrac, on the evidenced region a, b in [40, 5000] on the unswapped call (x below the mean, z from -8 to -0.2 sd), Excel computes TOMS 708's
@@ -3354,6 +3373,31 @@ Status: VERIFIED (excel-graph) to 15 digits on the region above, bit-level PARTI
 18-42-term points, 3-10 ulp, T-3813) and 1,632 of 1,632 hold-out cells; bit-level open past 10 terms; outside the region
 UNVERIFIED
 Tasks: T-3571, T-3812, T-3813, T-3323
+
+## F right tail on bfrac at a tiny kernel argument: Excel's error is noise of about 1E-14 (T-3953)
+
+Status: VERIFIED (excel-graph, two fills)
+Tasks: T-3953, T-3954
+
+Rule: where F's right tail I_v(d2/2, d1/2) dispatches to bratio's bfrac at x0 = d2/(d1·X + d2) between 1E-280 and
+1E-6 (d1 >= 80, 2 < d2 <= 200), Excel's F.DIST.RT and FDIST are off the 50-digit math by an unbiased relative error:
+median 1.1E-14, p90 4.4E-14, max 1.5E-13, 623 cells high and 577 low of 1,200. BETA.DIST with v formed in the sheet is
+the same (max 1.5E-13), and with v typed as a literal max 1.6E-13. That is far above a correctly rounded result (8 of 1,200 bit-exact
+against the math) and far below decision 0188 R3's 1E-4, so it is Excel's arithmetic to reproduce, not math to
+follow. Ours is noise too (F.DIST.RT median 6.5E-15, max 1.1E-13, 574 high, 626 low), but different noise: 4 of
+1,200 bit-exact against Excel, 82 within 4 ulp, 189 within 15 digits.
+- FDIST equals F.DIST.RT on all 1,200 rows. F.DIST.RT equals BETA.DIST(d2/(TRUNC(d1)·X + d2), d2/2, TRUNC(d1)/2, TRUE)
+  on 1,015 of 1,200, so F's tail is almost always that BETA.DIST call with v formed as d2/(d1·X + d2); the other 185
+  differ in the last bits (an argument form or rounding T-3954 has to explain). BETA.DIST at v typed as a
+  15-digit literal matches the sheet-v call on only 82 rows: a 15-digit v is not the engine's exact x0 and moves the
+  tail by up to a0·5E-16 relative, visible at this noise level, so that column does not test the kernel at an exact v.
+- A second excel-graph fill matched the first on all 4,800 cells (decision 0112).
+- Evidence: probes-numeric/t3953-f-tail-bfrac-tiny (1,200 rows × 4 columns). A fit uses column A only, on the fit lab's
+  hold-out (369 A cells, marked `/hold/` in the row's hypotheses); B, C and D repeat A's value on most rows and are
+  diagnostics. Generator, scorer and output: docs/research/t3953/. The math sidecar covers the BETA.DIST columns only
+  (the accuracy tool defines no F.DIST.RT or FDIST); the scorer measures A and B against the row's column C math, the
+  same exact quantity.
+- Ours: the bfrac port (T-2508); T-3954 owns the visibly-off cells.
 
 ## Student t tails are one kernel call, K(n/2, 1/2, y, z), with bgrat at b = 1/2 in extended precision (T-2464)
 Rule: T.DIST.RT(t,n) = L = I/2 with I = K(n/2, 1/2, y, z): y = fl(n/fl(n + fl(t·t))) and the complement
@@ -4107,13 +4151,22 @@ literal-argument cells of t2220-f-dist-sweep-pdf/-d2-1, m9-f-dist and t1530-f-df
   only its own bits, so `F.DIST(1E-215,3,1000,FALSE)` is 6.42285339593616E-108 (Y = 13·2^-1074, 2.1% below the exact
   density) and `F.DIST(1E-65,10,1000,FALSE)` 1.4821969375236873E-258 (Y = 3·2^-1074, 11.6% above). Excel's value then
   differs from fl(Y/x) by about 1E-14 relative (A5, A6, A10, A17; T-2647).
+- Dense sweep with Y/2^-1074 log-uniform in [1, 2^52] (probes-numeric t3926-f-density-subnormal-y, 240 cells, and its
+  hold-out t3926-f-density-subnormal-y-hold, 120 cells, never used for fitting; df pairs (3,5), (5,3), (3,1000),
+  (4,1000), (5,130), (10,1000), (3,3), (6,20); x written `2^-k` or as a literal of at most 10 digits; excel-graph,
+  2026-11-03, T-3926). Today's engine against Excel: 0 of 240 bit-exact, 0 within 4 ulp, 1 within 15 digits; hold-out
+  0 of 120, 0, 0. At the 145 power-of-two cells (91 + 54), where Y/x is exact in double, Excel's F·x/2^-1074 is an
+  integer at only 4 (2 + 2): were F the double division fl(Y/x) of a subnormal Y, it would be an integer at all of
+  them, so the evidence refutes "a plain double division of the stored Y" (the first candidate of T-2647) and leaves
+  the other candidates (extended-precision Y, division by a rounded 1/x, EXP of a log difference) to T-2647's fit.
+  Scorer: docs/research/t3926/score.py.
 - At a huge x an F below 2^-1022 is 0 (probes-numeric t2586-r5-f-edges-a B1285-B1303, B1350-B1360 and 38 cells of
   t2586-r5-f-edges-hold, where the density is about 1.8E-310; their `*2^600` companions such as C1296 and C1301 show
   the 0 is Excel's, not Graph's), and so is a df1·x near f64::MAX whose fl(df1·x) does not overflow
   (t2586-r5-f-edges-a B1437, t2586-verify-r5-f-edges-hold B91, B92: `F.DIST(~1.8E305,1000,3,FALSE)`).
 Evidence: probes-numeric t2220-f-dist-sweep-pdf (A897, A994), t2220-f-dist-sweep-d2-1 (A710, A776), t1530-f-df-cut
 A9-A10, m9-f-dist A30, t1864-f-pdf-moderate-x, t1864-f-pdf-edges A1-A12, t1864-f-pdf-tiny-x A1-A20 (excel-graph,
-2026-10-25), t2586-r5-f-edges-a, -hold, t2586-verify-r5-f-edges-hold, t2586-r5-f-bigconst-a; gen-m9 285d87cea1aaa73c A64 (`F.DIST(0.1,123456792,1,FALSE)` 0.085003679623665).
+2026-10-25), t3926-f-density-subnormal-y and -hold (excel-graph, 2026-11-03), t2586-r5-f-edges-a, -hold, t2586-verify-r5-f-edges-hold, t2586-r5-f-bigconst-a; gen-m9 285d87cea1aaa73c A64 (`F.DIST(0.1,123456792,1,FALSE)` 0.085003679623665).
 Ours: since T-3034, Excel's own chain M-final (`f_density.rs`, "F density is not the beta density, R's df or a
 GAMMALN formula (T-2513)"), which gives a number at every one of these cells and keeps the range steps; before it, an
 accurate Loader saddle-point form (T-1864, T-1290), now removed. `f_dist_of` makes a subnormal x `#DIV/0!`

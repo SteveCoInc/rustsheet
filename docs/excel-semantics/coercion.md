@@ -66,8 +66,8 @@ Hold-out agreement (T-3465, probes/t3465-collation-holdout, excel-graph 2026-11-
 tools/src/rustsheet_tools/gen/collation_holdout.py, categories per row in t3465-collation-holdout.draws.tsv),
 `cmp_text_excel` orders **569 of 600 pairs (94.8%)** as Excel does (1738 of 1800 `<`, `>` and `=` cells), before
 any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B holds). The 31 misses, by cause:
-19 pairs put a Thai or Lao digit below the letters (refutes the UNVERIFIED "Thai and other digit blocks keep
-code-point order" below; T-3895), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
+19 pairs put a Thai or Lao digit below the letters (refuting the old UNVERIFIED choice "Thai and other digit
+blocks keep code-point order"; fixed by T-3895, "Thai, Lao and the other script digits (T-3895)" below), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
 1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
 T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
 rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
@@ -461,7 +461,7 @@ is silent: the Thai prevowels `โ ใ ไ` do go with `เ แ`; Hebrew points 
 and Thai tone marks are accents by code point (sampled at U+0591, U+05B0, U+0610, U+065F, U+0670,
 U+0E4B); other-script digits, Thai and Lao included, are their digit plus a tiebreak (so below the
 letters, as probes/t3465-collation-holdout found: `"ณ" > "๘"`, `"NPOECV" > "໖66"`; engine gap
-T-3895). REFUTED by T-3559: the arrows, miscellaneous symbols and dingbats do not sort after `•`
+fixed by T-3895). REFUTED by T-3559: the arrows, miscellaneous symbols and dingbats do not sort after `•`
 (they sort before it, and not all by code point), `™` is not the letters `tm` with a variant
 weight (it sorts after `"tn"`), and astral characters from U+D840 do not all sort after the CJK
 ideographs (plane 3's `𰀀` sorts before Hangul). Still UNVERIFIED: lone surrogate units of planes 1
@@ -524,13 +524,40 @@ row. VERIFIED for the cells cited:
   so below every letter: `"3" < "٣" < "৩" < "੩" < "௩" < "౩" < "๓" < "໓" < "༣" < "၃" < "៣" < "9"`
   (ranks 30 to 41; G21:G25 = 4), never equal under `=` (Calc!B = 1), but COUNTIF `"="&x` counts all
   eleven spellings of 3 (E11 and E136:E145 = 11): the criterion reads each as the number 3.
+  Implemented by T-3917 (rule 7): `element` gives the Gurmukhi, Tamil, Telugu and Khmer digits a
+  `digit_variant` weight in this order, and `script_digit_to_ascii` reads them, so number-text coercion
+  takes them in every form of the T-3446 blocks (only the COUNTIF criterion is probed for these four).
 - **Astral characters and emoji sequences compare unit by unit**, no sequence is one element:
   `"𐀀" < "𝐀" < "🀄" < "🇺" < "🇺🇸" < "👍" < "👍🏽" < "👨" < "👨‍👩‍👧" < "😀"` (ranks 140 to 149);
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
   Plane 3's `𰀀` (U+30000) sorts after `😀` and before Hangul (rank 150), plane 2's `𪜀` (U+2A700)
   after `𠀀` (154).
-The engine fails 181 of the 955 cells (known failures in eval/baseline/probes.txt); engine gap T-3917
-(the Thai and Lao digits stay T-3895's).
+Implemented by T-3917 (every cell of the case passes): `element` (crates/rustsheet-engine/src/functions/util/collation.rs)
+skips `➿ ᡸ ₿` like U+0E83 (a stand-in for T-3904's weightless rule), places `、 。 「 ₩ ₹` in
+`PUNCTUATION`, `symbol` (collation/scripts.rs) orders the math operators `≠ ∑ ∫ ≤`, the geometric shapes, arrows,
+box drawing and the symbols and dingbats, then `•`; `™` is `t` with a weight above every letter, `℃` and `№` the
+letters `c` and `no` with the superscript variant (their places beyond the probed neighbours are UNVERIFIED);
+`ץ` weighs as `צ` and `ﻻ` as `لا`; `script_order` puts Georgian after Armenian (Mkhedruli first), reorders U+0E00
+to U+18AF by Excel's block order with the Gurmukhi `ਹ` and Lao `ໄ ໃ` exceptions, and sorts plane 3 and above with
+planes 1 before Hangul. The unprobed blocks keep code-point order inside the span they fall in (UNVERIFIED).
+
+### Thai, Lao and the other script digits (T-3895)
+Evidence: probes/t3895-collation-script-digits (excel-graph, 2026-11-03), 191 cells: Calc!A =
+`(x<y)+2*(x=y)+4*(x>y)` for chosen pairs, COUNTIF and exact MATCH against the text `"3"`. VERIFIED (cells cited):
+- **The Thai, Lao, Bengali, Tibetan, Myanmar and Extended Arabic-Indic digits are their digit plus a tiebreak**, as
+  the Arabic-Indic and Devanagari digits are (T-3276): `"3" < "๓" < "4"`, `"2z" < "๓" < "3a"`, `"๙" < "a"`, `"!" <
+  "๓"` for each block at digits 0, 3 and 9 (A1:A150, five rows per digit per block). Never equal under `=`.
+- **The tiebreak orders the blocks by code point**, every full-width digit first: `"3" < "３" < "٣" (U+0663) < "۳"
+  (U+06F3) < "३" < "৩" < "๓" < "໓" < "༣" < "၃"` (A4:A6, A11:A13, A129:A131, A151:A178). It works left to right:
+  `"๓"&"1" > "3"&"๑"` (A21, A46, A71, A96, A121, A146).
+- COUNTIF of the text `"3"` with `"="&"๓"` is 1 for every block (the criterion reads as the number 3; T-3446 owns
+  number-text reading), exact MATCH `#N/A` (A24, A25 and the same rows of each block).
+- **U+0E83** (unassigned in the Lao block, a T-3584 weightless character): a lone one is above `""` and below `" "`,
+  `"!"`, `"0"`, `"a"`, `"ÿ"` and `"ກ"` (A179:A184, A189); `"a"&U+0E83 > "a"` (A187), but `U+0E83&"a" = "a"`
+  (A185); `U+0E83&"໖" < "ÿ"` (A188, the hold-out's row 599); `LEN` 1, `UNICODE` 3715 (A190, A191).
+Implemented in `element` (crates/rustsheet-engine/src/functions/util/collation.rs): the digits as `digit_variant`
+with one variant weight per block; U+0E83 as a skipped character, a stand-in that misses A185 until T-3904's
+weightless rule replaces it. The Tibetan half digits U+0F2A..U+0F33 and the other digit blocks are unprobed.
 
 ### Script digits in number text (T-3446)
 Evidence: probes/t3446-script-digits-forms (excel-graph, 2026-11-03); formats from the oracle's ENTERED log,

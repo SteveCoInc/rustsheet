@@ -753,12 +753,23 @@ weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp
 - Georgian: `გ` U+10D2 with U+10FA (Calc!T1075, T1115).
 - Cyrillic Extended-C U+1C80-U+1C88 and Georgian Mtavruli U+1C90-U+1CBF are weightless, so they equal each other
   and not their ordinary letters (Calc!K13:O21, K40:O85).
-The engine folds every pair through Rust's `to_lowercase` and has no weightless class, so the cells of C and D listed
-in eval/baseline/probes.txt fail, and so do the T-3584 cells listed there (T-3445).
-Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above. Implemented for
-T-3133's list only; the T-3298 blocks, the weightless class and the T-3584 classes are not (T-3445).
-Implemented in: `fold_case` (functions/util/collation.rs), through `folded_units` (`ExactKey`, the indexed exact
-search) and `WildcardPattern` (the linear one); `decompose` (collation.rs) for XMATCH's `İ`
+Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
+position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
+Hebrew `צ` equals its final form `ץ`: exact MATCH of `"צ"` finds the `ץ` row before its own
+(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other final letters are unprobed and stay apart
+(UNVERIFIED). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
+(C110 = 110), while `=` and XMATCH equal them (coercion.md "Scripts and symbol blocks beyond T-3276").
+Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
+Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
+one, supplementary characters stay themselves, the classes above, then SEARCH's `fold_char` unless it lands on a
+weightless character), through `folded_units` (`ExactKey`, the indexed exact search) and `WildcardPattern` (the linear
+one, XMATCH's wildcard mode and wildcard criteria); `decompose` (collation.rs) for XMATCH's `İ`. UNVERIFIED
+(inferred): XMATCH/XLOOKUP's wildcard mode and wildcard criteria take the same fold because they share
+`WildcardPattern` with exact MATCH; the evidence above is exact MATCH, VLOOKUP and HLOOKUP only (probe: T-3929).
+SEARCH, the D-function prefix criteria and TEXTSPLIT/TEXTBEFORE keep `fold_case` (unprobed for the weightless class;
+T-3929 covers the prefix criteria). Not implemented: `=` and COUNTIF's weightless equality (T-3904) and MATCH's U+0001
+key, which matches U+0524 and empty text like `*` (t3584 Calc!R1, digit 3; T-3921). The 54 Calc!R cells whose `=`
+digit or U+0001's digit differs stay in eval/baseline/probes.txt; the other 202 pass.
 
 ## XMATCH, XLOOKUP and LOOKUP compare numbers as exact doubles (T-3106)
 Rule: XMATCH and XLOOKUP equate and order numbers as exact doubles, not at 15 digits like the comparison operators, in
@@ -1205,7 +1216,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   values), and a lifted count over such a grid is unprobed (T-2212). Full table with cells: SPEC-0014 "Excel behavior to match" (probes/reference-lift-consumers,
   -b1c, -b1d, -b2, excel-graph, 2026-10-19, T-1955). COUNTIFS, AVERAGEIF and MAXIFS lift per element too
   (T-2065 probes; ours since T-2823); see "Statistical aggregates over a lifted OFFSET" below for STDEV.S,
-  VAR.S, SUMSQ, AVERAGEA, MAXA, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
+  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
 - Per element, the scalar rules hold: an element off the sheet is `#REF!` (`OFFSET(A1,{0;-1},0)`, second element);
   `INDIRECT("R2C1",{TRUE;FALSE})` is `#REF!`, A2; a scalar error argument next to the lifted one is that error in every
   element (`INDEX(OFFSET(A1,{0;1},NA()),1,1)` is `#N/A`).
@@ -1510,12 +1521,19 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
   `MAXA(OFFSET(A4,{0;3},0))` 7, `AVERAGEA(OFFSET(A5,{0;1},0))` (blank, TRUE) `#DIV/0!` (TRUE not counted as 1) and
   `MAXA(OFFSET(A5,{0;1},0))` 0. This also explains the 0 of the probe below (text 0, blank and TRUE skipped).
 - `AVERAGEA` and `MAXA(OFFSET(A4,{0;1;2},0))` over "5", blank, TRUE are 0: the text is not read as 5 and TRUE not as 1; which elements count is open (the data holds no number).
+- T-3533 (probes/t3533-lift-*, E1, excel-graph 2026-11-03, one formula per workbook, same data plus A8 -3): VAR.P,
+  STDEV.P, legacy VAR, VARP and STDEVP, MINA, VARA, VARPA, STDEVA and STDEVPA all read each element's top-left cell (`MINA(OFFSET(A1,{0;1},0,1,2))`
+  is 1, `STDEV.P(..)` 49.5, `VARA(..)` 4900.5) and skip a text, blank or TRUE element, the A-variants too (as a plain
+  reference argument they count text as 0 and TRUE as 1; references.md T-1003/T-1211): `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7, -3 is 50 (the variance of 7
+  and -3; with text as 0 it would be 26.33, as 5 it would be 28), `VARPA(OFFSET(A6,{0;1;2},0))` over TRUE,
+  7, -3 25, `MINA(OFFSET(A4,{0;3},0))` over "5", 7 is 7 and `MAXA(OFFSET(A4,{0;4},0))` over "5", -3 is -3, so MAXA's
+  text is skipped, not 0. Only AVERAGEA counts a text element as 0 (above).
 Status: VERIFIED (excel-graph) for the values above. COUNTIFS, AVERAGEIF and MAXIFS implemented (T-2823). STDEV.S,
 VAR.S and SUMSQ implemented (T-2824, `GridReading::TopLeft`: each element's top-left cell, as SUM), and AVERAGEA and
 MAXA (`GridReading::TopLeftElements`: that cell read as an array element, so a blank or TRUE is skipped and AVERAGEA's
-text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). UNVERIFIED: legacy VAR
-(as VAR.S) and MAXA's text (skipped, or 0, the probes cannot tell). VAR.P, STDEV.P, MINA and the VARA family keep
-the value view, unprobed (T-3533).
+text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). T-3533: VAR.P and STDEV.P
+take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and STDEVP share VAR.P's and STDEV.P's), MINA and the VARA family `GridReading::TopLeftElements`
+(their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
 Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ

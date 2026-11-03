@@ -15,7 +15,10 @@ const VARA_ARGS: AggregatePolicy = AggregatePolicy {
     reading: ArgReading::Aggregate,
     errors: ErrorRule::Ranked,
     skip_empty_args: false,
-    grids: GridReading::Values,
+    // An array of references: each element's top-left cell as an array element, so only numbers
+    // count (`VARA(OFFSET(A4,{0;3;4},0))` over "5", 7 and -3 is 50; probes/t3533-lift-vara-*,
+    // -varpa-*, -stdeva-*, -stdevpa-*, T-3533).
+    grids: GridReading::TopLeftElements,
     nested: NestedReading::NotAvailable,
 };
 
@@ -80,85 +83,56 @@ pub(crate) fn excel_variance(values: &[f64], kind: VarianceKind) -> f64 {
 }
 
 impl Model {
-    /// VAR.P / VAR.S / STDEV.P / STDEV.S (and AGGREGATE 7, 8, 10, 11, whose arguments arrive as
-    /// numbers) of the numbers [`Model::for_each_value_with`] yields, an array of references read
-    /// as `grids` says.
+    /// The variance family of `args` (its square root when `std_dev`). VAR.P / VAR.S / STDEV.P /
+    /// STDEV.S (and AGGREGATE 7, 8, 10, 11, whose arguments arrive as numbers) take the numbers
+    /// [`Model::for_each_value_with`] yields, an array of references read by its elements' top-left
+    /// cells (VAR.S and STDEV.S: probes/t2065-lift-*, probes/t2816-lift-*, T-2824; VAR.P and
+    /// STDEV.P: probes/t3533-lift-varp-*, -stdevp-*, T-3533). With `a_rules` (VARA / VARPA /
+    /// STDEVA / STDEVPA) the cells of a reference coerce (text 0, booleans 1/0) while direct values
+    /// and array elements count only as numbers (SPEC-0009's walker with [`VARA_ARGS`] and
+    /// [`VARA_NUMBERS`]).
     pub(crate) fn variance_of_values(
         &mut self,
         args: &[Node],
-        grids: GridReading,
         cell: CellReferenceIndex,
         kind: VarianceKind,
         std_dev: bool,
+        a_rules: bool,
         name: &str,
     ) -> CalcResult {
         if args.is_empty() {
             return CalcResult::new_args_number_error(cell);
         }
         let mut values = Vec::new();
-        if let Err(error) = self.for_each_value_with(args, grids, cell, |value| values.push(value))
-        {
-            return error;
-        }
-        variance_result(&values, kind, std_dev, name, cell)
-    }
-
-    /// VARA / VARPA / STDEVA / STDEVPA: like `variance_of_values`, but the cells of a reference
-    /// coerce (text 0, booleans 1/0) while direct values and array elements count only as numbers
-    /// (SPEC-0009's walker with [`VARA_ARGS`] and [`VARA_NUMBERS`]).
-    pub(crate) fn variance_of_values_a(
-        &mut self,
-        args: &[Node],
-        cell: CellReferenceIndex,
-        kind: VarianceKind,
-        std_dev: bool,
-        name: &str,
-    ) -> CalcResult {
-        if args.is_empty() {
-            return CalcResult::new_args_number_error(cell);
-        }
-        let mut values = Vec::new();
-        if let Err(error) =
+        let walked = if a_rules {
             self.for_each_aggregate_number(args, cell, VARA_ARGS, VARA_NUMBERS, |value| {
                 values.push(value);
             })
-        {
+        } else {
+            self.for_each_value_with(args, GridReading::TopLeft, cell, |value| values.push(value))
+        };
+        if let Err(error) = walked {
             return error;
         }
         variance_result(&values, kind, std_dev, name, cell)
     }
 
     pub(crate) fn fn_var_p(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        // Unprobed over an array of references: the value view.
-        self.variance_of_values(
-            args,
-            GridReading::Values,
-            cell,
-            VarianceKind::Population,
-            false,
-            "VAR.P",
-        )
+        // Legacy VARP shares this function (probes/t3533-lift-varp-compat-*, T-3533).
+        self.variance_of_values(args, cell, VarianceKind::Population, false, false, "VAR.P")
     }
 
     pub(crate) fn fn_var_s(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        // probes/t2065-lift-vars, probes/t2816-lift-vars (T-2824); legacy VAR shares this reading,
-        // UNVERIFIED (T-3533).
-        self.variance_of_values(
-            args,
-            GridReading::TopLeft,
-            cell,
-            VarianceKind::Sample,
-            false,
-            "VAR.S",
-        )
+        // Legacy VAR shares this function (probes/t3533-lift-var-*, T-3533).
+        self.variance_of_values(args, cell, VarianceKind::Sample, false, false, "VAR.S")
     }
 
     pub(crate) fn fn_vara(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.variance_of_values_a(args, cell, VarianceKind::Sample, false, "VARA")
+        self.variance_of_values(args, cell, VarianceKind::Sample, false, true, "VARA")
     }
 
     pub(crate) fn fn_varpa(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.variance_of_values_a(args, cell, VarianceKind::Population, false, "VARPA")
+        self.variance_of_values(args, cell, VarianceKind::Population, false, true, "VARPA")
     }
 }
 

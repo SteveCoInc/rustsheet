@@ -738,6 +738,81 @@ fn a_lifted_groupby_filter_serves_one_element() {
 }
 
 #[test]
+fn one_filter_value_beside_a_header_row_and_one_record_is_that_records_element() {
+    // probes/t3880-groupby-scalar-filter-edges: beside a header row (given or detected) and
+    // exactly one record, a 1x1 filter is the record's element: TRUE, 2, {TRUE} or a TRUE cell
+    // keep it, even beside two key columns, and FALSE keeps no record (G!A1:A41, G!A63:A74). With
+    // two records it is #VALUE!, and so is TRUE beside a detected header row (G!A29, G!A51, G!A57).
+    let mut model = new_empty_model();
+    for (cell, value) in [
+        ("A1", "k"),
+        ("B1", "v"),
+        ("C1", "TRUE"),
+        ("A2", "x"),
+        ("B2", "5"),
+        ("A3", "y"),
+        ("B3", "7"),
+    ] {
+        model._set(cell, value);
+    }
+    let calls = [
+        ("E1", "A1:A2,B1:B2,_xleta.SUM,1,,,{TRUE}"),
+        ("E4", "A1:A2,B1:B2,_xleta.SUM,1,,,2"),
+        ("E7", "A1:A2,B1:B2,_xleta.SUM,1,,,C1"),
+        ("E10", "A1:A2,B1:B2,_xleta.SUM,,,,TRUE"),
+        ("E13", "A1:A2,B1:B2,_xleta.SUM,1,,,FALSE"),
+        ("E16", "A1:A3,B1:B3,_xleta.SUM,1,,,{TRUE}"),
+        ("E19", "A1:A3,B1:B3,_xleta.SUM,,,,TRUE"),
+    ];
+    for (anchor, args) in calls {
+        model._set(anchor, &format!("=GROUPBY({args})"));
+    }
+    model._set("I1", "=GROUPBY(A1:B2,B1:B2,_xleta.SUM,1,,,{TRUE})");
+    model.evaluate();
+    for top in [1, 4, 7, 10] {
+        assert_eq!(row(&model, top, 'E', 'F'), ["x", "5"]);
+        assert_eq!(row(&model, top + 1, 'E', 'F'), ["Total", "5"]);
+    }
+    assert_eq!(model._get_text("K1"), "5");
+    for anchor in ["E13", "E16", "E19"] {
+        assert_eq!(model._get_text(anchor), "#VALUE!");
+    }
+}
+
+#[test]
+fn an_error_relationship_element_is_its_own_error_after_the_filter_is_spent() {
+    // probes/t3880-groupby-scalar-filter-edges G!A89:B93: an error element of a lifted
+    // field_relationship is that error before and after another element spends the filter, and
+    // spends nothing itself.
+    let mut model = records();
+    model._set("Z1", "0");
+    model._set("Z2", "=NA()");
+    model._set("AA1", "1");
+    model._set("AA2", "1");
+    model._set("Z4", "=NA()");
+    model._set("AA4", "0");
+    model._set("Z5", "0");
+    model._set("AA5", "1");
+    model._set(
+        "H1",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z1:AA2)",
+    );
+    model._set(
+        "H4",
+        "=GROUPBY(A2:A11,D2:D11,_xleta.SUM,0,1,,C2:C11=2023,Z4:AA5)",
+    );
+    model.evaluate();
+    let first = model._get_text("H1");
+    assert_ne!(first, "#VALUE!");
+    let value = "#VALUE!".to_owned();
+    let na = "#N/A".to_owned();
+    assert_eq!(row(&model, 1, 'H', 'I'), [first.clone(), value.clone()]);
+    assert_eq!(row(&model, 2, 'H', 'I'), [na.clone(), value.clone()]);
+    assert_eq!(row(&model, 4, 'H', 'I'), [na, first]);
+    assert_eq!(row(&model, 5, 'H', 'I'), [value.clone(), value]);
+}
+
+#[test]
 fn a_cell_read_on_demand_spends_no_filter_of_a_lift() {
     // Z2 holds a filtering GROUPBY that runs when the lift first reads Z2:Z11; the lifted call
     // itself has no filter, so every element keeps its value (T-3840 review).
@@ -1369,6 +1444,17 @@ fn scalar_inputs_and_the_order_of_their_errors() {
         // first case, the same height (1 row each) in the second.
         ("=GROUPBY(Z1,B1:B3,_xleta.SUM,Z1)", "#DIV/0!"),
         ("=GROUPBY(Z1,Z4,_xleta.SUM,,,,Z1)", "#DIV/0!"),
+        // probes/t3854-groupby-scalar-inputs (T-3854): one row of text values is a header when
+        // field_headers is omitted, data with 0, and the header with 1; a 1x1 text array alike.
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,0)", "2"),
+        ("=GROUPBY(2,\"abc\",_xleta.COUNTA,1)", "#VALUE!"),
+        ("=GROUPBY({\"a\"},{\"x\"},_xleta.COUNTA)", "#VALUE!"),
+        // The error-reference key is #VALUE! whatever field_headers is; a 1x1 error array is a key.
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,0)", "#VALUE!"),
+        ("=GROUPBY(Z1,Z4,_xleta.SUM,2)", "#VALUE!"),
+        ("=GROUPBY({#N/A},{1},_xleta.SUM)", "#N/A"),
+        // A one-cell range of a blank cell is a blank cell.
+        ("=GROUPBY(Z4,Z3:Z3,_xleta.SUM)", "#VALUE!"),
     ];
     for (i, (formula, _)) in cases.iter().enumerate() {
         model._set(&format!("D{}", 3 * i + 1), formula);

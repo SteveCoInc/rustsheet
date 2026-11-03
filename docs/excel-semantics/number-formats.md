@@ -487,11 +487,15 @@ is "0"; `TEXT(1234.5,"[>100];0")` and `"[Red][>5];0"` are "1234.5" while `"[>100
 "-1235"; `TEXT(1234.5,"[$-409];0")` is "". A text value or a boolean in a 4th section of only a
 color is unchanged (`TEXT("abc","0;;;[Red]")` and `"[Red];[Blue];[Green];[Cyan]"` are "abc",
 TRUE gives "TRUE"). Evidence: probes/text-value-kind-sweep B69:H69, probes/text-value-kind-sweep-b
-rows 6-20 (excel-graph 2026-11-01). For a condition section with no literals this settles the General-or-section question that
-"Conditional sections" leaves open; with literals it stays open.
+rows 6-20 (excel-graph 2026-11-01). For a condition section with no literals this settles the General-or-section
+question that "Conditional sections" leaves open; with literals it stays open.
+Unprobed (T-3763): a color or condition section that also carries a numeral-system tag
+(`[Red][$-2010000]`; the engine applies the section's numerals), and `x@;` / `@;` (a trailing `;` makes the last
+section empty; TEXT and cell display).
 Status: VERIFIED
 Implemented in: `is_bracket_only_section` (formatter/sections.rs), used by `format_number` (formatter/format.rs) and
-`format_text_value` (formatter/text_value.rs). The cell keeps the section's color.
+`format_text_value` (formatter/text_value.rs). The cell keeping the section's color is inferred, not probed (the
+probes read TEXT() strings only; the displayed color is a desktop question, decision 0039).
 Tasks: T-3649
 
 ## Which codes are `#VALUE!` for which value kind (T-3649)

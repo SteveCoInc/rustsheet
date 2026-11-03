@@ -67,3 +67,10 @@ probes, so its line leaves eval/baseline/probes.txt when fixed.
 and every `origin/agent/*` branch), within 15 digits: A43 `BETA.DIST(0.1,5,50,TRUE)`, Excel 0.6385528602726223, ours
 0.6385528602726221 (1 ulp). It joins the 21 cells above under the same criteria.
 - probes-numeric/m9-beta-dist-a5.case.json (1): Calc!A43
+
+## Cells added by gap triage (2026-11-03)
+`make eval` on origin/main b9dac1c15 (excel-graph): one more cdf cell of the a = 10 grid is named by no open task (main
+and every `origin/agent/*` branch), within 15 digits: A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours
+0.5000000000000003 (1 ulp; the symmetric point, where the math is exactly 0.5). It joins the cells above under the same
+criteria.
+- probes-numeric/m9-beta-dist-a10.case.json (1): Calc!A39
