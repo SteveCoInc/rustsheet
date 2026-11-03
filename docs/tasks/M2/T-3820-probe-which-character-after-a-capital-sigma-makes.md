@@ -69,7 +69,8 @@ Excel uses, and every class where the engine disagrees has an owner task.
   - a whole-BMP sweep of the character after `ΑΣ`, one digit per code point, through LOWER (Calc!E1:E256) and
     PROPER (F1:F256).
 - Rule found: `Σ` lowers to `ς` only at the end of the text or before one of 30 ASCII characters: TAB, LF, CR,
-  space and ``! " # $ % & ' + , - . / : ; < = > ? @ [ \ ] _ { | }``. Before every other BMP code point it lowers to
+  space and ``! " # $ % & ' + , - . / : ; < = > ? @ [ \ ] _ { | }``. Before every other BMP code point UNICHAR can build (it errors at U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE
+  and U+FFFF) it lowers to
   `σ`, and so before 𐐀 and 😀. That includes letters Excel's case table lacks, marks of every block, format
   characters, U+2018, ``( ) * ^ ` ~``, the other controls and U+00A0. LOWER and PROPER agree on all 65,536 code
   points, and TEXTBEFORE's case-insensitive mode agrees on every row. So the predicate is a fixed separator list,
