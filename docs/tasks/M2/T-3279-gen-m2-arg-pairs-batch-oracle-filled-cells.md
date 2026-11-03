@@ -3,7 +3,7 @@ id: T-3279
 title: "gen-m2 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M2 functions (MID, LEFT, RIGHT, ROUND*, INDEX, HLOOKUP, VLOOKUP, MATCH, IF, IFERROR)"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
