@@ -41,9 +41,10 @@
 //! (probes/t3114-collation-beyond-latin1, probes/t3154-collation-accents; coercion.md "Letters
 //! beyond Latin-1 and combining marks"). Hebrew, Arabic, Devanagari, Thai, Lao, Hangul, the CJK
 //! ideographs and astral characters follow Excel's block order ([`script_order`]); Hebrew points,
-//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and four
-//! other blocks' digits are their digit (T-3895); arrows, symbols and dingbats sort after the
-//! punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps code-point order after the letters, as before T-0220.
+//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and eight
+//! other blocks' digits are their digit (T-3895, T-3917); arrows, symbols and dingbats sort after
+//! the punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps
+//! code-point order after the letters, as before T-0220.
 //!
 //! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs as the same unit of a pair does
 //! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
@@ -59,7 +60,11 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
-use scripts::{digit_variant, script_mark, script_order, symbol, unit, IDEOGRAPHS};
+use scripts::{
+    digit_variant, script_mark, script_order, symbol, unit, ARABIC_INDIC_DIGIT, BENGALI_DIGIT,
+    DEVANAGARI_DIGIT, EXTENDED_ARABIC_INDIC_DIGIT, GURMUKHI_DIGIT, IDEOGRAPHS, KHMER_DIGIT,
+    LAO_DIGIT, MYANMAR_DIGIT, TAMIL_DIGIT, TELUGU_DIGIT, THAI_DIGIT, TIBETAN_DIGIT,
+};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -346,19 +351,6 @@ const SUPERSCRIPT: u8 = 1;
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
 
-/// The variant pass weights of the other scripts' digits: after the ASCII digit and its
-/// [`FULL_WIDTH`] form, in code-point order of their blocks: Arabic-Indic, Extended
-/// Arabic-Indic, Devanagari, Bengali, Thai, Lao, Tibetan, Myanmar (probes/t3276-collation-other-scripts
-/// G25:G27; probes/t3895-collation-script-digits A4:A6, A129:A131, A151:A178).
-const ARABIC_INDIC_DIGIT: u8 = 3;
-const EXTENDED_ARABIC_INDIC_DIGIT: u8 = 4;
-const DEVANAGARI_DIGIT: u8 = 5;
-const BENGALI_DIGIT: u8 = 6;
-const THAI_DIGIT: u8 = 7;
-const LAO_DIGIT: u8 = 8;
-const TIBETAN_DIGIT: u8 = 9;
-const MYANMAR_DIGIT: u8 = 10;
-
 /// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
 /// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
 /// probes/t3275-collation-width-kana Calc!G12:G14, ranks A90:A95).
@@ -577,13 +569,18 @@ fn element(c: Char) -> Element {
         '\u{660}'..='\u{669}' => digit_variant(u32::from(c) - 0x660, ARABIC_INDIC_DIGIT),
         '\u{6f0}'..='\u{6f9}' => digit_variant(u32::from(c) - 0x6f0, EXTENDED_ARABIC_INDIC_DIGIT),
         '\u{966}'..='\u{96f}' => digit_variant(u32::from(c) - 0x966, DEVANAGARI_DIGIT),
-        // The Bengali, Thai, Lao, Tibetan and Myanmar digits too, below every letter (`"2z" <
-        // "๓" < "3a"`, `"๓" < "a"`; probes/t3895-collation-script-digits A1:A150).
+        // The Bengali, Gurmukhi, Tamil, Telugu, Thai, Lao, Tibetan, Myanmar and Khmer digits too,
+        // below every letter (`"2z" < "๓" < "3a"`, `"๓" < "a"`; probes/t3895-collation-script-digits
+        // A1:A150, probes/t3559-collation-unprobed-blocks ranks A30:A41).
         '\u{9e6}'..='\u{9ef}' => digit_variant(u32::from(c) - 0x9e6, BENGALI_DIGIT),
+        '\u{a66}'..='\u{a6f}' => digit_variant(u32::from(c) - 0xa66, GURMUKHI_DIGIT),
+        '\u{be6}'..='\u{bef}' => digit_variant(u32::from(c) - 0xbe6, TAMIL_DIGIT),
+        '\u{c66}'..='\u{c6f}' => digit_variant(u32::from(c) - 0xc66, TELUGU_DIGIT),
         '\u{e50}'..='\u{e59}' => digit_variant(u32::from(c) - 0xe50, THAI_DIGIT),
         '\u{ed0}'..='\u{ed9}' => digit_variant(u32::from(c) - 0xed0, LAO_DIGIT),
         '\u{f20}'..='\u{f29}' => digit_variant(u32::from(c) - 0xf20, TIBETAN_DIGIT),
         '\u{1040}'..='\u{1049}' => digit_variant(u32::from(c) - 0x1040, MYANMAR_DIGIT),
+        '\u{17e0}'..='\u{17e9}' => digit_variant(u32::from(c) - 0x17e0, KHMER_DIGIT),
         // U+0E83, unassigned in the Lao block, is one of T-3584's weightless characters
         // (docs/research/t3584/weightless-bmp.txt). Skipping it matches Excel alone (above `""`,
         // below `" "`) and trailing (`"a"&U+0E83 > "a"`; probes/t3895-collation-script-digits

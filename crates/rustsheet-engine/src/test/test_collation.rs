@@ -574,3 +574,16 @@ fn t3276_other_scripts() {
     assert_eq!(cmp_text(&high, &fffd), Ordering::Greater);
     assert_eq!(cmp_text(&low, &fffd), Ordering::Greater);
 }
+
+/// T-3917 rule 7: every other-script digit is its digit plus a tiebreak in code-point order of
+/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks A30:A41,
+/// G21:G25; probes/t3895-collation-script-digits A151:A178).
+#[test]
+fn script_digits_tiebreak_by_block() {
+    assert_increasing(&[
+        "3", "３", "٣", "۳", "३", "৩", "੩", "௩", "౩", "๓", "໓", "༣", "၃", "៣", "3a", "4",
+    ]);
+    for digit in ["੩", "௩", "౩", "៣"] {
+        assert_ne!(cmp_text_excel(digit, "3"), Ordering::Equal);
+    }
+}
