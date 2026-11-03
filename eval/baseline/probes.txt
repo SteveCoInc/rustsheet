@@ -244,6 +244,7 @@ C	probes/colon-hash-value-operands.case.json	6
 C	probes/combin-algorithm-sweep.case.json	844
 C	probes/concatenate-after-cut.case.json	9
 C	probes/concatenate-limit-spill.case.json	68
+C	probes/convert-mixed-prefix.case.json	672
 C	probes/convert-targets.case.json	84
 C	probes/convert-temperature-ov00.case.json	1
 C	probes/convert-temperature-ov01.case.json	1
@@ -2041,6 +2042,7 @@ C	probes/t3929-wildcard-fold-dfunctions.case.json	240
 C	probes/t3929-wildcard-fold-xmatch.case.json	210
 C	probes/t3944-datevalue-bare-clock-1900.case.json	40
 C	probes/t3944-datevalue-bare-clock-1904.case.json	40
+C	probes/t3945-atan-near-midpoint.case.json	214
 C	probes/t3948-letter-period-gate-edges.case.json	112
 C	probes/t3957-letter-period-colon-tail.case.json	168
 C	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	244
@@ -6676,6 +6678,15 @@ F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E29
 F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E3
 F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E30
 F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E7
+F	probes/t3945-atan-near-midpoint.case.json	S!B203
+F	probes/t3945-atan-near-midpoint.case.json	S!B204
+F	probes/t3945-atan-near-midpoint.case.json	S!C1
+F	probes/t3945-atan-near-midpoint.case.json	S!C10
+F	probes/t3945-atan-near-midpoint.case.json	S!C3
+F	probes/t3945-atan-near-midpoint.case.json	S!C5
+F	probes/t3945-atan-near-midpoint.case.json	S!C7
+F	probes/t3945-atan-near-midpoint.case.json	S!C8
+F	probes/t3945-atan-near-midpoint.case.json	S!C9
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B1
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B10
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B11
