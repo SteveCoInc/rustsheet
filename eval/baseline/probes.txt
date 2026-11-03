@@ -1965,6 +1965,7 @@ C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
+C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
 C	probes/t3752-percentof-3d-indirect.case.json	12

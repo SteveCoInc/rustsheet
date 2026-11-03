@@ -3,7 +3,7 @@ id: T-3746
 title: "NUMBERVALUE with NBSP or U+3000 as a separator at the start or end of the text"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,9 +24,16 @@ start or end of the text.
   start, the end and inside the text; then match.
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph) covers those cells; the engine matches every one; text.md "NUMBERVALUE removes group
+- [x] A probe case (excel-graph) covers those cells; the engine matches every one; text.md "NUMBERVALUE removes group
       separators only before the decimal separator" states the rule.
-- [ ] `make check` green; eval known failures only shrink (baseline updated); reviewers approve.
+- [x] `make check` green; eval known failures only shrink (baseline updated); reviewers approve.
 
 ## Out of scope
 - VALUE (T-3742).
+
+## Outcome
+Probe `probes/t3746-numbervalue-nbsp-separator` (12 cells, excel-graph) shows NBSP and U+3000 as decimal separator are
+read at the start and end of the text (the decimal separator is replaced before the ends are checked); as group
+separator they work before the decimal separator and leave `#VALUE!` after it. `numbervalue_of` now checks the ends
+after the decimal replacement; rule added to text.md. Eval: the probe's 12 cells match; the baseline shrank only by
+the cells this fixes (`eval/baseline/probes.txt`), no regressions.
