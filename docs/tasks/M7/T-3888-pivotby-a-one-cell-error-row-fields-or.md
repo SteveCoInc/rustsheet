@@ -3,7 +3,7 @@ id: T-3888
 title: "PIVOTBY: a one-cell error row_fields or col_fields and text or blank scalar values are #VALUE!"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -66,13 +66,28 @@ PIVOTBY returns `#VALUE!` where Excel does for a one-cell reference to an error 
 - gen-m7/fbb32b6c948cc84e.case.json Calc!A62, Calc!A184, Calc!A306, Calc!A428, Calc!A550, Calc!A794, Calc!A916
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel; unit tests cover an error-reference `row_fields`, an error-reference `col_fields`, and blank-cell and text `values`, each against a later error option.
-- [ ] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel; unit tests cover an error-reference `row_fields`, an error-reference `col_fields`, and blank-cell and text `values`, each against a later error option.
+- [x] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY's other batch rules (T-3889, T-3890); GROUPBY.
+
+## Outcome
+- `Model::pivotby_args` reads `row_fields` and `col_fields` through the new `Model::pivot_field`. A one-cell reference to an
+  error gives `#VALUE!`, but only once every error value is past: the values' error, the function's and each option's. A
+  literal error field still returns that error at once. A `values` that is a one-cell reference to a blank cell gives
+  `#VALUE!` straight after the values are read, ahead of the options. `Node::is_cell_reference_at` is now the one test for a
+  one-cell reference node, used by GROUPBY too.
+- The evidence corrected the task's premise (arrays.md "PIVOTBY in the gen-m7 arg-pairs batch", first bullet, rewritten):
+  - An error-cell field does *not* win over every option. A later error value keeps its error, as in GROUPBY: 17 calls, and
+    no call with an error value past the field is `#VALUE!`.
+  - Text `values` lose to a later option's error (26 calls). The only exception, 88f592c463d2ffb0 A7138, has a blank-cell
+    `row_sort_order` before the error. That is T-3889's rule, so the cell moved to T-3889.
+  - Two T-3889 cells with a blank-cell `values` now pass and left its list: 44a1feb80a78aa24 A1038 and 5c54b100d2f707be A3661.
+- Unit test: `test_fn_pivotby::an_error_cell_field_and_blank_cell_values_are_value_errors` (12 formulas).
+- Eval delta: gen-m7 known failures 10820 -> 10607 (213 fixed, 0 regressions); every other suite unchanged.
