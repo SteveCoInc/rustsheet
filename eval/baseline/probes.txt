@@ -1903,6 +1903,7 @@ C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
 C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
+C	probes/t3742-value-percent-currency.case.json	34
 C	probes/t3747-indirect-name-whitespace.case.json	14
 C	probes/t3747-indirect-whitespace.case.json	170
 C	probes/t3752-percentof-3d-indirect.case.json	12
@@ -7072,7 +7073,6 @@ F	probes/t3643-imsqrt-grid.case.json	S!M15
 F	probes/t3643-imsqrt-grid.case.json	S!M5
 F	probes/t3643-imsqrt-grid.case.json	S!N15
 F	probes/t3643-imsqrt-grid.case.json	S!N5
-F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A10
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A11
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A12

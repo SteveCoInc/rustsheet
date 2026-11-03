@@ -3,7 +3,7 @@ id: T-3742
 title: "VALUE reads one leading percent sign, and NUMBERVALUE refuses a trailing currency sign"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -40,3 +40,10 @@ VALUE gives Excel's value for text with a leading percent sign, as NUMBERVALUE a
 
 ## Out of scope
 - NUMBERVALUE (T-3647).
+
+## Outcome
+Probe `probes/t3742-value-percent-currency` (34 cells, excel-graph 2026-11-03) covers the shapes under VALUE, `+0`
+and NUMBERVALUE. Two changes in `parse_percent_or_currency` (formatter/parse_formatted.rs): a minus sign may precede
+the leading `%` (`-%1.5` = -0.015), and a trailing `$` is refused (`1.5$`, `1.5 $`, `-1.5$`); the euro stays
+readable. Rule in docs/excel-semantics/coercion.md. Eval: probes known failures 5139 -> 5138, 34/34 cells of the new
+case pass, 0 regressions.
