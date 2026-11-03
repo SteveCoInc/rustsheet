@@ -3,7 +3,7 @@ id: T-3857
 title: "Add upstream TIME_HOUR_MINUTE_SECOND_issue_1362.xlsx to calc_tests"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
