@@ -480,7 +480,7 @@ impl Model {
     /// The error value of an option before `field_relationship`, lifted over it when it is an
     /// array: that error in every element, since each element's GROUPBY meets it first
     /// (`GROUPBY(k,v,SUM,,,NA(),,{0;1})` is two `#N/A`, probes/groupby-subtotals G!A1351).
-    fn lifted_error(
+    pub(crate) fn lifted_error(
         &mut self,
         relationship: Option<&Node>,
         error: CalcResult,
@@ -495,7 +495,7 @@ impl Model {
 
     /// `error` in every element of `array` when it is an array or a multi-cell range that the call
     /// lifts over (GROUPBY's `field_relationship`, PIVOTBY's `relative_to`), else `error` itself.
-    pub(crate) fn error_over(
+    fn error_over(
         &mut self,
         array: CalcResult,
         error: CalcResult,

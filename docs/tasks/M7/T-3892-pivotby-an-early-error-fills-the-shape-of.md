@@ -3,7 +3,7 @@ id: T-3892
 title: "PIVOTBY: an early error fills the shape of an array relative_to or option it lifts over"
 milestone: M7
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -55,13 +55,20 @@ PIVOTBY fills the lifted shape with an early error, as Excel does, when it lifts
   gen-m7/410128dc65d03200.case.json Calc!A7931:B7932 already passes; build on that for the other early errors.
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel; a unit test covers an early `#VALUE!` and an early error option lifted over a 2x2 `relative_to`.
-- [ ] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel; a unit test covers an early `#VALUE!` and an early error option lifted over a 2x2 `relative_to`.
+- [x] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY's other batch rules (T-3888, T-3889, T-3890, T-3893); GROUPBY.
+
+## Outcome
+`Model::pivotby` lifts every error of `Model::pivotby_args` over an array `relative_to` through GROUPBY's
+`Model::lifted_error` (now `pub(crate)`), so a text, scalar or error-cell `row_fields`, an error option and a filter
+refusal fill the 2x2 shape, as each element's PIVOTBY meets the error first. The filter refusal's own `error_over`
+branch (T-3890) is folded into it. Unit test `an_early_error_fills_an_array_relative_to`; arrays.md's T-3892 bullet has
+its `Ours:` line. Eval delta: gen-m7 known failures 522 -> 12 (510 fixed, 0 regressions; all owned cells pass).

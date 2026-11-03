@@ -2283,7 +2283,11 @@ with `col_fields` beside `row_fields`:
   `Model::error_over`, which also clears 410128dc65d03200 A7931:B7932, a filter that keeps no row, of T-3892's list).
 - An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
   Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
-  A10859:B10860; 169 calls). Owner T-3892.
+  A10859:B10860; 169 calls). So do a scalar or error-cell `row_fields` (`Data!G6`, `2`, `Data!G9`) and an error option
+  (`#N/A`, `#NULL!`, `#REF!`, `SQRT(-1)`, `Data!G9`), each its own error in every cell (4ad4b1c6b2c2b01d A1:B2,
+  37041df35489e178 A4942:B4943), as GROUPBY's early errors fill a lifted `field_relationship`. Owner T-3892. Ours: since
+  T-3892 (`Model::pivotby` lifts every error of `Model::pivotby_args` over `relative_to` through
+  `Model::lifted_error`; the filter refusal above is one of them).
 - Rows sorted by a values column holding `#VALUE!` aggregates come out in an order of their own (febfd6901374d79c
   A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
   B8785). Owner T-3893.
