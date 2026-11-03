@@ -3,7 +3,7 @@ id: T-3584
 title: "Probe MATCH's exact-match fold per character where the t3298 sweep blocks disagree, and whether characters Excel's table lacks equal each other and empty text"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
