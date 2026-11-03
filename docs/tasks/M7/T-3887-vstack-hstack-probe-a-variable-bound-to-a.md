@@ -37,7 +37,8 @@ reference, and the engine matches it; docs/excel-semantics/arrays.md names T-376
 - Other stacking functions (TOCOL, TOROW, CHOOSECOLS).
 
 ## Outcome
-Added probe `probes/t3887-stack-blank-variable` (16 cells, excel-graph oracle): VSTACK/HSTACK of a LET variable and a MAP
-parameter bound to a blank cell. The engine already matched all 16 cells, so no engine change; arrays.md records the
-findings and names T-3765's helpers. The shared-helper fold-in was not needed (no engine change). Eval delta: +16 passing
-probe cells, none failing.
+Added probe `probes/t3887-stack-blank-variable` (18 cells, excel-graph oracle): `INDEX(VSTACK/HSTACK(z,1),1,1)` with z a LET
+variable and a MAP LAMBDA parameter bound to a blank cell, inspected inside the LAMBDA so MAP returns a scalar. Excel gives
+the T-2413 "empty value" in every form (ISBLANK TRUE, COUNT 1, TYPE 1), the same for VSTACK and HSTACK. The engine already
+matched all 18 cells, so no engine change; arrays.md records the findings and names T-3765's helpers. Eval delta: +18
+passing probe cells, none failing.

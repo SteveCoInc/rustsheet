@@ -2415,9 +2415,12 @@ index, a circular read) are wrapped unprobed. Unprobed, so kept as before: a one
 array's shape (a one-row or one-column array) is its error, and a wrongly shaped multi-cell include holding an error
 still returns the error first. T-3765 added `Model::is_one_cell_variable` and `stack_error_ref_as_array`
 (spill_functions.rs) so VSTACK/HSTACK also wrap a LET variable or LAMBDA parameter bound to a one-cell error reference.
-Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): `VSTACK(z,1)` and `HSTACK(z,1)`
-with z bound to a blank cell, via LET or MAP, keep the element blank in the LET form (ISBLANK TRUE, COUNT 0 for VSTACK,
-`&"x"` gives "x") and the engine matches every cell; the MAP form yields #CALC! for the `&` form. HSTACK(LET) COUNT is 1.
+Blank-cell variables (T-3887, probes/t3887-stack-blank-variable, excel-graph 2026-11-03): with z bound to a blank cell
+(D!Z1) by LET or as a MAP LAMBDA parameter, `INDEX(VSTACK(z,1),1,1)` and `INDEX(HSTACK(z,1),1,1)` are the same "empty value"
+as the direct-reference case of T-2413 (arrays.md, above): ISBLANK TRUE, COUNT 1, `&"x"` gives "x", TYPE 1 (LET A1:A4 and
+A10:A13, MAP A5:A8 and A14:A17). VSTACK and HSTACK do not differ. One-argument INDEX of the 2x1 or 1x2 stack is an
+array, not the element: TYPE 64 for VSTACK (A9), TYPE 1 for HSTACK (A18, a single row indexes straight to the element).
+The engine matches all 18 cells.
 Status: VERIFIED (excel-graph)
 Tasks: T-3506, T-3765, T-3887
 

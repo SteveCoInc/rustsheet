@@ -1940,7 +1940,7 @@ C	probes/t3881-imcsch-flip-start-negative.case.json	24
 C	probes/t3881-imcsch-flip-start.case.json	56
 C	probes/t3881-imcsch-overflow-band.case.json	416
 C	probes/t3885-textjoin-error-delimiter-text-ignore-empty.case.json	136
-C	probes/t3887-stack-blank-variable.case.json	16
+C	probes/t3887-stack-blank-variable.case.json	18
 C	probes/t3889-pivotby-option-order.case.json	52
 C	probes/t3890-pivotby-scalar-filter.case.json	59
 C	probes/t3894-bare-24h-clock.case.json	54
