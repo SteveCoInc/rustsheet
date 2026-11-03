@@ -47,4 +47,5 @@ criteria and typed input, as the four-digit `"1-Jul2024"` and `"1/Jul2024"` alre
 and a month name glued to a one-, two- or four-digit year as a date, through the same `day_name_year`
 path as the four-digit form. Period and comma forms stay `#VALUE!`. Unit test
 `glued_month_with_short_year_after_separator` added. Eval delta: probes/t3299-date-text-glued-month-3
-89 failing cells fixed (all of them; baseline/probes.txt shrank by 89 lines), no regressions.
+89 failing cells fixed (all of them; baseline/probes.txt shrank by 89 lines), no regressions. The typed format `d-mmm-yy` is covered by the probe's O:R cells (rows 2 and 10), which
+pass; the unit test checks serials only.

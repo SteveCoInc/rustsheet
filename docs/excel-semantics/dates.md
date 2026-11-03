@@ -589,15 +589,17 @@ MONTH/DAY of the text and the criteria agree on every row (E, F = 0 and K = 0 wh
   `"1-Jul2024"`, `"1-Jul24"`, `"1/Jul2024"`, `"1/Jul24"`, `"1-JULY2024"` -> 45474 (2024-07-01) and `"1Jul5"`
   -> 38534 (2005-07-01), each with format `d-mmm-yy`; `"1.Jul2024"`, `"1,Jul2024"`, `"1Jul1 , 2024"` and
   `"July1 , 2024 5"` stay text (General) (N1:N10, O:R).
-The engine reads the slash or hyphen shapes with a one- or two-digit glued year as `#VALUE!` and keeps them
-text when typed (rows 14, 19-26, N2, N10: engine gap T-3919); every other row matches.
+Implemented (T-3919): `parse_separated` takes a day, `/` or `-`, then a month glued to a one-, two- or
+four-digit year through `day_name_year`; period and comma stay `#VALUE!`; the engine matches every row.
 UNVERIFIED:
 - separators other than space, slash, hyphen, period and comma before a glued month-year, and a slash or hyphen
   before a glued month with no year (`"1/Jul"`);
+- a three-digit glued year after a separator (`"1-Jul245"`, the engine reads `#VALUE!`) and a two-digit one at or
+  above the century pivot (`"1-Jul30"`, which follows the shared two-digit year rule);
 - the clock-year results (`"July1"`, `"July01"`, criteria K6-K8) for clocks other than the oracle's 2026;
 - locales other than en-US (the split uses the locale's month names).
 Status: VERIFIED (web) for probes/date-text-glued-month rows 1-24, probes/date-text-glued-month-2 and probes/t3299-date-text-glued-month-3; engine gaps are tasks (below).
-Implemented in: `split_glued_month` in `crates/rustsheet-engine/src/formatter/date_text.rs` (used by `parse_date`)
+Implemented in: `split_glued_month` and `parse_separated` in `crates/rustsheet-engine/src/formatter/date_text.rs` (used by `parse_date`)
 Tasks: T-1788, T-1789, T-1879, T-3299, T-3919
 
 ## WORKDAY holidays take the whole range
