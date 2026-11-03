@@ -3768,6 +3768,13 @@ Evidence: probes-numeric m9-beta-inv, m9-legacy-betainv, t1745-beta-inv-roundtri
 and its neighbours as constants, BETA.DIST of each, and BETA.INV again), m9-f-inv, t1049-finv,
 m9-f-inv-rt, m9-legacy-finv, t1049-finvrt, m9-t-inv, m9-t-inv-2t, t1048-tinv. Fits `beta-inv`,
 `f-inv`, `f-inv-rt`, `t-inv`, `t-inv-2t` (`fitlab/kernels/beta_inv.py`).
+Tiny shapes and scaled ranges (T-3566, probes-numeric t3566-beta-inv-tiny-shape-and-range, excel-graph): of the 66
+tiny-shape points (a, b in 1E-5..0.01, p near 1/2 and 0.1/0.9), Excel's BETA.INV returns #NUM! at 21 (a = b = 1E-5: 4,
+1E-4: 4, 1E-3: 2; (1E-4, 0.01): 6; (0.01, 1E-4): 5; the plain and the [0.15, 1.2] calls agree on every one). At the 45
+numeric points BETA.DIST(BETA.INV(p)) equals p exactly at 24, is within one ulp at 4 and further at 17. Where it is
+further the cdf is flat or saturated (it reads 1.0, or 0.98646998669861 for every p at (1E-4, 0.01)), so the landing
+point is not a crossing of p. The scaled quantile BETA.INV(p,a,b,A,B) equals A + (B - A)*BETA.INV(p,a,b) bit for bit
+at all 40 points ((3, 600) and (2, 2.5) on four ranges, five p each).
 Status: VERIFIED (crossing at 155/188); the 11 misses and the solver's start, step and stop are UNVERIFIED
 Tasks: T-1745, T-0974
 
