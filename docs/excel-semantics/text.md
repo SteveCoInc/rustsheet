@@ -1409,3 +1409,11 @@ Evidence: gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512, A514:B51
 Status: VERIFIED
 Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
 Tasks: T-3884
+
+## SUBSTITUTE with a boolean instance_num is #VALUE! (T-3510, T-3927)
+Rule: `SUBSTITUTE("abc",0,"abc",TRUE)`, `SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)`
+are `#VALUE!` in Excel; every other argument kind of the first three arguments pairs normally with a numeric
+instance_num. All 23 evidenced cells have the literal `TRUE` fourth argument (gen-m5 5136e04c4ce978c3 A79 ..., see
+T-3927 for the list). Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03).
+Ours: the fourth argument goes through `calc_result_to_number`, so `TRUE` is instance 1 (known failure, T-3927). FALSE and a
+boolean from a cell are UNVERIFIED.
