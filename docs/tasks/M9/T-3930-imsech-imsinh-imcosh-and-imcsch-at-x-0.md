@@ -90,3 +90,16 @@ below |x| 1E-4").
 
 Eval delta: probes-numeric t3720-im-reciprocal-small-x-complex 4 texts and t3721-im-hyperbolic-small-x-fresh-sweep 2
 newly pass (not baselined suites); gated baselines unchanged, REGRESSIONS 0; new case t3930-r4-im-small-x-cosh 480/480.
+
+## Landing notes
+- PR #2999 (draft), head: the commit that adds this section. CI starts on this push. Every earlier CI run was on
+  930d42b, which failed check-fast's duplication and FITTED ratchets locally and was fixed after.
+- Reviewers: design, security and excel-fidelity all APPROVED 930d42b with MINOR findings only. The commits since
+  then change the following, and each reviewer must re-run on this head:
+  - a shared `docs/research/sweep_case.py`; both generators still regenerate their committed cases byte for byte;
+  - one doc-comment sentence on `inverse_exp_sinh_cosh` (design's MINOR);
+  - `quality/fitted.json` (`check_fitted.py --update`, 89 → 90; the hold-out is in the Outcome).
+  `make check-fast` passed locally on this head.
+- Deferred MINOR (fidelity): widen the FITTED range's lower bound to 1E-06 (the fresh sweep reaches it), or note
+  the libm fallback. The window closed while this was in flight.
+- Next step: re-run the three reviewers on this head, wait for green CI, mark ready, enqueue (SQUASH).
