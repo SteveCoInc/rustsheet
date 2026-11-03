@@ -103,7 +103,10 @@ impl LambdaCaller {
     /// (`Model::evaluate_formula_root`), at every call. An in-place call snaps
     /// (`Model::call_lambda`), and so does each call MAP, MAKEARRAY, BYROW, BYCOL, REDUCE and
     /// SCAN make, REDUCE's and SCAN's at every step, so `REDUCE(0,{0.1,0.2,-0.3,1E-16},
-    /// LAMBDA(a,x,a+x))` is 1E-16 (probes/t3095-snap-lambda-helpers, T-3111).
+    /// LAMBDA(a,x,a+x))` is 1E-16 (probes/t3095-snap-lambda-helpers, T-3111). GROUPBY and
+    /// PIVOTBY aggregation LAMBDAs call through it too, one- and two-parameter alike, the total
+    /// rows being the LAMBDA run again over all the values (probes/t3112-snap-groupby-eta,
+    /// probes/t3875-snap-groupby-two-arg; T-3617, T-3875).
     pub(crate) fn snapping_root(mut self) -> Self {
         self.root_snap = true;
         self

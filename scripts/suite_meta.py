@@ -1,5 +1,5 @@
-"""The eval suites' manifests (`eval/suites/*/suite.toml`) as one commit has them, for the merge
-tooling: which known-failure lists CI's eval gate checks (`merge_ready.Repo.checked_baselines`,
+"""The eval suites' manifests (`eval/suites/*/suite.toml`) as one commit has them, for `make
+catch-up`: which known-failure lists CI's eval gate checks (`merge_catchup.checked_baselines`,
 decision 0207) and where each suite's case files live (`visible_lock.case_on`, decision 0219)."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from merge_lock import git
+from git_ops import git
 
 SUITES_DIR = "eval/suites"
 

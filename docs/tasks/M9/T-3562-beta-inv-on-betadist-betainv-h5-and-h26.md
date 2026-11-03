@@ -38,6 +38,7 @@ held-out and fresh sweep points, or the task records the hypotheses it ruled out
   shapes (flat cdf, off-crossing stops) from T-3387's sweep. Share its start and stop model; do not write a second
   search. T-3387 sweeps shapes from 0.5 up, and neither shapes below 0.01 nor a scaled range [A, B] are probed. That
   is T-3566's sweep, so this task waits for it.
+- Evidence: probes-numeric t3566-beta-inv-tiny-shape-and-range.
 - Code: `fn_beta_inv` in crates/rustsheet-engine/src/functions/statistical/beta.rs, `beta_quantile` and
   inverse_beta.rs `beta_quantile_crossing`.
 

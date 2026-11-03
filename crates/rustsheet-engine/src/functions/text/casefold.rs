@@ -24,12 +24,11 @@ pub(super) fn fold_for_split(text: &str) -> String {
 }
 
 /// TEXTBEFORE and TEXTAFTER's `match_mode` 1 folding: [`fold_match_char`], except that sigma
-/// folds by position, with LOWER's final-sigma rule ([`sigma_is_final`]): a `Σ` before a letter
-/// or digit is `σ` and any other `Σ` is `ς`, and `ς` stays `ς`, so `ς` matches only `ς` and a
-/// final `Σ` (probes/textbefore-casefold-length A17-A25, probes/textbefore-sigma-contexts: a
-/// digit gives `σ`, a space or punctuation `ς`, and a lone `Σ` is `ς` even against a text `Σ`
-/// that is `σ`). `ẞ` does not fold to `ß`. That a combining mark, `’` or zero-width space
-/// also gives `σ` is UNVERIFIED here (it is LOWER's rule).
+/// folds by position, with LOWER's final-sigma rule ([`sigma_is_final`], the 30-character list
+/// verified in probes/t3820-lower-sigma-next-char C1:C50): a `Σ` at the end of the text or before
+/// one of those characters is `ς`, any other `Σ` is `σ`, and `ς` stays `ς`, so `ς` matches only
+/// `ς` and a final `Σ` (probes/textbefore-casefold-length A17-A25, probes/textbefore-sigma-contexts:
+/// a lone `Σ` is `ς` even against a text `Σ` that is `σ`). `ẞ` does not fold to `ß`.
 pub(super) fn fold_for_before_after(text: &str) -> String {
     let mut folded = String::with_capacity(text.len());
     let mut chars = text.chars().peekable();

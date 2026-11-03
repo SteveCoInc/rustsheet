@@ -77,6 +77,28 @@ evidence: pv23_022 is not vendored, and its file is in manual calculation mode.
 Status: VERIFIED (excel-graph)
 Tasks: T-0428, T-0401, T-0445, T-0451, T-0461, T-0464
 
+## A circular formula typed after the load leaves its readers their values from before
+Rule: Excel recalculates after the workbook loads and again after each typed entry, and the rule above holds at each of
+those recalculations: a cell that reads a cycle keeps the value it had just before the entry that closed it. So a formula
+typed into a blank cell that reads itself is 0, but its readers keep what they computed when it was blank: with H10
+typed `=H10+1`, the stored `ISBLANK(H10)` is TRUE, `ISNUMBER(H10)` FALSE, `TYPE(H10)` 1, `H10&"x"` "x",
+`COUNTBLANK(H10)` 1, `=H10` and `IFERROR(H10,"e")` 0, and a reader typed before H10 (`ISBLANK(H10)` in H5) is TRUE too,
+where a reader typed after it has no earlier value and is the number 0 (`ISBLANK(H10)`, `=H10` and `ISNUMBER(H10)` typed
+in H12:H14). `ISFORMULA(H10)`, which takes the reference without its value, is TRUE. A cycle typed one cell at a time
+keeps its first cell's value from the entry before the cycle closed: H17 `=H18+1` typed while H18 is blank is 1, then
+H18 `=H17+1` is 0, and `ISBLANK(H17)` is FALSE while `ISBLANK(H18)` is TRUE. A stored cycle is unchanged (D1 `=D1+1`
+0, its reader `ISBLANK(D1)` the number 0, as in the entry above). The R1C1 forms `=RC[0]*0+1` and
+`=SUM(R:R[1])*0+ROWS(R[-50]:R[-49])` (probes/t3212-r1c1-bare-offsets S!H39, S!H50) are such typed self-references: 0,
+and `ISBLANK` of them (J39, J50) TRUE.
+Evidence: probes/t3898-typed-circular-readers (28 cells, excel-graph, 2026-11-03, T-3898); probes/t3212-r1c1-bare-offsets
+S!H39, S!J39, S!H50, S!J50 (excel-graph, 2026-11-03).
+Ours: the engine keeps a circular cell's stored value (the entry above); the eval harness types a case's entered cells
+one edit each, in row-major order sheet by sheet, after the edit that loads the stored cells (`type_entries`,
+crates/rustsheet-eval/src/engine.rs; T-3898), as the oracle types them. A host that types several formulas in one
+`Workbook::edit` gets one recalculation for all of them, as one paste would (unprobed).
+Status: VERIFIED (excel-graph)
+Tasks: T-3898
+
 ## Iterative calculation sweeps the cycle in sheet order, in place
 Rule: with iteration on, each iteration recalculates the cycle's cells once in row-major sheet
 order, and each cell reads the values already updated in the same sweep (Gauss-Seidel, not

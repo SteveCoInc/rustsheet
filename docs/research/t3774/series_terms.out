@@ -1,0 +1,12 @@
+excel
+  Mp +0.95 Mq +0.99 ejp -1.04 ejq -0.88  rms 0.77
+  Mp +0.95 Mq +0.99 ejp -1.04 ejq -0.87 psump +2.09 psumq +0.62  rms 0.77
+  Mp +0.95 Mq +0.99 ejp -1.04 ejq -0.88 ejsp +56.18 ejsq +604.48  rms 0.77
+  Mp +0.95 Mq +0.99 ejp -1.04 ejq -0.87 v2p -42.85 v2q +248.20  rms 0.77
+  Mp +0.95 Mq +0.99 ejp -1.04 ejq -0.87 psump +2.11 psumq +0.25 ejsp +38.30 ejsq +639.90 v2p -18.70 v2q +327.29  rms 0.77
+engine
+  Mp +1.00 Mq +1.00 ejp -1.00 ejq -1.00  rms 0.04
+  Mp +1.00 Mq +1.00 ejp -1.00 ejq -1.00 psump -0.03 psumq -0.52  rms 0.04
+  Mp +1.00 Mq +1.00 ejp -1.00 ejq -1.00 ejsp -5.03 ejsq -15.72  rms 0.04
+  Mp +1.00 Mq +1.00 ejp -1.00 ejq -1.00 v2p -6.48 v2q -49.85  rms 0.04
+  Mp +1.00 Mq +1.00 ejp -1.00 ejq -1.00 psump -0.04 psumq -0.50 ejsp -3.23 ejsq -14.62 v2p -7.73 v2q -23.35  rms 0.04

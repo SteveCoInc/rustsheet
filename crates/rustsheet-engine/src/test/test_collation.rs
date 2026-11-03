@@ -315,6 +315,35 @@ fn final_sigma_folds_in_exact_and_wildcard_matches() {
     );
 }
 
+/// U+0001 is `*` in a pattern that starts with it and holds no `*`, and in SEARCH always
+/// (probes/t3921-match-u0001-wildcard).
+#[test]
+fn soh_reads_as_a_star() {
+    use crate::functions::criteria::WildcardPattern;
+    let matches = |pattern: &str, text: &str| {
+        WildcardPattern::new(&Text::from(pattern)).matches(&Text::from(text))
+    };
+    assert!(matches("\u{1}", "zzz") && matches("\u{1}", ""));
+    assert!(matches("\u{1}b", "ab") && !matches("\u{1}b", "abc"));
+    assert!(matches("\u{1}b\u{1}", "abc"));
+    assert!(matches("~\u{1}", "zzz"));
+    assert!(
+        !matches("a\u{1}", "abc") && matches("a\u{1}c", "a\u{1}c") && !matches("a\u{1}c", "abc")
+    );
+    assert!(!matches("\u{1}*", "abc") && !matches("*\u{1}", "abc"));
+    assert_eq!(
+        WildcardPattern::new(&Text::from("\u{1}")).literal_units(),
+        None
+    );
+    let search = |pattern: &str| {
+        WildcardPattern::for_search(pattern.encode_utf16())
+            .find_from(&"xabcx".encode_utf16().collect::<Vec<_>>(), 0)
+    };
+    assert_eq!(search("a\u{1}"), Some(1));
+    assert_eq!(search("\u{1}*"), Some(0));
+    assert_eq!(search("q\u{1}"), None);
+}
+
 /// The evaluated `Data` strings of the probes case `stem` (each a formula such as
 /// `="a"&REPT(UNICHAR(769),22)`).
 fn probe_data_strings(stem: &str) -> Vec<Text> {
@@ -573,4 +602,68 @@ fn t3276_other_scripts() {
     assert_eq!(cmp_text(&pair, &low), Ordering::Less);
     assert_eq!(cmp_text(&high, &fffd), Ordering::Greater);
     assert_eq!(cmp_text(&low, &fffd), Ordering::Greater);
+}
+
+/// T-3917 rule 7: every other-script digit is its digit plus a tiebreak in code-point order of
+/// its block, below the next digit (probes/t3559-collation-unprobed-blocks ranks Calc!A11, A136:A145,
+/// G21:G25; probes/t3895-collation-script-digits A151:A178).
+#[test]
+fn script_digits_tiebreak_by_block() {
+    assert_increasing(&[
+        "3", "３", "٣", "۳", "३", "৩", "੩", "௩", "౩", "๓", "໓", "༣", "၃", "៣", "3a", "4",
+    ]);
+    for digit in ["੩", "௩", "౩", "៣"] {
+        assert_ne!(cmp_text_excel(digit, "3"), Ordering::Equal);
+    }
+}
+
+/// T-3917 rule 1: `➿`, `ᡸ` and `₿` are equal to each other, above `""` and below `"!"`
+/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17).
+#[test]
+fn t3559_unknown_characters_weigh_alike() {
+    for unknown in ["\u{27bf}", "\u{1878}", "\u{20bf}"] {
+        assert_increasing(&["", unknown, "!", "0"]);
+        assert_eq!(cmp_text_excel(unknown, "\u{27bf}"), Ordering::Equal);
+    }
+}
+
+/// T-3917 rule 2: symbols among the punctuation in Excel's order, `•` after them (ranks 4 to 29,
+/// G16, G18).
+#[test]
+fn t3559_symbol_order() {
+    assert_increasing(&[
+        "!", "#", "$", "%", "、", "。", "~", "「", "₩", "€", "₹", "+", "≠", "∑", "∫", "≤", "■",
+        "●", "←", "⇿", "─", "█", "☀", "✓", "•", "0",
+    ]);
+}
+
+/// T-3917 rule 3: `∞` between `"9"` and `"a"`, `℃ №` between `"a"` and `"tm"`, `™` after `"tn"`
+/// and before `"z"` (ranks 41 to 50, G1:G12).
+#[test]
+fn t3559_letterlike_symbols() {
+    assert_increasing(&["~", "•", "0", "9", "∞", "a", "℃", "№", "tm", "™", "z"]);
+    assert_increasing(&["t", "tn", "™"]);
+    assert_eq!(cmp_text_excel("tm", "TM"), Ordering::Equal);
+}
+
+/// T-3917 rules 4 and 5: block order and the exceptions to code-point order inside a block
+/// (ranks 51 to 154).
+#[test]
+fn t3559_block_order() {
+    assert_increasing(&[
+        "ω", "я", "ա", "ֆ", "ა", "ჰ", "Ⴀ", "あ", "א", "ي", "क", "অ", "ক", "কি", "হ", "ਅ", "ਹ", "ਕ",
+        "ਕਿ", "அ", "க", "ஹ", "అ", "క", "హ", "เก", "โ", "ไก", "ก", "ข", "ะ", "ำ", "က", "ကိ", "အ",
+        "ᠠ", "ཀ", "ཀི", "ཨ", "ກ", "ກະ", "ຂ", "ະ", "ແ", "ໂ", "ໄ", "ໃ", "ក", "កា", "អ", "ሀ", "ፚ", "𐀀",
+        "𝐀", "😀", "𰀀", "가", "一", "𠀀", "𪜀",
+    ]);
+    assert_ne!(cmp_text_excel("Ⴀ", "ა"), Ordering::Equal);
+}
+
+/// T-3917 rule 6: equal forms (G13:G15, B55, B97, B109).
+#[test]
+fn t3559_equal_forms() {
+    assert_eq!(cmp_text_excel("Ա", "ա"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("ץ", "צ"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{fefb}", "لا"), Ordering::Equal);
+    assert_increasing(&["צ", "ש", "ת"]);
 }

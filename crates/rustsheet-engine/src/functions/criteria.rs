@@ -7,7 +7,7 @@ use crate::{
     cast::value_number_text_with,
     expressions::token::{is_english_error_string, Error},
     formatter::date_text::{parse_date, CurrentYear},
-    functions::util::collation::{cmp_text_pairwise, fold_case},
+    functions::util::collation::{cmp_text_pairwise, fold_case, fold_lookup},
     locale::Locale,
     number_format::{cmp_excel_precision, parse_excel_number, parse_finite_number},
     text::Text,
@@ -589,7 +589,8 @@ fn operand_text(criterion: &Text, prefix: &str) -> Text {
 }
 
 /// `text` case-folded unit by unit as a [`WildcardPattern`] compares it: each run folded by
-/// [`fold_case`], one character to one, then read as UTF-16 units (for ASCII text, each byte
+/// [`fold_lookup`] (Excel's comparison table: weightless characters one class, astral scripts
+/// apart; T-3445), one character to one, then read as UTF-16 units (for ASCII text, each byte
 /// lower-cased).
 pub(crate) fn folded_units(text: &Text) -> Vec<u16> {
     match text {
@@ -597,7 +598,7 @@ pub(crate) fn folded_units(text: &Text) -> Vec<u16> {
             .bytes()
             .map(|byte| u16::from(byte.to_ascii_lowercase()))
             .collect(),
-        _ => text.map_runs(fold_case).units().collect(),
+        _ => text.map_runs(fold_lookup).units().collect(),
     }
 }
 
@@ -615,6 +616,8 @@ enum WildcardToken {
 const TILDE: u16 = b'~' as u16;
 const STAR: u16 = b'*' as u16;
 const QUESTION: u16 = b'?' as u16;
+/// U+0001, which Excel's wildcard matchers read as `*` (see [`WildcardPattern::new`]).
+const SOH: u16 = 0x0001;
 
 /// An Excel wildcard pattern, matched against whole texts, case-insensitively, UTF-16 unit by
 /// unit. Excel: `?` is one unit, so a surrogate pair takes `??` and a wildcard splits a pair
@@ -630,14 +633,42 @@ pub(crate) struct WildcardPattern {
 }
 
 impl WildcardPattern {
-    /// Compiles `pattern`.
+    /// Compiles `pattern` for MATCH, VLOOKUP, HLOOKUP, XMATCH's wildcard mode and the criteria
+    /// functions. Excel reads every U+0001 as `*` when the pattern (after its `~` escapes) starts
+    /// with U+0001 and holds no `*`; otherwise U+0001 is a literal character:
+    /// `MATCH(CHAR(1)&"b",..)` finds "ab", `CHAR(1)&"b"&CHAR(1)` finds "abc", but `"a"&CHAR(1)`,
+    /// `CHAR(1)&"*"` and `"*"&CHAR(1)` find neither, and `COUNTIF(..,CHAR(1)&"?")` counts every
+    /// non-empty text (docs/excel-semantics/lookup.md "U+0001 is a wildcard";
+    /// probes/t3921-match-u0001-wildcard).
     pub(crate) fn new(pattern: &Text) -> WildcardPattern {
-        Self::from_units(pattern.map_runs(fold_case).units())
+        let mut compiled = Self::from_units(pattern.map_runs(fold_lookup).units());
+        let leading = compiled.tokens.first() == Some(&WildcardToken::Unit(SOH));
+        if leading && !compiled.tokens.contains(&WildcardToken::AnyRun) {
+            compiled.soh_as_star();
+        }
+        compiled
+    }
+
+    /// SEARCH's pattern: there every U+0001 is `*`, wherever it sits and beside a `*` too
+    /// (`SEARCH("a"&CHAR(1),"xabcx")` is 2, `SEARCH(CHAR(1)&"*","xabcx")` 1;
+    /// probes/t3921-match-u0001-wildcard column C).
+    pub(crate) fn for_search(units: impl Iterator<Item = u16>) -> WildcardPattern {
+        let mut compiled = Self::from_units(units);
+        compiled.soh_as_star();
+        compiled
+    }
+
+    fn soh_as_star(&mut self) {
+        for token in &mut self.tokens {
+            if *token == WildcardToken::Unit(SOH) {
+                *token = WildcardToken::AnyRun;
+            }
+        }
     }
 
     /// Compiles a pattern whose units the caller has already case-folded (SEARCH folds the whole
-    /// text once with [`fold_case`] and searches its units).
-    pub(crate) fn from_units(units: impl Iterator<Item = u16>) -> WildcardPattern {
+    /// text once with [`fold_case`] and searches its units), U+0001 kept literal.
+    fn from_units(units: impl Iterator<Item = u16>) -> WildcardPattern {
         let mut units = units;
         let mut tokens = Vec::new();
         while let Some(unit) = units.next() {

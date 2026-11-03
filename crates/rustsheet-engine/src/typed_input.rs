@@ -10,6 +10,8 @@ use crate::expressions::{
 };
 use crate::model::Model;
 
+mod r1c1;
+
 /// Start of the error message [`Model::set_typed_user_input`] gives for a formula that does not
 /// parse, which Excel refuses typed (Graph PATCH 400 `InvalidArgument`) where it keeps stored text
 /// (T-3213). Callers that replay what a user typed leave such a cell as it was (decision 0179).
@@ -20,9 +22,10 @@ pub const TYPED_FORMULA_DOES_NOT_PARSE: &str = "Formula does not parse";
 /// text without a leading `=` is a constant, the same in both modes. `None` when the formula does
 /// not parse, which Excel refuses. `worksheets` are the workbook's sheet names; defined names are
 /// kept as written and resolve when the A1 text is entered, but a structured reference does not
-/// parse here (no tables), so such a formula is `None` (T-3113). The engine's R1C1 grammar is its
-/// storage form, which always writes both numbers: a bare `R` or `C` (`RC`, `R[-1]C`) is not read
-/// as an offset of 0 (TODO(T-3212)).
+/// parse here (no tables), so such a formula is `None` (T-3113). Excel's short forms (`RC[-1]`,
+/// `R[-1]C`, a whole row `R2` or column `C[-1]`, lower case) read as Excel reads them, and a
+/// relative offset wraps around the grid (T-3212); a LET name or LAMBDA parameter `r`, `c`, `rc`
+/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`.
 #[must_use]
 pub fn r1c1_formula_to_a1(
     text: &str,
@@ -34,15 +37,24 @@ pub fn r1c1_formula_to_a1(
     let Some(formula) = text.strip_prefix('=') else {
         return Some(text.to_string());
     };
+    let formula = r1c1::expand_short_forms(formula, row, column)?;
     let mut parser = new_parser_english(worksheets.to_vec(), Vec::new(), HashMap::new());
     parser.set_lexer_mode(LexerMode::R1C1);
+    // Typed, so that what Excel refuses typed is refused here too (a LET name that reads as a
+    // reference in R1C1 mode, T-3212).
+    parser.set_typed(true);
     let context = CellReferenceRC {
         sheet: sheet.to_string(),
         row,
         column,
     };
-    let node = parser.parse(formula, &context);
-    if matches!(node, Node::ParseErrorKind { .. }) {
+    let node = parser.parse(&formula, &context);
+    // The A1 text printed below drops the whitespace, so a TAB or NBSP Excel refuses typed
+    // (`=S!` TAB `R1C4`, probes/t3102-r1c1-ws-after-bang, T-3102) is refused here.
+    if matches!(node, Node::ParseErrorKind { .. })
+        || parser.skipped_refused_whitespace()
+        || parser.typed_refusal().is_some()
+    {
         return None;
     }
     Some(format!("={}", to_english_string(&node, &context)))

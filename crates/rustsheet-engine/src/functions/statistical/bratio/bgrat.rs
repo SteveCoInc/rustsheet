@@ -22,7 +22,7 @@ use crate::x87_log1p::excel_log1p;
 use crate::x87_register::Register;
 
 /// A double-double: an unevaluated sum `hi + lo`.
-type Dd = (f64, f64);
+pub(super) type Dd = (f64, f64);
 
 /// Excel's switch from LN(x) to log1p(-y) for bgrat's ln x: y at or below it takes the series
 /// (r2-tdist probe p1 part B: every cell with y <= 0.01, the double 0.01 included, fits log1p).
@@ -37,7 +37,7 @@ const STOP_TOLERANCE: f64 = 15e-15;
 
 /// Past this z the prefactor e^-z is past [`dd_exp`]'s double-double range (its tail word turns
 /// subnormal); such points, tails below about 1E-282, keep today's kernel.
-const MAX_Z: f64 = 650.0;
+pub(super) const MAX_Z: f64 = 650.0;
 
 /// The smallest z [`upper_gamma_fraction`] takes: Legendre's fraction converges slowly below
 /// about 1 (every L140 bup+bgrat point in the probes has z >= 1.1: RESULTS.md finding 3).

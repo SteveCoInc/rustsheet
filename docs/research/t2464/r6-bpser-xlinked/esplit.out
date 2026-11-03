@@ -1,0 +1,6 @@
+EXP control: model == Excel on 10848 / 10848
+hold b0=4.75 a0=0.3 {'n': 397, 'model exact': 397, 'E measured exact': 397, 'E model == measured': 397}
+tune b0=2.5 a0=0.3 {'n': 350, 'model exact': 350, 'E measured exact': 350, 'E model == measured': 350}
+tune b0=6.25 a0=0.3 {'n': 406, 'model exact': 406, 'E measured exact': 406, 'E model == measured': 406}
+tune b0=2.5 a0=0.7 {'n': 258, 'model exact': 258, 'E measured exact': 258, 'E model == measured': 258}
+tune b0=6.25 a0=0.7 {'n': 512, 'model exact': 510, 'E measured exact': 510, 'E model == measured': 512, 'miss fixed by s-1': 2}

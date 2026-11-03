@@ -43,9 +43,10 @@ class Classifier(unittest.TestCase):
         self.assertFalse(classify("docs/parity.md", "docs/status.md", "docs/research-plan.md"))
         self.assertFalse(classify("docs/progress.md.bak", "docs/progress.mdx", "docs/milestones.md~"))
 
-    def test_the_review_skill_is_code(self) -> None:
-        # scripts/test_merge_ready.py reads its reviewer-applicability list (decision 0149).
-        self.assertTrue(classify(".claude/skills/review/SKILL.md"))
+    def test_skills_are_docs_only(self) -> None:
+        # The review skill was code while scripts/test_merge_ready.py read its panel (decision
+        # 0149); that reader went with the merge train (decision 0247, T-3827).
+        self.assertFalse(classify(".claude/skills/review/SKILL.md"))
         self.assertFalse(classify(".claude/skills/steward/SKILL.md"))
 
     def test_rename_of_crate_file_into_docs_is_code(self) -> None:
@@ -126,29 +127,29 @@ class MergeBase(unittest.TestCase):
     def branch(self, name: str, start: str) -> None:
         git(self.repo, "checkout", "-q", "-b", name, start)
 
-    def test_train_of_docs_prs_on_main_is_docs_only(self) -> None:
-        # A train starts at M0 = main's tip and merges PRs onto it; main has not moved.
+    def test_a_merge_of_docs_prs_on_main_is_docs_only(self) -> None:
+        # A branch starts at M0 = main's tip and merges PRs onto it; main has not moved.
         self.branch("pr1", self.m0)
         pr1 = commit(self.repo, "docs/tasks/T-1.md")
-        self.branch("merge-train/current", self.m0)
+        self.branch("group", self.m0)
         git(self.repo, "merge", "-q", "--no-ff", "--no-edit", pr1)
         commit(self.repo, "docs/status.md")
         self.assertFalse(self.code("main", "HEAD"))
         self.assertEqual(self.cli("main", "HEAD"), b"code=false\n")
 
-    def test_train_with_a_code_pr_is_code(self) -> None:
-        self.branch("merge-train/current", self.m0)
+    def test_a_merge_with_a_code_pr_is_code(self) -> None:
+        self.branch("group", self.m0)
         commit(self.repo, "docs/status.md")
         commit(self.repo, "crates/b.rs")
         self.assertTrue(self.code("main", "HEAD"))
 
-    def test_train_base_ignores_main_moving_on(self) -> None:
-        # main gains a code commit after the train was built: only the train's own diff counts.
-        self.branch("merge-train/current", self.m0)
+    def test_the_merge_base_ignores_main_moving_on(self) -> None:
+        # main gains a code commit after the branch was built: only the branch's own diff counts.
+        self.branch("group", self.m0)
         commit(self.repo, "docs/status.md")
         git(self.repo, "checkout", "-q", "main")
         commit(self.repo, "crates/a.rs")
-        self.assertFalse(self.code("main", "merge-train/current"))
+        self.assertFalse(self.code("main", "group"))
 
     def test_docs_only_pr_behind_main_is_docs_only(self) -> None:
         # Run 40622986699 (PR #2119): base.sha lagged main, and main had gained code since the

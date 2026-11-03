@@ -1,0 +1,24 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3062: value of a typed sheet-qualified #REF! naming a sheet the workbook does not have (Sheet1!A1 =NoSuchSheet!#REF!, A3 =SUM(NoSuchSheet!#REF!), A5 ISREF). Its FORMULATEXT is recorded in references.md, not here: Graph prints the oracle drive's URL in it.",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=NoSuchSheet!#REF!",
+        "A3": "=SUM(NoSuchSheet!#REF!)",
+        "A5": "=ISREF(NoSuchSheet!#REF!)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!A1",
+    "Sheet1!A3",
+    "Sheet1!A5"
+  ]
+}

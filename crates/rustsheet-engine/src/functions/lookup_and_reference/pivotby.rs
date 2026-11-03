@@ -80,7 +80,15 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
-        let (mut pivot, mut functions) = self.pivotby_args(args, cell)?;
+        // An early error fills the shape of an array `relative_to` the call lifts over, since each
+        // element's PIVOTBY meets it first, as GROUPBY's does: `#VALUE!` in all four cells of a
+        // `Data!C3:D4` behind a text `row_fields`, an error option or an error-cell field, and a
+        // filter refusal (gen-m7 arg-pairs batch, excel-graph: 4ad4b1c6b2c2b01d A1:B2,
+        // 37041df35489e178 A4942:B4943, 547d6192794dbf57 A10188:B10189).
+        let (mut pivot, mut functions) = match self.pivotby_args(args, cell) {
+            Ok(parsed) => parsed,
+            Err(error) => return Err(self.lifted_error(args.get(10), error, cell)),
+        };
         let (mut rows, mut cols, height) = pivot_groupings(&pivot, cell)?;
         if let Some(elements) = pivot.lifted.take() {
             return Ok(self.lifted_relative_to(elements, cell));
@@ -97,7 +105,10 @@ impl Model {
         // Rows sort by a value only when there is a Total column: with col_total_depth 0 they keep
         // the key order (probes/pivotby-followup P!A781, P!A1221; with it, P!M121, P!A801).
         // Columns sort by a value with or without the Total row (P!A821, P!A841).
-        let key_order = SortOrder::Keys(Vec::new());
+        let key_order = SortOrder::Keys {
+            ascending: Vec::new(),
+            named: Vec::new(),
+        };
         let row_sort = match pivot.row_sort {
             SortOrder::Value { .. } if pivot.col_depth == 0 => &key_order,
             ref order => order,
@@ -325,14 +336,45 @@ impl Model {
         if !(4..=11).contains(&args.len()) {
             return Err(CalcResult::new_args_number_error(cell));
         }
-        let row_keys = self.eval_to_array(&args[0], cell)?;
-        let col_keys = self.eval_to_array(&args[1], cell)?;
-        let values = self.eval_to_array(&args[2], cell)?;
+        // A field that is a one-cell reference to an error is `#VALUE!`, but only once every
+        // error value is past (the values' and the options'), with or without field_headers:
+        // `PIVOTBY(Data!G9,Data!A1:B12,Data!G3,LAMBDA(y,0.3))` is `#VALUE!`,
+        // `PIVOTBY(Data!G9,Data!A1:D12,Data!G9,..)` and `PIVOTBY(Data!G9,..,LAMBDA(x,0),0,0,Data!G9)`
+        // `#DIV/0!` (gen-m7 arg-pairs batch, excel-graph: 01d099c3b6d6ae95 A1038, A1770,
+        // 542087608aa65000 A7382). A literal error field is that error at once (A1221).
+        let (row_keys, row_error_cell) = self.pivot_field(&args[0], cell)?;
+        let (col_keys, col_error_cell) = self.pivot_field(&args[1], cell)?;
+        let values = self.evaluate_node_in_context(&args[2], cell);
+        if values.is_error() {
+            return Err(values);
+        }
+        // Values that are a one-cell reference to a blank cell are `#VALUE!` ahead of every
+        // option's error, as in GROUPBY (`PIVOTBY(Data!A1:D12,Data!C1:C12,Data!H1,_xleta.MIN,1,-2,
+        // #NUM!)`, 0098e1e4e5f8aa7c A10737); a literal error field still wins (01d099c3b6d6ae95
+        // A1831). Text values lose to the options' errors (`Data!G6` beside a later `Data!G9` is
+        // `#DIV/0!`, 0098e1e4e5f8aa7c A5430), as their height check below does.
+        if matches!(values, CalcResult::EmptyCell) && args[2].is_cell_reference_at(cell.row) {
+            return Err(value_error(cell, "values must not be a blank cell"));
+        }
+        let values = self.result_to_array(values, cell)?;
         // Every error value first, in argument order, then the validation, as in GROUPBY: an error
         // option beats an invalid one before or after it and a non-function
         // (probes/pivotby-followup P!A1401-A1461, P!A1261, P!A1281).
         let function = self.function_elements(&args[3], cell)?;
-        let mut options = self.evaluate_options(&args[4..], cell)?.into_iter();
+        // A one-cell reference to a blank cell as `row_sort_order`, `col_sort_order` or
+        // `filter_array` is `#VALUE!` in its place, ahead of a later option's error, as in
+        // GROUPBY; a blank total depth or field_headers, text, `""` or FALSE there, a scalar
+        // `row_fields` and a short or `""` `col_fields` leave the later error
+        // (probes/t3889-pivotby-option-order P!B1-B49, excel-graph, 2026-11-03).
+        let mut options = self
+            .evaluate_options(&args[4..], &[2, 4, 5], cell)?
+            .into_iter();
+        if row_error_cell || col_error_cell {
+            return Err(value_error(
+                cell,
+                "row_fields and col_fields must not be one error cell",
+            ));
+        }
         let field_headers = options.next().flatten();
         let row_depth = options.next().flatten();
         let row_sort = options.next().flatten();
@@ -393,8 +435,12 @@ impl Model {
         }
         // GROUPBY's filter rules hold too: another height, errors and text are #VALUE!, a header
         // row may be left out of the filter, and keeping no record is #VALUE! (P!A281,
-        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133).
-        let records = self.filter_rows(filter, height, first, cell)?;
+        // P!A1481-A1601, probes/groupby-pivotby-followup G!A881, -followup3 G!A133). One filter
+        // value keeps or drops every row only beside one row field, one column field, one value
+        // column and no header row, as in GROUPBY; otherwise it is #VALUE!, whatever the value
+        // (probes/t3890-pivotby-scalar-filter P!B1-B50).
+        let one_keeps_all = first == 0 && row_fields == 1 && col_fields == 1 && value_columns == 1;
+        let records = self.filter_rows(filter, height, first, one_keeps_all, cell)?;
         let (relative_to, lifted) = self.relative_to_arg(relative_to, cell)?;
         let row_depth = effective_depth(row_depth, row_depth_given, &row_sort, row_fields);
         let col_depth = effective_depth(col_depth, col_depth_given, &col_sort, col_fields);
@@ -413,6 +459,24 @@ impl Model {
             lifted,
         };
         Ok((pivot, functions))
+    }
+
+    /// `row_fields` or `col_fields` as an array, and whether it is a one-cell reference to an error,
+    /// which [`Model::pivotby_args`] rejects only after the error values; any other error is
+    /// returned at once.
+    fn pivot_field(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> Result<(Vec<Vec<ArrayNode>>, bool), CalcResult> {
+        let field = self.evaluate_node_in_context(node, cell);
+        if field.is_error() {
+            if node.is_cell_reference_at(cell.row) {
+                return Ok((Vec::new(), true));
+            }
+            return Err(field);
+        }
+        Ok((self.result_to_array(field, cell)?, false))
     }
 
     /// Sorts the row or column groups of a pivot by `order`. A key order is already applied
@@ -678,13 +742,16 @@ fn column_names_row(pivot: &Pivot, slots: &[Slot]) -> Vec<ArrayNode> {
     row
 }
 
-/// Header cells joined with ", " as text. An error cell makes the name that error (unprobed). A
-/// name longer than a cell can hold, 32,767 characters (docs/excel-semantics/coercion.md "Text
-/// longer than 32,767 characters"), is `#VALUE!` (unprobed for PIVOTBY).
+/// Header cells joined with ", " as text. A blank header cell is left out: `col_fields` headed
+/// (blank, "?b", 3.14159) are "?b, 3.14159", with `relative_to` a blank cell or 1 (gen-m7
+/// ceb2c91035864a71 B8785; probes/t3893-pivotby-error-sort-header B121; T-3893). An error cell
+/// makes the name that error (unprobed). A name longer than a cell can hold, 32,767 characters
+/// (docs/excel-semantics/coercion.md "Text longer than 32,767 characters"), is `#VALUE!`
+/// (unprobed for PIVOTBY).
 fn joined_names(names: impl Iterator<Item = ArrayNode>) -> ArrayNode {
     let mut parts = Vec::new();
     let mut units = 0usize;
-    for name in names {
+    for name in names.filter(|name| !matches!(name, ArrayNode::Empty)) {
         match array_node_to_string(&name) {
             Ok(text) => {
                 units = units.saturating_add(text.encode_utf16().count() + 2);

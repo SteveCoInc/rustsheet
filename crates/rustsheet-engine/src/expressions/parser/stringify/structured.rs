@@ -145,6 +145,13 @@ pub(super) fn reference_text(
         };
     }
     match rewrite {
+        // A column delete of every column of the table (T-2899 table-delete-all-columns: A1
+        // `=SUM(Sales[Qty])` reads `=SUM(#REF!)`, where a plain range prints `=SUM(S!#REF!)`).
+        Rewrite::Displace(Displacement { deleted_tables, .. })
+            if deleted_tables.contains(&reference.table_name.to_lowercase()) =>
+        {
+            return token::Error::REF.to_string();
+        }
         Rewrite::Displace(Displacement {
             data: DisplaceData::None,
             ..

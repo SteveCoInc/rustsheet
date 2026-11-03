@@ -1,5 +1,5 @@
-"""Tests for merge_renumber.py (`make renumber`) and the carry rule's renumber case
-(id_renumber.py, decision 0224), over a temporary origin."""
+"""Tests for merge_renumber.py (`make renumber`) and id_renumber.py (decision 0224), over a
+temporary origin."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import id_registry  # noqa: E402 (the sys.path line above must run first)
 import id_renumber  # noqa: E402
-import merge_ready  # noqa: E402
 import merge_renumber  # noqa: E402
 from merge_catchup import Refused  # noqa: E402
 from test_merge_catchup import TempOrigin, run  # noqa: E402
@@ -99,7 +98,7 @@ class Renumber(TempOrigin):
     def renumbered(self) -> str:
         return merge_renumber.renumber(self.clone, "agent/x", self.allocate, self.no_record)
 
-    def test_renumbers_the_prs_files_and_lines_and_the_carry_accepts_it(self) -> None:
+    def test_renumbers_the_prs_files_and_lines(self) -> None:
         start = self.git("rev-parse", "HEAD")
         head = self.renumbered()
         self.assertEqual(self.git("rev-parse", "HEAD"), start)  # the checkout is put back
@@ -123,98 +122,8 @@ class Renumber(TempOrigin):
         notes = self.show(head, "docs/notes.md")
         self.assertIn("main: T-0101 and decision 0002 are main's.", notes)
         self.assertIn("PR: T-0150 and decision 0009.", notes)
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(self.before, head))
 
-    def manual(self, change: dict[str, str | None]) -> str:
-        """A merge of main into the PR head with `change` (path -> text, None to delete) made by
-        hand on top, committed and pushed."""
-        self.git("checkout", "-q", "--detach", self.before)
-        self.git("merge", "-q", "--no-ff", "--no-commit", "main")
-        for path, text in change.items():
-            if text is None:
-                self.git("rm", "-q", path)
-            else:
-                self.write(path, text)
-        head = self.commit("hand merge")
-        self.git("push", "-q", "-f", "origin", f"{head}:refs/heads/agent/x")
-        self.git("checkout", "-q", "main")
-        return head
-
-    def by_hand(self, **overrides: str) -> dict[str, str | None]:
-        """What `make renumber` writes, with `overrides` (keyed by an alias) on top."""
-        notes = self.git("show", "main:docs/notes.md") + "\n"
-        out: dict[str, str | None] = {
-            PR_TASK: None,
-            PR_RECORD: None,
-            NEW_TASK: task("T-0150", "pr task").replace("0002", "0009"),
-            NEW_RECORD: "# 0009 — pr rule\n\nSee T-0150.\n",
-            "docs/notes.md": notes.replace("bottom\n", "bottom\nPR: T-0150 and decision 0009.\n"),
-        }
-        aliases = {"task": NEW_TASK, "record": NEW_RECORD, "notes": "docs/notes.md"}
-        out.update({aliases[k]: v for k, v in overrides.items()})
-        return out
-
-    def carry(self, head: str) -> str | None:
-        repo = merge_ready.Repo(self.clone)
-        repo.fetch_base()
-        return repo.carry_problem(self.before, head)
-
-    def test_the_same_renumber_by_hand_is_accepted(self) -> None:
-        self.git("checkout", "-q", "main")
-        change = self.by_hand()
-        self.assertIsNone(self.carry(self.manual(change)))
-
-    def test_a_substitution_in_a_line_main_owns_is_refused(self) -> None:
-        change = self.by_hand()
-        notes = str(change["docs/notes.md"]).replace(
-            "main: T-0101 and decision 0002", "main: T-0150 and decision 0009"
-        )
-        problem = self.carry(self.manual(self.by_hand(notes=notes)))
-        self.assertIsNotNone(problem)
-        self.assertIn("notes.md differs", str(problem))
-
-    def test_another_edit_in_a_renamed_file_is_refused(self) -> None:
-        problem = self.carry(self.manual(self.by_hand(record="# 0009 — pr rule, edited\n\nSee T-0150.\n")))
-        self.assertIn(NEW_RECORD, str(problem))
-
-    def test_a_rename_to_an_id_main_has_is_refused(self) -> None:
-        change = self.by_hand()
-        del change[NEW_TASK]
-        change["docs/tasks/M2/T-0100-pr-task.md"] = task("T-0100", "pr task").replace("0002", "0009")
-        change["docs/notes.md"] = str(change["docs/notes.md"]).replace("PR: T-0150", "PR: T-0100")
-        problem = self.carry(self.manual(change))
-        self.assertIn("not a fresh id", str(problem))
-
-    def test_a_new_id_not_claimed_in_the_registry_is_refused(self) -> None:
-        self.claim("T-0150")  # 0009 is free but nobody allocated it
-        problem = self.carry(self.manual(self.by_hand()))
-        self.assertIn("0009 is not claimed in the id registry", str(problem))
-
-    def test_an_unreadable_registry_refuses(self) -> None:
-        head = self.manual(self.by_hand())
-        repo = merge_ready.Repo(self.clone)
-        repo.fetch_base()
-        self.git("remote", "set-url", "origin", str(self.origin) + "-gone")
-        self.assertIn("the id registry cannot be read", str(repo.carry_problem(self.before, head)))
-        self.git("remote", "set-url", "origin", str(self.origin))
-        self.git("push", "-q", "origin", f":{id_registry.REF}")  # an absent registry claims nothing
-        self.assertIn("not claimed in the id registry", str(self.carry(head)))
-
-    def test_a_rename_without_a_real_collision_is_refused(self) -> None:
-        # The PR adds decision 0003, which main does not have; a merge moves it to a claimed id.
-        self.git("checkout", "-q", "agent/x")
-        self.write("docs/decisions/0003-new.md", "# 0003 — new\n")
-        self.before = self.commit("pr adds 0003")
-        self.git("push", "-q", "origin", "agent/x")
-        self.git("checkout", "-q", "main")
-        self.claim(*FRESH.values(), "0010")
-        change = self.by_hand()
-        change["docs/decisions/0003-new.md"] = None
-        change["docs/decisions/0010-new.md"] = "# 0010 — new\n"
-        problem = self.carry(self.manual(change))
-        self.assertIn("0003 does not collide with a file on main", str(problem))
-
-    def test_an_id_in_code_the_pr_added_refuses_the_renumber_and_the_carry(self) -> None:
+    def test_an_id_in_code_the_pr_added_refuses_the_renumber(self) -> None:
         # Security review of #2699: `MAX_DEPTH = 0002` is code, not a reference; nobody renumbers it.
         self.git("checkout", "-q", "agent/x")
         self.write("src/lim.rs", 'const MAX_DEPTH: usize = 0002;\nconst NAME: &str = "0002";\n')
@@ -225,20 +134,33 @@ class Renumber(TempOrigin):
             self.renumbered()
         self.assertEqual(self.allocated, [])  # refused before any id was reserved
         self.assertEqual(run("git", "rev-parse", "agent/x", cwd=self.origin), self.before)
-        for code in ('const MAX_DEPTH: usize = 0009;\nconst NAME: &str = "0009";\n', None):
-            change = self.by_hand()
-            if code is not None:
-                change["src/lim.rs"] = code
-            with self.subTest(code=code):
-                problem = self.carry(self.manual(change))
-                self.assertIn("outside docs/ name an old id (src/lim.rs)", str(problem))
+    def check(self, mapping: dict[str, str]) -> str:
+        """The refusal `id_renumber.check_mapping` gives for `mapping` on the PR head, or ""."""
+        base = id_renumber.merge_base(self.clone, self.before, self.main)
+        try:
+            id_renumber.check_mapping(self.clone, base, self.before, self.main, mapping)
+        except id_renumber.RenumberError as error:
+            return str(error)
+        return ""
 
-    def test_a_rename_of_a_file_main_owns_is_refused(self) -> None:
-        change: dict[str, str | None] = {
-            "docs/decisions/0001-base.md": None,
-            "docs/decisions/0009-base.md": "# 0009 — base\n",
-        }
-        self.assertIsNotNone(self.carry(self.manual(change)))
+    def test_check_mapping_accepts_the_fresh_renumber(self) -> None:
+        self.assertEqual(self.check(FRESH), "")
+
+    def test_check_mapping_refuses_a_rename_to_an_id_main_has(self) -> None:
+        self.assertIn("not a fresh id", self.check({"T-0101": "T-0100", "0002": "0009"}))
+
+    def test_check_mapping_refuses_two_ids_renumbered_to_one(self) -> None:
+        self.assertIn("two ids renumbered to one", self.check({"T-0101": "T-0150", "0002": "T-0150"}))
+
+    def test_check_mapping_refuses_an_id_the_pr_does_not_add(self) -> None:
+        self.assertIn("not the id of exactly one file the PR adds", self.check({"0001": "0010"}))
+
+    def test_check_mapping_refuses_an_id_without_a_real_collision(self) -> None:
+        self.git("checkout", "-q", "agent/x")
+        self.write("docs/decisions/0003-new.md", "# 0003 — new\n")
+        self.before = self.commit("pr adds 0003")
+        self.git("checkout", "-q", "main")
+        self.assertIn("0003 does not collide with a file on main", self.check({"0003": "0010"}))
 
     def test_no_collision_is_refused_and_nothing_pushed(self) -> None:
         self.git("checkout", "-q", "main")
@@ -286,8 +208,8 @@ class Renumber(TempOrigin):
             return 0
 
         head = merge_renumber.renumber(self.clone, "agent/x", self.allocate, record)
+        self.assertEqual(run("git", "rev-parse", "agent/x", cwd=self.origin), head)
         self.assertEqual(recorded, [self.clone])
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(self.before, head))
 
     def test_milestone_of(self) -> None:
         self.assertEqual(merge_renumber.milestone_of(self.clone, self.before, PR_TASK), "M2")

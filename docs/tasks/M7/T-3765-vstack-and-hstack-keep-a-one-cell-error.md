@@ -3,7 +3,7 @@ id: T-3765
 title: "VSTACK and HSTACK keep a one-cell error reference as a 1x1 array, also through a LAMBDA parameter"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -47,3 +47,10 @@ cell it owns has Excel's type and error.
 
 ## Out of scope
 - Scalar error arguments (T-1695 stays as is) and other stacking functions not probed here.
+
+## Outcome
+VSTACK and HSTACK now treat a variable (LET, LAMBDA parameter) bound to a one-cell reference like the reference itself:
+an error read through it is a 1x1 array element (`Model::is_one_cell_variable`, `stack_error_ref_as_array`). Probe
+probes/t3765-stack-error-reference (23 formulas, excel-graph; direct, LET, SCAN, REDUCE, MAP, literal contrast) passes
+25/25; the direct forms were already right (T-3667). gen-m7/3f368d034700f19e A2990 now passes (baseline updated).
+arrays.md entry extended.

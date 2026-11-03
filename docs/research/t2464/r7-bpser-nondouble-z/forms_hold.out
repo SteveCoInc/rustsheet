@@ -1,0 +1,64 @@
+cells: hold; exact counts. dz = z is a double, nd = z is not.
+form                               dz     nd  4.75:0.3  4.75:0.5  4.75:0.7
+(cells)                           397   1139       115       512       512
+z64                               397    560        58       248       254
+ne: E s                           397    273        52       221         0
+ne: fl(E s)(1+zl) ext             397    866        63       291       512
+ne: fl(E + E zl) s                397    662        62       260       340
+ne: (E + E zl)ext s               397    663        63       254       346
+ne: P + P zl                      397    866        63       291       512
+ne: P + P zl ext                  397    866        63       291       512
+ne: E s + E s zl ext              397    663        63       254       346
+ne: E (s + s zl)                  397    770        72       252       446
+ne: fl(E s) EXP(zl)               397   1139       115       512       512
+ne: fl(E s) EXP(zl) ext           397   1139       115       512       512
+ne: fl(E s) fl(1+zl)              397   1139       115       512       512
+ne: fl(E f) s                     397    913        99       474       340
+ne: E fl(s f)                     397   1000       107       447       446
+ne: (E f)ext s                    397    886        94       446       346
+ne: (E s)ext f                    397    886        94       446       346
+dn: E s                           397    658        80       321       257
+dn: fl(E s)(1+zl) ext             397    375        28       171       176
+dn: fl(E + E zl) s                397    402        45       162       195
+dn: (E + E zl)ext s               397    583        65       226       292
+dn: P + P zl                      397    375        28       171       176
+dn: P + P zl ext                  397    375        28       171       176
+dn: E s + E s zl ext              397    583        65       226       292
+dn: E (s + s zl)                  397    471        50       224       197
+dn: fl(E s) EXP(zl)               397    677        86       323       268
+dn: fl(E s) EXP(zl) ext           397    677        86       323       268
+dn: fl(E s) fl(1+zl)              397    677        86       323       268
+dn: fl(E f) s                     397    672        83       324       265
+dn: E fl(s f)                     397    671        86       324       261
+dn: (E f)ext s                    397    674        86       324       264
+dn: (E s)ext f                    397    674        86       324       264
+up: E s                           397      6         4         2         0
+up: fl(E s)(1+zl) ext             397    958        85       361       512
+up: fl(E + E zl) s                397    749        73       336       340
+up: (E + E zl)ext s               397    670        54       270       346
+up: P + P zl                      397    958        85       361       512
+up: P + P zl ext                  397    958        85       361       512
+up: E s + E s zl ext              397    670        54       270       346
+up: E (s + s zl)                  397    794        74       274       446
+up: fl(E s) EXP(zl)               397    958        85       361       512
+up: fl(E s) EXP(zl) ext           397    958        85       361       512
+up: fl(E s) fl(1+zl)              397    958        85       361       512
+up: fl(E f) s                     397    749        73       336       340
+up: E fl(s f)                     397    794        74       274       446
+up: (E f)ext s                    397    670        54       270       346
+up: (E s)ext f                    397    670        54       270       346
+tz: E s                           397      6         4         2         0
+tz: fl(E s)(1+zl) ext             397    958        85       361       512
+tz: fl(E + E zl) s                397    749        73       336       340
+tz: (E + E zl)ext s               397    670        54       270       346
+tz: P + P zl                      397    958        85       361       512
+tz: P + P zl ext                  397    958        85       361       512
+tz: E s + E s zl ext              397    670        54       270       346
+tz: E (s + s zl)                  397    794        74       274       446
+tz: fl(E s) EXP(zl)               397    958        85       361       512
+tz: fl(E s) EXP(zl) ext           397    958        85       361       512
+tz: fl(E s) fl(1+zl)              397    958        85       361       512
+tz: fl(E f) s                     397    749        73       336       340
+tz: E fl(s f)                     397    794        74       274       446
+tz: (E f)ext s                    397    670        54       270       346
+tz: (E s)ext f                    397    670        54       270       346

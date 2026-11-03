@@ -3,7 +3,7 @@ id: T-3838
 title: "GROUPBY: a text or blank option is #VALUE! ahead of a later option's error, and a TRUE field_relationship's order"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -40,13 +40,33 @@ GROUPBY reports `#VALUE!` where Excel does when a text, empty-text or blank opti
 - gen-m7/f310ddb6bc8ec33a.case.json Calc!A8968, Calc!A10066
 
 ## Acceptance criteria
-- [ ] An excel-graph probe settles the option-coercion order and TRUE as field_relationship; the rule is in docs/excel-semantics/arrays.md.
-- [ ] The owned cells match Excel; unit tests cover each option kind before a later error.
-- [ ] Visible parity: every owned cell has Excel's type, error and value.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe settles the option-coercion order and TRUE as field_relationship; the rule is in docs/excel-semantics/arrays.md.
+- [x] The owned cells match Excel; unit tests cover each option kind before a later error.
+- [x] Visible parity: every owned cell has Excel's type, error and value.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY (its arg-pairs batch is T-3841) and the other GROUPBY rules of the batch, owned by T-3837..T-3840.
+
+## Outcome
+Probe: probes/t3838-groupby-option-order (232 questions, excel-graph 2026-11-02): 13 option kinds (text, `""`, references
+to text, `=""` and a blank cell, FALSE, TRUE, "1", 9, `{1}`) at each option, alone, before a later `NA()` and after an
+earlier one, and `field_relationship` 1/TRUE/"1"/0/FALSE against `sort_order` scalars and arrays over two and three keys.
+The hypothesis in Context was half right; the rules (arrays.md "GROUPBY and PIVOTBY", after B79-B83) are:
+- `field_headers` and `total_depth` refuse text that is no number in place, ahead of a later error, whether it is written
+  or comes from a one-cell reference (`""` too); ours already did this for written text only. `Model::lift_options` now
+  reads a written reference's value too (lifted_options.rs).
+- `sort_order` and `filter_array` refuse a one-cell reference to a blank cell in place (text there does not):
+  `Model::evaluate_options` takes the option positions that refuse a blank (`blank_refused`; GROUPBY passes
+  `sort_order` and `filter_array`, PIVOTBY and `function_elements` pass none, unprobed).
+- A table relationship sorts by the keys `sort_order` names first, in written order, then the other keys ascending in
+  column order. A descending key reverses the whole ascending order, so the blank key sorts first. A hierarchy keeps
+  column order and the blank last. `SortOrder::Keys` now carries the named fields (`named`), and
+  `Grouping::sort_table_by_keys` sorts a table (grouping.rs).
+Unit tests: `options_are_refused_in_argument_order`, `a_table_sorts_by_the_named_keys_first` (test_fn_groupby.rs).
+Every owned gen-m7 cell now matches Excel, A4881:C4891 included.
+
+Eval delta (after merging main, T-3837 in): gen-m7 known failures 2,170 -> 2,119 (51 cells fixed), probes +1 passing case (232 cells), 0 regressions.

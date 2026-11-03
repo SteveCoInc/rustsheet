@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Clear a PR the merge train ejected for an id collision (decision 0224).
+"""Clear a PR whose task or decision id collides with one on main (decision 0224).
 
   scripts/merge_renumber.py --pr N   # exit 0: pushed; 1: refused (nothing pushed); 2: error
 
@@ -18,8 +18,8 @@ In this checkout, which must have no local changes, it does what `make catch-up`
 - commits one merge commit whose parents are the PR head and `main`, pushes it to the PR branch
   (never forced), and restores the checkout.
 
-When CI is green on the pushed head, `make mark-ready PR=N CARRY=1` re-marks the PR: the carry rule
-accepts exactly this shape (`merge_ready.Repo.carry_problem`, `id_renumber.renumbered_merge`).
+When CI is green on the pushed head, the PR is enqueued again without a re-review (work-loop step
+6.3, decision 0247).
 """
 
 from __future__ import annotations
@@ -31,11 +31,10 @@ from pathlib import Path
 import id_registry
 import id_renumber
 import merge_catchup
-import merge_ready
 import new_decision
 import tasks
 from merge_catchup import Refused
-from merge_lock import git
+from git_ops import BASE_BRANCH, git
 
 # (the checkout, old id, the task's milestone or "" for a decision, ids already taken) -> a
 # reserved fresh id.
@@ -91,8 +90,8 @@ def renumbering(allocate: Allocate) -> merge_catchup.Rewrite:
             base = id_renumber.merge_base(root, head, main)
             found = id_renumber.colliding(root, base, head, main)
             if not found:
-                raise Refused(f"the PR adds no task or decision file whose id {merge_ready.BASE_BRANCH} has")
-            conflicts = merge_catchup.conflicts_outside(merge_ready.Repo(root), head, main)
+                raise Refused(f"the PR adds no task or decision file whose id {BASE_BRANCH} has")
+            conflicts = merge_catchup.conflicts_outside(root, head, main)
             if conflicts is None or conflicts:
                 raise Refused("the merge with main conflicts outside the eval-gated baseline lists")
             # Before any id is reserved: an old id in a line the PR added outside docs/ is the worker's.
@@ -111,7 +110,7 @@ def renumbering(allocate: Allocate) -> merge_catchup.Rewrite:
         except id_renumber.RenumberError as error:
             raise Refused(str(error)) from error
         moves = ", ".join(f"{old} -> {new}" for old, new in sorted(mapping.items()))
-        return commit, f"Merge {merge_ready.BASE_BRANCH}; renumber {moves} (make renumber, decision 0224)"
+        return commit, f"Merge {BASE_BRANCH}; renumber {moves} (make renumber, decision 0224)"
 
     return rewrite
 
@@ -121,13 +120,10 @@ def renumber(
     branch: str,
     allocate: Allocate = reserve,
     record: Callable[[Path, Path], int] = merge_catchup.rerecord,
-    before_push: Callable[[str], None] | None = None,
 ) -> str:
     """The module docstring's steps on `branch`; returns the pushed head. Raises Refused (nothing
-    pushed). `before_push` gets the merge commit's sha before the push (the janitor's note)."""
-    return merge_catchup.catch_up(
-        root, branch, record, renumbering(allocate), record_clean=False, before_push=before_push
-    )
+    pushed)."""
+    return merge_catchup.catch_up(root, branch, record, renumbering(allocate), record_clean=False)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

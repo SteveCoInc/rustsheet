@@ -63,6 +63,19 @@ def test_the_phase1_and_checkpoint_lines_are_the_reports() -> None:
     assert "Milestones whose exit row in the report is met: M5." in text
 
 
+def test_the_phase1_exit_line_is_the_scripts_verdict() -> None:
+    met = {"overall": "met", "failing": [], "lines": []}
+    off = {"overall": "not met", "failing": ["owners", "milestone M2"], "lines": []}
+    assert goals.phase1_exit_line(met) == "Phase 1 exit (decision 0187): met"
+    assert (
+        goals.phase1_exit_line(off) == "Phase 1 exit (decision 0187): not met; failing: owners, milestone M2"
+    )
+    assert "not measured" in goals.phase1_exit_line(None)
+    g = goals.load(report())
+    text = goals.goals_block(g, docs(), data(), tasks_of(tasks()), None, exit_verdict=off)
+    assert "failing: owners, milestone M2" in text
+
+
 def test_whether_the_previous_complete_run_also_met_the_checkpoint() -> None:
     last = history.complete_row(Run("2026-10-18", "0123abcd", ("s",), ()), data(), tasks_of(tasks()), None)
     assert goals.previous_checkpoint(last, False) == (

@@ -1,0 +1,48 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "a94cc45d87bc87c6e2a1260b586c8fb2b177535013b0c20ae4e1c8f0a7aa11d8"
+ },
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(1,2^31-1)"
+   },
+   "A2": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(1,2^31)"
+   },
+   "A3": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2,2^31-2)"
+   },
+   "A4": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2,2^31-1)"
+   },
+   "A5": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(1,1E10)"
+   },
+   "A6": {
+    "t": "e",
+    "why": "number + number_chosen - 1 at or above 2^31-1 (#NUM!)",
+    "f": "=COMBINA(2,1E300)"
+   },
+   "A7": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=COMBIN(2^31-2,2^31-2)"
+   }
+  }
+ }
+}

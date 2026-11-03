@@ -1,0 +1,14 @@
+runs   bpser:1<b0<8  dz: cells  1519, z64 exact  1519, split exact  1519, split with L53  1519
+runs   bpser:1<b0<8  nd: cells  2065, z64 exact  1601, split exact  2041, split with L53  2041
+runs   bpser:b0<=1   dz: cells   478, z64 exact   478, split exact   478, split with L53   350
+runs   bpser:b0<=1   nd: cells  1570, z64 exact   888, split exact  1569, split with L53  1186
+runs   bpser:b0>=8   dz: cells   235, z64 exact     0, split exact     0, split with L53 n/a
+runs   bpser:b0>=8   model differs from kernel: cells   234, z64 exact     0, split exact     0, split with L53 n/a
+runs   bpser:b0>=8   nd: cells  1067, z64 exact    50, split exact     0, split with L53 n/a
+shapes bpser:1<b0<8  dz: cells   770, z64 exact   767, split exact   767, split with L53   640
+shapes bpser:1<b0<8  nd: cells  2645, z64 exact  1458, split exact  2639, split with L53  2149
+shapes bpser:b0<=1   dz: cells   693, z64 exact   692, split exact   692, split with L53   536
+shapes bpser:b0<=1   nd: cells  1519, z64 exact   861, split exact  1519, split with L53  1223
+shapes bpser:b0>=8   dz: cells   241, z64 exact   142, split exact   142, split with L53 n/a
+shapes bpser:b0>=8   model differs from kernel: cells   636, z64 exact     0, split exact     0, split with L53 n/a
+shapes bpser:b0>=8   nd: cells  1204, z64 exact   400, split exact   556, split with L53 n/a
