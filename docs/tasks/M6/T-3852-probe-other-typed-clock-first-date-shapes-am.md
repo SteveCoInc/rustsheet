@@ -27,5 +27,5 @@ T-3796 limited `leading_clock_shape` (crates/rustsheet-engine/src/formatter/pars
 Probed 22 en-US shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2026-11-03): a typed clock-first date-time
 is a number with the clock's format (`m/d/yyyy h:mm`, `mm:ss.0` for fractions, General out of range) for any readable date
 after it. `leading_clock_shape` now classifies the clock with `typed_clock_shape` and lets the date reader decide the rest;
-trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. Eval delta: see PR.
+trailing spaces tolerated. Recorded in docs/excel-semantics/dates.md. Eval delta: new probe case passes 44/44 (probes baseline +0 failures); no regressions.
 Not probed: day-first locales, filed as T-3901.
