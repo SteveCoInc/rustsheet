@@ -438,7 +438,7 @@ impl Model {
         let mut by_row = Vec::new();
         for (index, formula) in new_worksheet.shared_formulas.iter().enumerate() {
             let mut t = self.parser.parse(formula, &cell_reference);
-            rename_sheet_in_node(&mut t, source_index, &new_name);
+            rename_sheet_in_node(&mut t, source_index, &source_name, &new_name);
             shared_formulas.push(to_string_lowering(&t, None, &source_tables));
             if t.has_this_row_to(&source_tables) {
                 by_row.push((index, t));
@@ -492,7 +492,7 @@ impl Model {
                 .unwrap_or(&defined_name.formula);
             let mut node = self.parse_internal_formula(body, &context);
             let before = to_english_string(&node, &context);
-            rename_sheet_in_node(&mut node, source_index, &new_name);
+            rename_sheet_in_node(&mut node, source_index, &source_name, &new_name);
             let after = to_english_string(&node, &context);
 
             // Global names are only duplicated when they actually reference the
@@ -565,7 +565,7 @@ impl Model {
             let mut formulas = Vec::new();
             for formula in &worksheet.shared_formulas {
                 let mut t = self.parser.parse(formula, cell_reference);
-                rename_sheet_in_node(&mut t, sheet_index, new_name);
+                rename_sheet_in_node(&mut t, sheet_index, &old_name, new_name);
                 formulas.push(to_rc_format(&t));
             }
             worksheet.shared_formulas = formulas;
@@ -587,7 +587,7 @@ impl Model {
             let stored = defined_name.formula.trim_start();
             let (eq, body) = stored.strip_prefix('=').map_or(("", stored), |b| ("=", b));
             let mut t = self.parser.parse(body, cell_reference);
-            rename_sheet_in_node(&mut t, sheet_index, new_name);
+            rename_sheet_in_node(&mut t, sheet_index, &old_name, new_name);
             let formula = format!(
                 "{eq}{}",
                 to_localized_string(&t, cell_reference, self.locale, self.language)

@@ -32,7 +32,24 @@ pub(super) fn ref_error_text(sheet_name: Option<&str>) -> String {
     }
 }
 
-/// The text of a `WrongReferenceKind` or `WrongRangeKind` node (empty for any other node).
+/// The text of a written `S!#REF!`: `#REF!#REF!` when S does not exist (Excel, once S is deleted;
+/// probes/sheet-qualified-ref-error-text-delete-sheet F!A2), as for any reference to a deleted
+/// sheet ([`is_missing_sheet`]); otherwise `S!#REF!`.
+fn sheet_ref_error_text(
+    sheet_name: &str,
+    missing: bool,
+    context: Option<&CellReferenceRC>,
+    export_to_excel: bool,
+) -> String {
+    if missing && is_missing_sheet(Some(sheet_name), context, export_to_excel) {
+        format!("{}{}", Error::REF, Error::REF)
+    } else {
+        ref_error_text(Some(sheet_name))
+    }
+}
+
+/// The text of a `WrongReferenceKind` or `WrongRangeKind` node and of a written `S!#REF!`
+/// (empty for any other node).
 pub(super) fn text(
     node: &Node,
     context: Option<&CellReferenceRC>,
@@ -58,6 +75,10 @@ pub(super) fn text(
         is_missing_sheet(sheet_name.as_deref(), context, export_to_excel)
     };
     match node {
+        Node::SheetRefErrorKind {
+            sheet_name,
+            missing,
+        } => sheet_ref_error_text(sheet_name, *missing, context, export_to_excel),
         Node::WrongReferenceKind {
             sheet_name,
             column,

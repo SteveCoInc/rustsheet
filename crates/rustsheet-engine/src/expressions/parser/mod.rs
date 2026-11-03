@@ -38,7 +38,7 @@ use crate::language::get_default_language;
 use crate::language::Language;
 use crate::locale::get_default_locale;
 use crate::locale::Locale;
-use crate::types::Table;
+use crate::types::{sheet_names_match, Table};
 
 use super::lexer;
 use super::token;
@@ -497,7 +497,22 @@ impl Parser {
             }
             TokenType::Ident(name) => self.parse_identifier(name),
             TokenType::Error(kind) => Node::ErrorKind(kind),
-            TokenType::SheetRefError(sheet_name) => Node::SheetRefErrorKind { sheet_name },
+            TokenType::SheetRefError(sheet_name) => {
+                // Excel prints the sheet as the workbook spells it, whatever case was typed
+                // (probes/unqualified-ref-error-text-and-typed Sheet1!A2, A6).
+                let found = self
+                    .worksheets
+                    .iter()
+                    .find(|name| sheet_names_match(name, &sheet_name));
+                let (sheet_name, missing) = match found {
+                    Some(name) => (name.clone(), false),
+                    None => (sheet_name, true),
+                };
+                Node::SheetRefErrorKind {
+                    sheet_name,
+                    missing,
+                }
+            }
             TokenType::Illegal(error) => Node::ParseErrorKind {
                 formula: self.lexer.get_formula(),
                 expecting: vec![ExpectedTokens::Other],

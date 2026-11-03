@@ -1142,8 +1142,13 @@ but `10:00:30 A` is 0.41701... with `h:mm:ss AM/PM` (N9, N13-N15, N19, N20; exce
 Further bare shapes (N21-N29, T-2053): `10 A.`, `10 AM` and `10 PM` are numbers with `h:mm AM/PM`; `0:00 A` and
 `12:00 A` are 0 with `h:mm AM/PM`; `10:00:30 AM` has `h:mm:ss AM/PM`; a fractional second keeps its own format,
 `10:00:30.5 A` is 0.41701... and `10:00.5 A` 0.00695... with `mm:ss.0`; bare `13:00 A` stays text with General.
+A bare 24-hour clock typed with no date and no AM/PM is a number too (probes/t3894-bare-24h-clock, excel-graph
+2026-11-03, T-3894): `12:30`, `9:05`, `1:2`, `0:00` and `10:00:` are time of day with `h:mm`, `10:00:30` with `h:mm:ss`,
+`24:00`, `25:00` and `100:00` with `[h]:mm:ss`, a fractional second (`10:00.5`, `10:00:30.5`) with `mm:ss.0`, and
+`10:60` and `10:00:60` are numbers with General. `:30` and ` 10:00` (leading space) stay text.
+Evidence note: docs/research/t3894-bare-24h-clock-2026-11-03.md
 Status: VERIFIED (web)
-Implemented in: `typed_clock_shape`, `rejected_clock_text_format`, `parse_typed_number`, `parse_bare_letter_clock` and `without_single_letter_dot` in `crates/rustsheet-engine/src/formatter/parse_formatted.rs`
+Implemented in: `typed_clock_shape`, `rejected_clock_text_format`, `parse_bare_clock`, `parse_typed_number`, `parse_bare_letter_clock` and `without_single_letter_dot` in `crates/rustsheet-engine/src/formatter/parse_formatted.rs`
 Evidence note: docs/research/single-letter-ap-typed-clock-2026-10-19.md
 Tasks: T-1994, T-2011
 

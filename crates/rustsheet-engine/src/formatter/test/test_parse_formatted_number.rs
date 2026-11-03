@@ -554,3 +554,41 @@ fn typed_group_comma_and_leading_percent_formats() {
         assert!(parse(text, &["$"]).is_err(), "{text}");
     }
 }
+
+/// A bare typed 24-hour clock is a number with Excel's clock format (probes/t3894-bare-24h-clock,
+/// excel-graph 2026-11-03; docs/excel-semantics/dates.md).
+#[test]
+fn typed_bare_24_hour_clock() {
+    let fmt = |s: &str| {
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_else(|| "General".to_string())))
+    };
+    let cases = [
+        ("12:30", 0.520_833_333_333_333, "h:mm"),
+        ("9:05", 0.378_472_222_222_222, "h:mm"),
+        ("0:00", 0.0, "h:mm"),
+        ("1:2", 0.043_055_555_555_555_6, "h:mm"),
+        ("10:00:", 0.416_666_666_666_667, "h:mm"),
+        ("10:00:30", 0.417_013_888_888_889, "h:mm:ss"),
+        ("01:02:03", 0.043_090_277_777_777_8, "h:mm:ss"),
+        ("24:00", 1.0, "[h]:mm:ss"),
+        ("100:00", 4.166_666_666_666_67, "[h]:mm:ss"),
+        ("10:60", 0.458_333_333_333_333, "General"),
+        ("10:00:60", 0.417_361_111_111_111, "General"),
+        ("10:00.5", 0.006_950_231_481_481_48, "mm:ss.0"),
+        ("10:00:30.5", 0.417_019_675_925_926, "mm:ss.0"),
+    ];
+    for (text, value, format) in cases {
+        let (v, f) = fmt(text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert!((v - value).abs() < 1e-12, "{text}: {v}");
+        assert_eq!(f, format, "{text}");
+    }
+    assert!(fmt(":30").is_err());
+    assert!(fmt(" 10:00").is_err());
+}
