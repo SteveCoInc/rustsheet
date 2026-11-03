@@ -78,6 +78,18 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
   (2) has a pass rate within 10 points of its own pass rate on t3411-irr-r4-fresh (sweeps generated the same way).
   Otherwise nothing ships and the task is blocked with these notes.
 
+## R4 plan, round 3 (fixed 2026-11-03 before the third sweep is generated or scored)
+- Frozen model (commit "T-3411: freeze round 3"): main's IRR plus one check in `irr_fallback`: a root it settles
+  on is `#NUM!` when |`irr_npv`| there is `IRR_ROOT_RESIDUAL` = 1E-4 or more. Nothing else changes (secant cap 50,
+  fallback cap 50). The constant is bracketed by named cells over every IRR cell in eval whose secant runs fail and
+  whose uncapped Newton settles: Excel's largest returning residual is 9.54E-5 (probes-numeric/t3478-irr-r4-wide A83,
+  t3411-irr-r4-fresh A128), its smallest error residual above that 1.106E-4 (probes/t3406-irr-num-boundary A131).
+- No hold-out split: every IRR case in eval was used to find the bracket. The fresh sweep is the out-of-sample test.
+- Fresh sweep 3: probes-numeric/t3411-irr-r4-fresh-3, 150 cells, gen_sweep.py with seed "T-3411/r4-fresh-3",
+  generated after the freeze, oracle-filled from excel-graph.
+- Margin: on sweep 3, cell by cell against main's model, the frozen model (1) loses no cell main gets right (type or
+  digits) and (2) has no more type mismatches than main. Otherwise nothing ships and these notes record why.
+
 ## Progress notes
 2026-11-02, opus run (resumed from the landing notes below): the secant's cap moved to its own task, T-3806. The R4
 sections above record the two rounds. T-3806 was dropped in its review: round 2's cap of 213 loses

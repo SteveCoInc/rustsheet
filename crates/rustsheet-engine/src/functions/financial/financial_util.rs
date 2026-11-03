@@ -269,6 +269,17 @@ const IRR_FAR_ROOT_BOUND: f64 = 1e7;
 /// (gen-m9/abb7d565af89b849 A254) and the slowest probed root that returns needs 29 (`{42,1,1,-1}`).
 const IRR_FALLBACK_STEPS: usize = 50;
 
+/// The largest |NPV| (as [`irr_npv`] evaluates it) at which [`irr_fallback`] returns the root it
+/// reached: a root with a larger residual is `#NUM!` (financial.md "IRR's fallback is `#NUM!` when
+/// NPV at its root is 1E-4 or more"; T-3411). Over every IRR cell in eval whose secant runs fail and
+/// whose Newton search settles on a root, no cell Excel returns has a residual above 9.54E-5
+/// (probes-numeric/t3478-irr-r4-wide A83) and every cell from 1.106E-4 up is an error
+/// (probes/t3406-irr-num-boundary A131): inside t3406's outlay families (A97-A132), where the
+/// returns and `#NUM!` share their secant and Newton paths, the residual alone parts them. The
+/// round value is placed in that bracket.
+/// FITTED(T-3411, 710 cells, IRR whose secant runs fail: 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.54E-5..1.106E-4)
+const IRR_ROOT_RESIDUAL: f64 = 1e-4;
+
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
 fn irr_from_discount(v: f64) -> Option<f64> {
     let x = extended_quotient(1.0, v);
@@ -396,8 +407,8 @@ pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, Str
 /// Where both secant runs fail, Excel still finds some roots and not others: it behaves as
 /// Newton's method on the NPV polynomial in v, `sum c_i v^i`, started at v = 0 (r = +inf), and is
 /// `#NUM!` when the root it reaches is not a positive discount factor, when a negative root lies
-/// nearer 0 (P changes sign on [-v, 0)), or when the run does not settle in
-/// [`IRR_FALLBACK_STEPS`] steps. This fits every probed
+/// nearer 0 (P changes sign on [-v, 0)), when NPV at the root is [`IRR_ROOT_RESIDUAL`] or more
+/// in magnitude, or when the run does not settle in [`IRR_FALLBACK_STEPS`] steps. This fits every probed
 /// cell (financial.md "IRR's fallback when the secant fails", probes/irr-fallback-roots A1-A24, 15
 /// gen-m9 cells): `{42,1,1,-1}` (-0.7467) and `{-400,1,1,1,1,1}` (-0.6737) return from every
 /// guess while `{1,3,-1}`, `{1,7,-1}` and `{1,20,-1}`, whose root nearest v = 0 is negative, are
@@ -435,7 +446,10 @@ fn irr_fallback(values: &[f64]) -> Option<f64> {
             // past one at -4.6E-5; 1cd3096e3e87c965 A277, 4.06 past -4.01).
             let nearer_negative_root =
                 (polynomial(-next).0 > 0.0) != values.first().is_some_and(|&c| c > 0.0);
-            return if next > 0.0 && !nearer_negative_root {
+            // Excel is `#NUM!` at a root whose NPV is not within [`IRR_ROOT_RESIDUAL`] of 0
+            // (probes/t3406-irr-num-boundary A121-A132 alternate with it; T-3411).
+            let settled = irr_npv(values, next).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL);
+            return if next > 0.0 && !nearer_negative_root && settled {
                 irr_from_discount(next)
             } else {
                 None
