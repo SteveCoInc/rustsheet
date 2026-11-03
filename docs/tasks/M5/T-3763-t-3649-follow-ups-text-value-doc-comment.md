@@ -3,7 +3,7 @@ id: T-3763
 title: "T-3649 follow-ups: text-value doc comment, display color of a color-only section, test split"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
