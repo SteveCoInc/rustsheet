@@ -506,8 +506,19 @@ impl Model {
         // is 1E+290 and `CONVERT(1E300,"Ym","Zm")` 1E+303 (probes/convert-temperature-ov00, -ov01,
         // -ov20), where 1E24 × 1E-24 would be 1 - 2^-53; a result that overflows is `#NUM!` (ov02,
         // ov21). docs/excel-semantics/engineering.md "CONVERT constants and evaluation order".
-        let prefixes = nearest_power_of_ten(from.decimal_exponent - to.decimal_exponent)
-            * (from.binary_scale / to.binary_scale);
+        // Excel: with a binary prefix on either unit the prefixes are each unit's own constant,
+        // `(P_from × B_from) / (P_to × B_to)`: a decimal prefix on the target enters as its rounded
+        // reciprocal, not as the nearest double to the inverse power. `CONVERT(4.73E-10,"Gibyte",
+        // "zbyte")` is 5.0787988275200007E+20 (× 2^30 × (1/1E-21); × 2^30 × 1E21 gives
+        // 5.07879882752E+20). All 679 mixed binary/decimal cells fit (probes/convert-mixed-prefix,
+        // T-3975, every binary prefix against the 21 decimal prefixes in both directions);
+        // docs/excel-semantics/engineering.md "CONVERT constants and evaluation order".
+        let prefixes = if from.binary_scale > 1.0 || to.binary_scale > 1.0 {
+            (nearest_power_of_ten(from.decimal_exponent) * from.binary_scale)
+                / (nearest_power_of_ten(to.decimal_exponent) * to.binary_scale)
+        } else {
+            nearest_power_of_ten(from.decimal_exponent - to.decimal_exponent)
+        };
         let result = scaled * prefixes;
         CalcResult::Number(result)
     }
