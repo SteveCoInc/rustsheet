@@ -286,6 +286,7 @@ probes/t3647-numbervalue-whitespace-decimal.case.json	1
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
 probes/t3820-lower-sigma-next-char.case.json	216
+probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-band-edge.case.json	22
 probes/t3881-imcsch-flip-start-negative.case.json	12
 probes/t3881-imcsch-flip-start.case.json	20

@@ -64,3 +64,32 @@ Choosing between the two options depends on how decision 0188 R2/R4 applies here
 envelope fails this item", at points whose root noise width exceeds ε. Agents cannot rule on that (decision 0188
 is the owner's), so the choice is listed under "Needs owner" in docs/status.md and tracked by its own task. Unless
 the owner rules otherwise, the rule stays as merged.
+
+## Second pass: late restarts against the model's state (2026-11-03)
+
+The question: does any rule on what the model sees at a flat secant (the step, |f1|, |r1 - r0|, f1 relative to the
+terms) separate the late restarts Excel takes from its holds?
+
+Tools: `trace.diff` is a temporary, uncommitted patch. It adds an env switch and a trace line to `rate_secant`, plus
+an example binary `t3850_probe` that evaluates one formula per stdin line. Build it with
+`cargo build --release -p rustsheet_engine --example t3850_probe`. `gen_late.py` draws the probe (its docstring
+gives the run line).
+
+1. **In the older cases, the same model state gets different Excel values.** Among the 344 RATE oracle cells where
+   the hold and an unconditional restart differ, nine model states occur more than once. On four of them, Excel's
+   value varies with the guess alone, in no step order (financial.md "RATE flat secants: no rule on the model's
+   state ..." lists them).
+2. **A blind probe confirms it.** probes/t3850-rate-same-state was drawn by `gen_late.py` and committed before the
+   oracle fill: 240 calls in 40 groups of identical state, at steps 6 to 200. 25 groups get more than one Excel
+   value, and 21 mix the hold, the restart and neither. Excel is the hold on 29 cells, the restart on 111 and
+   neither on 100. T-3698's rule gets 55.
+3. **Widening the restart is a sampling artefact.** Score of step bound K in {16, 24, 32, 48, 64, 100, 200} by |f1|
+   cut in {1e-4, 2e-4, 1e-3, none} by floor in {1.3e-7, 0}, on the 2,160 other RATE oracle cells:
+   - the best gains 2 cells (cut 2e-4 at K 16), below the 5-point margin;
+   - K 200 with no cut gains 8 and loses 12.
+   - On the new probe the same K 200 gains 70 and loses 14. A rule picked from the probe would fit how its groups
+     were drawn, not Excel.
+
+So no rule is implemented. Excel's iterates differ from the model's before the flat step, so the next step is
+Excel's residual in the noise floor. That moved to T-3963, which now owns the off cells of the four flat-secant
+cases.
