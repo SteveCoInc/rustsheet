@@ -906,12 +906,18 @@ The 2^-53 grid in v ("IRR is a secant in d = 1 - v", T-2565 and T-3120 bullets) 
   9999998.994161328 for X = 1E+14).
 T-3120 found where: the secant's state is d = 1 - v, whose spacing in [0.5, 1) is 2^-53, and with NPV by
 worksheet NPV's running product the secant reaches those grid points itself (A25-A28 and A36-A39 bit for bit).
-Not explained: `IRR({-1,1E+15})` is `#DIV/0!` from guesses 0.05, 0.1, 5E+14 and 1E+15, and so are `IRR({-1,1E+300})`
-and IRR over gen-m9 bc04c1f478c9896c's Data!A1:D12 (first flow 0) from guesses 0.05, 0.1 and 0.5; ours is `#NUM!`
-(T-2802). `IRR({0,1E+15,2,42,1E+15,-0.0001})`, also a zero first flow, is `#NUM!` as ours.
+`IRR({-1,1E+300})` is `#DIV/0!` (probes/irr-guess-edges A39): from the guess 0.1 the secant's second iterate is
+d = 1 exactly, so v = 0 and NPV's 1/v divides by zero. The engine ends the call with `#DIV/0!` there (T-2802;
+whether the retry from 0.1 would run after such a stop from another guess is unprobed). Not explained:
+`IRR({-1,1E+15})` is `#DIV/0!` from guesses 0.05, 0.1, 5E+14 and 1E+15 (irr-guess-edges-2 A20, A28, A29,
+irr-guess-edges A38), while `IRR({-1,9E+14})` and `IRR({-1,2E+15})` are `#NUM!` (A19, A21): the fitted secant
+reaches none of them at d = 1; it stalls at the far root (d = 0.999999999999999 for 1E+15, 1 - 9 or 10 grid steps)
+in all three, so the rule that separates 1E+15 is elsewhere. IRR over gen-m9 bc04c1f478c9896c's Data!A1:D12 (first flow 0) from
+guesses 0.05, 0.1 and 0.5 is `#DIV/0!` too; ours is `#NUM!` (T-3900).
+`IRR({0,1E+15,2,42,1E+15,-0.0001})`, also a zero first flow, is `#NUM!` as ours.
 Evidence: probes/irr-fallback-roots A25-A40, probes/irr-guess-edges-2 A15-A34, probes/irr-guess-edges A27-A39
 (excel-graph, 2026-10-25 and 2026-10-26).
-Status: VERIFIED (excel-graph) for the bound; the `#DIV/0!` cases are UNVERIFIED
+Status: VERIFIED (excel-graph) for the bound and the d = 1 `#DIV/0!`; the other `#DIV/0!` cases are unexplained (T-3900)
 Implemented in: `IRR_FAR_ROOT_BOUND`, `irr_from_discount` (functions/financial/financial_util.rs)
 Tasks: T-2727, T-2802, T-3120
 

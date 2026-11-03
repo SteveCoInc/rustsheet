@@ -245,9 +245,9 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// FITTED(T-1533, 263 cells, IRR of 2..41 flows, |c| 1E-6..1E+9, guess -0.99..100, roots -0.99..99; T-3478 sweep, 231 Excel roots: 2..148 flows, |c| 2.3E-15..4.0E+12, guess -0.9997..9.8E+7, roots -0.9997..9.0E+5)
 /// The zero-step stop's bound (below):
 /// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep)
-fn irr_secant(values: &[f64], guess: f64) -> Option<f64> {
+fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     const MAX_STEPS: usize = 50;
-    let npv = |d: f64| irr_npv(values, 1.0 - d);
+    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::Failed);
     let largest_flow = values.iter().fold(0.0_f64, |m, c| m.max(c.abs()));
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
@@ -255,11 +255,18 @@ fn irr_secant(values: &[f64], guess: f64) -> Option<f64> {
     let mut f1 = npv(d1)?;
     for _ in 0..MAX_STEPS {
         if f1 == f0 {
-            return None;
+            return Err(SecantStop::Failed);
         }
         let d2 = d1 - extended_quotient(f1 * (d1 - d0), f1 - f0);
-        if !d2.is_finite() || d2 >= 1.0 {
-            return None;
+        // An iterate of exactly d = 1 is v = 0, and NPV's 1/v divides by zero: Excel's
+        // `#DIV/0!` (`IRR({-1,1E+300})`, probes/irr-guess-edges A39; financial.md "IRR's far-root
+        // bound", T-2802). The call ends there, without the retry from 0.1. Past 1 the run fails
+        // as before (the d > 1 guard is kept from the fit, unprobed).
+        if d2 == 1.0 {
+            return Err(SecantStop::DivZero);
+        }
+        if !d2.is_finite() || d2 > 1.0 {
+            return Err(SecantStop::Failed);
         }
         let f2 = npv(d2)?;
         // A zero step also stops when NPV is within 1e-7 of the largest flow: on the 2^-53 grid
@@ -269,11 +276,20 @@ fn irr_secant(values: &[f64], guess: f64) -> Option<f64> {
         // scores the same, and an absolute residual from 1E-5 to 0.1 would too.
         let stalled = d2 == d1 && f2.abs() < 1e-7 * largest_flow;
         if (d2 - d1).abs() < 1e-7 && (f2.abs() < 1e-7 || stalled) {
-            return irr_from_discount(1.0 - d2);
+            return irr_from_discount(1.0 - d2).ok_or(SecantStop::Failed);
         }
         (d0, f0, d1, f1) = (d1, f1, d2, f2);
     }
-    None
+    Err(SecantStop::Failed)
+}
+
+/// Why a run of [`irr_secant`] stopped without a root.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum SecantStop {
+    /// No root: the call retries from 0.1, then falls back ([`compute_irr`]).
+    Failed,
+    /// An iterate reached v = 0: the call is `#DIV/0!`.
+    DivZero,
 }
 
 /// The smallest guess IRR refuses as too large: 2^53.
@@ -314,17 +330,20 @@ pub(crate) fn compute_irr(values: &[f64], guess: f64) -> Result<f64, (Error, Str
         .iter()
         .position(|&c| c != 0.0)
         .map_or(values, |first| &values[first..]);
-    let first = irr_secant(values, guess);
+    let div_zero = || (Error::DIV, "Division by zero".to_string());
+    let mut result = irr_secant(values, guess);
     // A failed run is retried once from the default guess 0.1, unless that was the guess
-    let result = if guess == 0.1 {
-        first
-    } else {
-        first.or_else(|| irr_secant(values, 0.1))
-    };
-    result
-        .or_else(|| irr_fallback(values))
-        .filter(|r| r.is_finite())
-        .ok_or_else(|| (Error::NUM, "Failed to converge".to_string()))
+    if result == Err(SecantStop::Failed) && guess != 0.1 {
+        result = irr_secant(values, 0.1);
+    }
+    match result {
+        Ok(root) => Some(root),
+        Err(SecantStop::DivZero) => return Err(div_zero()),
+        Err(SecantStop::Failed) => None,
+    }
+    .or_else(|| irr_fallback(values))
+    .filter(|r| r.is_finite())
+    .ok_or_else(|| (Error::NUM, "Failed to converge".to_string()))
 }
 
 /// Where both secant runs fail, Excel still finds some roots and not others: it behaves as
