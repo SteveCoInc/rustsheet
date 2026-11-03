@@ -1907,6 +1907,7 @@ C	probes/t3839-groupby-scalar-filter.case.json	678
 C	probes/t3840-groupby-lifted-beside-filter.case.json	134
 C	probes/t3840-groupby-lifted-false-element.case.json	141
 C	probes/t3840-groupby-lifted-filter-consumed.case.json	46
+C	probes/t3894-bare-24h-clock.case.json	54
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -5719,7 +5720,6 @@ F	probes/t3444-binom-range-inv-large-n.case.json	Range!B91
 F	probes/t3444-binom-range-inv-large-n.case.json	Range!B93
 F	probes/t3444-binom-range-inv-large-n.case.json	Range!B95
 F	probes/t3444-binom-range-inv-large-n.case.json	Range!B98
-F	probes/t3446-script-digits-forms.case.json	Sheet1!B10
 F	probes/t3446-script-digits-forms.case.json	Sheet1!B100
 F	probes/t3446-script-digits-forms.case.json	Sheet1!B101
 F	probes/t3446-script-digits-forms.case.json	Sheet1!B102

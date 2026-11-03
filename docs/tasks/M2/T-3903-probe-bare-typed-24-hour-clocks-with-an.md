@@ -1,0 +1,24 @@
+---
+id: T-3903
+title: "Probe bare typed 24-hour clocks with an hour of 24 or more and seconds or an out-of-range minute (T-3894 follow-up)"
+milestone: M2
+lane: engine
+status: todo
+priority: P3
+size: S
+tier: sonnet
+depends_on: []
+---
+
+## Goal
+Bare typed 24-hour clocks beyond T-3894's probed shapes (`25:00:30`, `25:60`, `100:00:00`, `24:00:00`) are typed as Excel does instead of staying text.
+
+## Context
+`parse_bare_clock` (crates/rustsheet-engine/src/formatter/parse_formatted.rs) leaves these text because T-3894's probe did not cover them; dates.md "bare typed clock" records the probed shapes.
+
+## Acceptance criteria
+- [ ] Probe the shapes (excel-probe skill), record value and ENTERED format in a docs/research note, and extend `parse_bare_clock` to match.
+- [ ] `make check` green; reviewers approve.
+
+## Out of scope
+-
