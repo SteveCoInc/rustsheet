@@ -31,6 +31,6 @@ INDEX and ROWS to read each element.
 - Scalar ignore_empty (T-3885).
 
 ## Outcome
-Added probe `t3909-textjoin-lifted-ignore-empty` (44 cells, excel-graph oracle) covering array-literal and range
+Added probe `t3909-textjoin-lifted-ignore-empty` (40 formula cells, 44 scored, excel-graph oracle) covering array-literal and range
 ignore_empty against reference, range, error-value and plain delimiters. The engine already matches every cell, so no
 engine change; the finding is in docs/excel-semantics/text.md. Eval delta: +44 passing probe cells, no regressions.
