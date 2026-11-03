@@ -42,8 +42,9 @@ fn inner_trig_overflows(x: f64) -> bool {
 }
 
 /// IMSEC, IMCSC (other part y), IMSECH and IMCSCH (other part x) are `0` past the sine limit once
-/// the overflowed-reciprocal scale `2e^-|v|` is below the smallest normal double (|v| above about
-/// 709.09), where Excel never takes the sine: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
+/// `2e^-|v|` is below the smallest normal double (|v| above about 709.09), where Excel never takes
+/// the sine. This is a cut of its own, inferred from that bracket, not the divisor
+/// [`overflowed_parts`] uses: `IMSEC("1E+10+709.5i")` and `IMSECH("709.5+1E+10i")`
 /// are 0, `IMSEC("1E+10+709i")` is `#NUM!` (probes/im-trig-magnitude-grid, T-3642).
 fn reciprocal_flushes(v: f64) -> bool {
     2.0 * (-v.abs()).exp() < f64::MIN_POSITIVE
@@ -284,20 +285,28 @@ fn trig_tan(x: f64) -> f64 {
 
 /// IMSEC, IMCSC and IMSECH where the denominator `t` overflows (the hyperbolic argument `v` past
 /// about 355): cosh v and |sinh v| are then both `M = e^|v|/2` and `t` is M², so the result is the
-/// trigonometric parts `(re, im)` over M, computed as `2e^-|v|` so that it stays finite. Excel
-/// keeps these tiny parts: `IMCSC("-724.227-562.884i")` is
-/// -6.94796703439417E-245-6.26263832046024E-246i and `IMSECH("-524.561+5.3113i")`
-/// 1.73046857535442E-228-2.53533899849465E-228i (probes-numeric im-last-digit-sweep E55:F55,
-/// K42:L42). Past |v| ≈ 708 the parts are subnormal and print as 0 (`IMSEC("1.5+711i")`).
+/// trigonometric parts `(re, im)` over M. Excel keeps these tiny parts:
+/// `IMCSC("-724.227-562.884i")` is -6.94796703439417E-245-6.26263832046024E-246i and
+/// `IMSECH("-524.561+5.3113i")` 1.73046857535442E-228-2.53533899849465E-228i (probes-numeric
+/// im-last-digit-sweep E55:F55, K42:L42). Past |v| ≈ 708 the parts are subnormal and print as 0
+/// (`IMSEC("1.5+711i")`).
 fn overflowed_reciprocal(re: f64, im: f64, v: f64, suffix: Suffix) -> CalcResult {
     let (re, im) = overflowed_parts(re, im, v);
     complex_result(re, im, suffix)
 }
 
-/// The parts of [`overflowed_reciprocal`].
+/// The parts of [`overflowed_reciprocal`]: each part divided by `M = EXP(|v|)/2`, with Excel's EXP.
+/// `IMSECH(COMPLEX(400,20))` is 1.56309271549875E-174-3.49688997531599E-174i and
+/// `IMSECH(COMPLEX(699,1))` has real part 2.89616943787016E-304, where the earlier product with
+/// libm's `2e^-|v|` printed ...316E-174i and ...015E-304 (probes/t3881-imcsch-overflow-band B45,
+/// B82). It fits all 1,493 older cells that take this form and all 100 of the fresh sweep
+/// probes/t3883-im-overflow-reciprocal-sweep, against 1,465 and 24 for that product and 1,493 and 40
+/// for libm's `exp(|v|)/2` or `cosh |v|` as M (engineering.md "IM* reciprocals past the
+/// denominator's overflow", T-3883). Past |v| ≈ 709.78 M is infinite and the parts are ±0, as the
+/// product's underflow gave.
 fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
-    let scale = 2.0 * (-v.abs()).exp();
-    (re * scale, im * scale)
+    let m = excel_exp(v.abs()) / 2.0;
+    (re / m, im / m)
 }
 
 /// IMCSCH's band of large |x| where Excel's result for a non-real z is the negation of csch z,
@@ -593,8 +602,8 @@ pub(super) fn imtan((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
 #[cfg(test)]
 mod tests {
     use super::{
-        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsin, imsinh, imtan, inverse_exp_sinh_cosh,
-        CalcResult, CellReferenceIndex, ComplexParts, Suffix,
+        imcos, imcosh, imcot, imcsc, imcsch, imsec, imsech, imsin, imsinh, imtan,
+        inverse_exp_sinh_cosh, CalcResult, CellReferenceIndex, ComplexParts, Suffix,
     };
 
     /// The text a kernel prints for `x+yi`.
@@ -680,6 +689,25 @@ mod tests {
             "0.191168356084859+1.23600163390978i"
         );
         assert_eq!(text(imcsch, 0.0, 710.0), "-16586.8544023646i");
+    }
+
+    // probes/t3881-imcsch-overflow-band B45, B82, A82 and probes/t3883-im-overflow-reciprocal-sweep
+    // (excel-graph, T-3883): past the denominator's overflow each part is divided by Excel's
+    // EXP(|v|)/2.
+    #[test]
+    fn overflowed_reciprocal_divides_by_excel_exp() {
+        assert_eq!(
+            text(imsech, 400.0, 20.0),
+            "1.56309271549875E-174-3.49688997531599E-174i"
+        );
+        assert_eq!(
+            text(imsech, 699.0, 1.0),
+            "2.89616943787016E-304-4.51051665444843E-304i"
+        );
+        assert_eq!(
+            text(imcsch, 699.0, 1.0),
+            "-2.89616943787016E-304+4.51051665444843E-304i"
+        );
     }
 
     #[test]
