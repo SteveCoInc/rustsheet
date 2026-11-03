@@ -508,21 +508,38 @@ fn typed_mixed_separator_date_formats() {
     let (v, f) = fmt("10:00 7/1/2025").unwrap();
     assert!((v - 45_839.416_666_666_7).abs() < 1e-9);
     assert_eq!(f, "m/d/yyyy h:mm");
-    // Other clock-first shapes are unprobed and stay text.
-    assert!(fmt("10 AM 7/1/2025").is_err());
+    // A leading space keeps it text.
     assert!(fmt(" 10:00 7/1/2025").is_err());
     assert!(fmt(" 10:00 AM 7/1/2025").is_err());
-    for s in [
-        "10:00 July 1, 2025",
-        "10:00 1-Jul-2025",
-        "10:00 2025-07-01",
-        "10:00 7/1",
-        "23:59 7/1-2025",
-        "10:00 7/1/25",
-        "10:00  7/1/2025",
+    // Other clock-first shapes (probes/date-text-typed-clock-first-shapes, excel-graph 2026-11-03).
+    for (s, value, format) in [
+        ("10 AM 7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 PM 7/1/2025", 45_839.916_666_666_7, "m/d/yyyy h:mm"),
+        ("9:00 7/1/2025", 45_839.375, "m/d/yyyy h:mm"),
+        ("10:00:30 7/1/2025", 45_839.417_013_888_9, "m/d/yyyy h:mm"),
+        ("10:00:30.5 7/1/2025", 45_839.417_019_675_9, "mm:ss.0"),
+        ("10:00.5 7/1/2025", 45_839.006_950_231_5, "mm:ss.0"),
+        ("24:00 7/1/2025", 45_840.0, ""),
+        ("10:60 7/1/2025", 45_839.458_333_333_3, ""),
+        ("10:00  7/1/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 July 1, 2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1-Jul-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 2025-07-01", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1", 46_204.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/25", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("23:59 7/1-2025", 45_839.999_305_555_6, "m/d/yyyy h:mm"),
+        ("10:00 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 7/1/2025 ", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 1/Jul/2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
+        ("10:00 AM 7-1-2025", 45_839.416_666_666_7, "m/d/yyyy h:mm"),
     ] {
-        assert!(fmt(s).is_err(), "{s}");
+        let (v, f) = fmt(s).unwrap_or_else(|e| panic!("{s}: {e}"));
+        assert!((v - value).abs() < 1e-9, "{s}: {v}");
+        assert_eq!(f, format, "{s}");
     }
+    // Untyped mixed shapes.
+    assert_eq!(fmt("2025/7-1").unwrap().1, "m/d/yyyy");
+    assert_eq!(fmt("1-Jul/25").unwrap().1, "d-mmm-yy");
 }
 
 /// Typed text and the format Excel picks (probes/typed-group-comma-leading-percent, excel-graph

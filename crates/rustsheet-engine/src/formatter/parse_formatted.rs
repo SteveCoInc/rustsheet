@@ -6,7 +6,7 @@ use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem
 
 use super::{
     date_clock::{parse_clock_text, parse_date_clock_serial_in, parse_hour_only_am_pm},
-    date_text::{is_digits, parse_date, CurrentYear},
+    date_text::{parse_date, CurrentYear},
     lexer::is_likely_date_number_format,
 };
 
@@ -61,8 +61,13 @@ pub(crate) fn parse_typed_number(
             };
             return Ok((v, Some(format.to_string())));
         }
-        let Some(shape) = typed_clock_shape(text).or_else(|| leading_clock_shape(text)) else {
-            return Err(err);
+        // A clock-first date-time tolerates trailing spaces (probes/date-text-typed-clock-first-shapes A18).
+        let (shape, text) = match typed_clock_shape(text) {
+            Some(shape) => (shape, text),
+            None => match leading_clock_shape(text) {
+                Some(shape) => (shape, text.trim_end_matches(' ')),
+                None => return Err(err),
+            },
         };
         parse_date_clock_serial_in(text, locale, current_year, date_system)
             .map(|serial| (serial, shape.format()))
@@ -193,29 +198,33 @@ impl TypedClock {
     }
 }
 
-/// The clock typed before the date, limited to the evidenced shape `HH:MM M/D/YYYY` (`10:00
-/// 7/1/2025` is a number with `m/d/yyyy h:mm`; probes/date-text-mixed-separator-typed B10, C10,
-/// excel-graph 2026-11-01). A leading space keeps it text (A8, A9). Every other clock-first shape
-/// (AM/PM, seconds, one-digit hours, month-name, ISO, year-less or mixed-separator dates) is
-/// unprobed and stays text; TODO(T-3852).
+/// The clock typed before the date (`10:00 7/1/2025`, `10 AM 7/1/2025`, `9:00:30 July 1, 2025`):
+/// a number whose format follows the clock like a clock typed after the date, `m/d/yyyy h:mm`
+/// except a fractional second (`mm:ss.0`) and an out-of-range component (General). Whatever date
+/// shape the reader accepts may follow, with extra spaces around it, and a year-less date takes
+/// the current year (probes/date-text-typed-clock-first-shapes A1-A22, excel-graph 2026-11-03;
+/// docs/excel-semantics/dates.md "Typed clock-first date-times"). A leading space keeps it text
+/// (probes/date-text-mixed-separator-typed A8, A9).
 fn leading_clock_shape(text: &str) -> Option<TypedClock> {
-    let (clock, date) = text.split_once(' ')?;
-    let (hour, minute) = clock.split_once(':')?;
-    let date_parts: Vec<&str> = date.split('/').collect();
-    let [month, day, year] = date_parts.as_slice() else {
-        return None;
+    let (clock, rest) = text.split_once(' ')?;
+    let rest = rest.trim_start_matches(' ');
+    // An `AM`/`PM` word between the clock and the date belongs to the clock.
+    let clock_end = match rest.split_once(' ') {
+        Some((word, _)) if word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("pm") => {
+            text.len() - rest.len() + word.len()
+        }
+        _ => clock.len(),
     };
-    if !is_digits(hour, 2..=2)
-        || !is_digits(minute, 2..=2)
-        || !is_digits(month, 1..=2)
-        || !is_digits(day, 1..=2)
-        || !is_digits(year, 4..=4)
-    {
+    let clock = text.get(..clock_end)?;
+    if clock.is_empty() || !clock.bytes().next()?.is_ascii_digit() {
         return None;
     }
-    // Two ASCII digits always parse; the fallback only keeps the code panic-free.
-    let value = |s: &str| s.parse::<u32>().unwrap_or(u32::MAX);
-    (value(hour) < 24 && value(minute) < 60).then_some(TypedClock::Time)
+    // An hour alone needs its AM/PM word (`10 AM`, A1); `typed_clock_shape` leaves that to the
+    // bare-clock reader.
+    if parse_hour_only_am_pm(clock).is_some() {
+        return Some(TypedClock::Time);
+    }
+    typed_clock_shape(clock)
 }
 
 /// Classifies the clock at the end of typed date+clock text: `H:MM`, `H:MM:SS`, `H:MM:SS.f` or

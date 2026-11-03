@@ -401,7 +401,15 @@ DATEVALUE and column C VALUE of the text in column A; 63 forms):
   and `1/Jul-2025`, becomes `d-mmm-yy` (A5, A6). A clock first, `10:00 7/1/2025`, typed is 45839.4166666667 with
   `m/d/yyyy h:mm` (A10), but a leading space before it (` 10:00 7/1/2025`, ` 10:00 AM 7/1/2025`) leaves text with
   `General` (A8, A9). The readers are looser: `=DATEVALUE(" 10:00 7/1/2025")` is 45839 and `=VALUE(" 10:00 7/1/2025")` is
-  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; every other clock-first typed shape (AM/PM, seconds, one-digit hours, out-of-range, and month-name, ISO, year-less or mixed-separator dates after the clock) is unprobed and stays text, as do mixed-separator typed formats in day-first locales: T-3852. `CELL("format", ...)` is #VALUE! on excel-graph.
+  45839.4166666667 (A12, A13), while `=0+" 10:00 7/1/2025"` is #VALUE! (A11). The engine matches these as of T-3796; clock-first shapes beyond that are in "Typed clock-first date-times" below (T-3852); mixed-separator typed formats in day-first locales stay unprobed. `CELL("format", ...)` is #VALUE! on excel-graph.
+- **Typed clock-first date-times** (T-3852; probes/date-text-typed-clock-first-shapes A1-A22, excel-graph 2026-11-03; formats
+  from docs/research/typed-clock-first-shapes-2026-11-03.md): a clock typed before a date is a number whenever the same clock
+  after the date would be, and takes the clock's format: `m/d/yyyy h:mm` for `10 AM`, `10:00 AM/PM`, one-digit hours, seconds
+  (`10:00:30`), `mm:ss.0` for a fractional second (`10:00:30.5`, `10:00.5`), General for an out-of-range component (`24:00` is
+  45840, `10:60` is 45839.4583333333). Any date the readers accept may follow: month-name (`July 1, 2025`, `1-Jul-2025`,
+  `1/Jul/2025`), ISO, two-digit year, `-` or mixed separators, and a year-less `10:00 7/1` takes the current year; double
+  spaces between clock and date and a trailing space are accepted (a leading space stays text). Untyped `2025/7-1` is
+  `m/d/yyyy` and `1-Jul/25` `d-mmm-yy`. Day-first locales are unprobed.
 - **Shape survey** (T-3646; probes/date-text-shape-survey rows 1-120 and date-text-shape-survey-2
   rows 1-32, excel-graph 2026-11-01; columns B DATEVALUE, C VALUE, D YEAR of the text, E TIMEVALUE in
   the second; full dates use 2025 so a clock-year reading cannot pass; the three readers agree on

@@ -1,0 +1,129 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3852: typed clock-first date-time shapes and untyped mixed shapes (value, type; formats from the ENTERED log).",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3852"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 AM 7/1/2025"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,LEN(A1))",
+    "A2": {
+     "entered": "10:00 AM 7/1/2025"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,LEN(A2))",
+    "A3": {
+     "entered": "10:00 PM 7/1/2025"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,LEN(A3))",
+    "A4": {
+     "entered": "9:00 7/1/2025"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,LEN(A4))",
+    "A5": {
+     "entered": "10:00:30 7/1/2025"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,LEN(A5))",
+    "A6": {
+     "entered": "10:00:30.5 7/1/2025"
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,LEN(A6))",
+    "A7": {
+     "entered": "10:00.5 7/1/2025"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,LEN(A7))",
+    "A8": {
+     "entered": "24:00 7/1/2025"
+    },
+    "B8": "=ISNUMBER(A8)",
+    "C8": "=IF(ISNUMBER(A8),A8,LEN(A8))",
+    "A9": {
+     "entered": "10:60 7/1/2025"
+    },
+    "B9": "=ISNUMBER(A9)",
+    "C9": "=IF(ISNUMBER(A9),A9,LEN(A9))",
+    "A10": {
+     "entered": "10:00  7/1/2025"
+    },
+    "B10": "=ISNUMBER(A10)",
+    "C10": "=IF(ISNUMBER(A10),A10,LEN(A10))",
+    "A11": {
+     "entered": "10:00 July 1, 2025"
+    },
+    "B11": "=ISNUMBER(A11)",
+    "C11": "=IF(ISNUMBER(A11),A11,LEN(A11))",
+    "A12": {
+     "entered": "10:00 1-Jul-2025"
+    },
+    "B12": "=ISNUMBER(A12)",
+    "C12": "=IF(ISNUMBER(A12),A12,LEN(A12))",
+    "A13": {
+     "entered": "10:00 2025-07-01"
+    },
+    "B13": "=ISNUMBER(A13)",
+    "C13": "=IF(ISNUMBER(A13),A13,LEN(A13))",
+    "A14": {
+     "entered": "10:00 7/1"
+    },
+    "B14": "=ISNUMBER(A14)",
+    "C14": "=IF(ISNUMBER(A14),A14,LEN(A14))",
+    "A15": {
+     "entered": "10:00 7/1/25"
+    },
+    "B15": "=ISNUMBER(A15)",
+    "C15": "=IF(ISNUMBER(A15),A15,LEN(A15))",
+    "A16": {
+     "entered": "23:59 7/1-2025"
+    },
+    "B16": "=ISNUMBER(A16)",
+    "C16": "=IF(ISNUMBER(A16),A16,LEN(A16))",
+    "A17": {
+     "entered": "10:00 7-1-2025"
+    },
+    "B17": "=ISNUMBER(A17)",
+    "C17": "=IF(ISNUMBER(A17),A17,LEN(A17))",
+    "A18": {
+     "entered": "10:00 7/1/2025 "
+    },
+    "B18": "=ISNUMBER(A18)",
+    "C18": "=IF(ISNUMBER(A18),A18,LEN(A18))",
+    "A19": {
+     "entered": "2025/7-1"
+    },
+    "B19": "=ISNUMBER(A19)",
+    "C19": "=IF(ISNUMBER(A19),A19,LEN(A19))",
+    "A20": {
+     "entered": "1-Jul/25"
+    },
+    "B20": "=ISNUMBER(A20)",
+    "C20": "=IF(ISNUMBER(A20),A20,LEN(A20))",
+    "A21": {
+     "entered": "10:00 1/Jul/2025"
+    },
+    "B21": "=ISNUMBER(A21)",
+    "C21": "=IF(ISNUMBER(A21),A21,LEN(A21))",
+    "A22": {
+     "entered": "10:00 AM 7-1-2025"
+    },
+    "B22": "=ISNUMBER(A22)",
+    "C22": "=IF(ISNUMBER(A22),A22,LEN(A22))"
+   }
+  }
+ ]
+}
