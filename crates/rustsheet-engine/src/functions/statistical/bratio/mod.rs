@@ -310,7 +310,7 @@ fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option
             (w, other(w))
         }
         Branch::Bfrac => {
-            let w = bfrac(d.a0, d.b0, d.x0, d.y0, d.lambda, BFRAC_EPS_FACTOR * EPS)?;
+            let w = bfrac(&d, BFRAC_EPS_FACTOR * EPS)?;
             (w, other(w))
         }
         Branch::Basym => basym_oriented(&d)?,
