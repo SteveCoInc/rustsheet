@@ -20,12 +20,16 @@ type TwoMatricesResult = (i64, i64, Vec<Option<f64>>, Vec<Option<f64>>);
 impl Model {
     // SUMX2MY2(array_x, array_y) - Returns the sum of the difference of squares
     pub(crate) fn fn_sumx2my2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| flush_subnormal(x * x) - flush_subnormal(y * y))
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) - flush_subnormal(y * y)
+        })
     }
 
     // SUMX2PY2(array_x, array_y) - Returns the sum of the sum of squares
     pub(crate) fn fn_sumx2py2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| flush_subnormal(x * x) + flush_subnormal(y * y))
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) + flush_subnormal(y * y)
+        })
     }
 
     // SUMXMY2(array_x, array_y) - Returns the sum of squares of differences
