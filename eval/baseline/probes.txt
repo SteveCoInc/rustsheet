@@ -2024,6 +2024,7 @@ C	probes/table-edits/table-insert-two-columns-one-op-edge.case.json	7
 C	probes/table-edits/table-insert-two-columns-one-op.case.json	14
 C	probes/table-edits/table-no-header-baseline.case.json	15
 C	probes/table-edits/table-no-header-delete-first-row.case.json	15
+C	probes/table-edits/table-no-header-headers-combined.case.json	16
 C	probes/table-edits/table-rename-sheet.case.json	12
 C	probes/table-edits/table-this-row-off-data-isref.case.json	15
 C	probes/table-edits/table-totals-baseline.case.json	13
