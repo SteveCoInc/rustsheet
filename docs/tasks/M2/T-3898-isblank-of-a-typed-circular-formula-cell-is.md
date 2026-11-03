@@ -3,7 +3,7 @@ id: T-3898
 title: "ISBLANK of a typed circular formula cell is TRUE (probes/t3212 J39, J50)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
