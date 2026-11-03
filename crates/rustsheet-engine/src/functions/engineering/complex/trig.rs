@@ -496,10 +496,13 @@ pub(super) fn imsec((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> C
     complex_result(x_cos * (y_cosh / t), x_sin * (y_sinh / t), suffix)
 }
 
-/// sech(x+iy) = `(cosh x·cos y, -sinh x·sin y) / t` with `t = cos²y + sinh²x`, sinh²x fused into the
-/// sum (one rounding, `mul_add`): all 62 finite cells of probes-numeric im-last-digit-sweep (T-2750).
-/// The unfused sum (T-2044) misses only `IMSECH("1.34384-77.6742i")`, whose imaginary part Excel
-/// prints as ...306336 (J34; exact 0.37667538230633553); fusing cos²y instead also misses it.
+/// sech(x+iy) = `(cosh x·cos y, -sinh x·sin y) / t` with `t = sinh²x + cos²y`, each square rounded
+/// and then summed (T-3795): `IMSECH("0.999999999999999+10i")` has imaginary part 0.306614713343964
+/// and `IMSECH("-0.999999999999999+10i")` -0.306614713343963 (probes/t3643-imsech-grid H5, H15),
+/// where fusing sinh²x into the sum (`mul_add`, T-2750) swaps those last digits. T-2750 fused it
+/// for `IMSECH("1.34384-77.6742i")` (probes-numeric im-last-digit-sweep J34), which the unfused
+/// sum fits since the later sin, cos and sinh kernels; it changes no other cell of the 100 cases
+/// with IMSECH or IMCSCH.
 pub(super) fn imsech((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> CalcResult {
     match sech_parts(x, y) {
         Some((re, im)) => complex_result(re, im, suffix),
@@ -527,7 +530,7 @@ fn sech_parts(x: f64, y: f64) -> Option<(f64, f64)> {
     }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
-    let t = x_sinh.mul_add(x_sinh, y_cos * y_cos);
+    let t = x_sinh * x_sinh + y_cos * y_cos;
     if !t.is_finite() {
         return Some(overflowed_parts(y_cos, -y_sin * x.signum(), x));
     }
