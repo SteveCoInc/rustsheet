@@ -12,11 +12,11 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_decisions  # noqa: E402 (the sys.path line above must run first)
 import id_registry  # noqa: E402
-import merge_lock  # noqa: E402
+import git_ops  # noqa: E402
 import new_decision  # noqa: E402
 import tasks  # noqa: E402
 
-REAL_GIT = merge_lock.git
+REAL_GIT = git_ops.git
 
 
 def run(*args: str, cwd: Path) -> str:
@@ -40,12 +40,12 @@ class IdRegistry(unittest.TestCase):
         for clone in (self.a, self.b):
             run("git", "clone", "-q", str(self.origin), str(clone), cwd=base)
 
-        def guarded(*args: str, root: Path = merge_lock.ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
-            if Path(root).resolve() == merge_lock.ROOT:
+        def guarded(*args: str, root: Path = git_ops.ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
+            if Path(root).resolve() == git_ops.ROOT:
                 raise AssertionError(f"test ran git {args[:1]} in the real repository")
             return REAL_GIT(*args, root=root, check=check)
 
-        for module in (merge_lock, id_registry):
+        for module in (git_ops, id_registry):
             patcher = mock.patch.object(module, "git", side_effect=guarded)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -60,17 +60,17 @@ class IdRegistry(unittest.TestCase):
         self.assertEqual(id_registry.read(self.b)[1], ["T-3501", "T-3502", "0213", "T-3503"])
 
     def test_a_session_that_loses_the_race_takes_the_next_id(self) -> None:
-        real_push = merge_lock.push_lease
+        real_push = git_ops.push_lease
         raced = False
 
-        def push(expected: str, new: str, root: Path, ref: str = merge_lock.LOCK_REF) -> bool:
+        def push(expected: str, new: str, root: Path, ref: str = id_registry.REF) -> bool:
             nonlocal raced
             if not raced:  # b claims between a's read and a's push
                 raced = True
                 self.assertEqual(id_registry.claim(next_after(3500), id_registry.TASK, self.b), "T-3501")
             return real_push(expected, new, root, ref=ref)
 
-        with mock.patch.object(merge_lock, "push_lease", push):
+        with mock.patch.object(git_ops, "push_lease", push):
             self.assertEqual(id_registry.claim(next_after(3500), id_registry.TASK, self.a), "T-3502")
         self.assertEqual(id_registry.read(self.a)[1], ["T-3501", "T-3502"])
 
@@ -134,17 +134,17 @@ class IdRegistry(unittest.TestCase):
         self.assertEqual(block, "T-0043")
 
     def test_two_sessions_creating_the_registry_both_get_an_id(self) -> None:
-        real_push = merge_lock.push_lease
+        real_push = git_ops.push_lease
         raced = False
 
-        def push(expected: str, new: str, root: Path, ref: str = merge_lock.LOCK_REF) -> bool:
+        def push(expected: str, new: str, root: Path, ref: str = id_registry.REF) -> bool:
             nonlocal raced
             if not raced and expected == "":
                 raced = True
                 self.assertEqual(id_registry.claim(next_after(3500), id_registry.TASK, self.b), "T-3501")
             return real_push(expected, new, root, ref=ref)
 
-        with mock.patch.object(merge_lock, "push_lease", push):
+        with mock.patch.object(git_ops, "push_lease", push):
             self.assertEqual(id_registry.claim(next_after(3500), id_registry.TASK, self.a), "T-3502")
 
     def test_tasks_py_alone_falls_back_unreserved(self) -> None:

@@ -80,6 +80,12 @@ def main(argv: list[str] | None = None, git: history.Git | None = None) -> None:
     ap.add_argument("--baselines", type=Path, default=repo / "eval" / "baseline", help="eval/baseline/")
     ap.add_argument("--accuracy", type=Path, default=repo / "eval" / "runs" / "accuracy.json")
     ap.add_argument("--tasks", type=Path, default=repo / "eval" / "runs" / "latest" / "tasks.json")
+    ap.add_argument(
+        "--phase1-exit",
+        type=Path,
+        default=repo / "eval" / "runs" / "latest" / "phase1-exit.json",
+        help="scripts/phase1_exit.py --json output (optional; the goals block says so when it is missing)",
+    )
     ap.add_argument("--milestones", type=Path, default=repo / goals.MILESTONES_MD)
     ap.add_argument(
         "--out-dir", type=Path, help="the docs directory to write into (or, with --check, to read)"
@@ -115,6 +121,7 @@ def main(argv: list[str] | None = None, git: history.Git | None = None) -> None:
                 repo=repo,
                 tasks=load_object(args.tasks),
                 milestones=goals.parse_milestones(_read_text(args.milestones)),
+                exit_verdict=load_object(args.phase1_exit) if args.phase1_exit.exists() else None,
             )
         )
     except ProgressReportError as e:
@@ -172,6 +179,7 @@ def _complete_outcome(
     repo: Path,
     tasks: dict[str, Any],
     milestones: list[goals.MilestoneDoc],
+    exit_verdict: dict[str, Any] | None,
 ) -> Result:
     """A complete run: every generated block, the charts and functions.md, and its history row."""
     counts = tasks_of(tasks)
@@ -186,7 +194,7 @@ def _complete_outcome(
         else None
     )
     sections = {
-        "goals": goals.goals_block(goal, milestones, data, counts, last),
+        "goals": goals.goals_block(goal, milestones, data, counts, last, exit_verdict=exit_verdict),
         "campaign": goals.campaign_block(goal, data, counts),
         "since-last-run": history.since_block(row, last, commits),
         "trends": history.trends_block(parity.ASSETS),

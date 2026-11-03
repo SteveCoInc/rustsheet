@@ -1,7 +1,7 @@
 //! Walking a formula tree: the children of a node, and searching for calls of given functions.
 
 use super::spacing::is_empty_call_run;
-use super::{chain, ArrayNode, Node};
+use super::{chain, ArrayNode, Node, TOO_MANY_PARENTHESES_MESSAGE, TOO_MANY_SIGNS_MESSAGE};
 use crate::expressions::token::Error;
 use crate::functions::Function;
 
@@ -53,14 +53,34 @@ impl Node {
     /// formula (T-3326). An explicit stack, as above.
     #[must_use]
     pub fn has_parse_error(&self) -> bool {
+        self.find_parse_error(|_| true).is_some()
+    }
+
+    /// The message of a parse error, at any depth, for a formula past Excel's 256-parenthesis cap
+    /// ([`super::TOO_MANY_PARENTHESES_MESSAGE`]) or its sign cap
+    /// ([`super::TOO_MANY_SIGNS_MESSAGE`]). Stored, such a formula makes Excel refuse the whole
+    /// workbook (createSession 501; docs/excel-semantics/syntax.md "Formula nesting depth cap",
+    /// T-3869), so the xlsx importer reads this.
+    #[must_use]
+    pub fn syntax_cap_error(&self) -> Option<&str> {
+        self.find_parse_error(|message| {
+            message == TOO_MANY_PARENTHESES_MESSAGE || message == TOO_MANY_SIGNS_MESSAGE
+        })
+    }
+
+    /// The message of the first parse error in the tree that `wanted` accepts. An explicit
+    /// stack, as above.
+    fn find_parse_error(&self, wanted: impl Fn(&str) -> bool) -> Option<&str> {
         let mut pending = vec![self];
         while let Some(node) = pending.pop() {
-            if matches!(node, Node::ParseErrorKind { .. }) {
-                return true;
+            if let Node::ParseErrorKind { message, .. } = node {
+                if wanted(message) {
+                    return Some(message);
+                }
             }
             node.push_children(&mut pending);
         }
-        false
+        None
     }
 
     /// Whether the tree holds a call of one of `kinds` at any depth. SUBTOTAL and AGGREGATE skip

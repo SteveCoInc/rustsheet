@@ -1,0 +1,41 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3881: IMCSCH of COMPLEX(x, 1) (column A) and COMPLEX(x, 0) (column B) at x from -354.01 to -354.09, bisecting where the negative side's sign flip starts (between -354 and -354.1 by t3881-imcsch-band-edge and t3881-imcsch-flip-start).",
+ "tags": [
+  "M9",
+  "engineering",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Calc",
+   "cells": {
+    "A1": "=IMCSCH(COMPLEX(-354.01,1))",
+    "B1": "=IMCSCH(COMPLEX(-354.01,0))",
+    "A2": "=IMCSCH(COMPLEX(-354.02,1))",
+    "B2": "=IMCSCH(COMPLEX(-354.02,0))",
+    "A3": "=IMCSCH(COMPLEX(-354.03,1))",
+    "B3": "=IMCSCH(COMPLEX(-354.03,0))",
+    "A4": "=IMCSCH(COMPLEX(-354.04,1))",
+    "B4": "=IMCSCH(COMPLEX(-354.04,0))",
+    "A5": "=IMCSCH(COMPLEX(-354.05,1))",
+    "B5": "=IMCSCH(COMPLEX(-354.05,0))",
+    "A6": "=IMCSCH(COMPLEX(-354.06,1))",
+    "B6": "=IMCSCH(COMPLEX(-354.06,0))",
+    "A7": "=IMCSCH(COMPLEX(-354.07,1))",
+    "B7": "=IMCSCH(COMPLEX(-354.07,0))",
+    "A8": "=IMCSCH(COMPLEX(-354.08,1))",
+    "B8": "=IMCSCH(COMPLEX(-354.08,0))",
+    "A9": "=IMCSCH(COMPLEX(-354.09,1))",
+    "B9": "=IMCSCH(COMPLEX(-354.09,0))",
+    "A10": "=IMCSCH(COMPLEX(-354.0605,1))",
+    "B10": "=IMCSCH(COMPLEX(-354.0605,0))",
+    "A11": "=IMCSCH(COMPLEX(-354.061,1))",
+    "B11": "=IMCSCH(COMPLEX(-354.061,0))",
+    "A12": "=IMCSCH(COMPLEX(-354.0615,1))",
+    "B12": "=IMCSCH(COMPLEX(-354.0615,0))"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -279,14 +279,15 @@ fn excel_sin_cos_exact(x: f64) -> (DoubleDouble, DoubleDouble) {
 }
 
 /// `n = round(2x/π)` and the remainder `x − n·π₆₄/2` to double-double precision: `n·FRAC_PI_2` is
-/// split by an FMA, `n·X87_HALF_PI_TAIL` is exact (n has at most 27 bits, the tail 10), and
+/// split by an FMA, `n·X87_HALF_PI_TAIL` is exact (|n| < 2^28, 28 bits: the double-angle callers in
+/// functions/engineering/complex/trig.rs pass 2x for |x| < 2^27; the tail has 10, so the product has at most 38), and
 /// `x − n·FRAC_PI_2` is exact by Sterbenz's lemma.
 fn reduce(x: f64) -> (i64, DoubleDouble) {
     let n = (x / FRAC_PI_2).round();
     let product = DoubleDouble::two_prod(n, FRAC_PI_2);
     let head = DoubleDouble::two_sum(x - product.hi, -product.lo);
     let tail = DoubleDouble::two_sum(head.hi, -(n * X87_HALF_PI_TAIL));
-    // |n| < 2^27 (the `trig_arg` cut), so the cast is exact.
+    // |n| < 2^28 (|x| < 2^27 from `trig_arg`, or 2x from the double-angle callers), so the cast is exact.
     (
         n as i64,
         DoubleDouble::fast_two_sum(tail.hi, head.lo + tail.lo),

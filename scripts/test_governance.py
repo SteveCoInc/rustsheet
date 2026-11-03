@@ -86,7 +86,7 @@ class IssueTasks(unittest.TestCase):
     ISSUE_TASKS = {"docs/tasks/M2/T-0500-from-issue.md"}
 
     def failures(self, *lines: str) -> list[list[str]]:
-        return gov.failures(list(lines), lambda _p: ["M2"], flip=False, has_issue=lambda p: p in self.ISSUE_TASKS)
+        return gov.failures(list(lines), lambda _p: ["M2"], has_issue=lambda p: p in self.ISSUE_TASKS)
 
     def test_issue_task_with_a_protected_path_fails_even_with_a_decision_record(self) -> None:
         for status in ("A", "M"):
@@ -124,7 +124,7 @@ class IssueTasks(unittest.TestCase):
 
     def supply(self, *lines: str, added: list[tuple[str, str]] | None = None) -> list[list[str]]:
         return gov.failures(
-            list(lines), lambda _p: ["M2"], flip=False, has_issue=lambda p: p in self.ISSUE_TASKS,
+            list(lines), lambda _p: ["M2"], has_issue=lambda p: p in self.ISSUE_TASKS,
             added=lambda: added or [],
         )
 
@@ -187,7 +187,7 @@ class IssueTasks(unittest.TestCase):
         """`failures` with the real `task_has_issue`, reading a task whose front matter adds `extra`."""
         with mock.patch.object(gov, "git", return_value=self.TASK.format(extra=extra)):
             return gov.failures(
-                ["A\tdocs/tasks/M2/T-0500-from-issue.md", *lines], lambda _p: ["M2"], flip=False,
+                ["A\tdocs/tasks/M2/T-0500-from-issue.md", *lines], lambda _p: ["M2"],
                 added=lambda: [("crates/a/src/lib.rs", "#[allow(dead_code)]")],
             )
 

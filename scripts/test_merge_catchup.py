@@ -10,7 +10,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import merge_catchup  # noqa: E402 (the sys.path line above must run first)
-import merge_ready  # noqa: E402
 import visible_lock  # noqa: E402
 from merge_catchup import Refused  # noqa: E402
 
@@ -99,10 +98,9 @@ class CatchUp(TempOrigin):
         self.assertEqual(self.git("rev-parse", "HEAD"), start)  # the checkout is put back
         self.assertEqual(self.recorded, [self.clone])
         self.assertEqual(run("git", "show", f"{head}:{BASELINE}", cwd=self.origin), "F\tprobes/main\tM1")
-        # One merge commit of main into the PR's old head, which the carry rule accepts.
+        # One merge commit of main into the PR's old head.
         self.assertEqual(run("git", "rev-parse", f"{head}^1", cwd=self.origin), before)
         self.assertEqual(run("git", "rev-parse", f"{head}^2", cwd=self.origin), self.remote("main"))
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(before, head))
 
     def test_a_conflict_outside_the_baselines_is_refused_and_nothing_pushed(self) -> None:
         before = self.branch({"code.txt": "pr\n", BASELINE: "F\tprobes/pr\tP1\n"})
@@ -121,11 +119,10 @@ class CatchUp(TempOrigin):
         self.assertEqual(self.remote("agent/x"), before)
 
     def test_a_clean_merge_is_re_recorded_and_pushed_too(self) -> None:
-        before = self.branch({"pr.txt": "x\n"})
+        self.branch({"pr.txt": "x\n"})
         self.move_main({"other.txt": "y\n"})
         head = merge_catchup.catch_up(self.clone, "agent/x", self.record(0, "F\tprobes/a\tA1\n"))
         self.assertEqual(self.remote("agent/x"), head)
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(before, head))
 
     def test_a_conflict_in_a_fetched_suites_list_is_refused(self) -> None:
         before = self.branch({"eval/baseline/poi.txt": "F\tpoi/pr\tP1\n"})
@@ -137,7 +134,7 @@ class CatchUp(TempOrigin):
     def test_a_re_record_that_changes_another_file_is_refused(self) -> None:
         before = self.branch({BASELINE: "F\tprobes/pr\tP1\n"})
         self.move_main({BASELINE: "F\tprobes/main\tM1\n"})
-        with self.assertRaisesRegex(Refused, "does not accept: eval/baseline/poi.txt"):
+        with self.assertRaisesRegex(Refused, "outside the eval-gated lists: eval/baseline/poi.txt"):
             merge_catchup.catch_up(self.clone, "agent/x", self.record(0, "F\tpoi/x\tX1\n", "eval/baseline/poi.txt"))
         self.assertEqual(self.remote("agent/x"), before)
 
@@ -149,14 +146,13 @@ class CatchUp(TempOrigin):
         self.write(lock, "# h\nprobes/a\t3\nprobes/z\t1\n")
         self.base = self.commit("lock")
         self.git("push", "-q", "origin", "main")
-        before = self.branch({lock: "# h\nprobes/a\t3\nprobes/m-pr\t2\nprobes/z\t1\n"})
+        self.branch({lock: "# h\nprobes/a\t3\nprobes/m-pr\t2\nprobes/z\t1\n"})
         self.move_main({lock: "# h\nprobes/a\t1\nprobes/m-main\t5\n"})
         head = merge_catchup.catch_up(self.clone, "agent/x", self.record(0, "F\tprobes/a\tA1\n"))
         self.assertEqual(
             run("git", "show", f"{head}:{lock}", cwd=self.origin),
             "# h\nprobes/a\t1\nprobes/m-main\t5\nprobes/m-pr\t2",
         )
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(before, head))
 
     def test_a_retired_json_lock_conflict_is_resolved_by_deleting_it(self) -> None:
         # Decision 0219: a PR from before the per-case lock modified the json lock main deleted.
@@ -164,7 +160,7 @@ class CatchUp(TempOrigin):
         self.write(json, '{"visibly_off_cells": 1}\n')
         self.base = self.commit("json lock")
         self.git("push", "-q", "origin", "main")
-        before = self.branch({json: '{"visibly_off_cells": 2}\n', "eval/suites/probes/cases/pr.case.json": "{}\n"})
+        self.branch({json: '{"visibly_off_cells": 2}\n', "eval/suites/probes/cases/pr.case.json": "{}\n"})
         self.git("checkout", "-q", "main")
         self.git("rm", "-q", json)
         self.write(visible_lock.VISIBLE_PARITY, "# h\nprobes/a\t1\n")
@@ -175,7 +171,6 @@ class CatchUp(TempOrigin):
         self.assertEqual(self.listed, ["eval/suites/probes/cases/pr.case.json\n"])
         files = run("git", "ls-tree", "-r", "--name-only", head, "eval/baseline", cwd=self.origin).split()
         self.assertNotIn(json, files)
-        self.assertIsNone(merge_ready.Repo(self.clone).carry_problem(before, head))
 
     def test_a_line_above_mains_for_a_case_on_main_is_refused(self) -> None:
         # Decision 0219: a PR's sanctioned raise of one of main's cases is merged by hand.
@@ -224,15 +219,14 @@ class CatchUp(TempOrigin):
         self.assertEqual(merge_catchup.outside_lists([], lists), [])
 
     def test_conflicts_outside_is_the_shared_pre_merge_check(self) -> None:
-        # Decision 0224: make renumber and the janitor ask this before merging; catch-up agrees.
-        repo = merge_ready.Repo(self.clone)
+        # Decision 0224: make renumber asks this before merging; catch-up agrees.
         before = self.branch({"code.txt": "pr\n", BASELINE: "F\tprobes/pr\tP1\n"})
         self.move_main({"code.txt": "main\n", BASELINE: "F\tprobes/main\tM1\n"})
-        repo.fetch_base()
-        main = f"refs/merge-ready/{merge_ready.BASE_BRANCH}"
-        self.assertEqual(merge_catchup.conflicts_outside(repo, before, main), ["code.txt"])
+        merge_catchup.fetch_base(self.clone)
+        main = merge_catchup.BASE_REF
+        self.assertEqual(merge_catchup.conflicts_outside(self.clone, before, main), ["code.txt"])
         lists_only = self.branch({BASELINE: "F\tprobes/pr\tP1\n"})
-        self.assertEqual(merge_catchup.conflicts_outside(repo, lists_only, main), [])
+        self.assertEqual(merge_catchup.conflicts_outside(self.clone, lists_only, main), [])
 
 
 if __name__ == "__main__":

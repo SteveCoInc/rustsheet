@@ -828,7 +828,14 @@ Tasks: T-1360, T-1688, T-1272 (range lift)
 Rule (coercion, all three): an omitted, empty (`REGEXTEST("ABC","abc",)`) or blank-cell argument is 0; a number is
 truncated toward zero (0.5 and 0.9 are 0, 1.5 is 1; as occurrence -0.5 is 0, -1.5 is -1); TRUE is 1, FALSE 0; number
 text is its number ("1" probed for case_sensitivity and return_mode, "2" and "-1" for occurrence); other text, "" included, is `#VALUE!`; an error argument is returned. Arguments are read left to
-right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`).
+right, so an error in the text beats one in a later argument (`REGEXTEST(NA(),"a",1/0)` is `#N/A`). The range check of an option comes after the later arguments are read, though: REGEXEXTRACT's return_mode is coerced in
+its turn, but an out-of-range return_mode loses to an error case_sensitivity (`REGEXEXTRACT("abc","[0-9]",-1,#DIV/0!)`,
+`REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)`, return_mode 7 or "12" with case_sensitivity `#DIV/0!`, and a lifted return_mode of
+-2.5 or 42 with `#NUM!`, are that error), while a non-number text return_mode is still `#VALUE!` first (`"x~*"` with `#NUM!`
+is `#VALUE!`); a valid return_mode (TRUE) gives the error. Evidence: gen-m7/3d156a08a7bacf35 Calc!A8236, A9273, A9334,
+A11408 and gen-m7/781b74b7c112265f Calc!A6833:B6834 (excel-graph, 2026-11-02, T-3810). Ours since T-3810
+(`regex_option_in_range` after both coercions in `fn_regexextract`). REGEXREPLACE's occurrence and the other functions'
+order are unprobed.
 Rule (case_sensitivity, REGEXTEST's third, REGEXEXTRACT's fourth, REGEXREPLACE's fifth): after truncation 0 is
 case-sensitive and 1 case-insensitive; anything else (2, -1, 2^53) is `#VALUE!`, also for an array element (`{0;1;2}`
 gives FALSE, TRUE, `#VALUE!`). Case-insensitive matching uses Unicode case folding (`ſ` matches `s`, the Kelvin sign
@@ -1058,9 +1065,9 @@ Status: VERIFIED (excel-graph). Implemented in: `is_proper_letter` (functions/te
 C18, C20, C23, D24) wait for T-3583. Tasks: T-3657
 
 ## UPPER, LOWER and PROPER: one-to-one case mapping, final-sigma context (T-1747)
-Rule: UPPER, LOWER and PROPER all use the simple one-to-one mapping, so characters whose full mapping expands stay unchanged in every case (ᾳ, ẖ, ẘ, ﬀ, ﬃ, ﬆ, և, ß, ŉ, ǰ, ﬁ; `UPPER("ß")` is `ß`, not "SS"). ΐ upper-cases to Ϊ in UPPER and PROPER (LOWER leaves it), and ΰ to Ϋ in UPPER (probes/t3298-case-mapping-sweep; see "UPPER and LOWER use an old per-character case table" below for every other character). İ is the exception to consistency: PROPER and LOWER fold it to I / i (`LOWER("aİb İc")` is `aib ic`) but UPPER leaves it as İ. A capital Σ lowers to the final ς in LOWER and PROPER when the next character is the end of the text, a space, a straight apostrophe or `-`, and to σ when a letter or digit, a combining mark (probed: U+0301, U+0308; the rest of U+0300-U+036F is assumed, other combining blocks and U+200C/U+200D/U+2018 are unprobed and give ς), a curly apostrophe (U+2019) or a zero-width space (U+200B) follows. In LOWER a lone `Σ`, `Σ ` and `1Σ` give ς (no preceding letter needed), but `Σ`+U+0308 gives σ̈; lower-case σ is never changed (`LOWER("ασ")` is `ασ`). PROPER keeps a word-initial Σ capital.
+Rule: UPPER, LOWER and PROPER all use the simple one-to-one mapping, so characters whose full mapping expands stay unchanged in every case (ᾳ, ẖ, ẘ, ﬀ, ﬃ, ﬆ, և, ß, ŉ, ǰ, ﬁ; `UPPER("ß")` is `ß`, not "SS"). ΐ upper-cases to Ϊ in UPPER and PROPER (LOWER leaves it), and ΰ to Ϋ in UPPER (probes/t3298-case-mapping-sweep; see "UPPER and LOWER use an old per-character case table" below for every other character). İ is the exception to consistency: PROPER and LOWER fold it to I / i (`LOWER("aİb İc")` is `aib ic`) but UPPER leaves it as İ. A capital Σ lowers to the final ς in LOWER and PROPER only when it ends the text or the next character is one of 30 ASCII characters: TAB, LF, CR, space and the punctuation ``! " # $ % & ' + , - . / : ; < = > ? @ [ \ ] _ { | }``. Before every other character it lowers to σ: letters (also those Excel's case table lacks, U+0526, U+10C7, U+13A0, U+AB70, U+1C90, U+A7C0, and the supplementary 𐐀), uncased letters, modifier letters, digits of any script, non-digit numerics (², ½, Ⅻ, ①), combining marks of every block, format characters (U+00AD, U+200B-U+200D, U+2060, U+FEFF, U+FE0F), U+2018, U+2019, an emoji, `Σ σ ς`, and also the ASCII ``( ) * ^ ` ~``, the other C0 controls, DEL and U+00A0 (T-3820, VERIFIED: probes/t3820-lower-sigma-next-char Calc!A1:C50 per class, and Calc!E1:F256, a sweep of the whole BMP as the next character through LOWER (E) and PROPER (F), where these 30 and no other code point give ς, of the code points UNICHAR can build: U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF are errors there; excel-graph 2026-11-03). TEXTBEFORE's case-insensitive mode agrees on every row probed (Calc!C1:C50). So the test is a fixed list of separators, not a letter table. Ours: `sigma_is_final` (string_format.rs) tests exactly this list (T-3905). In LOWER a lone `Σ`, `Σ ` and `1Σ` give ς (no preceding letter needed), but `Σ`+U+0308 gives σ̈; lower-case σ is never changed (`LOWER("ασ")` is `ασ`). PROPER keeps a word-initial Σ capital.
 Evidence: probes/case-mapping-expanding (excel-graph, 2026-10-17, 81 cells; engine matches all).
-Status: VERIFIED (excel-graph). Implemented in: `lower_case`, `upper_case`, `proper_case` (functions/text/string_format.rs). Tasks: T-1747
+Status: VERIFIED (excel-graph). Implemented in: `lower_case`, `upper_case`, `proper_case`, `sigma_is_final` (functions/text/string_format.rs). Tasks: T-1747, T-3905
 
 ## UPPER and LOWER use an old per-character case table (T-3298)
 Rule: UPPER and LOWER map a character only if Excel's own case table has it, and that table is far older than current
@@ -1359,3 +1366,69 @@ intersected. An error element (`CHAR(0)` is `#VALUE!`, a `#N/A` cell) is the joi
 Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe shows
 `CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
 agree; the only gap was `CHAR`, fixed in T-3302.
+
+## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
+
+Oracle-filled cells of the arg-pairs batch (ARRAYTOTEXT implemented, T-3884; TEXTJOIN T-3885):
+
+- A multi-cell range as ARRAYTOTEXT's format lifts per element and spills to the range's shape; the array
+  argument is read whole. `ARRAYTOTEXT(2,Data!A1:B2)` (A1:B2 = 0, FALSE, blank, 1) fills A31:B32 with
+  `"2"`, `"2"`, `"2"`, `"{2}"` (gen-m5/af89ea54bae02c71). With C3:D4 (blank, "1.5", "x", 0.1) as format,
+  `ARRAYTOTEXT(Data!G1,Data!C3:D4)` fills A34:B35 with `"7"`, `"{7}"`, `#VALUE!`, `"7"`: text "x" is `#VALUE!`.
+  `ARRAYTOTEXT(Data!A1:B2,Data!A1:B2)` fills A529:B530 with `"0, FALSE, , 1"` x3 and `"{0,FALSE;,1}"`.
+  The eval scores only the anchor cell, so a "first element" model would pass but spill wrongly.
+- `ARRAYTOTEXT(<blank ref>,#DIV/0!)` is `#VALUE!` for every format kind (A469-A514, A499, A502): the
+  existing rule that a reference to one empty cell is `#VALUE!` (above) and T-2250's error-first rule apply.
+- TEXTJOIN with an error delimiter given as a reference keeps the delimiter's own error (`#DIV/0!`) when
+  ignore_empty is a number, boolean, blank or the same error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328,
+  A334), but a text ignore_empty, even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322;
+  alone A349, A352). The rule depends on the delimiter being a reference; see the next section.
+
+## TEXTJOIN: ignore_empty is read before a reference delimiter's error, after an error value
+Rule: when TEXTJOIN's delimiter is a reference to an error cell (a cell, a range holding an error, or an IF or
+INDEX that returns such a reference), ignore_empty is read first: a text ignore_empty (`"x"`, `"12"`, `""`, a
+text cell, `LOWER(...)`) is `#VALUE!`, and an error ignore_empty is its own error (`TEXTJOIN(<#DIV/0! cell>,
+<#N/A cell>,"a")` is `#N/A`); a number, boolean or blank ignore_empty leaves the delimiter's error. When the
+delimiter is an error *value* (a literal `#DIV/0!`, `1/0`, `NA()`, `VLOOKUP(TRUE,{1,2},2)`), that error is the
+result whatever ignore_empty is, text and error ignore_empty included.
+Consequence: `TEXTJOIN(VLOOKUP(...),LOWER(...),...)` is the VLOOKUP's `#N/A`
+(gen-m5/1d22a002d4f380b3 Calc!A274), while `TEXTJOIN(Data!G9,Data!G6,...)` with G9 `#DIV/0!` and G6 "x" is
+`#VALUE!`.
+Evidence: probes/t3885-textjoin-error-delimiter-text-ignore-empty B2:M13 (12 delimiter forms by 10 ignore_empty
+forms), B15:F15, B16:G16 (excel-graph, 2026-11-03; T-3885); gen-m5/d0c5e5dff134d787 Calc!A310, A316, A322;
+gen-m5/1d22a002d4f380b3 Calc!A274.
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` and `Model::textjoin_delimiters` (functions/text/concatenate.rs).
+Tasks: T-3885
+
+## TEXTJOIN: an array or range ignore_empty is lifted per element, with the scalar rule applied to each
+Rule: an array or range ignore_empty makes TEXTJOIN spill one result per element, and each element follows the
+scalar rule above. With a reference delimiter (a cell or a range of error cells) the elements give: boolean or
+number -> the delimiter's error (`#DIV/0!`), text (`"x"`, `""`) -> `#VALUE!`, error -> its own error (`#N/A`). With an
+error value delimiter (`1/0`) every element is `#DIV/0!`. With a plain delimiter: boolean or number -> `"a"`, text
+-> `#VALUE!`, error -> that error. An array literal and a range holding the same values agree.
+Evidence: probes/t3909-textjoin-lifted-ignore-empty A1:E8 (4 delimiters by array and range ignore_empty, 5 elements
+each; excel-graph, 2026-11-03; T-3909).
+Status: VERIFIED
+Implemented in: `Model::fn_textjoin` via `lift_call`; all 40 formula cells (44 scored) already match, no engine change.
+Tasks: T-3909
+
+## ARRAYTOTEXT: a range format argument
+Rule: ARRAYTOTEXT reads its array argument whole and lifts `format` over a range or an array literal, one text per element, spilling to the format's shape: `ARRAYTOTEXT(2,Data!A1:B2)` spills "2" over a 2x2 (`{2}` where an element selects strict form), and `ARRAYTOTEXT(range,range)` with the same range as format gives the array text per format element ("0, FALSE, , 1"). A blank first argument is `#VALUE!` even over an error format (`ARRAYTOTEXT(Data!H1,#DIV/0!)`, `ARRAYTOTEXT(Data!H1,<#DIV/0! ref>)`), while a non-blank first argument gives the format error.
+An error or blank first argument spills its error to the format's shape: `ARRAYTOTEXT(#N/A,Data!A1:B2)` fills A463:B464 with `#N/A`, `ARRAYTOTEXT(Data!G9,Data!C3:D4)` A466:B467 with `#DIV/0!`, a blank reference A511:B512 and A514:B515 with `#VALUE!`.
+An array-literal format lifts the same way: `ARRAYTOTEXT(7,{0,1})` spills "7", "{7}" across, `{0;1}` down, and `{0,2}` gives "7", `#VALUE!` (an element outside 0 and 1 is `#VALUE!` in its own cell only); `ARRAYTOTEXT({1,"x"},{0,1})` gives "1, x", `{1,"x"}`; `ARRAYTOTEXT(NA(),{0,1})` spills `#N/A` twice.
+Evidence: gen-m5/af89ea54bae02c71 Calc!A463:B464, A466:B467, A511:B512, A514:B515, A31:B32, A34:B35, A529:B530, A532:B533, A499, A502 (excel-graph oracle sidecar; T-3884); probes/arraytotext-array-literal-format A1:B1, A4:A5, A7:B7, A10:B10, A13:A15, A17:B17, A20:B20 (excel-graph, 2026-11-03; T-3884).
+Status: VERIFIED
+Implemented in: `Model::fn_arraytotext` (functions/text/arraytotext.rs) with the `ARRAYTOTEXT` entry of the lifting table (functions/lift/kinds/text.rs).
+Tasks: T-3884
+
+## SUBSTITUTE with a boolean instance_num is #VALUE! (T-3510, T-3927)
+Rule: any boolean instance_num is `#VALUE!`: literal `TRUE` and `FALSE`, a boolean from a cell (`B1`/`B2`), a comparison
+(`1=1`), and each boolean element of an array (`{TRUE,FALSE,1}` gives `#VALUE!`, `#VALUE!`, "xaa"). A blank-cell instance_num is
+also `#VALUE!` (like 0); `"2"` text coerces ("axa"). A boolean as text, old_text or new_text is coerced to "TRUE"
+(`SUBSTITUTE("TRUE",TRUE,"x")` "x", `SUBSTITUTE("aaa","a",TRUE,2)` "a", then TRUE as text, then "a"). The gen-m5 pairs `SUBSTITUTE("abc",0,"abc",TRUE)`,
+`SUBSTITUTE("Hello","Hello",2,TRUE)` and `SUBSTITUTE(2,"abc","abc",TRUE)` are all that one rule (23 cells, see T-3927 for the list).
+An error in text, old_text or new_text wins over the boolean `#VALUE!` (`SUBSTITUTE("abc",#REF!,"Hello",TRUE)` `#REF!`, `SUBSTITUTE(#N/A,"abc","abc",TRUE)` `#N/A`).
+Evidence: gen-m5 arg-pairs batch (excel-graph, 2026-11-03); probes/substitute-boolean-instance A1:A12, B12:C12 (excel-graph, 2026-11-03, T-3927).
+Status: VERIFIED
+Implemented in: `fn_substitute` (functions/text/common.rs), T-3927.

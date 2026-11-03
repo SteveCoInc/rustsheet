@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use crate::expressions::parser::tests::utils::new_parser;
 use crate::expressions::parser::{
     Node, MAX_FORMULA_DEPTH, MAX_PARENTHESES, MAX_SIGNS, MAX_VALUE_OPERATORS, TOO_DEEP_MESSAGE,
-    TOO_MANY_OPERATORS_MESSAGE, TOO_MANY_SIGNS_MESSAGE,
+    TOO_MANY_OPERATORS_MESSAGE, TOO_MANY_PARENTHESES_MESSAGE, TOO_MANY_SIGNS_MESSAGE,
 };
 use crate::expressions::types::CellReferenceRC;
 
@@ -38,6 +38,10 @@ fn on_small_stack(f: impl FnOnce() + Send + 'static) {
 
 fn is_too_deep(node: &Node) -> bool {
     matches!(node, Node::ParseErrorKind { message, .. } if message == TOO_DEEP_MESSAGE)
+}
+
+fn has_too_many_parentheses(node: &Node) -> bool {
+    matches!(node, Node::ParseErrorKind { message, .. } if message == TOO_MANY_PARENTHESES_MESSAGE)
 }
 
 fn has_too_many_signs(node: &Node) -> bool {
@@ -99,13 +103,15 @@ fn parenthesis_runs_nest_as_deep_as_excel_allows() {
         assert!(
             matches!(node, Node::Group { levels, .. } if usize::from(levels) == MAX_PARENTHESES)
         );
-        assert!(is_too_deep(&parse(&nested(
+        assert!(has_too_many_parentheses(&parse(&nested(
             "(",
             "1",
             ")",
             MAX_PARENTHESES + 1
         ))));
-        assert!(is_too_deep(&parse(&"(".repeat(MAX_PARENTHESES + 1))));
+        assert!(has_too_many_parentheses(&parse(
+            &"(".repeat(MAX_PARENTHESES + 1)
+        )));
         // Groups in several runs count together (unprobed; syntax.md): split by a space, an
         // operand or a call, 256 in all fit and 257 do not.
         let half = MAX_PARENTHESES / 2;
@@ -124,7 +130,7 @@ fn parenthesis_runs_nest_as_deep_as_excel_allows() {
             } else {
                 past
             };
-            assert!(is_too_deep(&parse(&past)), "{open}");
+            assert!(has_too_many_parentheses(&parse(&past)), "{open}");
         }
         let split = nested(
             "(",
@@ -139,7 +145,7 @@ fn parenthesis_runs_nest_as_deep_as_excel_allows() {
             ")",
             half,
         );
-        assert!(is_too_deep(&parse(&split)));
+        assert!(has_too_many_parentheses(&parse(&split)));
         let mut model = crate::test::util::new_empty_model();
         let formula = format!("={}", nested("(", "-A2", ")", MAX_PARENTHESES));
         model._set("A1", &formula);
@@ -189,7 +195,7 @@ fn signed_parentheses_nest_to_the_parenthesis_cap() {
             let fits = parse(&nested(open, "1", ")", MAX_PARENTHESES));
             assert!(!matches!(fits, Node::ParseErrorKind { .. }), "{open}");
             let past = parse(&nested(open, "1", ")", MAX_PARENTHESES + 1));
-            assert!(is_too_deep(&past), "{open}");
+            assert!(has_too_many_parentheses(&past), "{open}");
         }
         for (levels, signs) in [(200, 824), (50, 974)] {
             let around =
@@ -269,7 +275,13 @@ fn deep_formulas_of_every_shape_are_too_deep() {
             // Unclosed: the error must come from the depth, not the missing `)`.
             "(".repeat(levels),
         ] {
-            assert!(is_too_deep(&parse(&formula)), "{}", &formula[..40]);
+            // A run of `(` or `-(` meets Excel's parenthesis cap first (T-3689).
+            let node = parse(&formula);
+            assert!(
+                is_too_deep(&node) || has_too_many_parentheses(&node),
+                "{}",
+                &formula[..40]
+            );
         }
     });
 }
@@ -346,7 +358,7 @@ fn parser_is_reusable_after_a_too_deep_formula() {
             column: 1,
         };
         assert!(is_too_deep(
-            &parser.parse(&nested("(", "1", ")", 1000), &cell)
+            &parser.parse(&nested("( ", "1", ")", 1000), &cell)
         ));
         let node = parser.parse(&nested("(", "1", ")", MAX_OPERANDS), &cell);
         assert!(!matches!(node, Node::ParseErrorKind { .. }));

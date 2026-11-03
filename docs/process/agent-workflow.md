@@ -14,7 +14,6 @@ is the normative description of that loop. The executable version is the `work-l
 | **Gap triager** | `.claude/agents/gap-triager.md` | eval report → root-cause-grouped function tasks |
 | **Steward** | the daily steward routine (`routines.md`), following the `steward` skill and, for the dashboard, the `progress-report` skill | eval and health report in `docs/status.md`; the daily progress dashboard `docs/progress.md` (`make progress-report`, its judgment blocks; SPEC-0022, decision 0123); queues, orphaned PRs, oracle fills |
 | **Issue intake** | the issue intake routine (`routines.md`, fired on a GitHub issue being opened) and the steward's sweep, following the `issue-intake` skill | one GitHub issue → triage → a normal task with `issue: <N>` → worked at once through the `work-loop` (decision 0158) |
-| **Merger** | the merger routine (`routines.md`, every 30 min), running `make merge-train` per the `steward` skill's "Merge train" | in `train` mode, tests batches of PRs marked ready on a train branch built on `main` and squash-merges the green ones in order; in `shadow` mode, only tests and predicts on `merge-train/shadow`; in `lock` mode, stops at once (SPEC-0027, decision 0157). Never writes code or reviews |
 | **Oracle** | `rustsheet-oracle` + `.github/workflows/oracle.yml` | fills pending Excel expectations |
 | **Owner (human)** | — | sets direction, provides Excel access, reads `docs/status.md`; not a reviewer |
 
@@ -121,7 +120,7 @@ todo ──(worker claims: branch + status in-progress)──▶ in-progress ─
    with the current `main` and the PRs ahead of it, so agents run no up-to-date check and merge
    `origin/main` in only to fix a conflict or an id collision (decision 0121). A PR the queue
    removes is red CI. To change a queued PR, `disable_pr_auto_merge` first, push, re-review,
-   enqueue again. The merge train (0157) and the merge lock (0075) are retired for merges. The
+   enqueue again. The merge train (0157) and the merge lock (0075) are deleted (0252). The
    squash commit title and the task's Outcome are the record; the steward's daily run lists
    merged work in `docs/status.md` (decision 0024), so PRs do not edit its log.
 

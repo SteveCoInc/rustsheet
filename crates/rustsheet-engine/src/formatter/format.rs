@@ -15,7 +15,7 @@ use crate::{
 pub use super::formatted::Formatted;
 use super::formatted::MAX_TEXT_FORMAT_CHARS;
 pub(crate) use super::parse_formatted::{
-    parse_formatted_number, parse_typed_number, rejected_clock_text_format, script_digit_to_ascii,
+    ascii_script_digits, parse_formatted_number, parse_typed_number, rejected_clock_text_format,
 };
 pub(crate) use super::text_value::format_text_value_exact;
 pub use super::text_value::{displayed_text, format_text_value};

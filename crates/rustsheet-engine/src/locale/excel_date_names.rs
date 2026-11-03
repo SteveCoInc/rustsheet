@@ -2,11 +2,13 @@
 //! selects (`crate::formatter::locale_tag`). They are Excel's locale data, not CLDR (`[$-407]mmm` of
 //! March is "Mrz" where CLDR and `locales.bin` have "Mär"): every string is a probed value from
 //! probes/text-locale-date-names, probes/text-locale-name-tables and probes/text-locale-am-neutral
-//! (excel-graph, 2026-10-18; regional variants and more languages from probes/text-locale-regional-lcids), except the morning "AM" of locales whose afternoon is "PM", which
+//! (excel-graph, 2026-10-18; regional variants and more languages from probes/text-locale-regional-lcids and
+//! probes/text-locale-six-languages), except the morning "AM" of locales whose afternoon is "PM", which
 //! is probed for fr, de, de-AT, th, sk, uk and he only.
 
 use super::regional_date_names::{
-    AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, PT_AO, SK, TH, UK, ZH_SG,
+    AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
+    TH, UK, ZH_SG,
 };
 
 /// The date names and day-half strings of one locale.
@@ -663,7 +665,7 @@ pub(crate) static BCP47_ONLY: [(&str, &DateNames); 1] = [("pt-AO", &PT_AO)];
 
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 42] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
     (0x40C, "fr-FR", &FR),
@@ -706,6 +708,12 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 42] = [
     (0x401, "ar-SA", &AR),
     (0x40D, "he-IL", &HE),
     (0x439, "hi-IN", &HI),
+    (0x421, "id-ID", &ID),
+    (0x424, "sl-SI", &SL),
+    (0x427, "lt-LT", &LT),
+    (0x428, "tg-Cyrl-TJ", &TG),
+    (0x42F, "mk-MK", &MK),
+    (0x43F, "kk-KZ", &KK),
 ];
 
 /// The names of en-US, the locale of the system tags.

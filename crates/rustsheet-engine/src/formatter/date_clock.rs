@@ -23,9 +23,59 @@ pub(crate) fn parse_date_clock_serial_in(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Option<f64> {
+    if is_letter_period_shape(text) {
+        return parse_letter_period_serial_in(text, locale, current_year, date_system);
+    }
     let (days, clock) = parse_date_clock_parts(text, locale, current_year)?;
+    serial_in(days, clock, date_system)
+}
+
+/// `days` (a 1900-system date serial) shifted to `date_system`, plus `clock`.
+fn serial_in(days: i32, clock: f64, date_system: DateSystem) -> Option<f64> {
     let days = date_system.serial_from_1900_serial(i64::from(days))?;
     Some(days as f64 + clock)
+}
+
+/// Typed `10 A. 7/1/2025` text (see [`letter_period_parts`]) as a serial in the workbook's date
+/// system, the way [`parse_date_clock_serial_in`] reads it; the typed reader gives it its format.
+/// In a 1904 workbook the no-date form keeps day 0 (`10 A. 5` is 49710.2763252315 in both
+/// systems), a date shifts to the 1904 serial and must land on day 1 or later: `10 A. 7/1/2025`
+/// is 93906.2763275463, `10 A. 1/1904` (day 0) and `10 A. 12/1903` stay text and are #VALUE! to
+/// the formula readers (probes/t3920-typed-a-period-1904 A1-A5, excel-graph 2026-11-03).
+pub(crate) fn parse_letter_period_serial_in(
+    text: &str,
+    locale: &Locale,
+    current_year: CurrentYear,
+    date_system: DateSystem,
+) -> Option<f64> {
+    let (date, clock) = letter_period_parts(text, locale, current_year)?;
+    let days = match date {
+        None => 0,
+        Some(days) => date_system
+            .serial_from_1900_serial(i64::from(days))
+            .filter(|days| *days > 0)?,
+    };
+    Some(days as f64 + clock)
+}
+
+/// Whether `text` starts like `N A. F/D/Y` text (see [`letter_period_parts`]): a clock word of
+/// digits and colons, a spaced `A`/`P`/`AM`/`PM` word, its period and (after optional spaces)
+/// anything. Such text either reads that way or is #VALUE! to every formula reader: `10 A. 7-2025`,
+/// `10 A. 5/1`, `10 A. 7/1`, `10 A. July 1, 2025` and `10 A. Jul-2025` are not `10 A.` followed
+/// by a date, nor `1:2:3:4 A. 5` or `10 A. 5x` anything else (probes/t3920-typed-a-period-unprobed-edges
+/// rows 15-23, t3948-letter-period-gate-edges, excel-graph 2026-11-03). `10 A.` with nothing
+/// after the period is 10 AM.
+fn is_letter_period_shape(text: &str) -> bool {
+    let Some((clock, rest)) = text.split_once(' ') else {
+        return false;
+    };
+    let Some((word, rest)) = rest.trim_start_matches(' ').split_once('.') else {
+        return false;
+    };
+    clock.bytes().any(|b| b.is_ascii_digit())
+        && clock.bytes().all(|b| b.is_ascii_digit() || b == b':')
+        && am_pm_word(word).is_some()
+        && !rest.trim_start_matches(' ').is_empty()
 }
 
 /// Hour-only "N AM" / "N PM" text (hour 0-12, no minutes) as a time-of-day serial: `"0 PM"` is
@@ -66,6 +116,10 @@ fn parse_date_clock_parts(
     locale: &Locale,
     current_year: CurrentYear,
 ) -> Option<(i32, f64)> {
+    if is_letter_period_shape(text) {
+        let (date, clock) = letter_period_parts(text, locale, current_year)?;
+        return Some((date.unwrap_or(0), clock));
+    }
     // `date` comes with the spaces between it and the clock already cut.
     let split = |date: &str, clock: &str| {
         let clock = trim_spaces(clock);
@@ -101,6 +155,73 @@ fn parse_date_clock_parts(
         }
     }
     None
+}
+
+/// Seconds under every `N A. F/D/Y` reading (see [`letter_period_parts`]): 2^32 less 22, decoded
+/// from probes/date-text-typed-clock-first-a-period A1 (`10 A. 7/1/2025` is 95368.2763275463) and
+/// t3907-typed-clock-a-period-shapes A16 (`0 A. 7/1/2025`).
+const LETTER_PERIOD_BASE_SECONDS: u64 = (1 << 32) - 22;
+
+/// A clock, a spaced `A.`/`P.` (also `AM.`/`PM.`, any case), then digits and an optional date:
+/// `10 A. 7/1/2025`, `10:00 P. 7/1/2025`, `10 A. 5`. Excel reads it as no clock it otherwise
+/// knows: the digits right after the period are a fraction of a second (`.7`; rounded to the
+/// millisecond half up, `.2025` is 0.203 s), a `/`, `-` or space after them starts a date that
+/// must read on its own (`1/2025` is January 2025, `1/25` 25 January of the current year,
+/// `Jul/2025`; none is day 0), a bare `N` is N minutes (below 60) and `H:M` hours and minutes,
+/// and all of that sits on [`LETTER_PERIOD_BASE_SECONDS`], one second more for `P`. Typed, the
+/// value takes `mm:ss.0`; VALUE and `0+` read it whole, DATEVALUE its day and TIMEVALUE its
+/// fraction (probes/date-text-typed-clock-first-a-period, t3907-typed-clock-a-period-shapes,
+/// t3907-typed-clock-a-period-edges, excel-graph 2026-11-03; docs/excel-semantics/dates.md
+/// "Typed clock-first date-times"). `AM.` reads as `A.` and an `H:M` hour from 24 stays text
+/// (probes/t3920-typed-a-period-unprobed-edges rows 1-14). Returns the date's 1900 serial (`None`
+/// with no date) and the clock part.
+fn letter_period_parts(
+    text: &str,
+    locale: &Locale,
+    current_year: CurrentYear,
+) -> Option<(Option<i32>, f64)> {
+    let (clock, rest) = text.split_once(' ')?;
+    let clock_seconds = match clock.split_once(':') {
+        Some((hour, minute)) => {
+            let (hour, minute) = (parse_clock_component(hour)?, parse_clock_component(minute)?);
+            // `24:00 A. 7/1/2025`, `25:00 A. 5` and `10:60 A. 7/1/2025` stay text (t3920 rows 8-14).
+            (hour < 24 && minute < 60).then_some(hour * 3600 + minute * 60)?
+        }
+        // `60 A. 7/1/2025` and `99 A. 7/1/2025` stay text (edges A10, A23).
+        None => Some(parse_clock_component(clock)?)
+            .filter(|minute| *minute < 60)?
+            .checked_mul(60)?,
+    };
+    let (word, rest) = rest.trim_start_matches(' ').split_once('.')?;
+    let is_pm = am_pm_word(word)?;
+    let rest = rest.trim_start_matches(' ');
+    let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
+    if digits == 0 {
+        return None;
+    }
+    let (fraction, tail) = rest.split_at(digits);
+    let tail = tail.trim_end_matches(' ');
+    let days = if tail.is_empty() {
+        None
+    } else {
+        let date = tail.strip_prefix(['/', '-', ' '])?;
+        Some(parse_date(trim_spaces(date), locale, current_year).ok()?.0)
+    };
+    let whole = LETTER_PERIOD_BASE_SECONDS + u64::from(is_pm) + u64::from(clock_seconds);
+    // Below 2^53 ms, so exact, and divided as `parse_clock_text` divides.
+    let total_ms = whole * 1000 + u64::from(fraction_digits_to_ms(fraction));
+    Some((days, total_ms as f64 / 1000.0 / SECONDS_PER_DAY_F64))
+}
+
+/// Whether `word` is an `AM`/`A` (false) or `PM`/`P` (true) clock word, in any case.
+pub(crate) fn am_pm_word(word: &str) -> Option<bool> {
+    if word.eq_ignore_ascii_case("pm") || word.eq_ignore_ascii_case("p") {
+        Some(true)
+    } else if word.eq_ignore_ascii_case("am") || word.eq_ignore_ascii_case("a") {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 /// Time text is trimmed and split on the space character only: a tab, a no-break space or an
@@ -275,13 +396,7 @@ fn parse_simple_am_pm(text: &str) -> Option<(&str, bool)> {
 
     let suffix = suffix.strip_suffix('.').unwrap_or(suffix);
 
-    let is_pm = if suffix.eq_ignore_ascii_case("pm") || suffix.eq_ignore_ascii_case("p") {
-        true
-    } else if suffix.eq_ignore_ascii_case("am") || suffix.eq_ignore_ascii_case("a") {
-        false
-    } else {
-        return None;
-    };
+    let is_pm = am_pm_word(suffix)?;
 
     let hour_part = trim_spaces(hour_part);
 
@@ -289,4 +404,120 @@ fn parse_simple_am_pm(text: &str) -> Option<(&str, bool)> {
         return Some((hour_part, is_pm));
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{letter_period_parts, parse_date_clock_serial, parse_date_clock_serial_in};
+    use crate::{locale::get_locale, types::DateSystem};
+
+    fn serial(text: &str) -> Option<f64> {
+        let locale = get_locale("en").ok()?;
+        parse_date_clock_serial(text, locale, &|| Some(2026))
+    }
+
+    #[test]
+    fn letter_period_text_sits_on_two_to_the_32_seconds() {
+        // probes/t3907-typed-clock-a-period-shapes, -edges and date-text-typed-clock-first-a-period
+        // (excel-graph 2026-11-03), compared at Excel's 15 significant digits.
+        let cases = [
+            ("10 A. 7/1/2025", 95_368.276_327_546_3),
+            ("10:00 A. 7/1/2025", 95_368.686_049_768_53),
+            ("10 P. 7/1/2025", 95_368.276_339_120_4),
+            ("10 a. 7/1/2025", 95_368.276_327_546_3),
+            ("10 PM. 7/1/2025", 95_368.276_339_120_4),
+            ("0 A. 7/1/2025", 95_368.269_383_101_8),
+            ("1:2 A. 7/1/2025", 95_368.312_438_657_4),
+            ("10 A. 1/1/1900", 49_711.276_320_601_9),
+            ("10 A. 5", 49_710.276_325_231_5),
+            ("10 A. 2025-07-01", 95_914.276_321_794),
+            ("10 A. 123456789/1/2025", 95_368.276_320_868_1),
+            ("10 A. 7 1/1/2025", 95_368.276_327_546_3),
+            ("10 A.7/1/2025", 95_368.276_327_546_3),
+            ("10  A.  7/Jul/2025", 95_549.276_327_546_3),
+            // `AM.` reads as `A.` (probes/t3920-typed-a-period-unprobed-edges rows 1-6).
+            ("10 AM. 7/1/2025", 95_368.276_327_546_3),
+            ("10:00 AM. 7/1/2025", 95_368.686_049_768_53),
+            ("10 am. 7/1/2025", 95_368.276_327_546_3),
+            ("10 AM. 5", 49_710.276_325_231_48),
+            ("23:59 A. 7/1/2025", 95_369.268_688_657_41),
+        ];
+        for (text, expected) in cases {
+            let got = serial(text).map(|v| format!("{v:.10}"));
+            assert_eq!(got, Some(format!("{expected:.10}")), "{text}");
+        }
+    }
+
+    /// Typed, these stay text (edges and shapes cases); the shapes whose period is followed by a
+    /// digit are #VALUE! to the formula readers too, with no fallback to `10 A.` and a date
+    /// (`letter_period_shapes_have_no_other_reading`).
+    #[test]
+    fn letter_period_text_needs_digits_a_date_tail_and_minutes_below_60() {
+        let locale = get_locale("en").ok();
+        for text in [
+            "10 A.. 7/1/2025",
+            "10 a.m. 7/1/2025",
+            "A. 7/1/2025",
+            "10 B. 7/1/2025",
+            "10:00:30 A. 7/1/2025",
+            "10 A. 7/1",
+            "10 A. 7-2025",
+            "10 A. 7/13/2025",
+            "10 A. 7/0/2025",
+            "10 A. 7/1/1899",
+            "10 A. 7/1/2025 10:00",
+            "60 A. 7/1/2025",
+            "10 A. July 1, 2025",
+            "24:00 A. 7/1/2025",
+            "25:00 A. 5",
+            "10:60 A. 7/1/2025",
+        ] {
+            let parts = locale.and_then(|l| letter_period_parts(text, l, &|| Some(2026)));
+            assert_eq!(parts, None, "{text}");
+        }
+    }
+
+    /// probes/t3920-typed-a-period-unprobed-edges rows 8-23 (excel-graph 2026-11-03): VALUE, `0+`,
+    /// DATEVALUE and TIMEVALUE are #VALUE! on each, so the date-clock reader is `None`.
+    #[test]
+    fn letter_period_shapes_have_no_other_reading() {
+        for text in [
+            "24:00 A. 7/1/2025",
+            "25:00 A. 7/1/2025",
+            "100:00 A. 7/1/2025",
+            "10 A. 7-2025",
+            "60 A. 7/1/2025",
+            "10 A. 5/1",
+            "10:00:30 A. 7/1/2025",
+            "10 A. 7/1/2025 10:00",
+            "10 A. 7/13/2025",
+            "10 A. 7/1",
+            // probes/t3948-letter-period-gate-edges rows 1, 8, 13, 16.
+            "1:2:3:4 A. 5",
+            "10 A. 5x",
+            "10 A. July 1, 2025",
+            "10 A. Jul-2025",
+        ] {
+            assert_eq!(serial(text), None, "{text}");
+        }
+    }
+
+    /// probes/t3920-typed-a-period-1904 A1-A5 (excel-graph 2026-11-03).
+    #[test]
+    fn letter_period_text_in_a_1904_workbook() {
+        let serial_1904 = |text: &str| {
+            let locale = get_locale("en").ok()?;
+            parse_date_clock_serial_in(text, locale, &|| Some(2026), DateSystem::Excel1904)
+                .map(|v| format!("{v:.10}"))
+        };
+        let fixed = |v: f64| Some(format!("{v:.10}"));
+        assert_eq!(serial_1904("10 A. 5"), fixed(49_710.276_325_231_48));
+        assert_eq!(serial_1904("10 A. 7/1/2025"), fixed(93_906.276_327_546_3));
+        assert_eq!(
+            serial_1904("10:00 P. 7/1/2025"),
+            fixed(93_906.686_061_342_6)
+        );
+        assert_eq!(serial_1904("10 A. 1/1904"), None);
+        assert_eq!(serial_1904("10 A. 12/1903"), None);
+    }
 }

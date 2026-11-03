@@ -65,7 +65,7 @@ Array and range operands (T-3047, probes/t3047-snap-array-operands, excel-graph 
 
 Pickers, LET, LAMBDA and unary signs (T-3049, probes/t3049-snap-under-pickers, excel-graph 2026-10-28): the snap follows the **tree root**, not the last operator Excel executes. A root `+`/`-` that a picker or a unary sign returns is not snapped: `IF(TRUE,..)`, `IF(FALSE,0,..)`, `IFS(TRUE,..)`, `IFERROR(..,0)`, `IFNA(..,0)`, `CHOOSE(1,..)`, `SWITCH(1,1,..)`, `LET(x,..,x)`, `LET(x,0.1,x+0.2-0.3)`, `-(..)`, `+(..)`, `--(..)`, `IF(TRUE,(..))`, `IF(TRUE,IF(TRUE,..))` and `LET(x,..,x)+0` all keep 5.551115123125783e-17 over `0.1+0.2-0.3` and 1.5543122344752192e-15 at k = 7 (`1+7*2^-52-1`, which snaps as a bare root), negated under the minus (rows 3-16 and 19 of B:D). A **LAMBDA body is snapped at its own root**, as a defined-name body is: `=LAMBDA(x,x+0.2-0.3)(0.1)` and `=LAMBDA(x,x+7*2^-52-1)(1)` are 0, and k = 8 keeps 1.7763568394002505e-15 (B17:D17), while the same body under LET (row 16) is not snapped. `=-0.1-0.2+0.3` snaps (its root is the `+`; the minus binds to 0.1 only), and so does its k = 7 form `-1-7*2^-52+1` (B18:D18; k = 8 keeps -1.7763568394002505e-15). A plain reference to a snapped cell under `+0` reads the 0 (row 20). The 8-ULP boundary is unchanged wherever the snap applies (k = 7 snaps, k = 8 keeps). **Every call of a LAMBDA snaps its body's root; the body's own shape decides** (T-3094, probes/t3094-snap-lambda-call-forms, excel-graph 2026-10-29; rows 2-5 are `x+0.2-0.3` at 0.1, k = 7, k = 8 and `-x-0.2+0.3` at 0.1, column B the in-place control): a workbook-scoped name `f` = `=LAMBDA(x,..)` called as `=f(..)`, `=f(..)+0`, `=(f(..))` or `=SUM(f(..))` (C:F), `=LET(g,LAMBDA(x,..),g(..))` (G), a LAMBDA whose body calls another, in place (I) or by name (`h` = `=LAMBDA(y,f(y))`, J), all give 0 in rows 2, 3 and 5, so the call is the root in every position probed (C:G, I, J): `f(..)+0` reads an already snapped 0, unlike `LET(x,..,x)+0`. A body that is not itself the `+`/`-` keeps the residue: a grouped body `LAMBDA(x,(..))` (H, as a grouped name body, T-1164), a picker body `LAMBDA(x,IF(TRUE,..))` (K) and a LET body `LAMBDA(x,LET(z,x,..))` (L) keep 5.551115123125783e-17, 1.5543122344752192e-15 and -5.551115123125783e-17. k = 8 (row 4) keeps 1.7763568394002505e-15 in every form. The engine matches every cell, the calls through a defined name (C2:F2, C3:F3, C5:F5, J2, J3, J5) included: `Model::call_lambda` evaluates every called body, named or not, through `Model::evaluate_formula_root` (T-3105). A sheet-scoped name snaps the same way in the engine; that is unprobed (T-3149).
 
-GROUPBY and PIVOTBY aggregation LAMBDAs, and eta-reduced helper calls (T-3112, probes/t3112-snap-groupby-eta and t3112-snap-groupby-eta-totals, excel-graph 2026-11-01): **the aggregation LAMBDA's root is snapped at every call**, as for the T-3095 helpers. `LAMBDA(v,SUM(v)-0.3)` over a group of 0.1 and 0.2 gives 0 for the group row, the total row, `SUM` of the value column and every PIVOTBY cell, row total, column total and grand total (B3-B9); the negated body `LAMBDA(v,0.3-SUM(v))` snaps the same (B30-B36); k = 7 (`SUM(v)-1` over 1 and `7*2^-52`) is 0 everywhere (B12-B18) and k = 8 keeps 1.7763568394002505e-15 in each cell, 3.552713678800501e-15 for `SUM` of the two rows (B21-B27). **The total row is the LAMBDA run again over all the values and snapped**, not the snapped group results added: with two groups of 0.1 and 0.2, `LAMBDA(v,SUM(v)-0.3)` gives -0.19999999999999998 and -0.09999999999999998 for the groups (totals case B1, B2) and 0 for the GROUPBY total and the PIVOTBY grand total (totals case B3, B8; adding the group results would give -0.3), and the PIVOTBY row and column totals equal the single group they cover (B6, B7); `LAMBDA(v,SUM(v))` gives 0.1, 0.2 and 0.30000000000000004 (B9-B16). **An eta-reduced `SUM` returns the plain sum** (it has no `+`/`-` root, so the probe cannot tell "eta calls are not snapped" from "nothing to snap"): `_xleta.SUM` (the stored form of an eta-reduced `SUM`) keeps 0.30000000000000004 in BYROW, GROUPBY and PIVOTBY and 0.1 in MAP (totals case B17, B18, B20, B22), and the `-0.3` after it is the cell's own formula root, which snaps to 0 (totals case B19, B21, B23); `LAMBDA(r,SUM(r))` also keeps it (B42) while `LAMBDA(r,SUM(r)-0.3)` gives 0 (B41). A **bare** `SUM` argument (not `_xleta.`) is an unknown name, as in arrays.md and xlsx-storage.md: `#VALUE!` in MAP and BYROW (B37, B38, B40, B43) and `#NAME?` in GROUPBY (B44, B45); that is not an eta result (arrays.md "Functions passed by name" lists the BYROW/BYCOL case; MAP and GROUPBY differ in the error). The engine keeps the residue in every GROUPBY and PIVOTBY snap cell above except the k = 8 keeps and answers `#NAME?` for the bare `MAP(..,SUM)` cells; the gap is owned by T-3617 (B44, B45 already match).
+GROUPBY and PIVOTBY aggregation LAMBDAs, and eta-reduced helper calls (T-3112, probes/t3112-snap-groupby-eta and t3112-snap-groupby-eta-totals, excel-graph 2026-11-01): **the aggregation LAMBDA's root is snapped at every call**, as for the T-3095 helpers. `LAMBDA(v,SUM(v)-0.3)` over a group of 0.1 and 0.2 gives 0 for the group row, the total row, `SUM` of the value column and every PIVOTBY cell, row total, column total and grand total (B3-B9); the negated body `LAMBDA(v,0.3-SUM(v))` snaps the same (B30-B36); k = 7 (`SUM(v)-1` over 1 and `7*2^-52`) is 0 everywhere (B12-B18) and k = 8 keeps 1.7763568394002505e-15 in each cell, 3.552713678800501e-15 for `SUM` of the two rows (B21-B27). **The total row is the LAMBDA run again over all the values and snapped**, not the snapped group results added: with two groups of 0.1 and 0.2, `LAMBDA(v,SUM(v)-0.3)` gives -0.19999999999999998 and -0.09999999999999998 for the groups (totals case B1, B2) and 0 for the GROUPBY total and the PIVOTBY grand total (totals case B3, B8; adding the group results would give -0.3), and the PIVOTBY row and column totals equal the single group they cover (B6, B7); `LAMBDA(v,SUM(v))` gives 0.1, 0.2 and 0.30000000000000004 (B9-B16). **An eta-reduced `SUM` returns the plain sum** (it has no `+`/`-` root, so the probe cannot tell "eta calls are not snapped" from "nothing to snap"): `_xleta.SUM` (the stored form of an eta-reduced `SUM`) keeps 0.30000000000000004 in BYROW, GROUPBY and PIVOTBY and 0.1 in MAP (totals case B17, B18, B20, B22), and the `-0.3` after it is the cell's own formula root, which snaps to 0 (totals case B19, B21, B23); `LAMBDA(r,SUM(r))` also keeps it (B42) while `LAMBDA(r,SUM(r)-0.3)` gives 0 (B41). A **bare** `SUM` argument (not `_xleta.`) is an unknown name, as in arrays.md and xlsx-storage.md: `#VALUE!` in MAP and BYROW (B37, B38, B40, B43) and `#NAME?` in GROUPBY (B44, B45); that is not an eta result (arrays.md "Functions passed by name" lists the BYROW/BYCOL case; MAP and GROUPBY differ in the error). The engine matches every cell (T-3617): GROUPBY and PIVOTBY call their aggregation LAMBDA through `LambdaCaller::snapping_root`, the total row being the LAMBDA run again over all the values. **The two-parameter aggregation LAMBDA snaps alike** (T-3875, probes/t3875-snap-groupby-two-arg, excel-graph 2026-11-03; the second parameter is the cell's relative set, arrays.md default `relative_to` 0: all values for GROUPBY and the PIVOTBY totals, the cell's own column for a PIVOTBY body cell): `LAMBDA(v,a,SUM(v)-0.3)` over one group of 0.1 and 0.2 gives 0 for the group, the total row and the PIVOTBY cell and grand total (B1-B4), and `0.3-SUM(v)` the same (B11-B14); over two groups the groups keep -0.19999999999999998 and -0.09999999999999998 (B5, B6), the PIVOTBY cell and its row total equal the group they cover (B8, B9), and the GROUPBY total and PIVOTBY grand total are 0 (B7, B10), the total again being the LAMBDA run over all the values; `SUM(v)+SUM(a)-0.6` snaps to 0 for one group (B21-B24) and for the two-group totals (B27, B30), its groups keeping -0.19999999999999996 and -0.09999999999999998 (B25, B26); the relative set shows in B28, the PIVOTBY cell g1c1 of that body, -0.39999999999999997 (`SUM(a)` is column c1's 0.1 only, so no snap), against B25, the GROUPBY group 1, -0.19999999999999996 (`SUM(a)` is 0.3), and B29, the row total of g1, -0.19999999999999996 (all values again). The two-group `0.3-SUM(v)` form gives 0.19999999999999998 and 0.09999999999999998 for the groups, 0 for the GROUPBY total, 0.19999999999999998 for the PIVOTBY cell and its row total and 0 for the grand total (B15-B20). The engine matches all 30 cells without a change.
 
 **The LAMBDA helpers snap every call's root, and REDUCE and SCAN every step** (T-3095, probes/t3095-snap-lambda-helpers, excel-graph 2026-10-29, Calc!B): MAP, MAKEARRAY, BYROW and BYCOL give 0 in every element read through `INDEX(..,n)` and in a `SUM` over the spill, for `x+0.2-0.3` at 0.1, k = 7 and `-x-0.2+0.3` at 0.1 (rows 1-40 and 61-80; a BYROW/BYCOL body `SUM(r)-0.3` or `INDEX(r,1)+INDEX(r,2)-0.3` snaps like the in-place call of the same body, rows 10-20), while k = 8 keeps 1.7763568394002505e-15 per element (rows 41-60). REDUCE and SCAN with `LAMBDA(a,x,a+x)` snap the accumulator at the step that cancels, so later steps start from 0: over 0.1, 0.2, -0.3, 1E-16 SCAN reads 0.1, 0.30000000000000004, 0, 1E-16 and REDUCE is 1E-16, where the plain sum `=A+B+C+D` keeps 1.5551115123125782e-16 (rows 88-95); over 1, 7*2^-52, -1, 1E-15 REDUCE is 1E-15 against the plain 2.5543122344752192e-15 (rows 111-118); the k = 8 accumulator keeps 1.7763568394002505e-15 and adds to it (rows 119-133). Four nested in-place calls `LAMBDA(a,x,a+x)(LAMBDA(a,x,a+x)(..),..)` give the same as REDUCE (rows 94, 117), so an in-place call passed as a LAMBDA argument snaps too. The engine matches every cell (T-3111): MAP, MAKEARRAY, BYROW, BYCOL, REDUCE and SCAN call their LAMBDA through `LambdaCaller::snapping_root`, and an in-place call read in reference context (a LAMBDA argument, bound by `bind_argument`) snaps a root `+`/`-` body, which can never be a reference. That reference path is also the one an in-place call as an aggregate argument takes (`=SUM(LAMBDA(x,x+0.2-0.3)(0.1))`), so the engine snaps it too, as Excel snaps `=SUM(f(..))` over a defined-name LAMBDA (T-3094, F2:F5); the in-place aggregate form itself is unprobed (T-3093). GROUPBY/PIVOTBY aggregation LAMBDAs and eta-reduced helpers: see the T-3112 paragraph above. T-3093 also owns a parameter-passed or chained LAMBDA and a call under a picker (snapped as a direct call). The engine matches every t3049-snap-under-pickers cell (the LAMBDA cells B17 and C17 since T-3083). Status: VERIFIED.
 
@@ -140,7 +140,9 @@ Tasks: T-0110 (implementation), T-3092 (AVERAGEA addends, SUBTOTAL 1/101), T-113
 ## ROUND family rounds in two decimal stages
 Rule: ROUND, ROUNDUP and ROUNDDOWN never scale by a binary power of ten. They (1) cut the exact
 binary value to 15 significant digits, then (2) round that decimal at `num_digits` (ROUND: half
-away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return the nearest double.
+away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return that decimal as a double,
+which is the nearest double except about 1 in 5,000 times (see "Decimals reach a double through an x87
+multiply by 10^-n").
 Stage 1 rounds to nearest, but an **exact tie at the 16th digit** goes toward zero for ROUND and
 away from zero for ROUNDUP/ROUNDDOWN (inconsistent; Excel is right):
 `ROUND(999999999999957.5,0)` = 999999999999957 and `ROUND(999999999999956.5,0)` = …956, yet
@@ -271,8 +273,8 @@ decimal one, in either direction: `ROUNDUP(123.456,2)` = 123.45 + 0.01 = 123.460
 `ROUNDUP(0.29,1)` = 0.30000000000000004, `ROUNDUP(2.675,2)` = 2.6799999999999997,
 `ROUNDUP(8.255,1)` = 8.299999999999999, `ROUNDUP(7.123,1)` = 7.199999999999999. When nothing is
 dropped there is no add (`ROUNDUP(0.29,2)` = 0.29). Negative values round the magnitude and keep the
-sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal-correct
-double. A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
+sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal as a
+double (one ulp off it at rare points, see "Decimals reach a double through an x87 multiply by 10^-n"). A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
 `ROUNDUP(x,2^31+k)` and `ROUNDUP(x,k)` agree on every probed cell.
 Evidence: probes/roundup-wrapped-scaling (480 cells: 20 values × k = 1..4, plain, 65536+k, 2^31+k
 and -(65536+k), ROUNDUP and ROUNDDOWN); probes/round-huge-digits-wrap A16, A35, A38 (excel-graph,
@@ -341,14 +343,45 @@ Status: VERIFIED (excel-graph)
 Implemented in: not yet in the engine (T-3635).
 Tasks: T-3555, T-3627, T-3635
 
-## ROUND one ulp above the nearest double (observation)
-Observation (T-3555): `ROUND(4.91499999999999E-06,8)` is 4.9100000000000004E-06 in Excel, 1 ulp above 4.91E-06, the
-double nearest the decimal result. That contradicts "ROUND family rounds in two decimal stages", which says ROUND returns
-the nearest double. It is the only such cell among the 120 ROUND points. The engine returns 4.91E-06, which is within
-Gate A's envelope and below the reproducibility floor, so it is not a fit target.
-Evidence: eval/accuracy/tables/ROUND/s1 Calc!A61 (excel-graph, 2026-11-01).
-Status: UNVERIFIED (one cell)
-Tasks: T-3555
+## Decimals reach a double through an x87 multiply by 10^-n (T-3658)
+Rule: a decimal `m × 10^-n` (integer m, n ≥ 0) that Excel builds from text or from ROUND/ROUNDDOWN's
+stage 2 does not become the nearest double. Excel multiplies m by 10^-n rounded to a 64-bit significand
+(x87 extended), rounds that product to a 64-bit significand, then rounds to a double (each step to
+nearest, ties to even). The result is one ulp from the nearest double for about 1 in 5,000 short
+decimals; the probe's search found 61 among m < 20000, n = 1..15. Which m and n enter depends on the
+caller (inconsistent, and Excel is right):
+- **Literals** in a formula (`=16659E-15`, `=4.91E-06`, `=0.00000491`) and **VALUE** of the same text
+  use the digits as written: m = 4910 at n = 9 for `4910E-9`. Hits!C1:C61 and E1:E61 fit, 122/122
+  literal cells in all.
+- **ROUNDDOWN** uses the kept digits as they are, trailing zeros included: `ROUNDDOWN(4910.4E-9,9)` is
+  4910 × 10^-9 (Hits!B, 362/362 ROUNDDOWN cells).
+- **ROUND** first drops the trailing zeros of the kept digits: `ROUND(4910.4E-9,9)` is 491 × 10^-8, and
+  `ROUND(14550.4E-15,15)` is 1455 × 10^-14 = 1.4549999999999999E-11 where `=14550E-15` and
+  `ROUNDDOWN(14550.4E-15,15)` are 1.4550000000000001E-11 (Hits!A59, B59, C59). 1,871/1,871 ROUND cells fit.
+- Division is not this conversion: `=m/10^n` follows "Division rounds twice", the exact quotient rounded to
+  64 bits and then to a double (Hits!D1:D61, 61/61); it differs from the literal at 9 of the 61 points.
+So `=4.91E-06`, `=491/100000000` and `ROUND(4.91499999999999E-06,8)` are all 4.9100000000000004E-06 (bits
+…8e7a, one ulp above the nearest double …8e79), while `=4.91*10^-6` is …8e79, and `=B1*2^70-5796000000000000`
+with B1 = `=4.91E-06` is 704857722490 against 704857722489 for `=4.91*10^-6` (scratch run, excel-graph,
+2026-11-03; uncommitted, the case cells above carry the same bits): the value inside Excel is that double, not an artefact of the oracle transport. This is the
+T-3555 observation: eval/accuracy/tables/ROUND/s1 Calc!A61 is the 491 × 10^-8 point. Stored xlsx numbers do
+not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as written and 51 with trailing zeros
+stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
+to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
+`ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
+Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
+literals of more than 5 digits are not probed.
+Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
+m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
+controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
+and Hits!A1:K61, the 61 search hits with neighbours m+1 as controls (J, K).
+Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh (724 cells, excel-graph,
+2026-11-03): all 151 points with m in 20001..79999, n = 1..15 where the model leaves the nearest double, and 30
+trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
+(677 of them are not the nearest double).
+Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
+Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
+Tasks: T-3555, T-3658, T-3931, T-3932
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
@@ -2534,6 +2567,21 @@ COMBINA lifts over arrays (T-2414, probes/t2414-gen-m7-unexplained, excel-graph,
 (`VSTACK({1;2},CHOOSE(3,1,2))` is `#VALUE!`, ours agrees). Implemented (T-2453): COMBINA lifts both arguments.
 Status: VERIFIED (excel-graph); implemented (T-2154).
 
+## QUOTIENT truncates the double quotient (T-3675)
+Rule: `QUOTIENT(n,d)` is the double `n/d` truncated toward zero, not the integer part of the exact ratio of the two
+doubles: `QUOTIENT(-46.22552,8E-05)` is -577819 and `QUOTIENT(7789451.97564,0.00108)` 7212455533, where the exact ratio
+of the doubles is just inside -577819 and 7212455533 (its integer parts are -577818 and 7212455532); the double quotient
+rounds onto the whole number. A31 and A66 are the only table points where the two readings give different integers.
+Elsewhere Excel equals the truncated double quotient, but at A99 (`QUOTIENT(-2.28077524E+303,-2E+126)`) it is 1 ulp below
+the double quotient 1.1403876200000001E+177, which is inside the web-vs-desktop floor. A zero denominator is `#DIV/0!`.
+`QUOTIENT(1,0.1)` is 10 (the double quotient is exactly 10; the exact ratio is a little under it) and `QUOTIENT(0.3,0.1)` is 2
+(0.3/0.1 is the double 2.9999999999999996).
+Evidence: accuracy/QUOTIENT/s1 A31 and A66 (excel-graph, 2026-11-03, T-3675) for the two cells named, and the whole table;
+probes-numeric/double-rounding-ops A86, A87.
+Ours: `fn_quotient` (mathematical.rs) truncates `value / divisor`; matches.
+Status: VERIFIED (excel-graph)
+Tasks: T-3675
+
 ## QUOTIENT, FACTDOUBLE and SERIESSUM argument modes
 Rule: QUOTIENT (both arguments), FACTDOUBLE and SERIESSUM's `x`, `n` and `m` are Analysis ToolPak arguments. They lift
 over an array, one scalar call per element, and refuse a multi-cell range with `#VALUE!`, even on the range's own rows.
@@ -2700,7 +2748,13 @@ reference or array was handed on (`#N/A`, `#DIV/0!`); ours since: as Excel (`Mod
 A 3-D reference is refused as a direct `#VALUE!` in its place, whatever the span holds: `PERCENTOF(S1!A1,S1:S2!A1)`,
 `PERCENTOF(1,S1:S2!B1)`, `PERCENTOF(S1:S2!B1,NA())` and `PERCENTOF(S2!B1,S1:S2!A1)` (S2!B1 `#N/A`) are `#VALUE!`, while
 `PERCENTOF(NA(),S1:S2!A1)` is `#N/A`.
-Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11.
+A 3-D span reached indirectly is refused the same way (T-3752): `PERCENTOF(IF(TRUE,S1:S2!A1),1)`, `PERCENTOF(CHOOSE(1,S1:S2!A1),1)` and
+`PERCENTOF((S1:S2!A1,S1!A2),1)` are `#VALUE!`, as is the span in either argument position beside a number or a trailing `NA()`
+(`PERCENTOF(IF(TRUE,S1:S2!A1),NA())` is `#VALUE!`, not `#N/A`); a direct error placed before the span wins, `PERCENTOF(NA(),<form>)` is `#N/A`.
+Not probed: a defined name whose body is a 3-D span (excel-graph answers `FileCorruptTryRepair` / unsupportedWorkbook for any workbook
+holding one; desktop-only question, M14). The engine already matches the three probed forms.
+Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11;
+(2026-11-02) probes/t3752-percentof-3d-indirect Calc!A1:A12.
 Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
 
 ## PERCENTOF: an error cell argument is #NUM!

@@ -23,11 +23,20 @@ depends_on: []
   the same way.
 - A machine-dependent drop silently unchecks a cell against the math, and it makes sidecars differ between runs.
   Gate A table batches use the same limit.
+- Gap triage 2026-11-03: four visibly-off BETA.DIST cells that no task owned are `skipped` with "not converged or too
+  slow" in probes-numeric/t3571-r5-bfrac-fresh.math.json, so R1(c) counts them for want of a math value. This task
+  owns them until they have one:
+  - probes-numeric/t3571-r5-bfrac-fresh.case.json (4): Calc!A239, A441, A902, A978
+  - e.g. A239 `BETA.DIST(0.583019617141068,4563.6,2816.5,TRUE)`: Excel 3.0490854915703563e-10, ours
+    3.0490854915703785e-10. T-3813 (deferred) studies these shapes' bfrac rounding. If they are inside Gate A's
+    envelope once they have a math value, they become Phase 1b evidence. If not, file their engine owner.
 
 ## Acceptance criteria
 - [ ] Points are dropped by a deterministic budget (iterations, terms or precision steps), not wall-clock time; or the
       limit is generous enough that no committed point is near it, with a test that pins A237.
 - [ ] Regenerating probes-numeric twice on different load changes no byte.
+- [ ] t3571-r5-bfrac-fresh A239, A441, A902 and A978 get a math value (a larger deterministic budget for the incomplete
+      beta at shapes near 5000), or their skip reason is deterministic and the Outcome names an owner task for them.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

@@ -20,6 +20,33 @@ accuracy/BETA.DIST/s1!Calc!A184	T-3577	cdf at tiny shapes: the engine is 0; Exce
 accuracy/BETA.DIST/s1!Calc!A186	T-3577	cdf at a huge beta: Excel #NUM!, the engine and the math 0
 accuracy/BETA.DIST/s1!Calc!A187	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
 accuracy/BETA.DIST/s1!Calc!A193	T-3577	cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETA.INV/s1!Calc!A83	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A86	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A88	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A97	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A98	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A100	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A103	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A106	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A108	T-3351	p above 1/2 at a tiny alpha: Excel 2^-53 (1 minus the flipped search's 1-2^-53), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A115	T-2808	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A118	T-2808	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A123	T-3351	quantile rounds to 1: Excel 1-2^-53, the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A125	T-2808	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A128	T-2808	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A138	T-2808	a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETA.INV/s1!Calc!A180	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A181	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A187	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A188	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A190	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A191	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A192	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A193	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A194	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A196	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A197	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
+accuracy/BETA.INV/s1!Calc!A198	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
 accuracy/NPER/s1!Calc!A121	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A130	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/NPER/s1!Calc!A133	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math

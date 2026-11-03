@@ -38,6 +38,7 @@ mod filter;
 mod formulatext;
 mod getpivotdata;
 mod group_functions;
+mod group_order;
 mod groupby;
 mod grouping;
 mod hstack_vstack;

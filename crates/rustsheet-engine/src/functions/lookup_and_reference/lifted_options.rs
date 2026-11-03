@@ -81,24 +81,43 @@ impl Model {
                 (_, reference) => reference,
             };
             // A one-element array lifts too: `GROUPBY(k,v,SUM,{3})` is one cell (A113).
-            let elements = match (&frozen, reference) {
+            let elements = match (&frozen, &reference) {
                 (Node::ArrayKind(elements), _) => elements.clone(),
                 (_, Some(range @ CalcResult::Range { left, right })) if left != right => {
-                    self.result_to_array(range, cell)?
+                    self.result_to_array(range.clone(), cell)?
                 }
-                (Node::RangeKind { .. }, _) => continue,
                 _ => {
                     // Text that is no number is `#VALUE!` in the option's place, ahead of a later
-                    // argument's error value, scalar or lifted (A201, A97).
-                    let frozen = match frozen {
-                        Node::StringKind(text)
-                            if self
-                                .cast_to_number(CalcResult::String(text.as_str().into()), cell)
-                                .is_err() =>
-                        {
-                            Node::ErrorKind(Error::VALUE)
+                    // argument's error value, scalar or lifted (A201, A97), written or in a
+                    // one-cell reference, `""` included (probes/t3838-groupby-option-order G!B6,
+                    // B8, B35, B38).
+                    let range = match (&frozen, reference) {
+                        (_, Some(range)) => Some(range),
+                        // A written reference stays as written (`Model::freeze`); reading it
+                        // evaluates nothing else.
+                        (Node::ReferenceKind { .. }, None) => {
+                            Some(self.evaluate_node_in_context(&frozen, cell))
+                        }
+                        _ => None,
+                    };
+                    let value = match range {
+                        Some(range @ CalcResult::Range { .. }) => {
+                            Some(self.dereference(range, cell))
                         }
                         other => other,
+                    };
+                    let text = match (&frozen, value) {
+                        (Node::StringKind(text), _) => Some(text.as_str().into()),
+                        (_, Some(CalcResult::String(text))) => Some(text),
+                        _ => None,
+                    };
+                    let not_a_number = text.is_some_and(|text| {
+                        self.cast_to_number(CalcResult::String(text), cell).is_err()
+                    });
+                    let frozen = if not_a_number {
+                        Node::ErrorKind(Error::VALUE)
+                    } else {
+                        frozen
                     };
                     if let Some(slot) = args.get_mut(index) {
                         *slot = frozen;
@@ -154,25 +173,30 @@ impl Model {
                 .map(|(element, &bound)| model.element_class(element, bound, cell))
                 .collect()
         };
-        Err(self.lift_by_class(&positions, classify, |model, elements| {
-            for ((&index, element), class) in
-                indices.iter().zip(elements).zip(classify(model, elements))
-            {
-                // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
-                // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
-                if let Some(slot) = scalar_args.get_mut(index) {
-                    *slot = if class == Class::OtherText {
-                        Node::ErrorKind(Error::VALUE)
-                    } else {
-                        literal(element)
-                    };
+        Err(self.lift_by_class(
+            &positions,
+            |_| None,
+            classify,
+            |model, elements| {
+                for ((&index, element), class) in
+                    indices.iter().zip(elements).zip(classify(model, elements))
+                {
+                    // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
+                    // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
+                    if let Some(slot) = scalar_args.get_mut(index) {
+                        *slot = if class == Class::OtherText {
+                            Node::ErrorKind(Error::VALUE)
+                        } else {
+                            literal(element)
+                        };
+                    }
                 }
-            }
-            match call(model, &scalar_args, cell) {
-                CalcResult::Array(output) => at(&output, 0, 0),
-                other => calc_result_to_array_node(other),
-            }
-        }))
+                match call(model, &scalar_args, cell) {
+                    CalcResult::Array(output) => at(&output, 0, 0),
+                    other => calc_result_to_array_node(other),
+                }
+            },
+        ))
     }
 
     /// `node` evaluated and put back as a literal: a value, or an array as an array constant.
@@ -205,17 +229,37 @@ impl Model {
     /// `elements` lifted: each element's value is `run` of the first element of its class, so
     /// `run` is called once per class whatever the array's size (GROUPBY's `field_relationship`
     /// and the options of [`Model::lift_options`]).
+    ///
+    /// Excel's GROUPBY filter serves one element: once an element's call has dropped rows with
+    /// its `filter_array` ([`Model::groupby_filter_spent`]), every later element, in row-major
+    /// order, is `#VALUE!`, whatever it holds, a blank included; an element refused before the
+    /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
+    /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
+    /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
+    /// filter serves one element"). An element `settled` answers is that value, spent filter or
+    /// not, and spends nothing (an error `field_relationship` element, which GROUPBY returns
+    /// before it filters: probes/t3880-groupby-scalar-filter-edges G!A89:B93).
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
+        settled: impl Fn(&E) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
+        let outer_spent = std::mem::replace(&mut self.groupby_filter_spent, false);
         let mut known: Vec<(K, ArrayNode)> = Vec::new();
         let mut lifted = Vec::with_capacity(elements.len());
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
+                if let Some(value) = settled(element) {
+                    cells.push(value);
+                    continue;
+                }
+                if self.groupby_filter_spent {
+                    cells.push(ArrayNode::Error(Error::VALUE));
+                    continue;
+                }
                 let class = classify(self, element);
                 if let Some((_, value)) = known.iter().find(|(c, _)| *c == class) {
                     cells.push(value.clone());
@@ -227,6 +271,7 @@ impl Model {
             }
             lifted.push(cells);
         }
+        self.groupby_filter_spent = outer_spent;
         CalcResult::Array(lifted)
     }
 

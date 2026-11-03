@@ -23,7 +23,7 @@ const DAY_MONTH_NAME_FORMAT: &str = "d-mmm";
 pub(crate) type CurrentYear<'a> = &'a dyn Fn() -> Option<i32>;
 const NO_CLOCK: &str = "Year-less date text needs the current year";
 
-fn is_digits(s: &str, lengths: std::ops::RangeInclusive<usize>) -> bool {
+pub(crate) fn is_digits(s: &str, lengths: std::ops::RangeInclusive<usize>) -> bool {
     lengths.contains(&s.len()) && s.bytes().all(|b| b.is_ascii_digit())
 }
 
@@ -236,14 +236,25 @@ fn parse_separated(
     } else {
         word.splitn(4, ['/', '-']).collect()
     };
+    // A date mixing `/` and `-` takes Excel's own formats when typed, not the joined separators:
+    // numeric `m/d/yyyy`, name-and-year `d-mmm-yy` (probes/date-text-mixed-separator-typed,
+    // excel-graph 2026-11-01; docs/excel-semantics/dates.md "Typed mixed-separator dates").
+    // The evidence is en-US only, so day-first locales keep the joined separators; TODO(T-3901).
+    let mixed = word.contains('/')
+        && word.contains('-')
+        && separator != '.'
+        && !short_format.starts_with('d');
     let (day_str, month_str, year_str) = match parts.as_slice() {
         [first, second] => {
             return match parse_month_name(second, locale) {
                 Some((month, _)) => parse_day_month(first, month, current_year),
-                // "1-Jul2026": a day, then a month name glued to a four-digit year
-                // (probes/date-text-glued-month-2 row 8).
+                // "1-Jul2026", "1-Jul24", "1-Jul5": a day, then a month name glued to a one-,
+                // two- or four-digit year (probes/date-text-glued-month-2 row 8,
+                // probes/t3299-date-text-glued-month-3; a three-digit year is not covered).
                 None => match split_glued_month(second, locale) {
-                    Some((["", name, year], true)) if is_digits(year, 4..=4) => {
+                    Some((["", name, year], true))
+                        if is_digits(year, 4..=4) || is_digits(year, 1..=2) =>
+                    {
                         day_name_year(first, name, year, locale, separator)
                     }
                     _ => parse_month_year(first, second, locale, true, current_year),
@@ -255,13 +266,23 @@ fn parse_separated(
             let (day, day_format) = parse_day(day)?;
             let (month, month_format) = parse_month_number(month)?;
             let (year, _) = parse_year(year)?;
-            return Ok((
-                serial_of(day, month, year)?,
-                format!("yyyy{separator}{month_format}{separator}{day_format}"),
-            ));
+            let format = if mixed {
+                "m/d/yyyy".to_string()
+            } else {
+                format!("yyyy{separator}{month_format}{separator}{day_format}")
+            };
+            return Ok((serial_of(day, month, year)?, format));
         }
         [day, name, year] if !is_digits(name, 1..=2) => {
-            return day_name_year(day, name, year, locale, separator);
+            let (serial, format) = day_name_year(day, name, year, locale, separator)?;
+            return Ok((
+                serial,
+                if mixed {
+                    DAY_MONTH_NAME_YEAR_FORMAT.to_string()
+                } else {
+                    format
+                },
+            ));
         }
         // Numeric order follows the locale: month first in en-US, where "13/1/2026" and
         // "26-01-01" are #VALUE! (probes/date-text-grammar A32, probes/date-text-locale B1).
@@ -275,7 +296,9 @@ fn parse_separated(
     // (docs/excel-semantics/text.md "VALUE reads a sign before a space...",
     // probes/value-sign-space-mixed-fraction-dash-date A13, A14, A18, A19).
     let (year, year_format) = parse_year(year_str)?;
-    let format = if short_format.starts_with('d') {
+    let format = if mixed {
+        "m/d/yyyy".to_string()
+    } else if short_format.starts_with('d') {
         format!("{day_format}{separator}{month_format}{separator}{year_format}")
     } else {
         format!("{month_format}{separator}{day_format}{separator}{year_format}")
@@ -586,6 +609,25 @@ mod tests {
         // UNVERIFIED, hand-derived (not oracle-observed): a glued day with more than the year
         // after the comma, a day-first glued month with a comma, a doubled comma.
         for text in ["July1 , 2026 5", "1Jul1 , 2026", "July1,, 2026"] {
+            assert_eq!(en(text), None, "{text}");
+        }
+    }
+
+    #[test]
+    fn glued_month_with_short_year_after_separator() {
+        // probes/t3299-date-text-glued-month-3: 1-Jul24, 1/Jul24 and 1-Jul5 are dates; a period
+        // or comma separator is #VALUE!.
+        for (text, serial) in [
+            ("1-Jul24", 45474),
+            ("1/Jul24", 45474),
+            ("1-JUL24", 45474),
+            ("31-Jul24", 45504),
+            ("1-Jul5", 38534),
+            ("1-Jul05", 38534),
+        ] {
+            assert_eq!(en(text), Some(serial), "{text}");
+        }
+        for text in ["1.Jul24", "1,Jul24", "1.Jul2024"] {
             assert_eq!(en(text), None, "{text}");
         }
     }
