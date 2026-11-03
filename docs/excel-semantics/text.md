@@ -1366,3 +1366,19 @@ intersected. An error element (`CHAR(0)` is `#VALUE!`, a `#N/A` cell) is the joi
 Evidence: probes/t3302-text-funcs-arrays (E1-E20, oracle-filled). The probe shows
 `CONCAT`/`TEXTJOIN` over `CHAR`, `UNICHAR`, `CODE`, `UNICODE` ranges and computed arrays already
 agree; the only gap was `CHAR`, fixed in T-3302.
+
+## ARRAYTOTEXT format range lifts and spills; TEXTJOIN text ignore_empty beats an error delimiter (T-3512 batch)
+
+Oracle-filled cells of the arg-pairs batch, not yet implemented (T-3884, T-3885):
+
+- A multi-cell range as ARRAYTOTEXT's format lifts per element and spills to the range's shape; the array
+  argument is read whole. `ARRAYTOTEXT(2,Data!A1:B2)` (A1:B2 = 0, FALSE, blank, 1) fills A31:B32 with
+  `"2"`, `"2"`, `"2"`, `"{2}"` (gen-m5/af89ea54bae02c71). With C3:D4 (blank, "1.5", "x", 0.1) as format,
+  `ARRAYTOTEXT(Data!G1,Data!C3:D4)` fills A34:B35 with `"7"`, `"{7}"`, `#VALUE!`, `"7"`: text "x" is `#VALUE!`.
+  `ARRAYTOTEXT(Data!A1:B2,Data!A1:B2)` fills A529:B530 with `"0, FALSE, , 1"` x3 and `"{0,FALSE;,1}"`.
+  The eval scores only the anchor cell, so a "first element" model would pass but spill wrongly.
+- `ARRAYTOTEXT(<blank ref>,#DIV/0!)` is `#VALUE!` for every format kind (A469-A514, A499, A502): the
+  existing rule that a reference to one empty cell is `#VALUE!` (above) and T-2250's error-first rule apply.
+- TEXTJOIN with an error delimiter keeps the delimiter's own error (`#DIV/0!`) when ignore_empty is a number,
+  boolean, blank or error (gen-m5/d0c5e5dff134d787 A286, A292, A304, A328, A334), but a text ignore_empty,
+  even numeric text or "", is `#VALUE!` and wins over it (A310, A316, A322; alone A349, A352).

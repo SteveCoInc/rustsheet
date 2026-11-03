@@ -3,7 +3,7 @@ id: T-3512
 title: "gen-m5 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M5 number-to-text and join functions (FIXED, DOLLAR, NUMBERVALUE, VALUETOTEXT, ARRAYTOTEXT, TEXTJOIN)"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -49,3 +49,8 @@ gen-m5 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
   function's own module that the PR also tests.
 - TEXT and its format-code pairs (M10 number-format work).
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
+
+## Outcome
+- Added 11 gen-m5 arg-pairs cases with excel-graph sidecars (0 fill failures). Pairwise share is 1.0 (0 unseen pairs) for all six functions.
+- gen-m5: 53462/53488 cells bit-exact; known failures 3 -> 26 (23 new, all in the new cases: 20 ARRAYTOTEXT cells in af89ea54bae02c71, 3 TEXTJOIN cells in d0c5e5dff134d787), 0 regressions.
+- Owners filed: T-3884 (ARRAYTOTEXT range format / error format) and T-3885 (TEXTJOIN error delimiter); quirks recorded in docs/excel-semantics/text.md.

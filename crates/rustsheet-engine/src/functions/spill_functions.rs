@@ -333,6 +333,33 @@ pub(crate) fn wrap_one_cell_error_ref(
 }
 
 impl Model {
+    /// Whether `arg` is a variable (LET, or a LAMBDA parameter) bound to a one-cell reference,
+    /// which VSTACK and HSTACK read as the reference itself: `SCAN("12",Data!G9,LAMBDA(x,z,
+    /// VSTACK(x,z)))` is `#CALC!`, not `#DIV/0!` (probes/t3765-stack-error-reference D10:D23,
+    /// excel-graph, T-3765). Ask before the argument is evaluated: a read-once binding is moved
+    /// out by the read.
+    pub(crate) fn is_one_cell_variable(&self, arg: &Node) -> bool {
+        self.cell_variable_reference(arg.ungrouped()).is_some()
+    }
+
+    /// [`one_cell_error_ref_as_array`] for an argument that may be such a variable
+    /// (`is_variable`, from [`Model::is_one_cell_variable`]).
+    pub(crate) fn stack_error_ref_as_array(
+        arg: &Node,
+        is_variable: bool,
+        array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
+        cell: CellReferenceIndex,
+    ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
+        match array {
+            Err(CalcResult::Error { error, .. }) if is_variable => {
+                Ok(vec![vec![ArrayNode::Error(error)]])
+            }
+            array => one_cell_error_ref_as_array(arg, array, cell),
+        }
+    }
+}
+
+impl Model {
     /// Evaluate a node and convert the result to a 2-D array of `ArrayNodes`.
     /// Handles Range references, inline Arrays, and scalar values.
     pub(crate) fn eval_to_array(

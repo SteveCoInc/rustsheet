@@ -2402,10 +2402,15 @@ the literal error):
     `#N/A`, where the literal error makes the whole call `#DIV/0!`; the error reference stays an element wherever it stands.
 - Not a 1x1 array, the reference's error returned whatever the later arguments: SORT, SORTBY, UNIQUE, EXPAND, WRAPROWS and
   WRAPCOLS (`SORT(C2,5)`, `UNIQUE(C2,"x")`, `EXPAND(C2,"x")`, `WRAPROWS(C2,0)` are all `#DIV/0!`).
+- VSTACK and HSTACK also read a variable bound to a one-cell reference (LET, or a LAMBDA parameter that SCAN, REDUCE or MAP
+  pass as the walked range's cell) as that 1x1 array, and a literal error as the whole call's error: with A1 `#DIV/0!`,
+  `SCAN(B1,A1,LAMBDA(x,z,VSTACK(x,z)))` is `#CALC!`, `ROWS(VSTACK("12",A1))` 2, `INDEX(VSTACK("12",A1),2)` `#DIV/0!`,
+  `MAP(A1,LAMBDA(z,ROWS(VSTACK(z,1))))` 2, `LET(z,A1,ROWS(VSTACK(z,1)))` 2, against `ROWS(VSTACK("12",#DIV/0!))`
+  `#DIV/0!` (probes/t3765-stack-error-reference D1:D23, excel-graph, 2026-11-02, T-3765).
 Ours: implemented (T-3667): TAKE and DROP already kept the reference; CHOOSEROWS, CHOOSECOLS, VSTACK and HSTACK use
 `one_cell_error_ref_as_array`; the other six already match.
 Status: VERIFIED (excel-graph)
-Tasks: T-3667
+Tasks: T-3667, T-3765
 
 ## TOCOL, TOROW and SORT: which bad argument wins (T-3497)
 Rule:
