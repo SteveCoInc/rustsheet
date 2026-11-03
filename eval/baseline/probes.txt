@@ -1965,6 +1965,7 @@ C	probes/t3655-makearray-arity-sizes.case.json	313
 C	probes/t3656-indirect-spaces-reversed.case.json	291
 C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
+C	probes/t3677-sumx-running-overflow-snap.case.json	40
 C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
 C	probes/t3747-indirect-name-whitespace.case.json	14
@@ -6324,6 +6325,10 @@ F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
 F	probes/t3647-numbervalue-whitespace-decimal.case.json	Sheet1!A24
+F	probes/t3677-sumx-running-overflow-snap.case.json	Calc!A12
+F	probes/t3677-sumx-running-overflow-snap.case.json	Calc!A13
+F	probes/t3677-sumx-running-overflow-snap.case.json	Calc!A14
+F	probes/t3677-sumx-running-overflow-snap.case.json	Calc!A15
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A10
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A11
 F	probes/t3698-rate-flat-restart-fresh.case.json	Sheet1!A12
