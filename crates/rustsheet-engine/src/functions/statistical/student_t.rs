@@ -18,7 +18,7 @@
 //! - at df 2, for fl(1 - y) <= 0.9 and t of any size, L is the incomplete beta's closed form on
 //!   bratio's oriented arguments, halved, at that rounded y ([`closed_form_tail`], T-0969 attempt 8,
 //!   T-2502);
-//! - at df 1 and 2 past that cut (fl(1 - y) > 0.9), L is the exact tail at t rounded once, which
+//! - beyond t = 1 at df 1, and at df 2 past that cut, L is the exact tail at t rounded once, which
 //!   Excel is within about an ulp of ([`exact_low_df_tail`], T-3187);
 //! - elsewhere away from the deep tail (an integer df above [`SERIES_MAX_DF`], or a series tail too
 //!   small to keep its digits) L comes from Cephes' fractions with every input
@@ -37,9 +37,7 @@
 
 use super::bratio::t_kernel_tails;
 use super::gammaln::excel_gammaln;
-use super::incomplete_beta::{
-    beta_reg_upper, closed_form_tails, incbcf, incbd, A1_CLOSED_FORM_MAX_Y,
-};
+use super::incomplete_beta::{beta_reg_upper, closed_form_tails, incbcf, incbd};
 use crate::arithmetic::flush_subnormal;
 use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, dd_sqrt, excel_exp};
 
@@ -142,7 +140,7 @@ fn unflushed_upper_tail(t: f64, n: f64) -> f64 {
     if let Some(tail) = closed_form_tail(rounded_y, n) {
         return tail;
     }
-    if let Some(tail) = exact_low_df_tail(t, n, rounded_y) {
+    if let Some(tail) = exact_low_df_tail(t, n) {
         return tail;
     }
     if t > 1.0 && rounded_y > 0.0 && rounded_y <= ROUNDED_Y_MAX {
@@ -183,17 +181,16 @@ fn kernel_tail(t: f64, n: f64) -> Option<f64> {
     Some(0.5 * w)
 }
 
-/// L at df 1 and 2 past the closed-form cut, fl(1 - y) > 0.9 for the worksheet's rounded y (t above
-/// about 3 at df 1 and 4.24 at df 2), as the exact tail at t rounded once: atan(1/t)/pi at df 1 and
+/// L beyond t = 1 at df 1, and at df 2 where [`closed_form_tail`] does not take it (fl(1 - y) > 0.9,
+/// t above about 4.24), as the exact tail at t rounded once: atan(1/t)/pi at df 1 and
 /// 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2, both in double-double. Excel is within about an
-/// ulp of the exact tail there (`T.DIST.2T(1E15,1)` = 6.366197723675813E-16, `T.DIST.RT(1E6,2)`;
-/// gen-m9, probes-numeric m9-t-dist-rt, m9-t-dist-2t, t0969-t-df2-cut; T-3187;
-/// docs/excel-semantics/statistics.md "Student t tails at df 1 and 2 past the cut are exact at t"),
-/// where the tail at the rounded y was up to 24 ulp off. Short of the cut, df 2 keeps its closed form
-/// and df 1 the tail at the rounded y, which Excel matches bit for bit at `T.DIST.RT(3,1)` (1.8 ulp
-/// from the exact tail). `None` there, and where t^2 overflows.
-fn exact_low_df_tail(t: f64, n: f64, rounded_y: f64) -> Option<f64> {
-    if !(t * t).is_finite() || 1.0 - rounded_y <= A1_CLOSED_FORM_MAX_Y {
+/// ulp of the exact tail there (`T.DIST.2T(1E15,1)` = 6.366197723675813E-16, `T.DIST.RT(2,1)` =
+/// 0.14758361765043326, `T.DIST.RT(1E6,2)`; gen-m9, probes-numeric m9-t-dist-rt, m9-t-dist-2t,
+/// m9-t-nonint-df, t0969-t-df2-cut; T-3187; docs/excel-semantics/statistics.md "T.DIST.RT at df 2
+/// is BETA.DIST's closed form down to y = 0.1"), where the tail at the rounded y was up to 24 ulp
+/// off. `None` elsewhere, and where t^2 overflows.
+fn exact_low_df_tail(t: f64, n: f64) -> Option<f64> {
+    if t <= 1.0 || !(t * t).is_finite() {
         return None;
     }
     if n == 1.0 {
@@ -685,9 +682,13 @@ mod tests {
             2.0 * student_t_tails(1e15, 1.0).1,
             6.366_197_723_675_813e-16
         );
-        // Short of the cut df 1 keeps the tail at the rounded y, Excel's bits at `T.DIST.RT(3,1)`
-        // (m9-t-dist-rt A6), 1.8 ulp from the exact tail.
-        assert_eq!(student_t_tails(3.0, 1.0).1, 0.102_416_382_349_566_75);
+        // df 1 from t = 1 up: `T.DIST.RT(2,1)` (m9-t-dist-rt A5) is the exact tail; at
+        // `T.DIST.RT(3,1)` (A6) Excel is 1.8 ulp from it (T-3877).
+        assert_eq!(student_t_tails(2.0, 1.0).1, 0.147_583_617_650_433_26);
+        assert_eq!(
+            ulps(student_t_tails(3.0, 1.0).1, 0.102_416_382_349_566_75),
+            2
+        );
         // A t whose 2 t^2 overflows has a tail below the normal range: flushed.
         assert_eq!(student_t_tails(1e154, 2.0).1, 0.0);
     }

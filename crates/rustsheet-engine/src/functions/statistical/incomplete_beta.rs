@@ -76,7 +76,7 @@ pub(crate) const A1_EXPM1_MAX_X: f64 = 0.1;
 /// scores 1,258 of the 1,286 closed-form cells against 1,286 (T-2464 w5-triangulation
 /// `closed_variants.py`).
 /// FITTED(T-2464, 803 cells, T.DIST.RT df 2 t 2..6, BETA.DIST y0 0.9)
-pub(crate) const A1_CLOSED_FORM_MAX_Y: f64 = 0.9;
+const A1_CLOSED_FORM_MAX_Y: f64 = 0.9;
 
 /// `I_x(a, b)` for shapes a, b > 0; 0 at x <= 0 and 1 at x >= 1. NaN in, NaN out.
 #[cfg(test)]
