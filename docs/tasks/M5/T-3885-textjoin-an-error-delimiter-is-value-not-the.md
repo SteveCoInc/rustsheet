@@ -3,7 +3,7 @@ id: T-3885
 title: "TEXTJOIN: a text ignore_empty is #VALUE! even when the delimiter is an error"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
