@@ -52,3 +52,24 @@ Lab: the T-2007 method (dump `OddFirstSchedule`'s fields from `fn_oddfyield`, re
 
 ## Out of scope
 - YIELD (T-1592) and ODDFPRICE's own digits (T-1374).
+
+## Attempt 1 (2026-11-03, decision 0056)
+No bit-exact gain; the time-box's second attempt is still open. Method: an env-gated lab hook in
+`OddFirstSchedule::dprice` (not committed) scored in the engine with `rustsheet-eval show` on PRICE_YIELD.xlsx,
+probes/oddf-date-order-domain-sweep and probes/oddfyield-solver-sweep, plus a schedule dump (`OddFirstSchedule`
+fields and the start) re-run in Python/mpmath.
+- Candidates (long first periods only, `offset > 0`), cells passing per case (committed: 339 / 1196 / 545): the
+  exact lead `lead` at `lead_exponent`; a regular coupon at `y`; no lead; `(offset + 1)` coupons at the lead's
+  exponent; `lead` at `y`; a regular coupon at every quasi-coupon date from settlement; `/ m` before the power;
+  a regular coupon at `y + 1`; one at `lead_exponent - 1`; `y * lead` at the lead's exponent; `lead - offset ×
+  coupon`. Every one: 339 / 1196 / 545, 0 long-first cells gained (max relative error moves between 1.3e-9 and
+  3.5e-9 on PRICE_YIELD.xlsx).
+- Starts: YIELD's start over issue-maturity, first coupon-maturity, settlement-first coupon, issue-first coupon, and
+  the coupon rate: 0 of the 73 long-first cells (13 PRICE_YIELD.xlsx, 60 sweep Y rows 2, 22, 33, 34).
+- Finding (financial.md "ODDFYIELD stops short of ODDFPRICE's root", long first periods, zero coupon): on Y!A22:O22
+  (rate 0, so the committed slope is exact) Excel still differs, and ends above the root in G22, I22, K22, L22,
+  where an exact step from YIELD's start (above the root) ends below it, so the long-first difference is in the Newton itself (its slope's other terms or its start), not in the
+  lead coupon's weight. Next: a second attempt should fit the zero-coupon long-first cells alone first (one term,
+  no lead), e.g. the redemption term's exponent in the slope (`front_exponent` from a different `nq`/`y`, or
+  `t` vs `t + 1` in the power), then carry the result to the coupon rows.
+- Not done: the fitlab `oddfyield` kernel and the extreme-price #NUM! probe (still acceptance work).

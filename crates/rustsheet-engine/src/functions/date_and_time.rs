@@ -225,16 +225,22 @@ impl Model {
             // `N A. F/D/Y` text is read in the workbook's system and its day mapped back to the
             // 1900 count, so the shift below restores it: in a 1904 workbook `DATEVALUE("10 A. 5")`
             // is 49710, the no-date form's day 0 unshifted (probes/t3920-typed-a-period-1904 G1).
-            let serial = match parse_letter_period_serial_in(text, self.locale, year, date_system) {
-                Some(serial) => date_system.to_1900_serial(serial.floor() as i64)? as f64,
-                None => parse_date_clock_serial(text, self.locale, year)?.floor(),
-            };
-            if !(f64::from(MINIMUM_DATE_SERIAL_NUMBER)..=f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
-                .contains(&serial)
+            // Its day is not range-checked: `DATEVALUE("10 A. 5:30")` is 2982616, past 9999-12-31
+            // (probes/t3957-letter-period-colon-tail G1, G13:G18, G23, G24; t3948-letter-period-gate-edges G10).
+            if let Some(serial) =
+                parse_letter_period_serial_in(text, self.locale, year, date_system)
             {
-                return None;
+                let day = date_system.to_1900_serial(serial.floor() as i64)?;
+                i32::try_from(day).ok()?
+            } else {
+                let serial = parse_date_clock_serial(text, self.locale, year)?.floor();
+                if !(f64::from(MINIMUM_DATE_SERIAL_NUMBER)..=f64::from(MAXIMUM_DATE_SERIAL_NUMBER))
+                    .contains(&serial)
+                {
+                    return None;
+                }
+                serial as i32
             }
-            serial as i32
         };
         // The parsers count from the 1900 epoch; a 1904 workbook counts from 1904-01-01
         // (`DATEVALUE("1904-01-02")` is 1, probes/date-system-1904-negatives A12).

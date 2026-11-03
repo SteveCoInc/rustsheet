@@ -169,8 +169,38 @@ prefix first fits 150.
 Conversions to a non-base unit, to a prefixed unit and between two non-base units follow the same
 rule (probes/convert-targets, excel-graph, T-1297): `CONVERT(5,"cal","eV")` is 1.3065976295281882E+20,
 `CONVERT(1,"uk_pt","gal")` 0.15011874068810688, `CONVERT(1,"tsp","tbs")` 0.3333333333333333. The
-target prefix is applied as a reciprocal multiply: `CONVERT(0.0002,"m3","Mm3")` is
-2.0000000000000003E-22 (`* 1/1E18`; dividing gives 2E-22). The lbf factor is 444822.16152605
+two prefixes are applied as one factor: the nearest double to their combined power of ten (a
+squared or cubic unit multiplies its prefix's exponent by 2 or 3), times the binary prefixes' exact
+ratio, multiplied into the factor ratio last. Neither prefix is a product, power or quotient of the
+prefix constants (T-3861, probes/convert-unit-names and probes-numeric/t3861-convert-prefix-sweep,
+excel-graph): `CONVERT(1,"m","nm")` is 1E9 (1/1E-9 is 999999999.9999999), `CONVERT(1,"dm2","m2")`
+0.01 (0.1 × 0.1 is 0.010000000000000002), `CONVERT(1,"cm3","l")` 0.001, `CONVERT(1,"Pm3","l")`
+9.999999999999999E+47 (1000 × 1E45; 1E15³ gives 1E48), `CONVERT(0.0002,"m3","Mm3")`
+2.0000000000000003E-22 (× 1E-18; dividing by 1E18 gives 2E-22), `CONVERT(1E290,"Ym","Ym")` 1E+290 and
+`CONVERT(1E300,"Ym","Zm")` 1E+303 (probes/convert-temperature-ov00, -ov20; 1E24 × 1E-24 is
+1 - 2^-53), while `CONVERT(1E300,"Ym","m")` overflows to `#NUM!` (ov02). Of 18 forms scored on the
+1,145 prefixed literal CONVERT cells with oracle values (product or nearest constant for each
+prefix's power; multiply by the reciprocal, divide, or form the ratio first), this one fits 1,137;
+the next best, each prefix and the target's reciprocal as its own nearest constant, fits 1,103, and
+the engine's previous form (prefix products, `* 1/P_to`) 979. Hold-out by cell hash (30%, SHA-256
+of case and cell): 336 of 338 bit-exact, against 314 for the correctly rounded conversion; train
+801 of 807 against 742. Fresh sweep generated after the model was frozen (t3861-convert-prefix-sweep,
+150 seeded calls with prefixes on one or both units): 142 of 150 bit-exact, against 123 correctly
+rounded and 97 for the previous form; all 150 within 4 ulp, 15 digits and Gate A's envelope.
+Open gap: seven of the eight misses have a light-year or parsec factor (T-2047's digits).
+The eighth mixes a binary and a decimal prefix, and mixed pairs follow another rule (T-3975,
+probes/convert-mixed-prefix, excel-graph): with a binary prefix on either unit the prefixes are each
+unit's own constant, `(P_from × B_from) / (P_to × B_to)`, so a decimal prefix on the target enters as
+the rounded reciprocal of its constant rather than as the nearest double to the inverse power.
+`CONVERT(4.73E-10,"Gibyte","zbyte")` is 5.0787988275200007E+20 (× 2^30 × (1/1E-21); × 2^30 × 1E21
+gives 5.07879882752E+20). A decimal prefix on the source is the same either way. The probe pairs every
+binary prefix with the 21 decimal prefixes in both directions, bit and byte, 672 cells; with the
+sweeps' seven mixed cells that is 679, and all 679 fit (the pure-decimal rule fits 599). Hold-out by cell
+hash (30%, SHA-256 of case and cell): 204 of 204 bit-exact, against 151 correctly rounded and 184 for the
+pure-decimal rule; train 475 of 475 against 338 and 415. Fresh sweep after the rule was frozen
+(probes-numeric/t3975-convert-mixed-prefix-sweep, 150 seeded calls, values ±1E-250..1E250): 150 of 150
+bit-exact, against 108 correctly rounded and 125 for the pure-decimal rule; all inside Gate A's envelope.
+The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
 probes/eng-convert-boolean-unit A7; T-2046, T-2047).
@@ -181,8 +211,8 @@ product is infinite; every probed value fits, but whether Excel does this or use
 precision is not distinguishable from the probes.
 Backend: excel-desktop cached values + excel-graph (probes/convert-targets).
 Status: VERIFIED (for the evidenced conversions)
-Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297)
-Tasks: T-0922, T-1297
+Implemented in: `fn_convert` in functions/engineering/convert.rs (T-0922, T-1297, T-3861)
+Tasks: T-0922, T-1297, T-3861
 
 ## CONVERT temperature
 Rule: every temperature pair has its own last-digit form; there is no shared pivot unit. The forms
@@ -238,8 +268,8 @@ Per unit class:
 Evidence: probes/convert-unit-names (excel-graph, 1549 strings in both directions: every unit bare and
 with `k`, `ki`, `m`, `da`, `e`, `M`, `Gi`; all 29 prefixes on fifteen units; the ambiguous, power, case and
 spacing strings above). Probes convert-temperature-prefix-a/-b agree for temperature.
-Open: 116 of the probe's cells are one or two ulps off in the prefix scale (a target prefix of
-`Y`, `n` or smaller, and squared or cubed prefixes), T-3861; three more are non-base factors, T-2047.
+The prefix scale (a target prefix of `Y`, `n` or smaller, and squared or cubed prefixes) follows
+"CONVERT constants and evaluation order" (T-3861). Open: three cells are non-base factors, T-2047.
 Backend: excel-graph.
 Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
@@ -710,9 +740,14 @@ angle"); cosh and sinh are libm's, except IMSECH's and IMCSCH's (IMSINH's `1/u` 
   `IMLOG10(COMPLEX(-0.561651839159889,-0.827373683149484))`'s -0.941193126217726i and
   `IMLOG2(COMPLEX(-1,1.05859478337023E-09))`'s 4.53236014029996i (B101, C173); dividing by `LN_10` misses 8 imaginary
   parts, the product with libm `atan2` 3, and x87 extended forms (fpatan, 64-bit constants) 6 or more. The one miss,
-  `IMLOG2(COMPLEX(0.190581435720431,0.981671389192299))` (C111, Excel 1.98953694302209i, ours ...210), is Excel's
-  `atan(5.15092871182028)` one ulp below the correctly rounded 1.3790419226756176 (true value 0.37 ulp below it):
-  `π/2 - atan(x/y)` reproduces it but misses I8 and B101, so Excel's CRT `atan` is not modelled (time-boxed, T-3795).
+  `IMLOG2(COMPLEX(0.190581435720431,0.981671389192299))` (C111, Excel 1.98953694302209i, ours ...210), is not
+  Excel's `atan` (T-3945): Excel reads the real part's text `0.190581435720431` one ulp above the nearest double
+  (0.19058143572043101, numbers.md "Decimals reach a double through an x87 multiply by 10^-n"), so `y/x` is
+  5.150928711820279, one ulp below the quotient of the nearest doubles, and its correctly rounded `atan` is Excel's
+  1.3790419226756174. Excel's ATAN is correctly rounded at all 202 points of probes/t3945-atan-near-midpoint B1:B202
+  (q a stored double, true value within 0.15 ulp of a rounding midpoint), and `IMLOG2(COMPLEX(A204,A205))` over the
+  stored nearest doubles still prints ...209i (C10), because COMPLEX writes 15-digit text that IMLOG2 reads back
+  the same way. C111 is fixed with the literal and text conversion (T-3932), not in the IM kernels.
   The fresh sweep probes-numeric/t3795-r4-im-last-digits (seed 3795, after the freeze) matches all 300 of its
   IMLOG10 and IMLOG2 cells (columns B, C). IMLN prints the same digits with either angle.
 - Superseded by the entry above (T-3795): IMLOG10's imaginary part is `atan2 / LN_10`: `atan2·log10 e` misses `IMLOG10("711+1.5i")` (0.000916231724847909,

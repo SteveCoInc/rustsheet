@@ -3,7 +3,7 @@ id: T-3969
 title: "SUMX2MY2, SUMX2PY2 and SUMXMY2 flush a subnormal square to 0 (probes/t3677 A12:A15)"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,3 +30,6 @@ does, so probes/t3677-sumx-running-overflow-snap Calc!A12, A13, A14 and A15 pass
 
 ## Out of scope
 -
+
+## Outcome
+sumx_fold terms flush each square with `arithmetic::flush_subnormal` (as SUMSQ). Eval delta: see baseline commit.

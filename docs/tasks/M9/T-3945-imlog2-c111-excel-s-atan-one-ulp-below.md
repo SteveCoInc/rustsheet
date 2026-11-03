@@ -3,7 +3,7 @@ id: T-3945
 title: "IMLOG2 C111: Excel's atan one ulp below the correctly rounded value at 5.15092871182028"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,9 +26,29 @@ show the last bits) over a sweep of q > 1 to see whether Excel's ATAN shares the
 Code: `excel_atan2` (functions/math_and_trigonometry/mathematical.rs).
 
 ## Acceptance criteria
-- [ ] C111 matches Excel, or a time-boxed negative fit (decision 0056) names what was tried.
-- [ ] No ATAN, ATAN2, IMARGUMENT, IMLN, IMLOG10, IMLOG2, IMPOWER or IMSQRT cell regresses.
+- [x] C111 matches Excel, or a time-boxed negative fit (decision 0056) names what was tried.
+- [x] No ATAN, ATAN2, IMARGUMENT, IMLN, IMLOG10, IMLOG2, IMPOWER or IMSQRT cell regresses.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other T-3795 cells (fixed).
+
+## Outcome
+C111 is not an `atan` miss, so no IM or ATAN kernel changes; C111 now belongs to T-3932.
+- New probe probes/t3945-atan-near-midpoint (excel-graph, 2026-11-03, 214 cells, seed 3945). Excel's ATAN is
+  correctly rounded at all 202 stored-double points B1:B202. These include C111's quotient of the nearest doubles
+  (B1 = ...176) and 200 hard points over q in [0.0625, 1E8) whose true atan lies within 0.15 ulp of a rounding
+  midpoint. No CRT-`atan` model is needed: libm `atan` already matches all 202 cells. For comparison, fdlibm `atan`
+  matches only 226 of the 240 ATAN cells of probes/asin-atan-sign-source.
+- The ulp comes from the input. Excel reads `0.190581435720431` as 0.19058143572043101, one ulp above the nearest
+  double. That holds as a literal, through VALUE, and through the complex text parse (C1, C3, C5, C7, and the low
+  bits in C8). This is the T-3658 x87 conversion `round53(round64(m x round64(10^-15)))`, now shown at a 15-digit m
+  as well. It makes `y/x` 5.150928711820279 (C9), and the correctly rounded atan of that is Excel's
+  1.3790419226756174 (B203, B204). `IMLOG2(COMPLEX(A204,A205))` over the stored nearest doubles is also ...209i
+  (C10), because COMPLEX writes text that IMLOG2 parses again.
+- Recorded in engineering.md ("IMLOG10 and IMLOG2 scale IMLN", replacing the "CRT atan not modelled" note) and in
+  numbers.md ("Decimals reach a double through an x87 multiply", the 15-digit point). T-3932 now owns the 9 off
+  cells of the new case and t3643-r4-log-modulus C111.
+- Eval delta: fixed 0, regressions 0. The new case adds 214 cells: 205 pass and 9 are new-coverage failures, all
+  of them the literal/text conversion. No ATAN, ATAN2 or IM cell changed, because no code changed. Fit guards
+  (decision 0188 R4) do not apply: there is no fit and no model change, only probe evidence.

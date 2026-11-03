@@ -8,7 +8,7 @@ use crate::functions::util::aggregate_args::{
 };
 
 use crate::{
-    arithmetic::{extended_sum, snap_near_zero},
+    arithmetic::{extended_sum, flush_subnormal, snap_near_zero},
     calc_result::CalcResult,
     expressions::parser::Node,
     expressions::token::Error,
@@ -20,17 +20,21 @@ type TwoMatricesResult = (i64, i64, Vec<Option<f64>>, Vec<Option<f64>>);
 impl Model {
     // SUMX2MY2(array_x, array_y) - Returns the sum of the difference of squares
     pub(crate) fn fn_sumx2my2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| x * x - y * y)
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) - flush_subnormal(y * y)
+        })
     }
 
     // SUMX2PY2(array_x, array_y) - Returns the sum of the sum of squares
     pub(crate) fn fn_sumx2py2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| x * x + y * y)
+        self.sumx_fold(args, cell, |x, y| {
+            flush_subnormal(x * x) + flush_subnormal(y * y)
+        })
     }
 
     // SUMXMY2(array_x, array_y) - Returns the sum of squares of differences
     pub(crate) fn fn_sumxmy2(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        self.sumx_fold(args, cell, |x, y| (x - y) * (x - y))
+        self.sumx_fold(args, cell, |x, y| flush_subnormal((x - y) * (x - y)))
     }
 
     // Excel pairs the arrays row-major and only needs equal element counts (not shapes). The

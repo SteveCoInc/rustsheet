@@ -370,7 +370,14 @@ stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
-literals of more than 5 digits are not probed.
+literals of more than 5 digits are not probed, except one 15-digit point (T-3945): `=0.190581435720431`
+(m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
+and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
+the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
+`=0.981671389192299` is the nearest double, as the model gives (probes/t3945-atan-near-midpoint C1:C9, excel-graph,
+2026-11-03). So the complex functions' text parse (COMPLEX's output read back, a complex literal) converts the same
+way, and quotients and functions of such literals inherit the ulp: `=ATAN(0.981671389192299/0.190581435720431)` is
+1.3790419226756174 (B203) where ATAN of the stored quotient of the nearest doubles is ...176 (B1).
 Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
 m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
 controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
@@ -381,7 +388,7 @@ trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, l
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
 Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
-Tasks: T-3555, T-3658, T-3931, T-3932
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
@@ -1001,7 +1008,7 @@ SUMPRODUCT with three arrays flushes after each factor, left to right: `SUMPRODU
 SUMX2MY2, SUMX2PY2 and SUMXMY2 flush each square the same way (probes/t3677-sumx-running-overflow-snap A12:A15,
 excel-graph, 2026-11-03, T-3677): with M1:M2 = 1E-155, 1E-150 and N1:N2 = 0, `SUMX2PY2(M1:M2,N1:N2)`,
 `SUMX2MY2(M1:M2,N1:N2)` and `SUMXMY2(M1:M2,N1:N2)` are exactly 1E-300 and `SUMX2MY2(N1:N2,M1:M2)` is -1E-300 (the 1E-310
-square is dropped). The engine keeps it (1.0000000001E-300): T-3969.
+square is dropped). The engine matches since T-3969.
 A subnormal cell constant reads as 0 (T-2016, T-2228, VERIFIED, probes/subnormal-cell-constants, excel-graph 2026-10-21): a
 number constant of magnitude below 2.2250738585072014E-308 (5E-324, 2.2E-308, 1E-310, and the negatives -5E-324, -1E-310) in a loaded workbook (an xlsx `<v>`; typing
 one in is unprobed) is `=0` TRUE and `ISNUMBER` TRUE, `*1E+300`
@@ -2546,7 +2553,7 @@ term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C
 Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
 `1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
 Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
-Ours: the power matches (every power cell passes); a subnormal term is kept (power-and-term A2, A9; beside another term, term-sum A1; T-3949) and `^` flushes
+Ours: the power matches (every power cell passes); a subnormal term is flushed per term since T-3949 (power-and-term A2, A9; beside another term, term-sum A1), and `^` flushes
 the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
 Status: VERIFIED (excel-graph)
 Tasks: T-3942, T-3949, T-3950

@@ -741,7 +741,7 @@ fn an_error_cell_field_and_blank_cell_values_are_value_errors() {
 /// one-cell reference to a blank cell is `#VALUE!` in its place, ahead of a later option's error;
 /// a blank total depth or `field_headers` is 0 and a text sort order is invalid only after it, and
 /// a scalar `row_fields`, a short or `""` `col_fields` lose to the later error
-/// (probes/t3889-pivotby-option-order P!B1-B46).
+/// (probes/t3889-pivotby-option-order P!B1-B49).
 #[test]
 fn blank_options_are_refused_before_a_later_error() {
     let mut model = records();

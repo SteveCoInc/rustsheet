@@ -21,10 +21,10 @@
 <text x="310.9" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-29</text>
 <text x="431.3" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-31</text>
 <text x="612.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-03</text>
-<polyline class="s-numeric" stroke="#e34948" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,88.4 130.2,119.9 190.4,126.0 250.7,126.7 310.9,149.0 371.1,196.3 431.3,160.6 491.6,144.7 551.8,142.8 612.0,143.2"><title>Number</title></polyline>
-<circle class="b-numeric" fill="#e34948" cx="612.0" cy="143.2" r="3.5"><title>Number, 2026-11-03: 85,662</title></circle>
-<polyline class="s-other" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,222.0 130.2,244.2 190.4,244.6 250.7,245.0 310.9,244.8 371.1,245.0 431.3,245.1 491.6,244.9 551.8,244.9 612.0,244.6"><title>Type, error or text</title></polyline>
-<circle class="b-other" fill="#4b5563" cx="612.0" cy="244.6" r="3.5"><title>Type, error or text, 2026-11-03: 1,154</title></circle>
-<text x="622.0" y="143.2" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">85,662</text>
-<text x="622.0" y="244.6" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">1,154</text>
+<polyline class="s-numeric" stroke="#e34948" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,88.4 130.2,119.9 190.4,126.0 250.7,126.7 310.9,149.0 371.1,196.3 431.3,160.6 491.6,144.7 551.8,142.8 612.0,137.9"><title>Number</title></polyline>
+<circle class="b-numeric" fill="#e34948" cx="612.0" cy="137.9" r="3.5"><title>Number, 2026-11-03: 90,103</title></circle>
+<polyline class="s-other" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,222.0 130.2,244.2 190.4,244.6 250.7,245.0 310.9,244.8 371.1,245.0 431.3,245.1 491.6,244.9 551.8,244.9 612.0,244.8"><title>Type, error or text</title></polyline>
+<circle class="b-other" fill="#4b5563" cx="612.0" cy="244.8" r="3.5"><title>Type, error or text, 2026-11-03: 1,031</title></circle>
+<text x="622.0" y="137.9" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">90,103</text>
+<text x="622.0" y="244.8" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">1,031</text>
 </g></svg>

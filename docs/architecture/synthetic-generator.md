@@ -302,6 +302,10 @@ Key schema elements:
   wrap one column (T-1083).
   `wide_rate: <share>` makes that share of the draws 2-D and `row_rate: <share>` makes it a one-row range, so MATCH's
   lookup_array is mostly one-dimensional with a few 2-D `#N/A` cases (T-2719).
+- `probe_edge: first_column | first_row` (on a `probe` value) narrows the draw to the first column (VLOOKUP) or first
+  row (HLOOKUP) of the probed range, where the search looks. `index_of: {param, axis: rows | columns}` (on a number
+  parameter) draws 1 to that range's height or width in 90% of calls (VLOOKUP's col_index_num, HLOOKUP's
+  row_index_num, INDEX's row_num and column_num); the rest use the `domain`, so `#N/A` and `#REF!` stay covered (T-3074).
 - `same_shape: true` (`range` parameters of one call): the ranges share one rows x columns shape, except in about 1 call
   in 10, so the *IFS functions compute a real match and the shape-mismatch `#VALUE!` stays covered (T-2719).
 - `probe: <param>` (a `value` parameter): drawn from the cells of that `range` parameter 95% of the time, so MATCH's

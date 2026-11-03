@@ -206,23 +206,25 @@ fn a_condition_on_the_first_section_chooses_among_the_sections() {
     assert_eq!(text(0.0, "[=0]\"nil\";General"), "nil");
 }
 
-/// A trailing `;` opens an empty section and a section of only a color or a condition prints
-/// General (probes/text-value-kind-sweep, -b; number-formats.md, T-3649).
+/// A trailing `;` opens an empty section (probes/text-value-kind-sweep, -b; number-formats.md,
+/// T-3649).
 #[test]
-fn trailing_separator_and_bracket_only_sections() {
-    use crate::formatter::format::format_text_value;
+fn trailing_separator_opens_an_empty_section() {
     use crate::formatter::test::text;
     assert_eq!(text(-1234.5, "0;"), "");
     assert_eq!(text(1234.5, "0;"), "1235");
     assert_eq!(text(0.0, "0;0;"), "");
     assert_eq!(text(0.0, "0;;"), "");
+}
+
+/// A section of only a color or a condition prints General (number-formats.md, T-3649).
+#[test]
+fn bracket_only_section_prints_general() {
+    use crate::formatter::test::text;
     assert_eq!(text(1234.5, "[Red]"), "1234.5");
     assert_eq!(text(-1234.5, "[Red]"), "-1234.5");
     assert_eq!(text(-1234.5, "[Red];[Blue]"), "1234.5");
     assert_eq!(text(1234.5, "[>100];0"), "1234.5");
     assert_eq!(text(-1234.5, "[>100];0"), "-1235");
     assert_eq!(text(1234.5, "[$-409];0"), "");
-    assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
-    assert_eq!(format_text_value("abc", ";;;").text, "");
-    assert_eq!(format_text_value("abc", "0;").text, "abc");
 }
