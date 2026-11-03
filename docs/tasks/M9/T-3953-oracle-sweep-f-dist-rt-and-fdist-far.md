@@ -3,7 +3,7 @@ id: T-3953
 title: "Oracle sweep: F.DIST.RT and FDIST far right tail on bfrac (df1 >= 80, df2 <= 200, kernel x0 below 1E-6), with a hold-out, for the FDIST(1E+15,4490,6) fit"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
