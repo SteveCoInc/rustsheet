@@ -2540,11 +2540,14 @@ Tasks: T-3508
 
 ## LINEST, LOGEST, TREND and GROWTH: a data range over the array limit is #ERROR! (T-2557)
 Rule: the four functions read every cell of a `known_y`, `known_x` or `new_x` range into a dense grid (a blank cell
-is `#VALUE!`, so the used area cannot stand for the range). A range of more than `MAX_SIZE` (`MAX_SIZE`, the
-`check_array_cells` bound) cells is `#ERROR!`, refused from its extent before any allocation:
+is `#VALUE!`, so the used area cannot stand for the range). A range of more than 1,048,576 cells (`MAX_SIZE` = `LAST_ROW`, the
+`check_array_cells` bound; `A:A` is exactly at it, `A:B` is over) is `#ERROR!`, refused from its extent before any allocation:
 `LINEST(A1:XFD1048576,..)` no longer sizes a matrix from the full grid. A whole column, within the bound, is read
 and is `#VALUE!` when it holds blanks, as the used rows with a blank do (unit test
 `regression_functions_bound_huge_ranges`).
+The refusal comes when the argument is read, so it precedes a later argument's error value and the `#REF!` shape check:
+`LINEST(A1:XFD1048576,1/0)` is `#ERROR!`, where "LINEST and LOGEST report error values first" (statistics.md) gives
+`#DIV/0!` for a range within the limit. This override of the evidenced order is part of the deviation.
 Evidence: none for Excel; this is a resource limit (CLAUDE.md directive 5).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/functions/statistical/regression.rs (`Model::read_data`)
