@@ -3,10 +3,10 @@ id: T-3062
 title: "Probe the formula text of a sheet-qualified #REF! after a sheet rename or delete, unqualified and typed"
 milestone: M8
 lane: engine
-status: done
+status: todo
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: [T-2855]
 ---
 
@@ -39,3 +39,11 @@ rename (`rename_sheet_in_node` takes the old name), prints `#REF!#REF!` once S i
 (`Node::SheetRefErrorKind::missing`, set by the parser) and spells a typed sheet name as the workbook
 does. The unqualified wholly-deleted range already matched. A typed `NoSuchSheet!#REF!` is a Graph
 external-link artifact and is left out of the probe. Eval: the three new probes pass (15 checked cells).
+
+## Handoff
+Engine change and three probes (rename, delete-sheet, unqualified/typed) are done on PR #2926 and pass 15/15 cells; design and security approved. excel-fidelity requested changes twice (round 1 on 6357da18, round 2 on 05d85543), so I stopped (work-loop 5b). Open findings of round 2:
+- MAJOR references.md "A sheet-qualified #REF! is #REF!": the typed `=NoSuchSheet!#REF!` cell was dropped from the probe and Graph's text (an external-link path `='https://.../[NoSuchSheet]NoSuchSheet'!#REF!`) was not recorded. Put that cell back in the probe (oracle value recorded, engine cell a known failure with an owner) or record the exact text in references.md; drop the "Graph artifact" wording; say plainly that the engine's `#REF!#REF!` for a sheet no sheet has is unverified (the parser cannot tell a deleted sheet from a never-existing one).
+- MINOR sheet-qualified-ref-error-text-rename.case.json description says "A3 =S!C4:C5 SUM control"; A3 is `=SUM(S!C5)`.
+- Round 1 (handled by marking Unprobed and filing T-3899): duplicate-sheet and defined-name-rename behaviour of `S!#REF!` are not evidenced; alternative is to skip `SheetRefErrorKind` in the duplicate path.
+- Optional: share one case-insensitive sheet-name helper (parser/mod.rs, sheet_edits.rs; `Model::get_sheet_index_by_name` has one).
+Set `status: done` again after fixing.
