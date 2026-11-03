@@ -3,7 +3,7 @@ id: T-3075
 title: "gen-m2 lookup top-up batch: oracle-filled VLOOKUP, HLOOKUP and INDEX cells that find and pick (after T-3074)"
 milestone: M2
 lane: harness
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
