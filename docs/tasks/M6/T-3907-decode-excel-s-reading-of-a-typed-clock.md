@@ -3,7 +3,7 @@ id: T-3907
 title: "Decode Excel's reading of a typed clock-first date with an A. suffix (10 A. 7/1/2025 is a 2161 serial in mm:ss.0)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
