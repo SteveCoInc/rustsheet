@@ -34,7 +34,8 @@ fn leftmost_error_and_single_cell_ranges() {
     let mut model = new_empty_model();
     model._set("A1", "=DATEDIF(1/0,5,NA())");
     model._set("A2", "=DAYS360(1/0,5,NA())");
-    model._set("B3", "10:30");
+    // A formula string: typed `10:30` is a number now (T-3894), and TIMEVALUE of a number is #VALUE!.
+    model._set("B3", "=\"10:30\"");
     model._set("A3", "=TIMEVALUE(B3:B3)");
 
     model.evaluate();

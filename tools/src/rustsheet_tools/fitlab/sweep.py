@@ -229,6 +229,17 @@ def _exact_power(base: float, power: float) -> float:
         raise UnparsedError(msg) from None
 
 
+# The smallest normal double: Excel returns a smaller nonzero result of `*`, `/` and `^` as 0 and
+# reads a smaller literal as 0, but keeps a subnormal sum or difference (numbers.md, "Subnormal
+# results become 0"; probes/subnormal-function-results, probes/precision-and-rounding A14, A70).
+_SMALLEST_NORMAL = 2.0**-1022
+
+
+def _flush_subnormal(value: float) -> float:
+    """0 for a nonzero `value` below the smallest normal double, else `value`."""
+    return 0.0 if 0 < abs(value) < _SMALLEST_NORMAL else value
+
+
 class _Arithmetic:
     """A recursive-descent parser over `_tokens(text)`, evaluating as it goes (see `arithmetic`)."""
 
@@ -266,13 +277,14 @@ class _Arithmetic:
         literal = number_literal(tok)
         if not math.isfinite(literal):
             raise self.fail(f"non-finite literal {tok}")
-        return literal
+        return _flush_subnormal(literal)
 
     def power(self, depth: int) -> float:
         value = self.primary(depth)
         while self.peek() == "^":
             self.take()
-            value = _exact_power(value, self.primary(depth))  # Excel's ^ is left-associative
+            # Excel's ^ is left-associative and flushes a subnormal power to 0
+            value = _flush_subnormal(_exact_power(value, self.primary(depth)))
         return value
 
     def multiplicative(self, depth: int) -> float:
@@ -282,7 +294,7 @@ class _Arithmetic:
             rhs = self.power(depth)
             if op == "/" and rhs == 0:
                 raise self.fail("division by zero")
-            value = X87.mul(value, rhs) if op == "*" else X87.div(value, rhs)
+            value = _flush_subnormal(X87.mul(value, rhs) if op == "*" else X87.div(value, rhs))
         return value
 
     def additive(self, depth: int) -> float:
@@ -297,7 +309,8 @@ class _Arithmetic:
 def arithmetic(text: str) -> float:
     """Evaluates `+ - * / ^`, unary signs and parentheses over numeric literals with Excel's
     operator model: each of `+ - * /` rounds its exact result to 64 bits, then to a double
-    (numbers.md, "Division rounds twice"), and `^` must be exact (`_exact_power`). As in Excel,
+    (numbers.md, "Division rounds twice"), and `^` must be exact (`_exact_power`). A subnormal
+    result of `*`, `/` or `^`, or a subnormal literal, is 0; `+` and `-` keep one. As in Excel,
     a unary sign binds tighter than `^` (`-2^2` is 4). A non-finite literal, an overflow, or
     nesting deeper than 50 is UnparsedError."""
     parser = _Arithmetic(text)

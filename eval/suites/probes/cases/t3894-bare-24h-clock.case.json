@@ -1,0 +1,125 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Bare typed 24-hour clock shapes without AM/PM (T-3894): A = text typed into the cell, B = ISNUMBER(A), C = A+0, D = TEXT(A,\"0.000000000\"). Typed number formats come from the ENTERED log (docs/research/t3894-bare-24h-clock-2026-11-03.md).",
+  "tags": [
+    "M2",
+    "probe",
+    "coercion",
+    "T-3894"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": {
+          "entered": "12:30"
+        },
+        "B1": "=ISNUMBER(A1)",
+        "C1": "=IF(ISNUMBER(A1),A1+0,\"text\")",
+        "D1": "=IF(ISNUMBER(A1),TEXT(A1,\"0.000000000\"),\"text\")",
+        "A2": {
+          "entered": "9:05"
+        },
+        "B2": "=ISNUMBER(A2)",
+        "C2": "=IF(ISNUMBER(A2),A2+0,\"text\")",
+        "D2": "=IF(ISNUMBER(A2),TEXT(A2,\"0.000000000\"),\"text\")",
+        "A3": {
+          "entered": "0:00"
+        },
+        "B3": "=ISNUMBER(A3)",
+        "C3": "=IF(ISNUMBER(A3),A3+0,\"text\")",
+        "D3": "=IF(ISNUMBER(A3),TEXT(A3,\"0.000000000\"),\"text\")",
+        "A4": {
+          "entered": "23:59"
+        },
+        "B4": "=ISNUMBER(A4)",
+        "C4": "=IF(ISNUMBER(A4),A4+0,\"text\")",
+        "D4": "=IF(ISNUMBER(A4),TEXT(A4,\"0.000000000\"),\"text\")",
+        "A5": {
+          "entered": "10:00:30"
+        },
+        "B5": "=ISNUMBER(A5)",
+        "C5": "=IF(ISNUMBER(A5),A5+0,\"text\")",
+        "D5": "=IF(ISNUMBER(A5),TEXT(A5,\"0.000000000\"),\"text\")",
+        "A6": {
+          "entered": "24:00"
+        },
+        "B6": "=ISNUMBER(A6)",
+        "C6": "=IF(ISNUMBER(A6),A6+0,\"text\")",
+        "D6": "=IF(ISNUMBER(A6),TEXT(A6,\"0.000000000\"),\"text\")",
+        "A7": {
+          "entered": "25:00"
+        },
+        "B7": "=ISNUMBER(A7)",
+        "C7": "=IF(ISNUMBER(A7),A7+0,\"text\")",
+        "D7": "=IF(ISNUMBER(A7),TEXT(A7,\"0.000000000\"),\"text\")",
+        "A8": {
+          "entered": "10:60"
+        },
+        "B8": "=ISNUMBER(A8)",
+        "C8": "=IF(ISNUMBER(A8),A8+0,\"text\")",
+        "D8": "=IF(ISNUMBER(A8),TEXT(A8,\"0.000000000\"),\"text\")",
+        "A9": {
+          "entered": "10:00.5"
+        },
+        "B9": "=ISNUMBER(A9)",
+        "C9": "=IF(ISNUMBER(A9),A9+0,\"text\")",
+        "D9": "=IF(ISNUMBER(A9),TEXT(A9,\"0.000000000\"),\"text\")",
+        "A10": {
+          "entered": "10:00:30.5"
+        },
+        "B10": "=ISNUMBER(A10)",
+        "C10": "=IF(ISNUMBER(A10),A10+0,\"text\")",
+        "D10": "=IF(ISNUMBER(A10),TEXT(A10,\"0.000000000\"),\"text\")",
+        "A11": {
+          "entered": ":30"
+        },
+        "B11": "=ISNUMBER(A11)",
+        "C11": "=IF(ISNUMBER(A11),A11+0,\"text\")",
+        "D11": "=IF(ISNUMBER(A11),TEXT(A11,\"0.000000000\"),\"text\")",
+        "A12": {
+          "entered": " 10:00"
+        },
+        "B12": "=ISNUMBER(A12)",
+        "C12": "=IF(ISNUMBER(A12),A12+0,\"text\")",
+        "D12": "=IF(ISNUMBER(A12),TEXT(A12,\"0.000000000\"),\"text\")",
+        "A13": {
+          "entered": "10:00:60"
+        },
+        "B13": "=ISNUMBER(A13)",
+        "C13": "=IF(ISNUMBER(A13),A13+0,\"text\")",
+        "D13": "=IF(ISNUMBER(A13),TEXT(A13,\"0.000000000\"),\"text\")",
+        "A14": {
+          "entered": "10:00:59.999"
+        },
+        "B14": "=ISNUMBER(A14)",
+        "C14": "=IF(ISNUMBER(A14),A14+0,\"text\")",
+        "D14": "=IF(ISNUMBER(A14),TEXT(A14,\"0.000000000\"),\"text\")",
+        "A15": {
+          "entered": "1:2"
+        },
+        "B15": "=ISNUMBER(A15)",
+        "C15": "=IF(ISNUMBER(A15),A15+0,\"text\")",
+        "D15": "=IF(ISNUMBER(A15),TEXT(A15,\"0.000000000\"),\"text\")",
+        "A16": {
+          "entered": "01:02:03"
+        },
+        "B16": "=ISNUMBER(A16)",
+        "C16": "=IF(ISNUMBER(A16),A16+0,\"text\")",
+        "D16": "=IF(ISNUMBER(A16),TEXT(A16,\"0.000000000\"),\"text\")",
+        "A17": {
+          "entered": "10:00:"
+        },
+        "B17": "=ISNUMBER(A17)",
+        "C17": "=IF(ISNUMBER(A17),A17+0,\"text\")",
+        "D17": "=IF(ISNUMBER(A17),TEXT(A17,\"0.000000000\"),\"text\")",
+        "A18": {
+          "entered": "100:00"
+        },
+        "B18": "=ISNUMBER(A18)",
+        "C18": "=IF(ISNUMBER(A18),A18+0,\"text\")",
+        "D18": "=IF(ISNUMBER(A18),TEXT(A18,\"0.000000000\"),\"text\")"
+      }
+    }
+  ]
+}

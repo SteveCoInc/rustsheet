@@ -26,3 +26,5 @@ not measure because corpus-bench is not fetched in the worker environment (`rust
 
 ## Out of scope
 -
+
+Note (T-3791): a one-cell reference to an error cell as the bins is skipped as a bin with no number (gen-m9/d56012c9341cd0ff); the multi-cell range case is still open.

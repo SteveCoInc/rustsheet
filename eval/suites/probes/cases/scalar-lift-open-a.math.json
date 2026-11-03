@@ -1,0 +1,38 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "2ed8859a7982777ee052d3a38cc3773148e70fa4f0e1cf8eeac45e26f7010da1"
+ },
+ "sheets": {
+  "Sheet1": {
+   "Z19": {
+    "t": "n",
+    "v": "22500.0",
+    "f": "=QUOTIENT(45000,2)"
+   },
+   "Z20": {
+    "t": "n",
+    "v": "10.0",
+    "f": "=QUOTIENT(10,1)"
+   },
+   "Z21": {
+    "t": "n",
+    "v": "135135.0",
+    "f": "=FACTDOUBLE(13)"
+   },
+   "Z22": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=MULTINOMIAL(1,2)"
+   },
+   "Z23": {
+    "t": "n",
+    "v": "3.0",
+    "f": "=MULTINOMIAL(2,1)"
+   }
+  }
+ }
+}

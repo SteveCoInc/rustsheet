@@ -82,3 +82,6 @@ the 15-digit text cannot show moves to a follow-up with `defer: phase-1b`.
 
 ## Out of scope
 - Real x (T-3609, done). Notation of parts below 1 (T-3560). The 0.01 cut (T-2797). |x| above 0.01.
+
+## Evidence (T-3720)
+Dense sweep with SIN(y), COS(y), SINH(x), COSH(x), EXP(-x) companions: eval/suites/probes-numeric/cases/t3720-im-reciprocal-small-x-complex.case.json (+ .oracle.json). Counts in docs/excel-semantics/engineering.md.
