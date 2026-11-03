@@ -3,7 +3,7 @@ id: T-3901
 title: "Probe typed mixed-separator and clock-first dates in a day-first locale"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
