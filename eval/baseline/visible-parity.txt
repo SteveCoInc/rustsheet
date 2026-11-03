@@ -232,6 +232,7 @@ probes/irr-guess-edges.case.json	4
 probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
 probes/oddf-date-order-domain-sweep.case.json	60
+probes/seriessum-subnormal-power-and-term.case.json	7
 probes/stat-argument-modes.case.json	9
 probes/stat-order-floor-batch.case.json	1
 probes/stat-quantile-lift.case.json	9

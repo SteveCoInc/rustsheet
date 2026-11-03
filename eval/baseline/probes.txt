@@ -1112,6 +1112,7 @@ C	probes/sequence-step-accumulation.case.json	11
 C	probes/seriessum-blank-and-underflow.case.json	9
 C	probes/seriessum-boolean-coefficients.case.json	18
 C	probes/seriessum-negative-x-fractional-power.case.json	25
+C	probes/seriessum-subnormal-power-and-term.case.json	34
 C	probes/seriessum-x-zero-error-precedence.case.json	27
 C	probes/seriessum-x-zero.case.json	22
 C	probes/sheet-names-like-cells-3d-spans.case.json	7
@@ -3768,6 +3769,13 @@ F	probes/regression-trend.case.json	Sheet1!O7
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z10
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z8
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z9
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!A16
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!A2
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!A9
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B15
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B16
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B2
+F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B9
 F	probes/stat-argument-modes.case.json	Sheet1!H13
 F	probes/stat-argument-modes.case.json	Sheet1!H140
 F	probes/stat-argument-modes.case.json	Sheet1!H144
