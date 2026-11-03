@@ -1955,6 +1955,7 @@ C	probes/t3894-bare-24h-clock.case.json	54
 C	probes/t3895-collation-script-digits.case.json	193
 C	probes/t3896-collation-middle-dot.case.json	272
 C	probes/t3898-typed-circular-readers.case.json	28
+C	probes/t3903-bare-24h-clock-extra.case.json	63
 C	probes/t3906-rate-restart-oos.case.json	240
 C	probes/t3907-typed-clock-a-period-edges.case.json	78
 C	probes/t3907-typed-clock-a-period-shapes.case.json	78

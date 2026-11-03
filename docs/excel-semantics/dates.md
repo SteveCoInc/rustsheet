@@ -1215,6 +1215,7 @@ A bare 24-hour clock typed with no date and no AM/PM is a number too (probes/t38
 2026-11-03, T-3894): `12:30`, `9:05`, `1:2`, `0:00` and `10:00:` are time of day with `h:mm`, `10:00:30` with `h:mm:ss`,
 `24:00`, `25:00` and `100:00` with `[h]:mm:ss`, a fractional second (`10:00.5`, `10:00:30.5`) with `mm:ss.0`, and
 `10:60` and `10:00:60` are numbers with General. `:30` and ` 10:00` (leading space) stay text.
+T-3903 (probes/t3903-bare-24h-clock-extra): with an hour of 24 or more, seconds keep `[h]:mm:ss` (`25:00:30`, `24:00:00`, `99:59:59`) and an out-of-range minute or second is text (`25:60`, `24:60`, `25:00:60`); with an hour below 24 any out-of-range minute or second (`10:99`, `10:60:00`, `0:00:75`, `1:100`) is a number with General. Evidence note: docs/research/t3903-bare-24h-clock-extra-shapes-2026-11-03.md
 Evidence note: docs/research/t3894-bare-24h-clock-2026-11-03.md
 Status: VERIFIED (web)
 Implemented in: `typed_clock_shape`, `rejected_clock_text_format`, `parse_bare_clock`, `parse_typed_number`, `parse_bare_letter_clock` and `without_single_letter_dot` in `crates/rustsheet-engine/src/formatter/parse_formatted.rs`
