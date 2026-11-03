@@ -3,7 +3,7 @@ id: T-3929
 title: "Probe wildcard criteria and XMATCH wildcard mode against T-3445's lookup fold (weightless, astral, wider classes)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
