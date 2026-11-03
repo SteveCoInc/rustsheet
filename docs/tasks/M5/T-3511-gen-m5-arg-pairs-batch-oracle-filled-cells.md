@@ -3,7 +3,7 @@ id: T-3511
 title: "gen-m5 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of the M5 byte text functions (MIDB, LEFTB, RIGHTB, FINDB, SEARCHB, REPLACEB)"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
