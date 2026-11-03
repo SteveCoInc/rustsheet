@@ -2175,8 +2175,16 @@ t1049-ttest A44, `T.TEST({1,2,3},{2,4,7},2,1)`, and A48, `T.TEST({1,1,1},{2,3,4}
   gen-m9/bbab6562e88b70e8 A181 `T.DIST.2T(123456780.723,2.5)` = 6.561000999157746E-17 (0; ours +19), and
   `T.DIST.RT(100,1)` (m9-t-dist-rt A10, 0; ours +5). Every failing df-1 or df-2 cell with literal arguments in the
   report (49) has Excel within 1 ulp of the exact tail. Task: T-3187.
+- Not inside the cut at df 1: there Excel is up to 1.8 ulp from the exact tail, and the tail at the rounded y gives its
+  bits (`T.DIST.RT(3,1)` = 0.10241638234956675, m9-t-dist-rt A6, 1.8 ulp; gen-m9/5919660b7bb4d195 A336
+  `TDIST(1.005,1,2)`), while `T.DIST.RT(2,1)` (A5) is 2 ulp from both.
 Ours: `student_t.rs` `closed_form_tail` (since T-0969 attempt 8), the kernel's oriented closed form with the
-y0 <= 0.9 cut since T-2502; below it the general tail.
+y0 <= 0.9 cut since T-2502. Past the same cut (fl(1 - y) > 0.9), at df 1 and df 2 alike, the tail is the exact one at
+t rounded once (`exact_low_df_tail`, T-3187): atan(1/t)/pi at df 1 and 1/(s (s + t)) with s = sqrt(2 + t^2) at df 2, in
+double-double. That fixes the six visibly-off gen-m9 cells above and lifts t0969-t-df2-cut from 560 to 602 of 801
+bit-exact. Three cells where Excel is 0.7 ulp from the exact tail moved 1 ulp off (decision 0083 allowance; T-3877):
+`T_DIST.xlsx` F2 and C2 (`T.DIST.RT(60,1)`, `T.DIST.2T(60,1)`) and gen-m9/bbab6562e88b70e8 A113 (`T.DIST.2T(7.1,1)`).
+Inside the cut df 1 keeps the tail at the rounded y.
 Status: VERIFIED (excel-graph) from y = 0.100112 up and below y = 0.099900. The exact cut is UNVERIFIED: whether y = 0.1
 itself takes the closed form, and whether Excel tests y or z = 1 - y, need a dense probe near t = sqrt(18).
 T-2464 places the cut. It is the kernel's a0 = 1 test y0 <= 0.9 on the oriented arguments, and BETA.DIST at
