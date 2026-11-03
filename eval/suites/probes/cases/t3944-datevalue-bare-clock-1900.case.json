@@ -1,0 +1,89 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3944: DATEVALUE of clock-only text in the 1900 date system. A typed, B DATEVALUE of the literal, C TIMEVALUE, D VALUE, E DATEVALUE of the typed cell as text.",
+ "tags": [
+  "M2",
+  "probe",
+  "dates",
+  "date-text",
+  "T-3944"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": {
+     "entered": "10 A."
+    },
+    "B1": "=DATEVALUE(\"10 A.\")",
+    "C1": "=TIMEVALUE(\"10 A.\")",
+    "D1": "=VALUE(\"10 A.\")",
+    "E1": "=DATEVALUE(A1&\"\")",
+    "A2": {
+     "entered": "10:00"
+    },
+    "B2": "=DATEVALUE(\"10:00\")",
+    "C2": "=TIMEVALUE(\"10:00\")",
+    "D2": "=VALUE(\"10:00\")",
+    "E2": "=DATEVALUE(A2&\"\")",
+    "A3": {
+     "entered": "10 AM"
+    },
+    "B3": "=DATEVALUE(\"10 AM\")",
+    "C3": "=TIMEVALUE(\"10 AM\")",
+    "D3": "=VALUE(\"10 AM\")",
+    "E3": "=DATEVALUE(A3&\"\")",
+    "A4": {
+     "entered": "25:00"
+    },
+    "B4": "=DATEVALUE(\"25:00\")",
+    "C4": "=TIMEVALUE(\"25:00\")",
+    "D4": "=VALUE(\"25:00\")",
+    "E4": "=DATEVALUE(A4&\"\")",
+    "A5": {
+     "entered": "10:00 PM"
+    },
+    "B5": "=DATEVALUE(\"10:00 PM\")",
+    "C5": "=TIMEVALUE(\"10:00 PM\")",
+    "D5": "=VALUE(\"10:00 PM\")",
+    "E5": "=DATEVALUE(A5&\"\")",
+    "A6": {
+     "entered": "10:00:30"
+    },
+    "B6": "=DATEVALUE(\"10:00:30\")",
+    "C6": "=TIMEVALUE(\"10:00:30\")",
+    "D6": "=VALUE(\"10:00:30\")",
+    "E6": "=DATEVALUE(A6&\"\")",
+    "A7": {
+     "entered": "10 P."
+    },
+    "B7": "=DATEVALUE(\"10 P.\")",
+    "C7": "=TIMEVALUE(\"10 P.\")",
+    "D7": "=VALUE(\"10 P.\")",
+    "E7": "=DATEVALUE(A7&\"\")",
+    "A8": {
+     "entered": "12:00 AM"
+    },
+    "B8": "=DATEVALUE(\"12:00 AM\")",
+    "C8": "=TIMEVALUE(\"12:00 AM\")",
+    "D8": "=VALUE(\"12:00 AM\")",
+    "E8": "=DATEVALUE(A8&\"\")",
+    "A9": {
+     "entered": "0:00"
+    },
+    "B9": "=DATEVALUE(\"0:00\")",
+    "C9": "=TIMEVALUE(\"0:00\")",
+    "D9": "=VALUE(\"0:00\")",
+    "E9": "=DATEVALUE(A9&\"\")",
+    "A10": {
+     "entered": "24:00"
+    },
+    "B10": "=DATEVALUE(\"24:00\")",
+    "C10": "=TIMEVALUE(\"24:00\")",
+    "D10": "=VALUE(\"24:00\")",
+    "E10": "=DATEVALUE(A10&\"\")"
+   }
+  }
+ ]
+}

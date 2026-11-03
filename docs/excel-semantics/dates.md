@@ -307,6 +307,12 @@ timevalue-component-limits and timevalue-ampm-limits (oracle: excel-graph, 2026-
   AM/PM suffix) are #VALUE! (probes/t2352-time-text-trailing-colon, excel-graph, 2026-10-22, T-2352;
   implemented in `parse_clock_text`). Unprobed: `H:M:` before an AM/PM suffix (`"10:30: PM"`; the engine reads it as 10:30 PM).
   Evidence for these bullets: probes/clock-text-oddities, clock-text-oddities2 to -7 (excel-graph, 2026-10-06, T-0153), TIMEVALUE, `0+text` and VALUE agree.
+- **DATEVALUE of a bare clock is the whole days of its serial**, in both date systems: `DATEVALUE("10:00")`,
+  `"10 AM"`, `"10 A."`, `"10 P."`, `"10:00:30"`, `"12:00 AM"` and `"0:00"` are 0, and `"25:00"` and `"24:00"` are 1
+  (TIMEVALUE and VALUE of the same texts are the fraction and the unwrapped serial as above). DATEVALUE of the
+  number-as-text of the typed cells is #VALUE!. Implemented for DATEVALUE only (`parse_bare_clock_days`); other
+  readers of date text (DATEDIF, conditional formatting) are unprobed for a bare clock (probes/t3944-datevalue-bare-clock-1900
+  and -1904, excel-graph, 2026-11-03, T-3944; also probes/t3920-typed-a-period-1904 G6, t3948-letter-period-gate-edges G14).
 - **Clock text as a direct argument** is read as its coercion serial by SUM, AVERAGE, MAX, MIN,
   PRODUCT, LARGE, SMALL, ABS, INT, MOD, HOUR/MINUTE/SECOND, DAY and array math (`SUM("10:00","6 PM")`
   = 1.1666666666666667, `AVERAGE("10:00 ")` = 0.4166666666666667, `HOUR("25:00")` = 1,
