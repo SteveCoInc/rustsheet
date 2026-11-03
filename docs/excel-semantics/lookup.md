@@ -1559,6 +1559,6 @@ A referenced error cell (Data!G9 = #DIV/0!) behaves as a 1x1 array whose index i
 XMATCH with search_mode = Data!G9 (#DIV/0!): when match_mode converts to a number but is out of range (7, -2.5, "12"), or is a multi-cell range that Excel lifts element by element (A292 is a 2x2 spill of #DIV/0! over match_mode C3:D4, cells A292:B293), Excel returns #DIV/0!
 (315644f84093cf49 A292:B293, 75b38d80dd3152b2 A388 A448 A544); non-numeric text in match_mode still wins with #VALUE! (315644f84093cf49 A64, 75b38d80dd3152b2 A598).
 Evidence: gen-m6 21db5363d711888d, ad47b47c4e97019d, 315644f84093cf49, 75b38d80dd3152b2 (excel-graph).
-Ours: CHOOSEROWS/CHOOSECOLS match all of these cells (T-3667, a one-cell error reference in arrays.md); XMATCH returns #VALUE! in the four cells above only (it already returns #DIV/0! in most G9-search_mode cells).
+Ours: matches all of these cells (T-3667, a one-cell error reference in arrays.md; T-3542: XMATCH reports an out-of-range numeric match_mode only after search_mode's cast error).
 Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
 Tasks: T-3667, T-3542
