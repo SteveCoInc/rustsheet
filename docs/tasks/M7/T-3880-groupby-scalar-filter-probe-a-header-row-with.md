@@ -31,6 +31,10 @@ GROUPBY's scalar-filter rule (T-3839) is evidenced at its two unprobed edges, an
 
 ## Acceptance criteria
 - [ ] An excel-graph probe answers both edges; `Model::filter_rows` matches it (reorder the arms if the records-height rule wins).
+- [ ] The same probe covers an error element of a lifted GROUPBY option beside a filter column, before and after the
+      filter is spent (`GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,0,1,,(Data!C1:C12<0.2),{0,1;NA(),1})` and `{NA(),0;0,1}`;
+      T-3840's arrays.md entry "A lifted GROUPBY's filter serves one element"; ours: `#VALUE!` once spent, its own error
+      before, and it spends nothing; #2913 review MINOR).
 - [ ] arrays.md cites the new cells, fixes the L!D1:E2 sentence and its Status line.
 - [ ] `make check` green; reviewers approve.
 
