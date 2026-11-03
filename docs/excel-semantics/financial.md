@@ -1258,11 +1258,32 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 - Fresh sweep (decision 0188 R4.2): the Gate A batch accuracy/RATE/r4-T-3698, 300 points of `rustsheet-accuracy
   generate RATE --batch r4-T-3698`, drawn and oracle-filled after the final freeze. All 300 are inside the envelope,
   and the batch stays in Gate A.
+  The batch never fires the restart, though: an instrumented build counted 121 flat secants and 0 restarts in Gate A's
+  RATE tables, and 0 restarts on probes-numeric/t3698-rate-r4-fresh (T-3906).
   - The table's RATE takes no guess. probes-numeric/t3698-rate-r4-fresh (300 points of the same draw, each with a
     log-uniform guess, and 50-digit roots in its `math.tsv`) adds that. There the rule is bit-exact on 298 and
     within 15 digits on 299. The one outside is A201, below.
   - Neither sweep makes many flat secants. They show that the rule moves nothing elsewhere; they do not measure the
     restart itself.
+- Out of sample where the restart fires (T-3906, excel-graph, 2026-11-03): probes/t3906-rate-restart-oos.
+  - It holds 240 calls sampled from the 15,850 of 1,000,000 fresh annuities where the frozen rule's result differs
+    from the hold's (draw and seeds in the case's description). They are mostly large annuities (|pv| to 1e12) whose
+    run reaches the noise floor.
+  - Bit-exact / 4 ulp / 15 digits: the rule 48 / 84 / 103 of 240, the hold 12 / 76 / 104. Of the 232 cells where
+    Excel returns a number, the correctly rounded root gets 15 / 66 / 91.
+  - Gate A envelope (within half a unit of Excel's 15th digit or 1e-9 of the math; an error against a number is
+    outside; 50-digit roots at the double nearest each literal, per SPEC-0029, in the case's `math.tsv`): the rule is inside on 207 of 240 and the hold on 204. The rule brings
+    A15, A26, A64, A76 and A121 in, and moves A152 and A194 out.
+    - A194, `RATE(1,-57090142708.1999,57155400514.2199,-66085711.1548055,1,-0.0413434246245947)`, is `#NUM!` after
+      the restart. Excel returns 0.012686683557386938 and the hold 0.012686683564913244.
+  - So the rule beats the hold on the bit (48 against 12) and at 4 ulp (84 against 76). It is one cell behind at 15
+    digits (103 against 104).
+  - Moving two points out of the envelope fails the Gate A envelope item (decision 0188 R2, as reviewer check 7 applies
+    it), so the rule is not cleared. Which non-error point leaves is sensitive at the 1e-9 level: with roots computed
+    from the decimal literals it is A144, not A152. A194 leaves either way. It stays in
+    the code for now, and T-3850 must narrow it or revert it. A train-side rate on firing cells only, comparable to
+    this probe's 20% bit-exact, has not been computed yet (R4.1); T-3850 owns that too.
+  - On 180 of the 240 Excel's value is neither path's: in the noise floor its iterates leave the model's (T-3850).
 - Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
   in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
   Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.

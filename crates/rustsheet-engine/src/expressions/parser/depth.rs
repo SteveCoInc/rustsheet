@@ -24,8 +24,9 @@ pub const MAX_FORMULA_DEPTH: usize = 256;
 
 /// Most written groups a formula may nest (`((...(x)...))`): Excel loads 256 directly nested
 /// parentheses and refuses 257, stored and typed (probes/t3172-paren-256, T-3172). Groups split
-/// into several runs (`(1+((...)))`) count together (unprobed), and so do levels of `-(`, which
-/// Excel also nests to 256 and refuses at 257 (probes/t3266-nested-paren-*, T-3338). A run, signs
+/// into several runs (`( ((...)))`, `(1+((...)))`) count together, and a call's own parenthesis
+/// is not a group (`ABS(` around 256 groups loads; probes/t3870-*, T-3870), and so do levels of
+/// `-(`, which Excel also nests to 256 and refuses at 257 (probes/t3266-nested-paren-*, T-3338). A run, signs
 /// between its `(`s included, is parsed in a loop ([`Parser::parse_parenthesis_run`]), so this
 /// bound is Excel's, not the stack's.
 pub const MAX_PARENTHESES: usize = 256;

@@ -527,7 +527,9 @@ Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-colla
   letter position (`"¹"` > `"1"`, `"¹a"` < `"1b"`, `"¹b"` > `"1a"`; XMATCH of `"1"` against `¹` `#N/A`); `ç đ ð ł ñ ı` are accents on `c d d l n i` (`"ða"` < `"db"`, > `"da"`).
   CORRECTED: `þ` is an expansion equal to `th`, not an accent on `t` (`"þ"="th"`, `"þ"&"a"` = `"t"&"h"&"a"` TRUE, `"þa"` > `"tb"`, `XMATCH("th","þ",0)` = 1). Implemented (T-1669): `cmp_text_excel` makes `þ` an `expansion('t','h')`.
   A single-cell reference as XMATCH `lookup_array` or XLOOKUP `lookup_array`/`return_array` is a one-cell vector, not `#VALUE!`/`#N/A` (probes/text-collation-longer A96, A97, A102, A104, A105, A107).
-Tasks: T-0220, T-0244, T-1469, T-1590, T-1594, T-1595, T-1662, T-1669, T-3114, T-3154
+- The middle dot `·` (U+00B7) is an ordinary symbol, not skipped and not equal to `""`: it sorts just after `µ` and before `…`
+  (`§ < © < ¬ < ® < ° < µ < · < … < • < 0`; `"·" < "··" < "·a" < "·b"`, `"a·" < "a·b" < "ab"`; XMATCH/COUNTIF find it only as itself). T-3896; probes/t3896-collation-middle-dot (excel-graph 2026-11-03, Calc!A1:E54). Implemented in `PUNCTUATION`.
+Tasks: T-0220, T-0244, T-1469, T-1590, T-1594, T-1595, T-1662, T-1669, T-3114, T-3154, T-3896
 
 ## Double unary minus coerces to a number
 Rule: `--x` is not a no-op. Each unary minus coerces its operand to a number: `--FALSE` = 0,
