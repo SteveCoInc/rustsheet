@@ -173,25 +173,30 @@ impl Model {
                 .map(|(element, &bound)| model.element_class(element, bound, cell))
                 .collect()
         };
-        Err(self.lift_by_class(&positions, classify, |model, elements| {
-            for ((&index, element), class) in
-                indices.iter().zip(elements).zip(classify(model, elements))
-            {
-                // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
-                // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
-                if let Some(slot) = scalar_args.get_mut(index) {
-                    *slot = if class == Class::OtherText {
-                        Node::ErrorKind(Error::VALUE)
-                    } else {
-                        literal(element)
-                    };
+        Err(self.lift_by_class(
+            &positions,
+            |_| None,
+            classify,
+            |model, elements| {
+                for ((&index, element), class) in
+                    indices.iter().zip(elements).zip(classify(model, elements))
+                {
+                    // Text that is no number is `#VALUE!` in its argument's place, ahead of a later
+                    // argument's error value (`{1,"x",#N/A}` over a `1/0` relationship: A97).
+                    if let Some(slot) = scalar_args.get_mut(index) {
+                        *slot = if class == Class::OtherText {
+                            Node::ErrorKind(Error::VALUE)
+                        } else {
+                            literal(element)
+                        };
+                    }
                 }
-            }
-            match call(model, &scalar_args, cell) {
-                CalcResult::Array(output) => at(&output, 0, 0),
-                other => calc_result_to_array_node(other),
-            }
-        }))
+                match call(model, &scalar_args, cell) {
+                    CalcResult::Array(output) => at(&output, 0, 0),
+                    other => calc_result_to_array_node(other),
+                }
+            },
+        ))
     }
 
     /// `node` evaluated and put back as a literal: a value, or an array as an array constant.
@@ -231,10 +236,13 @@ impl Model {
     /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
     /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
     /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
-    /// filter serves one element").
+    /// filter serves one element"). An element `settled` answers is that value, spent filter or
+    /// not, and spends nothing (an error `field_relationship` element, which GROUPBY returns
+    /// before it filters: probes/t3880-groupby-scalar-filter-edges G!A89:B93).
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
+        settled: impl Fn(&E) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
@@ -244,6 +252,10 @@ impl Model {
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
+                if let Some(value) = settled(element) {
+                    cells.push(value);
+                    continue;
+                }
                 if self.groupby_filter_spent {
                     cells.push(ArrayNode::Error(Error::VALUE));
                     continue;

@@ -1941,6 +1941,7 @@ C	probes/t3870-space-256-stored.case.json	3
 C	probes/t3870-space-256-typed.case.json	3
 C	probes/t3870-space-257-typed.case.json	2
 C	probes/t3875-snap-groupby-two-arg.case.json	30
+C	probes/t3880-groupby-scalar-filter-edges.case.json	93
 C	probes/t3881-imcsch-band-edge.case.json	80
 C	probes/t3881-imcsch-flip-start-negative.case.json	24
 C	probes/t3881-imcsch-flip-start.case.json	56
