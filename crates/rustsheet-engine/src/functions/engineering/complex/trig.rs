@@ -325,9 +325,9 @@ fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
 /// -sgn(x)·IMSECH(z) digit for digit, and a real z (y = 0 or subnormal) is sgn(x)·IMSECH(x):
 /// 2x above 709 or below -708, the cuts of IMCOSH's and IMSINH's log form ([`hyperbolic_log_form`])
 /// applied to 2x (engineering.md "IMCSCH's negated band", T-3881). Excel brackets both edges to
-/// the 15-digit input grid: `IMCSCH(COMPLEX(354.5,1))` is
-/// 1.19199101546952E-154-1.85641601521147E-154i, the true csch, and `(354.50001,1)` is negated;
-/// `(-354,1)` is true and `(-354.0001,1)` negated (probes/t3881-imcsch-flip-start,
+/// one step of the 15-digit input grid: `IMCSCH(COMPLEX(354.5,1))` is
+/// 1.19199101546952E-154-1.85641601521147E-154i, the true csch, and `(354.500000000001,1)` is
+/// negated; `(-354,1)` is true and `(-354.000000000001,1)` negated (probes/t3881-imcsch-flip-start,
 /// -flip-start-negative, -band-edge, t3912-imcsch-band-edges, excel-graph).
 fn in_csch_negated_band(x: f64) -> bool {
     2.0 * x > 709.0 || 2.0 * x < -708.0
