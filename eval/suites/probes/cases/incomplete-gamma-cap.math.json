@@ -6,13 +6,17 @@
   "dps": 80,
   "input_sha256": "79119f0b48c5efb575ba17ab03c8574fd5ece29591b1c728f35e22e20481ae13"
  },
- "sheets": {},
- "skipped": {
+ "sheets": {
   "Sheet1": {
    "E12": {
-    "f": "=POISSON.DIST(337672413111,337672000000,TRUE)",
-    "why": "not converged or too slow"
-   },
+    "t": "n",
+    "v": "0.76143264489404006307887930505143129323644668932612",
+    "f": "=POISSON.DIST(337672413111,337672000000,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
    "E14": {
     "f": "=CHISQ.INV(0.26774,1312890000)",
     "why": "no single value"
