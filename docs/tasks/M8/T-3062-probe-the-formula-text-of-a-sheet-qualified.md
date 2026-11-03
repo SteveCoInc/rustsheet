@@ -38,4 +38,4 @@ Three probe cases fill the four shapes (excel-graph). The engine now keeps `S!#R
 rename (`rename_sheet_in_node` takes the old name), prints `#REF!#REF!` once S is deleted
 (`Node::SheetRefErrorKind::missing`, set by the parser) and spells a typed sheet name as the workbook
 does. The unqualified wholly-deleted range already matched. A typed `NoSuchSheet!#REF!` is a Graph
-external-link artifact and is left out of the probe. Eval: the three new probes pass (+16 cells).
+external-link artifact and is left out of the probe. Eval: the three new probes pass (15 checked cells).

@@ -904,6 +904,8 @@ S!A2); a typed `=sheet1!#REF!` / `=SUM(SHEET1!#REF!)` prints the sheet as the wo
 `=Sheet1!#REF!` (Sheet1!A2, A6). Not evidence: Graph prints a typed `=NoSuchSheet!#REF!` as an
 external-link path (a Graph artifact, so that cell is not in the probe); the engine treats a name
 no sheet has like a deleted sheet (`#REF!#REF!`).
+Unprobed (T-3899, desktop): that typed name, a defined-name body `S!#REF!` after a rename, and a duplicated
+sheet holding `S!#REF!` (the copy's name is rewritten, as for any reference to the source).
 Implemented in: `consume_range` in crates/rustsheet-engine/src/expressions/lexer/mod.rs (formula; the
 prefix is kept as `Node::SheetRefErrorKind` in the written tree only), `ParsedDefinedName::ErrorLiteral` in model.rs / new_empty.rs / defined_names.rs (name body), `fn_sheet` (SHEET of such a name).
 Tasks: T-0152, T-0169, T-2855
