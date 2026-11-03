@@ -1,0 +1,32 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3064: tilde-escaped criteria with positive matches. The data holds the literal texts x*, ? and x~* so the generator's \"x~*\" and \"~?\" criteria (which its Data pool never matches) count and sum real hits.",
+ "tags": [
+  "M2",
+  "probe",
+  "criteria",
+  "T-3064"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "B1": "x*",
+    "B2": "?",
+    "B3": "x~*",
+    "B4": "xy",
+    "C1": 1,
+    "C2": 2,
+    "C3": 4,
+    "C4": 8,
+    "A1": "=COUNTIF(B1:B4,\"x~*\")",
+    "A2": "=COUNTIF(B1:B4,\"~?\")",
+    "A3": "=SUMIF(B1:B4,\"x~*\",C1:C4)",
+    "A4": "=SUMIFS(C1:C4,B1:B4,\"~?\")",
+    "A5": "=COUNTIFS(B1:B4,\"x~*\",C1:C4,\">0\")",
+    "A6": "=COUNTIF(B1:B4,\"x~~*\")"
+  }
+  }
+ ],
+ "check": ["S!A1","S!A2","S!A3","S!A4","S!A5","S!A6"]
+}

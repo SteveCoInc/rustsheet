@@ -1,0 +1,47 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3490: three legacy-formula shapes (stored without the dynamic-array flag) holding a spill reference. A1 =SEQUENCE(3) spills A1:A3; B1:B3 hold 10, 20, 30. C2 and C5 hold the legacy =SIN(A1#)+B1:B3 (a spill reference mixed with a plain range), D2 and D5 the legacy bare =A1#, E2 and E5 the legacy scalar host =SUM(A1#)+B1:B3, on and off the spill's rows. F:H read FORMULATEXT (whether Excel adds an @), I:K ISBLANK of the cell below (whether the formula spills).",
+  "tags": [
+    "M7",
+    "arrays",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=SEQUENCE(3)",
+        "B1": 10,
+        "B2": 20,
+        "B3": 30,
+        "C2": "=SIN(A1#)+B1:B3",
+        "D2": "=A1#",
+        "E2": "=SUM(A1#)+B1:B3",
+        "F2": "=FORMULATEXT(C2)",
+        "I2": "=ISBLANK(C3)",
+        "G2": "=FORMULATEXT(D2)",
+        "J2": "=ISBLANK(D3)",
+        "H2": "=FORMULATEXT(E2)",
+        "K2": "=ISBLANK(E3)",
+        "C5": "=SIN(A1#)+B1:B3",
+        "D5": "=A1#",
+        "E5": "=SUM(A1#)+B1:B3",
+        "F5": "=FORMULATEXT(C5)",
+        "I5": "=ISBLANK(C6)",
+        "G5": "=FORMULATEXT(D5)",
+        "J5": "=ISBLANK(D6)",
+        "H5": "=FORMULATEXT(E5)",
+        "K5": "=ISBLANK(E6)"
+      },
+      "legacy_formulas": [
+        "C2",
+        "D2",
+        "E2",
+        "C5",
+        "D5",
+        "E5"
+      ]
+    }
+  ],
+  "expected": {}
+}

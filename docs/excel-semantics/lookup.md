@@ -737,6 +737,24 @@ one-to-one fold above still keeps the length:
   (U+003F) finds U+0524 by MATCH, and `~` (U+007E) finds empty text (digits 3, 1 and 2); `=` equals none of them to
   either. UNICHAR is an error at U+0000, the surrogates, U+FDD0-U+FDEF, U+FFFE and U+FFFF (the e digits).
 
+**U+0001 is a wildcard** (T-3921, probes/t3921-match-u0001-wildcard, excel-graph 2026-11-03; D1:D6 = zzz, abc, ab, empty
+text, U+0524, a+U+0001+c; S = U+0001). Rule:
+- In MATCH (type 0), VLOOKUP and HLOOKUP (FALSE) and XMATCH's wildcard mode (2), every S acts as `*` when the key, read
+  after its `~` escapes, starts with S and holds no `*`; otherwise S is a literal character. So `S` and `S&S` find
+  zzz (1), `S&"b"` ab (3), `S&"B"` ab (3), `S&"c"` and `S&"bc"` abc (2), `S&"b"&S` and `S&"a"&S&"c"` abc (2), `S&"?"`
+  zzz (1) and `"~"&S` zzz (1), while `S&"x"`, `"a"&S`, `"ab"&S`, `"z"&S`, `"q"&S`, `" "&S&"b"` and, with a `*`,
+  `S&"*"` and `"*"&S` are `#N/A`. `"a"&S&"c"` finds only the a+U+0001+c cell (6), not abc (Calc!A11:C20, O11:O20,
+  A21:B34).
+- COUNTIF uses the same rule, but only for a criterion that has a `*` or `?` and so is a wildcard criterion at all:
+  `COUNTIF(D1:D6,S&"?")` is 5 (every non-empty text, as `*?`), `S&"*"` 0, and keys without `*` or `?` compare
+  literally (`S` 0, `"a"&S&"c"` 1; Calc!P11:P20, N21:N34).
+- SEARCH reads every S as `*`, wherever it sits and beside a `*` too: in "xabcx", `"a"&S` and `"ab"&S` are 2, `S&"*"`,
+  `"*"&S` and `"~"&S` 1, `"q"&S`, `"z"&S` and `S&"zz"` `#VALUE!` (Calc!Q11:Q20, C21:C34).
+- XMATCH's exact mode (0) never does: only `"a"&S&"c"` matches (the same cell, 6; Calc!N11:N20). U+0002 is never a
+  wildcard (row 20).
+Implemented in `WildcardPattern::new` and `WildcardPattern::for_search` (crates/rustsheet-engine/src/functions/criteria.rs).
+Status: VERIFIED (excel-graph).
+
 **Equivalence classes beyond one-to-one case pairs** (Calc!T1:U1232, every character of Greek, Greek Extended, Latin
 Extended-D, Cyrillic Extended-B, Coptic, Cherokee and its supplement, Georgian, Cyrillic Extended-C with Georgian
 Mtavruli and Georgian Supplement, each looked up against its whole block; the relation is symmetric). Besides the
@@ -755,6 +773,10 @@ weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp
   and not their ordinary letters (Calc!K13:O21, K40:O85).
 Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
 position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
+Hebrew `צ` equals its final form `ץ`: exact MATCH of `"צ"` finds the `ץ` row before its own
+(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other final letters are unprobed and stay apart
+(UNVERIFIED). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
+(C110 = 110), while `=` and XMATCH equal them (coercion.md "Scripts and symbol blocks beyond T-3276").
 Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
 one, supplementary characters stay themselves, the classes above, then SEARCH's `fold_char` unless it lands on a
@@ -1212,7 +1234,7 @@ call's result), not a value. What the caller sees depends on who reads the eleme
   values), and a lifted count over such a grid is unprobed (T-2212). Full table with cells: SPEC-0014 "Excel behavior to match" (probes/reference-lift-consumers,
   -b1c, -b1d, -b2, excel-graph, 2026-10-19, T-1955). COUNTIFS, AVERAGEIF and MAXIFS lift per element too
   (T-2065 probes; ours since T-2823); see "Statistical aggregates over a lifted OFFSET" below for STDEV.S,
-  VAR.S, SUMSQ, AVERAGEA, MAXA, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
+  VAR.S, SUMSQ, AVERAGEA, MAXA, MINA, VAR.P, STDEV.P, the VARA family, CONCAT, MEDIAN, LARGE and SMALL. AVERAGEIFS and MINIFS are unprobed.
 - Per element, the scalar rules hold: an element off the sheet is `#REF!` (`OFFSET(A1,{0;-1},0)`, second element);
   `INDIRECT("R2C1",{TRUE;FALSE})` is `#REF!`, A2; a scalar error argument next to the lifted one is that error in every
   element (`INDEX(OFFSET(A1,{0;1},NA()),1,1)` is `#N/A`).
@@ -1517,12 +1539,19 @@ Evidence: probes/t2065-lift-* (one formula per workbook, excel-graph 2026-10-26;
   `MAXA(OFFSET(A4,{0;3},0))` 7, `AVERAGEA(OFFSET(A5,{0;1},0))` (blank, TRUE) `#DIV/0!` (TRUE not counted as 1) and
   `MAXA(OFFSET(A5,{0;1},0))` 0. This also explains the 0 of the probe below (text 0, blank and TRUE skipped).
 - `AVERAGEA` and `MAXA(OFFSET(A4,{0;1;2},0))` over "5", blank, TRUE are 0: the text is not read as 5 and TRUE not as 1; which elements count is open (the data holds no number).
+- T-3533 (probes/t3533-lift-*, E1, excel-graph 2026-11-03, one formula per workbook, same data plus A8 -3): VAR.P,
+  STDEV.P, legacy VAR, VARP and STDEVP, MINA, VARA, VARPA, STDEVA and STDEVPA all read each element's top-left cell (`MINA(OFFSET(A1,{0;1},0,1,2))`
+  is 1, `STDEV.P(..)` 49.5, `VARA(..)` 4900.5) and skip a text, blank or TRUE element, the A-variants too (as a plain
+  reference argument they count text as 0 and TRUE as 1; references.md T-1003/T-1211): `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7, -3 is 50 (the variance of 7
+  and -3; with text as 0 it would be 26.33, as 5 it would be 28), `VARPA(OFFSET(A6,{0;1;2},0))` over TRUE,
+  7, -3 25, `MINA(OFFSET(A4,{0;3},0))` over "5", 7 is 7 and `MAXA(OFFSET(A4,{0;4},0))` over "5", -3 is -3, so MAXA's
+  text is skipped, not 0. Only AVERAGEA counts a text element as 0 (above).
 Status: VERIFIED (excel-graph) for the values above. COUNTIFS, AVERAGEIF and MAXIFS implemented (T-2823). STDEV.S,
 VAR.S and SUMSQ implemented (T-2824, `GridReading::TopLeft`: each element's top-left cell, as SUM), and AVERAGEA and
 MAXA (`GridReading::TopLeftElements`: that cell read as an array element, so a blank or TRUE is skipped and AVERAGEA's
-text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). UNVERIFIED: legacy VAR
-(as VAR.S) and MAXA's text (skipped, or 0, the probes cannot tell). VAR.P, STDEV.P, MINA and the VARA family keep
-the value view, unprobed (T-3533).
+text is 0). Legacy STDEV follows STDEV.S (probes/t2577-indirect-ref-array Calc!A157 is 0). T-3533: VAR.P and STDEV.P
+take `GridReading::TopLeft` (legacy VAR already shared VAR.S's; legacy VARP and STDEVP share VAR.P's and STDEV.P's), MINA and the VARA family `GridReading::TopLeftElements`
+(their array rule counts only numbers, so text, blanks and TRUE are skipped); all 61 t3533 probes pass.
 
 ### MEDIAN, LARGE and SMALL over a lifted OFFSET
 Rule: each is `#VALUE!` over a lifted OFFSET (an array of references), like CONCAT and unlike STDEV.S, VAR.S and SUMSQ

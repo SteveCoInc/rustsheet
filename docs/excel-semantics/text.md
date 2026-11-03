@@ -729,7 +729,10 @@ separator, so the decimal separator is looked for in the text without it: `NUMBE
 CHAR(9), CHAR(10) and CHAR(13)), and `NUMBERVALUE("1 2,5"," ",",")` = 125, its "," a group separator with no decimal
 separator after it. Other characters are not removed, nor trimmed at the ends: CHAR(1), CHAR(11), CHAR(12), NBSP
 (CHAR(160)), U+3000 and U+202F inside the digits are `#VALUE!`, and so are `NUMBERVALUE(UNICHAR(160)&"1.5")`,
-`("1.5"&UNICHAR(160))` and `(UNICHAR(12288)&"1.5")` (ours 1.5; VALUE's shared reader trims them). CHAR(11), CHAR(12)
+`("1.5"&UNICHAR(160))` and `(UNICHAR(12288)&"1.5")` (ours 1.5; VALUE's shared reader trims them). As a separator they are read at the ends too (T-3746, probes/t3746-numbervalue-nbsp-separator): the decimal
+separator is replaced before the ends are checked, so with NBSP or U+3000 as the decimal separator `("1"&sep,sep)` = 1,
+`(sep&"5",sep)` = 0.5 and `("1"&sep&"5",sep)` = 1.5; as the group separator `(sep&"234.5",".",sep)` = 234.5 and
+`("1"&sep&"234.5",".",sep)` = 1234.5, but one after the decimal separator stays and `("234.5"&sep,".",sep)` is `#VALUE!`. CHAR(11), CHAR(12)
 and U+202F at the ends are unprobed. VALUE does not remove a tab: `VALUE("1"&CHAR(9)&"234")` is `#VALUE!`.
 Percent: one leading `%` divides by 100 as a trailing one does, also after a sign or `(`: `NUMBERVALUE("%1.5")` =
 0.015, `("%1.5%")` = 0.00015, `("-%1.5")` = `("%-1.5")` = `("(%1.5)")` = `("%(1.5)")` = -0.015, `("+%1.5")` =

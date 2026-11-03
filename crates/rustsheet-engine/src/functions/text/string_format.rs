@@ -263,21 +263,24 @@ impl Model {
         if text.is_empty() {
             return Ok(0.0);
         }
-        // NBSP and U+3000 are not trimmed, where the shared reader below would trim them:
+        // The decimal separator is read before any "%": with the decimal separator "%",
+        // `NUMBERVALUE("%5","%")` is 0.5, `("5%","%")` 5 and `("%5%","%")` #VALUE!
+        // (probes/t3647-numbervalue-whitespace-decimal A13-A16).
+        let cleaned = text.replace(decimal_sep, ".");
+
+        // NBSP and U+3000 are not trimmed, where the shared reader below would trim them, but
+        // only those left after the decimal separator is replaced: as the decimal separator they
+        // are read at the ends too (probes/t3746-numbervalue-nbsp-separator A3, A5, A9, A11):
         // `NUMBERVALUE(UNICHAR(160)&"1.5")`, `("1.5"&UNICHAR(160))` and `(UNICHAR(12288)&"1.5")`
         // are #VALUE! (probes/t3647-numbervalue-whitespace-decimal A25-A27).
         let untrimmed = |c: char| matches!(c, '\u{a0}' | '\u{3000}');
-        if text.starts_with(untrimmed) || text.ends_with(untrimmed) {
+        if cleaned.starts_with(untrimmed) || cleaned.ends_with(untrimmed) {
             return Err(CalcResult::new_error(
                 Error::VALUE,
                 cell,
                 "Cannot parse number".to_string(),
             ));
         }
-        // The decimal separator is read before any "%": with the decimal separator "%",
-        // `NUMBERVALUE("%5","%")` is 0.5, `("5%","%")` 5 and `("%5%","%")` #VALUE!
-        // (probes/t3647-numbervalue-whitespace-decimal A13-A16).
-        let cleaned = text.replace(decimal_sep, ".");
 
         // A trailing run of "%" divides by 100 each; text of "%" signs alone is 0: `"%"` and
         // `"%%"` (probes/t3647-numbervalue-percent-and-controls A10, A11).

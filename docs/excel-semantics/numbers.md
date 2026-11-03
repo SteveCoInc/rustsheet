@@ -508,6 +508,19 @@ SUMX2MY2 overflows on a square, not on the result: `SUMX2MY2({1.5E+154},{1.4E+15
 difference of the squares (2.9E+307) is finite, and so is `SUMX2MY2({1E+155},{0})`; the control
 `SUMXMY2({1.5E+154},{1.4E+154})` is 1.0000000000000033E+306 and `SUMXMY2({1E+155},{0})` is `#NUM!`
 (probes/t3808-m5-aggregate-overflow Calc!A178:C181).
+SUMPRODUCT, SUMX2MY2 and SUMX2PY2 overflow at a **running** sum, like SUM (probes/t3677-sumx-running-overflow-snap,
+excel-graph, 2026-11-03, T-3677; B = ERROR.TYPE): `SUMPRODUCT(F1:F3,G1:G3)` (F1:F3 = 9E+307, 9E+307, -9E+307; G = 1) and
+`SUMPRODUCT(F1:F3)` are `#NUM!` though the exact total is 9E+307, while the order 9E+307, -9E+307, 9E+307 gives 9E+307
+(A1:A3). SUMX2MY2 adds one x^2-y^2 per pair, not SUMX2 - SUMY2: the pairs (1.2E+154, 0), (1.2E+154, 0), (0, 1.2E+154) are
+`#NUM!`, the same pairs in the order (1.2E+154, 0), (0, 1.2E+154), (1.2E+154, 0) give 1.4400000000000002E+308, and two
+(1.2E+154, 1.2E+154) pairs give 0 (A4:A6; SUMX2 - SUMY2 would overflow on the last two). `SUMX2PY2` over (1.2E+154, 0),
+(0, 1.2E+154), (1.2E+154, 0) is `#NUM!` (A7), and so are `SUMX2PY2({1.2E+154},{1.2E+154})` (the term x^2+y^2, A20) and
+`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2
+(which could overflow where the term does not). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
+1+2^-52, `SUMX2MY2(J1:J2,K1:K2)` is -4.440892098500626E-16 (2 ULP of 1), `SUMX2MY2(K1:K2,J1:J2)` +4.440892098500626E-16 and
+the one pair `SUMX2MY2(J1,K2)` -4.440892098500626E-16 (A8, A10, A11); 1+4*2^-52 gives -1.7763568394002505E-15 (A9).
+`SUMPRODUCT(P1:P3,{1;1;1})` over 0.1, 0.2, -0.3 is 5.551115123125783E-17 (A17, T-3048's no-snap rule). The engine matches
+every cell of A1:A11 and A16:A20.
 The other SUBTOTAL and AGGREGATE codes overflow the same way (probes/t3808-m5-aggregate-overflow, excel-graph,
 2026-11-02, T-3808; A = value, B = `&""`, C = ERROR.TYPE): SUBTOTAL 101 and 109 over F1:F2 and F1:F3 and 106 over
 F5:F6 and F1:F2 are `#NUM!` (Calc!A20:C25). AGGREGATE 1, 7, 8, 10 and 11 over F1:F2, 7, 8, 9, 10 and 11 over F1:F3,
@@ -882,6 +895,11 @@ Evidence: probes/precision-and-rounding A14; probes-numeric `number-to-text/*/1e
 probes/text-number-words H6, H7, K1, K4, K5 (`="1e-308"+0` is 0).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
+Exception (T-3942, probes/seriessum-subnormal-power-and-term B15, A16 and probes/seriessum-subnormal-term-sum-and-power-points A3:B4): `x^2`
+for x = 1E-160, 1E-155 and 1.1E-155 keeps its subnormal result, see "SERIESSUM: a power or term below the smallest normal double is 0;
+`^` keeps its subnormal at x^2"; other `^` results flush (`0.5^1074`, `0.1^310`, `(-0.5)^1073`, "Integer exponents beyond 360"
+item 1, probes-numeric/power-large-integer-exponents B103, B107, B117, B119) and so does a negative exponent (`2^-1074` B89, `2^-1023`
+term-sum B5, subnormal-function-results C16).
 Per function group (T-0189, VERIFIED, probes/subnormal-function-results, excel-graph 2026-10-06;
 `C` companion cells `(x)=0` tell a true 0 from a kept subnormal, since the saved file, and so the Graph value,
 holds 0 (decision 0089) and
@@ -987,6 +1005,10 @@ SUMSQ flushes each square too (T-1057, VERIFIED, probes/subnormal-sumsq-sumprodu
 The order does not matter: `SUMSQ(1E-150,1E-155)` is also exactly 1E-300, so it is each square that is flushed, not the running sum.
 SUMPRODUCT with three arrays flushes after each factor, left to right: `SUMPRODUCT({1E-200},{1E-110},{1E+300})` is 0 while
 `SUMPRODUCT({1E-200},{1E+300},{1E-110})` is 1E-10.
+SUMX2MY2, SUMX2PY2 and SUMXMY2 flush each square the same way (probes/t3677-sumx-running-overflow-snap A12:A15,
+excel-graph, 2026-11-03, T-3677): with M1:M2 = 1E-155, 1E-150 and N1:N2 = 0, `SUMX2PY2(M1:M2,N1:N2)`,
+`SUMX2MY2(M1:M2,N1:N2)` and `SUMXMY2(M1:M2,N1:N2)` are exactly 1E-300 and `SUMX2MY2(N1:N2,M1:M2)` is -1E-300 (the 1E-310
+square is dropped). The engine matches since T-3969.
 A subnormal cell constant reads as 0 (T-2016, T-2228, VERIFIED, probes/subnormal-cell-constants, excel-graph 2026-10-21): a
 number constant of magnitude below 2.2250738585072014E-308 (5E-324, 2.2E-308, 1E-310, and the negatives -5E-324, -1E-310) in a loaded workbook (an xlsx `<v>`; typing
 one in is unprobed) is `=0` TRUE and `ISNUMBER` TRUE, `*1E+300`
@@ -1541,7 +1563,7 @@ itself, not 1/n: `(-8)^(1/3+8·2^-54)` is -2.0000000000000018.
   takes the limit on |1/y|.
 - Even reciprocals (`1/4 + 2^-55`, `1/2^20`) are #NUM!; `3/9`, `2/6` and `1/(-3)` are odd roots like 1/3 and -1/3.
 Overflow of a non-zero base is #NUM! (`10^309`, `(-10)^309`, `1E300^1.5`, `(-1E300)^3`, `2^1024`) and underflow follows
-"Non-integer exponents" (`1E-300^-1.5` #DIV/0!, `10^-309` 0). The operator `^` and POWER agree on every cell probed: the
+"Non-integer exponents" (`1E-300^-1.5` #DIV/0!, `10^-309` 0). The operator `^` and POWER agree on every cell probed here (not on a subnormal `x^2`, "SERIESSUM: a power or term below the smallest normal double is 0"): the
 odd-root cut, overflow, zero (`0^-1` #DIV/0!, `0^-0.5` #DIV/0!), negative bases (`(-8)^0.5` #NUM!), the 2^32 - 1 exponent limit,
 text (`"2"^2` = 4, `"a"^2` #VALUE!, `""^2` #VALUE!), logicals (`TRUE^2` = 1), blank cells (`Z99^Z99` #NUM!, `Z99^-1` #DIV/0!) and
 errors (`NA()^0` #N/A, `(1/0)^0` #DIV/0!).
@@ -1860,6 +1882,7 @@ Implemented (T-2392): `integer_power` in arithmetic/power.rs leaves |n| >= 2^32 
 Tasks: T-2392
 
 ### Integer exponents beyond 360, subnormal results, base 10 (T-1311)
+Note (T-3942): `x^2` at x = 1E-160, 1E-155 and 1.1E-155 keeps its subnormal where the chains below flush ("SERIESSUM: a power or term below the smallest normal double is 0").
 Rule: the square-and-multiply rule above holds for every integer exponent below 2^32 - 1 (from there on see
 "Integer exponents from 2^32 - 1: exp(y·ln x)" above; the cells past it here agree with both) and
 every base except 10 (about 280 cells across `1.0000001`, `0.9999999`, `1.5`, `2`, `3`, `5`, `7`,
@@ -2509,6 +2532,31 @@ Evidence: probes/seriessum-negative-x-fractional-power (25 cells, excel-graph, 2
 Implemented in: `seriessum_of` (crates/rustsheet-engine/src/functions/math_and_trigonometry/seriessum.rs, T-2380)
 Status: VERIFIED (excel-graph)
 Tasks: T-2380
+
+## SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal at x^2 (T-3942)
+Rule: SERIESSUM flushes both a power `x^(n+i*m)` and a term `c_i*x^(n+i*m)` that falls below the smallest normal double to a true 0
+(the `=0` companion is TRUE, decision 0042), for a positive and a negative x. `SERIESSUM(1E-200,2,1,{1})` (power 1E-400) and
+`SERIESSUM(1E-154,2,0,{1E-10})` (power 1E-308, subnormal) are 0; so is `SERIESSUM(1E-150,2,0,{1E-10})`, whose power 1E-300 is
+normal and whose term 1E-310 is subnormal. A subnormal power is flushed before the coefficient multiplies it, not after:
+`SERIESSUM(1E-160,2,0,{1,1E+300})` and `SERIESSUM(1E-160,2,0,{1E+300})` are 0, not 1E-20. A flushed term beside a normal one
+drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200); its second power 1E-400 is 0 in any
+arithmetic, so that cell shows a zero term dropping out, not the flush. The flush is per term, not on the sum: a subnormal term
+beside a normal one is dropped (`SERIESSUM(1E-150,2,0,{1E-10,23000})` is exactly 2.3E-296, where the sum would be
+2.30000000000001E-296; probes/seriessum-subnormal-term-sum-and-power-points A1), and normal terms that cancel to a subnormal sum keep it (`SERIESSUM(1E-150,2,0,{3E-8,-2.99999E-8})`,
+`=0` companion FALSE; seriessum-subnormal-term-sum-and-power-points A2, B2). This confirms the per-term flush T-3676's Gate A definition
+(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator keeps the subnormal at the squaring points probed: `=1E-160^2` keeps 1E-320 (`=(1E-160^2)=0` is FALSE),
+`=1E-155^2` and `=(1.1E-155)^2` too (term-sum A3:B4), and `=1E-160^2*1E+300` is 9.99988867182683E-21, where
+`POWER(1E-160,2)*1E+300` is 0. Other `^` results flush, so this is not a general rule: the positive-exponent chains
+`=(0.5)^1074`, `=(0.1)^310`, `=(-0.5)^1073` are true zeros (probes-numeric/power-large-integer-exponents B103, B107, B117, B119,
+"Integer exponents beyond 360" item 1), and so is a negative exponent whose result is subnormal (`=(2)^-1074` B89, `=(2^-1023)=0`
+term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C16); `5^-440` (2.839213766779712E-308) is normal.
+Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
+`1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
+Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
+Ours: the power matches (every power cell passes); a subnormal term is flushed per term since T-3949 (power-and-term A2, A9; beside another term, term-sum A1), and `^` flushes
+the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
+Status: VERIFIED (excel-graph)
+Tasks: T-3942, T-3949, T-3950
 
 ## SUMXMY2 is 1 ulp above the correctly rounded sum on a 1.5E+16 result (T-2384)
 Observation: `SUMXMY2(C10:E12,C6:E8)`, whose numeric pairs are (-1, 123456789.123), (7, 1E-15) and (-1, 0.3), is

@@ -526,14 +526,24 @@ row. VERIFIED for the cells cited:
   eleven spellings of 3 (E11 and E136:E145 = 11): the criterion reads each as the number 3.
   Implemented by T-3917 (rule 7): `element` gives the Gurmukhi, Tamil, Telugu and Khmer digits a
   `digit_variant` weight in this order, and `script_digit_to_ascii` reads them, so number-text coercion
-  takes them in every form of the T-3446 blocks (only the COUNTIF criterion is probed for these four).
+  takes them in every form of the T-3446 blocks. T-3958 probed them (probes/t3958-gurmukhi-tamil-telugu-khmer-digits,
+  excel-graph, 2026-11-03): the forms are in "Script digits in number text (T-3446)" below, and the pairs
+  (Pairs!C1:C28) place the digit 3 of each of the four blocks below `"3a"`, `"4"` and the Arabic-Indic 9, and above
+  `"3"`, the Extended Arabic-Indic 3 and the Devanagari 3 (code-point order of the blocks, weight of the digit
+  first). The engine passes them.
 - **Astral characters and emoji sequences compare unit by unit**, no sequence is one element:
   `"𐀀" < "𝐀" < "🀄" < "🇺" < "🇺🇸" < "👍" < "👍🏽" < "👨" < "👨‍👩‍👧" < "😀"` (ranks 140 to 149);
   the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
   Plane 3's `𰀀` (U+30000) sorts after `😀` and before Hangul (rank 150), plane 2's `𪜀` (U+2A700)
   after `𠀀` (154).
-The engine fails 181 of the 955 cells (known failures in eval/baseline/probes.txt); engine gap T-3917
-(the Thai and Lao digits were T-3895's, fixed there).
+Implemented by T-3917 (every cell of the case passes): `element` (crates/rustsheet-engine/src/functions/util/collation.rs)
+skips `➿ ᡸ ₿` like U+0E83 (a stand-in for T-3904's weightless rule), places `、 。 「 ₩ ₹` in
+`PUNCTUATION`, `symbol` (collation/scripts.rs) orders the math operators `≠ ∑ ∫ ≤`, the geometric shapes, arrows,
+box drawing and the symbols and dingbats, then `•`; `™` is `t` with a weight above every letter, `℃` and `№` the
+letters `c` and `no` with the superscript variant (their places beyond the probed neighbours are UNVERIFIED);
+`ץ` weighs as `צ` and `ﻻ` as `لا`; `script_order` puts Georgian after Armenian (Mkhedruli first), reorders U+0E00
+to U+18AF by Excel's block order with the Gurmukhi `ਹ` and Lao `ໄ ໃ` exceptions, and sorts plane 3 and above with
+planes 1 before Hangul. The unprobed blocks keep code-point order inside the span they fall in (UNVERIFIED).
 
 ### Thai, Lao and the other script digits (T-3895)
 Evidence: probes/t3895-collation-script-digits (excel-graph, 2026-11-03), 191 cells: Calc!A =
@@ -560,7 +570,13 @@ U+0660, Extended Arabic-Indic U+06F0, Devanagari U+0966, Bengali U+09E6, Thai U+
 U+0F20, Myanmar U+1040) of eleven forms each (`123`, `-12`, `1.5`, `12%`, `$12`, `(12)`, `1,234`, `1e3`,
 `2020-1-1`, `12:30`, `1 1/2`, digits in the row's script, the rest ASCII); A = typed, B = ISNUMBER(A),
 D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same text as a formula string.
-Status: VERIFIED.
+Status: VERIFIED. T-3958 adds the Gurmukhi (U+0A66), Tamil (U+0BE6), Telugu (U+0C66) and Khmer (U+17E0) blocks
+(probes/t3958-gurmukhi-tamil-telugu-khmer-digits, same layout, four blocks of eleven forms): all twelve blocks
+behave alike. `+0`, VALUE, NUMBERVALUE and TEXT read every form (the engine passes), and typed text is a number
+(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats seen (A39:A44, raw lines in
+docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)` = -12 `[$-km-KH,1200]0`, `១,២៣៤`
+`[$-km-KH,1200]#,##0`, exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction
+`# ?/?`. The formats of the other shapes and of the Gurmukhi, Tamil and Telugu blocks are UNVERIFIED (not logged).
 - **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
@@ -904,10 +920,11 @@ digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "
 #VALUE!. NUMBERVALUE strips its own percent signs first, so its "%%1.5" stays #VALUE! (the reader now reads the
 leading one, NUMBERVALUE refuses a second).
 Typed into a cell (probes/typed-group-comma-leading-percent, excel-graph 2026-11-02, T-3835, formats in docs/research/typed-group-comma-leading-percent-2026-11-02.md): the same texts give the same numbers and the refused ones stay text (General). Formats: grouped integers `#,##0` (`1,0000`, `01,0000`, `-1,0000`, `1,000,0000`), `#,##0.00` with a decimal (`1,0000.5`); a leading percent `0%` (`%1`, `%-1`, `% 1`, `%1,0000`), `0.00%` with decimals (`%1.5`); `1,0000%` `0%`. The engine matches (the reader is shared with VALUE; test `typed_group_comma_and_leading_percent_formats`).
-Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02).
+Sign before the percent sign and a trailing `$` (probes/t3742-value-percent-currency, excel-graph 2026-11-03, T-3742): VALUE and `+0` of "-%1.5" are -0.015, like "%-1.5" and "(%1.5)"; "%%1.5", "%1.5%", "%", "%$1.5" and "$%1.5" are #VALUE!, "% 1.5" is 0.015. A trailing dollar sign is refused in every form, "1.5$", "1.5 $" and "-1.5$" are #VALUE! for VALUE, `+0` and NUMBERVALUE, while a trailing euro sign reads ("1.5€" is 1.5, as do "$1.5" and "-$1.5").
+Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02), probes/t3742-value-percent-currency (excel-graph, 2026-11-03). Unverified extrapolations: `-%-1.5`, `-% 1.5` and `-%1e2` follow the `%` reader; typed `1.5$`, `-200$` and typed `-%1.5` are unprobed and keep the old typed behavior or share the reader (the `$` refusal is coercion and criteria only: COUNTIF of 1.5 against "1.5$", "=1.5$", "1.5 $", "-1.5$" and "1.5€" is 0, "$1.5" is 1, probes/t3742-value-percent-currency B1:B6).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED
-Tasks: T-3811 (implements), T-3644 (found)
+Tasks: T-3811 (implements), T-3644 (found), T-3742 (sign before the percent, trailing `$`)
 
 ## Percent text is rounded once
 Rule (en-US): number text ending in `%` (VALUE, `0+"…"`, typed cell input) is the decimal text shifted two places and rounded to the nearest double once: `VALUE("23.123%")` = 0.23123, not the double 23.123 divided by 100 (0.23123000000000002). The 15-significant-digit truncation of number text applies before the shift: `12345.6789012345678%` = 123.456789012345. All three paths agree for `23.123%`, `-23.123%`, `0.07%`, `1.005%`, `12345.6789012345678%`, and the e-notation texts `23e-12%` (2.3e-13) and `1.5E-300%` (1.5e-302), and typed input is a number (ISNUMBER TRUE). The `%` operator in a formula (`=23.123%`) is a separate path and is not covered here.

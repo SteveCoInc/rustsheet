@@ -18,7 +18,8 @@ use crate::text::Text;
 /// booleans use the format's text section"). A last section with `@` is the text section too,
 /// whatever the section count (`@" ""q"""` on "x" is "x q", probes/format-doubled-quotes C11;
 /// `TEXT("abc","0;x@")` is "xabc", probes/text-at-token-sections A10, A11, T-1656). Any other
-/// format with fewer than four sections returns the text unchanged; that case is unprobed. A
+/// format with fewer than four sections returns the text unchanged (probes/text-value-kind-sweep
+/// F2:G69, probes/text-value-kind-sweep-b F2:G20). A
 /// result over 255 characters is `#VALUE!` ([`MAX_TEXT_FORMAT_CHARS`]).
 ///
 /// Excel checks the number sections first: a code with an unparsable number section is `#VALUE!`
