@@ -3,7 +3,7 @@ id: T-3253
 title: "Widen the stack margin for 1,023-sign runs: iterative Clone/Drop of sign runs"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
