@@ -210,6 +210,7 @@ ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 ironcalc-calc/STATISTICAL/POISSON.xlsx	1
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/date-text-typed-clock-first-a-period.case.json	6
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
@@ -269,6 +270,8 @@ probes/t3446-script-digits-forms.case.json	92
 probes/t3465-collation-holdout.case.json	62
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
+probes/t3559-collation-unprobed-blocks.case.json	181
+probes/t3584-match-fold-weightless.case.json	673
 probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3643-imlog10-grid.case.json	2
@@ -277,6 +280,13 @@ probes/t3643-imsqrt-grid.case.json	14
 probes/t3647-numbervalue-whitespace-decimal.case.json	1
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3820-lower-sigma-next-char.case.json	216
+probes/t3881-imcsch-band-edge.case.json	22
+probes/t3881-imcsch-flip-start-negative.case.json	12
+probes/t3881-imcsch-flip-start.case.json	20
+probes/t3881-imcsch-overflow-band.case.json	214
+probes/t3883-im-overflow-reciprocal-sweep.case.json	1
+probes/t3906-rate-restart-oos.case.json	137
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	5
 probes/table-edits/table-column-range-delete-end.case.json	5
 probes/table-edits/table-column-range-delete-start.case.json	3

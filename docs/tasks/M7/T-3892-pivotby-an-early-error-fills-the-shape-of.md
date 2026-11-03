@@ -31,10 +31,10 @@ PIVOTBY fills the lifted shape with an early error, as Excel does, when it lifts
 - Owned cells (169 calls, 507 failing cells; each span runs from the call's anchor over
   the failing cells of its spill or lift):
 - gen-m7/05cf579cc6560867.case.json Calc!A4149:B4150, Calc!A4210:B4211, Calc!A5491:B5492, Calc!A5552:B5553, Calc!A6833:B6834, Calc!A6894:B6895, Calc!A8175:B8176, Calc!A8236:B8237, Calc!A9517:B9518, Calc!A9578:B9579, Calc!A10859:B10860, Calc!A10920:B10921
-- gen-m7/37041df35489e178.case.json Calc!A855:B856, Calc!A916:B917, Calc!A2197:B2198, Calc!A2258:B2259, Calc!A3539:B3540, Calc!A3600:B3601, Calc!A4881:B4882, Calc!A6223:B6224, Calc!A6284:B6285
+- gen-m7/37041df35489e178.case.json Calc!A855:B856, Calc!A916:B917, Calc!A2197:B2198, Calc!A2258:B2259, Calc!A3539:B3540, Calc!A3600:B3601, Calc!A4881:B4882, Calc!A6223:B6224, Calc!A6284:B6285, Calc!A4942:B4943
 - gen-m7/410128dc65d03200.case.json Calc!A123:B124, Calc!A184:B185, Calc!A1221:B1222, Calc!A1282:B1283, Calc!A2563:B2564, Calc!A2624:B2625, Calc!A3905:B3906, Calc!A3966:B3967, Calc!A5247:B5248, Calc!A5308:B5309, Calc!A6589:B6590, Calc!A6650:B6651, Calc!A7931:B7932, Calc!A7992:B7993, Calc!A9273:B9274, Calc!A9334:B9335
 - gen-m7/42c026cbec22a61f.case.json Calc!A977:B978, Calc!A1038:B1039
-- gen-m7/4ad4b1c6b2c2b01d.case.json Calc!A1:B2, Calc!A62:B63, Calc!A1343:B1344, Calc!A1404:B1405, Calc!A2685:B2686, Calc!A4027:B4028, Calc!A4088:B4089
+- gen-m7/4ad4b1c6b2c2b01d.case.json Calc!A1:B2, Calc!A62:B63, Calc!A1343:B1344, Calc!A1404:B1405, Calc!A2685:B2686, Calc!A4027:B4028, Calc!A4088:B4089, Calc!A2746:B2747
 - gen-m7/5239df16e9169bec.case.json Calc!A733:B734, Calc!A794:B795, Calc!A2075:B2076, Calc!A2136:B2137, Calc!A3417:B3418, Calc!A3478:B3479, Calc!A4759:B4760, Calc!A4820:B4821, Calc!A6101:B6102, Calc!A6162:B6163, Calc!A7443:B7444, Calc!A7504:B7505
 - gen-m7/547d6192794dbf57.case.json Calc!A733:B734, Calc!A794:B795, Calc!A2075:B2076, Calc!A2136:B2137, Calc!A3417:B3418, Calc!A3478:B3479, Calc!A4759:B4760, Calc!A4820:B4821, Calc!A6101:B6102, Calc!A6162:B6163, Calc!A7443:B7444, Calc!A7504:B7505, Calc!A8785:B8786, Calc!A8846:B8847, Calc!A10127:B10128, Calc!A11530:B11531
 - gen-m7/5883a41f98113db2.case.json Calc!A611:B612, Calc!A672:B673, Calc!A1953:B1954, Calc!A2014:B2015, Calc!A3295:B3296, Calc!A3356:B3357, Calc!A4698:B4699, Calc!A5979:B5980, Calc!A6040:B6041, Calc!A7687:B7688, Calc!A7748:B7749
@@ -47,6 +47,12 @@ PIVOTBY fills the lifted shape with an early error, as Excel does, when it lifts
 - gen-m7/ceb2c91035864a71.case.json Calc!A6589:B6590, Calc!A6650:B6651, Calc!A7931:B7932, Calc!A7992:B7993, Calc!A8907:B8908, Calc!A8968:B8969, Calc!A10249:B10250, Calc!A10310:B10311, Calc!A11591:B11592, Calc!A11652:B11653
 - gen-m7/e8a89caaafba1c89.case.json Calc!A11347:B11348, Calc!A11408:B11409
 - gen-m7/febfd6901374d79c.case.json Calc!A3661:B3662, Calc!A3722:B3723, Calc!A4759:B4760, Calc!A4820:B4821, Calc!A5857:B5858, Calc!A5918:B5919, Calc!A7199:B7200, Calc!A7260:B7261, Calc!A8541:B8542, Calc!A8602:B8603, Calc!A9761:B9762, Calc!A9822:B9823, Calc!A11103:B11104, Calc!A11164:B11165
+- Gap triage 2026-11-03 added 37041df35489e178 A4942:B4943 and 4ad4b1c6b2c2b01d A2746:B2747. T-3888 (done) listed
+  them, and its error-cell field rule fixed their anchors, but A4943, B4942, B4943, A2747, B2746 and B2747 are still
+  empty where Excel has `#VALUE!`. Both calls lift over a 2x2 `relative_to` (`Data!C3:D4`) behind an error-cell field
+  (`Data!G9`): this task's rule. Example: `=_xlfn.PIVOTBY(Data!G9,Data!B1:C12,Data!A1:D12,_xleta.SUM,2,2,0,1,-1,(Data!B1:B12<0.3),Data!C3:D4)`.
+- Since T-3890 a filter refusal fills an array `relative_to` (`Model::error_over` in `Model::pivotby_args`), so
+  gen-m7/410128dc65d03200.case.json Calc!A7931:B7932 already passes; build on that for the other early errors.
 
 ## Acceptance criteria
 - [ ] The owned cells match Excel; a unit test covers an early `#VALUE!` and an early error option lifted over a 2x2 `relative_to`.

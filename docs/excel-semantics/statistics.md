@@ -3142,6 +3142,43 @@ Status: PARTIAL (excel-graph): within 15 digits in every bpser sub-branch of the
 b0 >= 8, all others); bit-exact 52-75%; both > 1 with max > 8 a provisional form (T-3007)
 Tasks: T-2505, T-2512, T-2122, T-3007, T-3331, T-3570, T-3771
 
+## BETA.DIST at a = b = 1/2 is an arctangent closed form, reflected above x = 0.9 (T-3192)
+Rule: BETA.DIST's cdf (and BETADIST's) at a = b = 1/2 is not bratio's bpser but, in doubles with libm's atan,
+```
+w(t) = 2*ATAN(SQRT(t)/SQRT(1 - t))/PI
+I = w(x) for x <= 0.9,   I = (0.5 - w(y)) + 0.5 for x > 0.9   (y = fl(1 - x))
+```
+- Bit-exact on 42 of the 49 a = b = 1/2 cdf cells on file before T-3192 (the engine's bpser 16, the correctly
+  rounded value 27), 281 of 321 on the first fresh sweep (probes-numeric/t3192-beta-half-half) and 287 of 341 on the
+  second (t3192-beta-half-half-2), every cell within 2 ulp. BETA.DIST equals BETADIST on all 321 cells of the first.
+- The bpser miss that started it: `BETA.DIST(2.4674011002723394E-20,0.5,0.5,TRUE)` (t1745-beta-inv-roundtrip G1) is
+  9.999999999999999E-11 in Excel, the correctly rounded value, and 12 ulp low through bpser: fl(LN x) is 3.1E-15 off
+  ln x at x = 2.5E-20, which EXP(0.5 LN x) carries into the result, and the square root does not. An extended LN in
+  bpser itself is not Excel's: it fixes these cells but moves 13,322 other BETA.DIST cells off (T-3192 A/B).
+- The switch: on the first sweep the direct form wins every cell where the two differ up to x = 0.888 and the reflected
+  one from x = 0.900 (one cell against it, x = 0.837). It was frozen at 0.9 before the second sweep, which tested it:
+  287 against 228 for the direct form everywhere and 253 for the reflection at x > 0.5 (bratio's own swap). Below the
+  switch, rows where only the reflection is right exist (9 in (0.8, 0.9] on the second sweep), so 0.9 is the best
+  single cut, not an exact rule.
+- Ranked forms on the first sweep (bit-exact of 321): the direct libm form 270 (with the switch 281), Excel's own
+  worksheet `2*ATAN(SQRT(x)/SQRT(1-x))/PI()` equals BETA.DIST on 270, asin forms 237-247 (`2*asin(sqrt x)/pi`, F.TEST's
+  form, 247; the exact asin of the double sqrt over the double pi 238), the correctly rounded value 179. Exact
+  arctangents of the double ratio, sqrt(x/y) and the extended pi are lower (180-228).
+- Open: x = 0.5 is 0.5000000000000001 in Excel (5 cells on file, e.g. m9-beta-dist-a0p5 A9) and 0.5 here; the
+  remaining 1-2 ulp misses (40 and 54 cells) have no form yet. The same form fixes df-1 cells of
+  t0969-t-beta-link (BETA.DIST at shapes 1/2 and df/2 = 1/2); whether T.DIST at df 1 takes it is T-2930's.
+Evidence: probes-numeric t3192-beta-half-half (BETA.DIST, BETADIST and the worksheet form, 321 x) and
+t3192-beta-half-half-2 (341 x, 0.8-1 dense) and t3192-beta-half-half-3 (300 x, log-uniform toward 0 and 1; the
+direct form 239 bit-exact, the switch 287), excel-graph 2026-11-03; docs/research/t3192 (`make_probe.py`,
+`score_half.py`, RESULTS.md).
+Ours: the direct form w(x) for every x; the switch is not ported. It is a cut placed by scoring cells whose two forms
+differ by 1 ulp, below decision 0112's floor, so it is last-digit (Phase 1b) work (decision 0188 R4.4, R5; T-3886).
+The direct form on the fit lab's hold-out split (decision 0188 R4.1) of both sweeps' B and C cells: train 522 of 679
+bit-exact (76.9%), test 246 of 304 (80.9%), against the correctly rounded value's 176 of 304; every cell within 2 ulp.
+Implemented in: `functions/statistical/incomplete_beta.rs` `half_half_cdf`, called by `bratio::beta_dist_lower_tail`
+(BETA.DIST and BETADIST's cdf, and the F.INV crossing `inverse_beta::beta_lower_crossing` at d1 = d2 = 1, where no
+cell on file moved; F's tails, the Student t and BETA.INV's search keep their kernels).
+
 ## Incomplete beta at a shape near the double range: no overflowing fl(a LN x), and bpser is #NUM! once 1/B overflows (T-3007)
 Rule: Excel never evaluates a bpser whose fl(a·LN x) overflows: Excel for the web refuses a workbook that holds
 `BETA.DIST(0.1,a,0.5,TRUE)` at a = 1E+295, 1E+300, 1E+308 or `1E+150*1E+150` (the upload's `createSession` fails 501
@@ -3265,7 +3302,17 @@ cdf = fl(fl(P*fl(x*y)) * f),  P = BETA.DIST(x, a, b, FALSE)
   mostly 1-3 ulp (23 of 1,200 fresh points beyond 4 ulp, the largest 11); one-ulp nudges of single β_n fix most of them, so one rounding inside β (or α) per term is still unmodelled.
 Evidence: probes-numeric t3571-r5-bfrac-tune, -hold, -fresh; docs/research/t2464/r5-bfrac (`model.py`,
 `score_final.out`, `score_fresh.out`, `runs.out`, `lamab.out`).
-Ours: TOMS's forward recurrence in doubles with TOMS's λ (`functions/statistical/bratio/bfrac.rs`, T-2508).
+Ours: the model above on the evidenced region (`functions/statistical/bratio/bfrac.rs` `lentz_region`,
+`lentz_fraction`, T-3812; bit for bit `model.py` given the same density, all 4,368 tune, hold and fresh points), NR's
+FPMIN floors on |D| and |C| kept (a safety choice, directive 5; no probed point reaches them); TOMS's forward recurrence
+with TOMS's λ elsewhere (T-2508). The gate reads only bratio's dispatch, so every caller that reaches bfrac on the
+region takes the loop (F.DIST and FDIST through fisher.rs, BINOM.DIST, BETA.INV's crossings); the evidence is BETA.DIST
+only (y = fl(1 - x)), so those callers are UNVERIFIED there, as they were on TOMS's recurrence (T-3913). With the engine's density (T-3244, not Excel's at large shapes) the cdf cells score
+63/578/1,069 of 1,536 tune, 102/635/978 of 1,632 hold and 39/252/490 of 1,200 fresh (TOMS before: 44/466/1,055,
+45/428/913, 18/175/431; w15 here is half a unit of the 15th digit); fresh is 1,200 of 1,200 inside Gate A's envelope.
+On w2's (100, 120) run (t2464-w2f-xruns-1, 865 cells on the region) it is 32/351/496 against 43/325/480: 11 TOMS
+bit-exact cells were lucky cancellations against a density 5 ulp off (A14913: engine density 5 ulp off at A14914, TOMS
+exact, Lentz 7 ulp; with Excel's density the model is 1 ulp off).
 Status: VERIFIED (excel-graph) to 15 digits on the region above, bit-level PARTIAL: 15 digits on 1,188 of 1,200 fresh points (the 12 misses are
 18-42-term points, 3-10 ulp, T-3813) and 1,632 of 1,632 hold-out cells; bit-level open past 10 terms; outside the region
 UNVERIFIED
@@ -6407,7 +6454,8 @@ error cell as the bins is such a bin, not that error: `FREQUENCY(Data!G2,Data!G9
 `FREQUENCY(Data!G4,Data!G9)` with G4 = 1.5 {0;1}, `FREQUENCY(Data!G5,Data!G9)` with text data {0;0}. A typed error bin is still
 the result (`FREQUENCY("2.5",#NUM!)` `#NUM!`), and an error cell as the data is its error (`FREQUENCY(Data!G9,Data!G1)` `#DIV/0!`).
 Evidence: gen-m9/d56012c9341cd0ff (T-3781 arg-pairs batch, excel-graph, 2026-11-01), 46 cells in T-3791 (A794-A9945).
-Ours: every value in the second row, and the error cell's `#DIV/0!`; known failures owned by T-3791. Part of T-3046's
+Ours: matches (T-3791: no numeric bin is a lone bin at 0, and a one-cell reference to an error cell as the bins is skipped,
+a typed error bin still the result). Part of T-3046's
 question (an error cell in the bins) is answered for a one-cell reference.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3791

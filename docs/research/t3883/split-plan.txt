@@ -1,0 +1,3 @@
+Fixed 2026-11-03 before scoring: hold-out = cells whose md5("<case>!<sheet>!<cell>") first byte < 77 (~30%), the rest train.
+Margin: hold-out text-exact rate within 2 percentage points of train rate. Candidates scored: chosen (EXP(|v|)/2 divisor) and correctly rounded.
+Results (T-3883 Outcome): train 1,023 cells chosen 1,023 / correctly rounded 1,000; hold-out 470: 470 / 461.

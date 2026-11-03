@@ -105,10 +105,11 @@ hyphen. `þ`, `ð`, `œ` and the Latin-1 symbols were placed later (T-1590, T-15
 below), and the Latin Extended-A, Greek and Cyrillic letters by T-3114 (next section); full-width and
 half-width forms and kana are probed by T-3275 (below; implemented by T-3321). Hebrew, Arabic,
 Devanagari, Thai, Lao, Hangul, CJK ideographs, symbols above `€` and astral characters are probed by
-T-3276 (below; implemented by T-3324). Every other character (other scripts, such as Bengali,
-Tamil, Georgian, Armenian and Ethiopic, and other symbol blocks) keeps code-point order after the
-letters, UNVERIFIED; `script_order` in crates/rustsheet-engine/src/functions/util/collation.rs lists
-the groups the unprobed blocks fall in.
+T-3276 (below; implemented by T-3324). Bengali, Gurmukhi, Tamil, Telugu, Georgian, Armenian,
+Ethiopic, Mongolian, Tibetan, Khmer, Myanmar, more symbol blocks, other-script digits, emoji and
+planes 1 to 3 are probed by T-3559 (below, "Scripts and symbol blocks beyond T-3276"); scripts
+neither probe covers stay UNVERIFIED, and `script_order` in
+crates/rustsheet-engine/src/functions/util/collation/scripts.rs lists the groups they fall in.
 
 ### Letters beyond Latin-1 and combining marks (T-3114)
 Evidence: probes/t3114-collation-beyond-latin1 (excel-graph, 2026-10-29), 282 strings ranked against
@@ -454,18 +455,82 @@ The engine passes every cell: the collation cells since T-3324, the digit cells 
 - In passing: exact MATCH, VLOOKUP(...,FALSE) and wildcard XMATCH of a lone `"~"` find the empty string,
   not a `"~"` cell (`MATCH("~",{"a","","~"},0)` = 2, H9; `MATCH("~",{"a","~"},0)` an error, H10; H11, H13;
   over Data, C4 = 1 finds `""` while XMATCH finds the `"~"` row, D4 = 4). The engine already agrees.
-UNVERIFIED: whether `™` is an expansion (`"tm"`) or a symbol placed between `a` and `y` (only `"Ab"` and
-`"ÿ"` bracket it); where `∞` sits against the punctuation other than digits; where other astral
-characters (other planes, emoji with modifiers) sit; whether Thai vowels other than `เ แ า` and other
-Lao vowels follow the same split; Hebrew and Arabic letters other than those probed. T-3324's
-choices where the probe is silent (each UNVERIFIED): the Thai prevowels `โ ใ ไ` go with `เ แ`; all
-Hebrew points and cantillation marks, Arabic harakat (U+0610 to U+061A, U+064B to U+065F, U+0670)
-and Thai tone marks U+0E48 to U+0E4B are accents weighing their code point; Thai and other digit
-blocks keep code-point order (REFUTED for Thai and Lao by probes/t3465-collation-holdout: Excel puts them below
-the letters, `"ณ" > "๘"`, `"NPOECV" > "໖66"`; engine gap T-3895); every arrow (U+2190 to U+21FF), miscellaneous symbol and dingbat
-(U+2600 to U+27BF) sorts after `•` by code point; `™` is the letters `tm` with a variant weight
-(so not equal to `"tm"`); surrogate units below U+D840 (astral planes before the ideographs) sort
-between Lao and Hangul, units from U+D840 after the CJK ideographs, lone or paired.
+T-3559 (next section) settles this section's open questions (`™`, `∞`, the other astral characters,
+the other Thai and Lao vowels, more Hebrew and Arabic letters) and T-3324's choices where this probe
+is silent: the Thai prevowels `โ ใ ไ` do go with `เ แ`; Hebrew points and cantillation, Arabic harakat
+and Thai tone marks are accents by code point (sampled at U+0591, U+05B0, U+0610, U+065F, U+0670,
+U+0E4B); other-script digits, Thai and Lao included, are their digit plus a tiebreak (so below the
+letters, as probes/t3465-collation-holdout found: `"ณ" > "๘"`, `"NPOECV" > "໖66"`; engine gap
+T-3895). REFUTED by T-3559: the arrows, miscellaneous symbols and dingbats do not sort after `•`
+(they sort before it, and not all by code point), `™` is not the letters `tm` with a variant
+weight (it sorts after `"tn"`), and astral characters from U+D840 do not all sort after the CJK
+ideographs (plane 3's `𰀀` sorts before Hangul). Still UNVERIFIED: lone surrogate units of planes 1
+to 3 other than those probed by probes/text-lone-surrogates.
+
+### Scripts and symbol blocks beyond T-3276 (T-3559)
+Evidence: probes/t3559-collation-unprobed-blocks (excel-graph, 2026-11-03): 155 strings in Data!A,
+with T-3276's layout (Calc!A = count less, B = count equal, C = exact MATCH, D = XMATCH, E = COUNTIF
+`"="&x`) and G1:G25 = `(x<y)+2*(x=y)+4*(x>y)` for chosen pairs. "Rank" below is Calc!A of the Data
+row. VERIFIED for the cells cited:
+- **Characters Excel does not know weigh the same, just above the empty string.** `➿` (U+27BF),
+  `ᡸ` (U+1878) and `₿` (U+20BF) are equal to each other and to nothing else: rank 1 and count 3 on
+  each (A35, A62, A126; B35 = 3), COUNTIF counts all three (E35 = 3), MATCH and XMATCH find the first
+  of them (C62 = D62 = 35), and `"➿" < "0"` (G17). They are above `""` (rank 0, B1 = 1) and below
+  `"!"` (rank 4). Other characters of the same blocks (`✓`, `☀`, `ᠠ`, `₹`) sort normally. Inferred,
+  UNVERIFIED: Excel's table lacks these code points (they were added in Unicode 6.0, 11.0 and 10.0),
+  and every code point it lacks weighs this way.
+- **Symbols sort among the punctuation, not by code point and not by block.** Lowest first, with
+  the ranks: `! # $ %` (4 to 7), `、` `。` (8, 9), `~` (10), `「` (11), `₩` (12), `€` (13), `₹` (14),
+  `+` (15), `≠ ∑ ∫ ≤` (16 to 19), `■ ●` (20, 21), `← ⇿` (22, 23), `─ █` (24, 25), `☀ ✓` (26, 27),
+  `•` (28), then the digits from `0` (29). So currency signs are not one group (`₩ < € < ₹`, with
+  `₿` unknown above), math operators are not in code-point order (`≠` U+2260 < `∑` U+2211 < `∫`
+  U+222B < `≤` U+2264), and `•` sorts **after** the arrows, symbols and dingbats (`"⇿" < "•"`,
+  `"☀" < "•"`; G16, G18).
+- **`∞` is above every punctuation mark and digit**, between `"9"` and `"a"` (rank 42; G6:G12 = 4
+  against `! # % + ~ • 0`). `℃` and `№` sort after `"a"` and before `"tm"` (ranks 44, 45); whether
+  they expand to letters (`°c`, `no`) is UNVERIFIED.
+- **`™` is a letter after `"tn"`**: `"™" > "tm"`, `"TM"`, `"Tm"`, `"t"` and `"tn"` (G1:G5 = 4), and
+  `"™" < "z"` (rank 49 against 50). So it is not `tm` with a variant weight. Where it sits between
+  `"tn"` and `"z"` is UNVERIFIED. `"tm" = "TM" = "Tm"` (B15:B17 = 3).
+- **Block order, lowest first, continued**: Latin, Greek, Cyrillic, **Armenian, Georgian**, kana,
+  Hebrew, Arabic, Devanagari, **Bengali, Gurmukhi, Tamil, Telugu**, Thai, **Myanmar, Mongolian,
+  Tibetan**, Lao, **Khmer, Ethiopic**, then the astral characters below U+20000 (planes 1 and 3),
+  Hangul, the CJK ideographs, and plane 2 (`𠀀`, `𪜀`). Ranks: `я` 52 < `Ա` 53 < `ა` 56 < `あ` 59 <
+  `א` 60; `ي` 83 < `क` 84 < `অ` 85; `హ` 100 < Thai `เก` 101 … `ำ` 115 < `က` 116 < `အ` 118 < `ᠠ` 119
+  < `ཀ` 120 < `ཨ` 122 < `ກ` 123 … `ໃ` 132 < `ក` 133 < `អ` 136 < `ሀ` 137 < `ፚ` 139 < `𐀀` 140 < `𝐀`
+  141 < … < `😀` 149 < `𰀀` 150 < `가` 151 < `一` 152 < `𠀀` 153 < `𪜀` 154. Inside the blocks the order
+  is mostly code-point order, with these exceptions:
+  - **Gurmukhi** puts `ਹ` (U+0A39) before `ਕ` (U+0A15): `"ਅ" < "ਹ" < "ਕ" < "ਕਿ"` (ranks 89 to 92).
+  - **Georgian** puts the Mkhedruli letters before the Asomtavruli capital: `"ა" < "ჰ" < "Ⴀ"`
+    (ranks 56, 57, 58), and `Ⴀ` is not equal to `ა` (B54 = 1).
+  - **Lao** `ໄ` (U+0EC4) sorts before `ໃ` (U+0EC3) (ranks 131, 132).
+  - **Armenian** case pairs are equal: `"Ա" = "ա"` (G15 = 2, B55 = 2), `ա < ֆ`.
+  - **Hebrew** final letters equal their normal form: `"ץ" = "צ"` (G14 = 2, B97 = 2); `צ < ש < ת`.
+  - **Arabic** `ﻻ` (U+FEFB, presentation form) equals `"لا"` (G13 = 2, B109 = 2; XMATCH of `"لا"`
+    finds the `ﻻ` row first, D110 = 109, while exact MATCH finds its own row, C110 = 110). `ء` sorts
+    before `ا` (ranks 71, 72), `ى < ي` (82, 83).
+- **Marks.** Hebrew points and cantillation, Arabic harakat and the Thai tone mark `๋` are
+  tiebreaks on their letter, lighter at a lower code point: `"ב" < "ב֑" < "בְ" < "בא" < "ב֑א" <
+  "בְא"` (ranks 61 to 66; U+0591 before U+05B0), `"ب" < "بؐ" < "بٟ" < "بٰ" < "با" < "بؐا" < "بٰا"`
+  (ranks 73 to 79), `"ก" < "ก๋" < "ก๋ก" < "กะ"` (ranks 108 to 111). The vowel signs of Bengali,
+  Gurmukhi, Tamil, Telugu, Tibetan, Khmer and Myanmar follow their consonant before the next
+  consonant (`"ক" < "কি"`, `"ក" < "កា" < "កិ" < "អ"`); whether they are letters or accents is not
+  separated by these strings, UNVERIFIED.
+- **Thai prevowels `โ ใ ไ` sort before the consonants, like `เ แ`**: `"เก" < "โ" < "โก" < "ใ" < "ใก" <
+  "ไ" < "ไก" < "ก"` (ranks 101 to 108); `ะ` and `ำ` sort after the consonants (`"ข" < "ะ" < "ำ"`, ranks
+  113 to 115). **Lao prevowels sort after the consonants, like `ເ`**: `"ກ" < "ກະ" < "ຂ" < "ະ" < "າ" <
+  "ແ" < "ໂ" < "ໂກ" < "ໄ" < "ໃ"` (ranks 123 to 132).
+- **Other-script digits are their digit plus a tiebreak by code point**, below the next digit and
+  so below every letter: `"3" < "٣" < "৩" < "੩" < "௩" < "౩" < "๓" < "໓" < "༣" < "၃" < "៣" < "9"`
+  (ranks 30 to 41; G21:G25 = 4), never equal under `=` (Calc!B = 1), but COUNTIF `"="&x` counts all
+  eleven spellings of 3 (E11 and E136:E145 = 11): the criterion reads each as the number 3.
+- **Astral characters and emoji sequences compare unit by unit**, no sequence is one element:
+  `"𐀀" < "𝐀" < "🀄" < "🇺" < "🇺🇸" < "👍" < "👍🏽" < "👨" < "👨‍👩‍👧" < "😀"` (ranks 140 to 149);
+  the skin-tone modifier and the second flag letter make the string greater (G19, G20 = 4).
+  Plane 3's `𰀀` (U+30000) sorts after `😀` and before Hangul (rank 150), plane 2's `𪜀` (U+2A700)
+  after `𠀀` (154).
+The engine fails 181 of the 955 cells (known failures in eval/baseline/probes.txt); engine gap T-3917
+(the Thai and Lao digits stay T-3895's).
 
 ### Script digits in number text (T-3446)
 Evidence: probes/t3446-script-digits-forms (excel-graph, 2026-11-03); formats from the oracle's ENTERED log,
@@ -527,7 +592,9 @@ Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-colla
   letter position (`"¹"` > `"1"`, `"¹a"` < `"1b"`, `"¹b"` > `"1a"`; XMATCH of `"1"` against `¹` `#N/A`); `ç đ ð ł ñ ı` are accents on `c d d l n i` (`"ða"` < `"db"`, > `"da"`).
   CORRECTED: `þ` is an expansion equal to `th`, not an accent on `t` (`"þ"="th"`, `"þ"&"a"` = `"t"&"h"&"a"` TRUE, `"þa"` > `"tb"`, `XMATCH("th","þ",0)` = 1). Implemented (T-1669): `cmp_text_excel` makes `þ` an `expansion('t','h')`.
   A single-cell reference as XMATCH `lookup_array` or XLOOKUP `lookup_array`/`return_array` is a one-cell vector, not `#VALUE!`/`#N/A` (probes/text-collation-longer A96, A97, A102, A104, A105, A107).
-Tasks: T-0220, T-0244, T-1469, T-1590, T-1594, T-1595, T-1662, T-1669, T-3114, T-3154
+- The middle dot `·` (U+00B7) is an ordinary symbol, not skipped and not equal to `""`: it sorts just after `µ` and before `…`
+  (`§ < © < ¬ < ® < ° < µ < · < … < • < 0`; `"·" < "··" < "·a" < "·b"`, `"a·" < "a·b" < "ab"`; XMATCH/COUNTIF find it only as itself). T-3896; probes/t3896-collation-middle-dot (excel-graph 2026-11-03, Calc!A1:E54). Implemented in `PUNCTUATION`.
+Tasks: T-0220, T-0244, T-1469, T-1590, T-1594, T-1595, T-1662, T-1669, T-3114, T-3154, T-3896
 
 ## Double unary minus coerces to a number
 Rule: `--x` is not a no-op. Each unary minus coerces its operand to a number: `--FALSE` = 0,
@@ -546,6 +613,31 @@ evaluates it (element-wise over ranges and arrays); `stringify`/`move_formula` p
 parenthesise a lower-precedence operand (T-0132, `Ported-From: ironcalc@9b1ae3fd`). `--"12:00"`
 (MINUS_MINUS.xlsx C12, Excel 0.5) still fails: time text coercion is T-0146, which adds that workbook.
 Tasks: T-0132
+
+## Weightless characters in `=`, COUNTIF and XMATCH (T-3584)
+Rule: the 2568 BMP code points Excel's comparison table gives no weight (lookup.md "Weightless characters",
+listed in `docs/research/t3584/weightless-bmp.txt`) compare equal to one another under `=`, COUNTIF and
+XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count them one for one:
+- `UNICHAR(1316)=UNICHAR(4295)` (U+0524 with U+10C7), U+0524 with U+0525, U+0378 and U+00AD, U+AB70 with
+  U+1C90: TRUE (probes/t3584-match-fold-weightless Calc!B1:B3, B8, B14, B17:B18; COUNTIF and XMATCH agree, D:F).
+- `"a"&UNICHAR(1316)&"b"="ab"` and `UNICHAR(1316)&UNICHAR(4295)=UNICHAR(1317)` are TRUE (Calc!B6:B7, D6:D7,
+  F6:F7), where exact MATCH says `#N/A` (E6:E7).
+- But a weightless character is never equal to empty text (`UNICHAR(1316)=""` FALSE, Calc!B4, B9, B12, B19, B32),
+  and `"a"&UNICHAR(1316)="a"` and `"a"&UNICHAR(173)="a"` are FALSE (Calc!B5, B13; COUNTIF 0, XMATCH `#N/A`).
+- Over the whole BMP (Calc!R1:R256, digit 9 = bits 1 and 8), `x=UNICHAR(1316)` is TRUE exactly where exact MATCH
+  finds U+0524 (wildcards aside).
+- Not about weightless characters, found by the same probe: `=`, COUNTIF and XMATCH(..,0) also equate Greek
+  Extended's dasia+oxia and psili+varia letters (`UNICHAR(7941)=UNICHAR(7946)`, U+1F05 with U+1F0A, TRUE; Calc!B21,
+  D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
+  keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
+  whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
+  same weight).
+UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
+one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
+positions and neighbours make it count is open (T-3904).
+Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
+probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
 
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with

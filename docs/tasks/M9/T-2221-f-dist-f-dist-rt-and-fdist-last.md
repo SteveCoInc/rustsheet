@@ -160,3 +160,28 @@ it not named by another open task is this task's.
 - probes-numeric/t2220-f-dist-sweep-d1-1.case.json: the whole case, its within-15-digit cells (348 at this run)
 - probes-numeric/m9-legacy-fdist.case.json (2): Calc!A69, A70
 - probes/stat-argument-modes.case.json (2): Sheet1!H248, H251
+
+## Cells added from T-3198 (2026-11-03)
+These are T-2219's gen-m9 cells that T-3198 owned. For each, Excel and ours are about equally far from the 50-digit
+reference, between 1e-16 and 1e-14 relative and usually on the same side, so matching them is fitting Excel's last bits.
+None is visibly off. T-3198's "Triage (2026-11-03)" has the per-cell table.
+- gen-m9/2801c1c11c21e134.case.json (2): Calc!A219, A374
+- gen-m9/285d87cea1aaa73c.case.json (1): Calc!A34
+- gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259
+- gen-m9/35e8168aae2b00f8.case.json (1): Calc!A123
+- gen-m9/3a25a03eb94fcfbd.case.json (2): Calc!A49, A181
+- gen-m9/4bad303d32cc3f46.case.json (1): Calc!A141
+- gen-m9/68d8ffb69ff739d8.case.json (3): Calc!A3, A29, A273
+- gen-m9/7bd219ec0c0c5e22.case.json (1): Calc!A349
+- gen-m9/8dd2312c96effb1b.case.json (2): Calc!A144, A395
+- gen-m9/8f2ac25945af87da.case.json (1): Calc!A92
+- gen-m9/9cca17438a7e6f8a.case.json (1): Calc!A220
+- gen-m9/a5828d3925575713.case.json (1): Calc!A235
+- gen-m9/a612e89321a6df9c.case.json (1): Calc!A70
+- gen-m9/b6593d7dd13f2dac.case.json (1): Calc!A50
+- gen-m9/b8ee55934c5b824c.case.json (1): Calc!A22
+- gen-m9/bc40d37cb4d8301d.case.json (1): Calc!A344
+- gen-m9/c18dbf21f11093f3.case.json (1): Calc!A289
+- gen-m9/d8266bc15533702a.case.json (2): Calc!A120, A337
+- gen-m9/ee2497a5e683c5d9.case.json (1): Calc!A118
+- gen-m9/60b0b6e69ad35a45.case.json (1): Calc!A151

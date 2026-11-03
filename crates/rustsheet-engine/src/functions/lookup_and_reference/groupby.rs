@@ -403,9 +403,7 @@ impl Model {
         values: &Node,
         cell: CellReferenceIndex,
     ) -> Result<(Elements, Elements, ScalarInput), CalcResult> {
-        // A one-cell reference is read as its value here, so the node tells it from a literal.
-        let is_cell =
-            |node: &Node| matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. });
+        let is_cell = |node: &Node| node.is_cell_reference_at(cell.row);
         let keys = self.evaluate_node_in_context(row_fields, cell);
         if keys.is_error() && !is_cell(row_fields) {
             return Err(keys);
@@ -492,6 +490,17 @@ impl Model {
             return error;
         };
         let array = self.evaluate_node_in_context(node, cell);
+        self.error_over(array, error, cell)
+    }
+
+    /// `error` in every element of `array` when it is an array or a multi-cell range that the call
+    /// lifts over (GROUPBY's `field_relationship`, PIVOTBY's `relative_to`), else `error` itself.
+    pub(crate) fn error_over(
+        &mut self,
+        array: CalcResult,
+        error: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> CalcResult {
         if !array.is_multi_value() {
             return error;
         }
@@ -544,7 +553,7 @@ impl Model {
         // `GROUPBY(Data!G1,Data!G6,..)`, gen-m7 35679b4facc62956), and so is one error key, a
         // one-cell reference to an error ([`Model::groupby_fields`]; `GROUPBY(Data!G9,Data!G1,..)`),
         // both after the options' errors: `GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is
-        // `#NUM!` (d03de506903f5a35 A11835), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+        // `#NUM!` (ec5094d09c82f94d A6223), `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
         // `#DIV/0!` (18ded81711290e85 A1648).
         match (&inputs.scalar, field_headers_given) {
             (ScalarInput::Text | ScalarInput::ErrorCell(_), false) => {

@@ -3,7 +3,7 @@ id: T-3889
 title: "PIVOTBY: a #VALUE! argument (blank or text option, mismatched fields) wins over a later option's error"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -31,17 +31,16 @@ PIVOTBY returns `#VALUE!` where Excel does when an earlier argument is invalid (
   - `=_xlfn.PIVOTBY(Data!A1:B12,Data!A1:B2,Data!B1:B12,LAMBDA(w,w),1,1,Data!B1:C10,2,Data!E1,(Data!A1:A12=1e-15),#NUM!)` is `#VALUE!`, ours `#NUM!` (37041df35489e178 A6589)
 - Code: `crates/rustsheet-engine/src/functions/lookup_and_reference/pivotby.rs` (`fn_pivotby`), sharing `Model::filter_rows`
   and the GROUPBY helpers in `groupby.rs`.
-- Owned cells (23 calls, 23 failing cells; each span runs from the call's anchor over
+- Owned cells (22 calls, 22 failing cells; each span runs from the call's anchor over
   the failing cells of its spill or lift):
 - gen-m7/05cf579cc6560867.case.json Calc!A3905, Calc!A7992
 - gen-m7/0dac515958ce4371.case.json Calc!A9944, Calc!A11713
 - gen-m7/223090e4684153e5.case.json Calc!A8907
 - gen-m7/37041df35489e178.case.json Calc!A6589
 - gen-m7/410128dc65d03200.case.json Calc!A9639
-- gen-m7/44a1feb80a78aa24.case.json Calc!A1038
 - gen-m7/547d6192794dbf57.case.json Calc!A4576, Calc!A5125, Calc!A5186
 - gen-m7/5883a41f98113db2.case.json Calc!A6345, Calc!A6406
-- gen-m7/5c54b100d2f707be.case.json Calc!A3661
+- gen-m7/88f592c463d2ffb0.case.json Calc!A7138 (a text `values` before the blank `row_sort_order`; moved from T-3888)
 - gen-m7/7ab307dba9cb2062.case.json Calc!A9883, Calc!A9944
 - gen-m7/9077d156f68bf703.case.json Calc!A11225, Calc!A11286
 - gen-m7/cb6c98a18513801b.case.json Calc!A12079, Calc!A12140
@@ -49,13 +48,25 @@ PIVOTBY returns `#VALUE!` where Excel does when an earlier argument is invalid (
 - gen-m7/d7b4849a4fbe3485.case.json Calc!A8541
 
 ## Acceptance criteria
-- [ ] The owned cells match Excel; unit tests cover a blank option, a text option and a short field, each against a later error option.
-- [ ] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
-- [ ] Visible parity: every owned cell has Excel's type and error.
-- [ ] `make check` green; reviewers approve.
+- [x] The owned cells match Excel; unit tests cover a blank option, a text option and a short field, each against a later error option.
+- [x] docs/excel-semantics/arrays.md records the PIVOTBY rule (its `Ours:` line) when it is implemented.
+- [x] Visible parity: every owned cell has Excel's type and error.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (a wrong error, or a spilled table where Excel returns `#VALUE!`), so this task is in the campaign. Its target is that every cell it owns has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it.
 
 ## Out of scope
 - PIVOTBY's other batch rules (T-3888, T-3890); GROUPBY.
+
+## Outcome
+- Probed the shapes first (probes/t3889-pivotby-option-order, 49 questions, excel-graph, 2026-11-03): only a one-cell
+  reference to a blank cell as `row_sort_order`, `col_sort_order` or `filter_array` is `#VALUE!` ahead of a later
+  option's error, exactly GROUPBY's T-3838 rule. A scalar `row_fields`, a short or `""` `col_fields` and short values
+  lose to a later error (every batch call with one of those shapes also had a blank sort order, which decided it), and
+  a blank total depth or field_headers is 0. Text there was already handled by `Model::lift_options`.
+- `Model::pivotby_args` passes `blank_refused` `[2, 4, 5]` to `Model::evaluate_options` (one line, no new helper).
+  Unit test `blank_options_are_refused_before_a_later_error` covers a blank option, a text option and a short field,
+  each against a later error. arrays.md's PIVOTBY batch entry records the rule and the probe.
+- Eval delta: gen-m7 known failures 10607 -> 10585 (the 22 owned cells fixed, 0 regressions); probes +1 case
+  (t3889-pivotby-option-order, 52 cells, all pass).

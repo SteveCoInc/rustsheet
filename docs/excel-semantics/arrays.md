@@ -2227,7 +2227,7 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   has a scalar TRUE filter beside two key columns, which is `#VALUE!` by the rule above (probes/t3839-groupby-scalar-filter L!A1:B2).
 Ours: the scalar `values` and error `row_fields` rules and the early-error lift since T-3837 (`Model::groupby_fields`,
 `Model::groupby_args`, `ScalarInput`); text `values` and an error-reference `row_fields` turn out to be `#VALUE!` only after the options' errors
-(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, d03de506903f5a35 A11835; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
+(`GROUPBY(Data!D1:D12,"abc",LAMBDA(v,v),1,#NUM!)` is `#NUM!`, ec5094d09c82f94d A6223; `GROUPBY(Data!G9,Data!D1:D12,LAMBDA(acc,acc),Data!G9)`
 `#DIV/0!`, 18ded81711290e85 A1648), a blank-cell `values` before them. Those two apply to a scalar (a literal or a one-cell
 reference) with field_headers omitted, the evidenced domain; a given field_headers and 1x1 arrays are UNVERIFIED (T-3854). The other rules are known failures in
 eval/baseline/gen-m7.txt.
@@ -2239,17 +2239,48 @@ Tasks: T-3837, T-3838, T-3839, T-3840
 Rule (gen-m7 arg-pairs batch for PIVOTBY, 50 cases, excel-graph, 2026-11-03; Data sheets as in the GROUPBY entry above: G1=7,
 G2=0, G3=-2.5, G4=1.5, G5="12", G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank). GROUPBY's batch rules carry over,
 with `col_fields` beside `row_fields`:
-- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the options hold, a later error
-  option included: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
+- A one-cell reference to an error as `row_fields` or `col_fields` is `#VALUE!` whatever the other options hold, with or
+  without `field_headers`: `PIVOTBY(Data!G9,Data!E1:E12,Data!E1:E12,_xleta.PRODUCT,1,Data!G3)` (e4053a4410330089 A5064) and
   `PIVOTBY(Data!B1:E12,Data!G9,Data!A1:D12,_xleta.MIN,1,1,1,Data!G5)` (d7b4849a4fbe3485 A10798) are `#VALUE!`; 181 calls.
-  A blank-cell or text `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
-  _xleta.MAX,Data!G9)`, 13 calls). Owner T-3888.
-- An invalid earlier argument's `#VALUE!` wins over a later option's error: a blank-cell sort order or total depth, a text
-  option, a scalar `row_fields` (`2`, `Data!G4`) or a short `col_fields` (`Data!A1:B2`) beside 12-row fields, `""` as
-  `col_fields` (`PIVOTBY(Data!A1:C12,Data!D1:D12,Data!D1:E12,_xleta.PRODUCT,3,1,Data!H2,Data!G9)` is `#VALUE!`; 23 calls).
-  Owner T-3889.
+  It comes only after every error value, as GROUPBY's error key does: an error `values`
+  (`PIVOTBY(Data!G9,Data!A1:D12,Data!G9,LAMBDA(x,Data!C$12))`, 01d099c3b6d6ae95 A1770) or a later error option
+  (`PIVOTBY(Data!G9,Data!B1:E12,Data!A1:D12,LAMBDA(x,0),0,0,Data!G9)`, 542087608aa65000 A7382; `PIVOTBY(Data!B1:C12,Data!G9,
+  Data!E1:E12,LAMBDA(acc,(-2.5)),3,2,#N/A,Data!H2)`, d7b4849a4fbe3485 A11408 `#N/A`) keeps its error: 17 calls, and no call
+  with an error value past the field is `#VALUE!`. A literal error field is that error (`PIVOTBY(#REF!,..)`).
+  A blank-cell `values` is `#VALUE!` ahead of a later option's error (`PIVOTBY(Data!B1:E12,Data!A1:C12,Data!H2,
+  _xleta.MAX,Data!G9)`, 15 calls), after a literal error field (`PIVOTBY(#NULL!,Data!C1:E12,Data!H1,..)` is `#NULL!`,
+  01d099c3b6d6ae95 A1831). Text `values`, literal or referenced (`Data!G5`, `Data!G6`, `Data!G7`), are `#VALUE!` too, but
+  lose to a later option's error as in GROUPBY (`PIVOTBY(Data!A1:A12,Data!B1:E12,Data!G6,LAMBDA(y,y),2,1,Data!G9)` is
+  `#DIV/0!`, 0098e1e4e5f8aa7c A5430; 26 calls). The one exception, `PIVOTBY(Data!B1:E12,Data!C1:D12,Data!G6,LAMBDA(v,v),0,1,
+  Data!A10,Data!G9)` `#VALUE!` (88f592c463d2ffb0 A7138), has a blank-cell `row_sort_order` (`Data!A10`) before the error,
+  the next bullet's rule. Owner T-3888.
+- A `row_sort_order`, `col_sort_order` or `filter_array` that is a one-cell reference to a blank cell (`Data!H1`,
+  `Data!C$5`, `Data!C5:C5`) is `#VALUE!` in its place, ahead of a later option's error, GROUPBY's T-3838 rule
+  (`PIVOTBY(Data!A1:C12,Data!D1:D12,Data!D1:E12,_xleta.PRODUCT,3,1,Data!H2,Data!G9)` is `#VALUE!`; 22 calls). Each of the
+  batch's calls with a scalar `row_fields`, a short `col_fields` or `""` as `col_fields` has such a blank option too, and
+  alone those shapes lose to the later error. Probe (probes/t3889-pivotby-option-order, 49 questions in column B,
+  excel-graph, 2026-11-03; "order9 Bn"): a blank sort order or filter before `NA()` (order9 B1-B3, B25-B26, B32, B47)
+  or `=1/0` (B25) is `#VALUE!`, and alone too (B27-B29); a blank total depth or field_headers is 0 and the later `NA()`
+  wins (B4-B6; followed by a blank col_sort_order, that one's `#VALUE!` wins, B31); text, `""` or FALSE as a sort order or filter
+  leaves the later `NA()` (B7-B9, B13-B15, B19-B21, B33), while text or `""` as a total depth or field_headers is
+  `#VALUE!` ahead of it (B10-B12, B16-B18, B34-B35) and FALSE there is 0 (B22-B24); an earlier error wins over a blank
+  (B30); `row_fields` 2 or `Data!C2` beside 10-row fields, a short `col_fields` (`Data!B2:B3`), `""` as `col_fields`
+  and short values are `#VALUE!` alone (B36, B40, B43) but lose to any option's `NA()`, `#N/A` (B37-B39, B41-B42,
+  B44-B46). Owner T-3889.
 - A scalar `filter_array` (0.5, -1, 1, 2, TRUE, `Data!G4`) beside a multi-column field or values, or a header row, is
-  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). Owner T-3890.
+  `#VALUE!` (`PIVOTBY(Data!C1:D12,Data!A1:D12,Data!C1:D12,LAMBDA(v,v),0,-2,2,-1,2,-1)`; 14 calls). It is GROUPBY's T-3839 rule
+  with `col_fields` added (probes/t3890-pivotby-scalar-filter, 56 questions in P!B1:B56, excel-graph, 2026-11-03):
+  one value (TRUE, 2, 0.5, -1, `{TRUE}`, a reference to 3 or to TRUE) keeps every row only when `row_fields`,
+  `col_fields` and `values` are each one column wide and there is no header row (P!B1, B6, B16, B21, B26, B31, B36,
+  B49-B51). A second row field, column field or values column, or both of the first two, makes it `#VALUE!` (P!B2:B5 and
+  the same rows for each value). So does a header row, given (field_headers 1 or 3) or detected (omitted) (P!B43:B48).
+  With field_headers 0 over the header rows, the headers are records and the value keeps them (P!B41:B42). FALSE keeps
+  no record, `#VALUE!` (P!B11:B15). Text is `#VALUE!` in either shape (P!B54:B55). Error values come first: a later
+  `relative_to` `NA()` and an `NA()` filter are `#N/A` (P!B52:B53). Beside an array `relative_to` the refusal fills its
+  shape, as the next-but-one bullet's early errors do (547d6192794dbf57 A10188:B10189, A11469:B11470, 5883a41f98113db2
+  A4637:B4638, each `#VALUE!` over a 2x2 `Data!A1:B2`). Owner T-3890. Ours: since T-3890 (`Model::pivotby_args` passes
+  `one_keeps_all` to `Model::filter_rows`, and fills an array `relative_to` with any filter refusal through
+  `Model::error_over`, which also clears 410128dc65d03200 A7931:B7932, a filter that keeps no row, of T-3892's list).
 - An early error fills the shape of a 2x2 `relative_to` it lifts over: `PIVOTBY("abc",Data!B1:E12,Data!A1:A12,LAMBDA(z,
   Data!A2),0,-2,0,2,Data!B11:E12,(Data!D1:D12>3.14159),Data!A1:B2)` is `#VALUE!` in all four cells (05cf579cc6560867
   A10859:B10860; 169 calls). Owner T-3892.
@@ -2257,7 +2288,9 @@ with `col_fields` beside `row_fields`:
   A11230:A11232: 1E+15, 2.5, 42), and a call with a blank `relative_to` heads a column `?b, 3.14159` (ceb2c91035864a71
   B8785). Owner T-3893.
 Evidence: the gen-m7 cases of T-3841 (excel-graph, 2026-11-03); each owner task lists its calls.
-Ours: the GROUPBY rules of T-3837..T-3840 are GROUPBY's only; PIVOTBY's cells are known failures in eval/baseline/gen-m7.txt.
+Ours: the first bullet since T-3888 (`Model::pivotby_args`, `Model::pivot_field`); the blank-option bullet since T-3889
+(`Model::evaluate_options` with `blank_refused` from `Model::pivotby_args`); the GROUPBY rules of T-3838..T-3840 are
+GROUPBY's only, and the other bullets' cells are known failures in eval/baseline/gen-m7.txt.
 Status: VERIFIED (excel-graph) for the cells named; the order between these rules and each rule's exact domain are UNVERIFIED
 (the owners probe them)
 Tasks: T-3888, T-3889, T-3890, T-3892, T-3893

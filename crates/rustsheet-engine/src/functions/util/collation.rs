@@ -262,12 +262,14 @@ const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
 /// Punctuation and symbols in Excel's order: the ASCII ones from probes/text-collation-order
 /// ranks 7-36, the others from probes/text-collation-unprobed, which ranks them against `!`, `~`,
 /// `+` and `0` only. So the Latin-1 marks, quotes and currency signs go between `~` and `+`, and
-/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed).
-const PUNCTUATION: [char; 59] = [
+/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed). The middle dot
+/// `·` sits between `µ` and `…` and is neither skipped nor equal to `""`
+/// (probes/t3896-collation-middle-dot Calc!A29 = 31, A54 = 30, A28 = 32).
+const PUNCTUATION: [char; 60] = [
     '!', '"', '#', '$', '%', '&', '(', ')', '*', ',', '.', '/', ':', ';', '?', '@', '[', '\\', ']',
     '^', '_', '`', '{', '|', '}', '~', '¡', '¦', '¨', '¯', '´', '¸', '¿', '\u{2018}', '\u{2019}',
     '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '€', '+', '<', '=', '>', '±', '«', '»', '×', '÷',
-    '§', '©', '¬', '®', '°', 'µ', '…', '•',
+    '§', '©', '¬', '®', '°', 'µ', '\u{b7}', '…', '•',
 ];
 
 /// What one case-folded character contributes to each pass.
