@@ -1923,6 +1923,7 @@ C	probes/t3839-groupby-scalar-filter.case.json	678
 C	probes/t3840-groupby-lifted-beside-filter.case.json	134
 C	probes/t3840-groupby-lifted-false-element.case.json	141
 C	probes/t3840-groupby-lifted-filter-consumed.case.json	46
+C	probes/t3854-groupby-scalar-inputs.case.json	83
 C	probes/t3870-call-255-stored.case.json	3
 C	probes/t3870-call-255-typed.case.json	3
 C	probes/t3870-call-256-stored.case.json	3
