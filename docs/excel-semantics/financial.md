@@ -1211,7 +1211,7 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     The probe covers the 16 wrong-type cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
     - Residual: FV at 355 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
       them in the noise floor, |f| from 1e-7 to 1e-2) equals -(pv·P + pmt·A) with Excel's twice-rounded operators on
-      all 355. That is RATE's residual less + fv, so no residual difference shows at these points at any nper (T-3579
+      all 355. That is the model's RATE residual less + fv, so no residual difference shows at these points at any nper (T-3579
       found the same at nper 1). This reads Excel's FV, not RATE's own residual: that RATE evaluates its residual
       with FV's arithmetic is consistent with the scores but not observed directly. An iterate is written as
       `(a+b)`: a 15-digit head plus a tail that rounds back to the double, because Excel cuts a formula literal to
