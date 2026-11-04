@@ -1765,6 +1765,7 @@ C	probes/t3172-plus-255-stored.case.json	2
 C	probes/t3172-plus-255-typed.case.json	2
 C	probes/t3172-plus-256-stored.case.json	2
 C	probes/t3172-plus-256-typed.case.json	2
+C	probes/t3179-cumipmt-ipmt-sum.case.json	84
 C	probes/t3181-collation-prefix-arrays.case.json	30
 C	probes/t3181-collation-prefix-callers.case.json	43
 C	probes/t3188-b1-huge-tagged.case.json	6
@@ -4337,6 +4338,8 @@ F	probes/t3070-gamma-inv-band.case.json	S!A7
 F	probes/t3070-gamma-inv-band.case.json	S!A76
 F	probes/t3070-gamma-inv-band.case.json	S!A8
 F	probes/t3070-gamma-inv-band.case.json	S!A9
+F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!A1
+F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!D1
 F	probes/t3211-collation-sort-cycles.case.json	Calc!A16
 F	probes/t3211-collation-sort-cycles.case.json	Calc!A19
 F	probes/t3211-collation-sort-cycles.case.json	Calc!A20

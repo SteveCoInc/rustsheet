@@ -2209,6 +2209,20 @@ E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked
 underflowed principal's bits); the short sums' last digits in T-1374)
 Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-3731, T-3776, T-1374
 
+## CUMIPMT of one period is not that period's IPMT (T-3179)
+Rule: Excel's CUMIPMT is not the sum of its own IPMTs, even over a single period. `CUMIPMT(0.1,10,345,2,2,1)` is
+-29.395712615048502 while `IPMT(0.1,2,10,345,0,1)` is -29.3957126150485 (1 ulp apart), and `CUMIPMT(0.0083,36,8000,3,3,0)`
+is -63.2064526131625 while `IPMT(0.0083,3,36,8000,0,0)` is -63.20645261316252 (3 ulp). Over ranges the gap is 1 ulp too:
+`CUMIPMT(0.3,36,8000,3,30,1)` -50422.18667857409 against both `SUM(IPMT(0.3,SEQUENCE(28,1,3),36,8000,0,1))` and the
+left-to-right running sum of the 28 IPMTs, -50422.186678574086; `CUMIPMT(0.1,29.9,8000,3,10,1)` -5557.470043410287
+against -5557.470043410286. So CUMIPMT has a per-period interest form of its own; summing IPMT (or the discounted
+split IPMT and PPMT use, "IPMT and PPMT split Excel's discounted payment") does not reach Excel's bits on these cells.
+Evidence: probes/t3179-cumipmt-ipmt-sum (84 cells, excel-graph, 2026-11-04): A1, D1 and B1, C1 against columns A-D
+(each IPMT) and E-H (running sums); the same CUMIPMT cells are ironcalc-calc CUMPRINC_CUMIPMT.xlsx G3 (= probes
+fin-cumipmt-overflow-and-forms A8), G4, G15 and fin-cumipmt-overflow-and-forms A13.
+Status: VERIFIED (excel-graph). Ours: every IPMT and running sum of the probe matches; the two single-period CUMIPMT
+cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-3179).
+
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
 2^27 visit cap, so one call lifts at most 524,288 elements: `ROWS(CUMPRINC(SEQUENCE(524289)*0+0.004,1024,1000,1,32,1))`
