@@ -188,7 +188,7 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
     };
     // Short number text with no positive exponent converts like Excel's x87 multiply by 10^-n, the
     // digits as written times 10^-n, rather than to the nearest double: `=4.91E-06`, `=0.00000491`
-    // and `VALUE("4910E-9")` are 4.9100000000000004E-06 (docs/excel-semantics/numbers.md "Decimals
+    // and `VALUE("491E-8")` are 4.9100000000000004E-06 (docs/excel-semantics/numbers.md "Decimals
     // reach a double through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling Hits!C
     // and E, -fresh C and D, excel-graph). Longer digit strings and positive exponents were not
     // probed for it, so they keep the nearest double (T-3932).

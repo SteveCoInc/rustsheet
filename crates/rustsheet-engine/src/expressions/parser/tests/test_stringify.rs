@@ -179,8 +179,10 @@ fn number_literals_print_text_that_reads_back_to_the_same_double() {
         column: 1,
     };
     for (formula, printed) in [
-        ("4910E-9", "4.91000000000000e-6"),
+        ("4910E-9", "4910e-9"),
         ("4.91E-06", "4.91e-6"),
+        ("14550E-15", "14550e-15"),
+        ("-14550E-15", "-14550e-15"),
         ("1.5", "1.5"),
     ] {
         let t = parser.parse(formula, &cell_reference);

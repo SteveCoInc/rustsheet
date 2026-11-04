@@ -48,12 +48,16 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   zeros included, times round64(10^-n), rounded to 64 bits and stored. Longer text, positive exponents and
   n > 15 keep the nearest double, so no probe was needed for them (the 15-digit T-3945 point,
   probes/t3945-atan-near-midpoint, still fails its 9 cells, as in the baseline).
-- Formulas are reparsed from their printed text, and literals printed at 15 digits (`=4910E-9` as `4.91e-6`)
-  would then read one ulp off: `literal_text` in stringify/literals.rs prints all 15 digits
-  (`4.91000000000000e-6`) when the short text would not read back to the same double.
-- Eval delta: probes-numeric/t3658-round-scaling 2,388 → 2,491 of 2,539 (+103); the 48 left are the stored xlsx
+- Formulas are reparsed from their printed text, and a literal printed at 15 digits can read one ulp off
+  (`=4910E-9` as `4.91e-6` reads one ulp high, `=14550E-15` as `1.455e-11` reads as the nearest):
+  `literal_text` in stringify/literals.rs prints the digits with trailing zeros added (`4910e-9`, `14550e-15`)
+  or, failing that, all 15 digits, whichever reads back to the same double.
+- Eval delta: probes-numeric/t3658-round-scaling 2,388 → 2,492 of 2,539 (+104); the 47 left are the stored xlsx
   numbers (Hits!G, `=F#`, out of scope). t3658-round-scaling-fresh 392 → 724 of 724 (+332, all pass). Gated
   suites: fixed 0, regressions 0 (probes-numeric is ungated); Gate A unchanged.
+- Readers that share `parse_excel_number` but were not probed (typed input and percent text, `"text"+0`,
+  criteria, NUMBERVALUE, AVERAGE text, DATEDIF) and the printed literal text are recorded UNVERIFIED in
+  numbers.md, with the probe task T-4074.
 - Decision 0188 R4 (structural model, kind (c)). Hold-out: the manual split T-3931 fixed (sha1(`case/Sheet!Ref`)
   first byte below 77, ~30%), margin 2 points, over the pure literal and `VALUE("…")` cells. Bit-exact counts
   (model / correctly rounded):
@@ -63,7 +67,9 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   | t3658-round-scaling VALUE | 42/42 / 5 | 19/19 / 4 |
   | fresh literal | 114/114 / 10 | 67/67 / 5 |
   | fresh VALUE | 113/113 / 7 | 68/68 / 8 |
-  Both candidates hold every cell within 4 ulp and within 15 digits; the model's hold-out rate (100%) equals its
-  train rate. Fresh sweep: probes-numeric/t3658-round-scaling-fresh (frozen model, T-3658) 362/362 literal and
+  The model column is the engine's own result (`rustsheet-eval show`: every literal and VALUE cell of both cases
+  passes). Both candidates hold every cell within 4 ulp and within 15 digits; the model's hold-out rate (100%)
+  equals its train rate. Fresh sweep: probes-numeric/t3658-round-scaling-fresh (frozen model, T-3658) 362/362 literal and
   VALUE cells bit-exact, so all inside the Gate A envelope.
-- Follow-up: T-4063 (probe TRUNC and ROUND with nothing dropped at these points, from the T-3931 fidelity review).
+- Follow-ups: T-4063 (probe TRUNC and ROUND with nothing dropped at these points, from the T-3931 fidelity review);
+  T-4074 (probe the unprobed readers and FORMULATEXT, from this task's fidelity review).
