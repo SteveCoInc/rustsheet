@@ -1205,7 +1205,7 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     - a zero step against distinct iterates: Excel errs on 12 of 125 zero-step holds and 1 of 21 distinct ones;
     - a cut on the step count.
 
-    They are the noise floor's path, not a second rule. T-3424 tested this and T-3963 owns them now (next bullet).
+    They are the noise floor's path, not a second rule. T-3424 tested this (next bullet).
   - **Excel's residual and step are the model's; the outcome of a flat secant is not** (probes/t3424-rate-noise-trace,
     433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/). The probe covers the 16 wrong-type
     cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
@@ -1257,7 +1257,8 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     - So Excel's path leaves the model's in the noise floor, sometimes in the last ulp and sometimes many steps
       earlier, though the residual and the step agree at every point probed. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74). Excel stops
       at 5.2793196756967624e-06, one ulp past the model's hold and the first double where f changes sign. The cause
-      is unknown. T-3963 owns it.
+      is unknown. T-3424 is blocked as time-boxed (decision 0056), so its cells are accepted (decision 0267). T-3963
+      studies the flat-secant outcome for the cells it owns.
     - FV: Excel's FV is the twice-rounded form on all 355 cells. The engine's plain-double FV misses one of them,
       A132 (`=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,934408648396.347,1)`: Excel
       -10935378180.042114, engine -10935378180.042236). Across the 587 numeric literal FV oracle cells, the

@@ -895,6 +895,7 @@ Evidence: probes/precision-and-rounding A14; probes-numeric `number-to-text/*/1e
 probes/text-number-words H6, H7, K1, K4, K5 (`="1e-308"+0` is 0).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
+Implemented in `arithmetic::operator_power` (T-3950: the operator only; POWER and SERIESSUM keep flushing, A17).
 Exception (T-3942, probes/seriessum-subnormal-power-and-term B15, A16 and probes/seriessum-subnormal-term-sum-and-power-points A3:B4): `x^2`
 for x = 1E-160, 1E-155 and 1.1E-155 keeps its subnormal result, see "SERIESSUM: a power or term below the smallest normal double is 0;
 `^` keeps its subnormal at x^2"; other `^` results flush (`0.5^1074`, `0.1^310`, `(-0.5)^1073`, "Integer exponents beyond 360"

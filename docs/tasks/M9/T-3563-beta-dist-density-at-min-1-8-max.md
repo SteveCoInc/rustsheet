@@ -9,6 +9,7 @@ size: M
 tier: opus
 depends_on: [T-3569]
 campaign: visible
+defer: phase-1b
 ---
 
 ## Goal
@@ -86,3 +87,6 @@ Cells (the visibly-off cells of the two cases; T-3564 owns the rest of each case
 Decisions 0083 and 0114 (`visible`): done when every cell this task lists is within half a unit of the 15th
 significant digit of Excel's value, or is an UNVERIFIED entry with its ruled-out hypotheses. The bit-level residue is
 T-3564 (`defer: phase-1b`).
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.

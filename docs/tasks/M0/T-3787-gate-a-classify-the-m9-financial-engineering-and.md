@@ -3,7 +3,7 @@ id: T-3787
 title: "Gate A: classify the M9 financial, engineering and database functions with no table or exemption, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: dropped
 priority: P2
 size: M
 tier: opus
@@ -76,3 +76,7 @@ build its table.
 ## Out of scope
 - Building any table: the filed tasks do that.
 - The statistical functions (T-3786) and ERF/ERFC (T-3784).
+
+## Outcome (dropped, 2026-11-04)
+Dropped 2026-11-04 as a duplicate. T-3797 (the 51 financial functions) and T-3800 (the 25 engineering and database
+functions) cover the same list. T-3800 classified its part in decision 0270, and T-3797 still owns the financial part.

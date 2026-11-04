@@ -573,32 +573,52 @@ D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same
 Status: VERIFIED. T-3958 adds the Gurmukhi (U+0A66), Tamil (U+0BE6), Telugu (U+0C66) and Khmer (U+17E0) blocks
 (probes/t3958-gurmukhi-tamil-telugu-khmer-digits, same layout, four blocks of eleven forms): all twelve blocks
 behave alike. `+0`, VALUE, NUMBERVALUE and TEXT read every form (the engine passes), and typed text is a number
-(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats seen (A39:A44, raw lines in
-docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)` = -12 `[$-km-KH,1200]0`, `១,២៣៤`
-`[$-km-KH,1200]#,##0`, exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction
-`# ?/?`. The formats of the other shapes and of the Gurmukhi, Tamil and Telugu blocks are UNVERIFIED (not logged).
+(B1:B44 TRUE; the engine passes since T-3891). The typed formats of all four blocks are logged by
+probes/t3891-typed-script-digit-shapes A43:A86 (docs/research/t3891-typed-script-digit-shapes-2026-11-04.md):
+tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the other blocks.
 - **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
   which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
-  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101; row 102, `١.٥`, repeats row 14 and is not a mixed-script row).
+  UNPROBED: criteria (COUNTIF and the other readers through functions/criteria.rs, which share `cast::number_text_in`) on the five T-3446 blocks (Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar) are probed only for one plain digit: `COUNTIF("3","="&digit 3)` is 1 (probes/t3895-collation-script-digits Calc!A49, A74, A99, A124, A149; Thai A24). Not probed: multi-digit and the signed, decimal, percent, `$`, parentheses, group-comma, exponent and ISO-date forms in a criterion, script-digit clock and mixed-fraction criteria, and criteria readers other than COUNTIF (SUMIF, the *IFS functions, the D-functions). The engine reads them by the shared path.
 - **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
   separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
   VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
-- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE, rows 100 and 101 being the mixed-script ones; B103:B105 FALSE), and the cell gets
   a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
   `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
   `[$-,200]mm/dd/yyyy`, `١٢:٣٠` → `[$-,200]h:mm`; `-١٢` and `(١٢)` → `[$-ar-SA,200]0`; the exponent form keeps
   `0.00E+00` and the mixed fraction `# ?/?`, untagged. The tag per block: `ar-SA,200`, `ar-SA,300` (Extended
   Arabic-Indic), `hi-IN,400`, `bn-IN,500`, `th-TH,D00`, `lo-LA,E00`, `bo-CN,F00`, `my-MM,1000`; `1٢3` takes
-  `ar-SA,200` and `١२` takes `hi-IN,400`. The engine keeps typed script digits as text (engine gap T-3891).
+  `ar-SA,200` and `١२` takes `hi-IN,400`.
+- **The shapes T-3446 left open (T-3891)**, probes/t3891-typed-script-digit-shapes (excel-graph, 2026-11-04;
+  ENTERED log in docs/research/t3891-typed-script-digit-shapes-2026-11-04.md), each a number (B1:B42 TRUE):
+  - **The last script digit picks the tag**, whatever comes before it: `١२๓` → `th-TH,D00`, `๓२١` and `१٢3`
+    → `ar-SA,200`, `1٢३` → `hi-IN,400`, `12٣` → `ar-SA,200` (A31:A39).
+  - **A plain number counts its typed decimals**: `١.٢٥` → `[$-ar-SA,200]0.##`, `١.٢٥٠` → `0.###` (value 1.25),
+    `١٢.٥٠` → `0.##`, `٠.٥` and `.٥` → `0.#`, `+١٢` → `0`; an integer of 12 digits `١٢٣٤٥٦٧٨٩٠١٢` →
+    `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
+  - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
+    `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
+    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+  - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
+  - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
+    `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
+    clocks keep theirs: `h:mm:ss`, `h:mm AM/PM` (`١٢:٣٠ PM`, `١:٣٠ AM`, `١ PM`), `mm:ss.0` (`١٢:٣٠.٥`).
+  - Untagged as ASCII: `١E-٣` → `0.00E+00`, `١ ١/١٢` → `# ??/??`.
+  - Thai `๑๒.๕%` → `[$-th-TH,D00]0.00%`, `๑.๒๕` → `0.##`; Devanagari `-$१२` the long currency form with `hi-IN,400`.
+  How the tags print: number-formats.md "Numeral-system digits" (`locale,N00` form).
+  Unprobed and inferred in ours: a date with a month name and no year (ours `dd-mmm-yyyy`), a mixed fraction
+  with `%` (ours `0.00%`, tagged), the 12-digit boundary of the exponent form.
 - In passing: a bare typed ASCII clock `12:30` is a number with `h:mm` in Excel (B10); the engine keeps it
   text (engine gap T-3894). `NUMBERVALUE("1 1/2")` is 46328 in 2026: NUMBERVALUE drops every space
   (text.md), so it reads the date `11/2` of the current year; the case does not score F on those rows.
 Implemented in: `script_digit_to_ascii` and `ascii_script_digits` (formatter/parse_formatted.rs), applied in
 `cast::number_text_in` before the formatted-number and clock readers and before both mixed-fraction readers
-(`cast_number_in`, `value_number_text_with`).
+(`cast_number_in`, `value_number_text_with`). Typed input (T-3891): `parse_typed_number` reads the ASCII text and `script_digit_format` gives Excel's
+format, the tag from `SCRIPT_DIGITS` (same file).
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by
@@ -762,13 +782,49 @@ excel-graph, 2026-11-04):
   - SORTBY's order of the five texts that tie at every pass depends on their input order (Calc!B20:D26: ascending
     6,1,2,3,4,5,7; the reversed input 6,4,5,3,1,2,7), as a non-transitive comparison gives.
   Ours: SORT, SORTBY, the lookups, SWITCH and UNIQUE compare with `cmp_text_pairwise` (`compare_values_pairwise`)
-  and pass every cell. GROUPBY and PIVOTBY keep the total `cmp_text`, where this rule is UNVERIFIED.
+  and pass every cell. GROUPBY and PIVOTBY do not yet (T-4086 below, T-4088).
 - **A mark after a weightless character is a lone mark.** `"a"&U+00AD&U+0301` is above `"a"` and below `"á"`
   (Calc!B50:B54), and so is it with U+0524 (B55:B57). With a `b` after it, it is below `"áb"` and above `"ab"`, and
   COUNTIF does not count it as `áb` (B58:B61, B63). `U+00AD&U+0301` equals a lone U+0301 (B62). So the weightless
   character ends the letter before it, and the mark weighs as a mark with no letter.
   Implemented in: `elements` yields `Element::Weightless` for it, which has no weight in any pass but ends the
   letter before it, so `accent_units` gives the mark a letter unit of its own (T-4072).
+
+T-4086 settled what the review of T-4072 left open (probes/t4086-collation-later-passes, M2, 75 cells, and
+probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
+- **U+202F differs from the space at the accent pass.** `U+202F&"a"<" "&"á"` is FALSE, and so are
+  `<U+3000&"á"` and `U+202F&ぁ<" "&あ` (Calc!B1, C1, F1). U+3000 and U+205F give TRUE for the first two (B2:C4).
+  It is the accent pass itself, compared letter by letter: with the positions reversed, `"a"&U+202F < "á"&" "`
+  is TRUE (the `á` at position 1 decides), and so is `"a"&U+202F&"b" < "á"&" b"` (B46, B48; B47 FALSE).
+  Ours: U+202F's difference is a variant weight (`NARROW_NBSP`, T-4072), so B1, C1 and F1 are known failures owned
+  by T-4087. UNVERIFIED: the accent weight's value.
+- **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
+  character still joins the hyphen or apostrophe. `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
+  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE, and each still holds with a `b` after
+  it (Calc!B10:B12, B16:B17, B21:B22, B50:B52). Ours: since T-4072, `Element::Weightless` cuts the hyphen's marks
+  in `skipped` and clears `after_skipped`; B10, B12, B17, B21, B22 and B50 are owned by T-4087.
+- **Width and superscripts are weighed before small kana; kana type after.**
+  - `"Ａ"&ぁ > "A"&あ`, `"¹"&ぁ > "1"&あ` and `U+3000&ぁ > " "&あ` are TRUE (Calc!B30:B33, B36, F2). So the first
+    character's width or superscript decides over the second's small kana.
+  - `"ア"&ぁ < "あ"&あ` is TRUE (B34): the small kana still decides over the kana type, as in T-3275's
+    `"かぁ" < "カア"`.
+  - `"Ａ"&"a" < "A"&"á"` is TRUE (B37): the accents still come first.
+  - It is a separate, earlier pass, not one pass decided at the first difference. With the width at position 2
+    and the small kana at position 1, `ぁ&"Ａ" > あ&"A"`, `ぁ&"¹" > あ&"1"` and `ぁ&U+3000 > あ&" "` are still
+    TRUE (B40, B42, B44; B41, B43, B45 FALSE).
+  - Ours: `variants` weighs width, superscript and kana type in one pass after `kana_weights`, so B30:B33, B36,
+    B40:B45 and F2 are owned by T-4087. This qualifies "Full-width and half-width forms" above ("Width is a
+    tiebreak").
+- **GROUPBY and PIVOTBY group by `=`, prefix rule included.** Over `ab`, `ab`&U+00AD, `é`, `é`&U+00AD,
+  U+00AD&`ab` and `AB` (values 1, 2, 4, 8, 16, 32), GROUPBY gives three groups in this order (-groupby Calc!B1,
+  B4:B6, D4:D6):
+  - 49 = `ab` + U+00AD&`ab` + `AB`, keyed by its first spelling `ab` (EXACT, Calc!B11:B12);
+  - 2 = `ab`&U+00AD;
+  - 12 = `é` + `é`&U+00AD.
+
+  PIVOTBY gives the same groups under its header row (B2, C4:C7). U+00AD&`ab` is equal to both `ab` and
+  `ab`&U+00AD, and joins the first group. Ours: `group_key` keys texts by their upper case and `key_cmp` orders them
+  with the total `cmp_text`, giving five groups; the 13 off cells are owned by T-4088.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

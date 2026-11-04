@@ -50,6 +50,19 @@ pub(crate) fn parse_typed_number(
     if ends_with_dollar(original) {
         return Err("Cannot parse number".to_string());
     }
+    let parse =
+        |text: &str| parse_ascii_typed_number(text, currencies, locale, current_year, date_system);
+    parse_typed_script_digits(original, parse).unwrap_or_else(|| parse(original))
+}
+
+/// [`parse_typed_number`] for text whose digits are ASCII.
+fn parse_ascii_typed_number(
+    original: &str,
+    currencies: &[&str],
+    locale: &Locale,
+    current_year: CurrentYear,
+    date_system: DateSystem,
+) -> Result<(f64, Option<String>), String> {
     parse_formatted_number(original, currencies, locale, current_year, date_system).or_else(|err| {
         let text = without_single_letter_dot(original);
         if let Some(parsed) = parse_bare_letter_clock(text) {
@@ -556,30 +569,172 @@ fn parse_plain_number(
 
 /// Excel reads the digits of twelve scripts as their values, alone or mixed with ASCII digits and
 /// with each other: Arabic-Indic (U+0660..), Extended Arabic-Indic (U+06F0..), Devanagari
-/// (U+0966..), Bengali (U+09E6..), Thai (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..) and Myanmar
-/// (U+1040..) in every probed form; Gurmukhi (U+0A66..), Tamil (U+0BE6..), Telugu (U+0C66..) and
-/// Khmer (U+17E0..) as a COUNTIF criterion (probes/t3559-collation-unprobed-blocks E136:E145, their
-/// other forms unprobed); full-width digits stay text. Applied by number-text coercion only
-/// (`cast::number_text_in`, the mixed fraction readers), not to text typed into a cell
-/// (TODO(T-3891)). Evidence: docs/excel-semantics/coercion.md "Script digits in number text
-/// (T-3446)", probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms.
+/// (U+0966..), Bengali (U+09E6..), Gurmukhi (U+0A66..), Tamil (U+0BE6..), Telugu (U+0C66..), Thai
+/// (U+0E50..), Lao (U+0ED0..), Tibetan (U+0F20..), Myanmar (U+1040..) and Khmer (U+17E0..), in
+/// every probed form; full-width digits stay text. Number-text coercion (`cast::number_text_in`,
+/// the mixed fraction readers) and typed cell input ([`parse_typed_number`]) read them.
+/// Evidence: docs/excel-semantics/coercion.md "Script digits in number text (T-3446)",
+/// probes/t3276-collation-other-scripts Calc!H1:H8, probes/t3446-script-digits-forms,
+/// t3958-gurmukhi-tamil-telugu-khmer-digits, t3891-typed-script-digit-shapes.
 pub(crate) fn script_digit_to_ascii(c: char) -> char {
-    let zero = match c {
-        '\u{0660}'..='\u{0669}' => 0x0660,
-        '\u{06F0}'..='\u{06F9}' => 0x06F0,
-        '\u{0966}'..='\u{096F}' => 0x0966,
-        '\u{09E6}'..='\u{09EF}' => 0x09E6,
-        '\u{0A66}'..='\u{0A6F}' => 0x0A66,
-        '\u{0BE6}'..='\u{0BEF}' => 0x0BE6,
-        '\u{0C66}'..='\u{0C6F}' => 0x0C66,
-        '\u{0E50}'..='\u{0E59}' => 0x0E50,
-        '\u{0ED0}'..='\u{0ED9}' => 0x0ED0,
-        '\u{0F20}'..='\u{0F29}' => 0x0F20,
-        '\u{1040}'..='\u{1049}' => 0x1040,
-        '\u{17E0}'..='\u{17E9}' => 0x17E0,
-        _ => return c,
+    script_digit(c).map_or(c, |(_, digit)| digit)
+}
+
+/// The block of a script digit ([`script_digit_to_ascii`]) and its ASCII digit.
+fn script_digit(c: char) -> Option<(ScriptDigits, char)> {
+    let block = SCRIPT_DIGITS
+        .iter()
+        .find(|block| (block.zero..block.zero + 10).contains(&u32::from(c)))?;
+    let digit = char::from_digit(u32::from(c) - block.zero, 10)?;
+    Some((*block, digit))
+}
+
+/// A block of script digits and the locale tag Excel gives a number typed with them: the locale,
+/// and the numeral part of the tag (`ar-SA` and `200` make `[$-ar-SA,200]0`; the numeral byte of
+/// `locale_tag::numerals` above the low byte). Logged by the oracle for every block
+/// (docs/research/t3446-script-digits-forms-2026-11-03.md,
+/// t3891-typed-script-digit-shapes-2026-11-04.md).
+#[derive(Clone, Copy)]
+struct ScriptDigits {
+    zero: u32,
+    locale: &'static str,
+    numerals: &'static str,
+}
+
+const SCRIPT_DIGITS: [ScriptDigits; 12] = [
+    ScriptDigits {
+        zero: 0x0660,
+        locale: "ar-SA",
+        numerals: "200",
+    },
+    ScriptDigits {
+        zero: 0x06F0,
+        locale: "ar-SA",
+        numerals: "300",
+    },
+    ScriptDigits {
+        zero: 0x0966,
+        locale: "hi-IN",
+        numerals: "400",
+    },
+    ScriptDigits {
+        zero: 0x09E6,
+        locale: "bn-IN",
+        numerals: "500",
+    },
+    ScriptDigits {
+        zero: 0x0A66,
+        locale: "pa-IN",
+        numerals: "600",
+    },
+    ScriptDigits {
+        zero: 0x0BE6,
+        locale: "ta-IN",
+        numerals: "900",
+    },
+    ScriptDigits {
+        zero: 0x0C66,
+        locale: "te-IN",
+        numerals: "A00",
+    },
+    ScriptDigits {
+        zero: 0x0E50,
+        locale: "th-TH",
+        numerals: "D00",
+    },
+    ScriptDigits {
+        zero: 0x0ED0,
+        locale: "lo-LA",
+        numerals: "E00",
+    },
+    ScriptDigits {
+        zero: 0x0F20,
+        locale: "bo-CN",
+        numerals: "F00",
+    },
+    ScriptDigits {
+        zero: 0x1040,
+        locale: "my-MM",
+        numerals: "1000",
+    },
+    ScriptDigits {
+        zero: 0x17E0,
+        locale: "km-KH",
+        numerals: "1200",
+    },
+];
+
+/// [`parse_typed_number`] for typed text with script digits: the number of its ASCII reading,
+/// with the format Excel gives it, which names the block of the **last** script digit in a
+/// locale tag (`१٢` takes `ar-SA,200`, `๓२١` `ar-SA,200`, `१२๓` `th-TH,D00`; probes/t3891-typed-
+/// script-digit-shapes A31:A39) and differs from the format of the same ASCII text
+/// ([`script_digit_format`]). `None` when `original` has no script digit.
+fn parse_typed_script_digits(
+    original: &str,
+    parse: impl Fn(&str) -> Result<(f64, Option<String>), String>,
+) -> Option<Result<(f64, Option<String>), String>> {
+    let block = original.chars().rev().find_map(script_digit)?.0;
+    let ascii = ascii_script_digits(original);
+    Some(parse(&ascii).map(|(value, format)| {
+        let format = script_digit_format(&ascii, value, format.as_deref(), block);
+        (value, format)
+    }))
+}
+
+/// The format Excel gives typed script-digit text whose ASCII reading `ascii` has the typed
+/// format `format` (probes/t3446-script-digits-forms, t3958-gurmukhi-tamil-telugu-khmer-digits,
+/// t3891-typed-script-digit-shapes; excel-graph ENTERED logs):
+/// - a number with no format is `0`, or `0.` and one `#` per typed decimal (`١.٢٥٠` is `0.###`,
+///   `١٢.٥٠` `0.##`), and an integer of 12 digits or more `0.#####E+00`;
+/// - a percent is `0.00%` (ASCII `12%` is `0%`), a currency the long form
+///   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)` however it was written;
+/// - a date is `mm/dd/yyyy`, or `dd-mmm-yyyy` with a month name, under `[$-,200]`; a date-time
+///   and a clock keep their format under that tag;
+/// - an exponent or a mixed fraction keeps its format with no tag.
+fn script_digit_format(
+    ascii: &str,
+    value: f64,
+    format: Option<&str>,
+    block: ScriptDigits,
+) -> Option<String> {
+    let ScriptDigits {
+        locale, numerals, ..
+    } = block;
+    let tagged = |code: &str| Some(format!("[$-{locale},{numerals}]{code}"));
+    let Some(format) = format else {
+        // Excel: `١٢٣٤٥٦٧٨٩٠١٢` is `0.#####E+00` (A20); 11 digits and below unprobed.
+        if value.abs() >= 1e11 {
+            return tagged("0.#####E+00");
+        }
+        let decimals = ascii.split_once('.').map_or(0, |(_, rest)| {
+            rest.chars().take_while(char::is_ascii_digit).count()
+        });
+        return tagged(&format!(
+            "0{}{}",
+            if decimals > 0 { "." } else { "" },
+            "#".repeat(decimals)
+        ));
     };
-    char::from_digit(c as u32 - zero, 10).unwrap_or(c)
+    if format.contains('E') || format.contains('?') {
+        return Some(format.to_string());
+    }
+    if format.contains('$') {
+        let symbol = format!("[$$-{locale},{numerals}]");
+        return Some(format!("{symbol} #,##0.00_);[Red]({symbol}#,##0.00)"));
+    }
+    if format.contains('%') {
+        return tagged("0.00%");
+    }
+    if is_likely_date_number_format(format) {
+        let has_clock = format.contains('h') || format.contains('s');
+        let code = match () {
+            () if has_clock => format,
+            () if format.contains("mmm") => "dd-mmm-yyyy",
+            () => "mm/dd/yyyy",
+        };
+        return Some(format!("[$-,{numerals}]{code}"));
+    }
+    tagged(format)
 }
 
 /// `text` with every script digit ([`script_digit_to_ascii`]) replaced by its ASCII digit;

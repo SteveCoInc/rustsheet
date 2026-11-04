@@ -32,7 +32,7 @@ because T-3850 showed that no rule on the model's state at the flat step does it
 - A wider restart (to step 200, |f1| unbounded) gains 70 and loses 14 cells on the new probe, but on the fit set it
   gains 8 and loses 12. The sampling decides the count, so no widening is a rule.
 - T-3424 (2026-11-04, probes/t3424-rate-noise-trace, docs/research/t3424/): the residual is not the cause.
-  - Excel's FV is the model's annuity value at 355 noise-floor iterates of the 16 cells below, at nper 1 to 351.
+  - Excel's FV is the model's annuity value at 355 noise-floor iterates of T-3424's 16 cells, at nper 1 to 351.
   - The model's step form beats six others and two extended-iterate forms.
   - Seeded runs that hold at the same iterate get different Excel outcomes.
   - No single quantity at the hold separates Excel's returned holds from its errors.
@@ -49,14 +49,6 @@ because T-3850 showed that no rule on the model's state at the flat step does it
   - every cell of probes/t3698-rate-flat-restart-fresh that is off Excel;
   - every cell of probes/t3906-rate-restart-oos that is off Excel;
   - every cell of probes/t3850-rate-same-state that is off Excel.
-  - every cell of probes/t3424-rate-noise-trace that is off Excel (from T-3424; its one FV cell is T-4146's too).
-  - From T-3424's 16 wrong-type cells: probes-numeric/t3348-rate-gate-a-sweep A272 and A296.
-  - From T-3424's 16 wrong-type cells: probes-numeric/t3348-rate-gate-a-fresh A59, A70, A74, A77, A89, A90, A95,
-    A157, A162, A173, A251, A272, A275 and A292.
-  - From T-3424: every cell of probes/t3585-rate-num-near-minus-one that is off Excel (noise-floor holds in columns
-    G and H).
-  - From T-3424: probes-numeric/t3478-rate-r4-wide Calc!A285.
-  - From T-3424: the Gate A points accuracy/RATE/s1 Calc!A278 and A291 (eval/accuracy/known-failures.tsv).
   - The cases are named here on lines with no cell address, so this task owns every cell of them. It overlaps with
     T-3424 (the noise floor's type) on the error-against-number cells and with T-3916 (the owner's ruling on T-3698's
     restart, decision 0265: kept).

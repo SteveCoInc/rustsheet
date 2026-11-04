@@ -3,7 +3,7 @@ id: T-3424
 title: "RATE's type at the noise floor: Gate A sweep cells where one side errs"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P0
 size: M
 tier: opus
@@ -64,11 +64,11 @@ cells, so RATE's Gate A fails until they are settled.
   lab `rate` (tools/src/rustsheet_tools/fitlab/kernels/solvers.py).
 
 ## Acceptance criteria
-- [x] (fallback taken: the forms tried are recorded and the cells stay known misses, see Outcome) The 16 cells above have Excel's type, and the numbers are within 15 significant digits of Excel. If Excel's
+- [ ] The 16 cells above have Excel's type, and the numbers are within 15 significant digits of Excel. If Excel's
       noise cannot be reproduced, the task records the residual forms tried and the cells stay known misses;
       RATE's Gate A then stays failed (no exception exists for it).
-- [x] No gated cell regresses, and the 5 fv-nonzero holds above stay numbers.
-- [ ] `make check` green; reviewers approve (checked by CI and the review panel on this PR).
+- [ ] No gated cell regresses, and the 5 fv-nonzero holds above stay numbers.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The cells of the right type that are not Excel's bits (T-3389).
@@ -107,7 +107,7 @@ flat-secant restarts. RATE has also changed on `main` since this branch's experi
 `#NUM!` when a converged iterate has 1 + r at or below 1e-7. The next run re-scores the 16 cells on current `main`
 before it uses the two experiments above, then fits the residual from T-3579's cells.
 
-## Outcome (2026-11-04, opus run)
+## Progress (2026-11-04, opus run, third attempt)
 - **Re-scored on current `main`:** all 16 cells still have the wrong type, with T-3698's restart and T-3585's floor
   in place. The engine returns a number on sweep A296 and fresh A59, A70, A74, A77, A89, A90, A95, A157, A162,
   A173, A275 and A292, and gives `#NUM!` on sweep A272 and fresh A251 and A272.
@@ -124,13 +124,39 @@ before it uses the two experiments above, then fits the residual from T-3579's c
   - Seeded runs that hold at the same iterate get different Excel outcomes, a number on one and `#NUM!` on the other
     (fresh A275).
   - No single quantity at the hold separates Excel's 549 returned holds from its 60 errors.
-- **Acceptance:** the first criterion's fallback applies. The forms tried are recorded (above, the two experiments
-  in "Progress notes", and financial.md). The 16 cells stay known misses and RATE's Gate A stays failed. No engine
-  change was made, so no gated cell regresses.
-- **Handed on:** T-3963 owns the 16 cells now, together with the cells and the two Gate A points
-  (eval/accuracy/known-failures.tsv) this task owned, and every off cell of the new probe. Its context now says that
-  the residual is ruled out.
+- No engine change was made, so no gated cell regresses. T-3963's context now says the residual is ruled out.
 - **Follow-up:** T-4146 (opus). Excel's FV is the twice-rounded form on all 355 probe cells and on all 587 literal FV
   oracle cells. The engine's plain-double FV misses probe A132 (587 against 586).
 - **Eval delta:** probes +1 case (433 cells: 394 pass, 39 new-coverage known failures, 0 regressions;
   `make eval-baseline`). No other case changes.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 17 probes-numeric cells that no open task listed: 15 with the wrong type or error, 2 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3348-rate-gate-a-fresh.case.json (16): Calc!A59, A70, A74, A77, A89-A90, A95, A157, A162, A173, A251, A272, A275, A280, A285, A292
+- probes-numeric/t3348-rate-gate-a-sweep.case.json (1): Calc!A272
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Blocked because: time-boxed (decision 0056)
+Three attempts have not moved any of the 16 type cells: the power-form experiment (2026-10-31), the residual-precision
+experiment (2026-11-01; both in "Progress notes") and this run's probe (2026-11-04, "Progress" above). Decision 0267
+item 4 applies: the cells this task lists, including its "Decision 0267 cells", are accepted, and no follow-up is
+filed for them. RATE's Gate A stays failed on them.
+
+Candidates tried, none of which moves a cell:
+- the power P = (1+r)^n: Excel's `^` model (shipped), correctly rounded pow, exp(n·log(1+r)), exp(n·log1p(r)), the x87
+  sequence;
+- each residual operation twice-rounded, kept at 64 bits, or P-1 exact (64 and 96 combinations), k·(P-1) before /r,
+  the expm1 factor and the PV form (T-3389);
+- six step forms, a flat secant as `#NUM!`, and iterates kept at 80 bits (this run);
+- single thresholds on 13 quantities at the hold (this run).
+
+Reopen only on a new hypothesis recorded here (decision 0056). This run's probe shows the residual and the step are
+Excel's along the path. The open question is how Excel decides a flat secant: seeded runs that hold at the same
+iterate get different Excel outcomes. T-3963 studies that for the flat-secant cells it owns.
