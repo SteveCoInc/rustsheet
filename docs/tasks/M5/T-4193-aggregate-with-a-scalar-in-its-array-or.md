@@ -3,7 +3,7 @@ id: T-4193
 title: "AGGREGATE with a scalar in its array or reference argument, under every option, and a range against a later error argument: probe and match"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
