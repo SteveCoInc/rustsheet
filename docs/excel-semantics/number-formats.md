@@ -628,7 +628,7 @@ Tasks: T-0954
 ## `mm` after a minute is a month
 Rule: once an `m`/`mm` has been read as a minute, every later `m`/`mm` in the section is a month, unless an hour
 comes between them: `h:mm|h:mm` on 13:02 is "13:02|1:02 PM" with `AM/PM` and `h:mm h:mm AM/PM` "13:02 1:02 PM"
-(probes/t3710-ampm-hour-tokens A5, A14; `hour_pending`, T-3710). An hour, then a date token, then `mm`
+(probes/t3710-ampm-hour-tokens A5, A14; T-3710). An hour, then a date token, then `mm`
 after a minute is a minute too (`h:mm|h|yyyy-mm` is "18:00|18|2023-00", `h:mm|h d mm` "18:00|18 15 00";
 probes/t3666-review-followups A13:A15). `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 45000.75 "18:00|2023-03-15"; `hh mm|dd mm`
 is "06 00|00 01"; `mm:ss|yyyy-mm` is "00:00|1900-01". With an hour but no minute yet, `mm` is a minute even after a
@@ -636,7 +636,7 @@ date token: `h|yyyy-mm` is "6|1900-00".
 Evidence: probes/mm-after-time-and-date-token (22 cells, excel-graph 2026-10-30), probes/t2779-hebrew-saka-more E7.
 A minute read only because `.0` follows (`mm.0`) does not set it: `mm.0 h:mm` on 0.1234567 is "57.7 2:57"
 (probes/t3575-fraction-after-elapsed-b A30, T-3575).
-Status: VERIFIED (excel-graph). Implemented in: `minute_read` (formatter/parser.rs). Unprobed: `h:mm:ss mm`.
+Status: VERIFIED (excel-graph). Implemented in: `MinuteSlot` (formatter/parser.rs). Unprobed: `h:mm:ss mm`.
 Tasks: T-2961, T-3710
 
 ## AM/PM switches only some hours
