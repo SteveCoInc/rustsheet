@@ -3,7 +3,7 @@ id: T-3424
 title: "RATE's type at the noise floor: Gate A sweep cells where one side errs"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: todo
 priority: P0
 size: M
 tier: opus
@@ -90,9 +90,8 @@ cells, so RATE's Gate A fails until they are settled.
   experiment named next: the two sums kept at 64 bits. T-3389 adds the algebraic forms and the step forms, also
   negative, in financial.md "Not reproduced".
 
-## Blocked because
-Excel's residual in the noise floor is not determined by the evidence we have. Two experiments rule out the power
-routine, the residual's operation precision, the algebraic forms and the secant step forms. T-3389 shows that
-Excel's path leaves the model's trace before the hold, so a rule on the hold cannot settle the type either
-(decision 0198). T-3579 probes Excel's residual bits directly, with guess-seeded runs at nper 1. Unblock when it
-lands, and fit the residual from its cells. RATE's Gate A stays failed until then.
+## Unblocked (2026-11-04, decision 0264 stale-draft triage)
+T-3579, the blocker, is `done` on `main` (#2728): Excel's residual bits at nper 1 are probed, and the misses are
+flat-secant restarts. RATE has also changed on `main` since this branch's experiments: T-3585 (#2816) makes RATE
+`#NUM!` when a converged iterate has 1 + r at or below 1e-7. The next run re-scores the 16 cells on current `main`
+before it uses the two experiments above, then fits the residual from T-3579's cells.
