@@ -3,7 +3,7 @@ id: T-3662
 title: "Probe how Excel compares texts holding ignorable format characters: soft hyphen, zero-width space and joiners, bidi marks, BOM, word joiner, variation selector and the C1 controls"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
