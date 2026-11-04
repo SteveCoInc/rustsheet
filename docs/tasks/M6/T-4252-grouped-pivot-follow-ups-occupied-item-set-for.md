@@ -3,7 +3,7 @@ id: T-4252
 title: "Grouped pivot follow-ups: occupied-item set for GETPIVOTDATA and one layout footprint helper"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
