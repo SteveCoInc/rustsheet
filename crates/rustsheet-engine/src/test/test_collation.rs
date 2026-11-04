@@ -521,6 +521,34 @@ fn exact_match_fold_of_the_marks() {
 /// (`cmp_text_pairwise`) ends on the data of probes/t3201-collation-wrapped-run-pairs (37 texts,
 /// hundreds of intransitive triples) in several input orders, without panicking, with a
 /// permutation of the input in which no text is directly after one it is below (T-3211).
+/// A cycle `a<b<c<d<a` with chords `c<a`, `d<b` (probes/t3418-sort-cycle-permutations, the shape of
+/// Data!A3, A4, A6, A7): Excel does not reverse the strictly descending chain `a, c, b, d`; it merges
+/// one-element runs pairwise, `c, a` and `d, b`, then `c, d, a, b` (Calc!A3, T-3418).
+#[test]
+fn the_pairwise_sort_never_reverses_a_descending_chain() {
+    use crate::functions::util::sort_indices_pairwise;
+    use std::cmp::Ordering;
+    // less[x][y]: x < y. a=0, b=1, c=2, d=3.
+    let less = [
+        [false, true, false, false],
+        [false, false, true, false],
+        [true, false, false, true],
+        [true, true, false, false],
+    ];
+    let cmp = |x: usize, y: usize| {
+        if less[x][y] {
+            Ordering::Less
+        } else if less[y][x] {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    };
+    let mut indices = vec![0, 2, 1, 3];
+    sort_indices_pairwise(&mut indices, cmp);
+    assert_eq!(indices, vec![2, 3, 0, 1]);
+}
+
 #[test]
 fn the_pairwise_sort_ends_on_intransitive_texts() {
     use crate::functions::util::collation::cmp_text_pairwise;

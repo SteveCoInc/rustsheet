@@ -220,12 +220,15 @@ pub(crate) fn compare_values_pairwise(left: &CalcResult, right: &CalcResult) -> 
 
 /// Sorts `indices` stably by `cmp`, which need not be a total order: Excel's text comparison is
 /// not transitive (docs/excel-semantics/coercion.md "Not a total order"), and `slice::sort_by`
-/// may panic on such a comparator. A natural merge sort: the input is cut into runs, each
-/// non-descending or strictly descending (reversed in place), and neighbouring runs are merged
-/// pairwise, a tie taking the left run's element, until one is left. On any comparator it ends
-/// with a permutation of `indices`, in O(n log n) comparisons and one buffer of n indices. On a
-/// cycle it reproduces Excel's SORT for every order of three texts; on longer inputs holding
-/// cycles Excel's order differs in some cells (probes/t3211-collation-sort-cycles, T-3211).
+/// may panic on such a comparator. A natural merge sort: the input is cut into maximal
+/// non-descending runs (a strictly descending stretch is runs of one element, never reversed), and
+/// neighbouring runs are merged pairwise, bottom-up, a tie taking the left run's element, until
+/// one is left. On any comparator it ends with a permutation of `indices`, in O(n log n)
+/// comparisons and one buffer of n indices. On texts holding comparison cycles this is Excel's
+/// SORT and SORTBY order, ascending and descending: every row of
+/// probes/t3211-collation-sort-cycles and of probes/t3418-sort-cycle-permutations (every order
+/// of three 4- and 5-text sets). Reversing strictly descending runs, the T-3211 model, misses 28
+/// of those 168 rows, since on a cycle a strictly descending chain is not sorted (T-3418).
 pub(crate) fn sort_indices_pairwise(
     indices: &mut [usize],
     mut cmp: impl FnMut(usize, usize) -> Ordering,
@@ -235,15 +238,8 @@ pub(crate) fn sort_indices_pairwise(
     let mut start = 0;
     while start < n {
         let mut end = start + 1;
-        if end < n && cmp(indices[end], indices[end - 1]) == Ordering::Less {
-            while end < n && cmp(indices[end], indices[end - 1]) == Ordering::Less {
-                end += 1;
-            }
-            indices[start..end].reverse();
-        } else {
-            while end < n && cmp(indices[end], indices[end - 1]) != Ordering::Less {
-                end += 1;
-            }
+        while end < n && cmp(indices[end], indices[end - 1]) != Ordering::Less {
+            end += 1;
         }
         runs.push((start, end));
         start = end;
