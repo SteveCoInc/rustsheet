@@ -3,7 +3,7 @@ id: T-3513
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of TEXTBEFORE and TEXTAFTER"
 milestone: M7
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -49,3 +49,6 @@ gen-m7 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
   function's own module that the PR also tests.
 - TEXTSPLIT and REGEXEXTRACT (spilled results; a later batch after T-3497 shows the policy handles spills).
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
+
+## Outcome
+`rustsheet-gen --policy arg-pairs --milestone M7 --functions TEXTBEFORE,TEXTAFTER` added 30 gen-m7 cases, excel-graph filled. report.json pairwise share is 1.0 for TEXTBEFORE and TEXTAFTER (was 0.22, 0 unseen pairs). 11 cells fail (all an error-valued if_not_found; engine returns #VALUE!), now known failures in gen-m7 and owned by T-4037. Eval: gen-m7 known failures 0 -> 11 (new coverage), 0 regressions.
