@@ -6,11 +6,18 @@
 //! (`visible_numeric`, `visible_other`; T-0061). The ulp buckets take precedence: a number within
 //! 4 ulp is never visibly off, even where 4 ulp exceed half a unit in the 15th digit (decision
 //! 0088).
+//!
+//! Decision 0267 moves the bar to 13 digits for the incomplete-beta family
+//! ([`THIRTEEN_DIGIT_FAMILY`]): a number those functions alone compute that is past half a unit in
+//! the 15th digit but within half a unit in the 13th is `residue13`, Phase 1b residue that every
+//! report counts and shows but none counts as visibly off. There Excel itself is rarely correctly
+//! rounded (about 1% of 2,026 sampled cells), so those digits measure Excel's rounding noise.
 
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
+use crate::formula_calls::functions_in;
 use crate::runner::CellResult;
 use crate::value::{ulp_distance, Value, Verdict};
 
@@ -27,8 +34,13 @@ pub struct Closeness {
     /// the expected value ([`within_fifteen_digits`]). They may still display differently when
     /// they straddle a rounding boundary of that digit.
     pub digits15: usize,
+    /// Numbers of the incomplete-beta family ([`THIRTEEN_DIGIT_FAMILY`]) further apart than half
+    /// a unit in the 15th significant digit but within half a unit in the 13th: Phase 1b residue,
+    /// not visibly off (decision 0267). `default` keeps older report.json files readable.
+    #[serde(default)]
+    pub residue13: usize,
     /// Numbers further apart than half a unit in the 15th significant digit, including 0
-    /// against nonzero and non-finite values.
+    /// against nonzero and non-finite values, and not `residue13`.
     pub visible_numeric: usize,
     /// A wrong type, error, text or boolean.
     pub visible_other: usize,
@@ -47,6 +59,11 @@ fn bucket(cell: &CellResult) -> Option<Bucket> {
             (Value::Number(e), Value::Number(a)) if within_fifteen_digits(*e, *a) => {
                 Bucket::Digits15
             }
+            (Value::Number(e), Value::Number(a))
+                if within_significant_digits(*e, *a, 13) && in_thirteen_digit_family(cell) =>
+            {
+                Bucket::Residue13
+            }
             _ => Bucket::VisibleNumeric,
         },
         Verdict::TextMismatch
@@ -62,6 +79,7 @@ enum Bucket {
     Ulp1,
     Ulp4,
     Digits15,
+    Residue13,
     VisibleNumeric,
     VisibleOther,
 }
@@ -75,6 +93,7 @@ impl Closeness {
             Bucket::Ulp1 => &mut self.ulp1,
             Bucket::Ulp4 => &mut self.ulp4,
             Bucket::Digits15 => &mut self.digits15,
+            Bucket::Residue13 => &mut self.residue13,
             Bucket::VisibleNumeric => &mut self.visible_numeric,
             Bucket::VisibleOther => &mut self.visible_other,
         } += 1;
@@ -83,10 +102,11 @@ impl Closeness {
     /// The scored cells, every bucket summed.
     #[must_use]
     pub fn scored(&self) -> usize {
-        self.pass + self.ulp1 + self.ulp4 + self.digits15 + self.visible()
+        self.pass + self.ulp1 + self.ulp4 + self.digits15 + self.residue13 + self.visible()
     }
 
-    /// The visibly-off cells: `visible_numeric` and `visible_other` (decision 0083).
+    /// The visibly-off cells: `visible_numeric` and `visible_other` (decision 0083). `residue13`
+    /// is not among them (decision 0267).
     #[must_use]
     pub fn visible(&self) -> usize {
         self.visible_numeric + self.visible_other
@@ -147,15 +167,22 @@ impl Visible {
 
 /// Whether `actual` is within half a unit in the 15th significant digit of `expected`: the
 /// digits Excel displays are the same, or differ only by rounding at that digit (decision 0083).
+/// [`within_significant_digits`] at 15.
+#[must_use]
+pub fn within_fifteen_digits(expected: f64, actual: f64) -> bool {
+    within_significant_digits(expected, actual, 15)
+}
+
+/// Whether `actual` is within half a unit in the `digits`-th significant digit of `expected`.
 ///
-/// The boundary itself counts as within. An expected 0 has no 15th digit, so only an exact 0
+/// The boundary itself counts as within. An expected 0 has no such digit, so only an exact 0
 /// (either sign) is within. For a subnormal `expected` (and the smallest normals) half the unit
 /// underflows to 0 or a few subnormal steps, so in practice only an equal value is within.
-/// Non-finite values are never within. The half unit is the double nearest `5e(E-15)` for the
+/// Non-finite values are never within. The half unit is the double nearest `5e(E-digits)` for the
 /// decimal exponent `E` of `expected`, so a gap within half an ulp of it may land on either side;
 /// the unit tests pin the exactly representable boundary.
 #[must_use]
-pub fn within_fifteen_digits(expected: f64, actual: f64) -> bool {
+pub fn within_significant_digits(expected: f64, actual: f64, digits: i32) -> bool {
     if !expected.is_finite() || !actual.is_finite() {
         return false;
     }
@@ -171,8 +198,40 @@ pub fn within_fifteen_digits(expected: f64, actual: f64) -> bool {
     let Some(exponent) = exponent else {
         return false;
     };
-    let half_unit = format!("5e{}", exponent - 15).parse::<f64>().unwrap_or(0.0);
+    let half_unit = format!("5e{}", exponent - digits)
+        .parse::<f64>()
+        .unwrap_or(0.0);
     gap <= half_unit
+}
+
+/// The incomplete-beta family, whose numbers count at 13 digits (decision 0267): one TOMS 708
+/// `bratio` kernel serves them all (docs/excel-semantics/statistics.md, "Incomplete beta is
+/// TOMS 708 `bratio`"), and their 14th and 15th digits are Excel's rounding noise there.
+pub const THIRTEEN_DIGIT_FAMILY: &[&str] = &[
+    "BETA.DIST",
+    "BETADIST",
+    "BINOM.DIST",
+    "BINOMDIST",
+    "F.DIST",
+    "F.DIST.RT",
+    "FDIST",
+    "NEGBINOM.DIST",
+    "NEGBINOMDIST",
+];
+
+/// Whether every function `cell`'s formula is blamed on ([`blamed`]; its array anchor's formula
+/// for a member cell) is in [`THIRTEEN_DIGIT_FAMILY`]. A cell with no formula, or one that also
+/// calls a function outside the family (`BETA.INV(BETA.DIST(..))`), keeps the 15-digit bar.
+fn in_thirteen_digit_family(cell: &CellResult) -> bool {
+    let Some(formula) = cell.formula.as_deref().or(cell.anchor_formula.as_deref()) else {
+        return false;
+    };
+    let called = functions_in(formula);
+    let blamed = blamed(&called);
+    !blamed.is_empty()
+        && blamed
+            .iter()
+            .all(|f| THIRTEEN_DIGIT_FAMILY.contains(&f.as_str()))
 }
 
 /// Functions that only route or combine values (control flow, plain sums, reference picks,
@@ -258,12 +317,86 @@ mod tests {
             ulp1: 1,
             ulp4: 1,
             digits15: 1,
+            residue13: 0,
             visible_numeric: 2,
             visible_other: 1,
         };
         assert_eq!(c, expected);
         assert_eq!(c.scored(), 8);
         assert_eq!(c.visible(), 3);
+    }
+
+    fn with_formula(formula: &str, expected: f64, actual: f64) -> CellResult {
+        CellResult {
+            formula: Some(formula.into()),
+            ..cell(
+                Value::Number(expected),
+                Value::Number(actual),
+                Verdict::NumericClose,
+            )
+        }
+    }
+
+    #[test]
+    fn the_incomplete_beta_family_counts_at_thirteen_digits() {
+        // 1e15 + 6 is past half a unit in the 15th digit (5) and within half a unit in the 13th (500).
+        let (e, off15, off13) = (1e15, 1e15 + 6.0, 1e15 + 501.0);
+        let residue = |c: &CellResult| bucket(c) == Some(Bucket::Residue13);
+        for f in [
+            "=BETA.DIST(A1,2,3,TRUE)",
+            "=_xlfn.F.DIST.RT(2,3,4)",
+            "=IF(A1,BINOM.DIST(1,2,0.5,FALSE))",
+        ] {
+            assert!(residue(&with_formula(f, e, off15)), "{f}");
+            assert!(!Visible::is_off(&with_formula(f, e, off15)), "{f}");
+            // Past the 13th digit it is visibly off again.
+            assert!(Visible::is_off(&with_formula(f, e, off13)), "{f}");
+        }
+        // Outside the family, or mixed with a function outside it, the 15-digit bar holds.
+        for f in [
+            "=T.DIST(1,2,TRUE)",
+            "=BETA.INV(BETA.DIST(0.5,2,3,TRUE),2,3)",
+            "=A1*2",
+        ] {
+            assert!(Visible::is_off(&with_formula(f, e, off15)), "{f}");
+        }
+        // An array member is judged by its anchor's formula; a cell with no formula keeps 15.
+        let member = CellResult {
+            anchor_formula: Some("=FDIST(A1:A3,2,3)".into()),
+            ..cell(
+                Value::Number(e),
+                Value::Number(off15),
+                Verdict::NumericClose,
+            )
+        };
+        assert!(residue(&member));
+        assert!(Visible::is_off(&cell(
+            Value::Number(e),
+            Value::Number(off15),
+            Verdict::NumericClose
+        )));
+        // A wrong type is never residue.
+        let typed = CellResult {
+            formula: Some("=BETA.DIST(1,2,3,TRUE)".into()),
+            ..cell(
+                Value::Number(1.0),
+                Value::Error("#NUM!".into()),
+                Verdict::TypeMismatch,
+            )
+        };
+        assert!(Visible::is_off(&typed));
+        let mut c = Closeness::default();
+        c.add(&with_formula("=BETA.DIST(1,2,3,TRUE)", e, off15));
+        assert_eq!((c.residue13, c.visible(), c.scored()), (1, 0, 1));
+    }
+
+    #[test]
+    fn half_a_unit_in_the_thirteenth_digit_is_the_boundary() {
+        assert!(within_significant_digits(1e15, 1e15 + 500.0, 13));
+        assert!(!within_significant_digits(1e15, 1e15 + 502.0, 13));
+        assert!(within_significant_digits(1.0, 1.0 + 4e-13, 13));
+        assert!(!within_significant_digits(1.0, 1.0 + 6e-13, 13));
+        assert!(!within_significant_digits(0.0, 1e-300, 13));
     }
 
     #[test]

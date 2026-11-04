@@ -151,9 +151,9 @@ impl Tier {
             Tier::Unscored
         } else if cells.pass == scored {
             Tier::Exact
-        } else if visible == 0 && cells.digits15 == 0 {
+        } else if visible == 0 && cells.digits15 == 0 && cells.residue13 == 0 {
             Tier::Ulp4
-        } else if visible == 0 {
+        } else if visible == 0 && cells.residue13 == 0 {
             Tier::Digits15
         } else if share_at_least(RATE_NUM) {
             Tier::Rate999

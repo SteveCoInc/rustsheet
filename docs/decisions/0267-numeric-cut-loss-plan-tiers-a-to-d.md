@@ -56,10 +56,11 @@
        and it is never silently dropped.
      - The rule applies to the headline, the Phase 1 rate and tiers, the campaign counts, the probe rows, Gate B and
        the milestone exits.
-     - Unchanged: the regression gates. That covers the bit-level baselines, `make eval-check` and
-       eval/baseline/visible-parity.txt, where a family cell within 15 digits today that moves off 15 is still a
-       regression. Also unchanged: type, error and text verdicts, and every other function.
-     - T-4055 specs the rule and T-4056 implements it. Until T-4056 lands, the reports keep the 15-digit bar.
+     - Unchanged: type, error and text verdicts, and every other function. The bit-level baselines and
+       `make eval-check` are unchanged too, but item 6 says when a family regression is allowed. The visible-parity
+       lock counts visibly-off cells at this bar, so a family cell that moves from the 15th to the 14th digit no
+       longer raises it.
+     - SPEC-0030 defines the rule (T-4055), and the same PR implements it (T-4056). The owner asked for both now.
   3. **R3 ruling: follow the math (decision 0188 R3).** It covers T.INV.2T, TINV, T.INV, CONFIDENCE.T and BETA.INV at
      a tiny p, and CHISQ.INV.RT and CHIINV at df 1. It applies on each evidenced point where Excel is more than G off
      the 50-digit math. The marks go in eval/accuracy/math-over-excel.tsv with a `MATH-OVER-EXCEL` entry, and the
@@ -101,12 +102,28 @@
      - Once every such task is done, blocked or dropped, probes-numeric is frozen: no new cases and no new cells, only
        oracle refills of existing cells, unless a decision names an exception. T-4057 adds the check and stays
        blocked until then.
+  6. **Net-improvement allowance for family regressions.** Owner, 2026-11-04: "It's ok if some of these regress to
+     14 if the net is improvement. You can do this without my permission." A PR may record its regressions with
+     `target/release/rustsheet-eval update-baseline --allow-regressions`, citing this item and with no further
+     decision record, when all of these hold:
+     - (a) every regressed cell is a number of a family formula (`closeness::THIRTEEN_DIGIT_FAMILY`) that stays
+       within half a unit of Excel's 13th significant digit, so it lands in `residue13` or better;
+     - (b) no cell of any other function regresses, and no type, error or text verdict gets worse;
+     - (c) the net is an improvement. Over the suites the PR's `make eval` runs, the family's cells within 15 digits
+       (`pass + ulp1 + ulp4 + digits15` of the family functions in report.json `functions[].closeness`) rise
+       against main, and the family's visibly-off numbers (`visible_numeric`) do not rise;
+     - (d) the PR body gives the before and after counts of (c) and lists the regressed cells, and the Excel-fidelity
+       reviewer checks them.
+
+     Anything else still needs its own decision record (CLAUDE.md prime directive 2).
 - **Consequences:**
   - `make next-task` picks the P0 Tier A tasks first. The noise work leaves the ready queue.
   - Five of the deferred tasks own gen-m9 cells: T-3952, T-3954, T-4015, T-4016 and T-4018. Their FDIST and F.DIST
-    cells are 15th-digit Excel noise. They stay visibly off for Gate B until T-4056 lands, and then become residue.
-  - After T-4056, the headline drops by the family's 14th and 15th-digit count: about 84,900 probes-numeric cells on
-    the 2026-11-04 run. The residue is shown on its own line, so nothing is hidden.
+    cells are 15th-digit Excel noise, and are now residue for Gate B too.
+  - The headline drops by the family's 14th and 15th-digit count. On probes-numeric at a262d6b0, attributed
+    visibly-off numbers go from 89,170 to 4,238, and 84,932 become `residue13`. The residue gets its own bucket in
+    report.json and report.md and its own line on the dashboard, so nothing is hidden. The steward's
+    `--lower-visible-lock` then lowers the lock lines it frees.
   - Reopening a deferred task needs a cell it owns that is first wrong at the 13th digit or earlier. A new family
     algorithm study needs a new decision.
   - The analysis scripts and per-cell tables are not committed. The numbers above can be reproduced with

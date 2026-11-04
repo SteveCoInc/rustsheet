@@ -200,8 +200,9 @@ Only `pass` counts as passing. Case statuses:
   either are listed by name, tagged `oracle: none` or `volatile`. Informational; never gated.
   A "Visibly off (fifteen digits)" section (T-0061, decision 0088) splits each suite's in-scope
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
-  `digits15` within half a unit in the 15th significant digit, `visible_numeric`,
-  `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
+  family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
+  off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
   A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the

@@ -3,7 +3,7 @@ id: T-4055
 title: "Spec: the 13-digit bar for the incomplete-beta family (decision 0267): Phase 1 rate, headline, campaign and exit counts"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P0
 size: M
 tier: opus
@@ -33,20 +33,23 @@ reported every run but does not count as visibly off. It is never silently dropp
   for the regression gates.
 
 ## Acceptance criteria
-- [ ] docs/specs/SPEC-XXXX-*.md. It defines the bar:
+- [x] docs/specs/SPEC-XXXX-*.md. It defines the bar:
   - half a unit in the 13th significant digit, the same boundary rule as `within_fifteen_digits` at 13;
   - attribution only when every function a cell's formula calls is in the family or is a routing function;
   - composite cells (for example `BETA.INV(BETA.DIST(..))`) left out unless the spec argues them in.
-- [ ] It names every consumer listed in Context, and what each one counts after the change.
-- [ ] It keeps these unchanged:
+- [x] It names every consumer listed in Context, and what each one counts after the change.
+- [x] It keeps these unchanged:
   - the bit-level baselines and `make eval-check`;
   - eval/baseline/visible-parity.txt: a family cell within 15 digits today that moves off 15 is still a regression;
   - the type, error and text verdicts;
   - every function outside the family.
-- [ ] It defines the residue the progress report shows: the count of family cells first wrong at the 14th or 15th
+- [x] It defines the residue the progress report shows: the count of family cells first wrong at the 14th or 15th
       digit, a separate line from the 13-digit headline.
-- [ ] The design reviewer approves.
+- [x] The design reviewer approves.
 
 ## Out of scope
 - The implementation (T-4056).
 - Any function outside the family, such as T.DIST, GAMMA.DIST or the quantiles.
+
+## Outcome
+SPEC-0030 (docs/specs/SPEC-0030-thirteen-digit-bar-incomplete-beta.md) defines the bar and names each consumer. The owner asked for the spec and the implementation in one PR, together with decision 0267 and T-4056.

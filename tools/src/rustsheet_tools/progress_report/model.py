@@ -20,7 +20,10 @@ EN = "\N{EN DASH}"
 LE = "\N{LESS-THAN OR EQUAL TO}"
 GE = "\N{GREATER-THAN OR EQUAL TO}"
 # The closeness buckets of a cell, best first (crates/rustsheet-eval/src/closeness.rs `Closeness`).
-BUCKETS = ("pass", "ulp1", "ulp4", "digits15", "visible_numeric", "visible_other")
+# `residue13`: incomplete-beta family numbers wrong only at the 14th or 15th digit, Phase 1b residue
+# that is not visibly off (decision 0267). Reports from before it have no such key.
+BUCKETS = ("pass", "ulp1", "ulp4", "digits15", "residue13", "visible_numeric", "visible_other")
+OPTIONAL_BUCKETS = ("residue13",)
 VISIBLE = ("visible_numeric", "visible_other")
 # The parity tiers, best first: the report's `Tier` names (crates/rustsheet-eval/src/
 # attribution.rs, `Tier::ALL`). The report places every function; this list only orders them.
@@ -103,7 +106,12 @@ def one_of(obj: Any, key: str, where: str, allowed: tuple[str, ...], task: str |
 def closeness(obj: Any, key: str, where: str, task: str) -> dict[str, int]:
     """A `Closeness` object of the report: a count per bucket."""
     raw = field(obj, key, where, task)
-    return {b: count(raw, b, f"{where}.{key}", task) for b in BUCKETS}
+    return {
+        b: 0
+        if b in OPTIONAL_BUCKETS and isinstance(raw, dict) and b not in raw
+        else count(raw, b, f"{where}.{key}", task)
+        for b in BUCKETS
+    }
 
 
 @dataclass(frozen=True)
