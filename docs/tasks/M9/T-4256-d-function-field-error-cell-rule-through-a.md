@@ -3,7 +3,7 @@ id: T-4256
 title: "D-function field error-cell rule through a defined name, INDEX, @ and IF"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
