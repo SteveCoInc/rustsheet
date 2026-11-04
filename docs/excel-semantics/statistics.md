@@ -2700,7 +2700,7 @@ Ours: `discrete.rs`, a double-double walk, and past its budget p times this shif
 Status: VERIFIED (excel-graph) for the shifted kernel; the final step UNVERIFIED
 Tasks: T-2146, T-2586
 
-## BINOM.DIST and NEGBINOM.DIST at a large n: basym and Loader, within 1E-11 of the math (T-3352)
+## BINOM.DIST and NEGBINOM.DIST at a large n: basym and Loader, within 1E-11 of the math except at small p (T-3352, T-3960)
 Rule: at a large trial count (or number of failures) Excel's BINOM.DIST and NEGBINOM.DIST stay close to the exact value:
 on probes/t3352-binom-negbinom-large-n (208 cells: n 1E4 to 1E9 with p 0.3, 0.5 and 0.001; failures 1E3 to 1E9 with
 r = f at p 0.5, r = f/4 at p 0.2 and r = 10; k at the mean, mean + 2 sd and mean - 3 sd; pmf and cdf) every Excel value is
@@ -2746,13 +2746,33 @@ same amount (up to 4.4E-12 from Excel, T-3447).
   has b = 1/2.
 - BINOM.DIST.RANGE and BINOM.INV still take statrs past the walk: `BINOM.DIST.RANGE(1000000000,0.3,300000000,300000100)`
   is 1.47 and `BINOM.INV(1000000000,0.3,0.5)` 299998246 (T-3444).
+- Small p with a huge n or r is a different regime (T-3960): Excel's cdf is hundreds to hundreds of thousands of ulp off
+  the math, more often than not (worst 1.13E-10 relative, about 7.4E5 ulp, train A20 `BINOM.DIST(3870,349766152,
+  1.11298576118839E-05,TRUE)`; 24 cells are past 1E-11, all inside 1E-9). On probes-numeric/t3960-binom-negbinom-small-p-cdf (440 cells, seed 3960: p
+  log-uniform on [1E-5, 1E-2], n on [1E5, 1E9] or r on [10, 1E4], k from -3 to +2 sd of the mean, plus 40 controls around
+  the 11 owned cells of T-3961) and its hold-out t3960-binom-negbinom-small-p-cdf-hold (200 cells, seed 3961, no shared
+  point; T-3961's hold-out, never for fitting), counted against today's engine (excel-graph, 2026-11-03):
+
+  | case, family (cells) | ours = Excel bit-exact | within 4 ulp | within 15 digits | Excel correctly rounded | Excel > 100 ulp off math |
+  |---|---|---|---|---|---|
+  | train BINOM.DIST (220) | 43 | 108 | 118 | 9 | 109 |
+  | train NEGBINOM.DIST (220) | 4 | 44 | 69 | 3 | 88 |
+  | hold-out BINOM.DIST (100) | 21 | 53 | 56 | 3 | 43 |
+  | hold-out NEGBINOM.DIST (100) | 3 | 19 | 29 | 2 | 31 |
+
+  "Correctly rounded" is within half an ulp of the math. Ours is correctly rounded on 20 and 132 train cells (BINOM and
+  NEGBINOM), 12 and 61 hold-out cells; where Excel is more than 100 ulp off, ours is within 4 ulp of the math on 6 and
+  57 train cells, 0 and 20 hold-out cells. The math sidecars skip 174 of 440 train and 84 of 200 hold-out cells ("not converged or too slow"), so the counts use `docs/research/t3960/score.py`: the sidecar value where it exists, else an
+  outward pmf sum at 45 digits at the double nearest p (NEGBINOM.DIST as 1 - BINOM.DIST(r - 1, f + r, p)), which
+  agrees with the sidecar to 1E-12 relative on every overlapping cell, which the script asserts. The error is not confined to the 11 owned cells. The model is T-3961's.
 Evidence: probes/t3352-binom-negbinom-large-n (excel-graph), probes-numeric/t3352-binom-negbinom-sweep (excel-graph,
-scored against 50-digit mpmath; T-3352's Outcome).
+scored against 50-digit mpmath; T-3352's Outcome), probes-numeric/t3960-binom-negbinom-small-p-cdf and -hold (excel-graph).
 Implemented in: `crates/rustsheet-engine/src/functions/statistical/bratio/basym.rs`, `bratio::ported_tails`, and
 `binom_dist_of` and `negbinom_dist_of` (`loader_pmf`) in `binom.rs`.
-Status: VERIFIED (excel-graph) to 1E-11 of the math; last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
+Status: VERIFIED (excel-graph) to 1E-11 of the math for p of 0.001 and above (the t3352 cases; at p below 0.01 with n
+1E5 or more or r 10 or more Excel is up to 1.1E-10 off, T-3960); last digits UNVERIFIED (Excel's arithmetic in basym and in Loader's
 kernel at a large n not identified)
-Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146
+Tasks: T-3352, T-3447, T-3443, T-3444, T-2586, T-2146, T-3960, T-3961
 
 ## BINOM.DIST.RANGE and BINOM.INV at a large n sit on BINOM.DIST's own cdf (T-3444)
 Rule: Excel's BINOM.INV (and CRITBINOM, equal on every probe row) is the smallest k whose BINOM.DIST(k, n, p, TRUE) is

@@ -101,7 +101,9 @@ class Definition:
     from a tail probability (a distribution's x). `draw` replaces the per-parameter sampler for a
     solver (`solver`: the 300-point count). With `variadic` the last parameter repeats (SUM's
     number2, number3, ...) and `draw` sets the argument count. `sources` cite where the
-    definition's math and ranges come from."""
+    definition's math and ranges come from. `serials_1900` marks math that reads date serials in
+    the 1900 date system (YEARFRAC's calendar, HOUR's last-date bound): an eval cell in a 1904
+    workbook gets no math value (T-3678)."""
 
     function: str
     params: tuple[Param, ...]
@@ -113,6 +115,7 @@ class Definition:
     draw: Draw | None = None
     solver: bool = False
     variadic: bool = False
+    serials_1900: bool = False
 
     def __post_init__(self) -> None:
         flags = [p.optional for p in self.params]

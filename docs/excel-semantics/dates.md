@@ -1163,6 +1163,30 @@ on `month_arithmetic_date`, bases 1-3 serial differences; YEARFRAC and ACCRINTM 
 Status: VERIFIED (excel-graph)
 Tasks: T-1409, T-2237
 
+## YEARFRAC basis 1's year length (T-3678)
+Rule: basis 1 divides the serial day count by a year length that it reads on the real calendar. Dates more than a year
+apart take the average length of the calendar years from the start's year to the end's, both included. Dates at most a
+year apart take 366 days in three cases, and 365 otherwise:
+- both dates are in one leap year;
+- the end is a 29 February;
+- a 29 February lies between them, the start included: `(DATE(2024,2,29),DATE(2025,2,28),1)` = 365/366 (A14).
+
+"At most a year apart" means the same year, or the next year on or before the anniversary.
+- `YEARFRAC(DATE(2024,1,10),DATE(2024,12,20),1)` = 345/366 (one leap year).
+- `(DATE(2023,6,1),DATE(2024,2,29),1)` = 273/366 (the end is 29 February).
+- `(DATE(2023,3,1),DATE(2024,3,1),1)` = 1, and one day on is 367/365.5 (A6): more than a year apart, so the average
+  of 2023 and 2024.
+- `(DATE(2024,2,29),DATE(2025,3,1),1)` = 366/365.5 (A15): past the anniversary, so the average of 2024 and 2025.
+- `(DATE(2024,3,1),DATE(2025,2,28),1)` = 364/365 (no 29 February between).
+- `(DATE(1900,1,1),DATE(1900,12,31),1)` = 1 (A20): 365/365, although the count includes the fictitious 1900-02-29;
+  the year length is the real calendar's 365 for 1900.
+
+Evidence: probes/t3678-yearfrac-basis1-within-a-year A1:A20 (excel-graph, 2026-11-03). Every cell matches the rule
+above, which the Gate A definition `accuracy/defs/yearfrac.py` and the engine's `year_fraction_parts` both use. YEARFRAC/s1's
+basis-1 points match too.
+Status: VERIFIED (excel-graph)
+Tasks: T-3678
+
 ## DATEDIF argument errors before date checks
 Rule: an error in DATEDIF's unit argument wins over an invalid start date: `DATEDIF(-1,38627,CHOOSE(3,x))` (the unit is
 `#VALUE!`) is `#VALUE!`, not the `#NUM!` of a negative date.
@@ -1327,14 +1351,14 @@ for a negative value the window is half as wide, about 1.2E-7. Measured edges: p
 INDEX use (`NEAR_INTEGER_TOLERANCE`, 2^-22+2^-33, text.md and lookup.md), which lies inside the measured (2^-22+1E-12, 2.4E-7);
 we take half of it for a negative value, inside (2^-23+1E-12, 1.2E-7). The exact constants inside those brackets are unprobed
 for TIME and DATE. The XMATCH and XLOOKUP modes, read by the same `near_integer_whole`, bracket both constants to a relative
-2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then any argument outside
--32768..32767 is `#NUM!` (before the total is formed, so a minute of -32768 is legal and one of -32769 is not, whatever the
-hour), and so is a negative total; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
+2^-14 (lookup.md "XMATCH and XLOOKUP floor a fractional mode", T-2656). Then an argument above 32767 is `#NUM!`, before the total is formed and whatever the hour. On
+2026-10-21 an argument below -32768 was `#NUM!` too, so a minute of -32768 was legal and one of -32769 was not. Since 2026-11-03 such
+an argument wraps by 65536 instead (see the update below). A negative total is `#NUM!`; otherwise the value is `((h*3600+m*60+s)/86400) % 1` as in "TIME divides by 86400 first".
 Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number; write `-(2^-22)`.
 - Bound: `TIME(32767,0,0)` = 0.29166666666674246, `TIME(600,32767,0)` = 0.7548611111111114, `TIME(10,0,32767)` =
-  0.7959143518518519; the same with 32767.5 or 32767.9999; 32768, 65535, 65536 and -32769 in any position are `#NUM!`;
+  0.7959143518518519; the same with 32767.5 or 32767.9999; 32768, 65535, 65536 in any position are `#NUM!`, and so was -32769 on 2026-10-21 (now it wraps, see the update below);
   `TIME(600,-32768,0)` = 0.24444444444444446, `TIME(10,0,-32768)` = 0.03740740740740741; `TIME(32767,32767,32767)` =
-  0.4257754629629744; `TIME(600,-32768.5,0)` and `TIME(10,0,-32768.5)` are `#NUM!` (floored to -32769), while
+  0.4257754629629744; `TIME(600,-32768.5,0)` and `TIME(10,0,-32768.5)` were `#NUM!` on 2026-10-21 (floored to -32769; now they wrap), while
   `TIME(600,-32768-1E-7,0)` is a number (inside the window). `TIME("32768",0,0)` is `#NUM!`, `TIME("32767",0,0)` a number.
   (probes/time-argument-bound A1-A35, A77-A79; time-argument-window A73-A76.)
 - Window: `TIME(1-2^-22,0,0)` = 1:00 and `TIME(1-2.4E-7,0,0)` = 0:00; the same edge for the minute (`TIME(0,1-2^-22,0)` =
@@ -1348,9 +1372,25 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-negative-window.)
 - gen-m6 cells (34 in T-2267): `TIME(9,DATEVALUE("1/15/2024"),39)`, `TIME(DATEVALUE("2023-03-01"),27,26)`, `TIME(18,33,FACT(13))`,
   `TIME(1E+15,44,15)`, `SECOND(TIME(1E+15,10,48))` are `#NUM!`; `TIME(COLUMNS(A9)/POWER(0.1,2),12,35)` = 0.17540509259259274.
-Ours: `time_argument` in `functions/date_and_time.rs` (T-2267).
-Status: VERIFIED (excel-graph probes above, 2026-10-21).
-Tasks: T-2267
+- **Update 2026-11-03: Excel changed. An argument below -32768 now wraps by 65536** (T-3678,
+  probes/t3678-time-argument-far-negative, excel-graph, 2026-11-03). After the near-integer read, a whole value
+  below -32768 is moved by 65536 into -32768..32767, in any position. A value above 32767 is still `#NUM!`
+  (`TIME(0,32769,0)` through `TIME(0,131072,0)`, E1:E14). Examples:
+  - `TIME(600,-32769,0)` = `TIME(600,32767,0)` = 0.7548611111111114, and `TIME(-32769,0,0)` = 0.29166666666674246.
+  - `TIME(10,0,-98304)` = 0.03740740740740741 (-98304 wraps to -32768), and `TIME(14120,-131072,0)` =
+    `TIME(14120,0,0)`.
+  - `TIME(-65537,0,0)` is `#NUM!`: it wraps to -1 and the total is negative. `TIME(-32800,0,0)` = 0 (32736 hours).
+  - `TIME(600,-32768.5,0)` floors to -32769 and so reads 32767 (G4).
+
+  Column G of that probe repeats the cells that were `#NUM!` on 2026-10-21: time-argument-bound A22:A24,
+  time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
+  `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
+  Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
+  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
+Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
+-32768, which T-3983 owns.
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
 Rule (excel-graph, 2026-10-21): DATE reads its year, month and day as TIME reads its arguments ("TIME: an argument past 32767 is

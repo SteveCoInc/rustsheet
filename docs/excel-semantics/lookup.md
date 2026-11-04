@@ -774,8 +774,10 @@ weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp
 Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
 position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
 Hebrew `צ` equals its final form `ץ`: exact MATCH of `"צ"` finds the `ץ` row before its own
-(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other final letters are unprobed and stay apart
-(UNVERIFIED). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
+(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other four final letters fold the same way:
+exact MATCH of each bare final form and its normal form (`ך`/`כ`, `ם`/`מ`, `ן`/`נ`, `ף`/`פ`, `ץ`/`צ`) succeeds in both
+directions, while `İ`/`i`, `ϐ`/`β` and `ﬀ`/`ff` stay apart (probes/t3995-dfunction-fold-final-forms Calc!F1:F19,
+excel-graph 2026-11-04). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
 (C110 = 110), while `=` and XMATCH equal them (coercion.md "Scripts and symbol blocks beyond T-3276").
 Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to
