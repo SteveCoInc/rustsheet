@@ -155,12 +155,21 @@ impl Model {
         } else {
             LiftCost::Unit
         };
+        // A `field` that is a reference to an error cell is `#VALUE!` in Excel, while an error
+        // literal propagates (probes/m9-database-argument-kinds, excel-graph 2026-11-04). The
+        // driver hands over the dereferenced value, so the reference is recognised here.
+        let field_is_error_cell = self.db_field_is_error_cell(args.get(1), cell);
         self.lift_call_costed(
             kind,
             args,
             cost,
             cell,
-            &mut |model, values| match model.db_query(values, empty_field_counts, cell) {
+            &mut |model, values| match model.db_query(
+                values,
+                empty_field_counts,
+                field_is_error_cell,
+                cell,
+            ) {
                 Ok(query) => compute(model, &query, cell),
                 Err(error) => error,
             },
@@ -193,10 +202,22 @@ impl Model {
         LiftCost::Cells(rows.saturating_mul(per_row))
     }
 
+    /// Whether `field` is a single-cell reference whose cell holds an error.
+    fn db_field_is_error_cell(&mut self, field: Option<&Node>, cell: CellReferenceIndex) -> bool {
+        let Some(node @ Node::ReferenceKind { .. }) = field.map(Node::ungrouped) else {
+            return false;
+        };
+        match self.get_reference(node, cell) {
+            Ok(range) if range.left == range.right => self.evaluate_cell(range.left).is_error(),
+            _ => false,
+        }
+    }
+
     fn db_query(
         &mut self,
         values: &[CalcResult],
         empty_field_counts: bool,
+        field_is_error_cell: bool,
         cell: CellReferenceIndex,
     ) -> Result<DbQuery, CalcResult> {
         let [database, field, criteria] = values else {
@@ -205,6 +226,12 @@ impl Model {
         let (left, right) = reference_corners(database, cell)?;
         let field = if matches!(field, CalcResult::EmptyArg) && empty_field_counts {
             None
+        } else if field_is_error_cell {
+            return Err(CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "Field is a reference to an error".to_string(),
+            ));
         } else {
             Some(self.resolve_db_field_column(left, right, field, cell)?)
         };
