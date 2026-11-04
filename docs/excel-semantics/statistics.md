@@ -4172,7 +4172,7 @@ within 1E-15 relative / largest relative error:
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
   (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
-Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
+Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (the zeros, the `#NUM!` and df1 = 2), T-3754 (the engine is 3E-11 to 1E-10 off the math at df1 >= 3 here, where Excel is within about 1E-13; decision 0267).
 
 ## F-distribution df limit (T-1530)
 Rule: either df above 1E10 (after truncation) makes every F function `#NUM!`: F.DIST (cumulative and pdf), F.DIST.RT,

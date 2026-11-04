@@ -4,10 +4,11 @@ title: "Probe IRR's fallback under power-of-two scaling and negation: separate i
 milestone: M9
 lane: research
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: sonnet
 depends_on: []
+campaign: semantics
 ---
 
 ## Goal
@@ -42,3 +43,15 @@ values are exactly c·2^j.
 
 ## Out of scope
 - Fitting or changing the engine (T-2928).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 29 probes-numeric cells that no open task listed: 21 with the wrong type or error, 8 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t2927-irr-fallback-sweep.case.json (29): P!A24, A26-A31, A44, A47, A60, A62, A74, A101-A112, A138, A144, B31, B101, B111
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

@@ -10,6 +10,7 @@ tier: opus
 depends_on: [T-3192]
 campaign: accuracy
 spec: docs/specs/SPEC-0025-incomplete-beta-bratio-port.md
+defer: phase-1b
 ---
 
 ## Goal
@@ -46,3 +47,6 @@ Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs; `docs/researc
 
 ## Out of scope
 - bfrac/basym (T-2508), the bgrat family (T-2509, T-2510), the inverses (T-2511), T-2924's fit of Excel's ln B.
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
