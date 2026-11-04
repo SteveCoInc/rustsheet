@@ -3,7 +3,7 @@ id: T-3997
 title: "M5 exit owner for probes/t3945-atan-near-midpoint S!C8 and S!C10: they pass once T-3932 reads 0.190581435720431 as Excel does"
 milestone: M5
 lane: engine
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -44,3 +44,11 @@ owns the 15-digit read, and this task confirms the cells after it.
 ## Out of scope
 - The literal and VALUE reader itself (T-3932).
 - The ATAN and ATAN2 cells of the same case (S!B203, S!B204) and the other C cells T-3932 lists.
+
+## Outcome
+T-4077 (merged, #3202) made literals read their first 15 digits through the x87 multiply, which fixed both cells
+with no change here. On origin/main `make eval-show CASE=probes/t3945-atan-near-midpoint.case.json` reports
+`status=Pass checked=214 passed=214`; S!C8 and S!C10 pass and have no `F` line in eval/baseline/probes.txt
+(already absent), so `make eval-baseline` changed nothing. `make exit-owners MILESTONE=M5` reports
+"0 failing M5 exit cells have no open M5 owner". Eval delta: none. The case still has a visible-parity lock line of 2
+in eval/baseline/visible-parity.txt; only the steward lowers it (`make eval-lower-visible-lock`, decision 0093).
