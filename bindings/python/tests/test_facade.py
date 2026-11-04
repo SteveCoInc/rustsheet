@@ -397,3 +397,49 @@ def test_lone_surrogate_reads_back_exactly(wb):
     assert wb.values("A1:A3") == [["\ude00"], ["�"], ["x"]]
     assert wb.values("A2") == [["�"]]
     assert wb.value("A2") == "�"
+
+
+def test_iteration_settings_round_trip(wb):
+    assert wb.iteration is None
+    wb.set_iteration()
+    assert wb.iteration == (100, 0.001)
+    wb.set_iteration(max_iterations=5, max_change=0.5)
+    assert wb.iteration == (5, 0.5)
+    wb.set_iteration(False)
+    assert wb.iteration is None
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=0)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=32768)
+    wb.set_iteration(max_iterations=32767)
+    assert wb.iteration == (32767, 0.001)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_change=float("nan"))
+
+
+def test_iterating_cycle_converges(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = rs.Formula("=A1/2+1")
+    assert wb["Sheet1!A1"] == 0.0  # Excel shows 0 for a circular reference
+    wb.set_iteration(max_iterations=100, max_change=1e-9)
+    wb.recalculate()
+    assert wb["Sheet1!A1"] == pytest.approx(2.0, abs=1e-6)
+
+
+def test_column_data_table_fills_results(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = 1
+        tx["Sheet1!B1"] = rs.Formula("=A1*10")
+        tx["Sheet1!A2"] = 1
+        tx["Sheet1!A3"] = 2
+        tx["Sheet1!A4"] = 3
+        tx.add_data_table("Sheet1!B2:B4", column_input="Sheet1!A1")
+    assert wb.values("Sheet1!B2:B4") == [[10.0], [20.0], [30.0]]
+
+
+def test_data_table_error_rolls_back(wb):
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx["Sheet1!C5"] = 7
+            tx.add_data_table("Sheet1!B2:B4")
+    assert wb["Sheet1!C5"] is None
