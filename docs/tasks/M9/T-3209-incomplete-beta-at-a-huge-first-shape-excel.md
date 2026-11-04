@@ -47,4 +47,11 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 - Cells below the mean (Cephes' incbcf side), which are T-2510's.
 
 ## Evidence (T-4017)
-Sweep cases: probes-numeric t4017-f-huge-df2-above-mean-* (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").
+Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other than 5, in the same band) this task owns:
+- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-3e7.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e8.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-3e8.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json
+See (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").
