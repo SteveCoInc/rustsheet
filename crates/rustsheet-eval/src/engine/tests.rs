@@ -376,6 +376,33 @@ fn spec_pivot_rendered_cells_reach_the_engine() {
 }
 
 #[test]
+fn spec_grouped_pivot_is_not_registered_yet() {
+    // T-4228: a range-grouped pivot has no rendered cells and is left out until the engine groups
+    // spec pivots (T-4235), so GETPIVOTDATA against it is `#REF!` rather than an evaluation error.
+    let grouped = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
+            "A1":"N","B1":"Val","A2":0.3,"B2":1,"A3":0.7,"B3":2,
+            "H1":"=GETPIVOTDATA(\"Val\",D3,\"N\",\"0.3-0.4\")"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B3","location":"D3","row":"N","value":"Val",
+            "group":{"start":0,"end":1,"interval":0.1,"items":["<0","0-0.5","0.5-1",">1"]}}]}]}"#,
+    );
+    let evaluated = RustSheetEngine
+        .evaluate_spec(&grouped, None)
+        .expect("evaluates");
+    assert_eq!(
+        evaluated.value("S", Addr { row: 1, col: 8 }),
+        Some(Value::Error("#REF!".into()))
+    );
+    // A group key the builder does not write is refused when the case is read.
+    let unknown = serde_json::from_str::<CaseSpec>(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{},
+            "pivot_tables":[{"name":"Pv","source":"A1:B3","location":"D3","row":"N","value":"Val",
+            "group":{"start":0,"end":1,"interval":0.1,"items":[],"by":"months"}}]}]}"#,
+    );
+    assert!(unknown.is_err());
+}
+
+#[test]
 fn spec_hidden_rows_and_tables_reach_the_engine() {
     let spec = spec(
         r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
