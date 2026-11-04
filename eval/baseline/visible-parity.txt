@@ -219,6 +219,9 @@ probes/t3532-numeral-digit-fields.case.json	14
 probes/t3584-match-fold-weightless.case.json	125
 probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
+probes/t3662-collation-ignorables-prefix.case.json	67
+probes/t3662-collation-ignorables-sweep.case.json	30
+probes/t3662-collation-ignorables.case.json	318
 probes/t3678-time-argument-far-negative.case.json	81
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
@@ -226,6 +229,7 @@ probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
 probes/t3895-collation-script-digits.case.json	1
+probes/t3897-r1c1-let-cell-names.case.json	12
 probes/t3906-rate-restart-oos.case.json	137
 probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4

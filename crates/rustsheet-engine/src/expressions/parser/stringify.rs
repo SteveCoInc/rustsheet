@@ -1,4 +1,4 @@
-pub(super) mod bound_variables;
+pub(crate) mod bound_variables;
 mod literals;
 mod rename_defined_name;
 mod sheet_edits;
