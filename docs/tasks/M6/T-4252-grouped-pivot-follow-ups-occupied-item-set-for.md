@@ -3,11 +3,11 @@ id: T-4252
 title: "Grouped pivot follow-ups: occupied-item set for GETPIVOTDATA and one layout footprint helper"
 milestone: M6
 lane: engine
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: sonnet
-depends_on: []
+depends_on: [T-4235]
 ---
 
 ## Goal
@@ -33,3 +33,7 @@ has one definition.
 
 ## Out of scope
 - New Excel behaviour (T-4249, T-4248).
+
+## Note
+Filed against PR #3238 (T-4235), which is not on `main` yet: `shown_group`, `pivot/layout.rs` and
+`lay_out_grouped` do not exist there. Depends on T-4235 landing; found by a sonnet run on 2026-11-04.
