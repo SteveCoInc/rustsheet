@@ -2109,6 +2109,7 @@ C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
+C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4199-decimal-unprobed-shapes.case.json	87
 C	probes/t4208-hyperlink-blank-friendly-name.case.json	31
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
