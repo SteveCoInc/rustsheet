@@ -6,8 +6,8 @@ lane: functions-math
 status: todo
 priority: P3
 size: S
-tier: sonnet
-depends_on: []
+tier: opus
+depends_on: [T-4227]
 ---
 
 ## Goal
@@ -32,3 +32,17 @@ that calls SUBTOTAL, as they skip the spilled cells of a dynamic-array one, and 
 
 ## Out of scope
 - Other nested-call forms (T-4194).
+
+## Handoff (resumed)
+- The task names a case key `array_formulas`; it does not exist. `rg array_formulas` finds nothing in
+  `tools/src/rustsheet_tools/spec2xlsx.py`, `crates/rustsheet-eval/src/case.rs`, the oracle backends or
+  `docs/architecture/eval-harness.md`. The case format can only write dynamic-array single-anchor formulas
+  (`write_dynamic_array_formula(row, col, row, col, ..)`) and `legacy_formulas` (single-cell, non-array).
+- A multi-cell CSE block (`{=...}` over A1:A3) therefore needs harness work first: a per-sheet key in the
+  case schema, `spec2xlsx` writing `write_array_formula(first, last, ..)`, the engine adapter entering it
+  (it must create `Cell::SpillCell` members), and the excel-graph fill writing it. That is its own
+  harness-lane task (size M) plus an eval-harness.md entry; split it out, then do the probe.
+- Nothing else was tried; no code changed. excel-graph is available (`rustsheet-oracle status` OK).
+- Resumed by an opus run, 2026-11-04: the notes hold (no case key writes a multi-cell `<f t="array">`). The harness
+  work is split out as T-4227; this probe waits on it (`depends_on`). `array_formulas` in the Context above is the
+  key T-4227 adds.
