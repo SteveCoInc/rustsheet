@@ -3,7 +3,7 @@ id: T-4024
 title: "M6 exit owner for probes/t3929-wildcard-fold-xmatch Calc!E3, E7, E29, E30: they pass once T-3904 and T-4013 land"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
