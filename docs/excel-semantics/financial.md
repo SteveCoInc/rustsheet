@@ -157,7 +157,8 @@ Evidence (T-3014):
   the exact payment), as RATE is bit-exact on Excel's PMT bits (probes/rate-excel-pmt-bits, T-2527).
 - Not established: whether Excel's expm1 itself switches to `EXP(x)-1` at |x| = 1 (SINH and TANH call it only below
   1, numbers.md). IPMT and PPMT take the same switch ("IPMT and PPMT split Excel's discounted payment", T-2243);
-  CUMIPMT and CUMPRINC still use Kahan's form at every |x| and keep their fitted forms (T-3179).
+  CUMIPMT and CUMPRINC still use Kahan's form at every |x| and keep their fitted forms: the switch in CUMPRINC's
+  `1 - v^nper` moves no gated cell, so the evidence does not place it (T-3179).
   Not probed: nper 0 with a non-zero rate, |x| at exactly 1, and rates where `1-Q` leaves the normal range (the
   engine keeps "PMT, IPMT and PPMT are the exact payment"'s forms and errors there).
 Tiny rates (T-2748): the same form holds down to a rate of 1E-16, with no switch to the rate-0 branch `-(pv+fv)/nper` or
@@ -378,13 +379,14 @@ plus ironcalc-calc FINANCIAL/IPMT_PPMT.xlsx, Mac Excel cached values):
   the discounted IPMT those four cells are an ulp off: `CUMIPMT(0.1,10,345,2,2,1)` is -29.395712615048502, but the
   discounted `IPMT(0.1,2,10,345,0,1)` is ...485 in the engine. Excel's IPMT on those arguments is not probed: if it
   were ...502, this form would miss it rather than CUMIPMT having a form of its own. Four other type-1 CUMIPMT cells
-  would have been fixed by it. The probe and CUMIPMT's own form are open (T-3179).
+  would have been fixed by it. The probe is done (probes/t3179-cumipmt-ipmt-sum: Excel's IPMT there is ...485, so
+  CUMIPMT has a form of its own, "CUMIPMT of one period is not that period's IPMT"); that form is open (T-4197).
 Status: VERIFIED to the bit (Mac Excel cached values and excel-graph probes).
 Implemented in: `discounted_split`, `discounted_balance`, `discount_complement`, `payment_factor` and
 `period_payments`' `SplitForm` (crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2243). Where the form
 is not finite (`1-Q` or `A` past the double range), and for CUMIPMT's `SplitForm::Exact`, the forms of the entries
 named above still decide.
-Tasks: T-2243, T-2666, T-3179
+Tasks: T-2243, T-2666, T-3179, T-4197
 
 ## DB and SYD argument domains
 Rule: SYD with a negative salvage is `#NUM!` (`SYD(100,-1E-300,10,1)`; salvage 0 is a value), and `life*(life+1)` past the
@@ -2221,7 +2223,7 @@ Evidence: probes/t3179-cumipmt-ipmt-sum (84 cells, excel-graph, 2026-11-04): A1,
 (each IPMT) and E-H (running sums); the same CUMIPMT cells are ironcalc-calc CUMPRINC_CUMIPMT.xlsx G3 (= probes
 fin-cumipmt-overflow-and-forms A8), G4, G15 and fin-cumipmt-overflow-and-forms A13.
 Status: VERIFIED (excel-graph). Ours: every IPMT and running sum of the probe matches; the two single-period CUMIPMT
-cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-3179).
+cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-4197).
 Scored forms (T-3179, second run, 2026-11-04): on the 168 CUMIPMT cells with literal arguments and a range of at most 32
 periods that carry Excel values (probes fin-cumipmt-*, t3179-cumipmt-ipmt-sum, gen-m9), each candidate written as a
 formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on their probes:

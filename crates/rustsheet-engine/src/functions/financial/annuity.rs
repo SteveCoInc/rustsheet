@@ -370,7 +370,7 @@ fn balance_interest(
         // probes/t2665-ipmt-fractional-nper-past-range, fin-ipmt-ppmt-huge-rate A186 and gen-m9
         // b73c6cc96e093f03 A268; financial.md "IPMT cancels on fv". IPMT itself now takes
         // `discounted_split`, which explains these cells (T-2243); this switch is left for the
-        // non-finite fallback and CUMIPMT's exact sum, TODO(T-3179).
+        // non-finite fallback and CUMIPMT's exact sum, TODO(T-4197).
         -balance.0 * (rate / (1.0 + rate))
     } else if period_start {
         dd_div(dd_neg(dd_mul(balance, (rate, 0.0))), two_sum(1.0, rate)).0

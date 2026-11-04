@@ -3,7 +3,7 @@ id: T-3179
 title: "PPMT, IPMT and CUMIPMT's 1-Q: does Excel switch from expm1 to 1-EXP(x) at |nper*L| 1 as PMT does"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -55,12 +55,19 @@ period's IPMT"). Next step: fit CUMIPMT's per-period interest on the single-peri
 candidates: the exact split's `fl(pmt*... )` orderings, `(pv*(1+r)^(per-1) + pmt*((1+r)^(per-1)-1)/r)*r` evaluated as
 Excel's FV, then `-r*FV` with type 1's discount), then check it holds on G4, G15 and the fin-cumipmt cases.
 
-## Landing notes (2026-11-04, opus run; resumed 2026-11-04 11:35 UTC)
-- Branch agent/functions-financial/T-3179-cumipmt-one-minus-q, no PR yet. It holds the claim, the probe
-  (probes/t3179-cumipmt-ipmt-sum, oracle-filled), its two known failures in eval/baseline/probes.txt (A1, D1: the
-  single-period CUMIPMT cells, owned here) and the financial.md entry. `make check-fast` is green on it.
-- Stopped at the session's landing window, before any engine change. Next: fit CUMIPMT's per-period form (see "Probe
-  result" above) in `crates/rustsheet-engine/src/functions/financial/` (CUMIPMT's `SplitForm`), score on A1/D1 first,
-  then on CUMPRINC_CUMIPMT.xlsx G3, G4, G15 and the fin-cumipmt-* cases. That form is a fit (decision 0188 R4).
-- Do not repeat: summing the discounted IPMT (T-2243 tried it; it regresses G3, G4, G15 and A8). The probe shows why:
-  Excel's CUMIPMT is not its IPMT sum.
+## Outcome
+Negative result: no engine change. Excel's `1-Q` in CUMIPMT and CUMPRINC cannot be placed from the evidence, and the
+CUMIPMT cells left after T-2243 fit none of the per-period forms. These are the "recorded finding" of criterion 1:
+- **PMT's switch in CUMPRINC.** PMT takes `1 - EXP(-nper·L)` from |nper·L| 1 on. I put that switch into CUMPRINC's
+  `1 - v^nper` (`Periods::unpaid_share`, `-expm1` today) as a scratch build. Across every gated suite,
+  `rustsheet-eval check` reported 0 fixed and 0 regressions, and none of the 168 short-range CUMIPMT cells changed.
+  So the kernel keeps `-expm1`. IPMT and PPMT already take PMT's switch (T-2243).
+- **CUMIPMT's per-period form.** I scored four forms on the 168 evidenced CUMIPMT cells with literal arguments and
+  ranges of at most 32 periods: ours (`PMT·m - CUMPRINC`) gets 92 bit-exact, `PMT·m - SUM(PPMT)` 61, `SUM(IPMT)` 24
+  and the balance form `SUM(FV·r)` 9 to 11. The balance form gives t3179 A1 to the bit, but it misses D1 by 1 ulp
+  and misses the single-period cells Q1 and H10 that ours has. So it is not Excel's form either.
+- financial.md "CUMIPMT of one period is not that period's IPMT" lists the scores.
+- The owned cells (t3179 A1, D1 = CUMPRINC_CUMIPMT.xlsx G3 / fin-cumipmt-overflow-and-forms A8, A13; G4, G15) go to
+  follow-up T-4197.
+- Eval delta: none (no engine change). Probe added earlier on this branch: probes/t3179-cumipmt-ipmt-sum, 84 cells,
+  2 known failures (A1, D1).
