@@ -4,7 +4,7 @@ title: "Model Excel's gamma inverse search at a huge shape: its start, step rule
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P1
+priority: P0
 size: M
 tier: opus
 depends_on: []
@@ -35,7 +35,8 @@ up), not because of more fitted cuts. In particular `CHISQ.INV.RT(1E-300,df)` fo
   If one model explains all of them, it replaces the fitted cuts `BAND_UPPER_SLOPE`, `BAND_UPPER_EDGE` and
   `BAND_LOWER_EDGE`, and T-3396's miss (`GAMMA.INV(1E-80,1E10,1)`, `#NUM!` where the cut says a value) is the test of
   it.
-- Evidence to start from: probes/t3350-chisq-inv-huge-df, probes/t3350-gamma-inv-band-lower-edge,
+- Evidence to start from: probes/t3396-gamma-inv-band-huge (the band closing from both sides at 7E9 to 1.2E10,
+  T-3396's attempt 1), probes/t3350-chisq-inv-huge-df, probes/t3350-gamma-inv-band-lower-edge,
   probes-numeric/t3350-r4-chisq-inv-sweep, probes/t3070-gamma-inv-band, probes/t2982-gamma-inv-huge-shape;
   docs/excel-semantics/statistics.md "GAMMA.INV and CHISQ.INV at a huge shape"; docs/research/t3350/sweep.py (the
   mpmath reference).
@@ -74,3 +75,16 @@ up), not because of more fitted cuts. In particular `CHISQ.INV.RT(1E-300,df)` fo
 - The digits of the closed form at shape 1E9 and up (T-3272) and its move to the math under R3 (T-3364), unless the
   model shows they are the same mechanism; then say so in those tasks.
 - Small-shape quantiles (below shape 1E5).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 21 probes-numeric cells that no open task listed: 21 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/fit-audit-t3070-band-upper.case.json (13): S!A1-A3, A5-A7, A12-A13, A26, A32-A33, A38-A39
+- probes-numeric/fit-audit-t3070-shape-min.case.json (8): S!A19, A22-A23, A25-A26, A28-A30
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

@@ -3,7 +3,7 @@ id: T-1174
 title: "Desktop Excel: typed entry and file load of non-reference SUBTOTAL/AREAS arguments (follow-up of T-1163)"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -26,3 +26,7 @@ T-1163 (decision 0045) refuses at parse time, on excel-graph evidence only, a SU
 
 ## Blocked because
 Needs the excel-desktop oracle (`rustsheet-oracle status`: excel-desktop n/a). Unblock when it is available.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

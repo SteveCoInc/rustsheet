@@ -3,7 +3,7 @@ id: T-4060
 title: "Probe three collation choices T-3904/T-4039 left open: space forms at the first pass, the prefix rule under SORT and MATCH(..,1), marks after a weightless character"
 milestone: M2
 lane: research
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,10 +31,24 @@ VERIFIED, or an engine task is filed for the cells that differ.
 - Method: the `excel-probe` skill, milestone M2, under about 150 cells.
 
 ## Acceptance criteria
-- [ ] A probe case `probes/t4060-collation-open-choices` with its excel-graph sidecar answers 1 to 3.
-- [ ] coercion.md records each answer with cells (VERIFIED). Every cell the engine fails is a known failure owned by an
+- [x] A probe case `probes/t4060-collation-open-choices` with its excel-graph sidecar answers 1 to 3.
+- [x] coercion.md records each answer with cells (VERIFIED). Every cell the engine fails is a known failure owned by an
       engine task filed in the same PR.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing collation.rs (the engine task this may file).
+
+## Outcome
+- Probe probes/t4060-collation-open-choices (222 cells, excel-graph, 2026-11-04). Findings in coercion.md, T-3662
+  section, "T-4060 settled three choices":
+  1. U+3000, U+205F and U+202F share the space's first-pass weight. CHAR(160), CHAR(9), CHAR(10), CHAR(13) and
+     U+2000 to U+200B have their own, and U+2000 to U+200A sort above CHAR(10) and CHAR(13), which resolves T-4039's
+     UNVERIFIED note. The engine is wrong only for U+202F.
+  2. SORTBY, MATCH(..,1), VLOOKUP(..,TRUE), XMATCH(..,±1) and UNIQUE apply the prefix rule (Excel's pairwise
+     comparison; SORTBY's tie order depends on the input order). The engine already passes every cell, because
+     those paths use `cmp_text_pairwise`. GROUPBY and PIVOTBY are left UNVERIFIED.
+  3. A combining mark after a weightless character is a lone mark: `"a"&U+00AD&U+0301` sits between `"a"` and
+     `"á"`. The engine attaches it to the `a`.
+- New engine task T-4072 owns the 9 off cells (Calc!B2, K2, B50, B51, B55, B56, B58, B59, B63).
+- Eval delta: fixed 0, regressions 0; 1 new case, 213 of 222 pass.

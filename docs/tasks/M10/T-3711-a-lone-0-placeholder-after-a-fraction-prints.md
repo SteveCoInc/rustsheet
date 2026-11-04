@@ -4,7 +4,7 @@ title: "A lone 0 placeholder after a fraction prints its zero"
 milestone: M10
 lane: functions-text
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

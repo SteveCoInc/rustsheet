@@ -3,7 +3,7 @@ id: T-1081
 title: "Confirm JIS and FILTERXML web results on desktop Excel"
 milestone: M14
 lane: functions-text
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -37,3 +37,7 @@ questions are M14 work and never block Phase 1.
 ## Blocked because
 Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or phase exit.
 Unblock when `cd tools && uv run rustsheet-oracle status` shows `excel-desktop OK` and T-1074 is done.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

@@ -417,8 +417,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let month = ymd_month as usize;
                         text.push_str(&p.numerals.field(&format!("{month:02}")));
                     }
-                    TextToken::DayNameShort
-                    | TextToken::DayName
+                    TextToken::DayNameShort(..)
+                    | TextToken::DayName(..)
                     | TextToken::MonthNameShort
                     | TextToken::MonthName
                     | TextToken::MonthLetter => {
@@ -428,8 +428,10 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let weekday = excel_weekday_index(serial_1900);
                         if let (Some(Calendar::Hebrew(adars)), Some(names)) = (p.calendar, p.names)
                         {
-                            let month_name =
-                                !matches!(token, TextToken::DayName | TextToken::DayNameShort);
+                            let month_name = !matches!(
+                                token,
+                                TextToken::DayName(..) | TextToken::DayNameShort(..)
+                            );
                             if month_name && adars.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
                                 return invalid_date(value);
                             }
@@ -827,8 +829,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // Date tokens should not be present
                     TextToken::Day => {}
                     TextToken::DayPadded => {}
-                    TextToken::DayNameShort => {}
-                    TextToken::DayName => {}
+                    TextToken::DayNameShort(..) => {}
+                    TextToken::DayName(..) => {}
                     TextToken::Month => {}
                     TextToken::MonthPadded => {}
                     TextToken::MonthNameShort => {}

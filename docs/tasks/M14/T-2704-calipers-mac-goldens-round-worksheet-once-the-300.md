@@ -3,7 +3,7 @@ id: T-2704
 title: "Calipers Mac goldens round worksheet * once: the 300 formulas_nested chain cells that excel-graph's double rounding moves by one ulp"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -68,3 +68,7 @@ evidence exists. The open question for M14 is what Windows desktop Excel does:
 ## Blocked because
 Needs the excel-desktop oracle backend (decision 0039, M14). `cd tools && uv run rustsheet-oracle status`
 must show `excel-desktop OK`.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

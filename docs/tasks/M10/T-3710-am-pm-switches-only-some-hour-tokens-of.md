@@ -4,7 +4,7 @@ title: "AM/PM switches only some hour tokens of a section to the 12-hour clock"
 milestone: M10
 lane: functions-text
 status: done
-priority: P2
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

@@ -4,7 +4,7 @@ title: "BINOM.DIST and NEGBINOM.DIST cdf at p below 0.01 and a huge n: Excel is 
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: [T-3960]
@@ -144,3 +144,13 @@ Cells this task owns (T-3774 and T-3959 own the other cells of both cases):
 Decisions 0083 and 0114 (`visible`): done when each of the 11 cells is within half a unit of the 15th significant
 digit of Excel, or is an UNVERIFIED statistics.md entry naming the ruled-out hypotheses. Excel is the inaccurate one
 here, so this means reproducing Excel's formulation (time-boxed, decision 0056).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 182 probes-numeric cells that no open task listed: 31 first wrong at the 11th significant digit or earlier, 151 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3960-binom-negbinom-small-p-cdf-hold.case.json (48): Calc!A1, A3, A11, A13, A21-A23, A25, A35, A39, A46-A47, A52, A54-A56, A65-A66, A68, A74, A76-A78, A80, A95-A97, A99, A101, A108, A110, A121, A127, A135, A141-A142, A151-A152, A156, A163, A165-A166, A168, A170, A177, A179, A182, A194
+- probes-numeric/t3960-binom-negbinom-small-p-cdf.case.json (134): Calc!A2-A4, A8, A15, A20, A25, A27, A29, A31-A32, A34-A35, A37, A40, A42, A44, A53, A62-A64, A66, A68, A71, A74, A78, A81, A85, A88, A91, A94, A97, A100-A101, A106-A107, A109-A110, A113, A116, A122, A126, A128, A130, A132, A135, A141, A143, A151-A152, A157, A159, A163, A173, A182-A183, A195, A198, A200-A201, A207, A209-A210, A215-A216, A222, A225, A229, A233, A237, A239, A242, A244, A247, A256, A259, A263, A266, A268, A275, A277, A279, A287, A289-A290, A292, A300, A303-A304, A313, A321, A324, A329-A330, A335, A342-A343, A346, A349, A358-A359, A375, A378, A381-A383, A389, A392, A394-A396, A398, A401-A402, A404-A406, A413-A415, A421-A426, A428-A430, A432-A434, A436-A437
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

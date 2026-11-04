@@ -4,10 +4,11 @@ title: "GAMMA.INV band lower edge at shape 1E10: GAMMA.INV(1E-80,1E10,1) is #NUM
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
-depends_on: []
+depends_on: [T-3409]
+campaign: semantics
 ---
 
 ## Goal
@@ -27,6 +28,15 @@ GAMMA.INV, CHISQ.INV and the other gamma quantiles at a huge shape are `#NUM!` e
   `(3.38E-27,..)` and A49 `(2.89E-26,..)` are `#NUM!` in Excel and values in the engine. T-3409 (a model of
   Excel's search) may explain them together with A122; check it first.
 
+- **Attempt 1 (2026-11-04, decision 0056 time-box).** probes/t3396-gamma-inv-band-huge (256 cells, excel-graph)
+  pins the band at 7E9 to 1.2E10: it closes from both sides as the shape grows and is empty from 1.15E10
+  (statistics.md "GAMMA.INV and CHISQ.INV at a huge shape"). Neither the cdf ratio nor the distance o - z is constant
+  along the lower edge, and a 2-D cut fitted to these points would be an overfit (T-3409's owner ruling), so no rule
+  changed. The probe's off cells, all GAMMA.INV values where Excel is `#NUM!`, are this task's:
+  probes/t3396-gamma-inv-band-huge.case.json S!A35, S!A55:A56, S!A75:A77, S!A95:A98, S!A107:A108, S!A114:A119,
+  S!A129:A140, S!A151:A161. Column B (CHISQ.INV(3E-k,2a), the hold-out fixed before scoring) matches everywhere
+  (all `#NUM!`). Next: T-3409's search model, tested on these cells; this task now waits on it.
+
 ## Acceptance criteria
 - [ ] A filled probe pins the lower edge at shapes 7E9 to 1.2E10; the rule separates every huge-shape quantile cell
       in eval/, A122 included, or the remaining misses are listed with the reason.
@@ -36,3 +46,15 @@ GAMMA.INV, CHISQ.INV and the other gamma quantiles at a huge shape are `#NUM!` e
 ## Out of scope
 - A model of Excel's whole search (T-3409). If T-3409's model explains A122, close this task as its duplicate.
 - The band's upper edge and the closed-form branch.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 3 probes-numeric cells that no open task listed: 3 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/fit-audit-t3070-band-upper.case.json (3): S!A47-A49
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

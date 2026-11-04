@@ -1,0 +1,43 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3093: does the near-zero snap of a LAMBDA body's root +/- hold for a LET-bound call, a LAMBDA passed as a parameter, a chained call, a call under IF and a call as a SUM argument? B: 0.1+0.2-0.3; C, D: 1+k*2^-52-1 at k=7 (snaps at a root) and k=8 (kept).",
+  "tags": [
+    "M2",
+    "numbers",
+    "near-zero",
+    "probe",
+    "T-3093"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "shape",
+        "B1": "cancel",
+        "C1": "k=7",
+        "D1": "k=8",
+        "A2": "LET-bound",
+        "B2": "=LET(f,LAMBDA(x,x+0.2-0.3),f(0.1))",
+        "C2": "=LET(f,LAMBDA(x,x+7*2^-52-1),f(1))",
+        "D2": "=LET(f,LAMBDA(x,x+8*2^-52-1),f(1))",
+        "A3": "param",
+        "B3": "=LAMBDA(g,g(0.1))(LAMBDA(x,x+0.2-0.3))",
+        "C3": "=LAMBDA(g,g(1))(LAMBDA(x,x+7*2^-52-1))",
+        "D3": "=LAMBDA(g,g(1))(LAMBDA(x,x+8*2^-52-1))",
+        "A4": "chained",
+        "B4": "=LAMBDA(x,LAMBDA(y,x+y+0.2-0.3))(0.1)(0)",
+        "C4": "=LAMBDA(x,LAMBDA(y,x+y+7*2^-52-1))(1)(0)",
+        "D4": "=LAMBDA(x,LAMBDA(y,x+y+8*2^-52-1))(1)(0)",
+        "A5": "under IF",
+        "B5": "=IF(TRUE,LAMBDA(x,x+0.2-0.3)(0.1))",
+        "C5": "=IF(TRUE,LAMBDA(x,x+7*2^-52-1)(1))",
+        "D5": "=IF(TRUE,LAMBDA(x,x+8*2^-52-1)(1))",
+        "A6": "SUM arg",
+        "B6": "=SUM(LAMBDA(x,x+0.2-0.3)(0.1))",
+        "C6": "=SUM(LAMBDA(x,x+7*2^-52-1)(1))",
+        "D6": "=SUM(LAMBDA(x,x+8*2^-52-1)(1))"
+      }
+    }
+  ],
+  "expected": {}
+}

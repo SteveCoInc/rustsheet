@@ -576,6 +576,7 @@ fn time_arguments_snap_near_an_integer_and_stop_at_32767() {
         ("A6", "=TIME(32768,0,0)"),
         ("A7", "=TIME(600,-32768,0)"),
         ("A8", "=TIME(600,-32768-1E-6,0)"),
+        ("A9", "=TIME(600,32767,0)"),
     ]);
     let seconds = |c: &str| {
         let v: f64 = model._get_text(c).parse().unwrap();
@@ -588,5 +589,38 @@ fn time_arguments_snap_near_an_integer_and_stop_at_32767() {
     assert_eq!(seconds("A5"), 25200.0);
     assert_eq!(model._get_text("A6"), "#NUM!");
     assert_eq!(seconds("A7"), 21120.0);
+    // -32768-1E-6 floors to -32769, which wraps to 32767 (T-3983).
+    assert_eq!(seconds("A8"), seconds("A9"));
+}
+
+#[test]
+fn time_wraps_an_argument_below_minus_32768() {
+    // probes/t3678-time-argument-far-negative A1, D1, G4; t3983-time-argument-below-131072
+    // (excel-graph, 2026-11-03/04, T-3983).
+    let model = test_time_expressions(&[
+        ("A1", "=TIME(600,-32769,0)"),
+        ("A2", "=TIME(600,32767,0)"),
+        ("A3", "=TIME(-65537,0,0)"),
+        ("A4", "=TIME(600,-131073,0)"),
+        ("A5", "=TIME(600,-1000000,0)"),
+        ("A6", "=TIME(600,-2147483649,0)"),
+        ("A7", "=TIME(10,0,-1E15)"),
+        ("A8", "=TIME(-131073,0,0)"),
+        ("A9", "=TIME(0,32769,0)"),
+        ("A10", "=TIME(600,-32768.5,0)"),
+    ]);
+    let seconds = |c: &str| {
+        let v: f64 = model._get_text(c).parse().unwrap();
+        (v * 86400.0).round()
+    };
+    assert_eq!(seconds("A1"), seconds("A2"));
+    assert_eq!(model._get_text("A3"), "#NUM!");
+    assert_eq!(seconds("A4"), 86340.0);
+    assert_eq!(seconds("A5"), 19200.0);
+    // Past -2^31 the value reads as 0, not as its wrap (-1 would give 23:59).
+    assert_eq!(seconds("A6"), 0.0);
+    assert_eq!(seconds("A7"), 36000.0);
     assert_eq!(model._get_text("A8"), "#NUM!");
+    assert_eq!(model._get_text("A9"), "#NUM!");
+    assert_eq!(seconds("A10"), seconds("A2"));
 }

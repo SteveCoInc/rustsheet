@@ -191,6 +191,7 @@ probes/t2496-fin-subexpressions.case.json	2
 probes/t2565-irr-guess-sweeps.case.json	1
 probes/t2576-error-type-cell-paired.case.json	10
 probes/t2577-indirect-ref-array.case.json	6
+probes/t2657-pv-irr-div0.case.json	22
 probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2779-hebrew-saka-names.case.json	1
 probes/t2829-ftest-a306-shapes.case.json	8
@@ -204,12 +205,14 @@ probes/t3028-b2-taiwan-cuts.case.json	2
 probes/t3070-gamma-inv-band.case.json	1
 probes/t3211-collation-sort-cycles.case.json	43
 probes/t3297-legacy-if-index-arm-name-table.case.json	5
+probes/t3347-irr-conventional-num.case.json	19
 probes/t3348-rate-fv-nonzero.case.json	3
 probes/t3349-t-inv-2t-near-one.case.json	1
 probes/t3350-chisq-inv-huge-df.case.json	14
 probes/t3350-gamma-inv-band-lower-edge.case.json	1
 probes/t3352-binom-negbinom-large-n.case.json	69
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	222
+probes/t3396-gamma-inv-band-huge.case.json	41
 probes/t3406-irr-num-boundary.case.json	76
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3446-script-digits-forms.case.json	91
@@ -229,6 +232,8 @@ probes/t3710-ampm-hour-tokens.case.json	2
 probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
+probes/t3891-numeral-tag-render.case.json	2
+probes/t3891-typed-script-digit-shapes.case.json	2
 probes/t3895-collation-script-digits.case.json	1
 probes/t3897-r1c1-let-cell-names.case.json	12
 probes/t3906-rate-restart-oos.case.json	137
@@ -239,6 +244,10 @@ probes/t3929-wildcard-fold-xmatch.case.json	2
 probes/t3945-atan-near-midpoint.case.json	2
 probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	44
 probes/t4014-sheet-api-name-65.case.json	1
+probes/t4040-r1c1-unbound-cell-names.case.json	3
+probes/t4060-collation-open-choices.case.json	9
+probes/t4086-collation-later-passes.case.json	21
+probes/t4086-groupby-weightless.case.json	13
 probes/table-edits/t3629-convert-names.case.json	4
 probes/table-edits/t3629-convert-plain.case.json	4
 probes/table-edits/t3629-readd-other-area.case.json	4

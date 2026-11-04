@@ -1,0 +1,8 @@
+t2220-f-dist-sweep-cdf A191 F.DIST(0.1,2,100,TRUE)
+  l model -0.0019980026626730566  correctly rounded -0.001998002662673056  r+s at 0.553 of an ulp; b0*l at 0.375
+t2220-f-dist-sweep-cdf A195 / -rt A195 F.DIST(1.5,2,100)
+  l model -0.029558802241544405  correctly rounded -0.029558802241544405  r+s at 0.055 of an ulp; b0*l at 0.125
+t2220-f-dist-sweep-d2-1 A16 F.DIST(0.000117,2,1,TRUE)
+  l model -0.00023397262627021856  correctly rounded -0.00023397262627021856  r+s at 0.533 of an ulp; b0*l at 0.000
+t1745-beta-inv-roundtrip G145 BETA.DIST(D145,100,1,TRUE)
+  l model -0.02995732273554002  correctly rounded -0.029957322735540023  r+s at 0.045 of an ulp; b0*l at 0.938

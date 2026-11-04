@@ -4,6 +4,7 @@ use std::{collections::HashMap, sync::OnceLock};
 // `locales.bin` (de "Mrz" vs "Mär") on purpose: keep the two sources apart.
 pub(crate) mod calendar_date_names;
 pub mod excel_date_names;
+mod indic_date_names;
 mod regional_date_names;
 
 use bitcode::{Decode, Encode};

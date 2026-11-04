@@ -4,7 +4,7 @@ title: "BETA.DIST cdf at b = 1 and a shape of 136 to 1414: Excel's w on the a0 =
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -18,6 +18,11 @@ fix finds where Excel's w = 1 - x^a differs by one unit of 2^-53 from the engine
 `-excel_expm1(b0 · excel_ln_one_minus(x0))`, and does not lose any of the 1,738 column-B cells that match today.
 
 ## Context
+- T-3886 lead (docs/research/t3886/RESULTS.md section 2; statistics.md "Incomplete beta at a shape of 1 outside the
+  closed forms"): Kahan's expm1 reassociated as (u - 1)·(p/LN u) in `shape_one_tails` makes all 47 of these cells
+  bit-exact (full-eval A/B at origin/main b71347b1, `kahan_reassociated.patch`). It also loses 47 bit-exact cells
+  elsewhere, 5 of them gated (probes/t3354-f-dist-tiny-x-huge-d2), and no shape cut separates the wins from the
+  losses. It is a lead, not Excel's form.
 - T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01k (`make eval` on origin/main 063c2dd9, excel-graph; `scripts/exit_owners.py --all-off`).
   These 47 cells are visibly off. Their only owner is T-3712, which cannot be picked: it depends on T-3382, which is
@@ -110,3 +115,16 @@ criteria still unmet then go to a follow-up with `defer: phase-1b`.
 - Column A, the L140 bup+bgrat cdf (T-3712), and column C, the density (T-3569, T-3392).
 - w1 below 2^-53 beyond the four cells named above (T-3150).
 - Moving any cell to the math (R3, which needs an owner ruling).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 147 probes-numeric cells that no open task listed: 24 first wrong at the 11th significant digit or earlier, 123 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3568-r5-bup-fresh.case.json (12): Calc!A38, A47, A212, A261, A276, A291, A705, A718, A727, B39, B71, B296
+- probes-numeric/t3568-r5-bup-hold.case.json (33): Calc!A4, A20, A38, A74, A112, A174, A204, A207, A336, A475, A496, A536, A546, A555, A594, A609, A618, A685-A686, A830, A879, A910, A1371, A1462, B274, B285, B437, B500, B509, B536, B572, B579, B621
+- probes-numeric/t3568-r5-bup-terms-hold.case.json (27): Calc!B5, B105, C152, C165, C189, C203, D87, G165, H152, I165, J105, K231, L52, L231, M251, O52, O231, Q87, T151, V52, V231, W231, X15, AA47, AA278, AC165, AE15
+- probes-numeric/t3568-r5-bup-terms-tune.case.json (34): Calc!B210, D206, E253, F22, F75, F210, F216, F250, G216, H253, I216, I257, J216, J257, L22, M106, N257, O206, P75, Q257, R22, S110, S261, V22, V75, V206, V250, W257, X106, Y257, AB257, AB261, AC206, AE261
+- probes-numeric/t3568-r5-bup-tune.case.json (41): Calc!A9, A53, A61, A137, A145, A204, A211, A224, A281, A325, A327, A368, A404, A447, A449, A471, A481, A519, A537, A595, A598, A607, A667, A673, A679, A757, A843, A920, A944, A1383, A1396, A1560, A1599, A1648, B9, B31, B230, B534, B634, B690, B737
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

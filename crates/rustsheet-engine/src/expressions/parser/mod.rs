@@ -356,7 +356,13 @@ impl Parser {
         self.top_level = true;
         let node = self.parse_expr();
         self.top_level = false;
-        self.expect_end(node)
+        let mut node = self.expect_end(node);
+        // Only `_xlpm.f1` (A1 text, or the R1C1 storage form) or a bare `f1` typed in R1C1 mode
+        // reads a name spelled like an A1 cell (T-4040).
+        if formula.contains("_xlpm.") || (self.typed && !self.lexer.is_a1_mode()) {
+            stringify::bound_variables::quote_unbound_cell_shaped_names(&mut node);
+        }
+        node
     }
 
     /// Parses `formula` up to `cursor` (a char offset) and reports what the

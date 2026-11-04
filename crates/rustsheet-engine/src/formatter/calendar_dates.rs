@@ -224,7 +224,7 @@ pub(crate) fn hebrew_month_name(
     adars: Option<&'static [&'static str; 2]>,
     serial_1900: i64,
 ) -> Option<&'static str> {
-    if matches!(token, TextToken::DayName | TextToken::DayNameShort) {
+    if matches!(token, TextToken::DayName(..) | TextToken::DayNameShort(..)) {
         return None;
     }
     // Leap or not by the year table, which past 2238 differs from the arithmetic calendar's
@@ -319,15 +319,17 @@ fn taiwan_after_b2(part: &DatePart, token: &TextToken, year: i32) -> Option<Stri
 /// A8-A74): `d` 13, `dd` 14, `ddd` 15, `dddd` 16, `m` 17, `mm` 18 (also as minutes), `mmm` 19,
 /// `mmmm` 20, `h` 21, `hh` 22, `s` 25, `ss` 26, `y` and `yy` 27, `yyy` and `yyyy` 28, `AM/PM`
 /// and `A/P` 34, `[h]` 48, `[m]` 49, `[s]` 50, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57,
-/// `mmmmm` 59, `b` (also first itself) 88 ("X"), `bbbb` 89 ("Y"). Literals do not count. `aaa`
-/// is 51 in Excel but lexes as `ddd` here (TODO(T-3089)).
+/// `mmmmm` 59, `b` (also first itself) 88 ("X"), `bbbb` 89 ("Y"). Literals do not count. `aaa` 51,
+/// `aaaa` and longer 52 (probes/t3089-b2-aaa-code A1:A6).
 fn first_token_code(tokens: &[TextToken]) -> u8 {
     let first = tokens.iter().find(|t| !t.is_literal());
     match first {
         Some(TextToken::Day) => 13,
         Some(TextToken::DayPadded) => 14,
-        Some(TextToken::DayNameShort) => 15,
-        Some(TextToken::DayName) => 16,
+        Some(TextToken::DayNameShort(true)) => 51,
+        Some(TextToken::DayName(true)) => 52,
+        Some(TextToken::DayNameShort(false)) => 15,
+        Some(TextToken::DayName(false)) => 16,
         Some(TextToken::Month | TextToken::Minute) => 17,
         Some(TextToken::MonthPadded | TextToken::MinutePadded) => 18,
         Some(TextToken::MonthNameShort) => 19,

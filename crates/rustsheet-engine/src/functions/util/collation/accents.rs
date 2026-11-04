@@ -18,7 +18,7 @@ struct AccentUnit {
 /// The accent units of `text`, letter by letter: one letter unit per letter weight of the first
 /// pass (an expansion such as `æ` is two, its accent then an unaccented one), each followed by
 /// the units of the combining marks after it. Marks with no letter before them follow an
-/// unaccented letter unit of their own (unprobed).
+/// unaccented letter unit of their own, as do marks right after a weightless character.
 fn accent_units(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = AccentUnit> {
     let letter = |weight| AccentUnit {
         weight,
@@ -32,6 +32,14 @@ fn accent_units(elements: impl Iterator<Item = Element>) -> impl Iterator<Item =
         .flat_map(move |element| match element {
             Element::Skipped(_) => {
                 after_skipped = true;
+                [None, None]
+            }
+            // Excel: a weightless character ends the letter before it, so a mark after it is a
+            // lone mark (probes/t4060-collation-open-choices Calc!B50:B63, T-4072).
+            // ... but not a hyphen's or apostrophe's (probes/t4086-collation-later-passes
+            // Calc!B10:B22, T-4087): `after_skipped` stays.
+            Element::Weightless => {
+                started = false;
                 [None, None]
             }
             Element::Mark(_) if after_skipped => [None, None],

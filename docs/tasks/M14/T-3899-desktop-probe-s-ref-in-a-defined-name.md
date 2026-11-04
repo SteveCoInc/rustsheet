@@ -3,7 +3,7 @@ id: T-3899
 title: "Desktop-probe S!#REF! in a defined-name body after rename, in a duplicated sheet, and a typed name of a missing sheet"
 milestone: M14
 lane: research
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -32,3 +32,7 @@ See docs/excel-semantics/references.md "A sheet-qualified #REF! is #REF!".
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.
