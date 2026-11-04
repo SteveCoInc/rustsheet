@@ -346,12 +346,29 @@ fn type_entries(workbook: &mut Workbook, entered: Vec<(CellRef, Input)>) -> Resu
 }
 
 /// Defines a case's `api_names` after its sheet edits, each as its own edit, as the oracle replays
-/// them with Graph `names/add` (T-3264). Excel refusing a name (400 `InvalidArgument`) leaves it
+/// them with Graph `names/add` (T-3264; a sheet-scoped one on its worksheet, T-4014). Excel refusing a name (400 `InvalidArgument`) leaves it
 /// undefined, so a name the engine refuses the same way is skipped: a body nesting more than 65
 /// calls ([`rustsheet_engine::expressions::parser::TOO_MANY_NESTED_CALLS_MESSAGE`]). Any other refusal fails the case.
 fn define_api_names(workbook: &mut Workbook, names: &[ApiName]) -> Result<(), String> {
-    for ApiName { name, formula } in names {
-        match workbook.edit(|tx| tx.define_name(name, formula)) {
+    for ApiName {
+        name,
+        formula,
+        sheet,
+    } in names
+    {
+        let scope = match sheet {
+            Some(sheet) => Some(
+                workbook
+                    .sheet_id(sheet)
+                    .map_err(|e| format!("api name {name} on {sheet}: {e}"))?,
+            ),
+            None => None,
+        };
+        let defined = workbook.edit(|tx| match scope {
+            Some(id) => tx.define_sheet_name(id, name, formula),
+            None => tx.define_name(name, formula),
+        });
+        match defined {
             Err(rustsheet::EditError::DefinedName(message))
                 if message.contains(
                     rustsheet_engine::expressions::parser::TOO_MANY_NESTED_CALLS_MESSAGE,

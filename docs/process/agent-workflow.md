@@ -66,8 +66,9 @@ todo ──(worker claims: branch + status in-progress)──▶ in-progress ─
   └──────────── (unblocked) ◀── blocked ◀──(3 failed review/CI rounds, or needs oracle)
 ```
 
-- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task;
-  a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
+- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task,
+  including one blocked only on a stale draft PR's branch (steward skill "Stale drafts", decision
+  0264); a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
   check passes, or the blocking task is `done`): set `status: todo`, delete the "Blocked because"
   section, drop dependencies that stood only for the capability, remove the
   resolved "Needs owner" entry from `docs/status.md`, and note the unblock in the PR (no log line;

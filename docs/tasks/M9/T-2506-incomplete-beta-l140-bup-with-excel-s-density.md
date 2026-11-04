@@ -41,9 +41,9 @@ bup+bgrat (T-2509, T-2510) reuses it.
 ## Acceptance criteria
 - [x] The L140 bup+bpser cells of r2-bratio's sets (beta_exact, w2f, ix) score at least 7,505 bit-exact and 11,713
       within 15 digits of 11,742, with the engine's own density as P.
-- [ ] The ix L140 cells score at least 1,011 bit-exact of 1,620. (Not met as written: on the rebuilt ix set the
-      ported dispatch sends 1,383 cells to L140 bup+bpser, 995 bit-exact; the 1,620 vs 1,383 difference moves to
-      T-2893 per the Visible-parity stage.)
+- [x] The ix L140 cells score at least 1,011 bit-exact of 1,620. (Met, T-2893: the model's 1,620 are all three L140
+      branches, 1,383 of them bup+bpser; the engine scores 1,214 bit-exact on the same 1,620 rows,
+      docs/research/t2893/RESULTS.md.)
 - [x] The three stat-argument-modes cells are either kept bit-exact or recorded under decision 0083's allowance, with
       the test of r2-impact's hypothesis 1 in the Outcome.
 - [x] `make check` green; reviewers approve.

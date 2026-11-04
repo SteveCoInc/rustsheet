@@ -3,7 +3,7 @@ id: T-4037
 title: "TEXTBEFORE and TEXTAFTER: an error match_end beats the #VALUE! of an out-of-range numeric match_mode (gen-m7)"
 milestone: M7
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -35,9 +35,12 @@ Decision 0083: every cell this task owns has the wrong error (none is a last-dig
 the campaign. Its target is that every cell it owns has Excel's type, error and text.
 
 ## Acceptance criteria
-- [ ] A probe case with oracle values fixes the rule and its boundary; docs/excel-semantics/text.md records it.
-- [ ] The 11 cells above pass and leave eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case with oracle values fixes the rule and its boundary; docs/excel-semantics/text.md records it.
+- [x] The 11 cells above pass and leave eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other TEXTBEFORE/TEXTAFTER arguments and TEXTSPLIT.
+
+## Outcome
+`around_options` (TEXTBEFORE/TEXTAFTER) now coerces match_mode to a number, reads match_end, and only then range-checks match_mode, so an error match_end beats the `#VALUE!` of an out-of-range numeric mode; a mode that fails to coerce is still `#VALUE!` first. The oracle evidence and boundary were already in docs/excel-semantics/text.md (T-3513 excel-graph cells), now marked implemented. Eval: 11 gen-m7 cells fixed, 0 regressions, baseline updated.

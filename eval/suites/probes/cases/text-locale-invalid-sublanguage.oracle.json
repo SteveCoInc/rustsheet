@@ -1,0 +1,399 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "A2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "A3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "A4": {
+    "t": "s",
+    "v": "March"
+   },
+   "B1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "B2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "B3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "B4": {
+    "t": "s",
+    "v": "March"
+   },
+   "C1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "C2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "C3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "C4": {
+    "t": "s",
+    "v": "March"
+   },
+   "D1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "D2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "D3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "D4": {
+    "t": "s",
+    "v": "March"
+   },
+   "E1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "E2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "E3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "E4": {
+    "t": "s",
+    "v": "March"
+   },
+   "F1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "F2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "F3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "F4": {
+    "t": "s",
+    "v": "March"
+   },
+   "G1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "G2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "G3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "G4": {
+    "t": "s",
+    "v": "March"
+   },
+   "H1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "H2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "H3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "H4": {
+    "t": "s",
+    "v": "March"
+   },
+   "I1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "I2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "I3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "I4": {
+    "t": "s",
+    "v": "March"
+   },
+   "J1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "J2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "J3": {
+    "t": "s",
+    "v": "6 pm|6 pm|6 pm"
+   },
+   "J4": {
+    "t": "s",
+    "v": "March"
+   },
+   "K1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "K2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "K3": {
+    "t": "s",
+    "v": "6 pm|6 pm|6 pm"
+   },
+   "K4": {
+    "t": "s",
+    "v": "March"
+   },
+   "L1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "L2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "L3": {
+    "t": "s",
+    "v": "6 pm|6 pm|6 pm"
+   },
+   "L4": {
+    "t": "s",
+    "v": "March"
+   },
+   "M1": {
+    "t": "s",
+    "v": "ene.|enero|e"
+   },
+   "M2": {
+    "t": "s",
+    "v": "vie.|viernes"
+   },
+   "M3": {
+    "t": "s",
+    "v": "6 p.\u00a0m.|6 p.\u00a0m.|6 p.\u00a0m."
+   },
+   "M4": {
+    "t": "s",
+    "v": "marzo"
+   },
+   "N1": {
+    "t": "s",
+    "v": "ene.|enero|e"
+   },
+   "N2": {
+    "t": "s",
+    "v": "vi.|viernes"
+   },
+   "N3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "N4": {
+    "t": "s",
+    "v": "marzo"
+   },
+   "O1": {
+    "t": "s",
+    "v": "1|1\uc6d4|1"
+   },
+   "O2": {
+    "t": "s",
+    "v": "\uae08|\uae08\uc694\uc77c"
+   },
+   "O3": {
+    "t": "s",
+    "v": "6 \uc624\ud6c4|6 \uc624\ud6c4|6 \uc624\ud6c4"
+   },
+   "O4": {
+    "t": "s",
+    "v": "3\uc6d4"
+   },
+   "P1": {
+    "t": "s",
+    "v": "1|1\u6708|1"
+   },
+   "P2": {
+    "t": "s",
+    "v": "\u91d1|\u91d1\u66dc\u65e5"
+   },
+   "P3": {
+    "t": "s",
+    "v": "6 \u5348\u5f8c|6 \u5348\u5f8c|6 \u5348\u5f8c"
+   },
+   "P4": {
+    "t": "s",
+    "v": "3\u6708"
+   },
+   "Q1": {
+    "t": "s",
+    "v": "Jan|Januar|J"
+   },
+   "Q2": {
+    "t": "s",
+    "v": "Fr|Freitag"
+   },
+   "Q3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "Q4": {
+    "t": "s",
+    "v": "M\u00e4rz"
+   },
+   "R1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "R2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "R3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "R4": {
+    "t": "s",
+    "v": "March"
+   },
+   "S1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "S2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "S3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "S4": {
+    "t": "s",
+    "v": "March"
+   },
+   "T1": {
+    "t": "s",
+    "v": "jan|januari|j"
+   },
+   "T2": {
+    "t": "s",
+    "v": "vr|vrijdag"
+   },
+   "T3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "T4": {
+    "t": "s",
+    "v": "maart"
+   },
+   "U1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "U2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "U3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "U4": {
+    "t": "s",
+    "v": "March"
+   },
+   "V1": {
+    "t": "s",
+    "v": "jan|januari|j"
+   },
+   "V2": {
+    "t": "s",
+    "v": "vr|vrijdag"
+   },
+   "V3": {
+    "t": "s",
+    "v": "6 PM|6 PM|6 PM"
+   },
+   "V4": {
+    "t": "s",
+    "v": "maart"
+   },
+   "W1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "W2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "W3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "W4": {
+    "t": "s",
+    "v": "March"
+   },
+   "X1": {
+    "t": "s",
+    "v": "Jan|January|J"
+   },
+   "X2": {
+    "t": "s",
+    "v": "Fri|Friday"
+   },
+   "X3": {
+    "t": "s",
+    "v": "6 PM|6 P|6 p"
+   },
+   "X4": {
+    "t": "s",
+    "v": "March"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "46afb96c1e50cfdd1e9451a1b707d9527e733fe792d915b8c07b33897d71f975",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T07:40:28+00:00",
+  "version": null,
+  "workbook_name": "b7b852aa2382af9a7c896314942e7ffc650205a23b0e146592bd55611b172164.xlsx"
+ }
+}

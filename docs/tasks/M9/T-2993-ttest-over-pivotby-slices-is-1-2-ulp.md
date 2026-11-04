@@ -4,7 +4,7 @@ title: "TTEST over PIVOTBY slices misses Excel's last digits (probes/pivotby-tte
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: opus
 depends_on: []

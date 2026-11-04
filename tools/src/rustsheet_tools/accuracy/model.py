@@ -105,7 +105,9 @@ class Definition:
     the 1900 date system (YEARFRAC's calendar, HOUR's last-date bound): an eval cell in a 1904
     workbook gets no math value (T-3678). With `indexed` the function returns an array and a point
     is one element of it: the last two parameters are INDEX's row and column, and the cell is
-    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686)."""
+    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686). With `literal_arrays` an eval cell
+    gets a math value only where every array parameter is written as an array literal: the math does not
+    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693)."""
 
     function: str
     params: tuple[Param, ...]
@@ -119,6 +121,7 @@ class Definition:
     variadic: bool = False
     serials_1900: bool = False
     indexed: bool = False
+    literal_arrays: bool = False
 
     def __post_init__(self) -> None:
         flags = [p.optional for p in self.params]

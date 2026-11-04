@@ -4,7 +4,7 @@ title: "Typed cell input reads script digits as numbers with Excel's locale-tagg
 milestone: M5
 lane: engine
 status: todo
-priority: P2
+priority: P0
 size: M
 tier: opus
 depends_on: []

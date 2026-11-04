@@ -65,6 +65,9 @@ envelope fails this item", at points whose root noise width exceeds ε. Agents c
 is the owner's), so the choice is listed under "Needs owner" in docs/status.md and tracked by its own task. Unless
 the owner rules otherwise, the rule stays as merged.
 
+Ruling (2026-11-04, decision 0265): keep the rule. When a fit is checked, a point whose root noise width exceeds ε
+is judged against Excel's 15 digits only, so A152 does not count against it. A194 is accepted; T-3963 owns it.
+
 ## Second pass: late restarts against the model's state (2026-11-03)
 
 The question: does any rule on what the model sees at a flat secant (the step, |f1|, |r1 - r0|, f1 relative to the

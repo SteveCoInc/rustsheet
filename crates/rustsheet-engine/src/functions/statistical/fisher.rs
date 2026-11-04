@@ -695,6 +695,7 @@ impl Model {
 #[cfg(test)]
 mod tests {
     use super::{f_beta_arguments, f_cdf, f_quantile, f_tail, fisher, fisher_inv};
+    use crate::test::util::{ulps, within_fifteen_digits};
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
     #[test]
@@ -747,6 +748,20 @@ mod tests {
             (r / (1.0 + r), 1.0 / (1.0 + r))
         );
         assert_eq!(f_beta_arguments(4.0, 7.0, 0.0), (0.0, 1.0));
+    }
+
+    // A small df1 with a huge df2 takes L140 bup+bgrat up to a0 = df2/2 = 1E7 (T-3754): the fallback
+    // kernel was 1.4E-10 off at probes-numeric t3354-f-dist-sweep S!C168 and 8.3E-11 at S!A168.
+    // Excel is correctly rounded there; ours is 1 ulp from it on each tail.
+    #[test]
+    fn huge_df2_small_df1_takes_l140_bup_bgrat() {
+        let x = 1.090_808_853_953_79;
+        let rt = f_tail(8.0, 5_567_623.0, x, true);
+        let cdf = f_tail(8.0, 5_567_623.0, x, false);
+        assert!(within_fifteen_digits(0.365_893_631_290_974_9, rt), "{rt}");
+        assert!(within_fifteen_digits(0.634_106_368_709_025_1, cdf), "{cdf}");
+        assert!(ulps(0.365_893_631_290_974_9, rt) <= 1, "{rt}");
+        assert!(ulps(0.634_106_368_709_025_1, cdf) <= 1, "{cdf}");
     }
 
     // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric

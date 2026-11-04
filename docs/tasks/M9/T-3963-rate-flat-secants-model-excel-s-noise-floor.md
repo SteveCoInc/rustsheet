@@ -42,7 +42,7 @@ because T-3850 showed that no rule on the model's state at the flat step does it
   - every cell of probes/t3850-rate-same-state that is off Excel.
   - The cases are named here on lines with no cell address, so this task owns every cell of them. It overlaps with
     T-3424 (the noise floor's type) on the error-against-number cells and with T-3916 (the owner's ruling on T-3698's
-    restart).
+    restart, decision 0265: kept).
 
 ## Acceptance criteria
 - [ ] A probe or finding that pins Excel's residual (or another cause) at the noise floor of at least two of the
@@ -53,4 +53,5 @@ because T-3850 showed that no rule on the model's state at the flat step does it
 - [ ] financial.md updated; `make check` green; reviewers approve.
 
 ## Out of scope
-- The narrow-or-revert ruling on T-3698's restart (T-3916, needs owner).
+- The narrow-or-revert ruling on T-3698's restart: decided, the rule is kept (decision 0265, T-3916). A194 (and A26,
+  if a fallback is tried) stay this task's.

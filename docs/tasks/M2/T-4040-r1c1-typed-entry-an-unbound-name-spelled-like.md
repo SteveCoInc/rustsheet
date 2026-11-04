@@ -4,7 +4,7 @@ title: "R1C1 typed entry: an unbound name spelled like an A1 cell (f1, F1) is #N
 milestone: M2
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: opus
 depends_on: []
@@ -22,6 +22,13 @@ is an undefined name as in Excel: `#NAME?`, and FORMULATEXT shows it lower-cased
 - Today `rustsheet_engine::r1c1_formula_to_a1` (typed_input.rs) refuses such a formula
   (`stringify::to_english_string_typed_from_r1c1` returns `None`, `TODO(T-4040)`), so the cell is blank: bare
   A1 text would read the name as the cell F1.
+- Carried from T-3897's review (PR #3102, MINORs):
+  - Fidelity: passing the name on as an unbound `_xlpm.f1` may already give `#NAME?` (the A and B columns),
+    leaving only FORMULATEXT's `'f1'` open. Try that first.
+  - Fidelity: the doc comment of `bound_variables::reads_back_as_cell` still says the R1C1 lexer refuses a name
+    spelled like an A1 cell as an identifier; since T-3897 it reads one as a name in any case. Correct it.
+  - Design: `prefix_a1_cell_shaped_variables` repeats the A1 half of `reads_back_as_cell`
+    (`parse_reference_a1(&name.to_ascii_uppercase())`); give both one small helper.
 - Fix: carry the name through to the A1 entry as an undefined name (does the A1 parser read `'f1'` as one?
   probe it typed in A1 mode first), and print it `'f1'` in FORMULATEXT where Excel does.
 
