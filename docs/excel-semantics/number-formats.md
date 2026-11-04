@@ -579,7 +579,7 @@ still groups: `#,##0.0,0` is "1,234,567.89"), and so does one right after the po
 usual (`0.00|0,` is "1234.56|8", `0.00|#,##0,` "1234.56|7890", `0.,` "1235."; probes/t3666-review-followups
 A7:A12). Evidence: probes/t3598-decimal-part-commas (108 cells,
 four values, excel-graph 2026-11-04, T-3598); in a scientific code the commas after the point are
-unprobed and keep the old reading. Implemented in: `Token::Comma` (formatter/parser.rs). `0`/`?` placeholders beyond the number's
+unprobed and keep the old reading, and in a fraction section an `E` changes nothing (also unprobed). Implemented in: `comma_role` (formatter/comma.rs; a table of field, neighbours and role, T-4043). `0`/`?` placeholders beyond the number's
 digits pad the grouped result, and the padding is grouped too: with `0` a padded group shows its
 separator, and with `?` the padded separator becomes a space. A trailing `,` still scales by 1000
 and keeps the sign. A `,` right after a `%` does not scale: it prints as a literal (`0%,` on 0.5 is "50%,", on 1234567
@@ -1191,7 +1191,7 @@ Rule (gen-m10 `F!` text cells, TEXT() on sheet T gives the same text; cells name
   `%` or a literal it is a literal (`?/?%,` on 1E-252 "0/1%,", `?/?% ,` "0/1% ,", `?/? ,` "0/1 ,"), and a `,` after the
   integer neither scales nor groups (`0, ?/4` on 2 is "2    ", on 1234567.5 "1234567 2/4"; `#, ?/4` alike). Outside a
   fraction a `,` after `%` is a literal too: `0%,` on 0.5 is "50%," and on 1234567 "123456700%,". Implemented in the
-  parser (`Token::Comma`) and `fraction_scale` (formatter/fraction.rs). Unprobed: 86 or more commas (the exponent wraps
+  parser (`comma_role`, formatter/comma.rs) and `fraction_scale` (formatter/fraction.rs). Unprobed: 86 or more commas (the exponent wraps
   past 0), a `,` between the numerator and the `/`.
 - **Fixed denominators past 32768** (VERIFIED, probes/fraction-large-fixed-denominator and -six-digit-denominator,
   excel-graph 2026-10-27, T-2522). Up to 32768 a fixed denominator is used as written (`?/32768` on 0.5 is

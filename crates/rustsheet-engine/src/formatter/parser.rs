@@ -1,3 +1,4 @@
+use super::comma::{comma_role, CommaRole, Field, Next, Prev};
 use super::elapsed::{takes_second_fraction, twelve_hour_tokens};
 pub use super::fraction::{Denominator, Fraction};
 use super::lexer::{Compare, Lexer, Token, WeekdaySpelling};
@@ -373,14 +374,20 @@ impl Parser {
         *next_token == Token::Period && self.lexer.peek_token() == Token::Zero
     }
 
-    /// Whether a digit placeholder comes next, past any run of commas starting at `next_token`.
-    fn digit_after_commas(&mut self, next_token: &Token) -> bool {
-        next_token.is_digit()
-            || (*next_token == Token::Comma
-                && self
-                    .lexer
-                    .peek_token_past(|t| *t == Token::Comma)
-                    .is_digit())
+    /// What follows a `,` read just before `next_token` ([`comma_role`]).
+    fn after_comma(&mut self, next_token: &Token) -> Next {
+        if next_token.is_digit() {
+            Next::Digit
+        } else if *next_token == Token::Comma
+            && self
+                .lexer
+                .peek_token_past(|t| *t == Token::Comma)
+                .is_digit()
+        {
+            Next::CommasThenDigit
+        } else {
+            Next::Other
+        }
     }
 
     fn parse_part(&mut self) -> ParsePart {
@@ -442,7 +449,6 @@ impl Parser {
             let token_is_digit = token.is_digit();
             let token_is_fraction_literal = is_fraction_literal(&token);
             is_number = is_number || token_is_digit;
-            let next_token_is_digit = next_token.is_digit();
             let is_colon = token == Token::Literal(':');
             let is_percent = token == Token::Percent;
             let is_comma = token == Token::Comma;
@@ -468,46 +474,40 @@ impl Parser {
                     // (probes/text-format-general-company).
                     tokens.push(TextToken::General);
                 }
+                // A `,` groups, scales, prints or vanishes by the field it stands in (`comma_role`).
                 Token::Comma => {
-                    // Excel: in a fraction section only a `,` right after the denominator scales
-                    // (`?/?,` on 1E-250 is "1000/1"); a `,` after a `%` or a literal prints, also
-                    // outside a fraction (`?/?% ,` and `?/? ,` on 1E-250 are "0/1% ," and "0/1 ,",
-                    // `0%,` on 0.5 "50%,"; probes/fraction-overflow-scaled; number-formats.md
-                    // "Scaling commas in fraction formats").
-                    if after_denominator {
-                        comma += 1;
-                    } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
-                        tokens.push(TextToken::Literal(','));
-                    } else if found_decimal_dot
-                        && !is_scientific
-                        && tokens.last().is_some_and(TextToken::is_literal)
-                    {
-                        // A `,` after a literal of the decimal part prints, also last (`0.00|,0` is
-                        // "1234567.89|,0", `0.0|,` "1234567.9|,"; probes/t3598-decimal-part-commas
-                        // A26, t3666-review-followups A11).
-                        tokens.push(TextToken::Literal(','));
-                    } else if (last_token_is_digit
-                        || matches!(tokens.last(), Some(TextToken::Period)))
-                        && (found_decimal_dot || fraction.is_some())
-                        && !is_scientific
-                        && self.digit_after_commas(&next_token)
-                    {
-                        // Excel: only a `,` in the integer part groups. After the decimal point or a
-                        // fraction a run of commas before a placeholder prints nothing and neither
-                        // groups nor scales (`0.00|#,##0` on 1234567.89 is "1234567.89|0", `0.0,,0`
-                        // "1234567.89", `0.,0` "1234567.9", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000");
-                        // a trailing one still scales: `0.00|0,` is "1234.56|8", `0.,` "1235."
-                        // (probes/t3598-decimal-part-commas, t3666-review-followups A7:A10).
-                        while next_token == Token::Comma {
-                            next_token = self.lexer.next_token();
-                        }
-                    } else if last_token_is_digit && next_token_is_digit {
-                        use_thousands = true;
-                    } else if digit_count > 0 {
-                        comma += 1;
+                    let field = if after_denominator {
+                        Field::AfterDenominator
+                    } else if fraction.is_some() {
+                        Field::AfterFraction
+                    } else if is_scientific {
+                        Field::Exponent
+                    } else if found_decimal_dot {
+                        Field::Decimal
                     } else {
-                        // Before the number is just a literal.
-                        tokens.push(TextToken::Literal(','));
+                        Field::Integer
+                    };
+                    let prev = if after_percent {
+                        Prev::Percent
+                    } else if last_token_is_digit {
+                        Prev::Digit
+                    } else {
+                        match tokens.last() {
+                            Some(TextToken::Period) => Prev::Point,
+                            Some(t) if t.is_literal() => Prev::Literal,
+                            _ => Prev::Other,
+                        }
+                    };
+                    let next = self.after_comma(&next_token);
+                    match comma_role(field, prev, next, digit_count > 0) {
+                        CommaRole::Group => use_thousands = true,
+                        CommaRole::Scale => comma += 1,
+                        CommaRole::Literal => tokens.push(TextToken::Literal(',')),
+                        CommaRole::Skip => {
+                            while next_token == Token::Comma {
+                                next_token = self.lexer.next_token();
+                            }
+                        }
                     }
                 }
                 Token::Percent => {
