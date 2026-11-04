@@ -57,4 +57,19 @@ definition, and `make check` running them: the fresh-sweep criterion split out o
   1.9E-134; BINOM.INV's near-1 alpha off-by-a-few is the double cdf; BINOM.INV(0,p,alpha) = CRITBINOM(0,..) = 0 and
   BINOM.DIST.RANGE(0,p,0) = 1. T-3740's context lists its 9 points.
 - No numeric fit: the definitions are the math, chosen before scoring.
-- Eval delta: none (Gate A tables are outside eval/suites).
+- Eval delta: none (Gate A tables are outside eval/suites). The new definitions give math sidecar values to the BINOM.DIST.RANGE, BINOM.INV and
+  CRITBINOM cells of probes (stat-argument-modes, t2435-dist-extremes, t3444-binom-range-inv-large-n) and probes-numeric
+  (m9-legacy-critbinom, t2145-binom-range-sweep, t2645-binom-trials-limit): only those cases' sidecars were rewritten
+  (additions only), so `rustsheet-accuracy math --check` stays current.
+
+## Landing notes
+- PR #3240, head: the commit that adds these notes (it follows f2836eb54). On f2836eb54 the reviewers approved
+  (design APPROVE with 2 MINORs noted on the PR, security APPROVE) and every CI job was green except
+  `eval (Excel-compatibility gate)`. That job failed at `rustsheet-accuracy math --check`, because the six probe sidecars
+  named in the Outcome were stale (run 41922578642).
+- This head fixes that failure. It changes only math sidecars and this file: no code changed, so no reviewer needs to
+  re-run. Next step: wait for CI on this head, then enqueue (`enable_pr_auto_merge`, SQUASH).
+- Do not run `rustsheet-accuracy math --suite probes-numeric` in full to refresh sidecars. It recomputes all 826k
+  cells, and on this machine it also rewrote unrelated Bessel sidecars with different bytes. Rewrite only the cases
+  `check_suite` reports stale, with eval_math's `_job` and `sidecar_bytes`. The t3444 case takes about 40 minutes
+  (near-mean sums at n about 2^31).
