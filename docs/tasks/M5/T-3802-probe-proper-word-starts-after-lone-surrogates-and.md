@@ -3,7 +3,7 @@ id: T-3802
 title: "Probe PROPER word starts after lone surrogates and supplementary letters, and word-start lowering of non-letter capitals"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,10 @@ from T-3583.
 
 ## Out of scope
 - The BMP letter table (T-3657) and UPPER/LOWER's case table (T-3583).
+
+## Outcome
+Probe `probes/t3802-proper-surrogates` (49 cells, excel-graph, 2026-11-04) answers all three points; `docs/excel-semantics/text.md`
+records them and drops "probably" and "unprobed". A lone surrogate (either half) and any supplementary character (math bold,
+Deseret capital and small, emoji) break a word and are kept unchanged. Mtavruli U+1C90, U+0524, U+A78D and U+0525 are not
+lowered or raised in any position (the task's guess that non-letter capitals lower through `simple_case` was wrong). The engine already
+matches every cell, so no engine change. Eval delta: +49 passing probe cells (baseline updated if the ratchet asks).
