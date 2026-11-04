@@ -3,7 +3,7 @@ id: T-3612
 title: "Gate A defs: one smaller-tail quantile helper and a shared DF_CUT"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
