@@ -3,7 +3,7 @@ id: T-4233
 title: "SPEC-0024: charge the text bytes a whole-array reader compares (lookups, MATCH, UNIQUE, SORT, the *IF(S)) over a bound array of long texts"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
