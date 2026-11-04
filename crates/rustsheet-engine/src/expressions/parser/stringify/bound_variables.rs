@@ -31,7 +31,8 @@ where
     // stack at one frame each when a formula was set (T-3691, as T-3253's `Clone` and `PartialEq`).
     let mut node = node;
     loop {
-        node = match { node } {
+        let current = node;
+        node = match current {
             Node::UnaryKind { right: child, .. }
             | Node::ImplicitIntersection { child, .. }
             | Node::SpillRangeOperator { child }
