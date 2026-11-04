@@ -15,6 +15,7 @@ PMT gives Excel's last bits at sampled rates 1.2E-16 to 2.1E-16, where the engin
 ulp smaller in magnitude than Excel's, once the gap is shown to be above the oracle's reproducibility floor.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 Found by T-2748 (financial.md "PMT is a discounted payment", tiny-rate paragraph). The discounted payment is bit-exact
 on every cell of probes/pmt-tiny-rate (160 cells, rates 1E-16 to 1E-12, both types, five nper/pv/fv sets) except the
 2E-16 row. On probes/pmt-tiny-rate-near-2e-16 (30 cells, rates 1.1E-16 to 4E-16) it misses only on rows 1.2E-16 to

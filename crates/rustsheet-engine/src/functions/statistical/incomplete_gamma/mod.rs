@@ -49,8 +49,9 @@ use super::gammaln::excel_gammaln;
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::special::refine_increasing;
 use crate::functions::util::poly;
-use crate::x87_exp::excel_exp;
-use crate::x87_log10::excel_ln;
+use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, dd_neg, excel_exp, two_sum};
+use crate::x87_log10::{excel_ln, ln_double_double};
+use fraction::Dd;
 
 /// The most series or continued-fraction terms one cdf, or one whole inversion, may take. The
 /// series needs about 6.8 * sqrt(a) terms at its slowest, x = a (it is used for x <= a, and needs
@@ -138,6 +139,12 @@ pub(crate) fn gamma_ur(a: f64, x: f64) -> f64 {
     }
     // POISSON.DIST and the large-shape beta paths: the ratio form is unprobed for them (T-3252).
     pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate).1
+}
+
+/// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269) where it applies,
+/// else [`gamma_ur`].
+pub(crate) fn poisson_upper(a: f64, x: f64) -> f64 {
+    excel_tail::excel_far_upper(a, x, &mut Terms(MAX_TERMS)).unwrap_or_else(|| gamma_ur(a, x))
 }
 
 /// statrs' `Gamma::cdf` within `terms`: its closed branches are statrs' own.
@@ -295,8 +302,9 @@ const LN_GAMMA_1P_SERIES: [f64; 29] = [
 
 /// ln Gamma(1 + a) for 0 < a < [`SMALL_SHAPE`] to an ulp of its size, which `ln_gamma(1.0 + a)`
 /// is not: 1 + a rounds a to the ulp of 1, an absolute error that is a relative 1E-13 of Q at
-/// a of 1E-3.
-fn ln_gamma_1p_small(a: f64) -> f64 {
+/// a of 1E-3. The series is ln Gamma's Taylor series about 1, so it holds for -1/2 <= a < 0 too
+/// (bratio's bgrat takes ln Gamma(b) = ln Gamma(1 + (b - 1)) for 1/2 <= b < 1 from it).
+pub(in crate::functions::statistical) fn ln_gamma_1p_small(a: f64) -> f64 {
     let mut sum = 0.0;
     for &coefficient in LN_GAMMA_1P_SERIES.iter().rev() {
         sum = (sum + coefficient) * a;
@@ -411,122 +419,21 @@ fn excel_form_lower(a: f64, x: f64, exponent: f64) -> Option<f64> {
     Some(lead * excel_exp(-x) * sum)
 }
 
-/// Below this quantile (at scale 1) GAMMA.INV at a shape below 1 takes the closed form
-/// [`excel_small_shape_quantile`] and not the search (T-3013). This is a choice inside the
-/// evidence bracket (4.15E-22, 6.75E-21), not a measured Excel constant. A28
-/// `GAMMA.INV(1E-16,0.75,1)` = 4.147567013992107E-22 is the closed form, while A18 and B18
-/// `GAMMA.INV(1E-5,0.25,..)` (6.75E-21 at scale 1) are neither it nor one Newton step from it on
-/// the engine's model of Excel's cdf; so are A34 `(1E-16,0.9,1)` (1.6E-18) and
-/// gen-m9/60b0b6e69ad35a45 A210 (shape 1/60, 4.9E-19). The cut is on x, not on p or a·LN(x): A28
-/// and A34 share p = 1E-16 and nearly the same a·LN(x) (about -36.9), and only A28 is the closed
-/// form. Below it the series' correction (about x / (a + 1)) is far below an ulp, so the closed
-/// form is the quantile of the leading factor alone. T-3265 probes the gap.
-/// FITTED(T-3013, 5 cells, x 4.15E-22..1.6E-18, shape 1/60..0.9)
-const CLOSED_FORM_QUANTILE_MAX: f64 = 1e-21;
-
-/// GAMMA.INV takes one Newton step from the closed form where that step is more than this
-/// relative part of x, and keeps the closed form otherwise (T-3013). The step is (p - F)/(a F) of
-/// x to first order, so a test on the cdf's distance from p alone does not fit. This value is a
-/// point inside the evidence bracket (2.78E-14, 4.1E-14), not an Excel constant: 2^-45
-/// (2.84E-14) fits too. The step is kept at 2.78E-14 (gen-m9/146b46e74f2dac3b A396
-/// `GAMMA.INV(0.05,0.01,EOMONTH(58733,-18))`, where F at the closed form is 2.2E-16 below p) and at
-/// 1.33E-14 (A6 `GAMMA.INV(1E-5,0.05,1)`). It is taken at 4.1E-14 (A26 `GAMMA.INV(1E-100,0.75,1)`:
-/// F is 3.09E-14 below p at the closed form, and 2.60E-14 above p at the result, Excel's
-/// 4.1475670139922064E-134) and at 4.4E-14 (gen-m9/3a25a03eb94fcfbd A254 `GAMMAINV(0.5,0.01,100)`:
-/// F is 4.4E-16 below p at the closed form; the result is Excel's 4.4655350189103716E-29). F is
-/// [`excel_form_lower`], the leading-factor series form, even where a·LN(x) is above
-/// [`EXCEL_EXPONENT_MAX`] and the engine's GAMMA.DIST is the pair. A254 and A396 need that: on
-/// GAMMA.DIST's value their steps would be 2.2E-14 (kept) and 4.2E-14 (taken), both against Excel.
-/// So either Excel's GAMMA.INV steps on an internal form, or the engine's GAMMA.DIST is off there
-/// (T-3265 probes it). One step only: at A26 a second would be 3.46E-14 of x and Excel takes none.
-/// A loop under the same test, with the threshold in [3.46E-14, 4.1E-14), fits as well. T-3265
-/// probes steps from 2.9E-14 to 4.0E-14.
-/// FITTED(T-3013, 4 cells, step 1.33E-14..4.4E-14 of x, shape 0.01..0.75)
-const CLOSED_FORM_STEP_MIN: f64 = 3.5e-14;
-
-/// Excel's GAMMA.INV(p, a, 1) at a shape below 1 other than 1/2, where its quantile is tiny
-/// (T-3013; docs/excel-semantics/statistics.md, T-3013 bullet): the closed form
-/// `EXP((LN(p)+GAMMALN(a)+LN(a))/a)`, the root of the leading factor p = x^a / Gamma(a + 1),
-/// summed in that order (probes/t3012-gamma-inv-small-shape: bit-exact at 14 cells of column A,
-/// A9 `GAMMA.INV(1E-30,0.1,1)` = 6.073048362407713E-301 and A16 `(1E-16,0.25,1)` =
-/// 6.749697893111757E-65 among them, where `GAMMALN(a+1)` in place of the last two terms is one
-/// ulp of the exponent off). Where the Newton step on the leading-factor series form
-/// ([`excel_form_lower`]) is more than [`CLOSED_FORM_STEP_MIN`] of x, it takes that one step
-/// (A26). The value may be 0 or subnormal (Excel's `#DIV/0!`, the caller's to decide). `None` outside [`CLOSED_FORM_QUANTILE_MAX`], at a
-/// p outside (0, 1), and where a cdf or density fails: the search applies there.
-pub(crate) fn excel_small_shape_quantile(a: f64, p: f64) -> Option<f64> {
-    if !(a > 0.0 && a < 1.0 && a != 0.5 && p > 0.0 && p < 1.0) {
-        return None;
-    }
-    let mut x = leading_factor_root(a, p);
-    if x.is_nan() || x >= CLOSED_FORM_QUANTILE_MAX {
-        return None;
-    }
-    if x < f64::MIN_POSITIVE {
-        return Some(x);
-    }
-    let step = (excel_form_lower(a, x, a * excel_ln(x))? - p) / gamma_density(a, x, 1.0)?;
-    // A subnormal step is no step. The only evidence is one cell (A9, and B9 at scale 1E+15):
-    // `GAMMA.INV(1E-30,0.1,1)` = 6.073048362407713E-301 is the closed form though its step, 8.5E-14
-    // of x, is about 5E-314, as if Excel flushed it to zero. A NaN step fails both tests, so it
-    // is no step either.
-    if step.abs() >= f64::MIN_POSITIVE && step.abs() > CLOSED_FORM_STEP_MIN * x {
-        x -= step;
-    }
-    (x > 0.0 && x.is_finite()).then_some(x)
-}
-
-/// The root of the cdf's leading factor, p = x^a / Gamma(a + 1), as Excel forms it:
-/// `EXP((LN(p)+GAMMALN(a)+LN(a))/a)`, summed in that order (T-3013 at a shape below 1, T-2561
-/// above it). NaN where a logarithm is.
-fn leading_factor_root(a: f64, p: f64) -> f64 {
-    excel_exp((excel_ln(p) + excel_gammaln(a) + excel_ln(a)) / a)
-}
-
-/// How far, relative to p, GAMMA.DIST at [`leading_factor_root`] may be from p for
-/// [`excel_tiny_quantile`] to return that root. A fit, not an Excel constant, and a proxy for
-/// Excel's own test, which is unknown. Two cells set the bracket [4.09E-14, 5.88E-14): gen-m9/
-/// 0a9226016e8f5f33 A240 `CHISQ.INV(1E-200,7)`, the root bit for bit with our cdf 4.09E-14 from
-/// p, and d8266bc15533702a A212 `CHISQ.INV(1E-200,10)`, not the root (Excel 111 ulp above it)
-/// with our cdf 5.88E-14 from p. Over the cells it was fitted on, 7 distinct (shape, p) points are
-/// in and bit-exact and 2 are out. The ones in: (2, 1E-300) at A293 and A123, (2.5, 1E-300) A217,
-/// (3.5, 1E-200) A240, (2, 1E-100) A283, (4.5, 1E-200) A252, (3, 1E-100) A184 and A399, and
-/// (1.500000000000001, 1E-100) A142. The ones out: (5, 1E-200) A212 and (2.5, 1E-200) at A128, A98
-/// and caa1eed48b1883fe A282. The test is not Excel's: at shape 25 Excel's
-/// `CHISQ.INV(1E-300,50)` is the root (probes-numeric t1543-inverse-cdf-tiny-p A31) with our cdf
-/// 9.8E-12 off (TODO(T-3294)).
-/// FITTED(T-2561, 13 cells, shape 1.5..5, p 1E-300..1E-100)
-const TINY_QUANTILE_CHECK: f64 = 5e-14;
-
-/// Excel's lower-tail quantile at a shape above 1 (and below [`DIRECT_SHAPE_MAX`]) where it is
-/// tiny (T-2561): the root of the leading factor, [`leading_factor_root`], with no Newton step.
-/// It applies where GAMMA.DIST (the pair with Excel's prefactor) at that root is within
-/// [`TINY_QUANTILE_CHECK`] of p. The check also limits the form to tiny quantiles. The cdf's other
-/// factors, e^-x and the series, are 1 - x a / (a + 1) to first order, so above x of about 5E-14
-/// they move the cdf past the check. At `CHISQ.INV(1E-16,3)` (x = 2.6E-11, 1.6E-11 off)
-/// the search takes over. The check is not Excel's own test. At shape 25, `CHISQ.INV(1E-300,50)`
-/// is the root bit for bit in Excel (probes-numeric t1543-inverse-cdf-tiny-p A31), though the cdf
-/// there is 9.8E-12 off; the shape bound keeps that cell on the search (TODO(T-3294)). The root
-/// differs from the true quantile by the rounding of Excel's exponent: `CHISQ.INV(1E-300,4)` is
-/// Excel's 2.828427124746146E-150, 82 ulp below the crossing. `None` elsewhere.
-fn excel_tiny_quantile(a: f64, p: f64) -> Option<f64> {
-    if !(a > 1.0 && a < DIRECT_SHAPE_MAX && p > 0.0 && p < 1.0) {
-        return None;
-    }
-    let x = leading_factor_root(a, p);
-    if !(f64::MIN_POSITIVE..1.0).contains(&x) {
-        return None;
-    }
-    // One cdf of a shape below 20 at x below 1: the series, at most `cdf_terms_bound(20)` terms.
-    let cdf = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Excel).0;
-    ((cdf / p - 1.0).abs() <= TINY_QUANTILE_CHECK).then_some(x)
-}
-
 /// The shape from which the pair is Temme's uniform asymptotic expansion ([`temme_pair`]) and not a
 /// loop: the series needs about 6.8 * sqrt(a) terms near x = a, past [`MAX_TERMS`] from a shape of
 /// about 5.9E9, and never ends once `a + 1 == a`, while the expansion takes a fixed number of
 /// operations at any shape (T-1891).
 const TEMME_SHAPE_MIN: f64 = 1e8;
+
+/// The shape from which the pair is [`temme_pair`] within [`NEAR_MODE`] of x = a, below
+/// [`TEMME_SHAPE_MIN`] too. There the series and continued fraction after `rcomp` lose up to 16 ulp
+/// (`POISSON.DIST(46040,46071,TRUE)` 0.4438020698095398, Excel's 0.4438020698095389 is correctly
+/// rounded: ironcalc-calc POISSON.xlsx D55; T-3286), while the expansion's first dropped term,
+/// about `C_4(0)/a^4 · e^(-a phi)/sqrt(2 pi a)` with `|C_4(0)| < 1E-3`, is below 1E-17 from here; at
+/// shape 101 it is 3E-13. With [`temme_pair`]'s exponent in double-double, within an ulp of 60-digit
+/// values over the band at shapes 46041 and 1E6 and at 1E3 from 0.9a, 2 ulp for P below it
+/// (tests.rs `near_mode_pair_is_within_an_ulp_from_shape_1e3`).
+const TEMME_NEAR_MODE_MIN: f64 = 1e3;
 
 /// The shape from which [`gamma_quantile`]'s cdfs are [`temme_pair`] (one term each). One
 /// inversion's cdfs share [`MAX_TERMS`], and a series cdf near the median takes about 7.3 * sqrt(a)
@@ -605,33 +512,42 @@ const TEMME_C: [&[f64]; 4] = [
 ];
 
 /// (P(a, x), Q(a, x)) by Temme's uniform asymptotic expansion, for a shape of at least
-/// [`TEMME_SHAPE_MIN`] (T-1891). With phi = (x - a)/a - ln(x/a) and z = ±sqrt(2 phi) (the sign of
-/// x - a), the smaller tail is erfc(sqrt(a phi))/2 ± e^(-a phi)/sqrt(2 pi a) · sum `C_k(z)/a^k`
-/// (- for P below a, + for Q from a on), and the other tail 1 minus it. Excel is close to
+/// [`TEMME_SHAPE_MIN`] (T-1891), or [`TEMME_NEAR_MODE_MIN`] near the mode (T-3286). With
+/// phi = (x - a)/a - ln(x/a) ([`temme_phi`]) and z = ±sqrt(2 phi) (the sign of x - a), the
+/// smaller tail is erfc(sqrt(a phi))/2 ± e^(-a phi)/sqrt(2 pi a) · sum `C_k(z)/a^k` (- for P
+/// below a, + for Q from a on), and the other tail 1 minus it. Excel is close to
 /// correctly rounded here: `GAMMA.DIST(1E10,1E10,1,TRUE)` = 0.5000013298076014 and
 /// `GAMMA.DIST(1E16,1E16,1,TRUE)` = 0.5000000013298076 (probes/incomplete-gamma-cap E8, E1).
 fn temme_pair(a: f64, x: f64) -> (f64, f64) {
-    let phi = rlog(a, x);
-    let exponent = a * phi;
+    let phi = temme_phi(a, x);
+    // The exponent a·phi in double-double: rounded to a double it costs a relative error of about
+    // a·phi·eps in both erfc(sqrt(a phi)) and e^(-a phi), tens to hundreds of ulps of a tail within
+    // `NEAR_MODE` at shape 1E3 to 1E5 (T-3286).
+    let exponent = dd_mul((a, 0.0), phi);
+    // Past the double range the product's error word is NaN: the plain product (+inf) then takes
+    // the 0 tail, as before the double-double form (a = 1E308, x = 1E300).
+    let exponent = if exponent.0.is_finite() {
+        exponent
+    } else {
+        (a * phi.0, 0.0)
+    };
     let below = x < a;
-    let small = if exponent > TEMME_EXPONENT_MAX {
+    let small = if exponent.0.is_nan() || exponent.0 > TEMME_EXPONENT_MAX {
         0.0
     } else {
         let z = if below {
-            -(2.0 * phi).sqrt()
+            -(2.0 * phi.0).sqrt()
         } else {
-            (2.0 * phi).sqrt()
+            (2.0 * phi.0).sqrt()
         };
         let inverse = 1.0 / a;
         let series = TEMME_C
             .iter()
             .rev()
             .fold(0.0, |acc, c| acc * inverse + poly(c, z));
-        let correction = series * (-exponent).exp() / (2.0 * std::f64::consts::PI * a).sqrt();
-        // libm's erfc, within an ulp, not Excel's ERFC.PRECISE (`erf::erfc`), whose
-        // EXP(-fl(x*x)) loses about 2x^2 ulps in the tail: this family is close to correctly
-        // rounded in Excel (decision 0114, accuracy stage).
-        let base = libm::erfc(exponent.sqrt()) / 2.0;
+        let decay = (-exponent.0).exp() * (1.0 - exponent.1);
+        let correction = series * decay / (2.0 * std::f64::consts::PI * a).sqrt();
+        let base = erfc_of_root(exponent) / 2.0;
         if below {
             base - correction
         } else {
@@ -643,6 +559,67 @@ fn temme_pair(a: f64, x: f64) -> (f64, f64) {
     } else {
         (1.0 - small, small)
     }
+}
+
+/// The |s| up to which [`temme_phi`] sums its atanh series, s = (x - a)/(x + a): x from 0.6a to
+/// 1.67a, which holds `NEAR_MODE`'s band; each term is s² = 1/16 or less of the one before.
+const PHI_SERIES_MAX_S: f64 = 0.25;
+
+/// The atanh terms [`temme_phi`] sums at most: s^54 is below 2^-108 of s² at |s| <= 1/4
+/// (directive 5).
+const PHI_SERIES_TERMS: u32 = 27;
+
+/// phi = (x - a)/a - ln(x/a) for Temme's expansion in double-double, the exponent's error far below
+/// an ulp of a·phi (T-3286). With d = x - a and s = d/(x + a), ln(x/a) = 2 atanh(s), and
+/// (x - a)/a - 2s = s²(x + a)/a exactly, so near the mode phi = s²(x + a)/a - 2(s³/3 + s⁵/5 + ...)
+/// with no cancellation: ln x - ln a there would cancel all but the last 24 bits of phi at
+/// `POISSON(1E12,1E12,TRUE)` (a = 1E12 + 1, phi 5E-25). Off the band, ln x - ln a, each
+/// [`ln_double_double`] (about 2^-104 relative), where phi is at least 0.11.
+fn temme_phi(a: f64, x: f64) -> Dd {
+    let difference = two_sum(x, -a);
+    let total = two_sum(x, a);
+    if !total.0.is_finite() {
+        // x + a past the double range (a = x = 1E308): the double rlog, which is exact enough there
+        // for the tails it feeds (both 1/2 at x = a).
+        return (rlog(a, x), 0.0);
+    }
+    let s = dd_div(difference, total);
+    if s.0.abs() > PHI_SERIES_MAX_S {
+        let ratio = dd_div(difference, (a, 0.0));
+        let ln_ratio = dd_add(ln_double_double(x), dd_neg(ln_double_double(a)));
+        return dd_add(ratio, dd_neg(ln_ratio));
+    }
+    let square = dd_mul(s, s);
+    let lead = dd_div(dd_mul(square, total), (a, 0.0));
+    let mut power = s;
+    let mut tail = (0.0, 0.0);
+    let mut k = 1.0;
+    for _ in 0..PHI_SERIES_TERMS {
+        power = dd_mul(power, square);
+        let term = dd_div_small(power, 2.0 * k + 1.0);
+        tail = dd_add(tail, term);
+        if term.0.abs() <= lead.0.abs() * 1e-34 {
+            break;
+        }
+        k += 1.0;
+    }
+    dd_add(lead, dd_neg(dd_add(tail, tail)))
+}
+
+/// erfc(sqrt(e)) for a double-double e >= 0: libm's erfc (within an ulp) at s = fl(sqrt(e.0)),
+/// then the first-order step to the exact argument, d/de erfc(sqrt(e)) = -e^(-e)/sqrt(pi e), over
+/// the remainder e - s² (a few ulps of e, so the dropped second-order term is below 2^-100
+/// relative). Without the step the rounding of s alone costs e·eps relative.
+fn erfc_of_root(e: Dd) -> f64 {
+    let s = e.0.sqrt();
+    let base = libm::erfc(s);
+    if s == 0.0 {
+        return base;
+    }
+    let square = dd_mul((s, 0.0), (s, 0.0));
+    let remainder = dd_add(e, dd_neg(square)).0;
+    let slope = (-e.0).exp() / (std::f64::consts::PI.sqrt() * s);
+    base - remainder * slope
 }
 
 /// The regularized incomplete gamma pair (P(a, x), Q(a, x)) for a > 0, x > 0 (T-0971), with
@@ -669,7 +646,7 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
     if a == 1.0 {
         return (-(-x).exp_m1(), (-x).exp());
     }
-    if a >= TEMME_SHAPE_MIN {
+    if a >= TEMME_SHAPE_MIN || (a >= TEMME_NEAR_MODE_MIN && (x - a).abs() <= a * NEAR_MODE) {
         return charged_temme_pair(a, x, terms);
     }
     let prefactor = gamma_prefactor(a, x, exponent);
@@ -713,6 +690,9 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
 /// accurate pair's `upper` or lower tail.
 fn accurate_tail(a: f64, scaled: f64, upper: bool) -> f64 {
     if upper {
+        if let Some(q) = excel_tail::excel_far_upper(a, scaled, &mut Terms(MAX_TERMS)) {
+            return q;
+        }
         if let Some(q) = half_integer::half_integer_upper(a, scaled, &mut Terms(MAX_TERMS)) {
             return q;
         }
@@ -799,13 +779,22 @@ fn gamma_quantile_within(shape: f64, scale: f64, p: f64, tail: Tail, budget: u32
         (Tail::Upper, false) => (Tail::Lower, 1.0 - p),
     };
     // Only a lower-tail p of at most 1/2: the lower tail is both the tail given and the smaller one.
-    let tiny = (tail == Tail::Lower && small == Tail::Lower)
-        .then(|| excel_tiny_quantile(shape, target))
+    // Then Newton steps from the root where it is close, the lower tail being the smaller one
+    // in either function: `CHISQ.INV.RT(1-1E-16,3)` is Excel's first step (T-3311).
+    let tiny = (small == Tail::Lower)
+        .then(|| {
+            (tail == Tail::Lower)
+                .then(|| excel_tiny_quantile(shape, target))
+                .flatten()
+                .or_else(|| excel_newton_quantile(shape, target))
+        })
         .flatten();
     let x = if shape == 1.0 {
         exponential_quantile(small, target) * scale
     } else if let Some(unit) = tiny {
         // The scale multiplies the unit quantile, as at shape 1 and below 1 (T-3013, T-3016).
+        // Excel's `CHISQ.INV(p,2a)` and `GAMMA.INV(p,a,2)` are twice `GAMMA.INV(p,a,1)` at all 88
+        // points of probes-numeric/t3311-gamma-inv-lower-tail-cdf sheet W (T-3311).
         unit * scale
     } else {
         let Ok(dist) = Gamma::new(shape, rate) else {
@@ -916,11 +905,15 @@ fn quantile_tail(dist: &Gamma, x: f64, tail: Tail, terms: &mut Terms) -> f64 {
     }
 }
 
+mod closed_form;
 mod density;
+mod excel_tail;
 mod fraction;
 mod half_integer;
 mod huge_shape;
 
+pub(crate) use closed_form::excel_small_shape_quantile;
+use closed_form::{excel_newton_quantile, excel_tiny_quantile};
 pub(crate) use density::{accurate_gamma_density, gamma_density};
 pub(crate) use huge_shape::{huge_shape_quantile, HUGE_SHAPE_MIN};
 

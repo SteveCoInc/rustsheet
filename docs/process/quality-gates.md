@@ -1,7 +1,9 @@
 # Quality gates
 
-Every gate is automated and runs in CI (`.github/workflows/ci.yml`). `make check` runs the same
-gates locally, except `cargo deny` and `cargo machete` (`make ci`). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
+Every gate is automated and runs in CI (`.github/workflows/ci.yml`), on each PR head and again on
+the merge group. `make check` runs the same gates locally, except `cargo deny` and `cargo machete`
+(`make ci`). Before a push, workers run `make check-fast`: the gates their change can break, by
+path, never the full Rust suite (`scripts/fast_gates.py`, decision 0248). Gates are **ratchets**: a number that may only improve. Lowering a bar requires a
 decision record in `docs/decisions/` (enforced by `scripts/check_governance.py`).
 On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygiene always runs, and
 `docs/excel-semantics/` counts as code because the eval harness reads it. The rules are
@@ -12,10 +14,11 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 | Formatting | `make fmt-check`, `ruff format --check` | rustfmt / ruff formatted |
 | Rust lints | `make clippy` | workspace policy in `Cargo.toml` (`clippy::pedantic`, `unwrap_used`, `panic`, `print_*`, `unsafe_code = deny`), `-D warnings` |
 | Lint debt | `scripts/check_lint_debt.py` | per-crate `LINT-DEBT` allow-lists (inherited from the fork) may only shrink; locked in `quality/lint-debt.json` |
-| Rust tests | `make test` (CI: `test-shard-1` and `test-shard-2`, decision 0122) | all pass |
+| Rust tests | `make test` (CI: `test-shard-1`, `-2` and `-3`, decisions 0122 and 0232) | all pass |
 | **Excel compatibility** | `make eval-check` (CI and `make check`: `make eval-gates`, decision 0125) | no regressions against `eval/baseline/*.txt` (known failures); baseline must be up to date |
-| Visible parity | `make eval-check` (CI and `make check`: `make eval-gates`) | in-scope cells of the vendored gated suites that are visibly off from Excel may not increase; `eval/baseline/visible-parity.json` (decisions 0088, 0093) |
+| Visible parity | `make eval-check` (CI and `make check`: `make eval-gates`) | no case of the vendored gated suites may have more in-scope cells visibly off from Excel than its line allows; `eval/baseline/visible-parity.txt` (decisions 0088, 0093, 0219) |
 | Evidence floor | `make evidence-floor` | in-scope, oracle-evaluable functions with fewer than 20 Excel-evidence cells may not increase; `quality/evidence-floor.json` (decision 0062). CI and `make check` run it with `make eval-check` as `make eval-gates`, one run of the suites (decision 0125) |
+| New-case owners | `scripts/new_case_owners.py` (CI and `make check`: `make eval-gates`) | every visibly-off Excel cell (decision 0188 R1(c)) of an eval case the branch adds or refills (its case file or `.oracle.json` sidecar added or changed against the merge base with `origin/main`) is owned by an open task by `scripts/exit_owners.py`'s rule; a `defer:` owner counts (T-3793, decision 0245) |
 | Python tools | `make py-check` | ruff, mypy `--strict`, pytest |
 | Python bindings | `make py-bindings` | maturin build + pytest |
 | Duplication | `scripts/check_duplication.py` | duplicated lines (10-line normalized windows) may not increase; `quality/duplication.json` |
@@ -26,7 +29,8 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 | Unused deps | `cargo machete` | none |
 | Spelling | `typos` | clean (Excel names allow-listed in `_typos.toml`) |
 | Docs readers | `scripts/check_docs_readers.py` | code may read `docs/` or `.claude/` only under `CODE_READ_PATHS` in `scripts/ci_changes.py`, which CI never skips (decision 0066) |
-| CI rights | `scripts/check_ci_workflow.py` | `.github/workflows/ci.yml` references no secret or job token and every `permissions` block is exactly `contents: read`; its tests pin `on.push.branches` to `main`, `merge-train/current` and `merge-train/shadow` (decision 0147) |
+| CI rights | `scripts/check_ci_workflow.py` | `.github/workflows/ci.yml` references no secret or job token and every `permissions` block is exactly `contents: read`; its tests pin `on.push.branches` to `main` alone (decisions 0147, 0252) |
+| Math sidecars | `make eval-math-check` | every Gate A one-call cell of the probe suites has a math value or a recorded generator skip in its `*.math.json`, and no entry's `f` is stale; regenerate with `cd tools && uv run rustsheet-accuracy math --suite <suite>` (decision 0243) |
 | Governance | `scripts/check_governance.py origin/main` | protected-path changes need a decision record; test deletions flagged |
 
 ## Ratchet mechanics
@@ -64,14 +68,19 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
   fails when the count rises and when it falls without the lock being updated; `make
   eval-baseline` records a drop. Recording a rise needs `--update --allow-increase` and a
   decision record (for example, when the catalog brings functions into scope).
-- **Visible parity** (`eval/baseline/visible-parity.json`, decision 0088): a full `rustsheet-eval
-  check` also counts the in-scope cells of the vendored gated suites that are visibly off from
-  Excel (further than half a unit in the 15th significant digit, or a wrong type, error or text;
-  decision 0083). It fails when the count rises above the lock. A count below the lock passes:
-  `make eval-baseline` records only a rise that cases new to the baseline account for, never a
-  drop, so fix PRs do not conflict on the file, and the steward lowers the lock daily with `make
-  eval-lower-visible-lock` (decision 0093). Any other rise needs `--allow-regressions` and a
-  decision record.
+- **Visible parity** (`eval/baseline/visible-parity.txt`, decisions 0088 and 0219): a full
+  `rustsheet-eval check` also counts, per case, the in-scope cells of the vendored gated suites
+  that are visibly off from Excel (further than half a unit in the 15th significant digit, or a
+  wrong type, error or text; decision 0083). The lock has one `case<TAB>count` line per case with
+  any such cell, and fails each case above its line; a case with no line allows none. `make
+  eval-baseline` records the line of a case new to its suite's baseline, so a PR that adds cases
+  commits their lines. It never lowers a line, so fix PRs leave the file alone, and the steward
+  lowers the lines daily with `make eval-lower-visible-lock` (decision 0093). Raising an existing
+  case needs `--allow-regressions` and a decision record. PRs that touch different cases change
+  different lines, so they merge cleanly. `make catch-up` resolves a conflict on the file three-way
+  per case, then re-records with `NEW_CASES=<file>` (`update-baseline --new-cases`). That file lists
+  the case files the PR adds, and only those cases may then get a new or higher line. No merge may
+  leave one of `main`'s cases above `main`'s line (decision 0219).
 - **Lint debt / duplication / oversized files / fitted constants:** the scripts fail on increases. When you reduce
   them, run the script with `--update` and commit the JSON in the same PR.
 

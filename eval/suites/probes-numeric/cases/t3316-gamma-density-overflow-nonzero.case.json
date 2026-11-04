@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "GAMMA.DIST where alpha/x overflows but the density is not 0 (x/beta about 1 to 2.3): is it #NUM! there too, and the cdf (T-3316).",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=GAMMA.DIST(5.3E-308,10,2.3E-308,FALSE)",
+    "A2": "=GAMMA.DIST(5.6E-308,10,2.3E-308,FALSE)",
+    "A3": "=GAMMA.DIST(2.5E-308,5,2.3E-308,FALSE)",
+    "A4": "=GAMMA.DIST(2.9E-308,5,2.3E-308,FALSE)",
+    "A5": "=GAMMA.DIST(5.3E-308,10,2.3E-308,TRUE)",
+    "A6": "=GAMMA.DIST(2.5E-308,5,2.3E-308,TRUE)"
+   }
+  }
+ ],
+ "expected": {}
+}

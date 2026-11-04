@@ -94,7 +94,7 @@ fn find(search_for: &str, text: &str, start: usize) -> Option<i32> {
 fn search(search_for: &str, text: &str, start: usize) -> Option<i32> {
     // Both strings have one char per UTF-16 unit (`one_char_per_unit`), so `?` and `*` run over
     // units and match line breaks too (probes/search-wildcard-newline).
-    let pattern = WildcardPattern::from_units(unit_chars_to_units(search_for).into_iter());
+    let pattern = WildcardPattern::for_search(unit_chars_to_units(search_for).into_iter());
     let units = unit_chars_to_units(text);
     let at = pattern.find_from(&units, start.saturating_sub(1))?;
     Some(at as i32 + 1)

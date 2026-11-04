@@ -2,6 +2,7 @@
 
 use crate::expressions::parser::{for_each_chain_operand_mut, Node};
 use crate::expressions::utils::rename_defined_name_sheet;
+use crate::types::sheet_names_match;
 
 /// Calls `f` on every node of `node` that names a sheet (a reference, a 3-D span, a wrong
 /// reference or a defined name) and walks through every other node to reach them.
@@ -13,6 +14,7 @@ fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) 
         | Node::SheetSpanKind { .. }
         | Node::WrongReferenceKind { .. }
         | Node::WrongRangeKind { .. }
+        | Node::SheetRefErrorKind { .. }
         | Node::DefinedNameKind(_) => f(node),
 
         Node::OpRangeKind { left, right }
@@ -52,7 +54,6 @@ fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) 
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ErrorKind(_)
-        | Node::SheetRefErrorKind { .. }
         | Node::ParseErrorKind { .. }
         | Node::ArrayKind(_)
         | Node::NamedVariableKind { .. }
@@ -60,8 +61,15 @@ fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) 
     }
 }
 
-/// Writes `new_name` for the sheet at `sheet_index` everywhere `node` names it.
-pub(crate) fn rename_sheet_in_node(node: &mut Node, sheet_index: u32, new_name: &str) {
+/// Writes `new_name` for the sheet at `sheet_index` (named `old_name` until now) everywhere `node`
+/// names it. A `S!#REF!` holds no index, so it follows the rename by name: Excel prints
+/// `T!#REF!` after S becomes T (probes/sheet-qualified-ref-error-text-rename F!A2).
+pub(crate) fn rename_sheet_in_node(
+    node: &mut Node,
+    sheet_index: u32,
+    old_name: &str,
+    new_name: &str,
+) {
     for_each_sheet_reference_mut(node, &mut |node| match node {
         Node::SheetSpanKind {
             first_sheet,
@@ -82,6 +90,11 @@ pub(crate) fn rename_sheet_in_node(node: &mut Node, sheet_index: u32, new_name: 
                 if name.to_uppercase() == new_name.to_uppercase() {
                     *sheet_name = Some(name.to_owned());
                 }
+            }
+        }
+        Node::SheetRefErrorKind { sheet_name, .. } => {
+            if sheet_names_match(sheet_name, old_name) {
+                new_name.clone_into(sheet_name);
             }
         }
         Node::WrongRangeKind { sheet_name, .. } => {

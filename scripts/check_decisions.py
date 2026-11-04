@@ -41,8 +41,8 @@ def unfilled(texts: dict[str, str]) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    # `--root <dir>` judges another tree: the merge train runs `main`'s copy of this script
-    # against a train worktree (SPEC-0027 section 4 step 4, decision 0066).
+    # `--root <dir>` judges another tree: a caller can run `main`'s copy of this script against
+    # another worktree (decision 0066).
     decisions = DECISIONS
     if argv:  # None or [] judge this checkout
         if len(argv) != 2 or argv[0] != "--root" or not Path(argv[1]).is_dir():

@@ -1,0 +1,83 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3897: LET names and LAMBDA parameters spelled like an A1 cell (f1, a1, xy1, ab12, an optional b2, a called f1, upper-case F1 and A1), typed in R1C1 mode (formulasR1C1), where none of them is a reference; and an unbound f1 or F1 typed in R1C1 mode. F1 holds 7, so a name read as the A1 cell would show.",
+ "tags": [
+  "M2",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "F1": 7,
+    "A1": {
+     "entered_r1c1": "=LET(f1,5,f1+1)"
+    },
+    "B1": "=ISBLANK(A1)",
+    "C1": "=IFERROR(FORMULATEXT(A1),\"none\")",
+    "A2": {
+     "entered_r1c1": "=LAMBDA(a1,a1*2)(3)"
+    },
+    "B2": "=ISBLANK(A2)",
+    "C2": "=IFERROR(FORMULATEXT(A2),\"none\")",
+    "A3": {
+     "entered_r1c1": "=LET(xy1,3,xy1+1)"
+    },
+    "B3": "=ISBLANK(A3)",
+    "C3": "=IFERROR(FORMULATEXT(A3),\"none\")",
+    "A4": {
+     "entered_r1c1": "=LET(ab12,2,f1,ab12*10,f1+ab12)"
+    },
+    "B4": "=ISBLANK(A4)",
+    "C4": "=IFERROR(FORMULATEXT(A4),\"none\")",
+    "A5": {
+     "entered_r1c1": "=LAMBDA(x,[b2],ISOMITTED(b2))(1)"
+    },
+    "B5": "=ISBLANK(A5)",
+    "C5": "=IFERROR(FORMULATEXT(A5),\"none\")",
+    "A6": {
+     "entered_r1c1": "=LET(f1,LAMBDA(x,x+1),f1(2))"
+    },
+    "B6": "=ISBLANK(A6)",
+    "C6": "=IFERROR(FORMULATEXT(A6),\"none\")",
+    "A7": {
+     "entered_r1c1": "=LET(A1,5,A1*2)"
+    },
+    "B7": "=ISBLANK(A7)",
+    "C7": "=IFERROR(FORMULATEXT(A7),\"none\")",
+    "A8": {
+     "entered_r1c1": "=f1"
+    },
+    "B8": "=ISBLANK(A8)",
+    "C8": "=IFERROR(FORMULATEXT(A8),\"none\")",
+    "A9": {
+     "entered_r1c1": "=F1+1"
+    },
+    "B9": "=ISBLANK(A9)",
+    "C9": "=IFERROR(FORMULATEXT(A9),\"none\")",
+    "A10": {
+     "entered_r1c1": "=LET(x,1,x+F1)"
+    },
+    "B10": "=ISBLANK(A10)",
+    "C10": "=IFERROR(FORMULATEXT(A10),\"none\")",
+    "A11": {
+     "entered_r1c1": "=LET(F1,5,F1+1)"
+    },
+    "B11": "=ISBLANK(A11)",
+    "C11": "=IFERROR(FORMULATEXT(A11),\"none\")",
+    "A12": {
+     "entered_r1c1": "=LAMBDA(A1,A1*2)(3)"
+    },
+    "B12": "=ISBLANK(A12)",
+    "C12": "=IFERROR(FORMULATEXT(A12),\"none\")",
+    "A13": {
+     "entered_r1c1": "=LET(f1,5,f1+1)+F1"
+    },
+    "B13": "=ISBLANK(A13)",
+    "C13": "=IFERROR(FORMULATEXT(A13),\"none\")"
+   }
+  }
+ ],
+ "expected": {}
+}

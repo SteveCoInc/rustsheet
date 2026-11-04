@@ -93,6 +93,18 @@ fn every_text_function_broadcasts_its_arguments() {
                 "=ARRAYTOTEXT(FILTERXML({\"<a/>\";\"<b/>\"},NA()),1)",
                 "{#N/A;#N/A}",
             ),
+            // ARRAYTOTEXT's array-literal format lifts and spills; an error first argument spills
+            // as that error (probes/arraytotext-array-literal-format A1:B1, A20:B20; T-3884).
+            (
+                "B11",
+                "=ARRAYTOTEXT(ARRAYTOTEXT(7,{0,1}),1)",
+                "{\"7\",\"{7}\"}",
+            ),
+            (
+                "B12",
+                "=ARRAYTOTEXT(ARRAYTOTEXT(NA(),{0;1}),1)",
+                "{#N/A;#N/A}",
+            ),
         ],
     );
 }

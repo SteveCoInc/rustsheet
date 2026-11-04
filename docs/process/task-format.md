@@ -17,7 +17,7 @@ depends_on: [T-0100]
 spec: docs/specs/SPEC-0002-criteria.md   # optional
 campaign: semantics        # optional: semantics | accuracy | visible, picked in that order before milestone order (decisions 0083, 0114)
 defer: phase-1b            # optional: never picked until Phase 1 exits (decision 0114)
-issue: 42                  # optional: the steveash/rustsheet GitHub issue it came from, a positive integer (decision 0158)
+issue: 42                  # optional: the SteveCoInc/rustsheet GitHub issue it came from, a positive integer (decision 0158)
 issue_author: octocat      # with issue: (required then): the login that opened the issue (decision 0158)
 issue_origin: 42           # optional, never with issue:: a follow-up filed while working issue 42 (decision 0158)
 ---
@@ -72,9 +72,10 @@ Rules:
   capability, the command that proves it is available (decision 0013).
 - Create tasks with `make new-task MILESTONE=.. LANE=.. TITLE=..`, never by picking an id by hand.
   It takes the next id after the highest one used in the milestone's block, counting the tasks on
-  every pushed `origin/*` branch, so parallel sessions cannot collide (decision 0016). Fill in the
-  `TODO(fill)` lines (`tasks.py validate` rejects them), then commit and push the file right away:
-  the push is the claim.
+  every pushed `origin/*` branch and the claims in the id registry, and reserves it in the registry
+  atomically, so parallel sessions cannot collide (decisions 0016, 0215). Fill in the `TODO(fill)`
+  lines (`tasks.py validate` rejects them). Renumbering a collided task also takes its new id from
+  `make new-task`, never from a hand-picked number.
 - Cells a task owns go in cell-list lines, one per case: `- gen-m9/<case>.case.json (3): Calc!A185, A246, A10-A21`
   (a workbook names its sheet: `- ironcalc-calc/STATISTICAL/T_DIST.xlsx (2): T.INV.2T!D3, D7`). Before filing, search
   the open tasks for the cells (`rg '<case> ' docs/tasks`). `tasks.py validate` fails when a task the branch adds

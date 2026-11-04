@@ -420,14 +420,34 @@ def previous_checkpoint(last: dict[str, Any] | None, met: bool) -> str:
     return line + "."
 
 
+def phase1_exit_line(verdict: dict[str, Any] | None) -> str:
+    """The Phase 1 exit line from `scripts/phase1_exit.py --json` (decision 0187, T-3343); the
+    dashboard reads the verdict and never computes it. `None` is a run without that file."""
+    if verdict is None:
+        return "Phase 1 exit (decision 0187): not measured (no phase1-exit.json beside the report)"
+    where = "phase1-exit.json"
+    overall = _text(verdict, "overall", where)
+    failing = [str(c) for c in items(verdict, "failing", where)]
+    tail = f"; failing: {', '.join(failing)}" if failing else ""
+    return f"Phase 1 exit (decision 0187): {overall}{tail}"
+
+
 def goals_block(
-    g: Goals, docs: list[MilestoneDoc], data: Parity, tasks: Tasks, last: dict[str, Any] | None
+    g: Goals,
+    docs: list[MilestoneDoc],
+    data: Parity,
+    tasks: Tasks,
+    last: dict[str, Any] | None,
+    *,
+    exit_verdict: dict[str, Any] | None = None,
 ) -> str:
     """The `goals` block; `last` is the last complete history row before this run."""
     exited = ", ".join(data.milestones_exited) or "none"
     return f"""## Goals
 
 **{md_text(g.phase1_line)}**
+
+**{md_text(phase1_exit_line(exit_verdict))}**
 
 **{md_text(g.verdict_line)}** {previous_checkpoint(last, data.phase1.v15_met)}
 

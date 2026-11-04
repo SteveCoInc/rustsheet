@@ -8,6 +8,7 @@ mod fn_clean;
 mod fn_fixed_huge_decimals;
 mod fn_fixed_negative_zero;
 mod fn_left_right_mid_arrays;
+mod fn_numbervalue_placement;
 mod fn_regex;
 mod fn_regex_backtrack;
 mod fn_t_volatile_pick;
@@ -285,4 +286,15 @@ fn test_typed_and_coerced_signed_mixed_fraction() {
     assert_eq!(model._get_text("B1"), "3.5");
     assert_eq!(model._get_text("B2"), "err");
     assert_eq!(model._get_text("B3"), "0");
+}
+
+#[test]
+fn test_typed_negative_currency_percent_fraction_stays_text() {
+    // probes/typed-mixed-fraction-number-format A15/B15: text, `=A15+0` is #VALUE!.
+    let mut model = new_empty_model();
+    model._set("A1", "-$3 1/2%");
+    model._set("B1", "=A1+0");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "-$3 1/2%");
+    assert_eq!(model._get_text("B1"), "#VALUE!");
 }

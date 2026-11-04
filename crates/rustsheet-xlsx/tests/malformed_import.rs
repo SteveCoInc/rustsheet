@@ -453,6 +453,63 @@ fn formula_nesting_more_than_65_calls_refuses_the_workbook() -> TestResult {
     Ok(())
 }
 
+// Excel for the web loads 256 nested parentheses and 1,024 minus or plus signs before `1`, and
+// refuses the workbook at 257 and 1,025 (createSession 501 `FileCorruptTryRepair`;
+// probes/t3172-paren-*, t3172-minus-*, t3266-*, docs/excel-semantics/syntax.md "Formula nesting
+// depth cap", T-3869). The sign cap counts the operand: 1,022 signs before `(1)` load, 1,023 do not.
+// The stack is what the parser's depth tests give, 1 MiB optimized and 16 MiB unoptimized
+// (`on_small_stack` in the engine's `test_nesting_depth.rs`): directive 5.
+#[test]
+fn formula_past_the_parenthesis_or_sign_cap_refuses_the_workbook() -> TestResult {
+    let stack = if cfg!(debug_assertions) {
+        16 << 20
+    } else {
+        1 << 20
+    };
+    let handle = std::thread::Builder::new()
+        .stack_size(stack)
+        .spawn(|| past_the_caps().map_err(|error| error.to_string()))?;
+    handle
+        .join()
+        .map_err(|_| "the test thread panicked")?
+        .map_err(Into::into)
+}
+
+fn past_the_caps() -> TestResult {
+    let parens = |n: usize| format!("{}1{}", "(".repeat(n), ")".repeat(n));
+    let minus_parens = |n: usize| format!("{}1{}", "-(".repeat(n), ")".repeat(n));
+    // 200 levels of `-(` around `n` minus signs and `1`: the outer signs stay open.
+    let nested_signs =
+        |n: usize| format!("{}{}1{}", "-(".repeat(200), "-".repeat(n), ")".repeat(200));
+    let signs_before = |sign: &str, n: usize, operand: &str| format!("{}{operand}", sign.repeat(n));
+    let parentheses = "Formula in Sheet1!A100: Formula nests more than 256 parentheses";
+    let signs = "Formula in Sheet1!A100: Formula has too many unary signs";
+    for (loads, refused, needle) in [
+        (parens(256), parens(257), parentheses),
+        (minus_parens(256), minus_parens(257), parentheses),
+        (
+            signs_before("-", 1_024, "1"),
+            signs_before("-", 1_025, "1"),
+            signs,
+        ),
+        (
+            signs_before("+", 1_024, "1"),
+            signs_before("+", 1_025, "1"),
+            signs,
+        ),
+        (
+            signs_before("-", 1_022, "(1)"),
+            signs_before("-", 1_023, "(1)"),
+            signs,
+        ),
+        (nested_signs(824), nested_signs(825), signs),
+    ] {
+        assert_imports(&sheet_with_a100_formula(&loads)?)?;
+        assert_import_error(&sheet_with_a100_formula(&refused)?, needle);
+    }
+    Ok(())
+}
+
 // Stored, `_xlfn.SINGLE(` (`@`) and `_xlfn.ANCHORARRAY(` (`#`) are calls like any other: 65 calls
 // with one of them load and 66 are refused (createSession 501; probes/t3143-single-*-stored and
 // t3143-anchor-inner-*-stored, T-3143).

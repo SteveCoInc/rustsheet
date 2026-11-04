@@ -35,6 +35,9 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 - `large_shape_beta.rs` is an accuracy stand-in: when T-2510's bratio bgrat lands and the old kernel goes, it is
   folded into or replaced by `bratio`'s bgrat, so the two series do not stay as parallel definitions.
 
+- Gap triage 2026-11-04: the band's Gate B face, gen-m9 7bd219ec0c0c5e22 A349 `FDIST(7,10,1E+8)` (b = 5), is T-4018's,
+  on T-4017's sweep over df1 2 to 79. A model T-4018 lands should be checked on this task's 22 cells.
+
 ## Acceptance criteria
 - [ ] The 22 cells are within half a unit of the 15th digit of Excel (a model of Excel's bgrat at these points).
 - [ ] No cell of t2528-f-dist-huge-df2, t1530-f-df-cut or t1538-* moves away from Excel.
@@ -42,3 +45,14 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 
 ## Out of scope
 - Cells below the mean (Cephes' incbcf side), which are T-2510's.
+
+## Evidence (T-4017)
+Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other than 5, in the same band) this task owns:
+- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json (T-3754 moved 46 of its visibly-off cells into 15 digits by
+  taking L140 bup+bgrat up to a0 = 1E7; docs/research/t3754)
+- probes-numeric/t4017-f-huge-df2-above-mean-3e7.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e8.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-3e8.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json
+See (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").

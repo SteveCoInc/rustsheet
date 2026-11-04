@@ -41,6 +41,7 @@ import subprocess
 import sys
 import time
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -62,6 +63,9 @@ FUNCTION_LANES = [
 ]
 LANES = ["harness", "engine", "api", "perf", "quality", "research", *FUNCTION_LANES, "functions"]
 BUSY_SECONDS = 2 * 3600  # a lane whose pushed agent branch moved this recently is busy
+# How many tasks a lane may have in flight at once (decision 0022: one; decision 0269: engine
+# takes three, because most Phase 1 exit blockers are engine tasks and one slot ran them in series).
+LANE_SLOTS = {"engine": 3}
 PRIORITIES = ["P0", "P1", "P2", "P3"]
 SIZES = ["S", "M", "L"]
 TIERS = ["sonnet", "opus"]  # model tier that works the task (decision 0018)
@@ -71,7 +75,7 @@ CAMPAIGNS = ["semantics", "accuracy", "visible"]
 # `defer:` values: a deferred task is never ready (decision 0114 parks bit-level work until
 # Phase 1 exits).
 DEFERRALS = ["phase-1b"]
-# `issue:` value (matched whole): the number of the steveash/rustsheet GitHub issue the task came
+# `issue:` value (matched whole): the number of the SteveCoInc/rustsheet GitHub issue the task came
 # from; `issue_author:` is the login that opened it (decision 0158). ASCII only, never `\d`.
 ISSUE = re.compile(r"[1-9][0-9]*")
 # `issue_origin:` (same values) marks a follow-up filed while working an issue: it keeps the
@@ -611,6 +615,22 @@ TODO(fill): why; failing case ids; semantics notes; code paths.
 """
 
 
+def reserve_id(pick: Callable[[set[str]], str], fetch: bool) -> tuple[str, str]:
+    """(id, note): the id `pick` chooses, reserved in the id registry when it can be (decision
+    0215). `python -I` (the merger's filing) leaves this directory off sys.path, so it is added; a
+    tasks.py copied alone (as test fixtures do) falls back to the plain scan, unreserved."""
+    here = str(Path(__file__).resolve().parent)
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        import id_registry  # here, not at the top: the fallback below needs the ImportError
+    except ImportError:
+        print("warning: no id registry beside tasks.py; the id is not reserved", file=sys.stderr)
+        return pick(set()), "NOT reserved: commit and push it now to claim it"
+    chosen, reserved = id_registry.allocate(pick, id_registry.TASK, fetch)
+    return chosen, id_registry.note(reserved)
+
+
 def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
     """Writes a task file with the next free id (`--no-fetch` skips `git fetch`, e.g. offline)."""
     milestone, lane, title = arg("--milestone"), arg("--lane"), arg("--title")
@@ -623,12 +643,12 @@ def new_task(tasks: list[dict[str, object]], fetch: bool = True) -> int:
         print(f"priority must be one of {PRIORITIES}; size one of S, M (split L tasks); tier one of {TIERS}")
         return 2
     taken = {str(t["id"]) for t in tasks} | git_task_ids(fetch)
-    tid = next_id(milestone, tasks, taken)
+    tid, note = reserve_id(lambda claimed: next_id(milestone, tasks, taken | claimed), fetch)
     path = TASKS / milestone / f"{tid}-{slug(title)}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(TEMPLATE.format(id=tid, title=quote(title), milestone=milestone,
                                     lane=lane, priority=priority, size=size, tier=tier))
-    print(f"wrote {path.relative_to(ROOT)}: fill in the TODO(fill) lines, then commit and push it now to claim {tid}")
+    print(f"wrote {path.relative_to(ROOT)}: {tid} is {note}; fill in the TODO(fill) lines")
     return 0
 
 
@@ -770,11 +790,12 @@ def available(
     # One task in flight per lane. A branch whose task is already done on main (merged, branch not
     # yet deleted) leaves its lane free, so a looping worker can take the next task at once.
     # The task's own `lane:` decides (the branch name is only a fallback for tasks not on main).
-    busy = {
+    in_flight = Counter(
         str(by_id[tid].get("lane")) if tid in by_id else lane
         for lane, tid in active
         if by_id.get(tid, {}).get("status") not in ("done", "dropped")
-    }
+    )
+    busy = {lane for lane, n in in_flight.items() if n >= LANE_SLOTS.get(lane, 1)}
     cands = [
         t
         for t in tasks
@@ -813,9 +834,9 @@ def arg(name: str) -> str | None:
 
 
 def set_root(root: Path) -> None:
-    """Judge the tree at `root` instead of this checkout: the merge train runs `main`'s copy of
-    this script against a train worktree, so a PR cannot change how its own tree is judged
-    (`validate --root`, SPEC-0027 section 4 step 4, decision 0066)."""
+    """Judge the tree at `root` instead of this checkout: a caller can run `main`'s copy of this
+    script against another worktree, so a PR cannot change how its own tree is judged
+    (`validate --root`, decision 0066)."""
     global ROOT, TASKS
     ROOT = root.resolve()
     TASKS = ROOT / "docs" / "tasks"
@@ -834,7 +855,7 @@ def main() -> int:
     if cmd == "validate":
         errors = check(tasks)
         new_ids = new_task_ids()
-        # Warn, never fail: merge-train id checks and their tests run validate in trees with no origin/main.
+        # Warn, never fail: some tests run validate in trees with no origin/main.
         if new_ids is None:
             print("warning: no origin/main merge base; skipped the new-task cell-overlap check", file=sys.stderr)
         else:

@@ -24,8 +24,8 @@ const SHORT_CHAIN: usize = 16;
 
 /// The left operand of a value operator node. It derefs to the boxed node; its
 /// `Clone` copies the chain below it in a loop (a derived `Clone` overflowed a
-/// 1 MiB optimized stack at about 4,600 links), so `Node` keeps a derived
-/// `Clone`.
+/// 1 MiB optimized stack at about 4,600 links). `Node`'s own `Clone` loops over
+/// runs of signs the same way (`node_walks.rs`).
 #[derive(PartialEq, Debug)]
 pub struct ChainLeft(Box<Node>);
 

@@ -20,6 +20,8 @@ from rustsheet_tools.gen.arg_pairs import (
     CALLS_PER_PAIR,
     CLASS_FORMS,
     ERROR_LITERALS,
+    ROW_STRIDE,
+    SPILL_ROW_STRIDE,
     generate_arg_pairs,
     load_unseen_pairs,
 )
@@ -427,10 +429,10 @@ def test_number_enums_are_number_literals() -> None:
     assert not any(f.startswith('"') and f not in ('"2"', '""') for f in freqs), freqs
 
 
-def m7_formulas() -> list[str]:
+def m7_formulas(seeds: int = 40) -> list[str]:
     return [
         f
-        for seed in range(40)
+        for seed in range(seeds)
         for f in generate_case(catalog(), seed, milestone="M7", formulas=80)["sheets"][1]["cells"].values()
     ]
 
@@ -459,7 +461,8 @@ def test_bound_names_are_used_only_in_their_scope() -> None:
 def test_lambdas_get_as_many_parameters_as_values() -> None:
     # T-1083: an invoked LAMBDA gets one value per parameter, MAP's LAMBDA one parameter per array,
     # MAKEARRAY's two; a mismatch is #VALUE!.
-    formulas = m7_formulas()
+    # T-3074 moved the draws (lookup keys and indexes), so a wider seed range still finds a range-only MAP.
+    formulas = m7_formulas(120)
     invoked = [m for f in formulas for m in re.findall(r"LAMBDA\(([^()]*)\)\(([^()]*)\)", f)]
     assert invoked and all(a.count(",") == b.count(",") + 1 for a, b in invoked)
     mapped = [
@@ -792,7 +795,7 @@ def test_unfocused_output_is_unchanged() -> None:
     # `pool:` keys (T-2109) removed, which do draw from the rng. Re-recorded for T-2251 (INFO and SHEETS gained
     # signatures), T-2318 (TEXTJOIN's delimiter is an array parameter) and T-2719 (*IFS ranges share a shape,
     # MATCH's lookup_array is a vector) and T-2866 (number and bool parameters draw `""` and errors) and T-2717
-    # (the criteria pool grew, so criteria draws moved).
+    # (the criteria pool grew, so criteria draws moved) and T-3074 (lookup keys and indexes).
     catalog = copy.deepcopy(_loaded_catalog())
     for f in catalog.functions:
         for p in f.get("params", []):
@@ -800,7 +803,7 @@ def test_unfocused_output_is_unchanged() -> None:
     body = json.dumps(generate_case(catalog, 7, milestone="M5"), indent=1, sort_keys=True) + "\n"
     assert (
         hashlib.sha256(body.encode()).hexdigest()
-        == "25b67c6d3b3e9440ef405deb2ae9f585f5994595174a974b74b617d10668edc3"
+        == "75594f4fe848bdb5bc9416a3ead2b8b64062fe9aac5a117e117e308355f30aa3"
     )
 
 
@@ -1225,6 +1228,48 @@ def test_fixed_height_ranges_and_probes_stay_inside_their_range() -> None:
     assert re.fullmatch(r"Data!\$?[A-E]\$?\d+", gen.cell_in("not a range"))
 
 
+def test_lookup_keys_and_indexes_mostly_land_inside_the_table() -> None:
+    # T-3074: VLOOKUP/HLOOKUP keys come from the first column/row of the drawn table, and their indexes and
+    # INDEX's row_num/column_num lie inside it, in at least 80% of 200 calls each; some draws stay outside.
+    gen = Gen(random.Random(3), catalog(), data_rows=12, data_cols=5, max_depth=1)
+    cat = catalog()
+    for name, edge, axis in (("VLOOKUP", "first_column", "columns"), ("HLOOKUP", "first_row", "rows")):
+        fn = next(f for f in cat.functions if f["name"] == name)
+        keys = idx = 0
+        n = 200
+        for _ in range(n):
+            args, _ = gen.call_args(fn, 1)
+            m = re.fullmatch(r"Data!([A-E])(\d+):([A-E])(\d+)", args[1])
+            assert m, args
+            c0, r0, c1, r1 = ord(m[1]), int(m[2]), ord(m[3]), int(m[4])
+            key = re.fullmatch(r"Data!([A-E])(\d+)", args[0])
+            if key:
+                col, row = ord(key[1]), int(key[2])
+                keys += (
+                    (col == c0 and r0 <= row <= r1)
+                    if edge == "first_column"
+                    else (row == r0 and c0 <= col <= c1)
+                )
+            size = (c1 - c0 + 1) if axis == "columns" else (r1 - r0 + 1)
+            idx += args[2].isdigit() and 1 <= int(args[2]) <= size
+        assert 0.8 * n <= keys < n, (name, keys)
+        assert 0.8 * n <= idx < n, (name, idx)
+    index = next(f for f in cat.functions if f["name"] == "INDEX")
+    inside = total = 0
+    for _ in range(200):
+        args, _ = gen.call_args(index, 1)
+        m = re.fullmatch(r"Data!([A-E])(\d+):([A-E])(\d+)", args[0])
+        assert m, args
+        h, w = int(m[4]) - int(m[2]) + 1, ord(m[3]) - ord(m[1]) + 1
+        total += 1
+        inside += (
+            args[1].isdigit()
+            and 1 <= int(args[1]) <= h
+            and (len(args) < 3 or (args[2].isdigit() and 1 <= int(args[2]) <= w))
+        )
+    assert 0.8 * total <= inside < total
+
+
 def test_number_and_bool_value_params_draw_empty_text_and_errors() -> None:
     """T-2866: a number or bool `value` param gets `""` and an error literal; a `hard` domain never does."""
     g = Gen(random.Random(7), Catalog([], []), 12, 5, 3)
@@ -1364,3 +1409,28 @@ def test_arg_pairs_skips_hard_domain_pairs_and_is_deterministic(tmp_path: Path) 
     assert generate_arg_pairs(cat, unseen, 4, milestone="M2")[0] != specs
     only_mid, _ = generate_arg_pairs(cat, unseen, 3, milestone="M2", functions=["MID"])
     assert [s["tags"][-1] for s in only_mid] == ["MID"]
+
+
+def test_arg_pairs_spaces_dynamic_array_calls_by_the_tallest_result(tmp_path: Path) -> None:
+    # T-3497: TOCOL over the whole Data block is DATA_ROWS x DATA_COLS rows tall; a scalar function keeps the
+    # short stride and its anchors as `check`.
+    path = tmp_path / "report.json"
+    rows = [
+        {
+            "name": "TOCOL",
+            "unseen_pairs": [{"params": ["array", "ignore"], "classes": ["range", c]} for c in CLASS_FORMS],
+        },
+        {
+            "name": "MID",
+            "unseen_pairs": [{"params": ["text", "num_chars"], "classes": ["blank", "empty_text"]}],
+        },
+    ]
+    path.write_text(json.dumps({"argument_coverage": rows}))
+    cat = catalog()
+    for milestone, name, stride in (("M7", "TOCOL", SPILL_ROW_STRIDE), ("M2", "MID", ROW_STRIDE)):
+        specs, _ = generate_arg_pairs(cat, load_unseen_pairs(path), 0, milestone=milestone, functions=[name])
+        anchors = list(specs[0]["sheets"][1]["cells"])
+        assert anchors[:2] == ["A1", f"A{1 + stride}"], name
+        # A spilling function lists no `check`, so every oracle-recorded cell (spill members too) is scored.
+        assert specs[0]["check"] == ([] if stride == SPILL_ROW_STRIDE else [f"Calc!{a1}" for a1 in anchors])
+    assert SPILL_ROW_STRIDE > 12 * 5

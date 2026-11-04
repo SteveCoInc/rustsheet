@@ -261,7 +261,8 @@ impl UserModel {
                     scope,
                     old_value,
                 } => {
-                    self.model.new_defined_name(name, *scope, old_value)?;
+                    // The name existed: an undo puts it back even past the API's call cap (T-4014).
+                    self.model.restore_defined_name(name, *scope, old_value)?;
                 }
                 Diff::UpdateDefinedName {
                     name,

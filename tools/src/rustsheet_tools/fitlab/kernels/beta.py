@@ -32,9 +32,11 @@ import sys
 from collections.abc import Callable
 from fractions import Fraction
 from functools import cache
+from typing import TypeVar
 
 from rustsheet_tools.fitlab.exact import pi_cr
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, numeric_arg
 
@@ -96,6 +98,33 @@ def ln_gamma_decimal(z: decimal.Decimal) -> decimal.Decimal:
     return c.subtract(total, shift)
 
 
+Number = TypeVar("Number", decimal.Decimal, float)
+
+
+def betacf(a: Number, b: Number, x: Number, tol: Number, max_terms: int) -> tuple[Number, bool]:
+    """Numerical Recipes' continued fraction for I_x(a, b) (modified Lentz, DLMF 8.17.22) in the caller's number
+    type: a fixed-context Decimal here, an mpmath mpf at the working precision in Gate A (`accuracy.defs.student_t`).
+    Returns the fraction (I_x(a, b) = x^a (1-x)^b / (a B(a, b)) times it) and whether a step reached `tol` within
+    `max_terms`. It converges fast for x < (a + 1)/(a + b + 2)."""
+    qab, qap, qam = a + b, a + 1, a - 1
+    cc, d = a / a, 1 / (1 - qab * x / qap)  # a / a: 1 in the caller's number type
+    h = d
+    for m in range(1, max_terms):
+        m2 = 2 * m
+        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+        d = 1 / (1 + aa * d)
+        cc = 1 + aa / cc
+        h *= d * cc
+        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+        d = 1 / (1 + aa * d)
+        cc = 1 + aa / cc
+        delta = d * cc
+        h *= delta
+        if abs(delta - 1) < tol:
+            return h, True
+    return h, False
+
+
 def _ibeta_decimal(dx: decimal.Decimal, da: decimal.Decimal, db: decimal.Decimal) -> decimal.Decimal:
     """I_x(a, b) for 0 < x < 1 at 70 digits: NR's continued fraction."""
     c = _CTX
@@ -104,23 +133,7 @@ def _ibeta_decimal(dx: decimal.Decimal, da: decimal.Decimal, db: decimal.Decimal
         dx, da, db = 1 - dx, db, da
     lbt = ln_gamma_decimal(da + db) - ln_gamma_decimal(da) - ln_gamma_decimal(db)
     lbt = lbt + da * c.ln(dx) + db * c.ln(1 - dx)
-    qab, qap, qam = da + db, da + 1, da - 1
-    cc, d = decimal.Decimal(1), 1 / (1 - qab * dx / qap)
-    h = d
-    tol = decimal.Decimal(10) ** -62
-    for m in range(1, _MAX_CF_TERMS):
-        m2 = 2 * m
-        aa = m * (db - m) * dx / ((qam + m2) * (da + m2))
-        d = 1 / (1 + aa * d)
-        cc = 1 + aa / cc
-        h *= d * cc
-        aa = -(da + m) * (qab + m) * dx / ((da + m2) * (qap + m2))
-        d = 1 / (1 + aa * d)
-        cc = 1 + aa / cc
-        delta = d * cc
-        h *= delta
-        if abs(delta - 1) < tol:
-            break
+    h, _ = betacf(da, db, dx, decimal.Decimal(10) ** -62, _MAX_CF_TERMS)
     v = c.exp(lbt) * h / da
     return 1 - v if flip else v
 
@@ -497,7 +510,7 @@ def libreoffice_beta_dist(x: float, alpha: float, beta_: float, *, excel_closed_
 
 def ibeta_candidates() -> list[tuple[str, str, Ibeta]]:
     """(name, family, I_x(a,b)) for every candidate; the fits map their arguments onto these."""
-    out: list[tuple[str, str, Ibeta]] = [("correctly rounded", "reference", ibeta_reference)]
+    out: list[tuple[str, str, Ibeta]] = [(REFERENCE, "reference", ibeta_reference)]
     for log1p_tail in (False, True):
         for eps in (3e-16, 1e-15, 1e-14):
             name = f"NR betai eps={eps:g}, ln(1-x) by {'log1p' if log1p_tail else 'log'}"
@@ -626,7 +639,7 @@ def t_dist_candidates() -> list[Candidate]:
         return t_cdf_reference(t, n)
 
     # The reference maps exactly, not through a double y (see `t_cdf_reference`).
-    return [candidate("correctly rounded", reference, "reference")] + [
+    return [candidate(REFERENCE, reference, "reference")] + [
         candidate(name, wrap(fn), family) for name, family, fn in ibeta_candidates() if family != "reference"
     ]
 

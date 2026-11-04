@@ -15,10 +15,15 @@ docs/excel-semantics/engineering.md records Excel's IMCSCH of a large real numbe
 `inverse_exp_sinh_cosh`'s band (|x| > 20), from excel-graph evidence, and the engine matches it or a task owns the gap.
 
 ## Context
+- T-3881 (2026-11-03) settled the band 354 < |x| < 700 for a real z: probes/t3881-imcsch-overflow-band holds IMCSCH(COMPLEX(±x,0)) for x = 355, 356, 360, 400, 524.561, 600, 699 and 700, each sgn(x)·IMSECH(x) (2e^-|x|), and ours passes them all. Past 700 (IMCSCH("710") and up) is still this task's.
 Carried over from T-2841 and T-2884 (T-2884 fitted IMSEC and left this probe undone). Past the band IMCSCH's parts
 are libm's, and only `IMCSCH("710.4+0i")` (probes/eng-im-overflow-edges A64) covers the overflowed `t`. Probe with the
 `excel-probe` skill: `IMCSCH("400")`, `IMCSCH("-400")`, `IMCSCH("710")`, `IMCSCH("709.5")`, `IMCSCH("25")`,
 `IMCSCH("100")`, and the same with `+0i`. Code: `imcsch` in crates/rustsheet-engine/src/functions/engineering/complex/trig.rs.
+
+T-3642's grid (probes/im-trig-magnitude-grid J134, J153, J172, excel-graph) has the real rows: `IMCSCH(COMPLEX(700,0))`
+1.97193530875195E-304, `(705,0)` 1.32867955959959E-306, `(709,0)` 2.43356150124685E-308; ours 0. The complex rows of
+the same x are listed in T-2668.
 
 ## Acceptance criteria
 - [ ] A probes case holds the inputs above with excel-graph values.

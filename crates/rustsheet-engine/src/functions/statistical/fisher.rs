@@ -3,7 +3,7 @@ use statrs::distribution::FisherSnedecor;
 use crate::arithmetic::extended_quotient;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::bratio::{closed_or_ported_tails, kernel_tails};
+use crate::functions::statistical::bratio::{f_closed_or_ported_tails, kernel_tails};
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
 use crate::functions::statistical::half_integer_beta::half_integer_remainder;
@@ -31,14 +31,24 @@ fn f_df_ok(df: f64) -> bool {
     (1.0..=F_DF_MAX).contains(&df)
 }
 
-/// The incomplete beta's argument and its complement for the F distribution at `x` as Excel's F
-/// functions pass them to the kernel (T-2464 w5-triangulation, T-2502): u = 1/(1 + df2/(df1 x)) and
-/// its complement 1/(1 + df1 x/df2), each formed directly. On the b0 = 1 closed-form cells, which
-/// depend on the argument alone, this is bit-exact on 197 of 197, against 180 for
-/// df1 x/(df1 x + df2) (docs/excel-semantics/statistics.md "Incomplete beta is TOMS 708 `bratio`").
+/// The incomplete beta's arguments (x, y) for the F distribution at `x` as Excel's F functions pass
+/// them to bratio (T-3567, T-3580): with mx = fl(df1 x), r = fl(df2/mx) when mx <= df2, else
+/// fl(mx/df2), so r >= 1; the smaller argument is fl(1/fl(1 + r)) and the larger fl(r/fl(1 + r)).
+/// The larger one is not formed as 1/(1 + 1/r): bgrat reads only ln y, and the r >= 1 form is what
+/// puts F at a df of 1 on Excel's bits there (docs/excel-semantics/statistics.md "F's
+/// incomplete-beta arguments keep r >= 1"). At x = 0 (r infinite) the pair is (0, 1).
 fn f_beta_arguments(df1: f64, df2: f64, x: f64) -> (f64, f64) {
     let scaled = df1 * x;
-    (1.0 / (1.0 + df2 / scaled), 1.0 / (1.0 + scaled / df2))
+    if scaled <= df2 {
+        let r = df2 / scaled;
+        if r.is_infinite() {
+            return (0.0, 1.0);
+        }
+        (1.0 / (1.0 + r), r / (1.0 + r))
+    } else {
+        let r = scaled / df2;
+        (r / (1.0 + r), 1.0 / (1.0 + r))
+    }
 }
 
 /// The incomplete beta's argument df1 x/(df1 x + df2) and its complement df2/(df1 x + df2), the
@@ -65,15 +75,17 @@ fn f_beta_ratio_overflows(df1: f64, df2: f64, x: f64) -> bool {
     x > 0.0 && !(df2 / (df1 * x)).is_finite()
 }
 
-/// One F tail (`upper`: P(F > x)): Excel's closed forms (a df of 2) and the bratio port's branches
-/// on [`f_beta_arguments`] ([`closed_or_ported_tails`], T-2847), else today's Cephes kernel on
-/// u = df1 x/(df1 x + df2) and its complement df2/(df1 x + df2). w5's forms there move gated cells
-/// off Excel (T-2977: `FDIST(Data!$D5,1,9)`, gen-m9/c18dbf21f11093f3 A151, by 9 ulp, and
-/// `2*F.DIST.RT(1E+12,22,5)`, probes/t2829-ftest-tail-over-b S!A17, visibly).
+/// One F tail (`upper`: P(F > x)): Excel's closed forms (a df of 2) and the bratio port's branches,
+/// bgrat at b = 1/2 included, on [`f_beta_arguments`] ([`f_closed_or_ported_tails`], T-2847,
+/// T-3580), else today's Cephes kernel on
+/// u = df1 x/(df1 x + df2) and its complement df2/(df1 x + df2): Excel's arguments there move gated
+/// cells off Excel (T-2977: `2*F.DIST.RT(1E+12,22,5)`, probes/t2829-ftest-tail-over-b S!A17,
+/// visibly). bup's arithmetic on Excel's arguments is still off by an ulp or two
+/// (`FDIST(2,1,9)` and `F.DIST.RT(1,7,9)`, decision 0263).
 fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     let (u, v) = f_beta_arguments(df1, df2, x);
     let (a, b) = (df1 / 2.0, df2 / 2.0);
-    let (lower, upper_tail) = closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
+    let (lower, upper_tail) = f_closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
         let (u, v) = f_kernel_arguments(df1, df2, x);
         beta_reg_tails(u, v, a, b)
     });
@@ -152,8 +164,8 @@ fn f_test_p(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// file this form is bit-exact on 90 against 53 for the correctly rounded p and visibly off on 6
 /// against 40 (docs/excel-semantics/statistics.md "F.TEST / FTEST: larger variance on top").
 /// A shape of 1 is F.TEST's own form ([`unoriented_shape_one_tail`]), large shapes are the kernel's
-/// ([`kernel_tails`]: the bratio port's branches, else today's kernel; T-2977; F keeps today's kernel
-/// on the b = 1/2 bgrat branches, T-2510), and
+/// ([`kernel_tails`]: the bratio port's branches, else today's kernel; T-2977; F.TEST stays off the
+/// b = 1/2 bgrat branches F.DIST takes since T-3580, unmeasured on F.TEST's own arguments), and
 /// a = b = 1/2 is Excel's closed form 2 asin(sqrt x)/pi (T-2571; current scores in statistics.md).
 fn f_test_upper_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
     if x > 0.0 && y > 0.0 {
@@ -682,7 +694,8 @@ impl Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{f_cdf, f_quantile, f_tail, fisher, fisher_inv};
+    use super::{f_beta_arguments, f_cdf, f_quantile, f_tail, fisher, fisher_inv};
+    use crate::test::util::{ulps, within_fifteen_digits};
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
     #[test]
@@ -719,6 +732,44 @@ mod tests {
     fn shape_one_tail_takes_excels_expm1_and_log1p() {
         assert_eq!(f_tail(6.0, 2.0, 10.0, true), 0.093_686_012_554_127_09);
         assert_eq!(f_tail(8.0, 2.0, 40.0, true), 0.024_614_204_935_833_432);
+    }
+
+    // Excel's r >= 1 arguments (T-3567): the larger is fl(r/fl(1 + r)), not 1/(1 + 1/r).
+    #[test]
+    fn f_beta_arguments_keep_r_at_least_one() {
+        let r = 298.0 / 15.586;
+        assert_eq!(
+            f_beta_arguments(1.0, 298.0, 15.586),
+            (1.0 / (1.0 + r), r / (1.0 + r))
+        );
+        let r = 15.586 * 298.0 / 3.0;
+        assert_eq!(
+            f_beta_arguments(298.0, 3.0, 15.586),
+            (r / (1.0 + r), 1.0 / (1.0 + r))
+        );
+        assert_eq!(f_beta_arguments(4.0, 7.0, 0.0), (0.0, 1.0));
+    }
+
+    // A small df1 with a huge df2 takes L140 bup+bgrat up to a0 = df2/2 = 1E7 (T-3754): the fallback
+    // kernel was 1.4E-10 off at probes-numeric t3354-f-dist-sweep S!C168 and 8.3E-11 at S!A168.
+    // Excel is correctly rounded there; ours is 1 ulp from it on each tail.
+    #[test]
+    fn huge_df2_small_df1_takes_l140_bup_bgrat() {
+        let x = 1.090_808_853_953_79;
+        let rt = f_tail(8.0, 5_567_623.0, x, true);
+        let cdf = f_tail(8.0, 5_567_623.0, x, false);
+        assert!(within_fifteen_digits(0.365_893_631_290_974_9, rt), "{rt}");
+        assert!(within_fifteen_digits(0.634_106_368_709_025_1, cdf), "{cdf}");
+        assert!(ulps(0.365_893_631_290_974_9, rt) <= 1, "{rt}");
+        assert!(ulps(0.634_106_368_709_025_1, cdf) <= 1, "{cdf}");
+    }
+
+    // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric
+    // t3567-r5-fdf1-hold A1/B1 `F.DIST.RT(15.586,1,298)` and `F.DIST(15.586,1,298,TRUE)`.
+    #[test]
+    fn df_of_one_takes_bgrat_at_one_half() {
+        assert_eq!(f_tail(1.0, 298.0, 15.586, true), 9.842_252_247_713_118e-5);
+        assert_eq!(f_tail(1.0, 298.0, 15.586, false), 0.999_901_577_477_522_8);
     }
 
     #[test]

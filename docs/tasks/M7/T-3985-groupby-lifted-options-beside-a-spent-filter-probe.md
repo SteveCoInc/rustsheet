@@ -1,0 +1,52 @@
+---
+id: T-3985
+title: "GROUPBY lifted options beside a spent filter: probe a position holding text or an out-of-range number and an error, or two errors"
+milestone: M7
+lane: functions-lookup
+status: done
+priority: P3
+size: S
+tier: opus
+depends_on: []
+---
+
+## Goal
+GROUPBY's spent-filter rule for a position where two lifted options (field_headers and total depth) both hold
+something unusual is evidenced, and `Model::lift_options`' `settled` closure follows the cells.
+
+## Context
+- Follow-up of T-3964 (PR #3036, reviewer MINORs). T-3964 showed one error element of a lifted field_headers or total
+  depth stays its error after another element spent the filter (probes/t3964-groupby-filter-lift-errors G!B71, B83,
+  B89, B101). With two lifted options the engine models (unprobed) that a position's first error, in argument order,
+  wins only when no text element comes before it; any text (numeric text such as "1" included) and an out-of-range
+  number before the error leave the spent `#VALUE!`.
+- Probe beside `(Data!C1:C12<0.2)`, with field_headers and total depth both lifted (ranges, since an array constant
+  cannot hold `NA()`), the error in the second element so the first spends the filter: {numeric text "1", `#N/A`},
+  {other text "x", `#N/A`}, {5 (out of range), `#N/A`}, {`#DIV/0!`, `#N/A`}, each in both argument orders, plus
+  no-filter controls.
+- Also from the T-3964 review: arrays.md's T-3840 bullet says "a `=1/0` element is `#DIV/0!` in either place" (it means
+  field_headers or total depth; reword), the T-3778 bullet's new sentence needs re-wrapping, and the closure's
+  `find(..).filter(..)` reads better as one `match`.
+
+## Acceptance criteria
+- [x] An excel-graph probe answers each combination; ours matches every cell (change the `settled` closure if not).
+- [x] arrays.md "A lifted GROUPBY's filter serves one element" cites the cells and its Status line no longer lists the
+      combinations as unprobed; the wording and wrapping fixes above are made.
+- [x] `make check` green; reviewers approve.
+
+## Out of scope
+- PIVOTBY's lift beside a filter column (T-3892).
+
+## Outcome
+- Probe `probes/t3985-groupby-two-lifted-spent-filter` (excel-graph, 2026-11-04, 16 calls, 44 checked cells): field_headers
+  and total depth both lifted as 1x2 ranges beside `(Data!C1:C12<0.2)`, position 2 holding numeric text "1", text "x",
+  5 or `#DIV/0!` with `#N/A`, in both argument orders, plus no-filter controls. Each position-2 cell equals its
+  no-filter control: numeric text and an out-of-range number before the error do not stop it (`#N/A`), other text is
+  its own `#VALUE!`, and of two errors the first in argument order wins.
+- One cell was off: G!B1 (numeric text "1" before `#N/A`), ours the spent `#VALUE!`, Excel `#N/A`. The `settled`
+  closure in `Model::lift_options` now classifies the position (`element_class`) and stops only at an error or text
+  that is no number, written as one `match`; `lift_by_class`' `settled` takes the model for it.
+- arrays.md "A lifted GROUPBY's filter serves one element" cites the cells and drops the "Unprobed" sentence; the
+  T-3840 bullet's `=1/0` wording and the T-3778 bullet's wrapping are fixed.
+- Eval delta: the new case passes 44/44 (it failed 1 cell before the fix); t3964, t3880 and both t3840 GROUPBY probes
+  stay all-pass. REGRESSIONS 0.

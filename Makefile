@@ -13,7 +13,7 @@ help:
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
 # ---------------------------------------------------------------- Rust
-.PHONY: fmt fmt-check clippy test test-shard-1 test-shard-2 build
+.PHONY: fmt fmt-check clippy test test-shard-1 test-shard-2 test-shard-3 build
 fmt: ## Format Rust and Python code
 	$(CARGO) fmt --all
 	cd tools && $(UV) run ruff format src tests && $(UV) run ruff check --fix src tests
@@ -27,39 +27,54 @@ clippy: ## Lint Rust with -D warnings (workspace lint policy in Cargo.toml)
 test: ## Run Rust tests
 	$(CARGO) test --workspace --exclude rustsheet_python
 
-# CI runs `make test` as two shards (decision 0122): shard 1 runs the tests whose names contain one
-# of these substrings, shard 2 every other test (`--skip` matches the same way), so together they
-# run exactly the tests of `make test`, each once. Keep test_fn_groupby here and test_tailed_array
-# in shard 2 (memory-bound; they slow each other down); 0122 says when to rebalance.
-TEST_SHARD_1 := test::test_fn_groupby text_functions::fn_regex test::test_multi_area_arguments dynamic_evaluation::test_range_reads functions::text::
+# CI runs `make test` as three shards (decisions 0122 and 0232): shard 1 runs the tests whose names
+# contain one of the TEST_SHARD_1 substrings, shard 2 the tests matching TEST_SHARD_2 but not
+# TEST_SHARD_1, shard 3 every other test (`--skip` matches the same way), so together they run
+# exactly the tests of `make test`, each once; a new test lands in shard 3 unless it matches.
+# Memory-bound whole-grid tests slow each other down on one runner: keep test_fn_groupby in
+# shard 1, apart from test_fn_pivotby and every test_tailed_array test, and split
+# test_tailed_array between shards 2 and 3. Decision 0122 says when to rebalance.
+TEST_SHARD_1 := test::test_fn_groupby text_functions::fn_regex test::test_multi_area_arguments dynamic_evaluation::test_range_reads functions::text:: test::lookup_and_reference test::test_collation test::test_formula_work test::statistical
+TEST_SHARD_2 := test::test_fn_pivotby test_tailed_array::keyed test_tailed_array::index test_tailed_array::lookup test_tailed_array::small_and_large test::test_nested_groupby_cells
+SHARD_TEST := $(CARGO) test --workspace --exclude rustsheet_python --
 
-test-shard-1: ## CI: the tests matching TEST_SHARD_1 (half of make test)
-	$(CARGO) test --workspace --exclude rustsheet_python -- $(TEST_SHARD_1)
+test-shard-1: ## CI: the tests matching TEST_SHARD_1 (a third of make test)
+	$(SHARD_TEST) $(TEST_SHARD_1)
 
-test-shard-2: ## CI: every test test-shard-1 does not run (the other half of make test)
-	$(CARGO) test --workspace --exclude rustsheet_python -- $(addprefix --skip ,$(TEST_SHARD_1))
+test-shard-2: ## CI: the tests matching TEST_SHARD_2 and not TEST_SHARD_1 (a third of make test)
+	$(SHARD_TEST) $(TEST_SHARD_2) $(addprefix --skip ,$(TEST_SHARD_1))
+
+test-shard-3: ## CI: every test shards 1 and 2 do not run (the last third of make test)
+	$(SHARD_TEST) $(addprefix --skip ,$(TEST_SHARD_1) $(TEST_SHARD_2))
 
 build: ## Release build of the eval harness
 	$(CARGO) build --release -p rustsheet_eval
 
 # ---------------------------------------------------------------- Eval (Excel compatibility)
 .PHONY: eval eval-check eval-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
-eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}
+eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}, then Gate A's eval/runs/accuracy.json (decision 0268)
 	$(PY) scripts/desktop_owned.py --out eval/runs/desktop-owned.tsv
 	$(EVAL_GUARDED) run --desktop-owned
+	@# Gate A for the Phase 1 exit verdict and the dashboard (decision 0268). A failing point does not fail
+	@# make eval (make check gates it); a crash leaves no JSON, which both read as not measured.
+	rm -f eval/runs/accuracy.json
+	$(EVAL_GUARDED) accuracy > eval/runs/latest/accuracy.txt 2>&1 || true
+	@grep -m 1 '^accuracy:' eval/runs/latest/accuracy.txt || echo 'accuracy: no summary; see eval/runs/latest/accuracy.txt'
 
 eval-check: build ## Gate: fail on any regression vs eval/baseline
 	$(EVAL_GUARDED) check
 
-eval-gates: build ## eval-check and evidence-floor from one run of the suites, then Gate A's accuracy check (CI, make check; T-2761, decision 0193)
+eval-gates: build ## eval-check and evidence-floor from one run of the suites, then Gate A's accuracy check and new-case owners (CI, make check; T-2761, decisions 0193, 0245)
 	$(EVAL_GUARDED) check --evidence-floor
 	$(EVAL_GUARDED) accuracy
+	@# Cases the branch adds or refills: every visibly-off cell needs an open owner (T-3793, decision 0245).
+	$(PY) scripts/new_case_owners.py --eval $(EVAL)
 
-eval-baseline: build ## Ratchet eval/baseline and quality/evidence-floor.json after fixes (refuses regressions)
-	$(EVAL_GUARDED) update-baseline
+eval-baseline: build ## Ratchet eval/baseline and quality/evidence-floor.json after fixes (refuses regressions); NEW_CASES=<file> lists the only cases new to the visible-parity lock (make catch-up, decision 0217)
+	$(EVAL_GUARDED) update-baseline $(if $(NEW_CASES),--new-cases '$(NEW_CASES)')
 	$(EVAL) evidence-floor --update
 
-eval-lower-visible-lock: build ## Steward only, daily: also record a drop in eval/baseline/visible-parity.json (decision 0093)
+eval-lower-visible-lock: build ## Steward only, daily: also lower the cases of eval/baseline/visible-parity.txt (decisions 0093, 0217)
 	$(EVAL_GUARDED) update-baseline --lower-visible-lock
 
 evidence-floor: build ## Gate: no more in-scope functions below the evidence floor (T-0056; CI runs it in eval-gates)
@@ -69,17 +84,21 @@ eval-show: build ## Show one case: make eval-show CASE=ironcalc-calc/FINANCIAL/I
 	$(EVAL) show $(CASE)
 
 # ---------------------------------------------------------------- Python tooling
-.PHONY: py-sync py-check py-bindings progress-report
+.PHONY: py-sync py-check py-bindings progress-report eval-math-check
 py-sync:
 	cd tools && $(UV) sync -q
 
-py-check: py-sync ## Lint, type-check and test tools/
-	cd tools && $(UV) run ruff check src tests && $(UV) run ruff format --check src tests && $(UV) run mypy && $(UV) run pytest -q
+py-check: py-sync ## Lint, type-check and test tools/ (pytest on every core, decision 0233)
+	cd tools && $(UV) run ruff check src tests && $(UV) run ruff format --check src tests && $(UV) run mypy && $(UV) run pytest -q -n auto
+
+eval-math-check: build py-sync ## The probe suites' math sidecars are current: every Gate A one-call cell has a math value or a recorded generator skip, and no entry is stale (T-3588, decision 0243)
+	cd tools && $(UV) run rustsheet-accuracy math --check --suite probes --suite probes-numeric
 
 progress-report: py-sync ## Regenerate docs/progress.md and docs/progress/ from eval/runs/latest/ (after make eval; SPEC-0022, decision 0120)
 	mkdir -p eval/runs/latest
 	$(PY) scripts/tasks.py stats --json > eval/runs/latest/tasks.json.tmp || { rm -f eval/runs/latest/tasks.json.tmp; exit 1; }
 	mv eval/runs/latest/tasks.json.tmp eval/runs/latest/tasks.json
+	$(PY) scripts/phase1_exit.py --json > eval/runs/latest/phase1-exit.json || [ $$? -eq 1 ] || rm -f eval/runs/latest/phase1-exit.json
 	cd tools && $(UV) run rustsheet-progress-report --out-dir ../docs
 
 py-bindings: ## Build the PyO3 bindings into bindings/python/.venv and run their tests
@@ -97,7 +116,8 @@ hygiene: ## Lint-debt, file-size, duplication, fitted-constant, tasks and govern
 	$(PY) scripts/check_decisions.py
 	$(PY) scripts/check_docs_readers.py
 	$(PY) scripts/check_ci_workflow.py
-	$(PY) -m unittest discover -s scripts -p 'test_*.py' -q
+	@# The scripts' test modules run in parallel, one process per module, largest file first (decision 0241); xargs fails if any module fails.
+	ls -S scripts/test_*.py | xargs -n1 basename | xargs -P "$$(getconf _NPROCESSORS_ONLN)" -I{} $(PY) -m unittest discover -s scripts -p {} -q
 
 deny: ## License/advisory/source policy (needs cargo-deny)
 	$(CARGO) deny check
@@ -112,8 +132,11 @@ governance: ## Protected-path changes need a decision record
 	$(PY) scripts/check_governance.py $(BASE)
 
 # ---------------------------------------------------------------- Aggregates
-.PHONY: check ci
-check: fmt-check clippy test eval-gates py-check py-bindings hygiene typos ## Everything an agent must pass before a PR (typos too: CI fails on it)
+.PHONY: check check-fast ci
+check: fmt-check clippy test eval-gates eval-math-check py-check py-bindings hygiene typos ## Every gate CI runs on a PR (typos too: CI fails on it)
+
+check-fast: ## The local pre-push gate: the gates of `make check` the change can break, never the full test suite (scripts/fast_gates.py; BASE=origin/main)
+	targets="$$($(PY) scripts/fast_gates.py --base $(or $(BASE),origin/main))" && $(MAKE) --no-print-directory $$targets
 
 ci: check deny machete
 
@@ -147,60 +170,17 @@ phase1-exit: ## One verdict per Phase 1 exit criterion after a full make eval; e
 board: ## Write docs/tasks/BOARD.md locally (git-ignored; decision 0017)
 	$(PY) scripts/tasks.py board
 
-# ---------------------------------------------------------------- Merge lock (decisions 0075, 0145)
-.PHONY: merge-lock-acquire merge-lock-wait merge-lock-release merge-lock-status
-merge-lock-acquire: ## Take (or renew) the merge lock before merging a PR: make merge-lock-acquire PR=123 [RENEW=1] (exit 1: busy, you are queued; 3: PR already done; 4: lost; 5: refused, train mode)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_lock.py acquire --pr '$(PR)' $(if $(RENEW),--renew)
+# ---------------------------------------------------------------- Merge queue (decisions 0053, 0247)
+.PHONY: merge-mode catch-up renumber
+# Kept for the routines' stored prompts, which ask for `lock` before enqueueing (decision 0247):
+# merges always go through GitHub's merge queue now, so it always prints `lock`.
+merge-mode: ## Always `lock`, meaning "enqueue with enable_pr_auto_merge" (decision 0247; the merge train and its switch were deleted, T-3827)
+	@echo lock
 
-merge-lock-wait: ## Wait in the queue until the merge lock is yours (run it in the background): make merge-lock-wait PR=123 [TIMEOUT=45] (exit 0: held; 1: timed out; 2: error; 3: PR already done; 5: refused, train mode)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_lock.py wait --pr '$(PR)' --timeout '$(or $(TIMEOUT),45)'
-
-merge-lock-release: ## Free your merge lock (after the merge, a red CI, or any stop)
-	$(PY) scripts/merge_lock.py release
-
-merge-lock-status: ## Who holds the merge lock, since when, and the queue of waiters
-	$(PY) scripts/merge_lock.py status
-
-.PHONY: merge-ready-verify
-merge-ready-verify: ## Check a PR's readiness marker, V1-V6 of SPEC-0027 (reads only): make merge-ready-verify PR=123 (exit 0: ready; 1: not ready; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_ready.py verify --pr '$(PR)'
-
-.PHONY: mark-ready merge-labels verdict-record
-catch-up: ## Clear a merge-train ejection for a conflict with main that lies only in eval/baseline/ (decision 0207): make catch-up PR=123 merges main into the PR, re-records the lists and pushes; then make mark-ready PR=123 CARRY=1 once CI is green (exit 0: pushed; 1: refused; 2: error)
+catch-up: ## Clear a merge-queue removal or a conflict with main that lies only in eval/baseline/ (decision 0207): make catch-up PR=123 merges main into the PR, re-records the lists and pushes; enqueue it again once CI is green (exit 0: pushed; 1: refused; 2: error)
 	$(if $(PR),,$(error PR=<number> is required))
 	$(PY) scripts/merge_catchup.py --pr '$(PR)'
 
-mark-ready: ## Mark a green, approved PR ready for the merge train (SPEC-0027 section 2): make mark-ready PR=123, its verdicts from the verdict records on the head [REVIEW="security=APPROVE architecture=APPROVE quality=APPROVE [excel-fidelity=APPROVE]" for a reviewer with no record, while verdict_records = warn] (or CARRY=1 after a merge of main that is clean or only re-records eval-gated baseline lists, decision 0207) [STEP=1: print the writes as step-mode actions] (exit 0: marked; 1: refused; 2: error)
+renumber: ## Clear an id collision with main (decision 0224): make renumber PR=123 gives the PR's colliding task and decision files fresh ids from the id registry, rewrites the old id only under docs/ in what the PR added (refusing when a line it added elsewhere names it), merges main in and pushes; enqueue it again once CI is green (exit 0: pushed; 1: refused; 2: error)
 	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_ready.py mark --pr '$(PR)' $(if $(CARRY),--carry) $(if $(REVIEW),--review '$(REVIEW)') $(if $(STEP),--step)
-
-verdict-record: ## Post one reviewer's verdict record for the local HEAD, which must be the PR head (decision 0178): make verdict-record PR=123 REVIEWER=security VERDICT=APPROVE REPORT=<file with the reviewer's report> [STEP=1: print the comment as a step-mode action] (exit 0: posted; 1: refused; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(if $(REVIEWER),,$(error REVIEWER=<security|architecture|quality|excel-fidelity> is required))
-	$(if $(VERDICT),,$(error VERDICT=<APPROVE|REQUEST_CHANGES> is required))
-	$(if $(REPORT),,$(error REPORT=<file> is required))
-	$(PY) scripts/merge_ready.py record --pr '$(PR)' --reviewer '$(REVIEWER)' --verdict '$(VERDICT)' --report '$(REPORT)' $(if $(STEP),--step)
-
-merge-labels: ## Create the merge-train labels that are missing (ready-to-merge, merge-train-ejected, merge-train-stop)
-	$(PY) scripts/merge_ready.py labels --create
-
-.PHONY: merge-mode merge-train merge-train-ack merge-flip-check merge-train-stats catch-up
-merge-train: ## The merge train (SPEC-0027): DRY_RUN=1 prints the batch and writes nothing; SHADOW=1 tests and predicts on merge-train/shadow, in shadow mode only; TRAIN=1 merges a green train, in train mode only; STEP=1 (with SHADOW or TRAIN) prints each write as a JSON action for the session to perform and ack
-	$(if $(DRY_RUN)$(TRAIN)$(SHADOW),,$(error DRY_RUN=1 or SHADOW=1 or TRAIN=1 is required))
-	$(PY) scripts/merge_train.py $(if $(DRY_RUN),--dry-run,$(if $(SHADOW),--shadow,--train) $(if $(STEP),--step))
-
-merge-train-ack: ## Step mode (decision 0169): the session performed the pending action: make merge-train-ack SEQ=3 [REFUSED=1: GitHub refused the write] (exit 1: not the pending action)
-	$(PY) scripts/merge_step.py ack --seq '$(SEQ)' $(if $(REFUSED),--refused)
-
-merge-flip-check: ## Whether a PR only sets the merge-train switch to lock (SPEC-0027 "The switch", decision 0157); prints the head sha to merge with expectedHeadSha: make merge-flip-check PR=123 (exit 0: a flip PR; 1: not one; 2: error)
-	$(if $(PR),,$(error PR=<number> is required))
-	$(PY) scripts/merge_flip.py check '$(PR)'
-
-merge-train-stats: ## The merge train's metrics, the shadow agreement score and T-2991's evidence and load bar, from the GitHub API (SPEC-0027 "Metrics"): make merge-train-stats [SINCE=2026-10-29] [STRANDED=1: only the stranded-PR line, fast]
-	$(PY) scripts/merge_train_stats.py $(if $(SINCE),--since '$(SINCE)') $(if $(STRANDED),--stranded)
-
-merge-mode: ## The merge-train mode on a freshly fetched origin/main: lock, shadow or train (anything else reads as lock; SPEC-0027); `train (stop pending: #n)` while a valid merge-train-stop label is on PR n
-	$(PY) scripts/merge_train.py mode
+	$(PY) scripts/merge_renumber.py --pr '$(PR)'

@@ -1,5 +1,6 @@
 use crate::{
     arithmetic::flush_subnormal,
+    decimal_round::{x87_decimal_to_f64, X87_PROBED_DIGITS},
     formatter::{
         self,
         format::{FormatContext, Formatted},
@@ -134,6 +135,9 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
     let mut integer_sig_digits = 0i64;
     let mut fraction_digits = 0i64;
     let mut leading_fraction_digit = None;
+    // The significant digits as written (trailing zeros included), while short enough for the x87
+    // conversion below; `None` once there are too many.
+    let mut written: Option<u64> = Some(0);
     for c in mantissa.chars() {
         match c {
             '.' => {
@@ -151,6 +155,12 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
                 }
                 if sig > 0 || c != '0' {
                     sig += 1;
+                    written = written
+                        .and_then(|m| {
+                            m.checked_mul(10)?
+                                .checked_add(u64::from(c) - u64::from('0'))
+                        })
+                        .filter(|m| *m < X87_PROBED_DIGITS);
                 }
                 if sig <= 15 {
                     out.push(c);
@@ -176,6 +186,19 @@ pub fn parse_excel_number(text: &str) -> Option<f64> {
         Some(position) => exponent.saturating_sub(position),
         None => exponent.saturating_add(integer_sig_digits - 1),
     };
+    // Short number text with no positive exponent converts like Excel's x87 multiply by 10^-n, the
+    // digits as written times 10^-n, rather than to the nearest double: `=4.91E-06`, `=0.00000491`
+    // and `VALUE("491E-8")` are 4.9100000000000004E-06 (docs/excel-semantics/numbers.md "Decimals
+    // reach a double through an x87 multiply by 10^-n"; probes-numeric/t3658-round-scaling Hits!C
+    // and E, -fresh C and D, excel-graph). Longer digit strings and positive exponents were not
+    // probed for it, so they keep the nearest double (T-3932).
+    let number = written
+        .filter(|_| exponent <= 0)
+        .and_then(|digits| {
+            let place = exponent.checked_sub(fraction_digits)?;
+            x87_decimal_to_f64(digits, place)
+        })
+        .map_or(number, |converted| converted.copysign(number));
     (leading >= MIN_LEADING_EXPONENT).then(|| flush_subnormal(number))
 }
 
@@ -434,6 +457,9 @@ enum TextRules {
 fn value_to_text(value: f64, rules: TextRules) -> String {
     /// Longest plain-notation string (sign excluded) before Excel switches to E notation.
     const MAX_PLAIN_LEN: usize = 20;
+    /// Longest plain string for an IM* part below 1 (sign excluded): 21 characters, one more than
+    /// coercion allows (probes/eng-im-part-plain-boundary, docs/excel-semantics/engineering.md).
+    const MAX_COMPLEX_FRACTION_PLAIN_LEN: usize = 21;
     /// Smallest decimal exponent an IM* part writes in plain notation whatever its length.
     const MIN_COMPLEX_PLAIN_EXPONENT: i32 = -5;
     /// Largest decimal exponent an IM* part writes in plain notation whatever its length.
@@ -466,7 +492,9 @@ fn value_to_text(value: f64, rules: TextRules) -> String {
     let plain = match rules {
         TextRules::Coercion => plain_len(digits.len(), exponent) <= MAX_PLAIN_LEN,
         TextRules::ComplexPart => {
-            plain_len(digits.len(), exponent) <= MAX_PLAIN_LEN
+            let len = plain_len(digits.len(), exponent);
+            len <= MAX_PLAIN_LEN
+                || (exponent < 0 && len <= MAX_COMPLEX_FRACTION_PLAIN_LEN)
                 || (MIN_COMPLEX_PLAIN_EXPONENT..=MAX_COMPLEX_PLAIN_EXPONENT).contains(&exponent)
         }
     };

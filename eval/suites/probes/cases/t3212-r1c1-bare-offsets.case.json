@@ -1,0 +1,259 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3212: Excel's short R1C1 forms typed in R1C1 mode (`entered_r1c1`): bare R/C offsets (RC, R[-1]C, RC2), whole rows and columns (R2, R[1], C3, C[-1]), ranges, lower case, other sheets, and LET/LAMBDA names r, c, rc, r1c1. H holds the typed cell, I its FORMULATEXT, J ISBLANK (a refused entry leaves it blank).",
+ "tags": [
+  "M2",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "B2": 1,
+    "C2": 2,
+    "D2": 4,
+    "B3": 10,
+    "C3": 20,
+    "D3": 40,
+    "B4": 100,
+    "C4": 200,
+    "D4": 400,
+    "H10": {
+     "entered_r1c1": "=R[-8]C[-6]"
+    },
+    "I10": "=FORMULATEXT(H10)",
+    "J10": "=ISBLANK(H10)",
+    "H11": {
+     "entered_r1c1": "=SUM(R2)"
+    },
+    "I11": "=FORMULATEXT(H11)",
+    "J11": "=ISBLANK(H11)",
+    "H12": {
+     "entered_r1c1": "=SUM(R[-9])"
+    },
+    "I12": "=FORMULATEXT(H12)",
+    "J12": "=ISBLANK(H12)",
+    "H13": {
+     "entered_r1c1": "=SUM(C3)"
+    },
+    "I13": "=FORMULATEXT(H13)",
+    "J13": "=ISBLANK(H13)",
+    "H14": {
+     "entered_r1c1": "=SUM(C[-5])"
+    },
+    "I14": "=FORMULATEXT(H14)",
+    "J14": "=ISBLANK(H14)",
+    "H15": {
+     "entered_r1c1": "=R2C"
+    },
+    "I15": "=FORMULATEXT(H15)",
+    "J15": "=ISBLANK(H15)",
+    "H16": {
+     "entered_r1c1": "=R[-12]C[-5]+RC[-100]"
+    },
+    "I16": "=FORMULATEXT(H16)",
+    "J16": "=ISBLANK(H16)",
+    "H17": {
+     "entered_r1c1": "=R3C2"
+    },
+    "I17": "=FORMULATEXT(H17)",
+    "J17": "=ISBLANK(H17)",
+    "H18": {
+     "entered_r1c1": "=RC2"
+    },
+    "I18": "=FORMULATEXT(H18)",
+    "J18": "=ISBLANK(H18)",
+    "H19": {
+     "entered_r1c1": "=R2C[-5]"
+    },
+    "I19": "=FORMULATEXT(H19)",
+    "J19": "=ISBLANK(H19)",
+    "H20": {
+     "entered_r1c1": "=R[-17]C2"
+    },
+    "I20": "=FORMULATEXT(H20)",
+    "J20": "=ISBLANK(H20)",
+    "H21": {
+     "entered_r1c1": "=SUM(R2C2:R4C2)"
+    },
+    "I21": "=FORMULATEXT(H21)",
+    "J21": "=ISBLANK(H21)",
+    "H22": {
+     "entered_r1c1": "=SUM(R2C:R4C)"
+    },
+    "I22": "=FORMULATEXT(H22)",
+    "J22": "=ISBLANK(H22)",
+    "H23": {
+     "entered_r1c1": "=rc[-6]"
+    },
+    "I23": "=FORMULATEXT(H23)",
+    "J23": "=ISBLANK(H23)",
+    "H24": {
+     "entered_r1c1": "=ROW(RC)"
+    },
+    "I24": "=FORMULATEXT(H24)",
+    "J24": "=ISBLANK(H24)",
+    "H25": {
+     "entered_r1c1": "=COLUMN(RC)"
+    },
+    "I25": "=FORMULATEXT(H25)",
+    "J25": "=ISBLANK(H25)",
+    "H26": {
+     "entered_r1c1": "=ROWS(R)"
+    },
+    "I26": "=FORMULATEXT(H26)",
+    "J26": "=ISBLANK(H26)",
+    "H27": {
+     "entered_r1c1": "=COLUMNS(C)"
+    },
+    "I27": "=FORMULATEXT(H27)",
+    "J27": "=ISBLANK(H27)",
+    "H28": {
+     "entered_r1c1": "=T!RC"
+    },
+    "I28": "=FORMULATEXT(H28)",
+    "J28": "=ISBLANK(H28)",
+    "H29": {
+     "entered_r1c1": "=T!R[-3]C[-6]"
+    },
+    "I29": "=FORMULATEXT(H29)",
+    "J29": "=ISBLANK(H29)",
+    "H30": {
+     "entered_r1c1": "=LET(rc,5,rc+1)"
+    },
+    "I30": "=FORMULATEXT(H30)",
+    "J30": "=ISBLANK(H30)",
+    "H31": {
+     "entered_r1c1": "=LET(r,5,r+1)"
+    },
+    "I31": "=FORMULATEXT(H31)",
+    "J31": "=ISBLANK(H31)",
+    "H32": {
+     "entered_r1c1": "=LET(c,5,c+1)"
+    },
+    "I32": "=FORMULATEXT(H32)",
+    "J32": "=ISBLANK(H32)",
+    "H33": {
+     "entered_r1c1": "=LAMBDA(c,c+1)(2)"
+    },
+    "I33": "=FORMULATEXT(H33)",
+    "J33": "=ISBLANK(H33)",
+    "H35": {
+     "entered_r1c1": "=LET(r1c1,5,r1c1+1)"
+    },
+    "I35": "=FORMULATEXT(H35)",
+    "J35": "=ISBLANK(H35)",
+    "H36": {
+     "entered_r1c1": "=LET(x,5,x+1)"
+    },
+    "I36": "=FORMULATEXT(H36)",
+    "J36": "=ISBLANK(H36)",
+    "H37": {
+     "entered_r1c1": "=R[0]C[-6]"
+    },
+    "I37": "=FORMULATEXT(H37)",
+    "J37": "=ISBLANK(H37)",
+    "H38": {
+     "entered_r1c1": "=R0C1"
+    },
+    "I38": "=FORMULATEXT(H38)",
+    "J38": "=ISBLANK(H38)",
+    "H39": {
+     "entered_r1c1": "=RC[0]*0+1"
+    },
+    "I39": "=FORMULATEXT(H39)",
+    "J39": "=ISBLANK(H39)",
+    "H40": {
+     "entered_r1c1": "=SUM(R[-29]:R[-27])"
+    },
+    "I40": "=FORMULATEXT(H40)",
+    "J40": "=ISBLANK(H40)",
+    "H41": {
+     "entered_r1c1": "=SUM(C2:C3)"
+    },
+    "I41": "=FORMULATEXT(H41)",
+    "J41": "=ISBLANK(H41)",
+    "H42": {
+     "entered_r1c1": "=SUM(R2:R3)"
+    },
+    "I42": "=FORMULATEXT(H42)",
+    "J42": "=ISBLANK(H42)",
+    "H43": {
+     "entered_r1c1": "=ROWS(R[-1])"
+    },
+    "I43": "=FORMULATEXT(H43)",
+    "J43": "=ISBLANK(H43)",
+    "H44": {
+     "entered_r1c1": "=SUM(RC[-6]:RC[-5])"
+    },
+    "I44": "=FORMULATEXT(H44)",
+    "J44": "=ISBLANK(H44)",
+    "H45": {
+     "entered_r1c1": "=R[-100]C[-7]"
+    },
+    "I45": "=FORMULATEXT(H45)",
+    "J45": "=ISBLANK(H45)",
+    "H46": {
+     "entered_r1c1": "=RC[16384]"
+    },
+    "I46": "=FORMULATEXT(H46)",
+    "J46": "=ISBLANK(H46)",
+    "H47": {
+     "entered_r1c1": "=R2C16385"
+    },
+    "I47": "=FORMULATEXT(H47)",
+    "J47": "=ISBLANK(H47)",
+    "H48": {
+     "entered_r1c1": "=R[1048576]C[-7]"
+    },
+    "I48": "=FORMULATEXT(H48)",
+    "J48": "=ISBLANK(H48)",
+    "H49": {
+     "entered_r1c1": "=R1048577C1"
+    },
+    "I49": "=FORMULATEXT(H49)",
+    "J49": "=ISBLANK(H49)",
+    "H50": {
+     "entered_r1c1": "=SUM(R:R[1])*0+ROWS(R[-50]:R[-49])"
+    },
+    "I50": "=FORMULATEXT(H50)",
+    "J50": "=ISBLANK(H50)",
+    "H51": {
+     "entered_r1c1": "=R[-46]C[-7]:R[-45]C[-7]"
+    },
+    "I51": "=FORMULATEXT(H51)",
+    "J51": "=ISBLANK(H51)",
+    "H52": {
+     "entered_r1c1": "=SUM(T!C1)"
+    },
+    "I52": "=FORMULATEXT(H52)",
+    "J52": "=ISBLANK(H52)",
+    "H53": {
+     "entered_r1c1": "=SUM(T!R1)"
+    },
+    "I53": "=FORMULATEXT(H53)",
+    "J53": "=ISBLANK(H53)",
+    "H54": {
+     "entered_r1c1": "=r2c2"
+    },
+    "I54": "=FORMULATEXT(H54)",
+    "J54": "=ISBLANK(H54)",
+    "H55": {
+     "entered_r1c1": "=R2C2 + RC[-7]"
+    },
+    "I55": "=FORMULATEXT(H55)",
+    "J55": "=ISBLANK(H55)",
+    "A2": 3
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": 7,
+    "B2": 1000
+   }
+  }
+ ],
+ "expected": {}
+}

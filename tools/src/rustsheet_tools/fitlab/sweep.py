@@ -58,6 +58,29 @@ def number_literal(text: str) -> float:
 
 _UNSIGNED = r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?"
 _NUMBER = re.compile(rf"[+-]?{_UNSIGNED}")
+
+_COMPLEX_TEXT = re.compile(
+    rf"(?P<re>[+-]?{_UNSIGNED})?"
+    rf"(?:(?P<sign>[+-]?)(?P<im>{_UNSIGNED})?(?P<unit>[ij]))?"
+)
+
+
+def parse_complex_text(text: str) -> tuple[float, float]:
+    """An IM* function's text result (`1.5-2i`, `-0.5j`, `i`, `3`, `1E+307+1.6E+308i`) as its
+    real and imaginary parts; ValueError for anything else. The imaginary part needs its own sign
+    when a real part precedes it, so `1.5i` is 0+1.5i, not 1.5+1i."""
+    m = _COMPLEX_TEXT.fullmatch(text)
+    if m is None or (m["re"] is None and m["unit"] is None):
+        msg = f"not a complex number: {text!r}"
+        raise ValueError(msg)
+    if m["unit"] is None:
+        return float(m["re"]), 0.0
+    if m["re"] is not None and not m["sign"]:
+        return 0.0, float(m["re"])  # `1.5i`: the greedy real part took the coefficient
+    im = float(m["im"]) if m["im"] is not None else 1.0
+    return (float(m["re"]) if m["re"] is not None else 0.0), (-im if m["sign"] == "-" else im)
+
+
 _REF = re.compile(
     r"(?:(?P<sheet>'(?:[^']|'')+'|[A-Za-z_][\w.]*)!)?(?P<first>\$?[A-Za-z]{1,3}\$?\d+)"
     r"(?:\s*:\s*(?P<last>\$?[A-Za-z]{1,3}\$?\d+))?"
@@ -84,8 +107,9 @@ class Cell:
     address: str
     formula: str
     args: tuple[Arg, ...]
-    expected: float  # NaN when Excel's value is an error (`error` names it)
+    expected: float  # NaN when Excel's value is an error (`error` names it); a complex text's real part
     error: str | None = None  # Excel's error value (`#NUM!`) when the cell holds one
+    expected_im: float | None = None  # a complex text's imaginary part (`Fit.complex_text`), else None
 
     @property
     def key(self) -> str:
@@ -205,6 +229,17 @@ def _exact_power(base: float, power: float) -> float:
         raise UnparsedError(msg) from None
 
 
+# The smallest normal double: Excel returns a smaller nonzero result of `*`, `/` and `^` as 0 and
+# reads a smaller literal as 0, but keeps a subnormal sum or difference (numbers.md, "Subnormal
+# results become 0"; probes/subnormal-function-results, probes/precision-and-rounding A14, A70).
+_SMALLEST_NORMAL = 2.0**-1022
+
+
+def _flush_subnormal(value: float) -> float:
+    """0 for a nonzero `value` below the smallest normal double, else `value`."""
+    return 0.0 if 0 < abs(value) < _SMALLEST_NORMAL else value
+
+
 class _Arithmetic:
     """A recursive-descent parser over `_tokens(text)`, evaluating as it goes (see `arithmetic`)."""
 
@@ -242,13 +277,14 @@ class _Arithmetic:
         literal = number_literal(tok)
         if not math.isfinite(literal):
             raise self.fail(f"non-finite literal {tok}")
-        return literal
+        return _flush_subnormal(literal)
 
     def power(self, depth: int) -> float:
         value = self.primary(depth)
         while self.peek() == "^":
             self.take()
-            value = _exact_power(value, self.primary(depth))  # Excel's ^ is left-associative
+            # Excel's ^ is left-associative and flushes a subnormal power to 0
+            value = _flush_subnormal(_exact_power(value, self.primary(depth)))
         return value
 
     def multiplicative(self, depth: int) -> float:
@@ -258,7 +294,7 @@ class _Arithmetic:
             rhs = self.power(depth)
             if op == "/" and rhs == 0:
                 raise self.fail("division by zero")
-            value = X87.mul(value, rhs) if op == "*" else X87.div(value, rhs)
+            value = _flush_subnormal(X87.mul(value, rhs) if op == "*" else X87.div(value, rhs))
         return value
 
     def additive(self, depth: int) -> float:
@@ -273,7 +309,8 @@ class _Arithmetic:
 def arithmetic(text: str) -> float:
     """Evaluates `+ - * / ^`, unary signs and parentheses over numeric literals with Excel's
     operator model: each of `+ - * /` rounds its exact result to 64 bits, then to a double
-    (numbers.md, "Division rounds twice"), and `^` must be exact (`_exact_power`). As in Excel,
+    (numbers.md, "Division rounds twice"), and `^` must be exact (`_exact_power`). A subnormal
+    result of `*`, `/` or `^`, or a subnormal literal, is 0; `+` and `-` keep one. As in Excel,
     a unary sign binds tighter than `^` (`-2^2` is 4). A non-finite literal, an overflow, or
     nesting deeper than 50 is UnparsedError."""
     parser = _Arithmetic(text)
@@ -417,10 +454,13 @@ def select(
     where: Any = None,
     *,
     errors: bool = False,
+    complex_text: bool = False,
 ) -> None:
     """Adds `book`'s cells whose formula matches `pattern` to `sweep`. `where(cell)`, when given,
     keeps only the cells it returns true for. With `errors`, cells whose Excel value is an error
-    are kept too (a `Cell` with `error` set), so a candidate is scored on rejecting them."""
+    are kept too (a `Cell` with `error` set), so a candidate is scored on rejecting them. With
+    `complex_text`, a cell whose Excel value is an IM* function's text (`parse_complex_text`) is
+    kept with its two parts (`expected`, `expected_im`)."""
     for sheet, cells in book.sheets.items():
         for address, raw in cells.items():
             if not (isinstance(raw, str) and (m := pattern.match(raw))):
@@ -430,7 +470,8 @@ def select(
             is_error = (
                 errors and isinstance(entry, dict) and entry.get("t") == "e" and not is_undecoded(entry)
             )
-            if not isinstance(entry, dict) or (entry.get("t") != "n" and not is_error):
+            parts = _complex_parts(entry) if complex_text else None
+            if not isinstance(entry, dict) or (entry.get("t") != "n" and not is_error and parts is None):
                 sweep.non_numeric += 1
                 continue
             try:
@@ -440,12 +481,24 @@ def select(
                 continue
             if is_error:
                 cell = Cell(case_id, sheet, address, raw, args, math.nan, str(entry["v"]))
+            elif parts is not None:
+                cell = Cell(case_id, sheet, address, raw, args, parts[0], expected_im=parts[1])
             else:
                 cell = Cell(case_id, sheet, address, raw, args, float(entry["v"]))
             if where is not None and not where(cell):
                 sweep.excluded += 1
                 continue
             sweep.cells.append(cell)
+
+
+def _complex_parts(entry: Any) -> tuple[float, float] | None:
+    """The parts of a text oracle value that is a complex number, else None."""
+    if not (isinstance(entry, dict) and entry.get("t") == "s"):
+        return None
+    try:
+        return parse_complex_text(str(entry.get("v")))
+    except ValueError:
+        return None
 
 
 class RefusedSweepError(ValueError):
@@ -473,6 +526,7 @@ def load_sweep(
     calls: list[str] | None = None,
     *,
     holdout_only: bool = False,
+    complex_text: bool = False,
 ) -> Sweep:
     """The matching cells of every case in `case_ids` (`suite/name`); a nested call in an argument
     reads Excel's value of the same call from the `calls` cases (`call_values`). Gate A tables are
@@ -485,5 +539,5 @@ def load_sweep(
         entry = case_entry(case_id)
         book = load_workbook(Path(entry["path"]), Path(entry["sidecar"]))
         book = Workbook(book.sheets, book.oracle, known)
-        select(entry["id"], book, regex, sweep, where, errors=errors)
+        select(entry["id"], book, regex, sweep, where, errors=errors, complex_text=complex_text)
     return sweep

@@ -71,8 +71,20 @@ pub(crate) enum GridReading {
     /// skipped; an error element ranks as a referenced error, so a direct error beats it either
     /// side (UNVERIFIED: only a lone error element is probed; T-2065) (SPEC-0014 rule 4: SUM, AVERAGE,
     /// MIN, MAX, PRODUCT; `SUM(OFFSET(A1,0,0,{1;2}))` is 2, `AVERAGE(OFFSET(A1,{0;-1},0))`
-    /// `#REF!`; probes/reference-lift-consumers E1-E25, -b2 E117-E121, E181, E185).
+    /// `#REF!`; probes/reference-lift-consumers E1-E25, -b2 E117-E121, E181, E185). STDEV.S,
+    /// VAR.S and SUMSQ too: `SUMSQ(OFFSET(A1,0,0,{1;2}))` is 2, and the top-left cell is not the
+    /// formula row's (`SUMSQ(OFFSET(A2,0,0,{1;2}))` in row 1 is 20000; probes/t2065-lift-*,
+    /// probes/t2816-lift-*, T-2824).
     TopLeft,
+    /// Each element's top-left cell read as an array element, so text follows the consumer's
+    /// array rule and booleans are skipped, unlike a referenced cell (AVERAGEA, MAXA, MINA and the
+    /// VARA family:
+    /// `AVERAGEA(OFFSET(A4,{0;3},0))` over "5" and 7 is 3.5, over a blank and TRUE `#DIV/0!`, and
+    /// `MAXA(..)` over a blank and TRUE 0; probes/t2816-lift-averagea-*, -maxa-*, T-2824). MAXA,
+    /// MINA and the VARA family skip text, as their array rule does: `MAXA(OFFSET(A4,{0;4},0))`
+    /// over "5" and -3 is -3, `VARA(OFFSET(A4,{0;3;4},0))` over "5", 7 and -3 is 50
+    /// (probes/t3533-lift-*, T-3533). Blanks and errors are as under `TopLeft`.
+    TopLeftElements,
 }
 
 /// How the walker reads a nested cell of a GROUPBY or PIVOTBY result in an array argument
@@ -176,6 +188,15 @@ impl AggregateWalk {
             policy,
             held: None,
             numbers: None,
+        }
+    }
+
+    /// A walk with nothing held yet, for a visitor that folds the numbers `rules` give
+    /// ([`Model::aggregate_number`]), so array elements that give none are not walked.
+    pub(crate) fn for_numbers(policy: AggregatePolicy, rules: NumberRules) -> Self {
+        AggregateWalk {
+            numbers: Some(rules.array),
+            ..AggregateWalk::new(policy)
         }
     }
 
@@ -356,7 +377,7 @@ impl Model {
     {
         let items = walk.policy.errors == ErrorRule::Items;
         let read = match read {
-            RefArg::Grid(grid) if walk.policy.grids == GridReading::TopLeft => {
+            RefArg::Grid(grid) if walk.policy.grids != GridReading::Values => {
                 return self.walk_top_left_cells(&grid, cell, walk, visit);
             }
             read => read.into_ranges_or_value(),
@@ -491,9 +512,10 @@ impl Model {
         }
     }
 
-    /// [`GridReading::TopLeft`]: each element of `grid` in row-major order, a reference as its
-    /// top-left cell (one cell read per element, so the work is the grid's size) and an error
-    /// as a referenced error.
+    /// [`GridReading::TopLeft`] and [`GridReading::TopLeftElements`]: each element of `grid` in
+    /// row-major order, a reference as its top-left cell (one cell read per element, so the work
+    /// is the grid's size), visited as a referenced cell or as an array element, and an error as
+    /// a referenced error.
     fn walk_top_left_cells<F>(
         &mut self,
         grid: &RefGrid,
@@ -515,7 +537,15 @@ impl Model {
                         left: range.left,
                         right: range.left,
                     };
-                    self.walk_areas(std::slice::from_ref(&top_left), cell, walk, visit)?;
+                    let top_left = std::slice::from_ref(&top_left);
+                    if walk.policy.grids == GridReading::TopLeftElements {
+                        let mut as_element = |model: &mut Self, _: ItemSource, value| {
+                            visit(model, ItemSource::ArrayElement, value)
+                        };
+                        self.walk_areas(top_left, cell, walk, &mut as_element)?;
+                    } else {
+                        self.walk_areas(top_left, cell, walk, visit)?;
+                    }
                 }
                 RefElement::Error(error) => walk.referenced_error(CalcResult::new_error(
                     error.clone(),
@@ -540,10 +570,7 @@ impl Model {
     where
         F: FnMut(f64),
     {
-        let walk = AggregateWalk {
-            numbers: Some(rules.array),
-            ..AggregateWalk::new(policy)
-        };
+        let walk = AggregateWalk::for_numbers(policy, rules);
         self.walk_aggregate_args_with(args, cell, walk, |model, source, value| {
             // The hot path: a number in a referenced cell counts under every rule.
             if let (ItemSource::ReferencedCell, CalcResult::Number(number)) = (source, &value) {

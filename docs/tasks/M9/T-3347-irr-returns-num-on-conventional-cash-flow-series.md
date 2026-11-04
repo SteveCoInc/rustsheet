@@ -31,6 +31,13 @@ accuracy stage.
 - The IRR fallback is one of the fitted pieces of decision 0188's code audit: if the fix changes it, tag it per R4.3
   (T-3361) and keep it inside its measured range.
 
+- Gate A (T-3586) carries six accuracy/IRR/s1 points this task owns: A271, A280, A286, A288, A290 and A298.
+  These are conventional series with roots from -2.9E-4 to 2.6E-4, where the engine is `#NUM!` and Excel returns the
+  root. They are `known-failures.tsv` lines; remove them once they pass.
+- Excel itself is `#NUM!` on four other near-zero points of that table, and the engine already matches: A273, A276,
+  A279 and A293 (roots -5.0E-7 to 2.4E-5). A276's root, 2.4E-5, is inside this task's band, so a fix must keep
+  `#NUM!` there.
+
 ## Acceptance criteria
 - [ ] Conventional series with an IRR between 1e-5 and 3e-4, and near -10%, match Excel's result (number or error, within 15 significant digits for a number) on the oracle-filled cells.
 - [ ] A new public probe case under eval/suites/probes/cases/ (one milestone tag, M9; decision 0057), filled by the
@@ -47,6 +54,15 @@ accuracy stage.
       one side is an error and the other a number. This is a floor only: the target stays Excel's value.
 - [ ] The rule (what Excel does, what was wrong) is in docs/excel-semantics/ in the same PR.
 - [ ] `make check` green; reviewers approve.
+
+## Cells of this task's hold-out (gap triage 2026-11-04b)
+T-3411 listed these as "Type cells of T-3347's hold-out" and owned them until it closed (PR #3063); no open task
+named them after it. Excel returns the root, the engine is `#NUM!` (`make eval` on origin/main a7b115e9e). With the
+fallback's Newton cap lifted (local experiment, not committed) 10 come out at Excel's value (A13, A18, A21, A39,
+A46, A49, A53, A61, A69, A105), 11 cells of the case that pass now break, and the other 20 return a number 7 to 14
+digits from Excel's (A1: Excel 1.9690908018343833E-5, Newton from v = 0 1.9690910050940147E-5), so Excel's stop is
+not the fallback's. T-4027 (the level annuities of probes/t3406) is the same path; say so in both if one rule fits.
+- probes-numeric/t3347-irr-conventional-holdout.case.json (30): P!A1, A3, A7, A13, A18, A21, A23, A39, A44, A45, A46, A47, A49, A50, A53, A54, A56, A57, A61, A66, A67, A69, A71, A90, A95, A103, A105, A107, A110, A119
 
 ## Out of scope
 - Last-digit (bit) parity on cells already within 15 digits: Phase 1b (decision 0188 R5).

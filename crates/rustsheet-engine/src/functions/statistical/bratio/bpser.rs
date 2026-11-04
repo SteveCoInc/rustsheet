@@ -24,13 +24,18 @@ const BPSER_GAMMALN_FORM_MAX: f64 = 8.0;
 /// series times EXP(fl(a LN x) - lnB)"; model `r2-bpser-small/lib.py` `bpser_w3` with GL53):
 /// - s = fl(1/a) + sum `c_n/(a + n)`, `c_n = (c_{n-1}·((0.5 - b/n) + 0.5))·x`, every op an x87 op
 ///   stored to a double, summed forward until s stops changing (no TOMS tolerance);
-/// - z = fl64(fl(a·LN x) - L), never stored, and I = fl(EXP(z)·s) with Excel's EXP of the
-///   extended argument (T-2645).
+/// - z = fl(a·LN x) - L exact; for min(a, b) < 1 and b0 < 8, zh = z rounded to nearest, zl = z - zh
+///   and I = fl(fl(EXP(zh)·s)·fl(1 + zl)) (T-3879); elsewhere z = fl64(fl(a·LN x) - L), never
+///   stored, and I = fl(EXP(z)·s) with Excel's EXP of the extended argument (T-2645).
 ///
 /// `None` where L is not ported (both shapes >= 1 and one above 8), and where
 /// [`bpser_with_ln_beta`] gives `None`.
 pub(super) fn bpser(a: f64, b: f64, x: f64) -> Option<f64> {
-    bpser_with_ln_beta(a, b, x, bpser_neg_ln_beta(a, b)?)
+    // Excel's GAMMALN-sum L is a stored double only for min(a, b) < 1 and b0 < 8 (GL53): there z
+    // splits (T-3873, docs/research/t2464/r7-bpser-nondouble-z/RESULTS.md). Elsewhere L is held
+    // extended or unsolved (T-3569), so today's single EXP stays (not evidenced).
+    let split = a.min(b) < 1.0 && a.max(b) < BPSER_GAMMALN_FORM_MAX;
+    bpser_series(a, b, x, bpser_neg_ln_beta(a, b)?, split)
 }
 
 /// [`bpser`] with -L given by the caller: F.TEST's tail takes the series and EXP as BETA.DIST's
@@ -43,6 +48,11 @@ pub(in super::super) fn bpser_with_ln_beta(
     x: f64,
     neg_ln_beta: Register,
 ) -> Option<f64> {
+    bpser_series(a, b, x, neg_ln_beta, false)
+}
+
+/// The series and EXP of [`bpser`]; `split` forms I as the split-z product (see [`bpser`]).
+fn bpser_series(a: f64, b: f64, x: f64, neg_ln_beta: Register, split: bool) -> Option<f64> {
     if a <= 0.0 {
         return None;
     }
@@ -76,7 +86,19 @@ pub(in super::super) fn bpser_with_ln_beta(
         return None;
     }
     let z = Register::load(a_ln_x).add(neg_ln_beta);
-    Some(extended_product(excel_exp_extended(z), s))
+    if !split {
+        return Some(extended_product(excel_exp_extended(z), s));
+    }
+    // Excel's form where z is not a double: zh = z rounded to the nearest double (ties to even),
+    // zl = z - zh (exact, a double), I = fl(fl(EXP(zh)·s)·fl(1 + zl)); zl = 0 gives fl(EXP(z)·s)
+    // (T-3873: exact on 1,139 of 1,139 non-double-z hold-out cells and 1,920 of 1,920 r5 cells).
+    let zh = z.store();
+    if !zh.is_finite() {
+        return Some(extended_product(excel_exp_extended(z), s));
+    }
+    let zl = z.add(Register::load(zh).neg()).store();
+    let head = extended_product(excel_exp_extended(Register::load(zh)), s);
+    Some(extended_product(head, extended_sum(1.0, zl)))
 }
 
 /// -L, bpser's ln B(a, b) negated, as an x87 register (`bratio_excel.py` `lnb_w3`):

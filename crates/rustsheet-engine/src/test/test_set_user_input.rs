@@ -45,11 +45,11 @@ fn test_currencies() {
     );
     assert_eq!(model._get_text("B2"), *"TRUE");
 
-    // Dollar is on the right
+    // Dollar is on the right: typed text, not a number (probes/t3980-typed-percent-currency A4:C6)
     assert_eq!(model._get_text("A3"), "100$");
-    assert_eq!(model._get_text("B3"), *"TRUE");
+    assert_eq!(model._get_text("B3"), *"FALSE");
 
-    assert_eq!(model._get_text("A4"), "3.14$");
+    assert_eq!(model._get_text("A4"), "3.1415926$");
 }
 
 #[test]
@@ -66,7 +66,8 @@ fn scientific() {
         Ok(CellValue::Number(0.0003))
     );
     assert_eq!(model._get_text("Sheet1!A1"), "3.00E-04");
-    assert_eq!(model._get_text("Sheet1!A2"), "5.00E-04");
+    // `5e-4$` is text, not a number (probes/t3334-criteria-operand-forms H39).
+    assert_eq!(model._get_text("Sheet1!A2"), "5e-4$");
     assert_eq!(model._get_text("Sheet1!A3"), "6.00E-06");
 }
 
@@ -193,7 +194,8 @@ fn test_negative_currencies() {
     assert_eq!(model._get_text("A3"), *"($345)");
 
     assert_eq!(model._get_text("B1"), *"-200$");
-    assert_eq!(model._get_text("B2"), *"-92.69$");
+    // Typed trailing `$` stays text, unrounded (probes/t3980-typed-percent-currency A6).
+    assert_eq!(model._get_text("B2"), *"-92.689$");
     assert_eq!(model._get_text("B3"), *"-22$");
 }
 

@@ -196,6 +196,31 @@ impl Model {
                     .filter(|value| !matches!(value, CalcResult::EmptyArg))
                     .find_map(|value| model.cast_number_ref(value, cell).err())
                     .unwrap_or_else(|| error.clone()),
+                // A data error cell still beats a number, numeric text or a boolean, but not a
+                // scalar cell of text that does not read as a number: `SMALL(Data!G9,Data!G6)` is
+                // `#VALUE!`, not G9's `#DIV/0!` (statistics.md "A text scalar argument is #VALUE!
+                // before an error cell as the data", T-3788). A typed error as the data keeps its
+                // own error: `SMALL(#DIV/0!,"abc")` is `#DIV/0!` (gen-m9/5830c688df805e71 A463). An
+                // error-valued scalar against an error data cell is unprobed: the data's error wins.
+                Err(error)
+                    if args.first().is_some_and(|node| {
+                        matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. })
+                    }) =>
+                {
+                    values
+                        .iter()
+                        .zip(args)
+                        .skip(1)
+                        .filter(|(value, node)| {
+                            !matches!(value, CalcResult::EmptyArg | CalcResult::Error { .. })
+                                && matches!(
+                                    *node.ungrouped_at(cell.row),
+                                    Node::ReferenceKind { .. }
+                                )
+                        })
+                        .find_map(|(value, _)| model.cast_number_ref(value, cell).err())
+                        .unwrap_or_else(|| error.clone())
+                }
                 Err(error) => error.clone(),
             },
         )

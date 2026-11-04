@@ -18,11 +18,12 @@ Otherwise the Outcome records each candidate's bit-exact and within-4-ulp counts
 time box).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31m (`make eval` on origin/main 900fbc1bf, excel-graph). An ownership check over every failing
   Excel cell used `scripts/exit_owners.py`'s `owned` rule over the open task files of origin/main and of every
   `origin/agent/*` branch pushed since 2026-10-29. It found these cumulative cells named by no open task. None is
   visibly off, so this task carries no campaign key (decision 0083). The visibly-off cdf cells of the same grids are
-  T-3482's (shapes 5 to 100) and T-3475's on their branches; the density cells of the a = 0.5 grid go to T-2821, and
+  T-3592's (shapes 5 to 100); the density cells of the a = 0.5 grid go to T-2821, and
   those of the a = 5 and 10 grids to T-3392 (this triage adds them there).
 - Scored in triage against 50-digit mpmath (`mp.betainc(a, b, 0, x, regularized=True)`), in ulps of Excel's value:
   Excel is not correctly rounded on most of them, so the target is Excel's arithmetic, not the math:
@@ -40,7 +41,7 @@ time box).
 - Cells (eval/suites/probes-numeric, which has no baseline file: a fixed cell leaves the report's failing list):
 - probes-numeric/m9-beta-dist-a0p5.case.json (9): Calc!A1, A3, A5, A7, A9, A11, A19, A25, A31
 - probes-numeric/m9-beta-dist-a5.case.json (5): Calc!A1, A3, A9, A19, A25
-- probes-numeric/m9-beta-dist-a10.case.json (6): Calc!A5, A7, A9, A19, A37, A49
+- probes-numeric/m9-beta-dist-a10.case.json (7): Calc!A5, A7, A9, A19, A37, A39, A49 (A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours ...003, math 0.5: added by gap triage 2026-11-03, no other open task named it)
 - probes/stat-argument-modes.case.json (1): Sheet1!H374
 
 `NEGBINOM.DIST(5,5,0.4,TRUE)` (H374) is I_0.4(5, 6): Excel 0.3668967424000001, ours 0.36689674240000014, 1 ulp. It is in
@@ -59,5 +60,18 @@ probes, so its line leaves eval/baseline/probes.txt when fixed.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- The visibly-off cdf cells of the same grids (T-3482, T-3475) and every density cell (T-2821, T-3392).
+- The visibly-off cdf cells of the same grids (T-3592) and every density cell (T-2821, T-3392).
 - The incomplete-beta models themselves: T-3383 builds them; this task ports and scores them on these cells.
+
+## Cells added by gap triage (2026-11-01g)
+`make eval` on origin/main c0e330c2f (excel-graph): one more cdf cell of the a = 5 grid is named by no open task (main
+and every `origin/agent/*` branch), within 15 digits: A43 `BETA.DIST(0.1,5,50,TRUE)`, Excel 0.6385528602726223, ours
+0.6385528602726221 (1 ulp). It joins the 21 cells above under the same criteria.
+- probes-numeric/m9-beta-dist-a5.case.json (1): Calc!A43
+
+## Cells added by gap triage (2026-11-03)
+`make eval` on origin/main b9dac1c15 (excel-graph): one more cdf cell of the a = 10 grid is named by no open task (main
+and every `origin/agent/*` branch), within 15 digits: A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours
+0.5000000000000003 (1 ulp; the symmetric point, where the math is exactly 0.5). It joins the cells above under the same
+criteria.
+- probes-numeric/m9-beta-dist-a10.case.json (1): Calc!A39

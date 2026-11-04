@@ -24,6 +24,7 @@ side by side.
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
 differs from the pin) is listed as `not fetched` and skipped, with a note, by `run`/`check`/`update-baseline`.
+`run`/`check`/`update-baseline` take `--fetch-missing`: each *selected* suite whose cache is missing or stale is then fetched (as `fetch` does, printing `fetched <name> (<n> files)`) before scoring; a failed fetch prints `skipping <name>: fetch failed: <error>`, skips that suite and does not change the exit code. Without the flag nothing is fetched.
 Use this for sources that are too large or not redistributable (GPL / CC-BY-SA); never vendor them.
 
 Current suites:
@@ -89,6 +90,15 @@ Input conventions:
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
+- Optional `"api_names": [{"name": "N", "formula": "=ABS(1)"}]` defines workbook-scoped names
+  (with `"sheet": "S"`, a name scoped to sheet S, replayed with Graph `worksheets('S')/names/add` and
+  `Txn::define_sheet_name`; T-4014)
+  through the API after the typed entries and the sheet ops, in order (T-3264;
+  `tools/src/rustsheet_tools/api_names.py`): spec2xlsx records them as docProps custom properties
+  `rustsheet.apiname.<n>`, the excel-graph backend replays each with Graph `workbook/names/add`
+  (a 400 `InvalidArgument` is Excel refusing the name, which stays undefined; decision 0179) and the
+  other backends refuse such cases. The engine adapter replays each with `Txn::define_name` and skips
+  a name it refuses for nesting more than 65 calls, as Excel does; any other refusal fails the case.
 - Optional `"sheet_ops"` lists sheet edits made after the workbook loads and before it is
   recalculated (T-1608): `{"op":"add","sheet":"New"}` appends a sheet, `{"op":"rename",
   "sheet":"Data","to":"Inputs"}` renames one (formulas that refer to it are rewritten), and
@@ -96,7 +106,8 @@ Input conventions:
   `{"op":"insert_row","sheet":"S","row":1}` inserts one blank row above the 1-based row, shifting
   the cells below down (T-1933; Graph `range(address='1:1')/insert`). T-2323 adds `delete_row`
   (`row`), `insert_column` and `delete_column` (`column`, a letter), `delete_sheet` and
-  `convert_table` / `delete_table` (`table`); see docs/architecture/oracle.md for the Graph calls
+  `convert_table` / `delete_table` (`table`), and T-3629 `add_table` (`table` and `ref`, the range with its
+  header row first, header cells set in the case); see docs/architecture/oracle.md for the Graph calls
   and decision 0098 for the engine side (`convert_table` is refused there). Any other op or key is
   refused. spec2xlsx records them as docProps custom properties `rustsheet.sheetop.<n>`. The
   excel-graph backend replays them in the session after the typed entries and keeps its canary
@@ -218,8 +229,10 @@ Only `pass` counts as passing. Case statuses:
   Each `argument_coverage[]` row's `unseen_pairs` (T-3277) lists the expected argument-class pairs
   (parameter names and `ArgClass` of each) that its `pairwise` share counts but no Excel-evidence call has passed.
 - `eval/baseline/<suite>.txt`: known failures (see `docs/process/quality-gates.md`).
-- `eval/baseline/visible-parity.json`: the visible-parity lock (decision 0088). Task PRs never lower
-  it; the steward does, daily, with `make eval-lower-visible-lock` (decision 0093).
+- `eval/baseline/visible-parity.txt`: the visible-parity lock (decisions 0088, 0219), one sorted
+  `case<TAB>count` line per case with in-scope visibly-off cells; `check` fails a case above its
+  line, and a case with no line allows none. `update-baseline` writes new cases' lines; task PRs
+  never lower a line; the steward does, daily, with `make eval-lower-visible-lock` (decision 0093).
 
 ## Gate A: the accuracy check
 Normative design: [SPEC-0029](../specs/SPEC-0029-gate-a-accuracy-gate.md) (decision 0188 R2; the
@@ -427,8 +440,12 @@ A cell the run did not classify counts too, so nothing reads as met early. Each 
 carry `probe_r1c_off`, `probe_phase1b` and `calc_r1c_off`, and `probes_met` and `calc_met` read them. The
 table prints the R1(c) count with the visibly-off total in parentheses when that is larger. M1's frozen
 probe list still counts every visibly-off cell. `phase1b_evidence` holds the classes per probes,
-probes-numeric and ironcalc-calc, and its line is printed under the exit table. The Phase 1 exit script and
-`exit_owners.py` read these fields from T-3428.
+probes-numeric and ironcalc-calc, and its line is printed under the exit table. The report also writes
+`r1c_left_out`, every left-out cell with its class. `scripts/exit_owners.py` lists a probe row's
+`r1c_off_cells`, drops the left-out cells from the ironcalc-calc listing and the R3 passes from the rate
+listing, and `--all-off` drops left-out cells outside Gate B's suites. `scripts/phase1_exit.py` reads
+Gate B for its `function rate` line, as `n/a` with the missing suites when the run did not measure it
+(T-3428, decision 0211).
 
 ## CLI
 ```

@@ -2,8 +2,9 @@
 //! the same Newton with its own slope ([`odd_first_yield`]).
 
 use super::super::dates::{days_30_360_eu_ymd, days_30_360_us_ymd};
-use super::{discount_growth, OddArgs, OddFirstSchedule};
-use crate::formatter::dates::{date_to_serial_number, excel_serial_to_ymd};
+use super::coupon_schedule::next_coupon_date;
+use super::{days_between_not_neg, discount_growth, OddArgs, OddFirstSchedule};
+use crate::formatter::dates::{date_to_serial_number, excel_serial_to_ymd, from_excel_date};
 use crate::functions::date_and_time::is_leap_year;
 
 /// The settlement-to-maturity term of [`yield_start`]: `whole_years + days / year_days` years,
@@ -110,20 +111,36 @@ pub(super) fn excel_yield_newton(
     start: f64,
     price: impl Fn(f64) -> f64,
     dprice: impl Fn(f64) -> f64,
-) -> Option<f64> {
+) -> Option<NewtonStop> {
     let mut y = start;
-    for _ in 0..100 {
+    for check in 1..=NEWTON_CHECKS {
         let step = (price(y) - target) / dprice(y);
         if !step.is_finite() {
             return None;
         }
         if step.abs() < 1e-10 {
-            return Some(y);
+            return Some(NewtonStop {
+                value: y,
+                converged_on: Some(check),
+            });
         }
         y -= step;
     }
     // The 100th step can still overflow the iterate; inside the loop the next step catches that.
-    y.is_finite().then_some(y)
+    y.is_finite().then_some(NewtonStop {
+        value: y,
+        converged_on: None,
+    })
+}
+
+/// The most steps [`excel_yield_newton`] takes: it tests a step at most this many times.
+pub(super) const NEWTON_CHECKS: u32 = 100;
+
+/// Where [`excel_yield_newton`] stopped: its value, and the check (1 to [`NEWTON_CHECKS`]) whose
+/// step met the 1e-10 test, `None` when no check did and the value is the 100th iterate.
+pub(super) struct NewtonStop {
+    pub(super) value: f64,
+    pub(super) converged_on: Option<u32>,
 }
 
 /// ODDFYIELD: [`excel_yield_newton`] on ODDFPRICE from YIELD's start over the settlement-to-maturity
@@ -138,24 +155,53 @@ pub(super) fn odd_first_yield(odd: &OddArgs<4>, schedule: &OddFirstSchedule) -> 
         |y| schedule.price(y, discount_growth),
         |y| schedule.dprice(y),
     )
+    .map(|stop| stop.value)
+}
+
+/// [`OddFirstSchedule::slope_shift`] for a long first period: the basis' days (actual days on bases
+/// 1-3) from the settlement's next quasi-coupon date to the first coupon, over `e` (financial.md
+/// "ODDFYIELD stops short of ODDFPRICE's root", T-3031). 0 with the settlement in the last quasi
+/// period.
+pub(super) fn quasi_shift(
+    settlement: i64,
+    first_coupon: i64,
+    frequency: u32,
+    basis: u32,
+    e: f64,
+) -> Result<f64, String> {
+    let next_quasi = from_excel_date(next_coupon_date(settlement, first_coupon, frequency)?)?;
+    Ok(days_between_not_neg(next_quasi, from_excel_date(first_coupon)?, basis) / e)
 }
 
 impl OddFirstSchedule {
-    /// The slope ODDFYIELD's Newton takes at `yld`: d/dy of [`Self::price`], except that the odd
-    /// first coupon weighs as a regular one (`coupon` at the lead's exponent, not `lead`), as if the
-    /// bond's first period were regular. Excel: fitted on probes/oddfyield-solver-sweep, where this
-    /// slope from YIELD's start puts 323 of 324 coupon-bond cells within 1e-13 of Excel and the exact
-    /// slope 15 (financial.md "ODDFYIELD stops short of ODDFPRICE's root", T-2007).
+    /// The slope ODDFYIELD's Newton takes at `yld`: not d/dy of [`Self::price`]. Every coupon in it
+    /// is a regular one (`coupon`, also for the odd first coupon, not `lead`), there is one at each
+    /// quasi-coupon date from the settlement's next one on (`nq` of them before the
+    /// lead), and every exponent is `slope_shift` later than in the price. For a short first period
+    /// (no shift, no extra coupon) this is the bond's slope as if its first period were regular:
+    /// fitted on probes/oddfyield-solver-sweep, where it puts 323 of 324 coupon-bond cells within
+    /// 1e-13 of Excel and the exact slope 15 (T-2007). For a long one the shift and the extra
+    /// coupons take ironcalc-calc `PRICE_YIELD.xlsx` from 339 to 352 of 352 cells and
+    /// probes/oddf-date-order-domain-sweep from 1196 to 1256 of 1260 (a zero coupon there is
+    /// bit-exact only with the shift, 366/365 on basis 1 for a leap-year quasi period), and a
+    /// fresh sweep drawn after the model was frozen passes 157 of 160 (financial.md "ODDFYIELD
+    /// stops short of ODDFPRICE's root", T-3031).
     fn dprice(&self, yld: f64) -> f64 {
         let x = yld / self.m + 1.0;
+        // `nq` regular coupons ahead of the lead for a long first period (`offset` is `nq`).
+        let quasi = if self.first_index == 1 {
+            self.offset as i64
+        } else {
+            0
+        };
         let mut slope = 0.0;
-        // The lead at its own exponent, then the regular coupons, one period apart: index
-        // `first_index - 1` is the lead's (`lead_exponent` is `offset + y` there, short or long).
-        for index in (self.first_index - 1)..=self.last_index {
-            let t = index as f64 + self.offset + self.y;
+        // Index `first_index - 1` is the lead's (`lead_exponent` is `offset + y` there, short or
+        // long); the `quasi` indexes before it are the quasi-coupon dates after settlement.
+        for index in (self.first_index - 1 - quasi)..=self.last_index {
+            let t = index as f64 + self.offset + self.y + self.slope_shift;
             slope -= t * self.coupon / discount_growth(x, t + 1.0) / self.m;
         }
-        let t = self.front_exponent;
+        let t = self.front_exponent + self.slope_shift;
         slope - t * self.redemption / discount_growth(x, t + 1.0) / self.m
     }
 }
@@ -209,6 +255,27 @@ mod tests {
             year_days: 360.0,
         };
         assert!(yield_start(0.05, 98.0, &zero).is_nan());
+    }
+
+    #[test]
+    fn a_long_first_period_shifts_the_slope_by_the_quasi_periods_after_settlement() {
+        // probes/oddf-date-order-domain-sweep Y!B22's bond: settlement 2023-03-16, maturity
+        // 2030-06-15, issue 2022-12-15, first coupon 2024-06-15, annual, 0%, basis 1. One quasi
+        // period (2023-06-15 to 2024-06-15, 366 days) lies between the settlement's next
+        // quasi-coupon date and the first coupon; E is 365 (T-3031).
+        let long = OddFirstSchedule::new(45001, 47649, 44910, 45458, 0.0, 100.0, 1, 1).unwrap();
+        assert_eq!(long.offset, 1.0);
+        assert_eq!(long.slope_shift, 366.0 / 365.0);
+        // A zero coupon's slope is the redemption's alone, at the shifted exponent.
+        let (y, x) = (0.05, 1.05);
+        let t = long.front_exponent + long.slope_shift;
+        assert_eq!(
+            long.dprice(y),
+            -(t * 100.0 / discount_growth(x, t + 1.0) / 1.0)
+        );
+        // A short first period has neither.
+        let short = sweep_bond(0.05);
+        assert_eq!((short.first_index, short.slope_shift), (2, 0.0));
     }
 
     #[test]

@@ -2,6 +2,7 @@ use crate::arithmetic::lambda_text_error;
 use crate::calc_result::Range;
 use crate::functions::util::{array_node_to_calc_result, RangeItem};
 use crate::number_format::number_to_text;
+use crate::reference_operators::RefArg;
 use crate::{
     calc_result::CalcResult,
     cast::{array_node_to_string, calc_result_to_text, StringOrArray, MAX_TEXT_UNITS},
@@ -253,16 +254,32 @@ impl Model {
 
     /// TEXTJOIN's delimiter: a scalar, or the elements of an array or range in row-major order,
     /// which cycle between the joined values (probes/textjoin-delimiter-array A1-A6, T-1510).
-    /// Never empty.
+    /// Never empty. An error comes with whether the delimiter was a reference, which lets a bad
+    /// `ignore_empty` win over it (`fn_textjoin`).
     fn textjoin_delimiters(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
-    ) -> Result<Vec<String>, CalcResult> {
-        let value = self.evaluate_node_in_context(node, cell);
+    ) -> Result<Vec<String>, (CalcResult, bool)> {
+        // One evaluation, in reference context, tells both the value and whether the delimiter
+        // was a reference (`B1`, `B1:B2`, `IF(TRUE,B1)`, `INDEX(B1:B2,1)`); evaluating it again
+        // on the error path would double the work at every nested TEXTJOIN delimiter.
+        let delimiter = self.evaluate_reference_arg(node, cell);
+        let is_reference = matches!(delimiter, RefArg::Ranges(_));
+        let value = delimiter.into_single_area(cell);
         if matches!(value, CalcResult::Lambda(_)) {
-            return Err(lambda_text_error(cell));
+            return Err((lambda_text_error(cell), false));
         }
+        self.textjoin_delimiter_list(value, cell)
+            .map_err(|error| (error, is_reference))
+    }
+
+    /// The delimiter list of an evaluated TEXTJOIN delimiter ([`Self::textjoin_delimiters`]).
+    fn textjoin_delimiter_list(
+        &mut self,
+        value: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<Vec<String>, CalcResult> {
         match self.string_or_array(value, cell)? {
             StringOrArray::String(text) => Ok(vec![text.into_lossy_string()]),
             StringOrArray::Array(array) => {
@@ -320,7 +337,18 @@ impl Model {
         self.lift_call(Function::Textjoin, args, cell, &mut |model, values| {
             let delimiters = match &delimiters {
                 Ok(delimiters) => delimiters,
-                Err(error) => return error.clone(),
+                // Excel reads ignore_empty before the error of a delimiter given as a reference
+                // (a cell, a range, IF or INDEX returning one): a text ignore_empty is #VALUE! and
+                // an error one is its own error. An error value as delimiter (a literal, 1/0,
+                // NA(), VLOOKUP) is the result whatever ignore_empty is
+                // (probes/t3885-textjoin-error-delimiter-text-ignore-empty; docs/excel-semantics/
+                // text.md, T-3885).
+                Err((error, is_reference)) => {
+                    return match values.get(1).map(|value| Self::cast_bool_ref(value, cell)) {
+                        Some(Err(ignore_empty_error)) if *is_reference => ignore_empty_error,
+                        _ => error.clone(),
+                    };
+                }
             };
             let ignore_empty = match values.get(1).map(|value| Self::cast_bool_ref(value, cell)) {
                 Some(Ok(ignore_empty)) => ignore_empty,

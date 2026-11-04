@@ -1,0 +1,74 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3661: [#Headers] combined forms on a table without a header row (Sales on S!B3:C6, header_row false, data Qty 1,2,4,8). F!A1:A4 Sales[[#Headers],[Column1]] as ROWS/MIN(ROW())/SUM/ISREF, A5:A8 Sales[[#Headers],[#Data]], A9:A12 Sales[[#Headers],[#Data],[Column2]], A13:A16 Sales[[#All],[Column1]].",
+  "tags": [
+    "M8",
+    "tables",
+    "probe",
+    "T-3661"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "B2": "above",
+        "B3": "E",
+        "B4": "W",
+        "B5": "N",
+        "B6": "S",
+        "C3": 1,
+        "C4": 2,
+        "C5": 4,
+        "C6": 8,
+        "C10": 99
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "B3:C6",
+          "header_row": false
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=ROWS(Sales[[#Headers],[Column1]])",
+        "A2": "=MIN(ROW(Sales[[#Headers],[Column1]]))",
+        "A3": "=SUM(Sales[[#Headers],[Column1]])",
+        "A4": "=ISREF(Sales[[#Headers],[Column1]])",
+        "A5": "=ROWS(Sales[[#Headers],[#Data]])",
+        "A6": "=MIN(ROW(Sales[[#Headers],[#Data]]))",
+        "A7": "=SUM(Sales[[#Headers],[#Data]])",
+        "A8": "=ISREF(Sales[[#Headers],[#Data]])",
+        "A9": "=ROWS(Sales[[#Headers],[#Data],[Column2]])",
+        "A10": "=MIN(ROW(Sales[[#Headers],[#Data],[Column2]]))",
+        "A11": "=SUM(Sales[[#Headers],[#Data],[Column2]])",
+        "A12": "=ISREF(Sales[[#Headers],[#Data],[Column2]])",
+        "A13": "=ROWS(Sales[[#All],[Column1]])",
+        "A14": "=MIN(ROW(Sales[[#All],[Column1]]))",
+        "A15": "=SUM(Sales[[#All],[Column1]])",
+        "A16": "=ISREF(Sales[[#All],[Column1]])"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4",
+    "F!A5",
+    "F!A6",
+    "F!A7",
+    "F!A8",
+    "F!A9",
+    "F!A10",
+    "F!A11",
+    "F!A12",
+    "F!A13",
+    "F!A14",
+    "F!A15",
+    "F!A16"
+  ]
+}

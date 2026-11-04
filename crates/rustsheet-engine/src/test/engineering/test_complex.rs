@@ -115,6 +115,63 @@ fn fn_imsin() {
     assert_eq!(model._get_text("A1"), "-7.61923172032141-6.548120040911i");
 }
 
+/// IMSIN and IMCOS take sinh y and cosh y as (u ∓ 1/u)/2 with u = EXP(y) below IMSINH's band too
+/// (probes-numeric/t3525-im-hyperbolic-fresh-sweep C10, D89; t2778-imsinh-sign-sweep C2; T-3545).
+#[test]
+fn imsin_imcos_small_imaginary_part_takes_the_reciprocal_form() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSIN("0+0.0080407127044978i")"#);
+    model._set(
+        "A2",
+        r#"=IMCOS("-0.437695624558513-0.000131316980692306i")"#,
+    );
+    model._set("A3", r#"=IMSIN("-4i")"#);
+    model._set("A4", r#"=IMSIN("1E-200+1E-200i")"#);
+
+    model.evaluate();
+
+    // The EXP pair gives ...908i and ...7094i here.
+    assert_eq!(model._get_text("A1"), "0.00804079934755902i");
+    assert_eq!(
+        model._get_text("A2"),
+        "0.905730792422698-0.0000556591552727565i"
+    );
+    assert_eq!(model._get_text("A3"), "-27.2899171971278i");
+    assert_eq!(model._get_text("A4"), "1E-200");
+}
+
+/// IMSIN and IMCOS of a complex number take sin x and cos x from SIN and COS's own kernel (x
+/// reduced by the x87 64-bit π), not libm: near k·π/2 the small part keeps Excel's remainder
+/// (probes-numeric/t3616-imsin-imcos-positive-cut-probe K1, L1; t3726-imsin-imcos-near-half-pi-sweep
+/// A183, B183; T-3726). libm gave ...2.88917292436455E+293 and ...2223053845294390000 here.
+#[test]
+fn imsin_imcos_near_half_pi_take_the_x87_reduction() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSIN("1.5707963267949+709.7i")"#);
+    model._set("A2", r#"=IMCOS("1.5707963267949+709.7i")"#);
+    model._set("A3", r#"=IMSIN("4.71238898038469+79.1718046156471i")"#);
+    model._set("A4", r#"=IMCOS("4.71238898038469+79.1718046156471i")"#);
+
+    model.evaluate();
+
+    assert_eq!(
+        model._get_text("A1"),
+        "8.27492013840132E+307-2.88915216855774E+293i"
+    );
+    assert_eq!(
+        model._get_text("A2"),
+        "-2.88915216855774E+293-8.27492013840132E+307i"
+    );
+    assert_eq!(
+        model._get_text("A3"),
+        "-1.2101741480848E+34-2223964481544680000i"
+    );
+    assert_eq!(
+        model._get_text("A4"),
+        "-2223964481544680000+1.2101741480848E+34i"
+    );
+}
+
 #[test]
 fn fn_imaginary_misc() {
     let mut model = new_empty_model();
@@ -284,6 +341,35 @@ fn im_overflow_edges() {
     assert_eq!(model._get_text("B6"), *"0");
 }
 
+// IMSINH and IMCOSH take the log form below x = -708 (not -709) and past x = 709, with Excel's EXP:
+// probes-numeric/t3546-imsinh-neg-cut-fine A1, A2, B1, B2, C2, D2 and
+// t3525-im-hyperbolic-log-band-sweep A48 (excel-graph, T-3546).
+#[test]
+fn im_hyperbolic_log_form_cuts_and_exp() {
+    let cases = [
+        (
+            r#"=IMSINH("-708-0.5i")"#,
+            "-1.32663416266498E+307-7.24743546175708E+306i",
+        ),
+        (r#"=IMSINH("-708.000000000001-0.5i")"#, "#NUM!"),
+        (
+            r#"=IMCOSH("-708+2i")"#,
+            "-6.29085665580216E+306-1.37457725669918E+307i",
+        ),
+        (r#"=IMCOSH("-708.000000000001+2i")"#, "#NUM!"),
+        (r#"=IMSINH("-708.000000000001-1E-200i")"#, "#NUM!"),
+        (
+            r#"=IMSINH("-708.000000000001+1i")"#,
+            "-8.16770442188487E+306+1.27204459593408E+307i",
+        ),
+        (
+            r#"=IMSINH("-709.183834084079+1.0222540398548i")"#,
+            "-2.5751552985321E+307+4.21395787753335E+307i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
 // Excel: probes-numeric/im-last-digit-sweep E55:I55, K42:L42 and gen-m9/b5aef3645cec1b95 A154,
 // probes/eng-im-overflow-edges A82 (T-2335): where the reciprocal's denominator overflows, a normal
 // tiny part is kept and a subnormal one prints as 0.
@@ -350,6 +436,52 @@ fn fn_imcsc_imlog2_imcot_of_zero_are_num() {
     assert_eq!(model._get_text("A1"), "#NUM!");
     assert_eq!(model._get_text("A2"), "#NUM!");
     assert_eq!(model._get_text("A3"), "#NUM!");
+}
+
+// Excel: probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58, C68 and D102 (excel-graph, T-3609): a small real
+// IMSECH is 1 over libm's cosh and a small real IMCSCH 1 over the series sinh, down to the smallest normal x; a
+// subnormal x is #NUM! (probes-numeric/t3609-imcsch-tiny-real-probe A9, A11, A12, A14).
+#[test]
+fn small_real_imsech_imcsch_take_the_reciprocal() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSECH("6.17632662504393E-06")"#);
+    model._set("A2", r#"=IMSECH("-1.71603860095587E-05")"#);
+    model._set("A3", r#"=IMSECH("9.70217965965262E-05")"#);
+    model._set("A4", r#"=IMCSCH("-1.05118886127103E-06")"#);
+    model._set("A5", r#"=IMCSCH("1E-200")"#);
+    model._set("A6", r#"=IMCSCH("1E-307")"#);
+    model._set("A7", r#"=IMCSCH("1E-308")"#);
+    model._set("A8", r#"=IMCSCH("2E-309")"#);
+
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), "0.999999999980927");
+    assert_eq!(model._get_text("A2"), "0.999999999852761");
+    assert_eq!(model._get_text("A3"), "0.999999995293386");
+    assert_eq!(model._get_text("A4"), "-951303.839721704");
+    assert_eq!(model._get_text("A5"), "1E+200");
+    assert_eq!(model._get_text("A6"), "1E+307");
+    assert_eq!(model._get_text("A7"), "#NUM!");
+    assert_eq!(model._get_text("A8"), "#NUM!");
+}
+
+// Excel: probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C390, t3982-r4-imsech-real-cosh A5, A49 and
+// t3981-imsech-real-band-sweep-hold A13 (excel-graph, T-3982): above |x| 1E-4 a real IMSECH is 1 over the `1/u`
+// form's cosh, as IMCOSH's is, where libm's 1/cosh is one off in the last printed digit.
+#[test]
+fn real_imsech_above_the_libm_cut_takes_the_form() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSECH("-0.00802240437783925")"#);
+    model._set("A2", r#"=IMSECH("-0.000301650878487426")"#);
+    model._set("A3", r#"=IMSECH("-0.000112746312425845")"#);
+    model._set("A4", r#"=IMSECH("0.00483608995950115")"#);
+
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), "0.99996782137691");
+    assert_eq!(model._get_text("A2"), "0.999999954503376");
+    assert_eq!(model._get_text("A3"), "0.999999993644134");
+    assert_eq!(model._get_text("A4"), "0.999988306230907");
 }
 
 // Excel: gen-m9 (excel-graph, T-2258): IMLN and IMLOG10 of 0 or 0i are #NUM!, not "-inf" (T-2389).
@@ -542,6 +674,70 @@ fn imsqrt_of_a_negative_real_takes_excel_atan2_cos_and_sin() {
     assert_texts(&cases);
 }
 
+// IMSQRT roots twice in x87 precision, each root rounded to 64 bits and then to a double:
+// 0.999999999999999 (1-9·2^-53) squares to 1-18·2^-53, whose root is 1-9·2^-53 and whose second
+// root rounds to the midpoint 1-4.5·2^-53 and then to even, 1-4·2^-53, which prints as 1 (two
+// plain roots give 1-5·2^-53, 0.999999999999999). IMLOG10 and IMLOG2 multiply IMLN's parts, with
+// Excel's ATAN2 kernel as the argument, by one double constant (probes/t3643-imsqrt-grid,
+// t3643-imlog10-grid, probes-numeric/t3643-r4-log-modulus; excel-graph, T-3795).
+#[test]
+fn imsqrt_roots_twice_and_the_logs_scale_imln() {
+    let cases = [
+        (r#"=IMSQRT("0.999999999999999")"#, "1"),
+        (r#"=IMSQRT("-0.999999999999999")"#, "6.1257422745431E-17+1i"),
+        (r#"=IMSQRT("0.999999999999999+1E-300i")"#, "1+5E-301i"),
+        (
+            r#"=IMSQRT("-0.999999999999999-1E-8i")"#,
+            "5.00000003087007E-09-1i",
+        ),
+        (r#"=IMLOG10("10+1E8i")"#, "8+0.682188133491473i"),
+        (r#"=IMLOG10("10-1E8i")"#, "8-0.682188133491473i"),
+        (
+            "=IMLOG10(COMPLEX(-2.07417486058375E-29,26460080.1885507))",
+            "7.42259115600387+0.682188176920921i",
+        ),
+        (
+            "=IMLOG10(COMPLEX(1.60320693480002E-123,-1.63498510023214E-91))",
+            "-90.7864862007507-0.682188176920921i",
+        ),
+        (
+            "=IMLOG10(COMPLEX(-0.561651839159889,-0.827373683149484))",
+            "6.17169578594099E-15-0.941193126217726i",
+        ),
+        (
+            "=IMLOG2(COMPLEX(-9.69305538978777E-145,-6.94261454462663E-149))",
+            "-478.402622259513-4.53225680933651i",
+        ),
+        (
+            "=IMLOG2(COMPLEX(-1,1.05859478337023E-09))",
+            "4.53236014029996i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
+// Below |x| 1E-4 the hyperbolic kernels take libm's cosh, where the `1/u` form prints one digit off
+// (probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C311, t3720-im-reciprocal-small-x-complex
+// A3, B25; excel-graph, T-3930).
+#[test]
+fn tiny_x_hyperbolics_take_libm_cosh() {
+    let cases = [
+        (
+            r#"=IMSECH("-8.74352867749883E-05+1.16398498777952i")"#,
+            "2.52727602503685+0.000512882556578914i",
+        ),
+        (
+            r#"=IMCOSH("3.58722248184392E-06+0.256378854055322i")"#,
+            "0.967314566321166+9.0964584974296E-07i",
+        ),
+        (
+            r#"=IMCSCH("2.5814545068154E-05-0.118602492728453i")"#,
+            "0.00183084854010124+8.45132516126195i",
+        ),
+    ];
+    assert_texts(&cases);
+}
+
 /// Each `(formula, text)` in its own cell of column A: the formula prints that text.
 fn assert_texts(cases: &[(&str, &str)]) {
     let mut model = new_empty_model();
@@ -556,4 +752,36 @@ fn assert_texts(cases: &[(&str, &str)]) {
             "{formula}"
         );
     }
+}
+
+/// The logs' modulus is the x87 root of the double sum of squares, and an overflowing `y/x` is
+/// `#NUM!` in the logs and an angle of 0 in IMSQRT (probes/t3643-*-grid, excel-graph; T-3643).
+#[test]
+fn logs_round_the_modulus_twice_and_overflowing_quotients() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMLOG10("0.999999999999999+1E-8i")"#);
+    model._set("A2", r#"=IMLOG2("1E-8-0.999999999999999i")"#);
+    model._set("A3", r#"=IMLOG10("0.999999999999999+1i")"#);
+    model._set("A4", r#"=IMLOG10("1E-300+1E20i")"#);
+    model._set("A5", r#"=IMLOG2("-1E-300-1E20i")"#);
+    model._set("A6", r#"=IMLOG10("1E-20+1E20i")"#);
+    model._set("A7", r#"=IMSQRT("1E-300+1E20i")"#);
+    model._set("A8", r#"=IMSQRT("-1E-300-1E20i")"#);
+    model._set("A9", r#"=IMSQRT("1E-20+1E20i")"#);
+    model.evaluate();
+    assert_eq!(
+        model._get_text("A1"),
+        "-3.85730986621315E-16+4.34294481903252E-09i"
+    );
+    assert_eq!(
+        model._get_text("A2"),
+        "-1.28137060152597E-15-2.26618005648665i"
+    );
+    assert_eq!(model._get_text("A3"), "0.15051499783199+0.341094088460461i");
+    assert_eq!(model._get_text("A4"), *"#NUM!");
+    assert_eq!(model._get_text("A5"), *"#NUM!");
+    assert_eq!(model._get_text("A6"), "20+0.682188176920921i");
+    assert_eq!(model._get_text("A7"), "10000000000");
+    assert_eq!(model._get_text("A8"), "10000000000");
+    assert_eq!(model._get_text("A9"), "7071067811.86548+7071067811.86547i");
 }

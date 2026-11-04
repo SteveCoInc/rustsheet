@@ -8,12 +8,10 @@ undecodable input, is `code=true`: a wrong skip looks exactly like a pass, so do
 
 With `--merge-base A B` it lists the paths itself: the diff from the single merge base of A and B
 to B (decision 0147). A pull request passes its `base.sha` and `head.sha`, so only the PR's own
-changes count even when its branch is behind `main`; a merge-train push passes `origin/main` and
-`HEAD`. Several merge bases, none, a failed git command, a shallow clone or a malformed revision
+changes count even when its branch is behind `main`. Several merge bases, none, a failed git command, a shallow clone or a malformed revision
 give `code=true`. Any other arguments also give `code=true`.
 
-Standard library only: CI runs the copy from the PR's base commit, or from a train's merge base
-(decision 0066), so a PR can never change how its own files are classified.
+Standard library only: CI runs the copy from the PR's base commit (decision 0066), so a PR can never change how its own files are classified.
 """
 
 from __future__ import annotations
@@ -32,8 +30,7 @@ DOC_DIRS = ("docs/", ".claude/")
 # (crates/rustsheet-eval/src/deviations.rs). docs/milestones.md, docs/progress.md and
 # docs/progress/: the progress report generator reads them (tools/src/rustsheet_tools/
 # progress_report/, SPEC-0022, decision 0120), so a steward PR that changes only the page or its
-# history still runs the python job. .claude/skills/review/SKILL.md: scripts/test_merge_ready.py
-# checks that merge_ready.py's reviewer-applicability list matches the skill's (decision 0149).
+# history still runs the python job.
 # An entry ending in `/` is a directory and matches every path under it; any other entry is one
 # file and matches only itself, so docs/progress.md does not also claim docs/progress.mdx.
 CODE_READ_PATHS = (
@@ -41,7 +38,6 @@ CODE_READ_PATHS = (
     "docs/milestones.md",
     "docs/progress.md",
     "docs/progress/",
-    ".claude/skills/review/SKILL.md",
 )
 CODE_READ_DIRS = tuple(p for p in CODE_READ_PATHS if p.endswith("/"))
 
@@ -75,7 +71,7 @@ def classify(raw: bytes) -> bool:
 REVISION = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_./-]*")
 
 
-def _git(cwd: Path | None, *args: str) -> bytes | None:
+def git_bytes(cwd: Path | None, *args: str) -> bytes | None:
     """stdout of `git args` in `cwd`, or None when git fails or cannot run."""
     try:
         run = subprocess.run(["git", *args], cwd=cwd, capture_output=True, check=False, timeout=120)
@@ -94,15 +90,15 @@ def classify_range(base: str, head: str, cwd: Path | None = None) -> bool:
     if not all(REVISION.fullmatch(rev) for rev in (base, head)):
         return True
     # A shallow clone can hide the true merge base or report a wrong one; so can a failed check.
-    if _git(cwd, "rev-parse", "--is-shallow-repository") != b"false\n":
+    if git_bytes(cwd, "rev-parse", "--is-shallow-repository") != b"false\n":
         return True
-    bases = _git(cwd, "merge-base", "--all", base, head)
+    bases = git_bytes(cwd, "merge-base", "--all", base, head)
     if bases is None or len(bases.split()) != 1:
         return True
     merge_base = bases.decode("ascii", "replace").strip()
     # --no-renames lists both sides of a rename, so moving code into docs/ still counts as code;
     # -z keeps unusual file names intact.
-    changed = _git(cwd, "diff", "-z", "--no-renames", "--name-only", merge_base, head, "--")
+    changed = git_bytes(cwd, "diff", "-z", "--no-renames", "--name-only", merge_base, head, "--")
     if changed is None:
         return True
     # File names are attacker-controlled: log only their count (workflow-command injection).

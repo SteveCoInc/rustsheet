@@ -1,0 +1,18 @@
+LN control: model == Excel on 14 / 14
+center split    cells       LN  EXP arg        s     rest
+0.15   hold       264        0       85        0        0
+0.15   tune       312        0      110        0        0
+0.30   hold       456        0       77        0        0
+0.30   tune       120        0       24        0        0
+0.40   hold       288        0       66        0        0
+0.40   tune       288        0      107        0        0
+0.50   hold       264        0      104        0        0
+0.50   tune       312        0      132        1        0
+0.60   hold       216        0       62        0        0
+0.60   tune       360        0      111        0        0
+0.70   hold       288        0       90        0        0
+0.70   tune       288        0       48        0        0
+0.85   hold       192        0       50        0        0
+0.85   tune       384        0      101        0        0
+all    hold      1968        0      534        0        0
+all    tune      2064        0      633        1        0

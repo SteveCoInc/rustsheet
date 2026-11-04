@@ -188,6 +188,12 @@ pub struct TableSpec {
     /// `Txn::add_table_with_rows`).
     #[serde(default = "crate::suite::default_true")]
     pub header_row: bool,
+    /// Calculated columns as spec2xlsx writes them (`calculatedColumnFormula`, T-2969): column
+    /// letter to its formula, with or without `=`, in file form (`T[[#This Row],[Col]]`): the
+    /// adapter does not translate a `[@Col]` shorthand and refuses one. The engine adapter marks
+    /// each with `Txn::set_table_column_formula` (T-3033).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub calculated: BTreeMap<String, String>,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a
@@ -259,7 +265,8 @@ pub struct CalculationSpec {
 /// "column":"B"}` and `{"op":"delete_column","sheet":"S","column":"B"}` (a column letter; the cells
 /// to the right shift), `{"op":"delete_sheet","sheet":"S"}`, `{"op":"delete_table","sheet":"S",
 /// "table":"T1"}` and `{"op":"convert_table","sheet":"S","table":"T1"}`. `convert_table` converts the table
-/// to a plain range (T-2342).
+/// to a plain range (T-2342). `{"op":"add_table","sheet":"S","table":"T1","ref":"B3:C7"}` adds
+/// a table (T-3629).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SheetOp {
@@ -288,10 +295,16 @@ pub enum SheetOp {
     InsertColumn {
         sheet: String,
         column: String,
+        /// How many columns go in at `column` in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
     },
     DeleteColumn {
         sheet: String,
         column: String,
+        /// How many columns go from `column` on in one edit (absent: one; T-2899).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        count: Option<u32>,
     },
     DeleteSheet {
         sheet: String,
@@ -303,6 +316,14 @@ pub enum SheetOp {
     DeleteTable {
         sheet: String,
         table: String,
+    },
+    /// A table named `table` added over `range` (its header row first, the header cells already
+    /// set), as Graph `tables/add` and a rename make it (T-3629).
+    AddTable {
+        sheet: String,
+        table: String,
+        #[serde(rename = "ref")]
+        range: String,
     },
 }
 
@@ -343,19 +364,47 @@ impl SheetOp {
                     addr
                 }
             }
-            SheetOp::InsertColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column).map_or(addr.col, |c| shift(addr.col, c, 1)),
+            SheetOp::InsertColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => Addr {
+                col: Addr::col_index(column).map_or(addr.col, |c| {
+                    shift(
+                        addr.col,
+                        c,
+                        i32::try_from(count.unwrap_or(1)).unwrap_or(i32::MAX),
+                    )
+                }),
                 ..addr
             },
-            SheetOp::DeleteColumn { sheet: at, column } if at == sheet => Addr {
-                col: Addr::col_index(column)
-                    .filter(|c| addr.col > *c)
-                    .map_or(addr.col, |_| addr.col - 1),
-                ..addr
-            },
+            SheetOp::DeleteColumn {
+                sheet: at,
+                column,
+                count,
+            } if at == sheet => {
+                let count = count.unwrap_or(1);
+                Addr {
+                    col: Addr::col_index(column)
+                        .filter(|c| addr.col >= c.saturating_add(count))
+                        .map_or(addr.col, |_| addr.col - count),
+                    ..addr
+                }
+            }
             _ => addr,
         }
     }
+}
+
+/// A defined name added through the API after load (`CaseSpec::api_names`, T-3264).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApiName {
+    pub name: String,
+    pub formula: String,
+    /// The sheet the name is scoped to; workbook scope when absent (T-4014).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sheet: Option<String>,
 }
 
 /// A self-contained workbook test case.
@@ -378,6 +427,11 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
+    /// Names defined through the API after the sheet edits, in order (T-3264): the oracle replays
+    /// each with Graph `names/add` (`worksheets('S')/names/add` for one scoped to a sheet, T-4014),
+    /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub api_names: Vec<ApiName>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
@@ -557,6 +611,11 @@ mod tests {
         let del_col = op(r#"{"op":"delete_column","sheet":"S","column":"B"}"#);
         assert_eq!(del_col.moved("S", at("C1")), at("B1"));
         assert_eq!(del_col.moved("T", at("C1")), at("C1"));
+        let ins_cols = op(r#"{"op":"insert_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(ins_cols.moved("S", at("B1")), at("D1"));
+        let del_cols = op(r#"{"op":"delete_column","sheet":"S","column":"B","count":2}"#);
+        assert_eq!(del_cols.moved("S", at("D1")), at("B1"));
+        assert_eq!(del_cols.moved("S", at("C1")), at("C1"));
         let table = op(r#"{"op":"delete_table","sheet":"S","table":"Sales"}"#);
         assert_eq!(table.moved("S", at("C1")), at("C1"));
     }

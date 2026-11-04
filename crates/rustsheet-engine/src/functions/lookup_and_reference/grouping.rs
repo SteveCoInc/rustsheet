@@ -9,11 +9,11 @@ use std::collections::HashMap;
 
 use std::borrow::Cow;
 
+use super::group_order::{compare_aggregates, key_cmp};
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
-    functions::spill_functions::{cell_key, sort_key_cmp, CellKey},
-    functions::util::collation::cmp_text,
+    functions::spill_functions::{cell_key, CellKey},
 };
 
 /// How the groups are ordered: GROUPBY's `sort_order` (PIVOTBY's `row_sort_order` and
@@ -21,8 +21,12 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SortOrder {
     /// By the key fields, `ascending[i]` for field `i`; fields not named ascend
-    /// ([`Grouping::sort_by_keys`]).
-    Keys(Vec<bool>),
+    /// ([`Grouping::sort_by_keys`]). `named` lists the fields `sort_order` names, in written
+    /// order: a table relationship sorts by them first ([`Grouping::sort_table_by_keys`]).
+    Keys {
+        ascending: Vec<bool>,
+        named: Vec<usize>,
+    },
     /// By the aggregate of value column `column` (0-based among the value columns), with
     /// [`Grouping::sort_by_aggregate`].
     Value { column: usize, ascending: bool },
@@ -187,6 +191,44 @@ impl Grouping {
         });
     }
 
+    /// Sorts the groups of a GROUPBY table relationship (`field_relationship` 1) by their keys:
+    /// the fields `sort_order` names first, in written order, then the others ascending in column
+    /// order, so `sort_order` 2 sorts by the second key and then the first, and `{-1,2}` and
+    /// `{2,-1}` differ, where a hierarchy always sorts in column order (probes/t3838-groupby-
+    /// option-order G!B179-B216 against G!B217-B229). A descending field reverses its ascending
+    /// order whole, so the blank key sorts first there (G!B205, B207), where a hierarchy keeps it
+    /// last (G!B217). Mixed types descending in a table: unprobed, read the same way.
+    pub(crate) fn sort_table_by_keys(
+        &mut self,
+        ascending: &[bool],
+        named: &[usize],
+        cell: CellReferenceIndex,
+    ) {
+        let fields = self.groups.first().map_or(0, |group| group.keys.len());
+        let priority: Vec<usize> = named
+            .iter()
+            .copied()
+            .chain((0..fields).filter(|field| !named.contains(field)))
+            .collect();
+        self.groups.sort_by(|a, b| {
+            priority
+                .iter()
+                .map(|&field| {
+                    let (Some(x), Some(y)) = (a.keys.get(field), b.keys.get(field)) else {
+                        return Ordering::Equal;
+                    };
+                    let ordering = key_cmp(x, y, true, cell);
+                    if ascending.get(field).copied().unwrap_or(true) {
+                        ordering
+                    } else {
+                        ordering.reverse()
+                    }
+                })
+                .find(|ordering| ordering.is_ne())
+                .unwrap_or(Ordering::Equal)
+        });
+    }
+
     /// Sorts the groups by an aggregate (GROUPBY's `sort_order` naming a value column; PIVOTBY's
     /// sort by a total), and returns the aggregates it sorted by, each group's and (when the
     /// parents sort by value) each parent's, so the caller shows them, subtotals included, instead
@@ -335,20 +377,6 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
     })
 }
 
-/// [`key_cmp`] for two aggregates that may be missing (they never are: the indices come from
-/// the same groups).
-fn compare_aggregates(
-    a: Option<&ArrayNode>,
-    b: Option<&ArrayNode>,
-    ascending: bool,
-    cell: CellReferenceIndex,
-) -> Ordering {
-    match (a, b) {
-        (Some(a), Some(b)) => key_cmp(a, b, ascending, cell),
-        _ => Ordering::Equal,
-    }
-}
-
 /// A key cell as it groups: `cell_key`, except that -0 is 0. Excel stores a cell `=-0` as 0, so
 /// 0, `=-0` and `=0` are one group (probes/groupby-pivotby-followup G!A781); the engine keeps the
 /// sign of a computed -0.
@@ -364,22 +392,6 @@ fn positive_zero(node: &ArrayNode) -> ArrayNode {
     match node {
         ArrayNode::Number(n) if *n == 0.0 => ArrayNode::Number(0.0),
         other => other.clone(),
-    }
-}
-
-/// [`sort_key_cmp`] with numbers compared exactly (see [`Grouping::sort_by_keys`]), and text
-/// compared in place with the comparator `sort_key_cmp` reaches (`cmp_text`, through
-/// `compare_values`) instead of converting and cloning both strings on every comparison.
-fn key_cmp(a: &ArrayNode, b: &ArrayNode, ascending: bool, cell: CellReferenceIndex) -> Ordering {
-    let ordering = match (a, b) {
-        (ArrayNode::Number(x), ArrayNode::Number(y)) => x.total_cmp(y),
-        (ArrayNode::String(x), ArrayNode::String(y)) => cmp_text(x, y),
-        _ => return sort_key_cmp(a, b, ascending, cell),
-    };
-    if ascending {
-        ordering
-    } else {
-        ordering.reverse()
     }
 }
 
@@ -521,7 +533,7 @@ impl Grouping {
     /// calls no function.
     pub(crate) fn sort_by_key_order(&mut self, order: &SortOrder, cell: CellReferenceIndex) {
         match order {
-            SortOrder::Keys(ascending) => self.sort_by_keys(ascending, cell),
+            SortOrder::Keys { ascending, .. } => self.sort_by_keys(ascending, cell),
             SortOrder::Value { .. } => self.sort_by_keys(&[], cell),
         }
     }
@@ -904,12 +916,12 @@ mod tests {
         use crate::functions::spill_functions::sort_key_cmp;
         let pool = sort_pool();
         for ascending in [true, false] {
-            // SORT, SORTBY and UNIQUE (through `compare_values`), and GROUPBY/PIVOTBY.
+            // SORT and SORTBY (texts aside: `compare_values_pairwise`), and GROUPBY/PIVOTBY.
             assert_total_order(&pool, "sort_key_cmp", |a, b| {
                 sort_key_cmp(a, b, ascending, CELL)
             });
             assert_total_order(&pool, "key_cmp", |a, b| {
-                super::key_cmp(a, b, ascending, CELL)
+                super::super::group_order::key_cmp(a, b, ascending, CELL)
             });
         }
     }

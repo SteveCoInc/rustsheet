@@ -1,0 +1,27 @@
+sweep 1: Excel's worksheet D column equals the direct form in doubles on 321 of 321 rows
+double forms, bit-exact on sweeps 1 / 2 / 3:
+  direct 2*atan(sqrt x/sqrt y)/pi (ported)   270 / 228 / 239
+  2*atan(sqrt(x/y))/pi                       236 / 215 / 228
+  2*atan2(sqrt x, sqrt y)/pi                 252 / 221 / 236
+  atan(..)/(pi/2)                            270 / 228 / 239
+  atan(..)*(2/pi)                            231 / 193 / 189
+  2*atan(..)*(1/pi)                          231 / 193 / 189
+  2*asin(sqrt x)/pi                          247 / 215 / 204
+  1-2*acos(sqrt x)/pi                        92 / 134 / 78
+  acos(1-2x)/pi                              157 / 211 / 121
+  0.5+asin(2x-1)/pi                          134 / 213 / 143
+192 precision variants; the best 10 (total, per sweep, bits of t/a/result/pi):
+  737 [270, 228, 239] (53, 53, 53, 53) sqrt(x)/sqrt(y) 2a/pi
+  737 [270, 228, 239] (53, 53, 53, 53) sqrt(x)/sqrt(y) a/(pi/2)
+  737 [270, 228, 239] (53, 53, 53, 64) sqrt(x)/sqrt(y) a/(pi/2)
+  737 [270, 228, 239] (53, 53, 64, 53) sqrt(x)/sqrt(y) 2a/pi
+  737 [270, 228, 239] (53, 53, 64, 53) sqrt(x)/sqrt(y) a/(pi/2)
+  737 [270, 228, 239] (53, 53, 64, 53) sqrt(x)/sqrt(y) a*(2/pi)
+  737 [270, 228, 239] (53, 53, 64, 53) sqrt(x)/sqrt(y) a*(1/pi)*2
+  737 [270, 228, 239] (53, 64, 53, 53) sqrt(x)/sqrt(y) 2a/pi
+  679 [236, 215, 228] (53, 53, 53, 53) sqrt(x/y) 2a/pi
+  679 [236, 215, 228] (53, 53, 53, 53) sqrt(x/y) a/(pi/2)
+variants giving 0.5000000000000001 at x = 0.5: 22; the best 3:
+  666 [247, 215, 204] (53, 53, 53, 53) asin(sqrt x) 2a/pi
+  666 [247, 215, 204] (53, 53, 53, 53) asin(sqrt x) a/(pi/2)
+  666 [247, 215, 204] (53, 53, 53, 64) asin(sqrt x) a/(pi/2)

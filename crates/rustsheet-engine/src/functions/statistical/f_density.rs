@@ -19,7 +19,7 @@
 //! 10-36% above), but it beats the correctly rounded density on every region scored there.
 
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
-use crate::x87_exp::{dd_add, dd_div, dd_mul, dd_to_extended, excel_exp_extended};
+use crate::x87_exp::{dd_add, dd_div, dd_mul, dd_neg, dd_to_extended, excel_exp_extended};
 use crate::x87_log10::{excel_ln, ln_double_double};
 use crate::x87_log1p::excel_log1p;
 use crate::x87_register::Register;
@@ -45,7 +45,7 @@ const LOG1P_SERIES_LIMIT: f64 = 0.375;
 /// freeze, no hold-out) prefers 8: on r5-f-combine's 1,920 `ca` cells with 6 <= min(d) < 16 it
 /// gives 799 bit-exact, against 629 at 16, and all 1,920 within 15 digits at every edge tried.
 /// Below it every shape takes r4-f-small-df's constant, also shapes outside those it was fitted
-/// on ([`SMALL_SHAPE_OFFSET`]; T-3395, bounding it is T-3478); moving the edge is Phase 1b work
+/// on ([`SMALL_SHAPE_OFFSET`]; T-3478 measured it there); moving the edge is Phase 1b work
 /// (decision 0188 R5).
 const LARGE_DF_MIN: f64 = 16.0;
 /// `bcmodel`'s `C_BIG` (units of 2^-53): the mean need over r5-f-bigconst's in-sample x = 1 runs
@@ -58,13 +58,19 @@ const LARGE_SHAPE_OFFSET: f64 = -0.42;
 /// over the 56 (shape, side) groups with a best count of at least 25 in `s4_kscan.out` (probe
 /// t2586-r4-f-small-df-a, 31 shapes with max(d) <= 10, 3,008 cells) and `s4_kscan_tdens.out`
 /// (r3-tdensity's d1 = 1 runs at d2 3, 4, 5, 7, 10 and 30, 1,938 cells); T-3395 traced the count.
-/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30)
+/// It serves every shape with min(d) below [`LARGE_DF_MIN`]. T-3478 measured the three constants
+/// on the shapes outside the fit set (fresh 300-point sweep probes-numeric/t3478-f-density-r4-wide:
+/// 11 <= min(d) <= 15, and min(d) <= 10 with max(d) 11 to 1E+10): all 300 inside Gate A's envelope,
+/// 61 bit-exact and 232 within 4 ulp of Excel, against 15 and 159 for the correctly rounded
+/// density, so the model is kept there (statistics.md "F density's small-shape constant past its
+/// fit set").
+/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30; T-3478 sweep, 300 cells: min(d) 1..15 with max(d) up to 1E+10)
 const SMALL_SHAPE_OFFSET: f64 = 5.33;
 /// `sdmodel`'s e(1/2), fitted with [`SMALL_SHAPE_OFFSET`].
-/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30)
+/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30; T-3478 sweep, 300 cells: min(d) 1..15 with max(d) up to 1E+10)
 const STIRLING_ERROR_HALF: f64 = 0.22;
 /// `sdmodel`'s e(1), fitted with [`SMALL_SHAPE_OFFSET`].
-/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30)
+/// FITTED(T-2586, 4946 cells, F.DIST df 1..10 and d1 1 with d2 up to 30; T-3478 sweep, 300 cells: min(d) 1..15 with max(d) up to 1E+10)
 const STIRLING_ERROR_ONE: f64 = 0.06;
 
 /// r3-loader-const's measured error of Excel's stirlerr at v = 1.5, 2, ..., 28 in units of 2^-53
@@ -174,11 +180,11 @@ fn constant(a: f64, b: f64, side_one: bool) -> Register {
     // -ln B(a, b) + a ln(a/b) = ln(w)/2 + (h - 1/2) ln(h/o) - ln(2 pi)/2 - mu(a) - mu(b) + mu(h),
     // with (w, o) = (a, b) on side 1 and (b, a) on side 2 (Stirling's formula for each ln Gamma).
     let ln_w = ln_double_double(w);
-    let binet_sum = dd_add(dd_add(binet(h), neg(binet(a))), neg(binet(b)));
+    let binet_sum = dd_add(dd_add(binet(h), dd_neg(binet(a))), dd_neg(binet(b)));
     let exact = dd_add(
         dd_add(
             dd_add((ln_w.0 / 2.0, ln_w.1 / 2.0), bracket),
-            neg(HALF_LN_TWO_PI),
+            dd_neg(HALF_LN_TWO_PI),
         ),
         binet_sum,
     );
@@ -195,7 +201,7 @@ fn constant_offset(a: f64, b: f64, h: f64, w: f64, o: f64, bracket: (f64, f64)) 
         extended_quotient(w, o),
     )));
     let bracket_error =
-        dd_add(register_to_double_double(excel_bracket), neg(bracket)).0 / (f64::EPSILON / 2.0);
+        dd_add(register_to_double_double(excel_bracket), dd_neg(bracket)).0 / (f64::EPSILON / 2.0);
     let stirling = stirling_error(h) - stirling_error(a) - stirling_error(b) + SMALL_SHAPE_OFFSET;
     let small_shape = stirling + bracket_error;
     if a.min(b) * 2.0 >= LARGE_DF_MIN {
@@ -224,7 +230,7 @@ fn stirling_error(v: f64) -> f64 {
 
 /// (h - 1/2) ln(h/o) in double-double.
 fn exact_bracket(h: f64, o: f64) -> (f64, f64) {
-    let ln_ratio = dd_add(ln_double_double(h), neg(ln_double_double(o)));
+    let ln_ratio = dd_add(ln_double_double(h), dd_neg(ln_double_double(o)));
     dd_mul((h - 0.5, 0.0), ln_ratio)
 }
 
@@ -245,10 +251,6 @@ fn binet(v: f64) -> (f64, f64) {
     }
     sum = dd_add(dd_div((1.0, 0.0), (12.0, 0.0)), dd_mul(sum, z));
     dd_div(sum, (v, 0.0))
-}
-
-fn neg((hi, lo): (f64, f64)) -> (f64, f64) {
-    (-hi, -lo)
 }
 
 /// A double-double rounded to a register (RN64).

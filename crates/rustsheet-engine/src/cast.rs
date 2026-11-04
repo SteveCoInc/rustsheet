@@ -1,4 +1,4 @@
-use crate::arithmetic::{flush_subnormal, TINY_SUBNORMAL_BELOW};
+use crate::arithmetic::flush_subnormal;
 use crate::external_reference::{one_external_area, ExternalArea, PickedReference};
 use crate::formatter::date_text::CurrentYear;
 use crate::locale::Locale;
@@ -10,10 +10,10 @@ use crate::{
     calc_result::{CalcResult, Range},
     expressions::{
         parser::{ArrayNode, Node},
-        token::{Error, OpUnary},
+        token::Error,
         types::CellReferenceIndex,
     },
-    formatter::format::{parse_formatted_number, script_digit_to_ascii},
+    formatter::format::{ascii_script_digits, parse_formatted_number},
     limits::check_range_size,
     model::Model,
     text::Text,
@@ -169,6 +169,14 @@ pub(crate) fn number_text_too_long(text: &str) -> bool {
     text.len() > MAX_NUMBER_TEXT_LEN && text.chars().count() > MAX_NUMBER_TEXT_LEN
 }
 
+/// Whether `text` ends in a dollar sign, trailing spaces aside, the one definition of the refusal:
+/// coercion refuses such text
+/// ([`number_text_in`]) and so does typed input (`parse_typed_number`); only the formula test
+/// [`Model::typed_sign_text_is_number`] still reads it, so `-200$` stays text, not a formula.
+pub(crate) fn ends_with_dollar(text: &str) -> bool {
+    text.trim_end_matches(' ').ends_with('$')
+}
+
 /// [`Model::parse_number_text`] in an explicit `locale` and `date_system`, for readers that run
 /// without the model (the criteria matchers).
 pub(crate) fn number_text_in(
@@ -178,20 +186,27 @@ pub(crate) fn number_text_in(
     year: CurrentYear,
     date_system: DateSystem,
 ) -> Option<f64> {
-    // Script digits are read as numbers by coercion, VALUE and criteria (T-3325), not by typed input.
-    let mapped: String;
-    let digits = if text.is_ascii() {
-        text
-    } else {
-        mapped = text.chars().map(script_digit_to_ascii).collect();
-        &mapped
-    };
+    // Script digits are read as numbers by coercion, VALUE and criteria in every form, clock
+    // text included (T-3325, T-3446), not by typed input (TODO(T-3891)).
+    let digits = ascii_script_digits(text);
+    // A trailing `$` is refused in every form: `1.5$`, `1.5 $`, `-1.5$` are #VALUE! for VALUE,
+    // `+0` and NUMBERVALUE and match nothing as a criterion, while a trailing euro sign reads
+    // (probes/t3742-value-percent-currency A10-A13, A25-A28, A31-A34, B1:B4); typed input refuses it
+    // in `parse_typed_number` (probes/t3980-typed-percent-currency).
+    if ends_with_dollar(&digits) {
+        return None;
+    }
     if let Ok((v, _number_format)) =
-        parse_formatted_number(digits, currencies, locale, year, date_system)
+        parse_formatted_number(&digits, currencies, locale, year, date_system)
     {
         return Some(flush_subnormal(v));
     }
-    crate::functions::date_and_time::time_text::parse_time_serial(text, locale, year, date_system)
+    crate::functions::date_and_time::time_text::parse_time_serial(
+        &digits,
+        locale,
+        year,
+        date_system,
+    )
 }
 
 /// Text read as VALUE reads it (`Model::value_text_number`): `None` when it is over the
@@ -222,7 +237,7 @@ pub(crate) fn value_number_text_with(
     }
     let trimmed = text.trim_matches(' ');
     number_text_in(trimmed, currencies, locale, year, date_system)
-        .or_else(|| mixed_fraction(trimmed, fraction_currencies))
+        .or_else(|| mixed_fraction(&ascii_script_digits(trimmed), fraction_currencies))
 }
 
 /// The `#N/IMPL!` of a range, an array or a LAMBDA where a scalar cast expects a value.
@@ -260,6 +275,33 @@ impl Model {
         }
     }
 
+    /// Whether the text after a typed leading sign reads as a number, which keeps `-200$` a
+    /// number rather than a formula; typed `-200$` is then text (probes/t3980-typed-percent-currency
+    /// A6).
+    /// Script digits are not read here, as typed input reads none (TODO(T-3891)).
+    pub(crate) fn typed_sign_text_is_number(&self, s: &str) -> bool {
+        let trailing_dollar = ends_with_dollar(s)
+            && parse_formatted_number(
+                s,
+                &self.coercion_currencies(),
+                self.locale,
+                &|| None,
+                self.workbook.settings.date_system,
+            )
+            .is_ok();
+        trailing_dollar || self.cast_number_in(s, &|| None).is_some()
+    }
+
+    /// The currency symbols number-text coercion reads: `$`, `€` and the locale's own.
+    fn coercion_currencies(&self) -> Vec<&str> {
+        let currency = self.locale.currency.symbol.as_str();
+        let mut currencies = vec!["$", "€"];
+        if !currencies.contains(&currency) {
+            currencies.push(currency);
+        }
+        currencies
+    }
+
     pub(crate) fn cast_number(&self, s: &str) -> Option<f64> {
         self.cast_number_in(s, &|| self.current_year())
     }
@@ -272,13 +314,13 @@ impl Model {
         match parse_excel_number(s.trim()) {
             Some(f) => Some(f),
             _ => {
-                let currency = &self.locale.currency.symbol;
-                let mut currencies = vec!["$", "€"];
-                if !currencies.iter().any(|e| *e == currency) {
-                    currencies.push(currency);
-                }
+                let currencies = self.coercion_currencies();
                 self.parse_number_text(s, &currencies, current_year)
-                    .or_else(|| mixed_fraction(s.trim_matches(' '), &["$", "€"]))
+                    .or_else(|| {
+                        // Not `coercion_currencies`: the mixed-fraction grammar reads `$` and `€`
+                        // only, not the locale's own symbol (unchanged here).
+                        mixed_fraction(&ascii_script_digits(s.trim_matches(' ')), &["$", "€"])
+                    })
             }
         }
     }
@@ -345,11 +387,11 @@ impl Model {
         let width = usize::try_from(right.column - left.column + 1).unwrap_or(0);
         self.spend_cells(rows, width, cell)?;
         // A range inside the used area whose cells are inert reads as the cached values: the walk
-        // below would read the same values and evaluate nothing (`ifs_range_values`, T-3471). One
+        // below would read the same values and evaluate nothing (`range_values.rs`, T-3471). One
         // past the used area is walked, which reads only its used cells.
         if left.sheet == right.sheet && right.row <= last_row && right.column <= last_column {
             let rect = (left.sheet, left.row, left.column, right.row, right.column);
-            if let Some(view) = self.ifs_range_values(rect) {
+            if let Some(view) = self.range_values(rect) {
                 let element = |index: usize| {
                     view.get(index).map_or(ArrayNode::Empty, |value| {
                         calc_result_to_array_node(value.clone())
@@ -544,98 +586,6 @@ impl Model {
             )),
             CalcResult::Array(arr) => Ok(StringOrArray::Array(arr)),
             other => Ok(StringOrArray::String(self.cast_to_text(other, cell)?)),
-        }
-    }
-
-    /// Evaluates a unary `-` or `%` node. A chain such as `B:B%%%` or `---B:B` is applied
-    /// in one element-wise pass, so a whole column is lifted once rather than once per
-    /// operator (the `formula_eval` fuzz timeout, T-1078). Only the minus parity and the `%` count
-    /// are kept, and the walk allocates nothing. Negation is exact and the subnormal flush is
-    /// sign-symmetric, except that `-x` of a tiny positive x is +x; the chain applies that once,
-    /// to the parity, which is unprobed for `--x`, a tiny negative operand and references
-    /// (numbers.md "Unary minus of a tiny subnormal"; TODO(T-2942): probe those forms).
-    pub(crate) fn apply_unary_chain(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-    ) -> CalcResult {
-        let mut negate = false;
-        let mut percents = 0_usize;
-        let mut operand = node;
-        loop {
-            match operand {
-                Node::UnaryKind { kind, right } => {
-                    match kind {
-                        OpUnary::Minus => negate = !negate,
-                        OpUnary::Percentage => percents += 1,
-                    }
-                    operand = right;
-                }
-                // The identity: `-+-B:B` is one chain too.
-                Node::UnaryPlus { child } | Node::Spaced { child, .. } => operand = child,
-                _ => break,
-            }
-        }
-        self.apply_number_unary(operand, cell, |mut f| {
-            // A subnormal quotient is 0 like for `/` (numbers.md "Subnormal results
-            // become 0", probes/subnormal-function-results A1, A21); 0 stays 0, so blank
-            // cells stop early.
-            for _ in 0..percents {
-                if f == 0.0 {
-                    break;
-                }
-                f = flush_subnormal(f / 100.0);
-            }
-            // Excel's `-x` of a positive x below 2^-1026 is +x, while `0-x` keeps the sign
-            // (numbers.md "Unary minus of a tiny subnormal", probes/t2771-roundup-subnormal-sign-controls).
-            if negate && f > 0.0 && f < TINY_SUBNORMAL_BELOW {
-                return Ok(f);
-            }
-            Ok(if negate { -f } else { f })
-        })
-    }
-
-    /// Applies a scalar numeric transform element-wise over a node that may evaluate
-    /// to a number, a range, or an array: the unary `-`/`%` chain ([`Model::apply_unary_chain`]).
-    /// Functions lift through the SPEC-0011 driver instead (`functions/lift/`, T-1785).
-    ///
-    /// Element coercion matches the rest of the array machinery: booleans → 0/1,
-    /// empty → 0, strings are parsed with `cast_number` (`#VALUE!` if they don't
-    /// parse), and errors propagate.
-    pub(crate) fn apply_number_unary(
-        &mut self,
-        node: &Node,
-        cell: CellReferenceIndex,
-        op: impl Fn(f64) -> Result<f64, Error>,
-    ) -> CalcResult {
-        match self.get_number_or_array(node, cell) {
-            Ok(NumberOrArray::Number(f)) => match op(f) {
-                Ok(x) => CalcResult::Number(x),
-                Err(e) => CalcResult::new_error(e, cell, String::new()),
-            },
-            // Rewritten in place: a whole column is a million one-element rows, and
-            // reallocating each of them per operator dominated the cost (T-1078).
-            Ok(NumberOrArray::Array(mut array)) => {
-                for value in array.iter_mut().flatten() {
-                    let n = match value {
-                        ArrayNode::Number(n) => Some(*n),
-                        ArrayNode::Boolean(b) => Some(if *b { 1.0 } else { 0.0 }),
-                        ArrayNode::Empty => Some(0.0),
-                        ArrayNode::String(s) => self.cast_number(s),
-                        ArrayNode::Lambda(_) | ArrayNode::Nested(_) => None,
-                        ArrayNode::Error(_) => continue,
-                    };
-                    *value = match n {
-                        Some(f) => match op(f) {
-                            Ok(x) => ArrayNode::Number(x),
-                            Err(e) => ArrayNode::Error(e),
-                        },
-                        None => ArrayNode::Error(Error::VALUE),
-                    };
-                }
-                CalcResult::Array(array)
-            }
-            Err(e) => e,
         }
     }
 

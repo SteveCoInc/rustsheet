@@ -69,7 +69,8 @@ Microsoft 365 Excel (en-US, 1900 date system, dynamic arrays) — including undo
      fails; an R3 point is checked against the math only): the fresh sweep's count inside the
      envelope, with every point outside listed. From `rustsheet-eval accuracy` once T-3356 lands,
      until then against mpmath values the task attaches. A fit that moves a point out of the
-     envelope fails this item.
+     envelope fails this item. A point whose root's rounding-noise width exceeds ε is judged
+     against Excel's 15 digits only, if the task reports that width (decision 0265).
    - **`FITTED` tag** (R4.3, fits of kind (a)): each fitted piece carries `FITTED(T-XXXX,
      n_cells, range)` (the form T-3361 tags and ratchets) and is applied only inside `range`;
      outside it the code falls back to accurate math.
@@ -90,6 +91,6 @@ FINDINGS:
 - [BLOCKING|MAJOR|MINOR] path:line — problem — evidence/oracle case — fix
 SUMMARY: ...
 ```
-The `HEAD:` line names the commit you reviewed: it goes into the verdict record of your report
-(SPEC-0027 "Verdict records (v2)"), and a report for another commit does not count.
+The `HEAD:` line names the commit you reviewed: your verdict counts only for that commit, and a
+report for another commit does not count (the `review` skill, step 3).
 If the PR does not touch semantics, reply `VERDICT: APPROVE` with `SUMMARY: not applicable`.

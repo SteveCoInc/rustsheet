@@ -1,0 +1,64 @@
+cells: r5; exact counts. dz = z is a double, nd = z is not.
+form                               dz     nd    a0~0.3    a0~0.5    a0~0.7
+(cells)                          1143    777       245       308       224
+ne: fl(E s)(1+zl) ext            1143    422       111       141       170
+ne: P + P zl                     1143    422       111       141       170
+ne: P + P zl ext                 1143    422       111       141       170
+ne: fl(E s) EXP(zl)              1143    777       245       308       224
+ne: fl(E s) EXP(zl) ext          1143    777       245       308       224
+ne: fl(E s) fl(1+zl)             1143    777       245       308       224
+up: fl(E s)(1+zl) ext            1143    552       181       198       173
+up: P + P zl                     1143    552       181       198       173
+up: P + P zl ext                 1143    552       181       198       173
+up: fl(E s) EXP(zl)              1143    543       181       198       164
+up: fl(E s) EXP(zl) ext          1143    543       181       198       164
+up: fl(E s) fl(1+zl)             1143    543       181       198       164
+tz: fl(E s)(1+zl) ext            1143    552       181       198       173
+tz: P + P zl                     1143    552       181       198       173
+tz: P + P zl ext                 1143    552       181       198       173
+tz: fl(E s) EXP(zl)              1143    543       181       198       164
+tz: fl(E s) EXP(zl) ext          1143    543       181       198       164
+tz: fl(E s) fl(1+zl)             1143    543       181       198       164
+z64                              1143    360        99       140       121
+ne: E s                          1143    485       134       167       184
+ne: fl(E + E zl) s               1143    349       112        81       156
+ne: (E + E zl)ext s              1143    378       114       139       125
+ne: E s + E s zl ext             1143    378       114       139       125
+ne: E (s + s zl)                 1143    405       108       133       164
+ne: fl(E f) s                    1143    669       215       244       210
+ne: E fl(s f)                    1143    713       212       283       218
+ne: (E f)ext s                   1143    703       202       285       216
+ne: (E s)ext f                   1143    703       202       285       216
+dn: E s                          1143    552       201       207       144
+dn: fl(E s)(1+zl) ext            1143    250        34       100       116
+dn: fl(E + E zl) s               1143    243        72        42       129
+dn: (E + E zl)ext s              1143    369       120       124       125
+dn: P + P zl                     1143    250        34       100       116
+dn: P + P zl ext                 1143    250        34       100       116
+dn: E s + E s zl ext             1143    369       120       124       125
+dn: E (s + s zl)                 1143    313        76       118       119
+dn: fl(E s) EXP(zl)              1143    585       201       207       177
+dn: fl(E s) EXP(zl) ext          1143    585       201       207       177
+dn: fl(E s) fl(1+zl)             1143    585       201       207       177
+dn: fl(E f) s                    1143    613       201       207       205
+dn: E fl(s f)                    1143    592       201       207       184
+dn: (E f)ext s                   1143    608       201       207       200
+dn: (E s)ext f                   1143    608       201       207       200
+up: E s                          1143     77        12         1        64
+up: fl(E + E zl) s               1143    552       151       205       196
+up: (E + E zl)ext s              1143    397       110       156       131
+up: E s + E s zl ext             1143    397       110       156       131
+up: E (s + s zl)                 1143    475       138       162       175
+up: fl(E f) s                    1143    552       151       205       196
+up: E fl(s f)                    1143    475       138       162       175
+up: (E f)ext s                   1143    427       110       156       161
+up: (E s)ext f                   1143    427       110       156       161
+tz: E s                          1143     77        12         1        64
+tz: fl(E + E zl) s               1143    552       151       205       196
+tz: (E + E zl)ext s              1143    397       110       156       131
+tz: E s + E s zl ext             1143    397       110       156       131
+tz: E (s + s zl)                 1143    475       138       162       175
+tz: fl(E f) s                    1143    552       151       205       196
+tz: E fl(s f)                    1143    475       138       162       175
+tz: (E f)ext s                   1143    427       110       156       161
+tz: (E s)ext f                   1143    427       110       156       161

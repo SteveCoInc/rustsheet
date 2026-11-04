@@ -440,7 +440,14 @@ impl Model {
         max: u8,
         cell: CellReferenceIndex,
     ) -> Result<u8, CalcResult> {
-        let n = self.cast_number_or(value, 0.0, cell)?.trunc();
+        let n = self.cast_number_or(value, 0.0, cell)?;
+        Self::regex_option_in_range(n, max, cell)
+    }
+
+    /// The range check of [`Model::regex_option`] on an already coerced number: truncated, it must
+    /// be 0 to `max`, else `#VALUE!`.
+    fn regex_option_in_range(n: f64, max: u8, cell: CellReferenceIndex) -> Result<u8, CalcResult> {
+        let n = n.trunc();
         (0..=max)
             .find(|&option| f64::from(option) == n)
             .ok_or_else(|| CalcResult::new_error(Error::VALUE, cell, "Invalid option".to_string()))
@@ -481,12 +488,17 @@ impl Model {
             COMPARED_BYTES_PER_VISIT,
             |model, values, first_only| {
                 let options = Model::regex_operands(values, cell).and_then(|operands| {
-                    let mode = match model.regex_option(values.get(2), 2, cell)? {
+                    // return_mode is coerced before case_sensitivity, but its range is checked
+                    // after it: `REGEXEXTRACT("abc","^.",-2.5,#DIV/0!)` is #DIV/0!, while a
+                    // non-number text return_mode is #VALUE! first (gen-m7/781b74b7c112265f
+                    // B6833; text.md "REGEX* optional arguments", T-3810).
+                    let mode = model.cast_number_or(values.get(2), 0.0, cell)?;
+                    let insensitive = model.regex_case_insensitive(values.get(3), cell)?;
+                    let mode = match Self::regex_option_in_range(mode, 2, cell)? {
                         0 => ReturnMode::First,
                         1 => ReturnMode::All,
                         _ => ReturnMode::Groups,
                     };
-                    let insensitive = model.regex_case_insensitive(values.get(3), cell)?;
                     Ok((operands, mode, insensitive))
                 });
                 let ((text, pattern), mode, insensitive) = match options {

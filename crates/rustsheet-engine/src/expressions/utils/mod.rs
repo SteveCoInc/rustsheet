@@ -333,11 +333,14 @@ pub fn parse_reference_a1(r: &str) -> Option<ParsedReference> {
 /// probes/r1c1-let-name-r1c1). The R1C1 storage form escapes the ones it would read back as
 /// a cell ([`reads_as_r1c1_cell`]).
 pub fn is_valid_a1_identifier(name: &str) -> bool {
-    is_identifier_text(name)
+    is_name_text(name) && parse_reference_a1(name).is_none()
 }
 
-/// The rules every name follows: its characters, and not `TRUE`, `FALSE` or an A1 cell.
-fn is_identifier_text(name: &str) -> bool {
+/// The rules every name follows in either grammar mode: its characters, and not `TRUE` or
+/// `FALSE`. An A1 cell (`F1`) passes: [`is_valid_a1_identifier`] refuses it, and in R1C1 mode,
+/// where it is no reference, Excel takes it as a LET name or LAMBDA parameter
+/// (probes/t3897-r1c1-let-cell-names A11, A12, T-3897).
+pub(crate) fn is_name_text(name: &str) -> bool {
     // https://support.microsoft.com/en-us/office/names-in-formulas-fc2935f9-115d-4bef-a370-3aa8bb4c91f1
     // https://github.com/MartinTrummer/excel-names/
     let upper = name.to_uppercase();
@@ -361,9 +364,6 @@ fn is_identifier_text(name: &str) -> bool {
         return false;
     }
     if upper == *"TRUE" || upper == *"FALSE" {
-        return false;
-    }
-    if parse_reference_a1(name).is_some() {
         return false;
     }
     for ch in chars {
@@ -395,7 +395,7 @@ pub(crate) fn is_quoted_name(name: &str) -> bool {
 /// reference ([`is_r1c1_shaped`]; that also refuses "R", "C", "r" and "c"). `R0C1` passes, as
 /// Excel loads it (T-1657: its uses are `#NAME?` there).
 pub fn is_valid_identifier(name: &str) -> bool {
-    !is_r1c1_shaped(name) && is_identifier_text(name)
+    !is_r1c1_shaped(name) && is_valid_a1_identifier(name)
 }
 
 /// Whether `name` is made only of letters and digits and reads as an A1 cell (`NLG1`): the one
@@ -462,6 +462,41 @@ pub(crate) fn quote_digit_leading_sheet(text: &str) -> std::borrow::Cow<'_, str>
         }
         _ => text.into(),
     }
+}
+
+/// INDIRECT reference text (A1 or R1C1) with the spaces Excel accepts taken out, or `None` when
+/// its whitespace makes it no reference (`#REF!`). Any leading whitespace is refused; trailing
+/// spaces and line feeds are dropped; outside a quoted sheet name a space may only stand next to
+/// the range colon or after the `!`, and no other whitespace (tab, NBSP, a space between two
+/// references, a space before the `!`) is allowed (probes/t3656-indirect-spaces-reversed,
+/// docs/excel-semantics/lookup.md "INDIRECT reference text: where spaces are allowed").
+pub(crate) fn indirect_reference_text(text: &str) -> Option<String> {
+    if text.starts_with(char::is_whitespace) {
+        return None;
+    }
+    let text = text.trim_end_matches([' ', '\n']);
+    let mut out = String::with_capacity(text.len());
+    let mut quoted = false;
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\'' {
+            quoted = !quoted;
+        } else if !quoted && (c == ' ' || c == '\n') {
+            // A line feed counts as a space next to the colon (`"A1:"&CHAR(10)&"B2"` = A1:B2;
+            // probes/t3747-indirect-whitespace Sheet1!F24, rows 60-73).
+            while chars.peek().is_some_and(|&n| n == ' ' || n == '\n') {
+                chars.next();
+            }
+            if out.ends_with([':', '!']) || chars.peek() == Some(&':') {
+                continue;
+            }
+            return None;
+        } else if !quoted && c.is_whitespace() {
+            return None;
+        }
+        out.push(c);
+    }
+    Some(out)
 }
 
 /// The sheet name a `Sheet!` prefix spells: `'O''B'` is `O'B`, an unquoted prefix is itself.

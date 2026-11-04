@@ -270,7 +270,9 @@ fn a_whole_case_line_pins_a_refused_case() {
     };
     let engine: Arc<dyn Engine + Send> = Arc::new(crate::engine::RustSheetEngine);
     let run = || run_case(&engine, &suite, &case, Duration::from_secs(60));
-    let too_deep = format!("={}1{}", "(".repeat(300), ")".repeat(300));
+    // Spaced groups each cost depth; a bare run would meet Excel's parenthesis cap, a parse
+    // error rather than a limit (T-3689).
+    let too_deep = format!("={}1{}", "( ".repeat(300), ")".repeat(300));
     write_case(&too_deep);
     pin("nested too deeply");
     let refused = run();

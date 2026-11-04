@@ -302,6 +302,10 @@ Key schema elements:
   wrap one column (T-1083).
   `wide_rate: <share>` makes that share of the draws 2-D and `row_rate: <share>` makes it a one-row range, so MATCH's
   lookup_array is mostly one-dimensional with a few 2-D `#N/A` cases (T-2719).
+- `probe_edge: first_column | first_row` (on a `probe` value) narrows the draw to the first column (VLOOKUP) or first
+  row (HLOOKUP) of the probed range, where the search looks. `index_of: {param, axis: rows | columns}` (on a number
+  parameter) draws 1 to that range's height or width in 90% of calls (VLOOKUP's col_index_num, HLOOKUP's
+  row_index_num, INDEX's row_num and column_num); the rest use the `domain`, so `#N/A` and `#REF!` stay covered (T-3074).
 - `same_shape: true` (`range` parameters of one call): the ranges share one rows x columns shape, except in about 1 call
   in 10, so the *IFS functions compute a real match and the shape-mismatch `#VALUE!` stays covered (T-2719).
 - `probe: <param>` (a `value` parameter): drawn from the cells of that `range` parameter 95% of the time, so MATCH's
@@ -683,7 +687,12 @@ and coercion order live, and random draws rarely hit a given pair. The policy se
   GETPIVOTDATA (`pivot`) and LAMBDA (`invoke`) are left out: neither is a plain call.
 - **Layout.** One function per case, at most 200 calls, formulas every third row of column A on
   `Calc`, so a 2 × 2 `range` lifted by a value parameter spills into the gap instead of onto the next
-  formula. The Data sheet is a 12 × 5 block of generator values plus the class cells.
+  formula. The Data sheet is a 12 × 5 block of generator values plus the class cells. A `dynamic_array`
+  function's formulas are 61 rows apart instead (T-3497): its result can be as tall as all 60 Data cells
+  in one column (TOCOL, or WRAPROWS with a count of 1, over the whole block), so a spill never lands on
+  the next formula. Such a case has no `check` list, so every cell the oracle records is scored: each
+  anchor and every spill member Excel fills. The spill-extent check (T-1660) scores any other cell the
+  engine fills.
 - **Determinism.** Each function draws from its own stream seeded by the seed and its name: the same
   seed and report give the same cases, and adding a function does not shift another's draws.
 

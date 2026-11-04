@@ -213,15 +213,16 @@ fn row_inserts_keep_values() {
 }
 
 /// The table (header row 1, data rows 2-3) shrinks with a delete of either data row (T-2338) and
-/// is left alone by one below it; a delete touching its header row, or of both data rows at once,
-/// is a fallback.
+/// is left alone by one below it; a delete of both data rows at once keeps one cleared row
+/// (T-3259), and one touching its header row is a fallback.
 #[test]
 fn row_deletes_keep_values() {
     for (row, count, follows) in [
         (1, 1, false),
         (2, 1, true),
         (3, 1, true),
-        (2, 2, false),
+        // Every data row of the table (rows 2-3): it keeps one cleared row (T-3259).
+        (2, 2, true),
         (4, 1, true),
         (5, 1, true),
         (1, 5, false),
@@ -251,17 +252,15 @@ fn column_inserts_and_deletes_keep_values() {
 
 /// A column delete inside the table shrinks it and drops the column (T-2339): a reference to the
 /// deleted column prints `#REF!`, as Excel does (probes/table-edits/table-delete-column-qty), and
-/// the others keep their text and read the shrunk table. A column range that loses one end prints
-/// the area it is displaced to, as under a fallback; its value is the plain range's, whose own
-/// column-delete gaps are T-2851's (Excel is unprobed for both).
+/// the others keep their text and read the shrunk table. A column range that loses either end is
+/// `#REF!` too (T-3734, probes/table-edits/table-column-range-delete-end, -start).
 #[test]
 fn column_deletes_inside_drop_the_column() {
     let qty = [
         ("=SUM(#REF!)", "#REF!"),
         ("=SUM(Sales[#All])", "30"),
         ("=ROWS(Sales)", "2"),
-        // The plain range's column-delete corner gap, as above (T-2851).
-        ("=SUM(#REF!:$A$3)", "#REF!"),
+        ("=SUM(#REF!)", "#REF!"),
         ("=COUNTA(Sales[#Headers])", "1"),
         ("=SUM(Sales[[#Data],[Val]])", "30"),
     ];
@@ -269,8 +268,7 @@ fn column_deletes_inside_drop_the_column() {
         ("=SUM(Sales[Qty])", "3"),
         ("=SUM(Sales[#All])", "3"),
         ("=ROWS(Sales)", "2"),
-        // Not Excel's value: the plain range's column-delete corner gap (T-2851).
-        ("=SUM(Data!$A$2:#REF!)", "#ERROR!"),
+        ("=SUM(#REF!)", "#REF!"),
         ("=COUNTA(Sales[#Headers])", "1"),
         ("=SUM(#REF!)", "#REF!"),
     ];
@@ -616,6 +614,77 @@ fn deleting_the_last_data_row_clears_it_and_undo_restores_it() {
     assert_eq!(value(user.get_model(), 0, 7, 3), "99");
 }
 
+/// One delete of every data row keeps the first data row, cleared, and deletes the other three:
+/// what is below moves up three rows, not four, as four one-row deletes do
+/// (table-delete-rows-all-data-once, T-3259). In the user model it is one undo step.
+#[test]
+fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
+    let mut model = edge_model(false);
+    model.set_user_input(0, 10, 3, "99".to_string()).unwrap();
+    model.set_user_input(1, 6, 1, "=S!C10".to_string()).unwrap();
+    model
+        .set_user_input(1, 7, 1, "=COUNTA(Sales[Region])".to_string())
+        .unwrap();
+    model
+        .set_user_input(1, 8, 1, "=ROWS(Sales[#All])".to_string())
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    user.delete_rows(0, 4, 4).unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(formula(model, 1, 6, 1), "=S!C7");
+    assert_eq!(value(model, 1, 6, 1), "99");
+    assert_eq!(value(model, 1, 7, 1), "0");
+    assert_eq!(value(model, 1, 8, 1), "2");
+    assert_eq!(value(model, 0, 4, 3), "");
+    user.undo().unwrap();
+    let model = user.get_model();
+    // TODO(T-3634): undo restores the rows but not the table's extent (B3:C7), as for any delete
+    // of a table's bottom data rows.
+    assert_eq!(value(model, 0, 4, 3), "1");
+    assert_eq!(value(model, 0, 5, 3), "2");
+    assert_eq!(value(model, 0, 7, 3), "8");
+    assert_eq!(value(model, 0, 10, 3), "99");
+    user.redo().unwrap();
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
+    assert_eq!(value(model, 0, 4, 3), "");
+    assert_eq!(value(model, 0, 7, 3), "99");
+}
+
+/// A delete of every data row that would cut an array formula is refused before anything
+/// changes, so no unrecorded clear is left behind (T-3259).
+#[test]
+fn a_refused_delete_of_every_data_row_changes_nothing() {
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 7, 5, 1, 2, "={1;2}")
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    assert!(user.delete_rows(0, 4, 4).is_err());
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 0, 4, 3), "1");
+    assert_eq!(value(model, 0, 4, 2), "E");
+    // One starting in the kept row, outside the table's columns: inside the whole delete, but cut
+    // by the shorter delete below the kept row.
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 4, 5, 1, 2, "={1;2}")
+        .unwrap();
+    let mut user = crate::UserModel::from_model(model);
+    assert!(user.delete_rows(0, 4, 4).is_err());
+    let model = user.get_model();
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 0, 4, 3), "1");
+    let mut model = edge_model(false);
+    model
+        .set_user_array_formula(0, 4, 5, 1, 2, "={1;2}")
+        .unwrap();
+    assert!(model.delete_rows(0, 4, 4).is_err());
+    assert_eq!(value(&model, 0, 4, 3), "1");
+}
+
 #[test]
 fn cut_and_paste_keeps_values() {
     for (source, target) in [((2, 1), (10, 5)), ((1, 1), (10, 5)), ((5, 1), (10, 5))] {
@@ -914,6 +983,53 @@ fn convert_to_range_lowers_this_row_at_each_row() {
     assert_eq!(value(&model, 0, 3, 4), "4");
     assert_eq!(model.get_localized_cell_content(0, 3, 4).unwrap(), "=$A3*2");
     assert_eq!(value(&model, 1, 5, 4), "#VALUE!");
+}
+
+/// Convert to range: a `#This Row` reference off the data rows keeps its text, in its `@` form
+/// with the table name, evaluates `#VALUE!` through row and column inserts, and is exported
+/// as `#VALUE!` (probes/table-edits/table-convert-names-this-row S!F2, S!F10, T!A2, T-2763).
+#[test]
+fn convert_to_range_keeps_the_text_of_an_off_row_this_row() {
+    let mut model = model();
+    model
+        .set_user_input(0, 5, 4, "=Sales[[#This Row],[Qty]]*2".to_string())
+        .unwrap();
+    model
+        .set_user_input(1, 1, 4, "=Sales[[#This Row],[Qty]]".to_string())
+        .unwrap();
+    model.convert_table_to_range("Sales").unwrap();
+    model.evaluate();
+    let check = |model: &Model, (sheet, row, column): (u32, i32, i32), text: &str| {
+        assert_eq!(value(model, sheet, row, column), "#VALUE!");
+        assert_eq!(formula(model, sheet, row, column), text);
+    };
+    check(&model, (0, 5, 4), "=Sales[@Qty]*2");
+    check(&model, (1, 1, 4), "=Sales[@Qty]");
+    // A row insert moves the cell down, a column insert along its row; each re-enters it.
+    model.insert_rows(0, 1, 1).unwrap();
+    model.insert_columns(0, 3, 1).unwrap();
+    model.insert_rows(1, 1, 1).unwrap();
+    model.evaluate();
+    check(&model, (0, 6, 5), "=Sales[@Qty]*2");
+    check(&model, (1, 2, 4), "=Sales[@Qty]");
+    let Some(index) = model.workbook.worksheets[0]
+        .cell(6, 5)
+        .and_then(|cell| cell.get_formula())
+    else {
+        panic!("no formula at E6");
+    };
+    let context = CellReferenceRC {
+        sheet: "Data".to_string(),
+        row: 6,
+        column: 5,
+    };
+    let node = &model.parsed_formulas[0][usize::try_from(index).unwrap()].evaluated;
+    // Excel writes `#REF!` (probes/table-edits/t3629-save-detached, T-3629): TODO(T-4020).
+    assert_eq!(to_excel_string(node, &context), "#VALUE!*2");
+    // Typed, the engine's `[!]` prefix is not a formula.
+    assert!(model
+        .set_typed_user_input(0, 9, 4, "=[!]Sales[[#This Row],[Qty]]".to_string())
+        .is_err());
 }
 
 /// INDIRECT of structured-reference text is the table area; a column the table lacks, a table

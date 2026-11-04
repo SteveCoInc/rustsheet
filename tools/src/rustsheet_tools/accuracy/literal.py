@@ -9,6 +9,7 @@ which is the double Excel and the engine read.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import ROUND_HALF_EVEN, Decimal
 
 # The largest 15-digit literal below 1E+308, and the smallest 15-digit literal at or above the
@@ -16,8 +17,30 @@ from decimal import ROUND_HALF_EVEN, Decimal
 MAX_LITERAL = 9.99999999999999e307
 MIN_LITERAL = 2.22507385850721e-308
 
-Arg = float | int | bool
-"""One drawn argument: a real (float), an integer parameter (int) or a logical (bool)."""
+Scalar = float | int | bool
+Row = tuple[float | int, ...]
+Matrix = tuple[Row, ...]
+Arg = Scalar | Row | Matrix
+"""One drawn argument: a real (float), an integer parameter (int), a logical (bool), an array of
+numbers (a tuple, written as a one-row array literal: IRR's flows, XIRR's dates) or a matrix (a
+tuple of equally long rows, written as a 2-D array literal: MDETERM's, MINVERSE's and MMULT's
+arguments, T-3686)."""
+
+
+def decimal15(x: float) -> Decimal:
+    """The exact value of the double `x` cut half-even to 15 significant digits, as a decimal
+    (a carry gives the next power of ten: 9.9999999999999999 → 10.0000000000000). For a
+    15-digit literal this is the written decimal again: the double is within half an ulp of it,
+    far less than half a unit of the 15th digit."""
+    if x == 0:
+        return Decimal(0)
+    d = Decimal(x)
+    return d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=ROUND_HALF_EVEN)
+
+
+def exponent10(x: float) -> int:
+    """The decimal exponent of `x`'s 15-digit cut (2.675 → 0, 1.2E-5 → -5)."""
+    return decimal15(x).adjusted()
 
 
 def round15(x: float) -> float:
@@ -29,9 +52,7 @@ def round15(x: float) -> float:
         return MAX_LITERAL if x > 0 else -MAX_LITERAL
     if magnitude < MIN_LITERAL:
         return MIN_LITERAL if x > 0 else -MIN_LITERAL
-    d = Decimal(x)
-    d = d.quantize(Decimal(1).scaleb(d.adjusted() - 14), rounding=ROUND_HALF_EVEN)
-    value = float(d)
+    value = float(decimal15(x))
     if abs(value) >= MAX_LITERAL:  # 9.999999999999999E+307 rounds up to 1E+308
         return MAX_LITERAL if x > 0 else -MAX_LITERAL
     return value
@@ -54,7 +75,11 @@ def neighbour(b: float, up: bool) -> float:
 
 def text(a: Arg) -> str:
     """`a` as formula text: TRUE/FALSE, an integer's digits (15-digit exponent form above 1E15),
-    or a real's 15 significant digits in Excel's exponent style (`1.87E-297`)."""
+    a real's 15 significant digits in Excel's exponent style (`1.87E-297`), or an array literal of
+    those: one row (`{-1000,300.5,800}`) or a matrix, rows separated by `;` (`{1,2;3,4}`)."""
+    if isinstance(a, tuple):
+        rows: Sequence[Sequence[Arg]] = a if a and isinstance(a[0], tuple) else (a,)
+        return "{" + ";".join(",".join(text(x) for x in row) for row in rows) + "}"
     if isinstance(a, bool):
         return "TRUE" if a else "FALSE"
     if isinstance(a, int) and abs(a) < 10**15:

@@ -1,4 +1,4 @@
-pub(super) mod bound_variables;
+pub(crate) mod bound_variables;
 mod literals;
 mod rename_defined_name;
 mod sheet_edits;
@@ -86,6 +86,8 @@ pub(crate) struct Displacement<'a> {
     /// The table columns a column delete removes, as lowercase (table, column) names: a
     /// structured reference to one of them prints `#REF!` (T-2339).
     pub(crate) deleted_columns: &'a [(String, String)],
+    /// The tables (lowercase) a column delete removes whole: they print `#REF!` (T-3733).
+    pub(crate) deleted_tables: &'a [String],
 }
 
 /// The data rows `rows` and columns `columns` of a table on `sheet`, before the edit.
@@ -104,6 +106,7 @@ impl Displacement<'_> {
             kept_tables: &[],
             grown_edges: &[],
             deleted_columns: &[],
+            deleted_tables: &[],
         }
     }
 
@@ -170,21 +173,24 @@ impl Displacement<'_> {
 /// moved by a cut and paste. Everything else prints the same either way, so a moved formula
 /// has the text FORMULATEXT shows (SPEC-0007 step 5).
 enum Rewrite<'a> {
-    /// Displaced by a structural edit; the structured references to the tables named here
-    /// (lowercase) keep their text, since those tables move, grow or shrink with the edit
-    /// (SPEC-0016 "Structural edits", T-2297).
+    /// Displaced by a structural edit; structured references to the tables it names (lowercase)
+    /// keep their text, as they move, grow or shrink with it (SPEC-0016, T-2297).
     Displace(Displacement<'a>),
     Move(&'a MoveContext<'a>),
     /// Prints the area of every structured reference to one of these tables (lowercase names)
     /// instead of its text: the tables of a sheet being deleted (SPEC-0016 "Sheet rename, delete
-    /// and restore"). A `#This Row` area is resolved at the cell's row, or at the given row when
-    /// the formula is printed in R1C1 for one cell (T-1699).
+    /// and restore"). A `#This Row` area is resolved at the cell's row, or the given one (T-1699).
     Lower(&'a [String], Option<i32>),
-    /// Prints every `#This Row` as its area on the printing cell's row (T-1699).
-    LowerThisRow,
-    /// Prints `#REF!` for every structured reference to one of these tables (lowercase names):
-    /// the tables a table or sheet delete removes, as Excel rewrites them (T-2340).
+    /// Prints every `#This Row` as its area on the printing cell's row (T-1699), except one to
+    /// these tables (lowercase names), the tables a structural edit follows, which keeps its
+    /// text (T-3037).
+    LowerThisRow(&'a [String]),
+    /// Prints `#REF!` for every structured reference to these tables (lowercase): those a table
+    /// or sheet delete removes (T-2340).
     RefError(&'a [String]),
+    /// Prints the formula unchanged, as text entered into the cell again (a cell a structural edit
+    /// moves along its row); a detached structured reference keeps its `[!]` prefix (T-2763).
+    Reenter,
 }
 
 /// Whether an R1C1 range is a whole row (`1:1`, absolute rows 1 to the last) and a whole column
@@ -227,6 +233,24 @@ pub fn to_localized_string(
     language: &Language,
 ) -> String {
     stringify(node, Some(context), &NO_REWRITE, false, locale, language)
+}
+
+/// [`to_localized_string`] for text the engine enters into the cell again
+/// ([`Rewrite::Reenter`]): a cell a structural edit moves along its row (`Model::moved_text`).
+pub(crate) fn to_localized_string_reentered(
+    node: &Node,
+    context: &CellReferenceRC,
+    locale: &Locale,
+    language: &Language,
+) -> String {
+    stringify(
+        node,
+        Some(context),
+        &Rewrite::Reenter,
+        false,
+        locale,
+        language,
+    )
 }
 
 /// This is the mode used to export the formula to Excel
@@ -593,7 +617,9 @@ fn stringify(
             }
             &DisplaceData::None
         }
-        Rewrite::Lower(..) | Rewrite::LowerThisRow | Rewrite::RefError(_) => &DisplaceData::None,
+        Rewrite::Lower(..) | Rewrite::LowerThisRow(_) | Rewrite::RefError(_) | Rewrite::Reenter => {
+            &DisplaceData::None
+        }
     };
     let sub = |n: &Node| stringify(n, context, rewrite, export_to_excel, locale, language);
     match node {
@@ -816,7 +842,7 @@ fn stringify(
             right,
         } => format!("{}%", wrap(sub(right), binding(right) < binding(node))),
         ErrorKind(kind) => format!("{kind}"),
-        SheetRefErrorKind { sheet_name } => wrong_reference::ref_error_text(Some(sheet_name)),
+        SheetRefErrorKind { .. } => wrong_reference::text(node, context, export_to_excel),
         ParseErrorKind { message, .. }
             if export_to_excel && is_unresolved_structured_reference(message) =>
         {

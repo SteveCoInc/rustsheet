@@ -1,0 +1,144 @@
+"""T-3960 sweep (decision 0188 R4.1): BINOM.DIST and NEGBINOM.DIST cdf at p below 0.01 with a huge n or r.
+
+    python sweep.py generate [OUT_DIR]   # write the train and hold-out cases (deterministic, seeds below)
+
+Train (seed 3960): 200 BINOM.DIST(k, n, p, TRUE) with p log-uniform on [1E-5, 1E-2], n log-uniform on [1E5, 1E9],
+k = round(n p + z sqrt(n p q)), z uniform on [-3, 2]; 200 NEGBINOM.DIST(k, r, p, TRUE) with p as above, r
+log-uniform on [10, 1E4], k = round(mean + z sd) around the mean r q / p (sd = sqrt(r q) / p); plus controls: 20
+cells of each family at the 11 T-3961 owned cells' own (n or r, p), k stepped by 1 around the owned k.
+Hold-out (seed 3961): 100 + 100 cells, the same rule, no control and no point shared with the train case. It is
+T-3961's hold-out and is never used for fitting.
+p is written with at most 15 significant digits (Excel truncates longer formula literals).
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+import random
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from sweep_case import lit  # noqa: E402
+
+TRAIN_SEED = 3960
+HOLD_SEED = 3961
+# T-3961's owned cells: (family, n or r, p, k).
+OWNED_BINOM = [
+    (100000, 0.001, 70),
+    (600000, 0.001, 526),
+    (1000000, 0.001, 905),
+    (10000000, 0.001, 9700),
+    (16194261, 0.000154374041567456, 2461),
+    (623666, 0.00947288369372644, 5887),
+    (868228, 0.00961856313687781, 8259),
+]
+OWNED_NEGBINOM = [
+    (1903, 1.81058846428433e-05, 106931620),
+    (4940, 0.00472551518826802, 1041120),
+    (45, 0.000105461509284258, 544583),
+    (6017, 0.00159874266118577, 3827391),
+]
+
+
+def draw_p(rng: random.Random) -> float:
+    return float(lit(10.0 ** rng.uniform(-5.0, -2.0)))
+
+
+def binom_point(rng: random.Random) -> tuple[int, float, int]:
+    p = draw_p(rng)
+    n = round(10.0 ** rng.uniform(5.0, 9.0))
+    z = rng.uniform(-3.0, 2.0)
+    sd = math.sqrt(n * p * (1.0 - p))
+    return n, p, max(0, min(n, round(n * p + z * sd)))
+
+
+def negbinom_point(rng: random.Random) -> tuple[int, float, int]:
+    p = draw_p(rng)
+    r = round(10.0 ** rng.uniform(1.0, 4.0))
+    z = rng.uniform(-3.0, 2.0)
+    q = 1.0 - p
+    return r, p, max(0, round(r * q / p + z * math.sqrt(r * q) / p))
+
+
+def build(seed: int, count: int, controls: bool, exclude: set[tuple]) -> tuple[dict, dict]:
+    rng = random.Random(seed)
+    points: list[tuple[str, int, float, int, str]] = []
+    seen = set(exclude)
+
+    def add(fn: str, n: int, p: float, k: int, label: str) -> None:
+        key = (fn, k, n, lit(p))
+        if key not in seen:
+            seen.add(key)
+            points.append((fn, n, p, k, label))
+
+    for fn, draw in (("BINOM.DIST", binom_point), ("NEGBINOM.DIST", negbinom_point)):
+        done = 0
+        while done < count:
+            n, p, k = draw(rng)
+            before = len(points)
+            add(fn, n, p, k, "grid")
+            done += len(points) - before
+    if controls:
+        for fn, owned, per in (("BINOM.DIST", OWNED_BINOM, 3), ("NEGBINOM.DIST", OWNED_NEGBINOM, 5)):
+            for i, (n, p, k) in enumerate(owned):
+                # 20 per family: BINOM 7 points x 3 less one on the last, NEGBINOM 4 points x 5.
+                extra = -1 if (fn == "BINOM.DIST" and i == len(owned) - 1) else 0
+                steps = [0, -1, 1, -2, 2][: per + extra]
+                for d in steps:
+                    add(fn, n, p, k + d, "control")
+    cells: dict[str, str] = {}
+    hyp: dict[str, str] = {}
+    for row, (fn, n, p, k, label) in enumerate(points, start=1):
+        arg = "n" if fn == "BINOM.DIST" else "r"
+        cells[f"A{row}"] = f"={fn}({k},{n},{lit(p)},TRUE)"
+        hyp[f"Calc!A{row}"] = f"t3960/{label}/{fn}/k={k}/{arg}={n}/p={lit(p)}"
+    return cells, hyp
+
+
+def write(path: str, description: str, cells: dict, hyp: dict) -> None:
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": description,
+        "tags": ["M9", "probe", "numeric", "statistics", "T-3960", "T-3961", "sweep"],
+        "sheets": [{"name": "Calc", "cells": cells}],
+        "check": [f"Calc!{c}" for c in cells],
+        "hypotheses": hyp,
+        "expected": {},
+    }
+    with open(path, "w") as out:
+        json.dump(case, out, indent=1)
+        out.write("\n")
+    print(path, len(cells))
+
+
+def main(out_dir: str) -> None:
+    train_cells, train_hyp = build(TRAIN_SEED, 200, True, set())
+    train_keys = set()
+    for f in train_cells.values():
+        fn, rest = f[1:].split("(", 1)
+        k, n, p, _ = rest.rstrip(")").split(",")
+        train_keys.add((fn, int(k), int(n), p))
+    hold_cells, hold_hyp = build(HOLD_SEED, 100, False, train_keys)
+    write(
+        os.path.join(out_dir, "t3960-binom-negbinom-small-p-cdf.case.json"),
+        "T-3960 train sweep: BINOM.DIST and NEGBINOM.DIST cdf at p 1E-5 to 1E-2 with n 1E5 to 1E9 or r 10 to 1E4, "
+        "k within -3 to +2 sd of the mean, plus controls around T-3961's 11 owned cells; seed 3960; "
+        "generated by docs/research/t3960/sweep.py (decision 0188 R4.1).",
+        train_cells,
+        train_hyp,
+    )
+    write(
+        os.path.join(out_dir, "t3960-binom-negbinom-small-p-cdf-hold.case.json"),
+        "T-3960 HOLD-OUT for T-3961: the same grid as t3960-binom-negbinom-small-p-cdf, seed 3961, no shared point. "
+        "It is never used for fitting (decision 0188 R4.1).",
+        hold_cells,
+        hold_hyp,
+    )
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] != "generate":
+        sys.exit(__doc__)
+    main(sys.argv[2] if len(sys.argv) > 2 else "eval/suites/probes-numeric/cases")

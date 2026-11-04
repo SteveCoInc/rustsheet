@@ -39,22 +39,32 @@
 //! Additional letters with a canonical decomposition are their base letter plus their marks, and a
 //! combining mark (U+0300 to U+0362) adds its weight to the letter before it
 //! (probes/t3114-collation-beyond-latin1, probes/t3154-collation-accents; coercion.md "Letters
-//! beyond Latin-1 and combining marks"). Every other character keeps code-point order after the
-//! letters, as before T-0220.
+//! beyond Latin-1 and combining marks"). Hebrew, Arabic, Devanagari, Thai, Lao, Hangul, the CJK
+//! ideographs and astral characters follow Excel's block order ([`script_order`]); Hebrew points,
+//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and eight
+//! other blocks' digits are their digit (T-3895, T-3917); arrows, symbols and dingbats sort after
+//! the punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps
+//! code-point order after the letters, as before T-0220.
 //!
-//! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs `UNIT_BASE` plus its value and an
-//! astral character weighs its two UTF-16 units, so lone units sort above every BMP character
-//! (U+FFFD included) and a lone high half sorts before a pair it starts, a lone low half after it
+//! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs as the same unit of a pair does
+//! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
+//! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
 
 use std::cmp::{Ordering, Reverse};
-use std::iter::Peekable;
 
+mod accents;
 mod kana;
+mod lookup_fold;
+mod scripts;
 
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
+use accents::{accents, cmp_accent_units};
 use kana::{kana, vowel};
+pub(crate) use lookup_fold::fold_lookup;
+use lookup_fold::{class_first, is_weightless};
+use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -87,6 +97,35 @@ fn cmp_str(left: &str, right: &str, order: AccentOrder) -> Ordering {
     cmp_chars(scalars(left), scalars(right), order)
 }
 
+/// Excel's `<`, `=`, `>` before the collation (coercion.md "Format characters, U+200B and the C1
+/// controls (T-3662)"; probes/t3662-collation-ignorables, -prefix, -sweep): while both texts' units
+/// are below U+007B and equal ignoring ASCII case, a text that runs out first is the smaller, whatever
+/// the other has left. So `"ab"&U+00AD > "ab"` and `U+00AD > ""`, though the collation weighs
+/// U+00AD nothing; but `"a~"&U+00AD = "a~"` and `"é"&U+00AD = "é"`. `None` once a unit is not
+/// below U+007B or the texts differ (the collation decides), or when both run out together. Not
+/// transitive (`"ab" < "ab"&U+00AD`, yet both equal U+00AD&`"ab"`), so the total order and the
+/// [`CollationKey`] leave it out; it only tells apart texts with equal keys.
+fn cmp_prefix(
+    mut left: impl Iterator<Item = Char>,
+    mut right: impl Iterator<Item = Char>,
+) -> Option<Ordering> {
+    let fast = |c: Char| match c {
+        Char::Scalar(c) if c < '{' => Some(c.to_ascii_lowercase()),
+        _ => None,
+    };
+    loop {
+        match (left.next(), right.next()) {
+            (None, None) => return None,
+            (None, Some(_)) => return Some(Ordering::Less),
+            (Some(_), None) => return Some(Ordering::Greater),
+            (Some(l), Some(r)) => match (fast(l), fast(r)) {
+                (Some(l), Some(r)) if l == r => {}
+                _ => return None,
+            },
+        }
+    }
+}
+
 /// The characters of well-formed text.
 fn scalars(text: &str) -> impl Iterator<Item = Char> + Clone + '_ {
     text.chars().map(Char::Scalar)
@@ -110,6 +149,11 @@ pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
 
 /// [`cmp_text`] or [`cmp_text_pairwise`].
 fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
+    if let AccentOrder::Pairwise = order {
+        if let Some(order) = cmp_prefix(left.chars_lossless(), right.chars_lossless()) {
+            return order;
+        }
+    }
     if left.has_lone_surrogate() || right.has_lone_surrogate() {
         cmp_chars(left.chars_lossless(), right.chars_lossless(), order)
     } else {
@@ -226,46 +270,64 @@ fn ascii_primaries(text: &str) -> impl Iterator<Item = u32> + '_ {
         .filter(|&weight| weight != 0)
 }
 
-/// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), punctuation, digits, letters, and
-/// every other character after the letters by code point.
+/// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), the Unicode spaces, punctuation,
+/// digits, letters, and every other character after the letters by code point.
 const SPACE: u32 = 0x40;
 const NBSP: u32 = SPACE + 1;
 /// CHAR(9), CHAR(10) and CHAR(13) sort above CHAR(160) (probes/text-collation-unprobed); CHAR(11)
 /// and CHAR(12), unprobed, are kept with them in code-point order.
 const WHITESPACE_BASE: u32 = NBSP + 1;
-const PUNCTUATION_BASE: u32 = WHITESPACE_BASE + 5;
-const DIGIT_BASE: u32 = 0x90;
-const LETTER_BASE: u32 = 0xC0;
-const OTHER_BASE: u32 = 0x100;
+/// U+2000 to U+200B, after CHAR(9) and before `!`: U+2000 with U+2002, U+2001 with U+2003, then
+/// U+2004 to U+200A and the zero-width space U+200B one by one (probes/t4039-collation-space-forms
+/// Calc!B3 = 5, B5:B15 = 6, 8, 6, 8, 10 to 16, B18 = 17; probes/t3662-collation-ignorables-sweep
+/// G1:G6). Their order against CHAR(10) to CHAR(13) is unprobed but for U+200B's (above both,
+/// -sweep G2:G4).
+const SPACE_FORMS: u32 = WHITESPACE_BASE + 5;
+const PUNCTUATION_BASE: u32 = SPACE_FORMS + 10;
+/// The symbols after [`PUNCTUATION`] ([`symbol`]).
+const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
+/// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
+/// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
+const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
+/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, by code point
+/// (probes/t4039-collation-space-forms Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep
+/// K1:L16; U+0082 to U+008F and U+0091 to U+009D unprobed).
+const C1_BASE: u32 = BULLET + 1;
+const DIGIT_BASE: u32 = 0x800;
+const _: () = assert!(C1_BASE + 0x20 <= DIGIT_BASE);
+/// `∞` sorts between `"9"` and `"a"` (probes/t3276-collation-other-scripts rank A91 = 24).
+const INFINITY: u32 = digit(9) + 4;
+const LETTER_BASE: u32 = 0x840;
+const OTHER_BASE: u32 = 0x900;
 
-/// The primary weight of a character after the letters: by code point, two apart so that a weight
-/// fits between two neighbours ([`LONE_MARK`]).
+/// The primary weight of a character after the letters: by its place in [`script_order`], two
+/// apart so that a weight fits between two neighbours ([`LONE_MARK`]).
 fn other(c: char) -> u32 {
-    OTHER_BASE + 2 * u32::from(c)
+    OTHER_BASE + 2 * script_order(u32::from(c))
 }
 
 /// A long-vowel or iteration mark with no letter before it (`"ー"`, `"ゝ"`, `"ゞ"`, `"々"`, `"ーa"`):
 /// after the ideographs probed (`"ー" > "人人"`), all four equal (probes/t3275-collation-width-kana
 /// Calc!B119 = 4, probes/t3275-collation-width-kana-pairs AC25, AC37). Placed after the last
 /// unified ideograph.
-const LONE_MARK: u32 = OTHER_BASE + 2 * 0x9FFF + 1;
+const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
 
 /// Punctuation and symbols in Excel's order: the ASCII ones from probes/text-collation-order
 /// ranks 7-36, the others from probes/text-collation-unprobed, which ranks them against `!`, `~`,
 /// `+` and `0` only. So the Latin-1 marks, quotes and currency signs go between `~` and `+`, and
-/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed).
-const PUNCTUATION: [char; 59] = [
+/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed). The middle dot
+/// `·` sits between `µ` and `…` and is neither skipped nor equal to `""`
+/// (probes/t3896-collation-middle-dot Calc!A29 = 31, A54 = 30, A28 = 32). The CJK marks `、 。`
+/// sort between `%` and `~`, `「` after `~`, and the currency signs `₩ € ₹` in that order before
+/// `+` (probes/t3559-collation-unprobed-blocks ranks 7 to 15); their places against the unprobed
+/// ASCII marks and the Latin-1 signs are UNVERIFIED. [`punctuation`] lists the marks above `€`.
+const PUNCTUATION: [char; 64] = [
     '!', '"', '#', '$', '%', '&', '(', ')', '*', ',', '.', '/', ':', ';', '?', '@', '[', '\\', ']',
-    '^', '_', '`', '{', '|', '}', '~', '¡', '¦', '¨', '¯', '´', '¸', '¿', '\u{2018}', '\u{2019}',
-    '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '€', '+', '<', '=', '>', '±', '«', '»', '×', '÷',
-    '§', '©', '¬', '®', '°', 'µ', '…', '•',
+    '^', '_', '`', '{', '|', '}', '\u{3001}', '\u{3002}', '~', '\u{300c}', '¡', '¦', '¨', '¯', '´',
+    '¸', '¿', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '\u{20a9}', '€',
+    '\u{20b9}', '+', '<', '=', '>', '±', '«', '»', '×', '÷', '§', '©', '¬', '®', '°', 'µ',
+    '\u{b7}', '…',
 ];
-
-/// Weight of the first UTF-16 unit of an astral character or of a lone surrogate: above every BMP
-/// character ([`other`] stays below `OTHER_BASE + 0x2_0000`). An astral character weighs its two
-/// units, so a lone high surrogate sorts before a pair starting with it and a lone low one after
-/// it (`H<"😀"`, `"😀"<L`, `H<L` TRUE, `L<H` FALSE; probes/text-lone-surrogates A18-A22). A lone surrogate is above U+FFFD (A23, A24 FALSE).
-const UNIT_BASE: u32 = OTHER_BASE + 0x11_0000;
 
 /// What one case-folded character contributes to each pass.
 #[derive(Clone, Copy)]
@@ -282,6 +344,10 @@ enum Element {
     },
     /// A combining mark: no letter weight; it adds its diacritic weight to the letter before it.
     Mark(u8),
+    /// A weightless character (T-3904): no weight in any pass, but it ends the letter before it,
+    /// so a mark after it is a lone mark (`"a"&U+00AD&U+0301` is between `"a"` and `"á"`;
+    /// probes/t4060-collation-open-choices Calc!B50:B63, T-4072).
+    Weightless,
 }
 
 /// Diacritic (accent) weights, from Microsoft's Windows sorting weight table (the DW column; see
@@ -340,6 +406,10 @@ const SUPERSCRIPT: u8 = 1;
 /// (probes/t3275-collation-width-kana Calc!G1, G3, G6; pairs H6). Its order against
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
+/// The variant pass weight of U+202F: it is the space at the first pass (`U+202F&"a" < " b"`,
+/// probes/t4060-collation-open-choices Calc!B2, K2) and sorts after U+3000, the space full width,
+/// and before CHAR(160) (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4072).
+const NARROW_NBSP: u8 = FULL_WIDTH + 1;
 
 /// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
 /// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
@@ -421,10 +491,10 @@ fn expansion(first: char, second: char) -> Element {
     }
 }
 
-/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark is at or
-/// below `€`, so text in other scripts skips the scan.
+/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark but `₹`,
+/// `、`, `。` and `「` is at or below `€`, so text in other scripts skips the scan.
 fn punctuation(c: char) -> Option<u32> {
-    if c > '€' {
+    if c > '€' && !matches!(c, '\u{20b9}' | '\u{3001}' | '\u{3002}' | '\u{300c}') {
         return None;
     }
     PUNCTUATION
@@ -515,20 +585,35 @@ pub(crate) fn fold_char(c: char) -> char {
 }
 
 /// `c` with case removed: ASCII and Latin-1 letters directly, others through `to_lowercase`.
+/// A member of one of Excel's wider classes ([`class_first`]: `ϵ` with `ε`, `ϑ` with `ϴ`, `ϳ`
+/// with `Ͷ`, U+1FBE with `ι`, the Greek Extended psili+varia and dasia+oxia letters, ...) is its
+/// class's first member, so all of them weigh alike and tie under `<`, as Excel's do
+/// (probes/t4013-class-equality-order Calc!C1:E18; probes/t3584-match-fold-weightless Calc!B21:F21,
+/// P7, P9; T-4013). A supplementary
+/// character keeps its case: Excel's `=` keeps Deseret U+10400 apart from U+10428 (Calc!B25).
 fn fold(c: char) -> char {
     match c {
         'A'..='Z' => c.to_ascii_lowercase(),
         'À'..='Þ' if c != '×' => char::from_u32(u32::from(c) + 0x20).unwrap_or(c),
-        _ if c.is_ascii() => c,
-        _ => fold_final_sigma(c.to_lowercase().next().unwrap_or(c)),
+        _ if c.is_ascii() || u32::from(c) > 0xFFFF => c,
+        _ => {
+            let lower = |c: char| fold_final_sigma(c.to_lowercase().next().unwrap_or(c));
+            let folded = lower(c);
+            class_first(c)
+                .or_else(|| class_first(folded))
+                .map_or(folded, lower)
+        }
     }
 }
 
 fn element(c: Char) -> Element {
     let c = match c {
         Char::Scalar(c) => fold(c),
-        Char::Lone(unit) => return single(UNIT_BASE + u32::from(unit)),
+        Char::Lone(lone) => return single(unit(lone)),
     };
+    if let Some(element) = script_element(c) {
+        return element;
+    }
     match c {
         '\'' => Element::Skipped(APOSTROPHE),
         '-' => Element::Skipped(HYPHEN),
@@ -549,9 +634,41 @@ fn element(c: Char) -> Element {
         }
         _ if c.is_ascii() => single(ASCII_PRIMARY[c as usize]),
         '\u{a0}' => single(NBSP),
+        '\u{202f}' => Element::Weights {
+            primary: [SPACE, 0],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: NARROW_NBSP,
+        },
+        // U+205F equals the space (probes/t4039-collation-space-forms Calc!C1, H17).
+        '\u{205f}' => single(SPACE),
+        '\u{2000}' | '\u{2002}' => single(SPACE_FORMS),
+        '\u{2001}' | '\u{2003}' => single(SPACE_FORMS + 1),
+        '\u{2004}'..='\u{200b}' => single(SPACE_FORMS + 2 + (u32::from(c) - 0x2004)),
+        '\u{80}'..='\u{9f}' => single(C1_BASE + (u32::from(c) - 0x80)),
         '\u{363}'..='\u{36f}' => combining_letter(c)
             .map_or_else(|| single(other(c)), |base| accented(base, COMBINING_LETTER)),
         '\u{300}'..='\u{362}' => Element::Mark(mark_weight(c).unwrap_or(0)),
+        '\u{221e}' => single(INFINITY),
+        // `™` sorts after `"t"`, `"tm"` and `"tn"` and before `"z"` (probes/t3559-collation-unprobed-blocks
+        // G1:G5, ranks 46 to 50), so it is not `tm` with a variant weight: placed as `t` and a weight
+        // above every letter, before `"u"` (where it sits between `"tn"` and `"z"` is unprobed).
+        '\u{2122}' => Element::Weights {
+            primary: [letter('t'), letter('z') + 1],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: 0,
+        },
+        // `℃` and `№` sort after `"a"` and before `"tm"` (ranks 43 to 46): placed as the letters `c`
+        // and `no` of their compatibility forms with the superscript variant (UNVERIFIED).
+        '\u{2103}' => superscript(letter('c'), NO_ACCENT),
+        '\u{2116}' => Element::Weights {
+            primary: [letter('n'), letter('o')],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: SUPERSCRIPT,
+        },
+        '\u{2022}' => single(BULLET),
         '¼' => single(digit(0) + 1),
         '½' => single(digit(0) + 2),
         '¾' => single(digit(0) + 3),
@@ -603,16 +720,19 @@ fn element(c: Char) -> Element {
             let mut units = [0u16; 2];
             c.encode_utf16(&mut units);
             Element::Weights {
-                primary: [
-                    UNIT_BASE + u32::from(units[0]),
-                    UNIT_BASE + u32::from(units[1]),
-                ],
+                primary: [unit(units[0]), unit(units[1])],
                 accent: NO_ACCENT,
                 kana: NORMAL_KANA,
                 variant: 0,
             }
         }
-        _ => kana(c).unwrap_or_else(|| single(punctuation(c).unwrap_or_else(|| other(c)))),
+        _ => kana(c).unwrap_or_else(|| {
+            single(
+                punctuation(c)
+                    .or_else(|| symbol(c))
+                    .unwrap_or_else(|| other(c)),
+            )
+        }),
     }
 }
 
@@ -662,8 +782,21 @@ fn elements(
     difference: Option<usize>,
 ) -> impl Iterator<Item = Element> + Clone {
     text.enumerate()
-        .flat_map(|(at, c)| decompose(c).map(move |c| (at, c)))
+        // Excel: a weightless character (T-3584's table) has no weight in any pass
+        // ([`Element::Weightless`], before `decompose` could case-fold it into a weighted letter);
+        // where it still counts is [`cmp_prefix`]'s (coercion.md "Format characters, U+200B and
+        // the C1 controls (T-3662)", T-3904).
+        .flat_map(|(at, c)| {
+            let weightless = matches!(c, Char::Scalar(c) if is_weightless(c));
+            decompose(c)
+                .take(if weightless { 0 } else { 3 })
+                .map(move |c| (at, Some(c)))
+                .chain(weightless.then_some((at, None)))
+        })
         .scan(None, move |previous, (at, c)| {
+            let Some(c) = c else {
+                return Some(Element::Weightless);
+            };
             let element = resolve(c, *previous, difference == Some(at));
             if let Element::Weights { primary, .. } = element {
                 *previous = Some(if primary[1] == 0 {
@@ -750,113 +883,10 @@ fn full_width(element: Element) -> Element {
 fn primaries(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u32> {
     elements
         .flat_map(|element| match element {
-            Element::Skipped(_) | Element::Mark(_) => [0, 0],
+            Element::Skipped(_) | Element::Mark(_) | Element::Weightless => [0, 0],
             Element::Weights { primary, .. } => primary,
         })
         .filter(|&weight| weight != 0)
-}
-
-/// One unit of the accent pass: a letter's own diacritic weight (`letter`), or the weight of a
-/// combining mark after it.
-#[derive(Clone, Copy)]
-struct AccentUnit {
-    weight: u8,
-    letter: bool,
-}
-
-/// The accent units of `text`, letter by letter: one letter unit per letter weight of the first
-/// pass (an expansion such as `æ` is two, its accent then an unaccented one), each followed by
-/// the units of the combining marks after it. Marks with no letter before them follow an
-/// unaccented letter unit of their own (unprobed).
-fn accent_units(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = AccentUnit> {
-    let letter = |weight| AccentUnit {
-        weight,
-        letter: true,
-    };
-    let mut started = false;
-    elements
-        .flat_map(move |element| match element {
-            Element::Skipped(_) => [None, None],
-            Element::Mark(weight) => {
-                let mark = Some(AccentUnit {
-                    weight,
-                    letter: false,
-                });
-                if std::mem::replace(&mut started, true) {
-                    [mark, None]
-                } else {
-                    [Some(letter(NO_ACCENT)), mark]
-                }
-            }
-            Element::Weights {
-                primary, accent, ..
-            } => {
-                started = true;
-                let second = (primary[1] != 0).then(|| letter(NO_ACCENT));
-                [Some(letter(accent)), second]
-            }
-        })
-        .flatten()
-}
-
-/// The next unit of the letter whose units `units` is reading, if any is left.
-fn next_mark(units: &mut Peekable<impl Iterator<Item = AccentUnit>>) -> Option<u8> {
-    units.next_if(|unit| !unit.letter).map(|unit| unit.weight)
-}
-
-/// `first` plus the units left of the letter `units` is reading, in a wrapping byte.
-fn letter_sum(first: u8, units: &mut Peekable<impl Iterator<Item = AccentUnit>>) -> u8 {
-    std::iter::from_fn(|| next_mark(units)).fold(first, u8::wrapping_add)
-}
-
-/// The second pass: one accent weight per letter weight of the first pass, the sum of its
-/// [`accent_units`] in one wrapping byte, like the Windows sort key's one-byte diacritic weight.
-/// So the order of the marks does not matter:
-/// `"a"&UNICHAR(769)&UNICHAR(780)` = `"a"&UNICHAR(780)&UNICHAR(769)` = `"á"&UNICHAR(780)` =
-/// `"ǎ"&UNICHAR(769)` (2 + 12 + 18), and three U+0323 (2 + 3 * 86 = 260, so 4) sort between `"a"`
-/// and `"á"` (probes/t3154-collation-accent-weights, probes/t3154-collation-accent-pairs).
-fn accents(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u8> {
-    let mut units = accent_units(elements).peekable();
-    std::iter::from_fn(move || {
-        let first = units.next()?.weight;
-        Some(letter_sum(first, &mut units))
-    })
-}
-
-/// Excel's accent pass between two texts (coercion.md "Shared leading units are skipped before
-/// the sum", probes/t3201-collation-long-mark-runs, probes/t3201-collation-wrapped-run-pairs):
-/// letter by letter, drop the leading units both letters share with equal weights; a letter
-/// with no units left is less (so a text is below any text it is a proper prefix of,
-/// probes/t3154-collation-accent-pairs Calc!S19, T18); otherwise the sums of the units left, each
-/// in a wrapping byte, decide. Texts equal here have equal [`accents`].
-fn cmp_accent_units(
-    left: impl Iterator<Item = Element>,
-    right: impl Iterator<Item = Element>,
-) -> Ordering {
-    let (mut left, mut right) = (
-        accent_units(left).peekable(),
-        accent_units(right).peekable(),
-    );
-    loop {
-        let (mut l, mut r) = match (left.next(), right.next()) {
-            (None, None) => return Ordering::Equal,
-            (None, Some(_)) => return Ordering::Less,
-            (Some(_), None) => return Ordering::Greater,
-            (Some(l), Some(r)) => (Some(l.weight), Some(r.weight)),
-        };
-        while l.is_some() && l == r {
-            (l, r) = (next_mark(&mut left), next_mark(&mut right));
-        }
-        let order = match (l, r) {
-            (None, None) => Ordering::Equal,
-            (None, Some(_)) => Ordering::Less,
-            (Some(_), None) => Ordering::Greater,
-            (Some(l), Some(r)) => letter_sum(l, &mut left).cmp(&letter_sum(r, &mut right)),
-        };
-        if order.is_ne() {
-            return order;
-        }
-    }
 }
 
 /// The kana pass, after the accents: one weight per letter weight of the first pass,
@@ -890,20 +920,33 @@ fn letter_weights(
                 Some(pick(kana, variant)),
                 (primary[1] != 0).then_some(second),
             ],
-            Element::Skipped(_) | Element::Mark(_) => [None, None],
+            Element::Skipped(_) | Element::Mark(_) | Element::Weightless => [None, None],
         })
         .flatten()
 }
 
 /// The last pass: each hyphen or apostrophe as (position, weight), a later position first.
 /// Positions count letters and skipped characters, not combining marks, so a decomposed letter
-/// keeps the position of its precomposed form.
+/// keeps the position of its precomposed form. The marks right after a skipped character raise
+/// its weight by theirs (`"a'b" < "a-b" < "a'"&UNICHAR(769)&"b" < "a-"&UNICHAR(769)&"b"`:
+/// probes/t3304-collation-multi-letter-accents G4). That is the smallest fit for the probed
+/// U+0301; other marks and runs of several are unprobed.
 fn skipped(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = (Reverse<usize>, u8)> {
-    elements
-        .filter(|element| !matches!(element, Element::Mark(_)))
-        .enumerate()
-        .filter_map(|(position, element)| match element {
-            Element::Skipped(weight) => Some((Reverse(position), weight)),
-            Element::Weights { .. } | Element::Mark(_) => None,
-        })
+    let mut elements = elements.peekable();
+    let mut position = 0;
+    std::iter::from_fn(move || loop {
+        match elements.next()? {
+            Element::Skipped(mut weight) => {
+                while let Some(Element::Mark(mark)) =
+                    elements.next_if(|element| matches!(element, Element::Mark(_)))
+                {
+                    weight = weight.wrapping_add(mark);
+                }
+                position += 1;
+                return Some((Reverse(position - 1), weight));
+            }
+            Element::Weights { .. } => position += 1,
+            Element::Mark(_) | Element::Weightless => {}
+        }
+    })
 }

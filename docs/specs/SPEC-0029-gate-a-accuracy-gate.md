@@ -113,15 +113,19 @@ are parsed by Rust's `str::parse::<f64>` (correctly rounded); a math value beyon
 tools/ only (pure Python, BSD; the engine and the bindings never depend on it).
 
 - **Definitions.** `accuracy/defs/<family>.py` registers, per function, a `Definition`: the parameters (name, kind
-  real or integer, valid domain with open or closed bounds, typical range, extreme range, optional tail map) and the
-  mpmath function at the working precision. Inverses solve the forward mpmath function with `mpmath.findroot` on a
-  bracket; solvers (IRR, RATE, XIRR, YIELD) solve their defining equation and return Excel's root by Excel's root
-  choice where several exist (the definition cites the semantics entry; with no evidenced choice, points with several
-  roots are not drawn). The parameter list comes from the catalog (`eval/catalog/functions.yaml`: names, order,
-  `int` domains); the catalog's `domain` and `pool` seed the typical range where the definition gives none, but the
-  catalog's ranges are the synthetic generator's and are not the valid domain (T.INV's `max: 10` for df is a typical
-  value, df goes to 1e10), so the valid and extreme ranges are the definition's, each with a cited source
-  (a semantics entry, Excel's documented limit, or a probe).
+  real, integer, logical or array, valid domain with open or closed bounds, typical range, extreme range, optional
+  tail map) and the mpmath function at the working precision. An array (IRR's flows, XIRR's dates; T-3586) is written
+  as an array literal `{a,b,...}` with each element at most 15 significant digits, and its rules are the definition's.
+  A variadic function (SUM, AVERAGE; T-3549) repeats its last parameter (`Definition.variadic`), and its `draw` sets
+  the argument count, 1 to Excel's 255.
+  Inverses solve the forward mpmath function with `mpmath.findroot` on a bracket; solvers (IRR, RATE, XIRR, YIELD)
+  solve their defining equation and return Excel's root by Excel's root choice where several exist (the definition
+  cites the semantics entry; with no evidenced choice, points with several roots are not drawn). The parameter list
+  comes from the catalog (`eval/catalog/functions.yaml`: names, order, `int` domains); the catalog's `domain` and
+  `pool` seed the typical range where the definition gives none, but the catalog's ranges are the synthetic
+  generator's and are not the valid domain (T.INV's `max: 10` for df is a typical value, df goes to 1e10), so the
+  valid and extreme ranges are the definition's, each with a cited source (a semantics entry, Excel's documented
+  limit, or a probe).
 - **Precision.** Each value is computed at dps 60 and again at dps 80; a point whose two values differ beyond 1e-45
   relative is not converged and is dropped (logged with its arguments). A point whose evaluation takes more than 10 s is
   dropped the same way. The output is the dps-80 value rounded to 50 significant digits.
@@ -236,7 +240,10 @@ same mirroring for a fetched suite), attaches math values to the cells of any ev
   cell whose formula is one call `=FUNC(args)` of a function with a definition, parses its arguments with the fit lab's
   sweep reader (`fitlab/sweep.py`: literals, constant cells, arrays, `DATE`, and arithmetic over literals with Excel's
   operator model), and writes the math value with its formula text. A cell whose arguments read another formula cell,
-  or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent).
+  or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent). A candidate the
+  generator drops (no single value, not converged) is listed under an optional top-level `"skipped"` map (sheet → A1
+  → `{"f","why"}`), which the runner ignores and `rustsheet-accuracy math --check` (`make eval-math-check`, decision
+  0243) reads to tell it from a cell whose sidecar is missing or stale.
 - The runner reads the sidecar when present and puts the math value on the cell's `CellResult` (an optional field,
   absent from the JSON when none), dropping a stale one. R1(c) counts a visibly-off numeric cell as inside the envelope
   when `envelope` says so; a cell with no math value counts as outside (decision 0188 R1(c)), so nothing reads as met

@@ -3,7 +3,7 @@ id: T-3376
 title: "merge_lock attempt returns a structured queue status instead of wait matching message text"
 milestone: M2
 lane: harness
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ of #2513 named this as a follow-up.
 
 ## Out of scope
 - Any change to the lock format, the queue rules or the retry policy (decisions 0145, 0189).
+
+## Outcome
+Dropped (obsolete). `scripts/merge_lock.py` and the merge train were deleted by T-3827 (decision 0252), so there is nothing left to change.

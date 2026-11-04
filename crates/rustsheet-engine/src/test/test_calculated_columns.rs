@@ -111,6 +111,33 @@ fn identical_stored_formulas_are_not_refilled() {
     assert_eq!(column_formula(&model), None);
 }
 
+/// probes/t3033-calculated-refill-after-load and -overwrite-after-load: the same cells with a
+/// stored column formula (as xlsx import keeps it) are a calculated column, so a formula typed
+/// into the blank row, or over an occupied one, re-fills every data row (references.md rule 9).
+#[test]
+fn a_stored_column_formula_is_refilled() {
+    for (typed_row, blank) in [(5, true), (4, false)] {
+        let mut model = Model::new_empty("book", "en", "UTC", "en").unwrap();
+        for (row, col) in [(1, "Col"), (2, "1"), (3, "2"), (4, "4"), (5, "8")] {
+            model.set_user_input(0, row, 1, col.to_string()).unwrap();
+        }
+        model.set_user_input(0, 1, 2, "Other".to_string()).unwrap();
+        model.set_user_input(0, 1, 3, "Calc".to_string()).unwrap();
+        let last = if blank { 4 } else { 5 };
+        for row in 2..=last {
+            model
+                .set_user_input(0, row, 3, format!("=A{row}*2"))
+                .unwrap();
+        }
+        model
+            .add_table_with_totals(0, "T", (1, 1, 5, 3), false, false)
+            .unwrap();
+        model.set_table_column_formula("T", 2, "A2*2").unwrap();
+        typed(&mut model, typed_row, &format!("=A{typed_row}*3"));
+        assert_eq!(calc(&model, 5), ["3", "6", "12", "24"]);
+    }
+}
+
 /// A typed fill makes the column a calculated column, saved as the first data row's text, and a
 /// re-fill updates it; a typed constant fills nothing and keeps it.
 #[test]
@@ -124,6 +151,25 @@ fn a_typed_fill_records_the_column_formula() {
     assert_eq!(column_formula(&model).as_deref(), Some("A2*3"));
     typed(&mut model, 3, "5");
     assert_eq!(column_formula(&model).as_deref(), Some("A2*3"));
+}
+
+/// The recorded column formula is in file form, and an exception typed into the first data row
+/// does not change it (xlsx-storage.md; probes/t2957-constant-then-refill; T-3033).
+#[test]
+fn the_column_formula_is_file_form_and_survives_an_exception() {
+    let mut model = model(false);
+    typed(&mut model, 2, "=T[@Col]*2");
+    assert_eq!(
+        column_formula(&model).as_deref(),
+        Some("T[[#This Row],[Col]]*2")
+    );
+    typed(&mut model, 3, "5");
+    typed(&mut model, 2, "=T[@Col]*4");
+    assert_eq!(calc(&model, 4), ["4", "5", "8"]);
+    assert_eq!(
+        column_formula(&model).as_deref(),
+        Some("T[[#This Row],[Col]]*2")
+    );
 }
 
 /// probes/t2957-existing-constant: no fill beside a value.
@@ -343,6 +389,85 @@ fn a_padded_column_survives_an_edit_that_rewrites_its_text() {
     assert!(refused.is_err());
     model.evaluate();
     assert_eq!(model.get_formatted_cell_value(0, 9, 5).unwrap(), "");
+}
+
+/// Untyped text from outside the engine (`set_user_input`, the Python bindings' path) reads a
+/// padded bare column as no column too, as Excel reads it typed (refused) or loaded (`#REF!`;
+/// syntax.md, probes/t2800-stored-ws-0..2); the engine's own re-entry of its printed `T[ Col ]`
+/// (a fill, `Model::fill_cell`) still reads the column (T-3258). Untyped, a formula that does not
+/// parse is stored as `#ERROR!`, as an unknown column is.
+#[test]
+fn an_external_padded_bare_column_is_no_column() {
+    let mut model = model(false);
+    for (row, formula) in [
+        (8, "=SUM(T[ Col ])"),
+        (9, "=SUM(T[ Col])"),
+        (10, "=SUM(T[Col ])"),
+    ] {
+        model
+            .set_user_input(0, row, 5, formula.to_string())
+            .unwrap();
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, row, 5).unwrap(),
+            "#ERROR!",
+            "{formula}"
+        );
+    }
+    // The column as the engine prints it: `T[ [Col] ]` typed prints `T[ Col ]`, and a fill
+    // re-enters that text.
+    model
+        .set_typed_user_input(0, 12, 5, "=SUM(T[ [Col] ])".to_string())
+        .unwrap();
+    assert_eq!(
+        model.get_cell_formula(0, 12, 5).unwrap().as_deref(),
+        Some("=SUM(T[ Col ])")
+    );
+    let filled = model.fill_cell(0, (12, 5), (13, 5)).unwrap();
+    assert_eq!(filled, "=SUM(T[ Col ])");
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 12, 5).unwrap(), "7");
+    assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "7");
+    // The same text from outside is no column: a formula that does not parse, as an unknown
+    // column is untyped.
+    model.set_user_input(0, 14, 5, filled).unwrap();
+    model
+        .set_user_input(0, 15, 5, "=SUM(T[Nope])".to_string())
+        .unwrap();
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 14, 5).unwrap(), "#ERROR!");
+    assert_eq!(model.get_formatted_cell_value(0, 15, 5).unwrap(), "#ERROR!");
+}
+
+/// A loaded defined name whose body is a padded bare column is `#REF!`, as Excel loads it
+/// (probes/t3258-name-padded-column-0..2, T-3258); `T[ [Col] ]`, printed `T[ Col ]`, loads as
+/// the column.
+#[test]
+fn a_loaded_name_body_padded_bare_column_is_ref() {
+    let mut model = model(false);
+    for (name, body) in [
+        ("Both", "T[ Col ]"),
+        ("Left", "T[ Col]"),
+        ("Right", "T[Col ]"),
+    ] {
+        model.define_loaded_name(name, None, body).unwrap();
+    }
+    model.define_loaded_name("Ok", None, "T[ [Col] ]").unwrap();
+    for (row, formula) in [
+        (8, "=SUM(Both)"),
+        (9, "=SUM(Left)"),
+        (10, "=SUM(Right)"),
+        (11, "=SUM(Ok)"),
+    ] {
+        model
+            .set_user_input(0, row, 5, formula.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    let values: Vec<String> = (8..=11)
+        .map(|row| model.get_formatted_cell_value(0, row, 5).unwrap())
+        .collect();
+    assert_eq!(values, ["#REF!", "#REF!", "#REF!", "7"]);
 }
 
 /// probes/t3003-unqualified-structured-d2: `=[@Col]*2` typed into D2, just right of `T` A1:C4,

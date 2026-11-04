@@ -1,0 +1,55 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "Typed cell input of -%1.5, -%-1.5, -% 1.5, 1.5$, 1.5 $ and -200$ (value B, ISNUMBER C) and VALUE / +0 of -%-1.5, -% 1.5, -%1e2 and +%1.5 (T-3980).",
+ "tags": [
+  "M2",
+  "coercion",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": {
+     "entered": "-%1.5"
+    },
+    "B1": "=A1",
+    "C1": "=ISNUMBER(A1)",
+    "A2": {
+     "entered": "-%-1.5"
+    },
+    "B2": "=A2",
+    "C2": "=ISNUMBER(A2)",
+    "A3": {
+     "entered": "-% 1.5"
+    },
+    "B3": "=A3",
+    "C3": "=ISNUMBER(A3)",
+    "A4": {
+     "entered": "1.5$"
+    },
+    "B4": "=A4",
+    "C4": "=ISNUMBER(A4)",
+    "A5": {
+     "entered": "1.5 $"
+    },
+    "B5": "=A5",
+    "C5": "=ISNUMBER(A5)",
+    "A6": {
+     "entered": "-200$"
+    },
+    "B6": "=A6",
+    "C6": "=ISNUMBER(A6)",
+    "A7": "=VALUE(\"-%-1.5\")",
+    "B7": "=\"-%-1.5\"+0",
+    "A8": "=VALUE(\"-% 1.5\")",
+    "B8": "=\"-% 1.5\"+0",
+    "A9": "=VALUE(\"-%1e2\")",
+    "B9": "=\"-%1e2\"+0",
+    "A10": "=VALUE(\"+%1.5\")",
+    "B10": "=\"+%1.5\"+0"
+   }
+  }
+ ],
+ "expected": {}
+}
