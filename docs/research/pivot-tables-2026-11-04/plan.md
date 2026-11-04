@@ -37,7 +37,9 @@ Companion notes in this folder (data, citations, file:line references):
    values (LibreOffice 64 files, ClosedXML 38, Calipers 13, POI 5, corpus-bench 4). They serve as free
    regression evidence for real-world shapes. The oracle covers what they lack: rank, difference, running
    total, calculated items and blank rows appear in none of them.
-5. **Proposal:** a new milestone, M15 "Pivot tables", worked in a `pivot` lane parallel to Phase 1. It needs a
+5. **Decided (decision 0274, after review):** a new milestone, M15 "Pivot tables", in Phase 1, worked in the
+   existing lanes; its tasks are under docs/tasks/M15. The proposal below said a `pivot` lane; the decision
+   kept existing lanes so routine allowlists stay unchanged. The original proposal: M15 "Pivot tables", worked in a `pivot` lane parallel to Phase 1. It needs a
    decision record, since decision 0027 orders milestones. It is staged PV0–PV5 (§8), and every stage is gated
    by oracle-backed suites and per-feature coverage rows in the eval report.
 
@@ -249,7 +251,7 @@ round trip.
 
 | Stage | Scope | Exit evidence |
 |---|---|---|
-| **PV0 Foundations** | decision (M15, `pivot` lane, scope ruling, PivotChart ambition); SPEC-0030 (model, result, layout contract, refresh semantics, limits); feature catalog (schema walk + API + docs); oracle capability matrix (which catalog rows the web opens and renders; desktop-only ones go to M14); builder generalization; sidecar `pivots` capture; harness scoring of pivot areas; corpus fetcher; the spike findings committed as probes | catalog merged; `pivots` suite with ≥ 1 filled probe per family; capability matrix in `docs/excel-semantics/pivots.md` |
+| **PV0 Foundations** | decision (M15, lanes, scope ruling, PivotChart ambition); SPEC-0030 (model, result, layout contract, refresh semantics, limits); feature catalog (schema walk + API + docs); oracle capability matrix (which catalog rows the web opens and renders; desktop-only ones go to M14); builder generalization; sidecar `pivots` capture; harness scoring of pivot areas; corpus fetcher; the spike findings committed as probes | catalog merged; `pivots` suite with ≥ 1 filled probe per family; capability matrix in `docs/excel-semantics/pivots.md` |
 | **PV1 Refresh and core render** | refresh from a worksheet range or Table into the cache with Excel's item typing, identity and order; the 11 aggregates over records with text, blank and error rules; compact/outline/tabular; default subtotals top/bottom; grand totals; several data fields and the Values field on either axis; page fields (single/multi); manual hidden items; label sort; captions, `(blank)`, empty/error captions; location growth, page-area offsets and collisions; grid writer; refresh on load and by API; GETPIVOTDATA over every PV1 shape (closes T-2085) | `pivots` + `gen-pivot` (core) 100%; corpus files with only PV1 features re-render exactly |
 | **PV2 Analysis** | all 14 show-values-as modes; sort by value; label/value/date filters; Top/Bottom N; filter order and totals of filtered items; custom subtotal functions; show items with no data; repeat labels; blank rows; per-field layout mixes; data-field number formats (displayed text) | the same, per row |
 | **PV3 Grouping and calculation** | numeric, date and manual groups, with Excel's labels; shared group fields; calculated fields; calculated items with solve order and Excel's restrictions; errors they produce | the same |
@@ -261,6 +263,8 @@ The order is deliberate. PV1's layout engine and result tree carry everything af
 features change where the cells go (filters, sort, blank rows), so the layout must be right first.
 
 ## 9. First tasks proposed (filed after review)
+
+Filed 2026-11-04 as T-4120–T-4188 under docs/tasks/M15 (decision 0274): every stage's tasks, not only these nine.
 
 All are size S or M, as CLAUDE.md requires; anything bigger becomes a spec first.
 1. **Decision:** M15 "Pivot tables", a `pivot` lane parallel to Phase 1, the scope ruling of §8, and the

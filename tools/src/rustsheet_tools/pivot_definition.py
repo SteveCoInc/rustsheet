@@ -52,19 +52,31 @@ _DEFINITION_KEYS = {"table", "rows", "columns", "pages", "data", "fields", "calc
 _FIELD_KEYS = {"attrs", "hidden", "collapsed", "subtotals", "group", "order"}
 _DATA_KEYS = {"field", "name", "subtotal", "showDataAs", "baseField", "baseItem", "numFmtId"}
 # ST_DataConsolidateFunction, with the verb Excel puts in a data field's default name.
-AGGREGATES = {
-    "sum": "Sum",
-    "count": "Count",
-    "average": "Average",
-    "max": "Max",
-    "min": "Min",
-    "product": "Product",
-    "countNums": "Count",
-    "stdDev": "StdDev",
-    "stdDevp": "StdDevp",
-    "var": "Var",
-    "varp": "Varp",
-}
+_AGGREGATE_VERBS = [
+    "sum",
+    "Sum",
+    "count",
+    "Count",
+    "average",
+    "Average",
+    "max",
+    "Max",
+    "min",
+    "Min",
+    "product",
+    "Product",
+    "countNums",
+    "Count",
+    "stdDev",
+    "StdDev",
+    "stdDevp",
+    "StdDevp",
+    "var",
+    "Var",
+    "varp",
+    "Varp",
+]
+AGGREGATES = dict(zip(_AGGREGATE_VERBS[::2], _AGGREGATE_VERBS[1::2], strict=True))
 # ST_ShowDataAs (ECMA-376) plus the Excel 2010 modes Excel writes as x14 `pivotShowAs`; the latter are
 # accepted so probes can ask whether Excel for the web honours them (T-4129).
 SHOW_DATA_AS = {
@@ -78,6 +90,12 @@ SHOW_DATA_AS = {
     "percentOfTotal",
     "index",
 }
+# pivotTableDefinition attributes written unless `table` sets them (Excel's own new-pivot values).
+_TABLE_DEFAULTS = (
+    "dataCaption=Values updatedVersion=6 minRefreshableVersion=3 createdVersion=6 applyNumberFormats=0"
+    " applyBorderFormats=0 applyFontFormats=0 applyPatternFormats=0 applyAlignmentFormats=0"
+    " applyWidthHeightFormats=1 useAutoFormatting=1 itemPrintTitles=1 indent=0 outline=1 outlineData=1"
+)
 # Builder-managed attributes an author may not set through `table`, `attrs` or `cache`.
 _MANAGED_TABLE = {"name", "cacheId", "dataOnRows", "dataPosition"}
 _MANAGED_FIELD = {
@@ -487,23 +505,7 @@ class DefinedPivot:
     def table_definition(self, cache_id: int, top: int, left: int) -> str:
         table = self.d.get("table") or {}
         extra = _attrs(table, _MANAGED_TABLE, f"pivot {self.name} table")
-        defaults = {
-            "dataCaption": "Values",
-            "updatedVersion": "6",
-            "minRefreshableVersion": "3",
-            "createdVersion": "6",
-            "applyNumberFormats": "0",
-            "applyBorderFormats": "0",
-            "applyFontFormats": "0",
-            "applyPatternFormats": "0",
-            "applyAlignmentFormats": "0",
-            "applyWidthHeightFormats": "1",
-            "useAutoFormatting": "1",
-            "itemPrintTitles": "1",
-            "indent": "0",
-            "outline": "1",
-            "outlineData": "1",
-        }
+        defaults = dict(pair.split("=") for pair in _TABLE_DEFAULTS.split())
         head = "".join(f' {k}="{v}"' for k, v in defaults.items() if k not in table)
         anchor = xlsxwriter.utility.xl_rowcol_to_cell(top, left)
         corner = xlsxwriter.utility.xl_rowcol_to_cell(top + 1, left + 1)

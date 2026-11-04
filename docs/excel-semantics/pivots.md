@@ -64,7 +64,7 @@ Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals
 the formula over the sum of Sales, not the sum of the formula over the records. East/A (Sales 10 and
 4) shows 28.1, not 28.2.
 Evidence: oracle-spike.md run 5; T-4122 runs (sheet C).
-Status: UNVERIFIED (probe pending: T-4128, then T-4161 for the edge cases)
+Status: UNVERIFIED (probe pending: T-4128, then T-4173 for the edge cases)
 
 ## A Top-N filter changes the subtotals and grand totals
 Rule: with a `top10 val="2"` count filter on Product by Sum of Sales, the subtotals and grand totals
@@ -77,7 +77,7 @@ Rule: Excel replaces the group items a file gives with its own, and hides groups
 For fractional data (45031.5 present) and start 45000, interval 100, the labels are `45000-45100`,
 `45100-45200`, `45300-45400`. Whether integer data gives `a-(a+interval-1)` is open.
 Evidence: oracle-spike.md run 6; T-4122 runs (sheet G).
-Status: UNVERIFIED (probe pending: T-4128, then T-4159)
+Status: UNVERIFIED (probe pending: T-4128, then T-4170)
 
 ## A pivot that would meet a foreign cell collapses to #SPILL!
 Rule: when a pivot's new layout would overwrite cells it does not own, Excel for the web shows

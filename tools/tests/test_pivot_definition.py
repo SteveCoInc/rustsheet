@@ -52,7 +52,10 @@ def _parts(spec: dict[str, Any]) -> dict[str, str]:
 
 
 def _shared(cache: str, name: str) -> str:
-    m = re.search(rf'<cacheField name="{name}"[^>]*>(<sharedItems[^>]*/>|<sharedItems[^>]*[^/]>.*?</sharedItems>)', cache)
+    m = re.search(
+        rf'<cacheField name="{name}"[^>]*>(<sharedItems[^>]*/>|<sharedItems[^>]*[^/]>.*?</sharedItems>)',
+        cache,
+    )
     assert m, name
     return m.group(1)
 
