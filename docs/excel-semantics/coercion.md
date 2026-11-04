@@ -803,7 +803,8 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   - it equals the space with 88 U+030D, whose sum wraps to 10 in the accent byte (C34), and is above 173 and 87
     of them (9 and 7) and below 89 (13) (B35:D37).
 
-  Ranked among those texts it is third, after the space and U+3000 (B20). With a mark of its own, U+202F&U+0301
+  Three of those texts sort below it: the space, U+3000 and `" "&U+030D` (B20; B21 puts U+3000 below
+  `" "&U+030D`). With a mark of its own, U+202F&U+0301
   is above `" "&U+0301` (B24:B25). Implemented in: `element` gives U+202F the space's primary and the accent
   weight `NARROW_NBSP` = 10 (T-4087, T-4153).
 - **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
