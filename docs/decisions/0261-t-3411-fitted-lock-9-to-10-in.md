@@ -6,7 +6,7 @@
   `irr_npv` evaluates it one Newton step past the fallback's stop, is 1E-4 or more in magnitude
   (docs/excel-semantics/financial.md, "IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more"). The cut
   `IRR_ROOT_RESIDUAL` sits between evidenced cells, so it is a fit (decision 0188 R4):
-  - It carries `FITTED(T-3411, 169 IRR cases, fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed
+  - It carries `FITTED(T-3411, 59192 cells, the 169 IRR cases: fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed
     9.155E-5..1.2207E-4)`. Over every IRR cell in eval no cell moves for a cut anywhere in that bracket.
   - R4.1 split (fit lab `holdout.is_holdout`): 41,288 train and 17,904 test cells. The train cells alone bracket the
     cut at 9.155E-5..1.526E-4; the one test cell inside, probes-numeric/t3478-irr-r4-wide A90 (1.2207E-4), falls on

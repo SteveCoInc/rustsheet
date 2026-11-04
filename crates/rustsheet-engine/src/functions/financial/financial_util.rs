@@ -276,7 +276,7 @@ const IRR_FALLBACK_STEPS: usize = 50;
 /// residual is 9.155E-5 (probes-numeric/t3411-irr-r4-fresh A37 and A140) and its smallest `#NUM!`
 /// one 1.2207E-4 (t3478-irr-r4-wide A90). Those residuals are 3 and 4 times 2^-15, the rounding
 /// step of NPV sums of flows near 1E+11, so the round value is placed between the two.
-/// FITTED(T-3411, 169 IRR cases, fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.155E-5..1.2207E-4)
+/// FITTED(T-3411, 59192 cells, the 169 IRR cases: fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.155E-5..1.2207E-4)
 const IRR_ROOT_RESIDUAL: f64 = 1e-4;
 
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
