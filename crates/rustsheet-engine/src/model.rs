@@ -1944,13 +1944,13 @@ impl Model {
     /// # use rustsheet_engine::cell::CellValue;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
-    /// model.set_user_input(0, 1, 1, "100$".to_string());
-    /// model.set_user_input(0, 2, 1, "125$".to_string());
-    /// model.set_user_input(0, 3, 1, "-10$".to_string());
+    /// model.set_user_input(0, 1, 1, "$100".to_string());
+    /// model.set_user_input(0, 2, 1, "$125".to_string());
+    /// model.set_user_input(0, 3, 1, "-$10".to_string());
     /// model.set_user_input(0, 1, 2, "=SUM(A:A)".to_string());
     /// model.evaluate();
     /// assert_eq!(model.get_cell_value_by_index(0, 1, 2), Ok(CellValue::Number(215.0)));
-    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("215$".to_string()));
+    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("$215 ".to_string()));
     /// # Ok(())
     /// # }
     /// ```
@@ -2520,7 +2520,7 @@ impl Model {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
     /// let (sheet, row, column) = (0, 1, 1);
-    /// model.set_user_input(sheet, row, column, "100$".to_string());
+    /// model.set_user_input(sheet, row, column, "$100".to_string());
     /// let area = Area {
     ///     sheet,
     ///     row,
@@ -2531,7 +2531,7 @@ impl Model {
     /// model.range_clear_contents(&area)?;
     /// model.set_user_input(sheet, row, column, "10".to_string());
     /// let result = model.get_formatted_cell_value(sheet, row, column)?;
-    /// assert_eq!(result, "10$".to_string());
+    /// assert_eq!(result, "$10 ".to_string());
     /// # Ok(())
     /// # }
     /// ```
