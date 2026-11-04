@@ -3,7 +3,7 @@ id: T-3982
 title: "IMSECH's two T-3930 leftover texts (t3721 C386 complex, C390 real): find Excel's cosh where libm's misses"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
