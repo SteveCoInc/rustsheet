@@ -42,6 +42,8 @@ impl Model {
             error,
             before_weekend: true,
         };
+        // Read before the loop below follows IF's pick, which drops a unary plus written over it.
+        let written_value = written_reference(arg) == Some(false);
         let (mut arg, mut picked) = (arg, false);
         let value = loop {
             if is_multi_sheet_span(arg) {
@@ -81,10 +83,10 @@ impl Model {
         // A unary plus over a reference-returning function (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`) is
         // a scalar although evaluating it yields a one-cell range (probes/networkdays-intl-
         // holiday-unary-plus-fn B1:B4, E1:E4; T-4209).
-        let plus_one_cell = is_one_value(&value) && written_reference(arg) == Some(false);
+        let plus_one_cell = written_value && is_one_value(&value);
         let scalar = !matches!(value, CalcResult::Array(_))
             && (plus_one_cell || !matches!(value, CalcResult::Range { .. }))
-            && !self.is_reference(arg, cell);
+            && (written_value || !self.is_reference(arg, cell));
         let date_system = self.workbook.settings.date_system;
         let (mut serials, mut out_of_range) = (Vec::new(), false);
         self.collect_serial_numbers(value, cell, |serial| {
