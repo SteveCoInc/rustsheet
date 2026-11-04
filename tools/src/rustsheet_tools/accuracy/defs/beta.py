@@ -36,13 +36,65 @@ UNDERFLOW_SOURCE = (
 )
 
 
+# Above this a + b, I_x(a, b) is `_tail_series` alone. mpmath's `betainc` sums the alternating
+# 2F1(a, 1 - b; a + 1; x), which cancels so badly at large shapes that one call takes seconds to
+# minutes before it gives up (BETA.INV(1E-100,1E5,1E5), probes-numeric/t1543-inverse-cdf-tiny-p A99:
+# 34 calls, 100 s at dps 60, then hypsum fails). The old 10 s wall-clock drop hid that; T-3680
+# replaced it with these deterministic budgets.
+MPMATH_SHAPE_CAP = 20_000
+# The term budget of `_tail_series`. Its terms decay like exp(-n^2 (1 - x) / 2a) from the side's
+# switch point, so dps 80 needs about sqrt(370 a / (1 - x)) terms: 1E5 reaches a shape of about 1E7.
+SERIES_MAXTERMS = 10**5
+# Past this shape the series is not tried at all (NoValueError at once, as mpmath's NoConvergence
+# was): spending the term budget in every step of a root solve took 75 s for BETA.INV(0.5,2.5,5E9).
+SERIES_SHAPE_CAP = 1e7
+
+
+def _tail_series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
+    """I_x(a, b) for x ≤ (a + 1) / (a + b + 2) as x^a (1-x)^b / (a B(a, b)) 2F1(a + b, 1; a + 1; x)
+    (DLMF 8.17.8 with 15.8.1): every term is positive and they fall from the first, so nothing cancels."""
+    log_prefix = a * mpmath.log(x) + b * mpmath.log1p(-x) - mpmath.log(a) - mpmath.log(mpmath.beta(a, b))
+    return mpmath.exp(log_prefix) * mpmath.hyp2f1(a + b, 1, a + 1, x, maxterms=SERIES_MAXTERMS)
+
+
+def _series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
+    """I_x(a, b) from `_tail_series` on the side below the switch point (a + 1) / (a + b + 2), the
+    other side as the complement (it is then above about 1/2, so little cancels)."""
+    if x <= 0 or x >= 1:
+        return mpmath.mpf(0) if x <= 0 else mpmath.mpf(1)
+    if x <= (a + 1) / (a + b + 2):
+        return _tail_series(a, b, x)
+    return 1 - _tail_series(b, a, 1 - x)
+
+
 def _betainc(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
-    """I_x(a, b); NoValueError where mpmath's series does not converge (a shape near 1E7), so the sampler redraws."""
+    """I_x(a, b): mpmath's `betainc` up to a + b = MPMATH_SHAPE_CAP, with `_series` where it gives up
+    (its hypsum loses the cancelling series at shapes of a few thousand,
+    probes-numeric/t3571-r5-bfrac-fresh A239); `_series` alone above the cap. Both budgets are
+    deterministic, so a cell gets the same value or the same skip on any machine (T-3680).
+    NoValueError (the sampler redraws) above SERIES_SHAPE_CAP or where no series converges within its
+    budget; a ValueError from mpmath's hypsum (the point is dropped) where it gave up and the fallback
+    did too."""
+    if max(a, b) > SERIES_SHAPE_CAP:
+        msg = f"shape {mpmath.nstr(max(a, b), 3)} is above the incomplete beta's cap of 1E7 (T-3680)"
+        raise NoValueError(msg)
+    if a + b > MPMATH_SHAPE_CAP:
+        try:
+            return _series(a, b, x)
+        except mpmath.libmp.NoConvergence as err:
+            msg = f"the incomplete beta did not converge ({err})"
+            raise NoValueError(msg) from err
     try:
         return mpmath.betainc(a, b, 0, x, regularized=True)
-    except mpmath.libmp.NoConvergence as err:
-        msg = f"the incomplete beta did not converge ({err})"
-        raise NoValueError(msg) from err
+    except (mpmath.libmp.NoConvergence, ValueError) as err:
+        first = err
+    try:
+        return _series(a, b, x)
+    except (mpmath.libmp.NoConvergence, ValueError):
+        if isinstance(first, mpmath.libmp.NoConvergence):
+            msg = f"the incomplete beta did not converge ({first})"
+            raise NoValueError(msg) from first
+        raise first from None
 
 
 def lower_tail(x: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:

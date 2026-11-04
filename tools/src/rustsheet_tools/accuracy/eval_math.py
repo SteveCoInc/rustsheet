@@ -18,8 +18,8 @@ A candidate cell gets no math value when:
   given a number (likewise unevidenced per function), or the call has a
   different number of arguments than the definition (an omitted optional argument the definition
   does not mark `optional`, or an extra one);
-- the generator would drop the point (dps 60 and 80 disagree, over the time limit, or a value beyond
-  the double range). Only these skips need mpmath, so the sidecar lists them under `skipped`
+- the generator would drop the point (dps 60 and 80 disagree at the definition's deterministic
+  budget, or a value beyond the double range; never the clock, T-3680). Only these skips need mpmath, so the sidecar lists them under `skipped`
   (sheet → A1 → `f` and `why`) and `math --check` (T-3588) can tell, without mpmath, a cell the
   generator dropped from one nobody ran the generator for.
 xlsx cases are skipped: tools never parse xlsx values.
@@ -45,7 +45,7 @@ from rustsheet_tools.snapshot import suite_cases
 _ = defs  # importing the package registers the definitions
 
 NO_VALUE = "no single value"
-NOT_CONVERGED = "not converged or too slow"
+NOT_CONVERGED = "not converged"
 REGENERATE = "cd tools && uv run rustsheet-accuracy math --suite {suite}"
 
 _CALL = re.compile(r"=\s*([A-Za-z][A-Za-z0-9._]*)\((.*)\)\s*", re.DOTALL)

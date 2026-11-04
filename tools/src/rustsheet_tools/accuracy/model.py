@@ -7,9 +7,10 @@ the working precision. Definitions register themselves in `REGISTRY` from `defs/
 
 from __future__ import annotations
 
+import contextlib
 import math
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, TypeAlias
 
@@ -30,6 +31,41 @@ class DomainError(ValueError):
 class NoValueError(ValueError):
     """The point has no single math value to record (an overflow, or several roots with no
     evidenced root choice): the sampler redraws or drops it."""
+
+
+class OverBudgetError(Exception):
+    """A point's math spent more than its work budget (`work_budget`): the generator drops it. The
+    budget counts series terms, not seconds, so the same point is dropped on every machine (T-3680)."""
+
+
+_WORK: dict[str, int | None] = {"spent": 0, "limit": None}
+
+
+@contextlib.contextmanager
+def work_budget(limit: int | None) -> Iterator[None]:
+    """Counts the `spend` calls of the block against `limit` (None: count only)."""
+    saved = dict(_WORK)
+    _WORK.update(spent=0, limit=limit)
+    try:
+        yield
+    finally:
+        _WORK.update(saved)
+
+
+def spend(units: int = 1) -> None:
+    """Spends `units` of the current work budget; OverBudgetError once it is exceeded. A summed
+    expansion calls it once per term, so a slow point stops at the same term everywhere."""
+    spent = (_WORK["spent"] or 0) + units
+    _WORK["spent"] = spent
+    limit = _WORK["limit"]
+    if limit is not None and spent > limit:
+        msg = f"over the work budget of {limit} terms"
+        raise OverBudgetError(msg)
+
+
+def work_spent() -> int:
+    """The units spent so far in the current `work_budget` block."""
+    return _WORK["spent"] or 0
 
 
 @dataclass(frozen=True)
