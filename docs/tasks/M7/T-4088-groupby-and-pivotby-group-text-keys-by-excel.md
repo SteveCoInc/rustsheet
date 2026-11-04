@@ -3,7 +3,7 @@ id: T-4088
 title: "GROUPBY and PIVOTBY group text keys by Excel's = and order them pairwise (probes/t4086-groupby-weightless)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
