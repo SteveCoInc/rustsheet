@@ -349,8 +349,10 @@ operator cap. The xlsx importer refuses a workbook holding one, as Excel does (s
 Before T-0128 chains were capped at 255 terms.
 These bounds keep the recursive parser, evaluator, printer and tree copy/drop from overflowing the
 stack on untrusted formulas (CLAUDE.md directive 5). The heaviest shapes the sign and parenthesis caps admit (256 levels of spaced
-`- ( `, 1,023 spaced signs) fit a 1 MiB stack optimized, but an unoptimized build needs about 16 MiB
-for them, in the derived `Clone`/`Drop` of the tree (T-3338 measured; T-3691 makes those walks iterative); before T-0931, 200 nested parentheses crashed
+`- ( `, 1,023 spaced signs) fit a 1 MiB stack optimized and a 2 MiB stack unoptimized, every walk
+over the tree included: `Clone`, `PartialEq`, `Debug` and the name walk loop over a run of signs,
+whitespace and parentheses (T-3253, T-3691, T-4002; an unoptimized build needed about 16 MiB
+before, T-3338 measured); before T-0931, 200 nested parentheses crashed
 the process. A new recursive consumer of the tree (or a heavier evaluator frame) must be
 re-measured against these limits (the at-limit tests run on a 1 MiB stack in release builds), and
 must walk operator chains with `expressions/parser/chain.rs`.
