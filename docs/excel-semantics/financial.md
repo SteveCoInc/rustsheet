@@ -2222,6 +2222,20 @@ Evidence: probes/t3179-cumipmt-ipmt-sum (84 cells, excel-graph, 2026-11-04): A1,
 fin-cumipmt-overflow-and-forms A8), G4, G15 and fin-cumipmt-overflow-and-forms A13.
 Status: VERIFIED (excel-graph). Ours: every IPMT and running sum of the probe matches; the two single-period CUMIPMT
 cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-3179).
+Scored forms (T-3179, second run, 2026-11-04): on the 168 CUMIPMT cells with literal arguments and a range of at most 32
+periods that carry Excel values (probes fin-cumipmt-*, t3179-cumipmt-ipmt-sum, gen-m9), each candidate written as a
+formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on their probes:
+- ours, `PMT·m - CUMPRINC`: 92 bit-exact;
+- `PMT·m - SUM(PPMT(..SEQUENCE..))`: 61 (10 that ours misses, at rates 2E-6 to 1.5E-4; 41 that ours has);
+- `SUM(IPMT(..SEQUENCE..))`: 24, all of them also ours;
+- the balance form `SUM(FV(r,k-1,PMT,pv,t)·r)` (over `1+r` for type 1): 9 to 11. It gives A1 to the bit and D1 1 ulp
+  off, but misses the single-period cells `CUMIPMT(0.0083,36,8000,2,2,1)` (tiny-rate-structure Q1) and
+  `CUMIPMT(0.1,36,8000,2,2,1)` (gate-edges H10), which ours has, and its `(1+r)^m - 1` loses hundreds of ulps at
+  rates of 2E-5.
+So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: they stay 1 and 3 ulp off. Taking
+PMT's `1-Q` switch (`1 - EXP(-nper·L)` from |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper`
+moves none of the 168 cells and no gated cell (see T-3179's Outcome), so the evidence does not place a switch there and
+the kernel keeps `-expm1`.
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
