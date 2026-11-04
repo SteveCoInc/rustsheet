@@ -780,3 +780,28 @@ fn t4072_narrow_nbsp_and_marks_after_weightless_characters() {
         assert_eq!(pairwise(&format!("a{weightless}b"), "ab"), Ordering::Equal);
     }
 }
+
+/// T-4087: U+202F differs from the space at the accent pass; a weightless character keeps a
+/// hyphen's marks; width and superscripts are weighed before small kana, kana type after
+/// (probes/t4086-collation-later-passes).
+#[test]
+fn t4087_later_passes() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    // U+202F against an accent, either position.
+    assert_eq!(pairwise("\u{202f}a", " \u{e1}"), Ordering::Greater);
+    assert_eq!(pairwise("a\u{202f}", "\u{e1} "), Ordering::Less);
+    assert_increasing(&[" ", "\u{3000}", "\u{202f}", "\u{a0}"]);
+    // A hyphen or apostrophe keeps its mark across a weightless character.
+    assert_eq!(pairwise("a-\u{ad}\u{301}", "a-\u{301}"), Ordering::Equal);
+    assert_eq!(pairwise("a'\u{ad}\u{301}b", "a'\u{301}b"), Ordering::Equal);
+    assert_eq!(pairwise("a-\u{ad}\u{301}", "a-"), Ordering::Greater);
+    // Width and superscripts before small kana, from either position; kana type after it.
+    assert_eq!(pairwise("\u{ff21}\u{3041}", "A\u{3042}"), Ordering::Greater);
+    assert_eq!(pairwise("\u{3041}\u{ff21}", "\u{3042}A"), Ordering::Greater);
+    assert_eq!(pairwise("\u{b9}\u{3041}", "1\u{3042}"), Ordering::Greater);
+    assert_eq!(pairwise("\u{3041}\u{3000}", "\u{3042} "), Ordering::Greater);
+    assert_eq!(
+        pairwise("\u{30a2}\u{3041}", "\u{3042}\u{3042}"),
+        Ordering::Less
+    );
+}

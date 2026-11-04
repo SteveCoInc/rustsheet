@@ -211,8 +211,9 @@ where
             AccentOrder::Total => accents(left.clone()).cmp(accents(right.clone())),
             AccentOrder::Pairwise => cmp_accent_units(left.clone(), right.clone()),
         })
+        .then_with(|| widths(left.clone()).cmp(widths(right.clone())))
         .then_with(|| kana_weights(left.clone()).cmp(kana_weights(right.clone())))
-        .then_with(|| variants(left.clone()).cmp(variants(right.clone())))
+        .then_with(|| kana_types(left.clone()).cmp(kana_types(right.clone())))
         .then_with(|| skipped(left).cmp(skipped(right)))
 }
 
@@ -406,17 +407,26 @@ const SUPERSCRIPT: u8 = 1;
 /// (probes/t3275-collation-width-kana Calc!G1, G3, G6; pairs H6). Its order against
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
-/// The variant pass weight of U+202F: it is the space at the first pass (`U+202F&"a" < " b"`,
-/// probes/t4060-collation-open-choices Calc!B2, K2) and sorts after U+3000, the space full width,
-/// and before CHAR(160) (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4072).
-const NARROW_NBSP: u8 = FULL_WIDTH + 1;
+/// The accent weight of U+202F: it is the space at the first pass (`U+202F&"a" < " b"`,
+/// probes/t4060-collation-open-choices Calc!B2, K2) and differs from it at the accent pass, letter
+/// by letter (`U+202F&"a" > " á"`, `"a"&U+202F < "á"&" "`; probes/t4086-collation-later-passes
+/// Calc!B1, B46:B48), so it sorts after U+3000, whose difference is its width, and before CHAR(160)
+/// (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4087). The value, one above
+/// [`NO_ACCENT`], is UNVERIFIED.
+const NARROW_NBSP: u8 = NO_ACCENT + 1;
 
-/// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
-/// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
-/// probes/t3275-collation-width-kana Calc!G12:G14, ranks A90:A95).
-const HALF_WIDTH_KANA: u8 = 0;
-const KATAKANA: u8 = 1;
-const HIRAGANA: u8 = 2;
+/// The variant byte of a kana holds its kana type from here up; below it, a width or superscript
+/// weight. Excel weighs the two in different passes: width and superscripts before the kana pass,
+/// even from a later position (`"Ａ"&ぁ > "A"&あ`, `ぁ&"Ａ" > あ&"A"`, `"¹"&ぁ > "1"&あ`), the kana type
+/// after it (`"ア"&ぁ < "あ"&あ`) (probes/t4086-collation-later-passes Calc!B30:B45; T-4087).
+const KANA_TYPE: u8 = 0x40;
+
+/// The kana types: half-width katakana < katakana < hiragana, left to right, after the kana pass
+/// (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`; probes/t3275-collation-width-kana
+/// Calc!G12:G14, ranks A90:A95).
+const HALF_WIDTH_KANA: u8 = KANA_TYPE;
+const KATAKANA: u8 = KANA_TYPE + 1;
+const HIRAGANA: u8 = KANA_TYPE + 2;
 
 /// The kana pass weights, after the accents and before the variants: a small kana before its
 /// letter, the long-vowel mark `ー` and the kana iteration marks `ゝ ゞ` after the letter they
@@ -636,9 +646,9 @@ fn element(c: Char) -> Element {
         '\u{a0}' => single(NBSP),
         '\u{202f}' => Element::Weights {
             primary: [SPACE, 0],
-            accent: NO_ACCENT,
+            accent: NARROW_NBSP,
             kana: NORMAL_KANA,
-            variant: NARROW_NBSP,
+            variant: 0,
         },
         // U+205F equals the space (probes/t4039-collation-space-forms Calc!C1, H17).
         '\u{205f}' => single(SPACE),
@@ -895,11 +905,35 @@ fn kana_weights(elements: impl Iterator<Item = Element>) -> impl Iterator<Item =
     letter_weights(elements, |kana, _| kana, NORMAL_KANA)
 }
 
-/// The variant pass, after the kana pass: one weight per letter weight of the first pass,
-/// [`SUPERSCRIPT`] for `ª º ¹ ² ³`, [`FULL_WIDTH`] for the full-width forms, the kana type of a
-/// kana, and 0 otherwise.
+/// The variant byte as one weight per letter weight of the first pass: what the collation key
+/// keeps (the [`widths`] and [`kana_types`] together).
 fn variants(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u8> {
     letter_weights(elements, |_, variant| variant, 0)
+}
+
+/// The width pass, after the accents and before the kana pass: one weight per letter weight of the
+/// first pass, [`SUPERSCRIPT`] for `ª º ¹ ² ³`, [`FULL_WIDTH`] for the full-width forms, the other
+/// scripts' digit variants, and 0 otherwise (a kana's type is [`kana_types`]').
+fn widths(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u8> {
+    letter_weights(
+        elements,
+        |_, variant| if variant < KANA_TYPE { variant } else { 0 },
+        0,
+    )
+}
+
+/// The kana type pass, after the kana pass: one weight per letter weight of the first pass, a
+/// kana's type ([`HALF_WIDTH_KANA`], [`KATAKANA`], [`HIRAGANA`]) and 0 otherwise.
+fn kana_types(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u8> {
+    letter_weights(
+        elements,
+        |_, variant| {
+            variant
+                .checked_sub(KANA_TYPE)
+                .map_or(0, |kana_type| kana_type + 1)
+        },
+        0,
+    )
 }
 
 /// One weight per letter weight of the first pass: `pick` of the letter's kana and variant
@@ -937,10 +971,15 @@ fn skipped(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = (Rev
     std::iter::from_fn(move || loop {
         match elements.next()? {
             Element::Skipped(mut weight) => {
-                while let Some(Element::Mark(mark)) =
-                    elements.next_if(|element| matches!(element, Element::Mark(_)))
+                // Excel: a weightless character does not end a skipped character's marks
+                // (`"a-"&U+00AD&U+0301 = "a-"&U+0301`; probes/t4086-collation-later-passes
+                // Calc!B10:B22, B50:B52; T-4087).
+                while let Some(element) = elements
+                    .next_if(|element| matches!(element, Element::Mark(_) | Element::Weightless))
                 {
-                    weight = weight.wrapping_add(mark);
+                    if let Element::Mark(mark) = element {
+                        weight = weight.wrapping_add(mark);
+                    }
                 }
                 position += 1;
                 return Some((Reverse(position - 1), weight));

@@ -776,13 +776,14 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   `<U+3000&"á"` and `U+202F&ぁ<" "&あ` (Calc!B1, C1, F1). U+3000 and U+205F give TRUE for the first two (B2:C4).
   It is the accent pass itself, compared letter by letter: with the positions reversed, `"a"&U+202F < "á"&" "`
   is TRUE (the `á` at position 1 decides), and so is `"a"&U+202F&"b" < "á"&" b"` (B46, B48; B47 FALSE).
-  Ours: U+202F's difference is a variant weight (`NARROW_NBSP`, T-4072), so B1, C1 and F1 are known failures owned
-  by T-4087. UNVERIFIED: the accent weight's value.
+  Implemented in: `element` gives U+202F the space's primary and the accent weight `NARROW_NBSP`, one above
+  `NO_ACCENT` (T-4087). UNVERIFIED: the accent weight's value.
 - **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
   character still joins the hyphen or apostrophe. `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
-  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE, and each still holds with a `b` after
-  it (Calc!B10:B12, B16:B17, B21:B22, B50:B52). Ours: since T-4072, `Element::Weightless` cuts the hyphen's marks
-  in `skipped` and clears `after_skipped`; B10, B12, B17, B21, B22 and B50 are owned by T-4087.
+  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE. With a `b` after it, the apostrophe's
+  `=` is TRUE (B50:B52); for the hyphen, `=` follows from `<` and `>` both being FALSE (B16:B17) (Calc!B10:B12,
+  B21:B22). Implemented in: `skipped` reads the marks after a weightless character into the hyphen's weight, and
+  `accent_units` keeps `after_skipped` across it (T-4087).
 - **Width and superscripts are weighed before small kana; kana type after.**
   - `"Ａ"&ぁ > "A"&あ`, `"¹"&ぁ > "1"&あ` and `U+3000&ぁ > " "&あ` are TRUE (Calc!B30:B33, B36, F2). So the first
     character's width or superscript decides over the second's small kana.
@@ -792,9 +793,9 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   - It is a separate, earlier pass, not one pass decided at the first difference. With the width at position 2
     and the small kana at position 1, `ぁ&"Ａ" > あ&"A"`, `ぁ&"¹" > あ&"1"` and `ぁ&U+3000 > あ&" "` are still
     TRUE (B40, B42, B44; B41, B43, B45 FALSE).
-  - Ours: `variants` weighs width, superscript and kana type in one pass after `kana_weights`, so B30:B33, B36,
-    B40:B45 and F2 are owned by T-4087. This qualifies "Full-width and half-width forms" above ("Width is a
-    tiebreak").
+  - Implemented in: the variant byte holds a width or superscript below `KANA_TYPE` and a kana's type from it up.
+    `widths` is a pass between the accents and `kana_weights`; `kana_types` comes after it (T-4087). This qualifies
+    "Full-width and half-width forms" above ("Width is a tiebreak").
 - **GROUPBY and PIVOTBY group by `=`, prefix rule included.** Over `ab`, `ab`&U+00AD, `é`, `é`&U+00AD,
   U+00AD&`ab` and `AB` (values 1, 2, 4, 8, 16, 32), GROUPBY gives three groups in this order (-groupby Calc!B1,
   B4:B6, D4:D6):
@@ -802,8 +803,9 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   - 2 = `ab`&U+00AD;
   - 12 = `é` + `é`&U+00AD.
 
-  PIVOTBY gives the same groups under its header row (B2, C4:C7). U+00AD&`ab` is equal to both `ab` and
-  `ab`&U+00AD, and joins the first group. Ours: `group_key` keys texts by their upper case and `key_cmp` orders them
+  PIVOTBY gives the same groups under its header row (B2, C4:C7). By the prefix rule (a leading weightless unit
+  sends both texts to the collation; no `=` cell here), U+00AD&`ab` equals both `ab` and `ab`&U+00AD, and it joins
+  the first group. Ours: `group_key` keys texts by their upper case and `key_cmp` orders them
   with the total `cmp_text`, giving five groups; the 13 off cells are owned by T-4088.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
