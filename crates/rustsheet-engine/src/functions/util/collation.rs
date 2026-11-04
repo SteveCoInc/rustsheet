@@ -235,20 +235,33 @@ fn ascii_primaries(text: &str) -> impl Iterator<Item = u32> + '_ {
         .filter(|&weight| weight != 0)
 }
 
-/// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), punctuation, digits, letters, and
-/// every other character after the letters by code point.
+/// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), the Unicode spaces, punctuation,
+/// digits, letters, and every other character after the letters by code point.
 const SPACE: u32 = 0x40;
-const NBSP: u32 = SPACE + 1;
+/// U+202F sorts after U+3000 (the space, full width) and before CHAR(160)
+/// (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4).
+const NARROW_NBSP: u32 = SPACE + 1;
+const NBSP: u32 = NARROW_NBSP + 1;
 /// CHAR(9), CHAR(10) and CHAR(13) sort above CHAR(160) (probes/text-collation-unprobed); CHAR(11)
 /// and CHAR(12), unprobed, are kept with them in code-point order.
 const WHITESPACE_BASE: u32 = NBSP + 1;
-const PUNCTUATION_BASE: u32 = WHITESPACE_BASE + 5;
+/// U+2000 to U+200B, after CHAR(9) and before `!`: U+2000 with U+2002, U+2001 with U+2003, then
+/// U+2004 to U+200A and the zero-width space U+200B one by one (probes/t4039-collation-space-forms
+/// Calc!B3, B5:B18 = 5, 6, 8, 6, 8, 10 to 17; probes/t3662-collation-ignorables-sweep G1:G6). Their
+/// order against CHAR(10) to CHAR(13) is unprobed but for U+200B's (above both, -sweep G2:G4).
+const SPACE_FORMS: u32 = WHITESPACE_BASE + 5;
+const PUNCTUATION_BASE: u32 = SPACE_FORMS + 10;
 /// The symbols after [`PUNCTUATION`] ([`symbol`]).
 const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
 /// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
 /// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
 const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
+/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, by code point
+/// (probes/t4039-collation-space-forms Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep
+/// K1:L16; U+0082 to U+008F and U+0091 to U+009D unprobed).
+const C1_BASE: u32 = BULLET + 1;
 const DIGIT_BASE: u32 = 0x800;
+const _: () = assert!(C1_BASE + 0x20 <= DIGIT_BASE);
 /// `∞` sorts between `"9"` and `"a"` (probes/t3276-collation-other-scripts rank A91 = 24).
 const INFINITY: u32 = digit(9) + 4;
 const LETTER_BASE: u32 = 0x840;
@@ -581,6 +594,13 @@ fn element(c: Char) -> Element {
         }
         _ if c.is_ascii() => single(ASCII_PRIMARY[c as usize]),
         '\u{a0}' => single(NBSP),
+        '\u{202f}' => single(NARROW_NBSP),
+        // U+205F equals the space (probes/t4039-collation-space-forms Calc!C1, H17).
+        '\u{205f}' => single(SPACE),
+        '\u{2000}' | '\u{2002}' => single(SPACE_FORMS),
+        '\u{2001}' | '\u{2003}' => single(SPACE_FORMS + 1),
+        '\u{2004}'..='\u{200b}' => single(SPACE_FORMS + 2 + (u32::from(c) - 0x2004)),
+        '\u{80}'..='\u{9f}' => single(C1_BASE + (u32::from(c) - 0x80)),
         '\u{363}'..='\u{36f}' => combining_letter(c)
             .map_or_else(|| single(other(c)), |base| accented(base, COMBINING_LETTER)),
         '\u{300}'..='\u{362}' => Element::Mark(mark_weight(c).unwrap_or(0)),
