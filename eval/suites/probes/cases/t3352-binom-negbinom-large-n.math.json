@@ -613,15 +613,30 @@
     "v": "0.0039913857509778728983360944475214826472964634200442",
     "f": "=BINOM.DIST(10000,10000000,0.001,FALSE)"
    },
+   "A84": {
+    "t": "n",
+    "v": "0.50265958155178868539784679537822586568688095119935",
+    "f": "=BINOM.DIST(10000,10000000,0.001,TRUE)"
+   },
    "A85": {
     "t": "n",
     "v": "0.00055171120304326525823671820122300472686238966436487",
     "f": "=BINOM.DIST(10199,10000000,0.001,FALSE)"
    },
+   "A86": {
+    "t": "n",
+    "v": "0.97676403100548277422370646369580020948654899870083",
+    "f": "=BINOM.DIST(10199,10000000,0.001,TRUE)"
+   },
    "A87": {
     "t": "n",
     "v": "0.000042816186873827791145948261814062046969698589728568",
     "f": "=BINOM.DIST(9700,10000000,0.001,FALSE)"
+   },
+   "A88": {
+    "t": "n",
+    "v": "0.0013064181746126490728675946803320860049680636480207",
+    "f": "=BINOM.DIST(9700,10000000,0.001,TRUE)"
    },
    "A89": {
     "t": "n",
@@ -664,315 +679,303 @@
   "Calc": {
    "A10": {
     "f": "=BINOM.DIST(5100,10000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A100": {
     "f": "=BINOM.DIST(49985000,100000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A102": {
     "f": "=BINOM.DIST(100000,100000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A104": {
     "f": "=BINOM.DIST(100632,100000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A106": {
     "f": "=BINOM.DIST(99051,100000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A108": {
     "f": "=BINOM.DIST(300000000,1000000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A110": {
     "f": "=BINOM.DIST(300028982,1000000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A112": {
     "f": "=BINOM.DIST(299956525,1000000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A114": {
     "f": "=BINOM.DIST(500000000,1000000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A116": {
     "f": "=BINOM.DIST(500031622,1000000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A118": {
     "f": "=BINOM.DIST(499952565,1000000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A12": {
     "f": "=BINOM.DIST(4850,10000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A120": {
     "f": "=BINOM.DIST(1000000,1000000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A122": {
     "f": "=BINOM.DIST(1001998,1000000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A124": {
     "f": "=BINOM.DIST(997001,1000000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A138": {
     "f": "=NEGBINOM.DIST(10000,10000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A140": {
     "f": "=NEGBINOM.DIST(10282,10000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A150": {
     "f": "=NEGBINOM.DIST(100000,100000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A152": {
     "f": "=NEGBINOM.DIST(100894,100000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A154": {
     "f": "=NEGBINOM.DIST(100000,25000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A156": {
     "f": "=NEGBINOM.DIST(101414,25000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A162": {
     "f": "=NEGBINOM.DIST(1000000,1000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A164": {
     "f": "=NEGBINOM.DIST(1002828,1000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A166": {
     "f": "=NEGBINOM.DIST(1000000,250000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A168": {
     "f": "=NEGBINOM.DIST(1004472,250000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A174": {
     "f": "=NEGBINOM.DIST(10000000,10000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A176": {
     "f": "=NEGBINOM.DIST(10008944,10000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A178": {
     "f": "=NEGBINOM.DIST(10000000,2500000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A18": {
     "f": "=BINOM.DIST(30000,100000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A180": {
     "f": "=NEGBINOM.DIST(10014142,2500000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A186": {
     "f": "=NEGBINOM.DIST(100000000,100000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A188": {
     "f": "=NEGBINOM.DIST(100028284,100000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A190": {
     "f": "=NEGBINOM.DIST(100000000,25000000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A192": {
     "f": "=NEGBINOM.DIST(100044721,25000000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A198": {
     "f": "=NEGBINOM.DIST(1000000000,1000000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A2": {
     "f": "=BINOM.DIST(3000,10000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A20": {
     "f": "=BINOM.DIST(30289,100000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A200": {
     "f": "=NEGBINOM.DIST(1000089442,1000000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A202": {
     "f": "=NEGBINOM.DIST(1000000000,250000000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A204": {
     "f": "=NEGBINOM.DIST(1000141421,250000000,0.2,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A22": {
     "f": "=BINOM.DIST(29565,100000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A24": {
     "f": "=BINOM.DIST(50000,100000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A26": {
     "f": "=BINOM.DIST(50316,100000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A28": {
     "f": "=BINOM.DIST(49525,100000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A36": {
     "f": "=BINOM.DIST(180000,600000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A38": {
     "f": "=BINOM.DIST(180709,600000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A4": {
     "f": "=BINOM.DIST(3091,10000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A40": {
     "f": "=BINOM.DIST(178935,600000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A42": {
     "f": "=BINOM.DIST(300000,600000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A44": {
     "f": "=BINOM.DIST(300774,600000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A46": {
     "f": "=BINOM.DIST(298838,600000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A48": {
     "f": "=BINOM.DIST(600,600000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A50": {
     "f": "=BINOM.DIST(648,600000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A52": {
     "f": "=BINOM.DIST(526,600000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A54": {
     "f": "=BINOM.DIST(300000,1000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A56": {
     "f": "=BINOM.DIST(300916,1000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A58": {
     "f": "=BINOM.DIST(298625,1000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A6": {
     "f": "=BINOM.DIST(2862,10000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A60": {
     "f": "=BINOM.DIST(500000,1000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A62": {
     "f": "=BINOM.DIST(501000,1000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A64": {
     "f": "=BINOM.DIST(498500,1000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A66": {
     "f": "=BINOM.DIST(1000,1000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A70": {
     "f": "=BINOM.DIST(905,1000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A72": {
     "f": "=BINOM.DIST(3000000,10000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A74": {
     "f": "=BINOM.DIST(3002898,10000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A76": {
     "f": "=BINOM.DIST(2995652,10000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A78": {
     "f": "=BINOM.DIST(5000000,10000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A8": {
     "f": "=BINOM.DIST(5000,10000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A80": {
     "f": "=BINOM.DIST(5003162,10000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A82": {
     "f": "=BINOM.DIST(4995256,10000000,0.5,TRUE)",
-    "why": "not converged or too slow"
-   },
-   "A84": {
-    "f": "=BINOM.DIST(10000,10000000,0.001,TRUE)",
-    "why": "not converged or too slow"
-   },
-   "A86": {
-    "f": "=BINOM.DIST(10199,10000000,0.001,TRUE)",
-    "why": "not converged or too slow"
-   },
-   "A88": {
-    "f": "=BINOM.DIST(9700,10000000,0.001,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A90": {
     "f": "=BINOM.DIST(30000000,100000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A92": {
     "f": "=BINOM.DIST(30009165,100000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A94": {
     "f": "=BINOM.DIST(29986252,100000000,0.3,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A96": {
     "f": "=BINOM.DIST(50000000,100000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A98": {
     "f": "=BINOM.DIST(50010000,100000000,0.5,TRUE)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    }
   }
  }

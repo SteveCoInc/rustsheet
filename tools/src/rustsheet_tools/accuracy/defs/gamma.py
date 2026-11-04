@@ -25,6 +25,7 @@ from rustsheet_tools.accuracy.model import (
     Param,
     register,
     solve_log_bracket,
+    spend,
 )
 
 HUGE_SOURCE = "statistics.md#gammainv-and-chisqinv-at-a-huge-shape-the-true-quantile-num-or-a-wilson-hilferty-closed-form-t-2982-t-3070"
@@ -53,6 +54,7 @@ def _series(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     term = total = 1 / a
     n = a
     for _ in range(MAX_TERMS):
+        spend()
         n += 1
         term *= y / n
         total += term
@@ -71,6 +73,7 @@ def _continued_fraction(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     d = 1 / b
     h = d
     for i in range(1, MAX_TERMS):
+        spend()
         an = -i * (i - a)
         b += 2
         d = an * d + b
