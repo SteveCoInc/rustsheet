@@ -51,8 +51,8 @@ choice there is not attempted blind.
 
 ## Outcome
 Added `docs/research/t3981/gen_sweep.py` and the cases t3981-imsech-real-band-sweep (300 rows; rows 1-21 are C390's x
-and its 10 neighbouring doubles each side as 17-digit literals; Excel answers all 21 identically, so a neighbouring double cannot be named in text)
+and its 10 neighbouring doubles each side as 17-digit literals; Excel answers all 21 identically, as the math predicts: one ulp of x is far below cosh's ulp; IM text parsing is not probed)
 and t3981-imsech-real-band-sweep-hold (150 rows, hold-out), both with excel-graph sidecars, no pending cells.
-IMSECH matches Excel: libm 1/cosh 275/300 and 143/150, `1/u` form 300/300 and 150/150, worksheet 1/COSH 287 and 146 (15-digit comparison).
+IMSECH matches Excel: libm 1/cosh 275/300 and 143/150, `1/u` form 300/300 and 150/150, worksheet 1/COSH 292 and 146 (15-digit comparison).
 IMCOSH: libm 299 and 149, form 300 and 150, worksheet COSH 300 and 149. Recorded in engineering.md. probes-numeric is ungated:
 no baseline change; engine unchanged (32 of 1800 new cells fail today, the libm cells, for T-3982).

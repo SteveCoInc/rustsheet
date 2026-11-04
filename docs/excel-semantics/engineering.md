@@ -1176,10 +1176,10 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   T-3981 sweep (probes-numeric/t3981-imsech-real-band-sweep, 300 real x, and t3981-imsech-real-band-sweep-hold,
   150, never used for fitting; excel-graph 2026-11-04; 0.004 <= |x| <= 0.01 with a random sign; rows 1-21 of the first
   are t3721 S!C390's x and its 10 neighbouring doubles on each side as 17-digit literals: Excel answers all 21 rows with
-  the same IMSECH, IMCOSH, COSH and 1/COSH values to the last bit, so the text is read at 15 digits or fewer and a neighbouring
-  double cannot be named). Texts equal to
+  the same IMSECH, IMCOSH, COSH and 1/COSH values to the last bit, as the math predicts: one ulp of x moves cosh x by
+  about 1E-20, far below cosh's own ulp, so C390's miss is not one ulp of x; how IM text is parsed is not probed here). Texts equal to
   Excel's IMSECH (train, hold-out): `1/cosh` with libm (glibc) cosh 275 of 300, 143 of 150; `1/cosh` with the `1/u` form's cosh
-  300, 150; Excel's own worksheet `1/COSH(x)` (column D, both sides at 15 digits) 287, 146: a different cosh, not the kernel
+  300, 150; Excel's own worksheet `1/COSH(x)` (column D, both sides at 15 digits) 292, 146: a different cosh, not the kernel
   (D is 1/C to the bit in all 450 rows, so the worksheet COSH does not round). IMCOSH: libm cosh 299, 149; the `1/u`
   form 300, 150; worksheet COSH(x) at 15 digits 300, 149. Today's engine takes libm's cosh
   for IMSECH here, so it is off on 25 + 7 IMSECH texts of the 450 (t3981 case run, 32 cells in all); its IMCOSH
