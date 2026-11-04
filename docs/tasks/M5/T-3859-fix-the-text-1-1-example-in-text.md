@@ -3,7 +3,7 @@ id: T-3859
 title: "Fix the TEXT(-1,-1) example in text.md's format_text entry: cite A259 TEXT(-0.5,-1)"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,6 @@ The fix could not go in PR #2862 after approval (work-loop step 5: a MINOR never
 
 ## Out of scope
 - Any other text.md entry.
+
+## Outcome
+The format_text entry in `docs/excel-semantics/text.md` now reads `TEXT(-0.5,-1)` is "--1", describes the code as the literals `-` and `1`, and cites A259 in its Evidence line. Docs only; no eval delta.
