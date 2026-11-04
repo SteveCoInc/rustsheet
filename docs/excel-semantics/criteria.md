@@ -45,8 +45,11 @@ and fullwidth `Ａ` is `ａ`; `ı`, `ſ` and `µ` match only themselves (`ſ` is
 οσ, ος, i+U+0307, ss and İx; `"???"` nothing. COUNTIFS, SUMIFS and SUMIF agree.
 Evidence: probes/t3133-lookup-criteria-case-fold Calc!B1:B35, F1:I35, K1:L35, N1:N6 (excel-graph, 2026-10-29, T-3133).
 D-function prefix criteria fold `ς` too: DCOUNTA over `σx`, `ςx`, `Σ` counts 3 for `ς`, `σ` and `ς*` and 1 for `=ς`
-(probes/t3154-collation-accents Calc!H12:H15, T-3154). UNVERIFIED: the D-function fold of `İ` (T-3180); characters outside this
-list (other Greek and Cyrillic final forms, `ϐ`/`β`, `ﬀ`) are assumed to follow it.
+(probes/t3154-collation-accents Calc!H12:H15, T-3154). The D-function plain prefix and `*` criteria agree with COUNTIF's
+wildcard fold on the T-3995 keys (probes/t3995-dfunction-fold-final-forms, excel-graph 2026-11-04): `İ`/`i`, `ϐ`/`β` and
+`ﬀ`/`ff` do not match in either direction (Calc!B1:D6 = 0), while each Hebrew final form matches its normal form in both
+directions (`ך`/`כ`, `ם`/`מ`, `ן`/`נ`, `ף`/`פ`, `ץ`/`צ`: Calc!B7:D16 = 1), as do `ς`/`σ` (B18:D19) and `İ` with itself (B17:D17).
+`=`-style COUNTIF equality (Calc!E) is T-3904's.
 Wildcard criteria and D-function criteria (wildcard or plain prefix) fold as exact MATCH does (lookup.md "MATCH,
 VLOOKUP and HLOOKUP exact-match keys fold case one character to one"), one UTF-16 unit at a time
 (probes/t3929-wildcard-fold-criteria, -xmatch, -dfunctions, excel-graph 2026-11-03, T-3929; COUNTIF, SUMIF,

@@ -217,8 +217,9 @@ pub(super) fn script_element(c: char) -> Option<Element> {
         // A62, A126 = 1, B35 = 3, G17), as the same stand-in gives. T-3904 replaces it with the
         // weightless rule for the whole set.
         '\u{27bf}' | '\u{1878}' | '\u{20bf}' => Element::Skipped(UNASSIGNED),
-        // Hebrew `ץ` equals `צ` (G14 = 2, B97 = 2); the other final letters are unprobed and keep
-        // their code-point place (UNVERIFIED).
+        // Hebrew `ץ` equals `צ` (G14 = 2, B97 = 2); the other final letters keep their code-point
+        // place for ordering and `=` (UNVERIFIED, T-3904), although lookup and criteria folds do
+        // equate them (T-3995, lookup_fold.rs).
         '\u{5e5}' => single(other('\u{5e6}')),
         // Arabic `ﻻ` (the lam-alef ligature's isolated form) is `لا` (G13 = 2, B109 = 2).
         '\u{fefb}' => Element::Weights {
