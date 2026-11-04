@@ -3,12 +3,13 @@ id: T-3933
 title: "BETA.DIST cdf on bratio's direct bgrat branch at 0 < a0 < 1, a0 != 1/2: take bgrat_increment (2,168 visibly-off cells of probes-numeric t2512-r3-bgrat-split)"
 milestone: M9
 lane: functions-stat
-status: done
+status: todo
 priority: P2
 size: M
 tier: opus
 depends_on: []
 campaign: accuracy
+defer: phase-1b
 ---
 
 ## Goal
@@ -73,7 +74,14 @@ then go to a follow-up without the key, with `defer: phase-1b` if they are withi
 - Modelling Excel's noise in D (T-3567, T-3582 negatives).
 - F, BINOM and NEGBINOM callers (T-3580, T-3712); BETA.INV's search on L140 (T-3867).
 
-## Outcome
+## Landing notes
+Parked, not landed (2026-11-04). The work below was finished and passed `make check-fast`, design and security review
+(PR #3177, head 2a780f616), but decision 0267 (owner ruling, merged to main while this branch was in flight) cuts
+T-3933 as Tier D (`defer: phase-1b`): its cells are first wrong only at the 14th or 15th digit. Main's copy of this
+file carries the deferral text; merging main here conflicts only in this file. The PR stays a draft. Reopen only per
+decision 0267 (a cell this task owns first wrong at the 13th digit or earlier); the change and its A/B are then ready,
+needing only a merge of main and the Excel-fidelity review, which had not reported when the work was parked.
+Results as measured:
 - `bratio/mod.rs` `ported_tails_with` takes `Branch::Bgrat` at every 0 < a0 < 1: Excel's bgrat at 1/2 as before, and
   `bgrat.rs` `bgrat_increment` (the double-double bgrat L140 bup+bgrat already uses for D) elsewhere, with the other
   tail (0.5 - w1) + 0.5; `None` keeps today's kernel. The stale "T-3582 owns the rest" comment now names this task.
