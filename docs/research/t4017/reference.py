@@ -1,4 +1,4 @@
-"""T-4017 references: 120-digit mpmath F upper tail at the double arguments Excel sees.
+"""T-4017 references: high-precision mpmath F upper tail at the double arguments Excel sees.
 
 F.DIST.RT(x, d1, d2) = betainc(d1/2, d2/2, u, 1) with u = fl(d1 x / (d1 x + d2)), the
 same small-side argument as T-2528 (the large side's double rounding is amplified by d2/2). Writes references.json (50 digits) and
@@ -43,6 +43,7 @@ ROOT = Path(__file__).resolve().parents[3]
 CASES = ROOT / "eval/suites/probes-numeric/cases"
 refs = {}
 errors = []
+zeros = []
 unreferenced = []
 stats = collections.defaultdict(lambda: [0, 0, 0, 0, 0.0])
 for case in sorted(CASES.glob("t4017-f-huge-df2-above-mean-*.case.json")):
@@ -56,11 +57,17 @@ for case in sorted(CASES.glob("t4017-f-huge-df2-above-mean-*.case.json")):
         scaled = d1 * x
         u = scaled / (scaled + d2)
         ref = upper_tail(d1, d2, u)
+        e = excel[addr]
+        if e["t"] == "n" and float(e["v"]) == 0:
+            # Excel's exact zeros: the chi-square limit Q(d1/2, d1 x/2) (d2 -> infinity) estimates
+            # the true size to about d1 x / d2 relative, enough to show it is above or below the minimum.
+            with mp.workdps(60):
+                est = mp.gammainc(mp.mpf(d1) / 2, mp.mpf(d1 * x) / 2, mp.inf, regularized=True)
+            zeros.append((case.name[28:], addr, formula, mp.nstr(est, 3)))
         if ref is None:
             unreferenced.append((case.name, addr, formula))
             continue
         refs[f"{case.name}:{addr}"] = {"f": formula, "v": mp.nstr(ref, 50)}
-        e = excel[addr]
         s = stats[int(d1)]
         s[0] += 1
         if e["t"] != "n":
@@ -83,6 +90,8 @@ for case in sorted(CASES.glob("t4017-f-huge-df2-above-mean-*.case.json")):
             s[3] += 1
         s[4] = max(s[4], rel)
 (ROOT / "docs/research/t4017/references.json").write_text(json.dumps(refs, indent=1) + "\n")
+for z in zeros:
+    print("excel zero", *z)
 for cell in unreferenced:
     print("no stable reference", *cell)
 for err in errors:

@@ -61,6 +61,7 @@ T-4018 needs Excel for the web values to fit Excel's incomplete beta at a huge f
 Six probes-numeric cases `t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}` (1,345 cells, one per df2; the
 control `FDIST(7,10,1E+8)` is in the 1e7 file), oracle sidecars filled (no pending cells), Gate A math sidecars
 for the F.DIST(TRUE) cells (the tool has no F.DIST.RT), and 50-digit `F.DIST.RT` references in
-`docs/research/t4017/references.json` from `reference.py`. The summary is in statistics.md. Findings: Excel is within
-1E-13 but not correctly rounded at every df1; exact 0 for tails near 1E-22 at df1 = 2; `#NUM!` at df1 = 79, df2 = 1E10.
+`docs/research/t4017/references.json` from `reference.py`. The summary is in statistics.md. Findings: Excel is not correctly
+rounded at any df1; within about 1E-13 at df1 = 3 to 79 but up to 2E-8 at df1 = 2, x = 20; exact 0 for tails of 1.9E-22
+(df1 2, x 50), 4E-297 (df1 30, x 50) and 9E-278 (df1 79, x 20); `#NUM!` at df1 = 79, df2 = 1E10.
 No eval baseline change (probe cases carry no expectations).
