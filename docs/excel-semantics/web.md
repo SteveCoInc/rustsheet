@@ -147,7 +147,8 @@ below `start` is item 0, past `end` the last item; otherwise numbers (`rangePr s
 step `floor((v - start) / interval) + 1`, dates in their second, minute, hour (the time rounded to the nearest second),
 day of a leap year, month, quarter or year counted from `startDate`'s year (the day and time split as YEAR and HOUR,
 MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
-to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above). The importer skips the cache
+to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above; UNVERIFIED, see the date-group
+bullets: a refresh drops such a grouping, so no probe can show it). The importer skips the cache
 (logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
 a range group over text, a database field after a grouping field, and a base that is not a database field.
 Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
@@ -172,20 +173,46 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
   `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
   lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
-  Only pivot 3's relabel shows Excel's own labels (`0-3`, `3-6`, `6-9`). UNVERIFIED (T-4236): the label format for
+  Only pivot 3's relabel shows Excel's own labels (`0-3`, `3-6`, `6-9`). UNVERIFIED: the label format for
   decimal data (`0.3-0.4`) and that it is formatted General; the probe's decimal labels already equal what Excel would
-  write, so they show nothing. T-4236 can probe them with wrong-text labels of the right count.
+  write, so they show nothing. A probe with wrong-text labels of the right count would show them.
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
 powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). The importer does not follow the
 rounding or the `>end` quirk yet, nor GETPIVOTDATA's number items (T-4235); the eval adapter does not register a
 grouped spec pivot, so every cell of the probe but the `#REF!` ones is a known failure owned by T-4235.
-UNVERIFIED (T-4236): the date groups (a time of 23:59:59.5 or later, serials 1 to 60), which group item a blank goes in
-(item 0 by the label; one item for certain by the item lists), and GETPIVOTDATA on a date group's label, a year as a
-number, or a blank.
+Date groups (`<rangePr groupBy startDate endDate>`), probed (T-4236):
+- Rule: the cache rounds a date to the nearest second, and the rounded date is what is compared to `startDate` and
+  `endDate` and split into its calendar part (as YEAR, MONTH and HOUR split it: 23:59:59.5 or later is the next day).
+  2019-01-31 23:59:59.4 is in `Jan` and 23:59:59.5 and .9 in `Feb`; 2018-12-31 23:59:59.5 is in `Jan` of a group
+  starting 2019-01-01, not `<1/1/2019`; 2019-03-31 23:59:59.5 is `Qtr2`, 2017-12-31 23:59:59.5 is `2018`, 10:59:59.5 is
+  `11 AM` and 23:59:59.5 `12 AM`. A date equal to `endDate` is inside the range (2020-01-01 in `Jan` of a group ending
+  then; 2019-01-02 00:00 in `12 AM` of an hour group ending then), and anything later, even the same day (12:00 on
+  `endDate`), is in the last item. Ungrouped, two dates within a second of each other are one cache item too.
+- Serials below 61 group by the 1900 calendar: 0.5 is below a group starting at serial 1 (`<1/1/1900`); 1 and 31 are
+  `Jan`; 32, 59, 59 at 23:59:59.6, 60 and 60.75 are `Feb`; 61 is `Mar`. Day groups count the day of a leap year: 60 and
+  60.5 are `29-Feb`, 61 `1-Mar`, 366 `31-Dec`, 367 `1-Jan`, and 2019-02-28 and 2019-03-01 are `28-Feb` and `1-Mar` (no
+  2019 date is in `29-Feb`).
+- Quirk: on refresh, a date grouping of a field that holds a blank source cell is dropped. Every pivot of
+  probes/t4236-pivot-date-groups with a blank renders each (second-rounded) date as its own item and the blank as
+  `(blank)`; GETPIVOTDATA then takes `"(blank)"` or an omitted item for the blank and a date serial
+  (`DATE(2019,1,1)`) for a date item, while every group label is `#REF!`. Which group a blank takes in a cache that
+  keeps both (59932) is therefore not probeable.
+- GETPIVOTDATA on a date-grouped field: a text item is the label, case-folded (`"jan"`, `"JAN"`, `"12 am"`, `"qtr1"`,
+  `"29-feb"`, `"1-mar"`); the `<1/1/2019` and `>1/1/2020` labels work while their group has a record. A **number** item
+  picks the group whose calendar value equals its integer part: the hour (`0` and `TIME(10,0,0)` are `12 AM`, `10` is
+  `10 AM`), the leap-year day (`1` is `1-Jan`, `60` `29-Feb`, `61` `1-Mar`), the month (`1` is `Jan`; `31`, `32`, `60`
+  are `#REF!`), the quarter (`1`) and the year (`2018`, `2018.5`). A date serial (`DATE(2019,1,1)`, `43525`,
+  `DATE(2018,1,1)`, `DATE(2019,1,1)+TIME(10,0,0)`), a text number (`"1"`, `"10"`, `"2,018"`), another spelling (`"Q1"`,
+  `"January"`, `"01-Mar"`, `"2/29/1900"`), `TRUE`, `"(blank)"` and an omitted item are `#REF!`.
+Evidence: probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-blank (excel-graph, 2026-11-04,
+T-4236): pivots grouped by months, hours, quarters, years and days whose S values are distinct powers of two; the
+second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). The importer follows
+the record-to-group rule; GETPIVOTDATA number items, the dropped grouping over a blank, and the eval adapter's date
+groups are T-4246's (it owns both probes' visibly-off cells).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`).
-Tasks: T-4225, T-4228, T-4235, T-4236
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
