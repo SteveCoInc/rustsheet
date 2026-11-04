@@ -3,7 +3,7 @@ id: T-3548
 title: "IRR past the secant fit set: 50 T-3478 sweep cells off Excel (33 roots the engine misses, 17 Excel errors)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
