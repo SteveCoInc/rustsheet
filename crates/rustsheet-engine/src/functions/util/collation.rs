@@ -61,6 +61,7 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
+use lookup_fold::class_first;
 pub(crate) use lookup_fold::fold_lookup;
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
@@ -532,12 +533,23 @@ pub(crate) fn fold_char(c: char) -> char {
 }
 
 /// `c` with case removed: ASCII and Latin-1 letters directly, others through `to_lowercase`.
+/// A member of one of Excel's wider classes ([`class_first`]: `ϵ` with `ε`, `ϑ` with `ϴ`, `ϳ`
+/// with `Ͷ`, U+1FBE with `ι`, the Greek Extended psili+varia and dasia+oxia letters, ...) is its
+/// class's first member, so all of them weigh alike; their order under `<` is therefore equality,
+/// UNVERIFIED (probes/t3584-match-fold-weightless Calc!B21:F21, P7, P9; T-4013). A supplementary
+/// character keeps its case: Excel's `=` keeps Deseret U+10400 apart from U+10428 (Calc!B25).
 fn fold(c: char) -> char {
     match c {
         'A'..='Z' => c.to_ascii_lowercase(),
         'À'..='Þ' if c != '×' => char::from_u32(u32::from(c) + 0x20).unwrap_or(c),
-        _ if c.is_ascii() => c,
-        _ => fold_final_sigma(c.to_lowercase().next().unwrap_or(c)),
+        _ if c.is_ascii() || u32::from(c) > 0xFFFF => c,
+        _ => {
+            let lower = |c: char| fold_final_sigma(c.to_lowercase().next().unwrap_or(c));
+            let folded = lower(c);
+            class_first(c)
+                .or_else(|| class_first(folded))
+                .map_or(folded, lower)
+        }
     }
 }
 

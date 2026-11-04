@@ -3,7 +3,7 @@ id: T-4013
 title: "= , COUNTIF and XMATCH(..,0) equate T-3584's MATCH classes and keep supplementary case pairs apart (t3584 B21, B25, P7, P9; t3929 rows 29-30)"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,17 +39,35 @@ weightless-position probe.
   (Calc!B25 FALSE), so the comparison must not case-fold astral letters.
 
 ## Acceptance criteria
-- [ ] The 16 cells above pass and leave eval/baseline/probes.txt; `make eval-check` shows 0 regressions in every
+- [x] The 16 cells above pass and leave eval/baseline/probes.txt; `make eval-check` shows 0 regressions in every
       suite (in particular probes/t3465-collation-holdout, probes/text-collation-order, probes/t3211-collation-sort-cycles
       and probes/t3181-collation-prefix-callers keep every cell they pass today).
-- [ ] The class table is one definition shared with `fold_lookup_char` (no second copy of `CLASSES`).
-- [ ] Unit tests: one pair per class kind (Greek Extended, `ϵ`/`ε`, U+1FBE/`ι`, `Ͷ`/`ϳ`, `ϑ`/`ϴ`) is equal under
+- [x] The class table is one definition shared with `fold_lookup_char` (no second copy of `CLASSES`).
+- [x] Unit tests: one pair per class kind (Greek Extended, `ϵ`/`ε`, U+1FBE/`ι`, `Ͷ`/`ϳ`, `ϑ`/`ϴ`) is equal under
       `cmp_text_pairwise` with equal `CollationKey`s, and U+10400/U+10428 is not.
-- [ ] coercion.md's T-3584 section says "Implemented in" with this task for the class and Deseret bullet, and states
+- [x] coercion.md's T-3584 section says "Implemented in" with this task for the class and Deseret bullet, and states
       how `<` orders class members (VERIFIED with cells, or UNVERIFIED).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The weightless characters (U+0524, U+00AD, Mtavruli, Cherokee small letters, and Calc!P39's U+037F): T-3904, after
   T-3662.
 - Exact MATCH, VLOOKUP and HLOOKUP and the wildcard paths (already done by T-3445 and T-3929).
+
+## Outcome
+- The collation's `fold` maps a member of Excel's wider equivalence classes to the class's first member, through
+  `lookup_fold::class_first`. That is the one `CLASSES` table exact MATCH uses, now `pub(super)`, with no second copy.
+  So `=`, the text criteria without a wildcard, XMATCH's exact index and the sorts equate the Greek Extended
+  psili+varia/dasia+oxia letters, `ϵ`/`ε`, U+1FBE/`ι`, `Ͷ`/`ϳ`, `ϑ`/`ϴ` and the Hebrew final forms.
+- `fold` leaves supplementary characters uncased, so Deseret U+10400 and U+10428 stay apart (Calc!B25).
+- The design point: one weight per class. Each member weighs as its first member, so `<` treats members as equal.
+  The reviewers found that the classes were carried beyond the owned cells. New probe
+  probes/t4013-class-equality-order (108 cells, excel-graph, 2026-11-04) shows Excel agrees for every class kind:
+  the Hebrew finals, Latin Extended-D, Georgian U+10FA, ypogegrammeni, and `ϴ`=`ϑ` but `ϴ`>`θ`. `<` ties the members
+  and COUNTIF counts them. The engine passes all 108. coercion.md and the scripts.rs comment record it. No
+  collation-order cell moved:
+  probes/t3465-collation-holdout, text-collation-order, t3211-collation-sort-cycles and t3181-collation-prefix-callers
+  keep every cell.
+- Unit test `t4013_classes_are_equal_and_astral_case_pairs_apart` (test_collation.rs).
+- Eval delta: probes known failures 4453 → 4437 (the 16 owned cells fixed), 0 regressions in every suite. The
+  baseline is updated.

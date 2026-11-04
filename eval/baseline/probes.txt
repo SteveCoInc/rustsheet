@@ -2067,6 +2067,7 @@ C	probes/t3980-typed-percent-currency.case.json	20
 C	probes/t3985-groupby-two-lifted-spent-filter.case.json	44
 C	probes/t3991-percent-shapes.case.json	21
 C	probes/t3995-dfunction-fold-final-forms.case.json	228
+C	probes/t4013-class-equality-order.case.json	108
 C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
@@ -6021,8 +6022,6 @@ F	probes/t3584-match-fold-weightless.case.json	Calc!B14
 F	probes/t3584-match-fold-weightless.case.json	Calc!B17
 F	probes/t3584-match-fold-weightless.case.json	Calc!B18
 F	probes/t3584-match-fold-weightless.case.json	Calc!B20
-F	probes/t3584-match-fold-weightless.case.json	Calc!B21
-F	probes/t3584-match-fold-weightless.case.json	Calc!B25
 F	probes/t3584-match-fold-weightless.case.json	Calc!B3
 F	probes/t3584-match-fold-weightless.case.json	Calc!B6
 F	probes/t3584-match-fold-weightless.case.json	Calc!B7
@@ -6032,8 +6031,6 @@ F	probes/t3584-match-fold-weightless.case.json	Calc!D14
 F	probes/t3584-match-fold-weightless.case.json	Calc!D17
 F	probes/t3584-match-fold-weightless.case.json	Calc!D18
 F	probes/t3584-match-fold-weightless.case.json	Calc!D20
-F	probes/t3584-match-fold-weightless.case.json	Calc!D21
-F	probes/t3584-match-fold-weightless.case.json	Calc!D25
 F	probes/t3584-match-fold-weightless.case.json	Calc!D3
 F	probes/t3584-match-fold-weightless.case.json	Calc!D6
 F	probes/t3584-match-fold-weightless.case.json	Calc!D7
@@ -6043,8 +6040,6 @@ F	probes/t3584-match-fold-weightless.case.json	Calc!F14
 F	probes/t3584-match-fold-weightless.case.json	Calc!F17
 F	probes/t3584-match-fold-weightless.case.json	Calc!F18
 F	probes/t3584-match-fold-weightless.case.json	Calc!F20
-F	probes/t3584-match-fold-weightless.case.json	Calc!F21
-F	probes/t3584-match-fold-weightless.case.json	Calc!F25
 F	probes/t3584-match-fold-weightless.case.json	Calc!F3
 F	probes/t3584-match-fold-weightless.case.json	Calc!F6
 F	probes/t3584-match-fold-weightless.case.json	Calc!F7
@@ -6080,7 +6075,6 @@ F	probes/t3584-match-fold-weightless.case.json	Calc!P66
 F	probes/t3584-match-fold-weightless.case.json	Calc!P67
 F	probes/t3584-match-fold-weightless.case.json	Calc!P68
 F	probes/t3584-match-fold-weightless.case.json	Calc!P69
-F	probes/t3584-match-fold-weightless.case.json	Calc!P7
 F	probes/t3584-match-fold-weightless.case.json	Calc!P70
 F	probes/t3584-match-fold-weightless.case.json	Calc!P71
 F	probes/t3584-match-fold-weightless.case.json	Calc!P72
@@ -6094,7 +6088,6 @@ F	probes/t3584-match-fold-weightless.case.json	Calc!P79
 F	probes/t3584-match-fold-weightless.case.json	Calc!P80
 F	probes/t3584-match-fold-weightless.case.json	Calc!P81
 F	probes/t3584-match-fold-weightless.case.json	Calc!P82
-F	probes/t3584-match-fold-weightless.case.json	Calc!P9
 F	probes/t3584-match-fold-weightless.case.json	Calc!R1
 F	probes/t3584-match-fold-weightless.case.json	Calc!R10
 F	probes/t3584-match-fold-weightless.case.json	Calc!R11
@@ -6696,21 +6689,13 @@ F	probes/t3914-imsech-sign-sweep.case.json	Calc!A11
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!B11
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!C21
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!D21
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B29
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B3
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B30
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B7
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!C29
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!C3
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!C30
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!C7
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!D29
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!D3
-F	probes/t3929-wildcard-fold-criteria.case.json	Calc!D30
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!D7
-F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E29
 F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E3
-F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E30
 F	probes/t3929-wildcard-fold-xmatch.case.json	Calc!E7
 F	probes/t3945-atan-near-midpoint.case.json	S!B203
 F	probes/t3945-atan-near-midpoint.case.json	S!B204

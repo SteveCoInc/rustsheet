@@ -668,12 +668,29 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
   D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
   keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
   whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
-  same weight).
+  same weight). The text criteria without a wildcard equate `Ͷ`/`ϳ` and `ϑ`/`ϴ` too (probes/t3929-wildcard-fold-criteria
+  Calc!B29:D30, t3929-wildcard-fold-xmatch Calc!E29:E30; criteria.md "Case beyond ASCII").
+  The other classes of lookup.md's "Equivalence classes" hold under `=`, `<` and COUNTIF too. In each case x = y is
+  TRUE, x < y and x > y are FALSE, x&"b" < y&"a" is FALSE (they tie at the first pass), and COUNTIF counts 1. The
+  pairs are:
+  - the Hebrew final letters `כ ך`, `מ ם`, `נ ן`, `פ ף`, `צ ץ`;
+  - Latin Extended-D `Ꜹ Ꜻ`, `ꜹ ꜻ`, `Ꝥ Ꝧ`, `Ꝯ ꝰ`;
+  - Georgian `გ` with U+10FA;
+  - the ypogegrammeni U+1F8D with U+1F82 and U+1F88 with U+1F80;
+  - `ϴ ϑ`, `ϳ Ͷ`, `ϵ ε`, U+1FBE `ι`, and U+1F05 with U+1F0A.
+
+  `ϴ` is not `θ`: `ϴ=θ` is FALSE and `ϴ>θ` is TRUE, and COUNTIF counts 0 (probes/t4013-class-equality-order
+  Calc!B1:F18, excel-graph, 2026-11-04, T-4013).
+  Implemented in: the collation's `fold` (crates/rustsheet-engine/src/functions/util/collation.rs) maps each member
+  of those classes to the class's first member through the one `CLASSES` table that exact MATCH uses
+  (`lookup_fold::class_first`), and leaves supplementary characters uncased (T-4013). So `=`, `<`, the criteria, the
+  sorts and XMATCH's index weigh class members alike. `ϴ` therefore sorts at `ϑ`'s place, above `θ`, as Excel does.
+  These do not follow MATCH: the lam-alef ligature `ﻻ` and the weightless characters (above and lookup.md).
 UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
 one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
 positions and neighbours make it count is open (T-3904).
-Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
-probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
+Ours: `cmp_text_excel` gives the weightless characters their code-point weight, so `=` keeps them apart; those
+failing cells are known failures owned by T-3904 (`=`, COUNTIF, XMATCH).
 Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
 
 ## Text in a range operand of arithmetic is coerced
