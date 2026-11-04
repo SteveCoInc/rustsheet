@@ -3,7 +3,7 @@ id: T-3714
 title: "The python CI job stops waiting on its own release rustsheet-eval build"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
