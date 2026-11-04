@@ -3695,6 +3695,19 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     8E-15. `F.DIST.RT(1.09080885395379,8,5567623)` (probes-numeric t3354-f-dist-sweep S!C168, a0 = 2783811.5, b0 = 4)
     was 0.3658936312385961; it is now 1 ulp above Excel's correctly rounded 0.3658936312909749. Above 1E7 the cap
     stays: at a0 = 5E9 the composition takes t2528-f-dist-huge-df2 A4 and A16 visibly off (T-3569).
+- **Ours on the direct bgrat branch at 0 < a0 < 1, a0 ≠ 1/2 (T-3933): the accurate increment.** BETA.DIST's cdf
+  (and BETA.INV's search, which crosses the same `ported_tails_with`) takes `bratio/bgrat.rs` `bgrat_increment` there,
+  the double-double bgrat with stored lnx and z that L140 bup+bgrat uses for D, rounded once, with the other tail
+  (0.5 - w1) + 0.5; where it gives `None` (z below the fraction's range or past `MAX_Z`) today's kernel answers.
+  Excel's D is not modelled (it is noise around the accurate value, next bullet), so this is the `accuracy` target,
+  not a fit. On probes-numeric t2512-r3-bgrat-split (2,908 cells) exact / within 4 ulp / within 15 digits go from
+  35/384/740 to 216/1,605/2,085 (r6-bgrat-q's exact-Q row 191/1,587/2,069) and visibly off from 2,168 to 823; on the
+  t3568-r5-bup-{fresh,hold,tune} cells that take the branch, visibly off 873/1,837/1,858 to 668/1,387/1,439; on
+  t2464-r2-bratio-x29 bit-exact 2,696 to 2,851 of 3,080. Where the tail is tiny (I below about 1E-20, z in the
+  hundreds), the stored z = fl(-ν·ln x) moves I by about z·2^-53 relative, so ours and Excel's both sit several ulps
+  off the 50-digit math, which takes z exact: 163 of the t3568 cells and 17 of the t2512 cells move further from both
+  Excel and the math, while 1,285 and 2,198 move nearer Excel. F's truncated dfs never give such an a0, and the
+  Student t's a0 is always 1/2.
 - **Why TOMS bgrat lost at b ≠ 1/2 (T-2512).** TOMS passes bgrat's 15·eps = 15e-15 to grat1, whose continued fraction
   (z >= 1.1 on every such cell) stops tens of ulps short. On 2,908 direct bgrat cells (t2512-r3-bgrat-split):
   - TOMS in doubles with Excel's pieces scores 13/142/162, and 139/1,263/1,834 at eps 1e-15.

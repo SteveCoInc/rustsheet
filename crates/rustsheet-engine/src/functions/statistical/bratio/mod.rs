@@ -290,7 +290,8 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1 and L140 bup+bgrat (BETA.DIST's, the
+/// [`ported_tails`], with bratio's bgrat branches at every 0 < a0 < 1 (Excel's bgrat at a0 = 1/2, the accurate
+/// increment elsewhere, T-3933), bup + bgrat at other a0 < 1 and L140 bup+bgrat (BETA.DIST's, the
 /// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
 fn ported_tails_with(
     a: f64,

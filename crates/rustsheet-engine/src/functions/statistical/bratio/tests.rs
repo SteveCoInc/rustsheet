@@ -592,3 +592,16 @@ fn direct_bgrat_takes_the_accurate_increment() {
         0.000_723_546_787_215_665_2_f64.to_bits()
     );
 }
+
+// The direct bgrat branch at a huge b0 (T-3933): nu^2 overflows, so the increment divides by nu
+// twice. eval/accuracy BETA.DIST s1 A192: Excel and the math are 1.
+#[test]
+fn direct_bgrat_at_a_huge_b0_is_finite() {
+    let (x, a, b) = (
+        1.774_426_911_022_47E-162,
+        4.298_679_816_068_11E-33,
+        1.033_082_229_828_24E164,
+    );
+    assert_eq!(branch(a, b, x).0, Branch::Bgrat);
+    assert_eq!(cdf(x, a, b), 1.0);
+}

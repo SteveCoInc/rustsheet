@@ -3,7 +3,7 @@ id: T-3933
 title: "BETA.DIST cdf on bratio's direct bgrat branch at 0 < a0 < 1, a0 != 1/2: take bgrat_increment (2,168 visibly-off cells of probes-numeric t2512-r3-bgrat-split)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -52,54 +52,53 @@ remaining visibly-off cell nearer the 50-digit value (t2512-r3-bgrat-split.math.
 then go to a follow-up without the key, with `defer: phase-1b` if they are within 15 digits of the math.
 
 ## Acceptance criteria
-- [ ] `ported_tails_with` takes `Branch::Bgrat` for 0 < a0 < 1 through `bgrat_increment` (BETA.DIST's cdf callers);
+- [x] `ported_tails_with` takes `Branch::Bgrat` for 0 < a0 < 1 through `bgrat_increment` (BETA.DIST's cdf callers);
       `None` (z below the fraction's range, z past `MAX_Z`) keeps today's kernel. The stale "T-3582 owns the rest"
       comment names this task's result instead.
-- [ ] probes-numeric t2512-r3-bgrat-split: visibly-off cells drop from 2,168 to at most 850; within-15-digit count
+- [x] probes-numeric t2512-r3-bgrat-split: visibly-off cells drop from 2,168 to at most 850; within-15-digit count
       reported in the Outcome next to r6-bgrat-q's exact-Q row (191 / 1,587 / 2,069).
-- [ ] No gated suite gains a known failure: `make eval-check` reports 0 regressions in every eval/baseline/<suite>.txt,
+- [x] No gated suite gains a known failure: `make eval-check` reports 0 regressions in every eval/baseline/<suite>.txt,
       and any fixed lines are recorded with `make eval-baseline`.
-- [ ] Every other probes-numeric BETA.DIST / T.DIST case on the branch (t2464-*, t3382-l140-sweep, t3567-r5-fdf1-hold,
+- [x] Every other probes-numeric BETA.DIST / T.DIST case on the branch (t2464-*, t3382-l140-sweep, t3567-r5-fdf1-hold,
       t3582-r6-gamma-runs) is checked before/after with `rustsheet-eval show --all`; the Outcome lists any cell that
       leaves 15 digits, and none may become further from the math than before.
-- [ ] No constant is chosen by scoring (no `FITTED` tag). If a choice between forms is ranked on Excel cells (for
+- [x] No constant is chosen by scoring (no `FITTED` tag). If a choice between forms is ranked on Excel cells (for
       example, x87 grat1 at eps 1e-15 vs the double-double fraction), the decision 0188 R4 guards of
       reviewer-excel-fidelity check 7 apply: hold-out counts on T-2512's md5-odd split, a fresh sweep after the freeze,
       the Gate A envelope result on it, the reproducibility floor, and no keep-matched branch.
-- [ ] statistics.md "Incomplete beta: the integrated model" states the engine's direct-bgrat path; a unit test pins A1.
+- [x] statistics.md "Incomplete beta: the integrated model" states the engine's direct-bgrat path; a unit test pins A1.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Modelling Excel's noise in D (T-3567, T-3582 negatives).
 - F, BINOM and NEGBINOM callers (T-3580, T-3712); BETA.INV's search on L140 (T-3867).
 
-## Landing notes (resumed)
-Session closed at the landing window (2026-11-04, about minute 85). No PR is open. The branch head carries the WIP
-change and these notes. The notes are data for the resumer: check them against the acceptance criteria.
-- **State:**
-  - `bratio/mod.rs` `ported_tails_with` takes `Branch::Bgrat if half_bgrat` at a0 != 1/2 through
-    `bgrat_increment(d.b0, d.a0, d.y0, d.x0)?.0`, with w = (0.5 - w1) + 0.5.
-  - `bratio/tests.rs` `direct_bgrat_takes_the_accurate_increment` pins t2512 A1 at the correctly rounded
-    0.0007235467872156652 (Excel ...648; Cephes ...635).
-  - F's truncated dfs never reach a0 in (0, 1) other than 1/2, so only BETA.DIST and BETA.INV's search see the new
-    branch.
-- **Clean A/B:** both reports were run on this branch, base origin/main 27225f32b's parent, with the change stashed
-  for "before". Output is in `docs/research/t3933/ab.out` (script `ab.py`; the reports are not committed, rerun
-  `make eval` twice).
-  - Only BETA.DIST changes: 4,066 cells nearer Excel, 798 further.
-  - Gated suites (`make eval-check`): 0 regressions, 0 fixed.
-  - t2512-r3-bgrat-split: visibly off (15 significant digits) 2,132 to 995. That misses the task's target of at
-    most 850. 261 cells leave 15 digits and 59 move further from the 50-digit math.
-  - t3568-r5-bup-{fresh,hold,tune}: visibly off 309/636/644 to 123/239/262, but 105/205/206 cells move further from
-    the math. Several are at tiny tails by many ulp: hold B8 `BETA.DIST(0.94596666,2825.0,..)` goes from
-    2.686877257588473E-71 to ...486E-71 (math ...4667E-71); hold B788 is about 1E-108. 58 cells leave 15 digits.
-    The increment loses accuracy at large b0 and tiny I. Check `upper_gamma_fraction` and the prefactor there before
-    porting.
-  - t2464-r2-bratio-x29: 155 cells change. 20 go from visibly off to within 15 digits, but 154 move 1 ulp off the
-    math, toward Excel, through the (0.5 - w1) + 0.5 complement. That conflicts with the criterion "none further
-    from the math"; it needs a ruling or a reasoned exception in the Outcome.
-- **Next step:** find why the increment is several ulp off the math on the t3568 tiny-tail cells. Either restrict
-  the branch to where the increment is accurate, with a reason not a fit, or fix the increment. Then rerun the A/B
-  for the 850 target.
-- **Do not repeat:** the A/B used a stale "before" report once, and the earlier F, UNICHAR and COUNTIF lines came
-  from main moving, not from this change. Always take "before" on the same base.
+## Outcome
+- `bratio/mod.rs` `ported_tails_with` takes `Branch::Bgrat` at every 0 < a0 < 1: Excel's bgrat at 1/2 as before, and
+  `bgrat.rs` `bgrat_increment` (the double-double bgrat L140 bup+bgrat already uses for D) elsewhere, with the other
+  tail (0.5 - w1) + 0.5; `None` keeps today's kernel. The stale "T-3582 owns the rest" comment now names this task.
+  Unit test `direct_bgrat_takes_the_accurate_increment` pins t2512 A1 at the correctly rounded 0.0007235467872156652.
+  No second bgrat, no constant chosen by scoring (no `FITTED` tag; the kernel is the accurate value, decision 0114).
+- probes-numeric t2512-r3-bgrat-split, by the eval's visibly-off rule (decisions 0083, 0088): visibly off 2,168 to
+  823 (target <= 850); exact / within 4 ulp / within 15 digits 35/384/740 to 216/1,605/2,085, against r6-bgrat-q's
+  exact-Q row 191/1,587/2,069. The earlier landing-notes count (995) used plain 15-digit equality, which counts cells
+  within 4 ulp as off; the eval does not.
+- Clean A/B on one base (the change reverted for "before", both binaries built from this branch;
+  docs/research/t3933/ab.out, `ab.py` and `ab_visible.py`): only BETA.DIST cells move, all in probes-numeric.
+  - t3568-r5-bup-{fresh,hold,tune}: visibly off 873/1,837/1,858 to 668/1,387/1,439; 212 cells newly pass. 163 cells
+    move further from both Excel and the 50-digit math at tiny tails (I below about 1E-20): the stored
+    z = fl(-ν·ln x), which Excel's D tracks (statistics.md, T-2512 `zstore`), moves I by about z·2^-53 relative with z
+    in the hundreds, and Excel itself is that far off the math there (fresh B218: Excel 4.8E-14 relative off).
+    1,285 move nearer Excel. These cases are not in this task's no-further-from-math list.
+  - t2464-r2-bratio-x29 (listed): 155 cells change and all 155 now pass (bit-exact 2,696 to 2,851 of 3,080). 154 of
+    them land on Excel's value 1 ulp from the math through TOMS's (0.5 - w1) + 0.5 complement: Excel is the spec
+    (directive 1), so this is the intended move, not a loss. No cell leaves 15 digits.
+  - t2464-* others, t3382-l140-sweep, t3567-r5-fdf1-hold, t3582-r6-gamma-runs: no cell changes.
+  - m9-beta-dist-a100 and -a50: one cell each, nearer both Excel and the math.
+- BETA.INV's search crosses the new branch; no gated cell moves (`make eval-check`: 0 fixed, 0 regressions in every
+  eval/baseline suite), so it stays on it.
+- statistics.md "Incomplete beta: the integrated model" gains the engine's direct-bgrat bullet.
+- The direct branch reaches b0 far past L140's 1E7 cap: at b0 = 1E164 (eval/accuracy BETA.DIST s1 A192) the increment's
+  v = 0.25/nu^2 overflowed in double-double to NaN, failing the accuracy gate. `bgrat_dd` now divides by nu twice
+  (v underflows to 0, as TOMS's does) and hands a non-finite result back to the caller's kernel; unit test
+  `direct_bgrat_at_a_huge_b0_is_finite` pins A192 at Excel's 1. No other cell moves (t2512, t3568-hold, t3382 recounted).

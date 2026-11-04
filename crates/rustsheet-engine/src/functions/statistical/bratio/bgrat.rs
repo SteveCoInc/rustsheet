@@ -172,14 +172,18 @@ fn bgrat_dd(
         dd_div((w, 0.0), u)
     };
     let sum = asymptotic_sum(b, j0, z, lnx, nu, l);
-    Some(dd_add((w, 0.0), dd_mul(u, sum)))
+    let result = dd_add((w, 0.0), dd_mul(u, sum));
+    // A non-finite double-double step (an overflow in an intermediate) leaves the caller's kernel.
+    result.0.is_finite().then_some(result)
 }
 
 /// bgrat's sum `J_0 + sum d_n J_n` (TOMS's `j`, `c`, `d` recurrences) from `J_0` = Q(b, z)/r,
 /// stopping at TOMS's rule against `sum + l`.
 fn asymptotic_sum(b: f64, j0: Dd, z: f64, lnx: f64, nu: Dd, l: Dd) -> Dd {
     let bm1 = b - 0.5 - 0.5;
-    let v = dd_div((0.25, 0.0), dd_mul(nu, nu));
+    // 0.25/nu^2 as two divisions: nu^2 overflows at nu past 1E154 (the direct branch takes b0 up
+    // to DBL_MAX, T-3933), where 0.25/nu/nu underflows to 0 as TOMS's v does.
+    let v = dd_div(dd_div((0.25, 0.0), nu), nu);
     let t2 = dd_mul((0.25 * lnx, 0.0), (lnx, 0.0));
     let mut c = [(0.0, 0.0); MAX_TERMS];
     let mut d = [(0.0, 0.0); MAX_TERMS];
