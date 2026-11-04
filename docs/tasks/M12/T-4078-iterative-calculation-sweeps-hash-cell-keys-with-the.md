@@ -35,6 +35,7 @@ positions from the workbook), so these maps can share it.
 - [x] `IterationState`'s maps use `KeyBuild`; no other behavior change.
 - [x] Existing iteration and recalc-budget tests pass unchanged (results identical).
 - [x] The 1,024-cell × 32,767 case is measurably faster in a release build.
+- [x] T-4048 review MINOR: the importer test module's `allow(clippy::unwrap_used)` gives a reason.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
