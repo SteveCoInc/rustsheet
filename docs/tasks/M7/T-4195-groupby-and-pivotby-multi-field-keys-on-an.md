@@ -3,7 +3,7 @@ id: T-4195
 title: "GROUPBY and PIVOTBY multi-field keys on an intransitive = run: match Excel's dropped rows and shown keys (probes/t4088-groupby-multifield)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
