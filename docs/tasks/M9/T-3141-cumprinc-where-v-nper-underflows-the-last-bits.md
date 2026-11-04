@@ -88,3 +88,14 @@ underflows, the principal is one core for both types".
   with no regression; that waits for T-4059's evidence. fin-cumprinc-underflow-ends F (nper 1000, `v^nper` not
   underflowed, within an ulp) stays: out of scope here.
 - Unit test: `an_underflowed_principal_is_one_core_for_both_types` (test_fn_cumulative_lift.rs).
+
+## Landing notes
+- PR #3105 (draft), head f5ba043c9cbe (round 2), task blocked on T-4059. CI on that head had not been read when the
+  session's window closed. Round 1 verdicts (head 1f7daa081f0a): design and security approved, Excel fidelity requested
+  changes (R4.1 split, R4.2 sweep, R2 envelope, domain, FITTED range). Round 2 has not been reviewed.
+- Next: once T-4059 lands, fill and score `r4-T-3141` against this frozen kernel, record the envelope count and every
+  point outside it in the Outcome, run the full panel from round 1, and enqueue. If the sweep shows the core is Excel's
+  past a leading exponent of 0.3, move `underflowed_principal`'s cut (round 1 had it at any exponent, which fixed 8
+  more probe cells and 3 gen-m9 cells, with no regression).
+- Do not repeat: using fin-cumprinc-underflow-fresh as the R4.2 sweep (its I5 and J5 fed the expm1 cut), or a manual
+  case split as the R4.1 hold-out (the fit lab's `is_holdout` split is in the Outcome).
