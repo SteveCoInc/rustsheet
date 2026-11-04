@@ -3,7 +3,7 @@ id: T-3424
 title: "RATE's type at the noise floor: Gate A sweep cells where one side errs"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P0
 size: M
 tier: opus
@@ -106,3 +106,31 @@ T-3579, the blocker, is `done` on `main` (#2728): Excel's residual bits at nper 
 flat-secant restarts. RATE has also changed on `main` since this branch's experiments: T-3585 (#2816) makes RATE
 `#NUM!` when a converged iterate has 1 + r at or below 1e-7. The next run re-scores the 16 cells on current `main`
 before it uses the two experiments above, then fits the residual from T-3579's cells.
+
+## Outcome (2026-11-04, opus run)
+- **Re-scored on current `main`:** all 16 cells still have the wrong type, with T-3698's restart and T-3585's floor
+  in place. The engine returns a number on sweep A296 and fresh A59, A70, A74, A77, A89, A90, A95, A157, A162,
+  A173, A275 and A292, and gives `#NUM!` on sweep A272 and fresh A251 and A272.
+- **Probe:** probes/t3424-rate-noise-trace (433 cells, excel-graph, 0 fill failures). Generator and scorers are in
+  docs/research/t3424/.
+  - FV at 345 iterates of the model's run on the 16 cells reads Excel's residual along the path.
+  - RATE seeded with the last 12 iterates of each nper 1 and 2 cell (98 cells) reads Excel's run from there.
+- **Finding:** the residual is not Excel's noise. The cells' type comes from the outcome of a flat secant, which the
+  model does not reproduce (financial.md "Excel's residual and step are the model's; the outcome of a flat secant
+  is not").
+  - Excel's FV is the model's annuity value on 345 of 345 cells, at nper 1 to 351.
+  - The model's step form is bit-exact on 1,951 of the 2,475 literal RATE cells. Six other forms get 1,039 to
+    1,945, and 80-bit iterates get 1,111 and 1,048.
+  - Seeded runs that hold at the same iterate get different Excel outcomes, a number on one and `#NUM!` on the other
+    (fresh A275).
+  - No single quantity at the hold separates Excel's 549 returned holds from its 60 errors.
+- **Acceptance:** the first criterion's fallback applies. The forms tried are recorded (above, the two experiments
+  in "Progress notes", and financial.md). The 16 cells stay known misses and RATE's Gate A stays failed. No engine
+  change was made, so no gated cell regresses.
+- **Handed on:** T-3963 owns the 16 cells now, together with the cells and the two Gate A points
+  (eval/accuracy/known-failures.tsv) this task owned, and every off cell of the new probe. Its context now says that
+  the residual is ruled out.
+- **Follow-up:** T-4146 (opus). Excel's FV is the twice-rounded form on all 345 probe cells and on all 587 literal FV
+  oracle cells. The engine's plain-double FV misses probe A132 (587 against 586).
+- **Eval delta:** probes +1 case (433 cells: 394 pass, 39 new-coverage known failures, 0 regressions;
+  `make eval-baseline`). No other case changes.

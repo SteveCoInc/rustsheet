@@ -211,6 +211,7 @@ probes/t3350-gamma-inv-band-lower-edge.case.json	1
 probes/t3352-binom-negbinom-large-n.case.json	69
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	222
 probes/t3406-irr-num-boundary.case.json	76
+probes/t3424-rate-noise-trace.case.json	33
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3446-script-digits-forms.case.json	91
 probes/t3465-collation-holdout.case.json	22
