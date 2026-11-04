@@ -3,7 +3,7 @@ id: T-4191
 title: "VLOOKUP and HLOOKUP with an INDEX index that fails: probe whether Excel keeps INDEX's own error or maps it to #REF!, and match it"
 milestone: M2
 lane: functions-lookup
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,15 +39,27 @@ row_index_num is an `INDEX(...)` (or another reference-returning call) that fail
   reference-returning index.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M2) holds the cells above.
-- [ ] lookup.md's "VLOOKUP / HLOOKUP search before validating the index" entry states the rule, cites the new cells,
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M2) holds the cells above.
+- [x] lookup.md's "VLOOKUP / HLOOKUP search before validating the index" entry states the rule, cites the new cells,
       and drops the "unprobed" sentence.
-- [ ] The engine matches every new cell. The change is in `lookup_index_arg` / `resolve_lookup_index`, shared by both
+- [x] The engine matches every new cell. The change is in `lookup_index_arg` / `resolve_lookup_index`, shared by both
       functions (no per-function copy).
-- [ ] probes/lookup-index-hlookup, lookup-index-order, lookup-index-shapes, lookup-pick-index-shapes and
+- [x] probes/lookup-index-hlookup, lookup-index-order, lookup-index-shapes, lookup-pick-index-shapes and
       lookup-argument-edges still pass. Eval known failures only shrink (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XLOOKUP and MATCH (their own entries), INDEX's own error rules (evidenced), and lifted multi-cell indexes (T-1426,
   evidenced).
+
+## Outcome
+- New probe `probes/lookup-index-failing` (excel-graph, 2026-11-04, tag M2): 52 VLOOKUP/HLOOKUP calls whose index is a
+  failing INDEX, OFFSET, INDIRECT or CHOOSE, found and not found, each also wrapped in ERROR.TYPE, plus the order
+  against an error lookup_value and range_lookup.
+- Rule: a failing reference-returning index keeps its own error (`#VALUE!`, `#N/A`, `#DIV/0!`, `#REF!`), never mapped to
+  `#REF!`, and fails like a value index: after lookup_value, before the search and range_lookup. lookup.md's
+  "VLOOKUP / HLOOKUP search before validating the index" entry states it and drops the "unprobed" sentence.
+- The engine already matched every cell (105/105): `lookup_index_arg` sends the failed call's error through
+  `cast_to_number`, which keeps it. No behavior change; the doc comment now cites the probe.
+- Eval delta: +105 cells, +1 passing case in probes (baseline updated, 0 regressions). The other listed probes are
+  untouched. No Gate A one-call cells in the case (no math sidecar).
