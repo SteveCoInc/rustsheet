@@ -9,7 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{information::written_reference, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -78,7 +78,12 @@ impl Model {
         // `XLOOKUP(1,{1},C1:C1)` and a name bound to a cell are references; `IF(TRUE,45003)`
         // and `XLOOKUP(1,{1},{45003})` are scalar (probes/networkdays-intl-holiday-kinds,
         // -kinds-let, -kinds-names; T-4190). An array is never scalar.
-        let scalar = !matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
+        // A unary plus over a reference-returning function (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`) is
+        // a scalar although evaluating it yields a one-cell range (probes/networkdays-intl-
+        // holiday-unary-plus-fn B1:B4, E1:E4; T-4209).
+        let plus_one_cell = is_one_value(&value) && written_reference(arg) == Some(false);
+        let scalar = !matches!(value, CalcResult::Array(_))
+            && (plus_one_cell || !matches!(value, CalcResult::Range { .. }))
             && !self.is_reference(arg, cell);
         let date_system = self.workbook.settings.date_system;
         let (mut serials, mut out_of_range) = (Vec::new(), false);

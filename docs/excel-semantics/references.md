@@ -1812,6 +1812,12 @@ and `ISREF((C1))` are TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-g
 which the evaluator otherwise reads as the identity, ends the reference, as `T(+D1)` being `#VALUE!` already showed
 (text.md). NETWORKDAYS.INTL's holidays split by the same test (dates.md "NETWORKDAYS.INTL: a scalar holiday ignores the
 weekend argument"). Ours: `written_reference` in information/mod.rs settles these before `Model::is_reference`'s full test.
+A unary plus over a reference-returning function is a value too: `ISREF(+INDEX(C1:C2,1))`, `ISREF(+OFFSET(C1,0,0))`,
+`ISREF(+XLOOKUP(1,{1},C1:C1))` and `ISREF(+IF(TRUE,C1))` are all FALSE (probes/networkdays-intl-holiday-unary-plus-fn
+A1:A4, excel-graph 2026-11-04), and each, as NETWORKDAYS.INTL's holidays under weekend 13, counts as a scalar (87 for the
+Saturday holiday C1, 86 for the Tuesday one C2: B1:B4, E1:E4); `T(+INDEX(D1:D2,1))` over text D1 is that text (F1), where
+`T(+D1)` is `#VALUE!`. Without the plus, `ISREF(INDEX(C1:C2,1))` is TRUE (F2). Ours: `written_reference` settles the plus
+for ISREF, and holidays.rs reads the one-cell range such a function evaluates to as scalar through it (T-4209).
 Status: VERIFIED (web).
 
 ## Legacy formulas intersect the ranges in value arguments
