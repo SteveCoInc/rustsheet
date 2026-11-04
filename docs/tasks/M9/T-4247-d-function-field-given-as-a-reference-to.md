@@ -3,7 +3,7 @@ id: T-4247
 title: "D-function field given as a reference to an error cell is #VALUE!, not the error"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
