@@ -581,11 +581,12 @@ docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
   which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
-  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101; row 102, `١.٥`, repeats row 14 and is not a mixed-script row).
+  UNPROBED: criteria (COUNTIF and the other readers through functions/criteria.rs, which share `cast::number_text_in`) on the five T-3446 blocks (Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar) are probed only for one plain digit: `COUNTIF("3","="&digit 3)` is 1 (probes/t3895-collation-script-digits Calc!A49, A74, A99, A124, A149; Thai A24). Not probed: multi-digit and the signed, decimal, percent, `$`, parentheses, group-comma, exponent and ISO-date forms in a criterion, script-digit clock and mixed-fraction criteria, and criteria readers other than COUNTIF (SUMIF, the *IFS functions, the D-functions). The engine reads them by the shared path.
 - **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
   separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
   VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
-- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE, rows 100 and 101 being the mixed-script ones; B103:B105 FALSE), and the cell gets
   a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
   `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
