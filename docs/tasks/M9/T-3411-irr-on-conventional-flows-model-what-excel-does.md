@@ -90,6 +90,27 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
 - Margin: on sweep 3, cell by cell against main's model, the frozen model (1) loses no cell main gets right (type or
   digits) and (2) has no more type mismatches than main. Otherwise nothing ships and these notes record why.
 
+## R4 plan, round 4 (fixed 2026-11-04 before the fourth sweep and the Gate A batch are generated or scored)
+- Frozen model (commit "T-3411: freeze round 4"): round 3's check moved one Newton step: `irr_fallback` takes one
+  more step from its stop iterate and is `#NUM!` when |`irr_npv`| there is `IRR_ROOT_RESIDUAL` = 1E-4 or more; it
+  still returns the stop iterate. Caps unchanged (secant 50, fallback 50).
+- Bracket, over every IRR cell in eval (169 cases, scored cell by cell with `rustsheet-eval show --all`): no cell
+  moves for any cut in 9.16E-5..1.22E-4. Excel's largest returning residual is 9.155E-5 (t3411-irr-r4-fresh A37,
+  A140), its smallest `#NUM!` 1.2207E-4 (t3478-irr-r4-wide A90; next t3411-irr-r4-fresh-3 A49 at 1.526E-4).
+- R4.1 split (fit lab `holdout.is_holdout`, case ids without `.case.json`): 41,288 train and 17,904 test cells.
+  A37, A140 and fresh-3 A49 are train; wide A90 is test. On train alone the bracket is 9.155E-5..1.526E-4, which
+  holds 1E-4, and the test cell A90 falls on Excel's side. Bit-exact against main: train 39,997 -> 40,008 (+11, 0
+  lost), test 17,342 -> 17,346 (+4, 0 lost; A275 goes from a type to an error-code mismatch). Gap 96.90% train vs
+  96.88% test, within the 5-point default margin.
+- Against main, cell by cell over the 169 cases: 16 cells better (15 pass, 1 closer), 0 worse; round 3's three
+  losses (fresh-2 A43, wide A79, A292) are gone.
+- Fresh sweep 4: probes-numeric/t3411-irr-r4-fresh-4, 150 cells, gen_sweep.py with seed "T-3411/r4-fresh-4", and
+  the Gate A batch accuracy/IRR/r4-T-3411 (`rustsheet-accuracy generate IRR --batch r4-T-3411`), both generated
+  after the freeze and oracle-filled from excel-graph.
+- Margin: on sweep 4, cell by cell against main's model, the frozen model (1) makes no cell worse (type, error code
+  or closeness bucket) and (2) has no more type mismatches than main; on r4-T-3411 every point is inside the Gate A
+  envelope or fails the same way on main. Otherwise nothing ships and these notes record why.
+
 ## Progress notes
 2026-11-04, opus run (round 3, shipped as a partial step; the task stays open): the type split on the outlay
 families is the residual at the fallback's root. Inside t3406 A97-A132 (shared secant and Newton paths), Excel

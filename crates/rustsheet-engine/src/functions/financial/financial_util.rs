@@ -269,15 +269,14 @@ const IRR_FAR_ROOT_BOUND: f64 = 1e7;
 /// (gen-m9/abb7d565af89b849 A254) and the slowest probed root that returns needs 29 (`{42,1,1,-1}`).
 const IRR_FALLBACK_STEPS: usize = 50;
 
-/// The largest |NPV| (as [`irr_npv`] evaluates it) at which [`irr_fallback`] returns the root it
-/// reached: a root with a larger residual is `#NUM!` (financial.md "IRR's fallback is `#NUM!` when
-/// NPV at its root is 1E-4 or more"; T-3411). Over every IRR cell in eval whose secant runs fail and
-/// whose Newton search settles on a root, no cell Excel returns has a residual above 9.54E-5
-/// (probes-numeric/t3478-irr-r4-wide A83) and every cell from 1.106E-4 up is an error
-/// (probes/t3406-irr-num-boundary A131): inside t3406's outlay families (A97-A132), where the
-/// returns and `#NUM!` share their secant and Newton paths, the residual alone parts them. The
-/// round value is placed in that bracket.
-/// FITTED(T-3411, 710 cells, IRR whose secant runs fail: 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.54E-5..1.106E-4)
+/// The largest |NPV| (as [`irr_npv`] evaluates it, one Newton step past the stop) at which
+/// [`irr_fallback`] returns the root it reached: a larger residual is `#NUM!` (financial.md "IRR's
+/// fallback is `#NUM!` when NPV at its root is 1E-4 or more"; T-3411). Over every IRR cell in eval
+/// (169 cases), the cut moves no cell anywhere in 9.16E-5..1.22E-4: Excel's largest returning
+/// residual is 9.155E-5 (probes-numeric/t3411-irr-r4-fresh A37 and A140) and its smallest `#NUM!`
+/// one 1.2207E-4 (t3478-irr-r4-wide A90). Those residuals are 3 and 4 times 2^-15, the rounding
+/// step of NPV sums of flows near 1E+11, so the round value is placed between the two.
+/// FITTED(T-3411, 169 IRR cases, fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.155E-5..1.2207E-4)
 const IRR_ROOT_RESIDUAL: f64 = 1e-4;
 
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
@@ -446,9 +445,14 @@ fn irr_fallback(values: &[f64]) -> Option<f64> {
             // past one at -4.6E-5; 1cd3096e3e87c965 A277, 4.06 past -4.01).
             let nearer_negative_root =
                 (polynomial(-next).0 > 0.0) != values.first().is_some_and(|&c| c > 0.0);
-            // Excel is `#NUM!` at a root whose NPV is not within [`IRR_ROOT_RESIDUAL`] of 0
-            // (probes/t3406-irr-num-boundary A121-A132 alternate with it; T-3411).
-            let settled = irr_npv(values, next).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL);
+            // Excel is `#NUM!` at a root whose NPV is not within [`IRR_ROOT_RESIDUAL`] of 0,
+            // measured one Newton step past the stop (T-3411 round 4: at the stop iterate itself
+            // the check loses probes-numeric/t3478-irr-r4-wide A79 and A292, whose residuals fall
+            // under the cut only one step later). The stop iterate is still what is returned.
+            let (p_next, dp_next) = polynomial(next);
+            let past = next - p_next / dp_next;
+            let settled = past.is_finite()
+                && irr_npv(values, past).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL);
             return if next > 0.0 && !nearer_negative_root && settled {
                 irr_from_discount(next)
             } else {
