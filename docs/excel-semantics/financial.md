@@ -3494,8 +3494,8 @@ maturity (321).
   settlement lies before a quasi-coupon date inside the long first period (`nq` >= 1 whole quasi periods between the
   settlement's next quasi-coupon date Q and the first coupon): (1) a regular coupon at every quasi-coupon date from Q
   on, so `nq` more coupons ahead of the odd one, and (2) every exponent of the slope, the redemption's too, `s` later
-  than in the price, where `s` is the basis' days from Q to the first coupon over E (`nq` on bases 0 and 4; actual days
-  on bases 1 to 3). With the settlement in the last quasi period (`nq` = 0) both vanish, which is why the annual
+  than in the price, where `s` is the basis' days from Q to the first coupon over E (`nq` on regular 30/360 schedules,
+  bases 0 and 4, where month-end 30/360 day counts can differ, T-3988; actual days on bases 1 to 3). With the settlement in the last quasi period (`nq` = 0) both vanish, which is why the annual
   PRICE_YIELD rows fitted before. Found on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22, where the
   slope is the redemption's alone: each of the 15 cells is bit-exact only with the redemption's exponent `s` later,
   and the `s` each needs is 366/365 (basis 1 and 3, annual, Q 2023-06-15 to 2024-06-15), 366/360 (basis 2), 92/91,
@@ -3509,6 +3509,12 @@ maturity (321).
   period and `nq` 0 to 4, every frequency and basis, excel-graph 2026-11-03: 157 pass bit-exact or within the harness' ulp
   tolerance (the model without the extra coupons passes 72). Off: S!A80 (1 ulp) and S!A61, S!A70, both a
   28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3031 follow-up).
+  Hold-out (R4.1, `fitlab/holdout.py` `is_holdout` over the 73 long-first cells with `nq` >= 1 above, split after the
+  fact since no split was fixed before the lab scored): this slope is bit-exact on 45 of 45 train and 28 of 28 test
+  cells; ODDFPRICE's root, rounded, is bit-exact, within 4 ulp and within 15 digits on 0 of either (Excel is 3e-12 to
+  3e-8 relative from it). Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
+  engine's schedule are 0.077480666073101446 and 0.12192508630779288; Excel is -3.7e-11 and +4.9e-11 relative of them,
+  ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table).
   T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
   cell gained, and found the zero-coupon cells off Excel's Newton path, some above the root: the shift explains both.
 Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs

@@ -93,40 +93,22 @@ ODDFPRICE's root"). A short first period, and a long one with the settlement in 
   Y!N29 and the ODDFPRICE cells P!A29, P!E29, all 1 ulp); probes/oddfyield-solver-sweep unchanged at 545 of 547 (short
   first periods; its listed cells already passed on main: S!A9, A75-A83, B1, C21, C35, C50, C52, C85, E1, F1, E32, E33,
   E40, F24, F32, F33, F46, F50 all pass; S!C23 and S!E23 are 1 ulp).
-- R4 guards. Hold-out (R4.1): no split was fixed before the lab scored, so the hold-out is the fresh sweep below,
-  drawn and filled after the model was frozen and never scored before it: train (the 73 long-first cells with `nq` >= 1
-  of the two cases above, 58 distinct bonds in the lab) 73 of 73 pass, hold-out 157 of 160 (bit-exact or within the harness' ulp tolerance; margin
-  stated before scoring: within 5 points of train). The correctly rounded candidate (ODDFPRICE's root) is not Excel's
-  value on these cells: Excel stops short of it by 1e-12 to 1e-10 (financial.md; T-2007's root-landing solver scored
-  0 of 99). Fresh sweep (R4.2): probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls (2 to 5 quasi periods in
+- R4 guards. Hold-out (R4.1): no split was fixed before the lab scored, so the split is `fitlab/holdout.py`
+  `is_holdout` applied afterwards to the 73 long-first cells with `nq` >= 1 (case ids
+  `ironcalc-calc/FINANCIAL/PRICE_YIELD.xlsx` and `probes/oddf-date-order-domain-sweep.case.json`); margin 5 points
+  (the default). Bit-exact / within 4 ulp / within 15 digits: this slope train 45/45/45 of 45, test 28/28/28 of 28;
+  the correctly rounded candidate (ODDFPRICE's 50-digit mpmath root, rounded) train 0/0/0, test 0/0/0. Excel stops
+  short of the root by 3e-12 to 3e-8 relative on these cells (financial.md; T-2007's root-landing solver scored 0 of
+  99). Fresh sweep (R4.2): probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls (2 to 5 quasi periods in
   the first period, `nq` 0 to 4, every frequency and basis, coupon 0 or 0.001-0.2, price 20-200, redemption 50-200),
   excel-graph 2026-11-03: 157 pass; without the extra coupons 72. Gate A (R2): 160 of 160 inside the envelope: 157
-  within 15 digits of Excel, S!A80 1 ulp, and S!A61 and S!A70 (month-end schedules, T-3988) within 9e-11 and 1.2e-10
-  relative of ODDFPRICE's root (the engine's ODDFPRICE residual over its central-difference slope; `rustsheet-accuracy
-  math` has no ODDFYIELD model, so the case has no math sidecar). No `FITTED` tag: no constant was fitted, the shift is
+  within 15 digits of Excel, S!A80 1 ulp, and S!A61 and S!A70 (month-end schedules, T-3988) whose 50-digit mpmath roots
+  of ODDFPRICE(y) = price over the engine's schedule are 0.077480666073101446 and 0.12192508630779288: Excel is -3.7e-11
+  and +4.9e-11 relative of them, ours -9.0e-11 and +1.2e-10, inside 1e-9 (`rustsheet-accuracy math` has no ODDFYIELD
+  model, so the case has no math sidecar; T-3999). No `FITTED` tag: no constant was fitted, the shift is
   a day count. Reproducibility floor: no step targets a difference below 4 ulp. No keep-matched branch: the
   conditions are the schedule's own (`nq`, Q), not previously matching cells.
-- Not done here, filed: T-3988 (the two month-end cells), T-3989 (a committed fit-lab `oddfyield` kernel; this lab was
+- Not done here, filed: T-3988 (the two month-end cells), T-3999 (an ODDFYIELD math model and Gate A table), T-3989 (a committed fit-lab `oddfyield` kernel; this lab was
   a scratch dump like T-2007's), T-3990 (probe ODDFYIELD's `#NUM!` at extreme prices).
 - Eval delta: +73 cells (13 PRICE_YIELD, 60 oddf-date-order-domain-sweep); new case t3031-r4-oddfyield-long-first
   (157 of 160).
-
-## Landing notes (resumed 2026-11-04 by an opus run)
-- PR #3046 (draft), head before these notes d549ee3b9 (a docs-only conflict merge of origin/main onto 0ac4b487b).
-  CI was pending at the time of writing. Review round 1 on 0ac4b487b: reviewer-security APPROVE, reviewer-design
-  APPROVE (MINOR only), reviewer-excel-fidelity REQUEST_CHANGES. The code needs no change; two evidence items are
-  missing:
-  1. R4.1 hold-out: split the 73 long-first cells with `nq` >= 1 (PRICE_YIELD.xlsx ODDFPRICE_ODDFYIELD K8-K11,
-     K29-K33, K49-K52; probes/oddf-date-order-domain-sweep Y rows 2, 22, 33, 34) with
-     tools/src/rustsheet_tools/fitlab/holdout.py `is_holdout` (T-3360 has landed). Report train and test counts as
-     bit-exact, within 4 ulp and within 15 digits, for this slope and for the correctly rounded candidate (ODDFPRICE's
-     root). State the margin. The fresh sweep is R4.2 only and cannot also be the hold-out.
-  2. Gate A: give 50-digit (mpmath) roots of ODDFPRICE(y) = pr at least for probes-numeric/t3031-r4-oddfyield-long-first
-     S!A61 and S!A70, replacing "the engine's ODDFPRICE residual over its central-difference slope". File a task for an
-     ODDFYIELD math model and Gate A table. mpmath is not installed system-wide here; try the tools/ uv venv.
-- MINOR, to fix in the same push: financial.md should say "`nq` on regular 30/360 schedules" (month-end 30/360 day
-  counts can differ, see T-3988). Tick the "reviewers approve" criterion only after every reviewer approves.
-- Do not repeat: the shift alone, on any subset of coupon terms, leaves the coupon cells 1e-12 to 1e-10 off (the
-  extra quasi coupons are needed). Attempt 1's lead-term and start candidates are above.
-- Next step: add items 1 and 2 to the Outcome (and to financial.md where it cites Gate A), push once, re-run
-  reviewer-excel-fidelity (and design only if code changes), then mark the PR ready and enqueue it once CI is green.
