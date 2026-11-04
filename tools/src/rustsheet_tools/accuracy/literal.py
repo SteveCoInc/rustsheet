@@ -9,6 +9,7 @@ which is the double Excel and the engine read.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import ROUND_HALF_EVEN, Decimal
 
 # The largest 15-digit literal below 1E+308, and the smallest 15-digit literal at or above the
@@ -17,9 +18,13 @@ MAX_LITERAL = 9.99999999999999e307
 MIN_LITERAL = 2.22507385850721e-308
 
 Scalar = float | int | bool
-Arg = Scalar | tuple[float | int, ...]
-"""One drawn argument: a real (float), an integer parameter (int), a logical (bool) or an array of
-numbers (a tuple, written as an array literal: IRR's flows, XIRR's dates)."""
+Row = tuple[float | int, ...]
+Matrix = tuple[Row, ...]
+Arg = Scalar | Row | Matrix
+"""One drawn argument: a real (float), an integer parameter (int), a logical (bool), an array of
+numbers (a tuple, written as a one-row array literal: IRR's flows, XIRR's dates) or a matrix (a
+tuple of equally long rows, written as a 2-D array literal: MDETERM's, MINVERSE's and MMULT's
+arguments, T-3686)."""
 
 
 def decimal15(x: float) -> Decimal:
@@ -71,9 +76,10 @@ def neighbour(b: float, up: bool) -> float:
 def text(a: Arg) -> str:
     """`a` as formula text: TRUE/FALSE, an integer's digits (15-digit exponent form above 1E15),
     a real's 15 significant digits in Excel's exponent style (`1.87E-297`), or an array literal of
-    those (`{-1000,300.5,800}`)."""
+    those: one row (`{-1000,300.5,800}`) or a matrix, rows separated by `;` (`{1,2;3,4}`)."""
     if isinstance(a, tuple):
-        return "{" + ",".join(text(x) for x in a) + "}"
+        rows: Sequence[Sequence[Arg]] = a if a and isinstance(a[0], tuple) else (a,)
+        return "{" + ";".join(",".join(text(x) for x in row) for row in rows) + "}"
     if isinstance(a, bool):
         return "TRUE" if a else "FALSE"
     if isinstance(a, int) and abs(a) < 10**15:
