@@ -2095,6 +2095,7 @@ C	probes/t4060-collation-open-choices.case.json	222
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
+C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4199-decimal-unprobed-shapes.case.json	87
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8

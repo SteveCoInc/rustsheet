@@ -414,9 +414,11 @@ const FULL_WIDTH: u8 = 2;
 /// probes/t4060-collation-open-choices Calc!B2, K2) and differs from it at the accent pass, letter
 /// by letter (`U+202F&"a" > " á"`, `"a"&U+202F < "á"&" "`; probes/t4086-collation-later-passes
 /// Calc!B1, B46:B48), so it sorts after U+3000, whose difference is its width, and before CHAR(160)
-/// (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4087). The value, one above
-/// [`NO_ACCENT`], is UNVERIFIED.
-const NARROW_NBSP: u8 = NO_ACCENT + 1;
+/// (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4087). Its value is 10: U+202F
+/// equals a space with 88 U+030D (2 + 3 * 88 = 266, 10 in the wrapping byte), sorts above 9, 7 and
+/// `" "&U+030D` (5), and below 11, 13 and every other space with one mark (14 and up)
+/// (probes/t4153-narrow-nbsp-accent Calc!A1:E15, B30:D37; T-4153).
+const NARROW_NBSP: u8 = 10;
 
 /// The variant byte of a kana holds its kana type from here up; below it, a width or superscript
 /// weight. Excel weighs the two in different passes: width and superscripts before the kana pass,

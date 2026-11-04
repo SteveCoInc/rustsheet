@@ -805,3 +805,17 @@ fn t4087_later_passes() {
         Ordering::Less
     );
 }
+
+/// T-4153: U+202F's accent weight is 10: above `" "&U+030D` (5) and two U+030D (8), below three
+/// (11) and `" "&U+0301` (14), equal to the space with 88 U+030D (266 wraps to 10)
+/// (probes/t4153-narrow-nbsp-accent Calc!B1:D2, B30:D31, C34).
+#[test]
+fn t4153_narrow_nbsp_accent_weight() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    let marks = |n: usize| format!(" {}", "\u{30d}".repeat(n));
+    assert_eq!(pairwise("\u{202f}", &marks(1)), Ordering::Greater);
+    assert_eq!(pairwise("\u{202f}", &marks(2)), Ordering::Greater);
+    assert_eq!(pairwise("\u{202f}", &marks(3)), Ordering::Less);
+    assert_eq!(pairwise("\u{202f}", " \u{301}"), Ordering::Less);
+    assert_eq!(pairwise("\u{202f}", &marks(88)), Ordering::Equal);
+}
