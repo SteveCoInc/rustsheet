@@ -167,12 +167,14 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
   rendered label cell works, and an array of labels lifts. A **number** item picks the group whose lower bound equals it,
   within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
   1.3000000000000003 from 1; 3 by 3), and `endNum` itself picks the `>end` item (1 gives the `>1` total); a number
-  inside a group but not its lower bound (0.35, 4), the `<start` item's bound (-0.5), TRUE, an omitted item and
+  inside a group but not its lower bound (0.35, 4), a number inside the `<start` group (-0.5), TRUE, an omitted item and
   `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
 - Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
   `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
   lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
-  Excel's own labels for decimal data are `start-end` of each step (`0-3`, `0.3-0.4`), formatted General.
+  Only pivot 3's relabel shows Excel's own labels (`0-3`, `3-6`, `6-9`). UNVERIFIED (T-4236): the label format for
+  decimal data (`0.3-0.4`) and that it is formatted General; the probe's decimal labels already equal what Excel would
+  write, so they show nothing. T-4236 can probe them with wrong-text labels of the right count.
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
