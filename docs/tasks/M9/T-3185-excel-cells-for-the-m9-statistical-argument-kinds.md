@@ -3,7 +3,7 @@ id: T-3185
 title: "Excel cells for the M9 statistical argument kinds no suite covers (573 parameter/kind pairs in 129 functions, mostly empty text and errors)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
