@@ -3,7 +3,7 @@ id: T-4023
 title: "External untyped entry paths beyond set_user_input (redo of an external edit, set_user_array_formula, legacy formulas) read a padded bare column as Excel does"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
