@@ -19,6 +19,7 @@ T-3250, T-3220 and T-3035 fit are checked on this independent data before they a
 visibly-off cell anywhere.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Decision 0188 R5 (owner's 2026-10-31 rulings): parked as Phase 1b. Every cell this task owns is a BETA.DIST
   density cell of a dense probes-numeric sweep inside Gate A's envelope (measured below), so R1(c) counts it as
   Phase 1b evidence. A point that Gate A's tables show outside the envelope gets its own task without the key.

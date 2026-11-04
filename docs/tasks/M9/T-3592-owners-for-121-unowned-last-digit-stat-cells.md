@@ -17,6 +17,7 @@ to a narrower task that names its kernel branch, or listed in the Outcome with E
 the reason Excel's digits cannot be derived.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on origin/main 408444f20, `scripts/exit_owners.py --all-off`): these cells are
   visibly off, and no open task names them. All are last-digit work. The triage computed the math at 50 digits on the
   double inputs. Excel and ours are within 4.3e-14 relative of it on every BETA.DIST and F.DIST.RT cell. T-3478

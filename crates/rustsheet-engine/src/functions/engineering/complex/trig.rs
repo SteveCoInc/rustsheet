@@ -323,11 +323,12 @@ fn overflowed_parts(re: f64, im: f64, v: f64) -> (f64, f64) {
 
 /// IMCSCH's band of large |x| where Excel's result for a non-real z is the negation of csch z,
 /// -sgn(x)·IMSECH(z) digit for digit, and a real z (y = 0 or subnormal) is sgn(x)·IMSECH(x):
-/// 2x above 709 or below -708, the limits of a test on exp(2x) (engineering.md "IMCSCH's negated
-/// band", T-3881). Excel brackets both edges: `IMCSCH(COMPLEX(354.5,1))` is
-/// 1.19199101546952E-154-1.85641601521147E-154i, the true csch, and `(354.501,1)` is negated;
-/// `(-354,1)` is true and `(-354.01,1)` negated (probes/t3881-imcsch-flip-start,
-/// -flip-start-negative, -band-edge, excel-graph).
+/// 2x above 709 or below -708, the cuts of IMCOSH's and IMSINH's log form ([`hyperbolic_log_form`])
+/// applied to 2x (engineering.md "IMCSCH's negated band", T-3881). Excel brackets both edges to
+/// one step of the 15-digit input grid: `IMCSCH(COMPLEX(354.5,1))` is
+/// 1.19199101546952E-154-1.85641601521147E-154i, the true csch, and `(354.500000000001,1)` is
+/// negated; `(-354,1)` is true and `(-354.000000000001,1)` negated (probes/t3881-imcsch-flip-start,
+/// -flip-start-negative, -band-edge, t3912-imcsch-band-edges, excel-graph).
 fn in_csch_negated_band(x: f64) -> bool {
     2.0 * x > 709.0 || 2.0 * x < -708.0
 }
@@ -450,12 +451,12 @@ pub(super) fn imcsch((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
         return complex_result(1.0 / x_sinh, 0.0, suffix);
     }
 
-    if past_trig_limit(y) && !reciprocal_flushes(x) {
-        return num_error(cell);
-    }
     if in_csch_negated_band(x) {
         // A subnormal y counts as real: `IMCSCH(COMPLEX(700,1E-308))` is 1.97193530875195E-304,
         // as (700,0), while (700,1E-300) is -1.97193530875195E-304 (t3881-imcsch-overflow-band).
+        // The cut is DBL_MIN because the complex text parse reads a subnormal y as 0:
+        // `IMAGINARY(COMPLEX(355,2.2250738585072E-308))` is 0 and 2.2250738585073E-308 is kept
+        // (probes/t3912-imcsch-band-edges C61:D63, T-3912).
         let real = y.abs() < f64::MIN_POSITIVE;
         let sign = if real { x.signum() } else { -x.signum() };
         return match sech_parts(x, if real { 0.0 } else { y }) {
@@ -463,6 +464,10 @@ pub(super) fn imcsch((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
             Some((re, im)) => complex_result(sign * re + 0.0, sign * im + 0.0, suffix),
             None => num_error(cell),
         };
+    }
+    // After the band: `sech_parts` makes the same check there.
+    if past_trig_limit(y) && !reciprocal_flushes(x) {
+        return num_error(cell);
     }
     let (y_sin, y_cos) = trig_sin_cos(y);
 
@@ -811,7 +816,14 @@ mod tests {
                 1.0,
                 "-1.19079962025097E-154+1.85456052709499E-154i",
             ),
+            (
+                354.50001,
+                1.0,
+                "-1.19197909561899E-154+1.85639745114419E-154i",
+            ),
             (-354.0, 1.0, "-1.96526094168804E-154-3.06071257154752E-154i"),
+            (-354.0001, 1.0, "1.9650644254199E-154+3.0604065155935E-154i"),
+            (355.0, 2.225_073_858_507_3e-308, "-1.33810107625323E-154"),
             (-354.01, 1.0, "1.945706268592E-154+3.03025797261464E-154i"),
             (-354.01, 0.0, "-3.60114374390037E-154"),
             (700.0, 0.0, "1.97193530875195E-304"),

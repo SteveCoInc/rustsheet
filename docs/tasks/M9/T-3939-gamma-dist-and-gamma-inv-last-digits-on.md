@@ -16,6 +16,7 @@ GAMMA.DIST and GAMMA.INV return Excel's bits on the 58 last-digit cells of T-353
 subnormal-scale probe listed below, or the Outcome names each cell left with its kernel.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (gamma quantile) measured on t3311-gamma-inv-lower-tail-cdf, 0 of 899 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task, deferred ones included, and every unmerged branch's task files). T-3633
   (score the provisional gamma FITTED cuts), T-3396, T-3294 and T-3409 name these fit-audit cases but list other

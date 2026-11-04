@@ -73,18 +73,18 @@ whole overflow band, not as a list of points.
 - [x] If choosing the 15-digit text means ranking kernel candidates (for example `2·exp(-x)` against
       `exp(-x)·2`, or 1/sinh through `inverse_exp_sinh_cosh`), the R4 guards (reviewer-excel-fidelity check 7,
       decision 0188) apply and the Outcome shows them:
-  - [x] Hold-out (R4.1): train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for
+  - [x] N/A (no candidates ranked; T-3912): Hold-out (R4.1): train and hold-out counts side by side (bit-exact, within 4 ulp, within 15 digits) for
         the chosen candidate and the correctly rounded one, from the fit lab's split (T-3360). The margin is stated
         before scoring. The chosen candidate beats the correctly rounded one on hold-out.
-  - [x] Fresh sweep (R4.2): after the choice is frozen, a new probes-numeric case over the overflow band is
+  - [x] N/A (no candidates ranked; T-3912): Fresh sweep (R4.2): after the choice is frozen, a new probes-numeric case over the overflow band is
         oracle-filled and its counts are recorded.
-  - [x] Gate A envelope (R2): the fresh sweep's count inside the envelope (within 15 digits of Excel, or within
+  - [x] N/A (no candidates ranked; T-3912): Gate A envelope (R2): the fresh sweep's count inside the envelope (within 15 digits of Excel, or within
         1e-9 relative of 50-digit mpmath, absolute floor 1e-300), with every point outside listed.
-  - [x] `FITTED` tag (R4.3): any constant or cut chosen by scoring carries `FITTED(T-3881, n_cells, range)` and
+  - [x] N/A (no candidates ranked; T-3912): `FITTED` tag (R4.3): any constant or cut chosen by scoring carries `FITTED(T-3881, n_cells, range)` and
         applies only inside that range. For a structural choice (kind (c)), the Outcome says so instead.
-  - [x] Reproducibility floor (R4.4): no step targets differences below the oracle's floor (decision 0112, web
+  - [x] N/A (no candidates ranked; T-3912): Reproducibility floor (R4.4): no step targets differences below the oracle's floor (decision 0112, web
         against desktop up to 4 ulp).
-  - [x] No keep-matched branch: no band or special case whose domain is defined by the cells that already match
+  - [x] N/A (no candidates ranked; T-3912): No keep-matched branch: no band or special case whose domain is defined by the cells that already match
         (decisions 0056, 0082).
 - [x] `make check` green; reviewers approve.
 
@@ -126,8 +126,9 @@ known-failure lines.
   cases). The 14 left carry IMSECH's own last digit: the 12 overflow-band IMCSCH twins of T-3883's IMSECH cells and
   flip-start-negative A3 (IMSECH's finite-t form at -354.03) go to T-3883, grid J161 (705+705i) to T-3851. Their
   known-failure lines stay; no new line.
-- R4: no candidates were ranked. The kernel is IMSECH's, reused (directive 3), and the cut is the structural reading of
-  the two brackets (kind (c)), so no FITTED tag, hold-out or fresh sweep; no step targets sub-ulp differences, and no
+- R4: not triggered, since no candidates were ranked. The kernel is IMSECH's, reused (directive 3), and the cut is
+  read off the two brackets (T-3912 narrowed them to the 15-digit input grid), so no FITTED tag, hold-out or fresh
+  sweep; no step targets sub-ulp differences, and no
   band is defined by matched cells (both edges come from Excel's flips, not from where ours matched).
 - Unit test `imcsch_negates_csch_in_the_band` pins both edges, the real, subnormal-y and tiny-y cases, grid J134-J139,
   J180 and argument-cut J16.

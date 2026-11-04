@@ -16,6 +16,7 @@ GAMMALN, GAMMA and LN(GAMMA(x)) return Excel's bits on the 719 last-digit cells 
 below, by shipping the K1, K3 and (1.5, 2] kernels T-2122 cracks; or the Outcome names each cell left with its kernel.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe t3570-r5-bpser-lg-aux: 0 of its 2520 cells changed over three fills (its 594 cells there; its 125 t3570-r5-bpser-lngamma-gl cells not refilled); see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task, deferred ones included, and every unmerged branch's task files). T-3570
   (done) filled both probes as research side columns; neither case is named by an open task except T-2122's 45

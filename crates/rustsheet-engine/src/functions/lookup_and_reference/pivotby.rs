@@ -365,7 +365,7 @@ impl Model {
         // `filter_array` is `#VALUE!` in its place, ahead of a later option's error, as in
         // GROUPBY; a blank total depth or field_headers, text, `""` or FALSE there, a scalar
         // `row_fields` and a short or `""` `col_fields` leave the later error
-        // (probes/t3889-pivotby-option-order P!B1-B46, excel-graph, 2026-11-03).
+        // (probes/t3889-pivotby-option-order P!B1-B49, excel-graph, 2026-11-03).
         let mut options = self
             .evaluate_options(&args[4..], &[2, 4, 5], cell)?
             .into_iter();

@@ -18,6 +18,7 @@ unit of the 15th significant digit of Excel's value on the 1,168 pdf cells of T-
 with no new visibly-off cell anywhere.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; `scripts/exit_owners.py
   --all-off` plus a per-cell run of its `owned` rule over every failing cell of the report against every open task,
   deferred ones included, and the task files of every unmerged `origin/*` branch). No open task names this case's

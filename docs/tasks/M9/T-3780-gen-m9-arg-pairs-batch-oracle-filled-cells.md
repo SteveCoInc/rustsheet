@@ -16,6 +16,7 @@ argument coverage of the 17 M9 cash-flow, rate-conversion and depreciation funct
 engine fails is owned by a task.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on main 65c266573; report.json `argument_coverage[].pairwise` and
   `unseen_pairs`; decision 0031 evidence gaps). Every failing Excel cell of these functions is already owned
   (`make unowned-off ALL=1` and `make exit-owners MILESTONE=M9` list none of them), and every function is above the

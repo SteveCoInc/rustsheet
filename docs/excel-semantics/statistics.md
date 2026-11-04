@@ -1126,6 +1126,18 @@ cells and moves 4 closer, but loses `CHIDIST(42,7)` (0 to 1 ulp) and moves 4 far
 e^-x sum x^(j - 1/2) / Gamma(j + 1/2): with Excel's own ERFC and EXP in plain doubles that form gives Excel's bits at 75
 of 95 half-integer cells with x <= 5 and at 21 of 193 above, and with the series in double-double at 9 of 92 on
 [a + 1, 30] (T-3285 scratch harness). Excel's form past x = 30 is T-3269's subject.
+Near the mode at a large shape Excel is correctly rounded (T-3286; 60-digit mpmath `gammainc`): `POISSON.DIST(46040,46071,TRUE)`
+= Q(46041, 46071) is 0.4438020698095389, -0.2 ulp (ironcalc-calc POISSON.xlsx D55), `POISSON.DIST(1E6,1E6,TRUE)`
+0.5002659614862837, +0.1 (D31), `POISSON(1E12,1E12,TRUE)` 0.5000002659615203 (probes/incomplete-gamma-cap E11), and
+`GAMMA.DIST(99990000,99999999,1,TRUE)` 0.15867945221382798, -1.2 (probes/t2982-gamma-inv-huge-shape A144). Ours takes
+Temme's expansion within `NEAR_MODE` of x = a from a shape of 1E3 (below 1E8 the series after `rcomp` was 4 to 16 ulp
+off there), with its exponent a·phi in double-double: phi from s = (x - a)/(x + a) as s²(x + a)/a - 2(s³/3 + s⁵/5 + ...)
+near the mode, and erfc(sqrt(a phi)) stepped from the rounded root. A rounded a·phi costs about a·phi ulps of the tail
+(10 to 230 at shapes 1E3 to 46041, x from 0.9a to 1.1a), and ln x - ln a loses phi itself at a = 1E12 + 1, x = 1E12
+(phi 5E-25). Within an ulp of mpmath at shapes 1E3 to 1E6 over the band, 2 ulp for P at 1E3 below 0.9a. Not reached:
+shapes 21 and 101 (`POISSON(20,25,TRUE)`, probes-numeric t1048-poisson A9, Excel +1.5 ulp, ours +7.5;
+`POISSON.DIST(100,100,TRUE)`, D19), where the 4-term expansion's dropped term is 3E-13 at 101, and t2982 A146 (Excel
+itself -13.6 ulp).
 Unit tests (`incomplete_gamma.rs`): within 8 units of 2^-52 of mpmath at a in {0.001, 0.01, 0.3, 0.5, 9, 500}, P + Q = 1
 within 2 of them, the a = 1 identity, the b = 1E6 scale. The 2^19-term cap (section above) is unchanged; the series now
 runs to 2^-54 instead of 1E-15, about 8% more terms near x = a, so an inversion's budget runs out at a somewhat smaller
@@ -3896,6 +3908,11 @@ Evidence: probes-numeric m9-beta-inv, m9-legacy-betainv, t1745-beta-inv-roundtri
 and its neighbours as constants, BETA.DIST of each, and BETA.INV again), m9-f-inv, t1049-finv,
 m9-f-inv-rt, m9-legacy-finv, t1049-finvrt, m9-t-inv, m9-t-inv-2t, t1048-tinv. Fits `beta-inv`,
 `f-inv`, `f-inv-rt`, `t-inv`, `t-inv-2t` (`fitlab/kernels/beta_inv.py`).
+Small-shape sweep (T-3387, probes-numeric t3387-beta-inv-small-shape-landing, a in {0.5, 1, 2.5, 10}, b in {1, 2.5,
+10, 100, 1000}, p from 1E-10 to 0.5, 220 points): `BETA.DIST(BETA.INV(p,a,b),a,b,TRUE)` equals p at 57 points, is
+within one ulp of p at 53 more, and is further at 110. Largest miss in ulps of p, per (a, b): a=0.5: 11, 9, 10, 10, 11;
+a=1: 11, 1, 1, 1, 1; a=2.5: 24, 15, 32, 188, 220; a=10: 24, 11, 27, 14, 16 (for b = 1, 2.5, 10, 100, 1000 in each
+row). The case also holds the AS 109 mirror (`BETA.INV(1-p,b,a)` and `1-BETA.INV(1-p,b,a)` for p in 0.05, 0.2, 0.5).
 Tiny shapes and scaled ranges (T-3566, probes-numeric t3566-beta-inv-tiny-shape-and-range, excel-graph): of the 66
 tiny-shape points (a, b in 1E-5..0.01, p near 1/2 and 0.1/0.9), Excel's BETA.INV returns #NUM! at 21 (a = b = 1E-5: 4,
 1E-4: 4, 1E-3: 2; (1E-4, 0.01): 6; (0.01, 1E-4): 5; the plain and the [0.15, 1.2] calls agree on every one). At the 45
@@ -3904,7 +3921,7 @@ further the cdf is flat or saturated (it reads 1.0, or 0.98646998669861 for ever
 point is not a crossing of p. The scaled quantile BETA.INV(p,a,b,A,B) equals A + (B - A)*BETA.INV(p,a,b) bit for bit
 at all 40 points ((3, 600) and (2, 2.5) on four ranges, five p each).
 Status: VERIFIED (crossing at 155/188); the 11 misses and the solver's start, step and stop are UNVERIFIED
-Tasks: T-1745, T-0974
+Tasks: T-1745, T-0974, T-3387
 
 ## BETA.INV at a shape of 1 is the closed form to 15 digits for p of 1E-15 or more (T-3664)
 Rule: with alpha = 1 or beta = 1 and 1E-15 <= p < 1, Excel's BETA.INV(p,alpha,beta) (and BETAINV) is within half a

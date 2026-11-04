@@ -49,8 +49,9 @@ use super::gammaln::excel_gammaln;
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::special::refine_increasing;
 use crate::functions::util::poly;
-use crate::x87_exp::excel_exp;
-use crate::x87_log10::excel_ln;
+use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, dd_neg, excel_exp, two_sum};
+use crate::x87_log10::{excel_ln, ln_double_double};
+use fraction::Dd;
 
 /// The most series or continued-fraction terms one cdf, or one whole inversion, may take. The
 /// series needs about 6.8 * sqrt(a) terms at its slowest, x = a (it is used for x <= a, and needs
@@ -424,6 +425,16 @@ fn excel_form_lower(a: f64, x: f64, exponent: f64) -> Option<f64> {
 /// operations at any shape (T-1891).
 const TEMME_SHAPE_MIN: f64 = 1e8;
 
+/// The shape from which the pair is [`temme_pair`] within [`NEAR_MODE`] of x = a, below
+/// [`TEMME_SHAPE_MIN`] too. There the series and continued fraction after `rcomp` lose up to 16 ulp
+/// (`POISSON.DIST(46040,46071,TRUE)` 0.4438020698095398, Excel's 0.4438020698095389 is correctly
+/// rounded: ironcalc-calc POISSON.xlsx D55; T-3286), while the expansion's first dropped term,
+/// about `C_4(0)/a^4 · e^(-a phi)/sqrt(2 pi a)` with `|C_4(0)| < 1E-3`, is below 1E-17 from here; at
+/// shape 101 it is 3E-13. With [`temme_pair`]'s exponent in double-double, within an ulp of 60-digit
+/// values over the band at shapes 46041 and 1E6 and at 1E3 from 0.9a, 2 ulp for P below it
+/// (tests.rs `near_mode_pair_is_within_an_ulp_from_shape_1e3`).
+const TEMME_NEAR_MODE_MIN: f64 = 1e3;
+
 /// The shape from which [`gamma_quantile`]'s cdfs are [`temme_pair`] (one term each). One
 /// inversion's cdfs share [`MAX_TERMS`], and a series cdf near the median takes about 7.3 * sqrt(a)
 /// terms, so its cdfs could pass it from about 2.6E5; they did from about 5E6 (`CHISQ.INV(0.5,2E7)`
@@ -501,33 +512,42 @@ const TEMME_C: [&[f64]; 4] = [
 ];
 
 /// (P(a, x), Q(a, x)) by Temme's uniform asymptotic expansion, for a shape of at least
-/// [`TEMME_SHAPE_MIN`] (T-1891). With phi = (x - a)/a - ln(x/a) and z = ±sqrt(2 phi) (the sign of
-/// x - a), the smaller tail is erfc(sqrt(a phi))/2 ± e^(-a phi)/sqrt(2 pi a) · sum `C_k(z)/a^k`
-/// (- for P below a, + for Q from a on), and the other tail 1 minus it. Excel is close to
+/// [`TEMME_SHAPE_MIN`] (T-1891), or [`TEMME_NEAR_MODE_MIN`] near the mode (T-3286). With
+/// phi = (x - a)/a - ln(x/a) ([`temme_phi`]) and z = ±sqrt(2 phi) (the sign of x - a), the
+/// smaller tail is erfc(sqrt(a phi))/2 ± e^(-a phi)/sqrt(2 pi a) · sum `C_k(z)/a^k` (- for P
+/// below a, + for Q from a on), and the other tail 1 minus it. Excel is close to
 /// correctly rounded here: `GAMMA.DIST(1E10,1E10,1,TRUE)` = 0.5000013298076014 and
 /// `GAMMA.DIST(1E16,1E16,1,TRUE)` = 0.5000000013298076 (probes/incomplete-gamma-cap E8, E1).
 fn temme_pair(a: f64, x: f64) -> (f64, f64) {
-    let phi = rlog(a, x);
-    let exponent = a * phi;
+    let phi = temme_phi(a, x);
+    // The exponent a·phi in double-double: rounded to a double it costs a relative error of about
+    // a·phi·eps in both erfc(sqrt(a phi)) and e^(-a phi), tens to hundreds of ulps of a tail within
+    // `NEAR_MODE` at shape 1E3 to 1E5 (T-3286).
+    let exponent = dd_mul((a, 0.0), phi);
+    // Past the double range the product's error word is NaN: the plain product (+inf) then takes
+    // the 0 tail, as before the double-double form (a = 1E308, x = 1E300).
+    let exponent = if exponent.0.is_finite() {
+        exponent
+    } else {
+        (a * phi.0, 0.0)
+    };
     let below = x < a;
-    let small = if exponent > TEMME_EXPONENT_MAX {
+    let small = if exponent.0.is_nan() || exponent.0 > TEMME_EXPONENT_MAX {
         0.0
     } else {
         let z = if below {
-            -(2.0 * phi).sqrt()
+            -(2.0 * phi.0).sqrt()
         } else {
-            (2.0 * phi).sqrt()
+            (2.0 * phi.0).sqrt()
         };
         let inverse = 1.0 / a;
         let series = TEMME_C
             .iter()
             .rev()
             .fold(0.0, |acc, c| acc * inverse + poly(c, z));
-        let correction = series * (-exponent).exp() / (2.0 * std::f64::consts::PI * a).sqrt();
-        // libm's erfc, within an ulp, not Excel's ERFC.PRECISE (`erf::erfc`), whose
-        // EXP(-fl(x*x)) loses about 2x^2 ulps in the tail: this family is close to correctly
-        // rounded in Excel (decision 0114, accuracy stage).
-        let base = libm::erfc(exponent.sqrt()) / 2.0;
+        let decay = (-exponent.0).exp() * (1.0 - exponent.1);
+        let correction = series * decay / (2.0 * std::f64::consts::PI * a).sqrt();
+        let base = erfc_of_root(exponent) / 2.0;
         if below {
             base - correction
         } else {
@@ -539,6 +559,67 @@ fn temme_pair(a: f64, x: f64) -> (f64, f64) {
     } else {
         (1.0 - small, small)
     }
+}
+
+/// The |s| up to which [`temme_phi`] sums its atanh series, s = (x - a)/(x + a): x from 0.6a to
+/// 1.67a, which holds `NEAR_MODE`'s band; each term is s² = 1/16 or less of the one before.
+const PHI_SERIES_MAX_S: f64 = 0.25;
+
+/// The atanh terms [`temme_phi`] sums at most: s^54 is below 2^-108 of s² at |s| <= 1/4
+/// (directive 5).
+const PHI_SERIES_TERMS: u32 = 27;
+
+/// phi = (x - a)/a - ln(x/a) for Temme's expansion in double-double, the exponent's error far below
+/// an ulp of a·phi (T-3286). With d = x - a and s = d/(x + a), ln(x/a) = 2 atanh(s), and
+/// (x - a)/a - 2s = s²(x + a)/a exactly, so near the mode phi = s²(x + a)/a - 2(s³/3 + s⁵/5 + ...)
+/// with no cancellation: ln x - ln a there would cancel all but the last 24 bits of phi at
+/// `POISSON(1E12,1E12,TRUE)` (a = 1E12 + 1, phi 5E-25). Off the band, ln x - ln a, each
+/// [`ln_double_double`] (about 2^-104 relative), where phi is at least 0.11.
+fn temme_phi(a: f64, x: f64) -> Dd {
+    let difference = two_sum(x, -a);
+    let total = two_sum(x, a);
+    if !total.0.is_finite() {
+        // x + a past the double range (a = x = 1E308): the double rlog, which is exact enough there
+        // for the tails it feeds (both 1/2 at x = a).
+        return (rlog(a, x), 0.0);
+    }
+    let s = dd_div(difference, total);
+    if s.0.abs() > PHI_SERIES_MAX_S {
+        let ratio = dd_div(difference, (a, 0.0));
+        let ln_ratio = dd_add(ln_double_double(x), dd_neg(ln_double_double(a)));
+        return dd_add(ratio, dd_neg(ln_ratio));
+    }
+    let square = dd_mul(s, s);
+    let lead = dd_div(dd_mul(square, total), (a, 0.0));
+    let mut power = s;
+    let mut tail = (0.0, 0.0);
+    let mut k = 1.0;
+    for _ in 0..PHI_SERIES_TERMS {
+        power = dd_mul(power, square);
+        let term = dd_div_small(power, 2.0 * k + 1.0);
+        tail = dd_add(tail, term);
+        if term.0.abs() <= lead.0.abs() * 1e-34 {
+            break;
+        }
+        k += 1.0;
+    }
+    dd_add(lead, dd_neg(dd_add(tail, tail)))
+}
+
+/// erfc(sqrt(e)) for a double-double e >= 0: libm's erfc (within an ulp) at s = fl(sqrt(e.0)),
+/// then the first-order step to the exact argument, d/de erfc(sqrt(e)) = -e^(-e)/sqrt(pi e), over
+/// the remainder e - s² (a few ulps of e, so the dropped second-order term is below 2^-100
+/// relative). Without the step the rounding of s alone costs e·eps relative.
+fn erfc_of_root(e: Dd) -> f64 {
+    let s = e.0.sqrt();
+    let base = libm::erfc(s);
+    if s == 0.0 {
+        return base;
+    }
+    let square = dd_mul((s, 0.0), (s, 0.0));
+    let remainder = dd_add(e, dd_neg(square)).0;
+    let slope = (-e.0).exp() / (std::f64::consts::PI.sqrt() * s);
+    base - remainder * slope
 }
 
 /// The regularized incomplete gamma pair (P(a, x), Q(a, x)) for a > 0, x > 0 (T-0971), with
@@ -565,7 +646,7 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
     if a == 1.0 {
         return (-(-x).exp_m1(), (-x).exp());
     }
-    if a >= TEMME_SHAPE_MIN {
+    if a >= TEMME_SHAPE_MIN || (a >= TEMME_NEAR_MODE_MIN && (x - a).abs() <= a * NEAR_MODE) {
         return charged_temme_pair(a, x, terms);
     }
     let prefactor = gamma_prefactor(a, x, exponent);

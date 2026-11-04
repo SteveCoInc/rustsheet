@@ -1,0 +1,237 @@
+{
+ "fin-cumipmt-tiny-rate-structure": {
+  "cells": 226,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-29T06:17:30+00:00",
+   "fill2": "2026-11-03T22:16:54+00:00",
+   "fill3": "2026-11-03T22:19:15+00:00"
+  },
+  "kernel": "CUMPRINC/CUMIPMT",
+  "suite": "probes"
+ },
+ "t2143-ln-near-ties-fill1": {
+  "cells": 380,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-22T12:57:39+00:00",
+   "fill2": "2026-11-03T22:17:06+00:00",
+   "fill3": "2026-11-03T22:19:27+00:00"
+  },
+  "kernel": "LN (control)",
+  "suite": "probes-numeric"
+ },
+ "t2143-ln-near-ties-fill2": {
+  "cells": 380,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-22T12:58:00+00:00",
+   "refill": "2026-11-03T22:20:54+00:00"
+  },
+  "kernel": "LN (control, D1 label 2)",
+  "suite": "probes-numeric"
+ },
+ "t2143-ln-near-ties-fill3": {
+  "cells": 380,
+  "differ": {
+   "Calc!B11": {
+    "committed": -0.2073932411977767,
+    "refill": -0.20739324119777672,
+    "ulp": 1
+   },
+   "Calc!B12": {
+    "committed": 0.34621039533147036,
+    "refill": 0.3462103953314704,
+    "ulp": 1
+   },
+   "Calc!B14": {
+    "committed": -0.49044456901953853,
+    "refill": -0.4904445690195386,
+    "ulp": 1
+   },
+   "Calc!B17": {
+    "committed": 7.118471287286369,
+    "refill": 7.11847128728637,
+    "ulp": 1
+   },
+   "Calc!B172": {
+    "committed": -0.7690754596116545,
+    "refill": -0.7690754596116546,
+    "ulp": 1
+   },
+   "Calc!B18": {
+    "committed": 0.320592885439217,
+    "refill": 0.32059288543921705,
+    "ulp": 1
+   },
+   "Calc!B187": {
+    "committed": 0.05012034903633378,
+    "refill": 0.050120349036333785,
+    "ulp": 1
+   },
+   "Calc!B19": {
+    "committed": 0.3314532840296555,
+    "refill": 0.33145328402965557,
+    "ulp": 1
+   },
+   "Calc!B2": {
+    "committed": 0.22351770341174126,
+    "refill": 0.2235177034117413,
+    "ulp": 1
+   },
+   "Calc!B205": {
+    "committed": -0.6145713042156727,
+    "refill": -0.6145713042156729,
+    "ulp": 1
+   },
+   "Calc!B206": {
+    "committed": 0.032538823666703444,
+    "refill": 0.03253882366670345,
+    "ulp": 1
+   },
+   "Calc!B217": {
+    "committed": 0.8683218335157008,
+    "refill": 0.8683218335157009,
+    "ulp": 1
+   },
+   "Calc!B22": {
+    "committed": 0.2428000207700514,
+    "refill": 0.24280002077005142,
+    "ulp": 1
+   },
+   "Calc!B24": {
+    "committed": 0.320592885438477,
+    "refill": 0.3205928854384771,
+    "ulp": 1
+   },
+   "Calc!B25": {
+    "committed": 0.1962430289702163,
+    "refill": 0.19624302897021634,
+    "ulp": 1
+   },
+   "Calc!B27": {
+    "committed": 2.263048280493539,
+    "refill": 2.2630482804935395,
+    "ulp": 1
+   },
+   "Calc!B29": {
+    "committed": 0.7233051080928498,
+    "refill": 0.7233051080928499,
+    "ulp": 1
+   },
+   "Calc!B3": {
+    "committed": 230.46922960072047,
+    "refill": 230.4692296007205,
+    "ulp": 1
+   },
+   "Calc!B30": {
+    "committed": 0.7233051080915008,
+    "refill": 0.723305108091501,
+    "ulp": 1
+   },
+   "Calc!B4": {
+    "committed": 3.4036310844702493,
+    "refill": 3.4036310844702498,
+    "ulp": 1
+   },
+   "Calc!B5": {
+    "committed": 0.3027666760906276,
+    "refill": 0.30276667609062763,
+    "ulp": 1
+   },
+   "Calc!B6": {
+    "committed": 1.0943699967456948,
+    "refill": 1.094369996745695,
+    "ulp": 1
+   },
+   "Calc!B8": {
+    "committed": -0.2993498704338273,
+    "refill": -0.2993498704338274,
+    "ulp": 1
+   }
+  },
+  "fills": {
+   "committed": "2026-10-22T12:58:12+00:00",
+   "refill": "2026-11-03T22:21:05+00:00"
+  },
+  "kernel": "LN (control, D1 label 3)",
+  "suite": "probes-numeric"
+ },
+ "t2464-r2-bpser-small-gl": {
+  "cells": 5843,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-23T12:36:08+00:00",
+   "fill2": "2026-11-03T22:18:17+00:00",
+   "fill3": "2026-11-03T22:20:17+00:00"
+  },
+  "kernel": "incomplete beta (bpser)",
+  "suite": "probes-numeric"
+ },
+ "t3311-gamma-inv-lower-tail-cdf": {
+  "cells": 899,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-31T07:47:05+00:00",
+   "fill2": "2026-11-03T22:17:40+00:00",
+   "fill3": "2026-11-03T22:19:39+00:00"
+  },
+  "kernel": "gamma quantile",
+  "suite": "probes-numeric"
+ },
+ "t3349-t-inv-2t-sweep": {
+  "cells": 300,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-31T06:14:59+00:00",
+   "fill2": "2026-11-03T22:16:19+00:00",
+   "fill3": "2026-11-03T22:18:40+00:00"
+  },
+  "kernel": "Student t quantile",
+  "suite": "probes-numeric"
+ },
+ "t3478-irr-r4-wide": {
+  "cells": 300,
+  "differ": {},
+  "fills": {
+   "committed": "2026-10-31T23:27:25+00:00",
+   "fill2": "2026-11-03T22:16:32+00:00",
+   "fill3": "2026-11-03T22:18:53+00:00"
+  },
+  "kernel": "IRR",
+  "suite": "probes-numeric"
+ },
+ "t3570-r5-bpser-lg-aux": {
+  "cells": 2520,
+  "differ": {},
+  "fills": {
+   "committed": "2026-11-01T20:09:03+00:00",
+   "fill2": "2026-11-03T22:17:52+00:00",
+   "fill3": "2026-11-03T22:19:52+00:00"
+  },
+  "kernel": "lnGamma/GAMMA",
+  "suite": "probes-numeric"
+ },
+ "t3850-rate-same-state": {
+  "cells": 240,
+  "differ": {},
+  "fills": {
+   "committed": "2026-11-03T15:30:12+00:00",
+   "fill2": "2026-11-03T22:16:43+00:00",
+   "fill3": "2026-11-03T22:19:04+00:00"
+  },
+  "kernel": "RATE",
+  "suite": "probes"
+ },
+ "t3953-f-tail-bfrac-tiny": {
+  "cells": 4800,
+  "differ": {},
+  "fills": {
+   "committed": "2026-11-03T15:43:18+00:00",
+   "fill2": "2026-11-03T22:18:04+00:00",
+   "fill3": "2026-11-03T22:20:05+00:00"
+  },
+  "kernel": "incomplete beta (bfrac)",
+  "suite": "probes-numeric"
+ }
+}

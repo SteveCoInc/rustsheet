@@ -15,6 +15,7 @@ BINOM.DIST.RANGE ranges whose lower end is past the mean are bit-exact with Exce
 21 probe rows where Excel's range is not its own BINOM.DIST cdf difference.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Found by T-3444 (2026-11-01). probes/t3444-binom-range-inv-large-n Range rows 6, 12, 18, ..., 126 (every sixth row,
   ranges from mean + 3 sd to mean + 5 sd, n 1E4 to 2^31 - 2) differ from Excel's own
   `BINOM.DIST(s2,...)-BINOM.DIST(s1-1,...)` in column B by 2E-16 to 6E-14. statistics.md "BINOM.DIST.RANGE and

@@ -1,0 +1,41 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3946: how a GROUPBY value sort orders array aggregates (LAMBDA returning a 2-row array) by their first elements: a number against text, TRUE and an error, and a blank element (S!E1:E2) against text, TRUE, an error and a number, ascending and descending. Keys d,c,b,a hold 1,2,3,4 so the value order differs from the key order.",
+  "tags": [
+    "M7",
+    "probe",
+    "dynamic-arrays",
+    "T-3946"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{1;9},IF(SUM(x)=2,{\"a\";9},IF(SUM(x)=3,{TRUE;9},{#N/A;9})))),0,0,2)",
+        "A11": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{1;9},IF(SUM(x)=2,{\"a\";9},IF(SUM(x)=3,{TRUE;9},{#N/A;9})))),0,0,-2)",
+        "A21": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{#N/A;9},IF(SUM(x)=2,{TRUE;9},IF(SUM(x)=3,{\"a\";9},{1;9})))),0,0,2)",
+        "A31": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{#N/A;9},IF(SUM(x)=2,{TRUE;9},IF(SUM(x)=3,{\"a\";9},{1;9})))),0,0,-2)",
+        "A41": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,S!E1:E2,IF(SUM(x)=2,{\"a\";9},IF(SUM(x)=3,{TRUE;9},{#N/A;9})))),0,0,2)",
+        "A51": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,S!E1:E2,IF(SUM(x)=2,{\"a\";9},IF(SUM(x)=3,{TRUE;9},{#N/A;9})))),0,0,-2)",
+        "A61": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{#N/A;9},IF(SUM(x)=2,{TRUE;9},IF(SUM(x)=3,{\"a\";9},S!E1:E2)))),0,0,2)",
+        "A71": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,{#N/A;9},IF(SUM(x)=2,{TRUE;9},IF(SUM(x)=3,{\"a\";9},S!E1:E2)))),0,0,-2)",
+        "A81": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,S!E1:E2,IF(SUM(x)=2,{1;9},IF(SUM(x)=3,{2;9},{3;9})))),0,0,2)",
+        "A91": "=_xlfn.GROUPBY(S!A1:A4,S!B1:B4,LAMBDA(x,IF(SUM(x)=1,S!E1:E2,IF(SUM(x)=2,{1;9},IF(SUM(x)=3,{2;9},{3;9})))),0,0,-2)"
+      }
+    },
+    {
+      "name": "S",
+      "cells": {
+        "A1": "d",
+        "A2": "c",
+        "A3": "b",
+        "A4": "a",
+        "B1": 1,
+        "B2": 2,
+        "B3": 3,
+        "B4": 4
+      }
+    }
+  ],
+  "expected": {}
+}

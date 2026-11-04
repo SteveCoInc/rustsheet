@@ -18,6 +18,7 @@ cells are a few units past the 15th digit (6E-16 to 1.9E-15 relative). They are 
 cut, but they count in the M9 probes-numeric row and against BETA.DIST's Phase 1 rate.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on b98b3c00d, `scripts/exit_owners.py --all-off`): these are the only visibly-off
   BETA.DIST cells with no open owner, deferred or not. 131 sit in the hold-out case at a = 0.75 over ten b from 20.6
   to 7000, and one in the in-sample case at (0.5, 711.406).

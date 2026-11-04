@@ -17,10 +17,14 @@ candidates scored on T-3981's sweep. These are the last 2 visibly-off cells `exi
 owner at all.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03 (`make eval` at 42b10ad4, then `python3 scripts/exit_owners.py --all-off`): 63 visibly-off cells
   have no open non-deferred owner. 61 are owned only by `defer: phase-1b` tasks (T-3937, T-3640, T-2221, T-3474,
   T-3527, ...). These 2 have no owner of any kind:
   - probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep.case.json (2): S!C386, C390
+  - probes-numeric/t3981-imsech-real-band-sweep.case.json (25 IMSECH) and
+    probes-numeric/t3981-imsech-real-band-sweep-hold.case.json (7 IMSECH): the libm cosh misses at
+    0.004 <= |x| <= 0.01, where the `1/u` form fits 450 of 450 (engineering.md, T-3981 sweep)
   - C386 `IMSECH("-0.00529114829570232-0.0605498694819928i")`: Excel "1.0018218211334-0.00032135183420584i",
     ours "...-0.000321351834205841i". Excel's imaginary part prints 14 digits, so its double rounds to ...5840 at 15
     digits and ours to ...5841: one unit in the 15th digit. T-3930 found every cosh candidate prints ...841, so

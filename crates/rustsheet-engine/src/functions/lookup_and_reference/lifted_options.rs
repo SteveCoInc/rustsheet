@@ -175,7 +175,20 @@ impl Model {
         };
         Err(self.lift_by_class(
             &positions,
-            |_| None,
+            // Once the filter is spent, a position whose first error comes before any text is
+            // that error: the call returns it before it filters (t3964-groupby-filter-lift-errors
+            // G!B71, B83, B89, B101). Before it is spent `run` gives the same error (each error
+            // is a class of its own) without spending the filter (G!A77, A95).
+            |elements, spent| {
+                if !spent {
+                    return None;
+                }
+                elements
+                    .iter()
+                    .find(|element| matches!(element, ArrayNode::Error(_) | ArrayNode::String(_)))
+                    .filter(|element| matches!(element, ArrayNode::Error(_)))
+                    .map(|element| (*element).clone())
+            },
             classify,
             |model, elements| {
                 for ((&index, element), class) in
@@ -236,13 +249,15 @@ impl Model {
     /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
     /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
     /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
-    /// filter serves one element"). An element `settled` answers is that value, spent filter or
-    /// not, and spends nothing (an error `field_relationship` element, which GROUPBY returns
-    /// before it filters: probes/t3880-groupby-scalar-filter-edges G!A89:B93).
+    /// filter serves one element"). An element `settled` answers (given whether the filter is
+    /// spent) is that value and spends nothing: an element whose call returns before it filters,
+    /// as an error `field_relationship`, `field_headers` or total depth element does
+    /// (probes/t3880-groupby-scalar-filter-edges G!A89:B93, t3964-groupby-filter-lift-errors
+    /// G!A47:B105).
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
-        settled: impl Fn(&E) -> Option<ArrayNode>,
+        settled: impl Fn(&E, bool) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
@@ -252,7 +267,7 @@ impl Model {
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
-                if let Some(value) = settled(element) {
+                if let Some(value) = settled(element, self.groupby_filter_spent) {
                     cells.push(value);
                     continue;
                 }
