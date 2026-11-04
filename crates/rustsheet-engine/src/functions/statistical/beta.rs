@@ -5,7 +5,7 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error, value_error};
 use crate::functions::statistical::beta_density::beta_density_small_shape;
 use crate::functions::statistical::bratio::{
-    beta_dist_lower_tail, beta_search_tails, dispatch, Branch,
+    beta_dist_lower_tail, beta_search_tails, dispatch, l140_overflows, Branch,
 };
 use crate::functions::statistical::incomplete_beta::beta_density;
 use crate::functions::statistical::inverse_beta::{beta_inverse_cdf, beta_quantile_crossing};
@@ -212,6 +212,9 @@ impl Model {
             // A subnormal cdf is kept only at beta = 1, the closed form t^alpha, and is 0 at any
             // other beta, 1.0000001 included (`(x)=0` FALSE at B2, B3, B6, B7, B11, B12 of
             // probes/t2737-subnormal-cdf-shapes, TRUE at B1, B4, B5, B8:B10; T-2737).
+            if l140_overflows(alpha, beta_param, t, 1.0 - t) {
+                return Err(num_error(cell));
+            }
             let cdf = beta_dist_lower_tail(t, 1.0 - t, alpha, beta_param);
             if beta_param == 1.0 {
                 cdf

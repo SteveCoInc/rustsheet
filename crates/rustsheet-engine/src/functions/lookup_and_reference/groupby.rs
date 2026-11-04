@@ -650,9 +650,13 @@ impl Model {
         // The output size is checked while grouping, before the sort, any LAMBDA call or the
         // output allocation (SPEC-0006 step 6).
         let limit = |groups: usize| check_array_size(tall(groups), columns).map(to_error);
-        let mut grouping = Grouping::new(keys, args.rows.iter().copied(), limit, |units| {
-            self.spend_work(units, cell)
-        })?;
+        let mut grouping = Grouping::new(
+            keys,
+            args.rows.iter().copied(),
+            limit,
+            |units| self.spend_work(units, cell),
+            cell,
+        )?;
         // The subtotal rows count too, still before any call (CLAUDE.md directive 5): counted in
         // key order, they bound the subtotals after a value sort, which keeps each parent's
         // groups together.

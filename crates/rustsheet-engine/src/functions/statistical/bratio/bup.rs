@@ -118,6 +118,18 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
     w.is_finite().then_some(w)
 }
 
+/// Whether bratio's L140 bup sum overflows at this point (`b0 < 40` after the swap, either side of
+/// x0 = 0.7): S's running product of ratios (apb + l)/(ap1 + l) ([`bup_power_sum`]) passes the
+/// largest double, so S is not finite and Excel's incomplete beta is `#NUM!`. On probes/
+/// t3576-negbinom-cdf-huge-s every L140 cell whose ln of that product is 713.72 or more is `#NUM!`
+/// and every one at 707.81 or less is a value (ln of the largest double is 709.78), bup + bpser
+/// and bup + bgrat alike, and BETA.DIST with the same shapes is `#NUM!` at the same points
+/// (statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge `number_s`", T-3576).
+pub(super) fn l140_bup_sum_overflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    let (n, c) = bup_split(b0);
+    n > 1.0 && !bup_power_sum(c, a0, y0, x0, n).is_finite()
+}
+
 /// bup's sum S = 1 + `Σ_{i<n} t_i` of `bup(a, b, x, y, n)` as Excel forms it in L140 bup+bgrat
 /// (T-3568, r5-bup `model.py` `bup_sum`) and, for BETA.DIST and F, L140 bup+bpser (T-3198):
 /// `t_i = fl(R_i·EXP(fl(i·LN(x))))` with Excel's EXP and LN, `R_i` the running double product of

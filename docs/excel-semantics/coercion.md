@@ -863,12 +863,8 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
 
   PIVOTBY gives the same groups under its header row (B2, C4:C7). By the prefix rule (a leading weightless unit
   sends both texts to the collation; no `=` cell here), U+00AD&`ab` equals both `ab` and `ab`&U+00AD, and it joins
-  the first group. Implemented in (T-4088): `Grouping::new` (functions/lookup_and_reference/grouping.rs) gives
-  each key field's values a class through `first_equal_lines` (functions/spill_functions.rs), the one helper UNIQUE
-  groups with. A text joins the first earlier key `cmp_text_pairwise` finds equal in its `CollationKey` bucket, and
-  the groups, the PIVOTBY parents and the subtotal levels compare those classes. The groups still sort with the
-  total `cmp_text`, where a class's members tie, so the stable sort keeps their first-appearance order. Whether
-  Excel's GROUPBY sort is pairwise on an intransitive cycle (as SORT's is, T-3418) is UNVERIFIED.
+  the first group. Implemented in (T-4088, revised by T-4195): `Grouping::new` (functions/lookup_and_reference/
+  grouping.rs); see "GROUPBY on an intransitive run (T-4195)" below.
   - Single-field keys also equate what `=` equates beyond case: `ß`/`ss`, `æ`/`ae` and `á`/`a`&U+0301 make three
     groups, `{"á",48;"æ",12;"ß",3}` (probes/t4088-groupby-multifield Calc!B14:B21, B39; excel-graph, 2026-11-04).
     Ours passes them.
@@ -879,8 +875,46 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
       "2" (B31:B32). PIVOTBY is the same (B3, B38).
     - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
       second group shows `ab`, which is not the first spelling of either field.
-    - Each field alone groups by first `=` (B35:B36). Ours classes each field and groups by the tuple of classes,
-      which gives three groups here. These 10 cells are known failures owned by T-4195.
+    - Each field alone groups by first `=` (B35:B36). T-4195's model below passes all but B11 and B33 (T-4241).
+
+### GROUPBY on an intransitive run (T-4195)
+Evidence: probes/t4195-groupby-intransitive (56 blocks of 2 to 4 rows: every order of `ab`, `ab`&U+00AD and
+U+00AD&`ab`, with `AB` and `ab`&U+00AD&U+00AD, alone, beside a second field that is x in one row, before it,
+and with a third field) and probes/t4195-groupby-shown-key (18 blocks: case, U+00AD, `ß`/`ss` and `á`/`a`&U+0301
+spellings of one key in different groups); excel-graph, 2026-11-04. Each block's GROUPBY lists its groups' rows
+with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`: A = C and B = C, but A < B.
+- **One field: the distinct keys are UNIQUE's, sorted, and a row joins the one a binary search finds.** The
+  distinct keys are the first-`=` ones; they are sorted by `<`; each row joins the key a lower-bound binary
+  search of that order finds equal to it. So over B, C, A (Calc!B4) the keys are B and A, sorted A, B, and C
+  joins A, not its first equal key B: `{"ab","2, 3";"ab­","1"}`. All 56 single-field cells (B1:B56) and the
+  4-text runs (B31:B44; E = `ab`&U+00AD&U+00AD: E, B, C, A gives `ab`: 3, 4 and E: 1, 2, B40) follow it. The groups are in that sorted
+  order: `AB` before `ab`&U+00AD (B32: `AB` < `ab`&U+00AD by the prefix rule), where `cmp_text` puts it after.
+- **A group shows its key's first spelling, field by field.** (`ABC`,x), (`abc`,y) gives (`ABC`,x), (`ABC`,y);
+  (`ab`,x), (U+00AD&`ab`,y) gives (`ab`,x), (`ab`,y); `ß`/`ss` and `á`/`a`&U+0301 the same (-shown-key B1:B18,
+  D1:D18).
+- **A later field is classed within its parent.** The rows sharing the classes of the fields before it are classed
+  apart from the others: with x/y first and the text second, (x,C), (y,A), (y,B) gives (y,`ab`): 2 and
+  (y,`ab`&U+00AD): 3 (B55; B51:B56 are the swap rows). And `abc` under a first key other than `ABC`'s shows `abc`
+  (gen-m7/8044dce50616cfe9 Calc!C833, probes/t2360-array-lambda-holidays G!B6, probes/t2625-nested-consumers P!A30).
+- **A group none of UNIQUE's rows is in is not shown.** Its rows are in no group: probes/t4088-groupby-multifield
+  B1:B6, B30:B32 above, where the third row's (`ab`,y) holds none of UNIQUE's rows (`ab`,x) and (`ab`&U+00AD,y).
+- **Excel goes further on a multi-field run.** Rows (A,y), (B,x), (C,y) give (`ab`,y): 1, 3; (`ab`&U+00AD,x): 2;
+  (`ab`&U+00AD,y): 1, 2, 3 (Calc!C8). Row 2 is in two groups, and the third group's key is no row's. UNIQUE keeps
+  all three rows (D8) though (C,y) = (A,y): it keeps or drops (C,y) by the rows around it, as its merge meets them
+  (T-4200), and ours matches every D cell. PIVOTBY's rows are GROUPBY's (F). Unmatched: T-4241 owns those 24
+  cells.
+
+Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
+its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
+lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
+`coalesce_equal_lines` keeps, as `unique_of` does; only several key fields with a text outside ASCII can drop
+one). `Group::key_order` sorts texts under one parent by their rank in that sort, through `sort_indices_pairwise`.
+UNVERIFIED: every probe cell sorts ascending by the keys; a descending `sort_order` (ours reverses the rank) and a
+table sort naming a later field first (ours ranks texts under one parent, `cmp_text` across parents) on an
+intransitive run are unprobed (T-4241). The model was selected
+on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
+of -shown-key, with no hold-out, so T-4241's fresh permutations are its confirmation.
+Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
