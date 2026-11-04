@@ -3,7 +3,7 @@ id: T-3580
 title: "F cdf and tails: Excel's r >= 1 incomplete-beta arguments, and bgrat at b = 1/2 for a df of 1"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
