@@ -157,7 +157,8 @@ Evidence (T-3014):
   the exact payment), as RATE is bit-exact on Excel's PMT bits (probes/rate-excel-pmt-bits, T-2527).
 - Not established: whether Excel's expm1 itself switches to `EXP(x)-1` at |x| = 1 (SINH and TANH call it only below
   1, numbers.md). IPMT and PPMT take the same switch ("IPMT and PPMT split Excel's discounted payment", T-2243);
-  CUMIPMT and CUMPRINC still use Kahan's form at every |x| and keep their fitted forms (T-3179).
+  CUMIPMT and CUMPRINC still use Kahan's form at every |x| and keep their fitted forms: the switch in CUMPRINC's
+  `1 - v^nper` moves no gated cell, so the evidence does not place it (T-3179).
   Not probed: nper 0 with a non-zero rate, |x| at exactly 1, and rates where `1-Q` leaves the normal range (the
   engine keeps "PMT, IPMT and PPMT are the exact payment"'s forms and errors there).
 Tiny rates (T-2748): the same form holds down to a rate of 1E-16, with no switch to the rate-0 branch `-(pv+fv)/nper` or
@@ -378,13 +379,14 @@ plus ironcalc-calc FINANCIAL/IPMT_PPMT.xlsx, Mac Excel cached values):
   the discounted IPMT those four cells are an ulp off: `CUMIPMT(0.1,10,345,2,2,1)` is -29.395712615048502, but the
   discounted `IPMT(0.1,2,10,345,0,1)` is ...485 in the engine. Excel's IPMT on those arguments is not probed: if it
   were ...502, this form would miss it rather than CUMIPMT having a form of its own. Four other type-1 CUMIPMT cells
-  would have been fixed by it. The probe and CUMIPMT's own form are open (T-3179).
+  would have been fixed by it. The probe is done (probes/t3179-cumipmt-ipmt-sum: Excel's IPMT there is ...485, so
+  CUMIPMT has a form of its own, "CUMIPMT of one period is not that period's IPMT"); that form is open (T-4197).
 Status: VERIFIED to the bit (Mac Excel cached values and excel-graph probes).
 Implemented in: `discounted_split`, `discounted_balance`, `discount_complement`, `payment_factor` and
 `period_payments`' `SplitForm` (crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2243). Where the form
 is not finite (`1-Q` or `A` past the double range), and for CUMIPMT's `SplitForm::Exact`, the forms of the entries
 named above still decide.
-Tasks: T-2243, T-2666, T-3179
+Tasks: T-2243, T-2666, T-3179, T-4197
 
 ## DB and SYD argument domains
 Rule: SYD with a negative salvage is `#NUM!` (`SYD(100,-1E-300,10,1)`; salvage 0 is a value), and `life*(life+1)` past the
@@ -2210,6 +2212,34 @@ E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked
 `CUMPRINC_CUMIPMT.xlsx` G3, overflow-and-forms A8, A12, A14, gate-edges A1, tiny-rate-structure F2) and T-3141 (the
 underflowed principal's bits); the short sums' last digits in T-1374)
 Tasks: T-1845, T-1890, T-2192, T-2363, T-2514, T-2521, T-3067, T-3118, T-3141, T-3413, T-3552, T-3731, T-3776, T-1374
+
+## CUMIPMT of one period is not that period's IPMT (T-3179)
+Rule: Excel's CUMIPMT is not the sum of its own IPMTs, even over a single period. `CUMIPMT(0.1,10,345,2,2,1)` is
+-29.395712615048502 while `IPMT(0.1,2,10,345,0,1)` is -29.3957126150485 (1 ulp apart), and `CUMIPMT(0.0083,36,8000,3,3,0)`
+is -63.2064526131625 while `IPMT(0.0083,3,36,8000,0,0)` is -63.20645261316252 (3 ulp). Over ranges the gap is 1 ulp too:
+`CUMIPMT(0.3,36,8000,3,30,1)` -50422.18667857409 against both `SUM(IPMT(0.3,SEQUENCE(28,1,3),36,8000,0,1))` and the
+left-to-right running sum of the 28 IPMTs, -50422.186678574086; `CUMIPMT(0.1,29.9,8000,3,10,1)` -5557.470043410287
+against -5557.470043410286. So CUMIPMT has a per-period interest form of its own; summing IPMT (or the discounted
+split IPMT and PPMT use, "IPMT and PPMT split Excel's discounted payment") does not reach Excel's bits on these cells.
+Evidence: probes/t3179-cumipmt-ipmt-sum (84 cells, excel-graph, 2026-11-04): A1, D1 and B1, C1 against columns A-D
+(each IPMT) and E-H (running sums); the same CUMIPMT cells are ironcalc-calc CUMPRINC_CUMIPMT.xlsx G3 (= probes
+fin-cumipmt-overflow-and-forms A8), G4, G15 and fin-cumipmt-overflow-and-forms A13.
+Status: VERIFIED (excel-graph). Ours: every IPMT and running sum of the probe matches; the two single-period CUMIPMT
+cells A1 (-29.395712615048506) and D1 (-63.20645261316247) do not. CUMIPMT's form is open (T-4197).
+Scored forms (T-3179, second run, 2026-11-04): on the 168 CUMIPMT cells with literal arguments and a range of at most 32
+periods that carry Excel values (probes fin-cumipmt-*, t3179-cumipmt-ipmt-sum, gen-m9), each candidate written as a
+formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on their probes:
+- ours, `PMT·m - CUMPRINC`: 92 bit-exact;
+- `PMT·m - SUM(PPMT(..SEQUENCE..))`: 61 (10 that ours misses, at rates 2E-6 to 1.5E-4; 41 that ours has);
+- `SUM(IPMT(..SEQUENCE..))`: 24, all of them also ours;
+- the balance form `SUM(FV(r,k-1,PMT,pv,t)·r)` (over `1+r` for type 1): 9 to 11. It gives A1 to the bit and D1 1 ulp
+  off, but misses the single-period cells `CUMIPMT(0.0083,36,8000,2,2,1)` (tiny-rate-structure Q1) and
+  `CUMIPMT(0.1,36,8000,2,2,1)` (gate-edges H10), which ours has, and its `(1+r)^m - 1` loses hundreds of ulps at
+  rates of 2E-5.
+So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: they stay 1 and 3 ulp off. Taking
+PMT's `1-Q` switch (`1 - EXP(-nper·L)` from |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper`
+moves none of the 168 cells and no gated cell (see T-3179's Outcome), so the evidence does not place a switch there and
+the kernel keeps `-expm1`.
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
