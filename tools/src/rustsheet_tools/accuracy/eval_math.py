@@ -13,6 +13,8 @@ A candidate cell gets no math value when:
   exact-input cell), which is read with Excel's operator model as the fit lab reads it;
 - an argument is anything else the fit lab's sweep reader leaves unparsed (a nested call), text,
   empty or a range;
+- an array parameter of a `literal_arrays` definition is not written as an array literal (AGGREGATE over
+  a range, whose hidden rows the math does not model);
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
   (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
 - an integer parameter is given a non-integer (the definitions take integers; whether Excel
@@ -220,13 +222,28 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
         if definition.serials_1900 and spec.get("date_system") == 1904:
             out.append(Candidate(sheet, a1, text, definition, "a 1904 workbook"))
             continue
+        texts = split_args(call[1])
+        if definition.literal_arrays and _range_for_literal(definition, texts):
+            out.append(Candidate(sheet, a1, text, definition, "not an array literal"))
+            continue
         try:
-            values = [parse_arg(a, sheet, book) for a in split_args(call[1])]
+            values = [parse_arg(a, sheet, book) for a in texts]
         except (UnparsedError, ValueError) as err:
             out.append(Candidate(sheet, a1, text, definition, f"unparsed ({type(err).__name__})"))
             continue
         out.append(Candidate(sheet, a1, text, definition, fit_args(definition, values)))
     return out
+
+
+def _range_for_literal(definition: Definition, texts: list[str]) -> bool:
+    """Whether an array parameter's argument text is anything but an array literal `{...}`."""
+    try:
+        params = definition.params_for(len(texts))
+    except ValueError:
+        return False  # fit_args reports the argument count
+    return any(
+        p.kind == "array" and not t.strip().startswith("{") for p, t in zip(params, texts, strict=True)
+    )
 
 
 def case_math(case_id: str, case_path: Path, sidecar: Path) -> CaseMath:
