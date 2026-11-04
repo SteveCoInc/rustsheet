@@ -79,3 +79,6 @@ them.
 ## Out of scope
 - Below the mean, tiny x, and shapes of 40 or more (T-2510, T-3479, T-3527).
 - The other FDIST Gate B cells (T-4015, T-4016).
+
+## Evidence (T-4017)
+Sweep cases: probes-numeric t4017-f-huge-df2-above-mean-* (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").

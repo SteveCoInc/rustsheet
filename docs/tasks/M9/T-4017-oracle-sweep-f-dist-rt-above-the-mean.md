@@ -3,7 +3,7 @@ id: T-4017
 title: "Oracle sweep: F.DIST.RT above the mean at df2 1E7 to 1E10 for df1 other than 5 (T-3209's huge-first-shape band at b != 2.5)"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -32,7 +32,7 @@ T-4018 needs Excel for the web values to fit Excel's incomplete beta at a huge f
   (Cases are named here by their tasks, so this task does not claim their cells for `exit_owners.py`.)
 
 ## Acceptance criteria
-- [ ] New probes-numeric cases `eval/suites/probes-numeric/cases/t4017-f-huge-df2-above-mean-*.case.json`
+- [x] New probes-numeric cases `eval/suites/probes-numeric/cases/t4017-f-huge-df2-above-mean-*.case.json`
       (`rustsheet-case/v1`, sheet `Calc`, one formula per cell, a `hypotheses` label per cell naming the inputs), at
       most about 1,000 cells each, filled with `cd tools && uv run rustsheet-oracle fill -b excel-graph --suite
       probes-numeric` (excel-probe skill). The grid:
@@ -41,18 +41,27 @@ T-4018 needs Excel for the web values to fit Excel's incomplete beta at a huge f
         above the mean.
       - gen-m9 A349's own point, `FDIST(7,10,1E+8)`, as a control.
       - Every call at valid arity. An invalid one makes Excel for the web reject the whole workbook (T-0040).
-- [ ] The `.oracle.json` sidecars are committed with no pending cells.
-- [ ] 50-digit references at the double arguments are committed beside the cases, from
+- [x] The `.oracle.json` sidecars are committed with no pending cells.
+- [x] 50-digit references at the double arguments are committed beside the cases, from
       `docs/research/t2528/reference.py` or the math-sidecar tooling (SPEC-0029).
-- [ ] statistics.md's "Incomplete beta at a huge first shape" section gains the sweep's summary, citing the cases: per
+- [x] statistics.md's "Incomplete beta at a huge first shape" section gains the sweep's summary, citing the cases: per
       df1, the count of cells correctly rounded, within 4 ulp and within 15 digits of the math, and the largest
       error.
-- [ ] T-4018 and T-3209 link the cases.
-- [ ] Fixtures hold only formulas and Excel values. No RUSTSHEET_ORACLE_* values in logs or commits.
-- [ ] If the oracle is unavailable, the task is `status: blocked` with the reason and the command that proves the
+- [x] T-4018 and T-3209 link the cases.
+- [x] Fixtures hold only formulas and Excel values. No RUSTSHEET_ORACLE_* values in logs or commits.
+- [x] If the oracle is unavailable, the task is `status: blocked` with the reason and the command that proves the
       oracle is back (`cd tools && uv run rustsheet-oracle status`).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fitting or implementing (T-4018, T-3209).
 - Cells below the mean (T-2510's Cephes side), and tiny x (T-3479, T-3527).
+
+## Outcome
+Six probes-numeric cases `t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}` (1,345 cells, one per df2; the
+control `FDIST(7,10,1E+8)` is in the 1e7 file), oracle sidecars filled (no pending cells), Gate A math sidecars
+for the F.DIST(TRUE) cells (the tool has no F.DIST.RT), and 50-digit `F.DIST.RT` references in
+`docs/research/t4017/references.json` from `reference.py`. The summary is in statistics.md. Findings: Excel is not correctly
+rounded at any df1; within about 1E-13 at df1 = 3 to 79 but up to 2E-8 at df1 = 2, x = 20; exact 0 for tails of 1.9E-22
+(df1 2, x 50), 4E-297 (df1 30, x 50) and 9E-278 (df1 79, x 20); `#NUM!` at df1 = 79, df2 = 1E10 (new quirk, follow-up T-4030).
+No eval baseline change (probe cases carry no expectations).
