@@ -902,8 +902,11 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
 Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
 its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
 lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
-`coalesce_equal_lines` keeps when a key holds a text outside ASCII, as `unique_of` does; `first_equal_lines`
-otherwise). `Group::key_order` sorts texts under one parent by their rank in that sort. The model was selected
+`coalesce_equal_lines` keeps, as `unique_of` does; only several key fields with a text outside ASCII can drop
+one). `Group::key_order` sorts texts under one parent by their rank in that sort, through `sort_indices_pairwise`.
+UNVERIFIED: every probe cell sorts ascending by the keys; a descending `sort_order` (ours reverses the rank) and a
+table sort naming a later field first (ours ranks texts under one parent, `cmp_text` across parents) on an
+intransitive run are unprobed (T-4241). The model was selected
 on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
 of -shown-key, with no hold-out, so T-4241's fresh permutations are its confirmation.
 Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.

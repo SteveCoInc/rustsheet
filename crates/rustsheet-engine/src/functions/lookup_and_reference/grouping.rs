@@ -152,8 +152,9 @@ impl Grouping {
     /// Excel still differs on some multi-field intransitive runs, where it puts a row in two
     /// groups (T-4241). Every comparison is charged to `spend`. Fails only with `spend`'s error or
     /// `limit`'s. The groups are in order of first appearance until [`Grouping::sort_by_keys`].
-    /// `limit(n)` is the error `n` groups would give (the output size check, SPEC-0006 step 6),
-    /// asked once of the groups shown; there are never more groups than rows.
+    /// `limit(n)` is the error `n` groups would give (the output size check, SPEC-0006 step 6);
+    /// grouping stops at the first group that does not fit, before the whole-row pass, so no more
+    /// groups are built than the output can hold (a group that pass drops still counts).
     pub(crate) fn new(
         keys: &[Vec<ArrayNode>],
         rows: impl IntoIterator<Item = usize>,
@@ -197,67 +198,12 @@ impl Grouping {
                 }
             }
         }
-        // The lines whole-row `=` keeps, as UNIQUE keeps them: a group none of them is in is not
-        // shown, and its rows are in no group (probes/t4088-groupby-multifield B1:B6, B30:B32: over
-        // (`ab`,x), (`ab`&U+00AD,y), (U+00AD&`ab`,y) the third row's (`ab`,y) has no group). As in
-        // UNIQUE (`unique_of`), only texts outside ASCII compare intransitively, so lines with one
-        // group as Excel's merge meets them ([`coalesce_equal_lines`], T-4200) and the others by
-        // equality through hash buckets; keys other than texts compare exactly ([`group_key`]).
-        let texts = |line: usize, field: usize| match key_of(line, field) {
-            Some(ArrayNode::String(x)) => Some(x),
-            _ => None,
-        };
-        let units = |a: usize, b: usize| {
-            (0..fields)
-                .map(|field| match (texts(a, field), texts(b, field)) {
-                    (Some(x), Some(y)) => text_units(x.len() + y.len()).max(1),
-                    _ => 1,
-                })
-                .fold(0u64, u64::saturating_add)
-        };
-        let intransitive = (0..rows.len())
-            .any(|line| (0..fields).any(|field| texts(line, field).is_some_and(|x| !x.is_ascii())));
-        let whole = if intransitive {
-            coalesce_equal_lines(rows.len(), |a, b| {
-                spend(units(a, b))?;
-                Ok((0..fields)
-                    .map(|field| match (key_of(a, field), key_of(b, field)) {
-                        (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
-                            cmp_text_pairwise(x, y)
-                        }
-                        (Some(x), Some(y)) if group_key(x) == group_key(y) => Ordering::Equal,
-                        (Some(x), Some(y)) => key_cmp(x, y, true, cell),
-                        _ => Ordering::Equal,
-                    })
-                    .find(|ordering| ordering.is_ne())
-                    .unwrap_or(Ordering::Equal))
-            })?
-        } else {
-            first_equal_lines(
-                rows.len(),
-                |line| {
-                    (0..fields)
-                        .map(|field| key_of(line, field).map(group_key))
-                        .collect::<Vec<_>>()
-                },
-                |a, b| {
-                    (0..fields).all(|field| match (texts(a, field), texts(b, field)) {
-                        (Some(x), Some(y)) => cmp_text_pairwise(x, y) == Ordering::Equal,
-                        _ => true,
-                    })
-                },
-                units,
-                &mut spend,
-            )?
-        };
         let mut index: HashMap<Vec<usize>, usize> = HashMap::new();
         let mut groups: Vec<Group> = Vec::new();
-        let mut shown_by_unique: Vec<bool> = Vec::new();
-        for (line, (path, &row)) in paths.iter().zip(&rows).enumerate() {
+        for (path, &row) in paths.iter().zip(&rows) {
             let Some(tuple) = path else {
                 continue;
             };
-            let kept_whole = whole.get(line) == Some(&line);
             let cells: Vec<usize> = tuple
                 .iter()
                 .map(|&(kept, _)| rows.get(kept).copied().unwrap_or(row))
@@ -267,13 +213,12 @@ impl Grouping {
                     if let Some(group) = groups.get_mut(*entry.get()) {
                         group.rows.push(row);
                     }
-                    if let Some(shown) = shown_by_unique.get_mut(*entry.get()) {
-                        *shown |= kept_whole;
-                    }
                 }
                 Entry::Vacant(entry) => {
+                    if let Some(error) = limit(groups.len() + 1) {
+                        return Err(error);
+                    }
                     entry.insert(groups.len());
-                    shown_by_unique.push(kept_whole);
                     let shown = cells
                         .iter()
                         .enumerate()
@@ -292,10 +237,49 @@ impl Grouping {
                 }
             }
         }
-        let mut shown = shown_by_unique.into_iter();
-        groups.retain(|_| shown.next().unwrap_or(true));
-        if let Some(error) = limit(groups.len()).filter(|_| !groups.is_empty()) {
-            return Err(error);
+        // A group none of UNIQUE's kept rows is in is not shown, and its rows are in no group
+        // (probes/t4088-groupby-multifield B1:B6, B30:B32: over (`ab`,x), (`ab`&U+00AD,y),
+        // (U+00AD&`ab`,y) the third row's (`ab`,y) has no group). While `=` is transitive every
+        // group's first row is one UNIQUE keeps, and as UNIQUE (`unique_of`) has it only texts
+        // outside ASCII compare intransitively, so only several key fields with such a text can
+        // drop a group: their rows group as Excel's merge meets them ([`coalesce_equal_lines`],
+        // T-4200), keys other than texts compare exactly ([`group_key`]).
+        let texts = |line: usize, field: usize| match key_of(line, field) {
+            Some(ArrayNode::String(x)) => Some(x),
+            _ => None,
+        };
+        let intransitive = fields > 1
+            && (0..rows.len()).any(|line| {
+                (0..fields).any(|field| texts(line, field).is_some_and(|x| !x.is_ascii()))
+            });
+        if intransitive {
+            let units = |a: usize, b: usize| {
+                (0..fields)
+                    .map(|field| match (texts(a, field), texts(b, field)) {
+                        (Some(x), Some(y)) => text_units(x.len() + y.len()).max(1),
+                        _ => 1,
+                    })
+                    .fold(0u64, u64::saturating_add)
+            };
+            let whole = coalesce_equal_lines(rows.len(), |a, b| {
+                spend(units(a, b))?;
+                Ok((0..fields)
+                    .map(|field| match (key_of(a, field), key_of(b, field)) {
+                        (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                            cmp_text_pairwise(x, y)
+                        }
+                        (Some(x), Some(y)) if group_key(x) == group_key(y) => Ordering::Equal,
+                        (Some(x), Some(y)) => key_cmp(x, y, true, cell),
+                        _ => Ordering::Equal,
+                    })
+                    .find(|ordering| ordering.is_ne())
+                    .unwrap_or(Ordering::Equal))
+            })?;
+            let kept: std::collections::HashSet<usize> = (0..rows.len())
+                .filter(|&line| whole.get(line) == Some(&line))
+                .filter_map(|line| rows.get(line).copied())
+                .collect();
+            groups.retain(|group| group.rows.iter().any(|row| kept.contains(row)));
         }
         Ok(Grouping { groups })
     }

@@ -28,7 +28,8 @@ groups.
   is dropped. That matches every single-field row, every shown-key row (probes/t4195-groupby-shown-key) and 98 of the
   112 GROUPBY cells the simulator scored, not these.
 - UNIQUE's order dependence is T-4200's merge order; GROUPBY's double membership may come from the same merge over
-  whole rows. Probe first: the same rows with the x row moved and 4-row runs, which also serve as the fresh
+  whole rows. Probe first: the same rows with the x row moved, 4-row runs, a descending `sort_order` and a table sort naming
+  the second key first (both unprobed on these runs), which also serve as the fresh
   confirmation T-4195's model (selected on its own probe's cells) lacks.
 - Review notes from T-4195 (design, MINOR): `Grouping::new` is about 130 lines; when this task changes it, split
   the whole-row filter and the group building into helpers, and share the text-pair `=`/cost closures.
