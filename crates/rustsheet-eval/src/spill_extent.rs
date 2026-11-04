@@ -129,8 +129,9 @@ impl SpillExtent {
                         })
                     });
                     // The engine lays out a grouped pivot itself (T-4235): two columns from its
-                    // location, at most `max_layout_rows` of them.
-                    let grouped = s.pivot_tables.iter().filter(|p| p.group.is_some());
+                    // location, at most `max_layout_rows` of them. A date-grouped pivot is not
+                    // registered (T-4246), so it has no layout.
+                    let grouped = s.pivot_tables.iter().filter(|p| p.number_group().is_some());
                     let grouped = grouped.filter_map(|p| {
                         let top = Addr::parse(&p.location.replace('$', ""))?;
                         let source =

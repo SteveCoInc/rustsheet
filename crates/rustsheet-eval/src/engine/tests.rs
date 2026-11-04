@@ -400,7 +400,7 @@ fn spec_grouped_pivot_is_registered_and_laid_out() {
     let unknown = serde_json::from_str::<CaseSpec>(
         r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{},
             "pivot_tables":[{"name":"Pv","source":"A1:B3","location":"D3","row":"N","value":"Val",
-            "group":{"start":0,"end":1,"interval":0.1,"items":[],"by":"months"}}]}]}"#,
+            "group":{"start":0,"end":1,"interval":0.1,"items":[],"groupBy":"months"}}]}]}"#,
     );
     assert!(unknown.is_err());
 }

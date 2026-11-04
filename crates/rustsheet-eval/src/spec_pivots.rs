@@ -21,7 +21,10 @@ pub fn write_rendered(
     id: SheetId,
     input: impl Fn(&CellInput) -> Option<Input>,
 ) -> Result<(), EditError> {
-    for pivot in &sheet.pivot_tables {
+    // A date-grouped pivot is not registered until the engine groups dates (T-4246): GETPIVOTDATA
+    // against it is `#REF!`, a known failure of the probes/t4236 cases.
+    let registered = sheet.pivot_tables.iter();
+    for pivot in registered.filter(|p| p.group.is_none() || p.number_group().is_some()) {
         for (a1, cell) in &pivot.rendered {
             let addr = parse_addr(a1)?;
             if let Some(value) = input(cell) {
@@ -44,7 +47,10 @@ pub fn add_pivots(
     sheet: &SheetSpec,
     id: SheetId,
 ) -> Result<(), EditError> {
-    for pivot in &sheet.pivot_tables {
+    // A date-grouped pivot is not registered until the engine groups dates (T-4246): GETPIVOTDATA
+    // against it is `#REF!`, a known failure of the probes/t4236 cases.
+    let registered = sheet.pivot_tables.iter();
+    for pivot in registered.filter(|p| p.group.is_none() || p.number_group().is_some()) {
         let input = pivot_input(spec, ids, sheet, id, pivot)?;
         tx.add_pivot_table(&input)?;
     }
@@ -74,7 +80,7 @@ fn pivot_input(
     // grouped pivot has none: the engine lays it out from its top-left cell, as Excel does on
     // load (T-4235).
     let mut cells = Vec::new();
-    if pivot.group.is_some() {
+    if pivot.number_group().is_some() {
         cells.push(parse_addr(&pivot.location.replace('$', ""))?);
     }
     for a1 in pivot.rendered.keys() {
@@ -105,7 +111,7 @@ fn pivot_input(
         function,
         // The caption Excel gives a new data field: `Sum of Sales`.
         caption: format!("{} of {}", function.caption_name(), pivot.value),
-        group: pivot.group.as_ref().map(|g| PivotRangeGroup {
+        group: pivot.number_group().map(|g| PivotRangeGroup {
             start: g.start,
             end: g.end,
             interval: g.interval,
