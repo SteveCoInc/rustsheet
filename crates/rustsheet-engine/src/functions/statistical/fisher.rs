@@ -3,7 +3,7 @@ use statrs::distribution::FisherSnedecor;
 use crate::arithmetic::extended_quotient;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::bratio::{closed_or_ported_tails, kernel_tails};
+use crate::functions::statistical::bratio::{f_closed_or_ported_tails, kernel_tails};
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
 use crate::functions::statistical::half_integer_beta::half_integer_remainder;
@@ -31,14 +31,24 @@ fn f_df_ok(df: f64) -> bool {
     (1.0..=F_DF_MAX).contains(&df)
 }
 
-/// The incomplete beta's argument and its complement for the F distribution at `x` as Excel's F
-/// functions pass them to the kernel (T-2464 w5-triangulation, T-2502): u = 1/(1 + df2/(df1 x)) and
-/// its complement 1/(1 + df1 x/df2), each formed directly. On the b0 = 1 closed-form cells, which
-/// depend on the argument alone, this is bit-exact on 197 of 197, against 180 for
-/// df1 x/(df1 x + df2) (docs/excel-semantics/statistics.md "Incomplete beta is TOMS 708 `bratio`").
+/// The incomplete beta's arguments (x, y) for the F distribution at `x` as Excel's F functions pass
+/// them to bratio (T-3567, T-3580): with mx = fl(df1 x), r = fl(df2/mx) when mx <= df2, else
+/// fl(mx/df2), so r >= 1; the smaller argument is fl(1/fl(1 + r)) and the larger fl(r/fl(1 + r)).
+/// The larger one is not formed as 1/(1 + 1/r): bgrat reads only ln y, and the r >= 1 form is what
+/// puts F at a df of 1 on Excel's bits there (docs/excel-semantics/statistics.md "F's
+/// incomplete-beta arguments keep r >= 1"). At x = 0 (r infinite) the pair is (0, 1).
 fn f_beta_arguments(df1: f64, df2: f64, x: f64) -> (f64, f64) {
     let scaled = df1 * x;
-    (1.0 / (1.0 + df2 / scaled), 1.0 / (1.0 + scaled / df2))
+    if scaled <= df2 {
+        let r = df2 / scaled;
+        if r.is_infinite() {
+            return (0.0, 1.0);
+        }
+        (1.0 / (1.0 + r), r / (1.0 + r))
+    } else {
+        let r = scaled / df2;
+        (r / (1.0 + r), 1.0 / (1.0 + r))
+    }
 }
 
 /// The incomplete beta's argument df1 x/(df1 x + df2) and its complement df2/(df1 x + df2), the
@@ -73,7 +83,7 @@ fn f_beta_ratio_overflows(df1: f64, df2: f64, x: f64) -> bool {
 fn f_tail(df1: f64, df2: f64, x: f64, upper: bool) -> f64 {
     let (u, v) = f_beta_arguments(df1, df2, x);
     let (a, b) = (df1 / 2.0, df2 / 2.0);
-    let (lower, upper_tail) = closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
+    let (lower, upper_tail) = f_closed_or_ported_tails(u, v, a, b).unwrap_or_else(|| {
         let (u, v) = f_kernel_arguments(df1, df2, x);
         beta_reg_tails(u, v, a, b)
     });

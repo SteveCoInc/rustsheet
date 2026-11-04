@@ -260,6 +260,13 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
     closed_or_ported_with(x, y, a, b, false)
 }
 
+/// [`closed_or_ported_tails`] for the F tails (`fisher.rs`), with bgrat at b = 1/2 as the Student
+/// t's and BETA.DIST's callers take it: on F's own arguments (`fisher.rs` `f_beta_arguments`) a df
+/// of 1 reaches Excel's bits there (T-3580).
+pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    closed_or_ported_with(x, y, a, b, true)
+}
+
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
 /// tail and forms the other as (0.5 - w) + 0.5, each step an x87 op stored to a double
 /// (statistics.md "Incomplete beta is TOMS 708 `bratio`").
