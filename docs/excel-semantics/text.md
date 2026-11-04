@@ -1298,8 +1298,9 @@ Tasks: T-2314, T-2412, T-2581
 ## TEXTSPLIT: argument errors first, an all-empty result
 Rule: TEXTSPLIT checks its arguments in this order, the first failure being the result: the text (an error); a delimiter that is
 itself an error (col_delimiter, then row_delimiter); ignore_empty (an error, or a value that is not a boolean or number: `#VALUE!`);
-match_mode, alike; an array pad_with (`#VALUE!`); an error element of a delimiter list (an array holding an error, or an OFFSET array
-of references, which is `#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no delimiter or empty text.
+match_mode, alike; an error element of a delimiter list (an array or a multi-cell range holding an error, or an OFFSET array
+of references, which is `#VALUE!`); an array pad_with (`#VALUE!`); then TEXTSPLIT's own `#VALUE!` for an empty delimiter, no
+delimiter or empty text (the last three are all `#VALUE!`, so their order among themselves is unobservable).
 So `TEXTSPLIT("abc",",",NA(),1/0)` is `#N/A` and `TEXTSPLIT("abc",",",NA(),"x")` `#N/A`, but `TEXTSPLIT("abc",{",",#N/A},,1/0)` is
 `#DIV/0!`; `TEXTSPLIT("abc",",",,1/0,NA())` is `#DIV/0!`, `TEXTSPLIT("abc",",",,"x",NA())` `#VALUE!`; `TEXTSPLIT("abc",",",,1/0,,{1,2})`
 is `#DIV/0!`, `TEXTSPLIT("abc",NA(),,,,{1,2})` and `TEXTSPLIT("abc",",",,,NA(),{1,2})` are `#N/A`; `TEXTSPLIT("abc",",",
@@ -1330,11 +1331,21 @@ A one-cell range `TRANSPOSE(B2:B2)` is the value too, while a 1x1 array stays an
 A blank cell transposes to a blank value: `ISBLANK(TRANSPOSE(B10))` is FALSE and `FTEST(TRANSPOSE(B10),{1;2;3})` is the
 one-value `#DIV/0!`, not the blank-cell `#VALUE!` (A92, A93).
 Ours: since T-2455 (`fn_transpose`: a 1x1 result of an argument that did not evaluate to an array is its element).
-Unprobed: an array pad_with against an error element of a delimiter list (ours: the pad_with `#VALUE!`), and a one-cell reference to an
-error cell as the delimiter, which ours reads as a list, so `TEXTSPLIT("abc",B1,,1/0)` with B1 `#N/A` is ours `#DIV/0!`.
-Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs).
+A one-cell reference to an error cell is a delimiter that is itself an error, in every spelling: with B1 `#N/A`,
+`TEXTSPLIT("abc",F,,1/0)`, `TEXTSPLIT("abc",F,,"x")` and `TEXTSPLIT("abc",F)` are all `#N/A` for F = `B1`, `B1:B1`, `$B$1`,
+`Calc!B1`, `INDEX(B1:B2,1)` and a defined name for B1, and for a LET-bound `B1` (probes/t4198-textsplit-error-ref-delimiter A1-A21);
+the same as row_delimiter, `B1` or `B1:B1` (A22-A27). So it does not follow TOCOL's rule that a one-cell error reference is a 1x1
+array (arrays.md, T-3497). An error text still comes first (`TEXTSPLIT(B2,B1)` with B2 `#DIV/0!` is `#DIV/0!`, also with `B1:B1` or as
+row_delimiter, A28-A31); a one-cell reference to "," splits (A32, A33). A two-cell range of errors is a list: `TEXTSPLIT("abc",B1:B2,,1/0)`
+is `#DIV/0!`, with ignore_empty `"x"` `#VALUE!`, alone `#N/A` (A34-A36). An error element of a list beats an array pad_with:
+`TEXTSPLIT("a,b;c",{",",#N/A},";",,,{1,2})`, `TEXTSPLIT("abc",{",",#N/A},,,,{1,2})` and the same over the range B1:C1 (C1 ",") are
+`#N/A` (A37-A40), as are `TEXTSPLIT("abc",B1,,,,{1,2})` and its `B1:B1` form (A42, A43). TEXTBEFORE and TEXTAFTER read `B1` and
+`B1:B1` alike too (`#N/A`, also against an instance_num `1/0`, A44-A51).
+Evidence for this paragraph: probes/t4198-textsplit-error-ref-delimiter (excel-graph, 2026-11-04, T-4198).
+Ours: this order and the `#CALC!` since T-2315 (`fn_textsplit`, `textsplit_element` in functions/text/textsplit.rs); a one-cell
+reference read as its cell's value, and the list errors before the array pad_with, since T-4198.
 Status: VERIFIED (excel-graph)
-Tasks: T-2315
+Tasks: T-2315, T-4198
 
 
 ## TEXTSPLIT: column delimiters first, match_mode 0 or 1
