@@ -3,7 +3,7 @@ id: T-3997
 title: "M5 exit owner for probes/t3945-atan-near-midpoint S!C8 and S!C10: they pass once T-3932 reads 0.190581435720431 as Excel does"
 milestone: M5
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
