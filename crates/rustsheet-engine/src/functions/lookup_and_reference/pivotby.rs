@@ -608,6 +608,7 @@ fn pivot_groupings(
         pivot.records.iter().copied(),
         row_limit,
         &mut spend,
+        cell,
     )?;
     let height = tall(rows.groups.len());
     let grid_width = |groups: usize| {
@@ -622,6 +623,7 @@ fn pivot_groupings(
         pivot.records.iter().copied(),
         col_limit,
         &mut spend,
+        cell,
     )?;
     rows.sort_by_key_order(&pivot.row_sort, cell);
     cols.sort_by_key_order(&pivot.col_sort, cell);
