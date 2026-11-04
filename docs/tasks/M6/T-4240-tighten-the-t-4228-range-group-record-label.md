@@ -3,7 +3,7 @@ id: T-4240
 title: "Tighten the T-4228 range-group record: label format, the <start item, the rounding model, and an owner for the relabel quirk"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,3 +35,6 @@ MINOR findings of the Excel-fidelity review of T-4228 (PR #3219), all wording:
 
 ## Out of scope
 - New probes (T-4236).
+
+## Outcome
+Reworded web.md (decimal labels and General format marked UNVERIFIED, `<start` wording) and T-4235 (`<start` point, rounding as a structural model, relabel quirk now owned by T-4235). Docs only; eval delta none.
