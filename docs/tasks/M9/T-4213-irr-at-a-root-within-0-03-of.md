@@ -3,7 +3,7 @@ id: T-4213
 title: "IRR at a root within 0.03 of zero: Excel's last iterate and ours sit a different 1E-16 from the root (9 unowned t3411 fresh-sweep cells, 2 at the 11th digit, decision 0267 Tier A)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: blocked
 priority: P1
 size: S
 tier: opus
@@ -85,3 +85,71 @@ digit), 4 Tier B (12th or 13th), and 3 Tier C/D (14th or 15th), which come along
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit (decisions 0083, 0267).
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts ran (below). The second lands: 2 of the 9 cells (fresh-2 A43, A44) are now bit-exact. The other 7
+(fresh-2 A30, A32, A37; fresh-3 A38, A45, A109; fresh-4 A110) stay with this task for decision 0267 to accept. Excel's
+value at that noise floor is a secant iterate the engine passes, and no stop rule found picks it without turning
+Excel's `#NUM!` cells into numbers.
+
+## Outcome (2026-11-04, opus run)
+What changed: `irr_fallback` returns the Newton iterate one step past its stop (the iterate its residual test already
+evaluates), where that is a positive discount factor. Before, it returned the stop iterate. This is a structural choice
+between two ranked candidates, so it carries no `FITTED` tag (decision 0188 R4). financial.md "IRR's returns where the
+secant fails are Newton iterates" records both attempts. A unit test pins A43 and A44.
+
+Diagnosis: all 9 cells have large flows (|c| 1E+8 to 7E+11). Both secant runs go flat at |NPV| 2E-7 to 7E-5, above
+the 1e-7 stop and a few 1E-16 of the discounted flows, so `irr_fallback` answers. Then:
+- fresh-2 A43 and A44: Excel's value is the fallback's iterate one step past its stop.
+- fresh-2 A30, A32; fresh-3 A38, A45, A109; fresh-4 A110: Excel's value is bit for bit 1/(1 - d) - 1 at the secant
+  iterate whose |NPV| first falls under about 1.2E-15 to 2.1E-15 of sum |c_i| v^i.
+- fresh-2 A37: Excel's value is no iterate of either search.
+
+Attempt 1 was a relative noise-floor stop on the secant, |NPV| < eps * scale. It was refuted and not kept:
+- Scale sum |c_i| v^i, at every eps from 6E-16 to 3E-15. At 1E-15 it fixes 53 IRR cells. It also loses 27 bit-exact
+  cells and turns 98 cells Excel is `#NUM!` on into numbers, among them probes/irr-guess-edges A37
+  `IRR({1E+15,1,-1E+15},0.05)`.
+- Scale the largest flow, at 2E-15. It also loses t2565-irr-guess-sweeps A107:C141, whose 1.2E+14 flow is discounted
+  to about 2.5E+6 at the root.
+- Scale the guess's NPV: the window that fits the 9 cells (2.95E-15 to 9.8E-15) still stops irr-guess-edges A37.
+
+Attempt 2 (kept) is the Newton iterate one step past the fallback's stop. Over every IRR cell of eval it changes no
+cell's type. It makes 12 cells bit-exact: t2927 A79, A80, A135, A137; t3347-holdout A41; fresh-2 A43, A44;
+t3411-irr-residual-scale A31, A32, A48, A49; t3478 A292. It costs 1, t3411-irr-r4-fresh A129, where Excel's value is the
+stop iterate. It moves 4 t2927-irr-fallback-sweep cells (A46, A67, A127, A129) one ulp past the 15th digit. Within 15
+digits, the changed cells go from 10 to 21.
+
+R4 guards:
+- Hold-out: the split was fixed before scoring, with the margin at 10 points. A case is hold-out when the first hex
+  digit of sha256(case id) is under 5. That gives 31 IRR cases, about 31% of their cells. The counts are IRR cells
+  whose Excel value is a number:
+
+  | candidate | train n | train exact | train 4 ulp | train 15 digits | hold-out n | hold-out exact | hold-out 4 ulp | hold-out 15 digits |
+  |---|---|---|---|---|---|---|---|---|
+  | one past (chosen) | 1149 | 847 (73.7%) | 882 | 879 | 640 | 401 (62.7%) | 401 | 401 |
+  | stop iterate (main) | 1149 | 840 (73.1%) | 876 | 872 | 640 | 397 (62.0%) | 397 | 397 |
+  | correctly rounded root, cells with math | 588 | 74 (12.6%) | 154 | 180 | 288 | 20 (6.9%) | 49 | 68 |
+  | one past, the same cells | 588 | 374 (63.6%) | 395 | 390 | 288 | 152 (52.8%) | 152 | 152 |
+
+  The chosen candidate beats the correctly rounded root on hold-out, 152 against 20 exact. Its hold-out exact rate is
+  11.0 points under its train rate, past the 10-point margin. That gap comes from the case mix and is not the choice's:
+  main's stop iterate has the same 11.1-point gap, and the choice gains 0.6 to 0.7 points on both halves.
+- Fresh sweep: probes-numeric/t4213-irr-r4-fresh was drawn after the freeze and filled from excel-graph on
+  2026-11-04. It holds 150 conventional series with roots +-1E-7 to 0.05 (log-uniform) over six flow scales from 1 to
+  1E+13 (docs/research/t3411/gen_sweep.py, seed "T-4213/r4-fresh"). Results:
+  - Both sides give the same error on 46 cells. Excel returns a number on 104.
+  - The engine returns 59 of the 104: 57 bit-exact against main's 56. A95 becomes bit-exact, and A53 moves from the
+    8th digit to the 9th.
+  - The correctly rounded root matches 0 of the 104 bit for bit, and 3 within 15 digits.
+  - 45 cells are `#NUM!` where Excel returns a number (T-3548's type rule), and A53 and A149 stay off. All 47 go to
+    T-4232.
+- Gate A envelope: `rustsheet-eval accuracy` moves no IRR point out of the envelope. accuracy/IRR/r4-T-3411 A286
+  comes inside it, so its known-failures line (T-3408) is removed. The fresh sweep is a probes-numeric case, not a
+  Gate A table.
+- Reproducibility floor: the choice picks between two iterates the engine computes. It targets no sub-4-ulp
+  web-against-desktop difference and no bit that varies between fills.
+- No keep-matched branch: one rule applies to every fallback return, with no band.
+
+Eval delta: probes known failures unchanged, no regression. Visible parity changes on t3411-irr-r4-fresh-2 (A43 and A44
+fixed), t2927 (+4 cells within 15 digits, -4) and t3411-irr-r4-fresh (A129). The new case's 47 visibly-off cells are
+owned by T-4232.

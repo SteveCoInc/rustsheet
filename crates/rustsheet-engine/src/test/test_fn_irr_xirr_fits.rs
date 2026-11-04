@@ -77,6 +77,22 @@ fn irr_drops_leading_zero_flows() {
 }
 
 #[test]
+fn irr_fallback_returns_the_newton_iterate_past_its_stop() {
+    // probes-numeric/t3411-irr-r4-fresh-2 Calc!A43 and A44 (excel-graph): both secant runs go flat
+    // in NPV's rounding noise, and Excel's digits are the fallback's iterate one Newton step past
+    // its stop; the stop iterate is -0.0022000456147435177 and -0.003862736814644663 (T-4213).
+    let got = results(&[
+        "=IRR({-695986009883.848,96813241623.6437,95370628122.4462,63728799939.7472,88145864251.9703,28908334400.3665,79085445793.6791,74122584899.7995,56160108351.8228,66296206652.2788,39782610239.5982})",
+        "=IRR({-751258180.431342,104034853.792025,46963008.3706685,129441404.522239,57373616.3771261,157695709.534634,184479241.99603,59058125.6159921})",
+    ]);
+    let expected = [
+        -0.002_200_045_614_742_407_5_f64,
+        -0.003_862_736_814_644_440_7,
+    ];
+    assert_eq!(got, expected.map(f64::to_bits));
+}
+
+#[test]
 fn xirr_bisects_the_walked_bracket() {
     // probes/solver-iteration-traces X!A1, X!A10
     let got = results(&[

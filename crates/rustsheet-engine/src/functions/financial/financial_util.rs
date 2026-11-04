@@ -471,14 +471,25 @@ fn irr_fallback(values: &[f64]) -> Option<f64> {
             // Excel is `#NUM!` at a root whose NPV is not within [`IRR_ROOT_RESIDUAL`] of 0,
             // measured one Newton step past the stop (T-3411 round 4: at the stop iterate itself
             // the check loses probes-numeric/t3478-irr-r4-wide A79 and A292, whose residuals fall
-            // under the cut only one step later). The stop iterate is still what is returned.
+            // under the cut only one step later).
             let (p_next, dp_next) = polynomial(next);
             let past = next - p_next / dp_next;
             let settled = !irr_root_residual_applies(values)
                 || (past.is_finite()
                     && irr_npv(values, past).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL));
+            // The rate returned is that one step past the stop too, where it is a positive discount
+            // factor: Excel's digits are that iterate more often than the stop's (financial.md
+            // "IRR's returns where the secant fails are Newton iterates"). Over every IRR cell of
+            // eval it makes 12 cells bit-exact and costs 1 (t3411-irr-r4-fresh A129), among them
+            // t3411-irr-r4-fresh-2 A43 and A44, roots within 0.004 of zero; it moves no cell's
+            // type. A structural choice, not a fit (T-4213, hold-out and fresh sweep in its Outcome).
+            let root = if past.is_finite() && past > 0.0 {
+                past
+            } else {
+                next
+            };
             return if next > 0.0 && !nearer_negative_root && settled {
-                irr_from_discount(next)
+                irr_from_discount(root)
             } else {
                 None
             };

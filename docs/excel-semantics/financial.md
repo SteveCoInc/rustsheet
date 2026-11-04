@@ -4093,8 +4093,29 @@ Evidence: the oracle values of the cases above; `python3 -I docs/research/t3411/
 counts of the first four points, each iterate's step and stopping step size (an exact replay of the engine's
 secant, then Newton from v = 0). The NPV variants and the Illinois and two-point secants were scratch code.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
-Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
-Tasks: T-3411
+- Near-zero roots (T-4213). On conventional series whose root is within 0.03 of zero and whose flows are large
+  (|c| 1E+8 to 7E+11), both secant runs go flat in NPV's rounding noise (|NPV| 2E-7 to 7E-5, above the 1e-7 stop, a
+  few 1E-16 of the discounted flows), so the fallback answers, and a 1E-16 absolute step of the rate is an 11th to
+  15th-digit difference. Excel's value there is sometimes the fallback's iterate one step past the stop
+  (t3411-irr-r4-fresh-2 A43 -0.0022000456147424075 and A44 -0.0038627368146444407; the stop iterates are
+  -0.0022000456147435177 and -0.003862736814644663) and sometimes a secant iterate the engine passes on its way to
+  flat: fresh-2 A30 and A32, fresh-3 A38, A45 and A109 and fresh-4 A110 are bit for bit 1/(1 - d) - 1 at the first
+  secant iterate whose |NPV| is under about 1.2E-15 to 2.1E-15 of sum |c_i| v^i (fresh-2 A37 is no iterate of
+  either). That relative stop is not Excel's rule, though: added to the secant at any constant from 6E-16 to 3E-15, it
+  turns 98 cells Excel is `#NUM!` on into numbers (`IRR({1E+15,1,-1E+15},0.05)`, probes/irr-guess-edges A37, among
+  them) and costs 27 bit-exact cells; the same holds when |NPV| is measured against the largest flow (which also
+  loses t2565-irr-guess-sweeps A107-C141) or against the guess's NPV. Which iterate Excel returns at the noise
+  floor, and when it is `#NUM!` instead, stays unknown.
+- Returning the iterate one step past the stop (T-4213) makes 12 IRR cells of eval bit-exact (t2927-irr-fallback-sweep
+  A79, A80, A135, A137; t3347-irr-conventional-holdout A41; t3411-irr-r4-fresh-2 A43, A44; t3411-irr-residual-scale
+  A31, A32, A48, A49; t3478-irr-r4-wide A292) and costs one
+  (t3411-irr-r4-fresh A129, the stop iterate), with no change of type; 4 t2927-irr-fallback-sweep cells move one ulp
+  past the 15th digit. On T-4213's fresh sweep (probes-numeric/t4213-irr-r4-fresh, 150 conventional series with
+  roots 1E-7 to 0.05, drawn after the freeze) it moves 2 cells: A95 becomes bit-exact and A53 moves from the 8th to
+  the 9th digit.
+Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps and returns the iterate one
+Newton step past that stop (T-4213).
+Tasks: T-3411, T-4213
 
 ## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
 Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the
