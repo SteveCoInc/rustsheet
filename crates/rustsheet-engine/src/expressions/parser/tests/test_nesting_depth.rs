@@ -690,3 +690,45 @@ fn hand_written_clone_and_eq_agree_with_the_formula_text() {
         }
     }
 }
+
+/// T-3691: the heaviest wrapper shapes a formula can write (`- ( ` nested to the 256-parenthesis
+/// cap with whitespace at every sign and group, a run of 1,022 signs spaced or not before a
+/// reference, and 200 `-(` levels around 824 more signs) set, evaluate, clone, compare, print and
+/// drop on a 2 MiB stack even in an unoptimized build: the walks that see every node loop over a
+/// run of wrappers (T-3253; `walk_names`, T-3691), so an embedder's small debug thread cannot
+/// abort (directive 5). The derived `Debug` still recurses per node (TODO(T-4031)).
+#[test]
+fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
+    let mut shapes = vec![
+        nested("- ( ", "B1", " ) ", MAX_PARENTHESES),
+        nested("-(", &format!("{}1", "-".repeat(824)), ")", 200),
+    ];
+    for space in ["", " ", "\n "] {
+        shapes.push(format!("{}B1", signs(MAX_SIGNS - 1, space)));
+        shapes.push(format!("-({}B1)", signs(MAX_SIGNS - 2, space)));
+    }
+    for formula in shapes {
+        let walk = std::thread::Builder::new()
+            .stack_size(2 << 20)
+            .spawn(move || {
+                let tree = parse(&formula);
+                assert!(!matches!(tree, Node::ParseErrorKind { .. }), "{tree:?}");
+                let copy = tree.clone();
+                assert!(copy == tree);
+                assert!(!to_rc_format(&copy).is_empty());
+                let mut stripped = copy;
+                stripped.strip_spaces();
+                let _ = run_static_analysis_on_node(&stripped);
+                drop(stripped);
+                drop(tree);
+                let mut model = crate::test::util::new_empty_model();
+                model._set("B1", "2");
+                model._set("A1", &format!("={formula}"));
+                model.evaluate();
+                assert!(!model._get_text("A1").starts_with('#'));
+                assert_eq!(model._get_formula("A1"), format!("={}", formula.trim_end()));
+                drop(model);
+            });
+        assert!(walk.is_ok_and(|handle| handle.join().is_ok()));
+    }
+}

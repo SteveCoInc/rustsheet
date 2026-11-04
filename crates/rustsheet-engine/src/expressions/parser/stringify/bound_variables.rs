@@ -26,6 +26,25 @@ pub(crate) fn walk_names<F>(node: &mut Node, bound: &mut Vec<String>, visit: &mu
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
+    // A run of signs, unary pluses, whitespace and parentheses is peeled in a loop, so it costs
+    // no frame: 1,022 spaced signs are about 2,000 wrappers, which overflowed a 2 MiB unoptimized
+    // stack at one frame each when a formula was set (T-3691, as T-3253's `Clone` and `PartialEq`).
+    let mut node = node;
+    loop {
+        let current = node;
+        node = match current {
+            Node::UnaryKind { right: child, .. }
+            | Node::ImplicitIntersection { child, .. }
+            | Node::SpillRangeOperator { child }
+            | Node::Group { child, .. }
+            | Node::UnaryPlus { child }
+            | Node::Spaced { child, .. } => child,
+            other => {
+                node = other;
+                break;
+            }
+        };
+    }
     let declared =
         |bound: &[String], name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
     match node {
