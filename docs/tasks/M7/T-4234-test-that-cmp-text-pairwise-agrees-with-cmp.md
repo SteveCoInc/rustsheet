@@ -3,7 +3,7 @@ id: T-4234
 title: "Test that cmp_text_pairwise agrees with cmp_text on ASCII texts, the invariant behind UNIQUE's hash path (T-4200 review)"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ comparison (`cmp_text_pairwise`) agrees with the total `cmp_text`, so a later co
 
 ## Out of scope
 - Non-ASCII texts (T-4200's merge handles them).
+
+## Outcome
+Two tests: `t4234_ascii_pairwise_agrees_with_total_order` (test_collation.rs; every pair of ~400 ASCII texts: prefixes, case, hyphen, apostrophe, space, controls) and `t4234_ascii_unique_hash_and_pairwise_group_alike` (unique.rs; a shuffled column with duplicates gives the same groups from `first_equal_lines` and `coalesce_equal_lines`). `test_collation` is now `pub(crate)` so unique.rs shares the text set. No behaviour change; eval delta none.
