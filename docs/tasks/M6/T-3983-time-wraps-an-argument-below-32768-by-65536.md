@@ -50,3 +50,9 @@ below -131072 (probes/t3983-time-argument-below-131072, excel-graph 2026-11-04):
 beyond it Excel gives 0, not the wrap. Refilled time-argument-bound/-window/-negative. Removed the
 Gate A known-failure TIME/s1 A149. dates.md says "Ours: matches". Unit tests added in test_fn_time.rs.
 Also refilled four gen-m6/gen-m9 cases whose 2026-10 sidecars held the pre-wrap `#NUM!` (1a404a0379a1372c A8, 44194b2fefa30de2 A251, 6684de07ac74bcb8 A343, 09b47629f54b9817 A70). Eval delta: probes known failures 4433 -> 4352 (81 cells fixed), no regressions elsewhere.
+
+## Landing notes
+- PR #3079, head 243022e2b (a steward merge of origin/main onto d23e1ca). All three reviewers approved d23e1ca; the merge needs none.
+- CI: only `eval (Excel-compatibility gate)` is red (run 41789173677): `make eval-math-check` says "math sidecars: probes: stale". The new probe `t3983-time-argument-below-131072` has no `.math.json` sidecar (its TIME cells have no math value and are not skip-listed). `make check-fast` does not run this gate, which is why it passed locally.
+- Next step: `cd tools && uv run rustsheet-accuracy math --suite probes` (over 30 min here; it rewrites the whole suite, including an unrelated t3350 sidecar that must be reverted), commit only the t3983 `.math.json` and anything the check demands, run `uv run rustsheet-accuracy math --check --suite probes --suite probes-numeric`, push, enqueue once CI is green.
+- Also fix the two stale sentences in dates.md (~line 1390) in that push.
