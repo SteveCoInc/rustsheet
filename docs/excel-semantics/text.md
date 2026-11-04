@@ -99,7 +99,7 @@ exact UTF-16 units throughout:
 - 32,767 limit: `LEN(REPT("a",32766)&"😀")` is 32767 (the kept unit is the high half, coercion.md "Truncation inside a surrogate pair"); `REPT("😀",16384)` is `#VALUE!`;
   CONCAT and TEXTJOIN one unit over (a pair straddling the limit) are `#CALC!`, not truncated (existing entry below).
 Evidence: probes/text-lone-surrogates A1-A81, B1-B6 (excel-graph, 2026-10-15, T-1582).
-Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, unprobed, as a supplementary character does: "PROPER word starts: Excel's own letter table (T-3657)"). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/text_value.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
+Ours: comparisons, EXACT and exact-mode MATCH read lone units exactly (T-1585): `cmp_text` in functions/util/collation.rs weighs a lone unit (and each unit of an astral character) above every BMP character, by unit value, which gives H<L, H<"😀"<L, and both H and L above U+FFFD (`H<UNICHAR(65533)` FALSE); COUNTIF-style criteria and wildcard MATCH/XMATCH read lone units exactly as well (T-1642, criteria paragraph below). UPPER, LOWER, PROPER, TRIM and CLEAN keep lone units (`Text::map_runs`; a lone unit breaks a word for PROPER, as a supplementary character does, probes/t3802-proper-surrogates: "PROPER word starts: Excel's own letter table (T-3657)"). FIND, SEARCH and SUBSTITUTE read lone units exactly (T-1586: `find_element` in functions/text/position.rs maps each unit, a lone one included, to one character; `substitute_units` in functions/text/util.rs matches unit for unit, so a lone half splits a pair; with an `instance_num` instances overlap, as in the well-formed path, `SUBSTITUTE("aaa","aa","x",2)` is "ax", as Excel gives: "SUBSTITUTE instances overlap" below). CODE and VALUE already behaved as probed. REPT repeats the exact units (`Text::repeat`; `REPT(L&H,2)` re-pairs at the join like `&`), TEXT prints the exact text where `@` is (`format_text_value_exact` in formatter/text_value.rs formats a one-character private-use stand-in the format does not hold, so the 255-character limit and every format rule stay the well-formed path's, then swaps the exact text in; the limit is re-checked on the real length), and T returns its argument unchanged (T-1587; exactness VERIFIED, T-1647).
 Status: VERIFIED
 **Criteria and wildcards (VERIFIED, probes/criteria-lone-surrogates, excel-graph 2026-10-16, T-1642).** Excel's criteria (SUMIF, COUNTIFS) and wildcard MATCH/XMATCH read lone units exactly, unit by unit. Data: H, L, "😀", U+FFFD, "x", H&"a", "a"&L, "a".
 - A lone-half criterion (`H`, `"="&H`) matches H only. It does not match U+FFFD or the other half. `"<>"&H` matches everything else.
@@ -582,8 +582,8 @@ Tasks: T-1451
 
 ## TEXT's format_text of every argument class (T-3809)
 Rule: a format_text that is not text is read as the text it would display, then used as a code. A number
-is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-1,-1)` is "--1": the code `-1` is a literal `-`
-before a digit, and the value's sign is added), a blank cell or blank range element is empty text (an empty code shows nothing
+is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-0.5,-1)` is "--1": the code `-1` is the literals `-` and `1`,
+with no digit placeholder, so the value is never shown and only its minus is added), a blank cell or blank range element is empty text (an empty code shows nothing
 but a negative's minus: number-formats.md "An empty format string returns empty text"), and a boolean is the code `TRUE`/`FALSE`, which the code check rejects, so `TEXT("",TRUE)`,
 `TEXT(TRUE,TRUE)` and `TEXT(A1:B2,TRUE)` are `#VALUE!` (see number-formats.md "TEXT checks the code before it looks at a
 text or boolean value"). A boolean value prints as its text under a numeric code (`TEXT(TRUE,0)` is "TRUE"). Errors:
@@ -594,7 +594,7 @@ is `#NAME?`) and over a range format; an error format wins over any other value,
 Evidence: gen-m5/0428ca72d3724bea (excel-graph, 2026-11-02; `--policy arg-pairs --functions TEXT`, 102 cells over the 51
 unseen (value, format_text) class pairs, Calc!A1:A304 every third row): `TEXT(2,0)` A1, `TEXT(-1,Data!A1:B2)` A31
 ("--1.5", the top-left code -0.5), `TEXT("2.5",0)` A55, `TEXT("",TRUE)` A109, `TEXT(TRUE,0)` A139, `TEXT(#NAME?,#NUM!)`
-A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-").
+A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-"), `TEXT(Data!A1:B2,-1)` A259 ("--1", the top-left value -0.5).
 Status: VERIFIED (excel-graph)
 Ours: matches (102/102 cells).
 Implemented in: `fn_text` (functions/text/common.rs).
@@ -1053,8 +1053,13 @@ Cherokee small letters U+13F8-U+13FD and U+AB70-U+ABBF, Latin Extended-D U+A788 
 U+D7B0-U+D7FB, and the Bamum numerals U+A6E6-U+A6EF (Nl). Ordinary letters of every older script are letters
 (`PROPER("aאbc")`, `"a一bc"`, `"a가bc"`, `"aʰbc"`, `"a々bc"`, `"aⅰbc"` all keep `b` lower). Digits of every script,
 modifier symbols (`^`, `` ` ``, `´`, `¨`), the zero-width and bidi format characters, every space, control character and
-punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter
-(`PROPER("a𝐚bc")` is `A𝐚Bc`; probably each surrogate is read alone). Circled letters are not letters, so they are lowered
+punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter, whatever its case, and breaks a word
+(`PROPER("a𝐚bc")` is `A𝐚Bc`, `PROPER("x"&U+1D41A&"yz")` `X𝐚Yz`; a Deseret capital U+10400 or small U+10428 is left as it is at a word start,
+`PROPER(U+10400&"x")` is `𐐀X`, and mid-word, `A𐐀Bc`, `A𐐨Bc`; an emoji likewise). A lone surrogate, high or low, also breaks a word and is kept
+(`PROPER("a"&H&"bc")` is `A`+H+`Bc`, as with L; `PROPER(H&"b")` is H+`B`; the halves joined back into a pair, `PROPER("ab"&H&L&"cd")`, still break the word: `Ab`+H+L+`Cd`; the lone halves are built with `MID(UNICHAR(128512),1,1)` and `,2,1)`, as `LEFT` and `RIGHT` take the whole emoji).
+Non-letter capitals that Excel's case table lacks are not lowered (circled letters, which have an entry, are: above): Georgian Mtavruli U+1C90, Cyrillic U+0524 and Latin U+A78D stay as they are
+at a word start, mid-word, after a digit and after a space (`PROPER("a"&U+1C90&"b")` is `A`+U+1C90+`B`), and so does the small U+0525 (that the table lacks U+1C90 is shown by the T-3820 note below; for the others it is inferred from these cells)
+(probes/t3802-proper-surrogates, excel-graph, 2026-11-04, 49 cells; the engine matches all, T-3802). Circled letters are not letters, so they are lowered
 wherever they stand: `PROPER(UNICHAR(9398)&"x")` (Ⓐ) is `ⓐX`, `PROPER("aⒶB")` is `AⓐB`, `PROPER("1Ⓐ")` is `1ⓐ`. The
 titlecase digraphs map to their capital at a word start, also after a digit (`PROPER("1ǆ")` is `1Ǆ`), and to their small
 form inside a word (`PROPER("aǅB")` is `Aǆb`); the Greek letters with ypogegrammeni stay unchanged at a word start
