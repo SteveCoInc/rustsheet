@@ -21,7 +21,10 @@ use basym::basym;
 use bfrac::bfrac;
 use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_sum_overflows, BupSum};
+use bup::{
+    bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_prefactor_underflows,
+    l140_bup_sum_overflows, BupSum,
+};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -280,7 +283,16 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
 /// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
 /// was handed, not the kernel.
 pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
-    closed_or_ported_with(x, y, a, b, true)
+    l140_prefactor_zero_tails(a, b, x, y).or_else(|| closed_or_ported_with(x, y, a, b, true))
+}
+
+/// The tails (lower, upper) of K(a, b, x, y) where L140 bup+bgrat's w is Excel's exact 0 because
+/// bup's prefactor underflows ([`bup::l140_bup_prefactor_underflows`], T-4045): w is 0 and its
+/// complement 1, oriented back through bratio's swap. F's tails only (see there).
+fn l140_prefactor_zero_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
+    let d = dispatch(a, b, x, y)?;
+    (d.branch == Branch::L140BupBgrat && l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0))
+        .then_some(if d.swapped { (1.0, 0.0) } else { (0.0, 1.0) })
 }
 
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
@@ -346,13 +358,6 @@ fn ported_tails_with(
         // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
         Branch::L140BupBgrat if half_bgrat => {
             let w = l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?;
-            // Excel's exact 0 where bup's prefactor underflows (T-4045) is the evaluation's only:
-            // BETA.INV's and F.INV's search (`BupSum::Recurrence`) keeps today's kernel there, as it
-            // did before, or `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146)
-            // crosses that 0 and lands 0.6% from the math.
-            if w == 0.0 && bup_sum == BupSum::Recurrence {
-                return None;
-            }
             (w, other(w))
         }
         Branch::L140BupBpser => {

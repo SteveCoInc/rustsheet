@@ -76,11 +76,11 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   around ln(DBL_MIN) = -708.396. Cuts on e^-z (708.4, 745.1) or on P itself (z near 726, 724, 722) miss. The threshold
   is the double range's own bound, not a constant read off cells, so it carries no `FITTED` tag and R4's guards do
   not apply.
-- Code: `bratio/bup.rs` `l140_bup_bgrat` returns 0 when its density or ret is below the normal range, ahead of its
-  a0 <= 1E7 cap and n cap. It used to fall back to today's kernel there. The change applies to BETA.DIST's, the t's and
-  F's L140 bup+bgrat calls, and BETA.INV's search through the same branch. Unit test
-  `upper_tail_is_zero_where_bups_prefactor_underflows` (fisher.rs). Follow-up T-4254 probes BETA.DIST and T.DIST.RT
-  at the edge.
+- Code: `bratio/bup.rs` `l140_bup_prefactor_underflows` (bup's prefactor ret is one helper, `l140_bup_ret`, shared
+  with `l140_bup_bgrat`), asked for F's tails only by `bratio::f_closed_or_ported_tails` at any a0. Applying it to
+  BETA.DIST as well moved `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146, which searches BETA.DIST's
+  cdf) 0.6% off the math, out of the accuracy envelope, so BETA.DIST and the t keep today's kernel until T-4254
+  probes them. Unit test `upper_tail_is_zero_where_bups_prefactor_underflows` (fisher.rs).
 - Eval: every Excel 0 of t4045 (A18:A55, B19:B55, C15:C55, D1:D21) and of t4017 (this task's 11 cells) is now exact.
   With T-4044 merged in, t4045's only off cell is E3 (`FDIST(1.5,80,1E10)` digits, owned by deferred T-3209).
   Gated suites: fixed 0, regressions 0 (`make eval-baseline`).

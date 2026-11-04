@@ -4250,9 +4250,10 @@ within 1E-15 relative / largest relative error:
   bgrat's own increment is subnormal there (z > 708) and Excel flushes it. So the true tail can be as large as 4E-291
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
-  Ours (T-4045): `bratio/bup.rs` `l140_bup_bgrat` returns 0 there, ahead of its a0 <= 1E7 cap, on BETA.DIST's, the t's
-  and F's L140 bup+bgrat calls. It makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this
-  edge (T-4254).
+  Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
+  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this edge (T-4254), and
+  BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
+  `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism

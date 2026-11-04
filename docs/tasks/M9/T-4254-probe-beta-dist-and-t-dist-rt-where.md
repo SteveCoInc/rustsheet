@@ -17,8 +17,11 @@ bratio's L140 bup+bgrat branch, but only F.DIST.RT and FDIST are probed.
 ## Context
 - T-4045 (PR #3242): Excel's L140 bup+bgrat tail is exactly 0 when bup's prefactor ret = P·x0·y0/c (P the Beta(c, a0)
   density at y0) is below DBL_MIN. Evidence: probes-numeric/t4045-f-dist-rt-zero-cut, three F families whose brackets
-  meet only around ln(DBL_MIN). The code (`bratio/bup.rs` `l140_bup_bgrat`) applies it to BETA.DIST's and the t
-  functions' calls of that branch too, which no probe covers (reviewer-excel-fidelity, T-4045 round 1).
+  meet only around ln(DBL_MIN). The engine applies it to F's tails only (`bratio::f_closed_or_ported_tails`).
+  BETA.DIST and the t share the branch but are unprobed (reviewer-excel-fidelity, T-4045 round 1). BETA.DIST's cdf
+  also feeds F.INV's search at a huge df1: a 0 there moved `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1
+  A146) off the math, while Excel's own F.INV there (0.0239) is far from the math (0.0401). So check whether Excel's
+  BETA.DIST zero explains Excel's F.INV.
 - Probe: `BETA.DIST(x,a,b,TRUE)` with a in the millions and b < 40 (b0 = b after bratio's swap, x0 > 0.7), and
   T.DIST.RT at a huge df where t's kernel takes L140 bup+bgrat (check `bratio::dispatch` first). Walk x so that
   ln(x0^a0·y0^c/B(c, a0)) crosses -708.396 in steps of about 1, at two shapes per function, at both c = 1/2 and c = 1.
