@@ -8,6 +8,8 @@
 ABS	exact	the argument or its negation, with no rounding
 ARABIC	exact	a whole number from a Roman numeral (numbers.md "ARABIC of a blank cell, and padded numerals")
 AREAS	exact	counts the areas of a reference
+AVERAGEIF	composite	range and average_range must be references, as for SUMIF (decision 0271); gen-m9, probes and probes-numeric drive it
+AVERAGEIFS	composite	range and average_range must be references, as for SUMIF (decision 0271); gen-m9, probes and probes-numeric drive it
 BIN2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
 BITAND	exact	integer bit operation on values below 2^48
 BITLSHIFT	exact	integer bit shift on values below 2^48
@@ -47,6 +49,11 @@ EOMONTH	exact	a whole serial: a month's last day (dates.md: EOMONTH(0.5,1) = 59)
 ERROR.TYPE	exact	an error code
 FIND	exact	a character position
 FINDB	exact	a byte position
+FORECAST.ETS	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.CONFINT	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.SEASONALITY	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.STAT	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FREQUENCY	exact	an array of counts (statistics.md "FREQUENCY: one row per bin plus one"; decision 0271)
 GCD	exact	integer GCD of arguments up to 2^53 (numbers.md "GCD / LCM argument bound")
 GESTEP	exact	returns 0 or 1
 HEX2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
@@ -55,12 +62,20 @@ IMAGINARY	composite	the imaginary part parsed from complex text; numeric literal
 IMARGUMENT	composite	takes complex text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
 IMREAL	composite	the real part parsed from complex text; numeric literals cannot drive it (decision 0270); gen-m9, probes and probes-numeric drive it
 ISOWEEKNUM	exact	an integer week number
+LARGE	exact	the k-th of its inputs (statistics.md "LARGE/SMALL: a fractional k rounds up for LARGE and down for SMALL"; decision 0271)
 LCM	exact	integer LCM, its result taken as the double at 2^53 (numbers.md "GCD / LCM argument bound")
 LEN	exact	a character count
 LENB	exact	a byte count
 MATCH	exact	a position
 MAX	exact	one of its arguments, with no rounding
+MAXA	exact	one of its numeric inputs, or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array"; decision 0271)
+MAXIFS	composite	max_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
 MIN	exact	one of its arguments, with no rounding
+MINA	exact	one of its numeric inputs, or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array"; decision 0271)
+MINIFS	composite	max_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
+MODE	exact	the most frequent of its inputs (decision 0271)
+MODE.MULT	exact	an array of its most frequent inputs (decision 0271)
+MODE.SNGL	exact	the most frequent of its inputs (decision 0271)
 MONTH	exact	an integer part of a day serial
 MUNIT	exact	an identity matrix of 0s and 1s (numbers.md "RADIANS, SQRTPI and MUNIT")
 N	exact	the number itself, 1 or 0 for a logical and 0 for text, with no rounding
@@ -72,6 +87,9 @@ PI	exact	a constant with no arguments: the double nearest pi
 RAND	composite	a volatile draw (decision 0225); its invariant cells are pinned by the probe case t3631-rand-randbetween-invariant
 RANDARRAY	composite	a volatile array draw (decision 0225); its invariant and degenerate-bound cells are pinned by the probe case t3631-randarray-invariant
 RANDBETWEEN	composite	a volatile draw (decision 0225); its invariant and degenerate-bound cells are pinned by the probe case t3631-rand-randbetween-invariant
+RANK	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
+RANK.AVG	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
+RANK.EQ	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
 ROW	exact	a row number
 ROWS	exact	a row count
 SEARCH	exact	a character position
@@ -80,6 +98,7 @@ SEQUENCE	composite	returns an array (arrays.md "Arrays past the grid: MAKEARRAY,
 SHEET	exact	a sheet number
 SHEETS	exact	a sheet count
 SIGN	exact	returns -1, 0 or 1
+SMALL	exact	the k-th of its inputs (statistics.md "LARGE/SMALL: a fractional k rounds up for LARGE and down for SMALL"; decision 0271)
 SUBTOTAL	composite	takes references only (references.md "SUBTOTAL and AREAS take references only"); gen-m5, gen-m6, gen-m7, gen-m9 and probes drive it
 SUMIF	composite	range and sum_range must be references; gen-m2, probes and ironcalc-calc drive it
 SUMIFS	composite	sum_range and criteria_range must be references; gen-m2, probes and ironcalc-calc drive it
