@@ -654,3 +654,37 @@ External sources studied:
 - the Apache POI, Open XML SDK, openpyxl, SheetJS, EPPlus and docx4j documentation
 - LibreOffice InteropGrabBag (FOSDEM 2014)
 - ISO/IEC 29500-3 (Markup Compatibility)
+
+---
+
+## Filed (2026-11-04, after owner review)
+
+Cell-content bugs, as ordinary M11 tasks:
+
+| Task | Bug |
+|---|---|
+| T-4140 | External references are written as `'[1]Sheet'!A1` |
+| T-4143 | The externalLink parts and `externalReferences` are not written |
+| T-4144 | An external structured reference becomes `#REF!` |
+| T-4145 | A shared-string index with surrounding whitespace reads as 0 |
+| T-4148 | Empty-string cells come back blank |
+| T-4150 | A CR comes back as a literal `_x000d_` |
+| T-4157 | `dataDxfId` is read from `headerRowDxfId` |
+| T-4166 | Probe: does Excel load the formula spellings our export writes (RQ5)? |
+
+The leading-whitespace row of §2.2 matches Excel and is not filed. `style-alternate-content.xlsx`
+is already T-0489.
+
+M15 (decision 0275), all `blocked` until Phase 1 exits:
+
+| Task | Work |
+|---|---|
+| T-4167 | Spec: the round-trip contract |
+| T-4183 | Spec: the ownership matrix and preservation |
+| T-4172 | The `roundtrip` suite kind |
+| T-4173 | Corpus suites and baselines |
+| T-4179 | XSD validation |
+| T-4180 | Excel goldens |
+| T-4181 | Common Crawl corpus (also blocked on network access) |
+
+Stages 1–5 are decomposed from T-4183 by the planner.
