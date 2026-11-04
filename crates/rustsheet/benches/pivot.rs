@@ -56,6 +56,7 @@ fn workbook(formulas: &[String]) -> Result<Workbook, Box<dyn Error>> {
         value: "Sales".into(),
         function: PivotFunction::Sum,
         caption: "Sum of Sales".into(),
+        group: None,
     };
     wb.edit(|tx| {
         tx.add_pivot_table(&input)?;

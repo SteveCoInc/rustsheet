@@ -34,7 +34,8 @@ row field may hold blank (absent) cells, cached as `<m/>`.
 
 Excel stores no record's group, so the builder renders no cells for a grouped pivot (which group a
 record falls in is what such a probe asks): Excel lays the pivot out itself on load (excel-graph,
-T-4228), and the engine adapter does not register it (T-4235).
+T-4228), and the engine adapter has the engine lay out a numeric group (T-4235) and does not
+register a date group (T-4246).
 """
 
 from __future__ import annotations

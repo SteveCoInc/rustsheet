@@ -237,7 +237,7 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rendered: BTreeMap<String, CellInput>,
     /// A numeric range grouping of the row field (T-4228). The builder renders no cells for a
-    /// grouped pivot and the engine adapter does not register it yet (T-4235).
+    /// grouped pivot: the engine adapter has the engine lay it out from `location` (T-4235).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<PivotGroupSpec>,
 }
@@ -260,6 +260,16 @@ pub struct PivotGroupSpec {
     /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<String>,
+}
+
+impl PivotTableSpec {
+    /// The pivot's numeric range group, the one the engine lays out (T-4235). A date group
+    /// (`by` set) is not one: the eval adapter leaves such a pivot unregistered until the engine
+    /// groups dates (T-4246).
+    #[must_use]
+    pub fn number_group(&self) -> Option<&PivotGroupSpec> {
+        self.group.as_ref().filter(|g| g.by.is_none())
+    }
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine

@@ -19,8 +19,8 @@ use rustsheet_engine::expressions::token::get_error_by_english_name;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
     Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS,
-    MAX_RECORD_VALUES,
+    NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS,
+    MAX_ITEMS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
@@ -51,6 +51,12 @@ struct Skip(String);
 
 impl From<XlsxError> for Skip {
     fn from(error: XlsxError) -> Self {
+        Skip(error.to_string())
+    }
+}
+
+impl From<NumberGroupError> for Skip {
+    fn from(error: NumberGroupError) -> Self {
         Skip(error.to_string())
     }
 }
