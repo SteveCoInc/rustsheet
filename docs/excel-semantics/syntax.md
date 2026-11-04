@@ -595,7 +595,13 @@ agree):
   unprobed, T-3240). `T[ Col ]` is only
   the engine's own printed text for `T[ [Col] ]`, which it re-parses after edits: typed or loaded, a padded bare column
   reads the run as part of the column name, so it is a parse error typed and `#REF!` loaded, and the xlsx export writes
-  `T[ [Col] ]`. A defined-name body is neither, so a stored name `T[ Col ]` still reads as the column (unprobed).
+  `T[ [Col] ]`. Since T-3258 untyped text from outside the engine (`Model::set_user_input`, the Python bindings) reads
+  it so too (a formula that does not parse, `#ERROR!`), while the engine's own re-entries (fill, copy, paste, move,
+  merge) keep reading the column. **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
+  `<definedName name="N">T[ Col ]</definedName>` (or `T[ Col]`, `T[Col ]`) `=SUM(N)` and `=ROWS(N)` are `#REF!` and
+  `=ISREF(N)` is FALSE, as in a cell (probes/t3258-name-padded-column-0..2, excel-graph, 2026-11-04, T-3258). Ours: a
+  name body loaded through `Model::define_loaded_name` is read as a file's text and loads as `#REF!`; a name defined
+  through the API keeps reading the column (a typed Name Manager body is unprobed).
 Evidence: probes/t2800-this-row-whitespace B2:F3 and t2800-stored-ws-0..3 (excel-graph, 2026-10-28, T-2800); probes/t2786-whitespace-structured-refs-runs (excel-graph `entered`, 2026-10-26, T-2786): E4:E15 (F4:F15), H1:H13
 (I1:I13). Each refused formula was entered alone against the same case. probes/t2966-empty-call-runs and
 t2966-missing-first-arg-run (excel-graph `entered`, 2026-10-28, T-2966; cache keys `input_sha256` 22b97392f143589e517cbf4a28cbe57cc7d474de238160fc867864e5597b7e36
