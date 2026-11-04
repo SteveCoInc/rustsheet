@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "Plain hex LCIDs with an invalid or unusual sublanguage: when Excel falls back to the language and when to English (T-3666). Columns in order of the LCID list; rows: Jan names, Wed names, 6 PM halves, March.",
+ "description": "Plain hex LCIDs with an invalid or unusual sublanguage: when Excel falls back to the language and when to English (T-3666). Columns in order of the LCID list; rows: Jan names, Fri names, 6 PM halves, March.",
  "tags": [
   "M10",
   "number-format",

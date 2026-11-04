@@ -18,7 +18,6 @@ probes/text-locale-invalid-sublanguage S!J3, S!K3, S!L3 (found by T-3666); ours 
 
 ## Acceptance criteria
 - [ ] S!J3, S!K3, S!L3 pass; `make check` green.
-- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 -
