@@ -39,7 +39,8 @@ accuracy stage.
   `#NUM!` there.
 
 Training probes from draft #2529 (salvaged 2026-11-04; the hold-out case landed in #2562; T-3408 cites cells of both).
-Visibly-off cells on main:
+Visibly-off cells on main that no other task owned (T-3408 already owns probe A10, A13, A16, A17, A19, A37 and A40,
+so the probe has 19 visibly-off cells in all):
 - probes/t3347-irr-conventional-num.case.json (12): P!A11, A12, A14, A15, A18, A20, A21, A36, A38, A39, A41, A42
 - probes-numeric/t3347-irr-conventional-sweep.case.json (24): P!A1, A4, A7, A33, A35, A38, A45, A47, A51, A56, A58, A61, A62, A64, A71, A76, A82, A87, A88, A96, A97, A108, A109, A119
 
