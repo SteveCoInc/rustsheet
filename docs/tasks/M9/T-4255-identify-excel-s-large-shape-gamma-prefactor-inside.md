@@ -8,7 +8,7 @@ priority: P3
 size: M
 tier: opus
 depends_on: []
-defer: phase-1b
+campaign: visible
 ---
 
 ## Goal
@@ -24,12 +24,17 @@ T-3252 (docs/excel-semantics/statistics.md, "Incomplete gamma: accurate kernel",
 - Above the mode, from 1.05a to 1.45a, Excel is neither form (window A11:A20, A31:A40).
 - POISSON.DIST's cdf far above the mean at k 100 and 200 is closer to the ratio form (window A129, A139, A140),
   while k 50 is not (A117, A118).
-These are ulp-level known failures (within 15 digits). Read docs/research/excel-kernel-playbook.md first.
+Many of these cells are visibly off (past the 15th significant digit). Read docs/research/excel-kernel-playbook.md first.
 
 ## Acceptance criteria
 - [ ] A candidate model is scored against the cells above with a fixed hold-out (decision 0188 R4), and is adopted
       if it beats both forms; otherwise each rejected form is recorded in statistics.md with its scores.
 - [ ] `make check` green; reviewers approve.
+
+## Visible-parity stage
+Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign. Its target is that
+every cell it owns is within half a unit of the 15th significant digit of Excel's value. Bit-level criteria still unmet
+then move to a follow-up task filed without the key and with `defer: phase-1b`.
 
 ## Out of scope
 - Shapes below 20 (T-3219).
