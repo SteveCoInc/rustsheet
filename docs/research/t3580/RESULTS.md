@@ -5,6 +5,20 @@ arguments keep r >= 1") in `fisher.rs` `f_beta_arguments`, and F's tails through
 (bgrat at b = 1/2 and L140 bup+bgrat, as the Student t and BETA.DIST take them). Frozen at 3f4e01a2; the fresh sweep was
 drawn and filled after that commit and scored only once the per-branch check below had left the model unchanged.
 
+## R4.1: train against hold-out
+
+Train is the set T-3567 chose the r >= 1 form on: cells.tsv's 3,435 F cdf/tail cells (`c5.py`'s filter;
+`score_train.py`). Hold-out is T-3567's dedicated probe, built and filled after its model was frozen. Margin, stated
+before scoring: the fit lab's default of 5 points of bit-exact rate. Bit-exact / within 4 ulp / within 15 digits:
+
+| set | cells | T-3580 | correctly rounded | T-3580 bit-exact rate |
+|---|---|---|---|---|
+| train (cells.tsv F) | 3,435 | 2,647/3,350/3,403 | 1,497/2,972/3,165 | 77.1% |
+| hold-out (t3567-r5-fdf1-hold) | 3,578 | 2,879/3,430/3,487 | 1,407/2,484/n.a. | 80.5% |
+
+The model beats the correctly rounded value on hold-out (2,879 against 1,407 bit-exact), and its hold-out rate is
+within the 5-point margin of its train rate (+3.4 points). (The CR hold-out counts are T-3567's: bit-exact and 4 ulp.)
+
 ## Hold-out: probes-numeric t3567-r5-fdf1-hold (T-3567's, 3,578 cells)
 
 Bit-exact / within 4 ulp / within 15 significant digits (`score.py t3567-r5-fdf1-hold`):

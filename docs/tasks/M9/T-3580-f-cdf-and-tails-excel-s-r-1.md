@@ -63,6 +63,9 @@ denominator df of 1 takes bratio's bgrat branches at b = 1/2 as the Student t ta
     1,984/2,850/3,029 and the correctly rounded 1,407/2,484; bg1 (d1 = 1, bgrat) **991/1,000/1,000**; 0 cells newly
     visibly off, 458 newly within 15 digits. Per branch the new arguments win or tie everywhere, so nothing else
     was changed.
+  - R4.1 train against hold-out (margin 5 points of bit-exact rate, stated before scoring): train is cells.tsv's
+    3,435 F cdf/tail cells, the set T-3567 chose the form on (`score_train.py`): 2,647/3,350/3,403 (77.1%), against
+    the correctly rounded 1,497/2,972/3,165; hold-out 80.5%, within the margin, and above CR there.
   - Fresh sweep probes-numeric t3580-f-fresh (2,400 cells, drawn and excel-graph-filled after the freeze at 3f4e01a2):
     1,867/2,280/2,335 against main 1,278/1,924/2,040 and the correctly rounded 932/1,718/1,872; 0 newly visibly off.
   - Gate A envelope: 2,400/2,400 fresh-sweep cells inside (none to list; math attached as
