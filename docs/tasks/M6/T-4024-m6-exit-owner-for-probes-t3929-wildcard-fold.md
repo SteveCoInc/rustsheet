@@ -3,7 +3,7 @@ id: T-4024
 title: "M6 exit owner for probes/t3929-wildcard-fold-xmatch Calc!E3, E7, E29, E30: they pass once T-3904 and T-4013 land"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -44,3 +44,9 @@ pass once T-3904 and T-4013 land; if those two do not fix them, this task finds 
 ## Out of scope
 - The comparison itself: the weightless characters (T-3904) and the MATCH classes (T-4013).
 - The criteria cells of probes/t3929-wildcard-fold-criteria (M2 row; T-3904 and T-4013 own them).
+
+## Outcome
+T-3904 and T-4013 had already merged. On origin/main (`make eval`), `probes/t3929-wildcard-fold-xmatch.case.json`
+passes 210/210, including Calc!E3, E7, E29 and E30. eval/baseline/probes.txt already holds no known-failure lines for
+the case (only the `C` case line), so there was nothing to remove; `python3 scripts/exit_owners.py --milestone M6`
+lists no cells. No code change. Eval delta: none.
