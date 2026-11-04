@@ -712,6 +712,20 @@ fn time_groups_read_the_time_of_day() {
 }
 
 #[test]
+fn date_groups_compare_the_rounded_date_to_start_and_end() {
+    // T-4236: 10:30:14.6 rounds to startDate (10:30:15), so it is in January, not below the
+    // range; 2020-03-01 00:00:00.4 rounds to endDate, which is inside the range (March).
+    let definition = grouped_definition()
+        .replace("2019-05-20T23:59:59.6", "2019-01-15T10:30:14.6")
+        .replace(
+            r#"<d v="2020-02-29T00:00:00"/>"#,
+            r#"<d v="2020-03-01T00:00:00.4"/>"#,
+        );
+    let (caches, _) = load(&grouped_parts(definition));
+    assert_eq!(caches[0].fields[0].records, [1, 1, 3, 0]);
+}
+
+#[test]
 fn malformed_groups_skip_the_cache() {
     // A month group needs 14 items.
     let short = grouped_definition().replace(r#"<s v="Dec"/>"#, "");

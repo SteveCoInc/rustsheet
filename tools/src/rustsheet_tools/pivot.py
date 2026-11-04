@@ -25,15 +25,23 @@ A pivot may group its row field by numeric ranges (T-4228), the `<fieldGroup>` o
 
 The row field must then hold numbers and the pivot has no column field. `items` are the group
 labels in order, written as the `<groupItems>`: the first for values below `start`, the last for
-values past `end`. Excel stores no record's group, so the builder renders no cells for a grouped
-pivot (which group a record falls in is what such a probe asks): Excel lays the pivot out itself on
-load (excel-graph, T-4228), and the engine adapter does not register it (T-4235).
+values past `end`. A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hours`, `days`,
+`months`, `quarters` or `years`, ECMA-376's `groupBy`) with `interval` 1, and `start` and `end` are
+date serials (written as `startDate` and `endDate`); its row field holds date serials, which the
+case should give a date number format (Excel groups a field by date only when its cells are dates),
+and is cached as dates (truncated to the second; Excel refreshes the cache on load). Only a grouped
+row field may hold blank (absent) cells, cached as `<m/>`.
+
+Excel stores no record's group, so the builder renders no cells for a grouped pivot (which group a
+record falls in is what such a probe asks): Excel lays the pivot out itself on load (excel-graph,
+T-4228), and the engine adapter does not register it (T-4235).
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any
 from xml.sax.saxutils import quoteattr
 
@@ -52,6 +60,10 @@ _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
 }
 _KEYS = {"name", "source", "location", "row", "column", "value", "function", "rendered", "group"}
 _GROUP_KEYS = {"start", "end", "interval", "items"}
+_DATE_GROUPS = {"seconds", "minutes", "hours", "days", "months", "quarters", "years"}
+# Pivot caches write a date before March 1900 on the OLE epoch (1899-12-30 is 0), so the same
+# epoch serves every serial the builder writes (crates/rustsheet-xlsx `pivot_cache_date_serial`).
+_OLE_EPOCH = datetime(1899, 12, 30)
 
 Cell = str | float
 
@@ -78,7 +90,8 @@ def _split_range(ref: str) -> tuple[int, int, int, int]:
 
 
 def _source(spec: dict[str, Any], own_sheet: str, source: str) -> tuple[str, str, list[list[Any]]]:
-    """The source's sheet name, normalized range and rows of constants, header row first."""
+    """The source's sheet name, normalized range and rows of constants, header row first; an
+    absent cell is None (the caller says where a blank is allowed)."""
     sheet_name, bang, ref = source.rpartition("!")
     sheet_name = sheet_name.strip("'").replace("''", "'") if bang else own_sheet
     by_name = {s["name"]: s for s in spec["sheets"]}
@@ -96,7 +109,7 @@ def _source(spec: dict[str, Any], own_sheet: str, source: str) -> tuple[str, str
         for col in range(c1, c2 + 1):
             a1 = xlsxwriter.utility.xl_rowcol_to_cell(row, col)
             raw = cells.get(a1)
-            if (
+            if raw is not None and (
                 isinstance(raw, bool)
                 or not isinstance(raw, str | int | float)
                 or raw == ""
@@ -142,6 +155,10 @@ class _Pivot:
         self.row = self._field(pivot["row"], text=self.group is None)
         self.column = None if pivot.get("column") is None else self._field(pivot["column"], text=True)
         self.value = self._field(pivot["value"], text=False)
+        for i, name in enumerate(header):
+            if (i != self.row or self.group is None) and any(r[i] is None for r in self.records):
+                msg = f"pivot source field {name!r} has a blank cell (only a grouped row field may)"
+                raise ValueError(msg)
         if len({self.row, self.column, self.value} - {None}) != (2 if self.column is None else 3):
             msg = "a pivot's row, column and value fields must differ"
             raise ValueError(msg)
@@ -158,11 +175,15 @@ class _Pivot:
             msg = f"pivot field {name!r} is not in the source header {self.fields!r}"
             raise ValueError(msg)
         index = self.fields.index(name)
-        if any(isinstance(r[index], str) != text for r in self.records):
+        if any(isinstance(r[index], str) != text for r in self.records if r[index] is not None):
             kind = "text" if text else "numbers"
             msg = f"pivot field {name!r} must hold only {kind}"
             raise ValueError(msg)
         return index
+
+    def _dates(self, index: int) -> bool:
+        """Whether field `index` is cached as dates: the row field of a date group."""
+        return index == self.row and self.group is not None and self.group.by is not None
 
     def _order(self, index: int) -> list[str]:
         if index == self.row and self.group is not None:
@@ -242,12 +263,19 @@ class _Pivot:
                 items = "".join(f"<s v={quoteattr(v)}/>" for v in self.shared[i])
                 shared = f'<sharedItems count="{len(self.shared[i])}">{items}</sharedItems>'
             else:
-                numbers = [float(r[i]) for r in self.records]
-                integer = ' containsInteger="1"' if all(n.is_integer() for n in numbers) else ""
-                shared = (
-                    f'<sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1"{integer}'
-                    f' minValue="{_number(min(numbers))}" maxValue="{_number(max(numbers))}"/>'
-                )
+                numbers = [float(r[i]) for r in self.records if r[i] is not None]
+                blank = ' containsBlank="1"' if len(numbers) < len(self.records) else ""
+                if self._dates(i):
+                    shared = (
+                        '<sharedItems containsSemiMixedTypes="0" containsNonDate="0" containsDate="1"'
+                        f' containsString="0"{blank} minDate="{_iso(min(numbers))}" maxDate="{_iso(max(numbers))}"/>'
+                    )
+                else:
+                    integer = ' containsInteger="1"' if all(n.is_integer() for n in numbers) else ""
+                    shared = (
+                        f'<sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1"{integer}'
+                        f'{blank} minValue="{_number(min(numbers))}" maxValue="{_number(max(numbers))}"/>'
+                    )
             if i == self.row and self.group is not None:
                 shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
@@ -265,6 +293,10 @@ class _Pivot:
             + "".join(
                 f'<x v="{self.shared[i].index(v)}"/>'
                 if isinstance(v, str)
+                else "<m/>"
+                if v is None
+                else f'<d v="{_iso(float(v))}"/>'
+                if self._dates(i)
                 else f'<n v="{_number(float(v))}"/>'
                 for i, v in enumerate(record)
             )
@@ -328,27 +360,47 @@ class _Pivot:
 
 @dataclass(frozen=True)
 class _Group:
-    """A numeric range grouping of the row field (`<rangePr>` with `<groupItems>`)."""
+    """A numeric range or date grouping of the row field (`<rangePr>` with `<groupItems>`)."""
 
     start: float
     end: float
     interval: float
     items: list[str]
+    by: str | None = None  # `groupBy` of a date group; None groups numbers
 
     def xml(self, *, base: int) -> str:
         items = "".join(f"<s v={quoteattr(v)}/>" for v in self.items)
+        if self.by is None:
+            bounds = (
+                f'startNum="{_number(self.start)}" endNum="{_number(self.end)}"'
+                f' groupInterval="{_number(self.interval)}"'
+            )
+        else:
+            bounds = f'groupBy="{self.by}" startDate="{_iso(self.start)}" endDate="{_iso(self.end)}"'
         return (
-            f'<fieldGroup base="{base}"><rangePr autoStart="0" autoEnd="0" startNum="{_number(self.start)}"'
-            f' endNum="{_number(self.end)}" groupInterval="{_number(self.interval)}"/>'
+            f'<fieldGroup base="{base}"><rangePr autoStart="0" autoEnd="0" {bounds}/>'
             f'<groupItems count="{len(self.items)}">{items}</groupItems></fieldGroup>'
         )
+
+
+def _iso(serial: float) -> str:
+    """A date serial as a pivot cache writes it, to the whole second (truncated; the cache is
+    refreshed on load, so it only has to parse)."""
+    if not 0 <= serial < 2958466:
+        msg = f"a pivot date serial must be 0 to 9999-12-31: {serial!r}"
+        raise ValueError(msg)
+    return (_OLE_EPOCH + timedelta(seconds=int(serial * 86400))).strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def _group(raw: Any) -> _Group | None:
     if raw is None:
         return None
-    if not isinstance(raw, dict) or set(raw) != _GROUP_KEYS:
-        msg = f"a pivot group has exactly the keys {sorted(_GROUP_KEYS)}: {raw!r}"
+    if not isinstance(raw, dict) or set(raw) - {"by"} != _GROUP_KEYS:
+        msg = f"a pivot group has exactly the keys {sorted(_GROUP_KEYS)} (and optionally by): {raw!r}"
+        raise ValueError(msg)
+    by = raw.get("by")
+    if by is not None and (by not in _DATE_GROUPS or raw["interval"] != 1):
+        msg = f"a date group's by is one of {sorted(_DATE_GROUPS)} with interval 1: {raw!r}"
         raise ValueError(msg)
     bounds = [raw["start"], raw["end"], raw["interval"]]
     if any(isinstance(b, bool) or not isinstance(b, int | float) for b in bounds):
@@ -367,7 +419,10 @@ def _group(raw: Any) -> _Group | None:
     ):
         msg = f"a pivot group's items are three or more distinct texts: {items!r}"
         raise ValueError(msg)
-    return _Group(start, end, interval, items)
+    if by is not None:
+        for bound in (start, end):
+            _iso(bound)  # refuses a serial off the calendar
+    return _Group(start, end, interval, items, by)
 
 
 def rendered_cells(spec: dict[str, Any], sheet: dict[str, Any], pivot: dict[str, Any]) -> dict[str, Cell]:
