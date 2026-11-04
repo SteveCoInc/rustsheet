@@ -4132,7 +4132,7 @@ within 1E-15 relative / largest relative error:
 - df1 2: 1 / 13 / 18 / 2.0E-8 (1.1E-12 without x = 20, and the zeros below counted as 1.0); 3: 1 / 16 / 24 / 1.4E-14; 4: 3 / 21 / 27 / 1.1E-14; 6: 0 / 7 / 14 / 2.1E-14;
   7: 0 / 10 / 14 / 4.3E-14; 8: 1 / 10 / 11 / 2.8E-14; 10: 2 / 9 / 10 / 2.8E-14; 12: 0 / 7 / 11 / 8.7E-14;
   16: 0 / 3 / 4 / 5.5E-14; 20: 1 / 2 / 4 / 9.7E-14; 30: 0 / 3 / 5 / 1.1E-13 (42 referenced); 40: 0 / 1 / 2 / 5.8E-14 (42);
-  60: 0 / 0 / 2 / 1.4E-13 (42); 79: 0 / 0 / 0 / 8.3E-14 (36 referenced, and 8 of the others are `#NUM!` at df2 1E10).
+  60: 0 / 0 / 2 / 1.4E-13 (42); 79: 0 / 0 / 0 / 8.3E-14 (30 numeric referenced; 8 cells are `#NUM!`, below).
   So Excel is not correctly rounded at any df1 and the error is not specific to b = 2.5. At df1 = 3 to 79 it grows with
   df1 x up to about 1E-13, the pattern of df1 = 5. At df1 = 2 (b = 1) it is much larger and grows steeply with x: the
   maximum relative error per x is 2.8E-16 (1.5), 3.8E-16 (2), 1.6E-15 (3), 6.7E-15 (5), 5.5E-14 (7), 1.1E-12 (10) and
@@ -4142,10 +4142,12 @@ within 1E-15 relative / largest relative error:
   Q(df1/2, df1 x/2), exact to about df1 x / df2): `F.DIST.RT(50,2,d2)` (1.9E-22) for all six df2, `F.DIST.RT(50,30,d2)`
   (4E-297) for all six, and `F.DIST.RT(20,79,d2)` (9E-278) for df2 1E7 to 1E9 (at 1E10 it is `#NUM!`). The other zeros
   (x = 50 at df1 = 40, 60, 79: 4E-395, 5E-591, 4E-777) are correct underflow. `reference.py` prints every such cell.
-  The cells with no stable 50-digit reference are exactly these zero/underflow tails, so the counts above do not hide
-  a non-zero Excel value.
-- `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells): the same df2 x df1 cut
-  family as T-1530, here at df1 = 79.
+  The cells with no stable 50-digit reference are these zero/underflow tails and two of the `#NUM!` cells, so the counts
+  above do not hide a non-zero Excel value.
+- `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
+  to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
+  itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
+  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
 ## F-distribution df limit (T-1530)
@@ -4169,6 +4171,8 @@ Tasks: T-1530, T-1538
 - Ours: the hang is gone (the quantile is a bisection on the `statrs` cdf from df 1E5), but the cdf and quantile are off in
   about the 6th digit at df 1E10 (`F.INV(0.5,1E10,1E10)` = 1.0000025, Excel 1) and `F.DIST(...,FALSE)` at df 1E10 is
   `#NUM!` (`statrs` pdf) where Excel gives a number. 16 of 58 cells of the case fail (A1-A14, A57, A58); T-1538 closes them.
+
+Note (T-4017): the rule above is incomplete: `F.DIST.RT(x,79,1E10)` is `#NUM!` although neither df exceeds 1E10 (see "Incomplete beta at a huge first shape").
 
 ## F density's small-shape constant past its fit set
 Rule: the F density model's small-shape constants (`SMALL_SHAPE_OFFSET` 5.33 and the Stirling errors 0.22 at 1/2
