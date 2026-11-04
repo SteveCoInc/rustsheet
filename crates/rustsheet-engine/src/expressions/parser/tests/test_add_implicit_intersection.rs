@@ -244,6 +244,73 @@ fn defined_names_and_dynamic_functions() {
     }
 }
 
+// T-3856: a name whose body is one literal or one cell, of any sheet, reads as that body: no `@`
+// at the root, under ABS or as an IF arm, and a number body is a literal INDEX index; an array
+// constant, a range, a one-cell range and a computed body take the `@`
+// (probes/t3856-legacy-at-name-body, probes/t3297-legacy-if-index-arm-name-table I35, I36).
+#[test]
+fn defined_names_by_their_body() {
+    let worksheets = vec!["Sheet1".to_string(), "S2".to_string()];
+    let names = [
+        ("nNum", "3"),
+        ("nTxt", "\"x\""),
+        ("nBool", "TRUE"),
+        ("nCell", "Sheet1!$Z$3"),
+        ("nOther", "=S2!$A$3"),
+        ("nArr1", "{3}"),
+        ("nRng", "Sheet1!$Z$1:$Z$6"),
+        ("nCalc", "1+2"),
+        ("nCellR", "Sheet1!$Z$3:$Z$3"),
+    ]
+    .map(|(name, body)| (name.to_string(), None, body.to_string()))
+    .to_vec();
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 1,
+    };
+    let cases = [
+        ("nNum", "nNum"),
+        ("ABS(nTxt)", "ABS(nTxt)"),
+        ("IF(TRUE,nBool)", "IF(TRUE,nBool)"),
+        ("ABS(IF(TRUE,nCell))", "ABS(IF(TRUE,nCell))"),
+        ("IF(TRUE,nOther)", "IF(TRUE,nOther)"),
+        ("INDEX(Z1:Z6,nNum)", "INDEX(Z1:Z6,nNum)"),
+        ("ABS(INDEX(Z1:Z6,3,1))", "ABS(INDEX(Z1:Z6,3,1))"),
+        ("INDEX(Z1:Z6,A20)", "@INDEX(Z1:Z6,A20)"),
+        ("INDEX(Z1:Z6,0)", "@INDEX(Z1:Z6,0)"),
+        ("IF(TRUE,INDEX(Z1:Z6,nNum))", "IF(TRUE,INDEX(Z1:Z6,nNum))"),
+        ("INDEX(Z1:Z6,nCell)", "@INDEX(Z1:Z6,nCell)"),
+        (
+            "ABS(IF(TRUE,INDEX(Z1:Z6,nTxt)))",
+            "ABS(@IF(TRUE,INDEX(Z1:Z6,nTxt)))",
+        ),
+        (
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nBool)))",
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nBool)))",
+        ),
+        ("nArr1", "@nArr1"),
+        ("ABS(nRng)", "ABS(@nRng)"),
+        ("IF(TRUE,nCalc)", "@IF(TRUE,nCalc)"),
+        (
+            "IF(TRUE,INDEX(Z1:Z6,nCellR))",
+            "@IF(TRUE,INDEX(Z1:Z6,@nCellR))",
+        ),
+        ("SUM(nRng)", "SUM(nRng)"),
+        ("INDEX(Z1:Z6,3)", "INDEX(Z1:Z6,3)"),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
 // T-3297: a single-cell INDEX arm over a 4-argument form, a union, a sheet-qualified range, an
 // out-of-range literal, a defined name or a table area shows no `@`; a negated or boolean index
 // keeps it; an array-constant CHOOSE index over cell, computed or text arms moves it to the call,
