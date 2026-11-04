@@ -3661,6 +3661,12 @@ Rule: the entries above assembled in one TOMS 708 port (Excel's EXP, LN, GAMMALN
     own density for P, with D the bgrat increment for c < 1 and x0^a0 in double-double for c = 1. Where that density
     is not a normal double (it underflows while W, times S's large powers, does not) or x0^a0 is past e^-650, today's
     kernel answers. F, BINOM and NEGBINOM stay on today's kernel (T-3712).
+  - The composition is taken up to a0 = 1E7 (`MAX_BUP_A0`; T-3754, docs/research/t3754). T-3568's probes stop at
+    a0 = 3000, but between 3000 and 1E7 the fallback (Cephes on df1 x/(df1 x + df2)) is what is inaccurate: on F at
+    df1 4 to 20 and df2 1E5 to 1.5E7 it was 1.6E-12 to 3.7E-10 relative off the 50-digit math, the composition is within
+    8E-15. `F.DIST.RT(1.09080885395379,8,5567623)` (probes-numeric t3354-f-dist-sweep S!C168, a0 = 2783811.5, b0 = 4)
+    was 0.3658936312385961; it is now 1 ulp above Excel's correctly rounded 0.3658936312909749. Above 1E7 the cap
+    stays: at a0 = 5E9 the composition takes t2528-f-dist-huge-df2 A4 and A16 visibly off (T-3569).
 - **Why TOMS bgrat lost at b ≠ 1/2 (T-2512).** TOMS passes bgrat's 15·eps = 15e-15 to grat1, whose continued fraction
   (z >= 1.1 on every such cell) stops tens of ulps short. On 2,908 direct bgrat cells (t2512-r3-bgrat-split):
   - TOMS in doubles with Excel's pieces scores 13/142/162, and 139/1,263/1,834 at eps 1e-15.
@@ -4172,6 +4178,8 @@ within 1E-15 relative / largest relative error:
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
   (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
+Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
+moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
 ## F-distribution df limit (T-1530)
