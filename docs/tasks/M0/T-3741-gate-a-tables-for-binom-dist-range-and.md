@@ -3,7 +3,7 @@ id: T-3741
 title: "Gate A tables for BINOM.DIST.RANGE and BINOM.INV (fresh sweep at n to 2^31 - 2)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
