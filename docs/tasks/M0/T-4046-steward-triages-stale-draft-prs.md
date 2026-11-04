@@ -50,10 +50,11 @@ Decision 0264 has the full account and the options considered.
 
 ## Outcome
 Docs and skill only: decision 0264, the steward skill's "Stale drafts" rule, routine step 5 and
-one sentence in agent-workflow. No code or eval change. Applied to the nine drafts on 2026-11-04,
-the rule buckets them as follows:
-- superseded: #2635, #2624;
-- blocker gone: #2671;
-- owner needed: #2788;
-- ready: #2717, #2640;
-- otherwise (salvage or re-assess): #1885, #2529, #2573.
+one sentence in agent-workflow. No code or eval change. On 2026-11-04 the owner approved applying the rule to the
+nine drafts by hand:
+- closed as superseded: #2635 (merged as #2809); #2624 (task ids now collide with `main`); #2640 (decision 0250,
+  T-3623 #2841, fixed the exit_owners parsing that it worked around);
+- closed at the owner's request: #2788 (another session owns T-3544);
+- blocker gone: #2671, with T-3424 unblocked on its branch (T-3579 is done) for the opus worker;
+- ready: #2717, marked ready and enqueued;
+- salvage filed, then closed: #1885 (T-4050), #2529 (T-4051; T-3406 refuted its engine stage), #2573 (T-4052).
