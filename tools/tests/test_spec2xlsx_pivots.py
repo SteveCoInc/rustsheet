@@ -132,3 +132,70 @@ def test_rendered_cells_must_match_the_layout() -> None:
     rendered["B5"] = 99
     with pytest.raises(ValueError, match="differ from its layout"):
         build_xlsx(spec)
+
+
+_GROUP = {"start": 0, "end": 10, "interval": 5, "items": ["<0", "0-4", "5-9", ">10"]}
+_GROUPED = {"name": "Pg", "source": "Data!B1:C4", "location": "A3", "row": "Sales", "value": "Sales"}
+
+
+def _grouped_spec(group: object) -> dict[str, Any]:
+    data = {"A1": "N", "B1": "Sales", "A2": 1, "B2": 2, "A3": 7.5, "B3": 4, "A4": 12, "B4": 8}
+    pivot = _GROUPED | {"source": "Data!A1:B4", "row": "N", "group": group}
+    return {
+        "sheets": [
+            {"name": "Data", "cells": data},
+            {"name": "P", "cells": {"H1": "=1"}, "pivot_tables": [pivot]},
+        ]
+    }
+
+
+def test_range_grouped_pivot() -> None:
+    # T-4228: the row field groups by `<rangePr>`, its items index the group labels, and the
+    # builder renders no cells (Excel lays a grouped pivot out on load).
+    spec = _grouped_spec(_GROUP)
+    parts = _parts(spec)
+    definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert (
+        'minValue="1" maxValue="12"/><fieldGroup base="0"><rangePr autoStart="0" autoEnd="0" startNum="0"'
+        ' endNum="10" groupInterval="5"/><groupItems count="4"><s v="&lt;0"/><s v="0-4"/><s v="5-9"/>'
+        '<s v="&gt;10"/></groupItems></fieldGroup></cacheField>'
+    ) in definition
+    assert '<r><n v="7.5"/><n v="4"/></r>' in parts["xl/pivotCache/pivotCacheRecords1.xml"]
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert '<location ref="A3:B8" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>' in table
+    assert (
+        '<pivotField axis="axisRow" showAll="0"><items count="5"><item x="0"/><item x="1"/>'
+        '<item x="2"/><item x="3"/><item t="default"/></items></pivotField>'
+    ) in table
+    assert '<rowItems count="5"><i><x/></i><i><x v="1"/></i>' in table
+    assert not re.search(r'<c r="A3"', parts["xl/worksheets/sheet2.xml"])
+    assert not bake_pivots(spec)  # nothing to bake
+
+
+@pytest.mark.parametrize(
+    ("group", "message"),
+    [
+        ({"start": 0, "end": 10, "interval": 5}, "exactly the keys"),
+        (_GROUP | {"start": "0"}, "are numbers"),
+        (_GROUP | {"interval": True}, "are numbers"),
+        (_GROUP | {"start": 10}, "start < end"),
+        (_GROUP | {"interval": 0}, "interval > 0"),
+        (_GROUP | {"items": ["<0", ">10"]}, "three or more distinct texts"),
+        (_GROUP | {"items": ["a", "a", "b"]}, "three or more distinct texts"),
+        ("range", "exactly the keys"),
+    ],
+)
+def test_malformed_groups_are_refused(group: object, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_xlsx(_grouped_spec(group))
+
+
+def test_grouped_pivot_refusals() -> None:
+    with pytest.raises(ValueError, match="no column field"):
+        build_xlsx(_spec(_PIVOT | {"group": _GROUP}))
+    with pytest.raises(ValueError, match="must hold only numbers"):
+        build_xlsx(_spec({k: v for k, v in _PIVOT.items() if k != "column"} | {"group": _GROUP}))
+    spec = _grouped_spec(_GROUP)
+    spec["sheets"][1]["pivot_tables"][0]["rendered"] = {"A3": "Row Labels"}
+    with pytest.raises(ValueError, match="differ from its layout"):
+        build_xlsx(spec)

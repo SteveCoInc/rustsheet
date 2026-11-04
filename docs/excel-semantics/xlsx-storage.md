@@ -158,8 +158,15 @@ has no Function variant for the last three, so nothing is
 exported for them. GROUPBY and PIVOTBY (not on XlsxWriter's list) have `_xlfn.` arms since T-1322 and T-1326. PERCENTOF has an arm since T-0416. The case builder (which reads these arms) now prefixes it, and a
 sheet's `bare_function_names` list keeps a cell's names as typed, so function-name-forms A1 still
 stores the bare form (refilled 2026-10-13: still `#NAME?`). The gen-m5/m6/m7 cases that call PERCENTOF
-were refilled with the prefixed form. Two existing arms
-add a prefix Excel-authored workbooks omit (`GAMMALN`, `ISO.CEILING`): T-0417.
+were refilled with the prefixed form.
+GAMMALN and ISO.CEILING are stored bare, like CEILING (T-0417): Excel-authored
+rustsheet-xlsx/tests/calc_tests/STATISTICAL/GAMMALN_GAMMALNPRECISE.xlsx (Microsoft Excel 16.0300) stores `GAMMALN(A2)`
+beside `_xlfn.GAMMALN.PRECISE(A2)`, and MATH_AND_TRIGONOMETRY/FLOOR_CEILING.xlsx (Microsoft Excel Online) stores
+`ISO.CEILING($A175,B$2)`; neither is on XlsxWriter 3.2.9's list. The exporter wrote both prefixed until T-0417, and so did
+the case builder: Excel accepts the prefixed forms, since none of the 16,517 GAMMALN and 335 ISO.CEILING cells of the
+eval suites' excel-graph oracle files built that way (for example probes-numeric/t1042-gamma-int-1-90 A91 `GAMMALN(1)` =
+0, probes/t2715-ceiling-floor-subnormal-ratio G1) is `#NAME?`. The arms are gone, so the exporter and the case builder
+write them bare (test `test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix`).
 Tasks: T-0040, T-0412, T-0416, T-0417, T-1089
 
 ## Written parentheses are stored as written; `@(x)` is `_xlfn.SINGLE((x))`

@@ -563,3 +563,25 @@ fn test_export_ceiling_has_no_xlfn_prefix() {
         "CEILING(2.5,2)+_xlfn.CEILING.MATH(2.5,2)"
     );
 }
+
+#[test]
+fn test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix() {
+    // T-0417: Excel stores both bare, unlike their newer siblings: Excel-authored
+    // rustsheet-xlsx/tests/calc_tests/STATISTICAL/GAMMALN_GAMMALNPRECISE.xlsx has
+    // `GAMMALN(A2)` beside `_xlfn.GAMMALN.PRECISE(A2)`, and Excel Online's
+    // MATH_AND_TRIGONOMETRY/FLOOR_CEILING.xlsx has `ISO.CEILING($A175,B$2)`.
+    let mut parser = new_parser(vec!["Sheet1".to_string()], vec![], HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 1,
+        column: 1,
+    };
+    let t = parser.parse(
+        "GAMMALN(A2)+GAMMALN.PRECISE(A2)+ISO.CEILING(2.5,2)",
+        &cell_reference,
+    );
+    assert_eq!(
+        to_excel_string(&t, &cell_reference),
+        "GAMMALN(A2)+_xlfn.GAMMALN.PRECISE(A2)+ISO.CEILING(2.5,2)"
+    );
+}

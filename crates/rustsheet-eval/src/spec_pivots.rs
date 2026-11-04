@@ -43,7 +43,9 @@ pub fn add_pivots(
     sheet: &SheetSpec,
     id: SheetId,
 ) -> Result<(), EditError> {
-    for pivot in &sheet.pivot_tables {
+    // A grouped pivot is not registered until the engine groups spec pivots (T-4235): GETPIVOTDATA
+    // against it is `#REF!`, a known failure of probes/t4228-pivot-range-groups.
+    for pivot in sheet.pivot_tables.iter().filter(|p| p.group.is_none()) {
         let input = pivot_input(spec, ids, sheet, id, pivot)?;
         tx.add_pivot_table(&input)?;
     }

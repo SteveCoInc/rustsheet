@@ -12,7 +12,7 @@ merged since its last run.
 This run follows #3106, the 2026-11-04 05:50 UTC run (squash-merged as 66fc010b at 06:45 UTC). It covers the 106 commits merged to `main` after 66fc010b up to ac67b6d2 (#3215), the head when this run started; `make eval` ran on ac67b6d2 (clean tree apart from this run's UPSTREAM.md and duplication ratchet).
 
 - All 17 suites were scored. calipers, corpus-bench and poi were again not fetched in this container, so the first `make eval` skipped them; I ran `rustsheet-eval fetch` for the three and ran `make eval` again. Timeouts: 0 in every suite.
-- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 2,993 allowed in 267 cases to 1,545 in-scope visibly-off cells in 222 cases (0 in new cases).
+- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 2,993 allowed in 267 cases to 1,545 in-scope visibly-off cells in 222 cases (0 in new cases). After merging `main` (#3218 to #3222 landed during the run, adding t4228 and the t3629 table-edit cases), the lock allows 1,667 in 223 cases, which `make eval-check` confirms exactly.
 - The dashboard has this run's numbers (`make progress-report`; the judgment blocks pass `--check`).
 
 CI on `main` is green: the last 60 `ci.yml` push runs on `main` succeeded, through ac67b6d2.
