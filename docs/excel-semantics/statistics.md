@@ -4180,10 +4180,11 @@ within 1E-15 relative / largest relative error:
   is `#NUM!` for b = 38.5 to 39.5 and 0 (a number) from b = 40, and has the same type (number or `#NUM!`) as the F result at
   the same shapes (b = 30 to 38 numbers); the values agree only to about 6 digits (`BETA.DIST` x is a rounded copy of
   df2/(df2 + df1 x), and at a = 5E9 one ulp of x moves I by about 5E-7). The first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
-  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at 1E9 to 6E9, and about 1E-6 to 7E-6 at 5E9; whether
+  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at a other than 5E9, and about 3E-7 to 7E-6 at 5E9 (1E-2074 at x = 0.999999); whether
   the edge depends on x is unpinned). So the lower edge falls as a grows and the upper edge is b0 < 40, the
-  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at df1 80 and 100 (df2 1E10) is about 7E-9 relative from the 60-digit
-  mpmath value, the engine about 6.5E-8 (A39, A40, A61, A62). df2 = 2E10 is `#NUM!` for every
+  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
+  (df2 5E9) is within 9E-10 to 7E-9 relative of a 60-digit mpmath `betainc` (computed at review, not committed), the engine
+  1E-8 to 1.4E-7 off. df2 = 2E10 is `#NUM!` for every
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
