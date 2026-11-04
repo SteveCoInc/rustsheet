@@ -46,8 +46,10 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   significant digits as written are below 1,000,000, with n = 1..15 and no positive exponent, through
   `decimal_round::x87_decimal_to_f64` (T-3931's helper, now `pub(crate)`): the digits as written, trailing
   zeros included, times round64(10^-n), rounded to 64 bits and stored. Longer text, positive exponents and
-  n > 15 keep the nearest double, so no probe was needed for them (the 15-digit T-3945 point,
-  probes/t3945-atan-near-midpoint, still fails its 9 cells, as in the baseline).
+  n > 15 keep the nearest double, so no probe was needed for them. The 15-digit T-3945 point
+  (probes/t3945-atan-near-midpoint S!B203:B204, S!C1, S!C3, S!C5, S!C7:C10, probes-numeric/t3643-r4-log-modulus
+  C111) therefore still fails, as in the baseline: T-4077 owns those cells and the longer-literal probe, and
+  T-3997 now depends on it.
 - Formulas are reparsed from their printed text, and a literal printed at 15 digits can read one ulp off
   (`=4910E-9` as `4.91e-6` reads one ulp high, `=14550E-15` as `1.455e-11` reads as the nearest):
   `literal_text` in stringify/literals.rs prints the digits with trailing zeros added (`4910e-9`, `14550e-15`)
@@ -72,4 +74,5 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   equals its train rate. Fresh sweep: probes-numeric/t3658-round-scaling-fresh (frozen model, T-3658) 362/362 literal and
   VALUE cells bit-exact, so all inside the Gate A envelope.
 - Follow-ups: T-4063 (probe TRUNC and ROUND with nothing dropped at these points, from the T-3931 fidelity review);
-  T-4074 (probe the unprobed readers and FORMULATEXT, from this task's fidelity review).
+  T-4074 (probe the unprobed readers and FORMULATEXT, from this task's fidelity review); T-4077 (7- to 15-digit
+  literals and number text, the cells above).

@@ -207,8 +207,8 @@ fn strip_trailing_zeros(mut digits: u64, mut place: i64) -> (u64, i64) {
     (digits, place)
 }
 
-/// The double Excel's ROUND and ROUNDDOWN return for the decimal `digits * 10^place`, and number
-/// text and literals read as (`parse_excel_number`, digits as written; T-3932) (`place` =
+/// The double Excel's ROUND and ROUNDDOWN return for the decimal `digits * 10^place`, and the
+/// double number text and literals read as (`parse_excel_number`, digits as written; T-3932) (`place` =
 /// -n): `digits` times 10^-n rounded to a 64-bit significand, that product rounded to 64 bits and
 /// then to a double, an x87 multiply in extended precision stored to a double. It is one ulp from
 /// the nearest double for about 1 in 5,000 short decimals: `ROUND(4.91499999999999E-06,8)` is

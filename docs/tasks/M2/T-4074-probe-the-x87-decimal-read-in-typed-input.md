@@ -27,7 +27,8 @@ Oracle evidence says whether the readers that share `parse_excel_number` with li
 ## Acceptance criteria
 - [ ] A probes-numeric case, oracle-filled (excel-graph): typed input `4.91E-06` and `4.91%`-style percent text
       at a model-off point, `"4.91E-06"+0`, `COUNTIF` with a `"=4.91E-06"` criterion over both doubles,
-      `NUMBERVALUE("4.91E-06")`, and `FORMULATEXT` of `=4910E-9`, `=14550E-15`, `=4.91E-06`.
+      `NUMBERVALUE("4.91E-06")`, and `FORMULATEXT` of `=4910E-9`, `=14550E-15`, `=4.91E-06`; plus the decimal-point literal forms
+      `=0.00000491`, `=4.91E-06` and `=-0.00000491` (the t3658 cases hold only `mE-n` forms).
 - [ ] numbers.md records each result (VERIFIED or the rule found); a task for any engine change is filed.
 - [ ] `make check` green; reviewers approve.
 

@@ -7,12 +7,14 @@ status: todo
 priority: P3
 size: S
 tier: sonnet
-depends_on: [T-3932]
+depends_on: [T-4077]
 ---
 
 ## Goal
 The two M5 exit cells of probes/t3945-atan-near-midpoint have an owner of their milestone (decision 0096), and they
 pass once T-3932 lands; if T-3932 does not fix them, this task finds and fixes the M5 part that is left.
+T-3932 kept the nearest double for digit strings of 1,000,000 or more, so S!C8 and S!C10 still fail; T-4077 now
+owns the 15-digit read, and this task confirms the cells after it.
 
 ## Context
 - Gap triage 2026-11-03 (`make eval` on origin/main b6ab50e5): `make exit-owners MILESTONE=M5` lists two cells, and
