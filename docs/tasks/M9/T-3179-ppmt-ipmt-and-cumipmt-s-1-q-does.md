@@ -55,7 +55,7 @@ period's IPMT"). Next step: fit CUMIPMT's per-period interest on the single-peri
 candidates: the exact split's `fl(pmt*... )` orderings, `(pv*(1+r)^(per-1) + pmt*((1+r)^(per-1)-1)/r)*r` evaluated as
 Excel's FV, then `-r*FV` with type 1's discount), then check it holds on G4, G15 and the fin-cumipmt cases.
 
-## Landing notes (2026-11-04, opus run)
+## Landing notes (2026-11-04, opus run; resumed 2026-11-04 11:35 UTC)
 - Branch agent/functions-financial/T-3179-cumipmt-one-minus-q, no PR yet. It holds the claim, the probe
   (probes/t3179-cumipmt-ipmt-sum, oracle-filled), its two known failures in eval/baseline/probes.txt (A1, D1: the
   single-period CUMIPMT cells, owned here) and the financial.md entry. `make check-fast` is green on it.
