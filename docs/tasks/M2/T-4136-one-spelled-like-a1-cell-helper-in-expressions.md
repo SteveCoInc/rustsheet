@@ -3,7 +3,7 @@ id: T-4136
 title: "One spelled_like_a1_cell helper in expressions/utils, and the unbound-name quote pass in the parser"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
