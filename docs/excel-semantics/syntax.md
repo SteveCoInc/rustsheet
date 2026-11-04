@@ -608,7 +608,9 @@ agree):
   reads the run as part of the column name, so it is a parse error typed and `#REF!` loaded, and the xlsx export writes
   `T[ [Col] ]`. Since T-3258 untyped text from outside the engine (`Model::set_user_input`, the Python bindings) reads
   it so too (a formula that does not parse, `#ERROR!`), while the engine's own re-entries (fill, copy, paste, move,
-  merge) keep reading the column. **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
+  merge) keep reading the column. Since T-4023 so do a CSE entry (`set_user_array_formula`), a legacy entry
+  (`set_cell_with_legacy_formula`) and the redo of an external entry or pasted text (the undo diff records where its
+  text came from), while a moved array formula, a filled legacy cell and the redo of a copy keep the column. **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
   `<definedName name="N">T[ Col ]</definedName>` (or `T[ Col]`, `T[Col ]`) `=SUM(N)` and `=ROWS(N)` are `#REF!` and
   `=ISREF(N)` is FALSE, as in a cell (probes/t3258-name-padded-column-0..2, excel-graph, 2026-11-04, T-3258). Ours: a
   name body loaded through `Model::define_loaded_name` is read as a file's text and loads as `#REF!`; a name defined
