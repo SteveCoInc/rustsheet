@@ -3,7 +3,7 @@ id: T-2805
 title: "SPEC-0024 step 3: charge the other whole-array readers a LAMBDA can repeat"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
