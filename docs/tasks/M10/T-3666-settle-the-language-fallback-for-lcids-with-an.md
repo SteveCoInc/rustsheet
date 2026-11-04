@@ -3,7 +3,7 @@ id: T-3666
 title: "Settle the language fallback for LCIDs with an unknown sublanguage (0x2412)"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ T-1875 found `[$-2412]` prints English in Excel but `by_language` in formatter/l
 
 ## Out of scope
 -
+
+## Outcome
+Probed 24 plain hex LCIDs (probes/text-locale-invalid-sublanguage, excel-graph). An LCID whose sublanguage is undefined for its language prints English with letter-kept day halves; defined sublanguages keep the language fallback; English (0xF409) stays en-US. Added `sublanguage_defined` (bounds Korean, Japanese, German, Dutch). Rule in number-formats.md. Eval: text-locale-regional-lcids-2 M1:M21 (21 cells) now pass; the new case adds 96 cells, 93 pass; J3, K3, L3 (lowercase halves of 1809/2809/3C09) owned by T-4066. Unprobed languages' sublanguages are still taken as defined.
