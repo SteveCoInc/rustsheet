@@ -3,11 +3,11 @@ id: T-3396
 title: "GAMMA.INV band lower edge at shape 1E10: GAMMA.INV(1E-80,1E10,1) is #NUM! below the cdf-ratio edge"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P0
 size: S
 tier: opus
-depends_on: []
+depends_on: [T-3409]
 campaign: semantics
 ---
 
@@ -27,6 +27,15 @@ GAMMA.INV, CHISQ.INV and the other gamma quantiles at a huge shape are `#NUM!` e
   docs/research/fit-audit/README.md): fit-audit-t3070-band-upper A47 `GAMMA.INV(4.11E-29,11000000000,1)`, A48
   `(3.38E-27,..)` and A49 `(2.89E-26,..)` are `#NUM!` in Excel and values in the engine. T-3409 (a model of
   Excel's search) may explain them together with A122; check it first.
+
+- **Attempt 1 (2026-11-04, decision 0056 time-box).** probes/t3396-gamma-inv-band-huge (256 cells, excel-graph)
+  pins the band at 7E9 to 1.2E10: it closes from both sides as the shape grows and is empty from 1.15E10
+  (statistics.md "GAMMA.INV and CHISQ.INV at a huge shape"). Neither the cdf ratio nor the distance o - z is constant
+  along the lower edge, and a 2-D cut fitted to these points would be an overfit (T-3409's owner ruling), so no rule
+  changed. The probe's off cells, all GAMMA.INV values where Excel is `#NUM!`, are this task's:
+  probes/t3396-gamma-inv-band-huge.case.json S!A35, S!A55:A56, S!A75:A77, S!A95:A98, S!A107:A108, S!A114:A119,
+  S!A129:A140, S!A151:A161. Column B (CHISQ.INV(3E-k,2a), the hold-out fixed before scoring) matches everywhere
+  (all `#NUM!`). Next: T-3409's search model, tested on these cells; this task now waits on it.
 
 ## Acceptance criteria
 - [ ] A filled probe pins the lower edge at shapes 7E9 to 1.2E10; the rule separates every huge-shape quantile cell
