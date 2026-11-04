@@ -3,7 +3,7 @@ id: T-4080
 title: "Probe the BETA.DIST/F #NUM! band edge at a huge first shape: a 1E9..1E10 by b 30..39.5 by tail, to pin the edge as a function of a and x"
 milestone: M9
 lane: research
-status: done
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -41,7 +41,7 @@ shown to have none. T-4044 can then implement the band from evidence, not from a
 ## Acceptance criteria
 - [x] A probe case under eval/suites/probes-numeric, filled by the oracle, covering the grid above.
 - [x] statistics.md gives the edge as a rule with its evidence, or records that the cells admit none and why.
-- [x] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Implementing the band (T-4044). Excel's digits at huge df2 (T-3209, T-4018).
@@ -57,3 +57,18 @@ shown to have none. T-4044 can then implement the band from evidence, not from a
   a fit (decision 0056 guards) or probe a finer a grid.
 - Eval: the new case adds 108 known failures: the 82 band cells (owned by T-4044, amended) and 26 b = 40 cells 1.3E-9
   to 4.6E-8 relative off (deferred T-3209, amended); no other change.
+
+## Landing notes
+- No PR yet. Branch head after this commit; base origin/main c3d019be8. Committed: the case and its oracle and math
+  sidecars (`rustsheet-accuracy math --suite probes-numeric --check` says current), statistics.md, T-4044 and
+  T-3209 amended as owners of the new cells. The Outcome above is drafted; status stays in-progress.
+- Not done: `make eval-baseline` refused at this base (built with CARGO_TARGET_DIR shared with another checkout):
+  probes/seriessum-subnormal-power-and-term Sheet1!A16, B15, B16 and seriessum-subnormal-term-sum-and-power-points
+  Sheet1!B3, B4 show as REGRESSIONS. This branch changes no code, so check whether origin/main itself shows them
+  (a fresh build in its own target dir first); if main is clean, merge origin/main in only if the steward rules allow,
+  then record the baseline (the t4080 case adds 108 known failures: 82 band cells, 26 b = 40 cells).
+- Next: `make eval-baseline`, `make check-fast`, set status done, open the PR, review panel (design, excel-fidelity;
+  docs/eval only, so no security reviewer), enqueue.
+- Do not regenerate math sidecars suite-wide: `rustsheet-accuracy math --suite probes-numeric` rewrote eight
+  unrelated sidecars and timed out at 25 minutes without writing t4080's. A one-case copy of the suite (a temporary
+  suite dir with suite.toml renamed) wrote it in seconds.
