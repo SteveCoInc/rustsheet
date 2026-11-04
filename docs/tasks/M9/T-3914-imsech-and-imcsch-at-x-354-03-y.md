@@ -3,7 +3,7 @@ id: T-3914
 title: "IMSECH and IMCSCH at x = ±354.03, y = 1: Excel's last imaginary digit depends on the sign of x (T-3883's sweep A101)"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
