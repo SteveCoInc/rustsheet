@@ -21,7 +21,7 @@ use rustsheet_engine::pivot::{
 };
 use rustsheet_engine::types::DateSystem;
 
-use super::iso_date::iso8601_to_date_system_serial;
+use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
 use super::worksheets::parse_range;
 use super::xml::{find_start_attribute, start_attribute, XmlNode};
@@ -394,8 +394,9 @@ fn cache_item(
             None => return skip(format!("unknown error {v:?}")),
         },
         // `<d>` is an ISO 8601 text; the cell serial it stands for depends on the workbook's date
-        // system (1904 serials are 1462 days lower).
-        _ => match iso8601_to_date_system_serial(&v, date_system) {
+        // system (1904 serials are 1462 days lower), and below serial 61 Excel writes it on the
+        // 1899-12-30 epoch (T-3182).
+        _ => match pivot_cache_date_serial(&v, date_system) {
             Some(serial) => CacheItem::Date(serial),
             None => return skip(format!("bad date {v:?}")),
         },

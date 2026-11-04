@@ -364,12 +364,14 @@ days (the OLE epoch). It does not use the 1900-system calendar that a `t="d"` ce
   `Years` groups have `rangePr startDate="1899-12-30T00:00:00"`. Excel labels the first group item `<1/0/1900`, which is
   serial 0.
 So within a pivot cache, `1899-12-30T00:00:00` is 0, a time alone is `1899-12-30T<time>`, and serials 1 to 60 come out
-one day earlier than the cell calendar reads them. The importer reads cache `<d>` items with the cell rule
-(`iso8601_to_date_system_serial`). It rejects these dates and skips the whole cache ("bad date"), and with that rule it
-would also misread serials 1 to 60 by a day. The cutoff at 61 is inferred from where the two calendars agree
-(1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom 1900-02-29) and serials 1 to 60 other
-than this one point; whether `rangePr`/`groupItems` dates follow the same rule; 1904 workbooks. No GETPIVOTDATA cell
-depends on it yet.
+one day earlier than the cell calendar reads them. Since T-3182 the importer reads a cache `<d>` item dated 1899-12-30
+to 1900-02-28 on the OLE epoch in a 1900 workbook (`pivot_cache_date_serial`), and later dates with the cell rule
+(`iso8601_to_date_system_serial`); before, it rejected these dates and skipped the whole cache ("bad date"). The cutoff
+at 61 is inferred from where the two calendars agree (1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom
+1900-02-29; the importer reads a cached `1900-02-29` as 60 and `1900-02-28` as 60 too) and serials 1 to 60 other than
+the one point above; whether `rangePr`/`groupItems` dates follow the same rule (the importer does not read them);
+1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
+Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
 Tasks: T-3182
 
 ## Structured references in the file
