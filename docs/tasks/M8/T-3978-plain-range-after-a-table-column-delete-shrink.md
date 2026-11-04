@@ -3,7 +3,7 @@ id: T-3978
 title: "Plain range after a table column delete: shrink to C4:C7 and #REF! kind in table-column-range-delete probes"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
