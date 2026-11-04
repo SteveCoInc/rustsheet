@@ -312,43 +312,43 @@
    },
    "F10": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F11": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F12": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F13": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F14": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F15": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F16": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F17": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F18": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F19": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F2": {
     "t": "b",
@@ -372,15 +372,15 @@
    },
    "F7": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F8": {
     "t": "b",
-    "v": false
+    "v": true
    },
    "F9": {
     "t": "b",
-    "v": false
+    "v": true
    }
   },
   "Crit": {
@@ -767,6 +767,82 @@
    "C9": {
     "t": "s",
     "v": "\u05de"
+   },
+   "D1": {
+    "t": "s",
+    "v": "\u0130"
+   },
+   "D10": {
+    "t": "s",
+    "v": "\u05de"
+   },
+   "D11": {
+    "t": "s",
+    "v": "\u05df"
+   },
+   "D12": {
+    "t": "s",
+    "v": "\u05e0"
+   },
+   "D13": {
+    "t": "s",
+    "v": "\u05e3"
+   },
+   "D14": {
+    "t": "s",
+    "v": "\u05e4"
+   },
+   "D15": {
+    "t": "s",
+    "v": "\u05e5"
+   },
+   "D16": {
+    "t": "s",
+    "v": "\u05e6"
+   },
+   "D17": {
+    "t": "s",
+    "v": "\u0130"
+   },
+   "D18": {
+    "t": "s",
+    "v": "\u03c3"
+   },
+   "D19": {
+    "t": "s",
+    "v": "\u03c2"
+   },
+   "D2": {
+    "t": "s",
+    "v": "i"
+   },
+   "D3": {
+    "t": "s",
+    "v": "\u03d0"
+   },
+   "D4": {
+    "t": "s",
+    "v": "\u03b2"
+   },
+   "D5": {
+    "t": "s",
+    "v": "\ufb00"
+   },
+   "D6": {
+    "t": "s",
+    "v": "ff"
+   },
+   "D7": {
+    "t": "s",
+    "v": "\u05da"
+   },
+   "D8": {
+    "t": "s",
+    "v": "\u05db"
+   },
+   "D9": {
+    "t": "s",
+    "v": "\u05dd"
    }
   },
   "Pre": {
@@ -850,10 +926,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "a9f72e7fe9550809ce443b4b64947c3d998ee3ea579419d42b2d1032b99f8ac6",
+  "input_sha256": "7392d5ab4a77d5f1d8e2d9b853176961f783707526182da8a1a595c8c3c17ec2",
   "kind": "excel-graph",
-  "produced_at": "2026-11-04T00:57:33+00:00",
+  "produced_at": "2026-11-04T01:26:13+00:00",
   "version": null,
-  "workbook_name": "18d9b9414ada743ed2d341acc3f6d577b1aa91988b17bf5b0d1c2a939190ad21.xlsx"
+  "workbook_name": "d3e11ebbb811b41b5e7b7709cb7dd4b102f79f18a89aec47fa4c1eb656040f7d.xlsx"
  }
 }

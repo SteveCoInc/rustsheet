@@ -37,4 +37,4 @@ Cyrillic final forms other than `ς`, and criteria.md's UNVERIFIED line for them
 Probe `probes/t3995-dfunction-fold-final-forms` (excel-graph, 2026-11-04): D-function plain prefix and wildcard criteria
 leave `İ`/`i`, `ϐ`/`β`, `ﬀ`/`ff` apart and fold the Hebrew final forms `ך ם ן ף` with `כ מ נ פ` (as `ץ`/`צ`).
 The engine's lookup fold lacked those four classes; added to `lookup_fold.rs` CLASSES. criteria.md updated. Probe case
-passes (209 cells). No other cells off.
+passes (228 cells), including exact-MATCH controls (Calc!F). lookup.md and scripts.rs comment updated. No other cells off.
