@@ -582,8 +582,8 @@ Tasks: T-1451
 
 ## TEXT's format_text of every argument class (T-3809)
 Rule: a format_text that is not text is read as the text it would display, then used as a code. A number
-is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-1,-1)` is "--1": the code `-1` is a literal `-`
-before a digit, and the value's sign is added), a blank cell or blank range element is empty text (an empty code shows nothing
+is its General text (`TEXT(2,0)` is "2", `TEXT("2.5",0)` is "3", `TEXT(-0.5,-1)` is "--1": the code `-1` is the literals `-` and `1`,
+with no digit placeholder, so the value is never shown and only its minus is added), a blank cell or blank range element is empty text (an empty code shows nothing
 but a negative's minus: number-formats.md "An empty format string returns empty text"), and a boolean is the code `TRUE`/`FALSE`, which the code check rejects, so `TEXT("",TRUE)`,
 `TEXT(TRUE,TRUE)` and `TEXT(A1:B2,TRUE)` are `#VALUE!` (see number-formats.md "TEXT checks the code before it looks at a
 text or boolean value"). A boolean value prints as its text under a numeric code (`TEXT(TRUE,0)` is "TRUE"). Errors:
@@ -594,7 +594,7 @@ is `#NAME?`) and over a range format; an error format wins over any other value,
 Evidence: gen-m5/0428ca72d3724bea (excel-graph, 2026-11-02; `--policy arg-pairs --functions TEXT`, 102 cells over the 51
 unseen (value, format_text) class pairs, Calc!A1:A304 every third row): `TEXT(2,0)` A1, `TEXT(-1,Data!A1:B2)` A31
 ("--1.5", the top-left code -0.5), `TEXT("2.5",0)` A55, `TEXT("",TRUE)` A109, `TEXT(TRUE,0)` A139, `TEXT(#NAME?,#NUM!)`
-A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-").
+A199, `TEXT(#NAME?,TRUE)` A193, `TEXT("abc",#VALUE!)` A79, `TEXT(blank,#NAME?)` A235, `TEXT(Data!A1:B2,"")` A283 ("-"), `TEXT(Data!A1:B2,-1)` A259 ("--1", the top-left value -0.5).
 Status: VERIFIED (excel-graph)
 Ours: matches (102/102 cells).
 Implemented in: `fn_text` (functions/text/common.rs).
