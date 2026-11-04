@@ -436,7 +436,7 @@ fn typed_currency_and_percent_formats() {
 }
 
 #[test]
-fn script_digits_are_mapped_only_by_the_coercion_helper() {
+fn script_digit_coercion_helper_maps_each_block() {
     use crate::formatter::format::ascii_script_digits;
     let map = |s: &str| ascii_script_digits(s).into_owned();
     assert_eq!(map("٣٫"), "3٫");

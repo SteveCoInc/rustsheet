@@ -632,69 +632,70 @@ fn script_digit(c: char) -> Option<(ScriptDigits, char)> {
 struct ScriptDigits {
     zero: u32,
     locale: &'static str,
-    numerals: &'static str,
+    /// The numeral byte of [`Numerals::from_byte`]; the tag suffix is `{byte:X}00`.
+    numeral_byte: u32,
 }
 
 const SCRIPT_DIGITS: [ScriptDigits; 12] = [
     ScriptDigits {
         zero: 0x0660,
         locale: "ar-SA",
-        numerals: "200",
+        numeral_byte: 2,
     },
     ScriptDigits {
         zero: 0x06F0,
         locale: "ar-SA",
-        numerals: "300",
+        numeral_byte: 3,
     },
     ScriptDigits {
         zero: 0x0966,
         locale: "hi-IN",
-        numerals: "400",
+        numeral_byte: 4,
     },
     ScriptDigits {
         zero: 0x09E6,
         locale: "bn-IN",
-        numerals: "500",
+        numeral_byte: 5,
     },
     ScriptDigits {
         zero: 0x0A66,
         locale: "pa-IN",
-        numerals: "600",
+        numeral_byte: 6,
     },
     ScriptDigits {
         zero: 0x0BE6,
         locale: "ta-IN",
-        numerals: "900",
+        numeral_byte: 9,
     },
     ScriptDigits {
         zero: 0x0C66,
         locale: "te-IN",
-        numerals: "A00",
+        numeral_byte: 10,
     },
     ScriptDigits {
         zero: 0x0E50,
         locale: "th-TH",
-        numerals: "D00",
+        numeral_byte: 13,
     },
     ScriptDigits {
         zero: 0x0ED0,
         locale: "lo-LA",
-        numerals: "E00",
+        numeral_byte: 14,
     },
     ScriptDigits {
         zero: 0x0F20,
         locale: "bo-CN",
-        numerals: "F00",
+        numeral_byte: 15,
     },
     ScriptDigits {
         zero: 0x1040,
         locale: "my-MM",
-        numerals: "1000",
+        numeral_byte: 16,
     },
     ScriptDigits {
         zero: 0x17E0,
         locale: "km-KH",
-        numerals: "1200",
+        numeral_byte: 18,
     },
 ];
 
@@ -732,8 +733,11 @@ fn script_digit_format(
     block: ScriptDigits,
 ) -> Option<String> {
     let ScriptDigits {
-        locale, numerals, ..
+        locale,
+        numeral_byte,
+        ..
     } = block;
+    let numerals = format!("{numeral_byte:X}00");
     let tagged = |code: &str| Some(format!("[$-{locale},{numerals}]{code}"));
     let Some(format) = format else {
         // Excel: `١٢٣٤٥٦٧٨٩٠١٢` is `0.#####E+00` (A20); 11 digits and below unprobed.
@@ -908,5 +912,26 @@ fn parse_number(
                 decimal_digits,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod script_digits_table_tests {
+    use super::{ScriptDigits, SCRIPT_DIGITS};
+    use crate::formatter::numerals::Numerals;
+
+    /// `SCRIPT_DIGITS` and `Numerals::from_byte` are one table: each block's numeral byte prints
+    /// that block's own zero (Tamil keeps ASCII `0`, which has no zero digit).
+    #[test]
+    fn script_digits_agree_with_numerals() {
+        for ScriptDigits {
+            zero, numeral_byte, ..
+        } in SCRIPT_DIGITS
+        {
+            match Numerals::from_byte(numeral_byte) {
+                Numerals::Positional { zero: z, .. } => assert_eq!(z, zero, "byte {numeral_byte}"),
+                other => panic!("byte {numeral_byte} is {other:?}"),
+            }
+        }
     }
 }

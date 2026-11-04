@@ -3,7 +3,7 @@ id: T-4158
 title: "One table for script digit blocks: SCRIPT_DIGITS agrees with Numerals::from_byte, and rename the stale coercion-only test"
 milestone: M5
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,6 @@ prints its own zero digit. Also rename the test `script_digits_are_mapped_only_b
 
 ## Out of scope
 - New blocks or tags (T-4107, T-4156).
+
+## Outcome
+`SCRIPT_DIGITS` now stores the numeral byte (suffix formatted as `{byte:X}00` in `script_digit_format`), and a unit test ties every entry to `Numerals::from_byte`. Renamed the stale coercion test to `script_digit_coercion_helper_maps_each_block`. Behaviour unchanged; eval delta none.
