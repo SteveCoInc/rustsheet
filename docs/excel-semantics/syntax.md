@@ -694,12 +694,22 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   typed, in A1 and in R1C1 mode (`='f1'`, `='f1'+1`, `='abc'`, `='F1'`, `=LET(x,1,x+'f1')`: the cell stays blank).
 - A file that stores such a name unbound with its prefix (`=_xlpm.f1`, `=_xlpm.AB12*2`, `=SUM(_xlpm.xy1,2)`) reads it
   as the same undefined name (`#NAME?`), but FORMULATEXT shows the prefix: `=_xlpm.f1` (T-4099).
+- The prefix stays on any unbound name written with it, not only one spelled like a cell, and typed as well as in a
+  file: `=_xlpm.abc`, `=_xlpm.Xfe1`, `=_xlpm.R1C1`, `=_xlpm.abc+_xlpm.f1`, a call `=_xlpm.f1(2)`, in a LET or LAMBDA
+  that binds another name (`=LET(x,1,x+_xlpm.f1)`, `=LAMBDA(x,x+_xlpm.abc)(1)`) are all `#NAME?` with that
+  FORMULATEXT, `=ISREF(_xlpm.f1)` is FALSE, and `=_xlpm.f1` and `=_xlpm.abc` typed in A1 or R1C1 mode keep it too. The
+  letter case is the workbook's first spelling, as for the quoted name: `=_xlpm.F1` after `_xlpm.f1` reads
+  `=_xlpm.f1`. Only a bare `f1` typed in R1C1 mode is quoted. Unprobed: what Excel writes to a file for a typed
+  R1C1 `=f1` (ours writes `_xlpm.f1`, which Excel would show prefixed).
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
 probes/t3897-r1c1-let-cell-names (excel-graph, 2026-11-04), S!A1:C13: names spelled like an A1 cell, bound (rows 1 to
 7, 11, 12) and unbound (rows 8 to 10, 13).
 probes/t4040-r1c1-unbound-cell-names (excel-graph, 2026-11-04), S!A1:C16: the quoted spelling typed (rows 1 to 6),
 unbound names typed in R1C1 mode (rows 7 to 13) and a file's `_xlpm.` names (rows 14 to 16).
+probes/t4099-file-xlpm-unbound-names (excel-graph, 2026-11-04), S!A1:C13: a file's unbound `_xlpm.` names that are no
+cell, mixed, called, under LET, LAMBDA and ISREF, `F1` and `R1C1` (rows 1 to 9), and `_xlpm.f1`, `_xlpm.abc` typed in
+A1 mode (rows 10, 11) and R1C1 mode (rows 12, 13).
 Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
 (`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
 reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
@@ -707,9 +717,13 @@ parameters still re-parse from storage. A structured reference typed in R1C1 mod
 The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`), and the A1 text
 writes a bound one `_xlpm.f1` (`stringify::to_english_string_typed_from_r1c1`), which the typed A1 entry binds where it
 refuses a bare `f1`. An unbound one becomes the quoted name `'f1'` when the formula is parsed
-(`stringify::bound_variables::quote_unbound_cell_shaped_names`, on text with `_xlpm.` and on R1C1 typed text): no LET
-binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The A1 text, the R1C1
-storage form and a file write it `_xlpm.f1`, which reads back quoted (T-4040). The first-spelling table
+(`call_names::quote_unbound_cell_shaped_names`, on R1C1 typed text and on storage text with `_xlpm.`): no LET
+binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The R1C1 storage form and
+a file write it `_xlpm.f1`, which the storage reads back quoted, and the A1 text `_xlpm._xlpm.f1`, which the A1 parser
+reads back quoted, since one prefix there is the name written with it (T-4040, T-4099). The parser keeps the `_xlpm.`
+of every use until the end of the parse, and `call_names::settle_lambda_prefixes` drops it from the bound ones; an
+unbound one keeps it and prints it (`Parser::written_lambda_name`). The storage form writes such a name with two
+prefixes, as its single prefix is its own mark for a name that would read back as something else (T-4099). The first-spelling table
 (`CallNameSpellings`) gives it the workbook's spelling. Ours also shows a file's `_xlpm.f1` quoted (T-4099).
 Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
 whole-row range's second corner.

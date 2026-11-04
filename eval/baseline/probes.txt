@@ -2106,6 +2106,7 @@ C	probes/t4060-collation-open-choices.case.json	222
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
+C	probes/t4099-file-xlpm-unbound-names.case.json	39
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4199-decimal-unprobed-shapes.case.json	87
@@ -6469,9 +6470,6 @@ F	probes/t3945-atan-near-midpoint.case.json	S!C7
 F	probes/t3945-atan-near-midpoint.case.json	S!C8
 F	probes/t3945-atan-near-midpoint.case.json	S!C9
 F	probes/t4014-sheet-api-name-65.case.json	S!A1
-F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C14
-F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C15
-F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C16
 F	probes/t4088-groupby-multifield.case.json	Calc!B1
 F	probes/t4088-groupby-multifield.case.json	Calc!B11
 F	probes/t4088-groupby-multifield.case.json	Calc!B3
