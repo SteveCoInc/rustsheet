@@ -3,7 +3,7 @@ id: T-4208
 title: "HYPERLINK with a blank friendly_name: probe what value it returns, so LOGEST of it is #REF! as in gen-m9 fa25422d6f18c157 A75 (ours a computed blank, #VALUE!)"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -40,17 +40,17 @@ gen-m9/fa25422d6f18c157 Calc!A75 the inner `LOGEST(HYPERLINK("#Data!A1",Data!D1)
 - HYPERLINK is M6 (catalog prior 0.3). The visibly-off cell is in gen-m9.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified) with a blank friendly_name cell holds:
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified) with a blank friendly_name cell holds:
       `HYPERLINK("#A1",B1)` as a cell value; `TYPE`, `ISBLANK`, `ISNUMBER`, `ISTEXT`, `LEN` and `&"x"` of it;
       `LINEST`/`LOGEST(HYPERLINK("#A1",B1),{1;2})` and `(..., <3x3 range>)`; `IFERROR(B1,1)` controls on the same
       readers; `COUNT`, `COUNTA` and `SUM` of it; and HYPERLINK of an omitted friendly_name `HYPERLINK("#A1",)`.
       Wrap each error in `ERROR.TYPE`.
-- [ ] lookup.md gains a "HYPERLINK: a blank friendly_name" entry citing the new cells and gen-m9/fa25422d6f18c157
+- [x] lookup.md gains a "HYPERLINK: a blank friendly_name" entry citing the new cells and gen-m9/fa25422d6f18c157
       Calc!A75.
-- [ ] The engine matches every new cell, and gen-m9/fa25422d6f18c157 Calc!A75's known-failure line disappears from
+- [x] The engine matches every new cell, and gen-m9/fa25422d6f18c157 Calc!A75's known-failure line disappears from
       eval/baseline/gen-m9.txt with no new ones (`make eval-baseline`, 0 regressions). If the fix is in a shared
       reader rather than in `fn_hyperlink`, it changes that one helper (directive 3).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083/0114: the owned cell is visibly off (a wrong error: `#VALUE!` against Excel's `#REF!`), so this task is
@@ -59,3 +59,14 @@ in the campaign at stage `semantics`. The target is the cell's error matching Ex
 ## Out of scope
 - The rest of the FORECAST.ETS family's `#N/A` cells (T-4207; decision 0266 rule 2).
 - HYPERLINK's link attachment and the link_location rules (T-2277, T-2358).
+
+## Outcome
+- New probe probes/t4208-hyperlink-blank-friendly-name (31 cells, excel-graph 2026-11-04, M6). In Excel, a blank
+  or omitted friendly_name makes HYPERLINK return the number 0: ISNUMBER is TRUE, LEN 1, `&"x"` gives "0x", COUNT and
+  COUNTA are 1, and LOGEST reads a 0 (`#REF!` against 3 rows, `#NUM!` over `{1;2}`), never a computed blank.
+- Engine: `hyperlink_of` returns `Number(0)` for an `EmptyCell`/`EmptyArg` friendly_name. That fixes 14 new cells
+  and gen-m9/fa25422d6f18c157 Calc!A75 (`#REF!`), whose known-failure line is gone.
+- lookup.md gains "HYPERLINK: a blank friendly_name (T-4208)".
+- Follow-up filed: T-4211, from the PR #3184 (T-3184) review: reword financial.md's argument-kinds entry to its
+  evidence.
+- Eval delta: gen-m9 known failures 1939 -> 1938 (fixed 1); probes +31 cells, all passing; 0 regressions.

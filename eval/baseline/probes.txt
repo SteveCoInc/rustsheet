@@ -2104,6 +2104,7 @@ C	probes/t4088-groupby-multifield.case.json	50
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4199-decimal-unprobed-shapes.case.json	87
+C	probes/t4208-hyperlink-blank-friendly-name.case.json	31
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
