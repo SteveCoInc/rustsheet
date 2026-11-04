@@ -3,7 +3,7 @@ id: T-3718
 title: "Probe the unprobed CJK numeral forms (large integers, padded elapsed, myriad zero gap, General with literals)"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,6 @@ T-3532 implemented numeral-system digits (formatter/numerals.rs). number-formats
 
 ## Out of scope
 -
+
+## Outcome
+Probe case `probes/t3718-cjk-numeral-unprobed` (75 cells, excel-graph values) covers the four forms. The existing implementation already matches every cell (probes 75/75), so no code change; findings recorded in docs/excel-semantics/number-formats.md. Eval delta: +75 passing probe cells, no regressions.
