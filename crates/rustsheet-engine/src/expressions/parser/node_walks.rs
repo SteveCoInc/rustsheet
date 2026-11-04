@@ -176,7 +176,8 @@ impl fmt::Write for Indent<'_, '_> {
         for line in text.split_inclusive('\n') {
             if self.on_newline {
                 // Four spaces per level, written up to 64 at a time.
-                const SPACES: &str = "                                                                ";
+                const SPACES: &str =
+                    "                                                                ";
                 let mut spaces = self.depth.saturating_mul(4);
                 while spaces > 0 {
                     let chunk = spaces.min(SPACES.len());
