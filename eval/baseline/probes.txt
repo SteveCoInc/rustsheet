@@ -2066,6 +2066,7 @@ C	probes/t3964-groupby-filter-lift-errors.case.json	144
 C	probes/t3980-typed-percent-currency.case.json	20
 C	probes/t3985-groupby-two-lifted-spent-filter.case.json	44
 C	probes/t3995-dfunction-fold-final-forms.case.json	228
+C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
