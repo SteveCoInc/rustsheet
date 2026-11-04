@@ -3,7 +3,7 @@ id: T-4019
 title: "GROUPBY two lifted options beside a spent filter: probe out-of-range numeric text and a boolean before an error"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
