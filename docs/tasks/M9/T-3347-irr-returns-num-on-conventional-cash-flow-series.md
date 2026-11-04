@@ -39,8 +39,9 @@ accuracy stage.
   `#NUM!` there.
 
 Training probes from draft #2529 (salvaged 2026-11-04; the hold-out case landed in #2562; T-3408 cites cells of both).
-Visibly-off cells on main (all `#NUM!` or another type against Excel's number; T-3408 owns the digits of probe
-A10-A13, A16, A17, A19 and A37-A40 once they return a number):
+Visibly-off cells on main: `#NUM!` against Excel's number on all 19 probe cells and on 23 of the 25 sweep cells; sweep
+A33 and A82 return a number off from about the 10th significant digit. T-3408 owns the digits of probe A10-A13, A16,
+A17, A19 and A37-A40 once they return a number, and of sweep A33 and A82:
 - probes/t3347-irr-conventional-num.case.json (19): P!A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A36, A37, A38, A39, A40, A41, A42
 - probes-numeric/t3347-irr-conventional-sweep.case.json (25): P!A1, A4, A7, A17, A33, A35, A38, A45, A47, A51, A56, A58, A61, A62, A64, A71, A76, A82, A87, A88, A96, A97, A108, A109, A119
 

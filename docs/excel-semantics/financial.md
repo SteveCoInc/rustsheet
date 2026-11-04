@@ -3880,9 +3880,9 @@ Tasks: T-1084, T-1373
 ## IRR on conventional flows near 0 and -10% (T-3347's training probes)
 Rule (excel-graph, 2026-10-31, probes/t3347-irr-conventional-num, 42 cells, and probes-numeric/
 t3347-irr-conventional-sweep, 120 cells; exact roots in each case's `.roots.tsv`): Excel's IRR returns the root of
-conventional cash flows (one outlay, then positive flows) within about 3e-12 of the exact root on 159 of these 162
-series. The strata: roots near 0 (1e-6 to 3e-4, either sign), near -10%, and log-uniform positive and negative roots;
-across both cases the roots run from -0.40 to 0.72. It is `#NUM!` on three that have a real root
+conventional cash flows (one outlay, then positive flows) within 4e-12 of the exact root on 159 of these 162 series.
+The strata: roots near 0 (positive roots from about 1e-17 to 1e-2, negative ones from -1.0e-5 to -2.6e-4), near
+-10%, and log-uniform positive and negative roots; across both cases the roots run from -0.40 to 0.72. It is `#NUM!` on three that have a real root
 (sweep A111, A115 and A117, r = -0.23, -0.40 and -0.11, long series of tiny flows after a large outlay). The fitted
 secant ("IRR is a secant in d") fails on both shapes: near -10% on long level series (probe A10-A21) it drifts to its
 step cap, and near 0 with flows up to 1E9 (probe A36-A42) v = 1 - d repeats, so the secant is flat. Neither a larger
@@ -3893,7 +3893,8 @@ path-sensitive"). Also seen: sweep A106 (a root of -1.3E-17) is -2.2204460492503
 secant's one-ulp-of-v resolution.
 Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
 and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
-Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe and 25 sweep cells listed in T-3347.
+Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe cells and 23 of the 25 sweep cells listed in T-3347;
+sweep A33 and A82 return a number off from about the 10th to 12th significant digit.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
 Tasks: T-3347, T-3406, T-3408
 
