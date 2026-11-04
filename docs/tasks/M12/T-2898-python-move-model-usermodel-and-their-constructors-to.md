@@ -3,7 +3,7 @@ id: T-2898
 title: "Python: move Model, UserModel and their constructors to rustsheet.legacy with a DeprecationWarning; README on the facade (SPEC-0026)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
