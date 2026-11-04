@@ -1,6 +1,6 @@
 # 0261 — T-3411: fitted lock 9 to 10 in financial_util.rs for IRR_ROOT_RESIDUAL
 
-- **Status:** accepted (2026-11-04, T-3411). It applies decision 0188 R4.3 and adds no rule.
+- **Status:** proposed (2026-11-04, T-3411; pending the round-4 R4 result). It applies decision 0188 R4.3 and adds no rule.
 - **Context:** T-3411 makes IRR's fallback (`irr_fallback` in
   crates/rustsheet-engine/src/functions/financial/financial_util.rs, Newton on P(v) from v = 0) `#NUM!` at a root
   whose NPV, as `irr_npv` evaluates it, is 1E-4 or more in magnitude (docs/excel-semantics/financial.md, "IRR's
@@ -16,5 +16,7 @@
 - **Decision:** quality/fitted.json rises by one for financial/financial_util.rs (9 to 10), for this one new fit,
   written by `scripts/check_fitted.py --update`.
 - **Consequences:** one counted tag. The fitted ratchet stays one-way for new fits, each with its own record. No
-  gated or ungated cell is lost (`make eval-check`: 0 regressions). The rule fixes 12 cells over the existing IRR
-  sweeps and 3 on fresh-3.
+  gated cell is lost (`make eval-check`: 0 regressions). But as first written, with the check at the fallback's stop
+  iterate, the rule loses 3 ungated cells (probes-numeric/t3411-irr-r4-fresh-2 A43, t3478-irr-r4-wide A79 and A292;
+  T-3411 landing notes). So this record stays pending until the check moves to the iterate where the bracket was
+  measured and a round-4 R4 result replaces the numbers above.
