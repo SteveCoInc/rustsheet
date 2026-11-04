@@ -8,6 +8,7 @@ priority: P2
 size: M
 tier: opus
 depends_on: [T-3382]
+defer: phase-1b
 ---
 
 ## Goal
@@ -54,3 +55,6 @@ Today's engine is visibly off on 1,371 of the 1,650 column-A cells of t3568-r5-b
 - The n >= 10 leftover that grows with the binade of (n - 1)·|ln y0| (open in T-3568's RESULTS.md, section 5).
 - The density's lnB (T-3569) and D to the bit (T-3383).
 - Column B's own `BETA.DIST(x, a, 1, TRUE)` cells that are visibly off (47, the a0 = 1 complement): T-3764.
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
