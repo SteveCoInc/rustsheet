@@ -3,7 +3,7 @@ id: T-2655
 title: "TTEST with two 3x1 ranges and a 1E15 tails argument is #VALUE! in Excel, ours #NUM! (gen-m9 ede0323c389fc703 A75)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,3 +22,10 @@ gen-m9/ede0323c389fc703 Calc!A75 (`TTEST` over `Data!B10:B12`, tails 1E15): Exce
 
 ## Out of scope
 -
+
+## Outcome
+Already fixed on `origin/main` before this task was picked: gen-m9/ede0323c389fc703 Calc!A75 is not in
+`eval/baseline/gen-m9.txt` and `rustsheet-eval show` lists it as passing (the case's remaining failures
+are A67, A110, A148, A173, ...). The formula's fourth argument is CONFIDENCE.NORM(...), and
+`t_test_element` (functions/statistical/t_dist.rs) reads `type` before the tails check. No code
+change; eval delta none.
