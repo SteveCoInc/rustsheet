@@ -3,7 +3,7 @@ id: T-3045
 title: "Probe a unary plus on an IF arm and on OFFSET's reference under legacy N (T-2885 follow-up)"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
