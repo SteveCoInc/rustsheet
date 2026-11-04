@@ -3,7 +3,7 @@ id: T-4045
 title: "F.DIST.RT is exactly 0 in Excel at true tails of 4E-297 and 9E-278 (11 t4017 cells; find Excel's underflow cut)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
