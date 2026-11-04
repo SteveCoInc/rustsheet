@@ -3,7 +3,7 @@ id: T-4208
 title: "HYPERLINK with a blank friendly_name: probe what value it returns, so LOGEST of it is #REF! as in gen-m9 fa25422d6f18c157 A75 (ours a computed blank, #VALUE!)"
 milestone: M6
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
