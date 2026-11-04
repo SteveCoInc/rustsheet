@@ -4243,10 +4243,17 @@ within 1E-15 relative / largest relative error:
   (20, 1E7) and (31, 1E8). Excel drops straight from a normal number to 0: the last numbers are at z = 714, 715 and 711
   (`F.DIST.RT(71.5,20,1E7)`, z = 715, is 4.320911961488639E-291 and `F.DIST.RT(71.6,20,1E7)` is 0) and every z above is 0. The rule is on bratio's L140
   bup+bgrat prefactor, not on the tail: Excel's tail w is 0 when bup's prefactor ret = P·x0·y0/c (P the Beta(c, a0)
-  density at y0, c = b0 - n) is below the smallest normal double, 2.2250738585072014E-308. ln(x0^a0·y0^c/B(c, a0))
-  brackets the last number and the first 0 at (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) for the
-  three families (60-digit mpmath), and the brackets meet only in (-708.42, -708.38), around ln(DBL_MIN) = -708.396. A
-  plain e^-z cut (z > 708.4 or 745.1) or a cut on the density P itself (z near 726, 724, 722) misses every family.
+  density at y0, c = b0 - n) is below the smallest normal double, 2.2250738585072014E-308. ln ret (60-digit mpmath)
+  brackets the last number and the first 0 at (-707.42, -708.42), (-708.38, -709.38) and (-707.59, -708.59) for the
+  three families (the third, at c = 1/2, includes ret's 1/c), and the brackets meet only in (-708.42, -708.38), around
+  ln(DBL_MIN) = -708.396. Leaving any one family out, the other two still bracket ln(DBL_MIN), and it predicts the
+  third's edge. The probe's step of about 1 in ln cannot tell ret from ret·c (a factor of 2 at c = 1/2). A plain e^-z
+  cut (z > 708.4 or 745.1) or a cut on the density P itself (z near 726, 724, 722) misses every family.
+  Fresh sweep after the rule froze, at untouched shapes (probes/t4045-f-dist-rt-zero-cut-fresh, 102 cells,
+  excel-graph, 2026-11-04): F.DIST.RT at (df1, df2) = (24, 1E4), (25, 1E4), (24, 1E5), (27, 1E5), (22, 1E6), (23, 1E6),
+  17 cells each, stepping about 0.5 in ln ret around the predicted edge (row 9). Excel's first 0 is row 9 or 10 in
+  every family, within one step of the prediction. Scored once: all 51 zeros exact, all 51 numbers NumericClose
+  (last digits, T-3209), no type or zero mismatch.
   bgrat's own increment is subnormal there (z > 708) and Excel flushes it. So the true tail can be as large as 4E-291
   and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
   df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.

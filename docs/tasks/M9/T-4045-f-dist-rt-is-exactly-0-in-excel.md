@@ -70,12 +70,21 @@ the 15th significant digit of Excel's value with the right type.
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
 
 ## Outcome (2026-11-04, opus run)
-- Rule found, not fitted: Excel's L140 bup+bgrat tail is exactly 0 when bup's prefactor ret = P·x0·y0/c (P the
-  Beta(c, a0) density at y0) is below DBL_MIN. ln(x0^a0·y0^c/B(c, a0)) at each family's last number and first 0
-  (60-digit mpmath) gives brackets (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28), which meet only
-  around ln(DBL_MIN) = -708.396. Cuts on e^-z (708.4, 745.1) or on P itself (z near 726, 724, 722) miss. The threshold
-  is the double range's own bound, not a constant read off cells, so it carries no `FITTED` tag and R4's guards do
-  not apply.
+- Rule: Excel's L140 bup+bgrat tail is exactly 0 when bup's prefactor ret = P·x0·y0/c (P the Beta(c, a0) density at
+  y0) is below DBL_MIN. The threshold is the double range's own bound (no `FITTED` tag), but the quantity it applies to
+  was chosen from ranked candidates (e^-z, P, ret), a structural choice under decision 0188 R4. Its guards:
+  - Hold-out: leave-one-out over t4045's three families. ln ret at each family's last number and first 0 (60-digit
+    mpmath) brackets as (-707.42, -708.42), (-708.38, -709.38) and (-707.59, -708.59). Any two meet in an interval that
+    holds ln(DBL_MIN) = -708.396, and that predicts the third family's edge. e^-z (708.4, 745.1) and P (z near 726,
+    724, 722) miss every family. The step of about 1 in ln cannot tell ret from ret·c (a factor of 2 at c = 1/2).
+  - Fresh sweep after the freeze: probes/t4045-f-dist-rt-zero-cut-fresh (102 cells, excel-graph; generated from the
+    frozen rule at untouched shapes df2 1E4, 1E5 and 1E6, c = 1 and c = 1/2, stepping about 0.5 in ln ret). Excel's
+    first 0 is within one step of the predicted row in all 6 families. Scored once: 51 of 51 zeros exact, 51 numbers
+    NumericClose (last digits, T-3209), 0 type or zero mismatches. Gate A: F.DIST.RT has no accuracy table, and
+    `rustsheet-eval accuracy` stays at 0 failing (F.INV A146 is in its envelope).
+  - No keep-matched branch: the predicate reads only ret.
+- t4045 column E (FDIST at T-4044's band shapes) is the FDIST evidence T-4044's excel-fidelity review asked for
+  (#3237: FDIST unprobed there). E1, E4 and E6 pass. E3's digits go to deferred T-3209.
 - Code: `bratio/bup.rs` `l140_bup_prefactor_underflows` (bup's prefactor ret is one helper, `l140_bup_ret`, shared
   with `l140_bup_bgrat`), asked for F's tails only by `bratio::f_closed_or_ported_tails` at any a0. Applying it to
   BETA.DIST as well moved `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146, which searches BETA.DIST's
