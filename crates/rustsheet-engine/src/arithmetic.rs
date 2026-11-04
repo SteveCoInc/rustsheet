@@ -919,7 +919,7 @@ impl Model {
 }
 
 mod power;
-pub(crate) use power::{power, power_with_libm_exp};
+pub(crate) use power::{operator_power, power, power_with_libm_exp};
 
 mod register;
 pub(crate) use register::{extended_div, extended_mul, extended_of, store_extended, Extended};

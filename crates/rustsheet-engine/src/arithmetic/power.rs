@@ -23,6 +23,17 @@ pub(crate) fn power(x: f64, y: f64) -> Result<f64, Error> {
     )
 }
 
+/// `x^y` as the operator `^` computes it: [`power`], except that `x^2` keeps a subnormal result
+/// where POWER and SERIESSUM flush it (`1E-160^2`, `1E-155^2` and `(1.1E-155)^2` are kept,
+/// `POWER(1E-160,2)` is 0; probes/seriessum-subnormal-power-and-term B15, A16, A17; T-3950).
+/// Other exponents were not probed, so only 2 is exempt.
+pub(crate) fn operator_power(x: f64, y: f64) -> Result<f64, Error> {
+    if y == 2.0 && x.is_finite() {
+        return finite_or_num(extended_product(x, x));
+    }
+    power(x, y)
+}
+
 /// The `ln x` and `exp(y·ln x)` steps of a non-integer power.
 #[derive(Clone, Copy)]
 struct PowerSteps {
@@ -166,13 +177,7 @@ fn integer_power(x: f64, y: f64) -> Option<Result<f64, Error>> {
     } else {
         extended_quotient(1.0, positive_power)
     };
-    // Excel flushes a subnormal result to zero (T-1311 oracle: 0.1^310, 2^-1074, (-0.5)^1073),
-    // except at exponent 2, where `1E-160^2`, `1E-155^2` and `(1.1E-155)^2` keep it
-    // (probes/seriessum-subnormal-power-and-term B15, A16; T-3950). Other positive exponents
-    // were not probed, so only 2 is exempt.
-    if y == 2.0 {
-        return Some(Ok(result));
-    }
+    // Excel flushes a subnormal result to zero (T-1311 oracle: 0.1^310, 2^-1074, (-0.5)^1073).
     Some(Ok(flush_subnormal(result)))
 }
 
