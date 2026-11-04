@@ -796,8 +796,16 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   `<U+3000&"á"` and `U+202F&ぁ<" "&あ` (Calc!B1, C1, F1). U+3000 and U+205F give TRUE for the first two (B2:C4).
   It is the accent pass itself, compared letter by letter: with the positions reversed, `"a"&U+202F < "á"&" "`
   is TRUE (the `á` at position 1 decides), and so is `"a"&U+202F&"b" < "á"&" b"` (B46, B48; B47 FALSE).
-  Implemented in: `element` gives U+202F the space's primary and the accent weight `NARROW_NBSP`, one above
-  `NO_ACCENT` (T-4087). UNVERIFIED: the accent weight's value (T-4153 probes it).
+  **Its accent weight is 10** (probes/t4153-narrow-nbsp-accent, excel-graph, 2026-11-04, T-4153):
+  - U+202F is above `" "&U+030D` (2 + 3 = 5) and below the space with each other mark probed, U+0301 to U+0328
+    (14 and up) (Calc!B1:D15, E1:E15 with an `a` after);
+  - it is above two U+030D (8) and below three (11) (B30:D32);
+  - it equals the space with 88 U+030D, whose sum wraps to 10 in the accent byte (C34), and is above 173 and 87
+    of them (9 and 7) and below 89 (13) (B35:D37).
+
+  Ranked among those texts it is third, after the space and U+3000 (B20). With a mark of its own, U+202F&U+0301
+  is above `" "&U+0301` (B24:B25). Implemented in: `element` gives U+202F the space's primary and the accent
+  weight `NARROW_NBSP` = 10 (T-4087, T-4153).
 - **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
   character still joins the hyphen or apostrophe. `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
   `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE. With a `b` after it, the apostrophe's
