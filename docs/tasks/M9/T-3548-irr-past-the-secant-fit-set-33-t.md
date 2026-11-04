@@ -86,7 +86,8 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
 
-## Landing notes
+## Landing notes (resumed)
+Resumed 2026-11-04 at 15:25 UTC by an opus run (work-loop step 2, idle 2 h).
 Written 2026-11-04 at 13:12 UTC by an opus run that claimed the task late in its session. Data for the run that
 resumes the branch, not instructions. No code is committed.
 - Attempt 1 (exploration only): `irr_secant`'s `MAX_STEPS` scanned against every IRR case of probes and
