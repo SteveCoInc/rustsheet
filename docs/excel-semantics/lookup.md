@@ -661,8 +661,19 @@ array return_array, including match modes -1/1 (E9-E15); search modes 1 and -1 e
 `#VALUE!` (E8); a column lookup array needs the return's row count and a row lookup array its column count, so a column lookup array with a row return
 (E16), a row lookup array with a column return (E18, E6) or a shorter return (E5, E21) is `#VALUE!`; a column lookup array accepts a wider
 return_array and gives the matched row (E7, E19, E20), a row lookup array a taller one and gives the matched column
-(probes/xlookup-row-column-picks E28). A scalar return_array is `#VALUE!` (same probe, E35, E36). Still unprobed: an error return_array, and
-wildcard match mode with a binary search mode. A 2-D *range* lookup_array is `#VALUE!` as well (probes/xlookup-array-lookup-value-args A15, per element).
+(probes/xlookup-row-column-picks E28). A scalar return_array is `#VALUE!` (same probe, E35, E36).
+Error return_array (probes/t4192-xlookup-error-return-wildcard-binary F1:F27, excel-graph, 2026-11-04, T-4192): an
+error return_array (`1/0`, `NA()`, `#REF!`) is returned whether the value is found or not and whatever `if_not_found`
+says (`XLOOKUP(9,A1:A3,1/0,"nf")` is `#DIV/0!`, F1:F12; also under search modes 2 and -2, F24, F25, and against an
+error `if_not_found`, F27). An error lookup_value beats it (`XLOOKUP(NA(),A1:A3,1/0)` is `#N/A`, F13, F14), and so does
+an error lookup_array (`XLOOKUP(2,1/0,NA())` is `#DIV/0!` and `XLOOKUP(2,NA(),1/0)` `#N/A`, F15, F16). A return range
+or array holding an error gives it only when the match lands on it (F17:F21), and a 1x1 `{#N/A}` over a one-cell
+lookup vector is `#N/A` found and "nf" not found (F22, F23).
+Wildcard match mode with a binary search mode (same probe, G1:G23, I1:J2): match_mode 2 under search_mode 2 or -2 is
+`#VALUE!` whatever the lookup value (a wildcard, `~`, plain text, a number, TRUE, a blank), found or not, with or
+without `if_not_found`, and against a size mismatch; XMATCH is the same (G17:G20). Only an error lookup_value beats it
+(`XLOOKUP(NA(),..,2,2)` is `#N/A`, G23). A lifted search_mode decides per element (`{1;2}` gives 20, `#VALUE!`).
+Search modes 1 and -1 keep the wildcard (G21, G22: 20). The engine matched every cell when probed. A 2-D *range* lookup_array is `#VALUE!` as well (probes/xlookup-array-lookup-value-args A15, per element).
 Tasks: T-0948
 
 ## XMATCH / XLOOKUP binary search over runs of equal values
