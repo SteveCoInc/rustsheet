@@ -18,7 +18,7 @@ comparison, as UNIQUE and SORT do.
 - Evidence: probes/t4086-groupby-weightless (excel-graph, 2026-11-04, T-4086); coercion.md "Format characters, U+200B
   and the C1 controls (T-3662)", the T-4086 GROUPBY bullet. Over `ab`, `ab`&U+00AD, `é`, `é`&U+00AD, U+00AD&`ab`
   and `AB`, Excel gives three groups, in this order:
-  - {`ab`, U+00AD&`ab`, `AB`} = 49, its key `ab`;
+  - {`ab`, U+00AD&`ab`, `AB`} = 49, its key the first spelling `ab` (EXACT: Calc!B11:B12);
   - {`ab`&U+00AD} = 2;
   - {`é`, `é`&U+00AD} = 12.
   This is `=`'s prefix rule. The engine gives five groups, as before T-3904.

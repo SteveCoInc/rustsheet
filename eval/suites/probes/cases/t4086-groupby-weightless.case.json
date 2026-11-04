@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4086: do GROUPBY and PIVOTBY group and order texts with weightless characters by Excel's pairwise comparison (UNIQUE keeps ab and ab&U+00AD apart)? Data!A1:A6 = ab, ab&U+00AD, é, é&U+00AD, U+00AD&ab, AB with values 1, 2, 4, 8, 16, 32 (B) and one column field x (C). Calc!B1:B2 the row counts; rows 4-9: each group's sum in order (B GROUPBY, C PIVOTBY) and its key's LEN (D).",
+  "description": "T-4086: do GROUPBY and PIVOTBY group and order texts with weightless characters by Excel's pairwise comparison (UNIQUE keeps ab and ab&U+00AD apart)? Data!A1:A6 = ab, ab&U+00AD, é, é&U+00AD, U+00AD&ab, AB with values 1, 2, 4, 8, 16, 32 (B) and one column field x (C). Calc!B1:B2 the row counts; rows 4-9: each group's sum in order (B GROUPBY, C PIVOTBY) and its key's LEN (D). Calc!B11:B12: EXACT of the first group's key with ab and AB.",
   "tags": [
     "M7",
     "probe",
@@ -38,7 +38,11 @@
         "A9": "group 6: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
         "B9": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),6,2),\"none\")",
         "C9": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),6,2),\"none\")",
-        "D9": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),6,1)),\"none\")"
+        "D9": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),6,1)),\"none\")",
+        "A11": "EXACT(first group key, \"ab\")",
+        "B11": "=EXACT(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),1,1),\"ab\")",
+        "A12": "EXACT(first group key, \"AB\")",
+        "B12": "=EXACT(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),1,1),\"AB\")"
       }
     },
     {

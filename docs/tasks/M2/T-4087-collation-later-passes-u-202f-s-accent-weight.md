@@ -22,20 +22,23 @@ Each comes from the T-4072 review.
 - Evidence: coercion.md "Format characters, U+200B and the C1 controls (T-3662)", the T-4086 bullets (excel-graph,
   2026-11-04).
 - **U+202F.** `U+202F&"a"<" "&"á"` is FALSE: the accent pass already decides it. Likewise `U+202F&"a"<U+3000&"á"`
-  and `U+202F&ぁ<" "&あ` are FALSE (Calc!B1, C1, F1). Today `NARROW_NBSP` is a variant weight
+  and `U+202F&ぁ<" "&あ` are FALSE (Calc!B1, C1, F1). It is compared letter by letter with the other accents:
+  `"a"&U+202F < "á"&" "` is TRUE (B46:B48). Today `NARROW_NBSP` is a variant weight
   (crates/rustsheet-engine/src/functions/util/collation.rs, T-4072). Fix: give U+202F the space's primary with an
   accent weight above `NO_ACCENT`; its value is unprobed. U+3000 < U+202F < CHAR(160) must still hold
   (probes/t4039-collation-space-forms).
 - **Mark after a skipped and a weightless character.** `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
-  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE (Calc!B10:B22). Since T-4072, `Element::Weightless` ends the skipped
+  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with a following `b` too (Calc!B10:B22, B50:B52). Since T-4072, `Element::Weightless` ends the skipped
   character's run in `skipped` (collation.rs) and clears `after_skipped` in `accent_units` (collation/accents.rs).
   Fix: let a weightless character end only a letter. In `skipped`, the marks after a weightless character still
   add to the skipped character; in `accent_units`, keep `after_skipped`.
 - **Width before small kana.** `Ａ&ぁ > A&あ`, `¹&ぁ > 1&あ` and `U+3000&ぁ > " "&あ` are TRUE, while `ア&ぁ < あ&あ`
-  is TRUE (Calc!B30:B38, F2). Today `variants` weighs width, superscript and kana type in one pass after
+  is TRUE (Calc!B30:B38, F2). The width wins from a later position too: `ぁ&Ａ > あ&A`, `ぁ&¹ > あ&1` and
+  `ぁ&U+3000 > あ&" "` are TRUE (B40:B45). So it is a separate, earlier pass, not the same pass decided at the first
+  difference. Today `variants` weighs width, superscript and kana type in one pass after
   `kana_weights`. Fix: split it into a width/superscript pass before `kana_weights` and a kana-type pass after it.
   probes/t3275-collation-width-kana and -pairs must keep every cell.
-- Owned cells: probes/t4086-collation-later-passes (14): Calc!B1, C1, F1, F2, B10, B12, B17, B21, B22, B30, B31, B32, B33, B36
+- Owned cells: probes/t4086-collation-later-passes (21): Calc!B1, C1, F1, F2, B10, B12, B17, B21, B22, B30, B31, B32, B33, B36, B40, B41, B42, B43, B44, B45, B50
 
 ## Acceptance criteria
 - [ ] Every probes/t4086-collation-later-passes cell passes and leaves eval/baseline/probes.txt. `make eval-check`

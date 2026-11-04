@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4086 (from the T-4072 review): which pass after the first separates U+202F from the space, and how a mark after a hyphen or apostrophe followed by a weightless character weighs. Rows 1-4 x = U+202F, U+3000, space, U+205F (A labels): B x&\"a\"<\" \"&á; C x&\"a\"<U+3000&á; D x&\"á\">\" a\"; E x&あ>\" \"&ぁ; F x&ぁ<\" \"&あ; G x&\"1\"<\" \"&¹; H x&\"A\"<\" \"&Ａ; I x&\"a\"=\" a\"; J x&\"a\">\" a\"; K x&\"a\"<U+3000&\"a\". Rows 10-22: a mark after -&U+00AD and '&U+00AD (A labels each). Rows 30-38: does a full-width form, a superscript or a kana type outweigh a later small kana (A labels each)?",
+  "description": "T-4086 (from the T-4072 review): which pass after the first separates U+202F from the space, and how a mark after a hyphen or apostrophe followed by a weightless character weighs. Rows 1-4 x = U+202F, U+3000, space, U+205F (A labels): B x&\"a\"<\" \"&á; C x&\"a\"<U+3000&á; D x&\"á\">\" a\"; E x&あ>\" \"&ぁ; F x&ぁ<\" \"&あ; G x&\"1\"<\" \"&¹; H x&\"A\"<\" \"&Ａ; I x&\"a\"=\" a\"; J x&\"a\">\" a\"; K x&\"a\"<U+3000&\"a\". Rows 10-22: a mark after -&U+00AD and '&U+00AD (A labels each). Rows 30-38: does a full-width form, a superscript or a kana type outweigh a later small kana (A labels each)? Rows 40-52: the same questions with the positions reversed (a later-position width, superscript or U+202F against an earlier small kana or accent), and the apostrophe with a following b.",
   "tags": [
     "M2",
     "probe",
@@ -98,7 +98,33 @@
         "A37": "Ａ&a < A&á",
         "B37": "=UNICHAR(65313)&\"a\"<\"A\"&UNICHAR(225)",
         "A38": "Ａ&ぁ = A&あ",
-        "B38": "=UNICHAR(65313)&UNICHAR(12353)=\"A\"&UNICHAR(12354)"
+        "B38": "=UNICHAR(65313)&UNICHAR(12353)=\"A\"&UNICHAR(12354)",
+        "A40": "ぁ&Ａ > あ&A (width at 2, small kana at 1)",
+        "B40": "=UNICHAR(12353)&UNICHAR(65313)>UNICHAR(12354)&\"A\"",
+        "A41": "ぁ&Ａ < あ&A",
+        "B41": "=UNICHAR(12353)&UNICHAR(65313)<UNICHAR(12354)&\"A\"",
+        "A42": "ぁ&¹ > あ&1",
+        "B42": "=UNICHAR(12353)&UNICHAR(185)>UNICHAR(12354)&\"1\"",
+        "A43": "ぁ&¹ < あ&1",
+        "B43": "=UNICHAR(12353)&UNICHAR(185)<UNICHAR(12354)&\"1\"",
+        "A44": "ぁ&U+3000 > あ&\" \"",
+        "B44": "=UNICHAR(12353)&UNICHAR(12288)>UNICHAR(12354)&\" \"",
+        "A45": "ぁ&U+3000 < あ&\" \"",
+        "B45": "=UNICHAR(12353)&UNICHAR(12288)<UNICHAR(12354)&\" \"",
+        "A46": "\"a\"&U+202F < á&\" \" (U+202F at 2, accent at 1)",
+        "B46": "=\"a\"&UNICHAR(8239)<UNICHAR(225)&\" \"",
+        "A47": "\"a\"&U+202F > á&\" \"",
+        "B47": "=\"a\"&UNICHAR(8239)>UNICHAR(225)&\" \"",
+        "A48": "\"a\"&U+202F&\"b\" < á&\" b\"",
+        "B48": "=\"a\"&UNICHAR(8239)&\"b\"<UNICHAR(225)&\" b\"",
+        "A49": "\"a\"&U+3000 < á&\" \" (control)",
+        "B49": "=\"a\"&UNICHAR(12288)<UNICHAR(225)&\" \"",
+        "A50": "a' shy acute b = a'´b",
+        "B50": "=\"a'\"&UNICHAR(173)&UNICHAR(769)&\"b\"=\"a'\"&UNICHAR(769)&\"b\"",
+        "A51": "a' shy acute < a' acute",
+        "B51": "=\"a'\"&UNICHAR(173)&UNICHAR(769)<\"a'\"&UNICHAR(769)",
+        "A52": "a' shy acute b < a'´b",
+        "B52": "=\"a'\"&UNICHAR(173)&UNICHAR(769)&\"b\"<\"a'\"&UNICHAR(769)&\"b\""
       }
     }
   ]

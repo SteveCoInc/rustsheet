@@ -2080,8 +2080,8 @@ C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4039-collation-space-forms.case.json	322
 C	probes/t4060-collation-open-choices.case.json	222
-C	probes/t4086-collation-later-passes.case.json	62
-C	probes/t4086-groupby-weightless.case.json	26
+C	probes/t4086-collation-later-passes.case.json	75
+C	probes/t4086-groupby-weightless.case.json	28
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -6601,6 +6601,13 @@ F	probes/t4086-collation-later-passes.case.json	Calc!B31
 F	probes/t4086-collation-later-passes.case.json	Calc!B32
 F	probes/t4086-collation-later-passes.case.json	Calc!B33
 F	probes/t4086-collation-later-passes.case.json	Calc!B36
+F	probes/t4086-collation-later-passes.case.json	Calc!B40
+F	probes/t4086-collation-later-passes.case.json	Calc!B41
+F	probes/t4086-collation-later-passes.case.json	Calc!B42
+F	probes/t4086-collation-later-passes.case.json	Calc!B43
+F	probes/t4086-collation-later-passes.case.json	Calc!B44
+F	probes/t4086-collation-later-passes.case.json	Calc!B45
+F	probes/t4086-collation-later-passes.case.json	Calc!B50
 F	probes/t4086-collation-later-passes.case.json	Calc!C1
 F	probes/t4086-collation-later-passes.case.json	Calc!F1
 F	probes/t4086-collation-later-passes.case.json	Calc!F2

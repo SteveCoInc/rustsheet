@@ -6,6 +6,14 @@
     "t": "n",
     "v": 3.0
    },
+   "B11": {
+    "t": "b",
+    "v": true
+   },
+   "B12": {
+    "t": "b",
+    "v": false
+   },
    "B2": {
     "t": "n",
     "v": 4.0
@@ -112,10 +120,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "35647703b63ac346e27c781a3355f1bd177b48a9bb7971719fd5c75c6bbc6f27",
+  "input_sha256": "70d631a908d7b1dbbd9a949251228dc84998f569c54b91788287988f5b270433",
   "kind": "excel-graph",
-  "produced_at": "2026-11-04T09:17:14+00:00",
+  "produced_at": "2026-11-04T09:34:20+00:00",
   "version": null,
-  "workbook_name": "d4ef8f9932fa04cf58bc308a4f952bb6308b3b307563c125a0e28f13f833c91e.xlsx"
+  "workbook_name": "1630addc2e593668f51a4ff5d907b7b78b67172b52cc1e033cab9745a8dabf07.xlsx"
  }
 }
