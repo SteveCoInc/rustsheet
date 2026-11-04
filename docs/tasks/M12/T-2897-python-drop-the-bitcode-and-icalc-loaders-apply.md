@@ -3,10 +3,10 @@ id: T-2897
 title: "Python: drop the bitcode and icalc loaders, apply_external_diffs and test_panic (SPEC-0026)"
 milestone: M12
 lane: api
-status: todo
+status: done
 priority: P2
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 spec: docs/specs/SPEC-0026-python-legacy-surface.md
 ---
@@ -35,3 +35,20 @@ round-trip; keep the xlsx ones), tests/test_diffs.py (the whole file) and docs/e
 ## Out of scope
 - Moving the classes to `rustsheet.legacy` (T-2898).
 - The engine's own `Model::from_bytes` and `apply_external_diffs` (T-2913, T-2896).
+
+## Outcome
+Removed the listed loaders, writers, diff exchange and both `test_panic`s from the bindings, stubs, docs and
+examples; dropped the unused `bitcode` dependency; `tests/test_io.py` asserts every name is gone; hidden-row test now
+round-trips through xlsx. README notes the removal. Decision 0278 records the deletion of `tests/test_diffs.py` and
+`docs/examples/collaboration.py` (governance gate); the "produces diffs for collaboration" wording is gone from the
+README, docstrings, stub and rst pages. Eval delta: none (bindings only). `make py-bindings`: 171 passed.
+
+## Handoff (resumed)
+Implementation is complete and pushed (PR #3212, head efbe9ff): all listed symbols removed, `bitcode` dep dropped, `make check-fast` green
+(171 Python tests), design and security reviewers APPROVE. CI fails only on `hygiene`: `scripts/check_governance.py` reports
+"test files deleted (requires a decision record and reviewer sign-off): bindings/python/tests/test_diffs.py". The task (and SPEC-0026)
+requires deleting that file, so it needs a decision record in `docs/decisions/` (`make new-decision TITLE="..."`) covering the
+deletion of test_diffs.py (and `docs/examples/collaboration.py`), citing SPEC-0026 decisions 1, 2, 7; protected path, so not mine.
+Next: add the record, set `status: done` again, push, re-run design review (reviewers must confirm the deletion), enqueue.
+Also fold in the design MINOR: reword remaining "produces diffs for collaboration" text (README:19 and :40, user_model.rs:29,
+__init__.py:10, _ironcalc.pyi:354, docs/user_api_reference.rst:6, docs/usage_examples.rst:16).
