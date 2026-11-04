@@ -3,7 +3,7 @@ id: T-3473
 title: "BETA.DIST density at a shape of 5 to 100: 3 m9-beta-dist cells where Excel is within 2.5 ulp of the math and ours is 12 to 38 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
