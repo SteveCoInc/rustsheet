@@ -15,11 +15,12 @@ use crate::{
     number_format::cmp_excel_precision,
     reference_operators::{Picked, RefArg},
 };
-use std::cmp::Ordering;
 
 pub(crate) mod aggregate_args;
 pub(crate) mod collation;
 pub(crate) mod collation_tables;
+mod pairwise_order;
+pub(crate) use pairwise_order::{coalesce_equal_lines, sort_indices_pairwise};
 mod existing_walk;
 
 pub(crate) use existing_walk::StoredWalk;
@@ -215,60 +216,6 @@ pub(crate) fn compare_values_pairwise(left: &CalcResult, right: &CalcResult) -> 
     match (left, right) {
         (CalcResult::String(l), CalcResult::String(r)) => collation::cmp_text_pairwise(l, r) as i32,
         _ => compare_values(left, right),
-    }
-}
-
-/// Sorts `indices` stably by `cmp`, which need not be a total order: Excel's text comparison is
-/// not transitive (docs/excel-semantics/coercion.md "Not a total order"), and `slice::sort_by`
-/// may panic on such a comparator. A natural merge sort: the input is cut into maximal
-/// non-descending runs (a strictly descending stretch is runs of one element, never reversed), and
-/// neighbouring runs are merged pairwise, bottom-up, a tie taking the left run's element, until
-/// one is left. On any comparator it ends with a permutation of `indices`, in O(n log n)
-/// comparisons and one buffer of n indices. On texts holding comparison cycles this is Excel's
-/// SORT and SORTBY order, ascending and descending: every row of
-/// probes/t3211-collation-sort-cycles and of probes/t3418-sort-cycle-permutations (every order
-/// of three 4- and 5-text sets). Reversing strictly descending runs, the T-3211 model, misses 28
-/// of those 168 rows, since on a cycle a strictly descending chain is not sorted (T-3418).
-pub(crate) fn sort_indices_pairwise(
-    indices: &mut [usize],
-    mut cmp: impl FnMut(usize, usize) -> Ordering,
-) {
-    let n = indices.len();
-    let mut runs: Vec<(usize, usize)> = Vec::new();
-    let mut start = 0;
-    while start < n {
-        let mut end = start + 1;
-        while end < n && cmp(indices[end], indices[end - 1]) != Ordering::Less {
-            end += 1;
-        }
-        runs.push((start, end));
-        start = end;
-    }
-    let mut merged: Vec<usize> = Vec::with_capacity(n);
-    while runs.len() > 1 {
-        let mut next = Vec::with_capacity(runs.len().div_ceil(2));
-        for pair in runs.chunks(2) {
-            let &[(lo, mid), (_, hi)] = pair else {
-                next.extend_from_slice(pair);
-                continue;
-            };
-            merged.clear();
-            let (mut i, mut j) = (lo, mid);
-            while i < mid && j < hi {
-                if cmp(indices[j], indices[i]) == Ordering::Less {
-                    merged.push(indices[j]);
-                    j += 1;
-                } else {
-                    merged.push(indices[i]);
-                    i += 1;
-                }
-            }
-            merged.extend_from_slice(&indices[i..mid]);
-            merged.extend_from_slice(&indices[j..hi]);
-            indices[lo..hi].copy_from_slice(&merged);
-            next.push((lo, hi));
-        }
-        runs = next;
     }
 }
 
