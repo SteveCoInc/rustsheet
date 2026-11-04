@@ -3,7 +3,7 @@ id: T-4117
 title: "Typed $(12): a currency sign before parentheses is a negative number in Excel ($(١٢) is -12), text in ours"
 milestone: M5
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
