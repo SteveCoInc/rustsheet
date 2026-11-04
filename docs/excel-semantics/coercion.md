@@ -602,7 +602,7 @@ tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the
     `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
   - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
     `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
-    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+    `$(١٢)` (= -12; ASCII `$(12)` is -12 too, "Currency sign before parentheses").
   - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
   - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
     `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
@@ -1207,7 +1207,9 @@ Tasks: T-1082, T-1190, T-1191, T-1261, T-1574, T-1655, T-1661
 ## Currency sign before parentheses
 
 A currency sign followed by a parenthesised unsigned amount is a negative number, typed and by
-coercion: `$(12)`, `$ (12)` and `$(1,234.5)` are -12 and -1234.5, typed with the format
-`$#,##0_);[Red]($#,##0)` (two decimals when the amount has them). `-$(12)`, `$(-12)`, `$( 12)`,
-`(12$)`, `($)12` and `(12)$` are text / `#VALUE!` (probes/t4117-currency-parens A1-A10;
-`($12)` is the older paren-first form above). Implemented in `parse_percent_or_currency`.
+coercion: `$(12)`, `$ (12)`, `$( 12)`, `$(12 )`, `$( 12 )` and `$(1,234.5)` are -12 and -1234.5,
+typed with the format `$#,##0_);[Red]($#,##0)` (`$#,##0.00_);[Red]($#,##0.00)` when the amount has
+decimals). `-$(12)`, `$(-12)`, `$((12))`, `(12$)`, `($)12` and `(12)$` are text / `#VALUE!`
+(probes/t4117-currency-parens A1-A14; ENTERED formats in
+docs/research/t4117-currency-parens-2026-11-04.md; `($12)` is the older paren-first form above).
+Implemented in `parse_percent_or_currency`.

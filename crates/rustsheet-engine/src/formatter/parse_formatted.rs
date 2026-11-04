@@ -485,15 +485,15 @@ fn parse_percent_or_currency(
             .or_else(|| value.strip_prefix(currency).map(|p| (p, 1.0)));
         if let Some((p, sign)) = prefixed {
             let p = p.trim_matches(' ');
-            // Excel: a currency sign before a parenthesised unsigned amount is negative, `$(12)`
-            // and `$ (12)` are -12 with `$#,##0_);[Red]($#,##0)`, but `-$(12)`, `$(-12)` and
-            // `(12$)` stay text (probes/t4117-currency-parens A1-A10,
+            // Excel: a currency sign before a parenthesised unsigned amount is negative, `$(12)`,
+            // `$ (12)`, `$( 12 )` are -12 with `$#,##0_);[Red]($#,##0)`, but `-$(12)`, `$(-12)`,
+            // `$((12))` and `(12$)` stay text (probes/t4117-currency-parens A1-A14,
             // docs/excel-semantics/coercion.md "Currency sign before parentheses").
             let (p, sign) = match p.strip_prefix('(').and_then(|v| v.strip_suffix(')')) {
-                Some(inner) if sign < 0.0 || inner.starts_with(['-', '+', '(', ' ']) => {
+                Some(inner) if sign < 0.0 || inner.trim().starts_with(['-', '+', '(']) => {
                     return Err("Cannot parse number".to_string())
                 }
-                Some(inner) => (inner, -1.0),
+                Some(inner) => (inner.trim_matches(' '), -1.0),
                 None => (p, sign),
             };
             let (f, options) = parse_number(p, decimal_separator, group_separator)?;

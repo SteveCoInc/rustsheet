@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4117: ASCII currency sign before/after parentheses. A=typed text, B=ISNUMBER, C=number or text, D=VALUE, E=NUMBERVALUE, F=text+0 of the same literal.",
+ "description": "T-4117: ASCII currency sign before/after parentheses. A=typed text, B=ISNUMBER, C=number or text, D=VALUE, E=NUMBERVALUE, F=text+0 of the same literal. Rows 11-14: space padding and nesting inside the parentheses.",
  "tags": [
   "M5",
   "probe",
@@ -90,7 +90,39 @@
     "C10": "=IF(ISNUMBER(A10),A10,\"text\")",
     "D10": "=IFERROR(VALUE(\"(12)$\"),\"err\")",
     "E10": "=IFERROR(NUMBERVALUE(\"(12)$\"),\"err\")",
-    "F10": "=IFERROR(\"(12)$\"+0,\"err\")"
+    "F10": "=IFERROR(\"(12)$\"+0,\"err\")",
+    "A11": {
+     "entered": "$( 12)"
+    },
+    "B11": "=ISNUMBER(A11)",
+    "C11": "=IF(ISNUMBER(A11),A11,\"text\")",
+    "D11": "=IFERROR(VALUE(\"$( 12)\"),\"err\")",
+    "E11": "=IFERROR(NUMBERVALUE(\"$( 12)\"),\"err\")",
+    "F11": "=IFERROR(\"$( 12)\"+0,\"err\")",
+    "A12": {
+     "entered": "$(12 )"
+    },
+    "B12": "=ISNUMBER(A12)",
+    "C12": "=IF(ISNUMBER(A12),A12,\"text\")",
+    "D12": "=IFERROR(VALUE(\"$(12 )\"),\"err\")",
+    "E12": "=IFERROR(NUMBERVALUE(\"$(12 )\"),\"err\")",
+    "F12": "=IFERROR(\"$(12 )\"+0,\"err\")",
+    "A13": {
+     "entered": "$( 12 )"
+    },
+    "B13": "=ISNUMBER(A13)",
+    "C13": "=IF(ISNUMBER(A13),A13,\"text\")",
+    "D13": "=IFERROR(VALUE(\"$( 12 )\"),\"err\")",
+    "E13": "=IFERROR(NUMBERVALUE(\"$( 12 )\"),\"err\")",
+    "F13": "=IFERROR(\"$( 12 )\"+0,\"err\")",
+    "A14": {
+     "entered": "$((12))"
+    },
+    "B14": "=ISNUMBER(A14)",
+    "C14": "=IF(ISNUMBER(A14),A14,\"text\")",
+    "D14": "=IFERROR(VALUE(\"$((12))\"),\"err\")",
+    "E14": "=IFERROR(NUMBERVALUE(\"$((12))\"),\"err\")",
+    "F14": "=IFERROR(\"$((12))\"+0,\"err\")"
    }
   }
  ]
