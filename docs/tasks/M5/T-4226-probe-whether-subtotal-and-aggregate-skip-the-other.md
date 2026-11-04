@@ -3,11 +3,11 @@ id: T-4226
 title: "Probe whether SUBTOTAL and AGGREGATE skip the other cells of a CSE array formula that calls SUBTOTAL"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: opus
-depends_on: []
+depends_on: [T-4227]
 ---
 
 ## Goal
@@ -43,3 +43,6 @@ that calls SUBTOTAL, as they skip the spilled cells of a dynamic-array one, and 
   (it must create `Cell::SpillCell` members), and the excel-graph fill writing it. That is its own
   harness-lane task (size M) plus an eval-harness.md entry; split it out, then do the probe.
 - Nothing else was tried; no code changed. excel-graph is available (`rustsheet-oracle status` OK).
+- Resumed by an opus run, 2026-11-04: the notes hold (no case key writes a multi-cell `<f t="array">`). The harness
+  work is split out as T-4227; this probe waits on it (`depends_on`). `array_formulas` in the Context above is the
+  key T-4227 adds.
