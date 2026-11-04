@@ -3,7 +3,7 @@ id: T-4039
 title: "Weigh U+200B after the whitespace and the C1 controls before the digits in the collation (probes/t3662-collation-ignorables*)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
