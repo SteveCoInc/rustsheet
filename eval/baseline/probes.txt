@@ -1981,6 +1981,7 @@ C	probes/t3655-makearray-arity-sizes.case.json	313
 C	probes/t3656-indirect-spaces-reversed.case.json	291
 C	probes/t3657-proper-letter-sweep.case.json	4
 C	probes/t3657-proper-word-starts.case.json	177
+C	probes/t3666-calendar-top-bit.case.json	46
 C	probes/t3666-lcid-locale-map.case.json	255
 C	probes/t3666-lcid-sublanguage-sweep.case.json	534
 C	probes/t3666-locale-names.case.json	853
@@ -6117,6 +6118,10 @@ F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
+F	probes/t3666-calendar-top-bit.case.json	S!A19
+F	probes/t3666-calendar-top-bit.case.json	S!A20
+F	probes/t3666-calendar-top-bit.case.json	S!A21
+F	probes/t3666-calendar-top-bit.case.json	S!A22
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A1
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A10
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A11

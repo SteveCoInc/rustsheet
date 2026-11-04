@@ -112,8 +112,7 @@ pub enum LocaleTag {
     SystemDate,
     /// `[$-F400]` or `[$-x-systime]`: the section is the system long time.
     SystemTime,
-    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`, `[$-2412]`), a locale with no
-    /// table here for its language, or a calendar digit over an LCID with no locale that is not modelled
+    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`, `[$-2412]`), or a calendar digit over an LCID with no locale that is not modelled
     /// (`without_locale`): it prints nothing and changes nothing (`TEXT(0.75,"[$-FFFF]h A/P")`
     /// keeps "6 P").
     Silent,
@@ -254,8 +253,10 @@ fn extended_hex(tag: &str) -> Option<u32> {
 
 /// The calendar of a tag value: its third byte without the top bit, so 0x83 is 3 (Japanese eras;
 /// `[$-myv-RU]`, 0x0183EECE, prints 2023-03-15 as "05-03-15") and 0x93 is 0x13 (lunar;
-/// `[$-tok-001]`), while 0x15-0x7F are ignored (`[$-FF040C]` is French in its own calendar). Every
-/// tag of probes/t3666-locale-tag-names with no locale fits this, over 70 distinct bytes.
+/// `[$-tok-001]`) and 0xFF is 0x7F, ignored (`[$-FF040C]` is French in its own calendar). Every tag of
+/// probes/t3666-locale-tag-names with no locale fits this, over 70 distinct bytes, and so do the
+/// LCIDs with a locale of probes/t3666-calendar-top-bit (`[$-83040C]` is Japanese eras,
+/// `[$-91040C]` lunar, `[$-95040C]` en-US names like 0x15).
 fn calendar_digit(value: u32) -> u32 {
     (value >> 16) & 0x7F
 }
@@ -275,10 +276,11 @@ fn hijri_default(value: u32, hijri_prefix: bool) -> u32 {
 }
 
 /// An LCID with its calendar digits (bits 16-23, hex below). Excel: 0 is the locale's own calendar
-/// (Japanese eras for Japanese), 1 Gregorian, 2 and D Gregorian with en-US names, 3 Japanese eras
-/// (Japanese names only for a Japanese LCID), 4 Taiwan (zh-TW names), 5 Korean (Korean names only
-/// for a Korean LCID), 7 Thai (Thai names), 9 Gregorian with French names, and 15 and above are
-/// ignored (`[$-FF040C]mmmm` is "mars"). E, F, 11, 12 and 13 are lunar: E with lunar month names
+/// (Japanese eras for Japanese), 1 Gregorian, 2, D and 15 Gregorian with en-US names, 3 Japanese
+/// eras (Japanese names only for a Japanese LCID), 4 Taiwan (zh-TW names), 5 Korean (Korean names
+/// only for a Korean LCID), 7 Thai (Thai names), 9 Gregorian with French names, 16 Persian and 17
+/// a Hijri variant (unmodelled, T-4061), and 18 to 7F are ignored (`[$-7F040C]mmmm` is "mars";
+/// probes/t3666-calendar-top-bit; [`calendar_digit`] drops the top bit). E, F, 11, 12 and 13 are lunar: E with lunar month names
 /// and Japanese weekdays (Korean names under a Korean LCID), F and 11 with zh-CN weekdays, 12 and
 /// 13 with en-US names. A is Gregorian with Levant Arabic month names, B and C Gregorian with
 /// the ar-SA names, 14 Gregorian with the Korean native month names (probes/t1923-calendar-digits).
@@ -310,9 +312,11 @@ fn resolve_lcid(value: u32) -> LocaleTag {
         ))
     };
     match calendar_digit(value) {
-        0 | 0x15.. if japanese => with_names(names, Calendar::Japanese { explicit: false }),
-        0 | 1 | 0x15.. => with_names(names, Calendar::Gregorian),
-        2 | 0xD => with_names(EN_US, Calendar::Gregorian),
+        // 0x16 (Persian) and 0x17 (a Hijri variant) are not modelled and stay the locale's own
+        // calendar (TODO(T-4061)).
+        0 | 0x16.. if japanese => with_names(names, Calendar::Japanese { explicit: false }),
+        0 | 1 | 0x16.. => with_names(names, Calendar::Gregorian),
+        2 | 0xD | 0x15 => with_names(EN_US, Calendar::Gregorian),
         3 => with_names(
             if japanese { names } else { EN_US },
             Calendar::Japanese { explicit: true },
