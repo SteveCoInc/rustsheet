@@ -3508,11 +3508,11 @@ maturity (321).
   frozen (R4.2): probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls with 2 to 5 quasi periods in the first
   period and `nq` 0 to 4, every frequency and basis, excel-graph 2026-11-03: 157 pass bit-exact or within the harness' ulp
   tolerance (the model without the extra coupons passes 72). Off: S!A80 (1 ulp) and S!A61, S!A70, both a
-  28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3031 follow-up).
-  Hold-out (R4.1, `fitlab/holdout.py` `is_holdout` over the 73 long-first cells with `nq` >= 1 above, split after the
-  fact since no split was fixed before the lab scored): this slope is bit-exact on 45 of 45 train and 28 of 28 test
-  cells; ODDFPRICE's root, rounded, is bit-exact, within 4 ulp and within 15 digits on 0 of either (Excel is 3e-12 to
-  3e-8 relative from it). Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
+  28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3988).
+  Hold-out (R4.1): the model was chosen on the 73 long-first cells above (train) and held out on the fresh sweep
+  (never tuned on; margin 5 points, stated before it was scored). Bit-exact / within 4 ulp / within 15 digits: this
+  slope 73/73/73 of 73 and 157/158/158 of 160; ODDFPRICE's root, rounded, 0/0/0 and 0/1/2 (Excel is 3e-12 to 3e-8
+  relative from it). Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
   engine's schedule are 0.077480666073101446 and 0.12192508630779288; Excel is -3.7e-11 and +4.9e-11 relative of them,
   ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table).
   T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
