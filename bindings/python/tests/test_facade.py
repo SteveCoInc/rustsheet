@@ -443,3 +443,28 @@ def test_data_table_error_rolls_back(wb):
             tx["Sheet1!C5"] = 7
             tx.add_data_table("Sheet1!B2:B4")
     assert wb["Sheet1!C5"] is None
+
+
+def _cell_address_workbook(**kwargs) -> rs.Workbook:
+    wb = rs.Workbook(**kwargs)
+    with wb.edit() as tx:
+        tx.add_sheet("Data")
+        tx["A1"] = rs.Formula('=CELL("address",Data!B2)')
+    return wb
+
+
+def test_workbook_name_reaches_cell_address_at_new_open_and_from_bytes(tmp_path):
+    named = _cell_address_workbook(name="Budget")
+    assert named["A1"] == "[Budget.xlsx]Data!$B$2"
+
+    data = named.to_xlsx_bytes()
+    assert rs.Workbook.from_bytes(data, name="Other")["A1"] == "[Other.xlsx]Data!$B$2"
+    path = str(tmp_path / "book.xlsx")
+    named.save_xlsx(path)
+    assert rs.Workbook.open(path, name="Opened")["A1"] == "[Opened.xlsx]Data!$B$2"
+
+
+def test_unnamed_workbook_cell_address_is_an_error(tmp_path):
+    unnamed = _cell_address_workbook()
+    assert isinstance(unnamed["A1"], rs.XlError)
+    assert isinstance(rs.Workbook.from_bytes(unnamed.to_xlsx_bytes())["A1"], rs.XlError)
