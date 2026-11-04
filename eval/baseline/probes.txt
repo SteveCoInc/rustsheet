@@ -2117,6 +2117,7 @@ C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
 C	probes/t4194-subtotal-nested-skip.case.json	90
 C	probes/t4199-decimal-unprobed-shapes.case.json	87
+C	probes/t4200-unique-cycle-permutations.case.json	356
 C	probes/t4208-hyperlink-blank-friendly-name.case.json	31
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -4391,9 +4392,6 @@ F	probes/t3070-gamma-inv-band.case.json	S!A8
 F	probes/t3070-gamma-inv-band.case.json	S!A9
 F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!A1
 F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!D1
-F	probes/t3211-collation-sort-cycles.case.json	Calc!G4
-F	probes/t3211-collation-sort-cycles.case.json	Calc!H4
-F	probes/t3211-collation-sort-cycles.case.json	Calc!I4
 F	probes/t3347-irr-conventional-num.case.json	P!A10
 F	probes/t3347-irr-conventional-num.case.json	P!A11
 F	probes/t3347-irr-conventional-num.case.json	P!A12
