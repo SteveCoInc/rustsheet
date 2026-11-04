@@ -3,7 +3,7 @@ id: T-3750
 title: "Beta density algdiv lnB (min < 1 < 8 < max): desktop Excel cells for the r4-algdiv shapes"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -34,3 +34,7 @@ r4-algdiv's `scan.py` and re-score r5-algdiv's `counts.py` candidates. Also resc
 ## Blocked because
 Phase 4 (decision 0039): needs the excel-desktop backend. Unblock when `cd tools && uv run rustsheet-oracle status`
 shows `excel-desktop OK`.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.
