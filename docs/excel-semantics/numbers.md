@@ -2255,7 +2255,22 @@ application, and hidden columns are unprobed.
 Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036).
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
-`Node::contains_function`); whether a SUBTOTAL name inside a string, a defined name, an untaken IF branch, an uncalled LAMBDA body or an unused LET binding counts is unprobed (the engine counts any call in the tree).
+`Node::contains_function`, with spilled cells reading their anchor's formula since T-4194).
+
+**Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194).** The flag is syntactic: a call to SUBTOTAL or
+AGGREGATE anywhere in the cell's own formula text counts, whether or not it is evaluated, and nothing else does.
+- Skipped by SUBTOTAL 9 and 109 and AGGREGATE(9,0), read by AGGREGATE(9,4): `=IF(FALSE,SUBTOTAL(9,A1:A2),4)` (C1),
+  `=LET(x,SUBTOTAL(9,A1:A2),8)` with x unused (C2), `=LET(f,LAMBDA(r,SUBTOTAL(9,r)),16)` with f never called (C3),
+  `=IFERROR(32,SUBTOTAL(..))` (C4), `=IF(TRUE,128,SUBTOTAL(..))` (C12), `=CHOOSE(1,256,SUBTOTAL(..))` (C13),
+  `=LAMBDA(r,SUBTOTAL(9,r))(A1:A2)` (C14) and `=IF(FALSE,AGGREGATE(9,0,A1:A2),512)` (C16).
+- Read by all four: a defined name whose body calls SUBTOTAL, as `=st+0` and `=st` (C5, C6), a LAMBDA name whose body
+  calls it, as `=stf(A1:A2)` (C15), `=INDIRECT("X1")` where X1 holds `=SUBTOTAL(9,A1:A2)` (C10), and the word inside a
+  string, `=LEN("SUBTOTAL"&"")` and `=LEN("SUBTOTAL(9,A1)")` (C8, C9). X1 itself is skipped (row 26).
+- The flag is per cell, and a spilled cell takes its anchor's: under `=MAP(A1:A3,LAMBDA(r,SUBTOTAL(9,r)))` at Z1,
+  SUBTOTAL 9 and 109 and AGGREGATE(9,0) give 0 over Z1, over the spilled Z2 and Z3 alone and over Z1:Z3, and
+  AGGREGATE(9,4) gives 1, 2, 4 and 7 (rows 20 to 23). A plain spill `=A1:A3*1` is read (rows 24, 25).
+Evidence: probes/t4194-subtotal-nested-call-forms (120 cells; oracle: excel-graph, 2026-11-04, T-4194).
+Status: VERIFIED. Engine gaps: none known; `Model::cell_formula_is_one_of` follows a spill cell to its anchor.
 Implemented in: `fn_subtotal` and `row_hidden_status` / `sheet_has_filtered_table` (T-1182) (crates/rustsheet-engine/src/functions/subtotal.rs),
 `fn_aggregate` (functions/aggregate.rs). The case format's `hidden_rows` and `tables` (docs/architecture/eval-harness.md)
 load through `Txn::set_row_hidden` and `Txn::add_table`.

@@ -16,6 +16,7 @@ use crate::{
     },
     model::Model,
     reference_operators::{not_a_reference_array, Ranges, RefArg},
+    types::Cell,
 };
 
 /// Excel has a complicated way of filtering + hidden rows
@@ -96,6 +97,12 @@ impl Model {
 
     /// Whether the cell holds a formula that calls one of `kinds` anywhere (SUBTOTAL and
     /// AGGREGATE skip such cells; probes/subtotal-hidden-filtered Nest sheet, T-1036).
+    ///
+    /// Excel flags by syntax, not by what was evaluated: an untaken IF or CHOOSE branch, an
+    /// unused LET binding and an uncalled LAMBDA count, while a defined name whose body calls
+    /// SUBTOTAL, INDIRECT to a SUBTOTAL cell and the word inside a string do not. A spilled cell
+    /// has no formula of its own and takes its anchor's flag
+    /// (probes/t4194-subtotal-nested-call-forms, T-4194; docs/excel-semantics/numbers.md).
     pub(crate) fn cell_formula_is_one_of(
         &self,
         sheet_index: u32,
@@ -103,9 +110,16 @@ impl Model {
         column: i32,
         kinds: &[Function],
     ) -> bool {
-        let Some(cell) = self.workbook.worksheets[sheet_index as usize].cell(row, column) else {
+        let worksheet = &self.workbook.worksheets[sheet_index as usize];
+        let Some(mut cell) = worksheet.cell(row, column) else {
             return false;
         };
+        if let Cell::SpillCell { a: (r, c), .. } = cell {
+            let Some(anchor) = worksheet.cell(*r, *c) else {
+                return false;
+            };
+            cell = anchor;
+        }
         cell.get_formula().is_some_and(|f| {
             self.parsed_formulas[sheet_index as usize][f as usize]
                 .evaluated

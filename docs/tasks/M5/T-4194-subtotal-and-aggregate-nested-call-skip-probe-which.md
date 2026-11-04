@@ -3,7 +3,7 @@ id: T-4194
 title: "SUBTOTAL and AGGREGATE nested-call skip: probe which formulas count as calling SUBTOTAL (defined name, untaken IF branch, uncalled LAMBDA, unused LET binding, text) and match it"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -51,16 +51,31 @@ formula that calls one.
   module), T-2902 (Python facade hidden rows).
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the forms above with defined names
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the forms above with defined names
       in the case file.
-- [ ] numbers.md states the rule with the new cells and drops the "unprobed" sentence (or narrows it).
-- [ ] The engine matches every new cell. The predicate stays one helper shared by SUBTOTAL and AGGREGATE (directive 3).
+- [x] numbers.md states the rule with the new cells and drops the "unprobed" sentence (or narrows it).
+- [x] The engine matches every new cell. The predicate stays one helper shared by SUBTOTAL and AGGREGATE (directive 3).
       If Excel's flag is per cell (spilled cells skipped), the PR records how the spill child finds its anchor's flag.
-- [ ] probes/subtotal-hidden-filtered and every aggregate-* probe still pass. Eval known failures only shrink
+- [x] probes/subtotal-hidden-filtered and every aggregate-* probe still pass. Eval known failures only shrink
       (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Hidden columns, worksheet-level autoFilter and manual hides inside a filtered table (numbers.md lists them as
   unprobed; they need workbook edits the probe format does not drive), the per-formula cache (T-1195), and
   AGGREGATE's scalar rules (T-4193).
+
+## Outcome
+- New probe probes/t4194-subtotal-nested-call-forms (120 cells, excel-graph 2026-11-04, tag M5): the four readers
+  (SUBTOTAL 9 and 109, AGGREGATE(9,0) and AGGREGATE(9,4)) over 17 formula forms, a MAP spill whose lambda calls
+  SUBTOTAL, a plain spill and the SUBTOTAL cell itself. Defined names `st`, `k` and `stf` are in the case file.
+- Rule (numbers.md, "Which formulas count as a nested SUBTOTAL or AGGREGATE"): the flag is syntactic. Untaken IF and
+  CHOOSE branches, an unused LET binding, an uncalled LAMBDA and IFERROR's fallback count. A defined name that calls
+  SUBTOTAL, INDIRECT to a SUBTOTAL cell and the word in a string do not. A spilled cell takes its anchor's flag.
+- Engine: the syntax walk already matched the 102 non-spill cells. The 9 spill cells (E21:G23) were off: ours read
+  the spilled cells. `Model::cell_formula_is_one_of`, the one predicate SUBTOTAL and AGGREGATE share, now follows a
+  `Cell::SpillCell` to its anchor `a` and asks the anchor's formula. Unit test
+  `spilled_cells_of_a_subtotal_anchor_are_skipped`.
+- T-1195 needs no change: the rule stays per parsed formula.
+- Eval delta: probes +1 case, 120/120 pass; 0 regressions; no baseline change. probes/subtotal-hidden-filtered is
+  still 150/150.

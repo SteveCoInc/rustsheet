@@ -504,3 +504,35 @@ fn subtotal_and_areas_over_if_choose_let_of_xlookup_read_cells() {
     assert_eq!(model._get_text("K2"), "#VALUE!");
     assert_eq!(model._get_text("L1"), "");
 }
+
+/// A spilled cell takes its anchor's nested-SUBTOTAL flag, so SUBTOTAL and AGGREGATE options
+/// 0-3 skip it while AGGREGATE option 4 reads it (probes/t4194-subtotal-nested-call-forms rows
+/// 20 to 25, excel-graph 2026-11-04; docs/excel-semantics/numbers.md).
+#[test]
+fn spilled_cells_of_a_subtotal_anchor_are_skipped() {
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("A2", "2");
+    model._set("A3", "4");
+    model._set("Z1", "=MAP(A1:A3,LAMBDA(r,SUBTOTAL(9,r)))");
+    model._set("Y1", "=A1:A3*1");
+    for (cell, formula) in [
+        ("E1", "=SUBTOTAL(9,Z2)"),
+        ("E2", "=SUBTOTAL(109,Z1:Z3)"),
+        ("E3", "=AGGREGATE(9,0,Z3)"),
+        ("E4", "=AGGREGATE(9,4,Z1:Z3)"),
+        ("E5", "=SUBTOTAL(9,Y1:Y3)"),
+    ] {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, expected) in [
+        ("E1", "0"),
+        ("E2", "0"),
+        ("E3", "0"),
+        ("E4", "7"),
+        ("E5", "7"),
+    ] {
+        assert_eq!(model._get_text(cell), expected, "{cell}");
+    }
+}
