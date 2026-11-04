@@ -1,18 +1,22 @@
 //! Excel's own month, day and day-half names per locale, which a `[$-...]` number-format tag
-//! selects (`crate::formatter::locale_tag`). They are Excel's locale data, not CLDR (`[$-407]mmm` of
-//! March is "Mrz" where CLDR and `locales.bin` have "Mär"): every string is a probed value from
-//! probes/text-locale-date-names, probes/text-locale-name-tables and probes/text-locale-am-neutral
-//! (excel-graph, 2026-10-18; regional variants and more languages from probes/text-locale-regional-lcids and
-//! probes/text-locale-six-languages), except the morning "AM" of locales whose afternoon is "PM", which
-//! is probed for fr, de, de-AT, th, sk, uk and he only.
+//! selects (`crate::formatter::locale_tag`). They are Excel's locale data (Windows'), not CLDR
+//! (`[$-407]mmm` of March is "Mrz" where CLDR and `locales.bin` have "Mär"), and they are data, not
+//! code: the three tables beside this file hold Excel's answers for every LCID that has a locale and
+//! every BCP-47 tag Excel knows, generated from probes/t3666-locale-names and
+//! probes/t3666-locale-tag-names (excel-graph, 2026-11-04) by `rustsheet-excel-locales` (tools/):
+//!
+//! - `excel_names.tsv`: the distinct name sets, one per line (12 `mmm`, 12 `mmmm`, 7 `ddd`,
+//!   7 `dddd`, then the day halves), numbered from 0, with `\\`, `\t` and `\n` escaped (Excel's
+//!   `mmmm` under 0xF803 holds tabs);
+//! - `excel_lcids.tsv`: each LCID with a locale (hex) and its name set;
+//! - `excel_tags.tsv`: each tag, the LCID [MS-LCID] gives it (`-` for none) and its name set.
+//!
+//! An LCID or tag that is in no table has no locale (number-formats.md "Which LCIDs have a locale").
 
-use super::regional_date_names::{
-    AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
-    TH, UK, ZH_SG,
-};
+use std::sync::OnceLock;
 
 /// The date names and day-half strings of one locale.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct DateNames {
     /// `mmm`, January first.
     pub months_short: [&'static str; 12],
@@ -28,7 +32,10 @@ pub struct DateNames {
     pub pm: &'static str,
 }
 
-pub(super) static EN: DateNames = DateNames {
+/// The en-US names: what a tag with no locale prints, and the fallback of every lookup here.
+pub(crate) static EN_US: &DateNames = &EN;
+
+static EN: DateNames = DateNames {
     months_short: [
         "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ],
@@ -60,858 +67,172 @@ pub(super) static EN: DateNames = DateNames {
     pm: "PM",
 };
 
-static FR: DateNames = DateNames {
-    months_short: [
-        "janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.",
-        "déc.",
-    ],
-    months: [
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
-    ],
-    days_short: ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."],
-    days: [
-        "dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+impl DateNames {
+    /// These names with other month names, `mmm` and `mmmm` alike (a calendar's own months).
+    pub(crate) const fn with_months(&self, months: [&'static str; 12]) -> DateNames {
+        DateNames {
+            months_short: months,
+            months,
+            ..*self
+        }
+    }
 
-static DE: DateNames = DateNames {
-    months_short: [
-        "Jan", "Feb", "Mrz", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
-    ],
-    months: [
-        "Januar",
-        "Februar",
-        "März",
-        "April",
-        "Mai",
-        "Juni",
-        "Juli",
-        "August",
-        "September",
-        "Oktober",
-        "November",
-        "Dezember",
-    ],
-    days_short: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
-    days: [
-        "Sonntag",
-        "Montag",
-        "Dienstag",
-        "Mittwoch",
-        "Donnerstag",
-        "Freitag",
-        "Samstag",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+    /// One name set from a table line's fields, `None` if it is malformed.
+    fn from_fields(fields: &[&'static str]) -> Option<DateNames> {
+        Some(DateNames {
+            months_short: fields.get(0..12)?.try_into().ok()?,
+            months: fields.get(12..24)?.try_into().ok()?,
+            days_short: fields.get(24..31)?.try_into().ok()?,
+            days: fields.get(31..38)?.try_into().ok()?,
+            am: fields.get(38)?,
+            pm: fields.get(39)?,
+        })
+    }
+}
 
-static DE_CH: DateNames = DateNames {
-    months_short: [
-        "Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
-    ],
-    months: [
-        "Januar",
-        "Februar",
-        "März",
-        "April",
-        "Mai",
-        "Juni",
-        "Juli",
-        "August",
-        "September",
-        "Oktober",
-        "November",
-        "Dezember",
-    ],
-    days_short: ["So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."],
-    days: [
-        "Sonntag",
-        "Montag",
-        "Dienstag",
-        "Mittwoch",
-        "Donnerstag",
-        "Freitag",
-        "Samstag",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+/// A BCP-47 tag Excel knows: the LCID [MS-LCID] gives it, if any, and its names.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct TagLocale {
+    pub lcid: Option<u16>,
+    pub names: &'static DateNames,
+}
 
-static IT: DateNames = DateNames {
-    months_short: [
-        "gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic",
-    ],
-    months: [
-        "gennaio",
-        "febbraio",
-        "marzo",
-        "aprile",
-        "maggio",
-        "giugno",
-        "luglio",
-        "agosto",
-        "settembre",
-        "ottobre",
-        "novembre",
-        "dicembre",
-    ],
-    days_short: ["dom", "lun", "mar", "mer", "gio", "ven", "sab"],
-    days: [
-        "domenica",
-        "lunedì",
-        "martedì",
-        "mercoledì",
-        "giovedì",
-        "venerdì",
-        "sabato",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+struct Tables {
+    names: Vec<DateNames>,
+    /// Sorted by LCID, as the file is.
+    lcids: Vec<(u16, usize)>,
+    tags: Vec<(&'static str, Option<u16>, usize)>,
+}
 
-static ES: DateNames = DateNames {
-    months_short: [
-        "ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.",
-        "dic.",
-    ],
-    months: [
-        "enero",
-        "febrero",
-        "marzo",
-        "abril",
-        "mayo",
-        "junio",
-        "julio",
-        "agosto",
-        "septiembre",
-        "octubre",
-        "noviembre",
-        "diciembre",
-    ],
-    days_short: ["do.", "lu.", "ma.", "mi.", "ju.", "vi.", "sá."],
-    days: [
-        "domingo",
-        "lunes",
-        "martes",
-        "miércoles",
-        "jueves",
-        "viernes",
-        "sábado",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+impl Tables {
+    fn names(&self, index: usize) -> &DateNames {
+        self.names.get(index).unwrap_or(&EN)
+    }
+}
 
-static JA: DateNames = DateNames {
-    months_short: [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
-    ],
-    months: [
-        "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月",
-    ],
-    days_short: ["日", "月", "火", "水", "木", "金", "土"],
-    days: [
-        "日曜日",
-        "月曜日",
-        "火曜日",
-        "水曜日",
-        "木曜日",
-        "金曜日",
-        "土曜日",
-    ],
-    am: "午前",
-    pm: "午後",
-};
+/// The non-comment lines of a table, split into fields.
+fn rows(text: &'static str) -> impl Iterator<Item = Vec<&'static str>> {
+    text.lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| line.split('\t').collect())
+}
 
-static ZH_TW: DateNames = DateNames {
-    months_short: [
-        "一月",
-        "二月",
-        "三月",
-        "四月",
-        "五月",
-        "六月",
-        "七月",
-        "八月",
-        "九月",
-        "十月",
-        "十一月",
-        "十二月",
-    ],
-    months: [
-        "一月",
-        "二月",
-        "三月",
-        "四月",
-        "五月",
-        "六月",
-        "七月",
-        "八月",
-        "九月",
-        "十月",
-        "十一月",
-        "十二月",
-    ],
-    days_short: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
-    days: [
-        "星期日",
-        "星期一",
-        "星期二",
-        "星期三",
-        "星期四",
-        "星期五",
-        "星期六",
-    ],
-    am: "上午",
-    pm: "下午",
-};
+/// A table field with its escapes undone. The few names that hold one are copied once, for the
+/// life of the process, as the tables are.
+fn unescape(field: &'static str) -> &'static str {
+    if !field.contains('\\') {
+        return field;
+    }
+    let mut text = String::with_capacity(field.len());
+    let mut chars = field.chars();
+    while let Some(c) = chars.next() {
+        text.push(match (c, c == '\\') {
+            (_, true) => match chars.next() {
+                Some('t') => '\t',
+                Some('n') => '\n',
+                Some(other) => other,
+                None => '\\',
+            },
+            (c, false) => c,
+        });
+    }
+    text.leak()
+}
 
-static ZH_CN: DateNames = DateNames {
-    months_short: [
-        "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月",
-    ],
-    months: [
-        "一月",
-        "二月",
-        "三月",
-        "四月",
-        "五月",
-        "六月",
-        "七月",
-        "八月",
-        "九月",
-        "十月",
-        "十一月",
-        "十二月",
-    ],
-    days_short: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"],
-    days: [
-        "星期日",
-        "星期一",
-        "星期二",
-        "星期三",
-        "星期四",
-        "星期五",
-        "星期六",
-    ],
-    am: "上午",
-    pm: "下午",
-};
+fn tables() -> &'static Tables {
+    static TABLES: OnceLock<Tables> = OnceLock::new();
+    TABLES.get_or_init(|| {
+        // A malformed line keeps its place (the numbering is by line) with the en-US names; the
+        // tables are generated and a test checks every line parses.
+        let names = rows(include_str!("excel_names.tsv"))
+            .map(|fields| {
+                let fields: Vec<&'static str> = fields.into_iter().map(unescape).collect();
+                DateNames::from_fields(&fields).unwrap_or(EN)
+            })
+            .collect();
+        let lcids = rows(include_str!("excel_lcids.tsv"))
+            .filter_map(|fields| match fields.as_slice() {
+                [lcid, names] => Some((u16::from_str_radix(lcid, 16).ok()?, names.parse().ok()?)),
+                _ => None,
+            })
+            .collect();
+        let tags = rows(include_str!("excel_tags.tsv"))
+            .filter_map(|fields| match fields.as_slice() {
+                [tag, lcid, names] => Some((
+                    *tag,
+                    u16::from_str_radix(lcid, 16).ok(),
+                    names.parse().ok()?,
+                )),
+                _ => None,
+            })
+            .collect();
+        Tables { names, lcids, tags }
+    })
+}
 
-static RU: DateNames = DateNames {
-    months_short: [
-        "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек",
-    ],
-    months: [
-        "Январь",
-        "Февраль",
-        "Март",
-        "Апрель",
-        "Май",
-        "Июнь",
-        "Июль",
-        "Август",
-        "Сентябрь",
-        "Октябрь",
-        "Ноябрь",
-        "Декабрь",
-    ],
-    days_short: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
-    days: [
-        "воскресенье",
-        "понедельник",
-        "вторник",
-        "среда",
-        "четверг",
-        "пятница",
-        "суббота",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+/// The names of `lcid`, or `None` when Excel gives it no locale (`[$-2412]`, `[$-1]`).
+pub(crate) fn lcid_names(lcid: u16) -> Option<&'static DateNames> {
+    let tables = tables();
+    let at = tables
+        .lcids
+        .binary_search_by_key(&lcid, |(id, _)| *id)
+        .ok()?;
+    tables.lcids.get(at).map(|(_, names)| tables.names(*names))
+}
 
-pub(super) static PT: DateNames = DateNames {
-    months_short: [
-        "jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez",
-    ],
-    months: [
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    ],
-    days_short: ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"],
-    days: [
-        "domingo",
-        "segunda-feira",
-        "terça-feira",
-        "quarta-feira",
-        "quinta-feira",
-        "sexta-feira",
-        "sábado",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+/// The locale of a BCP-47 tag, matched case-insensitively, else of its language (`[$-fr-XX]` is
+/// French, `[$-zh-XX]` Traditional Chinese like `[$-zh]`); `None` when Excel knows neither.
+pub(crate) fn tag_locale(tag: &str) -> Option<TagLocale> {
+    let tables = tables();
+    let find = |wanted: &str| {
+        tables
+            .tags
+            .iter()
+            .find(|(t, _, _)| t.eq_ignore_ascii_case(wanted))
+            .map(|(_, lcid, names)| TagLocale {
+                lcid: *lcid,
+                names: tables.names(*names),
+            })
+    };
+    find(tag).or_else(|| {
+        find(
+            tag.split('-')
+                .next()
+                .filter(|l| !l.is_empty() && *l != tag)?,
+        )
+    })
+}
 
-static NL: DateNames = DateNames {
-    months_short: [
-        "jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec",
-    ],
-    months: [
-        "januari",
-        "februari",
-        "maart",
-        "april",
-        "mei",
-        "juni",
-        "juli",
-        "augustus",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ],
-    days_short: ["zo", "ma", "di", "wo", "do", "vr", "za"],
-    days: [
-        "zondag",
-        "maandag",
-        "dinsdag",
-        "woensdag",
-        "donderdag",
-        "vrijdag",
-        "zaterdag",
-    ],
-    am: "AM",
-    pm: "PM",
-};
+#[cfg(test)]
+mod tests {
+    use super::{lcid_names, rows, tag_locale, unescape, DateNames, EN};
 
-static KO: DateNames = DateNames {
-    months_short: [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
-    ],
-    months: [
-        "1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월",
-    ],
-    days_short: ["일", "월", "화", "수", "목", "금", "토"],
-    days: [
-        "일요일",
-        "월요일",
-        "화요일",
-        "수요일",
-        "목요일",
-        "금요일",
-        "토요일",
-    ],
-    am: "오전",
-    pm: "오후",
-};
+    #[test]
+    fn every_table_line_parses() {
+        for fields in rows(include_str!("excel_names.tsv")) {
+            assert!(DateNames::from_fields(&fields).is_some(), "{fields:?}");
+        }
+        for fields in rows(include_str!("excel_lcids.tsv")) {
+            assert_eq!(fields.len(), 2, "{fields:?}");
+        }
+        for fields in rows(include_str!("excel_tags.tsv")) {
+            assert_eq!(fields.len(), 3, "{fields:?}");
+        }
+    }
 
-static PL: DateNames = DateNames {
-    months_short: [
-        "sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru",
-    ],
-    months: [
-        "styczeń",
-        "luty",
-        "marzec",
-        "kwiecień",
-        "maj",
-        "czerwiec",
-        "lipiec",
-        "sierpień",
-        "wrzesień",
-        "październik",
-        "listopad",
-        "grudzień",
-    ],
-    days_short: ["niedz.", "pon.", "wt.", "śr.", "czw.", "pt.", "sob."],
-    days: [
-        "niedziela",
-        "poniedziałek",
-        "wtorek",
-        "środa",
-        "czwartek",
-        "piątek",
-        "sobota",
-    ],
-    am: "AM",
-    pm: "PM",
-};
-
-static DA: DateNames = DateNames {
-    months_short: [
-        "jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec",
-    ],
-    months: [
-        "januar",
-        "februar",
-        "marts",
-        "april",
-        "maj",
-        "juni",
-        "juli",
-        "august",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ],
-    days_short: ["sø", "ma", "ti", "on", "to", "fr", "lø"],
-    days: [
-        "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag",
-    ],
-    am: "AM",
-    pm: "PM",
-};
-
-static SV: DateNames = DateNames {
-    months_short: [
-        "jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec",
-    ],
-    months: [
-        "januari",
-        "februari",
-        "mars",
-        "april",
-        "maj",
-        "juni",
-        "juli",
-        "augusti",
-        "september",
-        "oktober",
-        "november",
-        "december",
-    ],
-    days_short: ["sön", "mån", "tis", "ons", "tor", "fre", "lör"],
-    days: [
-        "söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag",
-    ],
-    am: "AM",
-    pm: "PM",
-};
-
-static NB: DateNames = DateNames {
-    months_short: [
-        "jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des",
-    ],
-    months: [
-        "januar",
-        "februar",
-        "mars",
-        "april",
-        "mai",
-        "juni",
-        "juli",
-        "august",
-        "september",
-        "oktober",
-        "november",
-        "desember",
-    ],
-    days_short: ["søn", "man", "tir", "ons", "tor", "fre", "lør"],
-    days: [
-        "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag",
-    ],
-    am: "a.m.",
-    pm: "p.m.",
-};
-
-static FI: DateNames = DateNames {
-    months_short: [
-        "tammi", "helmi", "maalis", "huhti", "touko", "kesä", "heinä", "elo", "syys", "loka",
-        "marras", "joulu",
-    ],
-    months: [
-        "tammikuu",
-        "helmikuu",
-        "maaliskuu",
-        "huhtikuu",
-        "toukokuu",
-        "kesäkuu",
-        "heinäkuu",
-        "elokuu",
-        "syyskuu",
-        "lokakuu",
-        "marraskuu",
-        "joulukuu",
-    ],
-    days_short: ["su", "ma", "ti", "ke", "to", "pe", "la"],
-    days: [
-        "sunnuntai",
-        "maanantai",
-        "tiistai",
-        "keskiviikko",
-        "torstai",
-        "perjantai",
-        "lauantai",
-    ],
-    am: "ap.",
-    pm: "ip.",
-};
-
-static CS: DateNames = DateNames {
-    months_short: [
-        "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII",
-    ],
-    months: [
-        "leden",
-        "únor",
-        "březen",
-        "duben",
-        "květen",
-        "červen",
-        "červenec",
-        "srpen",
-        "září",
-        "říjen",
-        "listopad",
-        "prosinec",
-    ],
-    days_short: ["ne", "po", "út", "st", "čt", "pá", "so"],
-    days: [
-        "neděle",
-        "pondělí",
-        "úterý",
-        "středa",
-        "čtvrtek",
-        "pátek",
-        "sobota",
-    ],
-    am: "dop.",
-    pm: "odp.",
-};
-
-static HU: DateNames = DateNames {
-    months_short: [
-        "jan.", "febr.", "márc.", "ápr.", "máj.", "jún.", "júl.", "aug.", "szept.", "okt.", "nov.",
-        "dec.",
-    ],
-    months: [
-        "január",
-        "február",
-        "március",
-        "április",
-        "május",
-        "június",
-        "július",
-        "augusztus",
-        "szeptember",
-        "október",
-        "november",
-        "december",
-    ],
-    days_short: ["V", "H", "K", "Sze", "Cs", "P", "Szo"],
-    days: [
-        "vasárnap",
-        "hétfő",
-        "kedd",
-        "szerda",
-        "csütörtök",
-        "péntek",
-        "szombat",
-    ],
-    am: "de.",
-    pm: "du.",
-};
-
-static TR: DateNames = DateNames {
-    months_short: [
-        "Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
-    ],
-    months: [
-        "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim",
-        "Kasım", "Aralık",
-    ],
-    days_short: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
-    days: [
-        "Pazar",
-        "Pazartesi",
-        "Salı",
-        "Çarşamba",
-        "Perşembe",
-        "Cuma",
-        "Cumartesi",
-    ],
-    am: "ÖÖ",
-    pm: "ÖS",
-};
-
-/// Tags probed only as BCP-47 (no LCID of their own that was probed): `[$-pt-AO]` has the pt-PT
-/// names with other `ddd` and day halves (probes/text-locale-regional-lcids-2 J1-J21, T-1875).
-pub(crate) static BCP47_ONLY: [(&str, &DateNames); 1] = [("pt-AO", &PT_AO)];
-
-/// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
-/// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
-    (0x409, "en-US", &EN),
-    (0x809, "en-GB", &EN),
-    (0x40C, "fr-FR", &FR),
-    (0xC0C, "fr-CA", &FR),
-    (0x407, "de-DE", &DE),
-    (0x807, "de-CH", &DE_CH),
-    (0x410, "it-IT", &IT),
-    (0xC0A, "es-ES", &ES),
-    (0x40A, "es-ES_tradnl", &ES),
-    (0x411, "ja-JP", &JA),
-    (0x404, "zh-TW", &ZH_TW),
-    (0x804, "zh-CN", &ZH_CN),
-    (0x419, "ru-RU", &RU),
-    (0x416, "pt-BR", &PT),
-    (0x816, "pt-PT", &PT),
-    (0x413, "nl-NL", &NL),
-    (0x412, "ko-KR", &KO),
-    (0x415, "pl-PL", &PL),
-    (0x406, "da-DK", &DA),
-    (0x41D, "sv-SE", &SV),
-    (0x414, "nb-NO", &NB),
-    (0x40B, "fi-FI", &FI),
-    (0x405, "cs-CZ", &CS),
-    (0x40E, "hu-HU", &HU),
-    (0x41F, "tr-TR", &TR),
-    (0xC07, "de-AT", &DE_AT),
-    (0x1004, "zh-SG", &ZH_SG),
-    (0xC04, "zh-HK", &ZH_TW),
-    (0x80A, "es-MX", &ES_MX),
-    (0x2C0A, "es-AR", &ES_AR),
-    (0x240A, "es-CO", &ES_AR),
-    (0x340A, "es-CL", &ES_CL),
-    (0x5C0A, "es-419", &ES_419),
-    (0x1007, "de-LU", &DE_LU),
-    (0x1407, "de-LI", &DE_LU),
-    (0x408, "el-GR", &EL),
-    (0x41E, "th-TH", &TH),
-    (0x41B, "sk-SK", &SK),
-    (0x422, "uk-UA", &UK),
-    (0x401, "ar-SA", &AR),
-    (0x40D, "he-IL", &HE),
-    (0x439, "hi-IN", &HI),
-    (0x421, "id-ID", &ID),
-    (0x424, "sl-SI", &SL),
-    (0x427, "lt-LT", &LT),
-    (0x428, "tg-Cyrl-TJ", &TG),
-    (0x42F, "mk-MK", &MK),
-    (0x43F, "kk-KZ", &KK),
-];
-
-/// The names of en-US, the locale of the system tags.
-pub(crate) static EN_US: &DateNames = &EN;
-
-/// Calendar digits B and C under any LCID: Gregorian with the ar-SA names (`[$-B0409]mmmm|dddd` of
-/// 2023-03-15 is "مارس|الأربعاء"; probes/t1923-calendar-digits A22:A63, T-1923).
-pub(crate) static ARABIC: &DateNames = &AR;
-
-/// Calendar digit A under any LCID: Gregorian with the Levant Arabic month names, `mmm` too, and
-/// the ar-SA weekdays (`[$-A0409]mmmm` of 2023-01-15 is "كانون الثاني", of 2023-03-15 "آذار";
-/// probes/t1923-calendar-digits A1:A21, T-1923). The two-word names join with a no-break space.
-pub(crate) static ARABIC_LEVANT: DateNames = DateNames {
-    months_short: LEVANT_MONTHS,
-    months: LEVANT_MONTHS,
-    ..AR
-};
-
-const LEVANT_MONTHS: [&str; 12] = [
-    "كانون\u{a0}الثاني",
-    "شباط",
-    "آذار",
-    "نيسان",
-    "أيار",
-    "حزيران",
-    "تموز",
-    "آب",
-    "أيلول",
-    "تشرين\u{a0}الأول",
-    "تشرين\u{a0}الثاني",
-    "كانون\u{a0}الأول",
-];
-
-/// The Chinese lunar month names of calendar digits E, F and 11, first month first; `mmm` prints
-/// them too and months 13 and 14 print the twelfth (`[$-110409]mmm|mmmm` of 2023-03-15 is
-/// "二月|二月", of 2024-01-11 "十二月|十二月"; probes/text-locale-lunar-edges, T-1922).
-const LUNAR_MONTHS: [&str; 12] = [
-    "正月",
-    "二月",
-    "三月",
-    "四月",
-    "五月",
-    "六月",
-    "七月",
-    "八月",
-    "九月",
-    "十月",
-    "十一月",
-    "十二月",
-];
-
-/// Calendar digits F and 11 under any LCID: lunar month names and zh-CN weekdays
-/// (`[$-F0412]mmmm|ddd` is "二月|周三"; probes/text-locale-lunar-edges A33-A44).
-pub(crate) static LUNAR_ZH: DateNames = DateNames {
-    months_short: LUNAR_MONTHS,
-    months: LUNAR_MONTHS,
-    ..ZH_CN
-};
-
-/// Calendar digit E under a non-Korean LCID: lunar month names and Japanese weekdays
-/// (`[$-E0804]mmmm|ddd` is "二月|水"; probes/text-locale-lunar-edges A30-A33).
-pub(crate) static LUNAR_JA: DateNames = DateNames {
-    months_short: LUNAR_MONTHS,
-    months: LUNAR_MONTHS,
-    ..JA
-};
-
-/// Calendar digit E under a Korean LCID: the Korean lunar month names, `mmm` too, and Korean
-/// weekdays (`[$-E0412]mmmm|dddd` of 2023-01-22 is "정월|일요일"; probes/text-locale-lunar-tokens
-/// A59-A74). Calendar digit 14 gives the same names for the Gregorian months under any LCID
-/// (`[$-140409]mmmm|ddd` of 2023-03-15 is "삼월|수"; probes/t1923-calendar-digits A64:A84, T-1923).
-pub(crate) static LUNAR_KO: DateNames = DateNames {
-    months_short: LUNAR_KO_MONTHS,
-    months: LUNAR_KO_MONTHS,
-    ..KO
-};
-
-const LUNAR_KO_MONTHS: [&str; 12] = [
-    "정월",
-    "이월",
-    "삼월",
-    "사월",
-    "오월",
-    "유월",
-    "칠월",
-    "팔월",
-    "구월",
-    "시월",
-    "동짓달",
-    "섣달",
-];
-
-/// The Hijri month names of an Arabic LCID and of an LCID with no locale under calendar digit 6,
-/// and of every section that a `B2` prefix puts in Excel's Arabic path (`B2mmmm`,
-/// `B2[$-409]mmm`): Muharram first, `mmm` the same, the ar-SA weekdays. Two-word names join with
-/// a no-break space (probes/t1613-hijri-b2, t2729-hijri-locale-tag A25-A36).
-pub(crate) static HIJRI_ARABIC: DateNames = DateNames {
-    months_short: HIJRI_ARABIC_MONTHS,
-    months: HIJRI_ARABIC_MONTHS,
-    ..AR
-};
-
-const HIJRI_ARABIC_MONTHS: [&str; 12] = [
-    "محرم",
-    "صفر",
-    "ربيع\u{a0}الأول",
-    "ربيع\u{a0}الثاني",
-    "جمادى\u{a0}الأولى",
-    "جمادى\u{a0}الثانية",
-    "رجب",
-    "شعبان",
-    "رمضان",
-    "شوال",
-    "ذو\u{a0}القعدة",
-    "ذو\u{a0}الحجة",
-];
-
-/// The Hijri names of every probed LCID but the Arabic, French and Turkish ones under calendar
-/// digit 6 or a `B2` prefix before the tag: English transliterations, `mmm` = `mmmm` and `ddd` =
-/// `dddd`, Muharram and Sunday first (`[$-60409]mmmm|dddd` of 2023-03-15 is "Sha'ban|AlArbia'a";
-/// probes/t2729-hijri-locale-tag A1-A12, A73-A79, t2729-hijri-locale-tag-names A39-A82).
-pub(crate) static HIJRI_ENGLISH: DateNames = DateNames {
-    months_short: HIJRI_ENGLISH_MONTHS,
-    months: HIJRI_ENGLISH_MONTHS,
-    days_short: HIJRI_ENGLISH_DAYS,
-    days: HIJRI_ENGLISH_DAYS,
-    ..EN
-};
-
-const HIJRI_ENGLISH_MONTHS: [&str; 12] = [
-    "Muharram",
-    "Safar",
-    "Rabi' Awwal",
-    "Rabi' Thani",
-    "Jamada El Oula",
-    "Jamada El Thaniah",
-    "Rajab",
-    "Sha'ban",
-    "Ramadan",
-    "Shawwal",
-    "Thoul Ki'dah",
-    "Thoul Hijjah",
-];
-
-const HIJRI_ENGLISH_DAYS: [&str; 7] = [
-    "AlAhad",
-    "AlEthnien",
-    "AthThulatha",
-    "AlArbia'a",
-    "AlKhamis",
-    "AlJumaa",
-    "AsSabt",
-];
-
-/// The Hijri names of a French LCID: French transliterated months (`mmm` the same) and the
-/// ordinary French weekdays (`[$-6040C]mmmm|ddd` of 2023-03-15 is "Chaaban|mer.";
-/// probes/t2729-hijri-locale-tag A13-A24, A80-A86).
-pub(crate) static HIJRI_FRENCH: DateNames = DateNames {
-    months_short: HIJRI_FRENCH_MONTHS,
-    months: HIJRI_FRENCH_MONTHS,
-    ..FR
-};
-
-const HIJRI_FRENCH_MONTHS: [&str; 12] = [
-    "Mouharam",
-    "Safar",
-    "Rabi' Aoual",
-    "Rabi' Thani",
-    "Jamada El Oula",
-    "Jamada El Thaniah",
-    "Rajab",
-    "Chaaban",
-    "Ramadan",
-    "Chaoual",
-    "Zoul Ki'dah",
-    "Zoul Hijjah",
-];
-
-/// The Hijri names of a Turkish LCID: Turkish months (`mmm` the same) and the ordinary Turkish
-/// weekdays (`[$-6041F]mmmm|ddd` of 2023-03-15 is "Şaban|Çar";
-/// probes/t2729-hijri-locale-tag-names A1-A19).
-pub(crate) static HIJRI_TURKISH: DateNames = DateNames {
-    months_short: HIJRI_TURKISH_MONTHS,
-    months: HIJRI_TURKISH_MONTHS,
-    ..TR
-};
-
-const HIJRI_TURKISH_MONTHS: [&str; 12] = [
-    "Muharrem",
-    "Safer",
-    "Rebiyülevvel",
-    "Rebiyülahir",
-    "Cemaziyelevvel",
-    "Cemaziyelahir",
-    "Recep",
-    "Şaban",
-    "Ramazan",
-    "Şevval",
-    "Zilkade",
-    "Zilhicce",
-];
+    #[test]
+    fn lookups() {
+        assert_eq!(lcid_names(0x409), Some(&EN));
+        assert_eq!(lcid_names(0x40C).map(|n| n.months[2]), Some("mars"));
+        assert_eq!(lcid_names(0x1409).map(|n| n.pm), Some("pm"));
+        assert_eq!(lcid_names(0x2412), None);
+        assert_eq!(lcid_names(0x1), None);
+        assert_eq!(tag_locale("FR-fr").map(|t| t.lcid), Some(Some(0x40C)));
+        assert_eq!(tag_locale("fr-XX").map(|t| t.names.months[2]), Some("mars"));
+        assert_eq!(tag_locale("pt-AO").map(|t| t.lcid), Some(None));
+        assert!(tag_locale("xx").is_none());
+        // 0xF803 is Catalan with a `mmmm` holding tabs (probes/t3666-locale-names A584).
+        assert!(lcid_names(0xF803).is_some_and(|n| n.months[0].contains('\t')));
+        assert_eq!(unescape("a\\tb\\\\c"), "a\tb\\c");
+    }
+}

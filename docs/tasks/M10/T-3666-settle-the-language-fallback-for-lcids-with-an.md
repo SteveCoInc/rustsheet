@@ -26,8 +26,8 @@ T-1875 found `[$-2412]` prints English in Excel but `by_language` in formatter/l
 ## Outcome
 Done (general rule). Swept every language 0x01-0xFF x sublanguage 0-63 (probes/t3666-lcid-locale-map, 255 cells of
 64 TEXT calls each) and 8 languages in detail (probes/t3666-lcid-sublanguage-sweep, 534 cells): whether an LCID has a
-locale is a set Excel takes from Windows, now the table `formatter/lcid_locales.rs` (`has_locale`); `by_language`
-falls back only for those, `resolve_extended` is gone (extended hex follows the same rule), 0xC00 and 0x7F are en-US.
+locale is a set Excel takes from Windows (MS-LCID's LCIDs, less 0x1 and 0x2, plus the 0x3D-0x3F aliases), now the
+LCID table locale/excel_lcids.tsv (T-4042): an LCID outside it has no locale, `resolve_extended` is gone (extended hex
+follows the same rule), and 0xC00 and 0x7F are en-US.
 number-formats.md "Which LCIDs have a locale". Eval: text-locale-regional-lcids-2 S!M1:M21 and
-t1924-locale-tag-extended-hex S!B22 pass. Follow-up T-4042 owns the cells of the two sweeps whose locale has no table
-here (124 + 31 cells: regional day halves and names).
+t1924-locale-tag-extended-hex S!B22 pass. T-4042, done in the same branch, replaced the name tables with Excel's data for every LCID and tag, so these sweeps pass too.

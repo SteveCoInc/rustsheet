@@ -3,7 +3,7 @@ id: T-4042
 title: "Name and day-half tables for LCIDs Excel resolves but that have none here"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -31,9 +31,20 @@ probes/t3666-lcid-sublanguage-sweep
 probes/t3666-lcid-locale-map
 
 ## Acceptance criteria
-- [ ] probes/t3666-lcid-sublanguage-sweep and probes/t3666-lcid-locale-map pass (or what is left is owned by a
+- [x] probes/t3666-lcid-sublanguage-sweep and probes/t3666-lcid-locale-map pass (or what is left is owned by a
       narrower follow-up).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Which LCIDs have a locale (settled by T-3666).
+
+## Outcome
+Done in the same branch as T-3666, by replacing every hand-written name table with Excel's own data rather than adding
+regional tables one by one. Two more probes read Excel's 38 names and day halves under all 853 LCIDs with a locale
+(probes/t3666-locale-names) and under all 1122 BCP-47 tags of [MS-LCID] 2.2 and CLDR (probes/t3666-locale-tag-names);
+`rustsheet-excel-locales` (tools/) turns them into locale/excel_names.tsv (335 distinct sets), excel_lcids.tsv (845
+LCIDs) and excel_tags.tsv (926 tags, with the LCID [MS-LCID] gives each), which `locale::excel_date_names` loads once.
+`by_language`, `lcid_locales.rs`, regional_date_names.rs and the 48-entry `LOCALES` list are gone; the calendar name
+sets (Hijri, lunar, Levant, Saka, Hebrew) are built from the tables (`calendar_date_names::calendar_names`). The tag
+probe also settled extended hex past eight characters and the calendar byte's top bit (`calendar_digit`). Eval: both
+sweeps pass (t3666-lcid-sublanguage-sweep 534/534, t3666-lcid-locale-map 255/255), as do the two new probes.

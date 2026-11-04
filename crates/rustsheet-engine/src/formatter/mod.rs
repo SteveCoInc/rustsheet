@@ -9,7 +9,6 @@ pub mod format;
 mod formatted;
 mod fraction;
 mod general;
-mod lcid_locales;
 pub mod lexer;
 pub mod locale_tag;
 mod lunar_calendar;

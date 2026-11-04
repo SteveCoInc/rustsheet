@@ -192,15 +192,9 @@ pub(super) fn format_fraction(
     }
     let mut integer_fill = fill(&integer_digits, &integer_kinds).into_iter();
     let mut numerator_fill = fill(&numerator_digits, &numerator_kinds).into_iter();
-    let integer_end = tokens[..fraction.numerator_start]
-        .iter()
-        .rposition(|t| matches!(t, TextToken::Digit(_)))
-        .map_or(0, |i| i + 1);
+    let integer_end = digits_end(&tokens[..fraction.numerator_start]).unwrap_or(0);
     // Just past the last placeholder after the denominator: a blank fraction blanks up to there.
-    let trailing_end = tokens
-        .iter()
-        .rposition(|t| matches!(t, TextToken::Digit(_)))
-        .map(|i| i + 1)
+    let trailing_end = digits_end(tokens)
         .filter(|end| *end > fraction.denominator_at)
         .unwrap_or(fraction.denominator_at);
     for (index, token) in tokens.iter().enumerate() {
@@ -254,6 +248,14 @@ pub(super) fn format_fraction(
         push_denominator(&mut text, &denominator_text, blank, blank_spaces);
     }
     Some(text)
+}
+
+/// The index just past the last digit placeholder of `tokens`, if any.
+fn digits_end(tokens: &[TextToken]) -> Option<usize> {
+    tokens
+        .iter()
+        .rposition(|t| matches!(t, TextToken::Digit(_)))
+        .map(|i| i + 1)
 }
 
 /// How the separator (the literals between the integer part and the numerator) prints, given

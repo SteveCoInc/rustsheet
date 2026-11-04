@@ -292,6 +292,16 @@ impl Parser {
         *next_token == Token::Period && self.lexer.peek_token() == Token::Zero
     }
 
+    /// Whether a digit placeholder comes next, past any run of commas starting at `next_token`.
+    fn digit_after_commas(&mut self, next_token: &Token) -> bool {
+        next_token.is_digit()
+            || (*next_token == Token::Comma
+                && self
+                    .lexer
+                    .peek_token_past(|t| *t == Token::Comma)
+                    .is_digit())
+    }
+
     fn parse_part(&mut self) -> ParsePart {
         // Set from the last part read; error parts never reach the empty-section check.
         self.ends_in_separator = false;
@@ -395,12 +405,7 @@ impl Parser {
                     } else if last_token_is_digit
                         && (found_decimal_dot || fraction.is_some())
                         && !is_scientific
-                        && (next_token_is_digit
-                            || (next_token == Token::Comma
-                                && self
-                                    .lexer
-                                    .peek_token_past(|t| *t == Token::Comma)
-                                    .is_digit()))
+                        && self.digit_after_commas(&next_token)
                     {
                         // Excel: only a `,` in the integer part groups. After the decimal point or a
                         // fraction a run of commas between placeholders prints nothing and neither
