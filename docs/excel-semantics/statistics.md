@@ -4145,7 +4145,26 @@ the 60 cells are within 15 digits of Excel; the other 22 are where Excel is itse
 digit off the true value (T-3209).
 Status: VERIFIED (excel-graph) for the values; Excel's arithmetic inside bgrat is UNVERIFIED (T-3209, T-2510)
 Implemented in: functions/statistical/large_shape_beta.rs `large_shape_lower`
-Tasks: T-2528, T-3209
+Tasks: T-2528, T-3209, T-3754
+
+Wider window (T-3754): at a small d1 and d2 from 1E5 to 1E7 (b/a of 1E-6 to 1E-3, or a below 1E6) the expansion did
+not apply and Cephes' continued fraction with `large_prefactor` answered, right to only about 10 digits:
+`F.DIST.RT(1.09080885395379,8,5567623)` was 0.3658936312385961 and `F.DIST(...,TRUE)` 0.6341063687614039, where Excel's
+0.3658936312909749 and 0.6341063687090251 are the 50-digit math correctly rounded (probes-numeric/t3354-f-dist-sweep
+S!C168, S!A168; excel-graph). The engine-vs-mpmath grid (docs/research/t3754: d1 2 to 20, d2 2E4 to 1E9, x 0.5 to 2)
+had up to 6E-10 relative error there. The expansion now applies from a = 1E4 with b/a up to 1E-3 (its series, summed
+to convergence, has a term ratio of at most about (b/nu)^2 = 1E-6), and Q(b, z)/r is Legendre's fraction from
+z = 0.9 b up instead of from b + 1: `incomplete_gamma`'s Q over r is up to 2.4E-15 off between b and b + 1, which left
+the d1 = 8 cell 5 ulp off. After: within 1E-14 of the math at every grid point at d1 <= 10 and bit-exact on both
+cells; the only grid points above 1E-14 are at x = 1 exactly, where bratio's ported bfrac answers (T-3479's residue).
+Excel is not the math everywhere in the widened window: `F.DIST.RT(1.2128860145816052,5,1E10)` (x read as
+1.2128860145816) is 0.29999999159162205 in Excel, 4.0 ulp above the math 0.29999999159162182737, and the engine's old
+`gamma_ur` path matched it bit for bit; the fraction puts ours 1.0 ulp off the math (probes-numeric
+t1538-beta-dist-at-excel-inv A23, now within 4 ulp rather than bit-exact). At d1 = 12 to 79, d2 = 1E7 and 3E7 Excel is
+2 to 465 ulp off the 120-digit references of docs/research/t4017 and ours 0.1 to 424 (it was up to 2.7E6). Excel's
+own arithmetic in bgrat there stays T-3209's.
+Evidence: probes-numeric t3354-f-dist-sweep S!A168, S!C168, t4017-f-huge-df2-above-mean-*, t1538-beta-dist-at-excel-inv
+A23 (excel-graph); docs/research/t3754.
 
 Sweep above the mean at df1 other than 5 (T-4017): probes-numeric t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}
 (1,345 cells, excel-graph, 2026-11-04; df1 in 2, 3, 4, 6, 7, 8, 10, 12, 16, 20, 30, 40, 60, 79, df2 1E7 to 1E10, x 1.5 to

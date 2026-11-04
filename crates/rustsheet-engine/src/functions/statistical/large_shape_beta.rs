@@ -13,23 +13,25 @@
 //!
 //! r = z^b e^-z / Gamma(b), the `d_n` and `J_n` bgrat's recurrences from `J_0` = Q(b, z) / r; each
 //! term is about (b/nu)^2 of the one before, so at b/a of [`MAX_SHAPE_RATIO`] or less the sum is
-//! a correction below 1E-12 of Q.
+//! a small correction to Q that converges in a few terms.
 
 use super::incomplete_beta::{rlog1, stirling_correction};
 use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
 use crate::x87_exp::{dd_mul, two_sum};
 use crate::x87_log10::ln_double_double_pair;
 
-/// The largest b/a the expansion is used at: below it the series' first term is under 1E-12 of
-/// the leading Q(b, z), and Cephes' fraction is off by far more (T-2528 sweep against a 60-digit
-/// mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5).
-pub(super) const MAX_SHAPE_RATIO: f64 = 1e-6;
+/// The largest b/a the expansion is used at: each series term is about (b/nu)^2 of the one before,
+/// at most 1E-6 here, so the series (summed, not dropped) converges in a few terms. Cephes' fraction,
+/// the kernel past it, is off by far more: 1E-7 relative at a = 5E9, b = 2.5 (T-2528), and up to
+/// 6E-10 at d1 <= 20 with d2 from 1E5 to 1E7 on the F scale, where it took b/a of 1E-6 to 1E-3
+/// (`F.DIST.RT(1.09080885395379,8,5567623)`, T-3754; docs/research/t3754 grid, 1E-14 at most since).
+pub(super) const MAX_SHAPE_RATIO: f64 = 1e-3;
 
 /// The smallest first shape the expansion is used at. A tiny b at a moderate a also has b/a below
 /// [`MAX_SHAPE_RATIO`], where the expansion's terms in 1/nu are not small: `BETA.DIST(0.997,3.366,
 /// 3.43E-18,TRUE)` is 1.43E-17 in Excel (probes-numeric/t2464-r2-bpser-small-tiny A10) and 4E-13 by
-/// it.
-const MIN_SHAPE: f64 = 1e6;
+/// it. From a = 1E4 (d2 = 2E4 on the F scale) the T-3754 grid is within 1E-14 of the 50-digit math.
+const MIN_SHAPE: f64 = 1e4;
 
 /// The second shape below which the expansion is used: bratio's bgrat family (L140) is for b0 below
 /// 40, and from 40 Excel's other branches decide, `#NUM!` included: `BETA.DIST(0.1,1E+200,1E+100,
@@ -42,6 +44,13 @@ const MAX_SERIES_TERMS: usize = 30;
 /// The deepest cut of [`legendre_fraction`]: it needs about 10 cbrt(b) partial quotients at its
 /// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is at most 1E-6 of a finite a here.
 const MAX_FRACTION_DEPTH: u32 = 1 << 14;
+
+/// The smallest z/b [`upper_over_prefactor`] takes Legendre's fraction at. From 0.9 b up it is within
+/// 7E-16 of a 40-digit Q(b, z)/r at b from 0.1 to 39.5, where `incomplete_gamma`'s Q over r is up to
+/// 2.4E-15 off between b and b + 1 (T-3754: at `F.DIST.RT(1.09080885395379,8,5567623)`, z = 4.36 and
+/// b = 4, it was 1.3E-15 off and the tail 5 ulp; the fraction puts it on Excel's correctly rounded
+/// 0.3658936312909749). Further below b the fraction cancels: 1E-11 off at b = 4, z = 0.1.
+const FRACTION_MIN_Z_OVER_B: f64 = 0.9;
 
 /// The relative size of the last series term at which the series stops.
 const SERIES_TOLERANCE: f64 = 1e-17;
@@ -91,13 +100,14 @@ pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
     (value.is_finite() && value >= 0.0).then_some(value.min(1.0))
 }
 
-/// Q(b, z) / r with r = z^b e^-z / Gamma(b): for z of b + 1 or more Legendre's continued fraction
-/// 1/(z + 1 - b - 1(1 - b)/(z + 3 - b - 2(2 - b)/(z + 5 - b - ...))), evaluated from the bottom up
-/// at a depth doubled until two depths agree, which keeps it within about an ulp where the forward
-/// (Lentz) product of `incomplete_gamma` carries up to 7 (Q(2.5, 4.9999999825), T-2528); below,
-/// that module's Q(b, z) over r. `None` past [`MAX_FRACTION_DEPTH`].
+/// Q(b, z) / r with r = z^b e^-z / Gamma(b): for z of [`FRACTION_MIN_Z_OVER_B`] times b or more
+/// Legendre's continued fraction 1/(z + 1 - b - 1(1 - b)/(z + 3 - b - 2(2 - b)/(z + 5 - b - ...))),
+/// evaluated from the bottom up at a depth doubled until two depths agree, which keeps it within
+/// about an ulp where the forward (Lentz) product of `incomplete_gamma` carries up to 7
+/// (Q(2.5, 4.9999999825), T-2528); below, that module's Q(b, z) over r. `None` past
+/// [`MAX_FRACTION_DEPTH`].
 fn upper_over_prefactor(b: f64, z: f64, r: f64) -> Option<f64> {
-    if z < b + 1.0 {
+    if z < FRACTION_MIN_Z_OVER_B * b {
         let upper = gamma_ur(b, z);
         return upper.is_finite().then_some(upper / r);
     }

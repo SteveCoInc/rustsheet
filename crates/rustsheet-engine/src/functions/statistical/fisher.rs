@@ -696,6 +696,16 @@ impl Model {
 mod tests {
     use super::{f_beta_arguments, f_cdf, f_quantile, f_tail, fisher, fisher_inv};
 
+    // At d1 = 8, d2 = 5567623 (b/a = 1.4E-6, past the old 1E-6 cut of the large-shape expansion)
+    // Cephes' fraction answered 1.4E-10 off; Excel's values are the 50-digit math correctly rounded
+    // (probes-numeric/t3354-f-dist-sweep S!A168, S!C168; T-3754).
+    #[test]
+    fn f_tails_at_a_small_df1_and_a_huge_df2_are_correctly_rounded() {
+        let x = 1.090_808_853_953_79;
+        assert_eq!(f_tail(8.0, 5_567_623.0, x, true), 0.365_893_631_290_974_9);
+        assert_eq!(f_cdf(8.0, 5_567_623.0, x), 0.634_106_368_709_025_1);
+    }
+
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
     #[test]
     fn fisher_rounds_its_quotient_twice() {
