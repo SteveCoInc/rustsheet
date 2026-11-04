@@ -3,7 +3,7 @@ id: T-4193
 title: "AGGREGATE with a scalar in its array or reference argument, under every option, and a range against a later error argument: probe and match"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -45,13 +45,27 @@ and 7. Third, a range holding an error comes before a later error argument, and 
   rebases).
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the unprobed cells above.
-- [ ] numbers.md "AGGREGATE" states the scalar and error-order rules with the new cells, and the "Also unprobed"
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the unprobed cells above.
+- [x] numbers.md "AGGREGATE" states the scalar and error-order rules with the new cells, and the "Also unprobed"
       sentence is removed or narrowed to what stays unprobed.
-- [ ] The engine matches every new cell. probes/aggregate-args, aggregate-grid, aggregate-array-args,
+- [x] The engine matches every new cell. probes/aggregate-args, aggregate-grid, aggregate-array-args,
       aggregate-range-args, aggregate-negative-option-range-k and subtotal-hidden-filtered still pass.
-- [ ] Eval known failures only shrink (`make eval-baseline`, 0 regressions); `make check` green; reviewers approve.
+- [x] Eval known failures only shrink (`make eval-baseline`, 0 regressions); `make check` green; reviewers approve.
 
 ## Out of scope
 - Hidden and filtered rows (evidenced), AGGREGATE's k rounding (T-1034's entry), Gate A numerics (T-4068), and the
   nested SUBTOTAL/AGGREGATE skip (T-4194).
+
+## Outcome
+- New probe probes/t4193-aggregate-scalar-data-error-order (94 cells, excel-graph 2026-11-04, M5): a number as data
+  (reference form `#VALUE!`, array form one value), literal and one-cell-reference errors under options 0-7, text and
+  booleans in the array form, `TYPE` controls, and error order between a range and a direct error and between two
+  literal errors under options 0-7.
+- Findings in docs/excel-semantics/numbers.md "AGGREGATE": a direct error argument beats a range's error in either
+  order, the first of two literal errors wins, a literal error is never skipped, and a text or boolean scalar in the
+  array form is skipped (`#NUM!`). The "Also unprobed" sentence is replaced; what stays unprobed is named.
+- Engine: `aggregate_array_form` skips a text or boolean scalar instead of returning `#VALUE!` (3 cells, Calc!A8:A10);
+  the other 91 cells already matched.
+- Eval delta: +94 checked cells, all passing (the 3 fixed cells were never in the baseline: new case). aggregate-args,
+  aggregate-grid, aggregate-array-args, aggregate-range-args, aggregate-negative-option-range-k and
+  subtotal-hidden-filtered still pass.
