@@ -133,6 +133,19 @@ fn assert_num_errors(formulas: &[&str]) {
 }
 
 #[test]
+fn irr_is_div_zero_where_its_secant_cannot_evaluate_npv() {
+    // T-3407: a secant step whose NPV leaves the double range (a discount power that overflows)
+    // ends the call with worksheet NPV's #DIV/0!, without the retry from 0.1.
+    // probes/t3406-irr-num-boundary P!A69 (40 flows) and P!A84 (60 flows) are #DIV/0! in Excel;
+    // P!A83, the same 60-flow annuity with a smaller outlay, stays #NUM! (its steps stay in range).
+    assert_errors(&[
+        ("=IRR({-6912433510.59,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#DIV/0!"),
+        ("=IRR({-59016464.79,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#DIV/0!"),
+        ("=IRR({-13548805.62,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1})", "#NUM!"),
+    ]);
+}
+
+#[test]
 fn xirr_with_a_zero_first_value_and_a_negative_guess_is_num() {
     // probes/xirr-zero-first-bracket A6, A7, A11 (A6 has a root on the downward chain)
     assert_num_errors(&[
