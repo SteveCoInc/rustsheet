@@ -189,6 +189,7 @@ probes/t3007-beta-dist-ln-x-overflow.case.json	6
 probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
 probes/t3070-gamma-inv-band.case.json	1
+probes/t3312-xirr-xnpv-inner-calls.case.json	1
 probes/t3347-irr-conventional-num.case.json	19
 probes/t3348-rate-fv-nonzero.case.json	3
 probes/t3349-t-inv-2t-near-one.case.json	1

@@ -199,8 +199,9 @@ impl Model {
         )
     }
 
-    /// XNPV's values or dates. A non-number cell refuses the values with `#NUM!` and the dates
-    /// with `#VALUE!`. A values argument that is one empty cell is a single cash flow of 0,
+    /// XNPV's values or dates. A non-number cell refuses the values with `#NUM!`. A text or
+    /// boolean date in a range or array is read as NaN, which [`xnpv_flows`] turns into `#VALUE!`
+    /// in first place and `#NUM!` later; one that is no range or array is `#VALUE!`. A values argument that is one empty cell is a single cash flow of 0,
     /// `XNPV(1,A2,B11)` is 0 (probes/xnpv-empty-values-cell C1-C4, T-2599); empty cells in a
     /// larger range stay refused.
     fn xnpv_numbers(
@@ -230,18 +231,30 @@ impl Model {
                 )),
             };
         }
-        let non_number = match kind {
-            XnpvArgument::Values => Error::NUM,
-            XnpvArgument::Dates => Error::VALUE,
-        };
-        self.array_of_numbers_from(
-            result,
-            cell,
-            true, // accept_number_node
-            false,
-            refuse(Error::NUM),
-            refuse(non_number),
-        )
+        let marked = matches!(result, CalcResult::Range { .. } | CalcResult::Array(_));
+        match kind {
+            XnpvArgument::Values => self.array_of_numbers_from(
+                result,
+                cell,
+                true, // accept_number_node
+                false,
+                refuse(Error::NUM),
+                refuse(Error::NUM),
+            ),
+            XnpvArgument::Dates if marked => {
+                self.array_of_numbers_from(result, cell, true, false, refuse(Error::NUM), || {
+                    Ok(Some(f64::NAN))
+                })
+            }
+            XnpvArgument::Dates => self.array_of_numbers_from(
+                result,
+                cell,
+                true,
+                false,
+                refuse(Error::NUM),
+                refuse(Error::VALUE),
+            ),
+        }
     }
 
     fn xirr_numbers(
@@ -265,6 +278,64 @@ impl Model {
         )
     }
 
+    /// XIRR's values and dates, read whole and checked pair by pair: a text or boolean value or
+    /// date is `#VALUE!` and a negative date or one past the last serial `#NUM!`, whichever comes
+    /// first (`{-2.5,39448,"x"}` and `{39448,-2.5,"x"}` dates are `#NUM!`, `{39448,"x",-2.5}`
+    /// `#VALUE!`, probes/t3312-xirr-guess-dates-weibull A21-A24, A34; a negative first date
+    /// before a third text value is `#NUM!`, A38, but one text value cell before 16 dates holding
+    /// a negative one `#VALUE!`, gen-m9/7c20351562a2d71d A40; T-3312). Both come before the
+    /// flows' signs (A39). An argument that is no range or array keeps the plain reading.
+    fn xirr_flows(
+        &mut self,
+        values: CalcResult,
+        dates: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<Flows, CalcResult> {
+        let values = self.xirr_marked_numbers(values, cell)?;
+        let error = |error: Error| CalcResult::new_error(error, cell, String::new());
+        let dates = match self.xirr_marked_numbers(dates, cell) {
+            Ok(dates) => dates,
+            // A text value is read before an error in the dates' cells.
+            Err(_) if values.iter().any(|value| value.is_nan()) => return Err(error(Error::VALUE)),
+            Err(dates_error) => return Err(dates_error),
+        };
+        for index in 0..values.len().max(dates.len()) {
+            if values.get(index).is_some_and(|value| value.is_nan()) {
+                return Err(error(Error::VALUE));
+            }
+            match dates.get(index) {
+                Some(date) if date.is_nan() => return Err(error(Error::VALUE)),
+                Some(&date) if date < 0.0 || date > MAXIMUM_DATE_SERIAL_NUMBER as f64 => {
+                    return Err(error(Error::NUM))
+                }
+                _ => {}
+            }
+        }
+        let dates = xirr_dates(&values, &dates);
+        Ok((values, dates))
+    }
+
+    /// XIRR's numbers of a range or array with a text or boolean element as NaN, for
+    /// [`Self::xirr_flows`]; any other argument is read plainly, refusing text with `#VALUE!`.
+    fn xirr_marked_numbers(
+        &mut self,
+        arg: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Result<Vec<f64>, CalcResult> {
+        if matches!(arg, CalcResult::Range { .. } | CalcResult::Array(_)) {
+            self.array_of_numbers_from(
+                arg,
+                &cell,
+                false,
+                true, // numeric text in a range cell reads as its number (xirr-back-dated-stop A31)
+                || Ok(Some(0.0)),
+                || Ok(Some(f64::NAN)),
+            )
+        } else {
+            self.xirr_numbers(arg, &cell)
+        }
+    }
+
     /// XIRR's size checks (T-2428): one value and one date is `#N/A`
     /// (`XIRR(Data!A9:A9,Data!E9:E9)`, gen-m9/30e20ba3302fea8b A110; also with a FALSE date,
     /// bc04c1f478c9896c A24), a single date that is text or a boolean `#VALUE!`
@@ -281,9 +352,12 @@ impl Model {
         let value_count = self.flow_element_count(values)?;
         let date_count = self.flow_element_count(dates)?;
         let error = if value_count == 1 && date_count == 1 {
-            // A text, boolean or empty cell keeps the old `#VALUE!` (gen-m9/097af1ca33638670
-            // A255, a91bad4e84f49739 A203, bc04c1f478c9896c A318).
-            if self.non_number_cell(values) || self.non_number_cell(dates) {
+            // A text or boolean cell keeps the old `#VALUE!` (gen-m9/097af1ca33638670 A255,
+            // a91bad4e84f49739 A203, bc04c1f478c9896c A318; `XIRR(5,"x")`,
+            // probes/t3312-xirr-xnpv-inner-calls A45), but an empty cell is a number here:
+            // `XIRR(<empty>,39448)` and `XIRR(5,<empty>)` are `#N/A` (A20-A25, A40, A43, A44;
+            // T-3312).
+            if self.text_or_boolean_cell(values) || self.text_or_boolean_cell(dates) {
                 return None;
             }
             Error::NA
@@ -388,14 +462,14 @@ impl Model {
         Some((row2, column2))
     }
 
-    /// Whether a one-cell range or scalar is text, a boolean or nothing.
+    /// Whether a one-cell range or scalar is text or a boolean.
     ///
     /// An array element is not a cell: `XIRR(D2,BYROW(D9,LAMBDA(x,ISBLANK(x))))` is `#N/A`
     /// (gen-m9/bc04c1f478c9896c A24).
-    fn non_number_cell(&mut self, arg: &CalcResult) -> bool {
+    fn text_or_boolean_cell(&mut self, arg: &CalcResult) -> bool {
         matches!(
             *self.single_cell_value(arg),
-            CalcResult::String(_) | CalcResult::Boolean(_) | CalcResult::EmptyCell
+            CalcResult::String(_) | CalcResult::Boolean(_)
         )
     }
 
@@ -663,14 +737,18 @@ impl Model {
         let first_value_refused = self.xnpv_first_value_refused(&values, &dates, cell);
         // The dates are truncated and checked once, not per element: each element is charged
         // only the values' count.
-        let flows = self
-            .xnpv_numbers(values, &cell, XnpvArgument::Values)
-            .and_then(|values| {
-                let dates = self.xnpv_numbers(dates, &cell, XnpvArgument::Dates)?;
-                let dates = xnpv_dates(&values, &dates);
-                Ok((values, dates))
-            })
-            .map_err(CalcResult::without_message);
+        // An error values argument, unlike an error among its elements, comes before a rate at or
+        // below 0 and a non-number first date (`XNPV(-1+2^-52,<#VALUE!>,<4 dates>)` is `#VALUE!`,
+        // gen-m9/7d2979fba2c95d64 A84; c0681a8b150ce301 A112; T-3312).
+        let values_error = matches!(values, CalcResult::Error { .. });
+        let values = self.xnpv_numbers(values, &cell, XnpvArgument::Values);
+        let dates = self.xnpv_numbers(dates, &cell, XnpvArgument::Dates);
+        let flows = if values_error {
+            values.map(|_| (Vec::new(), Ok(Vec::new())))
+        } else {
+            xnpv_flows(values, dates, cell)
+        }
+        .map_err(CalcResult::without_message);
         self.lift_call_costed(
             Function::Xnpv,
             args,
@@ -702,14 +780,15 @@ impl Model {
                 }
                 match (rate, &flows) {
                     (Err(error), _) => error,
+                    // A rate at or below 0 is `#NUM!` before the flows' cells: an error value or
+                    // a non-number first date (`XNPV(0,{-100,#N/A,60},<TRUE,0,1.005>)`,
+                    // probes/t3312-xirr-xnpv-inner-calls A32; `XNPV(-1,..)` A17; T-3312).
+                    (Ok(rate), _) if rate <= 0.0 && !values_error => {
+                        CalcResult::new_error(Error::NUM, cell, String::new())
+                    }
                     (Ok(_), Err(error)) => error.clone(),
                     (Ok(rate), Ok((values, dates))) => {
                         let xnpv = dates.as_ref().map_err(Clone::clone).and_then(|dates| {
-                            // It seems Excel returns #NUM! if rate < 0, this is only necessary
-                            // if r <= -1
-                            if rate <= 0.0 {
-                                return Err(Error::NUM);
-                            }
                             compute_xnpv(rate, values, dates).map_err(|error| error.0)
                         });
                         number_result(xnpv, cell)
@@ -748,11 +827,7 @@ impl Model {
         let flows = if values_error.is_none() && matches!(dates, CalcResult::Error { .. }) {
             Err(dates.clone())
         } else {
-            self.xirr_numbers(values, &cell).and_then(|values| {
-                let dates = self.xirr_numbers(dates, &cell)?;
-                let dates = xirr_dates(&values, &dates);
-                Ok((values, dates))
-            })
+            self.xirr_flows(values, dates, cell)
         }
         .map_err(CalcResult::without_message);
         self.lift_call_costed(
@@ -763,15 +838,14 @@ impl Model {
             )),
             cell,
             &mut |model, arguments| {
-                // An error values argument comes first; then an error guess is that error before
-                // the dates' error, the size checks and the values' cells (T-2611:
-                // `XIRR(1E+21,<#VALUE!>,<#NUM!>)` is `#NUM!`, gen-m9/1dce4774f5c0e736 A189;
-                // `XIRR(<4 values>,<16 dates>,<#N/A>)` `#N/A`, 1b60bf99d71424e7 A29). A text guess
-                // that is not a number is its `#VALUE!` at the same point; a boolean guess beside
-                // different counts is `#VALUE!` (A226 below); beside equal counts it reads as 1 or 0.
-                if let Some(error) = &values_error {
-                    return error.clone();
-                }
+                // The guess comes first: an error guess is that error, and a text guess that is
+                // no number or a boolean guess (literal or cell, TRUE or FALSE) `#VALUE!`, before
+                // an error values or dates argument, the size checks and the cells
+                // (`XIRR(NA(),{2 dates},1/0)` is `#DIV/0!`, `XIRR(1/0,NA(),"x")` and
+                // `XIRR({-100,110},{2 dates},TRUE)` `#VALUE!`; probes/t3312-xirr-xnpv-inner-calls
+                // A51-A57, t3312-xirr-guess-dates-weibull A41-A43; T-3312). Then an error values
+                // argument, then an error dates argument (T-2611: `XIRR(1E+21,<#VALUE!>,<#NUM!>)`
+                // is `#NUM!`, gen-m9/1dce4774f5c0e736 A189).
                 // Excel: a written empty guess (`XIRR(v,d,)`) is the default 0.1, but an empty
                 // cell is guess 0; IRR and RATE read both as 0 (financial.md "XIRR (and IRR): an
                 // empty guess argument is the default 0.1 for XIRR, guess 0 for IRR";
@@ -779,39 +853,31 @@ impl Model {
                 let guess = arguments
                     .get(2)
                     .filter(|guess| !matches!(guess, CalcResult::EmptyArg));
-                let guess = match model.cast_number_or(guess, 0.1, cell) {
+                let guess = match model.cast_number_no_bools_or(guess, 0.1, cell) {
                     Ok(guess) => guess,
                     Err(error) => return error,
                 };
-                // A size error stands only beside a number guess: numeric text keeps the old
-                // reading. A written empty guess or an empty cell is a number guess here: both
-                // give `#NUM!` over text or boolean flows
-                // (probes/xirr-size-mismatch-empty-guess G21-G36).
-                let number_guess = matches!(
-                    arguments.get(2),
-                    None | Some(
-                        CalcResult::Number(_) | CalcResult::EmptyArg | CalcResult::EmptyCell
-                    )
-                );
-                if let (true, Some(size_error)) = (number_guess, &size_error) {
-                    return size_error.clone();
+                if let Some(error) = &values_error {
+                    return error.clone();
                 }
-                // A boolean guess beside flows of different counts is `#VALUE!`, not the count's
-                // `#NUM!`: `XIRR(Data!C7:E8,{3 dates},<TRUE>)` (gen-m9/b6a02893a8d6b151 A226).
-                // Only a guess cell holding TRUE is evidenced; a literal TRUE and a boolean guess
-                // beside equal counts are unprobed (financial.md "XIRR", T-3267).
-                if matches!(arguments.get(2), Some(CalcResult::Boolean(_)))
-                    && size_error.as_ref().is_some_and(|error| {
-                        matches!(
-                            error,
-                            CalcResult::Error {
-                                error: Error::NUM,
-                                ..
-                            }
-                        )
-                    })
-                {
-                    return CalcResult::new_error(Error::VALUE, cell, String::new());
+                // A size error stands beside any guess that reads as a number, numeric text
+                // included (`XIRR(<-100,110,"x">,{2 dates},"0.1")` is `#NUM!`, t3312-xirr-xnpv-
+                // inner-calls A63; probes/xirr-size-mismatch-empty-guess G21-G36). A guess at or
+                // below -1 turns the one-value `#N/A` into `#NUM!` (`XIRR(5,39448,-1)`,
+                // t3312-xirr-guess-dates-weibull A1, A2, A7, A17), but not a single text or boolean
+                // date's `#VALUE!` (A11, A12), which has no size error here.
+                if let Some(size_error) = &size_error {
+                    let one_text_date = matches!(
+                        size_error,
+                        CalcResult::Error {
+                            error: Error::VALUE,
+                            ..
+                        }
+                    );
+                    if guess <= -1.0 && !one_text_date {
+                        return CalcResult::new_error(Error::NUM, cell, String::new());
+                    }
+                    return size_error.clone();
                 }
                 let (values, dates) = match &flows {
                     Ok(flows) => flows,
@@ -946,15 +1012,40 @@ fn whole_day_dates(values: &[f64], dates: &[f64]) -> Result<(Vec<f64>, f64), Err
     }
 }
 
+/// XIRR's and XNPV's cash flows as read, with their dates truncated and checked (or the dates' error).
+type Flows = (Vec<f64>, Result<Vec<f64>, Error>);
+
+/// XNPV's values and dates as read, in Excel's order: a text or boolean first date (read as NaN)
+/// is `#VALUE!` before an error or non-number value, which comes before a non-number later date
+/// (`XNPV(0.1,{-100,#N/A,60},<TRUE,39448,39508>)` is `#VALUE!`, `<39448,TRUE,39508>` `#N/A`;
+/// probes/t3312-xirr-xnpv-inner-calls A33-A37; T-3312).
+fn xnpv_flows(
+    values: Result<Vec<f64>, CalcResult>,
+    dates: Result<Vec<f64>, CalcResult>,
+    cell: CellReferenceIndex,
+) -> Result<Flows, CalcResult> {
+    if let Ok(dates) = &dates {
+        if dates.first().is_some_and(|date| date.is_nan()) {
+            return Err(CalcResult::new_error(Error::VALUE, cell, String::new()));
+        }
+    }
+    let values = values?;
+    let dates = dates?;
+    let dates = xnpv_dates(&values, &dates);
+    Ok((values, dates))
+}
+
 /// XNPV's dates truncated to whole days, with the scalar call's checks in its order: the counts,
-/// then the dates (the rate is checked after them, per element).
+/// then the dates (the rate is checked before them, per element).
 fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
     let (dates, first_date) = whole_day_dates(values, dates)?;
     for date in &dates {
-        // Excel docs claim that if any number in dates is not a valid date,
-        // XNPV returns the #VALUE! error value, but it seems to return #NUM!.
-        // If any number in dates precedes the starting date, XNPV returns the #NUM! error value.
-        if *date < MINIMUM_DATE_SERIAL_NUMBER as f64
+        // A date that is no valid serial, one before the first and a text or boolean date after
+        // the first (NaN here) are `#NUM!`, not the `#VALUE!` Excel's documentation names:
+        // `XNPV(0.1,{-100;30;40;50},{7;TRUE;8;9})` (probes/t3312-xirr-xnpv-inner-calls A10-A16,
+        // ranges and arrays).
+        if date.is_nan()
+            || *date < MINIMUM_DATE_SERIAL_NUMBER as f64
             || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64
             || *date < first_date
         {

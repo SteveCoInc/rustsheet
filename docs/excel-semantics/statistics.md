@@ -6497,6 +6497,20 @@ Ours: both as Excel since T-2621 ("Statistical argument-domain errors and extrem
 Status: VERIFIED (excel-graph), one cell each; the boundaries are not probed.
 Tasks: T-2469, T-2435, T-2621
 
+## WEIBULL.DIST's density at x = 0 still computes beta^alpha (T-3312)
+Rule: the density (cumulative FALSE) at x = 0 is 0 only when its divisor beta^alpha is in range: it is `#NUM!` where
+beta^alpha overflows and `#DIV/0!` where it underflows to 0, as at x > 0. `WEIBULL.DIST(0,309,10,FALSE)` is `#NUM!`
+and `(0,308,10,FALSE)` 0 (10^309 is past the double range, 10^308 is not); `(0,400,0.1,FALSE)` and
+`(0,1E+10,0.9999,FALSE)` are `#DIV/0!`; `(0,2,1E+200,FALSE)`, `(0,1E+10,1.0001,FALSE)`, `(0,1E+300,1E+300,FALSE)` and
+`WEIBULL(0,400,10,FALSE)` are `#NUM!`. The cdf at x = 0 stays 0 (`WEIBULL.DIST(0,400,10,TRUE)`), and the density at
+0 for a shape below 1 is 0 too (`WEIBULL.DIST(0,0.5,1,FALSE)`, though its limit is infinite).
+Evidence: probes/t3312-xirr-xnpv-inner-calls A1-A6, probes/t3312-xirr-guess-dates-weibull A48-A61 (excel-graph,
+2026-11-04); it settles gen-m9/30e20ba3302fea8b A208 (`XIRR(-1.5,WEIBULL.DIST(0,1.5E+10,99999,FALSE))` is the
+WEIBULL.DIST's `#NUM!`).
+Status: VERIFIED
+Implemented in: `weibull_dist_of` and `weibull_divisor` (crates/rustsheet-engine/src/functions/statistical/weibull.rs).
+Tasks: T-3312
+
 ## Statistical argument-domain errors and extreme values (T-2621)
 Rule (probes/t2475-stat-subexpressions, excel-graph, 2026-10-24; each from the probe cell named, with its gen-m9 owner):
 - PERMUTATIONA's number_chosen truncates toward zero before its sign check: `PERMUTATIONA(<blank>,-0.0001)` is 1 (P!A28,
