@@ -1056,8 +1056,8 @@ modifier symbols (`^`, `` ` ``, `´`, `¨`), the zero-width and bidi format char
 punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter, whatever its case, and breaks a word
 (`PROPER("a𝐚bc")` is `A𝐚Bc`, `PROPER("x"&U+1D45A&"yz")` `X𝐚Yz`; a Deseret capital U+10400 or small U+10428 is left as it is at a word start,
 `PROPER(U+10400&"x")` is `𐐀X`, and mid-word, `A𐐀Bc`, `A𐐨Bc`; an emoji likewise). A lone surrogate, high or low, also breaks a word and is kept
-(`PROPER("a"&H&"bc")` is `A`+H+`Bc`, as with L; `PROPER(H&"b")` is H+`B`; a pair built from the two halves is read as one character).
-Non-letter capitals are not lowered at all (the case table has no entry for them): Georgian Mtavruli U+1C90, U+0524 and U+A78D stay as they are
+(`PROPER("a"&H&"bc")` is `A`+H+`Bc`, as with L; `PROPER(H&"b")` is H+`B`; the halves joined back into a pair, `PROPER("ab"&H&L&"cd")`, still break the word: `Ab`+H+L+`Cd`; the lone halves are built with `MID(UNICHAR(128512),1,1)` and `,2,1)`, as `LEFT` and `RIGHT` take the whole emoji).
+Non-letter capitals are not lowered at all (inferred: the case table has no entry for them, see the T-3820 note below): Georgian Mtavruli U+1C90, U+0524 and U+A78D stay as they are
 at a word start, mid-word, after a digit and after a space (`PROPER("a"&U+1C90&"b")` is `A`+U+1C90+`B`), and so does the small U+0525
 (probes/t3802-proper-surrogates, excel-graph, 2026-11-04, 49 cells; the engine matches all, T-3802). Circled letters are not letters, so they are lowered
 wherever they stand: `PROPER(UNICHAR(9398)&"x")` (Ⓐ) is `ⓐX`, `PROPER("aⒶB")` is `AⓐB`, `PROPER("1Ⓐ")` is `1ⓐ`. The
