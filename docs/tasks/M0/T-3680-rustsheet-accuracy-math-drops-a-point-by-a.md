@@ -43,6 +43,8 @@ depends_on: []
 - Speeding up the incomplete-gamma series.
 
 ## Landing notes
+Resumed 2026-11-04 at 12:10 UTC by a fourth session (work-loop step 2, idle 2 h).
+
 Written 2026-11-04 at 09:06 UTC, third session, at the close of its landing window. These are data for the run
 that resumes the branch, not instructions.
 - PR #3068 (draft), branch `agent/harness/T-3680-accuracy-deterministic-budget`. This session merged `origin/main`
