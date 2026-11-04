@@ -59,7 +59,17 @@ def _tail_series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
     """I_x(a, b) for x ≤ (a + 1) / (a + b + 2) as x^a (1-x)^b / (a B(a, b)) 2F1(a + b, 1; a + 1; x)
     (DLMF 8.17.8 with 15.8.1): every term is positive and they fall from the first, so nothing cancels."""
     log_prefix = a * mpmath.log(x) + b * mpmath.log1p(-x) - mpmath.log(a) - mpmath.log(mpmath.beta(a, b))
-    return mpmath.exp(log_prefix) * _positive_2f1(a, b, x)
+    # x near 1 at a huge a: the sum would need about 210 / (1 - x) terms, where mpmath's
+    # transformation answers at once (Gate A BETA.INV/s1 A176,
+    # BETA.INV(2.42438848002334E-218,907658.84479535,6.34809182974387)).
+    if _terms(a, b, x) > SERIES_MAXTERMS:
+        series = mpmath.hyp2f1(a + b, 1, a + 1, x, maxterms=SERIES_MAXTERMS)
+    else:
+        try:
+            series = _positive_2f1(a, b, x)
+        except mpmath.libmp.NoConvergence:
+            series = mpmath.hyp2f1(a + b, 1, a + 1, x, maxterms=SERIES_MAXTERMS)
+    return mpmath.exp(log_prefix) * series
 
 
 def _positive_2f1(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
