@@ -77,7 +77,7 @@ pub(crate) fn calendar_ymd(
         Some(Calendar::Hijri) => hijri_ymd(serial_1900),
         Some(Calendar::Lunar(table)) if serial_1900 <= LAST_SERIAL => lunar_ymd(serial_1900, table),
         Some(Calendar::Saka) => saka_ymd(serial_1900),
-        Some(Calendar::Hebrew(_)) => hebrew_ymd(serial_1900),
+        Some(Calendar::Hebrew) => hebrew_ymd(serial_1900),
         Some(Calendar::Persian) => persian_ymd(serial_1900),
         Some(Calendar::UmAlQura) => um_al_qura_ymd(serial_1900),
         _ => excel_serial_to_ymd(serial_1900),

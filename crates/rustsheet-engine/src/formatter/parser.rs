@@ -111,6 +111,8 @@ pub struct DatePart {
     pub b2: B2,
     /// Whether the calendar's months go by Gregorian number (`Localized::months_by_number`).
     pub months_by_number: bool,
+    /// A Hebrew leap year's month names (`Localized::leap_months`).
+    pub leap_months: Option<&'static [&'static str; 13]>,
     /// The digits of the section's locale tag (`locale_tag::numerals`).
     pub numerals: Numerals,
 }
@@ -887,6 +889,7 @@ impl Parser {
                 japanese_lcid: localized.is_some_and(|l| l.japanese_lcid),
                 b2,
                 months_by_number: localized.is_some_and(|l| l.months_by_number),
+                leap_months: localized.and_then(|l| l.leap_months),
                 numerals,
             })
         } else {

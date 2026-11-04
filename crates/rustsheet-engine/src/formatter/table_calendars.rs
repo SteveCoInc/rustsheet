@@ -14,10 +14,12 @@ const PERSIAN_MONTHS: [i64; 11] = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30];
 
 /// A calendar of consecutive periods (years or months) read from a table: the first period's
 /// number and the day each period starts on (1899-12-30 being day 0), one more than there are
-/// periods, so the last entry ends the table.
+/// periods, so the last entry ends the table, or starts a last period that never ends
+/// (`open_ended`: the table's last Persian year runs past 9999-12-31).
 struct Periods {
     first: i32,
     starts: Vec<i64>,
+    open_ended: bool,
 }
 
 impl Periods {
@@ -25,7 +27,7 @@ impl Periods {
     fn find(&self, day: i64) -> Option<(i32, i64)> {
         let after = self.starts.partition_point(|start| *start <= day);
         let index = after.checked_sub(1)?;
-        if after == self.starts.len() {
+        if after == self.starts.len() && !self.open_ended {
             return None;
         }
         Some((
@@ -38,7 +40,7 @@ impl Periods {
 /// Parses a table file: after the comments, a line `<first period> <first day>`, then lines of a
 /// period number and one digit per period (`unit` periods long when the digit is 0, one more when
 /// it is 1). A malformed table reads as empty, so every date is outside it.
-fn parse(text: &str, unit: impl Fn(usize) -> i64) -> Periods {
+fn parse(text: &str, unit: impl Fn(usize) -> i64, open_ended: bool) -> Periods {
     let mut lines = text
         .lines()
         .filter(|line| !line.is_empty() && !line.starts_with('#'));
@@ -50,6 +52,7 @@ fn parse(text: &str, unit: impl Fn(usize) -> i64) -> Periods {
         return Periods {
             first: 0,
             starts: Vec::new(),
+            open_ended,
         };
     };
     let mut starts = vec![day];
@@ -58,17 +61,21 @@ fn parse(text: &str, unit: impl Fn(usize) -> i64) -> Periods {
         day += unit(index) + i64::from(bit == '1');
         starts.push(day);
     }
-    Periods { first, starts }
+    Periods {
+        first,
+        starts,
+        open_ended,
+    }
 }
 
 fn persian_years() -> &'static Periods {
     static YEARS: OnceLock<Periods> = OnceLock::new();
-    YEARS.get_or_init(|| parse(include_str!("persian_years.txt"), |_| 365))
+    YEARS.get_or_init(|| parse(include_str!("persian_years.txt"), |_| 365, true))
 }
 
 fn um_al_qura_months() -> &'static Periods {
     static MONTHS: OnceLock<Periods> = OnceLock::new();
-    MONTHS.get_or_init(|| parse(include_str!("um_al_qura_months.txt"), |_| 29))
+    MONTHS.get_or_init(|| parse(include_str!("um_al_qura_months.txt"), |_| 29, false))
 }
 
 /// The Persian date of 1900-system `serial_1900` (`[$-160409]yyyy-mm-dd` of 2023-03-15 is
@@ -76,13 +83,8 @@ fn um_al_qura_months() -> &'static Periods {
 /// `#VALUE!` as for every converted calendar, `calendar_dates::real_day`). The last tabled year
 /// runs past 9999-12-31.
 pub(crate) fn persian_ymd(serial_1900: i64) -> Option<(i32, u32, u32)> {
+    let (year, start) = persian_years().find(real_day(serial_1900)?)?;
     let day = real_day(serial_1900)?;
-    let years = persian_years();
-    let last = years.starts.last().copied()?;
-    let (year, start) = years.find(day).or_else(|| {
-        let year = years.first + i32::try_from(years.starts.len()).ok()? - 1;
-        (day >= last).then_some((year, last))
-    })?;
     let mut rest = day - start;
     let mut month = 1;
     for length in PERSIAN_MONTHS {
@@ -112,7 +114,16 @@ pub(crate) fn um_al_qura_ymd(serial_1900: i64) -> Option<(i32, u32, u32)> {
 
 #[cfg(test)]
 mod tests {
-    use super::{persian_ymd, um_al_qura_ymd};
+    use super::{persian_years, persian_ymd, um_al_qura_months, um_al_qura_ymd};
+
+    #[test]
+    fn tables_parse() {
+        // 1278-9378 and 1318-1500 by 12 months, each with the start after its last period.
+        assert_eq!(persian_years().first, 1278);
+        assert_eq!(persian_years().starts.len(), 9378 - 1278 + 1);
+        assert_eq!(um_al_qura_months().first, 1318);
+        assert_eq!(um_al_qura_months().starts.len(), (1501 - 1318) * 12 + 1);
+    }
 
     #[test]
     fn persian_dates() {

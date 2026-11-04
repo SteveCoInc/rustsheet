@@ -1,9 +1,13 @@
 //! Excel's own month, day and day-half names per locale, which a `[$-...]` number-format tag
 //! selects (`crate::formatter::locale_tag`). They are Excel's locale data (Windows'), not CLDR
 //! (`[$-407]mmm` of March is "Mrz" where CLDR and `locales.bin` have "Mär"), and they are data, not
-//! code: the three tables beside this file hold Excel's answers for every LCID that has a locale and
-//! every BCP-47 tag Excel knows, generated from probes/t3666-locale-names and
-//! probes/t3666-locale-tag-names (excel-graph, 2026-11-04) by `rustsheet-excel-locales` (tools/):
+//! code: the four tables beside this file hold Excel's answers for every LCID that has a locale,
+//! every BCP-47 tag Excel knows and every calendar digit under each, generated from
+//! probes/t3666-* and t4061-* (excel-graph, 2026-11-04) by `rustsheet-excel-locales` (tools/). The
+//! generator leaves out what Excel does not resolve as a locale: a tag whose `A/P` stays as
+//! written, or that reads as extended hex (another calendar, or an LCID with the same names, unless
+//! the tag spells that LCID: `[$-bgc]` is 0xC0C, `[$-ceb]` Cebuano), and an LCID whose hex spells
+//! such a tag; `formatter::locale_tag`'s tests check the tag table against that rule.
 //!
 //! - `excel_names.tsv`: the distinct name sets, one per line (12 `mmm`, 12 `mmmm`, 7 `ddd`,
 //!   7 `dddd`, then the day halves), numbered from 0, with `\\`, `\t` and `\n` escaped (Excel's
@@ -338,6 +342,20 @@ mod tests {
             super::tables().calendars.len(),
             rows(include_str!("excel_calendars.tsv")).count()
         );
+    }
+
+    #[test]
+    fn name_set_indexes_are_in_range() {
+        let tables = super::tables();
+        let count = tables.names.len();
+        assert!(tables.lcids.iter().all(|(_, i)| *i < count));
+        assert!(tables.tags.iter().all(|(_, _, i)| *i < count));
+        assert!(tables.calendars.iter().all(|(_, names)| match names {
+            super::RowNames::Set(i, leap) => {
+                *i < count && leap.is_none_or(|l| l < tables.leap_months.len())
+            }
+            super::RowNames::Own | super::RowNames::NoLocale => true,
+        }));
     }
 
     #[test]

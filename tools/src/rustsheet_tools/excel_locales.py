@@ -8,13 +8,17 @@ which is neither CLDR nor stable across products, so the tables are read off Exc
 - probes/t3666-locale-tag-names: the names under every BCP-47 tag of [MS-LCID] and CLDR.
 
 `ms_lcid_tags.tsv` (from [MS-LCID] 2.2) gives the LCID a tag names, so a tag keeps its LCID's
-calendar rules (`[$-ja-JP]g`). The output is three tab-separated files in
-crates/rustsheet-engine/src/locale/, read by `locale::excel_date_names`:
+calendar rules (`[$-ja-JP]g`). The output, read by `locale::excel_date_names` and
+`formatter::table_calendars`:
 
-- `excel_names.tsv`: one name set per line (12 `mmm`, 12 `mmmm`, 7 `ddd`, 7 `dddd`, AM, PM),
-  numbered from 0 in file order, with `\\`, `\t` and `\n` escaped;
+- crates/rustsheet-engine/src/locale/`excel_names.tsv`: one name set per line (12 `mmm`, 12
+  `mmmm`, 7 `ddd`, 7 `dddd`, AM, PM), numbered from 0 in file order, with `\\`, `\t` and `\n`
+  escaped;
 - `excel_lcids.tsv`: LCID (hex) and name-set number;
-- `excel_tags.tsv`: tag, its LCID (hex, or `-` for none) and name-set number.
+- `excel_tags.tsv`: tag, its LCID (hex, or `-` for none) and name-set number;
+- `excel_calendars.tsv`: the names of each calendar digit under each LCID ([`calendar_rows`]);
+- crates/rustsheet-engine/src/formatter/`persian_years.txt` and `um_al_qura_months.txt`: the
+  Persian and Um al-Qura calendars ([`write_persian_years`], [`write_um_al_qura_months`]).
 
 Run `uv run rustsheet-excel-locales` from tools/ after refilling one of the probes.
 """
@@ -94,7 +98,11 @@ HEBREW = 8
 FORMATTER = ROOT / "crates" / "rustsheet-engine" / "src" / "formatter"
 
 
-def calendar_rows(by_lcid: dict[int, tuple[str, ...]], number: Callable[[tuple[str, ...]], int]) -> list[str]:
+def calendar_rows(
+    by_lcid: dict[int, tuple[str, ...]],
+    number: Callable[[tuple[str, ...]], int],
+    sets: dict[tuple[str, ...], int],
+) -> list[str]:
     """`excel_calendars.tsv`: for each calendar digit, `digit<TAB>key<TAB>names[<TAB>13 leap months]`.
 
     The key is `*` (the digit's default, its commonest names over the LCIDs with a locale), `-` (an
@@ -126,13 +134,30 @@ def calendar_rows(by_lcid: dict[int, tuple[str, ...]], number: Callable[[tuple[s
         no_locale = held[NO_LOCALE_LCID]
         lines.append(f"{digit:X}\t*\t{default}")
         lines.append(f"{digit:X}\t-\t{no_locale}")
+        default_names = resolved_names(default, None, sets)
         for lcid in lcids:
             base = default if lcid in by_lcid else no_locale
-            if lcid != NO_LOCALE_LCID and held[lcid] != base:
+            # A row that prints what the default does adds nothing (`=` where the LCID's own
+            # names are the default set's).
+            same = lcid in by_lcid and resolved_names(held[lcid], by_lcid[lcid], sets) == default_names
+            if lcid != NO_LOCALE_LCID and held[lcid] != base and not same:
                 # `-`: as under an LCID with no locale (`[$-80CEB]`, whose own names differ).
                 value = "-" if held[lcid] == no_locale else held[lcid]
                 lines.append(f"{digit:X}\t{lcid:X}\t{value}")
     return lines
+
+
+def resolved_names(
+    value: str, own: tuple[str, ...] | None, sets: dict[tuple[str, ...], int]
+) -> tuple[str, ...] | str:
+    """The names a row value prints (its leap months included), for comparing rows."""
+    head, _, leap = value.partition("\t")
+    if head == "=" and own is not None:
+        return (*own[:38], leap)
+    if head.isdigit():
+        names = next(n for n, i in sets.items() if i == int(head))
+        return (*names[:38], leap)
+    return value
 
 
 def calendar_value(
@@ -313,7 +338,7 @@ def main() -> int:
     ]
     (OUT / "excel_lcids.tsv").write_text(HEADER + "".join(f"{x}\n" for x in lcid_lines), encoding="utf-8")
     (OUT / "excel_tags.tsv").write_text(HEADER + "".join(f"{x}\n" for x in tag_lines), encoding="utf-8")
-    calendar_lines = calendar_rows(by_lcid, number)
+    calendar_lines = calendar_rows(by_lcid, number, sets)
     (OUT / "excel_calendars.tsv").write_text(
         HEADER + "".join(f"{x}\n" for x in calendar_lines), encoding="utf-8"
     )

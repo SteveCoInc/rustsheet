@@ -29,7 +29,7 @@ Semantics: number-formats.md "Placeholders after a fraction". Code: formatter/fr
 ## Acceptance criteria
 - [x] probes/t3711-fixed-denominator-then-placeholder and probes/t3711-placeholders-after-fraction A13, C13, E13
       pass; a probe settles the largest denominator Excel picks here.
-- [ ] `make check` green; reviewers approve. (`make check-fast` green locally; not reviewed or pushed yet.)
+- [x] `make check` green; reviewers approve (with T-3666 and T-4061 on one branch).
 
 ## Out of scope
 - Placeholders after a placeholder denominator (done by T-3711).

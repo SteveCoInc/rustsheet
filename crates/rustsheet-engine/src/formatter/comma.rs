@@ -94,6 +94,8 @@ pub(super) fn comma_role(field: Field, prev: Prev, next: Next, seen_digit: bool)
 mod tests {
     use super::{comma_role, CommaRole, Field, Next, Prev};
 
+    /// The expected roles below are a second, independent statement of the rule, written by field
+    /// from the evidence rather than copied from `comma_role`; keep the two apart.
     #[test]
     fn comma_roles_by_field() {
         use CommaRole::{Group, Literal, Scale, Skip};

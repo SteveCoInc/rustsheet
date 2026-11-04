@@ -349,7 +349,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             let date_valid = ymd.is_some();
             // A Saka or Hebrew section of a date with no such date is `#VALUE!` even with only
             // time tokens (`TEXT(60.5,"[$-80409]h:mm")`; probes/t2779-hebrew-saka-more E5, E6).
-            if !date_valid && matches!(p.calendar, Some(Calendar::Saka | Calendar::Hebrew(_))) {
+            if !date_valid && matches!(p.calendar, Some(Calendar::Saka | Calendar::Hebrew)) {
                 return invalid_date(value);
             }
             let (ymd_year, ymd_month, ymd_day) = ymd.unwrap_or((0, 1, 0));
@@ -426,8 +426,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             return invalid_date(value);
                         }
                         let weekday = excel_weekday_index(serial_1900);
-                        if let (Some(Calendar::Hebrew(leap_months)), Some(names)) =
-                            (p.calendar, p.names)
+                        if let (Some(Calendar::Hebrew), Some(names), leap_months) =
+                            (p.calendar, p.names, p.leap_months)
                         {
                             let month_name = !matches!(
                                 token,

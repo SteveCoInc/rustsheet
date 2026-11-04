@@ -77,7 +77,7 @@ pub(super) fn format_fraction(
         layout.trailing_end > layout.denominator_at,
     );
     let shown = choose(value, layout.has_integer, &choice)?;
-    Some(render(
+    let plan = plan(
         part,
         fraction,
         &layout,
@@ -85,7 +85,8 @@ pub(super) fn format_fraction(
         &shown,
         negative,
         group_separator,
-    ))
+    );
+    Some(emit(part, &layout, plan))
 }
 
 /// How a fraction's denominator is chosen.
@@ -222,8 +223,91 @@ impl Layout {
     }
 }
 
-/// The text of `shown` under `part`.
-fn render(
+/// How the chosen denominator prints: the kinds of its slots, its text, and for a denominator
+/// with `?` slots the digits it hands to the placeholders after it ([`trailing_fill`]).
+struct DenominatorPlan {
+    kinds: Vec<char>,
+    text: String,
+    spill: Option<Spill>,
+}
+
+/// The digits of a picked denominator past its slots, and how many more digits than slots it has
+/// (negative when it has fewer: a picked 2 under a written `16`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Spill {
+    digits: String,
+    excess: isize,
+}
+
+impl DenominatorPlan {
+    /// The plan for `denominator` chosen by `choice` as `digits`, under a numerator whose last
+    /// placeholder is `numerator_kind`. A fixed denominator used as written prints as written. A
+    /// picked fixed one prints the code's own digits cut to the picked denominator's length,
+    /// as placeholders that pad with spaces under a `?` numerator and with nothing otherwise
+    /// (512/625 under `?/40000` is "512/400  ", `0/40000` and `#/40000` on 0.5 "1/4"); its further
+    /// digits print after them under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on
+    /// 0.0625 "1/46|0") and go to the placeholders after the denominator under a `?` one, or
+    /// nowhere (4095937/5000000 under `?/40000` is "4095937/40000";
+    /// probes/t4043-fixed-denominator-slots). Placeholders fill from the left.
+    fn new(
+        denominator: &Denominator,
+        choice: &Choice,
+        digits: &str,
+        numerator_kind: Option<char>,
+    ) -> Self {
+        let (kinds, written) = match (denominator, choice) {
+            (Denominator::Fixed(written), Choice::AsWritten(_)) => {
+                return DenominatorPlan {
+                    kinds: Vec::new(),
+                    text: written.clone(),
+                    spill: None,
+                };
+            }
+            (Denominator::Fixed(written), Choice::Picked(_)) => {
+                let kind = if numerator_kind == Some('?') {
+                    '?'
+                } else {
+                    '#'
+                };
+                (vec![kind; written.len()], Some(written))
+            }
+            (Denominator::Placeholders(kinds), _) => (kinds.clone(), None),
+        };
+        let spill = Spill {
+            digits: digits.chars().skip(kinds.len()).collect(),
+            excess: digits.len().cast_signed() - kinds.len().cast_signed(),
+        };
+        let mut text = match written {
+            Some(written) => fill_left(
+                &written.chars().take(digits.len()).collect::<String>(),
+                &kinds,
+            ),
+            None => fill_left(digits, &kinds),
+        };
+        let spill = if kinds.contains(&'?') {
+            Some(spill)
+        } else {
+            text.push_str(&spill.digits);
+            None
+        };
+        DenominatorPlan { kinds, text, spill }
+    }
+}
+
+/// Everything a fraction section prints, prepared before its tokens are walked ([`emit`]).
+struct Plan {
+    minus: bool,
+    integer: Vec<String>,
+    numerator: Vec<String>,
+    denominator: String,
+    trailing: Vec<String>,
+    /// A zero numerator blanks the fraction ([`Layout::blanks`]), to spaces or to nothing.
+    blank: Option<bool>,
+    separator: Separator,
+}
+
+/// The [`Plan`] of `shown` under `part`.
+fn plan(
     part: &NumberPart,
     fraction: &Fraction,
     layout: &Layout,
@@ -231,42 +315,32 @@ fn render(
     shown: &Shown,
     negative: bool,
     group_separator: &str,
-) -> String {
+) -> Plan {
     let tokens = &part.tokens;
     let Shown {
         integer,
         numerator,
         denominator,
     } = *shown;
-    let has_integer = layout.has_integer;
     let integer_kinds = placeholder_kinds(&tokens[..layout.numerator_start]);
     let numerator_kinds = placeholder_kinds(&tokens[layout.numerator_start..layout.numerator_end]);
-    // A picked denominator's placeholder kinds. A picked fixed one prints its digits as
-    // placeholders that pad with spaces under a `?` numerator and with nothing otherwise
-    // (`?/40000` on 0.5 is "1/4    ", `0/40000` and `#/40000` "1/4", `??/40000` " 1/4    ").
-    let denominator_kinds: Vec<char> = match (&fraction.denominator, choice) {
-        (Denominator::Fixed(_), Choice::AsWritten(_)) => Vec::new(),
-        (Denominator::Fixed(digits), Choice::Picked(_)) => {
-            let kind = if numerator_kinds.last() == Some(&'?') {
-                '?'
-            } else {
-                '#'
-            };
-            vec![kind; digits.len()]
-        }
-        (Denominator::Placeholders(kinds), _) => kinds.clone(),
-    };
+    let denominator = DenominatorPlan::new(
+        &fraction.denominator,
+        choice,
+        &format!("{denominator}"),
+        numerator_kinds.last().copied(),
+    );
     // A zero numerator blanks the fraction unless a `0` placeholder prints it (`# 00/16` on 0 is
     // "00/16"; `#\:0=/=#` on 1 "1:0=/=1", poi/NumberFormatTests A258).
-    let blank = has_integer && numerator == 0.0 && !numerator_kinds.contains(&'0');
-    let sharp_numerator = numerator_kinds.first() == Some(&'#');
+    let blank = layout.has_integer && numerator == 0.0 && !numerator_kinds.contains(&'0');
     let last_integer_kind = integer_kinds.last().copied();
     // A blank fraction prints as spaces of its width, or as nothing under a `#` numerator with
     // neither a `?` integer nor a `?` in the denominator (`#\:#=/=?` and `?\:#=/=#` on 1 are
     // "1      ", `#\:#=/=#`, `#\:#=/=0` and `0\:#=/=#` "1"; poi/NumberFormatTests A253, A261,
     // A252, A254, A270).
-    let blank_spaces =
-        !sharp_numerator || denominator_kinds.contains(&'?') || last_integer_kind == Some('?');
+    let blank_spaces = numerator_kinds.first() != Some(&'#')
+        || denominator.kinds.contains(&'?')
+        || last_integer_kind == Some('?');
     let integer_digits = match (integer == 0.0, numerator == 0.0) {
         // A blank fraction leaves the integer printing even under `#`; a printed zero numerator
         // drops a zero integer under `#` and keeps it under `?` (`#\:0=/=#` on 0 is "0=/=1",
@@ -288,87 +362,80 @@ fn render(
     } else {
         format!("{numerator}")
     };
-    let denominator_digits = format!("{denominator}");
-    // The picked denominator's digits past its slots (only a picked fixed denominator has more
-    // digits than slots) and how many more (or fewer) digits than slots it has.
-    let slots = denominator_kinds.len();
-    let spill: String = denominator_digits.chars().skip(slots).collect();
-    let excess = denominator_digits.len().cast_signed() - slots.cast_signed();
+    let blank = blank.then_some(blank_spaces);
     // A numeral byte maps every digit the fraction prints (`[$-1B000409]# ?/?` on 12.5 is
     // "一二 一/二", `# ?/16` "一二 八/一六"; probes/t3532-numeral-digit-fields C14,
     // t3532-numeral-digit-sections A8).
-    let denominator_text = match (&fraction.denominator, choice) {
-        (Denominator::Fixed(digits), Choice::AsWritten(_)) => digits.clone(),
-        // The code's own digits print, cut to the picked denominator's length: 512/625 under
-        // `?/40000` is "512/400  ". The picked denominator's further digits print after them
-        // under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on 0.0625 "1/46|0") and go
-        // to the placeholders after the denominator under a `?` one, or nowhere (4095937/5000000
-        // under `?/40000` is "4095937/40000"; probes/t4043-fixed-denominator-slots).
-        (Denominator::Fixed(digits), Choice::Picked(_)) => {
-            let shown: String = digits.chars().take(denominator_digits.len()).collect();
-            let mut text = fill_left(&shown, &denominator_kinds);
-            if !denominator_kinds.contains(&'?') {
-                text.push_str(&spill);
-            }
-            text
-        }
-        (Denominator::Placeholders(_), _) => fill_left(&denominator_digits, &denominator_kinds),
+    let numerals = |digits: Vec<String>| -> Vec<String> {
+        digits.iter().map(|d| part.numerals.digits(d)).collect()
     };
-    let denominator_text = part.numerals.digits(&denominator_text);
-    let mut trailing_fill = trailing_fill(
-        &placeholder_kinds(&tokens[layout.denominator_at..]),
-        denominator_kinds
-            .contains(&'?')
-            .then_some((spill.as_str(), excess)),
-    )
-    .into_iter();
+    Plan {
+        minus: negative && (layout.has_integer || numerator != 0.0),
+        separator: separator_kind(
+            blank,
+            !integer_digits.is_empty(),
+            last_integer_kind,
+            numerator_kinds.first().copied(),
+        ),
+        integer: numerals(fill(&integer_digits, &integer_kinds)),
+        numerator: numerals(fill(&numerator_digits, &numerator_kinds)),
+        trailing: numerals(trailing_fill(
+            &placeholder_kinds(&tokens[layout.denominator_at..]),
+            denominator.spill.as_ref(),
+        )),
+        denominator: part.numerals.digits(&denominator.text),
+        blank,
+    }
+}
 
-    let separator = separator_kind(
-        blank.then_some(blank_spaces),
-        !integer_digits.is_empty(),
-        last_integer_kind,
-        numerator_kinds.first().copied(),
-    );
+/// The text of `plan`, walking `part`'s tokens zone by zone. The arms are disjoint: a blank
+/// fraction takes the zones it blanks whole (never the integer or separator), the separator is
+/// printed, spaced or dropped whole, and every other placeholder takes the next digits of its
+/// zone.
+fn emit(part: &NumberPart, layout: &Layout, plan: Plan) -> String {
+    let tokens = &part.tokens;
     let mut text = String::new();
-    if negative && (has_integer || numerator != 0.0) {
+    if plan.minus {
         text.push('-');
     }
     if let Some(c) = part.currency {
         text.push(c);
     }
-    let mut integer_fill = fill(&integer_digits, &integer_kinds).into_iter();
-    let mut numerator_fill = fill(&numerator_digits, &numerator_kinds).into_iter();
+    let push_denominator = |text: &mut String| match plan.blank {
+        None => text.push_str(&plan.denominator),
+        Some(true) => text.extend(plan.denominator.chars().map(|_| ' ')),
+        Some(false) => {}
+    };
+    let mut integer = plan.integer.iter();
+    let mut numerator = plan.numerator.iter();
+    let mut trailing = plan.trailing.iter();
     for (index, token) in tokens.iter().enumerate() {
         if index == layout.denominator_at {
-            push_denominator(&mut text, &denominator_text, blank, blank_spaces);
+            push_denominator(&mut text);
         }
         let zone = layout.zone(index);
-        // The separator and blank arms come before the digit arms: they take a zone whole.
         match (zone, token) {
-            (Zone::Separator, _) if separator == Separator::Dropped => {}
-            (Zone::Separator, _) if separator == Separator::Spaces => push_spaces(&mut text, token),
-            (Zone::Integer, TextToken::Digit(_)) => {
-                let digits = integer_fill.next().unwrap_or_default();
-                text.push_str(&part.numerals.digits(&digits));
-            }
             // Every placeholder and literal of a blank fraction takes its width in spaces, and so
             // do those after the denominator up to its last placeholder (`# ?/?|0 "12"` on 12 is
             // "12       12"; probes/t3711-placeholders-after-fraction B1:B20).
-            _ if blank && layout.blanks(index) => {
-                if blank_spaces {
+            _ if plan.blank.is_some() && layout.blanks(index) => {
+                if plan.blank == Some(true) {
                     push_spaces(&mut text, token);
                 }
             }
+            (Zone::Separator, _) if plan.separator == Separator::Dropped => {}
+            (Zone::Separator, _) if plan.separator == Separator::Spaces => {
+                push_spaces(&mut text, token);
+            }
+            (Zone::Integer, TextToken::Digit(_)) => text.extend(integer.next().map(String::as_str)),
+            (Zone::Numerator, TextToken::Digit(_)) => {
+                text.extend(numerator.next().map(String::as_str));
+            }
             (Zone::Trailing, TextToken::Digit(_)) => {
-                let digits = trailing_fill.next().unwrap_or_default();
-                text.push_str(&part.numerals.digits(&digits));
+                text.extend(trailing.next().map(String::as_str));
             }
             // A `.` after the denominator prints (`# ?/?|0.0` on 12.5 is "12 1/2|0.0").
             (Zone::Trailing, TextToken::Period) => text.push('.'),
-            (Zone::Numerator, TextToken::Digit(_)) => {
-                let digits = numerator_fill.next().unwrap_or_default();
-                text.push_str(&part.numerals.digits(&digits));
-            }
             (_, TextToken::Literal(c)) => text.push(*c),
             (_, TextToken::Text(t)) => text.push_str(t),
             (_, TextToken::Ghost(_)) => text.push(' '),
@@ -378,18 +445,19 @@ fn render(
         }
     }
     if layout.denominator_at == tokens.len() {
-        push_denominator(&mut text, &denominator_text, blank, blank_spaces);
+        push_denominator(&mut text);
     }
     text
 }
 
 /// What each placeholder after the denominator prints, for their `kinds`; they get no digit of
 /// the value (number-formats.md "Placeholders after a fraction"). After a denominator without `?`
-/// slots (a picked fixed one under a `#` or `0` numerator), `0` and `#` print a zero and `?` a
-/// space (`# 0/4|0` on 0.3 is "3/40|0", `# 0/16|?` on 0.01 "1/160| ").
+/// slots (`spill` `None`: one used as written, or a picked fixed one under a `#` or `0`
+/// numerator) `0` and `#` print a zero and `?` a space (`# 0/4|0` on 0.3 is "3/40|0",
+/// `# 0/16|?` on 0.01 "1/160| ").
 ///
-/// After a denominator with `?` slots, `spill` holds its digits past the slots and `excess` how
-/// many more digits than slots it has (negative when it has fewer):
+/// After a denominator with `?` slots, `spill` holds its digits past the slots and how many more
+/// digits than slots it has (negative when it has fewer):
 /// - all `?`: the spilled digits, or one `0` per missing digit, fill them from the left and a
 ///   placeholder with none prints a space (`# ?/4|?` on 0.0625 is " 1/4|6", `# ?/16|?` on 0.5
 ///   " 1/1 |0", `# ?/100|??` on 0.3 " 3/10 |0 ", `# ??/??|?` on 0.5 "  1/2 |0", on 0.3 "  3/10| ");
@@ -398,18 +466,19 @@ fn render(
 ///   space until a placeholder before it printed a zero (`# ?/4|0` on 0.0625 is " 1/4|60",
 ///   `# ?/16|#` on 0.5 " 1/1 |", `# ?/?|?0` " 1/2| 0", `# ?/?|0?` " 1/2|00";
 ///   probes/t4043-fixed-denominator-slots, -cut, t4043-placeholder-denominator-slots).
-fn trailing_fill(kinds: &[char], spill: Option<(&str, isize)>) -> Vec<String> {
-    let Some((spill, excess)) = spill else {
+fn trailing_fill(kinds: &[char], spill: Option<&Spill>) -> Vec<String> {
+    let Some(Spill { digits, excess }) = spill else {
         return kinds
             .iter()
             .map(|kind| if *kind == '?' { " " } else { "0" }.to_owned())
             .collect();
     };
+    let excess = *excess;
     if kinds.iter().all(|kind| *kind == '?') {
         let digits: Vec<char> = if excess < 0 {
             vec!['0'; excess.unsigned_abs()]
         } else {
-            spill.chars().collect()
+            digits.chars().collect()
         };
         return (0..kinds.len())
             .map(|i| digits.get(i).copied().unwrap_or(' ').to_string())
@@ -434,7 +503,7 @@ fn trailing_fill(kinds: &[char], spill: Option<(&str, isize)>) -> Vec<String> {
         })
         .collect();
     if let Some(first) = slots.first_mut() {
-        first.insert_str(0, spill);
+        first.insert_str(0, digits);
     }
     slots
 }
@@ -477,15 +546,6 @@ enum Separator {
     Printed,
     Spaces,
     Dropped,
-}
-
-/// Pushes the denominator, or its width in spaces (or nothing) for a blank fraction.
-fn push_denominator(text: &mut String, denominator: &str, blank: bool, blank_spaces: bool) {
-    match (blank, blank_spaces) {
-        (false, _) => text.push_str(denominator),
-        (true, true) => text.extend(denominator.chars().map(|_| ' ')),
-        (true, false) => {}
-    }
 }
 
 /// Pushes one space per column `token` would take.
@@ -654,5 +714,73 @@ mod comma_tests {
         assert_eq!(comma_exponent(252, true), 12);
         assert_eq!(comma_exponent(254, true), 6);
         assert_eq!(comma_exponent(1, false), 253);
+    }
+}
+
+#[cfg(test)]
+mod trailing_tests {
+    use super::{trailing_fill, Choice, Denominator, DenominatorPlan, Spill};
+
+    /// One row per probed shape: the placeholders after the denominator, the picked
+    /// denominator's spill (digits past its slots, excess), and what they print
+    /// (probes/t4043-fixed-denominator-slots, -cut, t4043-placeholder-denominator-slots).
+    #[test]
+    fn trailing_placeholders() {
+        let spill = |digits: &str, excess| {
+            Some(Spill {
+                digits: digits.to_owned(),
+                excess,
+            })
+        };
+        let rows: [(&str, Option<Spill>, &str); 13] = [
+            // No `?` slots: `0`/`#` print a zero, `?` a space (`# 0/16|?` on 0.01).
+            ("0", None, "0"),
+            ("?", None, " "),
+            // All `?`: spilled digits from the left (`# ?/4|?` on 0.0625, on PI()).
+            ("?", spill("6", 1), "6"),
+            ("??", spill("725033", 6), "72"),
+            // ... or a zero per missing digit (`# ?/16|?` on 0.5, `# ?/100|??` on 0.5 and 0.3).
+            ("?", spill("", -1), "0"),
+            ("??", spill("", -2), "00"),
+            ("??", spill("", -1), "0 "),
+            ("??", spill("", 0), "  "),
+            // A `0` or `#` among them: the spill first, then a zero each (`# ?/4|0` on 0.0625).
+            ("0", spill("6", 1), "60"),
+            ("?0", spill("6", 1), "600"),
+            // Exact fit: `?` is a space until a zero printed (`# ?/?|?0`, `|0?` on 0.5).
+            ("?0", spill("", 0), " 0"),
+            ("0?", spill("", 0), "00"),
+            // Missing digits: `#` prints nothing (`# ?/16|#` on 0.5).
+            ("#", spill("", -1), ""),
+        ];
+        for (kinds, spill, expected) in rows {
+            let kinds: Vec<char> = kinds.chars().collect();
+            assert_eq!(
+                trailing_fill(&kinds, spill.as_ref()).concat(),
+                expected,
+                "{kinds:?} {spill:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn denominator_plans() {
+        let fixed = |digits: &str| Denominator::Fixed(digits.to_owned());
+        let picked = Choice::Picked(9_999_999.0);
+        // `# ?/4|0` on 0.0625: "4" shows, "6" spills to the trailing placeholders.
+        let plan = DenominatorPlan::new(&fixed("4"), &picked, "16", Some('?'));
+        assert_eq!(
+            (plan.text.as_str(), plan.spill.map(|s| s.digits)),
+            ("4", Some("6".into()))
+        );
+        // `# 0/4|0` on 0.0625: the extra digit prints in the denominator itself.
+        let plan = DenominatorPlan::new(&fixed("4"), &picked, "16", Some('0'));
+        assert_eq!((plan.text.as_str(), plan.spill), ("46", None));
+        // `?/40000` on 0.5: cut to the picked length and padded under a `?` numerator.
+        let plan = DenominatorPlan::new(&fixed("40000"), &picked, "2", Some('?'));
+        assert_eq!(plan.text, "4    ");
+        // As written: printed as is.
+        let plan = DenominatorPlan::new(&fixed("16"), &Choice::AsWritten(16.0), "16", Some('?'));
+        assert_eq!((plan.text.as_str(), plan.spill), ("16", None));
     }
 }

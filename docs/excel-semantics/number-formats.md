@@ -832,12 +832,12 @@ does for most but not all (`[$-1]` and `[$-2]` have none, `[$-12]` is Korean); 0
 0x7F (invariant) English with "PM", while 0x1000 and 0x2000 have none. Apart from those aliases the set is exactly the
 LCIDs [MS-LCID] 2.2 defines (reserved and pseudo-locale entries excepted), less 0x1 and 0x2. Every locale has its own
 names, and regional variants differ often (en-NZ "pm", fr-CM "soir", es-GT "p. m."), so no fallback to a language's
-names is right: Excel's names under all 845 LCIDs that have a locale are tabulated (335 distinct sets). Under its own
+names is right: Excel's names under all 845 LCIDs that have a locale (841 tabulated; the hex of four spells a tag and resolves through it, `[$-CEB]`) are tabulated (220 distinct sets; 660 with the calendars' sets). Under its own
 calendar every locale prints the Gregorian year, month and day with ASCII digits (a Japanese LCID's `g` and `e` still
 print its eras), `A/P` prints the locale's day halves and `d mmmm` the plain
 `mmmm` (no genitive forms). One odd value: under 0xF803 (a Catalan alias) `mmmm` of January is all twelve genitive
 names joined by tabs.
-**BCP-47 tags** resolve the same way: Excel knows 926 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
+**BCP-47 tags** resolve the same way: Excel knows 930 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
 its LCID where it has one; a tag whose LCID has no locale still names one (`[$-ar]`, `[$-bg]`, `[$-qps-ploc]`), and so
 does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). After a `B2` such a tag is Hijri with its LCID's Hijri names
 (Arabic for `ar`, English for the rest) and its own day halves (`B2[$-ar]yyyy|mmmm|h A/P` is "1444|شعبان|6 م",
@@ -905,7 +905,7 @@ month and weekday of A, B, C and 14, with day halves under 401 ("6 م") and 412 
 | 14 | Gregorian, Korean native month names ("정월" … "섣달", `mmm` the same), Korean weekdays | "삼월", "수" |
 | 15 | Gregorian with en-US names (probes/t3666-calendar-top-bit) | `[$-15040C]mmmm` is "March" |
 | 16 | Persian (Windows CAL_PERSIAN): 2023-03-15 is 1401-12-24, 1900-01-01 1278-10-11, 9999-12-31 9378-10-13; months of 31 (1-6), 30 (7-11) and 29/30 days; the leap years follow the equinox (Excel's table of all 8100 years, probes/t4061-persian-new-years: neither the 33- nor the 2820-year rule fits, the new year drifts from 21 March to 17 March by 9999); `yy`/`b` two digits, `e` the year, `g` nothing | `[$-16040C]yyyy-mm-dd` of 45000 is "1401-12-24" |
-| 17 | Um al-Qura (CAL_UMALQURA): Excel's month table from 1 Muharram 1318 (1900-04-30) to the end of 1500 (2077-11-15), the digit-6 date outside it (probes/t4061-umalqura-months, t4061-hijri-variant-dates: a quarter of month starts differ from digit 6 by a day inside the table, none outside) | `[$-170409]yyyy-mm-dd` of 1900-04-30 is "1318-01-01" |
+| 17 | Um al-Qura (CAL_UMALQURA): Excel's month table from 1 Muharram 1318 (1900-04-30) to the end of 1500 (2077-11-15), the digit-6 date outside it (probes/t4061-umalqura-months, t4061-hijri-variant-dates: a quarter of month starts differ from digit 6 by a day inside the table, none outside up to 2100; later years are extrapolated from two points, 3000-01-01 and 9999-12-31, t4061-umalqura-months B7, B8) | `[$-170409]yyyy-mm-dd` of 1900-04-30 is "1318-01-01" |
 | 18 to 7F | ignored; the LCID's own calendar (probed 18-1F, 20, 3F, 40, 7F over fr-FR and ja-JP) | `[$-7F040C]mmmm` is "mars" |
 | 80 and above | the digit without its top bit (`[$-83040C]` Japanese eras, `[$-91040C]` lunar, `[$-FF040C]` ignored) | `[$-FF040C]mmmm` is "mars" |
 Under A, B, C and 14, `e` and `g` are probed ("2023", ""); `yy`, `b` and `bbbb` are inferred to print as under Gregorian (unprobed).
