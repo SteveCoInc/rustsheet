@@ -3,7 +3,7 @@ id: T-4066
 title: "Lowercase day halves for en-IE, en-BZ and en-HK hex LCIDs (1809 2809 3C09)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
