@@ -63,6 +63,9 @@ FUNCTION_LANES = [
 ]
 LANES = ["harness", "engine", "api", "perf", "quality", "research", *FUNCTION_LANES, "functions"]
 BUSY_SECONDS = 2 * 3600  # a lane whose pushed agent branch moved this recently is busy
+# How many tasks a lane may have in flight at once (decision 0022: one; decision 0269: engine
+# takes three, because most Phase 1 exit blockers are engine tasks and one slot ran them in series).
+LANE_SLOTS = {"engine": 3}
 PRIORITIES = ["P0", "P1", "P2", "P3"]
 SIZES = ["S", "M", "L"]
 TIERS = ["sonnet", "opus"]  # model tier that works the task (decision 0018)
@@ -787,11 +790,12 @@ def available(
     # One task in flight per lane. A branch whose task is already done on main (merged, branch not
     # yet deleted) leaves its lane free, so a looping worker can take the next task at once.
     # The task's own `lane:` decides (the branch name is only a fallback for tasks not on main).
-    busy = {
+    in_flight = Counter(
         str(by_id[tid].get("lane")) if tid in by_id else lane
         for lane, tid in active
         if by_id.get(tid, {}).get("status") not in ("done", "dropped")
-    }
+    )
+    busy = {lane for lane, n in in_flight.items() if n >= LANE_SLOTS.get(lane, 1)}
     cands = [
         t
         for t in tasks
