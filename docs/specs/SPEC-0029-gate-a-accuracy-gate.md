@@ -127,8 +127,9 @@ tools/ only (pure Python, BSD; the engine and the bindings never depend on it).
   valid and extreme ranges are the definition's, each with a cited source (a semantics entry, Excel's documented
   limit, or a probe).
 - **Precision.** Each value is computed at dps 60 and again at dps 80; a point whose two values differ beyond 1e-45
-  relative is not converged and is dropped (logged with its arguments). A point whose evaluation takes more than 10 s is
-  dropped the same way. The output is the dps-80 value rounded to 50 significant digits.
+  relative is not converged and is dropped (logged with its arguments). Only deterministic budgets drop a point (mpmath's
+  term and precision limits, a definition's own step counts), never the clock: a point that takes more than 600 s
+  stops the run with an error instead, so the same inputs write the same files on any machine (T-3680). The output is the dps-80 value rounded to 50 significant digits.
 - **Determinism.** The seed of a batch is `int(sha256(f"{FUNCTION}/{batch}"), 16) % 2**63`, fed to one
   `random.Random`; the sampler never reads the clock or the environment, and dict iteration is by sorted key. The
   same function, batch and tool version write byte-identical files (a unit test).

@@ -2821,20 +2821,45 @@ Tasks: T-3444, T-3352, T-3447, T-3740, T-3741
 
 ## NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)
 Rule: `NEGBINOM.DIST(f,s,p,TRUE)` is `#NUM!` at a huge number_s with enough failures, where the true cdf underflows
-to 0.
+to 0. `BETA.DIST(p,s,f+1,TRUE)` is `#NUM!` at the same points: the error comes from Excel's incomplete beta (below).
 - `#NUM!`: 28 failures at p 0.323212154487823 with number_s 1E+13, 1E+14, 999999999999999, 1E+16 and 1E+20
   (`NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)`), and at p 0.1 and 0.5 with number_s 999999999999999.
 - 0: number_s 1E+12, 1E+10 and 2^31 with 28 failures; 0 and 14 failures with number_s 999999999999999.
 - 0 everywhere: the pmf (`NEGBINOM.DIST(28,999999999999999,0.323212154487823,FALSE)`) and the legacy NEGBINOMDIST
   (always the pmf).
 
-The number_s cut is between 1E+12 and 1E+13 and the failures cut between 14 and 28. Whether they combine (a product
-or a sum) is not probed.
-Evidence: probes-numeric/t3553-negbinom-huge-s A1-A17 (excel-graph, 2026-11-01). It surfaced in T-3553's first Gate
+The error is Excel's incomplete beta kernel's, not NEGBINOM.DIST's own. `BETA.DIST(p,s,f+1,TRUE)` is `#NUM!`
+exactly where the cdf is, and so is the same call with the two shapes swapped. Examples:
+- `BETA.DIST(0.323212154487823,1E+13,29,TRUE)` and `(..,29,1E+13,TRUE)` are both `#NUM!`.
+- `(..,1E+12,29,TRUE)` is 0 and `(..,1E+13,21,TRUE)` is 0.
+
+Neither cut is a threshold on number_s or failures alone, nor on their product:
+- At number_s 999999999999999, 24 to 29 failures are `#NUM!`, while 22, and 40, 100 and 1000, are 0.
+- At number_s 1E+13, 27 and 29 failures are `#NUM!`, while 26 and 40 are 0.
+- At number_s 1E+20, every probed count from 18 to 1000 is `#NUM!`, and 15 to 17 are 0.
+- At 28 failures, number_s 3E+12 is 0 and 4E+12 is `#NUM!`.
+- Every `#NUM!` falls on cells where TOMS 708 bratio takes its L140 branch (b0 < 40 and b0·x0 > 0.7, then bup with
+  n = int(b0)), except one group: bfrac at number_s 1E+20. At 40 or more failures, bfrac gives 0 up to number_s 1E+15.
+
+On the bup + bpser cells (x0 <= 0.7), the natural log of bup's largest partial sum of terms separates the probe:
+0 up to 697.27 (`NEGBINOM.DIST(28,3E+12,..)`), `#NUM!` from 703.57 (`(27,1E+13,..)`). Two cells contradict that
+threshold: `NEGBINOM.DIST(1E+13,28,..)` and `(1E+15,28,..)`, a huge failures count with number_s 28, which bratio
+swaps. They are `#NUM!` at 684.35 and 804.09, while `(28,2E+12,..)` is 0 at 686.32. The bup + bgrat cells
+(x0 > 0.7: p 0.9 to 1 - 1E-13) are `#NUM!` from a partial-sum log of 56. So bgrat at a huge first shape fails
+separately. Which of bup's quantities Excel tests, and where, is UNVERIFIED.
+
+The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
+p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
+`#NUM!` (bup + bgrat), and p 1 - 1E-14 is 0.9999992473499035 (bfrac).
+
+Evidence: probes-numeric/t3553-negbinom-huge-s A1:A17 (excel-graph, 2026-11-01). It surfaced in T-3553's first Gate
 A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#NUM!` beside 0 at
-`(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`.
-Ours: 0 at every cell (the cdf sums pmf terms; `binom.rs`).
-Status: VERIFIED (excel-graph) for the probed cells; the cuts UNVERIFIED
+`(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
+A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch and the partial-sum log of
+each of its cells.
+Ours: a value at every `#NUM!` cell, in both NEGBINOM.DIST and BETA.DIST. The cdf sums pmf terms (`binom.rs`), and
+BETA.DIST's kernel (`bratio/`) has no failure path on these branches.
+Status: VERIFIED (excel-graph) for the probed cells; the rule UNVERIFIED
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)
@@ -4216,10 +4241,29 @@ within 1E-15 relative / largest relative error:
   df2/(df2 + df1 x), and at a = 5E9 one ulp of x moves I by about 5E-7). The first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
   and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at a other than 5E9, and about 3E-7 to 7E-6 at 5E9 (1E-2074 at x = 0.999999); whether
   the edge depends on x is unpinned). So the lower edge falls as a grows and the upper edge is b0 < 40, the
-  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
+  bgrat family of TOMS 708 (see above); T-4080 pins the edge (next item). From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
   (df2 5E9) is within 9E-10 to 7E-9 relative of a 60-digit mpmath `betainc` (computed at review, not committed), the engine
   1E-8 to 1.4E-7 off. df2 = 2E10 is `#NUM!` for every
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
+- **The edge (T-4080)**, probes-numeric/t4080-beta-num-band-edge (1,232 cells, excel-graph, 2026-11-04): `BETA.DIST(x,a,b,TRUE)`
+  on the grid a = 2E9, 2.25E9, 2.5E9, 2.75E9, 3E9, 3.5E9 to 5.5E9 by 5E8, 6E9, 7E9, 8E9, 1E10 by b = 30 to 40 by 1/2, at four
+  tails (x = 1 - q/a for I of about 1E-6, 0.05 and 0.5, and x = 1 - 1E-12). Rule:
+  - **The band counts bup's terms, not b.** With n = int(b), less 1 at an integer b (the n of TOMS 708's L140 path, which
+    splits b0 into n + a fraction of 1/2 or 1), the cell is `#NUM!` exactly when b < 40 and n >= n_min(a) (b = 40 leaves L140, see above, and is a number at all 14 a,
+    though its n = 39 is in the band's range): n_min = 39 for a = 2.25E9
+    to 3E9 (band b = 39.5), 38 for 3.5E9 to 5.5E9 (b = 38.5, 39, 39.5), 37 for 6E9 to 8E9 (b = 37.5 to 39.5), 36 at 1E10
+    (b = 36.5 to 39.5), none at 2E9. So the edge always opens at a half-integer b and takes the integer above it (same n),
+    which is why no rule in b alone (T-4044) separated the earlier cells.
+  - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.86,
+    2.21): 2E9 at n 39, a number, against 1E10 at n 36, `#NUM!`, needs w > 3/ln 5): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
+    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. This is a separating
+    line fitted to the 14 probed a, not a mechanism: the TOMS quantity it tracks is not identified (bup's term ratio and
+    brcmp1 do not move with a at a fixed tail; the exp(708) scaling runs only at an integer b, yet both kinds share n).
+    UNVERIFIED between the probed a and outside 2E9 to 1E10.
+  - **Only the tails that take L140 are cut**: columns A and B (I about 1E-6 and 0.05, where lambda = (a + b)(1 - x) - b
+    > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
+    are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
+    1E-6 and 0.05 the edge does not move.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
@@ -4748,7 +4792,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
   cdfs, was about 2,250). The crossing does not depend on the start where the cdf is monotone, but the doubles near it
   are not always: four eval cells moved, GAMMA.xlsx F7 to Excel's 1.9999999999999996, gen-m9 ecc87f80077959e0 A231 to
   within 15 digits, and two `GAMMAINV(0.5,...)` cells (35e8168aae2b00f8 A196, 4bad303d32cc3f46 A289) from 1 ulp under
-  Excel's 3.6720607488508965 to 1 ulp over. From shape 1E9 the quantile is `huge_shape_quantile` (T-3070).
+  Excel's 3.6720607488508965 to 1 ulp over. From shape 1E5 the quantile is `huge_shape_quantile` (T-3070, T-3409).
   The crossing is not always the correctly rounded quantile: on 49 gated cells it lands 1 to 3 ulps off Excel where
   Excel is the correctly rounded closed form (`CHISQ.INV(0.5,2)` is 1.3862943611198906 = 2 ln 2 in Excel, ours
   1.3862943611198908; `CHISQ.INV.RT(0.5,2)` ours 1.3862943611198904; GAMMA.xlsx F75 Excel 0.6931471805599453 = ln 2,
@@ -5833,8 +5877,8 @@ Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2808
 
 ## GAMMA.INV and CHISQ.INV at a huge shape: the true quantile, `#NUM!`, or a Wilson-Hilferty closed form (T-2982, T-3070)
-Rule: from a shape of 1E9 Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV, CHISQ.INV.RT and CHIINV, at shape df/2 and scale
-2) is one of three things, decided by its Wilson-Hilferty start x0 = a(1 + 0.0000886 - 1/(9a) + z s/(3 sqrt a) + ...)^3
+Rule: from a shape of 1E9 (the step limit from 1E5 too: T-3409) Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV,
+CHISQ.INV.RT and CHIINV, at shape df/2 and scale 2) is one of three things, decided by its Wilson-Hilferty start x0 = a(1 + 0.0000886 - 1/(9a) + z s/(3 sqrt a) + ...)^3
 (z the normal quantile of the lower tail's p; for CHISQ.INV.RT and CHIINV minus that of p itself, so
 `CHISQ.INV.RT(1E-100,1E10)` = 10005667524.015223 although 1 - p is 1):
 - **the closed form x0 itself** where the gamma density at x0 is below the smallest normal double: the true quantile
@@ -5843,26 +5887,30 @@ Rule: from a shape of 1E9 Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV, CHISQ.INV.
   probed cell either side agrees. So `GAMMA.INV(0.5,a,1)` is the closed form from 2E10 (c (a - 1/3) for a = 1E13 to 1E300, t2982 A7-A23, and at
   every scale, A78-A86), while at 2E10 p = 0.1 and below are `#NUM!` (t3070 A127-A134), at 5E10 only p = 1E-300 is
   (A155), and from about 8E10 every p is the closed form;
-- **the true quantile** inside a band of the start's offset o = (x0(z = 0) - a)/sqrt(a), about 2.66E-4 sqrt(a)
-  standard deviations, and z. Upper edge: z + 1.35 o < 27.25 (a fit: the edge lies in (26.93, 27.60), pinned by
-  t3070 A77 `GAMMA.INV(0.001,7E9,1)` (a value) and t2982 A45 `GAMMA.INV(1E-16,1E10,1)` (`#NUM!`); slopes 1.30 to 1.41
-  also separate every probed cell, UNVERIFIED between them). Lower edge, for z < 0 (T-3350): the start's lower tail
-  is at most e^205.3 times p, ln P(a, x0) - ln p < 205.3, which reads as Newton's method from the start (each step
-  from the inner side of a convex tail divides the tail by about e) giving up after about 200 steps (UNVERIFIED as
-  Excel's algorithm). The edge lies in (204.9, 205.8) at every shape from 1E9 to 7E9 (probes/t3350-gamma-inv-band-lower-edge,
-  p = 1E-40 to 1E-250 at ten shapes: `GAMMA.INV(1E-160,1E9,1)` = 999146781.3935351 at 191.9,
-  `GAMMA.INV(1E-180,1E9,1)` `#NUM!` at 205.8, `GAMMA.INV(1E-100,4E9,1)` `#NUM!` at 217.8), so it is a cut in p that
-  moves with the shape: from about 1E-170 at 1E9 to 1E-90 at 7E9. It separates 548 of the 549 huge-shape quantile
-  cells in eval/, and probes-numeric/t3350-r4-chisq-inv-sweep A16 `CHISQ.INV(1.85282139646205E-165,2410384116)`
-  (`#NUM!` at 210.6), which was not used in the fit. The old fit, o - z < 39 (T-3070), separated 528: it made
-  `GAMMA.INV(1E-140,1.5E9,1)` a value and `GAMMA.INV(1E-70,1E10,1)` = 9998225940.269697 `#NUM!`. The one miss is
-  `GAMMA.INV(1E-80,1E10,1)` (A122), `#NUM!` at only 184.2. At 7E9 and 1E10 the start lies above the mean (its lower
-  tail is about 1), so steps there may count differently (T-3396). `GAMMA.INV(0.5,5E9,1)` = 4999999999.666667,
-  `GAMMA.INV(1E-30,7E9,1)` = 6999040894.354145, `CHISQ.INV(1E-100,6E9)` = 5997669910.951994,
-  `CHISQ.INV(5.6221E-26,4715100000)` = 4714082845.627977 (incomplete-gamma-cap E15);
-- **`#NUM!`** elsewhere: at the far tails (`GAMMA.INV(1E-300,1E9,1)`, `GAMMA.INV(1-1E-15,3E9,1)`, `CHISQ.INV.RT(1E-100,2E9)`),
-  above the band (`GAMMA.INV(0.5,6E9,1)`, every probed p at 1.2E10) and below the closed form.
-How Excel's search fails is not known; the band is the shape of its failures, not its algorithm.
+- **the true quantile** where Excel's search from x0 converges within its step limit, and **`#NUM!`** where it does
+  not (T-3409). The search behaves as Newton's method on the odds P/Q = r (r = p/(1 - p) for the lower tail's p,
+  (1 - p)/p for the upper tail's): its step (PQ - r Q^2)/f is about P/f in the lower tail and Q/f past the mode, so
+  from Excel's start, which lies above the quantile, it never overshoots, and each step moves x about 1/|z| standard
+  deviations. So the number of steps is about the fall in ln density from the start to the quantile, through the
+  mode when the start lies past it: (z^2 - zs^2)/2 for a start zs below the mode, (z^2 + zs^2)/2 above it, with zs
+  about z + o and o = (x0(z = 0) - a)/sqrt(a), about 2.66E-4 sqrt(a). Excel gives up after about 207 steps
+  (counted to a relative step below 1E-8; a fit, UNVERIFIED as Excel's own count and tolerance). This one limit
+  is T-3350's lower edge (ln P(a, x0) - ln p < 205.3, the start below the mode), T-3070's upper edge (z + 1.35 o <
+  27.25), the band closing from both sides at 7E9 to 1.15E10 (T-3396, the start past the mode, so the lower edge
+  falls from ln(1/p) about 201 at 7E9 to about 132 at 1.1E10), and the `#NUM!` below shape 1E9 at a tiny p
+  (`GAMMA.INV(1E-300,6E+8,1)`, fit-audit-t3070-shape-min A19, about 222 steps; `GAMMA.INV(1E-300,5E+8,1)` 205, a value).
+  Replayed with 40-digit Temme cdfs it separates 804 of the 805 probed huge-shape inversions from shape 1E8 that
+  are not the start; the miss is `GAMMA.INV(1.11E-10,9000000000,1)` (fit-audit-t3070-band-upper), a value at 208
+  steps where four `#NUM!` cells are at 208 too, so the count is right to about a step. From shape 1E5 to 1E8 every
+  one of 282 probed cells converges in far fewer steps. `GAMMA.INV(0.5,5E9,1)` = 4999999999.666667,
+  `GAMMA.INV(1E-30,7E9,1)` = 6999040894.354145, `CHISQ.INV(1E-100,6E9)` = 5997669910.951994; `#NUM!` at
+  `GAMMA.INV(1E-300,1E9,1)`, `GAMMA.INV(1-1E-15,3E9,1)`, `CHISQ.INV.RT(1E-100,2E9)`, `GAMMA.INV(0.5,6E9,1)` and every
+  probed p at 1.2E10. Before T-3409 the band's edges were three fits (`BAND_UPPER_SLOPE`, `BAND_UPPER_EDGE`,
+  `BAND_LOWER_EDGE`), the lower edge read as "about 200 steps" (T-3350); the probes behind them: t3070 A77
+  `GAMMA.INV(0.001,7E9,1)` (a value) and t2982 A45 `GAMMA.INV(1E-16,1E10,1)` (`#NUM!`) for the upper edge,
+  probes/t3350-gamma-inv-band-lower-edge (p = 1E-40 to 1E-250 at ten shapes from 1E9 to 7E9) for the lower one.
+  Evidence for the model: docs/research/t3409/README.md (the replay, train and held-out sets) and
+  probes-numeric/t3409-r4-gamma-inv-search-sweep (the fresh sweep).
 The closed form's constants are effective constants fitted (T-3070) to Excel's values on the 167 closed-form cells
 from shape 1.5E10 to 1E300, not Excel's own formula: s = 0.999977894167, and terms (-7.586532E-4 + 6.740481E-5 z^2)/a -
 3.08676E-3 z^3/a^(3/2) inside the cube (UNVERIFIED as a form). The fit's residual is at most 3.6 ulps with a reference
@@ -5891,10 +5939,10 @@ for df from 5E6 to 1E9 is Excel's start x0, within 3.4E-9 of it with the constan
 A205-A289). At df 2E6 it is the true quantile (A193). These cells are NOT in decision 0188 R3's closed-form case,
 whose region starts at shape 1E9. The owner ruled (2026-10-31, T-3409) not to widen it: "I want you to match Excel here
 but not overfit. Can you just explore further and crack how Excel works in this region?" So the target here is Excel's
-value (directive 1). Ours still returns the true quantile, 2.6E-4 from Excel; they stay F lines of eval/baseline until
-T-3409. Hypothesis for T-3409 (UNVERIFIED): Excel searches from x0 and, when it gives up, returns x0. The same give-up
-would explain the band's lower edge (about 200 steps, `BAND_LOWER_EDGE`) and the closed-form branch, so one model of the
-search could replace the fitted cuts.
+value (directive 1). They are the closed-form rule itself: the density at x0 is below the smallest normal double
+from df 5E6 (ln -709.9 at 5E6, -707.9 at 2E6), and across all probed cells from shape 1E5 that rule picks exactly the
+197 cells where Excel is its start (T-3409). Ours applies the step limit from shape 1E5 (T-3409), but the start rule only from 1E9: below it the start's fitted
+terms are 1E-9 to 3.4E-9 off, outside Gate A's envelope, so these cells keep the true quantile (T-4205).
 From df 1E6 to 1E9, at every other probed p from 1E-300 to 1-1E-15, Excel's CHISQ.INV, CHISQ.INV.RT and CHIINV are the
 true quantile to within 4 ulps (probes/t3350-chisq-inv-huge-df, 372 cells; the fresh sweep
 probes-numeric/t3350-r4-chisq-inv-sweep, 240 cells, log-uniform over df 1 to 1E10).
@@ -5911,7 +5959,8 @@ whole df/2 failed the same way, with the same edges (T-3505, probes/t3505-gamma-
 `GAMMA.INV(0.5,7990464.81598859,1)`, Excel 7990464.482655259). Since T-3350 every one of the 525 has Excel's type, and
 all but 5 are within 15 digits of Excel. The 5 are GAMMA.INV at p = 1E-300 (A1, A13, A85, A97, A145, shapes 2.9E5
 to 3.5E7), where Excel is not the true quantile (up to 2.6E-14 off the 50-digit math at A97, the deep lower-tail root of T-3294).
-Status: VERIFIED (excel-graph) for the cells; the band's edges and the closed form's terms are fits (UNVERIFIED as forms)
+Status: VERIFIED (excel-graph) for the cells; the search model (Newton on the odds, 207 steps at a relative step of
+1E-8; T-3409) is UNVERIFIED as Excel's algorithm, and the closed form's terms are fits (UNVERIFIED as a form)
 Excel's band is not the engine's (T-3530 fit audit, probes-numeric/fit-audit-t3070-*, excel-graph 2026-10-31, scored on
 main after T-3350):
 - Below the huge shape, Excel is already `#NUM!` at a tiny p, from shape 6E8 at p = 1E-300, 7E8 at 1E-250 and 9E8 at
@@ -5925,7 +5974,8 @@ main after T-3350):
 - The closed form holds exactly where the density at the start is below the smallest normal double: 59 of 59 cells
   of fit-audit-t3070-closed-form-cut at shapes 1.3E10 to 2.3E10, ln density at the start -760 to -695, are within 15
   digits of Excel.
-So `HUGE_SHAPE_MIN` and the upper edge are not Excel's cut points (T-3409 models the search).
+So `HUGE_SHAPE_MIN` and the upper edge were not Excel's cut points; T-3409's search model places all of these cells
+(the 1.11E-10 cell at 9E9 aside, above).
 The band closes from both sides as the shape grows (T-3396, probes/t3396-gamma-inv-band-huge, excel-graph 2026-11-04;
 `GAMMA.INV(1E-k,a,1)` for k 20 to 120 by 5): the last value and first `#NUM!` of k are 85 and 90 at 7E9, 80 and 85 at
 8E9, 75 and 80 at 9E9, 70 and 75 at 1E10, 65 and 70 at 1.05E10 (where k = 20 is already `#NUM!`), and at 1.1E10 only
@@ -5937,7 +5987,7 @@ nor the start's distance in standard deviations, o - z (the last value and first
 k (22 to 122 by 10) at every one of these shapes, inside the band GAMMA.INV has at the same shape.
 Ours: `GAMMA.INV` is a value past this lower edge from 8E9 on (A35, A55:A56, A75:A77, A95:A98), and at 1.1E10 to
 1.2E10 inside Excel's empty band (A107:A108, A114:A119, A129:A140, A151:A161); the CHISQ.INV cells match. T-3409's model
-of Excel's search is the place to explain both edges; T-3396 keeps the cells.
+of Excel's search explains both edges (the start past the mode pays (zs^2)/2 steps to come down).
 Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505, T-3530
 
 ## GAMMA.DIST at a huge shape: #NUM! where shape/x overflows; an unexplained #NUM! from about 1E+56 (T-2435, T-3316)

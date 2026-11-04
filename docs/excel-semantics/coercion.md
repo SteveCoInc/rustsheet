@@ -231,16 +231,36 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   - **SORT and SORTBY in detail (T-3211).** Evidence: probes/t3211-collation-sort-cycles, excel-graph 2026-10-31,
     Status: VERIFIED. SORT and SORTBY give the same order in all 88 probed rows (Calc!A = C, B = D). Descending is
     not the reverse of ascending: `SORT` of U+0342 once, twice, U+0327 is once, twice, U+0327 and with -1 twice,
-    once, U+0327 (row 1). Every order of each three-text cycle (rows 1-12) comes out as a natural merge sort
-    gives it: an ascending input run stays, a strictly descending one is reversed, so a cyclic input order is
-    kept and an anti-cyclic one reversed (`ạ, á, ạạạ` gives `ạạạ, á, ạ`, row 8). On shuffles of eight texts
-    holding both cycles (rows 13-44) Excel's order follows no simple algorithm tried (T-3418 lists them). The
-    probed comparison matrix (Calc!L1:T9) is the engine's on all 81 pairs.
+    once, U+0327 (row 1). The order is a bottom-up natural merge sort over maximal non-descending runs only:
+    the input is cut where an element compares less than the one before it (a strictly descending stretch is
+    runs of one element, never reversed), and neighbouring runs are merged pairwise, round by round, a tie
+    taking the left run's element; descending sorts the same way with the comparison flipped (T-3418). It
+    gives every row of rows 1-44 and every row of probes/t3418-sort-cycle-permutations (excel-graph 2026-11-04:
+    all 24 orders of the 4-cycles {A3, A4, A6, A7} and {A5, A6, A7, A8} and all 120 orders of {A4..A8},
+    ascending and descending, 336 cells). Reversing strictly descending runs (T-3211's model) misses 28 of
+    those 168 rows: on a cycle `a<b<c<d<a` with chords `c<a`, `d<b`, the input `a, c, b, d` is one strictly
+    descending chain (c<a, b<c, d<b) but Excel takes it as four one-element runs, merges them into `c, a`
+    and `d, b`, then into `c, d, a, b`. The probed comparison matrix (Calc!L1:T9) is the engine's on all 81
+    pairs.
   - **UNIQUE groups by Excel's `=`** (T-3211, same case, Calc!G1:J15): `"ß"` and `"ss"`, `"á"` and
     `"a"&UNICHAR(769)` are one row (the first kept), as `=` finds them equal; `"Ａ"` and `"A"`, `"coop"` and
     `"co-op"` are two, as `=` finds them unequal; exactly_once drops both of an equal pair (`#CALC!` when none is
     left). On a cycle the grouping follows Excel's sort, not equality with any kept row: U+0327, U+0342, two
     U+0342 is three rows although U+0327 = two U+0342 (G4), while U+0342, two U+0342, U+0327 is two (G3).
+  - **UNIQUE's rule: equal lines become one group as soon as its merge meets them** (T-4200,
+    probes/t4200-unique-cycle-permutations, excel-graph, 2026-11-04: UNIQUE and exactly_once of every order of
+    {A3,A4,A6,A7} and {A4..A8} and of {A3,A4,A5}, A1:B150, and two-column rows A151:B174). UNIQUE runs SORT's
+    natural merge (above), except that two groups `=` finds equal become one group when they meet: as neighbours in
+    a run, as the heads of two runs being merged, or as the last group out of a merge and the next one; a group is
+    compared through the line that started it. Each group keeps its first line, in input order, and exactly_once
+    keeps the one-line groups. Grouping the neighbours of SORT's order fits the 4- and 5-text sets but not
+    {A3,A4,A5}, the cycle A5 < A3 < A4 = A5: SORT puts `{A3;A5;A4}` and `{A5;A4;A3}` in the order A5, A3, A4
+    (t3211 Calc!A2, A6), yet UNIQUE groups A5 with A4 in both (rows 146, 150), since they are equal neighbours of a
+    run before any merge. `{A4;A3;A5}` and `{A5;A3;A4}` keep three rows (rows 147, 149). Lines compare column by
+    column, the first unequal column deciding: rows ("x",A5), ("y",A3), ("x",A4) keep two, ("x",A5) standing for
+    ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149).
+    Which line represents a merged group (its first, its smallest or its last) is not separated by
+    the probe.
   Ours (T-3181): the operators and the criteria compare texts with `cmp_text_pairwise`, which
   applies the rule (the criteria index still hashes the `CollationKey` of the wrapped sums,
   which every pair the rule finds equal shares, and tests each candidate with the rule); so do
@@ -250,11 +270,13 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   index keeps the `CollationKey` but tests the first (last) cell with the key and walks when that
   cell is not equal. Since T-3211 SORT and SORTBY compare texts with `cmp_text_pairwise` too and sort
   with `sort_indices_pairwise`, a stable natural merge sort that cannot panic on a non-total order (`slice::sort_by`
-  may): every t3181 array cell passes, and every three-text cycle of t3211, but 40 cells of its eight-text rows do not
-  (T-3418). UNIQUE keys a text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
+  may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a
+  text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
-  unequal): all t3211 UNIQUE cells but G4:I4 pass (T-3418). GROUPBY and PIVOTBY group the same way
-  (T-4088) but still sort with the total `cmp_text`. Open: T-3418.
+  unequal), when every text of its data is ASCII (ASCII texts compare transitively); otherwise, since T-4200, it
+  groups with `coalesce_equal_lines` (functions/util/pairwise_order.rs), the merge above, comparing texts with
+  `cmp_text_pairwise` and other cells by their keys, each comparison charged to the budget: every t3211 and t4200
+  UNIQUE cell passes. GROUPBY and PIVOTBY still group by the buckets (T-4088) and sort with the total `cmp_text`.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
   probes/t3201-collation-long-mark-runs (1,000 cells: a ladder of 246 texts `"a"` plus up to three
   marks, one per weight 2, 5, 8, 11 and 14 to 255, self-ranked in order (Calc!A1:A246); `"a"` with
@@ -602,7 +624,7 @@ tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the
     `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
   - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
     `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
-    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+    `$(١٢)` (= -12; ASCII `$(12)` is -12 too, "Currency sign before parentheses is negative").
   - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
   - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
     `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
@@ -1092,6 +1114,30 @@ Evidence: probes/paren-negative-text, probes/paren-negative-variants, probes/par
 Status: VERIFIED
 Tasks: T-0259, T-0277, T-0280, T-0281, T-0282, T-0283, T-1300, T-1309
 
+## Currency sign before parentheses is negative
+Rule (en-US; probes/t4117-typed-currency-paren, excel-graph 2026-11-04, T-4117; ENTERED log
+docs/research/t4117-typed-currency-paren-2026-11-04.md): `$`, optional spaces, then a parenthesised unsigned amount is a
+negative number, typed or coerced: `$(12)`, `$ (12)`, `$( 12 )`, `$(1,234.5)`, `$(12.5)` and `$(0)` are -12, -12, -12,
+-1234.5, -12.5 and 0 (typed, ISNUMBER, `"..."+0`, VALUE and NUMBERVALUE agree). Typed formats: `$#,##0_);[Red]($#,##0)`
+for an integer amount, `$#,##0.00_);[Red]($#,##0.00)` when the amount has a decimal point with digits or none after it
+(`$(12.0)`, `$(12.)`, `$(.5)`), `0.00E+00` for `$(1e3)`. Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))`,
+`$(12)%` and `$(1,23)`. Typed `€(12)` is text with General, but `"€(12)"+0`, VALUE and NUMBERVALUE give -12
+(typed input has no `€` among its currencies, as above). (NUMBERVALUE reads `$(12)%` as -0.12 and `$(1,23)` as -123, which the engine matches.)
+`($12)` and `(12)` are the older paren forms above. More rows (probes/t4117-currency-parens A1:A34, excel-graph
+2026-11-04; ENTERED log docs/research/t4117-currency-parens-2026-11-04.md):
+- `€` takes the form only where it is a currency: typed `€(12)`, `€ (12)`, `€(1,234.5)`, `€(1e3)` and `€(1 1/2)`
+  stay text, but VALUE, NUMBERVALUE and `+0` read them as negative (A15:A17, A25, A31). `£(12)` is `#VALUE!`
+  everywhere (A28), as `£12` is.
+- A mixed fraction is negative too: `$(1 1/2)`, `$ (1 1/2)` and `$( 1 1/2 )` are -1.5 typed with `# ?/?`, `$(3 1/12)`
+  is -3.0833… with `# ??/??` (A21, A29, A33:A34), by VALUE and `+0` but not NUMBERVALUE, which drops the spaces
+  (`#VALUE!`). `-$(1 1/2)` is text (A32); typed `$(1 1/2%)` stays text but takes `0.00%`, like `-$3 1/2%` (A30).
+- `$(1.5E+2)` is -150 in `0.00E+00` (A19); `$(12%)`, `$(+12)`, `$()` and `$($12)` are text (A20, A22, A23, A27).
+Implemented in `parse_percent_or_currency` (formatter/parse_formatted.rs) and, for fractions, `read_mixed_fraction`
+(mixed_fraction.rs).
+Evidence: probes/t4117-typed-currency-paren, probes/t4117-currency-parens (excel-graph, 2026-11-04).
+Status: VERIFIED
+Tasks: T-4117
+
 ## Typed currency and percent formats
 Rule (en-US, text typed into a cell; probes/typed-currency-percent-input, excel-graph 2026-10-11, raw `ENTERED` log in docs/research/typed-currency-percent-input-2026-10-11.md, T-0283): a leading `$` (also `-$`, `$-`, and inside parentheses) gives `$#,##0_);[Red]($#,##0)`, or `$#,##0.00_);[Red]($#,##0.00)` when the text has any decimal digits (`$1.50`, `$1.0`, `$1,234.5`); a `%` gives `0%` or `0.00%` with decimals (`1.5%`, `1.0%`, `12.345%` -> `0.00%`, the value keeps all digits) and ignores grouping (`1,000%` is `0%`); scientific text keeps `0.00E+00` whichever symbol is around it (`$1e3`, `1e3%`, `-$1e3`, `($1e3)`); plain grouped text gets `#,##0` / `#,##0.00` (`(1,000.5)` -> `#,##0.00`). `-$1e3` is -1000 (the engine used to return +1000, also through `0+"-$1e3"` and VALUE, which are unprobed). A euro sign is not an en-US currency: `1€`, `1.5€`, `-1€` and `€1` stay text with General. The engine matches the `$` and percent formats (T-0283) and keeps typed euro text as text (T-1335: `set_user_input` no longer lists `€` among the currencies; `0+` coercion of `1€` still reads a number, a separate probed path (paren-number-text-euro-suffix); VALUE shares that code path (cast.rs, text/common.rs) but has no oracle cell of its own). Other prefix symbols keep the plain `{symbol}#,##0` format (unprobed).
 Evidence: probes/typed-currency-percent-input (excel-graph, 2026-10-11).
@@ -1203,3 +1249,4 @@ Implemented in: the engine matches every cell except MULTINOMIAL numeric text (C
 SERIESSUM boolean coefficients fixed in T-1191.
 Status: VERIFIED
 Tasks: T-1082, T-1190, T-1191, T-1261, T-1574, T-1655, T-1661
+

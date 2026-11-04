@@ -229,7 +229,7 @@ impl Model {
         } else {
             chi_squared(df, cell)?.shape()
         };
-        // From a shape of 1E9 Excel's own search at scale 2, the right tail's z from p itself
+        // From a shape of 1E5 Excel's own search at scale 2, the right tail's z from p itself
         // (`CHISQ.INV.RT(1E-100,1E10)` = 10005667524.015223, A371, where 1 - p is 1).
         if shape >= HUGE_SHAPE_MIN && p > 0.0 && p < 1.0 {
             let lower_z = normal_quantile(p, 0.0, 1.0, cell)?;

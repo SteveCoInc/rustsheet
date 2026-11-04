@@ -1,3 +1,4 @@
+import pytest
 import rustsheet as ic
 
 
@@ -23,24 +24,34 @@ def test_xlsx_roundtrip_raw_model(rm, tmp_path):
     assert model.get_formatted_cell_value(0, 1, 1) == "42"
 
 
-def test_icalc_roundtrip(um, tmp_path):
-    um.set_user_input(0, 1, 1, "hello")
-    file = str(tmp_path / "book.ic")
-    um.save_to_icalc(file)
+REMOVED_SYMBOLS = [
+    "load_from_bytes",
+    "load_from_icalc",
+    "create_user_model_from_bytes",
+    "create_user_model_from_icalc",
+    "test_panic",
+]
+REMOVED_METHODS = [
+    "from_bytes",
+    "from_icalc",
+    "apply_external_diffs",
+    "flush_send_queue",
+    "save_to_icalc",
+    "to_bytes",
+    "test_panic",
+]
 
-    model = ic.UserModel.from_icalc(file)
-    assert model.get_formatted_cell_value(0, 1, 1) == "hello"
+
+@pytest.mark.parametrize("name", REMOVED_SYMBOLS)
+def test_removed_module_symbol(name):
+    assert not hasattr(ic, name)
+    assert name not in ic.__all__
 
 
-def test_bytes_roundtrip_both_apis(um):
-    um.set_user_input(0, 1, 1, "=1+2")
-    data = bytes(um.to_bytes())
-
-    user = ic.UserModel.from_bytes(data)
-    assert user.get_formatted_cell_value(0, 1, 1) == "3"
-
-    raw = ic.load_from_bytes(data)
-    assert raw.get_formatted_cell_value(0, 1, 1) == "3"
+@pytest.mark.parametrize("name", REMOVED_METHODS)
+def test_removed_class_method(name):
+    assert not hasattr(ic.UserModel, name)
+    assert not hasattr(ic.Model, name)
 
 
 def test_workbook_name(um):

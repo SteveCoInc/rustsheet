@@ -55,6 +55,7 @@ df2 = 1E10, from the rule T-4030 finds, not from a cut at the probed cells.
   - x differs across the rows: tails from 5E-7 to 0.06.
   - TOMS 708's L140 path in doubles (bup, brcmp1, and bgrat's error exits on b·z = 0, u = 0 and sum <= 0) gives no
     error at the half-integer b cells; bup's exp(708) scaling runs only at an integer b.
+- T-4080 pinned the edge (statistics.md "The edge (T-4080)"): probes-numeric/t4080-beta-num-band-edge band cells A41:B41, A62:B62, A83:B83, A104:B104, A123:B125, A144:B146, A165:B167, A186:B188, A207:B209, A226:B230, A247:B251, A268:B272, A287:B293 are `#NUM!` in Excel and numbers in ours.
 
 ## Acceptance criteria
 - [ ] The 16 cells above are `#NUM!`; the other 1,329 t4017 cells keep their verdicts or improve (cell by cell,

@@ -1537,10 +1537,21 @@ not by the day-0 start/end.
 Evidence: probes/networkdays-intl-holiday-forms (22 cells), networkdays-intl-holiday-weekend-masks (45),
 networkdays-intl-holiday-weekend-dedupe (112), networkdays-intl-early-holidays (88), networkdays-intl-serial-zero-holiday (120);
 gen-m6 102b2df13f6891d2 A547, 1b4963f7cb42e2fa A385, ade135f51e0b7a36 A31 and A385, b91dcfba0176956e A493 and A499.
-Ours: implemented (T-3537): `Holidays::scalar`, set from the argument's node (`is_scalar_node`), read by `networkdays_of`.
-UNVERIFIED: a holidays argument that is a function returning a reference (INDEX, OFFSET, INDIRECT, CHOOSE, IF) is treated
-as a reference; only SUM, literals and `+` are probed. A named range is a reference.
-Status: VERIFIED for the probed forms
+Which kind an argument is (VERIFIED, excel-graph, 2026-11-04, T-4190): it is a reference exactly when ISREF of it is
+TRUE; the rule follows the evaluated kind, not the syntax. References: `(C1)`, `@C1`, `@(C1)`, `INDEX(C1:C2,1)`, `OFFSET(C1,0,0)`,
+`INDIRECT("C1")`, `INDEX(..):INDEX(..)`, `TRIMRANGE(C1:C1)`, and `IF`, `CHOOSE`, `IFS`, `SWITCH`, `XLOOKUP(1,{1},C1:C1)`,
+`LET(h,C1,h)`, `LAMBDA(x,x)(C1)`, `TAKE`/`DROP` of a range, and a defined name bound to a cell, when what they pick or return is a
+reference. A cell holding the text "45003" is a reference too. Scalars: the same pickers when they give a value (`IF(TRUE,45003)`,
+`CHOOSE(1,45003)`, `XLOOKUP(1,{1},{45003})`, `LET(h,45003,h)`, `LAMBDA(x,x)(45003)`, `LET(h,C1,h+0)`), a name bound to
+`=45003`, text `"45003"`, `--"45003"`, `N(C1)`, `MAX(C1)`, `ABS(C1)`, `DATE(..)`, `C1&""`, `IFERROR(C1,0)` (IFERROR does not
+hand the reference on), and every unary plus: `+C1`, `+(C1)`, `(+C1)`, `+@C1` are scalar. ISREF agrees on each unary form
+(`ISREF(+C1)` FALSE, `ISREF(@C1)` TRUE; see references.md "ISREF: a unary plus makes a value"). WORKDAY.INTL keeps no
+split for any of these forms (its controls are 45012 / 45011 throughout).
+Evidence: probes/networkdays-intl-holiday-kinds A1:H38 (M6), networkdays-intl-holiday-kinds-let A1:F11 (M7),
+networkdays-intl-holiday-kinds-names A1:F7 (M8; names in the case's `names`).
+Ours: implemented (T-3537, T-4190): `Holidays::scalar` is "neither an array nor `Model::is_reference`" of the argument (on the
+arm IF picked), set in `holiday_serials`, read by `networkdays_of`.
+Status: VERIFIED
 Tasks: T-3537
 
 ## DAYS error order

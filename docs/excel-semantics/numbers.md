@@ -369,8 +369,17 @@ not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as writt
 stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
-Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
-literals of more than 6 digits are not probed (the fresh sweep's 28 six-digit literal and VALUE cells, `=116570E-6` and the like, fit), except one 15-digit point (T-3945): `=0.190581435720431`
+Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values for ROUND and ROUNDDOWN.
+**Literals and VALUE text of 7 to 18 digits (T-4077).** The model holds for every digit count up to 15 and for a
+positive exponent, with m the digits as written and n the fraction digits less the exponent (`=7.5487209E+1` is
+75487209 × 10^-6 = 75.487209000000007, Lit!A82). Past 15 significant digits the text is cut first, the later digits
+truncated, not rounded, and the 15 kept digits go through the multiply (`=253.803752229973721` is 253803752229973 ×
+10^-12 = 253.80375222997299, Lit!A106; rounding to 253803752229974 first scores 8 of 24 rows, the nearest double of the
+full text 1 of 24). Evidence: probes-numeric/t4077-long-literal-x87 (516 cells: 72 model-off points at 7 to 15 digits
+in four forms, 9 controls, 24 positive-exponent rows, 24 rows of 18 digits; 516/516 fit, the nearest double 37/516)
+and the fresh sweep written after the model was frozen, probes-numeric/t4077-long-literal-x87-fresh (258 cells, 258/258);
+excel-graph, 2026-11-04. Larger n (more than 15 places after the cut) is not probed and keeps the nearest double.
+Before T-4077 the only long point probed was the 15-digit one of T-3945: `=0.190581435720431`
 (m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
 and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
 the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
@@ -387,8 +396,8 @@ Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh
 trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
-Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs (T-3932; digits as written below 1,000,000, n = 1..15 and no positive exponent, the nearest double elsewhere, so the 15-digit T-3945 point still reads as the nearest double). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
-Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
+Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs through `x87_text_to_f64` (T-3932, T-4077; the first 15 significant digits as written, any exponent, n = 1..15, the nearest double elsewhere). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945, T-4077
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
@@ -2214,8 +2223,20 @@ Evidence: probes/aggregate-grid (217 cells), probes/aggregate-args (53 cells), p
 Oracle: excel-graph, 2026-10-06 (T-0993).
 Status: VERIFIED. Hidden and filtered rows and nested SUBTOTAL/AGGREGATE calls: see "SUBTOTAL and AGGREGATE over
 hidden and filtered rows" below (T-1036).
-Also unprobed: a scalar in the array form (the engine takes a number as one value, returns a scalar error under every
-option, and gives `#VALUE!` for text or a boolean), and which error wins between a range and a later error argument.
+Scalar data and error order (probes/t4193-aggregate-scalar-data-error-order, excel-graph, 2026-11-04, T-4193):
+- In the reference form a number is `#VALUE!` like any value: `AGGREGATE(9,0,5)`, `(1,0,5,7)` and `(4,0,-1)` (Calc!A1:A3).
+- In the array form a number is a one-value array and the result a plain number (`TYPE` 1, Calc!A12):
+  `AGGREGATE(14,0,5,1)`, `(15,6,5,1)` and `(16,0,5,0.5)` are 5, and `(19,0,5,1)` is `#NUM!` as `QUARTILE.EXC(5,1)` is
+  (Calc!A4:A7). A text or boolean scalar is skipped, not refused, so `AGGREGATE(14,0,"3",1)`, `(14,0,TRUE,1)` and
+  `(14,6,"x",1)` are `#NUM!` (no numbers), not `#VALUE!` (Calc!A8:A10).
+- A literal error as data (`1/0`, `NA()`) is returned under every option 0-7 in both forms (Err!A1:D8): only a
+  reference's errors are skipped. A one-cell reference to an error cell (`Data!D7`) is a reference: options 2, 3, 6
+  and 7 skip it, so `AGGREGATE(9,k,Data!D7)` is 0 and `AGGREGATE(14,k,Data!D7,1)` `#NUM!`, and the other options return
+  its `#DIV/0!` (Err!E1:F8).
+- A direct error argument beats a range's error wherever it sits: with D1:D11 holding `#DIV/0!`,
+  `AGGREGATE(9,k,Data!D1:D11,NA())` and `AGGREGATE(9,k,NA(),Data!D1:D11)` are `#N/A` under every option. Between two
+  literal errors the first wins: `AGGREGATE(9,k,1/0,NA())` is `#DIV/0!` and `AGGREGATE(9,k,NA(),1/0)` `#N/A` (Win!A1:D8).
+Still unprobed: an empty-argument data (`AGGREGATE(14,0,,1)`) and a scalar from a name or LET.
 Known gaps: k rounding and boolean k in LARGE/SMALL (T-1034).
 The VAR.P last digit (probes/aggregate-grid B31, C31) has passed since T-1037.
 Implemented in: `fn_aggregate` (crates/rustsheet-engine/src/functions/aggregate.rs); the lift reuses
@@ -2240,10 +2261,22 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036).
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194).
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
-`Node::contains_function`); whether a SUBTOTAL name inside a string, a defined name, an untaken IF branch, an uncalled LAMBDA body or an unused LET binding counts is unprobed (the engine counts any call in the tree).
+`Node::contains_function`).
+**Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194):** the cell's formula text, not what it evaluated. A
+call anywhere in the formula's own tree counts even when it never runs: `=IF(FALSE,SUBTOTAL(9,A1:A2),4)`,
+`=IF(TRUE,128,SUBTOTAL(..))`, `=CHOOSE(1,256,SUBTOTAL(..))`, `=IFERROR(32,SUBTOTAL(..))`, `=LET(x,SUBTOTAL(..),8)`,
+`=LET(f,LAMBDA(r,SUBTOTAL(9,r)),16)` and `=LAMBDA(r,SUBTOTAL(9,r))(A1:A2)` are all skipped (0) by SUBTOTAL 9 and 109 and
+AGGREGATE(9,0,..), and read by AGGREGATE(9,4,..). A call reached only through something else does not count: a defined
+name whose body calls SUBTOTAL (`st` = `SUBTOTAL(9,Sheet1!$A$1:$A$2)`: `=st+0` and `=SUM(st)` are read, 3), a
+defined-name LAMBDA that calls it (`fn(A1:A2)`, read), an `INDIRECT` to a cell holding SUBTOTAL (read), and the name in a
+string (`=LEN("SUBTOTAL(9,A1)")`, read, 14). **The flag is per cell and a spilled cell carries its anchor's**: with
+`J1` = `=MAP(A1:A3,LAMBDA(r,SUBTOTAL(9,r)))` spilling 1, 2, 4, `SUBTOTAL(9,J2)`, `SUBTOTAL(9,J3)`, `AGGREGATE(9,0,J2)`
+and `SUBTOTAL(9,J1:J3)` are 0, and `AGGREGATE(9,4,J2)` is 2. Ours: the syntax walk of the cell's formula, or of its
+anchor's for a spilled cell (`cell_formula_is_one_of`). Evidence: probes/t4194-subtotal-nested-skip (90 cells,
+excel-graph, 2026-11-04, T-4194). Unprobed: a CSE array formula's other cells (the engine treats them as spilled cells).
 Implemented in: `fn_subtotal` and `row_hidden_status` / `sheet_has_filtered_table` (T-1182) (crates/rustsheet-engine/src/functions/subtotal.rs),
 `fn_aggregate` (functions/aggregate.rs). The case format's `hidden_rows` and `tables` (docs/architecture/eval-harness.md)
 load through `Txn::set_row_hidden` and `Txn::add_table`.

@@ -557,7 +557,7 @@ impl Model {
         if let Some((width, height)) = array {
             // We are moving an array formula, we need to move the whole range.
             // Its cells are removed first: the new area may overlap the old one,
-            // and `set_user_array_formula` refuses to cover an array formula.
+            // and `reenter_array_formula` refuses to cover an array formula.
             let worksheet = self.workbook.worksheet_mut(sheet)?;
             for r in source_row..source_row + height {
                 for c in source_column..source_column + width {
@@ -566,12 +566,10 @@ impl Model {
                     }
                 }
             }
-            self.set_user_array_formula(
+            self.reenter_array_formula(
                 sheet,
-                target_row,
-                target_column,
-                width,
-                height,
+                (target_row, target_column),
+                (width, height),
                 &formula_or_value,
             )?;
         } else {
@@ -1260,7 +1258,7 @@ impl Model {
         }
         for (r, value, style_idx, array, legacy) in original_cells {
             if let Some(a) = array {
-                self.set_user_array_formula(sheet, r, target_column, a.0, a.1, &value)?;
+                self.reenter_array_formula(sheet, (r, target_column), a, &value)?;
             } else {
                 self.reenter_user_input(sheet, r, target_column, value, legacy)?;
             }
@@ -1387,14 +1385,7 @@ impl Model {
         }
         for (c, value, style_idx, array, legacy) in original_cells {
             if let Some(array_range) = array {
-                self.set_user_array_formula(
-                    sheet,
-                    target_row,
-                    c,
-                    array_range.0,
-                    array_range.1,
-                    &value,
-                )?;
+                self.reenter_array_formula(sheet, (target_row, c), array_range, &value)?;
             } else {
                 self.reenter_user_input(sheet, target_row, c, value, legacy)?;
             }

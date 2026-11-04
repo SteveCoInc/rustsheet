@@ -30,6 +30,26 @@ fn joins_a_cell_to_a_sheet_qualified_one(node: &Node) -> bool {
             && matches!(right.ungrouped(), Node::ReferenceKind { sheet_name: Some(_), .. }))
 }
 
+/// Whether the written wrappers of an argument already settle [`Model::is_reference`]: a unary
+/// plus among them makes a value, and the `@` of one cell is that cell. `ISREF(+C1)`,
+/// `ISREF(+(C1))`, `ISREF((+C1))`, `ISREF(+@C1)` and `ISREF(@+C1)` are FALSE, `ISREF(@C1)` is
+/// TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-graph; T-4190). `None` leaves the
+/// argument to the full test.
+fn written_reference(node: &Node) -> Option<bool> {
+    let (mut node, mut intersected) = (node, false);
+    loop {
+        match node {
+            Node::UnaryPlus { .. } => return Some(false),
+            Node::Group { child, .. } | Node::Spaced { child, .. } => node = child,
+            Node::ImplicitIntersection { child, .. } if !intersected => {
+                (node, intersected) = (child, true);
+            }
+            Node::ReferenceKind { .. } if intersected => return Some(true),
+            _ => return None,
+        }
+    }
+}
+
 /// Applies `f` to every element of a 2-D array, keeping its shape.
 pub(crate) fn map_elements(
     values: &[Vec<ArrayNode>],
@@ -173,6 +193,9 @@ impl Model {
         // not a reference.
         // So is one a LET whose body may pick it picks: `ISREF(LET(c,TRUE,IF(c,…!A1,D1)))` is
         // TRUE (probes/external-ref-no-link-let-index A6).
+        if let Some(is_reference) = written_reference(node) {
+            return is_reference;
+        }
         let node = match self.unpicked_reference(node, cell) {
             Ok(node) => node,
             Err(is_reference) => return is_reference,

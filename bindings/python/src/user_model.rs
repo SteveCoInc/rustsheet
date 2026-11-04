@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use xlsx::base::cf_types::CfRuleInput;
 use xlsx::base::types::{Link, Style, StyleIncludes, Theme};
 use xlsx::base::{BorderArea, ClipboardData, UserModel};
-use xlsx::export::{save_to_icalc, save_to_xlsx};
+use xlsx::export::save_to_xlsx;
 use xlsx::import;
 
 use crate::types::PyCellType;
@@ -26,7 +26,7 @@ struct NamedStyleEntry {
 
 /// A workbook model implementing the "user" API: the same high level API used
 /// by the IronCalc web application. Every action evaluates the model, keeps
-/// undo/redo history and produces diffs for collaboration.
+/// undo/redo history.
 #[pyclass(name = "UserModel")]
 pub struct PyUserModel {
     pub model: UserModel,
@@ -41,14 +41,6 @@ impl PyUserModel {
         Ok(PyUserModel { model })
     }
 
-    /// Creates a user model from bytes in the internal binary ic format
-    #[staticmethod]
-    #[pyo3(signature = (bytes, language_id="en"))]
-    pub fn from_bytes(bytes: &[u8], language_id: &str) -> PyResult<Self> {
-        let model = UserModel::from_bytes(bytes, language_id).map_err(to_py_err)?;
-        Ok(PyUserModel { model })
-    }
-
     /// Creates a user model from an xlsx file
     #[staticmethod]
     #[pyo3(signature = (file_path, locale="en", tz="UTC", language_id="en"))]
@@ -60,47 +52,12 @@ impl PyUserModel {
         })
     }
 
-    /// Creates a user model from an icalc file
-    #[staticmethod]
-    #[pyo3(signature = (file_name, language_id="en"))]
-    pub fn from_icalc(file_name: &str, language_id: &str) -> PyResult<Self> {
-        let model = import::load_from_icalc(file_name, language_id).map_err(to_py_err)?;
-        Ok(PyUserModel {
-            model: UserModel::from_model(model),
-        })
-    }
-
     // Persistence
 
     /// Saves the workbook to an xlsx file
     pub fn save_to_xlsx(&self, file: &str) -> PyResult<()> {
         let model = self.model.get_model();
         save_to_xlsx(model, file).map_err(to_py_err)
-    }
-
-    /// Saves the workbook to a file in the internal binary ic format
-    pub fn save_to_icalc(&self, file: &str) -> PyResult<()> {
-        let model = self.model.get_model();
-        save_to_icalc(model, file).map_err(to_py_err)
-    }
-
-    /// Returns the workbook as bytes in the internal binary ic format
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.model.to_bytes()
-    }
-
-    // Collaboration
-
-    /// Applies a list of diffs produced by another model's `flush_send_queue`
-    pub fn apply_external_diffs(&mut self, external_diffs: &[u8]) -> PyResult<()> {
-        self.model
-            .apply_external_diffs(external_diffs)
-            .map_err(to_py_err)
-    }
-
-    /// Returns (and clears) the queue of diffs produced by local edits
-    pub fn flush_send_queue(&mut self) -> Vec<u8> {
-        self.model.flush_send_queue()
     }
 
     // Undo / redo and evaluation

@@ -1,0 +1,82 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4198 TEXTSPLIT with a one-cell error reference as a delimiter in every spelling (B1, B1:B1, $B$1, Calc!B1, INDEX, LET, a defined name) against ignore_empty, as a row delimiter and after an error text; an array pad_with against an error element of a delimiter list; TEXTBEFORE/TEXTAFTER with B1 and B1:B1",
+  "tags": [
+    "M7",
+    "text",
+    "dynamic-arrays",
+    "probe"
+  ],
+  "names": {
+    "dn": "=Calc!$B$1"
+  },
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1,,1/0),1)",
+        "A2": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1,,\"x\"),1)",
+        "A3": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1),1)",
+        "A4": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B1,,1/0),1)",
+        "A5": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B1,,\"x\"),1)",
+        "A6": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B1),1)",
+        "A7": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",$B$1,,1/0),1)",
+        "A8": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",$B$1,,\"x\"),1)",
+        "A9": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",$B$1),1)",
+        "A10": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",Calc!B1,,1/0),1)",
+        "A11": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",Calc!B1,,\"x\"),1)",
+        "A12": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",Calc!B1),1)",
+        "A13": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",INDEX(B1:B2,1),,1/0),1)",
+        "A14": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",INDEX(B1:B2,1),,\"x\"),1)",
+        "A15": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",INDEX(B1:B2,1)),1)",
+        "A16": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",dn,,1/0),1)",
+        "A17": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",dn,,\"x\"),1)",
+        "A18": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",dn),1)",
+        "A19": "=ARRAYTOTEXT(LET(d,B1,TEXTSPLIT(\"abc\",d,,1/0)),1)",
+        "A20": "=ARRAYTOTEXT(LET(d,B1,TEXTSPLIT(\"abc\",d,,\"x\")),1)",
+        "A21": "=ARRAYTOTEXT(LET(d,B1,TEXTSPLIT(\"abc\",d)),1)",
+        "A22": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1,1/0),1)",
+        "A23": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1,\"x\"),1)",
+        "A24": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1),1)",
+        "A25": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1:B1,1/0),1)",
+        "A26": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1:B1,\"x\"),1)",
+        "A27": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",\",\",B1:B1),1)",
+        "A28": "=ARRAYTOTEXT(TEXTSPLIT(B2,B1),1)",
+        "A29": "=ARRAYTOTEXT(TEXTSPLIT(B2,B1:B1),1)",
+        "A30": "=ARRAYTOTEXT(TEXTSPLIT(B2,\",\",B1),1)",
+        "A31": "=ARRAYTOTEXT(TEXTSPLIT(B2,\",\",B1:B1),1)",
+        "A32": "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",B3),1)",
+        "A33": "=ARRAYTOTEXT(TEXTSPLIT(\"a,b\",B3:B3),1)",
+        "A34": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B2,,1/0),1)",
+        "A35": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B2,,\"x\"),1)",
+        "A36": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B2),1)",
+        "A37": "=ARRAYTOTEXT(TEXTSPLIT(\"a,b;c\",{\",\",#N/A},\";\",,,{1,2}),1)",
+        "A38": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",{\",\",#N/A},,,,{1,2}),1)",
+        "A39": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:C1,,,,{1,2}),1)",
+        "A40": "=ARRAYTOTEXT(TEXTSPLIT(\"a,b;c\",B1:C1,\";\",,,{1,2}),1)",
+        "A41": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:C1,,1/0),1)",
+        "A42": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1,,,,{1,2}),1)",
+        "A43": "=ARRAYTOTEXT(TEXTSPLIT(\"abc\",B1:B1,,,,{1,2}),1)",
+        "A44": "=ARRAYTOTEXT(TEXTBEFORE(\"abc\",B1),1)",
+        "A45": "=ARRAYTOTEXT(TEXTBEFORE(\"abc\",B1,1/0),1)",
+        "A46": "=ARRAYTOTEXT(TEXTBEFORE(\"abc\",B1:B1),1)",
+        "A47": "=ARRAYTOTEXT(TEXTBEFORE(\"abc\",B1:B1,1/0),1)",
+        "A48": "=ARRAYTOTEXT(TEXTAFTER(\"abc\",B1),1)",
+        "A49": "=ARRAYTOTEXT(TEXTAFTER(\"abc\",B1,1/0),1)",
+        "A50": "=ARRAYTOTEXT(TEXTAFTER(\"abc\",B1:B1),1)",
+        "A51": "=ARRAYTOTEXT(TEXTAFTER(\"abc\",B1:B1,1/0),1)",
+        "B1": {
+          "t": "e",
+          "v": "#N/A"
+        },
+        "B2": {
+          "t": "e",
+          "v": "#DIV/0!"
+        },
+        "B3": ",",
+        "C1": ","
+      }
+    }
+  ],
+  "expected": {}
+}

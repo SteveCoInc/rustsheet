@@ -8,6 +8,17 @@ use crate::expressions::types::CellReferenceRC;
 use crate::language::{get_default_language, Language};
 use crate::locale::{get_default_locale, Locale};
 
+/// How `Rewrite::Lower` prints a `#This Row` reference off its table's data rows.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OffRows {
+    /// As a detached reference that keeps its text and evaluates `#VALUE!`: a duplicated
+    /// sheet, which gets no table (T-1699, T-2763).
+    Detach,
+    /// As `#REF!`: a convert to range, as Excel does (FORMULATEXT `=#REF!`;
+    /// probes/table-edits/t3629-convert-plain F1, F9, T-3629, T-4020).
+    RefError,
+}
+
 /// The text of `node`, in R1C1 without `context` and in English A1 with it, with every structured
 /// reference to one of `tables` (lowercase names) printed as the area it resolves to. Deleting
 /// the sheet of those tables then turns them into `#REF!`, as it does any reference to the sheet.
@@ -16,7 +27,11 @@ pub(crate) fn to_string_lowering(
     context: Option<&CellReferenceRC>,
     tables: &[String],
 ) -> String {
-    rewritten_text(node, context, &Rewrite::Lower(tables, None))
+    rewritten_text(
+        node,
+        context,
+        &Rewrite::Lower(tables, None, OffRows::Detach),
+    )
 }
 
 /// The text of `node` printed with `rewrite`, in R1C1 without `context` (a parse error keeps its
@@ -44,10 +59,15 @@ pub(crate) fn to_string_with_ref_errors(
 
 /// [`to_string_lowering`] in R1C1 for the formula of one cell on `row`: a `#This Row` area to
 /// one of `tables` is printed as the area it is on that row (`R3C1`, or `#VALUE!` off the data
-/// rows), the text its parse-time lowering had (T-1699).
-pub(crate) fn to_rc_lowering_at(node: &Node, row: i32, tables: &[String]) -> String {
+/// rows), the text its parse-time lowering had (T-1699); off them it prints as `off_rows` says.
+pub(crate) fn to_rc_lowering_at(
+    node: &Node,
+    row: i32,
+    tables: &[String],
+    off_rows: OffRows,
+) -> String {
     let (locale, language) = (get_default_locale(), get_default_language());
-    let rewrite = Rewrite::Lower(tables, Some(row));
+    let rewrite = Rewrite::Lower(tables, Some(row), off_rows);
     stringify(node, None, &rewrite, false, locale, language)
 }
 
@@ -85,7 +105,7 @@ pub(super) fn this_row_text(
 ) -> String {
     let row = match (context, rewrite) {
         (Some(context), _) => Some(context.row),
-        (None, Rewrite::Lower(_, row)) => *row,
+        (None, Rewrite::Lower(_, row, _)) => *row,
         (None, _) => None,
     };
     let area = match row {
@@ -118,9 +138,8 @@ pub(super) fn reference_text(
     // included (Excel keeps `SUM(Table2[#Totals])`, cached `#REF!`: calc_test_tables/tables.xlsx
     // Sheet2!F4). Any other reference that lowers to an error comes from table metadata that does
     // not fit (directive 5), and is written as that error, which it evaluates to.
-    // A detached reference (its table converted to a range) lowers to `#VALUE!`, so the
-    // `ErrorKind` arm below writes it as `#VALUE!`; Excel's save writes `#REF!` (probes/table-edits/
-    // t3629-save-detached, T-3629), which TODO(T-4020) adopts with the convert itself.
+    // A detached reference (a duplicated sheet's off-row `#This Row`) lowers to `#VALUE!`, so
+    // the `ErrorKind` arm below writes it as `#VALUE!`.
     if export_to_excel {
         return match lowered {
             Node::ErrorKind(_) if reference.specifier != Some(TableSpecifier::Totals) => {
@@ -180,14 +199,18 @@ pub(super) fn reference_text(
                 DeletedColumn::None => return written(),
             }
         }
-        Rewrite::Lower(tables, row) => {
+        Rewrite::Lower(tables, row, off_rows) => {
             let name = reference.table_name.to_lowercase();
-            // Off its data rows a `#This Row` reference is not lowered: Excel keeps its text
-            // after the convert, and it evaluates `#VALUE!` (S!F1, S!F9, T!A1 of
-            // probes/table-edits/table-convert-names-this-row, T-2763).
-            let off_rows = row.and_then(|row| lowered.this_row_at(row))
+            // Off its data rows a convert makes a `#This Row` reference `#REF!`: after Graph's
+            // `convertToRange` F1 and F9 (`=Sales[[#This Row],[Qty]]` above and below the table)
+            // are `#REF!` with FORMULATEXT `=#REF!`, and a table re-added under the same name
+            // does not take them back (probes/table-edits/t3629-convert-plain, -readd-same-area
+            // F1, F2, F9, F10; T-3629, T-4020). A duplicated sheet detaches it (T-2763).
+            let off = row.and_then(|row| lowered.this_row_at(row))
                 == Some(Node::ErrorKind(token::Error::VALUE));
-            return if tables.contains(&name) && off_rows {
+            return if tables.contains(&name) && off && *off_rows == OffRows::RefError {
+                token::Error::REF.to_string()
+            } else if tables.contains(&name) && off {
                 reference.detached_stored_text()
             } else if tables.contains(&name) {
                 print(lowered, rewrite)

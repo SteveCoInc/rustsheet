@@ -4,12 +4,13 @@ use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_references;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
-use if_arm::{returns_range_arm, returns_single_cell_index};
+use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
 use legacy::{
     add_argument_intersection, add_array_at, add_in_array_context, is_array_context,
     legacy_array_call_at, legacy_array_context, legacy_call_reads_a_value, let_returns_range,
     mark_legacy_reading,
 };
+use name_body::scalar_body;
 pub use redundant::remove_redundant_implicit_intersection;
 use redundant::remove_redundant_legacy_intersection;
 mod aggregate;
@@ -17,6 +18,7 @@ mod broadcast;
 mod if_arm;
 mod legacy;
 mod lifted;
+mod name_body;
 mod operand_array;
 mod redundant;
 mod reference_parameter;
@@ -209,9 +211,10 @@ pub(super) fn add_legacy_intersection(node: &mut Node, add: bool, arrays: bool) 
         // `=ABS(@Z30:Z32)+@swOne`; probes/legacy-at-defined-name-dynamic-funcs A20-V20), and so
         // does a defined-name lambda's call (`=ABS(@Z30:Z32)+@myId(1)`, probes/legacy-at-dynamic-
         // funcs-2 AE; T-2440). The call of a LET-bound one removes every `@`
-        // (`removes_automatic_at`).
+        // (`removes_automatic_at`). A name whose body is one literal or one cell takes none, as
+        // that body would not (`scalar_body`, T-3856).
         Node::DefinedNameKind(_) | Node::NamedFunctionKind { .. } => {
-            if add {
+            if add && scalar_body(node).is_none() {
                 *node = Node::automatic_at(node.clone());
             }
         }
@@ -367,7 +370,9 @@ pub(crate) fn run_static_analysis_on_node(node: &Node) -> StaticResult {
         | Node::OpPowerKind { .. }
         | Node::CompareKind { .. } => static_analysis_operator_chain(node),
 
-        // Defined names: their shape is not tracked.
+        // Defined names: their shape is not tracked, but for a body of one literal or one cell
+        // (`scalar_body`, T-3856).
+        Node::DefinedNameKind(_) if scalar_body(node).is_some() => StaticResult::Scalar,
         Node::DefinedNameKind(_) => StaticResult::Unknown,
         Node::NamedVariableKind { .. } | Node::ImplicitIntersection { .. } => StaticResult::Scalar,
         Node::FunctionKind { kind, args } => static_analysis_on_function(kind, args),
@@ -738,7 +743,9 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Chooserows => StaticResult::Unknown,
         Function::Hlookup => aggregate::lookup_static_result(args), // T-0270, T-1269
         Function::Hstack => StaticResult::Unknown,
-        // INDEX has two forms, but they are indistinguishable at parse time.
+        // One cell by literal indexes (T-3856); otherwise INDEX has two forms, but they are
+        // indistinguishable at parse time.
+        Function::Index if indexes_one_reference_cell(args) => StaticResult::Scalar,
         Function::Index => StaticResult::Unknown,
         Function::Indirect => reference_result::static_analysis_indirect(args),
         // Spills by lookup_value; the vectors are consumed (T-1241).

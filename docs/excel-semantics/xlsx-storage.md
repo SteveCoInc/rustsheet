@@ -158,8 +158,15 @@ has no Function variant for the last three, so nothing is
 exported for them. GROUPBY and PIVOTBY (not on XlsxWriter's list) have `_xlfn.` arms since T-1322 and T-1326. PERCENTOF has an arm since T-0416. The case builder (which reads these arms) now prefixes it, and a
 sheet's `bare_function_names` list keeps a cell's names as typed, so function-name-forms A1 still
 stores the bare form (refilled 2026-10-13: still `#NAME?`). The gen-m5/m6/m7 cases that call PERCENTOF
-were refilled with the prefixed form. Two existing arms
-add a prefix Excel-authored workbooks omit (`GAMMALN`, `ISO.CEILING`): T-0417.
+were refilled with the prefixed form.
+GAMMALN and ISO.CEILING are stored bare, like CEILING (T-0417): Excel-authored
+rustsheet-xlsx/tests/calc_tests/STATISTICAL/GAMMALN_GAMMALNPRECISE.xlsx (Microsoft Excel 16.0300) stores `GAMMALN(A2)`
+beside `_xlfn.GAMMALN.PRECISE(A2)`, and MATH_AND_TRIGONOMETRY/FLOOR_CEILING.xlsx (Microsoft Excel Online) stores
+`ISO.CEILING($A175,B$2)`; neither is on XlsxWriter 3.2.9's list. The exporter wrote both prefixed until T-0417, and so did
+the case builder: Excel accepts the prefixed forms, since none of the 16,517 GAMMALN and 335 ISO.CEILING cells of the
+eval suites' excel-graph oracle files built that way (for example probes-numeric/t1042-gamma-int-1-90 A91 `GAMMALN(1)` =
+0, probes/t2715-ceiling-floor-subnormal-ratio G1) is `#NAME?`. The arms are gone, so the exporter and the case builder
+write them bare (test `test_export_gammaln_and_iso_ceiling_have_no_xlfn_prefix`).
 Tasks: T-0040, T-0412, T-0416, T-0417, T-1089
 
 ## Written parentheses are stored as written; `@(x)` is `_xlfn.SINGLE((x))`
@@ -364,12 +371,15 @@ days (the OLE epoch). It does not use the 1900-system calendar that a `t="d"` ce
   `Years` groups have `rangePr startDate="1899-12-30T00:00:00"`. Excel labels the first group item `<1/0/1900`, which is
   serial 0.
 So within a pivot cache, `1899-12-30T00:00:00` is 0, a time alone is `1899-12-30T<time>`, and serials 1 to 60 come out
-one day earlier than the cell calendar reads them. The importer reads cache `<d>` items with the cell rule
-(`iso8601_to_date_system_serial`). It rejects these dates and skips the whole cache ("bad date"), and with that rule it
-would also misread serials 1 to 60 by a day. The cutoff at 61 is inferred from where the two calendars agree
-(1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom 1900-02-29) and serials 1 to 60 other
-than this one point; whether `rangePr`/`groupItems` dates follow the same rule; 1904 workbooks. No GETPIVOTDATA cell
-depends on it yet.
+one day earlier than the cell calendar reads them. Since T-3182 the importer reads a cache `<d>` item dated 1899-12-30
+to 1900-02-28 on the OLE epoch in a 1900 workbook (`pivot_cache_date_serial`), and later dates with the cell rule
+(`iso8601_to_date_system_serial`); before, it rejected these dates and skipped the whole cache ("bad date"). The cutoff
+at 61 is inferred from where the two calendars agree (1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom
+1900-02-29; the importer reads a cached `1900-02-29` as 60 and `1900-02-28` as 60 too) and serials 1 to 60 other than
+the one point above; whether `rangePr` dates follow the same rule (since T-4225 the importer reads `startDate` and
+`endDate` with it, so 59932's `1899-12-30T00:00:00` start is serial 0, which matches its `<1/0/1900` label);
+1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
+Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
 Tasks: T-3182
 
 ## Structured references in the file

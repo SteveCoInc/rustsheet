@@ -1,0 +1,129 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-1683: FORMULATEXT of structured references written from another sheet (this-row, bare name, case, redundant #Data and brackets), and typed unterminated or unbracketed multi-word structured references (refused entries stay blank).",
+ "tags": [
+  "M8",
+  
+  "probe"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "S",
+   "tables": [
+    {
+     "name": "Sales",
+     "ref": "A1:C5"
+    }
+   ],
+   "cells": {
+    "A1": "Qty",
+    "B1": "Unit Price",
+    "C1": "Region",
+    "A2": 1,
+    "B2": 10,
+    "C2": "N",
+    "A3": 2,
+    "B3": 20,
+    "C3": "S",
+    "A4": 4,
+    "B4": 40,
+    "C4": "E",
+    "A5": 8,
+    "B5": 80,
+    "C5": "W"
+   }
+  },
+  {
+   "name": "F",
+   "cells": {
+    "A2": {
+     "entered": "=Sales[@Qty]"
+    },
+    "B2": "=FORMULATEXT(A2)",
+    "A3": "=Sales[[#This Row],[Qty]]",
+    "B3": "=FORMULATEXT(A3)",
+    "A4": {
+     "entered": "=Sales[@[Unit Price]]"
+    },
+    "B4": "=FORMULATEXT(A4)",
+    "A5": {
+     "entered": "=SUM(Sales[@[Qty]:[Unit Price]])"
+    },
+    "B5": "=FORMULATEXT(A5)",
+    "A6": "=SUM(Sales[#This Row])",
+    "B6": "=FORMULATEXT(A6)",
+    "A7": "=SUM(Sales[[#This Row],[Qty]:[Unit Price]])",
+    "B7": "=FORMULATEXT(A7)",
+    "A8": {
+     "entered": "=sales[@qty]"
+    },
+    "B8": "=FORMULATEXT(A8)",
+    "A9": "=SUM(Sales[Qty])",
+    "B9": "=FORMULATEXT(A9)",
+    "A10": "=SUM(sales[qty])",
+    "B10": "=FORMULATEXT(A10)",
+    "A11": "=ROWS(Sales)",
+    "B11": "=FORMULATEXT(A11)",
+    "A12": "=ROWS(Sales[])",
+    "B12": "=FORMULATEXT(A12)",
+    "A13": "=ROWS(sales)",
+    "B13": "=FORMULATEXT(A13)",
+    "A14": "=SUM(Sales[[Qty]])",
+    "B14": "=FORMULATEXT(A14)",
+    "A15": "=SUM(Sales[[#Data],[Qty]])",
+    "B15": "=FORMULATEXT(A15)",
+    "A16": "=ROWS(Sales[#Data])",
+    "B16": "=FORMULATEXT(A16)",
+    "A17": "=ROWS(Sales[[#Data]])",
+    "B17": "=FORMULATEXT(A17)",
+    "A18": "=SUM(Sales[[Qty]:[Unit Price]])",
+    "B18": "=FORMULATEXT(A18)",
+    "A19": "=ROWS(Sales[#All])",
+    "B19": "=FORMULATEXT(A19)",
+    "A20": "=Sales[[#Headers],[Qty]]",
+    "B20": "=FORMULATEXT(A20)",
+    "A21": "=COUNTA(Sales[[#All],[Region]])",
+    "B21": "=FORMULATEXT(A21)",
+    "A22": "=SUM(Sales[[#Data],[Qty]:[Unit Price]])",
+    "B22": "=FORMULATEXT(A22)",
+    "D2": {
+     "entered": "=Sales[@Qty"
+    },
+    "E2": "=FORMULATEXT(D2)",
+    "F2": "=ISFORMULA(D2)",
+    "G2": "=ISBLANK(D2)",
+    "D3": {
+     "entered": "=Sales[Qty"
+    },
+    "E3": "=FORMULATEXT(D3)",
+    "F3": "=ISFORMULA(D3)",
+    "G3": "=ISBLANK(D3)",
+    "D4": {
+     "entered": "=SUM(Sales[Qty)"
+    },
+    "E4": "=FORMULATEXT(D4)",
+    "F4": "=ISFORMULA(D4)",
+    "G4": "=ISBLANK(D4)",
+    "D5": {
+     "entered": "=Sales[@Unit Price]"
+    },
+    "E5": "=FORMULATEXT(D5)",
+    "F5": "=ISFORMULA(D5)",
+    "G5": "=ISBLANK(D5)",
+    "D6": {
+     "entered": "=Sales[[#This Row],[Qty]"
+    },
+    "E6": "=FORMULATEXT(D6)",
+    "F6": "=ISFORMULA(D6)",
+    "G6": "=ISBLANK(D6)",
+    "D7": {
+     "entered": "=Sales[@[Qty]"
+    },
+    "E7": "=FORMULATEXT(D7)",
+    "F7": "=ISFORMULA(D7)",
+    "G7": "=ISBLANK(D7)"
+   }
+  }
+ ]
+}

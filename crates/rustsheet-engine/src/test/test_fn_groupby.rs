@@ -1225,8 +1225,10 @@ fn one_parameter_calls_are_charged_against_the_visit_cap_too() {
     // Every call is charged the cells it is given: one group of 1048575 records and its total
     // row cost 2^21 cells per function, so 10 functions compute and 100 (2E8 cells) are #ERROR!.
     let mut model = new_empty_model();
-    // The visit cap under test, not the formula work budget, which the reads now also charge.
+    // The visit cap under test, not the formula work budget or the pass's pool, which the reads
+    // now also charge (T-2804, and T-2805's charge on each copy of a bound array).
     model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=549755289600=INDEX(GROUPBY(SEQUENCE(1048575,,1,0),SEQUENCE(1048575),HSTACK(_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM,_xleta.SUM)),3,11)",
@@ -1245,8 +1247,11 @@ fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     // SPEC-0006 Design step 3, DEVIATION (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY"):
     // 20000 groups each given all 20000 rows visit 4E8 cells, past the cap, so the result is
     // #ERROR!, while the built-in PERCENTOF sums the relative set once (O(N)) and a one-parameter
-    // LAMBDA visits each row once.
+    // LAMBDA visits each row once. The work budgets are lifted: each call's copy of its group is
+    // charged to them too (T-2805), and the visit cap is what this test is about.
     let mut model = new_empty_model();
+    model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=GROUPBY(SEQUENCE(20000),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",

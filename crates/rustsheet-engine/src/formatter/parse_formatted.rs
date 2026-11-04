@@ -108,10 +108,17 @@ fn parse_ascii_typed_number(
 
 /// Whether the denominator of the mixed fraction `text` (already read by `mixed_fraction`) is 10
 /// or more, ignoring leading zeros: `3 1/12` and `3 1/10000` take `# ??/??`, `3 1/9` and
-/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27).
+/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27); a closing `)` or
+/// space is not part of it (`$(1 1/2)` is `# ?/?`, `$(3 1/12)` `# ??/??`, probes/t4117-currency-
+/// parens A21, A34).
 fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
-    text.rsplit_once('/')
-        .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
+    text.rsplit_once('/').is_some_and(|(_, denominator)| {
+        denominator
+            .trim_end_matches([')', ' '])
+            .trim_start_matches('0')
+            .len()
+            >= 2
+    })
 }
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
@@ -479,6 +486,33 @@ fn parse_percent_or_currency(
 
     // check if it is a currency in currencies
     for currency in currencies {
+        // A currency sign before a parenthesised amount is negative: `$(12)`, `$ (12)`, `$( 12 )`
+        // and `$(1,234.5)` are -12, -12, -12 and -1234.5, typed with the `$` accounting format
+        // (decimal digits after the point, even `$(12.0)` and `$(12.)`, give the two-decimal one);
+        // `$(1e3)` takes `0.00E+00`. `$(-12)`, `$((12))`, `$(12`, `$12)`, `(12$)`, `-$(12)` and
+        // `$(12)%` are text. `"€(12)"+0`, VALUE and NUMBERVALUE are -12 while typed `€(12)` is
+        // text, because typed input has no `€` among its currencies (probes/t4117-typed-currency-
+        // paren; ENTERED log docs/research/t4117-typed-currency-paren-2026-11-04.md;
+        // docs/excel-semantics/coercion.md "Currency sign before parentheses").
+        if let Some(inner) = Some(currency)
+            .filter(|c| !c.is_empty())
+            .and_then(|c| value.strip_prefix(c))
+            .map(|rest| rest.trim_start_matches(' '))
+            .and_then(|rest| rest.strip_prefix('('))
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            let inner = inner.trim_matches(' ');
+            if inner.starts_with(['-', '+', '(']) {
+                return Err("Cannot parse number".to_string());
+            }
+            let (f, options) = parse_number(inner, decimal_separator, group_separator)?;
+            let format = if options.is_scientific {
+                SCIENTIFIC_FORMAT.to_string()
+            } else {
+                prefix_currency_format(currency, options.decimal_digits > 0)
+            };
+            return Ok(Some((0.0 - f, Some(format))));
+        }
         let prefixed = value
             .strip_prefix(&format!("-{currency}"))
             .map(|p| (p, -1.0))

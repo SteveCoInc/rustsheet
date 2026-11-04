@@ -63,8 +63,9 @@ T-1703 behavior where one exists), never a guessed value:
 11. whether the answer follows the cache when the records disagree with the rendered cells (a file
     saved without refreshing), and the summation order (cache order or display order) on
     non-representable decimals (one data point: web.md "GETPIVOTDATA on real-model pivots", T-2662);
-12. grouped fields (`<fieldGroup>`, date grouping), calculated fields, and a cache saved without
-    records (`saveData="0"`): skipped at import (`#REF!`), a non-parity gap T-2085 records.
+12. calculated fields and a cache saved without records (`saveData="0"`): skipped at import
+    (`#REF!`), a non-parity gap T-2085 records. Grouped fields (`<fieldGroup>`) import as their group
+    items (T-4225); which group Excel puts each value in, and GETPIVOTDATA on them, are unprobed.
 13. an error in a field or item argument (ours `#REF!`), an error held by a single-cell
     `pivot_table` inside a pivot (ours: the error, as T-1703 does with no pivot), and an error
     cell inside a multi-cell `pivot_table` range (ours: not looked at);
@@ -149,9 +150,14 @@ edits".
   that cache or pivot, never a panic or a read outside the package.
 - `pivotCacheDefinition`: `<cacheSource type="worksheet"><worksheetSource ref sheet|name>`,
   `<cacheField name>` with `<sharedItems>` (`s`, `n`, `b`, `e`, `d`, `m`); other source types and
-  `<cacheHierarchies>` (OLAP) give no pivot. `<fieldGroup>` and calculated fields (`formula`
-  attribute) make the cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!`
-  (UNVERIFIED, logged by the importer as a skipped feature).
+  `<cacheHierarchies>` (OLAP) give no pivot. Calculated fields (`formula` attribute) make the
+  cache unusable: the pivot is skipped, so GETPIVOTDATA on it is `#REF!` (UNVERIFIED, logged by the
+  importer as a skipped feature). A grouped field (`<fieldGroup>` with `<rangePr>` or
+  `<discretePr>` and `<groupItems>`; T-4225) becomes an ordinary `CacheField` at import: its items
+  are the group labels and its records each record's group, derived from the `base` field's values;
+  a grouping field (`databaseField="0"`, written after the database fields and absent from the
+  records part) is appended as a field of its own. The model needs no new type (web.md "Grouped
+  pivot fields import as their group items").
 - `pivotCacheRecords`: `<r>` rows of `x v` (shared index) or inline `s n b e d m` values, the inline
   ones interned into the field's items. With no records part (`saveData="0"`) the cache and its
   pivots are skipped, so GETPIVOTDATA is `#REF!` (unknown 12; Excel would refresh).

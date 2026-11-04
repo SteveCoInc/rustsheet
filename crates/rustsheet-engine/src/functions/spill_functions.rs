@@ -1,8 +1,6 @@
-use crate::area_budget::text_units;
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::util::near_integer::near_integer_whole;
 use std::cmp::Ordering;
-use std::collections::HashMap;
 
 use crate::{
     calc_result::CalcResult,
@@ -15,8 +13,12 @@ use crate::{
     model::Model,
 };
 
-use super::util::collation::{cmp_text_pairwise, collation_key, CollationKey};
+use super::util::collation::CollationKey;
 use super::util::{compare_values_pairwise, sort_indices_pairwise};
+
+mod unique;
+use unique::unique_of;
+pub(crate) use unique::{first_equal_lines, unique_cell_key};
 
 /// Compare two sort keys following Excel's rules:
 ///   Numbers < Strings < Booleans < Errors < Empty cells
@@ -98,151 +100,6 @@ fn unique_flags_are_literals(args: &[Node]) -> bool {
         Some(_) => false,
     };
     literal(args.get(1), true) && literal(args.get(2), false)
-}
-
-/// For each of `count` lines, the first line Excel's `=` finds it equal to (itself when none
-/// before it is): UNIQUE's distinct lines and GROUPBY's and PIVOTBY's groups. Lines are bucketed by
-/// `key`, which every pair `same` finds equal must share (texts by [`collation_key`]), and a line
-/// joins the first kept line of its bucket that `same` finds equal to it, so an intransitive run
-/// (U+00AD&`"ab"` equals both `"ab"` and `"ab"`&U+00AD, which differ) joins the first
-/// (probes/t4086-groupby-weightless Calc!B4, T-4088). Each comparison is charged to `spend` first
-/// (`cost` units; directive 5, SPEC-0024), so a crafted bucket ends as the budget's error instead
-/// of running quadratically.
-pub(crate) fn first_equal_lines<K: std::hash::Hash + Eq, E>(
-    count: usize,
-    key: impl Fn(usize) -> K,
-    same: impl Fn(usize, usize) -> bool,
-    cost: impl Fn(usize, usize) -> u64,
-    mut spend: impl FnMut(u64) -> Result<(), E>,
-) -> Result<Vec<usize>, E> {
-    let mut first = Vec::with_capacity(count);
-    let mut buckets: HashMap<K, Vec<usize>> = HashMap::with_capacity(count);
-    for line in 0..count {
-        let bucket = buckets.entry(key(line)).or_default();
-        let mut found = None;
-        for &kept in bucket.iter() {
-            spend(cost(kept, line))?;
-            if same(kept, line) {
-                found = Some(kept);
-                break;
-            }
-        }
-        first.push(found.unwrap_or_else(|| {
-            bucket.push(line);
-            line
-        }));
-    }
-    Ok(first)
-}
-
-/// One UNIQUE call over `data`: its distinct rows (or columns), or those that occur once.
-///
-/// Two texts are one value when Excel's `=` finds them equal ([`cmp_text_pairwise`]): case is
-/// folded, `"ß"` is `"ss"` and `"á"` is `"a"&UNICHAR(769)`, but `"a"` and `"a"` plus 16 U+0302
-/// (equal wrapped accent sums) are two (probes/t3211-collation-sort-cycles G1:J15,
-/// t3181-collation-prefix-arrays B1, B2; docs/excel-semantics/coercion.md "Not a total order").
-/// Lines are bucketed by their [`CellKey`]s, texts by [`collation_key`], which every pair the
-/// rule finds equal shares, and a line joins the first kept line of its bucket the rule finds
-/// equal to it. On an intransitive cycle Excel's grouping follows its sort order instead (G4);
-/// that is unmatched (T-3211 Outcome).
-///
-/// Texts can share a key and still be unequal (`"a"` plus 16, 32, 48 ... U+0302), so a bucket may
-/// hold many kept lines and the walk may compare each line with all of them: every comparison is
-/// charged to the formula's work budget ([`text_units`] of the texts compared, at least one unit),
-/// so a crafted column ends as the budget's `#VALUE!` instead of running quadratically
-/// (directive 5; SPEC-0024).
-fn unique_of(
-    model: &mut Model,
-    data: &[Vec<ArrayNode>],
-    by_col: bool,
-    exactly_once: bool,
-    cell: CellReferenceIndex,
-) -> CalcResult {
-    let num_rows = data.len();
-    let num_cols = data.first().map_or(0, Vec::len);
-    let (count, length) = if by_col {
-        (num_cols, num_rows)
-    } else {
-        (num_rows, num_cols)
-    };
-    let at = |line: usize, k: usize| {
-        if by_col {
-            &data[k][line]
-        } else {
-            &data[line][k]
-        }
-    };
-    let same_texts = |a: usize, b: usize| {
-        (0..length).all(|k| match (at(a, k), at(b, k)) {
-            (ArrayNode::String(x), ArrayNode::String(y)) => {
-                cmp_text_pairwise(x, y) == Ordering::Equal
-            }
-            _ => true,
-        })
-    };
-    let compare_units = |a: usize, b: usize| {
-        (0..length)
-            .map(|k| match (at(a, k), at(b, k)) {
-                (ArrayNode::String(x), ArrayNode::String(y)) => text_units(x.len() + y.len()),
-                _ => 0,
-            })
-            .fold(1, u64::saturating_add)
-    };
-    let first = match first_equal_lines(
-        count,
-        |line| {
-            (0..length)
-                .map(|k| unique_cell_key(at(line, k)))
-                .collect::<Vec<_>>()
-        },
-        same_texts,
-        compare_units,
-        |units| model.spend_work(units, cell),
-    ) {
-        Ok(first) => first,
-        Err(error) => return error,
-    };
-    // The kept lines, in order, with how many lines each stands for.
-    let mut stands_for = vec![0_usize; count];
-    for &line in &first {
-        if let Some(n) = stands_for.get_mut(line) {
-            *n += 1;
-        }
-    }
-    let kept: Vec<(usize, usize)> = (0..count)
-        .filter(|&line| first.get(line) == Some(&line))
-        .map(|line| (line, stands_for.get(line).copied().unwrap_or(0)))
-        .collect();
-    let lines: Vec<usize> = kept
-        .into_iter()
-        .filter(|&(_, n)| !exactly_once || n == 1)
-        .map(|(line, _)| line)
-        .collect();
-    if lines.is_empty() {
-        let what = if by_col { "columns" } else { "rows" };
-        return CalcResult::new_error(
-            Error::CALC,
-            cell,
-            format!("UNIQUE found no matching {what}"),
-        );
-    }
-    if by_col {
-        CalcResult::Array(
-            data.iter()
-                .map(|row| lines.iter().map(|&c| row[c].clone()).collect())
-                .collect(),
-        )
-    } else {
-        CalcResult::Array(lines.iter().map(|&r| data[r].clone()).collect())
-    }
-}
-
-/// UNIQUE's [`cell_key`]: a text is keyed by its [`collation_key`] (see [`unique_of`]).
-pub(crate) fn unique_cell_key(node: &ArrayNode) -> CellKey {
-    match node {
-        ArrayNode::String(text) => CellKey::Collated(collation_key(text)),
-        other => cell_key(other),
-    }
 }
 
 /// The first of `orderings` that is not `Equal`: the comparison of SORT's and SORTBY's keys,

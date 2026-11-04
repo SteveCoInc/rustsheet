@@ -278,7 +278,7 @@ impl Model {
             // product is 0, as `gamma_quantile` flushes after its scale.
             return Ok(flush_subnormal(x * beta_scale));
         }
-        // From a shape of 1E9 Excel's own search: a closed form, the true quantile or `#NUM!`
+        // From a shape of 1E5 Excel's own search: its start, the true quantile or `#NUM!`
         // (docs/excel-semantics/statistics.md "GAMMA.INV and CHISQ.INV at a huge shape").
         let x = if alpha >= HUGE_SHAPE_MIN && p > 0.0 && p < 1.0 {
             let z = normal_quantile(p, 0.0, 1.0, cell)?;

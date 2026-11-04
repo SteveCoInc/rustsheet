@@ -98,7 +98,7 @@ Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probe
 pivots in tabular or outline form.
 Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`pivot.rs`, T-2081), read from xlsx by
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
-external, consolidation or scenario source, a grouped (`fieldGroup`) or calculated field, no records part
+external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
 includes time-only dates if Excel writes them so), and a pivot whose data field is shown as a calculation
 (`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
@@ -120,6 +120,70 @@ lifts). An error in a single-cell pivot_table propagates even inside a pivot, an
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
+
+## Grouped pivot fields import as their group items (T-4225)
+Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
+field. A `<cacheField>` grouped in place carries `<fieldGroup par base>` after its `<sharedItems>`; a grouping field Excel
+adds (`Quarters`, `Years`, `Hours`, `Days`) is a `<cacheField databaseField="0">` written after every database field,
+with `<fieldGroup base>` naming the database field it groups; the records part holds the database fields only. Each group
+lists its labels in `<groupItems>` (`<s>` items), and a pivot field's `<item x>` indexes those labels, not the base
+field's items. The date layouts are fixed: a first item for values below `startDate` (`<1/1/2019`), the calendar part, and
+a last item for values past `endDate` (`>1/14/2019`):
+- `groupBy="minutes"` 62 items `:00` to `:59`; `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
+  with `29-Feb` always present (corpus-bench/52379 fields `Date/Time`, `Hours`, `Days`);
+- `months` 14 items `Jan` to `Dec`; `quarters` 6 items `Qtr1` to `Qtr4`; `years` one item per year from `startDate`'s
+  to `endDate`'s, 123 items for 1899-12-30 to 2020-03-28 (`1900` to `2020`; corpus-bench/59932 fields `Date`,
+  `Quarters`, `Years`).
+- Quirk: 59932's `Date` field, which holds blanks (`containsBlank="1"`, shared item 5767 is `<m/>` and records point at
+  it) and starts at serial 0, labels its first month item `(blank)` where its `Quarters` and `Years` groups of the same
+  field and range label it `<1/0/1900`.
+- A grouped field has no blank item of its own: 59932's pivot lists exactly 14, 6 and 123 `<item x>` for `Date`,
+  `Quarters` and `Years`, while an ungrouped field with a blank lists it as an extra item (52379 `User`: 58 `<s>` and
+  `<m/>`, 59 `<item x>`). So a blank record falls in one of the group items.
+Engine: the importer turns every group into an ordinary cache field whose items are the group labels (text) and whose
+records are each record's group (`crates/rustsheet-xlsx/src/import/pivots/groups.rs`), so GETPIVOTDATA addresses a
+grouped field by its label (`"Quarters","Qtr1"`). The record-to-group rule is ECMA-376's layout read off these caches:
+below `start` is item 0, past `end` the last item; otherwise numbers (`rangePr startNum endNum groupInterval`) fall in
+step `floor((v - start) / interval) + 1`, dates in their second, minute, hour (the time rounded to the nearest second),
+day of a leap year, month, quarter or year counted from `startDate`'s year (the day and time split as YEAR and HOUR,
+MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
+to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above). The importer skips the cache
+(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
+a range group over text, a database field after a grouping field, and a base that is not a database field.
+Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
+- Rule: a value below `startNum` goes in the first item and one past `endNum` in the last. A value equal to `endNum`
+  goes in the last inner group (1 in `0.9-1` by 0.1 from 0 to 1; 9 in `6-9` by 3 from 0 to 9). Any other value goes in
+  inner step `floor(q)` (from 0), where q = (v - startNum) / groupInterval **rounded to 15 significant digits**: 0.3, 0.6
+  and 0.7 by 0.1 land in `0.3-0.4`, `0.6-0.7` and `0.7-0.8` (q is 2.9999999999999996, 5.999999999999999,
+  6.999999999999999), 0.2999999999999999 (q 2.9999999999999987) too, while 0.299999999999999 (q 2.99999999999999)
+  stays in `0.2-0.3`; by 0.001, 0.12299999999999961 (q 4e-13 below 123) is in `0.123-0.124` and 0.12299999999999921
+  (8e-13 below) in `0.122-0.123`, so the rounding is relative, not an absolute tolerance on q.
+- Quirk: a step that rounds past the last inner group goes in the **last item** (`>end`), not the last inner group, even
+  though the value is below `endNum`: 0.9999999999999999 by 0.1 from 0 to 1 is in `>1` while 1 is in `0.9-1`;
+  1.9999999999999998 (from 1 to 2) is in `>2`, 8.999999999999998 (by 3 from 0 to 9) in `>9`.
+- A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`.
+- GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
+  not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
+  rendered label cell works, and an array of labels lifts. A **number** item picks the group whose lower bound equals it,
+  within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
+  1.3000000000000003 from 1; 3 by 3), and `endNum` itself picks the `>end` item (1 gives the `>1` total); a number
+  inside a group but not its lower bound (0.35, 4), the `<start` item's bound (-0.5), TRUE, an omitted item and
+  `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
+- Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
+  `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
+  lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
+  Excel's own labels for decimal data are `start-end` of each step (`0-3`, `0.3-0.4`), formatted General.
+- excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
+  probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
+Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
+powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). The importer does not follow the
+rounding or the `>end` quirk yet, nor GETPIVOTDATA's number items (T-4235); the eval adapter does not register a
+grouped spec pivot, so every cell of the probe but the `#REF!` ones is a known failure owned by T-4235.
+UNVERIFIED (T-4236): the date groups (a time of 23:59:59.5 or later, serials 1 to 60), which group item a blank goes in
+(item 0 by the label; one item for certain by the item lists), and GETPIVOTDATA on a date group's label, a year as a
+number, or a blank.
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`).
+Tasks: T-4225, T-4228, T-4235, T-4236
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
