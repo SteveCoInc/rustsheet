@@ -103,7 +103,9 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
      (decision 0231, which needs no review table); a PR with a panel has no REQUEST_CHANGES,
      pending or not-run verdict in its table; and nothing in the body says it is not for merging.
      Mark it ready for review. The orphan rule above then adopts it, and runs its own reviewers on
-     the head: the table is only a hint.
+     the head: the table is only a hint. If marking it ready is refused (the account may lack the
+     permission), comment that it is ready on the PR and list it under "Needs owner" in the
+     steward PR, as for a refused enqueue; do not retry.
   5. **Otherwise** (a partial step, a time-box with no new hypothesis, failed review or CI rounds):
      if the branch holds evidence that `main` lacks (a probe case with oracle values, an
      `excel-semantics` entry, task notes), file one task to salvage it onto a fresh branch from
