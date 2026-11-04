@@ -156,14 +156,11 @@ fn every_site_reads_this_row_as_its_lowering() {
 #[test]
 fn the_stored_text_keeps_the_reference() {
     let model = parity_model();
-    assert_eq!(formula(&model, 1, 3, 1), "=Sales[[#This Row],[Qty]]");
-    assert_eq!(formula(&model, 1, 7, 1), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 1, 3, 1), "=Sales[@Qty]");
+    assert_eq!(formula(&model, 1, 7, 1), "=Sales[@Qty]");
     // One stored formula serves the whole column (SPEC-0016 "Shared formulas and storage").
     let stored = &model.workbook.worksheets[1].shared_formulas;
-    let this_row: Vec<_> = stored
-        .iter()
-        .filter(|f| *f == "Sales[[#This Row],[Qty]]")
-        .collect();
+    let this_row: Vec<_> = stored.iter().filter(|f| *f == "Sales[@Qty]").collect();
     assert_eq!(this_row.len(), 1);
 }
 
@@ -213,7 +210,7 @@ fn a_grown_table_reads_its_new_data_row() {
     model.evaluate();
     assert_eq!(value(&model, 1, 6, 1), "14");
     assert_eq!(value(&model, 1, 5, 1), "6");
-    assert_eq!(formula(&model, 1, 6, 1), "=Sales[[#This Row],[Qty]]*2");
+    assert_eq!(formula(&model, 1, 6, 1), "=Sales[@Qty]*2");
     // And shrink it: row 5 is off the table now.
     model.remove_table("Sales").unwrap();
     model.add_table(0, "Sales", (1, 1, 4, 2), false).unwrap();
@@ -319,7 +316,7 @@ fn structural_edits_keep_values() {
             for row in 1..=8 {
                 assert_eq!(
                     formula(&model, 1, row, row_column),
-                    "=ROW(Sales[[#This Row],[Qty]])",
+                    "=ROW(Sales[@Qty])",
                     "{name} row {row}"
                 );
             }
@@ -341,10 +338,10 @@ fn structural_edits_keep_values() {
     let mut model = parity_model();
     model.add_sheet("Other").unwrap();
     model.insert_rows(2, 1, 3).unwrap();
-    assert_eq!(formula(&model, 0, 3, 5), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 0, 3, 5), "=Sales[@Qty]");
     // So does an insert below the formula on its own sheet.
     model.insert_rows(1, 9, 1).unwrap();
-    assert_eq!(formula(&model, 1, 3, 1), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 1, 3, 1), "=Sales[@Qty]");
 }
 
 /// A cut and paste of the formula to another row reads the row it read; on the same row the
@@ -371,11 +368,7 @@ fn cut_and_paste_of_the_formula() {
         );
         assert_eq!(value(model, 1, row, column), "5!", "to {row},{column}");
         let text = formula(model, 1, row, column);
-        assert_eq!(
-            text == "=Sales[[#This Row],[Qty]]&\"!\"",
-            keeps_text,
-            "{text}"
-        );
+        assert_eq!(text == "=Sales[@Qty]&\"!\"", keeps_text, "{text}");
     }
 }
 
@@ -396,7 +389,7 @@ fn sheet_rename_and_delete() {
         .unwrap();
     model.rename_sheet("T", "Facts").unwrap();
     model.evaluate();
-    assert_eq!(formula(&model, 1, 5, 1), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 1, 5, 1), "=Sales[@Qty]");
     assert_eq!(value(&model, 1, 5, 1), "3");
     model.add_sheet("Spare").unwrap();
     model.take_sheet(0).unwrap();
@@ -440,10 +433,7 @@ fn copy_and_paste_of_the_formula() {
         user.paste_from_clipboard(1, (3, 1, 3, 1), &clipboard.data, false)
             .unwrap();
         let model = user.get_model();
-        assert_eq!(
-            formula(model, 1, row, column),
-            "=Sales[[#This Row],[Qty]]&\"!\""
-        );
+        assert_eq!(formula(model, 1, row, column), "=Sales[@Qty]&\"!\"");
         assert_eq!(value(model, 1, row, column), expected, "to {row},{column}");
     }
 }
@@ -526,11 +516,11 @@ fn a_row_insert_the_table_follows_keeps_this_row() {
         ["#VALUE!", "#VALUE!", "#VALUE!", "1", "2", "4", "8"]
     );
     for row in 2..=8 {
-        assert_eq!(formula(&model, 1, row, 1), "=Sales[[#This Row],[Qty]]");
+        assert_eq!(formula(&model, 1, row, 1), "=Sales[@Qty]");
     }
     // The cells beside the table move with it and read the same values.
     assert_eq!(column_values(&model, 0, 5, 5..=8), ["1", "2", "4", "8"]);
-    assert_eq!(formula(&model, 0, 8, 5), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 0, 8, 5), "=Sales[@Qty]");
     // The calculated column moves with the table, its last cell below the table's old last row.
     assert_eq!(column_values(&model, 0, 4, 5..=8), ["2", "4", "8", "16"]);
     assert_eq!(formula(&model, 0, 8, 4), "=[@Qty]*2");
@@ -544,7 +534,7 @@ fn a_row_insert_the_table_follows_keeps_this_row() {
         ["#VALUE!", "#VALUE!", "1", "2", "0", "4", "8"]
     );
     assert_eq!(column_values(&model, 0, 5, 4..=8), ["1", "2", "", "4", "8"]);
-    assert_eq!(formula(&model, 0, 8, 5), "=Sales[[#This Row],[Qty]]");
+    assert_eq!(formula(&model, 0, 8, 5), "=Sales[@Qty]");
     assert_eq!(column_values(&model, 0, 3, 7..=8), ["4", "8"]);
 }
 

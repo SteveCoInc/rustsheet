@@ -78,10 +78,9 @@ Non-goals:
 - The escape `'` goes before the special character (`Sales[C'#]`); a quote first is refused (same
   entry; gen-m8b d86ef297e840325f).
 - Unprobed: what Excel does to its structured references when a table is resized, converted to a
-  range or deleted (T-2197; recorded UNVERIFIED in references.md). Whether the stored text keeps
-  the typed case of table and column names or uses the table's spelling is also unprobed. The
-  canonical printer writes the specifiers in Excel's case (`#All`) and the names as typed, and
-  T-1683 settles the names along with the `@` spelling.
+  range or deleted (T-2197; recorded UNVERIFIED in references.md). The printed text uses the
+  table's spelling of table and column names and the `@` form of `#This Row` (T-1683,
+  references.md "Structured references: FORMULATEXT").
 
 ## Design
 ### Node
@@ -168,13 +167,14 @@ where its body is parsed (`Node::lower_this_rows_at`), both as before step 2.
 The storage and in-engine printers print a `StructuredReferenceKind` from `reference`, in the
 canonical long form:
 `Table[[#Spec],[Col]]`, `Table[[#Spec],[A]:[B]]`, `Table[Col]`, `Table[[A]:[B]]`, `Table[#Spec]`
-or `Table[]`. Names that need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`),
+or `Table[]`, except that `#This Row` prints in its `@` form (`Table[@Col]`, `Table[@[Two Words]]`,
+`Table[@]`; T-1683), and table and column names in the table's spelling (T-1683). Names that need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`),
 the inverse of `consume_escaped_until`. `ThisRowKind` is never printed on its own, because it
 only appears inside a wrapper. Where a wrapper prints its lowered area instead, the rule at the
 end of "Structural edits" applies.
 
 A bare table name (`ROWS(Sales)`, operands.rs) keeps printing as the bare name in these
-printers; T-1683 may change how it is spelled. `to_excel_string` prints `lowered` until step 3,
+printers, in the table's spelling (T-1683). `to_excel_string` prints `lowered` until step 3,
 and from then on writes a bare name as `Table[]` (see above).
 
 `rename_sheet_in_node` and `move_formula` recurse into `lowered` as they do today. The printed

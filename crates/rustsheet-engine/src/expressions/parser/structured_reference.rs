@@ -3,7 +3,7 @@
 
 use super::super::lexer::{Lexer, LexerMode};
 use super::super::token::{Error, TableReference, TableSpacing, TableSpecifier, TokenType};
-use super::{Node, Parser};
+use super::{get_table_column_by_name, Node, Parser};
 use crate::expressions::types::CellReferenceRC;
 use crate::language::get_language;
 use crate::locale::get_locale;
@@ -140,6 +140,13 @@ fn prints_bare(column: &str) -> bool {
         && !column.ends_with(char::is_whitespace)
 }
 
+/// Whether a single column prints bare after `@` (`T[@Col]`): as [`prints_bare`], and only a
+/// name with no whitespace. Excel takes a typed `=Sales[@Unit Price]` and prints it
+/// `=Sales[@[Unit Price]]` (probes/t1683-formulatext-structured-refs F!E5).
+fn prints_bare_after_at(column: &str) -> bool {
+    prints_bare(column) && !column.contains(char::is_whitespace)
+}
+
 fn table_reference_text(table_reference: &TableReference) -> String {
     match table_reference {
         TableReference::ColumnReference(name) => column_text(name),
@@ -164,16 +171,37 @@ impl StructuredReference {
         self.text_with_name(!self.unqualified)
     }
 
-    /// The text of a [`Self::detached`] reference: with the table name, and a `#This Row` one in
-    /// its `@` form, as Excel's FORMULATEXT prints `=Sales[@Qty]` for one written
-    /// `=Sales[[#This Row],[Qty]]` (probes/table-edits/table-convert-names-this-row S!F2).
-    /// Only `#This Row` references are detached, and only their text is evidenced; any other
-    /// form would print its qualified text.
+    /// The text of a [`Self::detached`] reference: with the table name, in the `@` form of a
+    /// `#This Row` one (probes/table-edits/table-convert-names-this-row S!F2).
     fn detached_text(&self) -> String {
-        if self.specifier == Some(TableSpecifier::ThisRow) {
-            return format!("{}{}", self.table_name, self.text_with_name(false));
+        self.text_with_name(true)
+    }
+
+    /// Takes the table's own spelling of the table and column names, which match it ignoring
+    /// case: Excel prints `=SUM(sales[qty])` and `=sales[@qty]` as `=SUM(Sales[Qty])` and
+    /// `=Sales[@Qty]`, typed or loaded from a file (references.md "Structured references:
+    /// FORMULATEXT", probes/t1683-formulatext-structured-refs F!B8:B10, F!B13). A column the
+    /// table does not have keeps its spelling (the reference does not resolve).
+    pub(super) fn use_table_spelling(&mut self, table: &Table) {
+        let spelled = |column: &mut String| {
+            if let Some(index) = get_table_column_by_name(column, table) {
+                if let Some(own) = usize::try_from(index)
+                    .ok()
+                    .and_then(|index| table.columns.get(index))
+                {
+                    column.clone_from(&own.name);
+                }
+            }
+        };
+        self.table_name.clone_from(&table.name);
+        match &mut self.table_reference {
+            Some(TableReference::ColumnReference(column)) => spelled(column),
+            Some(TableReference::RangeReference((left, right))) => {
+                spelled(left);
+                spelled(right);
+            }
+            None => {}
         }
-        self.qualified_text()
     }
 
     /// This reference as one whose table a convert to range removed ([`Self::detached`]),
@@ -212,24 +240,27 @@ impl StructuredReference {
 
     /// [`Self::text`], with the table name if `named`, without it otherwise.
     fn text_with_name(&self, named: bool) -> String {
-        let qualified = self.qualified_text();
-        if named {
-            return qualified;
-        }
-        // Excel shows a `#This Row` reference in its `@` form (references.md "Calculated
-        // columns" rule 6: FORMULATEXT prints `=[@Col]*2` in every filled row), keeping the
-        // padding inside the outer brackets: `T[ [#This Row] , [Col] ]` prints `[ @Col ]`
-        // (syntax.md, probes/t2800-this-row-whitespace, T-3069).
+        let name = if named { self.table_name.as_str() } else { "" };
+        // Excel shows a `#This Row` reference in its `@` form, with or without the table name
+        // (references.md "Calculated columns" rule 6: FORMULATEXT prints `=[@Col]*2` in every
+        // filled row; "Structured references: FORMULATEXT": `=Sales[[#This Row],[Qty]]` prints
+        // `=Sales[@Qty]`, `Sales[#This Row]` `Sales[@]`, probes/t1683-formulatext-structured-refs
+        // F!B2:B8), keeping the padding inside the outer brackets: `T[ [#This Row] , [Col] ]`
+        // prints `[ @Col ]` (syntax.md, probes/t2800-this-row-whitespace, T-3069).
         if self.specifier == Some(TableSpecifier::ThisRow) {
             let TableSpacing { open, close, .. } = &self.spacing;
             let inner = match &self.table_reference {
                 None => String::new(),
-                Some(TableReference::ColumnReference(column)) if prints_bare(column) => {
+                Some(TableReference::ColumnReference(column)) if prints_bare_after_at(column) => {
                     escaped_column(column)
                 }
                 Some(reference) => table_reference_text(reference),
             };
-            return format!("[{open}@{inner}{close}]");
+            return format!("{name}[{open}@{inner}{close}]");
+        }
+        let qualified = self.qualified_text();
+        if named {
+            return qualified;
         }
         qualified[self.table_name.len()..].to_string()
     }

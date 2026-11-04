@@ -134,7 +134,16 @@ fn keeps_the_text_and_follows_the_table() {
 fn every_written_form_is_kept() {
     let mut model = model();
     for (row, (written, stored)) in [
-        ("=SUM(sales[qty])", "=SUM(sales[qty])"),
+        ("=SUM(sales[qty])", "=SUM(Sales[Qty])"),
+        // FORMULATEXT prints `#This Row` in its `@` form, in the table's spelling
+        // (probes/t1683-formulatext-structured-refs F!B2:B8).
+        ("=SUM(sales[@qty])", "=SUM(Sales[@Qty])"),
+        ("=SUM(Sales[[#This Row],[Qty]])", "=SUM(Sales[@Qty])"),
+        ("=SUM(Sales[#This Row])", "=SUM(Sales[@])"),
+        (
+            "=SUM(Sales[[#This Row],[qty]:[VAL]])",
+            "=SUM(Sales[@[Qty]:[Val]])",
+        ),
         ("=SUM(Sales[[#All],[Qty]])", "=SUM(Sales[[#All],[Qty]])"),
         (
             "=SUM(Sales[[#Headers],[#Data]])",

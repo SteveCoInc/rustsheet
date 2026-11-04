@@ -2487,9 +2487,37 @@ Tasks: T-1607, T-1673, T-1674
 ## Structured references: the `@` shorthand
 Rule: `T[@]`, `T[@Col]`, `T[@[Col]]` and `T[@[A]:[B]]` are the UI spelling of `#This Row` and evaluate identically to the long form; `'@` inside a column name is a literal `@`.
 Evidence: gen-m8b in-table 19fdc25163755713 and this-row e1bf5aa0ffb4ed87 (excel-graph).
-Status: VERIFIED for evaluation; UNVERIFIED for FORMULATEXT (RustSheet shows the lowered `=$A$2`; Excel's output unprobed) and for rejecting unbracketed multi-word `T[@Unit Price]` / unterminated `T[@Qty`.
+Status: VERIFIED (FORMULATEXT and typed entry: "Structured references: FORMULATEXT" below).
 Implemented in: `Lexer::consume_this_row_shorthand`.
 Tasks: T-1672, T-1683
+
+## Structured references: FORMULATEXT
+Rule (probes/t1683-formulatext-structured-refs, excel-graph, 2026-11-04, T-1683; table `Sales` on S!A1:C5
+with columns Qty, Unit Price, Region, every formula on sheet F, outside the table):
+- A `#This Row` reference prints in its `@` form with the table name, however it was written:
+  `=Sales[[#This Row],[Qty]]` and `=Sales[@Qty]` print `=Sales[@Qty]` (F!B2:B3), `Sales[#This Row]` prints
+  `Sales[@]` (B6), a column range `Sales[@[Qty]:[Unit Price]]` (B5, B7), and a column name that is not one
+  word keeps its own brackets, `=Sales[@[Unit Price]]` (B4).
+- Table and column names print in the table's own spelling, typed or loaded from a file:
+  `=sales[@qty]` prints `=Sales[@Qty]` (B8), `=SUM(sales[qty])` `=SUM(Sales[Qty])` (B10),
+  `=ROWS(sales)` `=ROWS(Sales)` (B13).
+- A bare table name and `Sales[]` print as the bare name, `=ROWS(Sales)` (B11:B12); a column in its own
+  brackets drops them, `Sales[[Qty]]` → `Sales[Qty]` (B14), and so does a lone specifier,
+  `Sales[[#Data]]` → `Sales[#Data]` (B17); a redundant `[#Data]` beside a column stays,
+  `=SUM(Sales[[#Data],[Qty]])` (B15, B22). Other forms print as written (B16, B18:B21).
+- Typed (Graph `values`), Excel refuses (400 `InvalidArgument`, the cell stays blank: FORMULATEXT `#N/A`,
+  ISFORMULA FALSE) every unterminated structured reference: `=Sales[@Qty`, `=Sales[Qty`, `=SUM(Sales[Qty)`,
+  `=Sales[[#This Row],[Qty]`, `=Sales[@[Qty]` (D2:D4, D6:D7).
+- Quirk: the unbracketed multi-word `=Sales[@Unit Price]` is accepted, evaluates as `Sales[@[Unit Price]]`
+  (80 on row 5) and prints `=Sales[@[Unit Price]]` (D5:E5).
+Status: VERIFIED (excel-graph)
+Implemented in: `StructuredReference::text_with_name` (the `@` form, `prints_bare_after_at`) and
+`StructuredReference::use_table_spelling` (parser/structured_reference.rs); the lexer refuses an unterminated
+reference (`Lexer::consume_escaped_until`). The xlsx export still writes the long form
+(`StructuredReference::file_text`), which Excel's file format requires. Inside its own table a this-row reference
+prints without the table name (references.md "Calculated columns"); the case of an unqualified column there
+(`=[@qty]`) takes the table's spelling too, which is unprobed.
+Tasks: T-1683
 
 ## Structured references when the table changes
 Rule (excel-graph, 2026-10-21, T-2197; probes/table-edits, `Sales` at S!B3:C7 with header row 3, data rows
