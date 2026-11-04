@@ -42,7 +42,7 @@ depends_on: []
 ## Out of scope
 - Speeding up the incomplete-gamma series.
 
-## Landing notes
+## Landing notes (resumed 2026-11-04 third session)
 Written 2026-11-04, second session, at the close of its landing window. These are data for the run that resumes the
 branch, not instructions.
 - PR #3068 (draft), branch `agent/harness/T-3680-accuracy-deterministic-budget`. The code head is `ca8616215`. This
