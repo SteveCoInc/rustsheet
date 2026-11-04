@@ -44,16 +44,11 @@ from rustsheet._rustsheet import (
     column_number_from_name,
     create,
     create_user_model,
-    create_user_model_from_bytes,
-    create_user_model_from_icalc,
     create_user_model_from_xlsx,
     get_all_timezones,
     get_supported_locales,
-    load_from_bytes,
-    load_from_icalc,
     load_from_xlsx,
     quote_name,
-    test_panic,
 )
 
 
@@ -82,14 +77,9 @@ __all__ = [
     "column_number_from_name",
     "create",
     "create_user_model",
-    "create_user_model_from_bytes",
-    "create_user_model_from_icalc",
     "create_user_model_from_xlsx",
     "get_all_timezones",
     "get_supported_locales",
-    "load_from_bytes",
-    "load_from_icalc",
     "load_from_xlsx",
     "quote_name",
-    "test_panic",
 ]

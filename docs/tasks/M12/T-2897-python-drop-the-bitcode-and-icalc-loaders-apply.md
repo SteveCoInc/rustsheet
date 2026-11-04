@@ -3,7 +3,7 @@ id: T-2897
 title: "Python: drop the bitcode and icalc loaders, apply_external_diffs and test_panic (SPEC-0026)"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -35,3 +35,8 @@ round-trip; keep the xlsx ones), tests/test_diffs.py (the whole file) and docs/e
 ## Out of scope
 - Moving the classes to `rustsheet.legacy` (T-2898).
 - The engine's own `Model::from_bytes` and `apply_external_diffs` (T-2913, T-2896).
+
+## Outcome
+Removed the listed loaders, writers, diff exchange and both `test_panic`s from the bindings, stubs, docs and
+examples; dropped the unused `bitcode` dependency; `tests/test_io.py` asserts every name is gone; hidden-row test now
+round-trips through xlsx. README notes the removal. Eval delta: none (bindings only). `make py-bindings`: 171 passed.

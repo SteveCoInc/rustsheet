@@ -17,7 +17,6 @@ rustsheet = { path = "../../crates/rustsheet" }
 xlsx = { package = "rustsheet_xlsx", path = "../../crates/rustsheet-xlsx" }
 pyo3 = { version = "0.29", features = ["extension-module"] }
 pythonize = "0.29"
-bitcode = "0.6.8"
 
 
 [features]

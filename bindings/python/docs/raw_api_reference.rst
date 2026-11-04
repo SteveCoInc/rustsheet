@@ -19,8 +19,6 @@ Evaluation and persistence
    Evaluates the workbook. Call this after each batch of changes.
 
 .. method:: Model.save_to_xlsx(file: str)
-.. method:: Model.save_to_icalc(file: str)
-.. method:: Model.to_bytes() -> bytes
 
 Setting values
 ^^^^^^^^^^^^^^

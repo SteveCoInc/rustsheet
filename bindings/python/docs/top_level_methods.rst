@@ -16,15 +16,6 @@ Creating models (raw API)
 
    Loads a workbook from an xlsx file.
 
-.. function:: load_from_icalc(file_name, language_id="en") -> Model
-
-   Loads a workbook from a file in the internal binary ic format.
-
-.. function:: load_from_bytes(bytes, language_id="en") -> Model
-
-   Loads a workbook from bytes in the internal binary ic format (the format
-   produced by ``to_bytes`` and ``save_to_icalc``).
-
 Creating models (user API)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -34,15 +25,11 @@ The :class:`UserModel` constructor and static methods are the idiomatic way:
 
    model = ic.UserModel("My Workbook")
    model = ic.UserModel.from_xlsx("book.xlsx")
-   model = ic.UserModel.from_icalc("book.ic")
-   model = ic.UserModel.from_bytes(data)
 
 The equivalent top-level functions are also available:
 
 .. function:: create_user_model(name, locale="en", tz="UTC", language_id="en") -> UserModel
 .. function:: create_user_model_from_xlsx(file_path, locale="en", tz="UTC", language_id="en") -> UserModel
-.. function:: create_user_model_from_icalc(file_name, language_id="en") -> UserModel
-.. function:: create_user_model_from_bytes(bytes, language_id="en") -> UserModel
 
 Utilities
 ^^^^^^^^^

@@ -53,12 +53,3 @@ Importing CSV data
 
 .. literalinclude:: examples/csv_import.py
    :language: python
-
-Collaboration with diffs
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Two models can be kept in sync by exchanging binary diffs, the same mechanism
-the IronCalc web application uses for real time collaboration.
-
-.. literalinclude:: examples/collaboration.py
-   :language: python
