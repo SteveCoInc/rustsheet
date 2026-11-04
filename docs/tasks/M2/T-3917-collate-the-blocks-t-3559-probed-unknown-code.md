@@ -55,7 +55,7 @@ that case passes with no known failures.
 - Rule 7 done (2026-11-03, PR "T-3917 (partial)"): `element` gives the Gurmukhi U+0A66, Tamil U+0BE6, Telugu
   U+0C66 and Khmer U+17E0 digits a `digit_variant` weight, all twelve blocks in code-point order (Thai and Lao
   from T-3895), and `script_digit_to_ascii` reads them as digits. Unit test `script_digits_tiebreak_by_block`.
-  Fixed E11 and E136:E145 (probes 5102 → 5091, 0 regressions). The rank cells A30:A41 still fail on rules 1 to 6
+  Fixed E11 and E136:E145 (probes 5102 → 5091, 0 regressions). The rank cells Calc!A11 and A136:A145 still fail on rules 1 to 6
   (other characters ranked wrong around them), so they stay in the list above.
 
 ## Outcome

@@ -252,17 +252,15 @@ fn column_inserts_and_deletes_keep_values() {
 
 /// A column delete inside the table shrinks it and drops the column (T-2339): a reference to the
 /// deleted column prints `#REF!`, as Excel does (probes/table-edits/table-delete-column-qty), and
-/// the others keep their text and read the shrunk table. A column range that loses one end prints
-/// the area it is displaced to, as under a fallback; its value is the plain range's, whose own
-/// column-delete gaps are T-2851's (Excel is unprobed for both).
+/// the others keep their text and read the shrunk table. A column range that loses either end is
+/// `#REF!` too (T-3734, probes/table-edits/table-column-range-delete-end, -start).
 #[test]
 fn column_deletes_inside_drop_the_column() {
     let qty = [
         ("=SUM(#REF!)", "#REF!"),
         ("=SUM(Sales[#All])", "30"),
         ("=ROWS(Sales)", "2"),
-        // The plain range's column-delete corner gap, as above (T-2851).
-        ("=SUM(#REF!:$A$3)", "#REF!"),
+        ("=SUM(#REF!)", "#REF!"),
         ("=COUNTA(Sales[#Headers])", "1"),
         ("=SUM(Sales[[#Data],[Val]])", "30"),
     ];
@@ -270,8 +268,7 @@ fn column_deletes_inside_drop_the_column() {
         ("=SUM(Sales[Qty])", "3"),
         ("=SUM(Sales[#All])", "3"),
         ("=ROWS(Sales)", "2"),
-        // Not Excel's value: the plain range's column-delete corner gap (T-2851).
-        ("=SUM(Data!$A$2:#REF!)", "#ERROR!"),
+        ("=SUM(#REF!)", "#REF!"),
         ("=COUNTA(Sales[#Headers])", "1"),
         ("=SUM(#REF!)", "#REF!"),
     ];

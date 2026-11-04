@@ -173,3 +173,18 @@ fn unit_names_follow_excel() {
         );
     }
 }
+
+#[test]
+fn convert_mixed_binary_decimal_prefixes() {
+    // Excel (excel-graph): probes/convert-mixed-prefix and probes-numeric/t3861-convert-prefix-sweep
+    // A52 (T-3975). With a binary prefix on either unit, a decimal prefix on the target enters as
+    // the rounded reciprocal of its constant (× 2^30 × (1/1E-21), not × 2^30 × 1E21).
+    let mut model = new_empty_model();
+    model._set("A1", r#"=CONVERT(4.73E-10,"Gibyte","zbyte")"#);
+    model.evaluate();
+    let CellValue::Number(n) = model.get_cell_value_by_ref("Sheet1!A1").unwrap() else {
+        panic!("A1 is not a number");
+    };
+    assert_eq!(n.to_bits(), 5.078_798_827_520_000_7e20_f64.to_bits());
+    assert_ne!(n.to_bits(), 5.078_798_827_52e20_f64.to_bits());
+}

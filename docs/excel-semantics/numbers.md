@@ -370,7 +370,14 @@ stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
 Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
-literals of more than 5 digits are not probed.
+literals of more than 5 digits are not probed, except one 15-digit point (T-3945): `=0.190581435720431`
+(m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
+and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
+the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
+`=0.981671389192299` is the nearest double, as the model gives (probes/t3945-atan-near-midpoint C1:C9, excel-graph,
+2026-11-03). So the complex functions' text parse (COMPLEX's output read back, a complex literal) converts the same
+way, and quotients and functions of such literals inherit the ulp: `=ATAN(0.981671389192299/0.190581435720431)` is
+1.3790419226756174 (B203) where ATAN of the stored quotient of the nearest doubles is ...176 (B1).
 Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
 m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
 controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
@@ -381,7 +388,7 @@ trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, l
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
 Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
-Tasks: T-3555, T-3658, T-3931, T-3932
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
@@ -1001,7 +1008,7 @@ SUMPRODUCT with three arrays flushes after each factor, left to right: `SUMPRODU
 SUMX2MY2, SUMX2PY2 and SUMXMY2 flush each square the same way (probes/t3677-sumx-running-overflow-snap A12:A15,
 excel-graph, 2026-11-03, T-3677): with M1:M2 = 1E-155, 1E-150 and N1:N2 = 0, `SUMX2PY2(M1:M2,N1:N2)`,
 `SUMX2MY2(M1:M2,N1:N2)` and `SUMXMY2(M1:M2,N1:N2)` are exactly 1E-300 and `SUMX2MY2(N1:N2,M1:M2)` is -1E-300 (the 1E-310
-square is dropped). The engine keeps it (1.0000000001E-300): T-3969.
+square is dropped). The engine matches since T-3969.
 A subnormal cell constant reads as 0 (T-2016, T-2228, VERIFIED, probes/subnormal-cell-constants, excel-graph 2026-10-21): a
 number constant of magnitude below 2.2250738585072014E-308 (5E-324, 2.2E-308, 1E-310, and the negatives -5E-324, -1E-310) in a loaded workbook (an xlsx `<v>`; typing
 one in is unprobed) is `=0` TRUE and `ISNUMBER` TRUE, `*1E+300`
@@ -1670,6 +1677,11 @@ product `RN64(ln 2) * log2 x` from the nearest 53-bit midpoint, in 53-bit ulps, 
 - Consequence for T-2144: no single model can match every fill at the unstable points; fit only on points that agree
   across fills (357 of 380 here); 12 of those 357 (11 old near-ties and one new point, d 2.36e-4 to 2.71e-4) stably return the
   neighbour the model does not, so inside the window Excel can be stable and still differ from the model.
+- Refills (T-3992, excel-graph, 2026-11-03 22:16-22:21 UTC, fresh uploads with the oracle cache emptied): fill 1's bytes twice,
+  and fill 2's and fill 3's bytes once each, all return fill 1's bits at every one of the 380 cells. So fill 3's 2026-10-22
+  bits at the 23 unstable cells were one deviating run, not a property of its bytes (only the D1 label differs). Today's runs
+  give the neighbour fills 1 and 2 gave, which is mostly not the model's. At the 23 unstable cells the majority of runs (6 of 7)
+  agrees on fills 1 and 2's bits. See "excel-graph refills of the same bytes" below.
 
 T-2144 fit (docs/research/t1941/ln_guard_bits.py): a k-bit internal product, truncated (tz) or rounded (rn), before RN64
 and RN53. Matches out of the 357 fill-stable points of T-2143's case / the fixture's 4,000 sampled points / its 30 near-ties
@@ -2546,7 +2558,7 @@ term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C
 Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
 `1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
 Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
-Ours: the power matches (every power cell passes); a subnormal term is kept (power-and-term A2, A9; beside another term, term-sum A1; T-3949) and `^` flushes
+Ours: the power matches (every power cell passes); a subnormal term is flushed per term since T-3949 (power-and-term A2, A9; beside another term, term-sum A1), and `^` flushes
 the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
 Status: VERIFIED (excel-graph)
 Tasks: T-3942, T-3949, T-3950
@@ -2808,3 +2820,35 @@ Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
 ## PERCENTOF: an error cell argument is #NUM!
 Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). The general rule, for every error kind, is the entry above (T-3653), which also fixed these 21 cells (T-3728).
 Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.
+
+## excel-graph refills of the same bytes: no variation on eight fit kernels (2026-11-03)
+Rule: refilling the same workbook bytes with Excel for the web gave the same bits at every cell of the eight probes below,
+over three runs each. Fill-to-fill variation still happens, rarely, so this is a measurement of these probes on these
+dates, not a guarantee. The LN and ERFC variations on file moved some near-tie cells and not others: LN's by one ulp,
+ERFC's by one to two. AMORDEGRC's is one cell's integer result, cause unexplained:
+- T-2143's fill 3 of 2026-10-22 changed 23 LN cells, all inside decision 0112's window. Four refills of the same bytes
+  today returned fills 1 and 2's bits ("LN is FLDLN2 then FYL2X" above).
+- probes/ln-fyl2x-kernel and the T-1941 run differ at 3 of their 30 shared LN near-ties.
+- The T-1916 re-fill changed 9 of 20 ERFC near-tie cells by 1 to 2 ulp (`kmyst-erfc-r8c11!B12999` by 2; statistics.md
+  T-1916 table; T-1940).
+- AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in one later fill of the same bytes
+  (probes/amordegrc-a76-bisect-a) and in a near-copy (-h); UNEXPLAINED in financial.md, not shown to be a near-tie (T-3610).
+Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each of the eight kernel
+cases got two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
+three fills, with zero differing cells:
+- Student t quantile, probes-numeric/t3349-t-inv-2t-sweep (300 cells; committed 2026-10-31);
+- IRR, probes-numeric/t3478-irr-r4-wide (300 cells; 2026-10-31);
+- RATE, probes/t3850-rate-same-state (240 cells; 2026-11-03 15:30);
+- CUMPRINC/CUMIPMT, probes/fin-cumipmt-tiny-rate-structure (226 cells; 2026-10-29);
+- gamma quantile, probes-numeric/t3311-gamma-inv-lower-tail-cdf (899 cells; 2026-10-31);
+- lnGamma/GAMMA, probes-numeric/t3570-r5-bpser-lg-aux (2,520 cells; 2026-11-01);
+- incomplete beta bfrac, probes-numeric/t3953-f-tail-bfrac-tiny (4,800 cells; 2026-11-03 15:43);
+- incomplete beta bpser, probes-numeric/t2464-r2-bpser-small-gl (5,843 cells; 2026-10-23);
+- LN, probes-numeric/t2143-ln-near-ties-fill1 (380 cells; 2026-10-22), whose fill 3 workbook deviated at 23 cells on
+  2026-10-22 and returned fill 1's bits on refill ("LN is FLDLN2 then FYL2X" above).
+RATE and bfrac had all three runs on 2026-11-03; the others' committed fills come from earlier days. No run deviated in
+this session, so there was no positive control. Two refills minutes apart do not bound how often a deviating run occurs.
+This is not a web-against-desktop check either: that floor (docs/research/oracle-calibration.md, up to 4 ulp) is a
+separate question (T-1075).
+Status: VERIFIED (excel-graph)
+Tasks: T-3992, T-2143

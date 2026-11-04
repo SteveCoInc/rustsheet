@@ -3,7 +3,7 @@ id: T-3031
 title: "ODDFYIELD's slope for a long odd first period at frequency 2 and 4 (T-2007 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -45,10 +45,74 @@ Lab: the T-2007 method (dump `OddFirstSchedule`'s fields from `fn_oddfyield`, re
 `caret_pow`) scores a candidate in seconds; the long-period quasi-coupon count is `offset` (nq).
 
 ## Acceptance criteria
-- [ ] The listed cells are within half a unit of the 15th significant digit of Excel, or the task is blocked
+- [x] The listed cells are within half a unit of the 15th significant digit of Excel, or the task is blocked
       time-boxed (decision 0056) with the candidates recorded in financial.md.
-- [ ] ODDFYIELD lines in eval/baseline only shrink.
+- [x] ODDFYIELD lines in eval/baseline only shrink.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - YIELD (T-1592) and ODDFPRICE's own digits (T-1374).
+
+## Attempt 1 (2026-11-03, decision 0056)
+No bit-exact gain; the time-box's second attempt is still open. Method: an env-gated lab hook in
+`OddFirstSchedule::dprice` (not committed) scored in the engine with `rustsheet-eval show` on PRICE_YIELD.xlsx,
+probes/oddf-date-order-domain-sweep and probes/oddfyield-solver-sweep, plus a schedule dump (`OddFirstSchedule`
+fields and the start) re-run in Python/mpmath.
+- Candidates (long first periods only, `offset > 0`), cells passing per case (committed: 339 / 1196 / 545): the
+  exact lead `lead` at `lead_exponent`; a regular coupon at `y`; no lead; `(offset + 1)` coupons at the lead's
+  exponent; `lead` at `y`; a regular coupon at every quasi-coupon date from settlement; `/ m` before the power;
+  a regular coupon at `y + 1`; one at `lead_exponent - 1`; `y * lead` at the lead's exponent; `lead - offset ×
+  coupon`. Every one: 339 / 1196 / 545, 0 long-first cells gained (max relative error moves between 1.3e-9 and
+  3.5e-9 on PRICE_YIELD.xlsx).
+- Starts: YIELD's start over issue-maturity, first coupon-maturity, settlement-first coupon, issue-first coupon, and
+  the coupon rate: 0 of the 73 long-first cells (13 PRICE_YIELD.xlsx, 60 sweep Y rows 2, 22, 33, 34).
+- Finding (financial.md "ODDFYIELD stops short of ODDFPRICE's root", long first periods, zero coupon): on Y!A22:O22
+  (rate 0, so the committed slope is exact) Excel still differs, and ends above the root in G22, I22, K22, L22,
+  where an exact step from YIELD's start (above the root) ends below it, so the long-first difference is in the Newton itself (its slope's other terms or its start), not in the
+  lead coupon's weight. Next: a second attempt should fit the zero-coupon long-first cells alone first (one term,
+  no lead), e.g. the redemption term's exponent in the slope (`front_exponent` from a different `nq`/`y`, or
+  `t` vs `t + 1` in the power), then carry the result to the coupon rows.
+- Not done: the fitlab `oddfyield` kernel and the extreme-price #NUM! probe (still acceptance work).
+
+## Outcome
+Attempt 2 (the time-box's second attempt, decision 0056) found it; attempt 1 is above.
+ODDFYIELD's slope for a long first period is found (a structural model, decision 0188 R4 kind (c)): T-2007's
+regular-coupon slope plus a regular coupon at every quasi-coupon date from the settlement's next one Q (`nq` more
+coupons ahead of the odd one), with every exponent of the slope, the redemption's too, shifted by the basis' days from
+Q to the first coupon over E (`OddFirstSchedule::slope_shift` from `yield_solver::quasi_shift`, and `nq` extra coupons in `dprice`; financial.md "ODDFYIELD stops short of
+ODDFPRICE's root"). A short first period, and a long one with the settlement in its last quasi period, are unchanged.
+- How it was found: on the zero-coupon row probes/oddf-date-order-domain-sweep Y!A22:O22 the slope is the
+  redemption's alone and the start and price are known, so a Newton run in a scratch lab (engine schedule fields
+  dumped, libm powers) gives the shift each cell needs: 1 on bases 0 and 4 and 366/365, 366/360, 92/91, 92/90,
+  92/91.25, 183/182.5 on bases 1-3, the quasi period's days over E. The coupon terms were then chosen from 384 slope
+  forms (lead amount, lead exponent, coupon shift, extra coupons, redemption shift) on the 43 coupon-bond long-first
+  cells of that probe and PRICE_YIELD.xlsx; the shift alone, on any subset of coupon terms, leaves them 1e-12 to 1e-10
+  off.
+- Scores (engine, eval): ironcalc-calc `FINANCIAL/PRICE_YIELD.xlsx` 339 → 352 of 352 (K8-K11, K29-K33, K49-K52 pass);
+  probes/oddf-date-order-domain-sweep 1196 → 1256 of 1260 (Y!A2:O2, A22:O22, A33:O33, A34:O34 pass; left: Y!I29,
+  Y!N29 and the ODDFPRICE cells P!A29, P!E29, all 1 ulp); probes/oddfyield-solver-sweep unchanged at 545 of 547 (short
+  first periods; its listed cells already passed on main: S!A9, A75-A83, B1, C21, C35, C50, C52, C85, E1, F1, E32, E33,
+  E40, F24, F32, F33, F46, F50 all pass; S!C23 and S!E23 are 1 ulp).
+- R4 guards. Hold-out (R4.1): no split was fixed before the lab scored, so the fit lab's split
+  (`fitlab/holdout.py` `is_holdout`, case ids `ironcalc-calc/FINANCIAL/PRICE_YIELD.xlsx` and
+  `probes/oddf-date-order-domain-sweep.case.json`) was applied afterwards to the 73 long-first cells with `nq` >= 1
+  the model was chosen on; margin 5 points (the default). Bit-exact / within 4 ulp / within 15 digits: this slope train
+  45/45/45 of 45, test 28/28/28 of 28; the correctly rounded candidate (ODDFPRICE's 50-digit mpmath root over the
+  engine's schedule, rounded) 0/0/0 on both sides. Because those test cells were tuned on, the only data never tuned
+  on is the fresh sweep below (margin 5 points, stated before it was scored): this slope 157/158/158 of 160 and, on
+  its 108 cells with `nq` >= 1 (the engine schedule's `offset`), the only ones the change affects, 105/106/106; the
+  correctly rounded candidate 0/1/2 of 160 and 0/0/0 of 108. Excel stops short of the root by 3e-12 to 3e-8 relative
+  (financial.md; T-2007's root-landing solver scored 0 of 99). Fresh sweep (R4.2):
+  probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls (2 to 5 quasi periods in
+  the first period, `nq` 0 to 4, every frequency and basis, coupon 0 or 0.001-0.2, price 20-200, redemption 50-200),
+  excel-graph 2026-11-03: 157 pass; without the extra coupons 72. Gate A (R2): 160 of 160 inside the envelope: 157
+  within 15 digits of Excel, S!A80 1 ulp, and S!A61 and S!A70 (month-end schedules, T-3988) whose 50-digit mpmath roots
+  of ODDFPRICE(y) = price over the engine's schedule are 0.077480666073101446 and 0.12192508630779288: Excel is -3.7e-11
+  and +4.9e-11 relative of them, ours -9.0e-11 and +1.2e-10, inside 1e-9 (`rustsheet-accuracy math` has no ODDFYIELD
+  model, so the case has no math sidecar; T-3999). No `FITTED` tag: no constant was fitted, the shift is
+  a day count. Reproducibility floor: no step targets a difference below 4 ulp. No keep-matched branch: the
+  conditions are the schedule's own (`nq`, Q), not previously matching cells.
+- Not done here, filed: T-3988 (the two month-end cells), T-3999 (an ODDFYIELD math model and Gate A table), T-3989 (a committed fit-lab `oddfyield` kernel; this lab was
+  a scratch dump like T-2007's), T-3990 (probe ODDFYIELD's `#NUM!` at extreme prices).
+- Eval delta: +73 cells (13 PRICE_YIELD, 60 oddf-date-order-domain-sweep); new case t3031-r4-oddfyield-long-first
+  (157 of 160).

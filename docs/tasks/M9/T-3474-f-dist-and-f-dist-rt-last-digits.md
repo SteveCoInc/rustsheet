@@ -18,6 +18,7 @@ of 1 and on the right-tail sweep, plus one t1538 cell) agree with Excel to 15 si
 arithmetic Excel uses where Excel itself is off the math. No cell that agrees today is lost.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bfrac) measured on t3953-f-tail-bfrac-tiny, 0 of 4800 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Decision 0188 R5 (owner's 2026-10-31 rulings): parked as Phase 1b. Every cell is a dense probes-numeric sweep cell
   inside Gate A's envelope (SPEC-0029: ours is within 1E-9 relative of the 50-digit math on all 111) and Excel is
   itself 2 to 620 ulp off the math on every one (at 1.9 to 3 ulp only at d1-1 A179 and d2-1 A278, where ours is 3 to 5

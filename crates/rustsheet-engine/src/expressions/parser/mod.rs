@@ -57,6 +57,7 @@ mod lambda;
 mod lists;
 pub mod move_formula;
 mod node;
+mod node_walks;
 mod operands;
 mod reference_operators;
 mod sheet_span;

@@ -17,6 +17,7 @@ are probes-numeric t1864-f-pdf-tiny-x A5, A6, A10, A17 and A20, and the 86 subno
 listed under Context.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 Found by T-1864's edge probes (probes-numeric t1864-f-pdf-tiny-x, t1864-f-pdf-edges, excel-graph, 2026-10-25).
 T-1864 implements round 5's range steps (docs/excel-semantics/statistics.md, the T-2513 F density entry: Excel stores
 Y = density·x, takes F = fl(Y/x), and an F below 2^-1022 is 0) in `fisher.rs` `excel_density_range`, re-forming a

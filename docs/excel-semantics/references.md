@@ -1875,10 +1875,14 @@ position is intersected. With A1 `=SEQUENCE(3)`:
   `=SIN(A1#)`;
 - the legacy `=SIN(A1:A3)` beside it, in D2 and D5, is SIN(2) and `#VALUE!`, with FORMULATEXT `=SIN(@A1:A3)`.
 It joins the legacy forms with no automatic `@` (SWITCH, the dynamic-array functions, LAMBDA calls; "Legacy formulas
-put `@` on array-valued calls and array constants"). Unprobed, and handled by the engine as it handles SWITCH, with
-the rule applied to the whole formula: a formula mixing a spill reference with a plain range (`=SIN(A1#)+B1:B3`), a
-bare `=A1#`, and a scalar host (`=SUM(A1#)+B1:B3`); probe pending, T-3490.
-Evidence: probes/legacy-formula-spill-ref (excel-graph, 2026-10-31, 19 cells).
+put `@` on array-valued calls and array constants"). The rule covers the whole formula, as for SWITCH: a plain
+range beside the spill reference takes no `@` either. With B1:B3 holding 10, 20, 30, each legacy form below spills
+three rows from row 2 and from row 5 alike, and its FORMULATEXT is the formula as written, with no `@`:
+- `=SIN(A1#)+B1:B3` (a spill reference mixed with a plain range) spills 10+SIN(1), 20+SIN(2), 30+SIN(3);
+- the bare `=A1#` spills 1, 2, 3;
+- the scalar host `=SUM(A1#)+B1:B3` spills 16, 26, 36 (not the intersected 26 or `#VALUE!`).
+Evidence: probes/legacy-formula-spill-ref (excel-graph, 2026-10-31, 19 cells); probes/t3490-legacy-spill-ref-shapes
+(excel-graph, 2026-11-03, 33 cells: C2:E7, FORMULATEXT F2:H5, ISBLANK I2:K5; T-3490). Ours matches every cell.
 Engine: `removes_automatic_at` (parser/static_analysis/legacy.rs) holds for a spill reference.
 `Model::promote_dynamic_formula_cells` (formula_cells.rs) loads a plain formula cell that has no automatic `@` and a
 non-scalar static result as a dynamic anchor, as typing it does. This covers an xlsx `<f>` without `cm` and a decoded
@@ -2669,10 +2673,11 @@ Right/Left):
   `Sales[Region]` `#REF!`, and the plain `S!D4:D7` shrinks to `=SUM(S!B4:B7)`; D:E with the table on B3:D7 drops Val the same way, the fully deleted plain `S!D4:D7` becoming `=SUM(S!#REF!)` (table-delete-columns-straddle-left,
   -right). A column range `Sales[[Qty]:[Val]]` is `#REF!`, printed `=SUM(#REF!)`, when either end column is
   deleted, and when both are, in one edit or two (table-column-range-delete-end, -start, -both-ends, -both-ends-separate);
-  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete. The engine matches the naming and the
+  the plain `S!C4:D7` shrinks to `S!C4:C7` after a one-column delete, and is `=SUM(S!#REF!)` when both ends go in two edits. The `#This Row` and item-specifier forms of a range that loses one end are unprobed. The engine matches the naming and the
   two-column insert, the straddling deletes and the delete of every column (T-3733: `column_span` shrinks the
-  table, `Displacement::deleted_tables` prints its structured references `#REF!`); a column range that loses one
-  end is T-3734.
+  table, `Displacement::deleted_tables` prints its structured references `#REF!`) and the column range that loses
+  either end (T-3734: `deleted_column` prints `#REF!`); only the plain-range shrink after a one-column delete is
+  T-3978's.
 - Convert to Range (`tables/convertToRange`): every value is kept and each structured reference from another
   sheet is rewritten as an absolute, sheet-qualified range: `=SUM(S!$C$4:$C$7)`, `=COUNTA(S!$B$4:$B$7)`,
   `=COLUMN(S!$C$4:$C$7)`; `ROWS(Sales)` 4, `ROWS(Sales[#All])` 5 and `ROW(Sales[#Headers])` 3 keep their values

@@ -17,6 +17,7 @@ unit of Excel's 15th significant digit, but more than 4 ulp from Excel's double,
 within 4 ulp are not targets unless the same model fixes them.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bfrac) measured on t3953-f-tail-bfrac-tiny, 0 of 4800 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31 (`make eval` on origin/main 73241cb4c, excel-graph; `scripts/exit_owners.py`'s `owned` rule
   over every failing cell and the task files of origin/main and every open task-filing branch): 304 cells, none
   visibly off, that no open task names. T-3479 owns the visibly-off cells of the same two t3354 cases and says

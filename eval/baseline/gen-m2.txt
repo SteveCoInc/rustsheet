@@ -48,7 +48,9 @@ C	gen-m2/7469c3e920e1ade4.case.json	400
 C	gen-m2/75840b9c71a50596.case.json	400
 C	gen-m2/78bc88199fc96650.case.json	400
 C	gen-m2/7d61ca5cd4679d78.case.json	40
+C	gen-m2/844da2526152d8b9.case.json	300
 C	gen-m2/87da6a5f7b1fa72f.case.json	400
+C	gen-m2/88b15985ecd294e4.case.json	300
 C	gen-m2/893302d6c5b99e2e.case.json	400
 C	gen-m2/8a07153bca1905d5.case.json	40
 C	gen-m2/8e54f7a88b6bb668.case.json	62

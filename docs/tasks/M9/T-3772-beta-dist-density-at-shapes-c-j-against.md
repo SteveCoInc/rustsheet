@@ -17,6 +17,7 @@ a narrower open task that names its density branch, or be listed in the Outcome 
 and the reason Excel's bits cannot be derived.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on origin/main, `make unowned-off ALL=1`): these are the only visibly-off Excel
   cells that no open task names, deferred tasks included. Every other unowned group has an owner already, or one is
   being filed on an open branch (T-3755, T-3757, T-3764).

@@ -17,6 +17,7 @@ argument, starting with gen-m9 8f2ac25945af87da A92, by reproducing Excel's arit
 sweep shows it.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe t3953-f-tail-bfrac-tiny: 0 of its 4800 cells changed over three fills (its cells there; gen-m9 8f2ac25945af87da A92 not refilled); see docs/research/t3992/README.md.
 - Gap triage 2026-11-03 (`make eval` on origin/main c2062e5c8, excel-graph). `scripts/exit_owners.py --all-off` lists
   this cell as visibly off and owned only by a `defer: phase-1b` task: T-2221's "Cells added from T-3198 (2026-11-03)",
   which says none of those cells is visibly off. gen-m9 is a Gate B suite (decision 0188 R1(b)); a deferred owner

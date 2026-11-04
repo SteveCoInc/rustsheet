@@ -3,7 +3,7 @@ id: T-3958
 title: "Probe Gurmukhi, Tamil, Telugu and Khmer digits in number text and collation; fix T-3917's rank-cell citations"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,11 +31,16 @@ the right cells.
   `"4"`, `"۳"` and `"३"`.
 
 ## Acceptance criteria
-- [ ] An oracle-filled probe covers the four blocks in the T-3446 forms and in the pairs above. The engine passes it,
+- [x] An oracle-filled probe covers the four blocks in the T-3446 forms and in the pairs above. The engine passes it,
       or each off cell has an owner.
-- [ ] The four citations say Calc!A11, A136:A145 instead of A30:A41.
-- [ ] coercion.md's T-3446 and T-3559 entries cite the new probe.
-- [ ] `make check` green; reviewers approve.
+- [x] The four citations say Calc!A11, A136:A145 instead of A30:A41.
+- [x] coercion.md's T-3446 and T-3559 entries cite the new probe.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- Probe probes/t3958-gurmukhi-tamil-telugu-khmer-digits (excel-graph, 2026-11-03, 244 checked cells): four blocks x the eleven T-3446 forms (typed, ISNUMBER, +0, VALUE, NUMBERVALUE, TEXT) and 28 collation pairs. The engine passes 200; the 44 off cells are the typed-input ISNUMBER cells Sheet1!B1:B44, owned by T-3891 (amended).
+- The rank-cell citations now name Calc!A11, A136:A145 (collation/scripts.rs x2, test_collation.rs, T-3917's Progress note). coercion.md's T-3446 and T-3559 entries cite the probe.
+- Open: only the Khmer typed-format tags were logged; Gurmukhi, Tamil and Telugu tags are for T-3891.

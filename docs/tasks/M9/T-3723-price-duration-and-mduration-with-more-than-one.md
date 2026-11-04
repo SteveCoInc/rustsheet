@@ -16,6 +16,7 @@ PRICE, DURATION and MDURATION of a bond with more than one coupon left give Exce
 T-2733's post-freeze r4 sweep (the case in the cell list below), after T-2972's sum-order work.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01h (`make eval` on main b3389661, excel-graph). Scan: `scripts/exit_owners.py`'s `owned` rule
   over every failing cell, against the task files of origin/main and every open task-filing branch. No open task names
   these cells. T-2972 has the same root cause but owns only the bond-extreme probe. probes-numeric is

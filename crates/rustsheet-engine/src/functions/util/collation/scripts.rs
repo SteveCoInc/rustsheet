@@ -154,7 +154,7 @@ pub(super) const SYMBOLS: u32 = 4 + 0x60 + 0x70 + 0xa0 + 0x1c0;
 /// [`super::FULL_WIDTH`] form, in code-point order of their blocks: Arabic-Indic, Extended
 /// Arabic-Indic, Devanagari, Bengali, Gurmukhi, Tamil, Telugu, Thai, Lao, Tibetan, Myanmar, Khmer
 /// (probes/t3276-collation-other-scripts G25:G27; probes/t3895-collation-script-digits A4:A6,
-/// A129:A131, A151:A178; probes/t3559-collation-unprobed-blocks ranks A30:A41).
+/// A129:A131, A151:A178; probes/t3559-collation-unprobed-blocks ranks Calc!A11, A136:A145).
 pub(super) const ARABIC_INDIC_DIGIT: u8 = 3;
 pub(super) const EXTENDED_ARABIC_INDIC_DIGIT: u8 = 4;
 pub(super) const DEVANAGARI_DIGIT: u8 = 5;
@@ -196,7 +196,7 @@ pub(super) fn script_element(c: char) -> Option<Element> {
         '\u{966}'..='\u{96f}' => digit_variant(u32::from(c) - 0x966, DEVANAGARI_DIGIT),
         // The Bengali, Gurmukhi, Tamil, Telugu, Thai, Lao, Tibetan, Myanmar and Khmer digits too,
         // below every letter (`"2z" < "๓" < "3a"`, `"๓" < "a"`; probes/t3895-collation-script-digits
-        // A1:A150, probes/t3559-collation-unprobed-blocks ranks A30:A41).
+        // A1:A150, probes/t3559-collation-unprobed-blocks ranks Calc!A11, A136:A145).
         '\u{9e6}'..='\u{9ef}' => digit_variant(u32::from(c) - 0x9e6, BENGALI_DIGIT),
         '\u{a66}'..='\u{a6f}' => digit_variant(u32::from(c) - 0xa66, GURMUKHI_DIGIT),
         '\u{be6}'..='\u{bef}' => digit_variant(u32::from(c) - 0xbe6, TAMIL_DIGIT),

@@ -30,8 +30,9 @@ pub(super) fn compare_aggregates(
 /// order with the values' order, a blank element greatest, and a shorter array first when one
 /// is the start of the other (`LAMBDA(x,x)` sorts groups by their first record; probes/t3893-
 /// pivotby-error-tie-order A461-A651, the blank element and the prefix: t3893-pivotby-error-
-/// sort-header A61, A71). Unprobed: a blank element against text, booleans or errors (taken as
-/// greatest), and a one-cell reference result (compared like an array).
+/// sort-header A61, A71). A blank element against text, booleans, errors and numbers (greatest):
+/// probes/t3946-aggregate-array-element-kinds. Unprobed: a one-cell reference result (compared
+/// like an array).
 fn aggregate_cmp(
     a: &ArrayNode,
     b: &ArrayNode,

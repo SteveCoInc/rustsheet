@@ -17,6 +17,7 @@ the 15th significant digit of Excel's value, so this is last-digit work. The fix
 that T-3579's evidence pins down for RATE's noise floor, not from a rule for these 5 cells.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (RATE) measured on t3850-rate-same-state, 0 of 240 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01c (`make eval` on origin/main 4f55f1fbf, excel-graph). The sweep has 300 cells, 293 passing.
   Of its 7 failures, T-3424 owns A272 and A296 (type misses). No open task, on main or in an open task PR, named
   the other 5. T-3591 owns the four noise-floor digit cells of the *fresh* sweep

@@ -16,6 +16,7 @@ DURATION and MDURATION of a bond with one coupon left (COUPNUM = 1) give Excel's
 sweeps, not only its 15 digits.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01h (`make eval` on main b3389661, excel-graph). Scan: `scripts/exit_owners.py`'s `owned` rule
   over every failing cell, against the task files of origin/main and every open task-filing branch. T-2733 (done) drew
   its r4 and n1 R4.2 fresh sweeps (the probes-numeric cases in the cell list below). Its follow-ups own other

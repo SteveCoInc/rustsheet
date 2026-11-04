@@ -4,8 +4,8 @@ use super::huge_shape::{huge_shape_quantile, wilson_hilferty_quantile};
 use super::{
     cdf_terms_bound, continued_fraction_budget, excel_newton_quantile, excel_small_shape_lower,
     excel_small_shape_quantile, excel_tiny_quantile, gamma_cdf, gamma_density, gamma_quantile,
-    gamma_quantile_within, gamma_sf, gamma_ur, incomplete_gamma_pair, poisson_upper, temme_pair,
-    Tail, Terms, MAX_TERMS, TEMME_C,
+    gamma_quantile_within, gamma_sf, gamma_ur, incomplete_gamma_pair, pair_with, poisson_upper,
+    temme_pair, Exponent, Tail, Terms, MAX_TERMS, TEMME_C,
 };
 use statrs::distribution::{ChiSquared, ContinuousCDF, DiscreteCDF, Gamma, Poisson};
 use statrs::function::gamma::{gamma_lr as statrs_lr, gamma_ur as statrs_ur};
@@ -319,11 +319,12 @@ fn terms_needed(a: f64, x: f64) -> u32 {
 // is NaN, and the same call with exactly the terms it needs is its value.
 #[test]
 fn a_call_past_its_cap_is_nan() {
-    // The series near x = a below Temme's shape, the continued fraction (x above a) and the
-    // small-shape Q's series.
-    assert!(terms_needed(9e7, 9e7) > 50_000);
-    terms_needed(9e7, 9.0001e7);
+    // The series near x = a below `TEMME_NEAR_MODE_MIN`, the continued fraction (x above a) and
+    // the small-shape Q's series; from that shape the pair near the mode is one term (T-3286).
+    assert!(terms_needed(999.0, 999.0) > 100);
+    terms_needed(999.0, 1000.5);
     terms_needed(0.00113, 8e-4);
+    assert_eq!(terms_needed(9e7, 9e7), 1);
     // From Temme's shape a cdf is one term at any x, where the series needed 675,286 at
     // a = x = 1E10 (T-1891): Excel's `GAMMA.DIST(1E10,1E10,1,TRUE)` (E8).
     assert_eq!(terms_needed(1e10, 1e10), 1);
@@ -346,10 +347,10 @@ fn a_call_past_its_cap_is_nan() {
         "{median}"
     );
     // Past the shared budget the whole inversion is NaN (directive 5), on the series cdfs and on
-    // Temme's: one series cdf near the median at shape 1E4 takes about 730 terms, and the
-    // refinement needs more than three cdfs at any shape.
-    assert!(gamma_quantile_within(1e4, 1.0, 0.5, Tail::Lower, 1_000).is_nan());
-    assert!(gamma_quantile_within(1e4, 1.0, 0.5, Tail::Lower, MAX_TERMS).is_finite());
+    // Temme's: one series cdf near the median at shape 999 (below `TEMME_NEAR_MODE_MIN`) takes
+    // about 230 terms, and the refinement needs more than three cdfs at any shape.
+    assert!(gamma_quantile_within(999.0, 1.0, 0.5, Tail::Lower, 200).is_nan());
+    assert!(gamma_quantile_within(999.0, 1.0, 0.5, Tail::Lower, MAX_TERMS).is_finite());
     assert!(gamma_quantile_within(1e7, 1.0, 0.5, Tail::Upper, 3).is_nan());
 }
 
@@ -900,4 +901,77 @@ fn the_far_upper_tail_is_excels_ratio_form() {
         poisson_upper(3.0, 650.0).to_bits(),
         gamma_ur(3.0, 650.0).to_bits()
     );
+}
+
+/// (x, P, Q) at shape 1E3 to 60 digits (mpmath 1.3, `mp.dps = 60`, `gammainc(a, 0, x,
+/// regularized=True)` and `gammainc(a, x, inf, regularized=True)`), x from 0.6a to 1.4a (T-3286).
+const NEAR_MODE_1E3: [(f64, f64, f64); 9] = [
+    (600.0, 2.324060057960917e-50, 1.0),
+    (700.0, 1.0158583345333217e-26, 1.0),
+    (800.0, 5.5014197761792284e-12, 0.9999999999944986),
+    (900.0, 0.0005499022657117829, 0.9994500977342882),
+    (990.0, 0.3795213785379639, 0.620478621462036),
+    (1000.0, 0.5042052441802155, 0.4957947558197845),
+    (1050.0, 0.9413288886226819, 0.05867111137731808),
+    (1200.0, 0.9999999987118394, 1.2881606086281433e-09),
+    (1400.0, 1.0, 8.04132540818483e-30),
+];
+
+/// The same at shape 46041, x from 0.9a to 1.1a, where P or Q is not 0.
+const NEAR_MODE_46041: [(f64, f64, f64); 7] = [
+    (41436.9, 1.2108587184040666e-109, 1.0),
+    (43738.95, 5.09305281828588e-28, 1.0),
+    (45580.59, 0.015724044413005404, 0.9842759555869945),
+    (46041.0, 0.5006197499345632, 0.49938025006543685),
+    (46501.41, 0.9838289959746112, 0.016171004025388885),
+    (48343.05, 1.0, 2.373539625881012e-26),
+    (50645.100000000006, 1.0, 3.1167247123287765e-96),
+];
+
+/// Ulps of `exact` between `value` and `exact` (0 where they are equal, 0 included).
+fn ulps_from(value: f64, exact: f64) -> f64 {
+    if value == exact {
+        return 0.0;
+    }
+    ((value - exact) / (exact.abs() * f64::EPSILON)).abs()
+}
+
+/// Asserts P and Q of [`pair_with`] within `bound` ulps of each 60-digit (x, P, Q) at shape `a`.
+fn assert_near_mode(a: f64, rows: &[(f64, f64, f64)], bound: f64) {
+    for &(x, p, q) in rows {
+        let (lower, upper) = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate);
+        let (dp, dq) = (ulps_from(lower, p), ulps_from(upper, q));
+        assert!(
+            dp <= bound && dq <= bound,
+            "a={a} x={x}: P {dp} Q {dq} ulps"
+        );
+    }
+}
+
+// Temme's expansion near the mode from shape 1E3, its exponent a·phi in double-double: the series
+// after `rcomp` was 16 ulp off at POISSON.DIST(46040,46071,TRUE) where Excel is correctly rounded
+// (ironcalc-calc POISSON.xlsx D55), and a rounded a·phi left 10 to 230 ulp in the band's tails
+// (T-3286). At shape 1E3 the lower tail below 0.9a is within 2 ulp (erfc minus the correction).
+#[test]
+fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
+    assert_near_mode(1000.0, &NEAR_MODE_1E3[3..], 1.0);
+    assert_near_mode(1000.0, &NEAR_MODE_1E3[..3], 2.0);
+    assert_near_mode(46041.0, &NEAR_MODE_46041, 1.0);
+    // At the mode at shape 1E6, and at a = 1E12 + 1 one below it, where phi is 5E-25 and
+    // ln x - ln a would leave it 3E-7 off (probes/incomplete-gamma-cap E11, Excel's value).
+    assert_near_mode(
+        1e6,
+        &[(1e6, 0.500_132_980_760_872_5, 0.499_867_019_239_127_4)],
+        1.0,
+    );
+    assert_near_mode(1e6, &[(990_000.0, 5.446_644_693_010_809e-24, 1.0)], 1.0);
+    assert_eq!(gamma_ur(46041.0, 46071.0), 0.443_802_069_809_538_9);
+    assert_eq!(gamma_ur(1e12 + 1.0, 1e12), 0.500_000_265_961_520_3);
+    // Past the double range the double-double exponent falls back to doubles, not NaN: x + a
+    // overflows at a = x = 1E308 (both tails 1/2, as Excel's `GAMMA.DIST(1E300,1E300,1,TRUE)`,
+    // probes/incomplete-gamma-cap E3), and a·phi at a = 1E308, x = 1E300 (P is 0).
+    let pair = |a: f64, x: f64| pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate);
+    assert_eq!(pair(1e308, 1e308), (0.5, 0.5));
+    assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
+    assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
 }
