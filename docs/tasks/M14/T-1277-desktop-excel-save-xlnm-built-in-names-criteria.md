@@ -3,7 +3,7 @@ id: T-1277
 title: "Desktop Excel save: _xlnm. built-in names (Criteria, Database, Extract, both spellings in one scope, ROWS(_FilterDatabase))"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,7 @@ Left open by T-1250: excel-graph cannot save a workbook and no Excel-saved workb
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

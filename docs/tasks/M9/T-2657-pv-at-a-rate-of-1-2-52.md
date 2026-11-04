@@ -31,6 +31,17 @@ PV and IRR give Excel's `#DIV/0!` where the rate makes a growth factor underflow
 - Recorded in docs/excel-semantics/financial.md "Financial cells of the T-2496 sub-expression probe" (one cell each; the
   boundaries are not probed).
 
+Probe probes/t2657-pv-irr-div0 (431 cells, excel-graph, 2026-10-26; salvaged from draft #1885 on 2026-11-04). Its PV,
+FV and PMT cells pass. Its visibly-off IRR cells (financial.md "PV, PMT and IRR near a rate of -1"):
+- probes/t2657-pv-irr-div0.case.json (22): I!A1, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A17, A18, A20, A21, B1, B4, B5, F1, F3, F4, F5
+
+Attempt notes (draft #1885, 2026-10-26; salvaged 2026-11-04). The PV half is done on main (gen-m9/c0681a8b150ce301
+Calc!A101 left eval/baseline/gen-m9.txt). For IRR, tried with no cell flipped: a rate-space stop test
+(|r2 - r1| < 1e-7), `#DIV/0!` for a flat secant (f1 == f0), and `#DIV/0!` for an overflowing power. Neither a flat
+secant nor an overflow ends these runs; the `#DIV/0!` comes from how Excel treats a step to v <= 0, and that treatment
+depends on the first flow (1E-8 and 1 end in `#NUM!`). Next: probe first flows from 1E-15 to 1E-8 in decades, and flows
+whose secant from 0.1 stays positive, to find where `#DIV/0!` turns into `#NUM!`.
+
 ## Acceptance criteria
 - [ ] An excel-graph probe (`excel-probe` skill) of PV, FV and PMT with rate -1+k*2^-52 and n from 1 to 200, plus IRR over the cell's flows from guesses 1, 10, 41.9999 and 1E+3, pins where `#DIV/0!` starts.
 - [ ] The engine matches the probe.

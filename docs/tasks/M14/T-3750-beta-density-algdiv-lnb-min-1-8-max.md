@@ -3,7 +3,7 @@ id: T-3750
 title: "Beta density algdiv lnB (min < 1 < 8 < max): desktop Excel cells for the r4-algdiv shapes"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -38,3 +38,8 @@ shows `excel-desktop OK`.
 
 ## Deferred by decision 0267
 The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. Decision 0267's deferral above is moot once dropped; the context is kept in case a later decision
+reopens desktop work.

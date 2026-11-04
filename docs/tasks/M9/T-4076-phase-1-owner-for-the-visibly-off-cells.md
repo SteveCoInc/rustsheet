@@ -43,6 +43,14 @@ Cells (from `make unowned-off ALL=1` on 30dd03e3, the deferred-only ones):
 - probes/t3881-imcsch-flip-start-negative.case.json (1; unattributed): Calc!A3
 - probes/t3883-im-overflow-reciprocal-sweep.case.json (1; unattributed): Calc!A101
 
+Added by gap triage 2026-11-04 (`make eval` and `make phase1-exit` on origin/main c3d019be8, after T-4056's 13-digit
+bar). Three more cells have only deferred owners (T-2221, T-3472, T-3952, T-3954, T-4016). Each is a family call with
+a non-family argument function, so it keeps the 15-digit bar (SPEC-0030 "Which cells qualify"). All three are
+first wrong at the 14th or 15th digit (decision 0267 Tier C/D):
+- gen-m9/2801c1c11c21e134.case.json (1; unattributed, F.DIST + REDUCE): Calc!A219, Excel 4.881498042869914e-39, ours ...936e-39
+- gen-m9/285d87cea1aaa73c.case.json (1; unattributed, FDIST + MINUTE): Calc!A34, Excel 6.448979666396885e-18, ours ...879e-18
+- gen-m9/8f2ac25945af87da.case.json (1; unattributed, FDIST + DAYS360): Calc!A92, Excel 4.5060151487344243e-45, ours ...392e-45
+
 ## Acceptance criteria
 - [ ] Each cell above is within half a unit of Excel's 15th significant digit, or moved to an open, non-deferred task
       that owns it, or listed as Phase 1b evidence (both sides within 1e-9 of the 50-digit math; then it is not

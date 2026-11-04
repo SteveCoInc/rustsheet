@@ -792,6 +792,30 @@ mod tests {
         assert_eq!(fisher_inv(1000.0), 1.0);
     }
 
+    /// F tails at a huge df2 that T-3754's L140 bup+bgrat port leaves to the fallback kernel: df1 of
+    /// 20 and more (past `MAX_BUP_TERMS`) and df2 above 2E7 (a0 above its 1E7 cap). The expansion's
+    /// b/a cut used to send these to Cephes' fraction, 1E-11 to 7E-10 off; T-4119 removed it. The
+    /// df1 = 3 rows were already accurate and guard that path.
+    /// References: docs/research/t4017/references.json, at the double arguments Excel sees. The
+    /// bound is T-4119's target, 2.5E-14 relative; the grid's worst point is 2.1E-14.
+    #[test]
+    fn f_tails_past_the_bup_cap_take_the_large_shape_expansion() {
+        for (df1, df2, x, reference) in [
+            (3.0, 1e7, 2.0, 0.11161029807296603),
+            (3.0, 1e7, 5.0, 0.001816657939558678),
+            (3.0, 3e7, 3.0, 0.029290902489543566),
+            (40.0, 3e7, 2.0, 0.0001763055857205162),
+            (60.0, 3e7, 10.0, 4.432803223201799e-90),
+            (79.0, 3e7, 1.5, 0.002685050433156616),
+        ] {
+            let got = f_tail(df1, df2, x, true);
+            assert!(
+                (got / reference - 1.0).abs() < 2.5e-14,
+                "F.DIST.RT({x},{df1},{df2}) = {got} against {reference}"
+            );
+        }
+    }
+
     // Excel's F quantile at a huge df is its BETA.INV mapped to F (probes-numeric, excel-graph).
     #[test]
     fn huge_df_quantiles_go_through_excels_beta_inv() {

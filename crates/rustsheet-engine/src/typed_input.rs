@@ -31,7 +31,8 @@ pub const TYPED_FORMULA_DOES_NOT_PARSE: &str = "Formula does not parse";
 /// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`. A name
 /// spelled like an A1 cell (`f1`) is no reference in R1C1 mode and Excel binds it, so the A1 text
 /// writes it `_xlpm.f1`, which the typed A1 entry binds (T-3897). Unbound, such a name is
-/// Excel's undefined name (`#NAME?`) and `None` here, as the A1 text would read the cell.
+/// Excel's undefined name (`#NAME?`), which FORMULATEXT shows quoted, `='f1'`: the A1 text writes
+/// it `_xlpm.f1` too, which the typed A1 entry reads as that name (T-4040).
 #[must_use]
 pub fn r1c1_formula_to_a1(
     text: &str,
@@ -63,7 +64,10 @@ pub fn r1c1_formula_to_a1(
     {
         return None;
     }
-    to_english_string_typed_from_r1c1(&node, &context).map(|text| format!("={text}"))
+    Some(format!(
+        "={}",
+        to_english_string_typed_from_r1c1(&node, &context)
+    ))
 }
 
 /// Whether the one `(` that `formula` leaves open opens a call's arguments (`SUM(1`, `LOG10(2`,

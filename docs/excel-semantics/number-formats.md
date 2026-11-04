@@ -928,6 +928,19 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
 - **CJK General and elapsed counts.** `General` spells the integer part in units (十 百 千) and myriads (万 億) and prints the rest digit by digit: 27 `5` "五", `10` "十", `105` "百五", `1010` "千十", `10000` "一万", `100000` "十万", `123456789` "一億二千三百四十五万六千七百八十九", `0.5` "〇.五", `-15` "-十五", `12.05` "十二.〇五", `1E+11` "一E+一一" (the exponent digit by digit). 28 (daiji 壱弐参四伍六七八九, 拾 百 阡, 萬 億) writes every one ("壱拾", "壱百", "壱阡", "壱萬"). 29 uses fullwidth digits with 27's signs ("十１", "２十", "１万２千３百４十５"). 30 (○, 万 亿) and 31 (零壹贰叁肆伍陆柒捌玖, 拾 佰 仟, 万 亿) write every one and one zero digit for a gap ("一百○五", "一千○一十", "壹佰零伍", "壹仟零壹拾"). An elapsed count is spelled the same way (`[h]` of 1.25 under 27 "三十", `[m]` "千八百", `[s]` "十万八千", under 29 "３十"). Unprobed: a zero gap across a myriad under 30 and 31 (we write one zero, "一十万○五"), integers of 10^12 and more (we print them digit by digit), a padded elapsed count under 10 (digit by digit), and `General` beside literals or in a date section (spelled out as alone); to probe in T-3718.
 - **Which sections.** Only the first section's tag sets the digits, and they apply to the whole format: `[$-2000409]0;(0)` on -5 is "(٥)", `[$-2000409]0;General` on -15 "١٥", and a value no section takes falls back to General in them (`[$-2000409][>5]0` on 1 is "١"), while a tag in a later section changes nothing, not even its own section (`0;[$-2000409]0;0` on 0 is "0", on -5 "5"; `0;[$-2000409]0` on 5 "5"). A fixed denominator prints in them too (`[$-2000409]# ?/4` on 12.5 is "١٢ ٢/٤", `[$-1B000409]# ?/16` "一二 八/一六"), and a `B2` before a numeral tag is Hijri with the native digits (`B2[$-2000409]yyyy|mmmm` is "١٤٤٤|Sha'ban"). Evidence: probes/t3532-numeral-digit-sections.
 - Implemented (T-3532): `formatter/numerals.rs` (`Numerals`), from `locale_tag::numerals`; `resolve_lcid` ignores the byte, so the LCID's names and era stay.
+- **The `locale,N00` form (T-3891).** Excel gives typed script-digit text formats like `[$-ar-SA,200]0` and
+  `[$-,D00]h:mm` (coercion.md "Script digits in number text"). The hex after the comma is the numeral byte
+  above a low byte: `,200` Arabic-Indic, `,300` Persian, `,400` Devanagari, `,500` Bengali, `,600` Gurmukhi,
+  `,900` Tamil, `,A00` Telugu, `,D00` Thai, `,E00` Lao, `,F00` Tibetan, `,1000` Myanmar, `,1200` Khmer, and `,0`
+  ASCII; the part before the comma does not matter for the digits (`[$-en-US,200]0` and `[$-,200]0` on 123 are
+  "١٢٣", `[$-ar-SA]0` "123"). Every field takes them: `[$-ar-SA,200]0.00%` on 0.12 is "١٢.٠٠%",
+  `[$-ar-SA,200]0.00E+00` on 1000 "١.٠٠E+٠٣", `[$-,200]mm/dd/yyyy` of 43831 "٠١/٠١/٢٠٢٠", `[$$-ar-SA,200]#,##0.00`
+  on 12 "$١٢.٠٠". **Quirks:** `,2000` (byte 0x20) prints fullwidth `１２３` though byte 32 is ASCII in the LCID
+  form (A28; T-4107), and `[Red]([$$-ar-SA,200]#,##0.00)` on -12 is "($١٢.٠٠)", the symbol after the literal
+  paren, where ours prints "$(" (A6, also for `[$$-409]`; T-4108). Evidence: probes/t3891-numeral-tag-render
+  A1:A30 (excel-graph, 2026-11-04). Status: VERIFIED. Implemented (T-3891): `locale_tag::numerals`
+  (`numeral_suffix`); the locale part still resolves as the whole tag (`[$-40C,1]` is English, A106 of
+  probes/text-locale-date-names).
 
 **Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is unprobed, filed as T-3710. (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
 
@@ -936,7 +949,7 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
 Status: VERIFIED (excel-graph)
 Implemented in: formatter/numerals.rs, formatter/locale_tag.rs (`numerals`), formatter/format.rs, formatter/fraction.rs (T-3532)
 
-Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718
+Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718, T-3891, T-4107, T-4108
 
 ## Displayed text (`Range.text`) of a formatted cell (T-1610)
 Rule: excel-graph's `Range.text` is the cell's value under its number format, and it does not

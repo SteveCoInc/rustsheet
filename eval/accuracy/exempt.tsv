@@ -25,6 +25,12 @@ COUNTA	exact	counts cells
 COUNTBLANK	exact	counts cells
 COUNTIF	exact	counts cells
 COUNTIFS	exact	counts cells
+COUPDAYBS	exact	a day count: whole days, 30/360 or actual (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPDAYS	exact	a period length in days: whole days, or 360 or 365 over the frequency, each exact in binary (financial.md "COUPDAYS basis 1 counts from the chained next coupon"; decision 0273)
+COUPDAYSNC	exact	COUPDAYS less COUPDAYBS or an actual day count, exact in binary (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPNCD	exact	a whole day serial on the coupon schedule (financial.md "Coupon dates keep the maturity's day"; decision 0273)
+COUPNUM	exact	a count of coupon periods (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPPCD	exact	a whole day serial on the coupon schedule (financial.md "Coupon dates keep the maturity's day"; decision 0273)
 DATE	exact	an integer day serial
 DATEDIF	exact	whole days, months or years between truncated serials (dates.md "DATEDIF "MD" and "YD" day counts")
 DATEVALUE	exact	a whole serial from date text (dates.md "The en-US date-text grammar")
