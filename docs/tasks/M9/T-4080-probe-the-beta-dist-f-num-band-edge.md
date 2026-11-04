@@ -50,10 +50,10 @@ shown to have none. T-4044 can then implement the band from evidence, not from a
 - probes-numeric/t4080-beta-num-band-edge (1,232 cells, excel-graph 2026-11-04): BETA.DIST cdf at 14 a (2E9 to 1E10)
   by 21 b (30 to 40 by 1/2) by four tails, plus 56 density cells.
 - Rule (statistics.md "Incomplete beta at a huge first shape", "The edge (T-4080)"): the band is in bup's term count
-  n = int(b) (less 1 at an integer b), `#NUM!` exactly when n >= n_min(a) (39 at 2.25E9 to 3E9, 38 at 3.5E9 to 5.5E9,
+  n = int(b) (less 1 at an integer b), `#NUM!` exactly when b < 40 and n >= n_min(a) (39 at 2.25E9 to 3E9, 38 at 3.5E9 to 5.5E9,
   37 at 6E9 to 8E9, 36 at 1E10, none at 2E9), only on tails that take TOMS 708's L140 path (lambda > 0); I near 0.5,
   x = 1 - 1E-12 and the density are numbers. On the probed a the edge separates as n + 2 ln a > T, T in (81.86, 81.95)
-  (weight any value in (1.79, 2.21)); a separating line, not an identified TOMS quantity, so T-4044 should treat it as
+  (weight any value in (1.86, 2.21)); a separating line, not an identified TOMS quantity, so T-4044 should treat it as
   a fit (decision 0056 guards) or probe a finer a grid.
 - Eval: gated suites unchanged (`make eval-baseline`: 0 fixed, 0 regressions; probes-numeric is not gated). In the
   report the new case adds 108 known failures: the 82 band cells (owned by T-4044, amended) and 26 b = 40 cells 1.3E-9
