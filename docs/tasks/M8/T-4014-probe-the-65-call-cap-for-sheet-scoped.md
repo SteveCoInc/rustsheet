@@ -3,7 +3,7 @@ id: T-4014
 title: "Probe the 65-call cap for sheet-scoped names added through the API, and keep undo of a deleted over-cap name working"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
