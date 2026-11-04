@@ -3,7 +3,7 @@ id: T-3855
 title: "Find the arithmetic behind GAMMA.DIST's #NUM! at shapes from 1E56 (density and cdf share it)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: blocked
 priority: P0
 size: M
 tier: opus
@@ -44,6 +44,30 @@ not a cut.
     are 0: whatever separates them is mostly a function of y, with an onset in shape.
   - The extraction script is short: parse the GAMMA.DIST/GAMMADIST cells of the four cases with their oracle
     values, keep shape >= 1E+40 and y < 1.
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts ran (attempt 1 in Context, attempt 2 below) and neither found the arithmetic, so no cell moves. The 54
+cells in "Decision 0267 cells" stay with this task for decision 0267 to accept; no follow-up is filed for them. The
+engine keeps `HUGE_SHAPE_CDF_CUT` unchanged.
+
+## Attempt 2 (2026-11-04, opus run, decision 0056 time-box, about 35 minutes)
+Scored against the same 73 points (shape >= 1E+40, y = x/beta < 1, Excel 0 or `#NUM!`, 34 `#NUM!`; the
+extraction now scans every eval case with an oracle, which finds the same 73). The majority class alone gets 39.
+- Rounding direction to k bits (k = 1..52, nearest, the bits below against a half) of a·phi for three phi forms
+  ((y - a)/a - LN(y/a), y/a - 1 - LN(y/a), (y - a)/a - (LN(y) - LN(a))), of sqrt(a·phi), sqrt(a·phi/2) and
+  sqrt(2 phi) (an erfc whose exp(-x²) is split at a rounded x would give inf·0 when the rounding goes up), of
+  a·LN(y), LN(a/y), a·LN(a/y) and of Loader's log-form bd0 a·LN(a/y) + (y - a) (statistics.md "POISSON.DIST pmf"):
+  best 51 of 73. Single bits of those: best 56 of 73 (bit 2 of a·LN(y)), chance among about 900 features tried.
+- Structural forms that cannot make the pattern: R's Loader `dpois_raw` with Welinder's `ebd0` (y_h, y_l) split
+  (its residuals d - floor(d + 0.5) are 0 for every term above 2^53, so exp(-y_l)·exp(-y_h) is never inf·0); and a
+  GAMMALN-based Stirling error taken as a separate exp factor (its rounding noise has a random sign, but it depends
+  on the shape alone, while Excel's pattern changes with y at a fixed shape 1E+70).
+- What the points do say: at y = 2E-10, 16 of the 18 shapes from 1E+56 to 1.85E+76 are `#NUM!` (0 at 1E+76 and
+  1.84E+76), while at shape 1E+70 only 14 of 45 y are; so the deciding quantity is mostly a function of y, with an
+  onset in shape. The onset, between 1E+55 and 1E+56, is where shape^-5.5 becomes subnormal and
+  sqrt(2 pi shape)·shape^5 overflows (UNVERIFIED: a coincidence until a model uses it). A next attempt would need
+  more points along the shape at a few fixed y (the probe freeze, decision 0267, allows them only under this task),
+  not more candidate features on these 73.
 
 ## Acceptance criteria
 - [ ] A model that reproduces every probed huge-shape cell (or the remaining misses listed), implemented in place
