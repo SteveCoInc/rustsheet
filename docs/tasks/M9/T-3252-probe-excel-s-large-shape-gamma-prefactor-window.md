@@ -3,7 +3,7 @@ id: T-3252
 title: "Probe Excel's large-shape gamma prefactor window: near-mode bound, x below a/10, POISSON.DIST and large-shape BETA.DIST"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,9 +30,28 @@ steps of 0.05; x/a = 0.002 to 0.05; POISSON.DIST(k,λ,TRUE) for k from 19 to 200
 b in [20, 40) and a/b at most 1E-6.
 
 ## Acceptance criteria
-- [ ] A probe case with oracle values lands, and statistics.md records the bounds it shows (or that the form does not
+- [x] A probe case with oracle values lands, and statistics.md records the bounds it shows (or that the form does not
       apply), with the engine's constants and callers set to match (no regression).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The shapes below 20 (T-3219).
+
+## Outcome
+- Probes (excel-graph, 2026-11-04, M9): probes/t3252-gamma-prefactor-window (188 cells: GAMMA.DIST densities and
+  cdfs at x/a 0.55 to 1.45 and 0.002 to 0.05, POISSON.DIST cumulative at k 19 to 200, BETA.DIST with b 20.5 to 39 and a
+  1E-5 or 1E-6), with its Gate A math sidecar; probes/t3252-gamma-prefactor-holdout (42) and -holdout-2 (36).
+- Finding: below the mode, Excel takes the ratio form (0 to 2 ulp) at every probed x <= 0.664a for shapes 30 to 500;
+  from 0.668a to 0.99a, and above the mode from 1.05a to 1.45a, it is neither form (follow-up T-4255,
+  `defer: phase-1b`, ulp level). POISSON.DIST's cdf is closer to `rcomp` near and above the mean; BETA.DIST's
+  large-shape cells do not depend on the form. The tiny-ratio switch lies in (0.002a, 0.003a), outside the current
+  1/200 (`RATIO_FORM_MIN`); that fit stays with T-3219. statistics.md has the rules with cells.
+- Engine: `gamma_prefactor` takes the ratio form below the mode from (a - x) > 0.33a (`NEAR_MODE_BELOW`, new) instead
+  of 0.4a; above the mode `NEAR_MODE` 0.4 stays.
+- R4 guards: the bound is a fit inside a bracket. Training was the window case. The first freeze at 0.3 was scored on
+  -holdout, written after the freeze, and failed (0.68a: 86 to 208 ulp on the ratio form against 43 on `rcomp`). The
+  bound was re-frozen at 0.33 before -holdout-2 was written. On -holdout-2 every cell the ratio form takes is either
+  exact (0 to 2 ulp, x <= 0.664a) or a tie (0.668a: -55 against 56). FITTED tag and range are on the constant. There
+  is no keep-matched branch. Gate A: the window's math sidecar is committed, and `make eval-check` is green.
+- Eval delta: in the window case 74 of 188 cells pass, against 69 on main's engine. Each newly passing cell was 9 to
+  72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions.
