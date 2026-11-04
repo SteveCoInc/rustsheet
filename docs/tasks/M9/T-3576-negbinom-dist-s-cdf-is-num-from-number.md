@@ -3,7 +3,7 @@ id: T-3576
 title: "NEGBINOM.DIST's cdf is #NUM! from number_s 1E+13 at 28 failures"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P0
 size: S
 tier: opus
@@ -28,6 +28,21 @@ probed and recorded in statistics.md.
   double-double, so Excel's cdf presumably takes another path that overflows or refuses there.
 - The cuts are unknown: number_s between 1E+12 and 1E+13, failures between 14 and 28. Whether the cut depends on the
   product of the two is also unknown.
+- **Attempt 1 (2026-11-04, decision 0056 time-box).** probes/t3576-negbinom-cdf-huge-s (89 cells, excel-graph)
+  showed that neither cut is a threshold on number_s or failures. The error is Excel's incomplete beta's:
+  `BETA.DIST(p,s,f+1,TRUE)` is `#NUM!` at the same points. Every `#NUM!` falls on TOMS 708 bratio's L140 branch
+  (bup + bpser or bup + bgrat), except bfrac at number_s 1E+20.
+  - On the bup + bpser cells, the log of bup's largest partial sum separates the probe: 0 up to 697.27, `#NUM!`
+    from 703.57. That is not ln(DBL_MAX), and two swapped cells contradict it (A88 and A89 are `#NUM!` at 684 and
+    804).
+  - bup + bgrat fails from a log of 56.
+  - statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge number_s" and `docs/research/t3576/bup_partial_sum.py` hold
+    the numbers. The probe's 37 cells with the wrong type are this task's: probes/t3576-negbinom-cdf-huge-s Calc!A5:A10, A18:A21,
+    A34:A35, A42:A52, A60, A66:A71, A73, A76:A77, A82:A83, A88:A89. A75 is 1 ulp off.
+  - Next: find which quantity Excel tests in bup, bpser and bgrat, for example by modelling bpser(a0, 1, x0) at a
+    huge a0 in `bratio_excel.py` and checking where its terms overflow or a NaN appears. A threshold fitted to these
+    points alone would be a fit (decision 0188 R4: hold-out and fresh sweep). BETA.DIST takes the same rule, so the
+    fix belongs in `bratio/`, not `binom.rs`.
 
 ## Acceptance criteria
 - [ ] A probe brackets the number_s cut and the failures cut, and tests whether the cut is a product or a sum of the two.
