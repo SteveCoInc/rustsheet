@@ -49,7 +49,7 @@ probed and recorded in statistics.md.
       statistics.md records the rule.
 - [x] The engine matches every probed L140 cell, including probes-numeric/t3553-negbinom-huge-s (an ungated suite);
       the bfrac cells A50:A52 and A75 (1 ulp) of probes/t3576-negbinom-cdf-huge-s moved to T-4238.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The accuracy of NEGBINOM.DIST at a large number of failures (T-3352).
