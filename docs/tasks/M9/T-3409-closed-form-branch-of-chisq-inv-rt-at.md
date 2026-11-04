@@ -3,7 +3,7 @@ id: T-3409
 title: "Model Excel's gamma inverse search at a huge shape: its start, step rule, step limit and give-up value"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
