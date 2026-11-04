@@ -112,7 +112,6 @@ def test_beta_tail_series_agrees_with_mpmath_where_it_converges() -> None:
         (mp(40), mp("3.5"), mp("0.95")),
         (mp(200), mp(150), mp("0.6")),
     ):
-        side = (
-            beta._tail_series(a, b, x) if x <= (a + 1) / (a + b + 2) else 1 - beta._tail_series(b, a, 1 - x)
+        assert mpmath.almosteq(
+            beta._series(a, b, x), mpmath.betainc(a, b, 0, x, regularized=True), mp(10) ** -45
         )
-        assert mpmath.almosteq(side, mpmath.betainc(a, b, 0, x, regularized=True), mp(10) ** -45)
