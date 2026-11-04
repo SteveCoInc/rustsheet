@@ -2236,10 +2236,10 @@ formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on t
   off, but misses the single-period cells `CUMIPMT(0.0083,36,8000,2,2,1)` (tiny-rate-structure Q1) and
   `CUMIPMT(0.1,36,8000,2,2,1)` (gate-edges H10), which ours has, and its `(1+r)^m - 1` loses hundreds of ulps at
   rates of 2E-5.
-So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: they stay 1 and 3 ulp off. Taking
-PMT's `1-Q` switch (`1 - EXP(-nper·L)` from |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper`
-moves none of the 168 cells and no gated cell (see T-3179's Outcome), so the evidence does not place a switch there and
-the kernel keeps `-expm1`.
+So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: ours stays 1 and 4 ulp off them
+(the 3 ulp above is Excel's IPMT against its CUMIPMT at D1). Taking PMT's `1-Q` switch (`1 - EXP(-nper·L)` from
+|nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper` moves none of the 168 cells and no gated cell
+(see T-3179's Outcome), so the evidence does not place a switch there and the kernel keeps `-expm1`.
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
