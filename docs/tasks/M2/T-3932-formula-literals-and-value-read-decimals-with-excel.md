@@ -3,7 +3,7 @@ id: T-3932
 title: "Formula literals and VALUE read decimals with Excel's x87 multiply by 10^-n"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -32,11 +32,38 @@ Formula number literals and VALUE of numeric text produce the double Excel produ
   out of scope until that rule is derived: probes-numeric/t3658-round-scaling Hits!G1:G6, Hits!G8, Hits!G10:G11, Hits!G14:G16, Hits!G18:G19, Hits!G22:G26, Hits!G29:G41, Hits!G45:G47, Hits!G49:G58, Hits!G60:G61
 
 ## Acceptance criteria
-- [ ] Every literal (Hits!C) and VALUE (Hits!E) cell of probes-numeric/t3658-round-scaling, and columns C and D of t3658-round-scaling-fresh, pass, with a probe first for positive exponents and longer literals if the change reaches them.
-- [ ] No regression in the literal-parsing probes (numbers.md "15-digit literal parsing") or gen suites.
-- [ ] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
-- [ ] `make check` green; reviewers approve.
+- [x] Every literal (Hits!C) and VALUE (Hits!E) cell of probes-numeric/t3658-round-scaling, and columns C and D of t3658-round-scaling-fresh, pass, with a probe first for positive exponents and longer literals if the change reaches them.
+- [x] No regression in the literal-parsing probes (numbers.md "15-digit literal parsing") or gen suites.
+- [x] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - ROUND and ROUNDDOWN (T-3931).
 - The xlsx stored-number reader (Hits!G): its rule is open.
+
+## Outcome
+- `parse_excel_number` (formula literals, VALUE and the other number-text readers) converts number text whose
+  significant digits as written are below 1,000,000, with n = 1..15 and no positive exponent, through
+  `decimal_round::x87_decimal_to_f64` (T-3931's helper, now `pub(crate)`): the digits as written, trailing
+  zeros included, times round64(10^-n), rounded to 64 bits and stored. Longer text, positive exponents and
+  n > 15 keep the nearest double, so no probe was needed for them (the 15-digit T-3945 point,
+  probes/t3945-atan-near-midpoint, still fails its 9 cells, as in the baseline).
+- Formulas are reparsed from their printed text, and literals printed at 15 digits (`=4910E-9` as `4.91e-6`)
+  would then read one ulp off: `literal_text` in stringify/literals.rs prints all 15 digits
+  (`4.91000000000000e-6`) when the short text would not read back to the same double.
+- Eval delta: probes-numeric/t3658-round-scaling 2,388 → 2,491 of 2,539 (+103); the 48 left are the stored xlsx
+  numbers (Hits!G, `=F#`, out of scope). t3658-round-scaling-fresh 392 → 724 of 724 (+332, all pass). Gated
+  suites: fixed 0, regressions 0 (probes-numeric is ungated); Gate A unchanged.
+- Decision 0188 R4 (structural model, kind (c)). Hold-out: the manual split T-3931 fixed (sha1(`case/Sheet!Ref`)
+  first byte below 77, ~30%), margin 2 points, over the pure literal and `VALUE("…")` cells. Bit-exact counts
+  (model / correctly rounded):
+  | case, reader | train | hold-out |
+  |---|---|---|
+  | t3658-round-scaling literal | 77/77 / 43 | 45/45 / 27 |
+  | t3658-round-scaling VALUE | 42/42 / 5 | 19/19 / 4 |
+  | fresh literal | 114/114 / 10 | 67/67 / 5 |
+  | fresh VALUE | 113/113 / 7 | 68/68 / 8 |
+  Both candidates hold every cell within 4 ulp and within 15 digits; the model's hold-out rate (100%) equals its
+  train rate. Fresh sweep: probes-numeric/t3658-round-scaling-fresh (frozen model, T-3658) 362/362 literal and
+  VALUE cells bit-exact, so all inside the Gate A envelope.
+- Follow-up: T-4063 (probe TRUNC and ROUND with nothing dropped at these points, from the T-3931 fidelity review).

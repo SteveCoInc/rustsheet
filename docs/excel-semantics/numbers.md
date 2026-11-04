@@ -387,7 +387,7 @@ Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh
 trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
-Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and VALUE still return the nearest double (151 cells of t3658-round-scaling and 332 of the fresh case fail by one ulp; T-3932).
+Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs (T-3932; digits as written below 1,000,000, n = 1..15 and no positive exponent, the nearest double elsewhere, so the 15-digit T-3945 point still reads as the nearest double). The same reader serves `"text"+0`, criteria operands, NUMBERVALUE and AVERAGE's text, which were not probed for this but read text the way VALUE does. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4.91000000000000e-6`, not `4.91e-6`, which would read one ulp higher (`literal_text` in stringify/literals.rs).
 Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient

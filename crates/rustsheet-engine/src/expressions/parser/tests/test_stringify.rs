@@ -165,3 +165,25 @@ fn concatenation_operands_of_arithmetic_keep_their_parentheses() {
         assert_eq!(again, t, "{formula}");
     }
 }
+
+#[test]
+fn number_literals_print_text_that_reads_back_to_the_same_double() {
+    // probes-numeric/t3658-round-scaling Hits!C18 (`=4910E-9` is the nearest double) and Hits!C1
+    // area (`=4.91E-06` is one ulp above it): each prints text the x87 literal read maps back to
+    // the same double, so a reparsed formula keeps its value (T-3932).
+    let worksheets = vec!["Sheet1".to_string()];
+    let mut parser = new_parser(worksheets, vec![], HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 1,
+        column: 1,
+    };
+    for (formula, printed) in [
+        ("4910E-9", "4.91000000000000e-6"),
+        ("4.91E-06", "4.91e-6"),
+        ("1.5", "1.5"),
+    ] {
+        let t = parser.parse(formula, &cell_reference);
+        assert_eq!(to_english_localized_string(&t, &cell_reference), printed);
+    }
+}
