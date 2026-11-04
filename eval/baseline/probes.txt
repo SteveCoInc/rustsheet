@@ -6588,15 +6588,6 @@ F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B7
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B8
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B9
 F	probes/t4014-sheet-api-name-65.case.json	S!A1
-F	probes/t4060-collation-open-choices.case.json	Calc!B2
-F	probes/t4060-collation-open-choices.case.json	Calc!B50
-F	probes/t4060-collation-open-choices.case.json	Calc!B51
-F	probes/t4060-collation-open-choices.case.json	Calc!B55
-F	probes/t4060-collation-open-choices.case.json	Calc!B56
-F	probes/t4060-collation-open-choices.case.json	Calc!B58
-F	probes/t4060-collation-open-choices.case.json	Calc!B59
-F	probes/t4060-collation-open-choices.case.json	Calc!B63
-F	probes/t4060-collation-open-choices.case.json	Calc!K2
 F	probes/table-edits/t3629-convert-names.case.json	S!F1
 F	probes/table-edits/t3629-convert-names.case.json	S!F10
 F	probes/table-edits/t3629-convert-names.case.json	S!F2
