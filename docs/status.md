@@ -63,9 +63,10 @@ Spot-audit: the last was 2026-11-01, so none is due; next on or after 2026-11-08
 
 ## Needs owner
 
-None open. Pruned 2026-11-04: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
+None open. Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
 daily firings arriving again since 2026-11-03), the steward prompt drift (matches routines.md since 2026-11-02) and
-the RATE flat-secant ruling (T-3916, decided by decision 0265).
+the RATE flat-secant ruling (T-3916, decided by decision 0265). The direct-push item's recommendation, a ruleset on
+`main` requiring a pull request, remains the owner's to take up or not.
 
 excel-desktop needs are not owner items (decision 0039): T-1016, T-1051 and the other desktop tasks wait in M14 (Phase 4), tracked by T-1074 and T-1075.
 

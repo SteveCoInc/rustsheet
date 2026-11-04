@@ -1,6 +1,8 @@
 # 0265 — Gate A fit check at points inside a root's rounding noise
 
-- **Status:** accepted (2026-11-04, owner ruling, T-3916)
+- **Status:** accepted (2026-11-04, owner ruling, T-3916). The owner chose option 3 of T-3916's list ("Rule on R2
+  at the noise floor") in an interactive Claude Code session
+  (https://claude.ai/code/session_01AeCw9bPvaKQB7VyiBFywWu); the same session recorded it.
 - **Context:**
   - Decision 0188 R2 defines Gate A's envelope: within 15 significant digits of Excel, or within ε = 1e-9 relative
     of 50-digit math. Reviewer-excel-fidelity check 7 applies it to fits: "A fit that moves a point out of the
@@ -15,7 +17,8 @@
     magnitudes at the root, and f' the residual's slope there. The rule is 1.36e-9 from the math and the hold
     7.9e-10, so which side of ε a value lands on is chance. With roots from the decimal literals, the point that
     leaves is A144 instead, where Excel itself is 1.4e-8 from the math. Across the case, 23 of the 234 numeric points
-    have a noise width above ε.
+    have a noise width above ε. These figures are T-3850's (docs/research/t3850/README.md, finding 3). No committed
+    script recomputes them.
   - So at such points, the math side of the envelope measures rounding noise in the double's evaluation, not an
     accuracy defect. Decision 0188 is an owner decision, so agents could not rule on this themselves (T-3916, "Needs
     owner" in docs/status.md).
@@ -34,9 +37,9 @@
     next to the envelope result.
   - This changes how a fit is judged, not the `make check` gate. SPEC-0029's `envelope` and the Gate A tables are
     unchanged. A table point whose noise width exceeds ε still passes on either side there.
-  - Applied to T-3916, A152 is outside under both the rule and the hold, so the rule no longer moves it out. Neither is
-    within 15 digits of Excel's 2.9169749198680823: the case file lists the rule at 2.9169749163984258 and the hold at
-    2.9169749226737123. A194 remains a real exit: the restarted run is `#NUM!` where Excel returns a number.
+  - Applied to T-3916, A152 is neutral, not inside: it fails the 15-digit test under both the rule and the hold, so
+    the rule no longer moves it out. Excel gives 2.9169749198680823, and the case file lists the rule at
+    2.9169749163984258 and the hold at 2.9169749226737123. A194 remains a real exit: the restarted run is `#NUM!` where Excel returns a number.
     The owner accepts it with the rule. Falling back to the hold on an error fixes A194 but moves A26 out instead
     (T-3850 finding 2), and T-3963 owns both cells. T-3698's restart stays as merged.
 - **Consequences:**
