@@ -3,7 +3,7 @@ id: T-3711
 title: "A lone 0 placeholder after a fraction prints its zero"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -22,3 +22,11 @@ Found by T-3532: probes/t3532-numeral-digit-fields row 14, all columns (A14 "Ù¡Ù
 
 ## Out of scope
 -
+
+## Outcome
+A digit placeholder after a fraction's denominator (separated by a literal) now prints a zero, or a space under `?`, and a
+blank fraction blanks everything up to the last of them (formatter/fraction.rs). probes/t3532-numeral-digit-fields S!A14:G14
+pass (7 cells). New probe probes/t3711-fraction-trailing-placeholders (excel-graph) covers `0`, `#`, `?`, `00`, `0#`, `0.0`
+and the task's format at 12.5, 12 and 0.5: 34 of its 57 cells pass. The other 23 cells put a different placeholder
+kind right after the `/` (`?/?0`, `?/#0`, `?/0?`, ...), a separate denominator-run rule, owned by T-4204 and recorded in
+number-formats.md "Fraction formats". Eval delta: see the PR.

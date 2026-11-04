@@ -2214,8 +2214,20 @@ Evidence: probes/aggregate-grid (217 cells), probes/aggregate-args (53 cells), p
 Oracle: excel-graph, 2026-10-06 (T-0993).
 Status: VERIFIED. Hidden and filtered rows and nested SUBTOTAL/AGGREGATE calls: see "SUBTOTAL and AGGREGATE over
 hidden and filtered rows" below (T-1036).
-Also unprobed: a scalar in the array form (the engine takes a number as one value, returns a scalar error under every
-option, and gives `#VALUE!` for text or a boolean), and which error wins between a range and a later error argument.
+Scalar data and error order (probes/t4193-aggregate-scalar-data-error-order, excel-graph, 2026-11-04, T-4193):
+- In the reference form a number is `#VALUE!` like any value: `AGGREGATE(9,0,5)`, `(1,0,5,7)` and `(4,0,-1)` (Calc!A1:A3).
+- In the array form a number is a one-value array and the result a plain number (`TYPE` 1, Calc!A12):
+  `AGGREGATE(14,0,5,1)`, `(15,6,5,1)` and `(16,0,5,0.5)` are 5, and `(19,0,5,1)` is `#NUM!` as `QUARTILE.EXC(5,1)` is
+  (Calc!A4:A7). A text or boolean scalar is skipped, not refused, so `AGGREGATE(14,0,"3",1)`, `(14,0,TRUE,1)` and
+  `(14,6,"x",1)` are `#NUM!` (no numbers), not `#VALUE!` (Calc!A8:A10).
+- A literal error as data (`1/0`, `NA()`) is returned under every option 0-7 in both forms (Err!A1:D8): only a
+  reference's errors are skipped. A one-cell reference to an error cell (`Data!D7`) is a reference: options 2, 3, 6
+  and 7 skip it, so `AGGREGATE(9,k,Data!D7)` is 0 and `AGGREGATE(14,k,Data!D7,1)` `#NUM!`, and the other options return
+  its `#DIV/0!` (Err!E1:F8).
+- A direct error argument beats a range's error wherever it sits: with D1:D11 holding `#DIV/0!`,
+  `AGGREGATE(9,k,Data!D1:D11,NA())` and `AGGREGATE(9,k,NA(),Data!D1:D11)` are `#N/A` under every option. Between two
+  literal errors the first wins: `AGGREGATE(9,k,1/0,NA())` is `#DIV/0!` and `AGGREGATE(9,k,NA(),1/0)` `#N/A` (Win!A1:D8).
+Still unprobed: an empty-argument data (`AGGREGATE(14,0,,1)`) and a scalar from a name or LET.
 Known gaps: k rounding and boolean k in LARGE/SMALL (T-1034).
 The VAR.P last digit (probes/aggregate-grid B31, C31) has passed since T-1037.
 Implemented in: `fn_aggregate` (crates/rustsheet-engine/src/functions/aggregate.rs); the lift reuses

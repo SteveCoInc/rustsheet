@@ -332,6 +332,11 @@ impl Model {
                     Ok(Vec::new())
                 }
                 error @ CalcResult::Error { .. } => Err(error),
+                // A scalar text or boolean is not a number, not an argument error: it is
+                // skipped, so `AGGREGATE(14,0,"3",1)`, `(14,0,TRUE,1)` and `(14,6,"x",1)` are
+                // #NUM! (no numbers), not #VALUE! (probes/t4193-aggregate-scalar-data-error-order
+                // Calc!A8:A10; docs/excel-semantics/numbers.md "AGGREGATE").
+                CalcResult::String(_) | CalcResult::Boolean(_) => Ok(Vec::new()),
                 _ => Err(CalcResult::new_error(
                     Error::VALUE,
                     cell,

@@ -260,8 +260,8 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
   unequal): all t3211 UNIQUE cells but G4:I4 pass; grouping neighbours of the sorted order fits every one-column
-  t3211 UNIQUE cell in a simulation (T-4200). GROUPBY and PIVOTBY still sort with
-  the total `cmp_text`. Open: T-4200.
+  t3211 UNIQUE cell in a simulation (T-4200). GROUPBY and PIVOTBY group the same way
+  (T-4088) but still sort with the total `cmp_text`. Open: T-4200.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
   probes/t3201-collation-long-mark-runs (1,000 cells: a ladder of 246 texts `"a"` plus up to three
   marks, one per weight 2, 5, 8, 11 and 14 to 255, self-ranked in order (Calc!A1:A246); `"a"` with
@@ -803,13 +803,23 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   `<U+3000&"á"` and `U+202F&ぁ<" "&あ` (Calc!B1, C1, F1). U+3000 and U+205F give TRUE for the first two (B2:C4).
   It is the accent pass itself, compared letter by letter: with the positions reversed, `"a"&U+202F < "á"&" "`
   is TRUE (the `á` at position 1 decides), and so is `"a"&U+202F&"b" < "á"&" b"` (B46, B48; B47 FALSE).
-  Ours: U+202F's difference is a variant weight (`NARROW_NBSP`, T-4072), so B1, C1 and F1 are known failures owned
-  by T-4087. UNVERIFIED: the accent weight's value.
+  **Its accent weight is 10** (probes/t4153-narrow-nbsp-accent, excel-graph, 2026-11-04, T-4153):
+  - U+202F is above `" "&U+030D` (2 + 3 = 5) and below the space with each other mark probed, U+0301 to U+0328
+    (14 and up) (Calc!B1:D15, E1:E15 with an `a` after);
+  - it is above two U+030D (8) and below three (11) (B30:D32);
+  - it equals the space with 88 U+030D, whose sum wraps to 10 in the accent byte (C34), and is above 173 and 87
+    of them (9 and 7) and below 89 (13) (B35:D37).
+
+  Three of those texts sort below it: the space, U+3000 and `" "&U+030D` (B20; B21 puts U+3000 below
+  `" "&U+030D`). With a mark of its own, U+202F&U+0301
+  is above `" "&U+0301` (B24:B25). Implemented in: `element` gives U+202F the space's primary and the accent
+  weight `NARROW_NBSP` = 10 (T-4087, T-4153).
 - **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
   character still joins the hyphen or apostrophe. `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
-  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE, and each still holds with a `b` after
-  it (Calc!B10:B12, B16:B17, B21:B22, B50:B52). Ours: since T-4072, `Element::Weightless` cuts the hyphen's marks
-  in `skipped` and clears `after_skipped`; B10, B12, B17, B21, B22 and B50 are owned by T-4087.
+  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE. With a `b` after it, the apostrophe's
+  `=` is TRUE (B50:B52); for the hyphen, `=` follows from `<` and `>` both being FALSE (B16:B17) (Calc!B10:B12,
+  B21:B22). Implemented in: `skipped` reads the marks after a weightless character into the hyphen's weight, and
+  `accent_units` keeps `after_skipped` across it (T-4087).
 - **Width and superscripts are weighed before small kana; kana type after.**
   - `"Ａ"&ぁ > "A"&あ`, `"¹"&ぁ > "1"&あ` and `U+3000&ぁ > " "&あ` are TRUE (Calc!B30:B33, B36, F2). So the first
     character's width or superscript decides over the second's small kana.
@@ -819,9 +829,11 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   - It is a separate, earlier pass, not one pass decided at the first difference. With the width at position 2
     and the small kana at position 1, `ぁ&"Ａ" > あ&"A"`, `ぁ&"¹" > あ&"1"` and `ぁ&U+3000 > あ&" "` are still
     TRUE (B40, B42, B44; B41, B43, B45 FALSE).
-  - Ours: `variants` weighs width, superscript and kana type in one pass after `kana_weights`, so B30:B33, B36,
-    B40:B45 and F2 are owned by T-4087. This qualifies "Full-width and half-width forms" above ("Width is a
-    tiebreak").
+  - Implemented in: the variant byte holds a width or superscript below `KANA_TYPE` and a kana's type from it up.
+    `widths` is a pass between the accents and `kana_weights`; `kana_types` comes after it (T-4087). This qualifies
+    "Full-width and half-width forms" above ("Width is a tiebreak"). Half-width katakana stays a kana type, not a
+    width: in the width pass it would sort `"ｱ"` before `"ぁ"`, but Excel has `"ぁ" < "ｱ"` (probes/t3275-collation-
+    width-kana rank A99).
 - **GROUPBY and PIVOTBY group by `=`, prefix rule included.** Over `ab`, `ab`&U+00AD, `é`, `é`&U+00AD,
   U+00AD&`ab` and `AB` (values 1, 2, 4, 8, 16, 32), GROUPBY gives three groups in this order (-groupby Calc!B1,
   B4:B6, D4:D6):
@@ -829,9 +841,26 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   - 2 = `ab`&U+00AD;
   - 12 = `é` + `é`&U+00AD.
 
-  PIVOTBY gives the same groups under its header row (B2, C4:C7). U+00AD&`ab` is equal to both `ab` and
-  `ab`&U+00AD, and joins the first group. Ours: `group_key` keys texts by their upper case and `key_cmp` orders them
-  with the total `cmp_text`, giving five groups; the 13 off cells are owned by T-4088.
+  PIVOTBY gives the same groups under its header row (B2, C4:C7). By the prefix rule (a leading weightless unit
+  sends both texts to the collation; no `=` cell here), U+00AD&`ab` equals both `ab` and `ab`&U+00AD, and it joins
+  the first group. Implemented in (T-4088): `Grouping::new` (functions/lookup_and_reference/grouping.rs) gives
+  each key field's values a class through `first_equal_lines` (functions/spill_functions.rs), the one helper UNIQUE
+  groups with. A text joins the first earlier key `cmp_text_pairwise` finds equal in its `CollationKey` bucket, and
+  the groups, the PIVOTBY parents and the subtotal levels compare those classes. The groups still sort with the
+  total `cmp_text`, where a class's members tie, so the stable sort keeps their first-appearance order. Whether
+  Excel's GROUPBY sort is pairwise on an intransitive cycle (as SORT's is, T-3418) is UNVERIFIED.
+  - Single-field keys also equate what `=` equates beyond case: `ß`/`ss`, `æ`/`ae` and `á`/`a`&U+0301 make three
+    groups, `{"á",48;"æ",12;"ß",3}` (probes/t4088-groupby-multifield Calc!B14:B21, B39; excel-graph, 2026-11-04).
+    Ours passes them.
+  - **Multi-field keys on an intransitive run do not group field by field, nor quite by whole rows.** The rows are
+    (`ab`,x), (`ab`&U+00AD,y), (U+00AD&`ab`,y), with values 1, 2, 4.
+    - GROUPBY shows UNIQUE's two groups, `{"ab","x",1;"ab­","y",2}` (Calc!B1:B2, B30, B34).
+    - The third row, which `=` joins to the second, is in no group: COUNTA counts 1, and the aggregated values are
+      "2" (B31:B32). PIVOTBY is the same (B3, B38).
+    - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
+      second group shows `ab`, which is not the first spelling of either field.
+    - Each field alone groups by first `=` (B35:B36). Ours classes each field and groups by the tuple of classes,
+      which gives three groups here. These 10 cells are known failures owned by T-4195.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

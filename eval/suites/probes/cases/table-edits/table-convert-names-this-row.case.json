@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-2643: convert_table with a defined name =Sales[Qty] read through cells (value and FORMULATEXT), a #This Row outside the data rows (above the header, below the table) on S, and a #This Row from sheet T. Table Sales on S!B3:C7 (data rows 4-7).",
+  "description": "T-2643: convert_table with a defined name =Sales[Qty] read through cells (value and FORMULATEXT), a #This Row outside the data rows (above the header, below the table) on S, and a #This Row from sheet T. Table Sales on S!B3:C7 (data rows 4-7). Not scored (T-4020): S!F1, S!F2, S!F9, S!F10, T!A1 and T!A2, the #This Row cells off the data rows. Graph's convertToRange was a no-op here (with T!A1's cross-sheet #This Row present the saved file still defines Sales on B3:C7, T-3629), so their oracle values read a live table, not a converted one; the converted values are probes/table-edits/t3629-convert-plain and -convert-names F1, F2, F9, F10.",
   "tags": [
     "M8",
     "tables",
@@ -61,12 +61,6 @@
     "S!E6",
     "S!E7",
     "S!E8",
-    "S!F1",
-    "S!F2",
-    "S!F9",
-    "S!F10",
-    "T!A1",
-    "T!A2",
     "T!B1",
     "T!B2"
   ],

@@ -436,7 +436,12 @@ impl Model {
         };
         // The friendly name is the value displayed in the cell. It can be
         // a string, a number or a boolean.
+        // A blank friendly_name, a blank cell or one left out (`HYPERLINK("#A1",)`), is the number
+        // 0, not a computed blank: ISNUMBER is TRUE, LEN is 1, COUNT and COUNTA are 1 and LOGEST
+        // reads it as 0 (`#NUM!`), not as an empty value (probes/t4208-hyperlink-blank-friendly-name;
+        // docs/excel-semantics/lookup.md "HYPERLINK: a blank friendly_name").
         let display = match friendly_name {
+            Some(CalcResult::EmptyCell | CalcResult::EmptyArg) => CalcResult::Number(0.0),
             Some(value) => value.clone(),
             None => CalcResult::String(location.clone().into()),
         };

@@ -2024,7 +2024,9 @@ impl Model {
         Ok(())
     }
 
-    /// Sets an array formula in an area (CSE formula)
+    /// Sets an array formula in an area (CSE formula). The text comes from outside the engine,
+    /// so a padded bare column `T[ Col ]` reads as no column, as [`Model::set_user_input`] reads
+    /// it (T-4023).
     pub fn set_user_array_formula(
         &mut self,
         sheet: u32,
@@ -2032,6 +2034,21 @@ impl Model {
         column: i32,
         width: i32,
         height: i32,
+        value: &str,
+    ) -> Result<(), String> {
+        self.as_external(|model| {
+            model.reenter_array_formula(sheet, (row, column), (width, height), value)
+        })
+    }
+
+    /// [`Model::set_user_array_formula`] for text the engine printed itself (a moved array
+    /// formula, or one a row or column insert re-enters), which reads a padded bare column
+    /// `T[ Col ]` as the column, as [`Model::reenter_printed_input`] does (T-4023).
+    pub(crate) fn reenter_array_formula(
+        &mut self,
+        sheet: u32,
+        (row, column): (i32, i32),
+        (width, height): (i32, i32),
         value: &str,
     ) -> Result<(), String> {
         check_block(row, column, width, height)?;

@@ -16,9 +16,9 @@ use pyo3::types::{PyBool, PyBytes, PyDict, PyInt, PyList};
 use pyo3::{create_exception, IntoPyObjectExt};
 
 use rustsheet::{
-    resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError, ErrorKind, Input, LoadOptions,
-    RangeRef, RefError, SaveOptions, SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions,
-    XlError,
+    parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
+    ErrorKind, Input, Iteration, LoadOptions, RangeRef, RefError, SaveOptions, SheetChange,
+    SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
 };
 
 create_exception!(_rustsheet, RustSheetError, PyException);
@@ -445,6 +445,45 @@ impl PyWorkbook {
         py.detach(|| lock(&self.wb).recalculate());
     }
 
+    /// The iterative-calculation settings as `(max_iterations, max_change)`, `None` when off.
+    #[getter]
+    fn iteration(&self, py: Python<'_>) -> Option<(u32, f64)> {
+        self.read(py, |wb| {
+            wb.iteration().map(|i| (i.max_iterations, i.max_change))
+        })
+    }
+
+    /// Turns iterative calculation on with its count and delta (Excel's defaults 100 and
+    /// 0.001), or off with `enabled=False`. It applies from the next recalculation.
+    #[pyo3(signature = (enabled=true, max_iterations=100, max_change=0.001))]
+    fn set_iteration(
+        &self,
+        py: Python<'_>,
+        enabled: bool,
+        max_iterations: u32,
+        max_change: f64,
+    ) -> PyResult<()> {
+        let wanted = Iteration {
+            max_iterations,
+            max_change,
+        };
+        // The engine owns Excel's range (1 to `MAX_ITERATIONS`, finite non-negative delta): a
+        // setting it would bring back into range is rejected, not silently replaced.
+        let in_range = wanted.within_excel_range();
+        if enabled
+            && (in_range.max_iterations != max_iterations
+                || in_range.max_change.to_bits() != max_change.to_bits())
+        {
+            return Err(PyValueError::new_err(format!(
+                "max_iterations must be 1 to {} and max_change a finite number >= 0",
+                Iteration::MAX_ITERATIONS
+            )));
+        }
+        let setting = enabled.then_some(wanted);
+        py.detach(|| lock(&self.wb).set_iteration(setting));
+        Ok(())
+    }
+
     /// Sheet names in tab order.
     #[getter]
     fn sheet_names(&self, py: Python<'_>) -> Vec<String> {
@@ -569,6 +608,7 @@ enum Op {
     RenameSheet(String, String),
     DeleteSheet(String),
     Clock(Clock),
+    DataTable(String, Option<String>, Option<String>),
 }
 
 /// Buffers edits and applies them as one atomic `Workbook::edit` when the `with` block exits
@@ -594,9 +634,12 @@ impl PyTransaction {
 /// Position of `name` in `sheets`, resolved with the facade's own case-insensitive rule. The
 /// facade's `Workbook::sheet_id` cannot be used because the transaction's ops are not applied
 /// yet, so sheets added or renamed earlier in the same block exist only in this list.
+fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
+    sheets.iter().map(|(id, n)| (*id, n.as_str())).collect()
+}
+
 fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
-    let pairs: Vec<(SheetId, &str)> = sheets.iter().map(|(id, n)| (*id, n.as_str())).collect();
-    resolve_sheet_by_name(&pairs, Some(name))
+    resolve_sheet_by_name(&sheet_pairs(sheets), Some(name))
         .and_then(|id| sheets.iter().position(|(i, _)| *i == id))
         .ok_or_else(|| EditError::Ref(RefError::UnknownSheet(name.to_owned())))
 }
@@ -610,6 +653,14 @@ fn apply(
         match op {
             Op::Set(r, input) => txn.set(r.as_str(), input)?,
             Op::Clock(clock) => txn.set_clock(clock)?,
+            Op::DataTable(range, row_input, column_input) => {
+                let pairs = sheet_pairs(&sheets);
+                let by_name = |n: Option<&str>| resolve_sheet_by_name(&pairs, n);
+                let range = parse_range(&range, by_name)?;
+                let row_input = row_input.map(|r| parse_cell(&r, by_name)).transpose()?;
+                let column_input = column_input.map(|r| parse_cell(&r, by_name)).transpose()?;
+                txn.add_data_table(range, row_input, column_input)?;
+            }
             Op::AddSheet(name) => {
                 let id = txn.add_sheet(&name)?;
                 sheets.push((id, name));
@@ -668,6 +719,23 @@ impl PyTransaction {
     /// Clears a cell.
     fn clear(&mut self, r: &str) -> PyResult<()> {
         self.push(Op::Set(r.to_owned(), Input::Clear))
+    }
+
+    /// Adds a what-if data table whose result cells are `range`; `row_input` and `column_input`
+    /// are the cells the values of the row above and the column left of `range` replace. The
+    /// next evaluation fills the results. Errors surface when the block exits.
+    #[pyo3(signature = (range, row_input=None, column_input=None))]
+    fn add_data_table(
+        &mut self,
+        range: &str,
+        row_input: Option<&str>,
+        column_input: Option<&str>,
+    ) -> PyResult<()> {
+        self.push(Op::DataTable(
+            range.to_owned(),
+            row_input.map(str::to_owned),
+            column_input.map(str::to_owned),
+        ))
     }
 
     /// Adds a sheet at the end.

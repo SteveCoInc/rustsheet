@@ -2484,7 +2484,7 @@ for hours and exhaust memory. An external diff from a peer can carry any area (d
 Evidence: none for Excel. This is the no-panic and bounded-work rule (CLAUDE.md directive 5), not an Excel observation.
 Status: DEVIATION (decision 0014). Whether Excel accepts a CSE formula over more than a whole column is UNVERIFIED
 (probe pending, T-3436).
-Implemented in: crates/rustsheet-engine/src/model.rs (`set_user_array_formula`)
+Implemented in: crates/rustsheet-engine/src/model.rs (`reenter_array_formula`, behind `set_user_array_formula`)
 Tasks: T-2896, T-3436
 
 ## A one-cell error reference is a 1x1 array in TOCOL, TOROW and FILTER (T-3497)

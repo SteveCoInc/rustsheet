@@ -141,11 +141,12 @@ functions/lift/kinds/engineering.rs (`BESSEL`, `BESSEL_WEIGHT`), functions/lift/
 
 ## DECIMAL of unreadable text
 Rule: DECIMAL reads its first argument as text (a number or TRUE goes through its text form, so `DECIMAL(0.5,13)`, `DECIMAL(1E+20,10)` and `DECIMAL(TRUE,10)` read "0.5", "1E+20", "TRUE"). Leading spaces and tabs are skipped; empty or all-blank text is 0. Any other unreadable character is `#NUM!` (not `#VALUE!`): a sign (`"-1"`, `"+1"`), a point, trailing space, a non-breaking space, a digit not below the radix. Text over 255 UTF-16 units (200 emoji is too long) is `#VALUE!`, checked before the radix (`DECIMAL(REPT("1",256),37)` is `#VALUE!`), as is a non-numeric radix. Newline and fullwidth digits are unreadable (`#NUM!`); the overflow is `#NUM!` inside a larger formula too (`ERROR.TYPE` 6, `IFERROR` falls through). Error arguments: the text argument's error wins (`DECIMAL(#N/A,#DIV/0!)` is `#N/A`). Radix 16 only also skips leading zeros and one `x`/`X` (`"0x1F"`, `"x1F"`, `"00x1F"` are 31; `"0x0x1"`, `"1x1F"`, `"0x 1F"` are `#NUM!`; in radix 10 or 15 `"0x1F"` is `#NUM!`, in radix 36 the x is a digit). The sum is a float with no 2^53 limit (255 ones in radix 2 is 5.78960446186581E+76; 198 `Z`s in radix 36 is 1.4057081148316923E+308), but a result past the largest double is `#NUM!` (199 `Z`s in radix 36, 255 `Z`s).
-Evidence: probes/decimal-unreadable (84 cells, excel-graph, 2026-10-10); gen-m5/98ed0b6354e3394a Calc!A9.
-Ours: matches.
+The length check comes before the radix is read at all: over-long text is `#VALUE!` even against an error radix (`DECIMAL(REPT("1",256),NA())`, `…,#DIV/0!)`, a cell holding `=1/0`, `…,1)`, all `#VALUE!`), while 255 units against an error radix give that error (`DECIMAL(REPT("1",255),NA())` is `#N/A`). The skip set at the start is exactly space and tab, in any mix and count (`CHAR(9)&CHAR(9)&"11"` in radix 2 is 3): LF, VT, form feed, CR, CHAR(28) to CHAR(31) and NBSP (CHAR(160)) are `#NUM!` in radix 2 and 16, and one of them after or before a space is too (`" "&CHAR(12)&"11"`, `CHAR(12)&" 11"`). In radix 16 the order is blanks, then zeros, then one `x`, with nothing skipped after the zeros or the `x` (`" 0x1F"`, `" x1F"`, `"00x1F"` are 31; `"00 1F"`, `"0 0x1F"`, `"00"&CHAR(9)&"1F"`, `"x 1F"`, `"0x"&CHAR(9)&"1F"`, `"0x0x1F"`, `"0x1F "` are `#NUM!`). A blank cell, a formula's `""` and a formula's `"  "` read as empty text, 0 in radix 2 and 36; a cell holding the number 101 reads "101" (5 in radix 2, 1297 in radix 36). An array or range as the text lifts element by element, each element on its own rules: `DECIMAL({"11",#N/A,"2"},2)` and the same values in `B1:B3` are 3, `#N/A`, `#NUM!`; over a 300-unit text the element is `#VALUE!` against radix 2 and against `NA()` alike.
+Evidence: probes/decimal-unreadable (84 cells, excel-graph, 2026-10-10); probes/t4199-decimal-unprobed-shapes (80 formulas, excel-graph, 2026-11-04: A1:A27 length against the radix, A28:A50 control characters, A51:A60 radix-16 prefixes, A61:A68 cell forms, A70, A72, A76, A79 arrays and ranges); gen-m5/98ed0b6354e3394a Calc!A9.
+Ours: matches (an error radix before the length check until T-4199).
 Status: VERIFIED.
-Not probed: form feed and other control characters at the start; an error radix with over-long text; an empty-cell reference or an array as the text; blanks after radix-16 leading zeros.
-Tasks: T-1198
+Not probed: the C0 controls CHAR(1) to CHAR(8) and CHAR(14) to CHAR(27) at the start (ours: `#NUM!`, like every control probed).
+Tasks: T-1198, T-4199
 
 ## CONVERT constants and evaluation order
 Rule: CONVERT computes `value * F_from / F_to` and only then applies the prefixes
@@ -1370,6 +1371,47 @@ Rule: ours is bit-exact for BESSELK at every n probed up to x = 695, and at x = 
 Rule: in the upward recurrence `K(n+1) = K(n-1) + 2n/x * K(n)`, Excel sets the product `2n/x * K(n)` to 0 when it is subnormal (|product| < 2.2250738585072014E-308; inferred: the probe only brackets the threshold in (1.34E-308, 2.67E-308], from the x = 700 products of n = 1 (flushed) and n = 2 (kept)), as the other subnormal flushes here do (BESSELK below the smallest normal, T-2421). Replaying the recurrence from the oracle's K0 and K1 with that flush reproduces all 12 differing cells bit-exactly; without it, it reproduces our 12 values bit-exactly. At x = 700 only the n = 1 product (about 1.3E-308) is subnormal, so only K2 = K0 (4.669776528722504E-306) while K3 (4.69979514014056E-306), K4 (4.710060487066566E-306) and K5 (4.753624402849892E-306) still get their terms; at 702 and 705 every product is subnormal, so K2 = K4 = K0 and K3 = K5 = K1 (`BESSELK(702,4)` 6.310849433265845E-307, `(702,5)` 6.315342484400538E-307, `(705,4)` 3.135297088468052E-308). Ours adds the subnormal term and misses these 12 cells (n = 2 to 5 at x = 700, 702 and 705) by 1.6E-5 (`BESSELK(700,3)`) to 1.7% relative (`BESSELK(702,5)`, ours 6.4241464536256334E-307).
 Superseded by "BESSELI overflow point (T-2613)" below: the cut is at 709.7. Rule: BESSELI(x,0) is finite up to x = 709.5 (2.02976276636543E+306) and `#NUM!` at 709.78 and from there to 713; ours is finite at 709.78 (2.685109662266049E+306), so the overflow cut lies in (709.5, 709.78], below the true overflow of I0 near 713.98 (T-2421 has 710 on).
 Ours flushes that term since T-2549 and matches all 12 cells (146 of the probe's 147).
+
+## BESSELI at a large x and an order of 2 or more is far from the math (T-4083)
+Rule: Excel's BESSELI(x, n) for n >= 2 at a large |x| comes from its Miller recurrence normalized by I0, and the result
+can be far from the true I_n(x). On the Gate A table `accuracy/BESSELI/s1` (excel-graph, 2026-11-04), 8 of 120 points are
+more than 1e-4 relative off the 50-digit math, all at |x| >= 250 with 2 <= n <= 11:
+- `BESSELI(709,3)` is 5.7482433040321455E+305 against 1.2237503925239046E+306 (53% low);
+- `BESSELI(253.421155347657,3)` is 2.5167402586278356E+108 against 2.8241364757402905E+108 (10.9%);
+- `BESSELI(551.348728145439,7)` 3.7%, `BESSELI(-642.503977919388,11)` 0.46%, `BESSELI(709.5,4)` 0.40%,
+  `BESSELI(-467.113815260393,4)` 0.31%, `BESSELI(-669.689720042612,2)` 0.20%, `BESSELI(391.306630099966,6)` 0.085%.
+The order 3 case at the overflow cut ("BESSELI overflow point (T-2613)", `(-709.7,3)` under half its neighbours) is one
+instance. Orders 0 and 1 are Excel's polynomial forms, far closer to the math (`BESSELI(709.7,0)` is 1.4E-7 low).
+The engine matches Excel bit for bit on all 120 points (it runs the same recurrence), so Gate A holds through Excel's
+15 digits. These points exceed decision 0188 R3's G = 1e-4, so they are R3 candidates; following the math there needs an
+owner ruling (T-4196), and until then Excel stays the target.
+Also from the BESSELJ table: `BESSELJ(11.0627245753426,4)` is -4.609392711411031E-4 against -4.60294628772423E-4 (0.14%),
+next to a root of J_4, where Excel's ~1E-7 absolute error is large relative to the value (the T-0900 profile).
+Evidence: eval/accuracy/tables/BESSELI/s1 and BESSELJ/s1 with their oracle and math sidecars (T-4083).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_i.rs (unchanged; it already matches)
+Tasks: T-4083, T-4196
+
+## BESSELJ and BESSELI at a tiny x and a small order (T-4083)
+Rule: at a tiny |x| BESSELJ and BESSELI are `#NUM!` already at orders 2 to 4, far below the order 100,001 of "BESSEL
+order cap" (`BESSELJ(1E-300,100001)`), where the true value is a tiny number. The cut depends on the order and lies
+between these cells (Gate A tables `accuracy/BESSELJ/s1` and `BESSELI/s1`, excel-graph, 2026-11-04):
+- BESSELJ order 2: `BESSELJ(1.16668964461302E-30,2)` is 1.7014559085590685E-61, `BESSELJ(1.10541629485784E-181,2)` is
+  `#NUM!`;
+- BESSELJ order 3: `BESSELJ(2.49185320362869E-170,3)` and `BESSELJ(-6.6840116183702E-247,3)` are `#NUM!` (no answering
+  cell below 1E-5 at this order);
+- BESSELJ order 4: `BESSELJ(5.57080663109133E-14,4)` is 2.508078418226554E-56, `BESSELJ(-3.63601369770004E-65,4)` and
+  `BESSELJ(1.90005396436845E-196,4)` are `#NUM!`;
+- BESSELI order 4: `BESSELI(-1.02514099090909E-10,4)` is 2.876094643484432E-43, `BESSELI(-3.53342392064674E-38,4)` is
+  `#NUM!` (the math is about 4.06E-153). BESSELI order 2 answers at 4.45682724521062E-17.
+Orders 0 and 1 answer at every tiny x drawn (down to 1.5E-46 for J0, 5.3E-74 for J1, 2.7E-268 for I0). The likely cause
+is the recurrence's own overflow at a huge 2/x, as for the order 100,001 case, but where each cut lies is unprobed.
+The engine is `#NUM!` at all six cells and matches the answering ones bit for bit. Excel's error is matched (decision
+0188 R3 never applies to an error against a number), so Gate A holds through Excel's side.
+Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083).
+Status: VERIFIED (excel-graph, these cells) / UNVERIFIED (each order's cut)
+Implemented in: functions/engineering/transcendental/bessel_excel.rs, bessel_i.rs (unchanged; they already match)
+Tasks: T-4083
 
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.

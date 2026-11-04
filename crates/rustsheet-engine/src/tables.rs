@@ -7,7 +7,9 @@ use crate::{
         lexer::LexerMode,
         parser::{
             parse_range,
-            stringify::{to_rc_lowering_at, to_string_lowering, to_string_with_ref_errors},
+            stringify::{
+                to_rc_lowering_at, to_string_lowering, to_string_with_ref_errors, OffRows,
+            },
             Node,
         },
         types::{Area, CellReferenceRC},
@@ -23,11 +25,14 @@ use crate::{
 /// the cell's own row, a shared formula of its own: a duplicated sheet, which gets no table, then
 /// reads what each cell read before, `#VALUE!` off the data rows (T-1699). Rows whose text is the
 /// same share one formula. Cells on the rows `keep_rows` (inclusive) keep their shared formula.
+/// A reference off the data rows prints as `off_rows` says: detached for a duplicate, `#REF!`
+/// for a convert to range (T-4020).
 pub(crate) fn lower_this_row_cells(
     worksheet: &mut Worksheet,
     by_row: &[(usize, Node)],
     tables: &[String],
     keep_rows: Option<(i32, i32)>,
+    off_rows: OffRows,
 ) {
     if by_row.is_empty() {
         return;
@@ -51,7 +56,7 @@ pub(crate) fn lower_this_row_cells(
         let Some((_, node)) = by_row.iter().find(|(i, _)| *i == index) else {
             continue;
         };
-        let text = to_rc_lowering_at(node, row, tables);
+        let text = to_rc_lowering_at(node, row, tables, off_rows);
         let Ok(next) = i32::try_from(worksheet.shared_formulas.len()) else {
             return;
         };
@@ -410,7 +415,7 @@ impl Model {
                     node.has_this_row_to(tables).then_some((index, node))
                 })
                 .collect();
-            lower_this_row_cells(worksheet, &by_row, tables, data_rows);
+            lower_this_row_cells(worksheet, &by_row, tables, data_rows, OffRows::RefError);
         }
         self.parser.set_lexer_mode(LexerMode::A1);
     }

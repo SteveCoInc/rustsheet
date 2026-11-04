@@ -127,10 +127,7 @@ fn a_qualified_this_row_prints_in_its_at_form_inside_its_table() {
         assert_eq!(model.get_formatted_cell_value(0, 2, 9).unwrap(), printed);
         // In `U` the reference to `T` keeps its table name.
         typed(&mut model, 2, 7, "=T[@Col]+1");
-        assert_eq!(
-            formula(&model, 2, 7),
-            Some("=T[[#This Row],[Col]]+1".to_string())
-        );
+        assert_eq!(formula(&model, 2, 7), Some("=T[@Col]+1".to_string()));
     }
 }
 
@@ -141,7 +138,7 @@ fn copied_or_filled_out_of_the_table_it_keeps_the_table_name() {
     let mut model = model();
     typed(&mut model, 2, 3, "=[@Col]*2");
     typed(&mut model, 3, 3, "=T[@Col]*2");
-    let qualified = "=T[[#This Row],[Col]]*2";
+    let qualified = "=T[@Col]*2";
     for row in [2, 3] {
         // Filled right, past the table, on the same row.
         assert_eq!(model.extend_to(0, row, 3, row, 9).unwrap(), qualified);
@@ -191,7 +188,7 @@ fn a_resize_that_leaves_the_cell_outside_prints_the_table_name() {
         .unwrap();
     model.evaluate();
     let formula = |row| model.get_cell_formula(0, row, 2).unwrap();
-    assert_eq!(formula(4), Some("=T[[#This Row],[Col]]*2".to_string()));
-    assert_eq!(formula(3), Some("=T[[#This Row],[Col]]*2".to_string()));
+    assert_eq!(formula(4), Some("=T[@Col]*2".to_string()));
+    assert_eq!(formula(3), Some("=T[@Col]*2".to_string()));
     assert_eq!(model.get_formatted_cell_value(0, 3, 2).unwrap(), "4");
 }

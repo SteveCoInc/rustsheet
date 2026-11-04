@@ -212,6 +212,7 @@ probes/t3350-chisq-inv-huge-df.case.json	14
 probes/t3350-gamma-inv-band-lower-edge.case.json	1
 probes/t3352-binom-negbinom-large-n.case.json	69
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	222
+probes/t3396-gamma-inv-band-huge.case.json	41
 probes/t3406-irr-num-boundary.case.json	76
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3446-script-digits-forms.case.json	91
@@ -227,6 +228,8 @@ probes/t3662-collation-ignorables.case.json	318
 probes/t3678-time-argument-far-negative.case.json	81
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3710-ampm-hour-tokens.case.json	2
+probes/t3711-fraction-trailing-placeholders.case.json	23
 probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
@@ -246,6 +249,7 @@ probes/t4040-r1c1-unbound-cell-names.case.json	3
 probes/t4060-collation-open-choices.case.json	9
 probes/t4086-collation-later-passes.case.json	21
 probes/t4086-groupby-weightless.case.json	13
+probes/t4088-groupby-multifield.case.json	10
 probes/table-edits/t3629-convert-names.case.json	4
 probes/table-edits/t3629-convert-plain.case.json	4
 probes/table-edits/t3629-readd-other-area.case.json	4

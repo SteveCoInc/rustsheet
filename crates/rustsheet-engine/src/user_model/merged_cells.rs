@@ -136,6 +136,7 @@ impl UserModel {
                 column: range.column,
                 new_value,
                 legacy: false,
+                external: false,
                 old_value: Box::new(anchor_old_value),
             });
         }
@@ -268,6 +269,7 @@ impl UserModel {
                     column,
                     new_value: "".to_string(),
                     legacy: false,
+                    external: false,
                     old_value: Box::new(old_value),
                 });
             }

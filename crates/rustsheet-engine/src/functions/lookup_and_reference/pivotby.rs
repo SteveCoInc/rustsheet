@@ -89,7 +89,8 @@ impl Model {
             Ok(parsed) => parsed,
             Err(error) => return Err(self.lifted_error(args.get(10), error, cell)),
         };
-        let (mut rows, mut cols, height) = pivot_groupings(&pivot, cell)?;
+        let (mut rows, mut cols, height) =
+            pivot_groupings(&pivot, cell, |units| self.spend_work(units, cell))?;
         if let Some(elements) = pivot.lifted.take() {
             return Ok(self.lifted_relative_to(elements, cell));
         }
@@ -584,6 +585,7 @@ impl Totals {
 fn pivot_groupings(
     pivot: &Pivot,
     cell: CellReferenceIndex,
+    mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
 ) -> Result<(Grouping, Grouping, usize), CalcResult> {
     // The keys and the label column, left of the grid.
     let row_fields = width(&pivot.row_keys) + usize::from(pivot.shape.label_column);
@@ -600,9 +602,13 @@ fn pivot_groupings(
     let min_width = row_fields
         .saturating_add(value_columns)
         .saturating_add(total_columns);
-    let row_limit = |groups: usize| check_array_size(tall(groups), min_width);
-    let mut rows = Grouping::new(&pivot.row_keys, pivot.records.iter().copied(), row_limit)
-        .map_err(to_error)?;
+    let row_limit = |groups: usize| check_array_size(tall(groups), min_width).map(to_error);
+    let mut rows = Grouping::new(
+        &pivot.row_keys,
+        pivot.records.iter().copied(),
+        row_limit,
+        &mut spend,
+    )?;
     let height = tall(rows.groups.len());
     let grid_width = |groups: usize| {
         groups
@@ -610,9 +616,13 @@ fn pivot_groupings(
             .saturating_add(row_fields)
             .saturating_add(total_columns)
     };
-    let col_limit = |groups: usize| check_array_size(height, grid_width(groups));
-    let mut cols = Grouping::new(&pivot.col_keys, pivot.records.iter().copied(), col_limit)
-        .map_err(to_error)?;
+    let col_limit = |groups: usize| check_array_size(height, grid_width(groups)).map(to_error);
+    let mut cols = Grouping::new(
+        &pivot.col_keys,
+        pivot.records.iter().copied(),
+        col_limit,
+        &mut spend,
+    )?;
     rows.sort_by_key_order(&pivot.row_sort, cell);
     cols.sort_by_key_order(&pivot.col_sort, cell);
     let height = tall(rows.lines(subtotal_levels(pivot.row_depth), false).len());

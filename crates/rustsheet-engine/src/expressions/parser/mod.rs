@@ -357,10 +357,15 @@ impl Parser {
         let node = self.parse_expr();
         self.top_level = false;
         let mut node = self.expect_end(node);
-        // Only `_xlpm.f1` (A1 text, or the R1C1 storage form) or a bare `f1` typed in R1C1 mode
-        // reads a name spelled like an A1 cell (T-4040).
-        if formula.contains("_xlpm.") || (self.typed && !self.lexer.is_a1_mode()) {
-            stringify::bound_variables::quote_unbound_cell_shaped_names(&mut node);
+        // Only text with `_xlpm.` has a prefixed use to settle (T-4099). `contains` also matches
+        // text inside a string literal; that is harmless, the pass touches only prefixed names.
+        if formula.contains("_xlpm.") {
+            call_names::settle_lambda_prefixes(&mut node);
+        }
+        // Only a bare `f1` typed in R1C1 mode, or the storage form's `_xlpm.f1`, reads a name
+        // spelled like an A1 cell (T-4040); in A1 mode it is the cell.
+        if !self.lexer.is_a1_mode() && (self.typed || formula.contains("_xlpm.")) {
+            call_names::quote_unbound_cell_shaped_names(&mut node);
         }
         node
     }

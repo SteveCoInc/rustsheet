@@ -1467,14 +1467,43 @@ t3478-irr-r4-wide (excel-graph, 2026-10-31; T-3478; inputs and 50-digit roots in
     A268.
   - Excel is also `#NUM!`, as is the engine, on four log-uniform series (21 to 97 flows) with roots near 0:
     accuracy/IRR/s1 A273, A276, A279 and A293 (roots -5.0E-7 to 2.4E-5).
-`IRR({-1,1E+15})`'s `#DIV/0!` ("IRR's far-root bound") and t3406-irr-num-boundary's (T-3407) may share a cause.
+Most of t3406-irr-num-boundary's `#DIV/0!` cells and the `#DIV/0!` cells above with guesses near -1 or above 100 are
+explained by "IRR is #DIV/0! where its secant cannot evaluate NPV" (T-3407); `IRR({-1,1E+15})`'s ("IRR's far-root
+bound") is not.
 Evidence: probes-numeric/t3478-irr-r4-wide; docs/research/t3478/score_sweep.py lists the cells; accuracy/IRR/s1
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
-Ours: on t3478, the root on 13 of the 17 cells (a wrong value on A289) and `#NUM!` on A277, A290, A298. On
+Ours: on t3478, `#DIV/0!` with Excel on all seven `#DIV/0!` cells (T-3407); the `#NUM!` cells are T-3548's. On
 accuracy/IRR/s1, `#NUM!` with Excel on 47 cells, the root on the 8 `#NUM!` cells listed, and `#NUM!` on the 3 `#DIV/0!`
 cells.
 Tasks: T-3548, T-3407
 
+
+## IRR is #DIV/0! where its secant cannot evaluate NPV
+Rule: when a step of IRR's secant (from the guess or the retry from 0.1) lands on a rate where NPV, evaluated with
+worksheet NPV's running discount product, cannot be computed (a discount power that overflows or falls below the
+smallest normal double, or a sum that is not finite), the call is `#DIV/0!`: worksheet NPV's error for the same sum.
+The call ends there, without the retry from 0.1 and without the fallback.
+- On long series after one outlay, the secant's first step from the guess jumps far toward v = 0 or past it in r, and
+  the n-th discount power leaves the double range (1 + r below about 10^(-308/n)). That is T-3411's observation that
+  `#DIV/0!` sits where log10 |NPV| at the first step is above 228: the next trial point is out of range.
+- Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
+  value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
+  flows), 7 of the 9 long-series `#DIV/0!` cells of probes-numeric/t3347-irr-conventional-holdout (P!A123, A126, A130,
+  A132, A134, A135, A143; A131 and A138 stay `#NUM!`), 28 cells of the
+  t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
+  100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
+  smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
+- Out of sample (decision 0188 R4.2; a structural rule, frozen before the draws): a fresh probes-numeric sweep
+  (docs/research/t3411/gen_sweep.py, case name t3407-irr-r4-fresh, not committed under decision 0267's probe freeze)
+  has 7 cells better and 0 worse, with its `#DIV/0!` mismatches 10 -> 3. The Gate A batch accuracy/IRR/r4-T-3407 has
+  the same 25 points outside the envelope with and without the rule; none of its points reaches the rule.
+- Not explained: 23 `#DIV/0!` cells where every NPV the secant evaluates is in range and the engine is `#NUM!` (T-3900
+  lists them), `IRR({-1,1E+15})` ("IRR's far-root bound") and Gate A's long-series `#DIV/0!` points (accuracy/IRR/s1
+  A237, A248, A268; r4-T-3411 A213, A232, A233; r4-T-3407 A237). The step that overflows in Excel there is not one of the engine's secant iterates.
+Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
+Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
+Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)
+Tasks: T-3407
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
@@ -1573,6 +1602,29 @@ Status: DEVIATION (decision 0014)
 Tasks: T-1820, T-2491
 Implemented in: functions/financial/financial_depreciation.rs (`MAX_DEPRECIATION_PERIODS`),
 functions/lift/kinds/financial.rs (`DB`, `VDB`)
+
+## M9 financial argument kinds (T-3184)
+Rule: in the 55 M9 financial functions, one argument of a valid call replaced by another kind gives, by kind
+(probes/t3184-m9-financial-argument-kinds-a to -e, 608 cells, excel-graph, 2026-11-04; case letter and Calc row):
+- An error literal (`#N/A`) is returned in every parameter of every function (218 cells).
+- `""` is `#VALUE!` in every scalar parameter (255 cells). As the cash-flow array, `IRR("",0.1)` is `#NUM!` (c A18) and
+  `MIRR("",0.1,0.12)` is `#DIV/0!` (c A44): a scalar text flow is skipped, leaving no flows.
+- Numeric text is its number (75 cells: `"45337"` as a date, `"0.05"` as a rate, `"2"` as a frequency), except a
+  scalar flow or date, which is skipped as text is: `MIRR("5",..)` is `#DIV/0!` (c A42), `XIRR("5",..)` and
+  `XNPV(..,"5")` (dates) are `#NUM!` (e A49, e A60). Text `"x"` is `#VALUE!` (a A16, a A79, a A103, d A110), but
+  `MIRR("x",..)` is `#DIV/0!` (c A43).
+- A blank cell is 0: the result is a number where 0 is in the parameter's domain (basis, type, salvage, cost of SYD,
+  a coupon settlement; 13 cells, e.g. a A19, c A17, e A9) and `#NUM!` where it is not (a frequency, a maturity, nper,
+  per, a price or redemption, `PDURATION`'s fv; 15 cells, e.g. a A82, a A111, d A26, e A32).
+- TRUE is 1 in the annuity functions (FV pmt and pv, IPMT nper, NPER pmt and pv, PMT pv, PPMT fv, RATE fv, SLN life,
+  VDB salvage: b A79, b A82, c A7, c A56, c A58, d A31, d A46, d A112, e A6, e A36; `RATE(48,TRUE,8000,0,0,0.1)` is
+  `#NUM!`, d A106, since a payment of 1 has no rate), and `#VALUE!` in the Analysis ToolPak functions: the
+  settlement or maturity of COUPDAYBS, COUPPCD, DURATION, MDURATION and PRICE, the frequency of COUPPCD and YIELD,
+  and CUMIPMT's nper (a A65, a A119, a A126, a A134, b A58, c A29, d A51, d A54, e A77).
+- `COUPDAYS(S,0,2,1)` (maturity 0) is `#NUM!` (a A76), as is `ODDLPRICE(..,-1,2,0)` (redemption -1, c A120).
+Status: VERIFIED (excel-graph). The engine matched all 608 cells when probed. Earlier entries below give the
+check order between kinds; this entry adds one cell per missing parameter and kind (report.json `argument_coverage`).
+Generator choice: hand-written probe cases, option (b) of T-3184 (docs/architecture/synthetic-generator.md).
 
 ## Financial function argument modes
 Rule: every scalar argument of the M9 financial functions lifts elementwise over an array literal: all 256
@@ -2236,10 +2288,10 @@ formula over our own PMT, FV, IPMT and PPMT, which match Excel's to the bit on t
   off, but misses the single-period cells `CUMIPMT(0.0083,36,8000,2,2,1)` (tiny-rate-structure Q1) and
   `CUMIPMT(0.1,36,8000,2,2,1)` (gate-edges H10), which ours has, and its `(1+r)^m - 1` loses hundreds of ulps at
   rates of 2E-5.
-So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: they stay 1 and 3 ulp off. Taking
-PMT's `1-Q` switch (`1 - EXP(-nper·L)` from |nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper`
-moves none of the 168 cells and no gated cell (see T-3179's Outcome), so the evidence does not place a switch there and
-the kernel keeps `-expm1`.
+So none of these is Excel's, and A1 and D1 are not evidence for a per-period form: ours stays 1 and 4 ulp off them
+(the 3 ulp above is Excel's IPMT against its CUMIPMT at D1). Taking PMT's `1-Q` switch (`1 - EXP(-nper·L)` from
+|nper·L| 1, "PMT is a discounted payment") in CUMPRINC's `1 - v^nper` moves none of the 168 cells and no gated cell
+(see T-3179's Outcome), so the evidence does not place a switch there and the kernel keeps `-expm1`.
 
 ## CUMIPMT and CUMPRINC work cap
 Rule: RustSheet charges each lifted CUMIPMT or CUMPRINC element for its kernel's bound, 2^8 units against SPEC-0011's
@@ -3974,6 +4026,13 @@ Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) fini
 - Against any single cap: t3478-irr-r4-wide A227 (`IRR({-4.64118123183281E+17,...},-0.990669502541584)`) is `#NUM!` in
   Excel, while the guess run converges at its 189th step (to -0.6781680690607276), so it needs a cap of 188 or less;
   A201 and A221 match Excel only with a cap of 195 and 200 or more.
+- The best cap on the probe cells is still refuted (T-3548, 2026-11-04): over every IRR cell of probes, probes-numeric
+  and gen-m9, caps 182..188 each fix 63 cells and lose none (t3478-irr-r4-wide A206, which Excel returns, needs 182
+  steps; A227 bounds it at 188). Frozen at 185 within 148 flows, it loses Gate A's accuracy/IRR/r4-T-3411 A228 (63
+  flows): Excel is `#NUM!` there, while the guess run converges at its 129th step to 1.5164068398071384E-2 (the math
+  root to 2.3E-16). A fresh Gate A batch drawn after the freeze has a 130-flow series that Excel errs on and the
+  secant solves at step 98. Excel errs on runs of 98 and 129 steps and returns runs of 182, so the step count does
+  not separate its returns from its errors.
 - Cell counts over the six IRR probe cases, by cap (T-3806's fidelity review): 50 = 594, 136 = 630, 170 = 639,
   200..214 = 641, 215 = 640, 230 = 637. 200..214 is only the best-scoring range, and taking it loses A227.
 - Holdout A44 and A105 match Excel's digits only in runs of 1,068 and 2,406 steps, so Excel reaches the same last

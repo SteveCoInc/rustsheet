@@ -700,6 +700,18 @@ At 2026-10-31 (report of `make eval` on main), the M2 batch is 17 cases and 2220
 pairs of 12 functions; scored with the engine as if its values were Excel's, every one of those pairs is
 covered (T-3278 PR). The oracle-filled batch is T-3279.
 
+### 6.8 Single-class gaps: hand-written probes, not a focus mode (T-3184)
+
+A single parameter/kind pair the report lists as uncovered (`argument_coverage[].params[].seen`) is closed with
+a hand-written probe case (T-3184's option (b), as T-2861 did for M2), not with a coverage-directed `--focus`
+generator mode. The gaps are few and fixed: 608 pairs in the 55 M9 financial functions. One valid base call per
+function, with one argument swapped for the class's literal (or `Data!Z1` for blank), closes every pair in
+one cell. Edge pools (`POOL_RATE`) and soft domains would still have to be bypassed per parameter, and the
+generator's random draws add nothing to a once-only gap list. The M9 financial batch is
+probes/t3184-m9-financial-argument-kinds-a to -e (five cases of eleven functions, so one workbook Excel
+refuses does not cost the batch). The forms follow §6.7: the class literals of the classifier, `#N/A` for
+error, the base value in quotes for numeric text. Committed gen-m9 cases are unchanged.
+
 ---
 
 ## 7. Workbook-level structure

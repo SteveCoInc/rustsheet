@@ -371,8 +371,9 @@ fn resolve_lcid(value: u32) -> LocaleTag {
 /// The names and calendar of digit 8 (`hebrew`) or 10 under `lcid`: Hebrew script for a Hebrew or
 /// Arabic LCID (`[$-8040D]`, `[$-80801]`), Devanagari Saka names for an Arabic or Hindi one
 /// (`[$-100401]`, `[$-100439]`), the Latin transliterations under every other LCID with a locale
-/// (probes/t2779-hebrew-saka-names E1:E25, t2779-hebrew-saka-more C1:D33). bn-IN (0x445) also
-/// prints the Latin Saka names, but it has no table here and so no locale (`without_locale`).
+/// (probes/t2779-hebrew-saka-names E1:E25, t2779-hebrew-saka-more C1:D33), the Indic LCIDs
+/// bn-IN, mr-IN, ta-IN, te-IN, kn-IN, kok-IN and ne-NP included (probes/t2959-indic-lcid-names
+/// rows 14 and 15).
 fn hebrew_or_saka(hebrew: bool, lcid: u16) -> (&'static DateNames, Calendar) {
     match (hebrew, lcid & 0x3FF) {
         (true, 0x0D | 0x01) => (&HEBREW_SCRIPT, Calendar::Hebrew(Some(&HEBREW_SCRIPT_ADARS))),

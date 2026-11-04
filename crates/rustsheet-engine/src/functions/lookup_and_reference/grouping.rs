@@ -10,10 +10,14 @@ use std::collections::HashMap;
 use std::borrow::Cow;
 
 use super::group_order::{compare_aggregates, key_cmp};
+use crate::area_budget::text_units;
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
-    functions::spill_functions::{cell_key, CellKey},
+    functions::{
+        spill_functions::{cell_key, first_equal_lines, unique_cell_key, CellKey},
+        util::collation::cmp_text_pairwise,
+    },
 };
 
 /// How the groups are ordered: GROUPBY's `sort_order` (PIVOTBY's `row_sort_order` and
@@ -87,9 +91,9 @@ pub(crate) fn empty_text() -> ArrayNode {
 pub(crate) struct Group {
     pub(crate) keys: Vec<ArrayNode>,
     pub(crate) rows: Vec<usize>,
-    /// The keys as they group ([`group_key`]), built once by [`Grouping::new`] so that comparing
-    /// key prefixes later converts no text.
-    cells: Vec<CellKey>,
+    /// The keys as they group: per field, the first source row whose key Excel's `=` finds equal
+    /// to this group's ([`Grouping::new`]), so that comparing key prefixes later compares no text.
+    cells: Vec<usize>,
 }
 
 /// Rows grouped by a key tuple: the unit GROUPBY lays out as rows and PIVOTBY as a grid.
@@ -98,24 +102,72 @@ pub(crate) struct Grouping {
 }
 
 impl Grouping {
-    /// Groups `rows` (indices into `keys`, one key tuple per row) like UNIQUE: text is
-    /// case-insensitive and numbers compare exactly ([`group_key`]). The key is built once per row
-    /// and looked up in a hash map, so grouping is O(rows x key fields). The groups are in order
-    /// of first appearance until [`Grouping::sort_by_keys`]. `limit(n)` is the error `n` groups
-    /// would give (the output size check, SPEC-0006 step 6); grouping stops at the first group
-    /// that does not fit, so no more groups are built than the output can hold.
+    /// Groups `rows` (indices into `keys`, one key tuple per row): two keys of a field are one when
+    /// Excel's `=` finds them equal (case folded, `ß` with `ss`, the prefix rule:
+    /// probes/t4086-groupby-weightless, probes/t4088-groupby-multifield B14:B21; T-4088) and numbers
+    /// compare exactly ([`group_key`]). Each field's keys are classed by [`first_equal_lines`], as
+    /// UNIQUE classes lines, each comparison charged to `spend`, and the rows grouped by the tuple of
+    /// their classes in a hash map. Excel differs on a multi-field intransitive run (it drops a row
+    /// there; probes/t4088-groupby-multifield B1:B12, B30:B38): T-4195. Fails only with `spend`'s
+    /// error or `limit`'s. The groups are in order of first appearance
+    /// until [`Grouping::sort_by_keys`]. `limit(n)` is the error `n` groups would give (the output
+    /// size check, SPEC-0006 step 6); grouping stops at the first group that does not fit, so no
+    /// more groups are built than the output can hold.
     pub(crate) fn new(
         keys: &[Vec<ArrayNode>],
         rows: impl IntoIterator<Item = usize>,
-        limit: impl Fn(usize) -> Option<(Error, String)>,
-    ) -> Result<Self, (Error, String)> {
-        let mut index: HashMap<Vec<CellKey>, usize> = HashMap::new();
+        limit: impl Fn(usize) -> Option<CalcResult>,
+        mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
+    ) -> Result<Self, CalcResult> {
+        let rows: Vec<usize> = rows.into_iter().filter(|&row| row < keys.len()).collect();
+        let fields = rows
+            .first()
+            .and_then(|&row| keys.get(row))
+            .map_or(0, Vec::len);
+        let key_of = |line: usize, field: usize| {
+            rows.get(line)
+                .and_then(|&row| keys.get(row))
+                .and_then(|tuple| tuple.get(field))
+        };
+        // classes[field][line]: the first line whose key in `field` equals this line's.
+        let mut classes: Vec<Vec<usize>> = Vec::with_capacity(fields);
+        for field in 0..fields {
+            let same = |a: usize, b: usize| match (key_of(a, field), key_of(b, field)) {
+                (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                    cmp_text_pairwise(x, y) == Ordering::Equal
+                }
+                _ => true,
+            };
+            let cost = |a: usize, b: usize| match (key_of(a, field), key_of(b, field)) {
+                (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                    text_units(x.len() + y.len()).max(1)
+                }
+                _ => 1,
+            };
+            classes.push(first_equal_lines(
+                rows.len(),
+                |line| key_of(line, field).map(group_key),
+                same,
+                cost,
+                &mut spend,
+            )?);
+        }
+        let mut index: HashMap<Vec<usize>, usize> = HashMap::new();
         let mut groups: Vec<Group> = Vec::new();
-        for row in rows {
+        for (line, &row) in rows.iter().enumerate() {
             let Some(tuple) = keys.get(row) else {
                 continue;
             };
-            let cells: Vec<CellKey> = tuple.iter().map(group_key).collect();
+            let cells: Vec<usize> = classes
+                .iter()
+                .map(|class| {
+                    class
+                        .get(line)
+                        .and_then(|&first| rows.get(first))
+                        .copied()
+                        .unwrap_or(row)
+                })
+                .collect();
             match index.entry(cells.clone()) {
                 Entry::Occupied(entry) => {
                     if let Some(group) = groups.get_mut(*entry.get()) {
@@ -146,7 +198,7 @@ impl Grouping {
     /// For each group, the id of its first `level` keys (groups sharing them share the id; all
     /// 0 for level 0): the key prefixes of PIVOTBY's relative sets.
     pub(crate) fn prefix_ids(&self, level: usize) -> Vec<usize> {
-        let mut index: HashMap<&[CellKey], usize> = HashMap::new();
+        let mut index: HashMap<&[usize], usize> = HashMap::new();
         self.groups
             .iter()
             .map(|group| {
@@ -275,13 +327,13 @@ impl Grouping {
         // The rows of the previous level's parents, handed to `aggregate` as the group one level up.
         let mut previous_rows: Vec<Vec<usize>> = Vec::new();
         for level in 0..fields.saturating_sub(1) {
-            let mut index: HashMap<(usize, &CellKey), usize> = HashMap::new();
+            let mut index: HashMap<(usize, usize), usize> = HashMap::new();
             let mut parent_rows: Vec<Vec<usize>> = Vec::new();
             // The previous level's parent of each parent.
             let mut above: Vec<usize> = Vec::new();
             let mut parents = Vec::with_capacity(self.groups.len());
             for (group, parent) in self.groups.iter().zip(&previous) {
-                let key = group.cells.get(level).unwrap_or(&CellKey::Empty);
+                let key = group.cells.get(level).copied().unwrap_or(usize::MAX);
                 let id = *index.entry((*parent, key)).or_insert_with(|| {
                     parent_rows.push(Vec::new());
                     above.push(*parent);
@@ -377,13 +429,13 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
     })
 }
 
-/// A key cell as it groups: `cell_key`, except that -0 is 0. Excel stores a cell `=-0` as 0, so
-/// 0, `=-0` and `=0` are one group (probes/groupby-pivotby-followup G!A781); the engine keeps the
-/// sign of a computed -0.
+/// A key cell's bucket as it groups: UNIQUE's (`unique_cell_key`: a text by its collation key),
+/// except that -0 is 0. Excel stores a cell `=-0` as 0, so 0, `=-0` and `=0` are one group
+/// (probes/groupby-pivotby-followup G!A781); the engine keeps the sign of a computed -0.
 fn group_key(node: &ArrayNode) -> CellKey {
     match node {
         ArrayNode::Number(n) if *n == 0.0 => cell_key(&ArrayNode::Number(0.0)),
-        other => cell_key(other),
+        other => unique_cell_key(other),
     }
 }
 
@@ -610,319 +662,4 @@ pub(crate) fn subtotal_levels(depth: isize) -> usize {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{Axis, Grouping, Line, ParentOrder};
-    use crate::expressions::{parser::ArrayNode, types::CellReferenceIndex};
-    use std::cmp::Ordering;
-
-    const CELL: CellReferenceIndex = CellReferenceIndex {
-        sheet: 0,
-        row: 1,
-        column: 1,
-    };
-
-    fn text(s: &str) -> ArrayNode {
-        ArrayNode::String(s.into())
-    }
-
-    /// The first key of each group and its rows, after sorting with `ascending`.
-    fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
-        let keys: Vec<Vec<ArrayNode>> = keys.iter().map(|key| vec![key.clone()]).collect();
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        grouping.sort_by_keys(&[ascending], CELL);
-        grouping
-            .groups
-            .into_iter()
-            .map(|group| (group.keys[0].clone(), group.rows))
-            .collect()
-    }
-
-    #[test]
-    fn case_folded_first_spelling_and_blank_last_both_ways() {
-        let keys = [
-            text("West"),
-            ArrayNode::Empty,
-            text("east"),
-            ArrayNode::Number(2.0),
-            text("East"),
-            ArrayNode::Boolean(true),
-        ];
-        let ascending = sorted(&keys, true);
-        assert_eq!(
-            ascending,
-            [
-                (ArrayNode::Number(2.0), vec![3]),
-                (text("east"), vec![2, 4]),
-                (text("West"), vec![0]),
-                (ArrayNode::Boolean(true), vec![5]),
-                (ArrayNode::Empty, vec![1]),
-            ]
-        );
-        // Descending reverses every type but keeps the blank key last (G!A145).
-        let descending = sorted(&keys, false);
-        assert_eq!(
-            descending
-                .iter()
-                .map(|(key, _)| key.clone())
-                .collect::<Vec<_>>(),
-            [
-                ArrayNode::Boolean(true),
-                text("West"),
-                text("east"),
-                ArrayNode::Number(2.0),
-                ArrayNode::Empty,
-            ]
-        );
-    }
-
-    #[test]
-    fn two_key_fields_sort_lexicographically() {
-        let keys = vec![
-            vec![text("b"), ArrayNode::Number(2.0)],
-            vec![text("a"), ArrayNode::Number(3.0)],
-            vec![text("b"), ArrayNode::Number(1.0)],
-            vec![text("a"), ArrayNode::Number(3.0)],
-        ];
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        grouping.sort_by_keys(&[true, false], CELL);
-        let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
-        assert_eq!(rows, [vec![1, 3], vec![0], vec![2]]);
-    }
-
-    #[test]
-    fn value_sort_keeps_parents_with_equal_aggregates_together() {
-        // Parents a and b both sum to 4: they keep key order and their children do not
-        // interleave; b's children tie at 2 and keep key order (w before y).
-        let keys = vec![
-            vec![text("a"), text("x")],
-            vec![text("b"), text("y")],
-            vec![text("a"), text("z")],
-            vec![text("b"), text("w")],
-        ];
-        let values = [1.0, 2.0, 3.0, 2.0];
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None)
-            .unwrap_or(Grouping { groups: Vec::new() });
-        let mut calls = 0;
-        let order = (ParentOrder::ByValue, Axis::Rows);
-        let sums = grouping.sort_by_aggregate(true, order, CELL, |rows, _| {
-            calls += 1;
-            ArrayNode::Number(rows.iter().map(|&row| values[row]).sum())
-        });
-        let leaves: Vec<_> = (0..4)
-            .map(|i| sums.of_line(Line::Group(i)).cloned())
-            .collect();
-        let rows: Vec<Vec<usize>> = grouping.groups.iter().map(|g| g.rows.clone()).collect();
-        assert_eq!(rows, [vec![0], vec![2], vec![3], vec![1]]);
-        assert_eq!(
-            leaves,
-            [1.0, 3.0, 2.0, 2.0].map(|n| Some(ArrayNode::Number(n)))
-        );
-        // One call per group and one per parent, and the subtotal lines get the parents' sums
-        // without another call.
-        assert_eq!(calls, 6);
-        let subtotals: Vec<_> = grouping
-            .lines(1, false)
-            .into_iter()
-            .filter(|line| matches!(line, Line::Subtotal { .. }))
-            .map(|line| sums.of_line(line).cloned())
-            .collect();
-        assert_eq!(
-            subtotals,
-            [Some(ArrayNode::Number(4.0)), Some(ArrayNode::Number(4.0))]
-        );
-        assert_eq!(calls, 6);
-    }
-
-    /// Three-key groups a/x/1, a/x/2, a/y/1, b/x/1, already in key order.
-    fn three_keys() -> Grouping {
-        let keys: Vec<Vec<ArrayNode>> = [
-            ("a", "x", 1.0),
-            ("a", "x", 2.0),
-            ("a", "y", 1.0),
-            ("b", "x", 1.0),
-        ]
-        .iter()
-        .map(|(a, b, c)| vec![text(a), text(b), ArrayNode::Number(*c)])
-        .collect();
-        Grouping::new(&keys, 0..keys.len(), |_| None).unwrap_or(Grouping { groups: Vec::new() })
-    }
-
-    #[test]
-    fn subtotal_lines_after_and_before_their_groups() {
-        let grouping = three_keys();
-        let subtotal = |level, start, end| Line::Subtotal { level, start, end };
-        // Depth 2: the first level only (probes/groupby-subtotals G!A1).
-        assert_eq!(
-            grouping.lines(1, false),
-            [
-                Line::Group(0),
-                Line::Group(1),
-                Line::Group(2),
-                subtotal(1, 0, 3),
-                Line::Group(3),
-                subtotal(1, 3, 4)
-            ]
-        );
-        // Depth 3: the deepest subtotal first below the groups (G!A61) ...
-        assert_eq!(
-            grouping.lines(2, false),
-            [
-                Line::Group(0),
-                Line::Group(1),
-                subtotal(2, 0, 2),
-                Line::Group(2),
-                subtotal(2, 2, 3),
-                subtotal(1, 0, 3),
-                Line::Group(3),
-                subtotal(2, 3, 4),
-                subtotal(1, 3, 4),
-            ]
-        );
-        // ... and the shallowest first above them (G!A91).
-        assert_eq!(
-            grouping.lines(2, true),
-            [
-                subtotal(1, 0, 3),
-                subtotal(2, 0, 2),
-                Line::Group(0),
-                Line::Group(1),
-                subtotal(2, 2, 3),
-                Line::Group(2),
-                subtotal(1, 3, 4),
-                subtotal(2, 3, 4),
-                Line::Group(3),
-            ]
-        );
-        assert_eq!(
-            grouping.lines(0, true),
-            (0..4).map(Line::Group).collect::<Vec<_>>()
-        );
-        assert_eq!(grouping.rows_of(0, 3), [0, 1, 2]);
-        assert_eq!(
-            grouping.subtotal_label_cells(1, 3, 3),
-            [text("b"), text(""), text("")]
-        );
-    }
-
-    /// Every kind of key cell a sort meets: each `ArrayNode` variant, numbers at the edges of the
-    /// 15-digit comparison (-0/+0, subnormals, 0.1+0.2 against 0.3, infinities, NaN), texts that
-    /// differ only in case, accents, expansions (`æ`, `ß`), skipped characters, the ASCII fast
-    /// path against the general one and lone surrogates, and every error kind.
-    fn sort_pool() -> Vec<ArrayNode> {
-        use crate::{expressions::token::Error, text::Text};
-        let numbers = [
-            f64::NEG_INFINITY,
-            -f64::MAX,
-            -1.0,
-            -1e-300,
-            -5e-324,
-            -0.0,
-            0.0,
-            5e-324,
-            1e-300,
-            0.1 + 0.2,
-            0.3,
-            0.999_999_999_999_999_9,
-            1.0,
-            1.0 + f64::EPSILON,
-            1.000_000_000_000_001,
-            123_456_789_012_345.6,
-            123_456_789_012_345.7,
-            f64::MAX,
-            f64::INFINITY,
-            f64::NAN,
-            -f64::NAN,
-        ];
-        let texts = [
-            "", " ", "\u{a0}", "\t", "\n", "\u{1}", "a", "A", "b", "B", "z", "ä", "Ä", "á", "à",
-            "ã", "å", "ª", "ae", "AE", "æ", "Æ", "ss", "SS", "ß", "th", "þ", "o", "ö", "ø", "d",
-            "đ", "ð", "i", "I", "ı", "İ", "ab", "a'b", "a-b", "a–b", "a—b", "-a", "'a", "a-", "1",
-            "-1", "'1", "10", "½", "¹", "~", "+", "€", "<", "😀", "\u{fffd}", "a\u{a0}b",
-        ];
-        let units: [&[u16]; 5] = [
-            &[0xD83D],
-            &[0xDE00],
-            &[0xD83D, 0xDE00],
-            &[0x61, 0xD800],
-            &[0xDC00, 0xD800],
-        ];
-        numbers
-            .into_iter()
-            .map(ArrayNode::Number)
-            .chain(texts.into_iter().map(text))
-            .chain(
-                units
-                    .into_iter()
-                    .map(|u| ArrayNode::String(Text::from_utf16(u.to_vec()))),
-            )
-            .chain([ArrayNode::Boolean(false), ArrayNode::Boolean(true)])
-            .chain(Error::ALL.into_iter().map(ArrayNode::Error))
-            .chain([ArrayNode::Empty])
-            .collect()
-    }
-
-    /// Checks that `cmp` is a total order on `pool`: reflexive, antisymmetric and transitive
-    /// (`slice::sort_by` may panic otherwise, since Rust 1.81). Exhaustive over all triples, on
-    /// a precomputed table.
-    fn assert_total_order(
-        pool: &[ArrayNode],
-        name: &str,
-        cmp: impl Fn(&ArrayNode, &ArrayNode) -> Ordering,
-    ) {
-        let n = pool.len();
-        let table: Vec<Vec<Ordering>> = pool
-            .iter()
-            .map(|a| pool.iter().map(|b| cmp(a, b)).collect())
-            .collect();
-        for i in 0..n {
-            assert_eq!(
-                table[i][i],
-                Ordering::Equal,
-                "{name}: {:?} not equal to itself",
-                pool[i]
-            );
-            for j in 0..n {
-                assert_eq!(
-                    table[i][j],
-                    table[j][i].reverse(),
-                    "{name}: not antisymmetric on {:?}, {:?}",
-                    pool[i],
-                    pool[j]
-                );
-                for k in 0..n {
-                    let (ij, jk) = (table[i][j], table[j][k]);
-                    // a <= b <= c implies a <= c, strictly when either step is strict.
-                    let implied = match (ij, jk) {
-                        (Ordering::Equal, step) | (step, Ordering::Equal) => Some(step),
-                        (x, y) if x == y => Some(x),
-                        _ => None,
-                    };
-                    if let Some(implied) = implied {
-                        assert_eq!(
-                            table[i][k], implied,
-                            "{name}: not transitive on {:?}, {:?}, {:?}",
-                            pool[i], pool[j], pool[k]
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn sort_comparators_are_total_orders_on_mixed_types() {
-        use crate::functions::spill_functions::sort_key_cmp;
-        let pool = sort_pool();
-        for ascending in [true, false] {
-            // SORT and SORTBY (texts aside: `compare_values_pairwise`), and GROUPBY/PIVOTBY.
-            assert_total_order(&pool, "sort_key_cmp", |a, b| {
-                sort_key_cmp(a, b, ascending, CELL)
-            });
-            assert_total_order(&pool, "key_cmp", |a, b| {
-                super::super::group_order::key_cmp(a, b, ascending, CELL)
-            });
-        }
-    }
-}
+mod tests;

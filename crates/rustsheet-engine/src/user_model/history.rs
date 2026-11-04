@@ -24,8 +24,8 @@ pub(crate) struct ColumnData {
 }
 
 impl Diff {
-    /// A `SetCellValue` of the user input `value`, typed rather than written through the legacy
-    /// entry.
+    /// A `SetCellValue` of the user input `value` from outside the engine, typed rather than
+    /// written through the legacy entry.
     pub(crate) fn set_cell_value(
         sheet: u32,
         row: i32,
@@ -39,6 +39,7 @@ impl Diff {
             column,
             new_value: value.to_string(),
             legacy: false,
+            external: true,
             old_value: Box::new(old_value),
         }
     }
@@ -54,6 +55,11 @@ pub(crate) enum Diff {
         new_value: String,
         /// `new_value` was written through the legacy entry (SPEC-0012), so redo must be too.
         legacy: bool,
+        /// `new_value` came from outside the engine (an embedder's input or pasted text), not
+        /// from the engine's own print of a formula (a fill, a copy, a merge), so redo reads it
+        /// as [`Model::set_user_input`](crate::Model::set_user_input) does: a padded bare column
+        /// `T[ Col ]` is no column there and the column in the engine's text (T-4023).
+        external: bool,
         old_value: Box<Option<Cell>>,
     },
     SetArrayValue {

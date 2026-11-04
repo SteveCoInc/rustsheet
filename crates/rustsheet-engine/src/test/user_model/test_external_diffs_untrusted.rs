@@ -178,6 +178,7 @@ fn crafted_diffs_are_refused() {
         column,
         new_value: "1".to_string(),
         legacy: false,
+        external: false,
         old_value: Box::new(old),
     };
     let array = |height| Diff::SetArrayValue {
@@ -563,6 +564,7 @@ fn anchors_restored_claiming_more_cells_than_they_bring_are_refused() {
             column,
             new_value: "1".to_string(),
             legacy: false,
+            external: false,
             old_value: Box::new(Some(anchor.clone())),
         })
         .collect();

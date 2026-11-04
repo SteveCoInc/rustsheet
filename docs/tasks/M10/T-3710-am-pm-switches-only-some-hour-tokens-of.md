@@ -3,7 +3,7 @@ id: T-3710
 title: "AM/PM switches only some hour tokens of a section to the 12-hour clock"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -22,3 +22,10 @@ Found by T-3532: probes/t3532-numeral-digit-fields row 10, all columns (numeral 
 
 ## Out of scope
 -
+
+## Outcome
+Probed 26 ASCII forms (probes/t3710-ampm-hour-tokens): only the last hour token before each AM/PM marker
+and the last hour of the section take the 12-hour clock (`hour_is_twelve_hour`). The probe also showed an hour
+token makes the next `mm` a minute again even after a minute (parser `minute_read` reset). Documented in
+number-formats.md. Eval: probes known failures 4221 -> 4219 (t3532-numeral-digit-fields S!A10:G10 fixed;
+new probe passes all 26 cells); no regressions.

@@ -358,7 +358,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // year in the others (probes/text-locale-japanese-year A1-A13).
             let mut seen_era = false;
             let mut names = NameTokens::new(p);
-            for token in tokens {
+            for (index, token) in tokens.iter().enumerate() {
                 // Excel: a date or clock token leaves the register holding the serial's last
                 // component, so an elapsed token after it counts from that (T-3419).
                 split |= is_date_or_clock(token);
@@ -417,8 +417,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let month = ymd_month as usize;
                         text.push_str(&p.numerals.field(&format!("{month:02}")));
                     }
-                    TextToken::DayNameShort
-                    | TextToken::DayName
+                    TextToken::DayNameShort(..)
+                    | TextToken::DayName(..)
                     | TextToken::MonthNameShort
                     | TextToken::MonthName
                     | TextToken::MonthLetter => {
@@ -428,8 +428,10 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let weekday = excel_weekday_index(serial_1900);
                         if let (Some(Calendar::Hebrew(adars)), Some(names)) = (p.calendar, p.names)
                         {
-                            let month_name =
-                                !matches!(token, TextToken::DayName | TextToken::DayNameShort);
+                            let month_name = !matches!(
+                                token,
+                                TextToken::DayName(..) | TextToken::DayNameShort(..)
+                            );
                             if month_name && adars.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
                                 return invalid_date(value);
                             }
@@ -467,7 +469,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     }
                     TextToken::Hour | TextToken::HourPadded => {
                         let mut hour = hours as i32;
-                        if p.use_ampm {
+                        if p.use_ampm && hour_is_twelve_hour(tokens, index) {
                             if hour == 0 {
                                 hour = 12;
                             } else if hour > 12 {
@@ -827,8 +829,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // Date tokens should not be present
                     TextToken::Day => {}
                     TextToken::DayPadded => {}
-                    TextToken::DayNameShort => {}
-                    TextToken::DayName => {}
+                    TextToken::DayNameShort(..) => {}
+                    TextToken::DayName(..) => {}
                     TextToken::Month => {}
                     TextToken::MonthPadded => {}
                     TextToken::MonthNameShort => {}
@@ -864,4 +866,23 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             }
         }
     }
+}
+
+/// Whether the hour token at `index` of a section with `AM/PM` or `A/P` takes the 12-hour clock.
+///
+/// Excel: only the last hour token before each marker and the last hour token of the section do;
+/// the others print 24-hour (`h|hh|mm|ss|h:mm:ss.00 AM/PM` of 45000.5432 is
+/// "13|13|02|12|1:02:12.48 PM", `h h AM/PM h h` "13 1 PM 13 1"; probes/t3710-ampm-hour-tokens,
+/// docs/excel-semantics/number-formats.md "Hours with AM/PM").
+fn hour_is_twelve_hour(tokens: &[TextToken], index: usize) -> bool {
+    tokens
+        .iter()
+        .skip(index + 1)
+        .find(|t| {
+            matches!(
+                t,
+                TextToken::Hour | TextToken::HourPadded | TextToken::AMPM | TextToken::AP(..)
+            )
+        })
+        .is_none_or(|t| matches!(t, TextToken::AMPM | TextToken::AP(..)))
 }

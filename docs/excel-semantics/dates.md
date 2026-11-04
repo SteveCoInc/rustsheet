@@ -1386,10 +1386,14 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
   `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
   Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
-  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
-Ours: `time_argument` in `functions/date_and_time.rs` (T-2267). It does not wrap yet: it gives `#NUM!` below
--32768, which T-3983 owns.
-Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+  0.6936342592592837. T-3983 refilled time-argument-bound, -window and -negative from excel-graph on 2026-11-04,
+  and they confirm the wrap.
+- Below -131072 (probes/t3983-time-argument-below-131072, excel-graph, 2026-11-04): the wrap holds down to -2^31
+  (`TIME(600,-131073,0)` = 23:59, `TIME(600,-1000000,0)` = 0.2222222222222214, `TIME(-131073,0,0)` is `#NUM!`).
+  A whole value below -2^31 reads as 0 (`TIME(600,-2147483649,0)` = 0, where the wrap would be -1; the same for -2^32,
+  -1E15 and -1E20 in the minute, second and hour), as a clamp to the 32-bit minimum -2^31 would give.
+Ours: matches. `time_argument` in `functions/date_and_time.rs` wraps (T-3983).
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03 and 2026-11-04).
 Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
@@ -1533,10 +1537,21 @@ not by the day-0 start/end.
 Evidence: probes/networkdays-intl-holiday-forms (22 cells), networkdays-intl-holiday-weekend-masks (45),
 networkdays-intl-holiday-weekend-dedupe (112), networkdays-intl-early-holidays (88), networkdays-intl-serial-zero-holiday (120);
 gen-m6 102b2df13f6891d2 A547, 1b4963f7cb42e2fa A385, ade135f51e0b7a36 A31 and A385, b91dcfba0176956e A493 and A499.
-Ours: implemented (T-3537): `Holidays::scalar`, set from the argument's node (`is_scalar_node`), read by `networkdays_of`.
-UNVERIFIED: a holidays argument that is a function returning a reference (INDEX, OFFSET, INDIRECT, CHOOSE, IF) is treated
-as a reference; only SUM, literals and `+` are probed. A named range is a reference.
-Status: VERIFIED for the probed forms
+Which kind an argument is (VERIFIED, excel-graph, 2026-11-04, T-4190): it is a reference exactly when ISREF of it is
+TRUE; the rule follows the evaluated kind, not the syntax. References: `(C1)`, `@C1`, `@(C1)`, `INDEX(C1:C2,1)`, `OFFSET(C1,0,0)`,
+`INDIRECT("C1")`, `INDEX(..):INDEX(..)`, `TRIMRANGE(C1:C1)`, and `IF`, `CHOOSE`, `IFS`, `SWITCH`, `XLOOKUP(1,{1},C1:C1)`,
+`LET(h,C1,h)`, `LAMBDA(x,x)(C1)`, `TAKE`/`DROP` of a range, and a defined name bound to a cell, when what they pick or return is a
+reference. A cell holding the text "45003" is a reference too. Scalars: the same pickers when they give a value (`IF(TRUE,45003)`,
+`CHOOSE(1,45003)`, `XLOOKUP(1,{1},{45003})`, `LET(h,45003,h)`, `LAMBDA(x,x)(45003)`, `LET(h,C1,h+0)`), a name bound to
+`=45003`, text `"45003"`, `--"45003"`, `N(C1)`, `MAX(C1)`, `ABS(C1)`, `DATE(..)`, `C1&""`, `IFERROR(C1,0)` (IFERROR does not
+hand the reference on), and every unary plus: `+C1`, `+(C1)`, `(+C1)`, `+@C1` are scalar. ISREF agrees on each unary form
+(`ISREF(+C1)` FALSE, `ISREF(@C1)` TRUE; see references.md "ISREF: a unary plus makes a value"). WORKDAY.INTL keeps no
+split for any of these forms (its controls are 45012 / 45011 throughout).
+Evidence: probes/networkdays-intl-holiday-kinds A1:H38 (M6), networkdays-intl-holiday-kinds-let A1:F11 (M7),
+networkdays-intl-holiday-kinds-names A1:F7 (M8; names in the case's `names`).
+Ours: implemented (T-3537, T-4190): `Holidays::scalar` is "neither an array nor `Model::is_reference`" of the argument (on the
+arm IF picked), set in `holiday_serials`, read by `networkdays_of`.
+Status: VERIFIED
 Tasks: T-3537
 
 ## DAYS error order

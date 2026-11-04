@@ -162,6 +162,9 @@ impl Model {
     /// text or an error fails before the search (probes/lookup-index-order H9, H13, H28); a
     /// reference is kept for [`Model::resolve_lookup_index`]. `INDEX(...)` is a reference too: its
     /// selected cell is read only after a match (probes/lookup-index-shapes H2, H3, H11, H12).
+    /// A reference-returning call that fails (`INDEX(E1:E4,"x")`, `OFFSET(E1,-5,0)`,
+    /// `INDIRECT("nope")`) comes back as its error and fails here like a value index, keeping
+    /// that error rather than mapping it to `#REF!` (probes/lookup-index-failing, T-4191).
     pub(super) fn lookup_index_arg(
         &mut self,
         node: &Node,
