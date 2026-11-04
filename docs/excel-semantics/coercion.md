@@ -1092,6 +1092,18 @@ Evidence: probes/paren-negative-text, probes/paren-negative-variants, probes/par
 Status: VERIFIED
 Tasks: T-0259, T-0277, T-0280, T-0281, T-0282, T-0283, T-1300, T-1309
 
+## Currency sign before parentheses is negative
+Rule (en-US; probes/t4117-typed-currency-paren, excel-graph 2026-11-04, T-4117): a currency sign, optional spaces, then a
+parenthesised unsigned amount is a negative number, typed or coerced: `$(12)`, `$ (12)`, `$(1,234.5)`, `$(12.5)` and
+`$(0)` are -12, -12, -1234.5, -12.5 and 0 (typed, ISNUMBER, `"..."+0`, VALUE and NUMBERVALUE agree). Typed `$(12.5)` gets
+`$#,##0.00_);[Red]($#,##0.00)`; the integer-amount format is inferred from `$12` (the ENTERED log of the integer rows was
+not captured). Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))` and `$(12)%`; `$(1,23)` is text typed
+and by coercion but NUMBERVALUE reads it as -123, and NUMBERVALUE reads `$(12)%` as -0.12 (not implemented here).
+`($12)` and `(12)` are the older paren forms above.
+Evidence: probes/t4117-typed-currency-paren (excel-graph, 2026-11-04).
+Status: VERIFIED
+Tasks: T-4117
+
 ## Typed currency and percent formats
 Rule (en-US, text typed into a cell; probes/typed-currency-percent-input, excel-graph 2026-10-11, raw `ENTERED` log in docs/research/typed-currency-percent-input-2026-10-11.md, T-0283): a leading `$` (also `-$`, `$-`, and inside parentheses) gives `$#,##0_);[Red]($#,##0)`, or `$#,##0.00_);[Red]($#,##0.00)` when the text has any decimal digits (`$1.50`, `$1.0`, `$1,234.5`); a `%` gives `0%` or `0.00%` with decimals (`1.5%`, `1.0%`, `12.345%` -> `0.00%`, the value keeps all digits) and ignores grouping (`1,000%` is `0%`); scientific text keeps `0.00E+00` whichever symbol is around it (`$1e3`, `1e3%`, `-$1e3`, `($1e3)`); plain grouped text gets `#,##0` / `#,##0.00` (`(1,000.5)` -> `#,##0.00`). `-$1e3` is -1000 (the engine used to return +1000, also through `0+"-$1e3"` and VALUE, which are unprobed). A euro sign is not an en-US currency: `1€`, `1.5€`, `-1€` and `€1` stay text with General. The engine matches the `$` and percent formats (T-0283) and keeps typed euro text as text (T-1335: `set_user_input` no longer lists `€` among the currencies; `0+` coercion of `1€` still reads a number, a separate probed path (paren-number-text-euro-suffix); VALUE shares that code path (cast.rs, text/common.rs) but has no oracle cell of its own). Other prefix symbols keep the plain `{symbol}#,##0` format (unprobed).
 Evidence: probes/typed-currency-percent-input (excel-graph, 2026-10-11).
