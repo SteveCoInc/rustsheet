@@ -231,6 +231,7 @@ probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1
 probes/t3895-collation-script-digits.case.json	1
+probes/t3897-r1c1-let-cell-names.case.json	12
 probes/t3906-rate-restart-oos.case.json	137
 probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4
