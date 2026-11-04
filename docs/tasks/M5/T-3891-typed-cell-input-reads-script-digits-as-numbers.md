@@ -3,7 +3,7 @@ id: T-3891
 title: "Typed cell input reads script digits as numbers with Excel's locale-tagged formats (T-3446 follow-up)"
 milestone: M5
 lane: engine
-status: in-progress
+status: done
 priority: P0
 size: M
 tier: opus
@@ -32,14 +32,32 @@ fraction `# ?/?` with no tag. Mixed scripts: `1٢3` takes `ar-SA,200`, `١२` t
 docs/excel-semantics/coercion.md "Script digits in number text (T-3446)".
 
 ## Acceptance criteria
-- [ ] Probe the format rule's open shapes first (excel-probe): two or more decimals (`١.٢٥`), decimal
+- [x] Probe the format rule's open shapes first (excel-probe): two or more decimals (`١.٢٥`), decimal
       percent (`١٢.٥%`), grouped decimals, `-$١٢`, `(١,٢٣٤)`, slash dates, clock with seconds and AM/PM,
       which block tags a three-script mix, and how the tagged formats render through TEXT/displayed text.
-- [ ] Typed script-digit text is a number with Excel's format for every probed shape; probes/t3446-script-digits-forms
+- [x] Typed script-digit text is a number with Excel's format for every probed shape; probes/t3446-script-digits-forms
       B12:B102 and probes/t3958-gurmukhi-tamil-telugu-khmer-digits Sheet1!B1:B44 (Gurmukhi, Tamil, Telugu, Khmer typed text) pass; the engine's number formatter accepts the `[$-xx-YY,N00]` tags it now stores.
-- [ ] Probe the typed-format tags of the Gurmukhi, Tamil and Telugu blocks and the Khmer shapes T-3958 did not log (a fresh fill of a new case prints the ENTERED lines; commit them under docs/research/).
-- [ ] `make check` green; reviewers approve.
+- [x] Probe the typed-format tags of the Gurmukhi, Tamil and Telugu blocks and the Khmer shapes T-3958 did not log (a fresh fill of a new case prints the ENTERED lines; commit them under docs/research/).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The bare ASCII clock `12:30` typed (T-3894).
 - Collation of these digits (T-3324).
+
+## Outcome
+- Probed (excel-graph 2026-11-04): probes/t3891-typed-script-digit-shapes (86 typed texts: the open
+  Arabic-Indic shapes, three-script mixes, and the eleven forms in Gurmukhi, Tamil, Telugu and Khmer; ENTERED
+  log in docs/research/t3891-typed-script-digit-shapes-2026-11-04.md) and probes/t3891-numeral-tag-render (30
+  TEXT cells over the `locale,N00` tags). Rules in coercion.md "Script digits in number text" and
+  number-formats.md "Numeral-system digits": the last script digit picks the tag, a plain number counts its
+  typed decimals (`0.##`), every percent is `0.00%`, every currency the long form, dates take
+  `mm/dd/yyyy`/`dd-mmm-yyyy`, exponent and fraction stay untagged; `,N00` is the numeral byte above a low byte.
+- `parse_typed_number` (formatter/parse_formatted.rs) maps script digits, parses the ASCII text and gives
+  Excel's format (`script_digit_format`, tags from `SCRIPT_DIGITS`, which `script_digit_to_ascii` now reads
+  too); `locale_tag::numerals` reads the `,N00` suffix, so the stored formats print the script's digits.
+- Cells: t3891-typed-script-digit-shapes 170/172, t3891-numeral-tag-render 28/30, and the typed cells of
+  t3446-script-digits-forms B12:B102 and t3958-gurmukhi-tamil-telugu-khmer-digits B1:B44 now pass.
+  Eval delta: probes known failures 135 fixed (t3446 B12:B102, t3958 B1:B44), 0 regressions; the two new cases
+  add 4 owned known failures (below).
+- Follow-ups (owners of the four visibly-off cells): T-4117 (typed `$(12)`, B29:C29), T-4107 (`,2000`
+  prints fullwidth, render A28), T-4108 (a currency tag after a literal paren, render A6).
