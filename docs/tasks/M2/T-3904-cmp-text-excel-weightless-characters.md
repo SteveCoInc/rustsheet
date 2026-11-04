@@ -4,7 +4,7 @@ title: "= , COUNTIF and XMATCH(..,0) equate the weightless characters with one a
 milestone: M2
 lane: engine
 status: todo
-priority: P2
+priority: P0
 size: M
 tier: opus
 depends_on: []

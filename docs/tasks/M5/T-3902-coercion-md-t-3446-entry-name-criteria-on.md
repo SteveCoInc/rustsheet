@@ -4,7 +4,7 @@ title: "coercion.md T-3446 entry: name criteria on the five new digit blocks as 
 milestone: M5
 lane: research
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

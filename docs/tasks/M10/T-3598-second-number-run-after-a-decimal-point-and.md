@@ -4,7 +4,7 @@ title: "Second number run after a decimal point and literal prints no grouping"
 milestone: M10
 lane: functions-text
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

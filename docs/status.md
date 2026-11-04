@@ -53,13 +53,18 @@ Oracle: excel-graph credentials are present (`rustsheet-oracle status`: excel-gr
 
 Spot-audit: the last was 2026-11-01, so none is due; next on or after 2026-11-08.
 
-**Critical lane:** engine, research, harness
+**Critical lane:** engine
 
 (Ordered list read by both tier workers, which then fall back to `functions`. The current milestone is M2.
-- engine: the 156 visibly-off M0–M2 cells: T-3904 (weightless characters in `=`, COUNTIF and XMATCH) and T-3929 (wildcard folding).
-- research: the M2 probe queue (T-3662, T-3305, T-3381).
-- harness: Gate A (SPEC-0029).
-- api and quality have no M2 work on the critical path. perf stays out: Phase 2.)
+**Owner ruling, 2026-11-04: until Phase 1 exits, the critical lane is `engine` only.** Research probes and harness
+Gate A work close no Phase 1 exit criterion, and ranking them above `functions` kept workers off the exit blockers.
+The steward keeps this line as it is until the owner changes it.
+- engine: the M2 exit cells (T-3904, T-4039, T-4040, T-4024), M5 (T-3891, T-3997, T-3950), M7 (T-3418) and M8
+  (T-4020, T-1683, T-3856), all P0.
+- functions: the M10 numeral-digit and locale cells (T-3598, T-3710, T-3711, T-3666, T-3089, T-2959), M6's TIME wrap
+  (T-3983) and M9 (worked in its own session).
+- research: only the probes that own exit cells, now P0 (T-3902, T-3739); T-3381 and T-3305 stay with the M2
+  collation work.)
 
 ## Needs owner
 
