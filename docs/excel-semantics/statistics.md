@@ -4224,12 +4224,13 @@ within 1E-15 relative / largest relative error:
   on the grid a = 2E9, 2.25E9, 2.5E9, 2.75E9, 3E9, 3.5E9 to 5.5E9 by 5E8, 6E9, 7E9, 8E9, 1E10 by b = 30 to 40 by 1/2, at four
   tails (x = 1 - q/a for I of about 1E-6, 0.05 and 0.5, and x = 1 - 1E-12). Rule:
   - **The band counts bup's terms, not b.** With n = int(b), less 1 at an integer b (the n of TOMS 708's L140 path, which
-    splits b0 into n + a fraction of 1/2 or 1), the cell is `#NUM!` exactly when n >= n_min(a): n_min = 39 for a = 2.25E9
+    splits b0 into n + a fraction of 1/2 or 1), the cell is `#NUM!` exactly when b < 40 and n >= n_min(a) (b = 40 leaves L140, see above, and is a number at all 14 a,
+    though its n = 39 is in the band's range): n_min = 39 for a = 2.25E9
     to 3E9 (band b = 39.5), 38 for 3.5E9 to 5.5E9 (b = 38.5, 39, 39.5), 37 for 6E9 to 8E9 (b = 37.5 to 39.5), 36 at 1E10
     (b = 36.5 to 39.5), none at 2E9. So the edge always opens at a half-integer b and takes the integer above it (same n),
     which is why no rule in b alone (T-4044) separated the earlier cells.
-  - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.79,
-    2.21)): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
+  - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.86,
+    2.21): 2E9 at n 39, a number, against 1E10 at n 36, `#NUM!`, needs w > 3/ln 5): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
     81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. This is a separating
     line fitted to the 14 probed a, not a mechanism: the TOMS quantity it tracks is not identified (bup's term ratio and
     brcmp1 do not move with a at a fixed tail; the exp(708) scaling runs only at an integer b, yet both kinds share n).
