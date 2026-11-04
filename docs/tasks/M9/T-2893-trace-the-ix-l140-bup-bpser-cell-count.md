@@ -3,7 +3,7 @@ id: T-2893
 title: "Trace the ix L140 bup+bpser cell count (model 1,620, ported dispatch 1,383) and score T-2506's criterion 2 on the model's set"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
