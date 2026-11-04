@@ -217,9 +217,10 @@ pub(super) fn script_element(c: char) -> Option<Element> {
         // A62, A126 = 1, B35 = 3, G17), as the same stand-in gives. T-3904 replaces it with the
         // weightless rule for the whole set.
         '\u{27bf}' | '\u{1878}' | '\u{20bf}' => Element::Skipped(UNASSIGNED),
-        // Hebrew `ץ` equals `צ` (G14 = 2, B97 = 2); the other final letters keep their code-point
-        // place for ordering and `=` (UNVERIFIED, T-3904), although lookup and criteria folds do
-        // equate them (T-3995, lookup_fold.rs).
+        // Hebrew `ץ` equals `צ` (G14 = 2, B97 = 2) and sorts at `צ`'s place. The collation's `fold`
+        // maps every final-letter pair to one character before this (`lookup_fold::class_first`),
+        // so `כ ך`, `מ ם`, `נ ן` and `פ ף` are equal under `=` and `<` too
+        // (probes/t4013-class-equality-order Calc!B1:F5, T-4013).
         '\u{5e5}' => single(other('\u{5e6}')),
         // Arabic `ﻻ` (the lam-alef ligature's isolated form) is `لا` (G13 = 2, B109 = 2).
         '\u{fefb}' => Element::Weights {

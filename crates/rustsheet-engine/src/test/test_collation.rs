@@ -691,6 +691,7 @@ fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
         assert!(equal(a, b), "{a:?} = {b:?}");
     }
     assert!(!equal("\u{10400}", "\u{10428}"), "Deseret keeps its case");
+    // ϴ is not θ: probes/t4013-class-equality-order Calc!B13 FALSE, D13 TRUE.
     assert!(!equal("\u{3f4}", "\u{3b8}"), "ϴ is not θ");
     // Class members weigh alike, so the character after them decides the order.
     let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));

@@ -61,7 +61,11 @@ weightless-position probe.
   psili+varia/dasia+oxia letters, `ϵ`/`ε`, U+1FBE/`ι`, `Ͷ`/`ϳ`, `ϑ`/`ϴ` and the Hebrew final forms.
 - `fold` leaves supplementary characters uncased, so Deseret U+10400 and U+10428 stay apart (Calc!B25).
 - The design point: one weight per class. Each member weighs as its first member, so `<` treats members as equal.
-  That `<` order is recorded as UNVERIFIED in coercion.md (no cell probes it). No collation-order cell moved:
+  The reviewers found that the classes were carried beyond the owned cells. New probe
+  probes/t4013-class-equality-order (108 cells, excel-graph, 2026-11-04) shows Excel agrees for every class kind:
+  the Hebrew finals, Latin Extended-D, Georgian U+10FA, ypogegrammeni, and `ϴ`=`ϑ` but `ϴ`>`θ`. `<` ties the members
+  and COUNTIF counts them. The engine passes all 108. coercion.md and the scripts.rs comment record it. No
+  collation-order cell moved:
   probes/t3465-collation-holdout, text-collation-order, t3211-collation-sort-cycles and t3181-collation-prefix-callers
   keep every cell.
 - Unit test `t4013_classes_are_equal_and_astral_case_pairs_apart` (test_collation.rs).
