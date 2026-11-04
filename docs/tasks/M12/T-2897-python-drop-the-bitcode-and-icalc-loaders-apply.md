@@ -3,7 +3,7 @@ id: T-2897
 title: "Python: drop the bitcode and icalc loaders, apply_external_diffs and test_panic (SPEC-0026)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
