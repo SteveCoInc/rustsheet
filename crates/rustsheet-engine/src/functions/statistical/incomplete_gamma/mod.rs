@@ -191,8 +191,12 @@ fn gamma_prefactor(a: f64, x: f64, form: Exponent) -> f64 {
         }
         return (a * x.ln() - x - super::special::ln_gamma(a)).exp();
     }
-    let away_from_mode =
-        form == Exponent::Excel && (a - x > a * NEAR_MODE_BELOW || x - a > a * NEAR_MODE);
+    let below = if (NEAR_MODE_BELOW_SHAPES).contains(&a) {
+        NEAR_MODE_BELOW
+    } else {
+        NEAR_MODE
+    };
+    let away_from_mode = form == Exponent::Excel && (a - x > a * below || x - a > a * NEAR_MODE);
     let exponent = if away_from_mode && x >= a * RATIO_FORM_MIN {
         // Excel's own form away from the mode. Excel's density and cdf are 0 to 1 ulp from it at
         // shapes 25, 50 and 500 (60 to 1,083 ulp from `rcomp`, and Excel itself up to 600 ulp
@@ -256,14 +260,17 @@ enum Exponent {
 const NEAR_MODE: f64 = 0.4;
 
 /// The relative distance (a - x) / a below the mode within which [`gamma_prefactor`] keeps the
-/// accurate exponent for a large shape. Excel's density and cdf are its ratio form, 0 to 2 ulp,
-/// at every probed x <= 0.664a for shapes 30 to 500 (up to 287 ulp from `rcomp`); from 0.668a
-/// to 0.99a Excel is neither form, and `rcomp` is no worse on balance (probes/
-/// t3252-gamma-prefactor-window, -holdout, -holdout-2; statistics.md, T-3252). A first freeze
-/// at 0.3 failed its hold-out (0.68a: 86 to 208 ulp off on the ratio form against 43 on
-/// `rcomp`); 0.33 was frozen before -holdout-2, which puts the switch in (0.332, 0.336).
-/// FITTED(T-3252, 102 cells, x/a 0.55..0.99, shape 30..500)
-const NEAR_MODE_BELOW: f64 = 0.33;
+/// accurate exponent, for a shape in [`NEAR_MODE_BELOW_SHAPES`] ([`NEAR_MODE`] elsewhere). Excel's
+/// density and cdf are its ratio form, 0 to 2 ulp, at every probed x <= 0.664a for shapes 30 to
+/// 500 (up to 287 ulp from `rcomp`); from 0.668a to 0.99a Excel is neither form (probes/
+/// t3252-gamma-prefactor-window, -holdout, -holdout-2; statistics.md, T-3252). A freeze at 0.3
+/// failed its hold-out and one at 0.33 fell outside -holdout-2's bracket (0.332, 0.336); 0.334
+/// is its middle, frozen before the fresh sweep probes/t3252-gamma-prefactor-sweep.
+/// FITTED(T-3252, 266 cells, x/a 0.55..0.99, shape 30..500)
+const NEAR_MODE_BELOW: f64 = 0.334;
+
+/// The shapes the [`NEAR_MODE_BELOW`] evidence covers (R4.3: the fit applies only there).
+const NEAR_MODE_BELOW_SHAPES: std::ops::RangeInclusive<f64> = 30.0..=500.0;
 
 /// The smallest x / a at which [`gamma_prefactor`] takes Excel's ratio form. Bracketed (T-2638):
 /// Excel is the ratio form bit for bit at a/21 (gen-m9/8dd2312c96effb1b A333
