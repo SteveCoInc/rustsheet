@@ -3,7 +3,7 @@ id: T-0417
 title: "Exporter writes _xlfn. on GAMMALN and ISO.CEILING that Excel-authored files omit"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
