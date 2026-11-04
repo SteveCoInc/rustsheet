@@ -21,7 +21,7 @@ use basym::basym;
 use bfrac::bfrac;
 use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, BupSum};
+use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_sum_overflows, BupSum};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -157,6 +157,17 @@ pub(crate) fn dispatch(a: f64, b: f64, x: f64, y: f64) -> Option<Dispatch> {
         x0,
         y0,
         lambda,
+    })
+}
+
+/// Whether Excel's incomplete beta K(a, b, x, y) is `#NUM!` because bratio's L140 bup sum overflows
+/// ([`bup::l140_bup_sum_overflows`]): a huge shape beside one below 40, as in
+/// `NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)` and `BETA.DIST(0.323212154487823,1E+13,29,TRUE)`
+/// (T-3576). Only BETA.DIST's and NEGBINOM.DIST's cdfs are probed there and ask it.
+pub(crate) fn l140_overflows(a: f64, b: f64, x: f64, y: f64) -> bool {
+    dispatch(a, b, x, y).is_some_and(|d| {
+        matches!(d.branch, Branch::L140BupBpser | Branch::L140BupBgrat)
+            && l140_bup_sum_overflows(d.a0, d.b0, d.x0, d.y0)
     })
 }
 
