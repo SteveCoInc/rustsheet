@@ -222,6 +222,7 @@ probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3662-collation-ignorables-prefix.case.json	67
 probes/t3662-collation-ignorables-sweep.case.json	30
 probes/t3662-collation-ignorables.case.json	318
+probes/t3666-lcid-unknown-sublanguage.case.json	3
 probes/t3678-time-argument-far-negative.case.json	81
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22

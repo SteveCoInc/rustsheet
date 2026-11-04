@@ -15,6 +15,7 @@ use crate::locale::excel_date_names::{
     ARABIC, ARABIC_LEVANT, BCP47_ONLY, EN_US, HIJRI_ARABIC, HIJRI_ENGLISH, HIJRI_FRENCH,
     HIJRI_TURKISH, LOCALES, LUNAR_JA, LUNAR_KO, LUNAR_ZH,
 };
+use crate::locale::lcids;
 
 /// The calendar a locale tag selects: what `yy`, `yyyy`, `b`, `e` and `g` print.
 /// Evidence: probes/text-locale-calendars, text-locale-calendars-detail, text-locale-japanese-year
@@ -136,10 +137,11 @@ const SYSTEM_TIME_LCID: u32 = 0xF400;
 /// Resolves the text between `[$-` and `]`.
 ///
 /// A hex LCID may carry a calendar in the digits above the low four (see `resolve_lcid`). An LCID
-/// with no table falls back to its language (`[$-80C]` is French, `[$-C]` too); 400 and 800, the
-/// user and system defaults, are en-US.
+/// with no table falls back to its language when Windows assigns it or its sublanguage is 0x3D to
+/// 0x3F (`[$-80C]` is French, `[$-C]` too; [`by_language`]); 400 and 800, the user and system
+/// defaults, are en-US.
 /// A BCP-47 tag matches case-insensitively, then by its language (`[$-fr-XX]` is French).
-/// Any other tag is read as extended hex ([`extended_hex`], [`resolve_extended`]): `[$-fr_FR]` is
+/// Any other tag is read as extended hex ([`extended_hex`]) and resolved like a hex one: `[$-fr_FR]` is
 /// the Saka calendar over an LCID with no locale.
 /// [`resolve_after_hijri_prefix`] resolves a tag that follows a `B2` prefix in its section.
 pub fn resolve(tag: &str) -> LocaleTag {
@@ -207,9 +209,7 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
     // Hijri over an LCID with no locale has the Arabic names (`B2[$-0]` and `B2[$-FFFF]` print
     // "شعبان"; probes/t2729-hijri-locale-tag A202, A251).
     match hex.map(|value| resolve_lcid(hijri_default(value, hijri_prefix))) {
-        Some(LocaleTag::Silent) | None => {
-            extended_hex(tag).map_or(LocaleTag::Silent, resolve_extended)
-        }
+        Some(LocaleTag::Silent) | None => extended_hex(tag).map_or(LocaleTag::Silent, resolve_lcid),
         Some(hijri) => hijri,
     }
 }
@@ -380,19 +380,6 @@ fn hijri_names(lcid: u16) -> &'static DateNames {
     }
 }
 
-/// [`resolve_lcid`] for a value read by [`extended_hex`]: an LCID without a table of its own
-/// falls back to its language only when it is neutral (below 0x400: `[$-g]` 0x10 is Italian,
-/// `[$-0_]` 0x2F Macedonian). `[$-x_y]` is 0x2412 and prints English, not Korean
-/// (text-locale-calendars A139), so an LCID with a sublanguage and no table has no locale here.
-fn resolve_extended(value: u32) -> LocaleTag {
-    let value = value & 0xFF_FFFF;
-    let lcid = (value & 0xFFFF) as u16;
-    if lcid > 0x3FF && lcid != 0x400 && lcid != 0x800 && table(lcid).is_none() {
-        return without_locale(value >> 16);
-    }
-    resolve_lcid(value)
-}
-
 /// Calendar digit `calendar` over an LCID with no locale (0 included): the calendar's date with
 /// its own names where it has them (Thai under 7, Arabic under A, B and C) and en-US names
 /// otherwise, the lunar ones included, and `A/P` as written. `[$-E08DE]mmmm|yyyy-mm-dd` of 45000
@@ -429,10 +416,16 @@ fn table(lcid: u16) -> Option<&'static DateNames> {
         .map(|(_, _, names)| *names)
 }
 
-/// The first table of `lcid`'s language, for an LCID with no table of its own.
+/// The first table of `lcid`'s language, for an LCID with no table of its own. Excel falls back
+/// to the language only for an LCID Windows assigns (`[$-819]` ru-MD prints Russian, `[$-810]`
+/// it-CH Italian) or one whose sublanguage is 0x3D to 0x3F (`[$-F412]`, `[$-FC12]` print Korean,
+/// `[$-F409]` English with its own day halves). Any other sublanguage, unassigned below 0x20 or
+/// anywhere in 0x20 to 0x3C, has no locale: en-US names and `A/P` as written (`[$-2412]`,
+/// `[$-C12]`, `[$-8012]`, `[$-F012]` print "March|Wed|6 PM|6 P|6 p"; probes/t3666-lcid-unknown-
+/// sublanguage, text-locale-regional-lcids-2 M1:M21; number-formats.md "More regional variants").
 fn by_language(lcid: u16) -> Option<&'static DateNames> {
     let language = lcid & 0x3FF;
-    if language == 0 {
+    if language == 0 || !(lcid >> 10 >= 0x3D || lcids::is_assigned(lcid)) {
         return None;
     }
     LOCALES

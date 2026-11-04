@@ -161,6 +161,8 @@ fn a_tag_neither_hex_nor_bcp47_reads_as_extended_hex() {
     assert_eq!(text(45000.0, "[$-x_y]mmmm|yyyy-mm-dd"), "March|2023-03-15");
     assert_eq!(text(0.75, "[$-Gg]h A/P"), "6 P");
     assert_eq!(text(0.75, "[$-zzzz]h A/P"), "6 P");
+    // `_409` is 0xF409: sublanguage 0x3D falls back to English with its own day halves.
+    assert_eq!(text(0.75, "[$-_409]h A/P"), "6 PM");
     // A BCP-47 language still comes first (`fr-FR_x` is French).
     assert_eq!(text(45000.0, "[$-fr-FR_x]mmmm"), "mars");
 }
@@ -334,4 +336,41 @@ fn empty_text_section_is_empty() {
     assert_eq!(format_text_value("x", "0;0;0;").text, "");
     assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
     assert_eq!(format_text_value("abc", "0;").text, "abc");
+}
+
+// probes/t3666-lcid-unknown-sublanguage and text-locale-regional-lcids-2 M1:M21 (T-3666).
+#[test]
+fn an_lcid_without_a_table_falls_back_to_its_language_only_when_assigned_or_high() {
+    let code = "mmmm|ddd|h AM/PM|h A/P|h a/p";
+    let english = "March|Wed|6 PM|6 P|6 p";
+    // Unassigned sublanguages below 0x20, and all of 0x20 to 0x3C, have no locale.
+    for tag in [
+        "2412", "C12", "1412", "C11", "1807", "7C09", "8012", "BC09", "F012",
+    ] {
+        assert_eq!(
+            text(45000.75, &format!("[$-{tag}]{code}")),
+            english,
+            "{tag}"
+        );
+    }
+    // 0x3D to 0x3F fall back to the language's first table, as an assigned LCID does.
+    for tag in ["F412", "F812", "FC12", "412"] {
+        assert_eq!(
+            text(45000.75, &format!("[$-{tag}]{code}")),
+            "3월|수|6 오후|6 오후|6 오후",
+            "{tag}"
+        );
+    }
+    assert_eq!(
+        text(45000.75, &format!("[$-F40C]{code}")),
+        "mars|mer.|6 PM|6 PM|6 PM"
+    );
+    assert_eq!(
+        text(45000.75, &format!("[$-810]{code}")),
+        "marzo|mer|6 PM|6 PM|6 PM"
+    );
+    assert_eq!(
+        text(45000.75, &format!("[$-F409]{code}")),
+        "March|Wed|6 PM|6 PM|6 PM"
+    );
 }
