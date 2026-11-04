@@ -261,6 +261,11 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
     ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149).
     Which line represents a merged group (its first, its smallest or its last) is not separated by
     the probe.
+    Confirmed out of sample (T-4237, probes/t4237-unique-cycle-fresh, excel-graph, 2026-11-04; case and the
+    engine's values committed before the fill, docs/research/t4237/): all 240 cells as predicted, on 60 seeded orders
+    of the six texts A3..A8 (the {A3,A4,A5} cycle with A6, A7 and A8), 36 two-column rows where both columns hold an
+    order of the cycle, and 24 rows of a number, boolean or mixed-type first column (`{1;"1";1}`,
+    `{TRUE;"TRUE";TRUE}`, `{0;FALSE;""}` among them) beside an order of the cycle.
   Ours (T-3181): the operators and the criteria compare texts with `cmp_text_pairwise`, which
   applies the rule (the criteria index still hashes the `CollationKey` of the wrapped sums,
   which every pair the rule finds equal shares, and tests each candidate with the rule); so do

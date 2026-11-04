@@ -3,7 +3,7 @@ id: T-4237
 title: "Confirm T-4200's UNIQUE merge model on a probe made after its freeze: 6-text sets mixing the A3-A5 cycle with A6-A8, and two-column rows where both columns cycle"
 milestone: M7
 lane: research
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -30,9 +30,20 @@ a miss reopens it.
   release build on the case JSON) and record them, so the score is a true hold-out.
 
 ## Acceptance criteria
-- [ ] The probe case is filled on excel-graph and its predictions were recorded before the fill.
-- [ ] Every cell passes, or the misses are recorded in coercion.md with an owner task.
-- [ ] `make check` green; reviewers approve.
+- [x] The probe case is filled on excel-graph and its predictions were recorded before the fill.
+- [x] Every cell passes, or the misses are recorded in coercion.md with an owner task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - GROUPBY and PIVOTBY (T-4088).
+
+## Outcome
+- probes/t4237-unique-cycle-fresh (tag M7, 120 rows: UNIQUE in A, exactly_once in B, the input order in C) was
+  written by docs/research/t4237/gen_probe.py and committed with the engine's values
+  (docs/research/t4237/predictions.tsv) before the excel-graph fill. Groups: 60 seeded orders of the six texts
+  A3..A8; 36 two-column rows with an order of the {A3,A4,A5} cycle in both columns; 24 rows of a number, boolean or
+  mixed-type first column beside an order of the cycle.
+- Every one of the 240 cells matches Excel, so T-4200's merge model holds out of sample. coercion.md "UNIQUE's
+  rule" records the confirmation. Which line represents a merged group is still not separated (not this probe's
+  question).
+- Eval delta: probes new case 1, 248 of 248 passing; fixed 0, regressions 0. No engine change.
