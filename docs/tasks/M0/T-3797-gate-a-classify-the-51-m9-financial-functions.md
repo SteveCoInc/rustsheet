@@ -3,7 +3,7 @@ id: T-3797
 title: "Gate A: classify the 51 M9 financial functions with no table or exemption, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -61,19 +61,30 @@ Every in-scope numeric M9 financial function that Gate A counts as missing ends 
   arrays. Create each with `make new-task MILESTONE=M0 LANE=harness`, `tier: opus`, `spec:` SPEC-0029.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) classifies each of the 51 functions (or the recounted list) as
+- [x] A decision record (`make new-decision`) classifies each of the 51 functions (or the recounted list) as
       `exact`, `composite` or "needs a table (T-XXXX)", with a cited reason (a semantics entry or probe) for each
       exemption.
-- [ ] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
+- [x] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
       lower by their number, with no stale or bad exemption.
-- [ ] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR, with
+- [x] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR, with
       the judgment notes above that apply to it. A generator gap found here (an order constraint, a date draw) is
       its own task, and the table tasks that need it depend on it.
-- [ ] `python3 scripts/tasks.py validate` passes.
-- [ ] `make check` green; reviewers approve.
+- [x] `python3 scripts/tasks.py validate` passes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Building any table, definition or generator change (the filed tasks do that).
 - The other M9 families: distributions (T-3798), sample statistics (T-3799), engineering and database (T-3800).
 - Decision 0188's 18 functions (NPER, RATE, IRR and XIRR have tables already).
 - Engine fixes for the functions' failing eval cells (their own tasks own them).
+
+## Outcome
+- Decision 0273. All 51 were still missing. They are classified as follows:
+  - `exact`, 6: the COUP* functions. Each result is a count, a serial or a day count, exact in binary on every basis;
+  - needs a table, 45: eight table tasks, T-4109 to T-4116. DOLLARDE and DOLLARFR get tables (no entry rules them
+    exact). The cash-flow arrays use one-row literals.
+- The generator's joint `draw` covers the date-order constraints, so no generator task was needed.
+- `rustsheet-eval accuracy`: `missing tables` 163 to 157, 0 failing, 0 table defects.
+- Eval delta: none.
+- T-3786 is dropped as a duplicate of T-3798 and T-3799. After this PR, every one of the 157 functions still missing
+  a table is named by an open Gate A table task (checked against every open task's title and Goal).
