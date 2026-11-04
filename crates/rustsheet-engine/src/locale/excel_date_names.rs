@@ -664,11 +664,23 @@ static TR: DateNames = DateNames {
 /// names with other `ddd` and day halves (probes/text-locale-regional-lcids-2 J1-J21, T-1875).
 pub(crate) static BCP47_ONLY: [(&str, &DateNames); 1] = [("pt-AO", &PT_AO)];
 
+/// The English names with lowercase day halves, which en-IE, en-BZ and en-HK print: `[$-1809]h AM/PM|h A/P|h a/p`
+/// is "6 pm|6 pm|6 pm" and their month and day names are en-US's (probes/text-locale-invalid-sublanguage
+/// S!J1:L4, excel-graph; T-4066). The morning "am" is the same rule, unprobed.
+static EN_LOWER_HALVES: DateNames = DateNames {
+    am: "am",
+    pm: "pm",
+    ..EN
+};
+
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 55] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 58] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
+    (0x1809, "en-IE", &EN_LOWER_HALVES),
+    (0x2809, "en-BZ", &EN_LOWER_HALVES),
+    (0x3C09, "en-HK", &EN_LOWER_HALVES),
     (0x40C, "fr-FR", &FR),
     (0xC0C, "fr-CA", &FR),
     (0x407, "de-DE", &DE),

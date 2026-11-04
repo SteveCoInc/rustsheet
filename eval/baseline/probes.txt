@@ -7140,9 +7140,6 @@ F	probes/t4236-pivot-date-groups.case.json	Calc!Z42
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z43
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z44
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z45
-F	probes/text-locale-invalid-sublanguage.case.json	S!J3
-F	probes/text-locale-invalid-sublanguage.case.json	S!K3
-F	probes/text-locale-invalid-sublanguage.case.json	S!L3
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
