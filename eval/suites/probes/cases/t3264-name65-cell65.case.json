@@ -1,0 +1,26 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3264: name N nests 65 ABS calls and A1 nests 65 around `N` (130 in all): do a cell's calls and its name's add up to the 65-call cap?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(N)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+    "B1": "=ISFORMULA(A1)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!B1"
+ ],
+ "names": {
+  "N": "=ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(1)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))"
+ }
+}

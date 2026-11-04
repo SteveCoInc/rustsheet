@@ -8,7 +8,7 @@ use crate::{
         parser::{
             is_multi_sheet_span,
             stringify::{rename_defined_name_in_node, to_rc_format},
-            Node,
+            Node, TOO_MANY_NESTED_CALLS_MESSAGE,
         },
         token::Error,
         types::{CellReferenceIndex, CellReferenceRC},
@@ -354,6 +354,13 @@ impl Model {
         // working when the user switches language/locale.
         let context = self.defined_name_context();
         let internal_formula = self.user_formula_to_internal(formula, &context)?;
+        // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;
+        // probes/t3264-api-name-65 is accepted, t3264-api-name-66 refused, T-3264; syntax.md
+        // "Formula nesting depth cap"). A loaded body is checked by the importer, which refuses
+        // the whole workbook as Excel does (T-3143).
+        if !loading && self.parser.nests_too_many_calls() {
+            return Err(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
+        }
         self.workbook.defined_names.push(DefinedName {
             name: name.to_string(),
             formula: internal_formula,
