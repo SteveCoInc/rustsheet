@@ -3,7 +3,7 @@ id: T-3312
 title: "XIRR, XNPV and nested financial calls: the 18 gen-m9 cells T-2611 left (numeric text in XIRR values, XNPV element order, inner-function causes)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
