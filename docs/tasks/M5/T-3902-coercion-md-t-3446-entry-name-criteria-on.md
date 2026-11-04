@@ -34,4 +34,4 @@ Excel-fidelity review of PR #2921 (T-3446), two MINOR findings:
 - Typed input (T-3891).
 
 ## Outcome
-A single UNPROBED line in coercion.md now names the criteria forms on the five new blocks (no probe column added); the row-102 wording is corrected in coercion.md and T-3891. Docs only, no eval change.
+A single UNPROBED line in coercion.md now names the criteria forms on the five new blocks that are not probed (a plain single digit is, by T-3895 A49/A74/A99/A124/A149; no probe column added); the row-102 wording is corrected in coercion.md and T-3891. Docs only, no eval change.
