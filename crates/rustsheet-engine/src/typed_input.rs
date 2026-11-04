@@ -183,8 +183,16 @@ impl Model {
         // Text from outside the engine: a padded bare column `T[ Col ]` is no column here, as
         // Excel reads it typed or loaded (T-3258); the engine's own re-entries of its printed
         // text go through `reenter_printed_input`.
+        self.as_external(|model| model.reenter_printed_input(sheet, row, column, value))
+    }
+
+    /// Runs `entry` with the parser reading formulas as untyped text from outside the engine
+    /// ([`Parser::set_external`](crate::expressions::parser::Parser)), then restores the engine's
+    /// reading. Each public entry that takes formula text from an embedder wraps its crate-internal
+    /// re-entry with it (T-3258, T-4023).
+    pub(crate) fn as_external<T>(&mut self, entry: impl FnOnce(&mut Self) -> T) -> T {
         self.parser.set_external(true);
-        let result = self.reenter_printed_input(sheet, row, column, value);
+        let result = entry(self);
         self.parser.set_external(false);
         result
     }
