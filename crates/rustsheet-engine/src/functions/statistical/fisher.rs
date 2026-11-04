@@ -778,6 +778,31 @@ mod tests {
     }
 
     // Excel's F quantile at a huge df is its BETA.INV mapped to F (probes-numeric, excel-graph).
+    /// F tails at a huge df2 just past the old 1E-6 shape-ratio cut of `large_shape_beta`, against
+    /// 50-digit references (docs/research/t4017/references.json; T-3754's Context for the t3354
+    /// point). Excel is correctly rounded or within a few ulp on each, and Cephes' fraction was 3E-11
+    /// to 1.4E-10 off them (T-3754, decision 0267).
+    #[test]
+    fn f_tails_past_the_old_shape_ratio_cut_match_the_math() {
+        // The last two are probes-numeric/t3354-f-dist-sweep S!C168 and its cdf companion S!A168,
+        // where Excel's 0.3658936312909749 and 0.6341063687090251 are the correctly rounded values.
+        let s3354 = (8.0, 5_567_623.0, 1.090_808_853_953_79);
+        for (df1, df2, x, upper, reference) in [
+            (12.0, 1e7, 7.0, true, 7.084_503_009_583_756e-13),
+            (40.0, 1e7, 3.0, true, 6.352_997_481_461_932e-10),
+            (40.0, 3e7, 2.0, true, 1.763_055_857_205_162e-4),
+            (s3354.0, s3354.1, s3354.2, true, 0.365_893_631_290_974_9),
+            (s3354.0, s3354.1, s3354.2, false, 0.634_106_368_709_025_1),
+        ] {
+            let got = f_tail(df1, df2, x, upper);
+            assert!(
+                // T-3754's target for the band: under 1E-14 relative.
+                (got / reference - 1.0).abs() < 1e-14,
+                "F tail ({x}, {df1}, {df2}, upper {upper}) = {got} against {reference}"
+            );
+        }
+    }
+
     #[test]
     fn huge_df_quantiles_go_through_excels_beta_inv() {
         // t1538-f-inv-huge-df A3: y = BETA.INV(0.5,5E9,2.5) near 1, bit for bit.

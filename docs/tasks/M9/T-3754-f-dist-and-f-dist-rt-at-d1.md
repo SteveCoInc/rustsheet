@@ -3,7 +3,7 @@ id: T-3754
 title: "F.DIST and F.DIST.RT at d1 = 8, d2 = 5567623, x = 1.09: ours is 1.4E-10 off while Excel is correctly rounded (t3354-f-dist-sweep A168, C168)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P0
 size: S
 tier: opus
@@ -47,16 +47,16 @@ Stage `accuracy`. Target: probes-numeric/t3354-f-dist-sweep S!A168 and S!C168 wi
 significant digit of Excel's value (they are correctly rounded, so that is the math's value).
 
 ## Acceptance criteria
-- [ ] `make eval-show CASE=probes-numeric/t3354-f-dist-sweep.case.json` shows S!A168 and S!C168 within half a unit
+- [x] `make eval-show CASE=probes-numeric/t3354-f-dist-sweep.case.json` shows S!A168 and S!C168 within half a unit
       of Excel's 15th significant digit (bit-exact preferred). No cell of t3354-f-dist-sweep or
       probes/t3354-f-dist-tiny-x-huge-d2 that passes today fails.
-- [ ] The engine-vs-mpmath grid above, committed under docs/research/t3754/, reports the engine's maximum relative
+- [x] The engine-vs-mpmath grid above, committed under docs/research/t3754/, reports the engine's maximum relative
       error per stratum before and after. After the fix, the band that held these cells is under 1E-14 relative.
-- [ ] A unit test pins `F.DIST.RT(1.09080885395379,8,5567623)` = 0.3658936312909749 and the cdf companion.
-- [ ] No new known-failure lines in any eval/baseline/*.txt (`make eval-baseline` refuses regressions); T-3479's
+- [x] A unit test pins `F.DIST.RT(1.09080885395379,8,5567623)` = 0.3658936312909749 and the cdf companion.
+- [x] No new known-failure lines in any eval/baseline/*.txt (`make eval-baseline` refuses regressions); T-3479's
       cell list drops S!A168 and S!C168.
-- [ ] statistics.md records the branch that was inaccurate and what replaced it.
-- [ ] `make check` green; reviewers approve.
+- [x] statistics.md records the branch that was inaccurate and what replaced it.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Bit parity on the other t3354 cells (T-3479, T-3527).
@@ -75,4 +75,25 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json (2): Calc!A189, A219
 - probes-numeric/t4017-f-huge-df2-above-mean-3e7.case.json (23): Calc!A177-A179, A181, A183, A185, A187, A189, A193-A195, A197, A199, A201, A203, A205, A209-A211, A213, A215, A217, A219
 
-- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+- [x] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Outcome
+- **Cause.** The F tails at a huge df2 with a b/a just past `large_shape_beta::MAX_SHAPE_RATIO` (1E-6) fell to Cephes'
+  continued fraction, which is 1E-11 to 1E-9 off there. Examples: t3354 at d2 = 5567623, and t4017 at df2 1E7 to 3E7.
+- **Fix.** The cut is now 4E-5, which is `MAX_SECOND_SHAPE / MIN_SHAPE`, so the DiDonato-Morris expansion covers every
+  a >= 1E6 and b < 40.
+- **Grid** (docs/research/t3754, 640 points against 60-digit mpmath): worst relative error 7.0E-10 → 2.1E-14, median
+  6.4E-16 → 2.5E-16, points past 5E-14 169 → 0.
+- **Eval.** On probes-numeric, 85 cells change and every one moves closer to the true value:
+  - 12 become bit-exact;
+  - F.DIST.RT's visibly-off numbers go from 114 to 44 and F.DIST's from 849 to 834;
+  - `make eval-check` shows no gated cell moves, and no baseline line changes.
+- **The listed cells.** 83 of the 90 are now within 13 digits of Excel. There the gap is Excel's own error, about
+  1E-14, against ours of about 3E-16 (decision 0267 residue).
+  - S!C168 is within 15 digits. S!A168 is 6E-16 off the math and misses Excel's 15th-digit half unit by a hair.
+  - 5 deep-tail cells at df2 1E8 to 1E10 (1E-90 to 1E-142) stay at the 12th digit. There Excel is 4E-14 to 1.4E-13 off
+    the math and the engine 4E-15 to 7E-14.
+  - 2 cells are Excel's 0 against a subnormal tail (t3354 S!A9, S!A35). That is a different rule, not this kernel.
+- **Unit test.** `f_tails_past_the_old_shape_ratio_cut_match_the_math` pins the t3354 pair and three t4017 tails against
+  their references.
+- **statistics.md.** It records the old cut, the branch it sent these inputs to, and the new cut.

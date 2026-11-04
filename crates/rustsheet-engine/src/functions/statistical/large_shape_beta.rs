@@ -20,10 +20,15 @@ use super::incomplete_gamma::{accurate_gamma_density, gamma_ur};
 use crate::x87_exp::{dd_mul, two_sum};
 use crate::x87_log10::ln_double_double_pair;
 
-/// The largest b/a the expansion is used at: below it the series' first term is under 1E-12 of
-/// the leading Q(b, z), and Cephes' fraction is off by far more (T-2528 sweep against a 60-digit
-/// mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5).
-pub(super) const MAX_SHAPE_RATIO: f64 = 1e-6;
+/// The largest b/a the expansion is used at: [`MAX_SECOND_SHAPE`] over [`MIN_SHAPE`], so every
+/// a and b the other bounds allow. Each series term is about (b/nu)^2 of the one before, so at
+/// 4E-5 the sum still converges in a few terms, and Cephes' fraction is far worse there:
+/// - T-2528 sweep against a 60-digit mpmath `betainc`: 1E-7 relative at a = 5E9, b = 2.5.
+/// - T-3754 grid (decision 0267): F tails at df1 3 to 79, df2 2.1E6 to 5E7 and x 0.5 to 5, 640
+///   points against 60-digit mpmath. At the old 1E-6 cut the worst point was 7E-10 relative and
+///   169 points were past 5E-14. At 4E-5 the worst is 2.1E-14 and the median 2.5E-16, while
+///   Excel is within about 1E-13 of the math there (statistics.md, the T-4017 sweep).
+pub(super) const MAX_SHAPE_RATIO: f64 = 4e-5;
 
 /// The smallest first shape the expansion is used at. A tiny b at a moderate a also has b/a below
 /// [`MAX_SHAPE_RATIO`], where the expansion's terms in 1/nu are not small: `BETA.DIST(0.997,3.366,
@@ -40,7 +45,7 @@ const MAX_SECOND_SHAPE: f64 = 40.0;
 const MAX_SERIES_TERMS: usize = 30;
 
 /// The deepest cut of [`legendre_fraction`]: it needs about 10 cbrt(b) partial quotients at its
-/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is at most 1E-6 of a finite a here.
+/// slowest, z = b + 1 (`incomplete_gamma`'s budget), and b is below [`MAX_SECOND_SHAPE`] here.
 const MAX_FRACTION_DEPTH: u32 = 1 << 14;
 
 /// The relative size of the last series term at which the series stops.
