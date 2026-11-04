@@ -4,7 +4,7 @@ title: "The ^ operator keeps a subnormal at x^2 for x = 1E-160, 1E-155, 1.1E-155
 milestone: M5
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

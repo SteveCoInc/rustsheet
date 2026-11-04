@@ -4,7 +4,7 @@ title: "Date-name tables for LCIDs Excel resolves but we have no table for (bn-I
 milestone: M10
 lane: functions-text
 status: todo
-priority: P3
+priority: P0
 size: M
 tier: sonnet
 depends_on: []

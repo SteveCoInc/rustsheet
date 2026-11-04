@@ -4,7 +4,7 @@ title: "M6 exit owner for probes/t3929-wildcard-fold-xmatch Calc!E3, E7, E29, E3
 milestone: M6
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: [T-3904, T-4013]

@@ -4,7 +4,7 @@ title: "M5 exit owner for probes/t3945-atan-near-midpoint S!C8 and S!C10: they p
 milestone: M5
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: [T-3932]
