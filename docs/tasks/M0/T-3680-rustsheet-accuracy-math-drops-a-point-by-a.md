@@ -72,8 +72,9 @@ branch, not instructions.
       (UNDERFLOW_SOURCE).
   - A239 is inside Gate A's envelope: Excel is about 5.2e-14 relative from the math, ours about 1.25e-13. The fidelity
     reviewer confirmed A239 independently with a Lentz continued fraction (DLMF 8.17.22). Record both in the Outcome.
-- When the window closed, a regeneration of probes and probes-numeric (2 workers each, from `ca8616215`) was running.
-  It is not committed.
+- When the window closed, a regeneration of probes and probes-numeric (2 workers each, from `ca8616215`) was stopped
+  unfinished. Its first three probes sidecars (t3007, t3350, t3352) are committed as written. Every sidecar still needs
+  the full regeneration of step 1.
 - Next steps:
   1. Run `cd tools && .venv/bin/rustsheet-accuracy math --suite probes-numeric`, then `--suite probes`.
      - Call the venv binary: two concurrent `uv run` calls failed with "Failed to spawn".
