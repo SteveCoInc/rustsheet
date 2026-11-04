@@ -3,7 +3,7 @@ id: T-3963
 title: "RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-secant state fits (after T-3850)"
 milestone: M9
 lane: functions-financial
-status: blocked
+status: todo
 priority: P2
 size: M
 tier: opus
@@ -96,15 +96,19 @@ because T-3850 showed that no rule on the model's state at the flat step does it
 - **Follow-up:** T-3424 keeps the wrong-type cells (zero steps Excel errs on). The noise-only nper-1/2 residuals where
   Excel still restarts (t3906 A15, A64) are filed as a new task.
 
-## Blocked because
-Blocked because: owner ruling (T-3916). The model removes T-3698's restart, and that changes which noise-floor points
-are inside the Gate A envelope: on probes/t3906-rate-restart-oos 206 points are inside, against the merged rule's 207
-(A15, A64, A121 and A143 move out, A17, A194 and A195 move in). On the fresh probe A59, A60, A73 and A188 become numbers
-where Excel is `#NUM!`. Keep, narrow or revert of T-3698's restart is the owner's call under T-3916, so keep-r0 is
-added there as option 4. Excel-fidelity review of round 2 (head 5fcba30): BLOCK on that ground. Security and design
-APPROVE on 5fcba30.
-
-Also open from that review, for whoever resumes after the ruling:
+## Handoff
+- Branch: `agent/functions-financial/T-3963-rate-noise-floor-iterates` (draft PR #3019). Resume it there, not on a new branch.
+- Unblocked by the 2026-11-04 steward run: T-3916 is done on `main` (decision 0265, option 3, "Rule on R2 at the
+  noise floor"). The ruling kept T-3698's restart against options 1 to 3; keep-r0 (option 4) was added to T-3916 only
+  on this branch, so the owner did not rule on it.
+- Next step: re-judge keep-r0's envelope moves (t3906-rate-restart-oos A15, A64, A121, A143 out; A17, A194, A195 in;
+  the fresh probe's A59, A60, A73, A188) under decision 0265: a point whose noise width exceeds ε is judged against
+  Excel's 15 digits only, with the width reported per point. If keep-r0 then moves no point out (errors against
+  numbers still fail), fix the open items below, run the full panel and enqueue. If it still does, close #3019 and
+  land its findings in a docs-only PR, as the landing notes say.
+- The branch conflicts with `main` on the T-3916 and T-3963 task files, `eval/baseline/probes.txt`,
+  `eval/baseline/visible-parity.txt` and `quality/fitted.json`: resolve with `make catch-up PR=3019`.
+- Open items from the round-2 review:
 - add the correctly rounded (50-digit root) candidate's train and test counts to the R4.1 record (t3906 and the Gate
   A tables carry math sidecars);
 - financial.md's status for the new entry should read partial (it is bit-exact on 59 of 240 fresh calls);
