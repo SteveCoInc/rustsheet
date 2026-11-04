@@ -463,15 +463,23 @@ impl PyWorkbook {
         max_iterations: u32,
         max_change: f64,
     ) -> PyResult<()> {
-        if enabled && (max_iterations == 0 || !max_change.is_finite() || max_change < 0.0) {
-            return Err(PyValueError::new_err(
-                "max_iterations must be at least 1 and max_change a finite number >= 0",
-            ));
-        }
-        let setting = enabled.then_some(Iteration {
+        let wanted = Iteration {
             max_iterations,
             max_change,
-        });
+        };
+        // The engine owns Excel's range (1 to `MAX_ITERATIONS`, finite non-negative delta): a
+        // setting it would bring back into range is rejected, not silently replaced.
+        let in_range = wanted.within_excel_range();
+        if enabled
+            && (in_range.max_iterations != max_iterations
+                || in_range.max_change.to_bits() != max_change.to_bits())
+        {
+            return Err(PyValueError::new_err(format!(
+                "max_iterations must be 1 to {} and max_change a finite number >= 0",
+                Iteration::MAX_ITERATIONS
+            )));
+        }
+        let setting = enabled.then_some(wanted);
         py.detach(|| lock(&self.wb).set_iteration(setting));
         Ok(())
     }
@@ -626,9 +634,12 @@ impl PyTransaction {
 /// Position of `name` in `sheets`, resolved with the facade's own case-insensitive rule. The
 /// facade's `Workbook::sheet_id` cannot be used because the transaction's ops are not applied
 /// yet, so sheets added or renamed earlier in the same block exist only in this list.
+fn sheet_pairs(sheets: &[(SheetId, String)]) -> Vec<(SheetId, &str)> {
+    sheets.iter().map(|(id, n)| (*id, n.as_str())).collect()
+}
+
 fn find_sheet(sheets: &[(SheetId, String)], name: &str) -> Result<usize, EditError> {
-    let pairs: Vec<(SheetId, &str)> = sheets.iter().map(|(id, n)| (*id, n.as_str())).collect();
-    resolve_sheet_by_name(&pairs, Some(name))
+    resolve_sheet_by_name(&sheet_pairs(sheets), Some(name))
         .and_then(|id| sheets.iter().position(|(i, _)| *i == id))
         .ok_or_else(|| EditError::Ref(RefError::UnknownSheet(name.to_owned())))
 }
@@ -643,8 +654,7 @@ fn apply(
             Op::Set(r, input) => txn.set(r.as_str(), input)?,
             Op::Clock(clock) => txn.set_clock(clock)?,
             Op::DataTable(range, row_input, column_input) => {
-                let pairs: Vec<(SheetId, &str)> =
-                    sheets.iter().map(|(id, n)| (*id, n.as_str())).collect();
+                let pairs = sheet_pairs(&sheets);
                 let by_name = |n: Option<&str>| resolve_sheet_by_name(&pairs, n);
                 let range = parse_range(&range, by_name)?;
                 let row_input = row_input.map(|r| parse_cell(&r, by_name)).transpose()?;

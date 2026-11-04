@@ -410,6 +410,10 @@ def test_iteration_settings_round_trip(wb):
     with pytest.raises(ValueError):
         wb.set_iteration(max_iterations=0)
     with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=32768)
+    wb.set_iteration(max_iterations=32767)
+    assert wb.iteration == (32767, 0.001)
+    with pytest.raises(ValueError):
         wb.set_iteration(max_change=float("nan"))
 
 

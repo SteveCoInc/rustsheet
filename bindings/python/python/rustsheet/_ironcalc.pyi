@@ -49,7 +49,10 @@ class Transaction:
         row_input: str | None = None,
         column_input: str | None = None,
     ) -> None:
-        """Add a what-if data table with result cells `range`; the next evaluation fills them."""
+        """Add a what-if data table with result cells `range`; the next evaluation fills them.
+
+        Errors (EditError) surface when the `with` block exits and roll the block back.
+        """
 
 class Workbook:
     def __init__(
@@ -79,7 +82,10 @@ class Workbook:
     def set_iteration(
         self, enabled: bool = True, max_iterations: int = 100, max_change: float = 0.001
     ) -> None:
-        """Turn iterative calculation on or off; applies from the next recalculation."""
+        """Turn iterative calculation on or off; applies from the next recalculation.
+
+        max_iterations must be 1..=32767 and max_change finite and >= 0, else ValueError.
+        """
     @property
     def sheet_names(self) -> list[str]: ...
     def value(self, ref: str) -> CellValue: ...
