@@ -3,7 +3,7 @@ id: T-2897
 title: "Python: drop the bitcode and icalc loaders, apply_external_diffs and test_panic (SPEC-0026)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
@@ -41,7 +41,7 @@ Removed the listed loaders, writers, diff exchange and both `test_panic`s from t
 examples; dropped the unused `bitcode` dependency; `tests/test_io.py` asserts every name is gone; hidden-row test now
 round-trips through xlsx. README notes the removal. Eval delta: none (bindings only). `make py-bindings`: 171 passed.
 
-## Handoff
+## Handoff (resumed)
 Implementation is complete and pushed (PR #3212, head efbe9ff): all listed symbols removed, `bitcode` dep dropped, `make check-fast` green
 (171 Python tests), design and security reviewers APPROVE. CI fails only on `hygiene`: `scripts/check_governance.py` reports
 "test files deleted (requires a decision record and reviewer sign-off): bindings/python/tests/test_diffs.py". The task (and SPEC-0026)
