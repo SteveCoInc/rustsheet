@@ -1126,6 +1126,18 @@ cells and moves 4 closer, but loses `CHIDIST(42,7)` (0 to 1 ulp) and moves 4 far
 e^-x sum x^(j - 1/2) / Gamma(j + 1/2): with Excel's own ERFC and EXP in plain doubles that form gives Excel's bits at 75
 of 95 half-integer cells with x <= 5 and at 21 of 193 above, and with the series in double-double at 9 of 92 on
 [a + 1, 30] (T-3285 scratch harness). Excel's form past x = 30 is T-3269's subject.
+Near the mode at a large shape Excel is correctly rounded (T-3286; 60-digit mpmath `gammainc`): `POISSON.DIST(46040,46071,TRUE)`
+= Q(46041, 46071) is 0.4438020698095389, -0.2 ulp (ironcalc-calc POISSON.xlsx D55), `POISSON.DIST(1E6,1E6,TRUE)`
+0.5002659614862837, +0.1 (D31), `POISSON(1E12,1E12,TRUE)` 0.5000002659615203 (probes/incomplete-gamma-cap E11), and
+`GAMMA.DIST(99990000,99999999,1,TRUE)` 0.15867945221382798, -1.2 (probes/t2982-gamma-inv-huge-shape A144). Ours takes
+Temme's expansion within `NEAR_MODE` of x = a from a shape of 1E3 (below 1E8 the series after `rcomp` was 4 to 16 ulp
+off there), with its exponent a·phi in double-double: phi from s = (x - a)/(x + a) as s²(x + a)/a - 2(s³/3 + s⁵/5 + ...)
+near the mode, and erfc(sqrt(a phi)) stepped from the rounded root. A rounded a·phi costs about a·phi ulps of the tail
+(10 to 230 at shapes 1E3 to 46041, x from 0.9a to 1.1a), and ln x - ln a loses phi itself at a = 1E12 + 1, x = 1E12
+(phi 5E-25). Within an ulp of mpmath at shapes 1E3 to 1E6 over the band, 2 ulp for P at 1E3 below 0.9a. Not reached:
+shapes 21 and 101 (`POISSON(20,25,TRUE)`, probes-numeric t1048-poisson A9, Excel +1.5 ulp, ours +7.5;
+`POISSON.DIST(100,100,TRUE)`, D19), where the 4-term expansion's dropped term is 3E-13 at 101, and t2982 A146 (Excel
+itself -13.6 ulp).
 Unit tests (`incomplete_gamma.rs`): within 8 units of 2^-52 of mpmath at a in {0.001, 0.01, 0.3, 0.5, 9, 500}, P + Q = 1
 within 2 of them, the a = 1 identity, the b = 1E6 scale. The 2^19-term cap (section above) is unchanged; the series now
 runs to 2^-54 instead of 1E-15, about 8% more terms near x = a, so an inversion's budget runs out at a somewhat smaller
