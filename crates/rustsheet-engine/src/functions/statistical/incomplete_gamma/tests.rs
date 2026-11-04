@@ -511,9 +511,9 @@ fn wilson_hilferty_quantile_is_excels_at_a_huge_shape() {
     }
 }
 
-/// Excel's three regimes from shape 1E9 (probes/t3070-gamma-inv-band, T-3070): the closed form
-/// where the start's density underflows, the true quantile inside the fitted band, `#NUM!` (NaN)
-/// outside it.
+/// Excel's three regimes (probes/t3070-gamma-inv-band, T-3070, T-3409): the closed form where the
+/// start's density underflows, the true quantile where the search converges within its step
+/// limit, `#NUM!` (NaN) where it does not.
 #[test]
 fn huge_shape_quantile_has_excels_three_regimes() {
     let close = |ours: f64, excel: f64| ((ours - excel) / excel).abs() <= 1e-15;
@@ -543,6 +543,22 @@ fn huge_shape_quantile_has_excels_three_regimes() {
     ));
     assert!(huge_shape_quantile(1e9, 1.0, 1e-180, Tail::Lower, -28.642_286_179_286_17).is_nan());
     assert!(huge_shape_quantile(1.5e9, 1.0, 1e-140, Tail::Lower, -25.227_503_820_942_285).is_nan());
+    // T-3409's search model below shape 1E9 and at T-3396's band: probes-numeric/
+    // fit-audit-t3070-shape-min A19 `GAMMA.INV(1E-300,6E+8,1)` `#NUM!` (about 222 steps) and
+    // `GAMMA.INV(1E-300,5E+8,1)` a value (205), probes/t3396-gamma-inv-band-huge
+    // `GAMMA.INV(1E-80,1E10,1)` `#NUM!` (the start past the mode).
+    let z300 = -37.047_096_299_361_2;
+    assert!(huge_shape_quantile(6e8, 1.0, 1e-300, Tail::Lower, z300).is_nan());
+    assert!(huge_shape_quantile(5e8, 1.0, 1e-300, Tail::Lower, z300).is_finite());
+    assert!(huge_shape_quantile(1e10, 1.0, 1e-80, Tail::Lower, -18.991_635_878_820_205).is_nan());
+    // probes/t3350-chisq-inv-huge-df A205 `CHISQ.INV.RT(1E-300,5E6)`: Excel is its start
+    // 5119417.201267746 (the density there underflows), but the start's fitted terms are 3.4E-9
+    // off below shape 1E9, so ours keeps the true quantile 5118069.30177... (TODO(T-4205)).
+    let ours = huge_shape_quantile(2.5e6, 2.0, 1e-300, Tail::Upper, -z300);
+    assert!(
+        ((ours - 5_118_069.301_773_226) / ours).abs() <= 1e-14,
+        "{ours}"
+    );
     // A371 `CHISQ.INV.RT(1E-100,1E10)`: the right tail's closed form at shape 5E9.
     let ours = huge_shape_quantile(5e9, 2.0, 1e-100, Tail::Upper, 21.273_453_560_965_32);
     assert!(
