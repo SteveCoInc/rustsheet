@@ -3,7 +3,7 @@ id: T-4192
 title: "XLOOKUP with an error return_array and with wildcard match_mode under a binary search_mode: probe and match"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -38,15 +38,25 @@ docs/excel-semantics/lookup.md records both as unprobed.
   error: argument kinds, research). Leave those kinds to it.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M6) holds the cells above.
-- [ ] lookup.md records both rules with the cells, and the "Still unprobed" sentence is removed or narrowed.
-- [ ] The engine matches every new cell, in `xlookup_table` / `binary_hit` (XMATCH shares `binary_hit`'s rules: if
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M6) holds the cells above.
+- [x] lookup.md records both rules with the cells, and the "Still unprobed" sentence is removed or narrowed.
+- [x] The engine matches every new cell, in `xlookup_table` / `binary_hit` (XMATCH shares `binary_hit`'s rules: if
       Excel's XMATCH differs, the PR probes XMATCH's wildcard + binary cells too and keeps one helper).
-- [ ] probes/t2669-xlookup-regex-mode, t3317-xlookup-scalar-return, xlookup-array-return, xlookup-row-column-picks and
+- [x] probes/t2669-xlookup-regex-mode, t3317-xlookup-scalar-return, xlookup-array-return, xlookup-row-column-picks and
       t2746-xlookup-error-lookup-array-modes still pass. Eval known failures only shrink (`make eval-baseline`,
       0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XLOOKUP argument kinds (T-2865), regex match mode (evidenced), and binary-search landing over unsorted data
   (evidenced in lookup.md "XMATCH / XLOOKUP binary search over runs of equal values").
+
+## Outcome
+- New probe probes/t4192-xlookup-error-return-wildcard-binary (54 cells, excel-graph 2026-11-04, M6): error
+  return_array (found, not found, if_not_found, against error lookup value / lookup array / if_not_found, binary
+  modes, size mismatch, error cells and array elements at and away from the match, 1x1 `{#N/A}`), and match_mode 2
+  under search_mode 2/-2 (wildcards, plain text, number, boolean, blank, not found, size mismatch, XMATCH, lifted).
+- lookup.md "XLOOKUP: return_array may be wider" states both rules with the cells; the "Still unprobed" sentence is gone.
+- Engine: no change needed; the engine already matched all 54 cells (`xlookup_table` returns an error return_array
+  before the search, and `binary_hit` refuses wildcard and regex patterns under binary modes, as Excel does).
+- Eval delta: +54 checked cells, all passing; 0 regressions.
