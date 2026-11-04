@@ -193,7 +193,7 @@ def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     write_suite("t", workers=None)
     data = json.loads(math_path(sidecar).read_text())
     assert set(data["sheets"]["S"]) == {"A1"}
-    assert data["skipped"] == {"S": {"A2": {"f": "=T.DIST(2.5,3,TRUE)", "why": "not converged or too slow"}}}
+    assert data["skipped"] == {"S": {"A2": {"f": "=T.DIST(2.5,3,TRUE)", "why": "not converged"}}}
     assert check_suite("t") == []
 
     # The formula changes after the sidecar was written: its entry is stale.

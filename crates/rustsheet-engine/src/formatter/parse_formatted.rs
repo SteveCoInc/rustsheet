@@ -486,29 +486,40 @@ fn parse_percent_or_currency(
 
     // check if it is a currency in currencies
     for currency in currencies {
+        // A currency sign before a parenthesised amount is negative: `$(12)`, `$ (12)`, `$( 12 )`
+        // and `$(1,234.5)` are -12, -12, -12 and -1234.5, typed with the `$` accounting format
+        // (decimal digits after the point, even `$(12.0)` and `$(12.)`, give the two-decimal one);
+        // `$(1e3)` takes `0.00E+00`. `$(-12)`, `$((12))`, `$(12`, `$12)`, `(12$)`, `-$(12)` and
+        // `$(12)%` are text. `"€(12)"+0`, VALUE and NUMBERVALUE are -12 while typed `€(12)` is
+        // text, because typed input has no `€` among its currencies (probes/t4117-typed-currency-
+        // paren; ENTERED log docs/research/t4117-typed-currency-paren-2026-11-04.md;
+        // docs/excel-semantics/coercion.md "Currency sign before parentheses").
+        if let Some(inner) = Some(currency)
+            .filter(|c| !c.is_empty())
+            .and_then(|c| value.strip_prefix(c))
+            .map(|rest| rest.trim_start_matches(' '))
+            .and_then(|rest| rest.strip_prefix('('))
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            let inner = inner.trim_matches(' ');
+            if inner.starts_with(['-', '+', '(']) {
+                return Err("Cannot parse number".to_string());
+            }
+            let (f, options) = parse_number(inner, decimal_separator, group_separator)?;
+            let format = if options.is_scientific {
+                SCIENTIFIC_FORMAT.to_string()
+            } else {
+                prefix_currency_format(currency, options.decimal_digits > 0)
+            };
+            return Ok(Some((0.0 - f, Some(format))));
+        }
         let prefixed = value
             .strip_prefix(&format!("-{currency}"))
             .map(|p| (p, -1.0))
             .or_else(|| value.strip_prefix(currency).map(|p| (p, 1.0)));
         if let Some((p, sign)) = prefixed {
-            let p = p.trim_matches(' ');
-            // Excel: a currency sign before a parenthesised unsigned amount is negative, `$(12)`,
-            // `$ (12)`, `$( 12 )` are -12 with `$#,##0_);[Red]($#,##0)`, but `-$(12)`, `$(-12)`,
-            // `$((12))`, `$(+12)` and `(12$)` stay text; `$(1e3)` is -1000 in `0.00E+00` and `$(12%)`
-            // text (probes/t4117-currency-parens A1:A28,
-            // docs/excel-semantics/coercion.md "Currency sign before parentheses").
-            let (p, sign) = match p
-                .strip_prefix('(')
-                .and_then(|v| v.strip_suffix(')'))
-                .map(|inner| inner.trim_matches(' '))
-            {
-                Some(inner) if sign < 0.0 || inner.starts_with(['-', '+', '(']) => {
-                    return Err("Cannot parse number".to_string())
-                }
-                Some(inner) => (inner, -1.0),
-                None => (p, sign),
-            };
-            let (f, options) = parse_number(p, decimal_separator, group_separator)?;
+            let (f, options) =
+                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
             // Excel: `-$1e3` is -1000 like `$-1e3` (typed-currency-percent-input A29).
             let f = sign * f;
             if options.is_scientific {

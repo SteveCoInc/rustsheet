@@ -214,11 +214,13 @@ probes/t3352-binom-negbinom-large-n.case.json	69
 probes/t3354-f-dist-tiny-x-huge-d2.case.json	222
 probes/t3396-gamma-inv-band-huge.case.json	41
 probes/t3406-irr-num-boundary.case.json	76
+probes/t3424-rate-noise-trace.case.json	33
 probes/t3444-binom-range-inv-large-n.case.json	111
 probes/t3446-script-digits-forms.case.json	91
 probes/t3465-collation-holdout.case.json	22
 probes/t3505-gamma-inv-budget-band.case.json	5
 probes/t3532-numeral-digit-fields.case.json	14
+probes/t3576-negbinom-cdf-huge-s.case.json	37
 probes/t3584-match-fold-weightless.case.json	125
 probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7

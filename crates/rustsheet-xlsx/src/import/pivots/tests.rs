@@ -157,6 +157,29 @@ fn date_items_follow_the_workbooks_date_system() {
 }
 
 #[test]
+fn date_items_below_serial_61_load_on_the_ole_epoch() {
+    // Excel writes cache dates below serial 61 as 1899-12-30 plus the serial (T-3182): items of
+    // corpus-bench 52379 (`1900-01-01T16:11:48` is source cell FCR!E241 = 2.6748611111111114) and
+    // 59932 (`1899-12-30T00:00:00` is labelled `<1/0/1900`, serial 0). The cache used to be skipped.
+    let rows = r#"<r><x v="0"/><d v="1899-12-30T00:07:23"/><n v="1"/></r><r><x v="1"/><d v="1900-01-01T16:11:48"/><n v="2"/></r><r><x v="0"/><d v="1899-12-30T00:00:00"/><n v="3"/></r>"#;
+    let parts = with(
+        parts(),
+        "xl/pivotCache/pivotCacheRecords1.xml",
+        records(rows),
+    );
+    let (caches, pivots) = load(&parts);
+    assert_eq!(pivots.len(), 1);
+    assert_eq!(
+        caches[0].fields[1].items,
+        [
+            CacheItem::Date(443.0 / 86_400.0),
+            CacheItem::Date(2.674_861_111_111_111_4),
+            CacheItem::Date(0.0),
+        ]
+    );
+}
+
+#[test]
 fn shared_and_inline_values_load_into_the_cache_and_the_pivot() {
     let (caches, pivots) = load(&parts());
     assert_eq!(caches.len(), 1);

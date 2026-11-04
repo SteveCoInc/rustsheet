@@ -30,7 +30,7 @@ pub(crate) fn is_negative_currency_percent_fraction(text: &str, currencies: &[&s
 /// Excel: a currency sign before a parenthesised unsigned fraction is negative, as it is for a
 /// plain amount: `$(1 1/2)`, `$ (1 1/2)` and `$( 1 1/2 )` are -1.5, `-$(1 1/2)` is text
 /// (probes/t4117-currency-parens A21, A29:A34; docs/excel-semantics/coercion.md "Currency sign
-/// before parentheses").
+/// before parentheses is negative").
 fn read_mixed_fraction(text: &str, currencies: &[&str]) -> Option<(f64, bool, bool, bool)> {
     let (sign, rest) = match text.as_bytes().first()? {
         b'-' => (-1.0, text[1..].trim_start_matches(' ')),

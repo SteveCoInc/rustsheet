@@ -31,15 +31,24 @@ because T-3850 showed that no rule on the model's state at the flat step does it
     that step.
 - A wider restart (to step 200, |f1| unbounded) gains 70 and loses 14 cells on the new probe, but on the fit set it
   gains 8 and loses 12. The sampling decides the count, so no widening is a rule.
-- Candidates: reproduce Excel's residual bit for bit at noise-floor points (probe the residual itself, for example
-  through a run of 1 step), then rerun the secant on it. Ranking candidates owes decision 0188 R4's hold-out and fresh
-  sweep.
+- T-3424 (2026-11-04, probes/t3424-rate-noise-trace, docs/research/t3424/): no residual difference found in FV.
+  - Excel's FV is the model's annuity value at 355 noise-floor iterates of T-3424's 16 cells, at nper 1 to 351.
+  - The model's step form beats six others and two extended-iterate forms.
+  - Seeded runs that hold at the same iterate get different Excel outcomes.
+  - No single quantity at the hold separates Excel's returned holds from its errors.
+  - Excel's returned holds equal the model's held iterate on 202 of 549 cells, are 1 to 4 ulp off on 182 and further
+    off on 165, so Excel's path still leaves the model's in the noise floor (financial.md "Excel's FV along the path is the model's annuity value; how RATE decides in the noise floor is not").
+- Candidates: RATE's own residual (FV's arithmetic matched, but RATE's was not read directly), the step's
+  arithmetic, a guard on tiny or zero steps, a nudge of an iterate that repeats, or a stop test of the step against
+  the iterate. The direct test is a seeded or one-step RATE probe whose model trace stalls after one or two steps. Ranking candidates owes decision 0188
+  R4's hold-out and fresh sweep.
 - Code: `rate_secant` and `rate_residual` (crates/rustsheet-engine/src/functions/financial/financial_util.rs).
 - Known failures owned (from T-3850, which owned them before it closed):
   - every cell of probes/t3698-rate-flat-restart that is off Excel;
   - every cell of probes/t3698-rate-flat-restart-fresh that is off Excel;
   - every cell of probes/t3906-rate-restart-oos that is off Excel;
   - every cell of probes/t3850-rate-same-state that is off Excel.
+  - every cell of probes/t3424-rate-noise-trace that is off Excel (from T-3424's probe; its FV cell is T-4146's too).
   - The cases are named here on lines with no cell address, so this task owns every cell of them. It overlaps with
     T-3424 (the noise floor's type) on the error-against-number cells and with T-3916 (the owner's ruling on T-3698's
     restart, decision 0265: kept).

@@ -9,6 +9,8 @@ import json
 import pkgutil
 import random
 import subprocess
+import threading
+import time
 from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
@@ -20,7 +22,7 @@ import yaml
 
 from rustsheet_tools import repo_root, snapshot
 from rustsheet_tools.accuracy import cli as accuracy_cli
-from rustsheet_tools.accuracy import defs, literal
+from rustsheet_tools.accuracy import defs, literal, tables
 from rustsheet_tools.accuracy.defs.annuity import RATE, rate
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf, density, quantile
 from rustsheet_tools.accuracy.model import (
@@ -31,6 +33,7 @@ from rustsheet_tools.accuracy.model import (
     MathArg,
     NoValueError,
     Param,
+    spend,
 )
 from rustsheet_tools.accuracy.sampler import STRATA, Sampler, point_count, seed, stratum_counts
 from rustsheet_tools.accuracy.tables import batch_files, compute, draw_points, verify_batch, write_batch
@@ -281,6 +284,40 @@ def test_points_that_do_not_converge_are_dropped_and_logged() -> None:
         )
         assert points == []
         assert why in log.getvalue()
+
+
+def _ten_terms(_args: Sequence[MathArg]) -> mpmath.mpf:
+    for _ in range(10):
+        spend()
+    return mpmath.mpf("0.5")
+
+
+def test_the_work_budget_drops_a_point_by_terms_not_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    # T-3680: each precision gets the budget afresh, so 10 terms fit a budget of 10 and not of 9.
+    param = (Param("x", "real", Interval(0, 1), typical=(0.1, 0.9)),)
+    definition = Definition("FAKE", param, _ten_terms, ("test",))
+    monkeypatch.setattr(tables, "WORK_BUDGET", 10)
+    assert compute(definition, [0.25]).value is not None
+    monkeypatch.setattr(tables, "WORK_BUDGET", 9)
+    with pytest.raises(tables.DroppedError, match="work budget of 9 terms"):
+        compute(definition, [0.25])
+
+
+def _slow(_args: Sequence[MathArg]) -> mpmath.mpf:
+    time.sleep(5)
+    return mpmath.mpf("0.5")
+
+
+def test_a_slow_point_stops_the_run_instead_of_being_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    # T-3680: the clock never drops a point (a drop by wall time made sidecars differ by machine load).
+    if threading.current_thread() is not threading.main_thread():
+        pytest.skip("the hang guard is SIGALRM, main thread only")
+    monkeypatch.setattr(tables, "HANG_LIMIT", 0.05)
+    param = (Param("x", "real", Interval(0, 1), typical=(0.1, 0.9)),)
+    log = io.StringIO()
+    with pytest.raises(tables.PointTimeoutError, match="deterministic budget"):
+        draw_points(Definition("FAKE", param, _slow, ("test",)), "s1", 1, stratum="typical", log=log)
+    assert log.getvalue() == ""
 
 
 # -- fit lab and oracle fill ------------------------------------------------------------------
