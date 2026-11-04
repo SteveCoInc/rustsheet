@@ -2080,6 +2080,7 @@ C	probes/t4014-sheet-api-name-66.case.json	3
 C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4039-collation-space-forms.case.json	322
+C	probes/t4040-r1c1-unbound-cell-names.case.json	42
 C	probes/t4060-collation-open-choices.case.json	222
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -6325,18 +6326,6 @@ F	probes/t3850-rate-same-state.case.json	Calc!A95
 F	probes/t3850-rate-same-state.case.json	Calc!A96
 F	probes/t3881-imcsch-flip-start-negative.case.json	Calc!A3
 F	probes/t3883-im-overflow-reciprocal-sweep.case.json	Calc!A101
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A9
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B9
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C9
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A10
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A100
@@ -6589,6 +6578,9 @@ F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B7
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B8
 F	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	Sheet1!B9
 F	probes/t4014-sheet-api-name-65.case.json	S!A1
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C14
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C15
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C16
 F	probes/table-edits/t3629-convert-names.case.json	S!F1
 F	probes/table-edits/t3629-convert-names.case.json	S!F10
 F	probes/table-edits/t3629-convert-names.case.json	S!F2

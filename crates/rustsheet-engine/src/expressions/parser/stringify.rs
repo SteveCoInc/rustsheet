@@ -23,7 +23,7 @@ use crate::expressions::token::OpUnary;
 use crate::expressions::types::CellReferenceRC;
 use crate::language::{get_default_language, Language};
 use crate::locale::{get_default_locale, Locale};
-use bound_variables::{callee_text, prefix_bound_variables, variable_text};
+use bound_variables::{callee_text, prefix_bound_variables, quoted_name_text, variable_text};
 pub(crate) use literals::argument_separator;
 use literals::{format_number_locale, to_string_array_node};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
@@ -769,7 +769,7 @@ fn stringify(
             text
         }
         NamedFunctionKind { name, args, id: _ } => format_function(
-            &callee_text(name, context),
+            &callee_text(name, context, export_to_excel),
             args,
             context,
             rewrite,
@@ -829,7 +829,7 @@ fn stringify(
             *scope,
             context.is_none() || export_to_excel,
         ),
-        NamedVariableKind { name, id: _ } => variable_text(name, context),
+        NamedVariableKind { name, id: _ } => variable_text(name, context, export_to_excel),
         UnaryKind {
             kind: OpUnary::Minus,
             ..
@@ -882,9 +882,9 @@ fn stringify(
                             format!("_xlpm.{}", p.name)
                         }
                     } else if p.is_optional {
-                        format!("[{}]", variable_text(&p.name, context))
+                        format!("[{}]", variable_text(&p.name, context, false))
                     } else {
-                        variable_text(&p.name, context)
+                        variable_text(&p.name, context, false)
                     }
                 })
                 .collect();
@@ -896,7 +896,11 @@ fn stringify(
             // use lowercase to distinguish from real function calls in R1C1 format and
             // to match the display behaviour of InvalidFunctionKind.
             let lambda_str = match lambda.as_ref() {
-                Node::NamedVariableKind { name, id: _ } => name.to_lowercase(),
+                // The quoted `'f1'` keeps its text (`='f1'(2)`, T-4040).
+                Node::NamedVariableKind { name, id: _ } => {
+                    quoted_name_text(name, context, export_to_excel)
+                        .unwrap_or_else(|| name.to_lowercase())
+                }
                 other => callee_operand(sub(other), other),
             };
             let call_args: Vec<String> = args.iter().map(sub).collect();
