@@ -3,7 +3,7 @@ id: T-3629
 title: "Probe a detached #This Row after convert to range: a re-created same-name table, and its xlsx save and reload"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
