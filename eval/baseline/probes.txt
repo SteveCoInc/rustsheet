@@ -6828,12 +6828,6 @@ F	probes/t4228-pivot-range-groups.case.json	Calc!T2
 F	probes/t4228-pivot-range-groups.case.json	Calc!T3
 F	probes/t4228-pivot-range-groups.case.json	Calc!T4
 F	probes/t4228-pivot-range-groups.case.json	Calc!T5
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A4
-F	probes/table-edits/table-column-range-delete-both-ends-separate.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A4
-F	probes/table-edits/table-column-range-delete-end.case.json	F!A5
-F	probes/table-edits/table-column-range-delete-start.case.json	F!A4
-F	probes/table-edits/table-column-range-delete-start.case.json	F!A5
 F	probes/text-locale-invalid-sublanguage.case.json	S!J3
 F	probes/text-locale-invalid-sublanguage.case.json	S!K3
 F	probes/text-locale-invalid-sublanguage.case.json	S!L3

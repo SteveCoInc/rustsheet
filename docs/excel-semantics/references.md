@@ -2726,7 +2726,11 @@ Right/Left):
   excel-graph 2026-10-30, T-3019; rows 3-5 deleted in one edit over S!C1:C10 = 1..10): `=SUM(S!C4:C7)` and its
   absolute form become `S!C3:C4` (`$C$3:$C$4`, 13), `=SUM(S!C2:C4)` becomes `=SUM(S!C2:C2)` (2), the wholly
   deleted `=SUM(S!C3:C5)` is `=SUM(S!#REF!)`, and `=S!C10` reads `=S!C7`; the engine matches. Whole-row ranges
-  and column deletes still give `#REF!` corners (T-2851).
+  and multi-row deletes of whole ranges stay with T-2851. A one-column delete shrinks a plain range at its first or
+  last column the same way (table-column-range-delete-start, -end, excel-graph 2026-11-01, T-3978):
+  `=SUM(S!C4:D7)` is `=SUM(S!C4:C7)` (150 / 15) after deleting column C or D, and a second delete of the
+  remaining column (-both-ends-separate) gives `#REF!` printed `=SUM(S!#REF!)`. Wider column deletes across an edge
+  are assumed to shrink as the rows do (hand, unprobed: T-2851).
 - Column inserts. At A or B (left of or at the table's first column) the table moves right
   (`COLUMN(Sales[Qty])` 4, plain `S!C4:C7` becomes `S!D4:D7`); at C, between its columns, it grows
   (`COLUMNS(Sales)` 3, `COLUMN(Sales[Qty])` 4); at D, just right of it, nothing changes
