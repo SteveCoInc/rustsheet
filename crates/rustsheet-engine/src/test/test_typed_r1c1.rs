@@ -37,10 +37,11 @@ fn let_and_lambda_names_spelled_like_a1_cells_keep_their_prefix() {
         Some("=LAMBDA(x,[_xlpm.b2],ISOMITTED(_xlpm.b2))(1)")
     );
     // Unbound, such a name is Excel's undefined name (`#NAME?`, A8:A10, A13), not the cell bare
-    // A1 text would read: the A1 text writes it `_xlpm.` too (T-4040).
+    // A1 text would read: the A1 text writes it with two prefixes (T-4040), as one is the name
+    // written with its prefix, which FORMULATEXT shows (T-4099).
     assert_eq!(
         a1("=LET(f1,5,f1+1)+F1", 1, 1).as_deref(),
-        Some("=LET(_xlpm.f1,5,_xlpm.f1+1)+_xlpm.F1")
+        Some("=LET(_xlpm.f1,5,_xlpm.f1+1)+_xlpm._xlpm.F1")
     );
     // Other names stay bare.
     assert_eq!(a1("=LET(x,5,x+1)", 1, 1).as_deref(), Some("=LET(x,5,x+1)"));
@@ -110,4 +111,43 @@ fn unbound_names_spelled_like_a1_cells_are_quoted_undefined_names() {
     assert!(model
         .set_typed_user_input(0, 20, 1, "='f1'".to_string())
         .is_err());
+}
+
+/// An unbound name written with `_xlpm.` keeps the prefix in its formula text, any name, from a
+/// file or typed, and a bound one drops it (probes/t4099-file-xlpm-unbound-names, excel-graph,
+/// T-4099); a reload from the R1C1 storage form keeps both.
+#[test]
+fn an_unbound_prefixed_name_keeps_its_prefix() {
+    let cases = [
+        ("=_xlpm.f1", "=_xlpm.f1", "#NAME?"),
+        ("=_xlpm.abc+_xlpm.f1", "=_xlpm.abc+_xlpm.f1", "#NAME?"),
+        ("=_xlpm.R1C1", "=_xlpm.R1C1", "#NAME?"),
+        ("=_xlpm.f1(2)", "=_xlpm.f1(2)", "#NAME?"),
+        ("=LET(x,1,x+_xlpm.f1)", "=LET(x,1,x+_xlpm.f1)", "#NAME?"),
+        ("=ISREF(_xlpm.f1)", "=ISREF(_xlpm.f1)", "FALSE"),
+        ("=LET(_xlpm.x,1,_xlpm.x+1)", "=LET(x,1,x+1)", "2"),
+        ("=LET(_xlpm.f1,5,_xlpm.f1*2)", "=LET(f1,5,f1*2)", "10"),
+        ("=LET(x,2,_xlpm.x*3)", "=LET(x,2,x*3)", "6"),
+        ("=R1C1", "=R1C1", "#NAME?"),
+    ];
+    let mut model = crate::test::util::new_empty_model();
+    model._set("F1", "7");
+    for (row, (stored, ..)) in (1..).zip(cases) {
+        model._set(&format!("A{row}"), stored);
+    }
+    // Typed, the prefix stays as well (A10).
+    model
+        .set_typed_user_input(0, 20, 1, "=_xlpm.abc".to_string())
+        .unwrap_or_else(|e| panic!("{e}"));
+    model.evaluate();
+    let mut reloaded = crate::Model::from_bytes(&model.to_bytes(), "en").unwrap();
+    reloaded.evaluate();
+    for m in [&model, &reloaded] {
+        for (row, (stored, formula, value)) in (1..).zip(cases) {
+            let cell = format!("A{row}");
+            assert_eq!(m._get_formula(&cell), formula, "{stored}");
+            assert_eq!(m._get_text(&cell), value, "{stored}");
+        }
+        assert_eq!(m._get_formula("A20"), "=_xlpm.abc");
+    }
 }

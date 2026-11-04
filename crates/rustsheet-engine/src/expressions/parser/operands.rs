@@ -354,9 +354,13 @@ impl Parser {
                 true,
             );
         }
-        // xlpm: Excel Lambda Parameter
-        let name = name.trim_start_matches("_xlpm.").to_string();
-        Node::NamedVariableKind { name, id: None }
+        // xlpm: Excel Lambda Parameter. The prefix stays until the end of the parse, which drops
+        // it from a use some LET or LAMBDA binds and keeps it on an unbound one
+        // (`call_names::settle_lambda_prefixes`, T-4099).
+        Node::NamedVariableKind {
+            name: self.written_lambda_name(&name),
+            id: None,
+        }
     }
 
     /// The range a name spelled like a Lotus-style range is (`A1.B2` is `A1:B2`; see
@@ -368,6 +372,34 @@ impl Parser {
         }
         let (left, right) = parse_dotted_a1_range(name)?;
         Some(self.range_operand(None, left, right))
+    }
+
+    /// The name a use written `name` (used or called) reads, before the end of the parse drops
+    /// the `_xlpm.` prefix from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
+    /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). The R1C1 storage
+    /// form also prefixes a name that would read back as something else (`variable_text`,
+    /// `callee_text`), so there one prefix is the storage's own, dropped, and two are the name's
+    /// own. In A1 text, two prefixes on a name spelled like an A1 cell are the quoted `'f1'` of a
+    /// formula typed in R1C1 mode (`to_english_string_typed_from_r1c1`); otherwise any number
+    /// reads as one.
+    ///
+    /// | prefixes | R1C1 storage form | typed R1C1 | A1 text                                 |
+    /// |----------|-------------------|------------|-----------------------------------------|
+    /// | 0        | `f1`              | `f1`       | `abc`                                   |
+    /// | 1        | `f1` (its mark)   | `_xlpm.f1` | `_xlpm.f1`                              |
+    /// | 2 or more| `_xlpm.f1`        | `_xlpm.f1` | `'f1'` if spelled like a cell, else one |
+    fn written_lambda_name(&self, name: &str) -> String {
+        let bare = name.trim_start_matches("_xlpm.");
+        let prefixes = (name.len() - bare.len()) / "_xlpm.".len();
+        let storage_form = !self.lexer.is_a1_mode() && !self.typed;
+        let quoted_from_r1c1 = self.lexer.is_a1_mode() && spelled_like_a1_cell(bare);
+        match prefixes {
+            0 => bare.to_string(),
+            1 if storage_form => bare.to_string(),
+            1 => format!("_xlpm.{bare}"),
+            _ if quoted_from_r1c1 => format!("'{bare}'"),
+            _ => format!("_xlpm.{bare}"),
+        }
     }
 
     /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
@@ -434,11 +466,14 @@ impl Parser {
         // is the variable, not a function of its name (`calls_bound_name`, T-2567). A name
         // declared `_xlpm.Sum`, as Excel and the export write it, is not: there every call of
         // the variable is `_xlpm.Sum(` too, and a bare `SUM(` is the function.
-        if let (TokenType::Ident(_), Node::NamedVariableKind { name, .. }) = (token, &node) {
+        if let (TokenType::Ident(_), Node::NamedVariableKind { name, id }) = (token, &node) {
+            // A declaration is bound by definition: it drops the prefix a use keeps until the
+            // end of the parse.
+            let name = name.trim_start_matches("_xlpm.").to_string();
             if !text.trim_start().starts_with("_xlpm.") {
                 self.bound_names.push(name.clone());
             }
-            return node;
+            return Node::NamedVariableKind { name, id: *id };
         }
         if !self.lexer.is_a1_mode() {
             // Typed in R1C1 mode, a name that reads as a reference there (`r`, `c`, `rc`, `r1c1`:
@@ -690,7 +725,7 @@ impl Parser {
             });
         }
         self.chain_calls(Node::NamedFunctionKind {
-            name: name.trim_start_matches("_xlpm.").to_string(),
+            name: self.written_lambda_name(&name),
             args,
             id: None,
         })

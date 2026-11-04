@@ -90,6 +90,23 @@ impl CallNameSpellings {
     }
 }
 
+/// Drops the `_xlpm.` prefix the parser keeps on every use (used or called) from the ones a LET
+/// or LAMBDA binds, which evaluation finds by their bare name. An unbound one keeps it: it is
+/// Excel's undefined name (`#NAME?`), and FORMULATEXT shows the prefix, for any name, from a
+/// file or typed in either mode: `=_xlpm.f1`, `=_xlpm.abc`, `=SUM(_xlpm.xy1,2)`, `=_xlpm.f1(2)`,
+/// `=LET(x,1,x+_xlpm.f1)` (probes/t4040-r1c1-unbound-cell-names A14:C16,
+/// probes/t4099-file-xlpm-unbound-names, excel-graph, T-4099). The prefixed name is no defined
+/// name either: the defined-name lookup of `name_operand` never matches it.
+pub(super) fn settle_lambda_prefixes(node: &mut Node) {
+    walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
+        if declared.is_some() && matches!(site, NameSite::Use | NameSite::Callee) {
+            if let Some(bare) = name.strip_prefix("_xlpm.") {
+                *name = bare.to_string();
+            }
+        }
+    });
+}
+
 /// Gives every name spelled like an A1 cell that no LET or LAMBDA binds (used or called) the
 /// quoted spelling `'f1'`. Typed in R1C1 mode, `=f1`, `=F1+1` and `=SUM(f1,2)` read such a
 /// name, an undefined one (`#NAME?`), and FORMULATEXT quotes it like a sheet name: `='f1'`,
@@ -97,7 +114,7 @@ impl CallNameSpellings {
 /// probes/t4040-r1c1-unbound-cell-names A7:C13, excel-graph, T-4040); a name that is no cell
 /// stays bare (`=Xfe1`). The quoted spelling is no name a LET can declare and no defined name,
 /// so it evaluates to `#NAME?`; the R1C1 storage form writes it `_xlpm.f1` (`variable_text`),
-/// which this reads back quoted.
+/// which this reads back quoted, and a name written with its prefix `_xlpm._xlpm.x` (T-4099).
 pub(super) fn quote_unbound_cell_shaped_names(node: &mut Node) {
     walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
         if declared.is_none()
