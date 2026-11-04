@@ -3,7 +3,7 @@ id: T-3886
 title: "Incomplete beta bpser: T-3192's remaining items (b0 >= 8 L diff, T-2505's 987 moved cells, 6 shape-of-1 cells) and a = b = 1/2 at x = 0.5"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
