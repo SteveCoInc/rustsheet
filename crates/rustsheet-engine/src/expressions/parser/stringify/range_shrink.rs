@@ -27,36 +27,32 @@ fn shrunk_corners(
 }
 
 /// [`shrunk_corners`] for the row or column delete `data` on sheet `sheet_index`, a range spanning
-/// `rows` x `columns`: `None` when `data` is no such delete, else the corners it gives (`None`
-/// inside when the range is untouched or wholly deleted, whose corners displace as usual).
+/// `rows` x `columns`; `None` for any other edit, and for a range the delete leaves alone or
+/// takes whole, whose corners displace as usual.
 pub(super) fn delete_corners(
     data: &DisplaceData,
     sheet_index: u32,
     rows: (i32, i32),
     columns: (i32, i32),
-) -> Option<Option<(DisplaceData, DisplaceData)>> {
+) -> Option<(DisplaceData, DisplaceData)> {
     match *data {
         DisplaceData::Row { sheet, row, delta } if sheet == sheet_index && delta < 0 => {
-            Some(shrunk_corners(rows, row, delta, |from, to| {
-                DisplaceData::Row {
-                    sheet,
-                    row: from.min(to),
-                    delta: to - from,
-                }
-            }))
+            shrunk_corners(rows, row, delta, |from, to| DisplaceData::Row {
+                sheet,
+                row: from.min(to),
+                delta: to - from,
+            })
         }
         DisplaceData::Column {
             sheet,
             column,
             delta,
         } if sheet == sheet_index && delta < 0 => {
-            Some(shrunk_corners(columns, column, delta, |from, to| {
-                DisplaceData::Column {
-                    sheet,
-                    column: from.min(to),
-                    delta: to - from,
-                }
-            }))
+            shrunk_corners(columns, column, delta, |from, to| DisplaceData::Column {
+                sheet,
+                column: from.min(to),
+                delta: to - from,
+            })
         }
         _ => None,
     }

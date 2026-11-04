@@ -136,12 +136,13 @@ impl Displacement<'_> {
         columns: (i32, i32),
     ) -> Option<(DisplaceData, DisplaceData)> {
         if let Some(shrunk) = delete_corners(self.data, sheet_index, rows, columns) {
-            return shrunk;
+            return Some(shrunk);
         }
         let DisplaceData::Row { sheet, row, delta } = *self.data else {
             return None;
         };
-        if sheet != sheet_index {
+        // A row delete that shrinks nothing leaves the corners to displace as usual.
+        if sheet != sheet_index || delta < 0 {
             return None;
         }
         // The corner on row `from` moved to row `to`.
