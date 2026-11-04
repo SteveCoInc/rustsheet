@@ -31,9 +31,10 @@ pub struct StructuredReference {
     /// table no longer exists, but Excel keeps the text (FORMULATEXT `=Sales[@Qty]`) and the
     /// cell evaluates `#VALUE!` (references.md, convert-to-range entry;
     /// probes/table-edits/table-convert-names-this-row, T-2763). It resolves against no table,
-    /// so a later table of the same name does not take it back (unprobed, TODO(T-3629)). Stored
-    /// with the engine-only `[!]` prefix ([`Self::stored_text`]); the xlsx export writes
-    /// `#VALUE!` (unprobed, TODO(T-3629)). Only an off-row `#This Row` reference is detached.
+    /// so a later table of the same name does not take it back. Stored with the engine-only `[!]`
+    /// prefix ([`Self::stored_text`]); the xlsx export writes `#VALUE!`. Only an off-row
+    /// `#This Row` reference is detached. Excel turns such a reference into `#REF!` instead (FORMULATEXT
+    /// `=#REF!`, saved `<f>#REF!</f>`; probes/table-edits/t3629-*, T-3629): TODO(T-4020).
     pub detached: bool,
     /// The range of the table of a `#This Row` reference or of one written without the table
     /// name, as the table list the formula was parsed against had it: the printing cell decides

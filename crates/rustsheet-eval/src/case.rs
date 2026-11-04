@@ -265,7 +265,8 @@ pub struct CalculationSpec {
 /// "column":"B"}` and `{"op":"delete_column","sheet":"S","column":"B"}` (a column letter; the cells
 /// to the right shift), `{"op":"delete_sheet","sheet":"S"}`, `{"op":"delete_table","sheet":"S",
 /// "table":"T1"}` and `{"op":"convert_table","sheet":"S","table":"T1"}`. `convert_table` converts the table
-/// to a plain range (T-2342).
+/// to a plain range (T-2342). `{"op":"add_table","sheet":"S","table":"T1","ref":"B3:C7"}` adds
+/// a table (T-3629).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SheetOp {
@@ -315,6 +316,14 @@ pub enum SheetOp {
     DeleteTable {
         sheet: String,
         table: String,
+    },
+    /// A table named `table` added over `range` (its header row first, the header cells already
+    /// set), as Graph `tables/add` and a rename make it (T-3629).
+    AddTable {
+        sheet: String,
+        table: String,
+        #[serde(rename = "ref")]
+        range: String,
     },
 }
 

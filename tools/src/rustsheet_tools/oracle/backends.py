@@ -356,6 +356,21 @@ class GraphBackend:
                 if sheet == CANARY_SHEET:
                     raise OracleError(f"sheet op delete_sheet {sheet!r}: the canary sheet stays")
                 self._call("DELETE", ref(sheet), headers=sid)
+            elif op == "add_table":
+                # Graph names the new table itself (Table1): add it over the range with its header
+                # row, then rename it, and read the name back so a rename Excel did not make never
+                # becomes an oracle value (T-3629).
+                table, address = str(to).split(" ", 1)
+                added = self._call(
+                    "POST",
+                    f"{ref(sheet)}/tables/add",
+                    json={"address": address, "hasHeaders": True},
+                    headers=sid,
+                ).json()
+                self._call("PATCH", table_url(str(added["id"])), json={"name": table}, headers=sid)
+                got = self._call("GET", table_url(str(added["id"])), headers=sid).json().get("name")
+                if got != table:
+                    raise OracleError(f"sheet op add_table {table!r}: Excel named it {got!r}")
             elif op in ("convert_table", "delete_table"):
                 table = table_url(str(to))
                 if op == "convert_table":

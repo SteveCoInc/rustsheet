@@ -1024,7 +1024,7 @@ fn convert_to_range_keeps_the_text_of_an_off_row_this_row() {
         column: 5,
     };
     let node = &model.parsed_formulas[0][usize::try_from(index).unwrap()].evaluated;
-    // TODO(T-3629): what Excel writes to the file is unprobed.
+    // Excel writes `#REF!` (probes/table-edits/t3629-save-detached, T-3629): TODO(T-4020).
     assert_eq!(to_excel_string(node, &context), "#VALUE!*2");
     // Typed, the engine's `[!]` prefix is not a formula.
     assert!(model
