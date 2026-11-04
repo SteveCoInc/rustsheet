@@ -235,3 +235,22 @@ fn fixed_denominator_past_32768_is_picked() {
     assert_eq!(text(1.5, "# ?/40000"), "1 1/4    ");
     assert_eq!(format_number(0.5, "?/100000", &ctx).text, "#VALUE!");
 }
+
+/// probes/t3711-fraction-trailing-placeholders rows 5 and 9-19 (excel-graph, T-4204): a denominator
+/// run that starts with `?` ends before its first `0`, which prints after it; one that starts with
+/// `#` or `0` is the denominator whole, right-aligned like an integer.
+#[test]
+fn denominator_run_splits_by_its_first_placeholder() {
+    assert_eq!(text(12.5, "# ?/?0"), "12 1/20"); // A5
+    assert_eq!(text(12.5, "# ?/??0"), "12 1/2 0"); // A9
+    assert_eq!(text(12.125, "# ?/?0?"), "12 1/80 "); // C16
+    assert_eq!(text(12.5, "# ?/??#"), "12 1/2 "); // A17
+    assert_eq!(text(12.5, "# ?/?#"), "12 1/2"); // A12
+    assert_eq!(text(12.5, "# ?/#0"), "12 1/2"); // A10
+    assert_eq!(text(0.5, "# ?/#?"), " 1/2"); // B13
+    assert_eq!(text(12.5, "# ?/0?"), "12 1/02"); // A11
+    assert_eq!(text(12.125, "# ?/0#"), "12 1/08"); // C14
+    assert_eq!(text(0.5, "# ?/00?"), " 1/002"); // B15
+    assert_eq!(text(12.5, "# ?/#0#"), "12 1/02"); // A19
+    assert_eq!(text(12.0, "# ?/?0"), "12     "); // B5
+}

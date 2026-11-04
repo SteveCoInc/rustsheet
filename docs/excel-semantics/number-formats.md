@@ -1277,10 +1277,18 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `# ?/? ?` "12 1/2  ", `# ?/? 00` "12 1/2 00", `# ?/? 0#` "12 1/2 00", `# ?/? 0.0` "12 1/2 0.0" and
   `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
   separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
-  seven spaces then "12|5". Adjacent placeholders of a different kind right after the denominator split differently
-  (`# ?/?0` "12 1/20", `# ?/#0` "12 1/2", `# ?/0?` "12 1/02"): T-4204.
+  seven spaces then "12|5".
+- **A placeholder denominator run is cut by its first placeholder** (T-4204, same case rows 5, 9-19, at 12.5, 0.5 and
+  12.125). A run that starts with `?` ends before its first `0`, and the rest prints as placeholders after the
+  denominator (above): `# ?/?0` on 12.5 is "12 1/20", `# ?/??0` "12 1/2 0", `# ?/?0?` "12 1/20 ". Such a run is
+  left-aligned, so a `#` in it prints nothing and a `?` a space after the digits: `# ?/?#` "12 1/2", `# ?/??#`
+  "12 1/2 ". A run that starts with `#` or `0` is the denominator whole and is right-aligned like an integer (a
+  leading `#` prints nothing, a leading `0` a zero, a leading `?` after them a space): `# ?/#0` and `# ?/#?` "12 1/2",
+  `# ?/0?` and `# ?/0#` "12 1/02", `# ?/00?` "12 1/002", `# ?/#0#` "12 1/02". Unprobed: whether the cut changes
+  the denominator's digit limit (every probed value has a one-digit denominator); ours takes the run's length,
+  so `?0` allows one digit and `#0` two.
 Ours: implemented in formatter/parser.rs (`is_fraction_literal`) and formatter/fraction.rs (T-0982); all 325 cells pass.
-Unprobed engine choices (T-2209): a mixed `0`/`?` denominator puts its zeros left and spaces right; plain spaces or quoted
+Unprobed engine choices (T-2209): plain spaces or quoted
 text around the `/` also make a fraction; a `/` with no denominator after its literals stays a literal.
 Status: VERIFIED (Excel for the web; desktop Mac Excel cached values for the literals between the parts)
 Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T-3711, T-4204

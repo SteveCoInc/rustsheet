@@ -173,7 +173,15 @@ pub(super) fn format_fraction(
             let shown: String = digits.chars().take(denominator_digits.len()).collect();
             fill_left(&shown, &denominator_kinds)
         }
-        Denominator::Placeholders(_) => fill_left(&denominator_digits, &denominator_kinds),
+        // Excel: a run that starts with `?` holds no `0` (the parser ends it there) and is
+        // left-aligned (`# ???/???` on 1.5 is "1   1/2  ", `# ?/??#` on 12.5 "12 1/2 "); one that
+        // starts with `#` or `0` is right-aligned like an integer (`# ?/0?` "12 1/02", `# ?/#?`
+        // "12 1/2", `# ?/#0#` "12 1/02"; probes/t3711-fraction-trailing-placeholders; `?/00` on 1.5
+        // "3/02", probes/fraction-format-features B13).
+        Denominator::Placeholders(kinds) if kinds.first() == Some(&'?') => {
+            fill_left(&denominator_digits, &denominator_kinds)
+        }
+        Denominator::Placeholders(_) => fill(&denominator_digits, &denominator_kinds).concat(),
     };
     let denominator_text = part.numerals.digits(&denominator_text);
 
@@ -435,10 +443,10 @@ fn fill(digits: &str, kinds: &[char]) -> Vec<String> {
         .collect()
 }
 
-/// Like [`fill`] for a denominator: each placeholder past `digits` prints nothing (`#`), a space
-/// after the digits (`?`) or a zero before them (`0`): `# ???/???` on 1.5 is "1   1/2  ", `?/00`
-/// on 1.5 "3/02" (number-formats.md "Fraction formats", probes/fraction-format-features B13) and
-/// `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160).
+/// Like [`fill`] for a fixed denominator or a placeholder run that starts with `?`: each
+/// placeholder past `digits` prints nothing (`#`), a space after the digits (`?`) or a zero
+/// before them (`0`): `# ???/???` on 1.5 is "1   1/2  " (number-formats.md "Fraction formats")
+/// and `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160).
 fn fill_left(digits: &str, kinds: &[char]) -> String {
     let mut zeros = String::new();
     let mut spaces = String::new();
