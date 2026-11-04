@@ -6,7 +6,7 @@ lane: functions-text
 status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: [T-3718]
 ---
 
@@ -27,6 +27,15 @@ it.
 - Tidy-ups from the same reviews: merge the two Unprobed lists in number-formats.md's "CJK General and elapsed
   counts" paragraph into one, citing this task; rename the bindings in `Numerals::number`'s trillion arm that shadow
   `text` and `rest`.
+
+- Start from branch `agent/functions-text/T-3718-cjk-rows-21-25` (commit c656531). A parallel adoption of #3189
+  wrote it, and all three reviewers approved that tree (round 2), but another session's head f2b72f0 merged instead.
+  It adds rows 21-25 to probes/t3718-cjk-numeral-unprobed (`[s]` of 1E11, 1.2E11, 1E12, 1.2345E11; `[h]` of 1E15;
+  excel-graph 2026-11-04). They pin the cut: 8.64E15 is spelled "八千六百四十兆", 1.0368E16 is "一〇三六八兆". They also
+  pin a nonzero rest after a digit-by-digit 兆 count: 27 "一〇六六六兆八百億", 30 "一○六六六兆○八百亿", 31
+  "壹零陆陆陆兆零捌佰亿", so 30 and 31 write one gap zero after 兆. The branch has the matching numerals.rs change
+  (the trillion arm), unit test rows, and number-formats.md text. Bring that delta onto `main`: merge `origin/main`
+  in and keep the branch's side where #3189's merged text is a subset. Then add the probes listed above.
 
 ## Acceptance criteria
 - [ ] A probe case (excel-probe skill, excel-graph) covers the four forms under bytes 0x1B-0x1F. The code matches
