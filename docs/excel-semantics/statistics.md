@@ -3306,7 +3306,9 @@ bfrac (min(a,b) >= 40) takes the same brcomp = density·x·y, with λ = fl(a - f
   -1.97, -8.49, -7.22. Every published fraction × prefactor (Cephes, NR, LibreOffice, A&S, TOMS bfrac, R bratio) has
   c >= -1 there; raw TOMS brcmp1 exponents (b0', a0) give -7.22 to -11.15.
 - L140 bup+bpser: 7,516/11,684/11,724 of 11,753 (CR 3,941/10,372/11,572; verifier). Out of sample, on F, T, BINOM and
-  NEGBINOM L140 cells: 1,011/1,542/1,585 of 1,620, against TOMS's brcmp1 639 and CR 705. With Excel's own P and bpser
+  NEGBINOM L140 cells: 1,011/1,542/1,585 of 1,620, against TOMS's brcmp1 639 and CR 705. Those 1,620 are all
+  three L140 branches (bup+bpser 1,383 at 905 bit-exact, bup+bgrat 187, bup+bup+bgrat 50; docs/research/t2893);
+  the engine scores 1,214/1,554/1,592 on them (T-2893). With Excel's own P and bpser
   read off the sheet (probe w4p1): 3,571 of 4,095.
 - w4's "(7.3, 11.6): the worksheet density is not bup's" was an input artefact: the literal 0.5999999999999996 is cut
   to 15 digits, 0.599999999999999 (numbers.md "Formula number literals are read at 15 significant digits"), where

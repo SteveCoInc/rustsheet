@@ -1,0 +1,31 @@
+ix rows 9757
+BEST: L140 bup+bpser 1383; ex/u4/w15 (905, 1318, 1354)
+BEST closed=False: L140 bup+bpser 1383; ex/u4/w15 (905, 1318, 1354)
+BEST x29=0.29: L140 bup+bpser 1383; ex/u4/w15 (905, 1318, 1354)
+TOMS_XL: L140 bup+bpser 1383; ex/u4/w15 (546, 1082, 1224)
+R_LIKE: L140 bup+bpser 1383; ex/u4/w15 (550, 1082, 1224)
+BEST closed=False minus BEST: 0; BEST's branch for them: {}; minus the other way 0
+
+## The model's ix rows by BEST branch
+| branch | n | BEST ex/u4/w15 |
+|---|---|---|
+| L140 bup+bgrat | 187 | 82/178/182 |
+| L140 bup+bpser | 1383 | 905/1318/1354 |
+| L140 bup+bup+bgrat | 50 | 24/46/49 |
+| basym | 2 | 2/2/2 |
+| bfrac | 208 | 74/157/181 |
+| bgrat | 1612 | 173/932/1324 |
+| bpser(a,b>1) | 1126 | 709/968/1055 |
+| bup+bgrat | 1517 | 285/1406/1498 |
+| closed:a0=1 | 758 | 758/758/758 |
+| closed:b0=1 | 404 | 404/404/404 |
+| w1_bpser | 474 | 310/470/471 |
+| w_bpser | 2036 | 1263/2010/2024 |
+
+## Engine and model on the model's L140 rows (by the model's branch)
+| model branch | n | engine's branch for them | model ex/u4/w15 | engine ex/u4/w15 |
+|---|---|---|---|---|
+| L140 bup+bpser | 1383 | {'L140 bup+bpser': 1383} | 905/1318/1354 | 1133/1343/1363 |
+| L140 bup+bgrat | 187 | {'L140 bup+bgrat': 187} | 82/178/182 | 66/163/179 |
+| L140 bup+bup+bgrat | 50 | {'L140 bup+bup+bgrat': 50} | 24/46/49 | 15/48/50 |
+| all L140 | 1620 | | 1011/1542/1585 | 1214/1554/1592 |
