@@ -2995,6 +2995,15 @@ L5 = LN(n + 1) (Excel's);  Cs = accurate stirlerr(n) - stirlerr(k) - stirlerr(nk
   F.DIST at the mapped point (column B) shows the same growth (sd 46-53 at 25-50, 336-398 at 450-650).
   UNVERIFIED hypothesis (T-3250 and T-3244 to test): one rounding at the scale of |E| that one side makes and the
   other does not.
+- Where Excel is closer to the math than the model (T-3473, measured on main c8605ed7): at `BETA.DIST(0.5,5,100,FALSE)`
+  and its mirror (probes-numeric m9-beta-dist-a5 A52, -a100 A34) Excel is +2.3 ulp from the 60-digit value and the model
+  +38. The model's error is the store of t = fl(99·LN(fl(99/51.5))) = 64.70 in bd0(nk, n·q): -5.7E-15, -0.81 units of
+  ulp(E) (bd0(4, 51.5) is +0.10). -k·LN(M/k) leaves the same error and k·(LN k - LN M) a larger one (-2.0E-14). Keeping
+  the quotient in a register (unstored before LN) fixes 1,179 BETA.DIST density cells of probes-numeric and breaks
+  7,086 (suite 511,285 to 505,221 passed), with no n or ratio band that separates the two; T-3473's earlier run found
+  the same for t unstored and for a double-double log form. So Excel stores these steps as the model does and the 38
+  units are the n 70-105 constant residual above, not a missing rounding: a Phase 1b (bit-reproduction) question,
+  T-3592's. `BETA.DIST(0.1,10,5,FALSE)` (-a10 A32, Excel -2.5 ulp, model -11.9) is the same: t unstored fixes it only.
 Evidence: probes-numeric t2513-r3-loader-const-sweep1, -diverse1, -grid1, -hold1, t2513-r3-loader-bd0-a, -b, -hold,
 t2513-verify-r3-loader-const-hold, t2513-verify-r3-loader-bd0-hold, and T-2464's t2464-r2-density-large-p1,
 t2464-w2f-xruns-*, -absweep; docs/research/t2464/r3-loader-const (`m1_model.py`, `a2_forms.py`, `a5_xreg.py`,
@@ -3004,7 +3013,7 @@ w4-fractions section 5, w6-literature H2.
 Ours: powf × tgamma below a + b = 171.6, statrs above.
 Status: PARTIAL (excel-graph): the structure (extended E, stored k/n/nk, bd0's log form, the 0.2 cut) VERIFIED on
 hold-outs; the constant's residual and the series branch UNVERIFIED
-Tasks: T-2507, T-2585, T-2586, T-3220, T-3249, T-3250, T-3244
+Tasks: T-2507, T-2585, T-2586, T-3220, T-3249, T-3250, T-3244, T-3473, T-3592
 
 ## Incomplete beta bpser: a forward series times EXP(fl(a LN x) - lnB) (T-2464)
 Rule: every bratio bpser call (min(a,b) <= 1 direct, w1 = bpser(b0, a0, y0), a, b > 1 with b0 < 40 and b0·x0 <= 0.7,

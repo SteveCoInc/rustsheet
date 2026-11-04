@@ -3,7 +3,7 @@ id: T-3473
 title: "BETA.DIST density at a shape of 5 to 100: 3 m9-beta-dist cells where Excel is within 2.5 ulp of the math and ours is 12 to 38 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -75,3 +75,15 @@ earlier run for the resumer, not instructions.
   globally; the stored form fits far more cells. Next: measure each term of E (bd0_p, bd0_q, the stirlerr sum, lf,
   LN(n + 1)) at the two shapes against mpmath to find which term carries the 38 ulp, before changing any code. Any
   change must keep the BETA.DIST visible count at or below 44,464 (and BINOM.DIST and POISSON, which share the kernel).
+
+## Outcome
+Dropped (2026-11-04, opus): no accuracy fix exists for these 3 cells without regressions, so they stay with T-3592
+(Phase 1b), which already lists them. Measured on main c8605ed7 (docs/excel-semantics/statistics.md "Beta density for
+min(a,b) > 1 ...", the T-3473 bullet):
+- The 38 ulp at (5, 100, 0.5) and (100, 5, 0.5) is the store of t = fl(99·LN(fl(99/51.5))) in bd0(99, 51.5): -5.7E-15
+  absolute, -0.81 units of ulp(E). Every ln(k/M) form leaves it or a larger error.
+- Keeping k/M in a register before LN (env-gated experiment, not committed): probes-numeric 511,285 to 505,221 passed;
+  1,179 BETA.DIST density cells fixed, 7,086 broken, and no n or ratio band separates them. Together with the earlier
+  run's t-unstored and double-double variants, this shows Excel stores these steps, so the cells' miss is the model's
+  unexplained n 70-105 constant residual, a bit-reproduction question (decision 0188 R5), not accuracy.
+- Eval delta: none (docs only).
