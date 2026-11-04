@@ -3,7 +3,7 @@ id: T-4030
 title: "Probe the df1 boundary of F.DIST.RT #NUM! at df2 1E10 (df1 61 to 78) and its mechanism (T-4017 follow-up)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
