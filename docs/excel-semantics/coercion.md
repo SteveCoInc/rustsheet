@@ -686,12 +686,63 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
   (`lookup_fold::class_first`), and leaves supplementary characters uncased (T-4013). So `=`, `<`, the criteria, the
   sorts and XMATCH's index weigh class members alike. `ϴ` therefore sorts at `ϑ`'s place, above `θ`, as Excel does.
   These do not follow MATCH: the lam-alef ligature `ﻻ` and the weightless characters (above and lookup.md).
-UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
-one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
-positions and neighbours make it count is open (T-3904).
+Where a weightless character counts: settled by T-3662's prefix rule in "Format characters, U+200B and the C1
+controls (T-3662)" below. It counts only when it is in the part one text has beyond the other, and the shared
+part before it is plain ASCII below U+007B in both texts.
 Ours: `cmp_text_excel` gives the weightless characters their code-point weight, so `=` keeps them apart; those
 failing cells are known failures owned by T-3904 (`=`, COUNTIF, XMATCH).
-Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule VERIFIED by T-3662 (below).
+
+## Format characters, U+200B and the C1 controls (T-3662)
+Evidence: probes/t3662-collation-ignorables (17 characters × 39 questions), -prefix (152 cells) and -sweep (471
+cells), excel-graph, 2026-11-04. Call a "fast unit" a UTF-16 unit below U+007B: the ASCII controls, space,
+punctuation, digits and letters up to `z`, but not `{ | } ~`, DEL or anything above it.
+
+**The format characters are weightless.** U+00AD soft hyphen, U+200C ZWNJ, U+200D ZWJ, U+200E LRM, U+200F RLM,
+U+2060 word joiner, U+FEFF BOM and U+FE0F VS16 behave exactly like U+0524 and the other weightless characters
+(the T-3584 list holds all of them): rows 1, 3:9 of -ignorables match rows 13:17 (U+0524, U+10C7, U+AB70, U+1C90,
+U+0E83) in every column.
+- Inner and leading positions are ignored: `"a"&c&"b"="ab"`, `c&"ab"="ab"`, `"a-"&c&"b"="a-b"`,
+  `"a"&c&"-b"="a-b"` TRUE (Calc!B, C, O, P), and `<` and `>` tie them (R, S FALSE). Two weightless characters are
+  equal, alone or in a run (`c&c=c`, `c=UNICHAR(1317)` TRUE; M, N; Calc!AC = 13: all 13 rows' a&c&b are equal).
+- **The prefix rule (trailing position).** Compare the two texts unit by unit from the start while both units
+  are fast and equal ignoring ASCII case. If one text runs out during that walk while the other has units left,
+  the shorter text is less, whatever those units are. Otherwise, at the first unit that is not fast or the
+  first difference, the whole texts are compared by the collation, where weightless characters weigh nothing.
+  So:
+  - `"ab"&c="ab"`, `"1"&c="1"`, `"a-"&c="a-"`, `"a "&c="a "`, `"a"&CHAR(1)&c="a"&CHAR(1)`, ``"a`"&c="a`"``,
+    `c=""` and `"AB"&c="ab"` are FALSE, and `"ab"&c>"ab"` is TRUE (-ignorables D, G:L, T; -prefix C:F; -sweep
+    A1:C122 and E12, every CHAR(k) for k = 1 to 122).
+  - `UNICHAR(233)&c=UNICHAR(233)`, `UNICHAR(945)&c=UNICHAR(945)`, `UNICHAR(161)&c=UNICHAR(161)` (T-3465's `"¡"`),
+    `"a"&UNICHAR(233)&c="a"&UNICHAR(233)`, `"a~"&c="a~"`, `"~ab"&c="~ab"`, `"a~b"&c="a~b"` and the same after
+    `{ | }`, DEL and U+0080 are TRUE (-ignorables E, F, I; -prefix B, N:P; -sweep A123:C127, E1:E4, E9:E11): a
+    non-fast unit anywhere in the shared start sends the texts to the collation.
+  - Once both texts reach a unit, the rule no longer applies: `"ab"&c="ab"&c&c`, `"ab"&c="ab"&UNICHAR(1317)`
+    and `c&"a"&c="a"` are TRUE (-prefix H, G; -ignorables Q).
+  - A difference first goes to the collation: `"ab"&c<"ac"`, `"a-"&c<"ab"`, `"Ab"&c<"ac"`, `"ab"&c<"b"` TRUE and
+    `"b"<"ab"&c` FALSE (-sweep F1:F6), and so do `"ab"&c<"ab"&CHAR(1)`, `"ab"&c<"ab-"` (-prefix J, K).
+- COUNTIF without a wildcard and XMATCH(..,0) follow `=` here too: COUNTIF(ab&c, "ab") is 0 and XMATCH `#N/A`,
+  COUNTIF(c&ab, "ab") 1, COUNTIF(aé&c, "aé") 1 (-ignorables AI, AJ, AM; -prefix R:U). EXACT is FALSE and
+  exact MATCH `#N/A` throughout (lookup.md "Weightless characters": MATCH counts each unit). Wildcards count
+  the character: `"a?b"` and `"a*b"` match a&c&b, `"a??b"` does not (AF:AH; criteria.md "Case beyond ASCII").
+  LEN counts it (AO = 3).
+
+**U+200B and the C1 controls are not weightless.** They have a primary weight of their own, so no cell finds
+them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H13 and -sweep H, M all FALSE).
+- U+200B sorts after every whitespace character and before the punctuation: above CHAR(160), CHAR(9),
+  CHAR(10), CHAR(13), U+2002 and U+3000 (-sweep G1:G6, I1:I6 FALSE) and below `!` and every symbol tested
+  (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2).
+- The C1 controls U+0081, U+0085 and U+009F sort after every symbol tested (` ! # $ & * . _ ~ ¡ ¿ + = > ¤ § ° ±
+  × ÷ • → ★ © ¬`) and before the digits (`¼`, `0`, `∞`; -prefix B11:L13 FALSE, M11:N13 TRUE, P11:P13 = 12; -sweep K, L), in code-point
+  order among themselves.
+- So `"a"&c&"b"<"ab"` is TRUE for these four (-ignorables R2, R10:R12), and among the 17 a&c&b texts U+200B <
+  U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB). UNVERIFIED: the other C1 units (U+0080,
+  U+0082 to U+0084, U+0086 to U+009E), taken to keep code-point order with these.
+
+Ours: `element` (functions/util/collation.rs) gives every one of these characters `other(c)`, a weight after
+the letters. The weightless cells (the trailing rule included) are known failures owned by T-3904; U+200B
+and the C1 controls are owned by T-4039.
+Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with

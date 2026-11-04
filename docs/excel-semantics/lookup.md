@@ -726,6 +726,9 @@ one-to-one fold above still keeps the length:
 - It is not ignored by exact MATCH: `"a"&U+0524&"b"` against `"ab"` and `U+0524&U+10C7` against `U+0525` are
   `#N/A` in MATCH, VLOOKUP and HLOOKUP (Calc!E6:H7), while `=`, COUNTIF and XMATCH(..,0) call both pairs equal
   (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
+  Exact MATCH keeps this one-for-one rule for the format characters too (U+200C to U+200F, U+2060, U+FEFF, U+FE0F:
+  probes/t3662-collation-ignorables Calc!AK1:AK17 all `#N/A`), and for U+200B and the C1 controls, which have weights;
+  XMATCH(..,0) follows `=`'s prefix rule instead (coercion.md "Format characters, U+200B and the C1 controls (T-3662)").
 - Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
   versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
   Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
