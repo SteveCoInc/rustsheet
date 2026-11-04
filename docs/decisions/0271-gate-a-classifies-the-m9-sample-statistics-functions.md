@@ -10,11 +10,13 @@
   - The dependencies T-3799 names are done: T-3549 (variadic draws), T-3686 (2-D literals), T-3529 (chi-squared).
 - **Decision:** each of the 74 functions is classified below.
   - **`exact`, 8 functions.** The result is one of the inputs or a count, with no floating-point step:
-    - MAXA and MINA: over an array they read only its numbers, and they are 0 with none (statistics.md "AVERAGEA, MAXA
-      and MINA over an array");
+    - MAXA and MINA: one of their input values, a range's text read as 0 and TRUE as 1; over an array they read only
+      its numbers; 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array", "Statistical function argument
+      modes");
     - LARGE and SMALL: the ceil(k)-th largest or floor(k)-th smallest input (statistics.md "LARGE/SMALL: a fractional
       k rounds up for LARGE and down for SMALL");
-    - MODE, MODE.SNGL and MODE.MULT: the most frequent inputs. MODE.MULT returns them as an array;
+    - MODE, MODE.SNGL and MODE.MULT: the most frequent inputs, skipping typed text and booleans (statistics.md
+      "Statistical function argument modes"). MODE.MULT returns them as an array;
     - FREQUENCY: an array of counts, one per bin plus one (statistics.md "FREQUENCY: one row per bin plus one").
   - **`composite`, 11 functions:**
     - AVERAGEIF, AVERAGEIFS, MAXIFS and MINIFS: their ranges must be references, as for SUMIF and SUMIFS (decision

@@ -68,14 +68,14 @@ LEN	exact	a character count
 LENB	exact	a byte count
 MATCH	exact	a position
 MAX	exact	one of its arguments, with no rounding
-MAXA	exact	one of its numeric inputs, or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array"; decision 0271)
+MAXA	exact	one of its input values (a range's text as 0, TRUE as 1), or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array", "Statistical function argument modes"; decision 0271)
 MAXIFS	composite	max_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
 MIN	exact	one of its arguments, with no rounding
-MINA	exact	one of its numeric inputs, or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array"; decision 0271)
-MINIFS	composite	max_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
-MODE	exact	the most frequent of its inputs (decision 0271)
-MODE.MULT	exact	an array of its most frequent inputs (decision 0271)
-MODE.SNGL	exact	the most frequent of its inputs (decision 0271)
+MINA	exact	one of its input values (a range's text as 0, TRUE as 1), or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array", "Statistical function argument modes"; decision 0271)
+MINIFS	composite	min_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
+MODE	exact	the most frequent of its inputs (statistics.md "Statistical function argument modes"; decision 0271)
+MODE.MULT	exact	an array of its most frequent inputs (statistics.md "Statistical function argument modes"; decision 0271)
+MODE.SNGL	exact	the most frequent of its inputs (statistics.md "Statistical function argument modes"; decision 0271)
 MONTH	exact	an integer part of a day serial
 MUNIT	exact	an identity matrix of 0s and 1s (numbers.md "RADIANS, SQRTPI and MUNIT")
 N	exact	the number itself, 1 or 0 for a logical and 0 for text, with no rounding
