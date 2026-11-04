@@ -3,7 +3,7 @@ id: T-4221
 title: "The facade's Input::LegacyFormula reads a padded bare column as loaded text (#REF!), not as an untyped parse failure"
 milestone: M2
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
