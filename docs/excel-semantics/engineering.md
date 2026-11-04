@@ -1372,6 +1372,47 @@ Rule: in the upward recurrence `K(n+1) = K(n-1) + 2n/x * K(n)`, Excel sets the p
 Superseded by "BESSELI overflow point (T-2613)" below: the cut is at 709.7. Rule: BESSELI(x,0) is finite up to x = 709.5 (2.02976276636543E+306) and `#NUM!` at 709.78 and from there to 713; ours is finite at 709.78 (2.685109662266049E+306), so the overflow cut lies in (709.5, 709.78], below the true overflow of I0 near 713.98 (T-2421 has 710 on).
 Ours flushes that term since T-2549 and matches all 12 cells (146 of the probe's 147).
 
+## BESSELI at a large x and an order of 2 or more is far from the math (T-4083)
+Rule: Excel's BESSELI(x, n) for n >= 2 at a large |x| comes from its Miller recurrence normalized by I0, and the result
+can be far from the true I_n(x). On the Gate A table `accuracy/BESSELI/s1` (excel-graph, 2026-11-04), 8 of 120 points are
+more than 1e-4 relative off the 50-digit math, all at |x| >= 250 with 2 <= n <= 11:
+- `BESSELI(709,3)` is 5.7482433040321455E+305 against 1.2237503925239046E+306 (53% low);
+- `BESSELI(253.421155347657,3)` is 2.5167402586278356E+108 against 2.8241364757402905E+108 (10.9%);
+- `BESSELI(551.348728145439,7)` 3.7%, `BESSELI(-642.503977919388,11)` 0.46%, `BESSELI(709.5,4)` 0.40%,
+  `BESSELI(-467.113815260393,4)` 0.31%, `BESSELI(-669.689720042612,2)` 0.20%, `BESSELI(391.306630099966,6)` 0.085%.
+The order 3 case at the overflow cut ("BESSELI overflow point (T-2613)", `(-709.7,3)` under half its neighbours) is one
+instance. Orders 0 and 1 are Excel's polynomial forms, far closer to the math (`BESSELI(709.7,0)` is 1.4E-7 low).
+The engine matches Excel bit for bit on all 120 points (it runs the same recurrence), so Gate A holds through Excel's
+15 digits. These points exceed decision 0188 R3's G = 1e-4, so they are R3 candidates; following the math there needs an
+owner ruling (T-4196), and until then Excel stays the target.
+Also from the BESSELJ table: `BESSELJ(11.0627245753426,4)` is -4.609392711411031E-4 against -4.60294628772423E-4 (0.14%),
+next to a root of J_4, where Excel's ~1E-7 absolute error is large relative to the value (the T-0900 profile).
+Evidence: eval/accuracy/tables/BESSELI/s1 and BESSELJ/s1 with their oracle and math sidecars (T-4083).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_i.rs (unchanged; it already matches)
+Tasks: T-4083, T-4196
+
+## BESSELJ and BESSELI at a tiny x and a small order (T-4083)
+Rule: at a tiny |x| BESSELJ and BESSELI are `#NUM!` already at orders 2 to 4, far below the order 100,001 of "BESSEL
+order cap" (`BESSELJ(1E-300,100001)`), where the true value is a tiny number. The cut depends on the order and lies
+between these cells (Gate A tables `accuracy/BESSELJ/s1` and `BESSELI/s1`, excel-graph, 2026-11-04):
+- BESSELJ order 2: `BESSELJ(1.16668964461302E-30,2)` is 1.7014559085590685E-61, `BESSELJ(1.10541629485784E-181,2)` is
+  `#NUM!`;
+- BESSELJ order 3: `BESSELJ(2.49185320362869E-170,3)` and `BESSELJ(-6.6840116183702E-247,3)` are `#NUM!` (no answering
+  cell below 1E-5 at this order);
+- BESSELJ order 4: `BESSELJ(5.57080663109133E-14,4)` is 2.508078418226554E-56, `BESSELJ(-3.63601369770004E-65,4)` and
+  `BESSELJ(1.90005396436845E-196,4)` are `#NUM!`;
+- BESSELI order 4: `BESSELI(-1.02514099090909E-10,4)` is 2.876094643484432E-43, `BESSELI(-3.53342392064674E-38,4)` is
+  `#NUM!` (the math is about 4.06E-153). BESSELI order 2 answers at 4.45682724521062E-17.
+Orders 0 and 1 answer at every tiny x drawn (down to 1.5E-46 for J0, 5.3E-74 for J1, 2.7E-268 for I0). The likely cause
+is the recurrence's own overflow at a huge 2/x, as for the order 100,001 case, but where each cut lies is unprobed.
+The engine is `#NUM!` at all six cells and matches the answering ones bit for bit. Excel's error is matched (decision
+0188 R3 never applies to an error against a number), so Gate A holds through Excel's side.
+Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083).
+Status: VERIFIED (excel-graph, these cells) / UNVERIFIED (each order's cut)
+Implemented in: functions/engineering/transcendental/bessel_excel.rs, bessel_i.rs (unchanged; they already match)
+Tasks: T-4083
+
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.
 Rule: BESSELI(x,n) is finite up to x = 709.7 (`BESSELI(709.7,0)` is 2.4788083687166675E+306, `(709.7,1)` 2.4770621409647947E+306, `(709.7,5)` 1.9147648105012915E+306) and `#NUM!` at every probed x above it, to 709.78 and on, at orders 0, 1 and 5. The cut is in (709.7, 709.70001], far below the true overflow of I0 near 713.98 and of `exp` at 709.78, so it is a constant in Excel's code, taken as 709.7.
