@@ -409,3 +409,28 @@ fn sort_comparators_are_total_orders_on_mixed_types() {
         });
     }
 }
+
+/// T-4195 review: a table sort naming a later field first compares texts by rank under one parent
+/// and by `cmp_text` across parents, which can cycle; the sort must still end with every group.
+#[test]
+fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
+    let spellings = ["AB", "ab\u{ad}", "ab", "\u{ad}ab", "ab\u{ad}\u{ad}", "Ab"];
+    let firsts = ["x", "y", "z"];
+    let keys: Vec<Vec<ArrayNode>> = firsts
+        .iter()
+        .flat_map(|first| {
+            spellings
+                .iter()
+                .map(move |second| vec![text(first), text(second)])
+        })
+        .collect();
+    for ascending in [true, false] {
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+            .unwrap_or(Grouping { groups: Vec::new() });
+        let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
+        grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);
+        let after: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
+        assert_eq!(before, after);
+        assert!(!grouping.groups.is_empty());
+    }
+}

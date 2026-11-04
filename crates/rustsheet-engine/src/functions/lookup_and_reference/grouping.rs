@@ -308,6 +308,27 @@ impl Grouping {
         group_of
     }
 
+    /// Sorts the groups stably by `cmp` with [`sort_indices_pairwise`], which cannot panic: texts
+    /// compare by rank under one parent and by `cmp_text` across parents ([`Group::key_order`]),
+    /// and a `sort_order` naming a later field first can mix the two into a cycle, which
+    /// `slice::sort_by` may panic on.
+    fn sort_groups(&mut self, mut cmp: impl FnMut(&Group, &Group) -> Ordering) {
+        let mut order: Vec<usize> = (0..self.groups.len()).collect();
+        let groups = &self.groups;
+        sort_indices_pairwise(&mut order, |a, b| match (groups.get(a), groups.get(b)) {
+            (Some(x), Some(y)) => cmp(x, y),
+            _ => Ordering::Equal,
+        });
+        let mut slots: Vec<Option<Group>> = std::mem::take(&mut self.groups)
+            .into_iter()
+            .map(Some)
+            .collect();
+        self.groups = order
+            .into_iter()
+            .filter_map(|index| slots.get_mut(index).and_then(Option::take))
+            .collect();
+    }
+
     /// Sorts the groups by their keys, field by field, `ascending[i]` for field `i` (ascending
     /// when missing). Mixed types sort numbers < text < FALSE < TRUE (G!A193) and the blank key
     /// sorts last in both directions (G!A1, G!A145): that is `sort_key_cmp`. Numbers compare
@@ -315,7 +336,7 @@ impl Grouping {
     /// G!A761), matching the exact `cell_key` grouping. (Errors against text, booleans and the
     /// blank key: unprobed, SPEC-0006.)
     pub(crate) fn sort_by_keys(&mut self, ascending: &[bool], cell: CellReferenceIndex) {
-        self.groups.sort_by(|a, b| {
+        self.sort_groups(|a, b| {
             (0..a.keys.len().min(b.keys.len()))
                 .map(|field| {
                     a.key_order(
@@ -349,7 +370,7 @@ impl Grouping {
             .copied()
             .chain((0..fields).filter(|field| !named.contains(field)))
             .collect();
-        self.groups.sort_by(|a, b| {
+        self.sort_groups(|a, b| {
             priority
                 .iter()
                 .map(|&field| {
