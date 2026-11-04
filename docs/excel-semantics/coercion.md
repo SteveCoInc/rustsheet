@@ -609,7 +609,7 @@ tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the
     `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
   - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
     `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
-    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+    `$(١٢)` (= -12; ASCII `$(12)` is -12 too, "Currency sign before parentheses is negative").
   - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
   - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
     `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
@@ -1108,9 +1108,18 @@ for an integer amount, `$#,##0.00_);[Red]($#,##0.00)` when the amount has a deci
 (`$(12.0)`, `$(12.)`, `$(.5)`), `0.00E+00` for `$(1e3)`. Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))`,
 `$(12)%` and `$(1,23)`. Typed `€(12)` is text with General, but `"€(12)"+0`, VALUE and NUMBERVALUE give -12
 (typed input has no `€` among its currencies, as above). (NUMBERVALUE reads `$(12)%` as -0.12 and `$(1,23)` as -123, which the engine matches.)
-Other currency signs before parentheses are unprobed. `($12)` and `(12)` are the older
-paren forms above.
-Evidence: probes/t4117-typed-currency-paren (excel-graph, 2026-11-04).
+`($12)` and `(12)` are the older paren forms above. More rows (probes/t4117-currency-parens A1:A34, excel-graph
+2026-11-04; ENTERED log docs/research/t4117-currency-parens-2026-11-04.md):
+- `€` takes the form only where it is a currency: typed `€(12)`, `€ (12)`, `€(1,234.5)`, `€(1e3)` and `€(1 1/2)`
+  stay text, but VALUE, NUMBERVALUE and `+0` read them as negative (A15:A17, A25, A31). `£(12)` is `#VALUE!`
+  everywhere (A28), as `£12` is.
+- A mixed fraction is negative too: `$(1 1/2)`, `$ (1 1/2)` and `$( 1 1/2 )` are -1.5 typed with `# ?/?`, `$(3 1/12)`
+  is -3.0833… with `# ??/??` (A21, A29, A33:A34), by VALUE and `+0` but not NUMBERVALUE, which drops the spaces
+  (`#VALUE!`). `-$(1 1/2)` is text (A32); typed `$(1 1/2%)` stays text but takes `0.00%`, like `-$3 1/2%` (A30).
+- `$(1.5E+2)` is -150 in `0.00E+00` (A19); `$(12%)`, `$(+12)`, `$()` and `$($12)` are text (A20, A22, A23, A27).
+Implemented in `parse_percent_or_currency` (formatter/parse_formatted.rs) and, for fractions, `read_mixed_fraction`
+(mixed_fraction.rs).
+Evidence: probes/t4117-typed-currency-paren, probes/t4117-currency-parens (excel-graph, 2026-11-04).
 Status: VERIFIED
 Tasks: T-4117
 
@@ -1225,3 +1234,4 @@ Implemented in: the engine matches every cell except MULTINOMIAL numeric text (C
 SERIESSUM boolean coefficients fixed in T-1191.
 Status: VERIFIED
 Tasks: T-1082, T-1190, T-1191, T-1261, T-1574, T-1655, T-1661
+

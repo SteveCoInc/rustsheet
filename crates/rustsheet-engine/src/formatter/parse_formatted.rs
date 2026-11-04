@@ -108,10 +108,17 @@ fn parse_ascii_typed_number(
 
 /// Whether the denominator of the mixed fraction `text` (already read by `mixed_fraction`) is 10
 /// or more, ignoring leading zeros: `3 1/12` and `3 1/10000` take `# ??/??`, `3 1/9` and
-/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27).
+/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27); a closing `)` or
+/// space is not part of it (`$(1 1/2)` is `# ?/?`, `$(3 1/12)` `# ??/??`, probes/t4117-currency-
+/// parens A21, A34).
 fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
-    text.rsplit_once('/')
-        .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
+    text.rsplit_once('/').is_some_and(|(_, denominator)| {
+        denominator
+            .trim_end_matches([')', ' '])
+            .trim_start_matches('0')
+            .len()
+            >= 2
+    })
 }
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:

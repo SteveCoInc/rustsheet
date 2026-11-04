@@ -2111,6 +2111,7 @@ C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
 C	probes/t4099-file-xlpm-unbound-names.case.json	39
+C	probes/t4117-currency-parens.case.json	170
 C	probes/t4117-typed-currency-paren.case.json	120
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
