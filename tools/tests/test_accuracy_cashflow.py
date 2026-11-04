@@ -67,7 +67,7 @@ def test_xirr_counts_sign_changes_in_time_order_and_refuses_fractional_dates() -
 
 def test_array_literals_round_trip_through_the_formula() -> None:
     args: list[literal.Arg] = [(-1000.5, 300.0, 2.5e-7), (36526, 36600, 37000)]
-    text = formula("XIRR", args)
+    text = formula(XIRR, args)
     assert text == "=XIRR({-1000.5,300,2.5E-07},{36526,36600,37000})"
     assert parse_formula(XIRR, text) == [(-1000.5, 300.0, 2.5e-7), (36526.0, 36600.0, 37000.0)]
     assert math_arg(XIRR.params[0], args[0]) == (mp(-1000.5), mp(300), mp(2.5e-7))

@@ -668,13 +668,81 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
   D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
   keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
   whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
-  same weight).
-UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
-one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
-positions and neighbours make it count is open (T-3904).
-Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
-probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
-Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
+  same weight). The text criteria without a wildcard equate `Ͷ`/`ϳ` and `ϑ`/`ϴ` too (probes/t3929-wildcard-fold-criteria
+  Calc!B29:D30, t3929-wildcard-fold-xmatch Calc!E29:E30; criteria.md "Case beyond ASCII").
+  The other classes of lookup.md's "Equivalence classes" hold under `=`, `<` and COUNTIF too. In each case x = y is
+  TRUE, x < y and x > y are FALSE, x&"b" < y&"a" is FALSE (they tie at the first pass), and COUNTIF counts 1. The
+  pairs are:
+  - the Hebrew final letters `כ ך`, `מ ם`, `נ ן`, `פ ף`, `צ ץ`;
+  - Latin Extended-D `Ꜹ Ꜻ`, `ꜹ ꜻ`, `Ꝥ Ꝧ`, `Ꝯ ꝰ`;
+  - Georgian `გ` with U+10FA;
+  - the ypogegrammeni U+1F8D with U+1F82 and U+1F88 with U+1F80;
+  - `ϴ ϑ`, `ϳ Ͷ`, `ϵ ε`, U+1FBE `ι`, and U+1F05 with U+1F0A.
+
+  `ϴ` is not `θ`: `ϴ=θ` is FALSE and `ϴ>θ` is TRUE, and COUNTIF counts 0 (probes/t4013-class-equality-order
+  Calc!B1:F18, excel-graph, 2026-11-04, T-4013).
+  Implemented in: the collation's `fold` (crates/rustsheet-engine/src/functions/util/collation.rs) maps each member
+  of those classes to the class's first member through the one `CLASSES` table that exact MATCH uses
+  (`lookup_fold::class_first`), and leaves supplementary characters uncased (T-4013). So `=`, `<`, the criteria, the
+  sorts and XMATCH's index weigh class members alike. `ϴ` therefore sorts at `ϑ`'s place, above `θ`, as Excel does.
+  These do not follow MATCH: the lam-alef ligature `ﻻ` and the weightless characters (above and lookup.md).
+Where a weightless character counts: settled by T-3662's prefix rule in "Format characters, U+200B and the C1
+controls (T-3662)" below. It counts only when it is in the part one text has beyond the other, and the shared
+part before it is plain ASCII below U+007B in both texts.
+Ours: `cmp_text_excel` gives the weightless characters their code-point weight, so `=` keeps them apart; those
+failing cells are known failures owned by T-3904 (`=`, COUNTIF, XMATCH).
+Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule VERIFIED by T-3662 (below).
+
+## Format characters, U+200B and the C1 controls (T-3662)
+Evidence: probes/t3662-collation-ignorables (17 characters × 39 questions), -prefix (152 cells) and -sweep (471
+cells), excel-graph, 2026-11-04. Call a "fast unit" a UTF-16 unit below U+007B: the ASCII controls, space,
+punctuation, digits and letters up to `z`, but not `{ | } ~`, DEL or anything above it.
+
+**The format characters are weightless.** U+00AD soft hyphen, U+200C ZWNJ, U+200D ZWJ, U+200E LRM, U+200F RLM,
+U+2060 word joiner, U+FEFF BOM and U+FE0F VS16 behave exactly like U+0524 and the other weightless characters
+(the T-3584 list holds all of them): rows 1, 3:9 of -ignorables match rows 13:17 (U+0524, U+10C7, U+AB70, U+1C90,
+U+0E83) in every column.
+- Inner and leading positions are ignored: `"a"&c&"b"="ab"`, `c&"ab"="ab"`, `"a-"&c&"b"="a-b"`,
+  `"a"&c&"-b"="a-b"` TRUE (Calc!B, C, O, P), and `<` and `>` tie them (R, S FALSE). Two weightless characters are
+  equal, alone or in a run (`c&c=c`, `c=UNICHAR(1317)` TRUE; M, N; Calc!AC = 13: all 13 rows' a&c&b are equal).
+- **The prefix rule (trailing position).** Compare the two texts unit by unit from the start while both units
+  are fast and equal ignoring ASCII case. If one text runs out during that walk while the other has units left,
+  the shorter text is less, whatever those units are. Otherwise, at the first unit that is not fast or the
+  first difference, the whole texts are compared by the collation, where weightless characters weigh nothing.
+  So:
+  - `"ab"&c="ab"`, `"1"&c="1"`, `"a-"&c="a-"`, `"a "&c="a "`, `"a"&CHAR(1)&c="a"&CHAR(1)`, ``"a`"&c="a`"``,
+    `c=""` and `"AB"&c="ab"` are FALSE, and `"ab"&c>"ab"` is TRUE (-ignorables D, G:L, T; -prefix C:F; -sweep
+    A1:C122 and E12, every CHAR(k) for k = 1 to 122).
+  - `UNICHAR(233)&c=UNICHAR(233)`, `UNICHAR(945)&c=UNICHAR(945)`, `UNICHAR(161)&c=UNICHAR(161)` (T-3465's `"¡"`),
+    `"a"&UNICHAR(233)&c="a"&UNICHAR(233)`, `"a~"&c="a~"`, `"~ab"&c="~ab"`, `"a~b"&c="a~b"` and the same after
+    `{ | }`, DEL and U+0080 are TRUE (-ignorables E, F, I; -prefix B, N:P; -sweep A123:C127, E1:E4, E9:E11): a
+    non-fast unit anywhere in the shared start sends the texts to the collation.
+  - Once both texts reach a unit, the rule no longer applies: `"ab"&c="ab"&c&c`, `"ab"&c="ab"&UNICHAR(1317)`
+    and `c&"a"&c="a"` are TRUE (-prefix H, G; -ignorables Q).
+  - A difference first goes to the collation: `"ab"&c<"ac"`, `"a-"&c<"ab"`, `"Ab"&c<"ac"`, `"ab"&c<"b"` TRUE and
+    `"b"<"ab"&c` FALSE (-sweep F1:F6), and so do `"ab"&c<"ab"&CHAR(1)`, `"ab"&c<"ab-"` (-prefix J, K).
+- COUNTIF without a wildcard and XMATCH(..,0) follow `=` here too: COUNTIF(ab&c, "ab") is 0 and XMATCH `#N/A`,
+  COUNTIF(c&ab, "ab") 1, COUNTIF(aé&c, "aé") 1 (-ignorables AI, AJ, AM; -prefix R:U). EXACT is FALSE and
+  exact MATCH `#N/A` throughout (lookup.md "Weightless characters": MATCH counts each unit). Wildcards count
+  the character: `"a?b"` and `"a*b"` match a&c&b, `"a??b"` does not (AF:AH; criteria.md "Case beyond ASCII").
+  LEN counts it (AO = 3).
+
+**U+200B and the C1 controls are not weightless.** They have a primary weight of their own, so no cell finds
+them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H13 and -sweep H, M all FALSE).
+- U+200B sorts after every whitespace character and before the punctuation: above CHAR(160), CHAR(9),
+  CHAR(10), CHAR(13), U+2002 and U+3000 (-sweep G1:G6, I1:I6 FALSE) and below `!` and every symbol tested
+  (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2).
+- The C1 controls U+0081, U+0085 and U+009F sort after every symbol tested (` ! # $ & * . _ ~ ¡ ¿ + = > ¤ § ° ±
+  × ÷ • → ★ © ¬`) and before the digits (`¼`, `0`, `∞`; -prefix B11:L13 FALSE, M11:N13 TRUE, P11:P13 = 12; -sweep K, L), in code-point
+  order among themselves.
+- So `"a"&c&"b"<"ab"` is TRUE for these four (-ignorables R2, R10:R12), and among the 17 a&c&b texts U+200B <
+  U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB). UNVERIFIED: the other C1 units (U+0080,
+  U+0082 to U+0084, U+0086 to U+009E), taken to keep code-point order with these.
+
+Ours: `element` (functions/util/collation.rs) gives every one of these characters `other(c)`, a weight after
+the letters. The weightless cells (the trailing rule included) are known failures owned by T-3904; U+200B
+and the C1 controls are owned by T-4039.
+Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 ## Text in a range operand of arithmetic is coerced
 Rule: arithmetic on a range coerces a numeric text cell to a number, so `Data!D7:D7/1` with
@@ -921,10 +989,10 @@ digits (not exactly three): VALUE, `A1+0` and IMREAL of "1,0000" are 10000, of "
 leading one, NUMBERVALUE refuses a second).
 Typed into a cell (probes/typed-group-comma-leading-percent, excel-graph 2026-11-02, T-3835, formats in docs/research/typed-group-comma-leading-percent-2026-11-02.md): the same texts give the same numbers and the refused ones stay text (General). Formats: grouped integers `#,##0` (`1,0000`, `01,0000`, `-1,0000`, `1,000,0000`), `#,##0.00` with a decimal (`1,0000.5`); a leading percent `0%` (`%1`, `%-1`, `% 1`, `%1,0000`), `0.00%` with decimals (`%1.5`); `1,0000%` `0%`. The engine matches (the reader is shared with VALUE; test `typed_group_comma_and_leading_percent_formats`).
 Sign before the percent sign and a trailing `$` (probes/t3742-value-percent-currency, excel-graph 2026-11-03, T-3742): VALUE and `+0` of "-%1.5" are -0.015, like "%-1.5" and "(%1.5)"; "%%1.5", "%1.5%", "%", "%$1.5" and "$%1.5" are #VALUE!, "% 1.5" is 0.015. A trailing dollar sign is refused in every form, "1.5$", "1.5 $" and "-1.5$" are #VALUE! for VALUE, `+0` and NUMBERVALUE, while a trailing euro sign reads ("1.5€" is 1.5, as do "$1.5" and "-$1.5").
-Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02), probes/t3742-value-percent-currency (excel-graph, 2026-11-03). Unverified extrapolations: `-%-1.5`, `-% 1.5` and `-%1e2` follow the `%` reader; typed `1.5$`, `-200$` and typed `-%1.5` are unprobed and keep the old typed behavior or share the reader (the `$` refusal is coercion and criteria only: COUNTIF of 1.5 against "1.5$", "=1.5$", "1.5 $", "-1.5$" and "1.5€" is 0, "$1.5" is 1, probes/t3742-value-percent-currency B1:B6).
+Evidence: probes/eng-inumber-grammar-value, probes/eng-number-text-group-comma-edges (excel-graph, 2026-11-02), probes/t3742-value-percent-currency (excel-graph, 2026-11-03). Sign and `$` shapes (probes/t3980-typed-percent-currency, excel-graph 2026-11-03, T-3980): VALUE and `+0` of "-% 1.5" is -0.015, "-%1e2" is -1, "+%1.5" is 0.015, and "-%-1.5" is #VALUE! (a minus after `-%` is refused). Typed into a cell, `-%1.5` and `-% 1.5` are numbers (-0.015, format `0.00%`, ENTERED log in docs/research/t3980-typed-percent-currency-2026-11-03.md); `-%-1.5`, `1.5$`, `1.5 $` and `-200$` stay General text (not formulas). The `$` refusal applies to coercion, criteria and typed input; only the formula-or-text test of a typed leading sign still reads a trailing `$`, so `-200$` is text, not a formula. COUNTIF of 1.5 against "1.5$", "=1.5$", "1.5 $", "-1.5$" and "1.5€" is 0, "$1.5" is 1, probes/t3742-value-percent-currency B1:B6). Shapes after a sign (probes/t3991-percent-shapes, excel-graph 2026-11-04, T-3991): VALUE and `+0` of "+%-1.5", "-% -1.5" and "-%+1.5" are #VALUE! (a sign before the percent sign refuses any second sign after it, unlike "%-1.5"), "+% 1.5" is 0.015 and "+%1e2" is 1. Typed into a cell, `+%1.5` is a number (0.015, format `0.00%`, TEXT("0.00%") `1.50%`), `-%1.5` shows `-1.50%`, and `3 1/2$` stays General text; VALUE("3 1/2$") is #VALUE!. Fixed in the engine (T-3991).
 Oracle: excel-graph, 2026-11-02.
 Status: VERIFIED
-Tasks: T-3811 (implements), T-3644 (found), T-3742 (sign before the percent, trailing `$`)
+Tasks: T-3811 (implements), T-3644 (found), T-3742 (sign before the percent, trailing `$`), T-3980 (typed shapes)
 
 ## Percent text is rounded once
 Rule (en-US): number text ending in `%` (VALUE, `0+"…"`, typed cell input) is the decimal text shifted two places and rounded to the nearest double once: `VALUE("23.123%")` = 0.23123, not the double 23.123 divided by 100 (0.23123000000000002). The 15-significant-digit truncation of number text applies before the shift: `12345.6789012345678%` = 123.456789012345. All three paths agree for `23.123%`, `-23.123%`, `0.07%`, `1.005%`, `12345.6789012345678%`, and the e-notation texts `23e-12%` (2.3e-13) and `1.5E-300%` (1.5e-302), and typed input is a number (ISNUMBER TRUE). The `%` operator in a formula (`=23.123%`) is a separate path and is not covered here.

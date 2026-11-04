@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use crate::calculated_columns::TableGrowth;
 use crate::expressions::{
     lexer::LexerMode,
-    parser::{is_limit_error, new_parser_english, stringify::to_english_string, Node},
+    parser::{
+        is_limit_error, new_parser_english,
+        stringify::bound_variables::to_english_string_typed_from_r1c1, Node,
+    },
     types::CellReferenceRC,
 };
 use crate::model::Model;
@@ -25,7 +28,10 @@ pub const TYPED_FORMULA_DOES_NOT_PARSE: &str = "Formula does not parse";
 /// parse here (no tables), so such a formula is `None` (T-3113). Excel's short forms (`RC[-1]`,
 /// `R[-1]C`, a whole row `R2` or column `C[-1]`, lower case) read as Excel reads them, and a
 /// relative offset wraps around the grid (T-3212); a LET name or LAMBDA parameter `r`, `c`, `rc`
-/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`.
+/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`. A name
+/// spelled like an A1 cell (`f1`) is no reference in R1C1 mode and Excel binds it, so the A1 text
+/// writes it `_xlpm.f1`, which the typed A1 entry binds (T-3897). Unbound, such a name is
+/// Excel's undefined name (`#NAME?`) and `None` here, as the A1 text would read the cell.
 #[must_use]
 pub fn r1c1_formula_to_a1(
     text: &str,
@@ -57,7 +63,7 @@ pub fn r1c1_formula_to_a1(
     {
         return None;
     }
-    Some(format!("={}", to_english_string(&node, &context)))
+    to_english_string_typed_from_r1c1(&node, &context).map(|text| format!("={text}"))
 }
 
 /// Whether the one `(` that `formula` leaves open opens a call's arguments (`SUM(1`, `LOG10(2`,
@@ -130,6 +136,53 @@ impl Model {
             }
             node => self.parser.typed_refusal().map_or(Ok(node), Err),
         }
+    }
+
+    /// Sets a cell parametrized by (`sheet`, `row`, `column`) with `value`.
+    ///
+    /// This mimics a user entering a value on a cell.
+    ///
+    /// If you enter a currency `$100` it will set as a number and update the style
+    ///  Note that for currencies/percentage there is only one possible style
+    ///  The value is always a string, so we need to try to cast it into numbers/booleans/errors
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rustsheet_engine::Model;
+    /// # use rustsheet_engine::cell::CellValue;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
+    /// model.set_user_input(0, 1, 1, "$100".to_string());
+    /// model.set_user_input(0, 2, 1, "$125".to_string());
+    /// model.set_user_input(0, 3, 1, "-$10".to_string());
+    /// model.set_user_input(0, 1, 2, "=SUM(A:A)".to_string());
+    /// model.evaluate();
+    /// assert_eq!(model.get_cell_value_by_index(0, 1, 2), Ok(CellValue::Number(215.0)));
+    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("$215 ".to_string()));
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// See also:
+    /// * [`Model::update_cell_with_formula()`]
+    /// * [`Model::update_cell_with_number()`]
+    /// * [`Model::update_cell_with_bool()`]
+    /// * [`Model::update_cell_with_text()`]
+    pub fn set_user_input(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        value: String,
+    ) -> Result<(), String> {
+        // Text from outside the engine: a padded bare column `T[ Col ]` is no column here, as
+        // Excel reads it typed or loaded (T-3258); the engine's own re-entries of its printed
+        // text go through `reenter_printed_input`.
+        self.parser.set_external(true);
+        let result = self.reenter_printed_input(sheet, row, column, value);
+        self.parser.set_external(false);
+        result
     }
 
     /// [`Model::set_user_input`] for text a user types, which Excel refuses where it would read

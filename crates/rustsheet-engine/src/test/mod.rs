@@ -25,6 +25,7 @@ mod test_date_huge_month_day;
 mod test_datedif_leap_month_end;
 mod test_days360_month_end;
 mod test_days_days360;
+mod test_defined_name_call_cap;
 mod test_defined_name_formulas;
 mod test_defined_name_grouped;
 mod test_defined_name_relative;

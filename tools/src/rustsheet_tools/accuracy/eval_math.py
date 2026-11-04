@@ -148,8 +148,9 @@ def array_elements(value: Any) -> tuple[float, ...] | str:
 
 def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     """One argument as the parameter's kind, or why it does not fit."""
-    if param.kind == "array":
-        return array_elements(value)
+    if param.kind in ("array", "matrix"):
+        # a matrix needs its shape, which the sweep reader flattens (TODO(T-4025))
+        return array_elements(value) if param.kind == "array" else "a matrix argument"
     if isinstance(value, list) or value is None or isinstance(value, str):
         return "non-numeric argument"
     if param.kind == "bool":

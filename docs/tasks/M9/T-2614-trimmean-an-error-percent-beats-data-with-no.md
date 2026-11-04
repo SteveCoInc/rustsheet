@@ -3,7 +3,7 @@ id: T-2614
 title: "TRIMMEAN: an error percent beats data with no number (gen-m9 a5342a7e24fd803e A288)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,3 +30,9 @@ of QUARTILE, PERCENTILE, PERCENTRANK and TRIMMEAN (T-2256)" for the data rule.
 
 ## Out of scope
 - Whether QUARTILE, PERCENTILE and PERCENTRANK order the same way (unprobed; file a probe task if needed).
+
+## Outcome
+Already fixed on `main` before this run (an earlier change put the percent's error ahead of the no-number `#NUM!`):
+gen-m9 a5342a7e24fd803e Calc!A288 passes and its line is not in eval/baseline/gen-m9.txt, so the baseline needs no change.
+Added `trimmean_error_percent_beats_data_with_no_number` (test_fn_domain_errors_t2621.rs): `TRIMMEAN(<TRUE cell>,NA())`
+= `#N/A`, `TRIMMEAN(<TRUE cell>,0.1)` = `#NUM!`, and the A288 shape = `#N/A`. Eval delta: none.

@@ -119,7 +119,8 @@ pub(super) fn reference_text(
     // Sheet2!F4). Any other reference that lowers to an error comes from table metadata that does
     // not fit (directive 5), and is written as that error, which it evaluates to.
     // A detached reference (its table converted to a range) lowers to `#VALUE!`, so the
-    // `ErrorKind` arm below writes it as `#VALUE!`; what Excel writes is unprobed (TODO(T-3629)).
+    // `ErrorKind` arm below writes it as `#VALUE!`; Excel's save writes `#REF!` (probes/table-edits/
+    // t3629-save-detached, T-3629), which TODO(T-4020) adopts with the convert itself.
     if export_to_excel {
         return match lowered {
             Node::ErrorKind(_) if reference.specifier != Some(TableSpecifier::Totals) => {

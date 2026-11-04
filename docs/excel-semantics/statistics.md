@@ -2515,9 +2515,15 @@ act on the oriented arguments"), `incomplete_beta.rs` swaps at the mean for ever
 `student_t.rs`. BETA.DIST's cdf runs on the port's dispatch (T-2505): `bratio/mod.rs` `dispatch` (x0 >= 0.3) and
 `beta_dist_lower_tail`, with the bpser branches ported and every other branch, and a shape of 1 outside the closed
 forms, still on `incomplete_beta.rs` (T-2847).
+- bup + bgrat at a0 < 1 other than 1/2 is near the math in Excel (T-3665, an accuracy result, not a model of Excel's
+  bits): at a = 0.75 and 0.9, b = 2.5, x in [0.29, 0.3), Excel is within 1.7 ulp of the 60-digit value on the 9 cells
+  the task named, where the Cephes kernel was 4 to 6 ulp off. TOMS's 20 bup terms plus the accurate bgrat increment
+  (`bgrat_increment`, double-double Legendre fraction) make all 9 within 15 digits and 7 bit-exact. On probes-numeric
+  (main 302bec9b5) that is 16 BETA.DIST cells newly within 15 digits and none newly off, with 626 cells newly bit-exact
+  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed.
 Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and argument forms; each branch's
 arithmetic is in the entries below
-Tasks: T-2464, T-2504, T-2505
+Tasks: T-2464, T-2504, T-2505, T-3665
 
 ## Incomplete beta closed forms act on the oriented arguments (T-2464)
 Rule: after bratio's swap, on (a0, b0, x0, y0), with Excel's EXP and LN: b0 = 1 gives w = EXP(a0·LN(x0)); a0 = 1 with
@@ -3015,6 +3021,15 @@ L5 = LN(n + 1) (Excel's);  Cs = accurate stirlerr(n) - stirlerr(k) - stirlerr(nk
   F.DIST at the mapped point (column B) shows the same growth (sd 46-53 at 25-50, 336-398 at 450-650).
   UNVERIFIED hypothesis (T-3250 and T-3244 to test): one rounding at the scale of |E| that one side makes and the
   other does not.
+- Where Excel is closer to the math than the model (T-3473, measured on main c8605ed7): at `BETA.DIST(0.5,5,100,FALSE)`
+  and its mirror (probes-numeric m9-beta-dist-a5 A52, -a100 A34) Excel is +2.3 ulp from the 60-digit value and the model
+  +38. The model's error is the store of t = fl(99·LN(fl(99/51.5))) = 64.70 in bd0(nk, n·q): -5.7E-15, -0.81 units of
+  ulp(E) (bd0(4, 51.5) is +0.10). -k·LN(M/k) leaves the same error and k·(LN k - LN M) a larger one (-2.0E-14). Keeping
+  the quotient in a register (unstored before LN) fixes 1,179 BETA.DIST density cells of probes-numeric and breaks
+  7,086 (suite 511,285 to 505,221 passed), with no n or ratio band that separates the two; T-3473's earlier run found
+  the same for t unstored and for a double-double log form. So Excel stores these steps as the model does and the 38
+  units are the n 70-105 constant residual above, not a missing rounding: a Phase 1b (bit-reproduction) question,
+  T-3592's. `BETA.DIST(0.1,10,5,FALSE)` (-a10 A32, Excel -2.5 ulp, model -11.9) is the same: t unstored fixes it only.
 Evidence: probes-numeric t2513-r3-loader-const-sweep1, -diverse1, -grid1, -hold1, t2513-r3-loader-bd0-a, -b, -hold,
 t2513-verify-r3-loader-const-hold, t2513-verify-r3-loader-bd0-hold, and T-2464's t2464-r2-density-large-p1,
 t2464-w2f-xruns-*, -absweep; docs/research/t2464/r3-loader-const (`m1_model.py`, `a2_forms.py`, `a5_xreg.py`,
@@ -3024,7 +3039,7 @@ w4-fractions section 5, w6-literature H2.
 Ours: powf × tgamma below a + b = 171.6, statrs above.
 Status: PARTIAL (excel-graph): the structure (extended E, stored k/n/nk, bd0's log form, the 0.2 cut) VERIFIED on
 hold-outs; the constant's residual and the series branch UNVERIFIED
-Tasks: T-2507, T-2585, T-2586, T-3220, T-3249, T-3250, T-3244
+Tasks: T-2507, T-2585, T-2586, T-3220, T-3249, T-3250, T-3244, T-3473, T-3592
 
 ## Incomplete beta bpser: a forward series times EXP(fl(a LN x) - lnB) (T-2464)
 Rule: every bratio bpser call (min(a,b) <= 1 direct, w1 = bpser(b0, a0, y0), a, b > 1 with b0 < 40 and b0·x0 <= 0.7,
@@ -3493,7 +3508,16 @@ F.DIST(., TRUE) is its w and F.DIST.RT its w1. At a df of 1 (b = 1/2) that inclu
 - The F density takes the opposite sides (r = fl(mx/n) when mx <= n, "F density is not the beta density" below).
 Evidence: probes-numeric t3567-r5-fdf1-hold; cells.tsv's F cells (t2220-f-dist-sweep-*, gen-m9, m9-f-dist*);
 docs/research/t2464/r5-bgrat-fdf1 (`c3.py`, `c4.py`, `c5.py`, `score_hold.py`).
-Ours: `fisher.rs` `f_beta_arguments` forms both arguments as 1/(1 + .), and F does not take bgrat at b = 1/2 (T-3580).
+- bup's arithmetic on these arguments is not Excel's yet: `FDIST(2,1,9)` (bup+bgrat at b = 1/2) is 0.19094711716972404
+  against Excel's 0.190947117169724, and `F.DIST.RT(1,7,9)` (L140 bup+bpser) 0.48796816908209795 against
+  0.48796816908209784, both of which the 1/(1 + .) arguments with today's kernel happened to hit; on the hold-out the
+  r >= 1 arguments still win in both branches (bup+bgrat 65 against 31 of 98 bit-exact, L140 bup+bpser 220 against 204
+  of 294; decision 0263).
+- Fresh sweep probes-numeric t3580-f-fresh (2,400 cells, drawn and filled after T-3580's freeze): the engine
+  1,867/2,280/2,335, the correctly rounded value 932/1,718/1,872; every cell inside Gate A's envelope.
+Ours: `fisher.rs` `f_beta_arguments` forms the r >= 1 arguments and F's tails take bgrat at b = 1/2
+(`bratio::f_closed_or_ported_tails`, T-3580): t3567-r5-fdf1-hold 2,879/3,430/3,487, its bg1 region 991/1,000/1,000.
+F.INV, F.INV.RT and FINV still cross today's kernel on df1 x/(df1 x + df2) (`f_quantile_tail`).
 Status: VERIFIED (excel-graph)
 Tasks: T-3567, T-3580
 
@@ -4123,6 +4147,33 @@ Status: VERIFIED (excel-graph) for the values; Excel's arithmetic inside bgrat i
 Implemented in: functions/statistical/large_shape_beta.rs `large_shape_lower`
 Tasks: T-2528, T-3209
 
+Sweep above the mean at df1 other than 5 (T-4017): probes-numeric t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}
+(1,345 cells, excel-graph, 2026-11-04; df1 in 2, 3, 4, 6, 7, 8, 10, 12, 16, 20, 30, 40, 60, 79, df2 1E7 to 1E10, x 1.5 to
+50; `F.DIST.RT` and `F.DIST(.., TRUE)`; control `FDIST(7,10,1E+8)`). References: `docs/research/t4017/reference.py` (mpmath
+2F1 at 300+ digits, kept only where two precisions agree to 55 digits; 120-digit `betainc` is wrong below 1E-130).
+`F.DIST.RT` per df1, 48 cells each (6 df2 x 8 x), counted over cells with a stable reference: correctly rounded / within 4 ulp /
+within 1E-15 relative / largest relative error:
+- df1 2: 1 / 13 / 18 / 2.0E-8 (1.1E-12 without x = 20, and the zeros below counted as 1.0); 3: 1 / 16 / 24 / 1.4E-14; 4: 3 / 21 / 27 / 1.1E-14; 6: 0 / 7 / 14 / 2.1E-14;
+  7: 0 / 10 / 14 / 4.3E-14; 8: 1 / 10 / 11 / 2.8E-14; 10: 2 / 9 / 10 / 2.8E-14; 12: 0 / 7 / 11 / 8.7E-14;
+  16: 0 / 3 / 4 / 5.5E-14; 20: 1 / 2 / 4 / 9.7E-14; 30: 0 / 3 / 5 / 1.1E-13 (42 referenced); 40: 0 / 1 / 2 / 5.8E-14 (42);
+  60: 0 / 0 / 2 / 1.4E-13 (42); 79: 0 / 0 / 0 / 8.3E-14 (30 numeric referenced; 8 cells are `#NUM!`, below).
+  So Excel is not correctly rounded at any df1 and the error is not specific to b = 2.5. At df1 = 3 to 79 it grows with
+  df1 x up to about 1E-13, the pattern of df1 = 5. At df1 = 2 (b = 1) it is much larger and grows steeply with x: the
+  maximum relative error per x is 2.8E-16 (1.5), 3.8E-16 (2), 1.6E-15 (3), 6.7E-15 (5), 5.5E-14 (7), 1.1E-12 (10) and
+  2.0E-8 (20; 3.4E-10 to 2.0E-8 over the six df2, e.g. `F.DIST.RT(20,2,1E8)` 2.061161907818132E-9 against
+  2.0611618E-9; the closed form (1 + 2x/df2)^(-df2/2) confirms the reference). That is the case T-4018's model has to explain.
+- Excel returns exactly 0 where the true tail is far above the double minimum (true values from the chi-square limit
+  Q(df1/2, df1 x/2), exact to about df1 x / df2): `F.DIST.RT(50,2,d2)` (1.9E-22) for all six df2, `F.DIST.RT(50,30,d2)`
+  (4E-297) for all six, and `F.DIST.RT(20,79,d2)` (9E-278) for df2 1E7 to 1E9 (at 1E10 it is `#NUM!`). The other zeros
+  (x = 50 at df1 = 40, 60, 79: 4E-395, 5E-591, 4E-777) are correct underflow. `reference.py` prints every such cell.
+  The cells with no stable 50-digit reference are these zero/underflow tails and two of the `#NUM!` cells, so the counts
+  above do not hide a non-zero Excel value.
+- `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
+  to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
+  itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
+  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
+Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
+
 ## F-distribution df limit (T-1530)
 Rule: either df above 1E10 (after truncation) makes every F function `#NUM!`: F.DIST (cumulative and pdf), F.DIST.RT,
 F.INV, F.INV.RT, FDIST and FINV, in both df positions (probed at 10000000001, 1.5E10 and 1E11). Unlike Student-t, the pdf is cut too.
@@ -4144,6 +4195,8 @@ Tasks: T-1530, T-1538
 - Ours: the hang is gone (the quantile is a bisection on the `statrs` cdf from df 1E5), but the cdf and quantile are off in
   about the 6th digit at df 1E10 (`F.INV(0.5,1E10,1E10)` = 1.0000025, Excel 1) and `F.DIST(...,FALSE)` at df 1E10 is
   `#NUM!` (`statrs` pdf) where Excel gives a number. 16 of 58 cells of the case fail (A1-A14, A57, A58); T-1538 closes them.
+
+Note (T-4017): the rule above is incomplete: `F.DIST.RT(x,79,1E10)` is `#NUM!` although neither df exceeds 1E10 (see "Incomplete beta at a huge first shape").
 
 ## F density's small-shape constant past its fit set
 Rule: the F density model's small-shape constants (`SMALL_SHAPE_OFFSET` 5.33 and the Stirling errors 0.22 at 1/2

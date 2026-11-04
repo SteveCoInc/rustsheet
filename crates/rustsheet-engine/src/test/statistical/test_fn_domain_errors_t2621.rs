@@ -63,3 +63,21 @@ fn statistical_domain_errors_and_extreme_values() {
         );
     }
 }
+
+// T-2614: an error-valued percent beats data with no number (gen-m9 a5342a7e24fd803e A288, excel-graph
+// 2026-10-22; statistics.md "TRIMMEAN: an error percent before data with no number (T-1742)").
+#[test]
+fn trimmean_error_percent_beats_data_with_no_number() {
+    let mut model = new_empty_model();
+    model._set("B1", "=TRUE");
+    model._set("A1", "=TRIMMEAN(B1,NA())");
+    model._set("A2", "=TRIMMEAN(B1,0.1)");
+    model._set(
+        "A3",
+        "=TRIMMEAN(B1,COVARIANCE.P(A5:B6,A8:A10)-LOGEST(A1,1E+15,\"\"))",
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#N/A");
+    assert_eq!(model._get_text("A2"), "#NUM!");
+    assert_eq!(model._get_text("A3"), "#N/A");
+}

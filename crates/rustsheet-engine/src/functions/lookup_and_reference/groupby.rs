@@ -458,7 +458,7 @@ impl Model {
             &elements,
             // An error element is its own error even once an earlier element has spent the
             // filter (probes/t3880-groupby-scalar-filter-edges G!A89:B93).
-            |element, _| matches!(element, ArrayNode::Error(_)).then(|| element.clone()),
+            |_, element, _| matches!(element, ArrayNode::Error(_)).then(|| element.clone()),
             |model, element| match element {
                 ArrayNode::Error(_) => None,
                 _ => Some(

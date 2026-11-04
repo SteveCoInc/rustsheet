@@ -45,11 +45,11 @@ fn test_currencies() {
     );
     assert_eq!(model._get_text("B2"), *"TRUE");
 
-    // Dollar is on the right
+    // Dollar is on the right: typed text, not a number (probes/t3980-typed-percent-currency A4:C6)
     assert_eq!(model._get_text("A3"), "100$");
-    assert_eq!(model._get_text("B3"), *"TRUE");
+    assert_eq!(model._get_text("B3"), *"FALSE");
 
-    assert_eq!(model._get_text("A4"), "3.14$");
+    assert_eq!(model._get_text("A4"), "3.1415926$");
 }
 
 #[test]
@@ -194,7 +194,8 @@ fn test_negative_currencies() {
     assert_eq!(model._get_text("A3"), *"($345)");
 
     assert_eq!(model._get_text("B1"), *"-200$");
-    assert_eq!(model._get_text("B2"), *"-92.69$");
+    // Typed trailing `$` stays text, unrounded (probes/t3980-typed-percent-currency A6).
+    assert_eq!(model._get_text("B2"), *"-92.689$");
     assert_eq!(model._get_text("B3"), *"-22$");
 }
 

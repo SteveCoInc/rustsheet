@@ -146,7 +146,7 @@ const SINH_SERIES_TERMS: u32 = 3;
 
 /// sinh x as the Taylor series `x + x³/3! + x⁵/5!`, summed in that order in doubles, each term the one
 /// before times `x²/((2k)(2k+1))`: the sinh x of IMSINH, IMCOSH, IMSECH and IMCSCH at |x| <=
-/// `INVERSE_EXP_LOW` (a real IMSECH there takes libm's cosh instead and needs no sinh, T-3609). The
+/// `INVERSE_EXP_LOW` (a real IMSECH needs no sinh, T-3609). The
 /// series fits where libm's sinh misses `IMSINH("-0.00878860151333914")` (-0.00878871465166476, libm
 /// ...477) and the real part of `IMSINH("0.00313307442770563-0.855889226338187i")` (0.00205388173561626,
 /// libm ...625), and Horner's `x(1 + x²(1/6 + x²/120))` misses two (probes-numeric/t3525-im-hyperbolic-fresh-sweep
@@ -227,8 +227,12 @@ const INVERSE_EXP_LOW: f64 = 0.01;
 /// Below this |x| IMSINH, IMCOSH, IMSECH or IMCSCH takes libm's cosh x: 6 texts of
 /// t3720-im-reciprocal-small-x-complex and t3721-im-hyperbolic-small-x-fresh-sweep at
 /// |x| <= 8.8E-05 print Excel's digit with it and the `1/u` form's one off, while 33 at
-/// |x| >= 1.09E-04 need the form (T-3930).
-/// FITTED(T-3930, 39 cells, |x| 3.6E-06..0.01; cut bracketed 8.8E-05..1.09E-04)
+/// |x| >= 1.09E-04 need the form (T-3930). A real IMSECH takes the same cosh (T-3982): of the 825
+/// real IMSECH texts at 0 < |x| <= 0.0105, the form misses 6 at |x| <= 9.70E-05 and libm 33 at
+/// |x| >= 0.0042, none in between, so the cut fits all 825 and its lower bracket rises to 9.70E-05
+/// (`IMSECH("9.70217965965262E-05")` is 0.999999995293386, the form's one off; probes-numeric/
+/// t3589-im-hyperbolic-small-x-sweep C68).
+/// FITTED(T-3982, 864 cells, |x| 2E-309..0.01; cut bracketed 9.70E-05..1.09E-04)
 const LIBM_COSH_BELOW: f64 = 1e-4;
 /// See [`INVERSE_EXP_LOW`].
 /// FITTED(T-3525, 1942 cells, |x| 0.0001..100; cuts bracketed 0.01..0.0105 and 18.2..100)
@@ -532,16 +536,15 @@ pub(super) fn imsech((x, y, suffix): ComplexParts, cell: CellReferenceIndex) -> 
 fn sech_parts(x: f64, y: f64) -> Option<(f64, f64)> {
     let (x_sinh, x_cosh) = inverse_exp_sinh_cosh(x);
     if y == 0.0 {
-        // At |x| <= `INVERSE_EXP_LOW` a real IMSECH is 1 over libm's cosh, not over the `1/u`
-        // form's: all 75 real IMSECH texts there, `IMSECH("6.17632662504393E-06")` 0.999999999980927
-        // included (the form's ...926; probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58,
-        // C68), against 72 (engineering.md "IMSECH and IMCSCH of a small real number", T-3609).
-        let cosh = if x.abs() <= INVERSE_EXP_LOW {
-            x.cosh()
-        } else {
-            x_cosh
-        };
-        return Some((1.0 / cosh, 0.0));
+        // A real IMSECH is 1 over IMCOSH's cosh x: libm's below `LIBM_COSH_BELOW`, where the `1/u`
+        // form misses `IMSECH("6.17632662504393E-06")` 0.999999999980927 (the form's ...926;
+        // probes-numeric/t3589-im-hyperbolic-small-x-sweep C42, C58, C68; T-3609), and the form
+        // above it, where libm misses `IMSECH("-0.00802240437783925")` 0.99996782137691 (libm's
+        // ...909; t3721-im-hyperbolic-small-x-fresh-sweep C390). It fits all 825 real IMSECH
+        // texts at 0 < |x| <= 0.0105, the 150 of the t3981 hold-out included, against 792 for libm
+        // and 819 for the form (engineering.md "IMSINH, IMCOSH, IMSECH and IMCSCH take libm's cosh
+        // below |x| 1E-4", T-3982).
+        return Some((1.0 / x_cosh, 0.0));
     }
     if past_trig_limit(y) && !reciprocal_flushes(x) {
         return None;

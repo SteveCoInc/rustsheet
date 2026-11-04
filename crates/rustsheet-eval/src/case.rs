@@ -265,7 +265,8 @@ pub struct CalculationSpec {
 /// "column":"B"}` and `{"op":"delete_column","sheet":"S","column":"B"}` (a column letter; the cells
 /// to the right shift), `{"op":"delete_sheet","sheet":"S"}`, `{"op":"delete_table","sheet":"S",
 /// "table":"T1"}` and `{"op":"convert_table","sheet":"S","table":"T1"}`. `convert_table` converts the table
-/// to a plain range (T-2342).
+/// to a plain range (T-2342). `{"op":"add_table","sheet":"S","table":"T1","ref":"B3:C7"}` adds
+/// a table (T-3629).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum SheetOp {
@@ -315,6 +316,14 @@ pub enum SheetOp {
     DeleteTable {
         sheet: String,
         table: String,
+    },
+    /// A table named `table` added over `range` (its header row first, the header cells already
+    /// set), as Graph `tables/add` and a rename make it (T-3629).
+    AddTable {
+        sheet: String,
+        table: String,
+        #[serde(rename = "ref")]
+        range: String,
     },
 }
 
@@ -387,6 +396,14 @@ impl SheetOp {
     }
 }
 
+/// A defined name added through the API after load (`CaseSpec::api_names`, T-3264).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApiName {
+    pub name: String,
+    pub formula: String,
+}
+
 /// A self-contained workbook test case.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CaseSpec {
@@ -407,6 +424,10 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
+    /// Workbook-scoped names defined through the API after the sheet edits, in order (T-3264):
+    /// the oracle replays each with Graph `names/add`, the engine adapter with `Txn::define_name`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub api_names: Vec<ApiName>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,

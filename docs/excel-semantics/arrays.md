@@ -417,6 +417,9 @@ gives -4.66E-15 and -3.0000000000000036, and no pivoting gives 0 and -3.
 Evidence: probes/stats-evidence-floor-t1623 S!Q107, S!Q120, S!Q121 (excel-graph).
 MDETERM of an overflowing or underflowing pivot product: `MDETERM({1E+200,0;0,1E+200})` is `#NUM!`; `{1E-20}` is 1E-20, `{1E-300}` 1E-300,
 `{1E-17,0;0,1}` 1E-17, `{1E-200,0;0,1E-200}` 0 (underflow), `{1E+200}` 1E+200 (probes/minverse-singular-near-singular H1:H6, excel-graph, T-2067).
+Gate A table `accuracy/MDETERM/s1` (120 points, excel-graph, 2026-11-04, T-3686): Excel is within 1e-9 of the exact
+determinant except on one near-singular edge point (0.27% off). There the engine's elimination matches Excel's 15 digits,
+as it does on the other 119 points. The table's 3 overflowing diagonals are `#NUM!` in Excel.
 Implemented in: `fn_mdeterm`/`lu_decompose` (crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs, T-1751)
 Status: VERIFIED (excel-graph)
 Tasks: T-1751
@@ -433,6 +436,10 @@ exactly 0, not 2.22E-16. The inverse is the MDETERM elimination above (multiplie
 with L and back substitution with U per identity column (subtract then divide by the pivot): in IEEE doubles that reproduces
 all nine 3x3 residual entries bit for bit (T-2362). Dividing each U entry by the pivot before subtracting, or multiplying by
 the pivot's reciprocal, misses some of them.
+Gate A table `accuracy/MINVERSE/s1` (200 elements read through INDEX, excel-graph, 2026-11-04, T-3686): Excel is more
+than 1e-9 off the exact inverse on 14 points, the near-singular ones and the 2x2/3x3 matrices with entries from 1E-80 to 1E+80.
+The worst is 24 times the exact element: no scaling, the plain elimination above. The engine matches Excel's 15 digits
+on all 200 points. The 3 exactly-singular `{a,b;2a,2b}` matrices and the 3 overflowing `{t,1;0,t}` are `#NUM!` in Excel.
 An inverse element past the double range makes the whole result `#NUM!`, not just that element: `MINVERSE({1E-200,1;0,1E-200})`
 (back substitution overflows to -1E+400 in the corner) is `#NUM!` in every cell: `INDEX(...,1,1)` and `INDEX(...,2,2)`, which are finite on their own, are `#NUM!` too; the
 non-overflowing `MINVERSE({1E-200,0;0,1E-200})` is {1E+200,0;0,1E+200}, although both matrices have the same underflowing determinant
@@ -2263,9 +2270,11 @@ G6="x", G7="", G8=FALSE, G9=#DIV/0!, H1 and H2 blank):
   (`GROUPBY(S!A1:A2,S!B1:B2,_xleta.SUM,1,,,{TRUE})` is x, 5; Total, 5: G!A1:A41; two key columns G!A37); with two records
   it is `#VALUE!` (G!A29). Two value columns change nothing: `GROUPBY(S!A1:A2,S!B1:C2,_xleta.SUM,1,,,{TRUE})` is x, 5, 6;
   Total, 5, 6 with field_headers 1 or 3, TRUE, `{TRUE}`, 2 or a one-cell reference to TRUE, `{FALSE}` is `#VALUE!`, and two
-  records or field_headers 0 over the header row are `#VALUE!` (probes/t3964-groupby-filter-lift-errors G!A1:C42, T-3964). A detected header row counts as a header row: `GROUPBY(S!A1:A4,S!B1:B4,_xleta.SUM,,,,TRUE)` and
-  `{TRUE}` are `#VALUE!` though the call without the filter spills (G!A45:A57), and beside one record TRUE keeps it
-  (G!A63:A74); a detected none keeps every row (G!A78). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below, T-3890).
+  records or field_headers 0 over the header row are `#VALUE!` (probes/t3964-groupby-filter-lift-errors G!A1:C42,
+  T-3964). A detected header row counts as a header row: `GROUPBY(S!A1:A4,S!B1:B4,_xleta.SUM,,,,TRUE)` and `{TRUE}` are
+  `#VALUE!` though the call without the filter spills (G!A45:A57), and beside one record TRUE keeps it (G!A63:A74); a
+  detected none keeps every row (G!A78). PIVOTBY looks to follow it ("PIVOTBY in the gen-m7 arg-pairs batch" below,
+  T-3890).
 - Lifted over an array `field_relationship` (Data!A1:B2 = {"a*",<blank>;"?b",FALSE}), the FALSE element is `#VALUE!`
   (06c84cc76de04bae B5736, 7ab51243a366f57b B8054, and as `field_headers` f310ddb6bc8ec33a B4150), not because it is FALSE:
   each of those calls has a filter column that drops rows, and only the first element that filters gets a value ("A lifted
@@ -2376,21 +2385,38 @@ so the later calls meet a filter taller than them.
   `#VALUE!`, and {#REF!,0;0,1} is `#REF!`, -1; `#VALUE!`, `#VALUE!` (probes/t3964-groupby-filter-lift-errors G!A47:B69, T-3964).
 - So does an error element of a lifted `field_headers` or total depth: `GROUPBY(Data!C1:C12,Data!D1:D12,_xleta.SUM,S!K1:L2,1,,
   (Data!C1:C12<0.2))` with S!K1:L2 = {0,#N/A;0,0} is -1, `#N/A`; `#VALUE!`, `#VALUE!`, {#N/A,0;0,0} is `#N/A`, -1; `#VALUE!`,
-  `#VALUE!`, and a `=1/0` element is `#DIV/0!` in either place; total depths {1,#N/A;1,1}, {#N/A,1;1,1} and {1,#DIV/0!;1,1}
+  `#VALUE!`, and a `=1/0` element in either option is `#DIV/0!`; total depths {1,#N/A;1,1}, {#N/A,1;1,1} and {1,#DIV/0!;1,1}
   give the same; without the filter every other element is -1 (probes/t3964-groupby-filter-lift-errors G!A71:B105,
-  T-3964). Unprobed: a position where two lifted options hold an error and text, or two errors.
+  T-3964).
+- With both lifted, a position whose field_headers and total depth hold an error and something else is what the call
+  gives without the filter, after another element spent it: beside `(Data!C1:C12<0.2)`, position 2 of field_headers
+  {0,"1"} with total depth {1,#N/A} is `#N/A` (numeric text does not stop the error), {0,5} with {1,#N/A} is `#N/A`
+  (nor does an out-of-range number), {0,"x"} with {1,#N/A} is `#VALUE!` (the text's own), {0,#DIV/0!} with {1,#N/A} is
+  `#DIV/0!` (the first error in argument order), and with the two swapped, {0,#N/A} with {1,"1"}, {1,"x"}, {1,5} or
+  {1,#DIV/0!}, it is `#N/A`; position 1 is -1 in every call, and the no-filter controls give the same cells
+  (probes/t3985-groupby-two-lifted-spent-filter G!A1:B47, T-3985; ranges, since an array constant cannot hold `NA()`).
+  Nor do numeric text out of range or fractional, or a boolean: position 2 of field_headers {0,"5"}, {0,"0.5"}, {0,TRUE}
+  or {0,FALSE} with total depth {1,#N/A}, and {0,#N/A} with total depth {1,"5"}, {1,"0.5"}, {1,TRUE} or {1,FALSE}, is
+  `#N/A` beside `(Data!C1:C12<0.2)`; position 1 is -1 in every call, and the no-filter controls give the same cells
+  (probes/t4019-groupby-lifted-spent-filter-kinds G!A1:B47, T-4019).
+  Nor does a blank cell, but an empty text (a `=""` cell) is text that is no number: field_headers {0,blank} with total
+  depth {1,#N/A} is `#N/A`, {0,""} with {1,#N/A} is `#VALUE!`, and {0,#N/A} with {1,blank} or {1,""} is `#N/A`; position
+  1 is -1 in every call, and the no-filter controls give the same cells (probes/t4028-groupby-lifted-spent-filter-blank
+  G!A1:B23, T-4028).
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
-t3964-groupby-filter-lift-errors (T-3964).
+t3964-groupby-filter-lift-errors (T-3964), t3985-groupby-two-lifted-spent-filter (T-3985),
+t4019-groupby-lifted-spent-filter-kinds (T-4019) and t4028-groupby-lifted-spent-filter-blank (T-4028).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
-argument, T-3880), and, since T-3964, a lifted option position whose first error comes before any text element
-(`Model::lift_options`); a cell read on demand during an element's call keeps its own filter to itself. PIVOTBY's
-lift beside a filter column is unprobed (T-3892).
+argument, T-3880), and, since T-3964, a lifted option position whose first error comes before any text element that is
+no number (`Model::lift_options`; numeric text no longer stops it since T-3985; T-4019 and T-4028 found numbers, booleans
+and a blank pass through as well, and `""` stops it as other text does); a cell read on demand during an element's call
+keeps its own filter to itself. PIVOTBY's lift beside a filter column is unprobed (T-3892).
 Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
 row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
 that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880, T-3964
+Tasks: T-3840, T-3880, T-3964, T-3985, T-4019, T-4028
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,

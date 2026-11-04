@@ -171,6 +171,9 @@ leaves them unworked in Phase 1. Their visible-parity work moved to non-deferred
 bit-level residue: Calc!A374 of 2801c1c11c21e134, A34 of 285d87cea1aaa73c, A181 of 3a25a03eb94fcfbd and A50 of
 b6593d7dd13f2dac to T-3472 (accuracy); A151 of 60b0b6e69ad35a45 to T-3183; A219 of 2801c1c11c21e134 to T-3952;
 A92 of 8f2ac25945af87da to T-3954; A259 of 2a18b2f5a4dc43ac to T-1871 (its inner F.INV.RT).
+Gap triage 2026-11-04: T-3472 was deferred, so A374, A34, A181 and A50 moved on to T-4016 and T-4015; A349 of
+7bd219ec0c0c5e22 (visibly off: Excel +6.7E-15 from the math, ours -2.1E-15) moved to T-4018. This task keeps only
+their bit-level residue.
 - gen-m9/2801c1c11c21e134.case.json (2): Calc!A219, A374
 - gen-m9/285d87cea1aaa73c.case.json (1): Calc!A34
 - gen-m9/2a18b2f5a4dc43ac.case.json (1): Calc!A259

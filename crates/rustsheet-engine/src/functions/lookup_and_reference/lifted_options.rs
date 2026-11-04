@@ -175,19 +175,27 @@ impl Model {
         };
         Err(self.lift_by_class(
             &positions,
-            // Once the filter is spent, a position whose first error comes before any text is
-            // that error: the call returns it before it filters (t3964-groupby-filter-lift-errors
-            // G!B71, B83, B89, B101). Before it is spent `run` gives the same error (each error
-            // is a class of its own) without spending the filter (G!A77, A95).
-            |elements, spent| {
+            // Once the filter is spent, a position whose first error comes before any text that
+            // is no number is that error: the call returns it before it filters
+            // (t3964-groupby-filter-lift-errors G!B71, B83, B89, B101). Numeric text and an
+            // out-of-range number before it do not stop it (t3985-groupby-two-lifted-spent-filter
+            // G!B1, B25), nor do out-of-range or fractional numeric text and TRUE or FALSE, in
+            // either option (t4019-groupby-lifted-spent-filter-kinds G!B1:B46), nor does a blank
+            // cell; other text does (t3985 G!B13), `""` included
+            // (t4028-groupby-lifted-spent-filter-blank G!B1, B13, B19). Before the filter is spent
+            // `run` gives the same error (each error is a class of its own) without spending it
+            // (t3964 G!A77, A95).
+            |model, elements, spent| {
                 if !spent {
                     return None;
                 }
-                elements
-                    .iter()
-                    .find(|element| matches!(element, ArrayNode::Error(_) | ArrayNode::String(_)))
-                    .filter(|element| matches!(element, ArrayNode::Error(_)))
-                    .map(|element| (*element).clone())
+                match classify(model, elements)
+                    .into_iter()
+                    .find(|class| matches!(class, Class::Error(_) | Class::OtherText))
+                {
+                    Some(Class::Error(error)) => Some(ArrayNode::Error(error)),
+                    _ => None,
+                }
             },
             classify,
             |model, elements| {
@@ -249,15 +257,16 @@ impl Model {
     /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
     /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
     /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
-    /// filter serves one element"). An element `settled` answers (given whether the filter is
-    /// spent) is that value and spends nothing: an element whose call returns before it filters,
-    /// as an error `field_relationship`, `field_headers` or total depth element does
+    /// filter serves one element"). An element `settled` answers (it is given the model, the
+    /// element and whether the filter is spent) is that value and spends nothing: an element
+    /// whose call returns before it filters, as an error `field_relationship`, `field_headers`
+    /// or total depth element does
     /// (probes/t3880-groupby-scalar-filter-edges G!A89:B93, t3964-groupby-filter-lift-errors
     /// G!A47:B105).
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
-        settled: impl Fn(&E, bool) -> Option<ArrayNode>,
+        mut settled: impl FnMut(&mut Model, &E, bool) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
@@ -267,7 +276,8 @@ impl Model {
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
-                if let Some(value) = settled(element, self.groupby_filter_spent) {
+                let spent = self.groupby_filter_spent;
+                if let Some(value) = settled(self, element, spent) {
                     cells.push(value);
                     continue;
                 }

@@ -1,6 +1,7 @@
 //! Reading typed text as a number together with the format it implies ("$1,234.50" ->
 //! (1234.5, "$#,##0.00")), split from format.rs, which renders numbers.
 
+use crate::cast::ends_with_dollar;
 use crate::mixed_fraction::mixed_fraction;
 use crate::{locale::Locale, number_format::parse_excel_number, types::DateSystem};
 
@@ -44,6 +45,11 @@ pub(crate) fn parse_typed_number(
     current_year: CurrentYear,
     date_system: DateSystem,
 ) -> Result<(f64, Option<String>), String> {
+    // A trailing `$` stays text when typed: `1.5$`, `1.5 $` and `-200$` are General text
+    // (probes/t3980-typed-percent-currency A4:C6), as coercion refuses them too.
+    if ends_with_dollar(original) {
+        return Err("Cannot parse number".to_string());
+    }
     parse_formatted_number(original, currencies, locale, current_year, date_system).or_else(|err| {
         let text = without_single_letter_dot(original);
         if let Some(parsed) = parse_bare_letter_clock(text) {
@@ -432,13 +438,20 @@ fn parse_percent_or_currency(
     // A leading percent sign shifts the number after it: `%1` is 0.01, `%-1` -0.01, `% 1` 0.01,
     // while `%1%` is refused (probes/eng-inumber-grammar-value B3,
     // eng-number-text-group-comma-edges A15-A18). A minus sign may precede it: `-%1.5` is -0.015
-    // (probes/t3742-value-percent-currency A1, A16). Typed cell input shares this reader and is
-    // unprobed (T-3835).
+    // (probes/t3742-value-percent-currency A1, A16), but not before a minus: `-%-1.5` is #VALUE!
+    // and typed text. A plus may precede it: `+%1.5` is 0.015 (probes/t3980-typed-percent-
+    // currency A7/B7 and A2 for `-%-1.5`, A10/B10 for `+%1.5`; the shapes after a sign are T-3991). Typed cell input shares this reader (A1, A3).
     let leading_percent = value
         .strip_prefix('%')
-        .map(|p| (p, 1.0))
-        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0)));
-    if let Some((p, sign)) = leading_percent {
+        .map(|p| (p, 1.0, false))
+        .or_else(|| value.strip_prefix("+%").map(|p| (p, 1.0, true)))
+        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0, true)));
+    if let Some((p, sign, signed)) = leading_percent {
+        // Any sign before the percent sign refuses a second sign after it: `-%-1.5`, `+%-1.5`
+        // and `-%+1.5` are #VALUE! (probes/t3980 A2, probes/t3991-percent-shapes A1/A4/A5).
+        if signed && p.trim_start_matches(' ').starts_with(['-', '+']) {
+            return Err("Cannot parse number".to_string());
+        }
         let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
         let f = sign * f;
         let format = if options.is_scientific {

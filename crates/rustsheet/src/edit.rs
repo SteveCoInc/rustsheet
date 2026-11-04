@@ -500,7 +500,8 @@ impl Txn<'_> {
     ///
     /// # Errors
     /// [`EditError::DefinedName`] when the name is not a valid identifier, already exists, or the
-    /// formula does not parse.
+    /// formula does not parse or nests more than 65 function calls, which Excel's `names/add`
+    /// refuses (probes/t3264-api-name-66; docs/excel-semantics/syntax.md "Formula nesting depth cap").
     pub fn define_name(&mut self, name: &str, formula: &str) -> Result<(), EditError> {
         self.add_defined_name(name, None, formula, false)
     }

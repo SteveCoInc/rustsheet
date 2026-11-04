@@ -78,6 +78,9 @@ Decision 0083 / 0114 (`accuracy`): met when the 10 cells above (6 probe cells an
 of Excel's value, and no cell of the three cases that is within 15 digits today moves off. Bit-level criteria still
 unmet then move to a follow-up with `defer: phase-1b`.
 - Split (T-3229 check): 5 of the cells below are also listed by T-3592, which owns them; this task keeps the rest.
+- Split (gap triage 2026-11-04): gen-m9 is a Gate B suite, so its four cells need a non-deferred owner. Their
+  visible-parity work moved to T-4015 (A50 of b6593d7dd13f2dac, A181 of 3a25a03eb94fcfbd) and T-4016 (A374 of
+  2801c1c11c21e134, A34 of 285d87cea1aaa73c). This task keeps their bit-level residue only.
 
 ## Acceptance criteria
 - [ ] The 10 cells above (6 probe cells and the 4 gen-m9 cells added 2026-11-03) are within half a unit of the 15th significant digit of Excel's value (`make eval-show` output
