@@ -2252,10 +2252,22 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036).
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194).
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
-`Node::contains_function`); whether a SUBTOTAL name inside a string, a defined name, an untaken IF branch, an uncalled LAMBDA body or an unused LET binding counts is unprobed (the engine counts any call in the tree).
+`Node::contains_function`).
+**Which formulas count as a nested SUBTOTAL or AGGREGATE (T-4194):** the cell's formula text, not what it evaluated. A
+call anywhere in the formula's own tree counts even when it never runs: `=IF(FALSE,SUBTOTAL(9,A1:A2),4)`,
+`=IF(TRUE,128,SUBTOTAL(..))`, `=CHOOSE(1,256,SUBTOTAL(..))`, `=IFERROR(32,SUBTOTAL(..))`, `=LET(x,SUBTOTAL(..),8)`,
+`=LET(f,LAMBDA(r,SUBTOTAL(9,r)),16)` and `=LAMBDA(r,SUBTOTAL(9,r))(A1:A2)` are all skipped (0) by SUBTOTAL 9 and 109 and
+AGGREGATE(9,0,..), and read by AGGREGATE(9,4,..). A call reached only through something else does not count: a defined
+name whose body calls SUBTOTAL (`st` = `SUBTOTAL(9,Sheet1!$A$1:$A$2)`: `=st+0` and `=SUM(st)` are read, 3), a
+defined-name LAMBDA that calls it (`fn(A1:A2)`, read), an `INDIRECT` to a cell holding SUBTOTAL (read), and the name in a
+string (`=LEN("SUBTOTAL(9,A1)")`, read, 14). **The flag is per cell and a spilled cell carries its anchor's**: with
+`J1` = `=MAP(A1:A3,LAMBDA(r,SUBTOTAL(9,r)))` spilling 1, 2, 4, `SUBTOTAL(9,J2)`, `SUBTOTAL(9,J3)`, `AGGREGATE(9,0,J2)`
+and `SUBTOTAL(9,J1:J3)` are 0, and `AGGREGATE(9,4,J2)` is 2. Ours: the syntax walk of the cell's formula, or of its
+anchor's for a spilled cell (`cell_formula_is_one_of`). Evidence: probes/t4194-subtotal-nested-skip (90 cells,
+excel-graph, 2026-11-04, T-4194). Unprobed: a CSE array formula's other cells (the engine treats them as spilled cells).
 Implemented in: `fn_subtotal` and `row_hidden_status` / `sheet_has_filtered_table` (T-1182) (crates/rustsheet-engine/src/functions/subtotal.rs),
 `fn_aggregate` (functions/aggregate.rs). The case format's `hidden_rows` and `tables` (docs/architecture/eval-harness.md)
 load through `Txn::set_row_hidden` and `Txn::add_table`.
