@@ -18,7 +18,8 @@
 //! - with no integer part a numerator past Excel's bound cannot be shown ([`format_fraction`]
 //!   returns `None`);
 //! - a `,` right after the denominator scales the value up ([`fraction_scale`]), and a fixed
-//!   denominator past 32768 is replaced by a picked one ([`LARGE_FIXED_MAX_DENOMINATOR`]).
+//!   denominator past 32768 or followed by a digit placeholder is replaced by a picked one
+//!   ([`Choice`], [`LARGE_FIXED_MAX_DENOMINATOR`]).
 
 use super::parser::{NumberPart, TextToken};
 use crate::decimal_round::{round_decimal, RoundMode};
@@ -71,7 +72,10 @@ pub(super) fn format_fraction(
         return None;
     }
     let layout = Layout::new(&part.tokens, fraction);
-    let choice = Choice::of(&fraction.denominator);
+    let choice = Choice::of(
+        &fraction.denominator,
+        layout.trailing_end > layout.denominator_at,
+    );
     let shown = choose(value, layout.has_integer, &choice)?;
     Some(render(
         part,
@@ -86,19 +90,24 @@ pub(super) fn format_fraction(
 
 /// How a fraction's denominator is chosen.
 enum Choice {
-    /// A fixed denominator up to 32768, used as written.
+    /// A fixed denominator up to 32768 with no digit placeholder after it, used as written.
     AsWritten(f64),
     /// The last convergent with a denominator up to the bound: for placeholders, 10^n - 1 for
-    /// n of them; for a fixed denominator past 32768, [`LARGE_FIXED_MAX_DENOMINATOR`].
+    /// n of them; for any other fixed denominator, [`LARGE_FIXED_MAX_DENOMINATOR`].
     Picked(f64),
 }
 
 impl Choice {
-    fn of(denominator: &Denominator) -> Self {
+    /// The choice for `denominator`, in a section with digit placeholders after it or not
+    /// (`trailing_digits`). Excel picks the fraction for a fixed denominator past 32768 and for
+    /// one with a placeholder anywhere after it (`# ?/4|0` on 0.0625 is " 1/4|60", 1/16;
+    /// `# ?/4"x"` on 0.5 " 2/4x"; probes/t3711-fixed-denominator-then-placeholder,
+    /// t4043-fixed-denominator-slots).
+    fn of(denominator: &Denominator, trailing_digits: bool) -> Self {
         match denominator {
             // The parser only builds a fixed denominator from ASCII digits starting with 1-9.
             Denominator::Fixed(digits) => match digits.parse::<f64>() {
-                Ok(d) if d <= MAX_FIXED_DENOMINATOR => Choice::AsWritten(d),
+                Ok(d) if d <= MAX_FIXED_DENOMINATOR && !trailing_digits => Choice::AsWritten(d),
                 _ => Choice::Picked(LARGE_FIXED_MAX_DENOMINATOR),
             },
             // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
@@ -232,7 +241,7 @@ fn render(
     let has_integer = layout.has_integer;
     let integer_kinds = placeholder_kinds(&tokens[..layout.numerator_start]);
     let numerator_kinds = placeholder_kinds(&tokens[layout.numerator_start..layout.numerator_end]);
-    // A picked denominator's placeholder kinds. A fixed one past 32768 prints its digits as
+    // A picked denominator's placeholder kinds. A picked fixed one prints its digits as
     // placeholders that pad with spaces under a `?` numerator and with nothing otherwise
     // (`?/40000` on 0.5 is "1/4    ", `0/40000` and `#/40000` "1/4", `??/40000` " 1/4    ").
     let denominator_kinds: Vec<char> = match (&fraction.denominator, choice) {
@@ -280,28 +289,39 @@ fn render(
         format!("{numerator}")
     };
     let denominator_digits = format!("{denominator}");
+    // The picked denominator's digits past its slots (only a picked fixed denominator has more
+    // digits than slots) and how many more (or fewer) digits than slots it has.
+    let slots = denominator_kinds.len();
+    let spill: String = denominator_digits.chars().skip(slots).collect();
+    let excess = denominator_digits.len().cast_signed() - slots.cast_signed();
     // A numeral byte maps every digit the fraction prints (`[$-1B000409]# ?/?` on 12.5 is
     // "一二 一/二", `# ?/16` "一二 八/一六"; probes/t3532-numeral-digit-fields C14,
     // t3532-numeral-digit-sections A8).
     let denominator_text = match (&fraction.denominator, choice) {
         (Denominator::Fixed(digits), Choice::AsWritten(_)) => digits.clone(),
         // The code's own digits print, cut to the picked denominator's length: 512/625 under
-        // `?/40000` is "512/400  ", 4095937/5000000 "4095937/40000".
+        // `?/40000` is "512/400  ". The picked denominator's further digits print after them
+        // under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on 0.0625 "1/46|0") and go
+        // to the placeholders after the denominator under a `?` one, or nowhere (4095937/5000000
+        // under `?/40000` is "4095937/40000"; probes/t4043-fixed-denominator-slots).
         (Denominator::Fixed(digits), Choice::Picked(_)) => {
             let shown: String = digits.chars().take(denominator_digits.len()).collect();
-            fill_left(&shown, &denominator_kinds)
+            let mut text = fill_left(&shown, &denominator_kinds);
+            if !denominator_kinds.contains(&'?') {
+                text.push_str(&spill);
+            }
+            text
         }
         (Denominator::Placeholders(_), _) => fill_left(&denominator_digits, &denominator_kinds),
     };
     let denominator_text = part.numerals.digits(&denominator_text);
-    // A placeholder after the denominator gets no digit: `0` and `#` print a zero, `?` a space
-    // (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #` "12 1/2 0", `# ?/? ?` "12 1/2  ";
-    // probes/t3711-placeholders-after-fraction).
-    let mut trailing_fill = placeholder_kinds(&tokens[layout.denominator_at..])
-        .into_iter()
-        .map(|kind| if kind == '?' { " " } else { "0" })
-        .collect::<Vec<_>>()
-        .into_iter();
+    let mut trailing_fill = trailing_fill(
+        &placeholder_kinds(&tokens[layout.denominator_at..]),
+        denominator_kinds
+            .contains(&'?')
+            .then_some((spill.as_str(), excess)),
+    )
+    .into_iter();
 
     let separator = separator_kind(
         blank.then_some(blank_spaces),
@@ -341,7 +361,7 @@ fn render(
             }
             (Zone::Trailing, TextToken::Digit(_)) => {
                 let digits = trailing_fill.next().unwrap_or_default();
-                text.push_str(&part.numerals.digits(digits));
+                text.push_str(&part.numerals.digits(&digits));
             }
             // A `.` after the denominator prints (`# ?/?|0.0` on 12.5 is "12 1/2|0.0").
             (Zone::Trailing, TextToken::Period) => text.push('.'),
@@ -362,6 +382,63 @@ fn render(
     }
     text
 }
+
+/// What each placeholder after the denominator prints, for their `kinds`; they get no digit of
+/// the value (number-formats.md "Placeholders after a fraction"). After a denominator without `?`
+/// slots (a picked fixed one under a `#` or `0` numerator), `0` and `#` print a zero and `?` a
+/// space (`# 0/4|0` on 0.3 is "3/40|0", `# 0/16|?` on 0.01 "1/160| ").
+///
+/// After a denominator with `?` slots, `spill` holds its digits past the slots and `excess` how
+/// many more digits than slots it has (negative when it has fewer):
+/// - all `?`: the spilled digits, or one `0` per missing digit, fill them from the left and a
+///   placeholder with none prints a space (`# ?/4|?` on 0.0625 is " 1/4|6", `# ?/16|?` on 0.5
+///   " 1/1 |0", `# ?/100|??` on 0.3 " 3/10 |0 ", `# ??/??|?` on 0.5 "  1/2 |0", on 0.3 "  3/10| ");
+/// - otherwise the spilled digits print before the first one, then `0` prints a zero, `#` a zero
+///   unless digits are missing, and `?` a zero unless the slots fit exactly, where it prints a
+///   space until a placeholder before it printed a zero (`# ?/4|0` on 0.0625 is " 1/4|60",
+///   `# ?/16|#` on 0.5 " 1/1 |", `# ?/?|?0` " 1/2| 0", `# ?/?|0?` " 1/2|00";
+///   probes/t4043-fixed-denominator-slots, -cut, t4043-placeholder-denominator-slots).
+fn trailing_fill(kinds: &[char], spill: Option<(&str, isize)>) -> Vec<String> {
+    let Some((spill, excess)) = spill else {
+        return kinds
+            .iter()
+            .map(|kind| if *kind == '?' { " " } else { "0" }.to_owned())
+            .collect();
+    };
+    if kinds.iter().all(|kind| *kind == '?') {
+        let digits: Vec<char> = if excess < 0 {
+            vec!['0'; excess.unsigned_abs()]
+        } else {
+            spill.chars().collect()
+        };
+        return (0..kinds.len())
+            .map(|i| digits.get(i).copied().unwrap_or(' ').to_string())
+            .collect();
+    }
+    let mut zero_before = false;
+    let mut slots: Vec<String> = kinds
+        .iter()
+        .map(|kind| {
+            let zero = match kind {
+                '#' => excess >= 0,
+                '?' => excess != 0 || zero_before,
+                _ => true,
+            };
+            zero_before |= zero;
+            match (zero, *kind) {
+                (true, _) => "0",
+                (false, '?') => " ",
+                (false, _) => "",
+            }
+            .to_owned()
+        })
+        .collect();
+    if let Some(first) = slots.first_mut() {
+        first.insert_str(0, spill);
+    }
+    slots
+}
+
 /// The index just past the last digit placeholder of `tokens`, if any.
 fn digits_end(tokens: &[TextToken]) -> Option<usize> {
     tokens
@@ -491,9 +568,10 @@ pub(super) fn comma_exponent(commas: i32, signed: bool) -> i32 {
 /// "16384/32768", `?/32769` "1/3    "; probes/fraction-large-fixed-denominator).
 const MAX_FIXED_DENOMINATOR: f64 = 32768.0;
 
-/// The largest denominator Excel picks for a fixed denominator past 32768 (10^7 - 1), whatever
-/// its digit count: `?/40000` on 1/9999999 is "1/40000" and on 1E-7 "0/4    ", and `?/32769` alike
-/// (probes/fraction-large-fixed-denominator).
+/// The largest denominator Excel picks for a fixed denominator it does not use as written
+/// (10^7 - 1), whatever its digit count: `?/40000` on 1/9999999 is "1/40000" and on 1E-7
+/// "0/4    ", and `?/32769` alike (probes/fraction-large-fixed-denominator); `# ?/4|?` on `PI()` is
+/// "3 244252/4|7", 3 + 244252/1725033 (probes/t4043-fixed-denominator-slots).
 const LARGE_FIXED_MAX_DENOMINATOR: f64 = 9_999_999.0;
 
 /// The largest numerator a fixed denominator shows with no integer part (2^15 - 1).

@@ -1204,7 +1204,10 @@ Rule (gen-m10 `F!` text cells, TEXT() on sheet T gives the same text; cells name
   or `0` one (`??/40000` on 0.5 " 1/4    ", `0/40000` and `#/40000` "1/4", `# #/40000` on 1.5 "1 1/4", `# ?/40000`
   "1 1/4    "). Six or more digits (`?/100000`, `?/123456`) are #VALUE! from TEXT for every value, and Excel for the
   web refuses a workbook that applies one as a cell format (FileCorruptTryRepair), so its displayed text is unknown.
-  Implemented in `format_fraction` (`MAX_FIXED_DENOMINATOR`, `LARGE_FIXED_MAX_DENOMINATOR`) and the parser. Unprobed: a
+  A fixed denominator of any size followed by a digit placeholder is picked the same way, and a picked denominator
+  longer than the code's prints its further digits after the code's under a `#` or `0` numerator and drops them (or
+  moves them into the placeholders after it) under a `?` one (T-4043; "Placeholders after a fraction").
+  Implemented in `format_fraction` (`Choice`, `MAX_FIXED_DENOMINATOR`, `LARGE_FIXED_MAX_DENOMINATOR`) and the parser. Unprobed: a
   numerator mixing `?` with `#` or `0`, a blank fraction (`# ?/40000` on a whole number), and
   whether the #VALUE! rule is about the digit count or the value (only 6-digit codes of 100000 or more were probed;
   7+ digits and leading zeros are extrapolated).
@@ -1287,18 +1290,40 @@ Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074
 
 ## Placeholders after a fraction
 Rule: digit placeholders after a placeholder denominator get no digit of the value: `0` and `#` print a zero, `?` a
-space, a `.` among them prints and a `,` prints nothing (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #` "12 1/2 0",
+space (when the picked denominator fills the denominator's slots and no zero came before it; the full rule, T-4043,
+is below), a `.` among them prints and a `,` prints nothing (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #` "12 1/2 0",
 `# ?/? 00` "12 1/2 00", `# ?/? ?` "12 1/2  ", `# ?/?|0.0` "12 1/2|0.0", `# ?/?|#,##0` "12 1/2|0000"). When the fraction
 blanks (a zero fraction part, `# ?/?|0` on 12 or on 0), everything after the integer up to the last such placeholder
 blanks with it, literals and quoted text included, and what follows prints (`# ?/?|0 "12"|\5` on 12 is "12       12|5",
 `# ?/?"x"0` "12      ", `# ?/? 0|"x"` "12      |x", `# ?/?|0%` on 12.5 "1250      %"). Evidence:
 probes/t3711-placeholders-after-fraction (120 cells, excel-graph 2026-11-04), probes/t3532-numeral-digit-fields row 14
 (the zero takes the numeral digits). Implemented in: `format_fraction` (formatter/fraction.rs; T-3711).
-**A fixed denominator followed by a placeholder** is no longer fixed: Excel picks the fraction, prints the written
-denominator digit in place of the picked denominator's first digit and spills the other digits into the placeholders
-after it (`# ?/4|0` on 12.5 is "12 1/4|0", on 0.3 " 3/4|00", on 0.0625 " 1/4|60"; `# ?/4|?` on 0.0625 " 1/4|6", on 0.5
-" 1/4| "); a literal alone after it changes nothing (`# ?/4"x"` on 0.5 " 2/4x"). Evidence:
-probes/t3711-fixed-denominator-then-placeholder (88 cells). Status: open, T-4043 (we keep the fixed denominator).
+**A fixed denominator followed by a placeholder** is no longer fixed (VERIFIED, T-4043). With a digit placeholder
+anywhere after the denominator, Excel picks the fraction as for a fixed denominator past 32768 (see "Fraction formats"):
+the last convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 +
+244252/1725033). A literal alone after it changes nothing (`# ?/4"x"` on 0.5 is " 2/4x"). With C the code's
+denominator digits (L of them) and D the picked denominator:
+- **The denominator** prints C cut to D's length, padded by L - len(D) spaces under a `?` numerator and by nothing
+  otherwise (`# ?/16|0` on 0.5 is " 1/1 |0", `# 0/16|?` "1/1| "). D's digits past the first L (R) print right after it
+  under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on 0.0625 "1/46|0") and go to the placeholders after it
+  under a `?` numerator, or nowhere when there are none (`?/40000`).
+- **The placeholders after it** print as after a placeholder denominator (above) under a `#` or `0` numerator. Under a
+  `?` numerator, with E = len(D) - L: if they are all `?`, R (E > 0) or E zeros (E < 0) fill them from the left and the
+  rest print a space (`# ?/4|?` on 0.0625 " 1/4|6", on PI() "3 244252/4|7", on 0.5 " 1/4| "; `# ?/16|?` on 0.5
+  " 1/1 |0"; `# ?/100|??` on 0.5 " 1/1  |00", on 0.3 " 3/10 |0 "). Otherwise R prints before the first one, then `0`
+  prints a zero, `#` a zero unless E < 0, and `?` a zero unless E = 0, where it prints a space until an earlier one
+  printed a zero (`# ?/4|0` on 0.0625 " 1/4|60", on 0.3 " 3/4|00", on -0.3 "- 3/4|00"; `# ?/4 0 0` on 0.0625
+  " 1/4 60 0"; `# ?/16|#` on 0.5 " 1/1 |", `# ?/16|?0` " 1/1 |00"; with E = 0 `# ?/4|?0` on 0.5 is " 1/4| 0" and
+  `# ?/4|0?` " 1/4|00").
+- **A placeholder denominator** follows the same rule with its `?` slots (E <= 0 there): `# ?/?|?0` on 0.5 is
+  " 1/2| 0" and `# ?/?|0?` " 1/2|00", `# ??/??|?` on 0.5 "  1/2 |0" and on 0.3 "  3/10| ", `# ??/??|0?` on 0.3
+  "  3/10|00" (probes/t4043-placeholder-denominator-slots, 20 cells, excel-graph 2026-11-04). The T-3711 cells above
+  are the case E = 0. A denominator of `#` or `0` placeholders after which placeholders follow is unprobed; the engine
+  gives it the T-3711 reading.
+- A blank fraction (a zero numerator) blanks as above.
+Evidence: probes/t3711-fixed-denominator-then-placeholder (88 cells), t3711-placeholders-after-fraction A13, C13, E13,
+t4043-fixed-denominator-slots (19 formats x 15 values, excel-graph 2026-11-04), t4043-fixed-denominator-cut (11 x 8,
+excel-graph 2026-11-04); every cell matches. Implemented in: `Choice::of` and `trailing_fill` (formatter/fraction.rs).
 Tasks: T-3711, T-4043
 
 ## Fill characters (`*x`) add nothing to the text
