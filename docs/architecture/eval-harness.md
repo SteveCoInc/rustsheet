@@ -91,6 +91,8 @@ Input conventions:
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
 - Optional `"api_names": [{"name": "N", "formula": "=ABS(1)"}]` defines workbook-scoped names
+  (with `"sheet": "S"`, a name scoped to sheet S, replayed with Graph `worksheets('S')/names/add` and
+  `Txn::define_sheet_name`; T-4014)
   through the API after the typed entries and the sheet ops, in order (T-3264;
   `tools/src/rustsheet_tools/api_names.py`): spec2xlsx records them as docProps custom properties
   `rustsheet.apiname.<n>`, the excel-graph backend replays each with Graph `workbook/names/add`

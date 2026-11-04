@@ -3,12 +3,11 @@ id: T-2893
 title: "Trace the ix L140 bup+bpser cell count (model 1,620, ported dispatch 1,383) and score T-2506's criterion 2 on the model's set"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
 depends_on: [T-2506]
-defer: phase-1b
 ---
 
 ## Goal
@@ -26,14 +25,26 @@ cell by cell, so the engine's L140 port is judged against the model on one popul
 - Data rebuild steps are in docs/research/t2506/RESULTS.md ("Data").
 
 ## Acceptance criteria
-- [ ] The rows in the model's 1,620 and not in the engine's 1,383 (and the reverse) are listed by cause in a
+- [x] The rows in the model's 1,620 and not in the engine's 1,383 (and the reverse) are listed by cause in a
       RESULTS.md under docs/research/t2893/.
-- [ ] The engine's score on the model's 1,620 cells (or on the cells both call L140 bup+bpser) is recorded against
+- [x] The engine's score on the model's 1,620 cells (or on the cells both call L140 bup+bpser) is recorded against
       the model's 1,011, and T-2506's criterion 2 is marked met or a kernel follow-up is filed with the cells.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Moving F, T, BINOM or NEGBINOM onto bratio (T-2847).
 
-## Deferred by decision 0267
-The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
+## Outcome
+- docs/research/t2893/RESULTS.md, `trace.py`, `trace.out`. There is no row-level difference. The model's "1,620
+  ix L140 cells, 1,011 bit-exact" pools all three L140 branches: bup+bpser 1,383 (905 bit-exact), bup+bgrat 187 (82)
+  and bup+bup+bgrat 50 (24). T-2506 counted bup+bpser only. The model sends the same 1,383 rows to bup+bpser under
+  every configuration tried (BEST, closed off, x29 = 0.29, TOMS_XL, R_LIKE). The engine's `bratio::dispatch` puts each
+  of the 1,620 rows on the model's branch.
+- Criterion 2 on the model's population: the engine scores 1,214 / 1,554 / 1,592 of 1,620 (bit-exact / 4 ulp /
+  15 digits), against the model's 1,011 / 1,542 / 1,585. It is ahead on bup+bpser (1,133 against 905) and 25
+  bit-exact behind on the two bup+bgrat branches (81 against 106). T-2506's criterion 2 is marked met in its task
+  file, so no kernel follow-up.
+- The engine run used T-2977's deleted research harness, restored uncommitted from `f6e944993^` with `BRATIO` on
+  today's `bratio::kernel_tails`, then reverted (RESULTS.md "How the engine was run").
+- statistics.md's L140 bullet now says that the 1,620 are all three L140 branches.
+- Eval delta: none (research and docs only).

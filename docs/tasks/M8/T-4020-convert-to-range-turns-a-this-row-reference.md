@@ -4,7 +4,7 @@ title: "Convert to range turns a #This Row reference off the data rows into #REF
 milestone: M8
 lane: engine
 status: todo
-priority: P2
+priority: P0
 size: M
 tier: opus
 depends_on: []

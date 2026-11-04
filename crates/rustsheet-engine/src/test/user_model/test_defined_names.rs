@@ -639,3 +639,25 @@ fn cut_paste_range_defined_name_no_update_when_partial_overlap() {
         vec![("BigRange".to_string(), None, "Sheet1!$B$1:$D$3".to_string())]
     );
 }
+
+// A body edited past the API's 65-call cap (an update is unchecked: Graph has no endpoint that sets
+// a body) comes back when the delete of its name is undone, instead of failing the undo (T-4014).
+#[test]
+fn undoing_the_delete_of_an_over_cap_name_restores_it() {
+    let deep = format!("={}1{}", "ABS(".repeat(66), ")".repeat(66));
+    let mut model = new_empty_user_model();
+    model.new_defined_name("Deep", None, "Sheet1!$A$1").unwrap();
+    model
+        .update_defined_name("Deep", None, "Deep", None, &deep)
+        .unwrap();
+    model.set_user_input(0, 2, 1, "=Deep").unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("1".to_string()));
+    model.delete_defined_name("Deep", None).unwrap();
+    assert_eq!(
+        model.get_formatted_cell_value(0, 2, 1),
+        Ok("#NAME?".to_string())
+    );
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 2, 1), Ok("1".to_string()));
+    assert_eq!(model.get_defined_name_list().len(), 1);
+}

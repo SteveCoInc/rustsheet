@@ -4,7 +4,7 @@ title: "Probe #This Row through a row delete and a column edit its table follows
 milestone: M8
 lane: research
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

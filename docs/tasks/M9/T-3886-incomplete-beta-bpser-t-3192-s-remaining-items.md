@@ -3,14 +3,13 @@ id: T-3886
 title: "Incomplete beta bpser: T-3192's remaining items (b0 >= 8 L diff, T-2505's 987 moved cells, 6 shape-of-1 cells) and a = b = 1/2 at x = 0.5"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
 depends_on: [T-3192]
 campaign: accuracy
 spec: docs/specs/SPEC-0025-incomplete-beta-bratio-port.md
-defer: phase-1b
 ---
 
 ## Goal
@@ -48,5 +47,28 @@ Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs; `docs/researc
 ## Out of scope
 - bfrac/basym (T-2508), the bgrat family (T-2509, T-2510), the inverses (T-2511), T-2924's fit of Excel's ln B.
 
-## Deferred by decision 0267
-The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
+## Outcome
+The two items that could be scored with today's tooling are recorded as negative results. The other two were split
+to T-4070. Nothing is ported, and engine code is unchanged.
+- **a = b = 1/2 (x = 0.5 and the 1 to 2 ulp misses):** no closed form explains them
+  (docs/research/t3886/RESULTS.md section 1, `score_half_x87.py`).
+  - Over the three sweeps (962 cells), 10 double forms and 192 variants with 64-bit (x87) intermediates were scored.
+    None beats the ported direct form's 737 bit-exact.
+  - The 22 variants that give Excel's 0.5000000000000001 at x = 0.5 reach at most 666.
+  - Excel's worksheet ATAN form equals the double direct form on all 321 cells of sweep 1, so the misses are not a
+    libm difference.
+  - The unported 0.9 switch (855 of 962) still needs R4.4 evidence or an owner ruling. It is filed as deferred T-4071
+    (phase-1b), with the shape-pin prerequisite.
+- **The 6 shape-of-1 cells:** no single form of w fits them (RESULTS.md section 2, `ln1m_tie.py`).
+  - With l correctly rounded, Excel's expm1 gives Excel's bits at A191 and G145. A191 is a near-tie of the log1p
+    series (0.053 ulp from the tie); G145 is not a tie and stays unexplained.
+  - The A195 pair and A16 take libm's expm1, 1 - EXP or a reassociated Kahan form, which conflict with the 71 cells
+    T-3170's form fixed.
+  - Full-eval A/B of the reassociated Kahan form (`kahan_reassociated.patch`): 78 cells newly bit-exact, 47 lost,
+    5 of them gated probes cells, so it was not ported.
+  - Its wins include all 47 of T-3764's t3568 column-B cells. That is recorded in T-3764's Context as a lead.
+- **Split to T-4070** (opus, functions-stat): the b0 >= 8 L diff and T-2505's 987 moved cells. Each first needs the
+  T-2464 harness ported back from git history, or the bindings venv built, before anything can be scored.
+- statistics.md: the a = b = 1/2 entry and "Incomplete beta at a shape of 1 outside the closed forms" carry the
+  negative results.
+- Eval delta: none (docs and research scripts only).

@@ -131,6 +131,29 @@ fn api_names_are_defined_after_load_and_a_refused_one_stays_undefined() {
 }
 
 #[test]
+fn a_sheet_scoped_api_name_is_defined_on_its_sheet() {
+    // T-4014: `"sheet": "S"` defines N scoped to S (Graph `worksheets('S')/names/add`), so `S!N`
+    // from another sheet reads it; an unknown sheet fails the case.
+    let case = spec(
+        r#"{"format":"rustsheet-case/v1",
+            "sheets":[{"name":"S","cells":{}},{"name":"T","cells":{"A1":"=S!N"}}],
+            "api_names":[{"name":"N","formula":"=ABS(-2)","sheet":"S"}]}"#,
+    );
+    let result = RustSheetEngine
+        .evaluate_spec(&case, None)
+        .expect("evaluates");
+    assert_eq!(
+        result.value("T", Addr { row: 1, col: 1 }),
+        Some(Value::Number(2.0))
+    );
+    let bad = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{}}],
+            "api_names":[{"name":"N","formula":"=1","sheet":"Nope"}]}"#,
+    );
+    assert!(RustSheetEngine.evaluate_spec(&bad, None).is_err());
+}
+
+#[test]
 fn structural_sheet_ops_shift_cells_and_rewrite_references() {
     // T-2323: A3 refers to B2; a row delete above, a column insert left of it and a delete
     // of the sheet and the table named by the later ops all replay in order.

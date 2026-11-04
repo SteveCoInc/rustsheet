@@ -15,7 +15,7 @@ use bitcode::{Decode, Encode};
 
 use crate::{
     calc_result::CalcResult,
-    evaluation::{key, CellKey as Key},
+    evaluation::{key, CellKey as Key, KeyBuild},
     expressions::types::CellReferenceIndex,
     model::Model,
     types::{Cell, FormulaValue},
@@ -41,21 +41,52 @@ impl Default for Iteration {
     }
 }
 
+impl Iteration {
+    /// The largest `iterateCount` Excel takes (recalc.md, "Iteration settings outside Excel's
+    /// range fall back to its defaults").
+    pub const MAX_ITERATIONS: u32 = 32_767;
+
+    /// These settings as untrusted input may hold them, each brought into Excel's range: a count
+    /// outside 1 to [`Self::MAX_ITERATIONS`] and a delta that is not finite and non-negative
+    /// fall back to Excel's default, each on its own (recalc.md, "Iteration settings outside
+    /// Excel's range fall back to its defaults"). The xlsx importer and a decoded workbook
+    /// (`Model::from_workbook`) both read them through this, so a count from the bytes cannot
+    /// make the sweeps run for minutes (CLAUDE.md directive 5; T-4048).
+    #[must_use]
+    pub fn within_excel_range(self) -> Self {
+        let default = Self::default();
+        Self {
+            max_iterations: if (1..=Self::MAX_ITERATIONS).contains(&self.max_iterations) {
+                self.max_iterations
+            } else {
+                default.max_iterations
+            },
+            max_change: if self.max_change.is_finite() && self.max_change >= 0.0 {
+                self.max_change
+            } else {
+                default.max_change
+            },
+        }
+    }
+}
+
 /// Member evaluations all the sweeps of one recalculation may make together (CLAUDE.md
 /// directive 5); past it the sweeps stop where they are (recalc.md, DEVIATION). Each run also draws
 /// on the recalculation's ceiling (SPEC-0028 section 4), and running out of it stops them the same
 /// way.
 const MAX_SWEEP_EVALUATIONS: usize = 1 << 25;
 
-/// What a recalculation with iteration on keeps about its circular references.
+/// What a recalculation with iteration on keeps about its circular references. Its maps are keyed
+/// by formula positions, as the evaluation's are, and use the same hasher (`KeyBuild`): every read
+/// of a sweep looks a member up, and the default hasher was 15% of a sweep's cost (T-4078).
 #[derive(Default)]
 pub(crate) struct IterationState {
     /// The recalculated set: cycle cells and the cells that read them.
-    members: HashSet<Key>,
+    members: HashSet<Key, KeyBuild>,
     /// Every formula cell as it was before the recalculation.
-    prior: HashMap<Key, Cell>,
+    prior: HashMap<Key, Cell, KeyBuild>,
     /// The members as the first round's sweeps left them.
-    settled: HashMap<Key, Cell>,
+    settled: HashMap<Key, Cell, KeyBuild>,
     /// Calls of `join_stack` so far: a pass cache built while this moved read a member, so its
     /// reader joined, and is not stored (`search_cache.rs`, `ifs_cache.rs`; T-0485).
     joins: u64,

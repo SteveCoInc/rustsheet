@@ -45,8 +45,9 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane. `make next-task` enforces it: it skips tasks claimed by a pushed
-  branch and lanes with a branch that moved in the last 2 hours (handoffs, and branches whose task
+- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
+  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
+  in the last 2 hours (handoffs, and branches whose task
   is already done on main, excepted).
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).
@@ -66,8 +67,9 @@ todo ──(worker claims: branch + status in-progress)──▶ in-progress ─
   └──────────── (unblocked) ◀── blocked ◀──(3 failed review/CI rounds, or needs oracle)
 ```
 
-- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task;
-  a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
+- **Unblocking is an agent's job** (decision 0013). The steward run checks every `blocked` task,
+  including one blocked only on a stale draft PR's branch (steward skill "Stale drafts", decision
+  0264); a worker whose lane has no ready task checks its lane's. If the blocker is gone (the capability
   check passes, or the blocking task is `done`): set `status: todo`, delete the "Blocked because"
   section, drop dependencies that stood only for the capability, remove the
   resolved "Needs owner" entry from `docs/status.md`, and note the unblock in the PR (no log line;

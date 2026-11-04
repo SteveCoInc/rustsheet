@@ -16,11 +16,15 @@ use crate::x87_register::Register;
 /// today's kernel answers.
 const MAX_BUP_TERMS: f64 = 9.0;
 
-/// The largest a0 L140 bup+bgrat takes T-3568's composition for at n >= 2 or c = 1: the range its
-/// probes cover (a0 <= 3000). Excel's W tracks its density's error, which grows with a0, and the
-/// engine's density is not Excel's to the bit there (T-3569): at a0 = 5E9 the port takes
-/// probes-numeric t2528-f-dist-huge-df2 A4 and A16 from within 4 ulp to visibly off.
-const MAX_BUP_A0: f64 = 3000.0;
+/// The largest a0 L140 bup+bgrat takes T-3568's composition for at n >= 2 or c = 1. T-3568's probes
+/// cover a0 <= 3000; past that, up to 1E7, the fallback kernel is what is off: on F's calls at a
+/// small df1 (4 to 20) and df2 of 1E5 to 2E7 it is up to 3.7E-10 relative off the 50-digit math,
+/// and this composition within 8E-15 (T-3754, docs/research/t3754: `F.DIST.RT(1.09080885395379,8,
+/// 5567623)` 0.3658936312385961 against Excel's correctly rounded 0.3658936312909749). Above 1E7
+/// it stops: Excel's W tracks its density's error, which grows with a0, the engine's density is not
+/// Excel's to the bit there (T-3569), and at a0 = 5E9 the port takes probes-numeric
+/// t2528-f-dist-huge-df2 A4 and A16 from within 4 ulp to visibly off.
+const MAX_BUP_A0: f64 = 1e7;
 
 /// bratio's split of L140's b0 into n bup terms and the lowest shape b0' = b0 - n (b0' = 1 and
 /// n - 1 at an integer b0).

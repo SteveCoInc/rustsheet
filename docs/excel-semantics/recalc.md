@@ -174,6 +174,23 @@ Status: VERIFIED (excel-graph)
 Implemented in: crates/rustsheet-engine/src/iteration.rs (`Model::sweep`)
 Tasks: T-0428, T-0401, T-0429, T-0447
 
+## Iteration settings outside Excel's range fall back to its defaults
+Rule: Excel's Options dialog takes a Maximum Iterations of 1 to 32,767 and a non-negative Maximum
+Change; what Excel does with an xlsx whose `calcPr@iterateCount` or `iterateDelta` is outside
+that is unprobed.
+Evidence: none for Excel's handling of out-of-range values in a file; the range is the dialog's.
+Ours: the count and the delta each fall back to Excel's default (100 and 0.001) on their own when
+absent, unparsable, a count outside 1 to 32,767, or a delta that is not finite and non-negative.
+The xlsx importer and a workbook decoded from bytes (`Model::from_bytes`) apply the same rule, so
+neither can ask for more than 32,767 sweeps. Before T-4048 a decoded workbook kept any count: the
+`bitcode_workbook` fuzz target found a one-cell cycle with a count of 50,529,030 whose single
+recalculation took 6.7 s in a release build and over 30 s under the fuzzer (CLAUDE.md directive 5).
+Status: DEVIATION (decision 0014)
+Implemented in: crates/rustsheet-engine/src/iteration.rs (`Iteration::within_excel_range`),
+crates/rustsheet-engine/src/model.rs (`Model::from_workbook_with_clock`),
+crates/rustsheet-xlsx/src/import/workbook.rs (`iteration_from`)
+Tasks: T-0447, T-4048
+
 ## Iterative sweeps evaluate at most 2^25 members per recalculation
 Rule: Excel's limit on the work of iterative calculation is unprobed; it runs up to iterateCount
 (at most 32,767) sweeps over every member.
