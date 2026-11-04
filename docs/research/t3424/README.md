@@ -1,7 +1,7 @@
 # T-3424: RATE's type at the noise floor
 
-Notes from 2026-11-04, opus run. The finding is in docs/excel-semantics/financial.md, "Excel's residual and step are
-the model's; the outcome of a flat secant is not". These scripts reproduce it. None of them changes the engine, and
+Notes from 2026-11-04, opus run. The finding is in docs/excel-semantics/financial.md, "Excel's FV along the path is
+the model's annuity value; how RATE decides in the noise floor is not". These scripts reproduce it. None of them changes the engine, and
 no constant was chosen from them.
 
 Run each script from `tools/` with this directory as its first argument, for example
