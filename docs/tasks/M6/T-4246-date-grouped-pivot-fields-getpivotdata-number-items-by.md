@@ -3,7 +3,7 @@ id: T-4246
 title: "Date-grouped pivot fields: GETPIVOTDATA number items by calendar value, and the eval adapter registers date-grouped spec pivots"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
