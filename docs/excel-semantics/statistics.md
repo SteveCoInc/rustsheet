@@ -3493,7 +3493,16 @@ F.DIST(., TRUE) is its w and F.DIST.RT its w1. At a df of 1 (b = 1/2) that inclu
 - The F density takes the opposite sides (r = fl(mx/n) when mx <= n, "F density is not the beta density" below).
 Evidence: probes-numeric t3567-r5-fdf1-hold; cells.tsv's F cells (t2220-f-dist-sweep-*, gen-m9, m9-f-dist*);
 docs/research/t2464/r5-bgrat-fdf1 (`c3.py`, `c4.py`, `c5.py`, `score_hold.py`).
-Ours: `fisher.rs` `f_beta_arguments` forms both arguments as 1/(1 + .), and F does not take bgrat at b = 1/2 (T-3580).
+- bup's arithmetic on these arguments is not Excel's yet: `FDIST(2,1,9)` (bup+bgrat at b = 1/2) is 0.19094711716972404
+  against Excel's 0.190947117169724, and `F.DIST.RT(1,7,9)` (L140 bup+bpser) 0.48796816908209795 against
+  0.48796816908209784, both of which the 1/(1 + .) arguments with today's kernel happened to hit; on the hold-out the
+  r >= 1 arguments still win in both branches (bup+bgrat 65 against 31 of 98 bit-exact, L140 bup+bpser 220 against 204
+  of 294; decision 0263).
+- Fresh sweep probes-numeric t3580-f-fresh (2,400 cells, drawn and filled after T-3580's freeze): the engine
+  1,867/2,280/2,335, the correctly rounded value 932/1,718/1,872; every cell inside Gate A's envelope.
+Ours: `fisher.rs` `f_beta_arguments` forms the r >= 1 arguments and F's tails take bgrat at b = 1/2
+(`bratio::f_closed_or_ported_tails`, T-3580): t3567-r5-fdf1-hold 2,879/3,430/3,487, its bg1 region 991/1,000/1,000.
+F.INV, F.INV.RT and FINV still cross today's kernel on df1 x/(df1 x + df2) (`f_quantile_tail`).
 Status: VERIFIED (excel-graph)
 Tasks: T-3567, T-3580
 
