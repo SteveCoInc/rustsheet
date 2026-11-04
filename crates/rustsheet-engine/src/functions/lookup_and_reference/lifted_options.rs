@@ -175,19 +175,23 @@ impl Model {
         };
         Err(self.lift_by_class(
             &positions,
-            // Once the filter is spent, a position whose first error comes before any text is
-            // that error: the call returns it before it filters (t3964-groupby-filter-lift-errors
-            // G!B71, B83, B89, B101). Before it is spent `run` gives the same error (each error
-            // is a class of its own) without spending the filter (G!A77, A95).
-            |elements, spent| {
+            // Once the filter is spent, a position whose first error comes before any text that
+            // is no number is that error: the call returns it before it filters
+            // (t3964-groupby-filter-lift-errors G!B71, B83, B89, B101). Numeric text and an
+            // out-of-range number before it do not stop it (t3985-groupby-two-lifted-spent-filter
+            // G!B1, B25), other text does (G!B13). Before the filter is spent `run` gives the
+            // same error (each error is a class of its own) without spending it (G!A77, A95).
+            |model, elements, spent| {
                 if !spent {
                     return None;
                 }
-                elements
-                    .iter()
-                    .find(|element| matches!(element, ArrayNode::Error(_) | ArrayNode::String(_)))
-                    .filter(|element| matches!(element, ArrayNode::Error(_)))
-                    .map(|element| (*element).clone())
+                match classify(model, elements)
+                    .into_iter()
+                    .find(|class| matches!(class, Class::Error(_) | Class::OtherText))
+                {
+                    Some(Class::Error(error)) => Some(ArrayNode::Error(error)),
+                    _ => None,
+                }
             },
             classify,
             |model, elements| {
@@ -257,7 +261,7 @@ impl Model {
     pub(crate) fn lift_by_class<E, K: PartialEq>(
         &mut self,
         elements: &[Vec<E>],
-        settled: impl Fn(&E, bool) -> Option<ArrayNode>,
+        mut settled: impl FnMut(&mut Model, &E, bool) -> Option<ArrayNode>,
         mut classify: impl FnMut(&mut Model, &E) -> K,
         mut run: impl FnMut(&mut Model, &E) -> ArrayNode,
     ) -> CalcResult {
@@ -267,7 +271,8 @@ impl Model {
         for row in elements {
             let mut cells = Vec::with_capacity(row.len());
             for element in row {
-                if let Some(value) = settled(element, self.groupby_filter_spent) {
+                let spent = self.groupby_filter_spent;
+                if let Some(value) = settled(self, element, spent) {
                     cells.push(value);
                     continue;
                 }

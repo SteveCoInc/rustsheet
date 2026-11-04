@@ -35,6 +35,9 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 - `large_shape_beta.rs` is an accuracy stand-in: when T-2510's bratio bgrat lands and the old kernel goes, it is
   folded into or replaced by `bratio`'s bgrat, so the two series do not stay as parallel definitions.
 
+- Gap triage 2026-11-04: the band's Gate B face, gen-m9 7bd219ec0c0c5e22 A349 `FDIST(7,10,1E+8)` (b = 5), is T-4018's,
+  on T-4017's sweep over df1 2 to 79. A model T-4018 lands should be checked on this task's 22 cells.
+
 ## Acceptance criteria
 - [ ] The 22 cells are within half a unit of the 15th digit of Excel (a model of Excel's bgrat at these points).
 - [ ] No cell of t2528-f-dist-huge-df2, t1530-f-df-cut or t1538-* moves away from Excel.

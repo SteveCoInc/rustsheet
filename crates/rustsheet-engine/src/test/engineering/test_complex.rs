@@ -465,6 +465,25 @@ fn small_real_imsech_imcsch_take_the_reciprocal() {
     assert_eq!(model._get_text("A8"), "#NUM!");
 }
 
+// Excel: probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep C390, t3982-r4-imsech-real-cosh A5, A49 and
+// t3981-imsech-real-band-sweep-hold A13 (excel-graph, T-3982): above |x| 1E-4 a real IMSECH is 1 over the `1/u`
+// form's cosh, as IMCOSH's is, where libm's 1/cosh is one off in the last printed digit.
+#[test]
+fn real_imsech_above_the_libm_cut_takes_the_form() {
+    let mut model = new_empty_model();
+    model._set("A1", r#"=IMSECH("-0.00802240437783925")"#);
+    model._set("A2", r#"=IMSECH("-0.000301650878487426")"#);
+    model._set("A3", r#"=IMSECH("-0.000112746312425845")"#);
+    model._set("A4", r#"=IMSECH("0.00483608995950115")"#);
+
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), "0.99996782137691");
+    assert_eq!(model._get_text("A2"), "0.999999954503376");
+    assert_eq!(model._get_text("A3"), "0.999999993644134");
+    assert_eq!(model._get_text("A4"), "0.999988306230907");
+}
+
 // Excel: gen-m9 (excel-graph, T-2258): IMLN and IMLOG10 of 0 or 0i are #NUM!, not "-inf" (T-2389).
 #[test]
 fn fn_imln_imlog10_of_zero_are_num() {
