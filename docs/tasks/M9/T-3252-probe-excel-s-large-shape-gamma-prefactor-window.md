@@ -70,3 +70,25 @@ b in [20, 40) and a/b at most 1E-6.
 - Eval delta: in the window case 74 of 188 cells pass, against 69 on main's engine. Each newly passing cell was 9 to
   72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions. The three cases add 179 known failures
   (77 visibly off), owned by T-4255 and T-3219.
+
+## Landing notes
+- PR #3246 (draft), head after this commit; branch agent/research/T-3252-gamma-prefactor-window. CI on the
+  current head will be red in the eval job: probes/t3252-gamma-prefactor-sweep has no baseline lines yet.
+- Reviewers: security and design APPROVED f297af847 (the 0.33 version); excel-fidelity REQUESTED CHANGES on it
+  (0.33 outside the (0.332, 0.336) bracket; the cut applied outside the FITTED shape range; R4 hold-out counts,
+  margin and fresh sweep missing; it also asked to name the owner of window A171:A179). Round 2 (becb4501c and
+  later) answers the first three: 0.334 restricted to shapes 30 to 500, a fresh log-uniform sweep, and the score
+  table in the Outcome. Nobody has reviewed round 2 yet.
+- Blocker found when the window closed: `make eval-baseline` refuses. At 0.334, holdout-2 A29/A30
+  (`GAMMA.DIST(200.4,300,1,*)`, x = 0.668a) moves from the ratio form (-55/-54 ulp) to `rcomp` (+56/+57). That is one
+  more visibly-off cell than the 0.33 baseline allowed. Evidence at 0.668a is a tie, so either:
+  (a) keep 0.334 and handle the one-cell visible-parity move by the repo's rules (check decision 0083's ulp-regression
+  allowance first; never hand-edit the lock), or (b) go back to 0.33 restricted to 30..500. Option (b) puts the cut
+  just outside the bracket at the tied cell; justify it in the Outcome and decision 0281, and note that the sweep was
+  scored at 0.334.
+- Then: run `make eval-baseline` (the sweep adds 58 known failures, 10 of them visibly off). Name the 10 sweep cells in
+  T-4255's Context (A9, A19, A20, A23, A53, A54, A55, A57, A58, A63 were the list at 0.334). Run
+  `make check-fast`, update the "Eval delta" line, and re-run all three reviewers on the new head.
+- Do not repeat: `rustsheet-accuracy math --suite probes` rewrites unrelated bessel math sidecars (revert them) and
+  writes no sidecar for the hold-out and sweep cases. The scoring script used is described in the Outcome (50-digit
+  mpmath gammainc and loggamma against `rustsheet-eval show` actuals).
