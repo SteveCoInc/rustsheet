@@ -194,6 +194,7 @@ probes/t2496-fin-subexpressions.case.json	2
 probes/t2565-irr-guess-sweeps.case.json	1
 probes/t2576-error-type-cell-paired.case.json	10
 probes/t2577-indirect-ref-array.case.json	6
+probes/t2657-pv-irr-div0.case.json	22
 probes/t2753-gamma-density-ratio-sweep.case.json	6
 probes/t2779-hebrew-saka-names.case.json	1
 probes/t2829-ftest-a306-shapes.case.json	8
@@ -207,6 +208,7 @@ probes/t3028-b2-taiwan-cuts.case.json	2
 probes/t3070-gamma-inv-band.case.json	1
 probes/t3211-collation-sort-cycles.case.json	43
 probes/t3297-legacy-if-index-arm-name-table.case.json	5
+probes/t3347-irr-conventional-num.case.json	19
 probes/t3348-rate-fv-nonzero.case.json	3
 probes/t3349-t-inv-2t-near-one.case.json	1
 probes/t3350-chisq-inv-huge-df.case.json	14
