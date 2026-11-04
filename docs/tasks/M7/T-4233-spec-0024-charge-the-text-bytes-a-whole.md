@@ -39,7 +39,7 @@ evaluation does at most 268,435,456 work units".
   iterators, so a comparison pays up to its first difference, not the texts' lengths) and what each collation key or
   lookup fold is built from (`note_compared_bytes`); the ASCII arms that bypass it (`ExactKey::text_is` of MATCH,
   VLOOKUP and HLOOKUP's exact match, `folded_units`, `WildcardPattern::matches`) note theirs too. `Model::spend_compared`
-  (area_budget.rs) charges the count after each node in `evaluate_node_in_context`, one unit per 4 characters, and
+  (area_budget.rs) charges the count after each node (`Model::charged`, which `evaluate_node_in_context` ends with), one unit per 4 characters, and
   `with_area_budget` keeps an outer run's pending count apart from a dependency cell's run.
 - Tests (test_formula_work.rs, units not time): `every_text_comparing_reader_pays_the_bytes_it_compares` (MATCH exact,
   wildcard and approximate, XMATCH, XLOOKUP, LOOKUP, VLOOKUP, HLOOKUP, UNIQUE, SORT, SORTBY, GROUPBY, `=`),

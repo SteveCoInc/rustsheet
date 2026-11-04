@@ -326,9 +326,13 @@ impl Model {
         self.spend_work(NODE_UNITS, cell)
     }
 
-    /// `value`, a node's, once charged ([`Model::spend_value`]), or the budget's error.
+    /// `value`, a node's, once charged ([`Model::spend_value`]) with the text its comparisons read
+    /// ([`Model::spend_compared`]), or the budget's error.
     #[inline]
     pub(crate) fn charged(&mut self, value: CalcResult, cell: CellReferenceIndex) -> CalcResult {
+        if let Err(error) = self.spend_compared(cell) {
+            return error;
+        }
         match self.spend_value(&value, cell) {
             Ok(()) => value,
             Err(error) => error,
@@ -357,7 +361,7 @@ impl Model {
     /// [`compared_units`]): the node that just ran pays for the texts its reader compared, keyed or
     /// folded (MATCH, the lookups, UNIQUE, SORT, the criteria, GROUPBY), which its cell charges do not
     /// cover when it reads a bound array of long texts again and again (SPEC-0024 section 1, "text
-    /// values"; T-4233).
+    /// values"; T-4233). [`Model::charged`] runs it for each node `evaluate_node_in_context` ends.
     #[inline]
     pub(crate) fn spend_compared(&mut self, cell: CellReferenceIndex) -> Result<(), CalcResult> {
         match take_compared_bytes() {

@@ -57,6 +57,7 @@ use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};
 
 mod accents;
+mod compared;
 mod kana;
 mod lookup_fold;
 mod scripts;
@@ -64,33 +65,12 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use accents::{accents, cmp_accent_units};
+use compared::{cmp_text_in, counted};
+pub(crate) use compared::{note_compared_bytes, take_compared_bytes};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
-
-thread_local! {
-    /// The text bytes compared, keyed or folded since the evaluator last took them
-    /// ([`take_compared_bytes`]).
-    static COMPARED_BYTES: Cell<u64> = const { Cell::new(0) };
-}
-
-/// Notes `bytes` text bytes read by a comparison, a key or a fold. The readers that compare texts
-/// (the lookups, MATCH, UNIQUE, SORT, the criteria, GROUPBY) all go through this module or
-/// [`folded_units`](crate::functions::criteria::folded_units), so the evaluator charges what they
-/// read here, at one place, after each node (SPEC-0024 section 1, "text values"; T-4233): the
-/// cell charge of a bound array does not cover comparing its 32,767-byte texts again and again.
-#[inline]
-pub(crate) fn note_compared_bytes(bytes: usize) {
-    let bytes = u64::try_from(bytes).unwrap_or(u64::MAX);
-    COMPARED_BYTES.with(|total| total.set(total.get().saturating_add(bytes)));
-}
-
-/// The bytes noted ([`note_compared_bytes`]) since the last call, and starts again from 0.
-#[inline]
-pub(crate) fn take_compared_bytes() -> u64 {
-    COMPARED_BYTES.with(|total| total.replace(0))
-}
 
 /// Orders two texts by the module's six passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -127,16 +107,6 @@ fn cmp_str(left: &str, right: &str, order: AccentOrder, read: &Cell<u64>) -> Ord
         counted(scalars(right), read),
         order,
     )
-}
-
-/// `items`, adding one to `read` for each item taken, in every clone: a comparison's passes walk
-/// clones of the two texts and stop at their first difference, so `read` ends as the work they did,
-/// which the work budget charges ([`note_compared_bytes`], T-4233).
-fn counted<'a, I: Iterator + Clone + 'a>(
-    items: I,
-    read: &'a Cell<u64>,
-) -> impl Iterator<Item = I::Item> + Clone + 'a {
-    items.inspect(move |_| read.set(read.get().saturating_add(1)))
 }
 
 /// Excel's `<`, `=`, `>` before the collation (coercion.md "Format characters, U+200B and the C1
@@ -187,36 +157,6 @@ pub(crate) fn cmp_text(left: &Text, right: &Text) -> Ordering {
 /// equal always have equal [`CollationKey`]s, so a key lookup followed by this test finds them.
 pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
     cmp_text_in(left, right, AccentOrder::Pairwise)
-}
-
-/// [`cmp_text`] or [`cmp_text_pairwise`].
-fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
-    let read = Cell::new(0);
-    let ordering = cmp_text_counted(left, right, order, &read);
-    note_compared_bytes(usize::try_from(read.get()).unwrap_or(usize::MAX));
-    ordering
-}
-
-/// [`cmp_text_in`], counting the characters its passes read in `read`.
-fn cmp_text_counted(left: &Text, right: &Text, order: AccentOrder, read: &Cell<u64>) -> Ordering {
-    if let AccentOrder::Pairwise = order {
-        let prefix = cmp_prefix(
-            counted(left.chars_lossless(), read),
-            counted(right.chars_lossless(), read),
-        );
-        if let Some(order) = prefix {
-            return order;
-        }
-    }
-    if left.has_lone_surrogate() || right.has_lone_surrogate() {
-        cmp_chars(
-            counted(left.chars_lossless(), read),
-            counted(right.chars_lossless(), read),
-            order,
-        )
-    } else {
-        cmp_str(left, right, order, read)
-    }
 }
 
 /// What [`cmp_text`] compares: two texts are equal under it exactly when their keys are equal.

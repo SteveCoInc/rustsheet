@@ -647,9 +647,6 @@ impl Model {
             | LambdaDefKind { .. }
             | LambdaCallKind { .. } => self.evaluate_cold_node(node, cell),
         };
-        if let Err(error) = self.spend_compared(cell) {
-            return error;
-        }
         self.charged(result, cell)
     }
 
