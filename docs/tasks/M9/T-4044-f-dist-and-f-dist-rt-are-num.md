@@ -3,7 +3,7 @@ id: T-4044
 title: "F.DIST and F.DIST.RT are #NUM! at df1 79, df2 1E10 (16 t4017 cells the engine returns; owned only by deferred T-3209)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
