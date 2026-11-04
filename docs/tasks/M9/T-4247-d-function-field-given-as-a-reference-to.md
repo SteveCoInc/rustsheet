@@ -3,7 +3,7 @@ id: T-4247
 title: "D-function field given as a reference to an error cell is #VALUE!, not the error"
 milestone: M9
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -40,3 +40,12 @@ campaign. Its target is that every cell it owns has Excel's type and error.
 
 ## Out of scope
 - Other `field` kinds; database and criteria arguments.
+
+## Outcome
+`db_call` now checks whether `field` is a single-cell `ReferenceKind` whose cell holds an error and
+returns `#VALUE!` (error literals still propagate). Eval: probes/m9-database-argument-kinds, 12
+known failures fixed (Calc!A3, A6, ..., A36); `eval/baseline/probes.txt` shrank by 12. The
+visible-parity lock is lowered by the steward (`make eval-lower-visible-lock`).
+
+Not done: probes for a field through a defined name, `INDEX(...)`, `@G1:G2` and `IF(TRUE,Data!A3)`
+(need the Excel oracle); only a direct cell reference is handled. Follow-up for the oracle run.
