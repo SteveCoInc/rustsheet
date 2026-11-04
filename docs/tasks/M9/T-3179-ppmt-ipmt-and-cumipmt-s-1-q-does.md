@@ -3,7 +3,7 @@ id: T-3179
 title: "PPMT, IPMT and CUMIPMT's 1-Q: does Excel switch from expm1 to 1-EXP(x) at |nper*L| 1 as PMT does"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
