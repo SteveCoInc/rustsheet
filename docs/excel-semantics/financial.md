@@ -1,6 +1,8 @@
 # Financial functions
 
 ## Annuity evaluation order and `(1+r)^n` (PV/FV/PMT/NPER/IPMT/PPMT)
+Amended (T-4146): PV's and FV's `+`, `*` and `/` are Excel's twice-rounded operators, not plain doubles; see "FV
+and PV round each operation twice" below. The two forms agree on every cell of the sweeps cited here.
 Rule: with `P = (1+r)^n` by right-to-left square-and-multiply (numbers.md, "Integer exponents"),
 `k = 1+r*type` and `T = pmt*(k*((P-1)/r))`, Excel computes PV = `-(fv+T)/P` and FV = `-(pv*P+T)`
 (integer nper, rate ≠ 0), and NPER = `ln((pmt*k - fv*r)/(pmt*k + pv*r)) / ln(1+r)`, every
@@ -74,9 +76,31 @@ Evidence (Excel-cached values, `ironcalc-calc/FINANCIAL/PMT.xlsx`, `PV.xlsx`, `F
   by Excel's `+`). The sweeps have integer nper and non-zero pmt only.
 Status: PARTLY VERIFIED (PV/FV/NPER fitted on the sweep and implemented, for integer nper and pmt ≠ 0; PMT's bits fitted in "PMT is a discounted payment" (T-3014); IPMT/PPMT/NPV bits open, time-boxed per
 decision 0056 after T-1524's two attempts, in T-1528)
-Implemented in: `annuity_power`, `annuity_factor`, `compute_future_value`,
+Implemented in: `annuity_power`, `annuity_factor_rounded` (T-4146), `compute_future_value`,
 `fn_pv` and `fn_nper` (crates/rustsheet-engine/src/functions/financial/mod.rs, T-0901). Salvaged from
 draft PR #13 by T-0031.
+
+## FV and PV round each operation twice
+Rule (T-4146): in FV = `-(pv*P + pmt*(k*((P-1)/r)))` and PV = `-(fv + pmt*(k*((P-1)/r)))/P` (the parenthesization
+of "Annuity evaluation order" above), each `+`, `*` and `/` is Excel's twice-rounded operator (the 64-bit
+extended result rounded to a double, as RATE's residual in "RATE is a secant on the FV residual"), not one double
+rounding. `1+r` and P are as before. The two forms differ only where the sum cancels (pv·P and pmt·A, or fv and
+pmt·A, close and of opposite sign), which is why the earlier sweeps could not tell them apart.
+Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/research/t4146/):
+- probes/t3424-rate-noise-trace A132, `=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,
+  934408648396.347,1)`: Excel -10935378180.042114, the twice-rounded form; plain doubles give -10935378180.042236.
+  It was the only one of 587 literal FV oracle cells where the forms differ (docs/research/t3424/fv_forms.py).
+- probes/t4146-annuity-twice-rounded: 240 calls (FV and PV alternating, rate ±1e-7..0.5, integer nper 1..400,
+  type 0 and 1, a cancelling pmt), kept where the forms differ, committed before the fill. On the fit lab's hash
+  split (margin 5 points, fixed before scoring): twice-rounded bit-exact FV 84/84 train and 36/36 test, PV 87/87 and
+  33/33; plain doubles 0 on every side (PV within 4 ulp on 29 of 120); the correctly rounded value 0.
+- probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
+  the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
+- No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
+Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
+here)
+Tasks: T-4146, T-3424
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the

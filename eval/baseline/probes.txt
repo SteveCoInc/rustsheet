@@ -2114,6 +2114,8 @@ C	probes/t4088-groupby-multifield.case.json	50
 C	probes/t4099-file-xlpm-unbound-names.case.json	39
 C	probes/t4117-currency-parens.case.json	170
 C	probes/t4117-typed-currency-paren.case.json	120
+C	probes/t4146-annuity-twice-fresh.case.json	120
+C	probes/t4146-annuity-twice-rounded.case.json	240
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
@@ -5352,7 +5354,6 @@ F	probes/t3406-irr-num-boundary.case.json	P!A95
 F	probes/t3406-irr-num-boundary.case.json	P!A96
 F	probes/t3406-irr-num-boundary.case.json	P!A97
 F	probes/t3406-irr-num-boundary.case.json	P!A98
-F	probes/t3424-rate-noise-trace.case.json	Sheet1!A132
 F	probes/t3424-rate-noise-trace.case.json	Sheet1!A264
 F	probes/t3424-rate-noise-trace.case.json	Sheet1!A268
 F	probes/t3424-rate-noise-trace.case.json	Sheet1!A269

@@ -11,7 +11,7 @@ use crate::{
 
 /// RATE's residual f(r) = ((pv·P) + (pmt·(k·((P-1)/r)))) + fv, P = (1+r)^n by FV's power
 /// (`annuity_power`), k = 1+r for type 1, with each `+`, `*` and `/` Excel's twice-rounded operator
-/// ([`annuity_factor_rounded`]; FV's once-rounded `annuity_factor` misses 4 of the 782 fit-lab
+/// ([`annuity_factor_rounded`]; a once-rounded factor misses 4 of the 782 fit-lab
 /// cells); f(0) is the limit pv + pmt·n + fv. `None` where Excel's `^` errs (a power past the
 /// double range). Fit lab `rate` (T-2527): bit-exact on all 782 RATE cells of the fit set, a
 /// nested PMT at Excel's bits (financial.md "RATE is a secant on the FV residual";
