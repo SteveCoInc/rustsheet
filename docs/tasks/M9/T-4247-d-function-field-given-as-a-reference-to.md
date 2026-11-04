@@ -30,8 +30,9 @@ it cannot tell a literal from a referenced error. The fix likely looks at the `f
 choosing: a field reference through a defined name, `INDEX(...)`, `@G1:G2` and an `IF(TRUE,Data!A3)`.
 
 ## Acceptance criteria
-- [ ] The 12 cells above pass; probes for the unprobed forms above are added and match.
-- [ ] `make eval-baseline` shrinks the known failures; no regressions.
+- [x] The 12 cells above pass.
+- [ ] Probes for the unprobed forms above are added and match: moved to T-4256.
+- [x] `make eval-baseline` shrinks the known failures; no regressions.
 - [ ] `make check` green; reviewers approve.
 
 ## Visible-parity stage
@@ -48,4 +49,4 @@ known failures fixed (Calc!A3, A6, ..., A36); `eval/baseline/probes.txt` shrank 
 visible-parity lock is lowered by the steward (`make eval-lower-visible-lock`).
 
 Not done: probes for a field through a defined name, `INDEX(...)`, `@G1:G2` and `IF(TRUE,Data!A3)`
-(need the Excel oracle); only a direct cell reference is handled. Follow-up for the oracle run.
+(need the Excel oracle); only a direct cell reference is handled. Filed as T-4256.
