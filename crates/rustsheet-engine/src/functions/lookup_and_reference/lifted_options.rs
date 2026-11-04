@@ -179,7 +179,9 @@ impl Model {
             // is no number is that error: the call returns it before it filters
             // (t3964-groupby-filter-lift-errors G!B71, B83, B89, B101). Numeric text and an
             // out-of-range number before it do not stop it (t3985-groupby-two-lifted-spent-filter
-            // G!B1, B25), other text does (G!B13). Before the filter is spent `run` gives the
+            // G!B1, B25), nor do out-of-range or fractional numeric text and TRUE or FALSE, in
+            // either option (t4019-groupby-lifted-spent-filter-kinds G!B1:B46), other text does
+            // (t3985 G!B13). Before the filter is spent `run` gives the
             // same error (each error is a class of its own) without spending it (G!A77, A95).
             |model, elements, spent| {
                 if !spent {
@@ -253,8 +255,8 @@ impl Model {
     /// filter (text, a `field_relationship` of 2) leaves it for the next one, and a filter that
     /// keeps every row is never spent (probes/t3840-groupby-lifted-beside-filter,
     /// t3840-groupby-lifted-filter-consumed; docs/excel-semantics/arrays.md "A lifted GROUPBY's
-    /// filter serves one element"). An element `settled` answers (given whether the filter is
-    /// spent) is that value and spends nothing: an element whose call returns before it filters,
+    /// filter serves one element"). An element `settled` answers (it is given the model, the
+    /// element and whether the filter is spent) is that value and spends nothing: an element whose call returns before it filters,
     /// as an error `field_relationship`, `field_headers` or total depth element does
     /// (probes/t3880-groupby-scalar-filter-edges G!A89:B93, t3964-groupby-filter-lift-errors
     /// G!A47:B105).

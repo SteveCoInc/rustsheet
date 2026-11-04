@@ -53,8 +53,10 @@ def math_arg(param: Param, a: Arg) -> MathArg:
     """The math's view of a drawn argument: the exact double (or integer) or the logical."""
     if param.kind == "bool" or isinstance(a, bool):
         return bool(a)
+    if param.kind == "matrix" and isinstance(a, tuple):
+        return tuple(tuple(mpmath.mpf(x) for x in row) for row in a if isinstance(row, tuple))
     if isinstance(a, tuple):
-        return tuple(mpmath.mpf(x) for x in a)
+        return tuple(mpmath.mpf(x) for x in a if not isinstance(x, tuple))
     return mpmath.mpf(a)
 
 
@@ -99,20 +101,32 @@ class Sampler:
 
     def finish(self, param: Param, x: Arg) -> Arg:
         """A drawn value as a writable literal of the parameter's kind (an array element by
-        element: integers stay integers, reals take 15 digits)."""
+        element, a matrix row by row: integers stay integers, reals take 15 digits)."""
+        if param.kind == "matrix" and isinstance(x, tuple):
+            return tuple(self._elements(row) for row in x if isinstance(row, tuple))
         if isinstance(x, tuple):
-            return tuple(
-                e if isinstance(e, int) and not isinstance(e, bool) else round15(float(e)) for e in x
-            )
+            return self._elements(x)
         if param.kind == "bool":
             return bool(x)
         if param.kind == "int":
             return int(round15(float(round(float(x)))))
         return round15(float(x))
 
+    @staticmethod
+    def _elements(x: tuple[object, ...]) -> tuple[float | int, ...]:
+        out: list[float | int] = []
+        for e in x:
+            if isinstance(e, bool) or not isinstance(e, (int, float)):
+                msg = f"array element {e!r} is not a number"
+                raise TypeError(msg)
+            out.append(e if isinstance(e, int) else round15(e))
+        return tuple(out)
+
     def inside(self, param: Param, a: Arg) -> Arg:
         """`a`, or the nearest literal inside the domain when rounding left it."""
-        if param.kind in ("bool", "array") or isinstance(a, (bool, tuple)) or param.domain.contains(float(a)):
+        if param.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
+            return a
+        if param.domain.contains(float(a)):
             return a
         d = param.domain
         lower = float(a) < d.lo or (float(a) == d.lo and d.lo_open)
