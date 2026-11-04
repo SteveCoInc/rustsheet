@@ -3,7 +3,7 @@ id: T-3184
 title: "Excel cells for the M9 financial argument kinds no suite covers (611 parameter/kind pairs in 55 functions, mostly empty text and errors)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
