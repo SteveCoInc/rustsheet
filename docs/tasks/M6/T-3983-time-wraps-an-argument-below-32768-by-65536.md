@@ -49,3 +49,4 @@ TIME reads a whole argument below -32768 the way Excel does now: it wraps by 655
 below -131072 (probes/t3983-time-argument-below-131072, excel-graph 2026-11-04): the wrap holds to -2^31;
 beyond it Excel gives 0, not the wrap. Refilled time-argument-bound/-window/-negative. Removed the
 Gate A known-failure TIME/s1 A149. dates.md says "Ours: matches". Unit tests added in test_fn_time.rs.
+Also refilled four gen-m6/gen-m9 cases whose 2026-10 sidecars held the pre-wrap `#NUM!` (1a404a0379a1372c A8, 44194b2fefa30de2 A251, 6684de07ac74bcb8 A343, 09b47629f54b9817 A70). Eval delta: probes known failures 4433 -> 4352 (81 cells fixed), no regressions elsewhere.
