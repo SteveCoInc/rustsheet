@@ -133,28 +133,52 @@ impl Displacement<'_> {
         rows: (i32, i32),
         columns: (i32, i32),
     ) -> Option<(DisplaceData, DisplaceData)> {
-        let DisplaceData::Row { sheet, row, delta } = *self.data else {
-            return None;
-        };
-        if sheet != sheet_index {
-            return None;
+        match *self.data {
+            DisplaceData::Row { sheet, row, delta } if sheet == sheet_index => {
+                if delta < 0 {
+                    return shrunk_corners(rows, row, delta, |from, to| DisplaceData::Row {
+                        sheet,
+                        row: from.min(to),
+                        delta: to - from,
+                    });
+                }
+                self.grown_corners(sheet_index, rows, columns, row, delta)
+            }
+            // A column delete shrinks a range at its first or last column the same way, in the
+            // table column deletes of probes/table-edits table-column-range-delete-start and -end
+            // (`=SUM(S!C4:D7)` becomes `S!C4:C7`; excel-graph, T-3978).
+            DisplaceData::Column {
+                sheet,
+                column,
+                delta,
+            } if sheet == sheet_index && delta < 0 => {
+                shrunk_corners(columns, column, delta, |from, to| DisplaceData::Column {
+                    sheet,
+                    column: from.min(to),
+                    delta: to - from,
+                })
+            }
+            _ => None,
         }
+    }
+
+    /// [`Displacement::range_corners`] for a row insert `delta` rows at `row`: the corners of a
+    /// range in the data block of a table that grows at an edge.
+    fn grown_corners(
+        &self,
+        sheet_index: u32,
+        rows: (i32, i32),
+        columns: (i32, i32),
+        row: i32,
+        delta: i32,
+    ) -> Option<(DisplaceData, DisplaceData)> {
+        let sheet = sheet_index;
         // The corner on row `from` moved to row `to`.
         let shift_to = |from: i32, to: i32| DisplaceData::Row {
             sheet,
             row: from.min(to),
             delta: to - from,
         };
-        if delta < 0 {
-            let deleted = row..=row - delta - 1;
-            return if deleted.contains(&rows.0) && !deleted.contains(&rows.1) {
-                Some((shift_to(rows.0, row), shift_to(rows.1, rows.1 + delta)))
-            } else if !deleted.contains(&rows.0) && deleted.contains(&rows.1) {
-                Some((DisplaceData::None, shift_to(rows.1, row - 1)))
-            } else {
-                None
-            };
-        }
         let block = self.grown_edges.iter().find(|block| {
             block.sheet == sheet_index
                 && block.rows.0 <= rows.0
@@ -166,6 +190,26 @@ impl Displacement<'_> {
         let at_edge = (row == block.rows.0 && rows.0 == row)
             || (row == block.rows.1 + 1 && rows.1 == block.rows.1);
         at_edge.then(|| (DisplaceData::None, shift_to(rows.1, rows.1 + delta)))
+    }
+}
+
+/// The displacements of the two corners of a range spanning `span` (rows or columns) when a delete
+/// of `-delta` of them from `at` takes its first or last, but not all of them: the range shrinks
+/// to what is left, where displacing the deleted corner alone would give `#REF!`. `shift_to(from,
+/// to)` is the displacement of the corner on `from` that moves it to `to`.
+fn shrunk_corners(
+    span: (i32, i32),
+    at: i32,
+    delta: i32,
+    shift_to: impl Fn(i32, i32) -> DisplaceData,
+) -> Option<(DisplaceData, DisplaceData)> {
+    let deleted = at..=at - delta - 1;
+    if deleted.contains(&span.0) && !deleted.contains(&span.1) {
+        Some((shift_to(span.0, at), shift_to(span.1, span.1 + delta)))
+    } else if !deleted.contains(&span.0) && deleted.contains(&span.1) {
+        Some((DisplaceData::None, shift_to(span.1, at - 1)))
+    } else {
+        None
     }
 }
 

@@ -3,7 +3,7 @@ id: T-3978
 title: "Plain range after a table column delete: shrink to C4:C7 and #REF! kind in table-column-range-delete probes"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -34,3 +34,6 @@ their case, so `scripts/exit_owners.py --all-off` listed four of them as unowned
 
 ## Out of scope
 - Whole-row ranges and multi-row deletes (T-2851).
+
+## Outcome
+`Displacement::range_corners` (stringify.rs) now shrinks a plain range for a column delete at its first or last column as it does for rows (shared `shrunk_corners`). The six cells pass (end, start, both-ends-separate F!A4/A5) and leave eval/baseline/probes.txt; references.md records it. Wider column deletes remain unprobed (T-2851).
