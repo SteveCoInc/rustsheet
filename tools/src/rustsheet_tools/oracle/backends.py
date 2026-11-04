@@ -29,7 +29,7 @@ from urllib.parse import quote
 import requests
 from xlsxwriter.utility import xl_rowcol_to_cell
 
-from rustsheet_tools.api_names import api_names
+from rustsheet_tools.api_names import ApiName, api_names
 from rustsheet_tools.oracle.package import PackageError, patch_workbook
 from rustsheet_tools.spec2xlsx import Entered, entered_cells, parse_a1, sheet_ops, text_cells
 
@@ -95,7 +95,7 @@ def recorded_text_cells(xlsx: bytes) -> list[tuple[str, str]]:
         raise OracleError(str(e)) from e
 
 
-def recorded_api_names(xlsx: bytes) -> list[tuple[str, str]]:
+def recorded_api_names(xlsx: bytes) -> list[ApiName]:
     """The names a backend must define through the API after load (api_names.py, T-3264)."""
     try:
         return api_names(xlsx)
@@ -397,8 +397,8 @@ class GraphBackend:
                 self._type_entry(item_url, sid, entry)
             self._replay_sheet_ops(item_url, sid, recorded_sheet_ops(xlsx))
             # Not `name`: that is the uploaded file's name, returned as `workbook_name` below.
-            for defined, formula in recorded_api_names(xlsx):
-                self._add_name(item_url, sid, defined, formula)
+            for defined in recorded_api_names(xlsx):
+                self._add_name(item_url, sid, defined)
             # Load, this rebuild and the scratch edit below are three calculations; the eval
             # adapter repeats them for iterative cases (`ORACLE_CALCULATIONS` in
             # crates/rustsheet-eval/src/engine.rs, T-0429): keep the two in step.
@@ -464,20 +464,27 @@ class GraphBackend:
             file=sys.stderr,
         )
 
-    def _add_name(self, item_url: str, sid: dict[str, str], name: str, formula: str) -> None:
-        """Defines the workbook-scoped name `name` through the API (`names/add`, T-3264). A body
-        Excel refuses (400 `InvalidArgument`) leaves the name undefined: that is the answer, not a
-        failure, as for a refused typed cell (decision 0179)."""
+    def _add_name(self, item_url: str, sid: dict[str, str], defined: ApiName) -> None:
+        """Defines `defined` through the API: `names/add` for a workbook-scoped name (T-3264),
+        `worksheets('S')/names/add` for one scoped to sheet S (T-4014). A body Excel refuses (400
+        `InvalidArgument`) leaves the name undefined: that is the answer, not a failure, as for a
+        refused typed cell (decision 0179)."""
+        name, formula, sheet = defined
+        scope = ""
+        if sheet is not None:
+            sheet_ref = quote(sheet.replace("'", "''"), safe="")
+            scope = f"/worksheets('{sheet_ref}')"
         resp = self._call(
             "POST",
-            f"{item_url}/workbook/names/add",
+            f"{item_url}/workbook{scope}/names/add",
             json={"name": name, "reference": formula},
             headers=sid,
             refusable=True,
         )
         verdict = "REFUSED" if resp.status_code == 400 else "ADDED"
         detail = f": {self._redact(resp.text[:500])}" if resp.status_code == 400 else ""
-        print(f"{verdict} name {name} {formula[:80]!r}{detail}", file=sys.stderr)
+        where = "" if sheet is None else f" on sheet {sheet!r}"
+        print(f"{verdict} name {name}{where} {formula[:80]!r}{detail}", file=sys.stderr)
 
     def _read_texts(
         self, item_url: str, sid: dict[str, str], cells: list[tuple[str, str]]

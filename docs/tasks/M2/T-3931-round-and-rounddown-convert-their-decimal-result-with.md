@@ -3,7 +3,7 @@ id: T-3931
 title: "ROUND and ROUNDDOWN convert their decimal result with Excel's x87 multiply by 10^-n"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -24,11 +24,36 @@ ROUND and ROUNDDOWN return the double Excel returns at every cell of probes-nume
 - Also eval/accuracy/tables/ROUND/s1 Calc!A61 (Gate A; envelope holds it).
 
 ## Acceptance criteria
-- [ ] Every ROUND and ROUNDDOWN cell of probes-numeric/t3658-round-scaling and t3658-round-scaling-fresh passes (baseline shrinks by those cells), with no regression in probes/round-family, the ROUND-family Gate A tables or gen-m5 numeric-fp.
-- [ ] ROUNDUP keeps its own path ("ROUNDUP adds the unit in binary") unless evidence says otherwise.
-- [ ] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
-- [ ] `make check` green; reviewers approve.
+- [x] Every ROUND and ROUNDDOWN cell of probes-numeric/t3658-round-scaling and t3658-round-scaling-fresh passes (baseline shrinks by those cells), with no regression in probes/round-family, the ROUND-family Gate A tables or gen-m5 numeric-fp.
+- [x] ROUNDUP keeps its own path ("ROUNDUP adds the unit in binary") unless evidence says otherwise.
+- [x] Decision 0188 R4 guards for the structural model: a hold-out split (manual ~30% until T-3360) of the model against the correctly rounded conversion, the fresh sweep probes-numeric/t3658-round-scaling-fresh, and the Gate A envelope result, recorded in the Outcome.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Literal and VALUE parsing (T-3932).
 - n outside 0..15 or kept digits beyond the probed range: keep the nearest double unless probed.
+
+## Outcome
+- `round_function` (ROUND, ROUNDUP, ROUNDDOWN, TRUNC) now converts ROUND's and ROUNDDOWN's rounded
+  decimal with `x87_decimal_to_f64` in decimal_round.rs: `m × round64(10^-n)` on an
+  `x87_register::Register`, rounded to 64 bits and stored to a double. ROUND strips the trailing
+  zeros of the kept digits first; ROUNDDOWN keeps them. Only the probed range uses the model
+  (kept digits below 1,000,000, n = 1..15); elsewhere, and for ROUNDUP, TRUNC, INT and the number
+  formats (`round_decimal`), the nearest double stays.
+- Eval delta: probes-numeric/t3658-round-scaling 2,154 → 2,388 of 2,539 (+234); t3658-round-scaling-fresh
+  56 → 392 of 724 (+336). Every ROUND and ROUNDDOWN cell of both cases passes; the 151 + 332 cells left are
+  literals, VALUE (T-3932) and stored xlsx numbers (Hits!G, OPEN entry). The suite is ungated (no baseline file).
+  No change in any gated suite (`make eval-baseline` wrote nothing; probes, gen-m5 and Gate A unchanged:
+  eval/accuracy/tables/ROUND/s1 Calc!A61 stays inside the envelope).
+- Decision 0188 R4 (structural model, kind (c); no `FITTED` tag). Hold-out: manual split fixed before scoring,
+  cells whose sha1(`case/Sheet!Ref`) first byte is below 77 (~30%), margin 2 points between train and hold-out
+  exact rates. Bit-exact counts (model / correctly rounded):
+  | case, function | train | hold-out |
+  |---|---|---|
+  | t3658-round-scaling ROUND | 1305/1305 / 1162 | 566/566 / 528 |
+  | t3658-round-scaling ROUNDDOWN | 261/261 / 222 | 101/101 / 87 |
+  | fresh ROUND | 113/113 / 6 | 68/68 / 5 |
+  | fresh ROUNDDOWN | 119/119 / 11 | 62/62 / 4 |
+  Within 4 ulp and within 15 digits both candidates hold every cell, so bit-exact decides; the model's
+  hold-out rate (100%) equals its train rate. Fresh sweep: probes-numeric/t3658-round-scaling-fresh (frozen
+  model, T-3658) 362/362 ROUND and ROUNDDOWN cells bit-exact, so all inside the Gate A envelope (none outside).
