@@ -3,7 +3,7 @@ id: T-4077
 title: "Longer literals and number text read through the x87 multiply after the 15-digit cut"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
