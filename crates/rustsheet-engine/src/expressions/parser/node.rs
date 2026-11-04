@@ -61,8 +61,10 @@ pub struct CompletionContext {
     pub replace_from: usize,
 }
 
-/// A parsed formula. A value operator's left operand is a [`ChainLeft`] (see `chain.rs`).
-#[derive(PartialEq, Clone, Debug)]
+/// A parsed formula. A value operator's left operand is a [`ChainLeft`] (see `chain.rs`). Its
+/// `Clone` and `PartialEq` walk runs of signs, whitespace and parentheses in a loop
+/// (`node_walks.rs`, T-3253).
+#[derive(Debug)]
 pub enum Node {
     BooleanKind(bool),
     NumberKind(f64),
