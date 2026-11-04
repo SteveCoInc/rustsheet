@@ -3,7 +3,7 @@ id: T-1310
 title: "Probe 3-D spans after deleting or moving an end sheet (desktop oracle)"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -31,3 +31,7 @@ UNVERIFIED in docs/excel-semantics/references.md, "3-D references when sheets mo
 Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or phase exit. The evidence needs
 desktop Excel (a COM `Worksheets(..).Delete` / `.Move` before recalculation) or an Excel-authored workbook edited by
 hand. Unblock when `cd tools && uv run rustsheet-oracle status` shows `excel-desktop OK`, or when such a workbook is committed.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.
