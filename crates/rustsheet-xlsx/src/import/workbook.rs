@@ -174,7 +174,7 @@ pub(super) fn load_workbook<R: Read + std::io::Seek>(
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, reason = "tests")]
     use super::*;
 
     fn iteration(calc_pr: &str) -> Option<Iteration> {
