@@ -3,7 +3,7 @@ id: T-3514
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of REGEXTEST and REGEXREPLACE"
 milestone: M7
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -35,17 +35,20 @@ gen-m7 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
 - Tier: size S; the generator run, the oracle fill and the coverage check are mechanical (T-3493 is the same shape at sonnet); scalar results; no fitting; fixes are out of scope.
 
 ## Acceptance criteria
-- [ ] New gen-m7 cases from `--policy arg-pairs --milestone M7 --functions REGEXTEST,REGEXREPLACE` with their excel-graph
+- [x] New gen-m7 cases from `--policy arg-pairs --milestone M7 --functions REGEXTEST,REGEXREPLACE` with their excel-graph
       oracle sidecars are committed.
-- [ ] After `make eval`, each of the 2 functions above has a `pairwise` share of at least 0.9 in report.json
+- [x] After `make eval`, each of the 2 functions above has a `pairwise` share of at least 0.9 in report.json
       `argument_coverage`, or the PR lists the pairs left unseen and why (a hard domain, a pair Excel refuses to load).
-- [ ] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each
+- [x] Failing cells are known failures in eval/baseline/gen-m7.txt (`make eval-baseline`, 0 regressions), each
       owned by an open task, and `make exit-owners MILESTONE=M7` and `make unowned-off ALL=1` report no new
       unowned cell from the batch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Fixing the engine for the cells this batch finds (the owning tasks), beyond a one-line coercion fix in the
   function's own module that the PR also tests.
 - REGEXEXTRACT (its return_mode 1 and 2 results spill) and regex-syntax probes (the M7 regex tasks).
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
+
+## Outcome
+`rustsheet-gen --policy arg-pairs --milestone M7 --functions REGEXTEST,REGEXREPLACE` added 14 gen-m7 cases, filled by excel-graph (0 failures). Pairwise share is now 1.0 for REGEXTEST and for REGEXREPLACE (0 unseen pairs, from 0.17 and 0.18). All new cells pass: 0 new known failures, 0 regressions, so no owning task was needed and no new quirk was found. The 11 gen-m7 known failures still listed belong to T-4037 (PR #3104).
