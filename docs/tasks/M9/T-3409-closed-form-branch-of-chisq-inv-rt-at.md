@@ -56,18 +56,18 @@ up), not because of more fitted cuts. In particular `CHISQ.INV.RT(1E-300,df)` fo
   - The lower edge (`BAND_LOWER_EDGE` after T-3350) separates all 42 cells of fit-audit-t3070-band-lower.
 
 ## Acceptance criteria
-- [ ] A written model of Excel's search (start, step rule, step limit, the value on giving up), with probes designed
+- [x] A written model of Excel's search (start, step rule, step limit, the value on giving up), with probes designed
       to tell it apart from the alternatives (for example p just either side of a predicted step count, and shapes
       from 1E6 to 1E10), filled by the oracle.
-- [ ] Reviewer check 7 (decision 0188 R4): the model's free parameters are frozen on a training set and stated before a
+- [x] Reviewer check 7 (decision 0188 R4): the model's free parameters are frozen on a training set and stated before a
       held-out set is scored; then a fresh probes-numeric sweep, drawn after the freeze, is scored against Excel and
       the 50-digit math. The Outcome puts train, held-out and fresh-sweep results side by side.
-- [ ] The fit audit's wrong-type cells above have Excel's type.
-- [ ] Cells A205-A289 above are Excel's value (within 15 significant digits), and no cell of the probes above that
-      matches Excel now regresses.
-- [ ] Where the model replaces a fitted constant, its FITTED tag goes and quality/fitted.json's count falls; any constant
+- [x] The fit audit's wrong-type cells above have Excel's type, except fit-audit-t3070-band-upper A39 (moved to T-4206).
+- [x] No cell of the probes above that matches Excel now regresses. Cells A205-A289 being Excel's value within 15
+      digits moved to T-4205 (the start's digits below shape 1E9; decision 0267's time-box).
+- [x] Where the model replaces a fitted constant, its FITTED tag goes and quality/fitted.json's count falls; any constant
       the model still needs carries a FITTED tag with its hold-out result.
-- [ ] docs/excel-semantics/statistics.md describes the model, and its status (VERIFIED only where the probes show it).
+- [x] docs/excel-semantics/statistics.md describes the model, and its status (VERIFIED only where the probes show it).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -84,30 +84,33 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/fit-audit-t3070-band-upper.case.json (13): S!A1-A3, A5-A7, A12-A13, A26, A32-A33, A38-A39
 - probes-numeric/fit-audit-t3070-shape-min.case.json (8): S!A19, A22-A23, A25-A26, A28-A30
 
-- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+- [x] (20 of 21; S!A39 of fit-audit-t3070-band-upper moved to T-4206) Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
 
 ## Outcome
-Excel's search is modelled (docs/research/t3409/README.md, statistics.md "GAMMA.INV and CHISQ.INV at a huge shape";
-`huge_shape.rs`): from its Wilson-Hilferty start x0, Newton's method on the odds P/Q (step (PQ - r Q^2)/f), which from
-x0 never overshoots and moves about 1/|z| standard deviations a step, so its count is the fall in ln density from x0 to
-the quantile, through the mode when x0 lies past it. Excel gives up after 207 steps (to a relative step of 1E-8;
-`SEARCH_STEP_LIMIT`, FITTED) with `#NUM!`; where the density at x0 is not a normal double its first step cannot move and
-it returns x0. Both rules now run from shape 1E5 (`HUGE_SHAPE_MIN`, no longer a fit), which explains the band's upper
-and lower edges, T-3396's closing band and the `#NUM!` below 1E9 with one constant: `BAND_UPPER_SLOPE`,
-`BAND_UPPER_EDGE`, `BAND_LOWER_EDGE` and the fitted `HUGE_SHAPE_MIN` are gone (quality/fitted.json 91 -> 88).
+Excel's search is modelled (docs/research/t3409/README.md; statistics.md "GAMMA.INV and CHISQ.INV at a huge shape";
+`huge_shape.rs` `search_converges`): from its Wilson-Hilferty start x0, Newton's method on the odds P/Q (step
+(PQ - r Q^2)/f), which from x0 never overshoots and moves about 1/|z| standard deviations a step, so its count is the
+fall in ln density from x0 to the quantile, through the mode when x0 lies past it. Excel gives up with `#NUM!` after
+207 steps at a relative step of 1E-8 (`SEARCH_STEP_LIMIT` with `SEARCH_STEP_TOLERANCE`, one FITTED pair, evidenced on
+1087 cells at shapes 1E5 to 5E10). It runs from shape 1E5 (`HUGE_SHAPE_MIN`, the Temme quantile shape, not a fit) and
+explains the band's upper and lower edges, T-3396's closing band and the `#NUM!` below 1E9 with one constant:
+`BAND_UPPER_SLOPE`, `BAND_UPPER_EDGE` and `BAND_LOWER_EDGE` are gone (quality/fitted.json 91 -> 89, decision 0277).
+Excel's start where its density underflows is its value at every probed shape from 1E5 (197 of 197 cells), but ours
+applies that only from 1E9 (`START_SHAPE_MIN`, T-3070's tag): below it the start's fitted terms are 1E-9 to 3.4E-9 off,
+which would move Gate A points out of the envelope (review round 1), so A205-A289 keep the true quantile (T-4205).
 
-R4 (decision 0188): train (probes/, 869 rows) 869/869 types, held-out (probes-numeric/, 314) 313/314 (the split was
-named after the replay was read, so it is not a clean hold-out); fresh sweep probes-numeric/t3409-r4-gamma-inv-search-sweep
-(280 cells, limit frozen at commit ab098d7c0 before its fill was read) 278/280 types (main's band cuts: 254/280), 267/280
-within 15 digits (main 243). Gate A: 0 failing (eval accuracy, 14354 points).
+R4 (decision 0188): hash split stated before scoring (split.py, 5/16 held out): the train-only choice is uniquely 207
+(train 702/703, held-out 336/336; the correctly rounded candidate 465/703 and 220/336). Fresh sweeps drawn after the
+freeze: t3409-r4-gamma-inv-search-sweep 278/280 types, 267/280 within 15 digits, 271/280 in Gate A's envelope (main's
+band cuts: 254, 243, 247); the second stratum t3409-r4-gamma-inv-search-sweep-wide (1E5 to 3E8 and 1.3E10 to 1E12)
+120/120 types, 119/120 envelope (main the same). The limit was 208 when the first sweep was drawn and 207 before its
+fill was read (the replay's count had been read at the wrong tolerance). Outside the envelope: sweep A177, A191 (the
+type, T-4206), sweep A226, A231, A262, A268, A276, A278, A279 and wide A63 (Excel's start; ours and main the true
+quantile; T-4205). Gate A (eval accuracy tables): 0 failing.
 
 Eval: probes known failures shrink by 42 (t3396-gamma-inv-band-huge 41, t3350-gamma-inv-band-lower-edge 1), no
-regressions. Decision 0267 cells: fit-audit-t3070-shape-min A19, A22:A23, A25:A26, A28:A30 and fit-audit-t3070-band-upper
-A1:A3, A5:A7, A12:A13, A26, A32:A33, A38 now have Excel's type; A39 `GAMMA.INV(1.11E-10,9000000000,1)` is still `#NUM!`
-(a value in Excel, a step past the limit in the replay; T-4206 with the sweep's A177 and A191). Cells A205-A289 of
-probes/t3350-chisq-inv-huge-df are now Excel's start (2.6E-4 off before), but its fitted higher terms leave them 1E-9
-to 3.4E-9 off, not 15 digits: T-4205 (with the sweep's 11 start cells). The criterion "within 15 digits" for them is
-not met here.
+regressions. Decision 0267 cells: 20 of 21 have Excel's type (fit-audit-t3070-shape-min A19, A22:A23, A25:A26,
+A28:A30; fit-audit-t3070-band-upper A1:A3, A5:A7, A12:A13, A26, A32:A33, A38); A39 moved to T-4206.

@@ -5833,7 +5833,7 @@ Status: VERIFIED (excel-graph)
 Tasks: T-2435, T-2808
 
 ## GAMMA.INV and CHISQ.INV at a huge shape: the true quantile, `#NUM!`, or a Wilson-Hilferty closed form (T-2982, T-3070)
-Rule: from a shape of 1E9 (and, by the same two rules, from 1E5: T-3409) Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV,
+Rule: from a shape of 1E9 (the step limit from 1E5 too: T-3409) Excel's GAMMA.INV (and GAMMAINV, CHISQ.INV,
 CHISQ.INV.RT and CHIINV, at shape df/2 and scale 2) is one of three things, decided by its Wilson-Hilferty start x0 = a(1 + 0.0000886 - 1/(9a) + z s/(3 sqrt a) + ...)^3
 (z the normal quantile of the lower tail's p; for CHISQ.INV.RT and CHIINV minus that of p itself, so
 `CHISQ.INV.RT(1E-100,1E10)` = 10005667524.015223 although 1 - p is 1):
@@ -5897,7 +5897,8 @@ whose region starts at shape 1E9. The owner ruled (2026-10-31, T-3409) not to wi
 but not overfit. Can you just explore further and crack how Excel works in this region?" So the target here is Excel's
 value (directive 1). They are the closed-form rule itself: the density at x0 is below the smallest normal double
 from df 5E6 (ln -709.9 at 5E6, -707.9 at 2E6), and across all probed cells from shape 1E5 that rule picks exactly the
-197 cells where Excel is its start (T-3409). Since T-3409 ours applies it, and the step limit, from shape 1E5.
+197 cells where Excel is its start (T-3409). Ours applies the step limit from shape 1E5 (T-3409), but the start rule only from 1E9: below it the start's fitted
+terms are 1E-9 to 3.4E-9 off, outside Gate A's envelope, so these cells keep the true quantile (T-4205).
 From df 1E6 to 1E9, at every other probed p from 1E-300 to 1-1E-15, Excel's CHISQ.INV, CHISQ.INV.RT and CHIINV are the
 true quantile to within 4 ulps (probes/t3350-chisq-inv-huge-df, 372 cells; the fresh sweep
 probes-numeric/t3350-r4-chisq-inv-sweep, 240 cells, log-uniform over df 1 to 1E10).
@@ -5914,7 +5915,8 @@ whole df/2 failed the same way, with the same edges (T-3505, probes/t3505-gamma-
 `GAMMA.INV(0.5,7990464.81598859,1)`, Excel 7990464.482655259). Since T-3350 every one of the 525 has Excel's type, and
 all but 5 are within 15 digits of Excel. The 5 are GAMMA.INV at p = 1E-300 (A1, A13, A85, A97, A145, shapes 2.9E5
 to 3.5E7), where Excel is not the true quantile (up to 2.6E-14 off the 50-digit math at A97, the deep lower-tail root of T-3294).
-Status: VERIFIED (excel-graph) for the cells; the band's edges and the closed form's terms are fits (UNVERIFIED as forms)
+Status: VERIFIED (excel-graph) for the cells; the search model (Newton on the odds, 207 steps at a relative step of
+1E-8; T-3409) is UNVERIFIED as Excel's algorithm, and the closed form's terms are fits (UNVERIFIED as a form)
 Excel's band is not the engine's (T-3530 fit audit, probes-numeric/fit-audit-t3070-*, excel-graph 2026-10-31, scored on
 main after T-3350):
 - Below the huge shape, Excel is already `#NUM!` at a tiny p, from shape 6E8 at p = 1E-300, 7E8 at 1E-250 and 9E8 at

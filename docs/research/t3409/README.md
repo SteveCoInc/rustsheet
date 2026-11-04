@@ -42,16 +42,42 @@ for the cells near the edge. Run them from a scratch directory with the tools ve
 - From shape 1E5 to 1E8 all 282 cells converge in far fewer steps (all values, as Excel).
 - The tolerance is not a fit: the counts move together by at most a step between 1E-8 and 3E-16.
 
+## Hash split (review round 2, decision 0188 R4.1)
+
+`split.py`, stated before it was scored: a cell (distinct formula) is held out when the first hex digit of
+sha1(formula) is 0 to 4 (5/16). The limit is chosen on the train part only, at the 1E-8 tolerance:
+
+| | train (703) | held-out (336) |
+|---|---|---|
+| model, N = 207 (the unique train-best N; 205: 694, 206: 696, 208: 700, 209: 696) | 702 | **336** |
+| the correctly rounded candidate (the true quantile at every cell) | 465 | 220 |
+
+Margin: N = 207 is the only train optimum, and one step either way costs 2 to 6 train cells. The earlier
+split by suite (probes/ against probes-numeric/: 869/869 and 313/314) was named after the replay was read.
+
+Alternatives ranked out: plain Newton on P from Excel's start overshoots past 0 on its first step wherever the start
+lies past the mode, yet Excel is a value at 195 such cells (from shape 1E8). The fixed cuts it replaces (T-3070's upper
+edge, T-3350's lower edge) are main's model, scored below.
+
 ## Fresh sweep (decision 0188 R4)
 
-`sweep.py` drew probes-numeric/t3409-r4-gamma-inv-search-sweep (280 cells, seed 3409) after the model was written,
-and the limit was fixed at 207 (commit ab098d7c0) before its oracle fill was read. Scored with the engine
-(doubles, Temme's `temme_pair`):
+`sweep.py generate` drew probes-numeric/t3409-r4-gamma-inv-search-sweep (280 cells, seed 3409) after the model was
+written. The limit was 208 at the draw (4a760bf6a) and was fixed at 207 (ab098d7c0) before the fill was read, because
+the replay's step count had been read at the wrong tolerance column (the draw does not use the model). `sweep.py
+generate-wide` drew the second stratum probes-numeric/t3409-r4-gamma-inv-search-sweep-wide (120 cells, shapes 1E5 to
+3E8 and 1.3E10 to 1E12) after review round 1, with the model as merged. Scored with the engine (doubles, Temme's
+`temme_pair`); "envelope" is Gate A's (within 15 digits of Excel, or 1E-9 of the math sidecar):
 
-| | type right | within 15 digits |
-|---|---|---|
-| main (T-3070/T-3350 band cuts) | 254/280 | 243/280 |
-| T-3409 (search model) | **278/280** | 267/280 |
+| | types right | within 15 digits | envelope |
+|---|---|---|---|
+| sweep, main (T-3070/T-3350 band cuts) | 254/280 | 243/280 | 247/280 |
+| sweep, T-3409 | **278/280** | 267/280 | **271/280** |
+| wide, main | 120/120 | 119/120 | 119/120 |
+| wide, T-3409 | 120/120 | 119/120 | 119/120 |
 
-The two type misses (A177, A191) are at the edge (T-4206). The 11 digit misses are Excel's start, with the right type,
-where the start's fitted higher terms are 1E-9 to 3E-9 off below shape 1E9 (T-4205; A226 at 4.8E9 is T-3272's range).
+Outside the envelope with T-3409:
+- sweep A177 and A191: the type, a step from the limit (T-4206).
+- sweep A226, A231, A262, A268, A276, A278, A279, and wide A63: Excel's start, where ours (like main) is the true
+  quantile. Below shape 1E9 the start's fitted higher terms are 1E-9 to 3.4E-9 off, so the start rule stays at 1E9 and
+  up (`START_SHAPE_MIN`); the math sidecar has no value for these cells ("no single value"), so neither form is inside
+  (T-4205; A226, at shape 4.8E9, is T-3272's closed form).
