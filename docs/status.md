@@ -12,7 +12,7 @@ merged since its last run.
 This run follows #3106, the 2026-11-04 05:50 UTC run (squash-merged as 66fc010b at 06:45 UTC). It covers the 106 commits merged to `main` after 66fc010b up to ac67b6d2 (#3215), the head when this run started; `make eval` ran on ac67b6d2 (clean tree apart from this run's UPSTREAM.md and duplication ratchet).
 
 - All 17 suites were scored. calipers, corpus-bench and poi were again not fetched in this container, so the first `make eval` skipped them; I ran `rustsheet-eval fetch` for the three and ran `make eval` again. Timeouts: 0 in every suite.
-- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 2,993 allowed in 267 cases to 1,545 in-scope visibly-off cells in 222 cases (0 in new cases). After merging `main` (#3218 to #3222 landed during the run, adding t4228 and the t3629 table-edit cases), the lock allows 1,667 in 223 cases, which `make eval-check` confirms exactly.
+- Eval gate: `make eval-lower-visible-lock` shows 0 regressions and 0 fixed in every gated suite. It lowered the visible-parity lock (decision 0093) from 2,993 allowed in 267 cases to 1,545 in-scope visibly-off cells in 222 cases (0 in new cases). After merging `main` (#3212 to #3222 landed during the run), the lock allows 1,814 in 224 cases, which `make eval-check` confirms.
 - The dashboard has this run's numbers (`make progress-report`; the judgment blocks pass `--check`).
 
 CI on `main` is green: the last 60 `ci.yml` push runs on `main` succeeded, through ac67b6d2.
@@ -35,7 +35,7 @@ Open PRs: 7 at 19:50 UTC (15 last run), 5 of them drafts.
   - #3196 (gap triage T-4220/T-4221, head c152e44f pushed 16:31 UTC): green; I ran design and security on that head, both APPROVE; enqueued once idle 4 h (see the PR body).
   - #3189 (T-3718, head e20d3ff6 pushed 16:08 UTC): green, but my excel-fidelity re-review on that head is REQUEST_CHANGES (number-formats.md claims a rule for integers of 10^12 and more that the probe does not reach; the elapsed-count path stays unprobed). Not enqueued; blocker commented on the PR.
   - No PR carries `queue-dropped`.
-- Drafts older than 24 h: #3019 (T-3963, 25 h): bucket 2, blocker gone. T-3916 is done (decision 0265), but that ruling did not cover the branch's keep-r0 option, so I unblocked T-3963 on its branch (2f1dc15a) with a `## Handoff` for the opus worker: re-judge keep-r0 under decision 0265, then finish or close and salvage. The branch conflicts with `main` (generated baselines), to be resolved with `make catch-up PR=3019`.
+- Drafts older than 24 h: #3019 (T-3963, 25 h): bucket 2, blocker gone. T-3916 is done (decision 0265), but that ruling did not cover the branch's keep-r0 option, so I unblocked T-3963 on its branch (2f1dc15a) with a `## Handoff`. During this run #3221 landed the keep-r0 finding, probe and tools from `main` and marked T-3963 done, filing the owner ruling as T-4239 ("Needs owner" below). So #3019 is now superseded (bucket 1); the next run closes it unless its own session does first.
 - Younger drafts: #3212 (T-2897), #3211 (T-4213), #3177 (T-3933, parked by decision 0267) and #3105 (T-3141, blocked on T-4059).
 - Duplicate check: no two open PRs carry the same task id.
 
@@ -84,6 +84,11 @@ The steward keeps this line as it is until the owner changes it.
   - T-3484: XIRR near a zero root;
   - T-4196: BESSELI at a large x and order 2 or more, and BESSELJ near a root (filed by T-4083, #3157).
   Added 2026-11-04 (19:43 UTC run): these tasks were blocked on the owner but not listed here.
+- **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
+  secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
+  PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
+  error-against-number points out of the Gate A envelope, which decision 0265 does not cover, and regresses 37 gated
+  cells. Please choose: adopt it with those points accepted, or keep the merged rule (T-4239 has the details).
 
 Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
 daily firings arriving again since 2026-11-03), the steward prompt drift (matches routines.md since 2026-11-02) and

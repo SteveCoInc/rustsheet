@@ -2,8 +2,8 @@ User API Reference
 ------------------
 
 The user API (:class:`UserModel`) is the high level API used by the IronCalc
-web application. Every action evaluates the workbook, keeps undo/redo history
-and produces diffs for collaboration.
+web application. Every action evaluates the workbook and keeps undo/redo
+history.
 
 Conventions:
 
@@ -23,8 +23,6 @@ Constructors
    Creates an empty workbook.
 
 .. staticmethod:: UserModel.from_xlsx(file_path, locale="en", tz="UTC", language_id="en") -> UserModel
-.. staticmethod:: UserModel.from_icalc(file_name, language_id="en") -> UserModel
-.. staticmethod:: UserModel.from_bytes(bytes, language_id="en") -> UserModel
 
 Persistence
 ^^^^^^^^^^^
@@ -32,25 +30,6 @@ Persistence
 .. method:: UserModel.save_to_xlsx(file: str)
 
    Saves the workbook to an xlsx file.
-
-.. method:: UserModel.save_to_icalc(file: str)
-
-   Saves the workbook to a file in the internal binary ic format.
-
-.. method:: UserModel.to_bytes() -> bytes
-
-   Returns the workbook as bytes in the internal binary ic format.
-
-Collaboration
-^^^^^^^^^^^^^
-
-.. method:: UserModel.flush_send_queue() -> bytes
-
-   Returns (and clears) the queue of binary diffs produced by local edits.
-
-.. method:: UserModel.apply_external_diffs(external_diffs: bytes)
-
-   Applies a list of diffs produced by another model's ``flush_send_queue``.
 
 Undo, redo and evaluation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
