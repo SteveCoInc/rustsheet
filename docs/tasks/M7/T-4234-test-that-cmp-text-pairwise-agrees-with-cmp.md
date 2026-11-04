@@ -3,7 +3,7 @@ id: T-4234
 title: "Test that cmp_text_pairwise agrees with cmp_text on ASCII texts, the invariant behind UNIQUE's hash path (T-4200 review)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
