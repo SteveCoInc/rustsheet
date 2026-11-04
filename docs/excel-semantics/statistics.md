@@ -4171,7 +4171,17 @@ within 1E-15 relative / largest relative error:
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
-  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
+  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) were unprobed until T-4030 (next paragraph).
+- Boundary and mechanism (T-4030, probes-numeric t4030-f-dist-rt-df1-boundary, 235 cells, excel-graph, 2026-11-04): it is
+  a bratio branch on the beta shapes (a, b) = (df2/2, df1/2), not a df cut. At df2 = 1E10 `F.DIST.RT(2,df1,1E10)` and
+  `F.DIST(2,df1,1E10,TRUE)` are numbers up to df1 = 76 (b = 38) and `#NUM!` at df1 = 77 and 78 (b = 38.5, 39) and 79; df1 = 80
+  and 100 are numbers again (`F.DIST.RT(2,80,1E10)` 2.8087221288968924E-07), so it is a band, not a threshold. At df2 = 5E9
+  the first `#NUM!` is df1 = 79 (b = 39.5; df1 61 to 78 are numbers). The band is in a, b only: `BETA.DIST(x,5E9,b,TRUE)`
+  is `#NUM!` for b = 38.5 to 39.5 and 0 (a number) from b = 40, and equals the F result at matching shapes (b = 30 to 38
+  numbers). With x chosen for a tail near 1E-6, the first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
+  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9. So the lower edge falls as a grows and the upper edge is b < 40, the
+  `b <= 40` bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. df2 = 2E10 is `#NUM!` for every
+  df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
 ## F-distribution df limit (T-1530)
