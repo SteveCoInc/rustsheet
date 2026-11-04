@@ -23,7 +23,7 @@ M2 is still current. M0–M2 probes (decision 0051) have 2 known failures (154 l
 
 Hygiene:
 - lint-debt: 91 allow entries (= last run);
-- duplicated lines: 2,878 (baseline 2,880; ratchet lowered in this PR);
+- duplicated lines: 2,878 (baseline 2,880, unchanged). Not lowered here: `quality/` is a protected path (`check_governance.py`), so a task PR records the drop;
 - oversized files: 8 (= last run).
 
 Merged since #3106 (66fc010b): 106 commits up to ac67b6d2, from #2671 to #3215. None were reverted. All were committed by GitHub, each with its PR's `(#n)` suffix; 22 of them are task-only `tasks:` PRs. Among them: T-3904's weightless characters in `=`, COUNTIF and XMATCH (#3107), T-4040's R1C1 typed entry of A1-like names (#3144), T-3891's typed script digits (#3145), T-3983's TIME wrap (#3079), T-4077's 15-digit x87 literal reading (#3202), T-3418's SORT order on comparison cycles (#3164) and T-4200's UNIQUE grouping (#3214).
