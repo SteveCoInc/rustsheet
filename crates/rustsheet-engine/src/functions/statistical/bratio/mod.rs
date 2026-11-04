@@ -346,6 +346,13 @@ fn ported_tails_with(
         // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
         Branch::L140BupBgrat if half_bgrat => {
             let w = l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?;
+            // Excel's exact 0 where bup's prefactor underflows (T-4045) is the evaluation's only:
+            // BETA.INV's and F.INV's search (`BupSum::Recurrence`) keeps today's kernel there, as it
+            // did before, or `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146)
+            // crosses that 0 and lands 0.6% from the math.
+            if w == 0.0 && bup_sum == BupSum::Recurrence {
+                return None;
+            }
             (w, other(w))
         }
         Branch::L140BupBpser => {
