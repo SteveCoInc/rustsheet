@@ -118,8 +118,9 @@ pub enum LocaleTag {
     SystemDate,
     /// `[$-F400]` or `[$-x-systime]`: the section is the system long time.
     SystemTime,
-    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`) or one with no table here
-    /// (TODO(T-3666)), or a calendar digit over an LCID with no locale that is not modelled
+    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`), an LCID with no locale (no
+    /// table, and no language fallback in [`by_language`]), or a calendar digit over an LCID with
+    /// no locale that is not modelled
     /// (`without_locale`): it prints nothing and changes nothing (`TEXT(0.75,"[$-FFFF]h A/P")`
     /// keeps "6 P").
     Silent,
@@ -141,8 +142,8 @@ const SYSTEM_TIME_LCID: u32 = 0xF400;
 /// 0x3F (`[$-80C]` is French, `[$-C]` too; [`by_language`]); 400 and 800, the user and system
 /// defaults, are en-US.
 /// A BCP-47 tag matches case-insensitively, then by its language (`[$-fr-XX]` is French).
-/// Any other tag is read as extended hex ([`extended_hex`]) and resolved like a hex one: `[$-fr_FR]` is
-/// the Saka calendar over an LCID with no locale.
+/// Any other tag is read as extended hex ([`extended_hex`]) and resolved like a hex one:
+/// `[$-fr_FR]` is the Saka calendar over an LCID with no locale.
 /// [`resolve_after_hijri_prefix`] resolves a tag that follows a `B2` prefix in its section.
 pub fn resolve(tag: &str) -> LocaleTag {
     resolve_with(tag, false)
