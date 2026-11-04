@@ -28,10 +28,12 @@ IRR returns `#DIV/0!` where Excel does on conventional cash flows, instead of `#
 - Code: `irr_npv`, `irr_secant`, `compute_irr` (functions/financial/financial_util.rs).
 
 ## Acceptance criteria
-- [ ] A probe case (excel-graph) that isolates when IRR is `#DIV/0!`, its cells listed here before the fix.
+- [x] A probe case (excel-graph) that isolates when IRR is `#DIV/0!`, its cells listed here before the fix. (Met by
+      existing cells instead of a new probe; see the Outcome.)
 - [ ] The engine returns `#DIV/0!` on those cells and on the 9 hold-out cells, with no gated cell regressing.
-- [ ] The rule in docs/excel-semantics/financial.md.
-- [ ] `make check` green; reviewers approve.
+      (Partly: 7 of the 9 hold-out cells; A131 and A138 move to T-3900. No gated cell regresses.)
+- [x] The rule in docs/excel-semantics/financial.md.
+- [x] `make check` green; reviewers approve.
 
 
 ## Cells of T-3411's fresh sweeps
@@ -63,12 +65,18 @@ Done, first attempt: a secant step whose NPV cannot be evaluated ends IRR with w
 - Candidates scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 against main: (A) any secant
   NPV that cannot be evaluated: 59 better, 0 worse, Gate A unchanged (shipped); (B) |NPV| above 1E+228 at an iterate
   (T-3411's observation): 20 better, 8 worse (rejected).
-- Evidence for criterion 1: no new probe (decision 0267's probe freeze). The existing cells isolate the rule: t3406
-  P!A83 and P!A84 are the same 60-flow annuity, and only A84's secant step leaves the double range. Across the scored
-  cells, Excel's `#DIV/0!` appears where the engine's step overflows, and no cell where it overflows is anything else.
-- Criterion 2: all 9 hold-out cells pass. Of the 75 cells listed above, 52 pass. The 23 left (no step of the engine's
-  secant overflows there) move to T-3900, "Cells left by T-3407". The rule also fixes t3478-irr-r4-wide A261, A275,
-  A277, A281, A289, A290 and A298 (T-3548's), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56 (T-3900's).
+- Criterion 1, met by existing cells instead of a new probe: t3406 P!A83 and P!A84 are the same 60-flow annuity, and
+  only A84's secant step leaves the double range. Across the scored cells, Excel's `#DIV/0!` appears where the
+  engine's step overflows, and no cell where it overflows is anything else in Excel. Not isolated by any cell: an
+  unevaluable NPV at the guess point (d0 or d1) itself, and an overflow in the retry from 0.1 after a failed guess run.
+  That the error comes from NPV's evaluation is inferred, not observed (financial.md's status line).
+- Criterion 2, partly met: 7 of the 9 hold-out cells pass (P!A123, A126, A130, A132, A134, A135, A143). A131 and A138
+  (the secant goes flat at step 3, and both Newton runs overflow) stay `#NUM!` and move to T-3900. Of the 75 cells
+  listed above, 52 pass, and the other 23 (no step of the engine's secant overflows there) move to T-3900 too, under
+  "Cells left by T-3407". The rule also fixes t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298
+  (T-3548's), probes/irr-guess-edges A27, and gen-m9/bc04c1f478c9896c A56 (T-3900's).
+- Gate A ownership: this task's three known-failure lines (accuracy/IRR/r4-T-3411 A213, A232, A233; Excel `#DIV/0!`,
+  the engine `#NUM!`) and the new batch's A237 (the same symptom) move to T-3900.
 - R4 guards (structural rule, kind c; frozen before the draws):
   - R4.1, fit lab split (`holdout.is_holdout`), 212 cases calling IRR, main -> rule: train 52,909 cells, bit-exact
     51,253 -> 51,296 (96.87% -> 96.95%); test 23,002 cells, 22,289 -> 22,305 (96.90% -> 96.97%), within the 5-point
@@ -78,9 +86,10 @@ Done, first attempt: a secant step whose NPV cannot be evaluated ends IRR with w
     A70, A76, A82, A86, A99), 0 worse, `#DIV/0!` mismatches 10 -> 3. Not committed: decision 0267's probe freeze allows
     a new probes-numeric case only for owned cells.
   - Gate A batch accuracy/IRR/r4-T-3407 (300 points, `rustsheet-accuracy generate IRR --batch r4-T-3407`, excel-graph):
-    25 points outside the envelope with and without the rule, the same points. Their lines in known-failures.tsv go to
-    T-3548 (18, the families of its s1 and r4-T-3411 lines) and T-3347 (7, roots near 0). `rustsheet-eval accuracy`:
-    0 failing.
+    25 points outside the envelope with and without the rule, the same points. None of its points reaches the new
+    path: no step overflows there, so the batch shows only that nothing moves. The fresh probes sweep above is the
+    out-of-sample test that runs through it (7 cells). Known-failure lines: T-3548 17 (the families of its s1 and
+    r4-T-3411 lines), T-3347 7 (roots near 0), T-3900 1 (A237). `rustsheet-eval accuracy`: 0 failing.
 - Eval delta: probes 16 and gen-m9 1 baseline cells fixed (`make eval-baseline`), probes-numeric (ungated) 42 cells
   fixed, 0 regressions.
 - financial.md: "IRR is #DIV/0! where its secant cannot evaluate NPV" (new), and the t3478 / Gate A section's links.

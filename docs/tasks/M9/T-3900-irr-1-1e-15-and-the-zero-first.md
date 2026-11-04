@@ -40,10 +40,16 @@ Excel is `#DIV/0!` and the engine `#NUM!`, though every NPV the engine's secant 
 does not reach them (`make eval` on T-3407's branch, 2026-11-04). The overflowing step in Excel is not one of the
 engine's secant iterates:
 - probes/t3406-irr-num-boundary.case.json (6): P!A66, A67, A68, A81, A82, A95
+- probes-numeric/t3347-irr-conventional-holdout.case.json (2): P!A131, A138 (T-3407's context: the secant goes flat at
+  step 3 and both Newton runs overflow)
 - probes-numeric/t3411-irr-r4-fresh.case.json (3): Calc!A83, A85, A91
 - probes-numeric/t3411-irr-r4-fresh-2.case.json (6): Calc!A1, A6, A19, A82, A92, A98
 - probes-numeric/t3411-irr-r4-fresh-3.case.json (2): Calc!A24, A78
 - probes-numeric/t3411-irr-r4-fresh-4.case.json (6): Calc!A4, A68, A86, A89, A94, A103
+- Gate A known failures this task owns (moved from T-3407 and, for the new batch, from T-3548): accuracy/IRR/r4-T-3411
+  A213, A232, A233 and accuracy/IRR/r4-T-3407 A237, long series (about 180 to 198 flows) where Excel is `#DIV/0!` and
+  the engine `#NUM!`. accuracy/IRR/s1 A237, A248 and A268 are the same symptom and stay T-3548's (accepted under
+  decision 0267).
 
 ## Acceptance criteria
 - [ ] Probe the d = 1 rule T-2802 implemented from one cell (probes/irr-guess-edges A39), per the T-2802

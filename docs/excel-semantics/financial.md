@@ -1488,17 +1488,18 @@ The call ends there, without the retry from 0.1 and without the fallback.
   `#DIV/0!` sits where log10 |NPV| at the first step is above 228: the next trial point is out of range.
 - Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
   value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
-  flows), the 9 long-series cells of probes-numeric/t3347-irr-conventional-holdout (A123-A143), 28 cells of the
+  flows), 7 of the 9 long-series `#DIV/0!` cells of probes-numeric/t3347-irr-conventional-holdout (P!A123, A126, A130,
+  A132, A134, A135, A143; A131 and A138 stay `#NUM!`), 28 cells of the
   t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
   100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
   smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
 - Out of sample (decision 0188 R4.2; a structural rule, frozen before the draws): a fresh probes-numeric sweep
   (docs/research/t3411/gen_sweep.py, case name t3407-irr-r4-fresh, not committed under decision 0267's probe freeze)
   has 7 cells better and 0 worse, with its `#DIV/0!` mismatches 10 -> 3. The Gate A batch accuracy/IRR/r4-T-3407 has
-  the same 25 points outside the envelope with and without the rule.
+  the same 25 points outside the envelope with and without the rule; none of its points reaches the rule.
 - Not explained: 23 `#DIV/0!` cells where every NPV the secant evaluates is in range and the engine is `#NUM!` (T-3900
   lists them), `IRR({-1,1E+15})` ("IRR's far-root bound") and Gate A's long-series `#DIV/0!` points (accuracy/IRR/s1
-  A237, A248, A268). The step that overflows in Excel there is not one of the engine's secant iterates.
+  A237, A248, A268; r4-T-3411 A213, A232, A233; r4-T-3407 A237). The step that overflows in Excel there is not one of the engine's secant iterates.
 Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
 Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
 Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)

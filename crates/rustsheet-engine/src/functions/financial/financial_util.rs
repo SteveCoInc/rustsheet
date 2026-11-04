@@ -303,8 +303,8 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 
 /// One run of IRR's secant from `guess`, or why it stopped without a root: [`SecantStop::Failed`]
 /// on a flat secant, an iterate that is not a positive discount factor or no stop in 50 steps;
-/// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is d = 1 - v = r/(1 + r),
-/// so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
+/// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is
+/// d = 1 - v = r/(1 + r), so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
 /// (probes/t2565-irr-guess-sweeps), and each step is anchored on the newer iterate.
 /// Chosen by scoring on the fit set (financial.md "IRR is a secant in d = 1 - v"): the start offset
 /// of 1E-3 toward larger |NPV| (+1E-3 on both sides scores 121 of 263) and the 1E-7 residual stop
