@@ -287,3 +287,20 @@ fn a_formula_typed_below_an_empty_column_fills_nothing_and_rolls_back() {
     assert_eq!(wb.value("C2").unwrap(), Value::Empty);
     assert_eq!(formula(&wb, "C4"), None);
 }
+
+/// `Input::LegacyFormula` is stored text, so a padded bare column is `#REF!` as for
+/// `Input::StoredFormula`, while `T[ [Col] ]` is the column and the legacy `@` rewrite is kept
+/// (T-4221; syntax.md, padded bare column).
+#[test]
+fn a_legacy_formula_reads_a_padded_bare_column_as_stored_text() {
+    let mut wb = table_book();
+    wb.set("E1", Input::LegacyFormula("=SUM(T[ Col ])".into()))
+        .unwrap();
+    assert!(matches!(wb.value("E1").unwrap(), Value::Error(e) if e.kind == ErrorKind::Ref));
+    wb.set("E2", Input::LegacyFormula("=SUM(T[ [Col] ])".into()))
+        .unwrap();
+    assert_eq!(wb.value("E2").unwrap(), Value::Number(7.0));
+    wb.set("E3", Input::LegacyFormula("=T[Col]".into()))
+        .unwrap();
+    assert_eq!(formula(&wb, "E3").as_deref(), Some("=@T[Col]"));
+}

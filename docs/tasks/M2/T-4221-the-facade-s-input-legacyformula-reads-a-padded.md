@@ -3,7 +3,7 @@ id: T-4221
 title: "The facade's Input::LegacyFormula reads a padded bare column as loaded text (#REF!), not as an untyped parse failure"
 milestone: M2
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,10 +27,18 @@ stores it) reads a padded bare column `T[ Col ]` as Excel loads stored text: `#R
   (legacy_formula.rs) and `Diff::SetCellValue`'s `external` (user_model/history.rs, undo_redo.rs).
 
 ## Acceptance criteria
-- [ ] Through the facade, `Input::LegacyFormula("=SUM(T[ Col ])")` gives `#REF!` and `Input::LegacyFormula("=SUM(T[ [Col] ])")`
+- [x] Through the facade, `Input::LegacyFormula("=SUM(T[ Col ])")` gives `#REF!` and `Input::LegacyFormula("=SUM(T[ [Col] ])")`
       the column's sum, with the legacy `@` rewrite kept (test in crates/rustsheet).
-- [ ] syntax.md's "Implemented in" line lists the paths above.
-- [ ] `make check` green; reviewers approve.
+- [x] syntax.md's "Implemented in" line lists the paths above.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The engine's own legacy re-entries (fill, move), which T-4023 keeps reading the column.
+
+## Outcome
+Added `Model::set_loaded_legacy_formula` (legacy_formula.rs), the loaded reading of a legacy formula
+(`Parser::set_loaded` around `reenter_legacy_formula`, no copy of the loaded reading), and the facade's
+`Input::LegacyFormula` uses it. Test `a_legacy_formula_reads_a_padded_bare_column_as_stored_text`
+(crates/rustsheet): `=SUM(T[ Col ])` is `#REF!`, `=SUM(T[ [Col] ])` is 7, the `@` rewrite is kept. syntax.md's
+"Implemented in" line lists the paths. No eval cell changes. The engine's `set_cell_with_legacy_formula` is
+unchanged (external text).

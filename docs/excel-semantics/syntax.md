@@ -610,7 +610,7 @@ agree):
   it so too (a formula that does not parse, `#ERROR!`), while the engine's own re-entries (fill, copy, paste, move,
   merge) keep reading the column. Since T-4023 so do a CSE entry (`set_user_array_formula`), a legacy entry
   (`set_cell_with_legacy_formula`) and the redo of an external entry or pasted text (the undo diff records where its
-  text came from), while a moved array formula, a filled legacy cell and the redo of a copy keep the column. **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
+  text came from), while a moved array formula, a filled legacy cell and the redo of a copy keep the column. The facade's `Input::LegacyFormula` is stored text and goes through `Model::set_loaded_legacy_formula`: `=SUM(T[ Col ])` is `#REF!` as for `Input::StoredFormula` (T-4221). **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
   `<definedName name="N">T[ Col ]</definedName>` (or `T[ Col]`, `T[Col ]`) `=SUM(N)` and `=ROWS(N)` are `#REF!` and
   `=ISREF(N)` is FALSE, as in a cell (probes/t3258-name-padded-column-0..2, excel-graph, 2026-11-04, T-3258). Ours: a
   name body loaded through `Model::define_loaded_name` is read as a file's text and loads as `#REF!`; a name defined
@@ -631,7 +631,7 @@ whitespace followed the comma, which prints as one space (`TableSpacing`); F4:F1
 `T[ Col ]` reading back as column `Col` now contradicts Excel, which gives `#REF!` (stored-ws-0, T-3069); the one-sided
 `T[ Col]` and `T[Col ]` already match (stored-ws-1 and -2 pass). Padded `#` or `@` starts (`T[ #Data ]`) read as before.
 Status: VERIFIED (excel-graph)
-Implemented in: expressions/lexer/structured_references.rs, expressions/parser/structured_reference.rs (`text`)
+Implemented in: expressions/lexer/structured_references.rs, expressions/parser/structured_reference.rs (`text`), typed_input.rs (`Model::as_external`, `Model::set_loaded_user_input`), model.rs (`reenter_array_formula`), legacy_formula.rs (`reenter_legacy_formula`, `Model::set_loaded_legacy_formula`), user_model/history.rs and undo_redo.rs (`Diff::SetCellValue`'s `external`)
 Tasks: T-2786, T-2944, T-2966, T-2800, T-3069, T-2801, T-2955, T-2956, T-2957, T-2958
 
 ## FORMULATEXT keeps every written parenthesis
