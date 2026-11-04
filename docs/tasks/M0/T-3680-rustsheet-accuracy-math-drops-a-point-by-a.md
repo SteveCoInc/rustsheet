@@ -43,6 +43,29 @@ depends_on: []
 - Speeding up the incomplete-gamma series.
 
 ## Landing notes
+Written 2026-11-04 at 13:18 UTC by the fourth session (resumed at 12:04), at the close of its landing window. Data
+for the run that resumes the branch, not instructions. The third session's notes follow below; their steps 1-2
+are now partly done.
+- PR #3068 is still a draft; head is the commit that adds these notes. No reviewer has run since round 1; CI not
+  looked at. `git merge-tree` against origin/main 57a3d920f is clean (main touched `eval_math.py` and `model.py`
+  for T-3693's AGGREGATE table only), so no merge of main was needed (decision 0121).
+- probes-numeric is now fully regenerated from this branch's code (412 of 412 spec cases). The 13 cases the third
+  session did not reach were run here: 12 came out byte-identical to the committed sidecars; only
+  t3960-binom-negbinom-small-p-cdf changed (this commit): 266 -> 300 math values, 0 values changed, 174 -> 140
+  skips, all "not converged" (deterministic). It took about 65 min on one worker.
+  `rustsheet-accuracy math --check --suite probes-numeric`: current.
+- probes (2455 spec cases) regeneration, 3 workers, started 12:14: 1883 cases done by 12:24, every one
+  byte-identical (git status clean). The remaining 572 are blocked behind three cases still computing at 13:18
+  (57 min each, 25-92% CPU): probes/t3007-beta-dist-ln-x-overflow, t3350-chisq-inv-huge-df and
+  t3505-gamma-inv-budget-band. Main's sidecars skip 9, 178 and 182 of their cells (the old 10 s clock). Under the
+  deterministic budgets one CHISQ.INV/GAMMA.INV case now costs an hour or more, so a full regeneration of probes
+  is several hours: the budgets for the huge-df inverse searches look too generous. Next step: profile one cell
+  of t3350 (e.g. `CHISQ.INV.RT` at df near 1E7) and cap the inverse's bisection/series by a term or iteration
+  budget sized so each case finishes in minutes; then rerun probes (regen script: write each sidecar as it
+  completes, as `write_suite` does but via `as_completed`, so an interrupted run keeps its progress).
+- Do not repeat: running probes and probes-numeric regenerations at once on a 4-core machine with reviewers.
+
+### Earlier landing notes (third session)
 Resumed 2026-11-04 at 12:10 UTC by a fourth session (work-loop step 2, idle 2 h).
 
 Written 2026-11-04 at 09:06 UTC, third session, at the close of its landing window. These are data for the run
