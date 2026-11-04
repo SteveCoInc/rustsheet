@@ -3,7 +3,7 @@ id: T-3665
 title: "BETA.DIST cdf at a < 1, b = 2.5 and x in [0.29, 0.3): 9 t2464-r2-bratio-x29 cells where Excel is within 1.7 ulp of the math and ours is 4 to 6 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -49,16 +49,31 @@ within 15 digits today moves off. Bit-level criteria still unmet then move to a 
 - Split (T-3229 check): T-3592 (a deferred, phase-1b owners list) also lists these cells. This task does them at the accuracy stage now; when it lands, T-3592 drops them.
 
 ## Acceptance criteria
-- [ ] The 9 cells above are within half a unit of the 15th significant digit of Excel's value, shown in the Outcome
+- [x] The 9 cells above are within half a unit of the 15th significant digit of Excel's value, shown in the Outcome
       with `make eval-show` output.
-- [ ] On t2464-r2-bratio-x29 (3,080 cells) the count within 15 digits of Excel does not fall, and no probes-numeric or
+- [x] On t2464-r2-bratio-x29 (3,080 cells) the count within 15 digits of Excel does not fall, and no probes-numeric or
       gated cell goes from within 15 digits to visibly off; any that does is listed with Excel / new / exact values,
       or the change is narrowed.
-- [ ] A unit test pins at least two of the cells at Excel's value, with the case and cell named.
-- [ ] No new known-failure line in any eval/baseline/<suite>.txt (`make eval-baseline` refuses regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] A unit test pins at least two of the cells at Excel's value, with the case and cell named.
+- [x] No new known-failure line in any eval/baseline/<suite>.txt (`make eval-baseline` refuses regressions).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - L140 bup+bgrat with one bup term at a0 > 15 (T-3382) and the bulk with several bup terms (T-3561, which owns the
   bulk cdf cells).
 - Excel's bits where Excel is off the math (Phase 1b, decision 0188 R5).
+
+## Outcome
+BETA.DIST's bup + bgrat branch at a0 < 1 other than 1/2 (`Branch::BupBgrat`, bratio's a0 <= 1 path with x0 < 0.3)
+now takes TOMS's 20 bup terms plus the accurate bgrat increment (`bgrat::bgrat_increment`, reused, not copied) in
+`bratio/mod.rs` `ported_tails_with`, on the callers that already took bgrat at a0 = 1/2 (BETA.DIST's cdf and F's tails).
+Before, it fell back to the Cephes kernel. Measured with two full `rustsheet-eval run --suite probes-numeric` runs on
+main 302bec9b5, before (env-gated off) and after:
+- The 9 owned cells (t2464-r2-bratio-x29): all within 15 digits. A1551, A1574, A1597, A1609, A1637, A2327 and A2408 are
+  Excel's bits. A1616 is 0.6876825422232615 against Excel's 0.6876825422232614, and A2393 0.6269473858174794 against
+  0.6269473858174792.
+- The case goes from 2,133 to 2,696 of 3,080 passed. No cell of it, nor any probes-numeric cell, moves off 15 digits.
+- probes-numeric: 517,582 to 518,155 passed. 16 BETA.DIST cells are newly within 15 digits and none newly off; 626 are
+  newly bit-exact and 53 no longer bit-exact (still within 15 digits).
+- Unit test: `bratio/tests.rs` `bup_bgrat_at_a_shape_below_one_matches_excel` (A1551, A2327).
+- Eval delta: probes-numeric +573 passed (above); `make eval-baseline` changes no baseline file (0 regressions in every gated suite).

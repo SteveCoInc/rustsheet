@@ -28,6 +28,15 @@ walk over `Node`. An embedder that logs a parsed tree on a small debug thread th
   class members UNVERIFIED. probes/t4013-class-equality-order Calc!C1:E18 verifies it, so cite that and drop the
   word.
 
+- Carry-over from T-3691's review (PR #3092, MINOR findings):
+  - docs/excel-semantics/syntax.md's nesting paragraph still says the heaviest shapes need about 16 MiB unoptimized
+    and that "T-3691 makes those walks iterative". Since T-3691 every walk fits 2 MiB unoptimized except `{:?}`;
+    say so, and drop the `{:?}` exception once this task lands.
+  - The run in T-3691's test doc, its Outcome note and the `walk_names` comment is 1,023 signs (`MAX_SIGNS - 1`,
+    `MAX_SIGNS` = 1024), not 1,022.
+  - `walk_names`'s wrapper arms after its peel loop are unreachable. Fold them into the leaf arm with a comment, or
+    share one `&mut` wrapper-child accessor with `Node::shell` (node_walks.rs).
+
 ## Acceptance criteria
 - [ ] The T-3691 test formats every shape with `{:?}`. Its `TODO(T-4031)` is gone.
 - [ ] `{:?}` output is unchanged for a sample of formulas (a test pins it against the derived form).

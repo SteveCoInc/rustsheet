@@ -1271,6 +1271,7 @@ match_mode is cut toward zero and must then be 0 or 1, else `#VALUE!`, also besi
 are `#VALUE!` (`TEXTBEFORE("aBc","b",1,2)`; `TEXTBEFORE("abc","",2,123456789.123)`, which is c36ff5f42a1a4d47 A148), 0.5 is 0
 (`#N/A` for a case-different delimiter), 1.5 and TRUE are 1. A number or boolean if_not_found comes back as its text:
 `TEXTBEFORE("b","a",1,0,0,5)` is "5", `-2.5` is "-2.5", TRUE is "TRUE" (also gen-m7 ac67253061bba16a A776, A1345).
+An error `match_end` (5th argument) beats the `#VALUE!` of an out-of-range numeric match_mode: `TEXTAFTER("abc","a",1,-1,#N/A)` is `#N/A`, as are match_mode 2, 7, -2.5, "12" and "2.5" beside an error match_end (gen-m7/9f9357dbf7e17803 A85, A88, A157, A160, A286; gen-m7/b2139ff37d606cb4 A115, A118, A199, A202, A313, A316). A match_mode text that fails to coerce ("x", "abc", the empty string) is still `#VALUE!` beside an error match_end (9f9357dbf7e17803 A343, A346, A412; b2139ff37d606cb4 A373, A376, A439, A442), while a blank match_mode cell coerces to 0 and gives the match_end error (9f9357dbf7e17803 A589, A592). excel-graph 2026-11-04, T-3513. Not implemented: the engine returns `#VALUE!` for the first group (T-4037).
 Evidence: probes/t2314-textbefore-instance-bound (excel-graph, 2026-10-22) and gen-m7 (excel-graph, 2026-10-21, T-2225).
 Ours: matches (`text_around_element`, `around_options` and `around_not_found` in functions/text/before_after.rs, T-2314). The probe's
 `TEXTBEFORE("abc","b",1,-0.5)` is "a", not `#VALUE!`: flooring -0.5 would give the invalid -1 (A2), so match_mode is cut toward zero.
