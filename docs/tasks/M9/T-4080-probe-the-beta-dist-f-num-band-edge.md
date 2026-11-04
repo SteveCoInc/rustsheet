@@ -3,7 +3,7 @@ id: T-4080
 title: "Probe the BETA.DIST/F #NUM! band edge at a huge first shape: a 1E9..1E10 by b 30..39.5 by tail, to pin the edge as a function of a and x"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
