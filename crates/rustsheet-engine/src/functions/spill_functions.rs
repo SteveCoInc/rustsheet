@@ -100,6 +100,41 @@ fn unique_flags_are_literals(args: &[Node]) -> bool {
     literal(args.get(1), true) && literal(args.get(2), false)
 }
 
+/// For each of `count` lines, the first line Excel's `=` finds it equal to (itself when none
+/// before it is): UNIQUE's distinct lines and GROUPBY's and PIVOTBY's groups. Lines are bucketed by
+/// `key`, which every pair `same` finds equal must share (texts by [`collation_key`]), and a line
+/// joins the first kept line of its bucket that `same` finds equal to it, so an intransitive run
+/// (U+00AD&`"ab"` equals both `"ab"` and `"ab"`&U+00AD, which differ) joins the first
+/// (probes/t4086-groupby-weightless Calc!B4, T-4088). Each comparison is charged to `spend` first
+/// (`cost` units; directive 5, SPEC-0024), so a crafted bucket ends as the budget's error instead
+/// of running quadratically.
+pub(crate) fn first_equal_lines<K: std::hash::Hash + Eq, E>(
+    count: usize,
+    key: impl Fn(usize) -> K,
+    same: impl Fn(usize, usize) -> bool,
+    cost: impl Fn(usize, usize) -> u64,
+    mut spend: impl FnMut(u64) -> Result<(), E>,
+) -> Result<Vec<usize>, E> {
+    let mut first = Vec::with_capacity(count);
+    let mut buckets: HashMap<K, Vec<usize>> = HashMap::with_capacity(count);
+    for line in 0..count {
+        let bucket = buckets.entry(key(line)).or_default();
+        let mut found = None;
+        for &kept in bucket.iter() {
+            spend(cost(kept, line))?;
+            if same(kept, line) {
+                found = Some(kept);
+                break;
+            }
+        }
+        first.push(found.unwrap_or_else(|| {
+            bucket.push(line);
+            line
+        }));
+    }
+    Ok(first)
+}
+
 /// One UNIQUE call over `data`: its distinct rows (or columns), or those that occur once.
 ///
 /// Two texts are one value when Excel's `=` finds them equal ([`cmp_text_pairwise`]): case is
@@ -153,31 +188,31 @@ fn unique_of(
             })
             .fold(1, u64::saturating_add)
     };
+    let first = match first_equal_lines(
+        count,
+        |line| {
+            (0..length)
+                .map(|k| unique_cell_key(at(line, k)))
+                .collect::<Vec<_>>()
+        },
+        same_texts,
+        compare_units,
+        |units| model.spend_work(units, cell),
+    ) {
+        Ok(first) => first,
+        Err(error) => return error,
+    };
     // The kept lines, in order, with how many lines each stands for.
-    let mut kept: Vec<(usize, usize)> = Vec::new();
-    let mut buckets: HashMap<Vec<CellKey>, Vec<usize>> = HashMap::with_capacity(count);
-    for line in 0..count {
-        let key: Vec<CellKey> = (0..length).map(|k| unique_cell_key(at(line, k))).collect();
-        let bucket = buckets.entry(key).or_default();
-        let mut found = None;
-        for &slot in bucket.iter() {
-            let first = kept[slot].0;
-            if let Err(error) = model.spend_work(compare_units(first, line), cell) {
-                return error;
-            }
-            if same_texts(first, line) {
-                found = Some(slot);
-                break;
-            }
-        }
-        match found {
-            Some(slot) => kept[slot].1 += 1,
-            None => {
-                bucket.push(kept.len());
-                kept.push((line, 1));
-            }
+    let mut stands_for = vec![0_usize; count];
+    for &line in &first {
+        if let Some(n) = stands_for.get_mut(line) {
+            *n += 1;
         }
     }
+    let kept: Vec<(usize, usize)> = (0..count)
+        .filter(|&line| first.get(line) == Some(&line))
+        .map(|line| (line, stands_for.get(line).copied().unwrap_or(0)))
+        .collect();
     let lines: Vec<usize> = kept
         .into_iter()
         .filter(|&(_, n)| !exactly_once || n == 1)
@@ -203,7 +238,7 @@ fn unique_of(
 }
 
 /// UNIQUE's [`cell_key`]: a text is keyed by its [`collation_key`] (see [`unique_of`]).
-fn unique_cell_key(node: &ArrayNode) -> CellKey {
+pub(crate) fn unique_cell_key(node: &ArrayNode) -> CellKey {
     match node {
         ArrayNode::String(text) => CellKey::Collated(collation_key(text)),
         other => cell_key(other),

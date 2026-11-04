@@ -3,7 +3,7 @@
 //! code-point order"; probes/text-collation-order, probes/text-order-nbsp-space, excel-graph,
 //! T-1469, T-0244).
 //!
-//! Excel compares texts in five passes, like a word sort, and ignores case at every pass:
+//! Excel compares texts in six passes, like a word sort, and ignores case at every pass:
 //! 1. **Letters** (primary weights): the empty string, the space, CHAR(160), CHAR(9) to
 //!    CHAR(13), punctuation ``! " # $ % & ( ) * , . / : ; ? @ [ \ ] ^ _ ` { | } ~``, the Latin-1
 //!    marks, quotes and currency signs, `+ < = >`, the other Latin-1 symbols, digits (`¼ ½ ¾`
@@ -16,13 +16,15 @@
 //!    table, a letter's own plus those of the combining marks after it, in one wrapping byte
 //!    (`"a" < "ª" < "á" < "à" < "â" < "ä" < "ǎ" < "ă" < "ā" < "ã" < "å"`, `"ö" < "ø"`,
 //!    `"d" < "đ" < "ð"`; [`MARK_WEIGHT`]). `þ` is not an accent: it is the letters `th`.
-//! 3. **Kana**: a small kana before its letter, the long-vowel mark `ー` and the iteration marks
+//! 3. **Widths**: the superscripts `ª º ¹ ² ³` after the plain letters and digits
+//!    (`"1" < "¹"`) and a full-width form after its ASCII form (`"A" < "Ａ"`), before the kana pass
+//!    even from a later position (`ぁ&"Ａ" > あ&"A"`; [`widths`], T-4087).
+//! 4. **Kana**: a small kana before its letter, the long-vowel mark `ー` and the iteration marks
 //!    `ゝ ゞ` after the letter they repeat, `々` before it (`"かぁ" < "かあ" < "かー"`,
 //!    `"人々" < "人人"`; [`kana_weights`]).
-//! 4. **Variants**: the superscripts `ª º ¹ ² ³` after the plain letters and digits
-//!    (`"1" < "¹"`), a full-width form after its ASCII form (`"A" < "Ａ"`), and the kana type
-//!    (`"ｱ" < "ア" < "あ"`).
-//! 5. **Skipped characters**: by position, a later one first, then control characters (by code
+//! 5. **Kana types**: half-width katakana, katakana, hiragana (`"ｱ" < "ア" < "あ"`;
+//!    [`kana_types`]).
+//! 6. **Skipped characters**: by position, a later one first, then control characters (by code
 //!    point) before apostrophe, hyphen, en dash, em dash, the full-width apostrophe and hyphen
 //!    after theirs (`"ab" < "a'b" < "a-b" < "a–b" <
 //!    "a—b"`, `"a" < "a'" < "a-" < "'a" < "-a"`, `"1" < "'1" < "-1"`, `"" < CHAR(1) < "–"`).
@@ -66,7 +68,7 @@ pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
-/// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
+/// Orders two texts by the module's six passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
 /// are [`cmp_text_pairwise`].
 #[cfg(test)]
@@ -174,7 +176,8 @@ pub(crate) struct CollationKey {
     skipped: Vec<(usize, u8)>,
 }
 
-/// The [`CollationKey`] of `text`: its five passes, lone surrogates kept as [`cmp_text`] keeps them.
+/// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
+/// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
     let elements = || elements(text.chars_lossless(), None);
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {
@@ -428,7 +431,7 @@ const HALF_WIDTH_KANA: u8 = KANA_TYPE;
 const KATAKANA: u8 = KANA_TYPE + 1;
 const HIRAGANA: u8 = KANA_TYPE + 2;
 
-/// The kana pass weights, after the accents and before the variants: a small kana before its
+/// The kana pass weights, after the widths and before the kana types: a small kana before its
 /// letter, the long-vowel mark `ー` and the kana iteration marks `ゝ ゞ` after the letter they
 /// repeat, and `々` before it (`"かぁ" < "カア" < "かあ" < "カー" < "かー"`, `"かか" < "かゝ"`,
 /// `"人々" < "人人"`; probes/t3275-collation-width-kana ranks A99, A101:A102, A120:A123, A130:A131,
