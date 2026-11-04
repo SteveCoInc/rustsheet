@@ -48,7 +48,8 @@ returns the math within ε there. Every other point keeps Excel as its target (d
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- T.INV's own region (R3 case 1, T-3358).
+- The T.INV points of R3 case 1 (the Gate A tables, T-3358) stay with T-3358. This task owns only the t1531, t1543,
+  t3349 and m9 cells listed under "Decision 0267 cells".
 
 ## Decision 0267 cells
 Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 58 probes-numeric cells that no open task listed: 3 with the wrong type or error, 54 first wrong at the 11th significant digit or earlier, 1 first wrong at the 12th or 13th digit.
@@ -60,6 +61,9 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t3349-t-inv-2t-sweep.case.json (42): Calc!A211, A214-A217, A219, A224-A225, A230, A232, A237-A240, A242-A243, A246, A252, A257, A262-A264, A266, A270, A272-A274, A277, A279-A281, A283-A285, A287-A289, A291, A293-A294, A296, A300
 
 - [ ] The 3 type cells listed (t1543 A89, A91 and A92: the engine returns `#NUM!` where Excel returns a number for `BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)` and `BETA.INV(1E-200,0.5,100)`) never pass through an R3 mark while they are an error against a number (decision 0188 R3). The engine returns a number there. That is Excel's number, or the math where a mark applies.
+- [ ] Each R3 mark names one point whose committed 50-digit value (a math.json sidecar, or a Gate A table's math
+      column) shows Excel more than G = 1E-4 off. Marks go point by point: "tiny p" is not a band, and the
+      decision 0267 analysis numbers do not count as evidence until committed.
 - [ ] Every cell listed above does one of three things: it is an R3-marked cell where the engine returns the math within ε (R1(c) `R3Pass`); it matches Excel within half a unit of the 15th significant digit or has Excel's type and error; or it is left after decision 0056's time-box and accepted (decision 0267).
 
 ## Visible-parity stage
