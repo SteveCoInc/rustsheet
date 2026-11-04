@@ -33,5 +33,11 @@ IRR returns `#DIV/0!` where Excel does on conventional cash flows, instead of `#
 - [ ] The rule in docs/excel-semantics/financial.md.
 - [ ] `make check` green; reviewers approve.
 
+
+## Cells of T-3411's fresh sweeps
+T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model), where Excel is #DIV/0!, the engine #NUM!:
+- probes-numeric/t3411-irr-r4-fresh-3.case.json (12): Calc!A6, A18, A19, A21, A23, A24, A78, A79, A81, A85, A89, A93
+- probes-numeric/t3411-irr-r4-fresh-4.case.json (16): Calc!A2, A3, A4, A11, A13, A14, A15, A54, A68, A77, A85, A86, A89, A94, A103, A147
+
 ## Out of scope
 - Which series return a number (T-3406).

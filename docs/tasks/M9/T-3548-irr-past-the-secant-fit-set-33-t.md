@@ -51,6 +51,12 @@ of probes-numeric/t3478-irr-r4-wide outside Gate A's envelope, or each remaining
 - [ ] Gate A envelope on a fresh sweep of its own after the change (decision 0188 R4.2).
 - [ ] `make check` green; reviewers approve.
 
+
+## Cells of T-3411's fresh sweeps
+T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model), where the engine's type (number or #NUM!) differs from Excel's:
+- probes-numeric/t3411-irr-r4-fresh-3.case.json (49): Calc!A1, A2, A3, A4, A5, A7, A10, A11, A12, A13, A14, A15, A16, A20, A25, A27, A34, A36, A41, A44, A47, A51, A54, A55, A56, A61, A63, A65, A67, A72, A76, A77, A80, A82, A83, A84, A87, A90, A94, A95, A96, A97, A98, A100, A121, A130, A140, A141, A149
+- probes-numeric/t3411-irr-r4-fresh-4.case.json (62): Calc!A1, A5, A6, A7, A8, A9, A16, A17, A19, A21, A22, A24, A25, A27, A30, A31, A33, A35, A37, A41, A42, A43, A44, A50, A52, A53, A55, A56, A57, A59, A61, A63, A64, A65, A67, A69, A71, A72, A73, A74, A76, A79, A80, A82, A83, A84, A87, A88, A91, A92, A93, A96, A97, A98, A99, A129, A135, A136, A138, A143, A148, A149
+
 ## Out of scope
 - T-3347's near-zero roots and T-3406/T-3411's annuity boundary, except where one rule covers both (then say so in
   both tasks).

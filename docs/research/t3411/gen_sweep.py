@@ -11,7 +11,9 @@ Strata (25 cells each), conventional flows (one outlay, then inflows; 30% negate
   5 every axis wide
 
 Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [case name]
-(t3411-irr-r4-fresh: seed "T-3411/r4-fresh"; t3411-irr-r4-fresh-2: seed "T-3411/r4-fresh-2", round 2)
+(t3411-irr-r4-fresh: seed "T-3411/r4-fresh"; t3411-irr-r4-fresh-2: seed "T-3411/r4-fresh-2", round 2;
+t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: seed "T-3411/r4-fresh-4",
+round 4)
 """
 
 from __future__ import annotations
@@ -33,6 +35,8 @@ PER = 25
 FROZEN = {
     "t3411-irr-r4-fresh": "round 1: secant cap 220, stall residual 1E-4",
     "t3411-irr-r4-fresh-2": "round 2: secant cap 213",
+    "t3411-irr-r4-fresh-3": "round 3: fallback root residual 1E-4",
+    "t3411-irr-r4-fresh-4": "round 4: fallback residual 1E-4 one Newton step past the stop",
 }
 STRATA = [
     "long near-level, root -0.3..-0.01",
