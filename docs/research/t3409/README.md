@@ -13,6 +13,10 @@ The model (implemented in `crates/rustsheet-engine/src/functions/statistical/inc
 
 ## Replay (the fit)
 
+Scripts: `build.py` (the cells), `feat.py` (start and density features; imports `feat_helpers.py`), `feat_helpers.py`
+(Temme's P and Q, the density, `odds_newton`), `run2.py` (the replay), `bound.py` (step counts near the edge) and
+`sweep.py` (the fresh sweep's generator).
+
 `build.py` collects every GAMMA.INV/GAMMAINV/CHISQ.INV/CHISQ.INV.RT/CHIINV cell of probes/t2982-*, t3070-*,
 t3350-*, t3396-* and probes-numeric/fit-audit-t3070-*, t3350-r4-* with its oracle value; `feat.py` adds the start and
 its density (40-digit mpmath, Temme's leading term for P and Q); `run2.py SHAPE_LO SHAPE_HI` replays the search

@@ -4748,7 +4748,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
   cdfs, was about 2,250). The crossing does not depend on the start where the cdf is monotone, but the doubles near it
   are not always: four eval cells moved, GAMMA.xlsx F7 to Excel's 1.9999999999999996, gen-m9 ecc87f80077959e0 A231 to
   within 15 digits, and two `GAMMAINV(0.5,...)` cells (35e8168aae2b00f8 A196, 4bad303d32cc3f46 A289) from 1 ulp under
-  Excel's 3.6720607488508965 to 1 ulp over. From shape 1E9 the quantile is `huge_shape_quantile` (T-3070).
+  Excel's 3.6720607488508965 to 1 ulp over. From shape 1E5 the quantile is `huge_shape_quantile` (T-3070, T-3409).
   The crossing is not always the correctly rounded quantile: on 49 gated cells it lands 1 to 3 ulps off Excel where
   Excel is the correctly rounded closed form (`CHISQ.INV(0.5,2)` is 1.3862943611198906 = 2 ln 2 in Excel, ours
   1.3862943611198908; `CHISQ.INV.RT(0.5,2)` ours 1.3862943611198904; GAMMA.xlsx F75 Excel 0.6931471805599453 = ln 2,

@@ -101,7 +101,7 @@ const SEARCH_STEP_TOLERANCE: f64 = 1e-8;
 /// - Else NaN: `GAMMA.INV(0.5,6E9,1)` (A65), `GAMMA.INV(1E-300,6E+8,1)` (probes-numeric/
 ///   fit-audit-t3070-shape-min A19), `GAMMA.INV(p,1.2E10,1)` at every probed p (A85-A98).
 ///
-/// FITTED(T-3070, 2 cells, shape 1.5E10..1.95E10, ln density -708.54..-701.60)
+/// FITTED(T-3070, T-3409, 197 start cells and the cells either side, shape 1E5..1E300, ln density -708.54..-701.60)
 pub(crate) fn huge_shape_quantile(shape: f64, scale: f64, p: f64, tail: Tail, z: f64) -> f64 {
     let start = wilson_hilferty_quantile(shape, z);
     if gamma_density(shape, start, 1.0).is_none_or(|density| density < f64::MIN_POSITIVE) {
