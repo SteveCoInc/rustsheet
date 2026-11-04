@@ -3963,6 +3963,34 @@ Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
 Ours: `irr_fallback` stops at the first step under 1e-7 max(|v|, 1) within 50 steps; unchanged.
 Tasks: T-3411
 
+## IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more
+Rule (partial; the type rule where both secant runs fail): where Excel's IRR reaches the root by the fallback (the
+engine's `irr_fallback`, Newton on P(v) from v = 0), it is `#NUM!` when |NPV| at that root, evaluated as IRR's secant
+evaluates it (the running product at x = 1/v with the twice-rounded operators, `irr_npv`), is 1E-4 or more; a root
+with a smaller residual can still be `#NUM!` for other reasons (the level annuities below).
+- Inside the outlay families of probes/t3406-irr-num-boundary, where the returns and `#NUM!` share the same secant
+  path and the same Newton path, the residual alone parts them: A97-A108 return at 8.1E-6 to 7.8E-5 and are `#NUM!` at
+  1.26E-4 to 3.4E-4; A109-A120 return only on A117 (6.9E-5), the others are 3.2E-4 to 4.5E-3; A121-A132 return at
+  7.6E-6 to 8.4E-5 and are `#NUM!` at 1.11E-4 to 1.72E-4 (A125, A127, A130, A131, A121). A133-A144 (all under 4E-7)
+  all return.
+- Over all 710 IRR cells in eval whose secant runs fail (the replay of "IRR's returns where the secant fails are Newton
+  iterates"), with the Newton search run uncapped: no cell Excel returns has a residual above 9.54E-5
+  (probes-numeric/t3478-irr-r4-wide A83, t3411-irr-r4-fresh A128), and every cell with a residual of 1.106E-4
+  (t3406 A131) or more is an error. 1E-4 is the round value in that bracket.
+- Fresh sweep (decision 0188 R4, generated and oracle-filled after the freeze): probes-numeric/t3411-irr-r4-fresh-3,
+  150 cells. Against main's model, cell by cell: 0 cells lost, 3 gained (A49, A127, A128), type mismatches 52 -> 49.
+- Not the whole type rule. With the residual check and the Newton search uncapped, 71 cells main gets right turn
+  wrong: 39 level annuities of t3406 (A12-A24, A34-A48, A56-A65, A79; residuals 2E-13 to 3E-7, Excel `#NUM!`) and 32
+  scattered sweep cells. Excel's returning level annuities A1-A10, A25-A30 and A32-A33 are mostly not Newton iterates
+  from v = 0, so their path is still unknown; the n = 20 cutoff (A11 returns after 125 Newton steps, A12 is `#NUM!`
+  after 133) is no fixed step cap (n = 30 returns after 223, n = 60 after 577). The engine keeps its 50-step cap.
+Evidence: probes/t3406-irr-num-boundary, probes-numeric/t3478-irr-r4-wide, t3411-irr-r4-fresh, -fresh-2 and -fresh-3
+(excel-graph); the residuals from the replay in docs/research/t3411/fallback_iterates.py (`npv` at the Newton root).
+Status: VERIFIED (excel-graph) for the residual cut; FITTED (bracket 9.54E-5..1.106E-4)
+Ours: `irr_fallback` is `#NUM!` at a root with |`irr_npv`| >= `IRR_ROOT_RESIDUAL` = 1E-4 (T-3411); its 50-step cap is
+unchanged, so the rule acts only within it (+12 cells over the existing sweeps, +3 on fresh-3).
+Tasks: T-3411
+
 ## IRR over an error element
 Rule: IRR (probes/fin-irr-error-array, T-2390, excel-graph) gives `#VALUE!`, whatever the kind, when its values hold an
 error: in an array constant (`IRR({-100,#N/A,60})`, also `#DIV/0!`, `#NUM!`, `#VALUE!`, `#REF!`, `#NAME?`, first, middle or last,

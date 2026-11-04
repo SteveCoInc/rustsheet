@@ -3,7 +3,7 @@ id: T-3411
 title: "IRR on conventional flows: model what Excel does after its secant fails (Newton from v = 1 and the T-3406 candidates are refuted)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: todo
 priority: P1
 size: M
 tier: opus
@@ -91,6 +91,24 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
   digits) and (2) has no more type mismatches than main. Otherwise nothing ships and these notes record why.
 
 ## Progress notes
+2026-11-04, opus run (round 3, shipped as a partial step; the task stays open): the type split on the outlay
+families is the residual at the fallback's root. Inside t3406 A97-A132 (shared secant and Newton paths), Excel
+returns exactly where |`irr_npv`| at the Newton root is under 1E-4 (returns up to 8.4E-5, `#NUM!` from 1.106E-4);
+over all 710 secant-failing IRR cells in eval no return is above 9.54E-5. Shipped per the round-3 R4 plan above:
+`IRR_ROOT_RESIDUAL` = 1E-4 in `irr_fallback`, caps unchanged. Fresh sweep 3 (t3411-irr-r4-fresh-3, scored once):
+0 lost, +3, type mismatches 52 -> 49; also +5 fresh, +2 fresh-2, +5 t3478-wide, no other cell changes
+(`make eval-check`: 0 regressions). financial.md "IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more".
+- Still open (why the task is not done): with the Newton search uncapped plus the residual check, 219 cells would be
+  fixed but 71 that main gets right would break, 39 of them the t3406 level annuities A12-A24, A34-A48, A56-A65 and
+  A79 (residual under 3E-7, Excel `#NUM!`). Their cutoff in Newton steps (n = 20: 125 returns, 133 `#NUM!`; n = 30:
+  223 / 241; n = 40: 313 / 344; n = 60: 577 / 649) is no fixed cap and no fixed multiple of n (6.25..6.65 per flow at
+  n = 20, 9.6..10.8 at n = 60), and most returning annuities (A1-A10, A25-A30) are not Newton iterates from v = 0.
+  Measured and rejected as separators on the annuities: |NPV| at the secant's far first step (1.3E+20 returns vs
+  4.3E+23 `#NUM!` at n = 20, but 1.3E+131 returns at n = 60), the far step's d, and v0^n of the first Newton iterate.
+- Next step: find the annuities' path. Since their returns are not v = 0 Newton iterates, try Newton started at the
+  secant's far point or at v = 1/(1 + guess), each with the residual check, scoring type and digits on t3406 A1-A96
+  only; then raise the fallback cap only if the 71-cell regression list empties.
+
 2026-11-02, opus run (resumed from the landing notes below): the secant's cap moved to its own task, T-3806. The R4
 sections above record the two rounds. T-3806 was dropped in its review: round 2's cap of 213 loses
 probes-numeric/t3478-irr-r4-wide A227 (Excel `#NUM!`, the guess run converges at step 189), and A201/A221 need a cap
