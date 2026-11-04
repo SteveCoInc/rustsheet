@@ -3,7 +3,7 @@ id: T-3081
 title: "Probe how Excel opens an exported table filter: kept criteria, a criterion-less filterColumn, SUBTOTAL over its hidden rows"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
