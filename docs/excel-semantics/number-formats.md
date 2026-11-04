@@ -573,9 +573,11 @@ Rule: a `,` anywhere between digit placeholders of the integer part (not only in
 or after a fraction, a run of commas between placeholders prints nothing and neither groups nor
 scales: `0.00|#,##0` on 1234567.89 is "1234567.89|0", `0.0,0` and `0.0,,0` "1234567.89",
 `0.00|0,0` "1234567.89|00", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000" (a `,` in the integer part
-still groups: `#,##0.0,0` is "1,234,567.89"). After a literal of the decimal part a `,` before a
-placeholder prints (`0.00|,0` is "1234567.89|,0"), and a trailing one scales as usual (`0.00|0,`
-is "1234.56|8", `0.00|#,##0,` "1234.56|7890"). Evidence: probes/t3598-decimal-part-commas (108 cells,
+still groups: `#,##0.0,0` is "1,234,567.89"), and so does one right after the point (`0.,0` is
+"1234567.9"). After a literal of the decimal part a `,` prints, also last (`0.00|,0` is
+"1234567.89|,0", `0.0|,` "1234567.9|,"); a trailing one after a placeholder or the point scales as
+usual (`0.00|0,` is "1234.56|8", `0.00|#,##0,` "1234.56|7890", `0.,` "1235."; probes/t3666-review-followups
+A7:A12). Evidence: probes/t3598-decimal-part-commas (108 cells,
 four values, excel-graph 2026-11-04, T-3598); in a scientific code the commas after the point are
 unprobed and keep the old reading. Implemented in: `Token::Comma` (formatter/parser.rs). `0`/`?` placeholders beyond the number's
 digits pad the grouped result, and the padding is grouped too: with `0` a padded group shows its
@@ -626,8 +628,9 @@ Tasks: T-0954
 ## `mm` after a minute is a month
 Rule: once an `m`/`mm` has been read as a minute, every later `m`/`mm` in the section is a month, unless an hour
 comes between them: `h:mm|h:mm` on 13:02 is "13:02|1:02 PM" with `AM/PM` and `h:mm h:mm AM/PM` "13:02 1:02 PM"
-(probes/t3710-ampm-hour-tokens A5, A14; `hour_pending`, T-3710). Unprobed: an hour, then a date token, then `mm`
-after a minute (`h:mm|h|yyyy-mm`; read as a minute). `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 45000.75 "18:00|2023-03-15"; `hh mm|dd mm`
+(probes/t3710-ampm-hour-tokens A5, A14; `hour_pending`, T-3710). An hour, then a date token, then `mm`
+after a minute is a minute too (`h:mm|h|yyyy-mm` is "18:00|18|2023-00", `h:mm|h d mm` "18:00|18 15 00";
+probes/t3666-review-followups A13:A15). `h:mm|yyyy-mm-dd` on 0.25 is "6:00|1900-01-00" and on 45000.75 "18:00|2023-03-15"; `hh mm|dd mm`
 is "06 00|00 01"; `mm:ss|yyyy-mm` is "00:00|1900-01". With an hour but no minute yet, `mm` is a minute even after a
 date token: `h|yyyy-mm` is "6|1900-00".
 Evidence: probes/mm-after-time-and-date-token (22 cells, excel-graph 2026-10-30), probes/t2779-hebrew-saka-more E7.
@@ -830,12 +833,15 @@ does for most but not all (`[$-1]` and `[$-2]` have none, `[$-12]` is Korean); 0
 LCIDs [MS-LCID] 2.2 defines (reserved and pseudo-locale entries excepted), less 0x1 and 0x2. Every locale has its own
 names, and regional variants differ often (en-NZ "pm", fr-CM "soir", es-GT "p. m."), so no fallback to a language's
 names is right: Excel's names under all 845 LCIDs that have a locale are tabulated (335 distinct sets). Under its own
-calendar every locale is Gregorian with ASCII digits, `A/P` prints the locale's day halves and `d mmmm` the plain
+calendar every locale prints the Gregorian year, month and day with ASCII digits (a Japanese LCID's `g` and `e` still
+print its eras), `A/P` prints the locale's day halves and `d mmmm` the plain
 `mmmm` (no genitive forms). One odd value: under 0xF803 (a Catalan alias) `mmmm` of January is all twelve genitive
 names joined by tabs.
 **BCP-47 tags** resolve the same way: Excel knows 926 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
 its LCID where it has one; a tag whose LCID has no locale still names one (`[$-ar]`, `[$-bg]`, `[$-qps-ploc]`), and so
-does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). A tag Excel does not know reads as extended hex, at any length: the
+does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). After a `B2` such a tag is Hijri with its LCID's Hijri names
+(Arabic for `ar`, English for the rest) and its own day halves (`B2[$-ar]yyyy|mmmm|h A/P` is "1444|شعبان|6 م",
+`B2[$-pt-AO]` "1444|Sha'ban|6 p.m.", `B2[$-aa-ET]` "... 6 carra"; probes/t3666-review-followups A1:A6). A tag Excel does not know reads as extended hex, at any length: the
 value wraps at 32 bits (`[$-rhg-Rohg-BD]` is 0xEC91FDBD), and the calendar is the third byte without its top bit
 (0x91 is 0x11, Chinese lunar; 0x83 is 3, Japanese eras, which over an LCID with no locale print en-US names: `[$-myv-RU]`
 prints 2023-03-15 as "05-03-15"), checked against all 196 unknown tags and over LCIDs with a locale

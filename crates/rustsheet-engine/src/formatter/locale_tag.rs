@@ -419,25 +419,26 @@ fn without_locale(calendar: u32) -> LocaleTag {
 /// A BCP-47 tag Excel knows (`excel_date_names::tag_locale`, by its language for an unknown
 /// region) is the LCID [MS-LCID] gives it, with that locale's own calendar (`[$-ja-JP]g` is "R"),
 /// or Hijri after a `B2` prefix. A tag whose LCID has no locale (`[$-ar]` is LCID 1, `[$-qps-ploc]`
-/// 0x501) or that has no LCID (`[$-pt-AO]`) has its own names in the Gregorian calendar, and after
-/// a `B2` its language's LCID (probes/t3666-locale-tag-names).
+/// 0x501) or that has no LCID (`[$-pt-AO]`) has its own names in the Gregorian calendar
+/// (probes/t3666-locale-tag-names), and after a `B2` the Hijri date with its LCID's Hijri names and
+/// its own day halves (`B2[$-ar]yyyy|mmmm|h A/P` is "1444|شعبان|6 م", `B2[$-pt-AO]` "1444|Sha'ban|6
+/// p.m."; probes/t3666-review-followups A1:A5).
 fn resolve_bcp47(tag: &str, hijri_prefix: bool) -> LocaleTag {
     let Some(locale) = tag_locale(tag) else {
         return LocaleTag::Silent;
     };
-    let with_locale = |lcid: Option<u16>| lcid.filter(|id| lcid_names(*id).is_some());
-    let lcid = with_locale(locale.lcid).or_else(|| {
-        let language = tag.split('-').next()?;
-        with_locale(tag_locale(language)?.lcid).filter(|_| hijri_prefix)
-    });
-    match lcid {
-        Some(id) => resolve_lcid(hijri_default(u32::from(id), hijri_prefix)),
-        None => LocaleTag::Names(Localized::new(
-            locale.names,
-            Some(locale.names),
-            Calendar::Gregorian,
-            false,
-        )),
+    match locale.lcid {
+        Some(id) if lcid_names(id).is_some() => {
+            resolve_lcid(hijri_default(u32::from(id), hijri_prefix))
+        }
+        lcid => {
+            let (names, calendar) = if hijri_prefix {
+                (hijri_names(lcid.unwrap_or(0)), Calendar::Hijri)
+            } else {
+                (locale.names, Calendar::Gregorian)
+            };
+            LocaleTag::Names(Localized::new(names, Some(locale.names), calendar, false))
+        }
     }
 }
 

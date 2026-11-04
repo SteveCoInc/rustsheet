@@ -1986,6 +1986,7 @@ C	probes/t3666-lcid-locale-map.case.json	255
 C	probes/t3666-lcid-sublanguage-sweep.case.json	534
 C	probes/t3666-locale-names.case.json	853
 C	probes/t3666-locale-tag-names.case.json	1122
+C	probes/t3666-review-followups.case.json	15
 C	probes/t3677-sumx-running-overflow-snap.case.json	40
 C	probes/t3678-time-argument-far-negative.case.json	102
 C	probes/t3678-yearfrac-basis1-within-a-year.case.json	20

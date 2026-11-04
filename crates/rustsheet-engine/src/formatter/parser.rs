@@ -402,23 +402,29 @@ impl Parser {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
                         tokens.push(TextToken::Literal(','));
-                    } else if last_token_is_digit
+                    } else if found_decimal_dot
+                        && !is_scientific
+                        && tokens.last().is_some_and(TextToken::is_literal)
+                    {
+                        // A `,` after a literal of the decimal part prints, also last (`0.00|,0` is
+                        // "1234567.89|,0", `0.0|,` "1234567.9|,"; probes/t3598-decimal-part-commas
+                        // A26, t3666-review-followups A11).
+                        tokens.push(TextToken::Literal(','));
+                    } else if (last_token_is_digit
+                        || matches!(tokens.last(), Some(TextToken::Period)))
                         && (found_decimal_dot || fraction.is_some())
                         && !is_scientific
                         && self.digit_after_commas(&next_token)
                     {
                         // Excel: only a `,` in the integer part groups. After the decimal point or a
-                        // fraction a run of commas between placeholders prints nothing and neither
+                        // fraction a run of commas before a placeholder prints nothing and neither
                         // groups nor scales (`0.00|#,##0` on 1234567.89 is "1234567.89|0", `0.0,,0`
-                        // "1234567.89", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000"; a trailing one
-                        // still scales: `0.00|0,` is "1234.56|8"; probes/t3598-decimal-part-commas).
+                        // "1234567.89", `0.,0` "1234567.9", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000");
+                        // a trailing one still scales: `0.00|0,` is "1234.56|8", `0.,` "1235."
+                        // (probes/t3598-decimal-part-commas, t3666-review-followups A7:A10).
                         while next_token == Token::Comma {
                             next_token = self.lexer.next_token();
                         }
-                    } else if found_decimal_dot && !is_scientific && next_token_is_digit {
-                        // A `,` after a literal of the decimal part prints (`0.00|,0` is
-                        // "1234567.89|,0"; probes/t3598-decimal-part-commas A26).
-                        tokens.push(TextToken::Literal(','));
                     } else if last_token_is_digit && next_token_is_digit {
                         use_thousands = true;
                     } else if digit_count > 0 {
