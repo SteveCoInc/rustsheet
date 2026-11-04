@@ -3,7 +3,7 @@ id: T-4253
 title: "Probe the labels Excel writes when it relabels a decimal numeric pivot group"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
