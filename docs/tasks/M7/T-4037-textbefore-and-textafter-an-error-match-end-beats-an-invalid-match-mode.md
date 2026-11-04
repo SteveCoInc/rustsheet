@@ -18,10 +18,11 @@ TEXTBEFORE and TEXTAFTER return an error-valued `match_end` (5th argument) where
 Found by the T-3513 arg-pairs batch (excel-graph). Signature: text, delimiter, instance_num, match_mode, match_end,
 if_not_found. In each failing cell match_end is an error value (a literal such as `#N/A` or `Data!G9` = `#DIV/0!`) and
 match_mode is a number outside {0, 1}: 2, 7 (`Data!G1`), -1, -2.5 (`Data!G3`), "12" (`Data!G5`) or "2.5". Excel returns
-the match_end error; the engine returns `#VALUE!` for the invalid match_mode. The boundary is already in the batch: a
-non-numeric match_mode ("x" in Data!G6, "", blank G7) still gives `#VALUE!` beside an error match_end (9f9357dbf7e17803
-A343, A346, A409, A412; b2139ff37d606cb4 A373, A376, A439, A442), so the rule looks like "an error match_end wins over
-the `#VALUE!` of an out-of-range numeric match_mode, not over a match_mode that fails to coerce". Instance_num 0 is not
+the match_end error; the engine returns `#VALUE!` for the invalid match_mode. The boundary is already in the batch: a match_mode text that fails to coerce ("x" in Data!G6, "abc", or the empty
+string in Data!G7) still gives `#VALUE!` beside an error match_end (9f9357dbf7e17803 A346, A412; b2139ff37d606cb4 A376,
+A439, A442), while a blank match_mode cell (Data!H1, H2) coerces to 0 and gives the match_end error (9f9357dbf7e17803
+A589, A592). So the rule looks like "an error match_end wins over the `#VALUE!` of an out-of-range numeric match_mode,
+not over a match_mode that fails to coerce". Instance_num 0 is not
 the cause (it passes elsewhere). It is an error-ordering question inside `around_options` in the TEXTBEFORE/TEXTAFTER
 module of `crates/rustsheet-engine`. Use the `excel-probe` skill to fix the boundary first (the lock lines come out with
 `--lower-visible-lock`). docs/excel-semantics/text.md records the observation (not implemented).
