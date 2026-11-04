@@ -3,7 +3,7 @@ id: T-4226
 title: "Probe whether SUBTOTAL and AGGREGATE skip the other cells of a CSE array formula that calls SUBTOTAL"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: todo
 priority: P3
 size: S
 tier: opus
@@ -46,3 +46,14 @@ that calls SUBTOTAL, as they skip the spilled cells of a dynamic-array one, and 
 - Resumed by an opus run, 2026-11-04: the notes hold (no case key writes a multi-cell `<f t="array">`). The harness
   work is split out as T-4227; this probe waits on it (`depends_on`). `array_formulas` in the Context above is the
   key T-4227 adds.
+
+## Handoff
+Sonnet run found the probe cannot be written yet: the `rustsheet-case/v1` sheet spec (`SheetSpec` in
+crates/rustsheet-eval/src/case.rs, docs/architecture/eval-harness.md) has no way to declare a CSE
+(legacy array) block. The "case `array_formulas`" the Context names does not exist as a sheet field
+(searched case.rs, spec2xlsx.py, eval/suites: only `legacy_formulas`, which are non-array `<f>`).
+Next steps: (1) add an `array_formulas: [{ref, formula}]` sheet field written by spec2xlsx as
+`<f t="array" ref=...>` (with a note in eval-harness.md), have the engine adapter enter it with
+`Model::set_user_array_formula`, and check that the excel-graph backend (Graph workbook API) can load such a
+file; (2) write the probe per the Context; (3) fill with `rustsheet-oracle fill -b excel-graph --suite probes`
+(excel-graph is OK); (4) numbers.md rule + engine change. Consider splitting (1) into its own harness-lane task.
