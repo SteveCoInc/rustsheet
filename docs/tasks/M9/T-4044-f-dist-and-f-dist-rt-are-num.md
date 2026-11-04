@@ -25,7 +25,7 @@ df2 = 1E10, from the rule T-4030 finds, not from a cut at the probed cells.
 - T-4030 (probes-numeric/t4030-f-dist-rt-df1-boundary, excel-graph 2026-11-04) bracketed the band: at df2 1E10 Excel
   is `#NUM!` at df1 77, 78 and 79 and a number at 76 and 80; at df2 5E9 the first `#NUM!` is df1 79; `BETA.DIST(x,a,b)`
   shows the same band in (a, b) (statistics.md "Incomplete beta at a huge first shape"). The engine returns a number at
-  every `#NUM!` cell and misses the last digits of the other cells. Implement the band, not a cut at the probed cells.
+  the 23 `#NUM!` cells outside the 2E10 rows (A63 to A84 already match) and misses the last digits of the other cells, and is about 6.5E-8 off at df1 80 and 100 (A39, A40, A61, A62). Implement the band, not a cut at the probed cells.
   Cells owned by this task (61):
   - probes-numeric/t4030-f-dist-rt-df1-boundary.case.json: Calc!A1, A3, A5, A7, A9, A13, A15, A17, A19, A21, A23, A25, A27, A29, A31, A33, A34, A35, A36, A37, A38, A39,
     A40, A41, A42, A43, A44, A45, A46, A47, A48, A49, A50, A51, A53, A54, A55, A56, A57, A58, A59, A60, A61,

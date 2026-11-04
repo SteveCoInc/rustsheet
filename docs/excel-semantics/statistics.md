@@ -4177,10 +4177,13 @@ within 1E-15 relative / largest relative error:
   `F.DIST(2,df1,1E10,TRUE)` are numbers up to df1 = 76 (b = 38) and `#NUM!` at df1 = 77 and 78 (b = 38.5, 39) and 79; df1 = 80
   and 100 are numbers again (`F.DIST.RT(2,80,1E10)` 2.8087221288968924E-07), so it is a band, not a threshold. At df2 = 5E9
   the first `#NUM!` is df1 = 79 (b = 39.5; df1 61 to 78 are numbers). The band is in a, b only: `BETA.DIST(x,5E9,b,TRUE)`
-  is `#NUM!` for b = 38.5 to 39.5 and 0 (a number) from b = 40, and equals the F result at matching shapes (b = 30 to 38
-  numbers). With x chosen for a tail near 1E-6, the first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
-  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9. So the lower edge falls as a grows and the upper edge is b < 40, the
-  `b <= 40` bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. df2 = 2E10 is `#NUM!` for every
+  is `#NUM!` for b = 38.5 to 39.5 and 0 (a number) from b = 40, and has the same type (number or `#NUM!`) as the F result at
+  the same shapes (b = 30 to 38 numbers); the values agree only to about 6 digits (`BETA.DIST` x is a rounded copy of
+  df2/(df2 + df1 x), and at a = 5E9 one ulp of x moves I by about 5E-7). The first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
+  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at 1E9 to 6E9, and about 1E-6 to 7E-6 at 5E9; whether
+  the edge depends on x is unpinned). So the lower edge falls as a grows and the upper edge is b0 < 40, the
+  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at df1 80 and 100 (df2 1E10) is about 7E-9 relative from the 60-digit
+  mpmath value, the engine about 6.5E-8 (A39, A40, A61, A62). df2 = 2E10 is `#NUM!` for every
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
