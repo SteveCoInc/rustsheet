@@ -3,7 +3,7 @@ id: T-4237
 title: "Confirm T-4200's UNIQUE merge model on a probe made after its freeze: 6-text sets mixing the A3-A5 cycle with A6-A8, and two-column rows where both columns cycle"
 milestone: M7
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
