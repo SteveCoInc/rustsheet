@@ -3,7 +3,7 @@ id: T-4199
 title: "DECIMAL: probe the shapes T-1198 left unprobed (an error radix with over-long text, control characters and blanks before the digits, a blank or empty-text cell) and match"
 milestone: M5
 lane: functions-math
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -48,15 +48,28 @@ text" lists as "Not probed". The engine guesses on each of them today.
   is a known character class, look for an existing whitespace helper before writing one: `rg "trim_start_matches|is_excel_space" crates/rustsheet-engine/src`.
 
 ## Acceptance criteria
-- [ ] A new probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds items 1 to 5 above, with a
+- [x] A new probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds items 1 to 5 above, with a
       sidecar.
-- [ ] engineering.md "DECIMAL of unreadable text" states the rule for each item, cites the new cells, and drops or
+- [x] engineering.md "DECIMAL of unreadable text" states the rule for each item, cites the new cells, and drops or
       narrows its "Not probed" line.
-- [ ] The engine matches every new cell.
-- [ ] probes/decimal-unreadable, probes/t2198-m5-lift-argument-kinds and every gen-m5 DECIMAL cell still pass. No new
+- [x] The engine matches every new cell.
+- [x] probes/decimal-unreadable, probes/t2198-m5-lift-argument-kinds and every gen-m5 DECIMAL cell still pass. No new
       lines in eval/baseline/*.txt (`make eval-baseline` reports 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - BASE and the engineering base conversions (BIN2DEC, HEX2DEC and the others). Their argument kinds are T-3124's
   and T-3214's.
+
+## Outcome
+- New probe probes/t4199-decimal-unprobed-shapes (80 formulas, 87 scored cells, excel-graph 2026-11-04) covers
+  items 1 to 5. The array constant `{2,NA()}` is not a valid Excel formula (the workbook is refused), so item 5
+  builds its arrays with `CHOOSE`.
+- One engine change: `fn_decimal` checks the 255-unit length before it reads the radix, so over-long text is
+  `#VALUE!` against an error radix too (Excel: `DECIMAL(REPT("1",256),NA())` is `#VALUE!`; ours was `#N/A`).
+  Every other shape already matched: the skip set is exactly space and tab, radix 16 skips blanks, zeros, one
+  `x` in that order and nothing after, blank and empty-text cells are 0, and arrays lift element by element.
+- engineering.md "DECIMAL of unreadable text" states each rule with the new cells; its "Not probed" line now
+  names only CHAR(1) to CHAR(8) and CHAR(14) to CHAR(27).
+- Eval delta: probes +1 case, 87 cells, all passing; decimal-unreadable (84) and t2198-m5-lift-argument-kinds
+  (104) still pass; no baseline lines added.
