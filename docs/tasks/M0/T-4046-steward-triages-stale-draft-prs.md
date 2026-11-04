@@ -45,8 +45,8 @@ Decision 0264 has the full account and the options considered.
 ## Out of scope
 - Re-applying the stored steward routine prompts (only the owner can edit routines).
 - An age limit on branch claims in `scripts/tasks.py` (decision 0264, options considered).
-- Acting on the nine drafts themselves. The next steward run triages them under the new rule;
-  the owner gets a per-PR recommendation in the session that filed this task.
+- Re-running the triage: the owner approved applying it by hand to the nine drafts in this task's session
+  (Outcome); later drafts are the steward's.
 
 ## Outcome
 Docs and skill only: decision 0264, the steward skill's "Stale drafts" rule, routine step 5 and
@@ -56,5 +56,6 @@ nine drafts by hand:
   T-3623 #2841, fixed the exit_owners parsing that it worked around);
 - closed at the owner's request: #2788 (another session owns T-3544);
 - blocker gone: #2671, with T-3424 unblocked on its branch (T-3579 is done) for the opus worker;
-- ready: #2717, marked ready and enqueued;
+- ready: #2717. Marking it ready was refused: the session's GitHub account may not change a PR's draft
+  state. The steward's bucket 4 needs that permission; until then a ready draft is listed for the owner;
 - salvage filed, then closed: #1885 (T-4050), #2529 (T-4051; T-3406 refuted its engine stage), #2573 (T-4052).
