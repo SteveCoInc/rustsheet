@@ -3,7 +3,7 @@ id: T-3411
 title: "IRR on conventional flows: model what Excel does after its secant fails (Newton from v = 1 and the T-3406 candidates are refuted)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -111,6 +111,23 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
   or closeness bucket) and (2) has no more type mismatches than main; on r4-T-3411 every point is inside the Gate A
   envelope or fails the same way on main. Otherwise nothing ships and these notes record why.
 
+## Outcome
+Done as the residual-cut step of the type rule (round 4 of the R4 plan above); the rest of the type rule, the level
+annuities that need the fallback's cap lifted, moved to T-4027.
+- Engine: `irr_fallback` takes one more Newton step from its stop iterate and is `#NUM!` when |`irr_npv`| there is
+  `IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate. FITTED(T-3411, bracket 9.155E-5..1.2207E-4),
+  decision 0261 (fitted lock 9 -> 10). Unit test `irr_fallback_tests_the_residual_one_newton_step_past_its_stop`.
+- R4 guards (round-4 plan): bracket over all 169 IRR cases; R4.1 split train +11 / test +4 bit-exact, 0 lost, the one
+  test cell inside the train bracket (wide A90) on Excel's side; fresh sweep probes-numeric/t3411-irr-r4-fresh-4: 5
+  gained, 0 worse, type mismatches 67 -> 62; Gate A batch accuracy/IRR/r4-T-3411 (300 points): 31 outside the
+  envelope against 32 on main, the same points and kinds, carried in known-failures.tsv by T-3548 (27), T-3407 (3)
+  and T-3408 (1); `rustsheet-eval accuracy` 0 failing.
+- Eval delta, cell by cell against main over every IRR case: 16 cells better (15 now pass: t3411-irr-r4-fresh A31,
+  A39, A45, A144, A148; fresh-2 A50, A146; fresh-3 A49, A127, A128; t3478-irr-r4-wide A69, A70, A90, A258, A262;
+  wide A275 from a type to an error-code mismatch), 0 worse; plus the new fresh-4 case (69/150). Round 3's three
+  losses (fresh-2 A43, wide A79, A292) are gone.
+- financial.md "IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more" updated.
+
 ## Progress notes
 2026-11-04, opus run (round 3, shipped as a partial step; the task stays open): the type split on the outlay
 families is the residual at the fallback's root. Inside t3406 A97-A132 (shared secant and Newton paths), Excel
@@ -216,7 +233,7 @@ with docs/research/t3411/fallback_iterates.py; no engine change:
   the root against the secant's last bracket), and probe it with excel-probe on a family whose outlay moves by
   1E-4 steps.
 
-## Landing notes (2026-11-04, PR #3063)
+## Landing notes (2026-11-04, PR #3063; acted on by round 4 above)
 - PR #3063 (draft), head 8bb93fa98 before these notes. CI was running on that head. Reviewers on 1779ea4f: security
   APPROVE, design APPROVE (MINOR: no unit test), excel-fidelity REQUEST_CHANGES. None has reviewed the new head.
 - Fidelity's blocking finding is correct: the engine checks |`irr_npv`| at the fallback's stop iterate, but the bracket
