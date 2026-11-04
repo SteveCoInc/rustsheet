@@ -64,7 +64,12 @@ def test_graph_adds_each_name_before_calculating_and_goes_on_when_refused(
         return SimpleNamespace(json=lambda: {"id": "1", "eTag": etag}, content=b"saved", status_code=200)
 
     monkeypatch.setattr(graph, "_call", call)
-    graph.recalc(build_xlsx(_spec([{"name": "N", "formula": _BODY}, {"name": "M", "formula": "=1"}])))
+    _, info = graph.recalc(
+        build_xlsx(_spec([{"name": "N", "formula": _BODY}, {"name": "M", "formula": "=1"}]))
+    )
+    # The uploaded file's name, not the last name defined (T-3264 review).
+    assert info.workbook_name is not None
+    assert info.workbook_name.endswith(".xlsx")
     tails = [t for _, t, _ in calls]
     first = tails.index("/workbook/names/add")
     assert tails[first : first + 3] == [

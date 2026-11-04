@@ -1778,6 +1778,13 @@ C	probes/t3263-cf-abs-65.case.json	1
 C	probes/t3263-cf-long-299.case.json	1
 C	probes/t3263-dv-abs-65.case.json	1
 C	probes/t3263-dv-long-299.case.json	1
+C	probes/t3264-api-name-65.case.json	2
+C	probes/t3264-api-name-66.case.json	2
+C	probes/t3264-name40-cell25.case.json	2
+C	probes/t3264-name40-cell26-typed.case.json	3
+C	probes/t3264-name40-cell26.case.json	2
+C	probes/t3264-name65-cell65-typed.case.json	3
+C	probes/t3264-name65-cell65.case.json	2
 C	probes/t3266-minus-abs-1022-stored.case.json	2
 C	probes/t3266-minus-abs-1022-typed.case.json	2
 C	probes/t3266-minus-abs-1023-typed.case.json	2

@@ -381,8 +381,9 @@ class GraphBackend:
             for entry in typed_entries(xlsx):
                 self._type_entry(item_url, sid, entry)
             self._replay_sheet_ops(item_url, sid, recorded_sheet_ops(xlsx))
-            for name, formula in recorded_api_names(xlsx):
-                self._add_name(item_url, sid, name, formula)
+            # Not `name`: that is the uploaded file's name, returned as `workbook_name` below.
+            for defined, formula in recorded_api_names(xlsx):
+                self._add_name(item_url, sid, defined, formula)
             # Load, this rebuild and the scratch edit below are three calculations; the eval
             # adapter repeats them for iterative cases (`ORACLE_CALCULATIONS` in
             # crates/rustsheet-eval/src/engine.rs, T-0429): keep the two in step.

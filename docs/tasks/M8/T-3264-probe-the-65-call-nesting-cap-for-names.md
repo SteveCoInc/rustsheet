@@ -42,5 +42,10 @@ Oracle evidence for two unprobed corners of the 65-call cap on names, and the en
 - Engine: `Model::define_name` (non-loading path, so `Txn::define_name` and `define_sheet_name`) refuses
   a body nesting more than 65 calls (`TOO_MANY_NESTED_CALLS_MESSAGE`); the importer keeps refusing the
   loaded case (T-3143). syntax.md "Formula nesting depth cap" records it all.
-- Eval delta: probes +7 cases, 15 cells, all passing (t3264-api-name-66 S!A1 failed before the engine
+- Eval delta: probes +7 cases, 16 cells, all passing (eval/baseline/probes.txt records them) (t3264-api-name-66 S!A1 failed before the engine
   change: 1 instead of `#NAME?`); no regressions.
+- Review round 1 (excel-fidelity): the Graph backend's api-name loop shadowed the uploaded file's
+  name, so the two api-name sidecars recorded `workbook_name` "N"; fixed (with a test) and both
+  re-filled from excel-graph with the stale oracle cache entries removed (same values).
+- Follow-up: T-4014 (sheet-scoped `names/add`, which the engine now refuses by extension, and undo of a
+  deleted name whose body was edited past the cap).
