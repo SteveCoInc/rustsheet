@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use crate::area_budget::NODE_UNITS;
-use crate::arithmetic::{divide, minus, plus, power, times};
+use crate::arithmetic::{divide, minus, operator_power, plus, times};
 use crate::calc_result::CalcResult;
 use crate::defined_names::ParsedDefinedName;
 use crate::expressions::parser::{left_chain, value_operands, Node};
@@ -329,7 +329,7 @@ impl Model {
                 OpProduct::Times => self.handle_arithmetic(value, right, cell, &times),
                 OpProduct::Divide => self.handle_arithmetic(value, right, cell, &divide),
             },
-            Node::OpPowerKind { .. } => self.handle_arithmetic(value, right, cell, &power),
+            Node::OpPowerKind { .. } => self.handle_arithmetic(value, right, cell, &operator_power),
             Node::OpConcatenateKind { .. } => self.handle_concatenate(value, right, cell),
             Node::CompareKind { kind, .. } => self.handle_comparison(value, right, cell, kind),
             _ => value,

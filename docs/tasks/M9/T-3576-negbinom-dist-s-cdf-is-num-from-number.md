@@ -4,10 +4,11 @@ title: "NEGBINOM.DIST's cdf is #NUM! from number_s 1E+13 at 28 failures"
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
 depends_on: [T-3553]
+campaign: semantics
 ---
 
 ## Goal
@@ -36,3 +37,15 @@ probed and recorded in statistics.md.
 
 ## Out of scope
 - The accuracy of NEGBINOM.DIST at a large number of failures (T-3352).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 7 probes-numeric cells that no open task listed: 7 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3553-negbinom-huge-s.case.json (7): Calc!A1, A6-A7, A10-A11, A15-A16
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

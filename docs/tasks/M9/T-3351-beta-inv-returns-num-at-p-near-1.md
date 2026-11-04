@@ -58,3 +58,13 @@ the answer is 1.0.
 Decision 0083 and 0114 (`accuracy`): done when every cell this task owns is within half a unit of the 15th significant
 digit of Excel's value with the right type and error, and the fresh sweep shows the Gate A envelope (decision 0188 R2).
 Bit-level residue moves to a follow-up with `defer: phase-1b`.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 46 probes-numeric cells that no open task listed: 46 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/m9-beta-inv.case.json (4): Calc!A42, A77, A112, A147
+- probes-numeric/t3566-beta-inv-tiny-shape-and-range.case.json (42): Calc!A19-A21, A91-A93, A130-A132, A145-A153, A157-A159, A163-A177, A187-A189, A193-A195
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

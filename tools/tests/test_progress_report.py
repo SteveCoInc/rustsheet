@@ -250,7 +250,7 @@ def test_functions_come_from_the_catalog_with_the_reports_tiers() -> None:
 def test_tier_table() -> None:
     text = parity.tier_table(data())
     assert "| Exact | every cell bit-exact | 1 | 16.67% | 0 |" in text
-    assert "| &lt; 99% | &lt; 99% of cells within 15 digits | 1 | 16.67% | 1 |" in text
+    assert "| &lt; 99% | &lt; 99% of cells not visibly off | 1 | 16.67% | 1 |" in text
     assert "| Unscored | no scored Excel cell | 1 | 16.67% | 1 |" in text
     assert "| **All** |  | **6** |  | 2 |" in text
     summary = parity.tier_summary(data())

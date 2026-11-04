@@ -1,6 +1,6 @@
 use super::{
-    divide, extended_product, extended_quotient, extended_sqrt, extended_sum, minus, plus, power,
-    times,
+    divide, extended_product, extended_quotient, extended_sqrt, extended_sum, minus,
+    operator_power, plus, power, times,
 };
 use crate::expressions::token::Error;
 
@@ -194,4 +194,18 @@ fn extended_sqrt_of_a_subnormal_rounds_twice() {
     let x = f64::from_bits(344_225_268_385_227);
     assert_eq!(extended_sqrt(x), 4.123_952_952_442_882e-155);
     assert_ne!(x.sqrt(), extended_sqrt(x));
+}
+
+// probes/seriessum-subnormal-power-and-term B15, A16, A17 (excel-graph, T-3950): the operator
+// keeps the subnormal at x^2, POWER flushes it, and other exponents flush for both.
+#[test]
+fn operator_keeps_a_subnormal_square_and_power_flushes_it() {
+    for x in [1e-160, 1e-155, 1.1e-155] {
+        let kept = operator_power(x, 2.0).unwrap_or(f64::NAN);
+        assert!(kept > 0.0 && kept < f64::MIN_POSITIVE, "{x}");
+        assert_eq!(power(x, 2.0), Ok(0.0), "{x}");
+    }
+    assert_eq!(operator_power(0.5, 1074.0), Ok(0.0));
+    assert_eq!(operator_power(2.0, -1074.0), Ok(0.0));
+    assert_eq!(operator_power(1e200, 2.0), Err(Error::NUM));
 }
