@@ -3,7 +3,7 @@ id: T-2614
 title: "TRIMMEAN: an error percent beats data with no number (gen-m9 a5342a7e24fd803e A288)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
