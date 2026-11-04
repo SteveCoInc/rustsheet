@@ -38,9 +38,9 @@ TIER_MEANINGS = {
     "exact": "every cell bit-exact",
     "ulp4": "every cell within 4 ulp",
     "digits15": "every cell within 15 significant digits",
-    "rate999": f"{GE} 99.9% of cells within 15 digits",
-    "rate99": f"99{EN}99.9% of cells within 15 digits",
-    "below99": "< 99% of cells within 15 digits",
+    "rate999": f"{GE} 99.9% of cells not visibly off (15 digits; 13 for the decision 0267 family)",
+    "rate99": f"99{EN}99.9% of cells not visibly off",
+    "below99": "< 99% of cells not visibly off",
     "unscored": "no scored Excel cell",
 }
 BUCKET_LABELS = {

@@ -204,9 +204,11 @@ pub fn within_significant_digits(expected: f64, actual: f64, digits: i32) -> boo
     gap <= half_unit
 }
 
-/// The incomplete-beta family, whose numbers count at 13 digits (decision 0267): one TOMS 708
-/// `bratio` kernel serves them all (docs/excel-semantics/statistics.md, "Incomplete beta is
-/// TOMS 708 `bratio`"), and their 14th and 15th digits are Excel's rounding noise there.
+/// The functions decision 0267 rules on, whose numbers count at 13 digits: their cdfs run on
+/// TOMS 708 `bratio` (docs/excel-semantics/statistics.md, "Incomplete beta is TOMS 708
+/// `bratio`"), and the ruling's evidence covers their cdfs, densities and pmfs alike: there
+/// Excel's 14th and 15th digits are its rounding noise (statistics.md, "Incomplete-beta family:
+/// Excel's 14th and 15th digits are noise").
 pub const THIRTEEN_DIGIT_FAMILY: &[&str] = &[
     "BETA.DIST",
     "BETADIST",

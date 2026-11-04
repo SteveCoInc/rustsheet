@@ -6479,6 +6479,12 @@ more than G, and they need an owner ruling:
 - T.INV and F.INV at p from 1.2E-69 to 8.2E-131 (accuracy/T.INV/s1 A91, A96; F.INV/s1 A164, A169), owned by T-3544;
 - T.INV.2T and TINV at any p (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102), owned by T-3386.
 
+Owner ruling (decision 0267 item 3, 2026-11-04): the math also wins on each evidenced point where Excel is more than G
+off it for T.INV.2T, TINV, T.INV, CONFIDENCE.T and BETA.INV at a tiny p (probes-numeric t3349, t1531, t1543), and for
+CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16 (t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
+math and engine 37.19. That covers 50 of the 59 visibly-off tiny-p T cells, measured with mpmath at 60 digits. T-3386
+and T-3337 add the marks and widen this entry's Rule and Region when they land. df 1 near p = 1 (T-2858) stays Excel's.
+
 The engine is within ε of the math on all of them, so they pass Gate A through its math side. One point inside
 decision 0188's p < 1e-150 bound but outside the region the entry names needs a ruling of its own:
 `F.INV(4.36982683607437E-189,1,1698856)` (F.INV/s1 A167) is 3.85E-145 in Excel, while the true quantile, 3.0E-377, is
@@ -6639,3 +6645,38 @@ a typed error bin still the result). Part of T-3046's
 question (an error cell in the bins) is answered for a one-cell reference.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3791
+
+## Incomplete-beta family: Excel's 14th and 15th digits are noise (decision 0267)
+Rule: on BETA.DIST, F.DIST, F.DIST.RT, FDIST, BINOM.DIST and NEGBINOM.DIST cells where the engine is visibly off
+Excel, Excel itself is almost never correctly rounded. Its value carries tens to hundreds of ulp of its own rounding
+error, so matching those digits means reproducing Excel's op order, not computing more accurately.
+- Of 2,026 sampled visibly-off cells with literal arguments, Excel was correctly rounded on 20 (1%).
+- Median errors against 50-digit mpmath, Excel first and the engine second:
+  - BETA.DIST: 83 and 67 ulp;
+  - F.DIST: 327 and 237 ulp;
+  - F.DIST.RT and FDIST: about 115 and 68 ulp;
+  - BINOM.DIST: 66 and 0.9 ulp;
+  - NEGBINOM.DIST: 48 and 0.7 ulp.
+- The engine was the closer of the two on 72% of the sample.
+- Where the first wrong digit falls (89,166 visibly-off probes-numeric numbers at main 985d511b): 69.4% at the 15th
+  digit only, 28.3% at the 14th, 1.8% at the 13th, 0.2% at the 12th, 0.3% earlier. 97.4% are in this family.
+
+Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). Counted at 13 digits since decision 0267 and
+SPEC-0030 (`closeness::THIRTEEN_DIGIT_FAMILY`, the `residue13` bucket). The branch-level noise entries above (bgrat's
+increment, bup with 10 or more terms, bfrac past 10 terms, the F density) are the mechanisms.
+
+Reproduce: `rustsheet-eval run --suite probes-numeric`. Take report.json `attributed_off` (expected and actual) and
+bucket each cell by the first N whose half unit (`5e(E-N)`, E the decimal exponent of Excel's value) the gap exceeds.
+For the accuracy split, evaluate the literal-argument cells with mpmath: `betainc(a, b, 0, x, regularized=True)` for
+the cdfs, with the F upper tail as I(d2/(d2 + d1·x); d2/2, d1/2), and the closed-form density and pmf otherwise. Deep F
+tails below about 1E-130 need the higher-precision references of docs/research/t4017.
+
+At df1 = 2 and a huge df2 (b = 1), `F.DIST.RT` is up to 2E-8 off the closed form (1 + 2x/df2)^(-df2/2). That is
+statistics.md's T-4017 sweep, and T-4053 owns it. Negative result (decision 0267 analysis): Excel's values match none of
+these:
+- `POWER(1+2x/df2, -df2/2)` on the rounded base;
+- `EXP(-df2/2*LN(1+2x/df2))`;
+- `EXP(-df2/2*LN1P(2x/df2))`, which is within 1E-13 at x = 10 but 2E-9 off at x = 20, for example
+  `F.DIST.RT(20,2,1E8)`: Excel 2.061161907818132E-9, POWER form 2.061161865881937E-9.
+
+Tasks: decision 0267, T-4053, T-4055, T-4056.

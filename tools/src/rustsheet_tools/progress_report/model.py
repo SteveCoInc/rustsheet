@@ -106,12 +106,13 @@ def one_of(obj: Any, key: str, where: str, allowed: tuple[str, ...], task: str |
 def closeness(obj: Any, key: str, where: str, task: str) -> dict[str, int]:
     """A `Closeness` object of the report: a count per bucket."""
     raw = field(obj, key, where, task)
-    return {
-        b: 0
-        if b in OPTIONAL_BUCKETS and isinstance(raw, dict) and b not in raw
-        else count(raw, b, f"{where}.{key}", task)
-        for b in BUCKETS
-    }
+    counts: dict[str, int] = {}
+    for b in BUCKETS:
+        if b in OPTIONAL_BUCKETS and isinstance(raw, dict) and b not in raw:
+            counts[b] = 0  # a report from before the bucket existed
+        else:
+            counts[b] = count(raw, b, f"{where}.{key}", task)
+    return counts
 
 
 @dataclass(frozen=True)
