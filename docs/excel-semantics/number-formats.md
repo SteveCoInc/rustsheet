@@ -586,6 +586,24 @@ Status: VERIFIED
 Implemented in: crates/rustsheet-engine/src/formatter/format.rs (group positions count from the format's last digit placeholder; `?` padding separator is a space; a value exactly one unit at the last shown place keeps its sign)
 Tasks: T-0952
 
+## Commas after the decimal point (T-3598)
+Rule: a `,` between two digit placeholders after the format's decimal point neither groups the
+integer part nor scales the value, also when a literal stands between the fraction digits and it:
+the placeholders keep extending the fraction. A grouping `,` before the point still groups, and a
+trailing `,` still scales by 1000.
+- `0.00|#,##0` on 1234567.89 → "1234567.89|0" (the four placeholders after `|` are fraction digits
+  5-8, so `###` prints nothing and the last `0` a zero); `0.0,0` → "1234567.89"; `0.00,0` →
+  "1234567.890"; `0.##,##` → "1234567.89"; `.0,0` → "1234567.89" (A1, A4, A17, A18).
+- `0.00|0,000` on 1234567.891234 → "1234567.89|1234" (A14); `0.00|#,##0.00` → "1234567.89|0.00"
+  (the second `.` is a literal; A16); `0.00%|#,##0` → "123456789.00%|0" (A20).
+- `#,##0.00|#,##0` → "1,234,567.89|0" (the grouping `,` before the point holds; A2, A15);
+  `0.00|#,##0,` → "1234.56|7890" (the trailing `,` scales; A3); `0.0,` → "1234.6" (A5).
+Evidence: probes/t3598-comma-after-decimal-point A1:A20, probes/t1925-numeral-digits C1:C32
+(excel-graph, 2026-11-04).
+Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/formatter/parser.rs (`Token::Comma`)
+Tasks: T-3598
+
 ## `£`, `¥` and `|` print as literals without quotes
 Rule: these characters need no quotes or backslash in a number format; they print as written,
 and the number's "-" goes in front of everything (also before a quoted prefix). (`€` already works.)
@@ -913,7 +931,7 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
 
 **Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is unprobed, filed as T-3710. (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
 
-**Unrelated quirk the probe found (column C). Rule:** `TEXT(1234567.89,"[$-409]0.00|#,##0")` is "1234567.89|0": with a `#,##0` run after the decimal point and a literal, the integer part gets no thousands grouping and the trailing run prints just `0`. We print "1,234,567.89|0". This is why C1 fails with no numeral byte (probes/t1925-numeral-digits C1, C2, C21-C27); filed as T-3598.
+**Unrelated quirk the probe found (column C). Rule:** `TEXT(1234567.89,"[$-409]0.00|#,##0")` is "1234567.89|0": with a `#,##0` run after the decimal point and a literal, the integer part gets no thousands grouping and the trailing run prints just `0`. The `,` sits after the decimal point, so it does not group; see "Commas after the decimal point" (T-3598).
 
 Status: VERIFIED (excel-graph)
 Implemented in: formatter/numerals.rs, formatter/locale_tag.rs (`numerals`), formatter/format.rs, formatter/fraction.rs (T-3532)

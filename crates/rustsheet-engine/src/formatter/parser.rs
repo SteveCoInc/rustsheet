@@ -389,6 +389,11 @@ impl Parser {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
                         tokens.push(TextToken::Literal(','));
+                    } else if last_token_is_digit && next_token_is_digit && found_decimal_dot {
+                        // Excel: a `,` between placeholders after the decimal point neither groups
+                        // nor scales, even after a literal (`0.00|#,##0` on 1234567.89 is
+                        // "1234567.89|0", `0.0,0` is "1234567.89"; probes/t3598-comma-after-
+                        // decimal-point; number-formats.md "Commas after the decimal point").
                     } else if last_token_is_digit && next_token_is_digit {
                         use_thousands = true;
                     } else if digit_count > 0 {
