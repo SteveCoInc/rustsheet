@@ -3,7 +3,7 @@ id: T-3407
 title: "IRR returns #DIV/0! on long conventional series near -0.2 to -0.5 (9 hold-out cells; the engine is #NUM!)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
