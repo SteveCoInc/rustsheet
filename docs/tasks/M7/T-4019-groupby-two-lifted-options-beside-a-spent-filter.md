@@ -3,7 +3,7 @@ id: T-4019
 title: "GROUPBY two lifted options beside a spent filter: probe out-of-range numeric text and a boolean before an error"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,9 +26,18 @@ T-3985 left unprobed, and `Model::lift_options`' `settled` closure follows the c
 - docs/excel-semantics/arrays.md "A lifted GROUPBY's filter serves one element".
 
 ## Acceptance criteria
-- [ ] An excel-graph probe answers each combination; ours matches every cell (change the `settled` closure if not).
-- [ ] arrays.md cites the cells; the `lift_by_class` doc sentence is reworded.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe answers each combination; ours matches every cell (change the `settled` closure if not).
+- [x] arrays.md cites the cells; the `lift_by_class` doc sentence is reworded.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - PIVOTBY's lift beside a filter column (T-3892).
+
+## Outcome
+- New probe `probes/t4019-groupby-lifted-spent-filter-kinds` (excel-graph, 2026-11-04): beside `(Data!C1:C12<0.2)`, position 2
+  of a lifted field_headers/total depth pair holding numeric text "5" or "0.5", TRUE or FALSE before `#N/A` (either order) is
+  `#N/A`; position 1 is -1; no-filter controls agree. Ours already matched every cell (42/42 pass), so the `settled` closure
+  in `Model::lift_options` is unchanged; its comment now cites the new cells.
+- `lift_by_class` doc reworded: `settled` takes the model, the element and whether the filter is spent.
+- arrays.md "A lifted GROUPBY's filter serves one element" cites G!A1:B47.
+- Eval delta: +1 probe case, 42 cells passing, no regressions.
