@@ -207,9 +207,8 @@ impl Model {
         value: f64,
     ) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        let groups = field.number_groups?;
-        let n = groups.inner_count()?;
-        let item = groups.item(groups.lower_bound_index(value)?, n);
+        let groups = field.number_groups.as_ref()?;
+        let item = groups.item(groups.lower_bound_index(value)?);
         self.shown_group(pivot, position, u32::try_from(item).ok()?)
     }
 
