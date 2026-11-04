@@ -6650,7 +6650,11 @@ Tasks: T-3791
 Rule: on BETA.DIST, F.DIST, F.DIST.RT, FDIST, BINOM.DIST and NEGBINOM.DIST cells where the engine is visibly off
 Excel, Excel itself is almost never correctly rounded. Its value carries tens to hundreds of ulp of its own rounding
 error, so matching those digits means reproducing Excel's op order, not computing more accurately.
-- Of 2,026 sampled visibly-off cells with literal arguments, Excel was correctly rounded on 20 (1%).
+- Of 2,026 sampled visibly-off cells with literal arguments, Excel was correctly rounded on 20 (1%). The sample
+  takes report.json `attributed_off` at main 985d511b. For each function it shuffles the cells with Python
+  `random.seed(7)` and keeps the first 300 to 400 whose arguments are all literals. It covers BETA.DIST, F.DIST,
+  F.DIST.RT, FDIST, BINOM.DIST, NEGBINOM.DIST and 26 T.DIST cells. A cell counts as correctly rounded when it is
+  within 1.5 units of 2^-53 relative of the 50-digit value.
 - Median errors against 50-digit mpmath, Excel first and the engine second:
   - BETA.DIST: 83 and 67 ulp;
   - F.DIST: 327 and 237 ulp;
@@ -6660,6 +6664,9 @@ error, so matching those digits means reproducing Excel's op order, not computin
 - The engine was the closer of the two on 72% of the sample.
 - Where the first wrong digit falls (89,166 visibly-off probes-numeric numbers at main 985d511b): 69.4% at the 15th
   digit only, 28.3% at the 14th, 1.8% at the 13th, 0.2% at the 12th, 0.3% earlier. 97.4% are in this family.
+
+BETADIST, BINOMDIST and NEGBINOMDIST had no sample of their own. They are in the counted family as the legacy forms of
+BETA.DIST, BINOM.DIST and NEGBINOM.DIST on the same kernel ("Incomplete beta is TOMS 708 `bratio`", above).
 
 Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). Counted at 13 digits since decision 0267 and
 SPEC-0030 (`closeness::THIRTEEN_DIGIT_FAMILY`, the `residue13` bucket). The branch-level noise entries above (bgrat's

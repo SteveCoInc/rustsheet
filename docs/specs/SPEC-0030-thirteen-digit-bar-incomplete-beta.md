@@ -47,7 +47,17 @@ decision 0267's Context and the docs/excel-semantics/statistics.md entries it ci
   - the probe rows and R1(c) (`r1c`, `probe_milestones`);
   - Gate B (`gate_b`) and the milestone exits (`milestone_exit`);
   - the visible-parity lock (`visible_parity`);
+  - the milestone function-scope rows (`function_scope`) and the poi M8 subset (`poi_m8_subset`), both part of
+    the milestone exits;
   - scripts/phase1_exit.py, exit_owners.py and new_case_owners.py, which read those report fields.
+- **Gate A stays at 15 digits.** The envelope (`accuracy::envelope`, decision 0188 R2) tests Excel's side with
+  `Visible::is_off_at_fifteen_digits`. It reads the same buckets, with `residue13` counted as off, so it is still one
+  15-digit rule, and decision 0267 does not reach Gate A or the R4 fresh-sweep check. Without this, 106 accuracy
+  points of the family would have moved from `math` to `both`.
+- **Limit.** Family membership reads the formula's own calls (`functions_in`). It does not expand defined names or
+  LAMBDAs the way `function_scope`'s `calls_through_names` does. A family call whose argument is a name wrapping a
+  non-family function therefore gets the 13-digit bar. No case in the probe suites does that today, and a case that
+  needs it should expand the names first.
 - **report.md.** The "Visibly off" table gains a `residue13` column.
 - **Progress dashboard** (tools/src/rustsheet_tools/progress_report):
   - `model.BUCKETS` gains `residue13`, read as 0 from a report that predates it;

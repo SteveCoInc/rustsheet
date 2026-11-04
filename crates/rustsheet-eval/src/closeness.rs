@@ -151,10 +151,22 @@ impl Visible {
         self.numeric + self.other
     }
 
-    /// Whether `cell` is visibly off (decision 0083): the one test every report section uses.
+    /// Whether `cell` is visibly off (decision 0083): the one test every report section uses,
+    /// with the incomplete-beta family at 13 digits (decision 0267).
     #[must_use]
     pub fn is_off(cell: &CellResult) -> bool {
         Visible::of(cell).total() > 0
+    }
+
+    /// Whether `cell` is off at the 15-digit bar for every function, `residue13` included: Gate
+    /// A's envelope (decision 0188 R2), which decision 0267 leaves at 15 digits. The same buckets
+    /// as [`Visible::is_off`], so there is still one 15-digit rule.
+    #[must_use]
+    pub fn is_off_at_fifteen_digits(cell: &CellResult) -> bool {
+        matches!(
+            bucket(cell),
+            Some(Bucket::Residue13 | Bucket::VisibleNumeric | Bucket::VisibleOther)
+        )
     }
 
     /// Whether `cell` is a known failure (neither bit-exact nor a pinned deviation) that is
@@ -387,6 +399,18 @@ mod tests {
             )
         };
         assert!(Visible::is_off(&typed));
+        // Gate A's envelope keeps the 15-digit bar for the family too.
+        assert!(Visible::is_off_at_fifteen_digits(&with_formula(
+            "=BETA.DIST(1,2,3,TRUE)",
+            e,
+            off15
+        )));
+        assert!(!Visible::is_off_at_fifteen_digits(&with_formula(
+            "=BETA.DIST(1,2,3,TRUE)",
+            e,
+            e + 4.0
+        )));
+        assert!(Visible::is_off_at_fifteen_digits(&typed));
         let mut c = Closeness::default();
         c.add(&with_formula("=BETA.DIST(1,2,3,TRUE)", e, off15));
         assert_eq!((c.residue13, c.visible(), c.scored()), (1, 0, 1));

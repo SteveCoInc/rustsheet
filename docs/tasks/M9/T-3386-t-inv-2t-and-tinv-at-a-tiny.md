@@ -59,6 +59,7 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t1543-inverse-cdf-tiny-p.case.json (6): Calc!A43, A79, A86, A89, A91-A92
 - probes-numeric/t3349-t-inv-2t-sweep.case.json (42): Calc!A211, A214-A217, A219, A224-A225, A230, A232, A237-A240, A242-A243, A246, A252, A257, A262-A264, A266, A270, A272-A274, A277, A279-A281, A283-A285, A287-A289, A291, A293-A294, A296, A300
 
+- [ ] The 3 type cells listed (t1543 A89, A91 and A92: the engine returns `#NUM!` where Excel returns a number for `BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)` and `BETA.INV(1E-200,0.5,100)`) never pass through an R3 mark while they are an error against a number (decision 0188 R3). The engine returns a number there. That is Excel's number, or the math where a mark applies.
 - [ ] Every cell listed above does one of three things: it is an R3-marked cell where the engine returns the math within ε (R1(c) `R3Pass`); it matches Excel within half a unit of the 15th significant digit or has Excel's type and error; or it is left after decision 0056's time-box and accepted (decision 0267).
 
 ## Visible-parity stage

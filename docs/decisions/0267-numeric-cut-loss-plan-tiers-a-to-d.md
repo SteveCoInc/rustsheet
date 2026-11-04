@@ -56,7 +56,8 @@
        and it is never silently dropped.
      - The rule applies to the headline, the Phase 1 rate and tiers, the campaign counts, the probe rows, Gate B and
        the milestone exits.
-     - Unchanged: type, error and text verdicts, and every other function. The bit-level baselines and
+     - Unchanged: Gate A (decision 0188 R2's envelope and the R4 fresh-sweep check), which keeps 15 digits on
+       Excel's side for every function. Also unchanged: type, error and text verdicts, and every other function. The bit-level baselines and
        `make eval-check` are unchanged too, but item 6 says when a family regression is allowed. The visible-parity
        lock counts visibly-off cells at this bar, so a family cell that moves from the 15th to the 14th digit no
        longer raises it.
