@@ -3,7 +3,7 @@ id: T-3407
 title: "IRR returns #DIV/0! on long conventional series near -0.2 to -0.5 (9 hold-out cells; the engine is #NUM!)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: opus
@@ -53,3 +53,34 @@ log10 |NPV(d2)| above 228 (T-3411 progress notes, 2026-11-02):
 
 ## Decision 0267
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
+
+## Outcome
+Done, first attempt: a secant step whose NPV cannot be evaluated ends IRR with worksheet NPV's `#DIV/0!`.
+- Engine: `irr_secant` maps an NPV that `irr_npv` cannot compute (a discount power out of the double range, a sum that
+  is not finite) to `SecantStop::DivZero`, which ends the call as `#DIV/0!` without the retry from 0.1. Before this,
+  it was a failed run (retry, fallback, then `#NUM!`). Unit test `irr_is_div_zero_where_its_secant_cannot_evaluate_npv`
+  (t3406 P!A69, P!A84 `#DIV/0!`; P!A83 `#NUM!`).
+- Candidates scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 against main: (A) any secant
+  NPV that cannot be evaluated: 59 better, 0 worse, Gate A unchanged (shipped); (B) |NPV| above 1E+228 at an iterate
+  (T-3411's observation): 20 better, 8 worse (rejected).
+- Evidence for criterion 1: no new probe (decision 0267's probe freeze). The existing cells isolate the rule: t3406
+  P!A83 and P!A84 are the same 60-flow annuity, and only A84's secant step leaves the double range. Across the scored
+  cells, Excel's `#DIV/0!` appears where the engine's step overflows, and no cell where it overflows is anything else.
+- Criterion 2: all 9 hold-out cells pass. Of the 75 cells listed above, 52 pass. The 23 left (no step of the engine's
+  secant overflows there) move to T-3900, "Cells left by T-3407". The rule also fixes t3478-irr-r4-wide A261, A275,
+  A277, A281, A289, A290 and A298 (T-3548's), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56 (T-3900's).
+- R4 guards (structural rule, kind c; frozen before the draws):
+  - R4.1, fit lab split (`holdout.is_holdout`), 212 cases calling IRR, main -> rule: train 52,909 cells, bit-exact
+    51,253 -> 51,296 (96.87% -> 96.95%); test 23,002 cells, 22,289 -> 22,305 (96.90% -> 96.97%), within the 5-point
+    margin; type/error mismatches 586 -> 543 and 262 -> 246; 0 cells worse on either side.
+  - R4.2 fresh probes-numeric sweep (docs/research/t3411/gen_sweep.py, now seeded per task: `gen_sweep.py <repo>
+    t3407-irr-r4-fresh`, seed "T-3407/r4-fresh"), oracle-filled from excel-graph and scored once: 7 better (A19, A23,
+    A70, A76, A82, A86, A99), 0 worse, `#DIV/0!` mismatches 10 -> 3. Not committed: decision 0267's probe freeze allows
+    a new probes-numeric case only for owned cells.
+  - Gate A batch accuracy/IRR/r4-T-3407 (300 points, `rustsheet-accuracy generate IRR --batch r4-T-3407`, excel-graph):
+    25 points outside the envelope with and without the rule, the same points. Their lines in known-failures.tsv go to
+    T-3548 (18, the families of its s1 and r4-T-3411 lines) and T-3347 (7, roots near 0). `rustsheet-eval accuracy`:
+    0 failing.
+- Eval delta: probes 16 and gen-m9 1 baseline cells fixed (`make eval-baseline`), probes-numeric (ungated) 42 cells
+  fixed, 0 regressions.
+- financial.md: "IRR is #DIV/0! where its secant cannot evaluate NPV" (new), and the t3478 / Gate A section's links.

@@ -1467,14 +1467,42 @@ t3478-irr-r4-wide (excel-graph, 2026-10-31; T-3478; inputs and 50-digit roots in
     A268.
   - Excel is also `#NUM!`, as is the engine, on four log-uniform series (21 to 97 flows) with roots near 0:
     accuracy/IRR/s1 A273, A276, A279 and A293 (roots -5.0E-7 to 2.4E-5).
-`IRR({-1,1E+15})`'s `#DIV/0!` ("IRR's far-root bound") and t3406-irr-num-boundary's (T-3407) may share a cause.
+Most of t3406-irr-num-boundary's `#DIV/0!` cells and the `#DIV/0!` cells above with guesses near -1 or above 100 are
+explained by "IRR is #DIV/0! where its secant cannot evaluate NPV" (T-3407); `IRR({-1,1E+15})`'s ("IRR's far-root
+bound") is not.
 Evidence: probes-numeric/t3478-irr-r4-wide; docs/research/t3478/score_sweep.py lists the cells; accuracy/IRR/s1
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
-Ours: on t3478, the root on 13 of the 17 cells (a wrong value on A289) and `#NUM!` on A277, A290, A298. On
+Ours: on t3478, `#DIV/0!` with Excel on all seven `#DIV/0!` cells (T-3407); the `#NUM!` cells are T-3548's. On
 accuracy/IRR/s1, `#NUM!` with Excel on 47 cells, the root on the 8 `#NUM!` cells listed, and `#NUM!` on the 3 `#DIV/0!`
 cells.
 Tasks: T-3548, T-3407
 
+
+## IRR is #DIV/0! where its secant cannot evaluate NPV
+Rule: when a step of IRR's secant (from the guess or the retry from 0.1) lands on a rate where NPV, evaluated with
+worksheet NPV's running discount product, cannot be computed (a discount power that overflows or falls below the
+smallest normal double, or a sum that is not finite), the call is `#DIV/0!`: worksheet NPV's error for the same sum.
+The call ends there, without the retry from 0.1 and without the fallback.
+- On long series after one outlay, the secant's first step from the guess jumps far toward v = 0 or past it in r, and
+  the n-th discount power leaves the double range (1 + r below about 10^(-308/n)). That is T-3411's observation that
+  `#DIV/0!` sits where log10 |NPV| at the first step is above 228: the next trial point is out of range.
+- Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
+  value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
+  flows), the 9 long-series cells of probes-numeric/t3347-irr-conventional-holdout (A123-A143), 28 cells of the
+  t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
+  100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
+  smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
+- Out of sample (decision 0188 R4.2; a structural rule, frozen before the draws): a fresh probes-numeric sweep
+  (docs/research/t3411/gen_sweep.py, case name t3407-irr-r4-fresh, not committed under decision 0267's probe freeze)
+  has 7 cells better and 0 worse, with its `#DIV/0!` mismatches 10 -> 3. The Gate A batch accuracy/IRR/r4-T-3407 has
+  the same 25 points outside the envelope with and without the rule.
+- Not explained: 23 `#DIV/0!` cells where every NPV the secant evaluates is in range and the engine is `#NUM!` (T-3900
+  lists them), `IRR({-1,1E+15})` ("IRR's far-root bound") and Gate A's long-series `#DIV/0!` points (accuracy/IRR/s1
+  A237, A248, A268). The step that overflows in Excel there is not one of the engine's secant iterates.
+Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
+Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
+Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)
+Tasks: T-3407
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)

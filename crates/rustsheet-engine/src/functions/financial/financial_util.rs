@@ -251,7 +251,7 @@ fn discounted_sum(base: f64, values: &[f64]) -> Option<f64> {
 /// NPV at the discount factor `v` = 1/(1 + r), as IRR's search evaluates it: the
 /// [`discounted_sum`] at x = 1/v, the running product worksheet NPV uses (financial.md "IRR is a
 /// secant in d = 1 - v"; fit lab `irr`, T-3120). `None` when a discount overflows or underflows
-/// or the sum is not finite: that ends the run.
+/// or the sum is not finite: that ends the secant's call with `#DIV/0!` (T-3407).
 fn irr_npv(values: &[f64], v: f64) -> Option<f64> {
     discounted_sum(extended_quotient(1.0, v), values).filter(|total| total.is_finite())
 }
@@ -301,8 +301,9 @@ fn irr_from_discount(v: f64) -> Option<f64> {
     (x < IRR_FAR_ROOT_BOUND).then_some(x - 1.0)
 }
 
-/// One run of IRR's secant from `guess`, or `None` when it fails (a flat secant, an iterate that
-/// is not a positive discount factor, or no stop in 50 steps). The state is d = 1 - v = r/(1 + r),
+/// One run of IRR's secant from `guess`, or why it stopped without a root: [`SecantStop::Failed`]
+/// on a flat secant, an iterate that is not a positive discount factor or no stop in 50 steps;
+/// [`SecantStop::DivZero`] at v = 0 or where NPV cannot be evaluated. The state is d = 1 - v = r/(1 + r),
 /// so from v = 0.5 down the iterates' v = 1 - d sit on Excel's grid of multiples of 2^-53
 /// (probes/t2565-irr-guess-sweeps), and each step is anchored on the newer iterate.
 /// Chosen by scoring on the fit set (financial.md "IRR is a secant in d = 1 - v"): the start offset
@@ -320,7 +321,13 @@ fn irr_from_discount(v: f64) -> Option<f64> {
 /// FITTED(T-3120, 36 cells, IRR of {-2.5,-1,123456789.123} over a guess sweep)
 fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
     const MAX_STEPS: usize = 50;
-    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::Failed);
+    // An NPV the run cannot evaluate (a discount power out of the double range, or a sum that is
+    // not finite) ends the call with `#DIV/0!`, worksheet NPV's error for the same sum, and without
+    // the retry from 0.1: probes/t3406-irr-num-boundary A69-A72 and A84-A94, the 7 long-series
+    // hold-out cells of probes-numeric/t3347-irr-conventional-holdout (A123..A143) and 28 cells of
+    // the t3411 fresh sweeps are `#DIV/0!` in Excel exactly where the secant's step lands there
+    // (financial.md "IRR is #DIV/0! where its secant cannot evaluate NPV", T-3407).
+    let npv = |d: f64| irr_npv(values, 1.0 - d).ok_or(SecantStop::DivZero);
     let largest_flow = values.iter().fold(0.0_f64, |m, c| m.max(c.abs()));
     let mut d0 = extended_quotient(guess, 1.0 + guess);
     let mut f0 = npv(d0)?;
@@ -361,7 +368,7 @@ fn irr_secant(values: &[f64], guess: f64) -> Result<f64, SecantStop> {
 enum SecantStop {
     /// No root: the call retries from 0.1, then falls back ([`compute_irr`]).
     Failed,
-    /// An iterate reached v = 0: the call is `#DIV/0!`.
+    /// An iterate reached v = 0, or NPV could not be evaluated: the call is `#DIV/0!`.
     DivZero,
 }
 
