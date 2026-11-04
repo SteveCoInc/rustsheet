@@ -3,7 +3,7 @@ id: T-3713
 title: "runner test pending_case_that_panics_is_reported_as_panic reads Timeout under load: a panic's backtrace outlasts the 5 s case limit"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,9 +30,20 @@ a loaded machine. A panicking case is reported as `Panic`, never as `Timeout`.
   - whichever matches the runner's contract.
 
 ## Acceptance criteria
-- [ ] The test passes with `RUST_BACKTRACE=1` under CPU load (for example while `cargo build` runs), or the runner
+- [x] The test passes with `RUST_BACKTRACE=1` under CPU load (for example while `cargo build` runs), or the runner
       reports a caught panic as `Panic` whatever the time.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other runner timeouts.
+
+## Outcome
+- The test's scripted engine now panics with `std::panic::resume_unwind(Box::new("boom"))`, which unwinds like
+  `panic!` but skips the panic hook. The test harness keeps the default hook, whose backtrace capture under
+  `RUST_BACKTRACE=1` was what outlasted the 5 s case limit; with no hook there is nothing slow before
+  `catch_unwind` sees the payload. The test still checks the `Panic` verdict and the `boom` message.
+- The runner itself is unchanged: the CLI installs a silent panic hook before it runs cases (`execute` and
+  `cmd_accuracy` in main.rs), so a real eval run never captures a backtrace either, and the Timeout misreport
+  the task's context worried about does not arise there.
+- Demonstrated: with `RUST_BACKTRACE=1` and 12 busy loops on 4 cores, the test passed 10 of 10 runs (0.02 to 0.06 s).
+- Eval delta: none (test-only change).
