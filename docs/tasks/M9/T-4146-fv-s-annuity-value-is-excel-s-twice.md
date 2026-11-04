@@ -3,7 +3,7 @@ id: T-4146
 title: "FV's annuity value is Excel's twice-rounded form (probes/t3424-rate-noise-trace A132)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
