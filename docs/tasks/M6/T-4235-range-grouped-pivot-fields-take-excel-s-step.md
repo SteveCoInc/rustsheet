@@ -60,13 +60,26 @@ answers as Excel does, so every cell of probes/t4228-pivot-range-groups passes.
   the unexpected-cell check bounds the layout by `max_layout_rows`. SPEC-0015 "Spec cases in the eval adapter" records
   why this one shape is laid out in Rust.
 - Structural model (reviewer-excel-fidelity check 7 (c)): candidates were (A) round q to 15 digits, (B) a relative
-  tolerance of 3.3e-15 on q, (C) round the value to 15 digits, then q. All three fit the T-4228 points (the train set,
-  168 cells), so there was no hold-out split to score on: the model was frozen on A, then a fresh sweep was generated and
-  oracle-filled: probes/t4235-pivot-range-rounding (excel-graph, 2026-11-04; generator in the PR description, seed
-  42350): 105 points, 81 at relative offsets 1e-16 to 3e-14 below inner boundaries of four groupings (by 0.1, 7, 0.001
-  and 0.25) and 24 log-uniform over the ranges, 25 of them where the models disagree. Excel matches A at 105 of 105,
-  B at 81, C at 99. Gate A envelope: not applicable (no number is computed; group membership is exact or not), and the
-  case's 242 cells pass bit-exact.
+  tolerance of 3.3e-15 on q, (C) round the value to 15 digits, then q; the correctly rounded candidate is the plain
+  `floor((v - start) / interval)` the importer used before (P). A was chosen on the T-4228 points; the split below was
+  stated after that choice (by value: hold-out when `sha256(repr(v)) % 10 < 3`, margin 10 points), so it shows the
+  guard rather than gating the choice. Per record of probes/t4228-pivot-range-groups (55 values, the group Excel put
+  each in, decoded from the rendered power-of-two sums), exact group:
+
+  | candidate | train (42) | hold-out (13) | fresh sweep (105) |
+  |---|---|---|---|
+  | A (chosen) | 42 | 13 | 105 |
+  | B | 41 | 13 | 81 |
+  | C | 42 | 13 | 99 |
+  | P (correctly rounded) | 29 | 9 | 87 |
+
+  A beats P on hold-out (13 against 9) and its hold-out rate equals its train rate (100%). Fresh sweep (R4.2): after
+  the freeze, probes/t4235-pivot-range-rounding was generated (generator and seed 42350 in the PR description) and
+  oracle-filled by excel-graph (2026-11-04): 81 points at relative offsets 1e-16 to 3e-14 below inner boundaries of four
+  groupings (by 0.1, 7, 0.001 and 0.25) and 24 log-uniform over the ranges, 25 of them where A, B and C disagree. Gate A
+  envelope: not applicable (no number is computed; group membership is exact or not), and the case's 242 cells pass
+  bit-exact.
 - Eval delta: probes known failures -122 (all of probes/t4228-pivot-range-groups, now 168/168); new case
   probes/t4235-pivot-range-rounding 242/242. No regressions.
-- Follow-up: T-4248 (GETPIVOTDATA on an empty item of an ungrouped field).
+- Follow-ups: T-4248 (GETPIVOTDATA on an empty item of an ungrouped field), T-4249 (numeric group points past the
+  evidence: other wrong item counts, a partial last group, GETPIVOTDATA numbers past the end).

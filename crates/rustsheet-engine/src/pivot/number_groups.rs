@@ -31,7 +31,8 @@ impl NumberGroups {
     /// A grouping of `items_in_file` group items, or `None` for a range no grouping can have (an
     /// interval that is not positive and finite, an end below the start, too many groups).
     /// When the file's item count is not the layout's, Excel keeps the grouping, relabels it and
-    /// lists the end groups first (probe pivot 3: six items for the five of 0 to 9 by 3).
+    /// lists the end groups first (probe pivot 3: six items for the five of 0 to 9 by 3). Only a
+    /// list one item too long is probed; any other wrong length is UNVERIFIED (T-4249).
     #[must_use]
     pub fn new(start: f64, end: f64, interval: f64, items_in_file: usize) -> Option<NumberGroups> {
         let mut groups = NumberGroups {
@@ -46,7 +47,9 @@ impl NumberGroups {
     }
 
     /// How many inner groups the range has: the steps from `start` that reach `end`, counted on
-    /// the 15-digit quotient as values are (`0` to `1` by `0.1` has 10). At least one.
+    /// the 15-digit quotient as values are (`0` to `1` by `0.1` has 10). At least one. Probed
+    /// only for spans that are whole multiples of the interval; the count for another span (0
+    /// to 10 by 3 as four groups, the last `9-12`) is UNVERIFIED (T-4249).
     #[must_use]
     pub fn inner_count(&self) -> Option<usize> {
         let span = self.end - self.start;
@@ -90,7 +93,9 @@ impl NumberGroups {
     /// The layout position of the group whose lower bound is `value`, as GETPIVOTDATA picks a
     /// number item: within the same 15-digit rounding (0.6000000000000001 by 0.1 is `0.6-0.7`),
     /// and `end` is the `>end` group. A number inside a group but not its lower bound, or below
-    /// `start` (the `<start` group has none), is `None` (`#REF!`).
+    /// `start` (the `<start` group has none), is `None` (`#REF!`). UNVERIFIED (T-4249): a number
+    /// past `end` (`#REF!` here) and one below `end` whose rounded q is the group count (`>end`
+    /// here).
     #[must_use]
     pub fn lower_bound_index(&self, value: f64) -> Option<usize> {
         let n = self.inner_count()?;

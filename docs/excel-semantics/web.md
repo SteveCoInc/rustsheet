@@ -181,18 +181,22 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
 powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). Engine (T-4235): `NumberGroups`
 groups by the rule, picks a number item by its lower bound, and relabels a list of the wrong length with its own
-labels (`General(start + k*interval)-General(start + (k+1)*interval)`, the end groups first); a group with no record
+labels (`General(start + k*interval)-General(start + (k+1)*interval)`, the end groups first). UNVERIFIED (T-4249): a
+list of another wrong length than one too long, the group count of a span that is not a whole number of intervals
+(0 to 10 by 3 counted as four groups), a GETPIVOTDATA number past `endNum` (`#REF!` here) or below it with a
+quotient that rounds to the group count (`>end` here); a group with no record
 is `#REF!` on a numeric range field only (an empty item of an ungrouped field keeps its 0, unprobed). The importer and
 the eval adapter share it (`group_by_numbers`); the adapter has the engine lay a grouped spec pivot out (captions, the
-groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model: the probe's
-points fit both (T-4235 Outcome).
+groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model the fresh sweep
+probes/t4235-pivot-range-rounding confirms: 105 of 105 points, against 99 for rounding v first and 87 for the plain
+quotient (T-4235 Outcome).
 UNVERIFIED (T-4236): the date groups (a time of 23:59:59.5 or later, serials 1 to 60), which group item a blank goes in
 (item 0 by the label; one item for certain by the item lists), and GETPIVOTDATA on a date group's label, a year as a
 number, or a blank.
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/layout.rs (`row_layout`),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`).
-Tasks: T-4225, T-4228, T-4235, T-4236
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4249
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
