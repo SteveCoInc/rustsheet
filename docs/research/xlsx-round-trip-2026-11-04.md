@@ -112,7 +112,7 @@ above.
 | A shared-string index with trailing whitespace is read as 0 | POI bug69769: `<v>2 </v>` loads as "Konto" instead of "Mustermann". The snapshot reader trims, the importer does not. | 1 | high: wrong value on import, not only on export |
 | Empty-string cells are dropped | `t="s"` pointing at `""` becomes blank (POI bug66675, 3,604 cells). ISBLANK and COUNTA change. | 5 | medium |
 | A CR in a shared string comes back as a literal `_x000d_` | POI 60289 | 1 | medium |
-| Leading whitespace in a formula is lost | `= FG141` → `=FG141` (Calipers pv26) | 4 | low; Excel keeps it (SPEC-0023) |
+| Leading whitespace in a formula is lost | `= FG141` → `=FG141` (Calipers pv26) | 4 | **not a bug**: Excel drops a stored formula's leading run on import too (docs/excel-semantics/syntax.md, T-2784, T-2949), so the semantics match; only the package diff sees it |
 | Number literals are reprinted | `9.99E+307` → `9.99e307`, `0.000000000001` → `1e-12` | 6 | low, but needs an Excel probe: does Excel accept the lowercase, unpadded form in a file? |
 | `_xlfn.` is added to GAMMALN, ISO.CEILING, ECMA.CEILING | | 3 | known: T-0417 |
 | Formula cells without a cached value are written with a value | `<v>0</v>` | 36 | low; recalculation normally hides it |
@@ -590,7 +590,7 @@ The bug fixes from §2.2 are filed separately as M11 tasks, if approved.
 
 ## 9. Decisions and open questions for the owner
 
-**Decisions:**
+**Decisions:** D1–D6 were accepted as recommended by the owner on 2026-11-04 (decision 0275). D7 is open.
 
 **D1.** Create M15 in Phase 2 and move the orphan bullets, as recommended. The alternative keeps
 them in M11 and blocks Phase 1 exit.
