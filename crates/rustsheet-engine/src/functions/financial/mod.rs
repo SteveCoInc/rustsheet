@@ -200,9 +200,9 @@ impl Model {
     }
 
     /// XNPV's values or dates. A non-number cell refuses the values with `#NUM!`. A text or
-    /// boolean date in a range or array is read as NaN, which [`xnpv_flows`] turns into `#VALUE!`
-    /// in first place and `#NUM!` later; one that is no range or array is `#VALUE!`. A values argument that is one empty cell is a single cash flow of 0,
-    /// `XNPV(1,A2,B11)` is 0 (probes/xnpv-empty-values-cell C1-C4, T-2599); empty cells in a
+    /// boolean date in a range or array is read as NaN, which [`xnpv_flows`] turns into
+    /// `#VALUE!` in first place and `#NUM!` later; one that is no range or array is `#VALUE!`. A
+    /// values argument that is one empty cell is a single cash flow of 0, `XNPV(1,A2,B11)` is 0 (probes/xnpv-empty-values-cell C1-C4, T-2599); empty cells in a
     /// larger range stay refused.
     fn xnpv_numbers(
         &mut self,
@@ -231,30 +231,27 @@ impl Model {
                 )),
             };
         }
-        let marked = matches!(result, CalcResult::Range { .. } | CalcResult::Array(_));
-        match kind {
-            XnpvArgument::Values => self.array_of_numbers_from(
-                result,
-                cell,
-                true, // accept_number_node
-                false,
-                refuse(Error::NUM),
-                refuse(Error::NUM),
-            ),
-            XnpvArgument::Dates if marked => {
-                self.array_of_numbers_from(result, cell, true, false, refuse(Error::NUM), || {
-                    Ok(Some(f64::NAN))
-                })
+        // `None` marks a text or boolean element as NaN instead of refusing it.
+        let non_number = match kind {
+            XnpvArgument::Values => Some(Error::NUM),
+            XnpvArgument::Dates
+                if matches!(result, CalcResult::Range { .. } | CalcResult::Array(_)) =>
+            {
+                None
             }
-            XnpvArgument::Dates => self.array_of_numbers_from(
-                result,
-                cell,
-                true,
-                false,
-                refuse(Error::NUM),
-                refuse(Error::VALUE),
-            ),
-        }
+            XnpvArgument::Dates => Some(Error::VALUE),
+        };
+        self.array_of_numbers_from(
+            result,
+            cell,
+            true, // accept_number_node
+            false,
+            refuse(Error::NUM),
+            move || match &non_number {
+                Some(error) => refuse(error.clone())(),
+                None => Ok(Some(f64::NAN)),
+            },
+        )
     }
 
     fn xirr_numbers(
@@ -305,7 +302,10 @@ impl Model {
             }
             match dates.get(index) {
                 Some(date) if date.is_nan() => return Err(error(Error::VALUE)),
-                Some(&date) if date < 0.0 || date > MAXIMUM_DATE_SERIAL_NUMBER as f64 => {
+                // Truncated first, as `xirr_dates` reads them: 2958465.5 is a valid date.
+                Some(&date)
+                    if date.floor() < 0.0 || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64 =>
+                {
                     return Err(error(Error::NUM))
                 }
                 _ => {}

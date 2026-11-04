@@ -4375,7 +4375,7 @@ Tasks: T-2428, T-2611
 
 ## XIRR's guess, date and empty-cell order (T-3312)
 Rule: XIRR checks, in this order: (1) the guess: an error guess is that error, a text guess that is no number and a
-boolean guess (a literal or a cell, TRUE or FALSE, beside equal or different counts) `#VALUE!`; (2) an error values
+boolean guess (a literal TRUE or FALSE or a cell holding TRUE, beside equal or different counts) `#VALUE!`; (2) an error values
 argument; (3) an error dates argument; (4) the size checks of "XIRR and XNPV under the gen-m9 statistical cells", where
 one empty cell counts as a number: `XIRR(<empty>,39448)`, `XIRR(5,<empty>)` and `XIRR(<empty>,<empty>)` are `#N/A`, as
 is `XIRR(5,39448)`, while a text or boolean single cell stays `#VALUE!` (`XIRR(5,"x")`, `XIRR(5,TRUE)`). A guess at or
@@ -4394,9 +4394,12 @@ Evidence: probes/t3312-xirr-xnpv-inner-calls A18-A31, A39-A64 and probes/t3312-x
 `XIRR(1/0,NA(),"x")`, `XIRR(NA(),{2 dates},TRUE)` and `XIRR({-100,110},NA(),TRUE)` `#VALUE!`; `XIRR(NA(),{2 dates},-1)`
 and `XIRR({-100,110},NA(),-1)` `#N/A`. These settle gen-m9/4bad303d32cc3f46 A364 (`XIRR(<empty>,1E+15,-1)`),
 5919660b7bb4d195 A144 (`-2.5`, empty, `"TRUE"` dates) and b72d952c5f52cb4d A38 (`XIRR(MONTH(59085),<empty>)`).
-Unprobed: which of a pair is read first when both the value and the date are bad; an error element inside the values
-against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text (ours: the
-negative date's rule). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
+Unprobed: a FALSE guess cell (literal TRUE and FALSE and a TRUE cell are probed; ours: `#VALUE!` for every boolean);
+the -1 guess beside one text or boolean values cell against several dates (ours: that `#VALUE!` stands, as for one text
+date); which of a pair is read first when both the value and the date are bad; a text value against an error element
+in the dates (ours: the value's `#VALUE!` whatever the positions, the order before T-3312); an error element inside the
+values against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text
+(ours: the negative date's rule, on the date truncated to a whole day). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
 Status: VERIFIED
 Implemented in: `fn_xirr`, `xirr_size_error`, `xirr_flows` (crates/rustsheet-engine/src/functions/financial/mod.rs),
 `compute_xirr`'s guess check.
@@ -4415,8 +4418,9 @@ the first date gives it.
 Evidence: probes/t3312-xirr-xnpv-inner-calls A9-A17, A32-A38 (excel-graph, 2026-11-04); the error-argument order from
 gen-m9/7d2979fba2c95d64 A84 (`XNPV(-1+2^-52,<#VALUE!>,..)` is `#VALUE!`), c0681a8b150ce301 A112, d0854366830dcdee A127,
 e168be7f6d3f84c2 A88 (excel-graph). Settles gen-m9/5ded7594e597e31e A12 and 8f2ac25945af87da A137.
-Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule) or an error element in the dates
-against a non-number first date.
+Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule), an error element in the dates
+against a non-number first date, and a non-number first date against a text, boolean or empty values element (ours:
+the first date's `#VALUE!`; only error value elements are probed, A33, A36).
 Status: VERIFIED
 Implemented in: `fn_xnpv`, `xnpv_flows`, `xnpv_dates` (crates/rustsheet-engine/src/functions/financial/mod.rs).
 Tasks: T-3312

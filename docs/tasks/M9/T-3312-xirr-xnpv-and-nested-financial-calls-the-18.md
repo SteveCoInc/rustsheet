@@ -77,3 +77,17 @@ WEIBULL.DIST at x = 0).
 - compute_xirr's guess at or below -1 is `#NUM!`, not `#VALUE!` (t3312-xirr-guess-dates-weibull A9).
 Eval delta: gen-m9 known failures 1937 -> 1931 (6 fixed, 0 regressions); probes +2 cases (124 of 125 cells pass, 1
 new known failure owned by T-4251).
+
+## Landing notes
+- PR #3247 (draft), head is this commit's parent's successor (the commit that adds these notes). Round 1 reviews ran on
+  8f478c998: security APPROVE, design APPROVE (MINOR: doc wrap, duplicated XNPV dates arms; both fixed in this push),
+  excel-fidelity REQUEST_CHANGES (MAJOR: `xirr_flows` compared the raw date, so 2958465.5 became `#NUM!`; fixed by
+  comparing `date.floor()`; MINORs: unprobed generalizations, now listed under "Unprobed" in the two financial.md
+  entries). Round 2 has not run: re-run excel-fidelity and design on the new head.
+- Blocking `make check`: the `*.math.json` sidecars of the two new probe cases are missing
+  (`uv run rustsheet-accuracy math --suite probes --check` names t3312-xirr-xnpv-inner-calls A28, A30 and
+  t3312-xirr-guess-dates-weibull A32). `rustsheet-accuracy math --suite probes` ran 60 minutes in this session without
+  finishing (it has no per-case option) and was stopped; run it with a longer budget, commit only the two t3312
+  `.math.json` files, and revert any rewrite it makes to unrelated sidecars (it rewrote three Bessel ones: `why` text only).
+- Verified on this head: `rustsheet-eval check` 0 regressions in every suite (gen-m9 1931); engine tests pass.
+- Next: generate the sidecars, push, re-run the two reviewers, mark the PR ready, enqueue.
