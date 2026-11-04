@@ -357,9 +357,7 @@ impl Txn<'_> {
                 model.set_typed_user_input(sheet, row, col, text)
             }
             Input::StoredFormula(text) => model.set_loaded_user_input(sheet, row, col, text),
-            Input::LegacyFormula(text) => {
-                model.set_cell_with_legacy_formula(sheet, row, col, &text)
-            }
+            Input::LegacyFormula(text) => model.set_loaded_legacy_formula(sheet, row, col, &text),
             Input::Value(value) => {
                 // Typed setters skip the spill/array/merge checks that `set_user_input` does.
                 model

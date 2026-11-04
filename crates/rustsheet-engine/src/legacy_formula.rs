@@ -57,6 +57,26 @@ impl Model {
         self.as_external(|model| model.reenter_legacy_formula(sheet, row, column, formula))
     }
 
+    /// [`Model::set_cell_with_legacy_formula`] for a formula as a file stores it (a plain `<f>`):
+    /// a padded bare column `T[ Col ]` is `#REF!` and a reference to an unknown table or column
+    /// loads as `#REF!`, as [`Model::set_loaded_user_input`] reads a stored dynamic formula
+    /// (T-4221; docs/excel-semantics/syntax.md, padded bare column).
+    ///
+    /// # Errors
+    /// As [`Model::set_cell_with_legacy_formula`].
+    pub fn set_loaded_legacy_formula(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        formula: &str,
+    ) -> Result<(), String> {
+        self.parser.set_loaded(true);
+        let result = self.reenter_legacy_formula(sheet, row, column, formula);
+        self.parser.set_loaded(false);
+        result
+    }
+
     /// [`Model::set_cell_with_legacy_formula`] for text the engine printed itself, which reads a
     /// padded bare column `T[ Col ]` as the column (T-4023).
     fn reenter_legacy_formula(
