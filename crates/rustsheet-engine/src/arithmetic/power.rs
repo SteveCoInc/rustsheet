@@ -1,7 +1,10 @@
 //! `x^y` as POWER and the operator `^` compute it: integer exponents by square-and-multiply,
 //! others as `exp(y·ln x)` with Excel's own LN and EXP kernels (docs/excel-semantics/numbers.md).
 
-use super::{extended_product, extended_quotient, extended_sqrt, finite_or_num, flush_subnormal};
+use super::{
+    extended_product, extended_quotient, extended_sqrt, finite_or_num, finite_or_overflow,
+    flush_subnormal,
+};
 use crate::{
     expressions::token::Error, number_format::to_excel_precision, x87_exp::excel_exp,
     x87_log10::excel_ln,
@@ -29,7 +32,7 @@ pub(crate) fn power(x: f64, y: f64) -> Result<f64, Error> {
 /// Other exponents were not probed, so only 2 is exempt.
 pub(crate) fn operator_power(x: f64, y: f64) -> Result<f64, Error> {
     if y == 2.0 && x.is_finite() {
-        return finite_or_num(extended_product(x, x));
+        return finite_or_overflow(extended_product(x, x));
     }
     power(x, y)
 }

@@ -1,6 +1,6 @@
 use super::{
-    divide, extended_product, extended_quotient, extended_sqrt, extended_sum, minus, operator_power,
-    plus, power, times,
+    divide, extended_product, extended_quotient, extended_sqrt, extended_sum, minus,
+    operator_power, plus, power, times,
 };
 use crate::expressions::token::Error;
 

@@ -50,7 +50,7 @@ pub(crate) fn minus(x: f64, y: f64) -> Result<f64, Error> {
 }
 
 /// `value`, or `#NUM!` beyond the double range; subnormals are kept (addition, subtraction).
-fn finite_or_overflow(value: f64) -> Result<f64, Error> {
+pub(super) fn finite_or_overflow(value: f64) -> Result<f64, Error> {
     if value.is_finite() {
         Ok(value)
     } else {
