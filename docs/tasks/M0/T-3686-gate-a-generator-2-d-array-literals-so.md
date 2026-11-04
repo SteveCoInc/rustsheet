@@ -3,7 +3,7 @@ id: T-3686
 title: "Gate A generator: 2-D array literals, so MDETERM, MINVERSE and MMULT get tables in place of their composite exemptions"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
