@@ -643,6 +643,16 @@ A minute read only because `.0` follows (`mm.0`) does not set it: `mm.0 h:mm` on
 Status: VERIFIED (excel-graph). Implemented in: `minute_read` (formatter/parser.rs). Unprobed: `h:mm:ss mm`.
 Tasks: T-2961
 
+## Hours with AM/PM: only some hour tokens take the 12-hour clock
+Rule: in a section with `AM/PM` or `A/P`, an hour token (`h`, `hh`) prints 12-hour only if it is the last hour
+token before a marker or the last hour token of the section; every other one stays 24-hour.
+`TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM", `h h AM/PM h h` "13 1 PM 13 1",
+`h AM/PM|h` "1 PM|1", `AM/PM h h` "PM 13 1", `h AM/PM|hh|h` "1 PM|13|1". Also: an hour token makes the next
+`mm` a minute again even after a minute (`h:mm|h:mm AM/PM` is "13:02|1:02 PM", refining "`mm` after a minute is
+a month"). Not about numerals (t3532 row 10 in any digit set).
+Evidence: probes/t3710-ampm-hour-tokens (26 cells, excel-graph, 2026-11-04). Status: VERIFIED (excel-graph).
+Implemented in: `hour_is_twelve_hour` (formatter/format.rs), `minute_read` reset (formatter/parser.rs). T-3710
+
 ## `m`/`mm` directly before `:ss` is minutes, with no hour
 Rule: `m` or `mm` followed by `:` and a plain `s`/`ss` is a minute even when the code has no hour
 token (otherwise it is a month): `mm:ss` shows 1000 as "00:00", 123456.789 as "56:10" and 1.5 as
