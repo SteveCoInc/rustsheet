@@ -581,11 +581,12 @@ docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
   which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
-  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101; row 102, `١.٥`, repeats row 14 and is not a mixed-script row).
+  UNPROBED: criteria (COUNTIF and the other readers through functions/criteria.rs, which share `cast::number_text_in`) on the five T-3446 blocks (Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar) are probed only for one plain digit: `COUNTIF("3","="&digit 3)` is 1 (probes/t3895-collation-script-digits Calc!A49, A74, A99, A124, A149; Thai A24). Not probed: multi-digit and the signed, decimal, percent, `$`, parentheses, group-comma, exponent and ISO-date forms in a criterion, script-digit clock and mixed-fraction criteria, and criteria readers other than COUNTIF (SUMIF, the *IFS functions, the D-functions). The engine reads them by the shared path.
 - **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
   separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
   VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
-- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE, rows 100 and 101 being the mixed-script ones; B103:B105 FALSE), and the cell gets
   a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
   `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
@@ -734,8 +735,9 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   then U+3000 < U+202F < CHAR(160) < CHAR(9) < U+2000 = U+2002 < U+2001 = U+2003 < U+2004 < ... < U+200A <
   U+200B (B1:B18 in row order = 0, 4, 5, 2, 6, 8, 6, 8, 10 to 16, 3, 0, 17), and U+200B sorts below `!` and every symbol tested
   (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2, with CHAR(1) below it: O10 FALSE). U+200B is above CHAR(10) and
-  CHAR(13) as well (-sweep G2:G4, I2:I4 FALSE), and so are U+2000 to U+200A (probes/t4060-collation-open-choices
-  Calc!H8:I14 FALSE, CHAR(10) and CHAR(13) in H6:I7).
+  CHAR(13) as well (-sweep G2:G4, I2:I4 FALSE), and so are U+2000 to U+200A, strictly
+  (probes/t4060-collation-open-choices Calc!H8:I14 FALSE, and J8:J14 FALSE where J7,
+  `CHAR(13)&"a"<CHAR(13)&"b"`, is TRUE).
 - The C1 controls sort after the symbols tested and before the digits, in code-point order: U+0080, U+0081,
   U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
   `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
@@ -748,24 +750,62 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
 T-4060 settled three choices those tasks made without evidence (probes/t4060-collation-open-choices, 222 cells,
 excel-graph, 2026-11-04):
 - **Which spaces differ from the space only at a later pass.** `x&"a"<" b"` is TRUE for U+3000, U+205F and U+202F,
-  so they share the space's first-pass weight. It is FALSE for CHAR(160), CHAR(9), CHAR(10), CHAR(13), U+2000 to
+  so their first-pass weight is at most the space's; with t4039's order (the space ≤ U+3000 < U+202F, Calc!B1,
+  B4, B16) it is the space's. It is FALSE for CHAR(160), CHAR(9), CHAR(10), CHAR(13), U+2000 to
   U+200B and U+0081, which have weights of their own (Calc!B1:B15, K1:K15). `x&"a"<UNICHAR(8194)&"b"` is TRUE for
   U+2000 (equal to U+2002 at that pass) and FALSE for U+2001 (E8:E10).
-  Ours: U+202F has its own first-pass weight (`NARROW_NBSP`), so Calc!B2 and K2 are known failures owned by T-4072.
+  Implemented in: `element` weighs U+202F as `SPACE` with the variant weight `NARROW_NBSP`, above U+3000's
+  `FULL_WIDTH` (T-4072).
 - **The sorts and approximate lookups apply the prefix rule too**, being Excel's pairwise comparison:
   - `MATCH("ab",{"a";"ab"&U+00AD;"abc"},1)` is 1, as are VLOOKUP(..,TRUE) and XMATCH(..,-1); XMATCH(..,1) is 2 and
     the binary exact XMATCH `#N/A` (Calc!B30:B36).
   - UNIQUE keeps `ab` and `ab`&U+00AD apart and `""` and U+00AD apart, but merges `é` and `é`&U+00AD (B37:B39).
   - SORTBY's order of the five texts that tie at every pass depends on their input order (Calc!B20:D26: ascending
     6,1,2,3,4,5,7; the reversed input 6,4,5,3,1,2,7), as a non-transitive comparison gives.
-  Ours: SORT, SORTBY, the lookups and SWITCH compare with `cmp_text_pairwise` (`compare_values_pairwise`) and pass
-  every cell. GROUPBY and PIVOTBY keep the total `cmp_text`, where this rule is UNVERIFIED.
+  Ours: SORT, SORTBY, the lookups, SWITCH and UNIQUE compare with `cmp_text_pairwise` (`compare_values_pairwise`)
+  and pass every cell. GROUPBY and PIVOTBY do not yet (T-4086 below, T-4088).
 - **A mark after a weightless character is a lone mark.** `"a"&U+00AD&U+0301` is above `"a"` and below `"á"`
   (Calc!B50:B54), and so is it with U+0524 (B55:B57). With a `b` after it, it is below `"áb"` and above `"ab"`, and
   COUNTIF does not count it as `áb` (B58:B61, B63). `U+00AD&U+0301` equals a lone U+0301 (B62). So the weightless
   character ends the letter before it, and the mark weighs as a mark with no letter.
-  Ours: `elements` drops the weightless character first, so the mark joins the `a`; Calc!B50, B51, B55, B56, B58,
-  B59, B63 are known failures owned by T-4072.
+  Implemented in: `elements` yields `Element::Weightless` for it, which has no weight in any pass but ends the
+  letter before it, so `accent_units` gives the mark a letter unit of its own (T-4072).
+
+T-4086 settled what the review of T-4072 left open (probes/t4086-collation-later-passes, M2, 75 cells, and
+probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
+- **U+202F differs from the space at the accent pass.** `U+202F&"a"<" "&"á"` is FALSE, and so are
+  `<U+3000&"á"` and `U+202F&ぁ<" "&あ` (Calc!B1, C1, F1). U+3000 and U+205F give TRUE for the first two (B2:C4).
+  It is the accent pass itself, compared letter by letter: with the positions reversed, `"a"&U+202F < "á"&" "`
+  is TRUE (the `á` at position 1 decides), and so is `"a"&U+202F&"b" < "á"&" b"` (B46, B48; B47 FALSE).
+  Ours: U+202F's difference is a variant weight (`NARROW_NBSP`, T-4072), so B1, C1 and F1 are known failures owned
+  by T-4087. UNVERIFIED: the accent weight's value.
+- **A weightless character ends a letter, not a skipped character.** A mark after `-` or `'` and a weightless
+  character still joins the hyphen or apostrophe. `"a-"&U+00AD&U+0301 = "a-"&U+0301` and
+  `"a'"&U+00AD&U+0301 = "a'"&U+0301` are TRUE, with `<` and `>` both FALSE, and each still holds with a `b` after
+  it (Calc!B10:B12, B16:B17, B21:B22, B50:B52). Ours: since T-4072, `Element::Weightless` cuts the hyphen's marks
+  in `skipped` and clears `after_skipped`; B10, B12, B17, B21, B22 and B50 are owned by T-4087.
+- **Width and superscripts are weighed before small kana; kana type after.**
+  - `"Ａ"&ぁ > "A"&あ`, `"¹"&ぁ > "1"&あ` and `U+3000&ぁ > " "&あ` are TRUE (Calc!B30:B33, B36, F2). So the first
+    character's width or superscript decides over the second's small kana.
+  - `"ア"&ぁ < "あ"&あ` is TRUE (B34): the small kana still decides over the kana type, as in T-3275's
+    `"かぁ" < "カア"`.
+  - `"Ａ"&"a" < "A"&"á"` is TRUE (B37): the accents still come first.
+  - It is a separate, earlier pass, not one pass decided at the first difference. With the width at position 2
+    and the small kana at position 1, `ぁ&"Ａ" > あ&"A"`, `ぁ&"¹" > あ&"1"` and `ぁ&U+3000 > あ&" "` are still
+    TRUE (B40, B42, B44; B41, B43, B45 FALSE).
+  - Ours: `variants` weighs width, superscript and kana type in one pass after `kana_weights`, so B30:B33, B36,
+    B40:B45 and F2 are owned by T-4087. This qualifies "Full-width and half-width forms" above ("Width is a
+    tiebreak").
+- **GROUPBY and PIVOTBY group by `=`, prefix rule included.** Over `ab`, `ab`&U+00AD, `é`, `é`&U+00AD,
+  U+00AD&`ab` and `AB` (values 1, 2, 4, 8, 16, 32), GROUPBY gives three groups in this order (-groupby Calc!B1,
+  B4:B6, D4:D6):
+  - 49 = `ab` + U+00AD&`ab` + `AB`, keyed by its first spelling `ab` (EXACT, Calc!B11:B12);
+  - 2 = `ab`&U+00AD;
+  - 12 = `é` + `é`&U+00AD.
+
+  PIVOTBY gives the same groups under its header row (B2, C4:C7). U+00AD&`ab` is equal to both `ab` and
+  `ab`&U+00AD, and joins the first group. Ours: `group_key` keys texts by their upper case and `key_cmp` orders them
+  with the total `cmp_text`, giving five groups; the 13 off cells are owned by T-4088.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

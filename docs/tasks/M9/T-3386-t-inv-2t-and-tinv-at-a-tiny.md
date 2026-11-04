@@ -1,6 +1,6 @@
 ---
 id: T-3386
-title: "T.INV.2T and TINV at a tiny p: Excel is over 1e-4 off the math from p 1.7E-110 down (R3 candidate, needs an owner ruling)"
+title: "T.INV.2T and TINV at a tiny p: Excel is over 1e-4 off the math from p 1.7E-110 down (R3 case, owner ruling in decision 0267)"
 milestone: M9
 lane: functions-stat
 status: todo
@@ -8,11 +8,14 @@ priority: P1
 size: S
 tier: opus
 depends_on: [T-3358]
+campaign: visible
 ---
 
 ## Goal
-Decision 0188 R3 decides, with an owner ruling, whether T.INV.2T and TINV at a tiny p follow Excel or the math, and
-the region is evidenced as committed points; until then Excel's value stays the target (directive 1).
+Apply the owner's ruling in decision 0267: at a tiny p, the Student-t, beta and chi-square quantiles follow the math
+(decision 0188 R3) on every evidenced point where Excel is more than G = 1e-4 relative off the 50-digit math. That
+covers T.INV.2T, TINV, T.INV and CONFIDENCE.T, plus BETA.INV in t1543. Each such point gets an R3 mark, and the engine
+returns the math within ε there. Every other point keeps Excel as its target (directive 1).
 
 ## Context
 - Gate A known failures this task owns (T-3358, eval/accuracy/known-failures.tsv): accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78 (Excel #NUM! at p = 2.2E-308; error mismatches, which R3 never excuses). The R3 candidates of this task's region are T.INV.2T/s1 A98, A99 (p 4.4E-242) and A103 and TINV/s1 A102, which are not marked (decision 0213). Removing the lines
@@ -35,11 +38,29 @@ the region is evidenced as committed points; until then Excel's value stays the 
   is in it.
 
 ## Acceptance criteria
-- [ ] A decision record with the owner's ruling (follow the math, or match Excel) and the region's bounds, from
-      committed evidence points (T-3358's tables or a probe on both sides of the bound).
-- [ ] If the ruling is the math: a `MATH-OVER-EXCEL` entry and the R3 marks (SPEC-0029); if Excel: a task that
-      reproduces Excel's form there.
+- [x] A decision record with the owner's ruling: decision 0267 rules the math. The region is the evidenced points
+      where Excel is more than G off the math, checked per cell. The decision 0267 analysis (2026-11-04, mpmath at 60
+      digits) found 50 of the 59 visibly-off tiny-p T.INV, T.INV.2T and TINV cells of t1531, t3349 and the m9 cases above G.
+- [ ] A `MATH-OVER-EXCEL` entry in statistics.md and the R3 marks in eval/accuracy/math-over-excel.tsv (SPEC-0029)
+      for every listed cell where Excel is more than G off the math. A cell whose Excel value is within G keeps Excel
+      as its target, and this task names it, or blocks it under decision 0056.
+- [ ] df 1 near p = 1 (`T.INV.2T(0.999999999999999,1)`) is outside the ruling and stays Excel's (T-2858).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - T.INV's own region (R3 case 1, T-3358).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 58 probes-numeric cells that no open task listed: 3 with the wrong type or error, 54 first wrong at the 11th significant digit or earlier, 1 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t1531-t-tiny-p.case.json (10): Calc!A73-A74, A82-A84, A97-A98, A106-A108
+- probes-numeric/t1543-inverse-cdf-tiny-p.case.json (6): Calc!A43, A79, A86, A89, A91-A92
+- probes-numeric/t3349-t-inv-2t-sweep.case.json (42): Calc!A211, A214-A217, A219, A224-A225, A230, A232, A237-A240, A242-A243, A246, A252, A257, A262-A264, A266, A270, A272-A274, A277, A279-A281, A283-A285, A287-A289, A291, A293-A294, A296, A300
+
+- [ ] The 3 type cells listed (t1543 A89, A91 and A92: the engine returns `#NUM!` where Excel returns a number for `BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)` and `BETA.INV(1E-200,0.5,100)`) never pass through an R3 mark while they are an error against a number (decision 0188 R3). The engine returns a number there. That is Excel's number, or the math where a mark applies.
+- [ ] Every cell listed above does one of three things: it is an R3-marked cell where the engine returns the math within ε (R1(c) `R3Pass`); it matches Excel within half a unit of the 15th significant digit or has Excel's type and error; or it is left after decision 0056's time-box and accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" either passes as an R3 cell (decision 0188 R3, ruled by decision 0267), or is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text.

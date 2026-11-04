@@ -50,8 +50,8 @@ WHITE_DARK = ("#000000", "#ffffff")
 # The buckets of model.BUCKETS. Each ink pair clears 4.5:1 (WCAG) on its fill in that theme; the
 # worst is black on light blue, 4.76:1.
 BUCKET_PALETTE = Palette(
-    dict(zip(BUCKETS, (BLUE, AQUA, YELLOW, VIOLET, RED, SLATE), strict=True)),
-    dict(zip(BUCKETS, (BLACK, BLACK, BLACK, WHITE_LIGHT, BLACK, WHITE_LIGHT), strict=True)),
+    dict(zip(BUCKETS, (BLUE, AQUA, YELLOW, VIOLET, MAGENTA, RED, SLATE), strict=True)),
+    dict(zip(BUCKETS, (BLACK, BLACK, BLACK, WHITE_LIGHT, BLACK, BLACK, WHITE_LIGHT), strict=True)),
 )
 # The tiers of model.TIERS: validated as a six-hue categorical palette (light: worst adjacent CVD
 # Delta E 15.3, normal-vision 20.8; dark: CVD 10.0), with unscored in the neutral slate of "no

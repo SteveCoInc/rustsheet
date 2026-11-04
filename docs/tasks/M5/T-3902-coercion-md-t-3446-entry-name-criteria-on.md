@@ -3,7 +3,7 @@ id: T-3902
 title: "coercion.md T-3446 entry: name criteria on the five new digit blocks as unprobed and fix the row-102 wording (review follow-up)"
 milestone: M5
 lane: research
-status: todo
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ Excel-fidelity review of PR #2921 (T-3446), two MINOR findings:
 
 ## Out of scope
 - Typed input (T-3891).
+
+## Outcome
+A single UNPROBED line in coercion.md now names the criteria forms on the five new blocks that are not probed (a plain single digit is, by T-3895 A49/A74/A99/A124/A149; no probe column added); the row-102 wording is corrected in coercion.md and T-3891. Docs only, no eval change.

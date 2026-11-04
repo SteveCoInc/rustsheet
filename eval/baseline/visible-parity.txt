@@ -241,6 +241,8 @@ probes/t3945-atan-near-midpoint.case.json	2
 probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	44
 probes/t4014-sheet-api-name-65.case.json	1
 probes/t4060-collation-open-choices.case.json	9
+probes/t4086-collation-later-passes.case.json	21
+probes/t4086-groupby-weightless.case.json	13
 probes/table-edits/t3629-convert-names.case.json	4
 probes/table-edits/t3629-convert-plain.case.json	4
 probes/table-edits/t3629-readd-other-area.case.json	4
