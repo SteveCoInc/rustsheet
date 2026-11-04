@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-4117: ASCII currency sign before/after parentheses. A=typed text, B=ISNUMBER, C=number or text, D=VALUE, E=NUMBERVALUE, F=text+0 of the same literal. Rows 11-14: space padding and nesting inside the parentheses.",
+ "description": "T-4117: ASCII currency sign before/after parentheses. A=typed text, B=ISNUMBER, C=number or text, D=VALUE, E=NUMBERVALUE, F=text+0 of the same literal. Rows 11-14: space padding and nesting inside the parentheses. Rows 15-28: other currency signs, E-notation, percent, fraction, signed and malformed amounts inside the parentheses; rows 29-34: mixed fractions inside them.",
  "tags": [
   "M5",
   "probe",
@@ -122,7 +122,167 @@
     "C14": "=IF(ISNUMBER(A14),A14,\"text\")",
     "D14": "=IFERROR(VALUE(\"$((12))\"),\"err\")",
     "E14": "=IFERROR(NUMBERVALUE(\"$((12))\"),\"err\")",
-    "F14": "=IFERROR(\"$((12))\"+0,\"err\")"
+    "F14": "=IFERROR(\"$((12))\"+0,\"err\")",
+    "A15": {
+     "entered": "€(12)"
+    },
+    "B15": "=ISNUMBER(A15)",
+    "C15": "=IF(ISNUMBER(A15),A15,\"text\")",
+    "D15": "=IFERROR(VALUE(\"€(12)\"),\"err\")",
+    "E15": "=IFERROR(NUMBERVALUE(\"€(12)\"),\"err\")",
+    "F15": "=IFERROR(\"€(12)\"+0,\"err\")",
+    "A16": {
+     "entered": "€ (12)"
+    },
+    "B16": "=ISNUMBER(A16)",
+    "C16": "=IF(ISNUMBER(A16),A16,\"text\")",
+    "D16": "=IFERROR(VALUE(\"€ (12)\"),\"err\")",
+    "E16": "=IFERROR(NUMBERVALUE(\"€ (12)\"),\"err\")",
+    "F16": "=IFERROR(\"€ (12)\"+0,\"err\")",
+    "A17": {
+     "entered": "€(1,234.5)"
+    },
+    "B17": "=ISNUMBER(A17)",
+    "C17": "=IF(ISNUMBER(A17),A17,\"text\")",
+    "D17": "=IFERROR(VALUE(\"€(1,234.5)\"),\"err\")",
+    "E17": "=IFERROR(NUMBERVALUE(\"€(1,234.5)\"),\"err\")",
+    "F17": "=IFERROR(\"€(1,234.5)\"+0,\"err\")",
+    "A18": {
+     "entered": "$(1e3)"
+    },
+    "B18": "=ISNUMBER(A18)",
+    "C18": "=IF(ISNUMBER(A18),A18,\"text\")",
+    "D18": "=IFERROR(VALUE(\"$(1e3)\"),\"err\")",
+    "E18": "=IFERROR(NUMBERVALUE(\"$(1e3)\"),\"err\")",
+    "F18": "=IFERROR(\"$(1e3)\"+0,\"err\")",
+    "A19": {
+     "entered": "$(1.5E+2)"
+    },
+    "B19": "=ISNUMBER(A19)",
+    "C19": "=IF(ISNUMBER(A19),A19,\"text\")",
+    "D19": "=IFERROR(VALUE(\"$(1.5E+2)\"),\"err\")",
+    "E19": "=IFERROR(NUMBERVALUE(\"$(1.5E+2)\"),\"err\")",
+    "F19": "=IFERROR(\"$(1.5E+2)\"+0,\"err\")",
+    "A20": {
+     "entered": "$(12%)"
+    },
+    "B20": "=ISNUMBER(A20)",
+    "C20": "=IF(ISNUMBER(A20),A20,\"text\")",
+    "D20": "=IFERROR(VALUE(\"$(12%)\"),\"err\")",
+    "E20": "=IFERROR(NUMBERVALUE(\"$(12%)\"),\"err\")",
+    "F20": "=IFERROR(\"$(12%)\"+0,\"err\")",
+    "A21": {
+     "entered": "$(1 1/2)"
+    },
+    "B21": "=ISNUMBER(A21)",
+    "C21": "=IF(ISNUMBER(A21),A21,\"text\")",
+    "D21": "=IFERROR(VALUE(\"$(1 1/2)\"),\"err\")",
+    "E21": "=IFERROR(NUMBERVALUE(\"$(1 1/2)\"),\"err\")",
+    "F21": "=IFERROR(\"$(1 1/2)\"+0,\"err\")",
+    "A22": {
+     "entered": "$(+12)"
+    },
+    "B22": "=ISNUMBER(A22)",
+    "C22": "=IF(ISNUMBER(A22),A22,\"text\")",
+    "D22": "=IFERROR(VALUE(\"$(+12)\"),\"err\")",
+    "E22": "=IFERROR(NUMBERVALUE(\"$(+12)\"),\"err\")",
+    "F22": "=IFERROR(\"$(+12)\"+0,\"err\")",
+    "A23": {
+     "entered": "$()"
+    },
+    "B23": "=ISNUMBER(A23)",
+    "C23": "=IF(ISNUMBER(A23),A23,\"text\")",
+    "D23": "=IFERROR(VALUE(\"$()\"),\"err\")",
+    "E23": "=IFERROR(NUMBERVALUE(\"$()\"),\"err\")",
+    "F23": "=IFERROR(\"$()\"+0,\"err\")",
+    "A24": {
+     "entered": "$(12"
+    },
+    "B24": "=ISNUMBER(A24)",
+    "C24": "=IF(ISNUMBER(A24),A24,\"text\")",
+    "D24": "=IFERROR(VALUE(\"$(12\"),\"err\")",
+    "E24": "=IFERROR(NUMBERVALUE(\"$(12\"),\"err\")",
+    "F24": "=IFERROR(\"$(12\"+0,\"err\")",
+    "A25": {
+     "entered": "€(1e3)"
+    },
+    "B25": "=ISNUMBER(A25)",
+    "C25": "=IF(ISNUMBER(A25),A25,\"text\")",
+    "D25": "=IFERROR(VALUE(\"€(1e3)\"),\"err\")",
+    "E25": "=IFERROR(NUMBERVALUE(\"€(1e3)\"),\"err\")",
+    "F25": "=IFERROR(\"€(1e3)\"+0,\"err\")",
+    "A26": {
+     "entered": "$(12)%"
+    },
+    "B26": "=ISNUMBER(A26)",
+    "C26": "=IF(ISNUMBER(A26),A26,\"text\")",
+    "D26": "=IFERROR(VALUE(\"$(12)%\"),\"err\")",
+    "E26": "=IFERROR(NUMBERVALUE(\"$(12)%\"),\"err\")",
+    "F26": "=IFERROR(\"$(12)%\"+0,\"err\")",
+    "A27": {
+     "entered": "$($12)"
+    },
+    "B27": "=ISNUMBER(A27)",
+    "C27": "=IF(ISNUMBER(A27),A27,\"text\")",
+    "D27": "=IFERROR(VALUE(\"$($12)\"),\"err\")",
+    "E27": "=IFERROR(NUMBERVALUE(\"$($12)\"),\"err\")",
+    "F27": "=IFERROR(\"$($12)\"+0,\"err\")",
+    "A28": {
+     "entered": "£(12)"
+    },
+    "B28": "=ISNUMBER(A28)",
+    "C28": "=IF(ISNUMBER(A28),A28,\"text\")",
+    "D28": "=IFERROR(VALUE(\"£(12)\"),\"err\")",
+    "E28": "=IFERROR(NUMBERVALUE(\"£(12)\"),\"err\")",
+    "F28": "=IFERROR(\"£(12)\"+0,\"err\")",
+    "A29": {
+     "entered": "$( 1 1/2 )"
+    },
+    "B29": "=ISNUMBER(A29)",
+    "C29": "=IF(ISNUMBER(A29),A29,\"text\")",
+    "D29": "=IFERROR(VALUE(\"$( 1 1/2 )\"),\"err\")",
+    "E29": "=IFERROR(NUMBERVALUE(\"$( 1 1/2 )\"),\"err\")",
+    "F29": "=IFERROR(\"$( 1 1/2 )\"+0,\"err\")",
+    "A30": {
+     "entered": "$(1 1/2%)"
+    },
+    "B30": "=ISNUMBER(A30)",
+    "C30": "=IF(ISNUMBER(A30),A30,\"text\")",
+    "D30": "=IFERROR(VALUE(\"$(1 1/2%)\"),\"err\")",
+    "E30": "=IFERROR(NUMBERVALUE(\"$(1 1/2%)\"),\"err\")",
+    "F30": "=IFERROR(\"$(1 1/2%)\"+0,\"err\")",
+    "A31": {
+     "entered": "€(1 1/2)"
+    },
+    "B31": "=ISNUMBER(A31)",
+    "C31": "=IF(ISNUMBER(A31),A31,\"text\")",
+    "D31": "=IFERROR(VALUE(\"€(1 1/2)\"),\"err\")",
+    "E31": "=IFERROR(NUMBERVALUE(\"€(1 1/2)\"),\"err\")",
+    "F31": "=IFERROR(\"€(1 1/2)\"+0,\"err\")",
+    "A32": {
+     "entered": "-$(1 1/2)"
+    },
+    "B32": "=ISNUMBER(A32)",
+    "C32": "=IF(ISNUMBER(A32),A32,\"text\")",
+    "D32": "=IFERROR(VALUE(\"-$(1 1/2)\"),\"err\")",
+    "E32": "=IFERROR(NUMBERVALUE(\"-$(1 1/2)\"),\"err\")",
+    "F32": "=IFERROR(\"-$(1 1/2)\"+0,\"err\")",
+    "A33": {
+     "entered": "$ (1 1/2)"
+    },
+    "B33": "=ISNUMBER(A33)",
+    "C33": "=IF(ISNUMBER(A33),A33,\"text\")",
+    "D33": "=IFERROR(VALUE(\"$ (1 1/2)\"),\"err\")",
+    "E33": "=IFERROR(NUMBERVALUE(\"$ (1 1/2)\"),\"err\")",
+    "F33": "=IFERROR(\"$ (1 1/2)\"+0,\"err\")",
+    "A34": {
+     "entered": "$(3 1/12)"
+    },
+    "B34": "=ISNUMBER(A34)",
+    "C34": "=IF(ISNUMBER(A34),A34,\"text\")",
+    "D34": "=IFERROR(VALUE(\"$(3 1/12)\"),\"err\")",
+    "E34": "=IFERROR(NUMBERVALUE(\"$(3 1/12)\"),\"err\")",
+    "F34": "=IFERROR(\"$(3 1/12)\"+0,\"err\")"
    }
   }
  ]

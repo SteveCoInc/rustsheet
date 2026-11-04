@@ -108,10 +108,17 @@ fn parse_ascii_typed_number(
 
 /// Whether the denominator of the mixed fraction `text` (already read by `mixed_fraction`) is 10
 /// or more, ignoring leading zeros: `3 1/12` and `3 1/10000` take `# ??/??`, `3 1/9` and
-/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27).
+/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27); a closing `)` or
+/// space is not part of it (`$(1 1/2)` is `# ?/?`, `$(3 1/12)` `# ??/??`, probes/t4117-currency-
+/// parens A21, A34).
 fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
-    text.rsplit_once('/')
-        .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
+    text.rsplit_once('/').is_some_and(|(_, denominator)| {
+        denominator
+            .trim_end_matches([')', ' '])
+            .trim_start_matches('0')
+            .len()
+            >= 2
+    })
 }
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
@@ -487,13 +494,18 @@ fn parse_percent_or_currency(
             let p = p.trim_matches(' ');
             // Excel: a currency sign before a parenthesised unsigned amount is negative, `$(12)`,
             // `$ (12)`, `$( 12 )` are -12 with `$#,##0_);[Red]($#,##0)`, but `-$(12)`, `$(-12)`,
-            // `$((12))` and `(12$)` stay text (probes/t4117-currency-parens A1-A14,
+            // `$((12))`, `$(+12)` and `(12$)` stay text; `$(1e3)` is -1000 in `0.00E+00` and `$(12%)`
+            // text (probes/t4117-currency-parens A1:A28,
             // docs/excel-semantics/coercion.md "Currency sign before parentheses").
-            let (p, sign) = match p.strip_prefix('(').and_then(|v| v.strip_suffix(')')) {
-                Some(inner) if sign < 0.0 || inner.trim().starts_with(['-', '+', '(']) => {
+            let (p, sign) = match p
+                .strip_prefix('(')
+                .and_then(|v| v.strip_suffix(')'))
+                .map(|inner| inner.trim_matches(' '))
+            {
+                Some(inner) if sign < 0.0 || inner.starts_with(['-', '+', '(']) => {
                     return Err("Cannot parse number".to_string())
                 }
-                Some(inner) => (inner.trim_matches(' '), -1.0),
+                Some(inner) => (inner, -1.0),
                 None => (p, sign),
             };
             let (f, options) = parse_number(p, decimal_separator, group_separator)?;

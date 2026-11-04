@@ -1210,6 +1210,20 @@ A currency sign followed by a parenthesised unsigned amount is a negative number
 coercion: `$(12)`, `$ (12)`, `$( 12)`, `$(12 )`, `$( 12 )` and `$(1,234.5)` are -12 and -1234.5,
 typed with the format `$#,##0_);[Red]($#,##0)` (`$#,##0.00_);[Red]($#,##0.00)` when the amount has
 decimals). `-$(12)`, `$(-12)`, `$((12))`, `(12$)`, `($)12` and `(12)$` are text / `#VALUE!`
-(probes/t4117-currency-parens A1-A14; ENTERED formats in
+(probes/t4117-currency-parens A1:A14; ENTERED formats in
 docs/research/t4117-currency-parens-2026-11-04.md; `($12)` is the older paren-first form above).
-Implemented in `parse_percent_or_currency`.
+
+- **Only the sign typed input knows.** Typed `€(12)`, `€ (12)`, `€(1,234.5)`, `€(1e3)` and `€(1 1/2)` stay
+  text, but `VALUE`, `NUMBERVALUE` and `+0` read `€(…)` as negative like `$(…)` (A15:A17, A25, A31): the
+  coercion currencies (`$`, `€`) take the form, the typed ones (`$` in en-US) do. `£(12)` is `#VALUE!`
+  everywhere (A28), as `£12` is.
+- **The amount is any unsigned number the currency form reads.** `$(1e3)` and `$(1.5E+2)` are -1000 and
+  -150, typed with `0.00E+00` (A18:A19, as `$1e3` is); a mixed fraction is negative too: `$(1 1/2)`,
+  `$ (1 1/2)` and `$( 1 1/2 )` are -1.5 typed with `# ?/?`, `$(3 1/12)` -3.0833… with `# ??/??`
+  (A21, A29, A33:A34), by VALUE and `+0` but not NUMBERVALUE, which drops the spaces (`#VALUE!`).
+- **Text:** `$(12%)`, `$(12)%`, `$(+12)`, `$()`, `$(12`, `$($12)`, `-$(1 1/2)` (A20, A22:A24, A26:A27,
+  A32). `$(12)%` is `-0.12` by NUMBERVALUE alone (its trailing `%` rule, text.md). Typed `$(1 1/2%)`
+  stays text but takes `0.00%`, like `-$3 1/2%` (A30).
+
+Implemented in `parse_percent_or_currency` (formatter/parse_formatted.rs) and `read_mixed_fraction`
+(mixed_fraction.rs).

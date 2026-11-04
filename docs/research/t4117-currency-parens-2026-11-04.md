@@ -1,5 +1,7 @@
 # T-4117 typed currency-before-parentheses (excel-graph, 2026-11-04)
 
+ENTERED lines of `rustsheet-oracle fill -b excel-graph --suite probes --case probes/t4117-currency-parens.case.json --force` (rows 15-34 added by the opus resume of the handoff).
+
 ```
 ENTERED Sheet1!A1 '$(12)': values=[[-12]] numberFormat=[['$#,##0_);[Red]($#,##0)']]
 ENTERED Sheet1!A2 '$(1,234.5)': values=[[-1234.5]] numberFormat=[['$#,##0.00_);[Red]($#,##0.00)']]
@@ -15,4 +17,24 @@ ENTERED Sheet1!A11 '$( 12)': values=[[-12]] numberFormat=[['$#,##0_);[Red]($#,##
 ENTERED Sheet1!A12 '$(12 )': values=[[-12]] numberFormat=[['$#,##0_);[Red]($#,##0)']]
 ENTERED Sheet1!A13 '$( 12 )': values=[[-12]] numberFormat=[['$#,##0_);[Red]($#,##0)']]
 ENTERED Sheet1!A14 '$((12))': values=[['$((12))']] numberFormat=[['General']]
+ENTERED Sheet1!A15 '€(12)': values=[['€(12)']] numberFormat=[['General']]
+ENTERED Sheet1!A16 '€ (12)': values=[['€ (12)']] numberFormat=[['General']]
+ENTERED Sheet1!A17 '€(1,234.5)': values=[['€(1,234.5)']] numberFormat=[['General']]
+ENTERED Sheet1!A18 '$(1e3)': values=[[-1000]] numberFormat=[['0.00E+00']]
+ENTERED Sheet1!A19 '$(1.5E+2)': values=[[-150]] numberFormat=[['0.00E+00']]
+ENTERED Sheet1!A20 '$(12%)': values=[['$(12%)']] numberFormat=[['General']]
+ENTERED Sheet1!A21 '$(1 1/2)': values=[[-1.5]] numberFormat=[['# ?/?']]
+ENTERED Sheet1!A22 '$(+12)': values=[['$(+12)']] numberFormat=[['General']]
+ENTERED Sheet1!A23 '$()': values=[['$()']] numberFormat=[['General']]
+ENTERED Sheet1!A24 '$(12': values=[['$(12']] numberFormat=[['General']]
+ENTERED Sheet1!A25 '€(1e3)': values=[['€(1e3)']] numberFormat=[['General']]
+ENTERED Sheet1!A26 '$(12)%': values=[['$(12)%']] numberFormat=[['General']]
+ENTERED Sheet1!A27 '$($12)': values=[['$($12)']] numberFormat=[['General']]
+ENTERED Sheet1!A28 '£(12)': values=[['£(12)']] numberFormat=[['General']]
+ENTERED Sheet1!A29 '$( 1 1/2 )': values=[[-1.5]] numberFormat=[['# ?/?']]
+ENTERED Sheet1!A30 '$(1 1/2%)': values=[['$(1 1/2%)']] numberFormat=[['0.00%']]
+ENTERED Sheet1!A31 '€(1 1/2)': values=[['€(1 1/2)']] numberFormat=[['General']]
+ENTERED Sheet1!A32 '-$(1 1/2)': values=[['-$(1 1/2)']] numberFormat=[['General']]
+ENTERED Sheet1!A33 '$ (1 1/2)': values=[[-1.5]] numberFormat=[['# ?/?']]
+ENTERED Sheet1!A34 '$(3 1/12)': values=[[-3.08333333333333]] numberFormat=[['# ??/??']]
 ```
