@@ -440,14 +440,16 @@ fn parse_percent_or_currency(
     // eng-number-text-group-comma-edges A15-A18). A minus sign may precede it: `-%1.5` is -0.015
     // (probes/t3742-value-percent-currency A1, A16), but not before a minus: `-%-1.5` is #VALUE!
     // and typed text. A plus may precede it: `+%1.5` is 0.015 (probes/t3980-typed-percent-
-    // currency A7/B7 and A2 for `-%-1.5`, A10/B10 for `+%1.5`; the shapes after a `+%` are T-3991). Typed cell input shares this reader (A1, A3).
+    // currency A7/B7 and A2 for `-%-1.5`, A10/B10 for `+%1.5`; the shapes after a sign are T-3991). Typed cell input shares this reader (A1, A3).
     let leading_percent = value
         .strip_prefix('%')
-        .map(|p| (p, 1.0))
-        .or_else(|| value.strip_prefix("+%").map(|p| (p, 1.0)))
-        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0)));
-    if let Some((p, sign)) = leading_percent {
-        if sign < 0.0 && p.trim_start_matches(' ').starts_with('-') {
+        .map(|p| (p, 1.0, false))
+        .or_else(|| value.strip_prefix("+%").map(|p| (p, 1.0, true)))
+        .or_else(|| value.strip_prefix("-%").map(|p| (p, -1.0, true)));
+    if let Some((p, sign, signed)) = leading_percent {
+        // Any sign before the percent sign refuses a second sign after it: `-%-1.5`, `+%-1.5`
+        // and `-%+1.5` are #VALUE! (probes/t3980 A2, probes/t3991-percent-shapes A1/A4/A5).
+        if signed && p.trim_start_matches(' ').starts_with(['-', '+']) {
             return Err("Cannot parse number".to_string());
         }
         let (f, options) = parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
