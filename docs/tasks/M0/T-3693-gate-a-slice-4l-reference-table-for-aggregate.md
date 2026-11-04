@@ -3,7 +3,7 @@ id: T-3693
 title: "Gate A slice 4l: reference table for AGGREGATE's array forms (functions 14-19)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
