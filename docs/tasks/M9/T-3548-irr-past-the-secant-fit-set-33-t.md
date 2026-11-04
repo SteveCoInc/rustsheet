@@ -57,6 +57,18 @@ T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model
 - probes-numeric/t3411-irr-r4-fresh-3.case.json (49): Calc!A1, A2, A3, A4, A5, A7, A10, A11, A12, A13, A14, A15, A16, A20, A25, A27, A34, A36, A41, A44, A47, A51, A54, A55, A56, A61, A63, A65, A67, A72, A76, A77, A80, A82, A83, A84, A87, A90, A94, A95, A96, A97, A98, A100, A121, A130, A140, A141, A149
 - probes-numeric/t3411-irr-r4-fresh-4.case.json (62): Calc!A1, A5, A6, A7, A8, A9, A16, A17, A19, A21, A22, A24, A25, A27, A30, A31, A33, A35, A37, A41, A42, A43, A44, A50, A52, A53, A55, A56, A57, A59, A61, A63, A64, A65, A67, A69, A71, A72, A73, A74, A76, A79, A80, A82, A83, A84, A87, A88, A91, A92, A93, A96, A97, A98, A99, A129, A135, A136, A138, A143, A148, A149
 
+## Cells left by T-3411's close (gap triage 2026-11-04b)
+T-3411's R4 sweeps 1 and 2 (same generator as sweeps 3 and 4, docs/research/t3411/gen_sweep.py), which T-3411 owned
+until it closed and no open task named after it; the engine's type differs from Excel's (`make eval` on origin/main
+a7b115e9e). All are Excel number / engine `#NUM!` except fresh-2 A132 (Excel `#NUM!`, the engine 0.3127495296884877).
+A local experiment with the fallback's Newton cap lifted (`IRR_FALLBACK_STEPS` 50 -> 100000, residual cut kept; not
+committed) gives Excel's value on fresh A2, A16, A26, A44, A70, A78, A79, A81, A93, A94, A99, A102, A107, A128, A137
+and fresh-2 A2, A4, A9, A17, A33, A41, A51, A68, A69, A76, A83, A141, but loses 6 + 6 passing cells of these two
+cases (fresh A14, A24, A64, A87, A90, A92; fresh-2 A25, A39, A79, A89, A96, A110) and 39 t3406 annuities (T-4027);
+on most of the rest it returns a number 10 to 15 digits from Excel's, so Excel stops elsewhere (T-3408's question).
+- probes-numeric/t3411-irr-r4-fresh.case.json (51): Calc!A1, A2, A4, A6, A8, A9, A11, A12, A15, A16, A17, A18, A20, A22, A23, A25, A26, A27, A44, A46, A51, A52, A59, A66, A69, A70, A72, A73, A76, A78, A79, A80, A81, A82, A84, A86, A89, A93, A94, A95, A96, A97, A99, A102, A107, A115, A126, A128, A137, A145, A150
+- probes-numeric/t3411-irr-r4-fresh-2.case.json (49): Calc!A2, A3, A4, A5, A7, A8, A9, A12, A14, A15, A17, A18, A20, A21, A23, A24, A29, A33, A35, A40, A41, A51, A56, A58, A61, A62, A67, A68, A69, A70, A76, A80, A81, A83, A84, A85, A87, A88, A93, A95, A97, A99, A100, A106, A109, A127, A130, A132, A141
+
 ## Out of scope
 - T-3347's near-zero roots and T-3406/T-3411's annuity boundary, except where one rule covers both (then say so in
   both tasks).
