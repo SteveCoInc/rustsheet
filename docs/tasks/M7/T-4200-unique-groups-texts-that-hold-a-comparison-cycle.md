@@ -61,5 +61,6 @@ where ours keeps two because a̧ = a͂͂ pairwise.
 - coercion.md "Not a total order" states UNIQUE's rule with the cells; the ours note is updated.
 - Eval delta: probes/t3211-collation-sort-cycles Calc!G4, H4, I4 fixed (3 known failures fewer); the new case
   passes 356/356 checked cells. No regressions.
+- Follow-up filed: T-4234 (a test of the ASCII invariant behind the hash path).
 - Not separated by the probe: which line represents a merged group (first, smallest or last all fit); with
   numbers or booleans beside a cycling text column the order across types is SORT's, unprobed.

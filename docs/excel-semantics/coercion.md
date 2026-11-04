@@ -258,7 +258,8 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
     (t3211 Calc!A2, A6), yet UNIQUE groups A5 with A4 in both (rows 146, 150), since they are equal neighbours of a
     run before any merge. `{A4;A3;A5}` and `{A5;A3;A4}` keep three rows (rows 147, 149). Lines compare column by
     column, the first unequal column deciding: rows ("x",A5), ("y",A3), ("x",A4) keep two, ("x",A5) standing for
-    ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149). Which line represents a merged group (its first, its smallest or its last) is not separated by
+    ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149).
+    Which line represents a merged group (its first, its smallest or its last) is not separated by
     the probe.
   Ours (T-3181): the operators and the criteria compare texts with `cmp_text_pairwise`, which
   applies the rule (the criteria index still hashes the `CollationKey` of the wrapped sums,
@@ -273,7 +274,7 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
   unequal), when every text of its data is ASCII (ASCII texts compare transitively); otherwise, since T-4200, it
-  groups with `coalesce_equal_lines` (functions/util.rs), the merge above, comparing texts with
+  groups with `coalesce_equal_lines` (functions/util/pairwise_order.rs), the merge above, comparing texts with
   `cmp_text_pairwise` and other cells by their keys, each comparison charged to the budget: every t3211 and t4200
   UNIQUE cell passes. GROUPBY and PIVOTBY still group by the buckets (T-4088) and sort with the total `cmp_text`.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
