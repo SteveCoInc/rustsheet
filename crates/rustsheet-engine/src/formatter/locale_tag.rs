@@ -252,7 +252,6 @@ fn extended_hex(tag: &str) -> Option<u32> {
     }))
 }
 
-/// The calendar digits of a tag value (bits 16-23), without its numeral byte.
 /// The calendar of a tag value: its third byte without the top bit, so 0x83 is 3 (Japanese eras;
 /// `[$-myv-RU]`, 0x0183EECE, prints 2023-03-15 as "05-03-15") and 0x93 is 0x13 (lunar;
 /// `[$-tok-001]`), while 0x15-0x7F are ignored (`[$-FF040C]` is French in its own calendar). Every
