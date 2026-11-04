@@ -335,3 +335,23 @@ fn empty_text_section_is_empty() {
     assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
     assert_eq!(format_text_value("abc", "0;").text, "abc");
 }
+
+#[test]
+fn numeral_suffix_tags_print_script_digits() {
+    // probes/t3891-numeral-tag-render (excel-graph 2026-11-04).
+    use super::text;
+    assert_eq!(text(123.0, "[$-ar-SA,200]0"), "١٢٣");
+    assert_eq!(text(1.25, "[$-ar-SA,200]0.#"), "١.٣");
+    assert_eq!(text(0.12, "[$-ar-SA,200]0.00%"), "١٢.٠٠%");
+    assert_eq!(text(1234.0, "[$-ar-SA,200]#,##0"), "١,٢٣٤");
+    assert_eq!(text(43831.0, "[$-,200]mm/dd/yyyy"), "٠١/٠١/٢٠٢٠");
+    assert_eq!(text(43831.0, "[$-,D00]mm/dd/yyyy"), "๐๑/๐๑/๒๐๒๐");
+    assert_eq!(text(123.0, "[$-ta-IN,900]0"), "௧௨௩");
+    assert_eq!(text(123.0, "[$-km-KH,1200]0"), "១២៣");
+    assert_eq!(text(123.0, "[$-en-US,200]0"), "١٢٣");
+    assert_eq!(text(123.0, "[$-ar-SA,0]0"), "123");
+    assert_eq!(text(123.0, "[$-ar-SA]0"), "123");
+    assert_eq!(text(1000.0, "[$-ar-SA,200]0.00E+00"), "١.٠٠E+٠٣");
+    assert_eq!(text(12.0, "[$$-ar-SA,200]#,##0.00"), "$١٢.٠٠");
+    assert_eq!(text(-12.0, "[$-ar-SA,200]0"), "-١٢");
+}

@@ -219,11 +219,26 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
 /// Myanmar digits; probes/t1924-locale-tag-extended-hex A26). It holds whatever the LCID resolves
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
+    if let Some((_, suffix)) = numeral_suffix(tag) {
+        return hex_value(suffix).map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 8));
+    }
     let value = hex_value(tag).or_else(|| match resolve_bcp47(tag, false) {
         LocaleTag::Silent => extended_hex(tag),
         _ => None,
     });
     value.map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 24))
+}
+
+/// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
+/// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
+/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
+/// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
+/// digits there although byte 32 is ASCII in the LCID form (A28; TODO(T-4107)). Only the digits
+/// are read this way: the locale part resolves as the whole tag always has (`[$-40C,1]` prints
+/// English names; probes/text-locale-date-names A106).
+fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {
+    tag.split_once(',')
 }
 
 /// `tag` read as a hex LCID with its calendar digits, if it is one.
