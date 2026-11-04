@@ -3,7 +3,7 @@ id: T-3678
 title: "Gate A slice 4k: reference tables for TIME, HOUR, MINUTE, SECOND and YEARFRAC"
 milestone: M0
 lane: harness
-status: done
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -96,7 +96,7 @@ TIME, HOUR, MINUTE, SECOND and YEARFRAC each get a committed, oracle-filled `s1`
 - Eval delta: no engine change. The new probe case adds the visibly-off cells where Excel wraps and the engine
   gives `#NUM!`. T-3983 owns them; they are recorded through `make eval-baseline`.
 
-## Landing notes
+## Landing notes (resumed)
 - **PR:** #3047, a draft. **Head:** the commit after ed0d631 that adds these notes. CI was green on 2c8bb18 so far;
   on ed0d631 it was pending when the window closed.
 - **Reviewers on ed0d631:**
