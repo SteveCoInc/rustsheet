@@ -1386,13 +1386,14 @@ Mind Excel's precedence when probing: `-2^-22` is `(-2)^-22`, a positive number;
   time-argument-window A73, A75 and A76, and time-argument-negative A65 and A66. All eight are numbers now, while
   `TIME(-32768,0,0)`, `TIME(-32767,32767,32767)`, `TIME(32768,0,0)` and `TIME(0,0,32768)` stay `#NUM!` (G9:G12).
   Gate A's TIME/s1 table found the change at A149: `TIME(14120,-33313.544720951,-1389.80591442708)` =
-  0.6936342592592837. The older sidecars still hold the 2026-10-21 values. Unprobed: arguments below -131072. Two fills two weeks apart show the change, but a staged rollout cannot be ruled out, so T-3983 re-probes column G right before the engine change.
+  0.6936342592592837. T-3983 refilled time-argument-bound, -window and -negative from excel-graph on 2026-11-04,
+  and they confirm the wrap.
 - Below -131072 (probes/t3983-time-argument-below-131072, excel-graph, 2026-11-04): the wrap holds down to -2^31
   (`TIME(600,-131073,0)` = 23:59, `TIME(600,-1000000,0)` = 0.2222222222222214, `TIME(-131073,0,0)` is `#NUM!`).
   A whole value below -2^31 reads as 0 (`TIME(600,-2147483649,0)` = 0, where the wrap would be -1; the same for -2^32,
   -1E15 and -1E20 in the minute, second and hour), as a clamp to the 32-bit minimum -2^31 would give.
 Ours: matches. `time_argument` in `functions/date_and_time.rs` wraps (T-3983).
-Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03).
+Status: VERIFIED (excel-graph probes above, 2026-10-21; the wrap 2026-11-03 and 2026-11-04).
 Tasks: T-2267, T-3983
 
 ## DATE: a year, month or day just below an integer reads as that integer (T-2268)
