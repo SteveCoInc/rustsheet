@@ -961,9 +961,9 @@ fn convert_to_range_keeps_cells_and_makes_references_absolute_ranges() {
     assert!(model.convert_table_to_range("Sales").is_err());
 }
 
-/// Convert to range: a `#This Row` reference off the data rows stays `#VALUE!` (below the
+/// Convert to range: a `#This Row` reference off the data rows becomes `#REF!` (below the
 /// table and on another sheet), while one on a data row reads its own cell with the column
-/// absolute and the row relative (probes/table-edits/table-convert-names-this-row and
+/// absolute and the row relative (probes/table-edits/t3629-convert-plain F1, F9, T-4020;
 /// table-convert-same-sheet, T-2643).
 #[test]
 fn convert_to_range_lowers_this_row_at_each_row() {
@@ -978,18 +978,19 @@ fn convert_to_range_lowers_this_row_at_each_row() {
         .unwrap();
     model.convert_table_to_range("Sales").unwrap();
     model.evaluate();
-    assert_eq!(value(&model, 0, 5, 4), "#VALUE!");
+    assert_eq!(value(&model, 0, 5, 4), "#REF!");
     assert_eq!(value(&model, 0, 2, 4), "2");
     assert_eq!(value(&model, 0, 3, 4), "4");
     assert_eq!(model.get_localized_cell_content(0, 3, 4).unwrap(), "=$A3*2");
-    assert_eq!(value(&model, 1, 5, 4), "#VALUE!");
+    assert_eq!(value(&model, 1, 5, 4), "#REF!");
 }
 
-/// Convert to range: a `#This Row` reference off the data rows keeps its text, in its `@` form
-/// with the table name, evaluates `#VALUE!` through row and column inserts, and is exported
-/// as `#VALUE!` (probes/table-edits/table-convert-names-this-row S!F2, S!F10, T!A2, T-2763).
+/// Convert to range: a `#This Row` reference off the data rows becomes `#REF!` (FORMULATEXT
+/// `=#REF!`), stays so through row and column inserts and a table re-added under the same name,
+/// and is exported as `#REF!` (probes/table-edits/t3629-convert-plain, -readd-same-area,
+/// -save-detached F1, F2, F9, F10; T-3629, T-4020).
 #[test]
-fn convert_to_range_keeps_the_text_of_an_off_row_this_row() {
+fn convert_to_range_turns_an_off_row_this_row_into_ref() {
     let mut model = model();
     model
         .set_user_input(0, 5, 4, "=Sales[[#This Row],[Qty]]*2".to_string())
@@ -1000,18 +1001,19 @@ fn convert_to_range_keeps_the_text_of_an_off_row_this_row() {
     model.convert_table_to_range("Sales").unwrap();
     model.evaluate();
     let check = |model: &Model, (sheet, row, column): (u32, i32, i32), text: &str| {
-        assert_eq!(value(model, sheet, row, column), "#VALUE!");
+        assert_eq!(value(model, sheet, row, column), "#REF!");
         assert_eq!(formula(model, sheet, row, column), text);
     };
-    check(&model, (0, 5, 4), "=Sales[@Qty]*2");
-    check(&model, (1, 1, 4), "=Sales[@Qty]");
+    check(&model, (0, 5, 4), "=#REF!*2");
+    check(&model, (1, 1, 4), "=#REF!");
     // A row insert moves the cell down, a column insert along its row; each re-enters it.
     model.insert_rows(0, 1, 1).unwrap();
     model.insert_columns(0, 3, 1).unwrap();
     model.insert_rows(1, 1, 1).unwrap();
+    model.add_table(0, "Sales", (2, 1, 4, 2), false).unwrap();
     model.evaluate();
-    check(&model, (0, 6, 5), "=Sales[@Qty]*2");
-    check(&model, (1, 2, 4), "=Sales[@Qty]");
+    check(&model, (0, 6, 5), "=#REF!*2");
+    check(&model, (1, 2, 4), "=#REF!");
     let Some(index) = model.workbook.worksheets[0]
         .cell(6, 5)
         .and_then(|cell| cell.get_formula())
@@ -1024,8 +1026,7 @@ fn convert_to_range_keeps_the_text_of_an_off_row_this_row() {
         column: 5,
     };
     let node = &model.parsed_formulas[0][usize::try_from(index).unwrap()].evaluated;
-    // Excel writes `#REF!` (probes/table-edits/t3629-save-detached, T-3629): TODO(T-4020).
-    assert_eq!(to_excel_string(node, &context), "#VALUE!*2");
+    assert_eq!(to_excel_string(node, &context), "#REF!*2");
     // Typed, the engine's `[!]` prefix is not a formula.
     assert!(model
         .set_typed_user_input(0, 9, 4, "=[!]Sales[[#This Row],[Qty]]".to_string())

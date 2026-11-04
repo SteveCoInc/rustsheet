@@ -2716,12 +2716,12 @@ naming an inserted column `ColumnN` in its header cell, and `deleted_column` in 
 prints a reference to a deleted column as `#REF!`, a column range that loses both ends too; one that loses
 one end prints its displaced plain area, and a delete of every column or one straddling an edge, and one-end column ranges, differ from Excel: T-3733, T-3734; `ColumnN` naming and a multi-column insert match, T-2899). INDIRECT of a
 structured reference's text is `#REF!` (T-2911). Convert to range matches (T-2342): `Model::convert_table_to_range` prints each structured
-reference as the absolute area it lowered to (defined names too, T-2643). A cell with a `#This Row` reference
-off the data rows is kept as a *detached* structured reference (`StructuredReference::detached`, T-2763): it
-evaluates `#VALUE!` and prints `=Sales[@Qty]`. It resolves against no table, so a later table of the
-same name does not take it back; it is stored with an engine-only `[!]` prefix (`[!]Sales[[#This
-Row],[Qty]]`, which typed or loaded text refuses) so it survives reparses and structural edits, and the xlsx
-export writes it as `#VALUE!`.
+reference as the absolute area it lowered to (defined names too, T-2643). A `#This Row` reference off the data
+rows becomes `#REF!` (FORMULATEXT `=#REF!`, the xlsx export `#REF!`), as Excel does (next paragraph; T-4020; before
+T-4020 the engine kept it as a *detached* reference reading `#VALUE!` and `=Sales[@Qty]`). A duplicated sheet, which
+gets no table, still keeps such a reference detached (`StructuredReference::detached`, T-2763): it evaluates
+`#VALUE!`, prints `=Sales[@Qty]`, is stored with an engine-only `[!]` prefix and exported as `#VALUE!` (Excel copies
+the table instead; unprobed here).
 Excel does otherwise (T-3629, probes/table-edits/t3629-*, excel-graph 2026-11-04; engine change T-4020): after
 `convertToRange` of Sales (S!B3:C7), `=Sales[[#This Row],[Qty]]` in F1 and F9 (above and below the table) is
 `#REF!` with FORMULATEXT `=#REF!`, and Excel's own save (the oracle's download) writes `<f>#REF!</f>` for both,
@@ -2734,7 +2734,10 @@ t3629-readd-other-area). T-2763's evidence for the detached `#VALUE!` and `=Sale
 and with such a cross-sheet reference present Graph's `convertToRange` answered success but left the table in
 place (T-3629's saved workbooks still defined Sales on B3:C7, so those runs were dropped; T-4021 makes the
 replay check its table ops). Re-running table-convert-names-this-row on 2026-11-04 crashed Excel's
-recalculation twice (`InvalidSession`, `InternalErrorCrash`); its sidecar was kept. One on a data row is lowered at its row, as Excel does (T-2643, T-2763). A deleted table or sheet matches
+recalculation twice (`InvalidSession`, `InternalErrorCrash`); its sidecar was kept, and T-4020 records its six
+off-row cells (S!F1, S!F2, S!F9, S!F10, T!A1, T!A2) as a no-op convert: they are no longer scored (the case's
+description says why). table-convert-cross-sheet-this-row holds only data-row cells, which Excel lowered
+(`=S!$C5`), so that convert took effect and the case still scores all six cells. One on a data row is lowered at its row, as Excel does (T-2643, T-2763). A deleted table or sheet matches
 (T-2340): `delete_table` and `take_sheet` rewrite the stored text of every structured reference to the
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a

@@ -32,7 +32,7 @@ pub(crate) use sheet_edits::{
 };
 pub(crate) use structured::{
     to_localized_string_this_row_lowered, to_rc_lowering_at, to_string_lowering,
-    to_string_with_ref_errors,
+    to_string_with_ref_errors, OffRows,
 };
 use wrapped::wrapped_text;
 
@@ -179,8 +179,9 @@ enum Rewrite<'a> {
     Move(&'a MoveContext<'a>),
     /// Prints the area of every structured reference to one of these tables (lowercase names)
     /// instead of its text: the tables of a sheet being deleted (SPEC-0016 "Sheet rename, delete
-    /// and restore"). A `#This Row` area is resolved at the cell's row, or the given one (T-1699).
-    Lower(&'a [String], Option<i32>),
+    /// and restore"). A `#This Row` area is resolved at the cell's row, or the given one (T-1699);
+    /// off the data rows it prints as [`OffRows`] says.
+    Lower(&'a [String], Option<i32>, OffRows),
     /// Prints every `#This Row` as its area on the printing cell's row (T-1699), except one to
     /// these tables (lowercase names), the tables a structural edit follows, which keeps its
     /// text (T-3037).

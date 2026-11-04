@@ -27,14 +27,13 @@ pub struct StructuredReference {
     /// Written without the table name in a cell of the table (`=[@Col]*2`), which names the
     /// containing table (references.md "Structured references: this row, totals and ranges", T-2979).
     pub unqualified: bool,
-    /// A `#This Row` reference left behind by a convert to range off its table's data rows: its
-    /// table no longer exists, but Excel keeps the text (FORMULATEXT `=Sales[@Qty]`) and the
-    /// cell evaluates `#VALUE!` (references.md, convert-to-range entry;
-    /// probes/table-edits/table-convert-names-this-row, T-2763). It resolves against no table,
+    /// A `#This Row` reference off its table's data rows on a duplicated sheet, which gets no
+    /// table: it keeps its text (FORMULATEXT `=Sales[@Qty]`) and evaluates `#VALUE!` (T-1699,
+    /// T-2763). It resolves against no table,
     /// so a later table of the same name does not take it back. Stored with the engine-only `[!]`
     /// prefix ([`Self::stored_text`]); the xlsx export writes `#VALUE!`. Only an off-row
-    /// `#This Row` reference is detached. Excel turns such a reference into `#REF!` instead (FORMULATEXT
-    /// `=#REF!`, saved `<f>#REF!</f>`; probes/table-edits/t3629-*, T-3629): TODO(T-4020).
+    /// `#This Row` reference is detached. A convert to range makes one `#REF!` instead, as Excel
+    /// does (FORMULATEXT `=#REF!`, saved `<f>#REF!</f>`; probes/table-edits/t3629-*, T-4020).
     pub detached: bool,
     /// The range of the table of a `#This Row` reference or of one written without the table
     /// name, as the table list the formula was parsed against had it: the printing cell decides
