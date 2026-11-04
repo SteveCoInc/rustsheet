@@ -3,7 +3,7 @@ id: T-3859
 title: "Fix the TEXT(-1,-1) example in text.md's format_text entry: cite A259 TEXT(-0.5,-1)"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
