@@ -4239,6 +4239,15 @@ within 1E-15 relative / largest relative error:
     > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
     are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
     1E-6 and 0.05 the edge does not move.
+  - **At b = 40, columns A and B, Excel's value is noisy at the 8th to 10th digit** (T-4220). b0 = 40 leaves L140,
+    and with lambda > 0 bratio takes L110 to bfrac unswapped. Against a 60-digit mpmath `betainc` at the double
+    arguments, Excel is 4.5E-10 to 4.6E-8 relative off on the 28 A/B cells, with no consistent sign:
+    - A21 `BETA.DIST(0.999999961229869,2E9,40,TRUE)` is 9.999984224817014E-7, against the math 9.99998425283923E-7;
+    - B294 `BETA.DIST(0.999999994906026,1E10,40,TRUE)` is 0.049999949775626405, against 0.04999995206937666;
+    - B231 is -1.7E-8 relative.
+    Column C (lambda < 0, swapped, bfrac at a0 = 40) agrees with ours to 1.6E-15 relative or better. The mechanism is not pinned
+    (T-4220 lists the candidates). Status: VERIFIED (excel-graph) for the values, UNVERIFIED for the cause. Ours is
+    the math (`large_shape_lower`, within 9E-15).
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape

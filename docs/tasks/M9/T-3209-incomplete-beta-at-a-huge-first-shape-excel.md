@@ -38,6 +38,8 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 - Gap triage 2026-11-04: the band's Gate B face, gen-m9 7bd219ec0c0c5e22 A349 `FDIST(7,10,1E+8)` (b = 5), is T-4018's,
   on T-4017's sweep over df1 2 to 79. A model T-4018 lands should be checked on this task's 22 cells.
 - probes-numeric/t4080-beta-num-band-edge b = 40 cells A21:B21, A42:B42, B63, A84:B84, A105:B105, A126:B126, B147, A168:B168, A189:B189, A210:B210, A231:B231, A252:B252, A273:B273, A294:B294 (T-4080): ours 1.3E-9 to 4.6E-8 relative off Excel at a = 2E9 to 1E10 (26 cells; A63 and A147 pass within tolerance).
+  Tier A (decision 0267): owned by T-4220 since the 2026-11-04 gap triage (Excel 4.5E-10 to 4.6E-8 off the math, ours
+  within 9E-15), not by this deferred task.
 
 ## Acceptance criteria
 - [ ] The 22 cells are within half a unit of the 15th digit of Excel (a model of Excel's bgrat at these points).
