@@ -301,3 +301,22 @@ fn trailing_commas_keep_the_sign() {
     assert_eq!(format_number(-1234567.0, "#,,", &ctx).text, "-1");
     assert_eq!(format_number(1234567.0, "#,,", &ctx).text, "1");
 }
+
+#[test]
+fn comma_after_decimal_point_neither_groups_nor_scales() {
+    // Excel: probes/t3598-comma-after-decimal-point (number-formats.md "Commas after the
+    // decimal point").
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (1_234_567.89, "0.00|#,##0", "1234567.89|0"),
+        (1_234_567.89, "0.0,0", "1234567.89"),
+        (1_234_567.89, "0.00,0", "1234567.890"),
+        (1_234_567.891_234, "0.00|0,000", "1234567.89|1234"),
+        (1_234_567.89, "#,##0.00|#,##0", "1,234,567.89|0"),
+        (1_234_567.89, "0.00|#,##0,", "1234.56|7890"),
+        (1_234_567.89, "0.0,", "1234.6"),
+    ];
+    for (value, code, text) in cases {
+        assert_eq!(format_number(value, code, &ctx).text, text, "{code}");
+    }
+}

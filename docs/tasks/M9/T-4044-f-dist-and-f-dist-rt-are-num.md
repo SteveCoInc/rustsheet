@@ -22,6 +22,15 @@ df2 = 1E10, from the rule T-4030 finds, not from a cut at the probed cells.
   - probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json (16): Calc!A209, A210, A211, A212, A213, A214, A215, A216, A217, A218, A219, A220, A221, A222, A223, A224
   - e.g. A209 `F.DIST.RT(1.5,79,1E10)` Excel `#NUM!`, engine 0.0026850092067944196; A210 `F.DIST(1.5,79,1E10,TRUE)`
     Excel `#NUM!`, engine 0.9973149907932056; A223 `F.DIST.RT(50,79,1E10)` Excel `#NUM!`, engine 0.
+- T-4030 (probes-numeric/t4030-f-dist-rt-df1-boundary, excel-graph 2026-11-04) bracketed the band: at df2 1E10 Excel
+  is `#NUM!` at df1 77, 78 and 79 and a number at 76 and 80; at df2 5E9 the first `#NUM!` is df1 79; `BETA.DIST(x,a,b)`
+  shows the same band in (a, b) (statistics.md "Incomplete beta at a huge first shape"). The engine returns a number at
+  the 23 `#NUM!` cells outside the 2E10 rows (A63 to A84 already match) and misses the last digits of the other F cells (1E-8 to 1.4E-7 off at A39, A40, A61, A62, df1 80 and 100). The BETA.DIST cells
+  are left to the general large-a bratio accuracy work (T-3209). Implement the band, not a cut at the probed cells.
+  Cells owned by this task (61):
+  - probes-numeric/t4030-f-dist-rt-df1-boundary.case.json: Calc!A1, A3, A5, A7, A9, A13, A15, A17, A19, A21, A23, A25, A27, A29, A31, A33, A34, A35, A36, A37, A38, A39,
+    A40, A41, A42, A43, A44, A45, A46, A47, A48, A49, A50, A51, A53, A54, A55, A56, A57, A58, A59, A60, A61,
+    A62, A102, A103, A104, A105, A106, A114, A115, A175, A195, A213, A214, A215, A231, A232, A233, A234, A235
 - df1 up to 60 at df2 = 1E10 returns numbers in Excel (A1-A208 of the same case), and df1 = 79 at df2 1E7..1E9
   returns numbers (the other five t4017 cases). docs/excel-semantics/statistics.md "Incomplete beta at a huge first
   shape" (the T-4017 sweep paragraph) records the quirk; the per-df cut of "F-distribution df limit" (T-1530,

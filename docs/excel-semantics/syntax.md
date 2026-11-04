@@ -265,7 +265,15 @@ probes/t3264-name*, stored and typed alike): with N nesting 40 calls, `=ABS^25(N
 (65 and 66 in all) load and evaluate (name40-cell25, name40-cell26, name40-cell26-typed), and so does
 `=ABS^65(N)` with N nesting 65 (130 in all; name65-cell65, name65-cell65-typed). RustSheet counts each
 formula alone and matches. Unprobed: renaming or editing a name's body through the API (Graph has no
-endpoint that sets it), sheet-scoped names added through the API (`Txn::define_sheet_name` refuses them by the same rule), and desktop Excel's Name Manager.
+endpoint that sets it) and desktop Excel's Name Manager.
+A sheet-scoped name defined through the API is held to the same 65 (T-4014, probes/t4014-sheet-api-name-*, excel-graph
+2026-11-04): Graph `worksheets('S')/names/add` adds a body of 65 nested ABS calls (`T!A1 =S!N` is 1, sheet-api-name-65)
+and refuses one of 66 with 400 `InvalidArgument` (`S!N` is `#NAME?`, sheet-api-name-66); `Txn::define_sheet_name`
+refuses the same body. A quirk on the way: after the 65-call add and a FullRebuild, `S!A1 =N` on the name's own sheet,
+typed before the add, is still `#NAME?`, while the workbook-scoped twin's `=N` is 1 (t3264-api-name-65). Which rule
+that is (a binding made at entry that only a workbook-scoped add renews, or a Graph artefact) is open, T-4049; the
+engine gives 1 there. An undo of a deleted name puts it back whatever its body: `update_defined_name` is unchecked, so
+a body past the cap can exist, and the undo does not refuse it (`Model::restore_defined_name`, T-4014).
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,
