@@ -3,7 +3,7 @@ id: T-4225
 title: "Import pivot caches with grouped fields (fieldGroup) instead of skipping them (corpus-bench 52379, 59932)"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -26,11 +26,32 @@ instead of the whole cache being skipped, so its pivot tables and GETPIVOTDATA o
   (excel-probe skill, excel-graph). A spec section in SPEC-0015 first if the model needs new types.
 
 ## Acceptance criteria
-- [ ] The two corpus-bench workbooks import their caches with no "skipped pivot cache" line; unit tests in
+- [x] The two corpus-bench workbooks import their caches with no "skipped pivot cache" line; unit tests in
       crates/rustsheet-xlsx/src/import/pivots/tests.rs pin a date group and a numeric group.
-- [ ] GETPIVOTDATA over a grouped field matches an excel-graph probe, or the rule is marked UNVERIFIED in
+- [x] GETPIVOTDATA over a grouped field matches an excel-graph probe, or the rule is marked UNVERIFIED in
       docs/excel-semantics.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Pivot refresh and export of pivot caches.
+
+## Outcome
+- A grouped pivot cache field imports as an ordinary cache field: its items are the `<groupItems>` labels and its
+  records each record's group, derived from the `base` field (`apply_groups`, new
+  crates/rustsheet-xlsx/src/import/pivots/groups.rs). This covers `rangePr` numbers and dates (seconds to years),
+  `discretePr` lists, a field grouped in place, and the `databaseField="0"` grouping fields, which Excel writes after
+  the database fields and leaves out of the records part. The engine model gets no new type. SPEC-0015's import section
+  and unknown 12 say so.
+- corpus-bench 52379 (`Date/Time` by minutes, `Hours`, `Days`) and 59932 (`Date` by months, `Quarters`, `Years`) now
+  import their caches and pivots with no skip line. On main both logged `skipped pivot cache ...: "a grouped field"`.
+- Unit tests in import/pivots/tests.rs pin a date group (months in place, quarters and years), an hour group, a numeric
+  step group, a discrete group, a blank base value, and the malformed layouts that still skip the cache.
+- Quirk recorded: web.md "Grouped pivot fields import as their group items". It gives the group-item layouts Excel
+  writes (counts per `groupBy`, 29-Feb always present) and 59932's `(blank)` first month item. Which group Excel puts
+  each value in, and GETPIVOTDATA on a grouped field, are UNVERIFIED. Excel stores no record's group, so the caches
+  cannot show it. xlsx-storage.md now records that `rangePr` dates are read on the pivot-cache date rule.
+- Still skipped, logged: day groups of more than one day (date ranges), date groups in 1904 workbooks, an item count
+  other than the layout's, and a range group over text.
+- Follow-up: T-4228 (opus) probes the group boundaries and GETPIVOTDATA on a grouped field.
+- Eval delta: none. No gated cell reads a grouped pivot (corpus-bench is crash-only for these two workbooks), and there
+  are 0 regressions.

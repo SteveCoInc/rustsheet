@@ -98,7 +98,7 @@ Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081). Not probe
 pivots in tabular or outline form.
 Engine (SPEC-0015): the workbook model holds pivot caches and pivot tables (`pivot.rs`, T-2081), read from xlsx by
 `crates/rustsheet-xlsx/src/import/pivots.rs` (T-2082). The importer skips, whole and logged, a cache with an OLAP,
-external, consolidation or scenario source, a grouped (`fieldGroup`) or calculated field, no records part
+external, consolidation or scenario source, a calculated field, no records part
 (`saveData="0"`), a bad index, or a value it cannot read (an unknown error name, a `<d>` date before 1900, which
 includes time-only dates if Excel writes them so), and a pivot whose data field is shown as a calculation
 (`showDataAs`, such as % of total), whose index points past its cache, whose `axis` or `subtotal` is unknown, which has
@@ -120,6 +120,37 @@ lifts). An error in a single-cell pivot_table propagates even inside a pivot, an
 Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674; they cannot tell COUNT from COUNTA).
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
+
+## Grouped pivot fields import as their group items (T-4225)
+Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
+field. A `<cacheField>` grouped in place carries `<fieldGroup par base>` after its `<sharedItems>`; a grouping field Excel
+adds (`Quarters`, `Years`, `Hours`, `Days`) is a `<cacheField databaseField="0">` written after every database field,
+with `<fieldGroup base>` naming the database field it groups; the records part holds the database fields only. Each group
+lists its labels in `<groupItems>` (`<s>` items), and a pivot field's `<item x>` indexes those labels, not the base
+field's items. The date layouts are fixed: a first item for values below `startDate` (`<1/1/2019`), the calendar part, and
+a last item for values past `endDate` (`>1/14/2019`):
+- `groupBy="minutes"` 62 items `:00` to `:59`; `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
+  with `29-Feb` always present (corpus-bench/52379 fields `Date/Time`, `Hours`, `Days`);
+- `months` 14 items `Jan` to `Dec`; `quarters` 6 items `Qtr1` to `Qtr4`; `years` one item per year from `startDate`'s
+  to `endDate`'s, 123 items for 1899-12-30 to 2020-03-28 (`1900` to `2020`; corpus-bench/59932 fields `Date`,
+  `Quarters`, `Years`).
+- Quirk: 59932's `Date` field, which holds blanks (`containsBlank="1"`) and starts at serial 0, labels its first month
+  item `(blank)` where its `Quarters` and `Years` groups of the same field and range label it `<1/0/1900`.
+Engine: the importer turns every group into an ordinary cache field whose items are the group labels (text) and whose
+records are each record's group (`crates/rustsheet-xlsx/src/import/pivots/groups.rs`), so GETPIVOTDATA addresses a
+grouped field by its label (`"Quarters","Qtr1"`). The record-to-group rule is ECMA-376's layout read off these caches:
+below `start` is item 0, past `end` the last item; otherwise numbers (`rangePr startNum endNum groupInterval`) fall in
+step `floor((v - start) / interval) + 1`, dates in their second, minute, hour (the time rounded to the nearest second),
+day of a leap year, month, quarter or year counted from `startDate`'s year, and a `<discretePr>` list maps base shared
+item i to its i-th `<x v>`. A blank base value gets a blank item appended after the labels. The importer skips the cache
+(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
+a range group over text, a database field after a grouping field, and a base that is not a database field.
+UNVERIFIED: which group Excel puts each value in (no record's group is stored, so the caches cannot show it; the
+boundary values, a time of 23:59:59.5 or later, and serials 1 to 60 especially), where a blank goes (59932's `(blank)`
+suggests its own item, which may be item 0), and what GETPIVOTDATA answers for a grouped field's label, a year as a
+number, or a blank. No GETPIVOTDATA cell or excel-graph probe covers a grouped field yet (T-4228 probes them).
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`).
+Tasks: T-4225, T-4228
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):

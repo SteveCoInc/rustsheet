@@ -282,7 +282,7 @@ fn olap_and_other_sources_are_skipped() {
 }
 
 #[test]
-fn grouped_and_calculated_fields_are_skipped() {
+fn a_group_without_items_and_calculated_fields_are_skipped() {
     let grouped = definition(FIELDS).replace(
         "<sharedItems/></cacheField>",
         r#"<sharedItems/><fieldGroup base="1"/></cacheField>"#,
@@ -587,4 +587,172 @@ fn pivots_past_the_workbook_cap_are_dropped() {
     assert_eq!(on_sheet(14), MAX_PIVOTS_PER_SHEET);
     assert_eq!(on_sheet(15), MAX_PIVOTS - 15 * MAX_PIVOTS_PER_SHEET);
     assert_eq!(on_sheet(16), 0);
+}
+
+/// Group items `<s>` from labels.
+fn group_items(labels: &[&str]) -> String {
+    use std::fmt::Write as _;
+    let mut items = String::new();
+    for label in labels {
+        let label = label.replace('<', "&lt;").replace('>', "&gt;");
+        write!(items, r#"<s v="{label}"/>"#).unwrap();
+    }
+    format!(
+        r#"<groupItems count="{}">{items}</groupItems>"#,
+        labels.len()
+    )
+}
+
+const MONTHS: [&str; 14] = [
+    "<1/15/2019",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+    ">3/1/2020",
+];
+const DATES: &str = r#"startDate="2019-01-15T10:30:15" endDate="2020-03-01T00:00:00""#;
+
+/// A cache laid out as Excel writes grouped fields (corpus-bench 59932, 52379): `Date` grouped in
+/// place by months, a numeric and a discrete database field, then the grouping fields `Quarters`,
+/// `Years` (base Date), `Bands` (base Amount, by tens) and `Zone` (base Region, a list).
+fn grouped_definition() -> String {
+    let date = format!(
+        r#"<cacheField name="Date"><sharedItems containsBlank="1"><d v="2019-01-15T10:30:15"/><d v="2019-05-20T23:59:59.6"/><d v="2020-02-29T00:00:00"/><m/></sharedItems><fieldGroup par="4" base="0"><rangePr groupBy="months" {DATES}/>{}</fieldGroup></cacheField>"#,
+        group_items(&MONTHS)
+    );
+    let amount = r#"<cacheField name="Amount"><sharedItems/></cacheField>"#;
+    let region = r#"<cacheField name="Region"><sharedItems><s v="East"/><s v="West"/><s v="North"/></sharedItems></cacheField>"#;
+    let quarters = format!(
+        r#"<cacheField name="Quarters" databaseField="0"><sharedItems/><fieldGroup base="0"><rangePr groupBy="quarters" {DATES}/>{}</fieldGroup></cacheField>"#,
+        group_items(&["<1/15/2019", "Qtr1", "Qtr2", "Qtr3", "Qtr4", ">3/1/2020"])
+    );
+    let years = format!(
+        r#"<cacheField name="Years" databaseField="0"><sharedItems/><fieldGroup base="0"><rangePr groupBy="years" {DATES}/>{}</fieldGroup></cacheField>"#,
+        group_items(&["<1/15/2019", "2019", "2020", ">3/1/2020"])
+    );
+    let bands = format!(
+        r#"<cacheField name="Bands" databaseField="0"><sharedItems/><fieldGroup base="1"><rangePr startNum="0" endNum="30" groupInterval="10"/>{}</fieldGroup></cacheField>"#,
+        group_items(&["<0", "0-9", "10-19", "20-30", ">30"])
+    );
+    let zone = format!(
+        r#"<cacheField name="Zone" databaseField="0"><sharedItems/><fieldGroup base="2"><discretePr count="3"><x v="0"/><x v="1"/><x v="0"/></discretePr>{}</fieldGroup></cacheField>"#,
+        group_items(&["Group1", "Group2"])
+    );
+    definition(&format!(
+        "{date}{amount}{region}{quarters}{years}{bands}{zone}"
+    ))
+}
+
+const GROUPED_ROWS: &str = r#"<r><x v="0"/><n v="5"/><x v="0"/></r><r><x v="1"/><n v="10"/><x v="1"/></r><r><x v="2"/><n v="31"/><x v="2"/></r><r><x v="3"/><n v="-1"/><x v="0"/></r>"#;
+
+const GROUPED_TABLE: &str = r#"<location ref="A3:B6" firstHeaderRow="1"/><pivotFields count="7"><pivotField axis="axisRow"><items count="3"><item x="1"/><item x="5"/><item x="14"/></items></pivotField><pivotField dataField="1"/><pivotField/><pivotField axis="axisCol"><items count="6"><item x="0"/><item x="5" h="1"/></items></pivotField><pivotField/><pivotField/><pivotField/></pivotFields><rowFields><field x="0"/></rowFields><colFields><field x="3"/></colFields><dataFields><dataField name="Sum of Amount" fld="1"/></dataFields>"#;
+
+fn grouped_parts(definition: String) -> Vec<(String, String)> {
+    let parts = with(parts(), DEFINITION_PART, definition);
+    let parts = with(parts, RECORDS_PART, records(GROUPED_ROWS));
+    with(parts, TABLE_PART, table(GROUPED_TABLE))
+}
+
+#[test]
+fn grouped_fields_import_as_their_group_items() {
+    let (caches, pivots) = load(&grouped_parts(grouped_definition()));
+    assert_eq!(caches.len(), 1);
+    let fields = &caches[0].fields;
+    let names: Vec<&str> = fields.iter().map(|f| f.name.as_str()).collect();
+    assert_eq!(
+        names,
+        ["Date", "Amount", "Region", "Quarters", "Years", "Bands", "Zone"]
+    );
+    let labels = |field: usize| -> Vec<CacheItem> { fields[field].items.clone() };
+    // Date grouped in place: its items are the month groups, then a blank for the blank record.
+    let mut months: Vec<CacheItem> = MONTHS.iter().map(|m| text(m)).collect();
+    months.push(CacheItem::Missing);
+    assert_eq!(labels(0), months);
+    // 2019-05-20T23:59:59.6 rounds to 21 May, still May; the leap day is February.
+    assert_eq!(fields[0].records, [1, 5, 2, 14]);
+    assert_eq!(fields[3].records, [1, 2, 1, 6]);
+    assert_eq!(fields[3].items[6], CacheItem::Missing);
+    assert_eq!(fields[4].records, [1, 1, 2, 4]);
+    // 5 is in 0-9, 10 in 10-19, 31 past endNum, -1 before startNum.
+    assert_eq!(fields[5].records, [1, 2, 4, 0]);
+    assert_eq!(labels(5)[2], text("10-19"));
+    // East and North are Group1, West Group2.
+    assert_eq!(fields[6].records, [0, 1, 0, 0]);
+    assert_eq!(labels(6), [text("Group1"), text("Group2")]);
+    // The database fields keep their record values.
+    assert_eq!(fields[1].records.len(), 4);
+    assert_eq!(caches[0].record_count, 4);
+    // The pivot's items index the group items.
+    assert_eq!(pivots.len(), 1);
+    assert!(pivots[0].fields[3].is_hidden(5));
+    assert!(!pivots[0].fields[3].is_hidden(1));
+}
+
+#[test]
+fn time_groups_read_the_time_of_day() {
+    let hours: Vec<String> = (0..24).map(|h| format!("{h}h")).collect();
+    let mut labels: Vec<&str> = vec!["<"];
+    labels.extend(hours.iter().map(String::as_str));
+    labels.push(">");
+    let definition = grouped_definition().replace(
+        &format!(r#"groupBy="months" {DATES}/>{}"#, group_items(&MONTHS)),
+        &format!(r#"groupBy="hours" {DATES}/>{}"#, group_items(&labels)),
+    );
+    let body = GROUPED_TABLE.replace(r#"<item x="14"/>"#, r#"<item x="26"/>"#);
+    let parts = with(grouped_parts(definition), TABLE_PART, table(&body));
+    let (caches, _) = load(&parts);
+    // 10:30:15 is hour 10; 23:59:59.6 rounds to midnight of the next day, hour 0; 00:00 is hour 0.
+    assert_eq!(caches[0].fields[0].records, [11, 1, 1, 26]);
+}
+
+#[test]
+fn malformed_groups_skip_the_cache() {
+    // A month group needs 14 items.
+    let short = grouped_definition().replace(r#"<s v="Dec"/>"#, "");
+    let short = short.replace(r#"<groupItems count="14">"#, r#"<groupItems count="13">"#);
+    assert_no_cache(&grouped_parts(short));
+    // A database field after a grouping field.
+    let late = grouped_definition().replace(
+        "</cacheFields>",
+        r#"<cacheField name="Late"><sharedItems/></cacheField></cacheFields>"#,
+    );
+    assert_no_cache(&grouped_parts(late));
+    // A grouping field whose base is a grouping field, and one with no group at all.
+    let base = grouped_definition().replace(r#"<fieldGroup base="1">"#, r#"<fieldGroup base="3">"#);
+    assert_no_cache(&grouped_parts(base));
+    let bare = grouped_definition().replace(
+        "</cacheFields>",
+        r#"<cacheField name="Bare" databaseField="0"><sharedItems/></cacheField></cacheFields>"#,
+    );
+    assert_no_cache(&grouped_parts(bare));
+    // A range group over text, and a discrete index past the group items.
+    let text_range = grouped_definition().replace(
+        r#"<fieldGroup base="2">"#,
+        r#"<fieldGroup base="2"><rangePr startNum="0" endNum="1"/>"#,
+    );
+    let text_range = text_range.replace(
+        r#"<discretePr count="3"><x v="0"/><x v="1"/><x v="0"/></discretePr>"#,
+        "",
+    );
+    assert_no_cache(&grouped_parts(text_range));
+    let past = grouped_definition().replace(
+        r#"<x v="1"/><x v="0"/></discretePr>"#,
+        r#"<x v="2"/><x v="0"/></discretePr>"#,
+    );
+    assert_no_cache(&grouped_parts(past));
+    // Day groups of a week are date ranges, not read.
+    let weeks = grouped_definition().replace(
+        r#"groupBy="quarters""#,
+        r#"groupBy="days" groupInterval="7""#,
+    );
+    assert_no_cache(&grouped_parts(weeks));
 }
