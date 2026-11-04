@@ -3,7 +3,7 @@ id: T-4225
 title: "Import pivot caches with grouped fields (fieldGroup) instead of skipping them (corpus-bench 52379, 59932)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
