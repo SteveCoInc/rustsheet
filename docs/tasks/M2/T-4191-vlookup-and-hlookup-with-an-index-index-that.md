@@ -3,7 +3,7 @@ id: T-4191
 title: "VLOOKUP and HLOOKUP with an INDEX index that fails: probe whether Excel keeps INDEX's own error or maps it to #REF!, and match it"
 milestone: M2
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
