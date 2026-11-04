@@ -4123,6 +4123,25 @@ Status: VERIFIED (excel-graph) for the values; Excel's arithmetic inside bgrat i
 Implemented in: functions/statistical/large_shape_beta.rs `large_shape_lower`
 Tasks: T-2528, T-3209
 
+Sweep above the mean at df1 other than 5 (T-4017): probes-numeric t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}
+(1,345 cells, excel-graph, 2026-11-04; df1 in 2, 3, 4, 6, 7, 8, 10, 12, 16, 20, 30, 40, 60, 79, df2 1E7 to 1E10, x 1.5 to
+50; `F.DIST.RT` and `F.DIST(.., TRUE)`; control `FDIST(7,10,1E+8)`). References: `docs/research/t4017/reference.py` (mpmath
+2F1 at 300+ digits, kept only where two precisions agree to 55 digits; 120-digit `betainc` is wrong below 1E-130).
+`F.DIST.RT` per df1, 48 cells each (6 df2 x 8 x), counted over cells with a stable reference: correctly rounded / within 4 ulp /
+within 1E-15 relative / largest relative error:
+- df1 2: 1 / 13 / 18 / 1.0 (see the zeros below); 3: 1 / 16 / 24 / 1.4E-14; 4: 3 / 21 / 27 / 1.1E-14; 6: 0 / 7 / 14 / 2.1E-14;
+  7: 0 / 10 / 14 / 4.3E-14; 8: 1 / 10 / 11 / 2.8E-14; 10: 2 / 9 / 10 / 2.8E-14; 12: 0 / 7 / 11 / 8.7E-14;
+  16: 0 / 3 / 4 / 5.5E-14; 20: 1 / 2 / 4 / 9.7E-14; 30: 0 / 3 / 5 / 1.1E-13 (42 referenced); 40: 0 / 1 / 2 / 5.8E-14 (42);
+  60: 0 / 0 / 2 / 1.4E-13 (42); 79: 0 / 0 / 0 / 8.3E-14 (36 referenced, and 8 of the others are `#NUM!` at df2 1E10).
+  So Excel is not correctly rounded at any df1 and the error is not specific to b = 2.5: it grows with df1 x (up to
+  about 1E-13 at the far tails, the same pattern as df1 = 5).
+- Excel returns exactly 0 for the tail where the true value is far above the double minimum: `F.DIST.RT(50,2,1E7)` and
+  the same at 3E7 to 1E10 (true 1.93E-22).
+  Other far tails are non-zero but wrong by many orders (`F.DIST.RT(50,20,1E10)` 3.9E-199).
+- `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells): the same df2 x df1 cut
+  family as T-1530, here at df1 = 79.
+Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
+
 ## F-distribution df limit (T-1530)
 Rule: either df above 1E10 (after truncation) makes every F function `#NUM!`: F.DIST (cumulative and pdf), F.DIST.RT,
 F.INV, F.INV.RT, FDIST and FINV, in both df positions (probed at 10000000001, 1.5E10 and 1E11). Unlike Student-t, the pdf is cut too.

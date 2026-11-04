@@ -3,7 +3,7 @@ id: T-4017
 title: "Oracle sweep: F.DIST.RT above the mean at df2 1E7 to 1E10 for df1 other than 5 (T-3209's huge-first-shape band at b != 2.5)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -56,3 +56,11 @@ T-4018 needs Excel for the web values to fit Excel's incomplete beta at a huge f
 ## Out of scope
 - Fitting or implementing (T-4018, T-3209).
 - Cells below the mean (T-2510's Cephes side), and tiny x (T-3479, T-3527).
+
+## Outcome
+Six probes-numeric cases `t4017-f-huge-df2-above-mean-{1e7,3e7,1e8,3e8,1e9,1e10}` (1,345 cells, one per df2; the
+control `FDIST(7,10,1E+8)` is in the 1e7 file), oracle sidecars filled (no pending cells), Gate A math sidecars
+for the F.DIST(TRUE) cells (the tool has no F.DIST.RT), and 50-digit `F.DIST.RT` references in
+`docs/research/t4017/references.json` from `reference.py`. The summary is in statistics.md. Findings: Excel is within
+1E-13 but not correctly rounded at every df1; exact 0 for tails near 1E-22 at df1 = 2; `#NUM!` at df1 = 79, df2 = 1E10.
+No eval baseline change (probe cases carry no expectations).

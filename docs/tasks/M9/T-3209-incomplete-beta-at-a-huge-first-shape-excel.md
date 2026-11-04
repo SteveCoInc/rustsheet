@@ -45,3 +45,6 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 
 ## Out of scope
 - Cells below the mean (Cephes' incbcf side), which are T-2510's.
+
+## Evidence (T-4017)
+Sweep cases: probes-numeric t4017-f-huge-df2-above-mean-* (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").
