@@ -3,7 +3,7 @@ id: T-4235
 title: "Range-grouped pivot fields take Excel's step rule, and the eval adapter registers grouped spec pivots"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
