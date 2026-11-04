@@ -1,0 +1,260 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "F": {
+   "A10": {
+    "t": "n",
+    "v": 15.0
+   },
+   "A11": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A12": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A13": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A14": {
+    "t": "n",
+    "v": 15.0
+   },
+   "A15": {
+    "t": "n",
+    "v": 15.0
+   },
+   "A16": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A17": {
+    "t": "n",
+    "v": 4.0
+   },
+   "A18": {
+    "t": "n",
+    "v": 165.0
+   },
+   "A19": {
+    "t": "n",
+    "v": 5.0
+   },
+   "A2": {
+    "t": "n",
+    "v": 1.0
+   },
+   "A20": {
+    "t": "s",
+    "v": "Qty"
+   },
+   "A21": {
+    "t": "n",
+    "v": 5.0
+   },
+   "A22": {
+    "t": "n",
+    "v": 165.0
+   },
+   "A3": {
+    "t": "n",
+    "v": 2.0
+   },
+   "A4": {
+    "t": "n",
+    "v": 40.0
+   },
+   "A5": {
+    "t": "n",
+    "v": 88.0
+   },
+   "A6": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A7": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A8": {
+    "t": "e",
+    "v": "#VALUE!"
+   },
+   "A9": {
+    "t": "n",
+    "v": 15.0
+   },
+   "B10": {
+    "t": "s",
+    "v": "=SUM(Sales[Qty])"
+   },
+   "B11": {
+    "t": "s",
+    "v": "=ROWS(Sales)"
+   },
+   "B12": {
+    "t": "s",
+    "v": "=ROWS(Sales)"
+   },
+   "B13": {
+    "t": "s",
+    "v": "=ROWS(Sales)"
+   },
+   "B14": {
+    "t": "s",
+    "v": "=SUM(Sales[Qty])"
+   },
+   "B15": {
+    "t": "s",
+    "v": "=SUM(Sales[[#Data],[Qty]])"
+   },
+   "B16": {
+    "t": "s",
+    "v": "=ROWS(Sales[#Data])"
+   },
+   "B17": {
+    "t": "s",
+    "v": "=ROWS(Sales[#Data])"
+   },
+   "B18": {
+    "t": "s",
+    "v": "=SUM(Sales[[Qty]:[Unit Price]])"
+   },
+   "B19": {
+    "t": "s",
+    "v": "=ROWS(Sales[#All])"
+   },
+   "B2": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B20": {
+    "t": "s",
+    "v": "=Sales[[#Headers],[Qty]]"
+   },
+   "B21": {
+    "t": "s",
+    "v": "=COUNTA(Sales[[#All],[Region]])"
+   },
+   "B22": {
+    "t": "s",
+    "v": "=SUM(Sales[[#Data],[Qty]:[Unit Price]])"
+   },
+   "B3": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B4": {
+    "t": "s",
+    "v": "=Sales[@[Unit Price]]"
+   },
+   "B5": {
+    "t": "s",
+    "v": "=SUM(Sales[@[Qty]:[Unit Price]])"
+   },
+   "B6": {
+    "t": "s",
+    "v": "=SUM(Sales[@])"
+   },
+   "B7": {
+    "t": "s",
+    "v": "=SUM(Sales[@[Qty]:[Unit Price]])"
+   },
+   "B8": {
+    "t": "s",
+    "v": "=Sales[@Qty]"
+   },
+   "B9": {
+    "t": "s",
+    "v": "=SUM(Sales[Qty])"
+   },
+   "D5": {
+    "t": "n",
+    "v": 80.0
+   },
+   "E2": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E3": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E4": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E5": {
+    "t": "s",
+    "v": "=Sales[@[Unit Price]]"
+   },
+   "E6": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "E7": {
+    "t": "e",
+    "v": "#N/A"
+   },
+   "F2": {
+    "t": "b",
+    "v": false
+   },
+   "F3": {
+    "t": "b",
+    "v": false
+   },
+   "F4": {
+    "t": "b",
+    "v": false
+   },
+   "F5": {
+    "t": "b",
+    "v": true
+   },
+   "F6": {
+    "t": "b",
+    "v": false
+   },
+   "F7": {
+    "t": "b",
+    "v": false
+   },
+   "G2": {
+    "t": "b",
+    "v": true
+   },
+   "G3": {
+    "t": "b",
+    "v": true
+   },
+   "G4": {
+    "t": "b",
+    "v": true
+   },
+   "G5": {
+    "t": "b",
+    "v": false
+   },
+   "G6": {
+    "t": "b",
+    "v": true
+   },
+   "G7": {
+    "t": "b",
+    "v": true
+   }
+  },
+  "S": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "95b70a7e43cd2020f558fd2e0e80b34a0e7977473551500484bbc4ddfeddd0c9",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T13:35:36+00:00",
+  "version": null,
+  "workbook_name": "177e960f4c7b706487c712a0a357a82c2ab54b2182784112969445e8d3d58cfb.xlsx"
+ }
+}

@@ -17,13 +17,14 @@ in a cell outside its table (same row as a data row, and another row), and in th
 ## Context
 Since T-3241 the printing cell decides the form (`StructuredReference::text_at`, using the table's parse-time
 `TableExtent`; crates/rustsheet-engine/src/expressions/parser/structured_reference.rs): `T[[#This Row],[Col]]` and
-`T[@Col]` print `[@Col]` on a data row of T and the long form `T[[#This Row],[Col]]` anywhere else, header and
-totals rows included; an unqualified `[@Col]` prints `[@Col]` anywhere in T's range, header and totals rows included,
-and `T[[#This Row],[Col]]` outside it (`[Col]` likewise prints `T[Col]` outside). The only evidence is probes/t2800-this-row-whitespace (data-row cells of
-a one-row table; docs/excel-semantics/syntax.md "Whitespace beside a missing argument"). Excel likely prints
-`T[@Col]` outside the table. Write probe cases (excel-probe skill): `=T[[#This Row],[Col]]` and `=T[@Col]` typed
-and stored (a) outside T on a data row, (b) outside T on a non-data row, (c) in T's header row, (d) in T's totals
-row, each with FORMULATEXT beside it; also `=[@Col]` copied (or filled) from a data row to outside T, and a
+`T[@Col]` print `[@Col]` on a data row of T and `T[@Col]` anywhere else, header and totals rows included (since
+T-1683); an unqualified `[@Col]` prints `[@Col]` anywhere in T's range, header and totals rows included, and `T[@Col]`
+outside it (`[Col]` likewise prints `T[Col]` outside). The only evidence is probes/t2800-this-row-whitespace (data-row cells of
+a one-row table; docs/excel-semantics/syntax.md "Whitespace beside a missing argument"). T-1683 settled
+(a) and (b): written with the name on another sheet, on data and non-data rows, Excel prints `T[@Col]`
+(probes/t1683-formulatext-structured-refs F!B2:B8; references.md "Structured references: FORMULATEXT"). Still open,
+write probe cases (excel-probe skill): `=T[[#This Row],[Col]]` and `=T[@Col]` typed and stored (c) in T's header row,
+(d) in T's totals row, each with FORMULATEXT beside it; also `=[@Col]` copied (or filled) from a data row to outside T, and a
 `=[Col]`-style unqualified column reference copied out. Record the findings in syntax.md; file an engine task if ours differs.
 
 Also probe the padded shapes T-3069 left unprobed (PR #2415 review), typed and stored: qualified `=T[@ Col]` and
