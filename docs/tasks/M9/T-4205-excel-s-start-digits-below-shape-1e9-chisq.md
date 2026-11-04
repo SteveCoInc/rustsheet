@@ -27,8 +27,9 @@ at a huge shape". A fit owes decision 0188 R4's hold-out and fresh sweep.
 The fresh sweep of T-3409 adds the same kind of cell (the start, right type, digits off): probes-numeric/
 t3409-r4-gamma-inv-search-sweep Calc!A231, Calc!A262:A263, Calc!A266, Calc!A268, Calc!A271, Calc!A276:A279
 (`CHISQ.INV.RT` at p from 1E-295 to 1E-251, df 3.7E7 to 9.7E8), and probes-numeric/t3409-r4-gamma-inv-search-sweep
-Calc!A226 `CHISQ.INV.RT(6.19504333347244E-280,9522000000)` at shape 4.8E9 (the closed form from 1E9, T-3272's range), and probes-numeric/t3409-r4-gamma-inv-search-sweep-wide Calc!A63
-`CHISQ.INV.RT(7.12382795097409E-296,18338000)`. Then lower `START_SHAPE_MIN` to the shape the evidence supports.
+Calc!A226 `CHISQ.INV.RT(6.19504333347244E-280,9522000000)` at shape 4.8E9 (the closed form from 1E9, T-3272's range), probes-numeric/t3409-r4-gamma-inv-search-sweep-wide Calc!A63
+`CHISQ.INV.RT(7.12382795097409E-296,18338000)`, and (the closed form from 1E9, T-3272's range)
+probes-numeric/t3409-r4-gamma-inv-search-sweep-wide Calc!A114 `CHISQ.INV.RT(9.16912785059007E-174,27300000000)`. Then lower `START_SHAPE_MIN` to the shape the evidence supports.
 
 ## Acceptance criteria
 - [ ] A205, A217, A229, A241, A253, A265, A277, A289 of probes/t3350-chisq-inv-huge-df and the sweep cells above are within 15 digits of Excel, and no closed-form cell from 1E9 that matches now regresses.

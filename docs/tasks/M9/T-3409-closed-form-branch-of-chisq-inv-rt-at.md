@@ -114,3 +114,17 @@ quantile; T-4205). Gate A (eval accuracy tables): 0 failing.
 Eval: probes known failures shrink by 42 (t3396-gamma-inv-band-huge 41, t3350-gamma-inv-band-lower-edge 1), no
 regressions. Decision 0267 cells: 20 of 21 have Excel's type (fit-audit-t3070-shape-min A19, A22:A23, A25:A26,
 A28:A30; fit-audit-t3070-band-upper A1:A3, A5:A7, A12:A13, A26, A32:A33, A38); A39 moved to T-4206.
+
+## Landing notes
+- PR #3175 (draft), branch agent/functions-stat/T-3409-gamma-inv-search. Round 1 (head dc42cbbfb): security APPROVE,
+  design APPROVE (MINORs fixed in round 2), excel-fidelity REQUEST_CHANGES: Gate A envelope (the start rule below
+  1E9), hold-out not stated before scoring, FITTED ranges, no sweep coverage at 1E5..3E8 and above 1.3E10. CI round 1:
+  hygiene red only for a missing decision record on quality/fitted.json (decision 0277 added since).
+- Round 2 (the head carrying these notes) answers each: `START_SHAPE_MIN` = 1E9 for the start rule (T-4205 owns the
+  cells below), tags widened to their evidenced range, the hash split (docs/research/t3409/split.py) and the second
+  sweep stratum (t3409-r4-gamma-inv-search-sweep-wide, filled by excel-graph, math sidecar written), criteria A205-A289
+  and A39 moved to T-4205 and T-4206. `make eval-check` passed and new-case owners passed on it; the session's window
+  closed while the round-2 panel (all three reviewers) and CI were running.
+- Next: read the round-2 verdicts on this head; if all approve and CI is green, mark the PR ready and enqueue. Do not
+  move the start rule below 1E9 again (Gate A envelope, round 1), and do not regenerate other cases' math sidecars:
+  `rustsheet-accuracy math` rewrites unrelated "why" strings by timing; commit only the t3409 sidecars.
