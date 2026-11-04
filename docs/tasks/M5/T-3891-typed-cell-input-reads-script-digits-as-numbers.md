@@ -3,7 +3,7 @@ id: T-3891
 title: "Typed cell input reads script digits as numbers with Excel's locale-tagged formats (T-3446 follow-up)"
 milestone: M5
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
