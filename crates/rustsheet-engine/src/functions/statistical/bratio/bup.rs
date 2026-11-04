@@ -122,9 +122,9 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
 /// x0 = 0.7): S's running product of ratios (apb + l)/(ap1 + l) ([`bup_power_sum`]) passes the
 /// largest double, so S is not finite and Excel's incomplete beta is `#NUM!`. On probes/
 /// t3576-negbinom-cdf-huge-s every L140 cell whose ln of that product is 713.72 or more is `#NUM!`
-/// and every one at 707.81 or less is a value (ln(DBL_MAX) = 709.78), bup + bpser and bup + bgrat
+/// and every one at 707.81 or less is a value (ln of the largest double is 709.78), bup + bpser and bup + bgrat
 /// alike, and BETA.DIST with the same shapes is `#NUM!` at the same points (statistics.md
-/// "NEGBINOM.DIST's cdf is #NUM! at a huge number_s", T-3576).
+/// "NEGBINOM.DIST's cdf is #NUM! at a huge `number_s`", T-3576).
 pub(super) fn l140_bup_sum_overflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
     let (n, c) = bup_split(b0);
     n > 1.0 && !bup_power_sum(c, a0, y0, x0, n).is_finite()
