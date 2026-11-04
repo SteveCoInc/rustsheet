@@ -3,7 +3,7 @@ id: T-2655
 title: "TTEST with two 3x1 ranges and a 1E15 tails argument is #VALUE! in Excel, ours #NUM! (gen-m9 ede0323c389fc703 A75)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
