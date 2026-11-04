@@ -2515,9 +2515,15 @@ act on the oriented arguments"), `incomplete_beta.rs` swaps at the mean for ever
 `student_t.rs`. BETA.DIST's cdf runs on the port's dispatch (T-2505): `bratio/mod.rs` `dispatch` (x0 >= 0.3) and
 `beta_dist_lower_tail`, with the bpser branches ported and every other branch, and a shape of 1 outside the closed
 forms, still on `incomplete_beta.rs` (T-2847).
+- bup + bgrat at a0 < 1 other than 1/2 is near the math in Excel (T-3665, an accuracy result, not a model of Excel's
+  bits): at a = 0.75 and 0.9, b = 2.5, x in [0.29, 0.3), Excel is within 1.7 ulp of the 60-digit value on the 9 cells
+  the task named, where the Cephes kernel was 4 to 6 ulp off. TOMS's 20 bup terms plus the accurate bgrat increment
+  (`bgrat_increment`, double-double Legendre fraction) make all 9 within 15 digits and 7 bit-exact. On probes-numeric
+  (main 302bec9b5) that is 16 BETA.DIST cells newly within 15 digits and none newly off, with 626 cells newly bit-exact
+  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed.
 Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and argument forms; each branch's
 arithmetic is in the entries below
-Tasks: T-2464, T-2504, T-2505
+Tasks: T-2464, T-2504, T-2505, T-3665
 
 ## Incomplete beta closed forms act on the oriented arguments (T-2464)
 Rule: after bratio's swap, on (a0, b0, x0, y0), with Excel's EXP and LN: b0 = 1 gives w = EXP(a0·LN(x0)); a0 = 1 with
@@ -4165,7 +4171,21 @@ within 1E-15 relative / largest relative error:
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
-  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) are unprobed (T-4030).
+  (a df cut that depends on both dfs, or a bratio branch at b = 39.5) were unprobed until T-4030 (next paragraph).
+- Boundary and mechanism (T-4030, probes-numeric t4030-f-dist-rt-df1-boundary, 235 cells, excel-graph, 2026-11-04): it is
+  a bratio branch on the beta shapes (a, b) = (df2/2, df1/2), not a df cut. At df2 = 1E10 `F.DIST.RT(2,df1,1E10)` and
+  `F.DIST(2,df1,1E10,TRUE)` are numbers up to df1 = 76 (b = 38) and `#NUM!` at df1 = 77 and 78 (b = 38.5, 39) and 79; df1 = 80
+  and 100 are numbers again (`F.DIST.RT(2,80,1E10)` 2.8087221288968924E-07), so it is a band, not a threshold. At df2 = 5E9
+  the first `#NUM!` is df1 = 79 (b = 39.5; df1 61 to 78 are numbers). The band is in a, b only: `BETA.DIST(x,5E9,b,TRUE)`
+  is `#NUM!` for b = 38.5 to 39.5 and 0 (a number) from b = 40, and has the same type (number or `#NUM!`) as the F result at
+  the same shapes (b = 30 to 38 numbers); the values agree only to about 6 digits (`BETA.DIST` x is a rounded copy of
+  df2/(df2 + df1 x), and at a = 5E9 one ulp of x moves I by about 5E-7). The first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
+  and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at a other than 5E9, and about 3E-7 to 7E-6 at 5E9 (1E-2074 at x = 0.999999); whether
+  the edge depends on x is unpinned). So the lower edge falls as a grows and the upper edge is b0 < 40, the
+  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
+  (df2 5E9) is within 9E-10 to 7E-9 relative of a 60-digit mpmath `betainc` (computed at review, not committed), the engine
+  1E-8 to 1.4E-7 off. df2 = 2E10 is `#NUM!` for every
+  df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
 ## F-distribution df limit (T-1530)

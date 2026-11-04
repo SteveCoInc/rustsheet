@@ -92,8 +92,12 @@ pub(super) type Result<T> = std::result::Result<T, LexerError>;
 /// The one exception is a bare "R"/"C" immediately followed by '[': that is a
 /// malformed R1C1 reference (e.g. `R[`), not an identifier, so it is rejected.
 /// Genuine R1C1 references (`R[n]C[n]`, `RnCn`) are consumed before this fallback.
+///
+/// A name spelled like an A1 cell (`F1`, `A1`) is no reference here and is accepted in any case,
+/// as Excel takes `LET(F1,5,F1+1)` typed in R1C1 mode (probes/t3897-r1c1-let-cell-names A11,
+/// T-3897); lower case (`f1`) always passed.
 fn is_valid_r1c1_identifier(name: &str, next_char: Option<char>) -> bool {
-    if !utils::is_valid_a1_identifier(name) {
+    if !utils::is_name_text(name) {
         return false;
     }
     // `is_valid_identifier` also refuses the R1C1-shaped names ("R", "C", "RC", "R1C1D").

@@ -3,7 +3,7 @@ id: T-3990
 title: "Probe ODDFYIELD's #NUM! at extreme prices (T-3031 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -28,3 +28,9 @@ coupon at prices 1E-3 and 1E-6, every frequency; fill it on excel-graph and comp
 
 ## Out of scope
 - Fixing a mismatch the probe finds beyond a one-line change (file a task).
+
+## Outcome
+Added probes/oddfyield-extreme-price (72 cells, oracle-filled on excel-graph). The engine already matches every cell
+(value and type), so the eval delta is +72 passing cells, no new known failures and no follow-up task. Excel's
+`#NUM!` appears only for the long-first-period, annual, 0% coupon bond at prices 1E-3 and 1E-6 (J5, J6); recorded in
+financial.md ("ODDFYIELD's #NUM! at extreme prices").

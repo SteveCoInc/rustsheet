@@ -5,7 +5,10 @@ use std::collections::HashMap;
 use crate::calculated_columns::TableGrowth;
 use crate::expressions::{
     lexer::LexerMode,
-    parser::{is_limit_error, new_parser_english, stringify::to_english_string, Node},
+    parser::{
+        is_limit_error, new_parser_english,
+        stringify::bound_variables::to_english_string_typed_from_r1c1, Node,
+    },
     types::CellReferenceRC,
 };
 use crate::model::Model;
@@ -25,7 +28,10 @@ pub const TYPED_FORMULA_DOES_NOT_PARSE: &str = "Formula does not parse";
 /// parse here (no tables), so such a formula is `None` (T-3113). Excel's short forms (`RC[-1]`,
 /// `R[-1]C`, a whole row `R2` or column `C[-1]`, lower case) read as Excel reads them, and a
 /// relative offset wraps around the grid (T-3212); a LET name or LAMBDA parameter `r`, `c`, `rc`
-/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`.
+/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`. A name
+/// spelled like an A1 cell (`f1`) is no reference in R1C1 mode and Excel binds it, so the A1 text
+/// writes it `_xlpm.f1`, which the typed A1 entry binds (T-3897). Unbound, such a name is
+/// Excel's undefined name (`#NAME?`) and `None` here, as the A1 text would read the cell.
 #[must_use]
 pub fn r1c1_formula_to_a1(
     text: &str,
@@ -57,7 +63,7 @@ pub fn r1c1_formula_to_a1(
     {
         return None;
     }
-    Some(format!("={}", to_english_string(&node, &context)))
+    to_english_string_typed_from_r1c1(&node, &context).map(|text| format!("={text}"))
 }
 
 /// Whether the one `(` that `formula` leaves open opens a call's arguments (`SUM(1`, `LOG10(2`,

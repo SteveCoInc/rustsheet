@@ -487,7 +487,7 @@ const APART: [char; 2] = ['\u{2c70}', '\u{a78d}'];
 
 /// Whether `c` has no weight in Excel's comparison table (BMP only: every supplementary character
 /// has one, Calc!B25:H28).
-fn is_weightless(c: char) -> bool {
+pub(super) fn is_weightless(c: char) -> bool {
     let Ok(unit) = u16::try_from(u32::from(c)) else {
         return false;
     };

@@ -387,7 +387,7 @@ Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh
 trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
-Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
+Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and VALUE still return the nearest double (151 cells of t3658-round-scaling and 332 of the fresh case fail by one ulp; T-3932).
 Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient

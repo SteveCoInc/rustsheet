@@ -16,9 +16,10 @@ pub(super) mod ln_beta;
 
 use super::incomplete_beta::{beta_reg_tails, closed_form_tails, half_half_cdf, search_tails};
 use crate::arithmetic::extended_sum;
+use crate::x87_exp::dd_add;
 use basym::basym;
 use bfrac::bfrac;
-use bgrat::bgrat_half;
+use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
 use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, BupSum};
 
@@ -194,7 +195,8 @@ fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
 }
 
 /// BETA.DIST's cdf, w of K(a, b, x, y) with y = fl(1 - x) formed by the caller (SPEC-0025's caller
-/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`),
+/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`)
+/// and bup + bgrat at any other a0 < 1 (T-3665),
 /// and Excel's arcsine form at a = b = 1/2 (`incomplete_beta::half_half_cdf`, T-3192).
 /// Those are a net visible gain for BETA.DIST (T-2510: 30 fewer visibly-off cells, none more), not
 /// for F (see [`t_kernel_tails`]), so F's callers (`fisher.rs`) keep [`kernel_tails`].
@@ -288,7 +290,7 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat (BETA.DIST's, the
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1 and L140 bup+bgrat (BETA.DIST's, the
 /// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
 fn ported_tails_with(
     a: f64,
@@ -320,6 +322,14 @@ fn ported_tails_with(
         Branch::BupBgrat if half_bgrat && d.a0 == 0.5 => {
             let up = bup(d.b0, d.a0, d.y0, d.x0, BUP_BGRAT_TERMS)?;
             let w1 = bgrat_half(d.b0 + BUP_BGRAT_TERMS, d.y0, d.x0, up)?;
+            (other(w1), w1)
+        }
+        // Any other a0 < 1: the 20 bup terms plus the accurate bgrat increment (T-3665). Excel is
+        // within 1.7 ulp of the math there, the kernel this replaces 4 to 6 ulp off.
+        Branch::BupBgrat if half_bgrat => {
+            let up = bup(d.b0, d.a0, d.y0, d.x0, BUP_BGRAT_TERMS)?;
+            let increment = bgrat_increment(d.b0 + BUP_BGRAT_TERMS, d.a0, d.y0, d.x0)?;
+            let w1 = dd_add((up, 0.0), increment).0;
             (other(w1), w1)
         }
         // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
