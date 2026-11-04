@@ -16,7 +16,7 @@ There are two APIs:
 
 * The **user API** (`UserModel`): the same high level API used by the IronCalc
   web application. Every action evaluates the workbook, keeps undo/redo
-  history and produces diffs for collaboration.
+  history.
 * The **raw API** (`Model`): a low level API. Nothing is evaluated
   automatically (call `evaluate()` yourself), there is no undo/redo and no
   diffs. Faster and more flexible, but easier to get wrong.
@@ -36,8 +36,7 @@ model.update_range_style(0, 1, 1, 2, 1, "fill.color", "#FFFF00")
 model.save_to_xlsx("my-workbook.xlsx")
 ```
 
-More examples (styled reports, conditional formatting, CSV import,
-collaboration diffs) live in `docs/examples`.
+More examples (styled reports, conditional formatting, CSV import) live in `docs/examples`.
 
 ## Removed legacy surface (pre-v1, no warning release)
 

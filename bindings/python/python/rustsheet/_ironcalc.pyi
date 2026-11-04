@@ -350,8 +350,7 @@ class UserModel:
     """A workbook with the user, high level API: the same API used by the
     IronCalc web application.
 
-    Every action evaluates the workbook, keeps undo/redo history and produces
-    diffs for collaboration.
+    Every action evaluates the workbook and keeps undo/redo history.
     """
 
     def __init__(

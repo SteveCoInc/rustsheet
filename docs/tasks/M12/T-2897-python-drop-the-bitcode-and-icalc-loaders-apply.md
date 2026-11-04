@@ -3,7 +3,7 @@ id: T-2897
 title: "Python: drop the bitcode and icalc loaders, apply_external_diffs and test_panic (SPEC-0026)"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,7 +39,9 @@ round-trip; keep the xlsx ones), tests/test_diffs.py (the whole file) and docs/e
 ## Outcome
 Removed the listed loaders, writers, diff exchange and both `test_panic`s from the bindings, stubs, docs and
 examples; dropped the unused `bitcode` dependency; `tests/test_io.py` asserts every name is gone; hidden-row test now
-round-trips through xlsx. README notes the removal. Eval delta: none (bindings only). `make py-bindings`: 171 passed.
+round-trips through xlsx. README notes the removal. Decision 0278 records the deletion of `tests/test_diffs.py` and
+`docs/examples/collaboration.py` (governance gate); the "produces diffs for collaboration" wording is gone from the
+README, docstrings, stub and rst pages. Eval delta: none (bindings only). `make py-bindings`: 171 passed.
 
 ## Handoff (resumed)
 Implementation is complete and pushed (PR #3212, head efbe9ff): all listed symbols removed, `bitcode` dep dropped, `make check-fast` green

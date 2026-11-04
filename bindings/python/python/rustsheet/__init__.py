@@ -7,7 +7,7 @@ There are two APIs:
   reports a change set in ``wb.changes``.
 * The **user API** (:class:`UserModel`): the same high level API used by the
   IronCalc web application. Every action evaluates the workbook, keeps
-  undo/redo history and produces diffs for collaboration.
+  undo/redo history.
 * The **raw API** (:class:`Model`): a low level API. Nothing is evaluated
   automatically (call :meth:`Model.evaluate` yourself), there is no undo/redo
   and no diffs. It is faster and more flexible, but easier to get wrong.

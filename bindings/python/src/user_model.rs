@@ -26,7 +26,7 @@ struct NamedStyleEntry {
 
 /// A workbook model implementing the "user" API: the same high level API used
 /// by the IronCalc web application. Every action evaluates the model, keeps
-/// undo/redo history and produces diffs for collaboration.
+/// undo/redo history.
 #[pyclass(name = "UserModel")]
 pub struct PyUserModel {
     pub model: UserModel,

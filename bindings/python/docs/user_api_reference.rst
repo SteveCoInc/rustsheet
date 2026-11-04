@@ -2,8 +2,8 @@ User API Reference
 ------------------
 
 The user API (:class:`UserModel`) is the high level API used by the IronCalc
-web application. Every action evaluates the workbook, keeps undo/redo history
-and produces diffs for collaboration.
+web application. Every action evaluates the workbook and keeps undo/redo
+history.
 
 Conventions:
 
