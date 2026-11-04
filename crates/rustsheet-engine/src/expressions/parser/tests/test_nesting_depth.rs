@@ -712,10 +712,7 @@ fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
             .stack_size(2 << 20)
             .spawn(move || {
                 let tree = parse(&formula);
-                assert!(
-                    !matches!(tree, Node::ParseErrorKind { .. }),
-                    "{tree:?}"
-                );
+                assert!(!matches!(tree, Node::ParseErrorKind { .. }), "{tree:?}");
                 let copy = tree.clone();
                 assert!(copy == tree);
                 assert!(!to_rc_format(&copy).is_empty());
