@@ -566,6 +566,11 @@ fn a_padded_bare_column_is_ours_only() {
         let loaded = parser.parse(formula, &cell);
         parser.set_loaded(false);
         assert_eq!(to_excel_string(&loaded, &cell), "SUM(#REF!)", "{formula}");
+        // Untyped from outside the engine it is no column either (T-3258).
+        parser.set_external(true);
+        let external = parser.parse(formula, &cell);
+        parser.set_external(false);
+        assert!(matches!(external, Node::ParseErrorKind { .. }), "{formula}");
     }
     // Only the reference is `#REF!`: the rest of the formula is read as written.
     for (formula, loaded_text) in [

@@ -353,7 +353,13 @@ impl Model {
         // Defined-name formulas are stored internally in English so they keep
         // working when the user switches language/locale.
         let context = self.defined_name_context();
-        let internal_formula = self.user_formula_to_internal(formula, &context)?;
+        // A loaded body is read as a file's stored text: a structured reference Excel cannot
+        // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
+        // (probes/t3258-name-padded-column-0..2, T-3258).
+        self.parser.set_loaded(loading);
+        let internal_formula = self.user_formula_to_internal(formula, &context);
+        self.parser.set_loaded(false);
+        let internal_formula = internal_formula?;
         self.workbook.defined_names.push(DefinedName {
             name: name.to_string(),
             formula: internal_formula,

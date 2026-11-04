@@ -132,6 +132,53 @@ impl Model {
         }
     }
 
+    /// Sets a cell parametrized by (`sheet`, `row`, `column`) with `value`.
+    ///
+    /// This mimics a user entering a value on a cell.
+    ///
+    /// If you enter a currency `$100` it will set as a number and update the style
+    ///  Note that for currencies/percentage there is only one possible style
+    ///  The value is always a string, so we need to try to cast it into numbers/booleans/errors
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rustsheet_engine::Model;
+    /// # use rustsheet_engine::cell::CellValue;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
+    /// model.set_user_input(0, 1, 1, "100$".to_string());
+    /// model.set_user_input(0, 2, 1, "125$".to_string());
+    /// model.set_user_input(0, 3, 1, "-10$".to_string());
+    /// model.set_user_input(0, 1, 2, "=SUM(A:A)".to_string());
+    /// model.evaluate();
+    /// assert_eq!(model.get_cell_value_by_index(0, 1, 2), Ok(CellValue::Number(215.0)));
+    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("215$".to_string()));
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// See also:
+    /// * [`Model::update_cell_with_formula()`]
+    /// * [`Model::update_cell_with_number()`]
+    /// * [`Model::update_cell_with_bool()`]
+    /// * [`Model::update_cell_with_text()`]
+    pub fn set_user_input(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        value: String,
+    ) -> Result<(), String> {
+        // Text from outside the engine: a padded bare column `T[ Col ]` is no column here, as
+        // Excel reads it typed or loaded (T-3258); the engine's own re-entries of its printed
+        // text go through `reenter_printed_input`.
+        self.parser.set_external(true);
+        let result = self.reenter_printed_input(sheet, row, column, value);
+        self.parser.set_external(false);
+        result
+    }
+
     /// [`Model::set_user_input`] for text a user types, which Excel refuses where it would read
     /// stored text: a LET name or LAMBDA parameter spelled like a cell (`=LET(f1,1,f1+1)`) is an
     /// error here (decision 0103, T-2497) and binds through `set_user_input`. A formula typed
