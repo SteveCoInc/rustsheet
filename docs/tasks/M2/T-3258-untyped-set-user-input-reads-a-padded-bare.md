@@ -3,7 +3,7 @@ id: T-3258
 title: "Untyped set_user_input reads a padded bare column T[ Col ] as the engine's own text"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
