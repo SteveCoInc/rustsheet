@@ -3,7 +3,7 @@ id: T-3141
 title: "CUMPRINC where v^nper underflows: the last bits of the balance-drop principal (T-3067's seven regressed near-1E15 cells and the underflow-ends misses)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
