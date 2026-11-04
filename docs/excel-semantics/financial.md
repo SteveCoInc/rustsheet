@@ -1205,16 +1205,17 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     - a zero step against distinct iterates: Excel errs on 12 of 125 zero-step holds and 1 of 21 distinct ones;
     - a cut on the step count.
 
-    They are the noise floor's path, not a second rule. T-3424 tested this (next bullet).
-  - **Excel's residual and step are the model's; the outcome of a flat secant is not** (probes/t3424-rate-noise-trace,
-    433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/). The probe covers the 16 wrong-type
-    cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
+    They are the noise floor's path, not a second rule. T-3424 probed it (next bullet).
+  - **Excel's FV along the path is the model's annuity value; how RATE decides in the noise floor is not**
+    (probes/t3424-rate-noise-trace, 433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/).
+    The probe covers the 16 wrong-type cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
     - Residual: FV at 355 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
       them in the noise floor, |f| from 1e-7 to 1e-2) equals -(pv·P + pmt·A) with Excel's twice-rounded operators on
-      all 355. That is RATE's residual less + fv. So the residual is Excel's along the path at every nper, not
-      just at nper 1 (T-3579). An iterate is written as `(a+b)`: a 15-digit head plus a tail that rounds back to the
-      double, because Excel cuts a formula literal to 15 digits (numbers.md "Formula number literals are read at 15
-      significant digits").
+      all 355. That is RATE's residual less + fv, so no residual difference shows at these points at any nper (T-3579
+      found the same at nper 1). This reads Excel's FV, not RATE's own residual: that RATE evaluates its residual
+      with FV's arithmetic is consistent with the scores but not observed directly. An iterate is written as
+      `(a+b)`: a 15-digit head plus a tail that rounds back to the double, because Excel cuts a formula literal to
+      15 digits (numbers.md "Formula number literals are read at 15 significant digits").
     - Step: on the 2,475 literal RATE oracle cells, the model's step r1 - f1·(r1-r0)/(f1-f0) is bit-exact on 1,951.
       Other forms do worse:
 
@@ -1228,8 +1229,9 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       | (r0·f1 - r1·f0)/(f1-f0) | 1,039 |
 
       Keeping the iterates in 80-bit precision between steps gets 1,111 with the residual taken at the double
-      iterate, and 1,048 with 1+r and /r taken at the extended iterate. So Excel's iterates are doubles, and its
-      step is the model's.
+      iterate, and 1,048 with 1+r and /r taken at the extended iterate. This ranks whole-run scores: the model's
+      step ranks first, but no step was observed directly, and the 524 cells it misses leave room for a difference
+      in RATE's own step, residual or stop test.
     - A flat secant is not always `#NUM!`. Making it `#NUM!` fixes 60 wrong-type cells but breaks 549.
     - The hold point does not decide the outcome. On the nper 1 and 2 cells, RATE seeded with each of the last 12
       iterates (78 cells) gives these results:
@@ -1255,7 +1257,9 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       ulp from it on 182 (in either direction), and further off on 165: up to 156,030 ulp on t3348-rate-fv-nonzero
       A138 and about 2.5e9 ulp on probe A344.
     - So Excel's path leaves the model's in the noise floor, sometimes in the last ulp and sometimes many steps
-      earlier, though the residual and the step agree at every point probed. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74). Excel stops
+      earlier. With double iterates, RATE's own residual, step or stop test must then differ from the model's
+      somewhere; which one is unknown. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74).
+      Excel stops
       at 5.2793196756967624e-06, one ulp past the model's hold and the first double where f changes sign. The cause
       is unknown. T-3424 is blocked as time-boxed (decision 0056), so its cells are accepted (decision 0267). T-3963
       studies the flat-secant outcome for the cells it owns.
@@ -1266,8 +1270,9 @@ Evidence (excel-graph, 2026-10-31, T-3348):
 - Unprobed: no oracle cell has a flat secant with |f1| < 1e-7, so the convergence test on a held point is untested.
   It differs from the cap's test only where 1 + r1 <= 1e-4.
 Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
-Status: VERIFIED (excel-graph; the residual along the path, T-3424) / UNVERIFIED (the outcome of a flat secant in the
-noise floor; a non-integer nper below -1; a held point with |f1| < 1e-7)
+Status: VERIFIED (excel-graph; Excel's FV along the path, T-3424) / UNVERIFIED (RATE's own residual, step and stop
+test in the noise floor; the outcome of a flat secant there; a non-integer nper below -1; a held point with
+|f1| < 1e-7)
 Tasks: T-3348, T-3389, T-3424, T-3579, T-3698, T-3963, T-4146
 
 ## RATE restarts once on an early flat secant

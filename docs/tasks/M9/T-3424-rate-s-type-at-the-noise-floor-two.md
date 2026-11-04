@@ -113,18 +113,18 @@ before it uses the two experiments above, then fits the residual from T-3579's c
   A173, A275 and A292, and gives `#NUM!` on sweep A272 and fresh A251 and A272.
 - **Probe:** probes/t3424-rate-noise-trace (433 cells, excel-graph, 0 fill failures). Generator and scorers are in
   docs/research/t3424/.
-  - FV at 355 iterates of the model's run on the 16 cells reads Excel's residual along the path.
+  - FV at 355 iterates of the model's run on the 16 cells reads Excel's FV (the residual less + fv) along the path.
   - RATE seeded with the last 12 iterates of each nper 1 and 2 cell (78 cells) reads Excel's run from there.
-- **Finding:** the residual is not Excel's noise. The cells' type comes from the outcome of a flat secant, which the
-  model does not reproduce (financial.md "Excel's residual and step are the model's; the outcome of a flat secant
-  is not").
+- **Finding:** no residual difference shows in Excel's FV, but Excel's RATE path still leaves the model's in the noise
+  floor, so RATE's own residual, step or stop test differs somewhere, unobserved (financial.md "Excel's FV along
+  the path is the model's annuity value; how RATE decides in the noise floor is not").
   - Excel's FV is the model's annuity value on 355 of 355 cells, at nper 1 to 351.
   - The model's step form is bit-exact on 1,951 of the 2,475 literal RATE cells. Six other forms get 1,039 to
     1,945, and 80-bit iterates get 1,111 and 1,048.
   - Seeded runs that hold at the same iterate get different Excel outcomes, a number on one and `#NUM!` on the other
     (fresh A275).
   - No single quantity at the hold separates Excel's 549 returned holds from its 60 errors.
-- No engine change was made, so no gated cell regresses. T-3963's context now says the residual is ruled out.
+- No engine change was made, so no gated cell regresses. T-3963's context records this probe's result.
 - **Follow-up:** T-4146 (opus). Excel's FV is the twice-rounded form on all 355 probe cells and on all 587 literal FV
   oracle cells. The engine's plain-double FV misses probe A132 (587 against 586).
 - **Eval delta:** probes +1 case (433 cells: 394 pass, 39 new-coverage known failures, 0 regressions;
@@ -157,6 +157,7 @@ Candidates tried, none of which moves a cell:
 - six step forms, a flat secant as `#NUM!`, and iterates kept at 80 bits (this run);
 - single thresholds on 13 quantities at the hold (this run).
 
-Reopen only on a new hypothesis recorded here (decision 0056). This run's probe shows the residual and the step are
-Excel's along the path. The open question is how Excel decides a flat secant: seeded runs that hold at the same
-iterate get different Excel outcomes. T-3963 studies that for the flat-secant cells it owns.
+Reopen only on a new hypothesis recorded here (decision 0056). This run's probe found no difference in Excel's FV along the
+path and ranked the model's step first, yet Excel's RATE path leaves the model's: seeded runs that hold at the same
+iterate get different Excel outcomes. A direct read of RATE's own residual or step (a seeded or one-step RATE probe)
+is the next hypothesis. T-3963 studies that for the flat-secant cells it owns.
