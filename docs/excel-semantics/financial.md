@@ -3880,8 +3880,9 @@ Tasks: T-1084, T-1373
 ## IRR on conventional flows near 0 and -10% (T-3347's training probes)
 Rule (excel-graph, 2026-10-31, probes/t3347-irr-conventional-num, 42 cells, and probes-numeric/
 t3347-irr-conventional-sweep, 120 cells; exact roots in each case's `.roots.tsv`): Excel's IRR returns the root of
-conventional cash flows (one outlay, then positive flows) whose IRR is near 0 (1e-6 to 3e-4, either sign) or near
--10%, within about 2e-11 of the exact root, on 159 of these 162 series. It is `#NUM!` on three that have a real root
+conventional cash flows (one outlay, then positive flows) within about 3e-12 of the exact root on 159 of these 162
+series. The strata: roots near 0 (1e-6 to 3e-4, either sign), near -10%, and log-uniform positive and negative roots;
+across both cases the roots run from -0.40 to 0.72. It is `#NUM!` on three that have a real root
 (sweep A111, A115 and A117, r = -0.23, -0.40 and -0.11, long series of tiny flows after a large outlay). The fitted
 secant ("IRR is a secant in d") fails on both shapes: near -10% on long level series (probe A10-A21) it drifts to its
 step cap, and near 0 with flows up to 1E9 (probe A36-A42) v = 1 - d repeats, so the secant is flat. Neither a larger
@@ -3892,7 +3893,7 @@ path-sensitive"). Also seen: sweep A106 (a root of -1.3E-17) is -2.2204460492503
 secant's one-ulp-of-v resolution.
 Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
 and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
-Ours (2026-11-04): `#NUM!` or a wrong type on the 12 probe and 24 sweep cells listed in T-3347.
+Ours (2026-11-04): `#NUM!` against Excel's number on the 19 probe and 25 sweep cells listed in T-3347.
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
 Tasks: T-3347, T-3406, T-3408
 
@@ -4389,7 +4390,7 @@ on the first flow's size (1E-15 against 1E-8). A plain-double replica of the fit
 does not explain it: from 0.1 its first step is already a negative v (-0.37), and from 41.9999 it meets the v-stop at
 v = 2.4E-13 (rate 4.1E+12), where NPV is only the first flow, and its next step is negative. Not identified.
 Evidence: probes/t2657-pv-irr-div0 sheets P (PV, FV, PMT) and I (IRR; the flows on sheet D); salvaged from draft #1885.
-Ours (2026-11-04): every PV, FV and PMT cell passes. The 22 `#DIV/0!` IRR cells of sheet I are `#NUM!`.
+Ours (2026-11-04): every PV, FV and PMT cell passes. 22 of sheet I's `#DIV/0!` cells (listed in T-2657) are `#NUM!`; the rest match.
 Status: VERIFIED (excel-graph) for the values; the IRR rule is UNVERIFIED
 Tasks: T-2657
 
