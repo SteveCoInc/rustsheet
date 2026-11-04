@@ -13,7 +13,7 @@ mod calculated_column;
 mod diff;
 mod pivot;
 
-pub use self::pivot::{PivotError, PivotFunction, PivotTableInput};
+pub use self::pivot::{PivotError, PivotFunction, PivotRangeGroup, PivotTableInput};
 
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::{

@@ -9,13 +9,15 @@
 //! in place of its values. The importer turns both into ordinary cache fields whose items are the
 //! group items and whose records are each record's group, so the engine model and GETPIVOTDATA
 //! need nothing new: a pivot field's `<item x>` indexes the group items, as Excel writes it.
-//! Which group a value falls in is ECMA-376's layout, read off Excel-authored caches
-//! (corpus-bench 52379, 59932), and UNVERIFIED against Excel's own grouping
-//! (docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
+//! Which group a date falls in is ECMA-376's layout, read off Excel-authored caches
+//! (corpus-bench 52379, 59932), and UNVERIFIED against Excel's own grouping; a number follows
+//! Excel's probed rule, [`group_by_numbers`] (T-4235; docs/excel-semantics/web.md "Grouped pivot
+//! fields import as their group items").
 
 use rustsheet_engine::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
 use rustsheet_engine::pivot::{
-    CacheField, CacheItem, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
+    group_by_numbers, CacheField, CacheItem, PivotCache, PivotCacheError, MAX_ITEMS,
+    MAX_RECORD_VALUES,
 };
 
 use super::{skip, Skip};
@@ -139,6 +141,7 @@ pub(super) fn apply_groups(
         if let Some(existing) = cache.fields.get_mut(index) {
             existing.items = field.items;
             existing.records = field.records;
+            existing.number_groups = field.number_groups;
         } else {
             // Sorted, and every grouping field has exactly one group, so this is the next one.
             let Some(name) = names.next() else {
@@ -155,6 +158,14 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     let count = group.items.len();
     if count == 0 {
         return skip("a fieldGroup without groupItems");
+    }
+    // A numeric range: Excel's own rule, which relabels a `<groupItems>` list of the wrong length
+    // rather than refusing it (`group_by_numbers`; probes/t4228-pivot-range-groups pivot 3).
+    if let (Some(range), None) = (&group.range, &group.discrete) {
+        if range.by == GroupBy::Range {
+            let bounds = [range.start, range.end, range.interval];
+            return Ok(group_by_numbers(base, bounds, group.items.clone())?);
+        }
     }
     // A blank base value goes in item 0: Excel's pivot fields list exactly the group items, with
     // no blank item of their own (59932: 14, 6 and 123 items over a field holding a blank record),
@@ -186,11 +197,12 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
         name: String::new(),
         items: group.items.clone(),
         records,
+        number_groups: None,
     })
 }
 
-/// The group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise the
-/// step (numbers) or the calendar part (dates) counted from 1.
+/// The date group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise
+/// the calendar part counted from 1.
 fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip> {
     if let Some(expected) = range.by.fixed_item_count() {
         if count != expected {
@@ -222,15 +234,8 @@ fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip
         return Ok(u32::try_from(last).unwrap_or(0));
     }
     let inner = match range.by {
-        GroupBy::Range => {
-            let step = ((value - range.start) / range.interval).floor();
-            // Finite and at least 0 here; the clamp below bounds it.
-            if step.is_finite() && step < (count as f64) {
-                step as usize + 1
-            } else {
-                last - 1
-            }
-        }
+        // Numbers group by `group_by_numbers` (`group_field`).
+        GroupBy::Range => return skip("a numeric range group outside group_by_numbers"),
         GroupBy::Years => {
             let ((_, Some(year), _), (_, Some(start), _)) =
                 (calendar_parts(value)?, calendar_parts(range.start)?)
