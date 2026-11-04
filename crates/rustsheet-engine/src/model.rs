@@ -341,8 +341,15 @@ impl Model {
                 reference,
                 ..
             } => self.get_sheet_span_reference(*first_index, *last_index, reference, cell),
-            // A variable holds what it was bound to, a reference included.
-            Node::NamedVariableKind { .. } => self.variable_value(node, cell),
+            // A variable holds what it was bound to, a reference included. The read copies the
+            // bound value, so it is charged here as `evaluate_node_in_context` charges it: every
+            // reader of a LET-bound array (XMATCH, LARGE, COUNTIF, TEXTJOIN, INDEX, ...) pays the
+            // cells it copies, and a LAMBDA cannot repeat the read past the formula's work budget
+            // (SPEC-0024 step 3, T-2805).
+            Node::NamedVariableKind { .. } => {
+                let value = self.variable_value(node, cell);
+                self.charged(value, cell)
+            }
             // A defined name that stands for a reference is that reference, to a single cell as
             // well: `MAX(TextCell)` ignores the text in it (upstream MIN_MAX_extras.xlsx A1-A3).
             Node::DefinedNameKind((name, scope, _)) => {

@@ -344,7 +344,10 @@ impl Model {
                 _ => {}
             }
         }
-        RefArg::from(self.variable_value(node, cell))
+        // The copy is charged like a read in value context (`evaluate_node_in_context`;
+        // SPEC-0024 step 3, T-2805).
+        let value = self.variable_value(node, cell);
+        RefArg::from(self.charged(value, cell))
     }
 
     /// The one-cell reference `node` is bound to, when it is a variable bound to one: what TAKE,

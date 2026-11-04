@@ -1550,16 +1550,25 @@ second call's charge fails) and of smaller RATE calls 5.2 s, of lifted YIELD 7.6
 since T-2879, so these are node units). One call at its visit cap (2026-10-27, before T-2923's re-fit, which does not change
 visit units): RATE 2.4 s, ODDLPRICE 1.1 s, CHISQ.DIST and POISSON.DIST 0.4 s, GAMMA.INV and GAMMA.DIST under 0.1 s, COUNTIF
 and SUMIFS over 1,024 cells 0.1 and 0.4 s. The LAMBDAs a formula makes are dropped once its root cell is evaluated, so a
-recalculation of many such formulas does not slow each later one (T-2925). Array cells read by the other whole-array
-readers are not charged yet (T-2805). The calibration figures above were measured before T-2804 charged the aggregates'
+recalculation of many such formulas does not slow each later one (T-2925). A read of a LET variable or LAMBDA parameter
+copies what it is bound to, so it is charged that value (3 per array cell, one per 4 bytes of a text) in reference context
+too, as in value context: every whole-array reader of a bound array pays the cells it copies before it reads them (T-2805).
+The audited readers, each covered by `every_whole_array_reader_pays_the_cells_it_reads` (test_formula_work.rs): MATCH,
+XMATCH, XLOOKUP, LOOKUP, VLOOKUP, HLOOKUP, SORT, SORTBY, UNIQUE, FILTER, TEXTJOIN, CONCAT, TOCOL, TOROW, SUMPRODUCT, MMULT,
+COUNTIF, SUMIF, SUMIFS, COUNTIFS, AVERAGEIF, MAXIFS, LARGE, SMALL, PERCENTILE, QUARTILE, PERCENTRANK, NPV, AGGREGATE,
+and INDEX, ROWS and COLUMNS: these three do O(1) work on the array but the variable read under them copies it, so they
+are charged too. GROUPBY and PIVOTBY hand each call its group as a bound parameter, so `SUM(x)` there pays the copy and
+the aggregate's read. Text elements of an array are not charged by their length at a read: their bytes are shared
+(T-2806), so the copy moves pointers; a reader that compares text bytes element by element is T-4233. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/area_budget.rs (`MAX_FORMULA_WORK`, `Model::spend_work`, `Model::with_area_budget`),
 crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsheet-engine/src/functions/logical/lambda.rs
 (`call_prepared`, `prepare_lambda`, `fn_lambda`), crates/rustsheet-engine/src/node_frames.rs (`LambdaDefKind`),
 crates/rustsheet-engine/src/arithmetic.rs (`handle_concatenate`), crates/rustsheet-engine/src/functions/util/aggregate_args.rs
-(`walk_array_items`).
-Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804
+(`walk_array_items`), crates/rustsheet-engine/src/model.rs (`evaluate_node_with_reference`) and
+crates/rustsheet-engine/src/functions/logical/let.rs (`variable_reference`).
+Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804, T-2805
 
 ## Copies of a text share its bytes
 Rule: Excel has no known limit on the memory one formula's texts take; `IF(SEQUENCE(1024,1024),REPT("a",32767))` copies a
