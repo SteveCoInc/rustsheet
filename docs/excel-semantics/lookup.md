@@ -384,8 +384,15 @@ HLOOKUP behaves alike (probes/lookup-argument-edges J10-X2, excel-graph, 2026-10
 HLOOKUP twins (probes/lookup-index-hlookup H1-H6, excel-graph, 2026-10-07, T-0264): `INDEX(E1:E4,1)` (number)
 gives the row, `INDEX(E1:E4,2)` (text) and `INDEX(E1:E4,3)` (error) are `#REF!` found and `#N/A` not found,
 as in VLOOKUP. An INDEX index that itself fails (`INDEX(E1:E4,9)`) is `#REF!` in HLOOKUP and VLOOKUP, found
-or not found (H7-H10): a failing index is not turned into `#N/A` by a failed search. Whether the INDEX error propagates as is or is always
-mapped to `#REF!` is unprobed (an INDEX failing with another error, e.g. `INDEX(E1:E4,"x")`, would tell).
+or not found (H7-H10): a failing index is not turned into `#N/A` by a failed search.
+A failing reference-returning index keeps its own error, never mapped to `#REF!`. It fails like a value index:
+after lookup_value, before the search and before range_lookup, found or not found, in VLOOKUP and HLOOKUP alike.
+`INDEX(E1:E4,"x")`, `INDEX(E1:E4,-1)`, `OFFSET(E1,"x",0)` and `CHOOSE(3,E1,E2)` are `#VALUE!`. `INDEX(E1:E4,NA())` is
+`#N/A` and `INDEX(E1:E4,1/0)` is `#DIV/0!`. `INDEX(E1:E4,0,2)`, `OFFSET(E1,-5,0)`, `INDIRECT("nope")` and
+`INDEX(E1:E4,9)` are `#REF!`. `ERROR.TYPE` of each gives 3, 7, 2 or 4, so these are real errors, not a display.
+`INDEX(E1:E4,1.5)` is E1 (the index truncates), so it looks up column/row 2. `VLOOKUP(NA(),A1:C3,INDEX(E1:E4,"x"))` is
+`#N/A` (lookup_value first), and `VLOOKUP(1,A1:C3,INDEX(E1:E4,"x"),1/0)` is `#VALUE!` (the index beats range_lookup).
+Evidence: probes/lookup-index-failing H1:I52 (excel-graph, 2026-11-04, T-4191).
 A table_array error comes after lookup_value and before the index and range_lookup. `VLOOKUP(NA(),1/0,2)` and
 `VLOOKUP(NA(),#REF!,2)` are `#N/A`. `VLOOKUP(2,1/0,NA())`, `VLOOKUP(2,1/0,2,NA())` and `VLOOKUP(9,1/0,2)` are `#DIV/0!`.
 `VLOOKUP(2,#REF!,"a")` is `#REF!`. A lifted lookup_value spills the table error once per element: `VLOOKUP({2;9},1/0,2)`
