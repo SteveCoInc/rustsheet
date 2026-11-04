@@ -196,11 +196,21 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .map_or(0, |i| i + 1);
+    // Digit placeholders after the denominator print a zero each (a space under `?`), and a blank
+    // fraction blanks everything from the fraction up to the last of them (`# ?/? 0` on 12.5 is
+    // "12 1/2 0", `# ?/?0` on 12 "12     ", `# ?/?|0 "12"|\5` on 12 "12       12|5"; `#` prints
+    // "0" there and `0.0` is "0.0"; probes/t3711-fraction-trailing-placeholders).
+    let trailing_end = tokens
+        .iter()
+        .rposition(|t| matches!(t, TextToken::Digit(_)))
+        .filter(|end| *end >= fraction.denominator_at);
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
         }
         let in_fraction = (fraction.numerator_start..fraction.denominator_at).contains(&index);
+        let in_trailing =
+            trailing_end.is_some_and(|end| (fraction.denominator_at..=end).contains(&index));
         let in_separator = has_integer && (integer_end..fraction.numerator_start).contains(&index);
         match token {
             _ if in_separator && separator == Separator::Dropped => {}
@@ -222,6 +232,17 @@ pub(super) fn format_fraction(
                         .digits(&numerator_fill.next().unwrap_or_default()),
                 );
             }
+            _ if in_trailing && blank && !blank_spaces => {}
+            _ if in_trailing && blank => push_spaces(&mut text, token),
+            TextToken::Digit(_) if in_trailing => {
+                let zero = if placeholder_kinds(std::slice::from_ref(token)) == ['?'] {
+                    " ".to_owned()
+                } else {
+                    part.numerals.digits("0")
+                };
+                text.push_str(&zero);
+            }
+            TextToken::Period if in_trailing => text.push('.'),
             TextToken::Literal(c) => text.push(*c),
             TextToken::Text(t) => text.push_str(t),
             TextToken::Ghost(_) => text.push(' '),

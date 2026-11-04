@@ -1272,11 +1272,18 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `?` integer ("|  3=/=4|", A234) or under a `#` integer before a `?` numerator ("| 3=/=4|", A228), and is dropped
   under a `#` integer otherwise ("|3=/=4|", A225, A231). Literals between integer placeholders always print
   (`|#-#-#\:#/#|` on 0.75 "|--3/4|", A129).
+- **Digit placeholders after the denominator** (T-3711, probes/t3711-fraction-trailing-placeholders, excel-graph): each
+  prints a zero (a space for `?`) and a `.` between them prints, so `# ?/? 0` on 12.5 is "12 1/2 0", `# ?/? #` "12 1/2 0",
+  `# ?/? ?` "12 1/2  ", `# ?/? 00` "12 1/2 00", `# ?/? 0#` "12 1/2 00", `# ?/? 0.0` "12 1/2 0.0" and
+  `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
+  separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
+  seven spaces then "12|5". Adjacent placeholders of a different kind right after the denominator split differently
+  (`# ?/?0` "12 1/20", `# ?/#0` "12 1/2", `# ?/0?` "12 1/02"): T-4204.
 Ours: implemented in formatter/parser.rs (`is_fraction_literal`) and formatter/fraction.rs (T-0982); all 325 cells pass.
 Unprobed engine choices (T-2209): a mixed `0`/`?` denominator puts its zeros left and spaces right; plain spaces or quoted
 text around the `/` also make a fraction; a `/` with no denominator after its literals stays a literal.
 Status: VERIFIED (Excel for the web; desktop Mac Excel cached values for the literals between the parts)
-Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074
+Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T-3711, T-4204
 
 ## Fill characters (`*x`) add nothing to the text
 A `*x` fill (repeat) character contributes nothing to the displayed text or to TEXT(): `TEXT(7,"0*""a")` is "7a",
