@@ -231,11 +231,17 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   - **SORT and SORTBY in detail (T-3211).** Evidence: probes/t3211-collation-sort-cycles, excel-graph 2026-10-31,
     Status: VERIFIED. SORT and SORTBY give the same order in all 88 probed rows (Calc!A = C, B = D). Descending is
     not the reverse of ascending: `SORT` of U+0342 once, twice, U+0327 is once, twice, U+0327 and with -1 twice,
-    once, U+0327 (row 1). Every order of each three-text cycle (rows 1-12) comes out as a natural merge sort
-    gives it: an ascending input run stays, a strictly descending one is reversed, so a cyclic input order is
-    kept and an anti-cyclic one reversed (`ạ, á, ạạạ` gives `ạạạ, á, ạ`, row 8). On shuffles of eight texts
-    holding both cycles (rows 13-44) Excel's order follows no simple algorithm tried (T-3418 lists them). The
-    probed comparison matrix (Calc!L1:T9) is the engine's on all 81 pairs.
+    once, U+0327 (row 1). The order is a bottom-up natural merge sort over maximal non-descending runs only:
+    the input is cut where an element compares less than the one before it (a strictly descending stretch is
+    runs of one element, never reversed), and neighbouring runs are merged pairwise, round by round, a tie
+    taking the left run's element; descending sorts the same way with the comparison flipped (T-3418). It
+    gives every row of rows 1-44 and every row of probes/t3418-sort-cycle-permutations (excel-graph 2026-11-04:
+    all 24 orders of the 4-cycles {A3, A4, A6, A7} and {A5, A6, A7, A8} and all 120 orders of {A4..A8},
+    ascending and descending, 336 cells). Reversing strictly descending runs (T-3211's model) misses 28 of
+    those 168 rows: on a cycle `a<b<c<d<a` with chords `c<a`, `d<b`, the input `a, c, b, d` is one strictly
+    descending chain (c<a, b<c, d<b) but Excel takes it as four one-element runs, merges them into `c, a`
+    and `d, b`, then into `c, d, a, b`. The probed comparison matrix (Calc!L1:T9) is the engine's on all 81
+    pairs.
   - **UNIQUE groups by Excel's `=`** (T-3211, same case, Calc!G1:J15): `"ß"` and `"ss"`, `"á"` and
     `"a"&UNICHAR(769)` are one row (the first kept), as `=` finds them equal; `"Ａ"` and `"A"`, `"coop"` and
     `"co-op"` are two, as `=` finds them unequal; exactly_once drops both of an equal pair (`#CALC!` when none is
@@ -250,11 +256,12 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   index keeps the `CollationKey` but tests the first (last) cell with the key and walks when that
   cell is not equal. Since T-3211 SORT and SORTBY compare texts with `cmp_text_pairwise` too and sort
   with `sort_indices_pairwise`, a stable natural merge sort that cannot panic on a non-total order (`slice::sort_by`
-  may): every t3181 array cell passes, and every three-text cycle of t3211, but 40 cells of its eight-text rows do not
-  (T-3418). UNIQUE keys a text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
+  may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a
+  text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
-  unequal): all t3211 UNIQUE cells but G4:I4 pass (T-3418). GROUPBY and PIVOTBY group the same way
-  (T-4088) but still sort with the total `cmp_text`. Open: T-3418.
+  unequal): all t3211 UNIQUE cells but G4:I4 pass; grouping neighbours of the sorted order fits every one-column
+  t3211 UNIQUE cell in a simulation (T-4200). GROUPBY and PIVOTBY group the same way
+  (T-4088) but still sort with the total `cmp_text`. Open: T-4200.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
   probes/t3201-collation-long-mark-runs (1,000 cells: a ladder of 246 texts `"a"` plus up to three
   marks, one per weight 2, 5, 8, 11 and 14 to 255, self-ranked in order (Calc!A1:A246); `"a"` with
