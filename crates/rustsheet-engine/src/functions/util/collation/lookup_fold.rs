@@ -509,20 +509,22 @@ pub(crate) fn fold_lookup_char(c: char) -> char {
     if is_weightless(c) {
         return WEIGHTLESS;
     }
-    let Ok(unit) = u16::try_from(u32::from(c)) else {
+    if u16::try_from(u32::from(c)).is_err() {
         return c;
-    };
+    }
     let folded = fold_char(c);
     if is_weightless(folded) || APART.contains(&c) {
         return c;
     }
-    class_first(unit)
-        .or_else(|| u16::try_from(u32::from(folded)).ok().and_then(class_first))
+    class_first(c)
+        .or_else(|| class_first(folded))
         .unwrap_or(folded)
 }
 
-/// The first member of `unit`'s class in [`CLASSES`], if it is in one.
-fn class_first(unit: u16) -> Option<char> {
+/// The first member of `c`'s class in [`CLASSES`], if it is in one. The collation's `=` equates
+/// the members the same way (`super::fold`, T-4013).
+pub(super) fn class_first(c: char) -> Option<char> {
+    let unit = u16::try_from(u32::from(c)).ok()?;
     let index = CLASSES
         .binary_search_by_key(&unit, |&(member, _)| member)
         .ok()?;

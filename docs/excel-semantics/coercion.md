@@ -668,12 +668,18 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
   D21, F21; MATCH agrees, lookup.md "Equivalence classes"), `ϵ=ε` (U+03F5, Calc!P7) and U+1FBE `=ι` (Calc!P9), and
   keep the supplementary case pair Deseret U+10400 and U+10428 apart (Calc!B25, D25, F25 FALSE and 0). UNVERIFIED:
   whether the Greek Extended class is the accent-weight rule of T-3154 (psili+varia and dasia+oxia summing to the
-  same weight).
+  same weight). The text criteria without a wildcard equate `Ͷ`/`ϳ` and `ϑ`/`ϴ` too (probes/t3929-wildcard-fold-criteria
+  Calc!B29:D30, t3929-wildcard-fold-xmatch Calc!E29:E30; criteria.md "Case beyond ASCII").
+  Implemented in: the collation's `fold` (crates/rustsheet-engine/src/functions/util/collation.rs) maps each member
+  of lookup.md's equivalence classes to the class's first member through the one `CLASSES` table that exact MATCH
+  uses (`lookup_fold::class_first`), and leaves supplementary characters uncased (T-4013). So `<` orders class
+  members as equal (FALSE both ways), and the sorts and XMATCH's index key them alike. That `<` order is UNVERIFIED:
+  no cell compares two class members with `<`.
 UNVERIFIED: where a weightless character counts. A trailing one after `a` keeps the texts apart while an inner
 one does not, and T-3465 found `"¡"="¡"&UNICHAR(173)` TRUE (a trailing soft hyphen after punctuation); which
 positions and neighbours make it count is open (T-3904).
-Ours: `cmp_text_excel` gives these characters their code-point weight, so `=` keeps them apart; the
-probe's failing cells are known failures owned by T-3445 (MATCH) and T-3904 (`=`, COUNTIF, XMATCH).
+Ours: `cmp_text_excel` gives the weightless characters their code-point weight, so `=` keeps them apart; those
+failing cells are known failures owned by T-3904 (`=`, COUNTIF, XMATCH).
 Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule is UNVERIFIED.
 
 ## Text in a range operand of arithmetic is coerced

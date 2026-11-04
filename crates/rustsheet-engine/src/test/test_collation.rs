@@ -2,7 +2,7 @@
 
 use std::cmp::Ordering;
 
-use crate::functions::util::collation::{cmp_text, cmp_text_excel, collation_key};
+use crate::functions::util::collation::{cmp_text, cmp_text_excel, cmp_text_pairwise, collation_key};
 use crate::text::Text;
 
 /// Asserts `texts` are strictly increasing in Excel's order.
@@ -666,4 +666,31 @@ fn t3559_equal_forms() {
     assert_eq!(cmp_text_excel("ץ", "צ"), Ordering::Equal);
     assert_eq!(cmp_text_excel("\u{fefb}", "لا"), Ordering::Equal);
     assert_increasing(&["צ", "ש", "ת"]);
+}
+
+/// T-4013: `=` equates the members of Excel's wider classes and keeps supplementary case pairs
+/// apart (probes/t3584-match-fold-weightless Calc!B21:F21, B25:F25, P7, P9;
+/// probes/t3929-wildcard-fold-criteria rows 29-30).
+#[test]
+fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
+    let equal = |a: &str, b: &str| {
+        let (a, b) = (Text::from(a), Text::from(b));
+        cmp_text_pairwise(&a, &b) == Ordering::Equal && collation_key(&a) == collation_key(&b)
+    };
+    for (a, b) in [
+        ("\u{1f05}", "\u{1f0a}"), // Greek Extended: dasia+oxia with psili+varia
+        ("x\u{1f0d}y", "X\u{1f02}Y"),
+        ("\u{3f5}", "\u{3b5}"),  // ϵ with ε
+        ("\u{1fbe}", "\u{3b9}"), // prosgegrammeni with ι
+        ("\u{1fbe}", "\u{399}"),
+        ("\u{376}", "\u{3f3}"), // Ͷ with ϳ
+        ("\u{3d1}", "\u{3f4}"), // ϑ with ϴ
+    ] {
+        assert!(equal(a, b), "{a:?} = {b:?}");
+    }
+    assert!(!equal("\u{10400}", "\u{10428}"), "Deseret keeps its case");
+    assert!(!equal("\u{3f4}", "\u{3b8}"), "ϴ is not θ");
+    // Equal texts are not ordered either way.
+    let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));
+    assert_eq!(cmp_text(&a, &b), Ordering::Less);
 }
