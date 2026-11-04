@@ -1592,6 +1592,7 @@ C	probes/t2957-expand-right-data.case.json	12
 C	probes/t2957-expand-right-header.case.json	8
 C	probes/t2957-fill-one-totals.case.json	8
 C	probes/t2957-refill-second.case.json	6
+C	probes/t2959-indic-lcid-names.case.json	112
 C	probes/t2966-empty-call-runs.case.json	8
 C	probes/t2966-missing-first-arg-run.case.json	6
 C	probes/t2967-pivotby-subtotal-gate.case.json	359
@@ -3987,7 +3988,6 @@ F	probes/t2753-gamma-density-switch.case.json	S!B4
 F	probes/t2753-gamma-density-switch.case.json	S!B40
 F	probes/t2753-gamma-density-switch.case.json	S!B42
 F	probes/t2753-gamma-density-switch.case.json	S!B5
-F	probes/t2779-hebrew-saka-names.case.json	S!E18
 F	probes/t2829-ftest-a306-shapes.case.json	S!A1
 F	probes/t2829-ftest-a306-shapes.case.json	S!A10
 F	probes/t2829-ftest-a306-shapes.case.json	S!A11
