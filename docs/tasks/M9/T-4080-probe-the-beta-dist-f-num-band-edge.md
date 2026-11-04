@@ -58,7 +58,7 @@ shown to have none. T-4044 can then implement the band from evidence, not from a
 - Eval: the new case adds 108 known failures: the 82 band cells (owned by T-4044, amended) and 26 b = 40 cells 1.3E-9
   to 4.6E-8 relative off (deferred T-3209, amended); no other change.
 
-## Landing notes
+## Landing notes (resumed)
 - No PR yet. Branch head after this commit; base origin/main c3d019be8. Committed: the case and its oracle and math
   sidecars (`rustsheet-accuracy math --suite probes-numeric --check` says current), statistics.md, T-4044 and
   T-3209 amended as owners of the new cells. The Outcome above is drafted; status stays in-progress.
