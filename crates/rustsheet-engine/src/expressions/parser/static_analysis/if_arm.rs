@@ -1,7 +1,7 @@
 //! The arms of a legacy IF or IFS that are references, which the formula passes on whole instead of
 //! intersecting (docs/excel-semantics/references.md "Legacy IF passes a range arm whole").
 
-use super::name_body::{scalar_body, ScalarBody};
+use super::name_body::{is_reference_body, scalar_body, ScalarBody};
 use super::{run_static_analysis_on_node, Node, StaticResult};
 use crate::functions::Function;
 
@@ -118,8 +118,8 @@ fn is_single_cell_index(arm: &Node) -> bool {
 /// under ABS or LEN or in a sum (`=INDEX(Z1:Z6,3)`, `=ABS(INDEX(Z1:Z6,3))`, `=INDEX(Z1:Z6,3,1)`,
 /// `=INDEX(Z1:Z6,99)`, `=INDEX(Z1:Z6,nNum)+0` with nNum = 3), while `=@INDEX(Z1:Z6,A20)`,
 /// `=@INDEX(Z1:Z6,"3")` and `=@INDEX(Z1:Z6,0)` keep it (probes/t3856-legacy-at-name-body row 45,
-/// T-3856), so its shape is a scalar (`fallback_shape`).
-pub(super) fn indexes_one_cell(args: &[Node]) -> bool {
+/// T-3856), so its shape is a scalar ([`indexes_one_reference_cell`]).
+fn indexes_one_cell(args: &[Node]) -> bool {
     (2..=4).contains(&args.len())
         && matches!(
             &*args[0].ungrouped_static(),
@@ -128,6 +128,19 @@ pub(super) fn indexes_one_cell(args: &[Node]) -> bool {
         && args[1..]
             .iter()
             .all(|index| literal_index(index).is_some_and(|n| n >= 1.0 && n.fract() == 0.0))
+}
+
+/// Whether `INDEX(args)` picks one cell ([`indexes_one_cell`]) of an area that is certainly a
+/// reference: a range, a union, or a defined name whose body is a cell or a range reference
+/// (`is_reference_body`). Only then is the INDEX a scalar shape (`fallback_shape`): over a name
+/// whose body is a 2-D array constant, `INDEX(n2d,1)` is a row, which a typed formula spills and a
+/// legacy one intersects (`=@INDEX(n2d,1)`); INDEX over an array-bodied name is unprobed.
+pub(super) fn indexes_one_reference_cell(args: &[Node]) -> bool {
+    indexes_one_cell(args)
+        && match &*args[0].ungrouped_static() {
+            Node::RangeKind { .. } | Node::OpUnionKind { .. } => true,
+            name => is_reference_body(name),
+        }
 }
 
 /// The number an INDEX index is written as: a number literal, possibly in parentheses, or a defined

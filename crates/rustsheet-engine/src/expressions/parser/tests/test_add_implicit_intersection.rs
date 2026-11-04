@@ -261,6 +261,7 @@ fn defined_names_by_their_body() {
         ("nRng", "Sheet1!$Z$1:$Z$6"),
         ("nCalc", "1+2"),
         ("nCellR", "Sheet1!$Z$3:$Z$3"),
+        ("n2d", "{1,2;3,4}"),
     ]
     .map(|(name, body)| (name.to_string(), None, body.to_string()))
     .to_vec();
@@ -280,6 +281,10 @@ fn defined_names_by_their_body() {
         ("ABS(INDEX(Z1:Z6,3,1))", "ABS(INDEX(Z1:Z6,3,1))"),
         ("INDEX(Z1:Z6,A20)", "@INDEX(Z1:Z6,A20)"),
         ("INDEX(Z1:Z6,0)", "@INDEX(Z1:Z6,0)"),
+        // Over a 2-D array-bodied name INDEX is a row, not one cell (unprobed; kept as before).
+        ("INDEX(n2d,1)", "@INDEX(n2d,1)"),
+        ("INDEX(n2d,2)+0", "@INDEX(n2d,2)+0"),
+        ("INDEX(nRng,3)", "INDEX(nRng,3)"),
         ("IF(TRUE,INDEX(Z1:Z6,nNum))", "IF(TRUE,INDEX(Z1:Z6,nNum))"),
         ("INDEX(Z1:Z6,nCell)", "@INDEX(Z1:Z6,nCell)"),
         (

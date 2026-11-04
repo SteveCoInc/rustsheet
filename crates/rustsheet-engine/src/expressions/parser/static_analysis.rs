@@ -4,7 +4,7 @@ use crate::functions::lift::lifting_table_functions;
 use crate::functions::lookup_and_reference::lifts_into_references;
 use crate::functions::Function;
 use broadcast::{broadcast_shapes, static_analysis_operator_chain};
-use if_arm::{indexes_one_cell, returns_range_arm, returns_single_cell_index};
+use if_arm::{indexes_one_reference_cell, returns_range_arm, returns_single_cell_index};
 use legacy::{
     add_argument_intersection, add_array_at, add_in_array_context, is_array_context,
     legacy_array_call_at, legacy_array_context, legacy_call_reads_a_value, let_returns_range,
@@ -745,7 +745,7 @@ fn fallback_shape(kind: &Function, args: &[Node]) -> Option<StaticResult> {
         Function::Hstack => StaticResult::Unknown,
         // One cell by literal indexes (T-3856); otherwise INDEX has two forms, but they are
         // indistinguishable at parse time.
-        Function::Index if indexes_one_cell(args) => StaticResult::Scalar,
+        Function::Index if indexes_one_reference_cell(args) => StaticResult::Scalar,
         Function::Index => StaticResult::Unknown,
         Function::Indirect => reference_result::static_analysis_indirect(args),
         // Spills by lookup_value; the vectors are consumed (T-1241).

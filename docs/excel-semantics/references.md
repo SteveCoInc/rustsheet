@@ -2052,7 +2052,7 @@ Rule: in a legacy (no `cm`) formula, a defined name whose body is one number, te
 reference, of this sheet or another, reads exactly as that body written in its place; any other body (an array
 constant even of one element, a range, the one-cell range `$Z$3:$Z$3`, a computed `1+2`, and the SWITCH, LET and
 call bodies of the previous section) makes the name take the `@` in a value position, as a range would.
-With Z1:Z6 = 1..6 and the formulas on row 30+ (probes/t3856-legacy-at-name-body, 260 scored cells, excel-graph,
+With Z1:Z6 = 1..6 and the formulas on row 30+ (probes/t3856-legacy-at-name-body, 261 scored cells, excel-graph,
 2026-11-04, T-3856):
 - `nNum` = 3, `nTxt` = "x", `nBool` = TRUE, `nCell` = Sheet1!$Z$3, `nOther` = S2!$A$3 show no `@` at the root
   (`=nCell`), under ABS (`=ABS(nTxt)` `#VALUE!`), under SUM, as an IF arm (`=IF(TRUE,nBool)` TRUE) or under
@@ -2072,12 +2072,13 @@ With Z1:Z6 = 1..6 and the formulas on row 30+ (probes/t3856-legacy-at-name-body,
   (`#VALUE!`) keep it. Before T-3856 ours showed `=@INDEX(Z1:Z6,3)`, the same value.
 - Z10 = `Z1:Z6*1` is `#VALUE!`, so the cells stayed legacy.
 Ours matches every cell (`scalar_body`, static_analysis/name_body.rs, read by `add_legacy_intersection`,
-`run_static_analysis_on_node`, `is_range_arm` and `indexes_one_cell`, which also makes a single-cell INDEX a scalar
-shape in `fallback_shape`). The `@` is decided when the legacy formula
+`run_static_analysis_on_node`, `is_range_arm` and `indexes_one_cell`; `indexes_one_reference_cell` makes a single-cell
+INDEX a scalar shape in `fallback_shape` when its area is a range, a union or a name whose body is a reference, not
+over an array-bodied name, where `INDEX(n2d,1)` with n2d = `{1,2;3,4}` is a row: ours keeps `=@INDEX(n2d,1)`, unprobed). The `@` is decided when the legacy formula
 is read (xlsx import or `set_cell_with_legacy_formula`), from the body the name has then, and is kept in the formula
 after that; whether Excel redraws a legacy formula's `@` when a name's body changes later is unprobed.
-Unprobed: a relative one-cell body (ours: a cell, no `@`), and a negative number (`=-3`), an error literal or a
-parenthesized body (ours: the `@`; spaces around one token are trimmed).
+Unprobed: a relative one-cell body (ours: a cell, no `@`), and a negative number (`=-3`), an error literal, a
+parenthesized body or a body that is another name (ours: the `@`; spaces around one token are trimmed).
 Evidence: probes/t3856-legacy-at-name-body; probes/t3297-legacy-if-index-arm-name-table I35, K35, M35, I36, K36.
 Status: VERIFIED (excel-graph)
 Tasks: T-3297, T-3856
