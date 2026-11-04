@@ -1169,16 +1169,19 @@ apart take the average length of the calendar years from the start's year to the
 year apart take 366 days in three cases, and 365 otherwise:
 - both dates are in one leap year;
 - the end is a 29 February;
-- a 29 February lies between them.
+- a 29 February lies between them, the start included: `(DATE(2024,2,29),DATE(2025,2,28),1)` = 365/366 (A14).
 
 "At most a year apart" means the same year, or the next year on or before the anniversary.
 - `YEARFRAC(DATE(2024,1,10),DATE(2024,12,20),1)` = 345/366 (one leap year).
 - `(DATE(2023,6,1),DATE(2024,2,29),1)` = 273/366 (the end is 29 February).
-- `(DATE(2023,3,1),DATE(2024,3,1),1)` = 1, and one day on is 367/366 (A6).
-- `(DATE(2024,2,29),DATE(2025,3,1),1)` = 366/365.75: past the anniversary, so the average of 2024 and 2025.
+- `(DATE(2023,3,1),DATE(2024,3,1),1)` = 1, and one day on is 367/365.5 (A6): more than a year apart, so the average
+  of 2023 and 2024.
+- `(DATE(2024,2,29),DATE(2025,3,1),1)` = 366/365.5 (A15): past the anniversary, so the average of 2024 and 2025.
 - `(DATE(2024,3,1),DATE(2025,2,28),1)` = 364/365 (no 29 February between).
+- `(DATE(1900,1,1),DATE(1900,12,31),1)` = 1 (A20): 365/365, although the count includes the fictitious 1900-02-29;
+  the year length is the real calendar's 365 for 1900.
 
-Evidence: probes/t3678-yearfrac-basis1-within-a-year A1:A19 (excel-graph, 2026-11-03). Every cell matches the rule
+Evidence: probes/t3678-yearfrac-basis1-within-a-year A1:A20 (excel-graph, 2026-11-03). Every cell matches the rule
 above, which the Gate A definition `accuracy/defs/yearfrac.py` and the engine's `year_fraction_parts` both use. YEARFRAC/s1's
 basis-1 points match too.
 Status: VERIFIED (excel-graph)
