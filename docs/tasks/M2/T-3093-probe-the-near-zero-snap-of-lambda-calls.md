@@ -3,7 +3,7 @@ id: T-3093
 title: "Probe the near-zero snap of LAMBDA calls in other positions (LET-bound, parameter, chained, under a picker, as an aggregate argument)"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
