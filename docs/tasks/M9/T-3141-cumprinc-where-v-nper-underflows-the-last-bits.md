@@ -48,7 +48,9 @@ Decision 0056 applies (two attempts, then time-box).
 Blocked because: the R4.2 fresh sweep and Gate A envelope need a CUMPRINC Gate A table, which does not exist (T-4059).
 Round 1 of review (PR #3105, its first head): design and security approved; Excel fidelity requested changes on the
 decision 0188 R4 guards. Round 2 (this head) answers what it can without the table: the fit lab's hold-out split, the
-form kept below `GEOMETRIC_MIN_LEAD` (its evidenced domain), and the cut's CUMPRINC use tagged `FITTED(T-3141, ...)`.
+form kept below `GEOMETRIC_MIN_LEAD` (its evidenced domain), and the cut's CUMPRINC evidence (25 cells, m·L 0.36..1.40,
+bracket 0.9783..1.3976) noted on `PAYMENT_EXPM1_TO`. Its `FITTED(T-3141, ...)` tag raises the quality/fitted.json lock,
+which needs a decision record with the full R4 evidence (like decision 0261), so the tag waits for the sweep.
 fin-cumprinc-underflow-fresh served as fit data (its I5 and J5 set the expm1 switch), so it is no R4.2 sweep. Still open:
 the `r4-T-3141` batch, filled after the freeze, with its envelope count and every point outside it listed. Resume once
 T-4059 lands: record that result here, re-run the full panel, and enqueue. The kernel is unchanged since the freeze.
@@ -75,8 +77,10 @@ underflows, the principal is one core for both types".
   | correctly rounded | 65 / 216 / 216 of 216 | 33 / 88 / 88 of 88 |
 
   Accepted: test rate 100% equals the train rate, and it beats correctly rounded on test.
-- R4.2 and R2: open, T-4059 (see Blocked because). R4.3: the cut is tagged `FITTED(T-3141, 25 cells, ...)` on
-  `PAYMENT_EXPM1_TO`, and `quality/fitted.json` is updated. No keep-matched branch.
+- R4.2 and R2: open, T-4059 (see Blocked because). R4.3: open with them. Once the sweep is in, add
+  `FITTED(T-3141, 25 cells, CUMPRINC underflowed m*L 0.36..1.40; cut bracketed 0.9783..1.3976)` on `PAYMENT_EXPM1_TO`,
+  run `scripts/check_fitted.py --update`, and write the lock's decision record (`make new-decision`). No keep-matched
+  branch.
 - Also found: Excel's type 1 CUMPRINC there is its type 0 over `1+r` in doubles on 58 of 60 probed pairs (the other 2
   are `C·(1+r)/(1+r) ≠ C`), recorded in financial.md.
 - Eval delta: 68 known failures fixed, 0 regressions; probes 4417 -> 4357 (68 fixed: fin-cumprinc-near-1e15 27,
