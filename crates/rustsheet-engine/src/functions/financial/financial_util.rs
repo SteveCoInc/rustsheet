@@ -276,8 +276,24 @@ const IRR_FALLBACK_STEPS: usize = 50;
 /// residual is 9.155E-5 (probes-numeric/t3411-irr-r4-fresh A37 and A140) and its smallest `#NUM!`
 /// one 1.2207E-4 (t3478-irr-r4-wide A90). Those residuals are 3 and 4 times 2^-15, the rounding
 /// step of NPV sums of flows near 1E+11, so the round value is placed between the two.
-/// FITTED(T-3411, 59192 cells, the 169 IRR cases: fallback roots of 2..150 flows, |c| 1E-6..1E+13; cut bracketed 9.155E-5..1.2207E-4)
+/// Excel follows the absolute cut across scales: probes-numeric/t3411-irr-residual-scale scales those
+/// cells' flows by 1E-6..1E+4 and Excel turns `#NUM!` as the flows grow (A37's flows times 10, A79's
+/// times 10) exactly where this cut does, on all 72 cells. Applied only within
+/// [`IRR_ROOT_RESIDUAL_FLOWS`] (decision 0188 R4.3); outside it the root is returned, as before T-3411.
+/// FITTED(T-3411, 59264 cells, the 170 IRR cases: fallback roots of 2..148 flows, largest |c| 6.4E-12..2.2E+82; cut bracketed 9.155E-5..1.2207E-4)
 const IRR_ROOT_RESIDUAL: f64 = 1e-4;
+
+/// The flow sets [`IRR_ROOT_RESIDUAL`] is evidenced on: at most 148 flows (the longest scored series,
+/// probes-numeric/t3411-irr-r4-fresh*) with the largest |flow| from 6.4E-12
+/// (t3478-irr-r4-wide A287) to 2.2E+82 (A25).
+const IRR_ROOT_RESIDUAL_FLOWS: (usize, f64, f64) = (148, 6.4e-12, 2.2e82);
+
+/// Whether [`IRR_ROOT_RESIDUAL`] applies to `values` ([`IRR_ROOT_RESIDUAL_FLOWS`]).
+fn irr_root_residual_applies(values: &[f64]) -> bool {
+    let (most_flows, smallest, largest) = IRR_ROOT_RESIDUAL_FLOWS;
+    let peak = values.iter().fold(0.0_f64, |m, c| m.max(c.abs()));
+    values.len() <= most_flows && (smallest..=largest).contains(&peak)
+}
 
 /// The rate 1/v - 1 at a converged discount factor `v`, or `None` past [`IRR_FAR_ROOT_BOUND`].
 fn irr_from_discount(v: f64) -> Option<f64> {
@@ -451,8 +467,9 @@ fn irr_fallback(values: &[f64]) -> Option<f64> {
             // under the cut only one step later). The stop iterate is still what is returned.
             let (p_next, dp_next) = polynomial(next);
             let past = next - p_next / dp_next;
-            let settled = past.is_finite()
-                && irr_npv(values, past).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL);
+            let settled = !irr_root_residual_applies(values)
+                || (past.is_finite()
+                    && irr_npv(values, past).is_some_and(|f| f.abs() < IRR_ROOT_RESIDUAL));
             return if next > 0.0 && !nearer_negative_root && settled {
                 irr_from_discount(next)
             } else {

@@ -215,7 +215,10 @@ fn irr_fallback_tests_the_residual_one_newton_step_past_its_stop() {
     // one step past the stop is 1E-4 or more. probes-numeric/t3478-irr-r4-wide A90 (1.22E-4 there)
     // is #NUM!; A79 and A292 return although at the stop iterate itself their residuals are 8.8E-4
     // and 1.3E-4 (their last digits are T-3408's, so only the type is pinned here).
+    // probes-numeric/t3411-irr-residual-scale A5 and A6: t3411-irr-r4-fresh A37 returns, and the same
+    // flows times 10 are #NUM! in Excel, so the cut is on the absolute residual.
     assert_num_errors(&[
+        "=IRR({7839274018045.82,-1800700392574.26,-1932978417380.95,-628102382859.986,-771459031037.155,-1833829809207.7,-190607277255.53})",
         "=IRR({3538681482050.93,-959839357236.378,-695426025690.099,-1342006103306.3,-220806582262.62,-330645052475.425},0.00162399739616426)",
     ]);
     assert_numbers_near(

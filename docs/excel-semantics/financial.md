@@ -3982,6 +3982,11 @@ with a smaller residual can still be `#NUM!` for other reasons (the level annuit
   (probes-numeric/t3411-irr-r4-fresh A37, A140), its smallest `#NUM!` 1.2207E-4 (t3478-irr-r4-wide A90), then
   1.526E-4 (t3411-irr-r4-fresh-3 A49). These residuals are 3, 4 and 5 times 2^-15, the rounding step of NPV sums of
   flows near 1E+11: the cut sits at the noise floor of such flows.
+- The cut is absolute, not relative to the flows' size: probes-numeric/t3411-irr-residual-scale scales the bracket
+  cells' flows by 10^k (k = -6..4). Excel returns IRR(fresh A37), IRR(fresh A140), IRR(wide A79) and IRR(wide A292) up
+  to x1 and is `#NUM!` for the same flows times 10 or more; wide A90 is `#NUM!` at x1, returns at x10 and is `#NUM!`
+  from x100. The cut gives Excel's type on all 72 cells. So scaling every flow of an IRR by 10 can turn its answer
+  into `#NUM!`.
 - Fresh sweeps (decision 0188 R4, generated and oracle-filled after each freeze), against main's model cell by cell:
   round 3 (check at the stop iterate) on t3411-irr-r4-fresh-3: 3 gained, 0 lost, type mismatches 52 -> 49; round 4
   (one step past) on t3411-irr-r4-fresh-4: 5 gained (A29, A46, A48, A49, A144), 0 worse, type mismatches 67 -> 62;
@@ -3998,11 +4003,12 @@ with a smaller residual can still be `#NUM!` for other reasons (the level annuit
   from v = 0, so their path is still unknown; the n = 20 cutoff (A11 returns after 125 Newton steps, A12 is `#NUM!`
   after 133) is no fixed step cap (n = 30 returns after 223, n = 60 after 577). The engine keeps its 50-step cap.
 Evidence: probes/t3406-irr-num-boundary, probes-numeric/t3478-irr-r4-wide, t3411-irr-r4-fresh, -fresh-2, -fresh-3 and
--fresh-4, accuracy/IRR/r4-T-3411 (excel-graph); the residuals from the replay in docs/research/t3411/fallback_iterates.py
+-fresh-4, t3411-irr-residual-scale, accuracy/IRR/r4-T-3411 (excel-graph); the residuals from the replay in docs/research/t3411/fallback_iterates.py
 (`npv` at the Newton root) and from the engine's `irr_npv` one step past `irr_fallback`'s stop.
-Status: VERIFIED (excel-graph) for the cells; the cut is UNVERIFIED as a rule (FITTED bracket 9.155E-5..1.2207E-4, one Newton step past the engine's stop)
+Status: VERIFIED (excel-graph) for the cells; the cut is UNVERIFIED as a rule (FITTED bracket 9.155E-5..1.2207E-4, one Newton step past the engine's stop; the residuals are the engine's `irr_npv`, not shown to be bit-identical to Excel's NPV)
 Ours: `irr_fallback` takes one more Newton step from its stop iterate and is `#NUM!` when |`irr_npv`| there is
-`IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate (T-3411 round 4).
+`IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate (T-3411 round 4). The check applies only to
+2..148 flows whose largest |c| is 6.4E-12..2.2E+82, the evidenced range (`IRR_ROOT_RESIDUAL_FLOWS`).
 Tasks: T-3411
 
 ## IRR over an error element

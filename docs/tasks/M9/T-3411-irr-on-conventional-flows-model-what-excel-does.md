@@ -35,12 +35,12 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
 - Decision 0188 R4: state the hold-out split and margin before scoring; fill a fresh sweep after the model is frozen.
 
 ## Acceptance criteria
-- [ ] A model that gives Excel's type on every cell of probes/t3406-irr-num-boundary and T-3347's three cases
+- [ ] (Partly met; the rest moved to T-4027.) A model that gives Excel's type on every cell of probes/t3406-irr-num-boundary and T-3347's three cases
       (T-3407's `#DIV/0!` cells may stay `#NUM!` if T-3407 has not landed), with the R4 hold-out and a fresh
       probes-numeric sweep scored per stratum: 0 type mismatches, Gate A envelope.
-- [ ] The engine implements it (in T-3347's PR, or a new one replacing it), with the rule in
+- [x] The engine implements it, for the residual cut (in T-3347's PR, or a new one replacing it), with the rule in
       docs/excel-semantics/financial.md.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The last digits (T-3408) and `#DIV/0!` (T-3407).
@@ -110,13 +110,37 @@ stage (PR #2529, blocked on its hold-out) and unblocks T-3347.
 - Margin: on sweep 4, cell by cell against main's model, the frozen model (1) makes no cell worse (type, error code
   or closeness bucket) and (2) has no more type mismatches than main; on r4-T-3411 every point is inside the Gate A
   envelope or fails the same way on main. Otherwise nothing ships and these notes record why.
+- Result (scored once on the frozen model): sweep 4 has 5 cells gained (A29, A46, A48, A49, A144), 0 worse, type
+  mismatches 67 -> 62; r4-T-3411 has 31 points outside the envelope against 32 on main, the same points and kinds
+  (A296 fixed). The margin holds.
+- Review round 1 (excel-fidelity, REQUEST_CHANGES): (a) the FITTED range was not enforced (R4.3); (b) an absolute
+  cut and one relative to the flows' size fit the bracket cells alike, since all sit near 1E+11; (c) R4.1 lacked the
+  4-ulp and 15-digit columns; (d) the bracket was read off all cells before the split was applied (train-only
+  bracket 9.155E-5..1.526E-4 also holds 1E-4). Answers:
+  - (b) probes-numeric/t3411-irr-residual-scale (docs/research/t3411/gen_scale.py, excel-graph): the bracket cells
+    (fresh A37, A140, wide A79, A292, A90, A69, fresh-3 A49, fresh-4 A49) with every flow times 10^k, k = -6..4.
+    Excel itself turns `#NUM!` as the flows grow: fresh A37, A140, wide A79 and A292 return up to x1 and are `#NUM!`
+    from x10; wide A90 is `#NUM!` at x1, returns at x10 and is `#NUM!` from x100. The model gives Excel's type on all
+    72 cells (65 bit-exact, 7 digit misses of T-3408's kind), so the cut is absolute, as implemented. The reviewer's
+    scaled cells (A79 x100 and up, A292 x1000 and up) are `#NUM!` in Excel too.
+  - (a) The check applies only within `IRR_ROOT_RESIDUAL_FLOWS`: at most 148 flows (the longest scored series) and
+    the largest |flow| 6.4E-12..2.2E+82 (the scored IRR sweeps' extremes); outside, the root is returned as on main.
+    No cell of eval moves (cell by cell over the 169 cases against round 4: 0 changed).
+  - (c) R4.1 columns, train (41,288 cells) / test (17,904), main -> model: bit-exact 39,997 -> 40,008 / 17,342 ->
+    17,346; within 4 ulp 40,570 -> 40,581 / 17,601 -> 17,605; within 15 digits 40,639 -> 40,650 / 17,640 -> 17,644.
+    Main's model ("always return the root") is the math reference for a type cut.
+  - The cut separates 3 from 4 rounding steps (2^-15) of the engine's own `irr_npv` near 1E+11; that NPV is
+    bit-identical to Excel's there is not shown, so the rule stays UNVERIFIED in financial.md.
 
 ## Outcome
 Done as the residual-cut step of the type rule (round 4 of the R4 plan above); the rest of the type rule, the level
 annuities that need the fallback's cap lifted, moved to T-4027.
 - Engine: `irr_fallback` takes one more Newton step from its stop iterate and is `#NUM!` when |`irr_npv`| there is
   `IRR_ROOT_RESIDUAL` = 1E-4 or more; it still returns the stop iterate. FITTED(T-3411, bracket 9.155E-5..1.2207E-4),
-  decision 0261 (fitted lock 9 -> 10). Unit test `irr_fallback_tests_the_residual_one_newton_step_past_its_stop`.
+  decision 0261 (fitted lock 9 -> 10). Applied only within `IRR_ROOT_RESIDUAL_FLOWS` (2..148 flows, largest |c|
+  6.4E-12..2.2E+82), per R4.3. Unit test `irr_fallback_tests_the_residual_one_newton_step_past_its_stop`.
+- Scale probe probes-numeric/t3411-irr-residual-scale (72 cells): Excel's type on all 72, 65 bit-exact; it shows the
+  cut is absolute (Excel turns `#NUM!` as the same flows are scaled up).
 - R4 guards (round-4 plan): bracket over all 169 IRR cases; R4.1 split train +11 / test +4 bit-exact, 0 lost, the one
   test cell inside the train bracket (wide A90) on Excel's side; fresh sweep probes-numeric/t3411-irr-r4-fresh-4: 5
   gained, 0 worse, type mismatches 67 -> 62; Gate A batch accuracy/IRR/r4-T-3411 (300 points): 31 outside the

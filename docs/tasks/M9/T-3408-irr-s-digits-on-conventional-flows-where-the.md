@@ -42,6 +42,7 @@ IRR returns Excel's value to 15 significant digits on the conventional cash-flow
 T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model), where the engine returns the root on digits other than Excel's:
 - probes-numeric/t3411-irr-r4-fresh-3.case.json (7): Calc!A53, A58, A62, A66, A73, A106, A134
 - probes-numeric/t3411-irr-r4-fresh-4.case.json (2): Calc!A58, A75
+- probes-numeric/t3411-irr-residual-scale.case.json (7): Calc!A10, A22, A23, A31, A32, A48, A49
 
 ## Out of scope
 - Bit-level parity (Phase 1b, decision 0188 R5).
