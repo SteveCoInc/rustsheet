@@ -195,6 +195,25 @@ with docs/research/t3411/fallback_iterates.py; no engine change:
   the root against the secant's last bracket), and probe it with excel-probe on a family whose outlay moves by
   1E-4 steps.
 
+## Landing notes (2026-11-04, PR #3063)
+- PR #3063 (draft), head 8bb93fa98 before these notes. CI was running on that head. Reviewers on 1779ea4f: security
+  APPROVE, design APPROVE (MINOR: no unit test), excel-fidelity REQUEST_CHANGES. None has reviewed the new head.
+- Fidelity's blocking finding is correct: the engine checks |`irr_npv`| at the fallback's stop iterate, but the bracket
+  was measured one Newton step later. That makes three cells `#NUM!` that main had within ulps of Excel:
+  probes-numeric/t3411-irr-r4-fresh-2 A43, t3478-irr-r4-wide A79 and A292 (residuals at stop / stop+1: 3.9E-3 /
+  6.9E-5, 8.8E-4 / 1.2E-5, 1.3E-4 / 6.7E-6). So "0 lost, no other cell changes" in the progress note above is wrong
+  for those sweeps: fresh-2 is +2/-1 and t3478-wide +5/-2. `make eval-check` missed it because probes-numeric is
+  ungated. The round-3 margin was met only on fresh-3 itself.
+- Next step (a new R4 round 4, since this changes the frozen model): take one more Newton step past the stop and test
+  the residual there (keep returning the stop iterate unless digits are scored too). Then re-score every IRR case of
+  probes and probes-numeric cell by cell against main's binary. Also owed, per the fidelity review:
+  - the fit lab's R4.1 split (tools/src/rustsheet_tools/fitlab/holdout.py), with train and hold-out counts;
+  - the fresh sweep as an `r4-T-3411` batch of the IRR Gate A table (eval/accuracy/tables/IRR, SPEC-0029 "The R4
+    guards"), not an ungated probes-numeric case, with its envelope count;
+  - the FITTED range enforced in code, or narrowed to what the evidence supports;
+  - decision 0261's numbers updated to match.
+- Do not repeat: the absolute 1E-4 cut at the stop iterate. Evaluating it there is refuted by the three cells above.
+
 ## Landing notes (2026-11-01, superseded by the progress notes above)
 2026-11-01, opus run (stopped at the session's landing window; no PR opened, no code changed).
 - Branch head: the claim commit plus these notes. Nothing is implemented; CI and reviewers have not run.

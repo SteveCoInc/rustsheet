@@ -3979,6 +3979,11 @@ with a smaller residual can still be `#NUM!` for other reasons (the level annuit
   (t3406 A131) or more is an error. 1E-4 is the round value in that bracket.
 - Fresh sweep (decision 0188 R4, generated and oracle-filled after the freeze): probes-numeric/t3411-irr-r4-fresh-3,
   150 cells. Against main's model, cell by cell: 0 cells lost, 3 gained (A49, A127, A128), type mismatches 52 -> 49.
+- Where the residual is taken matters: the bracket above is at the iterate one Newton step past the engine's stop
+  (where Excel's value usually is). At the engine's stop iterate itself the residual can be 10 to 70 times larger:
+  probes-numeric/t3411-irr-r4-fresh-2 A43 (3.9E-3 at the stop, 6.9E-5 one step on), t3478-irr-r4-wide A79 (8.8E-4,
+  1.2E-5) and A292 (1.3E-4, 6.7E-6), all returned by Excel. Checking at the stop iterate makes those three `#NUM!`
+  (the first engine version of this rule did, T-3411 review).
 - Not the whole type rule. With the residual check and the Newton search uncapped, 71 cells main gets right turn
   wrong: 39 level annuities of t3406 (A12-A24, A34-A48, A56-A65, A79; residuals 2E-13 to 3E-7, Excel `#NUM!`) and 32
   scattered sweep cells. Excel's returning level annuities A1-A10, A25-A30 and A32-A33 are mostly not Newton iterates
@@ -3986,9 +3991,10 @@ with a smaller residual can still be `#NUM!` for other reasons (the level annuit
   after 133) is no fixed step cap (n = 30 returns after 223, n = 60 after 577). The engine keeps its 50-step cap.
 Evidence: probes/t3406-irr-num-boundary, probes-numeric/t3478-irr-r4-wide, t3411-irr-r4-fresh, -fresh-2 and -fresh-3
 (excel-graph); the residuals from the replay in docs/research/t3411/fallback_iterates.py (`npv` at the Newton root).
-Status: VERIFIED (excel-graph) for the residual cut; FITTED (bracket 9.54E-5..1.106E-4)
-Ours: `irr_fallback` is `#NUM!` at a root with |`irr_npv`| >= `IRR_ROOT_RESIDUAL` = 1E-4 (T-3411); its 50-step cap is
-unchanged, so the rule acts only within it (+12 cells over the existing sweeps, +3 on fresh-3).
+Status: VERIFIED (excel-graph) for the cells; the cut is UNVERIFIED as a rule (FITTED bracket 9.54E-5..1.106E-4, measured one step past the engine's stop)
+Ours (branch agent/functions-financial/T-3411-irr-conventional-type, PR #3063, not merged): `irr_fallback` is `#NUM!`
+at a root with |`irr_npv`| >= `IRR_ROOT_RESIDUAL` = 1E-4, checked at its stop iterate. That loses the three cells
+above (fresh-2 +2/-1, t3478-wide +5/-2); main has no residual check.
 Tasks: T-3411
 
 ## IRR over an error element
