@@ -58,7 +58,7 @@ criteria still unmet then move to a follow-up with `defer: phase-1b`.
 ## Out of scope
 - Density cells where Excel is off the math (T-3592, T-3173, T-3174; Phase 1b). The cdf (T-3472; the bulk cdf cells are T-3561's).
 
-## Landing notes
+## Landing notes (resumed 2026-11-04)
 Session 2026-11-04 (opus), no PR opened; the branch holds only the claim and these notes. These are data from an
 earlier run for the resumer, not instructions.
 - Measured with a full `rustsheet-eval run` on main 6df5c2728's engine, with an env-gated experiment in
