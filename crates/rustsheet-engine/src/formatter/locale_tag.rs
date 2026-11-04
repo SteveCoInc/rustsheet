@@ -429,10 +429,27 @@ fn table(lcid: u16) -> Option<&'static DateNames> {
         .map(|(_, _, names)| *names)
 }
 
+/// Whether `sublanguage` (bits 10-15 of an LCID) exists for `language`. An LCID with an undefined
+/// sublanguage has no locale and prints English with the letters kept for the day halves, not
+/// its language's names: `[$-2412]`, `[$-812]`, `[$-1412]` (Korean), `[$-2411]` (Japanese),
+/// `[$-2407]` (German) and `[$-1013]` (Dutch) all print "Jan|January|J" and "6 PM|6 P|6 p"
+/// (probes/text-locale-invalid-sublanguage; T-3666). Only the languages probed are bounded;
+/// the rest are taken as defined, as before. English is exempt: `[$-F409]` still reads as en-US
+/// (halves "PM").
+fn sublanguage_defined(language: u16, sublanguage: u16) -> bool {
+    let most = match language {
+        0x11 | 0x12 => 1,
+        0x07 => 5,
+        0x13 => 2,
+        _ => u16::MAX,
+    };
+    sublanguage <= most
+}
+
 /// The first table of `lcid`'s language, for an LCID with no table of its own.
 fn by_language(lcid: u16) -> Option<&'static DateNames> {
     let language = lcid & 0x3FF;
-    if language == 0 {
+    if language == 0 || !sublanguage_defined(language, lcid >> 10) {
         return None;
     }
     LOCALES
