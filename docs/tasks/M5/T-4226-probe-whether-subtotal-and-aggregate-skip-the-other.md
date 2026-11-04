@@ -3,7 +3,7 @@ id: T-4226
 title: "Probe whether SUBTOTAL and AGGREGATE skip the other cells of a CSE array formula that calls SUBTOTAL"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -33,7 +33,7 @@ that calls SUBTOTAL, as they skip the spilled cells of a dynamic-array one, and 
 ## Out of scope
 - Other nested-call forms (T-4194).
 
-## Handoff
+## Handoff (resumed)
 - The task names a case key `array_formulas`; it does not exist. `rg array_formulas` finds nothing in
   `tools/src/rustsheet_tools/spec2xlsx.py`, `crates/rustsheet-eval/src/case.rs`, the oracle backends or
   `docs/architecture/eval-harness.md`. The case format can only write dynamic-array single-anchor formulas
