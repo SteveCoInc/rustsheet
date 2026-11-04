@@ -6,7 +6,7 @@ lane: functions-text
 status: todo
 priority: P0
 size: M
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -26,3 +26,10 @@ LCIDs Excel resolves, so the calendar digits apply. number-formats.md "Hebrew (8
 
 ## Out of scope
 -
+
+## Handoff
+Picked by a sonnet run; stopped before coding. The task needs oracle-evidenced Gregorian month/day names (native scripts) for
+bn-IN 0x445 and 0x44E, 0x449, 0x44A, 0x44B, 0x457, 0x461, plus a decision on tables vs. a "resolved LCIDs" list in
+`locale_tag.rs` / `locale/excel_date_names.rs`. No evidence exists in the repo yet (`rustsheet-oracle status`: excel-graph OK).
+Next step: use the `excel-probe` skill to probe `TEXT(45000,"[$-<lcid>]mmm|mmmm|ddd|dddd")` for each LCID, add tables, then
+remove E18 of probes/t2779-hebrew-saka-names from eval/baseline/probes.txt via `make eval-baseline`.
