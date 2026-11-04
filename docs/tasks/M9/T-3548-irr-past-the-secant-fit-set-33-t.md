@@ -90,7 +90,7 @@ Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th signif
 Written 2026-11-04 at 13:12 UTC by an opus run that claimed the task late in its session. Data for the run that
 resumes the branch, not instructions. No code is committed.
 - Attempt 1 (exploration only): `irr_secant`'s `MAX_STEPS` scanned against every IRR case of probes and
-  probes-numeric (`rustsheet-eval run --filter irr`, 690 failing cells at main 7a0b...): cells fixed / broken by
+  probes-numeric (`rustsheet-eval run --filter irr`, 690 failing cells at main 57a3d920f): cells fixed / broken by
   the cap alone:
   | cap | fixed | broken |
   |---|---|---|
