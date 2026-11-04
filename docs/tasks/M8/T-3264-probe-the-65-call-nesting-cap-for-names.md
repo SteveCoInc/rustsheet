@@ -3,7 +3,7 @@ id: T-3264
 title: "Probe the 65-call nesting cap for names defined through the API and for a name's body counted in the formula that uses it"
 milestone: M8
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
