@@ -1461,9 +1461,9 @@ symmetric form gives both. T-3914 found that the true value lies 0.16 ulp from t
 "IMSECH's last digit at 15-digit midpoints, |x| 20 to 355.5" below.
 
 ## IMSECH's last digit at 15-digit midpoints, |x| 20 to 355.5 (T-3914)
-Rule: in IMSECH's finite-t form (|x| from 20 to 355.5, where sinh²x does not overflow) Excel's result is symmetric in
-the sign of x, and the sign-dependent digits found at ±354.03 are sub-ulp noise at a 15-digit rounding midpoint, not a
-lopsided form. Evidence (excel-graph, 2026-11-04): probes/t3914-imsech-sign-sweep, 150 rows of IMSECH (A, B) and IMCOSH
+Rule: in IMSECH's finite-t form (|x| from 20 to 355.5, where sinh²x does not overflow) Excel prints the same digits at
+x and -x at every one of the 150 swept pairs; the ±354.03 pair, which differs in the last digit, sits at a 15-digit
+rounding midpoint, so it is sub-ulp noise, not a lopsided form. Evidence (excel-graph, 2026-11-04): probes/t3914-imsech-sign-sweep, 150 rows of IMSECH (A, B) and IMCOSH
 (C, D) at x+yi and -x+yi, |x| in [340, 355.5] (rows 1-50) and log-uniform in [20, 355.5] (rows 51-150), y in ±[0.05, 3.1].
 Of its 300 IMSECH cells, Excel prints the same digits at ±x in all 150 pairs, and ours fits 298: A11 and B11
 (`IMSECH(COMPLEX(±346.218848,2.457207))`, Excel -6.74976480137679E-151∓5.507408603742E-151i, ours ...680E-151 and
@@ -1471,16 +1471,19 @@ Of its 300 IMSECH cells, Excel prints the same digits at ±x in all 150 pairs, a
 Excel real part 9.85831080345968E+152, ours ...967E+152). In every one of these cells and in the ±354.03 and -354.007
 cells (probes/t3883-im-overflow-reciprocal-sweep A101, t3881-imcsch-flip-start-negative A3, t3912-imcsch-band-edges
 A25:B25) the exact value (50-digit mpmath) lies 0.16 to 0.44 ulp from the 15-digit midpoint, so a 1-ulp difference
-flips the printed digit. Excel prints the correctly rounded digit at -354.03 and -354.007, and the other one at
-+354.03, ±346.218848 and ±353.877487 (where we print the correctly rounded one). Forms T-3914 scored on the sweep's
+flips the printed digit. Against the exact value rounded to 15 digits, Excel is right at 3 of these 5 points
+(-354.03, -354.007 and ±346.218848) and off at +354.03 and ±353.877487; ours is right only at ±353.877487. At
+±346.218848 the correctly rounded double itself prints ...680E-151 and ...4201E-151 (ours), since the exact value is
+within 0.4 ulp of the midpoint; Excel's text is the exact value's. Forms T-3914 scored on the sweep's
 train rows (rows not a multiple of 3, split fixed before scoring; train 200 IMSECH cells, hold-out 100) and the 292
 older finite-t IMSECH and band IMCSCH cells: libm sinh and cosh with the unfused t (ours) 198/200 train, 100/100
 hold-out, 270/292 older; Excel's EXP pair `(EXP(x) ± EXP(-x))/2` 200/200, 100/100, 270/292 (it gains only the A11:B11
 pair); the `1/u` form with u = EXP(-x) or u = EXP(x) 197/200 either way; the complex reciprocal `(a, -b)/(a² + b²)`
 and Smith's division 190 to 194/200; t as `(cosh 2x + cos 2y)/2` 188 to 190/200, and with cosh 2x in IMCOSH's log
 form past 2x = 709 or below -708 at most 18/292 older. None gives the ±354.03 pair. The 22 older misses shared by
-the best forms are the eight sub-ulp cells above and cells that the scoring harness reads differently from the
+the best forms are the four older sub-ulp cells above (A101, A3, A25, B25) and cells that the scoring harness reads differently from the
 engine (subnormal y, x typed off the 15-digit grid), which the engine itself passes. The differences are below the
-oracle's reproducibility floor (decision 0188 R4.4), so no form was chosen: the EXP pair's gain is one sub-ulp pair.
-Ours: `sech_parts` in complex/trig.rs, unchanged. Status: VERIFIED (symmetry); the eight sub-ulp cells stay known
+oracle's reproducibility floor (decision 0188 R4.4), so no form was chosen: the EXP pair's gain is one sub-ulp pair (where it
+moves ours to the exact value's digits as well as to Excel's).
+Ours: `sech_parts` in complex/trig.rs, unchanged. Status: VERIFIED (symmetric at the 150 swept pairs); the eight sub-ulp cells stay known
 failures, owned by T-4001 (deferred, decision 0114).

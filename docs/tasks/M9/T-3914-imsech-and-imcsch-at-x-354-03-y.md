@@ -34,10 +34,11 @@ imaginary digit at x = -354.03 and +354.03, which differ in the 15th digit altho
   guards of reviewer-excel-fidelity check 7 apply.
 
 ## Acceptance criteria
-- [ ] probes/t3883-im-overflow-reciprocal-sweep A101 and probes/t3881-imcsch-flip-start-negative A3 (and
+- [ ] (Not met; superseded: the question is answered and the cells are deferred to T-4001, see the Outcome.)
+      probes/t3883-im-overflow-reciprocal-sweep A101 and probes/t3881-imcsch-flip-start-negative A3 (and
       probes/t3912-imcsch-band-edges Calc!A25 and B25) match Excel's text,
       with no other IMSECH or IMCSCH cell regressing; their known-failure lines leave eval/baseline/probes.txt.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The overflowed form past sinh²x's overflow (T-3883).
@@ -50,13 +51,15 @@ first acceptance box is not met; the task's question is answered instead.
 - Probe: probes/t3914-imsech-sign-sweep (excel-graph, 2026-11-04), 600 cells: IMSECH and IMCOSH at x+yi and -x+yi,
   |x| in [340, 355.5] (rows 1-50) and log-uniform in [20, 355.5] (rows 51-150). Excel prints the same digits at ±x in
   every one of its 150 IMSECH pairs and 150 IMCOSH pairs.
-- In each off cell the exact value (50-digit mpmath) is 0.16 to 0.44 ulp from the 15-digit midpoint, and Excel is
-  not consistent about the side: it prints the correctly rounded digit at -354.03 and -354.007 and the other one at
-  +354.03, ±346.218848 (A11:B11) and ±353.877487 (IMCOSH C21:D21), where ours is the correctly rounded one.
+- In each off cell the exact value (50-digit mpmath) is 0.16 to 0.44 ulp from the 15-digit midpoint, and against
+  the exact value rounded to 15 digits Excel is right at -354.03, -354.007 and ±346.218848 (A11:B11) and off at
+  +354.03 and ±353.877487 (IMCOSH C21:D21); ours is right only at ±353.877487 (at ±346.218848 the correctly rounded
+  double prints ours).
 - Forms ranked (scratch harness, not committed), split fixed before scoring: train = sweep rows not a multiple of 3
   (200 IMSECH cells) plus the 292 older finite-t IMSECH and band IMCSCH cells, hold-out = rows that are a multiple of
   3 (100 cells), margin 10 points. Ours (libm, unfused t): 198/200 train, 100/100 hold-out, 270/292 older. Excel's EXP
-  pair: 200/200, 100/100, 270/292; it gains only the sub-ulp A11:B11 pair, so it was not taken (R4.4). The `1/u` form
+  pair: 200/200, 100/100, 270/292; it gains only the sub-ulp A11:B11 pair (moving it to the exact value's digits
+  too), so it was not taken (R4.4). The `1/u` form
   (either u), the complex reciprocal, Smith's division, `(cosh 2x + cos 2y)/2` and its log-form variant all score lower
   and none gives the ±354.03 pair. engineering.md "IMSECH's last digit at 15-digit midpoints, |x| 20 to 355.5".
 - R4: no model or constant changed, so the guards are not triggered (hold-out shown above for the record; fresh
