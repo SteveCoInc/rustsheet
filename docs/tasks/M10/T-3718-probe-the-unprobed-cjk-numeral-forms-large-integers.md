@@ -3,7 +3,7 @@ id: T-3718
 title: "Probe the unprobed CJK numeral forms (large integers, padded elapsed, myriad zero gap, General with literals)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
