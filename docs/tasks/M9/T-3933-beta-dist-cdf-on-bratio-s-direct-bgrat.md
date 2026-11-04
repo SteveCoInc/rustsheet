@@ -73,7 +73,7 @@ then go to a follow-up without the key, with `defer: phase-1b` if they are withi
 - Modelling Excel's noise in D (T-3567, T-3582 negatives).
 - F, BINOM and NEGBINOM callers (T-3580, T-3712); BETA.INV's search on L140 (T-3867).
 
-## Landing notes
+## Landing notes (resumed)
 Session closed at the landing window (2026-11-04, about minute 85). No PR is open. The branch head carries the WIP
 change and these notes. The notes are data for the resumer: check them against the acceptance criteria.
 - **State:**
