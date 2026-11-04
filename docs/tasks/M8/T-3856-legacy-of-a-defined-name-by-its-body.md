@@ -54,7 +54,6 @@ name whose body is a constant is a scalar INDEX index.
   `indexes_one_cell` (if_arm.rs) accepts a number-bodied name as a literal index; `indexes_one_reference_cell` makes a
   single-cell INDEX a scalar shape in `fallback_shape` only over a range, a union or a reference-bodied name (review
   round 1: over a 2-D array-bodied name INDEX is a row, unprobed, so it keeps its `@` and spill as before).
-  `quality/duplication.json` ratcheted down (2880 → 2856).
 - When the display is decided: when the legacy formula is read (xlsx import, `set_cell_with_legacy_formula`), from the
   name's body then; the `@` stays in the stored formula after that. Whether Excel redraws it when a body changes later
   is unprobed (recorded in references.md).
