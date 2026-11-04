@@ -249,3 +249,32 @@ fn placeholders_after_the_denominator_print_without_a_digit() {
     assert_eq!(text(12.0, "# ?/? 0|\"x\""), "12      |x");
     assert_eq!(text(12.5, "# ?/?|0%"), "1250      %");
 }
+
+#[test]
+fn fixed_denominator_followed_by_a_placeholder_is_picked() {
+    // T-4043: probes/t3711-fixed-denominator-then-placeholder, t4043-fixed-denominator-slots, -cut.
+    assert_eq!(text(0.0625, "# ?/4|0"), " 1/4|60");
+    assert_eq!(text(0.3, "# ?/4|0"), " 3/4|00");
+    assert_eq!(text(-0.3, "# ?/4|0"), "- 3/4|00");
+    assert_eq!(text(0.0625, "# ?/4|?"), " 1/4|6");
+    assert_eq!(text(0.5, "# ?/4|?"), " 1/4| ");
+    assert_eq!(text(0.0625, "# ?/4 0 0"), " 1/4 60 0");
+    assert_eq!(text(0.5, "# ?/16|?"), " 1/1 |0");
+    assert_eq!(text(0.5, "# ?/16|#"), " 1/1 |");
+    assert_eq!(text(0.3, "# ?/100|??"), " 3/10 |0 ");
+    assert_eq!(text(0.3, "# 0/4|0"), "3/40|0");
+    assert_eq!(text(0.0625, "# 0/4|0"), "1/46|0");
+    assert_eq!(text(0.01, "# 0/16|?"), "1/160| ");
+    // A literal alone after it keeps it fixed.
+    assert_eq!(text(0.5, "# ?/4\"x\""), " 2/4x");
+}
+
+#[test]
+fn placeholder_denominator_slots_fill_like_a_picked_one() {
+    // T-4043: probes/t4043-placeholder-denominator-slots.
+    assert_eq!(text(0.5, "# ?/?|?0"), " 1/2| 0");
+    assert_eq!(text(0.5, "# ?/?|0?"), " 1/2|00");
+    assert_eq!(text(0.5, "# ??/??|?"), "  1/2 |0");
+    assert_eq!(text(0.3, "# ??/??|??"), "  3/10|  ");
+    assert_eq!(text(0.5, "# ??/??|0?"), "  1/2 |00");
+}

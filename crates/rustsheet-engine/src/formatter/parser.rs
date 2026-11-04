@@ -1,3 +1,4 @@
+use super::comma::{comma_role, CommaRole, Field, Next, Prev};
 use super::elapsed::{takes_second_fraction, twelve_hour_tokens};
 pub use super::fraction::{Denominator, Fraction};
 use super::lexer::{Compare, Lexer, Token, WeekdaySpelling};
@@ -217,6 +218,87 @@ fn starts_denominator(token: &Token) -> bool {
     token.is_digit() || matches!(token, Token::Literal('1'..='9'))
 }
 
+/// The text token a date or time token prints as, with a plain `h`/`hh` after `[h]` and a plain
+/// `s`/`ss` after `[s]` showing the elapsed count (`elapsed_hour`, `elapsed_second`): "It was 75
+/// [yes, 75] hours" (poi/ElapsedFormatTests A10, A11, A21; number-formats.md "Elapsed-time
+/// tokens"). `None` for any other token; `m`/`mm` is read apart, as a minute or a month.
+fn date_text_token(token: Token, elapsed_hour: bool, elapsed_second: bool) -> Option<TextToken> {
+    Some(match token {
+        Token::Day => TextToken::Day,
+        Token::DayPadded => TextToken::DayPadded,
+        Token::DayNameShort(spelling) => TextToken::DayNameShort(spelling),
+        Token::DayName(spelling) => TextToken::DayName(spelling),
+        Token::MonthNameShort => TextToken::MonthNameShort,
+        Token::MonthName => TextToken::MonthName,
+        Token::MonthLetter => TextToken::MonthLetter,
+        Token::YearShort => TextToken::YearShort,
+        Token::Year => TextToken::Year,
+        Token::BuddhistYearShort => TextToken::BuddhistYearShort,
+        Token::BuddhistYear => TextToken::BuddhistYear,
+        Token::EraYear(padded) => TextToken::EraYear(padded),
+        // The era prints nothing for the Gregorian calendar (`TEXT(100,"g")` is "").
+        Token::Era(length) => TextToken::Era(length),
+        Token::Hour if elapsed_hour => TextToken::ElapsedHour,
+        Token::HourPadded if elapsed_hour => TextToken::ElapsedHourPadded,
+        Token::Hour => TextToken::Hour,
+        Token::HourPadded => TextToken::HourPadded,
+        Token::Second if elapsed_second => TextToken::ElapsedSecond,
+        Token::SecondPadded if elapsed_second => TextToken::ElapsedSecondPadded,
+        Token::Second => TextToken::Second,
+        Token::SecondPadded => TextToken::SecondPadded,
+        Token::ElapsedHour => TextToken::ElapsedHour,
+        Token::ElapsedHourPadded => TextToken::ElapsedHourPadded,
+        Token::ElapsedMinute => TextToken::ElapsedMinute,
+        Token::ElapsedMinutePadded => TextToken::ElapsedMinutePadded,
+        Token::ElapsedSecond => TextToken::ElapsedSecond,
+        Token::ElapsedSecondPadded => TextToken::ElapsedSecondPadded,
+        _ => return None,
+    })
+}
+
+/// Whether the next `m`/`mm` of a section is a clock minute (`Armed`) or a month
+/// (number-formats.md "`mm` after a minute is a month"). Transitions ([`MinuteSlot::next`]):
+///
+/// | event                                         | Unarmed | Armed | Spent |
+/// |-----------------------------------------------|---------|-------|-------|
+/// | `Time`: a `:`, `s`/`ss`, `[h]`, `[m]`, `[s]`  | Armed   | Armed | Spent |
+/// | `Hour`: a plain `h`/`hh`                      | Armed   | Armed | Armed |
+/// | `Minute`: an `m`/`mm` read as a clock minute  | Spent   | Spent | Spent |
+///
+/// After a minute later ones are months (`h:mm|yyyy-mm-dd`, `mm:ss|yyyy-mm`) until a plain hour
+/// comes, whatever stands between (`h:mm|h:mm` on 13:02 is "13:02|1:02", `h:mm|h|yyyy-mm`
+/// "18:00|18|2023-00"; probes/t3710-ampm-hour-tokens A5, A14, t3666-review-followups A13:A15).
+/// `[h]` counts as `Time`, so it re-arms nothing once spent. A `mm.0` minute
+/// (`minute_before_fraction`) is no event, and an `m`/`mm` before `:ss`
+/// (`minute_before_seconds`) is a minute in any state.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum MinuteSlot {
+    /// No clock token yet: `m`/`mm` is a month.
+    Unarmed,
+    /// `m`/`mm` is a minute.
+    Armed,
+    /// A minute was read and no hour since: `m`/`mm` is a month.
+    Spent,
+}
+
+/// What moves a [`MinuteSlot`]; see its table.
+#[derive(Clone, Copy, Debug)]
+enum ClockEvent {
+    Time,
+    Hour,
+    Minute,
+}
+
+impl MinuteSlot {
+    /// The slot after `event` (the table on [`MinuteSlot`]).
+    fn next(self, event: ClockEvent) -> Self {
+        match (event, self) {
+            (ClockEvent::Time, MinuteSlot::Spent) | (ClockEvent::Minute, _) => MinuteSlot::Spent,
+            (ClockEvent::Time | ClockEvent::Hour, _) => MinuteSlot::Armed,
+        }
+    }
+}
+
 impl NumberState {
     pub fn is_integer(&self) -> bool {
         matches!(self, NumberState::Integer)
@@ -294,14 +376,20 @@ impl Parser {
         *next_token == Token::Period && self.lexer.peek_token() == Token::Zero
     }
 
-    /// Whether a digit placeholder comes next, past any run of commas starting at `next_token`.
-    fn digit_after_commas(&mut self, next_token: &Token) -> bool {
-        next_token.is_digit()
-            || (*next_token == Token::Comma
-                && self
-                    .lexer
-                    .peek_token_past(|t| *t == Token::Comma)
-                    .is_digit())
+    /// What follows a `,` read just before `next_token` ([`comma_role`]).
+    fn after_comma(&mut self, next_token: &Token) -> Next {
+        if next_token.is_digit() {
+            Next::Digit
+        } else if *next_token == Token::Comma
+            && self
+                .lexer
+                .peek_token_past(|t| *t == Token::Comma)
+                .is_digit()
+        {
+            Next::CommasThenDigit
+        } else {
+            Next::Other
+        }
     }
 
     fn parse_part(&mut self) -> ParsePart {
@@ -335,12 +423,7 @@ impl Parser {
         let mut currency = None;
         // Where each currency symbol sits among `tokens`, for a date section to print it there.
         let mut currency_positions: Vec<(usize, char)> = Vec::new();
-        let mut is_time = false;
-        // Excel: after a minute, later `m`/`mm` are months (number-formats.md "`mm` after a minute").
-        let mut minute_read = false;
-        // Whether an hour was read after the last minute: the next `m`/`mm` is a minute again
-        // (`h:mm|h:mm` on 13:02 is "13:02|1:02"; probes/t3710-ampm-hour-tokens A5, A14).
-        let mut hour_pending = false;
+        let mut minute_slot = MinuteSlot::Unarmed;
         let mut hijri = false;
         let mut calendar_prefix = false;
         // Whether the previous token is an unescaped colon, which the next one joins.
@@ -368,7 +451,6 @@ impl Parser {
             let token_is_digit = token.is_digit();
             let token_is_fraction_literal = is_fraction_literal(&token);
             is_number = is_number || token_is_digit;
-            let next_token_is_digit = next_token.is_digit();
             let is_colon = token == Token::Literal(':');
             let is_percent = token == Token::Percent;
             let is_comma = token == Token::Comma;
@@ -394,46 +476,40 @@ impl Parser {
                     // (probes/text-format-general-company).
                     tokens.push(TextToken::General);
                 }
+                // A `,` groups, scales, prints or vanishes by the field it stands in (`comma_role`).
                 Token::Comma => {
-                    // Excel: in a fraction section only a `,` right after the denominator scales
-                    // (`?/?,` on 1E-250 is "1000/1"); a `,` after a `%` or a literal prints, also
-                    // outside a fraction (`?/?% ,` and `?/? ,` on 1E-250 are "0/1% ," and "0/1 ,",
-                    // `0%,` on 0.5 "50%,"; probes/fraction-overflow-scaled; number-formats.md
-                    // "Scaling commas in fraction formats").
-                    if after_denominator {
-                        comma += 1;
-                    } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
-                        tokens.push(TextToken::Literal(','));
-                    } else if found_decimal_dot
-                        && !is_scientific
-                        && tokens.last().is_some_and(TextToken::is_literal)
-                    {
-                        // A `,` after a literal of the decimal part prints, also last (`0.00|,0` is
-                        // "1234567.89|,0", `0.0|,` "1234567.9|,"; probes/t3598-decimal-part-commas
-                        // A26, t3666-review-followups A11).
-                        tokens.push(TextToken::Literal(','));
-                    } else if (last_token_is_digit
-                        || matches!(tokens.last(), Some(TextToken::Period)))
-                        && (found_decimal_dot || fraction.is_some())
-                        && !is_scientific
-                        && self.digit_after_commas(&next_token)
-                    {
-                        // Excel: only a `,` in the integer part groups. After the decimal point or a
-                        // fraction a run of commas before a placeholder prints nothing and neither
-                        // groups nor scales (`0.00|#,##0` on 1234567.89 is "1234567.89|0", `0.0,,0`
-                        // "1234567.89", `0.,0` "1234567.9", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000");
-                        // a trailing one still scales: `0.00|0,` is "1234.56|8", `0.,` "1235."
-                        // (probes/t3598-decimal-part-commas, t3666-review-followups A7:A10).
-                        while next_token == Token::Comma {
-                            next_token = self.lexer.next_token();
-                        }
-                    } else if last_token_is_digit && next_token_is_digit {
-                        use_thousands = true;
-                    } else if digit_count > 0 {
-                        comma += 1;
+                    let field = if after_denominator {
+                        Field::AfterDenominator
+                    } else if fraction.is_some() {
+                        Field::AfterFraction
+                    } else if is_scientific {
+                        Field::Exponent
+                    } else if found_decimal_dot {
+                        Field::Decimal
                     } else {
-                        // Before the number is just a literal.
-                        tokens.push(TextToken::Literal(','));
+                        Field::Integer
+                    };
+                    let prev = if after_percent {
+                        Prev::Percent
+                    } else if last_token_is_digit {
+                        Prev::Digit
+                    } else {
+                        match tokens.last() {
+                            Some(TextToken::Period) => Prev::Point,
+                            Some(t) if t.is_literal() => Prev::Literal,
+                            _ => Prev::Other,
+                        }
+                    };
+                    let next = self.after_comma(&next_token);
+                    match comma_role(field, prev, next, digit_count > 0) {
+                        CommaRole::Group => use_thousands = true,
+                        CommaRole::Scale => comma += 1,
+                        CommaRole::Literal => tokens.push(TextToken::Literal(',')),
+                        CommaRole::Skip => {
+                            while next_token == Token::Comma {
+                                next_token = self.lexer.next_token();
+                            }
+                        }
                     }
                 }
                 Token::Percent => {
@@ -582,7 +658,7 @@ impl Parser {
                 }
                 Token::Literal(value) => {
                     if value == ':' {
-                        is_time = true;
+                        minute_slot = minute_slot.next(ClockEvent::Time);
                     }
                     bare_digit |= value.is_ascii_digit();
                     // A run of colons prints as one ("0::a" → "1:a"; number-formats.md
@@ -593,7 +669,7 @@ impl Parser {
                 }
                 Token::Escaped(value) => {
                     if value == ':' {
-                        is_time = true;
+                        minute_slot = minute_slot.next(ClockEvent::Time);
                     }
                     // Escaped colons do not join a run: `TEXT(1,"0\:\:")` is "1::"
                     // (probes/text-format-unquoted-letters A105).
@@ -608,38 +684,16 @@ impl Parser {
                 Token::Spacer(value) => {
                     tokens.push(TextToken::Spacer(value));
                 }
-                Token::Day => {
-                    is_date = true;
-                    tokens.push(TextToken::Day);
-                }
-                Token::DayPadded => {
-                    is_date = true;
-                    tokens.push(TextToken::DayPadded);
-                }
-                Token::DayNameShort(spelling) => {
-                    is_date = true;
-                    tokens.push(TextToken::DayNameShort(spelling));
-                }
-                Token::DayName(spelling) => {
-                    is_date = true;
-                    tokens.push(TextToken::DayName(spelling));
-                }
-                Token::MonthNameShort => {
-                    is_date = true;
-                    tokens.push(TextToken::MonthNameShort);
-                }
-                Token::MonthName => {
-                    is_date = true;
-                    tokens.push(TextToken::MonthName);
-                }
                 Token::Month | Token::MonthPadded => {
-                    // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
+                    // A `mm.0` minute leaves the slot as it is ("mm.0 h:mm" is "57.7 2:57";
+                    // probes/t3575-fraction-after-elapsed-b A30).
                     let fraction = self.minute_before_fraction(&next_token);
-                    let clock = (is_time && (!minute_read || hour_pending))
-                        || self.minute_before_seconds(&next_token);
+                    let clock =
+                        minute_slot == MinuteSlot::Armed || self.minute_before_seconds(&next_token);
                     let minute = clock || fraction;
-                    minute_read |= clock;
-                    hour_pending &= !clock;
+                    if clock {
+                        minute_slot = minute_slot.next(ClockEvent::Minute);
+                    }
                     is_date |= !minute || fraction;
                     tokens.push(match (minute, token == Token::MonthPadded) {
                         (true, false) => TextToken::Minute,
@@ -647,35 +701,6 @@ impl Parser {
                         (false, false) => TextToken::Month,
                         (false, true) => TextToken::MonthPadded,
                     });
-                }
-                Token::MonthLetter => {
-                    is_date = true;
-                    tokens.push(TextToken::MonthLetter);
-                }
-                Token::YearShort => {
-                    is_date = true;
-                    tokens.push(TextToken::YearShort);
-                }
-                Token::Year => {
-                    is_date = true;
-                    tokens.push(TextToken::Year);
-                }
-                Token::BuddhistYearShort => {
-                    is_date = true;
-                    tokens.push(TextToken::BuddhistYearShort);
-                }
-                Token::BuddhistYear => {
-                    is_date = true;
-                    tokens.push(TextToken::BuddhistYear);
-                }
-                Token::EraYear(padded) => {
-                    is_date = true;
-                    tokens.push(TextToken::EraYear(padded));
-                }
-                // The era prints nothing for the Gregorian calendar (`TEXT(100,"g")` is "").
-                Token::Era(length) => {
-                    is_date = true;
-                    tokens.push(TextToken::Era(length));
                 }
                 // `B1` selects the Gregorian calendar and still makes the section a date one
                 // (`TEXT(100,"B1")` is ""). `B2` selects the Hijri calendar
@@ -691,44 +716,6 @@ impl Parser {
                     is_date = true;
                     calendar_prefix = true;
                     hijri |= c == '2' && locale.is_none();
-                }
-                Token::Hour => {
-                    is_date = true;
-                    is_time = true;
-                    hour_pending = true;
-                    tokens.push(if elapsed_hour {
-                        TextToken::ElapsedHour
-                    } else {
-                        TextToken::Hour
-                    });
-                }
-                Token::HourPadded => {
-                    is_date = true;
-                    is_time = true;
-                    hour_pending = true;
-                    tokens.push(if elapsed_hour {
-                        TextToken::ElapsedHourPadded
-                    } else {
-                        TextToken::HourPadded
-                    });
-                }
-                Token::Second => {
-                    is_date = true;
-                    is_time = true;
-                    tokens.push(if elapsed_second {
-                        TextToken::ElapsedSecond
-                    } else {
-                        TextToken::Second
-                    });
-                }
-                Token::SecondPadded => {
-                    is_date = true;
-                    is_time = true;
-                    tokens.push(if elapsed_second {
-                        TextToken::ElapsedSecondPadded
-                    } else {
-                        TextToken::SecondPadded
-                    });
                 }
                 Token::AMPM => {
                     // Excel: a bracketed elapsed token before the marker is #VALUE! (`[ss] AM/PM`,
@@ -775,45 +762,51 @@ impl Parser {
                     return ParsePart::Error(ErrorPart::default());
                 }
                 Token::EOF => {}
-                Token::ElapsedHour => {
+                Token::Day
+                | Token::DayPadded
+                | Token::DayNameShort(_)
+                | Token::DayName(_)
+                | Token::MonthNameShort
+                | Token::MonthName
+                | Token::MonthLetter
+                | Token::YearShort
+                | Token::Year
+                | Token::BuddhistYearShort
+                | Token::BuddhistYear
+                | Token::EraYear(_)
+                | Token::Era(_)
+                | Token::Hour
+                | Token::HourPadded
+                | Token::Second
+                | Token::SecondPadded
+                | Token::ElapsedHour
+                | Token::ElapsedHourPadded
+                | Token::ElapsedMinute
+                | Token::ElapsedMinutePadded
+                | Token::ElapsedSecond
+                | Token::ElapsedSecondPadded => {
                     is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    elapsed_hour = true;
-                    tokens.push(TextToken::ElapsedHour);
-                }
-                Token::ElapsedMinute => {
-                    is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    tokens.push(TextToken::ElapsedMinute);
-                }
-                Token::ElapsedSecond => {
-                    is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    elapsed_second = true;
-                    tokens.push(TextToken::ElapsedSecond);
-                }
-                Token::ElapsedHourPadded => {
-                    is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    elapsed_hour = true;
-                    tokens.push(TextToken::ElapsedHourPadded);
-                }
-                Token::ElapsedMinutePadded => {
-                    is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    tokens.push(TextToken::ElapsedMinutePadded);
-                }
-                Token::ElapsedSecondPadded => {
-                    is_date = true;
-                    bracketed_elapsed += 1;
-                    is_time = true;
-                    elapsed_second = true;
-                    tokens.push(TextToken::ElapsedSecondPadded);
+                    let bracketed = matches!(
+                        token,
+                        Token::ElapsedHour
+                            | Token::ElapsedHourPadded
+                            | Token::ElapsedMinute
+                            | Token::ElapsedMinutePadded
+                            | Token::ElapsedSecond
+                            | Token::ElapsedSecondPadded
+                    );
+                    bracketed_elapsed += usize::from(bracketed);
+                    elapsed_hour |= matches!(token, Token::ElapsedHour | Token::ElapsedHourPadded);
+                    elapsed_second |=
+                        matches!(token, Token::ElapsedSecond | Token::ElapsedSecondPadded);
+                    if matches!(token, Token::Hour | Token::HourPadded) {
+                        minute_slot = minute_slot.next(ClockEvent::Hour);
+                    } else if bracketed || matches!(token, Token::Second | Token::SecondPadded) {
+                        minute_slot = minute_slot.next(ClockEvent::Time);
+                    }
+                    if let Some(text_token) = date_text_token(token, elapsed_hour, elapsed_second) {
+                        tokens.push(text_token);
+                    }
                 }
             }
             if token_is_digit {
@@ -960,6 +953,30 @@ impl Parser {
                 ..part
             }),
             _ => ParsePart::Error(ErrorPart::default()),
+        }
+    }
+}
+
+#[cfg(test)]
+mod minute_slot_tests {
+    use super::{ClockEvent, MinuteSlot};
+
+    #[test]
+    fn minute_slot_follows_its_table() {
+        use ClockEvent::{Hour, Minute, Time};
+        use MinuteSlot::{Armed, Spent, Unarmed};
+        for (from, event, to) in [
+            (Unarmed, Time, Armed),
+            (Armed, Time, Armed),
+            (Spent, Time, Spent),
+            (Unarmed, Hour, Armed),
+            (Armed, Hour, Armed),
+            (Spent, Hour, Armed),
+            (Unarmed, Minute, Spent),
+            (Armed, Minute, Spent),
+            (Spent, Minute, Spent),
+        ] {
+            assert_eq!(from.next(event), to, "{from:?} on {event:?}");
         }
     }
 }

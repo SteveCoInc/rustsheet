@@ -18,7 +18,8 @@
 //! - with no integer part a numerator past Excel's bound cannot be shown ([`format_fraction`]
 //!   returns `None`);
 //! - a `,` right after the denominator scales the value up ([`fraction_scale`]), and a fixed
-//!   denominator past 32768 is replaced by a picked one ([`LARGE_FIXED_MAX_DENOMINATOR`]).
+//!   denominator past 32768 or followed by a digit placeholder is replaced by a picked one
+//!   ([`Choice`], [`LARGE_FIXED_MAX_DENOMINATOR`]).
 
 use super::parser::{NumberPart, TextToken};
 use crate::decimal_round::{round_decimal, RoundMode};
@@ -70,56 +71,76 @@ pub(super) fn format_fraction(
     if !value.is_finite() {
         return None;
     }
-    let tokens = &part.tokens;
-    let has_integer = tokens[..fraction.numerator_start]
-        .iter()
-        .any(|t| matches!(t, TextToken::Digit(_)));
-    let mut integer = if has_integer { value.trunc() } else { 0.0 };
-    let numerator_kinds =
-        placeholder_kinds(&tokens[fraction.numerator_start..fraction.numerator_end]);
-    // The parser only builds a fixed denominator from ASCII digits starting with 1-9.
-    let fixed = match &fraction.denominator {
-        Denominator::Fixed(digits) => digits
-            .parse::<f64>()
-            .ok()
-            .filter(|d| *d <= MAX_FIXED_DENOMINATOR),
-        Denominator::Placeholders(_) => None,
-    };
-    // A picked denominator's placeholder kinds. A fixed one past 32768 prints its digits as
-    // placeholders that pad with spaces under a `?` numerator and with nothing otherwise
-    // (`?/40000` on 0.5 is "1/4    ", `0/40000` and `#/40000` "1/4", `??/40000` " 1/4    ").
-    let denominator_kinds: Vec<char> = match &fraction.denominator {
-        Denominator::Fixed(_) if fixed.is_some() => Vec::new(),
-        Denominator::Fixed(digits) => {
-            let kind = if numerator_kinds.last() == Some(&'?') {
-                '?'
-            } else {
-                '#'
-            };
-            vec![kind; digits.len()]
+    let layout = Layout::new(&part.tokens, fraction);
+    let choice = Choice::of(
+        &fraction.denominator,
+        layout.trailing_end > layout.denominator_at,
+    );
+    let shown = choose(value, layout.has_integer, &choice)?;
+    Some(render(
+        part,
+        fraction,
+        &layout,
+        &choice,
+        &shown,
+        negative,
+        group_separator,
+    ))
+}
+
+/// How a fraction's denominator is chosen.
+enum Choice {
+    /// A fixed denominator up to 32768 with no digit placeholder after it, used as written.
+    AsWritten(f64),
+    /// The last convergent with a denominator up to the bound: for placeholders, 10^n - 1 for
+    /// n of them; for any other fixed denominator, [`LARGE_FIXED_MAX_DENOMINATOR`].
+    Picked(f64),
+}
+
+impl Choice {
+    /// The choice for `denominator`, in a section with digit placeholders after it or not
+    /// (`trailing_digits`). Excel picks the fraction for a fixed denominator past 32768 and for
+    /// one with a placeholder anywhere after it (`# ?/4|0` on 0.0625 is " 1/4|60", 1/16;
+    /// `# ?/4"x"` on 0.5 " 2/4x"; probes/t3711-fixed-denominator-then-placeholder,
+    /// t4043-fixed-denominator-slots).
+    fn of(denominator: &Denominator, trailing_digits: bool) -> Self {
+        match denominator {
+            // The parser only builds a fixed denominator from ASCII digits starting with 1-9.
+            Denominator::Fixed(digits) => match digits.parse::<f64>() {
+                Ok(d) if d <= MAX_FIXED_DENOMINATOR && !trailing_digits => Choice::AsWritten(d),
+                _ => Choice::Picked(LARGE_FIXED_MAX_DENOMINATOR),
+            },
+            // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
+            Denominator::Placeholders(kinds) => {
+                let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
+                Choice::Picked(10.0_f64.powi(digits) - 1.0)
+            }
         }
-        Denominator::Placeholders(kinds) => kinds.clone(),
-    };
-    let (mut numerator, denominator) = match fixed {
-        Some(denominator) => (
+    }
+}
+
+/// The integer, numerator and denominator a value shows.
+struct Shown {
+    integer: f64,
+    numerator: f64,
+    denominator: f64,
+}
+
+/// The fraction of `value >= 0` under `choice`, or `None` when it cannot be shown (see
+/// [`format_fraction`]): with an integer part the fraction is of the fraction part, and a numerator
+/// that rounds up to the denominator carries into the integer.
+fn choose(value: f64, has_integer: bool, choice: &Choice) -> Option<Shown> {
+    let mut integer = if has_integer { value.trunc() } else { 0.0 };
+    let (mut numerator, denominator) = match *choice {
+        Choice::AsWritten(denominator) => (
             round_numerator((value - integer) * denominator),
             denominator,
         ),
-        None => {
-            let max_denominator = match &fraction.denominator {
-                Denominator::Fixed(_) => LARGE_FIXED_MAX_DENOMINATOR,
-                // Past 15 digits 10^n - 1 is no longer exact in a double; no such bound can bind.
-                Denominator::Placeholders(kinds) => {
-                    let digits = i32::try_from(kinds.len()).unwrap_or(i32::MAX).min(15);
-                    10.0_f64.powi(digits) - 1.0
-                }
-            };
-            last_convergent(value - integer, max_denominator)
-        }
+        Choice::Picked(max_denominator) => last_convergent(value - integer, max_denominator),
     };
-    let overflows = match fixed {
-        Some(_) => numerator > MAX_FIXED_NUMERATOR,
-        None => value >= MAX_PLACEHOLDER_VALUE,
+    let overflows = match choice {
+        Choice::AsWritten(_) => numerator > MAX_FIXED_NUMERATOR,
+        Choice::Picked(_) => value >= MAX_PLACEHOLDER_VALUE,
     };
     if !has_integer && overflows {
         return None;
@@ -128,7 +149,113 @@ pub(super) fn format_fraction(
         integer += 1.0;
         numerator = 0.0;
     }
-    let integer_kinds = placeholder_kinds(&tokens[..fraction.numerator_start]);
+    Some(Shown {
+        integer,
+        numerator,
+        denominator,
+    })
+}
+
+/// Which part of a fraction section a token belongs to.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Zone {
+    /// Up to the last integer placeholder (or the numerator, with no integer part).
+    Integer,
+    /// The literals between the integer part and the numerator.
+    Separator,
+    /// The numerator's placeholders.
+    Numerator,
+    /// The `/` and the literals around it; the denominator prints at the zone's end.
+    Denominator,
+    /// Everything after the denominator.
+    Trailing,
+}
+
+/// Where the zones of a fraction section's tokens start and end.
+struct Layout {
+    has_integer: bool,
+    /// Just past the last integer placeholder.
+    integer_end: usize,
+    numerator_start: usize,
+    numerator_end: usize,
+    denominator_at: usize,
+    /// Just past the last placeholder after the denominator: a blank fraction blanks up to there.
+    trailing_end: usize,
+}
+
+impl Layout {
+    fn new(tokens: &[TextToken], fraction: &Fraction) -> Self {
+        let integer_end = digits_end(&tokens[..fraction.numerator_start]);
+        Layout {
+            has_integer: integer_end.is_some(),
+            integer_end: integer_end.unwrap_or(0),
+            numerator_start: fraction.numerator_start,
+            numerator_end: fraction.numerator_end,
+            denominator_at: fraction.denominator_at,
+            trailing_end: digits_end(tokens)
+                .filter(|end| *end > fraction.denominator_at)
+                .unwrap_or(fraction.denominator_at),
+        }
+    }
+
+    fn zone(&self, index: usize) -> Zone {
+        if index >= self.denominator_at {
+            Zone::Trailing
+        } else if index >= self.numerator_end {
+            Zone::Denominator
+        } else if index >= self.numerator_start {
+            Zone::Numerator
+        } else if self.has_integer && index >= self.integer_end {
+            Zone::Separator
+        } else {
+            Zone::Integer
+        }
+    }
+
+    /// Whether a blank fraction blanks the token at `index` with it.
+    fn blanks(&self, index: usize) -> bool {
+        match self.zone(index) {
+            Zone::Numerator | Zone::Denominator => true,
+            Zone::Trailing => index < self.trailing_end,
+            Zone::Integer | Zone::Separator => false,
+        }
+    }
+}
+
+/// The text of `shown` under `part`.
+fn render(
+    part: &NumberPart,
+    fraction: &Fraction,
+    layout: &Layout,
+    choice: &Choice,
+    shown: &Shown,
+    negative: bool,
+    group_separator: &str,
+) -> String {
+    let tokens = &part.tokens;
+    let Shown {
+        integer,
+        numerator,
+        denominator,
+    } = *shown;
+    let has_integer = layout.has_integer;
+    let integer_kinds = placeholder_kinds(&tokens[..layout.numerator_start]);
+    let numerator_kinds = placeholder_kinds(&tokens[layout.numerator_start..layout.numerator_end]);
+    // A picked denominator's placeholder kinds. A picked fixed one prints its digits as
+    // placeholders that pad with spaces under a `?` numerator and with nothing otherwise
+    // (`?/40000` on 0.5 is "1/4    ", `0/40000` and `#/40000` "1/4", `??/40000` " 1/4    ").
+    let denominator_kinds: Vec<char> = match (&fraction.denominator, choice) {
+        (Denominator::Fixed(_), Choice::AsWritten(_)) => Vec::new(),
+        (Denominator::Fixed(digits), Choice::Picked(_)) => {
+            let kind = if numerator_kinds.last() == Some(&'?') {
+                '?'
+            } else {
+                '#'
+            };
+            vec![kind; digits.len()]
+        }
+        (Denominator::Placeholders(kinds), _) => kinds.clone(),
+    };
     // A zero numerator blanks the fraction unless a `0` placeholder prints it (`# 00/16` on 0 is
     // "00/16"; `#\:0=/=#` on 1 "1:0=/=1", poi/NumberFormatTests A258).
     let blank = has_integer && numerator == 0.0 && !numerator_kinds.contains(&'0');
@@ -162,20 +289,39 @@ pub(super) fn format_fraction(
         format!("{numerator}")
     };
     let denominator_digits = format!("{denominator}");
+    // The picked denominator's digits past its slots (only a picked fixed denominator has more
+    // digits than slots) and how many more (or fewer) digits than slots it has.
+    let slots = denominator_kinds.len();
+    let spill: String = denominator_digits.chars().skip(slots).collect();
+    let excess = denominator_digits.len().cast_signed() - slots.cast_signed();
     // A numeral byte maps every digit the fraction prints (`[$-1B000409]# ?/?` on 12.5 is
     // "一二 一/二", `# ?/16` "一二 八/一六"; probes/t3532-numeral-digit-fields C14,
     // t3532-numeral-digit-sections A8).
-    let denominator_text = match &fraction.denominator {
-        Denominator::Fixed(digits) if fixed.is_some() => digits.clone(),
+    let denominator_text = match (&fraction.denominator, choice) {
+        (Denominator::Fixed(digits), Choice::AsWritten(_)) => digits.clone(),
         // The code's own digits print, cut to the picked denominator's length: 512/625 under
-        // `?/40000` is "512/400  ", 4095937/5000000 "4095937/40000".
-        Denominator::Fixed(digits) => {
+        // `?/40000` is "512/400  ". The picked denominator's further digits print after them
+        // under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on 0.0625 "1/46|0") and go
+        // to the placeholders after the denominator under a `?` one, or nowhere (4095937/5000000
+        // under `?/40000` is "4095937/40000"; probes/t4043-fixed-denominator-slots).
+        (Denominator::Fixed(digits), Choice::Picked(_)) => {
             let shown: String = digits.chars().take(denominator_digits.len()).collect();
-            fill_left(&shown, &denominator_kinds)
+            let mut text = fill_left(&shown, &denominator_kinds);
+            if !denominator_kinds.contains(&'?') {
+                text.push_str(&spill);
+            }
+            text
         }
-        Denominator::Placeholders(_) => fill_left(&denominator_digits, &denominator_kinds),
+        (Denominator::Placeholders(_), _) => fill_left(&denominator_digits, &denominator_kinds),
     };
     let denominator_text = part.numerals.digits(&denominator_text);
+    let mut trailing_fill = trailing_fill(
+        &placeholder_kinds(&tokens[layout.denominator_at..]),
+        denominator_kinds
+            .contains(&'?')
+            .then_some((spill.as_str(), excess)),
+    )
+    .into_iter();
 
     let separator = separator_kind(
         blank.then_some(blank_spaces),
@@ -192,62 +338,105 @@ pub(super) fn format_fraction(
     }
     let mut integer_fill = fill(&integer_digits, &integer_kinds).into_iter();
     let mut numerator_fill = fill(&numerator_digits, &numerator_kinds).into_iter();
-    let integer_end = digits_end(&tokens[..fraction.numerator_start]).unwrap_or(0);
-    // Just past the last placeholder after the denominator: a blank fraction blanks up to there.
-    let trailing_end = digits_end(tokens)
-        .filter(|end| *end > fraction.denominator_at)
-        .unwrap_or(fraction.denominator_at);
     for (index, token) in tokens.iter().enumerate() {
-        if index == fraction.denominator_at {
+        if index == layout.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
         }
-        let in_fraction = (fraction.numerator_start..fraction.denominator_at).contains(&index);
-        let blanked = in_fraction || (fraction.denominator_at..trailing_end).contains(&index);
-        let trailing = index >= fraction.denominator_at;
-        let in_separator = has_integer && (integer_end..fraction.numerator_start).contains(&index);
-        match token {
-            _ if in_separator && separator == Separator::Dropped => {}
-            _ if in_separator && separator == Separator::Spaces => push_spaces(&mut text, token),
-            TextToken::Digit(_) if index < fraction.numerator_start => {
-                text.push_str(
-                    &part
-                        .numerals
-                        .digits(&integer_fill.next().unwrap_or_default()),
-                );
+        let zone = layout.zone(index);
+        // The separator and blank arms come before the digit arms: they take a zone whole.
+        match (zone, token) {
+            (Zone::Separator, _) if separator == Separator::Dropped => {}
+            (Zone::Separator, _) if separator == Separator::Spaces => push_spaces(&mut text, token),
+            (Zone::Integer, TextToken::Digit(_)) => {
+                let digits = integer_fill.next().unwrap_or_default();
+                text.push_str(&part.numerals.digits(&digits));
             }
-            _ if blanked && blank && !blank_spaces => {}
             // Every placeholder and literal of a blank fraction takes its width in spaces, and so
             // do those after the denominator up to its last placeholder (`# ?/?|0 "12"` on 12 is
             // "12       12"; probes/t3711-placeholders-after-fraction B1:B20).
-            _ if blanked && blank => push_spaces(&mut text, token),
-            // A placeholder after the denominator gets no digit: `0` and `#` print a zero, `?` a
-            // space, and a `.` there prints (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #`
-            // "12 1/2 0", `# ?/? ?` "12 1/2  ", `# ?/?|0.0` "12 1/2|0.0";
-            // probes/t3711-placeholders-after-fraction).
-            TextToken::Digit(digit) if trailing => {
-                let pad = if digit.kind == '?' { " " } else { "0" };
-                text.push_str(&part.numerals.digits(pad));
+            _ if blank && layout.blanks(index) => {
+                if blank_spaces {
+                    push_spaces(&mut text, token);
+                }
             }
-            TextToken::Period if trailing => text.push('.'),
-            TextToken::Digit(_) if in_fraction => {
-                text.push_str(
-                    &part
-                        .numerals
-                        .digits(&numerator_fill.next().unwrap_or_default()),
-                );
+            (Zone::Trailing, TextToken::Digit(_)) => {
+                let digits = trailing_fill.next().unwrap_or_default();
+                text.push_str(&part.numerals.digits(&digits));
             }
-            TextToken::Literal(c) => text.push(*c),
-            TextToken::Text(t) => text.push_str(t),
-            TextToken::Ghost(_) => text.push(' '),
+            // A `.` after the denominator prints (`# ?/?|0.0` on 12.5 is "12 1/2|0.0").
+            (Zone::Trailing, TextToken::Period) => text.push('.'),
+            (Zone::Numerator, TextToken::Digit(_)) => {
+                let digits = numerator_fill.next().unwrap_or_default();
+                text.push_str(&part.numerals.digits(&digits));
+            }
+            (_, TextToken::Literal(c)) => text.push(*c),
+            (_, TextToken::Text(t)) => text.push_str(t),
+            (_, TextToken::Ghost(_)) => text.push(' '),
             // Excel: a `*x` fill adds nothing, `TEXT(1.5,"# ?/?*x")` is "1 1/2"
             // (docs/excel-semantics/number-formats.md "Fill characters"; T-2480).
             _ => {}
         }
     }
-    if fraction.denominator_at == tokens.len() {
+    if layout.denominator_at == tokens.len() {
         push_denominator(&mut text, &denominator_text, blank, blank_spaces);
     }
-    Some(text)
+    text
+}
+
+/// What each placeholder after the denominator prints, for their `kinds`; they get no digit of
+/// the value (number-formats.md "Placeholders after a fraction"). After a denominator without `?`
+/// slots (a picked fixed one under a `#` or `0` numerator), `0` and `#` print a zero and `?` a
+/// space (`# 0/4|0` on 0.3 is "3/40|0", `# 0/16|?` on 0.01 "1/160| ").
+///
+/// After a denominator with `?` slots, `spill` holds its digits past the slots and `excess` how
+/// many more digits than slots it has (negative when it has fewer):
+/// - all `?`: the spilled digits, or one `0` per missing digit, fill them from the left and a
+///   placeholder with none prints a space (`# ?/4|?` on 0.0625 is " 1/4|6", `# ?/16|?` on 0.5
+///   " 1/1 |0", `# ?/100|??` on 0.3 " 3/10 |0 ", `# ??/??|?` on 0.5 "  1/2 |0", on 0.3 "  3/10| ");
+/// - otherwise the spilled digits print before the first one, then `0` prints a zero, `#` a zero
+///   unless digits are missing, and `?` a zero unless the slots fit exactly, where it prints a
+///   space until a placeholder before it printed a zero (`# ?/4|0` on 0.0625 is " 1/4|60",
+///   `# ?/16|#` on 0.5 " 1/1 |", `# ?/?|?0` " 1/2| 0", `# ?/?|0?` " 1/2|00";
+///   probes/t4043-fixed-denominator-slots, -cut, t4043-placeholder-denominator-slots).
+fn trailing_fill(kinds: &[char], spill: Option<(&str, isize)>) -> Vec<String> {
+    let Some((spill, excess)) = spill else {
+        return kinds
+            .iter()
+            .map(|kind| if *kind == '?' { " " } else { "0" }.to_owned())
+            .collect();
+    };
+    if kinds.iter().all(|kind| *kind == '?') {
+        let digits: Vec<char> = if excess < 0 {
+            vec!['0'; excess.unsigned_abs()]
+        } else {
+            spill.chars().collect()
+        };
+        return (0..kinds.len())
+            .map(|i| digits.get(i).copied().unwrap_or(' ').to_string())
+            .collect();
+    }
+    let mut zero_before = false;
+    let mut slots: Vec<String> = kinds
+        .iter()
+        .map(|kind| {
+            let zero = match kind {
+                '#' => excess >= 0,
+                '?' => excess != 0 || zero_before,
+                _ => true,
+            };
+            zero_before |= zero;
+            match (zero, *kind) {
+                (true, _) => "0",
+                (false, '?') => " ",
+                (false, _) => "",
+            }
+            .to_owned()
+        })
+        .collect();
+    if let Some(first) = slots.first_mut() {
+        first.insert_str(0, spill);
+    }
+    slots
 }
 
 /// The index just past the last digit placeholder of `tokens`, if any.
@@ -379,9 +568,10 @@ pub(super) fn comma_exponent(commas: i32, signed: bool) -> i32 {
 /// "16384/32768", `?/32769` "1/3    "; probes/fraction-large-fixed-denominator).
 const MAX_FIXED_DENOMINATOR: f64 = 32768.0;
 
-/// The largest denominator Excel picks for a fixed denominator past 32768 (10^7 - 1), whatever
-/// its digit count: `?/40000` on 1/9999999 is "1/40000" and on 1E-7 "0/4    ", and `?/32769` alike
-/// (probes/fraction-large-fixed-denominator).
+/// The largest denominator Excel picks for a fixed denominator it does not use as written
+/// (10^7 - 1), whatever its digit count: `?/40000` on 1/9999999 is "1/40000" and on 1E-7
+/// "0/4    ", and `?/32769` alike (probes/fraction-large-fixed-denominator); `# ?/4|?` on `PI()` is
+/// "3 244252/4|7", 3 + 244252/1725033 (probes/t4043-fixed-denominator-slots).
 const LARGE_FIXED_MAX_DENOMINATOR: f64 = 9_999_999.0;
 
 /// The largest numerator a fixed denominator shows with no integer part (2^15 - 1).

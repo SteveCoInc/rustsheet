@@ -3,7 +3,7 @@ id: T-4043
 title: "A fixed denominator followed by placeholders picks the fraction and spills its digits"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -27,9 +27,23 @@ Semantics: number-formats.md "Placeholders after a fraction". Code: formatter/fr
 (the fixed-past-32768 path, `Denominator::Fixed` with `fixed == None`, is the closest model).
 
 ## Acceptance criteria
-- [ ] probes/t3711-fixed-denominator-then-placeholder and probes/t3711-placeholders-after-fraction A13, C13, E13
+- [x] probes/t3711-fixed-denominator-then-placeholder and probes/t3711-placeholders-after-fraction A13, C13, E13
       pass; a probe settles the largest denominator Excel picks here.
-- [ ] `make check` green; reviewers approve.
+- [ ] `make check` green; reviewers approve. (`make check-fast` green locally; not reviewed or pushed yet.)
 
 ## Out of scope
 - Placeholders after a placeholder denominator (done by T-3711).
+
+## Outcome
+Done. A fixed denominator is used as written only up to 32768 and with no digit placeholder after it; otherwise the
+fraction is picked as past 32768 (last convergent, denominator up to 9999999: PI() gives 3 + 244252/1725033,
+0.123456789 10/81), one path (`Choice`, formatter/fraction.rs). The picked denominator's digits past the code's print
+after them under a `#`/`0` numerator and spill into the placeholders after it under a `?` one (`trailing_fill`); the
+same slot rule covers placeholder denominators, which a new probe settled (probes/t4043-placeholder-denominator-slots,
+20 cells: `# ?/?|0?` on 0.5 is " 1/2|00"). Evidence: probes/t4043-fixed-denominator-slots (285 cells),
+t4043-fixed-denominator-cut (88), t3711-fixed-denominator-then-placeholder (88) and t3711-placeholders-after-fraction
+(120) all pass; probes known failures 4427 -> 4350 (77 fixed), no regressions. Done alongside a refactor of the
+format parser and fraction code: date tokens map through one helper and a `MinuteSlot` state decides minute or month
+(formatter/parser.rs); a pure `comma_role` table decides what a `,` does (formatter/comma.rs); `format_fraction` is
+split into choosing and rendering by `Zone`. Semantics: number-formats.md "Placeholders after a fraction" and
+"Fraction formats".
