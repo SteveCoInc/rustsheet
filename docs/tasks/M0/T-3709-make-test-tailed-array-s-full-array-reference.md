@@ -3,7 +3,7 @@ id: T-3709
 title: "Make test_tailed_array's full-array reference evaluations cheaper"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
