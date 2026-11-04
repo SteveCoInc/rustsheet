@@ -578,3 +578,17 @@ fn bup_bgrat_at_a_shape_below_one_matches_excel() {
     assert_eq!(branch(0.9, 2.5, 0.2916), (Branch::BupBgrat, false));
     assert_eq!(cdf(0.2916, 0.9, 2.5), 0.617_681_544_291_794);
 }
+
+// bratio's direct bgrat at 0 < a0 < 1, a0 != 1/2 (T-3933): the accurate increment, rounded once.
+// probes-numeric t2512-r3-bgrat-split A1 `BETA.DIST(0.8117,30.699999999999,0.7,TRUE)`: Excel
+// 0.0007235467872156648, the 50-digit value 0.00072354678721566559661...; the increment gives the
+// correctly rounded 0.0007235467872156652 (4 ulp above Excel, inside 15 digits), where the Cephes
+// kernel gave 0.0007235467872156635 (12 ulp below Excel, visibly off).
+#[test]
+fn direct_bgrat_takes_the_accurate_increment() {
+    assert_eq!(branch(30.699_999_999_999, 0.7, 0.8117).0, Branch::Bgrat);
+    assert_eq!(
+        cdf(0.8117, 30.699_999_999_999, 0.7).to_bits(),
+        0.000_723_546_787_215_665_2_f64.to_bits()
+    );
+}

@@ -72,3 +72,34 @@ then go to a follow-up without the key, with `defer: phase-1b` if they are withi
 ## Out of scope
 - Modelling Excel's noise in D (T-3567, T-3582 negatives).
 - F, BINOM and NEGBINOM callers (T-3580, T-3712); BETA.INV's search on L140 (T-3867).
+
+## Landing notes
+Session closed at the landing window (2026-11-04, about minute 85). No PR is open. The branch head carries the WIP
+change and these notes. The notes are data for the resumer: check them against the acceptance criteria.
+- **State:**
+  - `bratio/mod.rs` `ported_tails_with` takes `Branch::Bgrat if half_bgrat` at a0 != 1/2 through
+    `bgrat_increment(d.b0, d.a0, d.y0, d.x0)?.0`, with w = (0.5 - w1) + 0.5.
+  - `bratio/tests.rs` `direct_bgrat_takes_the_accurate_increment` pins t2512 A1 at the correctly rounded
+    0.0007235467872156652 (Excel ...648; Cephes ...635).
+  - F's truncated dfs never reach a0 in (0, 1) other than 1/2, so only BETA.DIST and BETA.INV's search see the new
+    branch.
+- **Clean A/B:** both reports were run on this branch, base origin/main 27225f32b's parent, with the change stashed
+  for "before". Output is in `docs/research/t3933/ab.out` (script `ab.py`; the reports are not committed, rerun
+  `make eval` twice).
+  - Only BETA.DIST changes: 4,066 cells nearer Excel, 798 further.
+  - Gated suites (`make eval-check`): 0 regressions, 0 fixed.
+  - t2512-r3-bgrat-split: visibly off (15 significant digits) 2,132 to 995. That misses the task's target of at
+    most 850. 261 cells leave 15 digits and 59 move further from the 50-digit math.
+  - t3568-r5-bup-{fresh,hold,tune}: visibly off 309/636/644 to 123/239/262, but 105/205/206 cells move further from
+    the math. Several are at tiny tails by many ulp: hold B8 `BETA.DIST(0.94596666,2825.0,..)` goes from
+    2.686877257588473E-71 to ...486E-71 (math ...4667E-71); hold B788 is about 1E-108. 58 cells leave 15 digits.
+    The increment loses accuracy at large b0 and tiny I. Check `upper_gamma_fraction` and the prefactor there before
+    porting.
+  - t2464-r2-bratio-x29: 155 cells change. 20 go from visibly off to within 15 digits, but 154 move 1 ulp off the
+    math, toward Excel, through the (0.5 - w1) + 0.5 complement. That conflicts with the criterion "none further
+    from the math"; it needs a ruling or a reasoned exception in the Outcome.
+- **Next step:** find why the increment is several ulp off the math on the t3568 tiny-tail cells. Either restrict
+  the branch to where the increment is accurate, with a reason not a fit, or fix the increment. Then rerun the A/B
+  for the 850 target.
+- **Do not repeat:** the A/B used a stale "before" report once, and the earlier F, UNICHAR and COUNTIF lines came
+  from main moving, not from this change. Always take "before" on the same base.

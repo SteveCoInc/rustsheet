@@ -314,9 +314,17 @@ fn ported_tails_with(
             let w1 = bpser(d.b0, d.a0, d.y0)?;
             (other(w1), w1)
         }
-        // bgrat's b is a0: only b = 1/2 is ported (T-2509; T-3582 owns the rest).
+        // bgrat's b is a0. At b = 1/2 Excel's own bgrat (T-2509).
         Branch::Bgrat if half_bgrat && d.a0 == 0.5 => {
             let w1 = bgrat_half(d.b0, d.y0, d.x0, 0.0)?;
+            (other(w1), w1)
+        }
+        // Any other 0 < b < 1: the accurate bgrat increment, rounded once (T-3933). Excel sits a few
+        // units of 2^-53 from the 50-digit value there with noise no model explains (T-3567,
+        // T-3582), and today's kernel is 10+ units off (probes-numeric t2512-r3-bgrat-split).
+        // F's truncated dfs never give such an a0, so this is BETA.DIST's (and BETA.INV's search).
+        Branch::Bgrat if half_bgrat => {
+            let w1 = bgrat_increment(d.b0, d.a0, d.y0, d.x0)?.0;
             (other(w1), w1)
         }
         Branch::BupBgrat if half_bgrat && d.a0 == 0.5 => {
