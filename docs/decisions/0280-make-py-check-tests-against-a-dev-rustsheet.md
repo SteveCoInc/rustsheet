@@ -27,5 +27,7 @@
   - `make check` builds the release binary before `py-check` (`eval-math-check: build`), so a
     full local check builds nothing more. As before, an existing release binary is used even if
     it is older than the sources.
+  - Measured in CI: the python job's `make py-check` step took 72 s on this change (run
+    41905116166) against 205-217 s on four PR runs of the same day.
   - A tools/ test that becomes too slow on a dev binary should cut its own work, not switch the
     whole job back to release.
