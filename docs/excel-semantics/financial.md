@@ -3531,10 +3531,12 @@ Rule: across prices 1, 5, 500, 5000, 1E-3 and 1E-6, frequencies 1, 2 and 4, shor
 coupon rates 0.05 and 0, ODDFYIELD is `#NUM!` in exactly two of 72 cells: the long first period (settlement
 2023-03-16, issue 2022-12-15, first coupon 2024-06-15, maturity 2030-06-15, basis 0), annual, 0% coupon, at prices 1E-3
 and 1E-6 (`ODDFYIELD(DATE(2023,3,16),DATE(2030,6,15),DATE(2022,12,15),DATE(2024,6,15),0,1E-3,100,1,0)`). Every other
-cell computes, at prices from 1E-6 (yields up to 92.4: short quarterly 0.05 at 1E-6) to 5000 (yields down to -0.585),
-including the same bond at semiannual and quarterly frequency (2.886 and 2.310 at 1E-3). So the `#NUM!` is the
+cell computes, at prices from 1E-6 (yields up to 92.4: short quarterly 0.05 at 1E-6) to 5000 (yields down to -0.596 at a 0% coupon and -0.585 at 0.05),
+including the long-first-period 0% bonds at semiannual and quarterly frequency (2.886 and 2.310 at 1E-3). So the `#NUM!` is the
 solver's non-finite step ("YIELD's #NUM! cells and its 100-step cap") and not a price limit of the function: no
 price in the sweep is rejected outright, and large and small prices alike converge or stop on the 100th iterate.
+Status: VERIFIED for the cell values (the mechanism is the engine's T-2007 model, which reproduces them).
+Tasks: T-3990, T-3031.
 Evidence: probes/oddfyield-extreme-price (T-3990), all 72 cells matching the engine in type and value (T-3031 follow-up).
 
 ## YIELD's #NUM! cells and its 100-step cap
