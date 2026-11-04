@@ -45,8 +45,10 @@ MPMATH_SHAPE_CAP = 20_000
 # The term budget of `_tail_series`. Its terms decay like exp(-n^2 (1 - x) / 2a) from the side's
 # switch point, so dps 80 needs about sqrt(370 a / (1 - x)) terms: 1E5 reaches a shape of about 1E7.
 SERIES_MAXTERMS = 10**5
-# Past this shape the series is not tried at all (NoValueError at once, as mpmath's NoConvergence
-# was): spending the term budget in every step of a root solve took 75 s for BETA.INV(0.5,2.5,5E9).
+# Past this shape the series is not tried at all and mpmath alone answers, as before T-3680: it
+# handles the astronomic shapes of the Gate A tables (BETA.DIST/s1 A189, a shape of 7.5E15 at a tiny
+# x) at once, while spending the term budget in every step of a root solve took 75 s for
+# BETA.INV(0.5,2.5,5E9).
 SERIES_SHAPE_CAP = 1e7
 
 
@@ -70,15 +72,13 @@ def _series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
 def _betainc(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
     """I_x(a, b): mpmath's `betainc` up to a + b = MPMATH_SHAPE_CAP, with `_series` where it gives up
     (its hypsum loses the cancelling series at shapes of a few thousand,
-    probes-numeric/t3571-r5-bfrac-fresh A239); `_series` alone above the cap. Both budgets are
+    probes-numeric/t3571-r5-bfrac-fresh A239); `_series` alone above that cap; mpmath alone again
+    above a shape of SERIES_SHAPE_CAP. Both budgets are
     deterministic, so a cell gets the same value or the same skip on any machine (T-3680).
-    NoValueError (the sampler redraws) above SERIES_SHAPE_CAP or where no series converges within its
-    budget; a ValueError from mpmath's hypsum (the point is dropped) where it gave up and the fallback
+    NoValueError (the sampler redraws) where no series converges within its budget; a ValueError
+    from mpmath's hypsum (the point is dropped) where it gave up and the fallback
     did too."""
-    if max(a, b) > SERIES_SHAPE_CAP:
-        msg = f"shape {mpmath.nstr(max(a, b), 3)} is above the incomplete beta's cap of 1E7 (T-3680)"
-        raise NoValueError(msg)
-    if a + b > MPMATH_SHAPE_CAP:
+    if a + b > MPMATH_SHAPE_CAP and max(a, b) <= SERIES_SHAPE_CAP:
         try:
             return _series(a, b, x)
         except mpmath.libmp.NoConvergence as err:
@@ -89,6 +89,8 @@ def _betainc(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
     except (mpmath.libmp.NoConvergence, ValueError) as err:
         first = err
     try:
+        if max(a, b) > SERIES_SHAPE_CAP:
+            raise first
         return _series(a, b, x)
     except (mpmath.libmp.NoConvergence, ValueError):
         if isinstance(first, mpmath.libmp.NoConvergence):
