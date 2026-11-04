@@ -74,6 +74,37 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   linking the survivor, deleting nothing) only after the survivor has merged, and only when the
   other's branch has not moved for 2 h, so a live session is never cut off. When any condition
   fails, do what you did before: fix CI, comment the blocker, or mark the task blocked with reasons.
+- **Stale drafts** (decision 0264): the orphan rule above skips drafts, and a task blocked on its
+  branch stays claimed (decision 0048). So in the daily run, also list every open **draft** PR from
+  an `agent/*` or `claude/*` branch of this repository (never a fork) whose head has not moved for
+  24 h. Measure the 24 h the way the orphan rule measures its 4 h. Read the PR body, the task file
+  on the branch and on `main`, and a local test-merge of `origin/main`. Then put the PR in the
+  **first** bucket that fits, and act:
+  1. **Superseded**: the task is `done` on `main` through another PR, or `main` already holds the
+     PR's change. Close the PR with a comment that links what landed, and delete nothing. A
+     task-only or triage PR whose task ids or decision numbers now collide with `main`, and which
+     is over 3 days behind, is also superseded: close it, and the next gap-triager or planner run
+     files what is still missing.
+  2. **Blocker gone**: the task is `status: blocked` on the branch, and the blocking task is
+     `done` on `main` or the capability check passes. Unblock it on that branch (agent-workflow
+     "Unblocking is an agent's job"; a bookkeeping commit, plus a clean merge of `origin/main` if
+     the branch conflicts, decision 0121), and say so on the PR. A `tier: opus` task is then
+     resumed by the opus worker; for any other task, file the next step as a task.
+  3. **Owner needed**: what blocks the PR is an owner ruling, credential or setting. Make sure
+     `docs/status.md` on `main` has a "Needs owner" entry for it, linking the PR, and add one in the
+     steward PR if not. An entry that exists only on the draft branch does not count.
+  4. **Ready**: CI is green on the head, the task is `done` on the branch (or the PR is task-only,
+     decision 0231), the PR body's review table has no REQUEST_CHANGES, pending or not-run
+     verdict, and nothing in the body says it is not for merging. Mark it ready for review; the
+     orphan rule above then adopts it, with its own review and checks.
+  5. **Otherwise** (a partial step, a time-box with no new hypothesis, failed review or CI
+     rounds): if the branch holds evidence that `main` lacks (a probe case with oracle values, an
+     `excel-semantics` entry, task notes), file one task to salvage it onto a fresh branch from
+     `main`. Then close the PR once that task has merged. If no such evidence exists, comment once
+     on the PR to name what still blocks it, and leave it open.
+  Never push code to a stale draft; only bookkeeping commits and a clean merge of `main`. List
+  every stale draft, its age and its bucket in the steward PR's body, and list the ones still
+  open after a run under "Open PRs" in docs/status.md.
 - **Merge style**: squash merge; title `T-XXXX: <task title>`; keep the Co-Authored-By trailer.
   Exception: the daily steward PR uses branch `agent/steward/<YYYY-MM-DD>` and title
   `steward: <YYYY-MM-DD> health` (docs/process/routines.md).
