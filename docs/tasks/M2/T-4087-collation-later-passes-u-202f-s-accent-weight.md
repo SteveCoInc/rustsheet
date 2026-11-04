@@ -3,7 +3,7 @@ id: T-4087
 title: "Collation later passes: U+202F's accent weight, a mark after a skipped and a weightless character joins the skipped one, width and superscripts before small kana (probes/t4086-collation-later-passes)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
