@@ -1805,6 +1805,15 @@ Tasks: T-1503
 Evidence strength: excel-graph oracle, 11 + 17 cells (T-1527); the postfix `#` spelling of the ANCHORARRAY case is inferred, not probed. Status: VERIFIED (web).
 Tasks: T-1506, T-1509, T-1527
 
+### ISREF: a unary plus makes a value (T-4190)
+
+`ISREF(+C1)`, `ISREF(+(C1))`, `ISREF((+C1))`, `ISREF(-(-C1))`, `ISREF(+@C1)` and `ISREF(@+C1)` are FALSE, while `ISREF(@C1)`
+and `ISREF((C1))` are TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-graph 2026-11-04). So a typed unary plus,
+which the evaluator otherwise reads as the identity, ends the reference, as `T(+D1)` being `#VALUE!` already showed
+(text.md). NETWORKDAYS.INTL's holidays split by the same test (dates.md "NETWORKDAYS.INTL: a scalar holiday ignores the
+weekend argument"). Ours: `written_reference` in information/mod.rs settles these before `Model::is_reference`'s full test.
+Status: VERIFIED (web).
+
 ## Legacy formulas intersect the ranges in value arguments
 Rule: in a legacy (non-dynamic, no `cm`) formula a range is implicitly intersected wherever Excel
 evaluates it as a value, not only at the formula's root (FORMULATEXT of these forms is unprobed;
@@ -2446,8 +2455,10 @@ Rule (gen-m8b, excel-graph, 2026-10-16, T-1607):
   `=[@Col]*2`). Since T-3241 a `#This Row` reference written with the table name prints the same `@` form in a data row
   of its table (probes/t2800-this-row-whitespace B3:E3, table-edits/table-insert-row-calc-column-inside-data
   F!A1:A2), and any reference written without the name prints with it in a cell outside its table (`[@Col]` as
-  `T[[#This Row],[Col]]`, `[Col]` as `T[Col]`: the engine's choice so the text parses there; Excel's spelling there
-  is T-3240). Counting the header and totals rows as inside the
+  `T[@Col]`, `[Col]` as `T[Col]`: the engine's choice so the text parses there). Outside its table Excel prints a
+  `#This Row` reference written with the name as `T[@Col]` ("Structured references: FORMULATEXT",
+  probes/t1683-formulatext-structured-refs F!B2:B8, T-1683); how it prints one copied or filled out of the table from
+  `[@Col]`, and the header and totals-row spellings, are unprobed (T-3240). Counting the header and totals rows as inside the
   table is an engine choice too, unprobed (T-3000). Storage (R1C1) keeps the table as a `[T]` prefix
   (`[T][[#This Row],[Col]]*2`), so the same text in two tables of one sheet reads each its own table and a re-parse
   (a sheet rename) prints it unqualified again; the export writes the qualified form Excel saves
@@ -2487,9 +2498,41 @@ Tasks: T-1607, T-1673, T-1674
 ## Structured references: the `@` shorthand
 Rule: `T[@]`, `T[@Col]`, `T[@[Col]]` and `T[@[A]:[B]]` are the UI spelling of `#This Row` and evaluate identically to the long form; `'@` inside a column name is a literal `@`.
 Evidence: gen-m8b in-table 19fdc25163755713 and this-row e1bf5aa0ffb4ed87 (excel-graph).
-Status: VERIFIED for evaluation; UNVERIFIED for FORMULATEXT (RustSheet shows the lowered `=$A$2`; Excel's output unprobed) and for rejecting unbracketed multi-word `T[@Unit Price]` / unterminated `T[@Qty`.
+Status: VERIFIED (FORMULATEXT and typed entry: "Structured references: FORMULATEXT" below).
 Implemented in: `Lexer::consume_this_row_shorthand`.
 Tasks: T-1672, T-1683
+
+## Structured references: FORMULATEXT
+Rule (probes/t1683-formulatext-structured-refs, excel-graph, 2026-11-04, T-1683; table `Sales` on S!A1:C5
+with columns Qty, Unit Price, Region, every formula on sheet F, outside the table):
+- A `#This Row` reference prints in its `@` form with the table name, however it was written:
+  `=Sales[[#This Row],[Qty]]` and `=Sales[@Qty]` print `=Sales[@Qty]` (F!B2:B3), `Sales[#This Row]` prints
+  `Sales[@]` (B6), a column range `Sales[@[Qty]:[Unit Price]]` (B5, B7), and a column name that is not one
+  word keeps its own brackets, `=Sales[@[Unit Price]]` (B4).
+- Table and column names print in the table's own spelling, typed or loaded from a file:
+  `=sales[@qty]` prints `=Sales[@Qty]` (B8), `=SUM(sales[qty])` `=SUM(Sales[Qty])` (B10),
+  `=ROWS(sales)` `=ROWS(Sales)` (B13).
+- A bare table name and `Sales[]` print as the bare name, `=ROWS(Sales)` (B11:B12); a column in its own
+  brackets drops them, `Sales[[Qty]]` → `Sales[Qty]` (B14), and so does a lone specifier,
+  `Sales[[#Data]]` → `Sales[#Data]` (B17); a redundant `[#Data]` beside a column stays,
+  `=SUM(Sales[[#Data],[Qty]])` (B15, B22). Other forms print as written (B16, B18:B21).
+- Typed (Graph `values`), Excel refuses (400 `InvalidArgument`, the cell stays blank: FORMULATEXT `#N/A`,
+  ISFORMULA FALSE) every unterminated structured reference: `=Sales[@Qty`, `=Sales[Qty`, `=SUM(Sales[Qty)`,
+  `=Sales[[#This Row],[Qty]`, `=Sales[@[Qty]` (D2:D4, D6:D7).
+- Quirk: the unbracketed multi-word `=Sales[@Unit Price]` is accepted, evaluates as `Sales[@[Unit Price]]`
+  (80 on row 5) and prints `=Sales[@[Unit Price]]` (D5:E5).
+Status: VERIFIED (excel-graph)
+Implemented in: `StructuredReference::text_with_name` (the `@` form, `prints_bare_after_at`) and
+`StructuredReference::use_table_spelling` (parser/structured_reference.rs); the lexer refuses an unterminated
+reference (`Lexer::consume_escaped_until`). The xlsx export still writes the long form
+(`StructuredReference::file_text`), which Excel's file format requires. Inside its own table a this-row reference
+prints without the table name (references.md "Calculated columns"); the case of an unqualified column there
+(`=[@qty]`) takes the table's spelling too, which is unprobed. Two more hand generalizations: both ends of a
+column range take the table's spelling (`Sales[[#This Row],[qty]:[VAL]]` prints `Sales[@[Qty]:[Val]]`; only single
+columns and the table name are probed), and a column name with any whitespace (tab, no-break space), not only a
+space, keeps its brackets after `@`. The table name is the table's `name`, which Excel-written files keep equal to
+its `displayName`; a file where they differ in spelling is unprobed.
+Tasks: T-1683
 
 ## Structured references when the table changes
 Rule (excel-graph, 2026-10-21, T-2197; probes/table-edits, `Sales` at S!B3:C7 with header row 3, data rows
@@ -2563,7 +2606,7 @@ edited table, as the T-2845 bullet above shows. A formula the insert moves with 
 (`Model::kept_table_holding`), so an unqualified `[@Qty]*2` or `SUM([Qty])` keeps its text where the move takes it below
 the table's old range (before T-3037 that cell did not parse, `#ERROR!`). Under every other edit a `#This Row` reference
 keeps the fallback rule (a row delete or a column edit the table follows is unprobed for it, T-3739).
-FORMULATEXT prints the long `Sales[[#This Row],[Qty]]` where Excel prints `Sales[@Qty]` (T-1683). An insert at
+FORMULATEXT prints `Sales[@Qty]`, as Excel does (T-1683). An insert at
 the first row of a table without a header row is a fallback too (unprobed, T-3039). An insert that would
 carry a table past the last row or column is refused with an error and changes nothing, as Excel does
 (`Model::refuse_table_off_sheet`, T-3038; a table that ends exactly at the last row afterwards is
@@ -2575,7 +2618,7 @@ inside grow the table (T-2339). A wholly deleted plain range prints one sheet-qu
 error that keeps its text and is exported as `#REF!`; a loaded formula naming an unknown table or column
 (xlsx import, `Input::StoredFormula`) is `#REF!` and FORMULATEXT prints `=SUM(#REF!)`, as Excel does
 (`Parser::set_loaded`, T-2322; the rewrite also covers shapes beyond the two probed ones, unprobed: T-2604); a typed one is refused and the cell keeps its content, as Excel refuses it (`=NoSuchTable[Col]`, probes/t3213-typed-parse-errors A8; T-3213). FORMULATEXT shows the stored
-canonical form (`=SUM(Sales[Qty])`), whose spelling is unprobed (T-1683). Since T-1671 the eval adapter
+canonical form (`=SUM(Sales[Qty])`), in the spelling Excel prints ("Structured references: FORMULATEXT", T-1683). Since T-1671 the eval adapter
 registers a spec table with its totals row; an insert above the totals row grows the table and keeps
 `Sales[[#Totals],[Qty]]` (T-2321), and since T-2338 the totals row's deletes (delete it or the last data row) keep it too (decision 0128).
 Under an edit its table does not follow (a fallback, a row move) or a cut and paste, a `#This Row` reference keeps its text

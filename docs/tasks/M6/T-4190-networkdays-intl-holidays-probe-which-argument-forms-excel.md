@@ -3,7 +3,7 @@ id: T-4190
 title: "NETWORKDAYS.INTL holidays: probe which argument forms Excel treats as a scalar value (the weekend-independent drop) beyond literals, arithmetic and SUM, and match it"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -49,16 +49,31 @@ the kind from an allowlist of syntax-node kinds. This task replaces that allowli
   research), T-2591 (WORKDAY.INTL/NETWORKDAYS.INTL weekend TRUE against 2/3), T-1954 (WORKDAY lift controls).
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M6) holds the forms above under weekend 13,
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M6) holds the forms above under weekend 13,
       with the Saturday and the Tuesday holiday each, plus the WORKDAY.INTL controls.
-- [ ] dates.md "NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument" states the rule that separates the two
+- [x] dates.md "NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument" states the rule that separates the two
       kinds, cites the new cells, and drops its UNVERIFIED line (or narrows it to the forms still unprobed).
-- [ ] The engine matches every new cell. `is_scalar_node`'s doc comment cites the evidence. If the rule is
+- [x] The engine matches every new cell. `is_scalar_node`'s doc comment cites the evidence. If the rule is
       value-based, the node allowlist is deleted, not kept beside it.
-- [ ] probes/networkdays-intl-holiday-forms, -weekend-masks, -weekend-dedupe, -early-holidays and
+- [x] probes/networkdays-intl-holiday-forms, -weekend-masks, -weekend-dedupe, -early-holidays and
       -serial-zero-holiday still pass. Eval known failures only shrink (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - WORKDAY.INTL's own holiday rules beyond the controls (already evidenced), NETWORKDAYS without INTL (its weekend is
   always Saturday and Sunday, so the split cannot show), and the argument kinds T-2864 owns.
+
+## Outcome
+- Probes (excel-graph, 2026-11-04): `networkdays-intl-holiday-kinds` (M6, 32 forms with a Saturday and a Tuesday holiday
+  under weekend 13, WORKDAY.INTL controls, and ISREF of the unary forms), `-kinds-let` (M7: LET, LAMBDA, TAKE, DROP) and
+  `-kinds-names` (M8: defined names bound to `=45003` and to `=Sheet1!$C$1`). 121 cells.
+- Rule: the split is by value kind. A holidays argument is a reference exactly when ISREF of it is TRUE. The syntax pairs
+  separate it: `IF(TRUE,C1)` is a reference but `IF(TRUE,45003)` is not, and `LET(h,C1,h)` is a reference but
+  `LET(h,45003,h)` is not. `+C1` is scalar and `@C1` is a reference, and ISREF agrees on both.
+- Engine: `Holidays::scalar` is now `!array && !is_reference(arg)`, and the `is_scalar_node` allowlist is deleted. To make it
+  work, `Model::is_reference` (ISREF, T's cell-text rule) gained `written_reference`: a unary plus among the written
+  wrappers is no reference, and `@` of one cell is one. Before this, ISREF got `+C1` and `@C1` wrong.
+- dates.md entry: VERIFIED, with the form list and the cited cells. references.md has a new entry,
+  "ISREF: a unary plus makes a value".
+- Eval delta: probes +3 passing cases (121 cells), 0 regressions. Before the fix, 26 of these cells were off. The listed
+  existing networkdays-intl probes still pass.

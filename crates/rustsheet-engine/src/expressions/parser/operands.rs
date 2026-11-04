@@ -751,6 +751,9 @@ impl Parser {
             extent: None,
         };
         let lowered = self.lower_structured_reference(table_name, specifier, table_reference);
+        if let Some(table) = self.table_named(&reference.table_name) {
+            reference.use_table_spelling(table);
+        }
         if let Node::ThisRowKind {
             data_start,
             data_end,

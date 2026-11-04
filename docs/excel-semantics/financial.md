@@ -1574,6 +1574,29 @@ Tasks: T-1820, T-2491
 Implemented in: functions/financial/financial_depreciation.rs (`MAX_DEPRECIATION_PERIODS`),
 functions/lift/kinds/financial.rs (`DB`, `VDB`)
 
+## M9 financial argument kinds (T-3184)
+Rule: in the 55 M9 financial functions, one argument of a valid call replaced by another kind gives, by kind
+(probes/t3184-m9-financial-argument-kinds-a to -e, 608 cells, excel-graph, 2026-11-04; case letter and Calc row):
+- An error literal (`#N/A`) is returned in every parameter of every function (218 cells).
+- `""` is `#VALUE!` in every scalar parameter (255 cells). As the cash-flow array, `IRR("",0.1)` is `#NUM!` (c A18) and
+  `MIRR("",0.1,0.12)` is `#DIV/0!` (c A44): a scalar text flow is skipped, leaving no flows.
+- Numeric text is its number (75 cells: `"45337"` as a date, `"0.05"` as a rate, `"2"` as a frequency), except a
+  scalar flow or date, which is skipped as text is: `MIRR("5",..)` is `#DIV/0!` (c A42), `XIRR("5",..)` and
+  `XNPV(..,"5")` (dates) are `#NUM!` (e A49, e A60). Text `"x"` is `#VALUE!` (a A16, a A79, a A103, d A110), but
+  `MIRR("x",..)` is `#DIV/0!` (c A43).
+- A blank cell is 0: the result is a number where 0 is in the parameter's domain (basis, type, salvage, cost of SYD,
+  a coupon settlement; 13 cells, e.g. a A19, c A17, e A9) and `#NUM!` where it is not (a frequency, a maturity, nper,
+  per, a price or redemption, `PDURATION`'s fv; 15 cells, e.g. a A82, a A111, d A26, e A32).
+- TRUE is 1 in the annuity functions (FV pmt and pv, IPMT nper, NPER pmt and pv, PMT pv, PPMT fv, RATE fv, SLN life,
+  VDB salvage: b A79, b A82, c A7, c A56, c A58, d A31, d A46, d A112, e A6, e A36; `RATE(48,TRUE,8000,0,0,0.1)` is
+  `#NUM!`, d A106, since a payment of 1 has no rate), and `#VALUE!` in the Analysis ToolPak functions: the
+  settlement or maturity of COUPDAYBS, COUPPCD, DURATION, MDURATION and PRICE, the frequency of COUPPCD and YIELD,
+  and CUMIPMT's nper (a A65, a A119, a A126, a A134, b A58, c A29, d A51, d A54, e A77).
+- `COUPDAYS(S,0,2,1)` (maturity 0) is `#NUM!` (a A76), as is `ODDLPRICE(..,-1,2,0)` (redemption -1, c A120).
+Status: VERIFIED (excel-graph). The engine matched all 608 cells when probed. Earlier entries below give the
+check order between kinds; this entry adds one cell per missing parameter and kind (report.json `argument_coverage`).
+Generator choice: hand-written probe cases, option (b) of T-3184 (docs/architecture/synthetic-generator.md).
+
 ## Financial function argument modes
 Rule: every scalar argument of the M9 financial functions lifts elementwise over an array literal: all 256
 `ROWS(F(..{v;v}..))` cells are 2, the dates, frequency, basis, type and guess arguments included. Over a two-cell

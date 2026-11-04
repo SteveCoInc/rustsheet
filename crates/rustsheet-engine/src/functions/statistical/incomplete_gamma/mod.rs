@@ -441,7 +441,7 @@ const TEMME_NEAR_MODE_MIN: f64 = 1e3;
 /// was `#NUM!`, Excel the true quantile, probes/t3350-chisq-inv-huge-df; T-3350). From here the
 /// expansion's variable is at most 0.13 where a tail is above e^-800 and its dropped terms below
 /// 1E-20 of the first.
-const QUANTILE_TEMME_SHAPE_MIN: f64 = 1e5;
+pub(super) const QUANTILE_TEMME_SHAPE_MIN: f64 = 1e5;
 
 /// Above this a·phi (`temme_pair`'s exponent) the smaller tail is below e^-800, so 0 in doubles,
 /// and the expansion's polynomials are not evaluated (their variable may overflow there).

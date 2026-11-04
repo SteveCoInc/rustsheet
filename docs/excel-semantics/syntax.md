@@ -598,9 +598,10 @@ agree):
   read the same way and are unprobed, T-3240). Since T-3241 the printing cell decides the `@` form: a `#This Row`
   reference written with its table name prints `[@Col]` (padding kept) in a data row of its own table, as Excel does
   above. Any reference written without the name prints with it in a cell outside the table (`[@Col]` as
-  `T[[#This Row],[Col]]`, `[Col]` as `T[Col]`), so a copy, fill or move out of the table, or a resize that leaves the
-  cell outside, gives text that parses there (an engine choice; header, totals and outside-the-table spellings are
-  unprobed, T-3240). `T[ Col ]` is only
+  `T[@Col]`, `[Col]` as `T[Col]`), so a copy, fill or move out of the table, or a resize that leaves the
+  cell outside, gives text that parses there (an engine choice). A `#This Row` reference written with the name prints
+  `T[@Col]` outside its table, as Excel does (references.md "Structured references: FORMULATEXT", T-1683); the copied-out,
+  header and totals-row spellings are unprobed (T-3240). `T[ Col ]` is only
   the engine's own printed text for `T[ [Col] ]`, which it re-parses after edits: typed or loaded, a padded bare column
   reads the run as part of the column name, so it is a parse error typed and `#REF!` loaded, and the xlsx export writes
   `T[ [Col] ]`. Since T-3258 untyped text from outside the engine (`Model::set_user_input`, the Python bindings) reads
