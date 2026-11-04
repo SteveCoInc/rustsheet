@@ -1760,6 +1760,10 @@ index. A boolean field `TRUE` is column 1 and `FALSE` is `#VALUE!` (T-1948, prob
 `DSUM(J1:L6,TRUE,N1:N2)` over a numeric first column is 19, the sum of column 1, `DAVERAGE` 4.75, `DMAX` 7, `DCOUNT`/`DCOUNTA` 4, `DGET` over one match 7, over several `#NUM!`; `DSUM(…,FALSE,…)` is `#VALUE!`).
 Earlier probes over a text first column gave 0 / `#DIV/0!` only because text is skipped by the numeric functions (DGET's `#NUM!` there came from several matching records).
 A legacy (non-dynamic-array) formula gets no implicit intersection on the `field` of a D-function: `=DSUM(A1:C6,G1:G2,E1:E2)` on a row of G1:G2 is `#VALUE!` (FORMULATEXT shows no `@`), while `G1:G2&""` is intersected (`@G1:G2&""`) and gives 19.
+An error `field` written as a literal is that error in all twelve (`DSUM(Db!A1:D9,#N/A,Db!F1:F2)` `#N/A`,
+`#DIV/0!` likewise), but a single-cell reference to a cell holding an error is `#VALUE!`, not the error
+(`DSUM(Db!A1:D9,Data!A3,Db!F1:F2)` with Data!A3 `=NA()`; T-3214, probes/m9-database-argument-kinds
+Calc!A1:A36, excel-graph 2026-11-04; ours gives `#N/A` there, T-4247).
 An empty field (`DCOUNT(A1:C6,,E1:E2)`) gives DCOUNT and DCOUNTA the count of
 matching records (4), and `#VALUE!` in every other function.
 A criteria given as an array literal (`{"Qty";">2"}`) lifts elementwise to `#VALUE!` per element, so it
@@ -4277,14 +4281,22 @@ within 1E-15 relative / largest relative error:
     which is why no rule in b alone (T-4044) separated the earlier cells.
   - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.86,
     2.21): 2E9 at n 39, a number, against 1E10 at n 36, `#NUM!`, needs w > 3/ln 5): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
-    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. This is a separating
-    line fitted to the 14 probed a, not a mechanism: the TOMS quantity it tracks is not identified (bup's term ratio and
-    brcmp1 do not move with a at a fixed tail; the exp(708) scaling runs only at an integer b, yet both kinds share n).
-    UNVERIFIED between the probed a and outside 2E9 to 1E10.
+    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. The line was fitted
+    to the 14 probed a. The mechanism behind it is bup's running ratio product passing DBL_MAX, whose log the line tracks
+    (the "mechanism" item below; T-4044).
   - **Only the tails that take L140 are cut**: columns A and B (I about 1E-6 and 0.05, where lambda = (a + b)(1 - x) - b
     > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
     are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
     1E-6 and 0.05 the edge does not move.
+- **The mechanism is T-3576's bup-sum overflow** (T-4044): in L140 bup, S's running product of the stored ratios
+  (apb + l)/(ap1 + l) (`bup.rs` `l140_bup_sum_overflows`, statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge
+  `number_s`") passes the largest double. Its log is about (n - 1) ln a - ln(Gamma(n + c)/Gamma(1 + c)) against
+  709.78, which is the separating line above (2.25E9 at n = 39: 713.6; 2E9 at n = 39: 709.1). Run with Excel's break
+  rule on each cell's own (a, b, x), that predicate gives Excel's type at all 1,176 BETA.DIST cells of t4080 (82
+  `#NUM!`), the 151 of t4030, and every positive-x F.DIST cdf and F.DIST.RT cell of t4017-f-huge-df2-* and t4030 (22
+  `#NUM!`, 1,385 numbers) on F's arguments (`fisher.rs` `f_bup_sum_overflows`, shapes df1/2 and df2/2). BETA.DIST
+  already asked it (T-3576); F.DIST's cdf, F.DIST.RT and FDIST ask it since T-4044. F.INV and F.INV.RT are unprobed at
+  these shapes.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
