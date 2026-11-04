@@ -1,0 +1,13 @@
+--- a/crates/rustsheet-engine/src/functions/statistical/incomplete_beta.rs
++++ b/crates/rustsheet-engine/src/functions/statistical/incomplete_beta.rs
+@@ -211,7 +211,9 @@
+     if a0 != 1.0 || b0 == 1.0 || y0 <= A1_CLOSED_FORM_MAX_Y {
+         return None;
+     }
+-    let w = -excel_expm1(b0 * excel_ln_one_minus(x0));
++    let p = b0 * excel_ln_one_minus(x0);
++    let u = crate::x87_exp::excel_exp(p);
++    let w = if u == 1.0 { -p } else { -((u - 1.0) * (p / crate::x87_log10::excel_ln(u))) };
+     let w1 = (0.5 - w) + 0.5;
+     Some(if swap { (w1, w) } else { (w, w1) })
+ }
