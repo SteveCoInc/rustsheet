@@ -2492,7 +2492,7 @@ impl Model {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
     /// let (sheet, row, column) = (0, 1, 1);
-    /// model.set_user_input(sheet, row, column, "100$".to_string());
+    /// model.set_user_input(sheet, row, column, "$100".to_string());
     /// let area = Area {
     ///     sheet,
     ///     row,
@@ -2503,7 +2503,7 @@ impl Model {
     /// model.range_clear_contents(&area)?;
     /// model.set_user_input(sheet, row, column, "10".to_string());
     /// let result = model.get_formatted_cell_value(sheet, row, column)?;
-    /// assert_eq!(result, "10$".to_string());
+    /// assert_eq!(result, "$10 ".to_string());
     /// # Ok(())
     /// # }
     /// ```

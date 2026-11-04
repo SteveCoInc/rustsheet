@@ -3,7 +3,7 @@ id: T-3980
 title: "Probe typed -%1.5, -%-1.5, 1.5$ and -200$, and VALUE of +%1.5 (T-3742 follow-up)"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -31,3 +31,7 @@ Use the `excel-probe` skill (typed cells need the typed-input probe form of prob
 
 ## Out of scope
 - Script digits in typed input (T-3891).
+
+## Outcome
+Probe `probes/t3980-typed-percent-currency` (excel-graph) filled; 20/20 cells pass. Engine: `-%-1.5` refused, `+%1.5` read,
+typed trailing `$` stays text. Rules moved from "Unverified extrapolations" to evidence in coercion.md.

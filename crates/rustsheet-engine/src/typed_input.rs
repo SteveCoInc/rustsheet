@@ -147,13 +147,13 @@ impl Model {
     /// # use rustsheet_engine::cell::CellValue;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
-    /// model.set_user_input(0, 1, 1, "100$".to_string());
-    /// model.set_user_input(0, 2, 1, "125$".to_string());
-    /// model.set_user_input(0, 3, 1, "-10$".to_string());
+    /// model.set_user_input(0, 1, 1, "$100".to_string());
+    /// model.set_user_input(0, 2, 1, "$125".to_string());
+    /// model.set_user_input(0, 3, 1, "-$10".to_string());
     /// model.set_user_input(0, 1, 2, "=SUM(A:A)".to_string());
     /// model.evaluate();
     /// assert_eq!(model.get_cell_value_by_index(0, 1, 2), Ok(CellValue::Number(215.0)));
-    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("215$".to_string()));
+    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("$215 ".to_string()));
     /// # Ok(())
     /// # }
     /// ```

@@ -100,6 +100,7 @@ from xml.sax.saxutils import escape
 
 import xlsxwriter
 
+from rustsheet_tools.api_names import record_api_names
 from rustsheet_tools.custom_properties import json_properties, set_json_property
 from rustsheet_tools.oracle.package import patch_parts, read_parts
 from rustsheet_tools.pivot import PivotParts, pivot_tables, relationships_xml
@@ -118,7 +119,6 @@ SHEET_OP_PROPERTY = "rustsheet.sheetop"
 TEXT_PROPERTY = "rustsheet.text"
 
 _A1 = re.compile(r"^\$?([A-Za-z]{1,3})\$?(\d+)$")
-
 
 # `A1#`, `$A$1#`, `Sheet!A1#`, `'My Sheet'!A1#`; the lookbehind keeps names like `X1A1#` whole.
 _SPILL_REF = re.compile(r"(?<![\w.$!'])((?:(?:'(?:[^']|'')+'|[A-Za-z_][\w.]*)!)?\$?[A-Za-z]{1,3}\$?\d+)#")
@@ -439,8 +439,7 @@ def _entered(sheet: str, a1: str, raw: dict[str, Any], formatted: bool) -> Enter
 
 
 def _record_backend_steps(wb: xlsxwriter.Workbook, spec: dict[str, Any], entered: list[Entered]) -> None:
-    """Records what an oracle backend does beyond recalculating, as custom properties: typed entries,
-    sheet edits and the cells whose displayed text it reads."""
+    """Records what an oracle backend does after load, as custom properties (api_names.py too)."""
     for n, entry in enumerate(entered, start=1):
         # An A1 entry keeps its three elements, so workbooks built before R1C1 entry stay byte-identical.
         value = [entry.sheet, entry.a1, entry.text, *([R1C1_MODE] if entry.r1c1 else [])]
@@ -449,6 +448,7 @@ def _record_backend_steps(wb: xlsxwriter.Workbook, spec: dict[str, Any], entered
         set_json_property(wb, f"{SHEET_OP_PROPERTY}.{n}", list(sheet_op(op)), f"sheet op {n}")
     for n, key in enumerate(spec.get("text", ()), start=1):
         set_json_property(wb, f"{TEXT_PROPERTY}.{n}", list(_text_cell(key)), f"text cell {key}")
+    record_api_names(wb, spec)
 
 
 class Entered(NamedTuple):

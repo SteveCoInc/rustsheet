@@ -139,7 +139,7 @@ workbook (createSession 501), so the published 255 is no limit at all. The engin
 and the cell keeps its content (`is_limit_error`), and the importer refuses the workbook, for cell formulas and defined-name
 bodies (T-2762; name bodies are unprobed; the importer's scan stops at the first token the lexer rejects, so a literal
 after one loads as a parse error).
-Unprobed: built-in (`_xlnm.*`) and sheet-scoped name bodies (the limit is applied to every definedName), a name defined through the API, desktop Excel, and `_xHHHH_` escapes inside `<f>` text (the spec-to-xlsx
+Unprobed: built-in (`_xlnm.*`) and sheet-scoped name bodies (the limit is applied to every definedName), the length limit of a name defined through the API (its call cap was probed, T-3264), desktop Excel, and `_xHHHH_` escapes inside `<f>` text (the spec-to-xlsx
 writer cannot emit them raw; T-1075 item 8).
 Notes: the first attempts (a single string literal of 4,090 or 4,100 emoji) were refused as well; the 4,095-unit string-literal limit (see "Typed" above; the published figure is 255) is the cause: 4,090 emoji are 8,180 units for the literals, which is why the cases split them.
 Status: VERIFIED (excel-graph, file load)
@@ -255,6 +255,17 @@ Defined names (T-3143): a name body of 65 nested ABS calls loads and evaluates
 importer refuses both workbooks Excel refuses, cell formulas and name bodies (`reparse_formula_hack`).
 `Input::StoredFormula` through the API is not checked (it keeps 66 calls, as it keeps `=SUM()`):
 Excel has no per-cell stored entry to probe, only the whole file.
+A name defined through the API is held to the same 65 (T-3264, probes/t3264-api-name-*, excel-graph
+2026-11-04): Graph `names/add` accepts a body of 65 nested ABS calls (`=N` is 1, api-name-65) and
+refuses one of 66 with 400 `InvalidArgument`, which leaves the name undefined (`=N` is `#NAME?`,
+api-name-66). RustSheet's `Txn::define_name` (`Model::define_name`) refuses the same body
+(`EditError::DefinedName` naming `TOO_MANY_NESTED_CALLS_MESSAGE`); the loading path leaves the check
+to the importer. A name's calls do not count toward the formula that uses it (T-3264,
+probes/t3264-name*, stored and typed alike): with N nesting 40 calls, `=ABS^25(N)` and `=ABS^26(N)`
+(65 and 66 in all) load and evaluate (name40-cell25, name40-cell26, name40-cell26-typed), and so does
+`=ABS^65(N)` with N nesting 65 (130 in all; name65-cell65, name65-cell65-typed). RustSheet counts each
+formula alone and matches. Unprobed: renaming or editing a name's body through the API (Graph has no
+endpoint that sets it), sheet-scoped names added through the API (`Txn::define_sheet_name` refuses them by the same rule), and desktop Excel's Name Manager.
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,
@@ -263,8 +274,8 @@ t3263-dv-abs-65), and the same at 66 make Excel refuse the workbook (createSessi
 file limit (the UI's): a 299-character `1+1+...+1` loads in both (t3263-cf-long-299, t3263-dv-long-299),
 as do the 326-character 65-call formulas. The importer refuses the same workbooks
 (`check_rule_formulas`). Unprobed: other rule types (`cellIs` formulas, whole/decimal/list/date data
-validation, whose formulas are not checked), the x14 `extLst` forms, names defined through the API, and
-whether a name's use counts its body's calls toward the using formula (T-3264).
+validation, whose formulas are not checked), and the x14 `extLst` forms (names defined through the API
+and a name's calls in the using formula: T-3264, above).
 The refused T-3143 inputs (`single-inner-65-stored`, `single-mid-65-stored`, `anchor-inner-65-stored`,
 `single-spelled-65-typed`, `name-body-66`) were dropped after the run.
 Bare parentheses and unary sign runs have caps of their own (T-3172, probes/t3172-*, excel-graph
@@ -294,9 +305,9 @@ sign runs T-3172 probed (minus up to 1,024, plus and alternating up to 1,023; T-
 64 and 65 levels of `(ABS(` (t3097-nesting-paren-abs-64 and -65; T-3197, decision 0184: a call at a
 group's head costs less depth), which RustSheet refused until then. The DEVIATION below is the
 depth bound on shapes past Excel's caps, which protects the stack (directive 5): up to 72 levels of
-`(ABS(` parse, and those past Excel's 65 calls are refused only on the typed and import paths (a
-defined-name body only on import), not through `Input::StoredFormula` or a name the API defines
-(T-3143). Measured on a 1 MiB stack in a release
+`(ABS(` parse, and those past Excel's 65 calls are refused only on the typed, import and
+name-definition paths (a defined-name body on import, T-3143, and through `Txn::define_name`, T-3264),
+not through `Input::StoredFormula`. Measured on a 1 MiB stack in a release
 build before T-3191 and T-3197, the
 parser alone overflowed at about 292 recursively nested parentheses (about 3.5 KB per level, as
 each one passes through the whole precedence chain), 180 nested `ABS(` and 112 nested `(ABS(`;
