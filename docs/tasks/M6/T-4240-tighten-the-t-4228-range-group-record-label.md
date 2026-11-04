@@ -3,7 +3,7 @@ id: T-4240
 title: "Tighten the T-4228 range-group record: label format, the <start item, the rounding model, and an owner for the relabel quirk"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
