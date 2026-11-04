@@ -14,6 +14,7 @@ use std::collections::HashMap;
 
 use super::stringify::bound_variables::{walk_names, NameSite};
 use super::Node;
+use crate::expressions::utils::spelled_like_a1_cell;
 use crate::types::DefinedName;
 
 /// Characters Excel keeps apart from their upper-case form in a name, though `to_uppercase` merges them.
@@ -87,6 +88,25 @@ impl CallNameSpellings {
         });
         changed
     }
+}
+
+/// Gives every name spelled like an A1 cell that no LET or LAMBDA binds (used or called) the
+/// quoted spelling `'f1'`. Typed in R1C1 mode, `=f1`, `=F1+1` and `=SUM(f1,2)` read such a
+/// name, an undefined one (`#NAME?`), and FORMULATEXT quotes it like a sheet name: `='f1'`,
+/// `='AB12'*2`, `=SUM('f1',2)`, `='f1'(2)` (probes/t3897-r1c1-let-cell-names A8:C10,
+/// probes/t4040-r1c1-unbound-cell-names A7:C13, excel-graph, T-4040); a name that is no cell
+/// stays bare (`=Xfe1`). The quoted spelling is no name a LET can declare and no defined name,
+/// so it evaluates to `#NAME?`; the R1C1 storage form writes it `_xlpm.f1` (`variable_text`),
+/// which this reads back quoted.
+pub(super) fn quote_unbound_cell_shaped_names(node: &mut Node) {
+    walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
+        if declared.is_none()
+            && matches!(site, NameSite::Use | NameSite::Callee)
+            && spelled_like_a1_cell(name)
+        {
+            *name = format!("'{name}'");
+        }
+    });
 }
 
 #[cfg(test)]

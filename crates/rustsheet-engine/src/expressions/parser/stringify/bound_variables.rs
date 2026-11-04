@@ -2,7 +2,7 @@
 
 use super::super::{for_each_chain_operand_mut, Node};
 use crate::expressions::types::CellReferenceRC;
-use crate::expressions::utils::{parse_reference_a1, reads_as_r1c1_cell};
+use crate::expressions::utils::{reads_as_r1c1_cell, spelled_like_a1_cell};
 use crate::functions::logical::same_variable;
 use crate::functions::Function;
 use crate::language::get_default_language;
@@ -157,36 +157,12 @@ pub(super) fn prefix_bound_variables(node: &mut Node) {
     });
 }
 
-/// Whether `name` is spelled like an A1 cell (`f1`, `AB12`, any case).
-fn spelled_like_a1_cell(name: &str) -> bool {
-    parse_reference_a1(&name.to_ascii_uppercase()).is_some()
-}
-
-/// The name inside `'f1'`, the quoted spelling [`quote_unbound_cell_shaped_names`] gives an
+/// The name inside `'f1'`, the quoted spelling `quote_unbound_cell_shaped_names` (`call_names`) gives an
 /// unbound name spelled like an A1 cell.
 fn unquoted_cell_shaped_name(name: &str) -> Option<&str> {
     name.strip_prefix('\'')
         .and_then(|name| name.strip_suffix('\''))
         .filter(|inner| spelled_like_a1_cell(inner))
-}
-
-/// Gives every name spelled like an A1 cell that no LET or LAMBDA binds (used or called) the
-/// quoted spelling `'f1'`. Typed in R1C1 mode, `=f1`, `=F1+1` and `=SUM(f1,2)` read such a
-/// name, an undefined one (`#NAME?`), and FORMULATEXT quotes it like a sheet name: `='f1'`,
-/// `='AB12'*2`, `=SUM('f1',2)`, `='f1'(2)` (probes/t3897-r1c1-let-cell-names A8:C10,
-/// probes/t4040-r1c1-unbound-cell-names A7:C13, excel-graph, T-4040); a name that is no cell
-/// stays bare (`=Xfe1`). The quoted spelling is no name a LET can declare and no defined name,
-/// so it evaluates to `#NAME?`; the R1C1 storage form writes it `_xlpm.f1` ([`variable_text`]),
-/// which this reads back quoted.
-pub(crate) fn quote_unbound_cell_shaped_names(node: &mut Node) {
-    walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
-        if declared.is_none()
-            && matches!(site, NameSite::Use | NameSite::Callee)
-            && spelled_like_a1_cell(name)
-        {
-            *name = format!("'{name}'");
-        }
-    });
 }
 
 /// Gives every LET name and LAMBDA parameter spelled like an A1 cell (`f1`, `a1`), at its
@@ -195,7 +171,7 @@ pub(crate) fn quote_unbound_cell_shaped_names(node: &mut Node) {
 /// is no reference. Excel binds a bound one (probes/t3897-r1c1-let-cell-names, T-3897), which the
 /// typed A1 entry then binds too instead of refusing it as it refuses `f1` typed in A1 mode
 /// (decision 0103); an unbound one is Excel's undefined name (`#NAME?`, A8:A10, A13), which the
-/// typed A1 entry reads back quoted ([`quote_unbound_cell_shaped_names`], T-4040) where bare A1
+/// typed A1 entry reads back quoted (`quote_unbound_cell_shaped_names` (`call_names`), T-4040) where bare A1
 /// text would read the cell, and Excel refuses `='f1'` typed in either mode
 /// (probes/t4040-r1c1-unbound-cell-names A1:A6).
 fn prefix_a1_cell_shaped_variables(node: &mut Node) {
@@ -220,12 +196,12 @@ pub(crate) fn to_english_string_typed_from_r1c1(node: &Node, context: &CellRefer
 /// Whether a stored (R1C1) formula would read `name` back as a cell, or as another name: an R1C1
 /// cell (`R1C1`, T-1658), or a name spelled like an A1 cell (`f1`, T-2040), which the R1C1 lexer
 /// reads as a name, but quoted when no LET or LAMBDA binds it
-/// ([`quote_unbound_cell_shaped_names`]).
+/// (`quote_unbound_cell_shaped_names` (`call_names`)).
 fn reads_back_as_cell(name: &str) -> bool {
     reads_as_r1c1_cell(name) || spelled_like_a1_cell(name)
 }
 
-/// The text of the quoted name `'f1'` ([`quote_unbound_cell_shaped_names`]), when `name` is one:
+/// The text of the quoted name `'f1'` (`quote_unbound_cell_shaped_names` (`call_names`)), when `name` is one:
 /// quoted in A1 output, as Excel's FORMULATEXT shows it, and `_xlpm.f1` in the R1C1 storage form
 /// (no `context`) and in a file (`export_to_excel`), which the parser reads back quoted. Excel
 /// reads a file's unbound `_xlpm.f1` as an undefined name too (`#NAME?`,

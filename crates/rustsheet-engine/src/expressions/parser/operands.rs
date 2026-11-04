@@ -6,7 +6,8 @@
 use super::super::token::{self, TableReference, TokenType};
 use super::super::types::ParsedReference;
 use super::super::utils::{
-    is_out_of_range_r1c1_name, parse_dotted_a1_range, parse_reference_a1, quote_name,
+    is_out_of_range_r1c1_name, parse_dotted_a1_range, parse_spelled_a1_cell, quote_name,
+    spelled_like_a1_cell,
 };
 use super::reference_operators::is_reference_operand;
 use super::structured_reference::{
@@ -465,7 +466,7 @@ impl Parser {
                     ..
                 },
                 Node::ReferenceKind { .. } | Node::WrongReferenceKind { .. },
-            ) if parse_reference_a1(&text.to_ascii_uppercase()).is_some() => {
+            ) if spelled_like_a1_cell(text) => {
                 if self.cell_shaped_binding.is_none() {
                     self.cell_shaped_binding = Some(text.to_string());
                 }
@@ -677,7 +678,7 @@ impl Parser {
         // (`LET(mk,..,add5,mk(5),add5(1))`, T-2040). A1 grammar only: in R1C1 mode (stored
         // forms, and the raw A1 text of a formula that did not parse) `AB1` is no cell, and reading
         // it as one would turn A1 coordinates into R1C1 offsets.
-        if let Some(cell) = parse_reference_a1(&name.to_ascii_uppercase()).filter(|_| {
+        if let Some(cell) = parse_spelled_a1_cell(&name).filter(|_| {
             self.lexer.is_a1_mode()
                 && !name.contains('$')
                 && !self.binds_reference_shaped_name(&name)

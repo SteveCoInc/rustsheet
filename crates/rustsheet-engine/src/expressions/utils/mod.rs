@@ -273,6 +273,16 @@ fn leading_number(text: &[u8], position: &mut usize) -> Option<i32> {
     (*position > start).then_some(number)
 }
 
+/// The A1 cell `name` is spelled like (`f1`, `AB12`, any case), if it is one.
+pub fn parse_spelled_a1_cell(name: &str) -> Option<ParsedReference> {
+    parse_reference_a1(&name.to_ascii_uppercase())
+}
+
+/// Whether `name` is spelled like an A1 cell (`f1`, `AB12`, any case).
+pub fn spelled_like_a1_cell(name: &str) -> bool {
+    parse_spelled_a1_cell(name).is_some()
+}
+
 pub fn parse_reference_a1(r: &str) -> Option<ParsedReference> {
     let chars = r.chars();
     let mut absolute_column = false;
