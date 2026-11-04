@@ -484,8 +484,19 @@ fn parse_percent_or_currency(
             .map(|p| (p, -1.0))
             .or_else(|| value.strip_prefix(currency).map(|p| (p, 1.0)));
         if let Some((p, sign)) = prefixed {
-            let (f, options) =
-                parse_number(p.trim_matches(' '), decimal_separator, group_separator)?;
+            let p = p.trim_matches(' ');
+            // Excel: a currency sign before a parenthesised unsigned amount is negative, `$(12)`
+            // and `$ (12)` are -12 with `$#,##0_);[Red]($#,##0)`, but `-$(12)`, `$(-12)` and
+            // `(12$)` stay text (probes/t4117-currency-parens A1-A10,
+            // docs/excel-semantics/coercion.md "Currency sign before parentheses").
+            let (p, sign) = match p.strip_prefix('(').and_then(|v| v.strip_suffix(')')) {
+                Some(inner) if sign < 0.0 || inner.starts_with(['-', '+', '(', ' ']) => {
+                    return Err("Cannot parse number".to_string())
+                }
+                Some(inner) => (inner, -1.0),
+                None => (p, sign),
+            };
+            let (f, options) = parse_number(p, decimal_separator, group_separator)?;
             // Excel: `-$1e3` is -1000 like `$-1e3` (typed-currency-percent-input A29).
             let f = sign * f;
             if options.is_scientific {

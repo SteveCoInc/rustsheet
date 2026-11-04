@@ -3,7 +3,7 @@ id: T-4117
 title: "Typed $(12): a currency sign before parentheses is a negative number in Excel ($(١٢) is -12), text in ours"
 milestone: M5
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -29,3 +29,6 @@ ENTERED formats.
 
 ## Out of scope
 - Script-digit tags (T-3891).
+
+## Outcome
+Probed ASCII forms (probes/t4117-currency-parens, excel-graph): `$(12)`, `$ (12)`, `$(1,234.5)`, `$(12.5)` are negative numbers by typing, VALUE, NUMBERVALUE and `+0`; `-$(12)`, `$(-12)`, `(12$)`, `($)12`, `(12)$` are text/#VALUE!. `parse_percent_or_currency` now reads a currency-prefixed parenthesised unsigned amount as negative, which also fixes the script-digit `$(١٢)` (t3891 B29:C29). Rule in docs/excel-semantics/coercion.md. New probe: 50/50 cells pass.

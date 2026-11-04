@@ -1,0 +1,97 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4117: ASCII currency sign before/after parentheses. A=typed text, B=ISNUMBER, C=number or text, D=VALUE, E=NUMBERVALUE, F=text+0 of the same literal.",
+ "tags": [
+  "M5",
+  "probe",
+  "coercion",
+  "T-4117"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": {
+     "entered": "$(12)"
+    },
+    "B1": "=ISNUMBER(A1)",
+    "C1": "=IF(ISNUMBER(A1),A1,\"text\")",
+    "D1": "=IFERROR(VALUE(\"$(12)\"),\"err\")",
+    "E1": "=IFERROR(NUMBERVALUE(\"$(12)\"),\"err\")",
+    "F1": "=IFERROR(\"$(12)\"+0,\"err\")",
+    "A2": {
+     "entered": "$(1,234.5)"
+    },
+    "B2": "=ISNUMBER(A2)",
+    "C2": "=IF(ISNUMBER(A2),A2,\"text\")",
+    "D2": "=IFERROR(VALUE(\"$(1,234.5)\"),\"err\")",
+    "E2": "=IFERROR(NUMBERVALUE(\"$(1,234.5)\"),\"err\")",
+    "F2": "=IFERROR(\"$(1,234.5)\"+0,\"err\")",
+    "A3": {
+     "entered": "$ (12)"
+    },
+    "B3": "=ISNUMBER(A3)",
+    "C3": "=IF(ISNUMBER(A3),A3,\"text\")",
+    "D3": "=IFERROR(VALUE(\"$ (12)\"),\"err\")",
+    "E3": "=IFERROR(NUMBERVALUE(\"$ (12)\"),\"err\")",
+    "F3": "=IFERROR(\"$ (12)\"+0,\"err\")",
+    "A4": {
+     "entered": "($12)"
+    },
+    "B4": "=ISNUMBER(A4)",
+    "C4": "=IF(ISNUMBER(A4),A4,\"text\")",
+    "D4": "=IFERROR(VALUE(\"($12)\"),\"err\")",
+    "E4": "=IFERROR(NUMBERVALUE(\"($12)\"),\"err\")",
+    "F4": "=IFERROR(\"($12)\"+0,\"err\")",
+    "A5": {
+     "entered": "(12$)"
+    },
+    "B5": "=ISNUMBER(A5)",
+    "C5": "=IF(ISNUMBER(A5),A5,\"text\")",
+    "D5": "=IFERROR(VALUE(\"(12$)\"),\"err\")",
+    "E5": "=IFERROR(NUMBERVALUE(\"(12$)\"),\"err\")",
+    "F5": "=IFERROR(\"(12$)\"+0,\"err\")",
+    "A6": {
+     "entered": "$(12.5)"
+    },
+    "B6": "=ISNUMBER(A6)",
+    "C6": "=IF(ISNUMBER(A6),A6,\"text\")",
+    "D6": "=IFERROR(VALUE(\"$(12.5)\"),\"err\")",
+    "E6": "=IFERROR(NUMBERVALUE(\"$(12.5)\"),\"err\")",
+    "F6": "=IFERROR(\"$(12.5)\"+0,\"err\")",
+    "A7": {
+     "entered": "-$(12)"
+    },
+    "B7": "=ISNUMBER(A7)",
+    "C7": "=IF(ISNUMBER(A7),A7,\"text\")",
+    "D7": "=IFERROR(VALUE(\"-$(12)\"),\"err\")",
+    "E7": "=IFERROR(NUMBERVALUE(\"-$(12)\"),\"err\")",
+    "F7": "=IFERROR(\"-$(12)\"+0,\"err\")",
+    "A8": {
+     "entered": "$(-12)"
+    },
+    "B8": "=ISNUMBER(A8)",
+    "C8": "=IF(ISNUMBER(A8),A8,\"text\")",
+    "D8": "=IFERROR(VALUE(\"$(-12)\"),\"err\")",
+    "E8": "=IFERROR(NUMBERVALUE(\"$(-12)\"),\"err\")",
+    "F8": "=IFERROR(\"$(-12)\"+0,\"err\")",
+    "A9": {
+     "entered": "($)12"
+    },
+    "B9": "=ISNUMBER(A9)",
+    "C9": "=IF(ISNUMBER(A9),A9,\"text\")",
+    "D9": "=IFERROR(VALUE(\"($)12\"),\"err\")",
+    "E9": "=IFERROR(NUMBERVALUE(\"($)12\"),\"err\")",
+    "F9": "=IFERROR(\"($)12\"+0,\"err\")",
+    "A10": {
+     "entered": "(12)$"
+    },
+    "B10": "=ISNUMBER(A10)",
+    "C10": "=IF(ISNUMBER(A10),A10,\"text\")",
+    "D10": "=IFERROR(VALUE(\"(12)$\"),\"err\")",
+    "E10": "=IFERROR(NUMBERVALUE(\"(12)$\"),\"err\")",
+    "F10": "=IFERROR(\"(12)$\"+0,\"err\")"
+   }
+  }
+ ]
+}

@@ -1203,3 +1203,11 @@ Implemented in: the engine matches every cell except MULTINOMIAL numeric text (C
 SERIESSUM boolean coefficients fixed in T-1191.
 Status: VERIFIED
 Tasks: T-1082, T-1190, T-1191, T-1261, T-1574, T-1655, T-1661
+
+## Currency sign before parentheses
+
+A currency sign followed by a parenthesised unsigned amount is a negative number, typed and by
+coercion: `$(12)`, `$ (12)` and `$(1,234.5)` are -12 and -1234.5, typed with the format
+`$#,##0_);[Red]($#,##0)` (two decimals when the amount has them). `-$(12)`, `$(-12)`, `$( 12)`,
+`(12$)`, `($)12` and `(12)$` are text / `#VALUE!` (probes/t4117-currency-parens A1-A10;
+`($12)` is the older paren-first form above). Implemented in `parse_percent_or_currency`.

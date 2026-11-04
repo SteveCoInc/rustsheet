@@ -2108,6 +2108,7 @@ C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
 C	probes/t4099-file-xlpm-unbound-names.case.json	39
+C	probes/t4117-currency-parens.case.json	50
 C	probes/t4153-narrow-nbsp-accent.case.json	106
 C	probes/t4192-xlookup-error-return-wildcard-binary.case.json	54
 C	probes/t4193-aggregate-scalar-data-error-order.case.json	94
@@ -6242,8 +6243,6 @@ F	probes/t3881-imcsch-flip-start-negative.case.json	Calc!A3
 F	probes/t3883-im-overflow-reciprocal-sweep.case.json	Calc!A101
 F	probes/t3891-numeral-tag-render.case.json	Sheet1!A28
 F	probes/t3891-numeral-tag-render.case.json	Sheet1!A6
-F	probes/t3891-typed-script-digit-shapes.case.json	Sheet1!B29
-F	probes/t3891-typed-script-digit-shapes.case.json	Sheet1!C29
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A10
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A100
