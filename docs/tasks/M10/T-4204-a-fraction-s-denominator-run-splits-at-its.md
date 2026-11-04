@@ -3,7 +3,7 @@ id: T-4204
 title: "A fraction's denominator run splits at its first 0 after a ?, and a leading # drops: ?/?0, #0, 0?"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
