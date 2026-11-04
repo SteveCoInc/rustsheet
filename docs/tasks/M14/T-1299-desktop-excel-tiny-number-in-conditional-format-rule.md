@@ -3,7 +3,7 @@ id: T-1299
 title: "Desktop Excel: tiny number in conditional-format rule values; audit parse_finite_number sites"
 milestone: M14
 lane: engine
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -28,3 +28,7 @@ T-1100 showed typed cell entry follows the T-0154 tiny-number rule (probes/typed
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

@@ -237,11 +237,11 @@ before the tag and `B2` after it change nothing):
   skipped, whatever comes after the `b` and whatever the serial: `d` 13, `dd` 14, `ddd` 15, `dddd` (and longer) 16,
   `m` 17, `mm` 18 (also as minutes, `mm:ss|b`), `mmm` 19, `mmmm` 20, `h` 21, `hh` 22, `s` 25, `ss` 26 (also `ss.00`),
   `y` and `yy` 27, `yyy` to `yyyyy` 28, `AM/PM` and `A/P` (any case) 34, `[h]` and `[hh]` 48, `[m]` and `[mm]` 49,
-  `[s]` and `[ss]` 50, `aaa` 51, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
+  `[s]` and `[ss]` 50, `aaa` 51, `aaaa` and longer 52, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
   the `b` is first itself), `bbbb` 89 ("Y"). So `B2[$-40409]b` of 2023-03-15 is "2X", `yyyy|b` "01|2\u{1c}", `e|b`
   "01|28", `"x"b` "x2X", of 2000-01-01 `b` "\u{f01}X". (A guess, not evidence: the codes look like Excel's internal token codes.) `yyyy|e|b` is
-  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). The engine gives `aaa` `ddd`'s 15 (T-3089);
-  `aaaa` and other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
+  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). `aaa` and `aaaa` are 51 and 52 (probes/t3089-b2-aaa-code A1:A6, matched since T-3089);
+  Other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
 - The same as a cell number format (B1-B5).
 Rule (quirk, T-3029): after a `B2` before a tag whose calendar wins over it (every digit probed: 1, 2, 3, 4, 5, 7, 9, A
 and 11), every weekday token (`ddd`, `dddd`, `aaa`) after a `mmm` prints weekday number min(month, 7), Sunday being 1,
@@ -806,6 +806,17 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
   "15 kovas", "15 marec", "15 март" (nominative, as `mmmm` alone), and so are `d. mmmm yyyy`, `dd mmm`, `mmmm d`
   and `dddd, d mmmm`. Evidence: probes/text-locale-six-languages (276 cells, excel-graph, 2026-11-03).
   Ours: matches (`ID`, `SL`, `LT`, `TG`, `MK`, `KK` in locale/regional_date_names.rs).
+- **Indic names: bn-IN, mr-IN, ta-IN, te-IN, kn-IN, kok-IN, ne-NP** (T-2959). `[$-445]`, `[$-44E]`, `[$-449]`,
+  `[$-44A]`, `[$-44B]`, `[$-457]` and `[$-461]` print their own native-script names (Excel's, not CLDR's): January
+  `mmm|mmmm` is "জানু.|জানুয়ারী", "जाने.|जानेवारी", "ஜனவரி|ஜனவரி", "జన|జనవరి", "ಜನವರಿ|ಜನವರಿ", "जाने|जानेवारी",
+  "जन|जनवरी"; Sunday `ddd|dddd` "রবি.|রবিবার", "रवि.|रविवार", "ஞாயிறு|ஞாயிற்றுக்கிழமை", "ఆది|ఆదివారం", "ಭಾನು.|ಭಾನುವಾರ",
+  "आय.|आयतार", "आइत|आइतवार". `mmmmm` is the first code point ("জ", "ஜ"). The day halves are "AM"/"PM" for bn-IN and
+  te-IN, "म.पू."/"म.नं." for mr-IN and kok-IN, "காலை"/"மாலை" ta-IN, "ಪೂರ್ವಾಹ್ನ"/"ಅಪರಾಹ್ನ" kn-IN, "पूर्वाह्न"/"अपराह्न"
+  ne-NP. Quirk: kn-IN's April `mmmm` doubles its first letter, "ಏಏಪ್ರಿಲ್", while `mmm` is "ಎಪ್ರಿಲ್" (E4). Each of these
+  LCIDs has a locale for the calendar digits: Saka (10) prints the Latin Saka names ("Phalguna|Budhavara"), Hebrew (8)
+  the Latin Hebrew ones ("Adar|Yom Revi'i") and Hijri (6) the English Hijri ones ("Sha'ban|AlArbia'a"), not the
+  no-locale en-US names. Evidence: probes/t2959-indic-lcid-names (112 cells, excel-graph, 2026-11-04).
+  Ours: matches (locale/indic_date_names.rs).
 - **System tags.** `[$-F800]` and `[$-x-sysdate]` replace the whole section with the system long date, en-US "dddd, mmmm d, yyyy", whatever else it holds (`TEXT(45000.75,"x[$-F800]0")` is "Wednesday, March 15, 2023", 0.5 "Saturday, January 0, 1900", -1 and 3e6 `#VALUE!`); `[$-F400]`/`[$-x-systime]` likewise give "h:mm:ss AM/PM". Only a first section shows it: `TEXT(-1,"0;[$-F800]")`, `TEXT(0,"0;0;[$-F800]")` and `TEXT("abc","0;0;0;[$-F800]")` are "". With `@` the section is a text section as usual (`[$-F800]@` of 45000.75 is "45000.75").
 - **One tag per section.** A second tag in a section is `#VALUE!`, even the same one or a system tag (`[$-40C]mmmm [$-40C]mmmm`, `[$-40C]mmmm [$€-407]mmmm`, `[$-F800][$-F400]`); tags in different sections are fine.
 - **Regional variants and more languages** (probes/text-locale-regional-lcids, 252 cells, T-1858). The language fallback does not hold across regions: `[$-C07]` de-AT has "Jän"/"Jänner" for January, "Mär" for March, and `ddd` "Mi."/"Do." (de-DE differs in all three); `[$-1004]` zh-SG mixes the two: short months as zh-TW ("一月"), days as zh-CN ("周三"); `[$-C04]` zh-HK equals zh-TW ("週三"); `[$-80A]` es-MX and `[$-2C0A]` es-AR differ from es-ES in `ddd` and the day halves ("a. m."/"p. m."), and es-AR's halves use a non-breaking space where es-MX's use a plain one. Languages that now resolve: `[$-408]` Greek ("Ιαν", "πμ"/"μμ"), `[$-41E]` Thai (Thai names, AM/PM stay Latin), `[$-41B]` Slovak (short months are the numerals "1"…"12", like Japanese), `[$-422]` Ukrainian (AM/PM stay Latin), `[$-401]` Arabic ("ص"/"م"), `[$-40D]` Hebrew (AM/PM stay Latin), `[$-439]` Hindi ("पूर्वाह्न"/"अपराह्न"). Calendar and digit switches of Thai, Arabic and Hebrew are T-1859's.
@@ -879,7 +890,7 @@ Under every one of these, `e` stays the Gregorian four-digit year, and so do `b`
   (2023-03-22 is "1945-01-01", 2024-03-21 "1946-01-01"), and Chaitra then has 31 days; months 2-6 have 31, 7-12 30.
   `yy`, `b`, `bb` and `y` print two digits ("44"), `e`, `ee`, `yyy`, `yyyyy` and `bbbb` the Saka year. Serial 1 is
   "1821-10-11|Pausa", and so is serial 0; 59 is "1821-12-09". 9999-12-31 is "9921-10-10" with `yy` "21".
-  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and bn-IN 445 included): months Chaitra,
+  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and the Indic LCIDs 445, 44E, 449, 44A, 44B, 457 and 461 included): months Chaitra,
     Vaisakha, Jyaistha, Asadha, Sravana, Bhadra, Asvina, Karthika, Agrahayana, Pausa, Magha, Phalguna (`mmm` the same,
     `mmmmm` the first letter); `ddd` Ravi, Som, Mangal, Budh, Guru, Sukra, Sani; `dddd` Ravivara, Somavara, Mangalvara,
     Budhavara, Guruvara, Sukravara, Sanivara.

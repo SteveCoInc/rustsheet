@@ -35,7 +35,8 @@ up), not because of more fitted cuts. In particular `CHISQ.INV.RT(1E-300,df)` fo
   If one model explains all of them, it replaces the fitted cuts `BAND_UPPER_SLOPE`, `BAND_UPPER_EDGE` and
   `BAND_LOWER_EDGE`, and T-3396's miss (`GAMMA.INV(1E-80,1E10,1)`, `#NUM!` where the cut says a value) is the test of
   it.
-- Evidence to start from: probes/t3350-chisq-inv-huge-df, probes/t3350-gamma-inv-band-lower-edge,
+- Evidence to start from: probes/t3396-gamma-inv-band-huge (the band closing from both sides at 7E9 to 1.2E10,
+  T-3396's attempt 1), probes/t3350-chisq-inv-huge-df, probes/t3350-gamma-inv-band-lower-edge,
   probes-numeric/t3350-r4-chisq-inv-sweep, probes/t3070-gamma-inv-band, probes/t2982-gamma-inv-huge-shape;
   docs/excel-semantics/statistics.md "GAMMA.INV and CHISQ.INV at a huge shape"; docs/research/t3350/sweep.py (the
   mpmath reference).

@@ -3,7 +3,7 @@ id: T-0198
 title: "Probe and implement 3-D reference edit semantics (sheet insert/delete/move inside a span, row and column edits)"
 milestone: M14
 lane: engine
-status: blocked
+status: dropped
 priority: P3
 size: M
 tier: opus
@@ -36,3 +36,7 @@ Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or
 over COM (`Worksheets.Add`, `Worksheet.Delete`, `Worksheet.Move`, `Range.Insert`, `Range.Delete`)
 and saving the rewritten formulas. Unblock when `cd tools && uv run rustsheet-oracle status` shows
 `excel-desktop OK` and T-1074 is done.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

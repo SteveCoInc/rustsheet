@@ -3,7 +3,7 @@ id: T-3314
 title: "Probe on desktop Excel the displayed text of a cell whose format TEXT() rejects as invalid"
 milestone: M14
 lane: research
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -23,3 +23,7 @@ T-3282 found that excel-graph refuses a workbook that carries such a code (`File
 
 ## Out of scope
 - Implementing the probe results beyond `displayed_text`.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

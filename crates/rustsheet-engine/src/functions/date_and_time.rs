@@ -133,13 +133,21 @@ fn is_feb29_between_consecutive_years(start: chrono::NaiveDate, end: chrono::Nai
     }
 }
 
-/// One TIME argument: [`near_integer_whole`], then `#NUM!` outside -32768..=32767.
+/// One TIME argument: [`near_integer_whole`], then `#NUM!` above 32767. A whole value below -32768
+/// wraps by 65536 into -32768..=32767 (`TIME(600,-32769,0)` is `TIME(600,32767,0)`), and one below
+/// -2^31 reads as 0, the way a clamp to the 32-bit minimum -2^31 (a multiple of 65536) would.
+/// Excel: dates.md "TIME: an argument past 32767 is `#NUM!`" (probes/t3678-time-argument-far-negative,
+/// probes/t3983-time-argument-below-131072; T-3983).
 fn time_argument(value: f64) -> Result<f64, Error> {
     let whole = near_integer_whole(value);
-    if (-32768.0..=32767.0).contains(&whole) {
-        Ok(whole)
-    } else {
+    if whole > 32767.0 {
         Err(Error::NUM)
+    } else if whole < -2_147_483_648.0 {
+        Ok(0.0)
+    } else if whole < -32768.0 {
+        Ok((whole + 32768.0).rem_euclid(65536.0) - 32768.0)
+    } else {
+        Ok(whole)
     }
 }
 

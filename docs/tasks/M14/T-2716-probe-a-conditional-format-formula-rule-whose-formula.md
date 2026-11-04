@@ -3,7 +3,7 @@ id: T-2716
 title: "Probe: a conditional format formula rule whose formula returns an array"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,7 @@ Phase 4 (decision 0039): not a "Needs owner" item, and it blocks no milestone or
 
 ## Out of scope
 - Making conditional formats evaluate on demand (T-0468).
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

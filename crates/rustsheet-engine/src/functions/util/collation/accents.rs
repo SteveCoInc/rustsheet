@@ -36,9 +36,10 @@ fn accent_units(elements: impl Iterator<Item = Element>) -> impl Iterator<Item =
             }
             // Excel: a weightless character ends the letter before it, so a mark after it is a
             // lone mark (probes/t4060-collation-open-choices Calc!B50:B63, T-4072).
+            // ... but not a hyphen's or apostrophe's (probes/t4086-collation-later-passes
+            // Calc!B10:B22, T-4087): `after_skipped` stays.
             Element::Weightless => {
                 started = false;
-                after_skipped = false;
                 [None, None]
             }
             Element::Mark(_) if after_skipped => [None, None],

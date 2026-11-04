@@ -6,6 +6,7 @@
 //! probes/text-locale-six-languages), except the morning "AM" of locales whose afternoon is "PM", which
 //! is probed for fr, de, de-AT, th, sk, uk and he only.
 
+use super::indic_date_names::{BN, KN, KOK, MR, NE, TA, TE};
 use super::regional_date_names::{
     AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
     TH, UK, ZH_SG,
@@ -665,7 +666,7 @@ pub(crate) static BCP47_ONLY: [(&str, &DateNames); 1] = [("pt-AO", &PT_AO)];
 
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 55] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
     (0x40C, "fr-FR", &FR),
@@ -714,6 +715,13 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 48] = [
     (0x428, "tg-Cyrl-TJ", &TG),
     (0x42F, "mk-MK", &MK),
     (0x43F, "kk-KZ", &KK),
+    (0x445, "bn-IN", &BN),
+    (0x44E, "mr-IN", &MR),
+    (0x449, "ta-IN", &TA),
+    (0x44A, "te-IN", &TE),
+    (0x44B, "kn-IN", &KN),
+    (0x457, "kok-IN", &KOK),
+    (0x461, "ne-NP", &NE),
 ];
 
 /// The names of en-US, the locale of the system tags.
