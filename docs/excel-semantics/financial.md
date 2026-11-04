@@ -3509,10 +3509,11 @@ maturity (321).
   period and `nq` 0 to 4, every frequency and basis, excel-graph 2026-11-03: 157 pass bit-exact or within the harness' ulp
   tolerance (the model without the extra coupons passes 72). Off: S!A80 (1 ulp) and S!A61, S!A70, both a
   28 February first coupon and maturity (a month-end schedule), 4e-11 and 7e-11 relative (T-3988).
-  Hold-out (R4.1): the model was chosen on the 73 long-first cells above (train) and held out on the fresh sweep
-  (never tuned on; margin 5 points, stated before it was scored). Bit-exact / within 4 ulp / within 15 digits: this
-  slope 73/73/73 of 73 and 157/158/158 of 160; ODDFPRICE's root, rounded, 0/0/0 and 0/1/2 (Excel is 3e-12 to 3e-8
-  relative from it). Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
+  Hold-out (R4.1): the fit lab's split (`is_holdout`), applied after the lab scored to the 73 long-first cells above
+  that the model was chosen on, gives this slope 45/45/45 of 45 train and 28/28/28 of 28 test (bit-exact / within
+  4 ulp / within 15 digits) and ODDFPRICE's root, rounded, 0/0/0 on both; on the fresh sweep, never tuned on (margin
+  5 points), the slope is 157/158/158 of 160 (105/106/106 of its 108 cells with `nq` >= 1) and the root 0/1/2
+  (0/0/0). Excel is 3e-12 to 3e-8 relative from the root. Gate A for S!A61 and S!A70: the 50-digit mpmath roots of ODDFPRICE(y) = price over the
   engine's schedule are 0.077480666073101446 and 0.12192508630779288; Excel is -3.7e-11 and +4.9e-11 relative of them,
   ours -9.0e-11 and +1.2e-10, inside the 1e-9 envelope (T-3999 files the ODDFYIELD math model and table).
   T-3031 attempt 1 (same day, without the shift) tried 12 lead-term slopes and five other starts with no long-first
@@ -3520,8 +3521,7 @@ maturity (321).
 Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bonds/yield_solver.rs), which runs
 `excel_yield_newton` with `OddFirstSchedule::dprice`, the slope above; before T-2007 it was a central-difference Newton
 from the coupon rate with a bisection fallback, landing on the root.
-Status: UNVERIFIED (a fitted structural model; the month-end long first periods are not explained); the values are
-oracle-backed
+Status: UNVERIFIED (a fitted structural model; the month-end long first periods are not explained); the values are oracle-backed.
 Tasks: T-2007 (the fit), T-3031 (the long first periods), T-1374 (ODDFPRICE's own last digits), T-1592 (YIELD)
 
 ## YIELD's #NUM! cells and its 100-step cap
