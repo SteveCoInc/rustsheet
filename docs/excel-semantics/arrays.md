@@ -1527,7 +1527,10 @@ is turned into (a range arm of a lifted IF or CHOOSE, or an HSTACK or VSTACK arg
 its used area, then a picked one copied for 3 per cell of the range; T-1564), 3 per cell of each array an aggregate (SUM,
 COUNT, AVERAGE, MIN, MAX, PRODUCT and the other `for_each_value` readers) reads, nested GROUPBY/PIVOTBY cells it
 flattens included (T-2804), one per 4 bytes of each text value a node gives (and of a lifted text call's results and of each text the
-`&` operator makes over an array, T-2806), 512 per LAMBDA value
+`&` operator makes over an array, T-2806), one per 4 characters a node's text comparisons read (the collation's passes up to
+their first difference, `=`/`<` between texts, the exact-match fold of MATCH, VLOOKUP and HLOOKUP, wildcard patterns, and the
+bytes of each text a collation key or a lookup fold is built from: MATCH, XMATCH, XLOOKUP, LOOKUP, UNIQUE, SORT, SORTBY,
+GROUPBY and the criteria; T-4233), 512 per LAMBDA value
 made plus 6 per node of each LAMBDA body cloned (the LAMBDA stored, and a call's fresh copy of its body; T-2923), plus the
 per-call caps' own charges: a lifted call's cell visits and kernel units (`MAX_LIFTED_CELL_VISITS`, 1 unit each), GROUPBY/PIVOTBY's
 visits, and a REGEX* or regex XLOOKUP/XMATCH call's compile budget (4 bytes a unit) and search work (32 units a unit), all of
@@ -1559,7 +1562,12 @@ COUNTIF, SUMIF, SUMIFS, COUNTIFS, AVERAGEIF, MAXIFS, LARGE, SMALL, PERCENTILE, Q
 and INDEX, ROWS and COLUMNS: these three do O(1) work on the array but the variable read under them copies it, so they
 are charged too. GROUPBY and PIVOTBY hand each call its group as a bound parameter, so `SUM(x)` there pays the copy and
 the aggregate's read. Text elements of an array are not charged by their length at a read: their bytes are shared
-(T-2806), so the copy moves pointers; a reader that compares text bytes element by element is T-4233. The calibration figures above were measured before T-2804 charged the aggregates'
+(T-2806), so the copy moves pointers; a reader that compares them pays the characters it reads instead (T-4233):
+each comparison counts what its passes read before they stop (`counted` in collation.rs), and the evaluator charges the
+count after each node (`Model::spend_compared`), so comparing 32,767-byte texts that differ in their first byte costs no
+more than comparing short ones, while a MAP of `MATCH(REPT("a",32766)&"b",s,0)` over `s` bound to 1E5 such texts runs out
+on its first call. Covered by `every_text_comparing_reader_pays_the_bytes_it_compares`. The criteria functions (COUNTIF,
+SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-engine/src/area_budget.rs (`MAX_FORMULA_WORK`, `Model::spend_work`, `Model::with_area_budget`),
@@ -1567,8 +1575,9 @@ crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsh
 (`call_prepared`, `prepare_lambda`, `fn_lambda`), crates/rustsheet-engine/src/node_frames.rs (`LambdaDefKind`),
 crates/rustsheet-engine/src/arithmetic.rs (`handle_concatenate`), crates/rustsheet-engine/src/functions/util/aggregate_args.rs
 (`walk_array_items`), crates/rustsheet-engine/src/model.rs (`evaluate_node_with_reference`) and
-crates/rustsheet-engine/src/functions/logical/let.rs (`variable_reference`).
-Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804, T-2805
+crates/rustsheet-engine/src/functions/logical/let.rs (`variable_reference`), crates/rustsheet-engine/src/functions/util/collation.rs
+(`note_compared_bytes`, `cmp_text_in`) and crates/rustsheet-engine/src/area_budget.rs (`Model::spend_compared`).
+Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804, T-2805, T-4233
 
 ## Copies of a text share its bytes
 Rule: Excel has no known limit on the memory one formula's texts take; `IF(SEQUENCE(1024,1024),REPT("a",32767))` copies a

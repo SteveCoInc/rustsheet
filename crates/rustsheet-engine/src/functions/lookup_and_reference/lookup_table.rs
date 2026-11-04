@@ -7,7 +7,9 @@ use crate::{calc_result::CalcResult, model::Model};
 use super::array_node_to_calc_result;
 use crate::functions::binary_search::Sequence;
 use crate::functions::criteria::{folded_units, WildcardPattern};
-use crate::functions::util::collation::{collation_key, fold_exact_lookup, CollationKey};
+use crate::functions::util::collation::{
+    collation_key, fold_exact_lookup, note_compared_bytes, CollationKey,
+};
 use crate::functions::util::{compare_values, compare_values_pairwise};
 use std::cmp::Ordering;
 use std::collections::HashMap;
@@ -200,10 +202,16 @@ impl ExactKey {
     fn text_is(units: &[u16], value: &CalcResult) -> bool {
         match value {
             CalcResult::String(crate::text::Text::Utf8(s)) if s.is_ascii() => {
-                s.len() == units.len()
-                    && s.bytes()
-                        .zip(units)
-                        .all(|(byte, &unit)| u16::from(byte.to_ascii_lowercase()) == unit)
+                if s.len() != units.len() {
+                    return false;
+                }
+                // The bytes walked up to the first difference are charged (T-4233).
+                let differs = s
+                    .bytes()
+                    .zip(units)
+                    .position(|(byte, &unit)| u16::from(byte.to_ascii_lowercase()) != unit);
+                note_compared_bytes(differs.map_or(s.len(), |at| at + 1));
+                differs.is_none()
             }
             CalcResult::String(s) => fold_exact_lookup(&folded_units(s)) == units,
             _ => false,

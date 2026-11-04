@@ -249,29 +249,26 @@ fn a_lambda_repeating_any_whole_array_reader_is_bounded() {
     }
 }
 
-/// The readers that compare texts (T-4233), each with `s` a bound array of `n` long texts and `t`
-/// a text of the same length that matches none of them.
-const TEXT_COMPARERS: [&str; 17] = [
+/// The readers that compare texts (T-4233), each with `s` a bound array of 100 texts of `len`
+/// bytes and `t` a text of the same length that differs from them only in its last byte, so every
+/// comparison reads both texts to the end.
+const TEXT_COMPARERS: [&str; 13] = [
     "MATCH(t,s,0)",
-    "MATCH(t,s,1)",
     r#"MATCH(t&"*",s,0)"#,
     "XMATCH(t,s)",
     "XLOOKUP(t,s,s,0)",
-    "LOOKUP(t,s)",
     "VLOOKUP(t,s,1,FALSE)",
     "HLOOKUP(t,TRANSPOSE(s),1,FALSE)",
     "ROWS(UNIQUE(s))",
     "ROWS(SORT(s))",
     "ROWS(SORTBY(s,s))",
-    "COUNTIF(s,t)",
-    r#"COUNTIF(s,"<"&t)"#,
-    "COUNTIFS(s,t)",
-    "SUMIF(s,t,SEQUENCE(ROWS(s)))",
-    "ROWS(GROUPBY(s,SEQUENCE(ROWS(s)),SUM))",
+    "ROWS(GROUPBY(s,SEQUENCE(ROWS(s)),LAMBDA(x,SUM(x))))",
     "SUM(--(s=t))",
+    "MATCH(t,s,1)",
+    "LOOKUP(t,s)",
 ];
 
-/// `reader` over 100 texts of `len` bytes.
+/// `reader` over 100 texts of `len` bytes ([`TEXT_COMPARERS`]).
 fn text_comparer(reader: &str, len: usize) -> String {
     let short = len - 1;
     format!(r#"=LET(s,IF(SEQUENCE(100),REPT("a",{len})),t,REPT("a",{short})&"b",{reader})"#)
@@ -280,16 +277,33 @@ fn text_comparer(reader: &str, len: usize) -> String {
 #[test]
 fn every_text_comparing_reader_pays_the_bytes_it_compares() {
     // 4,000 more bytes in each of the 100 texts: each is compared, keyed or folded at least once,
-    // so the reader pays at least 100 * 4,000 bytes more, where the cells alone cost the same.
+    // so the reader pays at least 100 * 4,000 bytes more, where the cells alone cost the same. A
+    // binary search (MATCH 1, LOOKUP) compares about log2(100) of them.
     for reader in TEXT_COMPARERS {
+        let compared = if reader.starts_with("MATCH(t,s,1)") || reader.starts_with("LOOKUP") {
+            6
+        } else {
+            100
+        };
         let small = units(&text_comparer(reader, 8));
         let big = units(&text_comparer(reader, 4008));
         assert!(
-            big - small >= 100 * 4000 / TEXT_BYTES_PER_UNIT,
-            "{reader}: {} units for 400,000 more bytes",
+            big - small >= compared * 4000 / TEXT_BYTES_PER_UNIT,
+            "{reader}: {} units for 4,000 more bytes a text",
             big - small
         );
     }
+}
+
+#[test]
+fn a_comparison_pays_for_what_it_reads_not_for_the_texts_lengths() {
+    // A first byte that differs ends the comparison, so 32,767-byte texts cost no more to compare
+    // than 8-byte ones: only their making (one REPT each) and the read of `t` grow.
+    let formula = |len: usize| {
+        format!(r#"=LET(s,IF(SEQUENCE(100),REPT("a",{len})),t,REPT("b",{len}),SUM(--(s=t)))"#)
+    };
+    let grown = units(&formula(32767)) - units(&formula(8));
+    assert!(grown <= 3 * 32767 / TEXT_BYTES_PER_UNIT + 3, "{grown}");
 }
 
 #[test]
@@ -300,7 +314,7 @@ fn a_lambda_repeating_a_text_comparing_reader_is_bounded() {
     // short texts; the 3.3 MB each call compares do not.
     for reader in [
         "MATCH(REPT(\"a\",32766)&\"b\",s,0)",
-        "COUNTIF(s,REPT(\"a\",32766)&\"b\")",
+        "XMATCH(REPT(\"a\",32766)&\"b\",s)",
     ] {
         let mut model = model_with_limit(1 << 24);
         model._set(

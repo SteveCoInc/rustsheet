@@ -97,7 +97,7 @@ pub(crate) fn take_compared_bytes() -> u64 {
 /// are [`cmp_text_pairwise`].
 #[cfg(test)]
 pub(crate) fn cmp_text_excel(left: &str, right: &str) -> Ordering {
-    cmp_str(left, right, AccentOrder::Total)
+    cmp_str(left, right, AccentOrder::Total, &Cell::new(0))
 }
 
 /// How the accent pass compares two letters' accents.
@@ -111,16 +111,32 @@ enum AccentOrder {
 }
 
 /// [`cmp_text_excel`] or [`cmp_text_pairwise`] for well-formed text.
-fn cmp_str(left: &str, right: &str, order: AccentOrder) -> Ordering {
+/// `read` counts the characters (ASCII: bytes) the passes read ([`counted`]).
+fn cmp_str(left: &str, right: &str, order: AccentOrder, read: &Cell<u64>) -> Ordering {
     if left.is_ascii() && right.is_ascii() {
         // ASCII has no accents, so the second pass always ties.
-        return ascii_primaries(left)
-            .cmp(ascii_primaries(right))
+        return ascii_primaries(counted(left.bytes(), read))
+            .cmp(ascii_primaries(counted(right.bytes(), read)))
             .then_with(|| {
-                skipped(elements(scalars(left), None)).cmp(skipped(elements(scalars(right), None)))
+                skipped(elements(counted(scalars(left), read), None))
+                    .cmp(skipped(elements(counted(scalars(right), read), None)))
             });
     }
-    cmp_chars(scalars(left), scalars(right), order)
+    cmp_chars(
+        counted(scalars(left), read),
+        counted(scalars(right), read),
+        order,
+    )
+}
+
+/// `items`, adding one to `read` for each item taken, in every clone: a comparison's passes walk
+/// clones of the two texts and stop at their first difference, so `read` ends as the work they did,
+/// which the work budget charges ([`note_compared_bytes`], T-4233).
+fn counted<'a, I: Iterator + Clone + 'a>(
+    items: I,
+    read: &'a Cell<u64>,
+) -> impl Iterator<Item = I::Item> + Clone + 'a {
+    items.inspect(move |_| read.set(read.get().saturating_add(1)))
 }
 
 /// Excel's `<`, `=`, `>` before the collation (coercion.md "Format characters, U+200B and the C1
@@ -175,17 +191,31 @@ pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
 
 /// [`cmp_text`] or [`cmp_text_pairwise`].
 fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
-    // Each pass reads at most both texts; a pass stops early, so this is the bound, not the cost.
-    note_compared_bytes(left.len().saturating_add(right.len()));
+    let read = Cell::new(0);
+    let ordering = cmp_text_counted(left, right, order, &read);
+    note_compared_bytes(usize::try_from(read.get()).unwrap_or(usize::MAX));
+    ordering
+}
+
+/// [`cmp_text_in`], counting the characters its passes read in `read`.
+fn cmp_text_counted(left: &Text, right: &Text, order: AccentOrder, read: &Cell<u64>) -> Ordering {
     if let AccentOrder::Pairwise = order {
-        if let Some(order) = cmp_prefix(left.chars_lossless(), right.chars_lossless()) {
+        let prefix = cmp_prefix(
+            counted(left.chars_lossless(), read),
+            counted(right.chars_lossless(), read),
+        );
+        if let Some(order) = prefix {
             return order;
         }
     }
     if left.has_lone_surrogate() || right.has_lone_surrogate() {
-        cmp_chars(left.chars_lossless(), right.chars_lossless(), order)
+        cmp_chars(
+            counted(left.chars_lossless(), read),
+            counted(right.chars_lossless(), read),
+            order,
+        )
     } else {
-        cmp_str(left, right, order)
+        cmp_str(left, right, order, read)
     }
 }
 
@@ -295,8 +325,8 @@ const fn digit(value: u32) -> u32 {
 }
 
 /// The first pass over ASCII text, through [`ASCII_PRIMARY`].
-fn ascii_primaries(text: &str) -> impl Iterator<Item = u32> + '_ {
-    text.bytes()
+fn ascii_primaries(bytes: impl Iterator<Item = u8>) -> impl Iterator<Item = u32> {
+    bytes
         .map(|byte| ASCII_PRIMARY[usize::from(byte & 0x7F)])
         .filter(|&weight| weight != 0)
 }
