@@ -3,7 +3,7 @@ id: T-3855
 title: "Find the arithmetic behind GAMMA.DIST's #NUM! at shapes from 1E56 (density and cdf share it)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P0
 size: M
 tier: opus
@@ -29,6 +29,21 @@ not a cut.
   factor (an x87 EXP of a huge argument, `x87_exp.rs`), a Loader or Temme form, or a loop that stops on NaN.
   Test candidates against every probed cell before probing more.
 - Opus: kernel research with unclear evidence.
+- **Attempt 1 (2026-11-04, decision 0056 time-box, about 15 minutes).** The four cases hold 73 distinct huge-shape
+  points (shape >= 1E+40, y = x/beta < 1, Excel 0 or `#NUM!`; 34 `#NUM!`); only (shape, y) matters (the same y
+  through different x and beta agrees every time). Ruled out as a single separating feature: any one bit (0 to 63)
+  of the double t = shape·LN(y), of t - LNGAMMA(shape) or t - LNGAMMA(shape + 1) (exact lgamma rounded once), of
+  t·log2(e), LN(y) or shape·LOG10(y), and any threshold on t/LNGAMMA(shape). Patterns worth testing next:
+  - At shape 1E+70 the `#NUM!` y are 1E-2, 1E-5, 2E-5, 1E-10, 2E-10, 3E-10, 2E-20, 1E-26, 1E-42, 1E-54, 1E-66,
+    1E-86, 1E-98 and 1E-100: the decades from 1E-26 down recur about every 12 (LN(y) steps of about 27.6, so t steps
+    of about 2.8E+71), which looks like a remainder of t (or of t·log2(e)) against a fixed modulus. One x87 `fprem`
+    pass without looping on C2 leaves a partial remainder that depends on t's bits; f2xm1 of an out-of-range
+    operand is undefined. Model the EXP of t (or of t - LNGAMMA) through that sequence (`x87_exp.rs`) and score it
+    against the 73 points before probing.
+  - At y = 2E-10 every shape from 1E+56 to 1.85E+76 is `#NUM!` except 1E+76 and 1.84E+76, and 1E+40 to 1E+55
+    are 0: whatever separates them is mostly a function of y, with an onset in shape.
+  - The extraction script is short: parse the GAMMA.DIST/GAMMADIST cells of the four cases with their oracle
+    values, keep shape >= 1E+40 and y < 1.
 
 ## Acceptance criteria
 - [ ] A model that reproduces every probed huge-shape cell (or the remaining misses listed), implemented in place
