@@ -61,5 +61,6 @@ first acceptance box is not met; the task's question is answered instead.
   and none gives the ±354.03 pair. engineering.md "IMSECH's last digit at 15-digit midpoints, |x| 20 to 355.5".
 - R4: no model or constant changed, so the guards are not triggered (hold-out shown above for the record; fresh
   sweep, Gate A envelope and `FITTED` N/A).
+- Eval delta: probes gains 1 case (600 cells, 596 pass) with 4 new-coverage known failures (A11:B11, C21:D21, owned by T-4001). Fixed 0, regressions 0.
 - Follow-up: T-4001 (deferred) owns probes/t3883-im-overflow-reciprocal-sweep A101,
   t3881-imcsch-flip-start-negative A3, t3912-imcsch-band-edges A25:B25 and t3914-imsech-sign-sweep A11:B11, C21:D21.
