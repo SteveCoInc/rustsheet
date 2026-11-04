@@ -9,7 +9,10 @@
 //!   7 `dddd`, then the day halves), numbered from 0, with `\\`, `\t` and `\n` escaped (Excel's
 //!   `mmmm` under 0xF803 holds tabs);
 //! - `excel_lcids.tsv`: each LCID with a locale (hex) and its name set;
-//! - `excel_tags.tsv`: each tag, the LCID [MS-LCID] gives it (`-` for none) and its name set.
+//! - `excel_tags.tsv`: each tag, the LCID [MS-LCID] gives it (`-` for none) and its name set;
+//! - `excel_calendars.tsv`: the names of each calendar digit of a tag ([`calendar_names`]) under
+//!   every LCID, from probes/t4061-calendar-names-digest and -full: a default per digit, the
+//!   names of an LCID with no locale (`-`), and the LCIDs whose names differ (`=` for their own).
 //!
 //! An LCID or tag that is in no table has no locale (number-formats.md "Which LCIDs have a locale").
 
@@ -68,15 +71,6 @@ static EN: DateNames = DateNames {
 };
 
 impl DateNames {
-    /// These names with other month names, `mmm` and `mmmm` alike (a calendar's own months).
-    pub(crate) const fn with_months(&self, months: [&'static str; 12]) -> DateNames {
-        DateNames {
-            months_short: months,
-            months,
-            ..*self
-        }
-    }
-
     /// One name set from a table line's fields, `None` if it is malformed.
     fn from_fields(fields: &[&'static str]) -> Option<DateNames> {
         Some(DateNames {
@@ -97,11 +91,56 @@ pub(crate) struct TagLocale {
     pub names: &'static DateNames,
 }
 
+/// The names a calendar digit prints under one LCID (`excel_calendars.tsv`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CalendarNames {
+    /// The LCID's own names (`[$-1040C]` is French, `[$-30411]` Japanese).
+    Own,
+    /// One of the calendar's name sets (`[$-6040C]mmmm` is "Chaaban", `[$-60409]` "Sha'ban"),
+    /// with the 13 month names of a Hebrew leap year (the set's 12 are a common year's), and
+    /// whether they are those of an LCID with no locale (`[$-80000]`, also `[$-80CEB]`), whose
+    /// months go by Gregorian number.
+    Set {
+        names: &'static DateNames,
+        leap_months: Option<&'static [&'static str; 13]>,
+        no_locale: bool,
+    },
+}
+
+/// The names field of a row of `excel_calendars.tsv`.
+#[derive(Clone, Copy)]
+enum RowNames {
+    /// `=`: the LCID's own names.
+    Own,
+    /// `-`: the names of an LCID with no locale.
+    NoLocale,
+    /// A name set, and the index of its leap months.
+    Set(usize, Option<usize>),
+}
+
+/// Whose names [`calendar_names`] reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CalendarKey {
+    /// An LCID: its own row, else the digit's default when it has a locale and the names of an
+    /// LCID with none when it has none.
+    Lcid(u16),
+    /// The digit's default names (a BCP-47 tag with no LCID of its own).
+    Default,
+}
+
+/// A row key of `excel_calendars.tsv`, ordered: an LCID, then `*`, then `-`.
+const DEFAULT_ROW: u32 = 0x1_0000;
+const NO_LOCALE_ROW: u32 = 0x1_0001;
+
 struct Tables {
     names: Vec<DateNames>,
     /// Sorted by LCID, as the file is.
     lcids: Vec<(u16, usize)>,
     tags: Vec<(&'static str, Option<u16>, usize)>,
+    /// Sorted by (digit, row key).
+    calendars: Vec<((u32, u32), RowNames)>,
+    /// The leap-year months of the Hebrew rows.
+    leap_months: Vec<[&'static str; 13]>,
 }
 
 impl Tables {
@@ -166,8 +205,79 @@ fn tables() -> &'static Tables {
                 _ => None,
             })
             .collect();
-        Tables { names, lcids, tags }
+        let mut leap_months = Vec::new();
+        let mut calendars: Vec<_> = rows(include_str!("excel_calendars.tsv"))
+            .filter_map(|fields| {
+                let [digit, key, names, leap @ ..] = fields.as_slice() else {
+                    return None;
+                };
+                let key = match *key {
+                    "*" => DEFAULT_ROW,
+                    "-" => NO_LOCALE_ROW,
+                    lcid => u32::from_str_radix(lcid, 16).ok()?,
+                };
+                let names = match *names {
+                    "=" => RowNames::Own,
+                    "-" => RowNames::NoLocale,
+                    set => {
+                        let leap = <[&'static str; 13]>::try_from(leap).ok().map(|months| {
+                            leap_months.push(months.map(unescape));
+                            leap_months.len() - 1
+                        });
+                        RowNames::Set(set.parse().ok()?, leap)
+                    }
+                };
+                Some(((u32::from_str_radix(digit, 16).ok()?, key), names))
+            })
+            .collect();
+        calendars.sort_by_key(|(key, _)| *key);
+        Tables {
+            names,
+            lcids,
+            tags,
+            calendars,
+            leap_months,
+        }
     })
+}
+
+/// The names calendar digit `digit` prints for `key`, `None` for a digit with no names of its own
+/// (0, and 0x18 and above, the locale's own calendar). Evidence: probes/t4061-calendar-names-digest
+/// (every LCID under digits 1-0x17), t4061-calendar-names-full; number-formats.md "Calendars of a
+/// locale tag".
+pub(crate) fn calendar_names(digit: u32, key: CalendarKey) -> Option<CalendarNames> {
+    let tables = tables();
+    let row = |row_key: u32| {
+        let find = |key: u32| {
+            let at = tables
+                .calendars
+                .binary_search_by_key(&(digit, key), |(key, _)| *key)
+                .ok()?;
+            tables.calendars.get(at).map(|(_, names)| *names)
+        };
+        let (names, no_locale) = match find(row_key)? {
+            RowNames::NoLocale => (find(NO_LOCALE_ROW)?, true),
+            names => (names, row_key == NO_LOCALE_ROW),
+        };
+        Some(match names {
+            RowNames::Set(set, leap) => CalendarNames::Set {
+                names: tables.names(set),
+                leap_months: leap.and_then(|i| tables.leap_months.get(i)),
+                no_locale,
+            },
+            RowNames::Own | RowNames::NoLocale => CalendarNames::Own,
+        })
+    };
+    match key {
+        CalendarKey::Lcid(lcid) => row(u32::from(lcid)).or_else(|| {
+            row(if lcid_names(lcid).is_some() {
+                DEFAULT_ROW
+            } else {
+                NO_LOCALE_ROW
+            })
+        }),
+        CalendarKey::Default => row(DEFAULT_ROW),
+    }
 }
 
 /// The names of `lcid`, or `None` when Excel gives it no locale (`[$-2412]`, `[$-1]`).
@@ -205,7 +315,10 @@ pub(crate) fn tag_locale(tag: &str) -> Option<TagLocale> {
 
 #[cfg(test)]
 mod tests {
-    use super::{lcid_names, rows, tag_locale, unescape, DateNames, EN};
+    use super::{
+        calendar_names, lcid_names, rows, tag_locale, unescape, CalendarKey, CalendarNames,
+        DateNames, EN,
+    };
 
     #[test]
     fn every_table_line_parses() {
@@ -218,6 +331,13 @@ mod tests {
         for fields in rows(include_str!("excel_tags.tsv")) {
             assert_eq!(fields.len(), 3, "{fields:?}");
         }
+        for fields in rows(include_str!("excel_calendars.tsv")) {
+            assert!(matches!(fields.len(), 3 | 16), "{fields:?}");
+        }
+        assert_eq!(
+            super::tables().calendars.len(),
+            rows(include_str!("excel_calendars.tsv")).count()
+        );
     }
 
     #[test]
@@ -234,5 +354,21 @@ mod tests {
         // 0xF803 is Catalan with a `mmmm` holding tabs (probes/t3666-locale-names A584).
         assert!(lcid_names(0xF803).is_some_and(|n| n.months[0].contains('\t')));
         assert_eq!(unescape("a\\tb\\\\c"), "a\tb\\c");
+    }
+
+    #[test]
+    fn calendar_lookups() {
+        let month = |digit, key| match calendar_names(digit, key) {
+            Some(CalendarNames::Set { names, .. }) => Some(names.months[2]),
+            Some(CalendarNames::Own) => Some("own"),
+            None => None,
+        };
+        // probes/t4061-calendar-names-digest: Hijri month 3 by language, the no-locale default.
+        assert_eq!(month(6, CalendarKey::Lcid(0x40C)), Some("Rabi' Aoual"));
+        assert_eq!(month(6, CalendarKey::Lcid(0x409)), Some("Rabi' Awwal"));
+        assert_eq!(month(6, CalendarKey::Lcid(0x2412)), Some("ربيع\u{a0}الأول"));
+        assert_eq!(month(6, CalendarKey::Default), Some("Rabi' Awwal"));
+        assert_eq!(month(1, CalendarKey::Lcid(0x40C)), Some("own"));
+        assert_eq!(month(0, CalendarKey::Lcid(0x40C)), None);
     }
 }

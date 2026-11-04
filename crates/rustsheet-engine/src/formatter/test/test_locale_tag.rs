@@ -75,10 +75,24 @@ fn tags_resolve_like_excel() {
     assert_eq!(names("E0412"), Some("삼월"));
     assert_eq!(names("120411"), Some("March"));
     assert_eq!(names("6040C"), Some("Rabi' Aoual"));
-    for silent in [
-        "", "zzz", "xx", "FFFF", "40C0", "0", "2000000", "40C,1", "+40C",
-    ] {
+    // A tag Excel cannot read, or an extended-hex reading with no locale and no calendar digit,
+    // changes nothing (`B2[$-zzz]` is a bare `B2`).
+    for silent in ["", "zzz", "xx", "+40C"] {
         assert_eq!(resolve(silent), LocaleTag::Silent, "{silent}");
+    }
+    // A hex LCID with no locale is en-US and Gregorian with `A/P` as written, under any calendar
+    // digit (`[$-40C,1]` is 0x40BC1, Taiwan over LCID 0xBC1; probes/t4061-calendars-without-locale).
+    for no_locale in ["FFFF", "40C0", "0", "2000000", "40C,1"] {
+        match resolve(no_locale) {
+            LocaleTag::Names(n) => {
+                assert_eq!(
+                    (n.names.months[2], n.day_half),
+                    ("March", None),
+                    "{no_locale}"
+                );
+            }
+            other => panic!("{no_locale}: {other:?}"),
+        }
     }
     assert_eq!(resolve("F800"), LocaleTag::SystemDate);
     assert_eq!(resolve("X-SYSTIME"), LocaleTag::SystemTime);

@@ -116,6 +116,8 @@ pub struct DatePart {
     pub b2_overridden: bool,
     /// The names from the section's first `mmm` on (`Localized::names_after_mmm`).
     pub names_after_mmm: Option<&'static DateNames>,
+    /// Whether the calendar's months go by Gregorian number (`Localized::months_by_number`).
+    pub months_by_number: bool,
     /// The digits of the section's locale tag (`locale_tag::numerals`).
     pub numerals: Numerals,
 }
@@ -896,6 +898,7 @@ impl Parser {
                 hijri,
                 b2_overridden,
                 names_after_mmm: localized.and_then(|l| l.names_after_mmm),
+                months_by_number: localized.is_some_and(|l| l.months_by_number),
                 numerals,
             })
         } else {

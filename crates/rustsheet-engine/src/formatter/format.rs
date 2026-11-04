@@ -426,23 +426,40 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                             return invalid_date(value);
                         }
                         let weekday = excel_weekday_index(serial_1900);
-                        if let (Some(Calendar::Hebrew(adars)), Some(names)) = (p.calendar, p.names)
+                        if let (Some(Calendar::Hebrew(leap_months)), Some(names)) =
+                            (p.calendar, p.names)
                         {
                             let month_name = !matches!(
                                 token,
                                 TextToken::DayName(_) | TextToken::DayNameShort(_)
                             );
-                            if month_name && adars.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
+                            if month_name
+                                && leap_months.is_some()
+                                && ymd_year > HEBREW_LAST_NAMED_YEAR
+                            {
                                 return invalid_date(value);
                             }
-                            if let Some(name) = hebrew_month_name(token, names, adars, serial_1900)
+                            if let Some(name) =
+                                hebrew_month_name(token, names, leap_months, serial_1900)
                             {
                                 text.push_str(name);
                                 continue;
                             }
                         }
-                        // Lunar months 13 and 14 take the twelfth name (`[$-110409]mmmm` of
-                        // 2024-01-11 is "十二月"; probes/text-locale-lunar-edges A26).
+                        // A month past the twelfth has no name when the months go by Gregorian
+                        // number, `mmmmm` printing U+0001 (`[$-80000]m|mmm|mmmm|mmmmm` of
+                        // 2024-09-20 is "13|||\u{1}"; probes/t2779-hebrew-saka-more E1); a lunar
+                        // calendar's own names give months 13 and 14 the twelfth (`[$-110409]mmmm`
+                        // of 2024-01-11 is "十二月"; probes/text-locale-lunar-edges A26).
+                        if ymd_month > 12 && p.months_by_number {
+                            let month_letter = matches!(token, TextToken::MonthLetter);
+                            let is_day =
+                                matches!(token, TextToken::DayName(_) | TextToken::DayNameShort(_));
+                            if !is_day {
+                                text.push_str(if month_letter { "\u{1}" } else { "" });
+                                continue;
+                            }
+                        }
                         let month = ymd_month.min(12);
                         names.push(token, &mut text, p.names, locale, month, weekday);
                     }

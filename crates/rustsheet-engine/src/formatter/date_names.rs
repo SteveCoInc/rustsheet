@@ -6,7 +6,10 @@ use super::{
     calendar_dates::real_day,
     parser::{DatePart, TextToken},
 };
-use crate::locale::{calendar_date_names::calendar_names, excel_date_names::DateNames, Locale};
+use crate::locale::{
+    excel_date_names::{calendar_names, CalendarKey, CalendarNames, DateNames, EN_US},
+    Locale,
+};
 
 /// Days from 1 Muharram 1 AH to the proleptic Gregorian 1899-12-30, the day [`real_day`] counts
 /// from: the Hijri epoch Excel uses is 622-07-18, which replays all 103 probed dates.
@@ -195,7 +198,7 @@ impl NameTokens {
         } else {
             *self.first.get_or_insert(own)
         };
-        let names = &calendar_names().hijri_arabic;
+        let names = arabic_hijri_names();
         let name = match (is_day, read) {
             (true, FirstName::Month(m)) => names.days[month_as_weekday(m)],
             (_, FirstName::Weekday(w)) => names.days[w],
@@ -209,6 +212,16 @@ impl NameTokens {
                 .map_or(name, |(end, _)| &name[..end]);
         }
         name
+    }
+}
+
+/// The names of Excel's Arabic path: the Hijri calendar's (digit 6) under an LCID with no locale,
+/// Arabic months and weekdays ("شعبان", "الأربعاء"; probes/t1613-hijri-b2,
+/// t4061-calendar-names-digest).
+fn arabic_hijri_names() -> &'static DateNames {
+    match calendar_names(6, CalendarKey::Lcid(0)) {
+        Some(CalendarNames::Set { names, .. }) => names,
+        _ => EN_US,
     }
 }
 

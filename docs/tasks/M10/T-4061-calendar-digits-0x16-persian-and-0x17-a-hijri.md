@@ -3,7 +3,7 @@ id: T-4061
 title: "Calendar digits 0x16 (Persian) and 0x17 (a Hijri variant) of a locale tag"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -24,8 +24,21 @@ Persian month boundaries (Nowruz) before implementing. Semantics: number-formats
 Code: formatter/locale_tag.rs `resolve_lcid` (TODO(T-4061)), formatter/calendar_dates.rs.
 
 ## Acceptance criteria
-- [ ] probes/t3666-calendar-top-bit A19:A22 pass; a probe covers the Persian calendar's months and leap years.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t3666-calendar-top-bit A19:A22 pass; a probe covers the Persian calendar's months and leap years.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other calendar digits.
+
+## Outcome
+Done, with the calendar-name model generalized rather than the two digits added as cases. Probes (excel-graph,
+2026-11-04): t4061-persian-new-years (the Persian new year of every Gregorian year 1900-9999), t4061-umalqura-months
+(Um al-Qura month starts 1900-2100), t4061-hijri-variant-dates, t4061-persian-and-hijri-variant, and the name sweeps
+t4061-calendar-names-digest/-full/-all/-by-language and t4061-calendars-without-locale. Findings: the digits are Windows
+calendar ids (0x16 Persian, 0x17 Um al-Qura); Persian leap years follow no cycle (Excel's table of 8100 years); Um
+al-Qura is a 1318-1500 AH month table with the digit-6 date outside; and every calendar's names are per-LCID data (32
+Hijri name sets, 10 Persian, odd alias transforms), not a rule by language. Code: `locale_tag::CALENDARS` (one spec per
+digit) and `localize` replace `resolve_lcid`'s match, `without_locale`, `hijri_names` and `hebrew_or_saka`;
+locale/excel_calendars.tsv (generated) replaces calendar_date_names.rs; formatter/table_calendars.rs reads
+persian_years.txt and um_al_qura_months.txt; a hex LCID with no locale is en-US/Gregorian with `A/P` as written. Eval:
+t3666-calendar-top-bit A19:A22 and every new t4061 case pass; 0 regressions.
