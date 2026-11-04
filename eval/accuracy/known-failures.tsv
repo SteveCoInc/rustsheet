@@ -88,4 +88,3 @@ accuracy/T.DIST/e-T-3425!Calc!A90	T-3554	Excel #NUM! for the density at a huge x
 accuracy/T.DIST/e-T-3425!Calc!A103	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/e-T-3425!Calc!A116	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/e-T-3425!Calc!A74	T-3363	quantile at df 1E10: the engine is 2.5E-6 off the math; Excel matches it
-accuracy/TIME/s1!Calc!A149	T-3983	Excel wraps a minute below -32768 by 65536 (drift since 2026-10-21); the engine is #NUM!

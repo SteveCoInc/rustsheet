@@ -3,7 +3,7 @@ id: T-3983
 title: "TIME wraps an argument below -32768 by 65536 (Excel drift since 2026-10-21)"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -43,3 +43,9 @@ TIME reads a whole argument below -32768 the way Excel does now: it wraps by 655
 ## Out of scope
 - DATE's argument bounds: they are a separate rule (dates.md "DATE month and day bounds"). Probe them in their own
   task if they are suspected of the same drift.
+
+## Outcome
+`time_argument` wraps a whole value below -32768 by 65536 and reads one below -2^31 as 0. Probed
+below -131072 (probes/t3983-time-argument-below-131072, excel-graph 2026-11-04): the wrap holds to -2^31;
+beyond it Excel gives 0, not the wrap. Refilled time-argument-bound/-window/-negative. Removed the
+Gate A known-failure TIME/s1 A149. dates.md says "Ours: matches". Unit tests added in test_fn_time.rs.
