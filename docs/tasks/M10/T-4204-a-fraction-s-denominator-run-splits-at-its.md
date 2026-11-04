@@ -43,3 +43,17 @@ Placeholder runs after a fraction's `/` that mix `?`, `#` and `0` print as Excel
 - probes/t3711-fraction-trailing-placeholders: 57/57 (23 fixed); t4204: 42/42. number-formats.md "Fraction formats"
   has the rule and its cells.
 - Eval delta: probes known failures -23, plus 42 new passing cells; 0 regressions in every suite.
+
+## Landing notes
+- PR #3227 (draft), head: the commit after f721cf10b that adds these notes. When the window closed (21:31 UTC,
+  2026-11-04), CI had not run on that head.
+- Round 1, on df89912b8: design APPROVE, security APPROVE, excel-fidelity REQUEST_CHANGES. Its MAJOR finding was
+  that the mixed shapes (`?#0`, `#?0`, `?0#`, ...) were unprobed; its MINOR one that the cut changed the digit limit.
+  Round 2's commit f721cf10b answers both: probes/t4204-fraction-denominator-mixed (excel-graph) disproved round 1's
+  "cut at the first `0`", so the parser change is reverted and `fill_left` is rewritten. Locally on f721cf10b: both
+  cases pass (57/57 and 42/42), formatter unit tests pass, and `make eval-baseline` shows 0 regressions in every
+  suite. `make check-fast` has NOT run on this head.
+- Next: run `make check-fast`, then the full panel (design, security, excel-fidelity) on the current head. Mark the
+  PR ready, and enqueue once CI is green and every reviewer approves.
+- Do not repeat: cutting a `?` run at its first `0` (row 9 shows `?0` on 0.123 is 8/65, so the whole run bounds the
+  digits).
