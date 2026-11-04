@@ -396,10 +396,10 @@ fn plan(
     }
 }
 
-/// The text of `plan`, walking `part`'s tokens zone by zone. The arms are disjoint: a blank
-/// fraction takes the zones it blanks whole (never the integer or separator), the separator is
-/// printed, spaced or dropped whole, and every other placeholder takes the next digits of its
-/// zone.
+/// The text of `plan`, walking `part`'s tokens zone by zone. The arms are ordered, the blank
+/// fraction's first: a blank fraction takes the zones it blanks whole (never the integer or
+/// separator), shadowing their placeholders; the separator is printed, spaced or dropped whole;
+/// and every other placeholder takes the next digits of its zone.
 fn emit(part: &NumberPart, layout: &Layout, plan: Plan) -> String {
     let tokens = &part.tokens;
     let mut text = String::new();

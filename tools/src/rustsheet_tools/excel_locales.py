@@ -302,7 +302,9 @@ def generate() -> dict[Path, str]:
         if int(row[0]) in with_locale:
             by_lcid[int(row[0])] = name_set(row)
     tags = known_tags(documented_lcids())
-    # A hex LCID that is really a tag (`[$-CA]` is Catalan by its tag "ca", 0xCA has no locale).
+    # A hex LCID that is really a tag (`[$-CA]` is Catalan by its tag "ca", 0xCA has no locale):
+    # its probe row measured the tag, so it is not evidence about the LCID. This only reads the
+    # probe; which spelling wins is the engine's resolution order (`locale_tag::resolve_with`).
     tag_names = {tag.lower() for tag, _, _ in tags}
     lcid_lines = [
         f"{lcid:X}\t{number(names)}" for lcid, names in by_lcid.items() if f"{lcid:x}" not in tag_names
