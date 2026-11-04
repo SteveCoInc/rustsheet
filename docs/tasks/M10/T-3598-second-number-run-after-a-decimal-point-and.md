@@ -3,7 +3,7 @@ id: T-3598
 title: "Second number run after a decimal point and literal prints no grouping"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
