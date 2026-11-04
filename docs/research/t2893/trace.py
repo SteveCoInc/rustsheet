@@ -1,7 +1,8 @@
 """T-2893: which ix rows does the r2-bratio model send to L140 bup+bpser, and under which configuration does it
 count 1,620?  Usage (from the repo root, after T-2506's data rebuild; python3 with mpmath and numpy):
     T2464_HARNESS=target/debug/deps/rustsheet_engine-<hash> python3 docs/research/t2893/trace.py
-Output: trace.out.
+The harness (`functions/statistical/t2464_harness.rs`) was deleted by T-2977; RESULTS.md says how it was restored,
+uncommitted, for this run. Output: trace.out.
 """
 import sys
 from collections import Counter
@@ -29,8 +30,7 @@ def branches(rows, cfg):
 
 def main() -> None:
     rows = load(sets=("ix",))
-    conf = Counter(r.get("conf", "?") for r in rows)
-    print("ix rows", len(rows), dict(conf))
+    print("ix rows", len(rows))
     configs = {
         "BEST": bx.BEST,
         "BEST closed=False": replace(bx.BEST, closed=False),
@@ -79,9 +79,6 @@ def engine_on_model_l140(rows, best) -> None:
           f"{'/'.join(map(str, tally(total_e)[1:]))} |")
 
 
-if __name__ == "__main__":
-    main()
-
 
 def by_branch(rows, rs):
     """Each BEST branch's ix count and score (to find the population behind 1,620 / 1,011)."""
@@ -90,3 +87,7 @@ def by_branch(rows, rs):
         g.setdefault(br, []).append((w if r["side"] == "lower" else w1, r["excel"]))
     for br in sorted(g):
         print(f"| {br} | {len(g[br])} | {'/'.join(map(str, tally(g[br])[1:]))} |")
+
+
+if __name__ == "__main__":
+    main()
