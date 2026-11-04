@@ -3,7 +3,7 @@ id: T-4153
 title: "Probe U+202F's accent weight against the space with one combining mark (T-4087's UNVERIFIED NARROW_NBSP value)"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
