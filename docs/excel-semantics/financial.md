@@ -1383,6 +1383,8 @@ restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0
 Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
+Explained (T-3963): the hidden state is the iterate before r0; see "RATE keeps its older iterate when a step leaves
+the residual unchanged" below (a finding; the engine still has the merged rule).
 Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
 and differ only in the guess, and so in the step of the flat secant, get different Excel values, in no step order.
 So no rule on what the model sees at that step (the step, |f1|, |r1 - r0|, f1 relative to the residual's terms) can
@@ -1449,6 +1451,47 @@ Evidence (excel-graph, 2026-10-19, T-1949): probes/yield-one-period-dsr-zero She
 Ours: `yield_one_period` returns 0 when DSR is 0 (T-1949).
 Status: VERIFIED (excel-graph)
 Tasks: T-1525, T-1532
+
+## RATE keeps its older iterate when a step leaves the residual unchanged
+Rule (T-3963, a finding; not implemented, owner ruling T-4239): a secant step whose new residual equals the last one
+exactly (f2 = f1) does not shift the pair. Excel keeps the older iterate r0 and replaces r1 with r2, so the next
+secant runs on r0 and r2. Otherwise the pair shifts as in "RATE is a secant on the FV residual". So a flat secant
+(f1 = f0) can only come on the start pair, guess and guess - 0.001·sign(f), which still holds per "RATE holds on a
+flat secant and runs on below -1". In this model T-3698's restart ("RATE restarts once on an early flat secant") and,
+on two distinct iterates, T-3348's hold are not needed. A zero step (r2 = r1, so f2 = f1) would repeat itself to the
+200th step, so a model applies the cap's test to it at once.
+Why it matters: it explains T-3850's negative finding. Calls whose runs reach the same r0, r1 and f1 by different
+paths get different Excel values (probes/t3850-rate-same-state), because Excel's next step depends on the iterate
+before r0, which the merged model's state drops. Excel's residual itself is not the cause: every other residual
+tried loses hundreds of cells.
+Evidence (excel-graph, 2026-11-03, T-3963; scorers and the temporary switch in docs/research/t3963/):
+- Residual candidates scored on the 2,400 literal `=RATE(` oracle cells of probes and probes-numeric (the merged
+  model is bit-exact on 1,914). Each loses 360 to 920 cells: the residual or the secant step held in an x87 register
+  until stored, `(1+r)^n` from libm `pow` or from Excel's `exp(n·ln(1+r))`, and the factor as `(k·(P-1))/r` or
+  `(pmt·k)·((P-1)/r)`. The twice-rounded residual of "RATE is a secant on the FV residual" stands.
+- Path candidates on the flat-secant step, on the same cells: a secant on r1 and the iterate before r0 (+98, -39),
+  a fresh run from r1 (+83, -72), from the iterate before r0 (+66, -123), an unconditional restart from r0 (+78,
+  -26), keeping r0 when |f2| >= |f1| (-258 net) and keeping r0 when f2 = f1 (+112, -34). The last was frozen.
+- Hold-out (the fit lab's hash split, 30% test): train 1,416 of 1,704 bit-exact (merged rule 1,357), test 576 of
+  696 (557). The candidates were first ranked on all 2,400 cells, so this split is not blind; the fresh probe is.
+- Fresh sweep, drawn after the freeze: probes/t3963-rate-keep-r0-fresh, 240 calls on the args of the existing RATE
+  probe series with new guesses, kept where the merged and the frozen model differ (`gen_fresh.py`, committed before
+  the fill). Bit-exact: the frozen model 59, the merged rule 9 (11 on `main` of 2026-11-04). Cells of the wrong type: 8 and 21. A hybrid (keep r0,
+  but T-3698's restart inside its steps and |f| band) scores 46 there and is worse on train and test too.
+- Gate A batch accuracy/RATE/r4-T-3963 (300 points drawn after the freeze): all inside the envelope under both
+  models; the table's RATE takes no guess, so the rule seldom fires there.
+- What it costs against the merged rule: 37 gated cells the merged rule has bit-exact (19 within 4 ulp, 13 beyond,
+  5 of the wrong type, among them the scaled nper-1 family t3698-rate-flat-restart A1 and A2, where the run ends on a
+  zero step at |f| 2.3e-7 and Excel is `#NUM!`); and five error-against-number points it moves out of the Gate A
+  envelope, which decision 0265 does not cover: t3906-rate-restart-oos A143 (`#NUM!` where Excel returns
+  -0.06546463553005233) and t3963-rate-keep-r0-fresh A59, A60, A73 and A188 (numbers where Excel is `#NUM!`).
+  Excel still restarts like T-3698 on some nper-1 calls whose residual is rounding noise for every rate
+  (t3906-rate-restart-oos A15, `RATE(1,18770705030.2495,-18770705030.2495,0,1,g)`; T-3970).
+Ours: `rate_secant` (functions/financial/financial_util.rs) still has the merged rule. The model is on PR #3019's
+branch, waiting on the owner's ruling (T-4239).
+Status: UNVERIFIED (partial: bit-exact on 59 of 240 fresh calls where it differs from the merged rule; why Excel still
+restarts on some noise-only residuals and errs on some zero steps is open)
+Tasks: T-3963, T-4239, T-3970, T-3424
 
 ## RATE and IRR secant constants past their fit sets
 Rule: the fitted constants of the two secants (RATE's start offset 0.001 toward smaller |f| and residual stop

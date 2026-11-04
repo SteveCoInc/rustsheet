@@ -246,6 +246,7 @@ probes/t3929-wildcard-fold-criteria.case.json	6
 probes/t3929-wildcard-fold-xmatch.case.json	2
 probes/t3945-atan-near-midpoint.case.json	2
 probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	44
+probes/t3963-rate-keep-r0-fresh.case.json	147
 probes/t4014-sheet-api-name-65.case.json	1
 probes/t4040-r1c1-unbound-cell-names.case.json	3
 probes/t4060-collation-open-choices.case.json	9
