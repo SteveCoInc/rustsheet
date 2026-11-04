@@ -51,10 +51,11 @@ the algorithm stays out of reach after probing, the cells are recorded as a DEVI
   functions/lookup_and_reference/grouping.rs): each field is classed within its parent (the rows sharing the
   earlier fields' classes); the distinct keys are the first-`=` ones, sorted by `<` (`sort_indices_pairwise`),
   and a text joins the key a lower-bound binary search finds equal to it; a group shows each class's first key;
-  a group none of whole-row `=`'s first rows is in is not shown; texts under one parent sort by that order
+  a group none of UNIQUE's kept rows is in is not shown (`coalesce_equal_lines`, T-4200's UNIQUE grouping, when a
+  key holds a text outside ASCII); texts under one parent sort by that order
   (`AB` before `ab`&U+00AD).
 - Eval delta: probes known failures 4046 -> 4064: 8 fixed (t4088-groupby-multifield B1, B3, B6, C6, B30, B31,
-  B32, B38), 0 regressions, 2 new cases (-intransitive 26 known failures, -shown-key 0). Visible parity 1586 ->
-  1566 in-scope cells off.
+  B32, B38), 0 regressions, 2 new cases (-intransitive 24 known failures after the merge with main, where T-4200's UNIQUE passes
+  D8 and D23; -shown-key 0).
 - Not reached: on some multi-field runs Excel puts a row in two groups, and its UNIQUE keeps or drops a row
-  depending on the rows around it. Filed T-4241 (opus), which owns the 26 -intransitive cells and t4088 B11, B33.
+  depending on the rows around it. Filed T-4241 (opus), which owns the 24 -intransitive cells and t4088 B11, B33.

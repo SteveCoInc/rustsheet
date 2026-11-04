@@ -17,7 +17,7 @@ fn text(s: &str) -> ArrayNode {
 /// The first key of each group and its rows, after sorting with `ascending`.
 fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
     let keys: Vec<Vec<ArrayNode>> = keys.iter().map(|key| vec![key.clone()]).collect();
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
         .unwrap_or(Grouping { groups: Vec::new() });
     grouping.sort_by_keys(&[ascending], CELL);
     grouping
@@ -78,7 +78,7 @@ fn intransitive_keys_join_the_key_a_binary_search_finds() {
 #[test]
 fn later_fields_class_within_their_parent() {
     let group = |keys: Vec<Vec<ArrayNode>>| {
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
             .unwrap_or(Grouping { groups: Vec::new() });
         grouping.sort_by_keys(&[], CELL);
         grouping
@@ -167,7 +167,7 @@ fn two_key_fields_sort_lexicographically() {
         vec![text("b"), ArrayNode::Number(1.0)],
         vec![text("a"), ArrayNode::Number(3.0)],
     ];
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
         .unwrap_or(Grouping { groups: Vec::new() });
     grouping.sort_by_keys(&[true, false], CELL);
     let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
@@ -185,7 +185,7 @@ fn value_sort_keeps_parents_with_equal_aggregates_together() {
         vec![text("b"), text("w")],
     ];
     let values = [1.0, 2.0, 3.0, 2.0];
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
         .unwrap_or(Grouping { groups: Vec::new() });
     let mut calls = 0;
     let order = (ParentOrder::ByValue, Axis::Rows);
@@ -229,7 +229,7 @@ fn three_keys() -> Grouping {
     .iter()
     .map(|(a, b, c)| vec![text(a), text(b), ArrayNode::Number(*c)])
     .collect();
-    Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+    Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
         .unwrap_or(Grouping { groups: Vec::new() })
 }
 
@@ -425,7 +425,7 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
         })
         .collect();
     for ascending in [true, false] {
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
             .unwrap_or(Grouping { groups: Vec::new() });
         let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
         grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);

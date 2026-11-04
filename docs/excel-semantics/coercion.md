@@ -894,17 +894,18 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
 - **A group none of UNIQUE's rows is in is not shown.** Its rows are in no group: probes/t4088-groupby-multifield
   B1:B6, B30:B32 above, where the third row's (`ab`,y) holds none of UNIQUE's rows (`ab`,x) and (`ab`&U+00AD,y).
 - **Excel goes further on a multi-field run.** Rows (A,y), (B,x), (C,y) give (`ab`,y): 1, 3; (`ab`&U+00AD,x): 2;
-  (`ab`&U+00AD,y): 1, 2, 3 (Calc!C8). Row 2 is in two groups, the third group's key is no row's, and UNIQUE keeps
-  all three rows (D8) though (C,y) = (A,y). Whether UNIQUE drops (C,y) depends on the rows around it: it is kept
-  here and dropped in (A,y), (C,y), (B,x) (D12). PIVOTBY's rows are GROUPBY's (F). Unmatched: T-4241 owns those
-  26 cells.
+  (`ab`&U+00AD,y): 1, 2, 3 (Calc!C8). Row 2 is in two groups, and the third group's key is no row's. UNIQUE keeps
+  all three rows (D8) though (C,y) = (A,y): it keeps or drops (C,y) by the rows around it, as its merge meets them
+  (T-4200), and ours matches every D cell. PIVOTBY's rows are GROUPBY's (F). Unmatched: T-4241 owns those 24
+  cells.
 
 Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
 its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
-lower-bound search), shows each class's first key, and drops a group none of the `first_equal_lines` whole rows is
-in. `Group::key_order` sorts texts under one parent by their rank in that sort. The simulator that chose this
-model scores 98 of the 112 GROUPBY cells of -intransitive and all 18 of -shown-key; every cell of both is an
-oracle value, so nothing is fitted.
+lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
+`coalesce_equal_lines` keeps when a key holds a text outside ASCII, as `unique_of` does; `first_equal_lines`
+otherwise). `Group::key_order` sorts texts under one parent by their rank in that sort. The model was selected
+on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
+of -shown-key, with no hold-out, so T-4241's fresh permutations are its confirmation.
 Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
