@@ -7,7 +7,7 @@
 
 use std::cell::Cell;
 use std::collections::HashMap;
-use std::io::{self, BufReader, Read, Seek};
+use std::io::{self, BufReader, Read, Seek, SeekFrom};
 
 use super::shared_strings::decode_xlsx_escapes;
 use crate::error::{ImportLimit, XlsxError};
@@ -125,6 +125,17 @@ pub(super) fn part_key(name: &str) -> String {
         .to_ascii_lowercase()
 }
 
+/// The first bytes of an OLE compound file (MS-CFB 2.2, `_abSig`).
+const OLE_SIGNATURE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
+
+/// Whether `bytes` start like an OLE compound file: a password-protected xlsx (an ECMA-376
+/// `EncryptedPackage`) or a legacy binary workbook, which are refused with
+/// [`XlsxError::OleCompoundFile`] (decision 0279).
+#[must_use]
+pub fn is_ole_compound_file(bytes: &[u8]) -> bool {
+    bytes.starts_with(&OLE_SIGNATURE)
+}
+
 /// A zip package with a byte budget shared by every part read from it.
 pub(crate) struct Package<R> {
     archive: zip::ZipArchive<R>,
@@ -139,7 +150,18 @@ pub(crate) struct Package<R> {
 }
 
 impl<R: Read + Seek> Package<R> {
-    pub(crate) fn new(reader: R, limits: ImportLimits) -> Result<Self, XlsxError> {
+    pub(crate) fn new(mut reader: R, limits: ImportLimits) -> Result<Self, XlsxError> {
+        // A password-protected xlsx is an OLE compound file holding the encrypted package, not a
+        // zip (poi 58616, protected_passtika): name the cause rather than a zip error (T-3972).
+        let mut head = Vec::with_capacity(OLE_SIGNATURE.len());
+        reader
+            .by_ref()
+            .take(OLE_SIGNATURE.len() as u64)
+            .read_to_end(&mut head)?;
+        if is_ole_compound_file(&head) {
+            return Err(XlsxError::OleCompoundFile);
+        }
+        reader.seek(SeekFrom::Start(0))?;
         let archive = zip::ZipArchive::new(reader)?;
         if u32::try_from(archive.len()).map_or(true, |n| n > limits.max_zip_entries) {
             return Err(XlsxError::Limit {

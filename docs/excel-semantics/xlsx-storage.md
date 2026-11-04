@@ -73,6 +73,20 @@ Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/package.rs (`ImportLimits`, `Package`),
 crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`)
 
+## Password-protected and non-zip packages
+Rule (engine): a file that starts with the OLE compound-file signature (`D0 CF 11 E0 A1 B1 1A E1`) is refused before
+the zip is opened, with `XlsxError::OleCompoundFile` ("the file is an OLE compound file (a password-protected or legacy
+binary workbook), not an xlsx package"). A password-protected xlsx is such a file: an ECMA-376 `EncryptedPackage` in a
+compound file, which Excel opens only after the user types the password. RustSheet takes no password and does not
+decrypt (decision 0279), and does not read `.xls` either. Any other file that is not a zip stays a zip error.
+- poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`) are refused this
+  way; their baseline lines stay `!InvalidCase` with the typed message.
+- poi `deep-data.xlsx` is a corrupt package (17 local headers with garbled names, no end-of-central-directory record),
+  not an encrypted one: it stays refused as a zip error (T-0489).
+Status: DEVIATION (decision 0279): Excel opens both encrypted files given their password; RustSheet refuses them.
+Implemented in: `Package::new` (crates/rustsheet-xlsx/src/import/package.rs), `XlsxError::OleCompoundFile` (error.rs).
+Tasks: T-3972
+
 ## A workbook whose indices dangle is refused outright
 Rule: `Model::from_workbook`, which every load ends in (xlsx import, `Model::from_bytes`,
 `UserModel::from_bytes`), refuses a workbook whose indices point at nothing the model would later read
