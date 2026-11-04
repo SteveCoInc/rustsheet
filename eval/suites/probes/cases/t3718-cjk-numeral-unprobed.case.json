@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-3718: unprobed CJK numeral forms. Rows 1-3 large integers (1E12, 1E15, 123456789012); 4-8 padded/elapsed counts; 9-11 myriad zero gaps; 12-15 General beside literals / in date sections; 16-20 elapsed counts of 10^11 and more ([s] of 2958465, 1E8, 1E9 and 1E15; [h] of 1E11). Columns A-E = numeral bytes 0x1B-0x1F.",
+ "description": "T-3718: unprobed CJK numeral forms. Rows 1-3 large integers (1E12, 1E15, 123456789012); 4-8 padded/elapsed counts; 9-11 myriad zero gaps; 12-15 General beside literals / in date sections; 16-20 elapsed counts of 10^11 and more ([s] of 2958465, 1E8, 1E9 and 1E15; [h] of 1E11); 21-25 the bound where the count of 兆 turns digit by digit ([s] of 1E11, 1.2E11, 1E12 and 1.2345E11; [h] of 1E15). Columns A-E = numeral bytes 0x1B-0x1F.",
  "tags": [
   "probe",
   "number-format",
@@ -111,7 +111,32 @@
     "B20": "=TEXT(1E15,\"[$-1C000409][s]\")",
     "C20": "=TEXT(1E15,\"[$-1D000409][s]\")",
     "D20": "=TEXT(1E15,\"[$-1E000409][s]\")",
-    "E20": "=TEXT(1E15,\"[$-1F000409][s]\")"
+    "E20": "=TEXT(1E15,\"[$-1F000409][s]\")",
+    "A21": "=TEXT(1E11,\"[$-1B000409][s]\")",
+    "B21": "=TEXT(1E11,\"[$-1C000409][s]\")",
+    "C21": "=TEXT(1E11,\"[$-1D000409][s]\")",
+    "D21": "=TEXT(1E11,\"[$-1E000409][s]\")",
+    "E21": "=TEXT(1E11,\"[$-1F000409][s]\")",
+    "A22": "=TEXT(1.2E11,\"[$-1B000409][s]\")",
+    "B22": "=TEXT(1.2E11,\"[$-1C000409][s]\")",
+    "C22": "=TEXT(1.2E11,\"[$-1D000409][s]\")",
+    "D22": "=TEXT(1.2E11,\"[$-1E000409][s]\")",
+    "E22": "=TEXT(1.2E11,\"[$-1F000409][s]\")",
+    "A23": "=TEXT(1E15,\"[$-1B000409][h]\")",
+    "B23": "=TEXT(1E15,\"[$-1C000409][h]\")",
+    "C23": "=TEXT(1E15,\"[$-1D000409][h]\")",
+    "D23": "=TEXT(1E15,\"[$-1E000409][h]\")",
+    "E23": "=TEXT(1E15,\"[$-1F000409][h]\")",
+    "A24": "=TEXT(1E12,\"[$-1B000409][s]\")",
+    "B24": "=TEXT(1E12,\"[$-1C000409][s]\")",
+    "C24": "=TEXT(1E12,\"[$-1D000409][s]\")",
+    "D24": "=TEXT(1E12,\"[$-1E000409][s]\")",
+    "E24": "=TEXT(1E12,\"[$-1F000409][s]\")",
+    "A25": "=TEXT(1.2345E11,\"[$-1B000409][s]\")",
+    "B25": "=TEXT(1.2345E11,\"[$-1C000409][s]\")",
+    "C25": "=TEXT(1.2345E11,\"[$-1D000409][s]\")",
+    "D25": "=TEXT(1.2345E11,\"[$-1E000409][s]\")",
+    "E25": "=TEXT(1.2345E11,\"[$-1F000409][s]\")"
    }
   }
  ],
