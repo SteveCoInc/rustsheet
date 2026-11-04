@@ -2034,6 +2034,7 @@ C	probes/t3907-typed-clock-a-period-edges.case.json	78
 C	probes/t3907-typed-clock-a-period-shapes.case.json	78
 C	probes/t3909-textjoin-lifted-ignore-empty.case.json	44
 C	probes/t3912-imcsch-band-edges.case.json	174
+C	probes/t3914-imsech-sign-sweep.case.json	600
 C	probes/t3920-typed-a-period-1904.case.json	49
 C	probes/t3920-typed-a-period-unprobed-edges.case.json	160
 C	probes/t3921-match-u0001-wildcard.case.json	135
@@ -6606,6 +6607,10 @@ F	probes/t3906-rate-restart-oos.case.json	Sheet1!A98
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A99
 F	probes/t3912-imcsch-band-edges.case.json	Calc!A25
 F	probes/t3912-imcsch-band-edges.case.json	Calc!B25
+F	probes/t3914-imsech-sign-sweep.case.json	Calc!A11
+F	probes/t3914-imsech-sign-sweep.case.json	Calc!B11
+F	probes/t3914-imsech-sign-sweep.case.json	Calc!C21
+F	probes/t3914-imsech-sign-sweep.case.json	Calc!D21
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B29
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B3
 F	probes/t3929-wildcard-fold-criteria.case.json	Calc!B30
