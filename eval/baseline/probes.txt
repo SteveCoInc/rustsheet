@@ -2040,6 +2040,7 @@ C	probes/t3893-pivotby-error-tie-order.case.json	710
 C	probes/t3894-bare-24h-clock.case.json	54
 C	probes/t3895-collation-script-digits.case.json	193
 C	probes/t3896-collation-middle-dot.case.json	272
+C	probes/t3897-r1c1-let-cell-names.case.json	39
 C	probes/t3898-typed-circular-readers.case.json	28
 C	probes/t3903-bare-24h-clock-extra.case.json	63
 C	probes/t3906-rate-restart-oos.case.json	240
@@ -6491,6 +6492,18 @@ F	probes/t3850-rate-same-state.case.json	Calc!A96
 F	probes/t3881-imcsch-flip-start-negative.case.json	Calc!A3
 F	probes/t3883-im-overflow-reciprocal-sweep.case.json	Calc!A101
 F	probes/t3895-collation-script-digits.case.json	Calc!A185
+F	probes/t3897-r1c1-let-cell-names.case.json	S!A10
+F	probes/t3897-r1c1-let-cell-names.case.json	S!A13
+F	probes/t3897-r1c1-let-cell-names.case.json	S!A8
+F	probes/t3897-r1c1-let-cell-names.case.json	S!A9
+F	probes/t3897-r1c1-let-cell-names.case.json	S!B10
+F	probes/t3897-r1c1-let-cell-names.case.json	S!B13
+F	probes/t3897-r1c1-let-cell-names.case.json	S!B8
+F	probes/t3897-r1c1-let-cell-names.case.json	S!B9
+F	probes/t3897-r1c1-let-cell-names.case.json	S!C10
+F	probes/t3897-r1c1-let-cell-names.case.json	S!C13
+F	probes/t3897-r1c1-let-cell-names.case.json	S!C8
+F	probes/t3897-r1c1-let-cell-names.case.json	S!C9
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A10
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A100
