@@ -176,7 +176,8 @@ pub(crate) struct CollationKey {
     skipped: Vec<(usize, u8)>,
 }
 
-/// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant byte), lone surrogates kept as [`cmp_text`] keeps them.
+/// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
+/// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
     let elements = || elements(text.chars_lossless(), None);
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {

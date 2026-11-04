@@ -1,6 +1,6 @@
 ---
 id: T-4088
-title: "GROUPBY and PIVOTBY group text keys by Excel's = and order them pairwise (probes/t4086-groupby-weightless)"
+title: "GROUPBY and PIVOTBY group text keys by Excel's = (probes/t4086-groupby-weightless)"
 milestone: M7
 lane: engine
 status: done
@@ -58,3 +58,8 @@ comparison, as UNIQUE and SORT do.
 - Unit test `keys_group_by_excel_equality`; grouping.rs's tests moved to grouping/tests.rs (the 1000-line limit).
 - Eval delta: probes known failures 4239 → 4226 (the 13 owned cells), REGRESSIONS 0 in every suite (gen-m9's
   GROUPBY and PIVOTBY sweep and every groupby/pivotby/unique probe case keep each cell they passed).
+- Review round 1 (excel-fidelity REQUEST_CHANGES): the per-field classing of multi-field keys had no evidence. New probe
+  probes/t4088-groupby-multifield (50 cells, excel-graph) shows Excel follows neither per-field nor whole-row classing
+  on an intransitive run: it shows UNIQUE's groups but drops the row `=` joins (coercion.md). Its 10 off cells are
+  known failures owned by new T-4195. The `ß`/`ss`, `æ`/`ae` and `á`/`a`&U+0301 grouping is VERIFIED (B14:B21, B39)
+  and passes. The doc comment no longer says "like UNIQUE"; the title drops "order them pairwise".

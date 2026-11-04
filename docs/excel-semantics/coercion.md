@@ -813,6 +813,18 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
   the groups, the PIVOTBY parents and the subtotal levels compare those classes. The groups still sort with the
   total `cmp_text`, where a class's members tie, so the stable sort keeps their first-appearance order. Whether
   Excel's GROUPBY sort is pairwise on an intransitive cycle (as SORT's is, T-3418) is UNVERIFIED.
+  - Single-field keys also equate what `=` equates beyond case: `ß`/`ss`, `æ`/`ae` and `á`/`a`&U+0301 make three
+    groups, `{"á",48;"æ",12;"ß",3}` (probes/t4088-groupby-multifield Calc!B14:B21, B39; excel-graph, 2026-11-04).
+    Ours passes them.
+  - **Multi-field keys on an intransitive run do not group field by field, nor quite by whole rows.** The rows are
+    (`ab`,x), (`ab`&U+00AD,y), (U+00AD&`ab`,y), with values 1, 2, 4.
+    - GROUPBY shows UNIQUE's two groups, `{"ab","x",1;"ab­","y",2}` (Calc!B1:B2, B30, B34).
+    - The third row, which `=` joins to the second, is in no group: COUNTA counts 1, and the aggregated values are
+      "2" (B31:B32). PIVOTBY is the same (B3, B38).
+    - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
+      second group shows `ab`, which is not the first spelling of either field.
+    - Each field alone groups by first `=` (B35:B36). Ours classes each field and groups by the tuple of classes,
+      which gives three groups here. These 10 cells are known failures owned by T-4195.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

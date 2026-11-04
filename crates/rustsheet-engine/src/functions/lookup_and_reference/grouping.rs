@@ -102,11 +102,14 @@ pub(crate) struct Grouping {
 }
 
 impl Grouping {
-    /// Groups `rows` (indices into `keys`, one key tuple per row) like UNIQUE: two keys are one
-    /// when Excel's `=` finds them equal (case folded, `ß` with `ss`, the prefix rule:
-    /// probes/t4086-groupby-weightless, T-4088) and numbers compare exactly ([`group_key`]). Each
-    /// field's keys are classed by [`first_equal_lines`], each comparison charged to `spend`, and
-    /// the rows grouped by their classes in a hash map. The groups are in order of first appearance
+    /// Groups `rows` (indices into `keys`, one key tuple per row): two keys of a field are one when
+    /// Excel's `=` finds them equal (case folded, `ß` with `ss`, the prefix rule:
+    /// probes/t4086-groupby-weightless, probes/t4088-groupby-multifield B14:B21; T-4088) and numbers
+    /// compare exactly ([`group_key`]). Each field's keys are classed by [`first_equal_lines`], as
+    /// UNIQUE classes lines, each comparison charged to `spend`, and the rows grouped by the tuple of
+    /// their classes in a hash map. Excel differs on a multi-field intransitive run (it drops a row
+    /// there; probes/t4088-groupby-multifield B1:B12, B30:B38): T-4195. Fails only with `spend`'s
+    /// error or `limit`'s. The groups are in order of first appearance
     /// until [`Grouping::sort_by_keys`]. `limit(n)` is the error `n` groups would give (the output
     /// size check, SPEC-0006 step 6); grouping stops at the first group that does not fit, so no
     /// more groups are built than the output can hold.
