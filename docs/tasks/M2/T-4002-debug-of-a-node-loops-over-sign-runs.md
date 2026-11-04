@@ -3,7 +3,7 @@ id: T-4002
 title: "Debug of a Node loops over sign runs"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
