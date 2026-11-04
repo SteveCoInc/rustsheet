@@ -49,7 +49,7 @@ where ours keeps two because a̧ = a͂͂ pairwise.
   one), each compared through the line that started it; lines compare column by column. A Python simulation
   separated eleven sort variants (bottom-up, top-down, insertion, descending, ties to the right) before the engine
   change; none but this one fits.
-- Engine: `coalesce_equal_lines` (functions/util.rs, beside `sort_indices_pairwise`) implements it with a
+- Engine: `coalesce_equal_lines` (functions/util/pairwise_order.rs, beside `sort_indices_pairwise`) implements it with a
   union-find, O(n log n) comparisons; `unique_of` uses it when its data holds a non-ASCII text, comparing cells with
   `unique_cell_cmp` (texts by `cmp_text_pairwise`, others equal exactly when their `unique_cell_key`s are), each
   comparison charged to the work budget. All-ASCII data keeps the hash buckets (`first_equal_lines`), which give
@@ -57,7 +57,7 @@ where ours keeps two because a̧ = a͂͂ pairwise.
 - File size: both touched files would pass 1000 lines, so `sort_indices_pairwise` and `coalesce_equal_lines` moved
   to functions/util/pairwise_order.rs and UNIQUE's grouping (`first_equal_lines`, `unique_of`, `unique_cell_key`,
   `unique_cell_cmp`) to functions/spill_functions/unique.rs, re-exported at their old paths. Duplicated lines
-  2,880 -> 2,878 (`check_duplication.py --update`).
+  2,880 -> 2,878; quality/duplication.json is left for the steward (a protected path).
 - coercion.md "Not a total order" states UNIQUE's rule with the cells; the ours note is updated.
 - Eval delta: probes/t3211-collation-sort-cycles Calc!G4, H4, I4 fixed (3 known failures fewer); the new case
   passes 356/356 checked cells. No regressions.
