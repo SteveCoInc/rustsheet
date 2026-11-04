@@ -3,7 +3,7 @@ id: T-3802
 title: "Probe PROPER word starts after lone surrogates and supplementary letters, and word-start lowering of non-letter capitals"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
