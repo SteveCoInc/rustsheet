@@ -41,6 +41,35 @@ impl Default for Iteration {
     }
 }
 
+impl Iteration {
+    /// The largest `iterateCount` Excel takes (recalc.md, "Iteration settings outside Excel's
+    /// range fall back to its defaults").
+    pub const MAX_ITERATIONS: u32 = 32_767;
+
+    /// These settings as untrusted input may hold them, each brought into Excel's range: a count
+    /// outside 1 to [`Self::MAX_ITERATIONS`] and a delta that is not finite and non-negative
+    /// fall back to Excel's default, each on its own (recalc.md, "Iteration settings outside
+    /// Excel's range fall back to its defaults"). The xlsx importer and a decoded workbook
+    /// (`Model::from_workbook`) both read them through this, so a count from the bytes cannot
+    /// make the sweeps run for minutes (CLAUDE.md directive 5; T-4048).
+    #[must_use]
+    pub fn within_excel_range(self) -> Self {
+        let default = Self::default();
+        Self {
+            max_iterations: if (1..=Self::MAX_ITERATIONS).contains(&self.max_iterations) {
+                self.max_iterations
+            } else {
+                default.max_iterations
+            },
+            max_change: if self.max_change.is_finite() && self.max_change >= 0.0 {
+                self.max_change
+            } else {
+                default.max_change
+            },
+        }
+    }
+}
+
 /// Member evaluations all the sweeps of one recalculation may make together (CLAUDE.md
 /// directive 5); past it the sweeps stop where they are (recalc.md, DEVIATION). Each run also draws
 /// on the recalculation's ceiling (SPEC-0028 section 4), and running out of it stops them the same
