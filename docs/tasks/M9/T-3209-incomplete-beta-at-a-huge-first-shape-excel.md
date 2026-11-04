@@ -59,4 +59,5 @@ Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other th
 - probes-numeric/t4017-f-huge-df2-above-mean-3e8.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e9.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json
+- probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!E3 (`FDIST(1.5,80,1E10)`, 4E-8 relative off; T-4045)
 See (docs/excel-semantics/statistics.md, "Incomplete beta at a huge first shape").

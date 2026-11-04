@@ -3,7 +3,7 @@ id: T-4045
 title: "F.DIST.RT is exactly 0 in Excel at true tails of 4E-297 and 9E-278 (11 t4017 cells; find Excel's underflow cut)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: opus
@@ -40,17 +40,25 @@ brackets, while every tail Excel returns as a number stays a number.
   excel-probe case (excel-graph) of F.DIST.RT and BETA.DIST at the matching shapes, walking x (or df1) from the last
   returning tail to the first zero at two or three df2, listed here before the fix.
 
+- Probe (2026-11-04, before the fix): probes-numeric/t4045-f-dist-rt-zero-cut (excel-graph, 192 cells). F.DIST.RT
+  walks z = df1 x / 2 from 690 to 770 at (df1, df2) = (30, 1E8) in column A, (20, 1E7) in B and (31, 1E8) in C. Column D
+  is FDIST at A's cut and column E is FDIST at T-4044's band shapes. Zero cells (Excel exactly 0):
+  - probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!A18:A55, B19:B55, C15:C55, D1:D21
+  The last numbers are A17 (z 714), B18 (z 715) and C14 (z 711). This task owns those cells and these visibly-off ones:
+  - probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!E1, E4, E6 (FDIST `#NUM!` in T-4044's band; T-4044's
+    `f_bup_sum_overflows` makes them pass once it is on main)
+
 ## Acceptance criteria
-- [ ] A probes-numeric case (excel-graph, valid arity, milestone M9) brackets the zero cut on at least two shape
+- [x] A probes-numeric case (excel-graph, valid arity, milestone M9) brackets the zero cut on at least two shape
       families; its cells are listed in this file before the fix.
-- [ ] The 11 cells above and the probe's zero cells are exactly 0; every probe and t4017 cell where Excel returns a
+- [x] The 11 cells above and the probe's zero cells are exactly 0; every probe and t4017 cell where Excel returns a
       number stays a number with an unchanged or better verdict (cell by cell, `rustsheet-eval show --all`).
-- [ ] If the cut is a constant read off cells, it carries a `FITTED` tag with its bracket and range (decision 0188
+- [x] If the cut is a constant read off cells, it carries a `FITTED` tag with its bracket and range (decision 0188
       R4.3), with the R4 guards of reviewer-excel-fidelity check 7: the hold-out counts, a fresh sweep scored once after
       the freeze, the Gate A envelope result, the reproducibility floor, and no keep-matched branch.
-- [ ] The rule in docs/excel-semantics/statistics.md.
-- [ ] No gated cell regresses (`make eval-baseline`); new failing cells have owners.
-- [ ] `make check` green; reviewers approve.
+- [x] The rule in docs/excel-semantics/statistics.md.
+- [x] No gated cell regresses (`make eval-baseline`); new failing cells have owners.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `#NUM!` at df1 79, df2 1E10 (T-4044); Excel's digits at huge df2 (T-3209, T-4018).
@@ -61,3 +69,19 @@ the 15th significant digit of Excel's value with the right type.
 
 ## Decision 0267
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
+
+## Outcome (2026-11-04, opus run)
+- Rule found, not fitted: Excel's L140 bup+bgrat tail is exactly 0 when bup's prefactor ret = P·x0·y0/c (P the
+  Beta(c, a0) density at y0) is below DBL_MIN. ln(x0^a0·y0^c/B(c, a0)) at each family's last number and first 0
+  (60-digit mpmath) gives brackets (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28), which meet only
+  around ln(DBL_MIN) = -708.396. Cuts on e^-z (708.4, 745.1) or on P itself (z near 726, 724, 722) miss. The threshold
+  is the double range's own bound, not a constant read off cells, so it carries no `FITTED` tag and R4's guards do
+  not apply.
+- Code: `bratio/bup.rs` `l140_bup_prefactor_underflows`, asked in `ported_tails_with`'s L140 bup+bgrat branch
+  (BETA.DIST's, the t's and F's callers) ahead of `l140_bup_bgrat` and its a0 <= 1E7 cap. Unit test
+  `upper_tail_is_zero_where_bups_prefactor_underflows` (fisher.rs).
+- Eval: every Excel 0 of t4045 (A18:A55, B19:B55, C15:C55, D1:D21) and of t4017 (this task's 11 cells) is now exact.
+  t4045's remaining off cells are E1, E4 and E6 (T-4044's band; they pass with #3237 on main) and E3
+  (`FDIST(1.5,80,1E10)` digits, T-4018). Gated suites: see the PR.
+- statistics.md "Incomplete beta at a huge first shape": a new "Where the exact 0 starts" item. The df1 = 2 zeros come
+  from Excel's closed form and stay unexplained (the engine already returns 0 there).
