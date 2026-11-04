@@ -2122,6 +2122,7 @@ C	probes/t4199-decimal-unprobed-shapes.case.json	87
 C	probes/t4200-unique-cycle-permutations.case.json	356
 C	probes/t4208-hyperlink-blank-friendly-name.case.json	31
 C	probes/t4228-pivot-range-groups.case.json	168
+C	probes/t4237-unique-cycle-fresh.case.json	248
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
