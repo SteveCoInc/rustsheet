@@ -72,4 +72,5 @@ text" lists as "Not probed". The engine guesses on each of them today.
 - engineering.md "DECIMAL of unreadable text" states each rule with the new cells; its "Not probed" line now
   names only CHAR(1) to CHAR(8) and CHAR(14) to CHAR(27).
 - Eval delta: probes +1 case, 87 cells, all passing; decimal-unreadable (84) and t2198-m5-lift-argument-kinds
-  (104) still pass; no baseline lines added.
+  (104) still pass; `make eval-baseline` adds only the new case's coverage line (`C ... 87`), no known failures,
+  0 regressions.
