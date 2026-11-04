@@ -49,9 +49,16 @@ counts as residue at 13 digits.
   - The references are taken at the exact ratio d2/(d2 + d1·x). At 1E-14 that includes up to about 2E-15 of argument
     rounding (README).
   - Per df1 the worst point is now 2.0E-15 (df1 3) to 2.1E-14 (df1 79).
-- **probes-numeric against main.** 54 t4017 cells change. 53 move toward Excel, and 6 come within 15 digits; none
-  leaves 15 digits, and none becomes bit-exact. The 54th is `F.DIST.RT(20,79,1E7)`, where Excel is an exact 0 (T-4045)
-  and our tail moves from 5E-13 to 2.7E-15 off the true 9.98932061401838E-278.
+- **probes-numeric against main.** 54 t4017 cells change, 31 at df2 1E7 and 23 at 3E7.
+  - 51 move toward Excel and none moves away. 5 of them come within 15 digits (`numeric_close` to `numeric_ulp`), and
+    none becomes bit-exact.
+  - The other 3 are cells where Excel is an exact 0 (T-4045): `F.DIST.RT(20,79,1E7)`, `F.DIST.RT(20,79,3E7)` and
+    `F.DIST.RT(50,30,1E7)`. Their tails shift in about the 12th digit. For the first, the true value is
+    9.98932061401838E-278, and ours goes from 5E-13 off it to 2.7E-15 off.
+  - Counts are from the Excel-fidelity review's cell-by-cell comparison.
+- **BETA.DIST check.** The widened region also serves BETA.DIST and the quantile searches. A 145-point BETA.DIST grid
+  at non-half-integer b and a up to 3.9E7 (README) goes from a worst error of 4.9E-10 to 4.9E-15, and no point gets
+  worse.
 - **Gated suites.** No cell moves.
 - **How the cut was chosen.** It is not fitted to Excel (R4): the expansion is extended to the bounds it already had,
   and the choice is checked only against 60-digit math. No fresh sweep was run, because the change only moves values

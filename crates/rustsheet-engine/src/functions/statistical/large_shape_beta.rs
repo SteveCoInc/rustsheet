@@ -50,8 +50,8 @@ const MAX_FRACTION_DEPTH: u32 = 1 << 14;
 const SERIES_TOLERANCE: f64 = 1e-17;
 
 /// `I_x(a, b)` with y = 1 - x given, for a of [`MIN_SHAPE`] or more, b below [`MAX_SECOND_SHAPE`]
-/// and 0 < x, y < 1; `None` elsewhere or where a step is not
-/// finite, and the caller keeps its kernel.
+/// and 0 < x, y < 1; `None` elsewhere or where a step is not finite, and the caller keeps its
+/// kernel.
 pub(super) fn large_shape_lower(a: f64, b: f64, x: f64, y: f64) -> Option<f64> {
     if !(a >= MIN_SHAPE && a.is_finite() && b > 0.0 && b < MAX_SECOND_SHAPE && x > 0.0 && y > 0.0) {
         return None;

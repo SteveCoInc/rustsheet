@@ -42,3 +42,16 @@ Before, every point past 5E-14 was at df1 40, 60 or 79, at every df2 of the grid
 bup+bgrat port, which takes at most `MAX_BUP_TERMS` = 9 bup terms (b0 = df1/2 below 10) and a0 <= 1E7. The large-shape
 expansion's b/a cut (b/a = df1/df2 above 1E-6) then sent them to Cephes' continued fraction, 1E-11 to 7E-10 off. At
 df1 3 to 20 the worst point was already 8E-15 before.
+
+## BETA.DIST at shapes the F grid does not reach
+
+The same function also serves BETA.DIST and the quantile searches, so `beta-dist-grid-references.json` checks the rest
+of the widened region. Each entry is `[x, a, b, I_x(a, b)]`:
+- a in 1.2E6, 3E6, 1E7, 2.5E7, 3.9E7;
+- non-half-integer b in 0.7, 2.3, 7.9, 13.37, 25.6, 39.4, with b/a at most 4E-5;
+- x at the mean and 1 and 3 standard deviations either side;
+- 60-digit mpmath, kept above 1E-120.
+
+That leaves 145 points, measured through `bratio::beta_dist_lower_tail`, BETA.DIST's kernel. Before: median 4.0E-16,
+worst 4.9E-10, 30 points past 5E-14. After: median 3.9E-16, worst 4.9E-15, none past 5E-14. No point gets worse by more
+than a factor of 1.5.
