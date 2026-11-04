@@ -77,6 +77,8 @@ def test_order_truncates_and_parity() -> None:
         (BESSELK, [mp(0), mp(1)]),
         (BESSELI, [mp("709.78"), mp(0)]),
         (BESSELI, [mp(-710), mp(1)]),
+        (BESSELJ, [mp("1e10"), mp(0)]),
+        (BESSELY, [mp("1e14"), mp(1)]),
     ],
 )
 def test_domain_errors(definition: object, args: list[mpmath.mpf]) -> None:

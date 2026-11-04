@@ -46,6 +46,9 @@ SPLIT = 8.0  # Excel's rational approximations below, the asymptotic branch from
 I_CUT = 709.7  # BESSELI is finite up to here and `#NUM!` above (T-2613)
 K_FLUSH = 705.5  # BESSELK is 0 from about here (T-2421)
 PHASE_DRAW = 1e8  # J and Y are drawn below this |x|; the phase cut is 134217727
+PHASE_NUM = (
+    134217730.0  # past this |x| both phases (x - 0.785398164, x - 2.356194491) are past the cut: `#NUM!`
+)
 ORDER_CAP = 100_000  # the engine's order cap (a DEVIATION above it)
 TINY_ORDER = 4  # the largest order drawn at a tiny x (a Miller overflow at a large one)
 TINY_X = 1e-6
@@ -61,8 +64,16 @@ def _order(args: Sequence[MathArg]) -> tuple[mpmath.mpf, int]:
     return x, order
 
 
+def _past_phase(x: mpmath.mpf) -> None:
+    """J and Y are `#NUM!` once every phase their recurrence needs is past the cut (T-2547)."""
+    if abs(x) > PHASE_NUM:
+        msg = f"|x| past the phase cut ({PHASE_NUM:g})"
+        raise DomainError(msg)
+
+
 def _besselj(args: Sequence[MathArg]) -> mpmath.mpf:
     x, n = _order(args)
+    _past_phase(x)
     return mpmath.besselj(n, x)
 
 
@@ -71,6 +82,7 @@ def _bessely(args: Sequence[MathArg]) -> mpmath.mpf:
     if x <= 0:
         msg = "BESSELY of x <= 0"
         raise DomainError(msg)
+    _past_phase(x)
     return mpmath.bessely(n, x)
 
 
@@ -174,6 +186,7 @@ def _k_edge(rng: random.Random) -> list[Arg]:
 def _definition(
     function: str,
     value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    *,
     x_hi: float,
     signed: bool,
     edge: Callable[[random.Random], list[Arg]],
@@ -194,7 +207,20 @@ def _definition(
     )
 
 
-BESSELJ = _definition("BESSELJ", _besselj, PHASE_DRAW, True, _jy_edges(True), (FIT_SOURCE, CAP_SOURCE))
-BESSELY = _definition("BESSELY", _bessely, PHASE_DRAW, False, _jy_edges(False), (FIT_SOURCE, CAP_SOURCE))
-BESSELI = _definition("BESSELI", _besseli, I_CUT, True, _i_edge, (I_SOURCE, CAP_SOURCE))
-BESSELK = _definition("BESSELK", _besselk, 1000.0, False, _k_edge, (K_SOURCE, CAP_SOURCE))
+BESSELJ = _definition(
+    "BESSELJ", _besselj, x_hi=PHASE_DRAW, signed=True, edge=_jy_edges(True), sources=(FIT_SOURCE, CAP_SOURCE)
+)
+BESSELY = _definition(
+    "BESSELY",
+    _bessely,
+    x_hi=PHASE_DRAW,
+    signed=False,
+    edge=_jy_edges(False),
+    sources=(FIT_SOURCE, CAP_SOURCE),
+)
+BESSELI = _definition(
+    "BESSELI", _besseli, x_hi=I_CUT, signed=True, edge=_i_edge, sources=(I_SOURCE, CAP_SOURCE)
+)
+BESSELK = _definition(
+    "BESSELK", _besselk, x_hi=1000.0, signed=False, edge=_k_edge, sources=(K_SOURCE, CAP_SOURCE)
+)
