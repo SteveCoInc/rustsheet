@@ -3,7 +3,7 @@ id: T-4235
 title: "Range-grouped pivot fields take Excel's step rule, and the eval adapter registers grouped spec pivots"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -36,10 +36,35 @@ answers as Excel does, so every cell of probes/t4228-pivot-range-groups passes.
   reuse the engine's existing 15-digit rounding helper (`rg` for it) rather than a new one.
 
 ## Acceptance criteria
-- [ ] `group_index` follows the rule above, with unit tests on the probe's points.
-- [ ] GETPIVOTDATA number items on a range-grouped field match the probe's C30:C47 and A35:A36.
-- [ ] probes/t4228-pivot-range-groups passes (the eval adapter registers grouped spec pivots); baseline updated.
-- [ ] `make check` green; reviewers approve.
+- [x] `group_index` follows the rule above, with unit tests on the probe's points.
+- [x] GETPIVOTDATA number items on a range-grouped field match the probe's C30:C47 and A35:A36.
+- [x] probes/t4228-pivot-range-groups passes (the eval adapter registers grouped spec pivots); baseline updated.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Date groups (T-4236).
+
+## Outcome
+- One rule for numeric range groups, `NumberGroups` (crates/rustsheet-engine/src/pivot/number_groups.rs): below
+  `startNum` the first item, past `endNum` the last, `endNum` the last inner group, otherwise step
+  `floor(to_excel_precision(q, 15))` (the engine's existing 15-digit helper), a step past the last inner group `>end`.
+  The importer's `group_field` uses it in place of `group_index`'s numeric branch, keeps it on the cache field
+  (`CacheField::number_groups`), and relabels a `<groupItems>` list of the wrong length with Excel's labels, end groups
+  first (pivot 3).
+- GETPIVOTDATA: a number item on a range-grouped field picks the group whose lower bound it is (`lower_bound_index`,
+  `endNum` is `>end`); a group with no record is `#REF!` on such a field (an empty item of an ungrouped field keeps its
+  answer, unprobed).
+- Eval adapter: a grouped spec pivot is registered (`PivotTableInput::group`, grouped through
+  `rustsheet_xlsx::import::group_by_number_range`, which calls `apply_groups`), and the facade writes the layout Excel
+  shows (captions, the groups holding a record, grand total) from the engine's `row_layout`; the unexpected-cell check
+  knows the grouped pivot's layout box.
+- Structural model (reviewer-excel-fidelity check 7 (c)): candidates were (A) round q to 15 digits, (B) a relative
+  tolerance of 3.3e-15 on q, (C) round the value to 15 digits, then q. All three fit the T-4228 points (the train set,
+  168 cells), so there was no hold-out split to score on: the model was frozen on A, then a fresh sweep was generated and
+  oracle-filled: probes/t4235-pivot-range-rounding (excel-graph, 2026-11-04; generator kept in the PR description):
+  105 points, 75 at relative offsets 1e-16 to 3e-14 below inner boundaries of four groupings (by 0.1, 7, 0.001 and 0.25)
+  and 24 log-uniform over each range, 25 of them where the models disagree. Excel matches A at 105 of 105, B at 81, C at
+  99. Gate A envelope: not applicable (no number is computed; group membership is exact or not), and the case's 242
+  cells pass bit-exact.
+- Eval delta: probes known failures -122 (all of probes/t4228-pivot-range-groups, now 168/168); new case
+  probes/t4235-pivot-range-rounding 242/242. No regressions.

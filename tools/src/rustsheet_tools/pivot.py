@@ -27,7 +27,7 @@ The row field must then hold numbers and the pivot has no column field. `items` 
 labels in order, written as the `<groupItems>`: the first for values below `start`, the last for
 values past `end`. Excel stores no record's group, so the builder renders no cells for a grouped
 pivot (which group a record falls in is what such a probe asks): Excel lays the pivot out itself on
-load (excel-graph, T-4228), and the engine adapter does not register it (T-4235).
+load (excel-graph, T-4228), and the engine adapter has the engine lay it out (T-4235).
 """
 
 from __future__ import annotations

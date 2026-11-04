@@ -142,9 +142,10 @@ a last item for values past `endDate` (`>1/14/2019`):
   `<m/>`, 59 `<item x>`). So a blank record falls in one of the group items.
 Engine: the importer turns every group into an ordinary cache field whose items are the group labels (text) and whose
 records are each record's group (`crates/rustsheet-xlsx/src/import/pivots/groups.rs`), so GETPIVOTDATA addresses a
-grouped field by its label (`"Quarters","Qtr1"`). The record-to-group rule is ECMA-376's layout read off these caches:
-below `start` is item 0, past `end` the last item; otherwise numbers (`rangePr startNum endNum groupInterval`) fall in
-step `floor((v - start) / interval) + 1`, dates in their second, minute, hour (the time rounded to the nearest second),
+grouped field by its label (`"Quarters","Qtr1"`). Numbers (`rangePr startNum endNum groupInterval`) follow the probed
+rule below (`NumberGroups`, crates/rustsheet-engine/src/pivot/number_groups.rs, T-4235). For dates the record-to-group
+rule is ECMA-376's layout read off these caches: below `start` is item 0, past `end` the last item; otherwise dates fall
+in their second, minute, hour (the time rounded to the nearest second),
 day of a leap year, month, quarter or year counted from `startDate`'s year (the day and time split as YEAR and HOUR,
 MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
 to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above). The importer skips the cache
@@ -178,13 +179,19 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
-powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). The importer does not follow the
-rounding or the `>end` quirk yet, nor GETPIVOTDATA's number items (T-4235); the eval adapter does not register a
-grouped spec pivot, so every cell of the probe but the `#REF!` ones is a known failure owned by T-4235.
+powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). Engine (T-4235): `NumberGroups`
+groups by the rule, picks a number item by its lower bound, and relabels a list of the wrong length with its own
+labels (`General(start + k*interval)-General(start + (k+1)*interval)`, the end groups first); a group with no record
+is `#REF!` on a numeric range field only (an empty item of an ungrouped field keeps its 0, unprobed). The importer and
+the eval adapter share it (`apply_groups`); the adapter has the engine lay a grouped spec pivot out (captions, the
+groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model: the probe's
+points fit both (T-4235 Outcome).
 UNVERIFIED (T-4236): the date groups (a time of 23:59:59.5 or later, serials 1 to 60), which group item a blank goes in
 (item 0 by the label; one item for certain by the item lists), and GETPIVOTDATA on a date group's label, a year as a
 number, or a blank.
-Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`).
+Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
+crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`), functions/lookup_and_reference/pivot_index.rs
+(`pivot_number_item`, `row_layout`).
 Tasks: T-4225, T-4228, T-4235, T-4236
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)

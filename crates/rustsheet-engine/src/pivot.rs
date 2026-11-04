@@ -23,6 +23,11 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod number_groups;
+
+pub use crate::functions::lookup_and_reference::pivot_index::{row_layout, RowLayout};
+pub use number_groups::NumberGroups;
+
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
 /// Most record values (records x fields) in one cache, and over the whole workbook.
@@ -62,6 +67,9 @@ pub struct CacheField {
     pub items: Vec<CacheItem>,
     /// Per record, an index into `items`.
     pub records: Vec<u32>,
+    /// For a field grouped by numeric ranges, its grouping: `items` are then the group labels
+    /// and GETPIVOTDATA also picks a group by its lower bound (T-4235).
+    pub number_groups: Option<NumberGroups>,
 }
 
 /// One value of a cache field.

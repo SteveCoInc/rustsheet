@@ -237,7 +237,7 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rendered: BTreeMap<String, CellInput>,
     /// A numeric range grouping of the row field (T-4228). The builder renders no cells for a
-    /// grouped pivot and the engine adapter does not register it yet (T-4235).
+    /// grouped pivot: the engine adapter has the engine lay it out from `location` (T-4235).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<PivotGroupSpec>,
 }

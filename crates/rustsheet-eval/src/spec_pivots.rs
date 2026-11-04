@@ -2,7 +2,8 @@
 //! written as constants, then the pivot is registered over its source.
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotFunction, PivotTableInput, RangeRef, SheetId, Txn,
+    CellRef, EditError, Input, PivotFunction, PivotRangeGroup, PivotTableInput, RangeRef, SheetId,
+    Txn,
 };
 
 use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
@@ -43,9 +44,7 @@ pub fn add_pivots(
     sheet: &SheetSpec,
     id: SheetId,
 ) -> Result<(), EditError> {
-    // A grouped pivot is not registered until the engine groups spec pivots (T-4235): GETPIVOTDATA
-    // against it is `#REF!`, a known failure of probes/t4228-pivot-range-groups.
-    for pivot in sheet.pivot_tables.iter().filter(|p| p.group.is_none()) {
+    for pivot in &sheet.pivot_tables {
         let input = pivot_input(spec, ids, sheet, id, pivot)?;
         tx.add_pivot_table(&input)?;
     }
@@ -71,8 +70,13 @@ fn pivot_input(
         })?;
     let source = range_ref(source_id, &range)
         .map_err(|_| EditError::Engine(format!("pivot {}: bad source {range}", pivot.name)))?;
-    // The rendered cells' bounding box is the pivot's `<location>` (it spans its labels).
+    // The rendered cells' bounding box is the pivot's `<location>` (it spans its labels). A
+    // grouped pivot has none: the engine lays it out from its top-left cell, as Excel does on
+    // load (T-4235).
     let mut cells = Vec::new();
+    if pivot.group.is_some() {
+        cells.push(parse_addr(&pivot.location.replace('$', ""))?);
+    }
     for a1 in pivot.rendered.keys() {
         cells.push(parse_addr(a1)?);
     }
@@ -101,6 +105,12 @@ fn pivot_input(
         function,
         // The caption Excel gives a new data field: `Sum of Sales`.
         caption: format!("{} of {}", function.caption_name(), pivot.value),
+        group: pivot.group.as_ref().map(|g| PivotRangeGroup {
+            start: g.start,
+            end: g.end,
+            interval: g.interval,
+            items: g.items.clone(),
+        }),
     })
 }
 

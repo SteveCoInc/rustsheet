@@ -13,7 +13,7 @@ mod workbook;
 
 pub use edit::{ChangeSet, Input, InputChange, SheetChange, Txn, ValueChange};
 #[doc(hidden)]
-pub use edit::{PivotError, PivotFunction, PivotTableInput};
+pub use edit::{PivotError, PivotFunction, PivotRangeGroup, PivotTableInput};
 pub use error::{EditError, LoadError, RefError, SaveError};
 pub use refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,

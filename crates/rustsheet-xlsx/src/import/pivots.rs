@@ -24,6 +24,7 @@ use rustsheet_engine::pivot::{
 };
 use rustsheet_engine::types::DateSystem;
 
+pub use self::groups::group_by_number_range;
 use self::groups::{apply_groups, FieldGroup, GroupBy, RangeGroup};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
