@@ -3,7 +3,7 @@ id: T-4020
 title: "Convert to range turns a #This Row reference off the data rows into #REF!, not a detached reference"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
