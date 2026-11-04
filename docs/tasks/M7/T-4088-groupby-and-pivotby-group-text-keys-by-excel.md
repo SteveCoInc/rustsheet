@@ -3,7 +3,7 @@ id: T-4088
 title: "GROUPBY and PIVOTBY group text keys by Excel's = and order them pairwise (probes/t4086-groupby-weightless)"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,11 +33,28 @@ comparison, as UNIQUE and SORT do.
   PIVOTBY "still sort with the total `cmp_text`".
 
 ## Acceptance criteria
-- [ ] Every probes/t4086-groupby-weightless cell passes. `make eval-check` shows 0 regressions; in particular, the
+- [x] Every probes/t4086-groupby-weightless cell passes. `make eval-check` shows 0 regressions; in particular, the
       groupby-pivotby probe cases and gen-m9 keep every cell.
-- [ ] One grouping-by-`=` helper is shared with UNIQUE (no copy).
-- [ ] coercion.md states "Implemented in" with this task.
+- [x] One grouping-by-`=` helper is shared with UNIQUE (no copy).
+- [x] coercion.md states "Implemented in" with this task.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - SORT's algorithm on intransitive cycles (T-3418).
+
+## Outcome
+- New `first_equal_lines` (functions/spill_functions.rs) holds UNIQUE's loop, now shared. It buckets lines by a key
+  and has a line join the first kept line of its bucket that `same` finds equal, charging every comparison to the
+  work budget. UNIQUE calls it.
+- `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each key field with it, with
+  `cmp_text_pairwise` for texts and `group_key` (now UNIQUE's `unique_cell_key`, -0 as 0) for the bucket. Groups,
+  `prefix_ids`, the subtotal levels and `first_difference` compare those classes (`Group::cells: Vec<usize>`), so
+  PIVOTBY's parents agree with the groups. `Grouping::new` takes the work budget as `spend`; GROUPBY and PIVOTBY pass
+  `Model::spend_work`.
+- The groups still sort with the total `cmp_text`. A class's members tie there, so first-appearance order holds
+  (UNVERIFIED on intransitive cycles: T-3418).
+- Folded in the #3142 MINORs: the collation module and `CollationKey` docs describe the six passes; coercion.md says
+  why half-width kana stays a kana type (t3275 A99); new probe task T-4153 for `NARROW_NBSP`'s value.
+- Unit test `keys_group_by_excel_equality`; grouping.rs's tests moved to grouping/tests.rs (the 1000-line limit).
+- Eval delta: probes known failures 4239 → 4226 (the 13 owned cells), REGRESSIONS 0 in every suite (gen-m9's
+  GROUPBY and PIVOTBY sweep and every groupby/pivotby/unique probe case keep each cell they passed).
