@@ -169,7 +169,8 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     }
     // A blank base value goes in item 0: Excel's pivot fields list exactly the group items, with
     // no blank item of their own (59932: 14, 6 and 123 items over a field holding a blank record),
-    // and 59932 labels its first month item "(blank)". Which item Excel uses is UNVERIFIED (T-4228).
+    // and 59932 labels its first month item "(blank)". Which item Excel uses is UNVERIFIED: a
+    // refresh drops the date grouping of a field holding a blank (T-4236), so no probe can say.
     let mut map = Vec::with_capacity(base.items.len());
     for (index, item) in base.items.iter().enumerate() {
         let target = match (item, &group.discrete, &group.range) {
@@ -214,10 +215,22 @@ fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip
         return skip("a range group with fewer than three items");
     }
     let last = count - 1;
-    if value < range.start {
+    // A date is compared to startDate and endDate rounded to the second, as it is grouped:
+    // Excel's cache holds 2018-12-31 23:59:59.5 as 2019-01-01, so it goes in the first month of
+    // a group starting then, not below it (probes/t4236-pivot-date-groups-no-blank, web.md).
+    let (below, past) = if range.by == GroupBy::Range {
+        (value < range.start, value > range.end)
+    } else {
+        let at = split_serial(value)?;
+        (
+            at < split_serial(range.start)?,
+            at > split_serial(range.end)?,
+        )
+    };
+    if below {
         return Ok(0);
     }
-    if value > range.end {
+    if past {
         return Ok(u32::try_from(last).unwrap_or(0));
     }
     let inner = match range.by {
@@ -279,7 +292,7 @@ fn calendar_parts(serial: f64) -> Result<(Option<YearDay>, Option<i32>, usize), 
 
 /// A serial's whole day and its time of day in seconds, split as YEAR, MONTH, HOUR, MINUTE and
 /// SECOND split it (`carried_day`, `time_of_day_parts`): the time rounds to the nearest second
-/// and 23:59:59.5 or later is the next day. That pivot groups split it so is UNVERIFIED (T-4228).
+/// and 23:59:59.5 or later is the next day, as Excel's pivot cache rounds a date (T-4236).
 fn split_serial(serial: f64) -> Result<(i64, usize), Skip> {
     // Pivot dates are 1900-01-00 to 9999-12-31, about 3e6 days: well inside an i64.
     if !(0.0..=1e7).contains(&serial) {

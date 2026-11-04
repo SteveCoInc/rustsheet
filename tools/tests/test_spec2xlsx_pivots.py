@@ -111,7 +111,7 @@ def test_rows_only_average_pivot() -> None:
         ({"function": "median"}, "is not one of"),
         ({"source": "Nope!A1:C4"}, "is not in the spec"),
         ({"source": "Data!A1:C1"}, "no data rows"),
-        ({"source": "Data!A1:C5"}, "literal text or number"),
+        ({"source": "Data!A1:C5"}, "has a blank cell"),
         ({"location": "G1"}, "overlaps"),
         ({"filter": "x"}, "unknown keys"),
     ],
@@ -198,4 +198,55 @@ def test_grouped_pivot_refusals() -> None:
     spec = _grouped_spec(_GROUP)
     spec["sheets"][1]["pivot_tables"][0]["rendered"] = {"A3": "Row Labels"}
     with pytest.raises(ValueError, match="differ from its layout"):
+        build_xlsx(spec)
+
+
+_DATE_GROUP = {
+    "by": "months",
+    "start": 43466,
+    "end": 43830.5,
+    "interval": 1,
+    "items": ["<", *"ABCDEFGHIJKL", ">"],
+}
+
+
+def test_date_grouped_pivot_with_a_blank() -> None:
+    # T-4236: a date group writes groupBy with startDate/endDate, caches the row field as dates
+    # (the OLE epoch, whole seconds) and a blank row-field cell as `<m/>`.
+    spec = _grouped_spec(_DATE_GROUP)
+    del spec["sheets"][0]["cells"]["A3"]
+    spec["sheets"][0]["cells"]["A2"] = 43480.99999
+    parts = _parts(spec)
+    definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert (
+        '<sharedItems containsSemiMixedTypes="0" containsNonDate="0" containsDate="1" containsString="0"'
+        ' containsBlank="1" minDate="1900-01-11T00:00:00" maxDate="2019-01-15T23:59:59"/>'
+        '<fieldGroup base="0"><rangePr autoStart="0" autoEnd="0" groupBy="months"'
+        ' startDate="2019-01-01T00:00:00" endDate="2019-12-31T12:00:00"/><groupItems count="14">'
+    ) in definition
+    records = parts["xl/pivotCache/pivotCacheRecords1.xml"]
+    assert '<r><d v="2019-01-15T23:59:59"/><n v="2"/></r><r><m/><n v="4"/></r>' in records
+
+
+@pytest.mark.parametrize(
+    ("group", "message"),
+    [
+        (_DATE_GROUP | {"by": "weeks"}, "with interval 1"),
+        (_DATE_GROUP | {"interval": 7}, "with interval 1"),
+        (_DATE_GROUP | {"start": -1}, "0 to 9999-12-31"),
+    ],
+)
+def test_malformed_date_groups_are_refused(group: object, message: str) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_xlsx(_grouped_spec(group))
+
+
+def test_only_a_grouped_row_field_may_hold_blanks() -> None:
+    spec = _grouped_spec(_GROUP)
+    del spec["sheets"][0]["cells"]["B3"]
+    with pytest.raises(ValueError, match="has a blank cell"):
+        build_xlsx(spec)
+    spec = _spec(_PIVOT)
+    del spec["sheets"][0]["cells"]["A3"]
+    with pytest.raises(ValueError, match="has a blank cell"):
         build_xlsx(spec)

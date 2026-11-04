@@ -242,7 +242,23 @@ pub struct PivotTableSpec {
     pub group: Option<PivotGroupSpec>,
 }
 
-/// A pivot row field's range grouping (`<fieldGroup>` with `<rangePr>`), as
+impl PivotTableSpec {
+    /// The pivot's numeric range group, if it has one. The engine adapter registers a pivot with
+    /// no group or a numeric one (T-4235); a date-grouped pivot stays unregistered until the engine
+    /// lays out date groups (T-4246).
+    #[must_use]
+    pub fn numeric_group(&self) -> Option<&PivotGroupSpec> {
+        self.group.as_ref().filter(|g| g.by.is_none())
+    }
+
+    /// Whether the engine adapter registers the pivot: it has no group or a numeric one.
+    #[must_use]
+    pub fn is_registered(&self) -> bool {
+        self.group.is_none() || self.numeric_group().is_some()
+    }
+}
+
+/// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as
 /// `tools/src/rustsheet_tools/pivot.py` writes it: `items` are the group labels in order, the first
 /// for values below `start` and the last for values past `end`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -256,6 +272,10 @@ pub struct PivotGroupSpec {
     pub interval: f64,
     /// The `<groupItems>` labels.
     pub items: Vec<String>,
+    /// A date group's `groupBy` (`months`, `hours`, ...), whose `start` and `end` are date serials
+    /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine

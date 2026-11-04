@@ -3,7 +3,7 @@ id: T-4247
 title: "D-function field given as a reference to an error cell is #VALUE!, not the error"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,8 +30,9 @@ it cannot tell a literal from a referenced error. The fix likely looks at the `f
 choosing: a field reference through a defined name, `INDEX(...)`, `@G1:G2` and an `IF(TRUE,Data!A3)`.
 
 ## Acceptance criteria
-- [ ] The 12 cells above pass; probes for the unprobed forms above are added and match.
-- [ ] `make eval-baseline` shrinks the known failures; no regressions.
+- [x] The 12 cells above pass.
+- [ ] Probes for the unprobed forms above are added and match: moved to T-4256.
+- [x] `make eval-baseline` shrinks the known failures; no regressions.
 - [ ] `make check` green; reviewers approve.
 
 ## Visible-parity stage
@@ -40,3 +41,12 @@ campaign. Its target is that every cell it owns has Excel's type and error.
 
 ## Out of scope
 - Other `field` kinds; database and criteria arguments.
+
+## Outcome
+`db_call` now checks whether `field` is a single-cell `ReferenceKind` whose cell holds an error and
+returns `#VALUE!` (error literals still propagate). Eval: probes/m9-database-argument-kinds, 12
+known failures fixed (Calc!A3, A6, ..., A36); `eval/baseline/probes.txt` shrank by 12. The
+visible-parity lock is lowered by the steward (`make eval-lower-visible-lock`).
+
+Not done: probes for a field through a defined name, `INDEX(...)`, `@G1:G2` and `IF(TRUE,Data!A3)`
+(need the Excel oracle); only a direct cell reference is handled. Filed as T-4256.
