@@ -113,8 +113,8 @@ pub(super) fn settle_lambda_prefixes(node: &mut Node) {
 /// `='AB12'*2`, `=SUM('f1',2)`, `='f1'(2)` (probes/t3897-r1c1-let-cell-names A8:C10,
 /// probes/t4040-r1c1-unbound-cell-names A7:C13, excel-graph, T-4040); a name that is no cell
 /// stays bare (`=Xfe1`). The quoted spelling is no name a LET can declare and no defined name,
-/// so it evaluates to `#NAME?`; the R1C1 storage form writes it bare, `f1` (`variable_text`),
-/// which this reads back quoted, and keeps `_xlpm.f1` for the prefixed name (T-4099).
+/// so it evaluates to `#NAME?`; the R1C1 storage form writes it `_xlpm.f1` (`variable_text`),
+/// which this reads back quoted, and a name written with its prefix `_xlpm._xlpm.x` (T-4099).
 pub(super) fn quote_unbound_cell_shaped_names(node: &mut Node) {
     walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
         if declared.is_none()

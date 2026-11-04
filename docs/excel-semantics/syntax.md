@@ -724,7 +724,7 @@ reads back quoted, since one prefix there is the name written with it (T-4040, T
 of every use until the end of the parse, and `call_names::settle_lambda_prefixes` drops it from the bound ones; an
 unbound one keeps it and prints it (`Parser::written_lambda_name`). The storage form writes such a name with two
 prefixes, as its single prefix is its own mark for a name that would read back as something else (T-4099). The first-spelling table
-(`CallNameSpellings`) gives it the workbook's spelling. Ours also shows a file's `_xlpm.f1` quoted (T-4099).
+(`CallNameSpellings`) gives it the workbook's spelling.
 Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
 whole-row range's second corner.
 Tasks: T-3212, T-3897, T-3898, T-4040
