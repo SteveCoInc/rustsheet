@@ -3,7 +3,7 @@ id: T-3985
 title: "GROUPBY lifted options beside a spent filter: probe a position holding text or an out-of-range number and an error, or two errors"
 milestone: M7
 lane: functions-lookup
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
