@@ -21,10 +21,7 @@ use basym::basym;
 use bfrac::bfrac;
 use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{
-    bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_prefactor_underflows,
-    l140_bup_sum_overflows, BupSum,
-};
+use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, l140_bup_sum_overflows, BupSum};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -348,12 +345,7 @@ fn ported_tails_with(
         }
         // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
         Branch::L140BupBgrat if half_bgrat => {
-            // Excel's exact 0 where bup's prefactor leaves the normal range (T-4045).
-            let w = if l140_bup_prefactor_underflows(d.a0, d.b0, d.x0, d.y0) {
-                0.0
-            } else {
-                l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?
-            };
+            let w = l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?;
             (w, other(w))
         }
         Branch::L140BupBpser => {

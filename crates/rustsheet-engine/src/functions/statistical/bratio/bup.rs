@@ -77,29 +77,6 @@ pub(super) fn l140_bup_bpser(a0: f64, b0: f64, x0: f64, y0: f64, sum: BupSum) ->
     Some(up + series)
 }
 
-/// Whether Excel's L140 bup+bgrat tail w is exactly 0 because bup's prefactor ret = x87(P·fl(x0·y0)/c)
-/// of [`l140_bup_bgrat`] (P the Beta(c, a0) density at y0) is below the smallest normal double:
-/// Excel's ret is then 0, and so is the whole tail, bgrat's increment included (there z > 708, so
-/// the increment is subnormal and flushed). A density that is itself below the normal range gives
-/// a smaller ret, so it is 0 too. On probes-numeric t4045-f-dist-rt-zero-cut ln(x0^a0·y0^c/B(c, a0))
-/// brackets Excel's last number and first 0 at (-707.42, -708.42), (-708.38, -709.38) and
-/// (-708.28, -709.28) in the three families (df1 30, 20 and 31 at df2 1E8, 1E7 and 1E8), which
-/// meet only around ln(DBL_MIN) = -708.396: `F.DIST.RT(47.6,30,1E8)` is a number and
-/// `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md "Incomplete beta at a huge first shape",
-/// T-4045). It holds at any a0 (no [`MAX_BUP_A0`] cap: the check reads only the prefactor).
-pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
-    let (_, c) = bup_split(b0);
-    match beta_density_small_shape(y0, c, a0) {
-        Some(density) if density.is_normal() => !Register::load(density)
-            .mul(Register::load(x0 * y0))
-            .div(Register::load(c))
-            .store()
-            .is_normal(),
-        Some(_) => true,
-        None => false,
-    }
-}
-
 /// bratio's L140 for x0 > 0.7 and a0 > 15 (b0 < 40): w = bgrat(a0, c, x0, y0, bup(c, a0, y0, x0, n))
 /// with n and c = b0 - n from [`bup_split`], as Excel computes it, RN(W + D) (statistics.md "Incomplete
 /// beta: the integrated model", L140 bup+bgrat at 1 < b < 2 (T-3382) and with n >= 2 bup terms
@@ -116,19 +93,32 @@ pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) 
 /// `bupdens.out`), and T-3568's n >= 2 model takes it too. On [`bup`]'s own callers the prefactor's
 /// rounding is not yet scored (`bup_arith = "w4"` covers only its W loop): T-3770.
 ///
+/// Excel's w is exactly 0 where ret is below the smallest normal double, at any a0 (the check comes
+/// before the caps): Excel's ret is then 0, and bgrat's increment, at z > 708 there, is subnormal
+/// and flushed. A density below the normal range gives a smaller ret, so it is 0 too. On
+/// probes-numeric t4045-f-dist-rt-zero-cut, ln(x0^a0·y0^c/B(c, a0)) brackets Excel's last number
+/// and first 0 at (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) in its three
+/// families (df1 30, 20 and 31 at df2 1E8, 1E7 and 1E8), which meet only around `ln(DBL_MIN)` =
+/// -708.396: `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0
+/// (statistics.md "Incomplete beta at a huge first shape", T-4045).
+///
 /// `None` past [`MAX_BUP_TERMS`] or [`MAX_BUP_A0`] at n >= 2 or c = 1, where either piece is not
 /// finite or bgrat's z is out of its range, so the caller keeps today's kernel.
 pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> {
     let (n, c) = bup_split(b0);
-    if bup_takes_terms(b0) && !(n <= MAX_BUP_TERMS && a0 <= MAX_BUP_A0) {
-        return None;
+    let density = beta_density_small_shape(y0, c, a0)?;
+    if !density.is_normal() {
+        return Some(0.0);
     }
-    // A density at or past the subnormal edge has lost the digits W needs (it underflows to 0
-    // while W, times S's large powers, is still a normal double): today's kernel keeps those.
-    let density = beta_density_small_shape(y0, c, a0).filter(|p| p.is_normal())?;
     let ret = Register::load(density)
         .mul(Register::load(x0 * y0))
         .div(Register::load(c));
+    if !ret.store().is_normal() {
+        return Some(0.0);
+    }
+    if bup_takes_terms(b0) && !(n <= MAX_BUP_TERMS && a0 <= MAX_BUP_A0) {
+        return None;
+    }
     let up = ret
         .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
         .store();
