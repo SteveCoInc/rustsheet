@@ -13,7 +13,7 @@
 //! (corpus-bench 52379, 59932), and UNVERIFIED against Excel's own grouping
 //! (docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
-use rustsheet_engine::formatter::dates::excel_serial_to_ymd;
+use rustsheet_engine::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
 use rustsheet_engine::pivot::{
     CacheField, CacheItem, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
 };
@@ -141,7 +141,9 @@ pub(super) fn apply_groups(
             existing.records = field.records;
         } else {
             // Sorted, and every grouping field has exactly one group, so this is the next one.
-            let name = names.next().unwrap_or_default();
+            let Some(name) = names.next() else {
+                return skip("a grouping field without a name");
+            };
             cache.fields.push(CacheField { name, ..field });
         }
     }
@@ -154,31 +156,22 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     if count == 0 {
         return skip("a fieldGroup without groupItems");
     }
-    let mut items = group.items.clone();
-    // A blank base value has no group item of its own in the layout; it gets a blank item
-    // appended (UNVERIFIED: 59932's month groups label their first item "(blank)").
-    let mut missing = None;
+    // A blank base value goes in item 0: Excel's pivot fields list exactly the group items, with
+    // no blank item of their own (59932: 14, 6 and 123 items over a field holding a blank record),
+    // and 59932 labels its first month item "(blank)". Which item Excel uses is UNVERIFIED (T-4228).
     let mut map = Vec::with_capacity(base.items.len());
     for (index, item) in base.items.iter().enumerate() {
         let target = match (item, &group.discrete, &group.range) {
             (_, Some(discrete), _) => match discrete.get(index) {
-                Some(&k) if (k as usize) < count => Some(k),
+                Some(&k) if (k as usize) < count => k,
                 _ => return skip("a base item without a valid discrete group"),
             },
-            (CacheItem::Missing, None, Some(_)) => None,
+            (CacheItem::Missing, None, Some(_)) => 0,
             (CacheItem::Number(v) | CacheItem::Date(v), None, Some(range)) => {
-                Some(range_group(*v, range, count)?)
+                group_index(*v, range, count)?
             }
             (_, None, Some(_)) => return skip("a range group over a value that is not a number"),
             (_, None, None) => return skip("a fieldGroup without rangePr or discretePr"),
-        };
-        let target = match target {
-            Some(k) => k,
-            None => *missing.get_or_insert_with(|| {
-                items.push(CacheItem::Missing);
-                // Bounded by MAX_ITEMS (the group items were read under it), so it fits.
-                items.len() as u32 - 1
-            }),
         };
         map.push(target);
     }
@@ -190,14 +183,14 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
         .ok_or(PivotCacheError::BadRecord)?;
     Ok(CacheField {
         name: String::new(),
-        items,
+        items: group.items.clone(),
         records,
     })
 }
 
 /// The group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise the
 /// step (numbers) or the calendar part (dates) counted from 1.
-fn range_group(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip> {
+fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip> {
     if let Some(expected) = range.by.fixed_item_count() {
         if count != expected {
             return skip(format!(
@@ -279,16 +272,16 @@ fn calendar_parts(serial: f64) -> Result<(Option<YearDay>, Option<i32>, usize), 
     })
 }
 
-/// A serial's whole day and its time of day in seconds (rounded to the nearest second).
+/// A serial's whole day and its time of day in seconds, split as YEAR, MONTH, HOUR, MINUTE and
+/// SECOND split it (`carried_day`, `time_of_day_parts`): the time rounds to the nearest second
+/// and 23:59:59.5 or later is the next day. That pivot groups split it so is UNVERIFIED (T-4228).
 fn split_serial(serial: f64) -> Result<(i64, usize), Skip> {
-    const SECONDS_PER_DAY: f64 = 86_400.0;
-    let total = (serial * SECONDS_PER_DAY).round();
-    // Pivot dates are 1900-01-00 to 9999-12-31, about 2.6e11 seconds: well inside an i64.
-    if !(0.0..=1e15).contains(&total) {
+    // Pivot dates are 1900-01-00 to 9999-12-31, about 3e6 days: well inside an i64.
+    if !(0.0..=1e7).contains(&serial) {
         return skip("a date group outside the calendar");
     }
-    let total = total as i64;
-    let day = total / 86_400;
-    let seconds = usize::try_from(total % 86_400).unwrap_or(0);
+    let day = carried_day(serial) as i64;
+    let [hour, minute, second] = time_of_day_parts(serial);
+    let seconds = (hour * 3600.0 + minute * 60.0 + second) as usize;
     Ok((day, seconds))
 }

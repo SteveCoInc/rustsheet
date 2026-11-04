@@ -44,6 +44,10 @@ instead of the whole cache being skipped, so its pivot tables and GETPIVOTDATA o
   and unknown 12 say so.
 - corpus-bench 52379 (`Date/Time` by minutes, `Hours`, `Days`) and 59932 (`Date` by months, `Quarters`, `Years`) now
   import their caches and pivots with no skip line. On main both logged `skipped pivot cache ...: "a grouped field"`.
+- A blank base value goes in group item 0: 59932's pivot lists exactly the group items (14, 6, 123) over a field with
+  a blank record, so Excel has no extra blank item, and its first month item is labelled `(blank)` (review round 1).
+  The time of day is split with the HOUR/MINUTE/SECOND and YEAR helpers (`time_of_day_parts`, `carried_day`). They
+  moved from functions/date_and_time.rs to formatter/dates.rs as public functions, so the importer reuses them.
 - Unit tests in import/pivots/tests.rs pin a date group (months in place, quarters and years), an hour group, a numeric
   step group, a discrete group, a blank base value, and the malformed layouts that still skip the cache.
 - Quirk recorded: web.md "Grouped pivot fields import as their group items". It gives the group-item layouts Excel

@@ -134,20 +134,26 @@ a last item for values past `endDate` (`>1/14/2019`):
 - `months` 14 items `Jan` to `Dec`; `quarters` 6 items `Qtr1` to `Qtr4`; `years` one item per year from `startDate`'s
   to `endDate`'s, 123 items for 1899-12-30 to 2020-03-28 (`1900` to `2020`; corpus-bench/59932 fields `Date`,
   `Quarters`, `Years`).
-- Quirk: 59932's `Date` field, which holds blanks (`containsBlank="1"`) and starts at serial 0, labels its first month
-  item `(blank)` where its `Quarters` and `Years` groups of the same field and range label it `<1/0/1900`.
+- Quirk: 59932's `Date` field, which holds blanks (`containsBlank="1"`, shared item 5767 is `<m/>` and records point at
+  it) and starts at serial 0, labels its first month item `(blank)` where its `Quarters` and `Years` groups of the same
+  field and range label it `<1/0/1900`.
+- A grouped field has no blank item of its own: 59932's pivot lists exactly 14, 6 and 123 `<item x>` for `Date`,
+  `Quarters` and `Years`, while an ungrouped field with a blank lists it as an extra item (52379 `User`: 58 `<s>` and
+  `<m/>`, 59 `<item x>`). So a blank record falls in one of the group items.
 Engine: the importer turns every group into an ordinary cache field whose items are the group labels (text) and whose
 records are each record's group (`crates/rustsheet-xlsx/src/import/pivots/groups.rs`), so GETPIVOTDATA addresses a
 grouped field by its label (`"Quarters","Qtr1"`). The record-to-group rule is ECMA-376's layout read off these caches:
 below `start` is item 0, past `end` the last item; otherwise numbers (`rangePr startNum endNum groupInterval`) fall in
 step `floor((v - start) / interval) + 1`, dates in their second, minute, hour (the time rounded to the nearest second),
-day of a leap year, month, quarter or year counted from `startDate`'s year, and a `<discretePr>` list maps base shared
-item i to its i-th `<x v>`. A blank base value gets a blank item appended after the labels. The importer skips the cache
+day of a leap year, month, quarter or year counted from `startDate`'s year (the day and time split as YEAR and HOUR,
+MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
+to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above). The importer skips the cache
 (logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
 a range group over text, a database field after a grouping field, and a base that is not a database field.
 UNVERIFIED: which group Excel puts each value in (no record's group is stored, so the caches cannot show it; the
-boundary values, a time of 23:59:59.5 or later, and serials 1 to 60 especially), where a blank goes (59932's `(blank)`
-suggests its own item, which may be item 0), and what GETPIVOTDATA answers for a grouped field's label, a year as a
+boundary values, steps a double cannot hold exactly (0.3 from 0 by 0.1), a time of 23:59:59.5 or later, and serials
+1 to 60 especially), which group item a blank goes in (item 0 by the label; one item for certain by the item lists),
+and what GETPIVOTDATA answers for a grouped field's label, a year as a
 number, or a blank. No GETPIVOTDATA cell or excel-graph probe covers a grouped field yet (T-4228 probes them).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`).
 Tasks: T-4225, T-4228

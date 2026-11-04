@@ -531,7 +531,7 @@ fn read_definition<B: BufRead>(
                 return Ok(());
             };
             match name.as_str() {
-                "rangePr" => group.range = Some(range_group(element, date_system)?),
+                "rangePr" => group.range = Some(read_range_pr(element, date_system)?),
                 "discretePr" => group.discrete = Some(Vec::new()),
                 _ => {}
             }
@@ -581,7 +581,7 @@ fn read_definition<B: BufRead>(
 
 /// A `<rangePr>`: `startNum`, `endNum` and `groupInterval` for numbers, `startDate` and `endDate`
 /// for dates (read as cache `<d>` items are).
-fn range_group(element: &BytesStart, date_system: DateSystem) -> Result<RangeGroup, Skip> {
+fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeGroup, Skip> {
     let Some(by) = GroupBy::parse(attribute(element, "groupBy")?.as_deref()) else {
         return skip("an unknown groupBy");
     };

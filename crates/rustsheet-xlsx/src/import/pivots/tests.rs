@@ -654,7 +654,7 @@ fn grouped_definition() -> String {
 
 const GROUPED_ROWS: &str = r#"<r><x v="0"/><n v="5"/><x v="0"/></r><r><x v="1"/><n v="10"/><x v="1"/></r><r><x v="2"/><n v="31"/><x v="2"/></r><r><x v="3"/><n v="-1"/><x v="0"/></r>"#;
 
-const GROUPED_TABLE: &str = r#"<location ref="A3:B6" firstHeaderRow="1"/><pivotFields count="7"><pivotField axis="axisRow"><items count="3"><item x="1"/><item x="5"/><item x="14"/></items></pivotField><pivotField dataField="1"/><pivotField/><pivotField axis="axisCol"><items count="6"><item x="0"/><item x="5" h="1"/></items></pivotField><pivotField/><pivotField/><pivotField/></pivotFields><rowFields><field x="0"/></rowFields><colFields><field x="3"/></colFields><dataFields><dataField name="Sum of Amount" fld="1"/></dataFields>"#;
+const GROUPED_TABLE: &str = r#"<location ref="A3:B6" firstHeaderRow="1"/><pivotFields count="7"><pivotField axis="axisRow"><items count="3"><item x="1"/><item x="5"/><item x="0"/></items></pivotField><pivotField dataField="1"/><pivotField/><pivotField axis="axisCol"><items count="6"><item x="0"/><item x="5" h="1"/></items></pivotField><pivotField/><pivotField/><pivotField/></pivotFields><rowFields><field x="0"/></rowFields><colFields><field x="3"/></colFields><dataFields><dataField name="Sum of Amount" fld="1"/></dataFields>"#;
 
 fn grouped_parts(definition: String) -> Vec<(String, String)> {
     let parts = with(parts(), DEFINITION_PART, definition);
@@ -673,15 +673,14 @@ fn grouped_fields_import_as_their_group_items() {
         ["Date", "Amount", "Region", "Quarters", "Years", "Bands", "Zone"]
     );
     let labels = |field: usize| -> Vec<CacheItem> { fields[field].items.clone() };
-    // Date grouped in place: its items are the month groups, then a blank for the blank record.
-    let mut months: Vec<CacheItem> = MONTHS.iter().map(|m| text(m)).collect();
-    months.push(CacheItem::Missing);
+    // Date grouped in place: its items are exactly the month groups; the blank record is in item 0.
+    let months: Vec<CacheItem> = MONTHS.iter().map(|m| text(m)).collect();
     assert_eq!(labels(0), months);
     // 2019-05-20T23:59:59.6 rounds to 21 May, still May; the leap day is February.
-    assert_eq!(fields[0].records, [1, 5, 2, 14]);
-    assert_eq!(fields[3].records, [1, 2, 1, 6]);
-    assert_eq!(fields[3].items[6], CacheItem::Missing);
-    assert_eq!(fields[4].records, [1, 1, 2, 4]);
+    assert_eq!(fields[0].records, [1, 5, 2, 0]);
+    assert_eq!(fields[3].records, [1, 2, 1, 0]);
+    assert_eq!(fields[3].items.len(), 6);
+    assert_eq!(fields[4].records, [1, 1, 2, 0]);
     // 5 is in 0-9, 10 in 10-19, 31 past endNum, -1 before startNum.
     assert_eq!(fields[5].records, [1, 2, 4, 0]);
     assert_eq!(labels(5)[2], text("10-19"));
@@ -707,11 +706,9 @@ fn time_groups_read_the_time_of_day() {
         &format!(r#"groupBy="months" {DATES}/>{}"#, group_items(&MONTHS)),
         &format!(r#"groupBy="hours" {DATES}/>{}"#, group_items(&labels)),
     );
-    let body = GROUPED_TABLE.replace(r#"<item x="14"/>"#, r#"<item x="26"/>"#);
-    let parts = with(grouped_parts(definition), TABLE_PART, table(&body));
-    let (caches, _) = load(&parts);
+    let (caches, _) = load(&grouped_parts(definition));
     // 10:30:15 is hour 10; 23:59:59.6 rounds to midnight of the next day, hour 0; 00:00 is hour 0.
-    assert_eq!(caches[0].fields[0].records, [11, 1, 1, 26]);
+    assert_eq!(caches[0].fields[0].records, [11, 1, 1, 0]);
 }
 
 #[test]
