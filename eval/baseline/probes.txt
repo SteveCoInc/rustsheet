@@ -2083,6 +2083,7 @@ C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4043-fixed-denominator-cut.case.json	88
 C	probes/t4043-fixed-denominator-slots.case.json	285
+C	probes/t4043-frozen-model-holdout.case.json	108
 C	probes/t4043-placeholder-denominator-slots.case.json	20
 C	probes/t4043-separated-slots.case.json	432
 C	probes/t4043-trailing-shapes-holdout.case.json	84

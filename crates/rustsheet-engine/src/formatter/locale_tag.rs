@@ -258,7 +258,8 @@ impl Source {
     /// The LCID whose calendar names a calendar digit reads. A tag reads its LCID's, or when that
     /// LCID has no locale its language's primary LCID's, or with neither the digit's default names
     /// (`B2[$-ar]` the Arabic Hijri names, `B2[$-bg]`, `B2[$-qps-ploc]` and `B2[$-pt-AO]` the
-    /// default English ones; probes/t3666-review-followups A1:A5).
+    /// default English ones; probes/t3666-review-followups A1:A5). The fallback to the primary LCID
+    /// can only matter for tags whose [MS-LCID] LCID has no locale (`ar`, `bg`, `qps-*`), all probed.
     fn calendar_key(self) -> CalendarKey {
         match self {
             Source::Lcid(lcid) => CalendarKey::Lcid(lcid),

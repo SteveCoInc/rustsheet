@@ -52,4 +52,6 @@ Revised after review: the first `trailing_fill` was fitted to the probed shapes 
 (probes/t4043-trailing-shapes-holdout). probes/t4043-separated-slots (432 cells: every placeholder of 24 shapes in a slot
 of its own) showed the mechanism: spilled digits, lacking digits, owed zeros and a due space, walked left to right
 (number-formats.md "Placeholders after a fraction"); a blank fraction is the would-be text as spaces. The rule matches
-every cell of all seven probes, including the hold-out and the 34 cells with no `?` slot.
+every cell of all seven probes, including the hold-out and the 34 cells with no `?` slot. Since that hold-out
+shaped the revision, a second one was written after the model was frozen (probes/t4043-frozen-model-holdout: 12 new
+shapes, denominators 2-9999, x 9 values): 108/108 match with no change.

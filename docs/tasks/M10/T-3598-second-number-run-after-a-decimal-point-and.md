@@ -33,5 +33,5 @@ Found by T-1925: probes/t1925-numeral-digits C1, C2, C21-C27 (we print "1,234,56
 Done (general rule, not the one cell). Probed 27 comma forms over 4 values (probes/t3598-decimal-part-commas, 108
 cells): only a `,` in the integer part groups; after the decimal point or a fraction a comma run between placeholders
 prints nothing and neither groups nor scales, after a decimal-part literal it prints, and a trailing one still scales.
-Implemented in `Token::Comma` (formatter/parser.rs); number-formats.md "A comma between digit placeholders turns on
+Implemented in `comma::comma_role` (formatter/comma.rs), one table of field and neighbour; number-formats.md "A comma between digit placeholders turns on
 thousands grouping". Eval: probes/t1925-numeral-digits S!C1:C32 pass (32 cells), the new case passes 108/108.

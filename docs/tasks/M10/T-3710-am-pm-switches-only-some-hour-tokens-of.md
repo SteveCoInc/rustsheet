@@ -27,6 +27,6 @@ Found by T-3532: probes/t3532-numeral-digit-fields row 10, all columns (numeral 
 Done (general rule). Probed 36 hour/marker layouts (probes/t3710-ampm-hour-tokens): the last hour before each
 `AM/PM`/`A/P` and the section's last hour take the 12-hour clock, the others stay 24-hour
 (`elapsed::twelve_hour_tokens`, replacing `DatePart::use_ampm`). The probe also showed that an hour read after a minute
-makes the next `mm` a minute again (`h:mm|h:mm`), fixed with `hour_pending` in the parser. number-formats.md "AM/PM
+makes the next `mm` a minute again (`h:mm|h:mm`), fixed with the parser's `MinuteSlot` state machine. number-formats.md "AM/PM
 switches only some hours" and "`mm` after a minute is a month". Eval: t3532-numeral-digit-fields S!A10:G10 pass, the
 new case 36/36.

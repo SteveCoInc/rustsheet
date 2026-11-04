@@ -837,7 +837,7 @@ calendar every locale prints the Gregorian year, month and day with ASCII digits
 print its eras), `A/P` prints the locale's day halves and `d mmmm` the plain
 `mmmm` (no genitive forms). One odd value: under 0xF803 (a Catalan alias) `mmmm` of January is all twelve genitive
 names joined by tabs.
-**BCP-47 tags** resolve the same way: Excel knows 930 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
+**BCP-47 tags** resolve the same way: the table holds 932 of the 1122 tags of [MS-LCID] and CLDR, each with the names of
 its LCID where it has one; a tag whose LCID has no locale still names one (`[$-ar]`, `[$-bg]`, `[$-qps-ploc]`), and so
 does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). After a `B2` such a tag is Hijri with its LCID's Hijri names
 (Arabic for `ar`, English for the rest) and its own day halves (`B2[$-ar]yyyy|mmmm|h A/P` is "1444|شعبان|6 م",
@@ -849,7 +849,7 @@ prints 2023-03-15 as "05-03-15"), checked against all 196 unknown tags and over 
 Catalan, `[$-100CA]` Saka over no locale ("6 P"), `B2[$-CA]` the Hijri date with the default names and Catalan day
 halves (probes/t4061-review-followups B1:B8).
 Evidence: probes/t3666-lcid-sublanguage-sweep, t3666-lcid-locale-map (every language 0x01-0xFF x sublanguage 0-63),
-t3666-locale-names (853 LCIDs x 41 names), t3666-locale-tag-names (1122 tags), excel-graph 2026-11-04; languages
+t3666-locale-names (853 LCIDs probed, 845 with a locale, x 38 names and 3 day halves), t3666-locale-tag-names (1122 tags), excel-graph 2026-11-04; languages
 0x100-0x3FF are unprobed (no locale here). Implemented in: the tables locale/excel_names.tsv, excel_lcids.tsv and
 excel_tags.tsv, generated from those probes by `rustsheet-excel-locales` (tools/), read by `locale::excel_date_names`
 (`lcid_names`, `tag_locale`); `locale_tag::resolve_lcid`, `resolve_bcp47`, `calendar_digit`, `extended_hex`.
@@ -1339,7 +1339,9 @@ on, by one rule for every denominator. A `.` among them prints and a `,` prints 
   0 "0" and 7 spaces: 1 lacks two digits of `100`, which the two `#` take); what follows prints.
 Evidence (excel-graph 2026-11-04), every cell matching: probes/t4043-separated-slots (24 shapes, each placeholder in a slot
 of its own, under denominators 4, 16 and 100 and six values: 432 cells), t4043-trailing-shapes-holdout (84 cells, shapes
-outside the earlier probes), t4043-fixed-denominator-slots, t4043-fixed-denominator-cut,
+outside the earlier probes, which shaped the revised model), t4043-frozen-model-holdout (108 cells written after the
+model was frozen: denominators 2-9999, mixed runs split by literals, no integer part, a negative),
+t4043-fixed-denominator-slots, t4043-fixed-denominator-cut,
 t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t3711-placeholders-after-fraction,
 t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). Implemented in: `Choice::of`, `DenominatorPlan`,
 `trailing_fill` and `emit` (formatter/fraction.rs). Status: VERIFIED (excel-graph). Tasks: T-3711, T-4043
