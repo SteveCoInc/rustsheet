@@ -3,7 +3,7 @@ id: T-3214
 title: "Excel cells for the M9 engineering and database argument kinds no suite covers (119 parameter/kind pairs in 58 functions, mostly empty text, errors and a numeric zero)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
