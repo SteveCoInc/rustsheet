@@ -3,7 +3,7 @@ id: T-3897
 title: "R1C1 typed entry: a LET name spelled like an A1 cell (f1) is accepted"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
