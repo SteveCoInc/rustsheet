@@ -4173,7 +4173,7 @@ mpmath itself is 4E-14 off at x = 50). `F.DIST(2,5,1E10,TRUE)` = 0.9247647537543
 Evidence: probes-numeric t2528-f-dist-huge-df2 (60 cells, excel-graph, 2026-10-30), t1530-f-df-cut A8, A12, A14.
 Ours: since T-2528 DiDonato and Morris' expansion in Q(b, z) (`large_shape_beta.rs`) for a of 1E6 or more, b below
 40 (bratio's bgrat family; from 40 Excel's other branches decide, `#NUM!` at `BETA.DIST(0.1,1E+200,1E+100,TRUE)`) and
-b/a at most 1E-6, in accurate arithmetic (z and ln x in double-double, Legendre's fraction for Q/r from the bottom up):
+(until T-4119) b/a at most 1E-6, in accurate arithmetic (z and ln x in double-double, Legendre's fraction for Q/r from the bottom up):
 within 2E-15 of the true value on the probe; Cephes' fraction there did not converge and was about 1E-7 off. 38 of
 the 60 cells are within 15 digits of Excel; the other 22 are where Excel is itself more than half a unit of the 15th
 digit off the true value (T-3209).
@@ -4222,6 +4222,10 @@ within 1E-15 relative / largest relative error:
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
+The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
+expansion's 1E-6 b/a cut left those on Cephes' fraction, 1E-11 to 7E-10 off the math. T-4119 removed the cut, so the
+expansion covers every a >= 1E6 and b < 40. Over its 640-point grid (docs/research/t4119) the worst error is now 2.1E-14.
+On t4017, 54 cells move toward Excel and 6 come within 15 digits; what is left there is mostly Excel's own 1E-14 error.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
 
 ## F-distribution df limit (T-1530)
