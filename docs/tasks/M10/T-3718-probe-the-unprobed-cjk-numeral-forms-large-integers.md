@@ -24,4 +24,10 @@ T-3532 implemented numeral-system digits (formatter/numerals.rs). number-formats
 -
 
 ## Outcome
-Probe case `probes/t3718-cjk-numeral-unprobed` (75 cells, excel-graph values) covers the four forms. The existing implementation already matches every cell (probes 75/75), so no code change; findings recorded in docs/excel-semantics/number-formats.md. Eval delta: +75 passing probe cells, no regressions.
+Probe case `probes/t3718-cjk-numeral-unprobed` (100 cells, excel-graph values; rows 16-20 added and the case
+refilled on 2026-11-04 after the steward's excel-fidelity review) covers the four forms. Findings recorded in
+docs/excel-semantics/number-formats.md. Rows 1-15 already matched. Rows 16-20 (elapsed counts of 10^11 and more)
+showed that Excel spells 10^12 with 兆 under every CJK byte and, past 10^16, writes the count of 兆 digit by digit
+before 兆; `formatter/numerals.rs` now does the same (`myriads` gains 兆, `MAX_SPELLED` 10^16 - 1, unit test
+`spells_trillions_with_zhao`). Adopted as an orphan PR (#3189) by an opus run. Eval delta: probes new case, 100/100
+passing; no regressions.

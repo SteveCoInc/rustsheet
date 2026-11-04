@@ -31,8 +31,9 @@ pub struct CjkStyle {
     digits: [char; 10],
     /// The signs of ten, hundred and thousand.
     units: [char; 3],
-    /// The signs of 10^4 and 10^8.
-    myriads: [char; 2],
+    /// The signs of 10^4, 10^8 and 10^12. Every style takes 兆 for 10^12, the Chinese ones too
+    /// (`[$-1F000409][s]` of 1E8 is "捌兆陆仟肆佰亿"; probes/t3718-cjk-numeral-unprobed rows 17-19).
+    myriads: [char; 3],
     /// Whether a spelled-out number writes the one before a unit sign (`一十`, `壱百`); a
     /// myriad always takes it (`[$-1B000409]General` on 10000 is "一万", on 100 "百").
     one_before_unit: bool,
@@ -51,7 +52,7 @@ pub struct CjkStyle {
 static JAPANESE: CjkStyle = CjkStyle {
     digits: ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
     units: ['十', '百', '千'],
-    myriads: ['万', '億'],
+    myriads: ['万', '億', '兆'],
     one_before_unit: false,
     one_before_field_ten: false,
     zero_in_gap: false,
@@ -62,7 +63,7 @@ static JAPANESE: CjkStyle = CjkStyle {
 static JAPANESE_FORMAL: CjkStyle = CjkStyle {
     digits: ['〇', '壱', '弐', '参', '四', '伍', '六', '七', '八', '九'],
     units: ['拾', '百', '阡'],
-    myriads: ['萬', '億'],
+    myriads: ['萬', '億', '兆'],
     one_before_unit: true,
     one_before_field_ten: true,
     zero_in_gap: false,
@@ -73,7 +74,7 @@ static JAPANESE_FORMAL: CjkStyle = CjkStyle {
 static FULLWIDTH: CjkStyle = CjkStyle {
     digits: ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
     units: ['十', '百', '千'],
-    myriads: ['万', '億'],
+    myriads: ['万', '億', '兆'],
     one_before_unit: false,
     one_before_field_ten: false,
     zero_in_gap: false,
@@ -84,7 +85,7 @@ static FULLWIDTH: CjkStyle = CjkStyle {
 static CHINESE: CjkStyle = CjkStyle {
     digits: ['○', '一', '二', '三', '四', '五', '六', '七', '八', '九'],
     units: ['十', '百', '千'],
-    myriads: ['万', '亿'],
+    myriads: ['万', '亿', '兆'],
     one_before_unit: true,
     one_before_field_ten: false,
     zero_in_gap: true,
@@ -95,16 +96,19 @@ static CHINESE: CjkStyle = CjkStyle {
 static CHINESE_FORMAL: CjkStyle = CjkStyle {
     digits: ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'],
     units: ['拾', '佰', '仟'],
-    myriads: ['万', '亿'],
+    myriads: ['万', '亿', '兆'],
     one_before_unit: true,
     one_before_field_ten: true,
     zero_in_gap: true,
     field_tens: true,
 };
 
-/// The largest integer spelled out in units and myriads; past it (unprobed, beyond 億 groups) the
-/// integer prints digit by digit.
-const MAX_SPELLED: u64 = 999_999_999_999;
+/// The largest integer spelled out in units and myriads (to 兆 groups). Past it the count of 兆
+/// prints digit by digit before 兆 (`[$-1B000409][s]` of 1E15 is "八六四〇〇〇〇〇兆";
+/// probes/t3718-cjk-numeral-unprobed row 20).
+const MAX_SPELLED: u64 = 9_999_999_999_999_999;
+/// The digits below 兆 (10^12).
+const BELOW_TRILLION: usize = 12;
 
 impl Numerals {
     /// The numeral system of byte `byte` (bits 24-31 of a locale tag value).
@@ -191,12 +195,21 @@ impl Numerals {
         let (sign, rest) = text.split_at(sign_len);
         let integer_len = rest.bytes().take_while(u8::is_ascii_digit).count();
         let (integer, tail) = rest.split_at(integer_len);
+        // A padded count (`[hh]` under 10) keeps its zero digit by digit.
+        let padded = integer.len() > 1 && integer.starts_with('0');
         let spelled = match integer.parse::<u64>() {
-            // A padded count (`[hh]` under 10) keeps its zero digit by digit; unprobed.
-            Ok(value)
-                if value <= MAX_SPELLED && !(integer.len() > 1 && integer.starts_with('0')) =>
-            {
-                style.spell(value)
+            Ok(value) if value <= MAX_SPELLED && !padded => style.spell(value),
+            _ if !padded && integer.len() > BELOW_TRILLION => {
+                // The count of 兆 digit by digit, then 兆 and the rest spelled out. Only a zero
+                // rest is probed (elapsed counts of 1e15 days keep 15 significant digits).
+                let (trillions, rest) = integer.split_at(integer.len() - BELOW_TRILLION);
+                let rest = rest.parse::<u64>().unwrap_or(0);
+                let mut text = self.digits(trillions);
+                text.push(style.myriads[2]);
+                if rest > 0 {
+                    text.push_str(&style.spell(rest));
+                }
+                text
             }
             _ => self.digits(integer),
         };
@@ -237,7 +250,7 @@ impl CjkStyle {
         // Whether a digit has printed, and whether zeros have run since the last one.
         let mut started = false;
         let mut gap = false;
-        for myriad in (0..3_u32).rev() {
+        for myriad in (0..4_u32).rev() {
             let group = value / 10_u64.pow(4 * myriad) % 10_000;
             if group == 0 {
                 gap |= started;
@@ -305,6 +318,35 @@ mod tests {
             "１万２千３百４十５"
         );
         assert_eq!(Numerals::from_byte(31).number("1010"), "壹仟零壹拾");
+    }
+
+    #[test]
+    fn spells_trillions_with_zhao() {
+        // probes/t3718-cjk-numeral-unprobed rows 17-20 (`[s]` of 1E8, 1E9, 1E15; `[h]` of 1E11).
+        let japanese = Numerals::from_byte(27);
+        assert_eq!(japanese.number("8640000000000"), "八兆六千四百億");
+        assert_eq!(japanese.number("86400000000000"), "八十六兆四千億");
+        assert_eq!(japanese.number("2400000000000"), "二兆四千億");
+        assert_eq!(
+            japanese.number("86400000000000000000"),
+            "八六四〇〇〇〇〇兆"
+        );
+        assert_eq!(
+            Numerals::from_byte(28).number("8640000000000"),
+            "八兆六阡四百億"
+        );
+        assert_eq!(
+            Numerals::from_byte(30).number("86400000000000"),
+            "八十六兆四千亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("8640000000000"),
+            "捌兆陆仟肆佰亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("86400000000000000000"),
+            "捌陆肆零零零零零兆"
+        );
     }
 
     #[test]
