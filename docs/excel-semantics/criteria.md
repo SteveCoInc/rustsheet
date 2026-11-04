@@ -63,9 +63,10 @@ COUNTIFS, MATCH(..,0), XMATCH(..,2), XLOOKUP(..,2) and DCOUNTA agree on every wi
   `"צ*"` ץx, U+1C91&`"*"` U+1C90&x (both weightless) but not `"ა*"`; `Ɒ`/`ɒ` stay apart (rows 16:28).
 Without a wildcard, COUNTIF, SUMIF, COUNTIFS and XMATCH(..,0) keep the `=` collation instead: a&U+0524&b equals ab
 there (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH"; -criteria Calc!B3:D3, -xmatch Calc!E3), while
-the wildcard and D-function paths do not. That includes `=`'s prefix rule for a trailing weightless character (`ab`&U+00AD is not `ab`,
-`aé`&U+00AD is `aé`) and the weights of U+200B and the C1 controls (coercion.md "Format characters, U+200B and
-the C1 controls (T-3662)"; probes/t3662-collation-ignorables Calc!AD:AJ, AL:AM, -prefix Calc!R:U).
+the wildcard and D-function paths do not. That includes `=`'s prefix rule for a trailing weightless
+character (`ab`&U+00AD is not `ab`, `aé`&U+00AD is `aé`) and the weights of U+200B and the C1 controls
+(coercion.md "Format characters, U+200B and the C1 controls (T-3662)"; probes/t3662-collation-ignorables
+Calc!AD:AJ, AL:AM, -prefix Calc!R:U).
 Status: VERIFIED (excel-graph) for the list and the T-3929 rows above
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445), through `folded_units` and
 `WildcardPattern::new`; D-function prefix criteria through `result_starts_with_units` (functions/criteria.rs, T-3929)
