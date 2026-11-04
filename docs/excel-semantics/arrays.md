@@ -2395,18 +2395,24 @@ so the later calls meet a filter taller than them.
   `#DIV/0!` (the first error in argument order), and with the two swapped, {0,#N/A} with {1,"1"}, {1,"x"}, {1,5} or
   {1,#DIV/0!}, it is `#N/A`; position 1 is -1 in every call, and the no-filter controls give the same cells
   (probes/t3985-groupby-two-lifted-spent-filter G!A1:B47, T-3985; ranges, since an array constant cannot hold `NA()`).
+  Nor does any other element that is no error and no non-numeric text: position 2 of field_headers {0,"5"} (numeric text
+  out of range), {0,"0.5"}, {0,TRUE} or {0,FALSE} with total depth {1,#N/A}, and {0,#N/A} with total depth {1,"5"},
+  {1,"0.5"}, {1,TRUE} or {1,FALSE}, is `#N/A` beside `(Data!C1:C12<0.2)`; position 1 is -1 in every call, and the no-filter
+  controls give the same cells (probes/t4019-groupby-lifted-spent-filter-kinds G!A1:B47, T-4019).
 Evidence: the three probes named, excel-graph, 2026-11-03 (T-3840), t3880-groupby-scalar-filter-edges (T-3880) and
-t3964-groupby-filter-lift-errors (T-3964) and t3985-groupby-two-lifted-spent-filter (T-3985).
+t3964-groupby-filter-lift-errors (T-3964), t3985-groupby-two-lifted-spent-filter (T-3985) and
+t4019-groupby-lifted-spent-filter-kinds (T-4019).
 Ours: `Model::groupby_args` sets `Model::groupby_filter_spent` when its filter dropped rows (it reads field_relationship
 before the filter and checks the total depth's range after it, Excel's order here) and `Model::lift_by_class` makes
 every later element `#VALUE!`, except an error `field_relationship` element, which stays its error (its `settled`
 argument, T-3880), and, since T-3964, a lifted option position whose first error comes before any text element that is
-no number (`Model::lift_options`; numeric text no longer stops it since T-3985); a cell read on demand during an
+no number (`Model::lift_options`; numeric text no longer stops it since T-3985, and T-4019 found every other non-error
+element passes through as well); a cell read on demand during an
 element's call keeps its own filter to itself. PIVOTBY's lift beside a filter column is unprobed (T-3892).
 Status: VERIFIED (excel-graph) for the cells named; UNVERIFIED, and modeled from the order above: a filter that keeps no
 row (ours: not spent, the call is `#VALUE!` before it filters anything), a table relationship with subtotals (ours: spent,
 that check comes after the filter), and a lift nested inside another lift (ours: the inner lift spends nothing outside it)
-Tasks: T-3840, T-3880, T-3964, T-3985
+Tasks: T-3840, T-3880, T-3964, T-3985, T-4019
 
 ## Array-value edges in the gen-m9 sweep (T-2436)
 Rule (one gen-m9 cell each, probes/t2436, excel-graph, 2026-10-24; mechanisms probed in probes/t2579-array-value-edges,
