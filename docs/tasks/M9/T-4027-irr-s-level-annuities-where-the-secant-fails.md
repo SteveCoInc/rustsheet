@@ -35,5 +35,22 @@ both secant runs fail, from a model of Excel's path there that holds on a fresh 
 - [ ] The rule in docs/excel-semantics/financial.md; the engine implements it.
 - [ ] `make check` green; reviewers approve.
 
+## Cells (gap triage 2026-11-04b)
+The span "A1-A96" names only its ends for `make unowned-off` (decision 0136), so the t3406 cells T-3411 left open
+when it closed (its criterion 1 moved here) are listed by name. Excel returns the root, the engine is `#NUM!`
+(`make eval` on origin/main a7b115e9e). The level annuities (this task's goal):
+- probes/t3406-irr-num-boundary.case.json (28): P!A5, A6, A7, A8, A9, A10, A11, A26, A27, A28, A29, A30, A31, A32, A33, A49, A50, A51, A52, A53, A54, A55, A73, A74, A75, A76, A77, A78
+
+The outlay families of the same case (a level annuity whose outlay is scaled; Excel alternates number and `#NUM!`
+inside one family, T-3411 progress notes 2026-11-02), scored with the annuities since T-3411's criterion 1 covered
+every t3406 cell; split them to a follow-up if the annuity model does not reach them:
+- probes/t3406-irr-num-boundary.case.json (26): P!A97, A98, A102, A105, A107, A108, A117, A122, A123, A124, A126, A128, A129, A132, A133, A134, A135, A136, A137, A138, A139, A140, A141, A142, A143, A144
+
+Measured for this triage (local, not committed): with `IRR_FALLBACK_STEPS` 50 -> 100000 and the residual cut kept,
+t3406 gains A11, A31 and 15 outlay cells (A98, A102, A105, A108, A117, A122, A123, A124, A126, A128, A132, A134,
+A138, A139, A142) at Excel's exact value and loses the 39 annuities named in Context; the other annuities above
+return a number 11 to 14 digits from Excel's (A5: Excel -0.09999761744847369, Newton -0.09999761744841507), which
+agrees with "most returning annuities are not Newton iterates from v = 0". The `#DIV/0!` cells A66-A95 are T-3407's.
+
 ## Out of scope
 - The last digits (T-3408) and `#DIV/0!` (T-3407).
