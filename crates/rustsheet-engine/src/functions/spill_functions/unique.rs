@@ -204,3 +204,44 @@ pub(crate) fn unique_cell_key(node: &ArrayNode) -> CellKey {
         other => cell_key(other),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::cmp::Ordering;
+
+    use super::first_equal_lines;
+    use crate::functions::util::collation::{cmp_text_pairwise, collation_key};
+    use crate::Text;
+
+    #[test]
+    fn t4234_ascii_unique_hash_and_pairwise_group_alike() {
+        use crate::functions::util::coalesce_equal_lines;
+        let mut texts = crate::test::test_collation::ascii_texts();
+        // A deterministic shuffle (an LCG), with duplicates added so groups have several lines.
+        let mut state = 0x2545_f491_4f6c_dd1d_u64;
+        let mut next = |bound: usize| {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            usize::try_from(state >> 33).unwrap_or(0) % bound
+        };
+        let extra: Vec<Text> = (0..texts.len() / 2)
+            .map(|_| texts[next(texts.len())].clone())
+            .collect();
+        texts.extend(extra);
+        for i in (1..texts.len()).rev() {
+            texts.swap(i, next(i + 1));
+        }
+        let hashed = first_equal_lines(
+            texts.len(),
+            |i| collation_key(&texts[i]),
+            |i, j| cmp_text_pairwise(&texts[i], &texts[j]) == Ordering::Equal,
+            |_, _| 1,
+            |_| Ok::<(), ()>(()),
+        );
+        let coalesced = coalesce_equal_lines(texts.len(), |i, j| {
+            Ok::<_, ()>(cmp_text_pairwise(&texts[i], &texts[j]))
+        });
+        assert_eq!(hashed, coalesced);
+    }
+}

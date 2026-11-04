@@ -879,3 +879,43 @@ fn t4153_narrow_nbsp_accent_weight() {
     assert_eq!(pairwise("\u{202f}", " \u{301}"), Ordering::Less);
     assert_eq!(pairwise("\u{202f}", &marks(88)), Ordering::Equal);
 }
+
+/// T-4234: on all-ASCII texts Excel's pairwise order agrees with the total `cmp_text`, the
+/// invariant behind UNIQUE's hash path (`unique_of` keeps the hash buckets when every text is
+/// ASCII and uses `coalesce_equal_lines` otherwise; T-4200 review).
+pub(crate) fn ascii_texts() -> Vec<Text> {
+    // Prefixes, case, hyphen, apostrophe, space, digits, punctuation and controls.
+    let alphabet = [
+        'a', 'A', 'b', 'B', 'z', '0', '9', '-', '\'', ' ', '_', '.', '~', '\t', '\n', '\u{1}',
+        '\u{7f}',
+    ];
+    let mut texts = vec![String::new()];
+    for a in alphabet {
+        texts.push(a.to_string());
+        for b in alphabet {
+            texts.push(format!("{a}{b}"));
+        }
+    }
+    for prefix in ["ab", "Ab", "co-op", "coop", "it's", "its", "a b", "ab "] {
+        for suffix in ["", "-", "'", "a", "A", " ", "1"] {
+            texts.push(format!("{prefix}{suffix}"));
+        }
+    }
+    texts.iter().map(|s| Text::from(s.as_str())).collect()
+}
+
+#[test]
+fn t4234_ascii_pairwise_agrees_with_total_order() {
+    let texts = ascii_texts();
+    for a in &texts {
+        for b in &texts {
+            assert_eq!(
+                cmp_text_pairwise(a, b),
+                cmp_text(a, b),
+                "{:?} vs {:?}",
+                a.to_string(),
+                b.to_string()
+            );
+        }
+    }
+}
