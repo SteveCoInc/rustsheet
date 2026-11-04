@@ -66,16 +66,17 @@ pub(super) fn wilson_hilferty_quantile(shape: f64, z: f64) -> f64 {
 /// The step limit of Excel's search ([`search_converges`]): it converges where Newton's method on
 /// the odds P/Q from the start takes a step below [`SEARCH_STEP_TOLERANCE`] of x within this many
 /// steps (T-3409). A fit (UNVERIFIED as Excel's own count and tolerance; the probes pin where the
-/// search fails, not how Excel counts): with the tolerance 1E-8 the last value is at 208
-/// (`GAMMA.INV(0.9,5E9,1)`, `GAMMA.INV(5.47E-6,8000000000,1)`, `CHISQ.INV.RT(0.1,1E10)`) and the
-/// first `#NUM!` at 209 (`GAMMA.INV(1E-180,1E9,1)`, `GAMMA.INV(1E-80,9E09,1)`); it separates
-/// 804 of the 805 probed cells from shape 1E8 that are not the start (the miss,
-/// `GAMMA.INV(1.11E-10,9000000000,1)`, a value at 209). Each step from the inner side of a tail
+/// search fails, not how Excel counts): replayed with 40-digit Temme cdfs and the tolerance 1E-8,
+/// the last values take 207 steps (`GAMMA.INV(0.9,5E9,1)`, `GAMMA.INV(5.47E-6,8000000000,1)`,
+/// `CHISQ.INV.RT(0.1,1E10)`) and the first `#NUM!` 208 (`GAMMA.INV(1E-180,1E9,1)`,
+/// `GAMMA.INV(1E-80,9E09,1)`, `GAMMA.INV(1E-85,8E09,1)`); it separates 804 of the 805 probed
+/// cells from shape 1E8 that are not the start (the miss, `GAMMA.INV(1.11E-10,9000000000,1)`, is
+/// a value at 208). Each step from the inner side of a tail
 /// moves the start about 1/|z| standard deviations, so the count is about the fall in ln density
 /// from the start to the quantile, through the mode when the start lies past it: T-3350's lower
 /// edge (ln P(a, x0) - ln p < 205.3), T-3070's upper edge and T-3396's band closing at 1.15E10.
 /// FITTED(T-3409, 805 cells, shape 1E8..1.2E10, every probed inversion that is not the start)
-const SEARCH_STEP_LIMIT: u32 = 208;
+const SEARCH_STEP_LIMIT: u32 = 207;
 
 /// The relative step at which [`search_converges`] counts the search as converged. Not a fit:
 /// the count changes by at most one between 1E-6 and 3E-16 (quadratic convergence), and 1E-8 is

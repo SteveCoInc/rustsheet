@@ -1,5 +1,5 @@
 """T-3409 fresh sweep (decision 0188 R4): drawn after the search model's free parameters were frozen
-(huge_shape.rs: SEARCH_STEP_LIMIT = 208 at SEARCH_STEP_TOLERANCE = 1E-8, fitted on the 805 cells of
+(huge_shape.rs: SEARCH_STEP_LIMIT = 207 at SEARCH_STEP_TOLERANCE = 1E-8, fitted on the 805 cells of
 probes/t2982-*, t3070-*, t3350-*, t3396-* and probes-numeric/fit-audit-t3070-*, t3350-r4-*), and
 scored against Excel (the oracle sidecar) after the freeze.
 
