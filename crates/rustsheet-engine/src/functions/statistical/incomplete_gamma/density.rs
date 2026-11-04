@@ -56,3 +56,25 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
     }
     Some(gamma_prefactor(a, y, form) / x)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::gamma_density;
+
+    #[test]
+    fn below_the_mode_the_ratio_form_starts_at_two_thirds_of_the_shape() {
+        // Excel's GAMMA.DIST(x,a,1,FALSE) bit for bit on the ratio form below 0.67a, where `rcomp`
+        // is 24 to 72 ulp off (probes/t3252-gamma-prefactor-window A3, A22, A23; T-3252).
+        for (a, x, excel) in [
+            (50.0, 32.5, 0.001_526_191_948_114_739_6),
+            (200.0, 120.0, 1.111_402_810_556_919e-11),
+            (200.0, 130.0, 4.174_320_755_401_682_5e-9),
+        ] {
+            assert_eq!(
+                gamma_density(a, x, 1.0),
+                Some(excel),
+                "GAMMA.DIST({x},{a},1,FALSE)"
+            );
+        }
+    }
+}
