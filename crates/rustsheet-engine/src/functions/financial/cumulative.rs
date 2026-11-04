@@ -151,12 +151,12 @@ impl Periods {
     /// exact integer: past 2^53 `period + 1` is `period`, and the closed form takes over. A short
     /// range where `v^nper` underflows is [`Periods::underflowed_principal`]'s, both types
     /// (T-3141). Otherwise type 0 has its own short forms ([`Periods::short_principal`]), within
-    /// 4 ulps of Excel on every probed cell where the closed form and the PPMT sum were up to 343 ulps off (T-2192). Type
-    /// 1's principal is the geometric sum at a large discount, else the closed form: summing PPMT
-    /// loses a small principal's digits to the payment it is taken from (`CUMPRINC_CUMIPMT.xlsx`
-    /// H5 had 8 right digits, H7 7; T-1890), and the per-period `exp` form misses H22 and H25 by
-    /// an ulp or two (T-2514). A long range that ends a deep discount before nper is the
-    /// geometric sum too (T-3067). `None` where no form is finite.
+    /// 4 ulps of Excel on every probed cell where the closed form and the PPMT sum were up to 343
+    /// ulps off (T-2192). Type 1's principal is the geometric sum at a large discount, else the
+    /// closed form: summing PPMT loses a small principal's digits to the payment it is taken from
+    /// (`CUMPRINC_CUMIPMT.xlsx` H5 had 8 right digits, H7 7; T-1890), and the per-period `exp`
+    /// form misses H22 and H25 by an ulp or two (T-2514). A long range that ends a deep discount
+    /// before nper is the geometric sum too (T-3067). `None` where no form is finite.
     fn principal(&self) -> Option<f64> {
         let short =
             self.end - self.start < CUMULATIVE_LOOP_PERIODS && self.end < EXACT_INTEGER_LIMIT;
@@ -264,31 +264,33 @@ impl Periods {
     /// in the balance from one core: `C = pv·((1-v^m)·v^(nper-end+1))` with `1-v^m` PMT's
     /// [`discount_complement`] of `-m·L` (Kahan's expm1 below m·L = 1, `1 - EXP` from it on), the
     /// power Excel's EXP of `-(nper-end+1)·L` and L [`growth_log`]'s. Type 1's principal is `-C`,
-    /// type 0's `-(C·(1+rate))`: the `1+rate` is a last product, not folded into the power. Excel's principal there does not depend on nper (the last m periods of
-    /// nper 1E6, 1E10, 1E12 and 1E15 are the same doubles, probes/fin-cumprinc-underflow-ends;
-    /// T-3067), so `CUMIPMT(0.01,1E15,100000,1E15,1E15,0)` is -9.900990099009732 with it. The
-    /// form is to the bit on all 304 principals probed: the 132 of fin-cumprinc-near-1e15 and
-    /// fin-cumprinc-underflow-ends (the fit, 108 type 0 and 24 type 1), the 72 of
-    /// fin-cumprinc-underflow-type1 (the hold-out: rates 0.0007 to 0.2, pv 12345.6, ranges ending
-    /// at nper and 2 before) and the 100 of fin-cumprinc-underflow-fresh (the sweep after the
-    /// freeze: 98 with Kahan's expm1 throughout, and I5 and J5, m·L 1.4, with PMT's switch to
-    /// `1 - EXP`), where T-3067's `-(pv·(v^(nper-end)·(1-v^m)))` was exact on 70 of the 108 type 0
-    /// fit cells and type 1's closed form on none of the 24 (T-3141). It comes before the geometric sum at any leading exponent:
-    /// the hold-out's ranges ending 2 before nper at 0.2 (C7-C9, G7-G9, leading exponent 0.55)
-    /// and the sweep's I10, K10 are Excel's with it and an ulp off with that sum, and so are
-    /// integer-rate cells (`CUMPRINC(10,230,351888,4,21,0)`, gen-m9 d0854366830dcdee A98;
-    /// 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), with none of the probed geometric-sum cells
-    /// lost. `None` for a type 1 range from period 1 (that period's principal is the whole
-    /// payment), where `v^nper` has not underflowed, where the leading power is not normal (it
-    /// has lost its digits, and the geometric sum and the closed form decide; unprobed here)
-    /// or where the result is not finite.
+    /// type 0's `-(C·(1+rate))`: the `1+rate` is a last product, not folded into the power.
+    /// Excel's principal there does not depend on nper (the last m periods of nper 1E6, 1E10, 1E12
+    /// and 1E15 are the same doubles, probes/fin-cumprinc-underflow-ends; T-3067), so
+    /// `CUMIPMT(0.01,1E15,100000,1E15,1E15,0)` is -9.900990099009732 with it. The form is to the
+    /// bit on all 304 principals probed (fin-cumprinc-near-1e15, fin-cumprinc-underflow-ends,
+    /// fin-cumprinc-underflow-type1 and fin-cumprinc-underflow-fresh, whose I5 and J5, m·L 1.4,
+    /// set the switch to `1 - EXP`; the fit lab's hold-out split is 216/216 on train and 88/88 on
+    /// test, the correctly rounded value 65 and 33), where T-3067's `-(pv·(v^(nper-end)·(1-v^m)))`
+    /// was exact on 70 of the 108 type 0 cells of the first two cases and type 1's closed form on
+    /// none of their 24 (T-3141). Only below [`GEOMETRIC_MIN_LEAD`], as T-3067's form was:
+    /// fin-cumprinc-underflow-type1's ranges ending 2 before nper at 0.2 (leading exponent 0.55)
+    /// are Excel's with this form and an ulp off with the geometric sum, which takes them, and
+    /// whether the core holds deeper waits for the CUMPRINC Gate A sweep (T-4059). `None` for a
+    /// type 1 range from period 1 (that period's principal is the whole payment), where `v^nper`
+    /// has not underflowed, where the leading power is not normal (it has lost its digits) or
+    /// where the result is not finite.
     fn underflowed_principal(&self) -> Option<f64> {
         let log_growth = growth_log(self.rate);
         if (self.period_start && self.start < 2.0) || self.unpaid_share(log_growth) != 1.0 {
             return None;
         }
+        let lead = (self.nper - self.end + 1.0) * log_growth;
+        if lead >= GEOMETRIC_MIN_LEAD {
+            return None;
+        }
         let count = self.end - self.start + 1.0;
-        let leading = excel_exp(-(self.nper - self.end + 1.0) * log_growth);
+        let leading = excel_exp(-lead);
         if !leading.is_normal() {
             return None;
         }

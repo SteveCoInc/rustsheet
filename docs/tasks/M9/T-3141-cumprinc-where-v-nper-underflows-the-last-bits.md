@@ -3,11 +3,11 @@ id: T-3141
 title: "CUMPRINC where v^nper underflows: the last bits of the balance-drop principal (T-3067's seven regressed near-1E15 cells and the underflow-ends misses)"
 milestone: M9
 lane: functions-financial
-status: done
+status: blocked
 priority: P2
 size: M
 tier: opus
-depends_on: [T-3067]
+depends_on: [T-3067, T-4059]
 ---
 
 ## Goal
@@ -44,25 +44,47 @@ Decision 0056 applies (two attempts, then time-box).
 ## Out of scope
 - Ranges where `v^nper` does not underflow (T-3067, T-1374).
 
+## Blocked because
+Blocked because: the R4.2 fresh sweep and Gate A envelope need a CUMPRINC Gate A table, which does not exist (T-4059).
+Round 1 of review (PR #3105, its first head): design and security approved; Excel fidelity requested changes on the
+decision 0188 R4 guards. Round 2 (this head) answers what it can without the table: the fit lab's hold-out split, the
+form kept below `GEOMETRIC_MIN_LEAD` (its evidenced domain), and the cut's CUMPRINC use tagged `FITTED(T-3141, ...)`.
+fin-cumprinc-underflow-fresh served as fit data (its I5 and J5 set the expm1 switch), so it is no R4.2 sweep. Still open:
+the `r4-T-3141` batch, filled after the freeze, with its envelope count and every point outside it listed. Resume once
+T-4059 lands: record that result here, re-run the full panel, and enqueue. The kernel is unchanged since the freeze.
+
 ## Outcome
-Fixed, not time-boxed. Where `1 - v^nper` is 1, Excel's principal over a short range is one core for both types,
+Where `1 - v^nper` is 1, Excel's principal over a short range is one core for both types,
 `C = pv·((1-v^m)·v^(nper-end+1))`: type 1 is `-C`, type 0 `-(C·(1+r))`, with `1-v^m` PMT's `discount_complement`
 (Kahan's expm1 below m·L = 1, `1 - EXP` from 1 on), the power Excel's EXP of `-(nper-end+1)·L` and `growth_log`'s L.
 T-3067's form folded the `1+r` into the power, which is what left the last bits off. `underflowed_principal` now
-takes both types (not a type 1 range from period 1) and comes before every other short form, at any leading exponent.
-Evidence and the search are in financial.md "Where `v^nper` underflows, the principal is one core for both types".
-- Structural model (decision 0188 R4: hold-out and fresh sweep, no `FITTED` constant; the 1.0 cut is T-3014's, reused):
-  fit set the 132 principals of fin-cumprinc-near-1e15 and fin-cumprinc-underflow-ends; hold-out the new
-  probes/fin-cumprinc-underflow-type1 (72 cells, excel-graph 2026-11-04), split before scoring; the enumeration of
-  every expression tree over the factors found the core, which is exact on 132/132 and 72/72. Fresh sweep after the
-  freeze: the new probes/fin-cumprinc-underflow-fresh (200 cells: 5 rates, own nper and pv, CUMPRINC and CUMIPMT of both
-  types): 98/100 principals with Kahan's expm1 throughout; the 2 misses (I5, J5, m·L 1.40) are `1 - EXP`'s, which PMT's
-  existing switch at 1 gives (Kahan right at 0.98, I4), so 100/100 and all 200 cells to the bit. No keep-matched branch.
+takes both types (not a type 1 range from period 1) and comes first of the short forms, but only below
+`GEOMETRIC_MIN_LEAD` (0.3), as T-3067's form did. Evidence and the search are in financial.md "Where `v^nper`
+underflows, the principal is one core for both types".
+- Structural model (decision 0188 R4, kind (c)): found by enumerating every expression tree over the factors, with the
+  132 principals of fin-cumprinc-near-1e15 and fin-cumprinc-underflow-ends as the fit set. New probes (excel-graph
+  2026-11-04): fin-cumprinc-underflow-type1 (72 cells) and fin-cumprinc-underflow-fresh (200 cells). The frozen core
+  was 98/100 on the fresh principals; its misses I5 and J5 (m·L 1.40) set the expm1 switch (PMT's cut, reused), so that
+  case is fit data too.
+- R4.1, the fit lab's split (`fitlab.holdout.is_holdout`, margin 5 points, the default), over all 304 underflowed
+  principals of the four cases:
+
+  | candidate | train exact / 4 ulp / 15 digits | test exact / 4 ulp / 15 digits |
+  |---|---|---|
+  | the core (kernel) | 216 / 216 / 216 of 216 | 88 / 88 / 88 of 88 |
+  | correctly rounded | 65 / 216 / 216 of 216 | 33 / 88 / 88 of 88 |
+
+  Accepted: test rate 100% equals the train rate, and it beats correctly rounded on test.
+- R4.2 and R2: open, T-4059 (see Blocked because). R4.3: the cut is tagged `FITTED(T-3141, 25 cells, ...)` on
+  `PAYMENT_EXPM1_TO`, and `quality/fitted.json` is updated. No keep-matched branch.
 - Also found: Excel's type 1 CUMPRINC there is its type 0 over `1+r` in doubles on 58 of 60 probed pairs (the other 2
   are `C·(1+r)/(1+r) ≠ C`), recorded in financial.md.
-- Eval delta: 71 known failures fixed, 0 regressions; probes 4417 -> 4349 (68: fin-cumprinc-near-1e15 27, including
-  A7, B1, B4, B9, C6, C10, E2-E4, E7, F1-F12 of this task; fin-cumprinc-underflow-ends 39; fin-cumipmt-overflow-and-forms
-  A10; fin-cumipmt-period-bound A18), gen-m9 1939 -> 1936 (67a4c03afd63f988 A208, b73c6cc96e093f03 A111,
-  d0854366830dcdee A98: integer rates). The two new cases (272 cells) are bit-exact. fin-cumprinc-underflow-ends F
-  (nper 1000, `v^nper` not underflowed; within an ulp) stays: out of scope here.
+- Eval delta: 68 known failures fixed, 0 regressions; probes 4417 -> 4357 (68 fixed: fin-cumprinc-near-1e15 27,
+  including A7, B1, B4, B9, C6, C10, E2-E4, E7 and F1-F12 of this task; fin-cumprinc-underflow-ends 39;
+  fin-cumipmt-overflow-and-forms A10; fin-cumipmt-period-bound A18). The 8 new-coverage failures are the new cases' cells
+  past a leading exponent of 0.3: type1 C7:C9 and G7:G9, fresh I10 and K10. They are an ulp off with the geometric sum
+  and to the bit with the core, and T-4059 owns them. With the core ahead of the geometric sum at any leading exponent
+  (round 1), those 8 pass and gen-m9 67a4c03afd63f988 A208, b73c6cc96e093f03 A111 and d0854366830dcdee A98 are fixed too,
+  with no regression; that waits for T-4059's evidence. fin-cumprinc-underflow-ends F (nper 1000, `v^nper` not
+  underflowed, within an ulp) stays: out of scope here.
 - Unit test: `an_underflowed_principal_is_one_core_for_both_types` (test_fn_cumulative_lift.rs).

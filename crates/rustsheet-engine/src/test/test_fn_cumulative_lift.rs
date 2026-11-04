@@ -499,8 +499,8 @@ fn periods_past_two_to_the_53_take_the_closed_form_and_end() {
 
 #[test]
 fn an_underflowed_principal_is_one_core_for_both_types() {
-    // Where `v^nper` underflows, the principal over a short range is `C = pv·((1-v^m)·v^(nper-end+1))`:
-    // type 1's is -C, type 0's -(C·(1+rate)), and `1-v^m` is Kahan's expm1 below m·L = 1 and
+    // Where `v^nper` underflows, the principal over a short range is
+    // `C = pv·((1-v^m)·v^(nper-end+1))`: type 1's is -C, type 0's -(C·(1+rate)), and `1-v^m` is Kahan's expm1 below m·L = 1 and
     // `1 - EXP` from it on (T-3141; probes/fin-cumprinc-near-1e15 A2, A7, B1, C6, E7, F2 and
     // probes/fin-cumprinc-underflow-fresh B7, I4, I5, J5, K5, excel-graph). Before it, type 0 was
     // `-(pv·(v^(nper-end)·(1-v^m)))` (an ulp off A2, A7, B1, C6; 16 ulps off the interest E7) and
