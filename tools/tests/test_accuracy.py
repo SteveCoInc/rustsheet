@@ -196,11 +196,17 @@ def test_rate_against_published_values() -> None:
 
 def test_definitions_follow_the_catalog_parameter_order() -> None:
     catalog = yaml.safe_load((repo_root() / "eval" / "catalog" / "functions.yaml").read_text())
-    params = {f["name"]: [p["name"] for p in f.get("params", [])] for f in catalog["functions"]}
+    params = {f["name"]: f.get("params", []) for f in catalog["functions"]}
     for name, definition in REGISTRY.items():
         # an indexed definition's last two parameters are INDEX's, not the function's (T-3686)
         mine = [p.name for p in definition.params[: -2 if definition.indexed else None]]
-        assert params[name][: len(mine)] == mine, name
+        theirs = [p["name"] for p in params[name]]
+        # a repeated catalog parameter that is not the definition's own variadic one (AGGREGATE's `ref`, which in
+        # function_num 14-19 holds the array and then k, T-3693) covers every later parameter: names before it match
+        repeat = next((i for i, p in enumerate(params[name]) if p.get("repeat")), None)
+        if repeat is not None and not definition.variadic and len(mine) > len(theirs):
+            mine, theirs = mine[:repeat], theirs[:repeat]
+        assert theirs[: len(mine)] == mine, name
 
 
 # -- batches ----------------------------------------------------------------------------------
