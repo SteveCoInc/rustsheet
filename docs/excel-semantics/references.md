@@ -1805,6 +1805,15 @@ Tasks: T-1503
 Evidence strength: excel-graph oracle, 11 + 17 cells (T-1527); the postfix `#` spelling of the ANCHORARRAY case is inferred, not probed. Status: VERIFIED (web).
 Tasks: T-1506, T-1509, T-1527
 
+### ISREF: a unary plus makes a value (T-4190)
+
+`ISREF(+C1)`, `ISREF(+(C1))`, `ISREF((+C1))`, `ISREF(-(-C1))`, `ISREF(+@C1)` and `ISREF(@+C1)` are FALSE, while `ISREF(@C1)`
+and `ISREF((C1))` are TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-graph 2026-11-04). So a typed unary plus,
+which the evaluator otherwise reads as the identity, ends the reference, as `T(+D1)` being `#VALUE!` already showed
+(text.md). NETWORKDAYS.INTL's holidays split by the same test (dates.md "NETWORKDAYS.INTL: a scalar holiday ignores the
+weekend argument"). Ours: `written_reference` in information/mod.rs settles these before `Model::is_reference`'s full test.
+Status: VERIFIED (web).
+
 ## Legacy formulas intersect the ranges in value arguments
 Rule: in a legacy (non-dynamic, no `cm`) formula a range is implicitly intersected wherever Excel
 evaluates it as a value, not only at the formula's root (FORMULATEXT of these forms is unprobed;
