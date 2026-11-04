@@ -37,15 +37,17 @@ impl Model {
                 Ok(text) => text,
                 Err(error) => return error,
             };
+            // Excel: see docs/excel-semantics/engineering.md#decimal-of-unreadable-text. The
+            // length is in UTF-16 units and is checked before the radix is read at all, so it
+            // wins over an error radix too (probes/decimal-unreadable,
+            // probes/t4199-decimal-unprobed-shapes).
+            if text.encode_utf16().count() > MAX_SHORT_TEXT_UNITS {
+                return value_error(cell);
+            }
             let radix = match model.kernel_number(radix, cell) {
                 Ok(f) => f.trunc() as i32,
                 Err(error) => return error,
             };
-            // Excel: see docs/excel-semantics/engineering.md#decimal-of-unreadable-text. The
-            // length is in UTF-16 units and is checked before the radix (probes/decimal-unreadable).
-            if text.encode_utf16().count() > MAX_SHORT_TEXT_UNITS {
-                return value_error(cell);
-            }
             if !(2..=36).contains(&radix) {
                 return num_error(cell);
             }
