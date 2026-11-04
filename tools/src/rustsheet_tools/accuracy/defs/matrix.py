@@ -133,7 +133,10 @@ def product(a: Exact, b: Exact) -> Exact:
         msg = "MMULT of non-conformable matrices"
         raise NoValueError(msg)
     return [
-        [sum((x * y for x, y in zip(row, column, strict=True)), Fraction(0)) for column in zip(*b, strict=False)]
+        [
+            sum((x * y for x, y in zip(row, column, strict=True)), Fraction(0))
+            for column in zip(*b, strict=False)
+        ]
         for row in a
     ]
 
