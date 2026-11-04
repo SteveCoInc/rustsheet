@@ -3,7 +3,7 @@ id: T-4136
 title: "One spelled_like_a1_cell helper in expressions/utils, and the unbound-name quote pass in the parser"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,10 @@ parser, with no behavior change.
 
 ## Out of scope
 - Any behavior change (T-4099 owns the stored `_xlpm.f1` display).
+
+## Outcome
+`spelled_like_a1_cell` (and `parse_spelled_a1_cell`, for the one site that needs the parsed cell) now live in
+`expressions/utils` next to `parse_reference_a1`; `operands.rs` (both sites) and `bound_variables.rs` use them, so
+`rg 'parse_reference_a1\(&.*to_ascii_uppercase'` finds only the helper. `quote_unbound_cell_shaped_names` moved to
+`parser/call_names.rs` (`pub(super)`, `walk_names` stays shared in `bound_variables`), and `Parser::parse` has a comment
+on why the `"_xlpm."` gate matching string-literal text is harmless. No behavior change; no eval or test change.
