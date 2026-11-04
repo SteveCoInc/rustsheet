@@ -3974,6 +3974,13 @@ Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) fini
 - Against any single cap: t3478-irr-r4-wide A227 (`IRR({-4.64118123183281E+17,...},-0.990669502541584)`) is `#NUM!` in
   Excel, while the guess run converges at its 189th step (to -0.6781680690607276), so it needs a cap of 188 or less;
   A201 and A221 match Excel only with a cap of 195 and 200 or more.
+- The best cap on the probe cells is still refuted (T-3548, 2026-11-04): over every IRR cell of probes, probes-numeric
+  and gen-m9, caps 182..188 each fix 63 cells and lose none (t3478-irr-r4-wide A206, which Excel returns, needs 182
+  steps; A227 bounds it at 188). Frozen at 185 within 148 flows, it loses Gate A's accuracy/IRR/r4-T-3411 A228 (63
+  flows): Excel is `#NUM!` there, while the guess run converges at its 129th step to 1.5164068398071384E-2 (the math
+  root to 2.3E-16). A fresh Gate A batch drawn after the freeze has a 130-flow series that Excel errs on and the
+  secant solves at step 98. Excel errs on runs of 98 and 129 steps and returns runs of 182, so the step count does
+  not separate its returns from its errors.
 - Cell counts over the six IRR probe cases, by cap (T-3806's fidelity review): 50 = 594, 136 = 630, 170 = 639,
   200..214 = 641, 215 = 640, 230 = 637. 200..214 is only the best-scoring range, and taking it loses A227.
 - Holdout A44 and A105 match Excel's digits only in runs of 1,068 and 2,406 steps, so Excel reaches the same last
