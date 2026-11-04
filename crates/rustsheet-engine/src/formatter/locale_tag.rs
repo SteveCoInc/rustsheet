@@ -280,7 +280,7 @@ const fn spec(calendar: Calendar) -> CalendarSpec {
 
 /// The calendar digits 1-0x17, index 0 being digit 1 (Windows' CAL_* ids: 1 Gregorian, 2 en-US
 /// Gregorian, 3 Japanese, 4 Taiwan, 5 Korean, 6 Hijri, 7 Thai, 8 Hebrew, 9 Middle-East French, A-C
-/// Arabic and transliterated Gregorian, D-13 the lunisolar and lunar ETO calendars, 10 Saka, 14
+/// Arabic and transliterated Gregorian, D-13 the lunisolar and lunar calendars, 10 Saka, 14
 /// Korean lunar names, 15 Gregorian, 16 Persian, 17 Um al-Qura). Digit 0 and 0x18-0x7F are the
 /// locale's own calendar.
 static CALENDARS: [CalendarSpec; 0x17] = [

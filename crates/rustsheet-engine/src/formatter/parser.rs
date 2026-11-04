@@ -1,3 +1,4 @@
+pub use super::calendar_dates::B2;
 use super::comma::{comma_role, CommaRole, Field, Next, Prev};
 use super::elapsed::{takes_second_fraction, twelve_hour_tokens};
 pub use super::fraction::{Denominator, Fraction};
@@ -106,17 +107,8 @@ pub struct DatePart {
     pub calendar: Option<Calendar>,
     /// Whether the section's locale tag names a Japanese LCID (`Localized::japanese_lcid`).
     pub japanese_lcid: bool,
-    /// Whether a `B2` before the tag converts the years once more (`Localized::year_twice`).
-    pub year_twice: bool,
-    /// Whether a `B2` prefix before any tag puts the section in the Hijri calendar
-    /// (`date_names::hijri_ymd`) and, with no tag or from its first `mmm` on, Excel's Arabic
-    /// name path (`date_names::NameTokens`).
-    pub hijri: bool,
-    /// Whether a `B2` prefix came before a tag whose calendar wins over it: a weekday after a
-    /// `mmm` then reads the month number (`date_names::NameTokens`).
-    pub b2_overridden: bool,
-    /// The names from the section's first `mmm` on (`Localized::names_after_mmm`).
-    pub names_after_mmm: Option<&'static DateNames>,
+    /// What a `B2` prefix does to the section.
+    pub b2: B2,
     /// Whether the calendar's months go by Gregorian number (`Localized::months_by_number`).
     pub months_by_number: bool,
     /// The digits of the section's locale tag (`locale_tag::numerals`).
@@ -853,8 +845,14 @@ impl Parser {
         };
         // A calendar digit other than Hijri wins over a `B2` before the tag (`B2[$-10409]yyyy` is
         // "2023"); an unresolved tag leaves it a bare `B2` (`B2[$-zzz]`).
-        let b2_overridden = hijri && localized.is_some_and(|l| l.calendar != Calendar::Hijri);
-        hijri &= !b2_overridden;
+        let b2 = match localized {
+            _ if !hijri => B2::Off,
+            Some(l) if l.calendar != Calendar::Hijri => B2::Overridden {
+                year_twice: l.year_twice,
+                names_after_mmm: l.names_after_mmm,
+            },
+            _ => B2::Hijri,
+        };
         let general_count = tokens
             .iter()
             .filter(|t| matches!(t, TextToken::General))
@@ -887,10 +885,7 @@ impl Parser {
                 day_half: localized.and_then(|l| l.day_half),
                 calendar: localized.map(|l| l.calendar),
                 japanese_lcid: localized.is_some_and(|l| l.japanese_lcid),
-                year_twice: localized.is_some_and(|l| l.year_twice),
-                hijri,
-                b2_overridden,
-                names_after_mmm: localized.and_then(|l| l.names_after_mmm),
+                b2,
                 months_by_number: localized.is_some_and(|l| l.months_by_number),
                 numerals,
             })
@@ -949,7 +944,7 @@ impl Parser {
                 day_half: Some(EN_US),
                 calendar: Some(Calendar::Gregorian),
                 japanese_lcid: false,
-                year_twice: false,
+                b2: B2::Off,
                 ..part
             }),
             _ => ParsePart::Error(ErrorPart::default()),

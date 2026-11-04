@@ -24,7 +24,7 @@ use super::{
     date_names::NameTokens,
     dates::negative_serial_allowed,
     locale_tag::Calendar,
-    parser::{ErrorPart, GeneralPart, ParsePart, Parser, TextToken},
+    parser::{ErrorPart, GeneralPart, ParsePart, Parser, TextToken, B2},
     sections::{
         conditional_section, is_bracket_only_section, is_text_section, numeric_section_count,
         section_condition,
@@ -345,7 +345,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // -1 stands for no date. The fallback is never read: `ymd` is `None` exactly when
             // `date_valid` is false.
             let serial_1900 = ctx.date_system.to_1900_serial(day_serial).unwrap_or(-1);
-            let ymd = calendar_ymd(p.calendar, p.hijri, serial_1900);
+            let ymd = calendar_ymd(p.calendar, p.b2 == B2::Hijri, serial_1900);
             let date_valid = ymd.is_some();
             // A Saka or Hebrew section of a date with no such date is `#VALUE!` even with only
             // time tokens (`TEXT(60.5,"[$-80409]h:mm")`; probes/t2779-hebrew-saka-more E5, E6).

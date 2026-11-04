@@ -16,6 +16,38 @@ use super::{
 };
 use crate::{functions::date_and_time::is_leap_year, locale::excel_date_names::DateNames};
 
+/// What a `B2` prefix does to its date section.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum B2 {
+    /// No `B2` prefix.
+    Off,
+    /// A bare `B2`, or one before a tag in its own calendar: the Hijri calendar
+    /// (`date_names::hijri_ymd`) and, with no tag or from its first `mmm` on, Excel's Arabic name
+    /// path (`date_names::NameTokens`).
+    Hijri,
+    /// A `B2` before a tag whose calendar digit wins over it (`B2[$-10409]yyyy` is "2023"): a
+    /// weekday after a `mmm` then reads the month number (`date_names::NameTokens`), every year
+    /// token may convert once more (`Localized::year_twice`), and the names may change from the
+    /// first `mmm` on (`Localized::names_after_mmm`).
+    Overridden {
+        year_twice: bool,
+        names_after_mmm: Option<&'static DateNames>,
+    },
+}
+
+impl B2 {
+    /// Whether every year token converts once more.
+    pub fn year_twice(self) -> bool {
+        matches!(
+            self,
+            B2::Overridden {
+                year_twice: true,
+                ..
+            }
+        )
+    }
+}
+
 /// Days from 1899-12-30 to the real date of 1900-system `serial_1900`, for the calendars that
 /// convert real dates: serial 0 reads as serial 1 (1900-01-01), serials 1 to 59 sit one day later
 /// than their number because serial 60 is the fictitious 1900-02-29, which has no date (`None`,
@@ -219,11 +251,11 @@ fn hebrew_ymd(serial_1900: i64) -> Option<(i32, u32, u32)> {
 /// The Hebrew month name a month token prints for `serial_1900` when the calendar has month names
 /// of its own: `mmm`, `mmmm` and `mmmmm` all print the whole name, the `leap_months` of the
 /// calendar's name set in a leap year and its 12 `months` otherwise
-/// (`excel_date_names::CalendarNames`; `[$-80409]mmmm` of 2024-02-15, 5784-06-06, is "AdarI").
+/// (`excel_date_names::CalendarNames`; `[$-80409]mmmm` of 2024-02-15, 5784-06-06, is "`AdarI`").
 /// `None` with no such names (the months go by Gregorian number through the ordinary name tokens,
 /// `Localized::months_by_number`) and for a weekday token. Leap or not by the year table, which
 /// past 2238 differs from the arithmetic calendar's (`[$-80409]mmmm` of 4502-03-01, 8262-06-24, is
-/// "AdarI"; probes/t2954-hebrew-value-limit F2).
+/// "`AdarI`"; probes/t2954-hebrew-value-limit F2).
 pub(crate) fn hebrew_month_name(
     token: &TextToken,
     names: &'static DateNames,
@@ -269,7 +301,7 @@ pub(crate) fn year_token_text(
     serial_1900: i64,
     ymd: (i32, u32, u32),
 ) -> Option<String> {
-    if part.year_twice && part.calendar == Some(Calendar::Taiwan) {
+    if part.b2.year_twice() && part.calendar == Some(Calendar::Taiwan) {
         return taiwan_after_b2(part, token, ymd.0);
     }
     Some(calendar_year_text(part, token, seen_era, serial_1900, ymd))
@@ -364,7 +396,7 @@ fn calendar_year_text(
     serial_1900: i64,
     ymd: (i32, u32, u32),
 ) -> String {
-    let twice = part.year_twice;
+    let twice = part.b2.year_twice();
     if let Some(Calendar::Japanese { explicit }) = part.calendar {
         let (era_year, names) = japanese_era(serial_1900, ymd, twice);
         // Twice converted, the era year is negative and prints as an unsigned 32-bit number

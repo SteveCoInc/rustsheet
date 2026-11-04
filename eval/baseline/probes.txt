@@ -2084,6 +2084,15 @@ C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4043-fixed-denominator-cut.case.json	88
 C	probes/t4043-fixed-denominator-slots.case.json	285
 C	probes/t4043-placeholder-denominator-slots.case.json	20
+C	probes/t4061-calendar-names-all.case.json	3384
+C	probes/t4061-calendar-names-by-language.case.json	1668
+C	probes/t4061-calendar-names-digest.case.json	848
+C	probes/t4061-calendar-names-full.case.json	526
+C	probes/t4061-calendars-without-locale.case.json	96
+C	probes/t4061-hijri-variant-dates.case.json	201
+C	probes/t4061-persian-and-hijri-variant.case.json	343
+C	probes/t4061-persian-new-years.case.json	81
+C	probes/t4061-umalqura-months.case.json	60
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -6122,10 +6131,6 @@ F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A30
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A36
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A39
 F	probes/t3638-subnormal-upper-tail.case.json	Sheet1!A42
-F	probes/t3666-calendar-top-bit.case.json	S!A19
-F	probes/t3666-calendar-top-bit.case.json	S!A20
-F	probes/t3666-calendar-top-bit.case.json	S!A21
-F	probes/t3666-calendar-top-bit.case.json	S!A22
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A1
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A10
 F	probes/t3678-time-argument-far-negative.case.json	Calc!A11

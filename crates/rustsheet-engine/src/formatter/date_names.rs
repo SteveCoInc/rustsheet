@@ -4,7 +4,7 @@
 
 use super::{
     calendar_dates::real_day,
-    parser::{DatePart, TextToken},
+    parser::{DatePart, TextToken, B2},
 };
 use crate::locale::{
     excel_date_names::{calendar_names, CalendarKey, CalendarNames, DateNames, EN_US},
@@ -82,12 +82,12 @@ pub(crate) struct NameTokens {
     arabic: bool,
     /// Whether a `mmm` switches the section to the Arabic path: `B2` before a tag.
     mmm_switches: bool,
-    /// Whether a `B2` came before a tag whose calendar wins over it (`DatePart::b2_overridden`).
+    /// Whether a `B2` came before a tag whose calendar wins over it (`B2::Overridden`).
     b2_overridden: bool,
     /// The month a `mmm` printed in a `b2_overridden` section, which every weekday after it reads.
     month_after_mmm: Option<u32>,
     /// The names every name token prints from a `b2_overridden` section's first `mmm` on
-    /// (`DatePart::names_after_mmm`).
+    /// (`B2::Overridden`).
     names_after_mmm: Option<&'static DateNames>,
     first: Option<FirstName>,
     /// Whether a numeric date token came before any Arabic name in a bare `B2` section, which
@@ -100,12 +100,19 @@ impl NameTokens {
     /// The name tokens of `part`'s section.
     pub(crate) fn new(part: &DatePart) -> Self {
         let tagged = part.names.is_some();
+        let hijri = part.b2 == B2::Hijri;
+        let names_after_mmm = match part.b2 {
+            B2::Overridden {
+                names_after_mmm, ..
+            } => names_after_mmm,
+            B2::Off | B2::Hijri => None,
+        };
         NameTokens {
-            arabic: part.hijri && !tagged,
-            mmm_switches: part.hijri && tagged,
-            b2_overridden: part.b2_overridden,
+            arabic: hijri && !tagged,
+            mmm_switches: hijri && tagged,
+            b2_overridden: matches!(part.b2, B2::Overridden { .. }),
             month_after_mmm: None,
-            names_after_mmm: part.names_after_mmm,
+            names_after_mmm,
             first: None,
             real_names: false,
         }
