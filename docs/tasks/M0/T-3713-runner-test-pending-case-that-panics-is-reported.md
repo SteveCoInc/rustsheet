@@ -3,7 +3,7 @@ id: T-3713
 title: "runner test pending_case_that_panics_is_reported_as_panic reads Timeout under load: a panic's backtrace outlasts the 5 s case limit"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
