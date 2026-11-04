@@ -2084,6 +2084,8 @@ C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4043-fixed-denominator-cut.case.json	88
 C	probes/t4043-fixed-denominator-slots.case.json	285
 C	probes/t4043-placeholder-denominator-slots.case.json	20
+C	probes/t4043-separated-slots.case.json	432
+C	probes/t4043-trailing-shapes-holdout.case.json	84
 C	probes/t4061-calendar-names-all.case.json	3384
 C	probes/t4061-calendar-names-by-language.case.json	1668
 C	probes/t4061-calendar-names-digest.case.json	848
@@ -2092,6 +2094,7 @@ C	probes/t4061-calendars-without-locale.case.json	96
 C	probes/t4061-hijri-variant-dates.case.json	201
 C	probes/t4061-persian-and-hijri-variant.case.json	343
 C	probes/t4061-persian-new-years.case.json	81
+C	probes/t4061-review-followups.case.json	35
 C	probes/t4061-umalqura-months.case.json	60
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8

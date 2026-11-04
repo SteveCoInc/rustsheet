@@ -845,9 +845,9 @@ does a tag with no LCID (`[$-pt-AO]`, `[$-aa-ET]`). After a `B2` such a tag is H
 value wraps at 32 bits (`[$-rhg-Rohg-BD]` is 0xEC91FDBD), and the calendar is the third byte without its top bit
 (0x91 is 0x11, Chinese lunar; 0x83 is 3, Japanese eras, which over an LCID with no locale print en-US names: `[$-myv-RU]`
 prints 2023-03-15 as "05-03-15"), checked against all 196 unknown tags and over LCIDs with a locale
-(probes/t3666-calendar-top-bit). Inferred: a hex value whose text is also a tag Excel knows (`CA`, `DE`, `FA`) is that tag,
-not an LCID with a locale, because `[$-CA]` resolves through the tag and so cannot show whether 0xCA has one
-(`[$-100CA]` and `B2[$-CA]` are unprobed).
+(probes/t3666-calendar-top-bit). A hex value whose text is also a tag Excel knows (`CA`, `DE`, `FA`) is that tag, and the LCID has no locale: `[$-CA]` is
+Catalan, `[$-100CA]` Saka over no locale ("6 P"), `B2[$-CA]` the Hijri date with the default names and Catalan day
+halves (probes/t4061-review-followups B1:B8).
 Evidence: probes/t3666-lcid-sublanguage-sweep, t3666-lcid-locale-map (every language 0x01-0xFF x sublanguage 0-63),
 t3666-locale-names (853 LCIDs x 41 names), t3666-locale-tag-names (1122 tags), excel-graph 2026-11-04; languages
 0x100-0x3FF are unprobed (no locale here). Implemented in: the tables locale/excel_names.tsv, excel_lcids.tsv and
@@ -905,7 +905,7 @@ month and weekday of A, B, C and 14, with day halves under 401 ("6 م") and 412 
 | 14 | Gregorian, Korean native month names ("정월" … "섣달", `mmm` the same), Korean weekdays | "삼월", "수" |
 | 15 | Gregorian with en-US names (probes/t3666-calendar-top-bit) | `[$-15040C]mmmm` is "March" |
 | 16 | Persian (Windows CAL_PERSIAN): 2023-03-15 is 1401-12-24, 1900-01-01 1278-10-11, 9999-12-31 9378-10-13; months of 31 (1-6), 30 (7-11) and 29/30 days; the leap years follow the equinox (Excel's table of all 8100 years, probes/t4061-persian-new-years: neither the 33- nor the 2820-year rule fits, the new year drifts from 21 March to 17 March by 9999); `yy`/`b` two digits, `e` the year, `g` nothing | `[$-16040C]yyyy-mm-dd` of 45000 is "1401-12-24" |
-| 17 | Um al-Qura (CAL_UMALQURA): Excel's month table from 1 Muharram 1318 (1900-04-30) to the end of 1500 (2077-11-15), the digit-6 date outside it (probes/t4061-umalqura-months, t4061-hijri-variant-dates: a quarter of month starts differ from digit 6 by a day inside the table, none outside up to 2100; later years are extrapolated from two points, 3000-01-01 and 9999-12-31, t4061-umalqura-months B7, B8) | `[$-170409]yyyy-mm-dd` of 1900-04-30 is "1318-01-01" |
+| 17 | Um al-Qura (CAL_UMALQURA): Excel's month table from 1 Muharram 1318 (1900-04-30) to the end of 1500 (2077-11-15), the digit-6 date outside it (probes/t4061-umalqura-months, t4061-hijri-variant-dates: a quarter of month starts differ from digit 6 by a day inside the table, none outside, through 9999: 1580 dates of 2101-9991, t4061-review-followups A) | `[$-170409]yyyy-mm-dd` of 1900-04-30 is "1318-01-01" |
 | 18 to 7F | ignored; the LCID's own calendar (probed 18-1F, 20, 3F, 40, 7F over fr-FR and ja-JP) | `[$-7F040C]mmmm` is "mars" |
 | 80 and above | the digit without its top bit (`[$-83040C]` Japanese eras, `[$-91040C]` lunar, `[$-FF040C]` ignored) | `[$-FF040C]mmmm` is "mars" |
 Under A, B, C and 14, `e` and `g` are probed ("2023", ""); `yy`, `b` and `bbbb` are inferred to print as under Gregorian (unprobed).
@@ -1312,42 +1312,37 @@ Status: VERIFIED (Excel for the web; desktop Mac Excel cached values for the lit
 Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074
 
 ## Placeholders after a fraction
-Rule: digit placeholders after a placeholder denominator get no digit of the value: `0` and `#` print a zero, `?` a
-space (when the picked denominator fills the denominator's slots and no zero came before it; the full rule, T-4043,
-is below), a `.` among them prints and a `,` prints nothing (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #` "12 1/2 0",
-`# ?/? 00` "12 1/2 00", `# ?/? ?` "12 1/2  ", `# ?/?|0.0` "12 1/2|0.0", `# ?/?|#,##0` "12 1/2|0000"). When the fraction
-blanks (a zero fraction part, `# ?/?|0` on 12 or on 0), everything after the integer up to the last such placeholder
-blanks with it, literals and quoted text included, and what follows prints (`# ?/?|0 "12"|\5` on 12 is "12       12|5",
-`# ?/?"x"0` "12      ", `# ?/? 0|"x"` "12      |x", `# ?/?|0%` on 12.5 "1250      %"). Evidence:
-probes/t3711-placeholders-after-fraction (120 cells, excel-graph 2026-11-04), probes/t3532-numeral-digit-fields row 14
-(the zero takes the numeral digits). Implemented in: `format_fraction` (formatter/fraction.rs; T-3711).
-**A fixed denominator followed by a placeholder** is no longer fixed (VERIFIED, T-4043). With a digit placeholder
-anywhere after the denominator, Excel picks the fraction as for a fixed denominator past 32768 (see "Fraction formats"):
-the last convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 +
-244252/1725033). A literal alone after it changes nothing (`# ?/4"x"` on 0.5 is " 2/4x"). With C the code's
-denominator digits (L of them) and D the picked denominator:
-- **The denominator** prints C cut to D's length, padded by L - len(D) spaces under a `?` numerator and by nothing
-  otherwise (`# ?/16|0` on 0.5 is " 1/1 |0", `# 0/16|?` "1/1| "). D's digits past the first L (R) print right after it
-  under a `#` or `0` numerator (`# 0/4|0` on 0.3 is "3/40|0", on 0.0625 "1/46|0") and go to the placeholders after it
-  under a `?` numerator, or nowhere when there are none (`?/40000`).
-- **The placeholders after it** print as after a placeholder denominator (above) under a `#` or `0` numerator. Under a
-  `?` numerator, with E = len(D) - L: if they are all `?`, R (E > 0) or E zeros (E < 0) fill them from the left and the
-  rest print a space (`# ?/4|?` on 0.0625 " 1/4|6", on PI() "3 244252/4|7", on 0.5 " 1/4| "; `# ?/16|?` on 0.5
-  " 1/1 |0"; `# ?/100|??` on 0.5 " 1/1  |00", on 0.3 " 3/10 |0 "). Otherwise R prints before the first one, then `0`
-  prints a zero, `#` a zero unless E < 0, and `?` a zero unless E = 0, where it prints a space until an earlier one
-  printed a zero (`# ?/4|0` on 0.0625 " 1/4|60", on 0.3 " 3/4|00", on -0.3 "- 3/4|00"; `# ?/4 0 0` on 0.0625
-  " 1/4 60 0"; `# ?/16|#` on 0.5 " 1/1 |", `# ?/16|?0` " 1/1 |00"; with E = 0 `# ?/4|?0` on 0.5 is " 1/4| 0" and
-  `# ?/4|0?` " 1/4|00").
-- **A placeholder denominator** follows the same rule with its `?` slots (E <= 0 there): `# ?/?|?0` on 0.5 is
-  " 1/2| 0" and `# ?/?|0?` " 1/2|00", `# ??/??|?` on 0.5 "  1/2 |0" and on 0.3 "  3/10| ", `# ??/??|0?` on 0.3
-  "  3/10|00" (probes/t4043-placeholder-denominator-slots, 20 cells, excel-graph 2026-11-04). The T-3711 cells above
-  are the case E = 0. A denominator of `#` or `0` placeholders after which placeholders follow is unprobed; the engine
-  gives it the T-3711 reading.
-- A blank fraction (a zero numerator) blanks as above.
-Evidence: probes/t3711-fixed-denominator-then-placeholder (88 cells), t3711-placeholders-after-fraction A13, C13, E13,
-t4043-fixed-denominator-slots (19 formats x 15 values, excel-graph 2026-11-04), t4043-fixed-denominator-cut (11 x 8,
-excel-graph 2026-11-04); every cell matches. Implemented in: `Choice::of` and `trailing_fill` (formatter/fraction.rs).
-Tasks: T-3711, T-4043
+Rule: digit placeholders after a fraction's denominator get no digit of the value; they print what the denominator hands
+on, by one rule for every denominator. A `.` among them prints and a `,` prints nothing.
+- **Which fraction.** A fixed denominator is used as written only when it is at most 32768 and no digit placeholder
+  follows it in the section; otherwise Excel picks the fraction as for one past 32768 (see "Fraction formats"): the last
+  convergent with a denominator up to 9999999 (0.0625 is 1/16, 0.3 3/10, 0.123456789 10/81, PI() 3 + 244252/1725033).
+  A literal alone after it changes nothing (`# ?/4"x"` on 0.5 is " 2/4x").
+- **The denominator** of a picked fixed one prints the code's digits C cut to the picked D's length, padded by
+  len(C) - len(D) spaces under a `?` numerator and by nothing otherwise (`# ?/16|0` on 0.5 is " 1/1 |0", `# 0/16|?`
+  "1/1| "). D's digits past the first len(C) print right after it under a `#` or `0` numerator (`# 0/4|0` on 0.3 is
+  "3/40|0") and are *spilled* to the placeholders after it under a `?` one, or dropped when there are none (`?/40000`);
+  a D shorter than C *lacks* that many digits. A placeholder denominator with `?` slots spills and lacks against its
+  slots the same way; any other denominator hands on nothing.
+- **The placeholders after it**, left to right, with the zeros owed and whether a `?` with nothing to print shows a
+  space (at first, and after a `?` that printed something):
+  - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else a space if one is due
+    (within a run of adjacent `?` it stays due; a literal ends the run), else a zero (and owes one);
+  - a `0` or `#` prints every spilled digit left, then its own zero and the zeros owed; for a lacking digit instead a
+    `0` prints a zero and a `#` nothing.
+  Examples: `# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? ?` "12 1/2  ", `# ?/?|#,##0` "12 1/2|0000"; `# ?/4|0` on 0.0625
+  " 1/4|60", `# ?/4 ? 0` " 1/4 6 00", `# ?/4 0 0` " 1/4 60 0", `# ?/4|??` on 0.5 " 1/4|  " but `# ?/4|?|?` " 1/4| |0",
+  `# ?/4|#?0#` on 0.5 " 1/4|00000", `# ?/16|#` on 0.5 " 1/1 |", `# ?/100|##` on 0.3 " 3/10 |0", on 0.5 " 1/1  |".
+- **A blank fraction** (a zero numerator, `# ?/?|0` on 12 or on 0) prints as spaces everything after the integer up to
+  the last such placeholder, literals and quoted text included, each placeholder as wide as what it would print with the
+  fraction's denominator (`# ?/?|0 "12"|\5` on 12 is "12       12|5", `# ?/?|0%` on 12.5 "1250      %", `# ?/100|##` on
+  0 "0" and 7 spaces: 1 lacks two digits of `100`, which the two `#` take); what follows prints.
+Evidence (excel-graph 2026-11-04), every cell matching: probes/t4043-separated-slots (24 shapes, each placeholder in a slot
+of its own, under denominators 4, 16 and 100 and six values: 432 cells), t4043-trailing-shapes-holdout (84 cells, shapes
+outside the earlier probes), t4043-fixed-denominator-slots, t4043-fixed-denominator-cut,
+t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t3711-placeholders-after-fraction,
+t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). Implemented in: `Choice::of`, `DenominatorPlan`,
+`trailing_fill` and `emit` (formatter/fraction.rs). Status: VERIFIED (excel-graph). Tasks: T-3711, T-4043
 
 ## Fill characters (`*x`) add nothing to the text
 A `*x` fill (repeat) character contributes nothing to the displayed text or to TEXT(): `TEXT(7,"0*""a")` is "7a",

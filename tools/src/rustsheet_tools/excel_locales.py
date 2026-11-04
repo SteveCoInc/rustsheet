@@ -65,22 +65,6 @@ def lcids_with_locale() -> set[int]:
     return found
 
 
-def extended_hex(tag: str) -> int | None:
-    """`locale_tag::extended_hex`: Excel's reading of a short tag as hex digits."""
-    if not tag or not tag.isascii():
-        return None
-    value = 0
-    for c in tag:
-        if c >= "a":
-            digit = ord(c) - ord("a") + 10
-        elif "A" <= c <= "Z":
-            digit = ord(c) - ord("A") + 10
-        else:
-            digit = ord(c) - ord("0")
-        value = (value * 16 + digit) & 0xFFFFFFFF
-    return value
-
-
 def name_set(row: list[str]) -> tuple[str, ...]:
     return (*row[NAMES], row[AM], row[PM])
 
@@ -226,7 +210,7 @@ def first_day_columns(case: str) -> list[str]:
     return [sheet[f"A{n}"]["v"] for n in range(1, len(sheet) + 1) if f"A{n}" in sheet]
 
 
-def write_persian_years() -> None:
+def persian_years() -> str:
     """`formatter/persian_years.txt`: Excel's Persian calendar (digit 0x16) as the length of every
     year 1278-9378, read off probes/t4061-persian-new-years (the Persian date of March 28, always in
     month 1, of every Gregorian year 1900-9999)."""
@@ -245,17 +229,16 @@ def write_persian_years() -> None:
     bits = "".join("1" if (starts[y + 1] - starts[y]).days == 366 else "0" for y in years[:-1])
     lines = [f"{years[0] + i}\t{bits[i : i + 64]}" for i in range(0, len(bits), 64)]
     epoch = (starts[years[0]] - date(1899, 12, 30)).days
-    (FORMATTER / "persian_years.txt").write_text(
+    return (
         HEADER
         + f"# Year {years[0]} starts on day {epoch} (1899-12-30 is 0). Each line: a year, then one digit\n"
         + "# per year from it, 1 for a 366-day year. Months 1-6 have 31 days, 7-11 30, 12 the rest.\n"
         + f"{years[0]}\t{epoch}\n"
-        + "".join(f"{x}\n" for x in lines),
-        encoding="utf-8",
+        + "".join(f"{x}\n" for x in lines)
     )
 
 
-def write_um_al_qura_months() -> None:
+def um_al_qura_months() -> str:
     """`formatter/um_al_qura_months.txt`: Excel's Um al-Qura calendar (digit 0x17) as the length of
     every month of its table, read off probes/t4061-umalqura-months (the 1st and 16th of every
     Gregorian month 1900-2100). Outside the table Excel uses the tabular Hijri calendar of digit 6."""
@@ -274,24 +257,41 @@ def write_um_al_qura_months() -> None:
             lengths.append("1" if (starts[following] - starts[(year, month)]).days == 30 else "0")
         lines.append(f"{year}\t{''.join(lengths)}")
     epoch = (starts[first] - date(1899, 12, 30)).days
-    (FORMATTER / "um_al_qura_months.txt").write_text(
+    return (
         HEADER
         + f"# 1 Muharram {first[0]} is day {epoch} (1899-12-30 is 0). Each line: a year, then one digit per\n"
         + "# month, 1 for 30 days and 0 for 29. Before and after the table Excel's dates are digit 6's.\n"
         + f"{first[0]}\t{epoch}\n"
-        + "".join(f"{x}\n" for x in lines),
-        encoding="utf-8",
+        + "".join(f"{x}\n" for x in lines)
     )
 
 
-def main() -> int:
-    with_locale = lcids_with_locale()
+def documented_lcids() -> dict[str, int]:
+    """[MS-LCID]'s LCID of each tag, lower-cased."""
     documented: dict[str, int] = {}
     for line in MS_LCID.read_text(encoding="utf-8").splitlines():
         if line and not line.startswith("#"):
             lcid, tag = line.split("\t")
             documented[tag.lower()] = int(lcid, 16)
+    return documented
 
+
+def known_tags(documented: dict[str, int]) -> list[tuple[str, int | None, tuple[str, ...]]]:
+    """The tags Excel resolves as a locale, with their LCID and names. A locale prints its own day
+    halves for `A/P`, so a tag that keeps "P" has none; some of those still print names, read as
+    extended hex (`an-ES` is calendar digit B, Arabic names), and so do tags with another calendar
+    or digits (`tok-001`): those are left to that path. Which of the rest Excel reads as extended
+    hex instead (`[$-bgc]` is 0xC0C) is the engine's rule (`formatter::locale_tag::known_tag`)."""
+    tags = []
+    for row in sorted(oracle_rows("t3666-locale-tag-names"), key=lambda r: r[0].lower()):
+        if row[AP] != "P" and row[YMD] == "2023-03-15":
+            tags.append((row[0], documented.get(row[0].lower()), name_set(row)))
+    return tags
+
+
+def generate() -> dict[Path, str]:
+    """Every generated table, by path, from the probes alone (no file is written)."""
+    with_locale = lcids_with_locale()
     sets: dict[tuple[str, ...], int] = {}
 
     def number(names: tuple[str, ...]) -> int:
@@ -301,57 +301,30 @@ def main() -> int:
     for row in sorted(oracle_rows("t3666-locale-names"), key=lambda r: int(r[0])):
         if int(row[0]) in with_locale:
             by_lcid[int(row[0])] = name_set(row)
-
-    tags: list[tuple[str, int | None, tuple[str, ...]]] = []
-    for row in sorted(oracle_rows("t3666-locale-tag-names"), key=lambda r: r[0].lower()):
-        tag, names = row[0], name_set(row)
-        # A locale prints its own day halves for `A/P`; a tag that keeps "P" has none. Some of those
-        # still print names, read as extended hex (`an-ES` is calendar digit B, Arabic names), and
-        # so do tags with another calendar or digits (`tok-001`): leave them to that path.
-        if row[AP] == "P" or row[YMD] != "2023-03-15":
-            continue
-        # An undocumented tag that reads as an LCID with the same names is that LCID (`[$-bgc]` is
-        # 0xC0C, fr-CA), unless the tag spells that LCID's hex digits: then the tag wins and the
-        # LCID has no locale of its own (`[$-CEB]` is Cebuano by its tag, `[$-0CEB]` and
-        # `[$-80CEB]` have no locale; probes/t4061-calendars-without-locale C1:C24).
-        value = extended_hex(tag)
-        if (
-            value is not None
-            and documented.get(tag.lower()) is None
-            and value >> 16 == 0
-            and by_lcid.get(value & 0xFFFF) == names
-            and f"{value:x}" != tag.lower()
-        ):
-            continue
-        tags.append((tag, documented.get(tag.lower()), names))
-
+    tags = known_tags(documented_lcids())
     # A hex LCID that is really a tag (`[$-CA]` is Catalan by its tag "ca", 0xCA has no locale).
     tag_names = {tag.lower() for tag, _, _ in tags}
-    lcid_rows = [(lcid, n) for lcid, n in by_lcid.items() if f"{lcid:x}" not in tag_names]
-
-    lcid_lines = [f"{lcid:X}\t{number(names)}" for lcid, names in lcid_rows]
+    lcid_lines = [
+        f"{lcid:X}\t{number(names)}" for lcid, names in by_lcid.items() if f"{lcid:x}" not in tag_names
+    ]
     tag_lines = [
         f"{tag}\t{'-' if lcid is None else f'{lcid:X}'}\t{number(names)}" for tag, lcid, names in tags
     ]
-    mismatched = [
-        tag for tag, lcid, names in tags if lcid is not None and lcid in by_lcid and by_lcid[lcid] != names
-    ]
-    (OUT / "excel_lcids.tsv").write_text(HEADER + "".join(f"{x}\n" for x in lcid_lines), encoding="utf-8")
-    (OUT / "excel_tags.tsv").write_text(HEADER + "".join(f"{x}\n" for x in tag_lines), encoding="utf-8")
     calendar_lines = calendar_rows(by_lcid, number, sets)
-    (OUT / "excel_calendars.tsv").write_text(
-        HEADER + "".join(f"{x}\n" for x in calendar_lines), encoding="utf-8"
-    )
-    (OUT / "excel_names.tsv").write_text(
-        HEADER + "".join("\t".join(map(escape, names)) + "\n" for names in sets), encoding="utf-8"
-    )
-    write_persian_years()
-    write_um_al_qura_months()
-    print(
-        f"{len(sets)} name sets, {len(lcid_lines)} LCIDs, {len(tag_lines)} tags, {len(calendar_lines)} calendar rows"
-    )
-    if mismatched:
-        print(f"tags whose names differ from their LCID's: {', '.join(mismatched)}")
+    return {
+        OUT / "excel_lcids.tsv": HEADER + "".join(f"{x}\n" for x in lcid_lines),
+        OUT / "excel_tags.tsv": HEADER + "".join(f"{x}\n" for x in tag_lines),
+        OUT / "excel_calendars.tsv": HEADER + "".join(f"{x}\n" for x in calendar_lines),
+        OUT / "excel_names.tsv": HEADER + "".join("\t".join(map(escape, names)) + "\n" for names in sets),
+        FORMATTER / "persian_years.txt": persian_years(),
+        FORMATTER / "um_al_qura_months.txt": um_al_qura_months(),
+    }
+
+
+def main() -> int:
+    for path, text in generate().items():
+        path.write_text(text, encoding="utf-8")
+        print(f"wrote {path.relative_to(ROOT)}: {text.count(chr(10))} lines")
     return 0
 
 

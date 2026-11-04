@@ -47,3 +47,9 @@ format parser and fraction code: date tokens map through one helper and a `Minut
 (formatter/parser.rs); a pure `comma_role` table decides what a `,` does (formatter/comma.rs); `format_fraction` is
 split into choosing and rendering by `Zone`. Semantics: number-formats.md "Placeholders after a fraction" and
 "Fraction formats".
+
+Revised after review: the first `trailing_fill` was fitted to the probed shapes and failed 19 of 84 cells of a hold-out
+(probes/t4043-trailing-shapes-holdout). probes/t4043-separated-slots (432 cells: every placeholder of 24 shapes in a slot
+of its own) showed the mechanism: spilled digits, lacking digits, owed zeros and a due space, walked left to right
+(number-formats.md "Placeholders after a fraction"); a blank fraction is the would-be text as spaces. The rule matches
+every cell of all seven probes, including the hold-out and the 34 cells with no `?` slot.

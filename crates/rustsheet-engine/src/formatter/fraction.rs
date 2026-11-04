@@ -21,6 +21,8 @@
 //!   denominator past 32768 or followed by a digit placeholder is replaced by a picked one
 //!   ([`Choice`], [`LARGE_FIXED_MAX_DENOMINATOR`]).
 
+use std::collections::VecDeque;
+
 use super::parser::{NumberPart, TextToken};
 use crate::decimal_round::{round_decimal, RoundMode};
 use crate::number_format::{group_thousands, to_precision};
@@ -380,7 +382,13 @@ fn plan(
         integer: numerals(fill(&integer_digits, &integer_kinds)),
         numerator: numerals(fill(&numerator_digits, &numerator_kinds)),
         trailing: numerals(trailing_fill(
-            &placeholder_kinds(&tokens[layout.denominator_at..]),
+            &tokens[layout.denominator_at..]
+                .iter()
+                .map(|token| match token {
+                    TextToken::Digit(digit) => Some(digit.kind),
+                    _ => None,
+                })
+                .collect::<Vec<_>>(),
             denominator.spill.as_ref(),
         )),
         denominator: part.numerals.digits(&denominator.text),
@@ -418,6 +426,17 @@ fn emit(part: &NumberPart, layout: &Layout, plan: Plan) -> String {
             // Every placeholder and literal of a blank fraction takes its width in spaces, and so
             // do those after the denominator up to its last placeholder (`# ?/?|0 "12"` on 12 is
             // "12       12"; probes/t3711-placeholders-after-fraction B1:B20).
+            // A placeholder after the denominator takes the width of what it would print with
+            // the fraction's denominator (`# ?/100|##` on 0 is "0" and 7 spaces: two missing digits
+            // of 1 under `100` take both `#`; probes/t4043-trailing-shapes-holdout G11).
+            (Zone::Trailing, TextToken::Digit(_))
+                if plan.blank.is_some() && layout.blanks(index) =>
+            {
+                let width = trailing.next().map_or(0, |fill| fill.chars().count());
+                if plan.blank == Some(true) {
+                    text.extend(std::iter::repeat_n(' ', width));
+                }
+            }
             _ if plan.blank.is_some() && layout.blanks(index) => {
                 if plan.blank == Some(true) {
                     push_spaces(&mut text, token);
@@ -450,62 +469,67 @@ fn emit(part: &NumberPart, layout: &Layout, plan: Plan) -> String {
     text
 }
 
-/// What each placeholder after the denominator prints, for their `kinds`; they get no digit of
-/// the value (number-formats.md "Placeholders after a fraction"). After a denominator without `?`
-/// slots (`spill` `None`: one used as written, or a picked fixed one under a `#` or `0`
-/// numerator) `0` and `#` print a zero and `?` a space (`# 0/4|0` on 0.3 is "3/40|0",
-/// `# 0/16|?` on 0.01 "1/160| ").
+/// What each digit placeholder after the denominator prints; they get no digit of the value but
+/// what the denominator hands on (number-formats.md "Placeholders after a fraction"). `tokens` has
+/// one entry per token after the denominator: a placeholder's kind, or `None` for any other token,
+/// which only ends a run of `?`. With `?` slots in the denominator, `spill` gives the picked
+/// denominator's digits past its slots, or how many it lacks (a picked 2 under a written `16`).
 ///
-/// After a denominator with `?` slots, `spill` holds its digits past the slots and how many more
-/// digits than slots it has (negative when it has fewer):
-/// - all `?`: the spilled digits, or one `0` per missing digit, fill them from the left and a
-///   placeholder with none prints a space (`# ?/4|?` on 0.0625 is " 1/4|6", `# ?/16|?` on 0.5
-///   " 1/1 |0", `# ?/100|??` on 0.3 " 3/10 |0 ", `# ??/??|?` on 0.5 "  1/2 |0", on 0.3 "  3/10| ");
-/// - otherwise the spilled digits print before the first one, then `0` prints a zero, `#` a zero
-///   unless digits are missing, and `?` a zero unless the slots fit exactly, where it prints a
-///   space until a placeholder before it printed a zero (`# ?/4|0` on 0.0625 is " 1/4|60",
-///   `# ?/16|#` on 0.5 " 1/1 |", `# ?/?|?0` " 1/2| 0", `# ?/?|0?` " 1/2|00";
-///   probes/t4043-fixed-denominator-slots, -cut, t4043-placeholder-denominator-slots).
-fn trailing_fill(kinds: &[char], spill: Option<&Spill>) -> Vec<String> {
-    let Some(Spill { digits, excess }) = spill else {
-        return kinds
-            .iter()
-            .map(|kind| if *kind == '?' { " " } else { "0" }.to_owned())
-            .collect();
+/// Excel's rule, walking the placeholders left to right with the spilled digits, the lacking
+/// count, the zeros owed and whether a `?` with nothing to print shows a space (at first, and
+/// after a `?` that printed one):
+/// - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else
+///   a space if one is due (a run of `?` keeps it due), else a zero (and owes one);
+/// - a `0` or `#` prints every spilled digit left, then its zero and the zeros owed; for a lacking
+///   digit instead a `0` prints a zero and a `#` nothing.
+///
+/// So `# ?/4|0` on 0.0625 (1/16) is " 1/4|60", `# ?/4 ? 0` " 1/4 6 00", `# ?/4|??` on 0.5
+/// " 1/4|  ", `# ?/4|?|?` " 1/4| |0", `# ?/16|#` on 0.5 " 1/1 |", `# ?/100|##` on 0.3 " 3/10 |0".
+/// Evidence: probes/t4043-separated-slots (every placeholder of 24 shapes in a slot of its own
+/// under denominators 4, 16 and 100), t4043-fixed-denominator-slots, -cut,
+/// t4043-placeholder-denominator-slots, t4043-trailing-shapes-holdout, t3711-*: every cell.
+fn trailing_fill(tokens: &[Option<char>], spill: Option<&Spill>) -> Vec<String> {
+    let (mut digits, mut lacking) = match spill {
+        Some(Spill { digits, excess }) if *excess > 0 => (digits.chars().collect(), 0),
+        Some(Spill { excess, .. }) => (VecDeque::new(), excess.unsigned_abs()),
+        None => (VecDeque::new(), 0),
     };
-    let excess = *excess;
-    if kinds.iter().all(|kind| *kind == '?') {
-        let digits: Vec<char> = if excess < 0 {
-            vec!['0'; excess.unsigned_abs()]
-        } else {
-            digits.chars().collect()
-        };
-        return (0..kinds.len())
-            .map(|i| digits.get(i).copied().unwrap_or(' ').to_string())
-            .collect();
-    }
-    let mut zero_before = false;
-    let mut slots: Vec<String> = kinds
-        .iter()
-        .map(|kind| {
-            let zero = match kind {
-                '#' => excess >= 0,
-                '?' => excess != 0 || zero_before,
-                _ => true,
-            };
-            zero_before |= zero;
-            match (zero, *kind) {
-                (true, _) => "0",
-                (false, '?') => " ",
-                (false, _) => "",
+    let mut owed = 0;
+    let mut space_due = true;
+    let mut fill = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        let Some(kind) = *token else { continue };
+        let text = if kind == '?' {
+            if let Some(digit) = digits.pop_front() {
+                owed += 1;
+                space_due = true;
+                digit.to_string()
+            } else if lacking > 0 {
+                lacking -= 1;
+                "0".to_owned()
+            } else if space_due {
+                space_due = tokens.get(i + 1) == Some(&Some('?'));
+                " ".to_owned()
+            } else {
+                owed += 1;
+                space_due = true;
+                "0".to_owned()
             }
-            .to_owned()
-        })
-        .collect();
-    if let Some(first) = slots.first_mut() {
-        first.insert_str(0, digits);
+        } else {
+            space_due = false;
+            if lacking > 0 {
+                lacking -= 1;
+                if kind == '0' { "0" } else { "" }.to_owned()
+            } else {
+                let mut text: String = digits.drain(..).collect();
+                text.push_str(&"0".repeat(1 + owed));
+                owed = 0;
+                text
+            }
+        };
+        fill.push(text);
     }
-    slots
+    fill
 }
 
 /// The index just past the last digit placeholder of `tokens`, if any.
@@ -732,33 +756,44 @@ mod trailing_tests {
                 excess,
             })
         };
-        let rows: [(&str, Option<Spill>, &str); 13] = [
+        // Shapes are written with `|` for a literal between placeholders; the outputs join the
+        // placeholders' texts with `|` too.
+        let rows: [(&str, Option<Spill>, &str); 18] = [
             // No `?` slots: `0`/`#` print a zero, `?` a space (`# 0/16|?` on 0.01).
             ("0", None, "0"),
             ("?", None, " "),
-            // All `?`: spilled digits from the left (`# ?/4|?` on 0.0625, on PI()).
+            // Spilled digits from the left (`# ?/4|?` on 0.0625, `# ?/4|??` on PI()).
             ("?", spill("6", 1), "6"),
-            ("??", spill("725033", 6), "72"),
-            // ... or a zero per missing digit (`# ?/16|?` on 0.5, `# ?/100|??` on 0.5 and 0.3).
+            ("??", spill("725033", 6), "7|2"),
+            // A zero per lacking digit (`# ?/16|?` on 0.5, `# ?/100|??` on 0.5 and 0.3).
             ("?", spill("", -1), "0"),
-            ("??", spill("", -2), "00"),
-            ("??", spill("", -1), "0 "),
-            ("??", spill("", 0), "  "),
-            // A `0` or `#` among them: the spill first, then a zero each (`# ?/4|0` on 0.0625).
+            ("??", spill("", -2), "0|0"),
+            ("??", spill("", -1), "0| "),
+            // A run of `?` keeps the space due; a literal ends it (`# ?/4|??`, `|?|?` on 0.5).
+            ("??", spill("", 0), " | "),
+            ("?|?", spill("", 0), " |0"),
+            // A `0` or `#` takes the rest of the spill, its zero and the zeros owed
+            // (`# ?/4|0`, `# ?/4 ? 0` and `# ?/4|?|?|#` on 0.0625 and PI()).
             ("0", spill("6", 1), "60"),
-            ("?0", spill("6", 1), "600"),
-            // Exact fit: `?` is a space until a zero printed (`# ?/?|?0`, `|0?` on 0.5).
-            ("?0", spill("", 0), " 0"),
-            ("0?", spill("", 0), "00"),
-            // Missing digits: `#` prints nothing (`# ?/16|#` on 0.5).
+            ("?|0", spill("6", 1), "6|00"),
+            ("?|?|#", spill("725033", 6), "7|2|5033000"),
+            // A `?` printing a zero owes one (`# ?/4|#?0#` on 0.5; `#|?|?` on 0.5).
+            ("#?0#", spill("", 0), "0|0|00|0"),
+            ("#|?|?", spill("", 0), "0|0| "),
+            // Lacking digits: `#` prints nothing, `0` a zero (`# ?/16|#`, `# ?/100|##` and `0#`
+            // on 0.5 and 0.3).
             ("#", spill("", -1), ""),
+            ("##", spill("", -2), "|"),
+            ("##", spill("", -1), "|0"),
+            ("0#", spill("", -2), "0|"),
         ];
-        for (kinds, spill, expected) in rows {
-            let kinds: Vec<char> = kinds.chars().collect();
+        for (shape, spill, expected) in rows {
+            let tokens: Vec<Option<char>> =
+                shape.chars().map(|c| (c != '|').then_some(c)).collect();
             assert_eq!(
-                trailing_fill(&kinds, spill.as_ref()).concat(),
+                trailing_fill(&tokens, spill.as_ref()).join("|"),
                 expected,
-                "{kinds:?} {spill:?}"
+                "{shape} {spill:?}"
             );
         }
     }

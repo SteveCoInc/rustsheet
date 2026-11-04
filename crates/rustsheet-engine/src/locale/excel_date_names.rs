@@ -4,10 +4,9 @@
 //! code: the four tables beside this file hold Excel's answers for every LCID that has a locale,
 //! every BCP-47 tag Excel knows and every calendar digit under each, generated from
 //! probes/t3666-* and t4061-* (excel-graph, 2026-11-04) by `rustsheet-excel-locales` (tools/). The
-//! generator leaves out what Excel does not resolve as a locale: a tag whose `A/P` stays as
-//! written, or that reads as extended hex (another calendar, or an LCID with the same names, unless
-//! the tag spells that LCID: `[$-bgc]` is 0xC0C, `[$-ceb]` Cebuano), and an LCID whose hex spells
-//! such a tag; `formatter::locale_tag`'s tests check the tag table against that rule.
+//! generator leaves out what Excel does not resolve as a locale (a tag whose `A/P` stays as
+//! written or that prints another calendar, and an LCID whose hex spells a tag Excel knows);
+//! which table tags Excel reads as hex instead is the resolver's rule (`formatter::locale_tag`).
 //!
 //! - `excel_names.tsv`: the distinct name sets, one per line (12 `mmm`, 12 `mmmm`, 7 `ddd`,
 //!   7 `dddd`, then the day halves), numbered from 0, with `\\`, `\t` and `\n` escaped (Excel's
@@ -140,7 +139,8 @@ struct Tables {
     names: Vec<DateNames>,
     /// Sorted by LCID, as the file is.
     lcids: Vec<(u16, usize)>,
-    tags: Vec<(&'static str, Option<u16>, usize)>,
+    /// Sorted by the lower-cased tag.
+    tags: Vec<(String, Option<u16>, usize)>,
     /// Sorted by (digit, row key).
     calendars: Vec<((u32, u32), RowNames)>,
     /// The leap-year months of the Hebrew rows.
@@ -199,16 +199,17 @@ fn tables() -> &'static Tables {
                 _ => None,
             })
             .collect();
-        let tags = rows(include_str!("excel_tags.tsv"))
+        let mut tags: Vec<_> = rows(include_str!("excel_tags.tsv"))
             .filter_map(|fields| match fields.as_slice() {
                 [tag, lcid, names] => Some((
-                    *tag,
+                    tag.to_ascii_lowercase(),
                     u16::from_str_radix(lcid, 16).ok(),
                     names.parse().ok()?,
                 )),
                 _ => None,
             })
             .collect();
+        tags.sort_by(|a, b| a.0.cmp(&b.0));
         let mut leap_months = Vec::new();
         let mut calendars: Vec<_> = rows(include_str!("excel_calendars.tsv"))
             .filter_map(|fields| {
@@ -295,18 +296,26 @@ pub(crate) fn lcid_names(lcid: u16) -> Option<&'static DateNames> {
 }
 
 /// The locale of a BCP-47 tag, matched case-insensitively, else of its language (`[$-fr-XX]` is
-/// French, `[$-zh-XX]` Traditional Chinese like `[$-zh]`); `None` when Excel knows neither.
-pub(crate) fn tag_locale(tag: &str) -> Option<TagLocale> {
+/// French, `[$-zh-XX]` Traditional Chinese like `[$-zh]`), taking only table entries `is_tag`
+/// accepts (the resolver's rule for a tag Excel reads as hex instead); `None` when Excel knows
+/// neither.
+pub(crate) fn tag_locale(
+    tag: &str,
+    is_tag: impl Fn(&str, &TagLocale) -> bool,
+) -> Option<TagLocale> {
     let tables = tables();
     let find = |wanted: &str| {
-        tables
+        let wanted = wanted.to_ascii_lowercase();
+        let at = tables
             .tags
-            .iter()
-            .find(|(t, _, _)| t.eq_ignore_ascii_case(wanted))
-            .map(|(_, lcid, names)| TagLocale {
-                lcid: *lcid,
-                names: tables.names(*names),
-            })
+            .binary_search_by(|(t, _, _)| t.as_str().cmp(&wanted))
+            .ok()?;
+        let (_, lcid, names) = tables.tags.get(at)?;
+        let locale = TagLocale {
+            lcid: *lcid,
+            names: tables.names(*names),
+        };
+        is_tag(&wanted, &locale).then_some(locale)
     };
     find(tag).or_else(|| {
         find(
@@ -365,10 +374,14 @@ mod tests {
         assert_eq!(lcid_names(0x1409).map(|n| n.pm), Some("pm"));
         assert_eq!(lcid_names(0x2412), None);
         assert_eq!(lcid_names(0x1), None);
-        assert_eq!(tag_locale("FR-fr").map(|t| t.lcid), Some(Some(0x40C)));
-        assert_eq!(tag_locale("fr-XX").map(|t| t.names.months[2]), Some("mars"));
-        assert_eq!(tag_locale("pt-AO").map(|t| t.lcid), Some(None));
-        assert!(tag_locale("xx").is_none());
+        let any = |_: &str, _: &super::TagLocale| true;
+        assert_eq!(tag_locale("FR-fr", any).map(|t| t.lcid), Some(Some(0x40C)));
+        assert_eq!(
+            tag_locale("fr-XX", any).map(|t| t.names.months[2]),
+            Some("mars")
+        );
+        assert_eq!(tag_locale("pt-AO", any).map(|t| t.lcid), Some(None));
+        assert!(tag_locale("xx", any).is_none());
         // 0xF803 is Catalan with a `mmmm` holding tabs (probes/t3666-locale-names A584).
         assert!(lcid_names(0xF803).is_some_and(|n| n.months[0].contains('\t')));
         assert_eq!(unescape("a\\tb\\\\c"), "a\tb\\c");

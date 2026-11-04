@@ -83,8 +83,8 @@ fn um_al_qura_months() -> &'static Periods {
 /// `#VALUE!` as for every converted calendar, `calendar_dates::real_day`). The last tabled year
 /// runs past 9999-12-31.
 pub(crate) fn persian_ymd(serial_1900: i64) -> Option<(i32, u32, u32)> {
-    let (year, start) = persian_years().find(real_day(serial_1900)?)?;
     let day = real_day(serial_1900)?;
+    let (year, start) = persian_years().find(day)?;
     let mut rest = day - start;
     let mut month = 1;
     for length in PERSIAN_MONTHS {

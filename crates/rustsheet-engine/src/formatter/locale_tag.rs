@@ -9,7 +9,7 @@ use super::dates::convert_to_serial_number;
 use super::numerals::Numerals;
 pub use crate::locale::excel_date_names::DateNames;
 use crate::locale::excel_date_names::{
-    calendar_names, lcid_names, tag_locale, CalendarKey, CalendarNames, EN_US,
+    calendar_names, lcid_names, tag_locale, CalendarKey, CalendarNames, TagLocale, EN_US,
 };
 
 /// The calendar a locale tag selects: what `yy`, `yyyy`, `b`, `e` and `g` print.
@@ -190,7 +190,7 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpe
     if let Some(value) = hex.filter(|value| lcid_names(lcid_of(*value)).is_some()) {
         return localize(Source::Lcid(lcid_of(value)), value, hijri_prefix);
     }
-    if let Some(locale) = tag_locale(tag) {
+    if let Some(locale) = known_tag(tag) {
         let source = Source::Tag {
             names: locale.names,
             lcid: locale.lcid,
@@ -203,6 +203,22 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> (LocaleTag, Option<CalendarSpe
             silent_if_inert(localize(Source::Lcid(lcid_of(value)), value, false))
         }),
     }
+}
+
+/// The locale of a BCP-47 tag Excel knows (`excel_date_names::tag_locale`). A table tag with no
+/// LCID that Excel reads as extended hex is not one: its reading, in its own calendar, is an LCID
+/// with the same names, and the tag does not spell that LCID's digits (`[$-bgc]` is 0xC0C, fr-CA,
+/// so `[$-bgc-IN]` reads as extended hex too and prints English; `[$-ceb]` spells 0xCEB, which has
+/// no locale, and is Cebuano; probes/t3666-locale-tag-names A89, t4061-calendars-without-locale).
+fn known_tag(tag: &str) -> Option<TagLocale> {
+    tag_locale(tag, |entry, locale| {
+        let Some(value) = extended_hex(entry).filter(|value| value >> 16 == 0) else {
+            return true;
+        };
+        let reads_as_lcid =
+            lcid_names(value as u16).is_some_and(|names| std::ptr::eq(names, locale.names));
+        locale.lcid.is_some() || !reads_as_lcid || format!("{value:x}") == entry
+    })
 }
 
 /// An extended-hex reading with no locale and no calendar digit changes nothing: `B2[$-zzz]` is a
@@ -400,7 +416,7 @@ fn localize(source: Source, value: u32, hijri_prefix: bool) -> (LocaleTag, Optio
 /// Myanmar digits; probes/t1924-locale-tag-extended-hex A26). It holds whatever the LCID resolves
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
-    let value = hex_value(tag).or_else(|| match tag_locale(tag) {
+    let value = hex_value(tag).or_else(|| match known_tag(tag) {
         None => extended_hex(tag),
         Some(_) => None,
     });
@@ -499,11 +515,11 @@ pub fn japanese_era(
 
 #[cfg(test)]
 mod tests {
-    use super::{extended_hex, lcid_names, tag_locale};
+    use super::extended_hex;
 
-    /// Excel's extended-hex reading of tags, the same pairs as `tools/tests/test_excel_locales.py`
-    /// asserts for the generator's copy (`excel_locales.extended_hex`), so the two cannot drift.
-    pub(super) const EXTENDED_HEX: [(&str, u32); 6] = [
+    /// Excel's extended-hex reading of tags (probes/t1924-locale-tag-extended-hex,
+    /// t3666-locale-tag-names).
+    const EXTENDED_HEX: [(&str, u32); 6] = [
         ("fr_FR", 0x0010_E00B),
         ("fr_FR-x", 0x10E0_0AF1),
         ("bgc", 0x0C0C),
@@ -519,29 +535,13 @@ mod tests {
         }
     }
 
-    /// The tag table holds only tags Excel resolves as tags. The generator leaves out a tag with no
-    /// LCID whose extended-hex reading is an LCID with the same names, unless the tag spells that
-    /// LCID's hex digits (`bgc` is 0xC0C and stays out, so `[$-bgc-IN]` does not fall back to it;
-    /// `ceb` stays in and 0xCEB has no locale). This checks that rule on the committed table, as
-    /// `resolve_with`'s order relies on it.
+    /// A table tag Excel reads as extended hex is not a tag (`[$-bgc]` is fr-CA by 0xC0C, and
+    /// `[$-bgc-IN]` falls back to no language), one that spells its LCID is (`[$-ceb]`).
     #[test]
-    fn tag_table_holds_only_tags() {
-        for line in include_str!("../locale/excel_tags.tsv").lines() {
-            let mut fields = line.split('\t');
-            let (Some(tag), Some("-")) = (fields.next(), fields.next()) else {
-                continue;
-            };
-            let Some(value) = extended_hex(tag).filter(|value| value >> 16 == 0) else {
-                continue;
-            };
-            let lcid = (value & 0xFFFF) as u16;
-            let same = lcid_names(lcid).is_some_and(|names| {
-                tag_locale(tag).is_some_and(|locale| std::ptr::eq(locale.names, names))
-            });
-            assert!(
-                !same || format!("{value:x}") == tag.to_ascii_lowercase(),
-                "{tag}"
-            );
-        }
+    fn tags_read_as_hex() {
+        assert!(super::known_tag("bgc").is_none());
+        assert!(super::known_tag("bgc-IN").is_none());
+        assert!(super::known_tag("ceb").is_some());
+        assert!(super::known_tag("fr-XX").is_some());
     }
 }
