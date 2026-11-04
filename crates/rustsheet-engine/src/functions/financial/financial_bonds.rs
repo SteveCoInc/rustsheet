@@ -288,6 +288,8 @@ struct OddFirstSchedule {
     offset: f64,
     y: f64,
     accrued: f64,
+    /// The exponent shift of ODDFYIELD's slope ([`yield_solver::quasi_shift`], T-3031).
+    slope_shift: f64,
 }
 
 impl OddFirstSchedule {
@@ -346,6 +348,7 @@ impl OddFirstSchedule {
                 offset: -1.0,
                 y,
                 accrued: a / e * (rate / m) * 100.0,
+                slope_shift: 0.0,
             })
         } else {
             // --- Long odd first coupon period (spans several quasi-coupon periods) ---
@@ -384,6 +387,8 @@ impl OddFirstSchedule {
 
             let nq = coup_number(first_coupon, settlement, num_months, true)?;
             let n = coupon_count(first_coupon, maturity, frequency)? as f64;
+            let slope_shift =
+                yield_solver::quasi_shift(settlement, first_coupon, frequency, basis, e)?;
             let y = dsc / e;
             Ok(OddFirstSchedule {
                 m,
@@ -397,6 +402,7 @@ impl OddFirstSchedule {
                 offset: nq,
                 y,
                 accrued: 100.0 * rate / m * anl,
+                slope_shift,
             })
         }
     }
@@ -799,7 +805,15 @@ impl Model {
     ) -> Result<(OddArgs<4>, OddFirstSchedule), CalcResult> {
         let odd = self.odd_args::<4>(values, price_given, cell, |dates, frequency| {
             let [settlement, maturity, issue, first_coupon] = *dates;
-            if issue >= first_coupon || first_coupon >= maturity || settlement >= maturity {
+            // Excel wants issue < settlement < first_coupon < maturity: a settlement on or
+            // before the issue, or on or after the first coupon, is #NUM! at every frequency
+            // and basis (probes/oddf-date-order-domain-sweep P!A5:O11, Y!A5:O11, T-3652;
+            // financial.md "ODDFPRICE and ODDFYIELD need issue < settlement < first_coupon").
+            if settlement <= issue
+                || settlement >= first_coupon
+                || issue >= first_coupon
+                || first_coupon >= maturity
+            {
                 return Err(num_error(cell));
             }
             check_odd_first_coupon(issue, first_coupon, maturity, frequency, cell)

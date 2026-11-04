@@ -74,21 +74,12 @@ fn formulas_at_the_nesting_limit_evaluate_on_a_2_mib_stack() {
 /// T-3338: `-(` nests to Excel's 256-parenthesis cap (probes/t3266-nested-paren-256), and so do
 /// its spaced and plus forms, and 200 levels around Excel's 824 more minus signs
 /// (probes/t3266-nested-200-824): each parses, evaluates, prints as written, and survives a row
-/// insert and a sheet rename (directive 5). The bare forms take a 2 MiB stack even unoptimized.
-/// The others hold more nodes per level, a [`Node::Spaced`] around every sign and group or a
-/// long run of signs, as many as the sign cap's own tests build (`MAX_SIGNS`), and the walks that
-/// recurse per node (cloning the tree when it is stored) take what those take: 1 MiB optimized,
-/// 16 MiB unoptimized (`on_small_stack` in `expressions/parser/tests/test_nesting_depth.rs`).
-///
-/// [`Node::Spaced`]: crate::expressions::parser::Node::Spaced
+/// insert and a sheet rename (directive 5), all on a 2 MiB stack even unoptimized: the walks over
+/// the tree loop over its runs of signs, whitespace and parentheses (T-3253, T-3691).
 #[test]
 fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
     let limit = MAX_PARENTHESES;
-    let small = if cfg!(debug_assertions) {
-        16 << 20
-    } else {
-        1 << 20
-    };
+    let small = 2 << 20;
     let minuses = "-".repeat(824);
     for (open, inner, close, levels, value, stack) in [
         ("-(", "B1", ")", limit, "2", 2 << 20),
@@ -126,9 +117,14 @@ fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
         assert_eq!(after, moved.trim_end(), "{open} {levels}");
         assert_eq!(value_after, value, "{open} {levels}");
     }
+    // Past the cap the formula is Excel's syntax error, not a resource limit (T-3689): typed it is
+    // refused as not parsing, stored it is kept as a parse error, as the sign cap's is.
     let mut model = new_empty_model();
     let past = nested("-(", "1", ")", limit + 1);
-    assert!(model.set_user_input(0, 1, 1, past).is_err());
+    assert!(model.set_typed_user_input(0, 1, 1, past.clone()).is_err());
+    assert_eq!(model.set_user_input(0, 1, 1, past), Ok(()));
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "#ERROR!");
 }
 
 /// SPEC-0023: whitespace costs no nesting level, so a shape typed with spaces at every level, a
@@ -199,9 +195,10 @@ fn alternating_calls_and_groups_at_the_nesting_limit_evaluate_on_a_2_mib_stack()
 
 /// T-1169: the reported shape, `=` + N `(` + `0.1+0.2-0.3+B1` + N `)`, on the default test thread
 /// (2 MiB) in whatever build runs the tests. Up to the limit it parses, evaluates, prints, and
-/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is
-/// refused as too deep. Either way the process does not abort. The parentheses are one run, one
-/// group node, so the limit is Excel's 256 (T-3191).
+/// survives the edits that rewrite every formula (row insert, sheet rename); past it, it is a
+/// parse error: typed it is refused, stored it is kept as one (Excel's syntax, T-3689). Either
+/// way the process does not abort. The parentheses are one run, one group node, so the limit is
+/// Excel's 256 (T-3191).
 #[test]
 fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
     let limit = MAX_PARENTHESES;
@@ -215,11 +212,15 @@ fn parenthesised_chain_nested_to_the_limit_and_past_it_never_overflows() {
         };
         let formula = nested_over("B1");
         let mut model = new_empty_model();
-        let result = model.set_user_input(0, 1, 1, formula.clone());
         if levels > limit {
-            assert!(result.is_err(), "{levels} levels were accepted");
+            let typed = model.set_typed_user_input(0, 1, 1, formula.clone());
+            assert!(typed.is_err(), "{levels} levels were accepted");
+            assert_eq!(model.set_user_input(0, 1, 1, formula), Ok(()), "{levels}");
+            model.evaluate();
+            assert_eq!(model._get_text("A1"), "#ERROR!", "{levels}");
             continue;
         }
+        let result = model.set_user_input(0, 1, 1, formula.clone());
         assert!(result.is_ok(), "{levels} levels were refused: {result:?}");
         model.evaluate();
         assert_eq!(model._get_text("A1"), "5.55112E-17", "{levels}");

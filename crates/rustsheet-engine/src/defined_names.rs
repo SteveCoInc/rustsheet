@@ -8,7 +8,7 @@ use crate::{
         parser::{
             is_multi_sheet_span,
             stringify::{rename_defined_name_in_node, to_rc_format},
-            Node,
+            Node, TOO_MANY_NESTED_CALLS_MESSAGE,
         },
         token::Error,
         types::{CellReferenceIndex, CellReferenceRC},
@@ -353,7 +353,21 @@ impl Model {
         // Defined-name formulas are stored internally in English so they keep
         // working when the user switches language/locale.
         let context = self.defined_name_context();
-        let internal_formula = self.user_formula_to_internal(formula, &context)?;
+        // A loaded body is read as a file's stored text: a structured reference Excel cannot
+        // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
+        // (probes/t3258-name-padded-column-0..2, T-3258).
+        self.parser.set_loaded(loading);
+        let internal_formula = self.user_formula_to_internal(formula, &context);
+        self.parser.set_loaded(false);
+        let internal_formula = internal_formula?;
+        // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;
+        // probes/t3264-api-name-65 is accepted, t3264-api-name-66 refused, T-3264; syntax.md
+        // "Formula nesting depth cap"). Only workbook-scoped `names/add` was probed; a
+        // sheet-scoped name is held to the same cap by extension (T-4014). A loaded body is
+        // checked by the importer, which refuses the whole workbook as Excel does (T-3143).
+        if !loading && self.parser.nests_too_many_calls() {
+            return Err(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
+        }
         self.workbook.defined_names.push(DefinedName {
             name: name.to_string(),
             formula: internal_formula,

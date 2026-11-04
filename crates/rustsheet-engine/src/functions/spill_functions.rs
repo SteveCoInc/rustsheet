@@ -305,7 +305,8 @@ pub(crate) fn reject_empty_value(
 /// one-cell error reference shows up; only a stored cell error is evidenced, so other errors read
 /// there (a `#REF!` for a sheet index, a circular read) are wrapped unprobed.
 // Excel: docs/excel-semantics/arrays.md "A one-cell error reference is a 1x1 array in TOCOL, TOROW
-// and FILTER".
+// and FILTER" and "A one-cell error reference in the other array functions (T-3667)" (CHOOSEROWS,
+// CHOOSECOLS, VSTACK, HSTACK; TAKE and DROP keep the reference).
 pub(crate) fn one_cell_error_ref_as_array(
     arg: &Node,
     array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
@@ -328,6 +329,33 @@ pub(crate) fn wrap_one_cell_error_ref(
             (Ok(vec![vec![ArrayNode::Error(error)]]), true)
         }
         array => (array, false),
+    }
+}
+
+impl Model {
+    /// Whether `arg` is a variable (LET, or a LAMBDA parameter) bound to a one-cell reference,
+    /// which VSTACK and HSTACK read as the reference itself: `SCAN("12",Data!G9,LAMBDA(x,z,
+    /// VSTACK(x,z)))` is `#CALC!`, not `#DIV/0!` (probes/t3765-stack-error-reference D10:D23,
+    /// excel-graph, T-3765). Ask before the argument is evaluated: a read-once binding is moved
+    /// out by the read.
+    pub(crate) fn is_one_cell_variable(&self, arg: &Node) -> bool {
+        self.cell_variable_reference(arg.ungrouped()).is_some()
+    }
+
+    /// [`one_cell_error_ref_as_array`] for an argument that may be such a variable
+    /// (`is_variable`, from [`Model::is_one_cell_variable`]).
+    pub(crate) fn stack_error_ref_as_array(
+        arg: &Node,
+        is_variable: bool,
+        array: Result<Vec<Vec<ArrayNode>>, CalcResult>,
+        cell: CellReferenceIndex,
+    ) -> Result<Vec<Vec<ArrayNode>>, CalcResult> {
+        match array {
+            Err(CalcResult::Error { error, .. }) if is_variable => {
+                Ok(vec![vec![ArrayNode::Error(error)]])
+            }
+            array => one_cell_error_ref_as_array(arg, array, cell),
+        }
     }
 }
 

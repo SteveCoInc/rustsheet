@@ -1,0 +1,27 @@
+center 0.15 b0=1.61: double-z misses 1 / 38  by x {'x=0.013': 1}
+center 0.15 b0=3.37: double-z misses 2 / 47  by x {'x=0.019': 1, 'x=0.027': 1}
+center 0.15 b0=5.83: double-z misses 0 / 63  by x {}
+center 0.30 b0=1.61: double-z misses 0 / 90  by x {}
+center 0.30 b0=3.37: double-z misses 0 / 122  by x {}
+center 0.30 b0=5.83: double-z misses 0 / 137  by x {}
+center 0.40 b0=1.61: double-z misses 9 / 134  by x {'x=0.037': 1, 'x=0.051': 1, 'x=0.071': 6, 'x=0.093': 1}
+center 0.40 b0=3.37: double-z misses 6 / 155  by x {'x=0.019': 1, 'x=0.027': 3, 'x=0.051': 2}
+center 0.40 b0=5.83: double-z misses 11 / 153  by x {'x=0.013': 6, 'x=0.019': 4, 'x=0.051': 1}
+center 0.50 b0=1.61: double-z misses 0 / 18  by x {}
+center 0.50 b0=3.37: double-z misses 12 / 166  by x {'x=0.027': 1, 'x=0.051': 8, 'x=0.071': 1, 'x=0.093': 2}
+center 0.50 b0=5.83: double-z misses 23 / 168  by x {'x=0.013': 1, 'x=0.027': 7, 'x=0.037': 7, 'x=0.071': 8}
+center 0.60 b0=1.61: double-z misses 3 / 119  by x {'x=0.051': 1, 'x=0.071': 1, 'x=0.093': 1}
+center 0.60 b0=3.37: double-z misses 17 / 162  by x {'x=0.037': 3, 'x=0.051': 6, 'x=0.071': 3, 'x=0.093': 5}
+center 0.60 b0=5.83: double-z misses 25 / 175  by x {'x=0.013': 5, 'x=0.027': 2, 'x=0.037': 1, 'x=0.051': 6, 'x=0.071': 5, 'x=0.093': 6}
+center 0.70 b0=1.61: double-z misses 2 / 126  by x {'x=0.071': 2}
+center 0.70 b0=3.37: double-z misses 6 / 165  by x {'x=0.037': 1, 'x=0.051': 1, 'x=0.071': 3, 'x=0.093': 1}
+center 0.70 b0=5.83: double-z misses 7 / 164  by x {'x=0.019': 1, 'x=0.071': 2, 'x=0.093': 4}
+center 0.85 b0=1.61: double-z misses 0 / 102  by x {}
+center 0.85 b0=3.37: double-z misses 4 / 108  by x {'x=0.051': 2, 'x=0.093': 2}
+center 0.85 b0=5.83: double-z misses 0 / 172  by x {}
+center 0.15: {'s-1 E-1': 2, 'off +1': 2, 'none': 1, 'off +2': 1}
+center 0.40: {'s+1 E+1': 18, 'off -1': 16, 'off -2': 10, 's+1': 4, 'none': 4}
+center 0.50: {'off -1': 33, 's+1 E+1': 21, 's+1': 7, 'E+1': 5, 's-1 E-1': 1, 'off +1': 1, 'none': 1, 'off -2': 1}
+center 0.60: {'off -1': 38, 's+1 E+1': 26, 'none': 9, 's+1': 8, 'off -2': 5, 'E+1': 1, 'off -3': 1, 's-1 E-1': 1, 'off +1': 1}
+center 0.70: {'off -1': 12, 's+1 E+1': 8, 'off -2': 3, 's+1': 3, 'none': 2, 'E+1': 2}
+center 0.85: {'off -1': 4, 's+1 E+1': 3, 'E+1': 1}

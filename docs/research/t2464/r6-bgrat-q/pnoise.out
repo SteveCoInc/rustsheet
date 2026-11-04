@@ -1,0 +1,4 @@
+b0.7-z0.3 P ~ 0.4204, ulp(P)/P = 1.19 units; Excel - CR in ulps: {-12: 1, -11: 1, -10: 2, -9: 21, -8: 38, -7: 81, -6: 114, -5: 124, -4: 97, -3: 105, -2: 129, -1: 88, 0: 69, 1: 72, 2: 42, 3: 25, 4: 12, 5: 3} | lag1/2/8 autocorr +0.60 +0.37 -0.37 | FFT max 30.0x mean
+b0.7-z1 P ~ 0.7612, ulp(P)/P = 1.31 units; Excel - CR in ulps: {0: 35, 1: 337, 2: 522, 3: 128, 4: 2} | lag1/2/8 autocorr +0.18 +0.01 -0.01 | FFT max 8.4x mean
+b0.03-z0.3 P ~ 0.9727, ulp(P)/P = 1.03 units; Excel - CR in ulps: {-1: 78, 0: 799, 1: 147} | lag1/2/8 autocorr +0.84 +0.73 +0.20 | FFT max 24.7x mean
+b0.03-z1 P ~ 0.9932, ulp(P)/P = 1.01 units; Excel - CR in ulps: {-1: 81, 0: 775, 1: 168} | lag1/2/8 autocorr +0.91 +0.84 +0.45 | FFT max 26.9x mean

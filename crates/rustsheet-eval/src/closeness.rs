@@ -285,6 +285,23 @@ mod tests {
     }
 
     #[test]
+    fn shared_vectors_agree_with_the_fit_lab_port() {
+        // The same table is read by tools/tests/test_fitlab_holdout.py (T-3453).
+        let table = include_str!("../tests/fixtures/within_fifteen_digits.tsv");
+        let mut rows = 0;
+        for line in table
+            .lines()
+            .filter(|l| !l.starts_with('#') && !l.is_empty())
+        {
+            let f: Vec<&str> = line.split('\t').collect();
+            let (e, a): (f64, f64) = (f[0].parse().unwrap(), f[1].parse().unwrap());
+            assert_eq!(within_fifteen_digits(e, a), f[2] == "1", "{line}");
+            rows += 1;
+        }
+        assert_eq!(rows, 16);
+    }
+
+    #[test]
     fn zero_subnormal_and_non_finite_expectations() {
         assert!(within_fifteen_digits(0.0, -0.0));
         assert!(!within_fifteen_digits(0.0, 1e-300));

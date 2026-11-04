@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "fae667e0caeaf35f186f81580311c4efcc50ca93a040fccf0873afe552ea8744"
+ },
+ "sheets": {
+  "Sheet1": {
+   "E13": {
+    "t": "n",
+    "v": "11.0",
+    "f": "=SUM(A1,B1)"
+   }
+  }
+ }
+}

@@ -68,6 +68,13 @@ fn is_range_arm(arm: &Node) -> bool {
                 }
                 pending.push(&args[0]);
             }
+            // A single-cell INDEX of a union counts too, though a bare union is not a range arm:
+            // `=SUM(IF(TRUE,INDEX((B1:B6,C1:C6),3,1)))` shows no `@`
+            // (probes/t3297-legacy-if-index-arm-more-shapes M32, T-3297).
+            Node::FunctionKind {
+                kind: Function::Index,
+                ..
+            } if is_single_cell_index(node) => return true,
             Node::FunctionKind {
                 kind: Function::Index,
                 args,
@@ -86,18 +93,25 @@ fn is_whole_range_arm(arm: &Node) -> bool {
     is_range_arm(arm) && !is_single_cell_index(arm)
 }
 
-/// Whether `arm` is `INDEX(range,row)` or `INDEX(range,row,column)` over a range of any shape whose
-/// indexes are all literal whole numbers of 1 or more, possibly in parentheses: Excel shows no `@`
-/// on a legacy IF over `INDEX(B1:C6,3,1)`, `INDEX(B1:F1,3)`, `INDEX(B1:B6,3,1)` or even the 2-D
-/// `INDEX(B1:C6,3)` (`#REF!`), but does over `INDEX(B1:B6,3.5)`, `INDEX(B1:B6,"3")`,
-/// `INDEX(B1:B6,1+2)`, `INDEX(B1:B6,A20)` with A20 = 3, `INDEX(B1:B6,0)` and `INDEX(B1:C6,3,0)`
-/// (probes/t3134-legacy-if-index-arm-shapes I31-I49, excel-graph, T-3134).
+/// Whether `arm` is `INDEX(area,row[,column[,area_num]])` whose indexes are all literal whole numbers
+/// of 1 or more, possibly in parentheses, over a range of any shape, a table area, a union of ranges
+/// or a defined name: Excel shows no `@` on a legacy IF over `INDEX(B1:C6,3,1)`, `INDEX(B1:F1,3)`,
+/// `INDEX(B1:B6,3,1)` or even the 2-D `INDEX(B1:C6,3)` (`#REF!`), but does over `INDEX(B1:B6,3.5)`,
+/// `INDEX(B1:B6,"3")`, `INDEX(B1:B6,1+2)`, `INDEX(B1:B6,A20)` with A20 = 3, `INDEX(B1:B6,0)` and
+/// `INDEX(B1:C6,3,0)` (probes/t3134-legacy-if-index-arm-shapes I31-I49, excel-graph, T-3134). None
+/// either over `INDEX(B1:B6,3,1,1)`, `INDEX((B1:B6,C1:C6),3,1,2)`, `INDEX(B1:B6,99)` (`#REF!`),
+/// `INDEX(Sheet1!B1:B6,3)`, `INDEX(Rng,3)`, `INDEX(Tbl[Col],3)` or `INDEX(Tbl,3,1)`, while
+/// `INDEX(B1:B6,-3)` and `INDEX(B1:B6,TRUE)` keep it (probes/t3297-legacy-if-index-arm-more-shapes
+/// and -name-table I30-I47, excel-graph, T-3297).
 fn is_single_cell_index(arm: &Node) -> bool {
     matches!(
         arm.ungrouped(),
         Node::FunctionKind { kind: Function::Index, args }
-            if (args.len() == 2 || args.len() == 3)
-                && matches!(&*args[0].ungrouped_static(), Node::RangeKind { .. })
+            if (2..=4).contains(&args.len())
+                && matches!(
+                    &*args[0].ungrouped_static(),
+                    Node::RangeKind { .. } | Node::OpUnionKind { .. } | Node::DefinedNameKind(_)
+                )
                 && args[1..].iter().all(|index| {
                     matches!(index.ungrouped(), Node::NumberKind(n) if *n >= 1.0 && n.fract() == 0.0)
                 })

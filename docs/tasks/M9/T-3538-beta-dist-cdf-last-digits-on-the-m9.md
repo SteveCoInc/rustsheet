@@ -18,6 +18,7 @@ Otherwise the Outcome records each candidate's bit-exact and within-4-ulp counts
 time box).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31m (`make eval` on origin/main 900fbc1bf, excel-graph). An ownership check over every failing
   Excel cell used `scripts/exit_owners.py`'s `owned` rule over the open task files of origin/main and of every
   `origin/agent/*` branch pushed since 2026-10-29. It found these cumulative cells named by no open task. None is
@@ -40,7 +41,7 @@ time box).
 - Cells (eval/suites/probes-numeric, which has no baseline file: a fixed cell leaves the report's failing list):
 - probes-numeric/m9-beta-dist-a0p5.case.json (9): Calc!A1, A3, A5, A7, A9, A11, A19, A25, A31
 - probes-numeric/m9-beta-dist-a5.case.json (5): Calc!A1, A3, A9, A19, A25
-- probes-numeric/m9-beta-dist-a10.case.json (6): Calc!A5, A7, A9, A19, A37, A49
+- probes-numeric/m9-beta-dist-a10.case.json (7): Calc!A5, A7, A9, A19, A37, A39, A49 (A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours ...003, math 0.5: added by gap triage 2026-11-03, no other open task named it)
 - probes/stat-argument-modes.case.json (1): Sheet1!H374
 
 `NEGBINOM.DIST(5,5,0.4,TRUE)` (H374) is I_0.4(5, 6): Excel 0.3668967424000001, ours 0.36689674240000014, 1 ulp. It is in
@@ -67,3 +68,10 @@ probes, so its line leaves eval/baseline/probes.txt when fixed.
 and every `origin/agent/*` branch), within 15 digits: A43 `BETA.DIST(0.1,5,50,TRUE)`, Excel 0.6385528602726223, ours
 0.6385528602726221 (1 ulp). It joins the 21 cells above under the same criteria.
 - probes-numeric/m9-beta-dist-a5.case.json (1): Calc!A43
+
+## Cells added by gap triage (2026-11-03)
+`make eval` on origin/main b9dac1c15 (excel-graph): one more cdf cell of the a = 10 grid is named by no open task (main
+and every `origin/agent/*` branch), within 15 digits: A39 `BETA.DIST(0.5,10,10,TRUE)`, Excel 0.5000000000000002, ours
+0.5000000000000003 (1 ulp; the symmetric point, where the math is exactly 0.5). It joins the cells above under the same
+criteria.
+- probes-numeric/m9-beta-dist-a10.case.json (1): Calc!A39

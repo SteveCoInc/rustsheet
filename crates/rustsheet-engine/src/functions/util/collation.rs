@@ -39,22 +39,31 @@
 //! Additional letters with a canonical decomposition are their base letter plus their marks, and a
 //! combining mark (U+0300 to U+0362) adds its weight to the letter before it
 //! (probes/t3114-collation-beyond-latin1, probes/t3154-collation-accents; coercion.md "Letters
-//! beyond Latin-1 and combining marks"). Every other character keeps code-point order after the
-//! letters, as before T-0220.
+//! beyond Latin-1 and combining marks"). Hebrew, Arabic, Devanagari, Thai, Lao, Hangul, the CJK
+//! ideographs and astral characters follow Excel's block order ([`script_order`]); Hebrew points,
+//! Arabic harakat and Thai tone marks are accents; Arabic-Indic, Devanagari, Thai, Lao and eight
+//! other blocks' digits are their digit (T-3895, T-3917); arrows, symbols and dingbats sort after
+//! the punctuation (probes/t3276-collation-other-scripts, T-3324). Every other character keeps
+//! code-point order after the letters, as before T-0220.
 //!
-//! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs `UNIT_BASE` plus its value and an
-//! astral character weighs its two UTF-16 units, so lone units sort above every BMP character
-//! (U+FFFD included) and a lone high half sorts before a pair it starts, a lone low half after it
+//! **Lone surrogates** (`cmp_text`): a lone surrogate unit weighs as the same unit of a pair does
+//! ([`script_order`]) and an astral character weighs its two UTF-16 units, so lone units sort above
+//! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
 
 use std::cmp::{Ordering, Reverse};
 use std::iter::Peekable;
 
 mod kana;
+mod lookup_fold;
+mod scripts;
 
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
+use lookup_fold::class_first;
+pub(crate) use lookup_fold::fold_lookup;
+use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -234,38 +243,45 @@ const NBSP: u32 = SPACE + 1;
 /// and CHAR(12), unprobed, are kept with them in code-point order.
 const WHITESPACE_BASE: u32 = NBSP + 1;
 const PUNCTUATION_BASE: u32 = WHITESPACE_BASE + 5;
-const DIGIT_BASE: u32 = 0x90;
-const LETTER_BASE: u32 = 0xC0;
-const OTHER_BASE: u32 = 0x100;
+/// The symbols after [`PUNCTUATION`] ([`symbol`]).
+const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
+/// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
+/// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
+const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
+const DIGIT_BASE: u32 = 0x800;
+/// `∞` sorts between `"9"` and `"a"` (probes/t3276-collation-other-scripts rank A91 = 24).
+const INFINITY: u32 = digit(9) + 4;
+const LETTER_BASE: u32 = 0x840;
+const OTHER_BASE: u32 = 0x900;
 
-/// The primary weight of a character after the letters: by code point, two apart so that a weight
-/// fits between two neighbours ([`LONE_MARK`]).
+/// The primary weight of a character after the letters: by its place in [`script_order`], two
+/// apart so that a weight fits between two neighbours ([`LONE_MARK`]).
 fn other(c: char) -> u32 {
-    OTHER_BASE + 2 * u32::from(c)
+    OTHER_BASE + 2 * script_order(u32::from(c))
 }
 
 /// A long-vowel or iteration mark with no letter before it (`"ー"`, `"ゝ"`, `"ゞ"`, `"々"`, `"ーa"`):
 /// after the ideographs probed (`"ー" > "人人"`), all four equal (probes/t3275-collation-width-kana
 /// Calc!B119 = 4, probes/t3275-collation-width-kana-pairs AC25, AC37). Placed after the last
 /// unified ideograph.
-const LONE_MARK: u32 = OTHER_BASE + 2 * 0x9FFF + 1;
+const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
 
 /// Punctuation and symbols in Excel's order: the ASCII ones from probes/text-collation-order
 /// ranks 7-36, the others from probes/text-collation-unprobed, which ranks them against `!`, `~`,
 /// `+` and `0` only. So the Latin-1 marks, quotes and currency signs go between `~` and `+`, and
-/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed).
-const PUNCTUATION: [char; 59] = [
+/// the symbols after `+`, placed after `>` (their order against `< = >` is unprobed). The middle dot
+/// `·` sits between `µ` and `…` and is neither skipped nor equal to `""`
+/// (probes/t3896-collation-middle-dot Calc!A29 = 31, A54 = 30, A28 = 32). The CJK marks `、 。`
+/// sort between `%` and `~`, `「` after `~`, and the currency signs `₩ € ₹` in that order before
+/// `+` (probes/t3559-collation-unprobed-blocks ranks 7 to 15); their places against the unprobed
+/// ASCII marks and the Latin-1 signs are UNVERIFIED. [`punctuation`] lists the marks above `€`.
+const PUNCTUATION: [char; 64] = [
     '!', '"', '#', '$', '%', '&', '(', ')', '*', ',', '.', '/', ':', ';', '?', '@', '[', '\\', ']',
-    '^', '_', '`', '{', '|', '}', '~', '¡', '¦', '¨', '¯', '´', '¸', '¿', '\u{2018}', '\u{2019}',
-    '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '€', '+', '<', '=', '>', '±', '«', '»', '×', '÷',
-    '§', '©', '¬', '®', '°', 'µ', '…', '•',
+    '^', '_', '`', '{', '|', '}', '\u{3001}', '\u{3002}', '~', '\u{300c}', '¡', '¦', '¨', '¯', '´',
+    '¸', '¿', '\u{2018}', '\u{2019}', '\u{201c}', '\u{201d}', '¢', '£', '¤', '¥', '\u{20a9}', '€',
+    '\u{20b9}', '+', '<', '=', '>', '±', '«', '»', '×', '÷', '§', '©', '¬', '®', '°', 'µ',
+    '\u{b7}', '…',
 ];
-
-/// Weight of the first UTF-16 unit of an astral character or of a lone surrogate: above every BMP
-/// character ([`other`] stays below `OTHER_BASE + 0x2_0000`). An astral character weighs its two
-/// units, so a lone high surrogate sorts before a pair starting with it and a lone low one after
-/// it (`H<"😀"`, `"😀"<L`, `H<L` TRUE, `L<H` FALSE; probes/text-lone-surrogates A18-A22). A lone surrogate is above U+FFFD (A23, A24 FALSE).
-const UNIT_BASE: u32 = OTHER_BASE + 0x11_0000;
 
 /// What one case-folded character contributes to each pass.
 #[derive(Clone, Copy)]
@@ -378,6 +394,8 @@ const HYPHEN: u8 = APOSTROPHE + 2;
 const FULL_WIDTH_HYPHEN: u8 = APOSTROPHE + 3;
 const EN_DASH: u8 = APOSTROPHE + 4;
 const EM_DASH: u8 = APOSTROPHE + 5;
+/// The skipped weight of U+0E83 (a weightless character, T-3904): after the em dash, unprobed.
+const UNASSIGNED: u8 = APOSTROPHE + 6;
 
 fn letter(base: char) -> u32 {
     LETTER_BASE + (u32::from(base) - u32::from('a'))
@@ -421,10 +439,10 @@ fn expansion(first: char, second: char) -> Element {
     }
 }
 
-/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark is at or
-/// below `€`, so text in other scripts skips the scan.
+/// The primary weight of a punctuation mark or symbol of [`PUNCTUATION`]. Every mark but `₹`,
+/// `、`, `。` and `「` is at or below `€`, so text in other scripts skips the scan.
 fn punctuation(c: char) -> Option<u32> {
-    if c > '€' {
+    if c > '€' && !matches!(c, '\u{20b9}' | '\u{3001}' | '\u{3002}' | '\u{300c}') {
         return None;
     }
     PUNCTUATION
@@ -515,20 +533,34 @@ pub(crate) fn fold_char(c: char) -> char {
 }
 
 /// `c` with case removed: ASCII and Latin-1 letters directly, others through `to_lowercase`.
+/// A member of one of Excel's wider classes ([`class_first`]: `ϵ` with `ε`, `ϑ` with `ϴ`, `ϳ`
+/// with `Ͷ`, U+1FBE with `ι`, the Greek Extended psili+varia and dasia+oxia letters, ...) is its
+/// class's first member, so all of them weigh alike; their order under `<` is therefore equality,
+/// UNVERIFIED (probes/t3584-match-fold-weightless Calc!B21:F21, P7, P9; T-4013). A supplementary
+/// character keeps its case: Excel's `=` keeps Deseret U+10400 apart from U+10428 (Calc!B25).
 fn fold(c: char) -> char {
     match c {
         'A'..='Z' => c.to_ascii_lowercase(),
         'À'..='Þ' if c != '×' => char::from_u32(u32::from(c) + 0x20).unwrap_or(c),
-        _ if c.is_ascii() => c,
-        _ => fold_final_sigma(c.to_lowercase().next().unwrap_or(c)),
+        _ if c.is_ascii() || u32::from(c) > 0xFFFF => c,
+        _ => {
+            let lower = |c: char| fold_final_sigma(c.to_lowercase().next().unwrap_or(c));
+            let folded = lower(c);
+            class_first(c)
+                .or_else(|| class_first(folded))
+                .map_or(folded, lower)
+        }
     }
 }
 
 fn element(c: Char) -> Element {
     let c = match c {
         Char::Scalar(c) => fold(c),
-        Char::Lone(unit) => return single(UNIT_BASE + u32::from(unit)),
+        Char::Lone(lone) => return single(unit(lone)),
     };
+    if let Some(element) = script_element(c) {
+        return element;
+    }
     match c {
         '\'' => Element::Skipped(APOSTROPHE),
         '-' => Element::Skipped(HYPHEN),
@@ -552,6 +584,26 @@ fn element(c: Char) -> Element {
         '\u{363}'..='\u{36f}' => combining_letter(c)
             .map_or_else(|| single(other(c)), |base| accented(base, COMBINING_LETTER)),
         '\u{300}'..='\u{362}' => Element::Mark(mark_weight(c).unwrap_or(0)),
+        '\u{221e}' => single(INFINITY),
+        // `™` sorts after `"t"`, `"tm"` and `"tn"` and before `"z"` (probes/t3559-collation-unprobed-blocks
+        // G1:G5, ranks 46 to 50), so it is not `tm` with a variant weight: placed as `t` and a weight
+        // above every letter, before `"u"` (where it sits between `"tn"` and `"z"` is unprobed).
+        '\u{2122}' => Element::Weights {
+            primary: [letter('t'), letter('z') + 1],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: 0,
+        },
+        // `℃` and `№` sort after `"a"` and before `"tm"` (ranks 43 to 46): placed as the letters `c`
+        // and `no` of their compatibility forms with the superscript variant (UNVERIFIED).
+        '\u{2103}' => superscript(letter('c'), NO_ACCENT),
+        '\u{2116}' => Element::Weights {
+            primary: [letter('n'), letter('o')],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: SUPERSCRIPT,
+        },
+        '\u{2022}' => single(BULLET),
         '¼' => single(digit(0) + 1),
         '½' => single(digit(0) + 2),
         '¾' => single(digit(0) + 3),
@@ -603,16 +655,19 @@ fn element(c: Char) -> Element {
             let mut units = [0u16; 2];
             c.encode_utf16(&mut units);
             Element::Weights {
-                primary: [
-                    UNIT_BASE + u32::from(units[0]),
-                    UNIT_BASE + u32::from(units[1]),
-                ],
+                primary: [unit(units[0]), unit(units[1])],
                 accent: NO_ACCENT,
                 kana: NORMAL_KANA,
                 variant: 0,
             }
         }
-        _ => kana(c).unwrap_or_else(|| single(punctuation(c).unwrap_or_else(|| other(c)))),
+        _ => kana(c).unwrap_or_else(|| {
+            single(
+                punctuation(c)
+                    .or_else(|| symbol(c))
+                    .unwrap_or_else(|| other(c)),
+            )
+        }),
     }
 }
 

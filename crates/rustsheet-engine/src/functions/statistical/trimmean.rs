@@ -24,6 +24,14 @@ const TRIMMEAN_DATA: DataArg = DataArg {
         {
             Ok(Vec::new())
         }
+        // A typed numeric-text or boolean literal is one number, unlike a cell holding one
+        // (`TRIMMEAN("2.5",0)` is 2.5, `TRIMMEAN(TRUE,0)` is 1, gen-m9/4fc6bdaec0e5583d A199-A253,
+        // A391-A439, T-3781); other text stays `#VALUE!` (`TRIMMEAN("abc",0)`, A259-A385).
+        CalcResult::String(text) => match model.cast_number(&text) {
+            Some(number) => Ok(vec![number]),
+            None => model.numeric_flat_with_element_errors(CalcResult::String(text), cell),
+        },
+        CalcResult::Boolean(b) => Ok(vec![f64::from(u8::from(b))]),
         value => model.numeric_flat_with_element_errors(value, cell),
     },
     order: DataOrder::Ascending,

@@ -17,6 +17,7 @@ Excel's quantile sits off its own BETA.DIST crossing. The value comes from a mod
 held-out and fresh sweep points, or the task records the hypotheses it ruled out.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on b98b3c00d). These two cells count against the M9 exit row's ironcalc-calc
   measure (44 R1(c) visibly-off cells, allowance 36). The only task that names them is a `defer:` one, in an Out of
   scope line (T-3374), so they have no real owner. T-3561 owns G5, the BETA.DIST input of H5.
@@ -38,6 +39,7 @@ held-out and fresh sweep points, or the task records the hypotheses it ruled out
   shapes (flat cdf, off-crossing stops) from T-3387's sweep. Share its start and stop model; do not write a second
   search. T-3387 sweeps shapes from 0.5 up, and neither shapes below 0.01 nor a scaled range [A, B] are probed. That
   is T-3566's sweep, so this task waits for it.
+- Evidence: probes-numeric t3566-beta-inv-tiny-shape-and-range.
 - Code: `fn_beta_inv` in crates/rustsheet-engine/src/functions/statistical/beta.rs, `beta_quantile` and
   inverse_beta.rs `beta_quantile_crossing`.
 

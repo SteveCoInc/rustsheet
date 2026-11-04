@@ -21,6 +21,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import scalars
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import (
     Definition,
@@ -69,8 +70,14 @@ def present_value(
 def unique_rate(flows: Sequence[mpmath.mpf], f: Callable[[mpmath.mpf], mpmath.mpf]) -> mpmath.mpf:
     """The rate r > -1 at the root of `f`, the flows' value as a function of u = ln(1 + r), for time-ordered
     `flows` with exactly one sign change (then the root is unique, Descartes' rule). DomainError with flows of one sign
-    (no rate: Excel's `#NUM!`), NoValueError with several sign changes (no evidenced root choice) or no bracket. The
+    (no rate: Excel's `#NUM!`), NoValueError with every flow 0, several sign changes (no evidenced root choice) or no
+    bracket. The
     bracket in u doubles from [-1, 1]; an end where f is exactly 0 is the root."""
+    if all(f == 0 for f in flows):
+        # every rate is a root: Excel returns the secant's iterate (T-3698, accuracy/RATE/r4-T-3698 A125),
+        # which no math rule names
+        msg = "every flow is 0: every rate is a root"
+        raise NoValueError(msg)
     changes = sign_changes(flows)
     if changes == 0:
         msg = "flows of one sign: no rate"
@@ -97,15 +104,6 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
         return present_value(u, nper, pmt, pv, fv, due=due)
 
     return unique_rate(annuity_flows(nper, pmt, pv, fv, due), f)
-
-
-def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
-    """The numeric arguments of a definition that takes no logical or array (its sampler draws numbers only)."""
-    out: list[mpmath.mpf] = []
-    for a in args:
-        assert not isinstance(a, (bool, tuple))
-        out.append(a)
-    return out
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:

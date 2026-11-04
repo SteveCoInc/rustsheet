@@ -391,6 +391,7 @@ fn every_form_round_trips_through_the_printer() {
         spacing: TableSpacing::default(),
         bare: true,
         unqualified: false,
+        detached: false,
         extent: None,
     }];
     for specifier in &specifiers {
@@ -402,6 +403,7 @@ fn every_form_round_trips_through_the_printer() {
                 spacing: TableSpacing::default(),
                 bare: false,
                 unqualified: false,
+                detached: false,
                 extent: None,
             });
         }
@@ -418,6 +420,7 @@ fn every_form_round_trips_through_the_printer() {
                     spacing: TableSpacing::default(),
                     bare: false,
                     unqualified: false,
+                    detached: false,
                     extent: None,
                 });
             }
@@ -563,6 +566,11 @@ fn a_padded_bare_column_is_ours_only() {
         let loaded = parser.parse(formula, &cell);
         parser.set_loaded(false);
         assert_eq!(to_excel_string(&loaded, &cell), "SUM(#REF!)", "{formula}");
+        // Untyped from outside the engine it is no column either (T-3258).
+        parser.set_external(true);
+        let external = parser.parse(formula, &cell);
+        parser.set_external(false);
+        assert!(matches!(external, Node::ParseErrorKind { .. }), "{formula}");
     }
     // Only the reference is `#REF!`: the rest of the formula is read as written.
     for (formula, loaded_text) in [
@@ -578,5 +586,36 @@ fn a_padded_bare_column_is_ours_only() {
         let typed = parser.parse(formula, &cell);
         parser.set_typed(false);
         assert!(matches!(typed, Node::ParseErrorKind { .. }), "{formula}");
+    }
+}
+
+/// On a table without a header row, `[#Headers]` combined with a column is `#REF!` and
+/// `[#Headers],[#Data]` / `[#All]` read the data rows (probes/table-edits
+/// table-no-header-headers-combined, excel-graph 2026-11-03, T-3661).
+#[test]
+fn headers_combined_forms_on_a_table_without_a_header_row() {
+    let mut tables = create_test_table("T", &["Jan", "Feb"], "A1", 3);
+    if let Some(table) = tables.get_mut("T") {
+        table.header_row_count = 0;
+    }
+    let mut parser = new_parser(vec!["Sheet One".to_string()], vec![], tables);
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet One".to_string(),
+        row: 9,
+        column: 9,
+    };
+    let mut text = |formula: &str| {
+        let t = parser.parse(formula, &cell_reference);
+        to_excel_string(&t, &cell_reference)
+    };
+    assert_eq!(text("ROWS(T[[#Headers],[Jan]])"), "ROWS(#REF!)");
+    assert_eq!(text("ROWS(T[#Headers])"), "ROWS(#REF!)");
+    // The data forms stay table references, printed as typed (the eval case checks their values).
+    for formula in [
+        "ROWS(T[[#Headers],[#Data]])",
+        "ROWS(T[[#All],[Jan]])",
+        "ROWS(T[[#Headers],[#Data],[Jan]])",
+    ] {
+        assert_eq!(text(formula), formula, "{formula}");
     }
 }

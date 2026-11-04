@@ -176,6 +176,20 @@ pub(crate) fn closed_form_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, 
     Some(if swap { (w1, w) } else { (w, w1) })
 }
 
+/// BETA.DIST's cdf at a = b = 1/2 for 0 < x < 1, y = fl(1 - x) from the caller: Excel's arcsine
+/// closed form, not bratio's bpser (statistics.md "BETA.DIST at a = b = 1/2 is an arctangent closed
+/// form", T-3192): 2·atan(sqrt(x)/sqrt(y))/pi in doubles, with libm's atan as the worksheet's ATAN
+/// takes it; not `fisher.rs`'s 2·asin(sqrt(x))/pi, which Excel's cells rank lower here. bpser is
+/// 12 ulp low at `BETA.DIST(2.4674011002723394E-20,0.5,0.5,TRUE)` (Excel 9.999999999999999E-11,
+/// probes-numeric/t1745-beta-inv-roundtrip G1): fl(LN x) loses 3E-15 that the square root keeps.
+/// Bit-exact on 270 of 321, 228 of 341 and 239 of 300 cells of three excel-graph sweeps
+/// (probes-numeric t3192-beta-half-half, -2, -3), every cell within 2 ulp. Excel's remaining 1-ulp
+/// bits fit a reflection above x near 0.9 that is not ported: a cut chosen below the 1-ulp floor
+/// of decision 0112 is Phase 1b work (decision 0188 R4.4, R5; T-3886).
+pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
+    2.0 * (x.sqrt() / y.sqrt()).atan() / std::f64::consts::PI
+}
+
 /// (`I_x(a, b)`, 1 - `I_x(a, b)`) at a shape of 1 where [`closed_form_tails`] does not apply, for
 /// 0 < x, y < 1: bratio's oriented a0 = 1 with y0 > 0.9 (x0 below about 0.1). Like bratio, Excel
 /// computes w and forms w1 as (0.5 - w) + 0.5 (statistics.md "Incomplete beta at a shape of 1
@@ -674,6 +688,23 @@ mod tests {
             assert_eq!(if lower { l } else { u }.to_bits(), expected.to_bits());
             // The other tail is (0.5 - w) + 0.5 of the computed one.
             assert!(l == (0.5 - u) + 0.5 || u == (0.5 - l) + 0.5, "{x} {a} {b}");
+        }
+    }
+
+    /// BETA.DIST at a = b = 1/2, Excel's cells (probes-numeric t1745-beta-inv-roundtrip G1;
+    /// t3192-beta-half-half-2 B321 at x = 0.9, and B83; T-3192).
+    #[test]
+    fn half_half_cdf_matches_excel() {
+        for (x, expected) in [
+            (
+                2.467_401_100_272_339_4e-20_f64,
+                9.999_999_999_999_999e-11_f64,
+            ),
+            (0.9_f64, 0.795_167_235_300_866_5_f64),
+            (0.997_292_735_257_305_6, 0.966_860_829_015_333),
+        ] {
+            let got = half_half_cdf(x, 1.0 - x);
+            assert_eq!(got.to_bits(), expected.to_bits(), "{x}: {got}");
         }
     }
 

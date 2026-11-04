@@ -33,7 +33,7 @@ use rustsheet_eval::deviations;
 use rustsheet_eval::engine::{Engine, RustSheetEngine};
 use rustsheet_eval::evidence_floor::{self, Lock, EVIDENCE_FLOOR, LOCK_PATH};
 use rustsheet_eval::exit_exceptions::ExitExceptions;
-use rustsheet_eval::fetch::fetch_suite;
+use rustsheet_eval::fetch::{fetch_missing, fetch_suite};
 use rustsheet_eval::lift_kinds;
 use rustsheet_eval::milestone_exit;
 use rustsheet_eval::milestone_lists::{self, MilestoneList};
@@ -73,6 +73,10 @@ struct Selection {
     /// Per-case timeout in seconds.
     #[arg(long, default_value_t = 60)]
     timeout: u64,
+    /// Fetch each selected external suite whose cache is missing or stale before scoring it,
+    /// instead of skipping it. A failed fetch skips that suite and the run continues.
+    #[arg(long)]
+    fetch_missing: bool,
 }
 
 #[derive(Subcommand)]
@@ -252,18 +256,31 @@ fn select(root: &Path, sel: &Selection, gate_only: bool) -> Result<Vec<Suite>> {
     let chosen: Vec<Suite> = all
         .into_iter()
         .filter(|s| {
+            let selected = if sel.suites.is_empty() {
+                !gate_only || s.manifest.gate
+            } else {
+                sel.suites.contains(&s.manifest.name)
+            };
             if s.fetch_state() == FetchState::NotFetched {
+                if sel.fetch_missing && selected {
+                    return match fetch_missing(s) {
+                        Ok(files) => {
+                            println!("fetched {} ({files} files)", s.manifest.name);
+                            true
+                        }
+                        Err(skip) => {
+                            eprintln!("{skip}");
+                            false
+                        }
+                    };
+                }
                 eprintln!(
                     "skipping {}: not fetched (run `rustsheet-eval fetch --suite {}`)",
                     s.manifest.name, s.manifest.name
                 );
                 return false;
             }
-            if sel.suites.is_empty() {
-                !gate_only || s.manifest.gate
-            } else {
-                sel.suites.contains(&s.manifest.name)
-            }
+            selected
         })
         .collect();
     if chosen.is_empty() {
@@ -661,6 +678,7 @@ fn cmd_evidence_floor(root: &Path, update: bool, allow_increase: bool) -> Result
             .collect(),
         filter: None,
         timeout: 60,
+        fetch_missing: false,
     };
     let suites = select(root, &sel, false)?;
     let catalog = Catalog::load(root)?;
@@ -734,6 +752,7 @@ fn cmd_show(root: &Path, case_id: &str, all: bool) -> Result<ExitCode> {
         suites: vec![suite_name.to_string()],
         filter: Some(case_id.to_string()),
         timeout: 120,
+        fetch_missing: false,
     };
     // `load_named` also finds Gate A's tables, which `select` (eval/suites only) never lists.
     let suite = Suite::load_named(root, suite_name)?;

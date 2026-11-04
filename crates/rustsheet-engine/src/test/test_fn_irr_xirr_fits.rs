@@ -176,6 +176,15 @@ fn irr_is_num_at_a_far_root() {
 }
 
 #[test]
+fn irr_is_div0_where_the_secant_reaches_a_zero_discount_factor() {
+    // probes/irr-guess-edges A39 (T-2802): from the guess 0.1 the secant's second step lands on
+    // d = 1 exactly (v = 0), and Excel's 1/v is #DIV/0!.
+    assert_errors(&[("=IRR({-1,1E+300})", "#DIV/0!")]);
+    // A far root the secant stalls at, short of d = 1, stays #NUM! (irr-guess-edges-2 A19, A21).
+    assert_num_errors(&["=IRR({-1,9E+14})", "=IRR({-1,2E+15})"]);
+}
+
+#[test]
 fn irr_where_the_secant_fails_is_num_at_a_root_near_minus_one() {
     // probes/irr-fallback-roots A1, A5, A8, A10: the NPV polynomial's root nearest v = 0 is negative
     assert_num_errors(&[
@@ -197,6 +206,33 @@ fn irr_where_the_secant_fails_finds_the_root_nearest_v_zero() {
             ("=IRR({-400,1,1,1,1,1},0.5)", -0.673_736_675_180_840_5),
         ],
         1e-14,
+    );
+}
+
+#[test]
+fn irr_fallback_tests_the_residual_one_newton_step_past_its_stop() {
+    // T-3411 round 4: where both secant runs fail, a root Newton settles on is #NUM! when |NPV|
+    // one step past the stop is 1E-4 or more. probes-numeric/t3478-irr-r4-wide A90 (1.22E-4 there)
+    // is #NUM!; A79 and A292 return although at the stop iterate itself their residuals are 8.8E-4
+    // and 1.3E-4 (their last digits are T-3408's, so only the type is pinned here).
+    // probes-numeric/t3411-irr-residual-scale A5 and A6: t3411-irr-r4-fresh A37 returns, and the same
+    // flows times 10 are #NUM! in Excel, so the cut is on the absolute residual.
+    assert_num_errors(&[
+        "=IRR({7839274018045.82,-1800700392574.26,-1932978417380.95,-628102382859.986,-771459031037.155,-1833829809207.7,-190607277255.53})",
+        "=IRR({3538681482050.93,-959839357236.378,-695426025690.099,-1342006103306.3,-220806582262.62,-330645052475.425},0.00162399739616426)",
+    ]);
+    assert_numbers_near(
+        &[
+            (
+                "=IRR({-20348062620.1183,4488889137.16682,2126791179.52687,322827138.632301,314093761.795836,3018827684.70375,1928928663.74205,818467822.296312,481991283.63873,3290162008.36438,1171706288.69735,1301641841.0064,2072846658.16491,366670370.47232,2006947896.47083,1595280758.06325,1440048477.42067},-0.0340669405751921)",
+                0.038_101_815_872_697_12,
+            ),
+            (
+                "=IRR({145997625287.114,-23243466498.3165,-24930632662.067,-13155199863.4897,-11546268184.9697,-22070569337.2782,-27101092776.3016,-20207638082.3591,-6392695211.92509},666.601763607955)",
+                0.004_302_898_815_059_297,
+            ),
+        ],
+        1e-6,
     );
 }
 

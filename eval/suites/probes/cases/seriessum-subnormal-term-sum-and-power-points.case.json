@@ -1,0 +1,30 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3942 follow-up to probes/seriessum-subnormal-power-and-term: rows 1-2 a subnormal SERIESSUM term beside a normal one and normal terms that cancel to a subnormal sum (per-term flush against result flush); rows 3-6 more ^ points (positive exponent 2; negative exponents whose positive power stays finite). Column B is the =0 companion (decision 0042).",
+ "tags": [
+  "M5",
+  "probe",
+  "math",
+  "T-3942"
+ ],
+ "expected": {},
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=SERIESSUM(1E-150,2,0,{1E-10,23000})",
+    "B1": "=(SERIESSUM(1E-150,2,0,{1E-10,23000}))=0",
+    "A2": "=SERIESSUM(1E-150,2,0,{3E-8,-2.99999E-8})",
+    "B2": "=(SERIESSUM(1E-150,2,0,{3E-8,-2.99999E-8}))=0",
+    "A3": "=1E-155^2",
+    "B3": "=(1E-155^2)=0",
+    "A4": "=(1.1E-155)^2",
+    "B4": "=((1.1E-155)^2)=0",
+    "A5": "=2^-1023",
+    "B5": "=(2^-1023)=0",
+    "A6": "=5^-440",
+    "B6": "=(5^-440)=0"
+   }
+  }
+ ]
+}

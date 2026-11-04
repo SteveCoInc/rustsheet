@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "GAMMA.DIST density: is Excel #NUM! where shape/x overflows a double (T-3316), independent of beta; and the huge-shape density #NUM! from shape 1E15 to 1E70.",
+ "tags": [
+  "M9",
+  "statistical",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=GAMMA.DIST(5.5628E-300,1E+9,1,FALSE)",
+    "A2": "=GAMMA.DIST(5.5626E-300,1E+9,1,FALSE)",
+    "A3": "=GAMMA.DIST(5.5628E-300,1E+9,1E-200,FALSE)",
+    "A4": "=GAMMA.DIST(5.5626E-300,1E+9,1E-200,FALSE)",
+    "A5": "=GAMMA.DIST(5.5628E-300,1E+9,1E+200,FALSE)",
+    "A6": "=GAMMA.DIST(5.5626E-300,1E+9,1E+200,FALSE)",
+    "A7": "=GAMMA.DIST(5.5628E-294,1E+15,1,FALSE)",
+    "A8": "=GAMMA.DIST(5.5626E-294,1E+15,1,FALSE)",
+    "A9": "=GAMMA.DIST(5.5628E-306,1000,1,FALSE)",
+    "A10": "=GAMMA.DIST(5.5626E-306,1000,1,FALSE)",
+    "A11": "=GAMMA.DIST(5.3E-308,10,1E-5,FALSE)",
+    "A12": "=GAMMA.DIST(5.6E-308,10,1E-5,FALSE)",
+    "A13": "=GAMMA.DIST(4.9E-308,10,1E-5,FALSE)",
+    "A14": "=GAMMA.DIST(2.5E-308,5,1E-5,FALSE)",
+    "A15": "=GAMMA.DIST(2.9E-308,5,1E-5,FALSE)",
+    "A16": "=GAMMA.DIST(2,1E+20,1E+10,FALSE)",
+    "A17": "=GAMMA.DIST(2,1E+30,1E+10,FALSE)",
+    "A18": "=GAMMA.DIST(2,1E+40,1E+10,FALSE)",
+    "A19": "=GAMMA.DIST(2,1E+50,1E+10,FALSE)",
+    "A20": "=GAMMA.DIST(2,1E+60,1E+10,FALSE)",
+    "A21": "=GAMMA.DIST(0.5,1E+20,1,FALSE)",
+    "A22": "=GAMMA.DIST(0.5,1E+40,1,FALSE)",
+    "A23": "=GAMMA.DIST(0.5,1E+70,1,FALSE)",
+    "A24": "=GAMMA.DIST(2E-10,1E+70,1,FALSE)",
+    "A25": "=GAMMA.DIST(2,1E+70,1,FALSE)",
+    "A26": "=GAMMA.DIST(1E+50,1E+70,1,FALSE)"
+   }
+  }
+ ],
+ "expected": {}
+}

@@ -83,6 +83,31 @@ fn bpser_branches_match_excel() {
     }
 }
 
+// The split-z EXP at min(a, b) < 1, b0 < 8 (T-3873, docs/research/t2464/r7-bpser-nondouble-z):
+// zh = z rounded to nearest, zl = z - zh, I = fl(fl(EXP(zh)·s)·fl(1 + zl)). Excel's values
+// (probes-numeric t3769-r6-bpser-beta, excel-graph); the unsplit fl(EXP(z)·s) is 1 ulp off on the
+// three non-double-z cells and the same on the double-z one (zl = 0).
+#[test]
+fn bpser_splits_a_non_double_z() {
+    let cells: [(f64, f64, f64, f64); 4] = [
+        // A15: z 1/2 ulp above a double, ties to even round it down: zl = +2^-53.
+        (0.037_100_000_000_000_1, 0.3, 2.5, 0.516_384_441_219_475),
+        // A2: a tie rounding up: zl = -2^-53.
+        (0.037_100_000_000_000_01, 0.3, 2.5, 0.516_384_441_219_474_7),
+        // A642: z 3/4 ulp above a double (q = 0.75): zl = -2^-53.
+        (0.0101, 0.5, 2.5, 0.169_751_703_820_125_86),
+        // A400: z is a double (zl = 0): today's form.
+        (0.0371, 0.3, 2.5, 0.516_384_441_219_474_7),
+    ];
+    for (x, a, b, excel) in cells {
+        assert_eq!(
+            cdf(x, a, b).to_bits(),
+            excel.to_bits(),
+            "BETA.DIST({x},{a},{b},TRUE)"
+        );
+    }
+}
+
 // bgrat and bup+bgrat at a0 = 1/2 (T-2509's `bgrat_half`): Excel's values, bit-exact since
 // BETA.DIST takes them (T-2510) and 1 to 7 ulp off on today's kernel before.
 #[test]
@@ -111,18 +136,14 @@ fn half_shape_bgrat_matches_excel() {
 // and 1 to 3 ulp off on today's kernel before it (T-2508).
 #[test]
 fn bfrac_matches_excel() {
-    let cells: [(f64, f64, f64, f64); 4] = [
+    // TOMS's recurrence, outside the Lentz region (a0 < 40; the swapped call). t2464-w2f-xruns-1
+    // A14913 and A15779 of the (100, 120) run were pinned here too: they are on the Lentz region
+    // now (T-3812), 7 and 5 ulp off with the engine's density, which is 5 ulp off Excel's on both
+    // (A14914, A15780); with Excel's density the model is 1 and 4 ulp off.
+    let cells: [(f64, f64, f64, f64); 2] = [
         // m9-beta-dist-a10 A43, m9-beta-dist-a100 A47 (swapped).
         (0.1, 10.0, 50.0, 0.066_589_445_582_871_41),
         (0.9, 100.0, 50.0, 0.999_999_999_999_994_9),
-        // t2464-w2f-xruns-1 A14913, A15779: the (100, 120) run.
-        (
-            0.401_300_000_000_016,
-            100.0,
-            120.0,
-            0.055_325_311_152_874_035,
-        ),
-        (0.401_300_000_000_04, 100.0, 120.0, 0.055_325_311_152_955_79),
     ];
     for (x, a, b, excel) in cells {
         assert_eq!(
@@ -135,6 +156,66 @@ fn bfrac_matches_excel() {
             "BETA.DIST({x},{a},{b},TRUE)"
         );
     }
+}
+
+// bfrac's Lentz loop on closed-form terms (T-3812, T-3571's model), on cells of probes-numeric
+// t3571-r5-bfrac-* (excel-graph) where the engine's density equals Excel's bit for bit, so the
+// fraction alone decides the cdf: hold A700 (700, 90), A1591 (80, 81), tune A133 (40, 45), fresh
+// A470 (4000, 40).
+#[test]
+fn bfrac_lentz_matches_excel() {
+    let cells: [(f64, f64, f64, f64); 4] = [
+        (
+            0.840_888_800_000_003,
+            700.0,
+            90.0,
+            0.000_129_653_947_998_744_3,
+        ),
+        (0.457_611_500_000_003, 80.0, 81.0, 0.159_405_966_431_110_57),
+        (
+            0.255_296_100_000_002,
+            40.0,
+            45.0,
+            1.062_430_605_729_624_7e-5,
+        ),
+        (
+            0.987_226_971_698_964,
+            4000.0,
+            40.0,
+            0.040_670_926_519_936_06,
+        ),
+    ];
+    for (x, a, b, excel) in cells {
+        let d = dispatch(a, b, x, 1.0 - x).expect("in domain");
+        assert_eq!(d.branch, Branch::Bfrac);
+        assert!(
+            super::bfrac::lentz_region(&d),
+            "BETA.DIST({x},{a},{b},TRUE)"
+        );
+        assert_eq!(
+            cdf(x, a, b).to_bits(),
+            excel.to_bits(),
+            "BETA.DIST({x},{a},{b},TRUE)"
+        );
+    }
+}
+
+// The Lentz loop's region is the probed one only (T-3812): the swapped call, a shape below 40 or
+// above 5000, and x within 0.2 sd of the mean or more than 8 sd below it keep TOMS's recurrence.
+#[test]
+fn bfrac_lentz_region_is_the_probed_one() {
+    let region = |a: f64, b: f64, x: f64| {
+        let d = dispatch(a, b, x, 1.0 - x).expect("in domain");
+        assert_eq!(d.branch, Branch::Bfrac, "({a}, {b}, {x})");
+        super::bfrac::lentz_region(&d)
+    };
+    // (100, 120): mean 0.4545, sd 0.0335.
+    assert!(region(100.0, 120.0, 0.4013));
+    assert!(!region(100.0, 120.0, 0.45)); // z = -0.13
+    assert!(!region(100.0, 120.0, 0.17)); // z = -8.5
+    assert!(!region(100.0, 120.0, 0.6)); // swapped
+    assert!(!region(6000.0, 7000.0, 0.44)); // a above 5000
+    assert!(!region(30.0, 600.0, 0.03)); // a below 40
 }
 
 // Branches not ported yet, and a shape of 1 outside the closed forms, keep today's kernel.
@@ -155,14 +236,72 @@ fn unported_points_keep_todays_kernel() {
     }
 }
 
+// L140 bup+bgrat with one bup term (1 < b0 < 2, a0 > 15, x0 > 0.7): RN(W + D), W from the density in
+// bup's orientation and D an accurate bgrat increment (T-3382). Excel's values, bit for bit, each
+// off before T-3382.
+#[test]
+fn l140_one_term_bup_bgrat_matches_excel() {
+    assert_eq!(branch(30.7, 1.7, 0.8117).0, Branch::L140BupBgrat);
+    for (x, a, b, excel) in [
+        // probes-numeric t2464-w2f-absweep Calc!A3079
+        (
+            0.8117,
+            30.699_999_999_999_1,
+            1.7,
+            0.006_917_415_711_258_284_f64,
+        ),
+        // t2464-w2f-absweep Calc!A3081
+        (
+            0.8117,
+            128_765_132.0 * 2f64.powi(-22) + 53_686_839.0 * 2f64.powi(-48),
+            1.7,
+            0.006_917_415_711_258_278,
+        ),
+        // t2464-w2f-xruns-2 Calc!A8667
+        (
+            127_506_841.0 * 2f64.powi(-27) + 40_265_043.0 * 2f64.powi(-53),
+            40.0,
+            1.03,
+            0.134_838_829_239_859_43,
+        ),
+        // t2464-w2f-xruns-2 Calc!A8869
+        (
+            15_938_355.0 * 2f64.powi(-24) + 13_421_751.0 * 2f64.powi(-50),
+            40.0,
+            1.03,
+            0.134_838_829_239_922_4,
+        ),
+    ] {
+        assert_eq!(cdf(x, a, b).to_bits(), excel.to_bits(), "{x} {a} {b}");
+    }
+}
+
+// L140 bup+bgrat with n >= 2 bup terms (2 <= b0 < 40, a0 > 15, x0 > 0.7): W = fl(ret·S) with bup's
+// powers of y0 through Excel's EXP and LN, D = x0^a0 at a whole b0 (T-3568's model, T-3561).
+#[test]
+fn l140_many_term_bup_bgrat() {
+    let x = (33587.0 - 2000.0) / (5_489_582.0 - 2000.0);
+    // Swapped to (a0, b0) = (600, 3): n = 2 terms at c = 1.
+    assert_eq!(branch(3.0, 600.0, x), (Branch::L140BupBgrat, true));
+    // ironcalc-calc STATISTICAL/BETADIST_BETAINV.xlsx Sheet1!G5,
+    // BETA.DIST(33587,3,600,TRUE,2000,5489582): Excel's value, correctly rounded (50-digit
+    // 0.67345537974934809577); today's kernel gave 0.6734553797493648.
+    assert_eq!(
+        cdf(x, 3.0, 600.0).to_bits(),
+        0.673_455_379_749_348_1_f64.to_bits()
+    );
+}
+
 // L140 at a whole b0 and a0 > 8 runs bpser(a0, 1, x0) with ln B(a0, 1) = -LN(a0): Excel's
 // values (probes-numeric, excel-graph), each on today's kernel and off before T-2506.
+// m9-beta-dist-a100 A39, `BETA.DIST(0.5,100,10,TRUE)` = 7.203401329871238e-21, is a known miss
+// since T-3198: bup's power sum is 1 ulp high at y0 = 0.5 there, where TOMS's recurrence was exact.
+// The test asserts today's value, so a fix shows as a change here (TODO(T-3947)).
 #[test]
 fn l140_whole_b0_takes_ln_beta_of_one() {
-    let cells: [(f64, f64, f64, f64); 3] = [
-        // m9-beta-dist-a100 A37, A39; t0969-beta-prefactor Pref!D140.
+    let cells: [(f64, f64, f64, f64); 2] = [
+        // m9-beta-dist-a100 A37; t0969-beta-prefactor Pref!D140.
         (0.1, 100.0, 10.0, 1.668_234_277_029_307e-88),
-        (0.5, 100.0, 10.0, 7.203_401_329_871_238e-21),
         (0.2, 15.0, 8.0, 1.312_292_337_614_844e-6),
     ];
     for (x, a, b, excel) in cells {
@@ -176,6 +315,11 @@ fn l140_whole_b0_takes_ln_beta_of_one() {
             "BETA.DIST({x},{a},{b},TRUE)"
         );
     }
+    assert_eq!(
+        cdf(0.5, 100.0, 10.0).to_bits(),
+        7.203_401_329_871_24e-21_f64.to_bits(),
+        "known miss: Excel 7.203401329871238e-21 (TODO(T-3947))"
+    );
 }
 
 // BINOM.DIST's cdf is w1 of K(k + 1, n - k, p, fl(1 - p)), whole shapes, so L140 at a whole b0
@@ -304,7 +448,7 @@ fn fixture_ported_branches_score() {
         (Branch::WBpser, 225, 122),
         (Branch::W1Bpser, 19, 16),
         (Branch::BpserLarge, 205, 123),
-        (Branch::L140BupBpser, 122, 91),
+        (Branch::L140BupBpser, 122, 99),
         (Branch::Bfrac, 82, 39),
     ]
     .map(|(branch, rows, exact)| (branch, rows, exact, 0, 0));
@@ -347,9 +491,18 @@ fn ported_tails_are_swap_symmetric() {
     for (r, (w, w1)) in ported_rows() {
         let swaps = |a, b, x, y| dispatch(a, b, x, y).map(|d| (d.swapped, d.lambda.to_bits()));
         let (direct, mirror) = (swaps(r.a, r.b, r.x, r.y), swaps(r.b, r.a, r.y, r.x));
-        // bfrac also takes λ, which the two calls form from different products when a = b.
+        // bfrac also takes λ, which the two calls form from different products when a = b. On
+        // the Lentz region only the unswapped call takes Excel's loop (T-3812), so its mirror is
+        // a different evaluation.
         if direct.map(|d| d.0) == mirror.map(|m| m.0)
             || (r.branch == Branch::Bfrac && direct.map(|d| d.1) != mirror.map(|m| m.1))
+            || [(r.a, r.b, r.x, r.y), (r.b, r.a, r.y, r.x)]
+                .into_iter()
+                .any(|(a, b, x, y)| {
+                    dispatch(a, b, x, y).is_some_and(|d| {
+                        d.branch == Branch::Bfrac && super::bfrac::lentz_region(&d)
+                    })
+                })
         {
             continue;
         }
@@ -365,13 +518,16 @@ fn ported_tails_are_swap_symmetric() {
             r.y
         );
     }
-    assert_eq!(compared, 607);
+    assert_eq!(compared, 593);
 }
 
 // Monotone in x on each shape pair's sorted ported rows, except where Excel's own value falls
 // between two x an ulp apart: BETA.DIST(x, 2.5, 2.5, TRUE) is 0.05000000000000001 at
 // 0.16528026665565798 and 0.05 at the next double (probes-numeric t1745-beta-inv-roundtrip G84,
-// H84; statistics.md "BETA.DIST's cdf is not monotone in its last bit").
+// H84; statistics.md "BETA.DIST's cdf is not monotone in its last bit"). One pair is a known miss,
+// asserted at today's values: (10, 10) at x = 0.5 and the next double, where Excel is
+// 0.5000000000000002 at both and bup's power sum (T-3198) is 1 ulp above it at 0.5 and 2 ulp below
+// at the next double (TODO(T-3947)).
 #[test]
 fn ported_tails_rise_with_x_where_excel_does() {
     let mut rows = ported_rows();
@@ -392,6 +548,14 @@ fn ported_tails_rise_with_x_where_excel_does() {
             continue;
         }
         pairs += 1;
+        if (p.a, p.b, p.x) == (10.0, 10.0, 0.5) {
+            assert_eq!(
+                (wp.to_bits(), wq.to_bits()),
+                (0.500_000_000_000_000_3_f64.to_bits(), 0.5_f64.to_bits()),
+                "known miss (TODO(T-3947))"
+            );
+            continue;
+        }
         assert!(
             wq >= wp || q.excel < p.excel,
             "({}, {}): {wp} at {}, {wq} at {}",
@@ -402,4 +566,15 @@ fn ported_tails_rise_with_x_where_excel_does() {
         );
     }
     assert_eq!(pairs, 425);
+}
+
+// bup+bgrat at a0 < 1 other than 1/2 (T-3665): 20 bup terms plus the accurate bgrat increment.
+// Excel is within 1.7 ulp of the math at these points and the Cephes kernel was 4 to 6 ulp off;
+// both cells are Excel's bits (probes-numeric/t2464-r2-bratio-x29 A1551 and A2327, excel-graph).
+#[test]
+fn bup_bgrat_at_a_shape_below_one_matches_excel() {
+    assert_eq!(branch(0.75, 2.5, 0.2910), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2910, 0.75, 2.5), 0.679_493_919_530_290_7);
+    assert_eq!(branch(0.9, 2.5, 0.2916), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2916, 0.9, 2.5), 0.617_681_544_291_794);
 }

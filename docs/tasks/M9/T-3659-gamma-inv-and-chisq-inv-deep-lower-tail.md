@@ -19,6 +19,7 @@ leading-factor root and which iterate it returns, or the Outcome lists the rules
 (decision 0056).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (gamma quantile) measured on t3311-gamma-inv-lower-tail-cdf, 0 of 899 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01f (`make eval` on a branch near origin/main fa5b844d6, excel-graph;
   `scripts/exit_owners.py --all-off` over the task files of origin/main and of every open PR and task branch): these
   cells have no open owner. T-3311 (done) filed the case as its R4.2 fresh sweep and reported "75 visibly off of 360"

@@ -14,13 +14,14 @@ pub(super) mod bpser;
 mod bup;
 pub(super) mod ln_beta;
 
-use super::incomplete_beta::{beta_reg_tails, closed_form_tails, search_tails};
+use super::incomplete_beta::{beta_reg_tails, closed_form_tails, half_half_cdf, search_tails};
 use crate::arithmetic::extended_sum;
+use crate::x87_exp::dd_add;
 use basym::basym;
 use bfrac::bfrac;
-use bgrat::bgrat_half;
+use bgrat::{bgrat_half, bgrat_increment};
 use bpser::bpser;
-use bup::{bup, l140_bup_bpser};
+use bup::{bup, bup_takes_terms, l140_bup_bgrat, l140_bup_bpser, BupSum};
 
 /// TOMS 708's `eps` in `bratio`: max(2^-52, 1e-15).
 pub(super) const EPS: f64 = 1e-15;
@@ -194,11 +195,16 @@ fn small_shape_branch(a0: f64, b0: f64, x0: f64) -> Branch {
 }
 
 /// BETA.DIST's cdf, w of K(a, b, x, y) with y = fl(1 - x) formed by the caller (SPEC-0025's caller
-/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`).
+/// table): [`kernel_tails`]'s w, plus bratio's bgrat branches at a0 = 1/2 (T-2509's `bgrat_half`)
+/// and bup + bgrat at any other a0 < 1 (T-3665),
+/// and Excel's arcsine form at a = b = 1/2 (`incomplete_beta::half_half_cdf`, T-3192).
 /// Those are a net visible gain for BETA.DIST (T-2510: 30 fewer visibly-off cells, none more), not
 /// for F (see [`t_kernel_tails`]), so F's callers (`fisher.rs`) keep [`kernel_tails`].
 /// BETA.INV's search (`beta.rs`) crosses it where it is closed or ported ([`beta_search_tails`]).
 pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
+    if a == 0.5 && b == 0.5 && x > 0.0 && y > 0.0 {
+        return half_half_cdf(x, y);
+    }
     kernel_tails_with(x, y, a, b, true).0
 }
 
@@ -208,8 +214,26 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// a = 170, b = 1.5, x = 0.99), so the search takes the bounded Cephes kernel there instead
 /// (`incomplete_beta::search_tails`, at most two 300-step fractions), as it did before T-3398:
 /// 129 cdfs of the series would cost 8 ms an element, past BETA.INV's lift weight.
+///
+/// L140 bup+bgrat with n >= 2 bup terms or c = 1 (T-3561) is BETA.DIST's only: there the search
+/// keeps the Cephes kernel, because crossing the new cdf moves gated ironcalc-calc
+/// `BETADIST_BETAINV.xlsx` H28 (`BETA.INV` at shapes 6 and 1000) from Excel's bit to 1 ulp off
+/// (T-3867 owns the search there). On L140 bup+bpser the search crosses bup's recurrence, not the
+/// power sum BETA.DIST takes (T-3198): the power sum moves gated H32 (`BETA.INV` at shapes 5 and 5,
+/// 0.555) to 0.5550000000000002.
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
-    closed_or_ported_with(x, y, a, b, true).unwrap_or_else(|| search_tails(x, y, a, b))
+    let ported = || {
+        let many_terms = dispatch(a, b, x, y)
+            .is_some_and(|d| d.branch == Branch::L140BupBgrat && bup_takes_terms(d.b0));
+        if many_terms {
+            None
+        } else {
+            ported_tails_with(a, b, x, y, true, BupSum::Recurrence)
+        }
+    };
+    closed_form_tails(x, y, a, b)
+        .or_else(ported)
+        .unwrap_or_else(|| search_tails(x, y, a, b))
 }
 
 /// (w, w1) of K(a, b, x, y), x and y formed by the caller per SPEC-0025's caller table:
@@ -227,7 +251,8 @@ fn kernel_tails_with(x: f64, y: f64, a: f64, b: f64, half_bgrat: bool) -> (f64, 
 /// Excel's closed forms, then the port's branches (with bgrat at a0 = 1/2 when `half_bgrat`);
 /// `None` where neither applies and the caller picks its fallback kernel.
 fn closed_or_ported_with(x: f64, y: f64, a: f64, b: f64, half_bgrat: bool) -> Option<(f64, f64)> {
-    closed_form_tails(x, y, a, b).or_else(|| ported_tails_with(a, b, x, y, half_bgrat))
+    closed_form_tails(x, y, a, b)
+        .or_else(|| ported_tails_with(a, b, x, y, half_bgrat, BupSum::Powers))
 }
 
 /// (w, w1) of K(a, b, x, y), x and y formed by the caller per SPEC-0025's caller table: Excel's
@@ -237,6 +262,16 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
     closed_or_ported_with(x, y, a, b, false)
 }
 
+/// [`closed_or_ported_tails`] for the F tails (`fisher.rs`), with bgrat at b = 1/2 as the Student
+/// t's and BETA.DIST's callers take it: on F's own arguments (`fisher.rs` `f_beta_arguments`) a df
+/// of 1 reaches Excel's bits there (T-3580: probes-numeric t3567-r5-fdf1-hold's d1 = 1 bgrat
+/// region 991 of 1,000 bit-exact, against 298 on today's kernel; statistics.md "F's
+/// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
+/// was handed, not the kernel.
+pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    closed_or_ported_with(x, y, a, b, true)
+}
+
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
 /// tail and forms the other as (0.5 - w) + 0.5, each step an x87 op stored to a double
 /// (statistics.md "Incomplete beta is TOMS 708 `bratio`").
@@ -244,21 +279,27 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
 /// A shape of 1 outside the closed forms (a0 = 1 with y0 > 0.9) stays on
 /// `incomplete_beta::shape_one_tails`: bpser(1, b0, x0) is further off Excel's w there (T-3007).
 pub(super) fn ported_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)> {
-    ported_tails_with(a, b, x, y, false)
+    ported_tails_with(a, b, x, y, false, BupSum::Powers)
 }
 
 /// (w, w1) of the Student t kernel call K(n/2, 1/2, y, z) ([`ported_tails`] plus bgrat at b = 1/2,
-/// T-2509). Only the Student t tails and BETA.DIST ([`beta_dist_lower_tail`]) take bgrat at
-/// b = 1/2 so far: F with a numerator or denominator df of 1 reaches the same branches, but there
-/// bgrat moved gated FDIST cells by 7 ulp and made F.DIST sweep cells visibly off
-/// (t2220-f-dist-sweep d1-1, d2-1), so F stays on today's kernel (T-2510's measurement).
+/// T-2509). The Student t tails, BETA.DIST ([`beta_dist_lower_tail`]) and F's tails
+/// ([`f_closed_or_ported_tails`], T-3580) take bgrat at b = 1/2; the binomial family and F.TEST
+/// ([`kernel_tails`]) do not.
 pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
-    ported_tails_with(a, 0.5, y, z, true)
+    ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 when `half_bgrat`.
-// TODO(T-3580): drop `half_bgrat` once F takes its own arguments and bgrat at b = 1/2 (T-3567).
-fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option<(f64, f64)> {
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1 and L140 bup+bgrat (BETA.DIST's, the
+/// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
+fn ported_tails_with(
+    a: f64,
+    b: f64,
+    x: f64,
+    y: f64,
+    half_bgrat: bool,
+    bup_sum: BupSum,
+) -> Option<(f64, f64)> {
     if a == 1.0 || b == 1.0 {
         return None;
     }
@@ -283,12 +324,25 @@ fn ported_tails_with(a: f64, b: f64, x: f64, y: f64, half_bgrat: bool) -> Option
             let w1 = bgrat_half(d.b0 + BUP_BGRAT_TERMS, d.y0, d.x0, up)?;
             (other(w1), w1)
         }
+        // Any other a0 < 1: the 20 bup terms plus the accurate bgrat increment (T-3665). Excel is
+        // within 1.7 ulp of the math there, the kernel this replaces 4 to 6 ulp off.
+        Branch::BupBgrat if half_bgrat => {
+            let up = bup(d.b0, d.a0, d.y0, d.x0, BUP_BGRAT_TERMS)?;
+            let increment = bgrat_increment(d.b0 + BUP_BGRAT_TERMS, d.a0, d.y0, d.x0)?;
+            let w1 = dd_add((up, 0.0), increment).0;
+            (other(w1), w1)
+        }
+        // n bup terms, 1 < b0 < 40 (T-3382, T-3561); BETA.DIST's callers only, as at b = 1/2.
+        Branch::L140BupBgrat if half_bgrat => {
+            let w = l140_bup_bgrat(d.a0, d.b0, d.x0, d.y0)?;
+            (w, other(w))
+        }
         Branch::L140BupBpser => {
-            let w = l140_bup_bpser(d.a0, d.b0, d.x0, d.y0)?;
+            let w = l140_bup_bpser(d.a0, d.b0, d.x0, d.y0, bup_sum)?;
             (w, other(w))
         }
         Branch::Bfrac => {
-            let w = bfrac(d.a0, d.b0, d.x0, d.y0, d.lambda, BFRAC_EPS_FACTOR * EPS)?;
+            let w = bfrac(&d, BFRAC_EPS_FACTOR * EPS)?;
             (w, other(w))
         }
         Branch::Basym => basym_oriented(&d)?,

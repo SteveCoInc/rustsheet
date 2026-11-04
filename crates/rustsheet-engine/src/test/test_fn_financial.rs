@@ -143,6 +143,42 @@ fn fn_rate_holds_on_a_flat_secant() {
     );
 }
 
+/// An early flat secant on two distinct iterates with |f1| < 1e-4 restarts the run once from the
+/// older iterate (financial.md "RATE restarts once on an early flat secant", T-3698).
+#[test]
+fn fn_rate_restarts_on_an_early_flat_secant() {
+    check_cells(
+        &[],
+        &[
+            // probes/t3579-rate-residual-nper1 A1: flat at step 3, |f| 1.7e-7; the restarted run is
+            // A6's, whose guess is the flat step's older iterate 0.0020941704345913
+            (
+                "A1",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0)",
+                "0.002094170434484841",
+            ),
+            (
+                "A2",
+                "=RATE(1,2560574.93,-2543613.41,-11634.76,0,0.0020941704345913)",
+                "0.002094170434484841",
+            ),
+            // probes/t3698-rate-flat-restart A1: the same run at 2^10 the scale, |f| 1.7e-4, holds
+            // and fails the cap's test
+            (
+                "A3",
+                "=RATE(1,2560574.93*2^10,-2543613.41*2^10,-11634.76*2^10,0)",
+                "#NUM!",
+            ),
+            // probes/t3698-rate-flat-restart A49 (gate-a-fresh A187): flat at step 70, past the bound, holds
+            (
+                "A4",
+                "=RATE(2,4670416862.51754,-9176930088.60565,-157419359.724444,0,0.1)",
+                "0.0004737270505260268",
+            ),
+        ],
+    );
+}
+
 /// RATE's secant runs on past an iterate at or below -1 and only its result must be above -1
 /// (financial.md "RATE holds on a flat secant and runs on below -1", T-3348).
 #[test]
@@ -1074,4 +1110,62 @@ fn fn_xirr_one_empty_or_numeric_text_cell_is_the_count_error() {
     assert_eq!(model._get_text("A2"), *"#NUM!");
     assert_eq!(model._get_text("A3"), *"#NUM!");
     assert_eq!(model._get_text("A4"), *"#VALUE!");
+}
+
+/// Numeric text in a range cell reads as its number (probes/xirr-back-dated-stop A31, T-3267);
+/// non-numeric text stays `#VALUE!`; a boolean guess beside different counts is `#VALUE!`
+/// (gen-m9/b6a02893a8d6b151 A226).
+#[test]
+fn fn_xirr_reads_numeric_text_in_range_cells() {
+    let mut model = new_empty_model();
+    model._set("B1", "'-1000");
+    model._set("B2", "'1100");
+    model._set("C1", "'43831");
+    model._set("C2", "'44197");
+    model._set("D1", "-1000");
+    model._set("D2", "1100");
+    model._set("E1", "43831");
+    model._set("E2", "44197");
+    model._set("F1", "'x");
+    model._set("F2", "1100");
+    model._set("A1", "=XIRR(B1:B2,C1:C2)=XIRR(D1:D2,E1:E2)");
+    model._set("A2", "=XIRR(F1:F2,E1:E2)");
+    model._set("G1", "TRUE");
+    model._set("A3", "=XIRR(D1:D2,{43831,44197,44562},G1)");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"TRUE");
+    assert_eq!(model._get_text("A2"), *"#VALUE!");
+    assert_eq!(model._get_text("A3"), *"#VALUE!");
+}
+
+/// T-2603: a values range whose first cell is no number is `#VALUE!` (probes/t2603-xnpv-no-number-values),
+/// and the dates scan behind it stops at the used area, so a dates range to the sheet's last cell is
+/// read at once.
+#[test]
+fn xnpv_first_value_refused_bounded() {
+    check_cells(
+        &[("A5", "5"), ("B11", "100"), ("B12", "0")],
+        &[
+            ("C1", "=XNPV(1,A4:A5,B11:B12)", "#VALUE!"),
+            ("C2", "=XNPV(1,A5:A6,B11:B12)", "#NUM!"),
+            // 2 values against a 17-billion-cell dates range: the count's #NUM!, with no scan.
+            ("C3", "=XNPV(1,A2:A3,B11:XFD1048576)", "#NUM!"),
+            // Equal counts, both ranges far past the used area.
+            ("C4", "=XNPV(1,A2:A1048567,B11:B1048576)", "#VALUE!"),
+        ],
+    );
+}
+
+/// T-2603 review: the dates scan behind a refused first value reads only the stored cells, so two
+/// far-apart dates cost two reads, not the 327-million-cell area between them.
+#[test]
+fn xnpv_first_value_refused_sparse_dates() {
+    check_cells(
+        &[("A300", "100"), ("XFD20299", "5"), ("XFD20298", "FALSE")],
+        &[
+            ("B1", "=XNPV(1,A1:XFD20000,A300:XFD20299)", "#NUM!"),
+            ("B2", "=XNPV(1,A1:XFD19998,A300:XFD20297)", "#VALUE!"),
+        ],
+    );
 }

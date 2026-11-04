@@ -3,7 +3,7 @@ id: T-3662
 title: "Probe how Excel compares texts holding ignorable format characters: soft hyphen, zero-width space and joiners, bidi marks, BOM, word joiner, variation selector and the C1 controls"
 milestone: M2
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -34,6 +34,9 @@ current treatment is either VERIFIED or owned by an engine task.
 - Characters to cover (build each with UNICHAR so the workbook stays ASCII): U+00AD soft hyphen,
   U+200B zero-width space, U+200C ZWNJ, U+200D ZWJ, U+200E LRM, U+200F RLM, U+2060 word joiner,
   U+FEFF BOM/ZWNBSP, U+FE0F variation selector 16, U+0085 NEL and U+0081/U+009F (C1 controls).
+- T-3584 (coercion.md "Weightless characters in `=`, COUNTIF and XMATCH") found U+00AD weightless with
+  U+0524 and the other unweighted letters: `"a"&c&"b"="ab"` TRUE but `"a"&c="a"` and `c=""` FALSE. Add
+  U+0524 (an unweighted letter, not a format character) to the characters below; T-3904 implements the result.
 - Questions, each answered by at least two cells per character:
   1. Equality: `"a"&c&"b"="ab"`, `c=""` (the character alone against empty text), `"ab"&c="ab"`.
   2. Order when not equal: rank against the ladder `""`, `"a"`, `"ab"`, `"a-b"`, `"a'b"`,
@@ -49,14 +52,17 @@ current treatment is either VERIFIED or owned by an engine task.
 - Method: the `excel-probe` skill, excel-graph, laid out like probes/t3276-collation-other-scripts (a Data
   column of strings, `SUMPRODUCT(--(range<x))` ranks and `=` counts, then chosen pairs and the criteria
   and lookup columns). Keep it under about 600 formula cells. Milestone tag M2 (decision 0051).
+- T-3465 sweep evidence (probes/t3465-collation-holdout, excel-graph 2026-11-03): an inserted soft hyphen
+  U+00AD is ignored by Excel's `<` and `=` (`"ĳĳ" = "ĳ"&UNICHAR(173)&"ĳ"`, `"¡" = "¡"&UNICHAR(173)`, a tab run with
+  and without it); the engine counts it. Those cells (probes/t3465-collation-holdout C18, E18, D69, E69, D117, E117, C132, E132, C153, E153, C222, E222, C234, E234, C579, E579, C597, E597) moved to T-3904 with the findings.
 
 ## Acceptance criteria
-- [ ] A probe case `probes/t3662-collation-ignorables` (milestone M2) is committed with its excel-graph
+- [x] A probe case `probes/t3662-collation-ignorables` (milestone M2) is committed with its excel-graph
       oracle sidecar and answers questions 1-5 for every character listed above.
-- [ ] coercion.md gains a section stating, per character or per group of characters that behave alike,
+- [x] coercion.md gains a section stating, per character or per group of characters that behave alike,
       the observed equality, order, criteria and lookup behaviour with the case id and cells (VERIFIED),
       and criteria.md/lookup.md point to it where criteria or exact lookups differ from `=`.
-- [ ] Every cell the engine fails is a known failure in eval/baseline/probes.txt (`make eval-baseline`,
+- [x] Every cell the engine fails is a known failure in eval/baseline/probes.txt (`make eval-baseline`,
       0 regressions), and an engine task filed in the same PR (`make new-task`, milestone M2, lane engine)
       lists them (case stem and A1 names in one bullet, decision 0159), so `make exit-owners MILESTONE=M2`
       reports 0.
@@ -66,3 +72,21 @@ current treatment is either VERIFIED or owned by an engine task.
 - Changing collation.rs or criteria.rs (the engine task this files).
 - Emoji sequences (skin-tone modifiers, ZWJ emoji, VS16 after an emoji) and other scripts: T-3559.
 - TRIM, CLEAN and SUBSTITUTE of these characters (text functions, not comparison).
+
+## Outcome
+- Probe cases (excel-graph, 2026-11-04, milestone M2): probes/t3662-collation-ignorables (17 characters × 39
+  questions: equality by position, order against the ladder and among themselves, COUNTIF with and without
+  wildcards, MATCH, XMATCH, EXACT, LEN), -prefix (152 cells: case, DEL, U+0080 and a non-ASCII prefix; U+200B and the
+  C1 controls against the symbols) and -sweep (471 cells: `"a"&CHAR(k)&c="a"&CHAR(k)` for k = 1 to 127, positions,
+  whitespace and the last symbols).
+- Findings (coercion.md "Format characters, U+200B and the C1 controls (T-3662)"):
+  - U+00AD, U+200C:U+200F, U+2060, U+FEFF and U+FE0F are weightless, exactly like U+0524.
+  - New quirk, the prefix rule, which settles T-3904's open question: a weightless character counts only in the
+    tail one text has beyond the other, when the shared start is units below U+007B that are equal ignoring ASCII
+    case (`"ab"&U+00AD<>"ab"`, `"a~"&U+00AD="a~"`, `"é"&U+00AD="é"`).
+  - U+200B and the C1 controls have weights: U+200B after every whitespace character, before `!`; the C1
+    controls after every symbol, before the digits.
+  - criteria.md and lookup.md point to it (COUNTIF and XMATCH follow `=`, exact MATCH counts every unit).
+- Owners: T-3904 (363 weightless cells, its T-3662 dependency dropped, the rule stated) and new T-4039 (52 cells,
+  U+200B and the C1 controls).
+- Eval delta: fixed 0, regressions 0; 3 new probe cases (1386 cells), 971 pass, 415 known failures, all owned.

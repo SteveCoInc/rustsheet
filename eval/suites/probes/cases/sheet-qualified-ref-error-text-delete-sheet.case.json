@@ -1,0 +1,44 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3062: FORMULATEXT of S!#REF! (after delete_row 4 of S) and of a live S ref, after sheet S is deleted; F!A1 =SUM(S!C4:C4), A3 =SUM(S!C5), A2/A4 their FORMULATEXT.",
+  "tags": [
+    "M8",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "C4": 1,
+        "C5": 2
+      }
+    },
+    {
+      "name": "F",
+      "cells": {
+        "A1": "=SUM(S!C4:C4)",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(S!C5)",
+        "A4": "=FORMULATEXT(A3)"
+      }
+    }
+  ],
+  "sheet_ops": [
+    {
+      "op": "delete_row",
+      "sheet": "S",
+      "row": 4
+    },
+    {
+      "op": "delete_sheet",
+      "sheet": "S"
+    }
+  ],
+  "expected": {},
+  "check": [
+    "F!A1",
+    "F!A2",
+    "F!A3",
+    "F!A4"
+  ]
+}

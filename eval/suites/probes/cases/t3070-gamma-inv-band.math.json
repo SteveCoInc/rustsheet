@@ -1,0 +1,1397 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c225604ab21338e538a9d505520d225fc7a2a8ef62310168656af23ab22fdb7e"
+ },
+ "sheets": {
+  "S": {
+   "A223": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1.5E10)"
+   },
+   "A224": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1.5E10)"
+   },
+   "A238": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E10)"
+   },
+   "A239": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E10)"
+   },
+   "A253": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,4E10)"
+   },
+   "A254": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,4E10)"
+   },
+   "A268": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E11)"
+   },
+   "A269": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E11)"
+   },
+   "A283": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E11)"
+   },
+   "A284": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E11)"
+   },
+   "A298": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E12)"
+   },
+   "A299": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E12)"
+   },
+   "A313": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E13)"
+   },
+   "A314": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E13)"
+   },
+   "A328": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E15)"
+   },
+   "A329": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E15)"
+   }
+  }
+ },
+ "skipped": {
+  "S": {
+   "A1": {
+    "f": "=GAMMA.INV(1E-300,1E9,1)",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=GAMMA.INV(0.9,1E9,1)",
+    "why": "no single value"
+   },
+   "A100": {
+    "f": "=GAMMA.INV(1E-100,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A101": {
+    "f": "=GAMMA.INV(1E-30,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A102": {
+    "f": "=GAMMA.INV(1E-16,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A103": {
+    "f": "=GAMMA.INV(1E-10,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A104": {
+    "f": "=GAMMA.INV(1E-5,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A105": {
+    "f": "=GAMMA.INV(0.001,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A106": {
+    "f": "=GAMMA.INV(0.1,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A107": {
+    "f": "=GAMMA.INV(0.5,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A108": {
+    "f": "=GAMMA.INV(0.9,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A109": {
+    "f": "=GAMMA.INV(0.999,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=GAMMA.INV(0.999,1E9,1)",
+    "why": "no single value"
+   },
+   "A110": {
+    "f": "=GAMMA.INV(0.999999,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A111": {
+    "f": "=GAMMA.INV(1-1E-10,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A112": {
+    "f": "=GAMMA.INV(1-1E-15,1.5E10,1)",
+    "why": "no single value"
+   },
+   "A113": {
+    "f": "=GAMMA.INV(1E-300,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A114": {
+    "f": "=GAMMA.INV(1E-100,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A115": {
+    "f": "=GAMMA.INV(1E-30,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A116": {
+    "f": "=GAMMA.INV(1E-16,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A117": {
+    "f": "=GAMMA.INV(1E-10,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A118": {
+    "f": "=GAMMA.INV(1E-5,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A119": {
+    "f": "=GAMMA.INV(0.001,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=GAMMA.INV(0.999999,1E9,1)",
+    "why": "no single value"
+   },
+   "A120": {
+    "f": "=GAMMA.INV(0.1,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A121": {
+    "f": "=GAMMA.INV(0.5,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A122": {
+    "f": "=GAMMA.INV(0.9,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A123": {
+    "f": "=GAMMA.INV(0.999,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A124": {
+    "f": "=GAMMA.INV(0.999999,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A125": {
+    "f": "=GAMMA.INV(1-1E-10,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A126": {
+    "f": "=GAMMA.INV(1-1E-15,1.8E10,1)",
+    "why": "no single value"
+   },
+   "A127": {
+    "f": "=GAMMA.INV(1E-300,2E10,1)",
+    "why": "no single value"
+   },
+   "A128": {
+    "f": "=GAMMA.INV(1E-100,2E10,1)",
+    "why": "no single value"
+   },
+   "A129": {
+    "f": "=GAMMA.INV(1E-30,2E10,1)",
+    "why": "no single value"
+   },
+   "A13": {
+    "f": "=GAMMA.INV(1-1E-10,1E9,1)",
+    "why": "no single value"
+   },
+   "A130": {
+    "f": "=GAMMA.INV(1E-16,2E10,1)",
+    "why": "no single value"
+   },
+   "A131": {
+    "f": "=GAMMA.INV(1E-10,2E10,1)",
+    "why": "no single value"
+   },
+   "A132": {
+    "f": "=GAMMA.INV(1E-5,2E10,1)",
+    "why": "no single value"
+   },
+   "A133": {
+    "f": "=GAMMA.INV(0.001,2E10,1)",
+    "why": "no single value"
+   },
+   "A134": {
+    "f": "=GAMMA.INV(0.1,2E10,1)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=GAMMA.INV(0.5,2E10,1)",
+    "why": "no single value"
+   },
+   "A136": {
+    "f": "=GAMMA.INV(0.9,2E10,1)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=GAMMA.INV(0.999,2E10,1)",
+    "why": "no single value"
+   },
+   "A138": {
+    "f": "=GAMMA.INV(0.999999,2E10,1)",
+    "why": "no single value"
+   },
+   "A139": {
+    "f": "=GAMMA.INV(1-1E-10,2E10,1)",
+    "why": "no single value"
+   },
+   "A14": {
+    "f": "=GAMMA.INV(1-1E-15,1E9,1)",
+    "why": "no single value"
+   },
+   "A140": {
+    "f": "=GAMMA.INV(1-1E-15,2E10,1)",
+    "why": "no single value"
+   },
+   "A141": {
+    "f": "=GAMMA.INV(1E-300,3E10,1)",
+    "why": "no single value"
+   },
+   "A142": {
+    "f": "=GAMMA.INV(1E-100,3E10,1)",
+    "why": "no single value"
+   },
+   "A143": {
+    "f": "=GAMMA.INV(1E-30,3E10,1)",
+    "why": "no single value"
+   },
+   "A144": {
+    "f": "=GAMMA.INV(1E-16,3E10,1)",
+    "why": "no single value"
+   },
+   "A145": {
+    "f": "=GAMMA.INV(1E-10,3E10,1)",
+    "why": "no single value"
+   },
+   "A146": {
+    "f": "=GAMMA.INV(1E-5,3E10,1)",
+    "why": "no single value"
+   },
+   "A147": {
+    "f": "=GAMMA.INV(0.001,3E10,1)",
+    "why": "no single value"
+   },
+   "A148": {
+    "f": "=GAMMA.INV(0.1,3E10,1)",
+    "why": "no single value"
+   },
+   "A149": {
+    "f": "=GAMMA.INV(0.5,3E10,1)",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=GAMMA.INV(1E-300,2E9,1)",
+    "why": "no single value"
+   },
+   "A150": {
+    "f": "=GAMMA.INV(0.9,3E10,1)",
+    "why": "no single value"
+   },
+   "A151": {
+    "f": "=GAMMA.INV(0.999,3E10,1)",
+    "why": "no single value"
+   },
+   "A152": {
+    "f": "=GAMMA.INV(0.999999,3E10,1)",
+    "why": "no single value"
+   },
+   "A153": {
+    "f": "=GAMMA.INV(1-1E-10,3E10,1)",
+    "why": "no single value"
+   },
+   "A154": {
+    "f": "=GAMMA.INV(1-1E-15,3E10,1)",
+    "why": "no single value"
+   },
+   "A155": {
+    "f": "=GAMMA.INV(1E-300,5E10,1)",
+    "why": "no single value"
+   },
+   "A156": {
+    "f": "=GAMMA.INV(1E-100,5E10,1)",
+    "why": "no single value"
+   },
+   "A157": {
+    "f": "=GAMMA.INV(1E-30,5E10,1)",
+    "why": "no single value"
+   },
+   "A158": {
+    "f": "=GAMMA.INV(1E-16,5E10,1)",
+    "why": "no single value"
+   },
+   "A159": {
+    "f": "=GAMMA.INV(1E-10,5E10,1)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=GAMMA.INV(1E-100,2E9,1)",
+    "why": "no single value"
+   },
+   "A160": {
+    "f": "=GAMMA.INV(1E-5,5E10,1)",
+    "why": "no single value"
+   },
+   "A161": {
+    "f": "=GAMMA.INV(0.001,5E10,1)",
+    "why": "no single value"
+   },
+   "A162": {
+    "f": "=GAMMA.INV(0.1,5E10,1)",
+    "why": "no single value"
+   },
+   "A163": {
+    "f": "=GAMMA.INV(0.5,5E10,1)",
+    "why": "no single value"
+   },
+   "A164": {
+    "f": "=GAMMA.INV(0.9,5E10,1)",
+    "why": "no single value"
+   },
+   "A165": {
+    "f": "=GAMMA.INV(0.999,5E10,1)",
+    "why": "no single value"
+   },
+   "A166": {
+    "f": "=GAMMA.INV(0.999999,5E10,1)",
+    "why": "no single value"
+   },
+   "A167": {
+    "f": "=GAMMA.INV(1-1E-10,5E10,1)",
+    "why": "no single value"
+   },
+   "A168": {
+    "f": "=GAMMA.INV(1-1E-15,5E10,1)",
+    "why": "no single value"
+   },
+   "A169": {
+    "f": "=GAMMA.INV(1E-300,2E11,1)",
+    "why": "no single value"
+   },
+   "A17": {
+    "f": "=GAMMA.INV(1E-30,2E9,1)",
+    "why": "no single value"
+   },
+   "A170": {
+    "f": "=GAMMA.INV(1E-100,2E11,1)",
+    "why": "no single value"
+   },
+   "A171": {
+    "f": "=GAMMA.INV(1E-30,2E11,1)",
+    "why": "no single value"
+   },
+   "A172": {
+    "f": "=GAMMA.INV(1E-16,2E11,1)",
+    "why": "no single value"
+   },
+   "A173": {
+    "f": "=GAMMA.INV(1E-10,2E11,1)",
+    "why": "no single value"
+   },
+   "A174": {
+    "f": "=GAMMA.INV(1E-5,2E11,1)",
+    "why": "no single value"
+   },
+   "A175": {
+    "f": "=GAMMA.INV(0.001,2E11,1)",
+    "why": "no single value"
+   },
+   "A176": {
+    "f": "=GAMMA.INV(0.1,2E11,1)",
+    "why": "no single value"
+   },
+   "A177": {
+    "f": "=GAMMA.INV(0.5,2E11,1)",
+    "why": "no single value"
+   },
+   "A178": {
+    "f": "=GAMMA.INV(0.9,2E11,1)",
+    "why": "no single value"
+   },
+   "A179": {
+    "f": "=GAMMA.INV(0.999,2E11,1)",
+    "why": "no single value"
+   },
+   "A18": {
+    "f": "=GAMMA.INV(1E-16,2E9,1)",
+    "why": "no single value"
+   },
+   "A180": {
+    "f": "=GAMMA.INV(0.999999,2E11,1)",
+    "why": "no single value"
+   },
+   "A181": {
+    "f": "=GAMMA.INV(1-1E-10,2E11,1)",
+    "why": "no single value"
+   },
+   "A182": {
+    "f": "=GAMMA.INV(1-1E-15,2E11,1)",
+    "why": "no single value"
+   },
+   "A183": {
+    "f": "=GAMMA.INV(1E-300,1E12,1)",
+    "why": "no single value"
+   },
+   "A184": {
+    "f": "=GAMMA.INV(1E-100,1E12,1)",
+    "why": "no single value"
+   },
+   "A185": {
+    "f": "=GAMMA.INV(1E-30,1E12,1)",
+    "why": "no single value"
+   },
+   "A186": {
+    "f": "=GAMMA.INV(1E-16,1E12,1)",
+    "why": "no single value"
+   },
+   "A187": {
+    "f": "=GAMMA.INV(1E-10,1E12,1)",
+    "why": "no single value"
+   },
+   "A188": {
+    "f": "=GAMMA.INV(1E-5,1E12,1)",
+    "why": "no single value"
+   },
+   "A189": {
+    "f": "=GAMMA.INV(0.001,1E12,1)",
+    "why": "no single value"
+   },
+   "A19": {
+    "f": "=GAMMA.INV(1E-10,2E9,1)",
+    "why": "no single value"
+   },
+   "A190": {
+    "f": "=GAMMA.INV(0.1,1E12,1)",
+    "why": "no single value"
+   },
+   "A191": {
+    "f": "=GAMMA.INV(0.5,1E12,1)",
+    "why": "no single value"
+   },
+   "A192": {
+    "f": "=GAMMA.INV(0.9,1E12,1)",
+    "why": "no single value"
+   },
+   "A193": {
+    "f": "=GAMMA.INV(0.999,1E12,1)",
+    "why": "no single value"
+   },
+   "A194": {
+    "f": "=GAMMA.INV(0.999999,1E12,1)",
+    "why": "no single value"
+   },
+   "A195": {
+    "f": "=GAMMA.INV(1-1E-10,1E12,1)",
+    "why": "no single value"
+   },
+   "A196": {
+    "f": "=GAMMA.INV(1-1E-15,1E12,1)",
+    "why": "no single value"
+   },
+   "A197": {
+    "f": "=GAMMA.INV(0.5,1.5E9,1)",
+    "why": "no single value"
+   },
+   "A198": {
+    "f": "=GAMMA.INV(0.5,4E9,1)",
+    "why": "no single value"
+   },
+   "A199": {
+    "f": "=GAMMA.INV(0.5,4.5E9,1)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=GAMMA.INV(1E-100,1E9,1)",
+    "why": "no single value"
+   },
+   "A20": {
+    "f": "=GAMMA.INV(1E-5,2E9,1)",
+    "why": "no single value"
+   },
+   "A200": {
+    "f": "=GAMMA.INV(0.5,5.5E9,1)",
+    "why": "no single value"
+   },
+   "A201": {
+    "f": "=GAMMA.INV(0.5,6.5E9,1)",
+    "why": "no single value"
+   },
+   "A202": {
+    "f": "=GAMMA.INV(0.5,8E9,1)",
+    "why": "no single value"
+   },
+   "A203": {
+    "f": "=GAMMA.INV(0.5,9E9,1)",
+    "why": "no single value"
+   },
+   "A204": {
+    "f": "=GAMMA.INV(0.5,1.1E10,1)",
+    "why": "no single value"
+   },
+   "A205": {
+    "f": "=GAMMA.INV(0.5,1.3E10,1)",
+    "why": "no single value"
+   },
+   "A206": {
+    "f": "=GAMMA.INV(0.5,1.4E10,1)",
+    "why": "no single value"
+   },
+   "A207": {
+    "f": "=GAMMA.INV(0.5,1.6E10,1)",
+    "why": "no single value"
+   },
+   "A208": {
+    "f": "=GAMMA.INV(0.5,1.7E10,1)",
+    "why": "no single value"
+   },
+   "A209": {
+    "f": "=GAMMA.INV(0.5,1.9E10,1)",
+    "why": "no single value"
+   },
+   "A21": {
+    "f": "=GAMMA.INV(0.001,2E9,1)",
+    "why": "no single value"
+   },
+   "A210": {
+    "f": "=GAMMA.INV(0.5,1.95E10,1)",
+    "why": "no single value"
+   },
+   "A211": {
+    "f": "=GAMMA.INV(0.5,2.5E10,1)",
+    "why": "no single value"
+   },
+   "A212": {
+    "f": "=GAMMA.INV(0.5,4E10,1)",
+    "why": "no single value"
+   },
+   "A213": {
+    "f": "=GAMMA.INV(0.5,7E10,1)",
+    "why": "no single value"
+   },
+   "A214": {
+    "f": "=CHISQ.INV.RT(1E-100,1.5E10)",
+    "why": "no single value"
+   },
+   "A215": {
+    "f": "=CHISQ.INV.RT(1E-10,1.5E10)",
+    "why": "no single value"
+   },
+   "A216": {
+    "f": "=CHISQ.INV.RT(0.001,1.5E10)",
+    "why": "no single value"
+   },
+   "A217": {
+    "f": "=CHISQ.INV.RT(0.1,1.5E10)",
+    "why": "no single value"
+   },
+   "A218": {
+    "f": "=CHISQ.INV.RT(0.5,1.5E10)",
+    "why": "no single value"
+   },
+   "A219": {
+    "f": "=CHISQ.INV.RT(0.9,1.5E10)",
+    "why": "no single value"
+   },
+   "A22": {
+    "f": "=GAMMA.INV(0.1,2E9,1)",
+    "why": "no single value"
+   },
+   "A220": {
+    "f": "=CHISQ.INV.RT(0.999,1.5E10)",
+    "why": "no single value"
+   },
+   "A221": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1.5E10)",
+    "why": "no single value"
+   },
+   "A229": {
+    "f": "=CHISQ.INV.RT(1E-100,2E10)",
+    "why": "no single value"
+   },
+   "A23": {
+    "f": "=GAMMA.INV(0.5,2E9,1)",
+    "why": "no single value"
+   },
+   "A230": {
+    "f": "=CHISQ.INV.RT(1E-10,2E10)",
+    "why": "no single value"
+   },
+   "A231": {
+    "f": "=CHISQ.INV.RT(0.001,2E10)",
+    "why": "no single value"
+   },
+   "A232": {
+    "f": "=CHISQ.INV.RT(0.1,2E10)",
+    "why": "no single value"
+   },
+   "A233": {
+    "f": "=CHISQ.INV.RT(0.5,2E10)",
+    "why": "no single value"
+   },
+   "A234": {
+    "f": "=CHISQ.INV.RT(0.9,2E10)",
+    "why": "no single value"
+   },
+   "A235": {
+    "f": "=CHISQ.INV.RT(0.999,2E10)",
+    "why": "no single value"
+   },
+   "A236": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E10)",
+    "why": "no single value"
+   },
+   "A24": {
+    "f": "=GAMMA.INV(0.9,2E9,1)",
+    "why": "no single value"
+   },
+   "A244": {
+    "f": "=CHISQ.INV.RT(1E-100,4E10)",
+    "why": "no single value"
+   },
+   "A245": {
+    "f": "=CHISQ.INV.RT(1E-10,4E10)",
+    "why": "no single value"
+   },
+   "A246": {
+    "f": "=CHISQ.INV.RT(0.001,4E10)",
+    "why": "no single value"
+   },
+   "A247": {
+    "f": "=CHISQ.INV.RT(0.1,4E10)",
+    "why": "no single value"
+   },
+   "A248": {
+    "f": "=CHISQ.INV.RT(0.5,4E10)",
+    "why": "no single value"
+   },
+   "A249": {
+    "f": "=CHISQ.INV.RT(0.9,4E10)",
+    "why": "no single value"
+   },
+   "A25": {
+    "f": "=GAMMA.INV(0.999,2E9,1)",
+    "why": "no single value"
+   },
+   "A250": {
+    "f": "=CHISQ.INV.RT(0.999,4E10)",
+    "why": "no single value"
+   },
+   "A251": {
+    "f": "=CHISQ.INV.RT(1-1E-10,4E10)",
+    "why": "no single value"
+   },
+   "A259": {
+    "f": "=CHISQ.INV.RT(1E-100,1E11)",
+    "why": "no single value"
+   },
+   "A26": {
+    "f": "=GAMMA.INV(0.999999,2E9,1)",
+    "why": "no single value"
+   },
+   "A260": {
+    "f": "=CHISQ.INV.RT(1E-10,1E11)",
+    "why": "no single value"
+   },
+   "A261": {
+    "f": "=CHISQ.INV.RT(0.001,1E11)",
+    "why": "no single value"
+   },
+   "A262": {
+    "f": "=CHISQ.INV.RT(0.1,1E11)",
+    "why": "no single value"
+   },
+   "A263": {
+    "f": "=CHISQ.INV.RT(0.5,1E11)",
+    "why": "no single value"
+   },
+   "A264": {
+    "f": "=CHISQ.INV.RT(0.9,1E11)",
+    "why": "no single value"
+   },
+   "A265": {
+    "f": "=CHISQ.INV.RT(0.999,1E11)",
+    "why": "no single value"
+   },
+   "A266": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E11)",
+    "why": "no single value"
+   },
+   "A27": {
+    "f": "=GAMMA.INV(1-1E-10,2E9,1)",
+    "why": "no single value"
+   },
+   "A274": {
+    "f": "=CHISQ.INV.RT(1E-100,2E11)",
+    "why": "no single value"
+   },
+   "A275": {
+    "f": "=CHISQ.INV.RT(1E-10,2E11)",
+    "why": "no single value"
+   },
+   "A276": {
+    "f": "=CHISQ.INV.RT(0.001,2E11)",
+    "why": "no single value"
+   },
+   "A277": {
+    "f": "=CHISQ.INV.RT(0.1,2E11)",
+    "why": "no single value"
+   },
+   "A278": {
+    "f": "=CHISQ.INV.RT(0.5,2E11)",
+    "why": "no single value"
+   },
+   "A279": {
+    "f": "=CHISQ.INV.RT(0.9,2E11)",
+    "why": "no single value"
+   },
+   "A28": {
+    "f": "=GAMMA.INV(1-1E-15,2E9,1)",
+    "why": "no single value"
+   },
+   "A280": {
+    "f": "=CHISQ.INV.RT(0.999,2E11)",
+    "why": "no single value"
+   },
+   "A281": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E11)",
+    "why": "no single value"
+   },
+   "A289": {
+    "f": "=CHISQ.INV.RT(1E-100,1E12)",
+    "why": "no single value"
+   },
+   "A29": {
+    "f": "=GAMMA.INV(1E-300,3E9,1)",
+    "why": "no single value"
+   },
+   "A290": {
+    "f": "=CHISQ.INV.RT(1E-10,1E12)",
+    "why": "no single value"
+   },
+   "A291": {
+    "f": "=CHISQ.INV.RT(0.001,1E12)",
+    "why": "no single value"
+   },
+   "A292": {
+    "f": "=CHISQ.INV.RT(0.1,1E12)",
+    "why": "no single value"
+   },
+   "A293": {
+    "f": "=CHISQ.INV.RT(0.5,1E12)",
+    "why": "no single value"
+   },
+   "A294": {
+    "f": "=CHISQ.INV.RT(0.9,1E12)",
+    "why": "no single value"
+   },
+   "A295": {
+    "f": "=CHISQ.INV.RT(0.999,1E12)",
+    "why": "no single value"
+   },
+   "A296": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E12)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=GAMMA.INV(1E-30,1E9,1)",
+    "why": "no single value"
+   },
+   "A30": {
+    "f": "=GAMMA.INV(1E-100,3E9,1)",
+    "why": "no single value"
+   },
+   "A304": {
+    "f": "=CHISQ.INV.RT(1E-100,2E13)",
+    "why": "no single value"
+   },
+   "A305": {
+    "f": "=CHISQ.INV.RT(1E-10,2E13)",
+    "why": "no single value"
+   },
+   "A306": {
+    "f": "=CHISQ.INV.RT(0.001,2E13)",
+    "why": "no single value"
+   },
+   "A307": {
+    "f": "=CHISQ.INV.RT(0.1,2E13)",
+    "why": "no single value"
+   },
+   "A308": {
+    "f": "=CHISQ.INV.RT(0.5,2E13)",
+    "why": "no single value"
+   },
+   "A309": {
+    "f": "=CHISQ.INV.RT(0.9,2E13)",
+    "why": "no single value"
+   },
+   "A31": {
+    "f": "=GAMMA.INV(1E-30,3E9,1)",
+    "why": "no single value"
+   },
+   "A310": {
+    "f": "=CHISQ.INV.RT(0.999,2E13)",
+    "why": "no single value"
+   },
+   "A311": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E13)",
+    "why": "no single value"
+   },
+   "A319": {
+    "f": "=CHISQ.INV.RT(1E-100,1E15)",
+    "why": "no single value"
+   },
+   "A32": {
+    "f": "=GAMMA.INV(1E-16,3E9,1)",
+    "why": "no single value"
+   },
+   "A320": {
+    "f": "=CHISQ.INV.RT(1E-10,1E15)",
+    "why": "no single value"
+   },
+   "A321": {
+    "f": "=CHISQ.INV.RT(0.001,1E15)",
+    "why": "no single value"
+   },
+   "A322": {
+    "f": "=CHISQ.INV.RT(0.1,1E15)",
+    "why": "no single value"
+   },
+   "A323": {
+    "f": "=CHISQ.INV.RT(0.5,1E15)",
+    "why": "no single value"
+   },
+   "A324": {
+    "f": "=CHISQ.INV.RT(0.9,1E15)",
+    "why": "no single value"
+   },
+   "A325": {
+    "f": "=CHISQ.INV.RT(0.999,1E15)",
+    "why": "no single value"
+   },
+   "A326": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E15)",
+    "why": "no single value"
+   },
+   "A33": {
+    "f": "=GAMMA.INV(1E-10,3E9,1)",
+    "why": "no single value"
+   },
+   "A334": {
+    "f": "=CHISQ.INV(1E-100,2E9)",
+    "why": "no single value"
+   },
+   "A335": {
+    "f": "=CHISQ.INV.RT(1E-100,2E9)",
+    "why": "no single value"
+   },
+   "A336": {
+    "f": "=CHISQ.INV(1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A337": {
+    "f": "=CHISQ.INV.RT(1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A338": {
+    "f": "=CHISQ.INV(0.001,2E9)",
+    "why": "no single value"
+   },
+   "A339": {
+    "f": "=CHISQ.INV.RT(0.001,2E9)",
+    "why": "no single value"
+   },
+   "A34": {
+    "f": "=GAMMA.INV(1E-5,3E9,1)",
+    "why": "no single value"
+   },
+   "A340": {
+    "f": "=CHISQ.INV(0.5,2E9)",
+    "why": "no single value"
+   },
+   "A341": {
+    "f": "=CHISQ.INV.RT(0.5,2E9)",
+    "why": "no single value"
+   },
+   "A342": {
+    "f": "=CHISQ.INV(0.999,2E9)",
+    "why": "no single value"
+   },
+   "A343": {
+    "f": "=CHISQ.INV.RT(0.999,2E9)",
+    "why": "no single value"
+   },
+   "A344": {
+    "f": "=CHISQ.INV(1-1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A345": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A346": {
+    "f": "=CHISQ.INV(1E-100,4E9)",
+    "why": "no single value"
+   },
+   "A347": {
+    "f": "=CHISQ.INV.RT(1E-100,4E9)",
+    "why": "no single value"
+   },
+   "A348": {
+    "f": "=CHISQ.INV(1E-10,4E9)",
+    "why": "no single value"
+   },
+   "A349": {
+    "f": "=CHISQ.INV.RT(1E-10,4E9)",
+    "why": "no single value"
+   },
+   "A35": {
+    "f": "=GAMMA.INV(0.001,3E9,1)",
+    "why": "no single value"
+   },
+   "A350": {
+    "f": "=CHISQ.INV(0.001,4E9)",
+    "why": "no single value"
+   },
+   "A351": {
+    "f": "=CHISQ.INV.RT(0.001,4E9)",
+    "why": "no single value"
+   },
+   "A352": {
+    "f": "=CHISQ.INV(0.5,4E9)",
+    "why": "no single value"
+   },
+   "A353": {
+    "f": "=CHISQ.INV.RT(0.5,4E9)",
+    "why": "no single value"
+   },
+   "A354": {
+    "f": "=CHISQ.INV(0.999,4E9)",
+    "why": "no single value"
+   },
+   "A355": {
+    "f": "=CHISQ.INV.RT(0.999,4E9)",
+    "why": "no single value"
+   },
+   "A356": {
+    "f": "=CHISQ.INV(1-1E-10,4E9)",
+    "why": "no single value"
+   },
+   "A357": {
+    "f": "=CHISQ.INV.RT(1-1E-10,4E9)",
+    "why": "no single value"
+   },
+   "A358": {
+    "f": "=CHISQ.INV(1E-100,6E9)",
+    "why": "no single value"
+   },
+   "A359": {
+    "f": "=CHISQ.INV.RT(1E-100,6E9)",
+    "why": "no single value"
+   },
+   "A36": {
+    "f": "=GAMMA.INV(0.1,3E9,1)",
+    "why": "no single value"
+   },
+   "A360": {
+    "f": "=CHISQ.INV(1E-10,6E9)",
+    "why": "no single value"
+   },
+   "A361": {
+    "f": "=CHISQ.INV.RT(1E-10,6E9)",
+    "why": "no single value"
+   },
+   "A362": {
+    "f": "=CHISQ.INV(0.001,6E9)",
+    "why": "no single value"
+   },
+   "A363": {
+    "f": "=CHISQ.INV.RT(0.001,6E9)",
+    "why": "no single value"
+   },
+   "A364": {
+    "f": "=CHISQ.INV(0.5,6E9)",
+    "why": "no single value"
+   },
+   "A365": {
+    "f": "=CHISQ.INV.RT(0.5,6E9)",
+    "why": "no single value"
+   },
+   "A366": {
+    "f": "=CHISQ.INV(0.999,6E9)",
+    "why": "no single value"
+   },
+   "A367": {
+    "f": "=CHISQ.INV.RT(0.999,6E9)",
+    "why": "no single value"
+   },
+   "A368": {
+    "f": "=CHISQ.INV(1-1E-10,6E9)",
+    "why": "no single value"
+   },
+   "A369": {
+    "f": "=CHISQ.INV.RT(1-1E-10,6E9)",
+    "why": "no single value"
+   },
+   "A37": {
+    "f": "=GAMMA.INV(0.5,3E9,1)",
+    "why": "no single value"
+   },
+   "A370": {
+    "f": "=CHISQ.INV(1E-100,1E10)",
+    "why": "no single value"
+   },
+   "A371": {
+    "f": "=CHISQ.INV.RT(1E-100,1E10)",
+    "why": "no single value"
+   },
+   "A372": {
+    "f": "=CHISQ.INV(1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A373": {
+    "f": "=CHISQ.INV.RT(1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A374": {
+    "f": "=CHISQ.INV(0.001,1E10)",
+    "why": "no single value"
+   },
+   "A375": {
+    "f": "=CHISQ.INV.RT(0.001,1E10)",
+    "why": "no single value"
+   },
+   "A376": {
+    "f": "=CHISQ.INV(0.5,1E10)",
+    "why": "no single value"
+   },
+   "A377": {
+    "f": "=CHISQ.INV.RT(0.5,1E10)",
+    "why": "no single value"
+   },
+   "A378": {
+    "f": "=CHISQ.INV(0.999,1E10)",
+    "why": "no single value"
+   },
+   "A379": {
+    "f": "=CHISQ.INV.RT(0.999,1E10)",
+    "why": "no single value"
+   },
+   "A38": {
+    "f": "=GAMMA.INV(0.9,3E9,1)",
+    "why": "no single value"
+   },
+   "A380": {
+    "f": "=CHISQ.INV(1-1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A381": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A39": {
+    "f": "=GAMMA.INV(0.999,3E9,1)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=GAMMA.INV(1E-16,1E9,1)",
+    "why": "no single value"
+   },
+   "A40": {
+    "f": "=GAMMA.INV(0.999999,3E9,1)",
+    "why": "no single value"
+   },
+   "A41": {
+    "f": "=GAMMA.INV(1-1E-10,3E9,1)",
+    "why": "no single value"
+   },
+   "A42": {
+    "f": "=GAMMA.INV(1-1E-15,3E9,1)",
+    "why": "no single value"
+   },
+   "A43": {
+    "f": "=GAMMA.INV(1E-300,5E9,1)",
+    "why": "no single value"
+   },
+   "A44": {
+    "f": "=GAMMA.INV(1E-100,5E9,1)",
+    "why": "no single value"
+   },
+   "A45": {
+    "f": "=GAMMA.INV(1E-30,5E9,1)",
+    "why": "no single value"
+   },
+   "A46": {
+    "f": "=GAMMA.INV(1E-16,5E9,1)",
+    "why": "no single value"
+   },
+   "A47": {
+    "f": "=GAMMA.INV(1E-10,5E9,1)",
+    "why": "no single value"
+   },
+   "A48": {
+    "f": "=GAMMA.INV(1E-5,5E9,1)",
+    "why": "no single value"
+   },
+   "A49": {
+    "f": "=GAMMA.INV(0.001,5E9,1)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=GAMMA.INV(1E-10,1E9,1)",
+    "why": "no single value"
+   },
+   "A50": {
+    "f": "=GAMMA.INV(0.1,5E9,1)",
+    "why": "no single value"
+   },
+   "A51": {
+    "f": "=GAMMA.INV(0.5,5E9,1)",
+    "why": "no single value"
+   },
+   "A52": {
+    "f": "=GAMMA.INV(0.9,5E9,1)",
+    "why": "no single value"
+   },
+   "A53": {
+    "f": "=GAMMA.INV(0.999,5E9,1)",
+    "why": "no single value"
+   },
+   "A54": {
+    "f": "=GAMMA.INV(0.999999,5E9,1)",
+    "why": "no single value"
+   },
+   "A55": {
+    "f": "=GAMMA.INV(1-1E-10,5E9,1)",
+    "why": "no single value"
+   },
+   "A56": {
+    "f": "=GAMMA.INV(1-1E-15,5E9,1)",
+    "why": "no single value"
+   },
+   "A57": {
+    "f": "=GAMMA.INV(1E-300,6E9,1)",
+    "why": "no single value"
+   },
+   "A58": {
+    "f": "=GAMMA.INV(1E-100,6E9,1)",
+    "why": "no single value"
+   },
+   "A59": {
+    "f": "=GAMMA.INV(1E-30,6E9,1)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=GAMMA.INV(1E-5,1E9,1)",
+    "why": "no single value"
+   },
+   "A60": {
+    "f": "=GAMMA.INV(1E-16,6E9,1)",
+    "why": "no single value"
+   },
+   "A61": {
+    "f": "=GAMMA.INV(1E-10,6E9,1)",
+    "why": "no single value"
+   },
+   "A62": {
+    "f": "=GAMMA.INV(1E-5,6E9,1)",
+    "why": "no single value"
+   },
+   "A63": {
+    "f": "=GAMMA.INV(0.001,6E9,1)",
+    "why": "no single value"
+   },
+   "A64": {
+    "f": "=GAMMA.INV(0.1,6E9,1)",
+    "why": "no single value"
+   },
+   "A65": {
+    "f": "=GAMMA.INV(0.5,6E9,1)",
+    "why": "no single value"
+   },
+   "A66": {
+    "f": "=GAMMA.INV(0.9,6E9,1)",
+    "why": "no single value"
+   },
+   "A67": {
+    "f": "=GAMMA.INV(0.999,6E9,1)",
+    "why": "no single value"
+   },
+   "A68": {
+    "f": "=GAMMA.INV(0.999999,6E9,1)",
+    "why": "no single value"
+   },
+   "A69": {
+    "f": "=GAMMA.INV(1-1E-10,6E9,1)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=GAMMA.INV(0.001,1E9,1)",
+    "why": "no single value"
+   },
+   "A70": {
+    "f": "=GAMMA.INV(1-1E-15,6E9,1)",
+    "why": "no single value"
+   },
+   "A71": {
+    "f": "=GAMMA.INV(1E-300,7E9,1)",
+    "why": "no single value"
+   },
+   "A72": {
+    "f": "=GAMMA.INV(1E-100,7E9,1)",
+    "why": "no single value"
+   },
+   "A73": {
+    "f": "=GAMMA.INV(1E-30,7E9,1)",
+    "why": "no single value"
+   },
+   "A74": {
+    "f": "=GAMMA.INV(1E-16,7E9,1)",
+    "why": "no single value"
+   },
+   "A75": {
+    "f": "=GAMMA.INV(1E-10,7E9,1)",
+    "why": "no single value"
+   },
+   "A76": {
+    "f": "=GAMMA.INV(1E-5,7E9,1)",
+    "why": "no single value"
+   },
+   "A77": {
+    "f": "=GAMMA.INV(0.001,7E9,1)",
+    "why": "no single value"
+   },
+   "A78": {
+    "f": "=GAMMA.INV(0.1,7E9,1)",
+    "why": "no single value"
+   },
+   "A79": {
+    "f": "=GAMMA.INV(0.5,7E9,1)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=GAMMA.INV(0.1,1E9,1)",
+    "why": "no single value"
+   },
+   "A80": {
+    "f": "=GAMMA.INV(0.9,7E9,1)",
+    "why": "no single value"
+   },
+   "A81": {
+    "f": "=GAMMA.INV(0.999,7E9,1)",
+    "why": "no single value"
+   },
+   "A82": {
+    "f": "=GAMMA.INV(0.999999,7E9,1)",
+    "why": "no single value"
+   },
+   "A83": {
+    "f": "=GAMMA.INV(1-1E-10,7E9,1)",
+    "why": "no single value"
+   },
+   "A84": {
+    "f": "=GAMMA.INV(1-1E-15,7E9,1)",
+    "why": "no single value"
+   },
+   "A85": {
+    "f": "=GAMMA.INV(1E-300,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A86": {
+    "f": "=GAMMA.INV(1E-100,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A87": {
+    "f": "=GAMMA.INV(1E-30,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A88": {
+    "f": "=GAMMA.INV(1E-16,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A89": {
+    "f": "=GAMMA.INV(1E-10,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=GAMMA.INV(0.5,1E9,1)",
+    "why": "no single value"
+   },
+   "A90": {
+    "f": "=GAMMA.INV(1E-5,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A91": {
+    "f": "=GAMMA.INV(0.001,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A92": {
+    "f": "=GAMMA.INV(0.1,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A93": {
+    "f": "=GAMMA.INV(0.5,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A94": {
+    "f": "=GAMMA.INV(0.9,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A95": {
+    "f": "=GAMMA.INV(0.999,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A96": {
+    "f": "=GAMMA.INV(0.999999,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A97": {
+    "f": "=GAMMA.INV(1-1E-10,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A98": {
+    "f": "=GAMMA.INV(1-1E-15,1.2E10,1)",
+    "why": "no single value"
+   },
+   "A99": {
+    "f": "=GAMMA.INV(1E-300,1.5E10,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}

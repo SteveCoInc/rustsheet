@@ -24,6 +24,7 @@ side by side.
 External suites (`[fetch]`) live in `eval/.cache/suites/<name>` (gitignored) after `rustsheet-eval fetch`;
 their `root` is that directory. A suite whose cache is missing or stale (marker `.rustsheet-fetched`
 differs from the pin) is listed as `not fetched` and skipped, with a note, by `run`/`check`/`update-baseline`.
+`run`/`check`/`update-baseline` take `--fetch-missing`: each *selected* suite whose cache is missing or stale is then fetched (as `fetch` does, printing `fetched <name> (<n> files)`) before scoring; a failed fetch prints `skipping <name>: fetch failed: <error>`, skips that suite and does not change the exit code. Without the flag nothing is fetched.
 Use this for sources that are too large or not redistributable (GPL / CC-BY-SA); never vendor them.
 
 Current suites:
@@ -89,6 +90,13 @@ Input conventions:
 - Optional `"names": {"rate": "=Sheet1!$B$1"}` declares workbook-scoped defined names (any
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
+- Optional `"api_names": [{"name": "N", "formula": "=ABS(1)"}]` defines workbook-scoped names
+  through the API after the typed entries and the sheet ops, in order (T-3264;
+  `tools/src/rustsheet_tools/api_names.py`): spec2xlsx records them as docProps custom properties
+  `rustsheet.apiname.<n>`, the excel-graph backend replays each with Graph `workbook/names/add`
+  (a 400 `InvalidArgument` is Excel refusing the name, which stays undefined; decision 0179) and the
+  other backends refuse such cases. The engine adapter replays each with `Txn::define_name` and skips
+  a name it refuses for nesting more than 65 calls, as Excel does; any other refusal fails the case.
 - Optional `"sheet_ops"` lists sheet edits made after the workbook loads and before it is
   recalculated (T-1608): `{"op":"add","sheet":"New"}` appends a sheet, `{"op":"rename",
   "sheet":"Data","to":"Inputs"}` renames one (formulas that refer to it are rewritten), and
@@ -96,7 +104,8 @@ Input conventions:
   `{"op":"insert_row","sheet":"S","row":1}` inserts one blank row above the 1-based row, shifting
   the cells below down (T-1933; Graph `range(address='1:1')/insert`). T-2323 adds `delete_row`
   (`row`), `insert_column` and `delete_column` (`column`, a letter), `delete_sheet` and
-  `convert_table` / `delete_table` (`table`); see docs/architecture/oracle.md for the Graph calls
+  `convert_table` / `delete_table` (`table`), and T-3629 `add_table` (`table` and `ref`, the range with its
+  header row first, header cells set in the case); see docs/architecture/oracle.md for the Graph calls
   and decision 0098 for the engine side (`convert_table` is refused there). Any other op or key is
   refused. spec2xlsx records them as docProps custom properties `rustsheet.sheetop.<n>`. The
   excel-graph backend replays them in the session after the typed entries and keeps its canary

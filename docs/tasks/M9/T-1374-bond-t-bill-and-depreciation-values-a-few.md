@@ -27,6 +27,8 @@ probes/fin-argument-modes (excel-graph, 2026-10-11, T-1084). Base rows that miss
   YIELD H343. (TBILLEQ H313 and the other TBILL cells moved to T-1475 on 2026-10-13.)
 - Added by T-1842: probes/fin-yield-odd-lift A1 and I5 (YIELD, about 1e-13 relative), A3 and I7 (ODDFPRICE, a few
   ulps), A5 and I9 (ODDFYIELD, about 1e-10 relative): the same base values as above, reached through the lift.
+- Added by T-3652: probes/oddf-date-order-domain-sweep P!A29 and E29 (ODDFPRICE at a yld of 1E-12, annual, bases
+  0 and 4; Excel 131.2499999992618, ours 131.24999999926183), NumericUlp.
 - Moved from T-1493 on 2026-10-13: YIELD A8-E8, A19-E19, A30-E30 and DURATION A20/C20 of
   probes/date-system-1900-financial-readers and its -shifted twin, and the 4 DURATION ulp cells of
   probes/coupdays-feb-month-end. probes/yield-solver-sweep (66 cells, excel-graph) is the YIELD sweep: Excel stops
@@ -64,6 +66,7 @@ Examples:
 Cells:
 - gen-m9/0a957119475760c5.case.json (1): Calc!A279
 - gen-m9/30e20ba3302fea8b.case.json (2): Calc!A90, A310
+  (Calc!A310's visible-parity work is T-1871's since gap triage 2026-11-03: the gap is its inner FINV(1E-100,2,3); this task keeps its bit-level residue.)
 - gen-m9/3c06f9298f65a3ba.case.json (1): Calc!A326
 - gen-m9/a91bad4e84f49739.case.json (1): Calc!A142
 - gen-m9/b6a02893a8d6b151.case.json (1): Calc!A260

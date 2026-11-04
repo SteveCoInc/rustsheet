@@ -41,7 +41,10 @@ before Excel evidence"): a period-4 series, the error orderings of its steps 1 t
 duplicate time stamps under each aggregation (and an all-blank time stamp under COUNT and COUNTA), a range across
 two sheets, a blank time stamp beside a value, and the 30% missing rule. Step 3 (an error element in `values` or
 `timeline` before different sizes) is the likeliest to differ on desktop: start from the web `#N/A` cells with an error
-element inside `values` or `timeline` that the T-2255 section of statistics.md counts.
+element inside `values` or `timeline` that the T-2255 section of statistics.md counts. For FORECAST.ETS: exact data (a
+line, an exactly repeating season with a trend), `seasonality` 0, 1 and 2 to 8,760 with fractional values, and a target
+equal to the last time stamp and between steps. For CONFINT and STAT: each `statistic_type`, `confidence_level` near 0
+and 1, a fractional horizon, and a CONFINT target equal to the last time stamp.
 
 Owned gen-m9 cells (T-2255 triage, excel-graph, 2026-10-22): 877 known-failure lines in eval/baseline/gen-m9.txt, 877 formulas.
 Examples:
@@ -259,6 +262,9 @@ probes/forecast-ets-longer-series (24- and 36-point series and a 12-point one; F
 .STAT, each with and without a seasonality or statistic argument) is excel-graph `#N/A` in all 41 failing cells and ours
 `#N/IMPL!`, the same web gap as the gen-m9 cells above; no open M9 task named the case.
 - probes/forecast-ets-longer-series.case.json (41): Sheet1!K1, K2, K3, K4, K5, K6, K7, K8, K9, K10, K11, K12, K13, K14, K15, K16, K17, K18, K19, K20, K21, K22, K23, K24, K25, K26, K27, K28, K29, K30, K31, K32, K33, K34, K35, K36, K37, K39, K40, K41, K42
+
+Cells (gap triage 2026-11-02): the T-2371 probe's #N/A cells (excel-graph leaves the family #N/A; ours `#N/IMPL!`):
+- probes/forecast-ets-optional-settings-shape.case.json (12): Sheet1!M29, M30, M31, M32, M33, M34, M41, M42, M43, M44, M45, M46
 
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2258): these 17 known-failure lines disappear from eval/baseline/gen-m9.txt

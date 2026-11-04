@@ -17,6 +17,7 @@ within 15 digits of Excel on the t3443 probes, from a model of Excel's arithmeti
 recorded as UNVERIFIED with the hypotheses ruled out).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bfrac) measured on t3953-f-tail-bfrac-tiny, 0 of 4800 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - T-3443 put these callers on the basym port (`bratio/basym.rs`, in doubles). Visibly off after it, in-sample /
   hold-out: BETA.DIST + BETADIST 33 / 20 of 50, F.DIST + F.DIST.RT + FDIST 17 / 23 of 40
   (probes-numeric/t3443-basym-a, t3443-basym-hold; statistics.md "BETA.DIST and F.DIST at basym points").

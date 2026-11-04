@@ -18,6 +18,7 @@ import math
 import mpmath
 
 from rustsheet_tools.fitlab.fit import Fit
+from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, candidate
 from rustsheet_tools.fitlab.sweep import Arg, Cell, numeric_arg
 
@@ -141,7 +142,7 @@ def split_exact_root(*args: Arg) -> float:
 
 def _candidates() -> list[Candidate]:
     return [
-        candidate("correctly rounded", correctly_rounded, "reference"),
+        candidate(REFERENCE, correctly_rounded, "reference"),
         candidate("15-digit snap (T-1123)", snapped_root, "snap"),
         candidate("plain exp(ln(P)/n)", plain_root, "plain"),
         candidate("correctly rounded root of the double P", rounded_product_root, "product root"),

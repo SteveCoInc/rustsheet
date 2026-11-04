@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import io
 import json
+import pkgutil
 import random
 import subprocess
 from collections.abc import Sequence
@@ -19,7 +20,7 @@ import yaml
 
 from rustsheet_tools import repo_root, snapshot
 from rustsheet_tools.accuracy import cli as accuracy_cli
-from rustsheet_tools.accuracy import literal
+from rustsheet_tools.accuracy import defs, literal
 from rustsheet_tools.accuracy.defs.annuity import RATE, rate
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf, density, quantile
 from rustsheet_tools.accuracy.model import (
@@ -184,6 +185,8 @@ def test_rate_against_published_values() -> None:
     assert compute(RATE, [10, 100.0, 1000.0, 0.0, 0]).why is not None  # one sign: no rate
     with pytest.raises(NoValueError):  # two sign changes: no evidenced root choice
         rate(3, mp(-100), mp(100), mp(150), False)
+    with pytest.raises(NoValueError):  # every flow 0 (T-3698): every rate is a root, Excel returns a number
+        rate(1, mp("702.59374702126"), mp("-702.59374702126"), mp(0), True)
     assert abs(value(RATE, [12, -100.0, 1200.0, 0.0, 0])) < 1e-300  # pv + n·pmt = 0: the root is 0
     # type 1 (payments at the start): 900 = 100·(1+r)·(1 - (1+r)^-10)/r
     due = value(RATE, [10, -100.0, 900.0, 0.0, 1])
@@ -195,7 +198,8 @@ def test_definitions_follow_the_catalog_parameter_order() -> None:
     catalog = yaml.safe_load((repo_root() / "eval" / "catalog" / "functions.yaml").read_text())
     params = {f["name"]: [p["name"] for p in f.get("params", [])] for f in catalog["functions"]}
     for name, definition in REGISTRY.items():
-        mine = [p.name for p in definition.params]
+        # an indexed definition's last two parameters are INDEX's, not the function's (T-3686)
+        mine = [p.name for p in definition.params[: -2 if definition.indexed else None]]
         assert params[name][: len(mine)] == mine, name
 
 
@@ -336,26 +340,21 @@ def test_fill_writes_excels_values_and_leaves_the_rest_pending(
 
 def test_cli_lists_and_generates(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert accuracy_cli.main(["list"]) == 0
-    assert capsys.readouterr().out.split() == [
-        "BINOM.DIST",
-        "F.DIST",
-        "F.INV",
-        "IRR",
-        "NEGBINOM.DIST",
-        "NPER",
-        "POISSON.DIST",
-        "RATE",
-        "ROUND",
-        "ROUNDDOWN",
-        "ROUNDUP",
-        "T.DIST",
-        "T.INV",
-        "T.INV.2T",
-        "TINV",
-        "XIRR",
-    ]
+    listed = capsys.readouterr().out.split()
+    # The list is the registry itself, so adding a Gate A family never edits this test (T-3830).
+    assert listed == sorted(REGISTRY)
+    assert {"ACOS", "SUM", "T.DIST", "XIRR"} <= set(listed)
     assert accuracy_cli.main(["--tables", str(tmp_path), "generate", "t.dist", "--count", "5"]) == 0
     assert (tmp_path / "T.DIST" / "s1.case.json").exists()
     assert accuracy_cli.main(["--tables", str(tmp_path), "verify", "T.DIST"]) == 0
     with pytest.raises(DomainError):
         T_DIST.evaluate([mp(1), mp(0), True])
+
+
+def test_defs_family_modules_are_discovered_not_listed() -> None:
+    """A new family is one new module under defs/: no shared module list names the families."""
+    on_disk = sorted(m.name for m in pkgutil.iter_modules(defs.__path__) if not m.name.startswith("_"))
+    assert defs.__all__ == on_disk
+    assert all(hasattr(defs, name) for name in on_disk)
+    source = Path(defs.__file__ or "").read_text()
+    assert "aggregate" not in source

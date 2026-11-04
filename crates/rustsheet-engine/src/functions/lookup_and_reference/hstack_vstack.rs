@@ -54,7 +54,19 @@ impl Model {
         for arg in args {
             // The empty value is `#VALUE!` (`HSTACK(CELL("contents",<blank>),1)`,
             // probes/t2466-cell-contents-stack A41; `reject_empty_value`, T-3053).
+            let is_variable = self.is_one_cell_variable(arg);
             let result = self.evaluate_node_in_context(arg, cell);
+            // A one-cell error reference is a 1x1 array holding the error (arrays.md "A one-cell
+            // error reference in the other array functions (T-3667)").
+            let result = match result {
+                error @ CalcResult::Error { .. } => {
+                    match Self::stack_error_ref_as_array(arg, is_variable, Err(error), cell) {
+                        Ok(array) => CalcResult::Array(array),
+                        Err(error) => error,
+                    }
+                }
+                other => other,
+            };
             match reject_empty_value(arg, result, cell) {
                 Err(err) | Ok(err @ CalcResult::Error { .. }) => return err,
                 Ok(CalcResult::Range { left, right }) => {
@@ -143,7 +155,9 @@ impl Model {
         // The widest argument, so the whole stack is checked before any range is copied (T-1564).
         let mut known_cols = 0_usize;
         for arg in args {
-            if matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. }) {
+            if matches!(*arg.ungrouped_at(cell.row), Node::ReferenceKind { .. })
+                || self.is_one_cell_variable(arg)
+            {
                 known_rows = known_rows.saturating_add(1);
                 known_cols = known_cols.max(1);
                 results.push(None);
@@ -181,9 +195,13 @@ impl Model {
                 Some(result) => self.result_to_array(result, cell).map(Stacked::Copied),
                 // A blank one-cell reference stacks as a blank element, not 0 (`ISBLANK(INDEX(
                 // VSTACK(Z1,1),1,1))` is TRUE; probes/t2413-blank-in-stacked-arrays A13:A23).
-                None => self
-                    .eval_to_array_keep_blank(arg, cell)
-                    .map(Stacked::Copied),
+                // An error in it is a 1x1 array holding the error (arrays.md, as for HSTACK).
+                None => {
+                    let is_variable = self.is_one_cell_variable(arg);
+                    let array = self.eval_to_array_keep_blank(arg, cell);
+                    Self::stack_error_ref_as_array(arg, is_variable, array, cell)
+                        .map(Stacked::Copied)
+                }
             };
             match item {
                 Ok(item) => stacked.push(item),

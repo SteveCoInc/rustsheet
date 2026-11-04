@@ -1,9 +1,8 @@
 """Renumbering a PR's colliding task and decision files, as one definition (decision 0224).
 
 `make renumber` (scripts/merge_renumber.py) gives each task or decision file a PR adds, whose id
-`main` also has, a fresh id from the id registry, and the carry rule
-(`merge_ready.Repo.carry_problem`) accepts the result without the reviewers. Both build the
-renumbered PR head with `renumbered_commit`, so the rule cannot drift from what the tool does:
+`main` also has, a fresh id from the id registry, building the renumbered PR head with
+`renumbered_commit`:
 
 - the PR's own file `docs/tasks/<M>/T-OLD-<slug>.md` (or `docs/decisions/OLD-<slug>.md`) moves to
   the new id, nothing else in its path changing;
@@ -15,10 +14,7 @@ renumbered PR head with `renumbered_commit`, so the rule cannot drift from what 
 - no other byte changes: a line `main` owns keeps the old id, which names `main`'s own file.
 
 The renumbered head (a throwaway commit whose parent is the PR head) is then merged with `main`.
-The carry rule recomputes that merge from the head's parents and the renames the head shows, and
-compares trees (`renumbered_merge`), so a hand edit anywhere is refused. Because the pusher's
-renames choose the mapping, the rule also requires each old id to collide with a file on `main`
-and each new id to be claimed in the id registry (decision 0215), read fresh and failing closed.
+`check_mapping` requires each old id to collide with a file on `main` and each new id to be fresh.
 
 Task ids are matched as `T-NNNN` not inside a longer word; decision numbers as four digits not
 inside a longer number or word (so `0.0221` and `T-0221` never match).
@@ -33,8 +29,7 @@ import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
-import id_registry
-from merge_lock import GitError, git, merge_tree
+from git_ops import GitError, git
 
 TASK_PATH = re.compile(r"^(docs/tasks/(?:[^/]+/)*)(T-\d{4})(-[^/]*\.md)$")
 DECISION_PATH = re.compile(r"^(docs/decisions/)(\d{4})(-[a-z0-9-]+\.md)$")
@@ -43,7 +38,7 @@ ID_DIRS = ("docs/tasks", "docs/decisions")
 DOCS = "docs/"
 TASK_ID = re.compile(r"T-\d{4}")
 DECISION_ID = re.compile(r"\d{4}")
-# A pinned diff, so the merger and the renumbering session number the PR's added lines alike.
+# A pinned diff, so the PR's added lines are numbered alike whatever the local git config.
 DIFF = (
     "diff",
     "--no-ext-diff",
@@ -263,47 +258,3 @@ def renumbered_commit(root: Path, base: str, head: str, mapping: Mapping[str, st
     message = "renumber " + ", ".join(f"{old} -> {new}" for old, new in sorted(mapping.items()))
     return raw(root, *IDENTITY, "commit-tree", tree, "-p", head, "-m", message).decode().strip()
 
-
-def implied_mapping(root: Path, base: str, prev: str, tree: str, head: str) -> dict[str, str]:
-    """old id -> new id of the renames `head` shows against the plain merge `tree`: a file `prev`
-    adds since `base` that `head` lacks, and the one file `head` has in its place under another
-    id. Empty when there are none. Only a hint: `renumbered_merge` checks the whole tree."""
-    diff = changed(root, tree, head, *ID_DIRS)
-    gone = [p for p, status in diff.items() if status == "D"]
-    new = [p for p, status in diff.items() if status == "A"]
-    ours = set(added_files(root, base, prev))
-    mapping: dict[str, str] = {}
-    for path in gone:
-        parts = id_path(path)
-        if parts is None or path not in ours:
-            continue
-        twins = [
-            p for p in new if (q := id_path(p)) and q[0] == parts[0] and q[2] == parts[2] and q[1] != parts[1]
-        ]
-        twin = id_path(twins[0]) if len(twins) == 1 else None
-        if twin is not None:
-            mapping[parts[1]] = twin[1]
-    return mapping
-
-
-def renumbered_merge(root: Path, parents: list[str], tree: str, head: str) -> tuple[str, list[str]] | None:
-    """The carry rule's expected merge for a renumber (decision 0224): (tree, conflicted paths) of
-    the PR head `parents[0]`, renumbered as `head`'s renames imply, merged with `main`'s
-    `parents[1]`. None when `head` renames nothing against the plain merge `tree`; RenumberError
-    when the renames are not a renumber `make renumber` could have made."""
-    prev, main = parents
-    base = merge_base(root, prev, main)
-    mapping = implied_mapping(root, base, prev, tree, head)
-    if not mapping:
-        return None
-    check_mapping(root, base, prev, main, mapping)
-    # Fresh is not enough: the new ids must have come from the allocator (decision 0215), or any
-    # free id would do. Read like `id_registry.read`, failing closed.
-    try:
-        _, claims = id_registry.read(root)
-    except (id_registry.RegistryError, GitError) as error:
-        raise RenumberError(f"the id registry cannot be read ({error})") from error
-    unclaimed = sorted(new for new in mapping.values() if new not in claims)
-    if unclaimed:
-        raise RenumberError(f"{', '.join(unclaimed)} is not claimed in the id registry")
-    return merge_tree(root, renumbered_commit(root, base, prev, mapping), main)

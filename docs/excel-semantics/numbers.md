@@ -65,7 +65,9 @@ Array and range operands (T-3047, probes/t3047-snap-array-operands, excel-graph 
 
 Pickers, LET, LAMBDA and unary signs (T-3049, probes/t3049-snap-under-pickers, excel-graph 2026-10-28): the snap follows the **tree root**, not the last operator Excel executes. A root `+`/`-` that a picker or a unary sign returns is not snapped: `IF(TRUE,..)`, `IF(FALSE,0,..)`, `IFS(TRUE,..)`, `IFERROR(..,0)`, `IFNA(..,0)`, `CHOOSE(1,..)`, `SWITCH(1,1,..)`, `LET(x,..,x)`, `LET(x,0.1,x+0.2-0.3)`, `-(..)`, `+(..)`, `--(..)`, `IF(TRUE,(..))`, `IF(TRUE,IF(TRUE,..))` and `LET(x,..,x)+0` all keep 5.551115123125783e-17 over `0.1+0.2-0.3` and 1.5543122344752192e-15 at k = 7 (`1+7*2^-52-1`, which snaps as a bare root), negated under the minus (rows 3-16 and 19 of B:D). A **LAMBDA body is snapped at its own root**, as a defined-name body is: `=LAMBDA(x,x+0.2-0.3)(0.1)` and `=LAMBDA(x,x+7*2^-52-1)(1)` are 0, and k = 8 keeps 1.7763568394002505e-15 (B17:D17), while the same body under LET (row 16) is not snapped. `=-0.1-0.2+0.3` snaps (its root is the `+`; the minus binds to 0.1 only), and so does its k = 7 form `-1-7*2^-52+1` (B18:D18; k = 8 keeps -1.7763568394002505e-15). A plain reference to a snapped cell under `+0` reads the 0 (row 20). The 8-ULP boundary is unchanged wherever the snap applies (k = 7 snaps, k = 8 keeps). **Every call of a LAMBDA snaps its body's root; the body's own shape decides** (T-3094, probes/t3094-snap-lambda-call-forms, excel-graph 2026-10-29; rows 2-5 are `x+0.2-0.3` at 0.1, k = 7, k = 8 and `-x-0.2+0.3` at 0.1, column B the in-place control): a workbook-scoped name `f` = `=LAMBDA(x,..)` called as `=f(..)`, `=f(..)+0`, `=(f(..))` or `=SUM(f(..))` (C:F), `=LET(g,LAMBDA(x,..),g(..))` (G), a LAMBDA whose body calls another, in place (I) or by name (`h` = `=LAMBDA(y,f(y))`, J), all give 0 in rows 2, 3 and 5, so the call is the root in every position probed (C:G, I, J): `f(..)+0` reads an already snapped 0, unlike `LET(x,..,x)+0`. A body that is not itself the `+`/`-` keeps the residue: a grouped body `LAMBDA(x,(..))` (H, as a grouped name body, T-1164), a picker body `LAMBDA(x,IF(TRUE,..))` (K) and a LET body `LAMBDA(x,LET(z,x,..))` (L) keep 5.551115123125783e-17, 1.5543122344752192e-15 and -5.551115123125783e-17. k = 8 (row 4) keeps 1.7763568394002505e-15 in every form. The engine matches every cell, the calls through a defined name (C2:F2, C3:F3, C5:F5, J2, J3, J5) included: `Model::call_lambda` evaluates every called body, named or not, through `Model::evaluate_formula_root` (T-3105). A sheet-scoped name snaps the same way in the engine; that is unprobed (T-3149).
 
-**The LAMBDA helpers snap every call's root, and REDUCE and SCAN every step** (T-3095, probes/t3095-snap-lambda-helpers, excel-graph 2026-10-29, Calc!B): MAP, MAKEARRAY, BYROW and BYCOL give 0 in every element read through `INDEX(..,n)` and in a `SUM` over the spill, for `x+0.2-0.3` at 0.1, k = 7 and `-x-0.2+0.3` at 0.1 (rows 1-40 and 61-80; a BYROW/BYCOL body `SUM(r)-0.3` or `INDEX(r,1)+INDEX(r,2)-0.3` snaps like the in-place call of the same body, rows 10-20), while k = 8 keeps 1.7763568394002505e-15 per element (rows 41-60). REDUCE and SCAN with `LAMBDA(a,x,a+x)` snap the accumulator at the step that cancels, so later steps start from 0: over 0.1, 0.2, -0.3, 1E-16 SCAN reads 0.1, 0.30000000000000004, 0, 1E-16 and REDUCE is 1E-16, where the plain sum `=A+B+C+D` keeps 1.5551115123125782e-16 (rows 88-95); over 1, 7*2^-52, -1, 1E-15 REDUCE is 1E-15 against the plain 2.5543122344752192e-15 (rows 111-118); the k = 8 accumulator keeps 1.7763568394002505e-15 and adds to it (rows 119-133). Four nested in-place calls `LAMBDA(a,x,a+x)(LAMBDA(a,x,a+x)(..),..)` give the same as REDUCE (rows 94, 117), so an in-place call passed as a LAMBDA argument snaps too. The engine matches every cell (T-3111): MAP, MAKEARRAY, BYROW, BYCOL, REDUCE and SCAN call their LAMBDA through `LambdaCaller::snapping_root`, and an in-place call read in reference context (a LAMBDA argument, bound by `bind_argument`) snaps a root `+`/`-` body, which can never be a reference. That reference path is also the one an in-place call as an aggregate argument takes (`=SUM(LAMBDA(x,x+0.2-0.3)(0.1))`), so the engine snaps it too, as Excel snaps `=SUM(f(..))` over a defined-name LAMBDA (T-3094, F2:F5); the in-place aggregate form itself is unprobed (T-3093). Unprobed: GROUPBY/PIVOTBY aggregation LAMBDAs, not snapped by the engine, and eta-reduced helpers (`MAP(r,SUM)`; T-3112). T-3093 also owns a parameter-passed or chained LAMBDA and a call under a picker (snapped as a direct call). The engine matches every t3049-snap-under-pickers cell (the LAMBDA cells B17 and C17 since T-3083). Status: VERIFIED.
+GROUPBY and PIVOTBY aggregation LAMBDAs, and eta-reduced helper calls (T-3112, probes/t3112-snap-groupby-eta and t3112-snap-groupby-eta-totals, excel-graph 2026-11-01): **the aggregation LAMBDA's root is snapped at every call**, as for the T-3095 helpers. `LAMBDA(v,SUM(v)-0.3)` over a group of 0.1 and 0.2 gives 0 for the group row, the total row, `SUM` of the value column and every PIVOTBY cell, row total, column total and grand total (B3-B9); the negated body `LAMBDA(v,0.3-SUM(v))` snaps the same (B30-B36); k = 7 (`SUM(v)-1` over 1 and `7*2^-52`) is 0 everywhere (B12-B18) and k = 8 keeps 1.7763568394002505e-15 in each cell, 3.552713678800501e-15 for `SUM` of the two rows (B21-B27). **The total row is the LAMBDA run again over all the values and snapped**, not the snapped group results added: with two groups of 0.1 and 0.2, `LAMBDA(v,SUM(v)-0.3)` gives -0.19999999999999998 and -0.09999999999999998 for the groups (totals case B1, B2) and 0 for the GROUPBY total and the PIVOTBY grand total (totals case B3, B8; adding the group results would give -0.3), and the PIVOTBY row and column totals equal the single group they cover (B6, B7); `LAMBDA(v,SUM(v))` gives 0.1, 0.2 and 0.30000000000000004 (B9-B16). **An eta-reduced `SUM` returns the plain sum** (it has no `+`/`-` root, so the probe cannot tell "eta calls are not snapped" from "nothing to snap"): `_xleta.SUM` (the stored form of an eta-reduced `SUM`) keeps 0.30000000000000004 in BYROW, GROUPBY and PIVOTBY and 0.1 in MAP (totals case B17, B18, B20, B22), and the `-0.3` after it is the cell's own formula root, which snaps to 0 (totals case B19, B21, B23); `LAMBDA(r,SUM(r))` also keeps it (B42) while `LAMBDA(r,SUM(r)-0.3)` gives 0 (B41). A **bare** `SUM` argument (not `_xleta.`) is an unknown name, as in arrays.md and xlsx-storage.md: `#VALUE!` in MAP and BYROW (B37, B38, B40, B43) and `#NAME?` in GROUPBY (B44, B45); that is not an eta result (arrays.md "Functions passed by name" lists the BYROW/BYCOL case; MAP and GROUPBY differ in the error). The engine matches every cell (T-3617): GROUPBY and PIVOTBY call their aggregation LAMBDA through `LambdaCaller::snapping_root`, the total row being the LAMBDA run again over all the values. **The two-parameter aggregation LAMBDA snaps alike** (T-3875, probes/t3875-snap-groupby-two-arg, excel-graph 2026-11-03; the second parameter is the cell's relative set, arrays.md default `relative_to` 0: all values for GROUPBY and the PIVOTBY totals, the cell's own column for a PIVOTBY body cell): `LAMBDA(v,a,SUM(v)-0.3)` over one group of 0.1 and 0.2 gives 0 for the group, the total row and the PIVOTBY cell and grand total (B1-B4), and `0.3-SUM(v)` the same (B11-B14); over two groups the groups keep -0.19999999999999998 and -0.09999999999999998 (B5, B6), the PIVOTBY cell and its row total equal the group they cover (B8, B9), and the GROUPBY total and PIVOTBY grand total are 0 (B7, B10), the total again being the LAMBDA run over all the values; `SUM(v)+SUM(a)-0.6` snaps to 0 for one group (B21-B24) and for the two-group totals (B27, B30), its groups keeping -0.19999999999999996 and -0.09999999999999998 (B25, B26); the relative set shows in B28, the PIVOTBY cell g1c1 of that body, -0.39999999999999997 (`SUM(a)` is column c1's 0.1 only, so no snap), against B25, the GROUPBY group 1, -0.19999999999999996 (`SUM(a)` is 0.3), and B29, the row total of g1, -0.19999999999999996 (all values again). The two-group `0.3-SUM(v)` form gives 0.19999999999999998 and 0.09999999999999998 for the groups, 0 for the GROUPBY total, 0.19999999999999998 for the PIVOTBY cell and its row total and 0 for the grand total (B15-B20). The engine matches all 30 cells without a change.
+
+**The LAMBDA helpers snap every call's root, and REDUCE and SCAN every step** (T-3095, probes/t3095-snap-lambda-helpers, excel-graph 2026-10-29, Calc!B): MAP, MAKEARRAY, BYROW and BYCOL give 0 in every element read through `INDEX(..,n)` and in a `SUM` over the spill, for `x+0.2-0.3` at 0.1, k = 7 and `-x-0.2+0.3` at 0.1 (rows 1-40 and 61-80; a BYROW/BYCOL body `SUM(r)-0.3` or `INDEX(r,1)+INDEX(r,2)-0.3` snaps like the in-place call of the same body, rows 10-20), while k = 8 keeps 1.7763568394002505e-15 per element (rows 41-60). REDUCE and SCAN with `LAMBDA(a,x,a+x)` snap the accumulator at the step that cancels, so later steps start from 0: over 0.1, 0.2, -0.3, 1E-16 SCAN reads 0.1, 0.30000000000000004, 0, 1E-16 and REDUCE is 1E-16, where the plain sum `=A+B+C+D` keeps 1.5551115123125782e-16 (rows 88-95); over 1, 7*2^-52, -1, 1E-15 REDUCE is 1E-15 against the plain 2.5543122344752192e-15 (rows 111-118); the k = 8 accumulator keeps 1.7763568394002505e-15 and adds to it (rows 119-133). Four nested in-place calls `LAMBDA(a,x,a+x)(LAMBDA(a,x,a+x)(..),..)` give the same as REDUCE (rows 94, 117), so an in-place call passed as a LAMBDA argument snaps too. The engine matches every cell (T-3111): MAP, MAKEARRAY, BYROW, BYCOL, REDUCE and SCAN call their LAMBDA through `LambdaCaller::snapping_root`, and an in-place call read in reference context (a LAMBDA argument, bound by `bind_argument`) snaps a root `+`/`-` body, which can never be a reference. That reference path is also the one an in-place call as an aggregate argument takes (`=SUM(LAMBDA(x,x+0.2-0.3)(0.1))`), so the engine snaps it too, as Excel snaps `=SUM(f(..))` over a defined-name LAMBDA (T-3094, F2:F5); the in-place aggregate form itself is unprobed (T-3093). GROUPBY/PIVOTBY aggregation LAMBDAs and eta-reduced helpers: see the T-3112 paragraph above. T-3093 also owns a parameter-passed or chained LAMBDA and a call under a picker (snapped as a direct call). The engine matches every t3049-snap-under-pickers cell (the LAMBDA cells B17 and C17 since T-3083). Status: VERIFIED.
 
 M2 pickers, wrappers and summing functions in both operand orders (T-3139, gen-m2 `numeric-fp` cases
 fde64eeac1b5122d, 4fcaec656703fa15 and 2f543197a3445de1 from `rustsheet-gen --policy numeric-fp --seed 0`, 5,200 cells,
@@ -138,7 +140,9 @@ Tasks: T-0110 (implementation), T-3092 (AVERAGEA addends, SUBTOTAL 1/101), T-113
 ## ROUND family rounds in two decimal stages
 Rule: ROUND, ROUNDUP and ROUNDDOWN never scale by a binary power of ten. They (1) cut the exact
 binary value to 15 significant digits, then (2) round that decimal at `num_digits` (ROUND: half
-away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return the nearest double.
+away from zero; ROUNDUP: away from zero; ROUNDDOWN: toward zero) and return that decimal as a double,
+which is the nearest double except about 1 in 5,000 times (see "Decimals reach a double through an x87
+multiply by 10^-n").
 Stage 1 rounds to nearest, but an **exact tie at the 16th digit** goes toward zero for ROUND and
 away from zero for ROUNDUP/ROUNDDOWN (inconsistent; Excel is right):
 `ROUND(999999999999957.5,0)` = 999999999999957 and `ROUND(999999999999956.5,0)` = …956, yet
@@ -255,6 +259,10 @@ forming with companions, 1E-15 and 1E+15 controls, and the cutoff sweep); genera
 predicts all 213 cells. Rivals that miss: a 15-digit cut of `q` (145 or 146 of 213, by cut variant: misses 1234.5 - 1 ulp and most seeded pairs), a
 tolerance of 4.5E-15 or 4.9E-15 (196, 207) or 5.3E-15 (203), an x87 quotient, and a decimal product (the products are
 binary). gen-m5/043ee562f32eb901 Calc!A199 is `MROUND(0.3,0.2)`.
+The sign and zero checks: a zero multiple gives 0 (`MROUND(1.1E-05,0)`, `MROUND(-0.005901617,0)`), a zero number gives 0
+whatever the multiple's sign (`MROUND(0,-0.0042017)`), and a nonzero number with a multiple of the opposite sign is `#NUM!`
+(`MROUND(17.9707,-0.0126)`, `MROUND(0.49999999999999,-1)`; 9 cells). Evidence: accuracy/MROUND/s1 (excel-graph,
+2026-11-02, T-3674).
 Status: VERIFIED (excel-graph, 213 cells); implemented (T-2167, `mround_value` in ceiling_floor.rs).
 
 ## ROUNDUP adds the unit in binary
@@ -265,8 +273,8 @@ decimal one, in either direction: `ROUNDUP(123.456,2)` = 123.45 + 0.01 = 123.460
 `ROUNDUP(0.29,1)` = 0.30000000000000004, `ROUNDUP(2.675,2)` = 2.6799999999999997,
 `ROUNDUP(8.255,1)` = 8.299999999999999, `ROUNDUP(7.123,1)` = 7.199999999999999. When nothing is
 dropped there is no add (`ROUNDUP(0.29,2)` = 0.29). Negative values round the magnitude and keep the
-sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal-correct
-double. A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
+sign (`ROUNDUP(-123.456,2)` = -123.46000000000001). ROUND and ROUNDDOWN return the decimal as a
+double (one ulp off it at rare points, see "Decimals reach a double through an x87 multiply by 10^-n"). A wrapped `num_digits` behaves the same as its wrapped value: `ROUNDUP(x,65536+k)`,
 `ROUNDUP(x,2^31+k)` and `ROUNDUP(x,k)` agree on every probed cell.
 Evidence: probes/roundup-wrapped-scaling (480 cells: 20 values × k = 1..4, plain, 65536+k, 2^31+k
 and -(65536+k), ROUNDUP and ROUNDDOWN); probes/round-huge-digits-wrap A16, A35, A38 (excel-graph,
@@ -307,30 +315,80 @@ Status: VERIFIED
 Implemented in: `effective_digits` in crates/rustsheet-engine/src/decimal_round.rs (T-0218).
 Tasks: T-0218, T-0268
 
-## ROUNDUP of a huge value at a huge negative num_digits
-Observation (T-3555): `ROUNDUP(6.4421516092447E+265,-43376)` is 6.4421516092447E+265, the value unchanged. The rule
-above says ROUNDUP keeps the sign of `num_digits` and takes its magnitude modulo 65,536, which leaves -43,376. The unit
-10^43376 then overflows, so the rule predicts `#NUM!`, which is what the engine returns. In the same draw,
-`ROUNDUP(-3.41521682833705E-207,-11541)`, `ROUNDUP(-2.33253918200575E+106,-678)` and `ROUNDUP(7712487.6865209,-400)`
-were `#NUM!`, and `ROUNDUP(4.72880001004526E+149,22178)` was the value. Every earlier huge-`num_digits` probe used a
-small value. The same value at -320 is `#NUM!` (committed: eval/accuracy/tables/ROUNDUP/s1 Calc!A111, `ROUNDUP(6.4421516092447E+265,-320)`).
-One candidate fits every cell above: a 16-bit count of the kept digits, `num_digits` + e + 1. At -320 the count is -54
-(`#NUM!`); at -43,376 it is -43,110, which wraps to +22,426 (the value comes back). But it does not fit
-`ROUNDUP(123.456,-65535)`, which is `#NUM!` (probes/round-huge-digits-wrap) though its count -65,532 wraps to +4, so
-the count alone is not the rule.
-Evidence: excel-graph, 2026-11-01, T-3555's first ROUNDUP Gate A draw. That batch was replaced before commit (its
-point was a math domain error against an Excel number), so T-3627 re-probes the cell.
-Status: UNVERIFIED (one cell; T-3627 probes for the rule)
-Tasks: T-3627
+## ROUNDUP and ROUNDDOWN round at 100 places past a 16-bit num_digits
+Rule: ROUNDUP and ROUNDDOWN narrow `num_digits` to k as above (sign kept, magnitude modulo 65,536). When |k| is
+32,768 or more, which no longer fits a signed 16-bit integer, they round the 15-digit cut at 100 places instead of k:
+at 10^-100 for positive k and at 10^100 for negative k. ROUNDUP still adds its unit 10^-k as a double (see "ROUNDUP adds
+the unit in binary"). For positive k that unit underflows to 0, so ROUNDUP returns the rounded-down value. For negative
+k it overflows, so ROUNDUP is `#NUM!` whenever a digit is dropped. Excel is right, however odd:
+- `ROUNDDOWN(1.23456789012345E-95,65535)` = `ROUNDUP(…,65535)` = 1.23456E-95.
+- `ROUNDUP(1.5E-100,65535)` = 1E-100, and `ROUNDUP(1.5E-120,65535)` = 0.
+- `ROUNDDOWN(1.23456789012345E+105,-32768)` = 1.23456E+105, but `ROUNDUP(…)` = `#NUM!`.
+- `ROUNDDOWN(1.5E+80,-65535)` = 0, as is `ROUNDDOWN(123.456,-65535)` above, and `ROUNDUP(123.456,-65535)` is `#NUM!`.
+- `ROUNDUP(1.5E+120,-65535)` = 1.5E+120, and `ROUNDUP(6.4421516092447E+265,-43376)` = 6.4421516092447E+265 (the T-3555
+  observation): nothing is dropped at 10^100, so no unit is added.
+- k = 40,000 and 98,304 (narrowed to 32,768) act the same. Below 32,768 the plain rule holds: `ROUNDDOWN(1.5E-300,32767)`
+  = 1.5E-300, every k = -32,767 cell is 0 (ROUNDDOWN) or `#NUM!` (ROUNDUP), and so are T-3555's
+  `ROUNDUP(-3.41521682833705E-207,-11541)` and `ROUNDUP(6.4421516092447E+265,-320)` (`#NUM!`), while
+  `ROUNDUP(4.72880001004526E+149,22178)` is the value.
+ROUND's narrowing differs and shows no such step: every probed ROUND cell follows the 32-bit rule above. TRUNC was not
+probed past 32,767.
+Evidence: probes/t3627-roundup-rounddown-digits-by-exponent (x = 1.5E-300 to 1.5E+300 in steps of 10^20; k = ±400,
+±1000, ±32767, ±32768, ±65535) and probes/t3627-roundup-rounddown-huge-digits-place (x = 1.23456789012345E∓90 to
+E∓112; k = ±32768, ±40000, ±65535, 98304), excel-graph, 2026-11-01. Negative values round their magnitude
+and keep the sign: probes/t3627-roundup-rounddown-negative-x (x = -1.5E-300 to -1.5E+120, k = ±32768, ±65535 and 32767).
+probes/t3627-roundup-rounddown-t3555-cells re-probes T-3555's draw cells quoted above, plus k = -32769 and -43376.
+The rule fits all 1,024 formula cells of the four cases.
+Status: VERIFIED (excel-graph)
+Implemented in: not yet in the engine (T-3635).
+Tasks: T-3555, T-3627, T-3635
 
-## ROUND one ulp above the nearest double (observation)
-Observation (T-3555): `ROUND(4.91499999999999E-06,8)` is 4.9100000000000004E-06 in Excel, 1 ulp above 4.91E-06, the
-double nearest the decimal result. That contradicts "ROUND family rounds in two decimal stages", which says ROUND returns
-the nearest double. It is the only such cell among the 120 ROUND points. The engine returns 4.91E-06, which is within
-Gate A's envelope and below the reproducibility floor, so it is not a fit target.
-Evidence: eval/accuracy/tables/ROUND/s1 Calc!A61 (excel-graph, 2026-11-01).
-Status: UNVERIFIED (one cell)
-Tasks: T-3555
+## Decimals reach a double through an x87 multiply by 10^-n (T-3658)
+Rule: a decimal `m × 10^-n` (integer m, n ≥ 0) that Excel builds from text or from ROUND/ROUNDDOWN's
+stage 2 does not become the nearest double. Excel multiplies m by 10^-n rounded to a 64-bit significand
+(x87 extended), rounds that product to a 64-bit significand, then rounds to a double (each step to
+nearest, ties to even). The result is one ulp from the nearest double for about 1 in 5,000 short
+decimals; the probe's search found 61 among m < 20000, n = 1..15. Which m and n enter depends on the
+caller (inconsistent, and Excel is right):
+- **Literals** in a formula (`=16659E-15`, `=4.91E-06`, `=0.00000491`) and **VALUE** of the same text
+  use the digits as written: m = 4910 at n = 9 for `4910E-9`. Hits!C1:C61 and E1:E61 fit, 122/122
+  literal cells in all.
+- **ROUNDDOWN** uses the kept digits as they are, trailing zeros included: `ROUNDDOWN(4910.4E-9,9)` is
+  4910 × 10^-9 (Hits!B, 362/362 ROUNDDOWN cells).
+- **ROUND** first drops the trailing zeros of the kept digits: `ROUND(4910.4E-9,9)` is 491 × 10^-8, and
+  `ROUND(14550.4E-15,15)` is 1455 × 10^-14 = 1.4549999999999999E-11 where `=14550E-15` and
+  `ROUNDDOWN(14550.4E-15,15)` are 1.4550000000000001E-11 (Hits!A59, B59, C59). 1,871/1,871 ROUND cells fit.
+- Division is not this conversion: `=m/10^n` follows "Division rounds twice", the exact quotient rounded to
+  64 bits and then to a double (Hits!D1:D61, 61/61); it differs from the literal at 9 of the 61 points.
+So `=4.91E-06`, `=491/100000000` and `ROUND(4.91499999999999E-06,8)` are all 4.9100000000000004E-06 (bits
+…8e7a, one ulp above the nearest double …8e79), while `=4.91*10^-6` is …8e79, and `=B1*2^70-5796000000000000`
+with B1 = `=4.91E-06` is 704857722490 against 704857722489 for `=4.91*10^-6` (scratch run, excel-graph,
+2026-11-03; uncommitted, the case cells above carry the same bits): the value inside Excel is that double, not an artefact of the oracle transport. This is the
+T-3555 observation: eval/accuracy/tables/ROUND/s1 Calc!A61 is the 491 × 10^-8 point. Stored xlsx numbers do
+not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as written and 51 with trailing zeros
+stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
+to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
+`ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
+Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
+literals of more than 5 digits are not probed, except one 15-digit point (T-3945): `=0.190581435720431`
+(m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
+and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
+the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
+`=0.981671389192299` is the nearest double, as the model gives (probes/t3945-atan-near-midpoint C1:C9, excel-graph,
+2026-11-03). So the complex functions' text parse (COMPLEX's output read back, a complex literal) converts the same
+way, and quotients and functions of such literals inherit the ulp: `=ATAN(0.981671389192299/0.190581435720431)` is
+1.3790419226756174 (B203) where ATAN of the stored quotient of the nearest doubles is ...176 (B1).
+Evidence: probes-numeric/t3658-round-scaling (2,539 cells, excel-graph, 2026-11-03): Calc!A1:A1929, a grid of
+m with m × 10^-n ≠ m × double(10^-n) at n = 0..14 (inputs m.3 to m.4999…9, m.5…, exact m, negated, ROUNDDOWN
+controls), which rules out a double-precision multiply (only the 4.91E-06 cells are off the nearest double),
+and Hits!A1:K61, the 61 search hits with neighbours m+1 as controls (J, K).
+Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh (724 cells, excel-graph,
+2026-11-03): all 151 points with m in 20001..79999, n = 1..15 where the model leaves the nearest double, and 30
+trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
+(677 of them are not the nearest double).
+Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
+Implemented in: not yet in the engine: it returns the nearest double (385 cells of t3658-round-scaling and 668 of the fresh case fail by one ulp; T-3931 for ROUND and ROUNDDOWN, T-3932 for literals and VALUE).
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):
@@ -441,12 +499,43 @@ and `AGGREGATE(9,6,F1:F3,NA())` is `#N/A` (option 6 ignores errors in the refere
 AVERAGE (also `AVERAGE(9E+307,9E+307,-9E+307)`), PRODUCT (`PRODUCT(1E+200,1E+200)`, and still `#NUM!` with a later
 factor 0 or 1E-200), SUMSQ (`SUMSQ(1E+200)`), SUBTOTAL 9, 1 and 6 (and 7, 8, 10, 11, 107, 108, 110 and 111 over three 1E+200, probes/subtotal-variance-one-vs-two-pass K10:K17), AGGREGATE 9 and 1 (option 6), SUMIF, SUMIFS,
 SERIESSUM, MMULT, SUMX2PY2, SUMXMY2, DEVSQ, STDEV and VAR, and `SUM(F1:F2)+0`, `SUM(F1:F2)&""`,
-`MAX(F1:F2)+F1` propagate it. Not an overflow: `COUNT` (3), `SUMX2MY2({9E+153},{0})` (8.1E+307, a finite near-limit result: SUMX2MY2 overflow itself is unprobed),
-`MEDIAN(F1:F2)` (9E+307) and `GEOMEAN(F1:F2)` (9E+307, exactly), F1:F2 holding 9E+307 twice (direct arguments not probed). `PERCENTOF(F1:F2,F1:F2)`
+`MAX(F1:F2)+F1` propagate it. Not an overflow: `COUNT` (3), `SUMX2MY2({9E+153},{0})` (8.1E+307, a finite near-limit result),
+`MEDIAN(F1:F2)` (9E+307) and `GEOMEAN(F1:F2)` (9E+307, exactly), F1:F2 holding 9E+307 twice. Direct arguments give the
+same: `MEDIAN(9E+307,9E+307)` and `GEOMEAN(9E+307,9E+307)` are 9E+307, and `MEDIAN(1E+200,1E+200,1E+200)` and
+`GEOMEAN(1E+200,1E+200,1E+200)` are 1E+200 (probes/t3808-median-geomean-direct-overflow A1:C5, excel-graph, 2026-11-02,
+T-3808; `GEOMEAN(9E+307,9E+307,1E-300)`, A6, is 2.0082988502465085E+105 and the engine is one ulp high, T-3847).
+SUMX2MY2 overflows on a square, not on the result: `SUMX2MY2({1.5E+154},{1.4E+154})` is `#NUM!` though the
+difference of the squares (2.9E+307) is finite, and so is `SUMX2MY2({1E+155},{0})`; the control
+`SUMXMY2({1.5E+154},{1.4E+154})` is 1.0000000000000033E+306 and `SUMXMY2({1E+155},{0})` is `#NUM!`
+(probes/t3808-m5-aggregate-overflow Calc!A178:C181).
+SUMPRODUCT, SUMX2MY2 and SUMX2PY2 overflow at a **running** sum, like SUM (probes/t3677-sumx-running-overflow-snap,
+excel-graph, 2026-11-03, T-3677; B = ERROR.TYPE): `SUMPRODUCT(F1:F3,G1:G3)` (F1:F3 = 9E+307, 9E+307, -9E+307; G = 1) and
+`SUMPRODUCT(F1:F3)` are `#NUM!` though the exact total is 9E+307, while the order 9E+307, -9E+307, 9E+307 gives 9E+307
+(A1:A3). SUMX2MY2 adds one x^2-y^2 per pair, not SUMX2 - SUMY2: the pairs (1.2E+154, 0), (1.2E+154, 0), (0, 1.2E+154) are
+`#NUM!`, the same pairs in the order (1.2E+154, 0), (0, 1.2E+154), (1.2E+154, 0) give 1.4400000000000002E+308, and two
+(1.2E+154, 1.2E+154) pairs give 0 (A4:A6; SUMX2 - SUMY2 would overflow on the last two). `SUMX2PY2` over (1.2E+154, 0),
+(0, 1.2E+154), (1.2E+154, 0) is `#NUM!` (A7), and so are `SUMX2PY2({1.2E+154},{1.2E+154})` (the term x^2+y^2, A20) and
+`SUMXMY2({1E+154,-1E+154},{-1E+154,1E+154})` (A19). Unprobed: whether SUMX2MY2's running sum takes x^2 and then -y^2
+(which could overflow where the term does not). SUMX2MY2 never snaps near zero: with J1:J2 = 1, 0 and K1:K2 = 0,
+1+2^-52, `SUMX2MY2(J1:J2,K1:K2)` is -4.440892098500626E-16 (2 ULP of 1), `SUMX2MY2(K1:K2,J1:J2)` +4.440892098500626E-16 and
+the one pair `SUMX2MY2(J1,K2)` -4.440892098500626E-16 (A8, A10, A11); 1+4*2^-52 gives -1.7763568394002505E-15 (A9).
+`SUMPRODUCT(P1:P3,{1;1;1})` over 0.1, 0.2, -0.3 is 5.551115123125783E-17 (A17, T-3048's no-snap rule). The engine matches
+every cell of A1:A11 and A16:A20.
+The other SUBTOTAL and AGGREGATE codes overflow the same way (probes/t3808-m5-aggregate-overflow, excel-graph,
+2026-11-02, T-3808; A = value, B = `&""`, C = ERROR.TYPE): SUBTOTAL 101 and 109 over F1:F2 and F1:F3 and 106 over
+F5:F6 and F1:F2 are `#NUM!` (Calc!A20:C25). AGGREGATE 1, 7, 8, 10 and 11 over F1:F2, 7, 8, 9, 10 and 11 over F1:F3,
+9 over F1:F2 and 6 over F5:F6 are `#NUM!` under every option 0-7 (Calc!A26:C177): the overflow is not an ignorable
+error. Over a range that also holds `#N/A` (F8:F10 = 9E+307, 9E+307, `#N/A`; F11:F13 = 1E+200, 1E+200, `#N/A`) options 0, 1,
+4 and 5 give `#N/A` and options 2, 3, 6 and 7, which ignore errors, give `#NUM!`. Hidden rows are left out before the
+check (Hide sheet, rows 3, 7 and 9 hidden, Hide!A20:C49): over F9:F11 = 9E+307 (hidden), 9E+307, 1, SUBTOTAL 109 is 9E+307,
+101 is 4.5E+307 and AGGREGATE 9 under options 1, 5 and 7 is 9E+307, while SUBTOTAL 9 and 1 and AGGREGATE 9 under options
+0 and 6 are `#NUM!`. Over F1:F3 = 9E+307, 9E+307, -9E+307 (hidden), SUBTOTAL 9 is `#NUM!` (overflow at the
+intermediate point, as SUM), and 109 and 101 are `#NUM!` too. Over F5:F7 = 1E+200, 1E+200, 1E-200 (hidden), SUBTOTAL 6
+and 106 and AGGREGATE 6 under options 0, 1, 5, 6 and 7 are all `#NUM!`. `PERCENTOF(F1:F2,F1:F2)`
 and `PERCENTOF(F1,F1:F2)` are `#NUM!` (an overflowing sum, like SUM; probes/percentof-snap-overflow-union (excel-graph, 2026-10-13, T-0416)).
 Implementation: `+ - * /` (T-0173), `SUM` (T-0185), and SUMPRODUCT, SUMSQ, PRODUCT, AVERAGE and SUBTOTAL 1, 6, 9
 (T-0990, `CalcResult::finite_number_or_num` on the final result, which covers a later 0 or 1E-200 factor
-since an infinity stays infinite or turns NaN; SUBTOTAL 101/106/109 share the code but are unprobed), and
+since an infinity stays infinite or turns NaN; SUBTOTAL 101/106/109 share the code, probed by T-3808), and
 SUMIF, SUMIFS, SUMX2PY2, SUMXMY2, DEVSQ, STDEV and VAR (T-0991, the same check). Probed (T-1021, probes/aggregate-overflow Calc!A49:C62): Excel gives `#NUM!` (ERROR.TYPE 6) for VAR.S, STDEV.S, VAR.P, STDEV.P, VARA and STDEVA over
 F1:F2 (9E+307 twice) and over F5:F6 (1E+200 twice), and for the spilling array-criteria SUMIF per criterion:
 `INDEX(SUMIF(F1:F3,{">0","<0"}),1,1)` is `#NUM!` while `...,1,2` is -9E+307. The engine matches for VAR.S, STDEV.S and SUMIF;
@@ -695,6 +784,11 @@ mantissa, with relative error +1.92E-20.
 
 Evidence: probes-numeric (on branch `agent/research/T-1778-kernel-map`) `kmyst-erfc-expcol`, `kmyst-erfc-runs1..4`, `kmyst-erfc-stepmap1/2`, `kmyst-erfc-chiruns1..3`
 (excel-graph, 2026-10-18). Status: VERIFIED (structure); the last mismatches are OPEN.
+Below the smallest normal double (a < -708.4) excel-graph shows 0: `EXP(-714.100700559872)` (a true 7.4E-311) and 14
+other accuracy/EXP/s1 points down to `EXP(-1000)` (Calc!A50-A52, A57-A61, A64-A67, A69, A79, A80; seven of them below even
+the smallest subnormal) (excel-graph, 2026-11-01, T-3672). Graph reports a kept subnormal as 0 too, so
+these cells do not tell whether EXP flushes; the worksheet-EXP paragraph below (probes/subnormal-function-results) shows it
+keeps the subnormal.
 Ours: `crates/rustsheet-engine/src/x87_exp.rs` `excel_exp` implements V6 with integer x87 rounding and a double-double
 F2XM1 (T-1916). It reproduces the reference model, scoring 62,013 of 62,100 `EXP(A)` cells of `kmyst-erfc-r5expmap1/2`
 and every `EXP(-(x*x))` cell up to x = 26.55 except the near-ties. The ERFC kernel and, since T-1931, the worksheet EXP
@@ -801,6 +895,11 @@ Evidence: probes/precision-and-rounding A14; probes-numeric `number-to-text/*/1e
 probes/text-number-words H6, H7, K1, K4, K5 (`="1e-308"+0` is 0).
 Oracle: excel-graph, 2026-10-04.
 Status: VERIFIED
+Exception (T-3942, probes/seriessum-subnormal-power-and-term B15, A16 and probes/seriessum-subnormal-term-sum-and-power-points A3:B4): `x^2`
+for x = 1E-160, 1E-155 and 1.1E-155 keeps its subnormal result, see "SERIESSUM: a power or term below the smallest normal double is 0;
+`^` keeps its subnormal at x^2"; other `^` results flush (`0.5^1074`, `0.1^310`, `(-0.5)^1073`, "Integer exponents beyond 360"
+item 1, probes-numeric/power-large-integer-exponents B103, B107, B117, B119) and so does a negative exponent (`2^-1074` B89, `2^-1023`
+term-sum B5, subnormal-function-results C16).
 Per function group (T-0189, VERIFIED, probes/subnormal-function-results, excel-graph 2026-10-06;
 `C` companion cells `(x)=0` tell a true 0 from a kept subnormal, since the saved file, and so the Graph value,
 holds 0 (decision 0089) and
@@ -872,6 +971,14 @@ does (test/statistical/test_subnormal_results.rs). Unprobed and flushed by exten
 (`1 - EXP(-x/2)`, subnormal from x below 4.4E-308) and at 1 degree (an ERF form, never subnormal from a normal x), the
 BETA.DIST cdf at alpha = 1, and BETADIST at beta = 1 off (2, 1). Row 25's #NUM! is GAMMA.DIST's subnormal x / beta
 (statistics.md "GAMMA.DIST's density is #NUM! at a subnormal x / beta", T-2738).
+Subnormal right tail Q(a, x) (T-3638, probes/t3638-subnormal-upper-tail, excel-graph 2026-11-01, column A the call, B its
+`(x)=0` companion): CHISQ.DIST.RT and CHIDIST are a true 0 at 1, 7, 21 and 39 degrees of freedom (true values near 1E-310
+and 1E-316; B1-B4, B13-B16, B19-B22, B25-B28) but KEEP the subnormal at 2 degrees, the exp closed form (B7-B10, FALSE);
+POISSON(k,mean,TRUE) is 0 at k = 3, 9 and 19 (B34, B35, B37, B38, B40, B41) and keeps it at k = 0 (B31, B32). Normal
+neighbours near 1E-300 are kept (FALSE) on every path. Every probed point has x/2 past 600, since a subnormal Q needs
+x/2 above about 700 at any df up to 40, so the 30 < x/2 <= 600 band never reaches a subnormal. Implemented: both
+functions pass the tail through `arithmetic::flush_subnormal` except df 2 / k = 0. See also statistics.md "Excel's far
+upper tail (T-3269)".
 Subnormal tails of functions (T-1143, VERIFIED at the probed arguments only, probes/subnormal-text-and-tail-companions, excel-graph
 2026-10-08): these return a true 0 (companion `(x)=0` TRUE) at `CSCH(710)`, `NORM.S.DIST(k,TRUE)` for k = -37.6, -37.75 and -38,
 `NORM.S.DIST(k,FALSE)` for k = -37.75 and -38, `PHI(-37.7)`, `NORM.DIST(19,0,0.5,FALSE)`, `ERFC(26.7)` and `ERFC.PRECISE(26.7)`.
@@ -898,6 +1005,10 @@ SUMSQ flushes each square too (T-1057, VERIFIED, probes/subnormal-sumsq-sumprodu
 The order does not matter: `SUMSQ(1E-150,1E-155)` is also exactly 1E-300, so it is each square that is flushed, not the running sum.
 SUMPRODUCT with three arrays flushes after each factor, left to right: `SUMPRODUCT({1E-200},{1E-110},{1E+300})` is 0 while
 `SUMPRODUCT({1E-200},{1E+300},{1E-110})` is 1E-10.
+SUMX2MY2, SUMX2PY2 and SUMXMY2 flush each square the same way (probes/t3677-sumx-running-overflow-snap A12:A15,
+excel-graph, 2026-11-03, T-3677): with M1:M2 = 1E-155, 1E-150 and N1:N2 = 0, `SUMX2PY2(M1:M2,N1:N2)`,
+`SUMX2MY2(M1:M2,N1:N2)` and `SUMXMY2(M1:M2,N1:N2)` are exactly 1E-300 and `SUMX2MY2(N1:N2,M1:M2)` is -1E-300 (the 1E-310
+square is dropped). The engine matches since T-3969.
 A subnormal cell constant reads as 0 (T-2016, T-2228, VERIFIED, probes/subnormal-cell-constants, excel-graph 2026-10-21): a
 number constant of magnitude below 2.2250738585072014E-308 (5E-324, 2.2E-308, 1E-310, and the negatives -5E-324, -1E-310) in a loaded workbook (an xlsx `<v>`; typing
 one in is unprobed) is `=0` TRUE and `ISNUMBER` TRUE, `*1E+300`
@@ -1046,6 +1157,38 @@ Status: VERIFIED (excel-graph)
 Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
 Tasks: T-2715, T-2756 (ROUNDUP)
 
+## CEILING and FLOOR cut the binary quotient, so CEILING can fall below its argument and FLOOR above it (T-3673)
+Rule: the CEILING/FLOOR family's 15-digit cut ("FLOOR.PRECISE: a 16th-digit tie in the ratio cut goes away from zero")
+is taken of the double quotient `number/significance`, not of the decimal ratio of the written arguments. Where the
+two sit on different sides of a 16th-digit tie, Excel's result is one unit of the cut's 15th digit away from the
+decimal reading, and a CEILING can come back below its own argument: `CEILING(9023487987474.29,0.002)` is
+9023487987474.28 (the exact ratio is the tie 4511743993737145, which would go up to 9023487987474.3, but the double
+quotient is 4511743993737144), and `FLOOR.MATH(405202879656.803,-0.0002,-1)` is 405202879656.802 (decimal reading
+405202879656.804). Above 1E+105 the same shows at `CEILING.MATH(7.34460155063567E+168,-2E-70,-1)` = 7.34460155063566E+168
+and `FLOOR.MATH(9.096E-120,-3.995E-225,-1)` = 9.096000000000019E-120.
+Evidence: eval/accuracy/tables CEILING/s1 A58, FLOOR.MATH/s1 A99, A173, CEILING.MATH/s1 A170 (excel-graph, 2026-11-01,
+T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches to the bit (`snap_ratio` cuts the double `value / significance`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
+## CEILING and FLOOR are #NUM! when number/significance overflows (T-3673)
+Rule: CEILING, CEILING.MATH (both modes), CEILING.PRECISE, FLOOR, FLOOR.MATH (both modes) and FLOOR.PRECISE are `#NUM!`
+when the ratio `number/significance` is beyond the double range, although the mathematical result (a multiple of the
+significance next to the number) is an ordinary double: `CEILING(6.78566159557368E+283,5.05874381382903E-127)` and
+`FLOOR.PRECISE(1.447176044413E+249,-1.38029997006174E-96)` are `#NUM!`. The tables bracket the boundary between 0.556 and 49 times the double range:
+`CEILING(-9.99999999999999E+307,-1)` and `FLOOR(-9.99999999999999E+307,-1)` (ratio 0.556 x DBL_MAX) are numbers, and
+`FLOOR.PRECISE(-3.85290564465378E+92,-4.37553180951326E-218)` (ratio 49 x DBL_MAX) is `#NUM!`. Where exactly it lies (the
+binary quotient overflowing, or its 15-digit cut) is not pinned.
+Evidence: eval/accuracy/tables CEILING/s1 A110, A120; CEILING.MATH/s1 A185, A198, A199; CEILING.PRECISE/s1 A111, A112;
+FLOOR.MATH/s1 A183, A184, A186, A191; FLOOR.PRECISE/s1 A114, A117, A119, A120; FLOOR/e-T-3673 A9, A29, A32, A41, A52
+(20 cells), and the numbers CEILING/s1 A75 and FLOOR/s1 A72 (excel-graph, 2026-11-01, T-3673).
+Status: VERIFIED (excel-graph)
+Ours: matches (the infinite ratio gives a non-finite result, which `numbers_fn` turns into `#NUM!`).
+Implemented in: `snap_ratio` in crates/rustsheet-engine/src/functions/math_and_trigonometry/ceiling_floor.rs
+Tasks: T-3673
+
 ## ROUNDUP and ROUNDDOWN of a number whose 15-digit cut is subnormal (T-2756)
 Rule: the ROUND family first cuts x to 15 significant digits (round to nearest, "ROUND family rounds in two decimal
 stages"). When that cut, as a double, is subnormal (below 2^-1022), ROUNDUP, ROUNDDOWN and TRUNC return a nonzero
@@ -1146,9 +1289,13 @@ Probe `probes-numeric/m9-hyperbolic` (268 cells, 255 distinct formulas, oracle: 
   `-ln(-x + sqrt(x*x + 1))`) and `ln(x + sqrt(x*x - 1))` bit-for-bit in IEEE doubles. So small arguments lose precision:
   ASINH(1E-10) = 1.000000082690371E-10 (relative error 8e-8), ASINH(3E-10) = 3.000000247771113E-10,
   ASINH(1E-9) = 1.000000082240371E-9, and ACOSH(1.000000000001) = 1.414276423083533E-6 (about 7e-11 relative below the
-  true value 1.4142764231805424E-6). The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc
-  TRIGONOMETRIC.xlsx sheet ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate
-  these formulas.
+  true value 1.4142764231805424E-6). Below half an ulp of 1 (about 1.1E-16) `x + sqrt(x*x + 1)` rounds to 1 and ASINH is 0, of
+  either sign: `ASINH(1.61207503113639E-17)`, `ASINH(±1E-20)` and every argument down to `ASINH(8.48916619031883E-285)`
+  are 0, and above the cut `ASINH(6.3701662356807E-14)` is 6.372680161348195E-14 (3.9e-4 relative off). Evidence:
+  accuracy/ASINH/s1 Calc!A115, A70, A83, A112, A59 (excel-graph, 2026-11-01, T-3671). The engine's formula gives the same
+  values; Gate A counts these points as R3-eligible but unmarked (decision 0188 R3 needs an owner ruling).
+  The same two formulas also give all 33 ASINH and 17 ACOSH cells of ironcalc-calc TRIGONOMETRIC.xlsx sheet
+  ASINH_ACOSH_ATANH (gap triage 2026-10-19). Implemented (T-2031): `fn_asinh`/`fn_acosh` evaluate these formulas.
 - Where `x*x` overflows a double (|x| above about 1.3407807929942596E154) ASINH and ACOSH return `#NUM!` (ln of infinity), for
   both signs of ASINH: probes-numeric/t2062-asinh-acosh-overflow (excel-graph, 2026-10-20). ASINH(+-1E154) = +-355.291251501643
   and ASINH(+-1.3E154) = +-355.55361576611045 are still finite; 1.35E154, 1.4E154, 1E200, 1E308 and 1.7976931348623157E308 are
@@ -1212,6 +1359,8 @@ off libm the reciprocals follow them. All 66 pairs of `probes-numeric/t0917-hype
 negatives, including x where TANH or SINH is 1 to 1.8 ulp from the true value) agree bit for bit; the earlier note that the
 exp forms regressed COTH_CSCH_SECH B10, B47 and C54 came from the engine's TANH/SINH misses, not from the reciprocal.
 The division is the worksheet `/` (twice-rounded, like COT/CSC/SEC); no probed cell tells it from a plain division.
+At 0 the division is 1/0, so `COTH(0)` and `CSCH(0)` are `#DIV/0!`: accuracy/COTH/s1 Calc!A68, A70, A74 and A76
+(excel-graph, 2026-11-01, T-3670) and gen-m5/4a971c8636db937d Calc!A289.
 Status: VERIFIED (excel-graph). Implemented in `fn_coth`, `fn_csch`, `fn_sech` (mathematical.rs) on `hyperbolic::{tanh, sinh, cosh}`.
 
 ### SINH and COSH overflow is `#NUM!` at once; SECH there is 0 (T-2169)
@@ -1229,7 +1378,14 @@ gen-m5/38b1b8e51dbad326 Calc!A331, gen-m5/bbbd316c346ce645 Calc!A327, gen-m5/977
 gen-m5/4febabc66cfdf9a1 Calc!A156, gen-m5/6ba5e4aceeef8209 Calc!A316, gen-m5/d9fb1e918971111b Calc!A108, gen-m5/fc81c2f704bef138 Calc!A46,
 gen-m5/ecd1b828aebad1e8 Calc!A185; the full list of 37 cells is in T-2169. A156 still fails, for ARRAYTOTEXT's own reason
 (text.md, T-2250).
-Unprobed: COSH and SECH on (700, 710). libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
+Past the smallest normal double the reciprocals read 0 too: `SECH(709.78)`, `SECH(-709.78)`, `CSCH(709.78)` and
+`CSCH(-709.78)` are 0 (accuracy/SECH/s1 Calc!A83, A84; accuracy/CSCH/s1 Calc!A84, A72, A79; excel-graph, 2026-11-01, T-3670),
+where the true values ±1.1156E-308 are subnormal (as are CSCH(-713.44) and CSCH(-717.64), 2.9E-310 and 4.3E-312). Graph
+reports a kept subnormal as 0 as well and those tables hold no `(x)=0` companion, so whether Excel flushes these is not
+told. From about |x| = 745 on (the tables' 803 to 993) the true value is below the smallest subnormal, so 0 is its
+correctly rounded double and no flush question arises.
+COSH(702.659631014027) and COSH(±709.78) are numbers within 1.2E-16 of the true value (accuracy/COSH/s1, T-3670); the cut in
+(709.78, 710) stays unprobed for COSH and SECH as for SINH. libm's cosh was finite up to 710.47 and ours now overflows just above 709.78, as SINH does.
 Status: VERIFIED (excel-graph) for SINH, COSH and EXP. Implemented (T-2169): `hyperbolic::{sinh,cosh}` overflow to infinity and
 `number_fn` maps a non-finite result to `#NUM!`. That mapping applies to every one-number math function through `number_fn`
 (DEGREES, RADIANS, FACT, the reciprocal trig functions, ...); outside SINH, COSH and EXP it is unprobed (hand: Excel has no
@@ -1399,12 +1555,15 @@ itself, not 1/n: `(-8)^(1/3+8·2^-54)` is -2.0000000000000018.
 - `1/101 ± 28·2^-59` counts and `± 29·2^-59` does not (the 15th digit of 101.000000000000).
 - Literals: `0.333333333333333` counts (-1.9999999999999984), `0.33333333333333` does not; `0.0909090909090909` (1/11) counts,
   `0.142857142857143` (1/7, 1/y = 6.999999999999993) does not.
+  A negative exponent follows the same 15-digit cut, and 1/9 too: `POWER(-0.00297317823308491,-0.142857142857143)` and
+  `POWER(-0.362795461331778,0.111111111111111)` (1/y = 9.000000000000009) are `#NUM!` (accuracy/POWER/s1 Calc!A54, A53;
+  excel-graph, 2026-11-01, T-3672), while `POWER(-8,-0.333333333333333)` counts (-0.5000000000000004, A80).
 - Size: `1/(2^31-3)` and `1/(2^31-5)` count; `1/(2^31-1)`, `1/(2^31+1)`, `1/(2^40+1)` and `1/(2^52+1)` are #NUM!, although
   1/y is exactly the odd integer there. Not probed: negative exponents at the limit (`-1/(2^31-1)`, `-1/(2^31-3)`); the engine
   takes the limit on |1/y|.
 - Even reciprocals (`1/4 + 2^-55`, `1/2^20`) are #NUM!; `3/9`, `2/6` and `1/(-3)` are odd roots like 1/3 and -1/3.
 Overflow of a non-zero base is #NUM! (`10^309`, `(-10)^309`, `1E300^1.5`, `(-1E300)^3`, `2^1024`) and underflow follows
-"Non-integer exponents" (`1E-300^-1.5` #DIV/0!, `10^-309` 0). The operator `^` and POWER agree on every cell probed: the
+"Non-integer exponents" (`1E-300^-1.5` #DIV/0!, `10^-309` 0). The operator `^` and POWER agree on every cell probed here (not on a subnormal `x^2`, "SERIESSUM: a power or term below the smallest normal double is 0"): the
 odd-root cut, overflow, zero (`0^-1` #DIV/0!, `0^-0.5` #DIV/0!), negative bases (`(-8)^0.5` #NUM!), the 2^32 - 1 exponent limit,
 text (`"2"^2` = 4, `"a"^2` #VALUE!, `""^2` #VALUE!), logicals (`TRUE^2` = 1), blank cells (`Z99^Z99` #NUM!, `Z99^-1` #DIV/0!) and
 errors (`NA()^0` #N/A, `(1/0)^0` #DIV/0!).
@@ -1428,7 +1587,8 @@ Tasks: T-0915
 
 ## ACOS is PI()/2 - ASIN(x)
 Rule: Excel's `ACOS(x)` is `π/2 - ASIN(x)` in doubles, on ASIN's kernel ("ASIN's formulation"). So `ACOS(0.5)` =
-1.0471975511965976, the double nearest π/3, where libm gives 1.0471975511965979.
+1.0471975511965976, one ulp below the double nearest π/3: libm's 1.0471975511965979 is the correctly rounded value
+(1.07E-16 from π/3 against 1.15E-16; corrected in T-3669).
 Evidence: all 240 ACOS cells of probes/asin-atan-sign-source (`ACOS(x)` and `ACOS(-x)`, H and I; excel-graph, 2026-10-18, T-1797),
 where libm `acos` fits 157; poi/48539.xlsx Instance1!E23 (oracle: excel-graph, 2026-10-04); poi/FormulaEvalTestData_Copy.xlsx Q104.
 Implemented in: `fn_acos` (functions/math_and_trigonometry/mathematical.rs) as `FRAC_PI_2 - excel_asin(x)` since T-0939.
@@ -1517,6 +1677,11 @@ product `RN64(ln 2) * log2 x` from the nearest 53-bit midpoint, in 53-bit ulps, 
 - Consequence for T-2144: no single model can match every fill at the unstable points; fit only on points that agree
   across fills (357 of 380 here); 12 of those 357 (11 old near-ties and one new point, d 2.36e-4 to 2.71e-4) stably return the
   neighbour the model does not, so inside the window Excel can be stable and still differ from the model.
+- Refills (T-3992, excel-graph, 2026-11-03 22:16-22:21 UTC, fresh uploads with the oracle cache emptied): fill 1's bytes twice,
+  and fill 2's and fill 3's bytes once each, all return fill 1's bits at every one of the 380 cells. So fill 3's 2026-10-22
+  bits at the 23 unstable cells were one deviating run, not a property of its bytes (only the D1 label differs). Today's runs
+  give the neighbour fills 1 and 2 gave, which is mostly not the model's. At the 23 unstable cells the majority of runs (6 of 7)
+  agrees on fills 1 and 2's bits. See "excel-graph refills of the same bytes" below.
 
 T-2144 fit (docs/research/t1941/ln_guard_bits.py): a k-bit internal product, truncated (tz) or rounded (rn), before RN64
 and RN53. Matches out of the 357 fill-stable points of T-2143's case / the fixture's 4,000 sampled points / its 30 near-ties
@@ -1722,6 +1887,7 @@ Implemented (T-2392): `integer_power` in arithmetic/power.rs leaves |n| >= 2^32 
 Tasks: T-2392
 
 ### Integer exponents beyond 360, subnormal results, base 10 (T-1311)
+Note (T-3942): `x^2` at x = 1E-160, 1E-155 and 1.1E-155 keeps its subnormal where the chains below flush ("SERIESSUM: a power or term below the smallest normal double is 0").
 Rule: the square-and-multiply rule above holds for every integer exponent below 2^32 - 1 (from there on see
 "Integer exponents from 2^32 - 1: exp(y·ln x)" above; the cells past it here agree with both) and
 every base except 10 (about 280 cells across `1.0000001`, `0.9999999`, `1.5`, `2`, `3`, `5`, `7`,
@@ -2372,6 +2538,31 @@ Implemented in: `seriessum_of` (crates/rustsheet-engine/src/functions/math_and_t
 Status: VERIFIED (excel-graph)
 Tasks: T-2380
 
+## SERIESSUM: a power or term below the smallest normal double is 0; `^` keeps its subnormal at x^2 (T-3942)
+Rule: SERIESSUM flushes both a power `x^(n+i*m)` and a term `c_i*x^(n+i*m)` that falls below the smallest normal double to a true 0
+(the `=0` companion is TRUE, decision 0042), for a positive and a negative x. `SERIESSUM(1E-200,2,1,{1})` (power 1E-400) and
+`SERIESSUM(1E-154,2,0,{1E-10})` (power 1E-308, subnormal) are 0; so is `SERIESSUM(1E-150,2,0,{1E-10})`, whose power 1E-300 is
+normal and whose term 1E-310 is subnormal. A subnormal power is flushed before the coefficient multiplies it, not after:
+`SERIESSUM(1E-160,2,0,{1,1E+300})` and `SERIESSUM(1E-160,2,0,{1E+300})` are 0, not 1E-20. A flushed term beside a normal one
+drops out: `SERIESSUM(1E-200,1,1,{1,1E+300})` is 1E-200 (and -1E-200 for x = -1E-200); its second power 1E-400 is 0 in any
+arithmetic, so that cell shows a zero term dropping out, not the flush. The flush is per term, not on the sum: a subnormal term
+beside a normal one is dropped (`SERIESSUM(1E-150,2,0,{1E-10,23000})` is exactly 2.3E-296, where the sum would be
+2.30000000000001E-296; probes/seriessum-subnormal-term-sum-and-power-points A1), and normal terms that cancel to a subnormal sum keep it (`SERIESSUM(1E-150,2,0,{3E-8,-2.99999E-8})`,
+`=0` companion FALSE; seriessum-subnormal-term-sum-and-power-points A2, B2). This confirms the per-term flush T-3676's Gate A definition
+(tools/src/rustsheet_tools/accuracy/defs/seriessum.py) infers. The `^` operator keeps the subnormal at the squaring points probed: `=1E-160^2` keeps 1E-320 (`=(1E-160^2)=0` is FALSE),
+`=1E-155^2` and `=(1.1E-155)^2` too (term-sum A3:B4), and `=1E-160^2*1E+300` is 9.99988867182683E-21, where
+`POWER(1E-160,2)*1E+300` is 0. Other `^` results flush, so this is not a general rule: the positive-exponent chains
+`=(0.5)^1074`, `=(0.1)^310`, `=(-0.5)^1073` are true zeros (probes-numeric/power-large-integer-exponents B103, B107, B117, B119,
+"Integer exponents beyond 360" item 1), and so is a negative exponent whose result is subnormal (`=(2)^-1074` B89, `=(2^-1023)=0`
+term-sum B5 with 2^1023 finite, `=(SUM(2^-1074))=0` subnormal-function-results C16); `5^-440` (2.839213766779712E-308) is normal.
+Why x^2 differs from the longer chains is open (a single product against the square-and-multiply chain are the candidates; probe
+`1E-160*1E-160`, `1E-160^3` and `(0.1^155)^2` before changing the engine); a single product is the weaker candidate, since `*` (`1E-307/10`) and `SUMSQ(1E-160)` give a true 0, "Subnormal results become 0" per function group). SERIESSUM's power follows POWER, not `^`.
+Evidence: probes/seriessum-subnormal-power-and-term A1:B17 and probes/seriessum-subnormal-term-sum-and-power-points A1:B6 (excel-graph, 2026-11-03, T-3942).
+Ours: the power matches (every power cell passes); a subnormal term is flushed per term since T-3949 (power-and-term A2, A9; beside another term, term-sum A1), and `^` flushes
+the squaring points' result (power-and-term B15, A16, B16 and term-sum B3, B4; T-3950).
+Status: VERIFIED (excel-graph)
+Tasks: T-3942, T-3949, T-3950
+
 ## SUMXMY2 is 1 ulp above the correctly rounded sum on a 1.5E+16 result (T-2384)
 Observation: `SUMXMY2(C10:E12,C6:E8)`, whose numeric pairs are (-1, 123456789.123), (7, 1E-15) and (-1, 0.3), is
 1.5241579027474522E+16; the exact sum of the squared differences rounds to 1.524157902747452E+16, and so do the left-to-right
@@ -2400,6 +2591,23 @@ gen-m5/e0087a1fb9a36188 Calc!A25, gen-m5/6a511beadb56b932 Calc!A106, gen-m5/b0d5
 other cells listed in T-2153.
 Status: VERIFIED (excel-graph); implemented in `fn_arabic` (T-2153).
 
+## ARABIC reads any Roman-letter string, right to left (T-3648)
+Rule: ARABIC checks no numeral grammar. After the padding trim above, it takes an optional leading `-`, then one or more
+ASCII letters I, V, X, L, C, D, M in either case, and scans them right to left: a letter worth less than the largest letter
+seen so far is subtracted, any other is added. So `ARABIC("IIX")` = 8, `"IXI"` = 10, `"IVX"` = 4, `"MIM"` = 1999, `"DCM"` =
+400, `"VV"` = 10, `"VX"` = 5, `"IIII"` = 4, `"MMMMM"` = 5000, `"xiv"` and `"XiV"` = 14, `"-XIV"`, `" -XIV"` and `"-xiv"` = -14, `"-IIX"` = -8;
+every ROMAN form reads back (`ARABIC(ROMAN(n,k))` = n for n 1..3999 and k 0..4, TRUE, FALSE).
+A lone `-` (also `"- "`, `" - "`) is `#NUM!`. Everything else is `#VALUE!`: `+XIV`, `--X`, `- XIV`, `-0`, a tab after the
+minus, numeric text (`"12"`, `"0"`, `"1E3"`), mixed digits (`X1`, `1X`), `X-`, `(X)`, `N`, the Unicode Roman numerals
+U+2160..U+2188 alone or mixed with letters (sampled: U+2160, U+2163, U+2169, U+2170, U+217E with "X", U+217F, U+2180, U+2183, U+2188; the rest of the block is inferred), full-width `Ｘ`, `ı` (U+0131), `İ` (U+0130) and a trailing CHAR(0).
+The text may be at most 255 characters counted *before* the trim: `REPT("M",255)` = 255000 and `"-"&REPT("M",254)` = -254000,
+but `REPT("M",256)`, `" "&REPT("M",255)`, `REPT("M",255)&" "`, `"-"&REPT("M",255)` and `REPT(" ",256)` are `#VALUE!`.
+Ours before T-3648: classic grammar with Excel's ROMAN subtractive pairs, at most three repeats, no sign and no length limit,
+so most non-canonical forms and every signed numeral were `#VALUE!`. Ours since: as Excel (`from_roman` and `fn_arabic`).
+Evidence (excel-graph, 2026-11-01): probes/t3648-arabic-numeral-shapes Calc!A1:A118 (shapes), C1:D7 (round-trip mismatch
+counts, all 0), F1:J20 (`ARABIC(ROMAN(n,k))` for 20 n and k 0..4).
+Status: VERIFIED (excel-graph); implemented in `fn_arabic` (T-3648).
+
 ## ROMAN truncates before its sign check; BASE checks the sign first (T-2154)
 Rule: ROMAN truncates its number before refusing a negative, so `ROMAN(-0.5025)` is "" (it truncates to 0); it reads and
 checks its form even when the number is 0: `ROMAN(0,<#N/A>)` is `#N/A` and `ROMAN(0.2,8.09)` (form `LOG10(123456789.123)`,
@@ -2418,6 +2626,21 @@ COMBINA lifts over arrays (T-2414, probes/t2414-gen-m7-unexplained, excel-graph,
 `VSTACK(COMBINA(..),CHOOSE(3,..))` (f19581ac44da1653 A3357) is the CHOOSE: a scalar-error argument makes VSTACK that error (probes/vstack-scalar-error, T-1695)
 (`VSTACK({1;2},CHOOSE(3,1,2))` is `#VALUE!`, ours agrees). Implemented (T-2453): COMBINA lifts both arguments.
 Status: VERIFIED (excel-graph); implemented (T-2154).
+
+## QUOTIENT truncates the double quotient (T-3675)
+Rule: `QUOTIENT(n,d)` is the double `n/d` truncated toward zero, not the integer part of the exact ratio of the two
+doubles: `QUOTIENT(-46.22552,8E-05)` is -577819 and `QUOTIENT(7789451.97564,0.00108)` 7212455533, where the exact ratio
+of the doubles is just inside -577819 and 7212455533 (its integer parts are -577818 and 7212455532); the double quotient
+rounds onto the whole number. A31 and A66 are the only table points where the two readings give different integers.
+Elsewhere Excel equals the truncated double quotient, but at A99 (`QUOTIENT(-2.28077524E+303,-2E+126)`) it is 1 ulp below
+the double quotient 1.1403876200000001E+177, which is inside the web-vs-desktop floor. A zero denominator is `#DIV/0!`.
+`QUOTIENT(1,0.1)` is 10 (the double quotient is exactly 10; the exact ratio is a little under it) and `QUOTIENT(0.3,0.1)` is 2
+(0.3/0.1 is the double 2.9999999999999996).
+Evidence: accuracy/QUOTIENT/s1 A31 and A66 (excel-graph, 2026-11-03, T-3675) for the two cells named, and the whole table;
+probes-numeric/double-rounding-ops A86, A87.
+Ours: `fn_quotient` (mathematical.rs) truncates `value / divisor`; matches.
+Status: VERIFIED (excel-graph)
+Tasks: T-3675
 
 ## QUOTIENT, FACTDOUBLE and SERIESSUM argument modes
 Rule: QUOTIENT (both arguments), FACTDOUBLE and SERIESSUM's `x`, `n` and `m` are Analysis ToolPak arguments. They lift
@@ -2475,8 +2698,9 @@ Tasks: T-1282, T-1785
 SIN, COS, TAN, COT, SEC and CSC return `#NUM!` when |x| >= 2^27 (134217728); 2^27-1 still gives a
 number, and the cut is the same for negative arguments and for 1E+300. The error is a real error
 (`ISERROR(N(SIN(1E+15)))` is TRUE). Evidence: probes/trig-huge-argument (T-1201). T-1201 probed only the integers 2^27-1 and 2^27 (and their negatives) at the cut; T-2172 adds fractions: the
-cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (-134217728.25 itself unprobed) (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172). COSH(1E+15) is also
-`#NUM!` (probe cell A85).
+cut for fractional arguments is also |x| >= 2^27: 134217727.25, .5, .75 and 2^27-2^-26 give numbers, 134217728.25 and -2^27 are `#NUM!`, negative fractions below 2^27 in magnitude give numbers (probes-numeric/trig-odd-even-sumxmy2-sweep Calc!A131:D142, T-2172), and -134217728.25 is `#NUM!` too (`SIN(-134217728.25)` and `CSC(-134217728.25)`, accuracy/SIN/s1 A78 and accuracy/CSC/s1 A70, excel-graph, T-3668). COSH(1E+15) is also
+`#NUM!` (probe cell A85). At 0, `COT(0)` and `CSC(0)` are `#DIV/0!` and `SEC(0)` is 1 (gen-m5 50d8a085335c05e6 A38 and A125,
+dde5ea295a38fb16 A289, cf893ec19f53a7fc A113; c7d88fa6defcfb8e A175, excel-graph): 0 is the only pole a double reaches.
 Excel reduces every trig argument by multiples of `π₆₄/2`, where `π₆₄` is π rounded to a 64-bit
 significand (the x87 `FLDPI` constant `0xC90FDAA22168C235·2^-62`, π₆₄ − π ≈ 5.0166e-20), and
 then rounds the true sine, cosine or tangent of that remainder once. So SIN(x) is the correctly
@@ -2540,6 +2764,7 @@ gen-m5/b0ecb7ca78460b77 Calc!A320 and the other 10 cells listed in T-2170. Imple
 ATANH(1) and ATANH(-1) are `#NUM!` too, at once: `IFERROR(ATANH(1),"err")` is "err", `ISERR(ATANH(1))` TRUE,
 `SUM(ATANH(1),1)` `#NUM!`; ATANH(0.9999999999999999) is 17.616361586450413 and ATANH(1.0000000000000002) `#NUM!`.
 ACOTH(1) and ACOTH(-1) are `#NUM!`. Evidence: probes/atanh-unit-argument (excel-graph, 2026-10-17, T-1569).
+ACOTH inside (-1, 1) is `#NUM!` as well: `ACOTH(0)` (accuracy/ACOTH/s1 Calc!A68, A69; excel-graph, 2026-11-01, T-3671).
 `f64::atanh` returns an infinity at +-1 (not NaN), so ATANH has its own check beside the macro's NaN mapping.
 
 ## SUBTOTAL 6 over no numbers is 0 (T-2269)
@@ -2561,3 +2786,69 @@ Rule: `TEXT(2^1023*(2-2^-52),"0.00E+00")` is `1.80E+308`: the mantissa rounds up
 Evidence: probes/dbl-max-text-b A1 (oracle: excel-graph) `1.80E+308`; the 2-digit analogues gen-m10/4398098060a7fa9d A13 ("01.2E+14") and gen-m5/c0651f0e0fb544d0 A74 ("1.0E+15").
 Status: VERIFIED for DBL_MAX; the 3-digit single-placeholder case (`1E+100` under `0.0E+0` as `1.0E+100`) is UNVERIFIED (probe pending), assumed from the 2-digit cells.
 Implemented in: formatter/format.rs, decimal_round.rs::round_scientific (T-2106).
+
+## PERCENTOF: an error inside a reference or array is #NUM! (T-3653)
+Rule: PERCENTOF(data_subset, data_all) reads its two arguments as SUM does, in one walk with SUM's error ranking
+(syntax.md "Aggregate error precedence"): a direct error in either argument returns as itself, the first in argument order,
+ahead of anything inside a reference or an array; and an error inside a reference or an array (a cell, a range, a union, a
+reference through IF, INDEX, OFFSET or LET, an array constant or a computed array) is not handed on but turned into `#NUM!`,
+ahead of a zero total. A direct error is an error value or a scalar computed from one (`NA()`, `1/0`, `Data!B1+0`,
+`SUM(Data!B1)`) and non-numeric typed text (`"x"`, `""`, both `#VALUE!`).
+So `PERCENTOF(NA(),1/0)` is `#N/A`, `PERCENTOF(1/0,NA())` `#DIV/0!`, `PERCENTOF(Data!B1,NA())` (B1 `#N/A`) `#N/A`,
+`PERCENTOF(Data!B1,"x")` `#VALUE!`, but `PERCENTOF(Data!B1,Data!B2)`, `PERCENTOF(1,Data!B1)`, `PERCENTOF(Data!B1,Data!D1:D2)`
+(a zero total), `PERCENTOF({1,#N/A},4)`, `PERCENTOF({1,2}+NA(),1)`, `PERCENTOF(IF(TRUE,Data!B1),1)` and
+`PERCENTOF(Data!A1,(Data!A1:A2,Data!B1))` are all `#NUM!`; `PERCENTOF(Data!G2,1)` with G2 `#NULL!` too.
+Coercion is SUM's: typed numeric text counts (`"3"`, `" 3 "`, `"1E1"`, `"$5"`, `"50%"`), typed TRUE and FALSE count as 1 and 0;
+text, numeric text and booleans in cells or inside arrays are skipped (`PERCENTOF(Data!C2,6)` with C2 the text "3" is 0,
+`PERCENTOF({"3",1},8)` 0.125, `PERCENTOF({1,TRUE},4)` 0.25, `PERCENTOF(IF(TRUE,Data!C2),6)` 0); a blank cell or an omitted
+argument is 0 (`PERCENTOF(,2)` 0, `PERCENTOF(2,)` `#DIV/0!`). A total of 0 is `#DIV/0!`; the subset need not lie inside
+data_all, and the arguments may have any shapes (`PERCENTOF({1,2;3,4},{1})` = 10, `PERCENTOF(SEQUENCE(3),SEQUENCE(2,2))` = 0.6).
+Ours before T-3653: each argument summed on its own, so the first argument's error came first and an error inside a
+reference or array was handed on (`#N/A`, `#DIV/0!`); ours since: as Excel (`Model::percentof_sums`).
+A 3-D reference is refused as a direct `#VALUE!` in its place, whatever the span holds: `PERCENTOF(S1!A1,S1:S2!A1)`,
+`PERCENTOF(1,S1:S2!B1)`, `PERCENTOF(S1:S2!B1,NA())` and `PERCENTOF(S2!B1,S1:S2!A1)` (S2!B1 `#N/A`) are `#VALUE!`, while
+`PERCENTOF(NA(),S1:S2!A1)` is `#N/A`.
+A 3-D span reached indirectly is refused the same way (T-3752): `PERCENTOF(IF(TRUE,S1:S2!A1),1)`, `PERCENTOF(CHOOSE(1,S1:S2!A1),1)` and
+`PERCENTOF((S1:S2!A1,S1!A2),1)` are `#VALUE!`, as is the span in either argument position beside a number or a trailing `NA()`
+(`PERCENTOF(IF(TRUE,S1:S2!A1),NA())` is `#VALUE!`, not `#N/A`); a direct error placed before the span wins, `PERCENTOF(NA(),<form>)` is `#N/A`.
+Not probed: a defined name whose body is a 3-D span (excel-graph answers `FileCorruptTryRepair` / unsupportedWorkbook for any workbook
+holding one; desktop-only question, M14). The engine already matches the three probed forms.
+Evidence (excel-graph, 2026-11-01): probes/t3653-percentof-argument-kinds Calc!A1:A98; probes/t3653-percentof-3d Calc!A1:A11;
+(2026-11-02) probes/t3752-percentof-3d-indirect Calc!A1:A12.
+Status: VERIFIED (excel-graph); implemented in `fn_percentof` (T-3653).
+
+## PERCENTOF: an error cell argument is #NUM!
+Rule: `PERCENTOF` with a `#DIV/0!` cell as `part` or `total` (alone, beside a number, or beside a range) is `#NUM!`, not the propagated error (excel-graph, 2026-10-31; 21 cells of gen-m5/f17765c5247b826e, Data!G9 = `#DIV/0!`, e.g. A16 `PERCENTOF(Data!G1,Data!G9)`, A412 `PERCENTOF(Data!G9,Data!C3:D4)`; T-3494). The general rule, for every error kind, is the entry above (T-3653), which also fixed these 21 cells (T-3728).
+Counter-cases (same case): a literal error argument passes through, `PERCENTOF("2.5",#DIV/0!)` (A169) and `PERCENTOF(#DIV/0!,TRUE)` (A391) are `#DIV/0!` and `PERCENTOF(2,#VALUE!)` (A13) is `#VALUE!`; a text first argument beats a literal error, `PERCENTOF("abc",#DIV/0!)` (A229) and `PERCENTOF("",#REF!)` (A283) are `#VALUE!`. So the `#NUM!` is for an error held in a cell reference, not a literal.
+
+## excel-graph refills of the same bytes: no variation on eight fit kernels (2026-11-03)
+Rule: refilling the same workbook bytes with Excel for the web gave the same bits at every cell of the eight probes below,
+over three runs each. Fill-to-fill variation still happens, rarely, so this is a measurement of these probes on these
+dates, not a guarantee. The LN and ERFC variations on file moved some near-tie cells and not others: LN's by one ulp,
+ERFC's by one to two. AMORDEGRC's is one cell's integer result, cause unexplained:
+- T-2143's fill 3 of 2026-10-22 changed 23 LN cells, all inside decision 0112's window. Four refills of the same bytes
+  today returned fills 1 and 2's bits ("LN is FLDLN2 then FYL2X" above).
+- probes/ln-fyl2x-kernel and the T-1941 run differ at 3 of their 30 shared LN near-ties.
+- The T-1916 re-fill changed 9 of 20 ERFC near-tie cells by 1 to 2 ulp (`kmyst-erfc-r8c11!B12999` by 2; statistics.md
+  T-1916 table; T-1940).
+- AMORDEGRC gen-m9 d912671baa1364aa Calc!A76 is 1 in one fill and 0 in one later fill of the same bytes
+  (probes/amordegrc-a76-bisect-a) and in a near-copy (-h); UNEXPLAINED in financial.md, not shown to be a near-tie (T-3610).
+Evidence: T-3992 (docs/research/t3992/README.md, cell-level differences in docs/research/t3992/diffs.json). Each of the eight kernel
+cases got two refills on 2026-11-03 (22:16-22:21 UTC, fresh uploads, oracle cache emptied) against its committed fill. Stable over
+three fills, with zero differing cells:
+- Student t quantile, probes-numeric/t3349-t-inv-2t-sweep (300 cells; committed 2026-10-31);
+- IRR, probes-numeric/t3478-irr-r4-wide (300 cells; 2026-10-31);
+- RATE, probes/t3850-rate-same-state (240 cells; 2026-11-03 15:30);
+- CUMPRINC/CUMIPMT, probes/fin-cumipmt-tiny-rate-structure (226 cells; 2026-10-29);
+- gamma quantile, probes-numeric/t3311-gamma-inv-lower-tail-cdf (899 cells; 2026-10-31);
+- lnGamma/GAMMA, probes-numeric/t3570-r5-bpser-lg-aux (2,520 cells; 2026-11-01);
+- incomplete beta bfrac, probes-numeric/t3953-f-tail-bfrac-tiny (4,800 cells; 2026-11-03 15:43);
+- incomplete beta bpser, probes-numeric/t2464-r2-bpser-small-gl (5,843 cells; 2026-10-23);
+- LN, probes-numeric/t2143-ln-near-ties-fill1 (380 cells; 2026-10-22), whose fill 3 workbook deviated at 23 cells on
+  2026-10-22 and returned fill 1's bits on refill ("LN is FLDLN2 then FYL2X" above).
+RATE and bfrac had all three runs on 2026-11-03; the others' committed fills come from earlier days. No run deviated in
+this session, so there was no positive control. Two refills minutes apart do not bound how often a deviating run occurs.
+This is not a web-against-desktop check either: that floor (docs/research/oracle-calibration.md, up to 4 ulp) is a
+separate question (T-1075).
+Status: VERIFIED (excel-graph)
+Tasks: T-3992, T-2143

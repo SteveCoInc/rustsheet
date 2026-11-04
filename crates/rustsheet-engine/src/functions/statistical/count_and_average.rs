@@ -93,8 +93,8 @@ impl Model {
     /// VAR.S and STDEV.S read its elements' top-left cells (SPEC-0014 rule 4:
     /// `AVERAGE(OFFSET(A1,{0;1},0))` is 50.5, probes/reference-lift-consumers E21, E133, -b2 E137,
     /// E165, E181; `STDEV.S(..)` 70.0035713374682 and `STDEV.S(OFFSET(A1,0,0,{1;2}))` 0,
-    /// probes/t2065-lift-stdevs, probes/t2816-lift-stdevs, T-2824). The rest of the family is
-    /// unprobed there and keeps the value view ([`Self::for_each_value`]).
+    /// probes/t2065-lift-stdevs, probes/t2816-lift-stdevs, T-2824), and VAR.P and STDEV.P too
+    /// (probes/t3533-lift-varp-*, -stdevp-*, T-3533).
     pub(crate) fn for_each_value_with<F>(
         &mut self,
         args: &[Node],
@@ -393,53 +393,37 @@ impl Model {
     }
 
     pub(crate) fn fn_mina(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
-        if args.is_empty() {
-            return CalcResult::new_args_number_error(cell);
-        }
-        let mut mina: Option<f64> = None;
-        if let Err(e) = self.for_each_value_a(
-            args,
-            ArrayNumbers::Numbers,
-            GridReading::Values,
-            cell,
-            |f, _| {
-                if let Some(m) = mina {
-                    mina = Some(m.min(f));
-                } else {
-                    mina = Some(f);
-                }
-            },
-        ) {
-            return e;
-        }
-        // No value at all is 0, as for MAX (`MINA(Z1:Z3)` over blanks and `MINA({"a"})` are 0;
-        // probes/averagea-array-constant-elements A22:A25).
-        CalcResult::Number(mina.unwrap_or(0.0))
+        self.extremum_a(args, cell, f64::min)
     }
 
     pub(crate) fn fn_maxa(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
+        self.extremum_a(args, cell, f64::max)
+    }
+
+    /// MINA / MAXA: the A rules, an array of references read by its elements' top-left cells as
+    /// array elements (probes/t2816-lift-maxa-*, T-2824; probes/t3533-lift-mina-*, -maxa-*, T-3533).
+    /// No value at all is 0, as for MIN and MAX (`MAXA(Z1:Z3)` over blanks and `MINA({"a"})` are 0;
+    /// probes/averagea-array-constant-elements A22:A25).
+    fn extremum_a(
+        &mut self,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        pick: fn(f64, f64) -> f64,
+    ) -> CalcResult {
         if args.is_empty() {
             return CalcResult::new_args_number_error(cell);
         }
-        let mut maxa: Option<f64> = None;
+        let mut best: Option<f64> = None;
         if let Err(e) = self.for_each_value_a(
             args,
             ArrayNumbers::Numbers,
             GridReading::TopLeftElements,
             cell,
-            |f, _| {
-                if let Some(m) = maxa {
-                    maxa = Some(m.max(f));
-                } else {
-                    maxa = Some(f);
-                }
-            },
+            |f, _| best = Some(best.map_or(f, |m| pick(m, f))),
         ) {
             return e;
         }
-        // No value at all is 0, as for MAX (`MAXA(Z1:Z3)` over blanks and `MAXA({"a"})` are 0;
-        // probes/averagea-array-constant-elements A22:A25).
-        CalcResult::Number(maxa.unwrap_or(0.0))
+        CalcResult::Number(best.unwrap_or(0.0))
     }
 
     pub(crate) fn fn_skew(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {

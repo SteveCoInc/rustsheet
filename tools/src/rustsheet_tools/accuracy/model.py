@@ -17,10 +17,10 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 
-Kind = Literal["real", "int", "bool", "array"]
-MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...]"
-"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, or an
-array literal's elements."""
+Kind = Literal["real", "int", "bool", "array", "matrix"]
+MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
+"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, an
+array literal's elements, or a matrix literal's rows."""
 
 
 class DomainError(ValueError):
@@ -63,7 +63,8 @@ class Param:
     the magnitude of whole-domain draws where the math cannot evaluate the domain's far end (a
     50-digit incomplete beta at a count of 1E+300) or the oracle cannot hold a point (a huge
     negative POISSON.DIST mean); unlike a domain bound it claims nothing about Excel, so it gets no
-    edge points.
+    edge points. An `optional` parameter (trailing ones only) may be left out of a call, as ERF's
+    `upper_limit`: a point then has fewer arguments, and only a definition's own `draw` omits one.
     """
 
     name: str
@@ -74,6 +75,7 @@ class Param:
     edges: tuple[float, ...] = ()
     source: str = ""
     draw_hi: float | None = None
+    optional: bool = False
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -97,8 +99,13 @@ class Definition:
     `NoValueError` where no single value exists; `domain` adds rules beyond the parameters'
     intervals (returns why the point is invalid, or None). `tail` sets parameter `tail_param`
     from a tail probability (a distribution's x). `draw` replaces the per-parameter sampler for a
-    solver (`solver`: the 300-point count). `sources` cite where the definition's math and
-    ranges come from."""
+    solver (`solver`: the 300-point count). With `variadic` the last parameter repeats (SUM's
+    number2, number3, ...) and `draw` sets the argument count. `sources` cite where the
+    definition's math and ranges come from. `serials_1900` marks math that reads date serials in
+    the 1900 date system (YEARFRAC's calendar, HOUR's last-date bound): an eval cell in a 1904
+    workbook gets no math value (T-3678). With `indexed` the function returns an array and a point
+    is one element of it: the last two parameters are INDEX's row and column, and the cell is
+    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686)."""
 
     function: str
     params: tuple[Param, ...]
@@ -109,6 +116,41 @@ class Definition:
     tail_param: str | None = None
     draw: Draw | None = None
     solver: bool = False
+    variadic: bool = False
+    serials_1900: bool = False
+    indexed: bool = False
+
+    def __post_init__(self) -> None:
+        flags = [p.optional for p in self.params]
+        if flags != sorted(flags):
+            msg = f"{self.function}: an optional parameter is followed by a required one"
+            raise ValueError(msg)
+        if self.indexed and (
+            self.variadic
+            or len(self.params) < 3
+            or any(p.kind != "int" or p.optional for p in self.params[-2:])
+        ):
+            msg = f"{self.function}: an indexed definition ends in two required integer parameters"
+            raise ValueError(msg)
+
+    def params_for(self, count: int) -> tuple[Param, ...]:
+        """The parameters a call with `count` arguments passes: every required one and the first
+        optional ones, with a variadic definition's last parameter repeated to fill `count`.
+        ValueError when `count` is fewer than the required, or more than all for a definition
+        that is not variadic."""
+        required = sum(1 for p in self.params if not p.optional)
+        if count < required or (count > len(self.params) and not self.variadic):
+            if self.variadic:
+                takes = f"at least {required}"
+            elif required == len(self.params):
+                takes = f"{required}"
+            else:
+                takes = f"{required} to {len(self.params)}"
+            msg = f"{self.function} takes {takes} arguments, not {count}"
+            raise ValueError(msg)
+        if count <= len(self.params):
+            return self.params[:count]
+        return self.params + (self.params[-1],) * (count - len(self.params))
 
     def numeric_arity(self) -> int:
         """The number of real or integer parameters."""
@@ -116,9 +158,9 @@ class Definition:
 
     def check_domain(self, args: Sequence[MathArg]) -> None:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
-        for p, a in zip(self.params, args, strict=True):
-            if p.kind in ("bool", "array") or isinstance(a, (bool, tuple)):
-                continue  # an array's rules are the definition's `domain`
+        for p, a in zip(self.params_for(len(args)), args, strict=True):
+            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
+                continue  # an array's or a matrix's rules are the definition's `domain`
             if not p.domain.contains(float(a)):
                 msg = f"{p.name} outside {p.domain.describe()}"
                 raise DomainError(msg)
@@ -182,6 +224,11 @@ def solve_bracket(
             side = 1
     msg = "root bracket did not converge"
     raise NoValueError(msg)
+
+
+LOG_SMALLEST_DOUBLE = math.log(5e-324)
+"""ln of the smallest positive double (2^-1074): the lower end of BETA.INV's log bracket, since a root below it has no
+double and Excel is #NUM! there (statistics.md "BETAINV is #NUM! where its quantile underflows", T-3578)."""
 
 
 def solve_log_bracket(f: Callable[[mpmath.mpf], mpmath.mpf], lo: float, hi: float) -> mpmath.mpf:

@@ -17,6 +17,7 @@ SHEET_OPS = (
     "delete_sheet",
     "convert_table",
     "delete_table",
+    "add_table",
 )
 # The spec key holding each op's argument; the ops not listed (add, delete_sheet) take none.
 _OP_KEYS = {
@@ -28,10 +29,13 @@ _OP_KEYS = {
     "delete_column": "column",
     "convert_table": "table",
     "delete_table": "table",
+    "add_table": "table",
 }
 _COLUMN_LETTERS = re.compile(r"[A-Za-z]{1,3}")
 _ROW_SPAN = re.compile(r"([1-9][0-9]*):([1-9][0-9]*)")
 _LAST_COLUMN = 16384  # XFD
+# An add_table's recorded argument, `<table name> <A1 range>` (T-3629): neither part holds a space.
+_TABLE_AT = re.compile(r"([^\s:]+) ([A-Za-z]{1,3}[1-9][0-9]*:[A-Za-z]{1,3}[1-9][0-9]*)")
 
 
 def _op_key(kind: object) -> str | None:
@@ -47,6 +51,15 @@ def column_number(letters: str) -> int:
     for ch in letters.upper():
         number = number * 26 + ord(ch) - ord("A") + 1
     return number
+
+
+def column_letters(number: int) -> str:
+    """The column letters of a 1-based column number (2 is `B`); the inverse of `column_number`."""
+    letters = ""
+    while number:
+        number, rem = divmod(number - 1, 26)
+        letters = chr(ord("A") + rem) + letters
+    return letters
 
 
 def _is_column(value: object) -> bool:
@@ -68,6 +81,12 @@ def _is_name(value: object) -> bool:
     return isinstance(value, str) and bool(value)
 
 
+def _is_column_span(value: object) -> bool:
+    """Whether `value` is the `C:E` columns of a multi-column insert or delete, first before last (T-2899)."""
+    first, _, last = value.partition(":") if isinstance(value, str) else ("", "", "")
+    return _is_column(first) and _is_column(last) and column_number(first) < column_number(last)
+
+
 def _is_row_span(value: object) -> bool:
     """Whether `value` is the `first:last` rows of a multi-row delete_row, first before last (T-3019)."""
     match = _ROW_SPAN.fullmatch(value) if isinstance(value, str) else None
@@ -81,10 +100,11 @@ def _valid_op_argument(kind: str, to: object) -> bool:
         "move": _is_int_at_least(to, 0),
         "insert_row": _is_int_at_least(to, 1),
         "delete_row": _is_int_at_least(to, 1) or _is_row_span(to),
-        "insert_column": _is_column(to),
-        "delete_column": _is_column(to),
+        "insert_column": _is_column(to) or _is_column_span(to),
+        "delete_column": _is_column(to) or _is_column_span(to),
         "convert_table": _is_name(to),
         "delete_table": _is_name(to),
+        "add_table": isinstance(to, str) and _TABLE_AT.fullmatch(to) is not None,
     }.get(kind, to is None)
 
 
@@ -94,7 +114,8 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
     blank row goes above it, T-1933; a delete_row with `count` n > 1 gives the span `row:row+n-1`,
     T-3019), the column letter of an insert_column or delete_column
     (spec key `column`), the table name of a convert_table or delete_table (spec key `table`;
-    T-2323) and None for an add or delete_sheet. Raises ValueError for an unknown or malformed op."""
+    T-2323), `<table> <range>` for an add_table (spec keys `table` and `ref`, a range with its header
+    row first; T-3629) and None for an add or delete_sheet. Raises ValueError for an unknown or malformed op."""
     recorded = isinstance(op, (list, tuple)) and len(op) == 3
     if recorded:
         key = _op_key(op[0])
@@ -105,20 +126,40 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
     kind, sheet = op["op"], op["sheet"]
     key = _op_key(kind)
     to = op.get(key) if key else None
-    if set(op) - {"op", "sheet", key, *(["count"] if kind == "delete_row" else [])}:
+    counted = kind in ("delete_row", "insert_column", "delete_column")
+    placed = kind == "add_table" and not recorded
+    if set(op) - {"op", "sheet", key, *(["count"] if counted else []), *(["ref"] if placed else [])}:
         msg = f"sheet op {op!r} has unknown keys"
         raise ValueError(msg)
-    if "count" in op:
-        count = op["count"]
-        if not (_is_int_at_least(count, 1) and _is_int_at_least(to, 1)):
-            msg = f"sheet op {op!r}: `count` must be a row count >= 1 after a 1-based `row`"
+    if placed:
+        # A spec names the table and its `ref` apart; the recording joins them (T-3629).
+        if not _is_name(to) or not isinstance(op.get("ref"), str) or " " in str(to):
+            msg = f"sheet op {op!r}: add_table needs a `table` name without spaces and a `ref` range"
             raise ValueError(msg)
-        # One edit of several rows is recorded as their span, `4:7`, which is also Graph's address;
-        # a count of 1 keeps the plain row, so single-row workbooks stay byte-identical.
-        if count > 1:
+        to = f"{to} {op['ref'].upper()}"
+    elif "count" in op:
+        count = op["count"]
+        by_column = kind != "delete_row"
+        if not (_is_int_at_least(count, 1) and (_is_column(to) if by_column else _is_int_at_least(to, 1))):
+            msg = f"sheet op {op!r}: `count` must be a row or column count >= 1 after a 1-based `row` or a `column`"
+            raise ValueError(msg)
+        # One edit of several rows or columns is recorded as its span, `4:7` or `C:E`, which is also
+        # Graph's address; a count of 1 keeps the plain row or letter, so single-edit workbooks stay
+        # byte-identical.
+        if count > 1 and by_column:
+            first = str(to).upper()
+            last = column_number(first) + count - 1
+            if last > _LAST_COLUMN:
+                msg = f"sheet op {op!r}: the columns run past XFD"
+                raise ValueError(msg)
+            to = f"{first}:{column_letters(last)}"
+        elif count > 1:
             to = f"{to}:{to + count - 1}"
     elif _is_row_span(to) and not recorded:
         msg = f"sheet op {op!r}: a spec deletes several rows with `row` and `count`, not a span"
+        raise ValueError(msg)
+    elif _is_column_span(to) and not recorded:
+        msg = f"sheet op {op!r}: a spec edits several columns with `column` and `count`, not a span"
         raise ValueError(msg)
     if _valid_op_argument(kind, to):
         return kind, sheet, to
@@ -127,6 +168,6 @@ def sheet_op(op: Any) -> tuple[str, str, str | int | None]:
         " >= 0 for move; `row` a 1-based row for insert_row and delete_row (with an optional row `count`"
         " for delete_row); `column` a column letter"
         " (A to XFD) for insert_column and delete_column; `table` a table name for convert_table and"
-        " delete_table"
+        " delete_table; `table` and `ref` (A1:B2) for add_table"
     )
     raise ValueError(msg)

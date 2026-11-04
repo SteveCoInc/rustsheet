@@ -92,8 +92,12 @@ pub(super) type Result<T> = std::result::Result<T, LexerError>;
 /// The one exception is a bare "R"/"C" immediately followed by '[': that is a
 /// malformed R1C1 reference (e.g. `R[`), not an identifier, so it is rejected.
 /// Genuine R1C1 references (`R[n]C[n]`, `RnCn`) are consumed before this fallback.
+///
+/// A name spelled like an A1 cell (`F1`, `A1`) is no reference here and is accepted in any case,
+/// as Excel takes `LET(F1,5,F1+1)` typed in R1C1 mode (probes/t3897-r1c1-let-cell-names A11,
+/// T-3897); lower case (`f1`) always passed.
 fn is_valid_r1c1_identifier(name: &str, next_char: Option<char>) -> bool {
-    if !utils::is_valid_a1_identifier(name) {
+    if !utils::is_name_text(name) {
         return false;
     }
     // `is_valid_identifier` also refuses the R1C1-shaped names ("R", "C", "RC", "R1C1D").
@@ -117,13 +121,18 @@ pub struct Lexer {
     mode: LexerMode,
     locale: &'static Locale,
     language: &'static Language,
-    /// Whether a padded bare column (`T[ Col ]`) reads as a column: our own printed text for
-    /// `T[ [Col] ]`, which the engine re-parses after edits. Text typed or loaded from a file
-    /// reads it as no column, as Excel does (see [`Lexer::set_engine_text`]).
-    padded_bare_columns: bool,
+    /// Whether the text is the engine's own printed text, which it re-parses after edits: a
+    /// padded bare column (`T[ Col ]`, our text for `T[ [Col] ]`) then reads as a column, and a
+    /// detached structured reference's `[!]` prefix is read. Text typed or loaded from a file
+    /// reads the column as no column, as Excel does, and refuses the prefix (see
+    /// [`Lexer::set_engine_text`]).
+    engine_text: bool,
     /// Whether `**` is a number's exponent marker, as `E` is: text a user types, which Excel
     /// reads so (`=2**3` stores `=2000`; see [`Lexer::set_typed`]).
     double_star_exponent: bool,
+    /// Whether whitespace between tokens of the formula last set held a TAB or an NBSP, which
+    /// Excel refuses in typed text ([`Lexer::skipped_refused_whitespace`]).
+    refused_whitespace: bool,
     /// The last token [`peek_token`](Self::peek_token) read: the parser peeks at most tokens
     /// several times before taking them, and long imported formulas spent most of their parse
     /// lexing the same token again (T-0499). A token depends only on the text, the start
@@ -153,8 +162,9 @@ impl Lexer {
             mode,
             locale,
             language,
-            padded_bare_columns: true,
+            engine_text: true,
             double_star_exponent: false,
+            refused_whitespace: false,
             peeked: None,
             number_text: String::new(),
         }
@@ -171,11 +181,11 @@ impl Lexer {
     }
 
     /// Whether the next formulas are text the engine printed itself (`true`, the default), which
-    /// reads a padded bare column (`T[ Col ]`) as a column; never text typed or read from a file,
-    /// where Excel refuses it or loads it as `#REF!` (syntax.md, probes/t2800-stored-ws-0..2,
-    /// T-3069).
+    /// reads a padded bare column (`T[ Col ]`) as a column and a detached structured reference's
+    /// `[!]` prefix (T-2763); never text typed or read from a file, where Excel refuses the column
+    /// or loads it as `#REF!` (syntax.md, probes/t2800-stored-ws-0..2, T-3069).
     pub(crate) fn set_engine_text(&mut self, engine_text: bool) {
-        self.padded_bare_columns = engine_text;
+        self.engine_text = engine_text;
         self.peeked = None;
     }
 
@@ -228,6 +238,16 @@ impl Lexer {
         self.position = 0;
         self.next_token_position = None;
         self.peeked = None;
+        self.refused_whitespace = false;
+    }
+
+    /// Whether the whitespace skipped between tokens of the formula so far held a TAB or an NBSP.
+    /// Typed, Excel refuses such a formula in A1 and R1C1 mode alike (Graph PATCH 400
+    /// `InvalidArgument`: `=1+` TAB `2`, `=` TAB `1+2`, NBSP forms, T-2949; `=S!` TAB `R1C4` in
+    /// R1C1 mode, probes/t3102-r1c1-ws-after-bang, T-3102; docs/excel-semantics/syntax.md
+    /// "Remaining whitespace shapes"). A string literal's own text is not skipped whitespace.
+    pub(crate) fn skipped_refused_whitespace(&self) -> bool {
+        self.refused_whitespace
     }
 
     /// Returns an error if the token is not the expected one.
@@ -806,6 +826,7 @@ impl Lexer {
             if !x.is_whitespace() {
                 break;
             }
+            self.refused_whitespace |= matches!(x, '\t' | '\u{a0}');
             position += 1;
         }
         self.position = position;

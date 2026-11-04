@@ -18,6 +18,11 @@ by part on the IM* text (`Fit.complex_text`).
 - `im-hyperbolic-log`: the log form's cells (|x| near 708-710.5) T-3546 chose Excel's EXP on, and
   `im-hyperbolic-log-fresh`, its sweep drawn after that choice (docs/research/t3546/libm-exp.patch
   makes the libm build).
+- `im-small-x-complex`: IMCOSH, IMCSCH, IMSECH and IMSINH of complex z at 0 < |x| <= 0.01, T-3720's sweep T-3721
+  chose the three-term sinh series on, and T-3721's sweep drawn after that choice
+  (`im-small-x-complex-fresh`; docs/research/t3589/gen_sweep.py).
+- `im-near-half-pi`: IMSIN and IMCOS with x near k*pi/2, drawn after T-3726 froze sin x and cos x as SIN and COS's
+  x87 reduction (docs/research/t3726/gen_sweep.py), with the T-3616 probe whose K1, L1, K22 and L22 found it.
 """
 
 from __future__ import annotations
@@ -32,11 +37,20 @@ from rustsheet_tools.fitlab.holdout import REFERENCE
 from rustsheet_tools.fitlab.score import Candidate, ExcelError
 from rustsheet_tools.fitlab.sweep import Cell, parse_complex_text
 
-_FUNCTION = re.compile(r"^=(IMSINH|IMCOSH|IMSIN|IMCOS)\(")
-_KERNELS = {"IMSINH": mpmath.sinh, "IMCOSH": mpmath.cosh, "IMSIN": mpmath.sin, "IMCOS": mpmath.cos}
+_FUNCTION = re.compile(r"^=(IMSINH|IMCOSH|IMSIN|IMCOS|IMCSCH|IMSECH)\(")
+_KERNELS = {
+    "IMSINH": mpmath.sinh,
+    "IMCOSH": mpmath.cosh,
+    "IMSIN": mpmath.sin,
+    "IMCOS": mpmath.cos,
+    "IMCSCH": mpmath.csch,
+    "IMSECH": mpmath.sech,
+}
 _DBL_MAX = sys.float_info.max
 _DBL_MIN_NORMAL = sys.float_info.min
 PATTERN = r"^=IM(?:SINH|COSH|SIN|COS)\((.*)\)$"
+# T-3721's fits also score the reciprocals.
+SMALL_X_PATTERN = r"^=IM(?:SINH|COSH|CSCH|SECH)\((.*)\)$"
 
 
 def _part(v: mpmath.mpf) -> float:
@@ -73,13 +87,13 @@ _NOTES = [
 ]
 
 
-def _fit(name: str, description: str, cases: list[str]) -> Fit:
+def _fit(name: str, description: str, cases: list[str], pattern: str = PATTERN) -> Fit:
     """One IM* fit: the shared pattern, reference, error cells and complex-text scoring."""
     return Fit(
         name=name,
         description=description,
         cases=cases,
-        pattern=PATTERN,
+        pattern=pattern,
         candidates=candidates,
         errors=True,
         complex_text=True,
@@ -138,5 +152,25 @@ FITS = [
         "im-hyperbolic-log-fresh",
         "IMSINH/IMCOSH in log space on T-3546's sweep drawn after choosing Excel's EXP (decision 0188 R4.2)",
         ["probes-numeric/t3546-im-hyperbolic-log-exp-fresh-sweep"],
+    ),
+    _fit(
+        "im-small-x-complex",
+        "IMCOSH/IMCSCH/IMSECH/IMSINH of complex z at 0 < |x| <= 0.01: T-3720's sweep T-3721 ranked the series on",
+        ["probes-numeric/t3720-im-reciprocal-small-x-complex"],
+        SMALL_X_PATTERN,
+    ),
+    _fit(
+        "im-small-x-complex-fresh",
+        "IMCOSH/IMCSCH/IMSECH/IMSINH at 0 < |x| <= 0.01: T-3721's sweep drawn after the three-term freeze",
+        ["probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep"],
+        SMALL_X_PATTERN,
+    ),
+    _fit(
+        "im-near-half-pi",
+        "IMSIN/IMCOS with x near k*pi/2: T-3726's sweep drawn after the x87 reduction was frozen, and the T-3616 probe",
+        [
+            "probes-numeric/t3726-imsin-imcos-near-half-pi-sweep",
+            "probes-numeric/t3616-imsin-imcos-positive-cut-probe",
+        ],
     ),
 ]

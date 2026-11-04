@@ -391,6 +391,85 @@ fn a_padded_column_survives_an_edit_that_rewrites_its_text() {
     assert_eq!(model.get_formatted_cell_value(0, 9, 5).unwrap(), "");
 }
 
+/// Untyped text from outside the engine (`set_user_input`, the Python bindings' path) reads a
+/// padded bare column as no column too, as Excel reads it typed (refused) or loaded (`#REF!`;
+/// syntax.md, probes/t2800-stored-ws-0..2); the engine's own re-entry of its printed `T[ Col ]`
+/// (a fill, `Model::fill_cell`) still reads the column (T-3258). Untyped, a formula that does not
+/// parse is stored as `#ERROR!`, as an unknown column is.
+#[test]
+fn an_external_padded_bare_column_is_no_column() {
+    let mut model = model(false);
+    for (row, formula) in [
+        (8, "=SUM(T[ Col ])"),
+        (9, "=SUM(T[ Col])"),
+        (10, "=SUM(T[Col ])"),
+    ] {
+        model
+            .set_user_input(0, row, 5, formula.to_string())
+            .unwrap();
+        model.evaluate();
+        assert_eq!(
+            model.get_formatted_cell_value(0, row, 5).unwrap(),
+            "#ERROR!",
+            "{formula}"
+        );
+    }
+    // The column as the engine prints it: `T[ [Col] ]` typed prints `T[ Col ]`, and a fill
+    // re-enters that text.
+    model
+        .set_typed_user_input(0, 12, 5, "=SUM(T[ [Col] ])".to_string())
+        .unwrap();
+    assert_eq!(
+        model.get_cell_formula(0, 12, 5).unwrap().as_deref(),
+        Some("=SUM(T[ Col ])")
+    );
+    let filled = model.fill_cell(0, (12, 5), (13, 5)).unwrap();
+    assert_eq!(filled, "=SUM(T[ Col ])");
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 12, 5).unwrap(), "7");
+    assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "7");
+    // The same text from outside is no column: a formula that does not parse, as an unknown
+    // column is untyped.
+    model.set_user_input(0, 14, 5, filled).unwrap();
+    model
+        .set_user_input(0, 15, 5, "=SUM(T[Nope])".to_string())
+        .unwrap();
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 14, 5).unwrap(), "#ERROR!");
+    assert_eq!(model.get_formatted_cell_value(0, 15, 5).unwrap(), "#ERROR!");
+}
+
+/// A loaded defined name whose body is a padded bare column is `#REF!`, as Excel loads it
+/// (probes/t3258-name-padded-column-0..2, T-3258); `T[ [Col] ]`, printed `T[ Col ]`, loads as
+/// the column.
+#[test]
+fn a_loaded_name_body_padded_bare_column_is_ref() {
+    let mut model = model(false);
+    for (name, body) in [
+        ("Both", "T[ Col ]"),
+        ("Left", "T[ Col]"),
+        ("Right", "T[Col ]"),
+    ] {
+        model.define_loaded_name(name, None, body).unwrap();
+    }
+    model.define_loaded_name("Ok", None, "T[ [Col] ]").unwrap();
+    for (row, formula) in [
+        (8, "=SUM(Both)"),
+        (9, "=SUM(Left)"),
+        (10, "=SUM(Right)"),
+        (11, "=SUM(Ok)"),
+    ] {
+        model
+            .set_user_input(0, row, 5, formula.to_string())
+            .unwrap();
+    }
+    model.evaluate();
+    let values: Vec<String> = (8..=11)
+        .map(|row| model.get_formatted_cell_value(0, row, 5).unwrap())
+        .collect();
+    assert_eq!(values, ["#REF!", "#REF!", "#REF!", "7"]);
+}
+
 /// probes/t3003-unqualified-structured-d2: `=[@Col]*2` typed into D2, just right of `T` A1:C4,
 /// parses inside the table it grows (rule 7f): `T` becomes A1:D4, the new column `Column1` fills
 /// against each row, and every row prints `=[@Col]*2`. The stored text names the table, so it

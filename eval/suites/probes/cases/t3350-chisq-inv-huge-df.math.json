@@ -1,0 +1,1605 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "1aaa5c03f0bf6a01c4ad8a8936980ffe02ed0977dad562c64a85689033692811"
+ },
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "n",
+    "v": "948517.81629976136473932098421632428643427687448472",
+    "f": "=CHISQ.INV(1E-300,1E6)"
+   },
+   "A10": {
+    "t": "n",
+    "v": "1006736.7596362823006536374816828092055522279068131",
+    "f": "=CHISQ.INV(1-1E-6,1E6)"
+   },
+   "A11": {
+    "t": "n",
+    "v": "1009022.6223672478377989242724250616344190229331274",
+    "f": "=CHISQ.INV(1-1E-10,1E6)"
+   },
+   "A12": {
+    "t": "n",
+    "v": "1011272.3111137591248620064007750753462725900952776",
+    "f": "=CHISQ.INV(1-1E-15,1E6)"
+   },
+   "A13": {
+    "t": "n",
+    "v": "1926817.3078797314060737268568621506836451711657287",
+    "f": "=CHISQ.INV(1E-300,2E6)"
+   },
+   "A14": {
+    "t": "n",
+    "v": "1957753.6046466315577830476221533069935139204095911",
+    "f": "=CHISQ.INV(1E-100,2E6)"
+   },
+   "A157": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-300,2E10)"
+   },
+   "A158": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-100,2E10)"
+   },
+   "A159": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-30,2E10)"
+   },
+   "A160": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-10,2E10)"
+   },
+   "A161": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,2E10)"
+   },
+   "A162": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.1,2E10)"
+   },
+   "A163": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,2E10)"
+   },
+   "A164": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.9,2E10)"
+   },
+   "A165": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.999,2E10)"
+   },
+   "A166": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-6,2E10)"
+   },
+   "A167": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-10,2E10)"
+   },
+   "A168": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-15,2E10)"
+   },
+   "A169": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-300,1E11)"
+   },
+   "A170": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-100,1E11)"
+   },
+   "A171": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-30,1E11)"
+   },
+   "A172": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1E-10,1E11)"
+   },
+   "A173": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.001,1E11)"
+   },
+   "A174": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.1,1E11)"
+   },
+   "A175": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.5,1E11)"
+   },
+   "A176": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.9,1E11)"
+   },
+   "A177": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(0.999,1E11)"
+   },
+   "A178": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-6,1E11)"
+   },
+   "A179": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-10,1E11)"
+   },
+   "A180": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.INV(1-1E-15,1E11)"
+   },
+   "A181": {
+    "t": "n",
+    "v": "1053310.777586219957115592440358841847469409425536",
+    "f": "=CHISQ.INV.RT(1E-300,1E6)"
+   },
+   "A182": {
+    "t": "n",
+    "v": "1030386.9880938714544043572813101610679350807502477",
+    "f": "=CHISQ.INV.RT(1E-100,1E6)"
+   },
+   "A183": {
+    "t": "n",
+    "v": "1016299.6402435438115358221321528911238500743720572",
+    "f": "=CHISQ.INV.RT(1E-30,1E6)"
+   },
+   "A184": {
+    "t": "n",
+    "v": "1009022.6223853256213937875503636867781696322522478",
+    "f": "=CHISQ.INV.RT(1E-10,1E6)"
+   },
+   "A185": {
+    "t": "n",
+    "v": "1004375.9487461416937014659359902373565181516543969",
+    "f": "=CHISQ.INV.RT(0.001,1E6)"
+   },
+   "A186": {
+    "t": "n",
+    "v": "1001812.8153150163480913542543844611632038885698563",
+    "f": "=CHISQ.INV.RT(0.1,1E6)"
+   },
+   "A189": {
+    "t": "n",
+    "v": "995635.45063159552582310988869943682831232916305378",
+    "f": "=CHISQ.INV.RT(0.999,1E6)"
+   },
+   "A191": {
+    "t": "n",
+    "v": "991029.99979214575693328042348246094557284262713942",
+    "f": "=CHISQ.INV.RT(1-1E-10,1E6)"
+   },
+   "A192": {
+    "t": "n",
+    "v": "988810.444151585963302365930786894603682430257433",
+    "f": "=CHISQ.INV.RT(1-1E-15,1E6)"
+   },
+   "A193": {
+    "t": "n",
+    "v": "2075011.3139588028320823230559077703096716965602959",
+    "f": "=CHISQ.INV.RT(1E-300,2E6)"
+   },
+   "A194": {
+    "t": "n",
+    "v": "2042848.4720721435265720007511077313412108755350394",
+    "f": "=CHISQ.INV.RT(1E-100,2E6)"
+   },
+   "A195": {
+    "t": "n",
+    "v": "2023015.0777325416485857516742788480100463511394464",
+    "f": "=CHISQ.INV.RT(1E-30,2E6)"
+   },
+   "A196": {
+    "t": "n",
+    "v": "2012749.0047247896037518328767629447172812027240925",
+    "f": "=CHISQ.INV.RT(1E-10,2E6)"
+   },
+   "A197": {
+    "t": "n",
+    "v": "2006186.1647397089436374128736097972587302759542746",
+    "f": "=CHISQ.INV.RT(0.001,2E6)"
+   },
+   "A198": {
+    "t": "n",
+    "v": "2002563.5309992419149492138322567144237580356087447",
+    "f": "=CHISQ.INV.RT(0.1,2E6)"
+   },
+   "A2": {
+    "t": "n",
+    "v": "970215.08557517294757547719202698745316994102039242",
+    "f": "=CHISQ.INV(1E-100,1E6)"
+   },
+   "A20": {
+    "t": "n",
+    "v": "2002563.5309992419152657899179400911407435819468308",
+    "f": "=CHISQ.INV(0.9,2E6)"
+   },
+   "A202": {
+    "t": "n",
+    "v": "1990507.5439550117837987725283324315276373455575183",
+    "f": "=CHISQ.INV.RT(1-1E-6,2E6)"
+   },
+   "A203": {
+    "t": "n",
+    "v": "1987303.6174857049350947733063038325309880727515197",
+    "f": "=CHISQ.INV.RT(1-1E-10,2E6)"
+   },
+   "A204": {
+    "t": "n",
+    "v": "1984158.4639522588590922353015394598978684246436381",
+    "f": "=CHISQ.INV.RT(1-1E-15,2E6)"
+   },
+   "A205": {
+    "t": "n",
+    "v": "5118069.3017732256091354807780773029937575710823033",
+    "f": "=CHISQ.INV.RT(1E-300,5E6)"
+   },
+   "A206": {
+    "t": "n",
+    "v": "5067573.9392692541150908675001029712807906645309194",
+    "f": "=CHISQ.INV.RT(1E-100,5E6)"
+   },
+   "A207": {
+    "t": "n",
+    "v": "5036339.4284757388557303719323196139138871387082421",
+    "f": "=CHISQ.INV.RT(1E-30,5E6)"
+   },
+   "A208": {
+    "t": "n",
+    "v": "5020142.6448049494178797677403347499986438096776948",
+    "f": "=CHISQ.INV.RT(1E-10,5E6)"
+   },
+   "A209": {
+    "t": "n",
+    "v": "5009777.8725535033122685768709875231223457384482039",
+    "f": "=CHISQ.INV.RT(0.001,5E6)"
+   },
+   "A21": {
+    "t": "n",
+    "v": "2006186.1647397089431211515685850200701735074443368",
+    "f": "=CHISQ.INV(0.999,2E6)"
+   },
+   "A210": {
+    "t": "n",
+    "v": "5004053.0498944328280345394791048241974348993660351",
+    "f": "=CHISQ.INV.RT(0.1,5E6)"
+   },
+   "A213": {
+    "t": "n",
+    "v": "4990233.526826797288075643505206938041776208675385",
+    "f": "=CHISQ.INV.RT(0.999,5E6)"
+   },
+   "A214": {
+    "t": "n",
+    "v": "4984982.7465877215145729626717324057628064118707837",
+    "f": "=CHISQ.INV.RT(1-1E-6,5E6)"
+   },
+   "A215": {
+    "t": "n",
+    "v": "4979909.9774356616272526488565832830809416317095713",
+    "f": "=CHISQ.INV.RT(1-1E-10,5E6)"
+   },
+   "A216": {
+    "t": "n",
+    "v": "4974928.3095449981445454251568564814046382704858849",
+    "f": "=CHISQ.INV.RT(1-1E-15,5E6)"
+   },
+   "A217": {
+    "t": "n",
+    "v": "10166595.230344969640818786347166023583703369647256",
+    "f": "=CHISQ.INV.RT(1E-300,1E7)"
+   },
+   "A218": {
+    "t": "n",
+    "v": "10095439.051634111201265252255439720304767162570693",
+    "f": "=CHISQ.INV.RT(1E-100,1E7)"
+   },
+   "A219": {
+    "t": "n",
+    "v": "10051355.661652686966237282147556684227952500151305",
+    "f": "=CHISQ.INV.RT(1E-30,1E7)"
+   },
+   "A22": {
+    "t": "n",
+    "v": "2009521.2494269355405933942124989926884025908451715",
+    "f": "=CHISQ.INV(1-1E-6,2E6)"
+   },
+   "A220": {
+    "t": "n",
+    "v": "10028475.097763842447514632001410158803898403643114",
+    "f": "=CHISQ.INV.RT(1E-10,1E7)"
+   },
+   "A221": {
+    "t": "n",
+    "v": "10013825.638891771720593842119546757009744186361934",
+    "f": "=CHISQ.INV.RT(0.001,1E7)"
+   },
+   "A222": {
+    "t": "n",
+    "v": "10005731.70091347736892249691579661677032990125247",
+    "f": "=CHISQ.INV.RT(0.1,1E7)"
+   },
+   "A229": {
+    "t": "n",
+    "v": "20235221.622231617305805379219701731821601076601259",
+    "f": "=CHISQ.INV.RT(1E-300,2E7)"
+   },
+   "A23": {
+    "t": "n",
+    "v": "2012749.0046992684794470230261973565628543803270838",
+    "f": "=CHISQ.INV(1-1E-10,2E6)"
+   },
+   "A230": {
+    "t": "n",
+    "v": "20134846.34015475464861723759590793061651345358526",
+    "f": "=CHISQ.INV.RT(1E-100,2E7)"
+   },
+   "A231": {
+    "t": "n",
+    "v": "20072591.832623388069534969179133911506522567847647",
+    "f": "=CHISQ.INV.RT(1E-30,2E7)"
+   },
+   "A232": {
+    "t": "n",
+    "v": "20040258.967293026693013351979147885664184968959183",
+    "f": "=CHISQ.INV.RT(1E-10,2E7)"
+   },
+   "A233": {
+    "t": "n",
+    "v": "20019550.045001854712413789465045409791269750104226",
+    "f": "=CHISQ.INV.RT(0.001,2E7)"
+   },
+   "A234": {
+    "t": "n",
+    "v": "20008105.671901135603737342334510150929727369061958",
+    "f": "=CHISQ.INV.RT(0.1,2E7)"
+   },
+   "A24": {
+    "t": "n",
+    "v": "2015924.2913741114524796998442114002434332922726265",
+    "f": "=CHISQ.INV(1-1E-15,2E6)"
+   },
+   "A240": {
+    "t": "n",
+    "v": "19949815.264884366923270369254519383251015716470493",
+    "f": "=CHISQ.INV.RT(1-1E-15,2E7)"
+   },
+   "A241": {
+    "t": "n",
+    "v": "50371385.849412500228313759595935087332137855683431",
+    "f": "=CHISQ.INV.RT(1E-300,5E7)"
+   },
+   "A242": {
+    "t": "n",
+    "v": "50213035.680750684640953956250122267683992067863357",
+    "f": "=CHISQ.INV.RT(1E-100,5E7)"
+   },
+   "A243": {
+    "t": "n",
+    "v": "50114727.211969470748019525263206604706585826333896",
+    "f": "=CHISQ.INV.RT(1E-30,5E7)"
+   },
+   "A244": {
+    "t": "n",
+    "v": "50063639.722494389216634093758084311841928984878016",
+    "f": "=CHISQ.INV.RT(1E-10,5E7)"
+   },
+   "A245": {
+    "t": "n",
+    "v": "50030908.022839657458932602059224631679517595287261",
+    "f": "=CHISQ.INV.RT(0.001,5E7)"
+   },
+   "A246": {
+    "t": "n",
+    "v": "50012815.94382876604472228486111240450757372801414",
+    "f": "=CHISQ.INV.RT(0.1,5E7)"
+   },
+   "A25": {
+    "t": "n",
+    "v": "4883759.3368374156227392611180938016545009027102997",
+    "f": "=CHISQ.INV(1E-300,5E6)"
+   },
+   "A253": {
+    "t": "n",
+    "v": "100524839.7823993681762399070855768429580440463501",
+    "f": "=CHISQ.INV.RT(1E-300,1E8)"
+   },
+   "A254": {
+    "t": "n",
+    "v": "100301153.17976898117643307005667648984949686841937",
+    "f": "=CHISQ.INV.RT(1E-100,1E8)"
+   },
+   "A255": {
+    "t": "n",
+    "v": "100162212.75238338076386638032312271150340135230302",
+    "f": "=CHISQ.INV.RT(1E-30,1E8)"
+   },
+   "A256": {
+    "t": "n",
+    "v": "100089989.2585683577885889185771611399569857849728",
+    "f": "=CHISQ.INV.RT(1E-10,1E8)"
+   },
+   "A257": {
+    "t": "n",
+    "v": "100043708.18413501536775400641914967441209431593151",
+    "f": "=CHISQ.INV.RT(0.001,1E8)"
+   },
+   "A258": {
+    "t": "n",
+    "v": "100018124.30424440141882271332885157836472308887273",
+    "f": "=CHISQ.INV.RT(0.1,1E8)"
+   },
+   "A26": {
+    "t": "n",
+    "v": "4933028.1392793793618577611359434617940362896639288",
+    "f": "=CHISQ.INV(1E-100,5E6)"
+   },
+   "A265": {
+    "t": "n",
+    "v": "200741856.53178441209433966541178586968915542440395",
+    "f": "=CHISQ.INV.RT(1E-300,2E8)"
+   },
+   "A266": {
+    "t": "n",
+    "v": "200425770.16374720156232030985572947307052696575159",
+    "f": "=CHISQ.INV.RT(1E-100,2E8)"
+   },
+   "A267": {
+    "t": "n",
+    "v": "200229367.45093337676885795457902307989689794863955",
+    "f": "=CHISQ.INV.RT(1E-30,2E8)"
+   },
+   "A268": {
+    "t": "n",
+    "v": "200127253.13033607552591193246359477469778499151754",
+    "f": "=CHISQ.INV.RT(1E-10,2E8)"
+   },
+   "A269": {
+    "t": "n",
+    "v": "200061810.34585758930278631194595553082350919657904",
+    "f": "=CHISQ.INV.RT(0.001,2E8)"
+   },
+   "A27": {
+    "t": "n",
+    "v": "4963834.469902864630683312898534028235604029442862",
+    "f": "=CHISQ.INV(1E-30,5E6)"
+   },
+   "A270": {
+    "t": "n",
+    "v": "200025631.4595223571674400111059530762146326534972",
+    "f": "=CHISQ.INV.RT(0.1,2E8)"
+   },
+   "A28": {
+    "t": "n",
+    "v": "4979909.9773955874452206279378709975097492455658084",
+    "f": "=CHISQ.INV(1E-10,5E6)"
+   },
+   "A29": {
+    "t": "n",
+    "v": "4990233.5268267972872621026002369127082348776797073",
+    "f": "=CHISQ.INV(0.001,5E6)"
+   },
+   "A3": {
+    "t": "n",
+    "v": "983874.2577185030860828387336677100131890742338099",
+    "f": "=CHISQ.INV(1E-30,1E6)"
+   },
+   "A30": {
+    "t": "n",
+    "v": "4995947.8066047802827267759635039947534408731381528",
+    "f": "=CHISQ.INV(0.1,5E6)"
+   },
+   "A32": {
+    "t": "n",
+    "v": "5004053.0498944328285349331903149065660317877956207",
+    "f": "=CHISQ.INV(0.9,5E6)"
+   },
+   "A33": {
+    "t": "n",
+    "v": "5009777.8725535033114529131842704878972090762716526",
+    "f": "=CHISQ.INV(0.999,5E6)"
+   },
+   "A34": {
+    "t": "n",
+    "v": "5015046.046799185137774341518469933355200204451414",
+    "f": "=CHISQ.INV(1-1E-6,5E6)"
+   },
+   "A35": {
+    "t": "n",
+    "v": "5020142.6447646596859737934408980949526411440755343",
+    "f": "=CHISQ.INV(1-1E-10,5E6)"
+   },
+   "A36": {
+    "t": "n",
+    "v": "5025154.4458179873384496361799918038429157826763683",
+    "f": "=CHISQ.INV(1-1E-15,5E6)"
+   },
+   "A37": {
+    "t": "n",
+    "v": "9835233.4138564697760136347687075554737196235130172",
+    "f": "=CHISQ.INV(1E-300,1E7)"
+   },
+   "A38": {
+    "t": "n",
+    "v": "9905163.0275244784034970218529783837714823319279745",
+    "f": "=CHISQ.INV(1E-100,1E7)"
+   },
+   "A39": {
+    "t": "n",
+    "v": "9948818.2367779862554949396204484505062128436030178",
+    "f": "=CHISQ.INV(1E-30,1E7)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "991029.99977428352289329326124486912372240947471276",
+    "f": "=CHISQ.INV(1E-10,1E6)"
+   },
+   "A40": {
+    "t": "n",
+    "v": "9971577.5244418103829869910860670951563247360733274",
+    "f": "=CHISQ.INV(1E-10,1E7)"
+   },
+   "A41": {
+    "t": "n",
+    "v": "9986185.7604888493013486000443775189755850555476518",
+    "f": "=CHISQ.INV(0.001,1E7)"
+   },
+   "A42": {
+    "t": "n",
+    "v": "9994269.1555857392863362044789785265228486630937562",
+    "f": "=CHISQ.INV(0.1,1E7)"
+   },
+   "A44": {
+    "t": "n",
+    "v": "10005731.700913477369630048559166520036758282417617",
+    "f": "=CHISQ.INV(0.9,1E7)"
+   },
+   "A45": {
+    "t": "n",
+    "v": "10013825.638891771719440759252454210717872702678695",
+    "f": "=CHISQ.INV(0.999,1E7)"
+   },
+   "A46": {
+    "t": "n",
+    "v": "10021272.358296881072560049071012064957901235109121",
+    "f": "=CHISQ.INV(1-1E-6,1E7)"
+   },
+   "A47": {
+    "t": "n",
+    "v": "10028475.097706908840165425047854553737898274659378",
+    "f": "=CHISQ.INV(1-1E-10,1E7)"
+   },
+   "A48": {
+    "t": "n",
+    "v": "10035556.608176711636746184864210986005338305439715",
+    "f": "=CHISQ.INV(1-1E-15,1E7)"
+   },
+   "A49": {
+    "t": "n",
+    "v": "19766607.024765239174177386978003690913010547803422",
+    "f": "=CHISQ.INV(1E-300,2E7)"
+   },
+   "A5": {
+    "t": "n",
+    "v": "995635.45063159552545986970702533397346446150174937",
+    "f": "=CHISQ.INV(0.001,1E6)"
+   },
+   "A50": {
+    "t": "n",
+    "v": "19865755.739308813644456791132956373167505181861063",
+    "f": "=CHISQ.INV(1E-100,2E7)"
+   },
+   "A56": {
+    "t": "n",
+    "v": "20008105.671901135604737859532704928394038880492962",
+    "f": "=CHISQ.INV(0.9,2E7)"
+   },
+   "A57": {
+    "t": "n",
+    "v": "20019550.045001854710783523776325766555676910788369",
+    "f": "=CHISQ.INV(0.999,2E7)"
+   },
+   "A58": {
+    "t": "n",
+    "v": "20030077.69299916922734509613032868293995833268438",
+    "f": "=CHISQ.INV(1-1E-6,2E7)"
+   },
+   "A59": {
+    "t": "n",
+    "v": "20040258.967212555080721982040275647171709263321927",
+    "f": "=CHISQ.INV(1-1E-10,2E7)"
+   },
+   "A6": {
+    "t": "n",
+    "v": "998188.04118416840665440271153413251400559289143969",
+    "f": "=CHISQ.INV(0.1,1E6)"
+   },
+   "A60": {
+    "t": "n",
+    "v": "20050267.490496926155948782723244080399806193782812",
+    "f": "=CHISQ.INV(1-1E-15,2E7)"
+   },
+   "A61": {
+    "t": "n",
+    "v": "49630442.799261612239930801502472045343683099510037",
+    "f": "=CHISQ.INV(1E-300,5E7)"
+   },
+   "A62": {
+    "t": "n",
+    "v": "49787566.398895871064913755841049331056412576470477",
+    "f": "=CHISQ.INV(1E-100,5E7)"
+   },
+   "A68": {
+    "t": "n",
+    "v": "50012815.943828766046304084410972939542147683892446",
+    "f": "=CHISQ.INV(0.9,5E7)"
+   },
+   "A69": {
+    "t": "n",
+    "v": "50030908.02283965745635554258386007197997687664789",
+    "f": "=CHISQ.INV(0.999,5E7)"
+   },
+   "A7": {
+    "t": "n",
+    "v": "999999.3333334123457367039101089013660816768502022",
+    "f": "=CHISQ.INV(0.5,1E6)"
+   },
+   "A70": {
+    "t": "n",
+    "v": "50047548.640606777075827676614980636755476521701136",
+    "f": "=CHISQ.INV(1-1E-6,5E7)"
+   },
+   "A71": {
+    "t": "n",
+    "v": "50063639.7223672150821602303199646981144189278985",
+    "f": "=CHISQ.INV(1-1E-10,5E7)"
+   },
+   "A72": {
+    "t": "n",
+    "v": "50079455.827513851915572169672061086717500188341501",
+    "f": "=CHISQ.INV(1-1E-15,5E7)"
+   },
+   "A8": {
+    "t": "n",
+    "v": "1001812.8153150163483152864903397491625138486154088",
+    "f": "=CHISQ.INV(0.9,1E6)"
+   },
+   "A80": {
+    "t": "n",
+    "v": "100018124.3042444014210596037700955005877265499888",
+    "f": "=CHISQ.INV(0.9,1E8)"
+   },
+   "A81": {
+    "t": "n",
+    "v": "100043708.18413501536410993364438895410724088099035",
+    "f": "=CHISQ.INV(0.999,1E8)"
+   },
+   "A82": {
+    "t": "n",
+    "v": "100067237.96852987373981816512957443332133703384125",
+    "f": "=CHISQ.INV(1-1E-6,1E8)"
+   },
+   "A83": {
+    "t": "n",
+    "v": "100089989.2583885510561072395839456778179133362478",
+    "f": "=CHISQ.INV(1-1E-10,1E8)"
+   },
+   "A84": {
+    "t": "n",
+    "v": "100112350.36618066393813031170803934228461283018404",
+    "f": "=CHISQ.INV(1-1E-15,1E8)"
+   },
+   "A9": {
+    "t": "n",
+    "v": "1004375.9487461416933361029733779483841953045576411",
+    "f": "=CHISQ.INV(0.999,1E6)"
+   },
+   "A92": {
+    "t": "n",
+    "v": "200025631.45952235717060333996962375482006092540802",
+    "f": "=CHISQ.INV(0.9,2E8)"
+   },
+   "A93": {
+    "t": "n",
+    "v": "200061810.34585758929763325447912794369524002493614",
+    "f": "=CHISQ.INV(0.999,2E8)"
+   },
+   "A94": {
+    "t": "n",
+    "v": "200095082.88328323939257161950501298170571457693091",
+    "f": "=CHISQ.INV(1-1E-6,2E8)"
+   },
+   "A95": {
+    "t": "n",
+    "v": "200127253.13008183505616139880528474636264133426323",
+    "f": "=CHISQ.INV(1-1E-10,2E8)"
+   },
+   "A96": {
+    "t": "n",
+    "v": "200158870.26991531960672008877427281827961160872423",
+    "f": "=CHISQ.INV(1-1E-15,2E8)"
+   }
+  }
+ },
+ "skipped": {
+  "S": {
+   "A100": {
+    "f": "=CHISQ.INV(1E-10,5E8)",
+    "why": "no single value"
+   },
+   "A101": {
+    "f": "=CHISQ.INV(0.001,5E8)",
+    "why": "no single value"
+   },
+   "A102": {
+    "f": "=CHISQ.INV(0.1,5E8)",
+    "why": "no single value"
+   },
+   "A103": {
+    "f": "=CHISQ.INV(0.5,5E8)",
+    "why": "no single value"
+   },
+   "A104": {
+    "f": "=CHISQ.INV(0.9,5E8)",
+    "why": "no single value"
+   },
+   "A105": {
+    "f": "=CHISQ.INV(0.999,5E8)",
+    "why": "no single value"
+   },
+   "A106": {
+    "f": "=CHISQ.INV(1-1E-6,5E8)",
+    "why": "no single value"
+   },
+   "A107": {
+    "f": "=CHISQ.INV(1-1E-10,5E8)",
+    "why": "no single value"
+   },
+   "A108": {
+    "f": "=CHISQ.INV(1-1E-15,5E8)",
+    "why": "no single value"
+   },
+   "A109": {
+    "f": "=CHISQ.INV(1E-300,1E9)",
+    "why": "no single value"
+   },
+   "A110": {
+    "f": "=CHISQ.INV(1E-100,1E9)",
+    "why": "no single value"
+   },
+   "A111": {
+    "f": "=CHISQ.INV(1E-30,1E9)",
+    "why": "no single value"
+   },
+   "A112": {
+    "f": "=CHISQ.INV(1E-10,1E9)",
+    "why": "no single value"
+   },
+   "A113": {
+    "f": "=CHISQ.INV(0.001,1E9)",
+    "why": "no single value"
+   },
+   "A114": {
+    "f": "=CHISQ.INV(0.1,1E9)",
+    "why": "no single value"
+   },
+   "A115": {
+    "f": "=CHISQ.INV(0.5,1E9)",
+    "why": "no single value"
+   },
+   "A116": {
+    "f": "=CHISQ.INV(0.9,1E9)",
+    "why": "no single value"
+   },
+   "A117": {
+    "f": "=CHISQ.INV(0.999,1E9)",
+    "why": "no single value"
+   },
+   "A118": {
+    "f": "=CHISQ.INV(1-1E-6,1E9)",
+    "why": "no single value"
+   },
+   "A119": {
+    "f": "=CHISQ.INV(1-1E-10,1E9)",
+    "why": "no single value"
+   },
+   "A120": {
+    "f": "=CHISQ.INV(1-1E-15,1E9)",
+    "why": "no single value"
+   },
+   "A121": {
+    "f": "=CHISQ.INV(1E-300,2E9)",
+    "why": "no single value"
+   },
+   "A122": {
+    "f": "=CHISQ.INV(1E-100,2E9)",
+    "why": "no single value"
+   },
+   "A123": {
+    "f": "=CHISQ.INV(1E-30,2E9)",
+    "why": "no single value"
+   },
+   "A124": {
+    "f": "=CHISQ.INV(1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A125": {
+    "f": "=CHISQ.INV(0.001,2E9)",
+    "why": "no single value"
+   },
+   "A126": {
+    "f": "=CHISQ.INV(0.1,2E9)",
+    "why": "no single value"
+   },
+   "A127": {
+    "f": "=CHISQ.INV(0.5,2E9)",
+    "why": "no single value"
+   },
+   "A128": {
+    "f": "=CHISQ.INV(0.9,2E9)",
+    "why": "no single value"
+   },
+   "A129": {
+    "f": "=CHISQ.INV(0.999,2E9)",
+    "why": "no single value"
+   },
+   "A130": {
+    "f": "=CHISQ.INV(1-1E-6,2E9)",
+    "why": "no single value"
+   },
+   "A131": {
+    "f": "=CHISQ.INV(1-1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A132": {
+    "f": "=CHISQ.INV(1-1E-15,2E9)",
+    "why": "no single value"
+   },
+   "A133": {
+    "f": "=CHISQ.INV(1E-300,5E9)",
+    "why": "no single value"
+   },
+   "A134": {
+    "f": "=CHISQ.INV(1E-100,5E9)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=CHISQ.INV(1E-30,5E9)",
+    "why": "no single value"
+   },
+   "A136": {
+    "f": "=CHISQ.INV(1E-10,5E9)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=CHISQ.INV(0.001,5E9)",
+    "why": "no single value"
+   },
+   "A138": {
+    "f": "=CHISQ.INV(0.1,5E9)",
+    "why": "no single value"
+   },
+   "A139": {
+    "f": "=CHISQ.INV(0.5,5E9)",
+    "why": "no single value"
+   },
+   "A140": {
+    "f": "=CHISQ.INV(0.9,5E9)",
+    "why": "no single value"
+   },
+   "A141": {
+    "f": "=CHISQ.INV(0.999,5E9)",
+    "why": "no single value"
+   },
+   "A142": {
+    "f": "=CHISQ.INV(1-1E-6,5E9)",
+    "why": "no single value"
+   },
+   "A143": {
+    "f": "=CHISQ.INV(1-1E-10,5E9)",
+    "why": "no single value"
+   },
+   "A144": {
+    "f": "=CHISQ.INV(1-1E-15,5E9)",
+    "why": "no single value"
+   },
+   "A145": {
+    "f": "=CHISQ.INV(1E-300,1E10)",
+    "why": "no single value"
+   },
+   "A146": {
+    "f": "=CHISQ.INV(1E-100,1E10)",
+    "why": "no single value"
+   },
+   "A147": {
+    "f": "=CHISQ.INV(1E-30,1E10)",
+    "why": "no single value"
+   },
+   "A148": {
+    "f": "=CHISQ.INV(1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A149": {
+    "f": "=CHISQ.INV(0.001,1E10)",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=CHISQ.INV(1E-30,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A150": {
+    "f": "=CHISQ.INV(0.1,1E10)",
+    "why": "no single value"
+   },
+   "A151": {
+    "f": "=CHISQ.INV(0.5,1E10)",
+    "why": "no single value"
+   },
+   "A152": {
+    "f": "=CHISQ.INV(0.9,1E10)",
+    "why": "no single value"
+   },
+   "A153": {
+    "f": "=CHISQ.INV(0.999,1E10)",
+    "why": "no single value"
+   },
+   "A154": {
+    "f": "=CHISQ.INV(1-1E-6,1E10)",
+    "why": "no single value"
+   },
+   "A155": {
+    "f": "=CHISQ.INV(1-1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A156": {
+    "f": "=CHISQ.INV(1-1E-15,1E10)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=CHISQ.INV(1E-10,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A17": {
+    "f": "=CHISQ.INV(0.001,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A18": {
+    "f": "=CHISQ.INV(0.1,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A187": {
+    "f": "=CHISQ.INV.RT(0.5,1E6)",
+    "why": "not converged or too slow"
+   },
+   "A188": {
+    "f": "=CHISQ.INV.RT(0.9,1E6)",
+    "why": "not converged or too slow"
+   },
+   "A19": {
+    "f": "=CHISQ.INV(0.5,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A190": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E6)",
+    "why": "not converged or too slow"
+   },
+   "A199": {
+    "f": "=CHISQ.INV.RT(0.5,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A200": {
+    "f": "=CHISQ.INV.RT(0.9,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A201": {
+    "f": "=CHISQ.INV.RT(0.999,2E6)",
+    "why": "not converged or too slow"
+   },
+   "A211": {
+    "f": "=CHISQ.INV.RT(0.5,5E6)",
+    "why": "not converged or too slow"
+   },
+   "A212": {
+    "f": "=CHISQ.INV.RT(0.9,5E6)",
+    "why": "not converged or too slow"
+   },
+   "A223": {
+    "f": "=CHISQ.INV.RT(0.5,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A224": {
+    "f": "=CHISQ.INV.RT(0.9,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A225": {
+    "f": "=CHISQ.INV.RT(0.999,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A226": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A227": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A228": {
+    "f": "=CHISQ.INV.RT(1-1E-15,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A235": {
+    "f": "=CHISQ.INV.RT(0.5,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A236": {
+    "f": "=CHISQ.INV.RT(0.9,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A237": {
+    "f": "=CHISQ.INV.RT(0.999,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A238": {
+    "f": "=CHISQ.INV.RT(1-1E-6,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A239": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A247": {
+    "f": "=CHISQ.INV.RT(0.5,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A248": {
+    "f": "=CHISQ.INV.RT(0.9,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A249": {
+    "f": "=CHISQ.INV.RT(0.999,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A250": {
+    "f": "=CHISQ.INV.RT(1-1E-6,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A251": {
+    "f": "=CHISQ.INV.RT(1-1E-10,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A252": {
+    "f": "=CHISQ.INV.RT(1-1E-15,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A259": {
+    "f": "=CHISQ.INV.RT(0.5,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A260": {
+    "f": "=CHISQ.INV.RT(0.9,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A261": {
+    "f": "=CHISQ.INV.RT(0.999,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A262": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A263": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A264": {
+    "f": "=CHISQ.INV.RT(1-1E-15,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A271": {
+    "f": "=CHISQ.INV.RT(0.5,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A272": {
+    "f": "=CHISQ.INV.RT(0.9,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A273": {
+    "f": "=CHISQ.INV.RT(0.999,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A274": {
+    "f": "=CHISQ.INV.RT(1-1E-6,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A275": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A276": {
+    "f": "=CHISQ.INV.RT(1-1E-15,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A277": {
+    "f": "=CHISQ.INV.RT(1E-300,5E8)",
+    "why": "no single value"
+   },
+   "A278": {
+    "f": "=CHISQ.INV.RT(1E-100,5E8)",
+    "why": "no single value"
+   },
+   "A279": {
+    "f": "=CHISQ.INV.RT(1E-30,5E8)",
+    "why": "no single value"
+   },
+   "A280": {
+    "f": "=CHISQ.INV.RT(1E-10,5E8)",
+    "why": "no single value"
+   },
+   "A281": {
+    "f": "=CHISQ.INV.RT(0.001,5E8)",
+    "why": "no single value"
+   },
+   "A282": {
+    "f": "=CHISQ.INV.RT(0.1,5E8)",
+    "why": "no single value"
+   },
+   "A283": {
+    "f": "=CHISQ.INV.RT(0.5,5E8)",
+    "why": "no single value"
+   },
+   "A284": {
+    "f": "=CHISQ.INV.RT(0.9,5E8)",
+    "why": "no single value"
+   },
+   "A285": {
+    "f": "=CHISQ.INV.RT(0.999,5E8)",
+    "why": "no single value"
+   },
+   "A286": {
+    "f": "=CHISQ.INV.RT(1-1E-6,5E8)",
+    "why": "no single value"
+   },
+   "A287": {
+    "f": "=CHISQ.INV.RT(1-1E-10,5E8)",
+    "why": "no single value"
+   },
+   "A288": {
+    "f": "=CHISQ.INV.RT(1-1E-15,5E8)",
+    "why": "no single value"
+   },
+   "A289": {
+    "f": "=CHISQ.INV.RT(1E-300,1E9)",
+    "why": "no single value"
+   },
+   "A290": {
+    "f": "=CHISQ.INV.RT(1E-100,1E9)",
+    "why": "no single value"
+   },
+   "A291": {
+    "f": "=CHISQ.INV.RT(1E-30,1E9)",
+    "why": "no single value"
+   },
+   "A292": {
+    "f": "=CHISQ.INV.RT(1E-10,1E9)",
+    "why": "no single value"
+   },
+   "A293": {
+    "f": "=CHISQ.INV.RT(0.001,1E9)",
+    "why": "no single value"
+   },
+   "A294": {
+    "f": "=CHISQ.INV.RT(0.1,1E9)",
+    "why": "no single value"
+   },
+   "A295": {
+    "f": "=CHISQ.INV.RT(0.5,1E9)",
+    "why": "no single value"
+   },
+   "A296": {
+    "f": "=CHISQ.INV.RT(0.9,1E9)",
+    "why": "no single value"
+   },
+   "A297": {
+    "f": "=CHISQ.INV.RT(0.999,1E9)",
+    "why": "no single value"
+   },
+   "A298": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E9)",
+    "why": "no single value"
+   },
+   "A299": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E9)",
+    "why": "no single value"
+   },
+   "A300": {
+    "f": "=CHISQ.INV.RT(1-1E-15,1E9)",
+    "why": "no single value"
+   },
+   "A301": {
+    "f": "=CHISQ.INV.RT(1E-300,2E9)",
+    "why": "no single value"
+   },
+   "A302": {
+    "f": "=CHISQ.INV.RT(1E-100,2E9)",
+    "why": "no single value"
+   },
+   "A303": {
+    "f": "=CHISQ.INV.RT(1E-30,2E9)",
+    "why": "no single value"
+   },
+   "A304": {
+    "f": "=CHISQ.INV.RT(1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A305": {
+    "f": "=CHISQ.INV.RT(0.001,2E9)",
+    "why": "no single value"
+   },
+   "A306": {
+    "f": "=CHISQ.INV.RT(0.1,2E9)",
+    "why": "no single value"
+   },
+   "A307": {
+    "f": "=CHISQ.INV.RT(0.5,2E9)",
+    "why": "no single value"
+   },
+   "A308": {
+    "f": "=CHISQ.INV.RT(0.9,2E9)",
+    "why": "no single value"
+   },
+   "A309": {
+    "f": "=CHISQ.INV.RT(0.999,2E9)",
+    "why": "no single value"
+   },
+   "A31": {
+    "f": "=CHISQ.INV(0.5,5E6)",
+    "why": "not converged or too slow"
+   },
+   "A310": {
+    "f": "=CHISQ.INV.RT(1-1E-6,2E9)",
+    "why": "no single value"
+   },
+   "A311": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E9)",
+    "why": "no single value"
+   },
+   "A312": {
+    "f": "=CHISQ.INV.RT(1-1E-15,2E9)",
+    "why": "no single value"
+   },
+   "A313": {
+    "f": "=CHISQ.INV.RT(1E-300,5E9)",
+    "why": "no single value"
+   },
+   "A314": {
+    "f": "=CHISQ.INV.RT(1E-100,5E9)",
+    "why": "no single value"
+   },
+   "A315": {
+    "f": "=CHISQ.INV.RT(1E-30,5E9)",
+    "why": "no single value"
+   },
+   "A316": {
+    "f": "=CHISQ.INV.RT(1E-10,5E9)",
+    "why": "no single value"
+   },
+   "A317": {
+    "f": "=CHISQ.INV.RT(0.001,5E9)",
+    "why": "no single value"
+   },
+   "A318": {
+    "f": "=CHISQ.INV.RT(0.1,5E9)",
+    "why": "no single value"
+   },
+   "A319": {
+    "f": "=CHISQ.INV.RT(0.5,5E9)",
+    "why": "no single value"
+   },
+   "A320": {
+    "f": "=CHISQ.INV.RT(0.9,5E9)",
+    "why": "no single value"
+   },
+   "A321": {
+    "f": "=CHISQ.INV.RT(0.999,5E9)",
+    "why": "no single value"
+   },
+   "A322": {
+    "f": "=CHISQ.INV.RT(1-1E-6,5E9)",
+    "why": "no single value"
+   },
+   "A323": {
+    "f": "=CHISQ.INV.RT(1-1E-10,5E9)",
+    "why": "no single value"
+   },
+   "A324": {
+    "f": "=CHISQ.INV.RT(1-1E-15,5E9)",
+    "why": "no single value"
+   },
+   "A325": {
+    "f": "=CHISQ.INV.RT(1E-300,1E10)",
+    "why": "no single value"
+   },
+   "A326": {
+    "f": "=CHISQ.INV.RT(1E-100,1E10)",
+    "why": "no single value"
+   },
+   "A327": {
+    "f": "=CHISQ.INV.RT(1E-30,1E10)",
+    "why": "no single value"
+   },
+   "A328": {
+    "f": "=CHISQ.INV.RT(1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A329": {
+    "f": "=CHISQ.INV.RT(0.001,1E10)",
+    "why": "no single value"
+   },
+   "A330": {
+    "f": "=CHISQ.INV.RT(0.1,1E10)",
+    "why": "no single value"
+   },
+   "A331": {
+    "f": "=CHISQ.INV.RT(0.5,1E10)",
+    "why": "no single value"
+   },
+   "A332": {
+    "f": "=CHISQ.INV.RT(0.9,1E10)",
+    "why": "no single value"
+   },
+   "A333": {
+    "f": "=CHISQ.INV.RT(0.999,1E10)",
+    "why": "no single value"
+   },
+   "A334": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E10)",
+    "why": "no single value"
+   },
+   "A335": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E10)",
+    "why": "no single value"
+   },
+   "A336": {
+    "f": "=CHISQ.INV.RT(1-1E-15,1E10)",
+    "why": "no single value"
+   },
+   "A337": {
+    "f": "=CHISQ.INV.RT(1E-300,2E10)",
+    "why": "no single value"
+   },
+   "A338": {
+    "f": "=CHISQ.INV.RT(1E-100,2E10)",
+    "why": "no single value"
+   },
+   "A339": {
+    "f": "=CHISQ.INV.RT(1E-30,2E10)",
+    "why": "no single value"
+   },
+   "A340": {
+    "f": "=CHISQ.INV.RT(1E-10,2E10)",
+    "why": "no single value"
+   },
+   "A341": {
+    "f": "=CHISQ.INV.RT(0.001,2E10)",
+    "why": "no single value"
+   },
+   "A342": {
+    "f": "=CHISQ.INV.RT(0.1,2E10)",
+    "why": "no single value"
+   },
+   "A343": {
+    "f": "=CHISQ.INV.RT(0.5,2E10)",
+    "why": "no single value"
+   },
+   "A344": {
+    "f": "=CHISQ.INV.RT(0.9,2E10)",
+    "why": "no single value"
+   },
+   "A345": {
+    "f": "=CHISQ.INV.RT(0.999,2E10)",
+    "why": "no single value"
+   },
+   "A346": {
+    "f": "=CHISQ.INV.RT(1-1E-6,2E10)",
+    "why": "no single value"
+   },
+   "A347": {
+    "f": "=CHISQ.INV.RT(1-1E-10,2E10)",
+    "why": "no single value"
+   },
+   "A348": {
+    "f": "=CHISQ.INV.RT(1-1E-15,2E10)",
+    "why": "no single value"
+   },
+   "A349": {
+    "f": "=CHISQ.INV.RT(1E-300,1E11)",
+    "why": "no single value"
+   },
+   "A350": {
+    "f": "=CHISQ.INV.RT(1E-100,1E11)",
+    "why": "no single value"
+   },
+   "A351": {
+    "f": "=CHISQ.INV.RT(1E-30,1E11)",
+    "why": "no single value"
+   },
+   "A352": {
+    "f": "=CHISQ.INV.RT(1E-10,1E11)",
+    "why": "no single value"
+   },
+   "A353": {
+    "f": "=CHISQ.INV.RT(0.001,1E11)",
+    "why": "no single value"
+   },
+   "A354": {
+    "f": "=CHISQ.INV.RT(0.1,1E11)",
+    "why": "no single value"
+   },
+   "A355": {
+    "f": "=CHISQ.INV.RT(0.5,1E11)",
+    "why": "no single value"
+   },
+   "A356": {
+    "f": "=CHISQ.INV.RT(0.9,1E11)",
+    "why": "no single value"
+   },
+   "A357": {
+    "f": "=CHISQ.INV.RT(0.999,1E11)",
+    "why": "no single value"
+   },
+   "A358": {
+    "f": "=CHISQ.INV.RT(1-1E-6,1E11)",
+    "why": "no single value"
+   },
+   "A359": {
+    "f": "=CHISQ.INV.RT(1-1E-10,1E11)",
+    "why": "no single value"
+   },
+   "A360": {
+    "f": "=CHISQ.INV.RT(1-1E-15,1E11)",
+    "why": "no single value"
+   },
+   "A43": {
+    "f": "=CHISQ.INV(0.5,1E7)",
+    "why": "not converged or too slow"
+   },
+   "A51": {
+    "f": "=CHISQ.INV(1E-30,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A52": {
+    "f": "=CHISQ.INV(1E-10,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A53": {
+    "f": "=CHISQ.INV(0.001,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A54": {
+    "f": "=CHISQ.INV(0.1,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A55": {
+    "f": "=CHISQ.INV(0.5,2E7)",
+    "why": "not converged or too slow"
+   },
+   "A63": {
+    "f": "=CHISQ.INV(1E-30,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A64": {
+    "f": "=CHISQ.INV(1E-10,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A65": {
+    "f": "=CHISQ.INV(0.001,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A66": {
+    "f": "=CHISQ.INV(0.1,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A67": {
+    "f": "=CHISQ.INV(0.5,5E7)",
+    "why": "not converged or too slow"
+   },
+   "A73": {
+    "f": "=CHISQ.INV(1E-300,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A74": {
+    "f": "=CHISQ.INV(1E-100,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A75": {
+    "f": "=CHISQ.INV(1E-30,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A76": {
+    "f": "=CHISQ.INV(1E-10,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A77": {
+    "f": "=CHISQ.INV(0.001,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A78": {
+    "f": "=CHISQ.INV(0.1,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A79": {
+    "f": "=CHISQ.INV(0.5,1E8)",
+    "why": "not converged or too slow"
+   },
+   "A85": {
+    "f": "=CHISQ.INV(1E-300,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A86": {
+    "f": "=CHISQ.INV(1E-100,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A87": {
+    "f": "=CHISQ.INV(1E-30,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A88": {
+    "f": "=CHISQ.INV(1E-10,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A89": {
+    "f": "=CHISQ.INV(0.001,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A90": {
+    "f": "=CHISQ.INV(0.1,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A91": {
+    "f": "=CHISQ.INV(0.5,2E8)",
+    "why": "not converged or too slow"
+   },
+   "A97": {
+    "f": "=CHISQ.INV(1E-300,5E8)",
+    "why": "no single value"
+   },
+   "A98": {
+    "f": "=CHISQ.INV(1E-100,5E8)",
+    "why": "no single value"
+   },
+   "A99": {
+    "f": "=CHISQ.INV(1E-30,5E8)",
+    "why": "no single value"
+   }
+  }
+ }
+}

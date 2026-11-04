@@ -17,6 +17,7 @@ applied today, above shape 11 at 30 < x <= 600 and at every shape past x = 600, 
 there (or finding the form Excel uses instead), so the 37 cells below are within 15 digits of Excel.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01: these cells of probes-numeric/t3269-fresh-sweep (T-3269's first fresh sweep, 240 cells,
   excel-graph) are visibly off and no open task named them. T-3269's rework (decision 0203, decision 0188 R4.3) applies
   the Stirling-ratio form only at shapes 3/2 to 11 and 30 < x <= 600 (`incomplete_gamma/excel_tail.rs`
@@ -51,6 +52,10 @@ Cells this task owns:
 - probes-numeric/t3269-fresh-sweep.case.json (37): Calc!A3, A5, A6, A16, A18, A20, A21, A34, A39, A47, A55, A62, A67,
   A71, A84, A91, A94, A95, A97, A109, A117, A130, A132, A138, A146, A148, A151, A157, A158, A184, A185, A188, A192, A206,
   A224, A229, A231
+- probes/t3638-subnormal-upper-tail.case.json (7, past x = 600 on the normal side of the subnormal cut; T-3638's probe,
+  last-digit misses, ours minus Excel's value): Sheet1!A17 `CHISQ.DIST.RT(1412.0,7)` and A18 `CHIDIST(1412.0,7)`,
+  A23 `CHISQ.DIST.RT(1479.2,21)` and A24 `CHIDIST(1479.2,21)`, A36 `POISSON(3,708.7,TRUE)`, A39 `POISSON(9,737.4,TRUE)`,
+  A42 `POISSON(19,777.9,TRUE)`
 
 ## Acceptance criteria
 - [ ] A model of Excel's switch (or form) above shape 11 and past x = 600 fitted on T-3639's train case and the

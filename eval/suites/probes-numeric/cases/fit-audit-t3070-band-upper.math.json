@@ -1,0 +1,222 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "c75fc22a8c4ffb7b60a53f2bc676cda414e141d430986941bad4fcab0e1988fe"
+ },
+ "sheets": {},
+ "skipped": {
+  "S": {
+   "A1": {
+    "f": "=GAMMA.INV(1-3.84E-12,3000000000,1)",
+    "why": "no single value"
+   },
+   "A10": {
+    "f": "=GAMMA.INV(1-3.27E-8,4000000000,1)",
+    "why": "no single value"
+   },
+   "A11": {
+    "f": "=GAMMA.INV(1-0.13,5000000000,1)",
+    "why": "no single value"
+   },
+   "A12": {
+    "f": "=GAMMA.INV(1-0.0637,5000000000,1)",
+    "why": "no single value"
+   },
+   "A13": {
+    "f": "=GAMMA.INV(1-0.0423,5000000000,1)",
+    "why": "no single value"
+   },
+   "A14": {
+    "f": "=GAMMA.INV(1-0.0215,5000000000,1)",
+    "why": "no single value"
+   },
+   "A15": {
+    "f": "=GAMMA.INV(1-0.01,5000000000,1)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=GAMMA.INV(1-0.00322,5000000000,1)",
+    "why": "no single value"
+   },
+   "A17": {
+    "f": "=GAMMA.INV(0.0973,6000000000,1)",
+    "why": "no single value"
+   },
+   "A18": {
+    "f": "=GAMMA.INV(0.185,6000000000,1)",
+    "why": "no single value"
+   },
+   "A19": {
+    "f": "=GAMMA.INV(0.243,6000000000,1)",
+    "why": "no single value"
+   },
+   "A2": {
+    "f": "=GAMMA.INV(1-2.17E-13,3000000000,1)",
+    "why": "no single value"
+   },
+   "A20": {
+    "f": "=GAMMA.INV(0.346,6000000000,1)",
+    "why": "no single value"
+   },
+   "A21": {
+    "f": "=GAMMA.INV(0.461,6000000000,1)",
+    "why": "no single value"
+   },
+   "A22": {
+    "f": "=GAMMA.INV(1-0.381,6000000000,1)",
+    "why": "no single value"
+   },
+   "A23": {
+    "f": "=GAMMA.INV(0.000212,7000000000,1)",
+    "why": "no single value"
+   },
+   "A24": {
+    "f": "=GAMMA.INV(0.00089,7000000000,1)",
+    "why": "no single value"
+   },
+   "A25": {
+    "f": "=GAMMA.INV(0.00172,7000000000,1)",
+    "why": "no single value"
+   },
+   "A26": {
+    "f": "=GAMMA.INV(0.00434,7000000000,1)",
+    "why": "no single value"
+   },
+   "A27": {
+    "f": "=GAMMA.INV(0.01,7000000000,1)",
+    "why": "no single value"
+   },
+   "A28": {
+    "f": "=GAMMA.INV(0.0271,7000000000,1)",
+    "why": "no single value"
+   },
+   "A29": {
+    "f": "=GAMMA.INV(1.09E-8,8000000000,1)",
+    "why": "no single value"
+   },
+   "A3": {
+    "f": "=GAMMA.INV(1-4.87E-14,3000000000,1)",
+    "why": "no single value"
+   },
+   "A30": {
+    "f": "=GAMMA.INV(1.01E-7,8000000000,1)",
+    "why": "no single value"
+   },
+   "A31": {
+    "f": "=GAMMA.INV(2.9E-7,8000000000,1)",
+    "why": "no single value"
+   },
+   "A32": {
+    "f": "=GAMMA.INV(1.32E-6,8000000000,1)",
+    "why": "no single value"
+   },
+   "A33": {
+    "f": "=GAMMA.INV(5.47E-6,8000000000,1)",
+    "why": "no single value"
+   },
+   "A34": {
+    "f": "=GAMMA.INV(3.2E-5,8000000000,1)",
+    "why": "no single value"
+   },
+   "A35": {
+    "f": "=GAMMA.INV(2.27E-14,9000000000,1)",
+    "why": "no single value"
+   },
+   "A36": {
+    "f": "=GAMMA.INV(4.51E-13,9000000000,1)",
+    "why": "no single value"
+   },
+   "A37": {
+    "f": "=GAMMA.INV(1.9E-12,9000000000,1)",
+    "why": "no single value"
+   },
+   "A38": {
+    "f": "=GAMMA.INV(1.52E-11,9000000000,1)",
+    "why": "no single value"
+   },
+   "A39": {
+    "f": "=GAMMA.INV(1.11E-10,9000000000,1)",
+    "why": "no single value"
+   },
+   "A4": {
+    "f": "=GAMMA.INV(1-4.8E-15,3000000000,1)",
+    "why": "no single value"
+   },
+   "A40": {
+    "f": "=GAMMA.INV(1.39E-9,9000000000,1)",
+    "why": "no single value"
+   },
+   "A41": {
+    "f": "=GAMMA.INV(3.11E-21,10000000000,1)",
+    "why": "no single value"
+   },
+   "A42": {
+    "f": "=GAMMA.INV(1.28E-19,10000000000,1)",
+    "why": "no single value"
+   },
+   "A43": {
+    "f": "=GAMMA.INV(7.74E-19,10000000000,1)",
+    "why": "no single value"
+   },
+   "A44": {
+    "f": "=GAMMA.INV(1.07E-17,10000000000,1)",
+    "why": "no single value"
+   },
+   "A45": {
+    "f": "=GAMMA.INV(1.35E-16,10000000000,1)",
+    "why": "no single value"
+   },
+   "A46": {
+    "f": "=GAMMA.INV(3.45E-15,10000000000,1)",
+    "why": "no single value"
+   },
+   "A47": {
+    "f": "=GAMMA.INV(4.11E-29,11000000000,1)",
+    "why": "no single value"
+   },
+   "A48": {
+    "f": "=GAMMA.INV(3.38E-27,11000000000,1)",
+    "why": "no single value"
+   },
+   "A49": {
+    "f": "=GAMMA.INV(2.89E-26,11000000000,1)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=GAMMA.INV(1-7.13E-5,4000000000,1)",
+    "why": "no single value"
+   },
+   "A50": {
+    "f": "=GAMMA.INV(6.72E-25,11000000000,1)",
+    "why": "no single value"
+   },
+   "A51": {
+    "f": "=GAMMA.INV(1.43E-23,11000000000,1)",
+    "why": "no single value"
+   },
+   "A52": {
+    "f": "=GAMMA.INV(7.3E-22,11000000000,1)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=GAMMA.INV(1-1.31E-5,4000000000,1)",
+    "why": "no single value"
+   },
+   "A7": {
+    "f": "=GAMMA.INV(1-5.32E-6,4000000000,1)",
+    "why": "no single value"
+   },
+   "A8": {
+    "f": "=GAMMA.INV(1-1.28E-6,4000000000,1)",
+    "why": "no single value"
+   },
+   "A9": {
+    "f": "=GAMMA.INV(1-2.81E-7,4000000000,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}
