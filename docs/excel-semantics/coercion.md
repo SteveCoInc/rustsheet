@@ -247,6 +247,20 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
     `"co-op"` are two, as `=` finds them unequal; exactly_once drops both of an equal pair (`#CALC!` when none is
     left). On a cycle the grouping follows Excel's sort, not equality with any kept row: U+0327, U+0342, two
     U+0342 is three rows although U+0327 = two U+0342 (G4), while U+0342, two U+0342, U+0327 is two (G3).
+  - **UNIQUE's rule: equal lines become one group as soon as its merge meets them** (T-4200,
+    probes/t4200-unique-cycle-permutations, excel-graph, 2026-11-04: UNIQUE and exactly_once of every order of
+    {A3,A4,A6,A7} and {A4..A8} and of {A3,A4,A5}, A1:B150, and two-column rows A151:B174). UNIQUE runs SORT's
+    natural merge (above), except that two groups `=` finds equal become one group when they meet: as neighbours in
+    a run, as the heads of two runs being merged, or as the last group out of a merge and the next one; a group is
+    compared through the line that started it. Each group keeps its first line, in input order, and exactly_once
+    keeps the one-line groups. Grouping the neighbours of SORT's order fits the 4- and 5-text sets but not
+    {A3,A4,A5}, the cycle A5 < A3 < A4 = A5: SORT puts `{A3;A5;A4}` and `{A5;A4;A3}` in the order A5, A3, A4
+    (t3211 Calc!A2, A6), yet UNIQUE groups A5 with A4 in both (rows 146, 150), since they are equal neighbours of a
+    run before any merge. `{A4;A3;A5}` and `{A5;A3;A4}` keep three rows (rows 147, 149). Lines compare column by
+    column, the first unequal column deciding: rows ("x",A5), ("y",A3), ("x",A4) keep two, ("x",A5) standing for
+    ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149).
+    Which line represents a merged group (its first, its smallest or its last) is not separated by
+    the probe.
   Ours (T-3181): the operators and the criteria compare texts with `cmp_text_pairwise`, which
   applies the rule (the criteria index still hashes the `CollationKey` of the wrapped sums,
   which every pair the rule finds equal shares, and tests each candidate with the rule); so do
@@ -259,9 +273,10 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a
   text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
-  unequal): all t3211 UNIQUE cells but G4:I4 pass; grouping neighbours of the sorted order fits every one-column
-  t3211 UNIQUE cell in a simulation (T-4200). GROUPBY and PIVOTBY group the same way
-  (T-4088) but still sort with the total `cmp_text`. Open: T-4200.
+  unequal), when every text of its data is ASCII (ASCII texts compare transitively); otherwise, since T-4200, it
+  groups with `coalesce_equal_lines` (functions/util/pairwise_order.rs), the merge above, comparing texts with
+  `cmp_text_pairwise` and other cells by their keys, each comparison charged to the budget: every t3211 and t4200
+  UNIQUE cell passes. GROUPBY and PIVOTBY still group by the buckets (T-4088) and sort with the total `cmp_text`.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
   probes/t3201-collation-long-mark-runs (1,000 cells: a ladder of 246 texts `"a"` plus up to three
   marks, one per weight 2, 5, 8, 11 and 14 to 255, self-ranked in order (Calc!A1:A246); `"a"` with

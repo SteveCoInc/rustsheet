@@ -3,7 +3,7 @@ id: T-2054
 title: "Python bindings: expose the workbook file name (WorkbookOptions::name)"
 milestone: M12
 lane: api
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,3 +27,8 @@ workbook, for which both CELL forms are `#N/IMPL!`. bindings/python/src/facade.r
 
 ## Out of scope
 -
+
+## Outcome
+`name` keyword (default `None`) on `Workbook(...)`, `Workbook.open` and `Workbook.from_bytes`, passed to `WorkbookOptions::name`;
+stubs updated; two tests show `[Budget.xlsx]Data!$B$2` for named (new/open/from_bytes) and an error value for unnamed.
+Eval delta: none (bindings only). `make check-fast` green.

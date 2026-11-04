@@ -18,6 +18,16 @@ cache definition, its records and the pivot table definition into the package. T
 `"rendered"` map (A1 address → cell, the layout above) as constants and builds the pivot's cache from
 `source` (T-2084); `rustsheet-spec bake-pivots` fills it, and spec2xlsx refuses a `rendered` that
 differs from the layout, so the layout stays defined here only.
+
+A pivot may group its row field by numeric ranges (T-4228), the `<fieldGroup>` of ECMA-376:
+
+    "group": {"start": 0, "end": 1, "interval": 0.1, "items": ["<0", "0-0.1", ..., ">1"]}
+
+The row field must then hold numbers and the pivot has no column field. `items` are the group
+labels in order, written as the `<groupItems>`: the first for values below `start`, the last for
+values past `end`. Excel stores no record's group, so the builder renders no cells for a grouped
+pivot (which group a record falls in is what such a probe asks): Excel lays the pivot out itself on
+load (excel-graph, T-4228), and the engine adapter does not register it (T-4235).
 """
 
 from __future__ import annotations
@@ -40,7 +50,8 @@ _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
     "max": ("Max", max),
     "min": ("Min", min),
 }
-_KEYS = {"name", "source", "location", "row", "column", "value", "function", "rendered"}
+_KEYS = {"name", "source", "location", "row", "column", "value", "function", "rendered", "group"}
+_GROUP_KEYS = {"start", "end", "interval", "items"}
 
 Cell = str | float
 
@@ -124,7 +135,11 @@ class _Pivot:
         if self.function not in _FUNCTIONS:
             msg = f"pivot function {self.function!r} is not one of {sorted(_FUNCTIONS)}"
             raise ValueError(msg)
-        self.row = self._field(pivot["row"], text=True)
+        self.group = _group(pivot.get("group"))
+        if self.group is not None and pivot.get("column") is not None:
+            msg = "a grouped pivot has no column field"
+            raise ValueError(msg)
+        self.row = self._field(pivot["row"], text=self.group is None)
         self.column = None if pivot.get("column") is None else self._field(pivot["column"], text=True)
         self.value = self._field(pivot["value"], text=False)
         if len({self.row, self.column, self.value} - {None}) != (2 if self.column is None else 3):
@@ -150,6 +165,8 @@ class _Pivot:
         return index
 
     def _order(self, index: int) -> list[str]:
+        if index == self.row and self.group is not None:
+            return self.group.items
         return sorted(self.shared[index], key=str.casefold)
 
     def _aggregate(self, row_item: str | None, column_item: str | None) -> float | None:
@@ -169,6 +186,8 @@ class _Pivot:
         """The rendered compact-form layout, by (row, column)."""
         rows, top, left = self._order(self.row), self.top, self.left
         out: dict[tuple[int, int], Cell] = {}
+        if self.group is not None:
+            return out
 
         def put(row: int, col: int, value: Cell | None) -> None:
             if value is not None:
@@ -201,7 +220,7 @@ class _Pivot:
         }
 
     def location(self) -> str:
-        rows = len(self.shared[self.row]) + 1
+        rows = len(self._order(self.row)) + 1
         if self.column is None:
             bottom, right, first_data_row = self.top + rows, self.left + 1, 1
         else:
@@ -229,6 +248,8 @@ class _Pivot:
                     f'<sharedItems containsSemiMixedTypes="0" containsString="0" containsNumber="1"{integer}'
                     f' minValue="{_number(min(numbers))}" maxValue="{_number(max(numbers))}"/>'
                 )
+            if i == self.row and self.group is not None:
+                shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
         return (
             f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1" refreshOnLoad="1"'
@@ -257,7 +278,11 @@ class _Pivot:
     def _axis_items(self, index: int) -> tuple[str, str]:
         """A field's `<items>` (display order, shared-item indices) and its `<rowItems>`/`<colItems>` body."""
         order = self._order(index)
-        items = "".join(f'<item x="{self.shared[index].index(v)}"/>' for v in order)
+        grouped = index == self.row and self.group is not None
+        # A grouped field's items index its group labels, not shared items (it has none).
+        items = "".join(
+            f'<item x="{k if grouped else self.shared[index].index(v)}"/>' for k, v in enumerate(order)
+        )
         lines = "".join("<i><x/></i>" if d == 0 else f'<i><x v="{d}"/></i>' for d in range(len(order)))
         return (
             f'<items count="{len(order) + 1}">{items}<item t="default"/></items>',
@@ -278,7 +303,7 @@ class _Pivot:
                 pivot_fields.append('<pivotField showAll="0"/>')
         row_lines = self._axis_items(self.row)[1]
         rows = f'<rowFields count="1"><field x="{self.row}"/></rowFields>'
-        rows += f'<rowItems count="{len(self.shared[self.row]) + 1}">{row_lines}</rowItems>'
+        rows += f'<rowItems count="{len(self._order(self.row)) + 1}">{row_lines}</rowItems>'
         if self.column is None:
             columns = '<colItems count="1"><i/></colItems>'
         else:
@@ -299,6 +324,50 @@ class _Pivot:
             '<pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1" showColHeaders="1"'
             ' showRowStripes="0" showColStripes="0" showLastColumn="1"/></pivotTableDefinition>'
         )
+
+
+@dataclass(frozen=True)
+class _Group:
+    """A numeric range grouping of the row field (`<rangePr>` with `<groupItems>`)."""
+
+    start: float
+    end: float
+    interval: float
+    items: list[str]
+
+    def xml(self, *, base: int) -> str:
+        items = "".join(f"<s v={quoteattr(v)}/>" for v in self.items)
+        return (
+            f'<fieldGroup base="{base}"><rangePr autoStart="0" autoEnd="0" startNum="{_number(self.start)}"'
+            f' endNum="{_number(self.end)}" groupInterval="{_number(self.interval)}"/>'
+            f'<groupItems count="{len(self.items)}">{items}</groupItems></fieldGroup>'
+        )
+
+
+def _group(raw: Any) -> _Group | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict) or set(raw) != _GROUP_KEYS:
+        msg = f"a pivot group has exactly the keys {sorted(_GROUP_KEYS)}: {raw!r}"
+        raise ValueError(msg)
+    bounds = [raw["start"], raw["end"], raw["interval"]]
+    if any(isinstance(b, bool) or not isinstance(b, int | float) for b in bounds):
+        msg = f"a pivot group's start, end and interval are numbers: {raw!r}"
+        raise ValueError(msg)
+    start, end, interval = (float(b) for b in bounds)
+    if not start < end or not interval > 0:
+        msg = f"a pivot group needs start < end and interval > 0: {raw!r}"
+        raise ValueError(msg)
+    items = raw["items"]
+    if (
+        not isinstance(items, list)
+        or len(items) < 3
+        or not all(isinstance(v, str) for v in items)
+        or len(set(items)) != len(items)
+    ):
+        msg = f"a pivot group's items are three or more distinct texts: {items!r}"
+        raise ValueError(msg)
+    return _Group(start, end, interval, items)
 
 
 def rendered_cells(spec: dict[str, Any], sheet: dict[str, Any], pivot: dict[str, Any]) -> dict[str, Cell]:

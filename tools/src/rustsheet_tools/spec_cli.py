@@ -17,7 +17,7 @@ def bake_pivots(spec: dict[str, Any]) -> bool:
     for sheet in spec["sheets"]:
         for pivot in sheet.get("pivot_tables", ()):
             layout = rendered_cells(spec, sheet, pivot)
-            if pivot.get("rendered") != layout:
+            if pivot.get("rendered", {}) != layout:
                 pivot["rendered"] = layout
                 changed = True
     return changed
