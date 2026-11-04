@@ -3,7 +3,7 @@ id: T-0460
 title: "Python bindings: iterative calculation settings and data tables"
 milestone: M11
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -25,3 +25,10 @@ crates/rustsheet. The architecture review asked for binding mirrors; bindings/py
 
 ## Out of scope
 - Removing data tables from Python.
+
+## Outcome
+`Workbook.iteration` / `Workbook.set_iteration(enabled, max_iterations, max_change)` and
+`Transaction.add_data_table(range, row_input, column_input)` in `bindings/python/src/facade.rs`,
+with `.pyi` stubs and docstrings. Invalid iteration settings raise `ValueError`; data-table
+errors raise `EditError` when the `with` block exits and roll the block back. Four Python tests
+(settings round trip, converging cycle, column data table, rollback). Eval delta: none (bindings only).

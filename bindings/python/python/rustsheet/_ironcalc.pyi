@@ -43,6 +43,13 @@ class Transaction:
     def add_sheet(self, name: str) -> None: ...
     def rename_sheet(self, name: str, new_name: str) -> None: ...
     def delete_sheet(self, name: str) -> None: ...
+    def add_data_table(
+        self,
+        range: str,
+        row_input: str | None = None,
+        column_input: str | None = None,
+    ) -> None:
+        """Add a what-if data table with result cells `range`; the next evaluation fills them."""
 
 class Workbook:
     def __init__(
@@ -66,6 +73,13 @@ class Workbook:
     def save_xlsx(self, path: str) -> None: ...
     def to_xlsx_bytes(self) -> bytes: ...
     def recalculate(self) -> None: ...
+    @property
+    def iteration(self) -> tuple[int, float] | None:
+        """Iterative calculation as (max_iterations, max_change); None when off."""
+    def set_iteration(
+        self, enabled: bool = True, max_iterations: int = 100, max_change: float = 0.001
+    ) -> None:
+        """Turn iterative calculation on or off; applies from the next recalculation."""
     @property
     def sheet_names(self) -> list[str]: ...
     def value(self, ref: str) -> CellValue: ...
