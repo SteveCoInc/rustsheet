@@ -50,7 +50,7 @@ pub(crate) fn minus(x: f64, y: f64) -> Result<f64, Error> {
 }
 
 /// `value`, or `#NUM!` beyond the double range; subnormals are kept (addition, subtraction).
-fn finite_or_overflow(value: f64) -> Result<f64, Error> {
+pub(super) fn finite_or_overflow(value: f64) -> Result<f64, Error> {
     if value.is_finite() {
         Ok(value)
     } else {
@@ -919,7 +919,7 @@ impl Model {
 }
 
 mod power;
-pub(crate) use power::{power, power_with_libm_exp};
+pub(crate) use power::{operator_power, power, power_with_libm_exp};
 
 mod register;
 pub(crate) use register::{extended_div, extended_mul, extended_of, store_extended, Extended};

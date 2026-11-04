@@ -573,32 +573,52 @@ D = `C+0`, E = VALUE(C), F = NUMBERVALUE(C), G = TEXT(C,"0.000") with C the same
 Status: VERIFIED. T-3958 adds the Gurmukhi (U+0A66), Tamil (U+0BE6), Telugu (U+0C66) and Khmer (U+17E0) blocks
 (probes/t3958-gurmukhi-tamil-telugu-khmer-digits, same layout, four blocks of eleven forms): all twelve blocks
 behave alike. `+0`, VALUE, NUMBERVALUE and TEXT read every form (the engine passes), and typed text is a number
-(B1:B44 TRUE; the engine keeps it text, T-3891 owns it). Khmer typed formats seen (A39:A44, raw lines in
-docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)` = -12 `[$-km-KH,1200]0`, `១,២៣៤`
-`[$-km-KH,1200]#,##0`, exponent `0.00E+00`, date `[$-,1200]mm/dd/yyyy`, clock `[$-,1200]h:mm`, mixed fraction
-`# ?/?`. The formats of the other shapes and of the Gurmukhi, Tamil and Telugu blocks are UNVERIFIED (not logged).
+(B1:B44 TRUE; the engine passes since T-3891). The typed formats of all four blocks are logged by
+probes/t3891-typed-script-digit-shapes A43:A86 (docs/research/t3891-typed-script-digit-shapes-2026-11-04.md):
+tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the other blocks.
 - **All eight blocks read as their digits in every form**, by `+0`, VALUE, NUMBERVALUE and TEXT alike, with
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
   which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
-  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101; row 102, `١.٥`, repeats row 14 and is not a mixed-script row).
+  UNPROBED: criteria (COUNTIF and the other readers through functions/criteria.rs, which share `cast::number_text_in`) on the five T-3446 blocks (Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar) are probed only for one plain digit: `COUNTIF("3","="&digit 3)` is 1 (probes/t3895-collation-script-digits Calc!A49, A74, A99, A124, A149; Thai A24). Not probed: multi-digit and the signed, decimal, percent, `$`, parentheses, group-comma, exponent and ISO-date forms in a criterion, script-digit clock and mixed-fraction criteria, and criteria readers other than COUNTIF (SUMIF, the *IFS functions, the D-functions). The engine reads them by the shared path.
 - **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
   separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
   VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
-- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE, rows 100 and 101 being the mixed-script ones; B103:B105 FALSE), and the cell gets
   a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
   `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
   `[$-,200]mm/dd/yyyy`, `١٢:٣٠` → `[$-,200]h:mm`; `-١٢` and `(١٢)` → `[$-ar-SA,200]0`; the exponent form keeps
   `0.00E+00` and the mixed fraction `# ?/?`, untagged. The tag per block: `ar-SA,200`, `ar-SA,300` (Extended
   Arabic-Indic), `hi-IN,400`, `bn-IN,500`, `th-TH,D00`, `lo-LA,E00`, `bo-CN,F00`, `my-MM,1000`; `1٢3` takes
-  `ar-SA,200` and `١२` takes `hi-IN,400`. The engine keeps typed script digits as text (engine gap T-3891).
+  `ar-SA,200` and `١२` takes `hi-IN,400`.
+- **The shapes T-3446 left open (T-3891)**, probes/t3891-typed-script-digit-shapes (excel-graph, 2026-11-04;
+  ENTERED log in docs/research/t3891-typed-script-digit-shapes-2026-11-04.md), each a number (B1:B42 TRUE):
+  - **The last script digit picks the tag**, whatever comes before it: `١२๓` → `th-TH,D00`, `๓२١` and `१٢3`
+    → `ar-SA,200`, `1٢३` → `hi-IN,400`, `12٣` → `ar-SA,200` (A31:A39).
+  - **A plain number counts its typed decimals**: `١.٢٥` → `[$-ar-SA,200]0.##`, `١.٢٥٠` → `0.###` (value 1.25),
+    `١٢.٥٠` → `0.##`, `٠.٥` and `.٥` → `0.#`, `+١٢` → `0`; an integer of 12 digits `١٢٣٤٥٦٧٨٩٠١٢` →
+    `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
+  - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
+    `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
+    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+  - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
+  - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
+    `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
+    clocks keep theirs: `h:mm:ss`, `h:mm AM/PM` (`١٢:٣٠ PM`, `١:٣٠ AM`, `١ PM`), `mm:ss.0` (`١٢:٣٠.٥`).
+  - Untagged as ASCII: `١E-٣` → `0.00E+00`, `١ ١/١٢` → `# ??/??`.
+  - Thai `๑๒.๕%` → `[$-th-TH,D00]0.00%`, `๑.๒๕` → `0.##`; Devanagari `-$१२` the long currency form with `hi-IN,400`.
+  How the tags print: number-formats.md "Numeral-system digits" (`locale,N00` form).
+  Unprobed and inferred in ours: a date with a month name and no year (ours `dd-mmm-yyyy`), a mixed fraction
+  with `%` (ours `0.00%`, tagged), the 12-digit boundary of the exponent form.
 - In passing: a bare typed ASCII clock `12:30` is a number with `h:mm` in Excel (B10); the engine keeps it
   text (engine gap T-3894). `NUMBERVALUE("1 1/2")` is 46328 in 2026: NUMBERVALUE drops every space
   (text.md), so it reads the date `11/2` of the current year; the case does not score F on those rows.
 Implemented in: `script_digit_to_ascii` and `ascii_script_digits` (formatter/parse_formatted.rs), applied in
 `cast::number_text_in` before the formatted-number and clock readers and before both mixed-fraction readers
-(`cast_number_in`, `value_number_text_with`).
+(`cast_number_in`, `value_number_text_with`). Typed input (T-3891): `parse_typed_number` reads the ASCII text and `script_digit_format` gives Excel's
+format, the tag from `SCRIPT_DIGITS` (same file).
 
 ### Collation equality in lookups and criteria; unprobed characters (T-1590)
 Evidence: probes/text-collation-lookups (66 formula cells) and probes/text-collation-unprobed (90 strings ranked by

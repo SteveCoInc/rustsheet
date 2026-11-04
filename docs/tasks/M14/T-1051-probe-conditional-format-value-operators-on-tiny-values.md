@@ -3,7 +3,7 @@ id: T-1051
 title: "Probe conditional-format value operators on tiny values; move all CF ValueOperator arms to 15-digit compare"
 milestone: M14
 lane: harness
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: sonnet
@@ -33,3 +33,7 @@ CLAUDE.md directive 1 forbids implementing from inference. Unblock when
 `cd tools && uv run rustsheet-oracle status` shows `excel-desktop OK` and T-1074 is done (the probe
 reads the evaluated format over COM, e.g. `Range.DisplayFormat`), or when an Excel-authored xlsx
 with conditional-format results is supplied.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

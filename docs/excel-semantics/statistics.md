@@ -4173,7 +4173,7 @@ mpmath itself is 4E-14 off at x = 50). `F.DIST(2,5,1E10,TRUE)` = 0.9247647537543
 Evidence: probes-numeric t2528-f-dist-huge-df2 (60 cells, excel-graph, 2026-10-30), t1530-f-df-cut A8, A12, A14.
 Ours: since T-2528 DiDonato and Morris' expansion in Q(b, z) (`large_shape_beta.rs`) for a of 1E6 or more, b below
 40 (bratio's bgrat family; from 40 Excel's other branches decide, `#NUM!` at `BETA.DIST(0.1,1E+200,1E+100,TRUE)`) and
-b/a at most 1E-6, in accurate arithmetic (z and ln x in double-double, Legendre's fraction for Q/r from the bottom up):
+(until T-4119) b/a at most 1E-6, in accurate arithmetic (z and ln x in double-double, Legendre's fraction for Q/r from the bottom up):
 within 2E-15 of the true value on the probe; Cephes' fraction there did not converge and was about 1E-7 off. 38 of
 the 60 cells are within 15 digits of Excel; the other 22 are where Excel is itself more than half a unit of the 15th
 digit off the true value (T-3209).
@@ -4222,7 +4222,13 @@ within 1E-15 relative / largest relative error:
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
-Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
+The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
+expansion's 1E-6 b/a cut left those on Cephes' fraction, 1E-11 to 7E-10 off the math. T-4119 removed the cut, so the
+expansion covers every a >= 1E6 and b < 40. Over its 640-point grid (docs/research/t4119) the worst error is now 2.1E-14.
+On t4017, 59 cells move toward Excel: 8 to bit-exact and 5 more to within 4 ulp. The 3 others are Excel's exact zeros
+(T-4045). What is left there is mostly Excel's own 1E-14 error. BETA.DIST at the same shapes also improves: on a
+145-point grid the worst error goes from 4.9E-10 to 4.9E-15.
+Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267).
 
 ## F-distribution df limit (T-1530)
 Rule: either df above 1E10 (after truncation) makes every F function `#NUM!`: F.DIST (cumulative and pdf), F.DIST.RT,
@@ -6529,6 +6535,12 @@ more than G, and they need an owner ruling:
 - T.INV and F.INV at p from 1.2E-69 to 8.2E-131 (accuracy/T.INV/s1 A91, A96; F.INV/s1 A164, A169), owned by T-3544;
 - T.INV.2T and TINV at any p (T.INV.2T/s1 A98, A99, A103, with A99 at p 4.4E-242; TINV/s1 A102), owned by T-3386.
 
+Owner ruling (decision 0267 item 3, 2026-11-04): the math also wins on each evidenced point where Excel is more than G
+off it for T.INV.2T, TINV, T.INV, CONFIDENCE.T and BETA.INV at a tiny p (probes-numeric t3349, t1531, t1543), and for
+CHISQ.INV.RT and CHIINV at df 1, p 1.5E-16 to 5E-16 (t3336). An example is `T.INV.2T(1E-300,100000)`: Excel 79.12,
+math and engine 37.19. That covers 50 of the 59 visibly-off tiny-p T cells, measured with mpmath at 60 digits. T-3386
+and T-3337 add the marks and widen this entry's Rule and Region when they land. df 1 near p = 1 (T-2858) stays Excel's.
+
 The engine is within ε of the math on all of them, so they pass Gate A through its math side. One point inside
 decision 0188's p < 1e-150 bound but outside the region the entry names needs a ruling of its own:
 `F.INV(4.36982683607437E-189,1,1698856)` (F.INV/s1 A167) is 3.85E-145 in Excel, while the true quantile, 3.0E-377, is
@@ -6689,3 +6701,45 @@ a typed error bin still the result). Part of T-3046's
 question (an error cell in the bins) is answered for a one-cell reference.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3791
+
+## Incomplete-beta family: Excel's 14th and 15th digits are noise (decision 0267)
+Rule: on BETA.DIST, F.DIST, F.DIST.RT, FDIST, BINOM.DIST and NEGBINOM.DIST cells where the engine is visibly off
+Excel, Excel itself is almost never correctly rounded. Its value carries tens to hundreds of ulp of its own rounding
+error, so matching those digits means reproducing Excel's op order, not computing more accurately.
+- Of 2,026 sampled visibly-off cells with literal arguments, Excel was correctly rounded on 20 (1%). The sample
+  takes report.json `attributed_off` at main 985d511b. For each function it shuffles the cells with Python
+  `random.seed(7)` and keeps the first 300 to 400 whose arguments are all literals. It covers BETA.DIST, F.DIST,
+  F.DIST.RT, FDIST, BINOM.DIST, NEGBINOM.DIST and 26 T.DIST cells. A cell counts as correctly rounded when it is
+  within 1.5 units of 2^-53 relative of the 50-digit value.
+- Median errors against 50-digit mpmath, Excel first and the engine second:
+  - BETA.DIST: 83 and 67 ulp;
+  - F.DIST: 327 and 237 ulp;
+  - F.DIST.RT and FDIST: about 115 and 68 ulp;
+  - BINOM.DIST: 66 and 0.9 ulp;
+  - NEGBINOM.DIST: 48 and 0.7 ulp.
+- The engine was the closer of the two on 72% of the sample.
+- Where the first wrong digit falls (89,166 visibly-off probes-numeric numbers at main 985d511b): 69.4% at the 15th
+  digit only, 28.3% at the 14th, 1.8% at the 13th, 0.2% at the 12th, 0.3% earlier. 97.4% are in this family.
+
+BETADIST, BINOMDIST and NEGBINOMDIST had no sample of their own. They are in the counted family as the legacy forms of
+BETA.DIST, BINOM.DIST and NEGBINOM.DIST on the same kernel ("Incomplete beta is TOMS 708 `bratio`", above).
+
+Status: MEASURED (excel-graph values, mpmath 1.3 at 50 digits; 2026-11-04). Counted at 13 digits since decision 0267 and
+SPEC-0030 (`closeness::THIRTEEN_DIGIT_FAMILY`, the `residue13` bucket). The branch-level noise entries above (bgrat's
+increment, bup with 10 or more terms, bfrac past 10 terms, the F density) are the mechanisms.
+
+Reproduce: `rustsheet-eval run --suite probes-numeric`. Take report.json `attributed_off` (expected and actual) and
+bucket each cell by the first N whose half unit (`5e(E-N)`, E the decimal exponent of Excel's value) the gap exceeds.
+For the accuracy split, evaluate the literal-argument cells with mpmath: `betainc(a, b, 0, x, regularized=True)` for
+the cdfs, with the F upper tail as I(d2/(d2 + d1·x); d2/2, d1/2), and the closed-form density and pmf otherwise. Deep F
+tails below about 1E-130 need the higher-precision references of docs/research/t4017.
+
+At df1 = 2 and a huge df2 (b = 1), `F.DIST.RT` is up to 2E-8 off the closed form (1 + 2x/df2)^(-df2/2). That is
+statistics.md's T-4017 sweep, and T-4053 owns it. Negative result (decision 0267 analysis): Excel's values match none of
+these:
+- `POWER(1+2x/df2, -df2/2)` on the rounded base;
+- `EXP(-df2/2*LN(1+2x/df2))`;
+- `EXP(-df2/2*LN1P(2x/df2))`, which is within 1E-13 at x = 10 but 2E-9 off at x = 20, for example
+  `F.DIST.RT(20,2,1E8)`: Excel 2.061161907818132E-9, POWER form 2.061161865881937E-9.
+
+Tasks: decision 0267, T-4053, T-4055, T-4056.

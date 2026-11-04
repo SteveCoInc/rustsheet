@@ -237,11 +237,11 @@ before the tag and `B2` after it change nothing):
   skipped, whatever comes after the `b` and whatever the serial: `d` 13, `dd` 14, `ddd` 15, `dddd` (and longer) 16,
   `m` 17, `mm` 18 (also as minutes, `mm:ss|b`), `mmm` 19, `mmmm` 20, `h` 21, `hh` 22, `s` 25, `ss` 26 (also `ss.00`),
   `y` and `yy` 27, `yyy` to `yyyyy` 28, `AM/PM` and `A/P` (any case) 34, `[h]` and `[hh]` 48, `[m]` and `[mm]` 49,
-  `[s]` and `[ss]` 50, `aaa` 51, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
+  `[s]` and `[ss]` 50, `aaa` 51, `aaaa` and longer 52, `g` 53, `gg` 54, `ggg` 55, `e` 56, `ee` 57, `mmmmm` 59, `b` and `bb` 88 ("X", also when
   the `b` is first itself), `bbbb` 89 ("Y"). So `B2[$-40409]b` of 2023-03-15 is "2X", `yyyy|b` "01|2\u{1c}", `e|b`
   "01|28", `"x"b` "x2X", of 2000-01-01 `b` "\u{f01}X". (A guess, not evidence: the codes look like Excel's internal token codes.) `yyyy|e|b` is
-  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). The engine gives `aaa` `ddd`'s 15 (T-3089);
-  `aaaa` and other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
+  the same under zh-TW (`B2[$-40404]`). Status: VERIFIED (excel-graph). `aaa` and `aaaa` are 51 and 52 (probes/t3089-b2-aaa-code A1:A6, matched since T-3089);
+  Other year tokens' effect on non-year tokens (`B2[$-40409]d` of 1911) are unprobed.
 - The same as a cell number format (B1-B5).
 Rule (quirk, T-3029): after a `B2` before a tag whose calendar wins over it (every digit probed: 1, 2, 3, 4, 5, 7, 9, A
 and 11), every weekday token (`ddd`, `dddd`, `aaa`) after a `mmm` prints weekday number min(month, 7), Sunday being 1,
@@ -806,6 +806,17 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
   "15 kovas", "15 marec", "15 март" (nominative, as `mmmm` alone), and so are `d. mmmm yyyy`, `dd mmm`, `mmmm d`
   and `dddd, d mmmm`. Evidence: probes/text-locale-six-languages (276 cells, excel-graph, 2026-11-03).
   Ours: matches (`ID`, `SL`, `LT`, `TG`, `MK`, `KK` in locale/regional_date_names.rs).
+- **Indic names: bn-IN, mr-IN, ta-IN, te-IN, kn-IN, kok-IN, ne-NP** (T-2959). `[$-445]`, `[$-44E]`, `[$-449]`,
+  `[$-44A]`, `[$-44B]`, `[$-457]` and `[$-461]` print their own native-script names (Excel's, not CLDR's): January
+  `mmm|mmmm` is "জানু.|জানুয়ারী", "जाने.|जानेवारी", "ஜனவரி|ஜனவரி", "జన|జనవరి", "ಜನವರಿ|ಜನವರಿ", "जाने|जानेवारी",
+  "जन|जनवरी"; Sunday `ddd|dddd` "রবি.|রবিবার", "रवि.|रविवार", "ஞாயிறு|ஞாயிற்றுக்கிழமை", "ఆది|ఆదివారం", "ಭಾನು.|ಭಾನುವಾರ",
+  "आय.|आयतार", "आइत|आइतवार". `mmmmm` is the first code point ("জ", "ஜ"). The day halves are "AM"/"PM" for bn-IN and
+  te-IN, "म.पू."/"म.नं." for mr-IN and kok-IN, "காலை"/"மாலை" ta-IN, "ಪೂರ್ವಾಹ್ನ"/"ಅಪರಾಹ್ನ" kn-IN, "पूर्वाह्न"/"अपराह्न"
+  ne-NP. Quirk: kn-IN's April `mmmm` doubles its first letter, "ಏಏಪ್ರಿಲ್", while `mmm` is "ಎಪ್ರಿಲ್" (E4). Each of these
+  LCIDs has a locale for the calendar digits: Saka (10) prints the Latin Saka names ("Phalguna|Budhavara"), Hebrew (8)
+  the Latin Hebrew ones ("Adar|Yom Revi'i") and Hijri (6) the English Hijri ones ("Sha'ban|AlArbia'a"), not the
+  no-locale en-US names. Evidence: probes/t2959-indic-lcid-names (112 cells, excel-graph, 2026-11-04).
+  Ours: matches (locale/indic_date_names.rs).
 - **System tags.** `[$-F800]` and `[$-x-sysdate]` replace the whole section with the system long date, en-US "dddd, mmmm d, yyyy", whatever else it holds (`TEXT(45000.75,"x[$-F800]0")` is "Wednesday, March 15, 2023", 0.5 "Saturday, January 0, 1900", -1 and 3e6 `#VALUE!`); `[$-F400]`/`[$-x-systime]` likewise give "h:mm:ss AM/PM". Only a first section shows it: `TEXT(-1,"0;[$-F800]")`, `TEXT(0,"0;0;[$-F800]")` and `TEXT("abc","0;0;0;[$-F800]")` are "". With `@` the section is a text section as usual (`[$-F800]@` of 45000.75 is "45000.75").
 - **One tag per section.** A second tag in a section is `#VALUE!`, even the same one or a system tag (`[$-40C]mmmm [$-40C]mmmm`, `[$-40C]mmmm [$€-407]mmmm`, `[$-F800][$-F400]`); tags in different sections are fine.
 - **Regional variants and more languages** (probes/text-locale-regional-lcids, 252 cells, T-1858). The language fallback does not hold across regions: `[$-C07]` de-AT has "Jän"/"Jänner" for January, "Mär" for March, and `ddd` "Mi."/"Do." (de-DE differs in all three); `[$-1004]` zh-SG mixes the two: short months as zh-TW ("一月"), days as zh-CN ("周三"); `[$-C04]` zh-HK equals zh-TW ("週三"); `[$-80A]` es-MX and `[$-2C0A]` es-AR differ from es-ES in `ddd` and the day halves ("a. m."/"p. m."), and es-AR's halves use a non-breaking space where es-MX's use a plain one. Languages that now resolve: `[$-408]` Greek ("Ιαν", "πμ"/"μμ"), `[$-41E]` Thai (Thai names, AM/PM stay Latin), `[$-41B]` Slovak (short months are the numerals "1"…"12", like Japanese), `[$-422]` Ukrainian (AM/PM stay Latin), `[$-401]` Arabic ("ص"/"م"), `[$-40D]` Hebrew (AM/PM stay Latin), `[$-439]` Hindi ("पूर्वाह्न"/"अपराह्न"). Calendar and digit switches of Thai, Arabic and Hebrew are T-1859's.
@@ -879,7 +890,7 @@ Under every one of these, `e` stays the Gregorian four-digit year, and so do `b`
   (2023-03-22 is "1945-01-01", 2024-03-21 "1946-01-01"), and Chaitra then has 31 days; months 2-6 have 31, 7-12 30.
   `yy`, `b`, `bb` and `y` print two digits ("44"), `e`, `ee`, `yyy`, `yyyyy` and `bbbb` the Saka year. Serial 1 is
   "1821-10-11|Pausa", and so is serial 0; 59 is "1821-12-09". 9999-12-31 is "9921-10-10" with `yy` "21".
-  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and bn-IN 445 included): months Chaitra,
+  - Latin names under every LCID with a locale but an Arabic or Hindi one (40D and the Indic LCIDs 445, 44E, 449, 44A, 44B, 457 and 461 included): months Chaitra,
     Vaisakha, Jyaistha, Asadha, Sravana, Bhadra, Asvina, Karthika, Agrahayana, Pausa, Magha, Phalguna (`mmm` the same,
     `mmmmm` the first letter); `ddd` Ravi, Som, Mangal, Budh, Guru, Sukra, Sani; `dddd` Ravivara, Somavara, Mangalvara,
     Budhavara, Guruvara, Sukravara, Sanivara.
@@ -928,6 +939,19 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
 - **CJK General and elapsed counts.** `General` spells the integer part in units (十 百 千) and myriads (万 億) and prints the rest digit by digit: 27 `5` "五", `10` "十", `105` "百五", `1010` "千十", `10000` "一万", `100000` "十万", `123456789` "一億二千三百四十五万六千七百八十九", `0.5` "〇.五", `-15` "-十五", `12.05` "十二.〇五", `1E+11` "一E+一一" (the exponent digit by digit). 28 (daiji 壱弐参四伍六七八九, 拾 百 阡, 萬 億) writes every one ("壱拾", "壱百", "壱阡", "壱萬"). 29 uses fullwidth digits with 27's signs ("十１", "２十", "１万２千３百４十５"). 30 (○, 万 亿) and 31 (零壹贰叁肆伍陆柒捌玖, 拾 佰 仟, 万 亿) write every one and one zero digit for a gap ("一百○五", "一千○一十", "壹佰零伍", "壹仟零壹拾"). An elapsed count is spelled the same way (`[h]` of 1.25 under 27 "三十", `[m]` "千八百", `[s]` "十万八千", under 29 "３十"). Unprobed: a zero gap across a myriad under 30 and 31 (we write one zero, "一十万○五"), integers of 10^12 and more (we print them digit by digit), a padded elapsed count under 10 (digit by digit), and `General` beside literals or in a date section (spelled out as alone); to probe in T-3718.
 - **Which sections.** Only the first section's tag sets the digits, and they apply to the whole format: `[$-2000409]0;(0)` on -5 is "(٥)", `[$-2000409]0;General` on -15 "١٥", and a value no section takes falls back to General in them (`[$-2000409][>5]0` on 1 is "١"), while a tag in a later section changes nothing, not even its own section (`0;[$-2000409]0;0` on 0 is "0", on -5 "5"; `0;[$-2000409]0` on 5 "5"). A fixed denominator prints in them too (`[$-2000409]# ?/4` on 12.5 is "١٢ ٢/٤", `[$-1B000409]# ?/16` "一二 八/一六"), and a `B2` before a numeral tag is Hijri with the native digits (`B2[$-2000409]yyyy|mmmm` is "١٤٤٤|Sha'ban"). Evidence: probes/t3532-numeral-digit-sections.
 - Implemented (T-3532): `formatter/numerals.rs` (`Numerals`), from `locale_tag::numerals`; `resolve_lcid` ignores the byte, so the LCID's names and era stay.
+- **The `locale,N00` form (T-3891).** Excel gives typed script-digit text formats like `[$-ar-SA,200]0` and
+  `[$-,D00]h:mm` (coercion.md "Script digits in number text"). The hex after the comma is the numeral byte
+  above a low byte: `,200` Arabic-Indic, `,300` Persian, `,400` Devanagari, `,500` Bengali, `,600` Gurmukhi,
+  `,900` Tamil, `,A00` Telugu, `,D00` Thai, `,E00` Lao, `,F00` Tibetan, `,1000` Myanmar, `,1200` Khmer, and `,0`
+  ASCII; the part before the comma does not matter for the digits (`[$-en-US,200]0` and `[$-,200]0` on 123 are
+  "١٢٣", `[$-ar-SA]0` "123"). Every field takes them: `[$-ar-SA,200]0.00%` on 0.12 is "١٢.٠٠%",
+  `[$-ar-SA,200]0.00E+00` on 1000 "١.٠٠E+٠٣", `[$-,200]mm/dd/yyyy` of 43831 "٠١/٠١/٢٠٢٠", `[$$-ar-SA,200]#,##0.00`
+  on 12 "$١٢.٠٠". **Quirks:** `,2000` (byte 0x20) prints fullwidth `１２３` though byte 32 is ASCII in the LCID
+  form (A28; T-4107), and `[Red]([$$-ar-SA,200]#,##0.00)` on -12 is "($١٢.٠٠)", the symbol after the literal
+  paren, where ours prints "$(" (A6, also for `[$$-409]`; T-4108). Evidence: probes/t3891-numeral-tag-render
+  A1:A30 (excel-graph, 2026-11-04). Status: VERIFIED. Implemented (T-3891): `locale_tag::numerals`
+  (`numeral_suffix`); the locale part still resolves as the whole tag (`[$-40C,1]` is English, A106 of
+  probes/text-locale-date-names).
 
 **Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is unprobed, filed as T-3710. (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
 
@@ -936,7 +960,7 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
 Status: VERIFIED (excel-graph)
 Implemented in: formatter/numerals.rs, formatter/locale_tag.rs (`numerals`), formatter/format.rs, formatter/fraction.rs (T-3532)
 
-Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718
+Tasks: T-1859, T-1613, T-1922, T-1923, T-1924, T-1925, T-2759, T-3532, T-3598, T-3710, T-3711, T-3718, T-3891, T-4107, T-4108
 
 ## Displayed text (`Range.text`) of a formatted cell (T-1610)
 Rule: excel-graph's `Range.text` is the cell's value under its number format, and it does not

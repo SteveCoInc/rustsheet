@@ -4,7 +4,7 @@ title: "Excel's BETA.INV early Newton stop where the quantile is tiny at a huge 
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -65,3 +65,12 @@ significant digit of Excel's value, or recorded as a DEVIATION where Excel's val
 
 ## Out of scope
 -
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 30 probes-numeric cells that no open task listed: 23 first wrong at the 11th significant digit or earlier, 7 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t1538-f-inv-huge-df.case.json (30): Calc!A1, A4, A15, A18, A23, A26, A37, A40, A42-A43, A46-A47, A60-A61, A63, A66, A111, A114, A119, A122, A125, A128-A129, A132-A133, A135, A137, A139, A153, A155
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

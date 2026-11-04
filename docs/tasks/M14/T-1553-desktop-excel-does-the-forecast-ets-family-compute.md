@@ -3,7 +3,7 @@ id: T-1553
 title: "Desktop Excel: does the FORECAST.ETS family compute a number?"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -25,3 +25,7 @@ Needs the `excel-desktop` backend (Windows with Excel), like T-1016.
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

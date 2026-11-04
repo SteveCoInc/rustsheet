@@ -3,7 +3,7 @@ id: T-2325
 title: "Probe cut and paste, row and column moves, sheet-delete undo and sheet duplication on tables with desktop Excel"
 milestone: M14
 lane: research
-status: blocked
+status: dropped
 priority: P3
 size: S
 tier: opus
@@ -35,3 +35,7 @@ table, where Excel is believed (hand) to add a renamed table to the copy (from T
 Phase 4 (decision 0039): only desktop Excel over COM (`Range.Cut`, `Range.Insert` with a cut, `Worksheet.Copy`,
 `Application.Undo`) can perform these edits. Unblock when `cd tools && uv run rustsheet-oracle status` shows
 `excel-desktop OK` and T-1074 is done.
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

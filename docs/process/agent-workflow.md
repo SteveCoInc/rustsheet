@@ -45,8 +45,9 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   minutes and 10 tasks per run, then landing its own PRs until minute 110 (decisions 0022, 0025,
   0229). Each walks the `**Critical lane:**` list in `docs/status.md`, then
   `functions` (every `functions-*` lane; allowlist and rules in `routines.md`).
-- One task in flight per lane. `make next-task` enforces it: it skips tasks claimed by a pushed
-  branch and lanes with a branch that moved in the last 2 hours (handoffs, and branches whose task
+- One task in flight per lane, three in `engine` (decision 0269). `make next-task` enforces it: it
+  skips tasks claimed by a pushed branch and lanes whose slots are all taken by branches that moved
+  in the last 2 hours (handoffs, and branches whose task
   is already done on main, excepted).
 - The functions work is split into the nine `functions-*` lanes above so several workers can fix
   functions at once; plain `functions` is retired for open tasks (`scripts/tasks.py validate`).

@@ -25,8 +25,10 @@ pub enum TextToken {
     // Dates
     Day,
     DayPadded,
-    DayNameShort,
-    DayName,
+    /// `ddd`; `true` when written `aaa`
+    DayNameShort(bool),
+    /// `dddd`; `true` when written `aaaa`
+    DayName(bool),
     Month,
     MonthPadded,
     MonthNameShort,
@@ -583,13 +585,13 @@ impl Parser {
                     is_date = true;
                     tokens.push(TextToken::DayPadded);
                 }
-                Token::DayNameShort => {
+                Token::DayNameShort | Token::WeekdayShort => {
                     is_date = true;
-                    tokens.push(TextToken::DayNameShort);
+                    tokens.push(TextToken::DayNameShort(token == Token::WeekdayShort));
                 }
-                Token::DayName => {
+                Token::DayName | Token::WeekdayFull => {
                     is_date = true;
-                    tokens.push(TextToken::DayName);
+                    tokens.push(TextToken::DayName(token == Token::WeekdayFull));
                 }
                 Token::MonthNameShort => {
                     is_date = true;

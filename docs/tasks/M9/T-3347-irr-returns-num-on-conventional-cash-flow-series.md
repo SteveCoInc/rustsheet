@@ -38,6 +38,13 @@ accuracy stage.
   A279 and A293 (roots -5.0E-7 to 2.4E-5). A276's root, 2.4E-5, is inside this task's band, so a fix must keep
   `#NUM!` there.
 
+Training probes from draft #2529 (salvaged 2026-11-04; the hold-out case landed in #2562; T-3408 cites cells of both).
+Visibly-off cells on main: `#NUM!` against Excel's number on all 19 probe cells and on 23 of the 25 sweep cells; sweep
+A33 and A82 return a number off from about the 10th significant digit. T-3408 owns the digits of probe A10-A13, A16,
+A17, A19 and A37-A40 once they return a number, and of sweep A33 and A82:
+- probes/t3347-irr-conventional-num.case.json (19): P!A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A36, A37, A38, A39, A40, A41, A42
+- probes-numeric/t3347-irr-conventional-sweep.case.json (25): P!A1, A4, A7, A17, A33, A35, A38, A45, A47, A51, A56, A58, A61, A62, A64, A71, A76, A82, A87, A88, A96, A97, A108, A109, A119
+
 ## Acceptance criteria
 - [ ] Conventional series with an IRR between 1e-5 and 3e-4, and near -10%, match Excel's result (number or error, within 15 significant digits for a number) on the oracle-filled cells.
 - [ ] A new public probe case under eval/suites/probes/cases/ (one milestone tag, M9; decision 0057), filled by the
@@ -72,3 +79,12 @@ not the fallback's. T-4027 (the level annuities of probes/t3406) is the same pat
 Decision 0083 and 0114 (`accuracy`): done when every cell this task owns is within half a unit of the 15th significant
 digit of Excel's value with the right type and error, and the fresh sweep shows the Gate A envelope (decision 0188 R2).
 Bit-level residue moves to a follow-up with `defer: phase-1b`.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 9 probes-numeric cells that no open task listed: 9 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3347-irr-conventional-holdout.case.json (9): P!A123, A126, A130-A132, A134-A135, A138, A143
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

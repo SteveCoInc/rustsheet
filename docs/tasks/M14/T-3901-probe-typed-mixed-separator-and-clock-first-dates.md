@@ -3,7 +3,7 @@ id: T-3901
 title: "Probe typed mixed-separator and clock-first dates in a day-first locale"
 milestone: M14
 lane: functions-date
-status: blocked
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -35,3 +35,7 @@ Excel's en-US `m/d/yyyy` (`date_text.rs` `parse_separated`, `TODO(T-3901)`); tha
 
 ## Out of scope
 -
+
+## Outcome (dropped, 2026-11-04, decision 0266)
+Dropped: desktop-Excel work is out of scope (owner, 2026-11-04). It needed the `excel-desktop` oracle backend, which
+was never set up. The context above is kept in case a later decision reopens desktop work.

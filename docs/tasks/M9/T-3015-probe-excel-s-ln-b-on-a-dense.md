@@ -8,6 +8,7 @@ priority: P2
 size: M
 tier: opus
 depends_on: []
+defer: phase-1b
 ---
 
 ## Goal
@@ -51,3 +52,6 @@ shapes, that BETA.DIST's bpser carries the same L as F.TEST's (T-2924 says "the 
 ## Out of scope
 - Fitting or porting Excel's ln B (T-2924, then T-3007).
 - The fl(a·LN x) grid steps that separate F.DIST.RT from F.TEST (T-3007 scores those once L is known).
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.
