@@ -44,6 +44,11 @@ pub fn add_pivots(
     id: SheetId,
 ) -> Result<(), EditError> {
     for pivot in &sheet.pivot_tables {
+        // Excel renders a defined pivot on open; the engine cannot yet (T-4152), so its cells stay
+        // empty and the cases scoring them fail as known failures until it can.
+        if pivot.definition.is_some() {
+            continue;
+        }
         let input = pivot_input(spec, ids, sheet, id, pivot)?;
         tx.add_pivot_table(&input)?;
     }
