@@ -159,3 +159,26 @@ fn elapsed_token_before_am_pm_marker_is_invalid() {
     assert_eq!(text(1.5, "[mm] AM/PM"), "#VALUE!");
     assert_eq!(text(1.5, "[s] A/P"), "#VALUE!");
 }
+
+#[test]
+fn ampm_switches_the_last_hour_before_a_marker_and_the_last_hour() {
+    // probes/t3710-ampm-hour-tokens (13:02:12.48).
+    let v = 45000.5432;
+    assert_eq!(
+        text(v, "h|hh|mm|ss|h:mm:ss.00 AM/PM"),
+        "13|13|02|12|1:02:12.48 PM"
+    );
+    assert_eq!(text(v, "h|h AM/PM"), "13|1 PM");
+    assert_eq!(text(v, "h AM/PM|h"), "1 PM|1");
+    assert_eq!(text(v, "AM/PM h|h"), "PM 13|1");
+    assert_eq!(text(v, "h|hh AM/PM|h"), "13|01 PM|1");
+    assert_eq!(text(v, "h|h|ss.00 AM/PM"), "13|1|12.48 PM");
+    assert_eq!(text(v, "h|h A/P"), "13|1 P");
+}
+
+#[test]
+fn an_hour_after_a_minute_makes_the_next_mm_a_minute() {
+    // probes/t3710-ampm-hour-tokens A5, A14; a date token does not (mm-after-time-and-date-token).
+    assert_eq!(text(45000.5432, "h:mm|h:mm AM/PM"), "13:02|1:02 PM");
+    assert_eq!(text(45000.75, "h:mm|yyyy-mm-dd"), "18:00|2023-03-15");
+}

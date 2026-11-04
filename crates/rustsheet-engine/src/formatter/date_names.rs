@@ -156,12 +156,12 @@ impl NameTokens {
         let m = month as usize - 1;
         let dates = &locale.dates;
         match token {
-            TextToken::DayNameShort => {
+            TextToken::DayNameShort(_) => {
                 text.push_str(
                     names.map_or(&dates.day_names_short[weekday], |n| n.days_short[weekday]),
                 );
             }
-            TextToken::DayName => {
+            TextToken::DayName(_) => {
                 text.push_str(names.map_or(&dates.day_names[weekday], |n| n.days[weekday]));
             }
             TextToken::MonthNameShort => {
@@ -185,7 +185,7 @@ impl NameTokens {
     /// becomes the value read after it (`B2dddd|mmm|dddd` is "الأربعاء|شعبان|السبت");
     /// probes/t2729-hijri-locale-tag A151-A168, t2729-hijri-locale-tag-names A239-A277.
     fn hijri_name(&mut self, token: &TextToken, month: u32, weekday: usize) -> &'static str {
-        let is_day = matches!(token, TextToken::DayName | TextToken::DayNameShort);
+        let is_day = matches!(token, TextToken::DayName(_) | TextToken::DayNameShort(_));
         let own = if is_day {
             FirstName::Weekday(weekday)
         } else {

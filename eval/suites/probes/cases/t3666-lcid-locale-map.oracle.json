@@ -1,0 +1,1035 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "s",
+    "v": "P January~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631~\u0645 \u064a\u0646\u0627\u064a\u0631"
+   },
+   "A10": {
+    "t": "s",
+    "v": "p. m. enero~PM enero~p. m. enero~PM enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. Enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. Enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~p.\u00a0m. enero~PM enero~p.m. enero~p.m. enero~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM enero~p. m. enero~PM enero"
+   },
+   "A100": {
+    "t": "s",
+    "v": "PM Enero~PM Enero~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Enero~PM Enero~PM Enero"
+   },
+   "A101": {
+    "t": "s",
+    "v": "\u0789\u078a \u0796\u07a6\u0782\u07a6\u0788\u07a6\u0783\u07a9~\u0789\u078a \u0796\u07a6\u0782\u07a6\u0788\u07a6\u0783\u07a9~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0789\u078a \u0796\u07a6\u0782\u07a6\u0788\u07a6\u0783\u07a9~\u0789\u078a \u0796\u07a6\u0782\u07a6\u0788\u07a6\u0783\u07a9~\u0789\u078a \u0796\u07a6\u0782\u07a6\u0788\u07a6\u0783\u07a9"
+   },
+   "A102": {
+    "t": "s",
+    "v": "PM January~PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM January~PM January~PM January"
+   },
+   "A103": {
+    "t": "s",
+    "v": "PM siilo~kikii\u0257e samwiee~PM samwiee~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM siilo~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~kikii\u0257e samwiee~PM siilo~kikii\u0257e samwiee"
+   },
+   "A104": {
+    "t": "s",
+    "v": "PM Janairu~PM Janairu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Janairu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Janairu~PM Janairu~PM Janairu"
+   },
+   "A105": {
+    "t": "s",
+    "v": "PM January~PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM January~PM January~PM January"
+   },
+   "A106": {
+    "t": "s",
+    "v": "\u1ecc\u0300s\u00e1n \u1e62\u1eb9\u0301r\u1eb9\u0301~\u1ecc\u0300s\u00e1n \u1e62\u1eb9\u0301r\u1eb9\u0301~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u1ecc\u0300s\u00e1n \u1e62\u1eb9\u0301r\u1eb9\u0301~\u1ecc\u0300s\u00e1n \u1e62\u1eb9\u0301r\u1eb9\u0301~\u1ecc\u0300s\u00e1n \u1e62\u1eb9\u0301r\u1eb9\u0301"
+   },
+   "A107": {
+    "t": "s",
+    "v": "p.m. Qulla puquy~p.m. Qulla puquy~PM kulla~p.m. Qulla puquy~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. Qulla puquy~p.m. Qulla puquy~p.m. Qulla puquy"
+   },
+   "A108": {
+    "t": "s",
+    "v": "PM Janaware~PM Janaware~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Janaware~PM Janaware~PM Janaware"
+   },
+   "A109": {
+    "t": "s",
+    "v": "PM \u0493\u0438\u043d\u0443\u0430\u0440~PM \u0493\u0438\u043d\u0443\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0493\u0438\u043d\u0443\u0430\u0440~PM \u0493\u0438\u043d\u0443\u0430\u0440~PM \u0493\u0438\u043d\u0443\u0430\u0440"
+   },
+   "A11": {
+    "t": "s",
+    "v": "ip. tammikuu~ip. tammikuu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~ip. tammikuu~ip. tammikuu~ip. tammikuu"
+   },
+   "A110": {
+    "t": "s",
+    "v": "PM Januar~PM Januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Januar~PM Januar~PM Januar"
+   },
+   "A111": {
+    "t": "s",
+    "v": "PM januaari~PM januaari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januaari~PM januaari~PM januaari"
+   },
+   "A112": {
+    "t": "s",
+    "v": "P.M. Jen\u1ee5war\u1ecb~P.M. Jen\u1ee5war\u1ecb~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P.M. Jen\u1ee5war\u1ecb~P.M. Jen\u1ee5war\u1ecb~P.M. Jen\u1ee5war\u1ecb"
+   },
+   "A113": {
+    "t": "s",
+    "v": "PM January~PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM January~PM January~PM January"
+   },
+   "A114": {
+    "t": "s",
+    "v": "WB Amajjii~WB Amajjii~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~WB Amajjii~WB Amajjii~WB Amajjii"
+   },
+   "A115": {
+    "t": "s",
+    "v": "\u12f5\u1215\u122a \u1250\u1275\u122a \u1325\u122a~\u12f5\u1215\u122a \u1250\u1275\u122a \u1325\u122a~\u12f5\u1215\u122d \u1230\u12d3\u1275 \u1325\u122a~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u12f5\u1215\u122a \u1250\u1275\u122a \u1325\u122a~\u12f5\u1215\u122a \u1250\u1275\u122a \u1325\u122a~\u12f5\u1215\u122a \u1250\u1275\u122a \u1325\u122a"
+   },
+   "A116": {
+    "t": "s",
+    "v": "p.m. jasyte\u0129~p.m. jasyte\u0129~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. jasyte\u0129~p.m. jasyte\u0129~p.m. jasyte\u0129"
+   },
+   "A117": {
+    "t": "s",
+    "v": "PM Ianuali~PM Ianuali~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Ianuali~PM Ianuali~PM Ianuali"
+   },
+   "A118": {
+    "t": "s",
+    "v": "PM Ianuarius~PM Ianuarius~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Ianuarius~PM Ianuarius~PM Ianuarius"
+   },
+   "A119": {
+    "t": "s",
+    "v": "GD Jannaayo~GD Jannaayo~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~GD Jannaayo~GD Jannaayo~GD Jannaayo"
+   },
+   "A12": {
+    "t": "s",
+    "v": "PM janvier~PM janvier~PM janvier~PM janvier~PM janvier~PM janvier~PM janvier~PM Janvier~PM janvier~PM janvier~PM janvier~soir janvier~PM janvier~PM janvier~PM janvier~PM janvier~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM janvier~PM janvier~PM janvier"
+   },
+   "A120": {
+    "t": "s",
+    "v": "\ua0b5\ua1aa\ua20c\ua248 \ua2cd\ua1aa~\ua0b5\ua1aa\ua20c\ua248 \ua2cd\ua1aa~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\ua0b5\ua1aa\ua20c\ua248 \ua2cd\ua1aa~\ua0b5\ua1aa\ua20c\ua248 \ua2cd\ua1aa~\ua0b5\ua1aa\ua20c\ua248 \ua2cd\ua1aa"
+   },
+   "A121": {
+    "t": "s",
+    "v": "PM januari~PM januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januari~PM januari~PM januari"
+   },
+   "A122": {
+    "t": "s",
+    "v": "PM Ki\u00f1e Tripantu~PM Ki\u00f1e Tripantu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Ki\u00f1e Tripantu~PM Ki\u00f1e Tripantu~PM Ki\u00f1e Tripantu"
+   },
+   "A123": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A124": {
+    "t": "s",
+    "v": "PM Tsothohrk\u00f3:Wa~PM Tsothohrk\u00f3:Wa~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Tsothohrk\u00f3:Wa~PM Tsothohrk\u00f3:Wa~PM Tsothohrk\u00f3:Wa"
+   },
+   "A125": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A126": {
+    "t": "s",
+    "v": "G.M. Genver~G.M. Genver~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~G.M. Genver~G.M. Genver~G.M. Genver"
+   },
+   "A127": {
+    "t": "s",
+    "v": "PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM January~P January"
+   },
+   "A128": {
+    "t": "s",
+    "v": "\u0686\u06c8\u0634\u062a\u0649\u0646 \u0643\u06d0\u064a\u0649\u0646 \u064a\u0627\u0646\u06cb\u0627\u0631~\u0686\u06c8\u0634\u062a\u0649\u0646 \u0643\u06d0\u064a\u0649\u0646 \u064a\u0627\u0646\u06cb\u0627\u0631~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0686\u06c8\u0634\u062a\u0649\u0646 \u0643\u06d0\u064a\u0649\u0646 \u066a\u0627\u0646\u06cb\u0627\u0631~\u0686\u06c8\u0634\u062a\u0649\u0646 \u0643\u06d0\u064a\u0649\u0646 \u062a\u0627\u0646\u06cb\u0627\u0631~\u0686\u06c8\u0634\u062a\u0649\u0646 \u0643\u06d0\u064a\u0649\u0646 \u064a\u0627\u0646\u06cb\u0627\u0631"
+   },
+   "A129": {
+    "t": "s",
+    "v": "p.m. Kohit\u0101tea~p.m. Kohit\u0101tea~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. Kohit\u0101tea~p.m. Kohit\u0101tea~p.m. Kohit\u0101tea"
+   },
+   "A13": {
+    "t": "s",
+    "v": "PM \u05d9\u05e0\u05d5\u05d0\u05e8~PM \u05d9\u05e0\u05d5\u05d0\u05e8~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u05d9\u05e0\u05d5\u05d0\u05e8~PM \u05d9\u05e0\u05d5\u05d0\u05e8~PM \u05d9\u05e0\u05d5\u05d0\u05e8"
+   },
+   "A130": {
+    "t": "s",
+    "v": "PM geni\u00e8r~PM geni\u00e8r~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM geni\u00e8r~PM geni\u00e8r~PM geni\u00e8r"
+   },
+   "A131": {
+    "t": "s",
+    "v": "PM ghjennaghju~PM ghjennaghju~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM ghjennaghju~PM ghjennaghju~PM ghjennaghju"
+   },
+   "A132": {
+    "t": "s",
+    "v": "nam. Januar~PM J\u00e4nner~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM J\u00e4nner~nam. Januar~PM J\u00e4nner"
+   },
+   "A133": {
+    "t": "s",
+    "v": "\u041a\u041a \u0422\u043e\u0445\u0441\u0443\u043d\u043d\u044c\u0443~\u041a\u041a \u0422\u043e\u0445\u0441\u0443\u043d\u043d\u044c\u0443~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u041a\u041a \u0422\u043e\u0445\u0441\u0443\u043d\u043d\u044c\u0443~\u041a\u041a \u0422\u043e\u0445\u0441\u0443\u043d\u043d\u044c\u0443~\u041a\u041a \u0422\u043e\u0445\u0441\u0443\u043d\u043d\u044c\u0443"
+   },
+   "A134": {
+    "t": "s",
+    "v": "p.m. nab'e ik'~p.m. nab'e ik'~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. nab'e ik'~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. nab'e ik'~p.m. nab'e ik'~p.m. nab'e ik'"
+   },
+   "A135": {
+    "t": "s",
+    "v": "PM Mutarama~PM Mutarama~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Mutarama~PM Mutarama~PM Mutarama"
+   },
+   "A136": {
+    "t": "s",
+    "v": "PM Samwiye~PM Samwiye~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Samwiye~PM Samwiye~PM Samwiye"
+   },
+   "A137": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A138": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A139": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A14": {
+    "t": "s",
+    "v": "du. janu\u00e1r~du. janu\u00e1r~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~du. janu\u00e1r~du. janu\u00e1r~du. janu\u00e1r"
+   },
+   "A140": {
+    "t": "s",
+    "v": "\u063a.\u0648 \u062c\u062f\u06cc~\u063a.\u0648 \u062c\u062f\u06cc~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u063a.\u0648 \u062c\u062f\u06cc~\u063a.\u0648 \u062c\u062f\u06cc~\u063a.\u0648 \u062c\u062f\u06cc"
+   },
+   "A141": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A142": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A143": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A144": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A145": {
+    "t": "s",
+    "v": "f Am Faoilleach~f Am Faoilleach~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~f Am Faoilleach~f Am Faoilleach~f Am Faoilleach"
+   },
+   "A146": {
+    "t": "s",
+    "v": "\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645~\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645~\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645~\u062f.\u0646 \u06a9\u0627\u0646\u0648\u0648\u0646\u06cc \u062f\u0648\u0648\u06d5\u0645"
+   },
+   "A147": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A148": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A149": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A15": {
+    "t": "s",
+    "v": "e.h. jan\u00faar~e.h. jan\u00faar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~e.h. jan\u00faar~e.h. jan\u00faar~e.h. jan\u00faar"
+   },
+   "A150": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A151": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A152": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A153": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A154": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A155": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A156": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A157": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A158": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A159": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A16": {
+    "t": "s",
+    "v": "PM gennaio~PM gennaio~PM gennaio~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM gennaio~PM gennaio~PM gennaio"
+   },
+   "A160": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A161": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A162": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A163": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A164": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A165": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A166": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A167": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A168": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A169": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A17": {
+    "t": "s",
+    "v": "\u5348\u5f8c 1\u6708~\u5348\u5f8c 1\u6708~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u5348\u5f8c 1\u6708~\u5348\u5f8c 1\u6708~\u5348\u5f8c 1\u6708"
+   },
+   "A170": {
+    "t": "s",
+    "v": "carra Qunxa Garablu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A171": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A172": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A173": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A174": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A175": {
+    "t": "s",
+    "v": "nm. Januarie~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A176": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A177": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A178": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A179": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A18": {
+    "t": "s",
+    "v": "\uc624\ud6c4 1\uc6d4~\uc624\ud6c4 1\uc6d4~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\uc624\ud6c4 1\uc6d4~\uc624\ud6c4 1\uc6d4~\uc624\ud6c4 1\uc6d4"
+   },
+   "A180": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A181": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A182": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A183": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A184": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A185": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A186": {
+    "t": "s",
+    "v": "PM \u0493\u0438\u043d\u0443\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A187": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A188": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A189": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A19": {
+    "t": "s",
+    "v": "PM januari~PM januari~PM januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januari~PM januari~PM januari"
+   },
+   "A190": {
+    "t": "s",
+    "v": "PM \u0441\u0442\u0443\u0434\u0437\u0435\u043d\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A191": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A192": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A193": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A194": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A195": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A196": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A197": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A198": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A199": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A2": {
+    "t": "s",
+    "v": "P January~PM \u044f\u043d\u0443\u0430\u0440\u0438~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u044f\u043d\u0443\u0430\u0440\u0438~PM \u044f\u043d\u0443\u0430\u0440\u0438~PM \u044f\u043d\u0443\u0430\u0440\u0438"
+   },
+   "A20": {
+    "t": "s",
+    "v": "p.m. januar~p.m. januar~e.m. januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~e.m. januar~p.m. januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. januar~p.m. januar~p.m. januar"
+   },
+   "A200": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A201": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A202": {
+    "t": "s",
+    "v": "p.\u00a0m. gener~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A203": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A204": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A205": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A206": {
+    "t": "s",
+    "v": "PM \u044f\u043d\u0432\u0430\u0440\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A207": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A208": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A209": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A21": {
+    "t": "s",
+    "v": "PM stycze\u0144~PM stycze\u0144~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM stycze\u0144~PM stycze\u0144~PM stycze\u0144"
+   },
+   "A210": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A211": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A212": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A213": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A214": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A215": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A216": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A217": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A218": {
+    "t": "s",
+    "v": "PM januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A219": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A22": {
+    "t": "s",
+    "v": "PM janeiro~PM janeiro~PM janeiro~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM janeiro~PM janeiro~PM janeiro"
+   },
+   "A220": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A221": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A222": {
+    "t": "s",
+    "v": "PM Januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A223": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A224": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A225": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A226": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A227": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A228": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A229": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A23": {
+    "t": "s",
+    "v": "PM schaner~PM schaner~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM schaner~PM schaner~PM schaner"
+   },
+   "A230": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A231": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A232": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A233": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A234": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A235": {
+    "t": "s",
+    "v": "P January~P January~P January~PM Enero~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A236": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A237": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A238": {
+    "t": "s",
+    "v": "\u0263etr\u0254 dzove~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A239": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A24": {
+    "t": "s",
+    "v": "p.m. ianuarie~p.m. ianuarie~p.m. ianuarie~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. ianuarie~p.m. ianuarie~p.m. ianuarie"
+   },
+   "A240": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A241": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A242": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A243": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A244": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A245": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A246": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A247": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A248": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A249": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A25": {
+    "t": "s",
+    "v": "PM \u042f\u043d\u0432\u0430\u0440\u044c~PM \u042f\u043d\u0432\u0430\u0440\u044c~PM \u044f\u043d\u0432\u0430\u0440\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u044f\u043d\u0432\u0430\u0440\u044c~PM \u042f\u043d\u0432\u0430\u0440\u044f~PM \u044f\u043d\u0432\u0430\u0440\u044f"
+   },
+   "A250": {
+    "t": "s",
+    "v": "\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A251": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A252": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A253": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A254": {
+    "t": "s",
+    "v": "P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A255": {
+    "t": "s",
+    "v": "PM siilo~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January"
+   },
+   "A26": {
+    "t": "s",
+    "v": "PM sije\u010danj~PM sije\u010danj~PM januar~PM \u0458\u0430\u043d\u0443\u0430\u0440~PM sije\u010danj~PM januar~po podne januar~PM \u0458\u0430\u043d\u0443\u0430\u0440~PM \u0458\u0430\u043d\u0443\u0430\u0440~po podne januar~PM \u0458\u0430\u043d\u0443\u0430\u0440~po podne januar~PM \u0458\u0430\u043d\u0443\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0458\u0430\u043d\u0443\u0430\u0440~PM januar~PM \u0458\u0430\u043d\u0443\u0430\u0440~po podne januar~P January~PM januar~po podne januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM sije\u010danj~PM sije\u010danj~PM sije\u010danj"
+   },
+   "A27": {
+    "t": "s",
+    "v": "PM janu\u00e1r~PM janu\u00e1r~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM janu\u00e1r~PM janu\u00e1r~PM janu\u00e1r"
+   },
+   "A28": {
+    "t": "s",
+    "v": "m.d. janar~m.d. janar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~m.d. janar~m.d. janar~m.d. janar"
+   },
+   "A29": {
+    "t": "s",
+    "v": "PM januari~PM januari~em januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januari~PM januari~PM januari"
+   },
+   "A3": {
+    "t": "s",
+    "v": "p.\u00a0m. gener~p.\u00a0m. gener~p.\u00a0m. gener~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.\u00a0m. gener~p.\u00a0m. De gener\tde febrer\tde mar\u00e7\td'abril\tde maig\tde juny\tde juliol\td'agost\tde setembre\td'octubre\tde novembre\tde desembre~p.\u00a0m. gener"
+   },
+   "A30": {
+    "t": "s",
+    "v": "PM \u0e21\u0e01\u0e23\u0e32\u0e04\u0e21~PM \u0e21\u0e01\u0e23\u0e32\u0e04\u0e21~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0e21\u0e01\u0e23\u0e32\u0e04\u0e21~PM \u0e21\u0e01\u0e23\u0e32\u0e04\u0e21~PM \u0e21\u0e01\u0e23\u0e32\u0e04\u0e21"
+   },
+   "A31": {
+    "t": "s",
+    "v": "\u00d6S Ocak~\u00d6S Ocak~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u00d6S Ocak~\u00d6S Ocak~\u00d6S Ocak"
+   },
+   "A32": {
+    "t": "s",
+    "v": "PM \u062c\u0646\u0648\u0631\u06cc~PM \u062c\u0646\u0648\u0631\u06cc~\u0631\u0627\u062a \u062c\u0646\u0648\u0631\u06cc~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u062c\u0646\u0648\u0631\u06cc~PM \u062c\u0646\u0648\u0631\u06cc~PM \u062c\u0646\u0648\u0631\u06cc"
+   },
+   "A33": {
+    "t": "s",
+    "v": "PM Januari~PM Januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Januari~PM Januari~PM Januari"
+   },
+   "A34": {
+    "t": "s",
+    "v": "PM \u0441\u0456\u0447\u0435\u043d\u044c~PM \u0441\u0456\u0447\u0435\u043d\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0461\u0456\u0447\u0435\u043d\u044c~PM \u0421\u0456\u0447\u043d\u044f~PM \u0441\u0456\u0447\u043d\u044f"
+   },
+   "A35": {
+    "t": "s",
+    "v": "PM \u0441\u0442\u0443\u0434\u0437\u0435\u043d\u044c~PM \u0441\u0442\u0443\u0434\u0437\u0435\u043d\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0461\u0442\u0443\u0434\u0437\u0435\u043d\u044c~PM \u0421\u0442\u0443\u0434\u0437\u0435\u043d\u044f~PM \u0441\u0442\u0443\u0434\u0437\u0435\u043d\u044f"
+   },
+   "A36": {
+    "t": "s",
+    "v": "pop. januar~pop. januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~pop. januar~pop. januar~pop. januar"
+   },
+   "A37": {
+    "t": "s",
+    "v": "PM jaanuar~PM jaanuar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM jaanuar~PM jaanuar~PM jaanuar"
+   },
+   "A38": {
+    "t": "s",
+    "v": "p\u0113cp. janv\u0101ris~p\u0113cp. janv\u0101ris~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p\u0113cp. janv\u0101ris~p\u0113cp. janv\u0101ris~p\u0113cp. janv\u0101ris"
+   },
+   "A39": {
+    "t": "s",
+    "v": "popiet sausis~popiet sausis~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~popiet \u0093ausis~popiet Sausio~popiet sausio"
+   },
+   "A4": {
+    "t": "s",
+    "v": "\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708~\u4e0b\u5348 \u4e00\u6708"
+   },
+   "A40": {
+    "t": "s",
+    "v": "PM \u044f\u043d\u0432\u0430\u0440~PM \u044f\u043d\u0432\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u044f\u043d\u0432\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u044f\u043d\u0432\u0430\u0440~PM \u044f\u043d\u0432\u0430\u0440~PM \u044f\u043d\u0432\u0430\u0440"
+   },
+   "A41": {
+    "t": "s",
+    "v": "\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647~\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647~\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647~\u0628.\u0638 \u0698\u0627\u0646\u0648\u064a\u0647"
+   },
+   "A42": {
+    "t": "s",
+    "v": "CH Tha\u0301ng Gi\u00eang~CH Tha\u0301ng Gi\u00eang~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~CH Tha\u0301ng Gi\u00eang~CH Tha\u0301ng Gi\u00eang~CH Tha\u0301ng Gi\u00eang"
+   },
+   "A43": {
+    "t": "s",
+    "v": "PM \u0540\u0578\u0582\u0576\u057e\u0561\u0580~PM \u0540\u0578\u0582\u0576\u057e\u0561\u0580~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0540\u0578\u0582\u0576\u057e\u0561\u0580~PM \u0540\u0578\u0582\u0576\u057e\u0561\u0580~PM \u0540\u0578\u0582\u0576\u057e\u0561\u0580"
+   },
+   "A44": {
+    "t": "s",
+    "v": "PM yanvar~PM yanvar~PM j\u0430\u043d\u0432\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM j\u0430\u043d\u0432\u0430\u0440~PM yanvar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM yanvar~PM yanvar~PM yanvar"
+   },
+   "A45": {
+    "t": "s",
+    "v": "PM urtarrila~PM urtarrila~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM urtarrila~PM urtarrila~PM urtarrila"
+   },
+   "A46": {
+    "t": "s",
+    "v": "popo\u0142dnju januar~popo\u0142dnju januar~PM januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~popo\u0142dnju januar~popo\u0142dnju januar~popo\u0142dnju januar"
+   },
+   "A47": {
+    "t": "s",
+    "v": "\u043f\u043e\u043f\u043b. \u0458\u0430\u043d\u0443\u0430\u0440\u0438~\u043f\u043e\u043f\u043b. \u0458\u0430\u043d\u0443\u0430\u0440\u0438~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u043f\u043e\u043f\u043b. \u0458\u0430\u043d\u0443\u0430\u0440\u0438~\u043f\u043e\u043f\u043b. \u0458\u0430\u043d\u0443\u0430\u0440\u0438~\u043f\u043e\u043f\u043b. \u0458\u0430\u043d\u0443\u0430\u0440\u0438"
+   },
+   "A48": {
+    "t": "s",
+    "v": "PM Phesekgong~PM Phesekgong~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Phesekgong~PM Phesekgong~PM Phesekgong"
+   },
+   "A49": {
+    "t": "s",
+    "v": "PM Sunguti~PM Sunguti~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Sunguti~PM Sunguti~PM Sunguti"
+   },
+   "A5": {
+    "t": "s",
+    "v": "odp. leden~odp. leden~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~odp. leden~odp. leden~odp. leden"
+   },
+   "A50": {
+    "t": "s",
+    "v": "PM Ferikgong~PM Ferikgong~PM Ferikgong~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Ferikgong~PM Ferikgong~PM Ferikgong"
+   },
+   "A51": {
+    "t": "s",
+    "v": "PM Phando~PM Phando~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Phando~PM Phando~PM Phando"
+   },
+   "A52": {
+    "t": "s",
+    "v": "PM uJanuwari~PM uJanuwari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM uJanuwari~PM uJanuwari~PM uJanuwari"
+   },
+   "A53": {
+    "t": "s",
+    "v": "PM Januwari~PM Januwari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Januwari~PM Januwari~PM Januwari"
+   },
+   "A54": {
+    "t": "s",
+    "v": "nm. Januarie~nm. Januarie~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~nm. Januarie~nm. Januarie~nm. Januarie"
+   },
+   "A55": {
+    "t": "s",
+    "v": "PM \u10d8\u10d0\u10dc\u10d5\u10d0\u10e0\u10d8~PM \u10d8\u10d0\u10dc\u10d5\u10d0\u10e0\u10d8~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u10d8\u10d0\u10dc\u10d5\u10d0\u10e0\u10d8~PM \u10d8\u10d0\u10dc\u10d5\u10d0\u10e0\u10d8~PM \u10d8\u10d0\u10dc\u10d5\u10d0\u10e0\u10d8"
+   },
+   "A56": {
+    "t": "s",
+    "v": "um sein. januar~um sein. januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~um sein. januar~um sein. januar~um sein. januar"
+   },
+   "A57": {
+    "t": "s",
+    "v": "\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940"
+   },
+   "A58": {
+    "t": "s",
+    "v": "PM Jannar~PM Jannar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Jannar~PM Jannar~PM Jannar"
+   },
+   "A59": {
+    "t": "s",
+    "v": "e.b. o\u0111\u0111ajagem\u00e1nnu~e.b. o\u0111\u0111ajagem\u00e1nnu~PM o\u0111\u0111ajagem\u00e1nnu~PM o\u0111\u0111ajagem\u00e1nu~PM \u00e5d\u00e5jakm\u00e1nno~PM \u00e5d\u00e5jakm\u00e1nno~PM ts\u00efengele~PM ts\u00efengele~PM o\u0111\u0111ee\u00b4jjm\u00e4\u00e4n~PM u\u0111\u0111\u00e2ivem\u00e1\u00e1nu~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM u\u0111\u0111\u00e2ivem\u00e1\u00e1nu~PM o\u0111\u0111ee\u00b4jjm\u00e4\u00e4n~PM ts\u00efengele~PM \u00e5d\u00e5jakm\u00e1nno~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~e.b. o\u0111\u0111ajagem\u00e1nnu~e.b. o\u0111\u0111ajagem\u00e1nnu~e.b. o\u0111\u0111ajagem\u00e1nnu"
+   },
+   "A6": {
+    "t": "s",
+    "v": "PM januar~PM januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM januar~PM januar~PM januar"
+   },
+   "A60": {
+    "t": "s",
+    "v": "i.n. Ean\u00e1ir~P January~i.n. Ean\u00e1ir~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~i.n. Ean\u00e1ir~P January"
+   },
+   "A61": {
+    "t": "s",
+    "v": "\u05e0\u05d0\u05b8\u05db\u05de\u05d9\u05d8\u05d0\u05b8\u05d2 \u05d9\u05d0\u05b7\u05e0\u05d5\u05d0\u05b7\u05e8~\u05e0\u05d0\u05b8\u05db\u05de\u05d9\u05d8\u05d0\u05b8\u05d2 \u05d9\u05d0\u05b7\u05e0\u05d5\u05d0\u05b7\u05e8~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u05e0\u05d0\u05b8\u05db\u05de\u05d9\u05d8\u05d0\u05b8\u05d2 \u05d9\u05d0\u05b7\u05e0\u05d5\u05d0\u05b7\u05e8~\u05e0\u05d0\u05b8\u05db\u05de\u05d9\u05d8\u05d0\u05b8\u05d2 \u05d9\u05d0\u05b7\u05e0\u05d5\u05d0\u05b7\u05e8~\u05e0\u05d0\u05b8\u05db\u05de\u05d9\u05d8\u05d0\u05b8\u05d2 \u05d9\u05d0\u05b7\u05e0\u05d5\u05d0\u05b7\u05e8"
+   },
+   "A62": {
+    "t": "s",
+    "v": "PTG Januari~PTG Januari~PTG Januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PTG Januari~PTG Januari~PTG Januari"
+   },
+   "A63": {
+    "t": "s",
+    "v": "PM \u049a\u0430\u04a3\u0442\u0430\u0440~PM \u049a\u0430\u04a3\u0442\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u049a\u0430\u04a3\u0442\u0430\u0440~PM \u049a\u0430\u04a3\u0442\u0430\u0440~PM \u049a\u0430\u04a3\u0442\u0430\u0440"
+   },
+   "A64": {
+    "t": "s",
+    "v": "\u0442\u043a \u042f\u043d\u0432\u0430\u0440\u044c~\u0442\u043a \u042f\u043d\u0432\u0430\u0440\u044c~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0442\u043a \u042f\u043d\u0432\u0430\u0440\u044c~\u0442\u043a \u042f\u043d\u0432\u0430\u0440\u044c~\u0442\u043a \u042f\u043d\u0432\u0430\u0440\u044c"
+   },
+   "A65": {
+    "t": "s",
+    "v": "PM Januari~PM Januari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Januari~PM Januari~PM Januari"
+   },
+   "A66": {
+    "t": "s",
+    "v": "PM \u00ddanwar~PM \u00ddanwar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u00ddanwar~PM \u00ddanwar~PM \u00ddanwar"
+   },
+   "A67": {
+    "t": "s",
+    "v": "TK Yanvar~TK Yanvar~\u0422\u041a \u044f\u043d\u0432\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0422\u041a \u044f\u043d\u0432\u0430\u0440~TK Yanvar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~TK Yanvar~TK Yanvar~TK Yanvar"
+   },
+   "A68": {
+    "t": "s",
+    "v": "PM \u0433\u044b\u0439\u043d\u0432\u0430\u0440~PM \u0433\u044b\u0439\u043d\u0432\u0430\u0440~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0453\u044b\u0439\u043d\u0432\u0430\u0440~PM \u03f3\u044b\u0439\u043d\u0432\u0430\u0440\u043d\u044b\u04a3~PM \u0413\u044b\u0439\u043d\u0432\u0430\u0440\u043d\u044b\u04a3"
+   },
+   "A69": {
+    "t": "s",
+    "v": "PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0~PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0~PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0~PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0~PM \u099c\u09be\u09a8\u09c1\u09af\u09bc\u09be\u09b0\u09c0"
+   },
+   "A7": {
+    "t": "s",
+    "v": "PM Januar~PM Januar~PM Januar~PM J\u00e4nner~PM Januar~PM Januar~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Januar~PM Januar~PM Januar"
+   },
+   "A70": {
+    "t": "s",
+    "v": "\u0a36\u0a3e\u0a2e \u0a1c\u0a28\u0a35\u0a30\u0a40~\u0a36\u0a3e\u0a2e \u0a1c\u0a28\u0a35\u0a30\u0a40~PM \u062c\u0646\u0648\u0631\u06cc~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u062c\u0646\u0648\u0631\u06cc~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0a36\u0a3e\u0a2e \u0a1c\u0a28\u0a35\u0a30\u0a40~\u0a36\u0a3e\u0a2e \u0a1c\u0a28\u0a35\u0a30\u0a40~\u0a36\u0a3e\u0a2e \u0a1c\u0a28\u0a35\u0a30\u0a40"
+   },
+   "A71": {
+    "t": "s",
+    "v": "\u0a89\u0aa4\u0acd\u0aa4\u0ab0\u00a0\u0aae\u0aa7\u0acd\u0aaf\u0abe\u0ab9\u0acd\u0aa8 \u0a9c\u0abe\u0aa8\u0acd\u0aaf\u0ac1\u0a86\u0ab0\u0ac0~\u0a89\u0aa4\u0acd\u0aa4\u0ab0\u00a0\u0aae\u0aa7\u0acd\u0aaf\u0abe\u0ab9\u0acd\u0aa8 \u0a9c\u0abe\u0aa8\u0acd\u0aaf\u0ac1\u0a86\u0ab0\u0ac0~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0a89\u0aa4\u0acd\u0aa4\u0ab0\u00a0\u0aae\u0aa7\u0acd\u0aaf\u0abe\u0ab9\u0acd\u0aa8 \u0a9c\u0abe\u0aa8\u0acd\u0aaf\u0ac1\u0a86\u0ab0\u0ac0~\u0a89\u0aa4\u0acd\u0aa4\u0ab0\u00a0\u0aae\u0aa7\u0acd\u0aaf\u0abe\u0ab9\u0acd\u0aa8 \u0a9c\u0abe\u0aa8\u0acd\u0aaf\u0ac1\u0a86\u0ab0\u0ac0~\u0a89\u0aa4\u0acd\u0aa4\u0ab0\u00a0\u0aae\u0aa7\u0acd\u0aaf\u0abe\u0ab9\u0acd\u0aa8 \u0a9c\u0abe\u0aa8\u0acd\u0aaf\u0ac1\u0a86\u0ab0\u0ac0"
+   },
+   "A72": {
+    "t": "s",
+    "v": "PM \u0b1c\u0b3e\u0b28\u0b41\u0b5f\u0b3e\u0b30\u0b40~PM \u0b1c\u0b3e\u0b28\u0b41\u0b5f\u0b3e\u0b30\u0b40~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0b3c\u0b3e\u0b28\u0b41\u0b5f\u0b3e\u0b30\u0b40~PM \u0afc\u0b3e\u0b28\u0b41\u0b5f\u0b3e\u0b30\u0b40~PM \u0b1c\u0b3e\u0b28\u0b41\u0b5f\u0b3e\u0b30\u0b40"
+   },
+   "A73": {
+    "t": "s",
+    "v": "\u0bae\u0bbe\u0bb2\u0bc8 \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf~\u0bae\u0bbe\u0bb2\u0bc8 \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf~\u0baa\u0bbf\u0bb1\u0bcd\u0baa\u0b95\u0bb2\u0bcd \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0bae\u0bbe\u0bb2\u0bc8 \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf~\u0bae\u0bbe\u0bb2\u0bc8 \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf~\u0bae\u0bbe\u0bb2\u0bc8 \u0b9c\u0ba9\u0bb5\u0bb0\u0bbf"
+   },
+   "A74": {
+    "t": "s",
+    "v": "PM \u0c1c\u0c28\u0c35\u0c30\u0c3f~PM \u0c1c\u0c28\u0c35\u0c30\u0c3f~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0c1c\u0c28\u0c35\u0c30\u0c3f~PM \u0c1c\u0c28\u0c35\u0c30\u0c3f~PM \u0c1c\u0c28\u0c35\u0c30\u0c3f"
+   },
+   "A75": {
+    "t": "s",
+    "v": "\u0c85\u0caa\u0cb0\u0cbe\u0cb9\u0ccd\u0ca8 \u0c9c\u0ca8\u0cb5\u0cb0\u0cbf~\u0c85\u0caa\u0cb0\u0cbe\u0cb9\u0ccd\u0ca8 \u0c9c\u0ca8\u0cb5\u0cb0\u0cbf~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0c85\u0caa\u0cb0\u0cbe\u0cb9\u0ccd\u0ca8 \u0cbc\u0ca8\u0cb5\u0cb0\u0cbf~\u0c85\u0caa\u0cb0\u0cbe\u0cb9\u0ccd\u0ca8 \u0c7c\u0ca8\u0cb5\u0cb0\u0cbf\u0caf~\u0c85\u0caa\u0cb0\u0cbe\u0cb9\u0ccd\u0ca8 \u0c9c\u0ca8\u0cb5\u0cb0\u0cbf\u0caf"
+   },
+   "A76": {
+    "t": "s",
+    "v": "PM \u0d1c\u0d28\u0d41\u0d35\u0d30\u0d3f~PM \u0d1c\u0d28\u0d41\u0d35\u0d30\u0d3f~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u0d1c\u0d28\u0d41\u0d35\u0d30\u0d3f~PM \u0d1c\u0d28\u0d41\u0d35\u0d30\u0d3f~PM \u0d1c\u0d28\u0d41\u0d35\u0d30\u0d3f"
+   },
+   "A77": {
+    "t": "s",
+    "v": "\u0986\u09ac\u09c7\u09b2\u09bf \u099c\u09be\u09a8\u09c1\u09f1\u09be\u09f0\u09c0~\u0986\u09ac\u09c7\u09b2\u09bf \u099c\u09be\u09a8\u09c1\u09f1\u09be\u09f0\u09c0~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0986\u09ac\u09c7\u09b2\u09bf \u099c\u09be\u09a8\u09c1\u09f1\u09be\u09f0\u09c0~\u0986\u09ac\u09c7\u09b2\u09bf \u099c\u09be\u09a8\u09c1\u09f1\u09be\u09f0\u09c0~\u0986\u09ac\u09c7\u09b2\u09bf \u099c\u09be\u09a8\u09c1\u09f1\u09be\u09f0\u09c0"
+   },
+   "A78": {
+    "t": "s",
+    "v": "\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940"
+   },
+   "A79": {
+    "t": "s",
+    "v": "\u092e\u0927\u094d\u092f\u093e\u0928\u092a\u091a\u094d\u092f\u093e\u0924 \u091c\u093e\u0928\u094d\u092f\u0941\u0905\u0930\u0940~\u092e\u0927\u094d\u092f\u093e\u0928\u092a\u091a\u094d\u092f\u093e\u0924 \u091c\u093e\u0928\u094d\u092f\u0941\u0905\u0930\u0940~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u092e\u0927\u094d\u092f\u093e\u0928\u092a\u091a\u094d\u092f\u093e\u0924 \u091c\u093e\u0928\u094d\u092f\u0941\u0905\u0930\u0940~\u092e\u0927\u094d\u092f\u093e\u0928\u092a\u091a\u094d\u092f\u093e\u0924 \u091c\u093e\u0928\u094d\u092f\u0941\u0905\u0930\u0940~\u092e\u0927\u094d\u092f\u093e\u0928\u092a\u091a\u094d\u092f\u093e\u0924 \u091c\u093e\u0928\u094d\u092f\u0941\u0905\u0930\u0940"
+   },
+   "A8": {
+    "t": "s",
+    "v": "\u03bc\u03bc \u0399\u03b1\u03bd\u03bf\u03c5\u03ac\u03c1\u03b9\u03bf\u03c2~\u03bc\u03bc \u0399\u03b1\u03bd\u03bf\u03c5\u03ac\u03c1\u03b9\u03bf\u03c2~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u03bc\u03bc \u0399\u03b1\u03bd\u03bf\u03c5\u03ac\u03c1\u03b9\u03bf\u03c2~\u03bc\u03bc \u0399\u03b1\u03bd\u03bf\u03c5\u03ac\u03c1\u03b9\u03bf\u03c2~\u03bc\u03bc \u0399\u03b1\u03bd\u03bf\u03c5\u03ac\u03c1\u03b9\u03bf\u03c2"
+   },
+   "A80": {
+    "t": "s",
+    "v": "\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440~\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440~PM \u1828\u1822\u182d\u1821\u1833\u1826\u182d\u1821\u1837 \u1830\u1820\u1837\u180e\u1820~PM \u1828\u1822\u182d\u1821\u1833\u1826\u182d\u1821\u1837 \u1830\u1820\u1837\u180e\u1820~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440~PM \u1828\u1822\u182d\u1821\u1833\u1826\u182d\u1821\u1837 \u1830\u1820\u1837\u180e\u1820~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440~\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440~\u04af.\u0445. \u041d\u044d\u0433\u0434\u04af\u0433\u044d\u044d\u0440 \u0441\u0430\u0440"
+   },
+   "A81": {
+    "t": "s",
+    "v": "\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d~\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d~\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d~\u0f55\u0fb1\u0f72\u0f0b\u0f46\u0f0b \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f54\u0f0b~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d~\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d~\u0f55\u0fb1\u0f72\u0f0b\u0f51\u0fb2\u0f7c \u0f66\u0fa4\u0fb1\u0f72\u0f0b\u0f5f\u0fb3\u0f0b\u0f51\u0f44\u0f0b\u0f54\u0f7c\u0f0d"
+   },
+   "A82": {
+    "t": "s",
+    "v": "yh Ionawr~yh Ionawr~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~yh Ionawr~yh Ionawr~yh Ionawr"
+   },
+   "A83": {
+    "t": "s",
+    "v": "\u179b\u17d2\u1784\u17b6\u1785 \u1798\u1780\u179a\u17b6~\u179b\u17d2\u1784\u17b6\u1785 \u1798\u1780\u179a\u17b6~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u179b\u17d2\u1784\u17b6\u1785 \u1798\u1780\u179a\u17b6~\u179b\u17d2\u1784\u17b6\u1785 \u1798\u1780\u179a\u17b6~\u179b\u17d2\u1784\u17b6\u1785 \u1798\u1780\u179a\u17b6"
+   },
+   "A84": {
+    "t": "s",
+    "v": "\u0eab\u0ebc\u0eb1\u0e87\u0e97\u0ec8\u0ebd\u0e87 \u0ea1\u0eb1\u0e87\u0e81\u0ead\u0e99~\u0eab\u0ebc\u0eb1\u0e87\u0e97\u0ec8\u0ebd\u0e87 \u0ea1\u0eb1\u0e87\u0e81\u0ead\u0e99~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0eab\u0ebc\u0eb1\u0e87\u0e97\u0ec8\u0ebd\u0e87 \u0ea1\u0eb1\u0e87\u0e81\u0ead\u0e99~\u0eab\u0ebc\u0eb1\u0e87\u0e97\u0ec8\u0ebd\u0e87 \u0ea1\u0eb1\u0e87\u0e81\u0ead\u0e99~\u0eab\u0ebc\u0eb1\u0e87\u0e97\u0ec8\u0ebd\u0e87 \u0ea1\u0eb1\u0e87\u0e81\u0ead\u0e99"
+   },
+   "A85": {
+    "t": "s",
+    "v": "\u100a\u1014\u1031 \u1007\u1014\u103a\u1014\u101d\u102b\u101b\u102e~\u100a\u1014\u1031 \u1007\u1014\u103a\u1014\u101d\u102b\u101b\u102e~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u100a\u1014\u1031 \u1007\u1014\u103a\u1014\u101d\u102b\u101b\u102e~\u100a\u1014\u1031 \u1007\u1014\u103a\u1014\u101d\u102b\u101b\u102e~\u100a\u1014\u1031 \u1007\u1014\u103a\u1014\u101d\u102b\u101b\u102e"
+   },
+   "A86": {
+    "t": "s",
+    "v": "p.m. Xaneiro~p.m. Xaneiro~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~p.m. Xaneiro~p.m. Xaneiro~p.m. Xaneiro"
+   },
+   "A87": {
+    "t": "s",
+    "v": "\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940~\u092e.\u0928\u0902. \u091c\u093e\u0928\u0947\u0935\u093e\u0930\u0940"
+   },
+   "A88": {
+    "t": "s",
+    "v": "PM \u09f1\u09be\u0995\u09bf\u099a\u0999~PM \u09f1\u09be\u0995\u09bf\u099a\u0999~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u09f1\u09be\u0995\u09bf\u099a\u0999~PM \u09f1\u09be\u0995\u09bf\u099a\u0999~PM \u09f1\u09be\u0995\u09bf\u099a\u0999"
+   },
+   "A89": {
+    "t": "s",
+    "v": "PM \u062c\u0646\u0648\u0631\u064a~PM \u091c\u0928\u0935\u0930\u092f~PM \u062c\u0646\u0648\u0631\u064a~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u062c\u0646\u0648\u0631\u064a~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u091c\u0928\u0935\u0930\u092f~PM \u062c\u0646\u0648\u0631\u064a~PM \u091c\u0928\u0935\u0930\u092f"
+   },
+   "A9": {
+    "t": "s",
+    "v": "PM January~PM January~PM January~PM January~PM January~pm January~pm January~pm January~pm January~PM January~pm January~pm January~pm January~pm January~PM January~pm January~PM January~PM January~pm January~PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM January~PM January~PM January"
+   },
+   "A90": {
+    "t": "s",
+    "v": "\u0712.\u071b \u071f\u0722\u0718\u0722\u00a0\u0710\u071a\u072a\u071d~\u0712.\u071b \u071f\u0722\u0718\u0722\u00a0\u0710\u071a\u072a\u071d~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0712.\u071b \u071f\u0722\u0718\u0722\u00a0\u0710\u071a\u072a\u071d~\u0712.\u071b \u071f\u0722\u0718\u0722\u00a0\u0710\u071a\u072a\u071d~\u0712.\u071b \u071f\u0722\u0718\u0722\u00a0\u0710\u071a\u072a\u071d"
+   },
+   "A91": {
+    "t": "s",
+    "v": "\u0db4.\u0dc0. \u0da2\u0db1\u0dc0\u0dcf\u0dbb\u0dd2~\u0db4.\u0dc0. \u0da2\u0db1\u0dc0\u0dcf\u0dbb\u0dd2~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0db4.\u0dc0. \u0da2\u0db1\u0dc0\u0dcf\u0dbb\u0dd2~\u0db4.\u0dc0. \u0da2\u0db1\u0dc0\u0dcf\u0dbb\u0dd2~\u0db4.\u0dc0. \u0da2\u0db1\u0dc0\u0dcf\u0dbb\u0dd2"
+   },
+   "A92": {
+    "t": "s",
+    "v": "PM \u13a4\u13c3\u13b8\u13d4\u13c5~PM \u13a4\u13c3\u13b8\u13d4\u13c5~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u13a4\u13c3\u13b8\u13d4\u13c5~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u13a4\u13c3\u13b8\u13d4\u13c5~PM \u13a4\u13c3\u13b8\u13d4\u13c5~PM \u13a4\u13c3\u13b8\u13d4\u13c5"
+   },
+   "A93": {
+    "t": "s",
+    "v": "PM Jaannuari~PM \u152e\u14d0\u14c4\u140a\u1546~PM Jaannuari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u152e\u14d0\u14c4\u140a\u1546~PM Jaannuari~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u152e\u14d0\u14c4\u140a\u1546~PM Jaannuari~PM \u152e\u14d0\u14c4\u140a\u1546"
+   },
+   "A94": {
+    "t": "s",
+    "v": "\u12a8\u1230\u12d3\u1275 \u1303\u1295\u12e9\u12c8\u122a~\u12a8\u1230\u12d3\u1275 \u1303\u1295\u12e9\u12c8\u122a~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u12a8\u1230\u12d3\u1275 \u1303\u1295\u12e9\u12c8\u122a~\u12a8\u1230\u12d3\u1275 \u1303\u1295\u12e9\u12c8\u122a~\u12a8\u1230\u12d3\u1275 \u1303\u1295\u12e9\u12c8\u122a"
+   },
+   "A95": {
+    "t": "s",
+    "v": "PM Yennayer~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~PM Yennayer~P January~PM \u2d49\u2d4f\u2d4f\u2d30\u2d62\u2d54~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u2d49\u2d4f\u2d4f\u2d30\u2d62\u2d54~PM Yennayer~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a~PM Yennayer~\u0645 \u0643\u0627\u0646\u0648\u0646\u00a0\u0627\u0644\u062b\u0627\u0646\u064a"
+   },
+   "A96": {
+    "t": "s",
+    "v": "PM \u062c\u0646\u0624\u0631\u06cc~PM \u062c\u0646\u0624\u0631\u06cc~PM January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM \u062c\u0646\u0624\u0631\u06cc~PM \u062c\u0646\u0624\u0631\u06cc~PM \u062c\u0646\u0624\u0631\u06cc"
+   },
+   "A97": {
+    "t": "s",
+    "v": "\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940~\u0905\u092a\u0930\u093e\u0939\u094d\u0928 \u091c\u0928\u0935\u0930\u0940"
+   },
+   "A98": {
+    "t": "s",
+    "v": "PM Jannewaris~PM Jannewaris~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~PM Jannewaris~PM Jannewaris~PM Jannewaris"
+   },
+   "A99": {
+    "t": "s",
+    "v": "\u063a.\u0648. \u0633\u0644\u0648\u0627\u063a\u0647~\u063a.\u0648. \u0633\u0644\u0648\u0627\u063a\u0647~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~P January~\u063a.\u0648. \u0633\u0644\u0648\u0627\u063a\u0647~\u063a.\u0648. \u0633\u0644\u0648\u0627\u063a\u0647~\u063a.\u0648. \u0633\u0644\u0648\u0627\u063a\u0647"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "b3876529b4e6bd533f34765de78746fbaef8800ef6a5b0817a467e1b89f513b6",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-04T05:52:14+00:00",
+  "version": null,
+  "workbook_name": "8b70bc9eb59ddbf1901552e168e0d4464425539e4ae549ac0639de3322b2033b.xlsx"
+ }
+}

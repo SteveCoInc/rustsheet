@@ -3,7 +3,7 @@ id: T-3598
 title: "Second number run after a decimal point and literal prints no grouping"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,9 +22,16 @@ Found by T-1925: probes/t1925-numeral-digits C1, C2, C21-C27 (we print "1,234,56
   probes/t1925-numeral-digits.case.json S!C1:C32
 
 ## Acceptance criteria
-- [ ] probes/t1925-numeral-digits S!C1:C32 pass (32 cells, ASCII and numeral-system digits); a probe covers the
+- [x] probes/t1925-numeral-digits S!C1:C32 pass (32 cells, ASCII and numeral-system digits); a probe covers the
       neighbouring forms.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Done (general rule, not the one cell). Probed 27 comma forms over 4 values (probes/t3598-decimal-part-commas, 108
+cells): only a `,` in the integer part groups; after the decimal point or a fraction a comma run between placeholders
+prints nothing and neither groups nor scales, after a decimal-part literal it prints, and a trailing one still scales.
+Implemented in `Token::Comma` (formatter/parser.rs); number-formats.md "A comma between digit placeholders turns on
+thousands grouping". Eval: probes/t1925-numeral-digits S!C1:C32 pass (32 cells), the new case passes 108/108.

@@ -13,3 +13,13 @@ fn question_decimals_keep_the_point_on_an_integer() {
 fn hash_percent_of_a_value_rounding_to_zero_is_the_sign_alone() {
     assert_eq!(text(0.0049, "#%"), "%");
 }
+
+#[test]
+fn commas_after_the_decimal_point_neither_group_nor_scale() {
+    // probes/t3598-decimal-part-commas.
+    assert_eq!(text(1_234_567.89, "0.00|#,##0"), "1234567.89|0");
+    assert_eq!(text(1_234_567.89, "0.0,,0"), "1234567.89");
+    assert_eq!(text(1_234_567.89, "#,##0.0,0"), "1,234,567.89");
+    assert_eq!(text(1_234_567.89, "0.00|,0"), "1234567.89|,0");
+    assert_eq!(text(1_234_567.89, "0.00|0,"), "1234.56|8");
+}

@@ -335,3 +335,25 @@ fn empty_text_section_is_empty() {
     assert_eq!(format_text_value("abc", "0;;;[Red]").text, "abc");
     assert_eq!(format_text_value("abc", "0;").text, "abc");
 }
+
+#[test]
+fn only_lcids_with_a_locale_fall_back_to_their_language() {
+    // probes/t3666-lcid-sublanguage-sweep: 0x2412 and 0x812 have no locale, 0x412, 0xF412 and
+    // 0xF409 have one; 0xC00 is en-US.
+    let v = 45000.75;
+    let f = |tag: &str| text(v, &format!("[$-{tag}]mmmm|ddd|h A/P|h AM/PM"));
+    assert_eq!(f("2412"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("812"), "March|Wed|6 P|6 PM");
+    assert_eq!(f("F412"), "3월|수|6 오후|6 오후");
+    assert_eq!(f("F409"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("C00"), "March|Wed|6 PM|6 PM");
+    assert_eq!(f("400C"), "March|Wed|6 P|6 PM");
+}
+
+#[test]
+fn a_weekday_written_with_a_has_its_own_code_after_b2() {
+    // probes/t3089-b2-weekday-a-codes.
+    assert_eq!(text(45000.0, "B2[$-40409]aaa|b"), "週三|23");
+    assert_eq!(text(45000.0, "B2[$-40409]AAAA|b"), "星期三|24");
+    assert_eq!(text(45000.0, "B2[$-40409]ddd aaa|b"), "週三 週三|2\u{f}");
+}

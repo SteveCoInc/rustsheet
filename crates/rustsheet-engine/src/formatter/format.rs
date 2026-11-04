@@ -358,7 +358,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             // year in the others (probes/text-locale-japanese-year A1-A13).
             let mut seen_era = false;
             let mut names = NameTokens::new(p);
-            for token in tokens {
+            for (index, token) in tokens.iter().enumerate() {
                 // Excel: a date or clock token leaves the register holding the serial's last
                 // component, so an elapsed token after it counts from that (T-3419).
                 split |= is_date_or_clock(token);
@@ -417,8 +417,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let month = ymd_month as usize;
                         text.push_str(&p.numerals.field(&format!("{month:02}")));
                     }
-                    TextToken::DayNameShort
-                    | TextToken::DayName
+                    TextToken::DayNameShort(_)
+                    | TextToken::DayName(_)
                     | TextToken::MonthNameShort
                     | TextToken::MonthName
                     | TextToken::MonthLetter => {
@@ -428,8 +428,10 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                         let weekday = excel_weekday_index(serial_1900);
                         if let (Some(Calendar::Hebrew(adars)), Some(names)) = (p.calendar, p.names)
                         {
-                            let month_name =
-                                !matches!(token, TextToken::DayName | TextToken::DayNameShort);
+                            let month_name = !matches!(
+                                token,
+                                TextToken::DayName(_) | TextToken::DayNameShort(_)
+                            );
                             if month_name && adars.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
                                 return invalid_date(value);
                             }
@@ -467,7 +469,7 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     }
                     TextToken::Hour | TextToken::HourPadded => {
                         let mut hour = hours as i32;
-                        if p.use_ampm {
+                        if p.twelve_hour.contains(&index) {
                             if hour == 0 {
                                 hour = 12;
                             } else if hour > 12 {
@@ -827,8 +829,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                     // Date tokens should not be present
                     TextToken::Day => {}
                     TextToken::DayPadded => {}
-                    TextToken::DayNameShort => {}
-                    TextToken::DayName => {}
+                    TextToken::DayNameShort(_) => {}
+                    TextToken::DayName(_) => {}
                     TextToken::Month => {}
                     TextToken::MonthPadded => {}
                     TextToken::MonthNameShort => {}

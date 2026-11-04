@@ -3,7 +3,7 @@ id: T-3089
 title: "TEXT: aaa as the first token before b after B2[40409] gives code 51, not ddd's 15"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,8 +22,13 @@ gives 51 (probes/t3028-b2-taiwan-cuts A65). The token needs to remember that it 
 its code first) without changing what it prints anywhere else.
 
 ## Acceptance criteria
-- [ ] probes/t3028-b2-taiwan-cuts C65 passes and leaves eval/baseline/probes.txt; `aaaa` is probed and matched.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t3028-b2-taiwan-cuts C65 passes and leaves eval/baseline/probes.txt; `aaaa` is probed and matched.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any other effect of `aaa` (T-1880).
+
+## Outcome
+Done. `aaa`/`AAA` is code 51 and `aaaa` or any longer `a` run 52 (probes/t3089-b2-weekday-a-codes, 24 cells); the
+weekday tokens carry `lexer::WeekdaySpelling` so `calendar_dates::first_token_code` can tell them apart, nothing else
+changes. Eval: t3028-b2-taiwan-cuts A65, C65 pass, the new case 24/24.

@@ -40,17 +40,17 @@ pub enum Token {
     ScientificMinus, // E-
     General,       // General
     // Dates and time
-    Day,            // d
-    DayPadded,      // dd
-    DayNameShort,   // ddd
-    DayName,        // dddd+
-    Month,          // m (or minute)
-    MonthPadded,    // mm (or minute padded)
-    MonthNameShort, // mmm
-    MonthName,      // mmmm or mmmmmm+
-    MonthLetter,    // mmmmm
-    YearShort,      // y or yy
-    Year,           // yyy+
+    Day,                           // d
+    DayPadded,                     // dd
+    DayNameShort(WeekdaySpelling), // ddd or aaa
+    DayName(WeekdaySpelling),      // dddd+ or aaaa+
+    Month,                         // m (or minute)
+    MonthPadded,                   // mm (or minute padded)
+    MonthNameShort,                // mmm
+    MonthName,                     // mmmm or mmmmmm+
+    MonthLetter,                   // mmmmm
+    YearShort,                     // y or yy
+    Year,                          // yyy+
     /// `e` (false) or `ee`+ (true, two digits at least): the era year, the four-digit year in a
     /// Gregorian calendar.
     EraYear(bool),
@@ -102,6 +102,14 @@ impl Compare {
     }
 }
 
+/// How a weekday token was written: `ddd`/`dddd` or `aaa`/`aaaa`. Both print the same; only the
+/// character a `B2` Minguo `b` reads past its year differs (`calendar_dates::first_token_code`).
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+pub enum WeekdaySpelling {
+    D,
+    A,
+}
+
 impl Token {
     pub fn is_digit(&self) -> bool {
         (self == &Token::Zero) || (self == &Token::Sharp) || (self == &Token::QuestionMark)
@@ -110,8 +118,7 @@ impl Token {
     pub fn is_date(&self) -> bool {
         self == &Token::Day
             || self == &Token::DayPadded
-            || self == &Token::DayNameShort
-            || self == &Token::DayName
+            || matches!(self, Token::DayNameShort(_) | Token::DayName(_))
             || self == &Token::MonthName
             || self == &Token::MonthNameShort
             || self == &Token::Month
@@ -641,8 +648,8 @@ impl Lexer {
                     match d {
                         1 => Token::Day,
                         2 => Token::DayPadded,
-                        3 => Token::DayNameShort,
-                        _ => Token::DayName,
+                        3 => Token::DayNameShort(WeekdaySpelling::D),
+                        _ => Token::DayName(WeekdaySpelling::D),
                     }
                 }
                 'm' | 'M' => {
@@ -716,9 +723,9 @@ impl Lexer {
                             }
                         }
                         if run == 3 {
-                            Token::DayNameShort
+                            Token::DayNameShort(WeekdaySpelling::A)
                         } else {
-                            Token::DayName
+                            Token::DayName(WeekdaySpelling::A)
                         }
                     } else {
                         // Excel: an unquoted `a` that is not AM/PM prints as itself

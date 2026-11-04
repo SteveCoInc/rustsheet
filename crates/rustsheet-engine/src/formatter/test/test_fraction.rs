@@ -235,3 +235,17 @@ fn fixed_denominator_past_32768_is_picked() {
     assert_eq!(text(1.5, "# ?/40000"), "1 1/4    ");
     assert_eq!(format_number(0.5, "?/100000", &ctx).text, "#VALUE!");
 }
+
+#[test]
+fn placeholders_after_the_denominator_print_without_a_digit() {
+    // probes/t3711-placeholders-after-fraction.
+    assert_eq!(text(12.5, "# ?/?|0 \"12\"|\\5"), "12 1/2|0 12|5");
+    assert_eq!(text(12.5, "# ?/? #"), "12 1/2 0");
+    assert_eq!(text(12.5, "# ?/? ?"), "12 1/2  ");
+    assert_eq!(text(12.5, "# ?/?|0.0"), "12 1/2|0.0");
+    assert_eq!(text(1234.25, "# ?/?|#,##0"), "1234 1/4|0000");
+    // A blank fraction blanks them too, up to the last one.
+    assert_eq!(text(12.0, "# ?/?|0 \"12\"|\\5"), "12       12|5");
+    assert_eq!(text(12.0, "# ?/? 0|\"x\""), "12      |x");
+    assert_eq!(text(12.5, "# ?/?|0%"), "1250      %");
+}

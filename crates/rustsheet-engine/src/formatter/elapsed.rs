@@ -177,6 +177,31 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
     false
 }
 
+/// The indices of the hour tokens (`h`, `hh`) of a date section that take the 12-hour clock: the
+/// last hour before each `AM/PM` or `A/P`, and the section's last hour when it has a marker
+/// anywhere. Every other hour stays on the 24-hour clock: on 13:02:12 `h|h AM/PM` is "13|1 PM",
+/// `h AM/PM|h` "1 PM|1", `AM/PM h|h` "PM 13|1", `h|hh AM/PM|h` "13|01 PM|1", `h|h|ss AM/PM`
+/// "13|1|12 PM" (probes/t3710-ampm-hour-tokens; number-formats.md "AM/PM switches only some hours").
+pub(super) fn twelve_hour_tokens(tokens: &[TextToken]) -> Vec<usize> {
+    let mut twelve = Vec::new();
+    let mut last_hour = None;
+    let mut marker = false;
+    for (index, token) in tokens.iter().enumerate() {
+        match token {
+            TextToken::Hour | TextToken::HourPadded => last_hour = Some(index),
+            TextToken::AMPM | TextToken::AP(..) => {
+                marker = true;
+                twelve.extend(last_hour);
+            }
+            _ => {}
+        }
+    }
+    if marker {
+        twelve.extend(last_hour);
+    }
+    twelve
+}
+
 /// Whether the token reads the serial's date or time of day (`d`, `mmm`, `h`, `ss`, `AM/PM`, an
 /// era): anything in a date section but literals, `General`, elapsed counts and fraction digits.
 pub(super) fn is_date_or_clock(token: &TextToken) -> bool {

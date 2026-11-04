@@ -6,6 +6,7 @@
 use chrono::NaiveDate;
 
 use super::dates::convert_to_serial_number;
+use super::lcid_locales::has_locale;
 use super::numerals::Numerals;
 use crate::locale::calendar_date_names::{
     HEBREW_LATIN, HEBREW_LATIN_ADARS, HEBREW_SCRIPT, HEBREW_SCRIPT_ADARS, SAKA, SAKA_HINDI,
@@ -117,8 +118,8 @@ pub enum LocaleTag {
     SystemDate,
     /// `[$-F400]` or `[$-x-systime]`: the section is the system long time.
     SystemTime,
-    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`) or one with no table here
-    /// (TODO(T-3666)), or a calendar digit over an LCID with no locale that is not modelled
+    /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`, `[$-2412]`), a locale with no
+    /// table here for its language, or a calendar digit over an LCID with no locale that is not modelled
     /// (`without_locale`): it prints nothing and changes nothing (`TEXT(0.75,"[$-FFFF]h A/P")`
     /// keeps "6 P").
     Silent,
@@ -136,10 +137,11 @@ const SYSTEM_TIME_LCID: u32 = 0xF400;
 /// Resolves the text between `[$-` and `]`.
 ///
 /// A hex LCID may carry a calendar in the digits above the low four (see `resolve_lcid`). An LCID
-/// with no table falls back to its language (`[$-80C]` is French, `[$-C]` too); 400 and 800, the
-/// user and system defaults, are en-US.
+/// with no table falls back to its language when Excel resolves it to a locale (`[$-80C]` is
+/// French, `[$-C]` and `[$-F40C]` too, `[$-400C]` English; `lcid_locales::has_locale`); 400, 800
+/// and C00, the user, system and custom defaults, are en-US.
 /// A BCP-47 tag matches case-insensitively, then by its language (`[$-fr-XX]` is French).
-/// Any other tag is read as extended hex ([`extended_hex`], [`resolve_extended`]): `[$-fr_FR]` is
+/// Any other tag is read as extended hex ([`extended_hex`], [`resolve_lcid`]): `[$-fr_FR]` is
 /// the Saka calendar over an LCID with no locale.
 /// [`resolve_after_hijri_prefix`] resolves a tag that follows a `B2` prefix in its section.
 pub fn resolve(tag: &str) -> LocaleTag {
@@ -207,9 +209,7 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
     // Hijri over an LCID with no locale has the Arabic names (`B2[$-0]` and `B2[$-FFFF]` print
     // "شعبان"; probes/t2729-hijri-locale-tag A202, A251).
     match hex.map(|value| resolve_lcid(hijri_default(value, hijri_prefix))) {
-        Some(LocaleTag::Silent) | None => {
-            extended_hex(tag).map_or(LocaleTag::Silent, resolve_extended)
-        }
+        Some(LocaleTag::Silent) | None => extended_hex(tag).map_or(LocaleTag::Silent, resolve_lcid),
         Some(hijri) => hijri,
     }
 }
@@ -301,7 +301,9 @@ fn resolve_lcid(value: u32) -> LocaleTag {
     if lcid == 1 && matches!(value >> 16, 8 | 0x10) {
         return without_locale(value >> 16);
     }
-    let names = if lcid == 0x400 || lcid == 0x800 {
+    // The user, system and custom defaults are en-US, and so is the invariant locale 0x7F
+    // (probes/t3666-lcid-sublanguage-sweep J9:J11, J18).
+    let names = if matches!(lcid, 0x400 | 0x800 | 0xC00 | 0x7F) {
         EN_US
     } else if let Some(names) = table(lcid).or_else(|| by_language(lcid)) {
         names
@@ -380,19 +382,6 @@ fn hijri_names(lcid: u16) -> &'static DateNames {
     }
 }
 
-/// [`resolve_lcid`] for a value read by [`extended_hex`]: an LCID without a table of its own
-/// falls back to its language only when it is neutral (below 0x400: `[$-g]` 0x10 is Italian,
-/// `[$-0_]` 0x2F Macedonian). `[$-x_y]` is 0x2412 and prints English, not Korean
-/// (text-locale-calendars A139), so an LCID with a sublanguage and no table has no locale here.
-fn resolve_extended(value: u32) -> LocaleTag {
-    let value = value & 0xFF_FFFF;
-    let lcid = (value & 0xFFFF) as u16;
-    if lcid > 0x3FF && lcid != 0x400 && lcid != 0x800 && table(lcid).is_none() {
-        return without_locale(value >> 16);
-    }
-    resolve_lcid(value)
-}
-
 /// Calendar digit `calendar` over an LCID with no locale (0 included): the calendar's date with
 /// its own names where it has them (Thai under 7, Arabic under A, B and C) and en-US names
 /// otherwise, the lunar ones included, and `A/P` as written. `[$-E08DE]mmmm|yyyy-mm-dd` of 45000
@@ -429,10 +418,12 @@ fn table(lcid: u16) -> Option<&'static DateNames> {
         .map(|(_, _, names)| *names)
 }
 
-/// The first table of `lcid`'s language, for an LCID with no table of its own.
+/// The first table of `lcid`'s language, for an LCID with no table of its own that Excel resolves
+/// to a locale ([`has_locale`]); a sublanguage with none prints English, as an unknown tag does
+/// (`[$-2412]mmmm` is "March", not Korean; probes/t3666-lcid-sublanguage-sweep).
 fn by_language(lcid: u16) -> Option<&'static DateNames> {
     let language = lcid & 0x3FF;
-    if language == 0 {
+    if language == 0 || !has_locale(lcid) {
         return None;
     }
     LOCALES

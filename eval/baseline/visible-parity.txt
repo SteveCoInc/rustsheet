@@ -221,10 +221,14 @@ probes/t3584-match-fold-weightless.case.json	133
 probes/t3585-rate-num-near-minus-one.case.json	7
 probes/t3638-subnormal-upper-tail.case.json	7
 probes/t3647-numbervalue-whitespace-decimal.case.json	1
+probes/t3666-lcid-locale-map.case.json	124
+probes/t3666-lcid-sublanguage-sweep.case.json	31
 probes/t3677-sumx-running-overflow-snap.case.json	4
 probes/t3678-time-argument-far-negative.case.json	81
 probes/t3698-rate-flat-restart-fresh.case.json	25
 probes/t3698-rate-flat-restart.case.json	22
+probes/t3711-fixed-denominator-then-placeholder.case.json	74
+probes/t3711-placeholders-after-fraction.case.json	3
 probes/t3850-rate-same-state.case.json	46
 probes/t3881-imcsch-flip-start-negative.case.json	1
 probes/t3883-im-overflow-reciprocal-sweep.case.json	1

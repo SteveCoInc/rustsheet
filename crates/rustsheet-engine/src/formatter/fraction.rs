@@ -196,11 +196,20 @@ pub(super) fn format_fraction(
         .iter()
         .rposition(|t| matches!(t, TextToken::Digit(_)))
         .map_or(0, |i| i + 1);
+    // Just past the last placeholder after the denominator: a blank fraction blanks up to there.
+    let trailing_end = tokens
+        .iter()
+        .rposition(|t| matches!(t, TextToken::Digit(_)))
+        .map(|i| i + 1)
+        .filter(|end| *end > fraction.denominator_at)
+        .unwrap_or(fraction.denominator_at);
     for (index, token) in tokens.iter().enumerate() {
         if index == fraction.denominator_at {
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
         }
         let in_fraction = (fraction.numerator_start..fraction.denominator_at).contains(&index);
+        let blanked = in_fraction || (fraction.denominator_at..trailing_end).contains(&index);
+        let trailing = index >= fraction.denominator_at;
         let in_separator = has_integer && (integer_end..fraction.numerator_start).contains(&index);
         match token {
             _ if in_separator && separator == Separator::Dropped => {}
@@ -212,9 +221,20 @@ pub(super) fn format_fraction(
                         .digits(&integer_fill.next().unwrap_or_default()),
                 );
             }
-            _ if in_fraction && blank && !blank_spaces => {}
-            // Every placeholder and literal of a blank fraction takes its width in spaces.
-            _ if in_fraction && blank => push_spaces(&mut text, token),
+            _ if blanked && blank && !blank_spaces => {}
+            // Every placeholder and literal of a blank fraction takes its width in spaces, and so
+            // do those after the denominator up to its last placeholder (`# ?/?|0 "12"` on 12 is
+            // "12       12"; probes/t3711-placeholders-after-fraction B1:B20).
+            _ if blanked && blank => push_spaces(&mut text, token),
+            // A placeholder after the denominator gets no digit: `0` and `#` print a zero, `?` a
+            // space, and a `.` there prints (`# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? #`
+            // "12 1/2 0", `# ?/? ?` "12 1/2  ", `# ?/?|0.0` "12 1/2|0.0";
+            // probes/t3711-placeholders-after-fraction).
+            TextToken::Digit(digit) if trailing => {
+                let pad = if digit.kind == '?' { " " } else { "0" };
+                text.push_str(&part.numerals.digits(pad));
+            }
+            TextToken::Period if trailing => text.push('.'),
             TextToken::Digit(_) if in_fraction => {
                 text.push_str(
                     &part

@@ -178,8 +178,8 @@ fn is_date_time_letter(token: &Token) -> bool {
         token,
         Token::Day
             | Token::DayPadded
-            | Token::DayNameShort
-            | Token::DayName
+            | Token::DayNameShort(_)
+            | Token::DayName(_)
             | Token::Month
             | Token::MonthPadded
             | Token::MonthNameShort

@@ -1,6 +1,6 @@
-use super::elapsed::takes_second_fraction;
+use super::elapsed::{takes_second_fraction, twelve_hour_tokens};
 pub use super::fraction::{Denominator, Fraction};
-use super::lexer::{Compare, Lexer, Token};
+use super::lexer::{Compare, Lexer, Token, WeekdaySpelling};
 use super::locale_tag::{self, Calendar, DateNames, LocaleTag};
 use super::numerals::Numerals;
 use crate::locale::excel_date_names::EN_US;
@@ -25,8 +25,8 @@ pub enum TextToken {
     // Dates
     Day,
     DayPadded,
-    DayNameShort,
-    DayName,
+    DayNameShort(WeekdaySpelling),
+    DayName(WeekdaySpelling),
     Month,
     MonthPadded,
     MonthNameShort,
@@ -94,7 +94,8 @@ const MAX_FIXED_DENOMINATOR_DIGITS: usize = 5;
 pub struct DatePart {
     pub color: Option<i32>,
     pub condition: Option<(Compare, f64)>,
-    pub use_ampm: bool,
+    /// The hour tokens that take the 12-hour clock (`elapsed::twelve_hour_tokens`).
+    pub twelve_hour: Vec<usize>,
     pub tokens: Vec<TextToken>,
     /// The names of the section's `[$-...]` locale; `None` uses the workbook locale.
     pub names: Option<&'static DateNames>,
@@ -298,7 +299,6 @@ impl Parser {
         let mut digit_count = 0;
         let mut precision = 0;
         let mut is_date = false;
-        let mut use_ampm = false;
         let mut is_number = false;
         let mut found_decimal_dot = false;
         let mut use_thousands = false;
@@ -326,6 +326,9 @@ impl Parser {
         let mut is_time = false;
         // Excel: after a minute, later `m`/`mm` are months (number-formats.md "`mm` after a minute").
         let mut minute_read = false;
+        // Whether an hour was read after the last minute: the next `m`/`mm` is a minute again
+        // (`h:mm|h:mm` on 13:02 is "13:02|1:02"; probes/t3710-ampm-hour-tokens A5, A14).
+        let mut hour_pending = false;
         let mut hijri = false;
         let mut calendar_prefix = false;
         // Whether the previous token is an unescaped colon, which the next one joins.
@@ -388,6 +391,28 @@ impl Parser {
                     if after_denominator {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
+                        tokens.push(TextToken::Literal(','));
+                    } else if last_token_is_digit
+                        && (found_decimal_dot || fraction.is_some())
+                        && !is_scientific
+                        && (next_token_is_digit
+                            || (next_token == Token::Comma
+                                && self
+                                    .lexer
+                                    .peek_token_past(|t| *t == Token::Comma)
+                                    .is_digit()))
+                    {
+                        // Excel: only a `,` in the integer part groups. After the decimal point or a
+                        // fraction a run of commas between placeholders prints nothing and neither
+                        // groups nor scales (`0.00|#,##0` on 1234567.89 is "1234567.89|0", `0.0,,0`
+                        // "1234567.89", `# ?/?|#,##0` on 1234.25 "1234 1/4|0000"; a trailing one
+                        // still scales: `0.00|0,` is "1234.56|8"; probes/t3598-decimal-part-commas).
+                        while next_token == Token::Comma {
+                            next_token = self.lexer.next_token();
+                        }
+                    } else if found_decimal_dot && !is_scientific && next_token_is_digit {
+                        // A `,` after a literal of the decimal part prints (`0.00|,0` is
+                        // "1234567.89|,0"; probes/t3598-decimal-part-commas A26).
                         tokens.push(TextToken::Literal(','));
                     } else if last_token_is_digit && next_token_is_digit {
                         use_thousands = true;
@@ -578,13 +603,13 @@ impl Parser {
                     is_date = true;
                     tokens.push(TextToken::DayPadded);
                 }
-                Token::DayNameShort => {
+                Token::DayNameShort(spelling) => {
                     is_date = true;
-                    tokens.push(TextToken::DayNameShort);
+                    tokens.push(TextToken::DayNameShort(spelling));
                 }
-                Token::DayName => {
+                Token::DayName(spelling) => {
                     is_date = true;
-                    tokens.push(TextToken::DayName);
+                    tokens.push(TextToken::DayName(spelling));
                 }
                 Token::MonthNameShort => {
                     is_date = true;
@@ -597,10 +622,11 @@ impl Parser {
                 Token::Month | Token::MonthPadded => {
                     // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
                     let fraction = self.minute_before_fraction(&next_token);
-                    let clock =
-                        (is_time && !minute_read) || self.minute_before_seconds(&next_token);
+                    let clock = (is_time && (!minute_read || hour_pending))
+                        || self.minute_before_seconds(&next_token);
                     let minute = clock || fraction;
                     minute_read |= clock;
+                    hour_pending &= !clock;
                     is_date |= !minute || fraction;
                     tokens.push(match (minute, token == Token::MonthPadded) {
                         (true, false) => TextToken::Minute,
@@ -656,6 +682,7 @@ impl Parser {
                 Token::Hour => {
                     is_date = true;
                     is_time = true;
+                    hour_pending = true;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHour
                     } else {
@@ -665,6 +692,7 @@ impl Parser {
                 Token::HourPadded => {
                     is_date = true;
                     is_time = true;
+                    hour_pending = true;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHourPadded
                     } else {
@@ -697,7 +725,6 @@ impl Parser {
                         return ParsePart::Error(ErrorPart::default());
                     }
                     is_date = true;
-                    use_ampm = true;
                     tokens.push(TextToken::AMPM);
                 }
                 Token::AP(am, pm) => {
@@ -706,7 +733,6 @@ impl Parser {
                         return ParsePart::Error(ErrorPart::default());
                     }
                     is_date = true;
-                    use_ampm = true;
                     tokens.push(TextToken::AP(am, pm));
                 }
                 Token::Locale(tag, tag_numerals) => {
@@ -849,7 +875,7 @@ impl Parser {
             ParsePart::Date(DatePart {
                 color,
                 condition,
-                use_ampm,
+                twelve_hour: twelve_hour_tokens(&tokens),
                 tokens,
                 names: localized.map(|l| l.names),
                 day_half: localized.and_then(|l| l.day_half),
