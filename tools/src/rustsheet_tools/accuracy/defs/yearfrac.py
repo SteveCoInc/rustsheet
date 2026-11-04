@@ -79,7 +79,11 @@ def _feb_last(year: int, month: int, day: int) -> bool:
 
 
 def us_30_360(start: YMD, end: YMD) -> int:
-    """Basis 0's day count (module docstring)."""
+    """Basis 0's day count (module docstring).
+
+    Not `fitlab.kernels.solvers.days360`: that one takes `datetime.date`, which cannot hold the
+    displayed day 0 of January 1900 or the fictitious 1900-02-29 this count reads.
+    """
     (y1, m1, d1), (y2, m2, d2) = start, end
     start_feb_last, end_feb_last = _feb_last(*start), _feb_last(*end)
     if start_feb_last and end_feb_last:
