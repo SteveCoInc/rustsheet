@@ -3706,11 +3706,6 @@ F	probes/regression-trend.case.json	Sheet1!O7
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z10
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z8
 F	probes/scalar-lift-open-a.case.json	Sheet1!Z9
-F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!A16
-F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B15
-F	probes/seriessum-subnormal-power-and-term.case.json	Sheet1!B16
-F	probes/seriessum-subnormal-term-sum-and-power-points.case.json	Sheet1!B3
-F	probes/seriessum-subnormal-term-sum-and-power-points.case.json	Sheet1!B4
 F	probes/stat-argument-modes.case.json	Sheet1!H13
 F	probes/stat-argument-modes.case.json	Sheet1!H140
 F	probes/stat-argument-modes.case.json	Sheet1!H144
