@@ -11,14 +11,23 @@ depends_on: []
 ---
 
 ## Goal
-TODO(fill): the outcome, not the implementation.
+Excel-graph probe cases settle the questions the excel-fidelity review of #3132 (T-4072) left open, and one the
+T-4060 docs marked UNVERIFIED. The questions:
+- which later pass separates U+202F from the space;
+- where a mark after a hyphen or apostrophe followed by a weightless character weighs;
+- whether GROUPBY and PIVOTBY apply `=`'s prefix rule.
 
 ## Context
-TODO(fill): why; failing case ids; semantics notes; code paths.
+- The review findings are on PR #3132. coercion.md "Format characters, U+200B and the C1 controls (T-3662)", the
+  T-4060 bullets, marks the GROUPBY and PIVOTBY order UNVERIFIED.
+- Method: the `excel-probe` skill. probes/t4086-collation-later-passes (M2) covers the passes;
+  probes/t4086-groupby-weightless (M7, the subject's milestone) covers GROUPBY and PIVOTBY.
 
 ## Acceptance criteria
-- [ ] TODO(fill): verifiable statements.
+- [ ] Both cases are committed with their excel-graph sidecars.
+- [ ] coercion.md records each finding with cells. Every cell the engine fails is owned by an engine task filed in
+      the same PR (T-4087, T-4088).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
--
+- The engine changes (T-4087, T-4088).

@@ -1,0 +1,68 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4086: do GROUPBY and PIVOTBY group and order texts with weightless characters by Excel's pairwise comparison (UNIQUE keeps ab and ab&U+00AD apart)? Data!A1:A6 = ab, ab&U+00AD, é, é&U+00AD, U+00AD&ab, AB with values 1, 2, 4, 8, 16, 32 (B) and one column field x (C). Calc!B1:B2 the row counts; rows 4-9: each group's sum in order (B GROUPBY, C PIVOTBY) and its key's LEN (D).",
+  "tags": [
+    "M7",
+    "probe",
+    "text"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "ROWS of GROUPBY",
+        "B1": "=ROWS(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0))",
+        "A2": "ROWS of PIVOTBY",
+        "B2": "=ROWS(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0))",
+        "A4": "group 1: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B4": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),1,2),\"none\")",
+        "C4": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),1,2),\"none\")",
+        "D4": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),1,1)),\"none\")",
+        "A5": "group 2: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B5": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),2,2),\"none\")",
+        "C5": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),2,2),\"none\")",
+        "D5": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),2,1)),\"none\")",
+        "A6": "group 3: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B6": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),3,2),\"none\")",
+        "C6": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),3,2),\"none\")",
+        "D6": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),3,1)),\"none\")",
+        "A7": "group 4: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B7": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),4,2),\"none\")",
+        "C7": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),4,2),\"none\")",
+        "D7": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),4,1)),\"none\")",
+        "A8": "group 5: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B8": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),5,2),\"none\")",
+        "C8": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),5,2),\"none\")",
+        "D8": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),5,1)),\"none\")",
+        "A9": "group 6: sum (GROUPBY B, PIVOTBY C), key LEN (D)",
+        "B9": "=IFERROR(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),6,2),\"none\")",
+        "C9": "=IFERROR(INDEX(_xlfn.PIVOTBY(Data!A1:A6,Data!C1:C6,Data!B1:B6,_xleta.SUM,0,0,,0),6,2),\"none\")",
+        "D9": "=IFERROR(LEN(INDEX(_xlfn.GROUPBY(Data!A1:A6,Data!B1:B6,_xleta.SUM,0,0),6,1)),\"none\")"
+      }
+    },
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "=\"ab\"",
+        "B1": 1,
+        "C1": "x",
+        "A2": "=\"ab\"&UNICHAR(173)",
+        "B2": 2,
+        "C2": "x",
+        "A3": "=UNICHAR(233)",
+        "B3": 4,
+        "C3": "x",
+        "A4": "=UNICHAR(233)&UNICHAR(173)",
+        "B4": 8,
+        "C4": "x",
+        "A5": "=UNICHAR(173)&\"ab\"",
+        "B5": 16,
+        "C5": "x",
+        "A6": "=\"AB\"",
+        "B6": 32,
+        "C6": "x"
+      }
+    }
+  ]
+}
