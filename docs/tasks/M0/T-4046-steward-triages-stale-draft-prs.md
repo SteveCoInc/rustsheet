@@ -56,6 +56,7 @@ nine drafts by hand:
   T-3623 #2841, fixed the exit_owners parsing that it worked around);
 - closed at the owner's request: #2788 (another session owns T-3544);
 - blocker gone: #2671, with T-3424 unblocked on its branch (T-3579 is done) for the opus worker;
-- ready: #2717. Marking it ready was refused: the session's GitHub account may not change a PR's draft
-  state. The steward's bucket 4 needs that permission; until then a ready draft is listed for the owner;
+- ready: #2717, but the owner's other session had already closed it six minutes earlier and re-filed its
+  task as T-4047 (#3114), so the mark-ready call failed on a closed PR. It was not a permission
+  problem. Bucket 4's "refused" fallback (0a4a883fa) stays as a general safeguard;
 - salvage filed, then closed: #1885 (T-4050), #2529 (T-4051; T-3406 refuted its engine stage), #2573 (T-4052).
