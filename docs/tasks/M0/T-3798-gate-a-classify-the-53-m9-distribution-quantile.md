@@ -75,8 +75,8 @@ missing ends up in one of two states:
   ruling (decision 0188 R3).
 
 ## Outcome
-- Decision 0272. All 53 need tables (no exemptions). Open table tasks already name 19: T-3783, T-3785, T-3925 and T-3741.
-  The other 34 are filed as T-4100 to T-4106, grouped by kernel. Legacy names get their own tables reusing the modern
+- Decision 0272. All 53 need tables (no exemptions). Open table tasks already name 18: T-3783, T-3785, T-3925 and T-3741.
+  The other 35 are filed as T-4100 to T-4106, grouped by kernel. Legacy names get their own tables reusing the modern
   Definition, which is the task's default.
 - `missing tables` unchanged at 163. `exempt.tsv` is not touched.
 - Eval delta: none.

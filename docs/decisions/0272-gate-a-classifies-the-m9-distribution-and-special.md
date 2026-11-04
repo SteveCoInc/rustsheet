@@ -5,7 +5,7 @@
   - Gate A (decision 0188 R1(a), SPEC-0029 "Gate A holds") needs every in-scope numeric catalog function to have a
     reference table or an `exempt.tsv` line. Decisions 0228, 0270 and 0271 classified the other groups.
   - T-3798 listed 53 M9 distribution and special functions. After decision 0271 all 53 still had neither.
-  - Open Gate A table tasks already name 19 of them in their title or Goal:
+  - Open Gate A table tasks already name 18 of them in their title or Goal:
     - T-3783: NORM.DIST, NORM.S.DIST, NORM.INV, NORM.S.INV, PHI, GAUSS;
     - T-3785: LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER, FISHERINV;
     - T-3925: GAMMA.DIST, CHISQ.DIST, CHISQ.DIST.RT;
@@ -18,12 +18,13 @@
   - **Legacy names get their own tables,** reusing the modern function's Definition and taking the alias's arguments
     into account (tails, a right tail, a cdf only). This is T-3798's default. No third "alias" class is added to
     SPEC-0029. TINV already has its own table beside T.INV.2T.
-  - **The other 34 are filed as seven table tasks:**
+  - **The other 35 are filed as seven table tasks:**
     - T-4100: NORMDIST, NORMINV, NORMSDIST, NORMSINV, LOGNORMDIST, LOGINV, STANDARDIZE (after T-3783 and T-3785);
     - T-4101: CONFIDENCE, CONFIDENCE.NORM, EXPONDIST, WEIBULL (after T-3783 and T-3785);
     - T-4102: T.DIST.2T, T.DIST.RT, TDIST, CONFIDENCE.T;
     - T-4103: F.DIST.RT, F.INV.RT, FDIST, FINV;
-    - T-4104: CHIDIST, CHIINV, GAMMADIST, GAMMAINV, BETADIST, BETAINV (after T-3925);
+    - T-4104: CHIDIST, CHIINV, GAMMADIST, GAMMAINV, BETADIST, BETAINV (after T-3925). T-3798 asked for these to depend
+      on T-3529, which is done; T-3925 is the open task holding the GAMMA.DIST and CHISQ.DIST.RT definitions they reuse;
     - T-4105: BINOMDIST, NEGBINOMDIST, HYPGEOM.DIST, HYPGEOMDIST, POISSON;
     - T-4106: GAMMA, GAMMALN, GAMMALN.PRECISE, PERMUT, PERMUTATIONA. Excel's GAMMA and GAMMALN are its own x87 routines
       and a valid target within 15 digits (statistics.md "GAMMALN is Excel's own x87 routine").
