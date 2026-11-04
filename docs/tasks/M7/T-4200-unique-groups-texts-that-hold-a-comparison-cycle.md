@@ -3,7 +3,7 @@ id: T-4200
 title: "UNIQUE groups texts that hold a comparison cycle by adjacency in SORT's order, not by equality with a kept row (t3211 G4:I4)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
