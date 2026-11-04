@@ -273,10 +273,7 @@ fn ascii_primaries(text: &str) -> impl Iterator<Item = u32> + '_ {
 /// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), the Unicode spaces, punctuation,
 /// digits, letters, and every other character after the letters by code point.
 const SPACE: u32 = 0x40;
-/// U+202F sorts after U+3000 (the space, full width) and before CHAR(160)
-/// (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4).
-const NARROW_NBSP: u32 = SPACE + 1;
-const NBSP: u32 = NARROW_NBSP + 1;
+const NBSP: u32 = SPACE + 1;
 /// CHAR(9), CHAR(10) and CHAR(13) sort above CHAR(160) (probes/text-collation-unprobed); CHAR(11)
 /// and CHAR(12), unprobed, are kept with them in code-point order.
 const WHITESPACE_BASE: u32 = NBSP + 1;
@@ -347,6 +344,10 @@ enum Element {
     },
     /// A combining mark: no letter weight; it adds its diacritic weight to the letter before it.
     Mark(u8),
+    /// A weightless character (T-3904): no weight in any pass, but it ends the letter before it,
+    /// so a mark after it is a lone mark (`"a"&U+00AD&U+0301` is between `"a"` and `"á"`;
+    /// probes/t4060-collation-open-choices Calc!B50:B63, T-4072).
+    Weightless,
 }
 
 /// Diacritic (accent) weights, from Microsoft's Windows sorting weight table (the DW column; see
@@ -405,6 +406,10 @@ const SUPERSCRIPT: u8 = 1;
 /// (probes/t3275-collation-width-kana Calc!G1, G3, G6; pairs H6). Its order against
 /// [`SUPERSCRIPT`] is unprobed.
 const FULL_WIDTH: u8 = 2;
+/// The variant pass weight of U+202F: it is the space at the first pass (`U+202F&"a" < " b"`,
+/// probes/t4060-collation-open-choices Calc!B2, K2) and sorts after U+3000, the space full width,
+/// and before CHAR(160) (probes/t4039-collation-space-forms Calc!B4, B16, B2 = 2, 3, 4; T-4072).
+const NARROW_NBSP: u8 = FULL_WIDTH + 1;
 
 /// The variant pass weights of the kana types: half-width katakana < katakana < hiragana, left to
 /// right, after the kana pass (`"ｱ" < "ア" < "あ"`, `"ｱあ" < "アあ" < "あア" < "ああ"`;
@@ -629,7 +634,12 @@ fn element(c: Char) -> Element {
         }
         _ if c.is_ascii() => single(ASCII_PRIMARY[c as usize]),
         '\u{a0}' => single(NBSP),
-        '\u{202f}' => single(NARROW_NBSP),
+        '\u{202f}' => Element::Weights {
+            primary: [SPACE, 0],
+            accent: NO_ACCENT,
+            kana: NORMAL_KANA,
+            variant: NARROW_NBSP,
+        },
         // U+205F equals the space (probes/t4039-collation-space-forms Calc!C1, H17).
         '\u{205f}' => single(SPACE),
         '\u{2000}' | '\u{2002}' => single(SPACE_FORMS),
@@ -772,12 +782,21 @@ fn elements(
     difference: Option<usize>,
 ) -> impl Iterator<Item = Element> + Clone {
     text.enumerate()
-        // Excel: a weightless character (T-3584's table) has no weight in any pass, so it is
-        // dropped here; where it still counts is [`cmp_prefix`]'s (coercion.md "Format
-        // characters, U+200B and the C1 controls (T-3662)", T-3904).
-        .filter(|&(_, c)| !matches!(c, Char::Scalar(c) if is_weightless(c)))
-        .flat_map(|(at, c)| decompose(c).map(move |c| (at, c)))
+        // Excel: a weightless character (T-3584's table) has no weight in any pass
+        // ([`Element::Weightless`], before `decompose` could case-fold it into a weighted letter);
+        // where it still counts is [`cmp_prefix`]'s (coercion.md "Format characters, U+200B and
+        // the C1 controls (T-3662)", T-3904).
+        .flat_map(|(at, c)| {
+            let weightless = matches!(c, Char::Scalar(c) if is_weightless(c));
+            decompose(c)
+                .take(if weightless { 0 } else { 3 })
+                .map(move |c| (at, Some(c)))
+                .chain(weightless.then_some((at, None)))
+        })
         .scan(None, move |previous, (at, c)| {
+            let Some(c) = c else {
+                return Some(Element::Weightless);
+            };
             let element = resolve(c, *previous, difference == Some(at));
             if let Element::Weights { primary, .. } = element {
                 *previous = Some(if primary[1] == 0 {
@@ -864,7 +883,7 @@ fn full_width(element: Element) -> Element {
 fn primaries(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = u32> {
     elements
         .flat_map(|element| match element {
-            Element::Skipped(_) | Element::Mark(_) => [0, 0],
+            Element::Skipped(_) | Element::Mark(_) | Element::Weightless => [0, 0],
             Element::Weights { primary, .. } => primary,
         })
         .filter(|&weight| weight != 0)
@@ -901,7 +920,7 @@ fn letter_weights(
                 Some(pick(kana, variant)),
                 (primary[1] != 0).then_some(second),
             ],
-            Element::Skipped(_) | Element::Mark(_) => [None, None],
+            Element::Skipped(_) | Element::Mark(_) | Element::Weightless => [None, None],
         })
         .flatten()
 }
@@ -927,7 +946,7 @@ fn skipped(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = (Rev
                 return Some((Reverse(position - 1), weight));
             }
             Element::Weights { .. } => position += 1,
-            Element::Mark(_) => {}
+            Element::Mark(_) | Element::Weightless => {}
         }
     })
 }

@@ -581,11 +581,12 @@ docs/research/t3958-gurmukhi-tamil-telugu-khmer-digits-2026-11-03.md): `(១២)
   the same value as the ASCII row: `"١٢%"+0` = 0.12, `"$১২"+0` = 12, `"(๑๒)"+0` = -12, `"໑,໒໓໔"+0` = 1234,
   `"༡e༣"+0` = 1000 (the `e` stays ASCII), `"၂၀၂၀-၁-၁"+0` = 43831, `"١٢:٣٠"+0` = 0.520833… (a clock too,
   which the engine read as `#VALUE!` before T-3446), `"१ १/२"+0` = 1.5, `TEXT("١.٥","0.000")` = `1.500`.
-  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101).
+  Scripts mix with ASCII and with each other: `"1٢3"+0` = 123, `"١२"+0` = 12 (rows 100, 101; row 102, `١.٥`, repeats row 14 and is not a mixed-script row).
+  UNPROBED: criteria (COUNTIF and the other readers through functions/criteria.rs, which share `cast::number_text_in`) on the five T-3446 blocks (Extended Arabic-Indic, Bengali, Lao, Tibetan, Myanmar) are probed only for one plain digit: `COUNTIF("3","="&digit 3)` is 1 (probes/t3895-collation-script-digits Calc!A49, A74, A99, A124, A149; Thai A24). Not probed: multi-digit and the signed, decimal, percent, `$`, parentheses, group-comma, exponent and ISO-date forms in a criterion, script-digit clock and mixed-fraction criteria, and criteria readers other than COUNTIF (SUMIF, the *IFS functions, the D-functions). The engine reads them by the shared path.
 - **Only the digits are read: Arabic punctuation is not.** The Arabic decimal separator U+066B (`١٫٥`), group
   separator U+066C (`١٬٢٣٤`) and percent sign U+066A (`١٢٪`) make the text non-numeric: `#VALUE!` from `+0`,
   VALUE and NUMBERVALUE, and TEXT returns the text unchanged (rows 103:105).
-- **Typed into a cell, every one of these is a number** (B12:B102 TRUE; B103:B105 FALSE), and the cell gets
+- **Typed into a cell, every one of these is a number** (B12:B102 TRUE, rows 100 and 101 being the mixed-script ones; B103:B105 FALSE), and the cell gets
   a **locale-tagged** number format, not the en-US one ASCII text gets: `١٢٣` → `[$-ar-SA,200]0`, `١.٥` →
   `[$-ar-SA,200]0.#`, `١٢%` → `[$-ar-SA,200]0.00%` (ASCII `12%` is `0%`), `$١٢` →
   `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`, `١,٢٣٤` → `[$-ar-SA,200]#,##0`, `٢٠٢٠-١-١` →
@@ -734,8 +735,9 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   then U+3000 < U+202F < CHAR(160) < CHAR(9) < U+2000 = U+2002 < U+2001 = U+2003 < U+2004 < ... < U+200A <
   U+200B (B1:B18 in row order = 0, 4, 5, 2, 6, 8, 6, 8, 10 to 16, 3, 0, 17), and U+200B sorts below `!` and every symbol tested
   (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2, with CHAR(1) below it: O10 FALSE). U+200B is above CHAR(10) and
-  CHAR(13) as well (-sweep G2:G4, I2:I4 FALSE); where U+2000 to U+200A sit against CHAR(10) to CHAR(13) is
-  UNVERIFIED.
+  CHAR(13) as well (-sweep G2:G4, I2:I4 FALSE), and so are U+2000 to U+200A, strictly
+  (probes/t4060-collation-open-choices Calc!H8:I14 FALSE, and J8:J14 FALSE where J7,
+  `CHAR(13)&"a"<CHAR(13)&"b"`, is TRUE).
 - The C1 controls sort after the symbols tested and before the digits, in code-point order: U+0080, U+0081,
   U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
   `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
@@ -744,6 +746,30 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   keep code-point order.
 - So `"a"&c&"b"<"ab"` is TRUE for U+200B and the C1 controls (-ignorables R2, R10:R12), and among the 17 a&c&b
   texts U+200B < U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB).
+
+T-4060 settled three choices those tasks made without evidence (probes/t4060-collation-open-choices, 222 cells,
+excel-graph, 2026-11-04):
+- **Which spaces differ from the space only at a later pass.** `x&"a"<" b"` is TRUE for U+3000, U+205F and U+202F,
+  so their first-pass weight is at most the space's; with t4039's order (the space ≤ U+3000 < U+202F, Calc!B1,
+  B4, B16) it is the space's. It is FALSE for CHAR(160), CHAR(9), CHAR(10), CHAR(13), U+2000 to
+  U+200B and U+0081, which have weights of their own (Calc!B1:B15, K1:K15). `x&"a"<UNICHAR(8194)&"b"` is TRUE for
+  U+2000 (equal to U+2002 at that pass) and FALSE for U+2001 (E8:E10).
+  Implemented in: `element` weighs U+202F as `SPACE` with the variant weight `NARROW_NBSP`, above U+3000's
+  `FULL_WIDTH` (T-4072).
+- **The sorts and approximate lookups apply the prefix rule too**, being Excel's pairwise comparison:
+  - `MATCH("ab",{"a";"ab"&U+00AD;"abc"},1)` is 1, as are VLOOKUP(..,TRUE) and XMATCH(..,-1); XMATCH(..,1) is 2 and
+    the binary exact XMATCH `#N/A` (Calc!B30:B36).
+  - UNIQUE keeps `ab` and `ab`&U+00AD apart and `""` and U+00AD apart, but merges `é` and `é`&U+00AD (B37:B39).
+  - SORTBY's order of the five texts that tie at every pass depends on their input order (Calc!B20:D26: ascending
+    6,1,2,3,4,5,7; the reversed input 6,4,5,3,1,2,7), as a non-transitive comparison gives.
+  Ours: SORT, SORTBY, the lookups, SWITCH and UNIQUE compare with `cmp_text_pairwise` (`compare_values_pairwise`)
+  and pass every cell. GROUPBY and PIVOTBY keep the total `cmp_text`, where this rule is UNVERIFIED.
+- **A mark after a weightless character is a lone mark.** `"a"&U+00AD&U+0301` is above `"a"` and below `"á"`
+  (Calc!B50:B54), and so is it with U+0524 (B55:B57). With a `b` after it, it is below `"áb"` and above `"ab"`, and
+  COUNTIF does not count it as `áb` (B58:B61, B63). `U+00AD&U+0301` equals a lone U+0301 (B62). So the weightless
+  character ends the letter before it, and the mark weighs as a mark with no letter.
+  Implemented in: `elements` yields `Element::Weightless` for it, which has no weight in any pass but ends the
+  letter before it, so `accent_units` gives the mark a letter unit of its own (T-4072).
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

@@ -1648,6 +1648,7 @@ C	probes/t3073-lookup-near-equal-approximate.case.json	218
 C	probes/t3085-take-drop-one-cell-forms.case.json	16
 C	probes/t3090-sort-lifted-by-col-broken-lead.case.json	239
 C	probes/t3092-averagea-subtotal-snap.case.json	29
+C	probes/t3093-lambda-snap-positions.case.json	15
 C	probes/t3094-snap-lambda-call-forms.case.json	44
 C	probes/t3095-snap-lambda-helpers.case.json	148
 C	probes/t3096-lookup-value-blank-elements.case.json	203
@@ -2079,6 +2080,7 @@ C	probes/t4014-sheet-api-name-66.case.json	3
 C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4039-collation-space-forms.case.json	322
+C	probes/t4060-collation-open-choices.case.json	222
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

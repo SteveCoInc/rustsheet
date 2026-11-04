@@ -4,7 +4,7 @@ title: "Collation: fit Excel's SORT order on intransitive cycles of more than th
 milestone: M7
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: M
 tier: opus
 depends_on: [T-3211]

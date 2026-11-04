@@ -88,6 +88,8 @@
       1e-300 for values near 0) nor within 15 significant digits of Excel's value (decision 0083's rule).
     - It also fails where the engine returns an error and Excel a number, or the reverse.
     - Points where R3 says to follow the math are checked against the math only.
+    - When a fit is judged on moving a point out of the envelope, a point whose root's rounding-noise width exceeds ε
+      is judged against Excel only (decision 0265, owner ruling 2026-11-04).
     - The table format, location, generator, oracle fill, the check and the per-function stratification are a spec
       (filed by this record), since the gate is architectural.
   - **R3. Excel versus math.**

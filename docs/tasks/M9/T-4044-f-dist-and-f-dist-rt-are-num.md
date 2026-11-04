@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: S
 tier: opus
-depends_on: [T-4030]
+depends_on: [T-4030, T-4080]
 campaign: semantics
 ---
 
@@ -45,6 +45,16 @@ df2 = 1E10, from the rule T-4030 finds, not from a cut at the probed cells.
   a cut to these 16 cells.
 - Also check FDIST (legacy) and F.INV / F.INV.RT at the same shapes if T-4030 covers them: one definition for the
   check, shared by every F function it applies to.
+
+- T-4044 attempt (2026-11-04): the cells T-4030 probed do not pin the edge, so per this task's rule the band waits
+  on a further probe (T-4080) rather than a fitted cut.
+  - First `#NUM!` b by a: 2.5E9 and 3E9 at 39.5; 4E9 and 5E9 at 38.5; 6E9 at 37.5. a = 1E9 and 2E9 have none up
+    to 39.5.
+  - No threshold b + g(a) with g = k ln a, k·a or k·sqrt(a) separates the number and `#NUM!` points for any k in
+    [0, 10), and neither does b ln a - k ln Gamma(b + 1). A monotone step g fits, but nothing pins it.
+  - x differs across the rows: tails from 5E-7 to 0.06.
+  - TOMS 708's L140 path in doubles (bup, brcmp1, and bgrat's error exits on b·z = 0, u = 0 and sum <= 0) gives no
+    error at the half-integer b cells; bup's exp(708) scaling runs only at an integer b.
 
 ## Acceptance criteria
 - [ ] The 16 cells above are `#NUM!`; the other 1,329 t4017 cells keep their verdicts or improve (cell by cell,

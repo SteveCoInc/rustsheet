@@ -18,6 +18,11 @@ fix finds where Excel's w = 1 - x^a differs by one unit of 2^-53 from the engine
 `-excel_expm1(b0 · excel_ln_one_minus(x0))`, and does not lose any of the 1,738 column-B cells that match today.
 
 ## Context
+- T-3886 lead (docs/research/t3886/RESULTS.md section 2; statistics.md "Incomplete beta at a shape of 1 outside the
+  closed forms"): Kahan's expm1 reassociated as (u - 1)·(p/LN u) in `shape_one_tails` makes all 47 of these cells
+  bit-exact (full-eval A/B at origin/main b71347b1, `kahan_reassociated.patch`). It also loses 47 bit-exact cells
+  elsewhere, 5 of them gated (probes/t3354-f-dist-tiny-x-huge-d2), and no shape cut separates the wins from the
+  losses. It is a lead, not Excel's form.
 - T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01k (`make eval` on origin/main 063c2dd9, excel-graph; `scripts/exit_owners.py --all-off`).
   These 47 cells are visibly off. Their only owner is T-3712, which cannot be picked: it depends on T-3382, which is

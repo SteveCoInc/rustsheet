@@ -1299,7 +1299,9 @@ Evidence (excel-graph, 2026-11-02, T-3698):
       Excel as here (the 1 + r floor), and the hold is a number.
     - R4.1 on firing cells only: the rule is bit-exact on 17 of 40 train and 5 of 14 test cells (the hold on 0 of
       each), against 48 of 240 out of sample.
-    - The choice of keep, narrow or revert waits on the owner's ruling (T-3916).
+    - Owner ruling (decision 0265, T-3916): the rule is kept as merged. A point whose root noise width exceeds ε is
+      judged against Excel's 15 digits only when a fit is checked, so A152 is outside under both paths and does not
+      count against the rule. A194 is accepted as the rule's one exit; T-3963 owns it with A26.
 - Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
   in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
   Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
@@ -1314,7 +1316,7 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
 restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
-Tasks: T-3698, T-3424, T-3876
+Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
 Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
