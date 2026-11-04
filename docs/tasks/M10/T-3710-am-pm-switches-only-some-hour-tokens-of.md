@@ -3,7 +3,7 @@ id: T-3710
 title: "AM/PM switches only some hour tokens of a section to the 12-hour clock"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
