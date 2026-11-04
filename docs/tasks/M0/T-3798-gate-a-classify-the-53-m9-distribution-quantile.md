@@ -3,7 +3,7 @@ id: T-3798
 title: "Gate A: classify the 53 M9 distribution, quantile and special functions outside decision 0188's 18 with no table or exemption, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -56,15 +56,15 @@ missing ends up in one of two states:
   `make new-task MILESTONE=M0 LANE=harness`, `tier: opus`, `spec:` SPEC-0029.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) classifies each of the 53 functions (or the recounted list) as
+- [x] A decision record (`make new-decision`) classifies each of the 53 functions (or the recounted list) as
       `exact`, `composite` or "needs a table (T-XXXX)", with a cited reason for each exemption, and rules on the
       legacy-alias question (a table per alias, or a third class with its spec note and reader task filed).
-- [ ] `eval/accuracy/exempt.tsv` gains any exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
+- [x] `eval/accuracy/exempt.tsv` gains any exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
       lower by their number, with no stale or bad exemption.
-- [ ] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR. The
+- [x] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR. The
       gamma and beta alias tasks depend on T-3529.
-- [ ] `python3 scripts/tasks.py validate` passes.
-- [ ] `make check` green; reviewers approve.
+- [x] `python3 scripts/tasks.py validate` passes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Building any table or definition (the filed tasks do that).
@@ -73,3 +73,10 @@ missing ends up in one of two states:
 - The other M9 families: financial (T-3797), sample statistics (T-3799), engineering and database (T-3800).
 - New R3 cases. Any region where Excel looks far from the math goes in the table task as a question for an owner
   ruling (decision 0188 R3).
+
+## Outcome
+- Decision 0272. All 53 need tables (no exemptions). Open table tasks already name 19: T-3783, T-3785, T-3925 and T-3741.
+  The other 34 are filed as T-4100 to T-4106, grouped by kernel. Legacy names get their own tables reusing the modern
+  Definition, which is the task's default.
+- `missing tables` unchanged at 163. `exempt.tsv` is not touched.
+- Eval delta: none.
