@@ -392,6 +392,52 @@ To add, fetched and never vendored, with licences recorded:
 - openpyxl's test data;
 - the FUSE subset of xlsx-corpus-bench, for real-world breadth.
 
+### 6.2b A fresh real-world corpus from Common Crawl (owner suggestion)
+
+FUSE (Barik et al., MSR 2015) is already in our xlsx-corpus-bench source list, and it was mined
+from Common Crawl. But it stops at 2014 crawls and is mostly `.xls`. A pull from the 2024–2026
+crawls would give **modern Excel saves**, with the extensions our census shows we lose and that
+no fixture corpus has much of: x15/x16 exts, threaded comments, richData, dynamic-array
+metadata, checkboxes, sensitivity labels, webextensions.
+
+**How.**
+1. Query the columnar URL index (Parquet, one table per crawl) for
+   `content_mime_detected` in the xlsx, xlsm and xltx types, or a `url_path` ending in those
+   extensions.
+2. Skip records with `content_truncated` set: Common Crawl cuts responses at 1 MiB, so large
+   workbooks arrive broken.
+3. Fetch each hit as one WARC record by byte range (`warc_filename`, `offset`, `length`) from
+   data.commoncrawl.org, not as whole WARC files. DuckDB over HTTPS with predicate pushdown
+   reads only the needed columns.
+4. Dedupe by content hash.
+
+**Selection ("spot the good ones"): coverage-guided, not random.**
+1. Run the stage 0 census over a candidate pool of 20k–50k files.
+2. Pick a set greedily to cover the most distinct fidelity features: part kinds, relationship
+   types, `ext` URIs, element paths, attribute names.
+3. Weight toward Excel-authored files (`docProps/app.xml` Application "Microsoft Excel", recent
+   AppVersion) and against near-duplicate templates (same structural fingerprint).
+
+Expected yield:
+- a few hundred files for the gated round-trip suite;
+- a larger crash-and-no-loss pool scored offline by the expected-delta rule;
+- the rest as seeds for the fuzz targets;
+- **new feature discovery**: any `ext` URI or part type the census has never seen is a list of
+  Excel features to probe or classify in the ownership matrix.
+
+**Constraints.**
+- **Copyright is unknown**, so the corpus is fetched, never vendored, like corpus-bench
+  (decision 0019). The suite pins each file by WARC filename, offset and sha256.
+- **Personal data**: web spreadsheets often hold it. Commit hashes and our own derived verdicts
+  only, never cell contents.
+- **The oracle**: uploading these files to the Excel tenant sends third-party data to Microsoft.
+  That needs an owner decision (D7); the offline expected-delta rule needs no upload.
+- **Active content**: macro files are carried, never executed, which the untrusted-input rules
+  already cover.
+- **Network access**: `index.commoncrawl.org` and `data.commoncrawl.org` are not reachable from
+  the agent environment today (connection refused on 2026-11-04). They need adding to the
+  environment's allowed domains.
+
 ### 6.3 Feature probes (built like our function probes)
 
 **(a) Authored probes, Excel-normalized.** A probe spec gets a `features` block, and spec2xlsx
@@ -490,50 +536,52 @@ Sizes follow our S/M rule. Each stage has a spec where it is architectural.
    corpus-bench and fixtures with baselines.
 4. XSD validation of outputs: vendor or fetch the ECMA-376 transitional and MS extension schemas
    (licence check).
-5. An oracle flow for Excel goldens: R0 re-save and R1 edit-then-save, plus "Excel for the web
+5. Common Crawl corpus (6.2b): an index query, range fetch, census, and coverage-guided
+   selection into a fetched `roundtrip-cc` suite. This needs the network allowlist first.
+6. An oracle flow for Excel goldens: R0 re-save and R1 edit-then-save, plus "Excel for the web
    refused to open" as a recorded verdict.
 
 **Stage 1: package preservation.**
-6. SPEC: ownership matrix, closure rule, limits, invalidation table.
-7. Bounded `SourcePackage` retention in the importer.
-8. Writer: `Replay`, `Active` and `Drop` policies, rId and part-name remapping, content-type
+7. SPEC: ownership matrix, closure rule, limits, invalidation table.
+8. Bounded `SourcePackage` retention in the importer.
+9. Writer: `Replay`, `Active` and `Drop` policies, rId and part-name remapping, content-type
    derivation. Then chartsheets and macro sheets kept as sheets (in the sheet order and in
    `workbook.xml`).
-9. External links kept as parts, with formulas printed back as `[1]Sheet!A1`.
-10. Unknown-feature probe generator (6.3c) and the hostile set (6.3d).
+10. External links kept as parts, with formulas printed back as `[1]Sheet!A1`.
+11. Unknown-feature probe generator (6.3c) and the hostile set (6.3d).
 
 **Stage 2: element preservation.**
-11. Fragment capture and emission for workbook, worksheet and styles, in schema-slot order;
+12. Fragment capture and emission for workbook, worksheet and styles, in schema-slot order;
     `mc:Ignorable` rebuild; AlternateContent policy.
-12. Keep `calcFeatures`, `fileVersion`, `workbookPr`, sheetFormatPr and phoneticPr. Decide `calcId`
+13. Keep `calcFeatures`, `fileVersion`, `workbookPr`, sheetFormatPr and phoneticPr. Decide `calcId`
     and `fullCalcOnLoad` from a probe.
-13. Range-bound and sheet-name-bound classification, plus SaveReport.
+14. Range-bound and sheet-name-bound classification, plus SaveReport.
 
 **Stage 3: index stability and the small-edit fast path.**
-14. Append-only shared strings and styles (keep source order).
-15. Verbatim replay of untouched sheets.
-16. Streaming cell patcher for content-only edits, with cross-check against regeneration.
+15. Append-only shared strings and styles (keep source order).
+16. Verbatim replay of untouched sheets.
+17. Streaming cell patcher for content-only edits, with cross-check against regeneration.
 
 **Stage 4: model the high-frequency features.** These are ordered by the census frequency
 (§2.1). Each one moves from replayed to modelled and gets an Excel-normalized probe set:
-17. Page setup, margins, header/footer, print options, page breaks.
-18. Data validation (including x14).
-19. Notes and threaded comments (VML regeneration à la GridCraft's merge).
-20. Sheet autoFilter.
-21. Protection (sheet, workbook, cell).
-22. sheetPr (tab colour, outline, codeName) and outlines on rows and columns.
-23. Rich text and phonetic.
-24. Full fills (pattern and gradient), fonts, alignment, indexed palette.
-25. Full theme.
-26. Views (zoom, split, topLeftCell, RTL).
+18. Page setup, margins, header/footer, print options, page breaks.
+19. Data validation (including x14).
+20. Notes and threaded comments (VML regeneration à la GridCraft's merge).
+21. Sheet autoFilter.
+22. Protection (sheet, workbook, cell).
+23. sheetPr (tab colour, outline, codeName) and outlines on rows and columns.
+24. Rich text and phonetic.
+25. Full fills (pattern and gradient), fonts, alignment, indexed palette.
+26. Full theme.
+27. Views (zoom, split, topLeftCell, RTL).
 
 Charts, drawings, pivots and slicers stay `Replay`/`ReplayIfClean` in M15. Modelling them is its
 own future milestone.
 
 **Stage 5: structural edits (with M4).**
-27. A reference shifter for modelled range-bound features and for known extension shapes (x14
+28. A reference shifter for modelled range-bound features and for known extension shapes (x14
     DV sqref, sparklines, CF x14).
-28. Drawing anchors moved with rows and columns, so drawings can be kept under R2 instead of
+29. Drawing anchors moved with rows and columns, so drawings can be kept under R2 instead of
     dropped.
 
 The bug fixes from §2.2 are filed separately as M11 tasks, if approved.
@@ -559,6 +607,10 @@ number" produce a one-cell diff.
 
 **D6.** Drop `x15ac:absPath` (it leaks the author's file path) or keep it as Excel does?
 Recommended keep (Excel is the spec), with an option to strip it.
+
+**D7.** Common Crawl corpus (6.2b): may third-party web workbooks be uploaded to the Excel
+oracle tenant for goldens, or only be scored offline? Recommended offline by default, uploading
+only files whose census shows a feature no other corpus has.
 
 **Research questions (probes):**
 
