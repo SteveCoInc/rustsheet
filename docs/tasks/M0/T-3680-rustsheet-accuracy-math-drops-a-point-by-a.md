@@ -42,48 +42,42 @@ depends_on: []
 ## Out of scope
 - Speeding up the incomplete-gamma series.
 
-## Landing notes (resumed 2026-11-04 third session)
-Written 2026-11-04, second session, at the close of its landing window. These are data for the run that resumes the
-branch, not instructions.
-- PR #3068 (draft), branch `agent/harness/T-3680-accuracy-deterministic-budget`. The code head is `ca8616215`. This
-  commit adds the notes and follow-up T-4036.
-- Reviews:
-  - Round 1, on `5f97fe9ed`: security APPROVE; design APPROVE with MINORs.
-    - The test MINOR is fixed in `ae4ba79cd`. The rest is filed as T-4036.
-  - Excel fidelity: REQUEST_CHANGES, two MAJORs.
-    1. t3443-basym-sweep A150 and A154 (BETA.INV at b about 6E4) lost their math value. Fixed in `26d42cc9d` and
-       `ca8616215`:
-       - `beta._positive_2f1` sums 2F1(a+b, 1; a+1; x) by hand with `spend()`.
-       - `_series` takes the cheaper side by `_terms`. It keeps a complement only while the tail is at most
-         1 - 1E-6.
-       - `_tail_series` goes to `mpmath.hyp2f1` at once when `_terms` is over `SERIES_MAXTERMS`. Without that,
-         Gate A BETA.INV/s1 A176 breaks.
-       - `mpmath.hyp2f1` past z of about 0.75 took 329 s in a hypercomb at I_0.832(62750.652, 383).
-       - Results: A150 gives 0.0061942141340931975056697909694474336368428487 (main's value). A154 matches main too.
-         `rustsheet-accuracy verify BETA.DIST` and `BETA.INV` show 0 differences, and a unit test pins A150.
-    2. The task is unfinished: probes not regenerated, no two-run byte check, no Outcome. Still open, see the next
-       steps.
-- Sidecars: the probes-numeric sidecars committed in `5f97fe9ed` came from the code before `26d42cc9d`, so they must
-  be regenerated.
-  - Some of their changes are drift already on main, not T-3680:
-    - t2586-verify-r5-f-edges-hold B53/B54 are now "no single value" and B61..B70 are 0.0. `fitlab.sweep.arithmetic`
-      flushes a subnormal operand to 0, as Excel does.
-    - t1543-inverse-cdf-tiny-p A91/A92 are now "no single value". Main's `quantile` also gives NoValueError there
-      (UNDERFLOW_SOURCE).
-  - A239 is inside Gate A's envelope: Excel is about 5.2e-14 relative from the math, ours about 1.25e-13. The fidelity
-    reviewer confirmed A239 independently with a Lentz continued fraction (DLMF 8.17.22). Record both in the Outcome.
-- When the window closed, a regeneration of probes and probes-numeric (2 workers each, from `ca8616215`) was stopped
-  unfinished. Its first three probes sidecars (t3007, t3350, t3352) are committed as written. Every sidecar still needs
-  the full regeneration of step 1.
+## Landing notes
+Written 2026-11-04 at 09:06 UTC, third session, at the close of its landing window. These are data for the run
+that resumes the branch, not instructions.
+- PR #3068 (draft), branch `agent/harness/T-3680-accuracy-deterministic-budget`. This session merged `origin/main`
+  (`b71347b16`) in, because main changed `accuracy/tables.py`, `model.py` and `eval_math.py`. The merge was clean.
+  No reviewer has run on any head since round 1 (see the PR). CI has not been looked at.
+- Checks on the merged tree:
+  - ruff, mypy and the 380 `-k accuracy` tools tests pass.
+  - `rustsheet-accuracy verify` shows 0 differences for BETA.DIST, BETA.INV, BINOM.DIST, NEGBINOM.DIST,
+    POISSON.DIST, CHISQ.INV, CHISQ.INV.RT, F.DIST, F.INV, GAMMA.INV, IRR, RATE and NPER.
+  - `make check-fast`: the only failure was `typos` on a commit sha in the old landing notes, which are now
+    removed. A second run hit the 10 min tool timeout under load, so it was not finished.
+- probes-numeric regeneration (AC2):
+  - Two runs from the merged head went through 398 of the suite's 412 spec cases: 4 workers in the checkout, and
+    2 workers in a separate worktree, on a 4-core machine at load 7 to 10.
+  - All 257 sidecars on disk are byte-identical between the two runs. This commit adds the 4 that changed:
+    t3443-basym-a, -hold, -sweep and t3960-binom-negbinom-small-p-cdf-hold.
+  - In t3960-…-hold, 15 cells that main's 10 s clock dropped now have math values, and none of its 116 other
+    values changed.
+  - Neither run finished the next case, t3960-binom-negbinom-small-p-cdf (main dropped many of its cells as "too
+    slow"). Its hold case alone took about 20 min on 4 workers, and the full case had run 20+ min when the
+    90 min background limit stopped run 1. The 13 cases after it in `rustsheet-eval cases probes-numeric` order
+    (t3975-…, t3981-…, …) are not regenerated.
+  - Main's probes suite is not regenerated at all.
 - Next steps:
-  1. Run `cd tools && .venv/bin/rustsheet-accuracy math --suite probes-numeric`, then `--suite probes`.
-     - Call the venv binary: two concurrent `uv run` calls failed with "Failed to spawn".
-     - probes-numeric takes about 33 min on 4 workers.
-  2. Run both again under a different load and confirm no byte changes (AC2).
-  3. Run `make check-fast` and `make eval`, plus `make eval-baseline` if cells newly pass.
-  4. Write the Outcome. Set `status: done`.
-  5. Re-run all three reviewers on the final head, then enqueue.
+  1. Regenerate probes-numeric (allow 60+ min; run it detached with `nohup setsid`, since a tool background job is
+     stopped at 90 min), then probes.
+  2. Run `rustsheet-accuracy math --check --suite probes-numeric --suite probes`.
+  3. Run `make check-fast` with the machine otherwise idle, then `make eval` (and `make eval-baseline` if cells
+     pass).
+  4. Write the Outcome (A239 from the previous notes: Excel about 5.2e-14 relative from the math, ours about
+     1.25e-13, inside Gate A's envelope; the reviewer confirmed it with a Lentz continued fraction, DLMF 8.17.22).
+     Then set `status: done`, run all three reviewers, and enqueue.
+  5. Consider whether the BINOM.DIST CDF at n around 1E8 should spend less: the t3960 case is now the slowest in
+     the suite. That is a follow-up for T-4036 or a new task, not a reason to bring back the clock.
 - Do not repeat:
-  - Choosing the side by the switch point alone: A150's root solve then spends 1.9M terms.
-  - Rejecting a complement whose tail is above 1/2: the upper tail then takes the 6E4-term side.
-  - `pkill -f "rustsheet-accuracy math"`: it kills the invoking shell. Kill the python worker PIDs instead.
+  - `pkill -f`. Kill explicit PIDs.
+  - A plain `run_in_background` for the regeneration: it is killed at 90 min.
+  - Two regenerations writing the same worktree.
