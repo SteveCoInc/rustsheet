@@ -6025,7 +6025,12 @@ is `#NUM!` at some points and not others, with no threshold in either argument, 
 - x/beta = 1E-100: 0 at shapes 1E+60, 1E+75, 1.5E+76, 1E+100 and 1E+200, `#NUM!` at 1E+70 and 1.85E+76; x/beta of 0.5, 1,
   2 and 1E+50 gave 0 at every probed shape.
 A refill in fresh workbooks reproduced fit-audit A4, A12 and A18, so the pattern is deterministic. It looks like the
-rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looks for it.
+rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looked for it
+in two time-boxed attempts and blocked (decision 0267 accepts the cells): no bit or k-bit rounding direction of a·LN(y),
+a·LN(a/y), Loader's bd0, a·phi or sqrt(a·phi) separates the 73 probed points, and R's `ebd0` split and a GAMMALN-based
+Stirling error cannot make the pattern (the task file lists the candidates). At x/beta = 2E-10 16 of the 18 probed
+shapes from 1E+56 to 1.85E+76 are `#NUM!`, at shape 1E+70 14 of 45 x/beta are: mostly a function of x/beta, with an
+onset in the shape.
 Evidence: probes-numeric/fit-audit-t3271-cdf-cut (one cell per workbook; A5, A8, A31 and A33 have no value),
 t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep, t3316-gamma-density-overflow A16:A26 (excel-graph, 2026-11-02);
 probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at x/beta = 2E-10 and shapes 1.2E+55 to
