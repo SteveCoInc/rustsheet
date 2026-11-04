@@ -3,7 +3,7 @@ id: T-3576
 title: "NEGBINOM.DIST's cdf is #NUM! from number_s 1E+13 at 28 failures"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
