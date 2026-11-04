@@ -166,7 +166,13 @@ fn integer_power(x: f64, y: f64) -> Option<Result<f64, Error>> {
     } else {
         extended_quotient(1.0, positive_power)
     };
-    // Excel flushes a subnormal result to zero (T-1311 oracle: 0.1^310, 2^-1074, (-0.5)^1073).
+    // Excel flushes a subnormal result to zero (T-1311 oracle: 0.1^310, 2^-1074, (-0.5)^1073),
+    // except at exponent 2, where `1E-160^2`, `1E-155^2` and `(1.1E-155)^2` keep it
+    // (probes/seriessum-subnormal-power-and-term B15, A16; T-3950). Other positive exponents
+    // were not probed, so only 2 is exempt.
+    if y == 2.0 {
+        return Some(Ok(result));
+    }
     Some(Ok(flush_subnormal(result)))
 }
 
