@@ -1996,6 +1996,7 @@ C	probes/t3678-time-argument-far-negative.case.json	102
 C	probes/t3678-yearfrac-basis1-within-a-year.case.json	20
 C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
+C	probes/t3710-ampm-hour-tokens.case.json	26
 C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14
@@ -5995,19 +5996,12 @@ F	probes/t3505-gamma-inv-budget-band.case.json	S!A96
 F	probes/t3505-gamma-inv-budget-band.case.json	S!A97
 F	probes/t3505-gamma-inv-budget-band.case.json	S!A98
 F	probes/t3505-gamma-inv-budget-band.case.json	S!A99
-F	probes/t3532-numeral-digit-fields.case.json	S!A10
 F	probes/t3532-numeral-digit-fields.case.json	S!A14
-F	probes/t3532-numeral-digit-fields.case.json	S!B10
 F	probes/t3532-numeral-digit-fields.case.json	S!B14
-F	probes/t3532-numeral-digit-fields.case.json	S!C10
 F	probes/t3532-numeral-digit-fields.case.json	S!C14
-F	probes/t3532-numeral-digit-fields.case.json	S!D10
 F	probes/t3532-numeral-digit-fields.case.json	S!D14
-F	probes/t3532-numeral-digit-fields.case.json	S!E10
 F	probes/t3532-numeral-digit-fields.case.json	S!E14
-F	probes/t3532-numeral-digit-fields.case.json	S!F10
 F	probes/t3532-numeral-digit-fields.case.json	S!F14
-F	probes/t3532-numeral-digit-fields.case.json	S!G10
 F	probes/t3532-numeral-digit-fields.case.json	S!G14
 F	probes/t3585-rate-num-near-minus-one.case.json	Sheet1!G1
 F	probes/t3585-rate-num-near-minus-one.case.json	Sheet1!G18

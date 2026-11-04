@@ -663,6 +663,10 @@ impl Parser {
                 Token::Hour => {
                     is_date = true;
                     is_time = true;
+                    // Excel: an hour token makes the next `m`/`mm` a minute again, even after a
+                    // minute (`h:mm|h:mm` of 45000.5432 is "13:02|13:02"; probes/t3710-ampm-hour-tokens
+                    // B3, B14; number-formats.md "`mm` after a minute is a month").
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHour
                     } else {
@@ -672,6 +676,10 @@ impl Parser {
                 Token::HourPadded => {
                     is_date = true;
                     is_time = true;
+                    // Excel: an hour token makes the next `m`/`mm` a minute again, even after a
+                    // minute (`h:mm|h:mm` of 45000.5432 is "13:02|13:02"; probes/t3710-ampm-hour-tokens
+                    // B3, B14; number-formats.md "`mm` after a minute is a month").
+                    minute_read = false;
                     tokens.push(if elapsed_hour {
                         TextToken::ElapsedHourPadded
                     } else {

@@ -347,6 +347,25 @@ fn a_runs_are_the_weekday() {
     }
 }
 
+/// Only the last hour before a marker and the last hour of the section take the 12-hour clock
+/// (probes/t3710-ampm-hour-tokens).
+#[test]
+fn am_pm_switches_only_some_hour_tokens() {
+    let cases = [
+        ("h|hh|mm|ss|h:mm:ss.00 AM/PM", "13|13|02|12|1:02:12.48 PM"),
+        ("h h AM/PM h h", "13 1 PM 13 1"),
+        ("h AM/PM|h", "1 PM|1"),
+        ("h:mm|h:mm AM/PM", "13:02|1:02 PM"),
+    ];
+    for (format, expected) in cases {
+        assert_eq!(
+            format_in(45000.5432, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
 /// A calendar prefix alone is no date token: a negative value prints its minus and the literals
 /// (probes/t2388-b1-negative; docs/excel-semantics/number-formats.md "Bare digits beside a date token").
 #[test]
