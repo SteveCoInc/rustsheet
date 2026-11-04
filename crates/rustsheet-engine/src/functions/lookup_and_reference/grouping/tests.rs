@@ -52,6 +52,75 @@ fn keys_group_by_excel_equality() {
     );
 }
 
+/// T-4195: on an intransitive run a key joins the distinct key a binary search of the sorted
+/// distinct keys finds, not its first equal one, and the groups follow `<`'s order
+/// (probes/t4195-groupby-intransitive Calc!B4, B32).
+#[test]
+fn intransitive_keys_join_the_key_a_binary_search_finds() {
+    // `ab`&U+00AD, U+00AD&`ab`, `ab`: the middle one equals both, and joins `ab`.
+    assert_eq!(
+        sorted(&[text("ab\u{ad}"), text("\u{ad}ab"), text("ab")], true),
+        [(text("ab"), vec![1, 2]), (text("ab\u{ad}"), vec![0])]
+    );
+    // `AB` < `ab`&U+00AD by the prefix rule, so its group comes first.
+    assert_eq!(
+        sorted(
+            &[text("AB"), text("ab"), text("ab\u{ad}"), text("\u{ad}ab")],
+            true
+        ),
+        [(text("AB"), vec![0, 1, 3]), (text("ab\u{ad}"), vec![2])]
+    );
+}
+
+/// T-4195: a later field is classed within its parent, a group shows each class's first key, and
+/// a group none of whole-row `=`'s first rows is in is not shown (probes/t4195-groupby-intransitive
+/// Calc!B55, probes/t4088-groupby-multifield Calc!B30, probes/t4195-groupby-shown-key Calc!B2).
+#[test]
+fn later_fields_class_within_their_parent() {
+    let group = |keys: Vec<Vec<ArrayNode>>| {
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()))
+            .unwrap_or(Grouping { groups: Vec::new() });
+        grouping.sort_by_keys(&[], CELL);
+        grouping
+            .groups
+            .into_iter()
+            .map(|group| (group.keys, group.rows))
+            .collect::<Vec<_>>()
+    };
+    let x = || text("x");
+    let y = || text("y");
+    assert_eq!(
+        group(vec![
+            vec![x(), text("\u{ad}ab")],
+            vec![y(), text("ab")],
+            vec![y(), text("ab\u{ad}")],
+        ]),
+        [
+            (vec![x(), text("\u{ad}ab")], vec![0]),
+            (vec![y(), text("ab")], vec![1]),
+            (vec![y(), text("ab\u{ad}")], vec![2]),
+        ]
+    );
+    assert_eq!(
+        group(vec![
+            vec![text("ab"), x()],
+            vec![text("ab\u{ad}"), y()],
+            vec![text("\u{ad}ab"), y()],
+        ]),
+        [
+            (vec![text("ab"), x()], vec![0]),
+            (vec![text("ab\u{ad}"), y()], vec![1]),
+        ]
+    );
+    assert_eq!(
+        group(vec![vec![text("ABC"), x()], vec![text("abc"), y()]]),
+        [
+            (vec![text("ABC"), x()], vec![0]),
+            (vec![text("ABC"), y()], vec![1]),
+        ]
+    );
+}
+
 #[test]
 fn case_folded_first_spelling_and_blank_last_both_ways() {
     let keys = [

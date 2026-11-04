@@ -252,6 +252,7 @@ probes/t4060-collation-open-choices.case.json	9
 probes/t4086-collation-later-passes.case.json	21
 probes/t4086-groupby-weightless.case.json	13
 probes/t4088-groupby-multifield.case.json	10
+probes/t4195-groupby-intransitive.case.json	26
 probes/table-edits/t3629-convert-names.case.json	4
 probes/table-edits/t3629-convert-plain.case.json	4
 probes/table-edits/t3629-readd-other-area.case.json	4

@@ -3,7 +3,7 @@ id: T-4195
 title: "GROUPBY and PIVOTBY multi-field keys on an intransitive = run: match Excel's dropped rows and shown keys (probes/t4088-groupby-multifield)"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -33,10 +33,28 @@ the algorithm stays out of reach after probing, the cells are recorded as a DEVI
 - Owned cells: probes/t4088-groupby-multifield (10): Calc!B1, B3, B6, C6, B11, B30, B31, B32, B33, B38
 
 ## Acceptance criteria
-- [ ] The cells pass and leave eval/baseline/probes.txt, with 0 regressions; or a DEVIATION entry records them with
-      the probe evidence that the algorithm is out of reach.
-- [ ] coercion.md states the rule (VERIFIED) and "Implemented in".
-- [ ] `make check` green; reviewers approve.
+- [x] The cells pass and leave eval/baseline/probes.txt, with 0 regressions: 8 of the 10 do; B11 and B33 move to
+      T-4241 with the probe evidence (a DEVIATION is not open to this gap: README "Deliberate deviations",
+      decision 0052).
+- [x] coercion.md states the rule (VERIFIED) and "Implemented in".
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - SORT's order on intransitive cycles (T-3418).
+
+## Outcome
+- Probed (excel-graph, 2026-11-04): probes/t4195-groupby-intransitive (56 blocks: every order of `ab`,
+  `ab`&U+00AD, U+00AD&`ab`, alone, with `AB` or `ab`&U+00AD&U+00AD, beside a second field, before it, and with a
+  third) and probes/t4195-groupby-shown-key (18 blocks: which spelling a group shows). A simulator scored candidate
+  models against every cell; the rule is in coercion.md "GROUPBY on an intransitive run (T-4195)".
+- Excel's model, now ours (`Grouping::new`, `classify`, `Group::key_order` in
+  functions/lookup_and_reference/grouping.rs): each field is classed within its parent (the rows sharing the
+  earlier fields' classes); the distinct keys are the first-`=` ones, sorted by `<` (`sort_indices_pairwise`),
+  and a text joins the key a lower-bound binary search finds equal to it; a group shows each class's first key;
+  a group none of whole-row `=`'s first rows is in is not shown; texts under one parent sort by that order
+  (`AB` before `ab`&U+00AD).
+- Eval delta: probes known failures 4046 -> 4064: 8 fixed (t4088-groupby-multifield B1, B3, B6, C6, B30, B31,
+  B32, B38), 0 regressions, 2 new cases (-intransitive 26 known failures, -shown-key 0). Visible parity 1586 ->
+  1566 in-scope cells off.
+- Not reached: on some multi-field runs Excel puts a row in two groups, and its UNIQUE keeps or drops a row
+  depending on the rows around it. Filed T-4241 (opus), which owns the 26 -intransitive cells and t4088 B11, B33.
