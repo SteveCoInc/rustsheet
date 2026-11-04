@@ -77,7 +77,7 @@ text comparison, and UNIQUE groups such texts as Excel does; or the cells are re
   | non-descending runs only (shipped) | 36/36 | 36/36 | 168/168 | 168/168 |
   | runs also strictly descending, reversed (T-3211) | 26/36 | 28/36 | 140/168 | 140/168 |
   | top-down merge | 18/36 | 21/36 | 136/168 | 136/168 |
-  | runs capped at 2 or 3 | at most 24/36 | at most 27/36 | at most 154/168 | at most 154/168 |
+  | other run-length caps (ascending and descending caps 1, 2, 3, unlimited) | at most 33/36 | at most 33/36 | at most 154/168 | at most 154/168 |
   Insertion, heap, shell, selection, quicksorts and CPython `sorted` score lower (at most 16/36, 130/168).
   In the engine all 40 sort cells of t3211 now pass, plus every t3418 cell. Added unit test
   `the_pairwise_sort_never_reverses_a_descending_chain`. `the_pairwise_sort_ends_on_intransitive_texts` still
