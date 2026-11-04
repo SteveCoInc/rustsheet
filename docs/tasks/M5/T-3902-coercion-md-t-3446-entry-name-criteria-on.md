@@ -3,7 +3,7 @@ id: T-3902
 title: "coercion.md T-3446 entry: name criteria on the five new digit blocks as unprobed and fix the row-102 wording (review follow-up)"
 milestone: M5
 lane: research
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
