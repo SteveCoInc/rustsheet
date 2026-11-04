@@ -391,14 +391,17 @@ fn fitted_payment(rate: f64, rate_nper: f64, pv: f64, fv: f64, period_start: boo
 }
 
 /// Below this |nper*L| PMT's `1-Q` is Excel's expm1, from it on `1 - EXP(-nper*L)`
-/// (probes/t3014-pmt-fv-type-alone column C: expm1 through |nper*L| 0.9896, `1-Q` from 1.0648).
+/// (probes/t3014-pmt-fv-type-alone column C: expm1 through |nper*L| 0.9896, `1-Q` from 1.0648;
+/// CUMPRINC's `1-v^m` likewise, expm1 through m·L 0.9783 and `1-Q` at 1.3976, probes/
+/// fin-cumprinc-underflow-fresh I4, I5, T-3141).
 /// FITTED(T-3014, 63 cells, PMT |nper*L| 0.5..1.6; cut bracketed 0.9896..1.0648)
 const PAYMENT_EXPM1_TO: f64 = 1.0;
 
 /// `1-Q` for `Q = EXP(x)` as Excel's PMT, IPMT and PPMT take it: `-expm1(x)` (Excel's expm1)
 /// for |x| < [`PAYMENT_EXPM1_TO`] and `1 - EXP(x)` beyond (financial.md "PMT is a discounted
-/// payment", "IPMT and PPMT split Excel's discounted payment").
-fn discount_complement(x: f64) -> f64 {
+/// payment", "IPMT and PPMT split Excel's discounted payment"). CUMPRINC's underflowed principal
+/// takes its `1-v^m` the same way (`cumulative.rs`, T-3141).
+pub(super) fn discount_complement(x: f64) -> f64 {
     if x.abs() < PAYMENT_EXPM1_TO {
         -excel_expm1(x)
     } else {

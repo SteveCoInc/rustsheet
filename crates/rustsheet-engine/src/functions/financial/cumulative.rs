@@ -8,10 +8,10 @@
 //! period count less that principal, as Excel builds it (docs/excel-semantics/financial.md
 //! "CUMIPMT and CUMPRINC over many periods"). Moved out of `financial/mod.rs` (T-1845).
 
-use super::annuity::{compute_payment, growth_log};
+use super::annuity::{compute_payment, discount_complement, growth_log};
 use super::number_or_error;
 use crate::functions::lift::num_error;
-use crate::x87_exp::{excel_exp, excel_expm1};
+use crate::x87_exp::excel_exp;
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, types::CellReferenceIndex},
@@ -36,12 +36,13 @@ const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 /// the range ends near nper and the per-period sum (type 0) or the closed form (type 1) is as
 /// close or closer: `CUMPRINC(1E-9,192,2707,8,24,0)` is -239.68227237224258 to the bit with the
 /// sum and 2 ulps off with the geometric form (exponent 2E-7, gen-m9 d912671baa1364aa A300),
-/// and so are the last periods of nper 1E15 at 0.1 (exponent 0.095, probes/fin-cumprinc-near-1e15
-/// C6, C10) and `CUMPRINC(0.1,6,100000,2,6,0)` (probes/fin-cumprinc-form-boundaries G1). From
+/// and so is `CUMPRINC(0.1,6,100000,2,6,0)` (exponent 0.095, probes/fin-cumprinc-form-boundaries
+/// G1; where `v^nper` underflows, [`Periods::underflowed_principal`] comes first, T-3141). From
 /// 0.398 up the geometric sum is exact on 22 of the 32 cells of E1-H8 (rates 0.01 and 0.1,
 /// leading exponents 0.4 to 3.6) and within 2 ulps on the rest, where the other forms are exact
 /// on 7 and up to 5 ulps off; between 0.095 and 0.398 the cut is a fit (T-3067). The deepest
-/// discount `(nper-first+1)·L`, the cut before T-3067, misses those near-1E15 cells.
+/// discount `(nper-first+1)·L`, the cut before T-3067, missed the last periods of nper 1E15 at
+/// 0.1 (probes/fin-cumprinc-near-1e15 C6, C10).
 /// FITTED(T-3067, 36 cells, leading exponent 2E-7..3.6, rate 1E-9..0.1; cut a fit in 0.095..0.398)
 const GEOMETRIC_MIN_LEAD: f64 = 0.3;
 
@@ -147,9 +148,10 @@ struct Periods {
 
 impl Periods {
     /// The principal. Per-period sums only over a short range, and only where every period is an
-    /// exact integer: past 2^53 `period + 1` is `period`, and the closed form takes over. Type 0
-    /// has its own short forms ([`Periods::short_principal`]), within 4 ulps of Excel on every
-    /// probed cell where the closed form and the PPMT sum were up to 343 ulps off (T-2192). Type
+    /// exact integer: past 2^53 `period + 1` is `period`, and the closed form takes over. A short
+    /// range where `v^nper` underflows is [`Periods::underflowed_principal`]'s, both types
+    /// (T-3141). Otherwise type 0 has its own short forms ([`Periods::short_principal`]), within
+    /// 4 ulps of Excel on every probed cell where the closed form and the PPMT sum were up to 343 ulps off (T-2192). Type
     /// 1's principal is the geometric sum at a large discount, else the closed form: summing PPMT
     /// loses a small principal's digits to the payment it is taken from (`CUMPRINC_CUMIPMT.xlsx`
     /// H5 had 8 right digits, H7 7; T-1890), and the per-period `exp` form misses H22 and H25 by
@@ -158,6 +160,11 @@ impl Periods {
     fn principal(&self) -> Option<f64> {
         let short =
             self.end - self.start < CUMULATIVE_LOOP_PERIODS && self.end < EXACT_INTEGER_LIMIT;
+        if short {
+            if let Some(principal) = self.underflowed_principal() {
+                return Some(principal);
+            }
+        }
         if short && !self.period_start {
             if let Some(principal) = self.short_principal() {
                 return Some(principal);
@@ -241,40 +248,56 @@ impl Periods {
     /// has the remaining-balance principal: Excel's `CUMIPMT(1E-300,243,80923,12,22,0)` is
     /// -4.547473508864641E-13 and `(1E-300,83,156759,5,17,0)` 0 to the bit with it, where the
     /// per-period sum adds the payment m times (gen-m9 81bcdc0bec0c8e6b A274, abb7d565af89b849
-    /// A84). Elsewhere the geometric sum, then the balance drop where `v^nper` underflows, then the
-    /// per-period sum, then the closed form.
+    /// A84). Elsewhere the geometric sum, then the per-period sum, then the closed form (where
+    /// `v^nper` underflows, [`Periods::principal`] has taken [`Periods::underflowed_principal`]).
     fn short_principal(&self) -> Option<f64> {
         let principal = if 1.0 + self.rate == 1.0 {
             self.remaining_principal()
         } else {
             self.geometric_principal(GEOMETRIC_MIN_LEAD)
-                .or_else(|| self.underflowed_principal())
                 .or_else(|| self.discounted_principal())
         };
         principal.or_else(|| self.closed_form(Paid::Principal))
     }
 
-    /// Type 0's principal over a short range where `v^nper` underflows (`1 - v^nper` is 1), as the
-    /// drop in the balance: `-(pv·(v^(nper-end)·(1-v^m)))` with Excel's EXP, Kahan's expm1 for
-    /// `1-v^m` and [`growth_log`]'s L. Excel's principal there does not depend on nper: the last m
-    /// periods of nper 1E6, 1E10, 1E12 and 1E15 are the same doubles at rates 0.001, 0.01 and 0.1
-    /// (probes/fin-cumprinc-underflow-ends A-D, G, H; fin-cumprinc-near-1e15 A-C), so
-    /// `CUMIPMT(0.01,1E15,100000,1E15,1E15,0)` is -9.900990099009732 with it, which the per-period
-    /// sum missed visibly (fin-cumipmt-overflow-and-forms A9, A11; fin-remaining-later-argument-ranges
-    /// K3). It is exact on 70 of the 108 underflowed principals probed and within an ulp of the rest
-    /// (the per-period sum: 16 of the 36 near 1E15), not on all: decision 0160, TODO(T-3141). Only
-    /// below [`GEOMETRIC_MIN_LEAD`]: above it the geometric sum is Excel's, at a rate of 1E10 and at
-    /// integer rates too (T-3067). `None` for type 1, where `v^nper` has not underflowed or where
-    /// the result is not finite.
+    /// The principal over a short range where `v^nper` underflows (`1 - v^nper` is 1), as the drop
+    /// in the balance from one core: `C = pv·((1-v^m)·v^(nper-end+1))` with `1-v^m` PMT's
+    /// [`discount_complement`] of `-m·L` (Kahan's expm1 below m·L = 1, `1 - EXP` from it on), the
+    /// power Excel's EXP of `-(nper-end+1)·L` and L [`growth_log`]'s. Type 1's principal is `-C`,
+    /// type 0's `-(C·(1+rate))`: the `1+rate` is a last product, not folded into the power. Excel's principal there does not depend on nper (the last m periods of
+    /// nper 1E6, 1E10, 1E12 and 1E15 are the same doubles, probes/fin-cumprinc-underflow-ends;
+    /// T-3067), so `CUMIPMT(0.01,1E15,100000,1E15,1E15,0)` is -9.900990099009732 with it. The
+    /// form is to the bit on all 304 principals probed: the 132 of fin-cumprinc-near-1e15 and
+    /// fin-cumprinc-underflow-ends (the fit, 108 type 0 and 24 type 1), the 72 of
+    /// fin-cumprinc-underflow-type1 (the hold-out: rates 0.0007 to 0.2, pv 12345.6, ranges ending
+    /// at nper and 2 before) and the 100 of fin-cumprinc-underflow-fresh (the sweep after the
+    /// freeze: 98 with Kahan's expm1 throughout, and I5 and J5, m·L 1.4, with PMT's switch to
+    /// `1 - EXP`), where T-3067's `-(pv·(v^(nper-end)·(1-v^m)))` was exact on 70 of the 108 type 0
+    /// fit cells and type 1's closed form on none of the 24 (T-3141). It comes before the geometric sum at any leading exponent:
+    /// the hold-out's ranges ending 2 before nper at 0.2 (C7-C9, G7-G9, leading exponent 0.55)
+    /// and the sweep's I10, K10 are Excel's with it and an ulp off with that sum, and so are
+    /// integer-rate cells (`CUMPRINC(10,230,351888,4,21,0)`, gen-m9 d0854366830dcdee A98;
+    /// 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), with none of the probed geometric-sum cells
+    /// lost. `None` for a type 1 range from period 1 (that period's principal is the whole
+    /// payment), where `v^nper` has not underflowed, where the leading power is not normal (it
+    /// has lost its digits, and the geometric sum and the closed form decide; unprobed here)
+    /// or where the result is not finite.
     fn underflowed_principal(&self) -> Option<f64> {
         let log_growth = growth_log(self.rate);
-        // Type 1's last periods take another form (probes/fin-cumprinc-underflow-ends J).
-        if self.period_start || self.unpaid_share(log_growth) != 1.0 {
+        if (self.period_start && self.start < 2.0) || self.unpaid_share(log_growth) != 1.0 {
             return None;
         }
         let count = self.end - self.start + 1.0;
-        let leading = excel_exp(-(self.nper - self.end) * log_growth);
-        let principal = -(self.pv * (leading * -excel_expm1(-count * log_growth)));
+        let leading = excel_exp(-(self.nper - self.end + 1.0) * log_growth);
+        if !leading.is_normal() {
+            return None;
+        }
+        let core = self.pv * (discount_complement(-count * log_growth) * leading);
+        let principal = if self.period_start {
+            -core
+        } else {
+            -(core * (1.0 + self.rate))
+        };
         principal.is_finite().then_some(principal + 0.0)
     }
 
@@ -391,8 +414,8 @@ impl Periods {
     /// `CUMPRINC(1E10,100,1,1,100,0)` is -1.0000000000000013, `-1E10/expm1(log1p(1E10))` (A17).
     /// This form matches 19 of the 28 probe cells over many periods or past an overflow (22 of the
     /// case's 30 cells pass overall) bit for
-    /// bit and the others within 6 ulps, but for type 1 near period 1E15 (fin-cumipmt-period-bound
-    /// A18; TODO(T-3141)); type 0 there is [`Periods::underflowed_principal`]'s. It keeps
+    /// bit and the others within 6 ulps; a short range near period 1E15 is
+    /// [`Periods::underflowed_principal`]'s (fin-cumipmt-period-bound A18, T-3141). It keeps
     /// `log1p`, not the geometric sum's `growth_log`: on Excel's L over every long range
     /// fin-cumipmt-period-bound A6, A11 and A30 leave the bit (T-2521). `None` when the result is
     /// not finite.

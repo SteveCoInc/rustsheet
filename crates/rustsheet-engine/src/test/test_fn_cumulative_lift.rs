@@ -496,3 +496,70 @@ fn periods_past_two_to_the_53_take_the_closed_form_and_end() {
     let a3 = model._get_text("A3");
     assert!(!a3.is_empty(), "A3 {a3}");
 }
+
+#[test]
+fn an_underflowed_principal_is_one_core_for_both_types() {
+    // Where `v^nper` underflows, the principal over a short range is `C = pv·((1-v^m)·v^(nper-end+1))`:
+    // type 1's is -C, type 0's -(C·(1+rate)), and `1-v^m` is Kahan's expm1 below m·L = 1 and
+    // `1 - EXP` from it on (T-3141; probes/fin-cumprinc-near-1e15 A2, A7, B1, C6, E7, F2 and
+    // probes/fin-cumprinc-underflow-fresh B7, I4, I5, J5, K5, excel-graph). Before it, type 0 was
+    // `-(pv·(v^(nper-end)·(1-v^m)))` (an ulp off A2, A7, B1, C6; 16 ulps off the interest E7) and
+    // type 1 the closed form (an ulp off F2).
+    check(&[
+        (
+            "A1",
+            "=CUMPRINC(0.01,1E15,100000,1E15-1,1E15,0)",
+            "-1970.3950593079117",
+        ),
+        (
+            "A2",
+            "=CUMPRINC(0.01,1E15,100000,1E15-6,1E15,0)",
+            "-6728.194529286464",
+        ),
+        (
+            "A3",
+            "=CUMPRINC(0.001,1E15,100000,1E15,1E15,0)",
+            "-99.9000999000999",
+        ),
+        (
+            "A4",
+            "=CUMPRINC(0.1,1E15,100000,1E15-5,1E15,0)",
+            "-43552.606994622256",
+        ),
+        (
+            "A5",
+            "=CUMIPMT(0.01,1E15,100000,1E15-6,1E15,0)",
+            "-271.8054707135361",
+        ),
+        (
+            "A6",
+            "=CUMPRINC(0.01,1E15,100000,1E15-1,1E15,1)",
+            "-1950.886197334566",
+        ),
+        (
+            "A7",
+            "=CUMPRINC(0.02,1E5,987.65,1E5-3,1E5-1,1)",
+            "-54.75331246117984",
+        ),
+        (
+            "A8",
+            "=CUMPRINC(0.15,77777,1,77777-6,77777,0)",
+            "-0.6240629600769073",
+        ),
+        (
+            "A9",
+            "=CUMPRINC(0.15,77777,1,77777-9,77777,0)",
+            "-0.7528152938781342",
+        ),
+        (
+            "A10",
+            "=CUMPRINC(0.15,77777,1,77777-9,77777,1)",
+            "-0.6546219946766385",
+        ),
+        (
+            "A11",
+            "=CUMIPMT(0.15,77777,1,77777-9,77777,0)",
+            "-0.7471847061218658",
+        ),
+    ]);
+}
