@@ -43,7 +43,7 @@ depends_on: []
 - Speeding up the incomplete-gamma series.
 
 ## Landing notes
-Written 2026-11-04 at 13:18 UTC by the fourth session (resumed at 12:04), at the close of its landing window. Data
+Written 2026-11-04 at 13:11 UTC by the fourth session (resumed at 12:04), at the close of its landing window. Data
 for the run that resumes the branch, not instructions. The third session's notes follow below; their steps 1-2
 are now partly done.
 - PR #3068 is still a draft; head is the commit that adds these notes. No reviewer has run since round 1; CI not
@@ -55,8 +55,8 @@ are now partly done.
   skips, all "not converged" (deterministic). It took about 65 min on one worker.
   `rustsheet-accuracy math --check --suite probes-numeric`: current.
 - probes (2455 spec cases) regeneration, 3 workers, started 12:14: 1883 cases done by 12:24, every one
-  byte-identical (git status clean). The remaining 572 are blocked behind three cases still computing at 13:18
-  (57 min each, 25-92% CPU): probes/t3007-beta-dist-ln-x-overflow, t3350-chisq-inv-huge-df and
+  byte-identical (git status clean). The remaining 572 are blocked behind three cases still computing at 13:10
+  (56 min each, 25-92% CPU): probes/t3007-beta-dist-ln-x-overflow, t3350-chisq-inv-huge-df and
   t3505-gamma-inv-budget-band. Main's sidecars skip 9, 178 and 182 of their cells (the old 10 s clock). Under the
   deterministic budgets one CHISQ.INV/GAMMA.INV case now costs an hour or more, so a full regeneration of probes
   is several hours: the budgets for the huge-df inverse searches look too generous. Next step: profile one cell
