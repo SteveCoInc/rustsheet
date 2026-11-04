@@ -3,7 +3,7 @@ id: T-3963
 title: "RATE flat secants: model Excel's noise-floor iterates, since no rule on the model's flat-secant state fits (after T-3850)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -96,7 +96,7 @@ because T-3850 showed that no rule on the model's state at the flat step does it
 - **Follow-up:** T-3424 keeps the wrong-type cells (zero steps Excel errs on). The noise-only nper-1/2 residuals where
   Excel still restarts (t3906 A15, A64) are filed as a new task.
 
-## Handoff
+## Handoff (resumed)
 - Branch: `agent/functions-financial/T-3963-rate-noise-floor-iterates` (draft PR #3019). Resume it there, not on a new branch.
 - Unblocked by the 2026-11-04 steward run: T-3916 is done on `main` (decision 0265, option 3, "Rule on R2 at the
   noise floor"). The ruling kept T-3698's restart against options 1 to 3; keep-r0 (option 4) was added to T-3916 only
