@@ -27,6 +27,7 @@ from rustsheet_tools.accuracy.model import (
     Param,
     register,
     solve_log_bracket,
+    spend,
 )
 
 DENSITY_SOURCE = "statistics.md#betadists-density-is-num-at-an-x-of-0-or-1-t-2435"
@@ -50,23 +51,69 @@ SERIES_MAXTERMS = 10**5
 # x) at once, while spending the term budget in every step of a root solve took 75 s for
 # BETA.INV(0.5,2.5,5E9).
 SERIES_SHAPE_CAP = 1e7
+# `_series` takes 1 - I_(1-x)(b, a) only while that tail is at most 1 - this (at most 6 digits lost).
+COMPLEMENT_MARGIN = mpmath.mpf("1e-6")
 
 
 def _tail_series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
     """I_x(a, b) for x ≤ (a + 1) / (a + b + 2) as x^a (1-x)^b / (a B(a, b)) 2F1(a + b, 1; a + 1; x)
     (DLMF 8.17.8 with 15.8.1): every term is positive and they fall from the first, so nothing cancels."""
     log_prefix = a * mpmath.log(x) + b * mpmath.log1p(-x) - mpmath.log(a) - mpmath.log(mpmath.beta(a, b))
-    return mpmath.exp(log_prefix) * mpmath.hyp2f1(a + b, 1, a + 1, x, maxterms=SERIES_MAXTERMS)
+    return mpmath.exp(log_prefix) * _positive_2f1(a, b, x)
+
+
+def _positive_2f1(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
+    """2F1(a + b, 1; a + 1; x) summed term by term. Not `mpmath.hyp2f1`: past z of about 0.75 it
+    leaves the series for a transformation whose hypercomb cancels and failed after 329 s at
+    I_0.832(62750.652, 383), a bracket step of BETA.INV(0.665410001077291,383,62750.652)
+    (probes-numeric/t3443-basym-sweep A150). The term ratio x (a + b + n) / (a + 1 + n) moves
+    monotonically to x, so no later ratio exceeds r = max(ratio, x) and the tail is at most
+    term * r / (1 - r); NoConvergence past SERIES_MAXTERMS terms, a deterministic budget (T-3680)."""
+    eps = mpmath.eps * 2**-10
+    total = term = mpmath.mpf(1)
+    for n in range(SERIES_MAXTERMS):
+        spend()
+        ratio = x * (a + b + n) / (a + 1 + n)
+        term *= ratio
+        total += term
+        r = max(ratio, x)
+        if r < 1 and term * r / (1 - r) <= eps * total:
+            return total
+    msg = f"2F1 series: no convergence in {SERIES_MAXTERMS} terms"
+    raise mpmath.libmp.NoConvergence(msg)
+
+
+def _terms(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
+    """About how many terms `_positive_2f1(a, b, x)` sums: the rise while its ratio
+    x (a + b + n) / (a + 1 + n) is above 1, then the fall at its limit x to 2^-300. Infinite where
+    x rounds to 1 (the complement of an x below the working epsilon)."""
+    if x >= 1:
+        return mpmath.inf
+    rise = max(0, (x * (a + b) - (a + 1)) / (1 - x))
+    return rise + 210 / -mpmath.log(x)
 
 
 def _series(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
-    """I_x(a, b) from `_tail_series` on the side below the switch point (a + 1) / (a + b + 2), the
-    other side as the complement (it is then above about 1/2, so little cancels)."""
+    """I_x(a, b) from `_tail_series`, directly or as the complement 1 - I_(1-x)(b, a), whichever
+    sums fewer terms. Near the switch point (a + 1) / (a + b + 2) at a skewed shape the classic
+    choice sums about 6E4 terms per call where the other side sums a few hundred, and a BETA.INV
+    root solve then spends its whole work budget (probes-numeric/t3443-basym-sweep A150,
+    BETA.INV(0.665410001077291,383,62750.652)). The direct sum has positive terms and never
+    cancels; the complement is kept only while I_(1-x)(b, a) <= 1 - COMPLEMENT_MARGIN, so 1 - it
+    loses at most 6 digits, well inside the 1e-45 agreement of dps 60 and 80.
+    Where the chosen side runs out of terms the other is tried."""
     if x <= 0 or x >= 1:
         return mpmath.mpf(0) if x <= 0 else mpmath.mpf(1)
-    if x <= (a + 1) / (a + b + 2):
+    if _terms(a, b, x) <= _terms(b, a, 1 - x):
+        try:
+            return _tail_series(a, b, x)
+        except mpmath.libmp.NoConvergence:
+            return 1 - _tail_series(b, a, 1 - x)
+    try:
+        other = _tail_series(b, a, 1 - x)
+    except mpmath.libmp.NoConvergence:
         return _tail_series(a, b, x)
-    return 1 - _tail_series(b, a, 1 - x)
+    return 1 - other if other <= 1 - COMPLEMENT_MARGIN else _tail_series(a, b, x)
 
 
 def _betainc(a: mpmath.mpf, b: mpmath.mpf, x: mpmath.mpf) -> mpmath.mpf:
