@@ -3,7 +3,7 @@ id: T-3981
 title: "Oracle sweep: real IMSECH and IMCOSH at |x| 0.004 to 0.01, with C390's neighbouring doubles and a hold-out, for the T-3930 leftovers"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
