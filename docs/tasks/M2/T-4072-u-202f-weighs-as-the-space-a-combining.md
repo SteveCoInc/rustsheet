@@ -3,7 +3,7 @@ id: T-4072
 title: "U+202F weighs as the space; a combining mark after a weightless character is a lone mark (probes/t4060-collation-open-choices)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
