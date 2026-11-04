@@ -18,6 +18,41 @@
     "v": "290690.3504095536009145693393917085430022421365855",
     "f": "=GAMMA.INV(0.9,290000,1)"
    },
+   "A100": {
+    "t": "n",
+    "v": "7991262.3528912775428276563126606282565848301174162",
+    "f": "=GAMMA.INV(0.001,8000000,1)"
+   },
+   "A101": {
+    "t": "n",
+    "v": "7993421.5652392106094895123908055054289808947094985",
+    "f": "=GAMMA.INV(0.01,8000000,1)"
+   },
+   "A102": {
+    "t": "n",
+    "v": "7996375.4389824884130362326179887277197448014909264",
+    "f": "=GAMMA.INV(0.1,8000000,1)"
+   },
+   "A103": {
+    "t": "n",
+    "v": "7998516.5297322282547160679920278170560794418549746",
+    "f": "=GAMMA.INV(0.3,8000000,1)"
+   },
+   "A104": {
+    "t": "n",
+    "v": "7999999.6666666691358025818146201263233561726304479",
+    "f": "=GAMMA.INV(0.5,8000000,1)"
+   },
+   "A105": {
+    "t": "n",
+    "v": "8001482.9869317078379268096322098752010850389413493",
+    "f": "=GAMMA.INV(0.7,8000000,1)"
+   },
+   "A106": {
+    "t": "n",
+    "v": "8003624.9892671205796337065113542207786229721700925",
+    "f": "=GAMMA.INV(0.9,8000000,1)"
+   },
    "A107": {
     "t": "n",
     "v": "8008743.3467990930466127870983147288126405484686299",
@@ -28,10 +63,45 @@
     "v": "8013451.913325805066228379684205599153331540748313",
     "f": "=GAMMA.INV(0.999999,8000000,1)"
    },
+   "A109": {
+    "t": "n",
+    "v": "9883303.5123826195870886934890018454565052739017109",
+    "f": "=GAMMA.INV(1E-300,10000000,1)"
+   },
    "A11": {
     "t": "n",
     "v": "291666.99127635739016326337830800284550331560689057",
     "f": "=GAMMA.INV(0.999,290000,1)"
+   },
+   "A110": {
+    "t": "n",
+    "v": "9963791.0329166600166663709075397317085113952340531",
+    "f": "=GAMMA.INV(1E-30,10000000,1)"
+   },
+   "A111": {
+    "t": "n",
+    "v": "9979896.8274575920607006721111184169692975517067687",
+    "f": "=GAMMA.INV(1E-10,10000000,1)"
+   },
+   "A112": {
+    "t": "n",
+    "v": "9990230.677189463260361666793209445086501885592453",
+    "f": "=GAMMA.INV(0.001,10000000,1)"
+   },
+   "A113": {
+    "t": "n",
+    "v": "9992644.9127520566635614035732649571299728810442189",
+    "f": "=GAMMA.INV(0.01,10000000,1)"
+   },
+   "A114": {
+    "t": "n",
+    "v": "9995947.5922990414118848360660705870982082881577386",
+    "f": "=GAMMA.INV(0.1,10000000,1)"
+   },
+   "A115": {
+    "t": "n",
+    "v": "9998341.4583366281221725491239925793821499881963403",
+    "f": "=GAMMA.INV(0.3,10000000,1)"
    },
    "A117": {
     "t": "n",
@@ -63,6 +133,26 @@
     "v": "15701901.586797079281253373229372643726659086053134",
     "f": "=GAMMA.INV(1E-300,15848931.9246111,1)"
    },
+   "A122": {
+    "t": "n",
+    "v": "15803336.284956321995044006488351051315027422206574",
+    "f": "=GAMMA.INV(1E-30,15848931.9246111,1)"
+   },
+   "A123": {
+    "t": "n",
+    "v": "15823620.12440211486416994454381791976218403037662",
+    "f": "=GAMMA.INV(1E-10,15848931.9246111,1)"
+   },
+   "A124": {
+    "t": "n",
+    "v": "15836632.338003723220807593411468671547021341680227",
+    "f": "=GAMMA.INV(0.001,15848931.9246111,1)"
+   },
+   "A125": {
+    "t": "n",
+    "v": "15839672.037569772113129042193790482164033405806898",
+    "f": "=GAMMA.INV(0.01,15848931.9246111,1)"
+   },
    "A129": {
     "t": "n",
     "v": "15851019.358961971238449804984178165199168852206353",
@@ -93,10 +183,35 @@
     "v": "19834777.196496604107989817460465773430104738005546",
     "f": "=GAMMA.INV(1E-300,20000000,1)"
    },
+   "A134": {
+    "t": "n",
+    "v": "19948774.788759452004926874850901530881386828613159",
+    "f": "=GAMMA.INV(1E-30,20000000,1)"
+   },
+   "A135": {
+    "t": "n",
+    "v": "19971564.372858380591363435247351068517325848128303",
+    "f": "=GAMMA.INV(1E-10,20000000,1)"
+   },
+   "A137": {
+    "t": "n",
+    "v": "19989597.7266830829253025659571353809023426635263",
+    "f": "=GAMMA.INV(0.01,20000000,1)"
+   },
+   "A138": {
+    "t": "n",
+    "v": "19994268.941332994062297562624250033611667675448139",
+    "f": "=GAMMA.INV(0.1,20000000,1)"
+   },
    "A14": {
     "t": "n",
     "v": "293764.29714187462366286103586195852462190242493105",
     "f": "=GAMMA.INV(1E-30,300000,1)"
+   },
+   "A141": {
+    "t": "n",
+    "v": "20002344.948697763863700678284142627490437811296312",
+    "f": "=GAMMA.INV(0.7,20000000,1)"
    },
    "A142": {
     "t": "n",
@@ -118,10 +233,20 @@
     "v": "35261120.321770396219250851462426547274454831397865",
     "f": "=GAMMA.INV(1E-300,35481338.9233576,1)"
    },
+   "A146": {
+    "t": "n",
+    "v": "35413095.536130784989219658144286413301714724201273",
+    "f": "=GAMMA.INV(1E-30,35481338.9233576,1)"
+   },
    "A15": {
     "t": "n",
     "v": "296528.89482625375399893997720738579958446068827582",
     "f": "=GAMMA.INV(1E-10,300000,1)"
+   },
+   "A153": {
+    "t": "n",
+    "v": "35484462.337007792982887558107495205818195496407594",
+    "f": "=GAMMA.INV(0.7,35481338.9233576,1)"
    },
    "A154": {
     "t": "n",
@@ -178,6 +303,11 @@
     "v": "298727.27761117462598304155725039620268026853480516",
     "f": "=GAMMA.INV(0.01,300000,1)"
    },
+   "A177": {
+    "t": "n",
+    "v": "79437496.955238265935406737056738236034095955882384",
+    "f": "=GAMMA.INV(0.7,79432823.4724282,1)"
+   },
    "A178": {
     "t": "n",
     "v": "79444245.526882191968311258099293210964121303779514",
@@ -203,6 +333,11 @@
     "v": "88775803.684935244365889217475703873145538455245435",
     "f": "=GAMMA.INV(1E-300,89125093.8133746,1)"
    },
+   "A189": {
+    "t": "n",
+    "v": "89130044.231771702805767741236073996324243788860113",
+    "f": "=GAMMA.INV(0.7,89125093.8133746,1)"
+   },
    "A19": {
     "t": "n",
     "v": "299712.53252089693695298654450778719864992862184212",
@@ -218,6 +353,11 @@
     "v": "89169976.231123648162876753011333302596583349288582",
     "f": "=GAMMA.INV(0.999999,89125093.8133746,1)"
    },
+   "A193": {
+    "t": "n",
+    "v": "98631843.06715771960067845011514800161463375379184",
+    "f": "=GAMMA.INV(1E-300,99000000,1)"
+   },
    "A2": {
     "t": "n",
     "v": "283869.83458933131745846483374676091052165423195206",
@@ -227,6 +367,11 @@
     "t": "n",
     "v": "299999.66666673251036819302610918270407856978765496",
     "f": "=GAMMA.INV(0.5,300000,1)"
+   },
+   "A201": {
+    "t": "n",
+    "v": "99005217.47754368834095755645832522593868074796493",
+    "f": "=GAMMA.INV(0.7,99000000,1)"
    },
    "A202": {
     "t": "n",
@@ -243,10 +388,20 @@
     "v": "99047303.173259588183440334275508262821236231765312",
     "f": "=GAMMA.INV(0.999999,99000000,1)"
    },
+   "A205": {
+    "t": "n",
+    "v": "99629986.058864164992645843784234665322136605421663",
+    "f": "=GAMMA.INV(1E-300,100000000,1)"
+   },
    "A21": {
     "t": "n",
     "v": "300286.98414314885869037945303719025156539040243474",
     "f": "=GAMMA.INV(0.7,300000,1)"
+   },
+   "A213": {
+    "t": "n",
+    "v": "100005243.76344925038812185053469100692035083513138",
+    "f": "=GAMMA.INV(0.7,100000000,1)"
    },
    "A214": {
     "t": "n",
@@ -268,10 +423,30 @@
     "v": "300702.14847763185193433635509551742307138064357086",
     "f": "=GAMMA.INV(0.9,300000,1)"
    },
+   "A229": {
+    "t": "n",
+    "v": "19959725.759212569665179266630897321054235245502103",
+    "f": "=GAMMA.INV(0.01,7990464.81598859,2.5)"
+   },
    "A23": {
     "t": "n",
     "v": "301695.4401854874862397755663621929827746680200244",
     "f": "=GAMMA.INV(0.999,300000,1)"
+   },
+   "A230": {
+    "t": "n",
+    "v": "7983.8903036850280322698099254711388410923581667917",
+    "f": "=GAMMA.INV(0.01,7990464.81598859,0.001)"
+   },
+   "A232": {
+    "t": "n",
+    "v": "19976161.206638147870648922809718537672838244583421",
+    "f": "=GAMMA.INV(0.5,7990464.81598859,2.5)"
+   },
+   "A233": {
+    "t": "n",
+    "v": "7990.4644826552593145945249881388243211178376307993",
+    "f": "=GAMMA.INV(0.5,7990464.81598859,0.001)"
    },
    "A235": {
     "t": "n",
@@ -282,6 +457,16 @@
     "t": "n",
     "v": "7994.087644430443685932728987731636495939824438214",
     "f": "=GAMMA.INV(0.9,7990464.81598859,0.001)"
+   },
+   "A238": {
+    "t": "n",
+    "v": "49973994.31670770731325641489283845225585665881575",
+    "f": "=GAMMA.INV(0.01,20000000,2.5)"
+   },
+   "A239": {
+    "t": "n",
+    "v": "19989.597726683083341419659378852485419445213265514",
+    "f": "=GAMMA.INV(0.01,20000000,0.001)"
    },
    "A24": {
     "t": "n",
@@ -463,10 +648,25 @@
     "v": "2002563.5309992419149492138322567144237580356087447",
     "f": "=CHISQ.INV.RT(0.1,2000000)"
    },
+   "A295": {
+    "t": "n",
+    "v": "1999999.3333333728395205957293083927297314614839369",
+    "f": "=CHISQ.INV(0.5,2000000)"
+   },
+   "A296": {
+    "t": "n",
+    "v": "1999999.3333333728395205957293083927297314614839369",
+    "f": "=CHISQ.INV.RT(0.5,2000000)"
+   },
    "A298": {
     "t": "n",
     "v": "2002563.5309992419152657899179400911407435819468308",
     "f": "=CHISQ.INV(0.9,2000000)"
+   },
+   "A299": {
+    "t": "n",
+    "v": "1997437.3254999605619978296794744433779755237761655",
+    "f": "=CHISQ.INV.RT(0.9,2000000)"
    },
    "A3": {
     "t": "n",
@@ -568,6 +768,11 @@
     "v": "10005731.700913477369630048559166520036758282417617",
     "f": "=CHISQ.INV(0.9,10000000)"
    },
+   "A326": {
+    "t": "n",
+    "v": "9994269.1555857392856291933186327377525734982782684",
+    "f": "=CHISQ.INV.RT(0.9,10000000)"
+   },
    "A328": {
     "t": "n",
     "v": "10013825.638891771719440759252454210717872702678695",
@@ -618,10 +823,20 @@
     "v": "1004760.6247134677702966971062494963442012954225858",
     "f": "=GAMMA.INV(0.999999,1000000,1)"
    },
+   "A364": {
+    "t": "n",
+    "v": "19927582.065833320033332741815079463417022790468106",
+    "f": "=CHISQ.INV(1E-30,20000000)"
+   },
    "A365": {
     "t": "n",
     "v": "20072591.832623388069534969179133911506522567847647",
     "f": "=CHISQ.INV.RT(1E-30,20000000)"
+   },
+   "A367": {
+    "t": "n",
+    "v": "19959793.654915184121401344222236833938595103413537",
+    "f": "=CHISQ.INV(1E-10,20000000)"
    },
    "A368": {
     "t": "n",
@@ -633,10 +848,20 @@
     "v": "2936288.895757133465737807015426529014073016956009",
     "f": "=GAMMA.INV(1E-300,3000000,1)"
    },
+   "A370": {
+    "t": "n",
+    "v": "19980461.354378926520723333586418890173003771184906",
+    "f": "=CHISQ.INV(0.001,20000000)"
+   },
    "A371": {
     "t": "n",
     "v": "20019550.045001854712413789465045409791269750104226",
     "f": "=CHISQ.INV.RT(0.001,20000000)"
+   },
+   "A373": {
+    "t": "n",
+    "v": "19991895.184598082823769672132141174196416576315477",
+    "f": "=CHISQ.INV(0.1,20000000)"
    },
    "A374": {
     "t": "n",
@@ -658,25 +883,50 @@
     "v": "20019550.045001854710783523776325766555676910788369",
     "f": "=CHISQ.INV(0.999,20000000)"
    },
+   "A383": {
+    "t": "n",
+    "v": "19980461.35437892652235147649323986909991928194931",
+    "f": "=CHISQ.INV.RT(0.999,20000000)"
+   },
    "A385": {
     "t": "n",
     "v": "20030077.69299916922734509613032868293995833268438",
     "f": "=CHISQ.INV(0.999999,20000000)"
+   },
+   "A386": {
+    "t": "n",
+    "v": "19969951.100390217088953237977115237455820566030569",
+    "f": "=CHISQ.INV.RT(0.999999,20000000)"
    },
    "A388": {
     "t": "n",
     "v": "20040258.967212555080721982040275647171709263321927",
     "f": "=CHISQ.INV(1-1E-10,20000000)"
    },
+   "A389": {
+    "t": "n",
+    "v": "19959793.654995440183758933723918913386136574055707",
+    "f": "=CHISQ.INV.RT(1-1E-10,20000000)"
+   },
    "A39": {
     "t": "n",
     "v": "2988994.9864890596866580056989817409875586976813504",
     "f": "=GAMMA.INV(1E-10,3000000,1)"
    },
+   "A391": {
+    "t": "n",
+    "v": "39897549.577518904009853749701803061762773657226319",
+    "f": "=CHISQ.INV(1E-30,40000000)"
+   },
    "A392": {
     "t": "n",
     "v": "40102624.320950821536950743787257928687892022540469",
     "f": "=CHISQ.INV.RT(1E-30,40000000)"
+   },
+   "A394": {
+    "t": "n",
+    "v": "39943128.745716761182726870494702137034651696256607",
+    "f": "=CHISQ.INV(1E-10,40000000)"
    },
    "A395": {
     "t": "n",
@@ -698,6 +948,11 @@
     "v": "2994650.4103572743826764116336051540145360060569662",
     "f": "=GAMMA.INV(0.001,3000000,1)"
    },
+   "A400": {
+    "t": "n",
+    "v": "39988537.882665988124595125248500067223335350896279",
+    "f": "=CHISQ.INV(0.1,40000000)"
+   },
    "A401": {
     "t": "n",
     "v": "40011462.973833231189035950778064222861942976444033",
@@ -707,6 +962,11 @@
     "t": "n",
     "v": "40011462.97383323119045078383551206119727037914284",
     "f": "=CHISQ.INV(0.9,40000000)"
+   },
+   "A407": {
+    "t": "n",
+    "v": "39988537.882665988123180832674081404181437345323997",
+    "f": "=CHISQ.INV.RT(0.9,40000000)"
    },
    "A409": {
     "t": "n",
@@ -723,10 +983,20 @@
     "v": "40042530.317137445194692706452852487084056831776393",
     "f": "=CHISQ.INV(0.999999,40000000)"
    },
+   "A413": {
+    "t": "n",
+    "v": "39957498.476252354398929079059115664056045637841366",
+    "f": "=CHISQ.INV.RT(0.999999,40000000)"
+   },
    "A415": {
     "t": "n",
     "v": "40056923.876378969238114950193468866897975040386131",
     "f": "=CHISQ.INV(1-1E-10,40000000)"
+   },
+   "A416": {
+    "t": "n",
+    "v": "39943128.745830305018365645609370741240458819943948",
+    "f": "=CHISQ.INV.RT(1-1E-10,40000000)"
    },
    "A419": {
     "t": "n",
@@ -873,10 +1143,20 @@
     "v": "200061810.34585758930278631194595553082350919657904",
     "f": "=CHISQ.INV.RT(0.001,200000000)"
    },
+   "A509": {
+    "t": "n",
+    "v": "200025631.4595223571674400111059530762146326534972",
+    "f": "=CHISQ.INV.RT(0.1,200000000)"
+   },
    "A51": {
     "t": "n",
     "v": "4985788.7622209051914934955430335475781623680366637",
     "f": "=GAMMA.INV(1E-10,5000000,1)"
+   },
+   "A514": {
+    "t": "n",
+    "v": "200025631.45952235717060333996962375482006092540802",
+    "f": "=CHISQ.INV(0.9,200000000)"
    },
    "A517": {
     "t": "n",
@@ -897,6 +1177,26 @@
     "t": "n",
     "v": "200127253.13008183505616139880528474636264133426323",
     "f": "=CHISQ.INV(1-1E-10,200000000)"
+   },
+   "A53": {
+    "t": "n",
+    "v": "4994799.5986916775955099627839677739453606386958949",
+    "f": "=GAMMA.INV(0.01,5000000,1)"
+   },
+   "A54": {
+    "t": "n",
+    "v": "4997134.5777928696431681022394892632614243315468781",
+    "f": "=GAMMA.INV(0.1,5000000,1)"
+   },
+   "A55": {
+    "t": "n",
+    "v": "4998827.1631819278936787789024378253521664343970801",
+    "f": "=GAMMA.INV(0.3,5000000,1)"
+   },
+   "A56": {
+    "t": "n",
+    "v": "4999999.6666666706172842390750591109059083341239495",
+    "f": "=GAMMA.INV(0.5,5000000,1)"
    },
    "A57": {
     "t": "n",
@@ -938,6 +1238,31 @@
     "v": "6983182.6272839495547463015192582652292949682667051",
     "f": "=GAMMA.INV(1E-10,7000000,1)"
    },
+   "A64": {
+    "t": "n",
+    "v": "6991826.8635869223549569322384706468587023369550316",
+    "f": "=GAMMA.INV(0.001,7000000,1)"
+   },
+   "A65": {
+    "t": "n",
+    "v": "6993846.5327325102369196357123920564082158107941448",
+    "f": "=GAMMA.INV(0.01,7000000,1)"
+   },
+   "A66": {
+    "t": "n",
+    "v": "6996609.547462154907196491647770421081863948626399",
+    "f": "=GAMMA.INV(0.1,7000000,1)"
+   },
+   "A67": {
+    "t": "n",
+    "v": "6998612.3250249738831499305606773393219611694102346",
+    "f": "=GAMMA.INV(0.3,7000000,1)"
+   },
+   "A68": {
+    "t": "n",
+    "v": "6999999.6666666694885363023751553738579818124003969",
+    "f": "=GAMMA.INV(0.5,7000000,1)"
+   },
    "A69": {
     "t": "n",
     "v": "7001387.1916389628201112551863716036717616930864478",
@@ -978,10 +1303,35 @@
     "v": "7482591.9038513304067352597981848725350599798440727",
     "f": "=GAMMA.INV(1E-10,7500000,1)"
    },
+   "A76": {
+    "t": "n",
+    "v": "7491539.9000551720292439855649226906755877018741501",
+    "f": "=GAMMA.INV(0.001,7500000,1)"
+   },
+   "A77": {
+    "t": "n",
+    "v": "7493630.5046328503810639123040686156505908004053882",
+    "f": "=GAMMA.INV(0.01,7500000,1)"
+   },
+   "A78": {
+    "t": "n",
+    "v": "7496490.5406891729227622203583657422512114507635954",
+    "f": "=GAMMA.INV(0.1,7500000,1)"
+   },
+   "A79": {
+    "t": "n",
+    "v": "7498563.6284178511424321063644840719178870983997064",
+    "f": "=GAMMA.INV(0.3,7500000,1)"
+   },
    "A8": {
     "t": "n",
     "v": "289999.66666673478084351773556055740618893149302641",
     "f": "=GAMMA.INV(0.5,290000,1)"
+   },
+   "A80": {
+    "t": "n",
+    "v": "7499999.6666666693004116508371997092752249520910809",
+    "f": "=GAMMA.INV(0.5,7500000,1)"
    },
    "A81": {
     "t": "n",
@@ -1013,10 +1363,40 @@
     "v": "7958102.4476988193654583209969714305370801169404768",
     "f": "=GAMMA.INV(1E-30,7990464.81598859,1)"
    },
+   "A87": {
+    "t": "n",
+    "v": "7972496.1061528280268280705428644944172041390662932",
+    "f": "=GAMMA.INV(1E-10,7990464.81598859,1)"
+   },
+   "A88": {
+    "t": "n",
+    "v": "7981732.3793232428248644601430795175504390268649447",
+    "f": "=GAMMA.INV(0.001,7990464.81598859,1)"
+   },
+   "A89": {
+    "t": "n",
+    "v": "7983890.3036850278660717066523589284216940982008411",
+    "f": "=GAMMA.INV(0.01,7990464.81598859,1)"
+   },
    "A9": {
     "t": "n",
     "v": "290282.15646870370524873249805647234021393093043207",
     "f": "=GAMMA.INV(0.7,290000,1)"
+   },
+   "A90": {
+    "t": "n",
+    "v": "7986842.4157963454908465683875252104115551009082227",
+    "f": "=GAMMA.INV(0.1,7990464.81598859,1)"
+   },
+   "A91": {
+    "t": "n",
+    "v": "7988982.2299130066826131194194357541067595729768355",
+    "f": "=GAMMA.INV(0.3,7990464.81598859,1)"
+   },
+   "A92": {
+    "t": "n",
+    "v": "7990464.4826552591482595691238874150691352978333684",
+    "f": "=GAMMA.INV(0.5,7990464.81598859,1)"
    },
    "A93": {
     "t": "n",
@@ -1047,330 +1427,211 @@
     "t": "n",
     "v": "7967618.3022164398815954691707645493475337270477192",
     "f": "=GAMMA.INV(1E-30,8000000,1)"
+   },
+   "A99": {
+    "t": "n",
+    "v": "7982020.5643029706495778101482387606023199080204351",
+    "f": "=GAMMA.INV(1E-10,8000000,1)"
    }
   }
  },
  "skipped": {
   "S": {
-   "A100": {
-    "f": "=GAMMA.INV(0.001,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A101": {
-    "f": "=GAMMA.INV(0.01,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A102": {
-    "f": "=GAMMA.INV(0.1,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A103": {
-    "f": "=GAMMA.INV(0.3,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A104": {
-    "f": "=GAMMA.INV(0.5,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A105": {
-    "f": "=GAMMA.INV(0.7,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A106": {
-    "f": "=GAMMA.INV(0.9,8000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A109": {
-    "f": "=GAMMA.INV(1E-300,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A110": {
-    "f": "=GAMMA.INV(1E-30,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A111": {
-    "f": "=GAMMA.INV(1E-10,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A112": {
-    "f": "=GAMMA.INV(0.001,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A113": {
-    "f": "=GAMMA.INV(0.01,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A114": {
-    "f": "=GAMMA.INV(0.1,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A115": {
-    "f": "=GAMMA.INV(0.3,10000000,1)",
-    "why": "not converged or too slow"
-   },
    "A116": {
     "f": "=GAMMA.INV(0.5,10000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A122": {
-    "f": "=GAMMA.INV(1E-30,15848931.9246111,1)",
-    "why": "not converged or too slow"
-   },
-   "A123": {
-    "f": "=GAMMA.INV(1E-10,15848931.9246111,1)",
-    "why": "not converged or too slow"
-   },
-   "A124": {
-    "f": "=GAMMA.INV(0.001,15848931.9246111,1)",
-    "why": "not converged or too slow"
-   },
-   "A125": {
-    "f": "=GAMMA.INV(0.01,15848931.9246111,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A126": {
     "f": "=GAMMA.INV(0.1,15848931.9246111,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A127": {
     "f": "=GAMMA.INV(0.3,15848931.9246111,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A128": {
     "f": "=GAMMA.INV(0.5,15848931.9246111,1)",
-    "why": "not converged or too slow"
-   },
-   "A134": {
-    "f": "=GAMMA.INV(1E-30,20000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A135": {
-    "f": "=GAMMA.INV(1E-10,20000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A136": {
     "f": "=GAMMA.INV(0.001,20000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A137": {
-    "f": "=GAMMA.INV(0.01,20000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A138": {
-    "f": "=GAMMA.INV(0.1,20000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A139": {
     "f": "=GAMMA.INV(0.3,20000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A140": {
     "f": "=GAMMA.INV(0.5,20000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A141": {
-    "f": "=GAMMA.INV(0.7,20000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A146": {
-    "f": "=GAMMA.INV(1E-30,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A147": {
     "f": "=GAMMA.INV(1E-10,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A148": {
     "f": "=GAMMA.INV(0.001,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A149": {
     "f": "=GAMMA.INV(0.01,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A150": {
     "f": "=GAMMA.INV(0.1,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A151": {
     "f": "=GAMMA.INV(0.3,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A152": {
     "f": "=GAMMA.INV(0.5,35481338.9233576,1)",
-    "why": "not converged or too slow"
-   },
-   "A153": {
-    "f": "=GAMMA.INV(0.7,35481338.9233576,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A158": {
     "f": "=GAMMA.INV(1E-30,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A159": {
     "f": "=GAMMA.INV(1E-10,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A160": {
     "f": "=GAMMA.INV(0.001,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A161": {
     "f": "=GAMMA.INV(0.01,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A162": {
     "f": "=GAMMA.INV(0.1,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A163": {
     "f": "=GAMMA.INV(0.3,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A164": {
     "f": "=GAMMA.INV(0.5,50000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A170": {
     "f": "=GAMMA.INV(1E-30,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A171": {
     "f": "=GAMMA.INV(1E-10,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A172": {
     "f": "=GAMMA.INV(0.001,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A173": {
     "f": "=GAMMA.INV(0.01,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A174": {
     "f": "=GAMMA.INV(0.1,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A175": {
     "f": "=GAMMA.INV(0.3,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A176": {
     "f": "=GAMMA.INV(0.5,79432823.4724282,1)",
-    "why": "not converged or too slow"
-   },
-   "A177": {
-    "f": "=GAMMA.INV(0.7,79432823.4724282,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A182": {
     "f": "=GAMMA.INV(1E-30,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A183": {
     "f": "=GAMMA.INV(1E-10,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A184": {
     "f": "=GAMMA.INV(0.001,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A185": {
     "f": "=GAMMA.INV(0.01,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A186": {
     "f": "=GAMMA.INV(0.1,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A187": {
     "f": "=GAMMA.INV(0.3,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A188": {
     "f": "=GAMMA.INV(0.5,89125093.8133746,1)",
-    "why": "not converged or too slow"
-   },
-   "A189": {
-    "f": "=GAMMA.INV(0.7,89125093.8133746,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A190": {
     "f": "=GAMMA.INV(0.9,89125093.8133746,1)",
-    "why": "not converged or too slow"
-   },
-   "A193": {
-    "f": "=GAMMA.INV(1E-300,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A194": {
     "f": "=GAMMA.INV(1E-30,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A195": {
     "f": "=GAMMA.INV(1E-10,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A196": {
     "f": "=GAMMA.INV(0.001,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A197": {
     "f": "=GAMMA.INV(0.01,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A198": {
     "f": "=GAMMA.INV(0.1,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A199": {
     "f": "=GAMMA.INV(0.3,99000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A200": {
     "f": "=GAMMA.INV(0.5,99000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A201": {
-    "f": "=GAMMA.INV(0.7,99000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A205": {
-    "f": "=GAMMA.INV(1E-300,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A206": {
     "f": "=GAMMA.INV(1E-30,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A207": {
     "f": "=GAMMA.INV(1E-10,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A208": {
     "f": "=GAMMA.INV(0.001,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A209": {
     "f": "=GAMMA.INV(0.01,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A210": {
     "f": "=GAMMA.INV(0.1,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A211": {
     "f": "=GAMMA.INV(0.3,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A212": {
     "f": "=GAMMA.INV(0.5,100000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A213": {
-    "f": "=GAMMA.INV(0.7,100000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A217": {
     "f": "=GAMMA.INV(1E-300,200000000,1)",
@@ -1420,365 +1681,181 @@
     "f": "=GAMMA.INV(0.999999,200000000,1)",
     "why": "no single value"
    },
-   "A229": {
-    "f": "=GAMMA.INV(0.01,7990464.81598859,2.5)",
-    "why": "not converged or too slow"
-   },
-   "A230": {
-    "f": "=GAMMA.INV(0.01,7990464.81598859,0.001)",
-    "why": "not converged or too slow"
-   },
-   "A232": {
-    "f": "=GAMMA.INV(0.5,7990464.81598859,2.5)",
-    "why": "not converged or too slow"
-   },
-   "A233": {
-    "f": "=GAMMA.INV(0.5,7990464.81598859,0.001)",
-    "why": "not converged or too slow"
-   },
-   "A238": {
-    "f": "=GAMMA.INV(0.01,20000000,2.5)",
-    "why": "not converged or too slow"
-   },
-   "A239": {
-    "f": "=GAMMA.INV(0.01,20000000,0.001)",
-    "why": "not converged or too slow"
-   },
    "A241": {
     "f": "=GAMMA.INV(0.5,20000000,2.5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A242": {
     "f": "=GAMMA.INV(0.5,20000000,0.001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A247": {
     "f": "=GAMMA.INV(0.01,79432823.4724282,2.5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A248": {
     "f": "=GAMMA.INV(0.01,79432823.4724282,0.001)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A250": {
     "f": "=GAMMA.INV(0.5,79432823.4724282,2.5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A251": {
     "f": "=GAMMA.INV(0.5,79432823.4724282,0.001)",
-    "why": "not converged or too slow"
-   },
-   "A295": {
-    "f": "=CHISQ.INV(0.5,2000000)",
-    "why": "not converged or too slow"
-   },
-   "A296": {
-    "f": "=CHISQ.INV.RT(0.5,2000000)",
-    "why": "not converged or too slow"
-   },
-   "A299": {
-    "f": "=CHISQ.INV.RT(0.9,2000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A323": {
     "f": "=CHISQ.INV.RT(0.5,10000000)",
-    "why": "not converged or too slow"
-   },
-   "A326": {
-    "f": "=CHISQ.INV.RT(0.9,10000000)",
-    "why": "not converged or too slow"
-   },
-   "A364": {
-    "f": "=CHISQ.INV(1E-30,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A367": {
-    "f": "=CHISQ.INV(1E-10,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A370": {
-    "f": "=CHISQ.INV(0.001,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A373": {
-    "f": "=CHISQ.INV(0.1,20000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A376": {
     "f": "=CHISQ.INV(0.5,20000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A377": {
     "f": "=CHISQ.INV.RT(0.5,20000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A380": {
     "f": "=CHISQ.INV.RT(0.9,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A383": {
-    "f": "=CHISQ.INV.RT(0.999,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A386": {
-    "f": "=CHISQ.INV.RT(0.999999,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A389": {
-    "f": "=CHISQ.INV.RT(1-1E-10,20000000)",
-    "why": "not converged or too slow"
-   },
-   "A391": {
-    "f": "=CHISQ.INV(1E-30,40000000)",
-    "why": "not converged or too slow"
-   },
-   "A394": {
-    "f": "=CHISQ.INV(1E-10,40000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A397": {
     "f": "=CHISQ.INV(0.001,40000000)",
-    "why": "not converged or too slow"
-   },
-   "A400": {
-    "f": "=CHISQ.INV(0.1,40000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A403": {
     "f": "=CHISQ.INV(0.5,40000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A404": {
     "f": "=CHISQ.INV.RT(0.5,40000000)",
-    "why": "not converged or too slow"
-   },
-   "A407": {
-    "f": "=CHISQ.INV.RT(0.9,40000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A410": {
     "f": "=CHISQ.INV.RT(0.999,40000000)",
-    "why": "not converged or too slow"
-   },
-   "A413": {
-    "f": "=CHISQ.INV.RT(0.999999,40000000)",
-    "why": "not converged or too slow"
-   },
-   "A416": {
-    "f": "=CHISQ.INV.RT(1-1E-10,40000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A418": {
     "f": "=CHISQ.INV(1E-30,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A421": {
     "f": "=CHISQ.INV(1E-10,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A424": {
     "f": "=CHISQ.INV(0.001,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A427": {
     "f": "=CHISQ.INV(0.1,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A430": {
     "f": "=CHISQ.INV(0.5,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A431": {
     "f": "=CHISQ.INV.RT(0.5,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A434": {
     "f": "=CHISQ.INV.RT(0.9,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A437": {
     "f": "=CHISQ.INV.RT(0.999,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A440": {
     "f": "=CHISQ.INV.RT(0.999999,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A443": {
     "f": "=CHISQ.INV.RT(1-1E-10,100000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A472": {
     "f": "=CHISQ.INV(1E-30,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A475": {
     "f": "=CHISQ.INV(1E-10,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A478": {
     "f": "=CHISQ.INV(0.001,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A481": {
     "f": "=CHISQ.INV(0.1,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A484": {
     "f": "=CHISQ.INV(0.5,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A485": {
     "f": "=CHISQ.INV.RT(0.5,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A488": {
     "f": "=CHISQ.INV.RT(0.9,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A491": {
     "f": "=CHISQ.INV.RT(0.999,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A494": {
     "f": "=CHISQ.INV.RT(0.999999,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A497": {
     "f": "=CHISQ.INV.RT(1-1E-10,198000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A499": {
     "f": "=CHISQ.INV(1E-30,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A502": {
     "f": "=CHISQ.INV(1E-10,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A505": {
     "f": "=CHISQ.INV(0.001,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A508": {
     "f": "=CHISQ.INV(0.1,200000000)",
-    "why": "not converged or too slow"
-   },
-   "A509": {
-    "f": "=CHISQ.INV.RT(0.1,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A511": {
     "f": "=CHISQ.INV(0.5,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A512": {
     "f": "=CHISQ.INV.RT(0.5,200000000)",
-    "why": "not converged or too slow"
-   },
-   "A514": {
-    "f": "=CHISQ.INV(0.9,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A515": {
     "f": "=CHISQ.INV.RT(0.9,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A518": {
     "f": "=CHISQ.INV.RT(0.999,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A521": {
     "f": "=CHISQ.INV.RT(0.999999,200000000)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A524": {
     "f": "=CHISQ.INV.RT(1-1E-10,200000000)",
-    "why": "not converged or too slow"
-   },
-   "A53": {
-    "f": "=GAMMA.INV(0.01,5000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A54": {
-    "f": "=GAMMA.INV(0.1,5000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A55": {
-    "f": "=GAMMA.INV(0.3,5000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A56": {
-    "f": "=GAMMA.INV(0.5,5000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A64": {
-    "f": "=GAMMA.INV(0.001,7000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A65": {
-    "f": "=GAMMA.INV(0.01,7000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A66": {
-    "f": "=GAMMA.INV(0.1,7000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A67": {
-    "f": "=GAMMA.INV(0.3,7000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A68": {
-    "f": "=GAMMA.INV(0.5,7000000,1)",
-    "why": "not converged or too slow"
-   },
-   "A76": {
-    "f": "=GAMMA.INV(0.001,7500000,1)",
-    "why": "not converged or too slow"
-   },
-   "A77": {
-    "f": "=GAMMA.INV(0.01,7500000,1)",
-    "why": "not converged or too slow"
-   },
-   "A78": {
-    "f": "=GAMMA.INV(0.1,7500000,1)",
-    "why": "not converged or too slow"
-   },
-   "A79": {
-    "f": "=GAMMA.INV(0.3,7500000,1)",
-    "why": "not converged or too slow"
-   },
-   "A80": {
-    "f": "=GAMMA.INV(0.5,7500000,1)",
-    "why": "not converged or too slow"
-   },
-   "A87": {
-    "f": "=GAMMA.INV(1E-10,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A88": {
-    "f": "=GAMMA.INV(0.001,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A89": {
-    "f": "=GAMMA.INV(0.01,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A90": {
-    "f": "=GAMMA.INV(0.1,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A91": {
-    "f": "=GAMMA.INV(0.3,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A92": {
-    "f": "=GAMMA.INV(0.5,7990464.81598859,1)",
-    "why": "not converged or too slow"
-   },
-   "A99": {
-    "f": "=GAMMA.INV(1E-10,8000000,1)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    }
   }
  }
