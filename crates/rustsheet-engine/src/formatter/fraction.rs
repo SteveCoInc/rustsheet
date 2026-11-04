@@ -209,8 +209,8 @@ pub(super) fn format_fraction(
             push_denominator(&mut text, &denominator_text, blank, blank_spaces);
         }
         let in_fraction = (fraction.numerator_start..fraction.denominator_at).contains(&index);
-        let in_trailing = trailing_end
-            .is_some_and(|end| (fraction.denominator_at..=end).contains(&index));
+        let in_trailing =
+            trailing_end.is_some_and(|end| (fraction.denominator_at..=end).contains(&index));
         let in_separator = has_integer && (integer_end..fraction.numerator_start).contains(&index);
         match token {
             _ if in_separator && separator == Separator::Dropped => {}
