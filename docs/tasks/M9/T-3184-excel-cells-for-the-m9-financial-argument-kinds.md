@@ -3,7 +3,7 @@ id: T-3184
 title: "Excel cells for the M9 financial argument kinds no suite covers (611 parameter/kind pairs in 55 functions, mostly empty text and errors)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -46,18 +46,31 @@ Known Excel behavior to cite where it applies: docs/excel-semantics/financial.md
 odd-period functions, T-2482 and T-2483; date coercion). The 1904 variants are T-2843.
 
 ## Acceptance criteria
-- [ ] After `make eval`, report.json `argument_coverage` shows `covered == expected` for every value parameter of the
+- [x] After `make eval`, report.json `argument_coverage` shows `covered == expected` for every value parameter of the
       55 functions. Where Excel refuses a workbook holding a kind (a hard domain), the kind is exempted in the catalog
       with its reason instead.
-- [ ] Every new cell where ours differs from Excel is fixed in this PR, if it is a one-line coercion fix in the
+- [x] Every new cell where ours differs from Excel is fixed in this PR, if it is a one-line coercion fix in the
       function's own module, or listed by case and cell in a functions-financial task filed with `make new-task`
       (`campaign: semantics` and a `## Visible-parity stage` section for wrong types and errors). The new known failures
       are recorded with `make eval-baseline`, and `make unowned-off ALL=1` lists none of them.
-- [ ] Each new Excel rule is in docs/excel-semantics/financial.md (or coercion.md), citing the cells.
-- [ ] `make check` green; reviewers approve.
+- [x] Each new Excel rule is in docs/excel-semantics/financial.md (or coercion.md), citing the cells.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Covering every function in one PR: if the work exceeds size M, split it by function group and file the rest
   as follow-up tasks with `make new-task` (as T-2861..T-2878 did).
 - The statistical (T-3185), engineering and database argument kinds.
 - Fixing the numeric residue of new cells (file it as tasks).
+
+## Outcome
+- Choice (b), recorded in docs/architecture/synthetic-generator.md §6.8: hand-written probe cases. Five cases
+  probes/t3184-m9-financial-argument-kinds-a to -e (608 cells, excel-graph 2026-11-04, M9), one cell per uncovered
+  parameter/kind pair: a valid base call per function with one argument swapped for the kind (`""` 257, `#N/A` 218,
+  numeric text 78, blank cell 28, TRUE 20, text 5, zero 1, negative 1). Committed gen-m9 cases are unchanged.
+- `make eval` after: report.json `argument_coverage` has `covered == expected` for every parameter of the 55 functions
+  (608 open pairs before, on main 70000141; the triage's 611 had shrunk by 3 since). No kind needed a catalog exemption.
+- The engine matches all 608 cells, so there are no new known failures and no owner tasks to file.
+- financial.md "M9 financial argument kinds (T-3184)" records the rules by kind with cells. The main ones: a TRUE is
+  1 in the annuity functions and `#VALUE!` in the Analysis ToolPak functions' dates, frequencies and CUMIPMT's nper.
+  A scalar text flow is skipped (IRR `#NUM!`, MIRR `#DIV/0!`, XIRR and XNPV `#NUM!`). A blank cell is 0.
+- Eval delta: +608 checked cells, all passing; 0 regressions.
