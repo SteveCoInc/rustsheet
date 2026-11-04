@@ -3,7 +3,7 @@ id: T-3904
 title: "= , COUNTIF and XMATCH(..,0) equate the weightless characters with one another (probes/t3584-match-fold-weightless; classes split to T-4013)"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -50,13 +50,30 @@ U+1FBE = `ι`, `Ͷ`/`ϳ`, `ϑ`/`ϴ` and the Deseret case pair) are T-4013's.
   weightless character one for one).
 
 ## Acceptance criteria
-- [ ] The cells above pass and leave eval/baseline/probes.txt; 0 regressions (the collation hold-out
+- [x] The cells above pass and leave eval/baseline/probes.txt; 0 regressions (the collation hold-out
       probes/t3465-collation-holdout and probes/text-collation-order keep passing).
-- [ ] The weightless table is one definition shared with T-3445's fold (no second copy of the ranges).
-- [ ] coercion.md's section says "Implemented in" with this task.
+- [x] The weightless table is one definition shared with T-3445's fold (no second copy of the ranges).
+- [x] coercion.md's section says "Implemented in" with this task.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Exact MATCH, VLOOKUP and HLOOKUP (T-3445). Supplementary characters (none is weightless).
 - U+200B and the C1 controls, which have weights (T-4039).
 - The class and Deseret cells (T-4013).
+
+## Outcome
+- The collation's `elements` drops every weightless character (`lookup_fold::is_weightless`, the one T-3584 table
+  exact MATCH uses, now `pub(super)`), so no pass weighs it and `CollationKey` leaves it out.
+- New `cmp_prefix` applies T-3662's prefix rule before the collation, in `cmp_text_pairwise` only (`=`, `<`, `>`,
+  the text criteria; XMATCH's index, the COUNTIFS cache and UNIQUE confirm key matches with it). The rule is not
+  transitive, so the sorts and the key leave it out.
+- The U+0E83 and U+27BF/U+1878/U+20BF stand-ins (`UNASSIGNED`) are gone; t3895 A179:A188 and t3559 keep passing,
+  and `t3559_unknown_characters_weigh_alike` now asserts `""` < `➿` under `cmp_text_pairwise` (the total order ties them).
+- Landed with T-4039 in one PR: probes/t3662-collation-ignorables Calc!AB1 (passing on main by coincidence) and
+  AB3:AB9, AB13:AB17 rank a weightless a&c&b among U+200B and the C1 controls, so they need both changes. Either
+  alone regresses AB1 (excel-fidelity review of #3101).
+- Also fixed the stale "UNVERIFIED" in `fold`'s doc comment (T-4013 review MINOR).
+- Unit test `t3904_weightless_characters_and_the_prefix_rule`.
+- Eval delta, with T-4039: probes known failures 4832 → 4263 (569 fixed), REGRESSIONS 0 in every suite;
+  t3584-match-fold-weightless, t3929-wildcard-fold-*, t3895-collation-script-digits and the three t3662 cases pass in
+  full, t3465-collation-holdout keeps only C313:D313 (T-3381).
