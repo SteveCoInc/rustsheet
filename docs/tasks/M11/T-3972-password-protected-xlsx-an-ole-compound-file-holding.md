@@ -3,7 +3,7 @@ id: T-3972
 title: "Password-protected xlsx (an OLE compound file holding EncryptedPackage): a typed import error and a recorded ruling for poi 58616 and protected_passtika"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
