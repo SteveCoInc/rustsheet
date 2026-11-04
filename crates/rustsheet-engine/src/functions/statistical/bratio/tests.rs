@@ -567,3 +567,14 @@ fn ported_tails_rise_with_x_where_excel_does() {
     }
     assert_eq!(pairs, 425);
 }
+
+// bup+bgrat at a0 < 1 other than 1/2 (T-3665): 20 bup terms plus the accurate bgrat increment.
+// Excel is within 1.7 ulp of the math at these points and the Cephes kernel was 4 to 6 ulp off;
+// both cells are Excel's bits (probes-numeric/t2464-r2-bratio-x29 A1551 and A2327, excel-graph).
+#[test]
+fn bup_bgrat_at_a_shape_below_one_matches_excel() {
+    assert_eq!(branch(0.75, 2.5, 0.2910), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2910, 0.75, 2.5), 0.679_493_919_530_290_7);
+    assert_eq!(branch(0.9, 2.5, 0.2916), (Branch::BupBgrat, false));
+    assert_eq!(cdf(0.2916, 0.9, 2.5), 0.617_681_544_291_794);
+}
