@@ -1999,7 +1999,7 @@ C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
 C	probes/t3710-ampm-hour-tokens.case.json	26
 C	probes/t3711-fraction-trailing-placeholders.case.json	57
-C	probes/t3718-cjk-numeral-unprobed.case.json	75
+C	probes/t3718-cjk-numeral-unprobed.case.json	95
 C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14

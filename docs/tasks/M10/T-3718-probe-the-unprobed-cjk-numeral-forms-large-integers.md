@@ -24,4 +24,9 @@ T-3532 implemented numeral-system digits (formatter/numerals.rs). number-formats
 -
 
 ## Outcome
-Probe case `probes/t3718-cjk-numeral-unprobed` (75 cells, excel-graph values) covers the four forms. The existing implementation already matches every cell (probes 75/75), so no code change; findings recorded in docs/excel-semantics/number-formats.md. Eval delta: +75 passing probe cells, no regressions.
+Probe case `probes/t3718-cjk-numeral-unprobed` (95 cells, excel-graph values) covers the four forms. Rows 1-15 (75 cells)
+matched the existing implementation. Rows 16-19 (added when the orphaned PR was adopted, after an excel-fidelity review
+asked for elapsed counts of 10^11 and more) showed that counts from 10^12 are spelled with 兆 in every style, not digit
+by digit: `formatter/numerals.rs` gains 兆 as a third myriad and spells up to 10^16 - 1 (beyond is unprobed). Findings
+recorded in docs/excel-semantics/number-formats.md (the 10^12 claim limited to `General`; the 億 zero gap is per style).
+Eval delta: +95 passing probe cells (15 of them fixed by the 兆 change), no regressions.

@@ -1,6 +1,6 @@
 {
  "format": "rustsheet-case/v1",
- "description": "T-3718: unprobed CJK numeral forms. Rows 1-3 large integers (1E12, 1E15, 123456789012); 4-8 padded/elapsed counts; 9-11 myriad zero gaps; 12-15 General beside literals / in date sections. Columns A-E = numeral bytes 0x1B-0x1F.",
+ "description": "T-3718: unprobed CJK numeral forms. Rows 1-3 large integers (1E12, 1E15, 123456789012); 4-8 padded/elapsed counts; 9-11 myriad zero gaps; 12-15 General beside literals / in date sections; 16-19 elapsed counts of 10^11 and more ([s] of 2958465, 1E8, 1E9; [h] of 1E11). Columns A-E = numeral bytes 0x1B-0x1F.",
  "tags": [
   "probe",
   "number-format",
@@ -86,7 +86,27 @@
     "B15": "=TEXT(45000,\"[$-1C000409]yyyy General\")",
     "C15": "=TEXT(45000,\"[$-1D000409]yyyy General\")",
     "D15": "=TEXT(45000,\"[$-1E000409]yyyy General\")",
-    "E15": "=TEXT(45000,\"[$-1F000409]yyyy General\")"
+    "E15": "=TEXT(45000,\"[$-1F000409]yyyy General\")",
+    "A16": "=TEXT(2958465,\"[$-1B000409][s]\")",
+    "B16": "=TEXT(2958465,\"[$-1C000409][s]\")",
+    "C16": "=TEXT(2958465,\"[$-1D000409][s]\")",
+    "D16": "=TEXT(2958465,\"[$-1E000409][s]\")",
+    "E16": "=TEXT(2958465,\"[$-1F000409][s]\")",
+    "A17": "=TEXT(1E8,\"[$-1B000409][s]\")",
+    "B17": "=TEXT(1E8,\"[$-1C000409][s]\")",
+    "C17": "=TEXT(1E8,\"[$-1D000409][s]\")",
+    "D17": "=TEXT(1E8,\"[$-1E000409][s]\")",
+    "E17": "=TEXT(1E8,\"[$-1F000409][s]\")",
+    "A18": "=TEXT(1E9,\"[$-1B000409][s]\")",
+    "B18": "=TEXT(1E9,\"[$-1C000409][s]\")",
+    "C18": "=TEXT(1E9,\"[$-1D000409][s]\")",
+    "D18": "=TEXT(1E9,\"[$-1E000409][s]\")",
+    "E18": "=TEXT(1E9,\"[$-1F000409][s]\")",
+    "A19": "=TEXT(1E11,\"[$-1B000409][h]\")",
+    "B19": "=TEXT(1E11,\"[$-1C000409][h]\")",
+    "C19": "=TEXT(1E11,\"[$-1D000409][h]\")",
+    "D19": "=TEXT(1E11,\"[$-1E000409][h]\")",
+    "E19": "=TEXT(1E11,\"[$-1F000409][h]\")"
    }
   }
  ],

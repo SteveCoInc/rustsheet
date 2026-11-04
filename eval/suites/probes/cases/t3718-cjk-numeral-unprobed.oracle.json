@@ -30,6 +30,22 @@
     "t": "s",
     "v": "\u4e8c\u3007\u4e8c\u4e09 \u3007.\u56db\u4e5d\u4e5d\u4e5d\u4e5d\u4e5d\u516b\u3007\u4e09"
    },
+   "A16": {
+    "t": "s",
+    "v": "\u4e8c\u5343\u4e94\u767e\u4e94\u5341\u516d\u5104\u5343\u767e\u4e09\u5341\u4e03\u4e07\u516d\u5343"
+   },
+   "A17": {
+    "t": "s",
+    "v": "\u516b\u5146\u516d\u5343\u56db\u767e\u5104"
+   },
+   "A18": {
+    "t": "s",
+    "v": "\u516b\u5341\u516d\u5146\u56db\u5343\u5104"
+   },
+   "A19": {
+    "t": "s",
+    "v": "\u4e8c\u5146\u56db\u5343\u5104"
+   },
    "A2": {
     "t": "s",
     "v": "\u4e00E+\u4e00\u4e94"
@@ -89,6 +105,22 @@
    "B15": {
     "t": "s",
     "v": "\u5f10\u3007\u5f10\u53c2 \u3007.\u56db\u4e5d\u4e5d\u4e5d\u4e5d\u4e5d\u516b\u3007\u53c2"
+   },
+   "B16": {
+    "t": "s",
+    "v": "\u5f10\u9621\u4f0d\u767e\u4f0d\u62fe\u516d\u5104\u58f1\u9621\u58f1\u767e\u53c2\u62fe\u4e03\u842c\u516d\u9621"
+   },
+   "B17": {
+    "t": "s",
+    "v": "\u516b\u5146\u516d\u9621\u56db\u767e\u5104"
+   },
+   "B18": {
+    "t": "s",
+    "v": "\u516b\u62fe\u516d\u5146\u56db\u9621\u5104"
+   },
+   "B19": {
+    "t": "s",
+    "v": "\u5f10\u5146\u56db\u9621\u5104"
    },
    "B2": {
     "t": "s",
@@ -150,6 +182,22 @@
     "t": "s",
     "v": "\uff12\uff10\uff12\uff13 \uff10.\uff14\uff19\uff19\uff19\uff19\uff19\uff18\uff10\uff13"
    },
+   "C16": {
+    "t": "s",
+    "v": "\uff12\u5343\uff15\u767e\uff15\u5341\uff16\u5104\u5343\u767e\uff13\u5341\uff17\u4e07\uff16\u5343"
+   },
+   "C17": {
+    "t": "s",
+    "v": "\uff18\u5146\uff16\u5343\uff14\u767e\u5104"
+   },
+   "C18": {
+    "t": "s",
+    "v": "\uff18\u5341\uff16\u5146\uff14\u5343\u5104"
+   },
+   "C19": {
+    "t": "s",
+    "v": "\uff12\u5146\uff14\u5343\u5104"
+   },
    "C2": {
     "t": "s",
     "v": "\uff11E+\uff11\uff15"
@@ -209,6 +257,22 @@
    "D15": {
     "t": "s",
     "v": "\u4e8c\u25cb\u4e8c\u4e09 \u25cb.\u56db\u4e5d\u4e5d\u4e5d\u4e5d\u4e5d\u516b\u25cb\u4e09"
+   },
+   "D16": {
+    "t": "s",
+    "v": "\u4e8c\u5343\u4e94\u767e\u4e94\u5341\u516d\u4ebf\u4e00\u5343\u4e00\u767e\u4e09\u5341\u4e03\u4e07\u516d\u5343"
+   },
+   "D17": {
+    "t": "s",
+    "v": "\u516b\u5146\u516d\u5343\u56db\u767e\u4ebf"
+   },
+   "D18": {
+    "t": "s",
+    "v": "\u516b\u5341\u516d\u5146\u56db\u5343\u4ebf"
+   },
+   "D19": {
+    "t": "s",
+    "v": "\u4e8c\u5146\u56db\u5343\u4ebf"
    },
    "D2": {
     "t": "s",
@@ -270,6 +334,22 @@
     "t": "s",
     "v": "\u8d30\u96f6\u8d30\u53c1 \u96f6.\u8086\u7396\u7396\u7396\u7396\u7396\u634c\u96f6\u53c1"
    },
+   "E16": {
+    "t": "s",
+    "v": "\u8d30\u4edf\u4f0d\u4f70\u4f0d\u62fe\u9646\u4ebf\u58f9\u4edf\u58f9\u4f70\u53c1\u62fe\u67d2\u4e07\u9646\u4edf"
+   },
+   "E17": {
+    "t": "s",
+    "v": "\u634c\u5146\u9646\u4edf\u8086\u4f70\u4ebf"
+   },
+   "E18": {
+    "t": "s",
+    "v": "\u634c\u62fe\u9646\u5146\u8086\u4edf\u4ebf"
+   },
+   "E19": {
+    "t": "s",
+    "v": "\u8d30\u5146\u8086\u4edf\u4ebf"
+   },
    "E2": {
     "t": "s",
     "v": "\u58f9E+\u58f9\u4f0d"
@@ -306,10 +386,10 @@
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "09153b2aa377e385c829689e3a6e2c9a713da8fc2d8d4b7dc2db676ab63c0e98",
+  "input_sha256": "41dc952256b83dc9c012578ce854661337ea275dc2dc402a734e46e360635e45",
   "kind": "excel-graph",
-  "produced_at": "2026-11-04T14:33:05+00:00",
+  "produced_at": "2026-11-04T20:27:51+00:00",
   "version": null,
-  "workbook_name": "d696139ab1d34468ef4567507852aab75bbe31376b2dbbd464e1aac28d8ff5ba.xlsx"
+  "workbook_name": "159427e74583c90dd6cacc0f3070d631e54b6bba9575354c6bcec1047968584a.xlsx"
  }
 }
