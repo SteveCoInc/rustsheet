@@ -38,6 +38,11 @@ accuracy stage.
   A279 and A293 (roots -5.0E-7 to 2.4E-5). A276's root, 2.4E-5, is inside this task's band, so a fix must keep
   `#NUM!` there.
 
+Training probes from draft #2529 (salvaged 2026-11-04; the hold-out case landed in #2562; T-3408 cites cells of both).
+Visibly-off cells on main:
+- probes/t3347-irr-conventional-num.case.json (12): P!A11, A12, A14, A15, A18, A20, A21, A36, A38, A39, A41, A42
+- probes-numeric/t3347-irr-conventional-sweep.case.json (24): P!A1, A4, A7, A33, A35, A38, A45, A47, A51, A56, A58, A61, A62, A64, A71, A76, A82, A87, A88, A96, A97, A108, A109, A119
+
 ## Acceptance criteria
 - [ ] Conventional series with an IRR between 1e-5 and 3e-4, and near -10%, match Excel's result (number or error, within 15 significant digits for a number) on the oracle-filled cells.
 - [ ] A new public probe case under eval/suites/probes/cases/ (one milestone tag, M9; decision 0057), filled by the

@@ -3862,6 +3862,25 @@ Status: VERIFIED (excel-graph)
 Implemented in: `fn_npv`, `fn_fvschedule` in functions/financial/mod.rs (T-1373)
 Tasks: T-1084, T-1373
 
+## IRR on conventional flows near 0 and -10% (T-3347's training probes)
+Rule (excel-graph, 2026-10-31, probes/t3347-irr-conventional-num, 42 cells, and probes-numeric/
+t3347-irr-conventional-sweep, 120 cells; exact roots in each case's `.roots.tsv`): Excel's IRR returns the root of
+conventional cash flows (one outlay, then positive flows) whose IRR is near 0 (1e-6 to 3e-4, either sign) or near
+-10%, within about 2e-11 of the exact root, on 159 of these 162 series. It is `#NUM!` on three that have a real root
+(sweep A111, A115 and A117, r = -0.23, -0.40 and -0.11, long series of tiny flows after a large outlay). The fitted
+secant ("IRR is a secant in d") fails on both shapes: near -10% on long level series (probe A10-A21) it drifts to its
+step cap, and near 0 with flows up to 1E9 (probe A36-A42) v = 1 - d repeats, so the secant is flat. Neither a larger
+cap nor any stop variant reproduces Excel's digits. Newton on P(v) from v = 1 (draft #2529's stage) fit these 162 but
+failed its hold-out (t3347-irr-conventional-holdout), and T-3406 refuted it under any cap, so which conventional series
+Excel leaves `#NUM!` is not known (see "IRR on conventional flows where the secant fails: which return is
+path-sensitive"). Also seen: sweep A106 (a root of -1.3E-17) is -2.220446049250313E-16 in Excel and in the engine, the
+secant's one-ulp-of-v resolution.
+Evidence: the two cases above (salvaged from draft #2529); docs/research/t3347_irr_conventional_sweep.py builds them
+and the roots; docs/research/t3347_irr_holdout_score.py scores the hold-out.
+Ours (2026-11-04): `#NUM!` or a wrong type on the 12 probe and 24 sweep cells listed in T-3347.
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
+Tasks: T-3347, T-3406, T-3408
+
 ## IRR on conventional flows where the secant fails: which return is path-sensitive
 Rule (partial; what Excel does is not known yet): on conventional flows (one outlay, then positive flows) where the
 fitted secant from guess 0.1 fails, Excel returns the root on some series and is `#NUM!` (or `#DIV/0!`) on others, and
@@ -4325,8 +4344,7 @@ Tasks: T-2482, T-2483, T-2484, T-2428, T-2493, T-2494, T-2491
 ## Financial cells of the T-2496 sub-expression probe
 Rule (excel-graph, 2026-10-25, probes/t2496-fin-subexpressions, each gen-m9 case's Data sheet copied): in the gen-m9
 financial cells whose error the outer call cannot make, an inner call differs and the outer call passes its error on.
-`PV(-1+2^-52,91,-421)` is `#DIV/0!` (ours `#NUM!`; hypothesis: (1+rate)^91 underflows to 0, T-2657 probes it); `IRR(<4x4 flows>,41.9999)` is
-`#DIV/0!` (ours converges on 4.1E+12, T-2657); `NPV(-1,1E-15,2.5)` and `NPV(1E+300,7,1E+15,2.5)` are `#DIV/0!` (T-2493, as
+`PV(-1+2^-52,91,-421)` and `IRR(<4x4 flows>,41.9999)` are `#DIV/0!` (see "PV, PMT and IRR near a rate of -1"); `NPV(-1,1E-15,2.5)` and `NPV(1E+300,7,1E+15,2.5)` are `#DIV/0!` (T-2493, as
 in the T-2436 probe); `XMATCH(FALSE,{1,2,3},0,0.5^1E-15)` is `#N/A` (lookup.md, T-2656). The statistical inner calls
 follow statistics.md: Z.TEST's one-number `#DIV/0!` and lone-empty-cell `#N/A` (T-2470), PROB's unequal-count `#N/A` and
 one-value `#DIV/0!` (T-2468), FREQUENCY's extra row for a bins argument with no number, so the enclosing ODDFYIELD and
@@ -4338,6 +4356,27 @@ probes/tbill-error-order-inner-calls.
 Ours: the other error or a value; the tasks named.
 Status: VERIFIED (excel-graph), one or two cells each
 Tasks: T-2496, T-2656, T-2657, T-2493, T-2470, T-2468, T-2427, T-2469, T-2435, T-2490, T-2344, T-2544
+
+## PV, PMT and IRR near a rate of -1
+Rule (excel-graph, 2026-10-26, probes/t2657-pv-irr-div0): at a rate of -1+k*2^-52, PV is `#DIV/0!` and PMT `#NUM!` from
+the first n where (1+rate)^n is below the smallest normal double (2^-1022), not only where it is 0. `PV(-1+2^-52,20,-421)`
+((2^-52)^20 = 2^-1040, subnormal) is `#DIV/0!`, while `PV(-1+2*2^-52,20,-421)` (2^-1020, normal) is `#NUM!`, because the
+result overflows. `PV(-1+3*2^-52,20,-421)` is 1.422500710491959E+306 and `PV(-1+1024*2^-52,24,-421)` still a value,
+with `#DIV/0!` from n = 21 and 25 (P!A1:D29). PMT's `#NUM!` starts at the same n (P!I1:L29), and FV stays near 421
+(P!E1:H29). At rate -1, PV is `#DIV/0!`, PMT `#NUM!` and FV 421 (P!A40:A42). n = 0, 1E-300 and -1 are values
+(P!A53:A55), and 20.5 is `#DIV/0!`. `PV(-1+1E-200,5,-421)` and `PV(-1+1E-100,11,-421)` are `#DIV/0!`, and
+`PV(1E+300,2,-421)` is `#NUM!`.
+IRR over the flows {1E-15,42,3.14159,0.5,-0.5,-2.5,-2.5} (gen-m9/9d9ceba257f8001b Data!A6:D9, row by row) is `#DIV/0!`
+from every guess probed (omitted, 0.1, 1, 2, 5, 10 to 50, 100, 1000, 1E+6), except -0.5, which gives
+-0.38612871136992966 (I!A1:A21). With the first flow -1E-15 it is also `#DIV/0!`. With 1 or 1E-8 it is `#NUM!`.
+With 0, or with the first flow dropped, it is -0.38612871136908067 from every guess (I!B1:G6). So the error depends
+on the first flow's size (1E-15 against 1E-8). A plain-double replica of the fitted secant ("IRR is a secant in d")
+does not explain it: from 0.1 its first step is already a negative v (-0.37), and from 41.9999 it meets the v-stop at
+v = 2.4E-13 (rate 4.1E+12), where NPV is only the first flow, and its next step is negative. Not identified.
+Evidence: probes/t2657-pv-irr-div0 sheets P (PV, FV, PMT) and I (IRR; the flows on sheet D); salvaged from draft #1885.
+Ours (2026-11-04): every PV, FV and PMT cell passes. The 22 `#DIV/0!` IRR cells of sheet I are `#NUM!`.
+Status: VERIFIED (excel-graph) for the values; the IRR rule is UNVERIFIED
+Tasks: T-2657
 
 ## NPV's residue at IRR's root is not the double sum
 Rule: NPV divides by (1+r) once, at the end: NPV(r, v1..vn) = (v1/d0 + v2/d1 + ... + vn/d(n-1)) / (1+r), where d0 = 1
