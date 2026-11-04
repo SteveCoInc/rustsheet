@@ -44,9 +44,8 @@ brackets, while every tail Excel returns as a number stays a number.
   walks z = df1 x / 2 from 690 to 770 at (df1, df2) = (30, 1E8) in column A, (20, 1E7) in B and (31, 1E8) in C. Column D
   is FDIST at A's cut and column E is FDIST at T-4044's band shapes. Zero cells (Excel exactly 0):
   - probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!A18:A55, B19:B55, C15:C55, D1:D21
-  The last numbers are A17 (z 714), B18 (z 715) and C14 (z 711). This task owns those cells and these visibly-off ones:
-  - probes-numeric/t4045-f-dist-rt-zero-cut.case.json: Calc!E1, E4, E6 (FDIST `#NUM!` in T-4044's band; T-4044's
-    `f_bup_sum_overflows` makes them pass once it is on main)
+  The last numbers are A17 (z 714), B18 (z 715) and C14 (z 711). E1, E4 and E6 (FDIST `#NUM!` in T-4044's band) pass
+  with T-4044's `f_bup_sum_overflows`.
 
 ## Acceptance criteria
 - [x] A probes-numeric case (excel-graph, valid arity, milestone M9) brackets the zero cut on at least two shape
@@ -77,11 +76,13 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   around ln(DBL_MIN) = -708.396. Cuts on e^-z (708.4, 745.1) or on P itself (z near 726, 724, 722) miss. The threshold
   is the double range's own bound, not a constant read off cells, so it carries no `FITTED` tag and R4's guards do
   not apply.
-- Code: `bratio/bup.rs` `l140_bup_prefactor_underflows`, asked in `ported_tails_with`'s L140 bup+bgrat branch
-  (BETA.DIST's, the t's and F's callers) ahead of `l140_bup_bgrat` and its a0 <= 1E7 cap. Unit test
-  `upper_tail_is_zero_where_bups_prefactor_underflows` (fisher.rs).
+- Code: `bratio/bup.rs` `l140_bup_bgrat` returns 0 when its density or ret is below the normal range, ahead of its
+  a0 <= 1E7 cap and n cap. It used to fall back to today's kernel there. The change applies to BETA.DIST's, the t's and
+  F's L140 bup+bgrat calls, and BETA.INV's search through the same branch. Unit test
+  `upper_tail_is_zero_where_bups_prefactor_underflows` (fisher.rs). Follow-up T-4254 probes BETA.DIST and T.DIST.RT
+  at the edge.
 - Eval: every Excel 0 of t4045 (A18:A55, B19:B55, C15:C55, D1:D21) and of t4017 (this task's 11 cells) is now exact.
-  t4045's remaining off cells are E1, E4 and E6 (T-4044's band; they pass with #3237 on main) and E3
-  (`FDIST(1.5,80,1E10)` digits, T-4018). Gated suites: see the PR.
+  With T-4044 merged in, t4045's only off cell is E3 (`FDIST(1.5,80,1E10)` digits, owned by deferred T-3209).
+  Gated suites: fixed 0, regressions 0 (`make eval-baseline`).
 - statistics.md "Incomplete beta at a huge first shape": a new "Where the exact 0 starts" item. The df1 = 2 zeros come
   from Excel's closed form and stay unexplained (the engine already returns 0 there).
