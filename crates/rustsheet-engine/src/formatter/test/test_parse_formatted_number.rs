@@ -456,7 +456,8 @@ fn script_digits_are_mapped_only_by_the_coercion_helper() {
     );
     // Full-width digits stay text (probes/t3276-collation-other-scripts Calc!H6).
     assert_eq!(map("３"), "３");
-    // The typed-input parser does not map them yet (TODO(T-3891)).
+    // `parse_formatted_number` reads ASCII only: coercion maps first (`cast::number_text_in`), and
+    // typed input in `parse_typed_number` (T-3891).
     assert!(parse("٣", &[]).is_err());
 }
 
@@ -621,5 +622,93 @@ fn typed_bare_24_hour_clock() {
     // An hour of 24 or more with an out-of-range minute or second stays text (T-3903).
     for text in ["25:60", "24:60", "25:00:60", "25:61:00"] {
         assert!(fmt(text).is_err(), "{text}");
+    }
+}
+
+/// Typed script-digit text: Excel's value and locale-tagged format (excel-graph ENTERED logs,
+/// docs/research/t3446-script-digits-forms-2026-11-03.md, t3891-typed-script-digit-shapes-2026-11-04.md).
+#[test]
+fn typed_script_digits_take_tagged_formats() {
+    let typed = |s: &str| {
+        let locale = get_default_locale();
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            locale,
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_default()))
+    };
+    let currency = "[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)";
+    for (text, value, format) in [
+        ("١٢٣", 123.0, "[$-ar-SA,200]0"),
+        ("-١٢", -12.0, "[$-ar-SA,200]0"),
+        ("(١٢)", -12.0, "[$-ar-SA,200]0"),
+        ("+١٢", 12.0, "[$-ar-SA,200]0"),
+        ("١.٥", 1.5, "[$-ar-SA,200]0.#"),
+        (".٥", 0.5, "[$-ar-SA,200]0.#"),
+        ("١.٢٥", 1.25, "[$-ar-SA,200]0.##"),
+        ("١.٢٥٠", 1.25, "[$-ar-SA,200]0.###"),
+        ("١٢.٥٠", 12.5, "[$-ar-SA,200]0.##"),
+        (
+            "١٢٣٤٥٦٧٨٩٠١٢",
+            123_456_789_012.0,
+            "[$-ar-SA,200]0.#####E+00",
+        ),
+        ("١٢%", 0.12, "[$-ar-SA,200]0.00%"),
+        ("١٢.٥%", 0.125, "[$-ar-SA,200]0.00%"),
+        ("١,٢٣٤%", 12.34, "[$-ar-SA,200]0.00%"),
+        ("$١٢", 12.0, currency),
+        ("-$١٢", -12.0, currency),
+        ("$-١٢", -12.0, currency),
+        ("$١,٢٣٤.٥", 1234.5, currency),
+        ("١,٢٣٤", 1234.0, "[$-ar-SA,200]#,##0"),
+        ("(١,٢٣٤)", -1234.0, "[$-ar-SA,200]#,##0"),
+        ("١,٢٣٤.٥", 1234.5, "[$-ar-SA,200]#,##0.00"),
+        ("١e٣", 1000.0, "0.00E+00"),
+        ("١E-٣", 0.001, "0.00E+00"),
+        ("١ ١/٢", 1.5, "# ?/?"),
+        ("١ ١/١٢", 13.0 / 12.0, "# ??/??"),
+        ("٢٠٢٠-١-١", 43831.0, "[$-,200]mm/dd/yyyy"),
+        ("١/٢/٢٠٢٠", 43832.0, "[$-,200]mm/dd/yyyy"),
+        ("١ Jan ٢٠٢٠", 43831.0, "[$-,200]dd-mmm-yyyy"),
+        ("Jan ١, ٢٠٢٠", 43831.0, "[$-,200]dd-mmm-yyyy"),
+        ("١٢:٣٠:٤٥", 0.521_354_166_666_666_7, "[$-,200]h:mm:ss"),
+        ("١:٣٠ AM", 0.0625, "[$-,200]h:mm AM/PM"),
+        ("١ PM", 13.0 / 24.0, "[$-,200]h:mm AM/PM"),
+        ("١٢:٣٠.٥", 750.5 / 86400.0, "[$-,200]mm:ss.0"),
+        (
+            "٢٠٢٠-١-١ ١٢:٣٠",
+            43831.0 + 12.5 / 24.0,
+            "[$-,200]m/d/yyyy h:mm",
+        ),
+        // The last script digit names the block.
+        ("١२๓", 123.0, "[$-th-TH,D00]0"),
+        ("๓२١", 321.0, "[$-ar-SA,200]0"),
+        ("1٢३", 123.0, "[$-hi-IN,400]0"),
+        ("१٢3", 123.0, "[$-ar-SA,200]0"),
+        ("12٣", 123.0, "[$-ar-SA,200]0"),
+        ("۱२", 12.0, "[$-hi-IN,400]0"),
+        ("੧੨੩", 123.0, "[$-pa-IN,600]0"),
+        ("௧.௫", 1.5, "[$-ta-IN,900]0.#"),
+        (
+            "$౧౨",
+            12.0,
+            "[$$-te-IN,A00] #,##0.00_);[Red]([$$-te-IN,A00]#,##0.00)",
+        ),
+        ("១២:៣០", 0.520_833_333_333_333_4, "[$-,1200]h:mm"),
+        ("၁,၂၃၄", 1234.0, "[$-my-MM,1000]#,##0"),
+    ] {
+        let (v, f) = typed(text).unwrap_or_default();
+        assert!(
+            (v - value).abs() <= 1e-12 * value.abs().max(1.0),
+            "{text}: {v}"
+        );
+        assert_eq!(f, format, "{text}");
+    }
+    // Arabic punctuation is not read (probes/t3446-script-digits-forms B103:B105).
+    for text in ["١٫٥", "١٬٢٣٤", "١٢٪"] {
+        assert!(typed(text).is_err(), "{text}");
     }
 }

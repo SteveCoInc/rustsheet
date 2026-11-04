@@ -48,7 +48,8 @@ reproducing Excel's own algorithm where Excel is the inaccurate one).
 
 ## Evidence (T-4017)
 Sweep cases, whose visibly-off cells (the F tails above the mean at df1 other than 5, in the same band) this task owns:
-- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json
+- probes-numeric/t4017-f-huge-df2-above-mean-1e7.case.json (T-3754 moved 46 of its visibly-off cells into 15 digits by
+  taking L140 bup+bgrat up to a0 = 1E7; docs/research/t3754)
 - probes-numeric/t4017-f-huge-df2-above-mean-3e7.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-1e8.case.json
 - probes-numeric/t4017-f-huge-df2-above-mean-3e8.case.json

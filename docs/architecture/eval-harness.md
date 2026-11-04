@@ -91,6 +91,8 @@ Input conventions:
   formula Excel accepts as a name body, e.g. an intersection). A key `Sheet1!name` is a name scoped
   to that sheet.
 - Optional `"api_names": [{"name": "N", "formula": "=ABS(1)"}]` defines workbook-scoped names
+  (with `"sheet": "S"`, a name scoped to sheet S, replayed with Graph `worksheets('S')/names/add` and
+  `Txn::define_sheet_name`; T-4014)
   through the API after the typed entries and the sheet ops, in order (T-3264;
   `tools/src/rustsheet_tools/api_names.py`): spec2xlsx records them as docProps custom properties
   `rustsheet.apiname.<n>`, the excel-graph backend replays each with Graph `workbook/names/add`
@@ -200,8 +202,9 @@ Only `pass` counts as passing. Case statuses:
   either are listed by name, tagged `oracle: none` or `volatile`. Informational; never gated.
   A "Visibly off (fifteen digits)" section (T-0061, decision 0088) splits each suite's in-scope
   scored cells into the closeness buckets of `closeness.rs` (bit-exact, 1 ulp, 2–4 ulp,
-  `digits15` within half a unit in the 15th significant digit, `visible_numeric`,
-  `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
+  `digits15` within half a unit in the 15th significant digit, `residue13` for incomplete-beta
+  family numbers past it but within half a unit in the 13th (decision 0267, SPEC-0030; not visibly
+  off), `visible_numeric`, `visible_other`) and lists the functions with visibly-off cells, worst first. A visibly-off
   cell is blamed on the functions it calls other than glue (`closeness::GLUE`: IF, SUM, DATE,
   INDEX and the like), or on its glue when it calls nothing else.
   A "Parity tiers (glue-aware)" section (T-0068, decision 0118, `attribution.rs`) counts the

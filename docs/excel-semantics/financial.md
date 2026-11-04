@@ -1299,7 +1299,9 @@ Evidence (excel-graph, 2026-11-02, T-3698):
       Excel as here (the 1 + r floor), and the hold is a number.
     - R4.1 on firing cells only: the rule is bit-exact on 17 of 40 train and 5 of 14 test cells (the hold on 0 of
       each), against 48 of 240 out of sample.
-    - The choice of keep, narrow or revert waits on the owner's ruling (T-3916).
+    - Owner ruling (decision 0265, T-3916): the rule is kept as merged. A point whose root noise width exceeds ε is
+      judged against Excel's 15 digits only when a fit is checked, so A152 is outside under both paths and does not
+      count against the rule. A194 is accepted as the rule's one exit; T-3963 owns it with A26.
 - Every flow 0 (found by the batch's first draw): `RATE(1,702.59374702126,-702.59374702126,0,1)` is 0.09577777777777774
   in Excel. pv + pmt = 0 at t = 0 and fv = 0, so every rate is a root, and Excel returns its secant's iterate. The
   Gate A definition now treats such a point as having no single value (it is redrawn), not as a domain error.
@@ -1314,7 +1316,7 @@ Evidence (excel-graph, 2026-11-02, T-3698):
 Ours: `compute_rate` and `rate_secant` (functions/financial/financial_util.rs), T-3698.
 Status: VERIFIED (excel-graph, on the cells above) / UNVERIFIED (the step bound's position in 16..17; late
 restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0 <= -1; a noise-only residual)
-Tasks: T-3698, T-3424, T-3876
+Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
 Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
@@ -3525,6 +3527,19 @@ Ours: `fn_oddfyield` calls `odd_first_yield` (functions/financial/financial_bond
 from the coupon rate with a bisection fallback, landing on the root.
 Status: UNVERIFIED (a fitted structural model; the month-end long first periods are not explained); the values are oracle-backed.
 Tasks: T-2007 (the fit), T-3031 (the long first periods), T-1374 (ODDFPRICE's own last digits), T-1592 (YIELD)
+
+## ODDFYIELD's #NUM! at extreme prices
+Rule: across prices 1, 5, 500, 5000, 1E-3 and 1E-6, frequencies 1, 2 and 4, short and long odd first periods and
+coupon rates 0.05 and 0, ODDFYIELD is `#NUM!` in exactly two of 72 cells: the long first period (settlement
+2023-03-16, issue 2022-12-15, first coupon 2024-06-15, maturity 2030-06-15, basis 0), annual, 0% coupon, at prices 1E-3
+and 1E-6 (`ODDFYIELD(DATE(2023,3,16),DATE(2030,6,15),DATE(2022,12,15),DATE(2024,6,15),0,1E-3,100,1,0)`). Every other
+cell computes, at prices from 1E-6 (yields up to 92.4: short quarterly 0.05 at 1E-6) to 5000 (yields down to -0.596 at a 0% coupon and -0.585 at 0.05),
+including the long-first-period 0% bonds at semiannual and quarterly frequency (2.886 and 2.310 at 1E-3). So the `#NUM!` is the
+solver's non-finite step ("YIELD's #NUM! cells and its 100-step cap") and not a price limit of the function: no
+price in the sweep is rejected outright, and large and small prices alike converge or stop on the 100th iterate.
+Status: VERIFIED for the cell values (the mechanism is the engine's T-2007 model, which reproduces them).
+Tasks: T-3990, T-3031.
+Evidence: probes/oddfyield-extreme-price (T-3990), all 72 cells matching the engine in type and value (T-3031 follow-up).
 
 ## YIELD's #NUM! cells and its 100-step cap
 Rule: with more than one coupon left, YIELD is analytic Newton on PRICE from the fitted start ("YIELD stops short of

@@ -72,3 +72,16 @@ cells, so RATE's Gate A fails until they are settled.
 
 ## Out of scope
 - The cells of the right type that are not Excel's bits (T-3389).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 17 probes-numeric cells that no open task listed: 15 with the wrong type or error, 2 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3348-rate-gate-a-fresh.case.json (16): Calc!A59, A70, A74, A77, A89-A90, A95, A157, A162, A173, A251, A272, A275, A280, A285, A292
+- probes-numeric/t3348-rate-gate-a-sweep.case.json (1): Calc!A272
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

@@ -151,9 +151,9 @@ impl Tier {
             Tier::Unscored
         } else if cells.pass == scored {
             Tier::Exact
-        } else if visible == 0 && cells.digits15 == 0 {
+        } else if visible == 0 && cells.digits15 == 0 && cells.residue13 == 0 {
             Tier::Ulp4
-        } else if visible == 0 {
+        } else if visible == 0 && cells.residue13 == 0 {
             Tier::Digits15
         } else if share_at_least(RATE_NUM) {
             Tier::Rate999
@@ -170,9 +170,11 @@ impl Tier {
             Tier::Exact => "`exact`: every cell bit-exact",
             Tier::Ulp4 => "`ulp4`: every cell within 4 ulp",
             Tier::Digits15 => "`digits15`: every cell within 15 digits",
-            Tier::Rate999 => "`rate999`: ≥ 99.9% within 15 digits",
-            Tier::Rate99 => "`rate99`: ≥ 99% within 15 digits",
-            Tier::Below99 => "`below99`: < 99% within 15 digits",
+            Tier::Rate999 => {
+                "`rate999`: ≥ 99.9% not visibly off (15 digits; 13 for the decision 0267 family)"
+            }
+            Tier::Rate99 => "`rate99`: ≥ 99% not visibly off",
+            Tier::Below99 => "`below99`: < 99% not visibly off",
             Tier::Unscored => "`unscored`: no scored Excel cell",
         }
     }
@@ -372,6 +374,16 @@ mod tests {
         // Exactly 99% is still `rate99`.
         assert_eq!(Tier::of(&buckets(990, 0, 10)), Tier::Rate99);
         assert_eq!(Tier::of(&buckets(989, 0, 11)), Tier::Below99);
+        // Incomplete-beta residue (decision 0267) is not visibly off, but a function with any is
+        // no higher than `rate999`: `ulp4` and `digits15` mean every cell within 4 ulp or 15 digits.
+        let residue = |residue13: usize, ulp1: usize| Closeness {
+            ulp1,
+            residue13,
+            ..buckets(5, 0, 0)
+        };
+        assert_eq!(Tier::of(&residue(1, 0)), Tier::Rate999);
+        assert_eq!(Tier::of(&residue(1, 3)), Tier::Rate999);
+        assert_eq!(Tier::of(&residue(0, 3)), Tier::Ulp4);
         let other = Closeness {
             visible_other: 1,
             ..buckets(1, 0, 0)
@@ -446,7 +458,7 @@ mod tests {
         let md = report.to_markdown(1);
         assert!(md.contains("## Parity tiers (glue-aware)"), "{md}");
         assert!(
-            md.contains("| `below99`: < 99% within 15 digits | 4 | 4 |"),
+            md.contains("| `below99`: < 99% not visibly off | 4 | 4 |"),
             "{md}"
         );
         assert!(md.contains("| total | 4 | 4 |"), "{md}");
@@ -471,7 +483,7 @@ mod tests {
         let report = RunReport::build("e", &[r], &[], &catalog);
         let md = report.to_markdown(1);
         assert!(
-            md.contains("| `below99`: < 99% within 15 digits | 1 | 1 |"),
+            md.contains("| `below99`: < 99% not visibly off | 1 | 1 |"),
             "{md}"
         );
         assert!(

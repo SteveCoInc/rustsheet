@@ -227,3 +227,26 @@ fn rounding_at_the_shown_places_carries_into_the_integer_part() {
         "1.00"
     );
 }
+
+#[test]
+fn short_number_text_reads_through_the_x87_multiply() {
+    // probes-numeric/t3658-round-scaling Hits!C and E (excel-graph): the digits as written times
+    // 10^-n, rounded to 64 bits twice; 491 × 10^-8 is one ulp above the nearest double, 4910 × 10^-9
+    // is the nearest, and 14550 × 10^-15 is one above (T-3932).
+    let nearest = 0x3ED4_9812_85E9_8E79_u64;
+    let read = |text: &str| parse_excel_number(text).map(f64::to_bits);
+    assert_eq!(read("4.91E-06"), Some(nearest + 1));
+    assert_eq!(read("0.00000491"), Some(nearest + 1));
+    assert_eq!(
+        read("-0.00000491"),
+        Some((-f64::from_bits(nearest + 1)).to_bits())
+    );
+    assert_eq!(read("4910E-9"), Some(nearest));
+    assert_eq!(
+        read("14550E-15"),
+        Some(1.455_000_000_000_000_1e-11_f64.to_bits())
+    );
+    // Seven or more digits as written, and positive exponents, keep the nearest double.
+    assert_eq!(read("4.910000E-06"), Some(nearest));
+    assert_eq!(read("0.0000000491E+2"), Some(nearest));
+}

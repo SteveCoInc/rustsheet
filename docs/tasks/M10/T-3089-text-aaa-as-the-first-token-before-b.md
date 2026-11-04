@@ -4,7 +4,7 @@ title: "TEXT: aaa as the first token before b after B2[40409] gives code 51, not
 milestone: M10
 lane: functions-text
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

@@ -234,7 +234,7 @@ def complete_row(
             "visibly_off": data.phase1.visibly_off,
         },
         "tiers": {t.tier: t.functions for t in data.tiers},
-        "off_cells": {"numeric": cells[numeric], "other": cells[other]},
+        "off_cells": {"numeric": cells[numeric], "other": cells[other], "residue13": cells["residue13"]},
         "excel_cells": sum(cells.values()),
         "suites": {
             s.name: {
@@ -269,6 +269,11 @@ MEASURES: tuple[tuple[str, Callable[[Row], int]], ...] = (
     *((f"Functions in tier: {TIER_LABELS[t]}", _tier_measure(t)) for t in TIERS),
     ("Visibly-off attributed cells: number", lambda r: int(r["off_cells"]["numeric"])),
     ("Visibly-off attributed cells: type, error or text", lambda r: int(r["off_cells"]["other"])),
+    # Rows from before decision 0267 have no residue: they counted those cells as visibly off.
+    (
+        "Incomplete-beta residue, 14th or 15th digit (decision 0267)",
+        lambda r: int(r["off_cells"].get("residue13", 0)),
+    ),
     ("Attributed Excel cells", lambda r: int(r["excel_cells"])),
     ("Tasks done", lambda r: int(r["tasks"]["done"])),
 )

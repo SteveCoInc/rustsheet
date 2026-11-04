@@ -8,6 +8,9 @@
 ABS	exact	the argument or its negation, with no rounding
 ARABIC	exact	a whole number from a Roman numeral (numbers.md "ARABIC of a blank cell, and padded numerals")
 AREAS	exact	counts the areas of a reference
+AVERAGEIF	composite	range and average_range must be references, as for SUMIF (decision 0271); gen-m9, probes and probes-numeric drive it
+AVERAGEIFS	composite	range and average_range must be references, as for SUMIF (decision 0271); gen-m9, probes and probes-numeric drive it
+BIN2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
 BITAND	exact	integer bit operation on values below 2^48
 BITLSHIFT	exact	integer bit shift on values below 2^48
 BITOR	exact	integer bit operation on values below 2^48
@@ -16,14 +19,22 @@ BITXOR	exact	integer bit operation on values below 2^48
 CODE	exact	a character code
 COLUMN	exact	a column number
 COLUMNS	exact	a column count
+CONVERT	composite	takes unit names as text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
 COUNT	exact	counts cells
 COUNTA	exact	counts cells
 COUNTBLANK	exact	counts cells
 COUNTIF	exact	counts cells
 COUNTIFS	exact	counts cells
+COUPDAYBS	exact	a day count: whole days, 30/360 or actual (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPDAYS	exact	a period length in days: whole days, or 360 or 365 over the frequency, each exact in binary (financial.md "COUPDAYS basis 1 counts from the chained next coupon"; decision 0273)
+COUPDAYSNC	exact	COUPDAYS less COUPDAYBS or an actual day count, exact in binary (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPNCD	exact	a whole day serial on the coupon schedule (financial.md "Coupon dates keep the maturity's day"; decision 0273)
+COUPNUM	exact	a count of coupon periods (financial.md "Coupon schedules at the calendar's edges"; decision 0273)
+COUPPCD	exact	a whole day serial on the coupon schedule (financial.md "Coupon dates keep the maturity's day"; decision 0273)
 DATE	exact	an integer day serial
 DATEDIF	exact	whole days, months or years between truncated serials (dates.md "DATEDIF "MD" and "YD" day counts")
 DATEVALUE	exact	a whole serial from date text (dates.md "The en-US date-text grammar")
+DAVERAGE	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
 DAY	exact	an integer part of a day serial
 DAYS	exact	the difference of the truncated serials (gen-m6: DAYS(45000.75,38535) and DAYS(0.5,20009) match Excel)
 DAYS360	exact	a 30/360 count of whole days between truncated serials (dates.md "Serials below 61 in DATEDIF, EDATE, DAYS360")
@@ -31,30 +42,60 @@ DCOUNT	exact	counts database cells
 DCOUNTA	exact	counts database cells
 DECIMAL	composite	parses text in a base; numeric literals cannot drive it (engineering.md "DECIMAL of unreadable text"); gen-m5, gen-m9 and probes drive it
 DELTA	exact	returns 0 or 1
+DMAX	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DMIN	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DPRODUCT	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DSTDEV	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DSTDEVP	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DSUM	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DVAR	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
+DVARP	composite	a database and a criteria range, which must be references: Excel for the web refuses an array-literal database (criteria.md "D-function front end across all twelve functions"; decision 0270); gen-m9 and probes drive it
 EDATE	exact	a whole serial: the truncated start moved by whole months (dates.md: EDATE(0.5,1) = 31)
 EOMONTH	exact	a whole serial: a month's last day (dates.md: EOMONTH(0.5,1) = 59)
 ERROR.TYPE	exact	an error code
 FIND	exact	a character position
 FINDB	exact	a byte position
+FORECAST.ETS	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.CONFINT	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.SEASONALITY	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FORECAST.ETS.STAT	composite	Excel for the web never computes it, so no table can be filled (statistics.md "FORECAST.ETS family: excel-graph never computes it"; T-2425 owns it; decision 0271); gen-m9 and probes drive it
+FREQUENCY	exact	an array of counts (statistics.md "FREQUENCY: one row per bin plus one"; decision 0271)
 GCD	exact	integer GCD of arguments up to 2^53 (numbers.md "GCD / LCM argument bound")
 GESTEP	exact	returns 0 or 1
+HEX2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
+IMABS	composite	takes complex text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
+IMAGINARY	composite	the imaginary part parsed from complex text; numeric literals cannot drive it (decision 0270); gen-m9, probes and probes-numeric drive it
+IMARGUMENT	composite	takes complex text, which the generator has no kind for; T-4085 replaces this line with a table after T-4084 (decision 0270); gen-m9, probes and probes-numeric drive it
+IMREAL	composite	the real part parsed from complex text; numeric literals cannot drive it (decision 0270); gen-m9, probes and probes-numeric drive it
 ISOWEEKNUM	exact	an integer week number
+LARGE	exact	the k-th of its inputs (statistics.md "LARGE/SMALL: a fractional k rounds up for LARGE and down for SMALL"; decision 0271)
 LCM	exact	integer LCM, its result taken as the double at 2^53 (numbers.md "GCD / LCM argument bound")
 LEN	exact	a character count
 LENB	exact	a byte count
 MATCH	exact	a position
 MAX	exact	one of its arguments, with no rounding
+MAXA	exact	one of its input values (a range's text as 0, TRUE as 1), or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array", "Statistical function argument modes"; decision 0271)
+MAXIFS	composite	max_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
 MIN	exact	one of its arguments, with no rounding
+MINA	exact	one of its input values (a range's text as 0, TRUE as 1), or 0 with none (statistics.md "AVERAGEA, MAXA and MINA over an array", "Statistical function argument modes"; decision 0271)
+MINIFS	composite	min_range and criteria_range must be references, as for SUMIFS (decision 0271); gen-m9 and probes drive it
+MODE	exact	the most frequent of its inputs (statistics.md "Statistical function argument modes"; decision 0271)
+MODE.MULT	exact	an array of its most frequent inputs (statistics.md "Statistical function argument modes"; decision 0271)
+MODE.SNGL	exact	the most frequent of its inputs (statistics.md "Statistical function argument modes"; decision 0271)
 MONTH	exact	an integer part of a day serial
 MUNIT	exact	an identity matrix of 0s and 1s (numbers.md "RADIANS, SQRTPI and MUNIT")
 N	exact	the number itself, 1 or 0 for a logical and 0 for text, with no rounding
 NETWORKDAYS	exact	a count of whole working days (dates.md "WORKDAY and NETWORKDAYS from serial 0")
 NETWORKDAYS.INTL	exact	a count of whole working days (dates.md "WORKDAY.INTL and NETWORKDAYS.INTL: weekend number coercion")
 NUMBERVALUE	composite	parses text with given separators; numeric literals cannot drive it; gen-m5, gen-m9 and probes drive it
+OCT2DEC	exact	a whole number from at most 10 digits of base text, two's complement (engineering.md "Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2*"; decision 0270)
 PI	exact	a constant with no arguments: the double nearest pi
 RAND	composite	a volatile draw (decision 0225); its invariant cells are pinned by the probe case t3631-rand-randbetween-invariant
 RANDARRAY	composite	a volatile array draw (decision 0225); its invariant and degenerate-bound cells are pinned by the probe case t3631-randarray-invariant
 RANDBETWEEN	composite	a volatile draw (decision 0225); its invariant and degenerate-bound cells are pinned by the probe case t3631-rand-randbetween-invariant
+RANK	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
+RANK.AVG	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
+RANK.EQ	composite	ref must be a reference: Excel for the web refuses an array literal (statistics.md "RANK of a non-reference array"; decision 0271); gen-m9 and probes drive it
 ROW	exact	a row number
 ROWS	exact	a row count
 SEARCH	exact	a character position
@@ -63,6 +104,7 @@ SEQUENCE	composite	returns an array (arrays.md "Arrays past the grid: MAKEARRAY,
 SHEET	exact	a sheet number
 SHEETS	exact	a sheet count
 SIGN	exact	returns -1, 0 or 1
+SMALL	exact	the k-th of its inputs (statistics.md "LARGE/SMALL: a fractional k rounds up for LARGE and down for SMALL"; decision 0271)
 SUBTOTAL	composite	takes references only (references.md "SUBTOTAL and AREAS take references only"); gen-m5, gen-m6, gen-m7, gen-m9 and probes drive it
 SUMIF	composite	range and sum_range must be references; gen-m2, probes and ironcalc-calc drive it
 SUMIFS	composite	sum_range and criteria_range must be references; gen-m2, probes and ironcalc-calc drive it

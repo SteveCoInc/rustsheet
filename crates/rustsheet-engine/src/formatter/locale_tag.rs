@@ -118,7 +118,7 @@ pub enum LocaleTag {
     /// `[$-F400]` or `[$-x-systime]`: the section is the system long time.
     SystemTime,
     /// A tag Excel does not resolve (`[$-zzz]`, `[$-]`, `[$-FFFF]`) or one with no table here
-    /// (TODO(T-3666)), or a calendar digit over an LCID with no locale that is not modelled
+    /// (unprobed languages), or a calendar digit over an LCID with no locale that is not modelled
     /// (`without_locale`): it prints nothing and changes nothing (`TEXT(0.75,"[$-FFFF]h A/P")`
     /// keeps "6 P").
     Silent,
@@ -219,11 +219,26 @@ fn resolve_with(tag: &str, hijri_prefix: bool) -> LocaleTag {
 /// Myanmar digits; probes/t1924-locale-tag-extended-hex A26). It holds whatever the LCID resolves
 /// to (`[$-fr_FR-x]` keeps the workbook's names and `A/P` as written).
 pub fn numerals(tag: &str) -> Numerals {
+    if let Some((_, suffix)) = numeral_suffix(tag) {
+        return hex_value(suffix).map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 8));
+    }
     let value = hex_value(tag).or_else(|| match resolve_bcp47(tag, false) {
         LocaleTag::Silent => extended_hex(tag),
         _ => None,
     });
     value.map_or(Numerals::Ascii, |value| Numerals::from_byte(value >> 24))
+}
+
+/// The locale and numeral parts of a tag written `locale,N00`, the form Excel gives a cell typed
+/// with script digits (`[$-ar-SA,200]0`, `[$-,D00]h:mm`; probes/t3446-script-digits-forms): the
+/// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
+/// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
+/// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
+/// digits there although byte 32 is ASCII in the LCID form (A28; TODO(T-4107)). Only the digits
+/// are read this way: the locale part resolves as the whole tag always has (`[$-40C,1]` prints
+/// English names; probes/text-locale-date-names A106).
+fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {
+    tag.split_once(',')
 }
 
 /// `tag` read as a hex LCID with its calendar digits, if it is one.
@@ -429,10 +444,27 @@ fn table(lcid: u16) -> Option<&'static DateNames> {
         .map(|(_, _, names)| *names)
 }
 
+/// Whether `sublanguage` (bits 10-15 of an LCID) exists for `language`. An LCID with an undefined
+/// sublanguage has no locale and prints English with the letters kept for the day halves, not
+/// its language's names: `[$-2412]`, `[$-812]`, `[$-1412]` (Korean), `[$-2411]` (Japanese),
+/// `[$-2407]` (German) and `[$-1013]` (Dutch) all print "Jan|January|J" and "6 PM|6 P|6 p"
+/// (probes/text-locale-invalid-sublanguage; T-3666). Only the languages probed are bounded;
+/// the rest are taken as defined, as before. English is exempt: `[$-F409]` still reads as en-US
+/// (halves "PM").
+fn sublanguage_defined(language: u16, sublanguage: u16) -> bool {
+    let most = match language {
+        0x11 | 0x12 => 1,
+        0x07 => 5,
+        0x13 => 2,
+        _ => u16::MAX,
+    };
+    sublanguage <= most
+}
+
 /// The first table of `lcid`'s language, for an LCID with no table of its own.
 fn by_language(lcid: u16) -> Option<&'static DateNames> {
     let language = lcid & 0x3FF;
-    if language == 0 {
+    if language == 0 || !sublanguage_defined(language, lcid >> 10) {
         return None;
     }
     LOCALES

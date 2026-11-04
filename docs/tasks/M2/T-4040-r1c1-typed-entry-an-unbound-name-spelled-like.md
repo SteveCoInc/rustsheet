@@ -4,7 +4,7 @@ title: "R1C1 typed entry: an unbound name spelled like an A1 cell (f1, F1) is #N
 milestone: M2
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: opus
 depends_on: []

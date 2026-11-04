@@ -4,10 +4,11 @@ title: "IRR past the secant fit set: 50 T-3478 sweep cells off Excel (33 roots t
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P2
+priority: P0
 size: M
 tier: opus
 depends_on: []
+campaign: semantics
 ---
 
 ## Goal
@@ -72,3 +73,15 @@ on most of the rest it returns a number 10 to 15 digits from Excel's, so Excel s
 ## Out of scope
 - T-3347's near-zero roots and T-3406/T-3411's annuity boundary, except where one rule covers both (then say so in
   both tasks).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 66 probes-numeric cells that no open task listed: 50 with the wrong type or error, 3 first wrong at the 11th significant digit or earlier, 13 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3478-irr-r4-wide.case.json (66): Calc!A1-A2, A9, A12-A13, A15, A18-A19, A21-A22, A27, A32-A36, A40-A41, A43, A46, A48, A53, A60, A68-A70, A79, A83, A90, A102, A131, A135, A201, A206, A209-A210, A213, A216, A221, A229-A230, A234-A236, A242-A243, A249, A251, A256, A258, A261-A262, A266, A269-A270, A275-A277, A281-A282, A289-A291, A294, A296, A298
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

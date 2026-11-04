@@ -4,10 +4,11 @@ title: "GAMMA.INV band lower edge at shape 1E10: GAMMA.INV(1E-80,1E10,1) is #NUM
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
 depends_on: []
+campaign: semantics
 ---
 
 ## Goal
@@ -36,3 +37,15 @@ GAMMA.INV, CHISQ.INV and the other gamma quantiles at a huge shape are `#NUM!` e
 ## Out of scope
 - A model of Excel's whole search (T-3409). If T-3409's model explains A122, close this task as its duplicate.
 - The band's upper edge and the closed-form branch.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 3 probes-numeric cells that no open task listed: 3 with the wrong type or error.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/fit-audit-t3070-band-upper.case.json (3): S!A47-A49
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

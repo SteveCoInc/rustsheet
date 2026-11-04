@@ -1,0 +1,37 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4014: name N scoped to sheet S, defined through the API (Graph worksheets('S')/names/add) with a body of 65 nested ABS calls; S!A1 is `=N`, T!A1 `=S!N`: is the 65-call cap applied to a sheet-scoped name added after load?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "B1": "=ISFORMULA(A1)"
+   }
+  },
+  {
+   "name": "T",
+   "cells": {
+    "A1": "=S!N"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!B1",
+  "T!A1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(1)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))",
+   "sheet": "S"
+  }
+ ]
+}

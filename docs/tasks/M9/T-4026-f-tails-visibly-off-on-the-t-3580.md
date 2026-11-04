@@ -4,7 +4,7 @@ title: "F tails visibly off on the T-3580 fresh sweep: deep tails at general dfs
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: []
@@ -37,3 +37,16 @@ visibly off, or each remaining one is explained by an open, cited Excel quirk.
 ## Out of scope
 - F.INV, F.INV.RT and FINV (`f_quantile_tail`).
 - The bup misses of decision 0263 (bup's arithmetic on F's arguments).
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 6 probes-numeric cells that no open task listed: 6 first wrong at the 11th significant digit or earlier.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3567-r5-fdf1-hold.case.json (2): Calc!B1003, B1307
+- probes-numeric/t3580-f-fresh.case.json (4): Calc!B723, B751, B824, B848
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Visible-parity stage
+Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).

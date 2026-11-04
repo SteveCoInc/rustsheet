@@ -3,8 +3,8 @@ id: T-3950
 title: "The ^ operator keeps a subnormal at x^2 for x = 1E-160, 1E-155, 1.1E-155 (probes seriessum-subnormal-power-and-term)"
 milestone: M5
 lane: engine
-status: todo
-priority: P3
+status: done
+priority: P0
 size: S
 tier: sonnet
 depends_on: []
@@ -38,3 +38,6 @@ Owned cells:
 
 ## Out of scope
 - SERIESSUM's term (T-3949) and POWER, which already flush.
+
+## Outcome
+Added `arithmetic::operator_power`, used by the `^` operator only: at exponent 2 it keeps the subnormal square (`1E-160^2`, `1E-155^2`, `(1.1E-155)^2`); every other exponent, POWER and SERIESSUM still flush. Unit test `operator_keeps_a_subnormal_square_and_power_flushes_it`. Eval: probes/seriessum-subnormal-power-and-term 34/34 and seriessum-subnormal-term-sum-and-power-points 12/12 now pass (were 31/34 and 10/12); no regressions in any suite. Other exponents were not probed (stated in numbers.md and the code).

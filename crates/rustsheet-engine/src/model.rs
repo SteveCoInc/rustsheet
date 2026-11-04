@@ -1327,6 +1327,12 @@ impl Model {
     ) -> Result<Model, String> {
         // Before anything is built from it: the indices are untrusted (T-2913).
         crate::workbook_check::check_indices(&workbook)?;
+        // The iteration count and delta are untrusted too: a decoded count of 50 million made one
+        // recalculation of a one-cell cycle sweep for minutes under the fuzzer (T-4048).
+        workbook.settings.iteration = workbook
+            .settings
+            .iteration
+            .map(crate::iteration::Iteration::within_excel_range);
         workbook.rebuild_derived_state();
         let worksheets = &workbook.worksheets;
 

@@ -620,11 +620,16 @@ fn script_digits_tiebreak_by_block() {
 }
 
 /// T-3917 rule 1: `➿`, `ᡸ` and `₿` are equal to each other, above `""` and below `"!"`
-/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17).
+/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17). They are weightless
+/// (T-3904): Excel's `<` puts them above `""` by the prefix rule, while the total order and the
+/// key, which weigh them nothing, tie them with it.
 #[test]
 fn t3559_unknown_characters_weigh_alike() {
     for unknown in ["\u{27bf}", "\u{1878}", "\u{20bf}"] {
-        assert_increasing(&["", unknown, "!", "0"]);
+        let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+        assert_eq!(pairwise("", unknown), Ordering::Less);
+        assert_eq!(cmp_text_excel("", unknown), Ordering::Equal);
+        assert_increasing(&[unknown, "!", "0"]);
         assert_eq!(cmp_text_excel(unknown, "\u{27bf}"), Ordering::Equal);
     }
 }
@@ -697,4 +702,81 @@ fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
     let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));
     assert_eq!(cmp_text(&a, &b), Ordering::Less);
     assert_eq!(cmp_text(&b, &a), Ordering::Greater);
+}
+
+/// T-3904: weightless characters weigh nothing, except in the tail one text has beyond the
+/// other after a shared start of units below U+007B (coercion.md "Format characters, U+200B and
+/// the C1 controls (T-3662)"; probes/t3662-collation-ignorables, -prefix, -sweep).
+#[test]
+fn t3904_weightless_characters_and_the_prefix_rule() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    let same_key =
+        |a: &str, b: &str| collation_key(&Text::from(a)) == collation_key(&Text::from(b));
+    for c in ['\u{ad}', '\u{200d}', '\u{feff}', '\u{524}', '\u{e83}'] {
+        let equal = [
+            (format!("a{c}b"), "ab".to_owned()),
+            (format!("{c}ab"), "ab".to_owned()),
+            (format!("é{c}"), "é".to_owned()),
+            (format!("a~{c}"), "a~".to_owned()),
+            (format!("ab{c}"), format!("ab{c}{c}")),
+            (c.to_string(), "\u{525}".to_owned()),
+        ];
+        for (a, b) in &equal {
+            assert_eq!(pairwise(a, b), Ordering::Equal, "{a:?} = {b:?}");
+            assert!(same_key(a, b), "{a:?} and {b:?} share a key");
+        }
+        // The prefix rule: a shorter fast start is less, case aside, though the keys agree.
+        for (a, b) in [
+            ("ab".to_owned(), format!("ab{c}")),
+            ("AB".to_owned(), format!("ab{c}")),
+            (String::new(), c.to_string()),
+            ("a-".to_owned(), format!("a-{c}")),
+        ] {
+            assert_eq!(pairwise(&a, &b), Ordering::Less, "{a:?} < {b:?}");
+            assert_eq!(pairwise(&b, &a), Ordering::Greater, "{b:?} > {a:?}");
+            assert!(same_key(&a, &b), "{a:?} and {b:?} share a key");
+        }
+        // A difference goes to the collation: "ab"&c < "ac" and < "b" (-sweep F1, F5).
+        assert_eq!(pairwise(&format!("ab{c}"), "ac"), Ordering::Less);
+        assert_eq!(pairwise(&format!("ab{c}"), "b"), Ordering::Less);
+    }
+}
+
+/// T-4039: the Unicode spaces, U+200B and the C1 controls (probes/t4039-collation-space-forms).
+#[test]
+fn t4039_space_forms_zero_width_space_and_c1_controls() {
+    assert_increasing(&[
+        " ", "\u{3000}", "\u{202f}", "\u{a0}", "\t", "\u{2002}", "\u{2003}", "\u{2004}",
+        "\u{200a}", "\u{200b}", "!", "\u{ac}", "\u{2022}", "\u{80}", "\u{81}", "\u{9f}", "0",
+    ]);
+    assert_eq!(cmp_text_excel("\u{205f}", " "), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2000}", "\u{2002}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2001}", "\u{2003}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("a\u{200b}b", "ab"), Ordering::Less);
+}
+
+/// T-4072: U+202F is the space at the first pass, after U+3000; a mark after a weightless
+/// character is a lone mark (probes/t4060-collation-open-choices Calc!B2, K2, B50:B63).
+#[test]
+fn t4072_narrow_nbsp_and_marks_after_weightless_characters() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    assert_eq!(pairwise("\u{202f}a", " b"), Ordering::Less);
+    assert_increasing(&[" ", "\u{3000}", "\u{202f}", "\u{a0}"]);
+    for weightless in ['\u{ad}', '\u{524}'] {
+        let marked = format!("a{weightless}\u{301}");
+        assert_eq!(pairwise(&marked, "a"), Ordering::Greater, "{marked:?} > a");
+        assert_eq!(
+            pairwise(&marked, "\u{e1}"),
+            Ordering::Less,
+            "{marked:?} < á"
+        );
+        assert_eq!(pairwise(&format!("{marked}b"), "\u{e1}b"), Ordering::Less);
+        assert_eq!(pairwise(&format!("{marked}b"), "ab"), Ordering::Greater);
+        assert_eq!(
+            pairwise(&format!("{weightless}\u{301}"), "\u{301}"),
+            Ordering::Equal
+        );
+        // Without a mark after it, a weightless character still weighs nothing.
+        assert_eq!(pairwise(&format!("a{weightless}b"), "ab"), Ordering::Equal);
+    }
 }

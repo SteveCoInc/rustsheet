@@ -52,9 +52,14 @@ build: ## Release build of the eval harness
 
 # ---------------------------------------------------------------- Eval (Excel compatibility)
 .PHONY: eval eval-check eval-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
-eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}
+eval: build ## Run all suites; writes eval/runs/latest/report.{md,json}, then Gate A's eval/runs/accuracy.json (decision 0268)
 	$(PY) scripts/desktop_owned.py --out eval/runs/desktop-owned.tsv
 	$(EVAL_GUARDED) run --desktop-owned
+	@# Gate A for the Phase 1 exit verdict and the dashboard (decision 0268). A failing point does not fail
+	@# make eval (make check gates it); a crash leaves no JSON, which both read as not measured.
+	rm -f eval/runs/accuracy.json
+	$(EVAL_GUARDED) accuracy > eval/runs/latest/accuracy.txt 2>&1 || true
+	@grep -m 1 '^accuracy:' eval/runs/latest/accuracy.txt || echo 'accuracy: no summary; see eval/runs/latest/accuracy.txt'
 
 eval-check: build ## Gate: fail on any regression vs eval/baseline
 	$(EVAL_GUARDED) check

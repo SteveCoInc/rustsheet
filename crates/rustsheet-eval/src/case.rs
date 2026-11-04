@@ -402,6 +402,9 @@ impl SheetOp {
 pub struct ApiName {
     pub name: String,
     pub formula: String,
+    /// The sheet the name is scoped to; workbook scope when absent (T-4014).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sheet: Option<String>,
 }
 
 /// A self-contained workbook test case.
@@ -424,8 +427,9 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
-    /// Workbook-scoped names defined through the API after the sheet edits, in order (T-3264):
-    /// the oracle replays each with Graph `names/add`, the engine adapter with `Txn::define_name`.
+    /// Names defined through the API after the sheet edits, in order (T-3264): the oracle replays
+    /// each with Graph `names/add` (`worksheets('S')/names/add` for one scoped to a sheet, T-4014),
+    /// the engine adapter with `Txn::define_name` (`Txn::define_sheet_name`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub api_names: Vec<ApiName>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
