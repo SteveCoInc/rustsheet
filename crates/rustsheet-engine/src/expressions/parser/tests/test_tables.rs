@@ -267,7 +267,8 @@ fn bare_table_name_and_empty_brackets_are_the_data_area() {
     assert_eq!(expected, "ROWS(tblIncome[])");
     assert!(matches!(bare.ungrouped(), Node::FunctionKind { .. }));
     // A bare name keeps its text; `tblIncome[]` is read as the bare name (SPEC-0016).
-    // Names match ignoring case, and print in the table's own spelling (probes/t1683-formulatext-structured-refs F!B13).
+    // Names match ignoring case, and print in the table's own spelling
+    // (probes/t1683-formulatext-structured-refs F!B13).
     let t = parser.parse("ROWS(TBLINCOME)", &cell_reference);
     assert_eq!(to_excel_string(&t, &cell_reference), "ROWS(tblIncome[])");
     assert_eq!(to_rc_format(&t), "ROWS(tblIncome)");

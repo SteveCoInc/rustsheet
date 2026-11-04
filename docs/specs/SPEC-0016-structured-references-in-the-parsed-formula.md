@@ -168,8 +168,9 @@ The storage and in-engine printers print a `StructuredReferenceKind` from `refer
 canonical long form:
 `Table[[#Spec],[Col]]`, `Table[[#Spec],[A]:[B]]`, `Table[Col]`, `Table[[A]:[B]]`, `Table[#Spec]`
 or `Table[]`, except that `#This Row` prints in its `@` form (`Table[@Col]`, `Table[@[Two Words]]`,
-`Table[@]`; T-1683), and table and column names in the table's spelling (T-1683). Names that need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`),
-the inverse of `consume_escaped_until`. `ThisRowKind` is never printed on its own, because it
+`Table[@]`; T-1683), and table and column names in the table's spelling (T-1683). Names that
+need escaping get Excel's `'` escapes (`'[`, `']`, `'#`, `''`, `'@`), the inverse of
+`consume_escaped_until`. `ThisRowKind` is never printed on its own, because it
 only appears inside a wrapper. Where a wrapper prints its lowered area instead, the rule at the
 end of "Structural edits" applies.
 
@@ -308,7 +309,7 @@ parse-error value.
    decides what `to_excel_string` writes for it.
 
 ### Shared formulas and storage
-The storage text is now `Sales[[#This Row],[Qty]]` in every cell of a filled column. It does not
+The storage text is now `Sales[@Qty]` (the `@` form since T-1683) in every cell of a filled column. It does not
 depend on the cell, so one shared formula serves the whole column, as Excel stores it. Parsing it
 at `(1, 1)` is now correct, because nothing in `lowered` depends on the context row.
 
