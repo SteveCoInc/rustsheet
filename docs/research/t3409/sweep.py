@@ -4,6 +4,7 @@ probes/t2982-*, t3070-*, t3350-*, t3396-* and probes-numeric/fit-audit-t3070-*, 
 scored against Excel (the oracle sidecar) after the freeze.
 
     python3 sweep.py generate CASE.json
+    python3 sweep.py generate-wide CASE.json   # the second stratum (generate_wide)
 
 Strata (seed below):
 - region (120): GAMMA.INV, shape log-uniform over [3E8, 1.3E10], p log-uniform over [1E-300, 0.5]
@@ -94,8 +95,52 @@ def generate(path: str) -> None:
         out.write("\n")
 
 
-if __name__ == "__main__":
+def main() -> None:
     if len(sys.argv) == 3 and sys.argv[1] == "generate":
         generate(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "generate-wide":
+        generate_wide(sys.argv[2])
     else:
         sys.exit(__doc__)
+
+
+def generate_wide(path: str) -> None:
+    """The review's second stratum (drawn after the start rule went back to shape 1E9 and the limit
+    stayed 207): the shapes the search model now reaches outside the first sweep, 1E5 to 3E8
+    (GAMMA.INV 60, CHISQ.INV.RT 10, CHISQ.INV 10) and 1.3E10 to 1E12 (GAMMA.INV 30, CHISQ.INV.RT 10),
+    shape and p drawn as in the first sweep (seed 34092)."""
+    rng = random.Random(SEED * 10 + 2)
+    cells: dict[str, str] = {}
+    row = 1
+    for function, count, lo, hi in (
+        ("GAMMA.INV", 60, 1e5, 3e8),
+        ("CHISQ.INV.RT", 10, 1e5, 3e8),
+        ("CHISQ.INV", 10, 1e5, 3e8),
+        ("GAMMA.INV", 30, 1.3e10, 1e12),
+        ("CHISQ.INV.RT", 10, 1.3e10, 1e12),
+    ):
+        for _ in range(count):
+            while True:
+                shape = float(f"{10.0 ** rng.uniform(math.log10(lo), math.log10(hi)):.4g}")
+                text = literal(draw_p(rng))
+                if 0.0 < float(text) < 1.0:
+                    break
+            if function == "GAMMA.INV":
+                cells[f"A{row}"] = f"=GAMMA.INV({text},{literal(shape)},1)"
+            else:
+                cells[f"A{row}"] = f"={function}({text},{round(2 * shape)})"
+            row += 1
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": "T-3409 fresh sweep, second stratum (decision 0188 R4): GAMMA.INV, CHISQ.INV and CHISQ.INV.RT at shapes 1E5 to 3E8 and 1.3E10 to 1E12, drawn after the model was frozen by docs/research/t3409/sweep.py generate-wide.",
+        "tags": ["M9", "probe", "statistics", "T-3409", "sweep", "incomplete-gamma"],
+        "sheets": [{"name": "Calc", "cells": cells}],
+        "expected": {},
+    }
+    with open(path, "w", encoding="utf-8") as out:
+        json.dump(case, out, indent=1)
+        out.write("\n")
+
+
+if __name__ == "__main__":
+    main()

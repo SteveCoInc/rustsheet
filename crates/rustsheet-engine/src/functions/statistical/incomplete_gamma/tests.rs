@@ -551,13 +551,13 @@ fn huge_shape_quantile_has_excels_three_regimes() {
     assert!(huge_shape_quantile(6e8, 1.0, 1e-300, Tail::Lower, z300).is_nan());
     assert!(huge_shape_quantile(5e8, 1.0, 1e-300, Tail::Lower, z300).is_finite());
     assert!(huge_shape_quantile(1e10, 1.0, 1e-80, Tail::Lower, -18.991_635_878_820_205).is_nan());
-    // probes/t3350-chisq-inv-huge-df A205 `CHISQ.INV.RT(1E-300,5E6)` = 5119417.201267746, Excel's
-    // start (its density underflows), 2.6E-4 above the true quantile; A193 (df 2E6) is the true
-    // quantile. The closed form's fitted terms are 3.4E-9 off here (TODO(T-4205)).
-    let start = huge_shape_quantile(2.5e6, 2.0, 1e-300, Tail::Upper, -z300);
+    // probes/t3350-chisq-inv-huge-df A205 `CHISQ.INV.RT(1E-300,5E6)`: Excel is its start
+    // 5119417.201267746 (the density there underflows), but the start's fitted terms are 3.4E-9
+    // off below shape 1E9, so ours keeps the true quantile 5118069.30177... (TODO(T-4205)).
+    let ours = huge_shape_quantile(2.5e6, 2.0, 1e-300, Tail::Upper, -z300);
     assert!(
-        ((start - 5_119_417.201_267_746) / start).abs() <= 1e-8,
-        "{start}"
+        ((ours - 5_118_069.301_773_226) / ours).abs() <= 1e-14,
+        "{ours}"
     );
     // A371 `CHISQ.INV.RT(1E-100,1E10)`: the right tail's closed form at shape 5E9.
     let ours = huge_shape_quantile(5e9, 2.0, 1e-100, Tail::Upper, 21.273_453_560_965_32);
