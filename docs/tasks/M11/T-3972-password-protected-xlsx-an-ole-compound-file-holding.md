@@ -62,9 +62,9 @@ known failures that come from them are an accepted, documented refusal and not a
 - Changing what happens to deep-data.xlsx or the other refused poi files (T-0489, decision 0012).
 
 ## Outcome
-- Decision 0279 rules that password-protected workbooks (and legacy binary `.xls`, the same OLE container) are out of
-  scope for v1 and refused with a typed error. There is no password argument and no decryption. The two poi baseline
-  lines stay `!InvalidCase`, and no suite exclude is added.
+- Decision 0279 is a scope ruling, not a deviation (decision 0052). Until T-4243's spec closes the gap,
+  password-protected workbooks (and legacy binary `.xls`, the same OLE container) are refused with a typed error. The
+  two poi baseline lines stay `!InvalidCase`, owned by T-4243, and no suite exclude is added.
 - `XlsxError::OleCompoundFile` (thiserror, doc comment) is returned by `Package::new` when the first 8 bytes are the
   OLE compound-file signature, before the zip is opened. The one signature check is
   `rustsheet_xlsx::import::is_ole_compound_file`. The eval harness's xlsx snapshot reader also uses it, because it
@@ -73,6 +73,7 @@ known failures that come from them are an accepted, documented refusal and not a
   signature and a padded header. A short buffer and a near-miss signature still give `XlsxError::Zip`.
 - poi (fetched): 58616.xlsx and protected_passtika.xlsx now report "Encrypted Or Binary Workbook Error: the file is an
   OLE compound file ...". deep-data.xlsx is unchanged (a zip error, corrupt package, T-0489).
-- docs/excel-semantics/xlsx-storage.md has a new entry, "Password-protected and non-zip packages" (DEVIATION,
-  decision 0279).
+- docs/excel-semantics/xlsx-storage.md has a new entry, "Password-protected and non-zip packages": a known gap,
+  UNVERIFIED (probe pending) on Excel opening the fixtures with their passwords.
+- Follow-up: T-4243 (spec: password on the load API, ECMA-376 decryption, the `.xls` plan).
 - Eval delta: none (fixed 0, new-coverage 0, regressions 0). The baseline lines are by kind, so they do not change.

@@ -49,7 +49,7 @@ pub enum XlsxError {
     Limit { limit: ImportLimit, max: u64 },
     /// The file is an OLE compound file, not a zip package: a password-protected xlsx (an
     /// ECMA-376 `EncryptedPackage`) or a legacy binary workbook (`.xls`). Neither is read
-    /// (decision 0279).
+    /// yet (decision 0279; T-4243 specs reading them).
     #[error("Encrypted Or Binary Workbook Error: the file is an OLE compound file (a password-protected or legacy binary workbook), not an xlsx package")]
     OleCompoundFile,
 }
