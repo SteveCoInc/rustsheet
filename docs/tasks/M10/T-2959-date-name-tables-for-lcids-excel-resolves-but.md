@@ -3,7 +3,7 @@ id: T-2959
 title: "Date-name tables for LCIDs Excel resolves but we have no table for (bn-IN 445 prints the Latin Saka names)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
@@ -27,7 +27,7 @@ LCIDs Excel resolves, so the calendar digits apply. number-formats.md "Hebrew (8
 ## Out of scope
 -
 
-## Handoff
+## Handoff (resumed)
 Picked by a sonnet run; stopped before coding. The task needs oracle-evidenced Gregorian month/day names (native scripts) for
 bn-IN 0x445 and 0x44E, 0x449, 0x44A, 0x44B, 0x457, 0x461, plus a decision on tables vs. a "resolved LCIDs" list in
 `locale_tag.rs` / `locale/excel_date_names.rs`. No evidence exists in the repo yet (`rustsheet-oracle status`: excel-graph OK).
