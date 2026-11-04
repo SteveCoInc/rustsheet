@@ -231,7 +231,7 @@ fn reads_back_as_cell(name: &str) -> bool {
 /// reads a file's unbound `_xlpm.f1` as an undefined name too (`#NAME?`,
 /// probes/t4040-r1c1-unbound-cell-names A14:A16), though its FORMULATEXT then shows `_xlpm.f1`
 /// (TODO(T-4099)).
-pub(super) fn quoted_name_text(
+fn quoted_name_text(
     name: &str,
     context: Option<&CellReferenceRC>,
     export_to_excel: bool,
@@ -287,4 +287,16 @@ pub(super) fn callee_text(
     } else {
         name.to_string()
     }
+}
+
+/// A plain name called with arguments (an unknown identifier used as a function, a
+/// `LambdaCallKind`): lower case, to tell it from a real function call in the R1C1 form and to
+/// match the display of an invalid function; the quoted `'f1'` keeps its text (`='f1'(2)`,
+/// [`quoted_name_text`], T-4040).
+pub(super) fn called_variable_text(
+    name: &str,
+    context: Option<&CellReferenceRC>,
+    export_to_excel: bool,
+) -> String {
+    quoted_name_text(name, context, export_to_excel).unwrap_or_else(|| name.to_lowercase())
 }

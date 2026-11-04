@@ -23,7 +23,7 @@ use crate::expressions::token::OpUnary;
 use crate::expressions::types::CellReferenceRC;
 use crate::language::{get_default_language, Language};
 use crate::locale::{get_default_locale, Locale};
-use bound_variables::{callee_text, prefix_bound_variables, quoted_name_text, variable_text};
+use bound_variables::{called_variable_text, callee_text, prefix_bound_variables, variable_text};
 pub(crate) use literals::argument_separator;
 use literals::{format_number_locale, to_string_array_node};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
@@ -892,14 +892,9 @@ fn stringify(
             format!("{}({})", lambda_name, parts.join(arg_sep))
         }
         LambdaCallKind { lambda, args } => {
-            // When the callee is a plain named variable (unknown identifier used as a function),
-            // use lowercase to distinguish from real function calls in R1C1 format and
-            // to match the display behaviour of InvalidFunctionKind.
             let lambda_str = match lambda.as_ref() {
-                // The quoted `'f1'` keeps its text (`='f1'(2)`, T-4040).
                 Node::NamedVariableKind { name, id: _ } => {
-                    quoted_name_text(name, context, export_to_excel)
-                        .unwrap_or_else(|| name.to_lowercase())
+                    called_variable_text(name, context, export_to_excel)
                 }
                 other => callee_operand(sub(other), other),
             };
