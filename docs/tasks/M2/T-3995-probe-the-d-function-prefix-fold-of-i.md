@@ -3,7 +3,7 @@ id: T-3995
 title: "Probe the D-function prefix fold of İ, ϐ/β, ﬀ and other final forms under fold_lookup"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
