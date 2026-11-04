@@ -387,6 +387,14 @@ impl SheetOp {
     }
 }
 
+/// A defined name added through the API after load (`CaseSpec::api_names`, T-3264).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApiName {
+    pub name: String,
+    pub formula: String,
+}
+
 /// A self-contained workbook test case.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CaseSpec {
@@ -407,6 +415,10 @@ pub struct CaseSpec {
     /// Cell keys in `expected` and `check` use the sheet names after the edits.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sheet_ops: Vec<SheetOp>,
+    /// Workbook-scoped names defined through the API after the sheet edits, in order (T-3264):
+    /// the oracle replays each with Graph `names/add`, the engine adapter with `Txn::define_name`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub api_names: Vec<ApiName>,
     /// Workbook-scoped defined names: name → formula (e.g. `"=Sheet1!$A$1:$B$2"`).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub names: BTreeMap<String, String>,
