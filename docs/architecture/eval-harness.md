@@ -97,7 +97,8 @@ Input conventions:
   `{"op":"insert_row","sheet":"S","row":1}` inserts one blank row above the 1-based row, shifting
   the cells below down (T-1933; Graph `range(address='1:1')/insert`). T-2323 adds `delete_row`
   (`row`), `insert_column` and `delete_column` (`column`, a letter), `delete_sheet` and
-  `convert_table` / `delete_table` (`table`); see docs/architecture/oracle.md for the Graph calls
+  `convert_table` / `delete_table` (`table`), and T-3629 `add_table` (`table` and `ref`, the range with its
+  header row first, header cells set in the case); see docs/architecture/oracle.md for the Graph calls
   and decision 0098 for the engine side (`convert_table` is refused there). Any other op or key is
   refused. spec2xlsx records them as docProps custom properties `rustsheet.sheetop.<n>`. The
   excel-graph backend replays them in the session after the typed entries and keeps its canary

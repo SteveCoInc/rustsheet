@@ -83,6 +83,27 @@ fn spec_sheet_ops_apply_in_order_after_the_build() {
 }
 
 #[test]
+fn add_table_adds_a_named_table_after_a_convert() {
+    // T-3629: Sales is converted, then added again on K8:L11 under its old name; adding it a
+    // second time is refused because the name is taken, which shows the first add made it.
+    let json = |adds: usize| {
+        let add = r#"{"op":"add_table","sheet":"S","table":"Sales","ref":"K8:L11"}"#;
+        format!(
+            r#"{{"format":"rustsheet-case/v1",
+                "sheets":[{{"name":"S","cells":{{"B3":"Region","C3":"Qty","B4":"E","C4":1,
+                                                "K8":"Region","L8":"Qty","K9":"a","L9":10}},
+                           "tables":[{{"name":"Sales","ref":"B3:C4"}}]}}],
+                "sheet_ops":[{{"op":"convert_table","sheet":"S","table":"Sales"}},{}]}}"#,
+            vec![add; adds].join(",")
+        )
+    };
+    assert!(RustSheetEngine.evaluate_spec(&spec(&json(1)), None).is_ok());
+    assert!(RustSheetEngine
+        .evaluate_spec(&spec(&json(2)), None)
+        .is_err());
+}
+
+#[test]
 fn structural_sheet_ops_shift_cells_and_rewrite_references() {
     // T-2323: A3 refers to B2; a row delete above, a column insert left of it and a delete
     // of the sheet and the table named by the later ops all replay in order.

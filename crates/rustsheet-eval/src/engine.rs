@@ -374,6 +374,16 @@ fn apply_sheet_ops(workbook: &mut Workbook, ops: &[SheetOp]) -> Result<(), Strin
             SheetOp::ConvertTable { table, .. } => workbook
                 .convert_table_to_range(table)
                 .map(|()| workbook.recalculate()),
+            SheetOp::AddTable {
+                sheet,
+                table,
+                range,
+            } => {
+                let id = sheet_id_of(workbook, sheet)?;
+                workbook
+                    .edit(|tx| tx.add_table(range_ref(id, range)?, table, false))
+                    .map(drop)
+            }
             SheetOp::DeleteTable { table, .. } => workbook
                 .delete_table(table)
                 .map(|()| workbook.recalculate()),
