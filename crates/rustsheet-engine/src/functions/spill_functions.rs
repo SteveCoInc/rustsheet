@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::util::collation::{cmp_text_pairwise, collation_key, CollationKey};
-use super::util::{compare_values_pairwise, sort_indices_pairwise};
+use super::util::{coalesce_equal_lines, compare_values_pairwise, sort_indices_pairwise};
 
 /// Compare two sort keys following Excel's rules:
 ///   Numbers < Strings < Booleans < Errors < Empty cells
@@ -143,8 +143,9 @@ pub(crate) fn first_equal_lines<K: std::hash::Hash + Eq, E>(
 /// t3181-collation-prefix-arrays B1, B2; docs/excel-semantics/coercion.md "Not a total order").
 /// Lines are bucketed by their [`CellKey`]s, texts by [`collation_key`], which every pair the
 /// rule finds equal shares, and a line joins the first kept line of its bucket the rule finds
-/// equal to it. On an intransitive cycle Excel's grouping follows its sort order instead (G4);
-/// that is unmatched (T-3211 Outcome).
+/// equal to it. That is Excel's grouping only while `=` is transitive: data holding a text outside
+/// ASCII groups as Excel's merge meets its lines instead ([`coalesce_equal_lines`], T-4200), so
+/// `{a̧;a͂;a͂͂}` keeps three rows (probes/t3211-collation-sort-cycles G4).
 ///
 /// Texts can share a key and still be unequal (`"a"` plus 16, 32, 48 ... U+0302), so a bucket may
 /// hold many kept lines and the walk may compare each line with all of them: every comparison is
@@ -188,17 +189,38 @@ fn unique_of(
             })
             .fold(1, u64::saturating_add)
     };
-    let first = match first_equal_lines(
-        count,
-        |line| {
+    // Only texts outside ASCII compare intransitively (accents, weightless characters), so data
+    // without one groups by equality through the hash buckets; with one, lines group as Excel's
+    // merge meets them ([`coalesce_equal_lines`]; probes/t4200-unique-cycle-permutations).
+    let intransitive = data
+        .iter()
+        .flatten()
+        .any(|node| matches!(node, ArrayNode::String(text) if !text.is_ascii()));
+    let first = if intransitive {
+        let compare_lines = |a: usize, b: usize| {
             (0..length)
-                .map(|k| unique_cell_key(at(line, k)))
-                .collect::<Vec<_>>()
-        },
-        same_texts,
-        compare_units,
-        |units| model.spend_work(units, cell),
-    ) {
+                .map(|k| unique_cell_cmp(at(a, k), at(b, k), cell))
+                .find(|ordering| *ordering != Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        };
+        coalesce_equal_lines(count, |a, b| {
+            model.spend_work(compare_units(a, b), cell)?;
+            Ok(compare_lines(a, b))
+        })
+    } else {
+        first_equal_lines(
+            count,
+            |line| {
+                (0..length)
+                    .map(|k| unique_cell_key(at(line, k)))
+                    .collect::<Vec<_>>()
+            },
+            same_texts,
+            compare_units,
+            |units| model.spend_work(units, cell),
+        )
+    };
+    let first = match first {
         Ok(first) => first,
         Err(error) => return error,
     };
@@ -235,6 +257,29 @@ fn unique_of(
     } else {
         CalcResult::Array(lines.iter().map(|&r| data[r].clone()).collect())
     }
+}
+
+/// How UNIQUE orders two cells of a line when it merges ([`unique_of`]): two texts as Excel's `<`,
+/// `=`, `>` do ([`cmp_text_pairwise`]); other cells are equal exactly when their
+/// [`unique_cell_key`]s are, and otherwise ordered as SORT orders them ([`sort_key_cmp`]), ties
+/// such as 0 and -0 by their kind and bits, so that unequal cells never compare equal.
+fn unique_cell_cmp(a: &ArrayNode, b: &ArrayNode, cell: CellReferenceIndex) -> Ordering {
+    if let (ArrayNode::String(x), ArrayNode::String(y)) = (a, b) {
+        return cmp_text_pairwise(x, y);
+    }
+    let (key_a, key_b) = (unique_cell_key(a), unique_cell_key(b));
+    if key_a == key_b {
+        return Ordering::Equal;
+    }
+    let rank = |key: &CellKey| match key {
+        CellKey::Number(bits) => (0, *bits),
+        CellKey::Boolean(b) => (1, u64::from(*b)),
+        CellKey::Error(e) => (2, u64::from(*e)),
+        CellKey::Lambda(id) => (3, u64::try_from(*id).unwrap_or(u64::MAX)),
+        CellKey::Empty => (4, 0),
+        CellKey::Str(_) | CellKey::Collated(_) => (5, 0),
+    };
+    sort_key_cmp(a, b, true, cell).then_with(|| rank(&key_a).cmp(&rank(&key_b)))
 }
 
 /// UNIQUE's [`cell_key`]: a text is keyed by its [`collation_key`] (see [`unique_of`]).
