@@ -288,6 +288,8 @@ struct OddFirstSchedule {
     offset: f64,
     y: f64,
     accrued: f64,
+    /// The exponent shift of ODDFYIELD's slope ([`yield_solver::quasi_shift`], T-3031).
+    slope_shift: f64,
 }
 
 impl OddFirstSchedule {
@@ -346,6 +348,7 @@ impl OddFirstSchedule {
                 offset: -1.0,
                 y,
                 accrued: a / e * (rate / m) * 100.0,
+                slope_shift: 0.0,
             })
         } else {
             // --- Long odd first coupon period (spans several quasi-coupon periods) ---
@@ -384,6 +387,8 @@ impl OddFirstSchedule {
 
             let nq = coup_number(first_coupon, settlement, num_months, true)?;
             let n = coupon_count(first_coupon, maturity, frequency)? as f64;
+            let slope_shift =
+                yield_solver::quasi_shift(settlement, first_coupon, frequency, basis, e)?;
             let y = dsc / e;
             Ok(OddFirstSchedule {
                 m,
@@ -397,6 +402,7 @@ impl OddFirstSchedule {
                 offset: nq,
                 y,
                 accrued: 100.0 * rate / m * anl,
+                slope_shift,
             })
         }
     }

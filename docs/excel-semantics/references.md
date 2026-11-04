@@ -2718,11 +2718,23 @@ one end prints its displaced plain area, and a delete of every column or one str
 structured reference's text is `#REF!` (T-2911). Convert to range matches (T-2342): `Model::convert_table_to_range` prints each structured
 reference as the absolute area it lowered to (defined names too, T-2643). A cell with a `#This Row` reference
 off the data rows is kept as a *detached* structured reference (`StructuredReference::detached`, T-2763): it
-evaluates `#VALUE!` and prints `=Sales[@Qty]` as in Excel. It resolves against no table, so a later table of the
-same name does not take it back (unprobed, T-3629); it is stored with an engine-only `[!]` prefix (`[!]Sales[[#This
+evaluates `#VALUE!` and prints `=Sales[@Qty]`. It resolves against no table, so a later table of the
+same name does not take it back; it is stored with an engine-only `[!]` prefix (`[!]Sales[[#This
 Row],[Qty]]`, which typed or loaded text refuses) so it survives reparses and structural edits, and the xlsx
-export writes it as `#VALUE!` (a file never holds a structured reference without its table part; what Excel
-writes for it is unprobed, T-3629). One on a data row is lowered at its row, as Excel does (T-2643, T-2763). A deleted table or sheet matches
+export writes it as `#VALUE!`.
+Excel does otherwise (T-3629, probes/table-edits/t3629-*, excel-graph 2026-11-04; engine change T-4020): after
+`convertToRange` of Sales (S!B3:C7), `=Sales[[#This Row],[Qty]]` in F1 and F9 (above and below the table) is
+`#REF!` with FORMULATEXT `=#REF!`, and Excel's own save (the oracle's download) writes `<f>#REF!</f>` for both,
+so a reload reads `#REF!` (t3629-convert-plain, t3629-convert-names with the defined names `=Sales[Qty]` and
+`=Sales[#All]` still reading the lowered range, t3629-save-detached). A data-row one (H5) is lowered to `$C5`.
+A table named Sales added afterwards (`add_table` sheet op, Graph `tables/add` and a rename), over B3:C7 or over
+K8:L11 so that F9's row is a data row of it, does not take F1 or F9 back: both stay `#REF!` (t3629-readd-same-area,
+t3629-readd-other-area). T-2763's evidence for the detached `#VALUE!` and `=Sales[@Qty]`
+(table-convert-names-this-row, 2026-10-25) is doubtful: that case also holds a `#This Row` of Sales on sheet T,
+and with such a cross-sheet reference present Graph's `convertToRange` answered success but left the table in
+place (T-3629's saved workbooks still defined Sales on B3:C7, so those runs were dropped; T-4021 makes the
+replay check its table ops). Re-running table-convert-names-this-row on 2026-11-04 crashed Excel's
+recalculation twice (`InvalidSession`, `InternalErrorCrash`); its sidecar was kept. One on a data row is lowered at its row, as Excel does (T-2643, T-2763). A deleted table or sheet matches
 (T-2340): `delete_table` and `take_sheet` rewrite the stored text of every structured reference to the
 removed tables (bare `Sales` included) to `#REF!` (`Model::rewrite_table_references`, tables.rs), and an
 undo of the sheet delete (`restore_sheet`, `UserModel` undo) puts the old text back; a reference to a
@@ -2734,7 +2746,7 @@ xlsx export writes `S!C4:C7` where Excel stores `#REF!C4:C7`. The `#REF!` displa
 existed (a loaded `Nope!A1`), an engine choice with no evidence. The adapter's delete_table clears the whole table range (header, text and Qty columns: COUNTA 0 each)
 and keeps the rows in place: `S!C9` still 99 and `SUM(S!C9:C10)` still 104 with unshifted text
 (T-2341, table-delete-table-cells, excel-graph 2026-10-22).
-Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734
+Tasks: T-2197, T-2323, T-2324, T-2325, T-2297, T-2338, T-2339, T-2340, T-2341, T-2342, T-2643, T-2855, T-2911, T-2899, T-3733, T-3734, T-3629, T-4020, T-4021
 
 ## Calculated columns: a formula typed into a table column
 Rule (excel-graph `entered` cells, typed one at a time in the case's order, 2026-10-27, T-2957; table `T` A1:C4,

@@ -16,6 +16,7 @@ defer: phase-1b
 form misses, or the Outcome records them as the reflection's evidence.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task, deferred ones included, and every unmerged branch's task files). T-3192
   (done) drew probes-numeric/t3192-beta-half-half-3 as its R4.2 fresh sweep after freezing the direct form: 239 of 300

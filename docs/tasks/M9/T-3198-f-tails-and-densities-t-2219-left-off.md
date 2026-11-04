@@ -74,6 +74,9 @@ reference; values are Excel's and ours on main 93a939d2.
 - **A26.** Ours is 1.2e-15 off the reference and Excel 3.2e-16 off, inside Excel's chain-model density (`f_density.rs`).
 - **A30.** Both are about 1e-14 off on the same side, so it is likely the chain model's own error.
 
+- Gap triage 2026-11-04: two rows above are visibly off in gen-m9, a Gate B suite, and now have non-deferred owners:
+  2801c1c11c21e134 A374 is T-4016's, and 7bd219ec0c0c5e22 A349 (Excel +6.7E-15 from the math) is T-4018's.
+
 ## Progress (2026-11-03, evidence PR)
 This opus run measured the L140 bup+bpser branch and probed Excel at its F points. It changed no code, so the three
 probe cells stay open. The finding is in statistics.md, "Incomplete beta L140 bup+bpser at the F points".

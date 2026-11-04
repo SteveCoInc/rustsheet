@@ -35,6 +35,7 @@ def test_each_op_is_recorded_in_order() -> None:
         {"op": "delete_column", "sheet": "Calc", "column": "Z", "count": 3},
         {"op": "convert_table", "sheet": "Calc", "table": "Sales"},
         {"op": "delete_table", "sheet": "Calc", "table": "Sales"},
+        {"op": "add_table", "sheet": "Calc", "table": "Sales", "ref": "k8:L11"},
         {"op": "delete_sheet", "sheet": "New"},
     ]
     xlsx = build_xlsx(_spec(ops))
@@ -52,6 +53,7 @@ def test_each_op_is_recorded_in_order() -> None:
         ("delete_column", "Calc", "Z:AB"),
         ("convert_table", "Calc", "Sales"),
         ("delete_table", "Calc", "Sales"),
+        ("add_table", "Calc", "Sales K8:L11"),
         ("delete_sheet", "New", None),
     ]
     assert sheet_ops(xlsx) == expected
@@ -214,3 +216,49 @@ def test_column_letters_invert_column_number() -> None:
         "XFD",
     ]
     assert all(column_number(column_letters(n)) == n for n in range(1, 800))
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        {"op": "add_table", "sheet": "S", "table": "Sales"},
+        {"op": "add_table", "sheet": "S", "table": "Sales", "ref": "B3"},
+        {"op": "add_table", "sheet": "S", "table": "My Sales", "ref": "B3:C7"},
+        {"op": "add_table", "sheet": "S", "table": "Sales B3:C7"},
+        {"op": "convert_table", "sheet": "S", "table": "Sales", "ref": "B3:C7"},
+    ],
+)
+def test_malformed_add_table_ops_are_refused(op: dict[str, Any]) -> None:
+    # T-3629: a spec gives `table` and `ref` apart; only the recording joins them.
+    with pytest.raises(ValueError, match="sheet op"):
+        build_xlsx(_spec([op]))
+
+
+def test_graph_adds_renames_and_reads_back_a_table(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in ("TENANT_ID", "CLIENT_ID", "CLIENT_SECRET", "DRIVE_ID"):
+        monkeypatch.setenv(f"RUSTSHEET_ORACLE_{var}", "x")
+    graph = GraphBackend()
+    calls: list[tuple[str, str, Any]] = []
+    named = {"name": "Table1"}
+
+    def call(method: str, url: str, **kw: Any) -> Any:
+        tail = unquote(url.rsplit("/workbook/", 1)[-1])
+        calls.append((method, tail, kw.get("json")))
+        if method == "PATCH" and tail == "tables('7')":
+            named["name"] = kw["json"]["name"]
+        body = {"id": "7", **named} if "tables" in tail else {"position": 0}
+        return SimpleNamespace(json=lambda: body)
+
+    monkeypatch.setattr(graph, "_call", call)
+    graph._replay_sheet_ops("https://x/items/1", {}, [("add_table", "S", "Sales K8:L11")])
+    assert calls == [
+        ("POST", "worksheets('S')/tables/add", {"address": "K8:L11", "hasHeaders": True}),
+        ("PATCH", "tables('7')", {"name": "Sales"}),
+        ("GET", "tables('7')", None),
+    ]
+    # Excel kept its own name: the rename did not happen, so the replay fails.
+    monkeypatch.setattr(
+        graph, "_call", lambda *_, **__: SimpleNamespace(json=lambda: {"id": "7", "name": "Table2"})
+    )
+    with pytest.raises(OracleError, match="Excel named it 'Table2'"):
+        graph._replay_sheet_ops("https://x/items/1", {}, [("add_table", "S", "Sales K8:L11")])

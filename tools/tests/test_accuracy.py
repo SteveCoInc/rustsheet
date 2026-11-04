@@ -201,7 +201,8 @@ def test_definitions_follow_the_catalog_parameter_order() -> None:
     catalog = yaml.safe_load((repo_root() / "eval" / "catalog" / "functions.yaml").read_text())
     params = {f["name"]: [p["name"] for p in f.get("params", [])] for f in catalog["functions"]}
     for name, definition in REGISTRY.items():
-        mine = [p.name for p in definition.params]
+        # an indexed definition's last two parameters are INDEX's, not the function's (T-3686)
+        mine = [p.name for p in definition.params[: -2 if definition.indexed else None]]
         assert params[name][: len(mine)] == mine, name
 
 

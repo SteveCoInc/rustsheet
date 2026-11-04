@@ -18,6 +18,7 @@ digits but not to Excel's bits, match Excel to the bit, by a rule for Excel's Q(
 hold-out split (decision 0056 time box). The cells stay named here until then.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01g (`make eval` on origin/main c0e330c2f, excel-graph). `scripts/exit_owners.py`'s `owned` rule,
   run over every failing cell (not only the visibly-off ones) against the open task files of origin/main and of every
   `origin/agent/*` task and triage branch, found exactly these POISSON cells with no open owner. T-3269 (done) named

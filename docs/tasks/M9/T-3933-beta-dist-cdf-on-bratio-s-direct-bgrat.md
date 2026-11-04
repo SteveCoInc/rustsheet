@@ -17,6 +17,7 @@ a0 != 1/2, b0 > 15) is computed by the accurate double-double bgrat the engine a
 most of probes-numeric t2512-r3-bgrat-split's 2,908 cells come within 15 digits of Excel.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03 b. `make eval` on origin/main 07e0c0a8c: probes-numeric t2512-r3-bgrat-split (2,908 BETA.DIST
   cells, excel-graph) passes 35; 2,873 fail (2,524 NumericClose, 349 NumericUlp) and 2,168 are visibly off at the 15th
   digit. `r1c_left_out` classes all 2,168 `phase1b` (both values within 1e-9 of the math), so they leave the M9 exit

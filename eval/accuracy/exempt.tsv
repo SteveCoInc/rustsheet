@@ -44,10 +44,7 @@ LEN	exact	a character count
 LENB	exact	a byte count
 MATCH	exact	a position
 MAX	exact	one of its arguments, with no rounding
-MDETERM	composite	a 2-D matrix argument the table's one-row array literal cannot write (arrays.md "MDETERM: partial-pivot LU"); gen-m5, gen-m9 and probes drive it
 MIN	exact	one of its arguments, with no rounding
-MINVERSE	composite	a 2-D matrix argument and an array result (arrays.md "MINVERSE: singularity rule"); gen-m5, gen-m9 and probes drive it
-MMULT	composite	2-D matrix arguments and an array result; gen-m5, gen-m9 and probes drive it
 MONTH	exact	an integer part of a day serial
 MUNIT	exact	an identity matrix of 0s and 1s (numbers.md "RADIANS, SQRTPI and MUNIT")
 N	exact	the number itself, 1 or 0 for a logical and 0 for text, with no rounding

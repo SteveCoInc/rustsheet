@@ -17,6 +17,7 @@ still a number) matches Excel to the bit on the four T-2561 edge probes, or with
 of their 1,320 cells are 1 to 4 ulp off (386 by 1, 32 by 2, one by 4) and no task owns them.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (gamma quantile) measured on t3311-gamma-inv-lower-tail-cdf, 0 of 899 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on b98b3c00d). All four cases are excel-graph, from T-2561 (statistics.md
   "CHISQ.INV.RT and CHIINV quirks", the `#NUM!` edge bullet). Since T-2561 every cell has Excel's type, error and
   value class. What is left is 419 cells within 4 ulp of Excel, none visibly off. T-3310 owns the three other failing

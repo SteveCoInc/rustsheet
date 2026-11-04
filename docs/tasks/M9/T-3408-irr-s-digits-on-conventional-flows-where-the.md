@@ -37,5 +37,19 @@ IRR returns Excel's value to 15 significant digits on the conventional cash-flow
 - [ ] No gated cell regresses.
 - [ ] `make check` green; reviewers approve.
 
+
+## Cells of T-3411's fresh sweeps
+T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model), where the engine returns the root on digits other than Excel's:
+- probes-numeric/t3411-irr-r4-fresh-3.case.json (7): Calc!A53, A58, A62, A66, A73, A106, A134
+- probes-numeric/t3411-irr-r4-fresh-4.case.json (2): Calc!A58, A75
+- probes-numeric/t3411-irr-residual-scale.case.json (7): Calc!A10, A22, A23, A31, A32, A48, A49
+
+## Cells left by T-3411's close (gap triage 2026-11-04b)
+T-3411's R4 sweeps 1 and 2, which T-3411 owned until it closed and no open task named after it: the engine returns
+the root on digits more than 15 significant digits from Excel's (`make eval` on origin/main a7b115e9e; e.g. fresh
+A53 Excel -0.00016023194079306524, engine -0.00016023193850578377). Lifting the fallback's Newton cap moves none.
+- probes-numeric/t3411-irr-r4-fresh.case.json (7): Calc!A53, A63, A67, A68, A74, A75, A146
+- probes-numeric/t3411-irr-r4-fresh-2.case.json (7): Calc!A53, A60, A64, A75, A119, A125, A147
+
 ## Out of scope
 - Bit-level parity (Phase 1b, decision 0188 R5).

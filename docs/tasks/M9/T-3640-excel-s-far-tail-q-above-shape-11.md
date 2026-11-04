@@ -17,6 +17,7 @@ applied today, above shape 11 at 30 < x <= 600 and at every shape past x = 600, 
 there (or finding the form Excel uses instead), so the 37 cells below are within 15 digits of Excel.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01: these cells of probes-numeric/t3269-fresh-sweep (T-3269's first fresh sweep, 240 cells,
   excel-graph) are visibly off and no open task named them. T-3269's rework (decision 0203, decision 0188 R4.3) applies
   the Stirling-ratio form only at shapes 3/2 to 11 and 30 < x <= 600 (`incomplete_gamma/excel_tail.rs`

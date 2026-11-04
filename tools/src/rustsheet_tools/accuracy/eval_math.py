@@ -13,6 +13,8 @@ A candidate cell gets no math value when:
   exact-input cell), which is read with Excel's operator model as the fit lab reads it;
 - an argument is anything else the fit lab's sweep reader leaves unparsed (a nested call), text,
   empty or a range;
+- the case is a 1904 workbook and the definition reads date serials in the 1900 system
+  (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
 - an integer parameter is given a non-integer (the definitions take integers; whether Excel
   truncates is per function, so the cell is skipped rather than guessed), a logical parameter is
   given a number (likewise unevidenced per function), or the call has a
@@ -146,8 +148,9 @@ def array_elements(value: Any) -> tuple[float, ...] | str:
 
 def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     """One argument as the parameter's kind, or why it does not fit."""
-    if param.kind == "array":
-        return array_elements(value)
+    if param.kind in ("array", "matrix"):
+        # a matrix needs its shape, which the sweep reader flattens (TODO(T-4025))
+        return array_elements(value) if param.kind == "array" else "a matrix argument"
     if isinstance(value, list) or value is None or isinstance(value, str):
         return "non-numeric argument"
     if param.kind == "bool":
@@ -213,6 +216,9 @@ def candidates(case_path: Path, sidecar: Path) -> list[Candidate]:
             continue
         definition = REGISTRY.get(call[0])
         if definition is None:
+            continue
+        if definition.serials_1900 and spec.get("date_system") == 1904:
+            out.append(Candidate(sheet, a1, text, definition, "a 1904 workbook"))
             continue
         try:
             values = [parse_arg(a, sheet, book) for a in split_args(call[1])]

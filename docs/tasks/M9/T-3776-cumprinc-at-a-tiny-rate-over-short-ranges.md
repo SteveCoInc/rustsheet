@@ -22,6 +22,7 @@ the one-period principals and found no form above 34% bit-exact (the engine has 
 Attempt 3 needs a new idea first (T-3731's "Attempts", next step), not more candidates of these families.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe fin-cumipmt-tiny-rate-structure: 0 of its 226 cells changed over three fills (its cells there); see docs/research/t3992/README.md.
 - Attempt 1 (T-3552) and attempt 2 (T-3731) found no form. Their task files' "Attempts" sections score every
   candidate, and financial.md "CUMIPMT and CUMPRINC over many periods" has the measured facts. T-3731's task file also
   describes the rule, the code path (functions/financial/cumulative.rs, the short-range forms below

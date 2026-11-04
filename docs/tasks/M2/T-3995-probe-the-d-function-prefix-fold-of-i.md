@@ -3,7 +3,7 @@ id: T-3995
 title: "Probe the D-function prefix fold of İ, ϐ/β, ﬀ and other final forms under fold_lookup"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,9 +26,15 @@ Cyrillic final forms other than `ς`, and criteria.md's UNVERIFIED line for them
   columns for comparison.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe covers the keys above; criteria.md states the D-function fold for them with cells.
-- [ ] The engine matches the probe, or every off cell is owned by a task.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe covers the keys above; criteria.md states the D-function fold for them with cells.
+- [x] The engine matches the probe, or every off cell is owned by a task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `=` and COUNTIF's non-wildcard equality (T-3904).
+
+## Outcome
+Probe `probes/t3995-dfunction-fold-final-forms` (excel-graph, 2026-11-04): D-function plain prefix and wildcard criteria
+leave `İ`/`i`, `ϐ`/`β`, `ﬀ`/`ff` apart and fold the Hebrew final forms `ך ם ן ף` with `כ מ נ פ` (as `ץ`/`צ`).
+The engine's lookup fold lacked those four classes; added to `lookup_fold.rs` CLASSES. criteria.md updated. Probe case
+passes (228 cells), including exact-MATCH controls (Calc!F). lookup.md and scripts.rs comment updated. No other cells off.

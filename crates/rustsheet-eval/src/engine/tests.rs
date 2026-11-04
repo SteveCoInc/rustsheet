@@ -83,6 +83,77 @@ fn spec_sheet_ops_apply_in_order_after_the_build() {
 }
 
 #[test]
+fn add_table_adds_a_named_table_after_a_convert() {
+    // T-3629: Sales is converted, then added again on K8:L11 under its old name; adding it a
+    // second time is refused because the name is taken, which shows the first add made it.
+    let json = |adds: usize| {
+        let add = r#"{"op":"add_table","sheet":"S","table":"Sales","ref":"K8:L11"}"#;
+        format!(
+            r#"{{"format":"rustsheet-case/v1",
+                "sheets":[{{"name":"S","cells":{{"B3":"Region","C3":"Qty","B4":"E","C4":1,
+                                                "K8":"Region","L8":"Qty","K9":"a","L9":10}},
+                           "tables":[{{"name":"Sales","ref":"B3:C4"}}]}}],
+                "sheet_ops":[{{"op":"convert_table","sheet":"S","table":"Sales"}},{}]}}"#,
+            vec![add; adds].join(",")
+        )
+    };
+    assert!(RustSheetEngine.evaluate_spec(&spec(&json(1)), None).is_ok());
+    assert!(RustSheetEngine
+        .evaluate_spec(&spec(&json(2)), None)
+        .is_err());
+}
+
+#[test]
+fn api_names_are_defined_after_load_and_a_refused_one_stays_undefined() {
+    // T-3264: Excel's `names/add` takes a 65-call body and refuses a 66-call one, which leaves
+    // the name undefined (probes/t3264-api-name-65, -66); any other refusal fails the case.
+    let body = |calls: usize| format!("={}1{}", "ABS(".repeat(calls), ")".repeat(calls));
+    let json = |calls: usize| {
+        format!(
+            r#"{{"format":"rustsheet-case/v1","sheets":[{{"name":"S","cells":{{"A1":"=N"}}}}],
+                "api_names":[{{"name":"N","formula":"{}"}}]}}"#,
+            body(calls)
+        )
+    };
+    let a1 = |calls| {
+        RustSheetEngine
+            .evaluate_spec(&spec(&json(calls)), None)
+            .expect("evaluates")
+            .value("S", Addr { row: 1, col: 1 })
+    };
+    assert_eq!(a1(65), Some(Value::Number(1.0)));
+    assert_eq!(a1(66), Some(Value::Error("#NAME?".into())));
+    let bad = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{}}],
+            "api_names":[{"name":"A1","formula":"=1"}]}"#,
+    );
+    assert!(RustSheetEngine.evaluate_spec(&bad, None).is_err());
+}
+
+#[test]
+fn a_sheet_scoped_api_name_is_defined_on_its_sheet() {
+    // T-4014: `"sheet": "S"` defines N scoped to S (Graph `worksheets('S')/names/add`), so `S!N`
+    // from another sheet reads it; an unknown sheet fails the case.
+    let case = spec(
+        r#"{"format":"rustsheet-case/v1",
+            "sheets":[{"name":"S","cells":{}},{"name":"T","cells":{"A1":"=S!N"}}],
+            "api_names":[{"name":"N","formula":"=ABS(-2)","sheet":"S"}]}"#,
+    );
+    let result = RustSheetEngine
+        .evaluate_spec(&case, None)
+        .expect("evaluates");
+    assert_eq!(
+        result.value("T", Addr { row: 1, col: 1 }),
+        Some(Value::Number(2.0))
+    );
+    let bad = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{}}],
+            "api_names":[{"name":"N","formula":"=1","sheet":"Nope"}]}"#,
+    );
+    assert!(RustSheetEngine.evaluate_spec(&bad, None).is_err());
+}
+
+#[test]
 fn structural_sheet_ops_shift_cells_and_rewrite_references() {
     // T-2323: A3 refers to B2; a row delete above, a column insert left of it and a delete
     // of the sheet and the table named by the later ops all replay in order.

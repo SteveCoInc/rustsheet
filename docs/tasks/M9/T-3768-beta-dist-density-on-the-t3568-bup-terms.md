@@ -16,6 +16,7 @@ defer: phase-1b
 oracle's reproducibility floor allows no better, on the 4,281 cells listed below that are already within 15 digits.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`eval/runs/latest`, run on abc78766 plus the unmerged PR #2787 batch). T-3568 (done) built
   probes-numeric/t3568-r5-bup-terms-tune and -terms-hold (docs/research/t2464/r5-bup/RESULTS.md section 4: BETA.DIST(y0,
   c + j, a0, FALSE) for every j < n at 300 points of each half). No open task names either case. Of their 11,307

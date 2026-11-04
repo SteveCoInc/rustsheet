@@ -1929,38 +1929,10 @@ impl Model {
         Ok(())
     }
 
-    /// Sets a cell parametrized by (`sheet`, `row`, `column`) with `value`.
-    ///
-    /// This mimics a user entering a value on a cell.
-    ///
-    /// If you enter a currency `$100` it will set as a number and update the style
-    ///  Note that for currencies/percentage there is only one possible style
-    ///  The value is always a string, so we need to try to cast it into numbers/booleans/errors
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// # use rustsheet_engine::Model;
-    /// # use rustsheet_engine::cell::CellValue;
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
-    /// model.set_user_input(0, 1, 1, "100$".to_string());
-    /// model.set_user_input(0, 2, 1, "125$".to_string());
-    /// model.set_user_input(0, 3, 1, "-10$".to_string());
-    /// model.set_user_input(0, 1, 2, "=SUM(A:A)".to_string());
-    /// model.evaluate();
-    /// assert_eq!(model.get_cell_value_by_index(0, 1, 2), Ok(CellValue::Number(215.0)));
-    /// assert_eq!(model.get_formatted_cell_value(0, 1, 2), Ok("215$".to_string()));
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// See also:
-    /// * [`Model::update_cell_with_formula()`]
-    /// * [`Model::update_cell_with_number()`]
-    /// * [`Model::update_cell_with_bool()`]
-    /// * [`Model::update_cell_with_text()`]
-    pub fn set_user_input(
+    /// [`Model::set_user_input`] for text the engine printed itself (a copied, filled, moved or
+    /// merged cell's formula), which reads a padded bare column `T[ Col ]`, the engine's print
+    /// of `T[ [Col] ]`, as the column (T-3069, T-3258).
+    pub(crate) fn reenter_printed_input(
         &mut self,
         sheet: u32,
         row: i32,
@@ -2520,7 +2492,7 @@ impl Model {
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut model = Model::new_empty("model", "en", "UTC", "en")?;
     /// let (sheet, row, column) = (0, 1, 1);
-    /// model.set_user_input(sheet, row, column, "100$".to_string());
+    /// model.set_user_input(sheet, row, column, "$100".to_string());
     /// let area = Area {
     ///     sheet,
     ///     row,
@@ -2531,7 +2503,7 @@ impl Model {
     /// model.range_clear_contents(&area)?;
     /// model.set_user_input(sheet, row, column, "10".to_string());
     /// let result = model.get_formatted_cell_value(sheet, row, column)?;
-    /// assert_eq!(result, "10$".to_string());
+    /// assert_eq!(result, "$10 ".to_string());
     /// # Ok(())
     /// # }
     /// ```

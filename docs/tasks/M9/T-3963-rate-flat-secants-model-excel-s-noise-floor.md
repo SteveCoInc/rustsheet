@@ -16,6 +16,7 @@ RATE's flat-secant cells come out as in Excel. That needs a model of Excel's own
 because T-3850 showed that no rule on the model's state at the flat step does it.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): measured on its own probe t3850-rate-same-state: 0 of its 240 cells changed over three fills (its cells there); see docs/research/t3992/README.md.
 - T-3850 (financial.md "RATE flat secants: no rule on the model's state separates Excel's restarts from its holds";
   docs/research/t3850/): calls whose model run reaches the same flat secant (same args, r0, r1 and f1), differing only
   in the guess and so in the step, get different Excel values in no step order.

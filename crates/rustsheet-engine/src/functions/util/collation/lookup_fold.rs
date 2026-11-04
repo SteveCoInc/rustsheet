@@ -403,9 +403,9 @@ const WEIGHTLESS_RANGES: [(u16, u16); 381] = [
 /// dasia+oxia letters, the ypogegrammeni pairs, `Ꜹ ꜹ Ꜻ ꜻ`, `Ꝥ ꝥ Ꝧ ꝧ`, `Ꝯ ꝯ ꝰ` and `გ` with U+10FA
 /// (probes/t3584-match-fold-weightless Calc!T1:U1232); and the prosgegrammeni U+1FBE with `Ι ι`
 /// (Calc!K9:L9; probes/t3298-case-mapping-sweep Calc!C8 position 32); and Hebrew `צ` with its final
-/// form `ץ` (probes/t3559-collation-unprobed-blocks Calc!C98 = 97; the other final letters are
-/// unprobed). Sorted by member.
-const CLASSES: [(u16, u16); 68] = [
+/// form `ץ` (probes/t3559-collation-unprobed-blocks Calc!C98 = 97), and the other four final
+/// letters `ך ם ן ף` with `כ מ נ פ` (probes/t3995-dfunction-fold-final-forms Calc!B7:D14). Sorted by member.
+const CLASSES: [(u16, u16); 72] = [
     (0x0377, 0x0376),
     (0x03B5, 0x0395),
     (0x03C2, 0x03A3),
@@ -413,6 +413,10 @@ const CLASSES: [(u16, u16); 68] = [
     (0x03F3, 0x0376),
     (0x03F4, 0x03D1),
     (0x03F5, 0x0395),
+    (0x05DB, 0x05DA),
+    (0x05DE, 0x05DD),
+    (0x05E0, 0x05DF),
+    (0x05E4, 0x05E3),
     (0x05E6, 0x05E5),
     (0x10FA, 0x10D2),
     (0x1F05, 0x1F02),
@@ -483,7 +487,7 @@ const APART: [char; 2] = ['\u{2c70}', '\u{a78d}'];
 
 /// Whether `c` has no weight in Excel's comparison table (BMP only: every supplementary character
 /// has one, Calc!B25:H28).
-fn is_weightless(c: char) -> bool {
+pub(super) fn is_weightless(c: char) -> bool {
     let Ok(unit) = u16::try_from(u32::from(c)) else {
         return false;
     };
@@ -505,20 +509,22 @@ pub(crate) fn fold_lookup_char(c: char) -> char {
     if is_weightless(c) {
         return WEIGHTLESS;
     }
-    let Ok(unit) = u16::try_from(u32::from(c)) else {
+    if u16::try_from(u32::from(c)).is_err() {
         return c;
-    };
+    }
     let folded = fold_char(c);
     if is_weightless(folded) || APART.contains(&c) {
         return c;
     }
-    class_first(unit)
-        .or_else(|| u16::try_from(u32::from(folded)).ok().and_then(class_first))
+    class_first(c)
+        .or_else(|| class_first(folded))
         .unwrap_or(folded)
 }
 
-/// The first member of `unit`'s class in [`CLASSES`], if it is in one.
-fn class_first(unit: u16) -> Option<char> {
+/// The first member of `c`'s class in [`CLASSES`], if it is in one. The collation's `=` equates
+/// the members the same way (`super::fold`, T-4013).
+pub(super) fn class_first(c: char) -> Option<char> {
+    let unit = u16::try_from(u32::from(c)).ok()?;
     let index = CLASSES
         .binary_search_by_key(&unit, |&(member, _)| member)
         .ok()?;

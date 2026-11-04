@@ -17,6 +17,7 @@ kernel branch, or be listed in the Outcome with Excel, ours, the 50-digit math, 
 derived.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on origin/main 26e0bd00b): these failing Excel cells are named by no open task,
   deferred ones included. Every one is within half a unit of Excel's 15th significant digit, or is Phase 1b evidence
   that decision 0188 R1(c) leaves out (both values within 1e-9 of the 50-digit math). So they are last-digit work,

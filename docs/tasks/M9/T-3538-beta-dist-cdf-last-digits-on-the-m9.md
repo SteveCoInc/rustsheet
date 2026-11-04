@@ -18,6 +18,7 @@ Otherwise the Outcome records each candidate's bit-exact and within-4-ulp counts
 time box).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31m (`make eval` on origin/main 900fbc1bf, excel-graph). An ownership check over every failing
   Excel cell used `scripts/exit_owners.py`'s `owned` rule over the open task files of origin/main and of every
   `origin/agent/*` branch pushed since 2026-10-29. It found these cumulative cells named by no open task. None is

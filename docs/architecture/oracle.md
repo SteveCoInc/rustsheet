@@ -163,10 +163,15 @@ worksheet endpoints (the canary sheet stays last); the structural ones are:
 | `delete_sheet` | `DELETE worksheets('S')` (the canary sheet is refused) |
 | `convert_table` (`table`) | `POST tables('T')/convertToRange` |
 | `delete_table` (`table`) | `DELETE tables('T')` (the table's cells are cleared too; the engine adapter does the same) |
+| `add_table` (`table`, `ref`) | `POST worksheets('S')/tables/add` (`hasHeaders`), then `PATCH tables(id)` to rename it and a read-back of the name (T-3629) |
 
 Cut and paste, row and column moves, undo and sheet duplication have no Graph REST endpoint and stay out
 (desktop questions, decision 0039). The engine adapter replays the same ops (decisions 0076, 0098); it has no
 table convert-to-range yet, so a `convert_table` case scores as an adapter error.
+
+A case's `api_names` (T-3264, `docs/architecture/eval-harness.md`) are replayed after the sheet ops,
+each with `POST workbook/names/add` (`{"name", "reference"}`), logging `ADDED` or, for a 400
+`InvalidArgument`, `REFUSED` (the name stays undefined, decision 0179).
 
 ## Owner setup — Microsoft Graph (one time, ~20 minutes)
 

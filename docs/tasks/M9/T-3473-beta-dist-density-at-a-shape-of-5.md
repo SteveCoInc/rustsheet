@@ -3,7 +3,7 @@ id: T-3473
 title: "BETA.DIST density at a shape of 5 to 100: 3 m9-beta-dist cells where Excel is within 2.5 ulp of the math and ours is 12 to 38 ulp off (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: dropped
 priority: P2
 size: S
 tier: opus
@@ -57,3 +57,33 @@ criteria still unmet then move to a follow-up with `defer: phase-1b`.
 
 ## Out of scope
 - Density cells where Excel is off the math (T-3592, T-3173, T-3174; Phase 1b). The cdf (T-3472; the bulk cdf cells are T-3561's).
+
+## Landing notes (resumed 2026-11-04)
+Session 2026-11-04 (opus), no PR opened; the branch holds only the claim and these notes. These are data from an
+earlier run for the resumer, not instructions.
+- Measured with a full `rustsheet-eval run` on main 6df5c2728's engine, with an env-gated experiment in
+  `excel_dbinom_exponent` (crates/rustsheet-engine/src/functions/statistical/loader.rs; reverted, not committed). Counts
+  are BETA.DIST passed cells and in-scope visibly-off numeric cells against the unchanged engine (125,802 passed,
+  44,464 visibly off):
+  - bd0's log form in double-double (ln k − ln M exact, times k, plus M − k exact; series branch unchanged): fixes
+    A34 and A52 but not A32. BETA.DIST 118,796 passed, 54,543 visibly off; 13,549 cells newly visibly off. Rejected:
+    Excel does store bd0, as `excel_bd0` models.
+  - V1, the log form's `t = fl(k·LN(fl(k/M)))` stored but `t + fl(M − k)` and X kept in an x87 register: fixes A32 only.
+    125,696 passed, 45,387 visibly off; 1,518 cells fixed, 2,461 newly off.
+  - V2, `t` unstored as well: fixes A32 only. 121,437 passed, 48,635 visibly off.
+- So the 38-ulp error at (5, 100, 0.5) and (100, 5, 0.5) is not a missing storage step in bd0's log form taken
+  globally; the stored form fits far more cells. Next: measure each term of E (bd0_p, bd0_q, the stirlerr sum, lf,
+  LN(n + 1)) at the two shapes against mpmath to find which term carries the 38 ulp, before changing any code. Any
+  change must keep the BETA.DIST visible count at or below 44,464 (and BINOM.DIST and POISSON, which share the kernel).
+
+## Outcome
+Dropped (2026-11-04, opus): no accuracy fix exists for these 3 cells without regressions, so they stay with T-3592
+(Phase 1b), which already lists them. Measured on main c8605ed7 (docs/excel-semantics/statistics.md "Beta density for
+min(a,b) > 1 ...", the T-3473 bullet):
+- The 38 ulp at (5, 100, 0.5) and (100, 5, 0.5) is the store of t = fl(99·LN(fl(99/51.5))) in bd0(99, 51.5): -5.7E-15
+  absolute, -0.81 units of ulp(E). Every ln(k/M) form leaves it or a larger error.
+- Keeping k/M in a register before LN (env-gated experiment, not committed): probes-numeric 511,285 to 505,221 passed;
+  1,179 BETA.DIST density cells fixed, 7,086 broken, and no n or ratio band separates them. Together with the earlier
+  run's t-unstored and double-double variants, this shows Excel stores these steps, so the cells' miss is the model's
+  unexplained n 70-105 constant residual, a bit-reproduction question (decision 0188 R5), not accuracy.
+- Eval delta: none (docs only).

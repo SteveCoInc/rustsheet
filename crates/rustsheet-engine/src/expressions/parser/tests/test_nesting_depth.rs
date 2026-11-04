@@ -4,6 +4,8 @@
 
 use std::collections::HashMap;
 
+use crate::expressions::parser::static_analysis::run_static_analysis_on_node;
+use crate::expressions::parser::stringify::to_rc_format;
 use crate::expressions::parser::tests::utils::new_parser;
 use crate::expressions::parser::{
     Node, MAX_FORMULA_DEPTH, MAX_PARENTHESES, MAX_SIGNS, MAX_VALUE_OPERATORS, TOO_DEEP_MESSAGE,
@@ -536,21 +538,28 @@ fn signs(count: usize, space: &str) -> String {
         + space
 }
 
+/// `run` and then `cell` at the bottom of `levels` nested `(1+...)`: a group and a sum per level.
+fn nested_over(levels: usize, run: &str, cell: &str) -> String {
+    format!("{}{run}{cell}{}", "(1+".repeat(levels), ")".repeat(levels))
+}
+
+/// The most levels of [`nested_over`] around `run` the depth bound admits.
+fn deepest_levels_over(run: &str) -> usize {
+    (1..MAX_FORMULA_DEPTH)
+        .rev()
+        .find(|&levels| !is_too_deep(&parse(&nested_over(levels, run, "C1"))))
+        .unwrap_or_default()
+}
+
 #[test]
 fn sign_runs_at_the_cap_survive_every_walk_under_the_deepest_nesting() {
     on_small_stack(|| {
         // The deepest operand nesting the depth bound admits, a group and a sum per level, with
         // a run of signs at the bottom: the deepest tree a formula can build (T-3193).
-        let nested_over = |levels: usize, run: &str, cell: &str| {
-            format!("{}{run}{cell}{}", "(1+".repeat(levels), ")".repeat(levels))
-        };
         for space in ["", " ", "\n "] {
             // A reference after the signs costs 1 of `MAX_SIGNS`.
             let run = signs(MAX_SIGNS - 1, space);
-            let levels = (1..MAX_FORMULA_DEPTH)
-                .rev()
-                .find(|&levels| !is_too_deep(&parse(&nested_over(levels, &run, "C1"))))
-                .unwrap_or_default();
+            let levels = deepest_levels_over(&run);
             assert!(levels > 60, "{levels}");
             let mut model = crate::test::util::new_empty_model();
             model._set("C1", "2");
@@ -580,4 +589,146 @@ fn sign_runs_at_the_cap_survive_every_walk_under_the_deepest_nesting() {
             ))));
         }
     });
+}
+
+#[test]
+fn sign_run_tree_walks_fit_a_quarter_of_the_stack() {
+    // The tree walks that see every node keep 4x headroom for a run at the cap under the deepest
+    // nesting: they loop over the signs, their whitespace and parentheses (T-3253). Parsing and
+    // evaluating that formula take more, as the same nesting does with no signs at all (697 KiB
+    // measured for `nesting_at_the_limit_parses`; the depth bound sizes them, T-0931).
+    // Measured on an optimized build before T-3253: a derived `Clone` took 920 KiB for a spaced
+    // run, `PartialEq` as much and `Debug` 635 KiB; since, the walks below fit in 147 KiB
+    // together (about 7x headroom on 1 MiB). `Debug` still recurses per sign.
+    for space in ["", " ", "\n "] {
+        let run = signs(MAX_SIGNS - 1, space);
+        let build = std::thread::Builder::new()
+            .stack_size(64 << 20)
+            .spawn(move || parse(&nested_over(deepest_levels_over(&run), &run, "C1")));
+        let Some(tree) = build.ok().and_then(|handle| handle.join().ok()) else {
+            panic!("the formula did not parse");
+        };
+        assert!(!matches!(tree, Node::ParseErrorKind { .. }));
+        let quarter = if cfg!(debug_assertions) {
+            4 << 20
+        } else {
+            256 << 10
+        };
+        let walk = std::thread::Builder::new()
+            .stack_size(quarter)
+            .spawn(move || {
+                let copy = tree.clone();
+                assert!(copy == tree);
+                let text = to_rc_format(&copy);
+                assert_eq!(text.matches('-').count(), MAX_SIGNS / 2);
+                let _ = run_static_analysis_on_node(&copy);
+                let mut stripped = copy;
+                stripped.strip_spaces();
+                assert!(stripped != tree || !tree.has_spaces());
+                drop(stripped);
+                drop(tree);
+            });
+        assert!(walk.is_ok_and(|handle| handle.join().is_ok()), "{space:?}");
+    }
+}
+
+#[test]
+fn hand_written_clone_and_eq_agree_with_the_formula_text() {
+    // `Node`'s `Clone` and `PartialEq` are written out per variant (T-3253): a copy equals its
+    // original, and trees of different formulas, wrappers included, are never equal.
+    let formulas = [
+        "1",
+        "TRUE",
+        "\"a\"",
+        "A1",
+        "A2",
+        "$A$1",
+        "B1:C2",
+        "Sheet1!A1",
+        "-A1",
+        "+A1",
+        "--A1",
+        "-+A1",
+        "- A1",
+        "-  A1",
+        "(A1)",
+        "((A1))",
+        "-(A1)",
+        "(-A1)",
+        " A1",
+        "1+2",
+        "1-2",
+        "1*2",
+        "1/2",
+        "1^2",
+        "1&2",
+        "1<2",
+        "1=2",
+        "A1:B2 B1:C3",
+        "(A1,B2)",
+        "A1#",
+        "@A1",
+        "#REF!",
+        "#N/A",
+        "SUM(1,2)",
+        "SUM(1,,2)",
+        "MAX(1,2)",
+        "LAMBDA(x,x+1)",
+        "LAMBDA(x,x+1)(2)",
+        "LET(x,1,x)",
+        "{1,2;3,4}",
+        "{1,2,3,4}",
+        "XNAME(1)",
+        "Sheet1:Sheet1!A1",
+        "1+",
+    ];
+    let trees: Vec<Node> = formulas.iter().map(|formula| parse(formula)).collect();
+    for (i, tree) in trees.iter().enumerate() {
+        assert!(tree.clone() == *tree, "{}", formulas[i]);
+        for (j, other) in trees.iter().enumerate() {
+            assert_eq!(i == j, tree == other, "{} vs {}", formulas[i], formulas[j]);
+        }
+    }
+}
+
+/// T-3691: the heaviest wrapper shapes a formula can write (`- ( ` nested to the 256-parenthesis
+/// cap with whitespace at every sign and group, a run of 1,022 signs spaced or not before a
+/// reference, and 200 `-(` levels around 824 more signs) set, evaluate, clone, compare, print and
+/// drop on a 2 MiB stack even in an unoptimized build: the walks that see every node loop over a
+/// run of wrappers (T-3253; `walk_names`, T-3691), so an embedder's small debug thread cannot
+/// abort (directive 5). The derived `Debug` still recurses per node (TODO(T-4031)).
+#[test]
+fn heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack() {
+    let mut shapes = vec![
+        nested("- ( ", "B1", " ) ", MAX_PARENTHESES),
+        nested("-(", &format!("{}1", "-".repeat(824)), ")", 200),
+    ];
+    for space in ["", " ", "\n "] {
+        shapes.push(format!("{}B1", signs(MAX_SIGNS - 1, space)));
+        shapes.push(format!("-({}B1)", signs(MAX_SIGNS - 2, space)));
+    }
+    for formula in shapes {
+        let walk = std::thread::Builder::new()
+            .stack_size(2 << 20)
+            .spawn(move || {
+                let tree = parse(&formula);
+                assert!(!matches!(tree, Node::ParseErrorKind { .. }), "{tree:?}");
+                let copy = tree.clone();
+                assert!(copy == tree);
+                assert!(!to_rc_format(&copy).is_empty());
+                let mut stripped = copy;
+                stripped.strip_spaces();
+                let _ = run_static_analysis_on_node(&stripped);
+                drop(stripped);
+                drop(tree);
+                let mut model = crate::test::util::new_empty_model();
+                model._set("B1", "2");
+                model._set("A1", &format!("={formula}"));
+                model.evaluate();
+                assert!(!model._get_text("A1").starts_with('#'));
+                assert_eq!(model._get_formula("A1"), format!("={}", formula.trim_end()));
+                drop(model);
+            });
+        assert!(walk.is_ok_and(|handle| handle.join().is_ok()));
+    }
 }

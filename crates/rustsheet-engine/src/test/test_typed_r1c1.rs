@@ -22,3 +22,50 @@ fn constants_pass_through_and_unparsable_formulas_are_refused() {
     assert_eq!(a1("=$A$1", 1, 1), None);
     assert_eq!(a1("=1+", 1, 1), None);
 }
+
+/// A LET name or LAMBDA parameter spelled like an A1 cell is no reference typed in R1C1 mode,
+/// and Excel binds it (probes/t3897-r1c1-let-cell-names, excel-graph, T-3897): the A1 text writes
+/// it `_xlpm.`, which the typed A1 entry binds where it refuses a bare `f1` (decision 0103).
+#[test]
+fn let_and_lambda_names_spelled_like_a1_cells_keep_their_prefix() {
+    assert_eq!(
+        a1("=LET(f1,5,f1+1)", 1, 1).as_deref(),
+        Some("=LET(_xlpm.f1,5,_xlpm.f1+1)")
+    );
+    assert_eq!(
+        a1("=LAMBDA(x,[b2],ISOMITTED(b2))(1)", 1, 1).as_deref(),
+        Some("=LAMBDA(x,[_xlpm.b2],ISOMITTED(_xlpm.b2))(1)")
+    );
+    // Unbound, such a name is Excel's undefined name (`#NAME?`, A8:A10, A13), not the cell the
+    // A1 text would read: refused until T-4040.
+    for typed in ["=f1", "=F1+1", "=LET(x,1,x+F1)", "=LET(f1,5,f1+1)+F1"] {
+        assert_eq!(a1(typed, 1, 1), None, "{typed}");
+    }
+    // Other names stay bare.
+    assert_eq!(a1("=LET(x,5,x+1)", 1, 1).as_deref(), Some("=LET(x,5,x+1)"));
+    let cases = [
+        ("=LET(f1,5,f1+1)", "6"),
+        ("=LAMBDA(a1,a1*2)(3)", "6"),
+        ("=LET(xy1,3,xy1+1)", "4"),
+        ("=LET(ab12,2,f1,ab12*10,f1+ab12)", "22"),
+        ("=LAMBDA(x,[b2],ISOMITTED(b2))(1)", "TRUE"),
+        ("=LET(f1,LAMBDA(x,x+1),f1(2))", "3"),
+        ("=LET(A1,5,A1*2)", "10"),
+        ("=LET(F1,5,F1+1)", "6"),
+        ("=LAMBDA(A1,A1*2)(3)", "6"),
+    ];
+    let mut model = crate::test::util::new_empty_model();
+    model._set("F1", "7");
+    for (row, (typed, _)) in (1..).zip(cases) {
+        let text = a1(typed, row, 8).unwrap_or_default();
+        model
+            .set_typed_user_input(0, row, 8, text)
+            .unwrap_or_else(|e| panic!("{typed}: {e}"));
+    }
+    model.evaluate();
+    for (row, (typed, value)) in (1..).zip(cases) {
+        let cell = format!("H{row}");
+        assert_eq!(model._get_text(&cell), value, "{typed}");
+        assert_eq!(model._get_formula(&cell), typed);
+    }
+}

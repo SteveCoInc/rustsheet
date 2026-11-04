@@ -16,6 +16,7 @@ CONVERT matches Excel bit for bit when converting from a base unit to a non-base
 `CONVERT(1,"m","ft")` = 3.2808398950131235, from a factor table or order fitted on the T-2046 sweep.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 Needs an oracle sweep: T-2046 (only two m→ft points exist).
 - Known failures (gap triage 2026-10-19): probes/scalar-lift-open-a Sheet1!Z8, Z9, Z10
   `CONVERT(1,"m","ft")`: Excel 3.2808398950131235, ours 3.280839895013123.

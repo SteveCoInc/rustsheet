@@ -2,7 +2,9 @@
 
 use std::cmp::Ordering;
 
-use crate::functions::util::collation::{cmp_text, cmp_text_excel, collation_key};
+use crate::functions::util::collation::{
+    cmp_text, cmp_text_excel, cmp_text_pairwise, collation_key,
+};
 use crate::text::Text;
 
 /// Asserts `texts` are strictly increasing in Excel's order.
@@ -618,11 +620,16 @@ fn script_digits_tiebreak_by_block() {
 }
 
 /// T-3917 rule 1: `➿`, `ᡸ` and `₿` are equal to each other, above `""` and below `"!"`
-/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17).
+/// (probes/t3559-collation-unprobed-blocks ranks A35, A62, A126, B35, G17). They are weightless
+/// (T-3904): Excel's `<` puts them above `""` by the prefix rule, while the total order and the
+/// key, which weigh them nothing, tie them with it.
 #[test]
 fn t3559_unknown_characters_weigh_alike() {
     for unknown in ["\u{27bf}", "\u{1878}", "\u{20bf}"] {
-        assert_increasing(&["", unknown, "!", "0"]);
+        let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+        assert_eq!(pairwise("", unknown), Ordering::Less);
+        assert_eq!(cmp_text_excel("", unknown), Ordering::Equal);
+        assert_increasing(&[unknown, "!", "0"]);
         assert_eq!(cmp_text_excel(unknown, "\u{27bf}"), Ordering::Equal);
     }
 }
@@ -666,4 +673,84 @@ fn t3559_equal_forms() {
     assert_eq!(cmp_text_excel("ץ", "צ"), Ordering::Equal);
     assert_eq!(cmp_text_excel("\u{fefb}", "لا"), Ordering::Equal);
     assert_increasing(&["צ", "ש", "ת"]);
+}
+
+/// T-4013: `=` equates the members of Excel's wider classes and keeps supplementary case pairs
+/// apart (probes/t3584-match-fold-weightless Calc!B21:F21, B25:F25, P7, P9;
+/// probes/t3929-wildcard-fold-criteria rows 29-30).
+#[test]
+fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
+    let equal = |a: &str, b: &str| {
+        let (a, b) = (Text::from(a), Text::from(b));
+        cmp_text_pairwise(&a, &b) == Ordering::Equal && collation_key(&a) == collation_key(&b)
+    };
+    for (a, b) in [
+        ("\u{1f05}", "\u{1f0a}"), // Greek Extended: dasia+oxia with psili+varia
+        ("x\u{1f0d}y", "X\u{1f02}Y"),
+        ("\u{3f5}", "\u{3b5}"),  // ϵ with ε
+        ("\u{1fbe}", "\u{3b9}"), // prosgegrammeni with ι
+        ("\u{1fbe}", "\u{399}"),
+        ("\u{376}", "\u{3f3}"), // Ͷ with ϳ
+        ("\u{3d1}", "\u{3f4}"), // ϑ with ϴ
+    ] {
+        assert!(equal(a, b), "{a:?} = {b:?}");
+    }
+    assert!(!equal("\u{10400}", "\u{10428}"), "Deseret keeps its case");
+    // ϴ is not θ: probes/t4013-class-equality-order Calc!B13 FALSE, D13 TRUE.
+    assert!(!equal("\u{3f4}", "\u{3b8}"), "ϴ is not θ");
+    // Class members weigh alike, so the character after them decides the order.
+    let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));
+    assert_eq!(cmp_text(&a, &b), Ordering::Less);
+    assert_eq!(cmp_text(&b, &a), Ordering::Greater);
+}
+
+/// T-3904: weightless characters weigh nothing, except in the tail one text has beyond the
+/// other after a shared start of units below U+007B (coercion.md "Format characters, U+200B and
+/// the C1 controls (T-3662)"; probes/t3662-collation-ignorables, -prefix, -sweep).
+#[test]
+fn t3904_weightless_characters_and_the_prefix_rule() {
+    let pairwise = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    let same_key =
+        |a: &str, b: &str| collation_key(&Text::from(a)) == collation_key(&Text::from(b));
+    for c in ['\u{ad}', '\u{200d}', '\u{feff}', '\u{524}', '\u{e83}'] {
+        let equal = [
+            (format!("a{c}b"), "ab".to_owned()),
+            (format!("{c}ab"), "ab".to_owned()),
+            (format!("é{c}"), "é".to_owned()),
+            (format!("a~{c}"), "a~".to_owned()),
+            (format!("ab{c}"), format!("ab{c}{c}")),
+            (c.to_string(), "\u{525}".to_owned()),
+        ];
+        for (a, b) in &equal {
+            assert_eq!(pairwise(a, b), Ordering::Equal, "{a:?} = {b:?}");
+            assert!(same_key(a, b), "{a:?} and {b:?} share a key");
+        }
+        // The prefix rule: a shorter fast start is less, case aside, though the keys agree.
+        for (a, b) in [
+            ("ab".to_owned(), format!("ab{c}")),
+            ("AB".to_owned(), format!("ab{c}")),
+            (String::new(), c.to_string()),
+            ("a-".to_owned(), format!("a-{c}")),
+        ] {
+            assert_eq!(pairwise(&a, &b), Ordering::Less, "{a:?} < {b:?}");
+            assert_eq!(pairwise(&b, &a), Ordering::Greater, "{b:?} > {a:?}");
+            assert!(same_key(&a, &b), "{a:?} and {b:?} share a key");
+        }
+        // A difference goes to the collation: "ab"&c < "ac" and < "b" (-sweep F1, F5).
+        assert_eq!(pairwise(&format!("ab{c}"), "ac"), Ordering::Less);
+        assert_eq!(pairwise(&format!("ab{c}"), "b"), Ordering::Less);
+    }
+}
+
+/// T-4039: the Unicode spaces, U+200B and the C1 controls (probes/t4039-collation-space-forms).
+#[test]
+fn t4039_space_forms_zero_width_space_and_c1_controls() {
+    assert_increasing(&[
+        " ", "\u{3000}", "\u{202f}", "\u{a0}", "\t", "\u{2002}", "\u{2003}", "\u{2004}",
+        "\u{200a}", "\u{200b}", "!", "\u{ac}", "\u{2022}", "\u{80}", "\u{81}", "\u{9f}", "0",
+    ]);
+    assert_eq!(cmp_text_excel("\u{205f}", " "), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2000}", "\u{2002}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("\u{2001}", "\u{2003}"), Ordering::Equal);
+    assert_eq!(cmp_text_excel("a\u{200b}b", "ab"), Ordering::Less);
 }

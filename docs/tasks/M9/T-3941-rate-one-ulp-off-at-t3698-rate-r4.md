@@ -16,6 +16,7 @@ defer: phase-1b
 RATE cell regressing.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (RATE) measured on t3850-rate-same-state, 0 of 240 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03m (`make eval` on origin/main ea84dadb9, excel-graph evidence; per-cell `owned` run over every
   failing cell against every open task, deferred ones included, and every unmerged branch's task files).
   probes-numeric/t3698-rate-r4-fresh is T-3698's R4.2 fresh sweep (300 cells, ungated). T-3876 owns its A201 (the

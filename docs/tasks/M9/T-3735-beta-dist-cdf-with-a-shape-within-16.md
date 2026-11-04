@@ -18,6 +18,7 @@ here are a = 1 ± k ulp or b = 1 ± k ulp (k up to 16), with the other shape 0.5
 cells beyond 4 ulp are the targets. Cells within 4 ulp are fixed only if the same structural model fixes them.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on origin/main 8c8cfd396, excel-graph). The scan applied `scripts/exit_owners.py`'s
   `owned` rule to every failing cell, against the task files of origin/main and the open task-filing branches. 133 of
   the case's 594 cells fail. T-3592 (deferred) owns the 6 visibly-off ones (Calc!A211, A407, A409, A411, A421, A423).

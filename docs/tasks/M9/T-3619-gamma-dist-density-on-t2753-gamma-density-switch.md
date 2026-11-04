@@ -17,6 +17,7 @@ half a unit of Excel's 15th significant digit, take Excel's double once T-3303 h
 1E-15 and in the 1 to 6 ulp residue, or the Outcome records per cell why not.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on agent/harness/T-3529-gate-a-chisq-gamma-beta e3be88d4a, origin/main 4e2f5f3df
   plus T-3529's harness commits; excel-graph evidence). `scripts/exit_owners.py`'s `owned` rule over every failing cell,
   against the task files of the working tree, origin/main and every unmerged triage branch: no open task owns these 64

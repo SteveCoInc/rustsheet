@@ -8,7 +8,7 @@ use crate::{
         parser::{
             is_multi_sheet_span,
             stringify::{rename_defined_name_in_node, to_rc_format},
-            Node,
+            Node, TOO_MANY_NESTED_CALLS_MESSAGE,
         },
         token::Error,
         types::{CellReferenceIndex, CellReferenceRC},
@@ -20,6 +20,17 @@ use crate::{
     types::DefinedName,
     utils as common,
 };
+
+/// Where a defined name comes from, which decides the checks [`Model::insert_defined_name`] makes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NameSource {
+    /// Added through the API: held to Excel's 65-call cap.
+    Api,
+    /// Read from a workbook: a cell-like spelling is accepted, the importer checks the cap.
+    Loaded,
+    /// Put back by an undo: it existed already, so the cap is not applied.
+    Restored,
+}
 
 /// The `#NAME?` of a name whose body runs out of depth or budget ([`Model::within_defined_name`]).
 fn name_refers_to_itself(name: &str, cell: CellReferenceIndex) -> CalcResult {
@@ -309,6 +320,25 @@ impl Model {
         self.define_name(name, scope, formula)
     }
 
+    /// As [`Model::define_name`], for a name that existed before, which an undo of its delete puts
+    /// back: the 65-call cap of an API add is not applied, so a body edited past it (an
+    /// update is unchecked, since Graph has no endpoint that sets a body) comes back too instead
+    /// of failing the undo (T-4014).
+    ///
+    /// The body is not held to [`Model::new_defined_name`]'s reference-or-LAMBDA rule either: a
+    /// name loaded from a workbook may have any body.
+    ///
+    /// # Errors
+    /// As [`Model::define_name`], except for the call cap.
+    pub(crate) fn restore_defined_name(
+        &mut self,
+        name: &str,
+        scope: Option<u32>,
+        formula: &str,
+    ) -> Result<(), String> {
+        self.insert_defined_name(name, scope, formula, NameSource::Restored)
+    }
+
     /// Adds a defined name whose formula is any formula that parses, as Excel stores them: an
     /// intersection is a valid name body (docs/excel-semantics/references.md "A defined name may
     /// be an intersection"). [`Model::new_defined_name`] additionally restricts the body to a
@@ -325,7 +355,7 @@ impl Model {
         scope: Option<u32>,
         formula: &str,
     ) -> Result<(), String> {
-        self.insert_defined_name(name, scope, formula, false)
+        self.insert_defined_name(name, scope, formula, NameSource::Api)
     }
 
     /// As [`Model::define_name`], for a name read from a workbook: one spelled like an A1 cell
@@ -339,7 +369,7 @@ impl Model {
         scope: Option<u32>,
         formula: &str,
     ) -> Result<(), String> {
-        self.insert_defined_name(name, scope, formula, true)
+        self.insert_defined_name(name, scope, formula, NameSource::Loaded)
     }
 
     fn insert_defined_name(
@@ -347,13 +377,29 @@ impl Model {
         name: &str,
         scope: Option<u32>,
         formula: &str,
-        loading: bool,
+        source: NameSource,
     ) -> Result<(), String> {
+        let loading = source == NameSource::Loaded;
         let sheet_id = self.defined_name_slot(name, scope, loading)?;
         // Defined-name formulas are stored internally in English so they keep
         // working when the user switches language/locale.
         let context = self.defined_name_context();
-        let internal_formula = self.user_formula_to_internal(formula, &context)?;
+        // A loaded body is read as a file's stored text: a structured reference Excel cannot
+        // resolve, such as a padded bare column `T[ Col ]`, loads as `#REF!`
+        // (probes/t3258-name-padded-column-0..2, T-3258).
+        self.parser.set_loaded(loading);
+        let internal_formula = self.user_formula_to_internal(formula, &context);
+        self.parser.set_loaded(false);
+        let internal_formula = internal_formula?;
+        // Excel's `names/add` refuses a body nesting more than 65 calls (400 `InvalidArgument`;
+        // probes/t3264-api-name-65 is accepted, t3264-api-name-66 refused, T-3264; syntax.md
+        // "Formula nesting depth cap"), and so does `worksheets('S')/names/add` for a sheet-scoped
+        // name (probes/t4014-sheet-api-name-65, -66, T-4014). A loaded body is checked by the
+        // importer, which refuses the whole workbook as Excel does (T-3143), and a restored one
+        // existed already ([`Model::restore_defined_name`]).
+        if source == NameSource::Api && self.parser.nests_too_many_calls() {
+            return Err(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
+        }
         self.workbook.defined_names.push(DefinedName {
             name: name.to_string(),
             formula: internal_formula,

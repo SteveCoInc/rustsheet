@@ -3,7 +3,7 @@ id: T-3286
 title: "Incomplete gamma near the mode at shapes 21 to 1E8: POISSON.xlsx D55 is 16 ulp off where Excel is correctly rounded (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -69,3 +69,54 @@ Cells this task owns:
 
 ## Out of scope
 - Where Excel's large-shape ratio form starts (T-3252, T-3270). The deep upper tail (T-3269). Shapes 1.5 and 2.5 (T-3285).
+
+## Landing notes (resumed 2026-11-03 by an opus run; superseded by the Outcome)
+- State (2026-11-03, session window closed): WIP on branch agent/functions-stat/T-3286-near-mode-temme, draft PR. Not
+  reviewed. `make check-fast` not run; `cargo test -p rustsheet_engine --lib incomplete_gamma` passes with the
+  measuring test below (it prints, it does not yet assert the 1-ulp bound).
+- Change so far: `pair_with` takes `temme_pair` when `a >= TEMME_NEAR_MODE_MIN` (1E3) and |x - a| <= NEAR_MODE·a.
+  `make eval-check` on it: ironcalc-calc 298 -> 296 (fixed 2, presumably POISSON.xlsx D55 and D31), probes 4354 ->
+  4353 (fixed 1, presumably t2982 A144), 0 regressions in every suite. `a_call_past_its_cap_is_nan` was moved to shape
+  999 (the series is one Temme term near the mode from 1E3 now). T-3985 (follow-up of T-3964) is filed on this branch.
+- Measured (ulps from mpmath 60 digits, `near_mode_pair_is_within_an_ulp_from_shape_1e3`, new vs main): at the centre
+  Temme wins (a=1000, x=1000: 0 vs 9; a=46041, x=a: 0 vs 6; x=1.01a: 0.97 vs 4.8; a=1E6, x=a: 0 vs 1), but in the
+  band's tails both are tens to hundreds of ulps off and Temme is sometimes worse: a=1000 x=600 P 59 vs 17, x=1200 Q
+  9.4 vs 2.9, x=1300 Q 13 vs 0, x=1400 Q 98 vs 82; a=46041 x=0.9a P 230 vs 157, 0.95a P 82 vs 52, 1.05a Q 59 vs 29.
+  The tail loss looks like the rounding of a·phi in exp(-a·phi) (relative error about a·phi·eps), shared by both paths.
+- Next step: restrict the Temme switch by a criterion derived from the error model, not fitted to these points (for
+  example a·phi below a bound where erfc's and the correction's rounding dominate), or form a·phi in double-double so
+  both tails improve; then assert the 1-ulp bound only where it holds, and say in the Outcome which acceptance points
+  (shapes 21 and 101 are out of reach of the 4-term expansion: 3E-13 at 101) need a follow-up. mpmath's `gammainc`
+  does not converge at shape 99999999 for most x (NoConvergence); the grid has only one such point.
+- Do not: pick the a·phi cut by scoring these grid points without decision 0056's hold-out (it would be a FITTED cut).
+- CI on 94e8eda2e: hygiene fails, `check_duplication.py` 2912 lines against baseline 2880 (+32, the size of the
+  `NEAR_MODE_EXACT` table in incomplete_gamma/tests.rs): shrink that table (fewer points, or one row per shape with
+  the x factors computed) rather than updating any baseline. Other jobs were green or pending at the window's close.
+
+## Outcome
+Temme's expansion is taken within `NEAR_MODE` of x = a from shape 1E3 (`TEMME_NEAR_MODE_MIN`, the WIP's switch), and
+`temme_pair` now forms its exponent a·phi in double-double: phi from s = (x - a)/(x + a) as s²(x + a)/a - 2(s³/3 + s⁵/5
++ ...) near the mode (`temme_phi`; ln x - ln a off the band), e^(-a phi) and erfc(sqrt(a phi)) each corrected for the
+exponent's low word and the rounded root (`erfc_of_root`). That answers the landing notes' tail loss (a rounded a·phi
+costs about a·phi ulps of the tail) without any cut: no criterion was scored. Not a fit (decision 0188 R4): an accurate
+kernel checked against 60-digit mpmath only, no oracle cell scored; `TEMME_NEAR_MODE_MIN` = 1E3 is the expansion's
+truncation bound (first dropped term about 1E-17 there). Past the double range (x + a or a·phi overflowing, a = 1E308)
+the exponent falls back to doubles as before, so those points are not NaN (fidelity review round 1; unit-tested).
+The branch also carries T-3985, a GROUPBY follow-up of the T-3964 review filed by the earlier run.
+- Unit test `near_mode_pair_is_within_an_ulp_from_shape_1e3`: within 1 ulp of 60-digit mpmath over the band at shapes
+  46041 and 1E6 and at 1E3 from 0.9a; 2 ulp for P at 1E3 below 0.9a (was 10 to 230 ulp on the WIP, 17 to 157 on
+  main). The table was cut to the points where P or Q is not 0 or 1, in two tables under ten rows, for the
+  duplication ratchet (2,880 again).
+- An intermediate form (ln x - ln a for phi) took gated probes/incomplete-gamma-cap E11 `POISSON(1E12,1E12,TRUE)` from
+  Excel's value to visibly off (phi 5E-25 at a = 1E12 + 1); the atanh form keeps it and t2435 A34 bit-exact, and the
+  test pins E11.
+- Eval, cell by cell against origin/main d8640a46 on the gamma family (the only other differences were the 23 main
+  commits the branch lacks): ironcalc-calc POISSON.xlsx D55 (visibly off) and D31 become bit-exact, known failures 298 ->
+  296; probes/t2982 A144 0.15867945221382823 -> 0.15867945221382804 (within 15 digits, Excel's ...798; still owned by
+  T-3070), A146 2.856123416018922E-07 -> 2.856123416018894E-07 (Excel's ...8864, itself -13.6 ulp from the math; still
+  visibly off, T-3070); probes/incomplete-gamma-cap E13 and probes-numeric t3350 A210 move by an ulp, both already
+  known failures within 15 digits. No cell goes from pass to fail, no new baseline line.
+- Bit-exact among the five owned cells and t2982 A144-A146: before 0 of 8, after 2 (D31, D55).
+- Not reached: shapes 21 and 101 (D19, t1048 A9 and B9 unchanged; the expansion's dropped term is 3E-13 at 101) and
+  the acceptance test's shape 99999999 point (mpmath does not converge there): follow-up T-4000.
+- statistics.md "Incomplete gamma: accurate kernel (T-0971)" records Excel's correctly rounded near-mode values.

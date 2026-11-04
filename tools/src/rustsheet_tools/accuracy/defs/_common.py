@@ -12,7 +12,7 @@ from fractions import Fraction
 import mpmath
 
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import Draw, MathArg
+from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 
@@ -32,6 +32,19 @@ def zero_pole(args: Sequence[MathArg]) -> str | None:
 
 
 StratumDraws = dict[str, Callable[[random.Random], list[Arg]]]
+
+
+def domain_of(value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Callable[[Sequence[MathArg]], str | None]:
+    """A definition's `domain` from its `value`: why `value` raises `DomainError` at the point, or None."""
+
+    def domain(args: Sequence[MathArg]) -> str | None:
+        try:
+            value(args)
+        except DomainError as why:
+            return str(why)
+        return None
+
+    return domain
 
 
 def by_stratum(draws: StratumDraws, doc: str) -> Draw:

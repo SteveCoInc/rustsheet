@@ -18,6 +18,7 @@ particular, the 29 cells 7 to 10 ulp from Excel's double reach 4 ulp or better. 
 unless the same model fixes them.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31 (`make eval` on origin/main 73241cb4c, excel-graph; `scripts/exit_owners.py`'s `owned` rule
   over every failing cell and the task files of origin/main and every open task-filing branch): T-2512 committed the
   probe (5,816 cells, docs/research/t2464/r3-bgrat/RESULTS.md table, `make_probe3.py`) to measure bup's prefactor. It

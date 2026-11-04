@@ -22,6 +22,12 @@ probes/table-edits/table-column-range-delete-end, -delete-start and -both-ends-s
 The `#ERROR!` against `#REF!` is its own error-kind bug. Code: `Displacement::range_corners` (stringify.rs).
 T-2851 (research) probes more plain-range shapes but does not list these cells.
 
+Cells this task owns (gap triage 2026-11-04 added the list: the prose above does not name the cells beside
+their case, so `scripts/exit_owners.py --all-off` listed four of them as unowned):
+- probes/table-edits/table-column-range-delete-end.case.json (2): F!A4, A5
+- probes/table-edits/table-column-range-delete-start.case.json (2): F!A4, A5
+- probes/table-edits/table-column-range-delete-both-ends-separate.case.json (2): F!A4, A5
+
 ## Acceptance criteria
 - [ ] The six cells above pass and leave `eval/baseline/probes.txt`.
 - [ ] `make check` green; reviewers approve.

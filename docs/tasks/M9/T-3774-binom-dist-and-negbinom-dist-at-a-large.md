@@ -18,6 +18,7 @@ Gap triage 2026-11-03b split the never-attempted cdf cells out to T-3959 (near t
 (p < 0.01 with a huge n). This task keeps the pmf cells.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Read first: T-3447's "Fit attempts" section (candidates and counts), statistics.md "BINOM.DIST and NEGBINOM.DIST at a
   large n: basym and Loader, within 1E-11 of the math (T-3352)", and `docs/research/t3447/pmf_regress.py`.
 - Attempt 1's finding for the pmf cells, which take `binom.rs` `loader_pmf` on `loader::excel_dbinom_exponent`:

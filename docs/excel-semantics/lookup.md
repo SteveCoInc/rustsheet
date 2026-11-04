@@ -726,6 +726,9 @@ one-to-one fold above still keeps the length:
 - It is not ignored by exact MATCH: `"a"&U+0524&"b"` against `"ab"` and `U+0524&U+10C7` against `U+0525` are
   `#N/A` in MATCH, VLOOKUP and HLOOKUP (Calc!E6:H7), while `=`, COUNTIF and XMATCH(..,0) call both pairs equal
   (B6:F7, coercion.md "Weightless characters in `=`, COUNTIF and XMATCH").
+  Exact MATCH keeps this one-for-one rule for the format characters too (U+200C to U+200F, U+2060, U+FEFF, U+FE0F:
+  probes/t3662-collation-ignorables Calc!AK1:AK17 all `#N/A`), and for U+200B and the C1 controls, which have weights;
+  XMATCH(..,0) follows `=`'s prefix rule instead (coercion.md "Format characters, U+200B and the C1 controls (T-3662)").
 - Which characters: every BMP code point unassigned as of Unicode 14 (1422), the characters of later Unicode
   versions that the table lacks (not a version cut: U+0524-U+0525 and U+0528-U+0530 are weightless, but U+0526,
   Samaritan U+0800 and Lisu U+A4D0 have weights; Calc!R6, R9, R165), and 51 characters already assigned by
@@ -774,8 +777,10 @@ weightless class and the case pairs, MATCH equals exactly these (`weightless-bmp
 Two more pairs stay apart: `Ɒ` U+2C70 with `ɒ` and `Ɥ` U+A78D with `ɥ` (probes/t3298-case-mapping-sweep Calc!C32:D32
 position 1, C36:D36 position 16), and the prosgegrammeni U+1FBE equals `Ι ι` (Calc!C8 position 32; t3584 Calc!K9:L9).
 Hebrew `צ` equals its final form `ץ`: exact MATCH of `"צ"` finds the `ץ` row before its own
-(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other final letters are unprobed and stay apart
-(UNVERIFIED). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
+(probes/t3559-collation-unprobed-blocks Calc!C98 = 97; T-3917). The other four final letters fold the same way:
+exact MATCH of each bare final form and its normal form (`ך`/`כ`, `ם`/`מ`, `ן`/`נ`, `ף`/`פ`, `ץ`/`צ`) succeeds in both
+directions, while `İ`/`i`, `ϐ`/`β` and `ﬀ`/`ff` stay apart (probes/t3995-dfunction-fold-final-forms Calc!F1:F19,
+excel-graph 2026-11-04). The lam-alef ligature `ﻻ` is not one of these classes: exact MATCH of `"لا"` finds its own row, not `ﻻ`
 (C110 = 110), while `=` and XMATCH equal them (coercion.md "Scripts and symbol blocks beyond T-3276").
 Status: VERIFIED (excel-graph) for the block table, the weightless set and the classes above.
 Implemented in: `fold_lookup_char` (functions/util/collation/lookup_fold.rs, T-3445: weightless characters fold to

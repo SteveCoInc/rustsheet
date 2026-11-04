@@ -179,13 +179,17 @@ impl Model {
             }
         };
         let instance_num = number_at(2)?.map_or(1, |f| f.floor() as i32);
-        let case = match number_at(3)? {
-            None => Case::Sensitive,
-            Some(mode) => Case::from_match_mode(mode, cell)?,
-        };
+        // match_mode must coerce to a number first, but its range check waits until match_end is
+        // read: an error match_end beats the `#VALUE!` of an out-of-range mode (gen-m7/
+        // 9f9357dbf7e17803 A85, T-4037).
+        let mode = number_at(3)?;
         // Also cut toward zero: -0.0001 is 0, not `#VALUE!` (gen-m7/2d9b48c6363e7a16 A660,
         // T-2412).
         let match_end = number_at(4)?.map_or(0.0, f64::trunc);
+        let case = match mode {
+            None => Case::Sensitive,
+            Some(mode) => Case::from_match_mode(mode, cell)?,
+        };
         if instance_num == 0 {
             return Err(CalcResult::new_error(
                 Error::VALUE,

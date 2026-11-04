@@ -16,16 +16,37 @@ pub(crate) enum NameSite {
     Callee,
     /// The name a LET pair declares (it is bound from its own value onwards).
     Declaration,
+    /// A LAMBDA parameter (bound in the LAMBDA's body).
+    Parameter,
 }
 
 /// Calls `visit` with every name of `node`, where it is and the spelling of the innermost
 /// enclosing LAMBDA or LET declaration that binds it (`None` when none does), `bound` holding the
 /// names already in scope. Matching is case-insensitive, mirroring evaluation (see
-/// `same_variable`). LAMBDA parameters themselves are not visited.
+/// `same_variable`). A LAMBDA parameter is visited as [`NameSite::Parameter`], declared by itself.
 pub(crate) fn walk_names<F>(node: &mut Node, bound: &mut Vec<String>, visit: &mut F)
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
+    // A run of signs, unary pluses, whitespace and parentheses is peeled in a loop, so it costs
+    // no frame: 1,022 spaced signs are about 2,000 wrappers, which overflowed a 2 MiB unoptimized
+    // stack at one frame each when a formula was set (T-3691, as T-3253's `Clone` and `PartialEq`).
+    let mut node = node;
+    loop {
+        let current = node;
+        node = match current {
+            Node::UnaryKind { right: child, .. }
+            | Node::ImplicitIntersection { child, .. }
+            | Node::SpillRangeOperator { child }
+            | Node::Group { child, .. }
+            | Node::UnaryPlus { child }
+            | Node::Spaced { child, .. } => child,
+            other => {
+                node = other;
+                break;
+            }
+        };
+    }
     let declared =
         |bound: &[String], name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
     match node {
@@ -42,8 +63,10 @@ where
         }
         Node::LambdaDefKind { parameters, body } => {
             let depth = bound.len();
-            for parameter in parameters.iter() {
+            for parameter in parameters.iter_mut() {
                 bound.push(parameter.name.clone());
+                let d = parameter.name.clone();
+                visit(NameSite::Parameter, &mut parameter.name, Some(&d));
             }
             walk_names(body, bound, visit);
             bound.truncate(depth);
@@ -126,11 +149,46 @@ where
 /// included. Unbound names (e.g. a defined name that only resolves at
 /// evaluation time) are left alone.
 pub(super) fn prefix_bound_variables(node: &mut Node) {
-    walk_names(node, &mut Vec::new(), &mut |_, name, declared| {
-        if declared.is_some() {
+    // A LAMBDA parameter is printed with its own prefix, `_xlpm.` or `_xlop.` (`stringify`).
+    walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
+        if declared.is_some() && site != NameSite::Parameter {
             *name = format!("_xlpm.{name}");
         }
     });
+}
+
+/// Gives every LET name and LAMBDA parameter spelled like an A1 cell (`f1`, `a1`), at its
+/// declaration and at every use, the `_xlpm.` prefix the parser drops: the A1 text of a formula
+/// typed in R1C1 mode, where such a name is no reference and Excel binds it
+/// (probes/t3897-r1c1-let-cell-names, T-3897), so that the typed A1 entry binds it too instead of
+/// refusing it as it refuses `f1` typed in A1 mode (decision 0103). Returns whether every name
+/// spelled like an A1 cell is bound: an unbound one (`=f1`) is an undefined name in Excel
+/// (`#NAME?`, A8:A10, A13), which bare A1 text would read as the cell instead.
+fn prefix_a1_cell_shaped_variables(node: &mut Node) -> bool {
+    let mut all_bound = true;
+    walk_names(node, &mut Vec::new(), &mut |_, name, declared| {
+        if parse_reference_a1(&name.to_ascii_uppercase()).is_some() {
+            if declared.is_some() {
+                *name = format!("_xlpm.{name}");
+            } else {
+                all_bound = false;
+            }
+        }
+    });
+    all_bound
+}
+
+/// [`super::to_english_string`] of a formula typed in R1C1 mode, as the A1 text the typed A1 entry
+/// reads the same: a LET name or LAMBDA parameter spelled like an A1 cell keeps its `_xlpm.`
+/// prefix ([`prefix_a1_cell_shaped_variables`], T-3897). `None` when such a name
+/// is unbound: Excel reads it as an undefined name, which no A1 text here spells yet
+/// (TODO(T-4040)).
+pub(crate) fn to_english_string_typed_from_r1c1(
+    node: &Node,
+    context: &CellReferenceRC,
+) -> Option<String> {
+    let mut node = node.clone();
+    prefix_a1_cell_shaped_variables(&mut node).then(|| super::to_english_string(&node, context))
 }
 
 /// Whether a stored (R1C1) formula would read `name` back as a cell, or refuse it: an R1C1 cell

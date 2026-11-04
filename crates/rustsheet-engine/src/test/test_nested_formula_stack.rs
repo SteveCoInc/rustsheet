@@ -74,21 +74,12 @@ fn formulas_at_the_nesting_limit_evaluate_on_a_2_mib_stack() {
 /// T-3338: `-(` nests to Excel's 256-parenthesis cap (probes/t3266-nested-paren-256), and so do
 /// its spaced and plus forms, and 200 levels around Excel's 824 more minus signs
 /// (probes/t3266-nested-200-824): each parses, evaluates, prints as written, and survives a row
-/// insert and a sheet rename (directive 5). The bare forms take a 2 MiB stack even unoptimized.
-/// The others hold more nodes per level, a [`Node::Spaced`] around every sign and group or a
-/// long run of signs, as many as the sign cap's own tests build (`MAX_SIGNS`), and the walks that
-/// recurse per node (cloning the tree when it is stored) take what those take: 1 MiB optimized,
-/// 16 MiB unoptimized (`on_small_stack` in `expressions/parser/tests/test_nesting_depth.rs`).
-///
-/// [`Node::Spaced`]: crate::expressions::parser::Node::Spaced
+/// insert and a sheet rename (directive 5), all on a 2 MiB stack even unoptimized: the walks over
+/// the tree loop over its runs of signs, whitespace and parentheses (T-3253, T-3691).
 #[test]
 fn signed_parentheses_at_the_parenthesis_cap_evaluate_on_a_small_stack() {
     let limit = MAX_PARENTHESES;
-    let small = if cfg!(debug_assertions) {
-        16 << 20
-    } else {
-        1 << 20
-    };
+    let small = 2 << 20;
     let minuses = "-".repeat(824);
     for (open, inner, close, levels, value, stack) in [
         ("-(", "B1", ")", limit, "2", 2 << 20),

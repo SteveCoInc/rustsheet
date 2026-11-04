@@ -57,6 +57,7 @@ mod lambda;
 mod lists;
 pub mod move_formula;
 mod node;
+mod node_walks;
 mod operands;
 mod reference_operators;
 mod sheet_span;
@@ -175,6 +176,10 @@ pub struct Parser {
     /// The formula is read from a file (xlsx import, `Input::StoredFormula`): a structured
     /// reference to an unknown table or column is `#REF!` (see [`Parser::set_loaded`]).
     loaded: bool,
+    /// The formula is untyped text from outside the engine (`Model::set_user_input` called by an
+    /// embedder or the bindings), not text the engine printed and re-enters itself: a padded bare
+    /// column then reads as no column, as typed or loaded text does (see [`Parser::set_external`]).
+    external: bool,
     /// The first cell-shaped name the last parse bound (see `typed`).
     cell_shaped_binding: Option<String>,
     /// The first call of a function with an argument count Excel refuses that the last parse
@@ -243,6 +248,7 @@ impl Parser {
             bound_names: Vec::new(),
             typed: false,
             loaded: false,
+            external: false,
             cell_shaped_binding: None,
             wrong_count_call: None,
             spelled_anchorarray: false,
@@ -258,6 +264,15 @@ impl Parser {
     /// anywhere else (typed text, a re-parse after `remove_table`) it stays a parse error.
     pub fn set_loaded(&mut self, loaded: bool) {
         self.loaded = loaded;
+    }
+
+    /// Reads the next formulas as untyped text from outside the engine (`true`), or as the
+    /// engine's own printed text (`false`, the default). Only the engine re-enters a padded bare
+    /// column `T[ Col ]` (its print of `T[ [Col] ]`) and reads it as the column; from outside,
+    /// typed or loaded, Excel refuses it or loads it as `#REF!` (syntax.md, probes/t2800-stored-ws-0..2,
+    /// T-3069, T-3258).
+    pub(crate) fn set_external(&mut self, external: bool) {
+        self.external = external;
     }
 
     /// Reads the next formulas as typed (`true`) or stored (`false`); see [`Parser::typed_refusal`].
@@ -317,7 +332,8 @@ impl Parser {
             formula
         };
         self.lexer.set_formula(formula);
-        self.lexer.set_engine_text(!self.typed && !self.loaded);
+        self.lexer
+            .set_engine_text(!self.typed && !self.loaded && !self.external);
         self.context = context.clone();
         // At the top level a formula may start with an expression or a range.
         self.expecting_here = vec![ExpectedTokens::Range, ExpectedTokens::Other];

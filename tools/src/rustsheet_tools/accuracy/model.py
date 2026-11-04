@@ -18,10 +18,10 @@ import mpmath
 
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 
-Kind = Literal["real", "int", "bool", "array"]
-MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...]"
-"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, or an
-array literal's elements."""
+Kind = Literal["real", "int", "bool", "array", "matrix"]
+MathArg: TypeAlias = "mpmath.mpf | bool | tuple[mpmath.mpf, ...] | tuple[tuple[mpmath.mpf, ...], ...]"
+"""An argument as the math sees it: the exact double (or integer) of the literal, a logical, an
+array literal's elements, or a matrix literal's rows."""
 
 
 class DomainError(ValueError):
@@ -137,7 +137,11 @@ class Definition:
     from a tail probability (a distribution's x). `draw` replaces the per-parameter sampler for a
     solver (`solver`: the 300-point count). With `variadic` the last parameter repeats (SUM's
     number2, number3, ...) and `draw` sets the argument count. `sources` cite where the
-    definition's math and ranges come from."""
+    definition's math and ranges come from. `serials_1900` marks math that reads date serials in
+    the 1900 date system (YEARFRAC's calendar, HOUR's last-date bound): an eval cell in a 1904
+    workbook gets no math value (T-3678). With `indexed` the function returns an array and a point
+    is one element of it: the last two parameters are INDEX's row and column, and the cell is
+    `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686)."""
 
     function: str
     params: tuple[Param, ...]
@@ -149,11 +153,20 @@ class Definition:
     draw: Draw | None = None
     solver: bool = False
     variadic: bool = False
+    serials_1900: bool = False
+    indexed: bool = False
 
     def __post_init__(self) -> None:
         flags = [p.optional for p in self.params]
         if flags != sorted(flags):
             msg = f"{self.function}: an optional parameter is followed by a required one"
+            raise ValueError(msg)
+        if self.indexed and (
+            self.variadic
+            or len(self.params) < 3
+            or any(p.kind != "int" or p.optional for p in self.params[-2:])
+        ):
+            msg = f"{self.function}: an indexed definition ends in two required integer parameters"
             raise ValueError(msg)
 
     def params_for(self, count: int) -> tuple[Param, ...]:
@@ -182,8 +195,8 @@ class Definition:
     def check_domain(self, args: Sequence[MathArg]) -> None:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
         for p, a in zip(self.params_for(len(args)), args, strict=True):
-            if p.kind in ("bool", "array") or isinstance(a, (bool, tuple)):
-                continue  # an array's rules are the definition's `domain`
+            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
+                continue  # an array's or a matrix's rules are the definition's `domain`
             if not p.domain.contains(float(a)):
                 msg = f"{p.name} outside {p.domain.describe()}"
                 raise DomainError(msg)

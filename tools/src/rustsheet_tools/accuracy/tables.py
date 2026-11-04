@@ -142,9 +142,13 @@ class Point:
     math: MathValue
 
 
-def formula(function: str, args: Sequence[literal.Arg]) -> str:
-    """`=T.INV(1.87E-297,3937)`."""
-    return f"={function}({','.join(literal.text(a) for a in args)})"
+def formula(definition: Definition, args: Sequence[literal.Arg]) -> str:
+    """`=T.INV(1.87E-297,3937)`, or for an indexed definition the one element it reads:
+    `=INDEX(MINVERSE({1,2;3,4}),2,1)`."""
+    texts = [literal.text(a) for a in args]
+    if definition.indexed:
+        return f"=INDEX({definition.function}({','.join(texts[:-2])}),{texts[-2]},{texts[-1]})"
+    return f"={definition.function}({','.join(texts)})"
 
 
 def draw_points(
@@ -171,7 +175,7 @@ def draw_points(
                 except NoValueError:
                     continue  # overflow or several roots: redraw
                 except DroppedError as err:
-                    print(f"dropped {formula(definition.function, args)} ({name}): {err}", file=log)
+                    print(f"dropped {formula(definition, args)} ({name}): {err}", file=log)
                 break
             else:
                 print(f"dropped a {name} point after {MAX_REDRAWS} redraws", file=log)
@@ -212,7 +216,7 @@ def batch_files(definition: Definition, batch: str, points: Sequence[Point]) -> 
     math_cells: dict[str, dict[str, str]] = {}
     for n, point in enumerate(points, start=1):
         address = f"A{n}"
-        text = formula(definition.function, point.args)
+        text = formula(definition, point.args)
         cells[address] = text
         hypotheses[f"Calc!{address}"] = (
             f"gate-a/{point.stratum}/{','.join(literal.text(a) for a in point.args)}"
@@ -255,12 +259,22 @@ def write_batch(
 
 
 def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
-    """The arguments of a table formula `=FUNC(lit,...)`, read as Excel reads them."""
+    """The arguments of a table formula `=FUNC(lit,...)` (an indexed definition's
+    `=INDEX(FUNC(lit,...),row,column)`), read as Excel reads them."""
     prefix = f"={definition.function}("
+    index: list[str] = []
+    if definition.indexed:
+        outer = (
+            split_args(text[len("=INDEX(") : -1]) if text.startswith("=INDEX(") and text.endswith(")") else []
+        )
+        if len(outer) != 3 or not outer[0].startswith(prefix[1:]):
+            msg = f"{text!r} is not INDEX of one call of {definition.function}"
+            raise ValueError(msg)
+        text, index = f"={outer[0]}", outer[1:]
     if not (text.startswith(prefix) and text.endswith(")")):
         msg = f"{text!r} is not one call of {definition.function}"
         raise ValueError(msg)
-    parts = split_args(text[len(prefix) : -1])
+    parts = split_args(text[len(prefix) : -1]) + index
     try:
         params = definition.params_for(len(parts))
     except ValueError as err:
@@ -271,11 +285,18 @@ def parse_formula(definition: Definition, text: str) -> list[literal.Arg]:
         token = part.strip()
         if param.kind == "bool":
             args.append(token.upper() == "TRUE")
-        elif param.kind == "array":
+        elif param.kind in ("array", "matrix"):
             if not (token.startswith("{") and token.endswith("}")):
                 msg = f"{text!r}: {param.name} is not an array literal"
                 raise ValueError(msg)
-            args.append(tuple(number_literal(t) for t in split_args(token[1:-1])))
+            rows = [tuple(number_literal(t) for t in split_args(row)) for row in token[1:-1].split(";")]
+            if param.kind == "array" and len(rows) == 1:
+                args.append(rows[0])
+            elif param.kind == "matrix" and len({len(r) for r in rows}) == 1:
+                args.append(tuple(rows))
+            else:
+                msg = f"{text!r}: {param.name} is not a {'one-row array' if param.kind == 'array' else 'matrix'}"
+                raise ValueError(msg)
         elif param.kind == "int":
             args.append(int(number_literal(token)))
         else:

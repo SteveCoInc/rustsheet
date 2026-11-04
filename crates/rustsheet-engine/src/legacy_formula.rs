@@ -128,7 +128,7 @@ impl Model {
         if legacy {
             self.set_cell_with_legacy_formula(sheet, row, column, &input)
         } else {
-            self.set_user_input(sheet, row, column, input)
+            self.reenter_printed_input(sheet, row, column, input)
         }
     }
 
