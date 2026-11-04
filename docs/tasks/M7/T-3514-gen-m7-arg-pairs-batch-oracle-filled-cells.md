@@ -3,7 +3,7 @@ id: T-3514
 title: "gen-m7 arg-pairs batch: oracle-filled cells for the unseen argument-class pairs of REGEXTEST and REGEXREPLACE"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
