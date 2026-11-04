@@ -3,7 +3,7 @@ id: T-4198
 title: "TEXTSPLIT with a one-cell error reference as a delimiter (B1 and B1:B1 disagree in ours) and an array pad_with against an error element of a delimiter list: probe and match"
 milestone: M7
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -50,18 +50,34 @@ recorded as unprobed in docs/excel-semantics/text.md "TEXTSPLIT: argument errors
   same (CLAUDE.md directive 3).
 
 ## Acceptance criteria
-- [ ] A new probes case (excel-probe skill, excel-graph, canary-verified, tag M7) holds items 1 to 4 above, with a
+- [x] A new probes case (excel-probe skill, excel-graph, canary-verified, tag M7) holds items 1 to 4 above, with a
       sidecar.
-- [ ] text.md "TEXTSPLIT: argument errors first, an all-empty result" states the rule for one-cell error references
+- [x] text.md "TEXTSPLIT: argument errors first, an all-empty result" states the rule for one-cell error references
       and for the pad_with/list-element order, cites the new cells, and drops or narrows its "Unprobed" sentence.
-- [ ] The engine matches every new cell. `TEXTSPLIT("abc",B1,,1/0)` and `TEXTSPLIT("abc",B1:B1,,1/0)` give the same
+- [x] The engine matches every new cell. `TEXTSPLIT("abc",B1,,1/0)` and `TEXTSPLIT("abc",B1:B1,,1/0)` give the same
       result whenever Excel's do, and any difference is backed by a cited cell.
-- [ ] probes/textsplit-error-order, textsplit-empty-delimiter, textsplit-empty-text, t2581-textsplit-textbefore and
+- [x] probes/textsplit-error-order, textsplit-empty-delimiter, textsplit-empty-text, t2581-textsplit-textbefore and
       every gen-m7 TEXTSPLIT cell still pass. No new lines in eval/baseline/*.txt (`make eval-baseline` reports 0
       regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - TEXTBEFORE/TEXTAFTER/TEXTSPLIT argument kinds (an error text, empty text in ignore_empty or match_mode, pad_with
   kinds): T-2876 (research). Leave those cells to it.
 - The lift of TEXTSPLIT over a text array, which is already evidenced.
+
+## Outcome
+- New probes case `probes/t4198-textsplit-error-ref-delimiter` (51 formula cells, excel-graph, canary-verified,
+  2026-11-04, tag M7) covers items 1 to 4 and TEXTBEFORE/TEXTAFTER with `B1` and `B1:B1`.
+- Excel: a one-cell reference to an error cell is an argument error in every spelling (`B1`, `B1:B1`, `$B$1`,
+  `Calc!B1`, `INDEX(B1:B2,1)`, a defined name, a LET-bound `B1`), as col_delimiter or row_delimiter, so it beats
+  ignore_empty `1/0` or `"x"` (A1-A27); it does not follow T-3497's TOCOL rule. A two-cell range of errors is a list
+  (A34-A36). An error element of a delimiter list beats an array pad_with's `#VALUE!` (A37-A40), which reverses the
+  order text.md guessed.
+- Engine (`fn_textsplit`): a delimiter argument goes through `collapse_single_cell` (the helper TEXTBEFORE/TEXTAFTER
+  already use) before the argument-error check, and the array pad_with `#VALUE!` moved after the list errors.
+  TEXTBEFORE/TEXTAFTER needed no change (A44-A51 pass).
+- text.md "TEXTSPLIT: argument errors first, an all-empty result": order corrected, new paragraph with the cells,
+  the "Unprobed" sentence dropped.
+- Eval delta: the new case passes 53/53 checked cells (new coverage); no baseline lines added or removed;
+  textsplit-error-order and the other TEXTSPLIT cases still pass.
