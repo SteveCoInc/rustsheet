@@ -45,3 +45,21 @@ fn a_cells_calls_and_its_names_do_not_add_up() {
     model.evaluate();
     assert_eq!(model._get_text("A1"), *"1");
 }
+
+// Graph's `worksheets('S')/names/add` holds a sheet-scoped name to the same cap: 65 calls are
+// added (S!N is 1 from another sheet) and 66 refused (probes/t4014-sheet-api-name-65, -66, T-4014).
+#[test]
+fn a_sheet_scoped_name_takes_65_nested_calls_and_not_66() {
+    let mut model = new_empty_model();
+    model.new_sheet();
+    model.define_name("Deep", Some(0), &nested_abs(65)).unwrap();
+    let refused = model
+        .define_name("Deeper", Some(0), &nested_abs(66))
+        .unwrap_err();
+    assert!(refused.contains(TOO_MANY_NESTED_CALLS_MESSAGE), "{refused}");
+    model._set("Sheet2!A1", "=Sheet1!Deep");
+    model._set("Sheet2!A2", "=Sheet1!Deeper");
+    model.evaluate();
+    assert_eq!(model._get_text("Sheet2!A1"), *"1");
+    assert_eq!(model._get_text("Sheet2!A2"), *"#NAME?");
+}

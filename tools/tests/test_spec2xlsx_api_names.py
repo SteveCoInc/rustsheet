@@ -18,7 +18,12 @@ def _spec(names: Any) -> dict[str, Any]:
 
 def test_names_are_recorded_in_spec_order() -> None:
     xlsx = build_xlsx(_spec([{"name": "N", "formula": _BODY}, {"name": "M", "formula": "=1"}]))
-    assert api_names(xlsx) == [("N", _BODY), ("M", "=1")]
+    assert api_names(xlsx) == [("N", _BODY, None), ("M", "=1", None)]
+
+
+def test_a_sheet_scoped_name_records_its_sheet() -> None:
+    xlsx = build_xlsx(_spec([{"name": "N", "formula": "=1", "sheet": "S"}, {"name": "M", "formula": "=2"}]))
+    assert api_names(xlsx) == [("N", "=1", "S"), ("M", "=2", None)]
 
 
 def test_a_spec_without_api_names_records_none() -> None:
@@ -34,6 +39,8 @@ def test_a_spec_without_api_names_records_none() -> None:
         [{"name": "", "formula": "=1"}],
         [{"name": "N", "formula": 1}],
         [{"name": "N", "formula": "=1", "scope": "S"}],
+        [{"name": "N", "formula": "=1", "sheet": ""}],
+        [{"name": "N", "formula": "=1", "sheet": 1}],
     ],
 )
 def test_malformed_api_names_are_refused(names: Any) -> None:
@@ -84,6 +91,27 @@ def test_graph_adds_each_name_before_calculating_and_goes_on_when_refused(
     err = capsys.readouterr().err
     assert "REFUSED name N" in err
     assert "ADDED name M '=1'" in err
+
+
+def test_graph_adds_a_sheet_scoped_name_on_its_worksheet(
+    graph: GraphBackend, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls: list[tuple[str, Any]] = []
+
+    def call(_method: str, url: str, **kw: Any) -> Any:
+        tail = url.rsplit("/items/1", 1)[-1]
+        calls.append((tail, kw.get("json")))
+        etag = "v2" if any(t == "/workbook/closeSession" for t, _ in calls) else "v1"
+        return SimpleNamespace(json=lambda: {"id": "1", "eTag": etag}, content=b"saved", status_code=200)
+
+    monkeypatch.setattr(graph, "_call", call)
+    spec = {
+        "sheets": [{"name": "it's", "cells": {"A1": "=N"}}],
+        "api_names": [{"name": "N", "formula": "=1", "sheet": "it's"}],
+    }
+    graph.recalc(build_xlsx(spec))
+    assert ("/workbook/worksheets('it%27%27s')/names/add", {"name": "N", "reference": "=1"}) in calls
+    assert "ADDED name N on sheet \"it's\" '=1'" in capsys.readouterr().err
 
 
 def test_libreoffice_refuses_api_names() -> None:
