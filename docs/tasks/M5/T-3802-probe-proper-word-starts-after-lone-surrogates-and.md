@@ -37,6 +37,6 @@ from T-3583.
 ## Outcome
 Probe `probes/t3802-proper-surrogates` (49 cells, excel-graph, 2026-11-04) answers all three points; `docs/excel-semantics/text.md`
 records them and drops "probably" and "unprobed". A lone surrogate (either half) and any supplementary character (math bold,
-Deseret capital and small, emoji) break a word and are kept unchanged. Mtavruli U+1C90, U+0524, U+A78D and U+0525 are not
-lowered or raised in any position (the task's guess that non-letter capitals lower through `simple_case` was wrong). The engine already
-matches every cell, so no engine change. Eval delta: +49 passing probe cells (baseline updated if the ratchet asks).
+Deseret capital and small, emoji) break a word and are kept unchanged. Mtavruli U+1C90, U+0524, U+A78D and U+0525 (characters Excel's case table lacks) are not
+lowered or raised in any position (the task's guess that they lower through `simple_case` was wrong; circled letters, which the table has, do lower). The engine already
+matches every cell, so no engine change. Eval delta: +49 passing probe cells (`eval/baseline/probes.txt` updated with `make eval-baseline`).

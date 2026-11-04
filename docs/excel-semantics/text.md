@@ -1054,11 +1054,11 @@ U+D7B0-U+D7FB, and the Bamum numerals U+A6E6-U+A6EF (Nl). Ordinary letters of ev
 (`PROPER("aאbc")`, `"a一bc"`, `"a가bc"`, `"aʰbc"`, `"a々bc"`, `"aⅰbc"` all keep `b` lower). Digits of every script,
 modifier symbols (`^`, `` ` ``, `´`, `¨`), the zero-width and bidi format characters, every space, control character and
 punctuation mark probed, and the private-use area are not letters. A supplementary-plane character is not a letter, whatever its case, and breaks a word
-(`PROPER("a𝐚bc")` is `A𝐚Bc`, `PROPER("x"&U+1D45A&"yz")` `X𝐚Yz`; a Deseret capital U+10400 or small U+10428 is left as it is at a word start,
+(`PROPER("a𝐚bc")` is `A𝐚Bc`, `PROPER("x"&U+1D41A&"yz")` `X𝐚Yz`; a Deseret capital U+10400 or small U+10428 is left as it is at a word start,
 `PROPER(U+10400&"x")` is `𐐀X`, and mid-word, `A𐐀Bc`, `A𐐨Bc`; an emoji likewise). A lone surrogate, high or low, also breaks a word and is kept
 (`PROPER("a"&H&"bc")` is `A`+H+`Bc`, as with L; `PROPER(H&"b")` is H+`B`; the halves joined back into a pair, `PROPER("ab"&H&L&"cd")`, still break the word: `Ab`+H+L+`Cd`; the lone halves are built with `MID(UNICHAR(128512),1,1)` and `,2,1)`, as `LEFT` and `RIGHT` take the whole emoji).
-Non-letter capitals are not lowered at all (inferred: the case table has no entry for them, see the T-3820 note below): Georgian Mtavruli U+1C90, U+0524 and U+A78D stay as they are
-at a word start, mid-word, after a digit and after a space (`PROPER("a"&U+1C90&"b")` is `A`+U+1C90+`B`), and so does the small U+0525
+Non-letter capitals that Excel's case table lacks are not lowered (circled letters, which have an entry, are: above): Georgian Mtavruli U+1C90, Cyrillic U+0524 and Latin U+A78D stay as they are
+at a word start, mid-word, after a digit and after a space (`PROPER("a"&U+1C90&"b")` is `A`+U+1C90+`B`), and so does the small U+0525 (that the table lacks U+1C90 is shown by the T-3820 note below; for the others it is inferred from these cells)
 (probes/t3802-proper-surrogates, excel-graph, 2026-11-04, 49 cells; the engine matches all, T-3802). Circled letters are not letters, so they are lowered
 wherever they stand: `PROPER(UNICHAR(9398)&"x")` (Ⓐ) is `ⓐX`, `PROPER("aⒶB")` is `AⓐB`, `PROPER("1Ⓐ")` is `1ⓐ`. The
 titlecase digraphs map to their capital at a word start, also after a digit (`PROPER("1ǆ")` is `1Ǆ`), and to their small
