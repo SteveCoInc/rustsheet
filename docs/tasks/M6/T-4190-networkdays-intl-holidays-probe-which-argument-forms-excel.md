@@ -3,7 +3,7 @@ id: T-4190
 title: "NETWORKDAYS.INTL holidays: probe which argument forms Excel treats as a scalar value (the weekend-independent drop) beyond literals, arithmetic and SUM, and match it"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
