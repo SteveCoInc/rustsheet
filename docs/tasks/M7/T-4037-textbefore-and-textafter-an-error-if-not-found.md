@@ -1,6 +1,6 @@
 ---
 id: T-4037
-title: "TEXTBEFORE and TEXTAFTER: an error if_not_found is returned in place of the #VALUE! of an invalid or failing call (gen-m7)"
+title: "TEXTBEFORE and TEXTAFTER: an error match_end beats the #VALUE! of an out-of-range numeric match_mode (gen-m7)"
 milestone: M7
 lane: functions-text
 status: todo
@@ -12,15 +12,19 @@ depends_on: []
 ---
 
 ## Goal
-TEXTBEFORE and TEXTAFTER return an error-valued `if_not_found` where Excel does, so the 11 gen-m7 cells below match.
+TEXTBEFORE and TEXTAFTER return an error-valued `match_end` (5th argument) where Excel does, so the 11 gen-m7 cells below match.
 
 ## Context
-Found by the T-3513 arg-pairs batch (excel-graph). In each cell the 5th argument is an error value (literal or a
-`Data!G9` cell) and Excel returns that error where the engine returns `#VALUE!`. The calls are ones whose other
-arguments are invalid or find no match (a match_mode of -1 or 2, instance_num 0, a non-number instance or match_mode
-cell holding an error, a "2.5" text instance), so the rule looks like "a call that would fail returns if_not_found,
-whatever the cause", but the boundary (which invalid arguments still give `#VALUE!`) is not probed. Use the
-`excel-probe` skill first. Code: the TEXTBEFORE/TEXTAFTER module in `crates/rustsheet-engine`.
+Found by the T-3513 arg-pairs batch (excel-graph). Signature: text, delimiter, instance_num, match_mode, match_end,
+if_not_found. In each failing cell match_end is an error value (a literal such as `#N/A` or `Data!G9` = `#DIV/0!`) and
+match_mode is a number outside {0, 1}: 2, 7 (`Data!G1`), -1, -2.5 (`Data!G3`), "12" (`Data!G5`) or "2.5". Excel returns
+the match_end error; the engine returns `#VALUE!` for the invalid match_mode. The boundary is already in the batch: a
+non-numeric match_mode ("x" in Data!G6, "", blank G7) still gives `#VALUE!` beside an error match_end (9f9357dbf7e17803
+A343, A346, A409, A412; b2139ff37d606cb4 A373, A376, A439, A442), so the rule looks like "an error match_end wins over
+the `#VALUE!` of an out-of-range numeric match_mode, not over a match_mode that fails to coerce". Instance_num 0 is not
+the cause (it passes elsewhere). It is an error-ordering question inside `around_options` in the TEXTBEFORE/TEXTAFTER
+module of `crates/rustsheet-engine`. Use the `excel-probe` skill to fix the boundary first (the lock lines come out with
+`--lower-visible-lock`). docs/excel-semantics/text.md records the observation (not implemented).
 Cells (case stem and A1 names, decision 0159):
 - gen-m7/9f9357dbf7e17803: A85, A88, A157, A160, A286 (TEXTAFTER)
 - gen-m7/b2139ff37d606cb4: A115, A118, A199, A202, A313, A316 (TEXTBEFORE)

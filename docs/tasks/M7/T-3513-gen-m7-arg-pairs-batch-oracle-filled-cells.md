@@ -51,4 +51,4 @@ gen-m7 gains an oracle-filled batch from `rustsheet-gen --policy arg-pairs` (T-3
 - Single argument-kind probes (the research tasks named above) and other functions or milestones.
 
 ## Outcome
-`rustsheet-gen --policy arg-pairs --milestone M7 --functions TEXTBEFORE,TEXTAFTER` added 30 gen-m7 cases, excel-graph filled. report.json pairwise share is 1.0 for TEXTBEFORE and TEXTAFTER (was 0.22, 0 unseen pairs). 11 cells fail (all an error-valued if_not_found; engine returns #VALUE!), now known failures in gen-m7 and owned by T-4037. Eval: gen-m7 known failures 0 -> 11 (new coverage), 0 regressions.
+`rustsheet-gen --policy arg-pairs --milestone M7 --functions TEXTBEFORE,TEXTAFTER` added 30 gen-m7 cases, excel-graph filled. report.json pairwise share is 1.0 for TEXTBEFORE and TEXTAFTER (was 0.22, 0 unseen pairs). 11 cells fail (an error match_end beside an out-of-range numeric match_mode; Excel returns the match_end error, the engine #VALUE!), now known failures in gen-m7 and owned by T-4037. Eval: gen-m7 known failures 0 -> 11 (new coverage), 0 regressions.
