@@ -1,0 +1,29 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3264: name N defined through the API (Graph names/add) with a body of 66 nested ABS calls; A1 is `=N`: is the 65-call cap applied to a name added after load?",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=N",
+    "B1": "=ISFORMULA(A1)"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S!A1",
+  "S!B1"
+ ],
+ "api_names": [
+  {
+   "name": "N",
+   "formula": "=ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(ABS(1))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))"
+  }
+ ]
+}

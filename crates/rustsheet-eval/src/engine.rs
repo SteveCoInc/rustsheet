@@ -12,7 +12,7 @@ use rustsheet::{
 use rustsheet_engine::text::{lone_escape, Segment};
 use rustsheet_engine::Text;
 
-use crate::case::{split_qualified, CaseSpec, CellInput, SheetOp, SheetSpec};
+use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec};
 use crate::cellref::{parse_range, Addr};
 use crate::spec_pivots;
 use crate::value::Value;
@@ -297,6 +297,7 @@ impl Engine for RustSheetEngine {
             .map_err(|e| e.to_string())?;
         type_entries(&mut workbook, entered)?;
         apply_sheet_ops(&mut workbook, &spec.sheet_ops)?;
+        define_api_names(&mut workbook, &spec.api_names)?;
         // The edit calculated once; an iterative case gets the oracle's other calculations.
         for _ in 1..calculations(spec) {
             workbook.recalculate();
@@ -338,6 +339,25 @@ fn type_entries(workbook: &mut Workbook, entered: Vec<(CellRef, Input)>) -> Resu
                 if message.starts_with(rustsheet_engine::TYPED_FORMULA_DOES_NOT_PARSE) => {}
             result => {
                 result.map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Defines a case's `api_names` after its sheet edits, each as its own edit, as the oracle replays
+/// them with Graph `names/add` (T-3264). Excel refusing a name (400 `InvalidArgument`) leaves it
+/// undefined, so a name the engine refuses the same way is skipped: a body nesting more than 65
+/// calls ([`rustsheet_engine::expressions::parser::TOO_MANY_NESTED_CALLS_MESSAGE`]). Any other refusal fails the case.
+fn define_api_names(workbook: &mut Workbook, names: &[ApiName]) -> Result<(), String> {
+    for ApiName { name, formula } in names {
+        match workbook.edit(|tx| tx.define_name(name, formula)) {
+            Err(rustsheet::EditError::DefinedName(message))
+                if message.contains(
+                    rustsheet_engine::expressions::parser::TOO_MANY_NESTED_CALLS_MESSAGE,
+                ) => {}
+            result => {
+                result.map_err(|e| format!("api name {name}: {e}"))?;
             }
         }
     }

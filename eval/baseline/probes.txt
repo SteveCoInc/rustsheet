@@ -1778,6 +1778,13 @@ C	probes/t3263-cf-abs-65.case.json	1
 C	probes/t3263-cf-long-299.case.json	1
 C	probes/t3263-dv-abs-65.case.json	1
 C	probes/t3263-dv-long-299.case.json	1
+C	probes/t3264-api-name-65.case.json	2
+C	probes/t3264-api-name-66.case.json	2
+C	probes/t3264-name40-cell25.case.json	2
+C	probes/t3264-name40-cell26-typed.case.json	3
+C	probes/t3264-name40-cell26.case.json	2
+C	probes/t3264-name65-cell65-typed.case.json	3
+C	probes/t3264-name65-cell65.case.json	2
 C	probes/t3266-minus-abs-1022-stored.case.json	2
 C	probes/t3266-minus-abs-1022-typed.case.json	2
 C	probes/t3266-minus-abs-1023-typed.case.json	2
@@ -2053,6 +2060,7 @@ C	probes/t3948-letter-period-gate-edges.case.json	112
 C	probes/t3957-letter-period-colon-tail.case.json	168
 C	probes/t3958-gurmukhi-tamil-telugu-khmer-digits.case.json	244
 C	probes/t3964-groupby-filter-lift-errors.case.json	144
+C	probes/t3985-groupby-two-lifted-spent-filter.case.json	44
 C	probes/t3995-dfunction-fold-final-forms.case.json	228
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
