@@ -374,8 +374,6 @@ impl Parser {
         Some(self.range_operand(None, left, right))
     }
 
-    /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
-    /// in any grammar mode.
     /// The name a use written `name` (used or called) reads, before the end of the parse drops
     /// the `_xlpm.` prefix from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
     /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). The R1C1 storage
@@ -384,19 +382,28 @@ impl Parser {
     /// own. In A1 text, two prefixes on a name spelled like an A1 cell are the quoted `'f1'` of a
     /// formula typed in R1C1 mode (`to_english_string_typed_from_r1c1`); otherwise any number
     /// reads as one.
+    ///
+    /// | prefixes | R1C1 storage form | typed R1C1 | A1 text                                 |
+    /// |----------|-------------------|------------|-----------------------------------------|
+    /// | 0        | `f1`              | `f1`       | `abc`                                   |
+    /// | 1        | `f1` (its mark)   | `_xlpm.f1` | `_xlpm.f1`                              |
+    /// | 2 or more| `_xlpm.f1`        | `_xlpm.f1` | `'f1'` if spelled like a cell, else one |
     fn written_lambda_name(&self, name: &str) -> String {
-        let once = name.strip_prefix("_xlpm.");
-        let twice = once.and_then(|rest| rest.strip_prefix("_xlpm."));
         let bare = name.trim_start_matches("_xlpm.");
-        if once.is_none() || (twice.is_none() && !self.lexer.is_a1_mode() && !self.typed) {
-            bare.to_string()
-        } else if twice.is_some() && self.lexer.is_a1_mode() && spelled_like_a1_cell(bare) {
-            format!("'{bare}'")
-        } else {
-            format!("_xlpm.{bare}")
+        let prefixes = (name.len() - bare.len()) / "_xlpm.".len();
+        let storage_form = !self.lexer.is_a1_mode() && !self.typed;
+        let quoted_from_r1c1 = self.lexer.is_a1_mode() && spelled_like_a1_cell(bare);
+        match prefixes {
+            0 => bare.to_string(),
+            1 if storage_form => bare.to_string(),
+            1 => format!("_xlpm.{bare}"),
+            _ if quoted_from_r1c1 => format!("'{bare}'"),
+            _ => format!("_xlpm.{bare}"),
         }
     }
 
+    /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
+    /// in any grammar mode.
     fn binds_name(&self, name: &str) -> bool {
         self.bound_names
             .iter()

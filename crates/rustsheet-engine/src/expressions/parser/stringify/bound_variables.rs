@@ -171,16 +171,17 @@ fn unquoted_cell_shaped_name(name: &str) -> Option<&str> {
 
 /// Gives every LET name and LAMBDA parameter spelled like an A1 cell (`f1`, `a1`), at its
 /// declaration and at every use, the `_xlpm.` prefix the parser drops, and an unbound one (the
-/// quoted `'f1'`) two of them, `_xlpm._xlpm.f1`: the A1 text of a formula typed in R1C1 mode,
-/// where such a name is no reference. One prefix would not do for the unbound one: typed in A1
-/// mode, an unbound `_xlpm.f1` is the name written with its prefix, which FORMULATEXT shows
-/// (probes/t4099-file-xlpm-unbound-names A10, T-4099), so the parser reads the doubled prefix in
-/// A1 text as the quoted name instead (`Parser::written_lambda_name`). Excel binds a bound one (probes/t3897-r1c1-let-cell-names, T-3897), which the
-/// typed A1 entry then binds too instead of refusing it as it refuses `f1` typed in A1 mode
-/// (decision 0103); an unbound one is Excel's undefined name (`#NAME?`, A8:A10, A13), which the
-/// typed A1 entry reads back quoted (`quote_unbound_cell_shaped_names` (`call_names`), T-4040) where bare A1
-/// text would read the cell, and Excel refuses `='f1'` typed in either mode
-/// (probes/t4040-r1c1-unbound-cell-names A1:A6).
+/// quoted `'f1'`) two of them, `_xlpm._xlpm.f1`: the A1 text of a formula typed in R1C1 mode, where
+/// such a name is no reference. One prefix would not do for the unbound one: typed in A1 mode, an
+/// unbound `_xlpm.f1` is the name written with its prefix, which FORMULATEXT shows
+/// (probes/t4099-file-xlpm-unbound-names A10, T-4099), so the parser reads the doubled prefix in A1
+/// text as the quoted name instead (`Parser::written_lambda_name`). Excel binds a bound one
+/// (probes/t3897-r1c1-let-cell-names, T-3897), which the typed A1 entry then binds too instead of
+/// refusing it as it refuses `f1` typed in A1 mode (decision 0103); an unbound one is Excel's
+/// undefined name (`#NAME?`, A8:A10, A13), which the typed A1 entry reads back quoted
+/// (`quote_unbound_cell_shaped_names` (`call_names`), T-4040) where bare A1 text would read the
+/// cell, and Excel refuses `='f1'` typed in either mode (probes/t4040-r1c1-unbound-cell-names
+/// A1:A6).
 fn prefix_a1_cell_shaped_variables(node: &mut Node) {
     walk_names(node, &mut Vec::new(), &mut |_, name, declared| {
         if let Some(inner) = unquoted_cell_shaped_name(name) {
