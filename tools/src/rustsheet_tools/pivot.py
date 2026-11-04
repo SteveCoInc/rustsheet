@@ -29,9 +29,12 @@ values past `end`. A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hou
 `months`, `quarters` or `years`, ECMA-376's `groupBy`) with `interval` 1, and `start` and `end` are
 date serials (written as `startDate` and `endDate`); its row field holds date serials, which the
 case should give a date number format (Excel groups a field by date only when its cells are dates),
-and is cached as dates. Only a grouped row field may hold blank (absent) cells, cached as `<m/>`. Excel stores no record's group, so the builder renders no cells for a grouped
-pivot (which group a record falls in is what such a probe asks): Excel lays the pivot out itself on
-load (excel-graph, T-4228), and the engine adapter does not register it (T-4235).
+and is cached as dates (truncated to the second; Excel refreshes the cache on load). Only a grouped
+row field may hold blank (absent) cells, cached as `<m/>`.
+
+Excel stores no record's group, so the builder renders no cells for a grouped pivot (which group a
+record falls in is what such a probe asks): Excel lays the pivot out itself on load (excel-graph,
+T-4228), and the engine adapter does not register it (T-4235).
 """
 
 from __future__ import annotations

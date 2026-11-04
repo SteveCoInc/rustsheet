@@ -197,7 +197,9 @@ Date groups (`<rangePr groupBy startDate endDate>`), probed (T-4236):
 - Quirk: on refresh, a date grouping of a field that holds a blank source cell is dropped. Every pivot of
   probes/t4236-pivot-date-groups with a blank renders each (second-rounded) date as its own item and the blank as
   `(blank)`; GETPIVOTDATA then takes `"(blank)"` or an omitted item for the blank and a date serial
-  (`DATE(2019,1,1)`) for a date item, while every group label is `#REF!`. Which group a blank takes in a cache that
+  (`DATE(2019,1,1)`) for a date item, while every group label is `#REF!`. The ungrouped items are listed in record
+  (first-appearance) order, not sorted, with `(blank)` at its record's place (pivot M: `... 43876, (blank), 43631`;
+  pivot H: `... 43467.25, (blank), 43466.5`). Which group a blank takes in a cache that
   keeps both (59932) is therefore not probeable.
 - GETPIVOTDATA on a date-grouped field: a text item is the label, case-folded (`"jan"`, `"JAN"`, `"12 am"`, `"qtr1"`,
   `"29-feb"`, `"1-mar"`); the `<1/1/2019` and `>1/1/2020` labels work while their group has a record. A **number** item

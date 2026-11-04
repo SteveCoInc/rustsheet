@@ -27,7 +27,11 @@ spec pivot, so every cell of probes/t4236-pivot-date-groups and probes/t4236-piv
 - On refresh Excel drops the date grouping of a field holding a blank source cell (probes/t4236-pivot-date-groups:
   every pivot with a blank renders its dates ungrouped, the blank as `(blank)`, and `"(blank)"`, an omitted item and a
   date serial item then work). The adapter builds spec pivots from their source, as a refresh does, so it should do
-  the same; the cache also rounds each date to the second (two dates within a second are one item).
+  the same; the cache also rounds each date to the second (two dates within a second are one item), and lists the
+  ungrouped items in record order, `(blank)` at its record's place (web.md).
+- The adapter must group from the source cells, not from a cache the builder writes: `pivot.py` `_iso` truncates a
+  date to the second where Excel rounds it (23:59:59.5 is the next day). The blank case's rendered reads stop at row
+  48 (Calc rows 41 to 58), which cuts off the ungrouped Q and Y layouts' last rows; extend the reads if it refills.
 - The adapter part extends T-4235's registration of grouped spec pivots (share `apply_groups`; do not copy it).
 - Owns every visibly-off cell of probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-blank.
 
