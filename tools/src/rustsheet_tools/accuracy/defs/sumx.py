@@ -37,7 +37,7 @@ from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of, signed_log_uniform
 from rustsheet_tools.accuracy.defs.aggregate import SNAP_SOURCE, running_total
 from rustsheet_tools.accuracy.defs.product import OVERFLOW_SOURCE, flush, running_product, squares
 from rustsheet_tools.accuracy.literal import Arg, round15
@@ -120,17 +120,6 @@ def _pair_sum(term: Term) -> Callable[[Sequence[MathArg]], mpmath.mpf]:
         return mpmath.fsum(exact)
 
     return value
-
-
-def _domain(value: Callable[[Sequence[MathArg]], mpmath.mpf]) -> Callable[[Sequence[MathArg]], str | None]:
-    def domain(args: Sequence[MathArg]) -> str | None:
-        try:
-            value(args)
-        except DomainError as why:
-            return str(why)
-        return None
-
-    return domain
 
 
 # -- draws -------------------------------------------------------------------------------------
@@ -276,7 +265,7 @@ SUMPRODUCT = register(
         function="SUMPRODUCT",
         params=(Param("array", "array", source=OVERFLOW_SOURCE),),
         value=_sumproduct,
-        domain=_domain(_sumproduct),
+        domain=domain_of(_sumproduct),
         draw=_sumproduct_draw(),
         variadic=True,
         sources=(*SOURCES, SNAP_SOURCE),
@@ -294,7 +283,7 @@ def _pair_definition(function: str, term: Term) -> Definition:
                 Param("array_y", "array", source=PAIRING_SOURCE),
             ),
             value=value,
-            domain=_domain(value),
+            domain=domain_of(value),
             draw=_pair_draw(function, value),
             sources=(*SOURCES, PAIRING_SOURCE),
         )
