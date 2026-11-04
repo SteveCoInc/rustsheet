@@ -147,7 +147,7 @@ impl fmt::Debug for Node {
             out.write_str(" {\n")?;
             out.depth += 1;
             if let Some((field_name, value)) = field {
-                write!(out, "{field_name}: {value:#?},\n")?;
+                writeln!(out, "{field_name}: {value:#?},")?;
             }
             out.write_str(child_name)?;
             out.write_str(": ")?;
@@ -255,8 +255,8 @@ fn same_operator(left: &Node, right: &Node) -> bool {
     }
 }
 
-/// `clone_one`, `eq_one` and `fmt_one` for every variant, from one list of each variant's fields: struct
-/// variants by their field names, then the one-value tuple variants, then the unit variant.
+/// `clone_one`, `eq_one` and `fmt_one` for every variant, from one list of each variant's fields:
+/// struct variants by their field names, then the one-value tuple variants, then the unit variant.
 macro_rules! one_node_walks {
     (
         $($variant:ident { $($field:ident),+ })+
