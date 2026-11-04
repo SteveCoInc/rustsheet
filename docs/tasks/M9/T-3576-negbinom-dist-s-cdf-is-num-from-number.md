@@ -3,7 +3,7 @@ id: T-3576
 title: "NEGBINOM.DIST's cdf is #NUM! from number_s 1E+13 at 28 failures"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: opus
@@ -45,10 +45,10 @@ probed and recorded in statistics.md.
     fix belongs in `bratio/`, not `binom.rs`.
 
 ## Acceptance criteria
-- [ ] A probe brackets the number_s cut and the failures cut, and tests whether the cut is a product or a sum of the two.
+- [x] A probe brackets the number_s cut and the failures cut, and tests whether the cut is a product or a sum of the two.
       statistics.md records the rule.
 - [ ] The engine matches every probed cell, including probes-numeric/t3553-negbinom-huge-s (an ungated suite).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The accuracy of NEGBINOM.DIST at a large number of failures (T-3352).
@@ -60,7 +60,26 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 
 - probes-numeric/t3553-negbinom-huge-s.case.json (7): Calc!A1, A6-A7, A10-A11, A15-A16
 
-- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+- [x] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Outcome
+Attempt 2 (2026-11-04) found the rule: on bratio's L140 branch Excel is `#NUM!` exactly where bup's running product
+of ratios R = prod_{l < n-1} (c + a0 + l)/(c + 1 + l) passes the largest double (ln 709.78), so bup's sum is not finite.
+On probes/t3576-negbinom-cdf-huge-s, ln R <= 707.81 is a value and ln R >= 713.72 is `#NUM!` on every L140 cell (attempt
+1's two contradicting swapped cells A88 and A89 included, and the bup + bgrat cells). R is the quantity, not a fitted
+threshold: the cut is the double's overflow, nothing was scored.
+- Structural model (decision 0188 R4): chosen among attempt 1's candidates (partial-sum log, ratio-product log), so it
+  owes a fresh sweep: probes/t3576-r2-ratio-overflow-sweep (54 cells, predictions frozen in the case generator before
+  the excel-graph fill) puts points 3% either side of the predicted cut at failures 19 to 38, p 0.25/0.55/0.95, and
+  non-integer shapes 21.5, 30.25, 37.75 through BETA.DIST in both orientations. Excel matched all 54 predictions.
+  Gate A: the change adds error returns only, so no envelope point moves.
+- Code: `bratio::l140_overflows` (dispatch + `bup::l140_bup_sum_overflows`, which runs the existing `bup_power_sum`),
+  asked by BETA.DIST's cdf (`beta.rs`) and NEGBINOM.DIST's cdf (`binom.rs`) only; the other kernel callers are
+  unprobed at such shapes. statistics.md entry rewritten with the rule.
+- Eval: probes-numeric/t3553-negbinom-huge-s 10/17 -> 17/17 (all 7 decision-0267 cells); probes/t3576-negbinom-cdf-huge-s
+  52/89 -> 85/89; probes/t3576-r2-ratio-overflow-sweep new, 54/54.
+- Left: A50:A52 of t3576-negbinom-cdf-huge-s (bfrac at number_s 1E+20, a different path) and A75 (1 ulp, Tier B):
+  follow-up T-4238.

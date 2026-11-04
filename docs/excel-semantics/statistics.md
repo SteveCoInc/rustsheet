@@ -2838,15 +2838,23 @@ Neither cut is a threshold on number_s or failures alone, nor on their product:
 - At number_s 1E+13, 27 and 29 failures are `#NUM!`, while 26 and 40 are 0.
 - At number_s 1E+20, every probed count from 18 to 1000 is `#NUM!`, and 15 to 17 are 0.
 - At 28 failures, number_s 3E+12 is 0 and 4E+12 is `#NUM!`.
-- Every `#NUM!` falls on cells where TOMS 708 bratio takes its L140 branch (b0 < 40 and b0·x0 > 0.7, then bup with
-  n = int(b0)), except one group: bfrac at number_s 1E+20. At 40 or more failures, bfrac gives 0 up to number_s 1E+15.
 
-On the bup + bpser cells (x0 <= 0.7), the natural log of bup's largest partial sum of terms separates the probe:
-0 up to 697.27 (`NEGBINOM.DIST(28,3E+12,..)`), `#NUM!` from 703.57 (`(27,1E+13,..)`). Two cells contradict that
-threshold: `NEGBINOM.DIST(1E+13,28,..)` and `(1E+15,28,..)`, a huge failures count with number_s 28, which bratio
-swaps. They are `#NUM!` at 684.35 and 804.09, while `(28,2E+12,..)` is 0 at 686.32. The bup + bgrat cells
-(x0 > 0.7: p 0.9 to 1 - 1E-13) are `#NUM!` from a partial-sum log of 56. So bgrat at a huge first shape fails
-separately. Which of bup's quantities Excel tests, and where, is UNVERIFIED.
+The rule on TOMS 708 bratio's L140 branch (b0 < 40 and b0·x0 > 0.7 after the swap, then bup with n = int(b0) and
+c = b0 - n, or n - 1 and c = 1 at a whole b0): Excel is `#NUM!` exactly where bup's running product of ratios
+R = prod_{l < n-1} (c + a0 + l)/(c + 1 + l) passes the largest double (ln 709.78), so bup's sum S is not finite. It holds
+on bup + bpser (x0 <= 0.7) and bup + bgrat (x0 > 0.7) alike, in either orientation, whatever p is: R does not involve
+x. On probes/t3576-negbinom-cdf-huge-s every L140 cell with ln R <= 707.81 (`NEGBINOM.DIST(28,3E+12,..)`) is a value and
+every one with ln R >= 713.72 (`(27,1E+13,..)`, and the swapped `(1E+13,28,..)` attempt 1's partial-sum threshold
+missed) is `#NUM!`. The fresh sweep probes/t3576-r2-ratio-overflow-sweep (54 cells, predictions frozen before the
+fill) puts points 3% either side of the predicted cut at failures 19 to 38, p 0.25, 0.55 and 0.95, and at the
+non-integer shapes 21.5, 30.25 and 37.75 through BETA.DIST in both orientations: Excel matched all 54. TOMS's own bup
+would not fail there (it scales its terms by exp(-mu) and returns at a zero prefactor), so Excel forms S before or
+without that check (see "Incomplete beta L140 and bfrac: the prefactor is Excel's own density times x·y").
+Implemented for BETA.DIST's and NEGBINOM.DIST's cdfs (`bratio::l140_overflows`, T-3576); the other callers of the
+kernel (BINOM.DIST's family, F, T, BETA.INV) are unprobed at such shapes.
+
+Still open: bfrac at number_s 1E+20 (40, 100 and 1000 failures, probes/t3576-negbinom-cdf-huge-s A50:A52) is `#NUM!`
+while bfrac at 1E+15 and below is 0. UNVERIFIED which quantity fails there.
 
 The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
 p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
@@ -2855,11 +2863,10 @@ p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 
 Evidence: probes-numeric/t3553-negbinom-huge-s A1:A17 (excel-graph, 2026-11-01). It surfaced in T-3553's first Gate
 A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#NUM!` beside 0 at
 `(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
-A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch and the partial-sum log of
-each of its cells.
-Ours: a value at every `#NUM!` cell, in both NEGBINOM.DIST and BETA.DIST. The cdf sums pmf terms (`binom.rs`), and
-BETA.DIST's kernel (`bratio/`) has no failure path on these branches.
-Status: VERIFIED (excel-graph) for the probed cells; the rule UNVERIFIED
+A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch, ln R and the partial-sum log of each of its
+cells. probes/t3576-r2-ratio-overflow-sweep A1:A54 (excel-graph, 2026-11-04).
+Ours: `#NUM!` at every L140 cell above (T-3576); a value at the three bfrac cells at 1E+20.
+Status: VERIFIED (excel-graph) for the probed cells and the L140 rule (fresh sweep); the bfrac cut at 1E+20 UNVERIFIED
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)

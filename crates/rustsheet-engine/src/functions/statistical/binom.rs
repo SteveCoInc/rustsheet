@@ -8,7 +8,7 @@
 
 use statrs::distribution::{Binomial, Discrete, DiscreteCDF, NegativeBinomial};
 
-use super::bratio::{closed_or_ported_tails, dispatch, ported_tails, Branch};
+use super::bratio::{closed_or_ported_tails, dispatch, l140_overflows, ported_tails, Branch};
 use super::discrete::{binomial_cdf, binomial_pmf, binomial_range, odds, times_ratio};
 use super::incomplete_beta::closed_form_tails;
 use super::loader::excel_dbinom_exponent;
@@ -300,6 +300,10 @@ impl Model {
             let (x, y, a, b) = (probability_s, 1.0 - probability_s, number_s, number_f + 1.0);
             if let Some((lower, _)) = closed_form_tails(x, y, a, b) {
                 return Ok(lower);
+            }
+            // Excel's kernel is `#NUM!` where bratio's L140 bup sum overflows (T-3576).
+            if l140_overflows(a, b, x, y) {
+                return Err(num_error(cell));
             }
             // bfrac's points take the double-double walk below first, and bfrac only past its
             // budget: Excel's `NEGBINOM.DIST(1,100,0.99,TRUE)` (ironcalc-calc BINOM.xlsx
