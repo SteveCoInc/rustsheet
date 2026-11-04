@@ -3,7 +3,7 @@ id: T-2054
 title: "Python bindings: expose the workbook file name (WorkbookOptions::name)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
