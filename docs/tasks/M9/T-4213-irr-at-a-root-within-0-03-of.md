@@ -3,7 +3,7 @@ id: T-4213
 title: "IRR at a root within 0.03 of zero: Excel's last iterate and ours sit a different 1E-16 from the root (9 unowned t3411 fresh-sweep cells, 2 at the 11th digit, decision 0267 Tier A)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
