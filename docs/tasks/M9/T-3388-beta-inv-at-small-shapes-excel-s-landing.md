@@ -78,3 +78,12 @@ model of Excel's start and stop is fitted under decision 0188 R4, or the task re
 Decisions 0083 and 0114 (`visible`): done when every cell this task owns is within half a unit of the 15th
 significant digit of Excel's value with the right type and error, or is an UNVERIFIED entry with its ruled-out
 hypotheses. Bit-level residue moves to a follow-up with `defer: phase-1b`.
+
+## Decision 0267 cells
+Decision 0267 (the owner's cut-loss plan, 2026-11-04) gives this task 17 probes-numeric cells that no open task listed: 1 first wrong at the 11th significant digit or earlier, 16 first wrong at the 12th or 13th digit.
+These come from the run at main 985d511b. They are Tier A (a wrong type or error, or the 11th digit or earlier) or Tier B (the 12th or 13th digit). Tier A is worked first.
+Decision 0056's time-box applies. If two attempts do not move these cells, block the task as time-boxed: decision 0267 then accepts the cells that are left, and no follow-up is filed for them.
+
+- probes-numeric/t3566-beta-inv-tiny-shape-and-range.case.json (17): Calc!A1, A4, A7, A10-A11, A34, A37-A38, A40-A41, A46-A47, A49, A76-A77, A109-A110
+
+- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

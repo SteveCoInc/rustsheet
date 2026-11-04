@@ -4,7 +4,7 @@ title: "F.DIST.RT is exactly 0 in Excel at true tails of 4E-297 and 9E-278 (11 t
 milestone: M9
 lane: functions-stat
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
 depends_on: []
@@ -58,3 +58,6 @@ brackets, while every tail Excel returns as a number stays a number.
 ## Visible-parity stage
 Decision 0083 and 0114 (`visible`): done when every cell this task owns is exactly Excel's 0 or within half a unit of
 the 15th significant digit of Excel's value with the right type.
+
+## Decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.

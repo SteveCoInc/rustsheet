@@ -18,7 +18,7 @@ instead of staying text.
 ## Context
 probes/t3446-script-digits-forms (excel-graph, 2026-11-03): every typed form of the eight blocks
 (plain, signed, decimal, percent, `$`, parentheses, group commas, exponent, ISO date, clock, mixed
-fraction) is a number in Excel (B12:B99 TRUE, B100:B102 TRUE for mixed scripts; B103:B105 stay text
+fraction) is a number in Excel (B12:B99 TRUE, B100:B101 TRUE for mixed scripts, B102 TRUE, a repeat of row 14's `١.٥`; B103:B105 stay text
 with U+066B, U+066C and U+066A). The engine keeps them text: `set_user_input` (model.rs) calls
 `parse_typed_number` on the raw text; coercion maps the digits through `ascii_script_digits`
 (formatter/parse_formatted.rs) since T-3325/T-3446.

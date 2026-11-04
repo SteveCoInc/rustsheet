@@ -71,7 +71,8 @@ On docs-only PRs (decision 0049) CI skips the rust, eval and python jobs; hygien
 - **Visible parity** (`eval/baseline/visible-parity.txt`, decisions 0088 and 0219): a full
   `rustsheet-eval check` also counts, per case, the in-scope cells of the vendored gated suites
   that are visibly off from Excel (further than half a unit in the 15th significant digit, or a
-  wrong type, error or text; decision 0083). The lock has one `case<TAB>count` line per case with
+  wrong type, error or text; decision 0083; the 13th digit for the incomplete-beta family, decision
+  0267 and SPEC-0030). The lock has one `case<TAB>count` line per case with
   any such cell, and fails each case above its line; a case with no line allows none. `make
   eval-baseline` records the line of a case new to its suite's baseline, so a PR that adds cases
   commits their lines. It never lowers a line, so fix PRs leave the file alone, and the steward
