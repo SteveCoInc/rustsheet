@@ -93,13 +93,14 @@ ODDFPRICE's root"). A short first period, and a long one with the settlement in 
   Y!N29 and the ODDFPRICE cells P!A29, P!E29, all 1 ulp); probes/oddfyield-solver-sweep unchanged at 545 of 547 (short
   first periods; its listed cells already passed on main: S!A9, A75-A83, B1, C21, C35, C50, C52, C85, E1, F1, E32, E33,
   E40, F24, F32, F33, F46, F50 all pass; S!C23 and S!E23 are 1 ulp).
-- R4 guards. Hold-out (R4.1): no split was fixed before the lab scored, so the split is `fitlab/holdout.py`
-  `is_holdout` applied afterwards to the 73 long-first cells with `nq` >= 1 (case ids
-  `ironcalc-calc/FINANCIAL/PRICE_YIELD.xlsx` and `probes/oddf-date-order-domain-sweep.case.json`); margin 5 points
-  (the default). Bit-exact / within 4 ulp / within 15 digits: this slope train 45/45/45 of 45, test 28/28/28 of 28;
-  the correctly rounded candidate (ODDFPRICE's 50-digit mpmath root, rounded) train 0/0/0, test 0/0/0. Excel stops
-  short of the root by 3e-12 to 3e-8 relative on these cells (financial.md; T-2007's root-landing solver scored 0 of
-  99). Fresh sweep (R4.2): probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls (2 to 5 quasi periods in
+- R4 guards. Hold-out (R4.1): no split was fixed before the lab scored, and the model was chosen on all 73 long-first
+  cells with `nq` >= 1 (PRICE_YIELD.xlsx and probes/oddf-date-order-domain-sweep), so those are the train side and
+  the hold-out is the fresh sweep below, never tuned on, with the margin stated before it was scored (within 5
+  points of train). Bit-exact / within 4 ulp / within 15 digits: this slope train 73/73/73 of 73, hold-out
+  157/158/158 of 160 (98.1%, 1.9 points below train); the correctly rounded candidate (ODDFPRICE's 50-digit mpmath
+  root over the engine's schedule, rounded) train 0/0/0, hold-out 0/1/2. Excel stops short of the root by 3e-12 to
+  3e-8 relative on the train cells (financial.md; T-2007's root-landing solver scored 0 of 99). Fresh sweep (R4.2):
+  probes-numeric/t3031-r4-oddfyield-long-first, 160 seeded calls (2 to 5 quasi periods in
   the first period, `nq` 0 to 4, every frequency and basis, coupon 0 or 0.001-0.2, price 20-200, redemption 50-200),
   excel-graph 2026-11-03: 157 pass; without the extra coupons 72. Gate A (R2): 160 of 160 inside the envelope: 157
   within 15 digits of Excel, S!A80 1 ulp, and S!A61 and S!A70 (month-end schedules, T-3988) whose 50-digit mpmath roots
