@@ -4216,10 +4216,28 @@ within 1E-15 relative / largest relative error:
   df2/(df2 + df1 x), and at a = 5E9 one ulp of x moves I by about 5E-7). The first `#NUM!` b at a: none to 39.5 for a = 1E9 and 2E9; 39.5 at 2.5E9
   and 3E9; 38.5 at 4E9 (and 5E9); 37.5 at 6E9 (x chosen for a tail of 0.04 to 0.06 at a other than 5E9, and about 3E-7 to 7E-6 at 5E9 (1E-2074 at x = 0.999999); whether
   the edge depends on x is unpinned). So the lower edge falls as a grows and the upper edge is b0 < 40, the
-  bgrat family of TOMS 708 (see above); the exact edge function of a is not pinned. From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
+  bgrat family of TOMS 708 (see above); T-4080 pins the edge (next item). From b = 40 Excel is a number again; its value at A39, A40 (df1 80 and 100, df2 1E10) and A61, A62
   (df2 5E9) is within 9E-10 to 7E-9 relative of a 60-digit mpmath `betainc` (computed at review, not committed), the engine
   1E-8 to 1.4E-7 off. df2 = 2E10 is `#NUM!` for every
   df1 (F-distribution df limit, T-1530), including 60, 79, 80 and 100.
+- **The edge (T-4080)**, probes-numeric/t4080-beta-num-band-edge (1,232 cells, excel-graph, 2026-11-04): `BETA.DIST(x,a,b,TRUE)`
+  on the grid a = 2E9, 2.25E9, 2.5E9, 2.75E9, 3E9, 3.5E9 to 5.5E9 by 5E8, 6E9, 7E9, 8E9, 1E10 by b = 30 to 40 by 1/2, at four
+  tails (x = 1 - q/a for I of about 1E-6, 0.05 and 0.5, and x = 1 - 1E-12). Rule:
+  - **The band counts bup's terms, not b.** With n = int(b), less 1 at an integer b (the n of TOMS 708's L140 path, which
+    splits b0 into n + a fraction of 1/2 or 1), the cell is `#NUM!` exactly when n >= n_min(a): n_min = 39 for a = 2.25E9
+    to 3E9 (band b = 39.5), 38 for 3.5E9 to 5.5E9 (b = 38.5, 39, 39.5), 37 for 6E9 to 8E9 (b = 37.5 to 39.5), 36 at 1E10
+    (b = 36.5 to 39.5), none at 2E9. So the edge always opens at a half-integer b and takes the integer above it (same n),
+    which is why no rule in b alone (T-4044) separated the earlier cells.
+  - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.79,
+    2.21)): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
+    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. This is a separating
+    line fitted to the 14 probed a, not a mechanism: the TOMS quantity it tracks is not identified (bup's term ratio and
+    brcmp1 do not move with a at a fixed tail; the exp(708) scaling runs only at an integer b, yet both kinds share n).
+    UNVERIFIED between the probed a and outside 2E9 to 1E10.
+  - **Only the tails that take L140 are cut**: columns A and B (I about 1E-6 and 0.05, where lambda = (a + b)(1 - x) - b
+    > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
+    are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
+    1E-6 and 0.05 the edge does not move.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209, T-4053 (df1 = 2; decision 0267).
