@@ -14,9 +14,9 @@
 use std::collections::HashMap;
 
 use crate::expressions::token::Error;
-use crate::functions::statistical::variance::{excel_variance, VarianceKind};
 use crate::model::Model;
-use crate::pivot::{Aggregate, AxisField, CacheField, CacheItem, PivotCache, PivotTable};
+use crate::pivot::layout::{aggregate, record_numbers};
+use crate::pivot::{AxisField, CacheField, CacheItem, PivotCache, PivotTable};
 
 /// The indices of every pivot used in the current evaluation.
 #[derive(Default)]
@@ -131,109 +131,6 @@ fn build(cache: &PivotCache, axis: Vec<u32>) -> Option<PivotIndex> {
     })
 }
 
-/// The data field `field`'s numbers in `records` (cache order). Every record must hold a number
-/// there: an error, blank, text, boolean or date is `#REF!` (SPEC-0015 unknown 6).
-fn record_numbers(field: &CacheField, records: &[u32]) -> Result<Vec<f64>, Error> {
-    records
-        .iter()
-        .map(|&record| {
-            match field
-                .records
-                .get(record as usize)
-                .and_then(|&i| field.items.get(i as usize))
-            {
-                Some(CacheItem::Number(n)) => Ok(*n),
-                _ => Err(Error::REF),
-            }
-        })
-        .collect()
-}
-
-/// The rows of a compact-form pivot over `cache` with row field `row` and one data field summing
-/// `data` by `function`: per item of `row` that holds a record, in item order, its value, then the
-/// grand total. An item with no record is not shown (`showAll="0"`, the builder's and Excel's
-/// default for a new pivot; probes/t4228-pivot-range-groups). `None` when a field is not in the
-/// cache or a record is malformed. Test support: the eval adapter lays out a grouped spec pivot
-/// with it (T-4235).
-#[must_use]
-pub fn row_layout(
-    cache: &PivotCache,
-    row: u32,
-    data: u32,
-    function: Aggregate,
-) -> Option<RowLayout> {
-    let row_field = cache.fields.get(row as usize)?;
-    let data_field = cache.fields.get(data as usize)?;
-    let mut by_item: Vec<Vec<u32>> = vec![Vec::new(); row_field.items.len()];
-    for record in 0..cache.record_count {
-        let item = *row_field.records.get(record as usize)?;
-        by_item.get_mut(item as usize)?.push(record);
-    }
-    let rows = (0u32..)
-        .zip(&by_item)
-        .filter(|(_, records)| !records.is_empty())
-        .map(|(item, records)| {
-            let value = record_numbers(data_field, records).and_then(|v| aggregate(function, &v));
-            (item, value)
-        })
-        .collect();
-    let all: Vec<u32> = (0..cache.record_count).collect();
-    let total = record_numbers(data_field, &all).and_then(|v| aggregate(function, &v));
-    Some(RowLayout { rows, total })
-}
-
-/// What [`row_layout`] gives: the shown items with their values, and the grand total.
-#[derive(Debug, PartialEq)]
-pub struct RowLayout {
-    /// Per shown item of the row field, in item order, the item index and its value.
-    pub rows: Vec<(u32, Result<f64, Error>)>,
-    /// The grand total.
-    pub total: Result<f64, Error>,
-}
-
-/// The data field's aggregate over `values` (cache order). A Sum, Count, Average, Max or Min over
-/// nothing is 0 (probes/getpivotdata-real-pivot H13, probes/getpivotdata-empty-intersection);
-/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite result `#NUM!` (unknown 16). Var and `StdDev` reuse
-/// the worksheet functions' algorithm (`excel_variance`); that the pivot computes them alike is
-/// UNVERIFIED (unknown 15).
-fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Error> {
-    let n = values.len();
-    let minimum = match function {
-        Aggregate::Sum
-        | Aggregate::Count
-        | Aggregate::Average
-        | Aggregate::Max
-        | Aggregate::Min => 0,
-        Aggregate::StdDev | Aggregate::Var => 2,
-        _ => 1,
-    };
-    if n < minimum {
-        return Err(Error::REF);
-    }
-    if n == 0 {
-        return Ok(0.0);
-    }
-    let sum = || values.iter().fold(0.0, |acc, x| acc + x);
-    let variance = |kind| excel_variance(values, kind);
-    let value = match function {
-        Aggregate::Sum => sum(),
-        Aggregate::Count | Aggregate::CountNums => n as f64,
-        Aggregate::Average => sum() / n as f64,
-        Aggregate::Max => values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-        Aggregate::Min => values.iter().copied().fold(f64::INFINITY, f64::min),
-        Aggregate::Product => values.iter().fold(1.0, |acc, x| acc * x),
-        Aggregate::Var => variance(VarianceKind::Sample),
-        Aggregate::VarP => variance(VarianceKind::Population),
-        Aggregate::StdDev => variance(VarianceKind::Sample).sqrt(),
-        Aggregate::StdDevP => variance(VarianceKind::Population).sqrt(),
-    };
-    if value.is_finite() {
-        Ok(value)
-    } else {
-        Err(Error::NUM)
-    }
-}
-
 impl Model {
     /// The axis fields of pivot `pivot` (row axis first), building its index on first use; `None`
     /// when the pivot is not one GETPIVOTDATA answers from ([`supported`]) or its cache is
@@ -319,7 +216,7 @@ impl Model {
     /// `item`, unless it is a group of a numeric range field that holds no record: Excel does not
     /// show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe Calc B3, R1).
     /// Whether an empty item of an ungrouped field is `#REF!` too is unprobed, so it keeps its
-    /// answer of 0 (probes/getpivotdata-empty-intersection).
+    /// answer of 0 (probes/getpivotdata-empty-intersection). TODO(T-4248): probe it.
     fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
         if field.number_groups.is_none() {

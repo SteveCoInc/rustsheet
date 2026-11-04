@@ -6,8 +6,9 @@
 //! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
 use bitcode::{Decode, Encode};
+use thiserror::Error as ThisError;
 
-use super::MAX_ITEMS;
+use super::{CacheField, CacheItem, MAX_ITEMS};
 use crate::number_format::{to_excel_precision, to_excel_precision_str};
 
 /// A field grouped by numbers from `start` to `end` in steps of `interval`. Its layout is the
@@ -147,6 +148,74 @@ impl NumberGroups {
     fn quotient(&self, value: f64) -> f64 {
         to_excel_precision((value - self.start) / self.interval, 15)
     }
+}
+
+/// Why a field cannot be grouped by numbers.
+#[derive(ThisError, Debug, PartialEq, Eq, Clone, Copy)]
+#[non_exhaustive]
+pub enum NumberGroupError {
+    /// The interval is not positive and finite, the end is below the start, or the range has
+    /// more groups than a cache can hold.
+    #[error("a numeric range group with no valid range")]
+    Range,
+    /// A base value is text, a boolean or an error.
+    #[error("a numeric range group over a value that is not a number")]
+    NotANumber,
+    /// A record points past the base field's items.
+    #[error("a record outside the grouped field's items")]
+    BadRecord,
+}
+
+/// Field `base` grouped by numbers from `start` to `end` in steps of `interval`, `labels` being
+/// the `<groupItems>` labels: the grouped field's items are the labels (Excel's own, end groups
+/// first, when their count is not the layout's: [`NumberGroups::new`]) and each record's item is
+/// the group its value falls in ([`NumberGroups::layout_index`]). A blank value goes in the first
+/// item, as the importer's other groups put it (web.md; UNVERIFIED, T-4236). The one grouping
+/// step for numbers, shared by the xlsx importer (`apply_groups`) and `Txn::add_pivot_table`.
+///
+/// # Errors
+/// [`NumberGroupError`] for a bad range, a value that is not a number, or a bad record.
+pub fn group_by_numbers(
+    base: &CacheField,
+    [start, end, interval]: [f64; 3],
+    labels: Vec<CacheItem>,
+) -> Result<CacheField, NumberGroupError> {
+    let groups =
+        NumberGroups::new(start, end, interval, labels.len()).ok_or(NumberGroupError::Range)?;
+    let n = groups.inner_count().ok_or(NumberGroupError::Range)?;
+    let items = if groups.ends_first {
+        let labels = groups.relabeled().ok_or(NumberGroupError::Range)?;
+        labels.into_iter().map(CacheItem::Text).collect()
+    } else {
+        labels
+    };
+    let map = base
+        .items
+        .iter()
+        .map(|item| match item {
+            CacheItem::Missing => Ok(0),
+            CacheItem::Number(v) | CacheItem::Date(v) => {
+                let index = groups
+                    .layout_index(*v)
+                    .ok_or(NumberGroupError::NotANumber)?;
+                // At most MAX_ITEMS groups (`inner_count`), so the item index fits a u32.
+                u32::try_from(groups.item(index, n)).map_err(|_| NumberGroupError::Range)
+            }
+            _ => Err(NumberGroupError::NotANumber),
+        })
+        .collect::<Result<Vec<u32>, _>>()?;
+    let records = base
+        .records
+        .iter()
+        .map(|&i| map.get(i as usize).copied())
+        .collect::<Option<Vec<u32>>>()
+        .ok_or(NumberGroupError::BadRecord)?;
+    Ok(CacheField {
+        name: base.name.clone(),
+        items,
+        records,
+        number_groups: Some(groups),
+    })
 }
 
 #[cfg(test)]
@@ -293,5 +362,42 @@ mod tests {
             assert_eq!(NumberGroups::new(start, end, interval, 3), None);
         }
         assert_eq!(groups(5.0, 5.0, 1.0).inner_count(), Some(1));
+    }
+
+    #[test]
+    fn a_field_groups_into_its_labels_and_records() {
+        let base = CacheField {
+            name: "N".into(),
+            items: vec![
+                CacheItem::Number(0.3),
+                CacheItem::Missing,
+                CacheItem::Number(1.5),
+            ],
+            records: vec![0, 2, 1, 0],
+            number_groups: None,
+        };
+        let labels = |n: usize| (0..n).map(|i| CacheItem::Text(i.to_string())).collect();
+        let grouped = group_by_numbers(&base, [0.0, 1.0, 0.1], labels(12)).unwrap();
+        assert_eq!(grouped.records, [4, 11, 0, 4]);
+        assert_eq!(grouped.items, labels(12));
+        let relabeled = group_by_numbers(&base, [0.0, 1.0, 0.5], labels(3)).unwrap();
+        assert_eq!(
+            relabeled.items[..2],
+            [CacheItem::Text("<0".into()), CacheItem::Text(">1".into())]
+        );
+        assert_eq!(relabeled.records, [2, 1, 0, 2]);
+        let text = CacheField {
+            items: vec![CacheItem::Text("a".into())],
+            records: vec![0],
+            ..base.clone()
+        };
+        assert_eq!(
+            group_by_numbers(&text, [0.0, 1.0, 0.1], labels(12)),
+            Err(NumberGroupError::NotANumber)
+        );
+        assert_eq!(
+            group_by_numbers(&base, [0.0, 1.0, 0.0], labels(3)),
+            Err(NumberGroupError::Range)
+        );
     }
 }

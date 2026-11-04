@@ -48,23 +48,25 @@ answers as Excel does, so every cell of probes/t4228-pivot-range-groups passes.
 - One rule for numeric range groups, `NumberGroups` (crates/rustsheet-engine/src/pivot/number_groups.rs): below
   `startNum` the first item, past `endNum` the last, `endNum` the last inner group, otherwise step
   `floor(to_excel_precision(q, 15))` (the engine's existing 15-digit helper), a step past the last inner group `>end`.
-  The importer's `group_field` uses it in place of `group_index`'s numeric branch, keeps it on the cache field
-  (`CacheField::number_groups`), and relabels a `<groupItems>` list of the wrong length with Excel's labels, end groups
-  first (pivot 3).
+  `group_by_numbers` (same file) groups a cache field by it, keeps the grouping on `CacheField::number_groups`, and
+  relabels a `<groupItems>` list of the wrong length with Excel's labels, end groups first (pivot 3). The importer's
+  `group_field` and `Txn::add_pivot_table` both call it; the importer's `group_index` keeps only dates.
 - GETPIVOTDATA: a number item on a range-grouped field picks the group whose lower bound it is (`lower_bound_index`,
   `endNum` is `>end`); a group with no record is `#REF!` on such a field (an empty item of an ungrouped field keeps its
-  answer, unprobed).
-- Eval adapter: a grouped spec pivot is registered (`PivotTableInput::group`, grouped through
-  `rustsheet_xlsx::import::group_by_number_range`, which calls `apply_groups`), and the facade writes the layout Excel
-  shows (captions, the groups holding a record, grand total) from the engine's `row_layout`; the unexpected-cell check
-  knows the grouped pivot's layout box.
+  answer, unprobed: T-4248).
+- Eval adapter: a grouped spec pivot is registered (`PivotTableInput::group`, `PivotRangeGroup`; a breaking change to
+  the `doc(hidden)` test-support input, every constructor updated), and the facade writes the layout Excel shows from
+  the engine's `row_layout` (crates/rustsheet-engine/src/pivot/layout.rs, with the aggregation GETPIVOTDATA shares);
+  the unexpected-cell check bounds the layout by `max_layout_rows`. SPEC-0015 "Spec cases in the eval adapter" records
+  why this one shape is laid out in Rust.
 - Structural model (reviewer-excel-fidelity check 7 (c)): candidates were (A) round q to 15 digits, (B) a relative
   tolerance of 3.3e-15 on q, (C) round the value to 15 digits, then q. All three fit the T-4228 points (the train set,
   168 cells), so there was no hold-out split to score on: the model was frozen on A, then a fresh sweep was generated and
-  oracle-filled: probes/t4235-pivot-range-rounding (excel-graph, 2026-11-04; generator kept in the PR description):
-  105 points, 75 at relative offsets 1e-16 to 3e-14 below inner boundaries of four groupings (by 0.1, 7, 0.001 and 0.25)
-  and 24 log-uniform over each range, 25 of them where the models disagree. Excel matches A at 105 of 105, B at 81, C at
-  99. Gate A envelope: not applicable (no number is computed; group membership is exact or not), and the case's 242
-  cells pass bit-exact.
+  oracle-filled: probes/t4235-pivot-range-rounding (excel-graph, 2026-11-04; generator in the PR description, seed
+  42350): 105 points, 81 at relative offsets 1e-16 to 3e-14 below inner boundaries of four groupings (by 0.1, 7, 0.001
+  and 0.25) and 24 log-uniform over the ranges, 25 of them where the models disagree. Excel matches A at 105 of 105,
+  B at 81, C at 99. Gate A envelope: not applicable (no number is computed; group membership is exact or not), and the
+  case's 242 cells pass bit-exact.
 - Eval delta: probes known failures -122 (all of probes/t4228-pivot-range-groups, now 168/168); new case
   probes/t4235-pivot-range-rounding 242/242. No regressions.
+- Follow-up: T-4248 (GETPIVOTDATA on an empty item of an ungrouped field).

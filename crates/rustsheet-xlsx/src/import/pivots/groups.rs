@@ -11,12 +11,13 @@
 //! need nothing new: a pivot field's `<item x>` indexes the group items, as Excel writes it.
 //! Which group a date falls in is ECMA-376's layout, read off Excel-authored caches
 //! (corpus-bench 52379, 59932), and UNVERIFIED against Excel's own grouping; a number follows
-//! Excel's probed rule, [`NumberGroups`] (T-4235; docs/excel-semantics/web.md "Grouped pivot
+//! Excel's probed rule, [`group_by_numbers`] (T-4235; docs/excel-semantics/web.md "Grouped pivot
 //! fields import as their group items").
 
 use rustsheet_engine::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
 use rustsheet_engine::pivot::{
-    CacheField, CacheItem, NumberGroups, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
+    group_by_numbers, CacheField, CacheItem, PivotCache, PivotCacheError, MAX_ITEMS,
+    MAX_RECORD_VALUES,
 };
 
 use super::{skip, Skip};
@@ -152,59 +153,19 @@ pub(super) fn apply_groups(
     Ok(())
 }
 
-/// Groups field `field` of `cache` in place by numbers from `start` to `end` in steps of
-/// `interval`, `items` being its `<groupItems>` labels: the importer's grouping of a
-/// `<fieldGroup base>` with `<rangePr>` ([`apply_groups`]), for a pivot built from a source range
-/// (the eval adapter's spec pivots, T-4235).
-///
-/// # Errors
-/// Why the grouping cannot apply: a field past the cache's, a value that is not a number, a
-/// range no grouping can have, or a limit.
-pub fn group_by_number_range(
-    cache: &mut PivotCache,
-    field: u32,
-    range: [f64; 3],
-    items: Vec<String>,
-) -> Result<(), String> {
-    let [start, end, interval] = range;
-    let group = FieldGroup {
-        field,
-        base: field,
-        range: Some(RangeGroup {
-            by: GroupBy::Range,
-            start,
-            end,
-            interval,
-        }),
-        discrete: None,
-        items: items.into_iter().map(CacheItem::Text).collect(),
-    };
-    apply_groups(cache, &[group], Vec::new(), MAX_RECORD_VALUES).map_err(|Skip(reason)| reason)
-}
-
 /// The group items of `group` and, per record of `base`, its group.
 fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip> {
-    let mut count = group.items.len();
+    let count = group.items.len();
     if count == 0 {
         return skip("a fieldGroup without groupItems");
     }
-    // A numeric range: Excel's own rule (`NumberGroups`), which relabels a `<groupItems>` list of
-    // the wrong length rather than refusing it (probes/t4228-pivot-range-groups pivot 3).
-    let number_groups = match &group.range {
-        Some(range) if range.by == GroupBy::Range && group.discrete.is_none() => {
-            let Some(groups) = NumberGroups::new(range.start, range.end, range.interval, count)
-            else {
-                return skip("a range group with no valid range");
-            };
-            Some(groups)
+    // A numeric range: Excel's own rule, which relabels a `<groupItems>` list of the wrong length
+    // rather than refusing it (`group_by_numbers`; probes/t4228-pivot-range-groups pivot 3).
+    if let (Some(range), None) = (&group.range, &group.discrete) {
+        if range.by == GroupBy::Range {
+            let bounds = [range.start, range.end, range.interval];
+            return Ok(group_by_numbers(base, bounds, group.items.clone())?);
         }
-        _ => None,
-    };
-    let relabeled = number_groups
-        .filter(|g| g.ends_first)
-        .and_then(|g| g.relabeled());
-    if let Some(labels) = &relabeled {
-        count = labels.len();
     }
     // A blank base value goes in item 0: Excel's pivot fields list exactly the group items, with
     // no blank item of their own (59932: 14, 6 and 123 items over a field holding a blank record),
@@ -218,10 +179,7 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
             },
             (CacheItem::Missing, None, Some(_)) => 0,
             (CacheItem::Number(v) | CacheItem::Date(v), None, Some(range)) => {
-                match &number_groups {
-                    Some(groups) => number_group(*v, groups)?,
-                    None => group_index(*v, range, count)?,
-                }
+                group_index(*v, range, count)?
             }
             (_, None, Some(_)) => return skip("a range group over a value that is not a number"),
             (_, None, None) => return skip("a fieldGroup without rangePr or discretePr"),
@@ -236,21 +194,10 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
         .ok_or(PivotCacheError::BadRecord)?;
     Ok(CacheField {
         name: String::new(),
-        items: relabeled.map_or_else(
-            || group.items.clone(),
-            |labels| labels.into_iter().map(CacheItem::Text).collect(),
-        ),
+        items: group.items.clone(),
         records,
-        number_groups,
+        number_groups: None,
     })
-}
-
-/// The cache item a number falls in under a numeric range grouping.
-fn number_group(value: f64, groups: &NumberGroups) -> Result<u32, Skip> {
-    let (Some(n), Some(index)) = (groups.inner_count(), groups.layout_index(value)) else {
-        return skip("a range group over a value that is not a number");
-    };
-    u32::try_from(groups.item(index, n)).or_else(|_| skip("too many group items"))
 }
 
 /// The date group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise
@@ -274,8 +221,8 @@ fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip
         return Ok(u32::try_from(last).unwrap_or(0));
     }
     let inner = match range.by {
-        // Numbers group by `NumberGroups` (`number_group`).
-        GroupBy::Range => return skip("a numeric range group outside NumberGroups"),
+        // Numbers group by `group_by_numbers` (`group_field`).
+        GroupBy::Range => return skip("a numeric range group outside group_by_numbers"),
         GroupBy::Years => {
             let ((_, Some(year), _), (_, Some(start), _)) =
                 (calendar_parts(value)?, calendar_parts(range.start)?)

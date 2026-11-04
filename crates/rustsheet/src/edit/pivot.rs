@@ -2,15 +2,16 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    row_layout, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea,
-    DataField, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
+    group_by_numbers, row_layout, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource,
+    CellArea, DataField, LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField,
+    PivotTable, RecordValue, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
 use super::{Input, Txn, Undo};
 use crate::error::{EditError, RefError};
 use crate::refs::RangeRef;
-use crate::value::Value;
+use crate::value::{ErrorKind, Value};
 use crate::workbook::{engine_rc, sheet_index};
 
 /// A data field's summary function.
@@ -95,8 +96,8 @@ pub struct PivotTableInput {
     pub group: Option<PivotRangeGroup>,
 }
 
-/// A row field grouped by numbers (`<fieldGroup>` with `<rangePr>`), as the xlsx importer groups
-/// one (`rustsheet_xlsx::import::group_by_number_range`).
+/// A row field grouped by numbers (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx importer
+/// groups one (`rustsheet_engine::pivot::group_by_numbers`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PivotRangeGroup {
     /// `startNum`.
@@ -129,8 +130,11 @@ pub enum PivotError {
     #[error(transparent)]
     Cache(#[from] PivotCacheError),
     /// The row field's grouping cannot apply (a value that is not a number, a bad range).
-    #[error("the pivot's grouping cannot apply: {0}")]
-    Group(String),
+    #[error(transparent)]
+    Group(#[from] NumberGroupError),
+    /// A grouped pivot with a column field: only a grouped row field is laid out.
+    #[error("a grouped pivot has no column field")]
+    GroupedWithColumn,
 }
 
 impl Txn<'_> {
@@ -238,15 +242,13 @@ impl Txn<'_> {
         }
         if let Some(group) = &input.group {
             if column.is_some() {
-                return Err(PivotError::Group("a grouped pivot has no column field".into()).into());
+                return Err(PivotError::GroupedWithColumn.into());
             }
-            rustsheet_xlsx::import::group_by_number_range(
-                &mut cache,
-                row,
-                [group.start, group.end, group.interval],
-                group.items.clone(),
-            )
-            .map_err(PivotError::Group)?;
+            let labels = group.items.iter().cloned().map(CacheItem::Text).collect();
+            let bounds = [group.start, group.end, group.interval];
+            if let Some(field) = cache.fields.get_mut(row as usize) {
+                *field = group_by_numbers(field, bounds, labels).map_err(PivotError::from)?;
+            }
         }
         let fields = cache
             .fields
@@ -287,56 +289,41 @@ impl Txn<'_> {
     }
 
     /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
-    /// cell, as the case builder lays out an ungrouped one (`tools/src/rustsheet_tools/pivot.py`
-    /// `cells`): the captions, each group that holds a record with its value, and the grand
-    /// total. Returns the area it covers. Excel lays out a grouped pivot itself on load, which
-    /// probes/t4228-pivot-range-groups reads back (Calc C1:T14).
+    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, and
+    /// the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
+    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
+    /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
     fn lay_out_grouped(
         &mut self,
         input: &PivotTableInput,
         cache: &PivotCache,
         table: &PivotTable,
     ) -> Result<CellArea, EditError> {
+        let bad = || PivotError::Cache(PivotCacheError::BadRecord);
         let (Some(AxisField::Field(row)), Some(data)) =
             (table.row_fields.first(), table.data_fields.first())
         else {
-            return Err(PivotError::Group("a grouped pivot needs a row field".into()).into());
+            return Err(bad().into());
         };
-        let layout = row_layout(cache, *row, data.field, data.function)
-            .ok_or(PivotError::Cache(PivotCacheError::BadRecord))?;
-        let items = &cache
-            .fields
-            .get(*row as usize)
-            .ok_or(PivotError::Cache(PivotCacheError::BadRecord))?
-            .items;
-        // Typed values: a label such as `1-1.1` is text, never parsed as a date.
-        let text = |s: &str| Input::Value(Value::Text(s.into()));
-        let not_laid_out = || PivotError::Group("a group's value is an error".into());
-        let mut cells = vec![(text("Row Labels"), text(&input.caption))];
-        for (item, value) in &layout.rows {
-            let label = match items.get(*item as usize) {
-                Some(CacheItem::Text(label)) => text(label),
-                _ => return Err(not_laid_out().into()),
-            };
-            cells.push((
-                label,
-                Input::from(value.clone().map_err(|_| not_laid_out())?),
-            ));
-        }
-        cells.push((
-            text("Grand Total"),
-            Input::from(layout.total.clone().map_err(|_| not_laid_out())?),
-        ));
+        let rows =
+            row_layout(cache, *row, data.field, data.function, &data.caption).ok_or_else(bad)?;
         let (sheet, top, left) = (
             input.location.sheet,
             input.location.top,
             input.location.left,
         );
         let mut bottom = top;
-        for (row, (label, value)) in (top..).zip(cells) {
-            self.set(crate::refs::CellRef::new(sheet, row, left)?, label)?;
-            self.set(crate::refs::CellRef::new(sheet, row, left + 1)?, value)?;
-            bottom = row;
+        for (r, cells) in (top..).zip(rows) {
+            for (c, cell) in (left..).zip(cells) {
+                // Typed values: a label such as `1-1.1` is text, never parsed as a date.
+                let value = match cell {
+                    LayoutCell::Text(text) => Value::Text(text.into()),
+                    LayoutCell::Number(n) => Value::Number(n),
+                    LayoutCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
+                };
+                self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
+            }
+            bottom = r;
         }
         Ok(CellArea {
             top,

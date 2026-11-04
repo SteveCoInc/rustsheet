@@ -19,12 +19,11 @@ use rustsheet_engine::expressions::token::get_error_by_english_name;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
     Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS,
-    MAX_RECORD_VALUES,
+    NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS,
+    MAX_ITEMS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
-pub use self::groups::group_by_number_range;
 use self::groups::{apply_groups, FieldGroup, GroupBy, RangeGroup};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
@@ -52,6 +51,12 @@ struct Skip(String);
 
 impl From<XlsxError> for Skip {
     fn from(error: XlsxError) -> Self {
+        Skip(error.to_string())
+    }
+}
+
+impl From<NumberGroupError> for Skip {
+    fn from(error: NumberGroupError) -> Self {
         Skip(error.to_string())
     }
 }

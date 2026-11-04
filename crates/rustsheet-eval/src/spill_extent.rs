@@ -7,6 +7,8 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
+use rustsheet_engine::pivot::max_layout_rows;
+
 use crate::case::{cell_key, split_qualified, CaseSpec, SheetOp};
 use crate::cellref::{parse_range, Addr};
 use crate::engine::Evaluated;
@@ -127,14 +129,14 @@ impl SpillExtent {
                         })
                     });
                     // The engine lays out a grouped pivot itself (T-4235): two columns from its
-                    // location, a header row, at most one row per record and the grand total.
+                    // location, at most `max_layout_rows` of them.
                     let grouped = s.pivot_tables.iter().filter(|p| p.group.is_some());
                     let grouped = grouped.filter_map(|p| {
                         let top = Addr::parse(&p.location.replace('$', ""))?;
                         let source =
                             split_qualified(&p.source).map_or(p.source.clone(), |(_, r)| r);
                         let (first, last) = parse_range(&source)?;
-                        let rows = last.row.checked_sub(first.row)? + 2;
+                        let rows = max_layout_rows(last.row.checked_sub(first.row)?);
                         Some((top, rows))
                     });
                     let grouped = grouped.flat_map(|(top, rows)| {

@@ -23,10 +23,11 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+pub(crate) mod layout;
 mod number_groups;
 
-pub use crate::functions::lookup_and_reference::pivot_index::{row_layout, RowLayout};
-pub use number_groups::NumberGroups;
+pub use layout::{max_layout_rows, row_layout, LayoutCell, GRAND_TOTAL, ROW_LABELS};
+pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
 pub const MAX_RECORDS: usize = 1_048_576;
