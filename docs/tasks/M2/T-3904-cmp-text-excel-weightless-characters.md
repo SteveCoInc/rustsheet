@@ -3,7 +3,7 @@ id: T-3904
 title: "= , COUNTIF and XMATCH(..,0) equate the weightless characters with one another (probes/t3584-match-fold-weightless; classes split to T-4013)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
