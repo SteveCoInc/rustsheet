@@ -6163,10 +6163,6 @@ F	probes/t3850-rate-same-state.case.json	Calc!A221
 F	probes/t3850-rate-same-state.case.json	Calc!A222
 F	probes/t3850-rate-same-state.case.json	Calc!A223
 F	probes/t3850-rate-same-state.case.json	Calc!A224
-F	probes/t3850-rate-same-state.case.json	Calc!A225
-F	probes/t3850-rate-same-state.case.json	Calc!A226
-F	probes/t3850-rate-same-state.case.json	Calc!A227
-F	probes/t3850-rate-same-state.case.json	Calc!A228
 F	probes/t3850-rate-same-state.case.json	Calc!A23
 F	probes/t3850-rate-same-state.case.json	Calc!A231
 F	probes/t3850-rate-same-state.case.json	Calc!A233
@@ -6303,7 +6299,6 @@ F	probes/t3906-rate-restart-oos.case.json	Sheet1!A162
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A163
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A164
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A165
-F	probes/t3906-rate-restart-oos.case.json	Sheet1!A166
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A168
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A169
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A17
@@ -6442,15 +6437,6 @@ F	probes/t3914-imsech-sign-sweep.case.json	Calc!A11
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!B11
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!C21
 F	probes/t3914-imsech-sign-sweep.case.json	Calc!D21
-F	probes/t3945-atan-near-midpoint.case.json	S!B203
-F	probes/t3945-atan-near-midpoint.case.json	S!B204
-F	probes/t3945-atan-near-midpoint.case.json	S!C1
-F	probes/t3945-atan-near-midpoint.case.json	S!C10
-F	probes/t3945-atan-near-midpoint.case.json	S!C3
-F	probes/t3945-atan-near-midpoint.case.json	S!C5
-F	probes/t3945-atan-near-midpoint.case.json	S!C7
-F	probes/t3945-atan-near-midpoint.case.json	S!C8
-F	probes/t3945-atan-near-midpoint.case.json	S!C9
 F	probes/t4014-sheet-api-name-65.case.json	S!A1
 F	probes/t4088-groupby-multifield.case.json	Calc!B1
 F	probes/t4088-groupby-multifield.case.json	Calc!B11

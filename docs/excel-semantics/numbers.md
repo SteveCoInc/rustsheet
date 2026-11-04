@@ -369,8 +369,17 @@ not follow this model (Hits!G1:G61 match it at 46 of 61 with the digits as writt
 stripped first, misses at G9, G12:G13, G20:G21, G27:G28 and G42:G44; see "Stored numbers in an xlsx are not always parsed
 to the nearest double", still OPEN). ROUNDUP's own conversion is not probed here (A1928 only checks
 `ROUNDUP(4.90499999999999E-06,8)` = 4.91E-06, the nearest double, as "ROUNDUP adds the unit in binary" gives).
-Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values; larger n, positive exponents and
-literals of more than 6 digits are not probed (the fresh sweep's 28 six-digit literal and VALUE cells, `=116570E-6` and the like, fit), except one 15-digit point (T-3945): `=0.190581435720431`
+Probed range: m < 1,000,000 (the search hits: m < 80,000), n = 0..15, positive and negative values for ROUND and ROUNDDOWN.
+**Literals and VALUE text of 7 to 18 digits (T-4077).** The model holds for every digit count up to 15 and for a
+positive exponent, with m the digits as written and n the fraction digits less the exponent (`=7.5487209E+1` is
+75487209 × 10^-6 = 75.487209000000007, Lit!A82). Past 15 significant digits the text is cut first, the later digits
+truncated, not rounded, and the 15 kept digits go through the multiply (`=253.803752229973721` is 253803752229973 ×
+10^-12 = 253.80375222997299, Lit!A106; rounding to 253803752229974 first scores 8 of 24 rows, the nearest double of the
+full text 1 of 24). Evidence: probes-numeric/t4077-long-literal-x87 (516 cells: 72 model-off points at 7 to 15 digits
+in four forms, 9 controls, 24 positive-exponent rows, 24 rows of 18 digits; 516/516 fit, the nearest double 37/516)
+and the fresh sweep written after the model was frozen, probes-numeric/t4077-long-literal-x87-fresh (258 cells, 258/258);
+excel-graph, 2026-11-04. Larger n (more than 15 places after the cut) is not probed and keeps the nearest double.
+Before T-4077 the only long point probed was the 15-digit one of T-3945: `=0.190581435720431`
 (m = 190581435720431, n = 15), `VALUE("0.190581435720431")`, `IMREAL(COMPLEX(0.190581435720431,0.981671389192299))`
 and `IMREAL("0.190581435720431+0.981671389192299i")` are all 0.19058143572043101, the model's value and one ulp above
 the nearest double (`=0.190581435720431*2^56-13732839000000000` is 726308276, not 726308274), while
@@ -387,8 +396,8 @@ Fresh sweep after the model was frozen: probes-numeric/t3658-round-scaling-fresh
 trailing-zero m where ROUND and ROUNDDOWN part ways, each as ROUND, ROUNDDOWN, literal and VALUE: 724/724 fit
 (677 of them are not the nearest double).
 Status: VERIFIED (excel-graph) for ROUND, ROUNDDOWN, literals and VALUE over the probed range
-Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs (T-3932; digits as written below 1,000,000, n = 1..15 and no positive exponent, the nearest double elsewhere, so the 15-digit T-3945 point still reads as the nearest double). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
-Tasks: T-3555, T-3658, T-3931, T-3932, T-3945
+Implemented in: `x87_decimal_to_f64` in crates/rustsheet-engine/src/decimal_round.rs for ROUND and ROUNDDOWN (T-3931; kept digits below 1,000,000 and n = 1..15 only, the nearest double elsewhere; the number formats and INT keep the nearest double). Literals and number text: `parse_excel_number` in crates/rustsheet-engine/src/number_format.rs through `x87_text_to_f64` (T-3932, T-4077; the first 15 significant digits as written, any exponent, n = 1..15, the nearest double elsewhere). UNVERIFIED (no probe yet, T-4074): the readers that share `parse_excel_number` and were not probed for this conversion take it too: typed cell input (`parse_formatted.rs`, including percent text, where `4.91%` becomes the x87 read of 4.91 divided by 100), `"text"+0`, criteria operands, NUMBERVALUE (its `%` divisions too), AVERAGE's text arguments and DATEDIF's number text. A formula's number literal prints back (formulas are reparsed from their text) as text that reads to the same double: `=4910E-9` prints `4910e-9` and `=14550E-15` prints `14550e-15`, where the 15-digit text `4.91e-6` and `1.455e-11` would read one ulp off (`literal_text` in stringify/literals.rs); FORMULATEXT and xlsx export show that text, and how Excel prints such a literal is UNVERIFIED (T-4074).
+Tasks: T-3555, T-3658, T-3931, T-3932, T-3945, T-4077
 
 ## MOD is #NUM! for a huge quotient
 Rule: `MOD(n,d)` is `#NUM!` when `|n/d| >= 1.1259E+12` (exactly that decimal, not a power of two):

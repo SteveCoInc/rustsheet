@@ -246,7 +246,12 @@ fn short_number_text_reads_through_the_x87_multiply() {
         read("14550E-15"),
         Some(1.455_000_000_000_000_1e-11_f64.to_bits())
     );
-    // Seven or more digits as written, and positive exponents, keep the nearest double.
-    assert_eq!(read("4.910000E-06"), Some(nearest));
-    assert_eq!(read("0.0000000491E+2"), Some(nearest));
+    // Seven to 15 digits, positive exponents and the first 15 digits of a longer string read the
+    // same way (probes-numeric/t4077-long-literal-x87 Lit!A1, A82, A106, excel-graph; T-4077):
+    // 4910000 × 10^-12 is one ulp above the nearest double, like 491 × 10^-8.
+    assert_eq!(read("4.910000E-06"), Some(nearest + 1));
+    assert_eq!(read("0.0000000491E+2"), Some(nearest + 1));
+    assert_eq!(read("0.0000002691564"), Some(0x3E92_1012_5DAF_A3FE));
+    assert_eq!(read("7.5487209E+1"), Some(0x4052_DF2E_6EA8_5448));
+    assert_eq!(read("253.803752229973721"), Some(0x406F_B9B8_5698_BA46));
 }
