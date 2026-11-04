@@ -7,6 +7,7 @@
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
+    functions::util::collation::{note_compared_bytes, take_compared_bytes},
     limits::too_many_visits,
     model::Model,
     recalc_budget::RunBound,
@@ -216,6 +217,12 @@ pub(crate) fn text_units(bytes: usize) -> u64 {
         .div_ceil(TEXT_BYTES_PER_UNIT)
 }
 
+/// The units of `bytes` text bytes a reader compared ([`Model::spend_compared`]): one per
+/// [`TEXT_BYTES_PER_UNIT`], rounded up.
+pub(crate) fn compared_units(bytes: u64) -> u64 {
+    bytes.div_ceil(TEXT_BYTES_PER_UNIT)
+}
+
 /// The units of building a `rows` x `columns` array: [`CELL_UNITS`] per cell, saturating, so an
 /// oversized shape fails its charge instead of wrapping into a small one.
 pub(crate) fn cell_units(rows: usize, columns: usize) -> u64 {
@@ -254,7 +261,13 @@ impl Model {
         #[cfg(test)]
         let fresh = self.start_run(self.area_budget.limit);
         let outer = std::mem::replace(&mut self.area_budget, fresh);
+        // The outer run's node may have compared texts before it read this cell: those bytes are
+        // its own, so they wait until this run is done ([`Model::spend_compared`]).
+        let outer_compared = take_compared_bytes();
         let result = f(self);
+        // Bytes a run compared after its last node (none today) are not charged to the outer one.
+        let _ = take_compared_bytes();
+        note_compared_bytes(usize::try_from(outer_compared).unwrap_or(usize::MAX));
         let mut inner = std::mem::replace(&mut self.area_budget, outer);
         // Past the work budget, the run was cut short wherever the charge failed, and `f` may have
         // turned that into a value (`IFERROR`), so the formula's value is the error (SPEC-0024).
@@ -338,6 +351,19 @@ impl Model {
             _ => return Ok(()),
         };
         self.spend_work(units, cell)
+    }
+
+    /// Charges the text bytes compared since the last node ([`take_compared_bytes`],
+    /// [`compared_units`]): the node that just ran pays for the texts its reader compared, keyed or
+    /// folded (MATCH, the lookups, UNIQUE, SORT, the criteria, GROUPBY), which its cell charges do not
+    /// cover when it reads a bound array of long texts again and again (SPEC-0024 section 1, "text
+    /// values"; T-4233).
+    #[inline]
+    pub(crate) fn spend_compared(&mut self, cell: CellReferenceIndex) -> Result<(), CalcResult> {
+        match take_compared_bytes() {
+            0 => Ok(()),
+            bytes => self.spend_work(compared_units(bytes), cell),
+        }
     }
 
     /// Charges a LAMBDA value made with body `body`: [`LAMBDA_UNITS`] for storing it and the

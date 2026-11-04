@@ -248,3 +248,78 @@ fn a_lambda_repeating_any_whole_array_reader_is_bounded() {
         assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
     }
 }
+
+/// The readers that compare texts (T-4233), each with `s` a bound array of `n` long texts and `t`
+/// a text of the same length that matches none of them.
+const TEXT_COMPARERS: [&str; 17] = [
+    "MATCH(t,s,0)",
+    "MATCH(t,s,1)",
+    r#"MATCH(t&"*",s,0)"#,
+    "XMATCH(t,s)",
+    "XLOOKUP(t,s,s,0)",
+    "LOOKUP(t,s)",
+    "VLOOKUP(t,s,1,FALSE)",
+    "HLOOKUP(t,TRANSPOSE(s),1,FALSE)",
+    "ROWS(UNIQUE(s))",
+    "ROWS(SORT(s))",
+    "ROWS(SORTBY(s,s))",
+    "COUNTIF(s,t)",
+    r#"COUNTIF(s,"<"&t)"#,
+    "COUNTIFS(s,t)",
+    "SUMIF(s,t,SEQUENCE(ROWS(s)))",
+    "ROWS(GROUPBY(s,SEQUENCE(ROWS(s)),SUM))",
+    "SUM(--(s=t))",
+];
+
+/// `reader` over 100 texts of `len` bytes.
+fn text_comparer(reader: &str, len: usize) -> String {
+    let short = len - 1;
+    format!(r#"=LET(s,IF(SEQUENCE(100),REPT("a",{len})),t,REPT("a",{short})&"b",{reader})"#)
+}
+
+#[test]
+fn every_text_comparing_reader_pays_the_bytes_it_compares() {
+    // 4,000 more bytes in each of the 100 texts: each is compared, keyed or folded at least once,
+    // so the reader pays at least 100 * 4,000 bytes more, where the cells alone cost the same.
+    for reader in TEXT_COMPARERS {
+        let small = units(&text_comparer(reader, 8));
+        let big = units(&text_comparer(reader, 4008));
+        assert!(
+            big - small >= 100 * 4000 / TEXT_BYTES_PER_UNIT,
+            "{reader}: {} units for 400,000 more bytes",
+            big - small
+        );
+    }
+}
+
+#[test]
+fn a_lambda_repeating_a_text_comparing_reader_is_bounded() {
+    // T-4233's acceptance shape, over 100 texts under a lower limit (a MATCH over T-4233's 1E5
+    // texts of 32,767 bytes pays over 8E8 units on its first call, past MAX_FORMULA_WORK). Its
+    // cells and its target cost about 9,000 units a call, so 900 calls fit in the limit with
+    // short texts; the 3.3 MB each call compares do not.
+    for reader in [
+        "MATCH(REPT(\"a\",32766)&\"b\",s,0)",
+        "COUNTIF(s,REPT(\"a\",32766)&\"b\")",
+    ] {
+        let mut model = model_with_limit(1 << 24);
+        model._set(
+            "A1",
+            &format!(
+                r#"=LET(s,IF(SEQUENCE(100),REPT("a",32767)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA({reader},1)))))"#
+            ),
+        );
+        model.evaluate();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+    }
+    // The same calls over 8-byte texts, with an 8-byte target, compute: the bytes compared are
+    // what ran out.
+    let mut model = model_with_limit(1 << 24);
+    model._set(
+        "A1",
+        r#"=LET(s,IF(SEQUENCE(100),REPT("a",8)),SUM(MAP(SEQUENCE(900),LAMBDA(i,IFNA(MATCH(REPT("a",7)&"b",s,0),1)))))"#,
+    );
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "900");
+}

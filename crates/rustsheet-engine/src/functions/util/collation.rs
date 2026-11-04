@@ -53,6 +53,7 @@
 //! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
 
+use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};
 
 mod accents;
@@ -67,6 +68,29 @@ use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
+
+thread_local! {
+    /// The text bytes compared, keyed or folded since the evaluator last took them
+    /// ([`take_compared_bytes`]).
+    static COMPARED_BYTES: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Notes `bytes` text bytes read by a comparison, a key or a fold. The readers that compare texts
+/// (the lookups, MATCH, UNIQUE, SORT, the criteria, GROUPBY) all go through this module or
+/// [`folded_units`](crate::functions::criteria::folded_units), so the evaluator charges what they
+/// read here, at one place, after each node (SPEC-0024 section 1, "text values"; T-4233): the
+/// cell charge of a bound array does not cover comparing its 32,767-byte texts again and again.
+#[inline]
+pub(crate) fn note_compared_bytes(bytes: usize) {
+    let bytes = u64::try_from(bytes).unwrap_or(u64::MAX);
+    COMPARED_BYTES.with(|total| total.set(total.get().saturating_add(bytes)));
+}
+
+/// The bytes noted ([`note_compared_bytes`]) since the last call, and starts again from 0.
+#[inline]
+pub(crate) fn take_compared_bytes() -> u64 {
+    COMPARED_BYTES.with(|total| total.replace(0))
+}
 
 /// Orders two texts by the module's six passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -151,6 +175,8 @@ pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
 
 /// [`cmp_text`] or [`cmp_text_pairwise`].
 fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
+    // Each pass reads at most both texts; a pass stops early, so this is the bound, not the cost.
+    note_compared_bytes(left.len().saturating_add(right.len()));
     if let AccentOrder::Pairwise = order {
         if let Some(order) = cmp_prefix(left.chars_lossless(), right.chars_lossless()) {
             return order;
@@ -179,6 +205,7 @@ pub(crate) struct CollationKey {
 /// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
 /// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
+    note_compared_bytes(text.len());
     let elements = || elements(text.chars_lossless(), None);
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {
         weights

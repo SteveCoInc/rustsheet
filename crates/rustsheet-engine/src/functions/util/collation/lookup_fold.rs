@@ -535,6 +535,7 @@ pub(super) fn class_first(c: char) -> Option<char> {
 
 /// [`fold_lookup_char`] over `text`, one character to one.
 pub(crate) fn fold_lookup(text: &str) -> String {
+    super::note_compared_bytes(text.len());
     text.chars().map(fold_lookup_char).collect()
 }
 
