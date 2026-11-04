@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-3089: the code B2[$-40409]b takes after aaa/aaaa/AAA/AAAA/aaaaa as the section's first token (A the code of b's last character, B the text).",
+ "tags": [
+  "M10",
+  "number-format",
+  "probe"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaa|b\"),1))",
+    "B1": "=TEXT(45000,\"B2[$-40409]aaa|b\")",
+    "A2": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaa|b\"),1))",
+    "B2": "=TEXT(45000,\"B2[$-40409]aaaa|b\")",
+    "A3": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]AAA|b\"),1))",
+    "B3": "=TEXT(45000,\"B2[$-40409]AAA|b\")",
+    "A4": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]AAAA|b\"),1))",
+    "B4": "=TEXT(45000,\"B2[$-40409]AAAA|b\")",
+    "A5": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaaa|b\"),1))",
+    "B5": "=TEXT(45000,\"B2[$-40409]aaaaa|b\")",
+    "A6": "=UNICODE(RIGHT(TEXT(45000,\"B2[$-40409]aaaAAA|b\"),1))",
+    "B6": "=TEXT(45000,\"B2[$-40409]aaaAAA|b\")"
+   }
+  }
+ ],
+ "check": [
+  "Sheet1!A1",
+  "Sheet1!B1",
+  "Sheet1!A2",
+  "Sheet1!B2",
+  "Sheet1!A3",
+  "Sheet1!B3",
+  "Sheet1!A4",
+  "Sheet1!B4",
+  "Sheet1!A5",
+  "Sheet1!B5",
+  "Sheet1!A6",
+  "Sheet1!B6"
+ ],
+ "expected": {}
+}

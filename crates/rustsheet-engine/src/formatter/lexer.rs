@@ -43,6 +43,8 @@ pub enum Token {
     Day,            // d
     DayPadded,      // dd
     DayNameShort,   // ddd
+    WeekdayShort,   // aaa
+    WeekdayFull,    // aaaa and longer
     DayName,        // dddd+
     Month,          // m (or minute)
     MonthPadded,    // mm (or minute padded)
@@ -112,6 +114,8 @@ impl Token {
             || self == &Token::DayPadded
             || self == &Token::DayNameShort
             || self == &Token::DayName
+            || self == &Token::WeekdayShort
+            || self == &Token::WeekdayFull
             || self == &Token::MonthName
             || self == &Token::MonthNameShort
             || self == &Token::Month
@@ -716,9 +720,9 @@ impl Lexer {
                             }
                         }
                         if run == 3 {
-                            Token::DayNameShort
+                            Token::WeekdayShort
                         } else {
-                            Token::DayName
+                            Token::WeekdayFull
                         }
                     } else {
                         // Excel: an unquoted `a` that is not AM/PM prints as itself

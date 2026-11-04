@@ -1647,6 +1647,7 @@ C	probes/t3072-criteria-near-equal-order.case.json	360
 C	probes/t3072-take-drop-one-cell-reference.case.json	57
 C	probes/t3073-lookup-near-equal-approximate.case.json	218
 C	probes/t3085-take-drop-one-cell-forms.case.json	16
+C	probes/t3089-b2-aaa-code.case.json	12
 C	probes/t3090-sort-lifted-by-col-broken-lead.case.json	239
 C	probes/t3092-averagea-subtotal-snap.case.json	29
 C	probes/t3093-lambda-snap-positions.case.json	15
@@ -4223,8 +4224,6 @@ F	probes/t3012-gamma-inv-small-shape.case.json	S!B30
 F	probes/t3012-gamma-inv-small-shape.case.json	S!B34
 F	probes/t3012-gamma-inv-small-shape.case.json	S!B35
 F	probes/t3012-gamma-inv-small-shape.case.json	S!B36
-F	probes/t3028-b2-taiwan-cuts.case.json	Sheet1!A65
-F	probes/t3028-b2-taiwan-cuts.case.json	Sheet1!C65
 F	probes/t3070-gamma-inv-band.case.json	S!A110
 F	probes/t3070-gamma-inv-band.case.json	S!A111
 F	probes/t3070-gamma-inv-band.case.json	S!A112
