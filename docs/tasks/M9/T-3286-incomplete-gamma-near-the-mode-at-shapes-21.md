@@ -3,7 +3,7 @@ id: T-3286
 title: "Incomplete gamma near the mode at shapes 21 to 1E8: POISSON.xlsx D55 is 16 ulp off where Excel is correctly rounded (accuracy)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -70,7 +70,7 @@ Cells this task owns:
 ## Out of scope
 - Where Excel's large-shape ratio form starts (T-3252, T-3270). The deep upper tail (T-3269). Shapes 1.5 and 2.5 (T-3285).
 
-## Landing notes (resumed 2026-11-03 by an opus run)
+## Landing notes (resumed 2026-11-03 by an opus run; superseded by the Outcome)
 - State (2026-11-03, session window closed): WIP on branch agent/functions-stat/T-3286-near-mode-temme, draft PR. Not
   reviewed. `make check-fast` not run; `cargo test -p rustsheet_engine --lib incomplete_gamma` passes with the
   measuring test below (it prints, it does not yet assert the 1-ulp bound).
@@ -92,3 +92,27 @@ Cells this task owns:
 - CI on 94e8eda2e: hygiene fails, `check_duplication.py` 2912 lines against baseline 2880 (+32, the size of the
   `NEAR_MODE_EXACT` table in incomplete_gamma/tests.rs): shrink that table (fewer points, or one row per shape with
   the x factors computed) rather than updating any baseline. Other jobs were green or pending at the window's close.
+
+## Outcome
+Temme's expansion is taken within `NEAR_MODE` of x = a from shape 1E3 (`TEMME_NEAR_MODE_MIN`, the WIP's switch), and
+`temme_pair` now forms its exponent a·phi in double-double: phi from s = (x - a)/(x + a) as s²(x + a)/a - 2(s³/3 + s⁵/5
++ ...) near the mode (`temme_phi`; ln x - ln a off the band), e^(-a phi) and erfc(sqrt(a phi)) each corrected for the
+exponent's low word and the rounded root (`erfc_of_root`). That answers the landing notes' tail loss (a rounded a·phi
+costs about a·phi ulps of the tail) without any cut: no criterion was scored.
+- Unit test `near_mode_pair_is_within_an_ulp_from_shape_1e3`: within 1 ulp of 60-digit mpmath over the band at shapes
+  46041 and 1E6 and at 1E3 from 0.9a; 2 ulp for P at 1E3 below 0.9a (was 10 to 230 ulp on the WIP, 17 to 157 on
+  main). The table was cut to the points where P or Q is not 0 or 1, in two tables under ten rows, for the
+  duplication ratchet (2,880 again).
+- An intermediate form (ln x - ln a for phi) took gated probes/incomplete-gamma-cap E11 `POISSON(1E12,1E12,TRUE)` from
+  Excel's value to visibly off (phi 5E-25 at a = 1E12 + 1); the atanh form keeps it and t2435 A34 bit-exact, and the
+  test pins E11.
+- Eval, cell by cell against origin/main d8640a46 on the gamma family (the only other differences were the 23 main
+  commits the branch lacks): ironcalc-calc POISSON.xlsx D55 (visibly off) and D31 become bit-exact, known failures 298 ->
+  296; probes/t2982 A144 0.15867945221382823 -> 0.15867945221382804 (within 15 digits, Excel's ...798; still owned by
+  T-3070), A146 2.856123416018922E-07 -> 2.856123416018894E-07 (Excel's ...8864, itself -13.6 ulp from the math; still
+  visibly off, T-3070); probes/incomplete-gamma-cap E13 and probes-numeric t3350 A210 move by an ulp, both already
+  known failures within 15 digits. No cell goes from pass to fail, no new baseline line.
+- Bit-exact among the five owned cells and t2982 A144-A146: before 0 of 8, after 2 (D31, D55).
+- Not reached: shapes 21 and 101 (D19, t1048 A9 and B9 unchanged; the expansion's dropped term is 3E-13 at 101) and
+  the acceptance test's shape 99999999 point (mpmath does not converge there): follow-up T-4000.
+- statistics.md "Incomplete gamma: accurate kernel (T-0971)" records Excel's correctly rounded near-mode values.
