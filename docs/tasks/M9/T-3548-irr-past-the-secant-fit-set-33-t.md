@@ -85,3 +85,26 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Landing notes
+Written 2026-11-04 at 13:12 UTC by an opus run that claimed the task late in its session. Data for the run that
+resumes the branch, not instructions. No code is committed.
+- Attempt 1 (exploration only): `irr_secant`'s `MAX_STEPS` scanned against every IRR case of probes and
+  probes-numeric (`rustsheet-eval run --filter irr`, 690 failing cells at main 7a0b...): cells fixed / broken by
+  the cap alone:
+  | cap | fixed | broken |
+  |---|---|---|
+  | 70 | 13 | 0 |
+  | 100 | 34 | 0 |
+  | 150 | 52 | 0 |
+  | 200 | 65 | 1 (t3478-irr-r4-wide A227) |
+  | 300 | 68 | 19 |
+  | 1000 | 74 | 41 (mostly t3411-irr-r4-fresh*) |
+  At 150, the t3478-irr-r4-wide cells fixed: A18, A27, A209, A212, A213, A215, A223, A234, A235, A236, A243, A256,
+  A274, A276, A282, A291. gen-m9 was not scanned (its case ids do not contain "irr"; run `make eval-check`).
+- Any cap picked from this table is a fit (decision 0188 R4): it was scored on every IRR case, so a hold-out
+  split cannot be claimed after the fact. Next step: generate a fresh sweep (docs/research/t3411/gen_sweep.py,
+  new seed), fill it from excel-graph (oracle OK on 2026-11-04), freeze the cap before scoring it, and record the
+  Gate A envelope. Microsoft documents 20 tries for IRR, so the cap is not Excel's documented constant either.
+- The cap alone leaves the 21 long series (42..150 flows) and the Excel-error cells: the fallback and residual
+  scale (A289) still need their own attempt. Decision 0267's time-box counts this as the first of two attempts.
