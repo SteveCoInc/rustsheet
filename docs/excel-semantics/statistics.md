@@ -5926,6 +5926,18 @@ main after T-3350):
   of fit-audit-t3070-closed-form-cut at shapes 1.3E10 to 2.3E10, ln density at the start -760 to -695, are within 15
   digits of Excel.
 So `HUGE_SHAPE_MIN` and the upper edge are not Excel's cut points (T-3409 models the search).
+The band closes from both sides as the shape grows (T-3396, probes/t3396-gamma-inv-band-huge, excel-graph 2026-11-04;
+`GAMMA.INV(1E-k,a,1)` for k 20 to 120 by 5): the last value and first `#NUM!` of k are 85 and 90 at 7E9, 80 and 85 at
+8E9, 75 and 80 at 9E9, 70 and 75 at 1E10, 65 and 70 at 1.05E10 (where k = 20 is already `#NUM!`), and at 1.1E10 only
+k 35 to 55 are values (k 20 to 30 and from 60 `#NUM!`); from 1.15E10 every probed k is `#NUM!`. So the lower edge
+falls from ln(1/p) about 201 at 7E9 by about 11.5 per 1E9 to about 167 at 1E10, then faster (about 132 at 1.1E10).
+Neither T-3350's cdf ratio (the start's lower tail is about 1 here, so the ratio is ln(1/p) and would stay at 205.3)
+nor the start's distance in standard deviations, o - z (the last value and first `#NUM!` are 41.8 and 42.4 at 7E9,
+44.3 and 45.0 at 1E10, 43.6 and 44.3 at 1.1E10), is constant along it. `CHISQ.INV(3E-k,2a)` is `#NUM!` at every probed
+k (22 to 122 by 10) at every one of these shapes, inside the band GAMMA.INV has at the same shape.
+Ours: `GAMMA.INV` is a value past this lower edge from 8E9 on (A35, A55:A56, A75:A77, A95:A98), and at 1.1E10 to
+1.2E10 inside Excel's empty band (A107:A108, A114:A119, A129:A140, A151:A161); the CHISQ.INV cells match. T-3409's model
+of Excel's search is the place to explain both edges; T-3396 keeps the cells.
 Tasks: T-2982, T-3070, T-3350, T-3396, T-3409, T-3505, T-3530
 
 ## GAMMA.DIST at a huge shape: #NUM! where shape/x overflows; an unexplained #NUM! from about 1E+56 (T-2435, T-3316)
