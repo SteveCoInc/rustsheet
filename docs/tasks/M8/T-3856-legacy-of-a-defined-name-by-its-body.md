@@ -3,7 +3,7 @@ id: T-3856
 title: "Legacy @ of a defined name by its body: a one-cell name as an IF arm and a constant name as an INDEX index show no @ (probe the other bodies first)"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
