@@ -3,7 +3,7 @@ id: T-1683
 title: "FORMULATEXT and unterminated structured refs: keep structured-reference text; reject t[@Qty without closing bracket"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
