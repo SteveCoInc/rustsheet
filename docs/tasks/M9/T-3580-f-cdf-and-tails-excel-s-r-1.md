@@ -40,7 +40,7 @@ denominator df of 1 takes bratio's bgrat branches at b = 1/2 as the Student t ta
 - [x] On t3567-r5-fdf1-hold, the bg1 region (d1 = 1, bgrat) reaches at least 990 of 1,000 cells bit-exact, and the
       case as a whole has no cell newly visibly off.
 - [ ] `FDIST(2,1,9)` (gen-m9/c18dbf21f11093f3 A151) and the T-2977 gated cells stay at Excel's value; no gated
-      known failure appears (`make eval-baseline` only shrinks baselines).
+      known failure appears (`make eval-baseline` only shrinks baselines). **Not met:** see the Outcome and decision 0263.
 - [x] statistics.md's "F's incomplete-beta arguments keep r >= 1" entry gets its "Ours:" line.
 - [x] The decision 0188 R4 guards for a structural model (reviewer-excel-fidelity check 7) are shown in the Outcome:
       the hold-out against the correctly rounded value (CR on t3567-r5-fdf1-hold: 1,407/2,484 of 3,578 bit-exact /

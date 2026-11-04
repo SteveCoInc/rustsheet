@@ -15,20 +15,21 @@ NAME = "t3580-f-fresh"
 rnd = random.Random(35800)
 def dec(v, k=None):
     return float(f"{v:.{k or rnd.randint(3, 15)}g}")
-pts = []
-for _ in range(400):
-    pts.append(("bg1", dec(math.exp(rnd.uniform(-1, 4))), 1, rnd.randint(31, 400)))
-for _ in range(300):
+def bg1():
+    return dec(math.exp(rnd.uniform(-1, 4))), 1, rnd.randint(31, 400)
+def d1():
     n = rnd.randint(3, 30)
-    pts.append(("d1", dec(n * math.exp(rnd.uniform(-8, 8))), 1, n))
-for _ in range(200):
+    return dec(n * math.exp(rnd.uniform(-8, 8))), 1, n
+def d2():
     m = rnd.randint(1, 400)
-    pts.append(("d2", dec(math.exp(rnd.uniform(-8, 8)) / m), m, 1))
-for _ in range(300):
-    m, n = (math.exp(rnd.uniform(0, math.log(500))) for _ in range(2))
-    m, n = (dec(v, 4) if rnd.random() < 1 / 3 else float(round(v)) for v in (m, n))
-    m, n = max(m, 1.0), max(n, 1.0)
-    pts.append(("gen", dec(math.trunc(n) / math.trunc(m) * math.exp(rnd.uniform(-6, 6))), m, n))
+    return dec(math.exp(rnd.uniform(-8, 8)) / m), m, 1
+def gen():
+    shapes = [math.exp(rnd.uniform(0, math.log(500))) for _ in range(2)]
+    shapes = [max(dec(v, 4) if rnd.random() < 1 / 3 else float(round(v)), 1.0) for v in shapes]
+    ratio = math.trunc(shapes[1]) / math.trunc(shapes[0])
+    return (dec(ratio * math.exp(rnd.uniform(-6, 6))), *shapes)
+REGIONS = (("bg1", bg1, 400), ("d1", d1, 300), ("d2", d2, 200), ("gen", gen, 300))
+pts = [(name, *draw()) for name, draw, count in REGIONS for _ in range(count)]
 cells, meta = {}, []
 f = lambda v: repr(v) if v != int(v) else str(int(v))
 for k, (reg, x, m, n) in enumerate(pts, 1):
