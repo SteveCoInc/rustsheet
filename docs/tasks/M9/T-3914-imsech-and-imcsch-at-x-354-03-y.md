@@ -3,7 +3,7 @@ id: T-3914
 title: "IMSECH and IMCSCH at x = ±354.03, y = 1: Excel's last imaginary digit depends on the sign of x (T-3883's sweep A101)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -41,3 +41,25 @@ imaginary digit at x = -354.03 and +354.03, which differ in the 15th digit altho
 
 ## Out of scope
 - The overflowed form past sinh²x's overflow (T-3883).
+
+## Outcome
+Findings, no engine change: Excel's IMSECH is symmetric in the sign of x across the finite-t form, and the ±354.03
+asymmetry is sub-ulp noise at a 15-digit rounding midpoint, below the reproducibility floor (decision 0188 R4.4).
+The four cells move to T-4001 (`defer: phase-1b`, decision 0114) with the four sub-ulp cells the probe added, so the
+first acceptance box is not met; the task's question is answered instead.
+- Probe: probes/t3914-imsech-sign-sweep (excel-graph, 2026-11-04), 600 cells: IMSECH and IMCOSH at x+yi and -x+yi,
+  |x| in [340, 355.5] (rows 1-50) and log-uniform in [20, 355.5] (rows 51-150). Excel prints the same digits at ±x in
+  every one of its 150 IMSECH pairs and 150 IMCOSH pairs.
+- In each off cell the exact value (50-digit mpmath) is 0.16 to 0.44 ulp from the 15-digit midpoint, and Excel is
+  not consistent about the side: it prints the correctly rounded digit at -354.03 and -354.007 and the other one at
+  +354.03, ±346.218848 (A11:B11) and ±353.877487 (IMCOSH C21:D21), where ours is the correctly rounded one.
+- Forms ranked (scratch harness, not committed), split fixed before scoring: train = sweep rows not a multiple of 3
+  (200 IMSECH cells) plus the 292 older finite-t IMSECH and band IMCSCH cells, hold-out = rows that are a multiple of
+  3 (100 cells), margin 10 points. Ours (libm, unfused t): 198/200 train, 100/100 hold-out, 270/292 older. Excel's EXP
+  pair: 200/200, 100/100, 270/292; it gains only the sub-ulp A11:B11 pair, so it was not taken (R4.4). The `1/u` form
+  (either u), the complex reciprocal, Smith's division, `(cosh 2x + cos 2y)/2` and its log-form variant all score lower
+  and none gives the ±354.03 pair. engineering.md "IMSECH's last digit at 15-digit midpoints, |x| 20 to 355.5".
+- R4: no model or constant changed, so the guards are not triggered (hold-out shown above for the record; fresh
+  sweep, Gate A envelope and `FITTED` N/A).
+- Follow-up: T-4001 (deferred) owns probes/t3883-im-overflow-reciprocal-sweep A101,
+  t3881-imcsch-flip-start-negative A3, t3912-imcsch-band-edges A25:B25 and t3914-imsech-sign-sweep A11:B11, C21:D21.
