@@ -3,7 +3,7 @@ id: T-4228
 title: "Probe which group Excel puts boundary values in, and GETPIVOTDATA on a grouped pivot field"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
