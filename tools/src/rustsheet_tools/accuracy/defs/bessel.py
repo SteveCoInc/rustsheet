@@ -10,19 +10,27 @@ Sources (engineering.md):
   the envelope through Excel's 15 digits. Near a root of J or Y the relative error against the math is unbounded,
   so such points can pass G; they are listed as R3 candidates in the task's Outcome, never marked (decision 0188
   R3). A fractional order truncates; `BESSELY` of x <= 0 is `#NUM!`. Past the phase 134217727 the sine and cosine
-  do not answer and BESSELJ and BESSELY are `#NUM!`; whether the cut itself answers is unprobed, so draws stay
-  below `PHASE_DRAW` (well short of it) and the edge stratum draws the evidenced `#NUM!` side only.
+  do not answer and BESSELJ and BESSELY are `#NUM!`: order 0 and every order from 2 once the order-0 phase is past
+  it (from x about 134217727.786), order 1 only from about 134217729.36. `PHASE_NUM` is one cut for every order, so
+  the band (134217727.79, 134217730] is outside this definition (Excel `#NUM!` there, the math a number); draws
+  stay below `PHASE_DRAW`, well short of it, and the edge stratum draws only |x| >= 1E+10.
 - "BESSEL order cap": the engine runs no recurrence above order 100,000 (a directive 5 DEVIATION), where Excel's
   own cap is 10,000,000. Draws stay at or below `ORDER_CAP` so the table never scores the deviation.
-  `BESSELJ(1E-300,100001)` is `#NUM!` from a Miller overflow at a tiny x, so tiny x is drawn with small orders only.
+  `BESSELJ(1E-300,100001)` is `#NUM!` from a Miller overflow at a tiny x. A tiny x is drawn with orders 0 to 4 only,
+  and even those are `#NUM!` below an order-dependent x ("BESSELJ and BESSELI at a tiny x and a small order
+  (T-4083)": `BESSELJ(1.10541629485784E-181,2)`, `BESSELI(-3.53342392064674E-38,4)`). The math is a number there;
+  such a point passes Gate A only through Excel's side (the engine is `#NUM!` too).
 - "BESSELK underflow, BESSELI overflow and BIT shifts of 49 to 53 (T-2421)", "BESSELK near the bottom of the double
   range, BESSELI overflow point (T-2550)", "BESSELI overflow point (T-2613)": BESSELI is `#NUM!` for every order
   from |x| > 709.7 (finite at 709.7, `#NUM!` at every probed x above), so |x| > `I_CUT` is a domain error; BESSELK
   flushes to 0 below the smallest normal double, which Gate A's absolute floor of 1e-300 covers. BESSELK grows past
   the double range at a large order and a small x (`BESSELK(2.5,171)` overflows); such a point has no math value in
   the double range and is redrawn.
-- BESSELK of x <= 0 is `#NUM!` (K is singular at 0 and undefined below); BESSELI and BESSELJ take any real x
-  (I_n(-x) = (-1)^n I_n(x), J_n(-x) = (-1)^n J_n(x)). A negative order is `#NUM!` in all four.
+- BESSELK of x <= 0 is a domain error here because K is singular at 0 and undefined below. This is not probed: no
+  semantics entry has a BESSELK cell at x <= 0, and no table point is drawn there. BESSELI and BESSELJ take any real
+  x (I_n(-x) = (-1)^n I_n(x), J_n(-x) = (-1)^n J_n(x)).
+- "Engineering edge cases from a generated sample (T-1385)": any negative order is `#NUM!`, checked before
+  truncation (`BESSELK(5,-0.0001)`, `BESSELJ(5,-0.9999)`).
 """
 
 from __future__ import annotations
@@ -55,13 +63,12 @@ TINY_X = 1e-6
 
 
 def _order(args: Sequence[MathArg]) -> tuple[mpmath.mpf, int]:
-    """(x, the order truncated toward zero); `#NUM!` for a negative order."""
+    """(x, the order truncated toward zero); `#NUM!` for any negative order, checked before truncation (T-1385)."""
     x, n = scalars(args)
-    order = trunc(n)
-    if order < 0:
+    if n < 0:
         msg = "a negative order"
         raise DomainError(msg)
-    return x, order
+    return x, trunc(n)
 
 
 def _past_phase(x: mpmath.mpf) -> None:

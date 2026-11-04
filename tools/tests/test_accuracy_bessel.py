@@ -72,9 +72,12 @@ def test_order_truncates_and_parity() -> None:
     ("definition", "args"),
     [
         (BESSELJ, [mp(1), mp(-1)]),
+        # engineering.md T-1385: any negative order is `#NUM!`, checked before truncation
+        (BESSELK, [mp(5), mp("-0.0001")]),
+        (BESSELJ, [mp(5), mp("-0.9999")]),
         (BESSELY, [mp(0), mp(0)]),
         (BESSELY, [mp(-1), mp(0)]),
-        (BESSELK, [mp(0), mp(1)]),
+        (BESSELK, [mp(0), mp(1)]),  # unprobed: K is singular at 0 (see the module docstring)
         (BESSELI, [mp("709.78"), mp(0)]),
         (BESSELI, [mp(-710), mp(1)]),
         (BESSELJ, [mp("1e10"), mp(0)]),
