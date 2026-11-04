@@ -3,7 +3,7 @@ id: T-4236
 title: "Probe date-grouped pivot fields: late times, serials 1 to 60, blanks, and GETPIVOTDATA on a year or omitted item"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
