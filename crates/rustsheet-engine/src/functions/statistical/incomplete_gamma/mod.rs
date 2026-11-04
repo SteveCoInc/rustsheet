@@ -524,8 +524,15 @@ fn temme_pair(a: f64, x: f64) -> (f64, f64) {
     // a·phi·eps in both erfc(sqrt(a phi)) and e^(-a phi), tens to hundreds of ulps of a tail within
     // `NEAR_MODE` at shape 1E3 to 1E5 (T-3286).
     let exponent = dd_mul((a, 0.0), phi);
+    // Past the double range the product's error word is NaN: the plain product (+inf) then takes
+    // the 0 tail, as before the double-double form (a = 1E308, x = 1E300).
+    let exponent = if exponent.0.is_finite() {
+        exponent
+    } else {
+        (a * phi.0, 0.0)
+    };
     let below = x < a;
-    let small = if exponent.0 > TEMME_EXPONENT_MAX {
+    let small = if exponent.0.is_nan() || exponent.0 > TEMME_EXPONENT_MAX {
         0.0
     } else {
         let z = if below {
@@ -571,6 +578,11 @@ const PHI_SERIES_TERMS: u32 = 27;
 fn temme_phi(a: f64, x: f64) -> Dd {
     let difference = two_sum(x, -a);
     let total = two_sum(x, a);
+    if !total.0.is_finite() {
+        // x + a past the double range (a = x = 1E308): the double rlog, which is exact enough there
+        // for the tails it feeds (both 1/2 at x = a).
+        return (rlog(a, x), 0.0);
+    }
     let s = dd_div(difference, total);
     if s.0.abs() > PHI_SERIES_MAX_S {
         let ratio = dd_div(difference, (a, 0.0));

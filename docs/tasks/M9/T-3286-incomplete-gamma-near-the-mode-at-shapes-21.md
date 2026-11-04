@@ -98,7 +98,11 @@ Temme's expansion is taken within `NEAR_MODE` of x = a from shape 1E3 (`TEMME_NE
 `temme_pair` now forms its exponent a·phi in double-double: phi from s = (x - a)/(x + a) as s²(x + a)/a - 2(s³/3 + s⁵/5
 + ...) near the mode (`temme_phi`; ln x - ln a off the band), e^(-a phi) and erfc(sqrt(a phi)) each corrected for the
 exponent's low word and the rounded root (`erfc_of_root`). That answers the landing notes' tail loss (a rounded a·phi
-costs about a·phi ulps of the tail) without any cut: no criterion was scored.
+costs about a·phi ulps of the tail) without any cut: no criterion was scored. Not a fit (decision 0188 R4): an accurate
+kernel checked against 60-digit mpmath only, no oracle cell scored; `TEMME_NEAR_MODE_MIN` = 1E3 is the expansion's
+truncation bound (first dropped term about 1E-17 there). Past the double range (x + a or a·phi overflowing, a = 1E308)
+the exponent falls back to doubles as before, so those points are not NaN (fidelity review round 1; unit-tested).
+The branch also carries T-3985, a GROUPBY follow-up of the T-3964 review filed by the earlier run.
 - Unit test `near_mode_pair_is_within_an_ulp_from_shape_1e3`: within 1 ulp of 60-digit mpmath over the band at shapes
   46041 and 1E6 and at 1E3 from 0.9a; 2 ulp for P at 1E3 below 0.9a (was 10 to 230 ulp on the WIP, 17 to 157 on
   main). The table was cut to the points where P or Q is not 0 or 1, in two tables under ten rows, for the

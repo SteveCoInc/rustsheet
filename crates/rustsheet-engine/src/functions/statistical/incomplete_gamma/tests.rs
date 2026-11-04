@@ -903,8 +903,8 @@ fn the_far_upper_tail_is_excels_ratio_form() {
     );
 }
 
-/// (x, P, Q) at shape 1E3 to 60 digits (mpmath `gammainc`, regularized), x from 0.6a to 1.4a
-/// (T-3286).
+/// (x, P, Q) at shape 1E3 to 60 digits (mpmath 1.3, `mp.dps = 60`, `gammainc(a, 0, x,
+/// regularized=True)` and `gammainc(a, x, inf, regularized=True)`), x from 0.6a to 1.4a (T-3286).
 const NEAR_MODE_1E3: [(f64, f64, f64); 9] = [
     (600.0, 2.324060057960917e-50, 1.0),
     (700.0, 1.0158583345333217e-26, 1.0),
@@ -967,4 +967,11 @@ fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
     assert_near_mode(1e6, &[(990_000.0, 5.446_644_693_010_809e-24, 1.0)], 1.0);
     assert_eq!(gamma_ur(46041.0, 46071.0), 0.443_802_069_809_538_9);
     assert_eq!(gamma_ur(1e12 + 1.0, 1e12), 0.500_000_265_961_520_3);
+    // Past the double range the double-double exponent falls back to doubles, not NaN: x + a
+    // overflows at a = x = 1E308 (both tails 1/2, as Excel's `GAMMA.DIST(1E300,1E300,1,TRUE)`,
+    // probes/incomplete-gamma-cap E3), and a·phi at a = 1E308, x = 1E300 (P is 0).
+    let pair = |a: f64, x: f64| pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate);
+    assert_eq!(pair(1e308, 1e308), (0.5, 0.5));
+    assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
+    assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
 }
