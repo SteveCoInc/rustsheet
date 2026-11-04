@@ -21,8 +21,8 @@ use crate::value::Value;
 use rustsheet_engine::expressions::utils::shift::shift_formula_text;
 use rustsheet_engine::types::DateSystem;
 use rustsheet_xlsx::import::{
-    date_system_from_attribute, decode_xlsx_escapes, iso8601_to_date_system_serial, rich_errors,
-    ImportLimits, PartNames,
+    date_system_from_attribute, decode_xlsx_escapes, is_ole_compound_file,
+    iso8601_to_date_system_serial, rich_errors, ImportLimits, PartNames,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -35,6 +35,10 @@ pub enum SnapshotError {
     Xml { part: String, message: String },
     #[error("malformed workbook: {0}")]
     Malformed(String),
+    /// A password-protected or legacy binary workbook (decision 0279), named as the importer
+    /// names it.
+    #[error("{0}")]
+    Import(#[from] rustsheet_xlsx::error::XlsxError),
 }
 
 /// How a formula is attached to a cell.
@@ -169,6 +173,9 @@ struct Zip {
 
 impl Zip {
     fn new(bytes: &[u8]) -> Result<Self, SnapshotError> {
+        if is_ole_compound_file(bytes) {
+            return Err(rustsheet_xlsx::error::XlsxError::OleCompoundFile.into());
+        }
         let archive = zip::ZipArchive::new(Cursor::new(bytes.to_vec()))?;
         let names = PartNames::from_archive(&archive)?;
         Ok(Zip { archive, names })

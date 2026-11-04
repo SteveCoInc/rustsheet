@@ -40,7 +40,7 @@ use rustsheet_engine::{
 use crate::error::XlsxError;
 
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
-pub use package::{ImportLimits, PartNames};
+pub use package::{is_ole_compound_file, ImportLimits, PartNames};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
 pub use workbook::date_system_from_attribute;
