@@ -3,7 +3,7 @@ id: T-3182
 title: "Pivot cache date items below serial 61 import on Excel's 1899-12-30 epoch instead of skipping the cache (corpus-bench 52379, 59932)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
