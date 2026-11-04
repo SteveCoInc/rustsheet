@@ -90,8 +90,8 @@ underflows, the principal is one core for both types".
 - Unit test: `an_underflowed_principal_is_one_core_for_both_types` (test_fn_cumulative_lift.rs).
 
 ## Landing notes
-- PR #3105 (draft), head f5ba043c9cbe (round 2), task blocked on T-4059. CI on that head had not been read when the
-  session's window closed. Round 1 verdicts (head 1f7daa081f0a): design and security approved, Excel fidelity requested
+- PR #3105 (draft), its round-2 head, task blocked on T-4059. CI on that head had not been read when the
+  session's window closed. Round 1 verdicts (its first head): design and security approved, Excel fidelity requested
   changes (R4.1 split, R4.2 sweep, R2 envelope, domain, FITTED range). Round 2 has not been reviewed.
 - Next: once T-4059 lands, fill and score `r4-T-3141` against this frozen kernel, record the envelope count and every
   point outside it in the Outcome, run the full panel from round 1, and enqueue. If the sweep shows the core is Excel's
