@@ -3,7 +3,7 @@ id: T-4040
 title: "R1C1 typed entry: an unbound name spelled like an A1 cell (f1, F1) is #NAME?, FORMULATEXT ='f1'"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
