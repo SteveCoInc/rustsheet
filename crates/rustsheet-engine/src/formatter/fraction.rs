@@ -173,15 +173,7 @@ pub(super) fn format_fraction(
             let shown: String = digits.chars().take(denominator_digits.len()).collect();
             fill_left(&shown, &denominator_kinds)
         }
-        // Excel: a run that starts with `?` holds no `0` (the parser ends it there) and is
-        // left-aligned (`# ???/???` on 1.5 is "1   1/2  ", `# ?/??#` on 12.5 "12 1/2 "); one that
-        // starts with `#` or `0` is right-aligned like an integer (`# ?/0?` "12 1/02", `# ?/#?`
-        // "12 1/2", `# ?/#0#` "12 1/02"; probes/t3711-fraction-trailing-placeholders; `?/00` on 1.5
-        // "3/02", probes/fraction-format-features B13).
-        Denominator::Placeholders(kinds) if kinds.first() == Some(&'?') => {
-            fill_left(&denominator_digits, &denominator_kinds)
-        }
-        Denominator::Placeholders(_) => fill(&denominator_digits, &denominator_kinds).concat(),
+        Denominator::Placeholders(_) => fill_left(&denominator_digits, &denominator_kinds),
     };
     let denominator_text = part.numerals.digits(&denominator_text);
 
@@ -443,21 +435,54 @@ fn fill(digits: &str, kinds: &[char]) -> Vec<String> {
         .collect()
 }
 
-/// Like [`fill`] for a fixed denominator or a placeholder run that starts with `?`: each
-/// placeholder past `digits` prints nothing (`#`), a space after the digits (`?`) or a zero
-/// before them (`0`): `# ???/???` on 1.5 is "1   1/2  " (number-formats.md "Fraction formats")
-/// and `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160).
+/// A denominator's text: `digits` in `kinds`. Leading `#`s take no digit. When there are fewer
+/// digits than the other placeholders, the `0`s are left out first, then the `#`s (each from
+/// the left), then the rightmost `?`s; a placeholder left out prints in its place nothing (`#`), a space (`?`) or a
+/// zero (`0`). `# ???/???` on 1.5 is "1   1/2  ", `?/00` on 1.5 "3/02" (fraction-format-features
+/// B13), `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160); on 12.5 `# ?/?0` is
+/// "12 1/20", `# ?/??0` "12 1/2 0", `# ?/#?0` "12 1/20", `# ?/0??` "12 1/02 ", `# ?/0#?` "12 1/02", `# ?/#0#` "12 1/02",
+/// and `# ?/?0?` on 0.3 " 3/100". The run's length still bounds the digits (`# ?/?0` on 0.123 is
+/// " 8/65", `# ?/#0` on PI() "3 1/7"; probes/t3711-fraction-trailing-placeholders,
+/// t4204-fraction-denominator-mixed; number-formats.md "Fraction formats").
 fn fill_left(digits: &str, kinds: &[char]) -> String {
-    let mut zeros = String::new();
-    let mut spaces = String::new();
-    for kind in kinds.iter().skip(digits.chars().count()) {
-        match kind {
-            '?' => spaces.push(' '),
-            '0' => zeros.push('0'),
-            _ => {}
+    let skipped = kinds.iter().take_while(|kind| **kind == '#').count();
+    let kinds = &kinds[skipped..];
+    let digits: Vec<char> = digits.chars().collect();
+    let mut unused = vec![false; kinds.len()];
+    let mut to_leave = kinds.len().saturating_sub(digits.len());
+    for left_out in ['0', '#'] {
+        for (i, kind) in kinds.iter().enumerate() {
+            if to_leave > 0 && *kind == left_out {
+                unused[i] = true;
+                to_leave -= 1;
+            }
         }
     }
-    format!("{zeros}{digits}{spaces}")
+    for i in (0..kinds.len()).rev() {
+        if to_leave > 0 && !unused[i] {
+            unused[i] = true;
+            to_leave -= 1;
+        }
+    }
+    // More digits than placeholders: the first one takes the extra (as in [`fill`]).
+    let extra = digits.len().saturating_sub(kinds.len());
+    let mut next = 0;
+    let mut text = String::new();
+    for (kind, unused) in kinds.iter().zip(unused) {
+        if unused {
+            match kind {
+                '?' => text.push(' '),
+                '0' => text.push('0'),
+                _ => {}
+            }
+        } else {
+            let take = if next == 0 { extra + 1 } else { 1 };
+            text.extend(digits.iter().skip(next).take(take));
+            next += take;
+        }
+    }
+    text.extend(digits.iter().skip(next));
+    text
 }
 
 #[cfg(test)]

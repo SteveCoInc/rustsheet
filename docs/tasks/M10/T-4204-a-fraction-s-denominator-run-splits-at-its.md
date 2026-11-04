@@ -33,14 +33,13 @@ Placeholder runs after a fraction's `/` that mix `?`, `#` and `0` print as Excel
 -
 
 ## Outcome
-- Parser (`formatter/parser.rs`): a placeholder denominator run that starts with `?` ends before its first `0`; the
-  rest are ordinary placeholders after the denominator (T-3711's rule). Formatter (`formatter/fraction.rs`): a run
-  that starts with `#` or `0` is right-aligned with the existing `fill`; a `?` run keeps `fill_left`.
-- The 23 cells of probes/t3711-fraction-trailing-placeholders pass (57/57). The rule fits every cell of rows 5 and
-  9-19, so no extra probes (`?#0`, `#?0`, `?0#`) were needed to choose it; whether the cut changes the denominator's
-  digit limit stays unprobed and is recorded as such in number-formats.md.
-- number-formats.md "Fraction formats": new bullet with the rule and cells; the T-2209 unprobed `0`/`?` choice
-  dropped (now evidenced: `?/0?` is "1/02").
-- Eval delta: probes known failures 4043 -> 4020 (fixed 23), 0 regressions in every suite (poi, calipers and
-  corpus-bench fetched and scored).
-
+- New probe case `probes/t4204-fraction-denominator-mixed` (42 cells, excel-graph, tag M10). Rows 1-8 hold the mixed
+  shapes `?#0`, `#?0`, `?0#`, `?#?`, `#?#`, `0#?`, `#??` and `0??`, and rows 9-14 the digit limit (0.123, PI(), 0.3).
+  The excel-fidelity review of round 1 asked for these probes, which the task asked for too. They disproved round 1's
+  "cut the run at its first `0`": the whole run bounds the digits (`?0` on 0.123 is 8/65).
+- `formatter/fraction.rs` `fill_left` places the denominator's digits. Leading `#`s take none. A short denominator
+  leaves out `0`s first, then `#`s, then the rightmost `?`s, and each left-out placeholder prints in place. The parser
+  is unchanged from main.
+- probes/t3711-fraction-trailing-placeholders: 57/57 (23 fixed); t4204: 42/42. number-formats.md "Fraction formats"
+  has the rule and its cells.
+- Eval delta: probes known failures -23, plus 42 new passing cells; 0 regressions in every suite.

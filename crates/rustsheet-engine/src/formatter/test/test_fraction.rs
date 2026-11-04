@@ -236,12 +236,12 @@ fn fixed_denominator_past_32768_is_picked() {
     assert_eq!(format_number(0.5, "?/100000", &ctx).text, "#VALUE!");
 }
 
-/// probes/t3711-fraction-trailing-placeholders rows 5 and 9-19 (excel-graph, T-4204): a denominator
-/// run that starts with `?` ends before its first `0`, which prints after it; one that starts with
-/// `#` or `0` is the denominator whole, right-aligned like an integer.
+/// probes/t3711-fraction-trailing-placeholders rows 5 and 9-19 and t4204-fraction-denominator-mixed
+/// (excel-graph, T-4204): a denominator's unused placeholders print in place; leading `#`s take no
+/// digit; a short denominator leaves out `0`s, then `#`s, then the rightmost `?`s.
 #[test]
-fn denominator_run_splits_by_its_first_placeholder() {
-    assert_eq!(text(12.5, "# ?/?0"), "12 1/20"); // A5
+fn denominator_placeholders_print_in_place() {
+    assert_eq!(text(12.5, "# ?/?0"), "12 1/20"); // t3711 A5
     assert_eq!(text(12.5, "# ?/??0"), "12 1/2 0"); // A9
     assert_eq!(text(12.125, "# ?/?0?"), "12 1/80 "); // C16
     assert_eq!(text(12.5, "# ?/??#"), "12 1/2 "); // A17
@@ -253,4 +253,16 @@ fn denominator_run_splits_by_its_first_placeholder() {
     assert_eq!(text(0.5, "# ?/00?"), " 1/002"); // B15
     assert_eq!(text(12.5, "# ?/#0#"), "12 1/02"); // A19
     assert_eq!(text(12.0, "# ?/?0"), "12     "); // B5
+    assert_eq!(text(12.5, "# ?/#?0"), "12 1/20"); // t4204 A2
+    assert_eq!(text(12.5, "# ?/?#?"), "12 1/2 "); // A4
+    assert_eq!(text(12.5, "# ?/#?#"), "12 1/2"); // A5
+    assert_eq!(text(12.125, "# ?/0??"), "12 1/08 "); // C8
+    assert_eq!(text(12.5, "# ?/0#?"), "12 1/02"); // A6
+    assert_eq!(text(0.123, "# ?/?0"), " 8/65"); // A9
+    assert_eq!(text(std::f64::consts::PI, "# ?/?0"), "3 1/70"); // B9
+    assert_eq!(text(0.3, "# ?/?0"), " 3/10"); // C9
+    assert_eq!(text(std::f64::consts::PI, "# ?/#0"), "3 1/7"); // B10
+    assert_eq!(text(std::f64::consts::PI, "# ?/0?"), "3 1/07"); // B13
+    assert_eq!(text(0.123, "# ?/??0"), " 23/187"); // A11
+    assert_eq!(text(0.3, "# ?/?0?"), " 3/100"); // C12
 }

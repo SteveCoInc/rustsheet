@@ -1278,15 +1278,19 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
   separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
   seven spaces then "12|5".
-- **A placeholder denominator run is cut by its first placeholder** (T-4204, same case rows 5, 9-19, at 12.5, 0.5 and
-  12.125). A run that starts with `?` ends before its first `0`, and the rest prints as placeholders after the
-  denominator (above): `# ?/?0` on 12.5 is "12 1/20", `# ?/??0` "12 1/2 0", `# ?/?0?` "12 1/20 ". Such a run is
-  left-aligned, so a `#` in it prints nothing and a `?` a space after the digits: `# ?/?#` "12 1/2", `# ?/??#`
-  "12 1/2 ". A run that starts with `#` or `0` is the denominator whole and is right-aligned like an integer (a
-  leading `#` prints nothing, a leading `0` a zero, a leading `?` after them a space): `# ?/#0` and `# ?/#?` "12 1/2",
-  `# ?/0?` and `# ?/0#` "12 1/02", `# ?/00?` "12 1/002", `# ?/#0#` "12 1/02". Unprobed: whether the cut changes
-  the denominator's digit limit (every probed value has a one-digit denominator); ours takes the run's length,
-  so `?0` allows one digit and `#0` two.
+- **A placeholder denominator prints its unused placeholders in place** (T-4204; probes/t3711-fraction-trailing-placeholders
+  rows 5, 9-19 and probes/t4204-fraction-denominator-mixed A1:C14, excel-graph, at 12.5, 0.5, 12.125, 0.123, PI() and 0.3).
+  The whole run bounds the denominator's digits (`# ?/?0` on 0.123 is " 8/65", `# ?/#0` on PI() "3 1/7", `# ?/??0` on
+  0.123 " 23/187"). Leading `#`s never take a digit. When the denominator has fewer digits than the other placeholders,
+  the `0`s are left out first, then the `#`s, then the rightmost `?`s, and each left-out placeholder prints in its place
+  (a `0` a zero, a `?` a space, a `#` nothing):
+  - on 12.5: `# ?/?0` "12 1/20", `# ?/??0` "12 1/2 0", `# ?/?0?` "12 1/20 ", `# ?/?#0` and `# ?/#?0` "12 1/20",
+    `# ?/??#` and `# ?/?#?` "12 1/2 ", `# ?/#0`, `# ?/#?` and `# ?/#?#` "12 1/2", `# ?/0?`, `# ?/0#`, `# ?/0#?` and
+    `# ?/#0#` "12 1/02", `# ?/0??` "12 1/02 ", `# ?/00?` "12 1/002";
+  - on PI() and 0.3: `# ?/?0` "3 1/70" and " 3/10", `# ?/0?` "3 1/07", `# ?/?0?` on 0.3 " 3/100" (the `0` is left
+    out, so the digits 1 and 0 take the two `?`s).
+  Ours: `fill_left` (formatter/fraction.rs). Unprobed: which of several `0`s a short denominator leaves out when it
+  takes some of them (ours: from the left).
 Ours: implemented in formatter/parser.rs (`is_fraction_literal`) and formatter/fraction.rs (T-0982); all 325 cells pass.
 Unprobed engine choices (T-2209): plain spaces or quoted
 text around the `/` also make a fraction; a `/` with no denominator after its literals stays a literal.

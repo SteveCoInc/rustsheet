@@ -527,16 +527,7 @@ impl Parser {
                         Denominator::Fixed(digits)
                     } else {
                         let mut kinds = vec![placeholder_kind(&next_token)];
-                        // Excel: a run that starts with `?` ends before its first `0`, which
-                        // prints after the denominator (`# ?/?0` on 12.5 is "12 1/20", `# ?/??0`
-                        // "12 1/2 0", `# ?/?0?` "12 1/20 "); a run that starts with `#` or `0`
-                        // is the denominator whole (`# ?/0?` "12 1/02", `# ?/#0#` "12 1/02";
-                        // probes/t3711-fraction-trailing-placeholders, number-formats.md
-                        // "Fraction formats").
-                        let starts_with_question = kinds[0] == '?';
-                        while self.lexer.peek_token().is_digit()
-                            && !(starts_with_question && self.lexer.peek_token() == Token::Zero)
-                        {
+                        while self.lexer.peek_token().is_digit() {
                             kinds.push(placeholder_kind(&self.lexer.next_token()));
                         }
                         Denominator::Placeholders(kinds)
