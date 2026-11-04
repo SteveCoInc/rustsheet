@@ -159,7 +159,7 @@ owned by T-4232.
 - Reviews on 2fcae3df3: security APPROVE, design APPROVE. Design's MINORs: the missing `.math.json`, and the STRATA
   conditional in gen_sweep.py could be a named constant. excel-fidelity was still running when the window closed;
   no verdict was recorded.
-- Missing: eval/suites/probes-numeric/cases/t4213-irr-r4-fresh.math.json. `make check` fails without it
+- (Done after the window: the t4213 `.math.json` is committed and `make eval-math-check` is current.) Was missing: eval/suites/probes-numeric/cases/t4213-irr-r4-fresh.math.json. `make check` fails without it
   (`make eval-math-check`, decision 0243). `cd tools && uv run rustsheet-accuracy math --suite probes-numeric` takes
   over 15 minutes and was still running. It also rewrites nine unrelated probes-numeric `.math.json` files (t1538,
   t1543, t2586, t3350, t3409, t3443 x3, t3953). Commit only the t4213 sidecar and `git checkout` the rest.
