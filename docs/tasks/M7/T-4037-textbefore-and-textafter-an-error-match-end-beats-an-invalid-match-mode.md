@@ -3,7 +3,7 @@ id: T-4037
 title: "TEXTBEFORE and TEXTAFTER: an error match_end beats the #VALUE! of an out-of-range numeric match_mode (gen-m7)"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
