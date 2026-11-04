@@ -35,7 +35,7 @@ fn undo_redo_respect_styles() {
     let model = new_empty_model();
     let mut model = UserModel::from_model(model);
     assert!(model.set_user_input(0, 1, 1, "100").is_ok());
-    assert!(model.set_user_input(0, 1, 1, "125$").is_ok());
+    assert!(model.set_user_input(0, 1, 1, "$125").is_ok());
     // The content of the cell is just the number 125
     assert_eq!(model.get_cell_content(0, 1, 1), Ok("125".to_string()));
     assert!(model.undo().is_ok());
@@ -46,10 +46,10 @@ fn undo_redo_respect_styles() {
     );
     assert_eq!(model.get_cell_content(0, 1, 1), Ok("100".to_string()));
     assert!(model.redo().is_ok());
-    // The cell has the number 125 formatted as '125$'
+    // The cell has the number 125 formatted as "$125 "
     assert_eq!(
         model.get_formatted_cell_value(0, 1, 1),
-        Ok("125$".to_string())
+        Ok("$125 ".to_string())
     );
     assert_eq!(model.get_cell_content(0, 1, 1), Ok("125".to_string()));
 }
