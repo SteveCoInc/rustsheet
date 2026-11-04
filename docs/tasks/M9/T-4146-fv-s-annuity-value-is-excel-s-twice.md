@@ -16,9 +16,9 @@ FV gives Excel's bits where its plain-double evaluation and Excel's twice-rounde
 probes/t3424-rate-noise-trace A132, which is the only literal FV oracle cell where the two forms differ today.
 
 ## Context
-- T-3424 read Excel's RATE residual through FV at 345 secant iterates (its trace probe, excel-graph, 2026-11-04).
+- T-3424 read Excel's RATE residual through FV at 355 secant iterates (its trace probe, excel-graph, 2026-11-04).
   Excel's FV equals -((pv·P) + (pmt·(k·((P-1)/r)))) with each `+`, `*` and `/` Excel's twice-rounded operator on
-  all 345 cells. That is RATE's residual without + fv (`annuity_factor_rounded` in
+  all 355 cells. That is RATE's residual without + fv (`annuity_factor_rounded` in
   crates/rustsheet-engine/src/functions/financial/annuity.rs).
 - The engine's FV (`compute_future_value`, same file) evaluates the same expression in plain doubles
   (`annuity_factor`). Across every literal `=FV(` oracle cell of every suite (587 numeric cells), the twice-rounded

@@ -1209,9 +1209,9 @@ Evidence (excel-graph, 2026-10-31, T-3348):
   - **Excel's residual and step are the model's; the outcome of a flat secant is not** (probes/t3424-rate-noise-trace,
     433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/). The probe covers the 16 wrong-type
     cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
-    - Residual: FV at 345 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
+    - Residual: FV at 355 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
       them in the noise floor, |f| from 1e-7 to 1e-2) equals -(pv·P + pmt·A) with Excel's twice-rounded operators on
-      all 345. That is RATE's residual less + fv. So the residual is Excel's along the path at every nper, not
+      all 355. That is RATE's residual less + fv. So the residual is Excel's along the path at every nper, not
       just at nper 1 (T-3579). An iterate is written as `(a+b)`: a 15-digit head plus a tail that rounds back to the
       double, because Excel cuts a formula literal to 15 digits (numbers.md "Formula number literals are read at 15
       significant digits").
@@ -1232,26 +1232,33 @@ Evidence (excel-graph, 2026-10-31, T-3348):
       step is the model's.
     - A flat secant is not always `#NUM!`. Making it `#NUM!` fixes 60 wrong-type cells but breaks 549.
     - The hold point does not decide the outcome. On the nper 1 and 2 cells, RATE seeded with each of the last 12
-      iterates (98 cells) gives these results:
+      iterates (78 cells) gives these results:
       - Where the model converges (19 cells), Excel equals the model on all 19.
       - Where the model holds (51 cells), Excel equals the hold on 20, errs on 22, and gives another number on 9.
+      - Where the model ends `#NUM!` on a flat secant it cannot hold (8 cells), Excel returns a number on 7: the
+        opposite type error.
       - Two seeded runs of fresh A275 hold at the same iterate 0.07115318239018958. Excel returns it for one and
         gives `#NUM!` for the other.
-      - The plateau decides nothing either. A157's runs hold at 11 different iterates, all with f = -2.38e-7. Excel
-        returns 5 of them and errs on 5.
-    - No single quantity at the hold separates Excel's 549 returned holds from its 60 errors better than returning
-      every hold, which gets 60 wrong. The best split gets 57 wrong. Quantities tried:
-      - |f|, and |f| over the largest term, over pv, over pmt, over fv, and over f at the guess;
-      - the step;
+      - The plateau decides nothing either. A157's runs hold at 10 different iterates, all with f = -2.38e-7. Excel
+        returns 5 of them and errs on 5. (Its 2 other holds have f = 3.58e-6, and Excel gives another number on
+        both.)
+    - No single threshold on a quantity at the hold separates Excel's 549 returned holds from its 60 errors much
+      better than returning every hold, which gets 60 wrong. The best split, on r itself, gets 57 wrong. Quantities
+      tried:
+      - |f|, and |f| over the largest term, over pv, over pmt, over fv, over f at the guess and over f at the first
+        iterate;
+      - |f| in ulps of the largest term and of fv;
+      - r, n and the step;
       - a zero step against distinct iterates, and the stall's sign and direction;
       - whether the run bracketed the root, and whether the hold has the smallest |f| of the run.
-
-      On 200 returned holds, Excel's value is 1 to 4 ulp from the model's held iterate, in either direction.
-    - So Excel's last few iterates differ from the model's at the ulp level, though the residual and the step agree
-      at every point probed. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74). Excel stops
+    - Where Excel returns a number on a held run (549 cells), its value is the model's held iterate on 202, 1 to 4
+      ulp from it on 182 (in either direction), and further off on 165: up to 156,030 ulp on t3348-rate-fv-nonzero
+      A138 and about 2.5e9 ulp on probe A344.
+    - So Excel's path leaves the model's in the noise floor, sometimes in the last ulp and sometimes many steps
+      earlier, though the residual and the step agree at every point probed. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74). Excel stops
       at 5.2793196756967624e-06, one ulp past the model's hold and the first double where f changes sign. The cause
       is unknown. T-3963 owns it.
-    - FV: Excel's FV is the twice-rounded form on all 345 cells. The engine's plain-double FV misses one of them,
+    - FV: Excel's FV is the twice-rounded form on all 355 cells. The engine's plain-double FV misses one of them,
       A132 (`=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,934408648396.347,1)`: Excel
       -10935378180.042114, engine -10935378180.042236). Across the 587 numeric literal FV oracle cells, the
       twice-rounded form scores 587 and the plain form 586. T-4146 owns A132.
