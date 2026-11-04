@@ -291,11 +291,12 @@ fn opt_clock(obj: Option<&Bound<'_, PyAny>>) -> PyResult<Clock> {
     obj.map_or(Ok(Clock::system()), py_to_clock)
 }
 
-fn load_options(recalc: bool, clock: Clock) -> LoadOptions {
+fn load_options(recalc: bool, clock: Clock, name: Option<String>) -> LoadOptions {
     LoadOptions {
         recalc,
         workbook: WorkbookOptions {
             clock,
+            name,
             ..WorkbookOptions::default()
         },
         ..LoadOptions::default()
@@ -352,9 +353,14 @@ fn sheet_names(wb: &Workbook) -> Vec<(SheetId, String)> {
 #[pymethods]
 impl PyWorkbook {
     /// Creates an empty workbook with one sheet; `date_system` is `"1900"` (default) or `"1904"`.
+    /// `name` is the file name without extension (`"Budget"`), which `CELL` reports as `[Budget.xlsx]`.
     #[new]
-    #[pyo3(signature = (date_system="1900", clock=None))]
-    fn py_new(date_system: &str, clock: Option<&Bound<'_, PyAny>>) -> PyResult<Self> {
+    #[pyo3(signature = (date_system="1900", clock=None, name=None))]
+    fn py_new(
+        date_system: &str,
+        clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
+    ) -> PyResult<Self> {
         let clock = opt_clock(clock)?;
         let date_system = match date_system {
             "1900" => DateSystem::Excel1900,
@@ -368,6 +374,7 @@ impl PyWorkbook {
         let wb = Workbook::new(&WorkbookOptions {
             date_system,
             clock,
+            name,
             ..WorkbookOptions::default()
         })
         .map_err(|e| PyLoadError::new_err(e.to_string()))?;
@@ -398,14 +405,15 @@ impl PyWorkbook {
 
     /// Opens an xlsx file (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (path, recalc=true, clock=None))]
+    #[pyo3(signature = (path, recalc=true, clock=None, name=None))]
     fn open(
         py: Python<'_>,
         path: &str,
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?);
+        let options = load_options(recalc, opt_clock(clock)?, name);
         let wb = py
             .detach(|| Workbook::open(path, &options))
             .map_err(|e| PyLoadError::new_err(e.to_string()))?;
@@ -414,14 +422,15 @@ impl PyWorkbook {
 
     /// Loads a workbook from xlsx bytes (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (data, recalc=true, clock=None))]
+    #[pyo3(signature = (data, recalc=true, clock=None, name=None))]
     fn from_bytes(
         py: Python<'_>,
         data: &[u8],
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
+        name: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?);
+        let options = load_options(recalc, opt_clock(clock)?, name);
         let wb = py
             .detach(|| Workbook::from_xlsx_bytes(data, &options))
             .map_err(|e| PyLoadError::new_err(e.to_string()))?;
