@@ -442,7 +442,7 @@ fn fill(digits: &str, kinds: &[char]) -> Vec<String> {
 /// B13), `#\:? ?0#/000` on 23.75 "2:3  03/004" (poi/NumberFormatTests A160); on 12.5 `# ?/?0` is
 /// "12 1/20", `# ?/??0` "12 1/2 0", `# ?/#?0` "12 1/20", `# ?/0??` "12 1/02 ", `# ?/0#?` "12 1/02", `# ?/#0#` "12 1/02",
 /// and `# ?/?0?` on 0.3 " 3/100". The run's length still bounds the digits (`# ?/?0` on 0.123 is
-/// " 8/65", `# ?/#0` on PI() "3 1/7"; probes/t3711-fraction-trailing-placeholders,
+/// " 8/65", `# ?/#0` on `PI()` "3 1/7"; probes/t3711-fraction-trailing-placeholders,
 /// t4204-fraction-denominator-mixed; number-formats.md "Fraction formats").
 fn fill_left(digits: &str, kinds: &[char]) -> String {
     let skipped = kinds.iter().take_while(|kind| **kind == '#').count();
