@@ -1981,6 +1981,7 @@ C	probes/t3753-lambda-helper-error-array-order.case.json	64
 C	probes/t3765-stack-error-reference.case.json	25
 C	probes/t3777-proper-case-table.case.json	162
 C	probes/t3777-regexreplace-case-table.case.json	121
+C	probes/t3802-proper-surrogates.case.json	49
 C	probes/t3807-blank-criterion-padded-zero.case.json	64
 C	probes/t3807-percent-operand-cut-order.case.json	84
 C	probes/t3808-m5-aggregate-overflow.case.json	576
