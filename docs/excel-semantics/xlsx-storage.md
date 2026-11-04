@@ -369,7 +369,8 @@ to 1900-02-28 on the OLE epoch in a 1900 workbook (`pivot_cache_date_serial`), a
 (`iso8601_to_date_system_serial`); before, it rejected these dates and skipped the whole cache ("bad date"). The cutoff
 at 61 is inferred from where the two calendars agree (1900-03-01), not observed. UNVERIFIED: serial 60 (the phantom
 1900-02-29; the importer reads a cached `1900-02-29` as 60 and `1900-02-28` as 60 too) and serials 1 to 60 other than
-the one point above; whether `rangePr`/`groupItems` dates follow the same rule (the importer does not read them);
+the one point above; whether `rangePr` dates follow the same rule (since T-4225 the importer reads `startDate` and
+`endDate` with it, so 59932's `1899-12-30T00:00:00` start is serial 0, which matches its `<1/0/1900` label);
 1904 workbooks (a cache date before 1904-01-01 still skips the cache). No GETPIVOTDATA cell depends on it yet.
 Implemented in: crates/rustsheet-xlsx/src/import/iso_date.rs (`pivot_cache_date_serial`), import/pivots.rs (`read_item`)
 Tasks: T-3182

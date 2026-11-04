@@ -3,11 +3,13 @@
 //! Every part is streamed with a pull parser, never built into a tree: a records part can hold
 //! millions of values, and [`CacheBuilder`] counts the SPEC-0015 limits before each push, so
 //! nothing past them is allocated (CLAUDE.md directive 5). Anything the model cannot hold
-//! faithfully (an OLAP or external source, a grouped or calculated field, a cache saved without
+//! faithfully (an OLAP or external source, a calculated field, a cache saved without
 //! records, a bad index, a limit) skips that cache, with every pivot on it, or that pivot: it is
 //! logged and dropped whole, never truncated or guessed, so GETPIVOTDATA on it is `#REF!` and the
 //! rest of the workbook loads as usual (docs/excel-semantics/web.md "GETPIVOTDATA against a pivot
-//! table").
+//! table"). A grouped field imports as its group items ([`groups`], T-4225).
+
+mod groups;
 
 use std::collections::HashMap;
 use std::io::{BufRead, Read, Seek};
@@ -17,10 +19,12 @@ use rustsheet_engine::expressions::token::get_error_by_english_name;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
     Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
+    PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS,
+    MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
+use self::groups::{apply_groups, FieldGroup, GroupBy, RangeGroup};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
 use super::worksheets::parse_range;
@@ -229,8 +233,13 @@ fn load_cache<R: Read + Seek>(
     date_system: DateSystem,
 ) -> Result<PivotCache, Skip> {
     let limits = *archive.limits();
-    let (mut builder, field_count, records_id) =
-        read_definition(archive.open(part)?, values_left, &limits, date_system)?;
+    let Definition {
+        mut builder,
+        field_count,
+        records_id,
+        groups,
+        grouping_fields,
+    } = read_definition(archive.open(part)?, values_left, &limits, date_system)?;
     let Some(records_id) = records_id else {
         return skip("no records part (saveData=\"0\")");
     };
@@ -251,7 +260,9 @@ fn load_cache<R: Read + Seek>(
         &limits,
         date_system,
     )?;
-    Ok(builder.finish())
+    let mut cache = builder.finish();
+    apply_groups(&mut cache, &groups, grouping_fields, values_left)?;
+    Ok(cache)
 }
 
 /// The relationships of a part in document order; none when the part has no relationships part.
@@ -405,19 +416,38 @@ fn cache_item(
 }
 
 const DEFINITION: &str = "pivotCacheDefinition";
+const FIELD: [&str; 3] = [DEFINITION, "cacheFields", "cacheField"];
+const GROUP: [&str; 4] = [DEFINITION, "cacheFields", "cacheField", "fieldGroup"];
 
-/// A `pivotCacheDefinition` part: a builder holding its fields and shared items, the field count,
-/// and the `r:id` of its records part.
+/// What a `pivotCacheDefinition` part holds.
+struct Definition {
+    /// A builder holding the database fields and their shared items.
+    builder: CacheBuilder,
+    /// How many database fields: the values of each record.
+    field_count: u32,
+    /// The `r:id` of the records part.
+    records_id: Option<String>,
+    /// The `<fieldGroup>`s.
+    groups: Vec<FieldGroup>,
+    /// The names of the grouping fields (`databaseField="0"`), which follow the database fields.
+    grouping_fields: Vec<String>,
+}
+
+/// A `pivotCacheDefinition` part.
 fn read_definition<B: BufRead>(
     part: B,
     values_left: usize,
     limits: &super::package::ImportLimits,
     date_system: DateSystem,
-) -> Result<(CacheBuilder, u32, Option<String>), Skip> {
+) -> Result<Definition, Skip> {
     let mut records_id = None;
     let mut source: Option<Option<CacheSource>> = None;
     let mut builder: Option<CacheBuilder> = None;
     let mut field_count = 0;
+    let mut groups: Vec<FieldGroup> = Vec::new();
+    let mut grouping_fields: Vec<String> = Vec::new();
+    // Group items and discrete indices over all groups, counted against MAX_ITEMS as they are read.
+    let mut group_values = 0_usize;
     walk(part, |path, tag| {
         let Tag::Open(element) = tag else {
             return Ok(());
@@ -458,23 +488,77 @@ fn read_definition<B: BufRead>(
             let Some(builder) = builder.as_mut() else {
                 return skip("a cacheField outside cacheFields");
             };
-            if attribute(element, "formula")?.is_some()
-                || attribute(element, "databaseField")?.as_deref() == Some("0")
-            {
-                return skip("a calculated or grouped field");
+            if attribute(element, "formula")?.is_some() {
+                return skip("a calculated field");
             }
             let Some(field_name) = attribute(element, "name")? else {
                 return skip("a cacheField without a name");
             };
             limits.check_text(&field_name)?;
-            builder.add_field(field_name)?;
-            field_count += 1;
-        } else if at(path, &[DEFINITION, "cacheFields", "cacheField"]) && name == "fieldGroup" {
-            return skip("a grouped field");
+            if field_count as usize + grouping_fields.len() >= MAX_FIELDS {
+                return Err(PivotCacheError::TooManyFields.into());
+            }
+            // A grouping field (`Quarters`, `Years`) has no record values; Excel writes them
+            // after the database fields, and the records part holds only those.
+            if attribute(element, "databaseField")?.as_deref() == Some("0") {
+                grouping_fields.push(field_name);
+            } else if grouping_fields.is_empty() {
+                builder.add_field(field_name)?;
+                field_count += 1;
+            } else {
+                return skip("a database field after a grouping field");
+            }
+        } else if at(path, &FIELD) && name == "fieldGroup" {
+            // The field just opened: a grouping field, or a database field grouped in place.
+            let field = field_count + grouping_fields.len() as u32 - 1;
+            let base = match attribute(element, "base")? {
+                Some(base) => match base.parse::<u32>() {
+                    Ok(base) => base,
+                    Err(_) => return skip("no valid base index"),
+                },
+                None => field,
+            };
+            if groups.last().is_some_and(|g| g.field == field) {
+                return skip("a field grouped twice");
+            }
+            groups.push(FieldGroup {
+                field,
+                base,
+                ..FieldGroup::default()
+            });
+        } else if at(path, &GROUP) {
+            let Some(group) = groups.last_mut() else {
+                return Ok(());
+            };
+            match name.as_str() {
+                "rangePr" => group.range = Some(read_range_pr(element, date_system)?),
+                "discretePr" => group.discrete = Some(Vec::new()),
+                _ => {}
+            }
+        } else if at(path, &[&GROUP[..], &["discretePr"]].concat()) && name == "x" {
+            let index = index_attribute(element, "v")?;
+            group_values += 1;
+            if group_values > MAX_ITEMS {
+                return Err(PivotCacheError::TooManyItems.into());
+            }
+            if let Some(discrete) = groups.last_mut().and_then(|g| g.discrete.as_mut()) {
+                discrete.push(index);
+            }
+        } else if at(path, &[&GROUP[..], &["groupItems"]].concat()) {
+            if let Some(item) = cache_item(element, limits, date_system)? {
+                group_values += 1;
+                if group_values > MAX_ITEMS {
+                    return Err(PivotCacheError::TooManyItems.into());
+                }
+                if let Some(group) = groups.last_mut() {
+                    group.items.push(item);
+                }
+            }
         } else if at(
             path,
             &[DEFINITION, "cacheFields", "cacheField", "sharedItems"],
-        ) {
+        ) && grouping_fields.is_empty()
+        {
             if let (Some(builder), Some(item)) =
                 (builder.as_mut(), cache_item(element, limits, date_system)?)
             {
@@ -484,8 +568,65 @@ fn read_definition<B: BufRead>(
         Ok(())
     })?;
     match builder {
-        Some(builder) => Ok((builder, field_count, records_id)),
+        Some(builder) => Ok(Definition {
+            builder,
+            field_count,
+            records_id,
+            groups,
+            grouping_fields,
+        }),
         None => skip("no cacheFields"),
+    }
+}
+
+/// A `<rangePr>`: `startNum`, `endNum` and `groupInterval` for numbers, `startDate` and `endDate`
+/// for dates (read as cache `<d>` items are).
+fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeGroup, Skip> {
+    let Some(by) = GroupBy::parse(attribute(element, "groupBy")?.as_deref()) else {
+        return skip("an unknown groupBy");
+    };
+    let number = |name: &str| -> Result<Option<f64>, Skip> {
+        match attribute(element, name)? {
+            None => Ok(None),
+            Some(v) => match v.trim().parse::<f64>() {
+                Ok(n) if n.is_finite() => Ok(Some(n)),
+                _ => skip(format!("bad {name} {v:?}")),
+            },
+        }
+    };
+    let interval = number("groupInterval")?.unwrap_or(1.0);
+    let (start, end) = if by == GroupBy::Range {
+        if interval <= 0.0 {
+            return skip("a groupInterval that is not positive");
+        }
+        (number("startNum")?, number("endNum")?)
+    } else {
+        // Unprobed: a 1904 cache's dates, and day groups of more than one day (date ranges).
+        if date_system != DateSystem::Excel1900 {
+            return skip("a date group in a 1904 workbook");
+        }
+        if by == GroupBy::Days && interval != 1.0 {
+            return skip("a day group of more than one day");
+        }
+        let date = |name: &str| -> Result<Option<f64>, Skip> {
+            match attribute(element, name)? {
+                None => Ok(None),
+                Some(v) => match pivot_cache_date_serial(&v, date_system) {
+                    Some(serial) => Ok(Some(serial)),
+                    None => skip(format!("bad {name} {v:?}")),
+                },
+            }
+        };
+        (date("startDate")?, date("endDate")?)
+    };
+    match (start, end) {
+        (Some(start), Some(end)) if start <= end => Ok(RangeGroup {
+            by,
+            start,
+            end,
+            interval,
+        }),
+        _ => skip("a rangePr without a valid start and end"),
     }
 }
 

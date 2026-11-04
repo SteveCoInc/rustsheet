@@ -151,34 +151,6 @@ fn time_argument(value: f64) -> Result<f64, Error> {
     }
 }
 
-/// The whole day a serial reads as in YEAR, MONTH, DAY, WEEKDAY and the bound of HOUR, MINUTE and
-/// SECOND: `floor(v + 0.5/86400)` in double precision, so a serial within half a second of the
-/// next midnight is the next day, exactly where `time_of_day_parts` rolls to hour 0. A negative
-/// serial is only floored, so it stays `#NUM!` before any carry. Excel: dates.md "YEAR, MONTH and
-/// DAY of a serial just below midnight" (probes/t3137-date-parts-near-midnight; T-3176).
-fn carried_day(v: f64) -> f64 {
-    if v < 0.0 {
-        v.floor()
-    } else {
-        (v + 0.5 / SECONDS_PER_DAY_F64).floor()
-    }
-}
-
-/// The hour, minute and second of a serial's time of day, as HOUR, MINUTE and SECOND take it
-/// apart. Half a second is added to the serial, then its fraction of a day is split by floors,
-/// through hours (x24) and minutes (x60), each step in double precision. So the time rounds to the
-/// nearest second and carries into the minute, the hour and past midnight (23:59:59.6 is hour 0),
-/// and an exact half goes whichever way the serial's binary noise takes it: `SECOND(0.5+2.5/86400)`
-/// is 2, `SECOND(0.5+3.5/86400)` 4. Excel: docs/excel-semantics/dates.md "HOUR, MINUTE and SECOND
-/// round to the nearest second" (probes/second-rounding, all 40 cells; T-1408).
-fn time_of_day_parts(v: f64) -> [f64; 3] {
-    let hours = (v + 0.5 / SECONDS_PER_DAY_F64).rem_euclid(1.0) * 24.0;
-    let hour = hours.floor();
-    let minutes = (hours - hour) * 60.0;
-    let minute = minutes.floor();
-    [hour, minute, ((minutes - minute) * 60.0).floor()]
-}
-
 use crate::cast::{calc_result_to_string, number_text_too_long};
 use crate::constants::MAXIMUM_DATE_SERIAL_NUMBER;
 use crate::constants::MINIMUM_DATE_SERIAL_NUMBER;
@@ -186,6 +158,7 @@ use crate::expressions::types::CellReferenceIndex;
 use crate::formatter::date_text::parse_date;
 use crate::formatter::dates::date_month_and_day;
 use crate::formatter::dates::permissive_date_to_serial_number;
+use crate::formatter::dates::{carried_day, time_of_day_parts};
 use crate::functions::lift::{num_error, number_result, value_error};
 use crate::functions::util::near_integer::near_integer_whole;
 use crate::functions::Function;
