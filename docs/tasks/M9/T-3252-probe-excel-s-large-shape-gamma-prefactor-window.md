@@ -46,13 +46,27 @@ b in [20, 40) and a/b at most 1E-6.
   campaign visible; the tiny-ratio cells A61:A70, A73:A80, A85:A93 are added to T-3219). POISSON.DIST's cdf is closer to `rcomp` near and above the mean; BETA.DIST's
   large-shape cells do not depend on the form. The tiny-ratio switch lies in (0.002a, 0.003a), outside the current
   1/200 (`RATIO_FORM_MIN`); that fit stays with T-3219. statistics.md has the rules with cells.
-- Engine: `gamma_prefactor` takes the ratio form below the mode from (a - x) > 0.33a (`NEAR_MODE_BELOW`, new) instead
-  of 0.4a; above the mode `NEAR_MODE` 0.4 stays.
-- R4 guards: the bound is a fit inside a bracket. Training was the window case. The first freeze at 0.3 was scored on
-  -holdout, written after the freeze, and failed (0.68a: 86 to 208 ulp on the ratio form against 43 on `rcomp`). The
-  bound was re-frozen at 0.33 before -holdout-2 was written. On -holdout-2 every cell the ratio form takes is either
-  exact (0 to 2 ulp, x <= 0.664a) or a tie (0.668a: -55 against 56). FITTED tag and range are on the constant. There
-  is no keep-matched branch. Gate A: the window's math sidecar is committed, and `make eval-check` is green.
+- Engine: `gamma_prefactor` takes the ratio form below the mode from (a - x) > 0.334a (`NEAR_MODE_BELOW`, new) at
+  shapes 30 to 500 (`NEAR_MODE_BELOW_SHAPES`, the evidenced range; R4.3), and from 0.4a elsewhere as before; above the
+  mode `NEAR_MODE` 0.4 stays. Decision 0281 records the fitted lock 2 to 3.
+- R4 guards (round 2, after the Excel-fidelity review). Freezes: 0.3 failed -holdout (0.68a: 86 to 208 ulp on the
+  ratio form against 43 on `rcomp`); 0.33 lay outside -holdout-2's bracket (0.332, 0.336). So -holdout and -holdout-2
+  are training data now. 0.334, the bracket's middle, was frozen at becb4501c before the fresh sweep
+  probes/t3252-gamma-prefactor-sweep was written: 40 points, shape log-uniform in [30, 500], x/a uniform in
+  [0.55, 0.75], seed 3252, density and cdf. Margin stated before scoring: the fit must beat correctly rounded at
+  every level on the sweep. Scores (bit-exact / within 4 ulp / within 15 digits; 50-digit mpmath for correctly
+  rounded):
+
+  | case | ours | correctly rounded |
+  |---|---|---|
+  | window, GAMMA.DIST (96) | 17 / 47 / 57 | 9 / 31 / 44 |
+  | holdout (42, train) | 6 / 19 / 27 | 0 / 6 / 15 |
+  | holdout-2 (36, train) | 7 / 14 / 20 | 0 / 7 / 10 |
+  | sweep (80, fresh) | 22 / 61 / 69 | 3 / 15 / 35 |
+
+  The sweep's exact rate (28%) is above training's (17 to 19%). FITTED tag and range are on the constant, and there
+  is no keep-matched branch. `rustsheet-accuracy math` writes no Gate A sidecar for the hold-out and sweep cases (0
+  candidate cells), so the envelope count is from the table above, not from Gate A.
 - Eval delta: in the window case 74 of 188 cells pass, against 69 on main's engine. Each newly passing cell was 9 to
   72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions. The three cases add 179 known failures
   (77 visibly off), owned by T-4255 and T-3219.
