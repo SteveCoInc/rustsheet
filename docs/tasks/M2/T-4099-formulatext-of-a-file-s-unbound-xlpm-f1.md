@@ -3,7 +3,7 @@ id: T-4099
 title: "FORMULATEXT of a file's unbound _xlpm.f1 shows the prefix: =_xlpm.f1"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
