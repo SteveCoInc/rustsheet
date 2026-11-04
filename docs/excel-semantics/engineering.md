@@ -1173,6 +1173,16 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   `IMSECH("-0.00529114829570232-0.0605498694819928i")` (C386, Excel -0.00032135183420584i, every candidate ...841)
   and the real `IMSECH("-0.00802240437783925")` (C390, Excel 0.99996782137691), which the `1/u` form's `1/cosh` fits
   but T-3609's libm `1/cosh` (all 75 of T-3609's real texts, against the form's 72) does not.
+  T-3981 sweep (probes-numeric/t3981-imsech-real-band-sweep, 300 real x, and t3981-imsech-real-band-sweep-hold,
+  150, never used for fitting; excel-graph 2026-11-04; 0.004 <= |x| <= 0.01 with a random sign; rows 1-21 of the first
+  are t3721 S!C390's x and its 10 nearest 15-digit literals on each side, since text is read at 15 digits). Texts equal to
+  Excel's IMSECH (train, hold-out): `1/cosh` with libm (glibc) cosh 275 of 300, 143 of 150; `1/cosh` with the `1/u` form's cosh
+  300, 150; Excel's own worksheet `1/COSH(x)` (column D) 30, 16 (COSH rounds to 15 digits before the division, so it is
+  not the kernel). IMCOSH: libm cosh 299, 149; the `1/u` form 300, 150; worksheet COSH(x) 4, 2. Today's engine takes libm's cosh
+  here, so it is off on 25 + 7 IMSECH and 1 + 1 IMCOSH texts of the 450 (t3981 case run, 32 cells in all). So the `1/u`
+  form, not libm's cosh, is Excel's at 0.004 <= |x| <= 0.01 (the earlier 368 of 369 with libm was too few points to
+  see it); where the switch to libm's cosh lies between 1E-4 and 0.004 is the open question for T-3982. Status of that
+  band: VERIFIED (excel-graph), engine not yet changed.
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is

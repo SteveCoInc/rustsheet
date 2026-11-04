@@ -3,7 +3,7 @@ id: T-3981
 title: "Oracle sweep: real IMSECH and IMCOSH at |x| 0.004 to 0.01, with C390's neighbouring doubles and a hold-out, for the T-3930 leftovers"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -48,3 +48,11 @@ choice there is not attempted blind.
 ## Out of scope
 - Any engine change (T-3982).
 - Complex arguments (C386 is T-3982's second cell; it needs no new sweep to be scored).
+
+## Outcome
+Added `docs/research/t3981/gen_sweep.py` and the cases t3981-imsech-real-band-sweep (300 rows; rows 1-21 are C390's x
+and 10 nearest 15-digit literals each side, because text is read at 15 digits and cannot name neighbouring doubles)
+and t3981-imsech-real-band-sweep-hold (150 rows, hold-out), both with excel-graph sidecars, no pending cells.
+IMSECH matches Excel: libm 1/cosh 275/300 and 143/150, `1/u` form 300/300 and 150/150, worksheet 1/COSH 30 and 16.
+IMCOSH: libm 299 and 149, form 300 and 150, COSH 4 and 2. Recorded in engineering.md. probes-numeric is ungated:
+no baseline change; engine unchanged (32 of 1800 new cells fail today, the libm cells, for T-3982).
