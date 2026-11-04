@@ -3,7 +3,7 @@ id: T-0460
 title: "Python bindings: iterative calculation settings and data tables"
 milestone: M11
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
