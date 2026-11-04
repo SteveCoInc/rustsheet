@@ -3,7 +3,7 @@ id: T-3983
 title: "TIME wraps an argument below -32768 by 65536 (Excel drift since 2026-10-21)"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P1
 size: S
 tier: sonnet
@@ -43,3 +43,15 @@ TIME reads a whole argument below -32768 the way Excel does now: it wraps by 655
 ## Out of scope
 - DATE's argument bounds: they are a separate rule (dates.md "DATE month and day bounds"). Probe them in their own
   task if they are suspected of the same drift.
+
+## Outcome
+`time_argument` wraps a whole value below -32768 by 65536 and reads one below -2^31 as 0. Probed
+below -131072 (probes/t3983-time-argument-below-131072, excel-graph 2026-11-04): the wrap holds to -2^31;
+beyond it Excel gives 0, not the wrap. Refilled time-argument-bound/-window/-negative. Removed the
+Gate A known-failure TIME/s1 A149. dates.md says "Ours: matches". Unit tests added in test_fn_time.rs.
+Also refilled four gen-m6/gen-m9 cases whose 2026-10 sidecars held the pre-wrap `#NUM!` (1a404a0379a1372c A8, 44194b2fefa30de2 A251, 6684de07ac74bcb8 A343, 09b47629f54b9817 A70). Eval delta: probes known failures 4433 -> 4352 (81 cells fixed), no regressions elsewhere.
+
+Adopted 2026-11-04 by an opus run (orphan, step 0.3): `make catch-up` cleared the probes baseline conflict; added the
+missing math sidecar of t3983-time-argument-below-131072 (all 24 cells are generator skips, "no single value");
+dates.md's two stale sentences are reworded. Security's MINOR (a NaN argument now reads as a number, where the old
+range check gave `#NUM!`) is moot: the engine produces no NaN number values.
