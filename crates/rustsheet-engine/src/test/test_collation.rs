@@ -517,10 +517,6 @@ fn exact_match_fold_of_the_marks() {
     assert_eq!(fold_exact_lookup(&[0xD800, 0x30FC]), vec![0xD800, 0x30FC]);
 }
 
-/// SORT's sort (`sort_indices_pairwise`) under Excel's intransitive text comparison
-/// (`cmp_text_pairwise`) ends on the data of probes/t3201-collation-wrapped-run-pairs (37 texts,
-/// hundreds of intransitive triples) in several input orders, without panicking, with a
-/// permutation of the input in which no text is directly after one it is below (T-3211).
 /// A cycle `a<b<c<d<a` with chords `c<a`, `d<b` (probes/t3418-sort-cycle-permutations, the shape of
 /// Data!A3, A4, A6, A7): Excel does not reverse the strictly descending chain `a, c, b, d`; it merges
 /// one-element runs pairwise, `c, a` and `d, b`, then `c, d, a, b` (Calc!A3, T-3418).
@@ -549,6 +545,10 @@ fn the_pairwise_sort_never_reverses_a_descending_chain() {
     assert_eq!(indices, vec![2, 3, 0, 1]);
 }
 
+/// SORT's sort (`sort_indices_pairwise`) under Excel's intransitive text comparison
+/// (`cmp_text_pairwise`) ends on the data of probes/t3201-collation-wrapped-run-pairs (37 texts,
+/// hundreds of intransitive triples) in several input orders, without panicking, with a
+/// permutation of the input in which no text is directly after one it is below (T-3211).
 #[test]
 fn the_pairwise_sort_ends_on_intransitive_texts() {
     use crate::functions::util::collation::cmp_text_pairwise;

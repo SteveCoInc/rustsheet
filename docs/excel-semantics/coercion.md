@@ -239,8 +239,9 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
     all 24 orders of the 4-cycles {A3, A4, A6, A7} and {A5, A6, A7, A8} and all 120 orders of {A4..A8},
     ascending and descending, 336 cells). Reversing strictly descending runs (T-3211's model) misses 28 of
     those 168 rows: on a cycle `a<b<c<d<a` with chords `c<a`, `d<b`, the input `a, c, b, d` is one strictly
-    descending chain (c<a, b<c, d<b) but Excel takes it as four one-element runs, merges them into `c, a` and `d, b`, then into `c, d, a, b`. The probed
-    comparison matrix (Calc!L1:T9) is the engine's on all 81 pairs.
+    descending chain (c<a, b<c, d<b) but Excel takes it as four one-element runs, merges them into `c, a`
+    and `d, b`, then into `c, d, a, b`. The probed comparison matrix (Calc!L1:T9) is the engine's on all 81
+    pairs.
   - **UNIQUE groups by Excel's `=`** (T-3211, same case, Calc!G1:J15): `"ß"` and `"ss"`, `"á"` and
     `"a"&UNICHAR(769)` are one row (the first kept), as `=` finds them equal; `"Ａ"` and `"A"`, `"coop"` and
     `"co-op"` are two, as `=` finds them unequal; exactly_once drops both of an equal pair (`#CALC!` when none is
@@ -255,7 +256,8 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   index keeps the `CollationKey` but tests the first (last) cell with the key and walks when that
   cell is not equal. Since T-3211 SORT and SORTBY compare texts with `cmp_text_pairwise` too and sort
   with `sort_indices_pairwise`, a stable natural merge sort that cannot panic on a non-total order (`slice::sort_by`
-  may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
+  may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a
+  text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
   unequal): all t3211 UNIQUE cells but G4:I4 pass; grouping neighbours of the sorted order fits every one-column
   t3211 UNIQUE cell in a simulation (T-4200). GROUPBY and PIVOTBY still sort with
