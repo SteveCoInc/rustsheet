@@ -3,7 +3,7 @@ id: T-4158
 title: "One table for script digit blocks: SCRIPT_DIGITS agrees with Numerals::from_byte, and rename the stale coercion-only test"
 milestone: M5
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
