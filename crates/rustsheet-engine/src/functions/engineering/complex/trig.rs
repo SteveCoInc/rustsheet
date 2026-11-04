@@ -232,7 +232,7 @@ const INVERSE_EXP_LOW: f64 = 0.01;
 /// |x| >= 0.0042, none in between, so the cut fits all 825 and its lower bracket rises to 9.70E-05
 /// (`IMSECH("9.70217965965262E-05")` is 0.999999995293386, the form's one off; probes-numeric/
 /// t3589-im-hyperbolic-small-x-sweep C68).
-/// FITTED(T-3982, 864 cells, |x| 3.4E-08..0.0105; cut bracketed 9.70E-05..1.09E-04)
+/// FITTED(T-3982, 864 cells, |x| 2E-309..0.01; cut bracketed 9.70E-05..1.09E-04)
 const LIBM_COSH_BELOW: f64 = 1e-4;
 /// See [`INVERSE_EXP_LOW`].
 /// FITTED(T-3525, 1942 cells, |x| 0.0001..100; cuts bracketed 0.01..0.0105 and 18.2..100)
