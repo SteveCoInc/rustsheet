@@ -3,7 +3,7 @@ id: T-3992
 title: "Measure excel-graph's fill-to-fill bit stability on the kernels the open R4 fits target (incomplete beta, lnGamma, gamma and t quantiles, RATE/IRR, CUMPRINC), so fits below the 4-ulp floor know which cells are targets"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -99,7 +99,7 @@ T-1553).
 - No sidecar under eval/ changed (the refill sidecars were copied aside and the committed ones restored). Eval delta:
   none.
 
-## Blocked because
+## Review rounds
 Resumed after the review-round limit (step 5c).
 
 Round 3 (head 3dff011b): security APPROVE. Design and Excel fidelity requested changes. Their findings are fixed in the
