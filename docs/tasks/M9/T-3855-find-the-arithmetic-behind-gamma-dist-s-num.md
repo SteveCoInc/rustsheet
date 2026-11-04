@@ -3,7 +3,7 @@ id: T-3855
 title: "Find the arithmetic behind GAMMA.DIST's #NUM! at shapes from 1E56 (density and cdf share it)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
