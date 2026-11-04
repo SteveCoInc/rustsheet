@@ -166,5 +166,18 @@ owned by T-4232.
 - CI on the draft has not been checked. It will be red until the sidecar lands.
 - Next: add the sidecar, run `make check-fast`, push, then run excel-fidelity on the new head. Design and security
   need no re-run for a data-only sidecar commit. Mark ready, and enqueue once CI is green.
+- Round 1 excel-fidelity on 2fcae3df3 (arrived after the window): REQUEST_CHANGES on the R4 guards, not on the
+  semantics. Unit-test bits, 0 regressions, Gate A at 0 failing and the structural classification were checked OK.
+  To fix in round 2:
+  1. MAJOR: the hold-out must use the fit lab's split (T-3360 done: `fitlab/holdout.py`, its default 5-point margin),
+     not the hand split above. Re-score one-past, the stop iterate and the correctly rounded root there. If the fit
+     lab refuses on the margin, acceptance needs a decision record (`make new-decision`); the task cannot waive it.
+  2. MAJOR: the fresh sweep must be a Gate A batch, `eval/accuracy/tables/IRR` `r4-T-4213` (precedent
+     r4-T-3411, r4-T-3407; T-3357 and T-3358 done), with oracle and math sidecars. Give each of the 45 points outside
+     the envelope (engine `#NUM!`, Excel a number) a known-failures.tsv line owned by T-4232. Record the
+     `rustsheet-eval accuracy` result (reviewer's count: 59 of 104 inside the envelope). The probes-numeric copy
+     then goes, and T-4232's cell list moves with it.
+  3. MINOR: financial.md, move the T-4213 bullets above the section's `Evidence:`/`Status:` lines.
+  4. MINOR: confirm none of t2927 A46, A67, A127, A129 (one ulp past the 15th digit now) is a desktop-oracle cell.
 - Do not repeat: a relative noise-floor stop on the secant (attempt 1, refuted in the Outcome). Keep the task
   `blocked` (time-boxed).
