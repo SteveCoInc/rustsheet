@@ -3,7 +3,7 @@ id: T-4002
 title: "Debug of a Node loops over sign runs"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -25,11 +25,29 @@ from the same variant list as `clone_one`/`eq_one` in `node_walks.rs`; it must k
 output format byte for byte, `{:#?}` included, or show that no test depends on it.
 
 ## Acceptance criteria
-- [ ] A test in `test_nesting_depth.rs` formats such a tree with `{:?}` and `{:#?}` on a
+- [x] A test in `test_nesting_depth.rs` formats such a tree with `{:?}` and `{:#?}` on a
       256 KiB release stack.
-- [ ] The output for ordinary formulas is unchanged (a test compares it with the derived format
+- [x] The output for ordinary formulas is unchanged (a test compares it with the derived format
       on a few trees), or the change is justified.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Any Excel-visible behavior.
+
+## Outcome
+- `Node`'s `Debug` is hand-written in node_walks.rs: `fmt_one`, generated from the same variant list as
+  `clone_one`/`eq_one`, prints one node as the derived impl did; `{:?}` prints a run of signs, unary pluses,
+  whitespace and parentheses in a loop (each wrapper's head, the node under them, then ` }` per wrapper) through the
+  caller's formatter, so every flag reaches the values. `{:#?}` loops for a run of 32 wrappers or more through one
+  `Indent` writer that stands for std's nested pad adapters; a shorter run, or `{:#?}` with width, precision, sign or
+  fill flags, recurses per node exactly as before. The one difference left: a `{:#x?}` hex flag does not reach the
+  values of a long run (std has no stable way to read it).
+- Tests: `debug_keeps_the_derived_format` pins `-+ (A1)` against the derived output captured before the change and
+  builds the derived form of 1 to 40 nested levels from it (both paths, `{:?}` and `{:#?}`, also mid-line under an
+  operator, a call and an `@`, and with width/precision flags). `sign_run_tree_walks_fit_a_quarter_of_the_stack`
+  now formats the deepest sign-run trees with `{:?}` and `{:#?}` on its 256 KiB release stack, and T-3691's
+  `heaviest_wrapper_shapes_take_every_walk_on_a_2_mib_stack` formats every shape (its `TODO(T-4031)` is gone).
+- Also closes T-4031 (the same change) and its carry-overs: syntax.md's nesting paragraph, the 1,023-sign count in
+  T-3691's test doc and `walk_names`'s comment, and `walk_names`'s unreachable wrapper arms folded into the leaf arm.
+  The collation `fold` carry-over was already done on main.
+- Eval delta: none (no Excel-visible behavior).

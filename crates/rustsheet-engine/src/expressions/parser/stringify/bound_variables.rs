@@ -29,7 +29,7 @@ where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
     // A run of signs, unary pluses, whitespace and parentheses is peeled in a loop, so it costs
-    // no frame: 1,022 spaced signs are about 2,000 wrappers, which overflowed a 2 MiB unoptimized
+    // no frame: 1,023 spaced signs are about 2,000 wrappers, which overflowed a 2 MiB unoptimized
     // stack at one frame each when a formula was set (T-3691, as T-3253's `Clone` and `PartialEq`).
     let mut node = node;
     loop {
@@ -115,13 +115,14 @@ where
         | Node::CompareKind { .. } => {
             for_each_chain_operand_mut(node, |operand| walk_names(operand, bound, visit));
         }
-        Node::UnaryKind { right, .. } => walk_names(right, bound, visit),
-        Node::ImplicitIntersection { child, .. }
-        | Node::SpillRangeOperator { child }
-        | Node::Group { child, .. }
-        | Node::UnaryPlus { child }
-        | Node::Spaced { child, .. } => walk_names(child, bound, visit),
-        Node::BooleanKind(_)
+        // The peel loop above took every wrapper: none reaches this match.
+        Node::UnaryKind { .. }
+        | Node::ImplicitIntersection { .. }
+        | Node::SpillRangeOperator { .. }
+        | Node::Group { .. }
+        | Node::UnaryPlus { .. }
+        | Node::Spaced { .. }
+        | Node::BooleanKind(_)
         | Node::NumberKind(_)
         | Node::StringKind(_)
         | Node::ReferenceKind { .. }
