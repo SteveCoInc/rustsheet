@@ -153,3 +153,18 @@ R4 guards:
 Eval delta: probes known failures unchanged, no regression. Visible parity changes on t3411-irr-r4-fresh-2 (A43 and A44
 fixed), t2927 (+4 cells within 15 digits, -4) and t3411-irr-r4-fresh (A129). The new case's 47 visibly-off cells are
 owned by T-4232.
+
+## Landing notes (2026-11-04, opus run, landing window closed)
+- PR #3211 (draft), head 2fcae3df3 before this commit. Not enqueued.
+- Reviews on 2fcae3df3: security APPROVE, design APPROVE. Design's MINORs: the missing `.math.json`, and the STRATA
+  conditional in gen_sweep.py could be a named constant. excel-fidelity was still running when the window closed;
+  no verdict was recorded.
+- Missing: eval/suites/probes-numeric/cases/t4213-irr-r4-fresh.math.json. `make check` fails without it
+  (`make eval-math-check`, decision 0243). `cd tools && uv run rustsheet-accuracy math --suite probes-numeric` takes
+  over 15 minutes and was still running. It also rewrites nine unrelated probes-numeric `.math.json` files (t1538,
+  t1543, t2586, t3350, t3409, t3443 x3, t3953). Commit only the t4213 sidecar and `git checkout` the rest.
+- CI on the draft has not been checked. It will be red until the sidecar lands.
+- Next: add the sidecar, run `make check-fast`, push, then run excel-fidelity on the new head. Design and security
+  need no re-run for a data-only sidecar commit. Mark ready, and enqueue once CI is green.
+- Do not repeat: a relative noise-floor stop on the secant (attempt 1, refuted in the Outcome). Keep the task
+  `blocked` (time-boxed).
