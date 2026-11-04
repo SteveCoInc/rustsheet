@@ -689,8 +689,8 @@ XMATCH(..,0), but not under EXACT; unlike exact MATCH, these three do not count 
 Where a weightless character counts: settled by T-3662's prefix rule in "Format characters, U+200B and the C1
 controls (T-3662)" below. It counts only when it is in the part one text has beyond the other, and the shared
 part before it is plain ASCII below U+007B in both texts.
-Ours: `cmp_text_excel` gives the weightless characters their code-point weight, so `=` keeps them apart; those
-failing cells are known failures owned by T-3904 (`=`, COUNTIF, XMATCH).
+Implemented in: the collation's `elements` drops the weightless characters and `cmp_prefix` keeps a trailing one
+apart under `=` (T-3904; see the T-3662 section below).
 Status: VERIFIED (excel-graph, 2026-11-03) for the cells cited; the position rule VERIFIED by T-3662 (below).
 
 ## Format characters, U+200B and the C1 controls (T-3662)
@@ -729,19 +729,30 @@ U+0E83) in every column.
 
 **U+200B and the C1 controls are not weightless.** They have a primary weight of their own, so no cell finds
 them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H13 and -sweep H, M all FALSE).
-- U+200B sorts after every whitespace character and before the punctuation: above CHAR(160), CHAR(9),
-  CHAR(10), CHAR(13), U+2002 and U+3000 (-sweep G1:G6, I1:I6 FALSE) and below `!` and every symbol tested
-  (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2).
-- The C1 controls U+0081, U+0085 and U+009F sort after every symbol tested (` ! # $ & * . _ ~ ¡ ¿ + = > ¤ § ° ±
-  × ÷ • → ★ © ¬`) and before the digits (`¼`, `0`, `∞`; -prefix B11:L13 FALSE, M11:N13 TRUE, P11:P13 = 12; -sweep K, L), in code-point
-  order among themselves.
-- So `"a"&c&"b"<"ab"` is TRUE for these four (-ignorables R2, R10:R12), and among the 17 a&c&b texts U+200B <
-  U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB). UNVERIFIED: the other C1 units (U+0080,
-  U+0082 to U+0084, U+0086 to U+009E), taken to keep code-point order with these.
+- The Unicode spaces and U+200B (probes/t4039-collation-space-forms, 322 cells, excel-graph, 2026-11-04, T-4039;
+  Calc!B ranks the 23 characters, C counts the equal ones): the space and U+205F are equal (C1 = C17 = 2, H17),
+  then U+3000 < U+202F < CHAR(160) < CHAR(9) < U+2000 = U+2002 < U+2001 = U+2003 < U+2004 < ... < U+200A <
+  U+200B (B1:B18 in row order = 0, 4, 5, 2, 6, 8, 6, 8, 10 to 16, 3, 0, 17), and U+200B sorts below `!` and every symbol tested
+  (-prefix B10 FALSE, C10:N10 TRUE, P10 = 2, with CHAR(1) below it: O10 FALSE). U+200B is above CHAR(10) and
+  CHAR(13) as well (-sweep G2:G4, I2:I4 FALSE); where U+2000 to U+200A sit against CHAR(10) to CHAR(13) is
+  UNVERIFIED.
+- The C1 controls sort after the symbols tested and before the digits, in code-point order: U+0080, U+0081,
+  U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
+  `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
+  M11:N13 TRUE, P11:P13 = 12). Against `+ = > ¤ § ° ± × ÷ • → ★ © ¬`, U+0081 is strictly above (-sweep K, M)
+  and U+009F at least as high (L; no `=` column). UNVERIFIED: U+0082 to U+008F and U+0091 to U+009D, taken to
+  keep code-point order.
+- So `"a"&c&"b"<"ab"` is TRUE for U+200B and the C1 controls (-ignorables R2, R10:R12), and among the 17 a&c&b
+  texts U+200B < U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB).
 
-Ours: `element` (functions/util/collation.rs) gives every one of these characters `other(c)`, a weight after
-the letters. The weightless cells (the trailing rule included) are known failures owned by T-3904; U+200B
-and the C1 controls are owned by T-4039.
+Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
+- the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
+  character of `lookup_fold::is_weightless` (the one T-3584 table exact MATCH uses), so no pass weighs it and the
+  [`CollationKey`] leaves it out;
+- `cmp_prefix` applies the prefix rule before the collation in `cmp_text_pairwise` only (Excel's `<`, `=`, `>`
+  and the text criteria; XMATCH's index confirms key matches with it), since the rule is not transitive;
+- `element` weighs U+205F as the space, U+202F at `NARROW_NBSP`, U+2000 to U+200B at `SPACE_FORMS` and the C1
+  controls at `C1_BASE`.
 Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 ## Text in a range operand of arithmetic is coerced

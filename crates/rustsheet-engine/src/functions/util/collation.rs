@@ -61,8 +61,8 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
-use lookup_fold::class_first;
 pub(crate) use lookup_fold::fold_lookup;
+use lookup_fold::{class_first, is_weightless};
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
@@ -96,6 +96,35 @@ fn cmp_str(left: &str, right: &str, order: AccentOrder) -> Ordering {
     cmp_chars(scalars(left), scalars(right), order)
 }
 
+/// Excel's `<`, `=`, `>` before the collation (coercion.md "Format characters, U+200B and the C1
+/// controls (T-3662)"; probes/t3662-collation-ignorables, -prefix, -sweep): while both texts' units
+/// are below U+007B and equal ignoring ASCII case, a text that runs out first is the smaller, whatever
+/// the other has left. So `"ab"&U+00AD > "ab"` and `U+00AD > ""`, though the collation weighs
+/// U+00AD nothing; but `"a~"&U+00AD = "a~"` and `"é"&U+00AD = "é"`. `None` once a unit is not
+/// below U+007B or the texts differ (the collation decides), or when both run out together. Not
+/// transitive (`"ab" < "ab"&U+00AD`, yet both equal U+00AD&`"ab"`), so the total order and the
+/// [`CollationKey`] leave it out; it only tells apart texts with equal keys.
+fn cmp_prefix(
+    mut left: impl Iterator<Item = Char>,
+    mut right: impl Iterator<Item = Char>,
+) -> Option<Ordering> {
+    let fast = |c: Char| match c {
+        Char::Scalar(c) if c < '{' => Some(c.to_ascii_lowercase()),
+        _ => None,
+    };
+    loop {
+        match (left.next(), right.next()) {
+            (None, None) => return None,
+            (None, Some(_)) => return Some(Ordering::Less),
+            (Some(_), None) => return Some(Ordering::Greater),
+            (Some(l), Some(r)) => match (fast(l), fast(r)) {
+                (Some(l), Some(r)) if l == r => {}
+                _ => return None,
+            },
+        }
+    }
+}
+
 /// The characters of well-formed text.
 fn scalars(text: &str) -> impl Iterator<Item = Char> + Clone + '_ {
     text.chars().map(Char::Scalar)
@@ -119,6 +148,11 @@ pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
 
 /// [`cmp_text`] or [`cmp_text_pairwise`].
 fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
+    if let AccentOrder::Pairwise = order {
+        if let Some(order) = cmp_prefix(left.chars_lossless(), right.chars_lossless()) {
+            return order;
+        }
+    }
     if left.has_lone_surrogate() || right.has_lone_surrogate() {
         cmp_chars(left.chars_lossless(), right.chars_lossless(), order)
     } else {
@@ -247,8 +281,9 @@ const NBSP: u32 = NARROW_NBSP + 1;
 const WHITESPACE_BASE: u32 = NBSP + 1;
 /// U+2000 to U+200B, after CHAR(9) and before `!`: U+2000 with U+2002, U+2001 with U+2003, then
 /// U+2004 to U+200A and the zero-width space U+200B one by one (probes/t4039-collation-space-forms
-/// Calc!B3, B5:B18 = 5, 6, 8, 6, 8, 10 to 17; probes/t3662-collation-ignorables-sweep G1:G6). Their
-/// order against CHAR(10) to CHAR(13) is unprobed but for U+200B's (above both, -sweep G2:G4).
+/// Calc!B3 = 5, B5:B15 = 6, 8, 6, 8, 10 to 16, B18 = 17; probes/t3662-collation-ignorables-sweep
+/// G1:G6). Their order against CHAR(10) to CHAR(13) is unprobed but for U+200B's (above both,
+/// -sweep G2:G4).
 const SPACE_FORMS: u32 = WHITESPACE_BASE + 5;
 const PUNCTUATION_BASE: u32 = SPACE_FORMS + 10;
 /// The symbols after [`PUNCTUATION`] ([`symbol`]).
@@ -407,8 +442,6 @@ const HYPHEN: u8 = APOSTROPHE + 2;
 const FULL_WIDTH_HYPHEN: u8 = APOSTROPHE + 3;
 const EN_DASH: u8 = APOSTROPHE + 4;
 const EM_DASH: u8 = APOSTROPHE + 5;
-/// The skipped weight of U+0E83 (a weightless character, T-3904): after the em dash, unprobed.
-const UNASSIGNED: u8 = APOSTROPHE + 6;
 
 fn letter(base: char) -> u32 {
     LETTER_BASE + (u32::from(base) - u32::from('a'))
@@ -548,8 +581,9 @@ pub(crate) fn fold_char(c: char) -> char {
 /// `c` with case removed: ASCII and Latin-1 letters directly, others through `to_lowercase`.
 /// A member of one of Excel's wider classes ([`class_first`]: `ϵ` with `ε`, `ϑ` with `ϴ`, `ϳ`
 /// with `Ͷ`, U+1FBE with `ι`, the Greek Extended psili+varia and dasia+oxia letters, ...) is its
-/// class's first member, so all of them weigh alike; their order under `<` is therefore equality,
-/// UNVERIFIED (probes/t3584-match-fold-weightless Calc!B21:F21, P7, P9; T-4013). A supplementary
+/// class's first member, so all of them weigh alike and tie under `<`, as Excel's do
+/// (probes/t4013-class-equality-order Calc!C1:E18; probes/t3584-match-fold-weightless Calc!B21:F21,
+/// P7, P9; T-4013). A supplementary
 /// character keeps its case: Excel's `=` keeps Deseret U+10400 apart from U+10428 (Calc!B25).
 fn fold(c: char) -> char {
     match c {
@@ -737,6 +771,10 @@ fn elements(
     difference: Option<usize>,
 ) -> impl Iterator<Item = Element> + Clone {
     text.enumerate()
+        // Excel: a weightless character (T-3584's table) has no weight in any pass, so it is
+        // dropped here; where it still counts is [`cmp_prefix`]'s (coercion.md "Format
+        // characters, U+200B and the C1 controls (T-3662)", T-3904).
+        .filter(|&(_, c)| !matches!(c, Char::Scalar(c) if is_weightless(c)))
         .flat_map(|(at, c)| decompose(c).map(move |c| (at, c)))
         .scan(None, move |previous, (at, c)| {
             let element = resolve(c, *previous, difference == Some(at));
