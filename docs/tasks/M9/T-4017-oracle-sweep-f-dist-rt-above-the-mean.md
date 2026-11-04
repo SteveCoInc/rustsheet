@@ -3,7 +3,7 @@ id: T-4017
 title: "Oracle sweep: F.DIST.RT above the mean at df2 1E7 to 1E10 for df1 other than 5 (T-3209's huge-first-shape band at b != 2.5)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
