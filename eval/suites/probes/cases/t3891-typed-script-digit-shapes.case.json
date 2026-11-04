@@ -1,0 +1,622 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Typed script-digit shapes T-3446 left open (T-3891); A = text typed into the cell, B = ISNUMBER(A), C = A when a number, else \"text\". Rows 1-30 Arabic-Indic: 1.25, 1.250, 12.5%, 1,234.5, 1,234.56, -$12, $-12, (1,234), $1,234.5, $1.5, -12%, 1/2/2020, 12:30:45, 12:30 PM, 1:30 AM, 2020-1-1 12:30, 1 Jan 2020, Jan 1, 2020, 12:30.5, 123456789012, 0.5, .5, +12, 1E-3, $12.34, 1 1/12, 1 PM, 1,234%, $(12), 12.50; rows 31-39 mixed scripts (Arabic+Devanagari+Thai in three orders, 1+Arabic+Devanagari, Devanagari+Arabic+3, Arabic+Arabic+3, 12+Arabic, Extended Arabic+Devanagari, Devanagari+Arabic); 40-41 Thai 12.5% and 1.25; 42 Devanagari -$12; rows 43-86 the eleven T-3446 forms (123, -12, 1.5, 12%, $12, (12), 1,234, 1e3, 2020-1-1, 12:30, 1 1/2) in Gurmukhi, Tamil, Telugu and Khmer. The number formats are in the oracle's ENTERED log (docs/research/t3891-typed-script-digit-shapes-2026-11-04.md).",
+  "tags": [
+    "M5",
+    "probe",
+    "coercion",
+    "T-3891"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": {
+          "entered": "١.٢٥"
+        },
+        "B1": "=ISNUMBER(A1)",
+        "C1": "=IF(ISNUMBER(A1),A1,\"text\")",
+        "A2": {
+          "entered": "١.٢٥٠"
+        },
+        "B2": "=ISNUMBER(A2)",
+        "C2": "=IF(ISNUMBER(A2),A2,\"text\")",
+        "A3": {
+          "entered": "١٢.٥%"
+        },
+        "B3": "=ISNUMBER(A3)",
+        "C3": "=IF(ISNUMBER(A3),A3,\"text\")",
+        "A4": {
+          "entered": "١,٢٣٤.٥"
+        },
+        "B4": "=ISNUMBER(A4)",
+        "C4": "=IF(ISNUMBER(A4),A4,\"text\")",
+        "A5": {
+          "entered": "١,٢٣٤.٥٦"
+        },
+        "B5": "=ISNUMBER(A5)",
+        "C5": "=IF(ISNUMBER(A5),A5,\"text\")",
+        "A6": {
+          "entered": "-$١٢"
+        },
+        "B6": "=ISNUMBER(A6)",
+        "C6": "=IF(ISNUMBER(A6),A6,\"text\")",
+        "A7": {
+          "entered": "$-١٢"
+        },
+        "B7": "=ISNUMBER(A7)",
+        "C7": "=IF(ISNUMBER(A7),A7,\"text\")",
+        "A8": {
+          "entered": "(١,٢٣٤)"
+        },
+        "B8": "=ISNUMBER(A8)",
+        "C8": "=IF(ISNUMBER(A8),A8,\"text\")",
+        "A9": {
+          "entered": "$١,٢٣٤.٥"
+        },
+        "B9": "=ISNUMBER(A9)",
+        "C9": "=IF(ISNUMBER(A9),A9,\"text\")",
+        "A10": {
+          "entered": "$١.٥"
+        },
+        "B10": "=ISNUMBER(A10)",
+        "C10": "=IF(ISNUMBER(A10),A10,\"text\")",
+        "A11": {
+          "entered": "-١٢%"
+        },
+        "B11": "=ISNUMBER(A11)",
+        "C11": "=IF(ISNUMBER(A11),A11,\"text\")",
+        "A12": {
+          "entered": "١/٢/٢٠٢٠"
+        },
+        "B12": "=ISNUMBER(A12)",
+        "C12": "=IF(ISNUMBER(A12),A12,\"text\")",
+        "A13": {
+          "entered": "١٢:٣٠:٤٥"
+        },
+        "B13": "=ISNUMBER(A13)",
+        "C13": "=IF(ISNUMBER(A13),A13,\"text\")",
+        "A14": {
+          "entered": "١٢:٣٠ PM"
+        },
+        "B14": "=ISNUMBER(A14)",
+        "C14": "=IF(ISNUMBER(A14),A14,\"text\")",
+        "A15": {
+          "entered": "١:٣٠ AM"
+        },
+        "B15": "=ISNUMBER(A15)",
+        "C15": "=IF(ISNUMBER(A15),A15,\"text\")",
+        "A16": {
+          "entered": "٢٠٢٠-١-١ ١٢:٣٠"
+        },
+        "B16": "=ISNUMBER(A16)",
+        "C16": "=IF(ISNUMBER(A16),A16,\"text\")",
+        "A17": {
+          "entered": "١ Jan ٢٠٢٠"
+        },
+        "B17": "=ISNUMBER(A17)",
+        "C17": "=IF(ISNUMBER(A17),A17,\"text\")",
+        "A18": {
+          "entered": "Jan ١, ٢٠٢٠"
+        },
+        "B18": "=ISNUMBER(A18)",
+        "C18": "=IF(ISNUMBER(A18),A18,\"text\")",
+        "A19": {
+          "entered": "١٢:٣٠.٥"
+        },
+        "B19": "=ISNUMBER(A19)",
+        "C19": "=IF(ISNUMBER(A19),A19,\"text\")",
+        "A20": {
+          "entered": "١٢٣٤٥٦٧٨٩٠١٢"
+        },
+        "B20": "=ISNUMBER(A20)",
+        "C20": "=IF(ISNUMBER(A20),A20,\"text\")",
+        "A21": {
+          "entered": "٠.٥"
+        },
+        "B21": "=ISNUMBER(A21)",
+        "C21": "=IF(ISNUMBER(A21),A21,\"text\")",
+        "A22": {
+          "entered": ".٥"
+        },
+        "B22": "=ISNUMBER(A22)",
+        "C22": "=IF(ISNUMBER(A22),A22,\"text\")",
+        "A23": {
+          "entered": "+١٢"
+        },
+        "B23": "=ISNUMBER(A23)",
+        "C23": "=IF(ISNUMBER(A23),A23,\"text\")",
+        "A24": {
+          "entered": "١E-٣"
+        },
+        "B24": "=ISNUMBER(A24)",
+        "C24": "=IF(ISNUMBER(A24),A24,\"text\")",
+        "A25": {
+          "entered": "$١٢.٣٤"
+        },
+        "B25": "=ISNUMBER(A25)",
+        "C25": "=IF(ISNUMBER(A25),A25,\"text\")",
+        "A26": {
+          "entered": "١ ١/١٢"
+        },
+        "B26": "=ISNUMBER(A26)",
+        "C26": "=IF(ISNUMBER(A26),A26,\"text\")",
+        "A27": {
+          "entered": "١ PM"
+        },
+        "B27": "=ISNUMBER(A27)",
+        "C27": "=IF(ISNUMBER(A27),A27,\"text\")",
+        "A28": {
+          "entered": "١,٢٣٤%"
+        },
+        "B28": "=ISNUMBER(A28)",
+        "C28": "=IF(ISNUMBER(A28),A28,\"text\")",
+        "A29": {
+          "entered": "$(١٢)"
+        },
+        "B29": "=ISNUMBER(A29)",
+        "C29": "=IF(ISNUMBER(A29),A29,\"text\")",
+        "A30": {
+          "entered": "١٢.٥٠"
+        },
+        "B30": "=ISNUMBER(A30)",
+        "C30": "=IF(ISNUMBER(A30),A30,\"text\")",
+        "A31": {
+          "entered": "١२๓"
+        },
+        "B31": "=ISNUMBER(A31)",
+        "C31": "=IF(ISNUMBER(A31),A31,\"text\")",
+        "A32": {
+          "entered": "๓२١"
+        },
+        "B32": "=ISNUMBER(A32)",
+        "C32": "=IF(ISNUMBER(A32),A32,\"text\")",
+        "A33": {
+          "entered": "२١๓"
+        },
+        "B33": "=ISNUMBER(A33)",
+        "C33": "=IF(ISNUMBER(A33),A33,\"text\")",
+        "A34": {
+          "entered": "1٢३"
+        },
+        "B34": "=ISNUMBER(A34)",
+        "C34": "=IF(ISNUMBER(A34),A34,\"text\")",
+        "A35": {
+          "entered": "१٢3"
+        },
+        "B35": "=ISNUMBER(A35)",
+        "C35": "=IF(ISNUMBER(A35),A35,\"text\")",
+        "A36": {
+          "entered": "١٢3"
+        },
+        "B36": "=ISNUMBER(A36)",
+        "C36": "=IF(ISNUMBER(A36),A36,\"text\")",
+        "A37": {
+          "entered": "12٣"
+        },
+        "B37": "=ISNUMBER(A37)",
+        "C37": "=IF(ISNUMBER(A37),A37,\"text\")",
+        "A38": {
+          "entered": "۱२"
+        },
+        "B38": "=ISNUMBER(A38)",
+        "C38": "=IF(ISNUMBER(A38),A38,\"text\")",
+        "A39": {
+          "entered": "१٢"
+        },
+        "B39": "=ISNUMBER(A39)",
+        "C39": "=IF(ISNUMBER(A39),A39,\"text\")",
+        "A40": {
+          "entered": "๑๒.๕%"
+        },
+        "B40": "=ISNUMBER(A40)",
+        "C40": "=IF(ISNUMBER(A40),A40,\"text\")",
+        "A41": {
+          "entered": "๑.๒๕"
+        },
+        "B41": "=ISNUMBER(A41)",
+        "C41": "=IF(ISNUMBER(A41),A41,\"text\")",
+        "A42": {
+          "entered": "-$१२"
+        },
+        "B42": "=ISNUMBER(A42)",
+        "C42": "=IF(ISNUMBER(A42),A42,\"text\")",
+        "A43": {
+          "entered": "੧੨੩"
+        },
+        "B43": "=ISNUMBER(A43)",
+        "C43": "=IF(ISNUMBER(A43),A43,\"text\")",
+        "A44": {
+          "entered": "-੧੨"
+        },
+        "B44": "=ISNUMBER(A44)",
+        "C44": "=IF(ISNUMBER(A44),A44,\"text\")",
+        "A45": {
+          "entered": "੧.੫"
+        },
+        "B45": "=ISNUMBER(A45)",
+        "C45": "=IF(ISNUMBER(A45),A45,\"text\")",
+        "A46": {
+          "entered": "੧੨%"
+        },
+        "B46": "=ISNUMBER(A46)",
+        "C46": "=IF(ISNUMBER(A46),A46,\"text\")",
+        "A47": {
+          "entered": "$੧੨"
+        },
+        "B47": "=ISNUMBER(A47)",
+        "C47": "=IF(ISNUMBER(A47),A47,\"text\")",
+        "A48": {
+          "entered": "(੧੨)"
+        },
+        "B48": "=ISNUMBER(A48)",
+        "C48": "=IF(ISNUMBER(A48),A48,\"text\")",
+        "A49": {
+          "entered": "੧,੨੩੪"
+        },
+        "B49": "=ISNUMBER(A49)",
+        "C49": "=IF(ISNUMBER(A49),A49,\"text\")",
+        "A50": {
+          "entered": "੧e੩"
+        },
+        "B50": "=ISNUMBER(A50)",
+        "C50": "=IF(ISNUMBER(A50),A50,\"text\")",
+        "A51": {
+          "entered": "੨੦੨੦-੧-੧"
+        },
+        "B51": "=ISNUMBER(A51)",
+        "C51": "=IF(ISNUMBER(A51),A51,\"text\")",
+        "A52": {
+          "entered": "੧੨:੩੦"
+        },
+        "B52": "=ISNUMBER(A52)",
+        "C52": "=IF(ISNUMBER(A52),A52,\"text\")",
+        "A53": {
+          "entered": "੧ ੧/੨"
+        },
+        "B53": "=ISNUMBER(A53)",
+        "C53": "=IF(ISNUMBER(A53),A53,\"text\")",
+        "A54": {
+          "entered": "௧௨௩"
+        },
+        "B54": "=ISNUMBER(A54)",
+        "C54": "=IF(ISNUMBER(A54),A54,\"text\")",
+        "A55": {
+          "entered": "-௧௨"
+        },
+        "B55": "=ISNUMBER(A55)",
+        "C55": "=IF(ISNUMBER(A55),A55,\"text\")",
+        "A56": {
+          "entered": "௧.௫"
+        },
+        "B56": "=ISNUMBER(A56)",
+        "C56": "=IF(ISNUMBER(A56),A56,\"text\")",
+        "A57": {
+          "entered": "௧௨%"
+        },
+        "B57": "=ISNUMBER(A57)",
+        "C57": "=IF(ISNUMBER(A57),A57,\"text\")",
+        "A58": {
+          "entered": "$௧௨"
+        },
+        "B58": "=ISNUMBER(A58)",
+        "C58": "=IF(ISNUMBER(A58),A58,\"text\")",
+        "A59": {
+          "entered": "(௧௨)"
+        },
+        "B59": "=ISNUMBER(A59)",
+        "C59": "=IF(ISNUMBER(A59),A59,\"text\")",
+        "A60": {
+          "entered": "௧,௨௩௪"
+        },
+        "B60": "=ISNUMBER(A60)",
+        "C60": "=IF(ISNUMBER(A60),A60,\"text\")",
+        "A61": {
+          "entered": "௧e௩"
+        },
+        "B61": "=ISNUMBER(A61)",
+        "C61": "=IF(ISNUMBER(A61),A61,\"text\")",
+        "A62": {
+          "entered": "௨௦௨௦-௧-௧"
+        },
+        "B62": "=ISNUMBER(A62)",
+        "C62": "=IF(ISNUMBER(A62),A62,\"text\")",
+        "A63": {
+          "entered": "௧௨:௩௦"
+        },
+        "B63": "=ISNUMBER(A63)",
+        "C63": "=IF(ISNUMBER(A63),A63,\"text\")",
+        "A64": {
+          "entered": "௧ ௧/௨"
+        },
+        "B64": "=ISNUMBER(A64)",
+        "C64": "=IF(ISNUMBER(A64),A64,\"text\")",
+        "A65": {
+          "entered": "౧౨౩"
+        },
+        "B65": "=ISNUMBER(A65)",
+        "C65": "=IF(ISNUMBER(A65),A65,\"text\")",
+        "A66": {
+          "entered": "-౧౨"
+        },
+        "B66": "=ISNUMBER(A66)",
+        "C66": "=IF(ISNUMBER(A66),A66,\"text\")",
+        "A67": {
+          "entered": "౧.౫"
+        },
+        "B67": "=ISNUMBER(A67)",
+        "C67": "=IF(ISNUMBER(A67),A67,\"text\")",
+        "A68": {
+          "entered": "౧౨%"
+        },
+        "B68": "=ISNUMBER(A68)",
+        "C68": "=IF(ISNUMBER(A68),A68,\"text\")",
+        "A69": {
+          "entered": "$౧౨"
+        },
+        "B69": "=ISNUMBER(A69)",
+        "C69": "=IF(ISNUMBER(A69),A69,\"text\")",
+        "A70": {
+          "entered": "(౧౨)"
+        },
+        "B70": "=ISNUMBER(A70)",
+        "C70": "=IF(ISNUMBER(A70),A70,\"text\")",
+        "A71": {
+          "entered": "౧,౨౩౪"
+        },
+        "B71": "=ISNUMBER(A71)",
+        "C71": "=IF(ISNUMBER(A71),A71,\"text\")",
+        "A72": {
+          "entered": "౧e౩"
+        },
+        "B72": "=ISNUMBER(A72)",
+        "C72": "=IF(ISNUMBER(A72),A72,\"text\")",
+        "A73": {
+          "entered": "౨౦౨౦-౧-౧"
+        },
+        "B73": "=ISNUMBER(A73)",
+        "C73": "=IF(ISNUMBER(A73),A73,\"text\")",
+        "A74": {
+          "entered": "౧౨:౩౦"
+        },
+        "B74": "=ISNUMBER(A74)",
+        "C74": "=IF(ISNUMBER(A74),A74,\"text\")",
+        "A75": {
+          "entered": "౧ ౧/౨"
+        },
+        "B75": "=ISNUMBER(A75)",
+        "C75": "=IF(ISNUMBER(A75),A75,\"text\")",
+        "A76": {
+          "entered": "១២៣"
+        },
+        "B76": "=ISNUMBER(A76)",
+        "C76": "=IF(ISNUMBER(A76),A76,\"text\")",
+        "A77": {
+          "entered": "-១២"
+        },
+        "B77": "=ISNUMBER(A77)",
+        "C77": "=IF(ISNUMBER(A77),A77,\"text\")",
+        "A78": {
+          "entered": "១.៥"
+        },
+        "B78": "=ISNUMBER(A78)",
+        "C78": "=IF(ISNUMBER(A78),A78,\"text\")",
+        "A79": {
+          "entered": "១២%"
+        },
+        "B79": "=ISNUMBER(A79)",
+        "C79": "=IF(ISNUMBER(A79),A79,\"text\")",
+        "A80": {
+          "entered": "$១២"
+        },
+        "B80": "=ISNUMBER(A80)",
+        "C80": "=IF(ISNUMBER(A80),A80,\"text\")",
+        "A81": {
+          "entered": "(១២)"
+        },
+        "B81": "=ISNUMBER(A81)",
+        "C81": "=IF(ISNUMBER(A81),A81,\"text\")",
+        "A82": {
+          "entered": "១,២៣៤"
+        },
+        "B82": "=ISNUMBER(A82)",
+        "C82": "=IF(ISNUMBER(A82),A82,\"text\")",
+        "A83": {
+          "entered": "១e៣"
+        },
+        "B83": "=ISNUMBER(A83)",
+        "C83": "=IF(ISNUMBER(A83),A83,\"text\")",
+        "A84": {
+          "entered": "២០២០-១-១"
+        },
+        "B84": "=ISNUMBER(A84)",
+        "C84": "=IF(ISNUMBER(A84),A84,\"text\")",
+        "A85": {
+          "entered": "១២:៣០"
+        },
+        "B85": "=ISNUMBER(A85)",
+        "C85": "=IF(ISNUMBER(A85),A85,\"text\")",
+        "A86": {
+          "entered": "១ ១/២"
+        },
+        "B86": "=ISNUMBER(A86)",
+        "C86": "=IF(ISNUMBER(A86),A86,\"text\")"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Sheet1!B1",
+    "Sheet1!C1",
+    "Sheet1!B2",
+    "Sheet1!C2",
+    "Sheet1!B3",
+    "Sheet1!C3",
+    "Sheet1!B4",
+    "Sheet1!C4",
+    "Sheet1!B5",
+    "Sheet1!C5",
+    "Sheet1!B6",
+    "Sheet1!C6",
+    "Sheet1!B7",
+    "Sheet1!C7",
+    "Sheet1!B8",
+    "Sheet1!C8",
+    "Sheet1!B9",
+    "Sheet1!C9",
+    "Sheet1!B10",
+    "Sheet1!C10",
+    "Sheet1!B11",
+    "Sheet1!C11",
+    "Sheet1!B12",
+    "Sheet1!C12",
+    "Sheet1!B13",
+    "Sheet1!C13",
+    "Sheet1!B14",
+    "Sheet1!C14",
+    "Sheet1!B15",
+    "Sheet1!C15",
+    "Sheet1!B16",
+    "Sheet1!C16",
+    "Sheet1!B17",
+    "Sheet1!C17",
+    "Sheet1!B18",
+    "Sheet1!C18",
+    "Sheet1!B19",
+    "Sheet1!C19",
+    "Sheet1!B20",
+    "Sheet1!C20",
+    "Sheet1!B21",
+    "Sheet1!C21",
+    "Sheet1!B22",
+    "Sheet1!C22",
+    "Sheet1!B23",
+    "Sheet1!C23",
+    "Sheet1!B24",
+    "Sheet1!C24",
+    "Sheet1!B25",
+    "Sheet1!C25",
+    "Sheet1!B26",
+    "Sheet1!C26",
+    "Sheet1!B27",
+    "Sheet1!C27",
+    "Sheet1!B28",
+    "Sheet1!C28",
+    "Sheet1!B29",
+    "Sheet1!C29",
+    "Sheet1!B30",
+    "Sheet1!C30",
+    "Sheet1!B31",
+    "Sheet1!C31",
+    "Sheet1!B32",
+    "Sheet1!C32",
+    "Sheet1!B33",
+    "Sheet1!C33",
+    "Sheet1!B34",
+    "Sheet1!C34",
+    "Sheet1!B35",
+    "Sheet1!C35",
+    "Sheet1!B36",
+    "Sheet1!C36",
+    "Sheet1!B37",
+    "Sheet1!C37",
+    "Sheet1!B38",
+    "Sheet1!C38",
+    "Sheet1!B39",
+    "Sheet1!C39",
+    "Sheet1!B40",
+    "Sheet1!C40",
+    "Sheet1!B41",
+    "Sheet1!C41",
+    "Sheet1!B42",
+    "Sheet1!C42",
+    "Sheet1!B43",
+    "Sheet1!C43",
+    "Sheet1!B44",
+    "Sheet1!C44",
+    "Sheet1!B45",
+    "Sheet1!C45",
+    "Sheet1!B46",
+    "Sheet1!C46",
+    "Sheet1!B47",
+    "Sheet1!C47",
+    "Sheet1!B48",
+    "Sheet1!C48",
+    "Sheet1!B49",
+    "Sheet1!C49",
+    "Sheet1!B50",
+    "Sheet1!C50",
+    "Sheet1!B51",
+    "Sheet1!C51",
+    "Sheet1!B52",
+    "Sheet1!C52",
+    "Sheet1!B53",
+    "Sheet1!C53",
+    "Sheet1!B54",
+    "Sheet1!C54",
+    "Sheet1!B55",
+    "Sheet1!C55",
+    "Sheet1!B56",
+    "Sheet1!C56",
+    "Sheet1!B57",
+    "Sheet1!C57",
+    "Sheet1!B58",
+    "Sheet1!C58",
+    "Sheet1!B59",
+    "Sheet1!C59",
+    "Sheet1!B60",
+    "Sheet1!C60",
+    "Sheet1!B61",
+    "Sheet1!C61",
+    "Sheet1!B62",
+    "Sheet1!C62",
+    "Sheet1!B63",
+    "Sheet1!C63",
+    "Sheet1!B64",
+    "Sheet1!C64",
+    "Sheet1!B65",
+    "Sheet1!C65",
+    "Sheet1!B66",
+    "Sheet1!C66",
+    "Sheet1!B67",
+    "Sheet1!C67",
+    "Sheet1!B68",
+    "Sheet1!C68",
+    "Sheet1!B69",
+    "Sheet1!C69",
+    "Sheet1!B70",
+    "Sheet1!C70",
+    "Sheet1!B71",
+    "Sheet1!C71",
+    "Sheet1!B72",
+    "Sheet1!C72",
+    "Sheet1!B73",
+    "Sheet1!C73",
+    "Sheet1!B74",
+    "Sheet1!C74",
+    "Sheet1!B75",
+    "Sheet1!C75",
+    "Sheet1!B76",
+    "Sheet1!C76",
+    "Sheet1!B77",
+    "Sheet1!C77",
+    "Sheet1!B78",
+    "Sheet1!C78",
+    "Sheet1!B79",
+    "Sheet1!C79",
+    "Sheet1!B80",
+    "Sheet1!C80",
+    "Sheet1!B81",
+    "Sheet1!C81",
+    "Sheet1!B82",
+    "Sheet1!C82",
+    "Sheet1!B83",
+    "Sheet1!C83",
+    "Sheet1!B84",
+    "Sheet1!C84",
+    "Sheet1!B85",
+    "Sheet1!C85",
+    "Sheet1!B86",
+    "Sheet1!C86"
+  ]
+}

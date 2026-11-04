@@ -3,7 +3,7 @@ id: T-3800
 title: "Gate A: classify the 25 M9 engineering and database functions with no table or exemption, and file their table tasks"
 milestone: M0
 lane: harness
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -52,16 +52,28 @@ Every in-scope numeric M9 engineering or database function that Gate A counts as
   `make new-task MILESTONE=M0 LANE=harness`, `tier: opus`, `spec:` SPEC-0029.
 
 ## Acceptance criteria
-- [ ] A decision record (`make new-decision`) classifies each of the 25 functions (or the recounted list) as
+- [x] A decision record (`make new-decision`) classifies each of the 25 functions (or the recounted list) as
       `exact`, `composite` or "needs a table (T-XXXX)", with a cited reason for each exemption.
-- [ ] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
+- [x] `eval/accuracy/exempt.tsv` gains the exempt lines, sorted. `rustsheet-eval accuracy` reports `missing tables`
       lower by their number, with no stale or bad exemption.
-- [ ] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR. Any
+- [x] Every function classified "needs a table" is named in the title or Goal of an open task filed by this PR. Any
       generator change those tables need (a text parameter kind) is its own task, and the table tasks depend on it.
-- [ ] `python3 scripts/tasks.py validate` passes.
-- [ ] `make check` green; reviewers approve.
+- [x] `python3 scripts/tasks.py validate` passes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Building any table, definition or generator change (the filed tasks do that).
 - The other M9 IM* functions, which return text and are not `returns: number` in the catalog.
 - The other M9 families: financial (T-3797), distributions (T-3798), sample statistics (T-3799).
+
+## Outcome
+- Decision 0270. Of the 25, ERF, ERF.PRECISE, ERFC and ERFC.PRECISE already had tables, so 21 were recounted and
+  classified:
+  - `exact`: BIN2DEC, OCT2DEC, HEX2DEC;
+  - `composite`: the nine D-functions, IMREAL, IMAGINARY, IMABS, IMARGUMENT, CONVERT;
+  - needs a table: BESSELI, BESSELJ, BESSELK, BESSELY, filed as T-4083.
+- IMABS, IMARGUMENT and CONVERT have real kernels but text arguments. T-4084 adds a text parameter kind, and T-4085
+  replaces their exemptions with tables.
+- `rustsheet-eval accuracy`: `missing tables` 199 to 182, 0 failing, 0 table defects, no stale or bad exemption.
+- T-3787 duplicated T-3797 and this task, so it is dropped.
+- Eval delta: none (no engine or suite change).

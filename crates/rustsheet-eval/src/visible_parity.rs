@@ -317,24 +317,25 @@ pub fn write_markdown(report: &RunReport, md: &mut String) {
     let _ = writeln!(md, "\n## Visibly off (fifteen digits)\n");
     let _ = writeln!(
         md,
-        "{} in-scope cells are visibly off: a number further than half a unit in the 15th significant digit of Excel's (or 0 against nonzero), or a wrong type, error, text or boolean. `digits15` cells are within that half unit but more than 4 ulp away.\n",
+        "{} in-scope cells are visibly off: a number further than half a unit in the 15th significant digit of Excel's (or 0 against nonzero), or a wrong type, error, text or boolean. `digits15` cells are within that half unit but more than 4 ulp away. `residue13` cells are incomplete-beta family numbers past that half unit but within half a unit in the 13th digit: Phase 1b residue, not visibly off (decision 0267).\n",
         report.visibly_off_cells()
     );
     let _ = writeln!(
         md,
-        "| suite | scored | bit-exact | ≤4 ulp | digits15 | visible numeric | visible other |"
+        "| suite | scored | bit-exact | ≤4 ulp | digits15 | residue13 | visible numeric | visible other |"
     );
-    let _ = writeln!(md, "|---|---|---|---|---|---|---|");
+    let _ = writeln!(md, "|---|---|---|---|---|---|---|---|");
     for s in &report.suites {
         let c = &s.closeness;
         let _ = writeln!(
             md,
-            "| {} | {} | {} | {} | {} | {} | {} |",
+            "| {} | {} | {} | {} | {} | {} | {} | {} |",
             s.name,
             c.scored(),
             c.pass,
             c.ulp1 + c.ulp4,
             c.digits15,
+            c.residue13,
             c.visible_numeric,
             c.visible_other
         );

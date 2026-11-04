@@ -9,6 +9,7 @@ size: S
 tier: opus
 depends_on: []
 campaign: visible
+defer: phase-1b
 ---
 
 ## Goal
@@ -70,3 +71,6 @@ within 15 digits but not bit-exact go to T-2221 (`defer: phase-1b`).
 
 ## Out of scope
 - The ln-beta grid fit itself (T-2924) and the bit-level F residue (T-2221).
+
+## Deferred by decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) parks this task until Phase 1 exits. It is work on the incomplete-beta family whose cells are first wrong only at the 14th or 15th significant digit, or a probe or port that serves only that work. In those regions Excel itself is not correctly rounded (on a sample of 2,026 visibly-off cells, Excel was correctly rounded on 1%, with a median error of 48 to 330 ulp). Matching those digits means reproducing Excel's rounding noise. Decision 0267 accepts those cells. Reopen the task only if a cell it owns is first wrong at the 13th digit or earlier.

@@ -4,7 +4,7 @@ title: "IRR returns #DIV/0! on long conventional series near -0.2 to -0.5 (9 hol
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
 depends_on: []
@@ -50,3 +50,6 @@ log10 |NPV(d2)| above 228 (T-3411 progress notes, 2026-11-02):
 
 ## Out of scope
 - Which series return a number (T-3406).
+
+## Decision 0267
+The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
