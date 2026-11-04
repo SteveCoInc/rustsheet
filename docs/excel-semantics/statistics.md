@@ -2821,20 +2821,45 @@ Tasks: T-3444, T-3352, T-3447, T-3740, T-3741
 
 ## NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)
 Rule: `NEGBINOM.DIST(f,s,p,TRUE)` is `#NUM!` at a huge number_s with enough failures, where the true cdf underflows
-to 0.
+to 0. `BETA.DIST(p,s,f+1,TRUE)` is `#NUM!` at the same points: the error comes from Excel's incomplete beta (below).
 - `#NUM!`: 28 failures at p 0.323212154487823 with number_s 1E+13, 1E+14, 999999999999999, 1E+16 and 1E+20
   (`NEGBINOM.DIST(28,1E+13,0.323212154487823,TRUE)`), and at p 0.1 and 0.5 with number_s 999999999999999.
 - 0: number_s 1E+12, 1E+10 and 2^31 with 28 failures; 0 and 14 failures with number_s 999999999999999.
 - 0 everywhere: the pmf (`NEGBINOM.DIST(28,999999999999999,0.323212154487823,FALSE)`) and the legacy NEGBINOMDIST
   (always the pmf).
 
-The number_s cut is between 1E+12 and 1E+13 and the failures cut between 14 and 28. Whether they combine (a product
-or a sum) is not probed.
-Evidence: probes-numeric/t3553-negbinom-huge-s A1-A17 (excel-graph, 2026-11-01). It surfaced in T-3553's first Gate
+The error is Excel's incomplete beta kernel's, not NEGBINOM.DIST's own. `BETA.DIST(p,s,f+1,TRUE)` is `#NUM!`
+exactly where the cdf is, and so is the same call with the two shapes swapped. Examples:
+- `BETA.DIST(0.323212154487823,1E+13,29,TRUE)` and `(..,29,1E+13,TRUE)` are both `#NUM!`.
+- `(..,1E+12,29,TRUE)` is 0 and `(..,1E+13,21,TRUE)` is 0.
+
+Neither cut is a threshold on number_s or failures alone, nor on their product:
+- At number_s 999999999999999, 24 to 29 failures are `#NUM!`, while 22, and 40, 100 and 1000, are 0.
+- At number_s 1E+13, 27 and 29 failures are `#NUM!`, while 26 and 40 are 0.
+- At number_s 1E+20, every probed count from 18 to 1000 is `#NUM!`, and 15 to 17 are 0.
+- At 28 failures, number_s 3E+12 is 0 and 4E+12 is `#NUM!`.
+- Every `#NUM!` falls on cells where TOMS 708 bratio takes its L140 branch (b0 < 40 and b0·x0 > 0.7, then bup with
+  n = int(b0)), except one group: bfrac at number_s 1E+20. At 40 or more failures, bfrac gives 0 up to number_s 1E+15.
+
+On the bup + bpser cells (x0 <= 0.7), the natural log of bup's largest partial sum of terms separates the probe:
+0 up to 697.27 (`NEGBINOM.DIST(28,3E+12,..)`), `#NUM!` from 703.57 (`(27,1E+13,..)`). Two cells contradict that
+threshold: `NEGBINOM.DIST(1E+13,28,..)` and `(1E+15,28,..)`, a huge failures count with number_s 28, which bratio
+swaps. They are `#NUM!` at 684.35 and 804.09, while `(28,2E+12,..)` is 0 at 686.32. The bup + bgrat cells
+(x0 > 0.7: p 0.9 to 1 - 1E-13) are `#NUM!` from a partial-sum log of 56. So bgrat at a huge first shape fails
+separately. Which of bup's quantities Excel tests, and where, is UNVERIFIED.
+
+The p dependence: p 0.001 (bpser) is 0. p 0.9, 0.99 and 0.999999 are `#NUM!` at both 1E+13 and 999999999999999.
+p 1 - 1E-13 and 1 - 1E-14 at 1E+13 are 1, through bfrac on the swapped call. At 999999999999999, p 1 - 1E-13 is
+`#NUM!` (bup + bgrat), and p 1 - 1E-14 is 0.9999992473499035 (bfrac).
+
+Evidence: probes-numeric/t3553-negbinom-huge-s A1:A17 (excel-graph, 2026-11-01). It surfaced in T-3553's first Gate
 A fill, where `NEGBINOM.DIST(28,999999999999999,0.323212154487823,TRUE)` was `#NUM!` beside 0 at
-`(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`.
-Ours: 0 at every cell (the cdf sums pmf terms; `binom.rs`).
-Status: VERIFIED (excel-graph) for the probed cells; the cuts UNVERIFIED
+`(14,999999999999999,0.0712044717475044,TRUE)` and `(6,1E+15,0.847418271232675,TRUE)`. probes/t3576-negbinom-cdf-huge-s
+A1:A89 (excel-graph, 2026-11-04). `docs/research/t3576/bup_partial_sum.py` prints the branch and the partial-sum log of
+each of its cells.
+Ours: a value at every `#NUM!` cell, in both NEGBINOM.DIST and BETA.DIST. The cdf sums pmf terms (`binom.rs`), and
+BETA.DIST's kernel (`bratio/`) has no failure path on these branches.
+Status: VERIFIED (excel-graph) for the probed cells; the rule UNVERIFIED
 Tasks: T-3576
 
 ## BETA.DIST and F.DIST at basym points; BETA.INV takes the nearest end there (T-3443)
@@ -4239,15 +4264,6 @@ within 1E-15 relative / largest relative error:
     > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
     are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
     1E-6 and 0.05 the edge does not move.
-  - **At b = 40, columns A and B, Excel's value is noisy at the 8th to 10th digit** (T-4220). b0 = 40 leaves L140,
-    and with lambda > 0 bratio takes L110 to bfrac unswapped. Against a 60-digit mpmath `betainc` at the double
-    arguments, Excel is 4.5E-10 to 4.6E-8 relative off on the 28 A/B cells, with no consistent sign:
-    - A21 `BETA.DIST(0.999999961229869,2E9,40,TRUE)` is 9.999984224817014E-7, against the math 9.99998425283923E-7;
-    - B294 `BETA.DIST(0.999999994906026,1E10,40,TRUE)` is 0.049999949775626405, against 0.04999995206937666;
-    - B231 is -1.7E-8 relative.
-    Column C (lambda < 0, swapped, bfrac at a0 = 40) agrees with ours to 1.6E-15 relative or better. The mechanism is not pinned
-    (T-4220 lists the candidates). Status: VERIFIED (excel-graph) for the values, UNVERIFIED for the cause. Ours is
-    the math (`large_shape_lower`, within 9E-15).
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape

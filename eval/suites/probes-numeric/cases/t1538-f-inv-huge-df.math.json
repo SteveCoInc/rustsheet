@@ -309,27 +309,27 @@
   "Calc": {
    "A105": {
     "f": "=F.INV(0.999999,1E10,6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A111": {
     "f": "=F.INV(0.3,5,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A113": {
     "f": "=F.INV(0.3,1E10,5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A119": {
     "f": "=F.INV(0.3,2,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A125": {
     "f": "=F.INV(0.3,6,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A131": {
     "f": "=F.INV(0.3,5,1E6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A133": {
     "f": "=BETA.INV(0.5,2.5,5E9)",
@@ -373,63 +373,63 @@
    },
    "A153": {
     "f": "=BETA.INV(0.3,2.5,5E9)",
-    "why": "not converged or too slow"
+    "why": "no single value"
    },
    "A155": {
     "f": "=BETA.INV(0.3,3,5E9)",
-    "why": "not converged or too slow"
+    "why": "no single value"
    },
    "A23": {
     "f": "=F.INV(0.025,5,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A25": {
     "f": "=F.INV(0.025,1E10,5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A3": {
     "f": "=F.INV(0.5,1E10,5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A31": {
     "f": "=F.INV(0.025,2,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A37": {
     "f": "=F.INV(0.025,6,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A45": {
     "f": "=F.INV(0.975,5,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A47": {
     "f": "=F.INV(0.975,1E10,5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A55": {
     "f": "=F.INV(0.975,1E8,2)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A61": {
     "f": "=F.INV(0.975,1E10,6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A69": {
     "f": "=F.INV(1E-6,1E10,5)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A75": {
     "f": "=F.INV(1E-6,2,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A89": {
     "f": "=F.INV(0.999999,5,1E10)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A9": {
     "f": "=F.INV(0.5,2,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    }
   }
  }

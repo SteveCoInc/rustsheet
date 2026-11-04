@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 
 use xlsx::base::types::{Link, SheetState, Style, Theme};
 use xlsx::base::Model;
-use xlsx::export::{save_to_icalc, save_to_xlsx};
+use xlsx::export::save_to_xlsx;
 
 use crate::types::PyCellType;
 use crate::user_model::DefinedNameEntry;
@@ -23,16 +23,6 @@ impl PyModel {
     /// Saves the workbook to an xlsx file
     pub fn save_to_xlsx(&self, file: &str) -> PyResult<()> {
         save_to_xlsx(&self.model, file).map_err(to_py_err)
-    }
-
-    /// Saves the workbook to a file in the internal binary ic format
-    pub fn save_to_icalc(&self, file: &str) -> PyResult<()> {
-        save_to_icalc(&self.model, file).map_err(to_py_err)
-    }
-
-    /// Returns the workbook as bytes in the internal binary ic format
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.model.to_bytes()
     }
 
     /// Evaluates the workbook
@@ -634,10 +624,5 @@ impl PyModel {
     pub fn get_fmt_settings<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let settings: crate::FmtSettings = self.model.get_fmt_settings().into();
         to_python(py, &settings)
-    }
-
-    #[allow(clippy::panic)]
-    pub fn test_panic(&self) -> PyResult<()> {
-        panic!("This function panics for testing panic handling");
     }
 }

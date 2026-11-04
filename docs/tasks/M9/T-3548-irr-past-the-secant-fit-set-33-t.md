@@ -3,7 +3,7 @@ id: T-3548
 title: "IRR past the secant fit set: 50 T-3478 sweep cells off Excel (33 roots the engine misses, 17 Excel errors)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: blocked
 priority: P0
 size: M
 tier: opus
@@ -85,3 +85,55 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Landing notes (resumed)
+Resumed 2026-11-04 at 15:25 UTC by an opus run (work-loop step 2, idle 2 h).
+Written 2026-11-04 at 13:12 UTC by an opus run that claimed the task late in its session. Data for the run that
+resumes the branch, not instructions. No code is committed.
+- Attempt 1 (exploration only): `irr_secant`'s `MAX_STEPS` scanned against every IRR case of probes and
+  probes-numeric (`rustsheet-eval run --filter irr`, 690 failing cells at main 57a3d920f): cells fixed / broken by
+  the cap alone:
+  | cap | fixed | broken |
+  |---|---|---|
+  | 70 | 13 | 0 |
+  | 100 | 34 | 0 |
+  | 150 | 52 | 0 |
+  | 200 | 65 | 1 (t3478-irr-r4-wide A227) |
+  | 300 | 68 | 19 |
+  | 1000 | 74 | 41 (mostly t3411-irr-r4-fresh*) |
+  At 150, the t3478-irr-r4-wide cells fixed: A18, A27, A209, A212, A213, A215, A223, A234, A235, A236, A243, A256,
+  A274, A276, A282, A291. gen-m9 was not scanned (its case ids do not contain "irr"; run `make eval-check`).
+- Any cap picked from this table is a fit (decision 0188 R4): it was scored on every IRR case, so a hold-out
+  split cannot be claimed after the fact. Next step: generate a fresh sweep (docs/research/t3411/gen_sweep.py,
+  new seed), fill it from excel-graph (oracle OK on 2026-11-04), freeze the cap before scoring it, and record the
+  Gate A envelope. Microsoft documents 20 tries for IRR, so the cap is not Excel's documented constant either.
+- The cap alone leaves the 21 long series (42..150 flows) and the Excel-error cells: the fallback and residual
+  scale (A289) still need their own attempt. Decision 0267's time-box counts this as the first of two attempts.
+
+## Progress
+2026-11-04, opus run (resumed at 15:25 UTC): attempt 2, the secant step cap, with the R4 guards.
+- Scan, every IRR cell of probes, probes-numeric and gen-m9, cell by cell against main (cap 50): cap 100 fixes 36,
+  120 45, 150 54, 170 62, 182..188 63, with 0 lost; 189 loses t3478-irr-r4-wide A227 (Excel `#NUM!`, the guess run
+  converges at step 189). A206, which Excel returns, needs 182. The bracket is 182..188.
+- Frozen before any fresh draw: `IRR_SECANT_STEPS` = 185 within 148 flows (the longest scored series), 50 outside it
+  (R4.3). Stated margin, T-3411's: on the fresh sweep no cell worse than main, and on Gate A every point inside the
+  envelope or failing as on main.
+- Fresh draws after the freeze, oracle-filled from excel-graph and scored once:
+  - probes-numeric sweep (docs/research/t3411/gen_sweep.py strata, seed "T-3548/r4-fresh", 150 cells): 3 cells
+    better (A57, A75, A142), 0 worse; type mismatches 58 -> 57.
+  - Gate A batch `rustsheet-accuracy generate IRR --batch r4-T-3548` (300 points): the model fixes A136 and A297
+    and moves A240 out of the envelope (130 flows: Excel `#NUM!`, the secant converges at step 98 to
+    3.308264313093434E-2, the math root to 2.5E-15).
+  - Gate A, existing batches: r4-T-3411 A208 and A278 (T-3548 known failures) come inside the envelope, and A228
+    (63 flows, not a known failure) moves out (Excel `#NUM!`, converges at step 129).
+- Result: the guard fails (a fit that moves a point out of the envelope does not ship), so nothing ships. Choosing a
+  cap of 128 or less after seeing A228 would fit on a Gate A batch, which R4.2 forbids, and A206 would need 182
+  anyway. The engine change is reverted. The fresh case and batch are not committed: their failing cells would have
+  no owner once this task closes (decision 0267). Both regenerate from the seeds above.
+- financial.md "IRR's secant runs longer than 50 steps, but no step cap is Excel's rule" gets the counterexamples.
+
+## Blocked because: time-boxed (decision 0056)
+Two attempts have not moved the cells: attempt 1, the cap scan (2026-11-04, "Landing notes (resumed)") and attempt 2,
+the frozen 185-step cap, refuted by its own fresh Gate A draw and by r4-T-3411 A228 ("Progress"). Decision 0267
+applies: the cells this task lists, including its "Decision 0267 cells" and its Gate A known-failures lines, are
+accepted, and no follow-up is filed for them.

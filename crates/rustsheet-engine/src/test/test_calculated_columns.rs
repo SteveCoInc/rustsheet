@@ -636,3 +636,84 @@ fn a_formula_typed_below_the_table_fills_no_calculated_column() {
     typed(&mut filled, 5, "=1");
     assert_eq!(calc(&filled, 5), ["2", "4", "8", "1"]);
 }
+
+/// The other entries that take formula text from outside the engine, a CSE array formula
+/// (`set_user_array_formula`) and a legacy formula (`set_cell_with_legacy_formula`), read a
+/// padded bare column as no column, as `set_user_input` does (T-3258, T-4023); the engine's own
+/// re-entries of the printed `T[ Col ]` through them (an array formula a row insert moves, a fill
+/// of a legacy cell) still read the column.
+#[test]
+fn external_array_and_legacy_entries_read_a_padded_bare_column_as_no_column() {
+    let mut model = model(false);
+    model
+        .set_user_array_formula(0, 8, 5, 1, 1, "=SUM(T[ Col ])")
+        .unwrap();
+    model
+        .set_cell_with_legacy_formula(0, 9, 5, "=SUM(T[ Col ])")
+        .unwrap();
+    model.evaluate();
+    assert_eq!(model.get_formatted_cell_value(0, 8, 5).unwrap(), "#ERROR!");
+    assert_eq!(model.get_formatted_cell_value(0, 9, 5).unwrap(), "#ERROR!");
+
+    // `T[ [Col] ]` is the column from outside too; the engine prints it `T[ Col ]`.
+    model
+        .set_user_array_formula(0, 11, 5, 1, 1, "=SUM(T[ [Col] ])")
+        .unwrap();
+    model
+        .set_cell_with_legacy_formula(0, 12, 5, "=SUM(T[ [Col] ])")
+        .unwrap();
+    assert_eq!(
+        model.get_cell_formula(0, 11, 5).unwrap().as_deref(),
+        Some("=SUM(T[ Col ])")
+    );
+    // A row insert above re-enters the array formula's printed text, a fill the legacy cell's.
+    model.insert_rows(0, 10, 1).unwrap();
+    let filled = model.fill_cell(0, (13, 5), (14, 5)).unwrap();
+    assert_eq!(filled, "=SUM(T[ Col ])");
+    model.evaluate();
+    let values: Vec<String> = (12..=14)
+        .map(|row| model.get_formatted_cell_value(0, row, 5).unwrap())
+        .collect();
+    assert_eq!(values, ["7", "7", "7"]);
+    assert_eq!(
+        model.get_cell_formula(0, 12, 5).unwrap().as_deref(),
+        Some("=SUM(T[ Col ])")
+    );
+}
+
+/// Redo replays an external entry as external and the engine's own text as its own: undo then
+/// redo of an untyped `=SUM(T[ Col ])` gives the same `#ERROR!` cell as the entry, and redo of a
+/// paste of the engine's printed `T[ Col ]` reads the column (T-4023).
+#[test]
+fn redo_keeps_where_a_padded_bare_column_came_from() {
+    let mut model = crate::UserModel::from_model(model(false));
+    model.set_user_input(0, 8, 5, "=SUM(T[ Col ])").unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 8, 5).unwrap(), "#ERROR!");
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 8, 5).unwrap(), "");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 8, 5).unwrap(), "#ERROR!");
+
+    model.set_user_input(0, 10, 5, "=SUM(T[ [Col] ])").unwrap();
+    model.set_selected_cell(10, 5).unwrap();
+    model.set_selected_range(10, 5, 10, 5).unwrap();
+    let copied = model.copy_to_clipboard().unwrap();
+    model.set_selected_cell(11, 5).unwrap();
+    model
+        .paste_from_clipboard(0, (10, 5, 10, 5), &copied.data, false)
+        .unwrap();
+    assert_eq!(model.get_cell_content(0, 11, 5).unwrap(), "=SUM(T[ Col ])");
+    assert_eq!(model.get_formatted_cell_value(0, 11, 5).unwrap(), "7");
+    model.undo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 11, 5).unwrap(), "");
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 11, 5).unwrap(), "7");
+
+    // A CSE entry from outside redoes as it was entered.
+    model
+        .set_user_array_formula(0, 13, 5, 1, 1, "=SUM(T[ Col ])")
+        .unwrap();
+    model.undo().unwrap();
+    model.redo().unwrap();
+    assert_eq!(model.get_formatted_cell_value(0, 13, 5).unwrap(), "#ERROR!");
+}

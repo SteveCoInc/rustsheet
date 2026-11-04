@@ -593,8 +593,12 @@ fn an_array_relative_to_is_lifted_per_element() {
 fn two_parameter_lambdas_are_charged_against_the_visit_cap() {
     // DEVIATION (docs/excel-semantics/arrays.md "GROUPBY and PIVOTBY: two-parameter LAMBDAs and
     // the cell-visit cap"): 20000 row groups in one column, each cell given the 20000-record
-    // column, visit 4E8 cells; the built-in PERCENTOF sums each relative set once.
+    // column, visit 4E8 cells; the built-in PERCENTOF sums each relative set once. The work
+    // budgets are lifted: each call's copy of its set is charged to them too (T-2805), and the
+    // visit cap is what this test is about.
     let mut model = new_empty_model();
+    model.area_budget.limit = u64::MAX;
+    model.evaluation.recalc_limits = (u64::MAX, u64::MAX);
     model._set(
         "A1",
         "=PIVOTBY(SEQUENCE(20000),SEQUENCE(20000,,0,0),SEQUENCE(20000),LAMBDA(x,y,ROWS(y)))",

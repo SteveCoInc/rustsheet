@@ -3,7 +3,7 @@ id: T-4194
 title: "SUBTOTAL and AGGREGATE nested-call skip: probe which formulas count as calling SUBTOTAL (defined name, untaken IF branch, uncalled LAMBDA, unused LET binding, text) and match it"
 milestone: M5
 lane: functions-math
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -51,16 +51,29 @@ formula that calls one.
   module), T-2902 (Python facade hidden rows).
 
 ## Acceptance criteria
-- [ ] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the forms above with defined names
+- [x] A probes case (excel-probe skill, excel-graph, canary-verified, tag M5) holds the forms above with defined names
       in the case file.
-- [ ] numbers.md states the rule with the new cells and drops the "unprobed" sentence (or narrows it).
-- [ ] The engine matches every new cell. The predicate stays one helper shared by SUBTOTAL and AGGREGATE (directive 3).
+- [x] numbers.md states the rule with the new cells and drops the "unprobed" sentence (or narrows it).
+- [x] The engine matches every new cell. The predicate stays one helper shared by SUBTOTAL and AGGREGATE (directive 3).
       If Excel's flag is per cell (spilled cells skipped), the PR records how the spill child finds its anchor's flag.
-- [ ] probes/subtotal-hidden-filtered and every aggregate-* probe still pass. Eval known failures only shrink
+- [x] probes/subtotal-hidden-filtered and every aggregate-* probe still pass. Eval known failures only shrink
       (`make eval-baseline`, 0 regressions).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Hidden columns, worksheet-level autoFilter and manual hides inside a filtered table (numbers.md lists them as
   unprobed; they need workbook edits the probe format does not drive), the per-formula cache (T-1195), and
   AGGREGATE's scalar rules (T-4193).
+
+## Outcome
+- New probe probes/t4194-subtotal-nested-skip (90 cells, excel-graph 2026-11-04, M5), with the defined names `st`, `k`
+  and `fn` in the case file.
+- Excel flags a cell by its formula's syntax, as the engine already did. An untaken IF or CHOOSE branch, an IFERROR
+  fallback, an unused LET binding and an uncalled or inline-called LAMBDA all count. A defined name's body (a value or a
+  LAMBDA), INDIRECT and the name inside a string do not.
+- The one difference: the flag is per cell, and a spilled cell carries its anchor's flag (K2, K3, L2, L3, K4, L4).
+  `cell_formula_is_one_of` (subtotal.rs), shared by SUBTOTAL and AGGREGATE, now reads a `SpillCell`'s anchor
+  (`Cell::SpillCell { a }`), so it remains a single helper.
+- numbers.md: the "unprobed" sentence is replaced by the rule with its cells. T-1195 is unchanged, since the rule is
+  still syntax-based.
+- Eval delta: probes +1 case, 90 cells, all passing (6 matched by the engine change); 0 regressions.

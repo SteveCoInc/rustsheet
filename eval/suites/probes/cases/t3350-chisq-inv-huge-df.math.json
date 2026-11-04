@@ -38,6 +38,11 @@
     "v": "1957753.6046466315577830476221533069935139204095911",
     "f": "=CHISQ.INV(1E-100,2E6)"
    },
+   "A15": {
+    "t": "n",
+    "v": "1977158.8204898528474947028041903922444387552629084",
+    "f": "=CHISQ.INV(1E-30,2E6)"
+   },
    "A157": {
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
@@ -52,6 +57,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.INV(1E-30,2E10)"
+   },
+   "A16": {
+    "t": "n",
+    "v": "1987303.6174603993605442627891583617543018545045277",
+    "f": "=CHISQ.INV(1E-10,2E6)"
    },
    "A160": {
     "t": "e",
@@ -103,6 +113,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.INV(1E-300,1E11)"
    },
+   "A17": {
+    "t": "n",
+    "v": "1993825.2346396303884787713174361120275360960768056",
+    "f": "=CHISQ.INV(0.001,2E6)"
+   },
    "A170": {
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
@@ -153,6 +168,11 @@
     "why": "deg_freedom outside [1, 1e+10]",
     "f": "=CHISQ.INV(1-1E-10,1E11)"
    },
+   "A18": {
+    "t": "n",
+    "v": "1997437.3254999605623138652821606965274190015792049",
+    "f": "=CHISQ.INV(0.1,2E6)"
+   },
    "A180": {
     "t": "e",
     "why": "deg_freedom outside [1, 1e+10]",
@@ -188,10 +208,30 @@
     "v": "1001812.8153150163480913542543844611632038885698563",
     "f": "=CHISQ.INV.RT(0.1,1E6)"
    },
+   "A187": {
+    "t": "n",
+    "v": "999999.3333334123457367039101089013660816768502022",
+    "f": "=CHISQ.INV.RT(0.5,1E6)"
+   },
+   "A188": {
+    "t": "n",
+    "v": "998188.04118416840643101095854222939825174293530319",
+    "f": "=CHISQ.INV.RT(0.9,1E6)"
+   },
    "A189": {
     "t": "n",
     "v": "995635.45063159552582310988869943682831232916305378",
     "f": "=CHISQ.INV.RT(0.999,1E6)"
+   },
+   "A19": {
+    "t": "n",
+    "v": "1999999.3333333728395205957293083927297314614839369",
+    "f": "=CHISQ.INV(0.5,2E6)"
+   },
+   "A190": {
+    "t": "n",
+    "v": "993292.03373739947698939218715524382272010416517613",
+    "f": "=CHISQ.INV.RT(1-1E-6,1E6)"
    },
    "A191": {
     "t": "n",
@@ -233,6 +273,11 @@
     "v": "2002563.5309992419149492138322567144237580356087447",
     "f": "=CHISQ.INV.RT(0.1,2E6)"
    },
+   "A199": {
+    "t": "n",
+    "v": "1999999.3333333728395205957293083927297314614839369",
+    "f": "=CHISQ.INV.RT(0.5,2E6)"
+   },
    "A2": {
     "t": "n",
     "v": "970215.08557517294757547719202698745316994102039242",
@@ -242,6 +287,16 @@
     "t": "n",
     "v": "2002563.5309992419152657899179400911407435819468308",
     "f": "=CHISQ.INV(0.9,2E6)"
+   },
+   "A200": {
+    "t": "n",
+    "v": "1997437.3254999605619978296794744433779755237761655",
+    "f": "=CHISQ.INV.RT(0.9,2E6)"
+   },
+   "A201": {
+    "t": "n",
+    "v": "1993825.234639630388992909841017188197092186367635",
+    "f": "=CHISQ.INV.RT(0.999,2E6)"
    },
    "A202": {
     "t": "n",
@@ -292,6 +347,11 @@
     "t": "n",
     "v": "5004053.0498944328280345394791048241974348993660351",
     "f": "=CHISQ.INV.RT(0.1,5E6)"
+   },
+   "A212": {
+    "t": "n",
+    "v": "4995947.8066047802822269227353112791503925484847634",
+    "f": "=CHISQ.INV.RT(0.9,5E6)"
    },
    "A213": {
     "t": "n",
@@ -348,6 +408,31 @@
     "v": "10005731.70091347736892249691579661677032990125247",
     "f": "=CHISQ.INV.RT(0.1,1E7)"
    },
+   "A224": {
+    "t": "n",
+    "v": "9994269.1555857392856291933186327377525734982782684",
+    "f": "=CHISQ.INV.RT(0.9,1E7)"
+   },
+   "A225": {
+    "t": "n",
+    "v": "9986185.7604888493024995601296219524297165152151154",
+    "f": "=CHISQ.INV.RT(0.999,1E7)"
+   },
+   "A226": {
+    "t": "n",
+    "v": "9978756.4350916786890899077034521556326497586756367",
+    "f": "=CHISQ.INV.RT(1-1E-6,1E7)"
+   },
+   "A227": {
+    "t": "n",
+    "v": "9971577.5244985284404223599570184285831573719725322",
+    "f": "=CHISQ.INV.RT(1-1E-10,1E7)"
+   },
+   "A228": {
+    "t": "n",
+    "v": "9964526.1471984789096195707416661949321582558577487",
+    "f": "=CHISQ.INV.RT(1-1E-15,1E7)"
+   },
    "A229": {
     "t": "n",
     "v": "20235221.622231617305805379219701731821601076601259",
@@ -382,6 +467,21 @@
     "t": "n",
     "v": "20008105.671901135603737342334510150929727369061958",
     "f": "=CHISQ.INV.RT(0.1,2E7)"
+   },
+   "A237": {
+    "t": "n",
+    "v": "19980461.35437892652235147649323986909991928194931",
+    "f": "=CHISQ.INV.RT(0.999,2E7)"
+   },
+   "A238": {
+    "t": "n",
+    "v": "19969951.100390217088953237977115237455820566030569",
+    "f": "=CHISQ.INV.RT(1-1E-6,2E7)"
+   },
+   "A239": {
+    "t": "n",
+    "v": "19959793.654995440183758933723918913386136574055707",
+    "f": "=CHISQ.INV.RT(1-1E-10,2E7)"
    },
    "A24": {
     "t": "n",
@@ -427,6 +527,21 @@
     "t": "n",
     "v": "4883759.3368374156227392611180938016545009027102997",
     "f": "=CHISQ.INV(1E-300,5E6)"
+   },
+   "A250": {
+    "t": "n",
+    "v": "49952480.152783105173258740196124036920528128169633",
+    "f": "=CHISQ.INV.RT(1-1E-6,5E7)"
+   },
+   "A251": {
+    "t": "n",
+    "v": "49936412.899842314972724550656285505011987257555158",
+    "f": "=CHISQ.INV.RT(1-1E-10,5E7)"
+   },
+   "A252": {
+    "t": "n",
+    "v": "49920626.927871102683732794534247244116061927488236",
+    "f": "=CHISQ.INV.RT(1-1E-15,5E7)"
    },
    "A253": {
     "t": "n",
@@ -578,6 +693,11 @@
     "v": "9994269.1555857392863362044789785265228486630937562",
     "f": "=CHISQ.INV(0.1,1E7)"
    },
+   "A43": {
+    "t": "n",
+    "v": "9999999.3333333412345684781501182218118166682478989",
+    "f": "=CHISQ.INV(0.5,1E7)"
+   },
    "A44": {
     "t": "n",
     "v": "10005731.700913477369630048559166520036758282417617",
@@ -617,6 +737,26 @@
     "t": "n",
     "v": "19865755.739308813644456791132956373167505181861063",
     "f": "=CHISQ.INV(1E-100,2E7)"
+   },
+   "A51": {
+    "t": "n",
+    "v": "19927582.065833320033332741815079463417022790468106",
+    "f": "=CHISQ.INV(1E-30,2E7)"
+   },
+   "A52": {
+    "t": "n",
+    "v": "19959793.654915184121401344222236833938595103413537",
+    "f": "=CHISQ.INV(1E-10,2E7)"
+   },
+   "A53": {
+    "t": "n",
+    "v": "19980461.354378926520723333586418890173003771184906",
+    "f": "=CHISQ.INV(0.001,2E7)"
+   },
+   "A54": {
+    "t": "n",
+    "v": "19991895.184598082823769672132141174196416576315477",
+    "f": "=CHISQ.INV(0.1,2E7)"
    },
    "A56": {
     "t": "n",
@@ -658,6 +798,16 @@
     "v": "49787566.398895871064913755841049331056412576470477",
     "f": "=CHISQ.INV(1E-100,5E7)"
    },
+   "A63": {
+    "t": "n",
+    "v": "49885446.686502858287841847122396513675243157281037",
+    "f": "=CHISQ.INV(1E-30,5E7)"
+   },
+   "A64": {
+    "t": "n",
+    "v": "49936412.899715356388196433069274278610668114322098",
+    "f": "=CHISQ.INV(1E-10,5E7)"
+   },
    "A68": {
     "t": "n",
     "v": "50012815.943828766046304084410972939542147683892446",
@@ -688,6 +838,16 @@
     "v": "50079455.827513851915572169672061086717500188341501",
     "f": "=CHISQ.INV(1-1E-15,5E7)"
    },
+   "A73": {
+    "t": "n",
+    "v": "99476988.866833830579800242073049800789049909251046",
+    "f": "=CHISQ.INV(1E-300,1E8)"
+   },
+   "A74": {
+    "t": "n",
+    "v": "99699448.899938570367000062617713649883616590767012",
+    "f": "=CHISQ.INV(1E-100,1E8)"
+   },
    "A8": {
     "t": "n",
     "v": "1001812.8153150163483152864903397491625138486154088",
@@ -717,6 +877,16 @@
     "t": "n",
     "v": "100112350.36618066393813031170803934228461283018404",
     "f": "=CHISQ.INV(1-1E-15,1E8)"
+   },
+   "A85": {
+    "t": "n",
+    "v": "199259972.11772832998529168756846933064427321084333",
+    "f": "=CHISQ.INV(1E-300,2E8)"
+   },
+   "A86": {
+    "t": "n",
+    "v": "199574831.91599084790613942123104509244551457989785",
+    "f": "=CHISQ.INV(1E-100,2E8)"
    },
    "A9": {
     "t": "n",
@@ -952,10 +1122,6 @@
     "f": "=CHISQ.INV(0.001,1E10)",
     "why": "no single value"
    },
-   "A15": {
-    "f": "=CHISQ.INV(1E-30,2E6)",
-    "why": "not converged or too slow"
-   },
    "A150": {
     "f": "=CHISQ.INV(0.1,1E10)",
     "why": "no single value"
@@ -984,169 +1150,81 @@
     "f": "=CHISQ.INV(1-1E-15,1E10)",
     "why": "no single value"
    },
-   "A16": {
-    "f": "=CHISQ.INV(1E-10,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A17": {
-    "f": "=CHISQ.INV(0.001,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A18": {
-    "f": "=CHISQ.INV(0.1,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A187": {
-    "f": "=CHISQ.INV.RT(0.5,1E6)",
-    "why": "not converged or too slow"
-   },
-   "A188": {
-    "f": "=CHISQ.INV.RT(0.9,1E6)",
-    "why": "not converged or too slow"
-   },
-   "A19": {
-    "f": "=CHISQ.INV(0.5,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A190": {
-    "f": "=CHISQ.INV.RT(1-1E-6,1E6)",
-    "why": "not converged or too slow"
-   },
-   "A199": {
-    "f": "=CHISQ.INV.RT(0.5,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A200": {
-    "f": "=CHISQ.INV.RT(0.9,2E6)",
-    "why": "not converged or too slow"
-   },
-   "A201": {
-    "f": "=CHISQ.INV.RT(0.999,2E6)",
-    "why": "not converged or too slow"
-   },
    "A211": {
     "f": "=CHISQ.INV.RT(0.5,5E6)",
-    "why": "not converged or too slow"
-   },
-   "A212": {
-    "f": "=CHISQ.INV.RT(0.9,5E6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A223": {
     "f": "=CHISQ.INV.RT(0.5,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A224": {
-    "f": "=CHISQ.INV.RT(0.9,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A225": {
-    "f": "=CHISQ.INV.RT(0.999,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A226": {
-    "f": "=CHISQ.INV.RT(1-1E-6,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A227": {
-    "f": "=CHISQ.INV.RT(1-1E-10,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A228": {
-    "f": "=CHISQ.INV.RT(1-1E-15,1E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A235": {
     "f": "=CHISQ.INV.RT(0.5,2E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A236": {
     "f": "=CHISQ.INV.RT(0.9,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A237": {
-    "f": "=CHISQ.INV.RT(0.999,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A238": {
-    "f": "=CHISQ.INV.RT(1-1E-6,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A239": {
-    "f": "=CHISQ.INV.RT(1-1E-10,2E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A247": {
     "f": "=CHISQ.INV.RT(0.5,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A248": {
     "f": "=CHISQ.INV.RT(0.9,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A249": {
     "f": "=CHISQ.INV.RT(0.999,5E7)",
-    "why": "not converged or too slow"
-   },
-   "A250": {
-    "f": "=CHISQ.INV.RT(1-1E-6,5E7)",
-    "why": "not converged or too slow"
-   },
-   "A251": {
-    "f": "=CHISQ.INV.RT(1-1E-10,5E7)",
-    "why": "not converged or too slow"
-   },
-   "A252": {
-    "f": "=CHISQ.INV.RT(1-1E-15,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A259": {
     "f": "=CHISQ.INV.RT(0.5,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A260": {
     "f": "=CHISQ.INV.RT(0.9,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A261": {
     "f": "=CHISQ.INV.RT(0.999,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A262": {
     "f": "=CHISQ.INV.RT(1-1E-6,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A263": {
     "f": "=CHISQ.INV.RT(1-1E-10,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A264": {
     "f": "=CHISQ.INV.RT(1-1E-15,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A271": {
     "f": "=CHISQ.INV.RT(0.5,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A272": {
     "f": "=CHISQ.INV.RT(0.9,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A273": {
     "f": "=CHISQ.INV.RT(0.999,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A274": {
     "f": "=CHISQ.INV.RT(1-1E-6,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A275": {
     "f": "=CHISQ.INV.RT(1-1E-10,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A276": {
     "f": "=CHISQ.INV.RT(1-1E-15,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A277": {
     "f": "=CHISQ.INV.RT(1E-300,5E8)",
@@ -1282,7 +1360,7 @@
    },
    "A31": {
     "f": "=CHISQ.INV(0.5,5E6)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A310": {
     "f": "=CHISQ.INV.RT(1-1E-6,2E9)",
@@ -1488,105 +1566,61 @@
     "f": "=CHISQ.INV.RT(1-1E-15,1E11)",
     "why": "no single value"
    },
-   "A43": {
-    "f": "=CHISQ.INV(0.5,1E7)",
-    "why": "not converged or too slow"
-   },
-   "A51": {
-    "f": "=CHISQ.INV(1E-30,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A52": {
-    "f": "=CHISQ.INV(1E-10,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A53": {
-    "f": "=CHISQ.INV(0.001,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A54": {
-    "f": "=CHISQ.INV(0.1,2E7)",
-    "why": "not converged or too slow"
-   },
    "A55": {
     "f": "=CHISQ.INV(0.5,2E7)",
-    "why": "not converged or too slow"
-   },
-   "A63": {
-    "f": "=CHISQ.INV(1E-30,5E7)",
-    "why": "not converged or too slow"
-   },
-   "A64": {
-    "f": "=CHISQ.INV(1E-10,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A65": {
     "f": "=CHISQ.INV(0.001,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A66": {
     "f": "=CHISQ.INV(0.1,5E7)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A67": {
     "f": "=CHISQ.INV(0.5,5E7)",
-    "why": "not converged or too slow"
-   },
-   "A73": {
-    "f": "=CHISQ.INV(1E-300,1E8)",
-    "why": "not converged or too slow"
-   },
-   "A74": {
-    "f": "=CHISQ.INV(1E-100,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A75": {
     "f": "=CHISQ.INV(1E-30,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A76": {
     "f": "=CHISQ.INV(1E-10,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A77": {
     "f": "=CHISQ.INV(0.001,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A78": {
     "f": "=CHISQ.INV(0.1,1E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A79": {
     "f": "=CHISQ.INV(0.5,1E8)",
-    "why": "not converged or too slow"
-   },
-   "A85": {
-    "f": "=CHISQ.INV(1E-300,2E8)",
-    "why": "not converged or too slow"
-   },
-   "A86": {
-    "f": "=CHISQ.INV(1E-100,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A87": {
     "f": "=CHISQ.INV(1E-30,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A88": {
     "f": "=CHISQ.INV(1E-10,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A89": {
     "f": "=CHISQ.INV(0.001,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A90": {
     "f": "=CHISQ.INV(0.1,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A91": {
     "f": "=CHISQ.INV(0.5,2E8)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A97": {
     "f": "=CHISQ.INV(1E-300,5E8)",

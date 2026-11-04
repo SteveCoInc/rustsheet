@@ -16,7 +16,7 @@ There are two APIs:
 
 * The **user API** (`UserModel`): the same high level API used by the IronCalc
   web application. Every action evaluates the workbook, keeps undo/redo
-  history and produces diffs for collaboration.
+  history.
 * The **raw API** (`Model`): a low level API. Nothing is evaluated
   automatically (call `evaluate()` yourself), there is no undo/redo and no
   diffs. Faster and more flexible, but easier to get wrong.
@@ -36,8 +36,15 @@ model.update_range_style(0, 1, 1, 2, 1, "fill.color", "#FFFF00")
 model.save_to_xlsx("my-workbook.xlsx")
 ```
 
-More examples (styled reports, conditional formatting, CSV import,
-collaboration diffs) live in `docs/examples`.
+More examples (styled reports, conditional formatting, CSV import) live in `docs/examples`.
+
+## Removed legacy surface (pre-v1, no warning release)
+
+The bitcode/icalc loaders and writers (`load_from_bytes`, `load_from_icalc`,
+`create_user_model_from_bytes`, `create_user_model_from_icalc`, `UserModel.from_bytes`,
+`UserModel.from_icalc`, `save_to_icalc`, `to_bytes`), the diff exchange
+(`UserModel.apply_external_diffs`, `UserModel.flush_send_queue`) and `test_panic` are gone
+(SPEC-0026). Use xlsx (`load_from_xlsx`, `save_to_xlsx`, `Workbook.from_bytes`).
 
 ## Compile and test
 

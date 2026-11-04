@@ -180,3 +180,71 @@ fn a_lambda_reading_a_bound_array_again_and_again_is_bounded() {
     assert_eq!(model._get_text("A1"), "#VALUE!");
     assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK);
 }
+
+/// The whole-array readers a LAMBDA can repeat over a LET-bound array (SPEC-0024 step 3, T-2805),
+/// each with `s` the bound array. INDEX, ROWS and COLUMNS are on the list too: reading the
+/// variable copies its array whatever the reader then does with it.
+const ARRAY_READERS: [&str; 32] = [
+    "MATCH(-1,s,0)",
+    "XMATCH(-1,s)",
+    "XLOOKUP(-1,s,s,0)",
+    "LOOKUP(-1,s)",
+    "VLOOKUP(-1,s,1,FALSE)",
+    "HLOOKUP(-1,TRANSPOSE(s),1,FALSE)",
+    "ROWS(SORT(s))",
+    "ROWS(SORTBY(s,s))",
+    "ROWS(UNIQUE(s))",
+    "ROWS(FILTER(s,s>0))",
+    r#"LEN(TEXTJOIN(",",TRUE,s))"#,
+    "LEN(CONCAT(s))",
+    "ROWS(TOCOL(s))",
+    "COLUMNS(TOROW(s))",
+    "SUMPRODUCT(s)",
+    "MMULT(TRANSPOSE(s),s)",
+    "COUNTIF(s,1)",
+    "SUMIF(s,1)",
+    "SUMIFS(s,s,1)",
+    "COUNTIFS(s,1)",
+    "AVERAGEIF(s,1)",
+    "MAXIFS(s,s,1)",
+    "LARGE(s,1)",
+    "SMALL(s,1)",
+    "PERCENTILE(s,0.5)",
+    "QUARTILE(s,1)",
+    "PERCENTRANK(s,5)",
+    "NPV(0.1,s)",
+    "AGGREGATE(9,6,s)",
+    "INDEX(s,5)",
+    "ROWS(s)",
+    "COLUMNS(s)",
+];
+
+#[test]
+fn every_whole_array_reader_pays_the_cells_it_reads() {
+    // Growing `s` by 1,000 cells costs at least the 1,000 built and the 1,000 the reader copies.
+    for reader in ARRAY_READERS {
+        let small = units(&format!("=LET(s,SEQUENCE(10),{reader})"));
+        let big = units(&format!("=LET(s,SEQUENCE(1010),{reader})"));
+        assert!(
+            big - small >= 2 * 1000 * CELL_UNITS,
+            "{reader}: {} units for 1,000 more cells",
+            big - small
+        );
+    }
+}
+
+#[test]
+fn a_lambda_repeating_any_whole_array_reader_is_bounded() {
+    // The acceptance shape of T-2805 under a lower limit, so each run stops after a few dozen
+    // calls: at the default limit the same charge stops it after about 900.
+    for reader in ARRAY_READERS {
+        let mut model = model_with_limit(1 << 24);
+        model._set(
+            "A1",
+            &format!("=LET(s,SEQUENCE(100000),REDUCE(0,SEQUENCE(100000),LAMBDA(a,b,a+{reader})))"),
+        );
+        model.evaluate();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{reader}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{reader}");
+    }
+}

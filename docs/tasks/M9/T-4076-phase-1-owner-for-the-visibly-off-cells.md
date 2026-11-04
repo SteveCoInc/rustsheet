@@ -51,6 +51,15 @@ first wrong at the 14th or 15th digit (decision 0267 Tier C/D):
 - gen-m9/285d87cea1aaa73c.case.json (1; unattributed, FDIST + MINUTE): Calc!A34, Excel 6.448979666396885e-18, ours ...879e-18
 - gen-m9/8f2ac25945af87da.case.json (1; unattributed, FDIST + DAYS360): Calc!A92, Excel 4.5060151487344243e-45, ours ...392e-45
 
+Added by gap triage 2026-11-04 (`make eval`, `make exit-owners` and `make unowned-off ALL=1` on origin/main
+b450050f8). Two GAMMA.DIST cells had no open owner and showed in the M9 exit row (`rate:GAMMA.DIST`, `probes`). Both
+sides are within 1e-9 of the math, so they are Phase 1b evidence under decision 0188 R1(c). They are first wrong at
+the 15th (A145) and 14th (A146) digit, decision 0267 Tier C/D. The fix is the deferred T-4216:
+- probes/t2982-gamma-inv-huge-shape.case.json (2; GAMMA.DIST): S!A145, Excel 2.8546421399586357e-07, ours ...6256e-07; S!A146, Excel 2.8561234160188864e-07, ours ...894e-07
+
+The 28 BETA.DIST b = 40 cells of probes-numeric/t4080-beta-num-band-edge that only deferred T-3209 owned went to
+T-4214 (decision 0267 Tier A), not here.
+
 ## Acceptance criteria
 - [ ] Each cell above is within half a unit of Excel's 15th significant digit, or moved to an open, non-deferred task
       that owns it, or listed as Phase 1b evidence (both sides within 1e-9 of the 50-digit math; then it is not

@@ -1,6 +1,8 @@
 # Financial functions
 
 ## Annuity evaluation order and `(1+r)^n` (PV/FV/PMT/NPER/IPMT/PPMT)
+Amended (T-4146): PV's and FV's `+`, `*` and `/` are Excel's twice-rounded operators, not plain doubles; see "FV
+and PV round each operation twice" below. The two forms agree on every cell of the sweeps cited here.
 Rule: with `P = (1+r)^n` by right-to-left square-and-multiply (numbers.md, "Integer exponents"),
 `k = 1+r*type` and `T = pmt*(k*((P-1)/r))`, Excel computes PV = `-(fv+T)/P` and FV = `-(pv*P+T)`
 (integer nper, rate ≠ 0), and NPER = `ln((pmt*k - fv*r)/(pmt*k + pv*r)) / ln(1+r)`, every
@@ -74,9 +76,31 @@ Evidence (Excel-cached values, `ironcalc-calc/FINANCIAL/PMT.xlsx`, `PV.xlsx`, `F
   by Excel's `+`). The sweeps have integer nper and non-zero pmt only.
 Status: PARTLY VERIFIED (PV/FV/NPER fitted on the sweep and implemented, for integer nper and pmt ≠ 0; PMT's bits fitted in "PMT is a discounted payment" (T-3014); IPMT/PPMT/NPV bits open, time-boxed per
 decision 0056 after T-1524's two attempts, in T-1528)
-Implemented in: `annuity_power`, `annuity_factor`, `compute_future_value`,
+Implemented in: `annuity_power`, `annuity_factor_rounded` (T-4146), `compute_future_value`,
 `fn_pv` and `fn_nper` (crates/rustsheet-engine/src/functions/financial/mod.rs, T-0901). Salvaged from
 draft PR #13 by T-0031.
+
+## FV and PV round each operation twice
+Rule (T-4146): in FV = `-(pv*P + pmt*(k*((P-1)/r)))` and PV = `-(fv + pmt*(k*((P-1)/r)))/P` (the parenthesization
+of "Annuity evaluation order" above), each `+`, `*` and `/` is Excel's twice-rounded operator (the 64-bit
+extended result rounded to a double, as RATE's residual in "RATE is a secant on the FV residual"), not one double
+rounding. `1+r` and P are as before. The two forms differ only where the sum cancels (pv·P and pmt·A, or fv and
+pmt·A, close and of opposite sign), which is why the earlier sweeps could not tell them apart.
+Evidence (excel-graph, 2026-11-04, T-4146; generator, forms and scorer in docs/research/t4146/):
+- probes/t3424-rate-noise-trace A132, `=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,
+  934408648396.347,1)`: Excel -10935378180.042114, the twice-rounded form; plain doubles give -10935378180.042236.
+  It was the only one of 587 literal FV oracle cells where the forms differ (docs/research/t3424/fv_forms.py).
+- probes/t4146-annuity-twice-rounded: 240 calls (FV and PV alternating, rate ±1e-7..0.5, integer nper 1..400,
+  type 0 and 1, a cancelling pmt), kept where the forms differ, committed before the fill. On the fit lab's hash
+  split (margin 5 points, fixed before scoring): twice-rounded bit-exact FV 84/84 train and 36/36 test, PV 87/87 and
+  33/33; plain doubles 0 on every side (PV within 4 ulp on 29 of 120); the correctly rounded value 0.
+- probes/t4146-annuity-twice-fresh: 120 calls drawn with a new seed after the form was frozen, committed before
+  the fill: twice-rounded 120/120 bit-exact, plain 0, correctly rounded 0.
+- No other FV, PV or RATE oracle cell changed (`make eval-baseline`: probes fixed 1, regressions 0).
+Ours: `compute_future_value` and `fn_pv` with `annuity_factor_rounded` (functions/financial/annuity.rs).
+Status: VERIFIED (excel-graph; integer nper, rate ≠ 0. rate = 0 and non-integer nper keep their forms, unprobed
+here)
+Tasks: T-4146, T-3424
 
 ## PMT, IPMT and PPMT are the exact payment
 Rule: Excel's PMT, IPMT and PPMT are within a few ulp of the exact value of the payment on the
@@ -1207,13 +1231,75 @@ Evidence (excel-graph, 2026-10-31, T-3348):
     - a zero step against distinct iterates: Excel errs on 12 of 125 zero-step holds and 1 of 21 distinct ones;
     - a cut on the step count.
 
-    They are the noise floor's path, not a second rule; T-3424 owns them.
+    They are the noise floor's path, not a second rule. T-3424 probed it (next bullet).
+  - **Excel's FV along the path is the model's annuity value; how RATE decides in the noise floor is not**
+    (probes/t3424-rate-noise-trace, 433 cells, excel-graph, 2026-11-04, T-3424; scripts in docs/research/t3424/).
+    The probe covers the 16 wrong-type cells above, at nper 1 to 351 and |pv|, |fv| from 1e6 to 1e12.
+    - Residual: FV at 355 iterates of the model's run from guess 0.1 (the first 6 and the last 24 per cell, most of
+      them in the noise floor, |f| from 1e-7 to 1e-2) equals -(pv·P + pmt·A) with Excel's twice-rounded operators on
+      all 355. That is the model's RATE residual less + fv, so no residual difference shows at these points at any nper (T-3579
+      found the same at nper 1). This reads Excel's FV, not RATE's own residual: that RATE evaluates its residual
+      with FV's arithmetic is consistent with the scores but not observed directly. An iterate is written as
+      `(a+b)`: a 15-digit head plus a tail that rounds back to the double, because Excel cuts a formula literal to
+      15 digits (numbers.md "Formula number literals are read at 15 significant digits").
+    - Step: on the 2,475 literal RATE oracle cells, the model's step r1 - f1·(r1-r0)/(f1-f0) is bit-exact on 1,951.
+      Other forms do worse:
+
+      | step form | bit-exact cells |
+      |---|---|
+      | the model's form in plain doubles | 1,945 |
+      | r1 - f1/((f1-f0)/(r1-r0)) | 1,504 |
+      | r1 - (r1-r0)·(f1/(f1-f0)) | 1,494 |
+      | r1 - ((r1-r0)/(f1-f0))·f1 | 1,463 |
+      | r0 - f0·(r1-r0)/(f1-f0) | 1,313 |
+      | (r0·f1 - r1·f0)/(f1-f0) | 1,039 |
+
+      Keeping the iterates in 80-bit precision between steps gets 1,111 with the residual taken at the double
+      iterate, and 1,048 with 1+r and /r taken at the extended iterate. This ranks whole-run scores: the model's
+      step ranks first, but no step was observed directly, and the 524 cells it misses leave room for a difference
+      in RATE's own step, residual or stop test.
+    - A flat secant is not always `#NUM!`. Making it `#NUM!` fixes 60 wrong-type cells but breaks 549.
+    - The hold point does not decide the outcome. On the nper 1 and 2 cells, RATE seeded with each of the last 12
+      iterates (78 cells) gives these results:
+      - Where the model converges (19 cells), Excel equals the model on all 19.
+      - Where the model holds (51 cells), Excel equals the hold on 20, errs on 22, and gives another number on 9.
+      - Where the model ends `#NUM!` on a flat secant it cannot hold (8 cells), Excel returns a number on 7: the
+        opposite type error.
+      - Two seeded runs of fresh A275 hold at the same iterate 0.07115318239018958. Excel returns it for one and
+        gives `#NUM!` for the other.
+      - The plateau decides nothing either. A157's runs hold at 10 different iterates, all with f = -2.38e-7. Excel
+        returns 5 of them and errs on 5. (Its 2 other holds have f = 3.58e-6, and Excel gives another number on
+        both.)
+    - No single threshold on a quantity at the hold separates Excel's 549 returned holds from its 60 errors much
+      better than returning every hold, which gets 60 wrong. The best split, on r itself, gets 57 wrong. Quantities
+      tried:
+      - |f|, and |f| over the largest term, over pv, over pmt, over fv, over f at the guess and over f at the first
+        iterate;
+      - |f| in ulps of the largest term and of fv;
+      - r, n and the step;
+      - a zero step against distinct iterates, and the stall's sign and direction;
+      - whether the run bracketed the root, and whether the hold has the smallest |f| of the run.
+    - Where Excel returns a number on a held run (549 cells), its value is the model's held iterate on 202, 1 to 4
+      ulp from it on 182 (in either direction), and further off on 165: up to 156,030 ulp on t3348-rate-fv-nonzero
+      A138 and about 2.5e9 ulp on probe A344.
+    - So Excel's path leaves the model's in the noise floor, sometimes in the last ulp and sometimes many steps
+      earlier. With double iterates, RATE's own residual, step or stop test must then differ from the model's
+      somewhere; which one is unknown. One example is fresh A59's run seeded at 5.279321039425968e-06 (probe A74).
+      Excel stops
+      at 5.2793196756967624e-06, one ulp past the model's hold and the first double where f changes sign. The cause
+      is unknown. T-3424 is blocked as time-boxed (decision 0056), so its cells are accepted (decision 0267). T-3963
+      studies the flat-secant outcome for the cells it owns.
+    - FV: Excel's FV is the twice-rounded form on all 355 cells. The engine's plain-double FV misses one of them,
+      A132 (`=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,934408648396.347,1)`: Excel
+      -10935378180.042114, engine -10935378180.042236). Across the 587 numeric literal FV oracle cells, the
+      twice-rounded form scores 587 and the plain form 586. T-4146 owns A132.
 - Unprobed: no oracle cell has a flat secant with |f1| < 1e-7, so the convergence test on a held point is untested.
   It differs from the cap's test only where 1 + r1 <= 1e-4.
 Ours: `compute_rate` (functions/financial/financial_util.rs), T-3348, decision 0198.
-Status: VERIFIED (excel-graph) / UNVERIFIED (Excel's residual in the noise floor; a non-integer nper below -1; a held
-point with |f1| < 1e-7)
-Tasks: T-3348, T-3389, T-3424, T-3579, T-3698
+Status: VERIFIED (excel-graph; Excel's FV along the path, T-3424) / UNVERIFIED (RATE's own residual, step and stop
+test in the noise floor; the outcome of a flat secant there; a non-integer nper below -1; a held point with
+|f1| < 1e-7)
+Tasks: T-3348, T-3389, T-3424, T-3579, T-3698, T-3963, T-4146
 
 ## RATE restarts once on an early flat secant
 Rule: an amendment to "RATE holds on a flat secant and runs on below -1" above. A flat secant (f1 = f0, f1 ≠ 0)
@@ -1321,6 +1407,8 @@ restarts; flat secants before step 3 or below |f1| 1.3e-7; a flat secant with r0
 Tasks: T-3698, T-3424, T-3876, T-3916, T-3963
 
 ## RATE flat secants: no rule on the model's state separates Excel's restarts from its holds
+Explained (T-3963): the hidden state is the iterate before r0; see "RATE keeps its older iterate when a step leaves
+the residual unchanged" below (a finding; the engine still has the merged rule).
 Rule (a negative finding, T-3850): calls whose model run meets the same flat secant (the same args, r0, r1 and f1)
 and differ only in the guess, and so in the step of the flat secant, get different Excel values, in no step order.
 So no rule on what the model sees at that step (the step, |f1|, |r1 - r0|, f1 relative to the residual's terms) can
@@ -1387,6 +1475,47 @@ Evidence (excel-graph, 2026-10-19, T-1949): probes/yield-one-period-dsr-zero She
 Ours: `yield_one_period` returns 0 when DSR is 0 (T-1949).
 Status: VERIFIED (excel-graph)
 Tasks: T-1525, T-1532
+
+## RATE keeps its older iterate when a step leaves the residual unchanged
+Rule (T-3963, a finding; not implemented, owner ruling T-4239): a secant step whose new residual equals the last one
+exactly (f2 = f1) does not shift the pair. Excel keeps the older iterate r0 and replaces r1 with r2, so the next
+secant runs on r0 and r2. Otherwise the pair shifts as in "RATE is a secant on the FV residual". So a flat secant
+(f1 = f0) can only come on the start pair, guess and guess - 0.001·sign(f), which still holds per "RATE holds on a
+flat secant and runs on below -1". In this model T-3698's restart ("RATE restarts once on an early flat secant") and,
+on two distinct iterates, T-3348's hold are not needed. A zero step (r2 = r1, so f2 = f1) would repeat itself to the
+200th step, so a model applies the cap's test to it at once.
+Why it matters: it explains T-3850's negative finding. Calls whose runs reach the same r0, r1 and f1 by different
+paths get different Excel values (probes/t3850-rate-same-state), because Excel's next step depends on the iterate
+before r0, which the merged model's state drops. Excel's residual itself is not the cause: every other residual
+tried loses hundreds of cells.
+Evidence (excel-graph, 2026-11-03, T-3963; scorers and the temporary switch in docs/research/t3963/):
+- Residual candidates scored on the 2,400 literal `=RATE(` oracle cells of probes and probes-numeric (the merged
+  model is bit-exact on 1,914). Each loses 360 to 920 cells: the residual or the secant step held in an x87 register
+  until stored, `(1+r)^n` from libm `pow` or from Excel's `exp(n·ln(1+r))`, and the factor as `(k·(P-1))/r` or
+  `(pmt·k)·((P-1)/r)`. The twice-rounded residual of "RATE is a secant on the FV residual" stands.
+- Path candidates on the flat-secant step, on the same cells: a secant on r1 and the iterate before r0 (+98, -39),
+  a fresh run from r1 (+83, -72), from the iterate before r0 (+66, -123), an unconditional restart from r0 (+78,
+  -26), keeping r0 when |f2| >= |f1| (-258 net) and keeping r0 when f2 = f1 (+112, -34). The last was frozen.
+- Hold-out (the fit lab's hash split, 30% test): train 1,416 of 1,704 bit-exact (merged rule 1,357), test 576 of
+  696 (557). The candidates were first ranked on all 2,400 cells, so this split is not blind; the fresh probe is.
+- Fresh sweep, drawn after the freeze: probes/t3963-rate-keep-r0-fresh, 240 calls on the args of the existing RATE
+  probe series with new guesses, kept where the merged and the frozen model differ (`gen_fresh.py`, committed before
+  the fill). Bit-exact: the frozen model 59, the merged rule 9 (11 on `main` of 2026-11-04). Cells of the wrong type: 8 and 21. A hybrid (keep r0,
+  but T-3698's restart inside its steps and |f| band) scores 46 there and is worse on train and test too.
+- Gate A batch accuracy/RATE/r4-T-3963 (300 points drawn after the freeze): all inside the envelope under both
+  models; the table's RATE takes no guess, so the rule seldom fires there.
+- What it costs against the merged rule: 37 gated cells the merged rule has bit-exact (19 within 4 ulp, 13 beyond,
+  5 of the wrong type, among them the scaled nper-1 family t3698-rate-flat-restart A1 and A2, where the run ends on a
+  zero step at |f| 2.3e-7 and Excel is `#NUM!`); and five error-against-number points it moves out of the Gate A
+  envelope, which decision 0265 does not cover: t3906-rate-restart-oos A143 (`#NUM!` where Excel returns
+  -0.06546463553005233) and t3963-rate-keep-r0-fresh A59, A60, A73 and A188 (numbers where Excel is `#NUM!`).
+  Excel still restarts like T-3698 on some nper-1 calls whose residual is rounding noise for every rate
+  (t3906-rate-restart-oos A15, `RATE(1,18770705030.2495,-18770705030.2495,0,1,g)`; T-3970).
+Ours: `rate_secant` (functions/financial/financial_util.rs) still has the merged rule. The model is on PR #3019's
+branch, waiting on the owner's ruling (T-4239).
+Status: UNVERIFIED (partial: bit-exact on 59 of 240 fresh calls where it differs from the merged rule; why Excel still
+restarts on some noise-only residuals and errs on some zero steps is open)
+Tasks: T-3963, T-4239, T-3970, T-3424
 
 ## RATE and IRR secant constants past their fit sets
 Rule: the fitted constants of the two secants (RATE's start offset 0.001 toward smaller |f| and residual stop
@@ -1467,14 +1596,43 @@ t3478-irr-r4-wide (excel-graph, 2026-10-31; T-3478; inputs and 50-digit roots in
     A268.
   - Excel is also `#NUM!`, as is the engine, on four log-uniform series (21 to 97 flows) with roots near 0:
     accuracy/IRR/s1 A273, A276, A279 and A293 (roots -5.0E-7 to 2.4E-5).
-`IRR({-1,1E+15})`'s `#DIV/0!` ("IRR's far-root bound") and t3406-irr-num-boundary's (T-3407) may share a cause.
+Most of t3406-irr-num-boundary's `#DIV/0!` cells and the `#DIV/0!` cells above with guesses near -1 or above 100 are
+explained by "IRR is #DIV/0! where its secant cannot evaluate NPV" (T-3407); `IRR({-1,1E+15})`'s ("IRR's far-root
+bound") is not.
 Evidence: probes-numeric/t3478-irr-r4-wide; docs/research/t3478/score_sweep.py lists the cells; accuracy/IRR/s1
 Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED
-Ours: on t3478, the root on 13 of the 17 cells (a wrong value on A289) and `#NUM!` on A277, A290, A298. On
+Ours: on t3478, `#DIV/0!` with Excel on all seven `#DIV/0!` cells (T-3407); the `#NUM!` cells are T-3548's. On
 accuracy/IRR/s1, `#NUM!` with Excel on 47 cells, the root on the 8 `#NUM!` cells listed, and `#NUM!` on the 3 `#DIV/0!`
 cells.
 Tasks: T-3548, T-3407
 
+
+## IRR is #DIV/0! where its secant cannot evaluate NPV
+Rule: when a step of IRR's secant (from the guess or the retry from 0.1) lands on a rate where NPV, evaluated with
+worksheet NPV's running discount product, cannot be computed (a discount power that overflows or falls below the
+smallest normal double, or a sum that is not finite), the call is `#DIV/0!`: worksheet NPV's error for the same sum.
+The call ends there, without the retry from 0.1 and without the fallback.
+- On long series after one outlay, the secant's first step from the guess jumps far toward v = 0 or past it in r, and
+  the n-th discount power leaves the double range (1 + r below about 10^(-308/n)). That is T-3411's observation that
+  `#DIV/0!` sits where log10 |NPV| at the first step is above 228: the next trial point is out of range.
+- Scored cell by cell over every IRR cell of probes, probes-numeric and gen-m9 (T-3407): 59 cells move to Excel's
+  value and none moves away. They are probes/t3406-irr-num-boundary P!A69-A72 and A84-A94 (level annuities of 40 and 60
+  flows), 7 of the 9 long-series `#DIV/0!` cells of probes-numeric/t3347-irr-conventional-holdout (P!A123, A126, A130,
+  A132, A134, A135, A143; A131 and A138 stay `#NUM!`), 28 cells of the
+  t3411-irr-r4-fresh sweeps, t3478-irr-r4-wide A261, A275, A277, A281, A289, A290 and A298 (guesses near -1 or above
+  100), probes/irr-guess-edges A27 and gen-m9/bc04c1f478c9896c A56. t3406 P!A83, the same 60-flow annuity with a
+  smaller outlay (1.35E+7), stays `#NUM!` in both: its steps stay in range.
+- Out of sample (decision 0188 R4.2; a structural rule, frozen before the draws): a fresh probes-numeric sweep
+  (docs/research/t3411/gen_sweep.py, case name t3407-irr-r4-fresh, not committed under decision 0267's probe freeze)
+  has 7 cells better and 0 worse, with its `#DIV/0!` mismatches 10 -> 3. The Gate A batch accuracy/IRR/r4-T-3407 has
+  the same 25 points outside the envelope with and without the rule; none of its points reaches the rule.
+- Not explained: 23 `#DIV/0!` cells where every NPV the secant evaluates is in range and the engine is `#NUM!` (T-3900
+  lists them), `IRR({-1,1E+15})` ("IRR's far-root bound") and Gate A's long-series `#DIV/0!` points (accuracy/IRR/s1
+  A237, A248, A268; r4-T-3411 A213, A232, A233; r4-T-3407 A237). The step that overflows in Excel there is not one of the engine's secant iterates.
+Evidence: the cells above (excel-graph, 2026-10-31 to 2026-11-04)
+Status: VERIFIED (excel-graph) for the cells; that the error comes from NPV's evaluation is inferred, not observed
+Implemented in: `irr_secant` (`SecantStop::DivZero`), `irr_npv` (functions/financial/financial_util.rs)
+Tasks: T-3407
 ## RATE: an empty guess is guess 0, not the default 0.1
 Rule: an empty guess argument (`RATE(48,-200,8000,0,1,)`) or a reference to an empty cell behaves as
 guess 0, not the default 0.1: the result has the same bits as an explicit `0` (0.008052981923885287)
@@ -3997,6 +4155,13 @@ Rule: unknown. Excel's IRR secant (from the guess, then the retry from 0.1) fini
 - Against any single cap: t3478-irr-r4-wide A227 (`IRR({-4.64118123183281E+17,...},-0.990669502541584)`) is `#NUM!` in
   Excel, while the guess run converges at its 189th step (to -0.6781680690607276), so it needs a cap of 188 or less;
   A201 and A221 match Excel only with a cap of 195 and 200 or more.
+- The best cap on the probe cells is still refuted (T-3548, 2026-11-04): over every IRR cell of probes, probes-numeric
+  and gen-m9, caps 182..188 each fix 63 cells and lose none (t3478-irr-r4-wide A206, which Excel returns, needs 182
+  steps; A227 bounds it at 188). Frozen at 185 within 148 flows, it loses Gate A's accuracy/IRR/r4-T-3411 A228 (63
+  flows): Excel is `#NUM!` there, while the guess run converges at its 129th step to 1.5164068398071384E-2 (the math
+  root to 2.3E-16). A fresh Gate A batch drawn after the freeze has a 130-flow series that Excel errs on and the
+  secant solves at step 98. Excel errs on runs of 98 and 129 steps and returns runs of 182, so the step count does
+  not separate its returns from its errors.
 - Cell counts over the six IRR probe cases, by cap (T-3806's fidelity review): 50 = 594, 136 = 630, 170 = 639,
   200..214 = 641, 215 = 640, 230 = 637. 200..214 is only the best-scoring range, and taking it loses A227.
 - Holdout A44 and A105 match Excel's digits only in runs of 1,068 and 2,406 steps, so Excel reaches the same last

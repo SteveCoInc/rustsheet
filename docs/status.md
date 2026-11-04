@@ -76,7 +76,13 @@ The steward keeps this line as it is until the owner changes it.
 
 ## Needs owner
 
-None open. Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
+- **Owner ruling on RATE's keep-r0 secant model, T-4239** (2026-11-04). T-3963 found why RATE's same-state flat
+  secants split (Excel keeps the older iterate when a step leaves the residual unchanged) and built the model on draft
+  PR #3019: +78 bit-exact of 2,400 literal RATE cells, 59 against 9 on a blind fresh probe. But it moves five
+  error-against-number points out of the Gate A envelope, which decision 0265 does not cover, and regresses 37 gated
+  cells. Please choose: adopt it with those points accepted, or keep the merged rule (T-4239 has the details).
+
+Pruned 2026-11-04 at the owner's request: the direct pushes to `main` (none since 2026-10-19), the missed steward runs (both
 daily firings arriving again since 2026-11-03), the steward prompt drift (matches routines.md since 2026-11-02) and
 the RATE flat-secant ruling (T-3916, decided by decision 0265). The direct-push item's recommendation, a ruleset on
 `main` requiring a pull request, remains the owner's to take up or not.

@@ -39,6 +39,8 @@ digits: the Wilson-Hilferty closed form's and the band's true-quantile crossings
   Excel's value).
 - probes-numeric/t3350-r4-chisq-inv-sweep A122, A127, A155 (`CHISQ.INV.RT` at about 1E-230, df 2.4E9 to 7.2E9, the
   same branch; also T-3364).
+- From T-3396 (2026-11-04, closed as T-3409's duplicate): probes/t3396-gamma-inv-band-huge's 33 known failures,
+  `GAMMA.INV` true quantiles at shapes 7E9 to 1.1E10, 1 to 3 ulp off (none visibly off).
 
 ## Acceptance criteria
 - [ ] A371 within half a unit of the 15th digit; the other cells pass or are named with their ulp in the Outcome; no

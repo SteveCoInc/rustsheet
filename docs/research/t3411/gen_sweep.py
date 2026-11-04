@@ -10,10 +10,10 @@ Strata (25 cells each), conventional flows (one outlay, then inflows; 30% negate
   4 2..41 flows, |c| 1E-6..1E+9, roots +-1E-4..2, half with a guess -0.9..0.9
   5 every axis wide
 
-Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [case name]
+Run: cd tools && uv run python -I ../docs/research/t3411/gen_sweep.py <repo> [case name, tNNNN-irr-<seed>]
 (t3411-irr-r4-fresh: seed "T-3411/r4-fresh"; t3411-irr-r4-fresh-2: seed "T-3411/r4-fresh-2", round 2;
 t3411-irr-r4-fresh-3: seed "T-3411/r4-fresh-3", round 3; t3411-irr-r4-fresh-4: seed "T-3411/r4-fresh-4",
-round 4)
+round 4; t3407-irr-r4-fresh: seed "T-3407/r4-fresh", T-3407's overflow rule)
 """
 
 from __future__ import annotations
@@ -37,7 +37,10 @@ FROZEN = {
     "t3411-irr-r4-fresh-2": "round 2: secant cap 213",
     "t3411-irr-r4-fresh-3": "round 3: fallback root residual 1E-4",
     "t3411-irr-r4-fresh-4": "round 4: fallback residual 1E-4 one Newton step past the stop",
+    "t3407-irr-r4-fresh": "T-3407: a non-finite NPV at a secant iterate is #DIV/0!",
 }
+# The task a sweep belongs to (its seed, description and tags name it): the case name's tNNNN prefix.
+TASK = "T-" + NAME[1:5]
 STRATA = [
     "long near-level, root -0.3..-0.01",
     "|c| 1E+8..1E+13, root near 0",
@@ -134,7 +137,8 @@ def point(rng: random.Random, stratum: int) -> tuple[str, str] | None:
 
 
 def main() -> None:
-    rng = random.Random("T-3411/r4-fresh" if NAME == "t3411-irr-r4-fresh" else f"T-3411/{NAME.removeprefix('t3411-irr-')}")
+    seed = "r4-fresh" if NAME == "t3411-irr-r4-fresh" else NAME.removeprefix(f"t{TASK[2:]}-irr-")
+    rng = random.Random(f"{TASK}/{seed}")
     cells: dict[str, str] = {}
     hypotheses: dict[str, str] = {}
     rows: list[str] = []
@@ -152,11 +156,11 @@ def main() -> None:
     case = {
         "format": "rustsheet-case/v1",
         "description": (
-            f"T-3411 fresh sweep (decision 0188 R4.2) of IRR on conventional flows, generated after the model was "
+            f"{TASK} fresh sweep (decision 0188 R4.2) of IRR on conventional flows, generated after the model was "
             f"frozen ({FROZEN[NAME]}): six strata of 25 (docs/research/t3411/gen_sweep.py). "
             "Math: math.tsv (50-digit mpmath roots)."
         ),
-        "tags": ["M9", "probe", "financial", "T-3411", "sweep", "irr", "r4"],
+        "tags": ["M9", "probe", "financial", TASK, "sweep", "irr", "r4"],
         "expected": {},
         "hypotheses": hypotheses,
         "sheets": [{"name": "Calc", "cells": cells}],

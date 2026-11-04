@@ -7,6 +7,7 @@ from collections.abc import Iterator
 import mpmath
 import pytest
 
+from rustsheet_tools.accuracy import tables
 from rustsheet_tools.accuracy.defs import beta, gamma
 from rustsheet_tools.accuracy.model import REGISTRY, DomainError, NoValueError
 
@@ -95,3 +96,30 @@ def test_gamma_quantile_keeps_a_value_below_the_smallest_double() -> None:
     # Excel gives 0 there and committed s1 points rely on it (gamma.quantile's docstring); the value is the math.
     value = REGISTRY["CHISQ.INV"].evaluate([mp("1E-300"), mp(1)])
     assert 0 < value < mp("1E-500")
+
+
+def test_beta_cdf_past_mpmaths_hypsum_takes_the_positive_series() -> None:
+    # probes-numeric/t3571-r5-bfrac-fresh A239: mpmath's betainc gives up at these shapes (T-3680).
+    a, b, x = mp(4563.6), mp(2816.5), mp(0.583019617141068)  # the cell's doubles
+    with pytest.raises(ValueError, match="hypsum"):
+        mpmath.betainc(a, b, 0, x, regularized=True)
+    assert close(beta.lower_tail(x, a, b), "3.0490854915703403050837858706446013617166928e-10", 40)
+
+
+def test_beta_tail_series_agrees_with_mpmath_where_it_converges() -> None:
+    # the last two are past the switch point (a + 1) / (a + b + 2): the other side's complement
+    for a, b, x in (
+        (mp("2.5"), mp(7), mp("0.1")),
+        (mp(40), mp("3.5"), mp("0.95")),
+        (mp(200), mp(150), mp("0.6")),
+    ):
+        assert mpmath.almosteq(
+            beta._series(a, b, x), mpmath.betainc(a, b, 0, x, regularized=True), mp(10) ** -45
+        )
+
+
+def test_beta_inv_past_the_switch_point_at_a_skewed_shape_stays_in_budget() -> None:
+    # probes-numeric/t3443-basym-sweep A150: the classic side choice summed ~6E4 terms per call and the
+    # root solve ran out of its work budget; main's mpmath value is 0.0061942141340931975... (T-3680).
+    value = tables.compute(REGISTRY["BETA.INV"], [0.665410001077291, 383.0, 62750.652])
+    assert value.value.startswith("0.0061942141340931975056697909694474336368428487")

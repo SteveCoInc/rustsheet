@@ -397,3 +397,74 @@ def test_lone_surrogate_reads_back_exactly(wb):
     assert wb.values("A1:A3") == [["\ude00"], ["�"], ["x"]]
     assert wb.values("A2") == [["�"]]
     assert wb.value("A2") == "�"
+
+
+def test_iteration_settings_round_trip(wb):
+    assert wb.iteration is None
+    wb.set_iteration()
+    assert wb.iteration == (100, 0.001)
+    wb.set_iteration(max_iterations=5, max_change=0.5)
+    assert wb.iteration == (5, 0.5)
+    wb.set_iteration(False)
+    assert wb.iteration is None
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=0)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_iterations=32768)
+    wb.set_iteration(max_iterations=32767)
+    assert wb.iteration == (32767, 0.001)
+    with pytest.raises(ValueError):
+        wb.set_iteration(max_change=float("nan"))
+
+
+def test_iterating_cycle_converges(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = rs.Formula("=A1/2+1")
+    assert wb["Sheet1!A1"] == 0.0  # Excel shows 0 for a circular reference
+    wb.set_iteration(max_iterations=100, max_change=1e-9)
+    wb.recalculate()
+    assert wb["Sheet1!A1"] == pytest.approx(2.0, abs=1e-6)
+
+
+def test_column_data_table_fills_results(wb):
+    with wb.edit() as tx:
+        tx["Sheet1!A1"] = 1
+        tx["Sheet1!B1"] = rs.Formula("=A1*10")
+        tx["Sheet1!A2"] = 1
+        tx["Sheet1!A3"] = 2
+        tx["Sheet1!A4"] = 3
+        tx.add_data_table("Sheet1!B2:B4", column_input="Sheet1!A1")
+    assert wb.values("Sheet1!B2:B4") == [[10.0], [20.0], [30.0]]
+
+
+def test_data_table_error_rolls_back(wb):
+    with pytest.raises(rs.EditError):
+        with wb.edit() as tx:
+            tx["Sheet1!C5"] = 7
+            tx.add_data_table("Sheet1!B2:B4")
+    assert wb["Sheet1!C5"] is None
+
+
+def _cell_address_workbook(**kwargs) -> rs.Workbook:
+    wb = rs.Workbook(**kwargs)
+    with wb.edit() as tx:
+        tx.add_sheet("Data")
+        tx["A1"] = rs.Formula('=CELL("address",Data!B2)')
+    return wb
+
+
+def test_workbook_name_reaches_cell_address_at_new_open_and_from_bytes(tmp_path):
+    named = _cell_address_workbook(name="Budget")
+    assert named["A1"] == "[Budget.xlsx]Data!$B$2"
+
+    data = named.to_xlsx_bytes()
+    assert rs.Workbook.from_bytes(data, name="Other")["A1"] == "[Other.xlsx]Data!$B$2"
+    path = str(tmp_path / "book.xlsx")
+    named.save_xlsx(path)
+    assert rs.Workbook.open(path, name="Opened")["A1"] == "[Opened.xlsx]Data!$B$2"
+
+
+def test_unnamed_workbook_cell_address_is_an_error(tmp_path):
+    unnamed = _cell_address_workbook()
+    assert isinstance(unnamed["A1"], rs.XlError)
+    assert isinstance(rs.Workbook.from_bytes(unnamed.to_xlsx_bytes())["A1"], rs.XlError)

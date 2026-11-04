@@ -517,6 +517,66 @@ fn exact_match_fold_of_the_marks() {
     assert_eq!(fold_exact_lookup(&[0xD800, 0x30FC]), vec![0xD800, 0x30FC]);
 }
 
+/// A cycle `a<b<c<d<a` with chords `c<a`, `d<b` (probes/t3418-sort-cycle-permutations, the shape of
+/// Data!A3, A4, A6, A7): Excel does not reverse the strictly descending chain `a, c, b, d`; it merges
+/// one-element runs pairwise, `c, a` and `d, b`, then `c, d, a, b` (Calc!A3, T-3418).
+#[test]
+fn the_pairwise_sort_never_reverses_a_descending_chain() {
+    use crate::functions::util::sort_indices_pairwise;
+    use std::cmp::Ordering;
+    // less[x][y]: x < y. a=0, b=1, c=2, d=3.
+    let less = [
+        [false, true, false, false],
+        [false, false, true, false],
+        [true, false, false, true],
+        [true, true, false, false],
+    ];
+    let cmp = |x: usize, y: usize| {
+        if less[x][y] {
+            Ordering::Less
+        } else if less[y][x] {
+            Ordering::Greater
+        } else {
+            Ordering::Equal
+        }
+    };
+    let mut indices = vec![0, 2, 1, 3];
+    sort_indices_pairwise(&mut indices, cmp);
+    assert_eq!(indices, vec![2, 3, 0, 1]);
+}
+
+/// UNIQUE's grouping (`coalesce_equal_lines`) on the cycle `c < a < b = c` of Data!A5, A3, A4 of
+/// probes/t4200-unique-cycle-permutations (a=A3, b=A4, c=A5): equal neighbours become one group
+/// before a merge can put `a` between them, so `{a;c;b}` keeps a and c (row 146) though SORT's
+/// order is c, a, b; `{b;a;c}` keeps all three (row 147); on a total order it is equality (T-4200).
+#[test]
+fn unique_grouping_coalesces_equal_lines_before_merging() {
+    use crate::functions::util::coalesce_equal_lines;
+    use std::cmp::Ordering;
+    // a=0, b=1, c=2: a < b, c < a, b = c.
+    let cmp = |x: usize, y: usize| -> Ordering {
+        match (x, y) {
+            (0, 1) | (2, 0) => Ordering::Less,
+            (1, 0) | (0, 2) => Ordering::Greater,
+            _ => Ordering::Equal,
+        }
+    };
+    let group = |order: &[usize]| {
+        coalesce_equal_lines::<()>(order.len(), |i, j| Ok(cmp(order[i], order[j])))
+            .unwrap_or_default()
+    };
+    assert_eq!(group(&[0, 2, 1]), vec![0, 1, 1]);
+    assert_eq!(group(&[2, 1, 0]), vec![0, 0, 2]);
+    assert_eq!(group(&[1, 0, 2]), vec![0, 1, 2]);
+    assert_eq!(group(&[0, 1, 2]), vec![0, 1, 1]);
+    // A total order: groups by equality, each line pointing at the first of its value.
+    let values = [3, 1, 3, 2, 1, 3];
+    let first = coalesce_equal_lines::<()>(values.len(), |i, j| Ok(values[i].cmp(&values[j])));
+    assert_eq!(first, Ok(vec![0, 1, 0, 3, 1, 0]));
+    // An error from the comparison ends the walk.
+    assert_eq!(coalesce_equal_lines(3, |_, _| Err("budget")), Err("budget"));
+}
+
 /// SORT's sort (`sort_indices_pairwise`) under Excel's intransitive text comparison
 /// (`cmp_text_pairwise`) ends on the data of probes/t3201-collation-wrapped-run-pairs (37 texts,
 /// hundreds of intransitive triples) in several input orders, without panicking, with a

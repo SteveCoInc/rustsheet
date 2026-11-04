@@ -10,29 +10,44 @@
 /// A currency symbol and a `%` together are `#VALUE!` (`"$3 1/2%"`, probes/typed-input-sign-space-
 /// mixed-fraction F8); the signed `"-$3 1/2%"` is text too (probes/typed-mixed-fraction-number-format A15).
 pub(crate) fn mixed_fraction(text: &str, currencies: &[&str]) -> Option<f64> {
-    let (value, percent, currency) = read_mixed_fraction(text, currencies)?;
+    let (value, percent, currency, _) = read_mixed_fraction(text, currencies)?;
     (!(percent && currency)).then_some(value)
 }
 
 /// Whether `text` is a minus-signed mixed fraction with both a currency symbol and a `%`
 /// (`-$3 1/2%`): not a number, and typed it stays text with the `0.00%` format (not a formula
 /// despite the leading `-`; probes/typed-mixed-fraction-number-format A15/B15, excel-graph).
+/// So is `$(1 1/2%)`, a currency sign before a parenthesised percent fraction (probes/t4117-currency-
+/// parens A30, excel-graph).
 pub(crate) fn is_negative_currency_percent_fraction(text: &str, currencies: &[&str]) -> bool {
-    text.starts_with('-')
-        && read_mixed_fraction(text, currencies)
-            .is_some_and(|(_, percent, currency)| percent && currency)
+    read_mixed_fraction(text, currencies)
+        .is_some_and(|(_, percent, currency, negative)| percent && currency && negative)
 }
 
-/// The value, whether a `%` ended it and whether a currency symbol led it, for any well-formed
-/// mixed fraction (the caller rejects the currency + percent pair).
-fn read_mixed_fraction(text: &str, currencies: &[&str]) -> Option<(f64, bool, bool)> {
+/// The value, whether a `%` ended it, whether a currency symbol led it and whether it is negative
+/// (a `-` or parentheses), for any well-formed mixed fraction (the caller rejects the currency +
+/// percent pair).
+/// Excel: a currency sign before a parenthesised unsigned fraction is negative, as it is for a
+/// plain amount: `$(1 1/2)`, `$ (1 1/2)` and `$( 1 1/2 )` are -1.5, `-$(1 1/2)` is text
+/// (probes/t4117-currency-parens A21, A29:A34; docs/excel-semantics/coercion.md "Currency sign
+/// before parentheses is negative").
+fn read_mixed_fraction(text: &str, currencies: &[&str]) -> Option<(f64, bool, bool, bool)> {
     let (sign, rest) = match text.as_bytes().first()? {
         b'-' => (-1.0, text[1..].trim_start_matches(' ')),
         b'+' => (1.0, text[1..].trim_start_matches(' ')),
         _ => (1.0, text),
     };
     let unprefixed = currencies.iter().find_map(|c| rest.strip_prefix(c));
-    let rest = unprefixed.unwrap_or(rest);
+    let parenthesised = unprefixed.and_then(|r| {
+        r.trim_start_matches(' ')
+            .strip_prefix('(')
+            .and_then(|r| r.strip_suffix(')'))
+    });
+    let (rest, sign) = match parenthesised {
+        Some(_) if text.starts_with(['-', '+']) => return None,
+        Some(inner) => (inner.trim_matches(' '), -1.0),
+        None => (unprefixed.unwrap_or(rest), sign),
+    };
     let (rest, percent) = match rest.strip_suffix('%') {
         Some(rest) => (rest, true),
         None => (rest, false),
@@ -58,5 +73,5 @@ fn read_mixed_fraction(text: &str, currencies: &[&str]) -> Option<(f64, bool, bo
     };
     value
         .is_finite()
-        .then_some((sign * value, percent, unprefixed.is_some()))
+        .then_some((sign * value, percent, unprefixed.is_some(), sign < 0.0))
 }

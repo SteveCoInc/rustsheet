@@ -869,7 +869,6 @@ dependencies = [
 name = "rustsheet_python"
 version = "0.1.0"
 dependencies = [
- "bitcode",
  "pyo3",
  "pyo3-build-config",
  "pythonize",
