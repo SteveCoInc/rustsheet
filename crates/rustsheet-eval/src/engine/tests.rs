@@ -403,6 +403,22 @@ fn spec_grouped_pivot_is_registered_and_laid_out() {
             "group":{"start":0,"end":1,"interval":0.1,"items":[],"groupBy":"months"}}]}]}"#,
     );
     assert!(unknown.is_err());
+    // A date group (`by`, T-4236) is not registered until the engine lays out date groups
+    // (T-4246): GETPIVOTDATA is `#REF!` and the location stays empty.
+    let dated = spec(
+        r#"{"format":"rustsheet-case/v1","sheets":[{"name":"S","cells":{
+            "A1":"D","B1":"Val","A2":43466,"B2":1,
+            "H1":"=GETPIVOTDATA(\"Val\",D3,\"D\",\"Jan\")"},
+            "pivot_tables":[{"name":"Pv","source":"A1:B2","location":"D3","row":"D","value":"Val",
+            "group":{"start":43466,"end":43831,"interval":1,"by":"months",
+            "items":["<1/1/2019","Jan",">1/1/2020"]}}]}]}"#,
+    );
+    let evaluated = RustSheetEngine
+        .evaluate_spec(&dated, None)
+        .expect("evaluates");
+    let at = |row, col| evaluated.value("S", Addr { row, col });
+    assert_eq!(at(1, 8), Some(Value::Error("#REF!".into())));
+    assert_eq!(at(3, 4), Some(Value::Empty));
 }
 
 #[test]

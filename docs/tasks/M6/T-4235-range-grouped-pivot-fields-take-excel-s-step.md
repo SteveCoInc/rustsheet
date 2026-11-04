@@ -84,22 +84,7 @@ answers as Excel does, so every cell of probes/t4228-pivot-range-groups passes.
 - Follow-ups: T-4248 (GETPIVOTDATA on an empty item of an ungrouped field), T-4249 (numeric group points past the
   evidence: other wrong item counts, a partial last group, GETPIVOTDATA numbers past the end).
 
-## Landing notes
-- PR #3238, head 89b2827 (after two `make catch-up` merges of main). CI was green on 89b2827, and all three reviewers
-  (security, design, excel-fidelity) approved 13a3230, the last code head before the catch-ups. The PR was enqueued,
-  then removed by the merge queue at 2026-11-04T22:57Z with reason MERGE_CONFLICT.
-- Cause: T-4236 (#3239, main 7d66a77a7) merged date groups into the same places. It conflicts in
-  `docs/excel-semantics/web.md` (the "Grouped pivot fields" entry), `tools/src/rustsheet_tools/pivot.py` (module
-  docstring) and `eval/baseline/probes.txt`. It also adds `by: Option<String>` to `PivotGroupSpec`
-  (crates/rustsheet-eval/src/case.rs).
-- Next step: merge `origin/main` in by hand, as a merge commit, not `make catch-up`, which only handles baseline-only
-  conflicts.
-  - Keep both docstrings in pivot.py: T-4236's date-group text, with its last line changed to say the engine adapter has
-    the engine lay out numeric groups (T-4235).
-  - Merge the two web.md entries.
-  - In crates/rustsheet-eval/src/spec_pivots.rs `pivot_input`, map only a numeric group (`by` absent or `range`) to
-    `PivotRangeGroup`. Leave a date-grouped spec pivot unregistered, as before, so its cells stay as T-4236 baselined
-    them. Also limit the grouped-layout box in spill_extent.rs to numeric groups.
-  - Then run `make eval-baseline` (regressions must be 0) and `make check-fast`. Re-run excel-fidelity and design on the
-    resulting diff, since the adapter change is code. Then enqueue.
-- Do not repeat: `make catch-up` refuses this conflict (it is not baseline-only).
+Merge with T-4236 (adopted from the queue drop, 2026-11-04): main's date groups (`by` on `PivotGroupSpec`) merged in
+by hand. The eval adapter registers a pivot with no group or a numeric one (`PivotTableSpec::numeric_group`,
+`is_registered`); a date-grouped spec pivot stays unregistered and lays out nothing, so T-4236's baselined cells are
+unchanged (T-4246 owns them). `make eval-baseline` after the merge: 0 fixed, 0 regressions.
