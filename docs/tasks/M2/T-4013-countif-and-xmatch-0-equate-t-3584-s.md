@@ -3,7 +3,7 @@ id: T-4013
 title: "= , COUNTIF and XMATCH(..,0) equate T-3584's MATCH classes and keep supplementary case pairs apart (t3584 B21, B25, P7, P9; t3929 rows 29-30)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
