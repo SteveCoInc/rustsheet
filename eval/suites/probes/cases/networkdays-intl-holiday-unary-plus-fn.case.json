@@ -1,0 +1,37 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4209: unary plus over a reference-returning function. A: ISREF; B: NETWORKDAYS.INTL(45000,45100,13,h) with Saturday holiday C1 (87 scalar, 86 reference); E: same with Tuesday holiday C2 (reverse); F1 T(+INDEX(D1:D2,1)) with text.",
+ "tags": [
+  "M6",
+  "probe",
+  "date",
+  "networkdays.intl"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "C1": 45003,
+    "C2": 45006,
+    "D1": "txt",
+    "D2": "x",
+    "A1": "=ISREF(+INDEX(C1:C2,1))",
+    "B1": "=NETWORKDAYS.INTL(45000,45100,13,+INDEX(C1:C2,1))",
+    "A2": "=ISREF(+OFFSET(C1,0,0))",
+    "B2": "=NETWORKDAYS.INTL(45000,45100,13,+OFFSET(C1,0,0))",
+    "A3": "=ISREF(+XLOOKUP(1,{1},C1:C1))",
+    "B3": "=NETWORKDAYS.INTL(45000,45100,13,+XLOOKUP(1,{1},C1:C1))",
+    "A4": "=ISREF(+IF(TRUE,C1))",
+    "B4": "=NETWORKDAYS.INTL(45000,45100,13,+IF(TRUE,C1))",
+    "E1": "=NETWORKDAYS.INTL(45000,45100,13,+INDEX(C1:C2,2))",
+    "E2": "=NETWORKDAYS.INTL(45000,45100,13,+OFFSET(C2,0,0))",
+    "E3": "=NETWORKDAYS.INTL(45000,45100,13,+XLOOKUP(1,{1},C2:C2))",
+    "E4": "=NETWORKDAYS.INTL(45000,45100,13,+IF(TRUE,C2))",
+    "F1": "=T(+INDEX(D1:D2,1))",
+    "F2": "=ISREF(INDEX(C1:C2,1))",
+    "F3": "=ISREF(+C1)"
+   }
+  }
+ ],
+ "expected": {}
+}

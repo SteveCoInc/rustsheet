@@ -1519,7 +1519,7 @@ the end date's range check comes before the start date's text check (`DAYS(-1,"a
 Evidence: gen-m6 a4a301d00b46acf3 (A79 A82 A85 A88 A241 A244 A307 A310 A493 A499) and the six NETWORKDAYS.INTL cells of T-3537.
 Ours: DAYS matches all ten (T-3536, see "DAYS error order" below); NETWORKDAYS.INTL is one day off in the other direction.
 Status: UNVERIFIED (probe pending; cells are oracle values, the general rule is not probed)
-Tasks: T-3536, T-3537
+Tasks: T-3536, T-3537, T-4190
 
 ## NETWORKDAYS.INTL: a scalar holiday ignores the weekend argument
 Rule (VERIFIED, excel-graph, 2026-11-01, T-3537): a holiday given to NETWORKDAYS.INTL as a **scalar value** (a number
