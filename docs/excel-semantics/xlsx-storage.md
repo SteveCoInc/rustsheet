@@ -418,18 +418,39 @@ keeps only its column and is written back as a criterion-less `<filterColumn col
 without a valid `colId` is dropped, and the `hiddenButton`/`showButton` attributes are not kept. `has_filters`
 still makes SUBTOTAL call the sheet's hidden rows filtered. A table filtered through the API with no criterion is
 written as `<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid and our own import reads them
-back as filtered; whether Excel opens any of these forms without repair, and still calls the hidden rows filtered,
-is unprobed (T-3081).
+back as filtered.
+Excel (excel-graph uploads of our export, 2026-11-04, T-3081) opens every one of these filter forms without repair,
+but calls the hidden rows filtered only for a filterColumn with a criterion inside the table. On `Sales` (A1:B7,
+`Cat` a,b,a,c,a,b and `Val` 1-6) with rows hidden as the filter would:
+- a values filter (keep "a", rows 3, 5, 7 hidden): `SUBTOTAL(109,Sales[Val])` and `SUBTOTAL(9,Sales[Val])` both 9,
+  `SUBTOTAL(103,Sales[Cat])` and `SUBTOTAL(3,Sales[Cat])` both 3, the same as ours; a custom filter (`Val` > 3, rows
+  2-4 hidden) 15, 15, 3, 3, also ours; two filterColumns with the same `colId` 0 behave as the values filter;
+- a criterion-less `<filterColumn colId="0"/>` (rows 3 and 5 hidden): SUBTOTAL 109 15 but SUBTOTAL 9 21, SUBTOTAL 103
+  4 but SUBTOTAL 3 6, as for rows hidden by hand. Ours calls them filtered (9 = 15, 3 = 4; T-4003). The same holds for
+  a top 10 filter exported criterion-less (rows 2-5 hidden: 11 and 21, 2 and 6; ours 11 and 11, 2 and 2), so the round
+  trip changes Excel's SUBTOTAL 9 from the original filter's 11 to 21 (T-4004); for a values filter whose `colId` is
+  past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
+  export writes after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15).
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
-cells only); whether Excel loads that is unprobed too (T-3081). A structured reference that lowers to an
+cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
+totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
+`totalsRowLabel="42"` or as a custom `<totalsRowFormula>42</totalsRowFormula>`, while it loads with a SUBTOTAL formula
+in that cell (T-4005).
+Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, `AutoFilter`, `FilterColumn` with
+`Filters`, `CustomFilters` or `Top10`, hidden rows through `row_dimensions`), the engine imports and exports it
+(`rustsheet_xlsx::import::load_from_xlsx`, `Model::delete_columns` for the deleted-column case,
+`rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export. A
+table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`.
+A structured reference that lowers to an
 error because the table's metadata does not fit (an unparsable `ref`, an overflowing row count; directive 5) is
 written as that error.
 Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-authored, 9 tables) now round-trips
 (import, export, import) with the same values (generated test `test_tables_tables`) and the same formula text
 (`excel_authored_tables_keep_their_formula_text`, export/test/test_tables.rs).
-Status: UNVERIFIED (the exported file has not been opened in Excel)
+Status: VERIFIED (web, T-3081): Excel loads every filter form and refuses a constant totals cell; T-4003, T-4004
+and T-4005 own the differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
-Tasks: T-2196, T-2838, T-3081
+Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
 
 ## A calculated column is saved as `calculatedColumnFormula` plus one formula per row
 Rule (excel-graph downloads of the T-2957 probes, 2026-10-27): a column Excel filled (references.md, "Calculated
