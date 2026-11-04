@@ -1453,6 +1453,19 @@ friendly_name (`fn_hyperlink` reads link_location before the lift).
 Status: VERIFIED
 Tasks: T-2277
 
+## HYPERLINK: a blank friendly_name (T-4208)
+Rule: a friendly_name that is a blank cell, or that is left out after the comma (`HYPERLINK("#A1",)`), makes
+HYPERLINK return the number 0, not a computed blank. With B1 empty, `HYPERLINK("#A1",B1)` shows 0, `TYPE` is 1,
+`ISNUMBER` TRUE, `ISBLANK` FALSE, `LEN` 1, `&"x"` "0x", `COUNT` and `COUNTA` 1, `N` 0 and `T` "" (A1:A7, A19:A21,
+A27:A29); the omitted form is the same (A22:A25). Readers see a 0, not an empty value: `LOGEST(HYPERLINK("#A1",B1),
+C1:E3)` is `#REF!` (a 1x1 y against 3 rows) like `LOGEST(B1,..)` and `LOGEST(0,..)`, while the computed blank
+`IFERROR(B1,1)` is `#VALUE!` (A10:A18, A26); over `{1;2}` LOGEST of it is `#NUM!` (log of 0) and LINEST a number
+(A8, A9). That is why gen-m9/fa25422d6f18c157 Calc!A75 (`FORECAST.ETS.CONFINT(LOGEST(HYPERLINK("#Data!A1",Data!D1),
+Data!B10:D12,..),..)`, D1 blank) is `#REF!`.
+Evidence: probes/t4208-hyperlink-blank-friendly-name (excel-graph, 2026-11-04). Status: VERIFIED (excel-graph).
+Unprobed: a blank element of a lifted friendly_name range (the engine gives 0 there too).
+Implemented in: `Model::hyperlink_of` (functions/lookup_and_reference/mod.rs).
+
 ## HYPERLINK: a link_location past 255 characters is #VALUE! (T-2277)
 Rule (excel-graph, 2026-10-22, probes/t2277-hyperlink-location-length A1-A15): a link_location of more than 255 characters is
 `#VALUE!`, with or without friendly_name and over an array friendly_name (one `#VALUE!`, no spill): `HYPERLINK(REPT("a",255),1)` = 1,
