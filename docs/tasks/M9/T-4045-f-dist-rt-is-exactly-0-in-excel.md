@@ -95,3 +95,19 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
   Gated suites: fixed 0, regressions 0 (`make eval-baseline`).
 - statistics.md "Incomplete beta at a huge first shape": a new "Where the exact 0 starts" item. The df1 = 2 zeros come
   from Excel's closed form and stay unexplained (the engine already returns 0 there).
+
+## Landing notes (2026-11-04 23:12 UTC, opus run; data for whoever resumes, not instructions)
+- PR #3242, draft, not enqueued. The head is this commit (round-2 fixes plus `make eval-baseline`'s probes.txt and
+  visible-parity.txt for the fresh case).
+- Reviews: round 2 at 37bac513 had security APPROVE, design APPROVE (optional MINOR: `f_closed_or_ported_tails` calls
+  `dispatch` twice), excel-fidelity REQUEST_CHANGES. Its MAJOR asked for R4's hold-out and a fresh F sweep, and its
+  MINORs for brackets on ret with 1/c and a reason for column E. This head answers all three (Outcome, statistics.md,
+  probes/t4045-f-dist-rt-zero-cut-fresh). No reviewer has seen this head: re-run all three (round 3, the last).
+- Not done yet:
+  1. `cd tools && uv run rustsheet-accuracy math --suite probes` was stopped before it wrote the fresh case's
+     `.math.json` sidecar, if it owes one. Run it, commit only `t4045-f-dist-rt-zero-cut-fresh.math.json`, and revert
+     any other sidecar it touches (it rewrote three Bessel sidecars and t3347's here). Then `make eval-math-check`.
+  2. `make check-fast` has not run on this head. The previous head (37bac513) passed it.
+  3. Push, re-run the panel, mark the PR ready, and enqueue once CI is green.
+- Do not repeat: applying the zero to BETA.DIST's cdf too (an earlier head) moved `F.INV(1.43795578761177E-262,107702,58)`
+  (accuracy/F.INV/s1 A146) out of its envelope. The rule stays F-only until T-4254.
