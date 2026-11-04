@@ -61,3 +61,6 @@ significant digit of Excel's value (they are correctly rounded, so that is the m
 ## Out of scope
 - Bit parity on the other t3354 cells (T-3479, T-3527).
 - Excel's own inaccuracy at a huge first shape (T-3209).
+
+## Resumed (2026-11-04)
+An opus run resumed this claim-only branch (idle since 05:51 UTC) under the routine's step 2.
