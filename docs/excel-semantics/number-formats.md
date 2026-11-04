@@ -1277,10 +1277,22 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `# ?/? ?` "12 1/2  ", `# ?/? 00` "12 1/2 00", `# ?/? 0#` "12 1/2 00", `# ?/? 0.0` "12 1/2 0.0" and
   `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
   separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
-  seven spaces then "12|5". Adjacent placeholders of a different kind right after the denominator split differently
-  (`# ?/?0` "12 1/20", `# ?/#0` "12 1/2", `# ?/0?` "12 1/02"): T-4204.
+  seven spaces then "12|5".
+- **A placeholder denominator prints its unused placeholders in place** (T-4204; probes/t3711-fraction-trailing-placeholders
+  rows 5, 9-19 and probes/t4204-fraction-denominator-mixed A1:C14, excel-graph, at 12.5, 0.5, 12.125, 0.123, PI() and 0.3).
+  The whole run bounds the denominator's digits (`# ?/?0` on 0.123 is " 8/65", `# ?/#0` on PI() "3 1/7", `# ?/??0` on
+  0.123 " 23/187"). Leading `#`s never take a digit. When the denominator has fewer digits than the other placeholders,
+  the `0`s are left out first, then the `#`s, then the rightmost `?`s, and each left-out placeholder prints in its place
+  (a `0` a zero, a `?` a space, a `#` nothing):
+  - on 12.5: `# ?/?0` "12 1/20", `# ?/??0` "12 1/2 0", `# ?/?0?` "12 1/20 ", `# ?/?#0` and `# ?/#?0` "12 1/20",
+    `# ?/??#` and `# ?/?#?` "12 1/2 ", `# ?/#0`, `# ?/#?` and `# ?/#?#` "12 1/2", `# ?/0?`, `# ?/0#`, `# ?/0#?` and
+    `# ?/#0#` "12 1/02", `# ?/0??` "12 1/02 ", `# ?/00?` "12 1/002";
+  - on PI() and 0.3: `# ?/?0` "3 1/70" and " 3/10", `# ?/0?` "3 1/07", `# ?/?0?` on 0.3 " 3/100" (the `0` is left
+    out, so the digits 1 and 0 take the two `?`s).
+  Ours: `fill_left` (formatter/fraction.rs). Unprobed: which of several `0`s a short denominator leaves out when it
+  takes some of them (ours: from the left).
 Ours: implemented in formatter/parser.rs (`is_fraction_literal`) and formatter/fraction.rs (T-0982); all 325 cells pass.
-Unprobed engine choices (T-2209): a mixed `0`/`?` denominator puts its zeros left and spaces right; plain spaces or quoted
+Unprobed engine choices (T-2209): plain spaces or quoted
 text around the `/` also make a fraction; a `/` with no denominator after its literals stays a literal.
 Status: VERIFIED (Excel for the web; desktop Mac Excel cached values for the literals between the parts)
 Tasks: T-1611, T-2029, T-2030, T-1740, T-0982, T-2061, T-2072, T-2073, T-2074, T-3711, T-4204
