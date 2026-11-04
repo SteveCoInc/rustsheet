@@ -1120,8 +1120,11 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   IMSINH, IMCOSH, IMSIN and IMCOS; for IMSECH and IMCSCH below 0.01 see the next entry (real x VERIFIED, three complex
   cells UNVERIFIED; T-3609). Ours: `inverse_exp_sinh_cosh`,
   `sinh_series` and `trig_sinh_cosh` in functions/engineering/complex/trig.rs.
-- **IMSECH and IMCSCH of a small real number: `1/cosh x` with libm's cosh, `1/sinh x` with the series sinh
-  (T-3609).** At 0 < |x| <= 0.01 and y = 0, IMSECH is 1 over libm's cosh, not over the reciprocal form IMCOSH uses:
+- **IMSECH and IMCSCH of a small real number: `1/cosh x` with IMCOSH's cosh, `1/sinh x` with the series sinh
+  (T-3609, T-3982).** Superseded in part by T-3982: IMSECH is 1 over IMCOSH's own cosh, libm's only below |x| 1E-4 and
+  the `1/u` form above it (the 0.004..0.01 band and the fresh sweep show libm misses there; entry "IMSINH, IMCOSH,
+  IMSECH and IMCSCH take libm's cosh below |x| 1E-4"). The T-3609 finding as recorded:
+  at 0 < |x| <= 0.01 and y = 0, IMSECH is 1 over libm's cosh, not over the reciprocal form IMCOSH uses:
   `IMSECH("6.17632662504393E-06")` is 0.999999999980927, `IMSECH("-1.71603860095587E-05")` 0.999999999852761 and
   `IMSECH("9.70217965965262E-05")` 0.999999995293386 (the form's ...926, ...276, ...385; t3589-im-hyperbolic-small-x-sweep
   C42, C58, C68). IMCSCH is `1/sinh x` with the series sinh, not `sinh x/sinh²x`: `IMCSCH("-1.05118886127103E-06")`
@@ -1186,7 +1189,21 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   matches Excel on all 450 (libm alone would miss 1 + 1). So the `1/u`
   form, not libm's cosh, is Excel's at 0.004 <= |x| <= 0.01 (the earlier 368 of 369 with libm was too few points to
   see it); where the switch to libm's cosh lies between 1E-4 and 0.004 is the open question for T-3982. Status of that
-  band: VERIFIED (excel-graph), engine not yet changed.
+  band: VERIFIED (excel-graph).
+  **T-3982 result: a real IMSECH is 1 over IMCOSH's own cosh x**, libm's below `LIBM_COSH_BELOW` (1E-4) and the `1/u`
+  form's above it, so C390 is Excel's 0.99996782137691. Over the 825 cached real IMSECH texts at 0 < |x| <= 0.0105
+  (t3589, t3609, t3643, t3721 and both t3981 cases) the form misses 6, all at |x| <= 9.70E-05
+  (`IMSECH("9.70217965965262E-05")` 0.999999995293386, t3589 C68), and libm 33, all at |x| >= 0.0042, none in between;
+  the rule fits all of them. Train (everything but the t3981 hold-out) 675 of 675, libm 649, form 669; hold-out 150 of
+  150, libm 143, form 150 (so T-3609's 368 of 369 for libm was a thin sample, as T-3981 found). Fresh sweep drawn after
+  the freeze (probes-numeric/t3982-r4-imsech-real-cosh, docs/research/t3982/gen_sweep.py seed 3982, |x| log-uniform in
+  1E-6..0.0105, 116 points in the 1E-4..0.004 gap): IMSECH 300 of 300 and IMCOSH 300 of 300, libm `1/cosh` 296 (it misses
+  at |x| 1.13E-04, 1.56E-04, 3.02E-04 and 0.0034, where the form is Excel's); 0 texts outside 1E-9 relative of the
+  50-digit sech. The cut keeps its place, lower bracket raised from 8.8E-05 to 9.70E-05 (FITTED T-3982). Status:
+  VERIFIED (excel-graph), implemented (T-3982).
+  C386 stays UNVERIFIED residue, owned by T-4012 (`defer: phase-1b`): no quotient variant gives its ...584i without
+  losing other texts (`-x_sinh * (y_sin / t)` +1 -41 of 1040 complex IMSECH texts at |x| <= 0.0105, `y_cos` fused into
+  `t` +1 -30, `conj(cosh z)/|cosh z|²` +1 -84, `t = (cosh 2x + cos 2y)/2` +1 -141; the current quotient fits 1003).
 - **An IM* part with 14 significant digits at exponent -6 is plain text (T-3545).** `IMSIN("0-1.03615953980931E-06i")`
   is `-0.0000010361595398356i` (21 characters without the sign, probes-numeric/t3545-imsin-imcos-small-imag-sweep
   A128), and so are A43, B49 and B81 there (`IMCOS("-0.856146645807608+1.42428827512383E-06i")` is
