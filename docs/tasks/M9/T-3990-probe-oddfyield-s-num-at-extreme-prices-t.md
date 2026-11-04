@@ -3,7 +3,7 @@ id: T-3990
 title: "Probe ODDFYIELD's #NUM! at extreme prices (T-3031 follow-up)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
