@@ -1760,6 +1760,10 @@ index. A boolean field `TRUE` is column 1 and `FALSE` is `#VALUE!` (T-1948, prob
 `DSUM(J1:L6,TRUE,N1:N2)` over a numeric first column is 19, the sum of column 1, `DAVERAGE` 4.75, `DMAX` 7, `DCOUNT`/`DCOUNTA` 4, `DGET` over one match 7, over several `#NUM!`; `DSUM(…,FALSE,…)` is `#VALUE!`).
 Earlier probes over a text first column gave 0 / `#DIV/0!` only because text is skipped by the numeric functions (DGET's `#NUM!` there came from several matching records).
 A legacy (non-dynamic-array) formula gets no implicit intersection on the `field` of a D-function: `=DSUM(A1:C6,G1:G2,E1:E2)` on a row of G1:G2 is `#VALUE!` (FORMULATEXT shows no `@`), while `G1:G2&""` is intersected (`@G1:G2&""`) and gives 19.
+An error `field` written as a literal is that error in all twelve (`DSUM(Db!A1:D9,#N/A,Db!F1:F2)` `#N/A`,
+`#DIV/0!` likewise), but a single-cell reference to a cell holding an error is `#VALUE!`, not the error
+(`DSUM(Db!A1:D9,Data!A3,Db!F1:F2)` with Data!A3 `=NA()`; T-3214, probes/m9-database-argument-kinds
+Calc!A1:A36, excel-graph 2026-11-04; ours gives `#N/A` there, T-4247).
 An empty field (`DCOUNT(A1:C6,,E1:E2)`) gives DCOUNT and DCOUNTA the count of
 matching records (4), and `#VALUE!` in every other function.
 A criteria given as an array literal (`{"Qty";">2"}`) lifts elementwise to `#VALUE!` per element, so it

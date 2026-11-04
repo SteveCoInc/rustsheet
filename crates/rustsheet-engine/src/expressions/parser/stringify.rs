@@ -1,5 +1,6 @@
 pub(crate) mod bound_variables;
 mod literals;
+mod range_shrink;
 mod rename_defined_name;
 mod sheet_edits;
 mod structured;
@@ -7,6 +8,7 @@ mod wrapped;
 mod wrong_reference;
 use std::fmt::Write;
 
+use self::range_shrink::delete_corners;
 use super::reference_operators::{
     at_text, callee_operand, intersection_text, spill_operand, tight_operand, union_text,
 };
@@ -111,11 +113,11 @@ impl Displacement<'_> {
     }
 
     /// The displacements of the two corners of the plain range `rows` x `columns` on sheet
-    /// `sheet_index` where a row edit does not displace them one by one; `None` for any other
+    /// `sheet_index` where a row or column edit does not displace them one by one; `None` for any other
     /// range, whose corners displace as usual.
     ///
     /// A row delete that takes a range's first or last rows, but not all of them, shrinks it to
-    /// the rows left (plain-range-delete-row-first and -last A1:A4, excel-graph, T-2338:
+    /// the rows left (a column delete likewise, `range_shrink.rs`; plain-range-delete-row-first and -last A1:A4, excel-graph, T-2338:
     /// `=SUM(S!C4:C7)` and `=SUM(S!$C$4:$C$7)` become `S!C4:C6` either way), where displacing the
     /// deleted corner alone would give `#REF!`. Only one-row deletes are probed; a wider delete
     /// across an edge shrinks the same way (hand, T-2851).
@@ -133,10 +135,14 @@ impl Displacement<'_> {
         rows: (i32, i32),
         columns: (i32, i32),
     ) -> Option<(DisplaceData, DisplaceData)> {
+        if let Some(shrunk) = delete_corners(self.data, sheet_index, rows, columns) {
+            return Some(shrunk);
+        }
         let DisplaceData::Row { sheet, row, delta } = *self.data else {
             return None;
         };
-        if sheet != sheet_index {
+        // A row delete that shrinks nothing leaves the corners to displace as usual.
+        if sheet != sheet_index || delta < 0 {
             return None;
         }
         // The corner on row `from` moved to row `to`.
@@ -145,16 +151,6 @@ impl Displacement<'_> {
             row: from.min(to),
             delta: to - from,
         };
-        if delta < 0 {
-            let deleted = row..=row - delta - 1;
-            return if deleted.contains(&rows.0) && !deleted.contains(&rows.1) {
-                Some((shift_to(rows.0, row), shift_to(rows.1, rows.1 + delta)))
-            } else if !deleted.contains(&rows.0) && deleted.contains(&rows.1) {
-                Some((DisplaceData::None, shift_to(rows.1, row - 1)))
-            } else {
-                None
-            };
-        }
         let block = self.grown_edges.iter().find(|block| {
             block.sheet == sheet_index
                 && block.rows.0 <= rows.0
