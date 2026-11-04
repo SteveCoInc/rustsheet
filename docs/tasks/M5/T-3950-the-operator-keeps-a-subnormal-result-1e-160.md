@@ -3,7 +3,7 @@ id: T-3950
 title: "The ^ operator keeps a subnormal at x^2 for x = 1E-160, 1E-155, 1.1E-155 (probes seriessum-subnormal-power-and-term)"
 milestone: M5
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
