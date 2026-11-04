@@ -21,8 +21,8 @@ owner at all.
   have no open non-deferred owner. 61 are owned only by `defer: phase-1b` tasks (T-3937, T-3640, T-2221, T-3474,
   T-3527, ...). These 2 have no owner of any kind:
   - probes-numeric/t3721-im-hyperbolic-small-x-fresh-sweep.case.json (2): S!C386, C390
-  - probes-numeric/t3981-imsech-real-band-sweep.case.json (25 IMSECH, 1 IMCOSH) and
-    probes-numeric/t3981-imsech-real-band-sweep-hold.case.json (7 IMSECH, 1 IMCOSH): the libm cosh misses at
+  - probes-numeric/t3981-imsech-real-band-sweep.case.json (25 IMSECH) and
+    probes-numeric/t3981-imsech-real-band-sweep-hold.case.json (7 IMSECH): the libm cosh misses at
     0.004 <= |x| <= 0.01, where the `1/u` form fits 450 of 450 (engineering.md, T-3981 sweep)
   - C386 `IMSECH("-0.00529114829570232-0.0605498694819928i")`: Excel "1.0018218211334-0.00032135183420584i",
     ours "...-0.000321351834205841i". Excel's imaginary part prints 14 digits, so its double rounds to ...5840 at 15

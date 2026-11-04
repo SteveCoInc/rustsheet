@@ -1179,7 +1179,8 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   Excel's IMSECH (train, hold-out): `1/cosh` with libm (glibc) cosh 275 of 300, 143 of 150; `1/cosh` with the `1/u` form's cosh
   300, 150; Excel's own worksheet `1/COSH(x)` (column D) 30, 16 (COSH rounds to 15 digits before the division, so it is
   not the kernel). IMCOSH: libm cosh 299, 149; the `1/u` form 300, 150; worksheet COSH(x) 4, 2. Today's engine takes libm's cosh
-  here, so it is off on 25 + 7 IMSECH and 1 + 1 IMCOSH texts of the 450 (t3981 case run, 32 cells in all). So the `1/u`
+  for IMSECH here, so it is off on 25 + 7 IMSECH texts of the 450 (t3981 case run, 32 cells in all); its IMCOSH
+  matches Excel on all 450 (libm alone would miss 1 + 1). So the `1/u`
   form, not libm's cosh, is Excel's at 0.004 <= |x| <= 0.01 (the earlier 368 of 369 with libm was too few points to
   see it); where the switch to libm's cosh lies between 1E-4 and 0.004 is the open question for T-3982. Status of that
   band: VERIFIED (excel-graph), engine not yet changed.
