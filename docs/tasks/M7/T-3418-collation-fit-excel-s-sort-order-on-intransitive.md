@@ -3,7 +3,7 @@ id: T-3418
 title: "Collation: fit Excel's SORT order on intransitive cycles of more than three texts and UNIQUE's sort-order grouping (t3211 cells)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
