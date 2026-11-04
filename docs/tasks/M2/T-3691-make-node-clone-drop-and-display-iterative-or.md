@@ -3,7 +3,7 @@ id: T-3691
 title: "Make Node Clone, Drop and Display iterative (or bound the node count) so small-stack debug embedders cannot abort"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
