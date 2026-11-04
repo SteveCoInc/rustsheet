@@ -3,7 +3,7 @@ id: T-3931
 title: "ROUND and ROUNDDOWN convert their decimal result with Excel's x87 multiply by 10^-n"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
