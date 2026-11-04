@@ -3,7 +3,9 @@ use statrs::distribution::FisherSnedecor;
 use crate::arithmetic::extended_quotient;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::bratio::{f_closed_or_ported_tails, kernel_tails};
+use crate::functions::statistical::bratio::{
+    f_closed_or_ported_tails, kernel_tails, l140_overflows,
+};
 use crate::functions::statistical::f_density::excel_f_density;
 use crate::functions::statistical::f_test_tail::f_test_bratio_p;
 use crate::functions::statistical::half_integer_beta::half_integer_remainder;
@@ -73,6 +75,18 @@ fn f_kernel_arguments(df1: f64, df2: f64, x: f64) -> (f64, f64) {
 /// Excel: see docs/excel-semantics/statistics.md, "The F cdf is #NUM! where df2/(df1 x) overflows (T-2435)"
 fn f_beta_ratio_overflows(df1: f64, df2: f64, x: f64) -> bool {
     x > 0.0 && !(df2 / (df1 * x)).is_finite()
+}
+
+/// Whether the F cdf at `x` is `#NUM!` because bratio's L140 bup sum overflows on its incomplete
+/// beta ([`l140_overflows`] on [`f_beta_arguments`] and the shapes df1/2, df2/2): a df2 in the
+/// billions beside a df1 below 80, as BETA.DIST is at the same shapes. It is `#NUM!` exactly where
+/// Excel is on every positive-x F.DIST cdf and F.DIST.RT cell of probes-numeric t4017-f-huge-df2-*
+/// and t4030-f-dist-rt-df1-boundary (22 `#NUM!` and 1,385 numbers): `F.DIST.RT(1.5,79,1E+10)` is
+/// `#NUM!` (t4017 ...-1e10 A209), df1 76 and 80 at df2 1E+10 are numbers
+/// (docs/excel-semantics/statistics.md "Incomplete beta at a huge first shape", T-4044).
+fn f_bup_sum_overflows(df1: f64, df2: f64, x: f64) -> bool {
+    let (u, v) = f_beta_arguments(df1, df2, x);
+    l140_overflows(df1 / 2.0, df2 / 2.0, u, v)
 }
 
 /// One F tail (`upper`: P(F > x)): Excel's closed forms (a df of 2) and the bratio port's branches,
@@ -423,7 +437,7 @@ impl Model {
         }
         // A tiny x whose df2/(df1 x) overflows is #NUM! for the cdf, 0 for the density
         // ([`f_beta_ratio_overflows`]).
-        if cumulative && f_beta_ratio_overflows(df1, df2, x) {
+        if cumulative && (f_beta_ratio_overflows(df1, df2, x) || f_bup_sum_overflows(df1, df2, x)) {
             return Err(num_error(cell));
         }
         // The density at 0 is infinite for df1 = 1 and exactly 1 for df1 = 2; higher df1 give
@@ -485,7 +499,7 @@ impl Model {
         }
         // A tiny x whose df2/(df1 x) overflows is #NUM!, as for F.DIST's cdf
         // ([`f_beta_ratio_overflows`]).
-        if f_beta_ratio_overflows(df1, df2, x) {
+        if f_beta_ratio_overflows(df1, df2, x) || f_bup_sum_overflows(df1, df2, x) {
             return Err(num_error(cell));
         }
         let result = f_sf(df1, df2, x);
@@ -694,7 +708,9 @@ impl Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{f_beta_arguments, f_cdf, f_quantile, f_tail, fisher, fisher_inv};
+    use super::{
+        f_beta_arguments, f_bup_sum_overflows, f_cdf, f_quantile, f_tail, fisher, fisher_inv,
+    };
     use crate::test::util::{ulps, within_fifteen_digits};
 
     // FISHER and FISHERINV round their quotient twice, like Excel's `/` (excel-graph; T-2437).
@@ -762,6 +778,18 @@ mod tests {
         assert!(within_fifteen_digits(0.634_106_368_709_025_1, cdf), "{cdf}");
         assert!(ulps(0.365_893_631_290_974_9, rt) <= 1, "{rt}");
         assert!(ulps(0.634_106_368_709_025_1, cdf) <= 1, "{cdf}");
+    }
+
+    // bratio's L140 bup sum overflows from df1 77 to 79 at df2 1E+10 (T-4044): Excel is `#NUM!` at
+    // probes-numeric t4017-f-huge-df2-above-mean-1e10 A209 `F.DIST.RT(1.5,79,1E+10)` and A223
+    // `F.DIST.RT(50,79,1E+10)`, and a number at df1 76 and 80 (t4030-f-dist-rt-df1-boundary).
+    #[test]
+    fn bup_sum_overflows_in_excels_df1_band() {
+        assert!(f_bup_sum_overflows(79.0, 1E10, 1.5));
+        assert!(f_bup_sum_overflows(79.0, 1E10, 50.0));
+        assert!(!f_bup_sum_overflows(76.0, 1E10, 1.5));
+        assert!(!f_bup_sum_overflows(80.0, 1E10, 1.5));
+        assert!(!f_bup_sum_overflows(79.0, 1E9, 1.5));
     }
 
     // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric

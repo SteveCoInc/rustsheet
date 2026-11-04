@@ -1760,6 +1760,10 @@ index. A boolean field `TRUE` is column 1 and `FALSE` is `#VALUE!` (T-1948, prob
 `DSUM(J1:L6,TRUE,N1:N2)` over a numeric first column is 19, the sum of column 1, `DAVERAGE` 4.75, `DMAX` 7, `DCOUNT`/`DCOUNTA` 4, `DGET` over one match 7, over several `#NUM!`; `DSUM(…,FALSE,…)` is `#VALUE!`).
 Earlier probes over a text first column gave 0 / `#DIV/0!` only because text is skipped by the numeric functions (DGET's `#NUM!` there came from several matching records).
 A legacy (non-dynamic-array) formula gets no implicit intersection on the `field` of a D-function: `=DSUM(A1:C6,G1:G2,E1:E2)` on a row of G1:G2 is `#VALUE!` (FORMULATEXT shows no `@`), while `G1:G2&""` is intersected (`@G1:G2&""`) and gives 19.
+An error `field` written as a literal is that error in all twelve (`DSUM(Db!A1:D9,#N/A,Db!F1:F2)` `#N/A`,
+`#DIV/0!` likewise), but a single-cell reference to a cell holding an error is `#VALUE!`, not the error
+(`DSUM(Db!A1:D9,Data!A3,Db!F1:F2)` with Data!A3 `=NA()`; T-3214, probes/m9-database-argument-kinds
+Calc!A1:A36, excel-graph 2026-11-04; ours gives `#N/A` there, T-4247).
 An empty field (`DCOUNT(A1:C6,,E1:E2)`) gives DCOUNT and DCOUNTA the count of
 matching records (4), and `#VALUE!` in every other function.
 A criteria given as an array literal (`{"Qty";">2"}`) lifts elementwise to `#VALUE!` per element, so it
@@ -4271,6 +4275,15 @@ within 1E-15 relative / largest relative error:
     > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
     are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
     1E-6 and 0.05 the edge does not move.
+- **The mechanism is T-3576's bup-sum overflow** (T-4044): in L140 bup, S's running product of the stored ratios
+  (apb + l)/(ap1 + l) (`bup.rs` `l140_bup_sum_overflows`, statistics.md "NEGBINOM.DIST's cdf is #NUM! at a huge
+  `number_s`") passes the largest double. Its log is about (n - 1) ln a - ln(Gamma(n + c)/Gamma(1 + c)) against
+  709.78, which is the separating line above (2.25E9 at n = 39: 713.6; 2E9 at n = 39: 709.1). Run with Excel's break
+  rule on each cell's own (a, b, x), that predicate gives Excel's type at all 1,176 BETA.DIST cells of t4080 (82
+  `#NUM!`), the 151 of t4030, and every positive-x F.DIST cdf and F.DIST.RT cell of t4017-f-huge-df2-* and t4030 (22
+  `#NUM!`, 1,385 numbers) on F's arguments (`fisher.rs` `f_bup_sum_overflows`, shapes df1/2 and df2/2). BETA.DIST
+  already asked it (T-3576); F.DIST's cdf, F.DIST.RT and FDIST ask it since T-4044. F.INV and F.INV.RT are unprobed at
+  these shapes.
 Ours at df2 = 1E7 (a = 5E6): since T-3754 L140 bup+bgrat takes it for df1 of 4 and up (cap a0 <= 1E7, above), which
 moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from bit-exact to 1 ulp (A37, A97, A98).
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
@@ -6025,7 +6038,12 @@ is `#NUM!` at some points and not others, with no threshold in either argument, 
 - x/beta = 1E-100: 0 at shapes 1E+60, 1E+75, 1.5E+76, 1E+100 and 1E+200, `#NUM!` at 1E+70 and 1.85E+76; x/beta of 0.5, 1,
   2 and 1E+50 gave 0 at every probed shape.
 A refill in fresh workbooks reproduced fit-audit A4, A12 and A18, so the pattern is deterministic. It looks like the
-rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looks for it.
+rounding of some intermediate of Excel's arithmetic (an inf * 0 or inf - inf), not a cut; T-3855 looked for it
+in two time-boxed attempts and blocked (decision 0267 accepts the cells): no bit or k-bit rounding direction of a·LN(y),
+a·LN(a/y), Loader's bd0, a·phi or sqrt(a·phi) separates the 73 probed points, and R's `ebd0` split and a GAMMALN-based
+Stirling error cannot make the pattern (the task file lists the candidates). At x/beta = 2E-10 16 of the 18 probed
+shapes from 1E+56 to 1.85E+76 are `#NUM!`, at shape 1E+70 14 of 45 x/beta are: mostly a function of x/beta, with an
+onset in the shape.
 Evidence: probes-numeric/fit-audit-t3271-cdf-cut (one cell per workbook; A5, A8, A31 and A33 have no value),
 t3316-gamma-cdf-huge-shape, t3316-gamma-cdf-y-sweep, t3316-gamma-density-overflow A16:A26 (excel-graph, 2026-11-02);
 probes/t2435-dist-extremes A100:A102. A workbook of 34 cdf and density cells at x/beta = 2E-10 and shapes 1.2E+55 to

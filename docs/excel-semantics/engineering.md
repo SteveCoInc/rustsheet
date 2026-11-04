@@ -1560,3 +1560,13 @@ oracle's reproducibility floor (decision 0188 R4.4), so no form was chosen: the 
 moves ours to the exact value's digits as well as to Excel's).
 Ours: `sech_parts` in complex/trig.rs, unchanged. Status: VERIFIED (symmetric at the 150 swept pairs); the eight sub-ulp cells stay known
 failures, owned by T-4001 (deferred, decision 0114).
+
+## M9 engineering argument kinds (T-3214)
+Rule: ERF.PRECISE, ERFC and ERFC.PRECISE are `#VALUE!` for empty text, typed (`ERFC("")`) or a ref to `=""`.
+HEX2DEC of the number 0 (typed or a cell holding 0) is 0. IMAGINARY of a blank cell is 0. The IM* functions read
+the number 0 as the complex 0, typed or from a cell, like the text "0": IMCOS, IMCOSH, IMEXP, IMSEC and IMSECH
+give "1", IMSIN and IMSINH "0", and IMCOT, IMCSC, IMCSCH, IMLN and IMLOG10 `#NUM!`. IMPRODUCT and OCT2DEC
+return an error argument as it is (`#N/A`, `#DIV/0!`, a ref to `=NA()`).
+Evidence: probes/m9-engineering-argument-kinds Calc!A1:A39 (excel-graph, 2026-11-04); ours matches all 39.
+Status: VERIFIED (excel-graph)
+Tasks: T-3214
