@@ -3,7 +3,7 @@ id: T-4060
 title: "Probe three collation choices T-3904/T-4039 left open: space forms at the first pass, the prefix rule under SORT and MATCH(..,1), marks after a weightless character"
 milestone: M2
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
