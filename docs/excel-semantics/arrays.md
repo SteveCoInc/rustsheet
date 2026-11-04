@@ -417,6 +417,9 @@ gives -4.66E-15 and -3.0000000000000036, and no pivoting gives 0 and -3.
 Evidence: probes/stats-evidence-floor-t1623 S!Q107, S!Q120, S!Q121 (excel-graph).
 MDETERM of an overflowing or underflowing pivot product: `MDETERM({1E+200,0;0,1E+200})` is `#NUM!`; `{1E-20}` is 1E-20, `{1E-300}` 1E-300,
 `{1E-17,0;0,1}` 1E-17, `{1E-200,0;0,1E-200}` 0 (underflow), `{1E+200}` 1E+200 (probes/minverse-singular-near-singular H1:H6, excel-graph, T-2067).
+Gate A table `accuracy/MDETERM/s1` (120 points, excel-graph, 2026-11-04, T-3686): Excel is within 1e-9 of the exact
+determinant except on one near-singular edge point (0.27% off). There the engine's elimination matches Excel's 15 digits,
+as it does on the other 119 points. The table's 3 overflowing diagonals are `#NUM!` in Excel.
 Implemented in: `fn_mdeterm`/`lu_decompose` (crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs, T-1751)
 Status: VERIFIED (excel-graph)
 Tasks: T-1751
@@ -433,6 +436,10 @@ exactly 0, not 2.22E-16. The inverse is the MDETERM elimination above (multiplie
 with L and back substitution with U per identity column (subtract then divide by the pivot): in IEEE doubles that reproduces
 all nine 3x3 residual entries bit for bit (T-2362). Dividing each U entry by the pivot before subtracting, or multiplying by
 the pivot's reciprocal, misses some of them.
+Gate A table `accuracy/MINVERSE/s1` (200 elements read through INDEX, excel-graph, 2026-11-04, T-3686): Excel is more
+than 1e-9 off the exact inverse on 14 points, the near-singular ones and the 2x2/3x3 matrices with entries from 1E-80 to 1E+80.
+The worst is 24 times the exact element: no scaling, the plain elimination above. The engine matches Excel's 15 digits
+on all 200 points. The 3 exactly-singular `{a,b;2a,2b}` matrices and the 3 overflowing `{t,1;0,t}` are `#NUM!` in Excel.
 An inverse element past the double range makes the whole result `#NUM!`, not just that element: `MINVERSE({1E-200,1;0,1E-200})`
 (back substitution overflows to -1E+400 in the corner) is `#NUM!` in every cell: `INDEX(...,1,1)` and `INDEX(...,2,2)`, which are finite on their own, are `#NUM!` too; the
 non-overflowing `MINVERSE({1E-200,0;0,1E-200})` is {1E+200,0;0,1E+200}, although both matrices have the same underflowing determinant

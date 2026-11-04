@@ -150,6 +150,8 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     """One argument as the parameter's kind, or why it does not fit."""
     if param.kind == "array":
         return array_elements(value)
+    if param.kind == "matrix":
+        return "a matrix argument"  # the sweep reader flattens arrays and ranges (TODO(T-4025))
     if isinstance(value, list) or value is None or isinstance(value, str):
         return "non-numeric argument"
     if param.kind == "bool":
