@@ -3,7 +3,7 @@ id: T-4198
 title: "TEXTSPLIT with a one-cell error reference as a delimiter (B1 and B1:B1 disagree in ours) and an array pad_with against an error element of a delimiter list: probe and match"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
