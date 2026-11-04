@@ -42,7 +42,7 @@ depends_on: []
 ## Out of scope
 - Speeding up the incomplete-gamma series.
 
-## Landing notes
+## Landing notes (resumed 2026-11-04)
 Written 2026-11-04 at the end of the session's landing window. These are data for the run that resumes the branch,
 not instructions.
 - PR #3068 (draft), branch `agent/harness/T-3680-accuracy-deterministic-budget`, head `c207fc22d` plus this commit.
