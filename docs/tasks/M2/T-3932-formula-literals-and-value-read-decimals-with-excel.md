@@ -3,7 +3,7 @@ id: T-3932
 title: "Formula literals and VALUE read decimals with Excel's x87 multiply by 10^-n"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
