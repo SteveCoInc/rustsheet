@@ -161,3 +161,18 @@ Reopen only on a new hypothesis recorded here (decision 0056). This run's probe 
 path and ranked the model's step first, yet Excel's RATE path leaves the model's: seeded runs that hold at the same
 iterate get different Excel outcomes. A direct read of RATE's own residual or step (a seeded or one-step RATE probe)
 is the next hypothesis. T-3963 studies that for the flat-secant cells it owns.
+
+## Landing notes (2026-11-04, opus run, landing window closed)
+- PR #2671, head after this commit (the round-3 fixes are 118031450). Not enqueued.
+- Reviews: three rounds ran. Round 1 (6dba81e9e): fidelity REQUEST_CHANGES (wrong counts), fixed in cfd633e2c.
+  Round 2 (cfd633e2c): all three APPROVE. Round 3 (3b3394476, after merging main and switching to the time-boxed
+  block): security and design APPROVE; fidelity REQUEST_CHANGES because the semantics entry and the task files
+  claimed RATE's own residual and step were verified from FV readings and whole-run scores. 118031450 rewords
+  them: Excel's FV is verified; RATE's own residual, step and stop test stay UNVERIFIED and on T-3963's candidate
+  list; T-3963 names probes/t3424-rate-noise-trace among its owned failures. No reviewer has run on 118031450.
+- CI: the run on 3b3394476 was in progress when the window closed; CI on the new head has not been checked.
+- Next step: run the full panel (security, design, excel-fidelity) on the current head, fix anything blocking, and
+  enqueue once CI is green. That is a fourth round, so whoever resumes it (orphan adoption, work-loop step 0.3)
+  starts the panel fresh.
+- Do not repeat: do not state that RATE's residual or step is Excel's; the probe reads FV, and the step result is a
+  ranking. Keep T-3424 `blocked` (time-boxed, decision 0267 item 4), not `done`, and keep its cells with it.
