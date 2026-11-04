@@ -1093,13 +1093,16 @@ Status: VERIFIED
 Tasks: T-0259, T-0277, T-0280, T-0281, T-0282, T-0283, T-1300, T-1309
 
 ## Currency sign before parentheses is negative
-Rule (en-US; probes/t4117-typed-currency-paren, excel-graph 2026-11-04, T-4117): a currency sign, optional spaces, then a
-parenthesised unsigned amount is a negative number, typed or coerced: `$(12)`, `$ (12)`, `$(1,234.5)`, `$(12.5)` and
-`$(0)` are -12, -12, -1234.5, -12.5 and 0 (typed, ISNUMBER, `"..."+0`, VALUE and NUMBERVALUE agree). Typed `$(12.5)` gets
-`$#,##0.00_);[Red]($#,##0.00)`; the integer-amount format is inferred from `$12` (the ENTERED log of the integer rows was
-not captured). Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))` and `$(12)%`; `$(1,23)` is text typed
-and by coercion but NUMBERVALUE reads it as -123, and NUMBERVALUE reads `$(12)%` as -0.12 (not implemented here).
-`($12)` and `(12)` are the older paren forms above.
+Rule (en-US; probes/t4117-typed-currency-paren, excel-graph 2026-11-04, T-4117; ENTERED log
+docs/research/t4117-typed-currency-paren-2026-11-04.md): `$`, optional spaces, then a parenthesised unsigned amount is a
+negative number, typed or coerced: `$(12)`, `$ (12)`, `$( 12 )`, `$(1,234.5)`, `$(12.5)` and `$(0)` are -12, -12, -12,
+-1234.5, -12.5 and 0 (typed, ISNUMBER, `"..."+0`, VALUE and NUMBERVALUE agree). Typed formats: `$#,##0_);[Red]($#,##0)`
+for an integer amount, `$#,##0.00_);[Red]($#,##0.00)` when the amount has a decimal point with digits or none after it
+(`$(12.0)`, `$(12.)`, `$(.5)`), `0.00E+00` for `$(1e3)`. Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))`,
+`$(12)%` and `$(1,23)`. Typed `€(12)` is text with General, but `"€(12)"+0`, VALUE and NUMBERVALUE give -12
+(typed input has no `€` among its currencies, as above). (NUMBERVALUE reads `$(12)%` as -0.12 and `$(1,23)` as -123, which the engine matches.)
+Other currency signs before parentheses are unprobed. `($12)` and `(12)` are the older
+paren forms above.
 Evidence: probes/t4117-typed-currency-paren (excel-graph, 2026-11-04).
 Status: VERIFIED
 Tasks: T-4117

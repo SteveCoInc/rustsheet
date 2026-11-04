@@ -34,6 +34,4 @@ ENTERED formats.
 `parse_percent_or_currency` reads a currency sign, optional spaces, then a parenthesised unsigned amount as a negative number
 (`$(12)`, `$ (12)`, `$(1,234.5)`, `$(0)`), typed and coerced; `$(-12)`, `-$(12)`, `$((12))`, `$(12`, `(12$)` and `$(12)%` stay text.
 Probe probes/t4117-typed-currency-paren (excel-graph 2026-11-04) passes 75/75; t3891-typed-script-digit-shapes B29:C29 now pass
-(baseline shrank by 2 cells, 1 new passing case). Rule in docs/excel-semantics/coercion.md. The ENTERED format log of the integer
-rows was not captured; the integer format is inferred from `$12`.
-Follow-up: NUMBERVALUE reads `$(12)%` as -0.12 and `$(1,23)` as -123 in Excel (recorded, not implemented).
+(baseline shrank by 2 cells, 1 new passing case). Rule in docs/excel-semantics/coercion.md. The ENTERED format log is docs/research/t4117-typed-currency-paren-2026-11-04.md; signs other than `$` and `€` are unprobed.
