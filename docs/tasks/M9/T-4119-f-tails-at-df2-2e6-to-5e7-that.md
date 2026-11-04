@@ -49,20 +49,25 @@ counts as residue at 13 digits.
   - The references are taken at the exact ratio d2/(d2 + d1·x). At 1E-14 that includes up to about 2E-15 of argument
     rounding (README).
   - Per df1 the worst point is now 2.0E-15 (df1 3) to 2.1E-14 (df1 79).
-- **probes-numeric against main.** 54 t4017 cells change, 31 at df2 1E7 and 23 at 3E7.
-  - 51 move toward Excel and none moves away. 5 of them come within 15 digits (`numeric_close` to `numeric_ulp`), and
-    none becomes bit-exact.
+- **probes-numeric against main.** 62 t4017 cells change, all at df2 1E7 and 3E7.
+  - 59 move toward Excel and none moves away. 8 become bit-exact: 1E7 A164, A180, A194, A196 and A210, and 3E7 A178,
+    A194 and A210. The cases' passed counts go 129 → 134 and 94 → 97. 5 more go from `numeric_close` to `numeric_ulp`.
   - The other 3 are cells where Excel is an exact 0 (T-4045): `F.DIST.RT(20,79,1E7)`, `F.DIST.RT(20,79,3E7)` and
     `F.DIST.RT(50,30,1E7)`. Their tails shift in about the 12th digit. For the first, the true value is
     9.98932061401838E-278, and ours goes from 5E-13 off it to 2.7E-15 off.
-  - Counts are from the Excel-fidelity review's cell-by-cell comparison.
+  - Counts are from the Excel-fidelity review's cell-by-cell comparison of main and this branch, which the cases'
+    passed counts confirm. An earlier count compared only the cells report.json lists (failing ones), so it missed
+    the cells that became bit-exact.
+  - No cell changes in probes or in probes-numeric outside t4017.
 - **BETA.DIST check.** The widened region also serves BETA.DIST and the quantile searches. A 145-point BETA.DIST grid
   at non-half-integer b and a up to 3.9E7 (README) goes from a worst error of 4.9E-10 to 4.9E-15, and no point gets
   worse.
 - **Gated suites.** No cell moves.
 - **How the cut was chosen.** It is not fitted to Excel (R4): the expansion is extended to the bounds it already had,
-  and the choice is checked only against 60-digit math. No fresh sweep was run, because the change only moves values
-  toward the math. Gate A: every grid point was already inside its 1E-9 envelope.
+  and the choice is checked only against 60-digit math. No fresh oracle sweep was run, because the change only moves values toward the
+  math. In its place are the 640-point F grid and the 145-point BETA.DIST grid (docs/research/t4119). The Excel-fidelity
+  review also checked 132 more BETA.DIST points against 60-digit mpmath at the double arguments (a 1E6 to 4E7, b 1.5
+  to 39.9, x from 40 sd below the mean to 6 sd above): worst 3.6E-14, all far inside Gate A's envelope. Gate A: every grid point was already inside its 1E-9 envelope.
 - **Superseded branch.** agent/functions-stat/T-3754-f-huge-df2-accuracy did the same widening on top of the pre-T-3754
   engine. Its review asked for honest criteria, a pin with a stated bound, and a stated reference convention; this task
   takes all three up. That branch is superseded and no PR was opened from it.

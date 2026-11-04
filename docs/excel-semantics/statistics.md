@@ -4225,7 +4225,8 @@ moves 46 cells of t4017 ...-1e7 into 15 digits of Excel; 3 cells there go from b
 The calls that port does not take are df1 of 20 and more (more than 9 bup terms) and a0 above 1E7. The large-shape
 expansion's 1E-6 b/a cut left those on Cephes' fraction, 1E-11 to 7E-10 off the math. T-4119 removed the cut, so the
 expansion covers every a >= 1E6 and b < 40. Over its 640-point grid (docs/research/t4119) the worst error is now 2.1E-14.
-On t4017, 51 cells move toward Excel and 5 come within 15 digits. The 3 others are Excel's exact zeros (T-4045). What
+On t4017, 59 cells move toward Excel: 8 to bit-exact and 5 more to within 4 ulp. The 3 others are Excel's exact zeros
+(T-4045). What
 is left there is mostly Excel's own 1E-14 error. BETA.DIST at the same shapes also improves: on a 145-point grid the
 worst error goes from 4.9E-10 to 4.9E-15.
 Evidence: the six t4017 cases. Tasks: T-4017, T-4018, T-3209.
