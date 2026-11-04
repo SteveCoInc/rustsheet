@@ -260,6 +260,16 @@ pub(crate) fn closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(
     closed_or_ported_with(x, y, a, b, false)
 }
 
+/// [`closed_or_ported_tails`] for the F tails (`fisher.rs`), with bgrat at b = 1/2 as the Student
+/// t's and BETA.DIST's callers take it: on F's own arguments (`fisher.rs` `f_beta_arguments`) a df
+/// of 1 reaches Excel's bits there (T-3580: probes-numeric t3567-r5-fdf1-hold's d1 = 1 bgrat
+/// region 991 of 1,000 bit-exact, against 298 on today's kernel; statistics.md "F's
+/// incomplete-beta arguments keep r >= 1"). T-2510 kept F off bgrat because of the arguments it
+/// was handed, not the kernel.
+pub(crate) fn f_closed_or_ported_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
+    closed_or_ported_with(x, y, a, b, true)
+}
+
 /// (w, w1) of K(a, b, x, y) on the branches ported so far, `None` elsewhere. bratio computes one
 /// tail and forms the other as (0.5 - w) + 0.5, each step an x87 op stored to a double
 /// (statistics.md "Incomplete beta is TOMS 708 `bratio`").
@@ -271,17 +281,15 @@ pub(super) fn ported_tails(a: f64, b: f64, x: f64, y: f64) -> Option<(f64, f64)>
 }
 
 /// (w, w1) of the Student t kernel call K(n/2, 1/2, y, z) ([`ported_tails`] plus bgrat at b = 1/2,
-/// T-2509). Only the Student t tails and BETA.DIST ([`beta_dist_lower_tail`]) take bgrat at
-/// b = 1/2 so far: F with a numerator or denominator df of 1 reaches the same branches, but there
-/// bgrat moved gated FDIST cells by 7 ulp and made F.DIST sweep cells visibly off
-/// (t2220-f-dist-sweep d1-1, d2-1), so F stays on today's kernel (T-2510's measurement).
+/// T-2509). The Student t tails, BETA.DIST ([`beta_dist_lower_tail`]) and F's tails
+/// ([`f_closed_or_ported_tails`], T-3580) take bgrat at b = 1/2; the binomial family and F.TEST
+/// ([`kernel_tails`]) do not.
 pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat (BETA.DIST's and
-/// the Student t's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
-// TODO(T-3580): drop `half_bgrat` once F takes its own arguments and bgrat at b = 1/2 (T-3567).
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2 and L140 bup+bgrat (BETA.DIST's, the
+/// Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
 fn ported_tails_with(
     a: f64,
     b: f64,
