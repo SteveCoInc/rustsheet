@@ -37,3 +37,4 @@ their case, so `scripts/exit_owners.py --all-off` listed four of them as unowned
 
 ## Outcome
 `Displacement::range_corners` (stringify.rs) now shrinks a plain range for a column delete at its first or last column as it does for rows (shared `shrunk_corners`). The six cells pass (end, start, both-ends-separate F!A4/A5) and leave eval/baseline/probes.txt; references.md records it. Wider column deletes remain unprobed (T-2851).
+CI found `test_actions::test_delete_columns` pinning the old `=SUM(#REF!:K4)` for a two-column delete across a range edge (an inherited IronCalc FIXME); it now expects `=SUM(D4:K4)`, the same shrink (wider column deletes across an edge stay an unprobed assumption, T-2851).
