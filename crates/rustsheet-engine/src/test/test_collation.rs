@@ -2,7 +2,9 @@
 
 use std::cmp::Ordering;
 
-use crate::functions::util::collation::{cmp_text, cmp_text_excel, cmp_text_pairwise, collation_key};
+use crate::functions::util::collation::{
+    cmp_text, cmp_text_excel, cmp_text_pairwise, collation_key,
+};
 use crate::text::Text;
 
 /// Asserts `texts` are strictly increasing in Excel's order.
@@ -690,7 +692,8 @@ fn t4013_classes_are_equal_and_astral_case_pairs_apart() {
     }
     assert!(!equal("\u{10400}", "\u{10428}"), "Deseret keeps its case");
     assert!(!equal("\u{3f4}", "\u{3b8}"), "ϴ is not θ");
-    // Equal texts are not ordered either way.
+    // Class members weigh alike, so the character after them decides the order.
     let (a, b) = (Text::from("\u{3d1}a"), Text::from("\u{3f4}b"));
     assert_eq!(cmp_text(&a, &b), Ordering::Less);
+    assert_eq!(cmp_text(&b, &a), Ordering::Greater);
 }

@@ -61,8 +61,8 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use kana::{kana, vowel};
-pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::class_first;
+pub(crate) use lookup_fold::fold_lookup;
 use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
 
 /// Orders two texts by the module's five passes, the accents by their wrapped sums: a total
