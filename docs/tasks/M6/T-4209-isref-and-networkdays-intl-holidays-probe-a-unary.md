@@ -3,7 +3,7 @@ id: T-4209
 title: "ISREF and NETWORKDAYS.INTL holidays: probe a unary plus over a reference-returning function (+INDEX, +OFFSET, +XLOOKUP)"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,11 +26,16 @@ ISREF and the NETWORKDAYS.INTL holidays split give Excel's answer for a unary pl
   (the same review's other MINOR).
 
 ## Acceptance criteria
-- [ ] A probe case holds the forms above, filled from excel-graph.
-- [ ] references.md "ISREF: a unary plus makes a value" states the rule for a function operand, and cites the cells.
-- [ ] The engine matches every new cell, through `written_reference` and nowhere else.
-- [ ] dates.md's `Tasks:` line names T-4190.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe case holds the forms above, filled from excel-graph.
+- [x] references.md "ISREF: a unary plus makes a value" states the rule for a function operand, and cites the cells.
+- [x] The engine matches every new cell, through `written_reference` and nowhere else.
+- [x] dates.md's `Tasks:` line names T-4190.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Unary minus (already a value) and the other holidays forms, which T-4190 evidenced.
+
+## Outcome
+- Probe `networkdays-intl-holiday-unary-plus-fn` (M6, excel-graph): a unary plus over `INDEX`, `OFFSET`, `XLOOKUP` or `IF` is a value for ISREF (FALSE) and a scalar NETWORKDAYS.INTL holiday; `T(+INDEX(D1:D2,1))` returns the text.
+- Engine: `holiday_serials` read `+OFFSET(...)` and `+IF(TRUE,C1)` as references (86/87 swapped). It now takes the written plus from `written_reference` (read before IF's pick drops it). Probe 15/15 pass; `networkdays-intl-holiday-kinds` still 87/87.
+- Docs: references.md "ISREF: a unary plus makes a value" extended; dates.md `Tasks:` names T-4190.
