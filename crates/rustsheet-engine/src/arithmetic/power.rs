@@ -1,7 +1,10 @@
 //! `x^y` as POWER and the operator `^` compute it: integer exponents by square-and-multiply,
 //! others as `exp(y·ln x)` with Excel's own LN and EXP kernels (docs/excel-semantics/numbers.md).
 
-use super::{extended_product, extended_quotient, extended_sqrt, finite_or_num, flush_subnormal};
+use super::{
+    extended_product, extended_quotient, extended_sqrt, finite_or_num, finite_or_overflow,
+    flush_subnormal,
+};
 use crate::{
     expressions::token::Error, number_format::to_excel_precision, x87_exp::excel_exp,
     x87_log10::excel_ln,
@@ -21,6 +24,17 @@ pub(crate) fn power(x: f64, y: f64) -> Result<f64, Error> {
             exp_of_product: |y, ln_x| excel_exp(extended_product(y, ln_x)),
         },
     )
+}
+
+/// `x^y` as the operator `^` computes it: [`power`], except that `x^2` keeps a subnormal result
+/// where POWER and SERIESSUM flush it (`1E-160^2`, `1E-155^2` and `(1.1E-155)^2` are kept,
+/// `POWER(1E-160,2)` is 0; probes/seriessum-subnormal-power-and-term B15, A16, A17; T-3950).
+/// Other exponents were not probed, so only 2 is exempt.
+pub(crate) fn operator_power(x: f64, y: f64) -> Result<f64, Error> {
+    if y == 2.0 && x.is_finite() {
+        return finite_or_overflow(extended_product(x, x));
+    }
+    power(x, y)
 }
 
 /// The `ln x` and `exp(y·ln x)` steps of a non-integer power.
