@@ -915,6 +915,7 @@ C	probes/odd-bond-argument-check-order.case.json	1091
 C	probes/odd-bond-huge-yield-overflow.case.json	53
 C	probes/odd-yield-far-from-par.case.json	102
 C	probes/oddf-date-order-domain-sweep.case.json	1260
+C	probes/oddfyield-extreme-price.case.json	72
 C	probes/oddfyield-solver-sweep.case.json	547
 C	probes/oddl-accrint-february-day.case.json	49
 C	probes/off-grid-corners.case.json	6
