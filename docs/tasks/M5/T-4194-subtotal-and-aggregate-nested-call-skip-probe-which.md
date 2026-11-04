@@ -3,7 +3,7 @@ id: T-4194
 title: "SUBTOTAL and AGGREGATE nested-call skip: probe which formulas count as calling SUBTOTAL (defined name, untaken IF branch, uncalled LAMBDA, unused LET binding, text) and match it"
 milestone: M5
 lane: functions-math
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
