@@ -684,19 +684,32 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   `=LET(ab12,2,f1,ab12*10,f1+ab12)` 22, an optional `[b2]` is ISOMITTED, and a LAMBDA bound to `f1` is called
   (`=LET(f1,LAMBDA(x,x+1),f1(2))` is 3). FORMULATEXT shows each as typed.
 - Unbound, such a name is an undefined name, not the A1 cell: with F1 holding 7, `=f1`, `=F1+1`, `=LET(x,1,x+F1)` and
-  `=LET(f1,5,f1+1)+F1` are all `#NAME?`. FORMULATEXT lower-cases the name and quotes it like a sheet name: `='f1'`,
-  `='f1'+1`, `=LET(x,1,x+'f1')`, `=LET(f1,5,f1+1)+'f1'`.
+  `=LET(f1,5,f1+1)+F1` are all `#NAME?`. FORMULATEXT quotes the name like a sheet name: `='f1'`,
+  `='f1'+1`, `=LET(x,1,x+'f1')`, `=LET(f1,5,f1+1)+'f1'`. The lower case there is no rule of its own: it is the
+  workbook's first spelling of the name (as for unknown function names, references.md "Unknown function call names"),
+  `f1` in A8; a name first typed upper-case keeps it (`=AB12*2` is `='AB12'*2`). Any position quotes it: an argument
+  `=SUM('f1',2)`, a call `='f1'(2)`, a LAMBDA body `=LAMBDA(x,x+'f1')(1)`, and `=ISREF(f1)` is FALSE, `=ISREF('f1')`.
+  `=xy1` is `='xy1'`; a name that is no cell stays bare (`=Xfe1`, `#NAME?`). The quoted spelling itself is refused
+  typed, in A1 and in R1C1 mode (`='f1'`, `='f1'+1`, `='abc'`, `='F1'`, `=LET(x,1,x+'f1')`: the cell stays blank).
+- A file that stores such a name unbound with its prefix (`=_xlpm.f1`, `=_xlpm.AB12*2`, `=SUM(_xlpm.xy1,2)`) reads it
+  as the same undefined name (`#NAME?`), but FORMULATEXT shows the prefix: `=_xlpm.f1` (T-4099).
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
 probes/t3897-r1c1-let-cell-names (excel-graph, 2026-11-04), S!A1:C13: names spelled like an A1 cell, bound (rows 1 to
 7, 11, 12) and unbound (rows 8 to 10, 13).
+probes/t4040-r1c1-unbound-cell-names (excel-graph, 2026-11-04), S!A1:C16: the quoted spelling typed (rows 1 to 6),
+unbound names typed in R1C1 mode (rows 7 to 13) and a file's `_xlpm.` names (rows 14 to 16).
 Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
 (`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
 reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
 parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
 The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`), and the A1 text
 writes a bound one `_xlpm.f1` (`stringify::to_english_string_typed_from_r1c1`), which the typed A1 entry binds where it
-refuses a bare `f1`. An unbound one is refused, so its cell stays blank instead of `#NAME?` (T-4040).
+refuses a bare `f1`. An unbound one becomes the quoted name `'f1'` when the formula is parsed
+(`stringify::bound_variables::quote_unbound_cell_shaped_names`, on text with `_xlpm.` and on R1C1 typed text): no LET
+binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The A1 text, the R1C1
+storage form and a file write it `_xlpm.f1`, which reads back quoted (T-4040). The first-spelling table
+(`CallNameSpellings`) gives it the workbook's spelling. Ours also shows a file's `_xlpm.f1` quoted (T-4099).
 Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
 whole-row range's second corner.
 Tasks: T-3212, T-3897, T-3898, T-4040

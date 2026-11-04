@@ -2082,6 +2082,7 @@ C	probes/t4014-sheet-api-name-66.case.json	3
 C	probes/t4019-groupby-lifted-spent-filter-kinds.case.json	42
 C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4039-collation-space-forms.case.json	322
+C	probes/t4040-r1c1-unbound-cell-names.case.json	42
 C	probes/t4060-collation-open-choices.case.json	222
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
@@ -6237,18 +6238,6 @@ F	probes/t3891-numeral-tag-render.case.json	Sheet1!A28
 F	probes/t3891-numeral-tag-render.case.json	Sheet1!A6
 F	probes/t3891-typed-script-digit-shapes.case.json	Sheet1!B29
 F	probes/t3891-typed-script-digit-shapes.case.json	Sheet1!C29
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!A9
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!B9
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C10
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C13
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C8
-F	probes/t3897-r1c1-let-cell-names.case.json	S!C9
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A1
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A10
 F	probes/t3906-rate-restart-oos.case.json	Sheet1!A100
@@ -6457,6 +6446,9 @@ F	probes/t3945-atan-near-midpoint.case.json	S!C7
 F	probes/t3945-atan-near-midpoint.case.json	S!C8
 F	probes/t3945-atan-near-midpoint.case.json	S!C9
 F	probes/t4014-sheet-api-name-65.case.json	S!A1
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C14
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C15
+F	probes/t4040-r1c1-unbound-cell-names.case.json	S!C16
 F	probes/t4086-collation-later-passes.case.json	Calc!B1
 F	probes/t4086-collation-later-passes.case.json	Calc!B10
 F	probes/t4086-collation-later-passes.case.json	Calc!B12
