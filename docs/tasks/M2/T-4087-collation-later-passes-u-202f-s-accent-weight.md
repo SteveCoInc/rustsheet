@@ -35,8 +35,7 @@ Each comes from the T-4072 review.
   is TRUE (Calc!B30:B38, F2). Today `variants` weighs width, superscript and kana type in one pass after
   `kana_weights`. Fix: split it into a width/superscript pass before `kana_weights` and a kana-type pass after it.
   probes/t3275-collation-width-kana and -pairs must keep every cell.
-- Owned cells: the failing cells of probes/t4086-collation-later-passes. The T-4086 PR lists them in
-  eval/baseline/probes.txt; the task's PR names them in its Outcome.
+- Owned cells: probes/t4086-collation-later-passes (14): Calc!B1, C1, F1, F2, B10, B12, B17, B21, B22, B30, B31, B32, B33, B36
 
 ## Acceptance criteria
 - [ ] Every probes/t4086-collation-later-passes cell passes and leaves eval/baseline/probes.txt. `make eval-check`

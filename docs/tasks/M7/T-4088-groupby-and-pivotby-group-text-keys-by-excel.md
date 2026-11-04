@@ -28,8 +28,7 @@ comparison, as UNIQUE and SORT do.
 - Model: UNIQUE (`unique_cell_key` and `unique_of`, functions/spill_functions.rs). It keys a text by its
   `CollationKey`, keeps a line unless `cmp_text_pairwise` finds it equal to a kept line of its bucket (the first
   one kept), and charges each comparison to the work budget. Reuse it, do not copy it (directive 3).
-- Owned cells: the failing cells of probes/t4086-groupby-weightless. The T-4086 PR lists them in
-  eval/baseline/probes.txt.
+- Owned cells: probes/t4086-groupby-weightless (13): Calc!B1, B2, B4, B6, B7, B8, C5, C7, C8, C9, D6, D7, D8
 - Related: T-3418 (SORT's order on intransitive cycles). The coercion.md "Not a total order" bullet says GROUPBY and
   PIVOTBY "still sort with the total `cmp_text`".
 
