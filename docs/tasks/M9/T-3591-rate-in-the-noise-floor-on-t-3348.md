@@ -16,6 +16,7 @@ The 4 RATE cells of T-3348's fresh sweep that have the right type but are beyond
 value to 15 digits. They are the out-of-sample check of the residual model T-3389 builds for the same noise floor.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (RATE) measured on t3850-rate-same-state, 0 of 240 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on origin/main 408444f20): these cells had no open owner. T-3424 owns the
   sweep's type misses, and T-3389 owns the 4 digit misses of probes/t3348-rate-fv-nonzero.
 - Values: Excel, ours, then the 50-digit math from `rustsheet-accuracy math`. The sidecar comes with T-3587.

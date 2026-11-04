@@ -18,6 +18,7 @@ stay known failures), or fresh web evidence shows the engine wrong and a functio
 they are known failures that no open task owns.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Decision 0188 R5: parked as Phase 1b. All three cells are within 4 ulp of Excel and inside Gate A's envelope, so they
   do not count against a Phase 1 exit. R4.4 also forbids fitting them: no fitting below the oracle's reproducibility
   floor (decision 0112, web against desktop up to 4 ulp). Without a ruling they stay unowned.

@@ -17,6 +17,7 @@ candidates scored on T-3981's sweep. These are the last 2 visibly-off cells `exi
 owner at all.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-03 (`make eval` at 42b10ad4, then `python3 scripts/exit_owners.py --all-off`): 63 visibly-off cells
   have no open non-deferred owner. 61 are owned only by `defer: phase-1b` tasks (T-3937, T-3640, T-2221, T-3474,
   T-3527, ...). These 2 have no owner of any kind:

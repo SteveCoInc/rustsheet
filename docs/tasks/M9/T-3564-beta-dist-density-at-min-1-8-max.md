@@ -16,6 +16,7 @@ defer: phase-1b
 shape, on the two T-3383 probes. These cells are already within 15 digits but not bit-exact, and no task owns them.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`make eval` on b98b3c00d). Of the 8,000 rows the two probes score, 2,304 fail in the hold-out
   case and 1,992 in the in-sample case. T-3563 owns the 132 that are visibly off (it lists them by cell). This task
   owns the other 4,164: 2,173 of the hold-out case and 1,991 of the in-sample case. The cases, whole:

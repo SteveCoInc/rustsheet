@@ -18,6 +18,7 @@ defer: phase-1b
 anywhere.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01 (`eval/runs/latest`, run on abc78766 plus the unmerged PR #2787 batch;
   `python3 scripts/exit_owners.py --all-off`, also checked against the task files of every pushed `origin/*` branch).
   T-3568 (done) built probes-numeric/t3568-r5-bup-terms-tune and -terms-hold to test a loop hypothesis

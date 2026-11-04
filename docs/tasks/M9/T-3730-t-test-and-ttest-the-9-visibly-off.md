@@ -18,6 +18,7 @@ fix should make our p-value follow the rule statistics.md already documents, "T.
 double before the tail", or else record why it cannot.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): its kernel was not measured; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01h (`make eval` on origin/main d2ddb42a7, excel-graph). This was a status split of
   `scripts/exit_owners.py`'s `owned` rule over every `--all-off` cell: open, undeferred owners, minus the blocked
   ones. It leaves these cells with T-0969 as their only owner. T-0969 lists them in its "Owned gen-m9 cells

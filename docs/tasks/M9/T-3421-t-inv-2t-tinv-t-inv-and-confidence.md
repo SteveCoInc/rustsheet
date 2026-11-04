@@ -17,6 +17,7 @@ centre quantile gives, so `CONFIDENCE.T(0.999999999989522,1,3)` is within 15 sig
 Today the engine returns the exact quantile there and Excel does not.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (Student t quantile) measured on t3349-t-inv-2t-sweep, 0 of 300 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-10-31c (`make eval` on b1bdc1c2d, `make unowned-off`): probes/t3349-t-inv-2t-near-one A5 is a
   visibly-off cell with no open owner. T-3349 (done) found it and called it Excel's last digits. Its 33 other df >= 2
   failing cells are within 15 digits and also had no owner.

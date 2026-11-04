@@ -18,6 +18,7 @@ fix finds where Excel's w = 1 - x^a differs by one unit of 2^-53 from the engine
 `-excel_expm1(b0 · excel_ln_one_minus(x0))`, and does not lose any of the 1,738 column-B cells that match today.
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (incomplete beta, bpser) measured on t2464-r2-bpser-small-gl, 0 of 5843 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-01k (`make eval` on origin/main 063c2dd9, excel-graph; `scripts/exit_owners.py --all-off`).
   These 47 cells are visibly off. Their only owner is T-3712, which cannot be picked: it depends on T-3382, which is
   still open. T-3712 names the three cases whole but works on column A (the L140 bup+bgrat cdf). It reads column B

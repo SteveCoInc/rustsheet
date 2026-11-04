@@ -18,6 +18,7 @@ inverse search there (T-3409's model) over Temme's one-term cdfs. Otherwise the 
 each candidate (decision 0056 time box).
 
 ## Context
+- T-3992 (excel-graph fill-to-fill stability, 2026-11-03): kernel family (gamma quantile) measured on t3311-gamma-inv-lower-tail-cdf, 0 of 899 cells changed over three fills; its own cells were not refilled; see docs/research/t3992/README.md.
 - Gap triage 2026-11-02 (`make eval` on origin/main 56917e82c). The case has 297 known failures in
   eval/baseline/probes.txt. T-3294 lists 5 of them by cell: the visibly-off `GAMMA.INV(1E-300,shape,1)` cells A1, A13,
   A85, A97 and A145, the deep lower tail. The other 292 belong to no task. T-3294 names the case only in a sentence
