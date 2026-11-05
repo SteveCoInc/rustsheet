@@ -3,7 +3,7 @@ id: T-4248
 title: "Probe GETPIVOTDATA on an empty item of an ungrouped pivot field"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
