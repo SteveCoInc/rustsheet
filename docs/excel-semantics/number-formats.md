@@ -1309,3 +1309,12 @@ Status: VERIFIED (excel-graph); implemented (T-1735, T-2480).
   code on zero prints every integer placeholder of the mantissa as `0`, `#` included (`##0.0E+0` → "000.0E+0",
   `##0.00E+00` → "000.00E+00", `#E+0` → "0E+0"). A carry out of the mantissa renormalises (`0.0E+00` on 99.5 is
   "1.0E+02"; already correct, pinned by test). "-x1E+15" is the General sign rule (T-2097, T-2850); no gen-m10 scientific cell with an empty text remains. Still open: `#E+0` ties. UNVERIFIED: grouped (`#,##0.0E+0`) and `?` (`??0.0E+0`) codes on zero.
+
+## A number section's currency tag prints where it is written (T-4108)
+
+Rule: a `[$<symbol>]` or `[$<symbol>-<locale>]` tag in a number section prints at its own position, after any
+literal before it and before any digit placeholder after it. It is not moved to the front. `([$$-409]#,##0.00)`
+on 12 is "($12.00)" (-12 "-($12.00)"), `"x"[$€-40C]0` "x€12", `([$$]0)` and `(\$0)` "($12)", `0[$€]` "12€",
+`#,##0[$€-40C]` "12€", `0.0[$€-40C]0` "12.0€0", `"a"[$€]0"b"` "a€12b", `[$€]0%` "€1200%", `[$€]0E+0` "€1E+1",
+`0;([$$-409]#,##0.00)` on -12 "($12.00)". A fraction section is not covered (it keeps its symbol in front,
+see "Currency and leading literals" below). Evidence: probes/t4108-currency-tag-position (excel-graph, 2026-11-05).

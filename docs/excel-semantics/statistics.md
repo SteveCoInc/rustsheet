@@ -6923,3 +6923,19 @@ Tasks: decision 0267, T-4053, T-4055, T-4056.
 
 ## Z.TEST: a single cell reached through INDEX, OFFSET, IF or parentheses is still a reference (T-2775)
 Rule: the "array with no number is `#N/A`" rule of the T-2256 Z.TEST entry holds for a one-cell reference however it is reached. With A1 text and A2 TRUE, `Z.TEST(A1,1)`, `Z.TEST(A2,1)`, `Z.TEST(INDEX(A1:A5,1),1)`, `Z.TEST(INDEX(A1:A5,2),1)`, `Z.TEST(OFFSET(A1,0,0),1)`, `Z.TEST((A1),1)` and `Z.TEST(IF(TRUE,A1),1)` are all `#N/A`, and an unused extra argument does not change it; a cell holding a number is `#DIV/0!` through a plain reference and INDEX (one value; OFFSET, IF and parentheses were not probed with a number). Defined names were not probed. Ours is `#VALUE!` or `#DIV/0!` for the INDEX and IF routes (T-4286). Evidence: probes/t2775-ztest-single-cell-routes (excel-graph, 2026-11-05). All 41 gen-m9 cells T-2470 owned already pass.
+
+## M9 statistical argument kinds of a scalar parameter (T-3185)
+Rule: a scalar (value-mode) parameter of the M9 distribution, inverse, confidence, test and regression functions
+coerces its argument as a number would, and an error argument propagates. In the base calls of
+probes/t3185-m9-statistical-argument-kinds-a to -c (excel-graph, 2026-11-04, 335 cells), one argument swapped for:
+- `""`: `#VALUE!` in all 174 cells, for every parameter, `cumulative` included (`=NORM.DIST(1.5,1,2,"")`).
+- `#N/A`: `#N/A` in all 122 cells, the cumulative flags and `tails` and `type` included.
+- Numeric text: the number (19 cells, for example `=HYPGEOMDIST(2,5,8,"20")` is the base call's 0.3973...), and
+  `"abc"` is `#VALUE!` (6 cells, `deg_freedom` of CHISQ.DIST and the T.DIST family, FINV's `deg_freedom1`).
+- `TRUE`: 1. `=CHISQ.DIST(2.5,TRUE,TRUE)` is 0.886..., `=F.INV(0.3,TRUE,6)` 0.163..., and a 1 that the domain refuses
+  is `#NUM!`: `=BETA.INV(TRUE,2,3,0,1)` (a probability of 1) and `=BETA.INV(0.4,2,3,TRUE,1)` (A equal to B).
+- A blank cell is 0 and 0 is FALSE as LINEST's and LOGEST's `stats` (`=LOGEST(Data!A1:A5,Data!B1:B5,TRUE,Data!Z1)`).
+- A two-cell range (`Data!Z5:Z6`, 1 and 2) as `const` gives one number in LINEST, LOGEST, GROWTH and TREND
+  (b A62, A86, A91, c A69): TREND's 5.8 is the fit at 6 with `const` TRUE, and LINEST's 0.6 its slope. As
+  `stats`, LINEST and LOGEST are `#SPILL!` (b A89, A94): a result taller than one row, where ours spills 1-by-2. The
+  shape is unprobed (T-4222). Ours is `#VALUE!` for GROWTH's and TREND's `const` (T-4222).
