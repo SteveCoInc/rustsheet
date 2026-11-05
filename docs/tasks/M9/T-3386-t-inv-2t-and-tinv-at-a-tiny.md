@@ -59,6 +59,8 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t1531-t-tiny-p.case.json (10): Calc!A73-A74, A82-A84, A97-A98, A106-A108
 - probes-numeric/t1543-inverse-cdf-tiny-p.case.json (6): Calc!A43, A79, A86, A89, A91-A92
 - probes-numeric/t3349-t-inv-2t-sweep.case.json (42): Calc!A211, A214-A217, A219, A224-A225, A230, A232, A237-A240, A242-A243, A246, A252, A257, A262-A264, A266, A270, A272-A274, A277, A279-A281, A283-A285, A287-A289, A291, A293-A294, A296, A300
+- gen-m9/7980ffb6095a340d.case.json (1): Calc!A160 (from T-0967, 2026-11-05: `TINV(1E-200,1E+10)`, Excel 58.19256428927105,
+  ours 30.228508783079672, about the normal quantile; Tier A, the tiny-p case of decision 0267 item 3)
 
 - [ ] The 3 type cells listed (t1543 A89, A91 and A92: the engine returns `#NUM!` where Excel returns a number for `BETA.INV(1-1E-16,1000,1)`, `BETA.INV(1E-300,0.5,100)` and `BETA.INV(1E-200,0.5,100)`) never pass through an R3 mark while they are an error against a number (decision 0188 R3). The engine returns a number there. That is Excel's number, or the math where a mark applies.
 - [ ] Each R3 mark names one point whose committed 50-digit value (a math.json sidecar, or a Gate A table's math
