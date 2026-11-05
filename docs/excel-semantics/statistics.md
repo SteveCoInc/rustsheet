@@ -1197,7 +1197,34 @@ the ratio form below 0.666a at shapes 30 to 500 (`NEAR_MODE_BELOW` 0.334, the mi
 (0.332, 0.336), frozen before the fresh sweep probes/t3252-gamma-prefactor-sweep) and `rcomp` above; outside those
 shapes the bound stays 0.4. Above the mode Excel is neither form from 1.05a to 1.45a at shapes 50 and 200 (window A11:A20, A31:A40, 5 to
 90 ulp from each; the forms coincide at 1.4a and 1.45a); it is the ratio form at 1.5a (T-2638), and ours keeps
-`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is unknown (T-4255).
+`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is still unknown (T-4255, open in T-4290).
+T-4255 (probes/t4255-gamma-window-exact-ratio, excel-graph 2026-11-05; docs/research/t4255/score_forms.py) put x/a
+on k/64, exact. Its findings:
+- Below the mode the ratio form, built on Excel's own LN(64/x) (column F), is Excel's to 2 ulp at shapes 48, 64, 100
+  and 256 through x/a 0.65625 (A1:D4). From 0.671875 (row 5) on it is not, so the switch lies in (0.65625, 0.671875],
+  which holds 2/3, the point where |x - a|/(x + a) = 0.2.
+- Above the mode, x/a = 1.5 is still in the window at shapes 64, 256 and 48: A58, B58 and C58 are 10 to 36 ulp from
+  both forms, which coincide there. At shape 100 it is the ratio form (D58). T-2638 saw the ratio form at 1.5a at
+  shapes 25, 50 and 500, so the upper end depends on the shape.
+- Inside, Excel's per-unit exponent error (E_excel - E)/a is the same at shapes 64 and 256 (a power of two apart).
+  It lies within about +-0.5 ulp of ln(x/a), and shapes 48 and 100 add a product rounding.
+- That error is no double logarithm's. Excel's LN(x/a) (column E) is the correctly rounded ln(x/a) at every k, and
+  at x/a 0.75 the implied logarithm sits +0.25 ulp from ln(0.75) at all four shapes, where the correctly rounded
+  value is +0.47 (A10:D10).
+- Rejected, as rms ulp(ln u) from Excel's per-unit error at shape 64 over 46 cells (x/a 0.67 to 0.94 and 1.06 to
+  1.49; an error uniform in +-0.5 ulp scores 0.29): the ratio form 1.13; -a rlog(u) to 50 digits 0.31; a ln(x/a) +
+  (a - x) 0.43; a log1p(w) + (a - x) 0.45; -a((u - 1) - ln u) 0.43; -a(w - log1p(w)) 0.45; a(ln u + 1 - u) 2.43;
+  TOMS 654's rlog rational 0.36; Loader's bd0(a, x) series 0.33; a 2atanh(v) + (a - x) by series 0.31.
+- Also rejected with no better score: ln u as log2(u) ln 2, as log10(u) ln 10, or as ln of the mantissa plus e ln 2;
+  x(1/a) and a(1/x) reciprocal arguments; (u e^(1-u))^a with the base rounded (rms 3.4 to 9.5); 64-bit x87 log and
+  product.
+- On the T-3252 densities in the window (fit = window and holdout, hold-out = holdout-2 and sweep, fixed before
+  scoring), no form is Excel's. Within 2 ulp, fit then hold-out: ratio form 1/47, 4/27; `rcomp` 11/47, 2/27; the best
+  others 14/47, 6/27, which is chance level, since Excel itself is 30.8 ulp rms from the 50-digit density there.
+  Outside the window the ratio form scores 4.8 ulp rms.
+- The cdf decouples from the density from about 0.72a: holdout A23 and A37 (densities at shapes 100 and 500) carry
+  -0.65 ulp of per-unit error, their cdfs A24 and A38 only -0.17 and -0.13. Up to 0.70a they carry about the same error.
+  So the cdf may take another path there (Temme's expansion is one candidate).
 The ratio form is Excel's bit for bit at a/21
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
 ratio form (probes/t2753-gamma-density-ratio-sweep A48, B48 `GAMMA.DIST(0.5,50,1,FALSE)`: ratio form 69 ulp off, `rcomp`
@@ -1234,7 +1261,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
