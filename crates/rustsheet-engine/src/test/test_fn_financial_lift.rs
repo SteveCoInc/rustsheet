@@ -455,10 +455,12 @@ fn xnpv_xirr_and_fvschedule_lift_beside_their_whole_flows() {
         ("H8", "=ROWS(FVSCHEDULE(C1:C2,{0.1,0.2}))", "#VALUE!"),
         ("H9", "=INDEX(FVSCHEDULE({1000;2000},{0.1,0.2}),2)", "2640"),
         // The scalar order: XNPV's rate and FVSCHEDULE's principal before the flows, XIRR's
-        // flows before its guess. A flows error is every element's.
+        // guess before an error values argument (`XIRR(NA(),{2 dates},"x")` is `#VALUE!`,
+        // probes/t3312-xirr-guess-dates-weibull A41). A flows error is every other element's.
         ("H10", "=INDEX(XNPV({\"x\";0.1},F4,J1),1)", "#VALUE!"),
         ("H11", "=INDEX(XNPV({\"x\";0.1},F4,J1),2)", "#DIV/0!"),
-        ("H12", "=INDEX(XIRR(F4,J1:J5,{\"x\";0.1}),1)", "#DIV/0!"),
+        ("H12", "=INDEX(XIRR(F4,J1:J5,{\"x\";0.1}),1)", "#VALUE!"),
+        ("H20", "=INDEX(XIRR(F4,J1:J5,{\"x\";0.1}),2)", "#DIV/0!"),
         ("H13", "=INDEX(XIRR(K1:K5,J1:J5,{\"x\";0.1}),1)", "#VALUE!"),
         ("H14", "=INDEX(FVSCHEDULE({TRUE;1000},F4),1)", "#VALUE!"),
         ("H15", "=INDEX(FVSCHEDULE({TRUE;1000},F4),2)", "#DIV/0!"),

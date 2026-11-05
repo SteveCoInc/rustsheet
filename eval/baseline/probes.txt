@@ -1881,6 +1881,8 @@ C	probes/t3299-date-text-glued-month-3.case.json	363
 C	probes/t3302-text-funcs-arrays.case.json	21
 C	probes/t3304-collation-multi-letter-accents.case.json	1896
 C	probes/t3308-intersection-function-operands.case.json	25
+C	probes/t3312-xirr-guess-dates-weibull.case.json	61
+C	probes/t3312-xirr-xnpv-inner-calls.case.json	64
 C	probes/t3317-xlookup-scalar-return.case.json	20
 C	probes/t3334-criteria-operand-forms.case.json	983
 C	probes/t3335-textbefore-overlapping-instances.case.json	78
@@ -4412,6 +4414,7 @@ F	probes/t3070-gamma-inv-band.case.json	S!A8
 F	probes/t3070-gamma-inv-band.case.json	S!A9
 F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!A1
 F	probes/t3179-cumipmt-ipmt-sum.case.json	Sheet1!D1
+F	probes/t3312-xirr-xnpv-inner-calls.case.json	Calc!A30
 F	probes/t3347-irr-conventional-num.case.json	P!A10
 F	probes/t3347-irr-conventional-num.case.json	P!A11
 F	probes/t3347-irr-conventional-num.case.json	P!A12

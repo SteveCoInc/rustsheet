@@ -601,8 +601,10 @@ pub(crate) fn compute_xirr(
 ) -> Result<f64, (Error, String)> {
     const BISECTION_CAP: usize = 200;
     let no_result = || (Error::NUM, "Failed to converge".to_string());
+    // A guess at or below -1 is `#NUM!`: `XIRR({-100,110},{39448,39508},-1)`
+    // (probes/t3312-xirr-guess-dates-weibull A9, T-3312).
     if guess <= -1.0 {
-        return Err((Error::VALUE, "Rate initial guess must be > -1".to_string()));
+        return Err((Error::NUM, "Rate initial guess must be > -1".to_string()));
     }
     // The values cannot be all positive or all negative
     if values.iter().all(|&x| x >= 0.0) || values.iter().all(|&x| x <= 0.0) {

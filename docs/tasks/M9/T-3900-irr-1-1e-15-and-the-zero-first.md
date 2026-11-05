@@ -26,9 +26,10 @@ bound"). The rest stays `#NUM!` in the engine:
 - probes/irr-guess-edges A27-A29 and gen-m9/bc04c1f478c9896c Calc!A56: IRR over Data!A1:D12 (first flow 0,
   values 1E+15 among them) from guesses 0.05, 0.1, 0.5; `IRR({0,1E+15,2,42,1E+15,-0.0001})` (A34, A35) is `#NUM!`.
 - gen-m9/530c636749a85209 Calc!A338 (`IRR({-1,1E+15},143)` inside HYPGEOM.DIST, `#DIV/0!` in Excel) is the same
-  shape; T-3312 lists it and keeps it.
+  shape; T-3312 traced it to the IRR (Data!C2:D3 reads -1 and 1E+15, BITXOR(235,100) = 143) and moved it here.
 Cells:
 - gen-m9/bc04c1f478c9896c.case.json (1): Calc!A56
+- gen-m9/530c636749a85209.case.json (1): Calc!A338
 - probes/irr-guess-edges-2 A20, A28, A29; probes/irr-guess-edges A27, A28, A29, A38
 
 - T-3407 (2026-11-04): gen-m9/bc04c1f478c9896c Calc!A56 and probes/irr-guess-edges A27 now pass. The secant's step

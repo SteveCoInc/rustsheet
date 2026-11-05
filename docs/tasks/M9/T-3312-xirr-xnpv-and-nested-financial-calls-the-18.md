@@ -3,7 +3,7 @@ id: T-3312
 title: "XIRR, XNPV and nested financial calls: the 18 gen-m9 cells T-2611 left (numeric text in XIRR values, XNPV element order, inner-function causes)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -45,10 +45,35 @@ Tool: a scratch suite holding one case's Data sheet with probe formulas in Calc 
 show p/x.case.json --all` (how T-2611 traced its cells).
 
 ## Acceptance criteria
-- [ ] The 18 lines above disappear from eval/baseline/gen-m9.txt, or each one left is listed in the Outcome with its
+- [x] The 18 lines above disappear from eval/baseline/gen-m9.txt, or each one left is listed in the Outcome with its
       traced cause and owner task; no new known-failure lines.
-- [ ] Every order changed is backed by a probe of the bare call and recorded in docs/excel-semantics/.
+- [x] Every order changed is backed by a probe of the bare call and recorded in docs/excel-semantics/.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR/XNPV solver values.
+
+## Outcome
+Seven of the 18 lines had already passed on main (31474c20fc1dafd6 A351, 1b60bf99d71424e7 A171, 58e3253bbd3a7a82 A189,
+a91bad4e84f49739 A158 and three others no longer in eval/baseline/gen-m9.txt). Two probe cases (excel-graph, 2026-11-04)
+traced the rest: probes/t3312-xirr-xnpv-inner-calls (64 cells: each inner call on a copy of its case's Data sheet, and
+the guess order) and probes/t3312-xirr-guess-dates-weibull (61 cells: guess at or below -1, dates read in order,
+WEIBULL.DIST at x = 0).
+- Fixed (6 gen-m9 lines): 30e20ba3302fea8b A208 (WEIBULL.DIST's density at x = 0 computes beta^alpha: `#NUM!` on
+  overflow, `#DIV/0!` on underflow; statistics.md), 5ded7594e597e31e A12 and 8f2ac25945af87da A137 (XNPV: rate at or
+  below 0 first, then a non-number first date `#VALUE!`, then value errors, then a non-number later date `#NUM!`;
+  financial.md "XNPV's rate, first date and later dates (T-3312)"), 4bad303d32cc3f46 A364, 5919660b7bb4d195 A144 and
+  b72d952c5f52cb4d A38 (XIRR: guess first, boolean guess `#VALUE!`, a guess at or below -1 turns the size errors into
+  `#NUM!`, one empty cell is a number for the one-value `#N/A`, values and dates read pair by pair; financial.md "XIRR's
+  guess, date and empty-cell order (T-3312)").
+- Left, with their owners: 530c636749a85209 A338 is `IRR({-1,1E+15},143)` (Data!C2:D3 reads -1 and 1E+15), moved to
+  T-3900's cell list; a4090567758520df A277 is T-2574's (LOGEST lift order, already listed there); 984cba67bbe6972b A141
+  is GAMMA.INV's last digit (the FVSCHEDULE inside gives 36690 exactly), T-3239's; 1b60bf99d71424e7 A181 is CUMPRINC's
+  last digit, T-1374's; 89f0aee953a55a45 A349 (`FVSCHEDULE(5916,{-1E+300,1E+300})`, 0 on excel-graph) cannot be probed
+  on excel-graph (every smaller workbook with an overflowing FVSCHEDULE fails to open), so it goes to desktop Excel,
+  T-4250 (M14, decision 0039).
+- New visibly-off probe cell: probes/t3312-xirr-xnpv-inner-calls Calc!A30 (`XIRR({-100,200,-300},{1,2,3})` is
+  2.98e-9 in Excel, a solver value), T-4251.
+- compute_xirr's guess at or below -1 is `#NUM!`, not `#VALUE!` (t3312-xirr-guess-dates-weibull A9).
+Eval delta: gen-m9 known failures 1937 -> 1931 (6 fixed, 0 regressions); probes +2 cases (124 of 125 cells pass, 1
+new known failure owned by T-4251).
