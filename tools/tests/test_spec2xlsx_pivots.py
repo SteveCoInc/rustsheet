@@ -173,6 +173,15 @@ def test_range_grouped_pivot() -> None:
     assert not bake_pivots(spec)  # nothing to bake
 
 
+def test_group_items_may_repeat_or_be_numbers() -> None:
+    # T-4316 probes how Excel reads a label listed twice and a non-text `<groupItems>` item.
+    spec = _grouped_spec(_GROUP | {"items": ["<0", "0-4", 3, "0-4", ">10"]})
+    definition = _parts(spec)["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert (
+        '<groupItems count="5"><s v="&lt;0"/><s v="0-4"/><n v="3"/><s v="0-4"/><s v="&gt;10"/></groupItems>'
+    ) in definition
+
+
 @pytest.mark.parametrize(
     ("group", "message"),
     [
@@ -181,8 +190,9 @@ def test_range_grouped_pivot() -> None:
         (_GROUP | {"interval": True}, "are numbers"),
         (_GROUP | {"start": 10}, "start < end"),
         (_GROUP | {"interval": 0}, "interval > 0"),
-        (_GROUP | {"items": ["<0", ">10"]}, "three or more distinct texts"),
-        (_GROUP | {"items": ["a", "a", "b"]}, "three or more distinct texts"),
+        (_GROUP | {"items": ["<0", ">10"]}, "three or more texts or numbers"),
+        (_GROUP | {"items": ["a", True, "b"]}, "three or more texts or numbers"),
+        (_GROUP | {"items": ["a", None, "b"]}, "three or more texts or numbers"),
         ("range", "exactly the keys"),
     ],
 )
