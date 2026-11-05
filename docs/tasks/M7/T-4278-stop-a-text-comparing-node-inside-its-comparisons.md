@@ -3,7 +3,7 @@ id: T-4278
 title: "Stop a text-comparing node inside its comparisons once the formula work budget runs out (T-4233 follow-up)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
