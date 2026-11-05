@@ -20,6 +20,7 @@
 use super::super::half_integer_beta::is_half_integer_shape;
 use super::super::loader::stirlerr_exact;
 use super::fraction::accurate_fraction;
+use super::density::{direct_deviance, in_window, window_exponent};
 use super::{excel_ratio_exponent, stirling_prefactor, Terms};
 
 /// The x above which Excel takes the ratio form. Bracketed by the T-3269 boundary probe
@@ -88,15 +89,49 @@ const FAR_ABOVE_MAX_RATIO: f64 = 2.9901;
 /// ratio form a ln(x/a) + (a - x) at 68. `None` elsewhere, where the result is not a normal
 /// double, or past `terms`.
 pub(super) fn excel_far_above_mean(a: f64, x: f64, terms: &mut Terms) -> Option<f64> {
-    let measured = a.fract() == 0.0 && (FAR_ABOVE_MIN_SHAPE..=FAR_ABOVE_MAX_SHAPE).contains(&a);
-    if !(measured && x > a * FAR_ABOVE_MIN_RATIO && x <= a * FAR_ABOVE_MAX_RATIO) {
+    if !(measured_poisson_shape(a) && x > a * FAR_ABOVE_MIN_RATIO && x <= a * FAR_ABOVE_MAX_RATIO) {
         return None;
     }
+    loader_upper(a, x, direct_deviance(a, x), terms)
+}
+
+/// Whether `a` is an integer shape (POISSON's k + 1) from [`FAR_ABOVE_MIN_SHAPE`] to
+/// [`FAR_ABOVE_MAX_SHAPE`], the k of every T-4302 and T-4322 probe.
+fn measured_poisson_shape(a: f64) -> bool {
+    a.fract() == 0.0 && (FAR_ABOVE_MIN_SHAPE..=FAR_ABOVE_MAX_SHAPE).contains(&a)
+}
+
+/// sqrt(a / 2 pi) exp(-B - c(a)) times the accurate fraction, for Excel's deviance B and the exact
+/// Stirling error c: `None` where the result is not a normal double, or past `terms`.
+fn loader_upper(a: f64, x: f64, deviance: f64, terms: &mut Terms) -> Option<f64> {
     let fraction = accurate_fraction(a, x, terms)?;
-    let deviance = a * (a / x).ln() + (x - a);
     let prefactor = stirling_prefactor(a, -deviance, stirlerr_exact(a).0);
     let upper = prefactor * (fraction.0 + fraction.1);
     upper.is_normal().then_some(upper)
+}
+
+/// The smallest x / a at which POISSON's cdf takes the window exponent ([`excel_window_upper`]).
+/// Bracketed by the T-4302 probes in (1.2957, 1.3068): from 1.3068 to 1.495 Excel's cdf is the
+/// window form to 0 to 6 ulp at 21 of 21 points (probes/t4302-poisson-cdf-beside-pmf B21, F24, A19,
+/// E21, F20, H24, A22 and probes/t4291-poisson-far-above-mean row 2), and at 1.258 to 1.2957 it is
+/// 9 to 62 ulp from it at shapes 81 to 301 (t4291 D1:H1, probes/t3252-gamma-prefactor-window A137),
+/// where the correctly rounded Q is 1 to 9 ulp off (T-4322 owns what Excel takes there). 1.3 is
+/// Cephes' `SMALLRATIO`, the cut of its asymptotic igamc series, inside the bracket.
+/// FITTED(T-4322, 30 cells, x/a 1.26..1.5, shape 31..301)
+const WINDOW_MIN_RATIO: f64 = 1.3;
+
+/// Excel's POISSON cdf Q(a, x) in the upper part of its gamma window (T-4322): at an integer shape
+/// from [`FAR_ABOVE_MIN_SHAPE`] to [`FAR_ABOVE_MAX_SHAPE`] and 1.3a <= x inside the density's
+/// window (x <= 1.5a, [`in_window`]), the prefactor sqrt(a / 2 pi) exp(-B - c(a)) with the
+/// density's window exponent B ([`window_exponent`], T-4308) times the accurate fraction. Below
+/// 1.3a Excel is not this form (it is a few ulp from the true Q there), and above 1.5a the far
+/// form takes over ([`excel_far_above_mean`]). `None` elsewhere, where the result is not a
+/// normal double, or past `terms`.
+pub(super) fn excel_window_upper(a: f64, x: f64, terms: &mut Terms) -> Option<f64> {
+    if !(measured_poisson_shape(a) && x >= a * WINDOW_MIN_RATIO && in_window(a, x)) {
+        return None;
+    }
+    loader_upper(a, x, window_exponent(a, x), terms)
 }
 
 #[cfg(test)]
