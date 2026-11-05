@@ -208,6 +208,35 @@ fn fraction_digit_ties_below_one_are_cut_field_by_field() {
     }
 }
 
+/// The fraction digits read the cut's remainder of a second at 15 significant digits, so a tie within half a unit
+/// of the 15th digit rounds up, and a remainder that rounds to 1 shows zeros without carrying into the seconds
+/// (probes/t4323-fraction-ties A121, A128, t4323-fraction-holdout A100, t4332-fraction-fresh A8,
+/// t4370-ulp-map-2 A417, A418, t4370-fraction-fresh; T-4370).
+#[test]
+fn fraction_digits_read_the_remainder_at_fifteen_digits() {
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (0.0005 / 86400.0, "[h]:mm:ss.000", "0:00:00.001"),
+        (0.0075 / 86400.0, "[h]:mm:ss.000", "0:00:00.008"),
+        (3.55 / 86400.0, "[s].0", "3.6"),
+        (1.45 / 86400.0, "h:mm:ss.0", "0:00:01.5"),
+        (0.055 / 86400.0, "s.00", "0.06"),
+        // Just below the 15th digit stays truncated.
+        (20.65 / 86400.0, "[s].0", "20.6"),
+        (2.05 / 86400.0, "[s].0", "2.0"),
+        // The digits wrap and the seconds stay: 2 ulp below 41.95 s is "41.0", 1 ulp below "42.0".
+        (41.95 / 86400.0 - 2.0 * 2f64.powi(-64), "[s].0", "41.0"),
+        (41.95 / 86400.0 - 2f64.powi(-64), "[s].0", "42.0"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_number(value, format, &ctx).text,
+            expected,
+            "{value:e} {format}"
+        );
+    }
+}
+
 // probes/t4295-elapsed-with-month A1, D1, K1 (excel-graph): `[s]` before an hour or minute token
 // hands it the elapsed count, counted from the date section's register (18.5 days on 1h42m18s).
 #[test]
