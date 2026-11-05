@@ -48,14 +48,15 @@ use super::{
     xml_constants::XML_DECLARATION,
 };
 
-/// The number written to a cell's `<v>`: a positive kept subnormal is saved as 0, as Excel for the web
+/// The number written to a cell's `<v>`: a kept subnormal of either sign is saved as 0, as Excel for the web
 /// does (`EXP(-745)` is saved `<v>0</v>` while `(EXP(-745))=0` stays FALSE in memory; numbers.md
-/// "Worksheet EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). Only the evidenced domain is
-/// flushed: the spill and array arms follow the formula-cell evidence by inference; a negative kept
-/// subnormal and desktop Excel's save are unprobed (T-4355), and `-0.0` keeps its spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
+/// "Worksheet EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). The negative case (`0-EXP(-745)`)
+/// and the array / spill case (`EXP({-745,-708})`, `EXP(D1:E1)`, `EXP(A6#)`) are evidenced too
+/// (probes/subnormal-saved-negative-and-array, T-4355); desktop Excel's save is unprobed, and `-0.0` keeps
+/// its spelling. A stored constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
 fn saved_number(v: f64) -> f64 {
-    if v > 0.0 && v < f64::MIN_POSITIVE {
+    if v != 0.0 && v.abs() < f64::MIN_POSITIVE {
         0.0
     } else {
         v

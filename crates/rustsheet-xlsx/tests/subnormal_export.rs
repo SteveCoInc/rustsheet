@@ -38,12 +38,12 @@ fn kept_subnormal_is_saved_as_zero() {
     model
         .set_user_input(0, 4, 1, "=(EXP(-745))=0".to_string())
         .unwrap();
-    // Unprobed (T-4355): a negative kept subnormal keeps its value in the file. `0-x` keeps the
-    // sign; `-EXP(-745)` would be +2^-1074 (numbers.md "Unary minus of a tiny subnormal").
+    // T-4355 (probes/subnormal-saved-negative-and-array A1): a negative kept subnormal is saved as 0
+    // too. `0-x` keeps the sign; `-EXP(-745)` would be +2^-1074 (numbers.md "Unary minus of a tiny subnormal").
     model
         .set_user_input(0, 6, 1, "=0-EXP(-745)".to_string())
         .unwrap();
-    // Spill and CSE paths follow the formula-cell evidence by inference (T-4355).
+    // The array path is saved as 0 as well (probe cells A4, A5, T-4355).
     model
         .set_user_input(0, 5, 1, "=EXP({-745,-708})".to_string())
         .unwrap();
@@ -65,7 +65,7 @@ fn kept_subnormal_is_saved_as_zero() {
     assert_eq!(saved[2], "0");
     assert_eq!(saved[3], "0");
     assert_eq!(full(&saved[4]), 3.307_553_003_638_408e-308);
-    assert_eq!(full(&saved[5]), -f64::from_bits(1));
+    assert_eq!(saved[5], "0");
     reloaded.evaluate();
     // The formulas are saved with their text, so recalculation gives 2^-1074 again.
     assert_eq!(
