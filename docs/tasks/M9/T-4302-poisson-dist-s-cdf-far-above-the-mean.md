@@ -68,7 +68,8 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
     here and pushed before the case was filled. The form passes if both of these hold:
     - its bit-exact rate on this hold-out is at least the train rate (6/32 = 19%) minus 15 percentage points;
     - it beats the correctly rounded Q there on bit-exact count, with ties broken by the within-4-ulp count.
-    Result: HOLDOUT2_RESULT.
+    Result: new 9/46/41 of 48 (bit-exact / within 4 ulp / within 15 digits), correctly rounded 0/3/3. The exact
+    rate is 19%, the same as train, and the form wins 9 to 0, so it passes. Gate A's envelope holds 48/48.
   - Reproducibility floor: the rest is Excel's own fraction, a few ulp from the accurate one (up to 8). It is not
     fitted, since it lies within the 4-ulp web-desktop floor.
   - The 1.5a lower end carries `FITTED(T-4302, 96 cells, ...)` (`quality/fitted.json` updated with `--update`).
@@ -80,8 +81,9 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
       form, and the cdf gains 30 cells within 4 ulp over main.
     - No margin was stated before scoring.
 - **Eval delta:**
-  - probes known failures went from 5713 to 5926: 8 fixed, 219 new-coverage failures in the new case, and 2 allowed
-    regressions. The new case's failures are its pmf, density and CHISQ.DIST.RT cells, plus few-ulp cdf misses.
+  - probes known failures went from 5739 (main at the last merge) to 5991: 8 fixed, 258 new-coverage failures in
+    the new cases (219 in the beside-pmf case, 39 in hold-out 2), and 2 allowed regressions. The new failures are
+    the pmf, density and CHISQ.DIST.RT cells, plus few-ulp cdf misses.
   - The 2 regressions are t4291 A3 and A5, 1 ulp each, allowed by decision 0288.
   - No other gated suite moves.
   - Visible parity: the 95 visibly-off cells of the new case are owned as below; the lock goes from 3156 to 3251.

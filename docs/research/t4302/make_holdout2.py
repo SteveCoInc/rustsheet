@@ -7,31 +7,20 @@ pass margin was written in the task (the Outcome's "Hold-out 2" line) and pushed
 Rows 1:6 hold the cdf POISSON.DIST(k, mean, TRUE), in columns A:H, column-major.
 """
 
-import math
-import random
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from sweep_case import write_checked_case  # importable once the path above is set
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from make_sweep import points  # the fresh sweep's sampler, at another seed and top
+from sweep_case import write_checked_case
 
 OUT = Path(__file__).resolve().parents[3] / "eval/suites/probes/cases/t4302-poisson-cdf-holdout-2.case.json"
 
 
-def points():
-    rng = random.Random(43021)
-    pts = []
-    while len(pts) < 48:
-        k = round(math.exp(rng.uniform(math.log(30), math.log(300))))
-        mean = float(f"{(k + 1) * rng.uniform(1.5, 2.99):.6g}")
-        if 1.5 < mean / (k + 1) <= 2.99:
-            pts.append((k, mean))
-    return pts
-
-
 def main() -> None:
     cells = {}
-    for i, (k, mean) in enumerate(points()):
+    for i, (k, mean) in enumerate(points(43021, 2.99)):
         cells[f"{'ABCDEFGH'[i // 6]}{1 + i % 6}"] = f"=POISSON.DIST({k},{mean:g},TRUE)"
     write_checked_case(
         OUT,

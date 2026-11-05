@@ -7,7 +7,9 @@ Splits, fixed before scoring (decision 0188 R4.1):
 - train: probes/t4291-poisson-far-above-mean (the cdfs) with probes/t4302-poisson-cdf-beside-pmf rows 1:18
   (the same points' pmf, density and CHISQ.DIST.RT);
 - hold-out: probes/t4302-poisson-cdf-beside-pmf rows 19:42 (48 points from seed 4302);
-- fresh sweep after the freeze (R4.2): probes-numeric/t4302-poisson-cdf-r4-fresh (seed 43020).
+- fresh sweep after the freeze (R4.2): probes-numeric/t4302-poisson-cdf-r4-fresh (seed 43020);
+- hold-out 2 (review round 1): probes/t4302-poisson-cdf-holdout-2 (seed 43021), drawn with its margin stated in
+  the task before it was filled, since the first hold-out was seen while B was ranked. It has no density cells.
 Parts:
 1. Excel's cdf against Excel's own gamma density times the exact x F (F = Q / (x^a e^-x / Gamma(a))).
 2. Excel's density exponent against candidate forms of B, as ulps of the form's double.
@@ -47,6 +49,7 @@ def points():
     c1, o1 = oracle("probes", "t4291-poisson-far-above-mean")
     c2, o2 = oracle("probes", "t4302-poisson-cdf-beside-pmf")
     c3, o3 = oracle("probes-numeric", "t4302-poisson-cdf-r4-fresh")
+    c4, o4 = oracle("probes", "t4302-poisson-cdf-holdout-2")
     for col in "ABCDEFGH":
         for r in range(1, 7):
             k, m = args(c1[f"{col}{r}"])[:2]
@@ -57,6 +60,8 @@ def points():
         for r in range(1, 7):
             k, m = args(c3[f"{col}{r}"])[:2]
             out.append(("fresh", f"{col}{r}", int(k), m, o3[f"{col}{r}"]["v"], o3[f"{col}{r + 6}"]["v"]))
+            k, m = args(c4[f"{col}{r}"])[:2]
+            out.append(("hold-out 2", f"{col}{r}", int(k), m, o4[f"{col}{r}"]["v"], None))
     return out
 
 
@@ -94,6 +99,7 @@ def engine_values():
         "probes/t4291-poisson-far-above-mean.case.json",
         "probes/t4302-poisson-cdf-beside-pmf.case.json",
         "probes-numeric/t4302-poisson-cdf-r4-fresh.case.json",
+        "probes/t4302-poisson-cdf-holdout-2.case.json",
     ):
         text = subprocess.run([binary, "--root", ROOT, "show", case], capture_output=True, text=True).stdout
         ref = None
@@ -111,7 +117,8 @@ def count(errs):
 
 def main():
     pts = points()
-    above = [p for p in pts if p[3] / (p[2] + 1) > 1.5]
+    above = [p for p in pts if p[3] / (p[2] + 1) > 1.5 and p[5] is not None]
+    above_cdf = [p for p in pts if p[3] / (p[2] + 1) > 1.5]
     window = [p for p in pts if p[3] / (p[2] + 1) <= 1.5]
     cache = {(p[2], p[3]): exact(p[2] + 1.0, p[3]) for p in pts}
 
@@ -157,12 +164,12 @@ def main():
     print("4. The cdf, x/a > 1.5: bit-exact/within 4 ulp/within 15 digits of n")
     eng = engine_values()
     stems = {"train": "t4291-poisson-far-above-mean", "hold-out": "t4302-poisson-cdf-beside-pmf",
-             "fresh": "t4302-poisson-cdf-r4-fresh"}
-    for split in ("train", "hold-out", "fresh"):
+             "fresh": "t4302-poisson-cdf-r4-fresh", "hold-out 2": "t4302-poisson-cdf-holdout-2"}
+    for split in ("train", "hold-out", "fresh", "hold-out 2"):
         for label in ("engine", "correctly rounded"):
             e = d15 = ex = n = 0
             outside = []
-            for s, ref, k, m, cdf, _ in above:
+            for s, ref, k, m, cdf, _ in above_cdf:
                 if s != split:
                     continue
                 q = cache[(k, m)][0]
@@ -176,7 +183,7 @@ def main():
                 if not (same15 or abs(M(v) / q - 1) <= M("1e-9")):
                     outside.append(ref)
             env = f"; Gate A envelope {n - len(outside)}/{n} inside" + (f", outside {outside}" if outside else "")
-            print(f"   {split:8} {label:17} {ex}/{e}/{d15} of {n}" + (env if split == "fresh" else ""))
+            print(f"   {split:10} {label:17} {ex}/{e}/{d15} of {n}" + (env if split in ("fresh", "hold-out 2") else ""))
 
 
 if __name__ == "__main__":
