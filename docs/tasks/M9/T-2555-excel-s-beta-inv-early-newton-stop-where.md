@@ -3,7 +3,7 @@ id: T-2555
 title: "Excel's BETA.INV early Newton stop where the quantile is tiny at a huge shape (T-1538 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
