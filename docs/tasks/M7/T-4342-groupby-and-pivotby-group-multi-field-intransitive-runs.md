@@ -3,7 +3,7 @@ id: T-4342
 title: "GROUPBY and PIVOTBY group multi-field intransitive runs by T-4241's tree model (sorted UNIQUE keys, per-field lower-bound search, empty leaf aggregates every row)"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P0
 size: M
 tier: opus
@@ -44,12 +44,33 @@ intransitive. That includes the rows Excel puts in two groups and the groups tha
   F17:F18, F21:F23, F25, F27, F29, F31:F33, F36:F39, F41, F43, F45, F47.
 
 ## Acceptance criteria
-- [ ] The confirmation probe's predictions are committed before its fill, and the model is Excel's on it (or the
+- [x] The confirmation probe's predictions are committed before its fill, and the model is Excel's on it (or the
       misses are recorded and the model revised).
-- [ ] The owned cells pass, with 0 regressions in eval/baseline, or the task records with evidence which ones stay
+- [x] The owned cells pass, with 0 regressions in eval/baseline, or the task records with evidence which ones stay
       known failures and why.
-- [ ] coercion.md "Implemented in" names the code.
-- [ ] `make check` green; reviewers approve.
+- [x] coercion.md "Implemented in" names the code.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - SORT's order on intransitive cycles (T-3418).
+
+## Outcome
+- Hold-out: probes/t4342-groupby-tree-holdout (56 blocks, 206 GROUPBY/PIVOTBY cells: seeded five-row runs of two
+  and three fields, ascending, `sort_order` -1, SUM, PIVOTBY by a column field, and ASCII case spellings). The
+  model's predictions (docs/research/t4342/predictions.tsv) were committed before the fill (commit "hold-out probe
+  ... before the fill"). The frozen T-4241 model scores 199 of 206. The six misses are one shape (two leaves
+  showing one key); a lower-bound search over [0, n-1] instead of [0, n) fits them and keeps all 234 earlier
+  blocks (t4195 C and E, t4241 B to E): 205 of 206 (`compare.py --revised`). That revision is a structural choice
+  made on the hold-out (decision 0188 R4: no fitted constant). The miss left is Calc!C40 (three fields,
+  `sort_order` -1), filed as T-4344.
+- New finding: even in ASCII a group shows the first spelling in whole-row sorted order, not in source order:
+  (`ABC`,y), (`abc`,x) shows `abc` twice (Calc!B51:B56). So the tree model applies to every multi-field key, not
+  only to intransitive runs, and the engine now uses it everywhere. coercion.md records both findings.
+- Engine: `Grouping::new` is the tree model (`Keys` for the comparisons and their cost, `Tree::build`,
+  `Tree::descend`) and takes the tree directions (`tree_directions`: a hierarchy's key directions, ascending for a
+  table or a value sort). UNIQUE's kept-row pass moved out of `unique_of` into `unique_first_lines`, which both use.
+  T-4195's `classify` and the whole-row drop pass are gone. While no key text is outside ASCII, a row descends as
+  its first equal row does, so there is one search per distinct key.
+- Eval: probes known failures 6074 -> 5909 (166 fixed: all owned cells, 24 t4195 + 2 t4088 + 140 t4241), 0
+  regressions. One new-coverage failure: t4342 Calc!C40 (T-4344).
+- Follow-up: T-4344 (C40; PIVOTBY column fields, table sorts and value sorts on intransitive runs, all unprobed).

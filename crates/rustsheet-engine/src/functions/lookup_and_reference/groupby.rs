@@ -6,8 +6,8 @@
 
 use super::group_functions::{Aggregate, Element, Functions};
 use super::grouping::{
-    at, effective_depth, empty_text, subtotal_levels, value_error, Axis, Grouping, ParentOrder,
-    Relative, SetId, SortOrder,
+    at, effective_depth, empty_text, subtotal_levels, tree_directions, value_error, Axis, Grouping,
+    ParentOrder, Relative, SetId, SortOrder,
 };
 use super::lifted_options::Bound;
 use super::relative_to::Elements;
@@ -653,6 +653,7 @@ impl Model {
         let mut grouping = Grouping::new(
             keys,
             args.rows.iter().copied(),
+            tree_directions(&args.sort, args.order),
             limit,
             |units| self.spend_work(units, cell),
             cell,
