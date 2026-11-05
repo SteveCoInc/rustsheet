@@ -27,7 +27,8 @@ backed by probes that tell the possible rules apart.
   (crates/rustsheet-engine/src/defined_names.rs) and name resolution.
 
 ## Acceptance criteria
-- [x] The probes above are filled and their rule is in syntax.md.
+- [x] The probes above are filled and their rule is in syntax.md (the typed-after and edited-after ones wait on
+      T-4348: the harness cannot type after an API add).
 - [x] probes/t4014-sheet-api-name-65 S!A1 passes, or the rule is shown to be a Graph artefact and recorded as such.
 - [x] `make check` green; reviewers approve.
 
@@ -40,7 +41,9 @@ backed by probes that tell the possible rules apart.
   move. Rule (syntax.md "A sheet-scoped name added after load"): Excel binds names at load/entry; a sheet-scoped add
   re-binds only uses of a defined workbook N on its own sheet (`=N` and `=S!N` there move; other sheets keep the
   workbook N), and an unresolved `=N` on the sheet stays `#NAME?` (shown `=N`). Not a Graph-only artefact as far as
-  Graph can show; the 65-call body plays no part (the plain `=1` body behaves the same).
+  Graph can show; the 65-call body plays no part (the plain `=1` body behaves the same). The probes of a cell typed
+  or edited *after* the add were not filled: the harness types every cell before the `api_names` add (backend and
+  engine adapter), so syntax.md lists them as UNVERIFIED and T-4348 extends the harness and fills them.
 - Engine: `Model::bind_added_sheet_name` (defined_names.rs), run by an API sheet-scoped `define_name`, rewrites that
   sheet's stored formulas (`expressions/parser/stringify/name_binding.rs`): an unresolved use is pinned as `[0]!N`
   (parsed back as the undefined workbook name, shown `N`; `defined_name_text` stores it so), and a sheet-qualified read

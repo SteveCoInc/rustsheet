@@ -32,7 +32,8 @@ fn an_unresolved_name_on_its_sheet_stays_unresolved() {
     assert_eq!(model._get_text("T!A2"), "#NAME?");
 
     // The binding is stored: another add re-parses every formula and S!A1 stays unresolved, while
-    // `=N` entered on S now reads the sheet-scoped name.
+    // `=N` entered on S now reads the sheet-scoped name (ours, binding by its text; unprobed, the
+    // harness cannot type after an API add: T-4348).
     model.define_name("Other", None, "=2").unwrap();
     model._set("S!B1", "=N");
     model.evaluate();

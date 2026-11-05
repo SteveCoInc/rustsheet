@@ -289,12 +289,15 @@ a body past the cap can exist, and the undo does not refuse it (`Model::restore_
 RustSheet keeps a formula's binding in its stored text, and `Model::define_name` with a sheet scope rewrites the
 formulas of that sheet before re-parsing (`Model::bind_added_sheet_name`): with no workbook name, an unresolved use
 of N is stored `[0]!N` (the own-workbook prefix: still the undefined workbook name, `#NAME?`, shown `N`); with one,
-a sheet-qualified read of the workbook N (stored `[0]!N`) becomes `S!N`. A formula entered later binds by its text,
-as Excel's does. Unprobed, so UNVERIFIED: a file-stored `[0]!N` on S (taken to move with `=S!N`, which loads as the
-same workbook binding); what a later workbook-scoped add of N does to a use pinned so (ours fills it, as Excel fills
+a sheet-qualified read of the workbook N (stored `[0]!N`) becomes `S!N`. Unprobed, so UNVERIFIED (the oracle
+harness types every cell before the API add, so it cannot show what happens after it; T-4348): a formula typed on S
+after the add (ours binds by its text, so `=N` reads the sheet name) and a cell of S edited after it (ours leaves a
+pinned `=N` pinned); `=T!N` typed on S with no local N on T (it loads as the same workbook binding as `=S!N`, so ours
+moves it to `S!N` too); a file-stored `[0]!N` on S (taken to move with `=S!N`, likewise); what a later workbook-scoped add of N does to a use pinned so (ours fills it, as Excel fills
 an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is saved (ours writes `[0]!N`) and how
-Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies and names called
-as functions (`N(2)`), which the add leaves alone; and desktop Excel's Name Manager.
+Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
+and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
+Excel's Name Manager.
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,
