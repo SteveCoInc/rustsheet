@@ -57,3 +57,40 @@ pub(super) fn excel_far_upper(a: f64, x: f64, terms: &mut Terms) -> Option<f64> 
     let upper = prefactor * (fraction.0 + fraction.1);
     upper.is_normal().then_some(upper)
 }
+
+/// The smallest shape the far-above-the-mean form ([`excel_far_above_mean`]) is applied at:
+/// POISSON's k = 30, the lowest k of the T-4302 probes (probes/t4291-poisson-far-above-mean,
+/// probes/t4302-poisson-cdf-beside-pmf); below it Excel is unprobed on this form.
+const FAR_ABOVE_MIN_SHAPE: f64 = 31.0;
+
+/// The largest shape the far-above-the-mean form was measured at (k = 300).
+const FAR_ABOVE_MAX_SHAPE: f64 = 301.0;
+
+/// The lower end of x / a for the far-above-the-mean form: the upper end of Excel's gamma window
+/// (T-2638, T-4290), inside which its prefactor takes another chain (T-4308). The T-4302 probes
+/// bracket it in (1.495, 1.549): at x / a 1.29 to 1.495 the cdf is 7 to 82 ulp from this form.
+const FAR_ABOVE_MIN_RATIO: f64 = 1.5;
+
+/// The upper end of x / a measured (mean / k = 3).
+const FAR_ABOVE_MAX_RATIO: f64 = 3.0;
+
+/// Excel's POISSON cdf Q(a, x) far above the mean (T-4302): at an integer shape from
+/// [`FAR_ABOVE_MIN_SHAPE`] to [`FAR_ABOVE_MAX_SHAPE`] and 1.5a < x <= 3a, the prefactor
+/// sqrt(a / 2 pi) exp(-B - c(a)) with Loader's direct deviance B = a ln(a/x) + (x - a), its
+/// difference x - a taken first, and the exact Stirling error c, times the accurate fraction.
+/// Excel's cdf there is its own gamma density times x times the fraction to a few ulp, and that
+/// density is exp(-c - B) / sqrt(2 pi a) times (a / x) bit for bit at all 72 probed points
+/// (docs/excel-semantics/statistics.md, the T-4302 paragraph); B against Excel's implied exponent
+/// is within half an ulp at 70 of 71 points, where the ratio form a ln(x/a) + (a - x) is up to 5
+/// ulps off. `None` elsewhere, where the result is not a normal double, or past `terms`.
+pub(super) fn excel_far_above_mean(a: f64, x: f64, terms: &mut Terms) -> Option<f64> {
+    let measured = a.fract() == 0.0 && (FAR_ABOVE_MIN_SHAPE..=FAR_ABOVE_MAX_SHAPE).contains(&a);
+    if !(measured && x > a * FAR_ABOVE_MIN_RATIO && x <= a * FAR_ABOVE_MAX_RATIO) {
+        return None;
+    }
+    let fraction = accurate_fraction(a, x, terms)?;
+    let deviance = a * (a / x).ln() + (x - a);
+    let prefactor = stirling_prefactor(a, -deviance, stirlerr_exact(a).0);
+    let upper = prefactor * (fraction.0 + fraction.1);
+    upper.is_normal().then_some(upper)
+}
