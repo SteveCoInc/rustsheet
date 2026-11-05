@@ -3,7 +3,7 @@ id: T-4070
 title: "Incomplete beta bpser: T-3886's split items, the b0 >= 8 L diff on t2464-r2-bpser-small-shapes and T-2505's 987 moved probes-numeric cells"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -32,10 +32,23 @@ need tooling rebuilt before any scoring, which is the bulk of the work:
 Tools: `docs/research/t3007/cell_diff.py` for full-eval A/B diffs.
 
 ## Acceptance criteria
-- [ ] Each item above is ported (no gated cell regresses), or recorded as a negative result in statistics.md with its
+- [x] Each item above is ported (no gated cell regresses), or recorded as a negative result in statistics.md with its
       scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - BETA.DIST at a = b = 1/2 and the 6 shape-of-1 cells (T-3886, recorded); the t3568 column-B cells (T-3764).
 - bfrac/basym (T-2508), the bgrat family (T-2509, T-2510), the inverses (T-2511), T-2924's fit of Excel's ln B.
+
+## Outcome
+Both items are negative results, recorded in statistics.md ("Incomplete beta bpser") and in
+docs/research/t4070/RESULTS.md. Neither needs a bpser change: what is left is GAMMALN's last digits (T-2122).
+- No harness: the engine's values come from `rustsheet-eval show/run` and its GAMMALN from the bindings.
+  `docs/research/t2464/excelmath.py` `excel` is moved to today's `rustsheet.Workbook` API.
+- b0 >= 8 L diff (`l_diff.py`): engine 1,484/2,842/2,859 and model 1,489/2,840/2,861 of 2,868 (ex/u4/w15). Every one of
+  the 145 differing cells has a different GAMMALN(a0). With the engine's GAMMALN, the model equals the engine on all
+  2,868, so L and algdiv are the model's already. The 2 visibly-off cells (A9491, A9492) are GAMMALN(0.186), 1 ulp high.
+- The 987 cells (`moved_cells.py`): the pre/post reports from 1d3ea444 and 81c3d27e give exactly 987. Of these, 632
+  are bit-exact today, 196 are bit-exact in the model only, 141 are off in both and 18 are not modelled. All 196 are
+  GAMMALN's: 178 under the model, and 18 under T-3879's split z, with each GAMMALN giving its own side's value.
+- Eval delta: none (docs and research scripts only; no engine change).
