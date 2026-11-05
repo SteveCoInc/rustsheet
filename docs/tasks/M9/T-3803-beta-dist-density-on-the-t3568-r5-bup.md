@@ -8,6 +8,7 @@ priority: P3
 size: M
 tier: opus
 depends_on: [T-2586]
+campaign: visible
 defer: phase-1b
 ---
 
@@ -42,6 +43,22 @@ ours and the 50-digit math and the reason Excel's digits cannot be derived.
   - **min(a, b) <= 1 (330 cells: hold 167, tune 163).** a is 0.01 to 0.993, b is 17.3 to 3,000.
     `beta_density.rs` `beta_density_small_shape`, owned by T-3035 (visible), T-2821 (bit level) and T-3563/T-3564
     (min < 1 < 8 < max, algdiv).
+- Merged from T-3818 (dropped by T-3834, 2026-11-05): T-3818 owned the same two cases whole for their 7,026 visibly-off
+  cells, a subset of this task's 11,307, with the same intended fix (the shared density kernel), so this task is the one
+  owner. What T-3818 added:
+  - Counts (2026-11-02): terms-tune 5,898 cells, 275 bit-exact, 3,602 visibly off; terms-hold 5,967 cells, 283
+    bit-exact, 3,424 visibly off.
+  - Examples (Excel vs ours, terms-hold): Calc!O231 `BETA.DIST(0.258,14.561,2283.22,FALSE)` 5.537148910195256e-266 vs
+    5.537148910194687e-266; Calc!M264 `BETA.DIST(0.0782029528482,13.0,1617.6,FALSE)` 4.0179058036923066e-38 vs
+    4.017905803692237e-38; Calc!AA20 7.975405748028135 vs 7.975405748028151 (`(1669435*2^-25+30215771*2^-51)`,
+    shape `(28101836*2^-20+53687091*2^-46)`, 720.3).
+  - On 9 sampled cells against 50-digit mpmath, Excel is 2.7e-15 to 1.8e-13 relative off the density and the engine
+    1.4e-15 to 6.7e-14: Excel is the less accurate one, hence stage `visible`, not `accuracy`.
+  - Suspected root cause: Loader's saddle point at a large exponent (the error grows with |ln f|, here up to about 660;
+    same family as T-3250 and T-3244) for min(a,b) > 1, and the min(a,b) <= 1 path's lnB (algdiv for b >= 8). T-3569
+    found no x87 storage variant of algdiv that fits on the web pins; T-3750 (M14, blocked) asks desktop cells for them.
+    Start from whichever of T-3220, T-3244 or T-3250 lands first; do not fit a second density model beside theirs
+    (directive 3).
 - Cases owned, whole (decision 0136: each case is named on a line with no cell):
   - probes-numeric/t3568-r5-bup-terms-tune
   - probes-numeric/t3568-r5-bup-terms-hold
@@ -59,8 +76,16 @@ ours and the 50-digit math and the reason Excel's digits cannot be derived.
       - no keep-matched branch.
 - [ ] No gated known-failure line is added (`make eval-baseline` refuses regressions), and the fit sets of T-3244,
       T-3220 and T-3035 keep their counts.
+- [ ] The per-case counts (exact, within 4 ulp, within 15 digits) before and after are in the Outcome, and
+      statistics.md's beta density entries record what was found with its hold-out score, or the negatives tried.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The cdf cells of t3568-r5-bup-tune, -hold and -fresh (T-3712), and the a0 < 1e-15 band (T-3719).
 - The Loader constant and bd0 series themselves (T-2586): this task ports them, it does not crack them.
+- The cells T-3244 (both shapes large at n < 300), T-3250 (the a = 1025 column) and T-3220 (the residue at n < 90)
+  own in their own cases.
+
+## Visible-parity stage
+Target (decision 0114): every visibly-off cell of the two cases within half a unit of the 15th significant digit of
+Excel's value. Bit-level residue goes to a follow-up with `defer: phase-1b`.

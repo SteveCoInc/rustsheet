@@ -2293,6 +2293,7 @@ C	probes/t4333-count-ulp-scan.case.json	56
 C	probes/t4342-groupby-tree-holdout.case.json	1107
 C	probes/t4344-groupby-descending-search.case.json	1200
 C	probes/t4347-numeral-bytes-24-27.case.json	140
+C	probes/t4353-api-name-unqualified-ref.case.json	8
 C	probes/t4358-pivotby-unreached-column-leaf.case.json	475
 C	probes/t4359-groupby-value-sort-holdout.case.json	540
 C	probes/t4359-groupby-value-sort-parents.case.json	462
@@ -7436,6 +7437,8 @@ F	probes/t4333-count-ulp-scan.case.json	Sheet1!D3
 F	probes/t4333-count-ulp-scan.case.json	Sheet1!D4
 F	probes/t4333-count-ulp-scan.case.json	Sheet1!D7
 F	probes/t4333-count-ulp-scan.case.json	Sheet1!E6
+F	probes/t4353-api-name-unqualified-ref.case.json	Last!A1
+F	probes/t4353-api-name-unqualified-ref.case.json	S2!A3
 F	probes/t4358-pivotby-unreached-column-leaf.case.json	Calc!B6
 F	probes/t4358-pivotby-unreached-column-leaf.case.json	Calc!D6
 F	probes/t4379-pivotby-repeated-unreached-leaf.case.json	Calc!B1
