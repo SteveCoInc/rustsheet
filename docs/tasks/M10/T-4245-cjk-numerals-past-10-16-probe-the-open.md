@@ -3,7 +3,7 @@ id: T-4245
 title: "CJK numerals past 10^16: probe the open rest shapes and the 2^53 bracket (after T-3718)"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -45,3 +45,18 @@ it.
 
 ## Out of scope
 - `General` (it switches to scientific from 1E+11).
+
+## Outcome
+- Merged `agent/functions-text/T-3718-cjk-rows-21-25` (c656531) onto `main`: the trillion arm of
+  `Numerals::number`, its unit test rows, rows 21-25 of probes/t3718-cjk-numeral-unprobed (now 125/125), and the
+  number-formats.md text. Conflicts were resolved to the branch's side; the unit tests keep both sides' rows.
+- New probe probes/t4245-cjk-numeral-past-1e16 (excel-graph, 35 cells, bytes 0x1B-0x1F). The cut is 10^16, not
+  2^53 (9.504E15 is spelled). An empty 億 group past 10^16 takes one gap zero under 30 and 31. A count of 兆
+  ending in zero keeps its zero digit. A zero gap inside or after the 兆 group below 10^16 is one zero under 30
+  and 31. The T-3378 value with an integer part is spelled with the tens sign. All 35 cells match the existing
+  code, so only the docs change.
+- Tidy-ups: number-formats.md's "CJK General and elapsed counts" paragraph has one Unprobed list, citing T-4245.
+  The trillion arm's bindings are renamed (`below`, `count`) and no longer shadow.
+- Eval: probes known failures 4528 -> 4528 (+30 checked cells in t3718, +35 in the new case, all passing), 0
+  regressions.
+

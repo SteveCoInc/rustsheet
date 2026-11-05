@@ -202,19 +202,20 @@ impl Numerals {
             _ if !padded && integer.len() > BELOW_TRILLION => {
                 // The count of 兆 digit by digit, then 兆 and the rest spelled out, with one gap
                 // zero under 30 and 31 when the rest starts below 1000億 (`[s]` of 1.2345E11 is
-                // "一○六六六兆○八百亿"; probes/t3718-cjk-numeral-unprobed rows 21-25). `rest` is
-                // exactly 12 ASCII digits here, so its parse cannot fail.
-                let (trillions, rest) = integer.split_at(integer.len() - BELOW_TRILLION);
-                let rest = rest.parse::<u64>().unwrap_or(0);
-                let mut text = self.digits(trillions);
-                text.push(style.myriads[2]);
-                if rest > 0 {
-                    if style.zero_in_gap && rest < 100_000_000_000 {
-                        text.push(style.digits[0]);
+                // "一○六六六兆○八百亿"; probes/t3718-cjk-numeral-unprobed rows 21-25,
+                // t4245-cjk-numeral-past-1e16). `below` is exactly 12 ASCII digits here, so its
+                // parse cannot fail.
+                let (trillions, below) = integer.split_at(integer.len() - BELOW_TRILLION);
+                let below = below.parse::<u64>().unwrap_or(0);
+                let mut count = self.digits(trillions);
+                count.push(style.myriads[2]);
+                if below > 0 {
+                    if style.zero_in_gap && below < 100_000_000_000 {
+                        count.push(style.digits[0]);
                     }
-                    text.push_str(&style.spell(rest));
+                    count.push_str(&style.spell(below));
                 }
-                text
+                count
             }
             _ => self.digits(integer),
         };
