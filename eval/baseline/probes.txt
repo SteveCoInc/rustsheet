@@ -1559,6 +1559,7 @@ C	probes/t2869-quoted-lf-after-bang.case.json	2
 C	probes/t2869-quoted-ws-after-bang.case.json	2
 C	probes/t2869-ws-lf-after-bang.case.json	2
 C	probes/t2881-besselj-turning-point.case.json	76
+C	probes/t2883-stat-name-index-data.case.json	168
 C	probes/t2921-sumproduct-one-cell-numeric-text.case.json	47
 C	probes/t2929-sort-lifted-by-col-column.case.json	50
 C	probes/t2929-sort-lifted-by-col-errors.case.json	94
@@ -4073,9 +4074,6 @@ F	probes/t2753-gamma-density-switch.case.json	S!B4
 F	probes/t2753-gamma-density-switch.case.json	S!B40
 F	probes/t2753-gamma-density-switch.case.json	S!B42
 F	probes/t2753-gamma-density-switch.case.json	S!B5
-F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B13
-F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B3
-F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B4
 F	probes/t2829-ftest-a306-shapes.case.json	S!A1
 F	probes/t2829-ftest-a306-shapes.case.json	S!A10
 F	probes/t2829-ftest-a306-shapes.case.json	S!A11
