@@ -71,7 +71,7 @@ b in [20, 40) and a/b at most 1E-6.
   72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions. The three cases add 179 known failures
   (77 visibly off), owned by T-4255 and T-3219.
 
-## Landing notes
+## Landing notes (resumed 2026-11-05 01:55 UTC)
 - PR #3246 (draft), head after this commit; branch agent/research/T-3252-gamma-prefactor-window. CI on the
   current head will be red in the eval job: probes/t3252-gamma-prefactor-sweep has no baseline lines yet.
 - Reviewers: security and design APPROVED f297af847 (the 0.33 version); excel-fidelity REQUESTED CHANGES on it
