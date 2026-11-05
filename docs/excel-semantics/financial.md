@@ -4766,11 +4766,14 @@ they isolate: 11eb3ab4f4f8104c A109, 1b31092a0d79e5f1 A260, 31f09e6c48ca245c A23
 3c06f9298f65a3ba A50, A148 (T-2698's list).
 Ours: `pv_of` and `nper_of` (functions/financial/annuity.rs), `fn_db` (functions/financial/financial_depreciation.rs), T-2620.
 Inferred from the same formulas, unprobed: PV's `#DIV/0!` covers every P that underflows to 0 (a rate in (-2,-1)
-with a large even nper too, `#NUM!` before), and NPER's LN of a non-positive ratio is `#NUM!` before the ln(1+rate)
-`#DIV/0!` (`NPER(1E-300,0,100,200)` is `#NUM!`).
-Status: VERIFIED for the probed cells; DB's boolean month beyond the FALSE pair and the inferred lines are UNVERIFIED
+with a large even nper too, `#NUM!` before).
+Probed (T-3367): NPER's 1 + rate = 1 `#DIV/0!` comes before a non-positive ratio's `#NUM!`, the reverse of what
+this entry inferred earlier: `NPER(1E-17,0,100,200,0)`, `NPER(5E-17,0,100,200,0)` and `NPER(1.1E-16,0,100,200,0)`
+are `#DIV/0!`, while `NPER(1.2E-16,0,100,200,0)`, where 1 + rate is not 1, is `#NUM!`
+(probes-numeric/t3367-nper-tiny-rate A7, A14, A21, A28; excel-graph, 2026-11-05).
+Status: VERIFIED for the probed cells; DB's boolean month beyond the FALSE pair and PV's inferred line are UNVERIFIED
 (T-2749 probes them).
-Tasks: T-2620, T-2698, T-2749
+Tasks: T-2620, T-2698, T-2749, T-3367
 
 ## NPER at a tiny positive rate: Excel is far off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: NPER at 0 < rate < 1e-14 is far off the true period count in Excel, above G = 1e-4, so RustSheet returns the
@@ -4782,7 +4785,17 @@ Evidence:
 - The owner's 2026-10-31 assessment (decision 0188), 50-digit mpmath against Excel for the web.
 - The R3-marked points of the Gate A table: accuracy/NPER/s1 A121, A130, A133, A135, A142, A143, A151, A152, A153,
   A156, A158 and A162, at rates 3.0E-16 to 7.6E-15 (excel-graph, T-3535, decision 0220).
+- probes-numeric/t3367-nper-tiny-rate, seven argument sets at each of 20 rates from 1E-17 to 1E-12 (excel-graph,
+  2026-11-05, with a 50-digit math sidecar). The 66 numeric cells inside the region are R3-marked (decision 0282).
+  Excel's relative error against the math there runs from 6.5E-3 to 4.7E-1, the largest just above the cut:
+  `NPER(1.2E-16,-100,10000,0,0)` is 54.0 in Excel against a true 100.0.
+
+Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells at 1E-14, 1.5E-14, 3E-14 and 1E-13
+(A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
+about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
+stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. T-4285 asks the owner whether to widen it.
 Status: MATH-OVER-EXCEL (decision 0188)
-Ours: today the engine matches Excel bit for bit; T-3367 moves it to the math in the region. Until then the marked
-points are Gate A known failures owned by T-3367.
-Tasks: T-3367, T-3535
+Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
+log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's
+errors still decide which cells are errors (T-3367).
+Tasks: T-3367, T-3535, T-4285
