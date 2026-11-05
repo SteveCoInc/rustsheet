@@ -3,7 +3,7 @@ id: T-4290
 title: "Read Excel's in-window large-shape gamma exponent from ulp runs on exact x/a (after T-4255)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
