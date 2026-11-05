@@ -3,7 +3,7 @@ id: T-4276
 title: "Keep an unused shared item and showAll of an ungrouped pivot field (GETPIVOTDATA 0)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
