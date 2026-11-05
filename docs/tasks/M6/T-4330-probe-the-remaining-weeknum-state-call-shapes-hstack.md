@@ -3,7 +3,7 @@ id: T-4330
 title: "Probe the remaining WEEKNUM-state call shapes: HSTACK/DROP/TOROW/WRAPROWS/EXPAND beyond a range, CONCAT of INDEX/OFFSET/INDIRECT/IF, TEXTJOIN's delimiter (T-4315 review follow-ups)"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,10 +33,17 @@ Layout: the T-4289 one (A1 `=WEEKNUM(100,99)`, A2 the call, A3 `=WEEKNUM(100,2)`
 holding 1 2 / 3 4, one sheet per call, as in probes/weeknum-stale-call-shapes.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe case of the shapes above; every cell passes, or an owner task is filed for each off cell.
-- [ ] dates.md "Which calls empty WEEKNUM's state" states the probed results and drops them from its unprobed list;
+- [x] An excel-graph probe case of the shapes above; every cell passes, or an owner task is filed for each off cell.
+- [x] dates.md "Which calls empty WEEKNUM's state" states the probed results and drops them from its unprobed list;
       the engine's table changes where Excel differs.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - WEEKNUM calls inside a spilling formula (T-2070).
+
+## Outcome
+Probe `probes/weeknum-stale-call-shapes-3` (24 sheets, excel-graph 2026-11-05). Excel differed from the T-4315
+extension in: WRAPCOLS and TEXTSPLIT (empty the state; engine kept it), `CONCAT(INDEX({1,2},1))` (empties; engine
+kept it) and `CONCAT(IF/CHOOSE/LET/name over C1)` (keep; engine emptied). HSTACK, DROP, TOROW, WRAPROWS and EXPAND
+empty it for every shape, `ARRAYTOTEXT(C1:D1)` keeps it and `TEXTJOIN(C1,1,"a")` empties it, as the engine had.
+`weeknum_effect_of_call` and `joins_a_reference` now match; dates.md updated. No off cells remain.
