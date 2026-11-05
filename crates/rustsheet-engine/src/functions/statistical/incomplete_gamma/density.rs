@@ -95,7 +95,7 @@ fn in_window(a: f64, y: f64) -> bool {
 /// the window, [`direct_deviance`] outside it) it is Excel's bit for bit at 1,333 of 1,351 probed
 /// window densities away from the mode, all 138 at it, 156 of 160 above the window and 119 of 155
 /// below it, where the prefactor's sqrt(a / 2 pi) exp(-B - c) / x is at 107, 72, 43 and 65
-/// (docs/research/t4308/read_out.py part 4, excel-graph 2026-11-05).
+/// (`docs/research/t4308/read_out.py` part 4, excel-graph 2026-11-05).
 ///
 /// `None` where 2 pi a overflows (a above about 2.9E307): the chain would give 0 there, so the
 /// caller keeps the prefactor's sqrt(a / 2 pi) form. Excel gives #DIV/0! there at the mode
