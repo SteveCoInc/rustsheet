@@ -39,8 +39,7 @@ cannot be derived. The cells are CUMPRINC, and the CUMIPMT built on it. Every on
   T-3216 owns the same open question, CUMPRINC's own last bits where v^nper does not underflow, on T-3067's probes
   (the fin-cumprinc form-boundary probes and others). This task depends on T-3216 and scores these 171 cells under
   whatever form T-3216 lands (and T-4406 its tiny-rate counterpart). A form chosen there cannot use these cells as
-  its fresh sweep unless they were drawn
-  after its freeze.
+  its fresh sweep unless they were drawn after its freeze.
 - Reproducibility floor (R4.4): most differences are 1-2 ulp, inside the 4-ulp web/desktop floor
   (docs/research/oracle-calibration.md), and this sweep has one excel-graph fill (2026-11-05). Refill it
   before fitting.
