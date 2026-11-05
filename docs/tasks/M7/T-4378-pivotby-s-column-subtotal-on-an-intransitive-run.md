@@ -3,7 +3,7 @@ id: T-4378
 title: "PIVOTBY's column subtotal on an intransitive run holds the records that reached its class"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
