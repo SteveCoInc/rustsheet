@@ -3,7 +3,7 @@ id: T-4384
 title: "Add upstream TEXT/NUMBERVALUE.xlsx to calc_tests"
 milestone: M5
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
