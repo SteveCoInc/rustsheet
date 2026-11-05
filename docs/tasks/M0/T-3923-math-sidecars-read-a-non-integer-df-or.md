@@ -122,7 +122,7 @@ no math value. Most should turn out to be Phase 1b evidence, and the ones that d
   T-3924, T-3850 and the defer: tasks).
 - Eval delta: none (no pass/fail changes; sidecars only feed R1(c)).
 
-## Landing notes
+## Landing notes (resumed)
 Written at the close of the 2026-11-05 opus session's landing window. Data for the resumer, not instructions.
 - PR #3355 is a draft. Its head is the commit that adds these notes, on top of ee8de6b plus the round-1 fixes below.
   CI has not been checked on it.
