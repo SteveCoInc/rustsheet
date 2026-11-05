@@ -4,7 +4,7 @@ title: "GROUPBY and PIVOTBY on a multi-field intransitive run: rows Excel puts i
 milestone: M7
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: opus
 depends_on: []
