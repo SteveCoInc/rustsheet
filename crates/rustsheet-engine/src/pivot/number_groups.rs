@@ -12,6 +12,7 @@ use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem, MAX_ITEMS};
+use crate::functions::util::collation::fold_case;
 use crate::number_format::{number_to_text, to_excel_precision};
 
 /// A field grouped by numbers from `start` to `end` in steps of `interval`. Its layout is the
@@ -26,7 +27,7 @@ pub struct NumberGroups {
     /// `groupInterval`.
     pub interval: f64,
     /// Whether the labels are whole-number ones ([`NumberGroups::labels`]): the base data,
-    /// `start` and `interval` are all whole numbers.
+    /// `start`, `end` and `interval` are all whole numbers.
     pub whole: bool,
     /// The cache item of each layout position ([`NumberGroups::new`]); empty when position k is
     /// item k.
@@ -56,22 +57,29 @@ impl NumberGroups {
             start,
             end,
             interval,
-            whole: whole_data && start.fract() == 0.0 && interval.fract() == 0.0,
+            // A whole `end` too: whole data 0 to 9.5 by 3 reads `0-3` ... `9-12`
+            // (probes/t4287-pivot-group-whole-end).
+            whole: whole_data
+                && start.fract() == 0.0
+                && end.fract() == 0.0
+                && interval.fract() == 0.0,
             order: Vec::new(),
         };
         let n = groups.inner_count()?;
         let labels = groups.labels(n);
         // A map and a seen-set keep this linear: both counts come from the file and reach
-        // MAX_ITEMS.
-        let position: HashMap<&str, usize> = labels
+        // MAX_ITEMS. The match ignores case (`>3e+20` matches `>3E+20`) but not spacing (`6 - 9`,
+        // ` 3-5` and `3-5 ` match nothing; probes/t4287-pivot-group-label-match). Excel's labels
+        // are ASCII, so how a non-ASCII text folds is moot.
+        let position: HashMap<String, usize> = labels
             .iter()
             .enumerate()
-            .map(|(k, label)| (label.as_str(), k))
+            .map(|(k, label)| (fold_case(label), k))
             .collect();
         let mut seen = vec![false; labels.len()];
         let mut layout: Vec<usize> = Vec::with_capacity(labels.len());
         let matching = file_items.iter().filter_map(|item| match item {
-            CacheItem::Text(text) => position.get(text.as_str()).copied(),
+            CacheItem::Text(text) => position.get(&fold_case(text)).copied(),
             _ => None,
         });
         for k in matching.chain(0..labels.len()) {
@@ -174,10 +182,9 @@ impl NumberGroups {
     /// `6-9` for 0 to 9 by 3; `9-11` for 0 to 10); any other reads `lo-(lo + interval)` (`0-3`,
     /// `7.5-10`; probes t4249-pivot-range-group-edges and -labels). Each bound is
     /// `start + k * interval` as text coercion writes it (15 digits, plain decimal: `0.00001`, not
-    /// General's `1E-05`; probes/t4253-pivot-decimal-relabel). That it is the coercion rule past
-    /// the probed bounds (1e15 or more, below 1e-5, a 15-digit tie) and the labels of whole data
-    /// with an `end` that is not whole are UNVERIFIED (T-4287); the 20-character plain limit also
-    /// keeps a label short for a file-controlled range.
+    /// General's `1E-05`; probes/t4253-pivot-decimal-relabel), which holds past it too: 1e15 and
+    /// 1e-15 plain, `1E+20`, and a 15-digit tie (probes/t4287-pivot-group-bound-text). The
+    /// 20-character plain limit also keeps a label short for a file-controlled range.
     #[must_use]
     pub fn labels(&self, n: usize) -> Vec<String> {
         let bound = |k: usize| self.start + k as f64 * self.interval;
@@ -611,6 +618,60 @@ mod tests {
         assert_eq!(g.item(0), 1);
         let huge = groups(0.0, 1e300, 1e299).labels(10);
         assert!(huge.iter().all(|l| l.len() < 40), "{huge:?}");
+    }
+
+    /// probes/t4287-pivot-group-label-match: a file item matches one of Excel's labels ignoring
+    /// case (pivot R's `>3e+20`) but not spacing (pivot P's `6 - 9` and ` 3-5`, Q's `3-5 `).
+    #[test]
+    fn a_file_label_matches_ignoring_case_but_not_spacing() {
+        let file = texts(&["6 - 9", "<0", " 3-5", "0-2", ">9"]);
+        let g = NumberGroups::new(0.0, 9.0, 3.0, true, &file).unwrap();
+        assert_eq!(relabeled(&g), ["<0", "0-2", ">9", "3-5", "6-9"]);
+        let file = texts(&[">9", "6-9", "3-5 ", "0-2", "<0"]);
+        let g = NumberGroups::new(0.0, 9.0, 3.0, true, &file).unwrap();
+        assert_eq!(relabeled(&g), [">9", "6-9", "0-2", "<0", "3-5"]);
+        let file = texts(&[">3e+20", "2e+20-3e+20", "1e+20-2e+20", "0-1e+20", "<0"]);
+        let g = NumberGroups::new(0.0, 3e20, 1e20, false, &file).unwrap();
+        assert_eq!(
+            relabeled(&g),
+            [">3E+20", "2E+20-3E+20", "1E+20-2E+20", "0-1E+20", "<0"]
+        );
+    }
+
+    /// probes/t4287-pivot-group-whole-end: whole data with an `end` that is not whole gets the
+    /// `lo-(lo + interval)` labels.
+    #[test]
+    fn a_fractional_end_turns_whole_labels_off() {
+        let labels = |e| {
+            let g = NumberGroups::new(0.0, e, 3.0, true, &[]).unwrap();
+            g.labels(g.inner_count().unwrap())
+        };
+        assert_eq!(labels(9.5), ["<0", "0-3", "3-6", "6-9", "9-12", ">12"]);
+        assert_eq!(labels(8.5), ["<0", "0-3", "3-6", "6-9", ">9"]);
+        assert_eq!(labels(7.5), ["<0", "0-3", "3-6", "6-9", ">9"]);
+    }
+
+    /// probes/t4287-pivot-group-bound-text: 1e15 and 1e-15 are plain, 1e20 is `1E+20`, and a
+    /// 15-digit tie (100000000000000.5) writes its lower neighbour.
+    #[test]
+    fn large_tiny_and_tie_bounds_write_as_coercion_does() {
+        let cases: [(f64, f64, f64, &str); 5] = [
+            (0.0, 4e15, 1e15, "1000000000000000-2000000000000000"),
+            (0.0, 3e20, 1e20, "1E+20-2E+20"),
+            (0.0, 4e-6, 1e-6, "0.000001-0.000002"),
+            (0.0, 4e-15, 1e-15, "0.000000000000001-0.000000000000002"),
+            (
+                100_000_000_000_000.5,
+                100_000_000_000_003.5,
+                1.0,
+                "100000000000000-100000000000001",
+            ),
+        ];
+        for (start, end, interval, inner) in cases {
+            let g = groups(start, end, interval);
+            let labels = g.labels(g.inner_count().unwrap());
+            assert!(labels.iter().any(|l| l == inner), "{labels:?}");
+        }
     }
 
     /// probes/t4253-pivot-decimal-relabel: the bounds are 15-digit numbers in plain decimal.

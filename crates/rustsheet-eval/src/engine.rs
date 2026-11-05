@@ -219,6 +219,14 @@ impl Engine for RustSheetEngine {
                 // for after this edit, the workbook's load ([`type_entries`]).
                 let mut entered = Vec::new();
                 for phase in [Phase::Values, Phase::Stored] {
+                    if phase == Phase::Stored {
+                        // Before the pivots too: a date-formatted source cell is a date to a
+                        // pivot's refresh (probes/t4287-pivot-group-dates-as-numbers). Set again
+                        // below, as a stored formula's own format replaces it.
+                        for (sheet, &id) in spec.sheets.iter().zip(&ids) {
+                            set_number_formats(tx, sheet, id)?;
+                        }
+                    }
                     for (sheet, &id) in spec.sheets.iter().zip(&ids) {
                         if phase == Phase::Stored {
                             spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
@@ -276,15 +284,7 @@ impl Engine for RustSheetEngine {
                             input(&table.column_input)?,
                         )?;
                     }
-                    for (a1, format) in &sheet.number_formats {
-                        let addr = Addr::parse(a1).ok_or_else(|| {
-                            rustsheet::EditError::Engine(format!("bad address {a1}"))
-                        })?;
-                        tx.set_number_format(
-                            CellRef::new(id, addr.row - 1, addr.col - 1)?,
-                            format,
-                        )?;
-                    }
+                    set_number_formats(tx, sheet, id)?;
                     for &row in &sheet.hidden_rows {
                         let row = row.checked_sub(1).ok_or(rustsheet::RefError::OutOfBounds)?;
                         tx.set_row_hidden(id, row, true)?;
@@ -536,6 +536,20 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
         last.row - 1,
         last.col - 1,
     )?)
+}
+
+/// Gives each cell of `sheet` (sheet `id`) its spec number format.
+fn set_number_formats(
+    tx: &mut rustsheet::Txn<'_>,
+    sheet: &SheetSpec,
+    id: SheetId,
+) -> Result<(), rustsheet::EditError> {
+    for (a1, format) in &sheet.number_formats {
+        let addr = Addr::parse(a1)
+            .ok_or_else(|| rustsheet::EditError::Engine(format!("bad address {a1}")))?;
+        tx.set_number_format(CellRef::new(id, addr.row - 1, addr.col - 1)?, format)?;
+    }
+    Ok(())
 }
 
 /// A spec table's calculated column in column `letter` of table range `a1`: its 0-based index in
