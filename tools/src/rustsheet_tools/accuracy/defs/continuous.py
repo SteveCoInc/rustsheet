@@ -21,8 +21,11 @@ Sources:
   (T-2239)", "WEIBULL's density divides by l^k: #DIV/0! when it underflows, #NUM! when it overflows (T-2239)" and
   "WEIBULL.DIST's density at x = 0 still computes beta^alpha (T-3312)": the error domain. Both forms are `#NUM!` once
   t = EXP(alpha*LN(x/beta)) overflows; the density is `#DIV/0!` where beta^alpha = EXP(alpha*LN(beta)) underflows to 0
-  and `#NUM!` where it overflows, x = 0 included, though its limit is 0. At x = 0 the value is 0 for every shape (the
-  density too, also for alpha <= 1, whose limit is not 0: t1048-weibull A16, A17).
+  and `#NUM!` where it overflows, x = 0 included, though its limit is 0.
+- At x = 0 the math is the math, not Excel's 0: the cdf is 0, and the density is 0 for alpha > 1, 1/beta for alpha = 1
+  and unbounded for alpha < 1 (no value; NoValueError). Excel's density there is 0 for every shape (statistics.md
+  "Density at 0", probes-numeric/t1048-weibull A16:B17), so the alpha = 1 cells are 100% off the math: an R3 candidate
+  listed for the owner (T-4318), not a rule of the definition.
 
 What is left out of the tables (the sampler redraws; their Excel cells stay in the eval suites):
 - FISHER and FISHERINV on 0 < |x| < `FISHER_CANCEL_HI`. Excel computes 0.5*LN((1+x)/(1-x)) and
@@ -303,7 +306,12 @@ def _weibull_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     assert not isinstance(x, (bool, tuple)) and not isinstance(alpha, (bool, tuple))
     assert not isinstance(beta, (bool, tuple))
     if x == 0:
-        return mpmath.mpf(0)  # every shape, the density too (t1048-weibull A16, A17)
+        if cumulative or alpha > 1:
+            return mpmath.mpf(0)
+        if alpha == 1:
+            return 1 / beta  # Excel's 0 is not the math (R3 candidate, T-4318)
+        msg = "the density at x = 0 is unbounded for alpha < 1"
+        raise NoValueError(msg)
     fx, falpha, fbeta = float(x), float(alpha), float(beta)
     log_ratio = math.log(fx / fbeta)
     t_float = math.exp(falpha * log_ratio)
@@ -332,7 +340,7 @@ _WEIBULL_EDGES: tuple[tuple[float, float, float, bool], ...] = (
     (0.0, 309.0, 10.0, False),  # #NUM!
     (0.0, 400.0, 0.1, False),  # #DIV/0!
     (0.0, 308.0, 10.0, False),  # 0
-    (0.0, 0.5, 1.0, False),  # 0, though the density's limit is infinite
+    (0.0, 0.5, 1.0, False),  # Excel 0; the density is unbounded, so no math value (redrawn)
     (0.0, 1.0, 2.0, True),
     (1e-10, 0.5, 1.0, False),  # 49999.5000025 (T-1046)
     (1e-10, 1.0, 1.0, True),

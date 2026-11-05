@@ -99,9 +99,12 @@ def test_weibull_semantics_values() -> None:
     assert value(WEIBULL_DIST, 1e-10, 0.5, 1, True) == pytest.approx(9.999950000166663e-06, rel=1e-15)
     assert value(WEIBULL_DIST, 1e-10, 0.5, 1, False) == pytest.approx(49999.5000025, rel=1e-12)
     assert value(WEIBULL_DIST, 1000, 0.5, 1, True) == pytest.approx(0.9999999999999816, rel=1e-15)
-    # x = 0 is 0 for every shape, the density too (t1048-weibull A16, A17; T-3312's (0,308,10,FALSE))
-    assert value(WEIBULL_DIST, 0, 0.5, 1, False) == 0
+    # x = 0: the math, not Excel's 0 for every shape (t1048-weibull A16:B17); T-3312's (0,308,10,FALSE) is 0 both ways
+    assert value(WEIBULL_DIST, 0, 0.5, 1, True) == 0
     assert value(WEIBULL_DIST, 0, 308, 10, False) == 0
+    assert value(WEIBULL_DIST, 0, 1, 3, False) == pytest.approx(1 / 3, rel=1e-15)
+    with pytest.raises(NoValueError):
+        WEIBULL_DIST.evaluate([mp(0), mp(0.5), mp(1), False])
 
 
 @pytest.mark.parametrize(

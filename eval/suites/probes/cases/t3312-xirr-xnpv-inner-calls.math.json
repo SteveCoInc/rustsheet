@@ -37,11 +37,6 @@
     "t": "n",
     "v": "0.0",
     "f": "=WEIBULL.DIST(0,2,1,FALSE)"
-   },
-   "A6": {
-    "t": "n",
-    "v": "0.0",
-    "f": "=WEIBULL.DIST(0,0.5,1,FALSE)"
    }
   }
  },
@@ -49,6 +44,10 @@
   "Calc": {
    "A30": {
     "f": "=XIRR({-100,200,-300},P!G1:G3)",
+    "why": "no single value"
+   },
+   "A6": {
+    "f": "=WEIBULL.DIST(0,0.5,1,FALSE)",
     "why": "no single value"
    }
   }

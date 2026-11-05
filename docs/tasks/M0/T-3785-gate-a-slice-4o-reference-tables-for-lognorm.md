@@ -67,8 +67,9 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   EXPON.DIST and WEIBULL.DIST are -expm1(-t) and the closed-form densities at the working precision; FISHER is atanh
   and FISHERINV tanh.
 - Error domain, from the evidence: WEIBULL.DIST is `#NUM!` once t = EXP(alpha*LN(x/beta)) overflows, and its density
-  `#DIV/0!` where beta^alpha underflows to 0 and `#NUM!` where it overflows, x = 0 included (T-2239, T-3312); at
-  x = 0 the value is 0 for every shape (t1048-weibull). LOGNORM.DIST takes x > 0 and sd > 0, LOGNORM.INV p in (0, 1),
+  `#DIV/0!` where beta^alpha underflows to 0 and `#NUM!` where it overflows, x = 0 included (T-2239, T-3312). At
+  x = 0 the definition is the math: the cdf 0, and the density 0 for alpha > 1, 1/beta for alpha = 1 and no value for
+  alpha < 1 (unbounded), where Excel gives 0 for every shape (statistics.md "Density at 0"). LOGNORM.DIST takes x > 0 and sd > 0, LOGNORM.INV p in (0, 1),
   EXPON.DIST x >= 0 and lambda > 0, FISHER (-1, 1). Excel agrees on every error point drawn: 60 `#NUM!` and 8
   `#DIV/0!` cells across the six tables, each a domain error of the math too.
 - **FISHER near zero:** left out of the tables, not marked R3. FISHER and FISHERINV points with 0 < |x| < 1E-6 are
@@ -86,8 +87,12 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   probes/t2437-fit-separators, Excel is more than 1e-4 off the math at FISHER A2, A4, A5, A7, A8, A10, A11 (|x| from
   1E-16 to 1.2E-14, up to 1.0: `FISHER(1.02759470998055E-16)` is 0) and FISHERINV A21 to A32 and A34 to A36 (|y| from
   1E-16 to 8E-15, 2.2E-3 to 0.20). The engine matches Excel there (T-2437). No other cell of the six functions in the
-  regenerated sidecars, outside these and t2437-fit-separators's other near-0 FISHER and FISHERINV cells (inside
-  R3, listed in T-4317), is more than 1e-9 off the math.
+  regenerated sidecars, outside these, t2437-fit-separators's other near-0 FISHER and FISHERINV cells (inside R3,
+  listed in T-4317) and the WEIBULL density at x = 0 below, is more than 1e-9 off the math.
+- **R3 candidates, for an owner ruling (not marked; T-4318):** WEIBULL.DIST's density at x = 0 with alpha = 1, Excel 0
+  against the math 1/beta (relative error 1): probes-numeric/t1048-weibull A16, B16 and t1049-weibulldist A27. With
+  alpha < 1 the density is unbounded and the sidecars hold no math value (t1048-weibull A17, B17, t1049-weibulldist
+  A28, probes/t3312-xirr-xnpv-inner-calls A6). No table point is at x = 0 with alpha <= 1.
 - In the tables, the worst Excel-vs-math gap is 4.0E-11 relative (`FISHER(1.40857451285715E-06)`, at the cut);
   otherwise WEIBULL.DIST 2.1E-13, LOGNORM.DIST 3.0E-13, EXPON.DIST 2.1E-14, LOGNORM.INV 6.4E-14, FISHERINV 1.4E-11.
 - Tables: `eval/accuracy/tables/{LOGNORM.DIST,LOGNORM.INV,EXPON.DIST,WEIBULL.DIST,FISHER,FISHERINV}/s1`, 120 or 200
@@ -99,5 +104,6 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   regenerated (only the cases `make eval-math-check` reported stale).
 - Unit tests: tools/tests/test_accuracy_continuous.py (Microsoft's examples, the T-1040, T-1046, T-0925 and T-2239
   values, the WEIBULL error domain, and the FISHER draws avoiding the cancellation region).
-- Follow-up: T-4317 (owner ruling on R3 for FISHER and FISHERINV near 0, blocked on the owner).
+- Follow-ups: T-4317 (owner ruling on R3 for FISHER and FISHERINV near 0) and T-4318 (the same for WEIBULL.DIST's
+  density at x = 0), both blocked on the owner.
 - Eval delta: none in the gated suites (tools, tables and sidecars only).
