@@ -17,12 +17,12 @@ from collections.abc import Sequence
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import DF_CUT
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register, solve_log_bracket
 from rustsheet_tools.fitlab.kernels.beta import betacf
 
 DF_SOURCE = "statistics.md#student-t-sweep-df-truncation-df-limits-tinv2t-above-1-t-1043"
 TINY_P_SOURCE = "statistics.md#student-t-quantile-at-a-tiny-probability-t-1531"
-DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df
 # The continued fraction converges for y < (a + 1)/(a + b + 2), which holds for x² ≥ 3 at every df; from |x| = 2 it
 # takes at most about 600 terms (df 1E10), fewer as |x| grows.
 CF_MIN_X = 2

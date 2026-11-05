@@ -16,7 +16,8 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.student_t import DF_CUT, bounded_df
+from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs.student_t import bounded_df
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -24,7 +25,7 @@ from rustsheet_tools.accuracy.model import (
     NoValueError,
     Param,
     register,
-    solve_log_bracket,
+    solve_smaller_tail,
 )
 
 DF_SOURCE = "statistics.md#f-distribution-df-limit-t-1530"
@@ -64,19 +65,10 @@ def density(x: mpmath.mpf, d1: mpmath.mpf, d2: mpmath.mpf) -> mpmath.mpf:
 
 
 def quantile(p: mpmath.mpf, d1: mpmath.mpf, d2: mpmath.mpf) -> mpmath.mpf:
-    """The x with P(F ≤ x) = p, 0 < p < 1: the smaller tail is solved in log scales,
-    ln P(F ≤ e^s) = ln p for p ≤ 1/2, else ln P(F > e^s) = ln(1 - p), so a 1E-300 tail is as well
-    conditioned as the centre. NoValueError when the root is beyond the double range."""
-    lower = p <= mpmath.mpf(1) / 2
-    target = mpmath.log(p if lower else 1 - p)
-
-    def f(s: mpmath.mpf) -> mpmath.mpf:
-        x = mpmath.exp(s)
-        tail = lower_tail(x, d1, d2) if lower else upper_tail(x, d1, d2)
-        # the lower tail grows with s and the upper falls: f has opposite signs on the bracket ends
-        return (mpmath.log(tail) - target) if lower else (target - mpmath.log(tail))
-
-    return mpmath.exp(solve_log_bracket(f, -1500, 710))
+    """The x with P(F ≤ x) = p, 0 < p < 1: the smaller tail is solved in log scales (`solve_smaller_tail`).
+    NoValueError when the root is beyond the double range."""
+    s = solve_smaller_tail(p, lambda x: lower_tail(x, d1, d2), lambda x: upper_tail(x, d1, d2), -1500, 710)
+    return mpmath.exp(s)
 
 
 def _df(name: str) -> Param:

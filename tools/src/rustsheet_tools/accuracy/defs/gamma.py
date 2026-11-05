@@ -16,7 +16,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs.student_t import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -24,7 +24,7 @@ from rustsheet_tools.accuracy.model import (
     NoValueError,
     Param,
     register,
-    solve_log_bracket,
+    solve_smaller_tail,
     spend,
 )
 
@@ -48,9 +48,15 @@ def _log_prefix(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     return a * mpmath.log(y) - y - mpmath.loggamma(a)
 
 
+def _eps() -> mpmath.mpf:
+    """The convergence tolerance of the series and the continued fraction: a few ulps, since delta - 1 is rounding
+    noise at the last bit."""
+    return mpmath.mpf(2) ** (-mpmath.mp.prec + 4)
+
+
 def _series(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     """P(a, y) by its power series, Σ y^n / (a (a+1) ... (a+n)) (A&S 6.5.29), for y < a + 1."""
-    eps = mpmath.mpf(2) ** (-mpmath.mp.prec + 4)  # a few ulps: delta - 1 is rounding noise at the last bit
+    eps = _eps()
     term = total = 1 / a
     n = a
     for _ in range(MAX_TERMS):
@@ -66,7 +72,7 @@ def _series(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
 
 def _continued_fraction(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
     """Q(a, y) by its continued fraction (A&S 6.5.31, modified Lentz), for y ≥ a + 1."""
-    eps = mpmath.mpf(2) ** (-mpmath.mp.prec + 4)  # a few ulps: delta - 1 is rounding noise at the last bit
+    eps = _eps()
     tiny = mpmath.mpf(10) ** -(mpmath.mp.dps * 4)
     b = y + 1 - a
     c = 1 / tiny
@@ -120,16 +126,8 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
     the smallest double keeps its value: Excel gives 0 there (accuracy/GAMMA.INV/s1 A82, A85, A145, A155 and A172;
     CHISQ.INV(1E-300,1)), which the Gate A envelope's absolute floor of 1E-300 already accepts, and s1 is immutable
     (SPEC-0029), so the bracket stays at e^-1500 (T-3578)."""
-    lower = (p <= mpmath.mpf(1) / 2) != upper
-    q = p if (lower != upper) else 1 - p
-    target = mpmath.log(q)
-
-    def f(s: mpmath.mpf) -> mpmath.mpf:
-        y = mpmath.exp(s)
-        # the lower tail grows with s and the upper falls: opposite signs at the bracket ends
-        return (mpmath.log(lower_tail(y, a)) - target) if lower else (target - mpmath.log(upper_tail(y, a)))
-
-    return mpmath.exp(solve_log_bracket(f, -1500, 710))
+    s = solve_smaller_tail(p, lambda y: lower_tail(y, a), lambda y: upper_tail(y, a), -1500, 710, upper=upper)
+    return mpmath.exp(s)
 
 
 def _gamma_inv(args: Sequence[MathArg]) -> mpmath.mpf:

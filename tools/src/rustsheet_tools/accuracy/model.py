@@ -279,3 +279,34 @@ def solve_log_bracket(f: Callable[[mpmath.mpf], mpmath.mpf], lo: float, hi: floa
     except NoValueError as err:
         msg = f"quantile outside the double range ({err})"
         raise NoValueError(msg) from err
+
+
+def solve_smaller_tail(
+    p: mpmath.mpf,
+    lower_tail: Callable[[mpmath.mpf], mpmath.mpf],
+    upper_tail: Callable[[mpmath.mpf], mpmath.mpf] | None,
+    lo: float,
+    hi: float,
+    *,
+    upper: bool = False,
+) -> mpmath.mpf:
+    """The s in [lo, hi] with tail(e^s) = min(p, 1 - p) for a quantile of probability `p` (0 < p < 1): the smaller
+    tail is solved in log scales, ln tail(e^s) = ln q, so a 1E-300 tail is as well conditioned as the centre.
+    `lower_tail` and `upper_tail` map x = e^s to P(X ≤ x) and P(X > x). With `upper`, `p` is itself an upper-tail
+    probability, Q(x) = p. `upper_tail` may be None for a quantile that only ever solves the lower tail.
+    NoValueError when the root is not in the bracket (see `solve_log_bracket`)."""
+    small = p <= mpmath.mpf(1) / 2
+    lower = small != upper
+    target = mpmath.log(p if small else 1 - p)
+
+    def f(s: mpmath.mpf) -> mpmath.mpf:
+        x = mpmath.exp(s)
+        if lower:
+            return mpmath.log(lower_tail(x)) - target
+        if upper_tail is None:
+            msg = "the upper tail is needed here but no upper_tail function was given"
+            raise ValueError(msg)
+        # the lower tail grows with s and the upper falls: f has opposite signs on the bracket ends
+        return target - mpmath.log(upper_tail(x))
+
+    return solve_log_bracket(f, lo, hi)
