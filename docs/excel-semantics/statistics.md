@@ -5645,6 +5645,29 @@ functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
 Tasks: T-2455, T-2426
 
+## A range as const or stats reads its top-left cell (T-4222)
+Rule (excel-graph, 2026-11-05, probes/t4222-regression-flag-ranges, every formula with room to spill): a range given as
+LINEST's or LOGEST's `const` or `stats`, or TREND's or GROWTH's `const`, is the value of its top-left cell. It does not
+lift and is not an implicit intersection, and the other cells are never read:
+- `stats` = Data!Z1:Z2 (1, 2) or Z21:Z22 (1, 0) is the 5x2 stats block (A1, A21; LOGEST A31); Z11:Z12 (0, 1) is one
+  row (A11, A41). A horizontal Z81:AA81 (0, 1) and a 2x2 Z141:AA142 (0 top-left) are one row (A81, A141).
+- `const`: `LINEST(y,x,Data!Z11:Z12,FALSE)` fits through the origin (1.2, 0; A51), with Z21:Z22 it keeps the
+  intercept (A54); TREND and GROWTH alike (A60, A63, A66, A69, A72; A91 for a row range). So T-3185's
+  `GROWTH(..,6,Data!Z5:Z6)` = 6.597539553864471 and `TREND(..,6,Data!Z5:Z6)` = 5.8 are the TRUE calls, and
+  `LINEST(..,TRUE,Data!Z5:Z6)` is `#SPILL!` because its 5x2 block meets the next formula
+  (probes/t3185-m9-statistical-argument-kinds-b A62, A89, A94; -c A69).
+- Not an intersection: in row 101, `LINEST(y,x,TRUE,Data!Z100:Z102)` with 1, 0, 1 is the stats block (A101), and in row
+  111 `TREND(y,x,6,Data!Z110:Z112)` is 5.8 (A111).
+- The other cells: a text or `#N/A` second cell changes nothing (A121, A124, A133); a text top-left cell is `#VALUE!`
+  (A130).
+- A blank cell is FALSE, not the default: a blank top-left cell (Z127:Z128 blank, 0, and Z157:Z158 blank, 1) and a
+  single blank cell (Data!Z151) as TREND's `const` give 7.2, the call through the origin (A127, A157, A151), and
+  `LINEST(y,x,Data!Z151,FALSE)` is {1.2, 0} (A154). An omitted or empty argument stays the default.
+Ours: matches since T-4222 (`flag_range_value` in crates/rustsheet-engine/src/functions/statistical/linest.rs, used by
+trend.rs; a blank cell in `flag_value`). The cells' last-digit residue is the base calls' (out of scope there).
+Status: VERIFIED (web)
+Tasks: T-3185, T-4222
+
 ## LINEST and LOGEST report error values first (T-2455)
 Rule: LINEST and LOGEST first report an argument that is itself an error value, in argument order (known_y, known_x, const,
 stats), and only then check the data: an error element of a range or array, a single value that is no number, too few points,
