@@ -46,6 +46,17 @@ Visibly-off cells this task owns (taken over from T-4296, plus the fresh sweep):
 - probes/t3252-gamma-prefactor-sweep A9, A19, A20, A23, A53, A54, A55, A57, A58 and A63.
 - probes-numeric/t4296-gamma-density-r4-fresh A41:A160.
 
+From the T-4296 review (PR #3315; MINOR, carried here):
+- State the R4.1 margin when the hold-out split is fixed, before scoring. T-4296 stated none.
+- Commit the Gate A envelope check and the per-engine fresh-sweep counts as a script under docs/research/t4308/.
+  T-4296's were computed ad hoc: 160/160 inside the envelope, and 78/160 bit-exact on
+  probes-numeric/t4296-gamma-density-r4-fresh.
+- Probe the near-mode region T-4296 did not cover: x/a from 0.6 to 0.667 at shapes outside 30 to 500, and shapes
+  above 1E7. `mode_density` takes the chain there, unprobed. Also probe a shape past the 2 pi a overflow, where
+  the density keeps the old chain.
+- Once the exponent moves, make the near-mode test once (density.rs `density_with` and `gamma_prefactor` both
+  evaluate `excel_away_from_mode` today).
+
 ## Acceptance criteria
 - [ ] A candidate exponent on the T-4296 chain is scored with a hold-out fixed before scoring (decision 0188 R4),
       and adopted if it is Excel's on the hold-out. Otherwise each rejected family goes into statistics.md with its
