@@ -110,3 +110,24 @@ tag, restated (T-3524), with its form choice filed as T-4349.
   visibly off (71 short, all CUMIPMT, worst 3,072 ulps; 69 long, 68 CUMIPMT, worst 2,048 ulps), owned by T-4349.
 - The `quality/fitted.json` update also lowers annuity.rs from 4 to 3: main already has 3 tags there (a stale lock).
 - Findings: docs/excel-semantics/financial.md, "The two cuts on a fresh sweep". Follow-up: T-4349.
+
+## Landing notes
+- PR #3365 (draft), head 3c0ae3461. CI: not checked on this head when the window closed. Reviews: security and
+  design APPROVE on 37b9c1b5e (round 1; they need a re-run on the current head). Excel fidelity: round 1
+  REQUEST_CHANGES (no rates below 1E-4 in the sweep, FITTED range): fixed in 3c0ae3461 by the tiny-rate sweep.
+  Round 2 REQUEST_CHANGES on 3c0ae3461. It accepts the long-cut removal, decision 0291 and Gate A, and has one MAJOR
+  finding: keeping `GEOMETRIC_MIN_LEAD` contradicts the task's rule. Removing the cut breaks the tie on the old
+  held-out cells (11 visibly lost against 10 won) and wins on both fresh sweeps: short ranges 254/260 and 237/265 to
+  the bit, visibly 9 lost / 15 won and 18 / 33. The 40 old cells it would put visibly off are the cut's own training
+  cells. Its MINOR findings: restate "fresh: 9 against 13" as 9 / 15, add the tiny sweep's 18 / 33, and note that
+  below a lead of 1E-3 only old cells back the cut.
+- When the window closed: nothing in progress. Next step: pick option (a) or (b) from the reviewer.
+  - (a) Remove the short cut too (the always-geometric build, scratchpad `eval-always-geometric`, patch
+    docs/research/t3524/always-geometric.patch). Record its gated regressions in a decision record, extending 0291
+    (they include visibly-off cells such as gen-m9 b72d952c5f52cb4d A257 and fin-cumipmt-tiny-rate-structure A1/A3, so
+    0083's allowance does not cover them). Then rescope T-4349.
+  - (b) Keep the cut through a decision record that states the deviation from AC 3 with the corrected counts. Untick
+    AC 3 and drop the Outcome's "visible parity overrides" sentence.
+  - Round 3 is the last review round (work-loop step 5).
+- Do not repeat: the cut's justification from the old cells alone. The reviewer rejects it as keep-matched (0056,
+  0082).
