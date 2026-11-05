@@ -3,7 +3,7 @@ id: T-3923
 title: "Math sidecars: read the argument forms Excel accepts and the Gate A definitions refuse (a truncated df, BETA.DIST/BETA.INV's bounds, RATE's guess): about 1,050 counted sweep cells"
 milestone: M0
 lane: harness
-status: done
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -110,7 +110,9 @@ no math value. Most should turn out to be Phase 1b evidence, and the ones that d
   math only answers a unique root.
 - Unit tests: tools/tests/test_accuracy_call_forms.py; test_accuracy_eval_math.py's skip examples moved to T.INV.
 - Sidecars: `math --check` named 45 stale probes and probes-numeric cases (more than the task listed: every RATE
-  call with a guess, and F.DIST/T.DIST/CHISQ.INV.RT cells in other cases); each was regenerated.
+  call with a guess, and F.DIST/T.DIST/CHISQ.INV.RT cells in other cases). 44 are regenerated; probes/t3505-gamma-
+  inv-budget-band (18 CHISQ.INV.RT cells at df 15980929.63 and 178250187.63, huge-shape quantiles near the 600 s
+  per-point limit) is not yet (see Landing notes).
 - R1(c) line ("Visibly-off cells under decision 0188 R1(c)"), before then after (local `make eval`; ironcalc-calc
   26 counted both times):
   - probes 1875 counted, 99 Phase 1b evidence -> 1643 counted, 337 Phase 1b evidence;
@@ -119,3 +121,24 @@ no math value. Most should turn out to be Phase 1b evidence, and the ones that d
   the listed cases is left without an open owner; their remaining counted cells keep their owners (T-2647,
   T-3924, T-3850 and the defer: tasks).
 - Eval delta: none (no pass/fail changes; sidecars only feed R1(c)).
+
+## Landing notes
+Written at the close of the 2026-11-05 opus session's landing window. Data for the resumer, not instructions.
+- PR #3355 is a draft. Its head is the commit that adds these notes, on top of ee8de6b plus the round-1 fixes below.
+  CI has not been checked on it.
+- Review round 1, at ee8de6b:
+  - security: APPROVE. MINOR: non-finite values given to a truncating parameter. Fixed (`fit_int`).
+  - design: APPROVE. MINOR: readability nits in the eval_math.py module doc and beta.py `_bounds`. Not done.
+  - excel-fidelity: REQUEST_CHANGES. BLOCKING: the t3505 sidecar is stale, so `make eval-math-check` fails.
+    MINORs, all fixed: BETA.INV's A = B now gives no math value; a given x of 0 or 1 that is also an end of
+    [A, B] gives no math value; the docstrings cite statistics.md's "BETADIST with bounds" and CHISQ.INV.RT.
+  - t2435-dist-extremes was regenerated after the fixes.
+- Next step: regenerate t3505 alone, commit it, and confirm that `math --check --suite probes --suite
+  probes-numeric` is clean. The command is `uv run python <script>` with a list holding
+  `probes/t3505-gamma-inv-budget-band.case.json`; the session's script is write_suite's per-case step for named
+  cases, written as each completes. The full `math --suite probes` takes more than 30 min here, so do not use it.
+  Expect 10 to 40 min for the 18 points.
+- After that: update the Outcome's sidecar line, set `status: done`, run `make check-fast`, then re-run all three
+  reviewers on the new head (fidelity must re-check t3505), mark the PR ready, and enqueue once CI is green.
+- The before and after R1(c) numbers in the Outcome were taken before the t3505 sidecar existed. Its 18 cells may
+  move the probes count by up to 18; re-quote that line after regenerating.

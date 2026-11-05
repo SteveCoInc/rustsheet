@@ -102,7 +102,7 @@ class Param:
     edge points. An `optional` parameter (trailing ones only) may be left out of a call, as ERF's
     `upper_limit`: a point then has fewer arguments, and only a definition's own `draw` omits one.
     `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
-    `int` parameter toward zero (F.DIST's and T.DIST's df); without one an eval cell that passes a
+    `int` parameter toward zero (F.DIST's, T.DIST's and CHISQ.INV.RT's df); without one an eval cell that passes a
     non-integer gets no math value, since whether Excel truncates is per function.
     """
 

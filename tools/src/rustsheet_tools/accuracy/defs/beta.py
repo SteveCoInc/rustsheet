@@ -13,12 +13,13 @@ The optional [A, B] bounds are a linear map of x (`A + (B - A) x`); the s1 batch
 they are call parameters (`Definition.call_params`, T-3923) that only eval cells pass:
 - BETA.DIST(x, alpha, beta, cumulative, A, B) is the standard beta at t = (x - A)/(B - A), taken exact (no
   evidence says how Excel rounds t, and rounding it here would be a fit), with the density divided by B - A
-  (Microsoft's BETA.DIST page). x outside [A, B] and A = B are Excel's `#NUM!` (beta.rs). The density keeps its
+  (Microsoft's BETA.DIST page). x outside [A, B] and A = B are Excel's `#NUM!` (statistics.md, "BETADIST with
+  bounds", the legacy function's evidence, which BETA.DIST relies on). The density keeps its
   check of the given x against 0 and 1 (DENSITY_SOURCE: `BETA.DIST(0,0.5,2,FALSE,-1,1)` is `#NUM!`); where t is
   an end of [0, 1] at a shape of 1 or less Excel gives 0 (the same entry), which is no math value.
 - BETA.INV(p, alpha, beta, A, B) is A + (B - A) q for the standard quantile q, which Excel's own scaled calls
   equal bit for bit at 40 of 40 points (statistics.md, "BETA.INV solves Excel's own CDF to the crossing
-  (T-1745)", the T-3566 paragraph). B <= A is `#NUM!`.
+  (T-1745)", the T-3566 paragraph). B < A is `#NUM!`; A = B is unprobed, so it has no math value.
 """
 
 from __future__ import annotations
@@ -226,6 +227,10 @@ def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
         lo, hi = _bounds(args[4:])
         if lo == hi or not lo <= x <= hi:
             return "x outside [A, B], or A = B"
+        # A given x of 0 or 1 that is also an end of [A, B]: whether the given-x #NUM! or the end's 0 wins is
+        # unprobed, so `_beta_dist` gives no math value there.
+        if not cumulative and x in (0, 1) and x in (lo, hi):
+            return None
     if (
         cumulative
         or isinstance(x, (bool, tuple))
@@ -256,12 +261,15 @@ def _beta_inv(args: Sequence[MathArg]) -> mpmath.mpf:
         and not isinstance(b, (bool, tuple))
     )
     lo, hi = _bounds(args[3:])
+    if lo == hi:
+        msg = "A = B: no evidence of Excel's answer"
+        raise NoValueError(msg)
     return lo + (hi - lo) * quantile(p, a, b)
 
 
 def _beta_inv_domain(args: Sequence[MathArg]) -> str | None:
     lo, hi = _bounds(args[3:])
-    return "B <= A" if hi <= lo else None
+    return "B < A" if hi < lo else None
 
 
 def _bound(name: str) -> Param:

@@ -14,7 +14,7 @@ from rustsheet_tools.accuracy.defs.fisher import F_DIST, F_INV
 from rustsheet_tools.accuracy.defs.gamma import CHISQ_INV, CHISQ_INV_RT
 from rustsheet_tools.accuracy.defs.student_t import T_DIST
 from rustsheet_tools.accuracy.eval_math import fit_args
-from rustsheet_tools.accuracy.model import Definition, DomainError, Param
+from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, Param
 from rustsheet_tools.accuracy.tables import MathValue, compute
 
 
@@ -81,6 +81,8 @@ def test_beta_inv_with_bounds_maps_the_quantile() -> None:
     want = mpmath.mpf(0.15) + (mpmath.mpf(1.2) - mpmath.mpf(0.15)) * mpmath.mpf(plain)
     assert mpmath.almosteq(mpmath.mpf(bounded), want, rel_eps=mpmath.mpf("1e-45"))
     assert _value(BETA_INV, [0.5, 2.0, 3.0, 1.2, 0.15]).why is not None  # B < A
+    with pytest.raises(NoValueError):
+        compute(BETA_INV, [0.5, 2.0, 3.0, 1.2, 1.2])  # A = B is unprobed
 
 
 def test_rate_ignores_its_guess() -> None:

@@ -171,6 +171,8 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
 def fit_int(param: Param, value: float) -> int | str:
     """A number for an `int` parameter: an integer as is, and a non-integer truncated toward zero
     where `param.truncates` cites the evidence that Excel does so, or why it does not fit."""
+    if not math.isfinite(value):
+        return "non-finite for an integer parameter"
     if value.is_integer():
         return int(value)
     return math.trunc(value) if param.truncates else "non-integer for an integer parameter"

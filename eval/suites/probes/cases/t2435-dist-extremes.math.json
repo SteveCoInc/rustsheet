@@ -108,36 +108,6 @@
     "v": "1.3500000008100000677675479956593807775739642840044e-599",
     "f": "=F.DIST(1E-300,6,1E+10,FALSE)"
    },
-   "A132": {
-    "t": "e",
-    "why": "density at x = 0 with alpha <= 1",
-    "f": "=BETA.DIST(0,0.5,2,FALSE,0,1)"
-   },
-   "A133": {
-    "t": "e",
-    "why": "density at x = 0 with alpha <= 1",
-    "f": "=BETA.DIST(0,0.5,2,FALSE,0)"
-   },
-   "A135": {
-    "t": "e",
-    "why": "density at x = 1 with beta <= 1",
-    "f": "=BETA.DIST(1,2,0.5,FALSE,0,1)"
-   },
-   "A136": {
-    "t": "e",
-    "why": "density at x = 0 with alpha <= 1",
-    "f": "=BETA.DIST(0,1,2,FALSE,0,1)"
-   },
-   "A137": {
-    "t": "e",
-    "why": "density at x = 0 with alpha <= 1",
-    "f": "=BETA.DIST(0,0.5,2,FALSE,0,5)"
-   },
-   "A138": {
-    "t": "e",
-    "why": "density at x = 1 with beta <= 1",
-    "f": "=BETA.DIST(1,2,0.5,FALSE,-1,1)"
-   },
    "A139": {
     "t": "e",
     "why": "density at x = 0 with alpha <= 1",
@@ -387,6 +357,30 @@
    },
    "A127": {
     "f": "=BETA.DIST(5,2,0.5,FALSE,2,5)",
+    "why": "no single value"
+   },
+   "A132": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A133": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=BETA.DIST(1,2,0.5,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A136": {
+    "f": "=BETA.DIST(0,1,2,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0,5)",
+    "why": "no single value"
+   },
+   "A138": {
+    "f": "=BETA.DIST(1,2,0.5,FALSE,-1,1)",
     "why": "no single value"
    },
    "A143": {
