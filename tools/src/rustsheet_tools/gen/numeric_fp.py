@@ -17,9 +17,10 @@ from __future__ import annotations
 
 import random
 import re
-from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN
 from typing import Any
 
+from rustsheet_tools.accuracy.literal import decimal15
 from rustsheet_tools.gen.generator import col_letter
 from rustsheet_tools.gen.numeric_rules import BASES, fmt_k
 
@@ -161,7 +162,6 @@ M5_WRAPPERS = {
     "roundup-0": "ROUNDUP({e},0)",
 }
 M5_POSITIONS = ("root", "wrapper", "digits15")
-SIG_DIGITS = 15
 MAX_BOUNDARY_K = 1 << 12  # every FP_BASES boundary lies below k = 50; the cap only bounds the search
 
 
@@ -177,18 +177,11 @@ def _x(base: str, sign: int, k: int) -> float:
     return _value(base) * (1 + sign * k * 2.0**-52)
 
 
-def _cut(x: float, rounding: str) -> Decimal:
-    """x's exact decimal value cut to 15 significant digits, rounded half-even or truncated."""
-    d = Decimal(x)
-    unit = Decimal(1).scaleb(d.adjusted() - SIG_DIGITS + 1)
-    return d.quantize(unit, rounding=rounding)
-
-
 def _cut_tags(base: str, sign: int, k: int) -> str:
     """Whether X's 15-digit cut, rounded and truncated, equals b's (`eq`) or not (`ne`)."""
     x, b = _x(base, sign, k), _value(base)
     return "/".join(
-        f"{name}={'eq' if _cut(x, mode) == _cut(b, mode) else 'ne'}"
+        f"{name}={'eq' if decimal15(x, mode) == decimal15(b, mode) else 'ne'}"
         for name, mode in (("round15", ROUND_HALF_EVEN), ("trunc15", ROUND_DOWN))
     )
 
@@ -200,9 +193,9 @@ def _boundary_pairs() -> list[tuple[str, int, int]]:
         for sign in SIGNS:
             ks: set[int] = set()
             for mode in (ROUND_HALF_EVEN, ROUND_DOWN):
-                b = _cut(_value(base), mode)
+                b = decimal15(_value(base), mode)
                 flip = next(
-                    (k for k in range(1, MAX_BOUNDARY_K) if _cut(_x(base, sign, k), mode) != b),
+                    (k for k in range(1, MAX_BOUNDARY_K) if decimal15(_x(base, sign, k), mode) != b),
                     MAX_BOUNDARY_K,
                 )
                 ks |= {flip - 1, flip, flip + 1}

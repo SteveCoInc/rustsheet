@@ -234,7 +234,7 @@ impl Model {
             };
 
             parsed_defined_names.insert(
-                (local_sheet_index, name.to_lowercase()),
+                crate::name_key::NameKey::new(local_sheet_index, &name),
                 parsed_defined_name_formula,
             );
         }

@@ -61,13 +61,13 @@ pub fn layout_extent(top: u32, left: u32, rows: u32) -> (u32, u32) {
 
 /// The rows of a compact-form pivot over `cache` with row field `row` and one data field captioned
 /// `caption` summarizing field `data` by `function`, two cells each: the captions, per item of
-/// `row` that holds a record (in item order) its label and value (a date as its serial, the blank
-/// as `(blank)`), then the grand total. An item
+/// `row` that holds a record (in item order) its label and value (a date or number as its value,
+/// the blank as `(blank)`), then the grand total. An item
 /// with no record is not shown with `show_all` off (`showAll="0"`, the builder's and Excel's
 /// default for a new pivot; probes/t4228-pivot-range-groups), and is shown with a blank value with
 /// it on, a group below `start` or past `end` too (probes/t4311-pivot-showall-column-and-groups
 /// Calc I1:J10). `None` when a field is not in the cache, a record is malformed or a shown item is
-/// not text, a date or the blank.
+/// not text, a number, a date or the blank.
 #[must_use]
 pub fn row_layout(
     cache: &PivotCache,
@@ -102,6 +102,9 @@ pub fn row_layout(
         let label = match item {
             CacheItem::Text(label) => LayoutCell::Text(label.clone()),
             CacheItem::Date(serial) => LayoutCell::Number(*serial),
+            // An ungrouped number (a numeric grouping Excel's refresh dropped,
+            // probes/t4287-pivot-group-whole-end pivot S) is its value too.
+            CacheItem::Number(value) => LayoutCell::Number(*value),
             CacheItem::Missing => LayoutCell::Text(BLANK_ITEM.to_string()),
             _ => return None,
         };

@@ -1,0 +1,85 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "3bd54d1f31beaf3125da18ee5ded8d7c9f4c43f98a24407352072383a40b370b"
+ },
+ "sheets": {
+  "Calc": {
+   "B1": {
+    "t": "n",
+    "v": "0.24410859578558273400503930647894430138282688214202",
+    "f": "=LOGNORM.DIST(0.5,0,1,TRUE)"
+   },
+   "B10": {
+    "t": "e",
+    "why": "x outside (0, inf)",
+    "f": "=LOGNORM.DIST(-1,0,1,TRUE)"
+   },
+   "B11": {
+    "t": "e",
+    "why": "standard_dev outside (0, inf)",
+    "f": "=LOGNORM.DIST(1,0,0,TRUE)"
+   },
+   "B12": {
+    "t": "e",
+    "why": "standard_dev outside (0, inf)",
+    "f": "=LOGNORM.DIST(1,0,-1,TRUE)"
+   },
+   "B2": {
+    "t": "n",
+    "v": "0.5",
+    "f": "=LOGNORM.DIST(1,0,1,TRUE)"
+   },
+   "B3": {
+    "t": "n",
+    "v": "0.26970493073490950849851284022296876412073113413044",
+    "f": "=LOGNORM.DIST(2,1,0.5,TRUE)"
+   },
+   "B4": {
+    "t": "n",
+    "v": "0.6188969618546741830683419105908279955134373887247",
+    "f": "=LOGNORM.DIST(10,2,1,TRUE)"
+   },
+   "B5": {
+    "t": "n",
+    "v": "0.12480595124085966046948774451191360598362654175129",
+    "f": "=LOGNORM.DIST(0.1,0,2,TRUE)"
+   },
+   "B6": {
+    "t": "n",
+    "v": "0.7284113490433144801370108671422460787405534685243",
+    "f": "=LOGNORM.DIST(50,3,1.5,TRUE)"
+   },
+   "B7": {
+    "t": "n",
+    "v": "0.72888289265311780139964571245448430296117456314819",
+    "f": "=LOGNORM.DIST(5,1,1,TRUE)"
+   },
+   "B8": {
+    "t": "n",
+    "v": "0.00015597421740995500397817035955904301409672170271957",
+    "f": "=LOGNORM.DIST(0.01,-1,1,TRUE)"
+   },
+   "B9": {
+    "t": "e",
+    "why": "x outside (0, inf)",
+    "f": "=LOGNORM.DIST(0,0,1,TRUE)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "B16": {
+    "f": "=LOGNORM.DIST(1e-300,0,1,TRUE)",
+    "why": "no single value"
+   },
+   "B17": {
+    "f": "=LOGNORM.DIST(1e300,0,1,TRUE)",
+    "why": "no single value"
+   }
+  }
+ }
+}
