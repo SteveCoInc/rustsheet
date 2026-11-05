@@ -28,6 +28,9 @@ pub enum LayoutCell {
     Text(String),
     /// An item's or the grand total's value.
     Number(f64),
+    /// The value of a shown item with no record (`showAll="1"`): an empty cell
+    /// (probes/t4311-pivot-showall-column-and-groups Calc J2, J4, J7).
+    Blank,
     /// A value with no number: the aggregate's error.
     Error(Error),
 }
@@ -36,10 +39,11 @@ pub enum LayoutCell {
 pub const LAYOUT_COLUMNS: usize = 2;
 
 /// The most rows [`row_layout`] gives over `record_count` records: the captions, at most one item
-/// per record, and the grand total. [`LAYOUT_COLUMNS`] wide.
+/// per record, and the grand total; with `showAll` on, every one of the row field's `items`
+/// instead. [`LAYOUT_COLUMNS`] wide.
 #[must_use]
-pub fn max_layout_rows(record_count: u32) -> u32 {
-    record_count.saturating_add(2)
+pub fn max_layout_rows(record_count: u32, show_all_items: Option<u32>) -> u32 {
+    show_all_items.unwrap_or(record_count).saturating_add(2)
 }
 
 /// The area a layout of `rows` rows covers from the cell `(top, left)`, as `(bottom, right)`: the
@@ -59,16 +63,18 @@ pub fn layout_extent(top: u32, left: u32, rows: u32) -> (u32, u32) {
 /// `caption` summarizing field `data` by `function`, two cells each: the captions, per item of
 /// `row` that holds a record (in item order) its label and value (a date as its serial, the blank
 /// as `(blank)`), then the grand total. An item
-/// with no record is not shown (`showAll="0"`, the builder's and Excel's default for a new pivot;
-/// probes/t4228-pivot-range-groups). `None` when a field is not in the cache, a record is
-/// malformed or a shown item is not text, a date or the blank.
+/// with no record is not shown with `show_all` off (`showAll="0"`, the builder's and Excel's
+/// default for a new pivot; probes/t4228-pivot-range-groups), and is shown with a blank value with
+/// it on, a group below `start` or past `end` too (probes/t4311-pivot-showall-column-and-groups
+/// Calc I1:J10). `None` when a field is not in the cache, a record is malformed or a shown item is
+/// not text, a date or the blank.
 #[must_use]
 pub fn row_layout(
     cache: &PivotCache,
-    row: u32,
-    data: u32,
+    [row, data]: [u32; 2],
     function: Aggregate,
     caption: &str,
+    show_all: bool,
 ) -> Option<Vec<[LayoutCell; LAYOUT_COLUMNS]>> {
     let row_field = cache.fields.get(row as usize)?;
     let data_field = cache.fields.get(data as usize)?;
@@ -88,7 +94,7 @@ pub fn row_layout(
         LayoutCell::Text(caption.to_string()),
     ]];
     for (item, records) in row_field.items.iter().zip(&by_item) {
-        if records.is_empty() {
+        if records.is_empty() && !show_all {
             continue;
         }
         // A date is its serial, as Excel writes the label cell of an ungrouped date field
@@ -99,7 +105,14 @@ pub fn row_layout(
             CacheItem::Missing => LayoutCell::Text(BLANK_ITEM.to_string()),
             _ => return None,
         };
-        rows.push([label, value(records)]);
+        rows.push([
+            label,
+            if records.is_empty() {
+                LayoutCell::Blank
+            } else {
+                value(records)
+            },
+        ]);
     }
     let all: Vec<u32> = (0..cache.record_count).collect();
     rows.push([LayoutCell::Text(GRAND_TOTAL.to_string()), value(&all)]);

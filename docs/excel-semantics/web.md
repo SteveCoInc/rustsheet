@@ -129,9 +129,22 @@ Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists
 - `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
   probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
 - Control: the grand total (35) and a record item (East, 15) answer as usual in both.
+
+The same rule holds on a column field and on a grouped row field (probes/t4311-pivot-showall-column-and-groups,
+excel-graph, 2026-11-05, T-4311):
+- Column field Product with "C" an unused shared item, over East/A 10, West/B 20, East/B 5: with `showAll="0"`
+  `GETPIVOTDATA("Sales",pivot,"Product","C")`, the same with `"Region","East"` and with `"c"` are `#REF!` (Calc A1, A3,
+  A5); with `showAll="1"` all three are 0 (B1, B3, B5). "Nowhere" is `#REF!` and the controls (B 25, East/B 5, total
+  35) answer as usual in both.
+- A row field grouped by 0.1 from 0 to 0.4 over N = 0.05, 0.25, 0.27, 0.35 (S 1, 2, 4, 8), so `<0`, `0.1-0.2` and
+  `>0.4` hold no record: with `showAll="0"` Excel lays out `0-0.1`, `0.2-0.3`, `0.3-0.4` and the total, and those
+  three labels are `#REF!` (Calc D1, D3, D6; G1:H5); with `showAll="1"` it lays out all six groups, the empty ones
+  with a blank value (Calc I1:J8, read back from Excel's own layout), and the three labels are 0 (E1, E3, E6).
 Engine (T-4276): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll` (on
 when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an ungrouped field's item that no record
-holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs). The eval adapter
+holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs), on the row and the
+column axis and on a grouped field alike (T-4311), and `row_layout` shows a grouped field's empty groups with a blank
+value under `showAll`. The eval adapter
 appends a spec's `unused_items` to the row field's items after the records' own and takes its `show_all`.
 
 ## Grouped pivot fields import as their group items (T-4225)
@@ -178,7 +191,9 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk: a step that rounds past the last inner group goes in the **last item** (`>end`), not the last inner group, even
   though the value is below `endNum`: 0.9999999999999999 by 0.1 from 0 to 1 is in `>1` while 1 is in `0.9-1`;
   1.9999999999999998 (from 1 to 2) is in `>2`, 8.999999999999998 (by 3 from 0 to 9) in `>9`.
-- A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`.
+- A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`. With `showAll="1"` every
+  group is shown, the `<start` and `>end` ones too, each empty one with a blank value, and GETPIVOTDATA on an empty
+  group's label is 0 (probes/t4311-pivot-showall-column-and-groups, below).
 - GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
   not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
   rendered label cell works, and an array of labels lifts. A **number** item picks the group whose bound equals it,
@@ -236,7 +251,7 @@ groups by the rule, picks a number item by the truncation rule, and always write
 above (`NumberGroups::new`, `labels`, `lower_bound_index`). UNVERIFIED (T-4287): whole data with an `endNum` that is
 not whole (the engine ends the last group at `max(lo + interval - 1, end)`), a blank among whole data (kept whole),
 and the T-4253 points above. A group with no record
-is `#REF!` on a numeric range field only (an empty item of an ungrouped field keeps its 0, unprobed). The importer and
+is `#REF!` while its field's `showAll` is off and 0 while it is on (T-4311). The importer and
 the eval adapter share it (`group_by_numbers`); the adapter has the engine lay a grouped spec pivot out (captions, the
 groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model the fresh sweep
 probes/t4235-pivot-range-rounding confirms: 105 of 105 points, against 99 for rounding v first and 87 for the plain
@@ -271,7 +286,8 @@ Evidence: probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-b
 T-4236): pivots grouped by months, hours, quarters, years and days whose S values are distinct powers of two; the
 second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). Engine (T-4246):
 `DateGroups` groups a record by the rule and picks a number item by its calendar value, shared by the importer, the
-eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field.
+eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field (`showAll="0"`; with
+`showAll="1"` the numeric range field's is 0, T-4311, and a date group's is taken to follow it, unprobed).
 - A number item on a seconds or minutes group is the second or minute, 0 to 59, by the hour rule: `0`, `5`, `30`,
   `59`, `59.5` and `59.999` pick `:00`, `:05`, `:30` and `:59`; `60`, `61` and `DATE(2019,1,1)` are `#REF!`. The
   integer part is **truncated toward zero**, not floored, on all three time groups: `-0.5`, `-0.0001`, `0.5`,

@@ -248,6 +248,12 @@ pub struct PivotTableSpec {
     /// The row field's `showAll` (T-4248); false when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub show_all: bool,
+    /// `unused_items` for the column field (T-4311); the adapter appends them to its cache items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_unused_items: Vec<String>,
+    /// The column field's `showAll` (T-4311); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub column_show_all: bool,
 }
 
 /// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as

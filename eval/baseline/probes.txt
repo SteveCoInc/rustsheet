@@ -2251,6 +2251,7 @@ C	probes/t4284-lotus-dot-ws-after-lf-after.case.json	5
 C	probes/t4290-gamma-window-large-pow2.case.json	930
 C	probes/t4291-poisson-far-above-mean.case.json	48
 C	probes/t4296-gamma-density-at-mode.case.json	120
+C	probes/t4311-pivot-showall-column-and-groups.case.json	68
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
