@@ -3,7 +3,7 @@ id: T-4107
 title: "Number formats: a ,2000 numeral suffix (and LCID byte 32) prints fullwidth digits in Excel"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
