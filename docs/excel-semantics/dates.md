@@ -162,7 +162,8 @@ AMORDEGRC's (financial.md "AMORDEGRC below period 1"). Layout: A1 `=WEEKNUM(100,
   `(C1:C2)`, `SORT(C1:D2)`, `UNIQUE(C1:D2)`, `ARRAYTOTEXT(C1:D2)`.
 - Empty with scalar arguments: `TEXTJOIN(",",1,1)`, `TEXTJOIN(",",1,1,2)`, `CONCAT(1,2)`.
 - Keep with a range argument: `TRANSPOSE(C1:D2)`, `TRANSPOSE(C1)`, `OFFSET(C1:D2,0,0,1)`, `OFFSET(C1,0,0)`, `INDEX(C1:D2,1,1)`,
-  `=C1:D2`, `SUM(C1:D2)`, `TEXTJOIN(",",1,C1:D2)`, `CONCAT(C1:D2)`, `SEQUENCE(1,2)+C1`, `OFFSET(C1:D2,2,2,3)` (`#SPILL!`).
+  `=C1:D2`, `SUM(C1:D2)`, `TEXTJOIN(",",1,C1:D2)`, `CONCAT(C1:D2)`, `SEQUENCE(1,2)+C1`, `OFFSET(C1:D2,2,2,3)` (`#SPILL!`). Also `SUM(TRANSPOSE(C1:D2))`, `SUM(OFFSET(C1:D2,0,0,1))` and `TRANSPOSE(C1:C2)`.
+A spilling anchor runs at its own place, not elsewhere: `CHOOSEROWS(C1:D2,1)` spills 1x2 and empties the state. The gen-m6 `#NUM!` readers are probably explained by another call between reader and setter (e.g. CHOOSEROWS in 9c615d338d990644 A26), not by the OFFSET; cross-sheet versus same-sheet ranges is unprobed.
 So the earlier T-2068 reading (every dynamic anchor empties) is wrong for TRANSPOSE and OFFSET, which keep it here; the
 argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJOIN/CONCAT the other way round), and why
 is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
