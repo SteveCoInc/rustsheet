@@ -1376,7 +1376,34 @@ Excel is up to 265 ulp from the true Q (G6 `POISSON.DIST(250,750,TRUE)`), about 
 implied exponent is not on the double grid of E either: at G5 (one ulp of E is 238 ulp of Q) it sits -0.65 ulp of
 E from the correctly rounded E. Across the 36 hold-out cells where one ulp of E is at least 8 ulp of Q it is 1.28 ulp
 of E from the accurate exponent and 1.43 from the ratio form. So the prefactor chain itself differs from both forms,
-as T-4290 found inside the gamma window (T-4296, T-4308). Ours keeps the accurate kernel there. The
+as T-4290 found inside the gamma window (T-4296, T-4308). T-4302 found that chain above the window (below).
+T-4302 (probes/t4302-poisson-cdf-beside-pmf and probes-numeric/t4302-poisson-cdf-r4-fresh, excel-graph 2026-11-05;
+docs/research/t4302/score.py) put the pmf, the gamma density and CHISQ.DIST.RT next to each far-above-the-mean cdf.
+The splits were fixed before scoring: train is the t4291 points, hold-out 48 points from seed 4302, and the fresh
+sweep 48 points from seed 43020 written after the freeze. Its findings at x = mean, a = k + 1, k 30 to 300:
+- `CHISQ.DIST.RT(2m, 2k + 2)` is `POISSON.DIST(k, m, TRUE)` bit for bit at all 96 points.
+- Above 1.5a the cdf is Excel's own gamma density `GAMMA.DIST(m, k + 1, 1, FALSE)` times x times the exact fraction
+  F = Q / (x^a e^-x / Gamma(a)) to 4 ulp at 32/32 train, 36/40 hold-out and 44/48 fresh points (at most 8). So the
+  cdf takes the density's prefactor. At or below 1.5a it does not (up to 63 ulp, train window rows), as T-4255 saw.
+- That density is exp(-c(a) - B) / sqrt(2 pi a) times (a / x), the T-4296 chain, with Loader's direct deviance
+  B = a ln(a/x) + (x - a): the logarithm of a/x (the ratio below 1), and the difference x - a taken before the sum.
+  c is the exact Stirling error. It is Excel's bit for bit at all 120 points above 1.5a (32, 40 and 48). Excel's
+  implied B is within half an ulp of that double at 31/32, 40/40 and 47/48 points (rms 0.3 ulp). Rejected, the same
+  counts and rms ulp(B): the ratio form a ln(x/a) + (a - x) 21/32, 22/40, 25/48 (1.6, 2.4, 2.0); the same sum
+  rounded as (a ln(a/x) + x) - a 23/32, 28/40, 26/48; a log1p((x - a)/a) + (a - x) 16, 27, 31 of the same; a((x/a -
+  1) - ln(x/a)) 6, 5, 15; a (ln a - ln x) + (x - a) 6, 7, 8 (rms 7 to 13). Inside the window this B is not Excel's
+  (2 of 24 densities bit-exact; T-4308).
+- Ours takes, for POISSON's cdf at integer shapes 31 to 301 and 1.5a < x <= 3a, sqrt(a / 2 pi) exp(-B - c) times
+  the accurate fraction (excel_tail.rs `excel_far_above_mean`). Bit-exact / within 4 ulp / within 15 digits:
+  train 6/32/30 (main 3/5/8, the correctly rounded Q 1/7/11), hold-out 13/36/36 (main 2/5/9, correctly rounded
+  0/4/10), fresh 8/45/44 (main 2/15/15, correctly rounded 1/5/9). Gate A's envelope holds all 48 fresh points. The
+  rest is Excel's own fraction, a few ulp from the accurate one. The 1.5a lower end is the window's (T-2638); the
+  probes bracket it in (1.495a, 1.549a).
+- The pmf `POISSON.DIST(k, m, FALSE)` is a third chain: it is up to 326 ulp from the gamma density at the same
+  point, and the cdf does not follow it.
+- The density (T-4319) and CHISQ.DIST.RT (T-4320) do not take this chain in ours yet. The window rows, x/a 1.29 to
+  1.5, stay with T-4308.
+The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
 (`GAMMA.DIST(0.9,9,1,TRUE)`: Excel 9 ulp below the truth, the ratio form 23 below Excel, the direct one 10 above).
@@ -1402,7 +1429,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4308
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
