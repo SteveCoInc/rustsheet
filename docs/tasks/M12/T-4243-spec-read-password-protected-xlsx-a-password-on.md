@@ -3,7 +3,7 @@ id: T-4243
 title: "Spec: read password-protected xlsx (a password on the load API, ECMA-376 decryption) and decide on legacy .xls"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
