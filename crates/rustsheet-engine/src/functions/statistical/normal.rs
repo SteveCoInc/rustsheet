@@ -9,9 +9,7 @@ use statrs::distribution::{ContinuousCDF, Normal, StudentsT};
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
-use crate::functions::statistical::special::{
-    normal_cdf, normal_density_overflows, normal_pdf, standard_normal_pdf,
-};
+use crate::functions::statistical::special::{normal_cdf, normal_density_overflows, normal_pdf};
 use crate::functions::statistical::t_dist::{cauchy_two_tail_quantile, t_upper_quantile, T_DF_MAX};
 use crate::functions::util::poly;
 use crate::functions::Function;
@@ -206,7 +204,7 @@ impl Model {
         let result = if cumulative {
             normal_cdf(z, 0.0, 1.0)
         } else {
-            standard_normal_pdf(z)
+            normal_pdf(z, 0.0, 1.0)
         };
         if !result.is_finite() {
             return Err(num_error(cell));

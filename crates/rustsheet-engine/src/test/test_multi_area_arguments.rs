@@ -617,6 +617,10 @@ fn plain_intersection_operands_take_the_pair_path() {
         .define_name("mu", None, "Sheet1!$A$1,Sheet1!$B$2")
         .unwrap();
     model.define_name("alias", None, "mu").unwrap();
+    model.define_name("half", None, "0.5").unwrap();
+    model
+        .define_name("dyn", None, "OFFSET(Sheet1!$A$1,0,0,2,2)")
+        .unwrap();
     let context = CellReferenceRC {
         sheet: "Sheet1".to_string(),
         row: 1,
@@ -633,6 +637,10 @@ fn plain_intersection_operands_take_the_pair_path() {
         ("arr", false),
         ("mu A1", true),
         ("alias A1", true),
+        // A scalar or OFFSET body cannot stand for several areas: the pair path (T-1194).
+        ("half A1", false),
+        ("dyn A1", false),
+        ("Dyn A1", false),
     ] {
         let node = model.parser.parse(formula, &context);
         assert_eq!(model.is_multi_area(&node), multi, "{formula}");

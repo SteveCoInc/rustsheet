@@ -295,17 +295,29 @@ eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeri
   `#REF!`. Text items match the label (`":05"`, `":00"`; `":00"` on an hour group, `"5"` and `"-0.5"` are `#REF!`).
   Evidence: probes/t4269-pivot-time-group-number-items (excel-graph, 2026-11-05, T-4269). Status: VERIFIED
   (excel-graph); the engine (`DateGroups::number_item`) matches every cell.
-- Quirk: a half second just below the half rounds up. Serial 43466.458327546294 (written 10:59:59.5, but
-  39599.49999978 s into the day, 2.2e-7 s below the half) is in `11 AM` (no-blank pivot H, Calc E45 and F13). The
-  engine splits a date as HOUR is modelled to (`time_of_day_parts`, dates.md: an exact half goes whichever way binary
-  noise takes it), which puts it in `10 AM`; HOUR of this serial is unprobed. T-4261 probes Excel's rounding model.
+- Quirk: the cache's rounding to the second divides the serial by the double 1/86400 and rounds half up:
+  `floor(x / (1/86400) + 0.5)` seconds, not `x * 86400` and not HOUR's rule. A date a hair below a half second can
+  therefore round up. Serial 43466.458327546294 (written 10:59:59.5, but 2.2e-7 s below the half) is in `11 AM`
+  (no-blank pivot H, Calc E45 and F13), while HOUR and SECOND of it give 10 and 59. 25006.524265046293 (2.6e-7 s
+  below 12:34:56.5) is 12:34:57, though its double product with 86400 is ...96.4999995. A 1900 date 2.2e-7 s or
+  1e-8 s below the half stays down, because a small serial keeps that much precision. Of five candidates (ms then s,
+  15 significant digits, the fraction's product, the engine's HOUR split, the serial's product), the serial's
+  product fit the 36 points of probes/t4261-pivot-half-second. The first fresh sweep rejected it (47 of 48), and
+  dividing by 1/86400, which fits all 84, was frozen. A second fresh sweep confirmed it at 48 of 48 (32 of them
+  points where the two disagree; the product gets 14), and an unbiased log-uniform third sweep at 48 of 48 (the
+  product 44, exact correct rounding 27). The R4 record, with its spent first hold-out, is in the T-4261 Outcome.
+  UNVERIFIED: a `startDate` or `endDate` within half a second of such a point, which uses the same rule.
+Evidence: probes/t4261-pivot-half-second, t4261-pivot-half-second-fresh, -fresh-2 and -fresh-3
+(excel-graph, 2026-11-05, T-4261): dates a delta of 1e-9 to 0.4 s either side of a half second, from 1900 to 9998,
+in an ungrouped pivot (a blank drops the grouping), whose rendered labels show each record's rounded second.
+Status: VERIFIED (excel-graph). Engine: `split_serial` (pivot/date_groups.rs), shared by the groups,
+`ungroup_dates`, the importer and the `startDate` and `endDate` comparisons.
 Engine (T-4260): `Txn::add_pivot_table` drops a date grouping over a blank as the refresh does (`ungroup_dates`:
 second-rounded `Date` items in record order, by the same `split_serial` rule as the groups), the layout writes a date
 label as its serial and the blank as `(blank)` (`row_layout`), and GETPIVOTDATA picks an ungrouped date item by an
 equal serial and the blank by `"(blank)"` (`pivot_number_item`, `pivot_blank_text`). A serial within the second of
 an item but not equal to it, `"(BLANK)"` in another case, and a field that also holds the text `(blank)` are
-UNVERIFIED. Pivot H's 10:59:59.5 point (Data!D4) rounds down here, as in the no-blank case, which merges it with
-10:59:59 and shifts H's later rows: T-4261 owns those cells too. The importer keeps a saved grouping (59932).
+UNVERIFIED. The importer keeps a saved grouping (59932).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
