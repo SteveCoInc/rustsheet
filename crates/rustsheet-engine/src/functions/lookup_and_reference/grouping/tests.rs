@@ -191,6 +191,27 @@ fn multi_field_keys_group_by_the_tree_over_sorted_unique_keys() {
             (vec![text("p"), x()], vec![0])
         ]
     );
+    // (B,y,A), (C,x,B), (B,x,C), (A,x,A), (A,x,B) descending: the merge leaves the first field's
+    // classes A, B (ascending), and the search runs in their direction, so row 1 finds B and is
+    // (B,y,A) alone; in the field's direction it would find A and be in no group (t4342
+    // Calc!C40; T-4344).
+    assert_eq!(
+        group(
+            vec![
+                vec![b(), y(), a()],
+                vec![c(), x(), b()],
+                vec![b(), x(), c()],
+                vec![a(), x(), a()],
+                vec![a(), x(), b()],
+            ],
+            &[false],
+        ),
+        [
+            (vec![a(), x(), a()], vec![3]),
+            (vec![a(), x(), b()], vec![1, 4]),
+            (vec![b(), y(), a()], vec![0]),
+        ]
+    );
 }
 
 #[test]
