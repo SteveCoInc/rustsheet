@@ -236,8 +236,8 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 /// power sum BETA.DIST takes (T-3198): the power sum moves gated H32 (`BETA.INV` at shapes 5 and 5,
 /// 0.555) to 0.5550000000000002.
 ///
-/// Branches that are not ported fall back to the bounded Cephes `search_tails`; bup + bgrat at a0 < 1 is ported
-/// (T-3665), so the search runs it too.
+/// Branches that are not ported fall back to the bounded Cephes `search_tails`; bup + bgrat at
+/// a0 < 1 is ported (T-3665), so the search runs it too.
 pub(crate) fn beta_search_tails(x: f64, y: f64, a: f64, b: f64) -> (f64, f64) {
     let ported = || {
         let many_terms = dispatch(a, b, x, y)
@@ -316,9 +316,10 @@ pub(super) fn t_kernel_tails(a: f64, y: f64, z: f64) -> Option<(f64, f64)> {
     ported_tails_with(a, 0.5, y, z, true, BupSum::Powers)
 }
 
-/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1 (BETA.DIST's cdf, F's tails
-/// and BETA.INV's search, T-3665) and L140 bup+bgrat (BETA.DIST's, the Student t's and F's callers) when
-/// `half_bgrat`, and L140 bup+bpser's sum formed as `bup_sum` says.
+/// [`ported_tails`], with bratio's bgrat branches at a0 = 1/2, bup + bgrat at other a0 < 1
+/// (BETA.DIST's cdf, F's tails and BETA.INV's search, T-3665) and L140 bup+bgrat (BETA.DIST's,
+/// the Student t's and F's callers) when `half_bgrat`, and L140 bup+bpser's sum formed as
+/// `bup_sum` says.
 fn ported_tails_with(
     a: f64,
     b: f64,
