@@ -151,3 +151,58 @@ fn an_unbound_prefixed_name_keeps_its_prefix() {
         assert_eq!(m._get_formula("A20"), "=_xlpm.abc");
     }
 }
+
+/// A file's `_xlpm.` is one mark: a doubled prefix leaves one on the name, an undefined name
+/// that FORMULATEXT shows as written, and `_xlpm._xlpm.x` declares the name `_xlpm.x`, which a
+/// use binds only spelled the same (probes/t4224-doubled-xlpm-prefix A1:C2, A7:C8, A13:C13,
+/// excel-graph, T-4224); a reload from the R1C1 storage form and an export keep each.
+#[test]
+fn a_files_doubled_prefix_is_one_mark_and_the_name() {
+    let cases = [
+        ("=_xlpm._xlpm.f1", "=_xlpm._xlpm.f1", "#NAME?"),
+        ("=_xlpm._xlpm.abc", "=_xlpm._xlpm.abc", "#NAME?"),
+        ("=LET(_xlpm.x,2,_xlpm.x*3)", "=LET(x,2,x*3)", "6"),
+        (
+            "=LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)",
+            "=LET(_xlpm.x,1,_xlpm.x+1)",
+            "2",
+        ),
+        (
+            "=LET(_xlpm.x,2,_xlpm._xlpm.x*3)",
+            "=LET(x,2,_xlpm._xlpm.x*3)",
+            "#NAME?",
+        ),
+    ];
+    let mut model = crate::test::util::new_empty_model();
+    model._set("F1", "7");
+    for (row, (stored, ..)) in (1..).zip(cases) {
+        model._set(&format!("A{row}"), stored);
+    }
+    model.evaluate();
+    let mut reloaded = crate::Model::from_bytes(&model.to_bytes(), "en").unwrap();
+    reloaded.evaluate();
+    for m in [&model, &reloaded] {
+        for (row, (stored, formula, value)) in (1..).zip(cases) {
+            let cell = format!("A{row}");
+            assert_eq!(m._get_formula(&cell), formula, "{stored}");
+            assert_eq!(m._get_text(&cell), value, "{stored}");
+        }
+    }
+    // The export writes the file's text back.
+    let context = crate::expressions::types::CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 1,
+        column: 1,
+    };
+    let exported: Vec<String> = model.parsed_formulas[0]
+        .iter()
+        .map(|f| crate::expressions::parser::stringify::to_excel_string(&f.evaluated, &context))
+        .collect();
+    for text in [
+        "_xlpm._xlpm.f1",
+        "_xlfn.LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)",
+        "_xlfn.LET(_xlpm.x,2,_xlpm._xlpm.x*3)",
+    ] {
+        assert!(exported.iter().any(|e| e == text), "{text}: {exported:?}");
+    }
+}

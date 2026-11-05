@@ -45,8 +45,8 @@ class Seeds(unittest.TestCase):
         self.assertEqual(first, again)
 
 
-class BitcodeSeeds(unittest.TestCase):
-    """`bitcode_seeds` adds what the Rust binary writes, named by content, and adds nothing twice."""
+class BinarySeeds(unittest.TestCase):
+    """`binary_seeds` adds what a Rust seed binary writes, named by content, and adds nothing twice."""
 
     @staticmethod
     def fake_run(argv: list[str], **_: object) -> subprocess.CompletedProcess[str]:
@@ -59,12 +59,12 @@ class BitcodeSeeds(unittest.TestCase):
         with tempfile.TemporaryDirectory() as corpus, mock.patch.object(
             seed_corpus.subprocess, "run", side_effect=self.fake_run
         ):
-            directory = Path(corpus) / "bitcode_workbook"
-            self.assertEqual(seed_corpus.bitcode_seeds(directory), 2)
+            directory = Path(corpus) / "cfb_container"
+            self.assertEqual(seed_corpus.binary_seeds("cfb_seeds", directory), 2)
             names = {path.name for path in directory.iterdir()}
             expected = {seed_corpus.hashlib.sha256(data).hexdigest() for data in (b"first", b"second")}
             self.assertEqual(names, expected)
-            seed_corpus.bitcode_seeds(directory)
+            seed_corpus.binary_seeds("cfb_seeds", directory)
             self.assertEqual({path.name for path in directory.iterdir()}, expected)
 
 

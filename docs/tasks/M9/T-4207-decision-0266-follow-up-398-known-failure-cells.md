@@ -103,6 +103,17 @@ Cells (known-failure lines of eval/baseline, owned here until the decision lands
 - gen-m9/fd9fa22d212080d6.case.json (1): Calc!A58
 - probes/forecast-ets-optional-settings-shape.case.json (12): Sheet1!M29, M30, M31, M32, M33, M34, M41, M42, M43, M44, M45, M46
 - probes/stat-argument-modes.case.json (8): Sheet1!H266, H267, H270, H271, H274, H275, H277, H278
+Added by gap triage 2026-11-05 (`make eval` and `make unowned-off ALL=1` on origin/main b6cf9465): one more cell of
+the same class, which no open task names. `FORECAST.ETS.CONFINT(30,7,Data!C$8,Data!$B12)` (values a TRUE cell, timeline
+a blank cell) inside DURATION's yld: excel-graph `#N/A` (the web's ETS answer passed through DURATION), ours `#NUM!`
+from the model steps of decision 0221:
+- gen-m9/a91bad4e84f49739.case.json (1): Calc!A141
+
+The 4 COMPLEXs.xlsx cells the Context counts as owned only by deferred tasks are T-1075's too (Mac 16.0300 cached
+digits: N6 `IMREAL(IMTAN(D6))`, AL12 and AL26 `IMREAL(IMSQRT(..))`, K25 `IMAGINARY(IMCOS(D25))`, decision 0196). Their
+other owner, T-3434, is deferred, so they still show in `make unowned-off ALL=1`; the ruling covers them as well:
+- ironcalc-calc/ENGINEERING/COMPLEXs.xlsx (4): Sheet1!N6, AL12, K25, AL26
+
 From T-1075:
 - ironcalc-calc/ENGINEERING/BESSEL.xlsx (2): All!D18, F18
 - ironcalc-calc/LOGICAL/IF_ARRAY.xlsx (3): Sheet1!C4, C11, E4

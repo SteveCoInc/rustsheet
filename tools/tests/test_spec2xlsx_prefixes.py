@@ -24,6 +24,16 @@ def test_let_names_are_prefixed() -> None:
     assert prefix_bound_names("=A1:A3 LET(x,A2:B2,x)") == "=A1:A3 LET(_xlpm.x,A2:B2,_xlpm.x)"
 
 
+def test_names_written_with_the_prefix_are_the_files_text() -> None:
+    # `_xlpm._xlpm.x` declares `_xlpm.x` and `LET(x,2,_xlpm.x*3)` binds its use, as the engine
+    # reads the same text (probes/t4224-doubled-xlpm-prefix A7, A8, A13; T-4224).
+    assert prefix_bound_names("=LET(x,2,_xlpm.x*3)") == "=LET(_xlpm.x,2,_xlpm.x*3)"
+    assert (
+        prefix_bound_names("=LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)") == "=LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)"
+    )
+    assert prefix_bound_names("=LET(x,2,_xlpm._xlpm.x*3)") == "=LET(_xlpm.x,2,_xlpm._xlpm.x*3)"
+
+
 def test_non_ascii_names_are_prefixed() -> None:
     # Unprefixed, Excel for the web refused `=LET(é,1,é+1)` as a corrupt file (T-1387).
     assert prefix_bound_names("=LET(é,1,É+1)") == "=LET(_xlpm.é,1,_xlpm.É+1)"
