@@ -77,8 +77,8 @@ hands the open question to T-4334 with a new lead.
   double. Where B >= a/128 it sits on the fixed grid a 2^-59 (2^-47 at shape 4096) up to one constant per shape,
   finer than ulp(B); below a/128 it is on its own double grid. So the exponent's last rounding happens at about
   a/128, which rules out an exp argument rounded as one double at large B.
-- Rejected, scored with t4290's split (fit A B C, hold-out D, fixed before scoring by T-4290; R4.1 margin: a
-  family is adopted only if its hold-out rms is below 0.10 ulp(ln u), against chance 0.30): fixed-grid logarithms
+- Rejected, scored with t4290's split (fit A B C, hold-out D, fixed before scoring by T-4290). No R4.1 margin was
+  stated before scoring, so none is claimed; no family came near adoption, all at chance: fixed-grid logarithms
   of u and of x and a (2^-55 to 2^-57), mantissa-and-exponent logarithms in three normalisations, TOMS 708's
   rlog1. Best hold-out 0.32. Nothing in the engine changes, so there is no fresh sweep and no FITTED tag.
 - The T-4296 review's carry-overs: the Gate A envelope check and the per-engine fresh-sweep counts are now
