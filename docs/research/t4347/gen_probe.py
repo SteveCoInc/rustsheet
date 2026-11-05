@@ -7,38 +7,45 @@ same questions for each byte, plus the `,N00` suffix form of each byte on two of
 import json
 
 OUT = "eval/suites/probes/cases/t4347-numeral-bytes-24-27.case.json"
-QUESTIONS = [
-    (5, "General"),
-    (10, "General"),
-    (15, "General"),
-    (20, "General"),
-    (100, "General"),
-    (105, "General"),
-    (1010, "General"),
-    (1230, "General"),
-    (12345, "General"),
-    (100000, "General"),
-    (123456789, "General"),
-    (100050000, "General"),
-    (1000000005, "General"),
-    (0.05, "General"),
-    (12.05, "General"),
-    (-15, "General"),
+GENERAL = [
+    5,
+    10,
+    15,
+    20,
+    100,
+    105,
+    1010,
+    1230,
+    12345,
+    100000,
+    123456789,
+    100050000,
+    1000000005,
+    0.05,
+    12.05,
+    -15,
+]
+OTHER = [
     (1230, "0"),
     (1234567890, "0"),
     (1234567.89, "#,##0.00"),
     (0.1234, "0.0%"),
     (1000, "0.00E+00"),
+]
+OTHER += [
     (12.5, "# ?/?"),
     (45000, "yyyy-mm-dd yy d"),
     (45000.7027, "h:mm:ss"),
     (45000.0417, "hh:mm"),
+]
+OTHER += [
     (45210, "m d dd"),
     (1.25, "[h]:mm"),
     (100000, "[s]"),
     (3600000, "[s]"),
     (0.2, "[hh]"),
 ]
+QUESTIONS = [(value, "General") for value in GENERAL] + OTHER
 
 
 def main() -> None:

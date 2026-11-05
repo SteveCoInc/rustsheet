@@ -515,19 +515,47 @@ mod tests {
     fn bytes_36_to_39_spell_as_excel() {
         // probes/t4347-numeral-bytes-24-27 (A10, A13, A17, A23, A41, A49, A55, A70, A105, A113,
         // A119, A138).
-        let n = Numerals::from_byte;
-        assert_eq!(n(36).number("100000"), "一十万");
-        assert_eq!(n(36).number("1000000005"), "一十億五");
-        assert_eq!(n(36).digits("1230"), "一二三０");
-        assert_eq!(n(36).field("15"), "十五");
-        assert_eq!(n(36).digits("6"), "\u{F9D1}");
-        assert_eq!(n(37).number("12345"), "壹萬貳阡\u{F96B}百四\u{F973}伍");
-        assert_eq!(n(37).digits("1230"), "壹貳\u{F96B}\u{F9B2}");
-        assert_eq!(n(37).field("15"), "壹\u{F973}伍");
-        assert_eq!(n(38).number("105"), "百５");
-        assert_eq!(n(39).number("12345"), "일만이천삼백사십오");
-        assert_eq!(n(39).digits("1230"), "일이삼영");
-        assert_eq!(n(39).field("15"), "십오");
-        assert_eq!(n(39).number("8640000000000"), "팔조육천사백억");
+        // (form, input, Excel) per byte: form 0 is `number` (General, elapsed counts), 1
+        // `digits`, 2 `field`.
+        let check = |byte: u32, cells: &[(u8, &str, &str)]| {
+            let numerals = Numerals::from_byte(byte);
+            for &(form, input, excel) in cells {
+                let ours = match form {
+                    0 => numerals.number(input),
+                    1 => numerals.digits(input),
+                    _ => numerals.field(input),
+                };
+                assert_eq!(ours, excel, "byte {byte} on {input}");
+            }
+        };
+        check(
+            36,
+            &[(0, "100000", "一十万"), (0, "1000000005", "一十億五")],
+        );
+        check(
+            36,
+            &[
+                (1, "1230", "一二三０"),
+                (2, "15", "十五"),
+                (1, "6", "\u{F9D1}"),
+            ],
+        );
+        check(37, &[(0, "12345", "壹萬貳阡\u{F96B}百四\u{F973}伍")]);
+        check(
+            37,
+            &[
+                (1, "1230", "壹貳\u{F96B}\u{F9B2}"),
+                (2, "15", "壹\u{F973}伍"),
+            ],
+        );
+        check(38, &[(0, "105", "百５")]);
+        check(
+            39,
+            &[(0, "12345", "일만이천삼백사십오"), (1, "1230", "일이삼영")],
+        );
+        check(
+            39,
+            &[(2, "15", "십오"), (0, "8640000000000", "팔조육천사백억")],
+        );
     }
 }
