@@ -35,8 +35,11 @@ example a check in the readers' loops against a remaining-work snapshot, without
 - `functions/util/collation/compared.rs`: a thread-local allowance, the ticks the run can still pay for at its next
   charge, set by `Model::spend_compared` after each node (work left x `COMPARED_TICKS_PER_UNIT`, 0 once exceeded) and
   by `Model::with_area_budget` for each run, which puts the interrupted run's back. `out_of_ticks` is true once the
-  pending ticks pass it: `cmp_text_pairwise` then returns `Equal` without reading, `collation_key` the empty key and
-  `fold_lookup` the empty text. Pending ticks past the allowance make the next charge fail, and a cut-short mark also
+  pending ticks pass it, inside `compared::stoppable` only (UNIQUE's grouping, SORT's and SORTBY's sort):
+  `cmp_text_pairwise` then returns `Equal` without reading and `collation_key` the empty key. Readers that build a
+  pass-shared index (XMATCH/XLOOKUP's exact-match index, the *IFS criteria index) never stop: review round 1 found
+  that their stand-in keys reached the next formulas of the pass (`=XMATCH(A200,A1:A200)` #N/A in a neighbour cell);
+  `a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index` covers it. Pending ticks past the allowance make the next charge fail, and a cut-short mark also
   forces the run's `TOO_MUCH_WORK` in `with_area_budget`, so a value computed from those stand-ins never shows. The
   total order (`cmp_text`) is not cut: GROUPBY sorts with `slice::sort_by`, which may panic on a comparator that is
   not an order. SORT/SORTBY use `sort_indices_pairwise`, which takes any comparator.

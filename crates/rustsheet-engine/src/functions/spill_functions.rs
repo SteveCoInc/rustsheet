@@ -13,6 +13,7 @@ use crate::{
     model::Model,
 };
 
+use super::util::collation::stoppable;
 use super::util::collation::CollationKey;
 use super::util::{compare_values_pairwise, sort_indices_pairwise};
 
@@ -496,20 +497,24 @@ impl Model {
         if !by_col {
             // Sort rows by the key columns.
             let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            sort_indices_pairwise(&mut row_indices, |a, b| {
-                first_unequal(keys.iter().map(|&(key, ascending)| {
-                    sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
-                }))
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[a][key], &data[b][key], ascending, cell)
+                    }))
+                });
             });
 
             CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         } else {
             // Sort columns by the key rows.
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
-            sort_indices_pairwise(&mut col_indices, |a, b| {
-                first_unequal(keys.iter().map(|&(key, ascending)| {
-                    sort_key_cmp(&data[key][a], &data[key][b], ascending, cell)
-                }))
+            stoppable(|| {
+                sort_indices_pairwise(&mut col_indices, |a, b| {
+                    first_unequal(keys.iter().map(|&(key, ascending)| {
+                        sort_key_cmp(&data[key][a], &data[key][b], ascending, cell)
+                    }))
+                });
             });
 
             CalcResult::Array(
@@ -678,22 +683,22 @@ impl Model {
 
         if by_rows {
             let mut row_indices: Vec<usize> = (0..num_rows).collect();
-            sort_indices_pairwise(&mut row_indices, |a, b| {
-                first_unequal(
-                    sort_keys.iter().map(|(key, ascending)| {
+            stoppable(|| {
+                sort_indices_pairwise(&mut row_indices, |a, b| {
+                    first_unequal(sort_keys.iter().map(|(key, ascending)| {
                         sort_key_cmp(&key[a][0], &key[b][0], *ascending, cell)
-                    }),
-                )
+                    }))
+                });
             });
             CalcResult::Array(row_indices.iter().map(|&r| data[r].clone()).collect())
         } else {
             let mut col_indices: Vec<usize> = (0..num_cols).collect();
-            sort_indices_pairwise(&mut col_indices, |a, b| {
-                first_unequal(
-                    sort_keys.iter().map(|(key, ascending)| {
+            stoppable(|| {
+                sort_indices_pairwise(&mut col_indices, |a, b| {
+                    first_unequal(sort_keys.iter().map(|(key, ascending)| {
                         sort_key_cmp(&key[0][a], &key[0][b], *ascending, cell)
-                    }),
-                )
+                    }))
+                });
             });
             CalcResult::Array(
                 data.iter()

@@ -537,12 +537,8 @@ pub(super) fn class_first(c: char) -> Option<char> {
         .and_then(|&(_, first)| char::from_u32(u32::from(first)))
 }
 
-/// [`fold_lookup_char`] over `text`, one character to one. Past the run's allowance it is the
-/// empty text without reading `text` (`compared::out_of_ticks`, T-4278).
+/// [`fold_lookup_char`] over `text`, one character to one.
 pub(crate) fn fold_lookup(text: &str) -> String {
-    if super::out_of_ticks() {
-        return String::new();
-    }
     super::note_compared(text.len(), super::FOLD_TICKS);
     text.chars().map(fold_lookup_char).collect()
 }

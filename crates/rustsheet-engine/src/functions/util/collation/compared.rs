@@ -45,6 +45,11 @@ thread_local! {
     /// The most ticks the formula run can still pay for at its next charge
     /// ([`set_compared_allowance`]); no bound outside a run.
     static COMPARED_ALLOWANCE: Cell<u64> = const { Cell::new(u64::MAX) };
+    /// Whether the readers may stop at all: only inside [`stoppable`], around a reader whose
+    /// results reach no cache another formula shares (UNIQUE's grouping, SORT's and SORTBY's
+    /// sort). A lookup index or a criteria cache built from stand-ins would give later formulas,
+    /// each under its own budget, wrong values.
+    static STOPPABLE: Cell<bool> = const { Cell::new(false) };
     /// Whether a reader stopped reading because the pending ticks passed the allowance
     /// ([`out_of_ticks`]): the run's value is then the work budget's error, whatever the reader
     /// returned ([`take_cut_short`]).
@@ -69,11 +74,22 @@ pub(crate) fn set_compared_allowance(ticks: u64) -> u64 {
 /// would fail never comes.
 #[inline]
 pub(super) fn out_of_ticks() -> bool {
-    let out = COMPARED_TICKS.with(Cell::get) > COMPARED_ALLOWANCE.with(Cell::get);
+    let out = STOPPABLE.with(Cell::get)
+        && COMPARED_TICKS.with(Cell::get) > COMPARED_ALLOWANCE.with(Cell::get);
     if out {
         CUT_SHORT.with(|cut| cut.set(true));
     }
     out
+}
+
+/// Runs `f`, a reader whose comparisons, keys and folds may stop past the run's allowance
+/// ([`out_of_ticks`]): its stand-in results must reach nothing but the node's own value, which the
+/// run then replaces with the work budget's error, never a cache that outlives the run (T-4278).
+pub(crate) fn stoppable<T>(f: impl FnOnce() -> T) -> T {
+    let outer = STOPPABLE.with(|flag| flag.replace(true));
+    let result = f();
+    STOPPABLE.with(|flag| flag.set(outer));
+    result
 }
 
 /// Whether a reader of the run stopped short since the last call ([`out_of_ticks`]), and clears it.
@@ -156,8 +172,8 @@ pub(super) fn counted<'a, I: Iterator + Clone + 'a>(
 /// [`super::cmp_text`] or [`super::cmp_text_pairwise`], noting the ticks it read.
 ///
 /// Past the run's allowance, Excel's pairwise order returns `Equal` without reading ([`out_of_ticks`],
-/// T-4278): its callers already take any order (the lookups' scans, `=`, SORT's merge,
-/// `sort_indices_pairwise`), and the run's value is the work budget's error. The total order does
+/// T-4278), inside [`stoppable`] only: SORT's and SORTBY's merge (`sort_indices_pairwise`) takes
+/// any order, and the run's value is the work budget's error. The total order does
 /// not, since `slice::sort_by` may panic on a comparator that is not one (GROUPBY's sorts).
 pub(super) fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
     if let AccentOrder::Pairwise = order {

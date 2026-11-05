@@ -71,7 +71,7 @@ pub(crate) use case_fold::{fold_case, fold_char, fold_exact_lookup, fold_final_s
 pub(crate) use compared::take_read_ticks;
 use compared::{cmp_text_in, counted, out_of_ticks, CHAR_TICKS, FOLD_TICKS, KEY_TICKS};
 pub(crate) use compared::{
-    note_compared, restore_compared_ticks, restore_cut_short, set_compared_allowance,
+    note_compared, restore_compared_ticks, restore_cut_short, set_compared_allowance, stoppable,
     take_compared_ticks, take_cut_short, BYTE_TICKS,
 };
 use kana::{kana, vowel};
@@ -185,8 +185,9 @@ pub(crate) struct CollationKey {
 /// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
 /// byte), lone surrogates kept as [`cmp_text`] keeps them.
 ///
-/// Past the run's allowance it is the empty key without reading the text ([`out_of_ticks`],
-/// T-4278): the run's value is then the work budget's error, so the keys it was given never show.
+/// Past the run's allowance, inside `compared::stoppable` (UNIQUE), it is the empty key without
+/// reading the text ([`out_of_ticks`], T-4278): the run's value is then the work budget's error,
+/// so the keys it was given never show.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
     if out_of_ticks() {
         return CollationKey::default();

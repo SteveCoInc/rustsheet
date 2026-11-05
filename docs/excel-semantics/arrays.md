@@ -1589,15 +1589,19 @@ these, and a 256-tick key weight (round 2) refused the first UNIQUE. Refused now
 nodes whose comparisons alone take longer than the limit's worth of time, such as `ROWS(SORT(REPT("a",300)&SEQUENCE(1048576)))`
 (about 9 s) and a UNIQUE whose texts add up to more than about 30 MB of collation keys, such as 1,048,576 texts of
 over about 30 bytes (`ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`). The charge lands after the node, but since T-4278 the node's
-readers stop once the ticks they noted pass what the run has left (`compared::out_of_ticks`; the pairwise comparison
-returns `Equal`, a key is empty, a fold is empty, without reading, and the run is `#VALUE!` whatever they return), so
+UNIQUE's grouping and SORT's and SORTBY's sort stop once the ticks they noted pass what the run has left
+(`compared::out_of_ticks`, inside `compared::stoppable`: the pairwise comparison returns `Equal` and a key is empty,
+without reading, and the run is `#VALUE!` whatever they return). Readers that build an index shared by the pass's
+formulas (the exact-match lookup index, the criteria index) never stop, since a stand-in key would give the later
+formulas, each under its own budget, wrong values. So
 that UNIQUE is `#VALUE!` in 5.3 s instead of about 30 s, and one of 1,000 texts of 16,383 `é` in 1.7 s instead of about
 60 s (release build, 2026-11-05). The total order (GROUPBY's `slice::sort_by`) reads on, since that sort may panic on a
 comparator that is not an order (T-4279 speeds the collation up). `rustsheet-eval check` has no formula past the limit. Covered by
 `every_text_comparing_reader_pays_the_bytes_it_compares` and
 `a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit` and
 `a_unique_of_medium_texts_stays_inside_the_limit`, and the stop by
-`a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left`. The criteria functions (COUNTIF,
+`a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left` and
+`a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index`. The criteria functions (COUNTIF,
 SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)

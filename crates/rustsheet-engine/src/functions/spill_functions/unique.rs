@@ -10,7 +10,7 @@ use crate::{
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::{
         coalesce_equal_lines,
-        collation::{cmp_text_pairwise, collation_key},
+        collation::{cmp_text_pairwise, collation_key, stoppable},
     },
     model::Model,
 };
@@ -111,30 +111,34 @@ pub(super) fn unique_of(
         .iter()
         .flatten()
         .any(|node| matches!(node, ArrayNode::String(text) if !text.is_ascii()));
-    let first = if intransitive {
-        let compare_lines = |a: usize, b: usize| {
-            (0..length)
-                .map(|k| unique_cell_cmp(at(a, k), at(b, k), cell))
-                .find(|ordering| *ordering != Ordering::Equal)
-                .unwrap_or(Ordering::Equal)
-        };
-        coalesce_equal_lines(count, |a, b| {
-            model.spend_work(compare_units(a, b), cell)?;
-            Ok(compare_lines(a, b))
-        })
-    } else {
-        first_equal_lines(
-            count,
-            |line| {
+    // The grouping may stop past the run's allowance: what it builds is only this node's value
+    // (`collation::stoppable`, T-4278).
+    let first = stoppable(|| {
+        if intransitive {
+            let compare_lines = |a: usize, b: usize| {
                 (0..length)
-                    .map(|k| unique_cell_key(at(line, k)))
-                    .collect::<Vec<_>>()
-            },
-            same_texts,
-            compare_units,
-            |units| model.spend_work(units, cell),
-        )
-    };
+                    .map(|k| unique_cell_cmp(at(a, k), at(b, k), cell))
+                    .find(|ordering| *ordering != Ordering::Equal)
+                    .unwrap_or(Ordering::Equal)
+            };
+            coalesce_equal_lines(count, |a, b| {
+                model.spend_work(compare_units(a, b), cell)?;
+                Ok(compare_lines(a, b))
+            })
+        } else {
+            first_equal_lines(
+                count,
+                |line| {
+                    (0..length)
+                        .map(|k| unique_cell_key(at(line, k)))
+                        .collect::<Vec<_>>()
+                },
+                same_texts,
+                compare_units,
+                |units| model.spend_work(units, cell),
+            )
+        }
+    });
     let first = match first {
         Ok(first) => first,
         Err(error) => return error,

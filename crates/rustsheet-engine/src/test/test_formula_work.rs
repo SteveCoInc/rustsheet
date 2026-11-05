@@ -399,3 +399,30 @@ fn a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left() {
     assert_eq!(model._get_text("A1"), "512");
     assert_eq!(model._get_text("A2"), "512");
 }
+
+#[test]
+fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
+    // The exact-match lookup index and the criteria index are shared by the formulas of a pass,
+    // each under its own budget: a formula that runs out while one is built must not leave keys
+    // it did not read for the others (T-4278 review; the readers stop only in
+    // `collation::stoppable`). Each formula below fits the limit unless it builds the index.
+    let mut model = model_with_limit(10_000);
+    for row in 1..=200 {
+        model._set(&format!("A{row}"), &format!(r#"=REPT("a",100)&{row}"#));
+    }
+    for row in 1..=4 {
+        model._set(&format!("B{row}"), "=XMATCH(A200,A1:A200)");
+        model._set(&format!("C{row}"), "=COUNTIFS(A1:A200,A200)");
+    }
+    model.evaluate();
+    for row in 1..=4 {
+        for column in ["B", "C"] {
+            let text = model._get_text(&format!("{column}{row}"));
+            let message = model._get_error_message(&format!("{column}{row}"));
+            assert!(
+                matches!(text.as_str(), "200" | "1") || message == TOO_MUCH_WORK,
+                "{column}{row}: {text} {message}"
+            );
+        }
+    }
+}
