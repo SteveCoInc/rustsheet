@@ -2656,10 +2656,14 @@ workbook-wide state written in Excel's calculation order:
     RAND, RANDBETWEEN, INDEX, MATCH, SUMPRODUCT and ROWS (-ca, -ce, -cl to -cp, -cw), with SUM and EFFECT (-aa, -ab).
   No principle we know of splits the two lists. It is not the spill, the array result, a function's age or an
   `_xlfn.` prefix: MINVERSE and FREQUENCY empty it while TRANSPOSE and MDETERM keep it, and LET keeps it while
-  LAMBDA empties it. Every other function is unprobed (ours: it keeps the state).
+  LAMBDA empties it. Every other function is unprobed. Ours keeps the state for those, except that every LAMBDA we
+  run empties it, so BYCOL, GROUPBY and PIVOTBY with a function argument, and a defined-name LAMBDA, empty it in ours
+  (unprobed; T-4289 probes its WEEKNUM analogue).
 - A dynamic-array formula is no exception: it acts at its place in the order like any other formula, with the
   calls above. Ours runs the anchors before the chain, so the chain puts back, at each anchor's place, the value
-  that anchor's run left, if its run wrote the state.
+  that anchor's run left, if its run wrote the state. An anchor that reads the state still reads it before the chain
+  runs. For `=AMORDEGRC(..fraction..)+SEQUENCE(1,2)` above a 485 charge, the rule predicts 485 and ours gives 0
+  (unprobed, as it was before T-3393).
 - -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. On 2026-11-05 the same input
   bytes (sha256 3f8ec3b8…) give 485, both in the copy -av and in a refill of -ai that is not committed. The 10-30
   value does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above. -ai A1

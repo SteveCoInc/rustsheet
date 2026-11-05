@@ -23,5 +23,6 @@
   `probes/amordegrc-fraction-state-ai` Sheet1!A1. The 10-30 sidecar stays committed. -av holds the 11-05 value.
   T-3610 owns the cell, together with A76, until it decides how such cells are scored.
 - **Consequences:** `eval/baseline/probes.txt` gains one F line for -ai A1, and `eval/baseline/visible-parity.txt` gains
-  one line for the case (1 cell). Reviewers confirm that the baseline
-  diff adds no other regression line. If T-3610's rule excludes cells that vary between fills, this line goes too.
+  one line for the case (1 cell). The baseline's only other new
+  F line is the new-coverage cell -cc A2 (`SUM(LINEST(..))`, 4 ulps). Reviewers confirm that the diff adds no other
+  regression line. If T-3610's rule excludes cells that vary between fills, this line goes too.

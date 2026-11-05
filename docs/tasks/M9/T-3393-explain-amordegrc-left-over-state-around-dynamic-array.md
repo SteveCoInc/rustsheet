@@ -52,4 +52,4 @@ financial.md "AMORDEGRC below period 1".
     last-digit cell.
   - The regression is -ai A1 (decision 0284).
   - Every other suite is unchanged.
-- **Follow-up:** T-4289 asks whether the same calls are what empties WEEKNUM's stale state.
+- **Follow-ups:** T-4289 asks whether the same calls are what empties WEEKNUM's stale state. T-4294 probes an anchor that reads the value and the LAMBDA-running calls (review MINORs).
