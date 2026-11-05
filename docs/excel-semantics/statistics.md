@@ -3006,7 +3006,7 @@ docs/research/t2464/cells.tsv; docs/research/t2464/r3-binom-pmf (`a1_survey.out`
 `b19_cfit_mul.out`, `c1_hold.out`), verify-r3-binom-pmf (`vscore_v.out`, `vstruct_v.out`).
 Implemented in: `binom_dist_of` in `crates/rustsheet-engine/src/functions/statistical/binom.rs` (T-2645): k = 0, pmf and
 cdf, is `excel_exp(n * excel_ln_one_minus(p))`; the pmf at k = n is `excel_exp(n * excel_ln(p))`. Ours: the interior pmf
-is `discrete.rs` `binomial_pmf`, a double-double walk, and past its budget this kernel (`binom.rs` `loader_pmf`, T-3352).
+is this kernel (`binom.rs` `loader_pmf`, T-3352, T-2146), and `discrete.rs` `binomial_pmf`'s walk only where it is not finite.
 Status: VERIFIED (excel-graph) for k = 0, k = n and the shared kernel; the interior pmf UNVERIFIED
 Tasks: T-2645, T-2146, T-2586
 
@@ -3022,10 +3022,42 @@ dnbinom (r/(f+r))·dbinom_raw(r, f+r, p, q).
   beats R's two forms (hold-out 328/2,316/2,541 against 233-275/1,775-1,779/2,203-2,211 of 3,072).
 Evidence: probes-numeric t2513-r3-binom-pmf-n, -hold, t2513-verify-r3-binom-pmf-h; docs/research/t2464/r3-binom-pmf
 (`b21_neg.out`, `b3_reg_neg_shift.out`, `b3_reg_neg.out`), verify-r3-binom-pmf (`vneg1.out`, `vneg2.out`).
-Ours: `discrete.rs`, a double-double walk, and past its budget p times this shifted kernel (T-3352).
+Ours: p times this shifted kernel everywhere off f = 0 (T-3352, T-2146; "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's
+kernel everywhere" below), `discrete.rs`'s walk only where the kernel is not finite.
 Status: VERIFIED (excel-graph) for the shifted kernel; the final step UNVERIFIED
 Tasks: T-2146, T-2586
 
+
+## BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere (T-2146)
+Rule: off their closed forms, BINOM.DIST's pmf (and BINOMDIST's, and BINOM.DIST.RANGE's one-point range) is Loader's
+kernel at every interior k, and NEGBINOM.DIST's pmf (and NEGBINOMDIST's) is p times the shifted kernel at every f >= 1.
+Neither is the exact value rounded, even where the exact value is a short binary fraction. NEGBINOM.DIST's pmf at
+f = 0 is EXP(fl(r·LN(p))), not the exact p^r, and like the k = 0 binomial pmf it keeps a subnormal result:
+- `NEGBINOMDIST(0,1,1E-200)` is 9.99999999999978E-201 and `NEGBINOMDIST(0,3,0.5)` 0.12500000000000003
+  (gen-m9 d8f44d556674c2fd A281, 11eb3ab4f4f8104c A374). This form fixes 11 gated f = 0 cells and regresses none.
+- `BINOM.DIST(10,20,0.5,FALSE)` is 0.17619705200195307, where C(20,10)/2^20 rounds to ...312 (ironcalc-calc
+  BINOM.xlsx BINOM.DIST!E76).
+- The kernel's model (`loader.rs` `excel_dbinom_exponent`, model M4) is not bit-exact. Its stored chain is not
+  identified (T-2513), and it misses some cells where the exact value happens to be Excel's. For example
+  `NEGBINOMDIST(9,3,0.001)`: Excel 5.450697538692308E-08, the exact value's double, the model 9 ulp away (gen-m9
+  1db18890916ee643 A10).
+- Still, it beats the walk as a whole. The fit lab's hold-out (fits `binom-pmf` and `negbinom-pmf`; T-2513 and T-2145
+  sweeps, cell-hash split, margin 5 points) gives test bit-exact rates:
+  - BINOM.DIST interior: Loader 26.6% (train 27.2%), walk 18.5%, correctly rounded 18.1%;
+  - NEGBINOM.DIST: Loader 24.4% (train 23.2%), walk 14.0%, correctly rounded 13.9%.
+- The fresh sweeps agree: Gate A batches `r4-T-2146` (392 points, all inside the envelope), and
+  probes-numeric/t2146-binom-negbinom-pmf-fresh (400 cells), where bit-exact goes from 96 to 135 and visibly off
+  from 168 to 131.
+- A tail-only switch lost to "everywhere" at every T from 2 to 60: Loader where the pmf is below e^-T, the walk above.
+  At NEGBINOM.DIST the final step fl(p·kernel) ties EXP(E + LN p) held in a register. R's dnbinom,
+  (r/(f+r))·dbinom_raw(r, f+r), is worse than the walk.
+Evidence: gen-m9 and ironcalc-calc BINOM.xlsx cells above; probes-numeric t2146-binom-negbinom-pmf-fresh
+(excel-graph, 2026-11-05), accuracy BINOM.DIST and NEGBINOM.DIST r4-T-2146, and the T-2513 probes.
+Ours: `binom.rs` `excel_binom_pmf` and `excel_negbinom_pmf`. Decision 0293 lists the 15 gated cells the switch
+regressed.
+Status: VERIFIED (excel-graph) for the f = 0 form and for the kernel as the better model; the stored chain is
+UNVERIFIED (T-4352)
+Tasks: T-2146, T-2513
 ## BINOM.DIST and NEGBINOM.DIST at a large n: basym and Loader, within 1E-11 of the math except at small p (T-3352, T-3960)
 Rule: at a large trial count (or number of failures) Excel's BINOM.DIST and NEGBINOM.DIST stay close to the exact value:
 on probes/t3352-binom-negbinom-large-n (208 cells: n 1E4 to 1E9 with p 0.3, 0.5 and 0.001; failures 1E3 to 1E9 with
