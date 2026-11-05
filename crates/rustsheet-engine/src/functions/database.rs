@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::arithmetic::{extended_sum, flush_subnormal};
 use crate::constants::LAST_ROW;
 use crate::expressions::parser::stringify::retarget_unqualified_references;
+use crate::reference_operators::Picked;
 use crate::types::Cell;
 use crate::{
     arithmetic::extended_quotient,
@@ -202,10 +203,29 @@ impl Model {
         LiftCost::Cells(rows.saturating_mul(per_row))
     }
 
-    /// Whether `field` is a single-cell reference whose cell holds an error.
+    /// Whether `field` is a single-cell reference whose cell holds an error, written directly or
+    /// reached through a defined name, `INDEX(…)`, `@` or `IF(TRUE,…)`: all give `#VALUE!` in
+    /// Excel (probes/m9-database-field-error-forms, excel-graph 2026-11-04).
     fn db_field_is_error_cell(&mut self, field: Option<&Node>, cell: CellReferenceIndex) -> bool {
-        let Some(node @ Node::ReferenceKind { .. }) = field.map(Node::ungrouped) else {
+        let Some(
+            node @ (Node::ReferenceKind { .. }
+            | Node::DefinedNameKind(_)
+            | Node::FunctionKind { .. }
+            | Node::ImplicitIntersection { .. }),
+        ) = field.map(Node::ungrouped)
+        else {
             return false;
+        };
+        // IF(TRUE,ref) hands on the picked branch's reference.
+        let node = match node {
+            Node::FunctionKind {
+                kind: Function::If,
+                args,
+            } => match self.if_pick(args, cell) {
+                Picked::Node(picked) => picked.ungrouped(),
+                Picked::Value(_) => return false,
+            },
+            other => other,
         };
         match self.get_reference(node, cell) {
             Ok(range) if range.left == range.right => self.evaluate_cell(range.left).is_error(),
