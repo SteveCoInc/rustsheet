@@ -3,7 +3,7 @@ id: T-0967
 title: "T.INV/T.INV.2T/CONFIDENCE.T: Student-t quantile parity (89 known failures)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
