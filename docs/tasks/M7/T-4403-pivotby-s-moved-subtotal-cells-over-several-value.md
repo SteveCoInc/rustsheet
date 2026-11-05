@@ -3,7 +3,7 @@ id: T-4403
 title: "PIVOTBY's moved subtotal cells over several value columns name a column group by its first row, which a leaf no record reaches shares"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
