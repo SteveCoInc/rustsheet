@@ -3,7 +3,7 @@ id: T-4289
 title: "Probe whether the calls that empty AMORDEGRC's left-over value (SEQUENCE, SORT, XLOOKUP, LAMBDA, ...) are what empties WEEKNUM's stale state"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -31,6 +31,12 @@ left-over value, or by a dynamic-array formula as such. If the evidence calls fo
   They are filled on excel-graph.
 - [ ] dates.md records the rule. The engine matches the probes, or a follow-up task owns every visibly-off cell.
 - [ ] `make check` green; reviewers approve.
+
+## Outcome
+Probed with probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph 2026-11-05.
+The state is emptied by particular calls, not by a dynamic-array formula as such, and not by AMORDEGRC's list
+(SEQUENCE, SORT of a constant, XLOOKUP, UNIQUE of a constant, MMULT and a called LAMBDA all keep it). The engine's
+rule is wrong on 26 cells; T-4315 owns them. Recorded in dates.md.
 
 ## Out of scope
 - AMORDEGRC itself (done in T-3393).

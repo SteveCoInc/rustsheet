@@ -243,6 +243,8 @@ probes/table-edits/table-column-range-delete-both-ends-separate.case.json	2
 probes/table-edits/table-column-range-delete-end.case.json	2
 probes/table-edits/table-column-range-delete-start.case.json	2
 probes/text-locale-invalid-sublanguage.case.json	3
+probes/weeknum-stale-between-calls.case.json	16
+probes/weeknum-stale-between-ranges.case.json	10
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
