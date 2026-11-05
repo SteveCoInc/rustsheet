@@ -1,17 +1,17 @@
 ---
 id: T-4280
-title: "Tidy the T-4045 and T-3741 review MINORs: ret brackets in bup.rs, ret against ret*c, BINOM.INV near-1 wording"
+title: "Tidy the T-4045, T-3741 and T-3252 review MINORs: ret brackets in bup.rs, ret against ret*c, BINOM.INV near-1 wording"
 milestone: M9
 lane: functions-stat
 status: todo
 priority: P3
 size: S
 tier: sonnet
-depends_on: [T-4045, T-3741]
+depends_on: [T-4045, T-3741, T-3252]
 ---
 
 ## Goal
-The comments and semantics notes that T-4045 (#3242) and T-3741 (#3240) added describe the quantities the code and the
+The comments and semantics notes that T-4045 (#3242), T-3741 (#3240) and T-3252 (#3246) added describe the quantities the code and the
 oracle cells measure. Behavior does not change.
 
 ## Context
@@ -37,8 +37,13 @@ The reviewers approved both PRs, with these wording-only MINORs that came after 
     1552734937. Reword it as "consistent with a cdf carrying about 1E-16 absolute error near 1; the exact form is not
     identified", so T-3447 and T-3740 do not build on a rounding model the data rules out.
 
+- T-3252 (#3246), its Outcome (R4 guards): it names A72 as the worst sweep cell at 1.04E-14 relative to the math.
+  Ours is worst at A20 (`GAMMA.DIST(177.0467,264.4,1,TRUE)`, 1.04E-14); A72 is 1.01E-14, and 1.04E-14 at A71 is
+  Excel's own error. Correct the label, recompute it with 50-digit mpmath first, and fix decision 0281 too if it
+  repeats the label.
+
 ## Acceptance criteria
-- [ ] The four items above are fixed, with every quoted figure recomputed (50- or 60-digit mpmath).
+- [ ] The five items above are fixed, with every quoted figure recomputed (50- or 60-digit mpmath).
 - [ ] No behavior change: `make eval` deltas are 0, and Gate A is unchanged.
 - [ ] `make check` green; reviewers approve.
 
