@@ -1527,7 +1527,7 @@ is turned into (a range arm of a lifted IF or CHOOSE, or an HSTACK or VSTACK arg
 its used area, then a picked one copied for 3 per cell of the range; T-1564), 3 per cell of each array an aggregate (SUM,
 COUNT, AVERAGE, MIN, MAX, PRODUCT and the other `for_each_value` readers) reads, nested GROUPBY/PIVOTBY cells it
 flattens included (T-2804), one per 4 bytes of each text value a node gives (and of a lifted text call's results and of each text the
-`&` operator makes over an array, T-2806), one per 4 characters a node's text comparisons read (the collation's passes up to
+`&` operator makes over an array, T-2806), one per 16 ticks of the text comparisons a node makes (ticks weighted by path, below; the collation's passes up to
 their first difference, `=`/`<` between texts, the exact-match fold of MATCH, VLOOKUP and HLOOKUP, wildcard patterns, and the
 bytes of each text a collation key or a lookup fold is built from: MATCH, XMATCH, XLOOKUP, LOOKUP, UNIQUE, SORT, SORTBY,
 GROUPBY and the criteria; T-4233), 512 per LAMBDA value
@@ -1571,20 +1571,23 @@ more than comparing short ones, while a MAP of `MATCH(REPT("a",32766)&"b",s,0)` 
 on its first call. The count is in ticks, weighted by path because the paths' cost a character differs a
 hundredfold (collation/compared.rs): 1 a byte for the ASCII first pass, the ASCII folds and wildcard matches of the
 lookups and criteria; 32 a character of the ASCII second pass (equal or case-only-different texts); 128 a character of
-the full collation (non-ASCII, lone surrogates); 256 a byte of a collation key (UNIQUE, the exact-match lookup index,
-the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Fitted by time
+the full collation (non-ASCII, lone surrogates); 128 a byte of a collation key (UNIQUE, the exact-match lookup index, the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Fitted by time
 (release build, 2026-11-05, 4 cores; each a MAP over 1E5 calls with `s` bound to 1,000 texts of 32,767 bytes, or 16,383
 `é`, run until `#VALUE!`): `XMATCH(REPT("a",32766)&"b",s)` 7.0 s (1.6 ns a tick), MATCH wildcard 4.9 s, `SUM(--(s=REPT("A",32767)))`
-5.7 s, `ROWS(SORT(s))` 5.6 s, XMATCH over the `é` texts 6.2 s, MATCH exact over them 5.1 s. Measured to compute: `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))`
+5.7 s, `ROWS(SORT(s))` 5.6 s, XMATCH over the `é` texts 6.2 s, MATCH exact over them 5.1 s; the key path with `s` bound to
+100 texts of 32,767 bytes, `ROWS(UNIQUE(s))` 7.1 s, `ROWS(UNIQUE(s))` over 100 distinct such texts 7.4 s. Measured to compute:
+`ROWS(UNIQUE(REPT("a",20)&SEQUENCE(1048576)))` in 9.8 s (main: 9.95 s), `ROWS(UNIQUE(REPT("a",200)&SEQUENCE(100000)))` 5.1 s, `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))`
 in 4.1 s (81M compare units), `ROWS(SORT(IF(SEQUENCE(1048576),"Same text, 30 characters long")))` 2.9 s,
 `ROWS(SORT(REPT("a",300)&SEQUENCE(100000)))` 0.6 s; a one-unit-per-4-bytes weight (the first cut) refused the first of
-these. Refused now though they computed before: single nodes whose comparisons alone take longer than the limit's
-worth of time, such as `ROWS(SORT(REPT("a",300)&SEQUENCE(1048576)))` (about 9 s) and `ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`
-(about 30 s, its collation keys); the charge lands after the node, so such a node runs to its end before the formula
+these, and a 256-tick key weight (round 2) refused the first UNIQUE. Refused now though they computed before: single
+nodes whose comparisons alone take longer than the limit's worth of time, such as `ROWS(SORT(REPT("a",300)&SEQUENCE(1048576)))`
+(about 9 s) and a UNIQUE whose texts add up to more than about 30 MB of collation keys, such as 1,048,576 texts of
+over about 30 bytes (`ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`, about 30 s on main); the charge lands after the node, so such a node runs to its end before the formula
 is `#VALUE!` (one UNIQUE of 1,000 texts of 16,383 `é` takes about 60 s; T-4278 stops it inside the node, T-4279 speeds
 the collation up). `rustsheet-eval check` has no formula past the limit. Covered by
 `every_text_comparing_reader_pays_the_bytes_it_compares` and
-`a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit`. The criteria functions (COUNTIF,
+`a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit` and
+`a_unique_of_medium_texts_stays_inside_the_limit`. The criteria functions (COUNTIF,
 SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)

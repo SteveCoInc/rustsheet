@@ -44,13 +44,15 @@ evaluation does at most 268,435,456 work units".
   ticks noted outside any run).
 - Calibration (round 2, after fidelity's round-1 finding that one unit per 4 bytes refused single SORTs that compute):
   the count is in ticks weighted by path, as the paths' cost a character differs a hundredfold (collation/compared.rs:
-  `BYTE_TICKS` 1, `ELEMENT_TICKS` 32, `CHAR_TICKS` 128, `KEY_TICKS` 256, `FOLD_TICKS` 32), and
+  `BYTE_TICKS` 1, `ELEMENT_TICKS` 32, `CHAR_TICKS` 128, `KEY_TICKS` 128, `FOLD_TICKS` 32; round 3 halved `KEY_TICKS` from 256, which refused
+  `ROWS(UNIQUE(REPT("a",20)&SEQUENCE(1048576)))`), and
   `COMPARED_TICKS_PER_UNIT` = 16 (area_budget.rs). Timed on a release build (figures in arrays.md): every path's
-  bound-array worst case reaches the limit in 4.9-7.0 s; `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))` computes (4.1 s,
+  bound-array worst case reaches the limit in 4.9-7.4 s; `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))` computes (4.1 s,
   81M compare units). Single nodes whose comparisons take longer than the limit's worth still run to their end before
   they are `#VALUE!` (follow-ups T-4278, stop inside the node; T-4279, speed up the collation).
 - `a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit`: 65,536-row SORTs (100-character shared
-  prefix; equal 30-character texts) spend under a twentieth of the limit.
+  prefix; equal 30-character texts) spend under a twentieth of the limit;
+  `a_unique_of_medium_texts_stays_inside_the_limit`: a 65,536-row UNIQUE of 27-byte texts under a sixteenth.
 - Tests (test_formula_work.rs, units not time): `every_text_comparing_reader_pays_the_bytes_it_compares` (MATCH exact,
   wildcard and approximate, XMATCH, XLOOKUP, LOOKUP, VLOOKUP, HLOOKUP, UNIQUE, SORT, SORTBY, GROUPBY, `=`),
   `a_comparison_pays_for_what_it_reads_not_for_the_texts_lengths`, and

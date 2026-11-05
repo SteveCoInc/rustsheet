@@ -354,3 +354,13 @@ fn a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit() {
     let spent = units(r#"=ROWS(SORT(IF(SEQUENCE(65536),"Same text, 30 characters long")))"#);
     assert!(spent < MAX_FORMULA_WORK / 20, "{spent}");
 }
+
+#[test]
+fn a_unique_of_medium_texts_stays_inside_the_limit() {
+    // UNIQUE keys every text ([`collation_key`](crate::functions::util::collation::collation_key)),
+    // the heaviest path a byte, so its weight is fitted so that a UNIQUE of a million 27-byte texts,
+    // which computes without the charge (about 10 s, release build), still does (T-4233). A
+    // sixteenth of it spends less than a sixteenth of the limit.
+    let spent = units(r#"=ROWS(UNIQUE(REPT("a",20)&SEQUENCE(65536)))"#);
+    assert!(spent < MAX_FORMULA_WORK / 16, "{spent}");
+}

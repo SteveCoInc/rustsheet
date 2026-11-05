@@ -26,8 +26,9 @@ pub(super) const ELEMENT_TICKS: u64 = 32;
 pub(super) const CHAR_TICKS: u64 = 128;
 
 /// Ticks of one byte a [`super::CollationKey`] is built from (UNIQUE, the exact-match lookup
-/// index, the *IF(S) cache: about 224 ns a byte for ASCII).
-pub(super) const KEY_TICKS: u64 = 256;
+/// index, the *IF(S) cache). Its bound-array worst case reaches the limit in about 7 s, as the
+/// other paths' do, while a UNIQUE of a million 27-byte texts still computes (T-4233).
+pub(super) const KEY_TICKS: u64 = 128;
 
 /// Ticks of one byte [`super::fold_lookup`] folds (non-ASCII: about 31 ns).
 pub(super) const FOLD_TICKS: u64 = 32;
