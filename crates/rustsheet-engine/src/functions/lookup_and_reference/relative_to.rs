@@ -45,6 +45,18 @@ impl RelativeTo {
         }
     }
 
+    /// The axis whose parent the cells' sets take: the columns for `relative_to` 3, the rows
+    /// for 4 ([`ParentSets`]); `None` for 0 to 2.
+    pub(crate) fn parent_axis(self) -> Option<Axis> {
+        if self.columns == Select::Parent {
+            Some(Axis::Columns)
+        } else if self.rows == Select::Parent {
+            Some(Axis::Rows)
+        } else {
+            None
+        }
+    }
+
     /// The relative set of a group's value in a value sort: the set of its Total cell (the
     /// Total column for rows, the Total row for columns), given its `rows`, the group one level
     /// up, `up` (`None` at the top level), and all `records`: its own rows, all records, or the
@@ -236,6 +248,31 @@ fn level(select: Select, fields: usize, item: Item) -> usize {
 /// cell-visit cap".
 const MAX_SET_ENTRIES: u64 = 1 << 24;
 
+/// The key-prefix levels the cells' sets use on each axis, or the `#ERROR!` of a call whose sets
+/// would hold more than [`MAX_SET_ENTRIES`] record entries, checked from the level counts before
+/// any set is built. [`ParentSets`] hold as many: each kept parent's sets hold a record once per
+/// column level, but for a column class no record reached, which holds every record of its line,
+/// as the grid's own bucket of such a leaf does.
+pub(crate) fn check_set_entries(
+    relative_to: RelativeTo,
+    (rows, cols): (&Grouping, &Grouping),
+    (row_lines, col_lines): (&[Line], &[Line]),
+    records: &[usize],
+    cell: CellReferenceIndex,
+) -> Result<(BTreeSet<usize>, BTreeSet<usize>), CalcResult> {
+    let row_levels = AxisSets::levels(relative_to.rows, rows.fields(), row_lines);
+    let col_levels = AxisSets::levels(relative_to.columns, cols.fields(), col_lines);
+    let pairs = (row_levels.len() as u64).saturating_mul(col_levels.len() as u64);
+    if pairs.saturating_mul(records.len() as u64) > MAX_SET_ENTRIES {
+        return Err(CalcResult::new_error(
+            Error::ERROR,
+            cell,
+            "Too many relative set entries".to_string(),
+        ));
+    }
+    Ok((row_levels, col_levels))
+}
+
 /// The relative sets of one PIVOTBY call, each built once and shared by its cells: for each pair
 /// of levels the cells use (a row level, a column level), the records bucketed by their row and
 /// column prefixes at those levels, in source order.
@@ -259,16 +296,13 @@ impl RelativeSets {
         records: &[usize],
         cell: CellReferenceIndex,
     ) -> Result<Self, CalcResult> {
-        let row_levels = AxisSets::levels(relative_to.rows, rows.fields(), row_lines);
-        let col_levels = AxisSets::levels(relative_to.columns, cols.fields(), col_lines);
-        let pairs = (row_levels.len() as u64).saturating_mul(col_levels.len() as u64);
-        if pairs.saturating_mul(records.len() as u64) > MAX_SET_ENTRIES {
-            return Err(CalcResult::new_error(
-                Error::ERROR,
-                cell,
-                "Too many relative set entries".to_string(),
-            ));
-        }
+        let (row_levels, col_levels) = check_set_entries(
+            relative_to,
+            (rows, cols),
+            (row_lines, col_lines),
+            records,
+            cell,
+        )?;
         let height = records.iter().max().map_or(0, |&row| row + 1);
         let mut sets = RelativeSets {
             rows: AxisSets::new(relative_to.rows, rows, height, &row_levels),
@@ -308,6 +342,167 @@ impl RelativeSets {
             rows: at
                 .and_then(|at| self.sets.get(at))
                 .map_or(&[][..], Vec::as_slice),
+        }
+    }
+}
+
+/// The parent of a grid item over `fields` key fields: a group's subtotal of its first
+/// `fields - 1` keys, a subtotal's of one key fewer, the Total (`None`) above the first field
+/// and for the Total itself. Its `end` is not the subtotal's: the records a subtotal holds
+/// depend only on its level and a group under it.
+fn parent_item(item: Item, fields: usize) -> Item {
+    let (level, start) = match item? {
+        Line::Group(group) => (fields, group),
+        Line::Subtotal { level, start, .. } => (level, start),
+    };
+    let level = level.checked_sub(1).filter(|&level| level > 0)?;
+    Some(Line::Subtotal {
+        level,
+        start,
+        end: start.saturating_add(1),
+    })
+}
+
+/// The key prefix (class ids) that names a subtotal item of `grouping`, empty for the Total.
+fn item_key(grouping: &Grouping, item: Item) -> Vec<usize> {
+    match item {
+        Some(Line::Subtotal { level, start, .. }) => grouping.prefix(start, level).to_vec(),
+        Some(Line::Group(group)) => grouping.prefix(group, grouping.fields()).to_vec(),
+        None => Vec::new(),
+    }
+}
+
+/// The sets of one parent: each column item's set, by index into `sets`.
+struct ParentEntry {
+    key: Vec<usize>,
+    items: HashMap<Item, usize>,
+    sets: Vec<(SetId, Vec<usize>)>,
+}
+
+/// PIVOTBY's `relative_to` 3 and 4 sets: a cell's set is the records of its parent's cell, the
+/// cell of the parent column item in its row for 3 (the parent column total) and of the parent
+/// row item in its column for 4 (the parent row total), each read by the rule the grid reads
+/// that cell's own records by. On an intransitive run a parent subtotal holds the records that
+/// reached its class, those that reached no leaf under it included: over Ay Ay Bx Cx Cy of
+/// q p p q q the parent column total of q's (`ab`,y) cell is `1, 4, 5`, and over Ay Ax By Cx Bx of
+/// p p q p q the parent row total of the (`ab`,x) Total cell `1, 2, 4`
+/// (probes/t4382-pivotby-intransitive-paths Calc!D2, E17; T-4402). Rows of one parent are laid
+/// out next to each other, so the sets of the latest parent at each level are kept and shared.
+pub(crate) struct ParentSets<'a> {
+    axis: Axis,
+    rows: &'a Grouping,
+    cols: &'a Grouping,
+    /// Every record: the Total's.
+    records: &'a [usize],
+    /// The latest parent's sets at each parent level (one entry for the columns' parents,
+    /// rebuilt per row line).
+    entries: HashMap<usize, ParentEntry>,
+    current: usize,
+    next_id: usize,
+}
+
+impl<'a> ParentSets<'a> {
+    pub(crate) fn new(
+        axis: Axis,
+        (rows, cols): (&'a Grouping, &'a Grouping),
+        records: &'a [usize],
+    ) -> Self {
+        ParentSets {
+            axis,
+            rows,
+            cols,
+            records,
+            entries: HashMap::new(),
+            current: 0,
+            next_id: 0,
+        }
+    }
+
+    /// Builds the sets of row line `row`, whose records are `records`, for the column items
+    /// `items`; `column_records` gives a column item's records among some records, by the
+    /// grid's rule.
+    pub(crate) fn prepare(
+        &mut self,
+        (row, records): (Item, &[usize]),
+        items: impl Iterator<Item = Item>,
+        column_records: impl Fn(Item, &[usize]) -> Vec<usize>,
+    ) {
+        match self.axis {
+            Axis::Columns => {
+                let mut parents: HashMap<Vec<usize>, usize> = HashMap::new();
+                let mut entry = ParentEntry {
+                    key: Vec::new(),
+                    items: HashMap::new(),
+                    sets: Vec::new(),
+                };
+                for item in items {
+                    if entry.items.contains_key(&item) {
+                        continue;
+                    }
+                    let parent = parent_item(item, self.cols.fields());
+                    let next = entry.sets.len();
+                    let at = *parents
+                        .entry(item_key(self.cols, parent))
+                        .or_insert(next);
+                    if at == next {
+                        let id = self.fresh_id();
+                        entry.sets.push((id, column_records(parent, records)));
+                    }
+                    entry.items.insert(item, at);
+                }
+                self.current = 0;
+                self.entries.insert(0, entry);
+            }
+            Axis::Rows => {
+                let parent = parent_item(row, self.rows.fields());
+                let (level, parent_records) = match parent {
+                    Some(Line::Subtotal { level, start, .. }) => {
+                        (level, self.rows.subtotal_rows(level, start))
+                    }
+                    _ => (0, self.records),
+                };
+                let key = item_key(self.rows, parent);
+                self.current = level;
+                if self
+                    .entries
+                    .get(&level)
+                    .is_some_and(|entry| entry.key == key)
+                {
+                    return;
+                }
+                let mut entry = ParentEntry {
+                    key,
+                    items: HashMap::new(),
+                    sets: Vec::new(),
+                };
+                for item in items {
+                    if entry.items.contains_key(&item) {
+                        continue;
+                    }
+                    let id = self.fresh_id();
+                    entry.items.insert(item, entry.sets.len());
+                    entry.sets.push((id, column_records(item, parent_records)));
+                }
+                self.entries.insert(level, entry);
+            }
+        }
+    }
+
+    fn fresh_id(&mut self) -> SetId {
+        self.next_id = self.next_id.saturating_add(1);
+        SetId::ParentCell(self.next_id)
+    }
+
+    /// The set of column item `col`'s cell in the row line last prepared (empty for an item
+    /// not prepared).
+    pub(crate) fn of_cell(&self, col: Item) -> Relative<'_> {
+        let set = self.entries.get(&self.current).and_then(|entry| {
+            let at = entry.items.get(&col)?;
+            entry.sets.get(*at)
+        });
+        Relative {
+            id: set.map(|(id, _)| *id),
+            rows: set.map_or(&[][..], |(_, rows)| rows.as_slice()),
         }
     }
 }
