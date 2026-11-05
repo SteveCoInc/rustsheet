@@ -154,10 +154,12 @@ impl Model {
                 };
                 for ((&position, item), &omitted) in positions.iter().zip(items).zip(&omitted) {
                     // An item is text, a label cell's value included (J6), or an omitted
-                    // argument for the blank item (pv23_041 G5:G7); a number picks a numeric
-                    // range group by its lower bound (probes/t4228-pivot-range-groups) and is
-                    // otherwise SPEC-0015 unknown 3, as are a date and a boolean; `""`, a blank
-                    // cell or `"(blank)"` unprobed, an error in a pair unprobed.
+                    // argument or `"(blank)"` for the blank item (pv23_041 G5:G7,
+                    // probes/t4236-pivot-date-groups); a number picks a numeric range group by
+                    // its lower bound (probes/t4228-pivot-range-groups), a date group by its
+                    // calendar value or an ungrouped date item it equals, and is otherwise
+                    // SPEC-0015 unknown 3, as is a boolean; `""` or a blank cell unprobed, an
+                    // error in a pair unprobed.
                     let found = match item {
                         _ if omitted => model.pivot_blank_item(pivot, position),
                         CalcResult::String(name) => model.pivot_item(pivot, position, name),

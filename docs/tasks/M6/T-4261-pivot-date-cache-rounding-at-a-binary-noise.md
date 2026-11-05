@@ -29,10 +29,14 @@ in. Every cell of probes/t4236-pivot-date-groups-no-blank that T-4246 left visib
   for example a 1900 date (serial < 100, where 15 digits keep far more decimals) against a 2019 one.
 - The same rule applies to the importer (it shares `DateGroups`), and the `startDate` and `endDate` comparison.
 
+- probes/t4236-pivot-date-groups pivot H (the same Data!D4 point, ungrouped since T-4260 drops the grouping over
+  its blank): the point merges with 10:59:59 into one item, so Calc E44:E50 and F43:F50 (15 cells) are off by a row.
+  Those cells are this task's too.
+
 ## Acceptance criteria
 - [ ] A probe case (excel-probe skill, excel-graph) separates the candidate models; the code follows the winner,
       and web.md "Grouped pivot fields import as their group items" records the rule.
-- [ ] probes/t4236-pivot-date-groups-no-blank passes; baseline updated.
+- [ ] probes/t4236-pivot-date-groups-no-blank and probes/t4236-pivot-date-groups pass; baseline updated.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
