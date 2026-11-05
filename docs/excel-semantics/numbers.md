@@ -2249,7 +2249,11 @@ both. AGGREGATE's odd options (1, 3, 5, 7) skip both kinds and its even options 
 follows its sheet, not its position: in a workbook as read from a file, on a sheet with a filtered table every
 hidden row counts as filtered, including
 rows above or below the table and cells in columns outside it, and on a sheet without one every hidden row is a
-manual hide (a table without a filter does not change that). SUBTOTAL, and AGGREGATE under options 0-3, skip a cell
+manual hide (a table without a filter does not change that). A table is filtered only when its autoFilter has a
+`<filterColumn>` that holds a criterion (values, custom, top 10, ...) and whose `colId` is inside the table: a
+criterion-less `<filterColumn colId="0"/>` (or on another column), and a values filter whose `colId` is past the
+table's last column, leave every hidden row a manual hide, as if the table had no filter (T-4003).
+SUBTOTAL, and AGGREGATE under options 0-3, skip a cell
 whose formula contains a SUBTOTAL or AGGREGATE call anywhere: `=1+SUBTOTAL(9,A1:A2)`, `=SUBTOTAL(..)+1`,
 `=-SUBTOTAL(..)`, `=SUBTOTAL(..)*1`, `=IF(TRUE,SUBTOTAL(..))`, `=SUM(SUBTOTAL(..))`, `=LET(x,SUBTOTAL(..),x)`,
 `=AGGREGATE(9,0,A1:A2)` and `=1+AGGREGATE(..)` all count as 0, while `AGGREGATE(9,4,..)` reads them and a plain
@@ -2262,7 +2266,20 @@ How the probe makes a filtered row: the table's autoFilter holds a values filter
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
 re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
-Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194).
+Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194); probes/t4003-filter-column-criterion (30 cells, excel-graph, 2026-11-05, T-4003; first seen on the T-3081 throwaway uploads, xlsx-storage.md "Table parts in the export").
+**Which filter makes a table filtered (T-4003):** on a table A1:B7 (`Cat` a,b,a,c,a,b, `Val` 1-6), a values filter on
+`Cat` keeping "a" with rows 3, 5 and 7 hidden gives `SUBTOTAL(9,..[Val])` = `SUBTOTAL(109,..)` = 9 and
+`SUBTOTAL(3,..[Cat])` = `SUBTOTAL(103,..)` = 3; a criterion-less filterColumn (on column 0 or on column 1) with rows 3
+and 5 hidden gives SUBTOTAL 9 21 and 109 15, SUBTOTAL 3 6 and 103 4, the same as the table with no filter; the values
+filter under `colId` 5 of the 2-column table with rows 3, 5, 7 hidden gives 21 and 9, 6 and 3. The xlsx import decides
+this per table (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs); an empty `<filters/>` counts as a
+criterion there (unprobed). Decided where Excel shows nothing: the API's `Txn::add_table(.., filtered: true)` means a
+table whose filter has a criterion that hides its hidden rows (what spec2xlsx writes and Excel reads as filtered), so it
+stays filtered in the engine; its xlsx export still writes a criterion-less filterColumn, which Excel and our import
+read as not filtered (T-4363). A column delete that takes the last kept criterion of a filter read from a file
+unfilters the table, so the engine agrees with its own export; whether Excel unfilters the rows when the filtered column
+is deleted in the application is unprobed (T-4371). A worksheet autoFilter (no table) and an autoFilter holding only a
+`<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,
 `Node::contains_function`).

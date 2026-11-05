@@ -52,6 +52,27 @@ def test_filtered_table_keeps_the_visible_rows() -> None:
     assert '<tableColumn id="1" name="Key"/><tableColumn id="2" name="Val"/>' in table
 
 
+def test_filter_column_col_id_and_no_criterion() -> None:
+    """The T-4003 forms: a values filter under a colId past the table, and no criterion."""
+
+    def table(**options: object) -> str:
+        spec = {"hidden_rows": [3], "tables": [{"name": "Data", "ref": "A1:B4", "filter": True} | options]}
+        return _parts(spec)["xl/tables/table1.xml"]
+
+    assert '<filterColumn colId="5"><filters><filter val="a"/><filter val="c"/></filters>' in table(
+        filter_column={"col_id": 5}
+    )
+    assert '<autoFilter ref="A1:B4"><filterColumn colId="1"/></autoFilter>' in table(
+        filter_column={"col_id": 1, "criterion": False}
+    )
+    with pytest.raises(ValueError, match="past the table's last column"):
+        table(filter_column={"col_id": 1})
+    with pytest.raises(ValueError, match="whole number"):
+        table(filter_column={"col_id": -1})
+    with pytest.raises(ValueError, match="takes only col_id and criterion"):
+        table(filter_column={"colId": 1})
+
+
 def test_unfiltered_table_has_an_empty_autofilter() -> None:
     parts = _parts({"tables": [{"name": "Plain", "ref": "A1:B4"}]})
     assert '<autoFilter ref="A1:B4"/>' in parts["xl/tables/table1.xml"]

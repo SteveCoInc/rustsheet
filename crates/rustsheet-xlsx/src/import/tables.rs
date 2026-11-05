@@ -103,18 +103,13 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
 
     // TODO: Conformant implementations should panic if header_row_dxf_id or data_dxf_id are out of bounds.
 
-    // Note that filters are non dynamic
-    // The only thing important for us is whether or not it has filters
+    // Note that filters are non dynamic: the criteria are kept for the export, and SUBTOTAL only
+    // needs to know whether the table is filtered (`has_filters`, set below once the columns are
+    // read).
     let auto_filter = table
         .descendants()
         .filter(|n| n.has_tag_name("autoFilter"))
         .collect::<Vec<&XmlNode>>();
-
-    let has_filters = if let Some(filter) = auto_filter.first() {
-        filter.children().count() > 0
-    } else {
-        false
-    };
     let filter_columns = auto_filter
         .first()
         .map(|filter| {
@@ -187,6 +182,10 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
         });
     }
 
+    let has_filters = auto_filter
+        .first()
+        .is_some_and(|filter| has_active_criterion(filter, columns.len()));
+
     // tableInfo
     let table_info = table
         .descendants()
@@ -228,6 +227,25 @@ pub(crate) fn load_table<R: Read + std::io::Seek>(
     })
 }
 
+/// Whether the table's `<autoFilter>` makes the sheet's hidden rows filtered for SUBTOTAL and
+/// AGGREGATE: Excel does so only for a `<filterColumn>` that holds a criterion element and whose
+/// `colId` is inside the table's `width` columns. A criterion-less `<filterColumn colId="0"/>`,
+/// one with `colId` past the table, or an autoFilter with no filterColumn leaves them manual
+/// hides (excel-graph, T-3081 and T-4003; docs/excel-semantics/numbers.md "SUBTOTAL and
+/// AGGREGATE over hidden and filtered rows").
+fn has_active_criterion(auto_filter: &XmlNode, width: usize) -> bool {
+    auto_filter
+        .children()
+        .filter(|n| n.has_tag_name("filterColumn"))
+        .any(|column| {
+            let inside = column
+                .attribute("colId")
+                .and_then(|id| id.parse::<usize>().ok())
+                .is_some_and(|id| id < width);
+            inside && column.children().next().is_some()
+        })
+}
+
 /// A `<filterColumn>`'s column and criterion; `None` for one without a valid `colId`, which
 /// Excel's schema requires. A values filter with date groups (`<dateGroupItem>`, `calendarType`)
 /// is kept as [`FilterCriterion::Other`], not as a values list that would drop its dates; the
@@ -266,7 +284,7 @@ fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
 
 #[cfg(test)]
 mod tests {
-    use super::{filter_column, XmlNode};
+    use super::{filter_column, has_active_criterion, XmlNode};
     use rustsheet_engine::types::FilterCriterion;
 
     fn criterion(xml: &str) -> FilterCriterion {
@@ -282,6 +300,31 @@ mod tests {
         assert_eq!(criterion(dated), FilterCriterion::Other);
         let calendar = r#"<filterColumn colId="1"><filters calendarType="gregorian"><filter val="a"/></filters></filterColumn>"#;
         assert_eq!(criterion(calendar), FilterCriterion::Other);
+    }
+
+    /// Only a filterColumn with a criterion inside the table makes its hidden rows filtered, as
+    /// Excel reads the T-3081 uploads (probes/t4003-filter-column-criterion).
+    #[test]
+    fn only_a_criterion_inside_the_table_filters() {
+        let active = |xml: &str| has_active_criterion(&XmlNode::parse_str(xml).unwrap(), 2);
+        let values =
+            r#"<filterColumn colId="1"><filters><filter val="a"/></filters></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{values}</autoFilter>")));
+        let custom = r#"<filterColumn colId="0"><customFilters><customFilter operator="greaterThan" val="3"/></customFilters></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{custom}</autoFilter>")));
+        let top10 = r#"<filterColumn colId="0"><top10 val="2"/></filterColumn>"#;
+        assert!(active(&format!("<autoFilter>{top10}</autoFilter>")));
+        let bare = r#"<filterColumn colId="0"/>"#;
+        assert!(!active(&format!("<autoFilter>{bare}</autoFilter>")));
+        let past = r#"<filterColumn colId="5"><filters><filter val="a"/></filters></filterColumn>"#;
+        assert!(!active(&format!("<autoFilter>{past}</autoFilter>")));
+        assert!(!active(
+            r#"<autoFilter><filterColumn colId="2"><filters/></filterColumn></autoFilter>"#
+        ));
+        assert!(active(&format!(
+            "<autoFilter>{bare}{past}{values}</autoFilter>"
+        )));
+        assert!(!active("<autoFilter/>"));
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding
