@@ -3,7 +3,7 @@ id: T-2780
 title: "Probe COVAR with a boolean scalar argument (COVAR({1,2,3},TRUE), COVAR(-2.5,FALSE)); T-2575 moved it with COVARIANCE.P unprobed"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
