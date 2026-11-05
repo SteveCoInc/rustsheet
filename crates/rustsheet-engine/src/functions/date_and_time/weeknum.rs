@@ -41,15 +41,23 @@ fn is_one_cell(node: &Node, cell: CellReferenceIndex) -> bool {
 
 /// Whether `node` is, as written, a reference CONCAT and TEXTJOIN join: a cell, a range, or a call
 /// that returns one (`CONCAT(INDEX(C1:D2,1,1))` keeps WEEKNUM's state, probes/weeknum-stale-call-
-/// shapes-2 S26). Read from the formula, never by evaluating the argument again: an argument that
-/// only picks a reference (IF, CHOOSE, LET) or a name is unprobed and counts as no reference.
+/// shapes-2 S26; `CONCAT(INDEX({1,2},1))` empties it, probes/weeknum-stale-call-shapes-3 S17).
+/// Read from the formula, never by evaluating the argument again. IF and CHOOSE count when a
+/// result argument does, LET when any argument does, and a defined name always (shapes-3
+/// S20-S23, a name for a range; a name for a constant is unprobed).
 fn joins_a_reference(node: &Node) -> bool {
     match node.ungrouped() {
         Node::ReferenceKind { .. }
         | Node::RangeKind { .. }
         | Node::OpRangeKind { .. }
         | Node::SheetSpanKind { .. } => true,
-        Node::FunctionKind { kind, .. } => *kind == Function::Index || kind.returns_reference(),
+        Node::FunctionKind { kind, args } => match kind {
+            Function::Index => args.first().is_some_and(joins_a_reference),
+            Function::If | Function::Choose => args.iter().skip(1).any(joins_a_reference),
+            Function::Let => args.iter().any(joins_a_reference),
+            _ => kind.returns_reference(),
+        },
+        Node::DefinedNameKind(_) => true,
         _ => false,
     }
 }
@@ -57,10 +65,10 @@ fn joins_a_reference(node: &Node) -> bool {
 impl Model {
     /// Empties WEEKNUM's state after a call of `kind` with `args` when Excel's does (dates.md
     /// "Which calls empty WEEKNUM's state", T-4289, T-4315; probes/weeknum-stale-between-calls,
-    /// -between-ranges, -call-shapes and -call-shapes-2). The rule is per function and argument
+    /// -between-ranges, -call-shapes, -call-shapes-2 and -call-shapes-3). The rule is per function and argument
     /// shape, nested calls included, and Excel gives no reason for it:
-    /// - CHOOSEROWS, CHOOSECOLS, TOCOL, TOROW, VSTACK, HSTACK, TAKE, DROP, TRIMRANGE, WRAPROWS and
-    ///   EXPAND always do (a constant array, one cell or a range);
+    /// - CHOOSEROWS, CHOOSECOLS, TOCOL, TOROW, VSTACK, HSTACK, TAKE, DROP, TRIMRANGE, WRAPROWS, WRAPCOLS,
+    ///   TEXTSPLIT and EXPAND always do (a constant array, one cell or a range);
     /// - SORT and UNIQUE with a multi-cell range (`SORT(C1:C2)`; `SORT({3,1})` and `SORT(C1)` keep
     ///   it); SORTBY unless its array is one cell (`SORTBY({1,2},{2,1})` empties, `SORTBY(C1,1)`
     ///   keeps it); ARRAYTOTEXT with a range of more than one row and column (`C1:D2`; `C1:C2`,
@@ -84,6 +92,8 @@ impl Model {
             | Function::Drop
             | Function::Trimrange
             | Function::Wraprows
+            | Function::Wrapcols
+            | Function::Textsplit
             | Function::Expand => true,
             Function::Sort | Function::Unique => first().is_some_and(|(multi, _)| multi),
             Function::Sortby => !args.first().is_some_and(|node| is_one_cell(node, cell)),

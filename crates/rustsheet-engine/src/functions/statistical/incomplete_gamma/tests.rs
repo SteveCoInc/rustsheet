@@ -99,7 +99,10 @@ fn the_density_is_within_a_few_ulps_of_the_reference() {
     for (a, x, scale, expected) in [
         (9.0, 10.0, 2.0, 0.032_639_019_674_079_374),
         (2.5, 0.3, 1.0, 0.091_570_869_452_182_3),
-        (500.0, 480.0, 1.0, 0.012_319_344_669_927_745),
+        // At the mode, not inside the window away from it: there the density takes Excel's own
+        // exponent, about half an ulp of ln(x/a) per unit of shape off the math (16 ulp at
+        // GAMMA.DIST(480,500,1,FALSE)), so a 4-ulp bound on the math no longer holds (T-4308).
+        (500.0, 500.0, 1.0, 0.017_838_267_869_511_78),
         (0.5, 1e-3, 2.0, 12.609_356_355_490_782),
         (3.0, 37.5, 2.0, 6.322_968_483_684_419e-7),
     ] {
