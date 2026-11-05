@@ -3,7 +3,7 @@ id: T-4070
 title: "Incomplete beta bpser: T-3886's split items, the b0 >= 8 L diff on t2464-r2-bpser-small-shapes and T-2505's 987 moved probes-numeric cells"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
