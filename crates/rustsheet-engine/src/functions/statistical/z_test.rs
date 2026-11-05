@@ -85,7 +85,11 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         let data = match args.first() {
-            Some(node) => self.evaluate_node_in_context(node, cell),
+            // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX, OFFSET
+            // or IF that picks a cell comes back as a range like the cell itself (T-2883).
+            Some(node) => self
+                .evaluate_picked_reference_arg(node, cell)
+                .into_single_sheet_area(cell),
             None => return CalcResult::new_args_number_error(cell),
         };
         // A data argument that is itself an error value comes before `x` and `sigma` in every
@@ -94,17 +98,10 @@ impl Model {
         // `Z.TEST(Data!B2:B3,1/0)` and `Z.TEST({1,2,#N/A},1/0)` are `#DIV/0!`
         // (probes/t2428-ztest-error-data).
         let data_is_error = matches!(data, CalcResult::Error { .. });
-        // A plain single-cell reference holding text, a boolean or nothing is data with no
-        // number: `#N/A`, not `#VALUE!` (`ZTEST(Data!B11,Data!C2)` with text in B11, gen-m9/
-        // c2684066d8df263e A190; docs/excel-semantics/statistics.md, T-2256 Z.TEST entry).
-        let first = args.first().map(|node| node.ungrouped_at(cell.row));
-        let data = match (first.as_deref(), data) {
-            (
-                Some(Node::ReferenceKind { .. }),
-                CalcResult::String(_) | CalcResult::Boolean(_) | CalcResult::EmptyCell,
-            ) => CalcResult::Array(Vec::new()),
-            (_, data) => data,
-        };
+        // A single cell holding text, a boolean or nothing, however it is picked, reads as a range
+        // of one cell: data with no number, `#N/A`, not `#VALUE!` (`ZTEST(Data!B11,Data!C2)` with
+        // text in B11, gen-m9/c2684066d8df263e A190; docs/excel-semantics/statistics.md, T-2256
+        // Z.TEST entry; the name, INDEX and IF forms, probes/t2883-stat-name-index-data, T-2883).
         let data = self
             .z_test_data(data, cell)
             .map_err(CalcResult::without_message);
