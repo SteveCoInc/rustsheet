@@ -228,6 +228,7 @@ probes/t4201-indic-regional-variants.case.json	102
 probes/t4224-doubled-xlpm-prefix.case.json	14
 probes/t4236-pivot-date-groups-no-blank.case.json	15
 probes/t4236-pivot-date-groups.case.json	105
+probes/t4241-groupby-intransitive-runs.case.json	140
 probes/t4248-getpivotdata-recordless-item.case.json	2
 probes/t4255-gamma-window-exact-ratio.case.json	58
 probes/t4290-gamma-window-large-pow2.case.json	669
