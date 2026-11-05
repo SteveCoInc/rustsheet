@@ -3,7 +3,7 @@ id: T-3834
 title: "Check whether T-3803 and T-3818 duplicate the same BETA.DIST density work"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
