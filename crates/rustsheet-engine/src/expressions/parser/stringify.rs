@@ -1,5 +1,6 @@
 pub(crate) mod bound_variables;
 mod literals;
+mod name_binding;
 mod range_shrink;
 mod rename_defined_name;
 mod sheet_edits;
@@ -28,6 +29,7 @@ use crate::locale::{get_default_locale, Locale};
 use bound_variables::{called_variable_text, callee_text, prefix_bound_variables, variable_text};
 pub(crate) use literals::argument_separator;
 use literals::{format_number_locale, to_string_array_node};
+pub(crate) use name_binding::{pin_unresolved_name, rebind_workbook_name_to_sheet};
 pub(crate) use rename_defined_name::rename_defined_name_in_node;
 pub(crate) use sheet_edits::{
     move_sheet_in_node, rename_sheet_in_node, retarget_unqualified_references,
@@ -821,9 +823,10 @@ fn stringify(
             }
             format!("{{{matrix_string}}}")
         }
-        DefinedNameKind((name, scope, _)) => crate::expressions::utils::defined_name_text(
+        DefinedNameKind((name, scope, formula)) => crate::expressions::utils::defined_name_text(
             name,
             *scope,
+            !formula.is_empty(),
             context.is_none() || export_to_excel,
         ),
         NamedVariableKind { name, id: _ } => variable_text(name, context, export_to_excel),

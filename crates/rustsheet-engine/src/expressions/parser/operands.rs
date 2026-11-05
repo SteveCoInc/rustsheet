@@ -327,6 +327,11 @@ impl Parser {
             Some(file) if scope.is_none() && !prefix.is_empty() && !formula.is_empty() => {
                 format!("{}!{bare}", quote_name(file))
             }
+            // An undefined workbook name read through `[0]!` is shown bare: that is how Excel
+            // shows a use that a sheet-scoped add left bound to the workbook name, which is
+            // stored so (`name_binding::pin_unresolved_name`; probes/t4049-sheet-api-name-plain
+            // S!B1, FORMULATEXT `=N`, T-4049).
+            _ if scope.is_none() && formula.is_empty() && prefix == "[0]" => bare.to_string(),
             _ => name.to_string(),
         };
         Some(Node::DefinedNameKind((text, scope, formula)))
