@@ -3,7 +3,7 @@ id: T-3745
 title: "One 15-digit decimal cut: gen numeric_fp _cut calls accuracy literal decimal15"
 milestone: M0
 lane: quality
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
