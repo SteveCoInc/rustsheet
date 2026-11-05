@@ -36,7 +36,7 @@ Filled probes/t4201-indic-regional-variants (142 cells, excel-graph) for 845, 84
 and ne-IN (12 months, AM, Saka and Hebrew digits for the LCIDs). 845, 849, 861 and their neutral/BCP-47 forms have their own tables, not the language fallback;
 recorded in number-formats.md "Indic regional variants". The 102 off cells are owned by T-4292; the eval baseline records them as known failures of the new case. Neutral 49 equals ta-IN and 61 equals ne-NP bar one Saka cell.
 
-## Handoff
+## Handoff (resumed)
 Probe, docs entry, T-4292 and baseline are done and `make check-fast` is green (head 3e396cb30, PR #3287). The design and
 security reviewers approved head 0e173dd23 (docs-only changes since). The fidelity reviewer requested changes twice, both
 factual errors in the number-formats.md "Indic regional variants" prose, checked against the t2959 and t4201 oracle
