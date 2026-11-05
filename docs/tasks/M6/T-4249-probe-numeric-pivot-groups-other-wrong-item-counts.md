@@ -21,8 +21,8 @@ engine matches it or the cells are owned.
     labels first, in file order; only one item too many is probed: probes/t4228-pivot-range-groups pivot 3,
     probes/t4253-pivot-relabel-order), including a list that is too short;
   - (from T-4253) that order matches a file item to a label on its exact text (case and spacing unprobed), and a
-    relabel bound of 1e15 or more, or below 1e-5, is printed in plain decimal as smaller ones are
-    (probes/t4253-pivot-decimal-relabel);
+    relabel bound of 1e15 or more, or below 1e-5, is printed as General prints it, which keeps a label short
+    (probed bounds are plain decimal: probes/t4253-pivot-decimal-relabel);
   - a span that is not a whole number of intervals (0 to 10 by 3) has `ceil` groups, the last one `9-12`;
   - GETPIVOTDATA with a number past `endNum` is `#REF!`, and one below `endNum` whose quotient rounds to the group
     count picks `>end`.

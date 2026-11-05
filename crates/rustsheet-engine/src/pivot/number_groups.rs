@@ -5,11 +5,13 @@
 //! bound). The rule is Excel's own, probed with excel-graph (probes/t4228-pivot-range-groups;
 //! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
+use std::collections::HashMap;
+
 use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem, MAX_ITEMS};
-use crate::number_format::to_excel_precision;
+use crate::number_format::{to_excel_precision, to_excel_precision_str};
 
 /// A field grouped by numbers from `start` to `end` in steps of `interval`. Its layout is the
 /// `<start` group, the inner groups `[start + k * interval, start + (k + 1) * interval)` and the
@@ -54,20 +56,25 @@ impl NumberGroups {
             return Some(groups);
         }
         let labels = groups.labels(n);
+        // A map and a seen-set keep this linear: both counts come from the file and reach
+        // MAX_ITEMS.
+        let position: HashMap<&str, usize> = labels
+            .iter()
+            .enumerate()
+            .map(|(k, label)| (label.as_str(), k))
+            .collect();
+        let mut seen = vec![false; labels.len()];
         let mut order: Vec<usize> = Vec::with_capacity(labels.len());
-        for item in file_items {
-            let CacheItem::Text(text) = item else {
-                continue;
-            };
-            if let Some(k) = labels.iter().position(|l| l == text) {
-                if !order.contains(&k) {
+        let matching = file_items.iter().filter_map(|item| match item {
+            CacheItem::Text(text) => position.get(text.as_str()).copied(),
+            _ => None,
+        });
+        for k in matching.chain(0..labels.len()) {
+            if let Some(slot) = seen.get_mut(k) {
+                if !*slot {
+                    *slot = true;
                     order.push(k);
                 }
-            }
-        }
-        for k in 0..labels.len() {
-            if !order.contains(&k) {
-                order.push(k);
             }
         }
         let mut relabeled = vec![0; labels.len()];
@@ -196,10 +203,16 @@ impl NumberGroups {
 /// A group bound as a relabel writes it: rounded to 15 significant digits and printed in plain
 /// decimal, never in General's scientific form (`0.00001-0.00002` by 1e-5, `0-0.333333333333333`
 /// by 1/3, `49382715604.8-61728394506`; probes/t4253-pivot-decimal-relabel). A bound of 1e15 or
-/// more, or below 1e-5, is UNVERIFIED (T-4249).
+/// more, or below 1e-5, is UNVERIFIED (T-4249): it is printed as General prints it, which also
+/// bounds a label's length (plain decimal would spell 1e300 in 301 digits, for up to MAX_ITEMS
+/// labels of a file-controlled range).
 fn label_number(value: f64) -> String {
+    let rounded = to_excel_precision(value, 15);
+    if rounded != 0.0 && !(1e-5..1e15).contains(&rounded.abs()) {
+        return to_excel_precision_str(rounded);
+    }
     // `+ 0.0` turns -0 into 0; Rust's `Display` of an f64 is plain decimal (shortest round trip).
-    format!("{}", to_excel_precision(value, 15) + 0.0)
+    format!("{}", rounded + 0.0)
 }
 
 /// Why a field cannot be grouped by numbers.
@@ -233,11 +246,7 @@ pub fn group_by_numbers(
     labels: Vec<CacheItem>,
 ) -> Result<CacheField, NumberGroupError> {
     let groups = NumberGroups::new(start, end, interval, &labels).ok_or(NumberGroupError::Range)?;
-    let items = if groups.relabeled.is_empty() {
-        labels
-    } else {
-        groups.relabeled_items().ok_or(NumberGroupError::Range)?
-    };
+    let items = groups.relabeled_items().unwrap_or(labels);
     let map = base
         .items
         .iter()
@@ -445,6 +454,20 @@ mod tests {
         assert_eq!(g.item(3), 1);
         assert_eq!(g.item(0), 2);
         assert_eq!(g.item(1), 3);
+    }
+
+    /// A file-controlled range of nearly MAX_ITEMS groups with a wrong item count relabels in
+    /// linear time, and a huge bound keeps a short label.
+    #[test]
+    fn a_large_relabel_is_linear_and_its_labels_short() {
+        let n = MAX_ITEMS - 2;
+        let mut file = texts(&["w"; 4]);
+        file.push(CacheItem::Text(format!(">{n}")));
+        let g = NumberGroups::new(0.0, n as f64, 1.0, &file).unwrap();
+        assert_eq!(g.item(n + 1), 0);
+        assert_eq!(g.item(0), 1);
+        let huge = groups(0.0, 1e300, 1e299).labels(10);
+        assert!(huge.iter().all(|l| l.len() < 40), "{huge:?}");
     }
 
     /// probes/t4253-pivot-decimal-relabel: the bounds are 15-digit numbers in plain decimal.
