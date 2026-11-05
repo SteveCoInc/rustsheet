@@ -3,7 +3,7 @@ id: T-4029
 title: "F cells T-3580's arguments moved off 15 digits, and the fit-lab split for its R4.1 record"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
