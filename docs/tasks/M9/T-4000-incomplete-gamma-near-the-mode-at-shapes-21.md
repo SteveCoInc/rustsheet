@@ -3,7 +3,7 @@ id: T-4000
 title: "Incomplete gamma near the mode at shapes 21 to 999: POISSON(20,25,TRUE) and POISSON.DIST(100,100,TRUE) a few ulp off where Excel is within 1.5 (accuracy)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
