@@ -3,7 +3,7 @@ id: T-2211
 title: "xlsx export writes a kept subnormal cell value as 0, as Excel does"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
