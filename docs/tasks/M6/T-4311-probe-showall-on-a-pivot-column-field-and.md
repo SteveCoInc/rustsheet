@@ -3,7 +3,7 @@ id: T-4311
 title: "Probe showAll on a pivot column field and on a grouped field (T-4276 review follow-ups)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
