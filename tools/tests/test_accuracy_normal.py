@@ -17,6 +17,7 @@ from rustsheet_tools.accuracy.defs.normal import (
     PHI,
     _draw_gauss,
     _draw_norm_inv,
+    _general_tail,
     gauss_cancels,
     inv_cancels,
 )
@@ -98,3 +99,19 @@ def test_draws_avoid_the_cancellation_regions() -> None:
             assert isinstance(p, float) and isinstance(mean, float) and isinstance(sd, float)
             assert 0 < p < 1 and sd > 0
             assert not inv_cancels(p, mean, sd)
+
+
+def test_norm_dist_tail_map_lands_on_the_tail() -> None:
+    # The NORM.DIST `tail` hook: the x whose lower (upper) tail is q is mean + sd*z
+    q, mean, sd = mp("1e-20"), mp(3), mp(2)
+    x = _general_tail(q, False, [mp(0), mean, sd, True])
+    assert mpmath.almosteq(NORM_DIST.evaluate([x, mean, sd, True]), q, rel_eps=mp("1e-30"))
+    upper = _general_tail(q, True, [mp(0), mean, sd, True])
+    assert mpmath.almosteq(1 - NORM_DIST.evaluate([upper, mean, sd, True]), q, rel_eps=mp("1e-15"))
+    with pytest.raises(ValueError, match="positive standard deviation"):
+        _general_tail(q, False, [mp(0), mean, mp(0), True])
+
+
+def test_norm_inv_past_the_double_range_is_redrawn() -> None:
+    with pytest.raises(NoValueError):
+        NORM_INV.evaluate([mp("1e-300"), mp(0), mp("1e307")])

@@ -34,11 +34,12 @@ from __future__ import annotations
 
 import math
 import random
+import sys
 from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars
+from rustsheet_tools.accuracy.defs._common import scalars, signed, square_overflows
 from rustsheet_tools.accuracy.defs.erf import erfc
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import (
@@ -95,9 +96,10 @@ def standard_quantile(p: mpmath.mpf) -> mpmath.mpf:
     return -z if p < half else z
 
 
-def _square_overflows(z: float) -> bool:
-    """Whether Excel's z*z overflows (statistics.md T-2435): from |z| = 2^512."""
-    return math.isinf(z * z)
+def _density_domain(z: float, cumulative: MathArg) -> str | None:
+    """A density whose standardized z squares past the double range is `#NUM!` (statistics.md T-2435); the cdf is
+    a number at any z."""
+    return "the density's z*z overflows" if not cumulative and square_overflows(z) else None
 
 
 def _standardized(args: Sequence[MathArg]) -> float:
@@ -120,9 +122,7 @@ def _norm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _norm_dist_domain(args: Sequence[MathArg]) -> str | None:
-    if not args[3] and _square_overflows(_standardized(args)):
-        return "the density's z*z overflows"
-    return None
+    return _density_domain(_standardized(args), args[3])
 
 
 def _norm_s_dist(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -132,9 +132,7 @@ def _norm_s_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _norm_s_dist_domain(args: Sequence[MathArg]) -> str | None:
-    if not args[1] and _square_overflows(float(scalars(args[:1])[0])):
-        return "the density's z*z overflows"
-    return None
+    return _density_domain(float(scalars(args[:1])[0]), args[1])
 
 
 def _phi(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -143,7 +141,7 @@ def _phi(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _phi_domain(args: Sequence[MathArg]) -> str | None:
-    return "z*z overflows" if _square_overflows(float(scalars(args)[0])) else None
+    return _density_domain(float(scalars(args)[0]), False)
 
 
 def _gauss(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -180,34 +178,30 @@ def _general_tail(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath
     return mean + sd * _standard_tail(q, upper, args)
 
 
-def _signed(rng: random.Random, x: float) -> float:
-    return -x if rng.random() < 0.5 else x
-
-
 def _gauss_edge(rng: random.Random) -> float:
     """A GAUSS point at an evidenced break: 0, the leading term, just past the cancellation region, or the flush."""
     shape = rng.randrange(5)
     if shape == 0:
         return 0.0
     if shape == 1:  # the leading term up to its evidenced end
-        return _signed(rng, rng.choice((1e-300, GAUSS_LEADING, log_uniform(rng, 1e-300, GAUSS_LEADING))))
+        return signed(rng, rng.choice((1e-300, GAUSS_LEADING, log_uniform(rng, 1e-300, GAUSS_LEADING))))
     if shape == 2:  # just past the cancellation region
-        return _signed(rng, log_uniform(rng, GAUSS_CANCEL_HI, 1e-4))
+        return signed(rng, log_uniform(rng, GAUSS_CANCEL_HI, 1e-4))
     if shape == 3:  # the lower tail's flush
-        return _signed(rng, rng.choice((FLUSH, 37.5, rng.uniform(37.0, 39.0))))
-    return _signed(rng, rng.choice((1.0, 2.0, 8.0)))
+        return signed(rng, rng.choice((FLUSH, 37.5, rng.uniform(37.0, 39.0))))
+    return signed(rng, rng.choice((1.0, 2.0, 8.0)))
 
 
 def _gauss_z(stratum: str, rng: random.Random) -> float:
     """One GAUSS argument of `stratum` (the caller redraws the cancellation region)."""
     if stratum == "tail":
-        return _signed(rng, rng.uniform(3.0, 40.0))
+        return signed(rng, rng.uniform(3.0, 40.0))
     if stratum == "edge":
         return _gauss_edge(rng)
     if stratum == "extreme":
-        return _signed(rng, log_uniform(rng, 40.0, 1e300))
+        return signed(rng, log_uniform(rng, 40.0, 1e300))
     if stratum == "log-uniform":
-        return _signed(rng, log_uniform(rng, 1e-300, 1e300))
+        return signed(rng, log_uniform(rng, 1e-300, 1e300))
     return rng.uniform(-4.0, 4.0)
 
 
@@ -248,9 +242,9 @@ def _inv_p(stratum: str, rng: random.Random) -> float:
 
 def _inv_mean_sd(stratum: str, rng: random.Random) -> tuple[float, float]:
     if stratum == "extreme":
-        return _signed(rng, log_uniform(rng, 1e-100, 1e100)), log_uniform(rng, 1e-100, 1e100)
+        return signed(rng, log_uniform(rng, 1e-100, 1e100)), log_uniform(rng, 1e-100, 1e100)
     if stratum == "log-uniform":
-        return _signed(rng, log_uniform(rng, 1e-300, 1e300)), log_uniform(rng, 1e-300, 1e300)
+        return signed(rng, log_uniform(rng, 1e-300, 1e300)), log_uniform(rng, 1e-300, 1e300)
     return rng.uniform(-100.0, 100.0), log_uniform(rng, 0.01, 100.0)
 
 
@@ -272,7 +266,8 @@ def _draw_norm_s_inv(stratum: str, rng: random.Random) -> list[Arg]:
 
 
 def _no_overflow(value: mpmath.mpf) -> mpmath.mpf:
-    if abs(value) > mpmath.mpf(1.7976931348623157e308):
+    """`value`, or NoValueError past the largest double (the sampler redraws)."""
+    if abs(value) > sys.float_info.max:
         msg = "beyond the double range"
         raise NoValueError(msg)
     return value
