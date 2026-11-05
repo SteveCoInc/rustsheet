@@ -3,7 +3,7 @@ id: T-2146
 title: "BINOM.DIST, BINOM.DIST.RANGE and NEGBINOM.DIST last digits: fit Excel's evaluation (70 ironcalc-calc BINOM.xlsx known failures)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
