@@ -23,7 +23,9 @@ T-4323's register `floor(frac(y)*86400*s)` gets 101, 467 and 72. Five cells the 
 0294): t4323-fraction-ties A121, A122, A124; t4323-fraction-sweep-2 A124; t4323-fraction-holdout A100. In most misses
 the cut's last remainder lies 1 to 11 ulp below a whole unit at a small seconds value. Yet cells Excel truncates lie
 8 to 32 ulp below (holdout A5 `20.65/86400` "[s].0" is "20.6"; sweep-2 A34 `9.35/86400`). So no ulp snap on that
-remainder separates them. docs/research/t4332/chain.py scores the model, and README.md lists what was tried and refuted
+remainder separates them. All the evidence is excel-graph (Excel for the web), and web and desktop may differ by up to
+4 ulp (decision 0188 R4.4, docs/research/oracle-calibration.md). Before chasing outcomes decided within a few ulp,
+check them on excel-desktop, or treat them as at the reproducibility floor. docs/research/t4332/chain.py scores the model, and README.md lists what was tried and refuted
 (see also docs/research/t4323/README.md).
 
 Visibly-off cells this task owns (the `[s]`/`[h]`/`[m]` count cells stay with T-4333: t4323-fraction-ties A90;

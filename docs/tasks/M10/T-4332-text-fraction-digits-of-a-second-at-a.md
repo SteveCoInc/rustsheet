@@ -32,10 +32,21 @@ Found by T-4323. The half-step register (`half_step_split`, formatter/elapsed.rs
   README.md), with no fitted constant. It was frozen before the fresh sweep.
   - Five t4323 cases: 134 of 156 below serial 1, 469 of 470 from 1 up. The register gets 101 and 467; the earlier
     rounding gets 114 below 1.
-  - R4.1 hold-out: t4323-fraction-holdout 99 of 100 (register 97), train cases 385 of 406 (register 353). The pooled
-    30% hash split of holdout.py: held 184 of 192 (register 171), train 419 of 434 (register 397).
-  - Fresh sweep probes/t4332-fraction-fresh, new in this PR: 120 cells drawn after the freeze (seed 43320; 60 separate
-    the two models), excel-graph 2026-11-05. The cut gets 103, the register 72, the earlier rounding 72.
+  - R4.1 hold-out, with T-4323's margin of 10 points. Outputs are text, so the within-4-ulp and 15-digit columns do
+    not apply.
+    - Pooled 30% sha256 split of holdout.py: the cut gets 419/434 (96.5%) on train and 184/192 (95.8%) on hold-out.
+      Correctly rounded gets 299/434 and 140/192; the register gets 397/434 and 171/192.
+    - Per-case split: train 504/526, t4323-fraction-holdout 99/100. Correctly rounded gets 360/526 and 79/100.
+    - Every candidate of the search (docs/research/t4332/README.md) was ranked on all five t4323 cases, so the hold-out
+      cells were seen during the search. The guard this PR relies on is the fresh sweep below. Ranked on the pooled
+      train part alone, the cut ties the digit-by-digit cut (419 each) and leads the others: cuts through 24 and
+      3600, 406; through 1440 and 60, 400; the register, 397; correctly rounded, 299.
+  - Fresh sweep probes/t4332-fraction-fresh, new in this PR: 120 cells drawn after the freeze (seed 43320),
+    excel-graph 2026-11-05. It is not uniform: the first 60 cells are ones where the cut and the register differ,
+    and 3 of 4 cells lie below serial 1.
+    - All 120: the cut gets 103, the register 72, correctly rounded 73, the earlier rounding 72.
+    - The 60 unselected cells: the cut gets 57, the register 58, the earlier rounding 50.
+    - Scored after the freeze, for the record: the digit-by-digit cut gets 101 of 120.
 - Eval delta (probes): 40 fixed. 5 regressions are allowed by decision 0294 (`update-baseline --allow-regressions`
   once): t4323-fraction-ties A121, A122, A124; t4323-fraction-sweep-2 A124; t4323-fraction-holdout A100. The new case
   adds 17 known failures. Every other suite is unchanged.
