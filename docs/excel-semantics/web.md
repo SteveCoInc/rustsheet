@@ -123,10 +123,10 @@ Structural edits: see "Pivot tables and structural edits" below. xlsx export dro
 
 ## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
-(`refreshOnLoad` off, or Excel drops it on load), over Data East 10, West 20, East 5.
+(`refreshOnLoad` off; UNVERIFIED: that Excel drops the item on a refresh, and the `missingItemsLimit` link), over Data East 10, West 20, East 5.
 - `showAll="0"`: the item is not shown and `GETPIVOTDATA("Sales",pivot,"Region","North")` is `#REF!`, as for a group with no
   record (see below) and for a text absent from the cache ("Nowhere").
-- `showAll="1"`: the item is shown with a blank value and the same call is `0` (like an empty intersection,
+- `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
   probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
 - Control: the grand total (35) and a record item (East, 15) answer as usual in both.
 Engine: the engine builds a pivot's cache from its records, so it has no recordless item and answers `#REF!` for both
