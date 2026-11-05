@@ -152,6 +152,7 @@ ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	5
 ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/amordegrc-fraction-state-ai.case.json	1
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
@@ -243,6 +244,8 @@ probes/table-edits/table-column-range-delete-both-ends-separate.case.json	2
 probes/table-edits/table-column-range-delete-end.case.json	2
 probes/table-edits/table-column-range-delete-start.case.json	2
 probes/text-locale-invalid-sublanguage.case.json	3
+probes/weeknum-stale-between-calls.case.json	16
+probes/weeknum-stale-between-ranges.case.json	10
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

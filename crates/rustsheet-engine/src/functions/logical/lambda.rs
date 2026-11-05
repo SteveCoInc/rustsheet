@@ -473,6 +473,9 @@ impl Model {
         let outer_base = self.lambda_calls_base.replace(stack_base);
         let result = self.call_prepared_within_budget(caller, cell, bind);
         self.lambda_calls_base = outer_base;
+        // A called LAMBDA empties AMORDEGRC's left-over value, as SEQUENCE does
+        // (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-ct, T-3393).
+        self.empty_amor_left_over();
         result
     }
 
