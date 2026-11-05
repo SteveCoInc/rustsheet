@@ -3,7 +3,7 @@ id: T-4342
 title: "GROUPBY and PIVOTBY group multi-field intransitive runs by T-4241's tree model (sorted UNIQUE keys, per-field lower-bound search, empty leaf aggregates every row)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: M
 tier: opus
