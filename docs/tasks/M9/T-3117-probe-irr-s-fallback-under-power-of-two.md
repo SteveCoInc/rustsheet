@@ -3,7 +3,7 @@ id: T-3117
 title: "Probe IRR's fallback under power-of-two scaling and negation: separate its absolute residual test from its arithmetic"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: sonnet
