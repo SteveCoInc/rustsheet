@@ -93,7 +93,7 @@ Gate A envelope:
 Eval delta: probes known failures 4980 -> 4950 (30 fixed, 0 regressions, 4 new cases all passing: 190, 106, 106 and
 106 cells). probes/t4236-pivot-date-groups (335/335) and -no-blank (349/349) now pass in full.
 
-## Landing notes
+## Landing notes (resumed)
 - PR #3299 (draft). Head 0c9bec9d7 is round 1's fix commit, together with this note's commit.
 - Reviews on acbc7ac5f: security APPROVE; design APPROVE (its optional "do not simplify" note is applied); excel-fidelity
   REQUEST_CHANGES (R4 record). Round 1's fix:
