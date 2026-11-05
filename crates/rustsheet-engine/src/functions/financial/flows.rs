@@ -87,22 +87,24 @@ impl Model {
 impl Model {
     /// The error of XNPV's element walk (T-3815, probes/t3815-xnpv-element-reading), or `None`.
     /// Over values and dates of the same count, both ranges or arrays of more than one element,
-    /// Excel takes each index in turn, the value before its date:
+    /// with a number as the first value, Excel takes each index in turn, the value before its
+    /// date:
     ///
     /// - an error value or date is that error (`XNPV(0.1,<-100,30,#N/A,50>,<39448,#DIV/0!,..>)`
     ///   is `#DIV/0!`, with the errors swapped `#N/A`; rows 35, 38; `{-100,#N/A,60}` against
     ///   `<39448,TRUE,39508>` is `#N/A`, probes/t3312-xirr-xnpv-inner-calls A37);
     /// - a later value that is no number (text, numeric text too, a boolean, an empty cell) is
-    ///   `#NUM!` (rows 24-28, 39), but only while the first value is a number: when it is not, the
-    ///   later values are left to the first value's `#VALUE!` (probes/t2603-xnpv-no-number-values
-    ///   C18-C20);
+    ///   `#NUM!` (rows 24-28, 39);
     /// - a date that is text or a boolean is `#NUM!`, a first one that is text, a boolean or empty
     ///   `#VALUE!` (rows 13-17, 20, 21, 36); a first date below the first serial or past the last
     ///   one, truncated, and a later one that is negative or past the last serial as given
     ///   (2958465.5 is `#NUM!`, row 9) are `#NUM!` (rows 4-8, 37).
     ///
     /// A later empty date, a later 0 and one before the first are not walked: they are `#NUM!`
-    /// after the first value's `#VALUE!` (t2603 C1, C7), in [`xnpv_dates`].
+    /// after the first value's `#VALUE!` (t2603 C1, C7), in [`xnpv_dates`]. When the first value
+    /// is no number the walk does not run and that `#VALUE!` stands: later values are left to it
+    /// (probes/t2603-xnpv-no-number-values C18-C20), and whether a later error value or date or
+    /// an out-of-range date comes first is unprobed.
     pub(super) fn xnpv_walk_error(
         &mut self,
         values: &CalcResult,
@@ -114,19 +116,22 @@ impl Model {
         if count < 2 || count != date_count {
             return None;
         }
-        let first_value_is_number = matches!(element_at(&values, 0), FlowElement::Number(_));
+        // Every probed walk has a number as its first value. When it is not, the first value's
+        // `#VALUE!` (T-2603) is kept: whether a later error or out-of-range date comes before it is
+        // unprobed (financial.md, T-3815 entry), so the walk does not run.
+        if !matches!(element_at(&values, 0), FlowElement::Number(_)) {
+            return None;
+        }
         // Only the stored elements and two more indexes can stop the walk: the first, and the
-        // first empty value after it while the first value is a number. Every other index is an
+        // first empty value after it. Every other index is an
         // empty value and an empty later date, which pass. So the walk visits those, in order,
         // and costs the stored cells, not the area (directive 5).
         let mut indexes: Vec<usize> = values.iter().chain(&dates).map(|(i, _)| *i).collect();
         indexes.push(0);
-        if first_value_is_number {
-            if let Some(gap) =
-                (1..count).find(|&index| matches!(element_at(&values, index), FlowElement::Empty))
-            {
-                indexes.push(gap);
-            }
+        if let Some(gap) =
+            (1..count).find(|&index| matches!(element_at(&values, index), FlowElement::Empty))
+        {
+            indexes.push(gap);
         }
         indexes.sort_unstable();
         indexes.dedup();
@@ -134,9 +139,7 @@ impl Model {
         for index in indexes {
             match element_at(&values, index) {
                 FlowElement::Error(value_error) => return error(value_error.clone()),
-                FlowElement::Empty | FlowElement::Other if index > 0 && first_value_is_number => {
-                    return error(Error::NUM)
-                }
+                FlowElement::Empty | FlowElement::Other if index > 0 => return error(Error::NUM),
                 _ => {}
             }
             match element_at(&dates, index) {

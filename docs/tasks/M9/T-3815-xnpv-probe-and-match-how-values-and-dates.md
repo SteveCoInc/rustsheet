@@ -81,3 +81,7 @@ XNPV now reads its values and dates as Excel does, element by element; the probe
   main's reading. `xnpv_first_value_refused_sparse_dates` moved its formulas from B1:B2 to B30001:B30002: they sat
   inside their own values range, which the walk reads cell by cell (a circular reference); same ranges, same
   expectations.
+- **Review round 2 (Excel fidelity)**: the walk runs only when the first value is a number. Every probed walk row has
+  one; behind a first value that is no number, a later error value or date and a later negative or past-the-end
+  date are unprobed, so the first value's `#VALUE!` (T-2603) stands, as on main, and financial.md lists them as
+  Unprobed (follow-up probe T-4375). The T-2603 entry no longer cites row 37 for a refused first value.

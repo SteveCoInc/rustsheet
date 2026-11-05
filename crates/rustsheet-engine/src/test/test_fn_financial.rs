@@ -1195,8 +1195,9 @@ fn xnpv_first_value_refused_sparse_dates() {
 
 /// T-3815 review: XNPV's element walk reads only the stored cells, so long sparse ranges cost
 /// their stored cells. A later empty value behind a number is the walk's `#NUM!`
-/// (probes/t3815-xnpv-element-reading rows 28, 39); an error date at the end of a long range is
-/// found too, before the first value's `#VALUE!` (row 35).
+/// (probes/t3815-xnpv-element-reading rows 28, 39). Behind a first value that is no number the
+/// walk does not run: an error date at the end of a long range leaves the first value's
+/// `#VALUE!` (T-2603; which comes first in Excel is unprobed).
 #[test]
 fn xnpv_walk_reads_stored_cells() {
     check_cells(
@@ -1210,7 +1211,7 @@ fn xnpv_walk_reads_stored_cells() {
         ],
         &[
             ("F1", "=XNPV(0.1,A1:A1000000,B1:B1000000)", "#NUM!"),
-            ("F2", "=XNPV(0.1,C1:C1000000,D1:D1000000)", "#N/A"),
+            ("F2", "=XNPV(0.1,C1:C1000000,D1:D1000000)", "#VALUE!"),
             ("F3", "=XNPV(0.1,A2:A1000001,B1:B1000000)", "#NUM!"),
             ("F4", "=XNPV(0.1,C2:C1000001,{1;2})", "#NUM!"),
         ],

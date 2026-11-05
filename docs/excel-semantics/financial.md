@@ -4681,7 +4681,9 @@ whatever the later cells hold. `XNPV(1,A4:A5,B11:B12)` with A4 empty and A5 = 5 
 - `EXPONDIST(1E+307,EXP(XNPV(100,<FALSE, empty>,<FALSE, 123456789.123>)),"x")` is XNPV's `#VALUE!` passed on (C16;
   gen-m9/58e3253bbd3a7a82 A189). EXPONDIST does not read "x" first: `EXPONDIST(1,1/0,"x")` is `#DIV/0!` (C15).
 - Numeric text in the first cell and the first element of an array constant are refused too (T-3815, the entry
-  below, rows 30, 31). A negative later date or one past the last serial blocks as a text date does (T-3815 row 37).
+  below, rows 30, 31).
+- Unprobed (they keep the older reading, `#VALUE!`): behind a first value that is no number, a later error value or
+  date and a later date that is negative or past the last serial (T-3815's walk is evidenced only behind a number).
 
 Evidence: probes/t2603-xnpv-no-number-values C1-C24 (excel-graph, 2026-11-03), probes/xnpv-empty-values-cell C8.
 Status: VERIFIED (excel-graph)
@@ -4691,18 +4693,20 @@ Tasks: T-2603
 ## XNPV reads its values and dates element by element (T-3815)
 Rule (excel-graph, 2026-11-05, probes/t3815-xnpv-element-reading, 187 cells; each row in a range (A), an array
 constant (B), a computed array `IF(TRUE,<range>)` (C) and as one cell (D), all alike unless noted): over values and
-dates of the same count, more than one element, XNPV takes each index in turn, the value before its date.
+dates of the same count, more than one element, with a number as the first value, XNPV takes each index in turn,
+the value before its date (every walk row has a number first; behind one that is no number, T-2603's entry above).
 - An error element is that error, whichever argument holds it: values `-100, 30, #N/A, 50` against dates
   `39448, #DIV/0!, 39600, 39700` is `#DIV/0!`, the errors one place apart the other way `#N/A` (rows 35, 38).
 - A later value that is no number is `#NUM!`: numeric text "30", date text, "x", TRUE, an empty cell (rows 24-28); TRUE
   at index 2 beats a `#DIV/0!` date at index 3 (row 39). A first value that is no number, numeric text "-100" too,
-  is `#VALUE!` (rows 30, 31), after the walk's dates (T-2603's entry above).
+  is `#VALUE!` (rows 30, 31; T-2603's entry above).
 - A later date that is text (numeric "39508" and date "1/1/2025" too), a boolean or empty is `#NUM!` (rows 13-18), a
   first one `#VALUE!` (rows 20, 21). Negative dates, date 0 and dates past 2958465 are `#NUM!` (rows 4-8); a later
   date is bounded before it is truncated, so a last date of 2958465.5 is `#NUM!` (row 9), while a fractional date
-  is otherwise truncated: first + 0.5 and 39448.7 then 39448.2 discount as the same day (rows 1-3). A later negative
-  date beats a later error value (row 37); a later 0, an empty date and a date before the first do not (they come
-  after the first value's `#VALUE!`, T-2603 C1, C7). A date equal to the first is fine, one before it `#NUM!`
+  is otherwise truncated: first + 0.5 and 39448.7 then 39448.2 discount as the same day (rows 1-3). With a number
+  first, a later negative date beats a later error value (row 37). Behind a first value that is no number, a later
+  0, an empty date and a date before the first leave its `#VALUE!` (T-2603 C1, C7); a later negative or past-the-end
+  date, error value or error date there is unprobed (the engine keeps the `#VALUE!`). A date equal to the first is fine, one before it `#NUM!`
   (rows 10, 11), and later dates need not be sorted (row 12).
 - One cell: a values or dates cell holding an error is that error, the values' first (`XNPV(0.1,<#N/A>,<TRUE>)` is
   `#N/A`, D32-D38; a dates cell `#N/A`, D19, D22). Numeric and date text in one cell is read as its number:
