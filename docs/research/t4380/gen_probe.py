@@ -4,8 +4,8 @@ Run from the repo root: python3 -I docs/research/t4380/gen_probe.py, then (after
 python3 -I docs/research/t4380/predict_engine.py, which records the engine's values as the committed predictions.
 
 T-4380 chose its rule on probes/t4379-pivotby-repeated-unreached-leaf: when the heads of two runs are equal, the
-right group joins the left head, which stays the head and meets the next right group too (docs/research/t4241/model.py
-`unique_kept`; T-4200's rule took both heads out). The two rules differ only on two-field runs (none of one field up
+right group joins the left head, which stays the head and meets the next right group too (`keep` in candidates.py;
+T-4200's rule, `old`, took both heads out; the fill refuted it, docs/excel-semantics/coercion.md). The two rules differ only on two-field runs (none of one field up
 to length 7). This probe takes runs where they differ, none of them t4379's: every such run of length 4, and a
 fixed-seed sample of lengths 5, 6 and 7, plus control runs where they agree on three or more kept keys.
 Texts: A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B); x < y. Each Calc row is one run, seen through
@@ -18,6 +18,8 @@ import random
 import sys
 
 sys.path.insert(0, "docs/research/t4241")
+sys.path.insert(0, "docs/research/t4380")
+import candidates  # noqa: E402
 import model  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("t4241_gen_probe", "docs/research/t4241/gen_probe.py")
@@ -46,7 +48,7 @@ def runs() -> list[str]:
         for keys in itertools.product(KEYS, repeat=n):
             run = " ".join(keys)
             rows = [tuple(k) for k in keys]
-            new, old = model.unique_kept(rows, rcmp), model.unique_kept(rows, rcmp, t4200=True)
+            new, old = candidates.kept(rows, rcmp, "keep"), candidates.kept(rows, rcmp, "old")
             if run in seen:
                 continue
             if new != old:

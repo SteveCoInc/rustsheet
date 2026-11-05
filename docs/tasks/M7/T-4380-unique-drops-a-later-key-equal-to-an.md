@@ -3,7 +3,7 @@ id: T-4380
 title: "UNIQUE drops a later key equal to an earlier kept one over Cx Ay Ax Bx (keeps Cx, Ay), and GROUPBY and PIVOTBY follow it"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -39,3 +39,20 @@ docs/research/t4241/model.py `unique_kept`) keeps Cx, Ay, Bx.
 
 ## Out of scope
 -
+
+## Outcome
+No engine change: the rule chosen on t4379 failed its hold-out. On equal run heads, the rule had the right group
+join the left head, which stayed the head, so the next right group met the joined group too. It made t4379 pass
+(351/351) and t4358 B6 and D6, and no other cell changed. Since it was chosen on these cells, a hold-out came next:
+probes/t4380-unique-keep-head-holdout, 45 two-field runs where it and T-4200's rule differ, plus controls.
+The predictions (docs/research/t4380/predictions.tsv) were committed in 0a22a4c63 before the excel-graph fill. 76
+of the 90 cells matched; 12 UNIQUE runs and 2 GROUPBY cells missed. The engine change was reverted, and so was its
+mirror in docs/research/t4241/model.py.
+docs/research/t4380/candidates.py scores five merge rules on the 60 runs of t4379 and t4380: T-4200's 33 misses,
+the chosen rule 12, `pushkeep` 5, the right group as head 37 and 39. Insertion sort then grouping neighbours misses
+37 to 44. Over Cy Cx Ay Bx Ay, Excel keeps two identical Ay rows apart, which no "sort, then group equal neighbours"
+model with the row-by-row field comparison does. Recorded in docs/excel-semantics/coercion.md ("No coalescing merge
+explains UNIQUE's two-field runs").
+The owned cells stay known failures for that reason, and T-4393 (research, opus) owns them: the 20 t4379 cells,
+t4358 B6 and D6, and the 50 t4380 cells the current engine misses.
+Eval delta: none on gated suites; probes gains t4380 (622 cells, 572 pass).
