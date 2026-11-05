@@ -3,7 +3,7 @@ id: T-4330
 title: "Probe the remaining WEEKNUM-state call shapes: HSTACK/DROP/TOROW/WRAPROWS/EXPAND beyond a range, CONCAT of INDEX/OFFSET/INDIRECT/IF, TEXTJOIN's delimiter (T-4315 review follow-ups)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
