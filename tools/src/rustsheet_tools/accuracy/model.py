@@ -303,7 +303,9 @@ def solve_smaller_tail(
         x = mpmath.exp(s)
         if lower:
             return mpmath.log(lower_tail(x)) - target
-        assert upper_tail is not None
+        if upper_tail is None:
+            msg = "the upper tail is needed here but no upper_tail function was given"
+            raise ValueError(msg)
         # the lower tail grows with s and the upper falls: f has opposite signs on the bracket ends
         return target - mpmath.log(upper_tail(x))
 
