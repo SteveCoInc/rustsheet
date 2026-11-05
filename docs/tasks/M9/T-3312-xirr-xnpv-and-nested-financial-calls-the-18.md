@@ -78,7 +78,7 @@ WEIBULL.DIST at x = 0).
 Eval delta: gen-m9 known failures 1937 -> 1931 (6 fixed, 0 regressions); probes +2 cases (124 of 125 cells pass, 1
 new known failure owned by T-4251).
 
-## Landing notes
+## Landing notes (resumed 2026-11-05 02:12 UTC)
 - PR #3247 (draft), head is this commit's parent's successor (the commit that adds these notes). Round 1 reviews ran on
   8f478c998: security APPROVE, design APPROVE (MINOR: doc wrap, duplicated XNPV dates arms; both fixed in this push),
   excel-fidelity REQUEST_CHANGES (MAJOR: `xirr_flows` compared the raw date, so 2958465.5 became `#NUM!`; fixed by
