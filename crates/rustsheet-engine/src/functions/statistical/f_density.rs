@@ -97,7 +97,8 @@ const STIRLING_ERROR_SLOPE: f64 = -4.509_156_650_246_305;
 const STIRLING_ERROR_INTERCEPT: f64 = 3.785_324_137_930_950_4;
 
 /// ln(2 pi)/2 in double-double.
-const HALF_LN_TWO_PI: (f64, f64) = (0.918_938_533_204_672_8, -3.878_294_158_067_241_4e-17);
+pub(super) const HALF_LN_TWO_PI: (f64, f64) =
+    (0.918_938_533_204_672_8, -3.878_294_158_067_241_4e-17);
 
 /// Binet's function mu(v) = ln Gamma(v) - (v - 1/2) ln v + v - ln(2 pi)/2 at v = 1/2, 1, ..., 15
 /// in double-double (mpmath, 200 bits); above 15 [`binet`] sums Stirling's series.

@@ -236,3 +236,34 @@ fn typed_at_and_hash_operators_add_no_nesting_level() {
     wb.set("B2", Input::StoredFormula(abs(66, "1"))).unwrap();
     assert_eq!(wb.value("B2").unwrap(), Value::Number(1.0));
 }
+
+/// `Input::ParseR1C1` reads R1C1 text against its cell, and a name spelled like an A1 cell is no
+/// reference there: a LET binds it, and unbound it is the quoted undefined name (T-3897, T-4040);
+/// `_xlpm.` is part of a typed name, and a LET name written with it is refused (T-4288).
+#[test]
+fn r1c1_typed_entry_reads_against_its_cell() {
+    let mut wb = book();
+    wb.set("A1", 5.0).unwrap();
+    let name = Err(ErrorKind::Name);
+    for (a1, text, formula, value) in [
+        ("A2", "=R[-1]C+1", "=A1+1", Ok(6.0)),
+        ("A3", "=LET(f1,5,f1+1)", "=LET(f1,5,f1+1)", Ok(6.0)),
+        ("A4", "=f1", "='f1'", name),
+        ("A5", "=LET(x,2,_xlpm.x*3)", "=LET(x,2,_xlpm.x*3)", name),
+    ] {
+        wb.set(a1, Input::ParseR1C1(text.into())).unwrap();
+        let cell = wb.cell(a1).unwrap();
+        assert_eq!(cell.formula.as_deref(), Some(formula), "{text}");
+        let actual = match wb.value(a1).unwrap() {
+            Value::Number(n) => Ok(n),
+            Value::Error(e) => Err(e.kind),
+            other => panic!("{text}: {other:?}"),
+        };
+        assert_eq!(actual, value, "{text}");
+    }
+    let err = wb
+        .set("A6", Input::ParseR1C1("=LET(_xlpm.x,1,_xlpm.x+1)".into()))
+        .unwrap_err();
+    assert!(matches!(err, EditError::InvalidInput { .. }), "{err:?}");
+    assert_eq!(wb.value("A6").unwrap(), Value::Empty);
+}

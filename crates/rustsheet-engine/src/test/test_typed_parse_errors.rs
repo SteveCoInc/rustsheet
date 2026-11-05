@@ -2,8 +2,8 @@
 //! its content; it closes a call's missing `)` but not a group's (probes/t3213-typed-parse-errors).
 //! Stored text keeps today's parse-error cell.
 
-use crate::test::util::new_empty_model;
-use crate::typed_input::{open_parenthesis_is_a_call, r1c1_formula_to_a1};
+use crate::test::util::{new_empty_model, typed_r1c1};
+use crate::typed_input::open_parenthesis_is_a_call;
 use crate::TYPED_FORMULA_DOES_NOT_PARSE;
 
 #[test]
@@ -233,22 +233,20 @@ fn typed_tab_or_nbsp_between_tokens_is_refused() {
     assert_eq!(model._get_text("A2"), "3");
     assert_eq!(model._get_text("A3"), "3");
     assert_eq!(model._get_text("A4"), "3");
-    let sheets = ["Sheet1".to_string()];
     assert_eq!(
-        r1c1_formula_to_a1("=Sheet1! R1C4", &sheets, "Sheet1", 1, 1),
-        Some("=Sheet1!$D$1".to_string())
+        typed_r1c1(&mut model, 0, "=Sheet1! R1C4", 10, 1).as_deref(),
+        Some("=Sheet1!$D$1")
     );
-    assert_eq!(
-        r1c1_formula_to_a1("=Sheet1!\tR1C4", &sheets, "Sheet1", 1, 1),
-        None
-    );
+    assert_eq!(typed_r1c1(&mut model, 0, "=Sheet1!\tR1C4", 11, 1), None);
 }
 
 /// Excel's short R1C1 forms typed in R1C1 mode, as probes/t3212-r1c1-bare-offsets shows them
 /// (FORMULATEXT of the typed cell, excel-graph, 2026-11-03, T-3212); `None` is a refusal.
 #[test]
 fn short_r1c1_forms_typed_in_r1c1_mode() {
-    let sheets = vec!["S".to_string(), "T".to_string()];
+    let mut model = new_empty_model();
+    model.rename_sheet("Sheet1", "S").unwrap();
+    model.add_sheet("T").unwrap();
     // (typed text, row, column of the typed cell in S, the A1 text Excel shows)
     let cases: [(&str, i32, i32, Option<&str>); 27] = [
         ("=R[-8]C[-6]", 10, 8, Some("=B2")),
@@ -281,14 +279,14 @@ fn short_r1c1_forms_typed_in_r1c1_mode() {
     ];
     for (typed, row, column, a1) in cases {
         assert_eq!(
-            r1c1_formula_to_a1(typed, &sheets, "S", row, column).as_deref(),
+            typed_r1c1(&mut model, 0, typed, row, column).as_deref(),
             a1,
             "{typed}"
         );
     }
     // Quoted text and bracketed parts are copied as they are.
     assert_eq!(
-        r1c1_formula_to_a1("=\"RC\"&'T'!RC", &sheets, "S", 1, 1).as_deref(),
+        typed_r1c1(&mut model, 0, "=\"RC\"&'T'!RC", 1, 1).as_deref(),
         Some("=\"RC\"&T!A1")
     );
 }

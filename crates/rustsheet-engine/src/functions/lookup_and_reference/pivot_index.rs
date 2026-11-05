@@ -234,8 +234,9 @@ impl Model {
     /// Excel does not show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe
     /// Calc B3, R1; a date group's `<start` and `>end` labels work only while they hold a record,
     /// probes/t4236-pivot-date-groups-no-blank).
-    /// Whether an empty item of an ungrouped field is `#REF!` too is unprobed, so it keeps its
-    /// answer of 0 (probes/getpivotdata-empty-intersection). TODO(T-4248): probe it.
+    /// An ungrouped field's recordless item is `#REF!` with `showAll="0"` and 0 with `showAll="1"`
+    /// (probes/t4248-getpivotdata-recordless-item); the engine keeps no such item yet.
+    /// TODO(T-4276): keep an unused shared item and `showAll`.
     fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
         if field.number_groups.is_none() && field.date_groups.is_none() {
