@@ -328,6 +328,8 @@ impl Parser {
         let mut is_time = false;
         // Excel: after a minute, later `m`/`mm` are months (number-formats.md "`mm` after a minute").
         let mut minute_read = false;
+        // An `[m]` was seen: every later `m`/`mm` is a month, even one before seconds.
+        let mut elapsed_minute_seen = false;
         let mut hijri = false;
         let mut calendar_prefix = false;
         // Whether the previous token is an unescaped colon, which the next one joins.
@@ -604,8 +606,8 @@ impl Parser {
                 Token::Month | Token::MonthPadded => {
                     // A `mm.0` minute leaves `minute_read` ("mm.0 h:mm" is "57.7 2:57"; t3575-b A30).
                     let fraction = self.minute_before_fraction(&next_token);
-                    let clock =
-                        (is_time && !minute_read) || self.minute_before_seconds(&next_token);
+                    let clock = !elapsed_minute_seen
+                        && ((is_time && !minute_read) || self.minute_before_seconds(&next_token));
                     let minute = clock || fraction;
                     minute_read |= clock;
                     is_date |= !minute || fraction;
@@ -762,6 +764,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinute);
                 }
                 Token::ElapsedSecond => {
@@ -782,6 +787,9 @@ impl Parser {
                     is_date = true;
                     bracketed_elapsed += 1;
                     is_time = true;
+                    // Excel: an `m` after `[m]` is a month, not a clock minute
+                    // (`[m] m` is "102 1"; probes/t2135-fractional-second-edges-1900 A34, T-2135).
+                    elapsed_minute_seen = true;
                     tokens.push(TextToken::ElapsedMinutePadded);
                 }
                 Token::ElapsedSecondPadded => {

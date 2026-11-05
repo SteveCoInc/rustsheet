@@ -379,14 +379,25 @@ Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
   total (`[s].000` is 271433 then ".376", A4).
 - A plain `h`/`s`/`ss` after `[h]`/`[hh]`/`[s]`/`[ss]` shows the elapsed total too:
   "It was 75 [yes, 75] hours and 23:53" (A10), "271433 [yes, 271433] seconds" (A11), "7384 [yes,
-  7384] seconds" (A21); padding stays (`ss` on 0 is "00", A31). `m` after `[m]` is unprobed; the
-  engine keeps it a clock minute (T-2135).
+  7384] seconds" (A21); padding stays (`ss` on 0 is "00", A31). `m`/`mm` after `[m]`/`[mm]` is a
+  month, never a clock minute, even before seconds: `[m] m` "102 1", `[mm]:mm` "102:01", `[m]:mm:ss`
+  "102:01:18", `[mm] mm:ss.0` "102 01:18.0" on 1h42m18s (serial 0.07, month 1); after `[h]` it is still the
+  clock minute (`[h] m` "1 42", `[h]:mm m` "1:42 1") (VERIFIED, probes/t2135-fractional-second-edges-1900/-1904
+  A34-A38, A41, T-2135). Odd and unimplemented: `[s] m` shows "18 26640" (the seconds field, then 26640), not
+  "6138 42" (A39; `m [m]` "1 26640" already matches).
 - Past 9999-12-31 a fraction of a second is #VALUE! with or without an elapsed token:
   `TEXT(1234567890,"[mm]:ss.0")` and `TEXT(1234567890,"h:mm:ss.00")` (gen-m10 810fee377a42575b
   T!A16, b4f66526f822ff2c T!A20; fbdab487cb11409e T!A25 on 123456789012345). Four or more zeros
-  (`s.0000`, `h.0000`) are #VALUE! (probes/t3575-fraction-after-elapsed-b A6, A27). Unprobed: where that cutoff sits
-  (the engine uses serial 2958466, also in a 1904 workbook) and whether a date token rolls over
-  with a fraction that rounds past midnight (the engine's does not); T-2135 probes them.
+  (`s.0000`, `h.0000`) are #VALUE! (probes/t3575-fraction-after-elapsed-b A6, A27). The cutoff is on the serial
+  rounded to the shown second or fraction digit, and in a 1904 workbook it sits at the same date: 9999-12-31
+  is 2957003 there, so `TEXT(2957004,"h:mm:ss")` and `TEXT(2957004.5,"h:mm:ss.0")` are #VALUE!, as are
+  `TEXT(2958465.999999,"h:mm:ss")` (rounds to 2958466) and 1904 `TEXT(2957003.999999,"h:mm:ss")`, while
+  `"h:mm:ss.0"` on 2958465.999999 is "23:59:59.9" (VERIFIED, probes/t2135-fractional-second-edges-1900/-1904
+  A18-A33). A date token rolls over with a fraction that rounds past midnight, as the clock does:
+  `TEXT(45001-1E-7,"yyyy-mm-dd hh:mm:ss.0")` is "2023-03-16 00:00:00.0" (".000" "2023-03-15 23:59:59.991"),
+  `ddd mmm d h:mm:ss.00` and `m/d/yy h:mm:ss.0 AM/PM` likewise, and a carry into the next minute or hour shows
+  "00:01:00.0" / "01:00:00.0" (A1-A17; the engine already matched). A fraction of four or more zeros
+  (`s.0000`, `[s].0000`, `ss.00000`, `mm:ss.0000`) is #VALUE! in the 1900 and 1904 systems alike (A42-A50).
 - A negative value prints one leading "-" before any literal text:
   "-It was 2 [yes, 2] hours and 03:04" (A40).
 In the 1900 date system TEXT of a negative under a format that mixes an elapsed token with a date/time token (`[h]:mm`, `[s] yy`, `[s].00`) is #VALUE! instead; a format whose only date/time token is one elapsed token still prints a minus, with any literals (below; dates.md "Negative serials under an explicit negative section", probes/text-negative-serial-elapsed-mixed, probes/negative-date-sections-1900, T-1079/T-1105); the minus above is the 1904-workbook behavior. Two elapsed tokens in one section (`[h]:[mm]`) are #VALUE! in both systems, for positive values too (same evidence).
