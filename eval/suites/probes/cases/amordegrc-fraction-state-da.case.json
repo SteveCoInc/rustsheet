@@ -1,0 +1,19 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3393: AMORDEGRC left-over value, a 485 charge as MMULT's second argument, alone below the fraction: before or after the arguments?",
+  "tags": [
+    "M9",
+    "financial",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)",
+        "A2": "=SUM(MMULT({1},AMORDEGRC(2400,39679,39813,300,2,0.15,1)))"
+      }
+    }
+  ],
+  "expected": {}
+}

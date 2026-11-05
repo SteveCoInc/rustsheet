@@ -1,0 +1,20 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-3393: AMORDEGRC left-over value, -ah with the operands swapped (charge first, SEQUENCE second): does the order inside the formula matter?",
+  "tags": [
+    "M9",
+    "financial",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=AMORDEGRC(10000,39000,39400,500,0.3,0.3,0)",
+        "A2": "=AMORDEGRC(2400,39679,39813,300,2,0.15,1)+SEQUENCE(1,2)",
+        "A3": "=AMORLINC(2400,39679,39813,300,1,0.15,1)"
+      }
+    }
+  ],
+  "expected": {}
+}
