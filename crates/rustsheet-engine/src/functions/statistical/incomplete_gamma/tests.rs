@@ -952,34 +952,8 @@ fn ulps_from(value: f64, exact: f64) -> f64 {
     ((value - exact) / (exact.abs() * f64::EPSILON)).abs()
 }
 
-/// 60-digit (x, P, Q) at shape 21, x from 0.6a to 1.4a by 0.1a (mpmath `gammainc`, T-4000).
-const NEAR_MODE_21: [(f64, f64, f64); 9] = [
-    (12.6, 0.018_677_090_738_518_077, 0.981_322_909_261_481_9),
-    (14.7, 0.071_050_236_332_737_9, 0.928_949_763_667_262_1),
-    (16.8, 0.180_935_180_858_221_6, 0.819_064_819_141_778_4),
-    (18.9, 0.344_192_476_260_255_34, 0.655_807_523_739_744_7),
-    (21.0, 0.529_025_636_132_290_3, 0.470_974_363_867_709_7),
-    (23.1, 0.697_090_767_859_555_6, 0.302_909_232_140_444_4),
-    (25.2, 0.824_684_121_821_466_4, 0.175_315_878_178_533_53),
-    (27.3, 0.907_980_177_142_409_4, 0.092_019_822_857_590_56),
-    (29.4, 0.955_820_171_179_228_9, 0.044_179_828_820_771_14),
-];
-
-/// The same at shape 101.
-const NEAR_MODE_101: [(f64, f64, f64); 9] = [
-    (60.6, 1.319_938_999_836_672_4e-6, 0.999_998_680_061_000_1),
-    (70.7, 0.000_404_867_197_387_234_9, 0.999_595_132_802_612_8),
-    (80.8, 0.016_651_615_142_057_444, 0.983_348_384_857_942_5),
-    (90.9, 0.156_936_749_296_821_17, 0.843_063_250_703_178_8),
-    (101.0, 0.513_232_791_918_545_1, 0.486_767_208_081_454_85),
-    (111.1, 0.842_846_013_606_726_7, 0.157_153_986_393_273_27),
-    (121.2, 0.972_720_774_514_629_1, 0.027_279_225_485_370_86),
-    (131.3, 0.997_361_861_657_837_6, 0.002_638_138_342_162_398),
-    (141.4, 0.999_849_507_692_163_2, 0.000_150_492_307_836_775_58),
-];
-
 /// Asserts P and Q of [`pair_with`] within `bound` ulps of each 60-digit (x, P, Q) at shape `a`.
-fn assert_near_mode(a: f64, rows: &[(f64, f64, f64)], bound: f64) {
+pub(super) fn assert_near_mode(a: f64, rows: &[(f64, f64, f64)], bound: f64) {
     for &(x, p, q) in rows {
         let (lower, upper) = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate);
         let (dp, dq) = (ulps_from(lower, p), ulps_from(upper, q));
@@ -1016,18 +990,4 @@ fn near_mode_pair_is_within_an_ulp_from_shape_1e3() {
     assert_eq!(pair(1e308, 1e308), (0.5, 0.5));
     assert_eq!(pair(1.5e308, 1e308), (0.0, 1.0));
     assert_eq!(pair(1e308, 1e300), (0.0, 1.0));
-}
-
-// Below shape 1E3 the band is the double-double pair (`near_mode.rs`, T-4000): the double kernel
-// was 1.5 ulp off at Q(101, 100) and 7.5 at Q(21, 25), where Excel is within 1.5 of the truth.
-#[test]
-fn near_mode_pair_is_within_an_ulp_from_shape_20() {
-    assert_near_mode(21.0, &NEAR_MODE_21, 1.0);
-    assert_near_mode(101.0, &NEAR_MODE_101, 1.0);
-    // `POISSON.DIST(100,100,TRUE)`: Excel's 0.5265621985299984, the correctly rounded Q
-    // (ironcalc-calc STATISTICAL/POISSON.xlsx D19).
-    assert_eq!(gamma_ur(101.0, 100.0), 0.526_562_198_529_998_4);
-    // `POISSON(20,25,TRUE)`: the correctly rounded Q, 1.5 ulp below Excel's 0.18549230269414177
-    // (probes-numeric/t1048-poisson A9, B9), within half a unit of its 15th digit.
-    assert_eq!(gamma_ur(21.0, 25.0), 0.185_492_302_694_141_71);
 }

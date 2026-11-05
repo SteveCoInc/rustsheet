@@ -52,7 +52,7 @@ Excel's is, so POISSON.DIST's cdf there gives Excel's double or is within half a
     (T-3252's window, and below the mode).
   - Shape 20 stays on the double kernel. Excel's Q(20, 20.9) is the double kernel's bits, 2.3 ulp below the truth (gated
     probes t3252-gamma-prefactor-window A103).
-- Unit test `near_mode_pair_is_within_an_ulp_from_shape_20`: P and Q at shapes 21 and 101, x from 0.6a to 1.4a, within
+- Unit test `near_mode_pair_is_within_an_ulp_from_shape_21`: P and Q at shapes 21 and 101, x from 0.6a to 1.4a, within
   1 ulp of 60-digit mpmath. It also checks D19 and Q(21, 25).
 - Eval delta: 5 known failures fixed, all bit-exact now:
   - ironcalc-calc POISSON.xlsx D19;
