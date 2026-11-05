@@ -3,12 +3,12 @@ id: T-0967
 title: "T.INV/T.INV.2T/CONFIDENCE.T: Student-t quantile parity (89 known failures)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: todo
 priority: P1
 size: M
 tier: opus
 campaign: visible
-depends_on: [T-1043, T-2511]
+depends_on: [T-1043, T-2511, T-1542, T-3061, T-3386, T-3399]
 ---
 
 ## Goal
@@ -234,3 +234,20 @@ T-2724's centre kernel (an accurate quantile, never a fit) leaves these owned ce
 quantile (mpmath) but more than half a unit of the 15th digit from Excel, whose own last digits are 1E-15 to 3.6E-15
 relative off there (statistics.md "Student t sweep", "Centre quantiles are accurate"): gen-m9/09b47629f54b9817 A40
 `TINV(1-1E-16,8)`, 4bad303d32cc3f46 A5 and A371, 984cba67bbe6972b A128, ecc87f80077959e0 A327 `CONFIDENCE.T(1-1E-10,2.5,16)`.
+
+## State on 2026-11-05 (cells routed to their owners)
+`make eval` on origin/main 82b5cd14: 149 visibly-off cells are attributed to T.INV, T.INV.2T, TINV and CONFIDENCE.T.
+Every one has an open owner, and 113 had one other than this task. This task was the only owner of the other 36. The
+tiers are decision 0267's, and the y offsets come from mpmath at 60 digits on the rounded-y form, as in statistics.md
+"Student-t quantile is SQRT(df*(1/y-1)) of the rounded beta quantile". They now go to the task that owns their
+mechanism:
+- T-3061 (Tier A): gen-m9/d8f44d556674c2fd A240 `TINV(0.5,(Data!B$4+-0.1))`, the rounded-y form at df 123456789.
+- T-3386 (Tier A, decision 0267 item 3, tiny p): gen-m9/7980ffb6095a340d A160 `TINV(1E-200,1E+10)`.
+- T-3399 (12 cells, Tier D, q = 0.25): Excel's y is 1 to 3 ulps above the nearest crossing.
+- T-1542 (20 cells, Tier C and D): tiny p at df 2 to 22.
+
+This task keeps two Tier D centre cells from T-2724 ("Cells back from T-2724" above): gen-m9/09b47629f54b9817 A40
+`TINV(1-1E-16,8)` and gen-m9/ecc87f80077959e0 A327 `CONFIDENCE.T(1-1E-10,2.5,16)`. Ours is within about 2E-16 of the
+true quantile there, and Excel is 1E-15 to 3.6E-15 off it. The task waits on the four owners above: its acceptance
+counts are met only once they land, and the shared routine is already in place (no statrs `StudentsT::inverse_cdf` call
+remains; df 1 is T-2858's closed form).

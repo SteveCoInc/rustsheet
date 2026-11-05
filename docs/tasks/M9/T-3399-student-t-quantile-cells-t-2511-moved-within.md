@@ -51,6 +51,17 @@ the nearest crossing.
 - At q = 0.05 Excel's y is about 2 ulps from the nearest crossing at df 999 and 1E10 alike (T-3061's 10 cells left,
   e.g. `T.INV.2T(0.1,1E10)` = 1.6448533237762966, ours 1.6448539987439552): a stop rule of Excel's search, not a
   tail accuracy limit. T-3061 keeps those cells; this task is the bit-level remainder.
+- Cells from T-0967 (2026-11-05, `make eval` on origin/main 82b5cd14; T-0967 was their only owner). Each is first
+  wrong at the 15th significant digit (decision 0267 Tier D), at q = 0.25 (c = 0.5), on the rounded-y path. Excel's
+  value is exactly fl(sqrt(fl(df*fl(fl(1/y)-1)))) at a y 1 to 3 ulps above the double nearest the exact crossing
+  (mpmath, 60 digits): 1 ulp at df 7, 1 or 2 at df 8 and 9, 2 or 3 at df 5. Ours, at the nearest y, is within an ulp
+  of the exact quantile: `T.INV.2T(0.5,5)` is 0.7266868438004216 in Excel, ours 0.726686843800423, exact
+  0.7266868438004227. Likely the same stop rule as at q = 0.05:
+  - gen-m9: 0620505280d2ea6e A28 `TINV(0.5,9)`, 7fd0a98183c6babf A242 and 91e167cd8d7eb652 A393 (the same at df 9),
+    46ac3ef5e61583ca A63, cb61169f4c033d4b A231 `T.INV.2T(0.5,5)`, 91e167cd8d7eb652 A226 and a2262ea466fcc142 A7
+    `T.INV.2T(1.5,5)`, 5395b8a427764a3f A347 `T.INV.2T(1.5,7)`, 787ba8d801105a60 A265 `TINV(1.5,7)`,
+    a4090567758520df A182 `T.INV.2T(0.5,8)`, 9cca17438a7e6f8a A320 `CONFIDENCE.T(0.5,123456789.123,10)` and
+    4bad303d32cc3f46 A188 `CONFIDENCE.T(0.5,1E-300,29)` (CONFIDENCE.T rounds once more when it scales).
 
 ## Acceptance criteria
 - [ ] The cells above return Excel's bits, or the Outcome shows the rule that would and why it is not taken.

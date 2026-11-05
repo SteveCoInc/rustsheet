@@ -4742,6 +4742,11 @@ and breaks 6; AS 109's own root (statrs' search) with this back-transform fixes 
 crossing of a tail at least as accurate as the y-tail on most cells. At q = 0.05 it is about 2 ulps from that
 crossing at df 999 and 1E10 alike (`T.INV.2T(0.1,1E10)` = 1.6448533237762966, `CONFIDENCE.T(0.1,1,1000)` =
 0.05206311786485653), which looks like the stop of Excel's search (T-3399).
+At q = 0.25 (c = 0.5, T-0967, 2026-11-05) Excel's y is 1 to 3 ulps above the nearest crossing (mpmath, 60 digits):
+1 ulp at df 7 (`T.INV.2T(1.5,7)` = -0.7111417780817859, exact -0.7111417780817864), 1 or 2 at df 8 and 9 (`TINV(0.5,9)` =
+0.7027221467513249, exact 0.7027221467513264), 2 or 3 at df 5 (`T.INV.2T(0.5,5)` = 0.7266868438004216, exact
+0.7266868438004227); the form at that y gives Excel's value bit for bit, and ours, at the nearest y, is within an ulp of
+the exact quantile, so these cells are first wrong at the 15th digit (12 gen-m9 cells, listed in T-3399).
 In the deep tail (q below 1E-5 with x = df/(df + t^2) below 1E-8) the rounded-y form is visibly off Excel and the
 closed form from the leading term and first correction of `I_x(df/2, 1/2)` is within an ulp or so of it
 (`TINV(1E-200,2)` = 1.0000000000000101E+100, gen-m9/7980ffb6095a340d A312: closed form 1.0000000000000103E+100, the
