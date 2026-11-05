@@ -3,7 +3,7 @@ id: T-3634
 title: "Undo of a row delete that shrinks a table at its bottom restores the rows but not the table's extent"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
