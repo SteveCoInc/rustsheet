@@ -3,7 +3,7 @@ id: T-4315
 title: "Match which calls empty WEEKNUM's stale state: T-4289 probes show it is not every dynamic anchor"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -26,9 +26,28 @@ and CONCAT with scalar arguments empty it but with C1:D2 keep it), so probe the 
 (constant array, range, scalar), then keep the gen-m6 cells passing.
 
 ## Acceptance criteria
-- [ ] The cells listed above pass, and no gen-m6 or other WEEKNUM stale-state cell regresses.
-- [ ] dates.md records the rule and the shape probes.
-- [ ] `make check` green; reviewers approve.
+- [x] The cells listed above pass, and no gen-m6 or other WEEKNUM stale-state cell regresses.
+- [x] dates.md records the rule and the shape probes.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Further WEEKNUM return_type or ordering work.
+
+## Outcome
+- Probes (excel-graph, 2026-11-05): probes/weeknum-stale-call-shapes and -call-shapes-2, 30 calls each in the T-4289
+  layout. Together they separate the argument shapes: text and number scalars, constant arrays, one cell, one-column
+  and two-dimensional ranges, nested and IF-skipped calls, and ten more array functions. The rule is per function, not
+  per shape class. Eleven array functions always empty the state. SORT and UNIQUE empty it only with a multi-cell
+  range, SORTBY unless its array is one cell, and ARRAYTOTEXT only with a range of more than one row and column.
+  CONCAT and TEXTJOIN empty it unless a joined argument is a reference. FILTER keeps it. A nested call empties it too,
+  and an untaken IF branch does not. dates.md "Which calls empty WEEKNUM's state" records the table and what is
+  unprobed.
+- Engine:
+  - `Model::weeknum_effect_of_call` (weeknum.rs) holds the table and runs after every function call
+    (`evaluate_function`).
+  - `run_excel_order` no longer empties the state at every dynamic anchor. An anchor whose run emptied it does so at
+    its place in the order. `AnchorAmor` is now `AnchorEffects`, which records that alongside AMORDEGRC's value.
+- Tests: test_weeknum_stale_state.rs replaces "a spilling formula empties the state" (the T-2068 reading that T-4289
+  disproved) with two tests of the evidenced table.
+- Eval delta: probes fixed 26: the 16 between-calls and 10 between-ranges cells the task lists. Two new cases (189 cells)
+  pass, and regressions are 0 in every suite, gen-m6 included.

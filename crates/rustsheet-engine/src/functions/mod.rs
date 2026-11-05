@@ -2172,6 +2172,8 @@ impl Model {
             Function::SkewP => Self::fn_skew_p,
             Function::Small => Self::fn_small,
         };
-        self.call_by_reference_elements(kind, args, cell, implementation)
+        let result = self.call_by_reference_elements(kind, args, cell, implementation);
+        self.weeknum_effect_of_call(kind, args, cell);
+        result
     }
 }

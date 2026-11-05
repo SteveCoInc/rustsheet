@@ -93,7 +93,7 @@ impl Model {
     /// at its place in Excel's order (`run_excel_order`).
     pub(crate) fn empty_amor_left_over(&mut self) {
         self.evaluation.order_state.amor_left_over = 0.0;
-        self.evaluation.anchor_amor.writes += 1;
+        self.evaluation.anchor_effects.writes += 1;
     }
 
     /// Lifts `kind` over its arguments and applies what the calls leave for an AMORDEGRC below
@@ -144,7 +144,7 @@ impl Model {
                 LeftOver::Keep => {}
                 LeftOver::Set(value) => {
                     state.order_state.amor_left_over = value;
-                    state.anchor_amor.writes += 1;
+                    state.anchor_effects.writes += 1;
                 }
                 LeftOver::Read => {
                     state.order_state_read = true;

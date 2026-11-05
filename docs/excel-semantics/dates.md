@@ -167,8 +167,33 @@ A spilling anchor runs at its own place, not elsewhere: `CHOOSEROWS(C1:D2,1)` sp
 So the earlier T-2068 reading (every dynamic anchor empties) is wrong for TRANSPOSE and OFFSET, which keep it here; the
 argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJOIN/CONCAT the other way round), and why
 is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
-2026-11-05. Ours: `run_excel_order` still empties at every dynamic anchor: 26 cells off, owned by T-4315.
-Status: VERIFIED (observed); not implemented
+2026-11-05.
+
+The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, excel-graph 2026-11-05,
+same layout) give the rule per function. It is neither a number-to-text conversion (`=1&2`, `TEXT(1,"0")`,
+`FIXED(1)` and `VALUE("1")` keep it; `CONCAT("a","b")` empties it) nor "a range argument" alone:
+- Always empty, whatever the argument (a constant array, one cell or a range): CHOOSEROWS, CHOOSECOLS, TOCOL,
+  TOROW, VSTACK, HSTACK, TAKE, DROP, TRIMRANGE, WRAPROWS, EXPAND (`CHOOSEROWS({1,2;3,4},1)`, `CHOOSEROWS(C1,1)`,
+  `TOCOL({1,2})`, `TAKE(C1,1)`, `TRIMRANGE(C1)`, `HSTACK(C1:D2)`, ...).
+- SORT and UNIQUE empty it with a multi-cell range (`SORT(C1:C2)`, `UNIQUE(C1:C2)`, `SORT(E1:F2)` of texts,
+  `SORT(C1:D2,1,-1)`); a constant array or one cell keeps it (`SORT({3,1})`, `SORT(C1)`, `UNIQUE(C1)`).
+- SORTBY empties it unless its array is one cell: `SORTBY({1,2},{2,1})` and `SORTBY(C1:C2,{2;1})` empty it,
+  `SORTBY(C1,1)` keeps it.
+- ARRAYTOTEXT empties it only with a range of more than one row and more than one column: `ARRAYTOTEXT(C1:D2)`
+  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (a one-row range is unprobed; we keep it).
+- CONCAT and TEXTJOIN empty it unless one of the joined arguments is a reference: `CONCAT("a","b")`, `CONCAT(1)`,
+  `CONCAT({1,2})`, `CONCAT("a",1)`, `CONCAT(C1&"")` and `TEXTJOIN(",",1,{1,2})` empty it; `CONCAT(C1)`,
+  `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))`, `TEXTJOIN(",",1,C1,"x")`, `TEXTJOIN(",",1,C1:D2,C1)` and
+  `TEXTJOIN(C1,1,C1)` keep it. TEXTJOIN's delimiter and ignore_empty do not count.
+- Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
+- A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
+  `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
+Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), called after every function call, holds this table; an
+Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
+excel_order.rs), and a dynamic-array formula as such no longer does. Unprobed: the functions not listed (WRAPCOLS,
+TEXTSPLIT, GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
+range), and whether the emptying comes before or after the call's own arguments run (we empty after).
+Status: VERIFIED (excel-graph); implemented
 
 ### WEEKNUM readers past the move budget of Excel's order (T-2068)
 Rule (Excel): the chain moves a cell that read an uncalculated formula cell to just after it, as
