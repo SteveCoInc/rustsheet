@@ -23,8 +23,8 @@ pub(crate) fn normal_cdf(x: f64, mean: f64, std_dev: f64) -> f64 {
 }
 
 /// Normal probability density function with the given mean and standard deviation, one kernel
-/// for NORM.DIST, NORMDIST, NORM.S.DIST and PHI: `EXP(-d*d/2) / std_dev * K`, d = (x - mean) /
-/// std_dev in doubles, with Excel's own EXP ([`excel_exp`]) and K the correctly rounded
+/// for NORM.DIST, NORMDIST, NORM.S.DIST and PHI: `EXP(-d*d/2) / std_dev * K`, `d = (x - mean) /
+/// std_dev` in doubles, with Excel's own EXP ([`excel_exp`]) and K the correctly rounded
 /// 1/sqrt(2*pi) ([`FRAC_1_SQRT_2PI`]), each step a double. It fits 795 of the 797 cached NORM.S.DIST, PHI
 /// and standard NORM.DIST density cells (the two misses are one EXP near-tie, z = -35.875, like
 /// T-1940's F2XM1 misses), and 496 of 496 NORM.DIST cells at sigma != 1, where libm's exp times K fits 767 and
@@ -214,7 +214,7 @@ mod tests {
     }
 
     /// Excel's density digits, bit for bit (T-0975): `NORM.S.DIST(0,FALSE)` and
-    /// `NORM.S.DIST(1.5,FALSE)` (NORM_DIST.xlsx C7, C24), `NORM.DIST(-28,0,10,FALSE)` and
+    /// `NORM.S.DIST(1.5,FALSE)` (`NORM_DIST.xlsx` C7, C24), `NORM.DIST(-28,0,10,FALSE)` and
     /// `NORM.DIST(-13,0,0.5,FALSE)` (probes-numeric m9-normpdf-norm-dist-s10, -s0p5).
     #[test]
     fn normal_pdf_matches_excel_bits() {
