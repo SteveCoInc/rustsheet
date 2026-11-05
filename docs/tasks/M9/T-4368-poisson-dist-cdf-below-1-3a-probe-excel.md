@@ -59,3 +59,18 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
   Excel is within 1 ulp), to follow-up T-4409.
 - Eval delta: probes gains one case with 118 of 470 cells passing. `make eval-baseline` records the rest as
   new-coverage known failures: last digits, every visibly-off cell owned by T-4409. 0 regressions.
+
+## Landing notes
+- PR #3437, at the head this commit pushes (it follows ae5201d). Not enqueued when the landing window closed (session
+  minute 110).
+- ae5201d: all three reviewers (security, design, excel-fidelity) approved. CI was red on one job, `eval
+  (Excel-compatibility gate)`, run https://github.com/SteveCoInc/rustsheet/actions/runs/42123431418, with "math
+  sidecars: probes, probes-numeric: stale". The new case had no `.math.json` sidecar (decision 0243).
+- This commit adds only eval/suites/probes/cases/t4368-poisson-shape-and-edge.math.json, written by
+  `rustsheet-accuracy math --suite probes`. `rustsheet-accuracy math --check --suite probes --suite probes-numeric`
+  reports "current" locally.
+- Next step: wait for CI on this head. When it is green, re-run the reviewers the change concerns (excel-fidelity for
+  the sidecar; nothing else changed), then enqueue.
+- Do not repeat: `rustsheet-accuracy math --suite probes` takes about 40 minutes and rewrites 9 unrelated sidecars
+  (incomplete-gamma-cap, the Bessel and GAMMA.INV/CHISQ.INV band cases, t3576). `--check` does not flag them, so they
+  were left out on purpose.
