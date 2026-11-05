@@ -2457,8 +2457,9 @@ mechanism of the Lotus-style names above), whether the text is typed or stored; 
 form would prefix it; unprobed). The R1C1 storage writes such a name as `_xlpm.f1` (the R1C1
 lexer refuses a cell-shaped identifier), and the xlsx export as `_xlpm.add5` like any bound
 name. Typed entry refuses it, as Excel does: `Input::Formula` and `Input::Parse` (engine
-`set_typed_user_input`) answer `EditError::InvalidInput` for a formula that binds a cell-shaped
-name, while stored text (xlsx import, re-parses, `Input::StoredFormula`, which the harness uses)
+`set_typed_user_input`) answer `EditError::InvalidInput`, its message starting with
+`TYPED_FORMULA_DOES_NOT_PARSE` (so the harness leaves such an `entered` cell blank, as Excel's PATCH 400 does),
+for a formula that binds a cell-shaped name, while stored text (xlsx import, re-parses, `Input::StoredFormula`, which the harness uses)
 binds it (decision 0103, T-2497). The refusal extends past the three probed formulas (UNVERIFIED):
 an uppercase name (`LET(A1,...)`), an optional `[f1]` parameter, nested bindings, and desktop
 Excel (the evidence is Excel for the web's input parser). Lotus-dot names typed are not refused
