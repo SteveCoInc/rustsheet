@@ -3,7 +3,7 @@ id: T-4271
 title: "Lotus dot range with whitespace on one side only (A1 .B2, A1. B2, A1 .5): probe Excel's reading and match the lexer"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
