@@ -89,12 +89,8 @@ impl UserModel {
             let overlaps = tables.iter().any(|(name, other)| {
                 name != &extent.name
                     && other.is_on_sheet(&sheet_name)
-                    && bounds(other).is_some_and(|o| {
-                        o.left <= new.right
-                            && new.left <= o.right
-                            && o.top <= new.bottom
-                            && new.top <= o.bottom
-                    })
+                    && bounds(other)
+                        .is_some_and(|o| o.overlaps(new.left, new.top, new.right, new.bottom))
             });
             if overlaps {
                 return Err(refused());

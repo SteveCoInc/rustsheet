@@ -149,6 +149,14 @@ pub(crate) struct Bounds {
     pub(crate) data: (i32, i32),
 }
 
+impl Bounds {
+    /// Whether the table's range shares a cell with the rectangle `left..=right` by
+    /// `top..=bottom`.
+    pub(crate) fn overlaps(&self, left: i32, top: i32, right: i32, bottom: i32) -> bool {
+        self.left <= right && left <= self.right && self.top <= bottom && top <= self.bottom
+    }
+}
+
 /// The [`Bounds`] of `table`; `None` when its reference or row counts do not fit (directive 5).
 pub(crate) fn bounds(table: &Table) -> Option<Bounds> {
     let (left, top, right, bottom) = parse_range(&table.reference).ok()?;

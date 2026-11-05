@@ -133,9 +133,7 @@ impl Model {
             TableGrowth::Right => (b.top, column, b.bottom, column),
             TableGrowth::Down => (row, b.left, row, b.right),
         };
-        let overlapped = on_sheet().any(|(_, other)| {
-            other.left <= right && left <= other.right && other.top <= bottom && top <= other.bottom
-        });
+        let overlapped = on_sheet().any(|(_, other)| other.overlaps(left, top, right, bottom));
         let blank = (top..=bottom)
             .flat_map(|r| (left..=right).map(move |c| (r, c)))
             .filter(|&cell| cell != (row, column))

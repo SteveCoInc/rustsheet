@@ -38,7 +38,11 @@ leaves the workbook exactly as it was.
   count) of the tables on the sheet that it changed, as a new `Diff::SetTableExtents` placed before the
   `DeleteRows` diff, like the merged-cells snapshot. Apply is a no-op (replaying the delete resizes the tables
   again); undo, which runs the list backwards, re-inserts the rows first and then puts the extents back and
-  reparses against the tables (`undo_table_extents`, diff_undo.rs).
+  reparses against the tables (`undo_table_extents` in the new user_model/table_extents.rs, called from the
+  `Diff::SetTableExtents` arm of undo_redo.rs). `merged_cells_snapshot_diffs` moved from common.rs to merged_cells.rs
+  so the oversized common.rs does not grow.
+- One overlap test for table rectangles, `Bounds::overlaps` (table_edits.rs), now serves the extent check,
+  `add_table_with_totals` (tables.rs) and the calculated-column growth (calculated_columns.rs); each had its own copy.
 - The diff can come from a peer (`apply_external_diffs`), so the undo refuses an extent that would move or widen the
   table, overlap another table, leave it no data row, give it more than one totals row or run past the last row,
   before any table changes (test_external_diffs_untrusted.rs `table_extents_that_move_a_table_are_refused`).

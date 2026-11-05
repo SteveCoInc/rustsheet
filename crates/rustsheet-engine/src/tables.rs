@@ -17,6 +17,7 @@ use crate::{
     },
     formula_rewrite::RewrittenFormula,
     model::Model,
+    table_edits::bounds,
     types::{Cell, Table, TableColumn, TableStyleInfo, Worksheet},
 };
 
@@ -203,9 +204,7 @@ impl Model {
         }
         let overlaps = self.workbook.tables.values().any(|t| {
             t.sheet_name == sheet_name
-                && parse_range(&t.reference).is_ok_and(|(c1, r1, c2, r2)| {
-                    c1 <= right && left <= c2 && r1 <= bottom && top <= r2
-                })
+                && bounds(t).is_some_and(|b| b.overlaps(left, top, right, bottom))
         });
         if overlaps {
             return Err("A table cannot overlap another table".to_string());
