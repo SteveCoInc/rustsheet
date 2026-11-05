@@ -3,7 +3,7 @@ id: T-4255
 title: "Identify Excel's large-shape gamma prefactor inside its window (0.668a to 0.99a, 1.05a to 1.45a) and POISSON's far upper tail form"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
