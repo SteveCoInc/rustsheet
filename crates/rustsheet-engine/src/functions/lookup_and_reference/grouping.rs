@@ -116,6 +116,14 @@ pub(crate) struct Group {
 }
 
 impl Group {
+    /// The id of the group's leaf class, which no other group of its grouping has, whether or
+    /// not a row reached it: it names the group across the sorts. (Its first row does not: a
+    /// leaf no row reaches holds every row, so it shares its first row with a reached group;
+    /// probes/t4382-pivotby-intransitive-paths Calc!B2, T-4403.)
+    pub(crate) fn leaf_id(&self) -> usize {
+        self.cells.last().copied().unwrap_or(usize::MAX)
+    }
+
     /// Orders two groups' keys in `field`: texts under one parent (equal keys in the fields
     /// before it) by their rank, the order [`Grouping::new`] sorted them in, `built` (ascending
     /// or not), so `"AB"` before `"ab"&U+00AD` (probes/t4195-groupby-intransitive Calc!B31:B38);
