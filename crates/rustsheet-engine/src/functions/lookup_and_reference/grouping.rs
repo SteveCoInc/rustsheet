@@ -151,6 +151,10 @@ pub(crate) struct Grouping {
     /// The directions [`Grouping::new`] built the groups in, per field (ascending past the end):
     /// the ranks' order.
     ascending: Vec<bool>,
+    /// Each grouped source row with the ids of the classes it reached, one per field from the
+    /// first (fewer when it reached no leaf; [`Grouping::new`] step 3), as [`Group::cells`] holds
+    /// them.
+    paths: Vec<(usize, Vec<usize>)>,
 }
 
 impl Grouping {
@@ -210,20 +214,23 @@ impl Grouping {
         let tree = Tree::build(&lines, &sorted, fields, limit, &mut spend)?;
         let intransitive =
             has_intransitive_text(rows.len(), fields, |line, field| lines.at(line, field));
-        // members[leaf]: the lines that reach it.
+        // members[leaf]: the lines that reach it; reached[line]: the classes the line reached.
         let mut members: Vec<Vec<usize>> = vec![Vec::new(); tree.leaves()];
-        let mut reached: Vec<Option<usize>> = vec![None; rows.len()];
+        let mut reached: Vec<Vec<usize>> = vec![Vec::new(); rows.len()];
         for line in 0..rows.len() {
             // While `=` is transitive a row descends as the first row equal to it (UNIQUE's).
-            let leaf = match first.get(line) {
-                Some(&kept) if !intransitive && kept < line => reached.get(kept).copied().flatten(),
+            let classes = match first.get(line) {
+                Some(&kept) if !intransitive && kept < line => {
+                    reached.get(kept).cloned().unwrap_or_default()
+                }
                 _ => tree.descend(&lines, line, fields, &mut spend)?,
             };
-            if let Some(slot) = reached.get_mut(line) {
-                *slot = leaf;
-            }
+            let leaf = classes.last().copied().filter(|_| classes.len() == fields);
             if let Some(entry) = leaf.and_then(|leaf| members.get_mut(leaf)) {
                 entry.push(line);
+            }
+            if let Some(slot) = reached.get_mut(line) {
+                *slot = classes;
             }
         }
         let mut groups = Vec::with_capacity(members.len());
@@ -258,9 +265,11 @@ impl Grouping {
                 reached,
             });
         }
+        let paths = rows.iter().copied().zip(reached).collect();
         Ok(Grouping {
             groups,
             ascending: ascending.to_vec(),
+            paths,
         })
     }
 
@@ -304,6 +313,27 @@ impl Grouping {
             }
         }
         group_of
+    }
+
+    /// For each of `height` source rows, the ids of the classes it reached ([`Grouping::paths`]):
+    /// empty for rows in no class (headers, filtered rows, or a first field no class equals).
+    pub(crate) fn reached_classes(&self, height: usize) -> Vec<&[usize]> {
+        let mut classes: Vec<&[usize]> = vec![&[]; height];
+        for (row, path) in &self.paths {
+            if let Some(slot) = classes.get_mut(*row) {
+                *slot = path;
+            }
+        }
+        classes
+    }
+
+    /// The class ids of group `group`'s first `level` keys, the prefix a subtotal at that level
+    /// covers (empty when there is no such group).
+    pub(crate) fn prefix(&self, group: usize, level: usize) -> &[usize] {
+        self.groups
+            .get(group)
+            .and_then(|group| group.cells.get(..level))
+            .unwrap_or_default()
     }
 
     /// The indices of the groups no row reached ([`Grouping::new`] step 4), which hold every row.

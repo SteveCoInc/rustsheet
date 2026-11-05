@@ -21,6 +21,7 @@ fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     grouping.sort_by_keys(&[ascending], CELL);
     grouping
@@ -85,6 +86,7 @@ fn later_fields_class_within_their_parent() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
             });
         grouping.sort_by_keys(&[], CELL);
         grouping
@@ -264,6 +266,7 @@ fn two_key_fields_sort_lexicographically() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     grouping.sort_by_keys(&[true, false], CELL);
     let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
@@ -285,6 +288,7 @@ fn value_sort_keeps_parents_with_equal_aggregates_together() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     let mut calls = 0;
     let order = (ParentOrder::ByValue, Axis::Rows);
@@ -331,6 +335,7 @@ fn three_keys() -> Grouping {
     Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
         groups: Vec::new(),
         ascending: Vec::new(),
+        paths: Vec::new(),
     })
 }
 
@@ -530,6 +535,7 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
             });
         let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
         grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);
@@ -605,6 +611,7 @@ fn unreached_names_the_leaf_no_row_reaches() {
         Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     let leaves: Vec<(Vec<ArrayNode>, Vec<usize>)> = grouping
         .groups
@@ -620,4 +627,27 @@ fn unreached_names_the_leaf_no_row_reaches() {
         ]
     );
     assert_eq!(grouping.unreached(), [2]);
+}
+
+/// T-4378: Bx, Cy, Cy, Ax, By build the classes A{x} and B{x, y}; rows 2 and 3 (C,y) reach class A
+/// (C = A) and then no leaf, so they keep only that class, which a PIVOTBY subtotal of A counts
+/// (probes/t4358-pivotby-unreached-column-leaf Calc!D1: the `ab` subtotal of q is `2, 3`).
+#[test]
+fn reached_classes_keep_a_row_that_reaches_no_leaf() {
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    let keys = vec![
+        vec![b(), x()],
+        vec![c(), y()],
+        vec![c(), y()],
+        vec![a(), x()],
+        vec![b(), y()],
+    ];
+    let grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).ok();
+    let reached = grouping.as_ref().map(|g| g.reached_classes(5));
+    let depths: Option<Vec<usize>> = reached.map(|r| r.iter().map(|path| path.len()).collect());
+    assert_eq!(depths, Some(vec![2, 1, 1, 2, 2]));
+    let a_prefix = grouping.as_ref().map(|g| g.prefix(0, 1).to_vec());
+    let row_2 = grouping.as_ref().map(|g| g.reached_classes(5)[1].to_vec());
+    assert_eq!(a_prefix, row_2);
 }
