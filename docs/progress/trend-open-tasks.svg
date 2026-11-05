@@ -23,21 +23,21 @@
 <rect class="grid" fill="#d1d9e0" x="70" y="66.0" width="542" height="1"/>
 <text x="62.0" y="66.0" class="muted num" fill="#59636e" text-anchor="end" dominant-baseline="middle">200</text>
 <text x="70.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-25</text>
-<text x="178.4" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-27</text>
-<text x="286.8" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-29</text>
-<text x="395.2" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-31</text>
-<text x="503.6" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-02</text>
-<text x="612.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-04</text>
-<polyline class="s-semantics" stroke="#2a78d6" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,206.4 124.2,228.9 178.4,240.6 232.6,239.7 286.8,244.2 341.0,245.1 395.2,236.1 449.4,239.7 503.6,237.0 557.8,245.1 612.0,240.6"><title>Semantics</title></polyline>
-<circle class="b-semantics" fill="#2a78d6" cx="612.0" cy="240.6" r="3.5"><title>Semantics, 2026-11-04: 6</title></circle>
-<polyline class="s-accuracy" stroke="#1baf7a" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,234.3 124.2,233.4 178.4,234.3 232.6,231.6 286.8,232.5 341.0,234.3 395.2,229.8 449.4,221.7 503.6,226.2 557.8,229.8 612.0,228.0"><title>Accuracy</title></polyline>
-<circle class="b-accuracy" fill="#1baf7a" cx="612.0" cy="228.0" r="3.5"><title>Accuracy, 2026-11-04: 20</title></circle>
-<polyline class="s-visible" stroke="#6250d6" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,212.7 124.2,218.1 178.4,213.6 232.6,214.5 286.8,208.2 341.0,203.7 395.2,201.0 449.4,193.8 503.6,188.4 557.8,182.1 612.0,179.4"><title>Visible</title></polyline>
-<circle class="b-visible" fill="#6250d6" cx="612.0" cy="179.4" r="3.5"><title>Visible, 2026-11-04: 74</title></circle>
-<polyline class="s-parked" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,212.7 124.2,210.9 178.4,216.3 232.6,207.3 286.8,206.4 341.0,201.0 395.2,175.8 449.4,150.6 503.6,136.2 557.8,129.9 612.0,102.9"><title>Parked</title></polyline>
-<circle class="b-parked" fill="#4b5563" cx="612.0" cy="102.9" r="3.5"><title>Parked, 2026-11-04: 159</title></circle>
-<text x="622.0" y="243.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">6</text>
-<text x="622.0" y="228.0" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">20</text>
-<text x="622.0" y="179.4" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">74</text>
+<text x="168.5" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-27</text>
+<text x="267.1" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-29</text>
+<text x="365.6" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-10-31</text>
+<text x="464.2" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-02</text>
+<text x="612.0" y="262.0" class="muted num" fill="#59636e" text-anchor="middle" dominant-baseline="middle">2026-11-05</text>
+<polyline class="s-semantics" stroke="#2a78d6" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,206.4 119.3,228.9 168.5,240.6 217.8,239.7 267.1,244.2 316.4,245.1 365.6,236.1 414.9,239.7 464.2,237.0 513.5,245.1 562.7,240.6 612.0,242.4"><title>Semantics</title></polyline>
+<circle class="b-semantics" fill="#2a78d6" cx="612.0" cy="242.4" r="3.5"><title>Semantics, 2026-11-05: 4</title></circle>
+<polyline class="s-accuracy" stroke="#1baf7a" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,234.3 119.3,233.4 168.5,234.3 217.8,231.6 267.1,232.5 316.4,234.3 365.6,229.8 414.9,221.7 464.2,226.2 513.5,229.8 562.7,228.0 612.0,229.8"><title>Accuracy</title></polyline>
+<circle class="b-accuracy" fill="#1baf7a" cx="612.0" cy="229.8" r="3.5"><title>Accuracy, 2026-11-05: 18</title></circle>
+<polyline class="s-visible" stroke="#6250d6" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,212.7 119.3,218.1 168.5,213.6 217.8,214.5 267.1,208.2 316.4,203.7 365.6,201.0 414.9,193.8 464.2,188.4 513.5,182.1 562.7,179.4 612.0,178.5"><title>Visible</title></polyline>
+<circle class="b-visible" fill="#6250d6" cx="612.0" cy="178.5" r="3.5"><title>Visible, 2026-11-05: 75</title></circle>
+<polyline class="s-parked" stroke="#4b5563" fill="none" stroke-width="2" stroke-linejoin="round" points="70.0,212.7 119.3,210.9 168.5,216.3 217.8,207.3 267.1,206.4 316.4,201.0 365.6,175.8 414.9,150.6 464.2,136.2 513.5,129.9 562.7,102.9 612.0,102.9"><title>Parked</title></polyline>
+<circle class="b-parked" fill="#4b5563" cx="612.0" cy="102.9" r="3.5"><title>Parked, 2026-11-05: 159</title></circle>
+<text x="622.0" y="244.8" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">4</text>
+<text x="622.0" y="229.8" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">18</text>
+<text x="622.0" y="178.5" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">75</text>
 <text x="622.0" y="102.9" class="ink num" fill="#1f2328" text-anchor="start" dominant-baseline="middle">159</text>
 </g></svg>

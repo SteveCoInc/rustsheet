@@ -4,7 +4,7 @@ title: "Number formats: a ,2000 numeral suffix (and LCID byte 32) prints fullwid
 milestone: M10
 lane: functions-text
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: sonnet
 depends_on: []

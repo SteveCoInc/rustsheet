@@ -4,7 +4,7 @@ title: "Pivot date cache rounding at a binary-noise half second: probe and model
 milestone: M6
 lane: engine
 status: todo
-priority: P3
+priority: P0
 size: S
 tier: opus
 depends_on: [T-4246]

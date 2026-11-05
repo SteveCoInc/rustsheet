@@ -4,7 +4,7 @@ title: "TEXT \"[s] m\" shows the seconds field and 26640 (not 6138 42): find the
 milestone: M10
 lane: functions-text
 status: todo
-priority: P2
+priority: P0
 size: S
 tier: opus
 depends_on: []
