@@ -7,7 +7,7 @@ status: in-progress
 priority: P2
 size: S
 tier: opus
-depends_on: []
+depends_on: [T-4388]
 ---
 
 ## Goal

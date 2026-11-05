@@ -1043,7 +1043,13 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     - **A subtotal whose class no record reached holds every record of the line**, as such a leaf does (step 4):
       with three column fields and `col_total_depth` 3, over BxC BxB CyA AxB AxB (p q p q p) the level-2 subtotal
       (`ab`&U+00AD,y), which no record reaches, is p `1, 3, 5`, q `2, 4` (Calc!B31; B31:C42), as GROUPBY's class
-      none reached does (T-4359). T-4401 owns them.
+      none reached does (T-4359). Implemented by T-4388 (`Grouping::class_reached`). **Confirmed out of sample**
+      (T-4401, probes/t4401-pivotby-unreached-subtotal-holdout, excel-graph, 2026-11-05): 24 fresh seeded runs
+      (seed "T-4401"), each with a class at level 2 or deeper that no record reaches, 12 with three column fields
+      (`col_total_depth` 3) and 12 with four (`col_total_depth` 4, subtotals at levels 1 to 3), ascending and
+      `col_sort_order` -1. The engine's values under this rule, committed before the fill
+      (docs/research/t4401/predictions.tsv), matched all 48 cells. The earlier prefix rule (T-4378), which gives such
+      a subtotal no records, matched 18. A structural rule confirmed on a hold-out (decision 0188 R4), not a fit.
     - **relative_to 3 and 4 take the parent subtotal's records by the same rule**: over Ay Ay Bx Cx Cy (q p p q q)
       the parent column total of q's (`ab`,y) cell is `1, 4, 5`, not `1, 5` (Calc!D2, a two-argument LAMBDA
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
