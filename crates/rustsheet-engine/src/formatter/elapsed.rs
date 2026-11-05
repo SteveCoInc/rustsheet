@@ -322,23 +322,23 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
 /// it first: a remainder up to about 1.8E-17 s below a millisecond tie rounds up, where T-4370's
 /// 15-digit rounding alone allows 5E-18 s at 0.005 s: `TEXT(0.0045/86400-36*2^-77,
 /// "[h]:mm:ss.000")` is "0:00:00.005", at -40 ulp ".004". The offset is in the serial, not in the
-/// seconds: past about 0.16 s (`y` of 2^-19 days, whose ulp is 2^-71) the addition rounds away,
-/// and the 31 cells of probes/t4389-holdout after whole seconds that tell the two apart all
-/// follow the serial. `.0` and `.00` show no offset (`TEXT(0.005/86400-12*2^-77,"s.00")` is
-/// "0.00"). The constant is a fit: every offset from 1.74E-17 to 1.86E-17 s scores the 538 `.000`
-/// cells of the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside
-/// that window; it is applied to serials below 2^-19 days, the only ones it can move. Hold-out
+/// seconds: the 71 cells of probes/t4389-holdout and t4389-confirm after whole seconds that tell
+/// the two apart all follow the serial. It moves `y` only below 2^-18 days (about 0.33 s); from
+/// 2^-19 days it is half an ulp, which the addition rounds to even, and Excel follows that in 29
+/// of the 40 probed cells there (t4389-confirm A1:A40; the rest are T-4419's). `.0` and `.00`
+/// show no offset (`TEXT(0.005/86400-12*2^-77,"s.00")` is "0.00"). The constant is a fit: every
+/// offset from 1.74E-17 to 1.86E-17 s scores the 538 `.000` cells of the t4323, t4332 and t4370
+/// fraction cases, and 2^-72 days is the power of two inside that window. Hold-out
 /// probes/t4389-holdout 368 of 368 (T-4370's model 337, the correctly rounded value 81); fresh
-/// sweep probes/t4389-fraction-fresh, drawn after the freeze, 120 of 120 (42 and 39; excel-graph
-/// 2026-11-05; docs/research/t4389). number-formats.md "Fraction digits of a second at a tie".
-/// FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-19 days, `.000` only)
+/// sweep probes/t4389-fraction-fresh 120 of 120 (42 and 39) and t4389-confirm 69 of 80 (51 and
+/// 31), both drawn after the freeze (excel-graph 2026-11-05; docs/research/t4389).
+/// number-formats.md "Fraction digits of a second at a tie".
+/// FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-18 days, `.000` only)
 fn millisecond_offset(shifted: f64, scale: f64) -> f64 {
-    /// 2^-72 days.
+    /// 2^-72 days; from 2^-18 days up it is under half an ulp and the addition leaves `shifted`.
     const OFFSET: f64 = 1.0 / 4_722_366_482_869_645_213_696.0;
-    /// 2^-19 days: from here up the serial's ulp is 2^-71 or more and the offset rounds away.
-    const RANGE: f64 = 1.0 / 524_288.0;
     // `scale` is exactly 10, 100 or 1000 (`10f64.powi`).
-    if scale > 500.0 && shifted < RANGE {
+    if scale > 500.0 {
         shifted + OFFSET
     } else {
         shifted

@@ -5,10 +5,14 @@ Both were written down (2026-11-05) before probes/t4389-holdout was generated or
 [1.74E-17, 1.86E-17] s scores all 538 `.000` cells of the t4323/t4332/t4370 cases, and 2^-72 days (1.83E-17 s) is the
 power of two inside that window. The open question was where Excel adds it:
 - `seconds_digits`: C in seconds, added to the remainder, `.000` with r below 0.1 s;
-- `days_digits`: 2^-72 added to the serial in days after the half step, before the cut, which rounds away once the
-  serial's ulp exceeds it (from 2^-19 days, about 0.16 s).
+- `days_digits`: 2^-72 added to the serial in days after the half step, before the cut. The addition rounds away once
+  it is under half the serial's ulp (from 2^-18 days, about 0.33 s); in [2^-19, 2^-18) it is exactly half an ulp and
+  rounds to even.
 The hold-out's 31 cells after whole seconds separate them: the days variant scores all 368 cells and the seconds
-variant misses those 31. The days variant was then frozen, and probes/t4389-fraction-fresh was drawn after that.
+variant misses those 31. The days variant was then frozen (ungated), and probes/t4389-fraction-fresh was drawn after
+that. The review of #3440 asked for untouched cells on both the days-or-seconds choice and the band from 2^-19 days, so
+probes/t4389-confirm (gen_confirm.py) was drawn after the review: days 40 of 40 after whole seconds (seconds 0), and
+in the band the ungated model 29 of 40 against 11 for a 2^-19-day gate. The engine ships the ungated model.
 """
 import math
 import os
@@ -50,16 +54,19 @@ def base_digits(x, s):
 
 
 def seconds_digits(x, s):
-    """The frozen candidate: C added to the remainder in seconds, `.000` and r < 0.1 s only."""
+    """Candidate 1: C added to the remainder in seconds, `.000` and r < 0.1 s only."""
     r = remainder(x, s)
     return floor_digits(r + C_SECONDS if s == 1000 and r < RANGE else r, s)
 
 
-def days_digits(x, s):
-    """The alternative: 2^-72 added to the serial before the cut, `.000` only."""
+def days_digits(x, s, gate=None):
+    """Candidate 2: 2^-72 added to the serial after the half step, before the cut, `.000` only. With `gate`, only
+    where the half-stepped serial is below it (the first version of the engine code gated at 2^-19 days)."""
     if s != 1000:
         return base_digits(x, s)
-    v = x + 0.5 / (86400 * s) + C_DAYS
+    v = x + 0.5 / (86400 * s)
+    if gate is None or v < gate:
+        v += C_DAYS
     v -= math.floor(v)
     for f in (24, 60, 60):
         v *= f
@@ -71,3 +78,8 @@ def fields(digits_fn):
     def f(x, s):
         return digits_fn(x, s), chain_units(x, s) // s, rnd(x * 86400 * s) // s
     return f
+
+
+def gated_digits(x, s):
+    """The first engine version: candidate 2 gated at 2^-19 days (rejected by probes/t4389-confirm)."""
+    return days_digits(x, s, 2.0 ** -19)

@@ -4,7 +4,7 @@ import math
 import sys
 from fractions import Fraction
 
-from common import base_digits, days_digits, fields, fmt, load, seconds_digits
+from common import base_digits, days_digits, fields, fmt, gated_digits, load, seconds_digits
 
 
 def correctly_rounded(x, s):
@@ -14,6 +14,7 @@ def correctly_rounded(x, s):
 
 T = "../t4370/"
 CANDS = (("C in days (frozen)", fields(days_digits)), ("C in seconds", fields(seconds_digits)),
+         ("days, gated at 2^-19", fields(gated_digits)),
          ("T-4370", fields(base_digits)), ("correctly rounded", correctly_rounded))
 
 

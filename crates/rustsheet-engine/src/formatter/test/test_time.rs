@@ -238,7 +238,7 @@ fn fraction_digits_read_the_remainder_at_fifteen_digits() {
 }
 
 /// Under `.000` the serial is cut as if 2^-72 days were added after the half step, so a tie up to
-/// about 1.8E-17 s below rounds up; past 2^-19 days the addition rounds away, and `.00` has no
+/// about 1.8E-17 s below rounds up; after whole seconds the addition rounds away, and `.00` has no
 /// offset (probes/t4370-ulp-map-2 A76, A75, t4389-holdout A272; T-4389).
 #[test]
 fn millisecond_ties_take_the_serial_offset() {

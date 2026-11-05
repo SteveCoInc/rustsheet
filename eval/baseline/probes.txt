@@ -2305,6 +2305,7 @@ C	probes/t4375-xnpv-refused-first-and-one-cell.case.json	114
 C	probes/t4378-pivotby-subtotal-holdout.case.json	450
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/t4380-unique-keep-head-holdout.case.json	622
+C	probes/t4389-confirm.case.json	80
 C	probes/t4389-fraction-fresh.case.json	120
 C	probes/t4389-holdout.case.json	368
 C	probes/t4397-days-two-errors.case.json	36
@@ -7459,6 +7460,17 @@ F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C6
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C7
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C8
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C9
+F	probes/t4389-confirm.case.json	Sheet1!A14
+F	probes/t4389-confirm.case.json	Sheet1!A15
+F	probes/t4389-confirm.case.json	Sheet1!A16
+F	probes/t4389-confirm.case.json	Sheet1!A17
+F	probes/t4389-confirm.case.json	Sheet1!A18
+F	probes/t4389-confirm.case.json	Sheet1!A19
+F	probes/t4389-confirm.case.json	Sheet1!A31
+F	probes/t4389-confirm.case.json	Sheet1!A36
+F	probes/t4389-confirm.case.json	Sheet1!A4
+F	probes/t4389-confirm.case.json	Sheet1!A6
+F	probes/t4389-confirm.case.json	Sheet1!A9
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

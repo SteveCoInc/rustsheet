@@ -413,16 +413,18 @@ Below serial 1, and the counts:
   2026-11-05; docs/research/t4370/model.py). From serial 1 up it prints what the cut prints on every probed cell.
   Under `.000` only, the serial is cut as if 2^-72 days (1.83E-17 s) were added after the half step (T-4389), so a
   tie up to about 1.8E-17 s below rounds up: `TEXT(0.0045/86400-36*2^-77,"[h]:mm:ss.000")` is "0:00:00.005", at
-  -40 ulp ".004" (t4370-ulp-map-2 A76, A75). The offset is in the serial, not in the seconds: once the serial's ulp
-  exceeds it (from 2^-19 days, about 0.16 s) it rounds away, and the 31 cells of probes/t4389-holdout after whole
+  -40 ulp ".004" (t4370-ulp-map-2 A76, A75). The offset is in the serial, not in the seconds: the 71 cells after whole
   seconds that tell the two apart all follow the serial (`TEXT(5.0605/86400-2^-67,"[h]:mm:ss.000")` "0:00:05.060",
-  A272). `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units
-  of the 15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000`
-  cells of the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no
-  operation that would produce it was found (T-4370's refuted list, docs/research/t4370/README.md). Hold-out
-  probes/t4389-holdout 368 of 368 (T-4370's model 337, the correctly rounded value 81); fresh sweep
-  probes/t4389-fraction-fresh, drawn after the freeze, 120 of 120 (42 and 39); excel-graph 2026-11-05,
-  docs/research/t4389. Implemented in `millisecond_offset` (formatter/elapsed.rs).
+  probes/t4389-holdout A272; t4389-confirm A41:A80). It moves the serial only below 2^-18 days (about 0.33 s). From
+  2^-19 days it is exactly half an ulp, which the double addition rounds to even, and Excel follows that in 29 of 40
+  probed cells (t4389-confirm A1:A40); the other 11 (A4, A6, A9, A14:A19, A31, A36) are not explained (T-4419).
+  `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units of the
+  15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000` cells of
+  the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no operation that
+  would produce it was found (T-4370's refuted list, docs/research/t4370/README.md). Hold-out probes/t4389-holdout
+  368 of 368 (T-4370's model 337, the correctly rounded value 81); after the freeze, probes/t4389-fraction-fresh 120
+  of 120 (42 and 39) and probes/t4389-confirm 69 of 80 (51 and 31); excel-graph 2026-11-05, docs/research/t4389.
+  Implemented in `millisecond_offset` (formatter/elapsed.rs).
 - The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
   tie just short of a whole minute or hour carries in neither the count nor the clock:
   `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",

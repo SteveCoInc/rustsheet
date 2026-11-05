@@ -44,28 +44,33 @@ E6 ("3733.0").
 - The `[s]`/`[h]`/`[m]` counts before the fraction (T-4333).
 
 ## Outcome
-- Model: under `.000` only, Excel cuts the serial as if 2^-72 days (1.83E-17 s) were added after the half step. It
-  is applied to serials below 2^-19 days, the only ones it can move; above that the addition rounds away. This is a
-  FITTED constant: every offset in [1.74E-17, 1.86E-17] s scores all 538 `.000` cells of the t4323/t4332/t4370
-  fraction cases (T-4370's model 476), and 2^-72 days is the power of two inside that window. No operation that
-  would produce it was found. Code: `millisecond_offset` in formatter/elapsed.rs, tagged
-  `FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-19 days, .000 only)`.
-- Seconds or days: the hold-out answers it, in serial days. probes/t4389-holdout has 368 cells, generated after both
-  candidates were written down, with the margin of 10 points fixed before scoring. Its 31 cells after whole seconds
-  tell the two apart, and Excel follows the serial in all of them.
-- R4 guards (decision 0188):
-  - Train: 538/538 `.000` cells, and 1664/1668 over all six fraction cases and the two ulp maps. The four misses
-    are three `[s]` counts (T-4333) and t4370-ulp-map-2 A418.
-  - Hold-out: 368/368. T-4370's model scores 337 and the correctly rounded value 81.
-  - Fresh sweep: probes/t4389-fraction-fresh, 120 cells, drawn after the freeze. The model scores 120/120, T-4370's
-    42 and the correctly rounded value 39.
-  - Gate A: not applicable. These are TEXT outputs judged on the exact text.
-  - Reproducibility floor: the flips the fit rests on sit 36 to 40 ulp of the serial below the tie, well above the
-    4-ulp web-vs-desktop floor.
-- Excel-desktop: t4370-ulp-map-2 A417 and A418, and t4333-count-ulp-scan E6, still rest on excel-graph alone
-  (excel-desktop is not available; M14 Phase 4, decision 0039). number-formats.md now says so.
-- Unit test: `millisecond_ties_take_the_serial_offset` (formatter/test/test_time.rs). Research:
-  docs/research/t4389.
-- Eval delta: probes fixed 62, which are every cell this task owned (t4370-ulp-map A52, A86:A91; -2 A1:A15, A18:A29,
-  A47:A50, A52:A63, A76:A83, A243:A244, A313:A314). Two new cases pass in full (488 cells). No regression, and no
-  other cell of the t4323, t4332 or t4370 fraction cases moves.
+- Model: under `.000` only, Excel cuts the serial as if 2^-72 days (1.83E-17 s) were added after the half step.
+  - Where it acts: the double addition can move the serial only below 2^-18 days. In [2^-19, 2^-18) the offset is
+    half an ulp and rounds to even.
+  - FITTED constant: every offset in [1.74E-17, 1.86E-17] s scores all 538 `.000` cells of the t4323/t4332/t4370
+    fraction cases (T-4370's model 476), and 2^-72 days is the power of two inside that window. No operation that
+    would produce it was found.
+  - Code: `millisecond_offset` in formatter/elapsed.rs, tagged
+    `FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-18 days, .000 only)`.
+- Seconds or days: the offset is in serial days. Both candidates were written down before the hold-out; the hold-out
+  chose days (31 separating cells), and the confirmation batch drawn after review confirms it (40 of 40 new
+  separating cells; seconds 0).
+- R4 guards (decision 0188). Counts are bit-exact text; the 4-ulp and 15-digit columns do not apply to TEXT.
+  - Train: 538/538 `.000` cells, 1664/1668 overall. The 4 misses are three `[s]` counts (T-4333) and t4370-ulp-map-2
+    A418.
+  - Hold-out: probes/t4389-holdout, 368/368 (T-4370 337, correctly rounded 81). It is a new probe, generated before
+    scoring with the 10-point margin fixed, in place of a 30% split, because every existing `.000` cell was in the fit.
+  - Fresh, after the freeze:
+    - probes/t4389-fraction-fresh: 120/120 (42, 39).
+    - probes/t4389-confirm: 69/80 (51, 31). The band cells A1:A40 score 29/40, against 11 for a gate at 2^-19 days
+      (the first version of this PR, dropped after review). The 11 band misses are owned by follow-up T-4419.
+  - Gate A: not applicable (TEXT output).
+  - Reproducibility floor: the flips the fit rests on sit 36 to 40 ulp of the serial below the tie, above the 4-ulp
+    floor.
+- Excel-desktop: t4370-ulp-map-2 A417, A418 and t4333-count-ulp-scan E6 still rest on excel-graph alone; excel-desktop
+  is not available (M14 Phase 4, decision 0039). number-formats.md says so.
+- Unit test: `millisecond_ties_take_the_serial_offset` (formatter/test/test_time.rs). Research: docs/research/t4389.
+- Eval delta: probes fixed 62 cells, every cell this task owned (t4370-ulp-map A52, A86:A91; -2 A1:A15, A18:A29,
+  A47:A50, A52:A63, A76:A83, A243:A244, A313:A314). New cases: t4389-holdout and t4389-fraction-fresh pass in full;
+  t4389-confirm passes 69 of 80, and its 11 misses are T-4419's. No regression.
+- Follow-up: T-4419, the 11 band cells.
