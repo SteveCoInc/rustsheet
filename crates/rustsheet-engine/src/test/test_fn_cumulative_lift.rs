@@ -318,6 +318,44 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
 }
 
 #[test]
+fn a_short_range_in_the_band_below_the_cut_is_the_geometric_sum() {
+    // At most 4 periods, a rate of at least 1E-3 and a leading exponent below 0.095 take the
+    // geometric sum below `GEOMETRIC_MIN_LEAD` (T-4349, decision 0296):
+    // probes/fin-cumprinc-underflow-ends A3, J3 (type 1) and I3, whose interest was 64 ulps off
+    // with the per-period forms, and the fresh sweep's B202
+    // (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep, 32 ulps off before). At a rate of
+    // 0.1 one period from nper (lead `ln 1.1`, above the band) the cut's form stays Excel's
+    // (fin-cumprinc-underflow-ends C2).
+    check(&[
+        (
+            "A1",
+            "=CUMPRINC(0.01,1E6,100000,1E6-2,1E6,0)",
+            "-2940.9852072355557",
+        ),
+        (
+            "A2",
+            "=CUMPRINC(0.01,1E6,100000,1E6-2,1E6,1)",
+            "-2911.866541817382",
+        ),
+        (
+            "A3",
+            "=CUMIPMT(0.01,1E6,100000,1E6-2,1E6,0)",
+            "-59.01479276444434",
+        ),
+        (
+            "A4",
+            "=CUMIPMT(0.00222502451804916,33,104329.5031,10,13,1)",
+            "-638.990724797266",
+        ),
+        (
+            "A5",
+            "=CUMPRINC(0.1,1E6,100000,1E6-1,1E6,0)",
+            "-17355.371900826445",
+        ),
+    ]);
+}
+
+#[test]
 fn the_interest_is_pmt_times_the_periods_less_cumprinc() {
     // Excel's CUMIPMT is its own PMT times the period count less its own CUMPRINC, and a type 1
     // range from period 1 is built from the range from period 2 (`PMT·(e-1) - CUMPRINC(..,2,e,1)`):

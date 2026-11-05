@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: S
 tier: opus
-depends_on: [T-4401]
+depends_on: []
 ---
 
 ## Goal
@@ -29,8 +29,8 @@ PERCENTOF `#DIV/0!` and a two-argument LAMBDA `#VALUE!`.
   PERCENTOF is `#DIV/0!` and the two-argument LAMBDA's cell `#VALUE!`; ours passes an empty set (`2, 4 / `,
   Calc!D7).
 - Cells: probes/t4382-pivotby-intransitive-paths Calc!C2, C4, C5, C7, C12, C14, D2, D4, D5, D7, D10, D11, D12, D14,
-  D16, D17, D18, D19, D21, D22, D23, D24, D25, D27, D29, D30, E16, E17, E18, E19, E21, E22, E23, E24, E25, E27,
-  E29, E30.
+  D17, D18, D19, D22, D23, D24, D25, D27, E17, E18, E19, E22, E23, E24, E25, E27 (D16, D21, D29, D30, E16, E21,
+  E29 and E30 pass since T-4359).
 
 ## Acceptance criteria
 - [ ] Every probes/t4382-pivotby-intransitive-paths cell named in Context passes, or the misses are recorded in

@@ -43,11 +43,12 @@ class) has not been checked on are probed against Excel, and match it or carry a
 - Findings, in docs/excel-semantics/coercion.md "PIVOTBY's other paths on intransitive runs (T-4382)":
   - the subtotal error gate (one function over two value columns) is the leaf buckets', as `Grid::has_records`
     decides: 12 of 15 gate cells pass, and the three misses are a placement defect (T-4403: Calc!B2, B5, B14);
-  - row subtotals hold the records that reached the row class, and a level-2 column subtotal whose class no
-    record reached holds every record of the line (T-4401: 25 cells);
+  - row subtotals hold the records that reached the row class (its 16 cells pass since T-4359, #3409, which
+    merged during this task), and a level-2 column subtotal whose class no record reached holds every record of
+    the line (T-4401: 9 cells);
   - relative_to 3 and 4 take the parent subtotal's records by that rule, and an empty parent set is PERCENTOF
-    `#DIV/0!` and a two-argument LAMBDA `#VALUE!` (T-4402: 38 cells).
+    `#DIV/0!` and a two-argument LAMBDA `#VALUE!` (T-4402: 30 cells; 8 more pass since T-4359).
   - docs/research/t4382/score.py gives 214 of 214 first-field subtotal and parent cells with the rule, chosen on
     them; T-4401 and T-4402 owe its hold-out.
-- Eval delta: probes known failures 4898 -> 4964 (66 new-coverage failures in the new case, 0 regressions), all
-  owned by T-4401, T-4402 and T-4403.
+- Eval delta: probes 129 new cells, 87 pass on main after T-4359; 42 new-coverage failures, 0 regressions, all
+  owned by T-4401 (9), T-4402 (30) and T-4403 (3).

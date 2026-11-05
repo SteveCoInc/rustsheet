@@ -43,5 +43,5 @@ has a leaf no record reaches.
   columns are then looked up on their own line.
 - Unit test `moved_subtotal_cell_beside_a_leaf_no_record_reaches` (test_fn_pivotby.rs) is Calc!B2's run.
 - coercion.md's T-4382 gate bullet lists the gate cells and records the fix.
-- Eval delta: probes known failures 4964 -> 4961 (fixed probes/t4382-pivotby-intransitive-paths Calc!B2, B5,
+- Eval delta: probes known failures in the case 42 -> 39 (fixed probes/t4382-pivotby-intransitive-paths Calc!B2, B5,
   B14), 0 regressions.
