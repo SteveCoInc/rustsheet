@@ -46,16 +46,3 @@ has a leaf no record reaches.
 - Eval delta: probes known failures in the case 42 -> 39 (fixed probes/t4382-pivotby-intransitive-paths Calc!B2, B5,
   B14), 0 regressions.
 
-## Landing notes
-- PR #3434 (draft), head 7d8e06481 before this notes commit; stacked on #3426 (T-4382), which was in the merge
-  queue at 55948e44 (after a `make catch-up`) when the session's landing window closed (2026-11-05 ~23:00 UTC).
-- Reviewers on 7d8e06481 (T-4403's own diff against the T-4382 branch): security, design and excel-fidelity all
-  APPROVE (design's MINOR on B14 in two lists is not a defect: B14 is a gate block and a moved-cell miss). CI has
-  not run on this branch's latest head as a ready PR.
-- Next step: once #3426 merges, merge `origin/main` into this branch. Expect a conflict only in
-  `eval/baseline/probes.txt` (main's catch-up re-recorded it): take main's file and drop the three lines
-  `F probes/t4382-pivotby-intransitive-paths.case.json Calc!B2`, `Calc!B5`, `Calc!B14`, or run `make catch-up
-  PR=3434`. Then mark #3434 ready, wait for green CI and enqueue. A clean merge of main and this notes commit need
-  no re-review.
-- Do not redo: the leaf-id fix and its unit test are verified (`cargo test -p rustsheet_engine --lib pivot`: 88
-  passed; `make eval-baseline`: fixed 3, 0 regressions).
