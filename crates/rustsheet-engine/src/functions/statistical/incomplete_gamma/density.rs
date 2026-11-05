@@ -3,8 +3,8 @@
 
 use super::super::loader::stirlerr_exact;
 use super::{
-    excel_ratio_exponent, gamma_prefactor, stirling_prefactor, Exponent, DIRECT_SHAPE_MAX,
-    NEAR_MODE,
+    excel_away_from_mode, excel_ratio_exponent, gamma_prefactor, rlog, stirling_prefactor,
+    Exponent, DIRECT_SHAPE_MAX, NEAR_MODE,
 };
 
 /// The smallest shape below [`DIRECT_SHAPE_MAX`] at which the density above the mode takes Excel's
@@ -54,7 +54,24 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
     {
         return Some(stirling_prefactor(a, excel_ratio_exponent(a, y), stirlerr_exact(a).0) / x);
     }
+    if form == Exponent::Excel && a >= DIRECT_SHAPE_MAX && !excel_away_from_mode(a, y, form) {
+        return Some(mode_density(a, x, y));
+    }
     Some(gamma_prefactor(a, y, form) / x)
+}
+
+/// The large-shape density near the mode, in Excel's chain: exp(-c(a) - a rlog(y/a)) / sqrt(2 pi a)
+/// times (a / x), one exponential of the summed exponent, the Stirling error c taken exact, and the
+/// shape over the raw argument last (T-4296). At x = a (exponent 0) it is Excel's bit for bit at
+/// 40 fit shapes from 20 to 1E7, the 40 hold-out shapes and the fit shapes at scale 3
+/// (probes/t4296-gamma-density-at-mode A1:C40, excel-graph 2026-11-05), where the prefactor's
+/// sqrt(a / 2 pi) exp(-c) / x is 0 to 1 ulp off at 18 of 40. Away from x = a the exponent still
+/// differs from Excel's by about half an ulp of ln(x/a) per unit of shape (T-4290), so most
+/// cells there stay a few ulp off; the chain is bit-exact at 288 of 1,281 probed window densities
+/// against 162 for the prefactor's (docs/research/t4296/score.py).
+fn mode_density(a: f64, x: f64, y: f64) -> f64 {
+    let exponent = -a * rlog(a, y) - stirlerr_exact(a).0;
+    exponent.exp() / (2.0 * std::f64::consts::PI * a).sqrt() * (a / x)
 }
 
 #[cfg(test)]
@@ -74,6 +91,24 @@ mod tests {
                 gamma_density(a, x, 1.0),
                 Some(excel),
                 "GAMMA.DIST({x},{a},1,FALSE)"
+            );
+        }
+    }
+
+    #[test]
+    fn at_the_mode_the_density_is_excel_s_window_chain() {
+        // exp(-c(a)) / sqrt(2 pi a) * (a / x) at x = a, Excel's bits where sqrt(a / 2 pi) exp(-c) / x
+        // is 1 ulp off (probes/t4296-gamma-density-at-mode A32, C32, A36, B34; T-4296).
+        for (x, a, scale, excel) in [
+            (3000.0, 3000.0, 1.0, 0.007_283_453_882_974_526_5),
+            (9000.0, 3000.0, 3.0, 0.002_427_817_960_991_508_7),
+            (12345.5, 12345.5, 1.0, 0.003_590_482_318_690_912_5),
+            (108.422, 108.422, 1.0, 0.038_284_022_269_937_386),
+        ] {
+            assert_eq!(
+                gamma_density(a, x, scale),
+                Some(excel),
+                "GAMMA.DIST({x},{a},{scale},FALSE)"
             );
         }
     }
