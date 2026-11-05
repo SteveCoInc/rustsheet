@@ -87,7 +87,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
 - **Emptying:** a scalar WEEKNUM with return_type 12-16 (Tuesday to Saturday starts are never
   kept), one with an always-#NUM! return_type (0, 3-10, 18-20; probed 0, 3, 10, 18, 20), and any WEEKNUM that lifts over an
   array, valid types included (`SUM(WEEKNUM(100,{2,2}))`, `SUM(WEEKNUM({100,101},2))`).
-- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21): with a
+- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21; refined by T-4289: not every anchor does, see "Which calls empty WEEKNUM's state" below): with a
   dynamic-array formula between a reader and the setter that runs before it in the order, the
   reader is `#NUM!` (OFFSET, TRANSPOSE, TRIMRANGE, CHOOSEROWS or CHOOSECOLS, none of them
   calling WEEKNUM). In the evidence none of them spilled: each is `#SPILL!`, an error or a 1×1
@@ -99,7 +99,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
   c4edd76f46980c5f A307 and fde83d52a9d1fc63 A131 and A359, all `#NUM!`; the four readers with no
   dynamic-array formula in between read the setter (121a7c17092038d9 A238 = 33, 3e51213f35889d06 A74,
   c96ac1ada46179c4 A219 and A295). Whether it is the spill itself or where Excel runs the anchor
-  that empties it is open (T-2070).
+  that empties it is open (T-2070); T-4289 answers it, see "Which calls empty WEEKNUM's state" below.
 - **No effect:** a call whose serial is an error (`WEEKNUM(-1,2)`, `WEEKNUM(-1,0)`,
   `ISOWEEKNUM(-1)`), a `#VALUE!` return_type (`TRUE`, `"x"`), a call IF does not run, and WEEKDAY of
   any return_type.
@@ -149,6 +149,55 @@ lifts over one (we leave the state as it is), where a spilling formula sits
 in the order, WEEKNUM in a defined name, LET or LAMBDA, conditional formatting formulas, and
 a return_type in (-1, 0) (truncates to 0, so presumably empties), and whether a reference to an
 uncalculated cell in an IF branch that is not taken also moves the cell.
+
+### Which calls empty WEEKNUM's state (T-4289, VERIFIED)
+Rule: a dynamic-array formula, spilling or not, does NOT empty WEEKNUM's state as such; some calls do, and they are not
+AMORDEGRC's (financial.md "AMORDEGRC below period 1"). Layout: A1 `=WEEKNUM(100,99)`, A2 the formula, A3
+`=WEEKNUM(100,2)` (Monday); the reader reads 16 when A2 keeps the state, `#NUM!` when it empties it.
+- Keep (16): `=1`, `=SEQUENCE(1,2)`, `=SEQUENCE(2,1)` (`#SPILL!`), `=SUM(SEQUENCE(2))`, `=SORT({3,1})`, `=UNIQUE({1,1})`,
+  `={1,2}`, `=TRANSPOSE({1,2})` (`#SPILL!`), `=LET(x,{1,2},x)`, `=LAMBDA(x,x)(1)` and `({1,2})`, `=XLOOKUP(1,{1,2},{5,6})`,
+  `=MMULT({1,2},{3;4})`, `=INDEX({1,2},1)`, `=MDETERM(..)`: 26 of the 27 sheets of
+  probes/weeknum-stale-between-calls (the exception is `=TEXTJOIN(",",1,1,2)`, which empties). A spill does not empty it.
+- Empty (`#NUM!`) with a range argument C1:D2: `CHOOSEROWS(C1:D2,1)`, `CHOOSECOLS(C1:D2,1)`, `TRIMRANGE(C1:D2)` and
+  `(C1:C2)`, `SORT(C1:D2)`, `UNIQUE(C1:D2)`, `ARRAYTOTEXT(C1:D2)`.
+- Empty with scalar arguments: `TEXTJOIN(",",1,1)`, `TEXTJOIN(",",1,1,2)`, `CONCAT(1,2)`.
+- Keep with a range argument: `TRANSPOSE(C1:D2)`, `TRANSPOSE(C1)`, `OFFSET(C1:D2,0,0,1)`, `OFFSET(C1,0,0)`, `INDEX(C1:D2,1,1)`,
+  `=C1:D2`, `SUM(C1:D2)`, `TEXTJOIN(",",1,C1:D2)`, `CONCAT(C1:D2)`, `SEQUENCE(1,2)+C1`, `OFFSET(C1:D2,2,2,3)` (`#SPILL!`). Also `SUM(TRANSPOSE(C1:D2))`, `SUM(OFFSET(C1:D2,0,0,1))` and `TRANSPOSE(C1:C2)`.
+A spilling anchor runs at its own place, not elsewhere: `CHOOSEROWS(C1:D2,1)` spills 1x2 and empties the state. The gen-m6 `#NUM!` readers are probably explained by another call between reader and setter (e.g. CHOOSEROWS in 9c615d338d990644 A26), not by the OFFSET; cross-sheet versus same-sheet ranges is unprobed.
+So the earlier T-2068 reading (every dynamic anchor empties) is wrong for TRANSPOSE and OFFSET, which keep it here; the
+argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJOIN/CONCAT the other way round), and why
+is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
+2026-11-05.
+
+The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, excel-graph 2026-11-05,
+same layout) give the rule per function. It is neither a number-to-text conversion (`=1&2`, `TEXT(1,"0")`,
+`FIXED(1)` and `VALUE("1")` keep it; `CONCAT("a","b")` empties it) nor "a range argument" alone:
+- Always empty: CHOOSEROWS, CHOOSECOLS, TOCOL, VSTACK and TAKE with a constant array, one cell and a range
+  (`CHOOSEROWS({1,2;3,4},1)`, `CHOOSEROWS(C1,1)`, `TOCOL({1,2})`, `TAKE(C1,1)`, ...); TRIMRANGE with one cell and
+  ranges (`TRIMRANGE(C1)`, `C1:C2`, `C1:D2`); HSTACK, DROP, TOROW, WRAPROWS and EXPAND probed with `C1:D2` only (their
+  other shapes are taken to empty it too, unprobed).
+- SORT and UNIQUE empty it with a multi-cell range (`SORT(C1:C2)`, `UNIQUE(C1:C2)`, `SORT(E1:F2)` of texts,
+  `SORT(C1:D2,1,-1)`); a constant array or one cell keeps it (`SORT({3,1})`, `SORT(C1)`, `UNIQUE(C1)`).
+- SORTBY empties it unless its array is one cell: `SORTBY({1,2},{2,1})` and `SORTBY(C1:C2,{2;1})` empty it,
+  `SORTBY(C1,1)` keeps it.
+- ARRAYTOTEXT empties it only with a range of more than one row and more than one column: `ARRAYTOTEXT(C1:D2)`
+  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (a one-row range is unprobed; we keep it).
+- CONCAT and TEXTJOIN empty it unless one of the joined arguments is a reference: `CONCAT("a","b")`, `CONCAT(1)`,
+  `CONCAT({1,2})`, `CONCAT("a",1)`, `CONCAT(C1&"")` and `TEXTJOIN(",",1,{1,2})` empty it; `CONCAT(C1)`,
+  `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))`, `TEXTJOIN(",",1,C1,"x")`, `TEXTJOIN(",",1,C1:D2,C1)` and
+  `TEXTJOIN(C1,1,C1)` keep it. That TEXTJOIN's delimiter and ignore_empty do not count is unprobed (no case has a
+  reference delimiter and no joined reference, such as `TEXTJOIN(C1,1,"a")`); we read only the joined arguments.
+- Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
+- A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
+  `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
+Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every function call (`call_with_order_effects`), holds this table; an
+Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
+excel_order.rs), and a dynamic-array formula as such no longer does. Unprobed: the functions not listed (WRAPCOLS,
+TEXTSPLIT, GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
+range), a CONCAT or TEXTJOIN argument that only picks a reference (IF, CHOOSE, LET) or is a name (read from
+the formula, never evaluated again, and counted as no reference), and whether the emptying comes before or after the
+call's own arguments run (we empty after).
+Status: VERIFIED (excel-graph); implemented
 
 ### WEEKNUM readers past the move budget of Excel's order (T-2068)
 Rule (Excel): the chain moves a cell that read an uncalculated formula cell to just after it, as

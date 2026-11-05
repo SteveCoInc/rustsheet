@@ -142,10 +142,12 @@ pub(crate) fn gamma_ur(a: f64, x: f64) -> f64 {
     pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate).1
 }
 
-/// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269) where it applies,
-/// else [`gamma_ur`].
+/// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269) or its form far
+/// above the mean (T-4302) where they apply, else [`gamma_ur`].
 pub(crate) fn poisson_upper(a: f64, x: f64) -> f64 {
-    excel_tail::excel_far_upper(a, x, &mut Terms(MAX_TERMS)).unwrap_or_else(|| gamma_ur(a, x))
+    excel_tail::excel_far_upper(a, x, &mut Terms(MAX_TERMS))
+        .or_else(|| excel_tail::excel_far_above_mean(a, x, &mut Terms(MAX_TERMS)))
+        .unwrap_or_else(|| gamma_ur(a, x))
 }
 
 /// statrs' `Gamma::cdf` within `terms`: its closed branches are statrs' own.
@@ -191,13 +193,7 @@ fn gamma_prefactor(a: f64, x: f64, form: Exponent) -> f64 {
         }
         return (a * x.ln() - x - super::special::ln_gamma(a)).exp();
     }
-    let below = if NEAR_MODE_BELOW_SHAPES.contains(&a) {
-        NEAR_MODE_BELOW
-    } else {
-        NEAR_MODE
-    };
-    let away_from_mode = form == Exponent::Excel && (a - x > a * below || x - a > a * NEAR_MODE);
-    let exponent = if away_from_mode && x >= a * RATIO_FORM_MIN {
+    let exponent = if excel_away_from_mode(a, x, form) && x >= a * RATIO_FORM_MIN {
         // Excel's own form away from the mode. Excel's density and cdf are 0 to 1 ulp from it at
         // shapes 25, 50 and 500 (60 to 1,083 ulp from `rcomp`, and Excel itself up to 600 ulp
         // from the true value: probes-numeric m9-gamma-dist-a50, -a500, m9-chisq-dist A51-A64;
@@ -210,6 +206,18 @@ fn gamma_prefactor(a: f64, x: f64, form: Exponent) -> f64 {
         -a * rlog(a, x)
     };
     stirling_prefactor(a, exponent, stirling_correction(a))
+}
+
+/// Whether a large-shape point takes Excel's ratio form of the prefactor's exponent rather than the
+/// accurate one: only for `Exponent::Excel`, beyond [`NEAR_MODE`] of the mode (beyond
+/// [`NEAR_MODE_BELOW`] below it at [`NEAR_MODE_BELOW_SHAPES`]).
+fn excel_away_from_mode(a: f64, x: f64, form: Exponent) -> bool {
+    let below = if NEAR_MODE_BELOW_SHAPES.contains(&a) {
+        NEAR_MODE_BELOW
+    } else {
+        NEAR_MODE
+    };
+    form == Exponent::Excel && (a - x > a * below || x - a > a * NEAR_MODE)
 }
 
 /// sqrt(a / 2 pi) exp(exponent - correction), Stirling's form of the prefactor.
@@ -672,6 +680,12 @@ fn pair_with(a: f64, x: f64, terms: &mut Terms, exponent: Exponent) -> (f64, f64
     if a >= TEMME_SHAPE_MIN || (a >= TEMME_NEAR_MODE_MIN && (x - a).abs() <= a * NEAR_MODE) {
         return charged_temme_pair(a, x, terms);
     }
+    // Only the accurate-exponent callers (POISSON's cdf, the quantiles): GAMMA.DIST and CHISQ.DIST
+    // are not accurate in the band (T-4000: 7 cells such as `GAMMA.DIST(360,500,1,TRUE)`, Excel
+    // 16.5 ulp from the truth, go visibly off on the accurate pair; T-3252's window).
+    if exponent == Exponent::Accurate && near_mode::in_band(a, x) {
+        return near_mode::near_mode_pair(a, x, terms).unwrap_or((f64::NAN, f64::NAN));
+    }
     let prefactor = gamma_prefactor(a, x, exponent);
     if prefactor == 0.0 {
         // x^a e^-x / Gamma(a) underflows: the tail that has it as a factor is 0, as statrs'
@@ -934,6 +948,7 @@ mod excel_tail;
 mod fraction;
 mod half_integer;
 mod huge_shape;
+mod near_mode;
 
 pub(crate) use closed_form::excel_small_shape_quantile;
 use closed_form::{excel_newton_quantile, excel_tiny_quantile};

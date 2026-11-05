@@ -241,13 +241,19 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<PivotGroupSpec>,
     /// Texts the row field's cache keeps as shared items though no record uses them (T-4248); the
-    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter ignores them: it
-    /// builds the cache from the source records.
+    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter appends them to the
+    /// row field's cache items after the records' own (T-4276).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unused_items: Vec<String>,
     /// The row field's `showAll` (T-4248); false when absent.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub show_all: bool,
+    /// `unused_items` for the column field (T-4311); the adapter appends them to its cache items.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub column_unused_items: Vec<String>,
+    /// The column field's `showAll` (T-4311); false when absent.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub column_show_all: bool,
 }
 
 /// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as

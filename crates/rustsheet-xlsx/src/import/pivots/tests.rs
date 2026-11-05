@@ -768,11 +768,11 @@ fn malformed_groups_skip_the_cache() {
     assert_no_cache(&grouped_parts(weeks));
 }
 
-/// Probe pivot 3 (probes/t4228-pivot-range-groups): a numeric `<groupItems>` list one item longer
-/// than the layout is not refused; Excel relabels the groups with its own labels and lists the
-/// file's items that are among them (`<0`, `>30`) first (probes/t4253-pivot-relabel-order).
+/// probes/t4249-pivot-range-group-edges: whatever the numeric `<groupItems>` list says, Excel
+/// writes its own labels (whole-number data: `0-9`, `10-19`, `20-30`); the file's items that are
+/// among them keep the file's order and come first, the others follow in layout order.
 #[test]
-fn a_numeric_group_of_the_wrong_length_is_relabeled_matching_items_first() {
+fn a_numeric_group_writes_excels_own_labels_in_the_file_order() {
     let definition = grouped_definition().replace(
         &group_items(&["<0", "0-9", "10-19", "20-30", ">30"]),
         &group_items(&["<0", "0-9", "10-19", "20-29", "30-39", ">30"]),
@@ -781,12 +781,37 @@ fn a_numeric_group_of_the_wrong_length_is_relabeled_matching_items_first() {
     let bands = &caches[0].fields[5];
     assert_eq!(
         bands.items,
-        ["<0", ">30", "0-10", "10-20", "20-30"].map(text)
+        ["<0", "0-9", "10-19", ">30", "20-30"].map(text)
     );
-    // 5 is in 0-10, 10 in 10-20, 31 past endNum, -1 before startNum.
-    assert_eq!(bands.records, [2, 3, 1, 0]);
+    // 5 is in 0-9, 10 in 10-19, 31 past endNum, -1 before startNum.
+    assert_eq!(bands.records, [1, 2, 3, 0]);
     assert!(bands
         .number_groups
         .as_ref()
-        .is_some_and(|g| !g.relabeled.is_empty()));
+        .is_some_and(|g| g.order == [0, 1, 2, 4, 3]));
+}
+
+/// A pivot field's `showAll`: on unless written `0` or `false` (ECMA-376's default; Excel writes
+/// `showAll="0"`), which decides GETPIVOTDATA on an unused shared item (T-4276, web.md).
+#[test]
+fn show_all_is_on_unless_written_off() {
+    for (attribute, show_all) in [
+        ("", true),
+        (r#" showAll="1""#, true),
+        (r#" showAll="0""#, false),
+        (r#" showAll="false""#, false),
+    ] {
+        let body = TABLE_BODY.replacen(
+            r#"<pivotField axis="axisRow">"#,
+            &format!(r#"<pivotField axis="axisRow"{attribute}>"#),
+            1,
+        );
+        let parts = with(parts(), "xl/pivotTables/pivotTable1.xml", table(&body));
+        let (_, tables) = load(&parts);
+        let [pivot] = &tables[..] else {
+            panic!("one pivot for {attribute:?}");
+        };
+        assert_eq!(pivot.fields[0].show_all, show_all, "{attribute:?}");
+        assert!(pivot.fields[1].show_all, "{attribute:?}");
+    }
 }

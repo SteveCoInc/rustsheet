@@ -128,5 +128,8 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/m9-t-inv-2t.case.json (2): Calc!A112, A126
 - probes-numeric/m9-t-nonint-df.case.json (2): Calc!A60, A66
 - probes-numeric/t1518-t-df-cut.case.json (1): Calc!A17
+- gen-m9/d8f44d556674c2fd.case.json (1): Calc!A240 (from T-0967, 2026-11-05: `TINV(0.5,(Data!B$4+-0.1))` at df 123456789,
+  Excel 0.6744897431508498, ours 0.6744897634720731; Tier A, the rounded-y back-transform at a huge df, where one ulp
+  of y moves t by millions of ulps)
 
 - [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).

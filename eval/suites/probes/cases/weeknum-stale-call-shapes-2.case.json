@@ -1,0 +1,494 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4315 round 2: the layout of probes/weeknum-stale-call-shapes (A1 reader, A2 one call, A3 Monday setter; 16 keeps, #NUM! empties), for constant and one-cell arguments of the range-array functions (CHOOSECOLS, TOCOL, VSTACK, TAKE, SORTBY, TRIMRANGE), more of them over C1:D2 (HSTACK, DROP, TOROW, WRAPROWS, EXPAND), mixed and computed CONCAT/TEXTJOIN arguments, one-column ranges, and a CHOOSEROWS IF does not run.",
+  "tags": [
+    "probe",
+    "weeknum",
+    "calc-order",
+    "T-4315",
+    "M6"
+  ],
+  "sheets": [
+    {
+      "name": "S01",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CHOOSECOLS({1,2;3,4},1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S02",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CHOOSECOLS(C1,1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S03",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TOCOL({1,2})",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S04",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TOCOL(C1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S05",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=VSTACK({1,2})",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S06",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=VSTACK(C1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S07",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TAKE({1,2},1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S08",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TAKE(C1,1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S09",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORTBY({1,2},{2,1})",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S10",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORTBY(C1,1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S11",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TRIMRANGE(C1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S12",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=HSTACK(C1:D2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S13",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=DROP(C1:D2,1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S14",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TOROW(C1:D2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S15",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=WRAPROWS(C1:D2,2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S16",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=EXPAND(C1:D2,2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S17",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TEXTJOIN(\",\",1,C1,\"x\")",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S18",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CONCAT(C1:D2,\"x\")",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S19",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CONCAT(C1&\"\")",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S20",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TEXTJOIN(C1,1,C1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S21",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TEXTJOIN(\",\",1,C1:D2,C1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S22",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=ARRAYTOTEXT(C1:C2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S23",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=UNIQUE(C1:C2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S24",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORT(C1:D2,1,-1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S25",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=FILTER(C1:C2,{TRUE;TRUE})",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S26",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CONCAT(INDEX(C1:D2,1,1))",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S27",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORT(E1:F2)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S28",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=COUNT(CHOOSEROWS(C1:D2,1))",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S29",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=CHOOSEROWS(C1:D2,1)+0",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    },
+    {
+      "name": "S30",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=IF(FALSE,CHOOSEROWS(C1:D2,1),1)",
+        "A3": "=WEEKNUM(100,2)",
+        "C1": 1,
+        "D1": 2,
+        "C2": 3,
+        "D2": 4,
+        "E1": "a",
+        "F1": "b",
+        "E2": "c",
+        "F2": "d"
+      }
+    }
+  ],
+  "expected": {}
+}

@@ -22,7 +22,7 @@ from rustsheet_tools.accuracy.eval_math import (
     write_suite,
 )
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param
-from rustsheet_tools.accuracy.tables import DroppedError, compute
+from rustsheet_tools.accuracy.tables import DroppedError, PointTimeoutError, compute
 
 
 def _case(tmp_path: Path, cells: dict[str, Any], oracle: dict[str, Any] | None) -> tuple[Path, Path]:
@@ -76,7 +76,7 @@ def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -
         "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
         "A4": "=T.DIST(1.5,2.5,TRUE)",  # non-integer df: skipped
         "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
-        "A6": "=NORM.DIST(1,0,1,TRUE)",  # no definition: not a candidate
+        "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
         "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
         "A8": "=T.DIST(B2,3,TRUE)",  # an arithmetic-over-literals formula cell: read
         "B1": 1.5,
@@ -211,3 +211,36 @@ def test_check_names_a_sidecar_that_is_not_json(tmp_path: Path) -> None:
     case, sidecar = _case(tmp_path, {"A1": "=T.DIST(1.5,3,TRUE)"}, {"A1": {"t": "n", "v": 0.5}})
     math_path(sidecar).write_text("{not json")
     assert eval_math.check_case("t/c", case, sidecar) == ["t/c: math sidecar c.math.json is not JSON"]
+
+
+def test_a_timeout_fails_the_run_and_keeps_the_sidecar_a_drop_does_not(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # T-3833: a point that is only slow is never written as "not converged". The hang guard's
+    # PointTimeoutError fails `math` and leaves the existing sidecar's value in place; a
+    # deterministic non-convergence still lists the cell under `skipped`.
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)"}
+    case, sidecar = _case(tmp_path, cells, {"A1": {"t": "n", "v": 0.5}})
+    entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
+    monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)
+    monkeypatch.setattr(eval_math, "_pool", _InProcessPool)
+    write_suite("t", workers=None)
+    held = math_path(sidecar).read_bytes()
+    assert set(json.loads(held)["sheets"]["S"]) == {"A1"}
+
+    def times_out(_definition: Definition, _args: list[Any]) -> Any:
+        raise PointTimeoutError("a point took over 600 s")
+
+    monkeypatch.setattr(eval_math, "compute", times_out)
+    with pytest.raises(PointTimeoutError):
+        write_suite("t", workers=None)
+    assert math_path(sidecar).read_bytes() == held
+
+    def does_not_converge(_definition: Definition, _args: list[Any]) -> Any:
+        raise DroppedError("not converged: dps 60 and 80 differ by 1e-30")
+
+    monkeypatch.setattr(eval_math, "compute", does_not_converge)
+    write_suite("t", workers=None)
+    data = json.loads(math_path(sidecar).read_text())
+    assert data["sheets"] == {}
+    assert data["skipped"] == {"S": {"A1": {"f": "=T.DIST(1.5,3,TRUE)", "why": "not converged"}}}

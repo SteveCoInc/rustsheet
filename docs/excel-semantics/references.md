@@ -3049,3 +3049,11 @@ Evidence: probes/t2436/computed-scalar, probes/t2436/06b4e8f5de409d5e, probes/t2
 Ours: since T-2577 (`lifts_one_by_one` for INDIRECT, as for OFFSET, TAKE and DROP).
 Status: VERIFIED (excel-graph)
 Tasks: T-2577, T-2347
+
+## A legacy single-cell INDEX shows no `@` at the root or under ABS (T-4212)
+
+`INDEX(area,<literal whole numbers>)` with a legacy (no `cm`) formula keeps its text unchanged in FORMULATEXT, at the root
+and under ABS, for every area kind: a union (`INDEX((B1:B6,C1:C6),3,1)`, `,3,1,2`), a sheet-qualified range, a 2-D
+range with row and column, and a name whose body is a range or a cell (`INDEX(Rng,3)`, `INDEX(One,1)`). Values equal the typed
+twins' (3, 30, 3, 3, 3, 3). `INDEX(B1:C6,3)` (row only, two columns) is `#REF!` in all three forms. Evidence:
+probes/t4212-legacy-index-root-area-kinds (excel-graph); the engine matches all 42 cells.

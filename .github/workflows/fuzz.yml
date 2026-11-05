@@ -34,6 +34,8 @@ jobs:
             args: -max_len=65536
           - target: cfb_container
             args: -max_len=65536
+          - target: encrypted_package
+            args: -max_len=65536
     steps:
       - uses: actions/checkout@v4
         with:

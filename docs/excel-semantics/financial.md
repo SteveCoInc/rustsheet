@@ -2637,15 +2637,37 @@ workbook-wide state written in Excel's calculation order:
   {1,0.5},0.15,1))` is 1552 (776 + 776, -ae), `{0.5,1}` 776 (0 + 776, -af). A fraction above such a call is 0, not
   the call's last element (485 for `{1,2}`, 776 for `{2,1}`, 776 for `{1,0.5}`) nor the AMORLINC's 132 below it
   (-ac to -af: A1 fraction, A2 the lifted SUM, A3 `AMORLINC(2400,39679,39813,300,1,0.15,1)`).
-  An error element inside a lifted call is unprobed (ours: it leaves the value as it was, like a scalar error, so
-  `{1,-1,0.5}` is 776, `#NUM!`, 776; T-3393).
-- Hypothesis from one probe: a dynamic-array formula in the order empties the state, as WEEKNUM's does
-  (excel_order.rs): a fraction above
-  `=SEQUENCE(1,2)` (A2) above the 485 charge (A3) is 0 (-ag; ours 485: emptying the state at the formula's place in
-  `run_excel_order` did not change it, so how the pass reaches a spilling anchor is still to be found). Not fully
-  explained: `=SEQUENCE(1,2)+AMORDEGRC(..485..)` in A2 above an AMORLINC in A3 leaves the 485 for the fraction in A1
-  (-ah, 485; ours 132), where `=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` alone below the fraction leaves it 0 (-ai; ours
-  the same). Known failures: -ag and -ah (T-3393).
+  An error element leaves the value as it was, like a scalar error: `AMORDEGRC(2400,39679,39813,300,{1,-1,0.5},0.15,1)`
+  is 776, `#NUM!`, 776, both through INDEX (-as) and spilled (-at, where a fraction below it in A2 is 0: the lifted
+  call left the state empty).
+- Some function calls empty the state, at the point Excel evaluates them and after they have read their arguments
+  (T-3393). A fraction above `=SEQUENCE(1,2)` above the 485 charge is 0 (-ag), and so it is above `=SEQUENCE(1,1)`,
+  which does not spill (-an), `=SUM(SEQUENCE(1,2))` or `=ROWS(SEQUENCE(1,2))` (-az, -bd). Within a formula the calls run
+  left to right: `=SEQUENCE(1,2)+AMORDEGRC(..485..)` leaves 485 whatever ran before it (-ah, -aj, -ak, -au, -av, -aw;
+  -ap: above a 776 charge, 485), and `=AMORDEGRC(..485..)+SEQUENCE(1,2)` leaves the state empty (-am). A charge inside
+  the call's own arguments is emptied too: `SUM(SEQUENCE(1,1,AMORDEGRC(..485..)))`, `TEXTJOIN(",",TRUE,..)`, `XLOOKUP`
+  over it and `MMULT({1},..)` leave 0 (-cx to -da). A SEQUENCE in an IF arm that is not taken empties nothing (-be).
+  Probed one call each (wrapped in SUM, between the fraction and the 485 charge, -ax to -cw):
+  - **Empty it:** SEQUENCE, RANDARRAY, MUNIT, SORT, SORTBY, UNIQUE, FILTER, XLOOKUP, XMATCH, TOCOL, TOROW, HSTACK,
+    VSTACK, TAKE, DROP, CHOOSECOLS, CHOOSEROWS, EXPAND, WRAPROWS, WRAPCOLS, TEXTSPLIT, TEXTBEFORE, TEXTJOIN, CONCAT,
+    ARRAYTOTEXT, MMULT, MINVERSE, FREQUENCY, LINEST, TREND, MODE.MULT, MAKEARRAY, MAP, BYROW, SCAN, REDUCE, and a
+    called LAMBDA (`LAMBDA(x,x)(1)`, -ct).
+  - **Keep it:** an array constant `={1,2}` (-aq), TRANSPOSE (-ax), a lifted ABS (the case after -az), COLUMN (-bg), MDETERM, LET,
+    RAND, RANDBETWEEN, INDEX, MATCH, SUMPRODUCT and ROWS (-ca, -ce, -cl to -cp, -cw), with SUM and EFFECT (-aa, -ab).
+  No principle we know of splits the two lists. It is not the spill, the array result, a function's age or an
+  `_xlfn.` prefix: MINVERSE and FREQUENCY empty it while TRANSPOSE and MDETERM keep it, and LET keeps it while
+  LAMBDA empties it. Every other function is unprobed. Ours keeps the state for those, except that every LAMBDA we
+  run empties it, so BYCOL, GROUPBY and PIVOTBY with a function argument, and a defined-name LAMBDA, empty it in ours
+  (unprobed; T-4289 probes its WEEKNUM analogue).
+- A dynamic-array formula is no exception: it acts at its place in the order like any other formula, with the
+  calls above. Ours runs the anchors before the chain, so the chain puts back, at each anchor's place, the value
+  that anchor's run left, if its run wrote the state. An anchor that reads the state still reads it before the chain
+  runs. For `=AMORDEGRC(..fraction..)+SEQUENCE(1,2)` above a 485 charge, the rule predicts 485 and ours gives 0
+  (unprobed, as it was before T-3393).
+- -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. On 2026-11-05 the same input
+  bytes (sha256 3f8ec3b8…) give 485, both in the copy -av and in a refill of -ai that is not committed. The 10-30
+  value does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above. -ai A1
+  stays a known failure against its committed 10-30 value (decision 0284, T-3610).
 - The order is Excel's fresh-load order (recalc.md "The order Excel calculates a freshly loaded workbook in"): the
   value comes from the cell below (-p: A1 is 776 from A2, not A3's 485), the cell to the right (-q: A1 is B1's 485)
   or a later sheet (-n: Sheet1!A1 is Sheet2!A1's 485); a precedent is evaluated first wherever it sits (-o: A2's
@@ -2668,16 +2690,19 @@ not a function of the workbook alone, like WEEKNUM's state after edits (decision
 different service build, or a recalc after the load in an order the calc chain set) is not known.
 Evidence: probes/amordegrc-fraction-alone-a to -g (excel-graph, 2026-10-26, T-1895) and
 probes/amordegrc-fraction-state-h to -ab (excel-graph, 2026-10-27, T-2825),
-probes/amordegrc-fraction-state-ac to -ai (excel-graph, 2026-10-30, T-2844), probes/amordegrc-a76-bisect-a to -h
+probes/amordegrc-fraction-state-ac to -ai (excel-graph, 2026-10-30, T-2844),
+probes/amordegrc-fraction-state-aj to -da (excel-graph, 2026-11-05, T-3393), probes/amordegrc-a76-bisect-a to -h
 (excel-graph, 2026-11-01, T-3590), with the earlier cells above.
 Ours: since T-2825 (decision 0131), `OrderState::amor_left_over` in evaluation.rs, set and read by
-`Model::amortization_call` (functions/financial/amortization.rs, `LeftOver`); a read runs the pass in Excel's order
+`Model::amortization_call` (functions/financial/amortization.rs, `LeftOver`), emptied by `Model::empty_amor_left_over`
+after the calls of `Function::empties_amor_left_over` and a called LAMBDA (since T-3393), with each anchor's value put
+back at its place by `run_excel_order` (`Evaluation::anchor_amor`); a read runs the pass in Excel's order
 (`excel_order.rs`, SPEC-0017), whose move budget and its DEVIATION (dates.md) apply here too. gen-m9 d912671baa1364aa
 Calc!A76 stays a known failure against its 10-28 oracle value; ours (0) is Excel's value on every 2026-11-01 run.
 Status: VERIFIED (excel-graph) on freshly loaded workbooks; after an edit in a live session the order is not
 reproducible from the file (recalc.md); as for what a lifted call and a dynamic-array formula's place in the order do to the
-value: a lifted call is VERIFIED (ours matches), a dynamic-array formula's place is only partly explained (-ag, -ah known
-failures), and gen-m9 A76's 1 is UNEXPLAINED and not reproducible (probes/amordegrc-a76-bisect-a to -h, T-3590)
+value: a lifted call and the emptying calls are VERIFIED (ours matches every 2026-11-05 cell; functions not listed
+are unprobed), and -ai's 10-30 value and gen-m9 A76's 1 are UNEXPLAINED and not reproducible (probes/amordegrc-a76-bisect-a to -h, T-3590)
 Tasks: T-1895, T-2825, T-2844, T-3393, T-3590
 
 ## AMORDEGRC past 2^22 periods
@@ -4401,9 +4426,21 @@ in the dates (ours: the value's `#VALUE!` whatever the positions, the order befo
 values against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text
 (ours: the negative date's rule, on the date truncated to a whole day). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
 Status: VERIFIED
-Implemented in: `fn_xirr`, `xirr_size_error`, `xirr_flows` (crates/rustsheet-engine/src/functions/financial/mod.rs),
-`compute_xirr`'s guess check.
+Implemented in: `fn_xirr`, `xirr_size_error` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xirr_flows`
+(functions/financial/flows.rs), `compute_xirr`'s guess check.
 Tasks: T-3312
+
+## XIRR's date bound is checked on the whole day (T-4283)
+Rule: XIRR truncates a date to a whole day before checking it against 0 and 9999-12-31 (2958465): 2958465.5 is a valid
+date and 2958466 is `#NUM!`; 0.5 is a valid date and -0.5 is `#NUM!` (it truncates to -1, like -1 itself), as for XNPV's
+fractional dates.
+Evidence: probes/t4283-xirr-whole-day-date-bound A1-A10 (excel-graph, 2026-11-05): `XIRR({-100,100.001},{2958464,2958465.5})`
+and with 2958465 are 0.003656652569770813, with 2958466 `#NUM!`; `XIRR({-100,200},{-0.5,43831})` and with -1 are `#NUM!`,
+with 0.5 or 0 0.005788829922676086; the range forms agree (A8-A10).
+Ours: matches (`xirr_flows`, pinned by `fn_xirr_date_bound_is_checked_on_the_whole_day`).
+Status: VERIFIED (excel-graph)
+Implemented in: `xirr_flows` (functions/financial/flows.rs).
+Tasks: T-4283
 
 ## XNPV's rate, first date and later dates (T-3312)
 Rule: after the rate's own checks and the size checks of "XIRR and XNPV under the gen-m9 statistical cells", XNPV is
@@ -4422,7 +4459,8 @@ Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule)
 against a non-number first date, and a non-number first date against a text, boolean or empty values element (ours:
 the first date's `#VALUE!`; only error value elements are probed, A33, A36).
 Status: VERIFIED
-Implemented in: `fn_xnpv`, `xnpv_flows`, `xnpv_dates` (crates/rustsheet-engine/src/functions/financial/mod.rs).
+Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xnpv_flows`, `xnpv_dates`
+(functions/financial/flows.rs).
 Tasks: T-3312
 
 ## FVSCHEDULE whose running product overflows: excel-graph cannot open it

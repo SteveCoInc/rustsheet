@@ -28,32 +28,54 @@ pub enum LayoutCell {
     Text(String),
     /// An item's or the grand total's value.
     Number(f64),
+    /// The value of a shown item with no record (`showAll="1"`): an empty cell
+    /// (probes/t4311-pivot-showall-column-and-groups Calc J2, J4, J7).
+    Blank,
     /// A value with no number: the aggregate's error.
     Error(Error),
 }
 
+/// How many columns wide a [`row_layout`] row is: the label and the value.
+pub const LAYOUT_COLUMNS: usize = 2;
+
 /// The most rows [`row_layout`] gives over `record_count` records: the captions, at most one item
-/// per record, and the grand total. Two columns wide.
+/// per record, and the grand total; with `showAll` on, every one of the row field's `items`
+/// instead. [`LAYOUT_COLUMNS`] wide.
 #[must_use]
-pub fn max_layout_rows(record_count: u32) -> u32 {
-    record_count.saturating_add(2)
+pub fn max_layout_rows(record_count: u32, show_all_items: Option<u32>) -> u32 {
+    show_all_items.unwrap_or(record_count).saturating_add(2)
+}
+
+/// The area a layout of `rows` rows covers from the cell `(top, left)`, as `(bottom, right)`: the
+/// one definition of a grouped pivot's footprint, shared by the facade's layout and the eval
+/// harness's input set, which passes [`max_layout_rows`]. Saturates, and `rows` of 0 covers the
+/// top row.
+#[must_use]
+pub fn layout_extent(top: u32, left: u32, rows: u32) -> (u32, u32) {
+    let columns = u32::try_from(LAYOUT_COLUMNS).unwrap_or(u32::MAX);
+    (
+        top.saturating_add(rows.saturating_sub(1)),
+        left.saturating_add(columns - 1),
+    )
 }
 
 /// The rows of a compact-form pivot over `cache` with row field `row` and one data field captioned
 /// `caption` summarizing field `data` by `function`, two cells each: the captions, per item of
-/// `row` that holds a record (in item order) its label and value (a date as its serial, the blank
-/// as `(blank)`), then the grand total. An item
-/// with no record is not shown (`showAll="0"`, the builder's and Excel's default for a new pivot;
-/// probes/t4228-pivot-range-groups). `None` when a field is not in the cache, a record is
-/// malformed or a shown item is not text, a date or the blank.
+/// `row` that holds a record (in item order) its label and value (a date or number as its value,
+/// the blank as `(blank)`), then the grand total. An item
+/// with no record is not shown with `show_all` off (`showAll="0"`, the builder's and Excel's
+/// default for a new pivot; probes/t4228-pivot-range-groups), and is shown with a blank value with
+/// it on, a group below `start` or past `end` too (probes/t4311-pivot-showall-column-and-groups
+/// Calc I1:J10). `None` when a field is not in the cache, a record is malformed or a shown item is
+/// not text, a number, a date or the blank.
 #[must_use]
 pub fn row_layout(
     cache: &PivotCache,
-    row: u32,
-    data: u32,
+    [row, data]: [u32; 2],
     function: Aggregate,
     caption: &str,
-) -> Option<Vec<[LayoutCell; 2]>> {
+    show_all: bool,
+) -> Option<Vec<[LayoutCell; LAYOUT_COLUMNS]>> {
     let row_field = cache.fields.get(row as usize)?;
     let data_field = cache.fields.get(data as usize)?;
     let mut by_item: Vec<Vec<u32>> = vec![Vec::new(); row_field.items.len()];
@@ -72,7 +94,7 @@ pub fn row_layout(
         LayoutCell::Text(caption.to_string()),
     ]];
     for (item, records) in row_field.items.iter().zip(&by_item) {
-        if records.is_empty() {
+        if records.is_empty() && !show_all {
             continue;
         }
         // A date is its serial, as Excel writes the label cell of an ungrouped date field
@@ -80,10 +102,20 @@ pub fn row_layout(
         let label = match item {
             CacheItem::Text(label) => LayoutCell::Text(label.clone()),
             CacheItem::Date(serial) => LayoutCell::Number(*serial),
+            // An ungrouped number (a numeric grouping Excel's refresh dropped,
+            // probes/t4287-pivot-group-whole-end pivot S) is its value too.
+            CacheItem::Number(value) => LayoutCell::Number(*value),
             CacheItem::Missing => LayoutCell::Text(BLANK_ITEM.to_string()),
             _ => return None,
         };
-        rows.push([label, value(records)]);
+        rows.push([
+            label,
+            if records.is_empty() {
+                LayoutCell::Blank
+            } else {
+                value(records)
+            },
+        ]);
     }
     let all: Vec<u32> = (0..cache.record_count).collect();
     rows.push([LayoutCell::Text(GRAND_TOTAL.to_string()), value(&all)]);
@@ -110,9 +142,9 @@ pub(crate) fn record_numbers(field: &CacheField, records: &[u32]) -> Result<Vec<
 
 /// The data field's aggregate over `values` (cache order). A Sum, Count, Average, Max or Min over
 /// nothing is 0 (probes/getpivotdata-real-pivot H13, probes/getpivotdata-empty-intersection);
-/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite result `#NUM!` (unknown 16). Var and `StdDev` reuse
-/// the worksheet functions' algorithm (`excel_variance`); that the pivot computes them alike is
-/// UNVERIFIED (unknown 15).
+/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite
+/// result `#NUM!` (unknown 16). Var and `StdDev` reuse the worksheet functions' algorithm
+/// (`excel_variance`); that the pivot computes them alike is UNVERIFIED (unknown 15).
 pub(crate) fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Error> {
     let n = values.len();
     let minimum = match function {
@@ -148,5 +180,21 @@ pub(crate) fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Erro
         Ok(value)
     } else {
         Err(Error::NUM)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_extent_is_the_rows_below_and_the_columns_right_of_the_top_left_cell() {
+        assert_eq!(layout_extent(4, 3, 5), (8, 4));
+        assert_eq!(
+            layout_extent(4, 3, 0),
+            (4, 4),
+            "no rows still covers the top row"
+        );
+        assert_eq!(layout_extent(u32::MAX, u32::MAX, 9), (u32::MAX, u32::MAX));
     }
 }

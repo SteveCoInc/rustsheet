@@ -3,7 +3,7 @@ id: T-0975
 title: "Normal PDF last digits: NORM.S.DIST/NORM.DIST/LOGNORM.DIST non-cumulative and PHI (24 known failures)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: S
 tier: opus
@@ -114,3 +114,36 @@ It owns the 4 visibly-off LOGNORM.DIST cells and alone lifts LOGNORM.DIST. Prior
 ## Cells added by gap triage (2026-10-30)
 `make eval` on origin/main 6a26b992a (excel-graph), `scripts/exit_owners.py`'s `owned` rule over every failing cell and the task files of origin/main and every pushed branch: 16 NORM.DIST and NORMDIST density cells of the T-1048 probe, 1 ulp off and none visibly off, that no open task names. Columns A (NORMDIST) and B (NORM.DIST) hold the same arguments and give the same value, so these are 8 points. One of them is the T-1041 lead itself: `NORM.DIST(0,0,1,FALSE)` (A14, B14) is Excel 0.3989422804014327 (the correctly rounded 1/sqrt(2*pi), the multiplier of the best form in "Normal density oracle sweep (T-1041)") and ours 0.39894228040143265. Others, Excel vs ours: A2 `NORMDIST(0.5,0,1,FALSE)` 0.3520653267642995 vs 0.35206532676429947; A6 `NORMDIST(42,40,1.5,FALSE)` 0.10934004978399575 vs 0.10934004978399574. If the visible stage closes first, these cells move to its phase-1b follow-up with the rest of the bit-level residue.
 - probes-numeric/t1048-normdist.case.json (16): Calc!A2, A4, A6, A8, A12, A14, A21, A23, B2, B4, B6, B8, B12, B14, B21, B23
+
+## Outcome
+- Kernel (a structural model, decision 0188 R4 kind (c)): NORM.DIST, NORMDIST, NORM.S.DIST and PHI share
+  `special::normal_pdf` = `EXP(-d*d/2) / s * K`, d = (x - m) / s, with Excel's own EXP (`x87_exp::excel_exp`) and K =
+  `FRAC_1_SQRT_2PI` (the correctly rounded 1/sqrt(2*pi), reused from incomplete_beta.rs), each step a double.
+  `standard_normal_pdf` is gone. Evidence and the refuted forms: docs/excel-semantics/statistics.md "Normal density is
+  Excel's EXP times 1/sqrt(2*pi), then / sigma (T-0975)" (VERIFIED; the two older entries are marked superseded).
+- Scores (docs/research/t0975/guards.py over every density cell with literal arguments): NORM.S.DIST / PHI /
+  standard NORM.DIST 795 of 797 (the miss is z = -35.875, an EXP near-tie, in NORM.S.DIST and PHI), NORM.DIST at
+  s != 1 496 of 496. libm exp times K: 767 of 797.
+- R4 guards. Disclosure first: the candidates were scored on every cached density cell before any split was fixed,
+  so the hold-out is reported, not blind; the fresh sweep is the decisive guard. Hold-out on the fit lab's split
+  (T-3360 `is_holdout`, default margin 5 points), bit-exact / within 4 ulp / within 15 digits: train 900/900/900 of
+  900 (correctly rounded 451/794/851), hold-out 390/392/392 of 393 (correctly rounded 201/344/368); the test rate
+  is 0.8 points under train, inside the margin, and beats the correctly rounded one. Fresh sweep, drawn and filled
+  after the freeze: Gate A batches `eval/accuracy/tables/{NORM.DIST,NORM.S.DIST,PHI}/r4-T-0975` (`rustsheet-accuracy
+  generate`, default strata; 165, 113 and 120 points, 86 and 58 of the first two densities) are bit-exact on every
+  point, and `rustsheet-eval accuracy` reports 0 failing and 0 table defects (17,470 points), so every point is
+  inside the Gate A envelope. probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py, 480 density
+  cells including NORMDIST, which has no table) is 480 of 480 (correctly rounded 196/382/434). A first fill of that
+  case with 17-digit literals was discarded: Excel reads typed literals to 15 digits (T-4077), so it evaluated other
+  arguments. The case was regenerated at 15 digits and refilled. No FITTED tag: nothing is fitted (K is the
+  correctly rounded constant and EXP the existing model), and no branch is tuned to cells. The one miss, z = -35.875
+  (Excel one ulp under model V6's EXP, not an F2XM1 near-tie), is recorded as unverified and handed to T-1940.
+- Eval delta: gen-m9 known failures 1929 -> 1913 (the 16 T-2256 NORMDIST lines); ironcalc-calc 282 -> 274 (NORM.DIST
+  E3, E5, E7, E35, E46, E61, NORM.S.DIST F24, PHI B5; the 12 NORM.S.DIST C lines were already gone on main); probes
+  and every other suite unchanged; 0 regressions. probes-numeric (ungated): t1048-normdist 56/56 (its 16 cells now
+  bit-exact), m9-normpdf-norm-dist-* all pass, m9-normpdf-norm-s-dist and -phi miss only z = -35.875.
+- Not done, moved to T-4321: LOGNORM.DIST's density is not this kernel (`LOGNORM.DIST(1,0,1,FALSE)` is one ulp under
+  K, and Excel is up to 34 ulp off the true density). No form scored above 46 of 121. So the visible-parity cell
+  gen-m9/b4173fe25109a238 A48 and the 3 bit-level gen-m9 LOGNORM.DIST lines, plus the 5 LOGNORM.xlsx lines, stay
+  in the baseline and T-4321 (`campaign: visible`) owns them; log_normal.rs keeps its order with a comment citing
+  the cell. The visible-parity box above stays open: its 16 T-2256 lines left the baseline, its T-2255 line went to T-4321.

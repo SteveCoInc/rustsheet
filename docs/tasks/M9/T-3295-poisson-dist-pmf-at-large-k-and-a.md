@@ -45,6 +45,8 @@ to T-3247 (`defer: phase-1b`), which keeps the rest of the pmf residue.
 
 Cells this task owns (split from T-3247):
 - probes-numeric/t2055-poisson-pmf-sweep.case.json (5): Calc!A193, A196, A197, A200, A201
+- probes/t4302-poisson-cdf-beside-pmf.case.json (6, added by T-4302, k 60 to 300 at mean/k 1.3 and 1.5): Calc!D2,
+  D25, E2, G1, G2, H1
 
 ## Acceptance criteria
 - [ ] The five cells above are within half a unit of the 15th significant digit of Excel (`make eval-show

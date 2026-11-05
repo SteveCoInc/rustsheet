@@ -5,6 +5,7 @@ Not a function family: the leading underscore keeps `defs/__init__.py` from impo
 
 from __future__ import annotations
 
+import math
 import random
 from collections.abc import Callable, Sequence
 from fractions import Fraction
@@ -73,6 +74,17 @@ def fraction_to_mpf(r: Fraction | int) -> mpmath.mpf:
 def trunc(x: mpmath.mpf) -> int:
     """`x` truncated toward zero."""
     return int(mpmath.floor(x)) if x >= 0 else -int(mpmath.floor(-x))
+
+
+def square_overflows(x: float) -> bool:
+    """Whether x*x overflows a double (from |x| = 2^512): the `#NUM!` cut of ASINH and ACOSH and of the normal
+    densities (statistics.md T-2435)."""
+    return math.isinf(x * x)
+
+
+def signed(rng: random.Random, x: float) -> float:
+    """`x` or `-x`, each with probability 1/2."""
+    return -x if rng.random() < 0.5 else x
 
 
 def signed_log_uniform(rng: random.Random, lo: float, hi: float, negative: float = 0.3) -> float:

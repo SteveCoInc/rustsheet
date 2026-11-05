@@ -953,7 +953,7 @@ fn ulps_from(value: f64, exact: f64) -> f64 {
 }
 
 /// Asserts P and Q of [`pair_with`] within `bound` ulps of each 60-digit (x, P, Q) at shape `a`.
-fn assert_near_mode(a: f64, rows: &[(f64, f64, f64)], bound: f64) {
+pub(super) fn assert_near_mode(a: f64, rows: &[(f64, f64, f64)], bound: f64) {
     for &(x, p, q) in rows {
         let (lower, upper) = pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate);
         let (dp, dq) = (ulps_from(lower, p), ulps_from(upper, q));

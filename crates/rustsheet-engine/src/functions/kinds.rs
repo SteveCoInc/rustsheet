@@ -25,6 +25,54 @@ impl Function {
         matches!(self, Function::Indirect | Function::Offset)
     }
 
+    /// The calls after which Excel's AMORDEGRC below period 1 reads 0: each empties the value the
+    /// last AMORDEGRC or AMORLINC left, once it has read its arguments (financial.md "AMORDEGRC
+    /// below period 1"; probes/amordegrc-fraction-state-ag to -da, T-3393). A called LAMBDA empties
+    /// it too (`Model::call_prepared`). Probed and keeping it: LET, MDETERM, TRANSPOSE, INDEX, MATCH,
+    /// SUMPRODUCT, ROWS, COLUMN, RAND, RANDBETWEEN, ABS, SUM, EFFECT; every other kind is unprobed and
+    /// keeps it.
+    pub(crate) fn empties_amor_left_over(&self) -> bool {
+        matches!(
+            self,
+            Function::Sequence
+                | Function::Randarray
+                | Function::Munit
+                | Function::Sort
+                | Function::Sortby
+                | Function::Unique
+                | Function::Filter
+                | Function::Xlookup
+                | Function::Xmatch
+                | Function::Tocol
+                | Function::Torow
+                | Function::Hstack
+                | Function::Vstack
+                | Function::Take
+                | Function::Drop
+                | Function::Choosecols
+                | Function::Chooserows
+                | Function::Expand
+                | Function::Wraprows
+                | Function::Wrapcols
+                | Function::Textsplit
+                | Function::Textbefore
+                | Function::Textjoin
+                | Function::Concat
+                | Function::Arraytotext
+                | Function::Mmult
+                | Function::Minverse
+                | Function::Frequency
+                | Function::Linest
+                | Function::Trend
+                | Function::ModeMult
+                | Function::Makearray
+                | Function::Map
+                | Function::Byrow
+                | Function::Scan
+                | Function::Reduce
+        )
+    }
+
     /// N or T, legacy or not: the calls that read a reference argument as its top-left cell.
     pub(crate) fn is_n_or_t(&self) -> bool {
         matches!(
