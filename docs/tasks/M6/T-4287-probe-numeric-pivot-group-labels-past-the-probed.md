@@ -56,6 +56,6 @@ matches it or the cells are owned.
   (`grouped`, `mixes_dates`), and `row_layout` writes a number item as its value. The eval adapter now sets spec number
   formats before it adds pivots as well as after the stored formulas (a stored formula's own format replaces an
   earlier one: probes/displayed-text-formats S!A16).
-- Not probed (the case builder writes neither): a label the file lists twice and a non-text group item; nor a numeric
+- Not probed (the case builder writes neither; follow-up T-4316): a label the file lists twice and a non-text group item; nor a numeric
   grouping over date cells alone (the engine keeps it). Recorded as UNVERIFIED in web.md.
 - Eval delta: probes known failures 5713 -> 5713, 4 new cases (324 cells) all pass, 0 regressions in every suite.

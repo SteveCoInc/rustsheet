@@ -213,8 +213,8 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk (T-4287): **a numeric grouping over a blank, or over date-formatted cells among numbers, is dropped** on refresh,
   as a date grouping over a blank is (below): whole data 0 to 9 by 3 with one blank record shows `-1`, `0`, `3`,
   `(blank)`, `6`, `9`, `10` (record order), and 0 to 9 by 3 over -1, 1, 4, 7, 10 with 1 and 4 formatted `yyyy-mm-dd`
-  shows each value (`4.5` too) as its own item. A numeric grouping over date cells alone is unprobed (the engine keeps
-  it).
+  shows each value (`4.5` too) as its own item. A numeric grouping over date cells alone is UNVERIFIED (T-4316; the
+  engine keeps it).
 - Relabel order (T-4253, T-4249): the file's items whose text is one of Excel's labels come first, in the file's order,
   then Excel's other labels in layout order. Excel's five labels for 0 to 9 by 3 listed as `<0`, `3-6`, `0-3`, `>9`,
   `6-9` keep that order; a list one short (`<0`, `0-3`, `3-6`, `>9` over whole data, whose labels are `0-2` ...) shows
@@ -226,7 +226,7 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
   the layout order. The match is on the whole text, ignoring case but not spacing (T-4287): `>3e+20`, `2e+20-3e+20`, ... match Excel's
   `>3E+20`, ... and keep the file's order (Excel still writes `E`), while `6 - 9`, ` 3-5` and `3-5 ` match nothing and
   come after the matched items. A label the file lists twice (the engine takes its first) and a non-text item (the
-  engine skips it) are UNVERIFIED: the case builder writes neither.
+  engine skips it) are UNVERIFIED (T-4316): the case builder writes neither.
 - Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>` with the last bound (data not all whole), each bound start + k * interval rounded to 15
   significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
   would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
@@ -310,7 +310,7 @@ Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
-Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287, T-4316
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
