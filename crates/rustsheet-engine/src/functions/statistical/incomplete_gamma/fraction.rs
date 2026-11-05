@@ -1,10 +1,11 @@
 //! The continued fraction for Q(a, x) / (x^a e^-x / Gamma(a)) above x = a + 1: the modified Lentz
 //! evaluation the double kernel uses ([`continued_fraction`]), and the same fraction in
-//! double-double evaluated backward ([`accurate_fraction`], T-3285), whose rounding does not
-//! accumulate the way the forward product's does (5.1 ulp at Q(2.5, 5), 16 at Q(1.5, 3)).
+//! double-double evaluated backward ([`accurate_fraction`], T-3285; any shape since T-4000), whose
+//! rounding does not accumulate the way the forward product's does (5.1 ulp at Q(2.5, 5), 16 at
+//! Q(1.5, 3)).
 
 use super::{continued_fraction_budget, Terms};
-use crate::x87_exp::{dd_add, dd_div, two_sum};
+use crate::x87_exp::{dd_add, dd_div, dd_mul, two_sum};
 
 /// A double-double: an unevaluated sum `hi + lo`.
 pub(super) type Dd = (f64, f64);
@@ -54,9 +55,8 @@ pub(super) fn continued_fraction(a: f64, x: f64, terms: &mut Terms) -> Option<(f
     }
 }
 
-/// The fraction of [`continued_fraction`] in double-double for a shape `a` that is a multiple of
-/// 1/2: the forward fraction sets the depth, from which [`backward_fraction`] evaluates it. `None`
-/// past `terms` or the fraction's budget.
+/// The fraction of [`continued_fraction`] in double-double: the forward fraction sets the depth,
+/// from which [`backward_fraction`] evaluates it. `None` past `terms` or the fraction's budget.
 pub(super) fn accurate_fraction(a: f64, x: f64, terms: &mut Terms) -> Option<Dd> {
     let (_, taken) = continued_fraction(a, x, terms)?;
     let depth = taken
@@ -67,15 +67,22 @@ pub(super) fn accurate_fraction(a: f64, x: f64, terms: &mut Terms) -> Option<Dd>
 
 /// The continued fraction of [`continued_fraction`] evaluated from depth `depth` up:
 /// `t(depth) = 0`, `t(i - 1) = i (a - i) / (x + 1 - a + 2i + t(i))`, then
-/// `1 / (x + 1 - a + t(0))`. Each numerator i (a - i) and offset 1 - a + 2i is exact (a
-/// multiple of 1/2 below 20, i at most twice the fraction's budget); x plus the offset is formed
-/// exactly by `two_sum`.
+/// `1 / (x + 1 - a + t(0))`. Each numerator i (a - i) and offset 1 - a + 2i is taken exactly as a
+/// double-double (`two_sum`, then the exact product), and x is added to the offset's head by
+/// `two_sum`; at a multiple of 1/2 below 20 (the half-integer callers) every low word is 0, so
+/// the steps are exact there as before the general shapes of T-4000.
 fn backward_fraction(a: f64, x: f64, depth: u32) -> Dd {
     let mut tail: Dd = (0.0, 0.0);
     for i in (1..=depth).rev() {
         let i = f64::from(i);
-        let denominator = dd_add(two_sum(x, 1.0 - a + 2.0 * i), tail);
-        tail = dd_div((i * (a - i), 0.0), denominator);
+        let numerator = dd_mul((i, 0.0), two_sum(a, -i));
+        let denominator = dd_add(offset_from(x, two_sum(1.0 + 2.0 * i, -a)), tail);
+        tail = dd_div(numerator, denominator);
     }
-    dd_div((1.0, 0.0), dd_add(two_sum(x, 1.0 - a), tail))
+    dd_div((1.0, 0.0), dd_add(offset_from(x, two_sum(1.0, -a)), tail))
+}
+
+/// x + offset for a double-double offset: `two_sum` of x and the head, then the low word.
+fn offset_from(x: f64, offset: Dd) -> Dd {
+    dd_add(two_sum(x, offset.0), (offset.1, 0.0))
 }

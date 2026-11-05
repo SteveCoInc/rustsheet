@@ -4592,8 +4592,6 @@ F	probes/t3252-gamma-prefactor-window.case.json	Calc!A106
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A107
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A110
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A111
-F	probes/t3252-gamma-prefactor-window.case.json	Calc!A113
-F	probes/t3252-gamma-prefactor-window.case.json	Calc!A114
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A115
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A116
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A117
