@@ -4,7 +4,9 @@
 use std::f64::consts::FRAC_1_SQRT_2;
 
 use super::erf::erfc;
+use super::incomplete_beta::FRAC_1_SQRT_2PI;
 use crate::arithmetic::{extended_product, extended_quotient, extended_sum};
+use crate::x87_exp::excel_exp;
 
 /// sqrt(2*pi), the normal density's normalising constant.
 pub(crate) const SQRT_2PI: f64 = 2.506_628_274_631_000_7;
@@ -20,17 +22,18 @@ pub(crate) fn normal_cdf(x: f64, mean: f64, std_dev: f64) -> f64 {
     0.5 * erfc(extended_product(-z, FRAC_1_SQRT_2))
 }
 
-/// Normal probability density function with the given mean and standard deviation.
+/// Normal probability density function with the given mean and standard deviation, one kernel
+/// for NORM.DIST, NORMDIST, NORM.S.DIST and PHI: `EXP(-d*d/2) / std_dev * K`, d = (x - mean) /
+/// std_dev in doubles, with Excel's own EXP ([`excel_exp`]) and K the correctly rounded
+/// 1/sqrt(2*pi) ([`FRAC_1_SQRT_2PI`]), each step a double. It fits 795 of the 797 cached NORM.S.DIST, PHI
+/// and standard NORM.DIST density cells (the two misses are one EXP near-tie, z = -35.875, like
+/// T-1940's F2XM1 misses), and 496 of 496 NORM.DIST cells at sigma != 1, where libm's exp times K fits 767 and
+/// the earlier `exp / (sqrt(2*pi) * sigma)` 140 (docs/excel-semantics/statistics.md "Normal
+/// density is Excel's EXP times 1/sqrt(2*pi), then / sigma (T-0975)"). At x = mean it is K
+/// itself: `NORM.S.DIST(0,FALSE)` = 0.3989422804014327. LOGNORM.DIST is not this kernel (T-0975).
 pub(crate) fn normal_pdf(x: f64, mean: f64, std_dev: f64) -> f64 {
     let d = (x - mean) / std_dev;
-    (-0.5 * d * d).exp() / (SQRT_2PI * std_dev)
-}
-
-/// Standard normal density, shared by PHI and NORM.S.DIST. This operation order reproduces Excel's
-/// cached last digits in PHI.xlsx and `NORM.S.DIST(-37.6,FALSE)` (4.0441448093482273E-308,
-/// probes/subnormal-text-and-tail-companions); `normal_pdf`'s statrs-style order does not.
-pub(crate) fn standard_normal_pdf(x: f64) -> f64 {
-    (-(x * x) / 2.0).exp() / (2.0 * std::f64::consts::PI).sqrt()
+    excel_exp(-(d * d) / 2.0) / std_dev * FRAC_1_SQRT_2PI
 }
 
 /// Whether Excel's normal density at the standardized `z` is `#NUM!` instead of its limit 0: it is
@@ -208,6 +211,17 @@ mod tests {
     fn normal_kernels() {
         close(normal_cdf(1.0, 0.0, 1.0), 0.841_344_746_068_542_9);
         close(normal_pdf(0.0, 0.0, 1.0), 0.398_942_280_401_432_7);
+    }
+
+    /// Excel's density digits, bit for bit (T-0975): `NORM.S.DIST(0,FALSE)` and
+    /// `NORM.S.DIST(1.5,FALSE)` (NORM_DIST.xlsx C7, C24), `NORM.DIST(-28,0,10,FALSE)` and
+    /// `NORM.DIST(-13,0,0.5,FALSE)` (probes-numeric m9-normpdf-norm-dist-s10, -s0p5).
+    #[test]
+    fn normal_pdf_matches_excel_bits() {
+        assert_eq!(normal_pdf(0.0, 0.0, 1.0), 0.398_942_280_401_432_7);
+        assert_eq!(normal_pdf(1.5, 0.0, 1.0), 0.129_517_595_665_891_74);
+        assert_eq!(normal_pdf(-28.0, 0.0, 10.0), 0.000_791_545_158_297_996_9);
+        assert_eq!(normal_pdf(-13.0, 0.0, 0.5), 1.289_451_994_279_570_3e-147);
     }
 
     #[test]

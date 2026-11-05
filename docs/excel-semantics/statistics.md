@@ -142,7 +142,8 @@ formulation is open.
 Evidence: `ironcalc-calc/STATISTICAL/NORM_DIST.xlsx` `NORM.S.DIST NORM.S.INV`!C3, C5, C7, C16, C17,
 C24, C25, C26, C32 (checked during T-0903).
 Update: refuted as a general rule by the T-1041 sweep, see "Normal density oracle sweep (T-1041)" below.
-Status: UNVERIFIED (refuted as a general rule; fits the 9 cached cells only; 272/369 on the T-1041 sweep)
+Status: UNVERIFIED (refuted as a general rule; fits the 9 cached cells only; 272/369 on the T-1041 sweep);
+superseded by "Normal density is Excel's EXP times 1/sqrt(2*pi), then / sigma (T-0975)" below
 Tasks: T-0975
 
 ## Normal density oracle sweep (T-1041)
@@ -163,6 +164,33 @@ Evidence: probes-numeric cases `m9-normpdf-norm-s-dist`, `m9-normpdf-phi`; compa
 `m9-normpdf-lognorm-dist` (three (m,s) pairs).
 Status: VERIFIED (observation)
 Tasks: T-0975, T-1041
+
+## Normal density is Excel's EXP times 1/sqrt(2*pi), then / sigma (T-0975)
+Rule: NORM.DIST(x, m, s, FALSE), NORMDIST(..., FALSE), NORM.S.DIST(z, FALSE) and PHI(z) are one kernel,
+`EXP(-d*d/2) / s * K`, every step a double: d = (x - m) / s, Excel's own EXP (the x87 model V6 of numbers.md
+"EXP is an x87 2^(a*log2 e) evaluation, not correctly rounded", not libm's exp), then the quotient by s, then the
+product with K = 0.3989422804014327, the correctly rounded 1/sqrt(2*pi). At s = 1 the quotient is exact, so
+NORM.S.DIST and PHI are `EXP(-z*z/2) * K` and `NORM.S.DIST(0,FALSE)` = K. Results below the normal range flush to 0
+(the sweep above). The two hypotheses above are superseded: dividing by sqrt(2*pi) in any form loses, and the
+T-1041 lead `exp(-z*z/2) * K` missed only where libm's exp and Excel's EXP differ.
+Evidence (excel-graph; scored by docs/research/t0975/guards.py over every density cell with literal arguments in
+the probes, probes-numeric and gen-m9 suites):
+- NORM.S.DIST, PHI and NORM.DIST at (0, 1): 795 of 797 bit for bit; the two misses are one point,
+  z = -35.875 (`NORM.S.DIST` and `PHI`, m9-normpdf-norm-s-dist and m9-normpdf-phi), Excel 1.3459162462827747E-280
+  against 1.345916246282775E-280, an EXP near-tie like T-1940's. libm exp times K fits 767, the earlier divisor
+  forms 604 and 139.
+- NORM.DIST at s in {0.5, 1.2, 3, 10} and elsewhere: 496 of 496. `(EXP*K)/s` fits 374, `EXP*(K/s)` 375,
+  `EXP/(sqrt(2 pi)*s)` 140 to 323 by the constant.
+- R4 guards (decision 0188; split fixed as a sha256 of case and cell, 30% hold-out): train 900 of 903 bit for bit
+  (correctly rounded 457), hold-out 390 of 390 (correctly rounded 195). Fresh sweep after the freeze,
+  probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py, 480 cells, z log-uniform in 1E-3..38 of
+  either sign, s log-uniform in 1E-3..1E3): 480 of 480 bit for bit (correctly rounded 196), all inside the Gate A
+  envelope.
+- LOGNORM.DIST's density is not this kernel: `LOGNORM.DIST(1,0,1,FALSE)` is 0.39894228040143265, one ulp under K
+  (m9-normpdf-lognorm-dist A4), and Excel's values there are up to 34 ulp off the true density (T-4321).
+Implemented in: functions/statistical/special.rs `normal_pdf`.
+Status: VERIFIED
+Tasks: T-0975, T-4321
 
 ## HYPGEOM.DIST is not exact for small integer arguments
 Rule: HYPGEOM.DIST misses the exact rational result by a few ulp even for tiny populations, so it is
