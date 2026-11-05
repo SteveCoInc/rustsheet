@@ -7542,10 +7542,8 @@ F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C6
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C7
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C8
 F	probes/t4380-unique-keep-head-holdout.case.json	Calc!C9
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B14
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B16
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B17
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B2
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B21
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B22
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B23
@@ -7558,7 +7556,6 @@ F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B33
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B35
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B39
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B41
-F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!B5
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C12
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C14
 F	probes/t4382-pivotby-intransitive-paths.case.json	Calc!C17
