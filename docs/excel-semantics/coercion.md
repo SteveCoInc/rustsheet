@@ -990,7 +990,17 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       `Tree::descend` returns the classes a row reached, `Grouping::reached_classes` keeps them, and the
       `Slot::Subtotal` arm of `Grid::cell_rows` (pivotby.rs) takes the records whose classes start with its prefix.
     - **Excel can leave such a leaf out**: over Cx Ay Ax Bx Ax (q q p p q) the columns are (`­ab`,x), (`­ab`,y)
-      only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379).
+      only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379). The cause is
+      UNIQUE, below.
+  - **UNIQUE drops Bx after Cx Ay Ax** (T-4379, probes/t4379-pivotby-repeated-unreached-leaf, excel-graph,
+    2026-11-05; 15 runs of B6's keys through UNIQUE (B), GROUPBY (C), PIVOTBY by p/q (D), by one row group (E) and
+    with `col_sort_order` -1 (F), predictions in docs/research/t4379 committed before the fill). Over Cx Ay Ax Bx
+    UNIQUE is `{"­ab","x";"ab","y"}`: Bx, which `=` Cx only, is dropped, where T-4200's merge keeps it. GROUPBY and
+    PIVOTBY build their trees on those two keys, so no third (C,x) group or column exists: the leaf is not left
+    out, it was never built. The same holds with a fifth row Ax, Cx or Bx after, and over Cx Ay Ax Ax Bx (rows 1,
+    2, 8, 9, 10). Bx is kept over Cx Ay Bx, Cx Ay Bx Ax (Bx before the Ax), Cx Ax Ay Bx Ax (the Ax before the Ay),
+    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. T-4380
+    owns the 20 cells and t4358 B6, D6.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
@@ -1004,7 +1014,8 @@ tree order and sort by their class's rank (`Group::key_order`). While no key tex
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
 (`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
-reached its class (T-4378). Not implemented: a left-out repeated leaf (T-4379) and a value sort's parent values (T-4359) on these runs.
+reached its class (T-4378). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a repeated leaf
+(T-4380), and a value sort's parent values (T-4359) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
