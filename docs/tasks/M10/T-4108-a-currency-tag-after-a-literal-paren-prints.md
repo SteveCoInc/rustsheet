@@ -3,7 +3,7 @@ id: T-4108
 title: "A currency tag after a literal paren prints before it: ([$$-409]#,##0.00) on -12 is ($12.00) in Excel, $(12.00) in ours"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -23,9 +23,12 @@ literal `(` (lexer.rs `Token::Currency`, parser.rs, format.rs). This is the form
 (excel-probe): `([$$-409]#,##0.00)`, `("x"[$€-40C]0)`, `([$$]0)`, `(\$0)` on -12 and 12.
 
 ## Acceptance criteria
-- [ ] probes/t3891-numeral-tag-render A6 and the new probe's cells pass; the rule is in
+- [x] probes/t3891-numeral-tag-render A6 and the new probe's cells pass; the rule is in
       docs/excel-semantics/number-formats.md.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Numeral suffixes (T-3891, T-4107).
+
+## Outcome
+A number section's currency symbol is now inserted into the token stream where it is written (parser.rs, as date sections already did) instead of printed first. Fractions keep the old front placement. Probe probes/t4108-currency-tag-position filled from excel-graph; rule in number-formats.md.
