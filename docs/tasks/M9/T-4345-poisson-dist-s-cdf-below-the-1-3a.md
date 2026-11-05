@@ -3,7 +3,7 @@ id: T-4345
 title: "POISSON.DIST's cdf below the 1.3a window cut (x/a 1 to 1.3), after T-4322"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
