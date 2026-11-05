@@ -15,6 +15,9 @@ use super::{Aggregate, CacheField, CacheItem, PivotCache};
 
 /// The caption above a compact-form pivot's row labels.
 pub const ROW_LABELS: &str = "Row Labels";
+/// The label of a blank item's row, and the text GETPIVOTDATA takes for that item on an
+/// ungrouped field (probes/t4236-pivot-date-groups).
+pub const BLANK_ITEM: &str = "(blank)";
 /// The label of a compact-form pivot's grand-total row.
 pub const GRAND_TOTAL: &str = "Grand Total";
 
@@ -38,10 +41,11 @@ pub fn max_layout_rows(record_count: u32) -> u32 {
 
 /// The rows of a compact-form pivot over `cache` with row field `row` and one data field captioned
 /// `caption` summarizing field `data` by `function`, two cells each: the captions, per item of
-/// `row` that holds a record (in item order) its label and value, then the grand total. An item
+/// `row` that holds a record (in item order) its label and value (a date as its serial, the blank
+/// as `(blank)`), then the grand total. An item
 /// with no record is not shown (`showAll="0"`, the builder's and Excel's default for a new pivot;
 /// probes/t4228-pivot-range-groups). `None` when a field is not in the cache, a record is
-/// malformed or a shown item is not text.
+/// malformed or a shown item is not text, a date or the blank.
 #[must_use]
 pub fn row_layout(
     cache: &PivotCache,
@@ -71,10 +75,15 @@ pub fn row_layout(
         if records.is_empty() {
             continue;
         }
-        let CacheItem::Text(label) = item else {
-            return None;
+        // A date is its serial, as Excel writes the label cell of an ungrouped date field
+        // (probes/t4236-pivot-date-groups reads `43496.9999884259`), and a blank is `(blank)`.
+        let label = match item {
+            CacheItem::Text(label) => LayoutCell::Text(label.clone()),
+            CacheItem::Date(serial) => LayoutCell::Number(*serial),
+            CacheItem::Missing => LayoutCell::Text(BLANK_ITEM.to_string()),
+            _ => return None,
         };
-        rows.push([LayoutCell::Text(label.clone()), value(records)]);
+        rows.push([label, value(records)]);
     }
     let all: Vec<u32> = (0..cache.record_count).collect();
     rows.push([LayoutCell::Text(GRAND_TOTAL.to_string()), value(&all)]);
