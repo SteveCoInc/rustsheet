@@ -19,6 +19,7 @@ use std::sync::Arc;
 use super::r#let::assign_variable_ids;
 use super::read_once::read_once;
 use crate::evaluation_limits::stack_address;
+use crate::expressions::parser::XLPM_PREFIX;
 use crate::variable_stack::Binding;
 
 /// A LAMBDA's parameters and body as `Model::lambdas` stores them, shared with the defined name
@@ -693,7 +694,7 @@ impl Model {
                 if let Node::NamedVariableKind { name, id } = n {
                     let (clean, is_optional) = if let Some(s) = name.strip_prefix("_xlop.") {
                         (s.to_string(), true)
-                    } else if let Some(s) = name.strip_prefix("_xlpm.") {
+                    } else if let Some(s) = name.strip_prefix(XLPM_PREFIX) {
                         (s.to_string(), false)
                     } else {
                         (name.clone(), false)

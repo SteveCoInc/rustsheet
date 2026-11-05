@@ -142,11 +142,13 @@ pub(crate) fn gamma_ur(a: f64, x: f64) -> f64 {
     pair_with(a, x, &mut Terms(MAX_TERMS), Exponent::Accurate).1
 }
 
-/// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269) or its form far
-/// above the mean (T-4302) where they apply, else [`gamma_ur`].
+/// POISSON's cdf Q(k + 1, mean): Excel's far upper tail ([`excel_tail`], T-3269), its form far
+/// above the mean (T-4302) or in the upper gamma window (T-4322) where they apply, else
+/// [`gamma_ur`].
 pub(crate) fn poisson_upper(a: f64, x: f64) -> f64 {
     excel_tail::excel_far_upper(a, x, &mut Terms(MAX_TERMS))
         .or_else(|| excel_tail::excel_far_above_mean(a, x, &mut Terms(MAX_TERMS)))
+        .or_else(|| excel_tail::excel_window_upper(a, x, &mut Terms(MAX_TERMS)))
         .unwrap_or_else(|| gamma_ur(a, x))
 }
 

@@ -122,6 +122,7 @@ mod test_shared_formulas;
 mod test_sheet_data_bounds;
 mod test_sheet_data_hint;
 mod test_sheet_markup;
+mod test_sheet_name_added_binding;
 mod test_sheet_qualified_ref_error;
 mod test_sheet_scoped_name_qualified;
 mod test_sheet_span_references;

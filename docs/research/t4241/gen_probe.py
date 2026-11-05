@@ -39,6 +39,20 @@ def blocks():
     return out
 
 
+def write_case(path, description, calc, data):
+    """Writes a probes case of a Calc and a Data sheet (also docs/research/t4342/gen_probe.py)."""
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": description,
+        "tags": ["M7", "probe", "text"],
+        "expected": {},
+        "sheets": [{"name": "Calc", "cells": calc}, {"name": "Data", "cells": data}],
+    }
+    with open(path, "w") as fh:
+        json.dump(case, fh, indent=1, ensure_ascii=False)
+        fh.write("\n")
+
+
 def main():
     data, calc = {}, {}
     row = 1
@@ -57,19 +71,15 @@ def main():
         calc[f"F{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},LAMBDA(v,SUM(v)),0,0),1)"
         calc[f"G{r}"] = f"=ARRAYTOTEXT(_xlfn.UNIQUE({keys}),1)"
         row = b + 1
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": "T-4241: GROUPBY on multi-field intransitive runs (A = ab, B = ab&U+00AD, C = U+00AD&ab; "
+    write_case(
+        OUT,
+        "T-4241: GROUPBY on multi-field intransitive runs (A = ab, B = ab&U+00AD, C = U+00AD&ab; "
         "A = C = B, A < B). Rows 1-18: the 18 three-row blocks of probes/t4195-groupby-intransitive, fresh. "
         "Rows 19-48: seeded four-row runs. B: ascending, ARRAYTOTEXT of the member positions; C: sort_order -1; "
         "D: sort_order 2; E: sort_order -2; F: SUM of 2^(position-1); G: UNIQUE.",
-        "tags": ["M7", "probe", "text"],
-        "expected": {},
-        "sheets": [{"name": "Calc", "cells": calc}, {"name": "Data", "cells": data}],
-    }
-    with open(OUT, "w") as fh:
-        json.dump(case, fh, indent=1, ensure_ascii=False)
-        fh.write("\n")
+        calc,
+        data,
+    )
 
 
 if __name__ == "__main__":

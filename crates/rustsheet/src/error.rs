@@ -119,9 +119,45 @@ pub enum LoadError {
     /// The file is not a valid workbook.
     #[error("invalid workbook: {0}")]
     Format(String),
-    /// The load options are inconsistent.
+    /// The load options are inconsistent, or the workbook exceeds one of their limits.
     #[error("invalid options: {0}")]
     Options(String),
+    /// The file is a password-protected xlsx and [`crate::LoadOptions::password`] is `None`.
+    #[error("the workbook is password-protected: pass a password to open it")]
+    PasswordRequired,
+    /// The password given does not open the password-protected xlsx (or is longer than the 255
+    /// UTF-16 code units a password may have).
+    #[error("the password does not open this workbook")]
+    WrongPassword,
+    /// The file is of a kind RustSheet does not read (SPEC-0031 D4).
+    #[error("unsupported file: {0}")]
+    Unsupported(UnsupportedKind),
+}
+
+/// What kind of file [`LoadError::Unsupported`] refused, so callers match on the kind, not on
+/// the message text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum UnsupportedKind {
+    /// A legacy binary Excel workbook (`.xls`, BIFF): save it as xlsx to open it.
+    LegacyBinaryWorkbook,
+    /// A password-protected xlsx encrypted in a way RustSheet does not read; the text names the
+    /// kind (e.g. "Extensible encryption", "RC4"), never the password.
+    Encryption(String),
+    /// Any other OLE compound file, or one that cannot be read as a container.
+    OtherOleFile,
+}
+
+impl std::fmt::Display for UnsupportedKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::LegacyBinaryWorkbook => {
+                f.write_str("a binary Excel workbook (.xls); save it as .xlsx to open it")
+            }
+            Self::Encryption(kind) => write!(f, "a password-protected xlsx using {kind}"),
+            Self::OtherOleFile => f.write_str("an OLE compound file that is not a workbook"),
+        }
+    }
 }
 
 /// A workbook could not be saved.

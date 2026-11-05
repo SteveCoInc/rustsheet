@@ -84,7 +84,7 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
 /// and 100 only (T-4339 probes others). Where y + a overflows the point is far from the mode
 /// (y past 1E308 at a finite shape), so it is outside: an infinite bound would take every such y
 /// in and give the density at the mode (T-4308 review).
-fn in_window(a: f64, y: f64) -> bool {
+pub(super) fn in_window(a: f64, y: f64) -> bool {
     let sum = y + a;
     sum.is_finite() && (y - a).abs() <= 0.2 * sum
 }
@@ -116,7 +116,7 @@ fn loader_density(a: f64, x: f64, deviance: f64) -> Option<f64> {
 /// t4302-poisson-cdf-r4-fresh rows 7:12), where the ratio form a ln(y/a) + (a - y) is not; below
 /// the mode the two are the same double. Excel takes the ratio prefactor at x/a = 1.5078125
 /// instead (probes/t4290-gamma-window-large-pow2 A223:C223; decision 0290, T-4339).
-fn direct_deviance(a: f64, y: f64) -> f64 {
+pub(super) fn direct_deviance(a: f64, y: f64) -> f64 {
     a * (a / y).ln() + (y - a)
 }
 
@@ -129,7 +129,7 @@ fn direct_deviance(a: f64, y: f64) -> f64 {
 /// atanh (427 and 152, one ulp of atanh off), Loader's series summed term by term (80 and 27),
 /// (y - a) v - 2a(atanh(v) - v) (the same at power-of-two shapes, 10 of 77 on the t3252 windows
 /// against 77) and every form T-4255 and T-4290 tried (statistics.md).
-fn window_exponent(a: f64, y: f64) -> f64 {
+pub(super) fn window_exponent(a: f64, y: f64) -> f64 {
     let d = y - a;
     let v = d / (y + a);
     d * v - (2.0 * a * atanh_rounded(v) - 2.0 * a * v)
