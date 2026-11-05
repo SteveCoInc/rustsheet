@@ -38,9 +38,10 @@ fn kept_subnormal_is_saved_as_zero() {
     model
         .set_user_input(0, 4, 1, "=(EXP(-745))=0".to_string())
         .unwrap();
-    // Unprobed (T-4355): a negative kept subnormal keeps its value in the file.
+    // Unprobed (T-4355): a negative kept subnormal keeps its value in the file. `0-x` keeps the
+    // sign; `-EXP(-745)` would be +2^-1074 (numbers.md "Unary minus of a tiny subnormal").
     model
-        .set_user_input(0, 5, 1, "=-EXP(-745)".to_string())
+        .set_user_input(0, 6, 1, "=0-EXP(-745)".to_string())
         .unwrap();
     // Spill and CSE paths follow the formula-cell evidence by inference (T-4355).
     model
@@ -49,20 +50,22 @@ fn kept_subnormal_is_saved_as_zero() {
     model.evaluate();
     let path = "temp_subnormal_export.xlsx";
     save_to_xlsx(&model, path).unwrap();
-    assert_eq!(cached(path, "A1"), "0");
-    // Only the value is pinned: the spelling of a number in the file is out of scope (T-2211).
-    assert_eq!(
-        cached(path, "A2").parse::<f64>().unwrap(),
-        3.307_553_003_638_408e-308
-    );
-    assert_eq!(cached(path, "A3"), "0");
-    assert_eq!(cached(path, "A5"), "0");
-    assert_eq!(
-        cached(path, "B5").parse::<f64>().unwrap(),
-        3.307_553_003_638_408e-308
-    );
-    let mut reloaded = load_from_xlsx(path, "en", "UTC", "en").unwrap();
+    // Read everything before asserting, so a failure does not leave the file behind.
+    let saved: Vec<String> = ["A1", "A2", "A3", "A5", "B5", "A6"]
+        .iter()
+        .map(|r| cached(path, r))
+        .collect();
+    let reloaded = load_from_xlsx(path, "en", "UTC", "en");
     std::fs::remove_file(path).unwrap();
+    let mut reloaded = reloaded.unwrap();
+    let full = |s: &str| s.parse::<f64>().unwrap();
+    assert_eq!(saved[0], "0");
+    // Only the value is pinned: the spelling of a number in the file is out of scope (T-2211).
+    assert_eq!(full(&saved[1]), 3.307_553_003_638_408e-308);
+    assert_eq!(saved[2], "0");
+    assert_eq!(saved[3], "0");
+    assert_eq!(full(&saved[4]), 3.307_553_003_638_408e-308);
+    assert_eq!(full(&saved[5]), -f64::from_bits(1));
     reloaded.evaluate();
     // The formulas are saved with their text, so recalculation gives 2^-1074 again.
     assert_eq!(
