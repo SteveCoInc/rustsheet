@@ -3,7 +3,7 @@ id: T-4370
 title: "TEXT fraction digits of a second at a tie: the cells T-4332's field-by-field cut still misses"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
