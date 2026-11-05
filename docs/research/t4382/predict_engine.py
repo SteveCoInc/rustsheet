@@ -1,20 +1,18 @@
 """T-4382: record the engine's values for probes/t4382-pivotby-intransitive-paths before the fill.
 
-Run from the repo root after `make build` and gen_probe.py: python3 -I docs/research/t4382/predict_engine.py. It is
-docs/research/t4344/predict_engine.py pointed at this case (predictions.tsv here).
+Run from the repo root once `make build` and gen_probe.py have run: python3 -I docs/research/t4382/predict_engine.py
+writes docs/research/t4382/predictions.tsv with docs/research/t4344/predict_engine.py's `main`.
 """
 
-import importlib.util
+from importlib import util
 
-_spec = importlib.util.spec_from_file_location(
-    "t4344_predict_engine", "docs/research/t4344/predict_engine.py"
-)
-assert _spec and _spec.loader
-engine = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(engine)
-
-engine.CASE = "eval/suites/probes/cases/t4382-pivotby-intransitive-paths"
-engine.OUT = "docs/research/t4382/predictions.tsv"
+SPEC = util.spec_from_file_location("predict", "docs/research/t4344/predict_engine.py")
+if SPEC is None or SPEC.loader is None:
+    raise SystemExit("docs/research/t4344/predict_engine.py is missing")
+predict = util.module_from_spec(SPEC)
+SPEC.loader.exec_module(predict)
+predict.CASE = "eval/suites/probes/cases/t4382-pivotby-intransitive-paths"
+predict.OUT = "docs/research/t4382/predictions.tsv"
 
 if __name__ == "__main__":
-    engine.main()
+    predict.main()

@@ -55,7 +55,8 @@ def table(value: str) -> list[list[str]]:
 
 def main() -> None:
     with open(CASE + ".case.json") as fh:
-        calc = {s["name"]: s["cells"] for s in json.load(fh)["sheets"]}["Calc"]
+        sheets = json.load(fh)["sheets"]
+    calc = next(s["cells"] for s in sheets if s["name"] == "Calc")
     with open(CASE + ".oracle.json") as fh:
         oracle = json.load(fh)["sheets"]["Calc"]
     preds = {}
