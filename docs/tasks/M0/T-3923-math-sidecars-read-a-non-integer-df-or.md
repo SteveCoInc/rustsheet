@@ -3,7 +3,7 @@ id: T-3923
 title: "Math sidecars: read the argument forms Excel accepts and the Gate A definitions refuse (a truncated df, BETA.DIST/BETA.INV's bounds, RATE's guess): about 1,050 counted sweep cells"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
