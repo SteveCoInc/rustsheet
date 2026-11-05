@@ -4411,8 +4411,7 @@ date and 2958466 is `#NUM!`; 0.5 is a valid date and -0.5 is `#NUM!` (it truncat
 fractional dates.
 Evidence: probes/t4283-xirr-whole-day-date-bound A1-A10 (excel-graph, 2026-11-05): `XIRR({-100,100.001},{2958464,2958465.5})`
 and with 2958465 are 0.003656652569770813, with 2958466 `#NUM!`; `XIRR({-100,200},{-0.5,43831})` and with -1 are `#NUM!`,
-with 0.5 or 0 0.005788829922676086; the range forms agree (A8-A10). A span to the date bound from the epoch is a solver
-`#NUM!` whatever the date (`XIRR({-100,200},{43831,2958465.5})`), so the cells start 1 day before the bound.
+with 0.5 or 0 0.005788829922676086; the range forms agree (A8-A10).
 Ours: matches (`xirr_flows`, pinned by `fn_xirr_date_bound_is_checked_on_the_whole_day`).
 Status: VERIFIED (excel-graph)
 Implemented in: `xirr_flows` (functions/financial/flows.rs).
