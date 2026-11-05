@@ -55,7 +55,7 @@ value, ours, the 50-digit math and the reason Excel's last digits cannot be deri
       keep-matched branch. Needs an oracle sweep: the cached probes are already T-4302's train and hold-out sets,
       and its fresh sweep (probes-numeric/t4302-poisson-cdf-r4-fresh) is spent, so a fit first files a
       research-lane sweep task (`make new-task`, probes suite: probes-numeric is frozen by decision 0267 item 5) and
-      depends on it.
+      depends on it. T-4376 (filed 2026-11-05) is that sweep: its rows 14:25 cover x/a 1.5 to 2.5.
 - [ ] The fixed cells' lines disappear from eval/baseline/probes.txt with no new ones.
 - [ ] `make check` green; reviewers approve.
 
