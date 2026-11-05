@@ -3,7 +3,7 @@ id: T-3864
 title: "Correct the BETA.INV Gate A quirk wording from T-3578's review"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
