@@ -67,6 +67,11 @@ is 33031.07777777778 in ours) and our FTEST is 0.206831318254199; the rate two u
 value in every product order, so the innermost difference is FTEST, about 2 ulp low (the same class as the cells above).
 - gen-m9/932b33b1ef8b7608.case.json (1): Calc!A168
 
+Gap triage 2026-11-05 (`make eval` on origin/main c3de9423b): 1 more known-failure cell no open task named, the same
+class (F.TEST as the outer call, 1 ulp). gen-m9/8dd2312c96effb1b Calc!A341 `=F.TEST(Data!A7:D8,Data!C8:E10)`: Excel
+1.8768433447187109E-93, ours 1.8768433447187106E-93.
+- gen-m9/8dd2312c96effb1b.case.json (1): Calc!A341
+
 ## Acceptance criteria
 - [ ] These 32 known-failure lines (the 31 F.TEST and FTEST cells plus the T-2676 cell 932b33b1ef8b7608 A168) disappear from eval/baseline/gen-m9.txt (`make eval-baseline`) with no new ones in any
       baseline, or the Outcome records the candidates scored with the f-test fit and their bit-exact counts (decision
