@@ -234,7 +234,7 @@ pub fn numerals(tag: &str) -> Numerals {
 /// hex after the comma holds the numeral byte of [`Numerals::from_byte`] above its low byte, so
 /// `,200` prints Arabic-Indic digits, `,D00` Thai and `,1200` Khmer, and `,0` ASCII
 /// (probes/t3891-numeral-tag-render A1:A30, excel-graph 2026-11-04). `,2000` prints fullwidth
-/// digits there although byte 32 is ASCII in the LCID form (A28; TODO(T-4107)). Only the digits
+/// digits there, as byte 32 does in the LCID form (A28; probes/t4107-numeral-2000-suffix). Only the digits
 /// are read this way: the locale part resolves as the whole tag always has (`[$-40C,1]` prints
 /// English names; probes/text-locale-date-names A106).
 fn numeral_suffix(tag: &str) -> Option<(&str, &str)> {

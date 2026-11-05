@@ -103,6 +103,25 @@ static CHINESE_FORMAL: CjkStyle = CjkStyle {
     field_tens: true,
 };
 
+/// Byte 32: Chinese structure (`一千○一十`) written with fullwidth digits (`１千０１十`), the byte
+/// `,2000` and `[$-20000409]` carry (probes/t4107-numeral-2000-suffix rows 28-34, 70-73).
+static FULLWIDTH_CHINESE: CjkStyle = CjkStyle {
+    digits: ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
+    units: ['十', '百', '千'],
+    myriads: ['万', '亿', '兆'],
+    one_before_unit: true,
+    one_before_field_ten: false,
+    zero_in_gap: true,
+    field_tens: true,
+};
+
+/// Byte 35: [`FULLWIDTH_CHINESE`] with the traditional 萬 and 億 (probes/t4107-numeral-2000-suffix
+/// rows 35-41, 74-80).
+static FULLWIDTH_TRADITIONAL: CjkStyle = CjkStyle {
+    myriads: ['萬', '億', '兆'],
+    ..FULLWIDTH_CHINESE
+};
+
 /// The largest integer spelled out in units and myriads (to 兆 groups). Past it the count of 兆
 /// prints digit by digit before 兆: `[$-1B000409][s]` of 1E11 (8.64E15) is "八千六百四十兆", of
 /// 1.2E11 (1.0368E16) "一〇三六八兆" (probes/t3718-cjk-numeral-unprobed rows 20-25).
@@ -148,6 +167,11 @@ impl Numerals {
             29 => Numerals::Cjk(&FULLWIDTH),
             30 => Numerals::Cjk(&CHINESE),
             31 => Numerals::Cjk(&CHINESE_FORMAL),
+            // Bytes 32-35 repeat the CJK systems of 29-31 in a new order (probes/t4107-numeral-2000-suffix).
+            32 => Numerals::Cjk(&FULLWIDTH_CHINESE),
+            33 => Numerals::Cjk(&CHINESE),
+            34 => Numerals::Cjk(&CHINESE_FORMAL),
+            35 => Numerals::Cjk(&FULLWIDTH_TRADITIONAL),
             _ => Numerals::Ascii,
         }
     }
