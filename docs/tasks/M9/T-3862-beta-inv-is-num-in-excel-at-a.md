@@ -16,8 +16,8 @@ BETA.INV returns `#NUM!` where Excel does at a huge alpha (above about 1E+160) a
 ## Context
 - Gate A table accuracy/BETA.INV/s1 (T-3578, excel-graph 2026-11-02): 12 log-uniform points A180, A181, A187, A188,
   A190, A191, A192, A193, A194, A196, A197 and A198, for example `BETA.INV(1.67153110503488E-76,1.06481105633372E+183,
-  1.82075780727763E-162)`. Excel is `#NUM!`; the engine and the math are 1 - 2^-53 (the true quantile rounds to just
-  below 1). They are known failures in eval/accuracy/known-failures.tsv owned by this task.
+  1.82075780727763E-162)`. Excel is `#NUM!`; the math is exactly 1 (the true quantile rounds to 1) and the engine returns
+  1 - 2^-53. They are known failures in eval/accuracy/known-failures.tsv owned by this task.
 - statistics.md "BETA.INV at a huge shape is AS 109's Newton search (T-1538)" says the search converges near 1 at a
   huge first shape (shapes up to 5E9 and 1E10 there). These points have alpha from 5E+161 to 4E+296 and p from 1E-277
   to 8E-10: find where Excel's search fails (a density or ln B that overflows, a start that cannot move), probe the

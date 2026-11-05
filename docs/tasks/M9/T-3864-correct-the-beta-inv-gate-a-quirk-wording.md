@@ -3,7 +3,7 @@ id: T-3864
 title: "Correct the BETA.INV Gate A quirk wording from T-3578's review"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -29,8 +29,11 @@ statistics.md "BETA.INV's Gate A table", the BETA.INV s1 lines of eval/accuracy/
 - Only the note column of known-failures.tsv changes (no point is added or removed); decision 0199.
 
 ## Acceptance criteria
-- [ ] The three corrections are made; `rustsheet-eval accuracy` still reports 0 failing and the same 86 known failures.
+- [ ] The three corrections are made; `rustsheet-eval accuracy` still reports 0 failing and the same known failures (27 of them BETA.INV/s1).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Engine fixes (T-3351, T-2808, T-3862).
+
+## Outcome
+The three corrections are made, checked against eval/accuracy/tables/BETA.INV/s1.{oracle,math}.json: (1) class 4 says the math is exactly 1 and the engine 1 - 2^-53, in statistics.md, the 12 known-failure notes and T-3862's Context; (2) A123 leaves class 1 and is recorded as a correctly rounded Excel value with only the engine's `#NUM!` failing (note and entry); (3) `quantile`'s docstring says the sub-double bound applies only for p <= 1/2. Only note columns of known-failures.tsv changed. Eval delta: none.
