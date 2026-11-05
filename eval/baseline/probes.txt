@@ -2293,6 +2293,7 @@ C	probes/t4333-count-ulp-scan.case.json	56
 C	probes/t4342-groupby-tree-holdout.case.json	1107
 C	probes/t4344-groupby-descending-search.case.json	1200
 C	probes/t4347-numeral-bytes-24-27.case.json	140
+C	probes/t4354-indirect-structref-sheet-prefix.case.json	19
 C	probes/t4358-pivotby-unreached-column-leaf.case.json	475
 C	probes/t4375-xnpv-refused-first-and-one-cell.case.json	114
 C	probes/t4378-pivotby-subtotal-holdout.case.json	450

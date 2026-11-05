@@ -38,8 +38,12 @@ and refuses an unqualified one. With `Sales` on S!A1:D5 (header row 1, data rows
 - Unqualified text is `#REF!` everywhere, also in a cell inside the table: `[Qty]`, `[@Qty]`, `[#Data]`.
 - Names and specifiers match ignoring case (`sales[qty]`, `SALES[QTY]`, `Sales[#all]`, `Sales[#DATA]`).
 - A sheet prefix is ignored: `S!Sales[Qty]`, `'S'!Sales[Qty]`, `S!Sales[#Data]`, `S!Sales` resolve, and so does
-  `P!Sales[Qty]` though sheet P does not hold the table. A prefix naming no sheet is unprobed (the engine
-  keeps it `#REF!`).
+  `P!Sales[Qty]` though sheet P does not hold the table. But the prefix must name a sheet, and unquoted it follows
+  the defined-name rule (letters, digits, `_` and `.` only): `Nope!Sales[Qty]`, `'Nope'!Sales[Qty]`,
+  `'No Sheet'!Sales[Qty]` and `No Sheet!Sales[Qty]` are `#REF!`, and so are `Co A!TabA[Qty]`, `P&L!TabB[Qty]` and
+  `O'B!TabC[Qty]` though the sheet holds the table, while `'Co A'!TabA[Qty]`, `'P&L'!TabB[Qty]`, `'O''B'!TabC[Qty]`
+  and `'Co A'!Sales[Qty]` (another sheet's table) resolve (probes/t4354-indirect-structref-sheet-prefix P!A1:A19,
+  excel-graph 2026-11-05, T-4354).
 - `a1` FALSE changes nothing: `INDIRECT("Sales[Qty]",FALSE)`, `INDIRECT("Sales",FALSE)`, `INDIRECT("Sales[#All]",FALSE)`
   resolve as with TRUE.
 - Whitespace follows the A1 rule ("INDIRECT reference text: where spaces are allowed"): a leading space is `#REF!`
@@ -51,7 +55,7 @@ and refuses an unqualified one. With `Sales` on S!A1:D5 (header row 1, data rows
 Evidence: probes/t3394-indirect-structref-shapes (S!D2:D4, F3:L3, F8:L8; P!A1:A27, B1:B9, C1:C11; each cell the
 first row, first column, rows and columns of the area; excel-graph 2026-11-05, T-3394).
 Status: VERIFIED (Excel for the web)
-Implemented in: `indirect_structured` (crates/rustsheet-engine/src/functions/lookup_and_reference/mod.rs), tried after
+Implemented in: `indirect_structured` (crates/rustsheet-engine/src/functions/lookup_and_reference/indirect_fallbacks.rs), tried after
 the defined-name fallback in A1 and R1C1 mode.
 
 ## INDIRECT resolves a defined name that holds a reference
