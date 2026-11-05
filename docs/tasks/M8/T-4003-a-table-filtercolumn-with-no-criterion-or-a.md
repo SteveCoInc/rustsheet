@@ -3,7 +3,7 @@ id: T-4003
 title: "A table filterColumn with no criterion or a colId outside the table leaves its hidden rows unfiltered for SUBTOTAL and AGGREGATE"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,12 +30,29 @@ criterion inside the table, as Excel does.
   write the probes case and fill it.
 
 ## Acceptance criteria
-- [ ] A probes case (excel-graph) covers a criterion-less filterColumn, a colId past the width, and a values filter,
+- [x] A probes case (excel-graph) covers a criterion-less filterColumn, a colId past the width, and a values filter,
       each with hidden rows and SUBTOTAL 3, 9, 103 and 109; it passes.
-- [ ] What the API's filtered table with no criterion and the column-delete fallback should be is decided and written
+- [x] What the API's filtered table with no criterion and the column-delete fallback should be is decided and written
       in docs/excel-semantics (numbers.md "SUBTOTAL and AGGREGATE over hidden and filtered rows").
 - [ ] `make check` green; reviewers approve.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - Re-applying a filter. Top 10 and other criteria the export drops (T-4004).
+
+## Outcome
+- Durable evidence: spec2xlsx gains `"filter_col_id"` and `"filter_criterion": false` (TableSpec in
+  crates/rustsheet-eval/src/case.rs, docs/architecture/eval-harness.md), and probes/t4003-filter-column-criterion
+  (5 sheets, 30 cells, excel-graph 2026-11-05) covers a values filter, a criterion-less filterColumn on columns 0 and
+  1, a values filter under `colId` 5 of a 2-column table, and a table without a filter, each with SUBTOTAL 3, 103, 9,
+  109 and AGGREGATE(9,1) and (9,4). Excel calls the hidden rows filtered only for the values filter inside the table.
+- The xlsx import sets `has_filters` only for a filterColumn with a criterion element and a `colId` inside the table
+  (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs). A column delete that removes a file-read
+  table's last kept criterion inside the table unfilters it (`kept_filter_inside`, table_edits.rs), so the engine
+  agrees with its export. The eval adapter adds a criterion-less or out-of-range spec filter unfiltered.
+- Decided (numbers.md "SUBTOTAL and AGGREGATE over hidden and filtered rows"; xlsx-storage.md "Table parts in the
+  export" updated): the API's `filtered` flag means a filter with a criterion, so it stays filtered; its export still
+  writes a criterion-less filterColumn that Excel and now our import read as unfiltered, pinned by
+  `a_filtered_table_without_a_criterion_exports_unfiltered`; follow-up T-4363 writes a criterion instead.
+- Eval delta: +1 probes case, 30/30 cells pass; no other case changed.
+- Follow-up: T-4363.

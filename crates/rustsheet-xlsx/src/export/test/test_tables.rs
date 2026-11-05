@@ -124,8 +124,11 @@ fn table_parts_and_structured_references_round_trip() {
     assert_eq!(reloaded.get_formatted_cell_value(0, 7, 5).unwrap(), "30");
 }
 
+/// An API-filtered table with no kept criterion is written as a criterion-less filterColumn,
+/// which Excel reads as not filtered (T-4003), and so does our import: the round trip loses the
+/// filter. TODO(T-4363): write a criterion Excel reads as filtered.
 #[test]
-fn a_filtered_table_keeps_its_filter_flag() {
+fn a_filtered_table_without_a_criterion_exports_unfiltered() {
     let mut model = new_empty_model();
     for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
         model.set_user_input(0, row, 1, input.to_string()).unwrap();
@@ -141,7 +144,8 @@ fn a_filtered_table_keeps_its_filter_flag() {
         table_xml.contains(r#"<autoFilter ref="A1:A3"><filterColumn colId="0"/></autoFilter>"#),
         "{table_xml}"
     );
-    assert!(reloaded.workbook.tables["Sales"].has_filters);
+    assert!(model.workbook.tables["Sales"].has_filters);
+    assert!(!reloaded.workbook.tables["Sales"].has_filters);
 }
 
 #[test]
@@ -325,6 +329,45 @@ fn filter_columns_of_every_kind_survive_an_export() {
     let table = &reloaded.workbook.tables["Sales"];
     assert_eq!(table.filter_columns, filter_columns);
     assert!(table.has_filters);
+}
+
+/// A table filtered by a criterion from its file stays filtered while a criterion is left inside
+/// it, and stops being filtered when a column delete takes the last one, as the export then
+/// writes no filterColumn (T-4003).
+#[test]
+fn deleting_the_filtered_column_unfilters_the_table() {
+    let mut model = new_empty_model();
+    for (row, input) in [(1, "Cat"), (2, "a"), (3, "b"), (4, "a")] {
+        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    }
+    for (row, input) in [(1, "Val"), (2, "1"), (3, "2"), (4, "4")] {
+        model.set_user_input(0, row, 2, input.to_string()).unwrap();
+    }
+    for (row, input) in [(1, "Tag"), (2, "x"), (3, "y"), (4, "x")] {
+        model.set_user_input(0, row, 3, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 4, 3), true).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Values {
+                values: vec!["a".to_string()],
+                blank: false,
+            },
+        }];
+    }
+    model.delete_columns(0, 3, 1).unwrap();
+    assert!(model.workbook.tables["Sales"].has_filters);
+    model.delete_columns(0, 1, 1).unwrap();
+    let table = &model.workbook.tables["Sales"];
+    assert!(table.filter_columns.is_empty());
+    assert!(!table.has_filters);
+
+    let temp_file_name = "temp_file_test_deleted_filter_column.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let table_xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    fs::remove_file(temp_file_name).unwrap();
+    assert!(!table_xml.contains("filterColumn"), "{table_xml}");
 }
 
 /// A calculated column is written with its `calculatedColumnFormula` in file form and read back

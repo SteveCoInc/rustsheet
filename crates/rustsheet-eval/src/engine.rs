@@ -12,7 +12,7 @@ use rustsheet::{
 use rustsheet_engine::text::{lone_escape, Segment};
 use rustsheet_engine::Text;
 
-use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec};
+use crate::case::{split_qualified, ApiName, CaseSpec, CellInput, SheetOp, SheetSpec, TableSpec};
 use crate::cellref::{parse_range, Addr};
 use crate::spec_pivots;
 use crate::value::Value;
@@ -231,10 +231,11 @@ impl Engine for RustSheetEngine {
                         if phase == Phase::Stored {
                             spec_pivots::add_pivots(tx, spec, &ids, sheet, id)?;
                             for table in &sheet.tables {
+                                let range = range_ref(id, &table.range)?;
                                 tx.add_table_with_rows(
-                                    range_ref(id, &table.range)?,
+                                    range,
                                     &table.name,
-                                    table.filter,
+                                    filters_hidden_rows(table, range),
                                     (table.header_row, table.totals_row),
                                 )?;
                                 for (letter, formula) in &table.calculated {
@@ -536,6 +537,16 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
         last.row - 1,
         last.col - 1,
     )?)
+}
+
+/// Whether the spec table's filter makes its sheet's hidden rows filtered: Excel calls them
+/// filtered only for a filterColumn with a criterion inside the table, not for a criterion-less
+/// one or one whose `colId` is past the table's width (probes/t4003-filter-column-criterion), and
+/// the facade's `filtered` flag is that "filtered" (docs/excel-semantics/numbers.md, "SUBTOTAL and
+/// AGGREGATE over hidden and filtered rows").
+fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
+    let width = (u64::from(range.right) + 1).saturating_sub(u64::from(range.left));
+    table.filter && table.filter_criterion && u64::from(table.filter_col_id) < width
 }
 
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.

@@ -179,6 +179,14 @@ pub struct TableSpec {
     pub range: String,
     #[serde(default)]
     pub filter: bool,
+    /// The filtered column's `colId` (0-based in the table; default 0). A `colId` past the
+    /// table's width makes a filter Excel does not apply to the hidden rows (T-4003).
+    #[serde(default)]
+    pub filter_col_id: u32,
+    /// `false`: the filter's `<filterColumn>` holds no criterion, which Excel does not call
+    /// filtered (T-4003). Default `true`: spec2xlsx's values filter.
+    #[serde(default = "crate::suite::default_true")]
+    pub filter_criterion: bool,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
     /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
