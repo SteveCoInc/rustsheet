@@ -3,7 +3,7 @@ id: T-4344
 title: "GROUPBY's tree on a descending first field of three: the row t4342 Calc!C40 finds its class where the lower-bound search does not; and PIVOTBY columns, table sorts and value sorts on intransitive runs"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
