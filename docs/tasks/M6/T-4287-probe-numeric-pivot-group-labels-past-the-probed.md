@@ -3,7 +3,7 @@ id: T-4287
 title: "Probe numeric pivot group labels past the probed points: large and tiny bounds, non-whole end over whole data, label matching by case and spacing"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
