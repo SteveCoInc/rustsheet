@@ -3,7 +3,7 @@ id: T-4026
 title: "F tails visibly off on the T-3580 fresh sweep: deep tails at general dfs"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
