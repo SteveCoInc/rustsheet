@@ -51,6 +51,11 @@ class Transaction:
     def add_sheet(self, name: str) -> None: ...
     def rename_sheet(self, name: str, new_name: str) -> None: ...
     def delete_sheet(self, name: str) -> None: ...
+    def define_name(self, name: str, formula: str, sheet: str | None = None) -> None:
+        """Define a workbook-scoped name, or one scoped to `sheet` (shadows a workbook name there).
+
+        Errors (EditError) surface when the `with` block exits and roll the block back.
+        """
     def add_data_table(
         self,
         range: str,

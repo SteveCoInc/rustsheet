@@ -3,7 +3,7 @@ id: T-2900
 title: "Python facade: Transaction.define_name for workbook- and sheet-scoped defined names"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -44,3 +44,7 @@ be named; the `sheet=` argument must do the same.
 - Reading or deleting defined names from Python (the Rust facade has no read API for names yet).
 - `Txn::load_defined_name` (importer only).
 - Other missing mirrors (T-2916, T-2901 to T-2904, T-0460, T-2054); any change to crates/rustsheet or the engine.
+
+## Outcome
+Added `Transaction.define_name(name, formula, sheet=None)` (`Op::DefineName` in bindings/python/src/facade.rs), the `_rustsheet.pyi` stub, and tests in test_facade.py covering workbook scope, sheet-scope shadowing (sheet added in the same block), and duplicate / invalid name / unparsable formula / unknown sheet rolling the block back. Eval delta: none (bindings only).
+Notes: an unknown `sheet=` raises `rs.RefError` (the facade's existing mapping for every unknown-sheet error), not `EditError` as the acceptance text says. An unqualified ref in a sheet-scoped name resolves against the first sheet in the Rust facade; the tests qualify refs; filed T-4353.

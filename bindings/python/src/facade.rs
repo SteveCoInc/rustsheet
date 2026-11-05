@@ -637,6 +637,7 @@ enum Op {
     AddSheet(String),
     RenameSheet(String, String),
     DeleteSheet(String),
+    DefineName(String, String, Option<String>),
     Clock(Clock),
     DataTable(String, Option<String>, Option<String>),
 }
@@ -704,6 +705,11 @@ fn apply(
                 let i = find_sheet(&sheets, &name)?;
                 txn.delete_sheet(sheets[i].0)?;
                 sheets.remove(i);
+            }
+            Op::DefineName(name, formula, None) => txn.define_name(&name, &formula)?,
+            Op::DefineName(name, formula, Some(sheet)) => {
+                let i = find_sheet(&sheets, &sheet)?;
+                txn.define_sheet_name(sheets[i].0, &name, &formula)?;
             }
         }
     }
@@ -781,6 +787,19 @@ impl PyTransaction {
     /// Deletes a sheet.
     fn delete_sheet(&mut self, name: &str) -> PyResult<()> {
         self.push(Op::DeleteSheet(name.to_owned()))
+    }
+
+    /// Defines a name for `formula` (a leading `=` is optional): workbook-scoped, or scoped to the
+    /// sheet `sheet` when given (it may be a sheet added earlier in the block). A sheet-scoped name
+    /// shadows a workbook name of the same spelling on its sheet. An invalid or duplicate name, an
+    /// unparsable formula or an unknown sheet raises `EditError` when the block exits.
+    #[pyo3(signature = (name, formula, sheet=None))]
+    fn define_name(&mut self, name: &str, formula: &str, sheet: Option<&str>) -> PyResult<()> {
+        self.push(Op::DefineName(
+            name.to_owned(),
+            formula.to_owned(),
+            sheet.map(str::to_owned),
+        ))
     }
 }
 

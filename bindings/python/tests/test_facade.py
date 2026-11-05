@@ -518,3 +518,41 @@ def test_xls_is_load_error_without_the_password():
         assert not isinstance(info.value, (rs.PasswordRequiredError, rs.WrongPasswordError))
         assert ".xls" in str(info.value)
         assert secret not in str(info.value)
+
+
+def test_define_name_workbook_scoped(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Sheet2")
+        tx["Sheet1!B1"] = 5
+        tx.define_name("Rate", "=Sheet1!$B$1")
+        tx["Sheet1!A1"] = rs.Formula("=Rate*2")
+        tx["Sheet2!A1"] = rs.Formula("=Rate*2")
+    assert wb["Sheet1!A1"] == 10.0
+    assert wb["Sheet2!A1"] == 10.0
+
+
+def test_define_name_sheet_scope_shadows(wb):
+    with wb.edit() as tx:
+        tx.add_sheet("Sheet2")
+        tx["Sheet1!B1"] = 5
+        tx["Sheet2!B1"] = 7
+        tx.define_name("Rate", "Sheet1!$B$1")
+        tx.define_name("Rate", "=Sheet2!$B$1", sheet="Sheet2")
+        tx["Sheet1!A1"] = rs.Formula("=Rate")
+        tx["Sheet2!A1"] = rs.Formula("=Rate")
+    assert wb["Sheet1!A1"] == 5.0
+    assert wb["Sheet2!A1"] == 7.0
+
+
+@pytest.mark.parametrize(
+    ("name", "formula", "sheet"),
+    [("Dup", "=1", None), ("1abc", "=1", None), ("Bad", "=1+", None), ("N", "=1", "Nope")],
+)
+def test_define_name_errors_roll_back(wb, name, formula, sheet):
+    # An unknown sheet is a RefError, as for every other sheet op (RefError is not an EditError).
+    with pytest.raises((rs.EditError, rs.RefError)):
+        with wb.edit() as tx:
+            tx["A1"] = 1
+            tx.define_name("Dup", "=2")
+            tx.define_name(name, formula, sheet=sheet)
+    assert wb["A1"] is None
