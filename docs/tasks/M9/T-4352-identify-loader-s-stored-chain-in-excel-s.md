@@ -27,6 +27,9 @@ step), which T-2513 left open.
     ede0323c389fc703 Calc!A249 and Calc!A97;
   - ironcalc-calc: STATISTICAL/BINOM.xlsx BINOM.DIST!E51, E53, E54;
   - probes: t3352-binom-negbinom-large-n Calc!A15, A157, A169.
+  - Three of the gen-m9 hashes above are shared with probes copies (probes/t2429, probes/t2436), so
+    `scripts/exit_owners.py` credits them only with the suite prefix (gap triage 2026-11-05, T-4365):
+    gen-m9/1db18890916ee643 Calc!A10, gen-m9/3a25a03eb94fcfbd Calc!A73, gen-m9/941c409532603d32 Calc!A223.
 - Visibly-off cells of T-2146's fresh sweep, owned here: probes-numeric/t2146-binom-negbinom-pmf-fresh Calc!A5:A6,
   A10, A13, A15, A19:A22, A24, A27, A29:A30, A33:A35, A38, A45, A47, A50:A51, A55:A56, A60, A62, A65, A69:A70, A76,
   A86:A87, A93, A104, A110, A117:A118, A120:A121, A124:A128, A130:A132, A135:A136, A139, A144, A148:A149,

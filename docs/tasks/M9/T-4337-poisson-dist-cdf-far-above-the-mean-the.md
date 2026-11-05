@@ -36,12 +36,17 @@ value, ours, the 50-digit math and the reason Excel's last digits cannot be deri
 - docs/excel-semantics/statistics.md has the T-4302 paragraph; docs/research/t4302/score.py scores the cdf against
   Excel's density times x times the fraction. No new Excel point is needed to re-measure.
 - Split (T-3229): T-4322 owns this probe's B2, D2, F2, G2 and H2; this task owns none of them.
+- Gap triage 2026-11-05 (later run, origin/main c5fdf6bd3): T-4322 is done (661bf4836). Of its five t4291 cells,
+  B2 and G2 are now 2 to 3 ulp off and no task names them, so this task takes them. They are window cells too: x/a
+  1.46 and 1.49. `POISSON.DIST(40,60,TRUE)` is 0.003982809502273009 in Excel and 0.003982809502273012 in ours;
+  `POISSON.DIST(250,375,TRUE)` is 4.058130618936607E-12 in Excel and 4.058130618936609E-12 in ours. D2 and H2 stay
+  visibly off (T-4357, PR #3376), and F2 passes.
 - Cells:
-  - probes/t4291-poisson-far-above-mean.case.json (36): Calc!A2, A3, A4, A5, A6, B1, B3, B4, B5, B6, C1, C2, C3, C5, D1, D3, D4, D5, D6, E1, E2, E3, E4, E5, E6, F1, F4, F5, F6, G1, G5, H1, H3, H4, H5, H6
+  - probes/t4291-poisson-far-above-mean.case.json (36, plus B2 and G2 from 2026-11-05): Calc!B2, G2, A2, A3, A4, A5, A6, B1, B3, B4, B5, B6, C1, C2, C3, C5, D1, D3, D4, D5, D6, E1, E2, E3, E4, E5, E6, F1, F4, F5, F6, G1, G5, H1, H3, H4, H5, H6
   - probes/t4302-poisson-cdf-holdout-2.case.json (39): Calc!A1, A2, A3, A4, A5, A6, B1, B2, B3, B5, B6, C1, C2, C3, C6, D1, D2, D4, D6, E1, E4, E5, E6, F1, F3, F4, F5, F6, G1, G2, G3, G5, G6, H1, H2, H3, H4, H5, H6
 
 ## Acceptance criteria
-- [ ] After T-4322 is done, the 10 window cells are re-measured and each is bit-exact or listed in the Outcome.
+- [ ] After T-4322 is done, the 10 window cells and B2, G2 are re-measured and each is bit-exact or listed in the Outcome.
 - [ ] Each of the 65 cells above 1.5a is bit-exact or listed in the Outcome with Excel, ours, Excel's density times x
       times the accurate fraction, and the 50-digit math.
 - [ ] Any change to Excel's fraction there is a fit only if it meets the R4 guards of reviewer-excel-fidelity check 7
