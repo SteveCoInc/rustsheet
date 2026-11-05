@@ -2463,7 +2463,7 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   the hold-out. Frozen, it was exact on 98 of the fresh sweep's 100 principals (5 rates 0.0004 to 0.15, nper 77777 to
   2E13, pv 1 to 3.3E6, ranges ending at nper, 1 and 3 before); the 2 misses (I5, J5: 0.15 over 10 periods, m·L 1.40,
   the largest probed) are `1 - EXP(-m·L)`'s, and Kahan's is right at 0.98 (I4), so the cut sits in 0.98..1.40, which
-  PMT's cut at 1 (T-3014) fits; the kernel reuses that helper. Taking that cut from the fresh case made it fit data,
+  PMT's cut at 1 (T-3014) fits; T-3141's kernel (on its branch) reuses that helper. Taking that cut from the fresh case made it fit data,
   so it is no R4.2 sweep: that sweep is T-4059's `r4-T-3141` batch of a CUMPRINC Gate A table. With the fit lab's split
   (decision 0188 R4.1, margin 5 points) over all 304 principals, the core is 216/216 bit-exact on train and 88/88 on
   test (all within 4 ulps and 15 digits), the correctly rounded value 65/216 and 33/88 (all within 4 ulps). Forms that lost on the fit set: x87-register

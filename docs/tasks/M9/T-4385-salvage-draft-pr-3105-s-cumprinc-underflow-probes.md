@@ -45,4 +45,4 @@ kept as is; T-4110 does not cover CUMPRINC/CUMIPMT underflow sweeps), and the fi
 CUMPRINC notes (the rule, the fit/hold-out record, the lost forms; not the "Ours since" paragraph or the Status line,
 which describe the engine change T-3141 owns). T-3141's `depends_on` now names T-4059. Eval delta: probes +166
 known-failure lines (the new cases score against the current engine; the engine fix stays on the branch), visible-parity
-lock +1 line, every visibly-off cell owned, 0 regressions. The comment on #3105 links this PR.
+lock +1 line, every visibly-off cell owned (24 CUMIPMT cells of the fresh case now named in T-3141), 0 regressions. The comment on #3105 links this PR.
