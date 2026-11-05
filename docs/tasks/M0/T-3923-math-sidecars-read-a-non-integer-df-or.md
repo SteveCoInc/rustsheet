@@ -3,7 +3,7 @@ id: T-3923
 title: "Math sidecars: read the argument forms Excel accepts and the Gate A definitions refuse (a truncated df, BETA.DIST/BETA.INV's bounds, RATE's guess): about 1,050 counted sweep cells"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -95,3 +95,27 @@ no math value. Most should turn out to be Phase 1b evidence, and the ones that d
   `BINOM.INV`).
 - New Gate A definitions (T-3798, T-3925).
 - Any engine change.
+
+## Outcome
+- `Param.truncates` (model.py) cites the semantics entry showing Excel truncates a non-integer `int` argument;
+  `eval_math.fit_int` then truncates toward zero, and every other `int` parameter keeps the skip. Set for F.DIST's
+  df (statistics.md T-2586 round 5 and T-1864: `F.DIST(2,150.7,3,FALSE)` is the df-150 density), T.DIST's df
+  (T-1043) and CHISQ.INV.RT's df (T-1543: `CHISQ.INV.RT(1E-9,1.5)` is the df-1 value). F.INV, T.INV, CHISQ.INV and
+  the rest still skip.
+- `Definition.call_params`: trailing optional parameters an eval call may pass but the sampler never draws, so no
+  Gate A table changes. BETA.DIST takes [A, B] at the exact t = (x - A)/(B - A), the density divided by B - A
+  (`rescaled_param` "x": the domain function checks A <= x <= B instead of x's [0, 1]); a density at an end of
+  [A, B] with a shape of 1 or less, where Excel gives 0, is no math value. BETA.INV takes [A, B] as A + (B - A) q
+  (T-3566: Excel's scaled calls equal that bit for bit at 40 of 40 points). RATE takes `guess` and ignores it: its
+  math only answers a unique root.
+- Unit tests: tools/tests/test_accuracy_call_forms.py; test_accuracy_eval_math.py's skip examples moved to T.INV.
+- Sidecars: `math --check` named 45 stale probes and probes-numeric cases (more than the task listed: every RATE
+  call with a guess, and F.DIST/T.DIST/CHISQ.INV.RT cells in other cases); each was regenerated.
+- R1(c) line ("Visibly-off cells under decision 0188 R1(c)"), before then after (local `make eval`; ironcalc-calc
+  26 counted both times):
+  - probes 1875 counted, 99 Phase 1b evidence -> 1643 counted, 337 Phase 1b evidence;
+  - probes-numeric 2008 counted, 2891 Phase 1b evidence -> 1954 counted, 2945 Phase 1b evidence.
+- `scripts/exit_owners.py --all-off`: no `(deferred)` lines before or after. With this task `done`, no cell of
+  the listed cases is left without an open owner; their remaining counted cells keep their owners (T-2647,
+  T-3924, T-3850 and the defer: tasks).
+- Eval delta: none (no pass/fail changes; sidecars only feed R1(c)).
