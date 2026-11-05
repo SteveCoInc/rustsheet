@@ -3,6 +3,7 @@
 use super::date_clock::SECONDS_PER_DAY_F64;
 use super::parser::TextToken;
 use crate::constants::MAXIMUM_DATE_SERIAL_NUMBER;
+use crate::number_format::significant_15;
 
 /// The unit of an elapsed `[h]`/`[m]`/`[s]` token (or of a clock `h`/`m`/`s`), smallest first so
 /// the derived order ranks them.
@@ -17,18 +18,22 @@ pub(super) enum ElapsedUnit {
 /// clock, elapsed and fraction tokens agree: `[h]:m:s.000` on 3.14159 is "75:23:53.376",
 /// `[hh]:mm:ss.0` "75:23:53.4", `[s].000` "271433.376" (poi/ElapsedFormatTests A2-A7,
 /// number-formats.md "Elapsed-time tokens"). With fraction digits every token truncates the
-/// half-step serial ([`half_step`]), the clock and fraction cut field by field ([`field_split`]),
-/// so float error decides a tie: `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2"
-/// (probes/t4323-fraction-ties, -carry-ties, t4332-fraction-fresh, number-formats.md "Fraction
-/// digits of a second at a tie"). Whole seconds round the value.
+/// half-step serial ([`half_step`]), the clock cut field by field ([`field_split`]) and the
+/// fraction digits read from the remainder of a second at 15 significant digits
+/// ([`fraction_digits`]), so float error decides a tie: `TEXT(1+0.25/86400,"[h]:mm.0")` is
+/// "24:00.2" (probes/t4323-fraction-ties, -carry-ties, t4332-fraction-fresh,
+/// t4370-fraction-fresh, number-formats.md "Fraction digits of a second at a tie"). Whole seconds
+/// round the value.
 pub(super) struct FractionalSeconds {
     /// The seconds the elapsed counts truncate: the value rounded to whole seconds, or with
     /// fraction digits the half-step register's seconds, unfloored.
     elapsed_seconds: f64,
     /// The whole days the clock and date read.
     days: f64,
-    /// The units within that day the clock and the fraction digits read, whole.
+    /// The units within that day the clock reads, whole.
     day_units: f64,
+    /// The shown fraction digits as one number (`376` for `.376`), below `scale`.
+    fraction: f64,
     scale: f64,
     digits: usize,
 }
@@ -38,29 +43,32 @@ impl FractionalSeconds {
     /// 9999-12-31, so the units stay far below 2^53 and count exactly.
     pub(super) fn new(value: f64, digits: usize) -> Option<Self> {
         let scale = [1.0, 10.0, 100.0, 1000.0].get(digits).copied()?;
-        let (elapsed_seconds, days, day_units) = if digits == 0 {
+        let (elapsed_seconds, days, day_units, fraction) = if digits == 0 {
             // Whole seconds keep the rounded value: only fraction digits have the tie evidence.
             let units = (value * SECONDS_PER_DAY_F64).round();
             (
                 units,
                 (units / SECONDS_PER_DAY_F64).floor(),
                 units % SECONDS_PER_DAY_F64,
+                0.0,
             )
         } else {
             // The counts read the same register as the clock, so a tie just short of a whole
             // minute or hour carries in neither: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is
             // "24:59:59.9", `TEXT(2+3599.95/86400,...)` "49:59:59.9" (probes/t4323-carry-ties).
-            let (days, day_units) = field_split(value, scale);
+            let (days, day_units, second_rest) = field_split(value, scale);
             (
                 half_step(value, scale) * SECONDS_PER_DAY_F64,
                 days,
                 day_units,
+                fraction_digits(second_rest, digits),
             )
         };
         Some(Self {
             elapsed_seconds,
             days,
             day_units,
+            fraction,
             scale,
             digits,
         })
@@ -93,11 +101,7 @@ impl FractionalSeconds {
 
     /// The fraction digits, zero-padded (`376`, `4`, `00`).
     pub(super) fn digits_text(&self) -> String {
-        format!(
-            "{:0>width$.0}",
-            self.day_units % self.scale,
-            width = self.digits
-        )
+        format!("{:0>width$.0}", self.fraction, width = self.digits)
     }
 }
 
@@ -314,9 +318,9 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
     (days, (shifted - days) * SECONDS_PER_DAY_F64 * scale)
 }
 
-/// The whole days and the whole units of `1/scale` second within the day that the clock and the
-/// fraction digits show: the half step's serial `y` ([`half_step`]) cut field by field, as Excel
-/// does. `frac(y)` is multiplied by 24, floored and its remainder kept, then the same with 60, 60
+/// The whole days and the whole units of `1/scale` second within the day that the clock shows,
+/// and the remainder in [0, 1) of a second the fraction digits read ([`fraction_digits`]): the
+/// half step's serial `y` ([`half_step`]) cut field by field, as Excel does. `frac(y)` is multiplied by 24, floored and its remainder kept, then the same with 60, 60
 /// and `scale`, all in plain doubles. Cutting `frac(y)*86400*scale` at once (the register of
 /// [`half_step_split`]) truncates many ties below serial 1 that Excel rounds up:
 /// `TEXT(0.015/86400,"s.00")` is "0.02" and `TEXT(21.2685/86400,"[h]:mm:ss.000")` "0:00:21.268",
@@ -324,18 +328,51 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
 /// and 469 of 470 from 1 up in the five t4323 probes (the register 101 and 467), and 103 of 120
 /// in the fresh sweep generated after it was frozen (probes/t4332-fraction-fresh, excel-graph
 /// 2026-11-05; the register 72). T-4332, number-formats.md "Fraction digits of a second at a tie".
-fn field_split(value: f64, scale: f64) -> (f64, f64) {
+fn field_split(value: f64, scale: f64) -> (f64, f64, f64) {
     let shifted = half_step(value, scale);
     let days = shifted.floor();
     let mut rest = shifted - days;
     let mut units = 0.0;
-    for field in [24.0, 60.0, 60.0, scale] {
+    let mut second_rest = 0.0;
+    for (stage, field) in [24.0, 60.0, 60.0, scale].into_iter().enumerate() {
         rest *= field;
         let whole = rest.floor();
         units = units * field + whole;
         rest -= whole;
+        if stage == 2 {
+            // Cut to the whole second: what is left is the remainder of a second.
+            second_rest = rest;
+        }
     }
-    (days, units)
+    (days, units, second_rest)
+}
+
+/// The fraction digits of a second that Excel shows, as one number below `10^digits`: the
+/// remainder `rest` of a second left by [`field_split`]'s cut, rounded to 15 significant digits
+/// (Excel's 15-digit cut, [`significant_15`]), then truncated to `digits` places. Below serial 1
+/// this rounds up ties that the cut's own last stage truncates, `TEXT(0.0005/86400,
+/// "[h]:mm:ss.000")` is "0:00:00.001" and `TEXT(3.55/86400,"[s].0")` "3.6", while one just below
+/// the 15th digit stays truncated (`TEXT(20.65/86400,"[s].0")` is "20.6"). A remainder that rounds
+/// to 1 shows zeros without carrying into the seconds, which are cut on their own:
+/// `TEXT(41.95/86400-2*2^-64,"[s].0")` is "41.0" (probes/t4370-ulp-map-2 A417). The model scores
+/// 743 of 746 cells of the t4323/t4332 fraction cases (the field-by-field digits 706), 739 of the
+/// 802 ulp-map cells (554) and all 120 of the fresh sweep generated after it was frozen
+/// (probes/t4370-fraction-fresh, excel-graph 2026-11-05; the field-by-field digits 54). T-4370,
+/// number-formats.md "Fraction digits of a second at a tie".
+fn fraction_digits(rest: f64, digits: usize) -> f64 {
+    if rest <= 0.0 || !rest.is_finite() {
+        return 0.0;
+    }
+    // rest15 = mantissa * 10^(exponent - 14) with exponent <= 0, so the shown digits are
+    // mantissa / 10^(14 - exponent - digits), truncated; a remainder far below a unit gives 0.
+    let (mantissa, exponent) = significant_15(rest, true);
+    let shown = u32::try_from(14 - exponent - i64::try_from(digits).unwrap_or(0))
+        .ok()
+        .and_then(|drop| 10_u64.checked_pow(drop))
+        .map_or(0, |unit| mantissa / unit);
+    // A remainder that rounds to 1 wraps to zeros; `digits` is at most 3, so this is exact.
+    let modulus = 10_u64.pow(u32::try_from(digits).unwrap_or(0));
+    f64::from(u32::try_from(shown % modulus).unwrap_or(0))
 }
 
 /// `x` rounded to `1/scale`; a magnitude whose scaled value overflows is already integral, and

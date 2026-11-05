@@ -380,7 +380,7 @@ Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-secon
 Status: VERIFIED
 Tasks: T-2684, T-4323
 
-## Fraction digits of a second at a tie (T-4323, T-4332)
+## Fraction digits of a second at a tie (T-4323, T-4332, T-4370)
 Rule: with `.0`, `.00` or `.000` shown, the clock (`h`, `mm`, `ss`), the elapsed counts and the fraction digits are not the serial rounded to
 the shown digit but the half-step register truncated: `y = x + 0.5/(86400*scale)`, then `floor(frac(y)*86400*scale)` in
 plain doubles (`frac(y)*86400` first, then `*scale`), so the float error of `frac(y)` decides a tie, and not in one
@@ -389,7 +389,7 @@ direction: `1+0.25/86400` under `[h]:mm.0` is "24:00.2" (2.99999999997 units), `
 uses ("`General` in a date section"). It holds for every probed format (`[h]:mm.0`, `h:mm:ss.0`, `[s].0`, `s.00`,
 `[h]:mm:ss.000`, `[m]:ss.00`, `mm:ss.0`, `h:mm:ss.000`) at serials of 1 or more: the tie probe 100 of 100 such cells,
 fresh sweeps 1-3 (each generated after a freeze) 274 of 276; the engine's earlier rounding of the value got 34 and 139.
-Not settled:
+Below serial 1, and the counts:
 - Serials below 1 (d = 0), T-4332: the clock and fraction digits are cut from `frac(y)` field by field, not at once:
   multiply by 24, floor, keep the remainder, then the same with 60, 60 and `scale`, in plain doubles. Excel then
   rounds `TEXT(0.015/86400,"s.00")` up to "0.02" (the register 1.9999999999999998, the cut 2) and truncates
@@ -397,13 +397,23 @@ Not settled:
   470 from 1 up in the five t4323 cases (the register 101 and 467; the engine's earlier rounding 114 below 1). On the
   fresh sweep probes/t4332-fraction-fresh it gets 103 of 120, against 72 for the register and 72 for the earlier
   rounding (120 cells drawn after the cut was frozen; excel-graph 2026-11-05).
-  Still open (T-4370): Excel rounds up some ties whose last remainder lies 1 to 11 ulp below a whole unit
-  (`TEXT(0.0005/86400,"[h]:mm:ss.000")` "0:00:00.001", `TEXT(3.55/86400,"[s].0")` "3.6"), yet truncates others 8 ulp
-  below (`TEXT(20.65/86400,"[s].0")` "20.6"). Refuted below 1: every operation order of the one-step register,
-  64-bit intermediates, the 15-digit snap (`r15`) and the `1+2^-52` snap (fresh sweep 2), cuts through 24 and 3600
-  or 1440 and 60 (117 and 107 of 156), the fraction cut digit by digit (131), whole milliseconds first (115 to 125,
-  but they lose most cells from 1 up), and keeping the register wherever it is above the cut (84 of 120 on the fresh
-  sweep).
+- The fraction digits are not the cut's last stage (T-4370). They are read on their own from the cut's remainder of a
+  second: `r` in [0, 1), left after the second 60, is rounded to 15 significant digits and the digits are
+  `floor(r15*scale)`, taken modulo `scale`. So a tie whose `r` lies within half a unit of the 15th digit below a
+  shown digit rounds up: `TEXT(0.0005/86400,"[h]:mm:ss.000")` "0:00:00.001", `TEXT(3.55/86400,"[s].0")` "3.6",
+  while `TEXT(20.65/86400,"[s].0")` stays "20.6". The seconds field does not carry with them: when `r15` reaches 1
+  the digits wrap to zeros, so `TEXT(41.95/86400-2*2^-64,"[s].0")` is "41.0" (probes/t4370-ulp-map-2 A417; the
+  same split T-4333's ulp scan saw at `3733.95/86400+1*2^-57` "3733.0"). The ulp maps probes/t4370-ulp-map and
+  t4370-ulp-map-2 step 70 ties up to 64 ulp around their serial: the flip depends on the serial only, not on the
+  format, and lands within an ulp of the model's. The model scores 743 of the 746 cells of the six t4323/t4332
+  fraction cases (the cut's own digits 706; the three misses are `[s]` counts), 739 of the 802 ulp-map cells (554),
+  and 120 of 120 on probes/t4370-fraction-fresh, generated after it was frozen (the cut's digits 54; excel-graph
+  2026-11-05; docs/research/t4370/model.py). From serial 1 up it prints what the cut prints on every probed cell.
+  Not settled: `.000` on a remainder below about 0.06 s rounds up further than the 15th digit allows, as if 1.6E-17
+  to 1.9E-17 s were added: `TEXT(0.0045/86400-36*2^-77,"[h]:mm:ss.000")` is "0:00:00.005" (r is 2.2E-17 below
+  0.005), at -40 ulp ".004" (2.3E-17 below); `.0` and `.00` show no such offset (`TEXT(0.005/86400-8*2^-77,"s.00")`
+  ".01", -12 ulp ".00", 0.45 and 0.68 units of the 15th digit below). The engine's 62 ulp-map misses are all of
+  this kind (T-4389).
 - The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
   tie just short of a whole minute or hour carries in neither the count nor the clock:
   `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",
@@ -427,11 +437,14 @@ Not settled:
   where the register is exactly 394741 and printed "57:54.1".
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
 t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100), t4323-carry-ties (32), t4323-carry-sweep (120),
-t4332-fraction-fresh (120), t4333-count-ulp-scan (56), excel-graph 2026-11-05; scoring scripts in docs/research/t4323,
-docs/research/t4332 and docs/research/t4333.
-Status: VERIFIED (serials of 1 or more); PARTIAL below 1 (T-4370) and OPEN for the `[s]` count (T-4333)
-Implemented in: `field_split`, `half_step_split` (the `General` register) and `FractionalSeconds` (formatter/elapsed.rs).
-Tasks: T-4323, T-4332, T-4333, T-4370
+t4332-fraction-fresh (120), t4333-count-ulp-scan (56), t4370-ulp-map (340), t4370-ulp-map-2 (462),
+t4370-fraction-fresh (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323, docs/research/t4332,
+docs/research/t4333 and docs/research/t4370.
+Status: VERIFIED for the clock and the fraction digits; PARTIAL for `.000` below 0.06 s (T-4389) and OPEN for the `[s]`
+count (T-4333)
+Implemented in: `field_split`, `fraction_digits`, `half_step_split` (the `General` register) and `FractionalSeconds`
+(formatter/elapsed.rs).
+Tasks: T-4323, T-4332, T-4333, T-4370, T-4389
 
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
