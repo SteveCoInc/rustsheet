@@ -370,6 +370,16 @@ Status: VERIFIED
 Implemented in: `consume_string` (formatter/lexer.rs) ends the literal at every `"`.
 Tasks: T-0935
 
+## Fraction after minutes with no seconds (T-2684, VERIFIED)
+Rule: a `.0`, `.00` or `.000` after a minutes token with no seconds token shows the fraction of the hidden seconds, whatever
+the hours token: for 2:59:59.4, `[h]:mm.0` is "2:59.4", `[h]:mm.00` "2:59.40", `h:mm.0` "2:59.4", `mm.0` "59.4", `[m].0`
+"179.4", `[mm].0` "179.4", `[h].0` and `h.0` "2.4", `[s].0` "10799.4", `d [h]:mm.0` "0 108:59.4", `[h]:mm.0 \h`
+"2:59.4 h". Four digits (`[h]:mm.0000`) and an AM/PM beside it (`[h]:mm.0 AM/PM`) are `#VALUE!`. Engine matches all of it
+except `TEXT(1+0.25/86400,"[h]:mm.0")`: Excel "24:00.2", ours "24:00.3" (T-4323).
+Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-seconds-boundary A32, excel-graph 2026-11-05.
+Status: VERIFIED
+Tasks: T-2684, T-4323
+
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
 - Fractional elapsed seconds work: `[h]:m:s.000` on 3.14159 → "75:23:53.376" (A2), `[m]:s.000` →
