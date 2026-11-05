@@ -25,9 +25,17 @@ an error value, an error date, or a later date that is negative or past 2958465,
 - Probe (excel-probe skill, excel-graph): values `<"x",30,#N/A,50>`, `<,30,40,50>` and `<TRUE,30,40,50>` against
   good dates; the same values against dates with a `#DIV/0!`, a -1 and a 2958466 at index 1 and at index 3; each as
   a range, an array constant and a computed array (extend docs/research/t3815/gen_case.py or write a new case).
+- Also probe (T-3815 fidelity review round 2, MINOR), so the T-3815 entry's remaining inferred lines get cells:
+  - a number-first walk against a later 0, empty or before-the-first date together with a later error value or
+    non-number value (`XNPV(0.1,{-100;30;#N/A;50},{39448;0;39600;39700})`: the engine gives `#N/A`; T-2603 C1/C7
+    only evidence those dates behind a refused first value);
+  - `xnpv_one_cell` (flows.rs) through a one-cell range (`D!A2:A2`), `OFFSET`/`INDEX` returning one cell and a
+    defined name for one cell, holding an error, numeric text and date text (every D-column cell of
+    probes/t3815-xnpv-element-reading is a plain reference).
 
 ## Acceptance criteria
-- [ ] The probe case is filled on excel-graph and passes; financial.md states the rule and drops the Unprobed lines.
+- [ ] The probe case is filled on excel-graph and passes, the cases above included; financial.md states the rule and
+      drops the Unprobed lines.
 - [ ] If Excel lets any of these beat the `#VALUE!`, the walk follows it (one walk, no second reader).
 - [ ] `make check` green; reviewers approve.
 

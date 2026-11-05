@@ -3,7 +3,7 @@ id: T-2555
 title: "Excel's BETA.INV early Newton stop where the quantile is tiny at a huge shape (T-1538 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: blocked
 priority: P1
 size: M
 tier: opus
@@ -74,3 +74,36 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t1538-f-inv-huge-df.case.json (30): Calc!A1, A4, A15, A18, A23, A26, A37, A40, A42-A43, A46-A47, A60-A61, A63, A66, A111, A114, A119, A122, A125, A128-A129, A132-A133, A135, A137, A139, A153, A155
 
 - [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+
+## Attempts (decision 0056 time-box)
+- Attempt 1 (2026-11-05, opus run; docs/research/t2555/as109_replay.py): AS 109 (R's old `qbeta`, AS R19's acu
+  `max(fpu, 10^(-13 - 2.5/pp^2 - 0.5/alpha^2))`, the Majumder-Bhattacharjee start, the step-thirding loop, return
+  of the iterate before the last step or after it) replayed in doubles on an mpmath CDF rounded to a double, on the
+  8 tiny-quantile cells A133, A135, A137, A139, A145, A147, A153, A155. Moved no cell. Ruled out:
+  - every stop rule over these iterates: Excel's value is no iterate. It is nearest iterate 2 (A133 1E-12, A135
+    2E-13 relative with log1p; A137 4E-8, A139 2E-8), and A145 and A147 sit at full convergence (6E-16 and 0, so
+    only A147 is exact). A153 and A155 lie 1E-8 from every iterate past the first;
+  - acu fixed at 1E-13 to 1E-30 and the R19 formula, each with the old or the new iterate returned: at best 1 of 8
+    cells (A147) within an ulp;
+  - ln B exact or from double lgamma (1.2E-5 off at (2.5, 5E9)), and ln(1 - x) as log(1 - x) or log1p;
+  - a constant error in ln B: the offset that puts iterate 2 on Excel's value is -1.6E-8 at A133, +3.3E-5 at A137 and
+    +1.0E-3 at A145, all at the shapes (2.5, 5E9), and no offset within 1E-3 reaches A153 or A155.
+  The next attempt should change the CDF that the search evaluates (Excel's own BETA.DIST at each iterate, e.g. its
+  value at iterate 1, which is 1E-3 to 5E-2 off the root, where an inaccurate tail would move iterate 2 by about
+  what the cells show) or the start, not the stop. A second attempt that moves nothing blocks the task as time-boxed
+  under decision 0267.
+- Attempt 2 (2026-11-05, opus run; docs/research/t2555/gen_iterates_probe.py, iterates.py, excel_cdf_probe.*.json):
+  Excel's own BETA.DIST at the replay's start and first iterates x0 to x3 of the 8 cells (31 cells, excel-graph
+  2026-11-05). Moved no cell. Ruled out: Excel's CDF as the cause. It is within 2E-14 relative of the mpmath CDF at
+  every iterate, and a Newton step taken on Excel's own value lands where the exact one does: 1E-12 (A133), 2E-13
+  (A135) and 1E-12 (A145) from Excel's BETA.INV at one iterate, but 4E-8 to 9.3E-7 from it at every iterate of A137
+  and A139 and 1E-8 at A153 and A155. Excel's value lies between iterate 2 and the root of its own CDF (for A137,
+  4 percent of the way from x2), so it is on no trajectory of AS 109 from this start, whatever its stop and CDF.
+
+## Blocked because
+Blocked because: time-boxed (decision 0056). Two attempts (Attempts above) moved none of the owned cells. Under
+decision 0267 the cells this task still lists are accepted, and no follow-up is filed for them. What is left to try
+is another start or another search (a secant or bisection that ends inside the last Newton bracket), against the
+8 cells and the 31 CDF values in docs/research/t2555; statistics.md "BETA.INV at a huge shape is AS 109's Newton
+search" records the ruled-out models.
+
