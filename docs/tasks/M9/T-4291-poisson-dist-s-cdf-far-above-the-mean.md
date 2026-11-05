@@ -3,7 +3,7 @@ id: T-4291
 title: "POISSON.DIST's cdf far above the mean at k 50 to 200: which prefactor form Excel takes (split from T-4255)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
