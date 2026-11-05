@@ -17,6 +17,7 @@ uv run rustsheet-fitlab xirr                   # T-1525 solvers: also xirr-oos, 
 uv run rustsheet-fitlab beta-dist              # T-1744: I_x(a,b); also f-dist, t-dist
 uv run rustsheet-fitlab norm-s-inv             # T-1746: NORM.S.INV, AS 241 tails vs the unfitted centre
 uv run rustsheet-fitlab im-hyperbolic --build no-band=/path/to/rustsheet-eval   # T-3525: IM* text, a 2nd build
+uv run rustsheet-fitlab cumulative-fresh --build no-short-cut=/path/to/rustsheet-eval   # T-3524: also cumulative
 uv run rustsheet-fitlab erfc-tail --only 'bu_even' --worst 10 --no-engine
 uv run rustsheet-fitlab --case probes-numeric/t1040-erfc \
     --pattern '^=ERFC\((.*)\)$' --candidate math:erfc --candidate mymod:my_erfc   # ad hoc
