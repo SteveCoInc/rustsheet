@@ -73,7 +73,12 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
       clean test: B is within half an ulp of Excel's implied exponent at 47/48 points, against 25/48 for the ratio
       form, and the cdf gains 30 cells within 4 ulp over main.
     - No margin was stated before scoring.
-- **Eval delta:** EVAL_DELTA.
+- **Eval delta:**
+  - probes known failures went from 5713 to 5926: 8 fixed, 219 new-coverage failures in the new case, and 2 allowed
+    regressions. The new case's failures are its pmf, density and CHISQ.DIST.RT cells, plus few-ulp cdf misses.
+  - The 2 regressions are t4291 A3 and A5, 1 ulp each, allowed by decision 0288.
+  - No other gated suite moves.
+  - Visible parity: the 95 visibly-off cells of the new case are owned as below; the lock goes from 3156 to 3251.
 - **Ownership.** The visibly-off cells left are owned by these tasks:
   - T-4322 (new): the cdf inside the window, x/a 1.29 to 1.5; t4291 B2, D2, F2, G2 and H2 among them.
   - T-4319 (new): the gamma density above 1.5a.

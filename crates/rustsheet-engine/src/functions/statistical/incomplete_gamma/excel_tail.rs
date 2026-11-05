@@ -96,3 +96,34 @@ pub(super) fn excel_far_above_mean(a: f64, x: f64, terms: &mut Terms) -> Option<
     let upper = prefactor * (fraction.0 + fraction.1);
     upper.is_normal().then_some(upper)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::{gamma_ur, poisson_upper};
+
+    // Excel's cdf far above the mean (T-4302): the prefactor with Loader's direct deviance times the
+    // accurate fraction gives Excel's own bits at these cells (probes/t4291-poisson-far-above-mean G6,
+    // C6; probes/t4302-poisson-cdf-beside-pmf B20, F19), where Excel is 208 to 265 ulp from the true Q.
+    #[test]
+    fn far_above_the_mean_the_cdf_takes_loader_s_deviance() {
+        let excel = [
+            (250.0, 750.0, 5.134_850_238_125_346e-100_f64),
+            (60.0, 180.0, 2.497_452_789_099_686_4e-25),
+            (173.0, 511.142, 1.595_806_199_959_312_8e-67),
+            (211.0, 620.901, 3.197_252_522_551_427_3e-81),
+        ];
+        for (k, mean, q) in excel {
+            assert_eq!(
+                poisson_upper(k + 1.0, mean).to_bits(),
+                q.to_bits(),
+                "POISSON({k}, {mean}, TRUE)"
+            );
+            assert_ne!(gamma_ur(k + 1.0, mean).to_bits(), q.to_bits());
+        }
+        // Outside the measured range the accurate kernel stays: in the window (x <= 1.5a), past
+        // shape 301, below shape 31, and at a non-integer shape.
+        for (a, x) in [(101.0, 150.0), (302.0, 700.0), (30.0, 70.0), (100.5, 200.0)] {
+            assert_eq!(poisson_upper(a, x).to_bits(), gamma_ur(a, x).to_bits());
+        }
+    }
+}
