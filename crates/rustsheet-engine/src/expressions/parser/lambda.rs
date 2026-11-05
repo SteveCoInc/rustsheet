@@ -178,6 +178,7 @@ impl Parser {
                 self.lexer.advance_token();
                 arg_index += 1;
                 // A parameter keeps no whitespace (`LAMBDA( x, x)`): it is a name, not a node.
+                self.note_prefixed_declaration(&text);
                 expr = self.bind_name(&token, &text, expr).unspaced().1;
                 match expr {
                     Node::NamedVariableKind { name, id } => {

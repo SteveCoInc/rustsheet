@@ -270,10 +270,34 @@ A sheet-scoped name defined through the API is held to the same 65 (T-4014, prob
 2026-11-04): Graph `worksheets('S')/names/add` adds a body of 65 nested ABS calls (`T!A1 =S!N` is 1, sheet-api-name-65)
 and refuses one of 66 with 400 `InvalidArgument` (`S!N` is `#NAME?`, sheet-api-name-66); `Txn::define_sheet_name`
 refuses the same body. A quirk on the way: after the 65-call add and a FullRebuild, `S!A1 =N` on the name's own sheet,
-typed before the add, is still `#NAME?`, while the workbook-scoped twin's `=N` is 1 (t3264-api-name-65). Which rule
-that is (a binding made at entry that only a workbook-scoped add renews, or a Graph artefact) is open, T-4049; the
-engine gives 1 there. An undo of a deleted name puts it back whatever its body: `update_defined_name` is unchecked, so
+typed before the add, is still `#NAME?`, while the workbook-scoped twin's `=N` is 1 (t3264-api-name-65). That is
+not the call cap: it is how a sheet-scoped add binds names, below ("A sheet-scoped name added after load", T-4049). An undo of a deleted name puts it back whatever its body: `update_defined_name` is unchecked, so
 a body past the cap can exist, and the undo does not refuse it (`Model::restore_defined_name`, T-4014).
+**A sheet-scoped name added after load** (T-4049, probes/t4049-sheet-api-name-plain and -over-book, excel-graph
+2026-11-05). Excel binds a cell's names when its formula is loaded or entered, and a sheet-scoped add of N on sheet S
+(Graph `worksheets('S')/names/add`, then a FullRebuild) re-binds only uses of a *defined* workbook N, and only on S:
+- No workbook N (plain, body `=1`): on S, `=N`, `=N+1` and `=ISERROR(N)` loaded from the file, and `=N` typed through
+  the API before the add, stay `#NAME?` (TRUE), FORMULATEXT still `=N`; `=S!N` on S and on T read the new name (1;
+  FORMULATEXT `=S!N`); `=N` on T is `#NAME?`. The same body nested 65 calls deep (probes/t4014-sheet-api-name-65)
+  behaves alike, so the cap plays no part. A workbook-scoped add instead fills the unresolved `=N`
+  (probes/t3264-api-name-65: 1).
+- A workbook N (`=10`) in the file (over-book): on S, `=N` (loaded or typed) and `=S!N`, which at load fell back to the
+  workbook N, both read the new sheet name (1), FORMULATEXT `=N` and `=S!N` (before the add, `=S!N` shows as
+  `='<file>.xlsx'!N`, references.md "A sheet-qualified workbook name is rewritten to the workbook's file name"); on T,
+  `=N` and `=S!N` keep the workbook N (10), the latter still shown `='<file>.xlsx'!N`.
+- `INDIRECT("N")` on S and `INDIRECT("S!N")` on T are `#REF!` in both: a name whose body is a constant is no reference.
+RustSheet keeps a formula's binding in its stored text, and `Model::define_name` with a sheet scope rewrites the
+formulas of that sheet before re-parsing (`Model::bind_added_sheet_name`): with no workbook name, an unresolved use
+of N is stored `[0]!N` (the own-workbook prefix: still the undefined workbook name, `#NAME?`, shown `N`); with one,
+a sheet-qualified read of the workbook N (stored `[0]!N`) becomes `S!N`. Unprobed, so UNVERIFIED (the oracle
+harness types every cell before the API add, so it cannot show what happens after it; T-4348): a formula typed on S
+after the add (ours binds by its text, so `=N` reads the sheet name) and a cell of S edited after it (ours leaves a
+pinned `=N` pinned); `=T!N` typed on S with no local N on T (it loads as the same workbook binding as `=S!N`, so ours
+moves it to `S!N` too); a file-stored `[0]!N` on S (taken to move with `=S!N`, likewise); what a later workbook-scoped add of N does to a use pinned so (ours fills it, as Excel fills
+an unresolved `=N`; it then shows as `'<file>.xlsx'!N`); how a pinned use is saved (ours writes `[0]!N`) and how
+Excel saves it; a typed `=[0]!Missing` (ours now shows `=Missing`); uses inside other names' bodies, conditional-format
+and data-validation formulas on S, and names called as functions (`N(2)`), which the add leaves alone; and desktop
+Excel's Name Manager.
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,
@@ -715,11 +739,22 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   are `#NAME?` with that FORMULATEXT; `=LET(x,2,_xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)` (the use
   is not `x`), as is `=LET(x,2,_xlpm._xlpm.x*3)`; and a declaration written with it, `=LET(_xlpm.x,1,_xlpm.x+1)`, is
   refused (the cell stays blank) (T-4224). Ours matches (T-4288).
+- Typed `_xlpm.` extrapolations (probes/t4299-typed-xlpm-extrapolations, 22 cells, excel-graph, 2026-11-05, T-4299): the
+  prefix matches ignoring case, and Excel writes it back lowercase: `=LET(_XLPM.x,1,_XLPM.x+1)` is refused (blank),
+  `=LET(x,2,_XLPM.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)`. A LAMBDA body use `_xlpm.x` of a parameter `x`
+  is `#NAME?` (`=LAMBDA(x,_xlpm.x*2)(3)`, FORMULATEXT `=LAMBDA(x,_xlpm.x*2)(3)`; the control `=LAMBDA(x,x*2)(3)` is 6),
+  and a LAMBDA parameter typed `_xlpm.x` is refused (blank), like a LET name. Typed in R1C1 mode `=LET(x,2,_xlpm._xlpm.x*3)`
+  is `#NAME?` like A1's. A structured reference typed in R1C1 mode parses against the workbook's tables: `=SUM(T[Col])`
+  is 7 in both modes. Ours matches (T-4299). Probed in all-uppercase `_XLPM.` and in a LET body, and (T-4331, probes/t4331-typed-xlpm-remaining) in the forms
+  below. Mixed case `=LET(_Xlpm.x,1,_Xlpm.x+1)` is refused like the uppercase form (A1, blank). A bare `=_XLPM.x` is
+  `#NAME?` and FORMULATEXT keeps its case, `=_XLPM.x` (C2; ours matches, T-4343). A doubled
+  `=LET(x,2,_XLPM._XLPM.x*3)` is `#NAME?`, FORMULATEXT keeps both prefixes' case (C3; ours matches, T-4343). So Excel
+  lowercases the typed prefix only when what follows it is a name the LET or LAMBDA binds. A called `=LAMBDA(x,_XLPM.f(3))(1)`
+  is `#NAME?` and keeps its case, as ours does (C4). A LET-bound lambda called as `_XLPM.f(3)` is refused (A5). The rule is inferred from t4299 C2 and t4331 C2:C4, not probed beyond them.
 - Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
   1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
 - Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
-  doubled prefix on a LAMBDA parameter, a LAMBDA parameter typed with `_xlpm.` (ours binds it under that name), and
-  what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
+  doubled prefix on a LAMBDA parameter, and what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
   FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.

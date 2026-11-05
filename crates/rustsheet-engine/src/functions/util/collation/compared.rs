@@ -42,6 +42,69 @@ thread_local! {
     /// The ticks of the comparisons, keys and folds since the evaluator last took them
     /// ([`take_compared_ticks`]).
     static COMPARED_TICKS: Cell<u64> = const { Cell::new(0) };
+    /// The most ticks the formula run can still pay for at its next charge
+    /// ([`set_compared_allowance`]); no bound outside a run.
+    static COMPARED_ALLOWANCE: Cell<u64> = const { Cell::new(u64::MAX) };
+    /// Whether the readers may stop at all: only inside [`stoppable`], around a reader whose
+    /// results reach no cache another formula shares (UNIQUE's grouping, SORT's and SORTBY's
+    /// sort). A lookup index or a criteria cache built from stand-ins would give later formulas,
+    /// each under its own budget, wrong values.
+    static STOPPABLE: Cell<bool> = const { Cell::new(false) };
+    /// Whether a reader stopped reading because the pending ticks passed the allowance
+    /// ([`out_of_ticks`]): the run's value is then the work budget's error, whatever the reader
+    /// returned ([`take_cut_short`]).
+    static CUT_SHORT: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Sets the ticks the formula run can still pay for at its next charge (its work units left
+/// times `area_budget::COMPARED_TICKS_PER_UNIT`) and returns the one it replaces. Pending ticks
+/// past it make that charge fail, so a reader may stop reading as soon as they pass it
+/// ([`out_of_ticks`], T-4278). It may be more than the run has left (units spent since it was set
+/// lower what is left), never less: the evaluator sets it at each node's charge and at the start
+/// of each run, and puts the interrupted run's back afterwards.
+#[inline]
+pub(crate) fn set_compared_allowance(ticks: u64) -> u64 {
+    COMPARED_ALLOWANCE.with(|allowance| allowance.replace(ticks))
+}
+
+/// Whether the ticks noted since the last charge already pass what the run can pay for
+/// ([`set_compared_allowance`]): the node will be the work budget's error whatever it computes, so
+/// a reader returns at once, without reading, instead of reading to its end first (T-4278). Marks
+/// the run cut short ([`take_cut_short`]), so its value is that error even if the charge that
+/// would fail never comes.
+#[inline]
+pub(super) fn out_of_ticks() -> bool {
+    let out = STOPPABLE.with(Cell::get)
+        && COMPARED_TICKS.with(Cell::get) > COMPARED_ALLOWANCE.with(Cell::get);
+    if out {
+        CUT_SHORT.with(|cut| cut.set(true));
+    }
+    out
+}
+
+/// Runs `f`, a reader whose comparisons, keys and folds may stop past the run's allowance
+/// ([`out_of_ticks`]): its stand-in results must reach nothing but the node's own value, which the
+/// run then replaces with the work budget's error, never a cache that outlives the run (T-4278).
+pub(crate) fn stoppable<T>(f: impl FnOnce() -> T) -> T {
+    let outer = STOPPABLE.with(|flag| flag.replace(true));
+    let result = f();
+    STOPPABLE.with(|flag| flag.set(outer));
+    result
+}
+
+/// Whether a reader of the run stopped short since the last call ([`out_of_ticks`]), and clears it.
+#[inline]
+pub(crate) fn take_cut_short() -> bool {
+    CUT_SHORT.with(|cut| cut.replace(false))
+}
+
+/// Marks the run cut short again: an interrupted run's flag, put back after a dependency cell's
+/// run ([`take_cut_short`]).
+#[inline]
+pub(crate) fn restore_cut_short(cut: bool) {
+    if cut {
+        CUT_SHORT.with(|flag| flag.set(true));
+    }
 }
 
 /// Notes `count` bytes or characters read by a comparison, a key or a fold, at `ticks` each (the
@@ -53,12 +116,33 @@ thread_local! {
 #[inline]
 pub(crate) fn note_compared(count: usize, ticks: u64) {
     let count = u64::try_from(count).unwrap_or(u64::MAX);
-    add_ticks(count.saturating_mul(ticks));
+    read_ticks(count.saturating_mul(ticks));
 }
 
 /// Adds `ticks` to the pending count.
 fn add_ticks(ticks: u64) {
     COMPARED_TICKS.with(|total| total.set(total.get().saturating_add(ticks)));
+}
+
+/// Adds `ticks` a reader read to the pending count ([`add_ticks`]), and, in tests, to the count
+/// of every tick read ([`take_read_ticks`]).
+fn read_ticks(ticks: u64) {
+    add_ticks(ticks);
+    #[cfg(test)]
+    READ_TICKS.with(|total| total.set(total.get().saturating_add(ticks)));
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Every tick the readers read since [`take_read_ticks`] last took them, charged or not.
+    static READ_TICKS: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The ticks the readers read since the last call, for the tests of T-4278: how far a reader
+/// read before it stopped.
+#[cfg(test)]
+pub(crate) fn take_read_ticks() -> u64 {
+    READ_TICKS.with(|total| total.replace(0))
 }
 
 /// The ticks noted ([`note_compared`]) since the last call, and starts again from 0.
@@ -86,10 +170,20 @@ pub(super) fn counted<'a, I: Iterator + Clone + 'a>(
 }
 
 /// [`super::cmp_text`] or [`super::cmp_text_pairwise`], noting the ticks it read.
+///
+/// Past the run's allowance, Excel's pairwise order returns `Equal` without reading ([`out_of_ticks`],
+/// T-4278), inside [`stoppable`] only: SORT's and SORTBY's merge (`sort_indices_pairwise`) takes
+/// any order, and the run's value is the work budget's error. The total order does
+/// not, since `slice::sort_by` may panic on a comparator that is not one (GROUPBY's sorts).
 pub(super) fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
+    if let AccentOrder::Pairwise = order {
+        if out_of_ticks() {
+            return Ordering::Equal;
+        }
+    }
     let read = Cell::new(0);
     let ordering = cmp_text_counted(left, right, order, &read);
-    add_ticks(read.get());
+    read_ticks(read.get());
     ordering
 }
 

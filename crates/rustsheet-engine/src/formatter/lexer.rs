@@ -420,7 +420,12 @@ impl Lexer {
 
     /// Whether the characters from the current position start with `text`, ignoring ASCII case.
     fn looks_at(&self, text: &str) -> bool {
-        let mut position = self.position;
+        self.looks_at_after(0, text)
+    }
+
+    /// Whether the characters `offset` places on start with `text`, ignoring ASCII case.
+    fn looks_at_after(&self, offset: usize, text: &str) -> bool {
+        let mut position = self.position + offset;
         for expected in text.chars() {
             match self.chars.get(position) {
                 Some(c) if c.eq_ignore_ascii_case(&expected) => position += 1,
@@ -428,6 +433,19 @@ impl Lexer {
             }
         }
         true
+    }
+
+    /// The run of `c` from the current position that belongs to an `aaa` weekday code: the run's
+    /// last letter is the `A` of an `AM/PM` or `A/P` token right after it, not part of the code.
+    /// Excel: `TEXT(0.75,"aaaa/p")` is "Satp" and `"aaam/pm"` is "aaPM", not "Saturday/p"
+    /// (probes/text-format-aaa-weekday-d A5, A7; T-2745).
+    fn weekday_run(&self, c: char) -> usize {
+        let run = self.same_char_run(c);
+        if run > 0 && (self.looks_at_after(run, "m/pm") || self.looks_at_after(run, "/p")) {
+            run - 1
+        } else {
+            run
+        }
     }
 
     /// Whether the next token is a currency tag's symbol: `[$€]` or `[$€-40C]` (`Token::Currency`),
@@ -701,7 +719,7 @@ impl Lexer {
                         self.read_next_char();
                         let pm = self.read_next_char().unwrap_or('p');
                         Token::AP(x, pm)
-                    } else if let first @ 3.. = 1 + self.same_char_run(x) {
+                    } else if let first @ 3.. = 1 + self.weekday_run(x) {
                         // Excel: three or more of one `a` (all lowercase or all uppercase) are the
                         // weekday, `aaa` short and `aaaa`+ full like `ddd`/`dddd`; mixed case
                         // prints (`TEXT(1,"aaa")` = "Sun", `"AAAA"` "Sunday", `"aAa"` "aAa").
@@ -711,7 +729,7 @@ impl Lexer {
                         self.position += first - 1;
                         let mut run = first;
                         while let Some(next @ ('a' | 'A')) = self.peek_char() {
-                            match self.same_char_run(next) {
+                            match self.weekday_run(next) {
                                 more @ 3.. => {
                                     self.position += more;
                                     run += more;

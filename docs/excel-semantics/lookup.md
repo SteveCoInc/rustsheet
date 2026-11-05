@@ -19,12 +19,40 @@ then renamed (T-1608, the unscored cells of probes/sheet-ops/sheet-ops-rename-in
 Rule: `INDIRECT("Sales[Column2]")` is the area the same structured reference is in a formula. After two column
 inserts inside `Sales`, `ROWS(INDIRECT("Sales[Column2]"))` is 4; after one insert, where `Column2` does not exist,
 it is `#REF!`. `COUNTA(INDIRECT("Sales[Column1]"))` is 0 (an empty data column). A column the table lacks is `#REF!`.
-Only the plain `Table[Column]` shape is evidenced and implemented; the specifiers (`#All`, `#Headers`, `@`), an
-unqualified column, spacing, a bare table name and `a1` FALSE are unprobed and stay `#REF!` in the engine until
-T-3394 probes them. Case is unprobed too: the engine matches table and column names ignoring case, as the parser
-does, so `INDIRECT("sales[column2]")` probably resolves (T-2911).
+The other shapes are the next entry.
 Evidence: probes/table-edits/table-insert-column-inside-header F!A4, F!A5; table-insert-two-columns-inside-header
 F!A4, F!A5 (excel-graph 2026-10-27).
+
+## INDIRECT of structured-reference text: every qualified shape
+Rule: INDIRECT resolves any structured reference that names its table to the area the same text is in a formula,
+and refuses an unqualified one. With `Sales` on S!A1:D5 (header row 1, data rows 2-4, totals row 5):
+- Specifiers: `Sales[#All]` A1:D5, `Sales[#Headers]` A1:D1, `Sales[#Data]` A2:D4, `Sales[#Totals]` A5:D5,
+  `Sales[[#Headers],[Qty]]` B1, `Sales[[#Totals],[Qty]]` B5, `Sales[[#Headers],[#Data],[Qty]]` B1:B4,
+  `Sales[[#Data],[#Totals],[Qty]]` B2:B5, `Sales[[#All],[Qty]]` B1:B5; column ranges `Sales[[Qty]:[Price]]` and
+  `Sales[[#Data],[Qty]:[Price]]` B2:C4.
+- A bare name: `Sales` and `Sales[]` are the data area A2:D4 (`ISREF(INDIRECT("Sales"))` TRUE).
+- `@` and `#This Row` (`Sales[@Qty]`, `Sales[[#This Row],[Qty]]`, `Sales[#This Row]`, `Sales[@]`, `Sales[@[Qty]]`)
+  are that row of the table at the INDIRECT cell's row number, from the table's sheet or another sheet (P!C3 gives
+  B3); on a row outside the data rows they are `#REF!` (in a formula the same reference is `#VALUE!`).
+  `Sales[@Qty]:Sales[@Price]` (a range of two references) is `#REF!`.
+- Unqualified text is `#REF!` everywhere, also in a cell inside the table: `[Qty]`, `[@Qty]`, `[#Data]`.
+- Names and specifiers match ignoring case (`sales[qty]`, `SALES[QTY]`, `Sales[#all]`, `Sales[#DATA]`).
+- A sheet prefix is ignored: `S!Sales[Qty]`, `'S'!Sales[Qty]`, `S!Sales[#Data]`, `S!Sales` resolve, and so does
+  `P!Sales[Qty]` though sheet P does not hold the table. A prefix naming no sheet is unprobed (the engine
+  keeps it `#REF!`).
+- `a1` FALSE changes nothing: `INDIRECT("Sales[Qty]",FALSE)`, `INDIRECT("Sales",FALSE)`, `INDIRECT("Sales[#All]",FALSE)`
+  resolve as with TRUE.
+- Whitespace follows the A1 rule ("INDIRECT reference text: where spaces are allowed"): a leading space is `#REF!`
+  (`" Sales[Qty]"`, `" Sales"`), trailing spaces and a trailing line feed are ignored (`"Sales[Qty] "`,
+  `"Sales[Qty]   "`, `"Sales[Qty]"&CHAR(10)`, `"Sales "`, `"Sales[#Data] "`), a trailing tab is `#REF!`. Inside,
+  spaces are allowed where the formula grammar puts them between items (`Sales[[#Data], [Qty]]`,
+  `Sales[ [#Data],[Qty] ]`) but not between the name and its bracket (`Sales [Qty]`) or around a column name
+  (`Sales[ Qty]`, `Sales[[ Qty ]]`), which are `#REF!`.
+Evidence: probes/t3394-indirect-structref-shapes (S!D2:D4, F3:L3, F8:L8; P!A1:A27, B1:B9, C1:C11; each cell the
+first row, first column, rows and columns of the area; excel-graph 2026-11-05, T-3394).
+Status: VERIFIED (Excel for the web)
+Implemented in: `indirect_structured` (crates/rustsheet-engine/src/functions/lookup_and_reference/mod.rs), tried after
+the defined-name fallback in A1 and R1C1 mode.
 
 ## INDIRECT resolves a defined name that holds a reference
 Rule: `INDIRECT("<name>")` of a defined name whose body is a cell or range reference is that
@@ -113,15 +141,16 @@ Evidence: probes/t3656-indirect-spaces-reversed Sheet1!F11:I33, F47:I54, F61:I65
 CELL("address") of each text in E; oracle: excel-graph, 2026-11-01, T-3656).
 Status: VERIFIED (Excel for the web)
 Implemented in: `indirect_reference_text` (engine expressions/utils), applied before both parsers; the
-defined-name and structured-reference fallbacks still see the text as written (their spacing is
-unprobed; structured references are T-3394).
+defined-name and structured-reference fallbacks still see the text as written and apply the same
+leading and trailing rule themselves (structured references: "INDIRECT of structured-reference text: every qualified shape", T-3394).
 Also `#REF!` (probes/t3747-indirect-whitespace, T-3747): a carriage return anywhere (leading, trailing,
 `"A1"&CHAR(13)&CHAR(10)`, `"R1C1"&CHAR(13)`), a leading line feed, a Unicode space (`UNICHAR(8195)`) leading or
 trailing, a line feed between two references (`"A1"&CHAR(10)&"B2"`, `"A1:B2"&CHAR(10)&"B1:C2"`), a line feed before the `!` (`"Sheet2"&CHAR(10)&"!A1"`), and spaces inside a reference (`"$A $1"`, `"A 1"`, `"$ A$1"`,
 `"A1 :B 2"`, `"R[ 1]C"`, `"R1 C1"`, `"R[1] C"`, `"R 1C1"`). Trailing space on a whole-column or row ref
 resolves (`"A:A "`, `"1:1 "`). A defined name's text may end in spaces or a line feed (`"MyName "`,
 `"MyName"&CHAR(10)`, `"MyName"&CHAR(10)&CHAR(10)`, `"MyName "&CHAR(10)`, `"MyName"&CHAR(10)&" "`) but not start with a space (probes/t3747-indirect-name-whitespace; the name fallback trims
-the same trailing characters). Not probed: names with a carriage return, structured references (T-3394).
+the same trailing characters). Not probed: names with a carriage return. Structured-reference text: "INDIRECT of structured-reference
+text: every qualified shape" (T-3394).
 Note for probes: text naming a sheet that does not exist is resolved by Excel for the web as an
 external workbook reference (`"' My Sheet'!A1"` gave CELL address `[ My Sheet] My Sheet!$A$1` and SUM
 `#BLOCKED!`), so such cells were dropped from the case (see "INDIRECT to a sheet that does not exist").

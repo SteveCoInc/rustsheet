@@ -3,8 +3,8 @@ id: T-4107
 title: "Number formats: a ,2000 numeral suffix (and LCID byte 32) prints fullwidth digits in Excel"
 milestone: M10
 lane: functions-text
-status: todo
-priority: P3
+status: done
+priority: P0
 size: S
 tier: sonnet
 depends_on: []
@@ -23,9 +23,12 @@ Every other probed suffix (`,200` to `,1200`, `,0`) is byte = value >> 8. Probe 
 `[$-,20]0` and a date field, then fix `locale_tag::numerals` (TODO(T-4107) there).
 
 ## Acceptance criteria
-- [ ] The probe's cells and probes/t3891-numeral-tag-render A28 pass; the rule is in
+- [x] The probe's cells and probes/t3891-numeral-tag-render A28 pass; the rule is in
       docs/excel-semantics/number-formats.md "Numeral-system digits".
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Typed script-digit input (T-3891).
+
+## Outcome
+Probed (probes/t4107-numeral-2000-suffix, excel-graph): numeral bytes 0x20-0x27 are CJK systems, not ASCII, in both the `,N00` suffix and the LCID form. Implemented 0x20 (fullwidth digits, Chinese structure), 0x21, 0x22 (the Chinese styles of 30, 31) and 0x23 (0x20 with 萬 億); extended-hex tags that wrap past byte 31 stay ASCII (gen-m10 evidence). Rules in docs/excel-semantics/number-formats.md "Bytes 32-39". probes/t3891-numeral-tag-render A28 now passes. Bytes 0x24-0x27 are left to T-4347 (probe cells A22, A42:A69 owned there).

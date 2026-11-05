@@ -7,7 +7,10 @@
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
-    functions::util::collation::{restore_compared_ticks, take_compared_ticks},
+    functions::util::collation::{
+        restore_compared_ticks, restore_cut_short, set_compared_allowance, take_compared_ticks,
+        take_cut_short,
+    },
     limits::too_many_visits,
     model::Model,
     recalc_budget::RunBound,
@@ -227,6 +230,13 @@ pub(crate) fn text_units(bytes: usize) -> u64 {
         .div_ceil(TEXT_BYTES_PER_UNIT)
 }
 
+/// The ticks of text comparison `work` units pay for ([`COMPARED_TICKS_PER_UNIT`] each): pending
+/// ticks past it make the next [`Model::spend_compared`] fail ([`compared_units`] rounds up), so
+/// the readers may stop there (`set_compared_allowance`, T-4278).
+pub(crate) fn compared_allowance(work: u64) -> u64 {
+    work.saturating_mul(COMPARED_TICKS_PER_UNIT)
+}
+
 /// The units of `ticks` ticks of text comparison ([`Model::spend_compared`]): one per
 /// [`COMPARED_TICKS_PER_UNIT`], rounded up.
 pub(crate) fn compared_units(ticks: u64) -> u64 {
@@ -276,11 +286,21 @@ impl Model {
         // level this also sets aside ticks noted outside any run (an API sort, say), so no run
         // ever pays for them.
         let outer_compared = take_compared_ticks();
+        // The readers stop once the pending ticks pass what this run has left (T-4278); the
+        // interrupted run's allowance and cut-short mark come back afterwards.
+        let outer_allowance = set_compared_allowance(compared_allowance(self.area_budget.work));
+        let outer_cut_short = take_cut_short();
         let result = f(self);
         // Ticks a run noted after its last node (none today) are not charged to the outer one.
         let _ = take_compared_ticks();
         restore_compared_ticks(outer_compared);
+        set_compared_allowance(outer_allowance);
+        let cut_short = take_cut_short();
+        restore_cut_short(outer_cut_short);
         let mut inner = std::mem::replace(&mut self.area_budget, outer);
+        // A reader that stopped short returned a value it did not compute: the run is past its
+        // budget whether or not the charge that fails came (`compared::out_of_ticks`).
+        inner.work_exceeded |= cut_short;
         // Past the work budget, the run was cut short wherever the charge failed, and `f` may have
         // turned that into a value (`IFERROR`), so the formula's value is the error (SPEC-0024).
         let exceeded = self.end_run(&mut inner, cell);
@@ -376,10 +396,18 @@ impl Model {
     /// values"; T-4233). [`Model::charged`] runs it for each node `evaluate_node_in_context` ends.
     #[inline]
     pub(crate) fn spend_compared(&mut self, cell: CellReferenceIndex) -> Result<(), CalcResult> {
-        match take_compared_ticks() {
+        let charged = match take_compared_ticks() {
             0 => Ok(()),
             ticks => self.spend_work(compared_units(ticks), cell),
-        }
+        };
+        // What the next node's readers may compare before its charge must fail (T-4278).
+        let left = if self.area_budget.work_exceeded {
+            0
+        } else {
+            self.area_budget.work
+        };
+        set_compared_allowance(compared_allowance(left));
+        charged
     }
 
     /// Charges a LAMBDA value made with body `body`: [`LAMBDA_UNITS`] for storing it and the

@@ -7,7 +7,7 @@ use rustsheet::{
 };
 
 use crate::case::{
-    split_qualified, CaseSpec, CellInput, PivotGroupSpec, PivotTableSpec, SheetSpec,
+    split_qualified, CaseSpec, CellInput, PivotGroupItem, PivotGroupSpec, PivotTableSpec, SheetSpec,
 };
 use crate::cellref::Addr;
 use crate::engine::range_ref;
@@ -110,6 +110,8 @@ fn pivot_input(
         group: pivot.group.as_ref().map(range_group).transpose()?,
         unused_items: pivot.unused_items.clone(),
         show_all: pivot.show_all,
+        column_unused_items: pivot.column_unused_items.clone(),
+        column_show_all: pivot.column_show_all,
     })
 }
 
@@ -123,12 +125,31 @@ fn range_group(group: &PivotGroupSpec) -> Result<PivotRangeGroup, EditError> {
                 .ok_or_else(|| EditError::Engine(format!("pivot group by {by:?}")))?,
         ),
     };
+    // A date group's item count is its layout's (`DateGroups::new`), so a number item there
+    // cannot simply be left out; no probe has one.
+    if by.is_some()
+        && group
+            .items
+            .iter()
+            .any(|i| matches!(i, PivotGroupItem::Number(_)))
+    {
+        return Err(EditError::Engine("a date group's items are texts".into()));
+    }
     Ok(PivotRangeGroup {
         by,
         start: group.start,
         end: group.end,
         interval: group.interval,
-        items: group.items.clone(),
+        // A number item matches none of Excel's labels and takes no place among them, so it is
+        // left out (probes/t4316-pivot-group-number-item; `NumberGroups::new`).
+        items: group
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                PivotGroupItem::Text(text) => Some(text.clone()),
+                PivotGroupItem::Number(_) => None,
+            })
+            .collect(),
     })
 }
 

@@ -1,13 +1,8 @@
 use crate::arithmetic::bcast_get;
 use crate::cast::NumberOrArray;
-use crate::defined_names::ParsedDefinedName;
 use crate::expressions::parser::ArrayNode;
-use crate::expressions::token::TableReference;
-use crate::expressions::types::{CellReferenceIndex, CellReferenceRC};
-use crate::expressions::utils::{
-    indirect_reference_text, is_indirect_unquoted_sheet, is_out_of_range_r1c1_name,
-    quote_digit_leading_sheet, unquote_sheet_prefix,
-};
+use crate::expressions::types::CellReferenceIndex;
+use crate::expressions::utils::{indirect_reference_text, quote_digit_leading_sheet};
 use crate::external_reference::{one_external_area, PickedReference};
 use crate::functions::util::array_node_to_calc_result;
 use crate::functions::Function;
@@ -44,6 +39,7 @@ mod grouping;
 mod hstack_vstack;
 mod index;
 mod index_arg;
+mod indirect_fallbacks;
 mod lifted_options;
 mod lookup;
 mod lookup_each;
@@ -863,10 +859,12 @@ impl Model {
                 let Range { left, right } = Range::between(left, right);
                 CalcResult::Range { left, right }
             }
-            Err(message) => match self.indirect_defined_name(&ref_text, cell).or_else(|| {
-                a1.then(|| self.indirect_structured(&ref_text, cell))
-                    .flatten()
-            }) {
+            // `a1` FALSE resolves a structured reference too (probes/t3394-indirect-structref-shapes
+            // P!B1:B3).
+            Err(message) => match self
+                .indirect_defined_name(&ref_text, cell)
+                .or_else(|| self.indirect_structured(&ref_text, cell))
+            {
                 Some(found) => found,
                 None => CalcResult::Error {
                     error: Error::REF,
@@ -874,112 +872,6 @@ impl Model {
                     message,
                 },
             },
-        }
-    }
-
-    /// INDIRECT of the text of a structured reference (`INDIRECT("Sales[Qty]")`): the area the
-    /// parser lowers the reference to, as for the same text in a formula. A table or column the
-    /// workbook lacks stays `#REF!` (docs/excel-semantics/lookup.md "INDIRECT of a structured
-    /// reference text resolves the table area"; probes/table-edits/table-insert-column-inside-header F!A4:A5, T-2911).
-    fn indirect_structured(&mut self, text: &str, cell: CellReferenceIndex) -> Option<CalcResult> {
-        let sheet = self
-            .workbook
-            .worksheets
-            .get(cell.sheet as usize)?
-            .get_name();
-        let context = CellReferenceRC {
-            sheet,
-            row: cell.row,
-            column: cell.column,
-        };
-        // Only the evidenced `Table[Column]` shape: the specifiers, `@`, an unqualified column,
-        // spacing, a bare table name and `a1` FALSE are unprobed and stay `#REF!` (case is
-        // unprobed but matched ignoring case, as the parser does)
-        // (TODO(T-3394): probe them).
-        let Node::StructuredReferenceKind { reference, lowered } =
-            self.parser.parse(text, &context)
-        else {
-            return None;
-        };
-        let plain_column = reference.specifier.is_none()
-            && !reference.bare
-            && !reference.unqualified
-            && matches!(
-                reference.table_reference,
-                Some(TableReference::ColumnReference(_))
-            );
-        if !plain_column {
-            return None;
-        }
-        let (sheet, row1, column1, row2, column2) = match *lowered {
-            Node::ReferenceKind {
-                sheet_index,
-                row,
-                column,
-                ..
-            } => (sheet_index, row, column, row, column),
-            Node::RangeKind {
-                sheet_index,
-                row1,
-                column1,
-                row2,
-                column2,
-                ..
-            } => (sheet_index, row1, column1, row2, column2),
-            _ => return None,
-        };
-        Some(CalcResult::Range {
-            left: CellReferenceIndex {
-                sheet,
-                row: row1,
-                column: column1,
-            },
-            right: CellReferenceIndex {
-                sheet,
-                row: row2,
-                column: column2,
-            },
-        })
-    }
-
-    /// INDIRECT of the text of a defined name that stands for a reference (`INDIRECT("RCR")`,
-    /// `ISREF` TRUE; probes/r1c1-name-use-rcr, excel-graph). A name spelled like an out-of-range
-    /// R1C1 reference is never resolved (T-1657).
-    ///
-    /// Excel: see docs/excel-semantics/lookup.md "INDIRECT resolves a defined name that holds a
-    /// reference": `a1` FALSE still resolves a name, trailing (not leading) spaces are ignored, and
-    /// a `Sheet!name` prefix picks the name scoped to that sheet, else the workbook name
-    /// (probes/indirect-defined-name-text A5, A8, A22; T-1682).
-    ///
-    /// A relative name (`=Jan!A1`) is read from `cell`, the cell of the INDIRECT, as any other use
-    /// of it is; that INDIRECT case is not probed yet (references.md "Relative references in
-    /// defined names").
-    fn indirect_defined_name(&self, text: &str, cell: CellReferenceIndex) -> Option<CalcResult> {
-        let sheet = cell.sheet;
-        let text = text.trim_end_matches([' ', '\n']);
-        if is_out_of_range_r1c1_name(text) {
-            return None;
-        }
-        let scope = match text.rsplit_once('!') {
-            Some((prefix, _)) => {
-                // Unquoted, the sheet name may hold only letters, digits, '_' and '.':
-                // `INDIRECT("Co A!tn")`, `"P&L!tn"` and `"O'B!tn"` are #REF!, while `"2024!tn"`,
-                // `"Q1!tn"`, `"x.y!tn"` and the quoted `"'O''B'!tn"` resolve
-                // (probes/indirect-sheet-scoped-name, docs/excel-semantics/lookup.md).
-                if !prefix.starts_with('\'') && !is_indirect_unquoted_sheet(prefix) {
-                    return None;
-                }
-                self.get_sheet_index_by_name(&unquote_sheet_prefix(prefix)?)?
-            }
-            None => sheet,
-        };
-        let found = self
-            .parsed_defined_name(text, Some(scope))
-            .or_else(|| self.parsed_defined_name(text, None));
-        match found? {
-            ParsedDefinedName::CellReference(reference)
-            | ParsedDefinedName::RangeReference(reference) => Some(reference.range_at(cell)),
-            _ => None,
         }
     }
 }

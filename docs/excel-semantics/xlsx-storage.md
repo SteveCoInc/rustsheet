@@ -77,7 +77,10 @@ The key derivation may ask for at most `max_spin_count` rounds (`spinCount`), 1,
 before any hashing: MS-OFFCRYPTO allows 10,000,000 (about 2 to 4 s of SHA-512 that any file could
 demand without knowing the password) and Excel writes 100,000, so a file with 1,000,001 to
 10,000,000 rounds that Excel opens is refused with the `SpinCount` limit until the caller raises the
-limit (SPEC-0031 D3). Past 10,000,000 a file is malformed for the format, not a limit.
+limit (SPEC-0031 D3): on the public API that is `LoadOptions::max_spin_count` (default 1,000,000) and
+the refusal is `LoadError::Options`, raised before any hashing (T-4266). A load runs at most one key
+derivation: only the password the caller gives is tried. Past 10,000,000 a file is malformed for the
+format, not a limit.
 Evidence: none for Excel; these are resource limits (CLAUDE.md directive 5), not Excel observations.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/package.rs (`ImportLimits`, `Package`),
@@ -115,7 +118,13 @@ are `UnsupportedEncryption`; a broken descriptor or package, and an Agile packag
 `MalformedEncryption` (SPEC-0031 D5, until T-4263 shows whether Excel opens such a file). With the passwords
 POI's tests use, `protected_passtika.xlsx` (`tika`) and `58616.xlsx` (`VelvetSweatshop`, the default password of
 E2) both decrypt with msoffcrypto-tool 6.1.0, and both are Standard encryption (`EncryptionInfo` 4.2, AES-128).
-The load API does not call it yet (T-4266).
+Since T-4266 the load API calls it: `LoadOptions::password` (Python `password=`) decrypts the package before the
+zip is opened, and the facade maps the importer errors to `LoadError::PasswordRequired` (no password given),
+`WrongPassword`, `Unsupported(UnsupportedKind::{LegacyBinaryWorkbook, Encryption(kind), OtherOleFile})`, `Options`
+(a limit) and `Format` (malformed or tampered), in Python `PasswordRequiredError` and `WrongPasswordError`
+(subclasses of `LoadError`). No `VelvetSweatshop` retry exists: E2 is unverified (T-4263), so a file encrypted with
+Excel's default password needs that password passed explicitly. A password given for a file that is not encrypted
+is ignored.
 - poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`, version 3
   containers with the `\x06DataSpaces` storage, `EncryptionInfo` of 248 bytes and `EncryptedPackage`) are refused as
   `EncryptedPackage`. Their baseline lines stay `!InvalidCase` (now with that message), owned by T-4267.
@@ -124,8 +133,10 @@ The load API does not call it yet (T-4266).
 Status: UNVERIFIED (probe pending, T-4263); known gap owned by T-4265 to T-4267 (SPEC-0031).
 Implemented in: `Package::new`, `is_ole_compound_file` (crates/rustsheet-xlsx/src/import/package.rs),
 `classify_ole_compound_file` and `decrypt_ole_package` (import/ole.rs), `decrypt_package` (import/encryption.rs),
-the `XlsxError` variants (error.rs); the eval snapshot reader (crates/rustsheet-eval/src/xlsx_snapshot.rs). Tests:
-crates/rustsheet-xlsx/tests/ole_container.rs, crates/rustsheet-xlsx/tests/encrypted_package.rs; fuzz targets
+the `XlsxError` variants (error.rs); `Workbook::from_xlsx_bytes` and `import_load_error`
+(crates/rustsheet/src/workbook.rs); the eval snapshot reader (crates/rustsheet-eval/src/xlsx_snapshot.rs). Tests:
+crates/rustsheet-xlsx/tests/ole_container.rs, crates/rustsheet-xlsx/tests/encrypted_package.rs,
+crates/rustsheet/tests/encrypted_load.rs, bindings/python/tests/test_facade.py; fuzz targets
 `cfb_container`, `encrypted_package`.
 Tasks: T-3972, T-4243, T-4263, T-4264, T-4265, T-4266, T-4267, T-4268
 

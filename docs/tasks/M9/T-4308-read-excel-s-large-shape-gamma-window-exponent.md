@@ -3,7 +3,7 @@ id: T-4308
 title: "Read Excel's large-shape gamma window exponent on the mode chain (after T-4296)"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -58,10 +58,10 @@ From the T-4296 review (PR #3315; MINOR, carried here):
   evaluate `excel_away_from_mode` today).
 
 ## Acceptance criteria
-- [ ] A candidate exponent on the T-4296 chain is scored with a hold-out fixed before scoring (decision 0188 R4),
+- [x] A candidate exponent on the T-4296 chain is scored with a hold-out fixed before scoring (decision 0188 R4),
       and adopted if it is Excel's on the hold-out. Otherwise each rejected family goes into statistics.md with its
       scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
@@ -69,3 +69,63 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 ## Out of scope
 - Shapes below 20 (T-3219).
 - The cdf inside the window (it decouples from the density from about 0.72a; T-4255).
+
+## Pre-registration (written before any candidate was scored, decision 0188 R4.1)
+- Target: Excel's exponent read out as a double. For each window cell (0.6668 < x/a < 1.4999, |x/a - 1| >= 0.02)
+  of probes/t4290-gamma-window-large-pow2, the double B within 128 ulp of the true exponent whose T-4296 chain
+  exp(-c(a) - B) / sqrt(2 pi a) * (a / x) is Excel's value bit for bit (cells with no such B are reported and left out).
+- Split: fit = columns A:C (shapes 4096, 1024, 256), hold-out = column D (shape 2048, x/a on the k + 2 grid).
+- Score: the count of cells where the candidate's B is Excel's B exactly, then rms in ulp(B).
+- Margin: a candidate is adopted only if its hold-out exact rate is within 10 percentage points of its fit rate and
+  beats the correctly rounded B's hold-out exact rate by at least 10 points.
+
+## Outcome
+Found Excel's window exponent and adopted it. Excel's large-shape GAMMA.DIST density is one chain, Loader's dgamma:
+exp(-c(a) - B) / sqrt(2 pi a) * (a / x), with B taken from bd0 cut at |y - a| <= 0.2 (y + a).
+- **Read-out.** On the T-4296 chain one double B reproduces Excel's density bit for bit at 746 of 809 t4290
+  window cells, so the exponent is read exactly (docs/research/t4308/read_out.py part 1).
+- **Window.** B = (y - a) v - (2a atanh(v) - 2a v), v = fl((y - a)/(y + a)), with atanh correctly rounded (a
+  double-double ln). Scored against Excel's exact B with the pre-registered split: fit (t4290 A:C) 551/551,
+  hold-out (D) 193/195. The correctly rounded B is at 74/551 and 26/195. The R4.1 margin holds: the hold-out rate
+  of 99.0% is within 10 points of the fit's 100% and 85.7 points above the correctly rounded B's 13.3%.
+  This is a structural model, an operation order chosen from ranked candidates, with no fitted constant, so it
+  has no `FITTED` tag.
+- **Outside the window.** The same chain takes Loader's direct deviance a ln(a/y) + (y - a) from a/200 up. This is
+  T-4319's change, folded in here because it is one chain. It is bit-exact at 156/160 probed cells above the
+  window and 119/155 below it, against 43 and 65 for the old ratio prefactor (read_out.py part 4).
+- **Window ends.** |y - a| <= 0.2 (y + a), tested in doubles, puts every t4290 E/F ladder cell and every t4255 edge
+  cell on Excel's side.
+- **Code.** density.rs `density_with`, `in_window`, `loader_density` (it replaces `mode_density`),
+  `window_exponent`, `direct_deviance` and `atanh_rounded`. The test for the near mode is now made once for the
+  density (`in_window`), and P and Q keep `excel_away_from_mode`, since the window cdf decouples (T-4255). Where y + a overflows the point is
+  outside the window (review round 1).
+- **R4.2 fresh sweep.** probes-numeric/t4308-gamma-density-r4-fresh: 154 cells drawn after the freeze (seed
+  43081, docs/research/t4308/make_sweep.py), excel-graph 2026-11-05. They cover the window at shapes 20 to 1E9,
+  outside it, 0.6a to 0.667a at shapes outside 30 to 500, shapes 1E7 to 1E12, and the 2 pi a overflow. Of the
+  54 cells with a nonzero Excel value, the engine is bit-exact at 52, within 4 ulp at 53 and within 15 digits at
+  53. The correctly rounded density is at 3, 9 and 12. Gate A's envelope holds every numeric point (read_out.py part 3,
+  committed as the MINOR item asked). A152:A154, Excel's #DIV/0! and unchanged here, are outside it (T-4340). On the t4296 fresh sweep the engine is 125/126 bit-exact.
+- **New quirk.** Past the 2 pi a overflow Excel's density at the mode is #DIV/0! (A152:A154). It goes to T-4340.
+- **Eval delta.** probes fixed 1,168, gen-m9 fixed 1. That includes the seven cells decision 0286 let regress,
+  which come back. One regression, probes/t4290-gamma-window-large-pow2 B223 at x/a = 1.5078125, where Excel
+  takes the ratio prefactor and its neighbours take the chain, is recorded by decision 0290 (follow-up T-4339).
+  New: probes-numeric t4308 fresh, 149 of 154 cells pass.
+- **Follow-ups.** T-4339 (row 223 above the window) and T-4340 (#DIV/0! past the overflow).
+
+## Outcome of PR #3349 (first PR; superseded by the Outcome above)
+No exponent is Excel's; the task ends on the second branch of its first criterion (rejected families recorded), and
+hands the open question to T-4334 with a new lead.
+- New finding (statistics.md, the T-4308 paragraph): Excel's implied exponent B on the T-4296 chain is not one
+  double. Where B >= a/128 it sits on the fixed grid a 2^-59 (2^-47 at shape 4096) up to one constant per shape,
+  finer than ulp(B); below a/128 it is on its own double grid. So the exponent's last rounding happens at about
+  a/128, which rules out an exp argument rounded as one double at large B.
+- Rejected, scored with t4290's split (fit A B C, hold-out D, fixed before scoring by T-4290). No R4.1 margin was
+  stated before scoring, so none is claimed; no family came near adoption, all at chance: fixed-grid logarithms
+  of u and of x and a (2^-55 to 2^-57), mantissa-and-exponent logarithms in three normalisations, TOMS 708's
+  rlog1. Best hold-out 0.32. Nothing in the engine changes, so there is no fresh sweep and no FITTED tag.
+- The T-4296 review's carry-overs: the Gate A envelope check and the per-engine fresh-sweep counts are now
+  docs/research/t4308/score.py part 3 (160/160 inside; 40/40/40 at x = a and 38/51/64 of 120 elsewhere in the
+  window, bit-exact / 4 ulp / 15 digits). The near-mode and overflow probes and the single near-mode test move to
+  T-4334 with the visibly-off cells.
+- Eval delta: none (docs and research script only).
+- Follow-ups: T-4334 (the exponent, from the grid); T-4335 (T-4295's unprobed `[s]` forms, from PR #3308's review).

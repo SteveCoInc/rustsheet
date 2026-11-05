@@ -8,6 +8,7 @@ from rustsheet_tools.fitlab.kernels import (
     asin,
     beta,
     beta_inv,
+    binom_pmf,
     devsq,
     erfc,
     fisher_expon_harmean,
@@ -27,6 +28,7 @@ from rustsheet_tools.fitlab.kernels import (
 )
 
 MODULES = [
+    binom_pmf,
     erfc,
     annuity,
     power,
@@ -37,7 +39,6 @@ MODULES = [
     beta,
     norm_inv,
     beta_inv,
-    devsq,
     mirr,
     asin,
     yield_caret,

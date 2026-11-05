@@ -25,7 +25,8 @@ A pivot may group its row field by numeric ranges (T-4228), the `<fieldGroup>` o
 
 The row field must then hold numbers and the pivot has no column field. `items` are the group
 labels in order, written as the `<groupItems>`: the first for values below `start`, the last for
-values past `end`. A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hours`, `days`,
+values past `end`. A label may repeat and a number is written as an `<n>` item (T-4316 probes both;
+Excel writes its own labels on load). A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hours`, `days`,
 `months`, `quarters` or `years`, ECMA-376's `groupBy`) with `interval` 1, and `start` and `end` are
 date serials (written as `startDate` and `endDate`); its row field holds date serials, which the
 case should give a date number format (Excel groups a field by date only when its cells are dates),
@@ -37,6 +38,7 @@ record uses them (what a refresh that dropped an item's last record leaves, `mis
 `"show_all"` (default false), the row field's `showAll`. Excel rebuilds the cache from `source` on
 load, which would drop such an item, so a pivot with unused items leaves `refreshOnLoad` off; the
 rendered layout then shows an unused item (a blank aggregate) only when `show_all` is true.
+`"column_unused_items"` and `"column_show_all"` (T-4311) are the same for the column field.
 
 Excel stores no record's group, so the builder renders no cells for a grouped pivot (which group a
 record falls in is what such a probe asks): Excel lays the pivot out itself on load (excel-graph,
@@ -77,6 +79,8 @@ _KEYS = {
     "group",
     "unused_items",
     "show_all",
+    "column_unused_items",
+    "column_show_all",
 }
 _GROUP_KEYS = {"start", "end", "interval", "items"}
 _DATE_GROUPS = {"seconds", "minutes", "hours", "days", "months", "quarters", "years"}
@@ -188,21 +192,36 @@ class _Pivot:
                 if isinstance(value, str) and value not in self.shared[i]:
                     self.shared[i].append(value)
         self.show_all = bool(pivot.get("show_all", False))
-        self.unused: list[str] = list(pivot.get("unused_items", []))
-        # Excel matches pivot items case-insensitively (the probe's "north" finds "North"), so an
-        # unused item must differ from every record's item, and from the others, ignoring case.
-        used = {str(v).casefold() for v in self.shared[self.row]}
-        if self.unused and (
-            self.group is not None
-            or not all(isinstance(u, str) and u.casefold() not in used for u in self.unused)
-            or len({str(u).casefold() for u in self.unused}) != len(self.unused)
-        ):
-            msg = (
-                f"unused_items are distinct texts no record uses, on an ungrouped row field: {self.unused!r}"
-            )
+        self.unused: list[str] = self._unused(
+            self.row, pivot.get("unused_items", []), grouped=self.group is not None, key="unused_items"
+        )
+        self.column_show_all = bool(pivot.get("column_show_all", False))
+        column_unused = list(pivot.get("column_unused_items", []))
+        if self.column is None and (column_unused or self.column_show_all):
+            msg = "column_unused_items and column_show_all need a column field"
             raise ValueError(msg)
-        self.shared[self.row].extend(self.unused)
+        self.column_unused: list[str] = (
+            []
+            if self.column is None
+            else self._unused(self.column, column_unused, grouped=False, key="column_unused_items")
+        )
         self.top, self.left = xlsxwriter.utility.xl_cell_to_rowcol(str(pivot["location"]).replace("$", ""))
+
+    def _unused(self, index: int, raw: Any, *, grouped: bool, key: str) -> list[str]:
+        """Field `index`'s unused items, appended to its shared items. Excel matches pivot items
+        case-insensitively (the probe's "north" finds "North"), so an unused item must differ from
+        every record's item, and from the others, ignoring case."""
+        unused = list(raw)
+        used = {str(v).casefold() for v in self.shared[index]}
+        if unused and (
+            grouped
+            or not all(isinstance(u, str) and u.casefold() not in used for u in unused)
+            or len({str(u).casefold() for u in unused}) != len(unused)
+        ):
+            msg = f"{key} are distinct texts no record uses, on an ungrouped field: {unused!r}"
+            raise ValueError(msg)
+        self.shared[index].extend(unused)
+        return unused
 
     def _field(self, name: Any, *, text: bool) -> int:
         if name not in self.fields:
@@ -221,15 +240,21 @@ class _Pivot:
 
     def _order(self, index: int) -> list[str]:
         if index == self.row and self.group is not None:
-            return self.group.items
+            # Only the items' positions matter here: a grouped pivot renders no cells.
+            return [str(v) for v in self.group.items]
         return sorted(self.shared[index], key=str.casefold)
 
+    def _shows_all(self, index: int) -> bool:
+        """Field `index`'s `showAll`: the row's `show_all`, the column's `column_show_all`."""
+        return self.show_all if index == self.row else self.column_show_all and index == self.column
+
     def _shown(self, index: int) -> list[str]:
-        """The items of field `index` laid out: all but a row item without a record, unless `showAll`."""
+        """The items of field `index` laid out: all but an item without a record, unless `showAll`."""
         order = self._order(index)
-        if index != self.row or self.show_all:
+        if self._shows_all(index):
             return order
-        return [v for v in order if v not in self.unused]
+        unused = self.unused if index == self.row else self.column_unused if index == self.column else []
+        return [v for v in order if v not in unused]
 
     def _aggregate(self, row_item: str | None, column_item: str | None) -> float | None:
         values = [
@@ -262,7 +287,7 @@ class _Pivot:
                 put(top + 1 + i, left, item if item is not None else "Grand Total")
                 put(top + 1 + i, left + 1, self._aggregate(item, None))
             return out
-        columns = self._order(self.column)
+        columns = self._shown(self.column)
         put(top, left, self.caption)
         put(top, left + 1, "Column Labels")
         put(top + 1, left, "Row Labels")
@@ -288,7 +313,7 @@ class _Pivot:
         else:
             bottom, right, first_data_row = (
                 self.top + 1 + rows,
-                self.left + 1 + len(self.shared[self.column]),
+                self.left + 1 + len(self._shown(self.column)),
                 2,
             )
         ref = (
@@ -320,7 +345,7 @@ class _Pivot:
             if i == self.row and self.group is not None:
                 shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
-        refresh = "" if self.unused else ' refreshOnLoad="1"'
+        refresh = "" if self.unused or self.column_unused else ' refreshOnLoad="1"'
         return (
             f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1"{refresh}'
             f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{len(self.records)}">'
@@ -372,7 +397,7 @@ class _Pivot:
             if i in (self.row, self.column):
                 axis = "axisRow" if i == self.row else "axisCol"
                 pivot_fields.append(
-                    f'<pivotField axis="{axis}" showAll="{int(self.show_all and i == self.row)}">{self._axis_items(i)[0]}</pivotField>'
+                    f'<pivotField axis="{axis}" showAll="{int(self._shows_all(i))}">{self._axis_items(i)[0]}</pivotField>'
                 )
             elif i == self.value:
                 pivot_fields.append('<pivotField dataField="1" showAll="0"/>')
@@ -386,7 +411,7 @@ class _Pivot:
         else:
             column_lines = self._axis_items(self.column)[1]
             columns = f'<colFields count="1"><field x="{self.column}"/></colFields>'
-            columns += f'<colItems count="{len(self.shared[self.column]) + 1}">{column_lines}</colItems>'
+            columns += f'<colItems count="{len(self._shown(self.column)) + 1}">{column_lines}</colItems>'
         subtotal = "" if self.function == "sum" else f' subtotal="{self.function}"'
         return (
             f'<pivotTableDefinition xmlns="{_MAIN_NS}" name={quoteattr(self.name)} cacheId="{cache_id}"'
@@ -410,11 +435,13 @@ class _Group:
     start: float
     end: float
     interval: float
-    items: list[str]
+    items: list[str | float]
     by: str | None = None  # `groupBy` of a date group; None groups numbers
 
     def xml(self, *, base: int) -> str:
-        items = "".join(f"<s v={quoteattr(v)}/>" for v in self.items)
+        items = "".join(
+            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{_number(v)}"/>' for v in self.items
+        )
         if self.by is None:
             bounds = (
                 f'startNum="{_number(self.start)}" endNum="{_number(self.end)}"'
@@ -459,10 +486,11 @@ def _group(raw: Any) -> _Group | None:
     if (
         not isinstance(items, list)
         or len(items) < 3
-        or not all(isinstance(v, str) for v in items)
-        or len(set(items)) != len(items)
+        or not all(
+            isinstance(v, str) or (isinstance(v, int | float) and not isinstance(v, bool)) for v in items
+        )
     ):
-        msg = f"a pivot group's items are three or more distinct texts: {items!r}"
+        msg = f"a pivot group's items are three or more texts or numbers: {items!r}"
         raise ValueError(msg)
     if by is not None:
         for bound in (start, end):

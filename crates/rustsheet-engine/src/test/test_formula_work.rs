@@ -364,3 +364,65 @@ fn a_unique_of_medium_texts_stays_inside_the_limit() {
     let spent = units(r#"=ROWS(UNIQUE(REPT("a",20)&SEQUENCE(65536)))"#);
     assert!(spent < MAX_FORMULA_WORK / 16, "{spent}");
 }
+
+#[test]
+fn a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left() {
+    use crate::functions::util::collation::take_read_ticks;
+    // T-4278: one node whose comparisons alone pass the budget stops there, instead of reading to
+    // its end before the charge. Scaled-down shapes of `=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`
+    // and a UNIQUE of long `é` texts, and SORT's pairwise merge. Unstopped, each reads 100 to
+    // 440 million ticks (65,536 keys of 105 bytes at 64 ticks a byte, 200 of 8,003 bytes, about a
+    // million comparisons of 105 bytes); the limit pays for 16.8 million.
+    const LIMIT: u64 = 1 << 20;
+    let allowance = LIMIT * COMPARED_TICKS_PER_UNIT;
+    for (formula, longest_read) in [
+        (r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(65536)))"#, 105 * 64),
+        (r#"=ROWS(UNIQUE(REPT("é",4000)&SEQUENCE(200)))"#, 8003 * 64),
+        (r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(65536)))"#, 2 * 105),
+    ] {
+        let mut model = model_with_limit(LIMIT);
+        model._set("A1", formula);
+        let _ = take_read_ticks();
+        model.evaluate();
+        let read = take_read_ticks();
+        assert_eq!(model._get_text("A1"), "#VALUE!", "{formula}");
+        assert_eq!(model._get_error_message("A1"), TOO_MUCH_WORK, "{formula}");
+        // What earlier nodes were charged, then what the node read past its allowance: at most one
+        // more key or comparison.
+        assert!(read <= 2 * allowance + longest_read, "{formula}: {read}");
+    }
+    // Under the limit the same readers compute.
+    let mut model = model_with_limit(LIMIT);
+    model._set("A1", r#"=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(512)))"#);
+    model._set("A2", r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(512)))"#);
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), "512");
+    assert_eq!(model._get_text("A2"), "512");
+}
+
+#[test]
+fn a_formula_past_the_limit_leaves_no_stand_in_in_a_shared_index() {
+    // The exact-match lookup index and the criteria index are shared by the formulas of a pass,
+    // each under its own budget: a formula that runs out while one is built must not leave keys
+    // it did not read for the others (T-4278 review; the readers stop only in
+    // `collation::stoppable`). Each formula below fits the limit unless it builds the index.
+    let mut model = model_with_limit(10_000);
+    for row in 1..=200 {
+        model._set(&format!("A{row}"), &format!(r#"=REPT("a",100)&{row}"#));
+    }
+    for row in 1..=4 {
+        model._set(&format!("B{row}"), "=XMATCH(A200,A1:A200)");
+        model._set(&format!("C{row}"), "=COUNTIFS(A1:A200,A200)");
+    }
+    model.evaluate();
+    for row in 1..=4 {
+        for column in ["B", "C"] {
+            let text = model._get_text(&format!("{column}{row}"));
+            let message = model._get_error_message(&format!("{column}{row}"));
+            assert!(
+                matches!(text.as_str(), "200" | "1") || message == TOO_MUCH_WORK,
+                "{column}{row}: {text} {message}"
+            );
+        }
+    }
+}

@@ -3,7 +3,7 @@ id: T-0497
 title: "Port ironcalc 06f12748: export shared strings with leading or trailing whitespace as xml:space=\"preserve\""
 milestone: M11
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,11 +28,17 @@ behaviour is the XML 1.0 whitespace rule, and Excel itself writes `xml:space="pr
 runs: e.g. the shared strings of the Excel-authored calc_tests/DATE_AND_TIME/DAYS_DAYS360.xlsx).
 
 ## Acceptance criteria
-- [ ] Exported shared strings with leading or trailing whitespace carry `xml:space="preserve"`;
+- [x] Exported shared strings with leading or trailing whitespace carry `xml:space="preserve"`;
       other strings are written unchanged.
-- [ ] A round-trip test (export, then import) keeps `" a"`, `"a "`, `"\n"` and `"a b"` exactly.
-- [ ] The commit carries `Ported-From: ironcalc@06f12748`.
-- [ ] `make check` green; reviewers approve.
+- [x] A round-trip test (export, then import) keeps `" a"`, `"a "`, `"\n"` and `"a b"` exactly.
+- [x] The commit carries `Ported-From: ironcalc@06f12748`.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Normalizing whitespace on import (already correct).
+
+## Outcome
+`export/shared_strings.rs` (the only writer of `<t>` text in `export/`; no rich-text or comment writer exists)
+now writes `<t xml:space="preserve">` for a shared string that starts or ends with whitespace
+(`char::is_whitespace`) and plain `<t>` otherwise. Test: `crates/rustsheet-xlsx/tests/shared_string_whitespace.rs`
+(export XML and reload keep `" a"`, `"a "`, `"\n"`, `"a b"`). Eval delta: none.
