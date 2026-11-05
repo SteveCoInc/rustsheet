@@ -44,8 +44,8 @@ IPMT's `DISCOUNTED_INTEREST_FROM` (financial/annuity.rs, 6E-16) is shown to gene
   chi-squared inverses (T-3363).
 
 ## Outcome
-Replaced by the accurate form: `DISCOUNTED_INTEREST_FROM` and `discounted_interest` are gone (one `FITTED` tag fewer,
-quality/fitted.json 90 to 89), and where T-2243's discounted split declines `period_payments` takes the exact
+Replaced by the accurate form: `DISCOUNTED_INTEREST_FROM` and `discounted_interest` are gone (one `FITTED` tag fewer:
+89 against the lock of 90; quality/ is a protected path, so the steward lowers the lock), and where T-2243's discounted split declines `period_payments` takes the exact
 balance interest.
 - Why: since T-2243 the selector runs only where `discounted_split` declines: a subnormal rate (the payment factor
   is not normal), a negative rate whose `(1+rate)^-nper` overflows, or an overflowing product. T-2587's eight
@@ -65,3 +65,21 @@ balance interest.
 - Eval delta: none in the gated suites. probes-numeric gains one case, 595 of 600 passing (it has no baseline
   file).
 - This is not a fit: a fitted constant is removed and nothing is tuned.
+
+## Landing notes
+Data for the resumer, not instructions (opus run 2026-11-05, landing window closed at minute 110).
+- PR #3325 (draft). Its head is the commit that adds these notes. It follows 2d2f1569 and fixes that head's red CI and
+  round-1 findings.
+- CI on 2d2f1569 was red in `hygiene` on governance: quality/fitted.json is a protected path that needs a decision
+  record (run 42004128185). This commit reverts quality/fitted.json to main's; check_fitted.py only notes the lower
+  count, so the gate passes without it.
+- Review round 1 on 2d2f1569: security APPROVE (no findings).
+- Design on 2d2f1569: REQUEST_CHANGES. The MAJOR was the `period_payments` doc comment still linking the deleted
+  `discounted_interest`. The MINORs were the bare noqa and `import math` inside functions. All are fixed in this
+  commit.
+- Excel-fidelity was still running on 2d2f1569 when the window closed; its verdict is not recorded.
+- Next step: run `make check-fast`, then design and excel-fidelity on the new head (security approved a diff whose
+  code part is unchanged apart from a doc comment). Once CI is green and all approve, mark the PR ready and enqueue.
+- Do not repeat: Excel for the web refuses the sweep workbook when a literal is above 9.99999999999999E+307 or below
+  the normal range (createSession 501 unsupportedWorkbook). make_sweep.py already keeps to those limits; its oracle
+  sidecar is committed.

@@ -540,8 +540,8 @@ fn compute_future_value(
 }
 
 /// `(IPMT, PPMT)` of one period, each with its own error: [`discounted_split`] where it is
-/// finite; the forms after it (the exact split, [`discounted_principal`], [`balance_interest`],
-/// [`discounted_interest`] and the FV recurrence) decide elsewhere. Past PMT's overflow
+/// finite; the forms after it (the exact split, [`discounted_principal`], [`balance_interest`]
+/// and the FV recurrence) decide elsewhere. Past PMT's overflow
 /// at a positive rate IPMT and PPMT keep their values (`PPMT(1E+307,7,292,
 /// 176644,89)` is 0, gen-m9 3aa168259335be54 A340), and IPMT is 0 in period 1 of type 1 even where
 /// PMT is `#NUM!` (`IPMT(-0.5,1,2000,1,0,1)`, probes/fin-ipmt-ppmt-huge-rate B1).

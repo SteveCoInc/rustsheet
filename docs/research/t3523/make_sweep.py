@@ -6,20 +6,19 @@ exact balance and the selector. Log-uniform draws from a fixed seed; no earlier 
 Run from the repository root: python3 docs/research/t3523/make_sweep.py
 """
 
+import math
 import random
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from sweep_case import lit, write_checked_case  # noqa: E402
+from sweep_case import lit, write_checked_case  # noqa: E402 (sweep_case is found through the sys.path entry above)
 
 OUT = Path("eval/suites/probes-numeric/cases/t3523-ipmt-selector-sweep.case.json")
 
 
 def logu(rng: random.Random, lo: float, hi: float) -> float:
     """A log-uniform draw from [lo, hi]."""
-    import math
-
     return math.exp(rng.uniform(math.log(lo), math.log(hi)))
 
 
@@ -27,7 +26,6 @@ def main() -> None:
     """Write the sweep case: column A negative rates past the power's range, B subnormal rates, C huge values."""
     rng = random.Random(3523)
     cells: dict[str, str] = {}
-    import math
 
     for i in range(1, 201):
         # A: rate -0.9..-0.01, nper past where (1+rate)^-nper overflows (log(1.8e308)/-log1p(rate) .. x8).
