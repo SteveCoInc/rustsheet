@@ -3,7 +3,7 @@ id: T-4265
 title: "Decrypt ECMA-376 Agile and Standard encrypted xlsx packages with bounded limits (SPEC-0031 D2, D3, D5)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
