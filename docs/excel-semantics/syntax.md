@@ -613,7 +613,7 @@ agree):
   text came from), while a moved array formula, a filled legacy cell and the redo of a copy keep the column. The facade's `Input::LegacyFormula` is stored text and goes through `Model::set_loaded_legacy_formula`: `=SUM(T[ Col ])` is `#REF!` as for `Input::StoredFormula` (T-4221). **A defined name whose stored body is a padded bare column loads as `#REF!`**: with
   `<definedName name="N">T[ Col ]</definedName>` (or `T[ Col]`, `T[Col ]`) `=SUM(N)` and `=ROWS(N)` are `#REF!` and
   `=ISREF(N)` is FALSE, as in a cell (probes/t3258-name-padded-column-0..2, excel-graph, 2026-11-04, T-3258). Ours: a
-  name body loaded through `Model::define_loaded_name` is read as a file's text and loads as `#REF!`; a name defined
+  name body loaded through `Model::define_loaded_name` or the xlsx importer (`load_from_xlsx`, T-4022) is read as a file's text and loads as `#REF!`; a name defined
   through the API keeps reading the column (a typed Name Manager body is unprobed).
 Evidence: probes/t2800-this-row-whitespace B2:F3 and t2800-stored-ws-0..3 (excel-graph, 2026-10-28, T-2800); probes/t2786-whitespace-structured-refs-runs (excel-graph `entered`, 2026-10-26, T-2786): E4:E15 (F4:F15), H1:H13
 (I1:I13). Each refused formula was entered alone against the same case. probes/t2966-empty-call-runs and
