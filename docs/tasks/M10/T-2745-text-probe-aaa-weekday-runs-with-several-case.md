@@ -3,7 +3,7 @@ id: T-2745
 title: "TEXT: probe aaa weekday runs with several case changes and aaam/pm (follow-up of T-1880)"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,3 +29,6 @@ docs/excel-semantics/number-formats.md "`aaa` is the weekday" (its Unprobed line
 
 ## Out of scope
 -
+
+## Outcome
+New probe probes/text-format-aaa-weekday-d (7 cells, excel-graph). Further joined runs already matched; `aaam/pm` ("aaPM") and `aaaa/p` ("Satp") did not: the last letter of a run before `m/pm` or `/p` belongs to the AM/PM token. Fixed in the lexer (`weekday_run`); rule in number-formats.md. Eval: new case 7/7.

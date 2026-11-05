@@ -319,6 +319,25 @@ fn fraction_digits_round_into_the_next_day() {
 }
 
 // probes/text-format-aaa-weekday and -b (T-1880): three or more of one `a` are the weekday.
+// probes/text-format-aaa-weekday-d (T-2745): a run's last letter before `m/pm` or `/p` is the AM/PM token's.
+#[test]
+fn a_run_before_am_pm_gives_its_last_letter_to_the_token() {
+    let cases = [
+        (1.0, "aaaAAAaaa", "Sunday"),
+        (1.0, "aaaAAAa", "Sundaya"),
+        (0.75, "aaam/pm", "aaPM"),
+        (0.75, "aaaAM/PM", "SatPM"),
+        (0.75, "aaaa/p", "Satp"),
+    ];
+    for (v, format, expected) in cases {
+        assert_eq!(
+            format_in(v, format, DateSystem::Excel1900),
+            expected,
+            "{format}"
+        );
+    }
+}
+
 #[test]
 fn a_runs_are_the_weekday() {
     let cases = [
