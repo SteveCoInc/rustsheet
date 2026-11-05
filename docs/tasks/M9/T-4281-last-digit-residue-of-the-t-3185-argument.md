@@ -11,7 +11,7 @@ depends_on: []
 ---
 
 ## Goal
-The 14 last-digit residue cells of the T-3185 argument-kind probes each match Excel, or are owned by the task that
+The 16 last-digit residue cells of the T-3185 argument-kind probes each match Excel, or are owned by the task that
 owns the same base call's residue.
 
 ## Context
@@ -22,6 +22,11 @@ owns the same base call's residue.
 - probes/t3185-m9-statistical-argument-kinds-b A6 (`F.INV(0.3,TRUE,6)`, NumericClose, not ulp-level), A65, A68
   (`HYPGEOM.DIST(2,5,8,20,TRUE)` with text arguments), A76, A79, A82 (`HYPGEOMDIST(2,5,8,20)` with text
   arguments), A86, A87 (LINEST), A91, A93 (LOGEST) and A119 (`NEGBINOMDIST(3,"5",0.4)`).
+- Gap triage 2026-11-05 (`make eval` on origin/main c3de9423b) found two more cells of the same probes that fail
+  bit-level with no open task naming them: probes/t3185-m9-statistical-argument-kinds-b A62
+  (`GROWTH(Data!A1:A5,Data!B1:B5,6,Data!Z5:Z6)`, Excel 6.597539553864471, ours ...475, 5 ulp) and
+  probes/t3185-m9-statistical-argument-kinds-c A69 (`TREND(Data!A1:A5,Data!B1:B5,6,Data!Z5:Z6)`, Excel 5.8, ours
+  5.800000000000001, 1 ulp). Their base calls' residue is the least-squares kernel's (T-2006, deferred).
 - First step: compare each cell with the same call written with plain numbers. If an existing open task owns that
   base call's residue, move the cell's name into that task and close this one for those cells. Gate A context:
   T-4105 (discrete tables) and the F and beta inverse tasks.

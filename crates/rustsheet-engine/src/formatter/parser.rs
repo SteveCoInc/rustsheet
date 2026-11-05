@@ -860,6 +860,11 @@ impl Parser {
             // Excel: `%` beside `General` prints, no scaling (probes/text-format-general-company A3).
             percent = 0;
         }
+        // `E+` or `E-` with no digit after it is invalid: `TEXT(1.5,"0E+")` and `0.0E-"x"` are
+        // #VALUE! (probes/text-scientific-edges, excel-graph 2026-11-05, T-2230).
+        if is_scientific && exponent_digit_count == 0 {
+            return ParsePart::Error(ErrorPart::default());
+        }
         if is_date {
             if is_number {
                 return ParsePart::Error(ErrorPart::default());

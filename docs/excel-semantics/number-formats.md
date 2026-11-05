@@ -538,8 +538,11 @@ Evidence: poi/NumberFormatApproxTests.xlsx A40, A41, A96, A97, A136, A137, A176,
 Ours: `formatter/parser.rs` pushes the `E` as a literal at the format's `E+`/`E-`; `formatter/format.rs`
 prints the sign before the first exponent digit and a `0` for the last `#` integer placeholder of a zero
 mantissa (T-0937).
+- **No exponent digit is `#VALUE!`** (probes/text-scientific-edges, 56 cells, excel-graph, 2026-11-05, T-2230): `E+` or `E-` with no digit after it (`0E+`, `0E-`, `0.00E+`, `0.0E-"x"`) makes `TEXT` return `#VALUE!` for every value (0, 1.5, -123456.789, 1.23E-5).
+- **Lowercase `e+`/`e-`** (`0e+0`, `0.0e-0`, `0.0e+00`) is `#VALUE!` here too, as the CONFLICTING lowercase `e` entry says for Excel for the web (T-1075 keeps the desktop question).
+- **A `?` integer placeholder also prints 0 on a zero mantissa**: `?.?E+0` on 0 is "0. E+0" (the fractional `?` stays a space). `##0.0E+0`, `###.#E+0` and `##E+0` on 0 follow the `#` rule above. Several `?` placeholders are unprobed and are taken to follow the same rule.
 Status: VERIFIED
-Tasks: T-0937 (implemented)
+Tasks: T-0937 (implemented), T-2230
 
 ## `TEXT(x,"General")` uses an 11-character fixed-notation limit
 Rule: General prints fixed notation, with at most 9 decimals ("0." plus 9 decimals is 11
