@@ -36,6 +36,7 @@ from rustsheet_tools.accuracy.model import (
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 RATE_SOURCE = "financial.md#rate-is-a-secant-on-the-fv-residual"
+GUESS_SOURCE = "financial.md#irr-rate-and-xirr-stop-early-and-the-guess-and-flow-scaling-change-the-result"
 MAX_BRACKET_DOUBLINGS = 24  # |ln(1 + r)| up to 2^24: far past any double rate
 
 
@@ -107,7 +108,9 @@ def rate(nper: int, pmt: mpmath.mpf, pv: mpmath.mpf, fv: mpmath.mpf, due: bool) 
 
 
 def _rate(args: Sequence[MathArg]) -> mpmath.mpf:
-    nper, pmt, pv, fv, kind = scalars(args)
+    # a `guess` (the sixth argument) only starts Excel's secant: with one sign change the root is unique, so the math
+    # ignores it, and a guess Excel cannot converge from is Excel's error against the math's number (T-3923)
+    nper, pmt, pv, fv, kind = scalars(args[:5])
     return rate(int(nper), pmt, pv, fv, kind != 0)
 
 
@@ -180,6 +183,8 @@ RATE = register(
             Param("pv", "real", _AMOUNT, source=RATE_SOURCE),
             Param("fv", "real", _AMOUNT, source=RATE_SOURCE),
             Param("type", "int", Interval(0, 1, lo_open=False, hi_open=False), source=RATE_SOURCE),
+            # the catalog's optional sixth argument; `_draw` never passes it
+            Param("guess", "real", _AMOUNT, source=GUESS_SOURCE, optional=True),
         ),
         value=_rate,
         draw=_draw,

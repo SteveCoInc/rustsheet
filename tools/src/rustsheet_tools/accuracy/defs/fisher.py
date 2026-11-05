@@ -29,6 +29,8 @@ from rustsheet_tools.accuracy.model import (
 )
 
 DF_SOURCE = "statistics.md#f-distribution-df-limit-t-1530"
+# F.DIST truncates a non-integer df: `F.DIST(2,150.7,3,FALSE)` is the density at df 150 (T-3923 reads such cells).
+TRUNC_SOURCE = "statistics.md#f-density-at-large-degrees-of-freedom-t-1864"
 INV_SOURCE = "statistics.md#finv-is-a-crossing-of-fdists-tails-t-0974"
 
 
@@ -71,8 +73,8 @@ def quantile(p: mpmath.mpf, d1: mpmath.mpf, d2: mpmath.mpf) -> mpmath.mpf:
     return mpmath.exp(s)
 
 
-def _df(name: str) -> Param:
-    return bounded_df(name, (1, 60), DF_SOURCE, edges=(DF_CUT,))
+def _df(name: str, truncates: str = "") -> Param:
+    return bounded_df(name, (1, 60), DF_SOURCE, edges=(DF_CUT,), truncates=truncates)
 
 
 def _f_dist(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -109,14 +111,14 @@ F_DIST = register(
                 extreme=(1e-300, 1e300),
                 source="Abramowitz and Stegun 26.6",
             ),
-            _df("deg_freedom1"),
-            _df("deg_freedom2"),
+            _df("deg_freedom1", TRUNC_SOURCE),
+            _df("deg_freedom2", TRUNC_SOURCE),
             Param("cumulative", "bool", source="catalog"),
         ),
         value=_f_dist,
         tail=_tail_x,
         tail_param="x",
-        sources=(DF_SOURCE, "Abramowitz and Stegun 26.6.1, 26.6.2"),
+        sources=(DF_SOURCE, TRUNC_SOURCE, "Abramowitz and Stegun 26.6.1, 26.6.2"),
     )
 )
 

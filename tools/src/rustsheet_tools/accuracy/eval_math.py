@@ -18,7 +18,8 @@ A candidate cell gets no math value when:
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
   (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
 - an integer parameter is given a non-integer (the definitions take integers; whether Excel
-  truncates is per function, so the cell is skipped rather than guessed), a logical parameter is
+  truncates is per function, so the cell is skipped rather than guessed) unless the parameter's
+  `truncates` cites the entry showing Excel truncates it (F.DIST's df; T-3923), a logical parameter is
   given a number (likewise unevidenced per function), or the call has a
   different number of arguments than the definition (an omitted optional argument the definition
   does not mark `optional`, or an extra one);
@@ -40,7 +41,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import mpmath
+
 from rustsheet_tools.accuracy import defs, literal
+from rustsheet_tools.accuracy.defs._common import trunc
 from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param
 from rustsheet_tools.accuracy.tables import MATH_FORMAT, DroppedError, compute, math_sidecar_bytes
 from rustsheet_tools.fitlab.sweep import UnparsedError, Workbook, arithmetic, parse_arg, split_args
@@ -160,9 +164,15 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
         return value if isinstance(value, bool) else "number for a logical"
     if isinstance(value, bool):
         return "logical for a number"
-    if param.kind == "int":
-        return int(value) if float(value).is_integer() else "non-integer for an integer parameter"
-    return float(value)
+    return _fit_int(param, value) if param.kind == "int" else float(value)
+
+
+def _fit_int(param: Param, value: float) -> int | str:
+    """An integer parameter's argument: a whole number as is, a non-integer truncated toward zero where the
+    parameter's `truncates` cites that Excel truncates it (a literal is always finite), else why it does not fit."""
+    if float(value).is_integer():
+        return int(value)
+    return trunc(mpmath.mpf(value)) if param.truncates else "non-integer for an integer parameter"
 
 
 def fit_args(definition: Definition, values: list[Any]) -> list[literal.Arg] | str:

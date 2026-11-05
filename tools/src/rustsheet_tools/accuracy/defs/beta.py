@@ -9,18 +9,31 @@ Sources:
   26.5.2); the density x^(a-1) (1-x)^(b-1) / B(a, b) in log space. The quantile solves the smaller tail in log
   scale, of x for the lower tail and of 1 - x for the upper, so a 1E-300 tail is as well conditioned as the centre.
 
-The optional [A, B] bounds are a linear map of x (`A + (B - A) x`); the s1 batches stay on [0, 1] (T-3529).
+The optional [A, B] bounds are a linear map of x (`A + (B - A) x`); the s1 batches stay on [0, 1] (T-3529), since the
+sampler draws only the required parameters. An eval cell that passes them gets the standard beta at the exact
+z = (x - A)/(B - A) (T-3923): BETA.DIST's cdf I_z(a, b) and density f(z)/(B - A), BETA.INV's A + (B - A)·x(p). How
+Excel rounds z is not evidenced, so the math does not round it (rounding where Excel might not would be a fit). Domain
+(Microsoft's BETA.DIST and BETA.INV pages; the engine's beta.rs): x < A, x > B or A = B is `#NUM!` for BETA.DIST, and
+A ≥ B for BETA.INV. BETA.DIST's density stays `#NUM!` at a given x of exactly 0 or 1 with a shape ≤ 1 whatever the
+bounds (DENSITY_SOURCE: "Excel checks the given x against 0 and 1"), and is 0 at an interval end otherwise
+(probes/t2435-dist-extremes A126, A127, A143:A146). The scaled quantile is A + (B - A)·BETA.INV(p, a, b) bit for bit
+(INV_SOURCE, T-3566's scaled ranges), so the map itself is the math's. Where B - A leaves the double range
+Excel's cdf is 0 at x = A and 1 at x = B and every other point is `#DIV/0!` (probes/stat-overflow-arguments A7:A10,
+E9; the engine's beta.rs), and so is the math's.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 
 import mpmath
 
+from rustsheet_tools.accuracy.defs._common import scalars
 from rustsheet_tools.accuracy.model import (
     LOG_SMALLEST_DOUBLE,
     Definition,
+    DomainError,
     Interval,
     MathArg,
     NoValueError,
@@ -188,16 +201,48 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
     return x
 
 
-def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, a, b, cumulative = args
+def _bounds(bounds: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
+    """The interval [A, B] of a call's optional bounds (A = 0 and B = 1 when left out)."""
+    lo, hi = scalars(bounds) + [mpmath.mpf(0), mpmath.mpf(1)][len(bounds) :]
+    return lo, hi
+
+
+def _standard_x(args: Sequence[MathArg]) -> mpmath.mpf:
+    """BETA.DIST's x on [0, 1]: (x - A)/(B - A), exact at the working precision. DomainError where Excel is `#NUM!`
+    (A = B, or x outside [A, B])."""
+    x = args[0]
     assert not isinstance(x, (bool, tuple))
+    if len(args) == 4:
+        return x
+    lo, hi = _bounds(args[4:])
+    if lo == hi or x < lo or x > hi:
+        msg = "x outside [A, B], or A = B"
+        raise DomainError(msg)
+    return (x - lo) / (hi - lo)
+
+
+def _beta_dist_intervals(args: Sequence[MathArg]) -> Sequence[MathArg]:
+    """The arguments BETA.DIST's intervals check: x as `_standard_x`, so it is checked on [0, 1]."""
+    return [_standard_x(args), *args[1:]]
+
+
+def _beta_dist(args: Sequence[MathArg]) -> mpmath.mpf:
+    _, a, b, cumulative = args[:4]
     assert not isinstance(a, (bool, tuple))
     assert not isinstance(b, (bool, tuple))
-    return lower_tail(x, a, b) if cumulative else density(x, a, b)
+    z = _standard_x(args)
+    lo, hi = _bounds(args[4:])
+    if math.isinf(float(hi) - float(lo)):  # B - A past the double range: see the module doc
+        if cumulative and z in (0, 1):
+            return z
+        msg = "B - A beyond the double range"
+        raise DomainError(msg)
+    return lower_tail(z, a, b) if cumulative else density(z, a, b) / (hi - lo)
 
 
 def _beta_dist_domain(args: Sequence[MathArg]) -> str | None:
-    x, a, b, cumulative = args
+    # the given x, not (x - A)/(B - A): Excel checks it against 0 and 1 (DENSITY_SOURCE)
+    x, a, b, cumulative = args[:4]
     if (
         cumulative
         or isinstance(x, (bool, tuple))
@@ -221,13 +266,19 @@ def _tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _beta_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    p, a, b = args
-    assert (
-        not isinstance(p, (bool, tuple))
-        and not isinstance(a, (bool, tuple))
-        and not isinstance(b, (bool, tuple))
-    )
-    return quantile(p, a, b)
+    p, a, b = scalars(args[:3])
+    lo, hi = _bounds(args[3:])
+    if len(args) == 3:
+        return quantile(p, a, b)
+    if lo >= hi:
+        msg = "A >= B"
+        raise DomainError(msg)
+    return lo + (hi - lo) * quantile(p, a, b)
+
+
+def _bound(name: str) -> Param:
+    """An optional bound A or B: any number (A = B, x outside [A, B] and A ≥ B are the definitions' own rules)."""
+    return Param(name, "real", Interval(), source="Microsoft's BETA.DIST and BETA.INV pages", optional=True)
 
 
 def _shape(name: str) -> Param:
@@ -257,12 +308,15 @@ BETA_DIST = register(
             _shape("alpha"),
             _shape("beta"),
             Param("cumulative", "bool", source="catalog"),
+            _bound("A"),
+            _bound("B"),
         ),
         value=_beta_dist,
         domain=_beta_dist_domain,
+        interval_args=_beta_dist_intervals,
         tail=_tail_x,
         tail_param="x",
-        sources=(DENSITY_SOURCE, "Abramowitz and Stegun 26.5.1, 26.5.2"),
+        sources=(DENSITY_SOURCE, INV_SOURCE, "Abramowitz and Stegun 26.5.1, 26.5.2"),
     )
 )
 
@@ -280,6 +334,8 @@ BETA_INV = register(
             ),
             _shape("alpha"),
             _shape("beta"),
+            _bound("A"),
+            _bound("B"),
         ),
         value=_beta_inv,
         sources=(INV_SOURCE, UNDERFLOW_SOURCE, "Abramowitz and Stegun 26.5.1"),

@@ -33,6 +33,8 @@ HUGE_SOURCE = "statistics.md#gammainv-and-chisqinv-at-a-huge-shape-the-true-quan
 CLOSED_SOURCE = (
     "statistics.md#chi-squared-quantile-at-df-2-and-gamma-quantile-at-alpha-1-are-closed-forms-t-2860"
 )
+# CHISQ.INV.RT truncates a non-integer df: "CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation)" (T-3923).
+TRUNC_SOURCE = "statistics.md#inverse-cdf-functions-at-a-tiny-or-near-1-probability-t-1543"
 CHI_SCALE = mpmath.mpf(2)
 # The largest df drawn (CHISQ.INV.RT; CHISQ.INV stops at its 1E10): "any" df is evidenced to about 1E16 (HUGE_SOURCE).
 # The s1 batches were drawn up to df 2E7 (shape 1E7), the series' reach before Temme's expansion (T-3863).
@@ -272,8 +274,9 @@ def _probability(source: str, lo_open: bool, hi_open: bool) -> Param:
     )
 
 
-def _df(hi: float) -> Param:
-    """df from 1 to `hi` (CHISQ.INV's 1E10, CHISQ.INV.RT's none); the extreme draws reach `hi` or MAX_DRAWN_DF."""
+def _df(hi: float, truncates: str = "") -> Param:
+    """df from 1 to `hi` (CHISQ.INV's 1E10, CHISQ.INV.RT's none); the extreme draws reach `hi` or MAX_DRAWN_DF.
+    `truncates` is `Param.truncates`."""
     return Param(
         "deg_freedom",
         "int",
@@ -282,6 +285,7 @@ def _df(hi: float) -> Param:
         extreme=(1e3, min(hi, MAX_DRAWN_DF)),
         edges=(2.0,),
         source=HUGE_SOURCE,
+        truncates=truncates,
     )
 
 
@@ -327,7 +331,7 @@ CHISQ_INV = register(
 CHISQ_INV_RT = register(
     Definition(
         function="CHISQ.INV.RT",
-        params=(_probability(CLOSED_SOURCE, lo_open=True, hi_open=False), _df(float("inf"))),
+        params=(_probability(CLOSED_SOURCE, lo_open=True, hi_open=False), _df(float("inf"), TRUNC_SOURCE)),
         value=_chisq(upper=True),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )

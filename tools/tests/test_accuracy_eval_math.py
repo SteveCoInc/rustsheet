@@ -11,7 +11,11 @@ import mpmath
 import pytest
 
 from rustsheet_tools.accuracy import eval_math
+from rustsheet_tools.accuracy.defs.annuity import RATE
+from rustsheet_tools.accuracy.defs.beta import BETA_DIST, BETA_INV
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
+from rustsheet_tools.accuracy.defs.fisher import F_DIST, F_INV
+from rustsheet_tools.accuracy.defs.gamma import CHISQ_INV_RT
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, cdf
 from rustsheet_tools.accuracy.eval_math import (
     case_math,
@@ -48,13 +52,84 @@ def test_single_call_takes_one_whole_call_only() -> None:
 def test_fit_args_follows_the_parameters() -> None:
     assert fit_args(T_DIST, [1.5, 3.0, True]) == [1.5, 3, True]
     assert fit_args(T_DIST, [1.5, 3.0, 1.0]) == "number for a logical"
-    assert fit_args(T_DIST, [1.5, 2.5, True]) == "non-integer for an integer parameter"
+    assert fit_args(F_INV, [0.5, 2.5, 3.0]) == "non-integer for an integer parameter"  # no `truncates` cited
     assert fit_args(T_DIST, [1.5, 3.0]) == "argument count"
     assert fit_args(T_DIST, ["1", 3.0, True]) == "non-numeric argument"
     assert fit_args(T_DIST, [True, 3.0, True]) == "logical for a number"
     assert (
         fit_args(T_DIST, [[1.5, 2.0], 3.0, True]) == "non-numeric argument"
     )  # a range for a scalar parameter
+
+
+def test_an_evidenced_df_truncates_toward_zero_and_others_keep_the_skip() -> None:
+    # F.DIST's, T.DIST's and CHISQ.INV.RT's df cite the semantics entry showing Excel truncates (T-3923)
+    assert fit_args(F_DIST, [2.0, 150.7, 3.0, False]) == [2.0, 150, 3, False]
+    assert fit_args(T_DIST, [2.0, 3.7, False]) == [2.0, 3, False]
+    assert fit_args(CHISQ_INV_RT, [1e-9, 1.5]) == [1e-9, 1]
+    assert fit_args(F_DIST, [2.0, 0.5, 3.0, True]) == [
+        2.0,
+        0,
+        3,
+        True,
+    ]  # truncates to 0: Excel's #NUM! below df 1
+    # statistics.md "F density at large degrees of freedom (T-1864)": the df-150 density, 0.17202585847929508
+    value = compute(F_DIST, fit_args(F_DIST, [2.0, 150.7, 3.0, False]))  # type: ignore[arg-type]
+    assert value.value is not None
+    assert abs(float(value.value) / 0.17202585847929508 - 1) < 1e-14
+    assert compute(F_DIST, [2.0, 0, 3, True]).why is not None
+    for definition in (F_INV, IRR, XIRR, RATE, BETA_DIST):
+        assert not any(p.truncates for p in definition.params), definition.function
+
+
+def _value(definition: Definition, args: Sequence[Any]) -> mpmath.mpf:
+    found = compute(definition, list(args))
+    assert found.value is not None, found.why
+    with mpmath.workdps(80):
+        return mpmath.mpf(found.value)
+
+
+def _close(a: mpmath.mpf, b: mpmath.mpf) -> bool:
+    """Equal to the 50 digits a math value holds."""
+    with mpmath.workdps(80):
+        return bool(abs(a - b) <= mpmath.mpf(10) ** -45 * abs(b))
+
+
+def test_beta_takes_its_optional_bounds_as_the_standard_beta_on_the_exact_ratio() -> None:
+    x, lo, hi = 1.49003654331704, 0.95, 5.02  # probes-numeric t3443-basym-a Calc!A9's shape of call
+    with mpmath.workdps(80):
+        z = (mpmath.mpf(x) - mpmath.mpf(lo)) / (mpmath.mpf(hi) - mpmath.mpf(lo))
+        width = mpmath.mpf(hi) - mpmath.mpf(lo)
+    with mpmath.workdps(80):
+        cdf = mpmath.betainc(2.5, 7, 0, z, regularized=True)
+        pdf = z**1.5 * (1 - z) ** 6 / mpmath.beta(2.5, 7) / width
+    assert _close(_value(BETA_DIST, [x, 2.5, 7.0, True, lo, hi]), cdf)
+    assert _close(_value(BETA_DIST, [x, 2.5, 7.0, False, lo, hi]), pdf)
+    # an omitted B is 1 (Microsoft's page); x outside [A, B], A = B: #NUM!
+    assert _close(_value(BETA_DIST, [0.5, 2.0, 3.0, True, 0.0]), _value(BETA_DIST, [0.5, 2.0, 3.0, True]))
+    for bad in (
+        [0.5, 2.0, 3.0, True, 0.6, 1.0],
+        [2.0, 2.0, 3.0, True, 0.0, 1.5],
+        [1.0, 2.0, 3.0, True, 1.0, 1.0],
+    ):
+        assert compute(BETA_DIST, bad).why is not None
+    # the given x is checked against 0 and 1, not the interval's ends (statistics.md, T-2435)
+    assert compute(BETA_DIST, [0.0, 0.5, 2.0, False, -1.0, 1.0]).why is not None
+    assert _value(BETA_DIST, [2.0, 0.5, 2.0, False, 2.0, 5.0]) == 0
+    # B - A beyond the double range: the cdf's ends stay 0 and 1, the rest is Excel's #DIV/0!
+    assert _value(BETA_DIST, [-1e308, 2.0, 3.0, True, -1e308, 1e308]) == 0
+    assert compute(BETA_DIST, [0.0, 2.0, 3.0, True, -1e308, 1e308]).why is not None
+    # BETA.INV: A + (B - A)·x(p) (statistics.md T-3566: bit for bit in Excel); A >= B is #NUM!
+    plain = _value(BETA_INV, [0.4998, 3.0, 600.0])
+    with mpmath.workdps(80):
+        scaled = mpmath.mpf(0.15) + (mpmath.mpf(1.2) - mpmath.mpf(0.15)) * plain
+    assert _close(_value(BETA_INV, [0.4998, 3.0, 600.0, 0.15, 1.2]), scaled)
+    assert compute(BETA_INV, [0.5, 2.0, 3.0, 1.2, 1.2]).why is not None
+
+
+def test_rate_ignores_the_guess_where_the_root_is_unique() -> None:
+    args = [10, -100.0, 900.0, 0.0, 1]
+    assert _value(RATE, [*args, 0.5]) == _value(RATE, args)
+    assert _value(RATE, [*args, -0.9]) == _value(RATE, args)
 
 
 def test_fit_args_reads_an_array_parameter_row_major() -> None:
@@ -74,7 +149,7 @@ def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -
         "A1": "=T.DIST(1.5,3,TRUE)",  # a value
         "A2": "=T.DIST(B1,3,TRUE)",  # a constant cell: read
         "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
-        "A4": "=T.DIST(1.5,2.5,TRUE)",  # non-integer df: skipped
+        "A4": "=T.INV(0.5,2.5)",  # non-integer df where no entry shows Excel truncates: skipped
         "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
         "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
         "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
@@ -166,7 +241,7 @@ class _InProcessPool:
 def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.DIST(1.5,2.5,TRUE)"}
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.INV(0.5,2.5)"}
     case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
     entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
     monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)

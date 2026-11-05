@@ -112,6 +112,7 @@ class Param:
     source: str = ""
     draw_hi: float | None = None
     optional: bool = False
+    truncates: str = ""
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -143,7 +144,10 @@ class Definition:
     is one element of it: the last two parameters are INDEX's row and column, and the cell is
     `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686). With `literal_arrays` an eval cell
     gets a math value only where every array parameter is written as an array literal: the math does not
-    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693)."""
+    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693). `interval_args` maps
+    a call's arguments to the ones the parameters' intervals are checked against, of the same length, and may raise
+    `DomainError` itself: BETA.DIST's x is checked on [0, 1] as (x - A)/(B - A) when the bounds A and B are passed
+    (T-3923)."""
 
     function: str
     params: tuple[Param, ...]
@@ -158,6 +162,7 @@ class Definition:
     serials_1900: bool = False
     indexed: bool = False
     literal_arrays: bool = False
+    interval_args: Callable[[Sequence[MathArg]], Sequence[MathArg]] | None = None
 
     def __post_init__(self) -> None:
         flags = [p.optional for p in self.params]
@@ -191,13 +196,20 @@ class Definition:
             return self.params[:count]
         return self.params + (self.params[-1],) * (count - len(self.params))
 
+    @property
+    def required(self) -> tuple[Param, ...]:
+        """The parameters every call passes (the optional ones are trailing): what the per-parameter sampler
+        draws, so adding an optional parameter leaves the drawn tables as they were."""
+        return tuple(p for p in self.params if not p.optional)
+
     def numeric_arity(self) -> int:
         """The number of real or integer parameters."""
         return sum(1 for p in self.params if p.kind != "bool")
 
     def check_domain(self, args: Sequence[MathArg]) -> None:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
-        for p, a in zip(self.params_for(len(args)), args, strict=True):
+        checked = args if self.interval_args is None else self.interval_args(args)
+        for p, a in zip(self.params_for(len(args)), checked, strict=True):
             if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
                 continue  # an array's or a matrix's rules are the definition's `domain`
             if not p.domain.contains(float(a)):

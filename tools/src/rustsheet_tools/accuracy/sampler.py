@@ -185,11 +185,11 @@ class Sampler:
         if stratum == "extreme":
             return self._extreme()
         if stratum == "log-uniform":
-            return [self.whole_domain(p) for p in d.params]
-        return [self.typical(p) for p in d.params]
+            return [self.whole_domain(p) for p in d.required]
+        return [self.typical(p) for p in d.required]
 
     def _extreme(self) -> list[Arg]:
-        params = self.definition.params
+        params = self.definition.required
         candidates = [i for i, p in enumerate(params) if p.extreme is not None]
         chosen = {i for i in candidates if self.rng.random() < 0.5}
         if candidates and not chosen:
@@ -200,11 +200,11 @@ class Sampler:
         """Round-robin targets of tail points: None for the tail map, else a parameter index."""
         d = self.definition
         targets: list[int | None] = [None] if d.tail is not None else []
-        targets += [i for i, p in enumerate(d.params) if p.kind == "real" and p.finite_bounds()]
+        targets += [i for i, p in enumerate(d.required) if p.kind == "real" and p.finite_bounds()]
         return targets
 
     def _tail(self, index: int) -> list[Arg]:
-        params = self.definition.params
+        params = self.definition.required
         args = [self.typical(p) for p in params]
         targets = self._tail_targets()
         if not targets:
@@ -224,16 +224,16 @@ class Sampler:
         probability, in the lower or upper tail, so a cdf point is really in the tail."""
         d = self.definition
         assert d.tail is not None and d.tail_param is not None
-        target = next(i for i, p in enumerate(d.params) if p.name == d.tail_param)
+        target = next(i for i, p in enumerate(d.required) if p.name == d.tail_param)
         q = mpmath.mpf(log_uniform(self.rng, *TAIL_PROBABILITY))
         upper = self.rng.random() < 0.5
-        others = [math_arg(p, a) for p, a in zip(d.params, args, strict=True)]
+        others = [math_arg(p, a) for p, a in zip(d.required, args, strict=True)]
         try:
             with mpmath.workdps(TAIL_MAP_DPS):
                 x = d.tail(q, upper, others)
         except (ValueError, ZeroDivisionError, OverflowError):
             return args  # the typical draw stands (e.g. the other arguments are invalid)
-        param = d.params[target]
+        param = d.required[target]
         if not mpmath.isfinite(x) or abs(x) > MAX_LITERAL:
             return args
         args[target] = self.inside(param, self.finish(param, float(x)))
@@ -243,7 +243,7 @@ class Sampler:
         """Every (parameter index, value) edge: each finite bound itself, its nearest literal
         inside, the nearest invalid literal outside, and the parameter's extra `edges`."""
         out: list[tuple[int, Arg]] = []
-        for i, p in enumerate(self.definition.params):
+        for i, p in enumerate(self.definition.required):
             if p.kind == "bool":
                 continue
             values: list[float] = []
@@ -263,7 +263,7 @@ class Sampler:
         return out
 
     def _edge(self, index: int) -> list[Arg]:
-        args = [self.typical(p) for p in self.definition.params]
+        args = [self.typical(p) for p in self.definition.required]
         if self.edges:
             target, value = self.edges[index % len(self.edges)]
             args[target] = value
