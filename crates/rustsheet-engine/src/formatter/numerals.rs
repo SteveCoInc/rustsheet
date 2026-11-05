@@ -317,7 +317,8 @@ impl CjkStyle {
             for place in (0..4_u32).rev() {
                 let d = (group / 10_u64.pow(place) % 10) as usize;
                 if d == 0 {
-                    gap |= started && (self.trailing_zero_gap || group % 10_u64.pow(place + 1) != 0);
+                    gap |=
+                        started && (self.trailing_zero_gap || group % 10_u64.pow(place + 1) != 0);
                     continue;
                 }
                 if gap && self.zero_in_gap {
@@ -351,7 +352,10 @@ mod tests {
         assert_eq!(fullwidth.number("311040000000"), "３千１百１十亿４千万");
         assert_eq!(fullwidth.number("31104000000"), "３百１十１亿０４百万");
         assert_eq!(fullwidth.number("1000000005"), "１十亿０５");
-        assert_eq!(Numerals::from_byte(34).number("311040000000"), "參佰壹拾壹億肆仟萬");
+        assert_eq!(
+            Numerals::from_byte(34).number("311040000000"),
+            "參佰壹拾壹億肆仟萬"
+        );
         assert_eq!(Numerals::from_byte(33).number("1050"), "一千○五十");
     }
 
