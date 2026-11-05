@@ -59,6 +59,8 @@ FACADE_ALL = {
     "RustSheetError",
     "WorkbookError",
     "LoadError",
+    "PasswordRequiredError",
+    "WrongPasswordError",
     "SaveError",
     "EditError",
     "RefError",
