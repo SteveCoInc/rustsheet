@@ -3487,12 +3487,6 @@ F	probes/forecast-ets-optional-settings-shape.case.json	Sheet1!M44
 F	probes/forecast-ets-optional-settings-shape.case.json	Sheet1!M45
 F	probes/forecast-ets-optional-settings-shape.case.json	Sheet1!M46
 F	probes/ftest-decomposition.case.json	Calc!B12
-F	probes/ftest-decomposition.case.json	Calc!B9
-F	probes/ftest-decomposition.case.json	Calc!C10
-F	probes/ftest-decomposition.case.json	Calc!C9
-F	probes/ftest-decomposition.case.json	Calc!D10
-F	probes/ftest-decomposition.case.json	Calc!F10
-F	probes/ftest-decomposition.case.json	Calc!F9
 F	probes/geomean-exponent-sum-2.case.json	Sheet1!C24
 F	probes/geomean-exponent-sum-2.case.json	Sheet1!C28
 F	probes/geomean-exponent-sum.case.json	Sheet1!C2
@@ -3948,7 +3942,6 @@ F	probes/stat-argument-modes.case.json	Sheet1!H327
 F	probes/stat-argument-modes.case.json	Sheet1!H328
 F	probes/stat-argument-modes.case.json	Sheet1!H337
 F	probes/stat-argument-modes.case.json	Sheet1!H380
-F	probes/stat-argument-modes.case.json	Sheet1!H5
 F	probes/stat-argument-modes.case.json	Sheet1!H518
 F	probes/stat-argument-modes.case.json	Sheet1!H535
 F	probes/stat-argument-modes.case.json	Sheet1!H536
@@ -3956,13 +3949,6 @@ F	probes/stat-argument-modes.case.json	Sheet1!H541
 F	probes/stat-argument-modes.case.json	Sheet1!H542
 F	probes/stat-argument-modes.case.json	Sheet1!H90
 F	probes/stat-argument-modes.case.json	Sheet1!H95
-F	probes/stat-order-floor-batch.case.json	Sheet1!A277
-F	probes/stat-order-floor-batch.case.json	Sheet1!A278
-F	probes/stat-order-floor-batch.case.json	Sheet1!A280
-F	probes/stat-order-floor-batch.case.json	Sheet1!A290
-F	probes/stat-order-floor-batch.case.json	Sheet1!A294
-F	probes/stat-order-floor-batch.case.json	Sheet1!A295
-F	probes/stat-order-floor-batch.case.json	Sheet1!A300
 F	probes/stat-quantile-lift.case.json	Sheet1!E1
 F	probes/stat-quantile-lift.case.json	Sheet1!E10
 F	probes/stat-quantile-lift.case.json	Sheet1!E11

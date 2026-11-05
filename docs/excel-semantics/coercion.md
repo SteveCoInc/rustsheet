@@ -1154,9 +1154,9 @@ G1448, K1448, G1456, K1456, I392, L176, M1332, N1332; `#NUM!`: F176, G176, H392;
 F1448, F1456, H1288.
 Status: VERIFIED (Excel-cached)
 Implemented in: `Model::for_each_value` users `fn_stdev_s`/`fn_stdev_p`, `fn_var_s`/`fn_var_p`,
-`fn_devsq`, `fn_avedev`, `fn_sumsq`. Open: I392 (`DEVSQ("1","2",2)`) and K1456
-(`VARP(TRUE,FALSE,TRUE)`) differ in the last digit (accumulation order, like E392/F392/J392; DEVSQ is
-probably the two-pass sum, T-1749).
+`fn_devsq`, `fn_avedev`, `fn_sumsq`. I392 (`DEVSQ("1","2",2)`) and E392/F392/J392
+pass since DEVSQ became the two-pass sum (statistics.md "DEVSQ is a two-pass sum (T-1749)"). Open: K1456
+(`VARP(TRUE,FALSE,TRUE)`) differs in the last digit (accumulation order).
 An empty argument is counted as 0 by DEVSQ and AVEDEV (`DEVSQ(1,)` = `AVEDEV(1,)` = 0.5; probes/stat-order-floor-batch
 A274, A299; T-1748) and by STDEV/VAR (probes/average-value-args); SUMSQ(1,) is 1 either way, T-1748.
 Tasks: T-0945

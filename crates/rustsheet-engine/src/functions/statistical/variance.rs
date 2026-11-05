@@ -73,13 +73,20 @@ pub(crate) fn excel_variance(values: &[f64], kind: VarianceKind) -> f64 {
     };
     let mean = div(sum, n);
     if mul(one_pass, divisor) < mul(0.01, sumsq) || one_pass < mul(0.001, mean.abs()) {
-        let mut squares = 0.0;
-        for &x in values {
-            squares += mul(x - mean, x - mean);
-        }
-        return div(squares, divisor);
+        return div(squared_deviations(values, mean), divisor);
     }
     one_pass
+}
+
+/// The two-pass sum of squared deviations `Σ(x - mean)²`, a plain left-to-right double sum with
+/// each product flushed like Excel's `*` (subnormal to 0). DEVSQ is this sum with `mean` the
+/// double `Σx / n` (T-1749), and the variance family's two-pass branch divides it.
+pub(crate) fn squared_deviations(values: &[f64], mean: f64) -> f64 {
+    let mut squares = 0.0;
+    for &x in values {
+        squares += flush_subnormal((x - mean) * (x - mean));
+    }
+    squares
 }
 
 impl Model {
@@ -238,6 +245,21 @@ mod tests {
         assert_eq!(
             excel_variance(&[0.0, 3e-154], VarianceKind::Sample),
             4.500000000000001e-308
+        );
+    }
+
+    #[test]
+    fn devsq_squared_deviations_match_excel() {
+        // DEVSQ's two-pass sum (T-1749): probes/stat-order-floor-batch and gen-m9 values.
+        let devsq = |xs: &[f64]| {
+            let mean = xs.iter().sum::<f64>() / xs.len() as f64;
+            super::squared_deviations(xs, mean)
+        };
+        assert_eq!(devsq(&[0.1, 0.2, 0.3]), 0.019_999_999_999_999_997);
+        assert_eq!(devsq(&[1e15, 1e15 + 1.0]), 0.5);
+        assert_eq!(
+            devsq(&[100_000_000.1, 100_000_000.2, 100_000_000.3]),
+            0.020_000_000_596_046_563
         );
     }
 

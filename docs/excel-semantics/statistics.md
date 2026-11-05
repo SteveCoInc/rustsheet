@@ -257,6 +257,32 @@ Evidence: `ironcalc-calc/STATISTICAL/BETA_GAMMA.xlsx` BETA_DIST!G3, G4.
 Status: VERIFIED (observation); algorithm UNVERIFIED (T-0970)
 Tasks: T-0970
 
+## DEVSQ is a two-pass sum (T-1749)
+Rule: DEVSQ is always the two-pass sum `Σ(x - mean)²`: mean = Σx / n as a double (a left-to-right sum), then the
+squared deviations summed left to right, every step a double. It never uses the one-pass `Σx² - (Σx)²/n` and has no
+switch like VAR/STDEV's below. So it does not cancel: `DEVSQ(1E15,1E15+1)` = 0.5 (one-pass 0) and
+`DEVSQ({100000000.1,100000000.2,100000000.3})` = 0.020000000596046563 (one-pass -4; the value carries the error of the
+double mean). In the last digit, `DEVSQ(0.1,0.2,0.3)` = 0.019999999999999997 (one-pass 0.019999999999999976) and
+`DEVSQ("1","2",2)` = 0.6666666666666666 (one-pass ...661).
+Evidence: probes/stat-order-floor-batch A277, A278, A280, A290, A294, A295, A300; probes/ftest-decomposition B9, C9,
+C10, D10, F9, F10; probes/stat-argument-modes H5; poi FormulaEvalTestData_Copy.xlsx EverythingTests!E392, F392, I392,
+J392 (Excel-cached); 126 DEVSQ cells of gen-m9 (excel-graph). With this form every DEVSQ cell T-1749 owned passes bit
+for bit, and no cell regressed in any suite. Fresh sweep after the freeze, probes-numeric t1749-devsq-fresh
+(docs/research/t1749/gen_fresh.py, 200 DEVSQ calls of 2 to 12 literals, offsets 1E-3..1E15 and spreads 1E-6..1E3,
+excel-graph): 200 of 200 bit for bit, where the earlier one-pass form matched 27. No constant is fitted: the
+choice was between the two textbook forms. Hold-out (decision 0188 R4.1, `rustsheet-fitlab devsq` and `devsq-fresh`,
+margin 5 points stated before scoring): on the owned cells two-pass is 201 of 203 train and 87 of 87 test bit for bit,
+the correctly rounded `Σ(x - mean)²` 133 and 67, one-pass 120 and 61; on the fresh sweep two-pass is 133 of 134 and 66
+of 66, correctly rounded 60 and 28, one-pass 18 and 9. The two-pass misses are the lab's, not the form's: two one-cell
+references to a bool or numeric text the lab reads as literals, and fresh A156, whose literals the lab rounds
+correctly where Excel's x87 conversion does not ("15-digit literal parsing"); the engine passes all three.
+Inferred, not probed for DEVSQ: each square and the mean are flushed to 0 when subnormal, as Excel's `*` and `/` are
+and as VAR/STDEV's two-pass branch is evidenced to be; no DEVSQ cell has a subnormal mean or square.
+Implemented in: functions/statistical/devsq.rs through variance.rs `squared_deviations`, which VAR/STDEV's two-pass
+branch shares.
+Status: VERIFIED
+Tasks: T-1749
+
 ## VAR/STDEV switch between a one-pass and a two-pass formula
 Rule: VAR.P/VARP/VARPA first compute the one-pass form V = `(n*Σx² - (Σx)²)/(n*n)`, and
 VAR.S/VAR/VARA compute V = `(Σx² - (Σx)²/n)/(n-1)` (plain left-to-right double sums). Excel keeps
