@@ -2,11 +2,13 @@
 //! written as constants, then the pivot is registered over its source.
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotFunction, PivotRangeGroup, PivotTableInput, RangeRef, SheetId,
-    Txn,
+    CellRef, EditError, Input, PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup,
+    PivotTableInput, RangeRef, SheetId, Txn,
 };
 
-use crate::case::{split_qualified, CaseSpec, CellInput, PivotTableSpec, SheetSpec};
+use crate::case::{
+    split_qualified, CaseSpec, CellInput, PivotGroupSpec, PivotTableSpec, SheetSpec,
+};
 use crate::cellref::Addr;
 use crate::engine::range_ref;
 
@@ -21,10 +23,8 @@ pub fn write_rendered(
     id: SheetId,
     input: impl Fn(&CellInput) -> Option<Input>,
 ) -> Result<(), EditError> {
-    // A date-grouped pivot is not registered until the engine groups dates (T-4246): GETPIVOTDATA
-    // against it is `#REF!`, a known failure of the probes/t4236 cases.
-    let registered = sheet.pivot_tables.iter();
-    for pivot in registered.filter(|p| p.group.is_none() || p.number_group().is_some()) {
+    // A grouped pivot has none: the engine lays it out (T-4235).
+    for pivot in &sheet.pivot_tables {
         for (a1, cell) in &pivot.rendered {
             let addr = parse_addr(a1)?;
             if let Some(value) = input(cell) {
@@ -47,12 +47,15 @@ pub fn add_pivots(
     sheet: &SheetSpec,
     id: SheetId,
 ) -> Result<(), EditError> {
-    // A date-grouped pivot is not registered until the engine groups dates (T-4246): GETPIVOTDATA
-    // against it is `#REF!`, a known failure of the probes/t4236 cases.
-    let registered = sheet.pivot_tables.iter();
-    for pivot in registered.filter(|p| p.group.is_none() || p.number_group().is_some()) {
+    for pivot in &sheet.pivot_tables {
         let input = pivot_input(spec, ids, sheet, id, pivot)?;
-        tx.add_pivot_table(&input)?;
+        match tx.add_pivot_table(&input) {
+            // Excel drops a date grouping over a blank on refresh, which the engine does not
+            // model yet (T-4260): such a pivot stays unregistered, so GETPIVOTDATA against it is
+            // `#REF!`, a known failure of probes/t4236-pivot-date-groups.
+            Err(EditError::Pivot(PivotError::DateGroupOverBlank)) => {}
+            result => result?,
+        }
     }
     Ok(())
 }
@@ -80,7 +83,7 @@ fn pivot_input(
     // grouped pivot has none: the engine lays it out from its top-left cell, as Excel does on
     // load (T-4235).
     let mut cells = Vec::new();
-    if pivot.number_group().is_some() {
+    if pivot.group.is_some() {
         cells.push(parse_addr(&pivot.location.replace('$', ""))?);
     }
     for a1 in pivot.rendered.keys() {
@@ -111,12 +114,26 @@ fn pivot_input(
         function,
         // The caption Excel gives a new data field: `Sum of Sales`.
         caption: format!("{} of {}", function.caption_name(), pivot.value),
-        group: pivot.number_group().map(|g| PivotRangeGroup {
-            start: g.start,
-            end: g.end,
-            interval: g.interval,
-            items: g.items.clone(),
-        }),
+        group: pivot.group.as_ref().map(range_group).transpose()?,
+    })
+}
+
+/// A spec pivot's grouping as the engine takes it: `by` names a date group (pivot.py
+/// `_DATE_GROUPS`), and its absence a numeric range.
+fn range_group(group: &PivotGroupSpec) -> Result<PivotRangeGroup, EditError> {
+    let by = match group.by.as_deref() {
+        None => None,
+        Some(by) => Some(
+            PivotDateGroupBy::parse(by)
+                .ok_or_else(|| EditError::Engine(format!("pivot group by {by:?}")))?,
+        ),
+    };
+    Ok(PivotRangeGroup {
+        by,
+        start: group.start,
+        end: group.end,
+        interval: group.interval,
+        items: group.items.clone(),
     })
 }
 

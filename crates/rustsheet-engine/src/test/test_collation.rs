@@ -498,6 +498,51 @@ fn width_and_kana_tiebreaks() {
     assert_eq!(cmp("aー", "Ａb"), Ordering::Less);
 }
 
+/// A long-vowel or iteration mark with no letter before it sorts above every other character,
+/// whatever follows it (probes/t4258-collation-lone-mark-astral; t3465-collation-holdout C313:D313).
+#[test]
+fn lone_mark_sorts_above_every_character() {
+    let cmp = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    for mark in ["ー", "ゝ", "ゞ", "ヽ", "ヾ", "々"] {
+        for other in [
+            "𠀀",
+            "𪜀",
+            "\u{2fa1d}",
+            "𰀀",
+            "가",
+            "一",
+            "\u{9fff}",
+            "㐀",
+            "豈",
+            "\u{e000}",
+            "😀",
+            "\u{fffd}",
+            "\u{f0000}",
+            "\u{10fffd}",
+            "𝐀",
+            "𠀀𠀀",
+        ] {
+            assert_eq!(cmp(mark, other), Ordering::Greater, "{mark:?} > {other:?}");
+            assert_eq!(cmp(other, mark), Ordering::Less, "{other:?} < {mark:?}");
+        }
+    }
+    for text in [
+        "々\u{35f}",
+        "々ヲ",
+        "々一",
+        "々𠀀",
+        "々A",
+        "々ー",
+        "ーヲ",
+        "ー𠀀",
+    ] {
+        assert_eq!(cmp(text, "𠀀"), Ordering::Greater, "{text:?} > 𠀀");
+    }
+    let b313 = "々\u{35f}ヲ\u{32b}\u{350}ゞ";
+    assert_eq!(cmp("𠀀", b313), Ordering::Less);
+    assert_eq!(cmp(b313, "𠀀"), Ordering::Greater);
+}
+
 /// Exact MATCH folds `ー` after a letter to that letter and a leading iteration mark to `ー`
 /// (probes/t3275-collation-width-kana Calc!C127:C129, C136), and does not decompose voicing.
 #[test]
@@ -918,4 +963,21 @@ fn t4234_ascii_pairwise_agrees_with_total_order() {
             );
         }
     }
+}
+
+/// T-4270: the 32 C1 controls U+0080 to U+009F are pairwise distinct and sort by code point, after
+/// U+200B, `¬` and `•` and before `0`, alone and between `a` and `b` (probes/t4270-collation-c1-controls
+/// Calc!B1:B36 ranks 3 to 34 in row order, U+200B 0, `¬` 1, `•` 2, `0` 35; C1:C36 and E1:E36 all 1;
+/// N1:N32 the code points of SORT in order).
+#[test]
+fn t4270_c1_controls_in_code_point_order() {
+    let controls: Vec<String> = ('\u{80}'..='\u{9f}').map(String::from).collect();
+    let mut alone = vec!["\u{200b}", "¬", "•"];
+    alone.extend(controls.iter().map(String::as_str));
+    alone.push("0");
+    assert_increasing(&alone);
+    let wrapped: Vec<String> = controls.iter().map(|c| format!("a{c}b")).collect();
+    let mut wrapped: Vec<&str> = wrapped.iter().map(String::as_str).collect();
+    wrapped.push("ab");
+    assert_increasing(&wrapped);
 }

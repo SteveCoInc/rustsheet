@@ -190,6 +190,13 @@ probes/t3007-beta-dist-ln-x-overflow.case.json	6
 probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
 probes/t3070-gamma-inv-band.case.json	1
+probes/t3185-m9-statistical-argument-kinds-b.case.json	5
+probes/t3185-m9-statistical-argument-kinds-c.case.json	1
+probes/t3252-gamma-prefactor-holdout-2.case.json	16
+probes/t3252-gamma-prefactor-holdout.case.json	15
+probes/t3252-gamma-prefactor-sweep.case.json	10
+probes/t3252-gamma-prefactor-window.case.json	47
+probes/t3312-xirr-xnpv-inner-calls.case.json	1
 probes/t3347-irr-conventional-num.case.json	19
 probes/t3348-rate-fv-nonzero.case.json	3
 probes/t3349-t-inv-2t-near-one.case.json	1
@@ -216,6 +223,7 @@ probes/t3912-imcsch-band-edges.case.json	2
 probes/t3914-imsech-sign-sweep.case.json	4
 probes/t3963-rate-keep-r0-fresh.case.json	147
 probes/t4014-sheet-api-name-65.case.json	1
+probes/t4045-f-dist-rt-zero-cut-fresh.case.json	24
 probes/t4088-groupby-multifield.case.json	10
 probes/t4195-groupby-intransitive.case.json	24
 probes/t4228-pivot-range-groups.case.json	122

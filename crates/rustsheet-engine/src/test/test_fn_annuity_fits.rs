@@ -72,3 +72,39 @@ fn fv_and_pv_round_each_operation_twice() {
     ];
     assert_eq!(got, expected.map(f64::to_bits));
 }
+
+#[test]
+fn nper_below_a_rate_of_1e_14_is_the_math() {
+    // probes-numeric/t3367-nper-tiny-rate A22, A39, A47, A62, A97: Excel is 46%, 35%, 37%, 16% and
+    // 0.9% off there, and the engine returns the 50-digit math (decision 0188 R3, financial.md
+    // "NPER at a tiny positive rate", MATH-OVER-EXCEL).
+    let got = results(&[
+        "=NPER(1.2E-16,-100,10000,0,0)",
+        "=NPER(3E-16,370.793811118894,-6303.49478902119,0,0)",
+        "=NPER(3.04353262019695E-16,-1,0,1000,1)",
+        "=NPER(7.7E-16,0,100,-200,0)",
+        "=NPER(9.9E-15,0,100,-200,0)",
+    ]);
+    let math = [
+        100.000_000_000_000_61_f64,
+        17.000_000_000_000_025,
+        999.999_999_999_847_7,
+        900_191_143_584_344.9,
+        70_014_866_723_227.14,
+    ];
+    for (bits, want) in got.into_iter().zip(math) {
+        let value = f64::from_bits(bits);
+        assert!(((value - want) / want).abs() < 1e-14, "{value} vs {want}");
+    }
+}
+
+#[test]
+fn nper_from_a_rate_of_1e_14_keeps_excels_value() {
+    // probes-numeric/t3367-nper-tiny-rate A99 and A120: outside the R3 region the engine is Excel's
+    // value, though Excel is 8.9E-4 and 8.0E-4 off the math there (an R3 candidate, not ruled).
+    let got = results(&["=NPER(1E-14,-100,10000,0,0)", "=NPER(1E-13,-100,10000,0,0)"]);
+    assert_eq!(
+        got,
+        [100.088_888_888_839_35_f64, 100.079_999_999_504_6].map(f64::to_bits)
+    );
+}

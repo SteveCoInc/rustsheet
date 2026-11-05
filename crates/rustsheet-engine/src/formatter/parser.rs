@@ -877,6 +877,16 @@ impl Parser {
                 numerals,
             })
         } else {
+            // Excel prints a number section's currency symbol where it is written, after any literal
+            // before it (`([$$-409]#,##0.00)` on 12 is "($12.00)", `0[$€]` "12€", `"x"[$€-40C]0`
+            // "x€12"; probes/t4108-currency-tag-position, excel-graph, T-4108). A fraction keeps its
+            // symbol in front: its token indices are positions into `tokens`.
+            if fraction.is_none() {
+                for (position, symbol) in currency_positions.into_iter().rev() {
+                    tokens.insert(position, TextToken::Literal(symbol));
+                }
+                currency = None;
+            }
             ParsePart::Number(NumberPart {
                 color,
                 condition,

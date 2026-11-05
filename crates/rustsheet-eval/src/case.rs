@@ -262,16 +262,6 @@ pub struct PivotGroupSpec {
     pub by: Option<String>,
 }
 
-impl PivotTableSpec {
-    /// The pivot's numeric range group, the one the engine lays out (T-4235). A date group
-    /// (`by` set) is not one: the eval adapter leaves such a pivot unregistered until the engine
-    /// groups dates (T-4246).
-    #[must_use]
-    pub fn number_group(&self) -> Option<&PivotGroupSpec> {
-        self.group.as_ref().filter(|g| g.by.is_none())
-    }
-}
-
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine
 /// adapter runs an iterative case's three oracle calculations (T-0429) but does not pass the
 /// settings on until Phase 2 implements iterative calculation (T-0401).

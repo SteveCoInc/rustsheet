@@ -712,6 +712,11 @@ probes/t3184-m9-financial-argument-kinds-a to -e (five cases of eleven functions
 refuses does not cost the batch). The forms follow §6.7: the class literals of the classifier, `#N/A` for
 error, the base value in quotes for numeric text. Committed gen-m9 cases are unchanged.
 
+T-3185 closes the M9 statistical value-mode pairs (335 pairs in 70 functions) the same way:
+probes/t3185-m9-statistical-argument-kinds-a to -c, with `Data!A1:A5` and `B1:B5` as the y and x data of the
+regression and test functions, `"abc"` for text, `TRUE` for boolean and `Data!Z5:Z6` for a range. The array,
+aggregate and criteria pairs are T-4223's.
+
 ---
 
 ## 7. Workbook-level structure

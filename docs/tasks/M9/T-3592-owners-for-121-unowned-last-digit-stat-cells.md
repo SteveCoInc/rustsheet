@@ -51,6 +51,11 @@ the reason Excel's digits cannot be derived.
   - probes-numeric/t2220-f-dist-sweep-rt.case.json (33): Calc!A84, A97, A98, A399, A467, A504, A567, A579, A589, A594, A596, A669, A680, A697, A795, A800, A804, A868, A878, A879, A885, A890, A897, A900, A954, A960, A978, A984, A990, A994, A997, A999, A1000
   - probes/t3349-t-inv-2t-near-one.case.json (1): Calc!A5
 - Split (T-3229 check): T-3414 and T-3415 also list probes/t3349-t-inv-2t-near-one A5; this task owns it.
+- Also owns (T-4026, 2026-11-05): 27 cells of T-3580's fresh sweep, visibly off only at the 14th or 15th digit (0.5
+  to 11 units of the 15th; Tier C/D, decision 0267), by `bratio::dispatch` branch on `fisher.rs` `f_beta_arguments`:
+  bpser with both shapes above 1 (b0·x0 <= 0.7) for 22, L140 bup+bgrat for B1063, B1185 and B1196, w = bpser at
+  b0 <= 1 for A481 (df1 1) and Excel's df-of-2 closed form for A1042 (`F.DIST.RT(2.414974758017,2,146)`):
+  - probes-numeric/t3580-f-fresh.case.json (27): Calc!A481, A903, A923, A935, A948, A1003, A1042, A1056, A1097, A1106, A1144, A1148, A1166, A1169, A1184, B912, B919, B945, B959, B983, B1063, B1105, B1108, B1118, B1164, B1185, B1196
 
 ## Acceptance criteria
 - [ ] Each listed cell is within half a unit of Excel's 15th significant digit, or moved to a named narrower task

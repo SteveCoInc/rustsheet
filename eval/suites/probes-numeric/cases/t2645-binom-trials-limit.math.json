@@ -128,6 +128,11 @@
     "why": "trials outside [0, 2.14748e+09]",
     "f": "=BINOM.DIST(0,2^31-1,1,FALSE)"
    },
+   "A33": {
+    "t": "e",
+    "why": "trials outside [0, 2.14748e+09]",
+    "f": "=BINOM.DIST.RANGE(2^31-1,1E-12,0)"
+   },
    "A34": {
     "t": "n",
     "v": "1.4593175408102484070329014880393158249163796661121e-25769824396",
@@ -182,6 +187,11 @@
     "t": "e",
     "why": "trials outside [0, 2.14748e+09]",
     "f": "=BINOM.DIST(0,2^31,1,FALSE)"
+   },
+   "A45": {
+    "t": "e",
+    "why": "trials outside [0, 2.14748e+09]",
+    "f": "=BINOM.DIST.RANGE(2^31,1E-12,0)"
    },
    "A46": {
     "t": "n",

@@ -198,7 +198,9 @@ impl Model {
 
     /// The group of a numeric range field at axis position `position` of pivot `pivot` whose
     /// lower bound is `value` ([`crate::pivot::NumberGroups::lower_bound_index`]: probes/t4228-pivot-range-groups
-    /// Calc A35, C30:C46); `None` on any other field, where a number is SPEC-0015 unknown 3. Call
+    /// Calc A35, C30:C46), or of a date-grouped field whose calendar value is `value`'s integer
+    /// part ([`crate::pivot::DateGroups::number_item`]: probes/t4236-pivot-date-groups-no-blank);
+    /// `None` on any other field, where a number is SPEC-0015 unknown 3. Call
     /// [`Model::pivot_axis`] first.
     pub(crate) fn pivot_number_item(
         &self,
@@ -207,19 +209,24 @@ impl Model {
         value: f64,
     ) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        let groups = field.number_groups?;
-        let n = groups.inner_count()?;
-        let item = groups.item(groups.lower_bound_index(value)?, n);
+        let item = if let Some(groups) = field.number_groups {
+            let n = groups.inner_count()?;
+            groups.item(groups.lower_bound_index(value)?, n)
+        } else {
+            field.date_groups?.number_item(value)?
+        };
         self.shown_group(pivot, position, u32::try_from(item).ok()?)
     }
 
-    /// `item`, unless it is a group of a numeric range field that holds no record: Excel does not
-    /// show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe Calc B3, R1).
+    /// `item`, unless it is a group of a numeric range or date-grouped field that holds no record:
+    /// Excel does not show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe
+    /// Calc B3, R1; a date group's `<start` and `>end` labels work only while they hold a record,
+    /// probes/t4236-pivot-date-groups-no-blank).
     /// Whether an empty item of an ungrouped field is `#REF!` too is unprobed, so it keeps its
     /// answer of 0 (probes/getpivotdata-empty-intersection). TODO(T-4248): probe it.
     fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        if field.number_groups.is_none() {
+        if field.number_groups.is_none() && field.date_groups.is_none() {
             return Some(item);
         }
         let index = self.evaluation.pivot_indexes.pivots.get(&pivot)?;
