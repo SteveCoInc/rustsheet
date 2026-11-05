@@ -50,6 +50,20 @@ fn first_equal_lines<K: std::hash::Hash + Eq, E>(
     Ok(first)
 }
 
+/// Whether any of `count` lines of `length` cells holds a text outside ASCII: only such texts
+/// compare intransitively under Excel's `=` (accents, weightless characters), so without one
+/// lines group by equality ([`unique_first_lines`], `Grouping::new`).
+pub(crate) fn has_intransitive_text<'a>(
+    count: usize,
+    length: usize,
+    at: impl Fn(usize, usize) -> Option<&'a ArrayNode>,
+) -> bool {
+    (0..count).any(|line| {
+        (0..length)
+            .any(|k| matches!(at(line, k), Some(ArrayNode::String(text)) if !text.is_ascii()))
+    })
+}
+
 /// For each of `count` lines of `length` cells (`at(line, k)`, `None` past the data), the line
 /// UNIQUE keeps for it: the smallest line of its group. Two texts are one value when Excel's `=`
 /// finds them equal ([`cmp_text_pairwise`]). Only texts outside ASCII compare intransitively
@@ -83,11 +97,7 @@ pub(crate) fn unique_first_lines<'a, E>(
             })
             .fold(1, u64::saturating_add)
     };
-    let intransitive = (0..count).any(|line| {
-        (0..length)
-            .any(|k| matches!(at(line, k), Some(ArrayNode::String(text)) if !text.is_ascii()))
-    });
-    if intransitive {
+    if has_intransitive_text(count, length, &at) {
         let compare_lines = |a: usize, b: usize| {
             (0..length)
                 .map(|k| match (at(a, k), at(b, k)) {

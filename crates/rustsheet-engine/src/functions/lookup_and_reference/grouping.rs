@@ -14,7 +14,9 @@ use crate::{
     calc_result::CalcResult,
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::{
-        spill_functions::{cell_key, unique_cell_key, unique_first_lines, CellKey},
+        spill_functions::{
+            cell_key, has_intransitive_text, unique_cell_key, unique_first_lines, CellKey,
+        },
         util::{collation::cmp_text_pairwise, sort_indices_pairwise},
     },
 };
@@ -205,11 +207,8 @@ impl Grouping {
         )?;
         let sorted = lines.sorted(&first, fields, &mut spend)?;
         let tree = Tree::build(&lines, &sorted, fields, limit, &mut spend)?;
-        let intransitive = (0..rows.len()).any(|line| {
-            (0..fields).any(|field| {
-                matches!(lines.at(line, field), Some(ArrayNode::String(x)) if !x.is_ascii())
-            })
-        });
+        let intransitive =
+            has_intransitive_text(rows.len(), fields, |line, field| lines.at(line, field));
         // members[leaf]: the lines that reach it.
         let mut members: Vec<Vec<usize>> = vec![Vec::new(); tree.leaves()];
         let mut reached: Vec<Option<usize>> = vec![None; rows.len()];
@@ -226,37 +225,38 @@ impl Grouping {
                 entry.push(line);
             }
         }
-        let groups = members
-            .into_iter()
-            .enumerate()
-            .map(|(leaf, members)| {
-                let path = tree.path(leaf);
-                let all = members.is_empty();
-                let chosen: Vec<usize> = if all {
-                    (0..rows.len()).collect()
-                } else {
-                    members
-                };
-                Group {
-                    keys: path
-                        .iter()
-                        .enumerate()
-                        .map(|(field, node)| {
-                            lines
-                                .at(node.key, field)
-                                .map_or_else(empty_text, positive_zero)
-                        })
-                        .collect(),
-                    rows: chosen
-                        .iter()
-                        .filter_map(|&line| rows.get(line).copied())
-                        .collect(),
-                    cells: path.iter().map(|node| node.id).collect(),
-                    ranks: path.iter().map(|node| node.rank).collect(),
-                    reached: !all,
-                }
-            })
-            .collect();
+        let mut groups = Vec::with_capacity(members.len());
+        for (leaf, members) in members.into_iter().enumerate() {
+            let path = tree.path(leaf);
+            let reached = !members.is_empty();
+            // A leaf no row reaches holds every row: charged per row, so crafted intransitive
+            // keys with many such leaves end as the work budget's error, not as leaves x rows
+            // of memory (directive 5).
+            let rows_of_leaf: Vec<usize> = if reached {
+                members
+                    .iter()
+                    .filter_map(|&line| rows.get(line).copied())
+                    .collect()
+            } else {
+                spend(u64::try_from(rows.len()).unwrap_or(u64::MAX))?;
+                rows.clone()
+            };
+            groups.push(Group {
+                keys: path
+                    .iter()
+                    .enumerate()
+                    .map(|(field, node)| {
+                        lines
+                            .at(node.key, field)
+                            .map_or_else(empty_text, positive_zero)
+                    })
+                    .collect(),
+                rows: rows_of_leaf,
+                cells: path.iter().map(|node| node.id).collect(),
+                ranks: path.iter().map(|node| node.rank).collect(),
+                reached,
+            });
+        }
         Ok(Grouping {
             groups,
             ascending: ascending.to_vec(),

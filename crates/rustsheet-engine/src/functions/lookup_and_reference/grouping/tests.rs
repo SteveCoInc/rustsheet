@@ -517,3 +517,51 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
         assert!(!grouping.groups.is_empty());
     }
 }
+
+/// A leaf no row reaches holds every row, and that copy is charged to the work budget per row
+/// (directive 5): crafted runs with many such leaves end as the budget's error.
+#[test]
+fn a_leaf_no_row_reaches_is_charged_per_row() {
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    let mut keys = vec![vec![a(), y()], vec![b(), x()], vec![c(), y()]];
+    keys.extend((0..7).map(|_| vec![text("p"), x()]));
+    let mut charges = Vec::new();
+    let grouping = Grouping::new(
+        &keys,
+        0..keys.len(),
+        &[],
+        |_| None,
+        |units| {
+            charges.push(units);
+            Ok(())
+        },
+        CELL,
+    );
+    let all = grouping
+        .map(|grouping| {
+            grouping
+                .groups
+                .iter()
+                .filter(|group| !group.reached)
+                .count()
+        })
+        .unwrap_or(0);
+    assert_eq!(all, 1);
+    assert!(charges.contains(&10), "{charges:?}");
+    let refused = Grouping::new(
+        &keys,
+        0..keys.len(),
+        &[],
+        |_| None,
+        |units| {
+            if units >= 10 {
+                Err(super::value_error(CELL, "budget"))
+            } else {
+                Ok(())
+            }
+        },
+        CELL,
+    );
+    assert!(refused.is_err());
+}
