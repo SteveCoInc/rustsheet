@@ -3,9 +3,11 @@
 
 use super::super::loader::stirlerr_exact;
 use super::{
-    excel_away_from_mode, excel_ratio_exponent, gamma_prefactor, rlog, stirling_prefactor,
-    Exponent, DIRECT_SHAPE_MAX, NEAR_MODE,
+    excel_ratio_exponent, gamma_prefactor, stirling_prefactor, Exponent, DIRECT_SHAPE_MAX,
+    NEAR_MODE, RATIO_FORM_MIN,
 };
+use crate::x87_exp::{dd_div, two_sum};
+use crate::x87_log10::ln_double_double_pair;
 
 /// The smallest shape below [`DIRECT_SHAPE_MAX`] at which the density above the mode takes Excel's
 /// ratio form ([`density_with`]). A fit inside its evidence bracket (2.5, 3] (T-3147; ulp from
@@ -54,33 +56,85 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
     {
         return Some(stirling_prefactor(a, excel_ratio_exponent(a, y), stirlerr_exact(a).0) / x);
     }
-    if form == Exponent::Excel && a >= DIRECT_SHAPE_MAX && !excel_away_from_mode(a, y, form) {
-        if let Some(density) = mode_density(a, x, y) {
+    if form == Exponent::Excel && a >= DIRECT_SHAPE_MAX {
+        // Excel's large-shape density is one chain, Loader's dgamma: [`loader_density`] on bd0's
+        // series inside the window and its direct deviance outside it (T-4308, T-4319). Below
+        // a/200 Excel is neither (T-3219), so the prefactor's `rcomp` stays there.
+        let deviance = if in_window(a, y) {
+            Some(window_exponent(a, y))
+        } else if y >= a * RATIO_FORM_MIN {
+            Some(direct_deviance(a, y))
+        } else {
+            None
+        };
+        if let Some(density) = deviance.and_then(|b| loader_density(a, x, b)) {
             return Some(density);
         }
     }
     Some(gamma_prefactor(a, y, form) / x)
 }
 
-/// The large-shape density near the mode, in Excel's chain: exp(-c(a) - a rlog(y/a)) / sqrt(2 pi a)
-/// times (a / x), one exponential of the summed exponent, the Stirling error c taken exact, and the
-/// shape over the raw argument last (T-4296). At x = a (exponent 0) it is Excel's bit for bit at
-/// 40 fit shapes from 20 to 1E7, the 40 hold-out shapes and the fit shapes at scale 3
-/// (probes/t4296-gamma-density-at-mode A1:C40, excel-graph 2026-11-05), where the prefactor's
-/// sqrt(a / 2 pi) exp(-c) / x is 0 to 1 ulp off at 18 of 40. Away from x = a the exponent still
-/// differs from Excel's by about half an ulp of ln(x/a) per unit of shape (T-4290), so most
-/// cells there stay a few ulp off; the chain is bit-exact at 288 of 1,281 probed window densities
-/// against 162 for the prefactor's (docs/research/t4296/score.py).
+/// Whether y lies in Excel's large-shape density window |y - a| <= 0.2 (y + a), 2a/3 <= y <= 3a/2,
+/// tested in doubles as written. Both ends are inclusive and fall where Excel's do on the ladders
+/// across them: at shape 3072, y = 2048 = 2a/3 (and 2a/3 + 1.9E-9) is the window and every y below
+/// it the ratio form (probes/t4290-gamma-window-large-pow2 E1:E10); at shape 2048, y = 3072 = 3a/2
+/// is the window and 3072 + 2.8E-9 the ratio form (F7:F10); at shape 100 the two forms coincide
+/// at y = 1.5a (probes/t4255-gamma-window-exact-ratio D58; T-4308).
+fn in_window(a: f64, y: f64) -> bool {
+    (y - a).abs() <= 0.2 * (y + a)
+}
+
+/// Excel's large-shape density exp(-c(a) - B) / sqrt(2 pi a) times (a / x) for the deviance
+/// B = a ln(a/y) + y - a: one exponential of the summed exponent, the Stirling error c taken exact,
+/// and the shape over the raw argument last (T-4296). On Excel's own B ([`window_exponent`] inside
+/// the window, [`direct_deviance`] outside it) it is Excel's bit for bit at 1,331 of 1,347 probed
+/// window densities away from the mode, all 120 at it, 147 of 151 above the window and 113 of 149
+/// below it, where the prefactor's sqrt(a / 2 pi) exp(-B - c) / x is at 39 and 62 of those
+/// (docs/research/t4308/score.py, excel-graph 2026-11-05).
 ///
 /// `None` where 2 pi a overflows (a above about 2.9E307): the chain would give 0 there, where the
 /// density is about 1E-154, so the caller keeps the prefactor's sqrt(a / 2 pi) form (unprobed).
-fn mode_density(a: f64, x: f64, y: f64) -> Option<f64> {
+fn loader_density(a: f64, x: f64, deviance: f64) -> Option<f64> {
     let two_pi_a = 2.0 * std::f64::consts::PI * a;
     if !two_pi_a.is_finite() {
         return None;
     }
-    let exponent = -a * rlog(a, y) - stirlerr_exact(a).0;
+    let exponent = -deviance - stirlerr_exact(a).0;
     Some(exponent.exp() / two_pi_a.sqrt() * (a / x))
+}
+
+/// Loader's direct deviance a ln(a/y) + (y - a) outside the window: the log of a/y (below 1 above
+/// the mode), and y - a taken before the sum. Above the window it is Excel's bit for bit at all
+/// 120 points of T-4302 (probes/t4302-poisson-cdf-beside-pmf rows 7:12 and 31:36, probes-numeric/
+/// t4302-poisson-cdf-r4-fresh rows 7:12), where the ratio form a ln(y/a) + (a - y) is at 68; below
+/// it the two are the same double.
+fn direct_deviance(a: f64, y: f64) -> f64 {
+    a * (a / y).ln() + (y - a)
+}
+
+/// Excel's window exponent B = a ln(a/y) + y - a, as Loader's bd0 splits it into a leading term
+/// and an odd series, B = (y - a) v - (2a atanh(v) - 2a v) with v = (y - a)/(y + a), every
+/// operation a double rounding as written and atanh(v) correctly rounded ([`atanh_rounded`]).
+/// On the T-4296 chain it reproduces Excel's density bit for bit at 852 of 868 window cells of
+/// probes/t4290-gamma-window-large-pow2, where the correctly rounded B does at 113: the order
+/// was chosen on columns A:C (551 of 551) and held on the hold-out D (193 of 195), with the split
+/// and margin fixed before scoring (T-4308). Rejected on the same cells: the libm atanh (427 of
+/// 551, one ulp of atanh off), Loader's series summed term by term (68), (y - a) v - 2a(atanh(v)
+/// - v) (551 of 551 at the power-of-two shapes but 10 of 77 on the t3252 windows) and every form
+/// T-4255 and T-4290 tried (statistics.md).
+fn window_exponent(a: f64, y: f64) -> f64 {
+    let d = y - a;
+    let v = d / (y + a);
+    d * v - (2.0 * a * atanh_rounded(v) - 2.0 * a * v)
+}
+
+/// atanh(v) for |v| <= 0.2, rounded once from the double-double 0.5 ln((1 + v)/(1 - v)) (about
+/// 2^-104 relative, so correctly rounded but within about 2^-50 ulp of a tie): Excel's window
+/// exponent takes the correctly rounded value, where libm's is an ulp off at about a fifth of
+/// the probed points (T-4308).
+fn atanh_rounded(v: f64) -> f64 {
+    let (hi, lo) = ln_double_double_pair(dd_div(two_sum(1.0, v), two_sum(1.0, -v)));
+    0.5 * (hi + lo)
 }
 
 #[cfg(test)]
@@ -120,6 +174,56 @@ mod tests {
                 "GAMMA.DIST({x},{a},{scale},FALSE)"
             );
         }
+    }
+
+    #[test]
+    fn inside_the_window_the_density_is_excel_s_bd0_split_exponent() {
+        // Excel's bits on the window chain with B = (y - a) v - (2a atanh(v) - 2a v), where the
+        // correctly rounded B is 5 to 1,135 ulp off (T-4308): probes/t3252-gamma-prefactor-window
+        // A4, t4255-gamma-window-exact-ratio C5, both window ends (t4290-gamma-window-large-pow2
+        // E7 at 2a/3 and F7 at 3a/2) and probes-numeric/t4296-gamma-density-r4-fresh A42, A43 and
+        // A46 at scales other than 1.
+        for (x, a, scale, excel) in [
+            (35.0, 50.0, 1.0, 0.004_730_667_654_048_708_5),
+            (32.25, 48.0, 1.0, 0.003_035_513_715_728_734_6),
+            (2048.0, 3072.0, 1.0, 6.287_537_497_111_510_4e-99),
+            (3072.0, 2048.0, 1.0, 4.858_310_149_119_557e-87),
+            (
+                4620.000_077_580_01,
+                57.240_712_107_224_9,
+                71.931_451_611_773_7,
+                0.000_439_643_676_330_607_65,
+            ),
+            (
+                6712.558_165_817_08,
+                34_152.171_922_174_6,
+                0.176_056_425_630_832,
+                5.535_299_812_893_028e-96,
+            ),
+            (
+                61.770_389_938_097_9,
+                97.937_187_980_708_1,
+                0.510_209_231_828_174,
+                0.005_995_354_591_055_000_6,
+            ),
+        ] {
+            assert_eq!(
+                gamma_density(a, x, scale),
+                Some(excel),
+                "GAMMA.DIST({x},{a},{scale},FALSE)"
+            );
+        }
+    }
+
+    #[test]
+    fn just_outside_the_window_the_density_is_the_ratio_form() {
+        // The 15-digit 2047.99999999999, just below 2a/3 at shape 3072
+        // (probes/t4290-gamma-window-large-pow2 E6): Excel's ratio form, 879 ulp from the window
+        // chain, at a shape where the cdf's bound would still give the accurate exponent (T-4308).
+        assert_eq!(
+            gamma_density(3072.0, 2047.999_999_999_99, 1.0),
+            Some(6.287_537_497_079_017e-99)
+        );
     }
 
     #[test]
