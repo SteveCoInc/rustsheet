@@ -3,7 +3,7 @@ id: T-4319
 title: "GAMMA.DIST's density above 1.5a at shapes 31 to 301 takes Loader's direct deviance in the T-4296 chain (after T-4302)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
