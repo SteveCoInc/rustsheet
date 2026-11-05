@@ -3,7 +3,7 @@ id: T-4315
 title: "Match which calls empty WEEKNUM's stale state: T-4289 probes show it is not every dynamic anchor"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
