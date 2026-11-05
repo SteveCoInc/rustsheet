@@ -2,11 +2,14 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    group_by_numbers, row_layout, Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource,
-    CellArea, DataField, LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField,
-    PivotTable, RecordValue, MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, row_layout, Aggregate, Axis, AxisField, CacheBuilder,
+    CacheField, CacheItem, CacheSource, CellArea, DataField, DateGroupError, DateGroups,
+    LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue,
+    MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
+
+pub use rustsheet_engine::pivot::DateGroupBy as PivotDateGroupBy;
 
 use super::{Input, Txn, Undo};
 use crate::error::{EditError, RefError};
@@ -90,24 +93,42 @@ pub struct PivotTableInput {
     pub function: PivotFunction,
     /// The data field's caption (`Sum of Sales`).
     pub caption: String,
-    /// A numeric range grouping of the row field, if any. A grouped pivot is laid out by the
+    /// A numeric range or date grouping of the row field, if any. A grouped pivot is laid out by the
     /// engine (Excel lays one out itself on load): its rendered cells are written from
     /// `location`'s top-left cell, which is all of `location` that is read.
     pub group: Option<PivotRangeGroup>,
 }
 
-/// A row field grouped by numbers (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx importer
-/// groups one (`rustsheet_engine::pivot::group_by_numbers`).
+/// A row field grouped by numbers or dates (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx
+/// importer groups one (`rustsheet_engine::pivot::group_by_numbers`, `group_by_dates`).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PivotRangeGroup {
-    /// `startNum`.
+    /// What a date group groups by; `None` for numbers (ECMA-376's `range`).
+    pub by: Option<PivotDateGroupBy>,
+    /// `startNum`, or `startDate` as a serial.
     pub start: f64,
-    /// `endNum`.
+    /// `endNum`, or `endDate` as a serial.
     pub end: f64,
-    /// `groupInterval`.
+    /// `groupInterval` (1 for a date group).
     pub interval: f64,
     /// The `<groupItems>` labels, in order.
     pub items: Vec<String>,
+}
+
+/// Field `field` grouped by `group`, as the xlsx importer groups one (`group_by_numbers`,
+/// `group_by_dates`).
+fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
+    let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
+    Ok(match group.by {
+        None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
+        Some(by) => {
+            if field.items.contains(&CacheItem::Missing) {
+                return Err(PivotError::DateGroupOverBlank);
+            }
+            let groups = DateGroups::new(by, group.start, group.end, labels.len())?;
+            group_by_dates(field, groups, labels)?
+        }
+    })
 }
 
 /// Why a pivot table could not be registered.
@@ -132,6 +153,15 @@ pub enum PivotError {
     /// The row field's grouping cannot apply (a value that is not a number, a bad range).
     #[error(transparent)]
     Group(#[from] NumberGroupError),
+    /// The row field's date grouping cannot apply (a value that is not a date, a wrong item
+    /// count).
+    #[error(transparent)]
+    DateGroup(#[from] DateGroupError),
+    /// A date grouping of a field that holds a blank: a refresh makes Excel drop the grouping and
+    /// list each date as its own item (probes/t4236-pivot-date-groups, web.md), which this does
+    /// not model yet (T-4260).
+    #[error("a date grouping over a field that holds a blank")]
+    DateGroupOverBlank,
     /// A grouped pivot with a column field: only a grouped row field is laid out.
     #[error("a grouped pivot has no column field")]
     GroupedWithColumn,
@@ -244,10 +274,8 @@ impl Txn<'_> {
             if column.is_some() {
                 return Err(PivotError::GroupedWithColumn.into());
             }
-            let labels = group.items.iter().cloned().map(CacheItem::Text).collect();
-            let bounds = [group.start, group.end, group.interval];
             if let Some(field) = cache.fields.get_mut(row as usize) {
-                *field = group_by_numbers(field, bounds, labels).map_err(PivotError::from)?;
+                *field = grouped(field, group)?;
             }
         }
         let fields = cache
@@ -507,6 +535,7 @@ mod tests {
                 function: PivotFunction::Sum,
                 caption: "Sum of S".into(),
                 group: Some(PivotRangeGroup {
+                    by: None,
                     start: 0.0,
                     end: 1.0,
                     interval: 0.1,

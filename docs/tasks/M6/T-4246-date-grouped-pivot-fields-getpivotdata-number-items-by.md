@@ -3,7 +3,7 @@ id: T-4246
 title: "Date-grouped pivot fields: GETPIVOTDATA number items by calendar value, and the eval adapter registers date-grouped spec pivots"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -43,3 +43,20 @@ spec pivot, so every cell of probes/t4236-pivot-date-groups and probes/t4236-piv
 
 ## Out of scope
 - Day groups of more than one day and 1904 workbooks (the importer skips them).
+
+## Outcome
+- The date-group rule moved from the xlsx importer into the engine: `DateGroups` and `group_by_dates`
+  (crates/rustsheet-engine/src/pivot/date_groups.rs), next to `NumberGroups`. The importer (`group_field`) and
+  `Txn::add_pivot_table` both call it, and `CacheField::date_groups` keeps the grouping. GETPIVOTDATA's number item
+  on a date-grouped field picks the inner group whose calendar value equals the number's integer part
+  (`DateGroups::number_item`), and a group with no record is `#REF!`, as on a numeric range field (`shown_group`).
+- The eval adapter registers date-grouped spec pivots (`PivotRangeGroup::by`), and the engine lays them out.
+  Excel drops a date grouping over a blank on refresh; the engine does not model that yet, so `add_pivot_table`
+  refuses such a pivot (`PivotError::DateGroupOverBlank`) and the adapter leaves it unregistered. That is split
+  out as T-4260 (size M: an ungrouped date layout, number items on an ungrouped date field, cache rounding).
+- One probe point is not met: 10:59:59.5 sits 2.2e-7 s below the half, and Excel puts it in `11 AM`. Behind
+  it are the 15 visibly-off cells left in the no-blank case, filed as T-4261 (a structural rounding model,
+  probe first). The quirk is recorded in web.md.
+- Eval: probes 188 cells fixed (no-blank 144 of 159, blank 44), 0 regressions in every suite.
+- Acceptance: the number items and the no-blank probe pass except T-4261's point; the blank probe is T-4260's.
+

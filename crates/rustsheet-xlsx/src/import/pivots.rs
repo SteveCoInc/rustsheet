@@ -19,12 +19,12 @@ use rustsheet_engine::expressions::token::get_error_by_english_name;
 use rustsheet_engine::expressions::utils::{is_valid_column_number, is_valid_row};
 use rustsheet_engine::pivot::{
     Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue, MAX_FIELDS,
-    MAX_ITEMS, MAX_RECORD_VALUES,
+    DateGroupBy, DateGroupError, NumberGroupError, PivotCache, PivotCacheError, PivotField,
+    PivotTable, RecordValue, MAX_FIELDS, MAX_ITEMS, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::types::DateSystem;
 
-use self::groups::{apply_groups, FieldGroup, GroupBy, RangeGroup};
+use self::groups::{apply_groups, FieldGroup, RangeGroup};
 use super::iso_date::pivot_cache_date_serial;
 use super::package::{part_folder_and_rels, part_key, resolve_relative_target, Package};
 use super::worksheets::parse_range;
@@ -51,6 +51,12 @@ struct Skip(String);
 
 impl From<XlsxError> for Skip {
     fn from(error: XlsxError) -> Self {
+        Skip(error.to_string())
+    }
+}
+
+impl From<DateGroupError> for Skip {
+    fn from(error: DateGroupError) -> Self {
         Skip(error.to_string())
     }
 }
@@ -588,8 +594,12 @@ fn read_definition<B: BufRead>(
 /// A `<rangePr>`: `startNum`, `endNum` and `groupInterval` for numbers, `startDate` and `endDate`
 /// for dates (read as cache `<d>` items are).
 fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeGroup, Skip> {
-    let Some(by) = GroupBy::parse(attribute(element, "groupBy")?.as_deref()) else {
-        return skip("an unknown groupBy");
+    let by = match attribute(element, "groupBy")?.as_deref() {
+        None | Some("range") => None,
+        Some(text) => match DateGroupBy::parse(text) {
+            Some(by) => Some(by),
+            None => return skip("an unknown groupBy"),
+        },
     };
     let number = |name: &str| -> Result<Option<f64>, Skip> {
         match attribute(element, name)? {
@@ -601,7 +611,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
         }
     };
     let interval = number("groupInterval")?.unwrap_or(1.0);
-    let (start, end) = if by == GroupBy::Range {
+    let (start, end) = if by.is_none() {
         if interval <= 0.0 {
             return skip("a groupInterval that is not positive");
         }
@@ -611,7 +621,7 @@ fn read_range_pr(element: &BytesStart, date_system: DateSystem) -> Result<RangeG
         if date_system != DateSystem::Excel1900 {
             return skip("a date group in a 1904 workbook");
         }
-        if by == GroupBy::Days && interval != 1.0 {
+        if by == Some(DateGroupBy::Days) && interval != 1.0 {
             return skip("a day group of more than one day");
         }
         let date = |name: &str| -> Result<Option<f64>, Skip> {
