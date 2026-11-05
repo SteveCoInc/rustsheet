@@ -17,8 +17,12 @@ engine matches it or the cells are owned.
 ## Context
 - Follow-up of T-4235 (crates/rustsheet-engine/src/pivot/number_groups.rs `NumberGroups`; docs/excel-semantics/web.md
   "Grouped pivot fields import as their group items", the UNVERIFIED (T-4249) list). The engine assumes:
-  - any `<groupItems>` count other than the layout's relabels with the end groups first (only one item too many is
-    probed: probes/t4228-pivot-range-groups pivot 3), including a list that is too short;
+  - any `<groupItems>` count other than the layout's relabels in T-4253's order (the file's items that are Excel's
+    labels first, in file order; only one item too many is probed: probes/t4228-pivot-range-groups pivot 3,
+    probes/t4253-pivot-relabel-order), including a list that is too short;
+  - (from T-4253) that order matches a file item to a label on its exact text (case and spacing unprobed), and a
+    relabel bound of 1e15 or more, or below 1e-5, is printed in plain decimal as smaller ones are
+    (probes/t4253-pivot-decimal-relabel);
   - a span that is not a whole number of intervals (0 to 10 by 3) has `ceil` groups, the last one `9-12`;
   - GETPIVOTDATA with a number past `endNum` is `#REF!`, and one below `endNum` whose quotient rounds to the group
     count picks `>end`.

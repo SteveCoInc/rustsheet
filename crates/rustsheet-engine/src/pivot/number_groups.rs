@@ -196,7 +196,7 @@ impl NumberGroups {
 /// A group bound as a relabel writes it: rounded to 15 significant digits and printed in plain
 /// decimal, never in General's scientific form (`0.00001-0.00002` by 1e-5, `0-0.333333333333333`
 /// by 1/3, `49382715604.8-61728394506`; probes/t4253-pivot-decimal-relabel). A bound of 1e15 or
-/// more, or below 1e-5, is UNVERIFIED (T-4253 Outcome).
+/// more, or below 1e-5, is UNVERIFIED (T-4249).
 fn label_number(value: f64) -> String {
     // `+ 0.0` turns -0 into 0; Rust's `Display` of an f64 is plain decimal (shortest round trip).
     format!("{}", to_excel_precision(value, 15) + 0.0)
