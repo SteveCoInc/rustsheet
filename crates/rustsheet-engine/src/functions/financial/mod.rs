@@ -346,8 +346,13 @@ impl Model {
         if self.non_numeric_text_or_boolean_cell(values) {
             return Some(CalcResult::new_error(Error::VALUE, cell, String::new()));
         }
+        // An error values argument is read before any dates check: `XNPV(0.1,<#N/A>,<TRUE>)` is
+        // `#N/A` (probes/t3815-xnpv-element-reading D36), and it comes before the rate too.
+        if matches!(values, CalcResult::Error { .. }) {
+            return None;
+        }
         if matches!(dates, CalcResult::Error { .. }) {
-            return (!matches!(values, CalcResult::Error { .. })).then(|| dates.clone());
+            return Some(dates.clone());
         }
         if self.non_numeric_text_or_boolean_cell(dates) {
             return Some(CalcResult::new_error(Error::VALUE, cell, String::new()));
@@ -415,7 +420,8 @@ impl Model {
     }
 
     /// Whether XNPV is `#VALUE!` for the first cell of a multi-cell values range (T-2603,
-    /// probes/t2603-xnpv-no-number-values). That cell is empty, a boolean or non-numeric text.
+    /// probes/t2603-xnpv-no-number-values). That cell is empty, a boolean or text, numeric text
+    /// too (probes/t3815-xnpv-element-reading A30, T-3815).
     /// Only the first cell counts: `XNPV(1,A4:A5,..)` with A4 empty and A5 = 5 is `#VALUE!`
     /// (C3, also with later text or booleans, C18-C20), but `XNPV(1,A5:A6,..)` with A6 empty is
     /// `#NUM!` (C4).
@@ -433,6 +439,20 @@ impl Model {
         dates: &CalcResult,
         cell: CellReferenceIndex,
     ) -> bool {
+        if let CalcResult::Array(array) = values {
+            // An array's first element that is text or a boolean is refused too:
+            // `XNPV(0.1,{"-100";30;40;50},..)` and `{TRUE;..}` are `#VALUE!`
+            // (probes/t3815-xnpv-element-reading B30, B31). The element walk has already
+            // settled any date that would come first.
+            let elements = array
+                .len()
+                .saturating_mul(array.first().map_or(0, Vec::len));
+            return elements > 1
+                && matches!(
+                    array.first().and_then(|row| row.first()),
+                    Some(ArrayNode::String(_) | ArrayNode::Boolean(_))
+                );
+        }
         let CalcResult::Range { left, right } = values else {
             return false;
         };
@@ -444,7 +464,9 @@ impl Model {
                 left: position,
                 right: position,
             };
-            model.empty_cell(&value) || model.non_numeric_text_or_boolean_cell(&value)
+            // Numeric text is refused too: `XNPV(0.1,<"-100",30,40,50>,..)` is `#VALUE!`
+            // (probes/t3815-xnpv-element-reading A30).
+            model.empty_cell(&value) || model.text_or_boolean_cell(&value)
         };
         if !refused(self, *left) {
             return false;
@@ -673,8 +695,11 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         };
         let values = self.evaluate_node_in_context(values, cell);
+        let values = self.xnpv_one_cell(values);
         let dates = self.evaluate_node_in_context(dates, cell);
+        let dates = self.xnpv_one_cell(dates);
         let size_error = self.xnpv_size_error(&values, &dates, cell);
+        let walk_error = self.xnpv_walk_error(&values, &dates, cell);
         let first_value_refused = self.xnpv_first_value_refused(&values, &dates, cell);
         // The dates are truncated and checked once, not per element: each element is charged
         // only the values' count.
@@ -711,6 +736,15 @@ impl Model {
                 // a rate at or below 0 (`XNPV(1,A2:A3,B11)` and `XNPV(-1,A2:A3,B11:B12)` with A2:A3
                 // empty are `#NUM!`; probes/t2603-xnpv-no-number-values C2, C13). The dates are
                 // not read first: all-empty dates are `#VALUE!` too (C5).
+                // The element walk's error comes after a rate at or below 0 and before the first
+                // value's `#VALUE!` (T-3815).
+                if let (Ok(rate), Some(walk_error)) = (&rate, &walk_error) {
+                    return if *rate <= 0.0 {
+                        CalcResult::new_error(Error::NUM, cell, String::new())
+                    } else {
+                        walk_error.clone()
+                    };
+                }
                 if let (Ok(rate), true) = (&rate, first_value_refused) {
                     let error = if *rate <= 0.0 {
                         Error::NUM

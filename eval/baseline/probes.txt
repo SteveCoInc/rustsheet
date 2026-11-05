@@ -2117,6 +2117,7 @@ C	probes/t3807-percent-operand-cut-order.case.json	84
 C	probes/t3808-m5-aggregate-overflow.case.json	576
 C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/t3814-lambda-helper-arity.case.json	248
+C	probes/t3815-xnpv-element-reading.case.json	187
 C	probes/t3820-lower-sigma-next-char.case.json	712
 C	probes/t3836-mmult-blank-range-first-arg.case.json	19
 C	probes/t3838-groupby-option-order.case.json	232
