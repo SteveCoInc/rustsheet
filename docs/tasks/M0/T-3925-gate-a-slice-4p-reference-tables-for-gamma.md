@@ -3,7 +3,7 @@ id: T-3925
 title: "Gate A slice 4p: reference tables for GAMMA.DIST, CHISQ.DIST and CHISQ.DIST.RT"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -71,22 +71,6 @@ the math. Every failing table point has an owner.
 - GAMMA, GAMMALN and GAMMALN.PRECISE (T-3798).
 - Any engine change.
 
-## Blocked because
-Resumed after the review-round limit (step 5c).
-- Round 3 (head 54e0c7109): design and security APPROVE; reviewer-excel-fidelity REQUEST_CHANGES. Findings, all
-  addressed in the commit that blocks the task (not yet reviewed):
-  - [MAJOR] t2982 A117-A120 (Excel 0, math up to about 1, x / beta underflowing to 0) were made valueless without
-    being listed as R3 candidates, unlike t2753 A13-A15: now in the Outcome and T-4392.
-  - [MINOR] the docstring claimed Excel's 0 for every subnormal x / beta: now evidenced only where it underflows to 0
-    (T-2982), the nonzero subnormal below shape 1 unprobed (T-1942).
-  - [MINOR] GAMMA.DIST's density at 0 with shape 1 (1 / beta) was inferred from CHISQ.DIST's df 2: now no value.
-    No table point or eval cell is there (`verify` and `math --check` unchanged).
-- Open MINORs for T-4395 (or the resumer): `NORMAL_MIN` duplicated with continuous.py; gamma_dist's `RT_TRUNC_SOURCE`
-  shares a name with gamma.py's but cites T-0971 (rename, e.g. `RT_DF_TRUNC_SOURCE`); the protected
-  `quality/duplication.json` baseline (2878, measured 2876) is the steward's.
-- Next: an opus run resumes per work-loop step 5c: `make check-fast`, the full panel on the current head, then CI and
-  enqueue. CI on 54e0c7109 was running when the window closed (PR #3412).
-
 ## Outcome
 - `tools/src/rustsheet_tools/accuracy/defs/gamma_dist.py`: GAMMA.DIST, CHISQ.DIST and CHISQ.DIST.RT, each citing its
   statistics.md entries. The cdfs are gamma.py's `lower_tail` and `upper_tail` (P and Q at y = x / beta, x / 2 for the
@@ -129,3 +113,7 @@ Resumed after the review-round limit (step 5c).
   T-1049 values, the error domain either side of the T-2738, T-3316 and T-4308 cuts, and the no-value regions).
 - Follow-up: T-4392 (owner ruling on R3 for the tiny-ratio density), blocked on the owner.
 - Eval delta: none in the gated suites (tools, tables and sidecars only).
+- Resumed after the review-round limit (step 5c). The resumed panel (round 1, head 0a65f0d) approved: design,
+  security and Excel fidelity. Open MINORs: `NORMAL_MIN` and the second `RT_TRUNC_SOURCE` (T-4395); the protected
+  duplication baseline (the steward's); a probe cell between 2.86E307 and 5E307 for the 2 pi `#DIV/0!` cut (T-4340's
+  probe).
