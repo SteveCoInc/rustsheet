@@ -25,6 +25,10 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
 - Evidence (excel-graph; math from T-3925's regenerated sidecars): probes/t2753-gamma-density-ratio-sweep A13
   (`GAMMA.DIST(1E-300,2,1,FALSE)`, math 1.0E-300, at the envelope's floor), A14 (`(1E-250,2,1,FALSE)`, math 1.0E-250) and
   A15 (`(1E-200,2,1,FALSE)`, math 1.0E-200): Excel 0, relative error 1 (past R3's 1e-4).
+- The same kind of gap where x / beta underflows to 0 in doubles (statistics.md, "Where x / beta underflows to 0", T-2982):
+  probes/t2982-gamma-inv-huge-shape A117-A120, `GAMMA.DIST(1E-300,a,1E100,TRUE)` at a = 0.5, 1E-17, 1E-300 and 0.01,
+  Excel 0 against the math's about 1.1E-200, 1 - 9E-15, about 1 and about 1E-4. The T-3925 definition records no math
+  value there (its sidecar lists them as skipped); a ruling covers both families.
 - The T-3925 Gate A table has no such point (0 failing); no other GAMMA.DIST, CHISQ.DIST or CHISQ.DIST.RT cell of
   probes or probes-numeric is a number more than 1e-4 off the math.
 - The owner's options: (a) keep matching Excel, so this is no R3 case (write it into the T-2753 entry); (b) an R3 case

@@ -22,16 +22,19 @@ Sources:
 - statistics.md, "Thin distribution functions: argument coercion, truncation and error edges (T-1049)", "Density at 0":
   `CHISQ.DIST(0,1,FALSE)` is `#NUM!` (infinite), the df 2 value is 0.5 and higher df give 0, as the math does;
   `CHISQ.DIST.RT(0,..)` is 1. GAMMA.DIST at x = 0 is 0 above shape 1 (`GAMMA.DIST(0,9,2,FALSE)`, Excel's GAMMA.xlsx
-  E13); at shape 1 it takes the df-2 chi-squared value's math (1 / beta); below shape 1 it is unprobed (no value).
+  E13); at shape 1 and below it is unprobed for GAMMA.DIST (no value), while CHISQ.DIST's df 2 (shape 1) is its math, 0.5.
 - statistics.md, "GAMMA.INV and CHISQ.INV at a huge shape (T-2982, T-3070)": CHISQ.DIST and CHISQ.DIST.RT are
   `#NUM!` above 1E10 degrees of freedom; "Incomplete gamma: accurate kernel (T-0971)": CHISQ.DIST.RT truncates its
   df (`CHISQ.DIST.RT(8,3.34)` is Q(1.5, 4), Excel's CHISQ.xlsx G3). No entry shows CHISQ.DIST truncating, so an eval
   cell giving it a non-integer df gets no math value (`Param.truncates`).
 
 What has no math value (the sampler redraws; the Excel cells stay in the eval suites):
-- GAMMA.DIST's cdf at a positive x whose x / beta is subnormal in doubles, where the math is above 1E-300: Excel
-  computes from the rounded ratio and gives 0 (statistics.md, "GAMMA.DIST's density is #NUM! at a subnormal x / beta",
-  and the T-2982 note that the cdf is 0 there at every shape), which is not a cut of the math.
+- GAMMA.DIST's cdf at a positive x whose x / beta is subnormal in doubles, where the math is above 1E-300. Where the
+  ratio underflows to 0, Excel gives 0 at every probed shape (statistics.md line "Where x / beta underflows to 0",
+  T-2982: probes/t2982-gamma-inv-huge-shape A117-A122), against a math value up to about 1: R3 candidates listed for
+  the owner (T-4392), not a cut of the math. A nonzero subnormal ratio below shape 1 is unprobed (T-1942).
+- GAMMA.DIST's density at x = 0 with shape 1: the math is 1 / beta, but only the chi-squared df-2 value (0.5) is
+  evidenced, so GAMMA.DIST there gets no value.
 - The chi-squared densities of a positive x whose x / 2 is subnormal or whose (df / 2) / x overflows: unprobed.
 - Ill-conditioned points, where the one rounding of y that Excel's x / beta makes (none where the quotient is a
   double, as x / 2 always is above the subnormals) moves the value by more than `CONDITION_LIMIT` relative:
@@ -153,9 +156,12 @@ def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     assert not isinstance(beta, (bool, tuple))
     fx, fa, fbeta = _floats(x, a, beta)
     y = x / beta
+    if not cumulative and y == 0 and a == 1:
+        msg = "GAMMA.DIST's density at 0 with shape 1 is unprobed (only CHISQ.DIST's df 2 is evidenced)"
+        raise NoValueError(msg)
     value = _cdf(y, a, upper=False) if cumulative else _density(y, a, beta)
     if cumulative and fx > 0 and fx / fbeta < NORMAL_MIN and value > FLOOR:
-        msg = "Excel's cdf reads a subnormal x / beta as 0 (T-2738, T-2982)"
+        msg = "a subnormal x / beta: Excel's 0 where it underflows (T-2982, R3 candidates T-4392), unprobed otherwise"
         raise NoValueError(msg)
     _huge_shape_zero(fa, value)
     return value
