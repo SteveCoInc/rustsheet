@@ -3,7 +3,7 @@ id: T-4334
 title: "Read the large-shape gamma window exponent from its a 2^-59 grid (after T-4308)"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -55,10 +55,10 @@ From the T-4308 review (PR #3349; MINOR, excel-fidelity, carried here):
   be a trend worth reading.
 
 ## Acceptance criteria
-- [ ] A candidate exponent that reproduces the a 2^-59 grid is scored on the T-4296 chain with a hold-out fixed before
+- [x] A candidate exponent that reproduces the a 2^-59 grid is scored on the T-4296 chain with a hold-out fixed before
       scoring (decision 0188 R4), and adopted if it is Excel's on the hold-out. Otherwise each rejected family goes
       into statistics.md with its scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
@@ -66,3 +66,11 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 ## Out of scope
 - Shapes below 20 (T-3219).
 - The cdf inside the window (T-4255, T-4326).
+
+## Outcome
+Done by T-4308's second PR (#3352), which this task's PR #3349 ran in parallel with: Excel's window exponent is
+Loader's bd0 split B = (y - a) v - (2a atanh(v) - 2a v), with atanh correctly rounded, one double that gives Excel's
+density bit for bit (fit 551/551, hold-out 193/195; docs/research/t4308/read_out.py). The a 2^-59 grid reading is
+superseded (statistics.md, the T-4308 paragraph). The near-mode and overflow probes are in
+probes-numeric/t4308-gamma-density-r4-fresh, and the single near-mode test is density.rs `in_window`. The
+visibly-off window cells pass, except those named in T-4339 and T-4340.
