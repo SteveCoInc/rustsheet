@@ -358,6 +358,15 @@ impl Grouping {
             .map_or(&self.every[..], Vec::as_slice)
     }
 
+    /// Whether some row's descent reached class `class` of field `field`. A PIVOTBY column
+    /// subtotal of a class none reached holds every record of its line, as its leaves do
+    /// (probes/t4388-pivotby-intransitive-subtotals columns D and E; T-4388).
+    pub(crate) fn class_reached(&self, field: usize, class: usize) -> bool {
+        self.reached_by
+            .get(field)
+            .is_some_and(|classes| classes.contains_key(&class))
+    }
+
     /// The class ids of group `group`'s first `level` keys, the prefix a subtotal at that level
     /// covers (empty when there is no such group).
     pub(crate) fn prefix(&self, group: usize, level: usize) -> &[usize] {

@@ -1,8 +1,9 @@
 """T-4388: write probes/t4388-pivotby-intransitive-subtotals, PIVOTBY's and GROUPBY's subtotals on intransitive runs.
 
 Run from the repo root: python3 -I docs/research/t4388/gen_probe.py, then (after `make build`, before the fill)
-python3 -I docs/research/t4388/predict_engine.py, which commits the engine's values as the predictions (the current
-model: T-4359's parents for GROUPBY and PIVOTBY's row axis, T-4378's column subtotals, T-4358's column leaves).
+python3 -I docs/research/t4344/predict_engine.py eval/suites/probes/cases/t4388-pivotby-intransitive-subtotals
+docs/research/t4388/predictions.tsv, which commits the engine's values as the predictions (the current model:
+T-4359's parents for GROUPBY and PIVOTBY's row axis, T-4378's column subtotals, T-4358's column leaves).
 
 30 fresh seeded five-row runs (seed "T-4388"; A = ab, B = ab&U+00AD, C = U+00AD&ab, so A = C = B, A < B), p/q rows
 (Data!F): 15 three-field runs (text, x/y, text) whose tree, ascending or with the first or second field descending,

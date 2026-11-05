@@ -1041,15 +1041,21 @@ tree order and sort by their class's rank (`Group::key_order`). While no key tex
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
 (`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
-reached its class (T-4378). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort orders by and a subtotal line
-shows, are `Grouping::class_rows`: the rows that reached the class, every row when none did (T-4359; PIVOTBY's row
-axis and descending key sorts unprobed, T-4388). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
+reached its class (T-4378), and every record of the row line when no record reached the class, as its leaves do
+(`Grouping::class_reached`; T-4388): over CyB BxC CxC AyB BxB of p q q q q (three fields, ascending) no record reaches
+the (`ab`&U+00AD, `y`) class, whose one leaf (`ab`&U+00AD) and subtotal both show `1` for p and `2, 3, 4, 5` for q
+(probes/t4388-pivotby-intransitive-subtotals Calc!D2). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort
+orders by and a subtotal line shows, are `Grouping::class_rows`: the rows that reached the class, every row when none
+did (T-4359). T-4388 confirmed it out of sample on PIVOTBY's row axis (row subtotals, and a sort by the first value
+column with them) and on GROUPBY's subtotals under `sort_order` -1 and -2: its 120 B, C, F and G cells matched the
+engine's predictions committed before the fill; its D and E column subtotals matched in 45 of 60, the 15 misses all
+the unreached-class rule above (fixed). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
 repeated leaf (T-4380) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378 and t4359 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378, t4359 and t4388 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
