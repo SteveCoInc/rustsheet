@@ -2,10 +2,10 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    group_by_dates, group_by_numbers, row_layout, ungroup_dates, Aggregate, Axis, AxisField,
-    CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField, DateGroupError,
-    DateGroups, LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable,
-    RecordValue, MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, layout_extent, row_layout, ungroup_dates, Aggregate, Axis,
+    AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    DateGroupError, DateGroups, LayoutCell, NumberGroupError, PivotCache, PivotCacheError,
+    PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -337,7 +337,8 @@ impl Txn<'_> {
             input.location.top,
             input.location.left,
         );
-        let mut bottom = top;
+        let (bottom, right) =
+            layout_extent(top, left, u32::try_from(rows.len()).unwrap_or(u32::MAX));
         for (r, cells) in (top..).zip(rows) {
             for (c, cell) in (left..).zip(cells) {
                 // Typed values: a label such as `1-1.1` is text, never parsed as a date.
@@ -348,13 +349,12 @@ impl Txn<'_> {
                 };
                 self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
             }
-            bottom = r;
         }
         Ok(CellArea {
             top,
             left,
             bottom,
-            right: left + 1,
+            right,
         })
     }
 }
