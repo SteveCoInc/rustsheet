@@ -3,10 +3,10 @@ id: T-1194
 title: "Name lookups in reference context: one lowercase lookup per use, and look through formula-bodied names in is_multi_area"
 milestone: M1
 lane: perf
-status: in-progress
+status: todo
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -32,3 +32,17 @@ bounded), so `dyn A1` with `dyn` = `=OFFSET(...)` does not build an area list.
 
 ## Out of scope
 - The value path's lookup in model.rs (same pattern; may share the fix).
+
+## Handoff
+Findings by a sonnet run (no code changed):
+- The `is_multi_area` half is already in place: `may_be_multi_area(node, look_through_names)` in
+  `reference_operators/mod.rs` opens a name body once and counts names inside it as multi-area,
+  so `=0.5` / `=OFFSET(...)` bodies keep the pair path. Only a test for a formula-bodied scalar
+  name in `test_multi_area_arguments.rs` may be missing (check around line 638).
+- The remaining half needs a design choice: `parsed_defined_names` is keyed
+  `(Option<u32>, String)`, so every `parsed_defined_name` call allocates a lowercase `String`
+  (defined_names.rs ~l.230). Options: store the lowercased key in `DefinedNameS` (44 match sites
+  of `Node::DefinedNameKind`, parser + serialization), or resolve once and pass an `Arc<Node>`
+  down through `defined_name_reference` / `evaluate_node_with_reference` / the `is_multi_area`
+  callers (count.rs, frequency.rs, let.rs, map_reduce.rs, cast.rs, util.rs).
+- Next step: pick one, add a counting test, run the perf reviewer-free `make check-fast`.
