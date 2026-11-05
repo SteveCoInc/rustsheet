@@ -3,7 +3,7 @@ id: T-4327
 title: "Probe showAll=1 on an empty date group; mark the unread pivot layouts UNVERIFIED; builder tests for column unused items (T-4311 review follow-ups)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
