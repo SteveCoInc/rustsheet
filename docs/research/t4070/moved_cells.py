@@ -69,7 +69,7 @@ def literal_cdf(formula: str):
 
 
 def main() -> None:
-    (pre_cases, pre), (post_cases, post), (now_cases, now) = (load(p) for p in sys.argv[1:4])
+    (pre_cases, pre), (_, post), (now_cases, now) = (load(p) for p in sys.argv[1:4])
     moved = [k for k, c in post.items() if k[0] in pre_cases and k not in pre and c.get("actual", {}).get("t") == "n"]
     print(f"cells bit-exact before T-2505 and off after it: {len(moved)}")
     pts, idx = [], []
