@@ -3,7 +3,7 @@ id: T-0473
 title: "External links: O(1) per-sheet has-cells and extent lookups in the cache"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
