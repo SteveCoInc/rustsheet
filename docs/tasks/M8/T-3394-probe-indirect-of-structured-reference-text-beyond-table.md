@@ -3,7 +3,7 @@ id: T-3394
 title: "Probe INDIRECT of structured-reference text beyond Table[Column]: specifiers, @, unqualified, case, spacing, bare name, a1 FALSE"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
