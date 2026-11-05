@@ -3,7 +3,7 @@ id: T-4296
 title: "Read Excel's in-window large-shape gamma path from its prefactor chain and the 2a/3 and 1.5a ties (after T-4290)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
