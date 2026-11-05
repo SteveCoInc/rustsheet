@@ -1986,6 +1986,10 @@ a valid call from an invalid one. The only distinguishable result is a text `tar
 before the `#N/A`. So the web oracle gives no evidence for the algorithm or for most argument validation; it is a
 golden only for the type-coercion step (decision 0039). Catalog `oracle: none` is not used: the canary does not
 refuse these workbooks, Excel for the web just does not calculate the family.
+Re-check 2026-11-05 (T-3641, probes/forecast-ets-reprobe-2026-11, excel-graph): still `#N/A` on every valid call. 16 cells over a 36-point
+monthly timeline (period 12) and a 28-point daily timeline (period 7) cover FORECAST.ETS (default, seasonality 0/7/12, data_completion and
+aggregation 1), .CONFINT (default and 0.9), .SEASONALITY and .STAT (types 1, 2, 8). So the web oracle still gives no algorithm evidence;
+T-2425 (dropped, decision 0266) is unaffected.
 Shapes (probes/forecast-ets-optional-settings-shape, excel-graph, T-2371): every optional setting lifts over an array or range.
 `ROWS(FORECAST.ETS(9,B1:B8,A1:A8,{1;4}))` is 2 and `COLUMNS` 1; a `G1:G2` setting is the same 2x1; a `G1:H1` setting is 1x2;
 a 2x2 array is 2x2 (COLUMNS is checked only for FORECAST.ETS's seasonality; the other cells check ROWS), for
