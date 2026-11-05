@@ -9,6 +9,9 @@ hypotheses differ only in the rows a parent's value is the function of:
 - R1: the rows whose descent reached its class, those that reached no leaf under it included, and not the extra
   rows of a leaf no row reaches (t4344 Calc!D56; PIVOTBY's column subtotals, T-4378).
 - R2: R0 and R1 together (the rows of its groups and the rows that reached it).
+- R3: R1, except that a class no row reached holds every row, as a leaf no row reaches does (added after the fill
+  of probes/t4359-groupby-value-sort-parents, from its subtotals, Calc!E4, E10: a repeated first-field class no row
+  reached shows the total of every row).
 Texts: A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B).
 """
 
@@ -83,7 +86,7 @@ def value_sort(
                 continue
             r0 = sorted({r for q, ms in held.items() if q[:level] == prefix for r in ms})
             r1 = [r for r in every if paths[r - 1][:level] == prefix]
-            rs = {"R0": r0, "R1": r1, "R2": sorted(set(r0) | set(r1))}[hyp]
+            rs = {"R0": r0, "R1": r1, "R2": sorted(set(r0) | set(r1)), "R3": r1 or every}[hyp]
             parents[prefix] = agg(rs)
     sign = 1 if ascending else -1
 
