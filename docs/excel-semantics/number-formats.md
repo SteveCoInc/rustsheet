@@ -827,6 +827,16 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
   the Latin Hebrew ones ("Adar|Yom Revi'i") and Hijri (6) the English Hijri ones ("Sha'ban|AlArbia'a"), not the
   no-locale en-US names. Evidence: probes/t2959-indic-lcid-names (112 cells, excel-graph, 2026-11-04).
   Ours: matches (locale/indic_date_names.rs).
+- **Indic regional variants** (T-4201, probes/t4201-indic-regional-variants, 142 cells, excel-graph, 2026-11-05). The
+  language fallback to bn-IN, ta-IN and ne-NP is wrong: each tag has its own table. `[$-845]` bn-BD, neutral `[$-45]`,
+  `[$-bn]` and `[$-bn-BD]` print March `mmm|mmmm|ddd|dddd|AM/PM` as "মার্চ|মার্চ|বুধ|বুধবার|PM" (full month names for
+  `mmm`, undotted short days, Latin "AM"/"PM", AM `mmmmm` "জ"). `[$-849]` ta-LK and `[$-ta-LK]` give
+  "மார்.|மார்ச்|புத.|புதன்|பிற்பகல்" (morning "முற்பகல்"; ta-IN's halves are "காலை"/"மாலை"); neutral `[$-49]` is a third
+  table, "மார்ச்|மார்ச்|புதன்|புதன்கிழமை|மாலை" (morning "காலை", Sunday "ஞாயிற்றுக்கிழமை"). `[$-861]` ne-IN and `[$-ne-IN]`
+  print "मार्च|मार्च|बुध|बुधबार|अपराह्न" (Wednesday ends "-बार"; ne-NP's Sunday is "आइतवार"), neutral `[$-61]` "…|बुधवार|…"
+  like ne-NP. Under calendar digits 10 (Saka) and 8 (Hebrew) every LCID prints the Latin Saka ("Phalguna|Budh|Budhavara")
+  and Hebrew ("Adar|Yom Revi'i") names, except 861 and 61 whose Saka cells are native ("फल्गुण", "बुधवार"). Ours: wrong
+  (102 off cells), owned by T-4292.
 - **System tags.** `[$-F800]` and `[$-x-sysdate]` replace the whole section with the system long date, en-US "dddd, mmmm d, yyyy", whatever else it holds (`TEXT(45000.75,"x[$-F800]0")` is "Wednesday, March 15, 2023", 0.5 "Saturday, January 0, 1900", -1 and 3e6 `#VALUE!`); `[$-F400]`/`[$-x-systime]` likewise give "h:mm:ss AM/PM". Only a first section shows it: `TEXT(-1,"0;[$-F800]")`, `TEXT(0,"0;0;[$-F800]")` and `TEXT("abc","0;0;0;[$-F800]")` are "". With `@` the section is a text section as usual (`[$-F800]@` of 45000.75 is "45000.75").
 - **One tag per section.** A second tag in a section is `#VALUE!`, even the same one or a system tag (`[$-40C]mmmm [$-40C]mmmm`, `[$-40C]mmmm [$€-407]mmmm`, `[$-F800][$-F400]`); tags in different sections are fine.
 - **Regional variants and more languages** (probes/text-locale-regional-lcids, 252 cells, T-1858). The language fallback does not hold across regions: `[$-C07]` de-AT has "Jän"/"Jänner" for January, "Mär" for March, and `ddd` "Mi."/"Do." (de-DE differs in all three); `[$-1004]` zh-SG mixes the two: short months as zh-TW ("一月"), days as zh-CN ("周三"); `[$-C04]` zh-HK equals zh-TW ("週三"); `[$-80A]` es-MX and `[$-2C0A]` es-AR differ from es-ES in `ddd` and the day halves ("a. m."/"p. m."), and es-AR's halves use a non-breaking space where es-MX's use a plain one. Languages that now resolve: `[$-408]` Greek ("Ιαν", "πμ"/"μμ"), `[$-41E]` Thai (Thai names, AM/PM stay Latin), `[$-41B]` Slovak (short months are the numerals "1"…"12", like Japanese), `[$-422]` Ukrainian (AM/PM stay Latin), `[$-401]` Arabic ("ص"/"م"), `[$-40D]` Hebrew (AM/PM stay Latin), `[$-439]` Hindi ("पूर्वाह्न"/"अपराह्न"). Calendar and digit switches of Thai, Arabic and Hebrew are T-1859's.

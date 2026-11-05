@@ -3,7 +3,7 @@ id: T-4201
 title: "Probe the Indic regional variants that resolve by the language fallback (bn-BD 845, ta-LK 849, ne-IN 861, [$-bn], [$-ne-IN])"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -30,3 +30,8 @@ other regions (number-formats.md "Regional variants": de-AT, es-MX, zh-SG). Foun
 
 ## Out of scope
 - Indic LCIDs other than these regional variants.
+
+## Outcome
+Filled probes/t4201-indic-regional-variants (142 cells, excel-graph) for 845, 849, 861, 45, 49, 61, bn, bn-BD, ta-LK
+and ne-IN (12 months, AM, Saka and Hebrew digits for the LCIDs). Every tag has its own table, not the language fallback;
+recorded in number-formats.md "Indic regional variants". The 102 off cells are owned by T-4292. No eval baseline change.
