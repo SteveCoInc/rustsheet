@@ -21,7 +21,9 @@ T-4322 (docs/excel-semantics/statistics.md, the T-4322 paragraph; docs/research/
 exponent B, and that the cut is in (1.298a, 1.3a] at k = 100, 200 and 300. Below the cut Excel is none of the
 tried prefactors: it is 1 to 17 ulp from the correctly rounded Q (probes-numeric/t4322-poisson-window-r4-fresh
 A8:C10, probes/t4291-poisson-far-above-mean D1:H1), and the window form is up to 62 ulp off. 1.3 is Cephes'
-`SMALLRATIO`, the cut of its asymptotic (Temme) igamc series: score that series computed in doubles first.
+`SMALLRATIO`, the cut of its asymptotic (Temme) igamc series: score that series computed in doubles first. The
+cut is bracketed at k = 100 and 300 only: at k = 200 the window form is as close as the correctly rounded Q just
+below it (t4322 fresh B8:B10, -3, 4 and -2 ulp against -9, 10 and -1), so check whether the cut depends on k.
 - probes-numeric/t4322-poisson-window-r4-fresh G3 `POISSON.DIST(80,118.464,TRUE)` (x/a 1.4625) is 64 ulp from
   the window form and 27 to 92 from every other tried form; its neighbours fit.
 - Split (T-3229): T-4337 owns the t4291 cells that are off by a few ulp but not visibly (row 1 among them), cited

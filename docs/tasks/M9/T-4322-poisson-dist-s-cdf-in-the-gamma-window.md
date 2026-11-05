@@ -50,9 +50,23 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
   exponent was T-4308's) plus one cut, 1.3, `FITTED` and frozen (commit ff265dc32) before the fresh sweep
   probes-numeric/t4322-poisson-window-r4-fresh (seed 43220, 48 points at 1.3a to 1.5a plus a ladder across the
   cut at k = 100, 200, 300) was written and filled (excel-graph 2026-11-05).
-- Within 4 ulp of Excel (docs/research/t4322/score.py): fit (the 15 seen T-4302 points from 1.3a) the form 14/15
-  against the correctly rounded Q 9/15; fresh 51/57 against 10/57, bit-exact 8 against 2. Gate A's envelope holds
-  all 57. The ladder puts Excel's cut in (1.298a, 1.3a].
+- Hold-out (R4.1) and fresh sweep (R4.2). The fresh sweep doubles as the hold-out: it was never tuned on, and its
+  seed 43220 was fixed in the freeze commit. No margin was stated when the split was fixed. The guard holds for any
+  non-negative margin, since the hold-out exact rate (8/57, 14.0%) is at least the train rate (2/15, 13.3%).
+  Counts are bit-exact / within 4 ulp / within 15 digits (docs/research/t4322/score.py, x/a 1.3 to 1.5):
+
+  | split | the window form | correctly rounded Q |
+  |---|---|---|
+  | train (15 seen T-4302 points) | 2/14/10 | 0/9/7 |
+  | hold-out (fresh sweep, 57 points) | 8/51/47 | 2/10/22 |
+
+  Gate A's envelope holds all 57 fresh points, and all 9 below the cut.
+- Gate A batch: accuracy/POISSON.DIST/r4-T-4322 (120 points, 15 of them domain errors, generated after the freeze
+  and filled by excel-graph on 2026-11-05). `rustsheet-eval accuracy` puts every point inside the envelope, 0
+  failing.
+- The ladder puts Excel's cut in (1.298a, 1.3a] at k = 100 and 300. At k = 200 the form is as close to Excel as the
+  correctly rounded Q just below the cut (-3, 4 and -2 ulp at 1.29a, 1.295a and 1.298a, against -9, 10 and -1), so
+  the cut is not bracketed there (T-4345).
 - Below 1.3a Excel is none of the tried prefactors (window, direct, correctly rounded B, pmf times Q/pmf) and 1 to
   17 ulp from the correctly rounded Q: T-4345. G3 of the fresh sweep is a lone 64-ulp miss (T-4345).
 - The window densities this task listed (A8 ... H36) already pass since T-4308. CHISQ.DIST.RT's window cells,

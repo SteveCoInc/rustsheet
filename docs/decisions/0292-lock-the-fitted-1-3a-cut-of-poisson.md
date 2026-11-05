@@ -12,7 +12,8 @@
       probes-numeric/t4322-poisson-window-r4-fresh: 48 points from seed 43220 at 1.3a to 1.5a, plus a ladder across
       the cut at k = 100, 200 and 300 (excel-graph, 2026-11-05).
     - On the fresh sweep, 51 of 57 points are within 4 ulp of Excel, against 10 of 57 for the correctly rounded Q.
-      Gate A's envelope holds all 57 points.
+      Gate A's envelope holds all 57 points, and every point of the Gate A batch accuracy/POISSON.DIST/r4-T-4322
+      (120 points, drawn after the freeze).
     - The ladder puts Excel's cut in (1.298a, 1.3a]: at 1.3a the form is 2, 0 and -5 ulp off.
     - The tag is `FITTED(T-4322, 24 cells, x/a 1.26..1.5, shape 31..301)`, and the form applies only in that range.
   - `scripts/check_fitted.py --update` also lowers annuity.rs's count from 4 to 3. That is the file's actual

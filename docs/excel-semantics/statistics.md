@@ -1468,7 +1468,9 @@ the cdf inside the window, x/a <= 1.5 with a = k + 1, at k 30 to 300:
   nor the direct deviance (up to 83), nor the pmf times the exact ratio Q/pmf (up to 42). Excel is 1 to 17 ulp
   from the correctly rounded Q there (t4291 D1:H1; t4322 fresh A8:C10). The cut is at 1.3a, inclusive: on the
   fresh ladder at k = 100, 200, 300, x = 1.3a is the form (2, 0 and -5 ulp, where the correctly rounded Q is 14, -5
-  and -63), and at 1.298a and below Excel is the correctly rounded Q to 17 ulp. 1.3 is Cephes' `SMALLRATIO`, its
+  and -63). At 1.298a and below, at k = 100 and 300 Excel is the correctly rounded Q to 17 ulp, where the form is
+  up to 16 off; at k = 200 the form is as close (-3, 4, -2 ulp against -9, 10, -1), so the cut is bracketed at k = 100
+  and 300 only. 1.3 is Cephes' `SMALLRATIO`, its
   igamc's switch to the asymptotic (Temme) series; what Excel computes below it is open (T-4345).
 - One fresh point does not fit: G3 `POISSON.DIST(80,118.464,TRUE)` (1.4625a) is 64 ulp from the form and 27 to 92
   from every other tried prefactor (T-4345).
