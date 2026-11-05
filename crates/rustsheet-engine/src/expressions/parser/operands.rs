@@ -183,7 +183,13 @@ impl Parser {
             // orders them: `ROWS(R[-50]:R[-49])` in row 50, rows 1048576 and 1 after the wrap,
             // is `ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50, T-3212). The storage
             // form keeps its corners as written.
-            let at = |n: i32, absolute: bool, base: i32| if absolute { n } else { base + n };
+            let at = |n: i32, absolute: bool, base: i32| {
+                if absolute {
+                    n
+                } else {
+                    base.saturating_add(n)
+                }
+            };
             if at(row1, absolute_row1, context.row) > at(row2, absolute_row2, context.row) {
                 (row2, row1) = (row1, row2);
                 (absolute_row2, absolute_row1) = (absolute_row1, absolute_row2);
@@ -324,7 +330,16 @@ impl Parser {
     }
 
     /// A name that is not called: a defined name, a table or a LAMBDA parameter.
-    fn name_operand(&mut self, name: String) -> Node {
+    fn name_operand(&mut self, mut name: String) -> Node {
+        // Typed, the prefix is lowercased: `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in
+        // FORMULATEXT (`#NAME?` either way; probes/t4299-typed-xlpm-extrapolations C2:C3, T-4299).
+        if self.typed {
+            if let Some(prefix) = name.get(.."_xlpm.".len()) {
+                if prefix.eq_ignore_ascii_case("_xlpm.") {
+                    name.replace_range(.."_xlpm.".len(), "_xlpm.");
+                }
+            }
+        }
         // A defined name of a linked workbook, `[1]!Name` or `[1]Sheet!Name` (one identifier to
         // the lexer), keeps its prefix: evaluation reads it from the link's cache.
         if let Some(node) = self.prefixed_name_operand(&name) {
@@ -625,10 +640,14 @@ impl Parser {
     /// for [`Parser::typed_refusal`]: typed, the prefix is part of the name, and Excel refuses
     /// `=LET(_xlpm.x,1,_xlpm.x+1)` in A1 and in R1C1 mode (the cell stays blank,
     /// probes/t4224-doubled-xlpm-prefix A10, A12, T-4288). A file declares every LET name so.
-    /// Unprobed: a LAMBDA parameter typed with the prefix, which binds here.
+    /// The match ignores case (`=LET(_XLPM.x,1,_XLPM.x+1)` is refused too) and a LAMBDA parameter
+    /// typed with the prefix is refused alike (probes/t4299-typed-xlpm-extrapolations A1, A4, T-4299).
     pub(super) fn note_prefixed_declaration(&mut self, text: &str) {
         let name = text.trim();
-        if self.typed && self.prefixed_declaration.is_none() && name.starts_with("_xlpm.") {
+        let prefixed = name
+            .get(.."_xlpm.".len())
+            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("_xlpm."));
+        if self.typed && self.prefixed_declaration.is_none() && prefixed {
             self.prefixed_declaration = Some(name.to_string());
         }
     }

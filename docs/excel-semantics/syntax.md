@@ -715,10 +715,17 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   are `#NAME?` with that FORMULATEXT; `=LET(x,2,_xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)` (the use
   is not `x`), as is `=LET(x,2,_xlpm._xlpm.x*3)`; and a declaration written with it, `=LET(_xlpm.x,1,_xlpm.x+1)`, is
   refused (the cell stays blank) (T-4224). Ours matches (T-4288).
+- Typed `_xlpm.` extrapolations (probes/t4299-typed-xlpm-extrapolations, 22 cells, excel-graph, 2026-11-05, T-4299): the
+  prefix matches ignoring case, and Excel writes it back lowercase: `=LET(_XLPM.x,1,_XLPM.x+1)` is refused (blank),
+  `=LET(x,2,_XLPM.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)`. A LAMBDA body use `_xlpm.x` of a parameter `x`
+  is `#NAME?` (`=LAMBDA(x,_xlpm.x*2)(3)`, FORMULATEXT `=LAMBDA(x,_xlpm.x*2)(3)`; the control `=LAMBDA(x,x*2)(3)` is 6),
+  and a LAMBDA parameter typed `_xlpm.x` is refused (blank), like a LET name. Typed in R1C1 mode `=LET(x,2,_xlpm._xlpm.x*3)`
+  is `#NAME?` like A1's. A structured reference typed in R1C1 mode parses against the workbook's tables: `=SUM(T[Col])`
+  is 7 in both modes. Ours matches (T-4299).
 - Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
   1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
 - Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
-  doubled prefix on a LAMBDA parameter, a LAMBDA parameter typed with `_xlpm.` (ours binds it under that name), and
+  doubled prefix on a LAMBDA parameter, and
   what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
   FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and

@@ -2171,6 +2171,7 @@ C	probes/t4284-lotus-dot-ws-after-dollar-space-after-dotdot.case.json	5
 C	probes/t4284-lotus-dot-ws-after-dollar-space-after.case.json	5
 C	probes/t4284-lotus-dot-ws-after-lf-after.case.json	5
 C	probes/t4290-gamma-window-large-pow2.case.json	930
+C	probes/t4299-typed-xlpm-extrapolations.case.json	22
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
