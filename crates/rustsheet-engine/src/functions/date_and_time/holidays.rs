@@ -9,7 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{information::written_reference, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -42,6 +42,8 @@ impl Model {
             error,
             before_weekend: true,
         };
+        // `Node::ungrouped` sees through a unary plus, so read it off the argument as written.
+        let written_plus = written_reference(arg) == Some(false);
         let (mut arg, mut picked) = (arg, false);
         let value = loop {
             if is_multi_sheet_span(arg) {
@@ -81,7 +83,7 @@ impl Model {
         // A unary plus over a function that returns one cell (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`)
         // is a value as well, though the evaluator hands the cell's range on
         // (probes/networkdays-intl-holiday-unary-fn A1:B4, T-4209).
-        let plus_of_one_cell = matches!(arg.ungrouped(), Node::UnaryPlus { .. }) && one_value;
+        let plus_of_one_cell = written_plus && one_value;
         let scalar = plus_of_one_cell
             || (!matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
                 && !self.is_reference(arg, cell));

@@ -35,7 +35,7 @@ fn joins_a_cell_to_a_sheet_qualified_one(node: &Node) -> bool {
 /// `ISREF(+(C1))`, `ISREF((+C1))`, `ISREF(+@C1)` and `ISREF(@+C1)` are FALSE, `ISREF(@C1)` is
 /// TRUE (probes/networkdays-intl-holiday-kinds G1:G8, excel-graph; T-4190). `None` leaves the
 /// argument to the full test.
-fn written_reference(node: &Node) -> Option<bool> {
+pub(crate) fn written_reference(node: &Node) -> Option<bool> {
     let (mut node, mut intersected) = (node, false);
     loop {
         match node {
