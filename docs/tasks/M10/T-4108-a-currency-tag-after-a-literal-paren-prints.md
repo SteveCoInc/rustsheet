@@ -3,7 +3,7 @@ id: T-4108
 title: "A currency tag after a literal paren prints before it: ([$$-409]#,##0.00) on -12 is ($12.00) in Excel, $(12.00) in ours"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
