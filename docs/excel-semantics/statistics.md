@@ -6532,9 +6532,11 @@ so the size check and the one-point rule apply: `COVARIANCE.P({1,2,3},TRUE)` is 
 boolean ours already matches (A29:A34).
 Evidence: probes/t2436/computed-scalar (excel-graph, 2026-10-24); 4 gen-m9 cells listed in T-2575.
 Ours: matches (T-2575).
-UNVERIFIED: COVAR (the compatibility name) shares the code path, so a boolean scalar is one value there too; no probe of it yet.
-Status: VERIFIED (excel-graph); COVAR with a boolean unprobed
-Tasks: T-2575
+COVAR (the compatibility name) does the same, as COVARIANCE.P: `COVAR({1,2,3},TRUE)` and `COVAR({1,2,3},B2)` with B2 = TRUE and
+`COVAR({1,2,3},NOT(FALSE))` are `#N/A`; `COVAR(-2.5,FALSE)`, `COVAR(B1,FALSE)` with B1 = 5 and `COVAR(B2,B2)` are `#DIV/0!`
+(probes/t2780-covar-boolean-scalar A1:A6, excel-graph, 2026-11-05, T-2780); ours matches with no change.
+Status: VERIFIED (excel-graph)
+Tasks: T-2575, T-2780
 
 ## ERROR.TYPE and CELL results are #NUM! in the paired functions (T-2436)
 Rule: a number that ERROR.TYPE or CELL returns, passed straight on as a one-value argument, makes F.TEST, FTEST, FORECAST,
