@@ -60,5 +60,5 @@ the 18 T-4345 cdf points below 1.3a. Recorded in statistics.md (the T-4357 parag
   order.
 
 No candidate was taken: no fit, no `FITTED` tag, and no fresh sweep. The engine is unchanged. Eval delta: the
-new case is new coverage, and its failing cells are in the baseline. Follow-up T-4367 (operation order) takes
+new case is new coverage (144 cells, all pass at the gate's tolerance; no baseline change). Follow-up T-4367 (operation order) takes
 over the visibly-off cells, the new case's included.
