@@ -45,3 +45,22 @@ groups.
 
 ## Out of scope
 - SORT's order on intransitive cycles (T-3418).
+
+## Landing notes
+Session 2026-11-05 (claimed 12:08 UTC, stopped at the session's new-work budget). No PR was opened and no engine
+change was made. These notes are data for the run that resumes this branch:
+- docs/research/t4241/sim.py loads the 42 blocks of probes/t4195-groupby-intransitive that use only A, B and C
+  and scores candidate membership models against Excel's group member lists. The shown keys are not scored.
+- Rejected models, scored on the 42 blocks:
+  - The T-4195 per-row model (classify each field, one group per row) cannot place a row in two groups. C8 and
+    C23 need that: the group (B,y) holds rows 1, 2 and 3.
+  - "Group = S[lower_bound(k), upper_bound(k))", taking S as the natural-merge sort of the whole rows or as the
+    rows in input order, with k over the first-`=` rows or over every row: at most 12/42.
+  - The same with S ordered field by field by the single-field classing: 16/42.
+- One clue: the shown keys of C8 and C9 follow from sorting UNIQUE's kept rows (SORT's merge). A field's class is
+  then a run of sorted keys equal to the class's first key; C8 has the classes [A], [B,C], shown as A and B. The
+  shown keys fit, but the members do not. C8's (B,y) holds row 2, which is (B,x), so membership is neither
+  per-field `=` nor this range model.
+- Next step: probe as the Context says (the x row moved, 4-row runs, descending sort_order, a table sort that
+  names the second key first). Add a SUM aggregate beside ARRAYTOTEXT, to see whether a doubled row is summed
+  twice. Then try "aggregate over a range of the row order the classing builds" with other searches.
