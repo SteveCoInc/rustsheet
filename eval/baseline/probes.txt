@@ -2292,6 +2292,7 @@ C	probes/t4333-count-ulp-scan.case.json	56
 C	probes/t4342-groupby-tree-holdout.case.json	1107
 C	probes/t4344-groupby-descending-search.case.json	1200
 C	probes/t4358-pivotby-unreached-column-leaf.case.json	475
+C	probes/t4375-xnpv-refused-first-and-one-cell.case.json	114
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
