@@ -3,7 +3,7 @@ id: T-4358
 title: "PIVOTBY's column leaf no record reaches holds every record of its row group"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
