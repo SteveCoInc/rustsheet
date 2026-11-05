@@ -1,6 +1,6 @@
 //! The `_xlpm.` form of LAMBDA/LET bound names: Excel's, on export, and the R1C1 storage form's.
 
-use super::super::{for_each_chain_operand_mut, Node};
+use super::super::{for_each_chain_operand_mut, Node, XLPM_PREFIX};
 use crate::expressions::types::CellReferenceRC;
 use crate::expressions::utils::{reads_as_r1c1_cell, spelled_like_a1_cell};
 use crate::functions::logical::same_variable;
@@ -73,7 +73,7 @@ where
     // `_xlpm._xlpm.x`, is bound by its own spelling (probes/t4224-doubled-xlpm-prefix A8, T-4224).
     let declared = |bound: &[String], name: &str| {
         let find = |name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
-        let unmarked = || name.strip_prefix("_xlpm.").filter(|_| marked);
+        let unmarked = || name.strip_prefix(XLPM_PREFIX).filter(|_| marked);
         find(name).or_else(|| unmarked().and_then(find))
     };
     match node {
@@ -180,7 +180,7 @@ pub(super) fn prefix_bound_variables(node: &mut Node) {
     // A LAMBDA parameter is printed with its own prefix, `_xlpm.` or `_xlop.` (`stringify`).
     walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
         if declared.is_some() && site != NameSite::Parameter {
-            *name = format!("_xlpm.{name}");
+            *name = format!("{XLPM_PREFIX}{name}");
         }
     });
 }
@@ -213,7 +213,7 @@ fn quoted_name_text(
 ) -> Option<String> {
     let inner = unquoted_cell_shaped_name(name)?;
     Some(if context.is_none() || export_to_excel {
-        format!("_xlpm.{inner}")
+        format!("{XLPM_PREFIX}{inner}")
     } else {
         name.to_string()
     })
@@ -234,8 +234,8 @@ pub(super) fn variable_text(
         return text;
     }
     // No `context` is the R1C1 storage form (`to_rc_format`); a context is A1 output.
-    if context.is_none() && (reads_back_as_cell(name) || name.starts_with("_xlpm.")) {
-        format!("_xlpm.{name}")
+    if context.is_none() && (reads_back_as_cell(name) || name.starts_with(XLPM_PREFIX)) {
+        format!("{XLPM_PREFIX}{name}")
     } else {
         name.to_string()
     }
@@ -260,9 +260,9 @@ pub(super) fn callee_text(
             || name.eq_ignore_ascii_case(&english.booleans.r#false)
     };
     if context.is_none()
-        && (reads_back_as_cell(name) || name.starts_with("_xlpm.") || reads_as_function())
+        && (reads_back_as_cell(name) || name.starts_with(XLPM_PREFIX) || reads_as_function())
     {
-        format!("_xlpm.{name}")
+        format!("{XLPM_PREFIX}{name}")
     } else {
         name.to_string()
     }

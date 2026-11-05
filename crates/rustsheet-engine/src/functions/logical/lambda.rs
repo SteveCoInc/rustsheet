@@ -3,7 +3,7 @@ use crate::{
     calc_result::CalcResult,
     cast::calc_result_to_array_node,
     expressions::{
-        parser::{ArrayNode, NamedVariable, Node},
+        parser::{ArrayNode, NamedVariable, Node, XLPM_PREFIX},
         token::Error,
         types::CellReferenceIndex,
     },
@@ -693,7 +693,7 @@ impl Model {
                 if let Node::NamedVariableKind { name, id } = n {
                     let (clean, is_optional) = if let Some(s) = name.strip_prefix("_xlop.") {
                         (s.to_string(), true)
-                    } else if let Some(s) = name.strip_prefix("_xlpm.") {
+                    } else if let Some(s) = name.strip_prefix(XLPM_PREFIX) {
                         (s.to_string(), false)
                     } else {
                         (name.clone(), false)

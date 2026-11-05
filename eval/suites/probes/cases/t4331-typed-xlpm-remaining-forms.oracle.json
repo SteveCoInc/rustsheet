@@ -1,0 +1,87 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "S": {
+   "A1": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A2": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A3": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A4": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A5": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "A6": {
+    "t": "e",
+    "v": "#NAME?"
+   },
+   "B1": {
+    "t": "b",
+    "v": false
+   },
+   "B2": {
+    "t": "b",
+    "v": false
+   },
+   "B3": {
+    "t": "b",
+    "v": false
+   },
+   "B4": {
+    "t": "b",
+    "v": false
+   },
+   "B5": {
+    "t": "b",
+    "v": false
+   },
+   "B6": {
+    "t": "b",
+    "v": false
+   },
+   "C1": {
+    "t": "s",
+    "v": "=LET(x,2,_xlpm.x*3)"
+   },
+   "C2": {
+    "t": "s",
+    "v": "=_xlpm.x"
+   },
+   "C3": {
+    "t": "s",
+    "v": "=LET(x,2,_XLPM._XLPM.x*3)"
+   },
+   "C4": {
+    "t": "s",
+    "v": "=_XLPM.f(3)"
+   },
+   "C5": {
+    "t": "s",
+    "v": "=_xlpm.x"
+   },
+   "C6": {
+    "t": "s",
+    "v": "=LET(f,LAMBDA(a,a+1),_XLPM.f(3))"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "db24c815e5b9d4e7cbfe06edb356380ec14511e149e2f6e35512d7e5ff37454d",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-05T12:54:51+00:00",
+  "version": null,
+  "workbook_name": "9e8b48dc6b5116464ada3b324e2154c0094ec427165a8a0151131628eca95fbc.xlsx"
+ }
+}

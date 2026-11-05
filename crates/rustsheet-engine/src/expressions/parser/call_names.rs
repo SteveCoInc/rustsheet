@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 
 use super::stringify::bound_variables::{walk_marked_names, walk_names, NameSite};
-use super::Node;
+use super::{Node, XLPM_PREFIX};
 use crate::expressions::utils::spelled_like_a1_cell;
 use crate::functions::logical::same_variable;
 use crate::types::DefinedName;
@@ -107,7 +107,7 @@ pub(super) fn settle_lambda_prefixes(node: &mut Node) {
     walk_marked_names(node, &mut Vec::new(), &mut |site, name, declared| {
         let Some(declared) = declared else { return };
         if matches!(site, NameSite::Use | NameSite::Callee) && !same_variable(name, declared) {
-            if let Some(bare) = name.strip_prefix("_xlpm.") {
+            if let Some(bare) = name.strip_prefix(XLPM_PREFIX) {
                 *name = bare.to_string();
             }
         }

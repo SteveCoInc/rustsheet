@@ -721,9 +721,14 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   is `#NAME?` (`=LAMBDA(x,_xlpm.x*2)(3)`, FORMULATEXT `=LAMBDA(x,_xlpm.x*2)(3)`; the control `=LAMBDA(x,x*2)(3)` is 6),
   and a LAMBDA parameter typed `_xlpm.x` is refused (blank), like a LET name. Typed in R1C1 mode `=LET(x,2,_xlpm._xlpm.x*3)`
   is `#NAME?` like A1's. A structured reference typed in R1C1 mode parses against the workbook's tables: `=SUM(T[Col])`
-  is 7 in both modes. Ours matches (T-4299). Probed only in all-uppercase `_XLPM.` and in a LET body; unprobed: mixed
-  case such as `_Xlpm.`, a bare `=_XLPM.x` outside a LET or LAMBDA, a doubled `_XLPM._XLPM.x` (ours lowercases the first
-  prefix only) and a called `_XLPM.f(3)` (ours keeps its case).
+  is 7 in both modes. Ours matches (T-4299). Probed in all-uppercase `_XLPM.` there.
+- Remaining typed `_XLPM.` forms (probes/t4331-typed-xlpm-remaining-forms, 18 cells, excel-graph, 2026-11-05, T-4331): all
+  six are `#NAME?` and not blank. A mixed-case prefix is lowercased on read-back (`=LET(x,2,_Xlpm.x*3)` shows
+  `_xlpm.x`), as is a bare `=_XLPM.x` (`=_xlpm.x`, A2 and its lowercase control A5 agree). A called `=_XLPM.f(3)` keeps
+  its case in FORMULATEXT, and so does a call against a LET-bound LAMBDA (`_XLPM.f(3)`). A doubled prefix is kept as
+  typed: `=LET(x,2,_XLPM._XLPM.x*3)` reads back `_XLPM._XLPM.x` (not `_xlpm._XLPM.x`); ours lowercased the first
+  prefix and now keeps a name whose remainder also starts with the prefix (a mixed-case double such as
+  `_xlpm._XLPM.x` is unprobed).
 - Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
   1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
 - Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a

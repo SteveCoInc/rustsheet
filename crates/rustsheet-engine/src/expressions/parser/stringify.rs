@@ -17,7 +17,7 @@ use super::{
     super::utils::{name_needs_quoting, quote_name},
     left_chain,
     move_formula::{moved_reference_text, MoveContext},
-    value_operands, Node, Reference,
+    value_operands, Node, Reference, XLPM_PREFIX,
 };
 use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::parser::static_analysis::remove_redundant_implicit_intersection;
@@ -876,7 +876,7 @@ fn stringify(
                         if p.is_optional {
                             format!("_xlop.{}", p.name)
                         } else {
-                            format!("_xlpm.{}", p.name)
+                            format!("{XLPM_PREFIX}{}", p.name)
                         }
                     } else if p.is_optional {
                         format!("[{}]", variable_text(&p.name, context, false))
