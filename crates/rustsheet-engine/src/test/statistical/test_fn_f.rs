@@ -105,3 +105,21 @@ fn f_inv_rt_deep_upper_tail_is_solved_on_its_own_tail() {
     assert_eq!(model._get_text("A1"), *"60647458731");
     assert_eq!(model._get_text("A2"), *"183379.0031");
 }
+
+#[test]
+fn test_fn_f_dist_cdf_flushes_a_subnormal_result() {
+    // probes/t4026-f-cdf-subnormal (T-4026): Excel's cdf is a true 0 below the smallest normal
+    // double (B24, B57, B1 TRUE) and keeps 3.3E-308 just above it (B23, B56 FALSE).
+    let mut model = new_empty_model();
+    model._set("A1", "=(F.DIST(3.68471993975E-5,316,1,TRUE))=0");
+    model._set("A2", "=(F.DIST(1.1432683661E-17,40,1,TRUE))=0");
+    model._set("A3", "=(F.DIST(3.66425083e-05,316,1,TRUE))=0");
+    model._set("A4", "=(F.DIST(3.69653490428E-5,316,1,TRUE))=0");
+    model._set("A5", "=(F.DIST(1.17221034258E-17,40,1,TRUE))=0");
+    model.evaluate();
+    assert_eq!(model._get_text("A1"), *"TRUE");
+    assert_eq!(model._get_text("A2"), *"TRUE");
+    assert_eq!(model._get_text("A3"), *"TRUE");
+    assert_eq!(model._get_text("A4"), *"FALSE");
+    assert_eq!(model._get_text("A5"), *"FALSE");
+}

@@ -2378,12 +2378,17 @@ when it is an A1 reference, which is a separate test: `R1`, `C3`, `RC99999`, `C1
   FORMULATEXT (probes/lotus-dot-range). The probed forms (probes/lotus-dot-range-*, T-1659): `$`
   cells (`$A$1.B2`, `A$1..$B$2`, `A1.$B$2`), a sheet prefix on the first cell (`Data!A1.B2`,
   `'Data'!B2..A1` is `Data!A1:B2`), lowercase (`a1.b2` prints `A1:B2`), whitespace around the
-  dots (`A1 . B2` prints `A1:B2`; whitespace on one side only, `A1 .B2`, `A1. B2`, and `A1 .5` are unprobed, and ours reads the first two as the range too), ISREF (TRUE), an intersection (`A1.B2 B1:B3`) and a colon after
+  dots (`A1 . B2` prints `A1:B2`), whitespace on one side only (VERIFIED, probes/t4271-lotus-dot-one-side-space-before,
+  -space-after, -space-before-dotdot, -space-after-dotdot and -lf-before, excel-graph, 2026-11-05, T-4271: `A1 .B2`,
+  `A1. B2`, `A1 ..B2`, `A1.. B2` and a line feed before the dot are each `A1:B2` in SUM (15), ROWS (2), ISREF (TRUE)
+  and FORMULATEXT (T-4284, probes/t4284-lotus-dot-ws-after-{lf-after,dollar-space-after,dollar-space-after-dotdot}, excel-graph, 2026-11-05: `A1.`&LF&`B2`, `$A$1. B2` and `A$1.. B2` read the same way, printed `A1:B2`, `$A$1:B2`, `A$1:B2`); ours read `A1. B2` and `A1.. B2` as a name `A1.` intersected with `B2` until T-4271), ISREF (TRUE), an intersection (`A1.B2 B1:B3`) and a colon after
   it (`ROWS(A1.B2:C3)` is `A1:B2:C3`, 3) all read the range. Names, kept as typed and `#NAME?`:
   whole columns (`A.B`, `A..B`), `A1.5`, an off-grid second cell (`A1.XFE1`), `A1.B2D`, a name
   as the second part (`A1.foo` with `foo` defined) and a call (`A1.INDEX(B2:B2,1)`, `#NAME?`).
   Excel rejects the file (Graph `FileCorruptTryRepair`) for `ROWS(1..2)`, `A1.B2.C3`, `A1.B2.x`,
-  `Data!A1.Data!B2` and `ROWS(A1:B2.C3)`; ours reads the first two as names. A LET or LAMBDA
+  `Data!A1.Data!B2` and `ROWS(A1:B2.C3)`; ours reads the first two as names. It also rejects `SUM(A1 .5)` and
+  `SUM(A1. 5)` (with ROWS, ISREF and FORMULATEXT beside them; one form per workbook, 2026-11-05, T-4271), which ours
+  reads as a parse error (`#ERROR!`). A LET or LAMBDA
   name spelled so is the variable in its call and the range outside it (probes/lotus-dot-name-*,
   r1c1-let-name-r1-c1): `LET(R1.C1,5,R1.C1*2)` 10, `LAMBDA(A1.B2,A1.B2*2)(4)` 8,
   `LAMBDA([A1.B2],ISOMITTED(A1.B2))()` TRUE, `LET(A1.B2,5,A1.B2)+SUM(A1.B2)` 20 (printed

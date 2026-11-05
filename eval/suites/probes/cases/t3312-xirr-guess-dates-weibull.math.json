@@ -1,0 +1,36 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "2d28f09ee39a30bcfc9e8330d6e861231e5b139a8317eb8c7e6c2f39659b245c"
+ },
+ "sheets": {
+  "Calc": {
+   "A29": {
+    "t": "e",
+    "why": "flows of one sign: no rate",
+    "f": "=XIRR({-100,-200,-300},P!N1:N3)"
+   },
+   "A31": {
+    "t": "n",
+    "v": "66.805638038994896931956818876565868849869076319628",
+    "f": "=XIRR({-100,200,300},P!AC1:AC3)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "flows of one sign: no rate",
+    "f": "=XIRR({-100,-200,-300},P!AC1:AC3)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "A20": {
+    "f": "=XIRR({-100,200,300},P!T1:T3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

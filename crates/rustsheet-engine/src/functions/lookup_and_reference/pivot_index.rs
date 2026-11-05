@@ -209,9 +209,8 @@ impl Model {
         value: f64,
     ) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        let item = if let Some(groups) = field.number_groups {
-            let n = groups.inner_count()?;
-            groups.item(groups.lower_bound_index(value)?, n)
+        let item = if let Some(groups) = field.number_groups.as_ref() {
+            groups.item(groups.lower_bound_index(value)?)
         } else {
             field.date_groups?.number_item(value)?
         };

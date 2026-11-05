@@ -47,11 +47,13 @@ where
             }
         };
     }
-    // A use the parser has not settled yet may still carry the `_xlpm.` prefix it was written
+    // A use the parser has not settled yet may still carry the `_xlpm.` mark it was written
     // with; the declaration binding it has none (`call_names::settle_lambda_prefixes`, T-4099).
+    // A name that is itself spelled with the prefix, `_xlpm.x` declared as a file's
+    // `_xlpm._xlpm.x`, is bound by its own spelling (probes/t4224-doubled-xlpm-prefix A8, T-4224).
     let declared = |bound: &[String], name: &str| {
-        let name = name.strip_prefix("_xlpm.").unwrap_or(name);
-        bound.iter().rev().find(|n| same_variable(n, name)).cloned()
+        let find = |name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
+        find(name).or_else(|| name.strip_prefix("_xlpm.").and_then(find))
     };
     match node {
         Node::NamedVariableKind { name, .. } => {

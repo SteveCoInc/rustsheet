@@ -2,8 +2,8 @@ use crate::constants::{LAST_COLUMN, LAST_ROW};
 use crate::expressions::{
     token::TokenType,
     utils::{
-        is_valid_column, is_valid_column_number, is_valid_identifier, push_column_letter,
-        quote_name,
+        is_valid_column, is_valid_column_number, is_valid_identifier, parse_reference_a1,
+        push_column_letter, quote_name,
     },
 };
 
@@ -157,6 +157,39 @@ impl Lexer {
             self.position = start;
         }
         corner
+    }
+
+    /// The Lotus-style range token when `name`, the identifier just read from `start`, is a cell
+    /// and a run of dots that whitespace follows (`A1. B2`, `A1.. B2`): to Excel that is the range
+    /// `A1:B2` (probes/t4271-lotus-dot-one-side-space-after, -space-after-dotdot, excel-graph,
+    /// T-4271). It re-reads from `start` as a cell and a dotted corner. `None`, with the position
+    /// unchanged, when `name` is not shaped like that or no second cell follows (`A1. 5`).
+    pub(super) fn dotted_range_after_cell_name(
+        &mut self,
+        name: &str,
+        start: usize,
+    ) -> Option<TokenType> {
+        let stem = name.trim_end_matches('.');
+        if stem.len() == name.len()
+            || !self.peek_char().is_some_and(char::is_whitespace)
+            || parse_reference_a1(stem).is_none()
+        {
+            return None;
+        }
+        let after_name = self.position;
+        self.position = start;
+        let range = self.scan_reference_a1().ok().and_then(|(left, end)| {
+            self.position = end;
+            self.consume_dotted_corner().map(|right| TokenType::Range {
+                sheet: None,
+                left,
+                right,
+            })
+        });
+        if range.is_none() {
+            self.position = after_name;
+        }
+        range
     }
 
     /// Consumes a reference in A1 style like:

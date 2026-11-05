@@ -705,6 +705,19 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
   letter case is the workbook's first spelling, as for the quoted name: `=_xlpm.F1` after `_xlpm.f1` reads
   `=_xlpm.f1`. Only a bare `f1` typed in R1C1 mode is quoted. Unprobed: what Excel writes to a file for a typed
   R1C1 `=f1` (ours writes `_xlpm.f1`, which Excel would show prefixed).
+- In a file exactly one `_xlpm.` is the mark; the rest is the name. A doubled prefix is the undefined name
+  `_xlpm.f1` written with its mark: `=_xlpm._xlpm.f1` and `=_xlpm._xlpm.abc` are `#NAME?` and FORMULATEXT shows them
+  as written. `_xlfn.LET(_xlpm._xlpm.x,1,_xlpm._xlpm.x+1)` declares a variable named `_xlpm.x`: 2, FORMULATEXT
+  `=LET(_xlpm.x,1,_xlpm.x+1)`. A use binds only the name it spells after its mark:
+  `_xlfn.LET(_xlpm.x,2,_xlpm._xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm._xlpm.x*3)`
+  (and `_xlfn.LET(_xlpm.x,2,_xlpm.x*3)` is the ordinary 6, `=LET(x,2,x*3)`) (T-4224).
+- Typed, `_xlpm.` is no mark but part of the name, in A1 and in R1C1 mode: `=_xlpm._xlpm.f1` and `=_xlpm._xlpm.abc`
+  are `#NAME?` with that FORMULATEXT; `=LET(x,2,_xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)` (the use
+  is not `x`), as is `=LET(x,2,_xlpm._xlpm.x*3)`; and a declaration written with it, `=LET(_xlpm.x,1,_xlpm.x+1)`, is
+  refused (the cell stays blank) (T-4224). Ours still reads a typed `_xlpm.` as the mark (T-4288).
+- Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
+  doubled prefix on a LAMBDA parameter, and what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
+  FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
 probes/t3897-r1c1-let-cell-names (excel-graph, 2026-11-04), S!A1:C13: names spelled like an A1 cell, bound (rows 1 to
@@ -714,6 +727,10 @@ unbound names typed in R1C1 mode (rows 7 to 13) and a file's `_xlpm.` names (row
 probes/t4099-file-xlpm-unbound-names (excel-graph, 2026-11-04), S!A1:C13: a file's unbound `_xlpm.` names that are no
 cell, mixed, called, under LET, LAMBDA and ISREF, `F1` and `R1C1` (rows 1 to 9), and `_xlpm.f1`, `_xlpm.abc` typed in
 A1 mode (rows 10, 11) and R1C1 mode (rows 12, 13).
+probes/t4224-doubled-xlpm-prefix (excel-graph, 2026-11-05), S!A1:C14: a doubled prefix from a file (rows 1, 2), typed
+in A1 mode (3, 4) and R1C1 mode (5, 6); LETs whose declaration and use differ in the prefix from a file (7, 8, 13) and
+typed (9 to 12, 14). The case's A1 text is the builder's input: it adds the mark to a bare declared name only
+(`spec2xlsx.prefix_bound_names`), so row 8 is written `_xlpm._xlpm.x`.
 Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
 (`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
 reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
@@ -723,15 +740,17 @@ writes a bound one `_xlpm.f1` (`stringify::to_english_string_typed_from_r1c1`), 
 refuses a bare `f1`. An unbound one becomes the quoted name `'f1'` when the formula is parsed
 (`call_names::quote_unbound_cell_shaped_names`, on R1C1 typed text and on storage text with `_xlpm.`): no LET
 binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The R1C1 storage form and
-a file write it `_xlpm.f1`, which the storage reads back quoted, and the A1 text `_xlpm._xlpm.f1`, which the A1 parser
-reads back quoted, since one prefix there is the name written with it (T-4040, T-4099). The parser keeps the `_xlpm.`
-of every use until the end of the parse, and `call_names::settle_lambda_prefixes` drops it from the bound ones; an
-unbound one keeps it and prints it (`Parser::written_lambda_name`). The storage form writes such a name with two
-prefixes, as its single prefix is its own mark for a name that would read back as something else (T-4099). The first-spelling table
+a file write it `_xlpm.f1`, which the storage reads back quoted, and the A1 text `_xlpm._xlpm.f1`, which the typed A1
+parser reads back quoted (T-4040, T-4099; a clash with a typed `_xlpm._xlpm.f1`, which T-4288 removes). A file's
+(untyped A1) use keeps every prefix it was written with until the end of the parse, and
+`call_names::settle_lambda_prefixes` drops one, the mark, from the ones a LET or LAMBDA binds after it; an unbound one
+keeps them all and prints them (`Parser::written_lambda_name`). A declaration drops one (T-4224). The storage form
+writes a name that starts with `_xlpm.` with one more prefix, its own mark for a name that would read back as
+something else, and drops exactly one when it reads it (T-4099, T-4224). The first-spelling table
 (`CallNameSpellings`) gives it the workbook's spelling.
 Status: VERIFIED (excel-graph) for the cells named. Not probed: `C0`, `R[0]`, and a wrap past the grid's end on a
 whole-row range's second corner.
-Tasks: T-3212, T-3897, T-3898, T-4040
+Tasks: T-3212, T-3897, T-3898, T-4040, T-4099, T-4224, T-4288
 
 ## A typed formula that does not parse is refused; a call's missing `)` is added
 Rule: Excel refuses a formula typed through the API (Graph PATCH 400 `InvalidArgument`) that does
