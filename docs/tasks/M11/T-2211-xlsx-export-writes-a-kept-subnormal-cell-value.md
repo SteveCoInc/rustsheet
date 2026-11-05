@@ -3,7 +3,7 @@ id: T-2211
 title: "xlsx export writes a kept subnormal cell value as 0, as Excel does"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -44,7 +44,7 @@ written as `<v>0</v>`, as Excel does, so a file RustSheet saves reads back like 
 covers `=EXP(-745)`, `=A1`, `=EXP(-708)`, an unflushed `=-EXP(-745)` and the reload giving 2^-1074. The
 negative / spilled / desktop probes were not run (no oracle access): filed as T-4355. Eval delta: none.
 
-## Handoff
+## Handoff (resumed)
 Escalated per work-loop 5b: the excel-fidelity reviewer requested changes twice. Round 1 (MAJOR): the flush
 covered unevidenced negative subnormals, so it was narrowed to `0 < v < MIN_POSITIVE` and T-4355 filed. Round 2
 (MAJOR, wording): numbers.md said spill/array paths keep today's output while the code flushes them. This is fixed
