@@ -3,7 +3,7 @@ id: T-4316
 title: "Probe numeric pivot groups the case builder cannot write yet: a label listed twice, a non-text group item, a numeric grouping over date cells alone"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
