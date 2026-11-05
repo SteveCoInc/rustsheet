@@ -2276,6 +2276,7 @@ C	probes/t4316-pivot-group-label-twice.case.json	75
 C	probes/t4316-pivot-group-number-item.case.json	75
 C	probes/t4331-typed-xlpm-remaining.case.json	13
 C	probes/t4342-groupby-tree-holdout.case.json	1107
+C	probes/t4344-groupby-descending-search.case.json	1200
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -7354,7 +7355,12 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
-F	probes/t4342-groupby-tree-holdout.case.json	Calc!C40
+F	probes/t4344-groupby-descending-search.case.json	Calc!D39
+F	probes/t4344-groupby-descending-search.case.json	Calc!D41
+F	probes/t4344-groupby-descending-search.case.json	Calc!D56
+F	probes/t4344-groupby-descending-search.case.json	Calc!E38
+F	probes/t4344-groupby-descending-search.case.json	Calc!E41
+F	probes/t4344-groupby-descending-search.case.json	Calc!E56
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

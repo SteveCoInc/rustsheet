@@ -39,8 +39,8 @@ pub(crate) enum SortOrder {
 
 /// The directions [`Grouping::new`] builds its tree in for `sort`: a hierarchy's key directions
 /// (probes/t4241-groupby-intransitive-runs Calc!C, E), ascending for a table relationship
-/// (`order` [`ParentOrder::Flat`]) and for a sort by a value, which are unprobed on intransitive
-/// runs (T-4344).
+/// (`order` [`ParentOrder::Flat`]) and for a sort by a value, which match Excel on intransitive
+/// runs but for a value sort's parents (probes/t4344-groupby-descending-search B55:E66; T-4359).
 pub(crate) fn tree_directions(sort: &SortOrder, order: ParentOrder) -> &[bool] {
     match sort {
         SortOrder::Keys { ascending, .. } if order != ParentOrder::Flat => ascending,
@@ -168,8 +168,9 @@ impl Grouping {
     ///    class when its field `=` the field of the class's first key, else it starts a class; a
     ///    class shows its first key's spelling (so `abc` for (`ABC`,y), (`abc`,x): t4342 Calc!B51).
     /// 3. Each row descends the tree by a lower-bound search over its parent's classes, in the
-    ///    field's direction, over [0, n-1] ([`Tree::descend`]); it is in no group when the class
-    ///    found is not `=` to it.
+    ///    direction its first two classes run in (T-4344: on an intransitive run a descending
+    ///    field's can run ascending), over [0, n-1] ([`Tree::descend`]); it is in no group when the
+    ///    class found is not `=` to it.
     /// 4. A leaf no row reaches aggregates every row (t4241 Calc!C8, F2): such a row is in two
     ///    groups.
     ///
@@ -285,7 +286,8 @@ impl Grouping {
     /// For each of `height` source rows, the index of its group (`usize::MAX` for rows in no
     /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
     /// step 4) maps to the group it reached; such a group gets only the rows in no other
-    /// (unprobed for PIVOTBY's columns and relative sets, T-4344).
+    /// (PIVOTBY's columns differ on such runs: probes/t4344-groupby-descending-search D39, T-4358;
+    /// relative sets unprobed).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
         for reached in [true, false] {
@@ -717,7 +719,8 @@ impl Tree {
     }
 
     /// The leaf line `line` reaches: at each field a lower-bound search over its parent's classes
-    /// in the field's direction, over [0, n-1] so it never runs off the end, then `=` (t4342
+    /// in the direction the first two of them run in (the field's, unless the run is
+    /// intransitive: T-4344), over [0, n-1] so it never runs off the end, then `=` (t4342
     /// Calc!B14, B48: the half-open search over [0, n) puts their rows in the other repeated
     /// class). `None` when the class found is not `=` to the line's key: Cy, Ax, By leaves row 3
     /// (B = C) in no group (t4241 Calc!B14).
@@ -737,6 +740,20 @@ impl Tree {
             if start >= end {
                 return Ok(None);
             }
+            // The search runs in the direction of the first two classes, not the field's: on an
+            // intransitive run the merge can leave them the other way round (t4342 Calc!C40;
+            // probes/t4344-groupby-descending-search B1:B30, docs/excel-semantics/coercion.md).
+            let before = match (level.get(start), level.get(start + 1)) {
+                (Some(first), Some(second)) if start + 1 < end => {
+                    spend(lines.units(first.key, second.key, field))?;
+                    if lines.cmp(first.key, second.key, field) == Ordering::Greater {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Less
+                    }
+                }
+                _ => Ordering::Less,
+            };
             let (mut low, mut high) = (start, end - 1);
             while low < high {
                 let middle = low + (high - low) / 2;
@@ -744,7 +761,7 @@ impl Tree {
                     break;
                 };
                 spend(lines.units(class.key, line, field))?;
-                if lines.cmp(class.key, line, field) == Ordering::Less {
+                if lines.cmp(class.key, line, field) == before {
                     low = middle + 1;
                 } else {
                     high = middle;
