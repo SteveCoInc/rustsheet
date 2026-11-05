@@ -3,7 +3,7 @@ id: T-4349
 title: "CUMPRINC's short-range form choice: find what decides it where the leading exponent does not (T-3524 follow-up)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -57,11 +57,39 @@ available rule on a fresh sweep.
   remove the tag with the cut (T-3524 fidelity review, round 3).
 
 ## Acceptance criteria
-- [ ] A ranked comparison (fit lab, two or more engine builds) of candidate short-range selectors on the old and the
+- [x] A ranked comparison (fit lab, two or more engine builds) of candidate short-range selectors on the old and the
       T-3524 cells, with hold-out counts, and a fresh sweep drawn after the choice is frozen.
-- [ ] The chosen rule beats `GEOMETRIC_MIN_LEAD` on test and on the fresh sweep with no visibly-off regression
+- [x] The chosen rule beats `GEOMETRIC_MIN_LEAD` on test and on the fresh sweep with no visibly-off regression
       beyond decision 0083's allowance, or the Outcome shows no candidate does and the cut stays.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Long ranges (T-3524 removed their cut); type 0's underflowed principal (T-3141).
+
+## Outcome
+No decider replaces `GEOMETRIC_MIN_LEAD`; a fitted band below it now takes the geometric sum (decision 0296).
+- Method (docs/research/t4349): the engine built with the cut at 0 beside today's engine gives each cell's value under
+  both short-range forms (`dump.py`), so every selector between them is scored without another build; the live
+  build reproduced the simulated counts exactly. Over the 923 old and T-3524 cells where the forms differ, each is
+  bit-exact on only 265 and 286: neither is Excel's algorithm there (T-4390 owns finding it).
+- Ranked comparison (`select.py`, decision 0188 R4.1): selectors of one to three conditions on the type, rate, lead
+  and period count, dropping any that put an old cell newly visibly off, ranked on the train side of fit
+  `cumulative` (the fit lab's fixed split). Frozen first: at most 4 periods, rate at least 1E-3, lead below 0.095
+  (`short_takes_geometric`, one `FITTED(T-4349, 4038 cells, ...)` tag; quality/fitted.json 1 to 2 for cumulative.rs).
+  A single condition gained at most 6 on train (`lead<0.001`, which lost 6 on test); `periods<=1` alone was +4/+5.
+- Bit-exact, cut vs band: train 386 vs 403 of 880; held out 149 vs 156 of 358 (train rate 45.8%, test 43.6%, within
+  the 5-point margin); T-3524 fresh 566 vs 574 and tiny 475 vs 475 of 1,000. Fresh sweep drawn after the freeze
+  (`gen_sweep.py`, seed 4349; probes-numeric/t4349-cumprinc-short-selector-fresh-sweep, fit `cumulative-short`,
+  excel-graph 2026-11-05, 800 cells over 1 to 4 periods, rates 1E-3..0.0997, leads to 0.095): 258 vs 299. Visibly
+  off: train 47 vs 45, test 16 vs 14, fresh 61 vs 57, tiny 140 vs 140, the new sweep 216 vs 190 (77 fixed, 51 new,
+  all CUMIPMT).
+- Gate A: CUMPRINC/CUMIPMT have no math sidecar tables; the band moves cells between two forms both within an ulp or
+  two of the 60-digit value on the principal (T-3524's gate_a.tsv covers the sweeps' envelope).
+- Eval delta: probes known failures 4820 to 4796 (31 fixed, 4 of them visibly: fin-cumprinc-underflow-ends I3, I4,
+  fin-cumprinc-near-1e15 E3, E4); 7 regressions under decision 0083's allowance, each bit-exact to 1 ulp, within 15
+  digits (decision 0296 lists values): fin-cumprinc-near-1e15 B2, B3; fin-cumprinc-single-period-rate-scan K52, K57,
+  K59; fin-cumprinc-underflow-ends D2, D3. gen-m9 and ironcalc-calc unchanged. New case: 800 cells, 190 visibly off,
+  owned by T-4390.
+- The cut's own `FITTED` range stays as T-3524 restated it (decision 0295 still governs the cut itself).
+- Follow-up: T-4390 (Excel's own short-range form; owns the 7 regressed cells and the three sweeps' visibly-off cells).
+- Findings: docs/excel-semantics/financial.md, "Neither short-range form is Excel's below a lead of 0.3".

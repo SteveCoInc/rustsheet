@@ -49,9 +49,37 @@ const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 /// b72d952c5f52cb4d A257, 33,554,432 ulps), against 20 it fixes; the two fresh sweeps gain as many
 /// visible cells as the gated suites lose (21). So it stays, over a short range only, as decision
 /// 0295's recorded deviation from R4.3: the leading exponent alone does not decide Excel's form
-/// there (TODO(T-4349)).
+/// there. T-4349 found no decider that replaces it; it carved out [`short_takes_geometric`]'s
+/// band below it instead (TODO(T-4390)).
 /// FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes rate 1E-300..1E300; cut a fit in 0.095..0.398)
 const GEOMETRIC_MIN_LEAD: f64 = 0.3;
+
+/// The most periods of [`short_takes_geometric`]'s band (part of its fit).
+const SHORT_GEOMETRIC_MAX_PERIODS: f64 = 4.0;
+
+/// The lowest rate of [`short_takes_geometric`]'s band (part of its fit).
+const SHORT_GEOMETRIC_MIN_RATE: f64 = 1E-3;
+
+/// The leading exponent below which [`short_takes_geometric`]'s band lies (part of its fit).
+const SHORT_GEOMETRIC_MAX_LEAD: f64 = 0.095;
+
+/// Whether a short range below [`GEOMETRIC_MIN_LEAD`] still takes the geometric sum: at most 4
+/// periods, a rate of at least 1E-3 and a leading exponent below 0.095 (so a rate below about
+/// 0.0997, where `ln(1+rate)` is a lead of one period). A fit (decision 0188 R4, T-4349,
+/// decision 0296): of the selectors built from the type, the rate, the lead and the period count
+/// (one to three conditions), it gained the most bit-exact cells on the train side of the old
+/// cells (+17) with no cell newly visibly off, then +7 on their held-out side and, on a sweep drawn
+/// after it was frozen (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep), 299 against the
+/// cut's 258 of 800 to the bit and 190 against 216 visibly off: `CUMIPMT(0.01,1E6,1,999998,1E6,0)`
+/// (probes/fin-cumprinc-underflow-ends I3) is 64 ulps off with the cut and exact with it. The band
+/// stops below 0.095 because at a rate of 0.1, one period from nper (lead `ln 1.1`), the cut's
+/// forms are Excel's (fin-cumprinc-near-1e15 C2, C4; fin-cumprinc-underflow-ends C2, C4, H2, H4).
+/// FITTED(T-4349, 4038 cells, 1 to 4 periods; rate 1E-3..0.0997; lead ln(1+rate)..0.095; pv 1..1E7 fresh, old probes nper to 1E15)
+fn short_takes_geometric(rate: f64, periods: f64, lead: f64) -> bool {
+    periods <= SHORT_GEOMETRIC_MAX_PERIODS
+        && rate >= SHORT_GEOMETRIC_MIN_RATE
+        && lead < SHORT_GEOMETRIC_MAX_LEAD
+}
 
 /// Which sum the kernel returns.
 #[derive(Clone, Copy)]
@@ -165,7 +193,7 @@ impl Periods {
         // (probes-numeric/t3524-cumprinc-lead-fresh-sweep) and 71 vs 238 at 1E-12..1E-4
         // (t3524-cumprinc-tiny-rate-sweep, where below a lead of 3.6 the cut got 2 of 404), so it
         // went (T-3524, decision 0188 R4).
-        let min_lead = if short { GEOMETRIC_MIN_LEAD } else { 0.0 };
+        let min_lead = if short { self.short_min_lead() } else { 0.0 };
         self.geometric_principal(min_lead)
             .or_else(|| self.closed_form(Paid::Principal))
     }
@@ -234,6 +262,17 @@ impl Periods {
         -(-self.nper * log_growth).exp_m1()
     }
 
+    /// The least leading exponent from which a short range takes the geometric sum:
+    /// [`GEOMETRIC_MIN_LEAD`], or 0 inside [`short_takes_geometric`]'s band.
+    fn short_min_lead(&self) -> f64 {
+        let lead = (self.nper - self.end + 1.0) * growth_log(self.rate);
+        if short_takes_geometric(self.rate, self.end - self.start + 1.0, lead) {
+            0.0
+        } else {
+            GEOMETRIC_MIN_LEAD
+        }
+    }
+
     /// Type 0's principal over a short range, which its interest's `-pmt·m - principal` shares
     /// (Excel's CUMIPMT is that of its own CUMPRINC, T-2363). A rate lost in `1 + rate` (1E-300)
     /// has the remaining-balance principal: Excel's `CUMIPMT(1E-300,243,80923,12,22,0)` is
@@ -245,7 +284,7 @@ impl Periods {
         let principal = if 1.0 + self.rate == 1.0 {
             self.remaining_principal()
         } else {
-            self.geometric_principal(GEOMETRIC_MIN_LEAD)
+            self.geometric_principal(self.short_min_lead())
                 .or_else(|| self.underflowed_principal())
                 .or_else(|| self.discounted_principal())
         };
