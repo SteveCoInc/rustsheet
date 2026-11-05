@@ -7,7 +7,8 @@ Arguments are numeric literals, TRUE/FALSE, string literals, array literals of t
 row-major), `DATE(y,m,d)` with integer literals (a 1900-system serial), references (`A1`, `$Z$1`,
 `Data!B2`, `D1:D10`) to constant cells of the case or to formula cells with an oracle value, and
 arithmetic over numeric literals (`0.05/12`, `1+26955297717044*2^-52`), which is evaluated with
-Excel's operator model (`arithmetic`), and a nested call whose text is the whole formula of a cell
+Excel's operator model (`arithmetic`; with `parse_arg`'s `cell_refs`, that arithmetic may also read
+single cells holding a number, `A112*A112`, for the math sidecars, T-3924), and a nested call whose text is the whole formula of a cell
 of the fit's `calls` cases (`PMT(0.2,1,10000)` in `RATE(1,PMT(0.2,1,10000),10000)`), which is
 Excel's value of that cell: the outer kernel is then scored on Excel's own bits of the inner call.
 A cell whose arguments are anything else (another function call) is reported as unparsed. A pattern
@@ -21,6 +22,7 @@ import datetime
 import json
 import math
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, Decimal
 from pathlib import Path
@@ -35,6 +37,8 @@ from rustsheet_tools.spec2xlsx import parse_a1
 # What a candidate receives for one argument: a number, a bool, a string, an empty cell (None)
 # or, for a range, the list of those values in row-major order.
 Arg = float | bool | str | None | list[float | bool | str | None]
+# A cell reference's text inside arithmetic -> that cell's number (`arithmetic`'s `resolve`).
+Resolve = Callable[[str], float]
 
 
 def numeric_arg(a: Arg) -> float:
@@ -81,13 +85,16 @@ def parse_complex_text(text: str) -> tuple[float, float]:
     return (float(m["re"]) if m["re"] is not None else 0.0), (-im if m["sign"] == "-" else im)
 
 
-_REF = re.compile(
-    r"(?:(?P<sheet>'(?:[^']|'')+'|[A-Za-z_][\w.]*)!)?(?P<first>\$?[A-Za-z]{1,3}\$?\d+)"
-    r"(?:\s*:\s*(?P<last>\$?[A-Za-z]{1,3}\$?\d+))?"
-)
+_SHEET = r"'(?:[^']|'')+'|[A-Za-z_][\w.]*"
+_A1 = r"\$?[A-Za-z]{1,3}\$?\d+"
+_REF = re.compile(rf"(?:(?P<sheet>{_SHEET})!)?(?P<first>{_A1})(?:\s*:\s*(?P<last>{_A1}))?")
 _MAX_RANGE_CELLS = 1_000_000
-_ARITH = re.compile(rf"\s*(?:(?P<num>{_UNSIGNED})|(?P<op>[-+*/^()]))")
+# One cell reference inside arithmetic (`A1249`, `Calc!$A$2`), never a function name such as
+# `LOG10(` or the start of a range.
+_CELL_TOKEN = rf"(?:(?:{_SHEET})!)?{_A1}(?![\w.$:!]|\s*[(:])"
+_ARITH = re.compile(rf"\s*(?:(?P<num>{_UNSIGNED})|(?P<ref>{_CELL_TOKEN})|(?P<op>[-+*/^()]))")
 _MAX_EXACT_EXPONENT = 1100  # beyond the double range either way
+_OPERATORS = frozenset("+-*/^()")
 _MAX_NESTING = 50  # parentheses and unary signs: a bound on the parser's recursion (directive 5)
 _CALL = re.compile(r"=[A-Za-z][\w.]*\([^()]*\)")  # one call over literals: `=PMT(0.2,1,10000)`
 _DATE = re.compile(r"DATE\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)", re.IGNORECASE)
@@ -197,8 +204,9 @@ def _sheet_name(raw: str | None, default: str) -> str:
 
 
 def _tokens(text: str) -> list[str]:
-    """`text` split into unsigned numbers and the operators `+ - * / ^ ( )`, whitespace dropped;
-    UnparsedError at anything else (a function name, a reference, a comma)."""
+    """`text` split into unsigned numbers, single-cell references and the operators
+    `+ - * / ^ ( )`, whitespace dropped; UnparsedError at anything else (a function name, a range,
+    a comma)."""
     out: list[str] = []
     pos, end = 0, len(text.rstrip())
     while pos < end:
@@ -206,7 +214,7 @@ def _tokens(text: str) -> list[str]:
         if not m:
             msg = f"cannot evaluate argument {text!r}"
             raise UnparsedError(msg)
-        out.append(m.group("num") or m.group("op"))
+        out.append(m.group("num") or m.group("ref") or m.group("op"))
         pos = m.end()
     return out
 
@@ -243,10 +251,11 @@ def _flush_subnormal(value: float) -> float:
 class _Arithmetic:
     """A recursive-descent parser over `_tokens(text)`, evaluating as it goes (see `arithmetic`)."""
 
-    def __init__(self, text: str) -> None:
+    def __init__(self, text: str, resolve: Resolve | None) -> None:
         self.text = text
         self.tokens = _tokens(text)
         self.pos = 0
+        self.resolve = resolve
 
     def fail(self, what: str) -> UnparsedError:
         return UnparsedError(f"{what} in argument {self.text!r}")
@@ -273,7 +282,9 @@ class _Arithmetic:
                 raise self.fail("unbalanced parentheses")
             return value
         if not _NUMBER.fullmatch(tok):
-            raise self.fail(f"unexpected {tok!r}")
+            if tok in _OPERATORS or self.resolve is None:
+                raise self.fail(f"unexpected {tok!r}")
+            return self.resolve(tok)
         literal = number_literal(tok)
         if not math.isfinite(literal):
             raise self.fail(f"non-finite literal {tok}")
@@ -306,14 +317,16 @@ class _Arithmetic:
         return value
 
 
-def arithmetic(text: str) -> float:
+def arithmetic(text: str, resolve: Resolve | None = None) -> float:
     """Evaluates `+ - * / ^`, unary signs and parentheses over numeric literals with Excel's
     operator model: each of `+ - * /` rounds its exact result to 64 bits, then to a double
     (numbers.md, "Division rounds twice"), and `^` must be exact (`_exact_power`). A subnormal
     result of `*`, `/` or `^`, or a subnormal literal, is 0; `+` and `-` keep one. As in Excel,
     a unary sign binds tighter than `^` (`-2^2` is 4). A non-finite literal, an overflow, or
-    nesting deeper than 50 is UnparsedError."""
-    parser = _Arithmetic(text)
+    nesting deeper than 50 is UnparsedError. A single-cell reference is an operand only when
+    `resolve` is given: it maps the reference's text to the cell's number or raises UnparsedError
+    (`parse_arg`'s `cell_refs`, T-3924); without it a reference is UnparsedError."""
+    parser = _Arithmetic(text, resolve)
     try:
         result = parser.additive(0)
     except OverflowError:  # an X87 operation's result is beyond the double range
@@ -371,8 +384,10 @@ def serial_date(serial: float) -> datetime.date:
     return EPOCH + datetime.timedelta(days=int(serial))
 
 
-def parse_arg(text: str, sheet: str, book: Workbook) -> Arg:
-    """One argument's value (see the module doc for what is supported)."""
+def parse_arg(text: str, sheet: str, book: Workbook, *, cell_refs: bool = False) -> Arg:
+    """One argument's value (see the module doc for what is supported). With `cell_refs`,
+    arithmetic may also read single cells of `book` that hold a number (`cell_number`):
+    `A112*A112`, `1/(1+20/(4*A1249))` (T-3924, the math sidecars)."""
     if len(text) >= 2 and text[0] == "{" and text[-1] == "}":
         return _array(text)
     if d := _DATE.fullmatch(text):
@@ -390,7 +405,30 @@ def parse_arg(text: str, sheet: str, book: Workbook) -> Arg:
         return values if m.group("last") else values[0]
     if (call := book.calls.get(call_key(text))) is not None:
         return call
-    return arithmetic(text)
+    if not cell_refs:
+        return arithmetic(text)
+    # Excel has no negative zero: `-A1` over a 0 is 0, as the literal `-0` is (`_literal`)
+    return arithmetic(text, lambda ref: cell_number(ref, sheet, book)) + 0.0
+
+
+def cell_number(ref: str, sheet: str, book: Workbook) -> float:
+    """The number in the cell `ref` names (on `sheet` unless it names a sheet), as an arithmetic
+    operand; UnparsedError for a cell holding anything else. A non-finite or subnormal number is
+    UnparsedError too: whether Excel reads a stored subnormal as 0, as it reads a subnormal literal,
+    has no evidence (numbers.md, "Subnormal results become 0")."""
+    m = _REF.fullmatch(ref)
+    if m is None or m.group("last"):
+        msg = f"{ref!r} is not a single cell"
+        raise UnparsedError(msg)
+    row, col = parse_a1(m.group("first"))
+    value = book.value(_sheet_name(m.group("sheet"), sheet), xl_rowcol_to_cell(row, col))
+    if isinstance(value, bool) or not isinstance(value, float):
+        msg = f"{ref} does not hold a number"
+        raise UnparsedError(msg)
+    if not math.isfinite(value) or _flush_subnormal(value) != value:
+        msg = f"{ref} holds {value}, which is not a normal double or 0"
+        raise UnparsedError(msg)
+    return value
 
 
 def call_key(text: str) -> str:
