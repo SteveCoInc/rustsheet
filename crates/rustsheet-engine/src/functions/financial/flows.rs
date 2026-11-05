@@ -190,7 +190,7 @@ impl Model {
                 {
                     return error(Error::NUM)
                 }
-                _ => {}
+                FlowElement::Number(_) => {}
             }
         }
         None
