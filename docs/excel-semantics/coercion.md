@@ -999,8 +999,18 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     PIVOTBY build their trees on those two keys, so no third (C,x) group or column exists: the leaf is not left
     out, it was never built. The same holds with a fifth row Ax, Cx or Bx after, and over Cx Ay Ax Ax Bx (rows 1,
     2, 8, 9, 10). Bx is kept over Cx Ay Bx, Cx Ay Bx Ax (Bx before the Ax), Cx Ax Ay Bx Ax (the Ax before the Ay),
-    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. T-4380
-    owns the 20 cells and t4358 B6, D6.
+    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. T-4393
+    owns the 20 cells and t4358 B6, D6 (from T-4380, whose rule failed its hold-out, below).
+  - **No coalescing merge explains UNIQUE's two-field runs** (T-4380, probes/t4380-unique-keep-head-holdout,
+    excel-graph, 2026-11-05; 45 runs through UNIQUE (B) and GROUPBY (C), predictions in docs/research/t4380 committed
+    before the fill). The rule chosen on t4379 (equal run heads: the right group joins the left head, which stays the
+    head) fits t4379 but misses 12 of the 45 hold-out runs: over Cy Cx Ay Bx Excel keeps Cy, Cx and Bx (as T-4200's
+    rule does), where the rule merges Bx into Cx. Pushing the joined head out and keeping it (`pushkeep`) misses 5;
+    T-4200's rule misses 28; the right group taking the head misses more; insertion sort then grouping neighbours
+    (MSVC's short `stable_sort`) misses 37 to 44. Over Cy Cx Ay Bx Ay (rows 6, 27) Excel's UNIQUE is Cy, Cx, Bx, Ay: the
+    second Ay is kept apart from the first, which joined Cy, so two identical rows end in different groups. No
+    sort-then-group-neighbours model under the row-by-row field comparison can do that. One-field runs never tell
+    the rules apart (none up to length 7). T-4393 owns the search and these cells.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
