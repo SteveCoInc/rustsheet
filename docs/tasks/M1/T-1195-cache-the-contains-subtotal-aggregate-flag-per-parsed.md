@@ -3,7 +3,7 @@ id: T-1195
 title: "Cache the contains-SUBTOTAL/AGGREGATE flag per parsed formula"
 milestone: M1
 lane: perf
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -22,3 +22,9 @@ T-1183 made `cell_formula_is_one_of` (functions/subtotal.rs) walk the whole tree
 
 ## Out of scope
 -
+
+## Outcome
+`ParsedFormula` gains `calls_subtotal`, computed once in `stored_formula`; `cell_formula_is_one_of` became
+`cell_formula_calls_subtotal` and reads the flag (both callers, SUBTOTAL and AGGREGATE, always passed
+SUBTOTAL/AGGREGATE). A column of one shared formula is now walked once, at parse. Unit test
+`parsed_formula_flags_nested_subtotal_calls`; existing subtotal/aggregate tests pass. No eval delta.
