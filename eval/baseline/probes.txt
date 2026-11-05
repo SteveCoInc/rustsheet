@@ -2271,6 +2271,7 @@ C	probes/t4316-pivot-group-dates-alone-frac.case.json	25
 C	probes/t4316-pivot-group-dates-alone.case.json	25
 C	probes/t4316-pivot-group-label-twice.case.json	75
 C	probes/t4316-pivot-group-number-item.case.json	75
+C	probes/t4331-typed-xlpm-remaining.case.json	13
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -7518,6 +7519,8 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
+F	probes/t4331-typed-xlpm-remaining.case.json	S!C2
+F	probes/t4331-typed-xlpm-remaining.case.json	S!C3
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10

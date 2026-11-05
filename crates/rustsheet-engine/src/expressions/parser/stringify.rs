@@ -6,6 +6,7 @@ mod sheet_edits;
 mod structured;
 mod wrapped;
 mod wrong_reference;
+use crate::expressions::parser::XLPM_PREFIX;
 use std::fmt::Write;
 
 use self::range_shrink::delete_corners;
@@ -876,7 +877,7 @@ fn stringify(
                         if p.is_optional {
                             format!("_xlop.{}", p.name)
                         } else {
-                            format!("_xlpm.{}", p.name)
+                            format!("{XLPM_PREFIX}{}", p.name)
                         }
                     } else if p.is_optional {
                         format!("[{}]", variable_text(&p.name, context, false))

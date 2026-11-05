@@ -10,6 +10,7 @@
 //! `=foo(1)`, a typed `=Foo(1)` or `=FOO(1)` prints `=foo(1)` (probes/unknown-function-name-spelling,
 //! docs/excel-semantics/references.md "Unknown function call names", T-1719).
 
+use crate::expressions::parser::XLPM_PREFIX;
 use std::collections::HashMap;
 
 use super::stringify::bound_variables::{walk_marked_names, walk_names, NameSite};
@@ -107,7 +108,7 @@ pub(super) fn settle_lambda_prefixes(node: &mut Node) {
     walk_marked_names(node, &mut Vec::new(), &mut |site, name, declared| {
         let Some(declared) = declared else { return };
         if matches!(site, NameSite::Use | NameSite::Callee) && !same_variable(name, declared) {
-            if let Some(bare) = name.strip_prefix("_xlpm.") {
+            if let Some(bare) = name.strip_prefix(XLPM_PREFIX) {
                 *name = bare.to_string();
             }
         }
