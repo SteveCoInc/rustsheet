@@ -3,8 +3,9 @@
 
 Formula targets get one file per formula shape in eval/suites (without the leading `=`), at most
 MAX_FORMULA_SEEDS of them; `xlsx_import` gets every workbook under crates/rustsheet-xlsx/tests and
-eval/suites; `bitcode_workbook` gets the engine-written workbooks of `seeds/bitcode_seeds.rs`, and
-`cfb_container` the OLE containers of `seeds/cfb_seeds.rs`.
+eval/suites; `bitcode_workbook` gets the engine-written workbooks of `seeds/bitcode_seeds.rs`,
+`cfb_container` the OLE containers of `seeds/cfb_seeds.rs`, and `encrypted_package` the encrypted xlsx
+fixtures of crates/rustsheet-xlsx/tests/encrypted.
 Corpora are generated, never committed, so they track the suites as they grow. Seeds are added to
 whatever a corpus directory already holds, so the inputs libFuzzer found on earlier runs are kept.
 
@@ -121,8 +122,14 @@ def main() -> int:
             kept += 1
     encoded = binary_seeds("bitcode_seeds", corpus / "bitcode_workbook")
     containers = binary_seeds("cfb_seeds", corpus / "cfb_container")
+    # The encrypted xlsx fixtures (T-4265): containers that reach the decryption code.
+    directory = corpus / "encrypted_package"
+    directory.mkdir(parents=True, exist_ok=True)
+    encrypted = sorted((ROOT / "crates" / "rustsheet-xlsx" / "tests" / "encrypted").glob("*.xlsx"))
+    for workbook in encrypted:
+        write_seed(directory, workbook.read_bytes())
     print(f"{len(seeds)} formula seeds of {len(formulas)} formulas, {kept} workbook seeds, {encoded} bitcode "
-          f"seeds, {containers} container seeds in {corpus}; dictionary {dictionary}")
+          f"seeds, {containers} container seeds, {len(encrypted)} encrypted seeds in {corpus}; dictionary {dictionary}")
     return 0
 
 
