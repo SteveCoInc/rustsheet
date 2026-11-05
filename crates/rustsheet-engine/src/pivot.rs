@@ -23,9 +23,11 @@ use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::types::sheet_names_match;
 
+mod date_groups;
 pub(crate) mod layout;
 mod number_groups;
 
+pub use date_groups::{group_by_dates, DateGroupBy, DateGroupError, DateGroups};
 pub use layout::{max_layout_rows, row_layout, LayoutCell, GRAND_TOTAL, ROW_LABELS};
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 
@@ -71,6 +73,9 @@ pub struct CacheField {
     /// For a field grouped by numeric ranges, its grouping: `items` are then the group labels
     /// and GETPIVOTDATA also picks a group by its lower bound (T-4235).
     pub number_groups: Option<NumberGroups>,
+    /// For a field grouped by dates, its grouping: `items` are then the group labels and
+    /// GETPIVOTDATA also picks a group by its calendar value (T-4246).
+    pub date_groups: Option<DateGroups>,
 }
 
 /// One value of a cache field.
