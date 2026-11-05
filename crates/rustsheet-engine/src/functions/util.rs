@@ -534,10 +534,9 @@ impl Model {
             // So does a lifted TAKE or DROP over a range (T-1838), which still empties
             // AMORDEGRC's left-over value (probes/amordegrc-fraction-state-bp, -bq).
             Function::Take | Function::Drop => {
-                let edge = if *kind == Function::Take {
-                    Edge::Take
-                } else {
-                    Edge::Drop
+                let edge = match kind {
+                    Function::Take => Edge::Take,
+                    _ => Edge::Drop,
                 };
                 let value = self.take_drop_reference(args, cell, edge, true);
                 self.empty_amor_left_over();

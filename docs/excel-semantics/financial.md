@@ -2660,9 +2660,10 @@ workbook-wide state written in Excel's calculation order:
 - A dynamic-array formula is no exception: it acts at its place in the order like any other formula, with the
   calls above. Ours runs the anchors before the chain, so the chain puts back, at each anchor's place, the value
   that anchor's run left, if its run wrote the state.
-- -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. Today, the same input bytes
-  (sha256 3f8ec3b8…) are 485, both refilled (-ai) and as the copy -av (excel-graph, 2026-11-05). The 10-30 value
-  does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above.
+- -ai (`=SEQUENCE(1,2)*0+AMORDEGRC(..485..)` below the fraction) was 0 on 2026-10-30. On 2026-11-05 the same input
+  bytes (sha256 3f8ec3b8…) give 485, both in the copy -av and in a refill of -ai that is not committed. The 10-30
+  value does not reproduce, like gen-m9 A76's 1 below. Excel's values on 2026-11-05 fit the rule above. -ai A1
+  stays a known failure against its committed 10-30 value (decision 0284, T-3610).
 - The order is Excel's fresh-load order (recalc.md "The order Excel calculates a freshly loaded workbook in"): the
   value comes from the cell below (-p: A1 is 776 from A2, not A3's 485), the cell to the right (-q: A1 is B1's 485)
   or a later sheet (-n: Sheet1!A1 is Sheet2!A1's 485); a precedent is evaluated first wherever it sits (-o: A2's
@@ -2685,7 +2686,7 @@ not a function of the workbook alone, like WEEKNUM's state after edits (decision
 different service build, or a recalc after the load in an order the calc chain set) is not known.
 Evidence: probes/amordegrc-fraction-alone-a to -g (excel-graph, 2026-10-26, T-1895) and
 probes/amordegrc-fraction-state-h to -ab (excel-graph, 2026-10-27, T-2825),
-probes/amordegrc-fraction-state-ac to -ai (excel-graph, 2026-10-30, T-2844; -ai refilled 2026-11-05),
+probes/amordegrc-fraction-state-ac to -ai (excel-graph, 2026-10-30, T-2844),
 probes/amordegrc-fraction-state-aj to -da (excel-graph, 2026-11-05, T-3393), probes/amordegrc-a76-bisect-a to -h
 (excel-graph, 2026-11-01, T-3590), with the earlier cells above.
 Ours: since T-2825 (decision 0131), `OrderState::amor_left_over` in evaluation.rs, set and read by

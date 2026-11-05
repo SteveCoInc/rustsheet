@@ -2600,6 +2600,7 @@ C	probes/yield-start-one-input.case.json	192
 C	probes/yield-start-rate-term.case.json	150
 C	probes/yield-start-sweep.case.json	100
 C	probes/yield-start-term-basis.case.json	159
+F	probes/amordegrc-fraction-state-ai.case.json	Sheet1!A1
 F	probes/amordegrc-fraction-state-cc.case.json	Sheet1!A2
 F	probes/bond-extreme-coupon-yield.case.json	Calc!B100
 F	probes/bond-extreme-coupon-yield.case.json	Calc!B12
