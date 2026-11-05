@@ -3,7 +3,7 @@ id: T-3874
 title: "TRIMMEAN and PERCENTILE share one typed-scalar data reader; probe a picked cell and typed FALSE"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
