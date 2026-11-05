@@ -3,7 +3,7 @@ id: T-4209
 title: "ISREF and NETWORKDAYS.INTL holidays: probe a unary plus over a reference-returning function (+INDEX, +OFFSET, +XLOOKUP)"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,3 +34,9 @@ ISREF and the NETWORKDAYS.INTL holidays split give Excel's answer for a unary pl
 
 ## Out of scope
 - Unary minus (already a value) and the other holidays forms, which T-4190 evidenced.
+
+## Outcome
+Probe `networkdays-intl-holiday-unary-fn` (M6) filled from excel-graph: a unary plus over INDEX, OFFSET, XLOOKUP and IF
+makes a scalar holiday (87 / 86) and ISREF FALSE, as `written_reference` already answered; no engine change was needed.
+Also found `T(+INDEX(D1:D2,1))` = "abc" (vs `T(+D1)` `#VALUE!`), recorded in references.md. dates.md `Tasks:` names T-4190.
+Eval delta: new probe cells only; see PR.
