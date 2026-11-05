@@ -3,7 +3,7 @@ id: T-4118
 title: "Extended-hex tag [$-_409] (0x2F409) keeps English day halves: h A/P is \"6 PM\", not \"6 P\" (t1924 S!B22)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
