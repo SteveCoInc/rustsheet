@@ -2740,7 +2740,7 @@ m9-t-dist-pdf; docs/research/t2464/r3-tdensity (`tdlib.py`, `s10_eset.py`, `s11_
   unlike the beta density's stored bd0: storing it moves `T.DIST(2.20146...,11,FALSE)` (hold2) 3 ulp off Excel and
   hold2 to 572 exact (T-2585).
 Implemented in: `loader.rs` `excel_t_density` (with `loader_t_constant` and `excel_bd0_unstored`), called by T.DIST's
-density; `student_t.rs` `student_t_density` stays the fallback and T.INV's centre estimate (T-2585). On cells.tsv the
+density through `student_t.rs` `t_density`; `student_t_density` stays the fallback and T.INV's centre estimate (T-2585). On cells.tsv the
 engine gets 7,046 exact and 19,725 within 15 digits of 19,793 cells (df >= 3: 18,646 of 18,714; df 1 and 2: all
 1,079 exact); hold2 573 exact, the verifier's hold-out at least 505 exact and 977 within 15 digits (unit test over
 `test/fixtures/t_density_hold.fixture`).
