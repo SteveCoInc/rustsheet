@@ -48,6 +48,10 @@ decision instead of reflecting a mechanism that can no longer fire.
 - Related open work, not duplicated: T-3641 (re-probe whether excel-graph computes the family today). If it finds that
   it does, the cells become fixable, and this decision should say what happens then. T-3994 and T-4076 cover cells
   owned only by deferred tasks, a different rule.
+- Steward 2026-11-05 (second run): T-3641 landed (#3392; excel-graph still `#N/A` for the whole family), so the 40
+  visibly-off cells of probes/forecast-ets-longer-series K1:K42 it owned (all but K37 and K38, all four functions; ours
+  numbers or `#NUM!` from the AAA model against the web's `#N/A`) had no open owner and are the M9 exit cells `make
+  exit-owners MILESTONE=M9` listed. This task owns them too, under the same rule as the 342 above.
 - Code: scripts/desktop_owned.py, scripts/exit_owners.py (`read_desktop_owned`, `counted_in_rate`, `--all-off`), the
   `--desktop-owned` path of crates/rustsheet-eval (v15_checkpoint), eval/milestones/*.tsv (decision 0044 protects
   them: a line changes only in the PR of the decision that names it).
