@@ -3,7 +3,7 @@ id: T-4291
 title: "POISSON.DIST's cdf far above the mean at k 50 to 200: which prefactor form Excel takes (split from T-4255)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -28,13 +28,23 @@ Excel's far upper tail (`excel_tail`, T-3269), or a series that does not use the
 Visibly-off cells this task owns: probes/t3252-gamma-prefactor-window A117, A118, A129, A139 and A140.
 
 ## Acceptance criteria
-- [ ] The form is scored on a hold-out fixed before scoring (decision 0188 R4): POISSON.DIST at k 30 to 300 for
+- [x] The form is scored on a hold-out fixed before scoring (decision 0188 R4): POISSON.DIST at k 30 to 300 for
       mean/k 1.3 to 3, as a new probe. It is adopted in `gamma_ur`'s POISSON path if it is Excel's there.
       Otherwise the rejected forms go into statistics.md with their scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
 
 ## Out of scope
 - The in-window gamma exponent (T-4290).
+
+## Outcome
+Neither prefactor form is Excel's far above the mean; the engine keeps the accurate kernel. The rejected forms and
+their scores are in statistics.md (the POISSON sentences under "Incomplete gamma: accurate kernel").
+- New hold-out probe probes/t4291-poisson-far-above-mean (48 cells, excel-graph): k 30 to 300 at mean/k 1.3 to 3.
+  The generator and scorer are in docs/research/t4291/.
+- Within 2 ulp of Excel on fit, then hold-out: the accurate value 4/20 and 9/48; the ratio form 0/20 and 1/48.
+- Excel's implied exponent is off the double grid of E, so the chain itself differs, as in T-4290.
+- The visibly-off cells pass to T-4302.
+- Eval delta: 4 of 48 new probe cells pass. The 29 visibly off are owned by T-4302. Regressions 0.

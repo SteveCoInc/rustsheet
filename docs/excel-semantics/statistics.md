@@ -1235,7 +1235,17 @@ a/333 the ratio form is (A62, A74, A86: 31, 100, 48 against -108, -259, -165), s
 0.003a); Excel is neither form there (T-3219 owns the fit). POISSON.DIST's cdf keeps `rcomp`, and the evidence does
 not favour the ratio form: k = 19 to 200 at mean/k 0.1 to 3 (window A97:A140) has `rcomp` closer near and above the
 mean (e.g. A125 `POISSON.DIST(100,110,TRUE)` -5 against 47, A136 -8 against -131, A118 1 against 85), and the ratio form
-closer only far above it at k 100 and 200 (A129, A139, A140: -4, 3, -1 against 115, -115, -327; T-4255). The
+closer only far above it at k 100 and 200 (A129, A139, A140: -4, 3, -1 against 115, -115, -327; T-4255). Far above
+the mean neither form is Excel's (T-4291, probes/t4291-poisson-far-above-mean, excel-graph 2026-11-05, k 30 to 300 at
+mean/k 1.3 to 3, the hold-out fixed before scoring; docs/research/t4291/score.py). The forms are taken as the 50-digit
+Q times exp(E_form - E), with no prefactor rounding, so they resolve to a few ulp. Within 2 ulp of Excel, then rms:
+- on the fit cells (window A103:A140 below 0.5) the accurate value 4/20, 36.8 ulp, and the ratio form 0/20, 46.9;
+- on the hold-out the accurate value 9/48, 78.8 ulp, and the ratio form 1/48, 62.4.
+Excel is up to 265 ulp from the true Q (G6 `POISSON.DIST(250,750,TRUE)`), about one ulp of the exponent there. Its
+implied exponent is not on the double grid of E either: at G5 (one ulp of E is 238 ulp of Q) it sits -0.65 ulp of
+E from the correctly rounded E. Across the 36 hold-out cells where one ulp of E is at least 8 ulp of Q it is 1.28 ulp
+of E from the accurate exponent and 1.43 from the ratio form. So the prefactor chain itself differs from both forms,
+as T-4290 found inside the gamma window (T-4296). Ours keeps the accurate kernel there. The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
 (`GAMMA.DIST(0.9,9,1,TRUE)`: Excel 9 ulp below the truth, the ratio form 23 below Excel, the direct one 10 above).
