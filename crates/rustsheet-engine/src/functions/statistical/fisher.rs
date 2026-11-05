@@ -792,6 +792,17 @@ mod tests {
         assert!(!f_bup_sum_overflows(79.0, 1E9, 1.5));
     }
 
+    // Excel's upper tail is exactly 0 once bup's prefactor in L140 leaves the normal range (T-4045):
+    // probes-numeric t4045-f-dist-rt-zero-cut B18 `F.DIST.RT(71.5,20,1E7)` is 4.320911961488639E-291
+    // and B19 `F.DIST.RT(71.6,20,1E7)` is 0; A17 `F.DIST.RT(47.6,30,1E8)` is a number, A18 0.
+    #[test]
+    fn upper_tail_is_zero_where_bups_prefactor_underflows() {
+        assert!(f_tail(20.0, 1E7, 71.5, true) > 0.0);
+        assert_eq!(f_tail(20.0, 1E7, 71.6, true), 0.0);
+        assert!(f_tail(30.0, 1E8, 47.6, true) > 0.0);
+        assert_eq!(f_tail(30.0, 1E8, 47.666_666_666_7, true), 0.0);
+    }
+
     // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric
     // t3567-r5-fdf1-hold A1/B1 `F.DIST.RT(15.586,1,298)` and `F.DIST(15.586,1,298,TRUE)`.
     #[test]
