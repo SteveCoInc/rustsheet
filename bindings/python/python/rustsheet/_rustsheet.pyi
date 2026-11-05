@@ -54,7 +54,8 @@ class Transaction:
     def define_name(self, name: str, formula: str, sheet: str | None = None) -> None:
         """Define a workbook-scoped name, or one scoped to `sheet` (shadows a workbook name there).
 
-        Errors (EditError) surface when the `with` block exits and roll the block back.
+        Errors (EditError for a duplicate or invalid name or an unparsable formula, RefError for an
+        unknown sheet) surface when the `with` block exits and roll the block back.
         """
     def add_data_table(
         self,

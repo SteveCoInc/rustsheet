@@ -792,7 +792,7 @@ impl PyTransaction {
     /// Defines a name for `formula` (a leading `=` is optional): workbook-scoped, or scoped to the
     /// sheet `sheet` when given (it may be a sheet added earlier in the block). A sheet-scoped name
     /// shadows a workbook name of the same spelling on its sheet. An invalid or duplicate name, an
-    /// unparsable formula or an unknown sheet raises `EditError` when the block exits.
+    /// unparsable formula raises `EditError`, and an unknown sheet `RefError`, when the block exits.
     #[pyo3(signature = (name, formula, sheet=None))]
     fn define_name(&mut self, name: &str, formula: &str, sheet: Option<&str>) -> PyResult<()> {
         self.push(Op::DefineName(

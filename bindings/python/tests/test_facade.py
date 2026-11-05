@@ -545,12 +545,17 @@ def test_define_name_sheet_scope_shadows(wb):
 
 
 @pytest.mark.parametrize(
-    ("name", "formula", "sheet"),
-    [("Dup", "=1", None), ("1abc", "=1", None), ("Bad", "=1+", None), ("N", "=1", "Nope")],
+    ("name", "formula", "sheet", "exc"),
+    [
+        ("Dup", "=1", None, rs.EditError),
+        ("1abc", "=1", None, rs.EditError),
+        ("Bad", "=1+", None, rs.EditError),
+        ("N", "=1", "Nope", rs.RefError),
+    ],
 )
-def test_define_name_errors_roll_back(wb, name, formula, sheet):
+def test_define_name_errors_roll_back(wb, name, formula, sheet, exc):
     # An unknown sheet is a RefError, as for every other sheet op (RefError is not an EditError).
-    with pytest.raises((rs.EditError, rs.RefError)):
+    with pytest.raises(exc):
         with wb.edit() as tx:
             tx["A1"] = 1
             tx.define_name("Dup", "=2")
