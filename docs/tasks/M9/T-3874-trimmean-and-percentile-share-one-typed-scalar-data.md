@@ -3,7 +3,7 @@ id: T-3874
 title: "TRIMMEAN and PERCENTILE share one typed-scalar data reader; probe a picked cell and typed FALSE"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,3 +28,6 @@ TRIMMEAN reads its data argument through the same typed-scalar path as PERCENTIL
 
 ## Out of scope
 - Other sorted_data.rs users unless the probe shows the same rule.
+
+## Outcome
+Probe `probes/t3874-trimmean-typed-scalar` (excel-graph): `TRIMMEAN(FALSE,0)` is 0; a name of a TRUE/text cell and INDEX of a text/boolean cell are `#NUM!` (already what ours did). TRIMMEAN's typed-scalar arms now call `typed_scalar_numbers` in percentile.rs, shared with PERCENTILE*. Semantics entry updated. Eval delta: none expected (all cells already matched).
