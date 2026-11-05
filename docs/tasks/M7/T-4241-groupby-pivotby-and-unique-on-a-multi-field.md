@@ -3,7 +3,7 @@ id: T-4241
 title: "GROUPBY and PIVOTBY on a multi-field intransitive run: rows Excel puts in two groups (probes/t4195-groupby-intransitive)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
