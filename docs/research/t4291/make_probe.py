@@ -7,8 +7,11 @@ of decision 0188 R4, fixed before any scoring: the forms are compared on probes/
 A97:A140 first.
 """
 
-import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from sweep_case import write_checked_case  # importable once the path above is set
 
 OUT = Path(__file__).resolve().parents[3] / "eval/suites/probes/cases/t4291-poisson-far-above-mean.case.json"
 KS = (30, 40, 60, 80, 120, 150, 250, 300)
@@ -21,18 +24,15 @@ def main() -> None:
         for row, r in enumerate(RATIOS, start=1):
             mean = round(k * r, 6)
             cells[f"{col}{row}"] = f"=POISSON.DIST({k},{mean:g},TRUE)"
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": (
+    write_checked_case(
+        OUT,
+        (
             "T-4291: POISSON.DIST's cdf far above the mean, k 30 to 300 (columns A:H) at mean/k 1.3 to 3 "
             "(rows 1:6): which large-shape prefactor Excel takes for Q(k + 1, mean) there."
         ),
-        "tags": ["M9", "statistical", "probe", "numeric", "T-4291"],
-        "expected": {},
-        "check": [f"Calc!{r}" for r in sorted(cells, key=lambda r: (int(r[1:]), r[0]))],
-        "sheets": [{"name": "Calc", "cells": cells}],
-    }
-    OUT.write_text(json.dumps(case, indent=1) + "\n")
+        ["M9", "statistical", "probe", "numeric", "T-4291"],
+        cells,
+    )
 
 
 if __name__ == "__main__":
