@@ -405,10 +405,9 @@ def parse_arg(text: str, sheet: str, book: Workbook, *, cell_refs: bool = False)
         return values if m.group("last") else values[0]
     if (call := book.calls.get(call_key(text))) is not None:
         return call
-    if not cell_refs:
-        return arithmetic(text)
+    value = arithmetic(text, (lambda ref: cell_number(ref, sheet, book)) if cell_refs else None)
     # Excel has no negative zero: `-A1` over a 0 is 0, as the literal `-0` is (`_literal`)
-    return arithmetic(text, lambda ref: cell_number(ref, sheet, book)) + 0.0
+    return value + 0.0 if cell_refs else value
 
 
 def cell_number(ref: str, sheet: str, book: Workbook) -> float:
