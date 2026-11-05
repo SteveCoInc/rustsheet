@@ -3,7 +3,7 @@ id: T-4201
 title: "Probe the Indic regional variants that resolve by the language fallback (bn-BD 845, ta-LK 849, ne-IN 861, [$-bn], [$-ne-IN])"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -23,10 +23,10 @@ other regions (number-formats.md "Regional variants": de-AT, es-MX, zh-SG). Foun
 `AM/PM` and `[$-100845]`-style Saka cells, like probes/t2959-indic-lcid-names.
 
 ## Acceptance criteria
-- [ ] A filled probe covers every tag in the goal; a tag whose names differ from its fallback gets its own table, or an
+- [x] A filled probe covers every tag in the goal; a tag whose names differ from its fallback gets its own table, or an
       owned off cell.
-- [ ] number-formats.md "Indic names" records the result.
-- [ ] `make check` green; reviewers approve.
+- [x] number-formats.md "Indic names" records the result.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Indic LCIDs other than these regional variants.
