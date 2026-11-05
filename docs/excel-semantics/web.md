@@ -121,7 +121,7 @@ Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674;
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
 
-## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
+## GETPIVOTDATA on a recordless item of a pivot field (T-4248, T-4311)
 Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
 (`refreshOnLoad` off; UNVERIFIED: that Excel drops the item on a refresh, and the `missingItemsLimit` link), over Data East 10, West 20, East 5.
 - `showAll="0"`: the item is not shown and `GETPIVOTDATA("Sales",pivot,"Region","North")` is `#REF!`, as for a group with no
@@ -129,10 +129,21 @@ Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists
 - `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
   probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
 - Control: the grand total (35) and a record item (East, 15) answer as usual in both.
-Engine (T-4276): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll` (on
-when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an ungrouped field's item that no record
-holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs). The eval adapter
-appends a spec's `unused_items` to the row field's items after the records' own and takes its `show_all`.
+- A **column** field follows the same rule under its own `showAll` (T-4311, probes/t4311-pivot-showall-column: Product
+  lists `C` unused over East/A 1, East/B 2, West/A 4, row field `showAll="0"`): with the column field's `showAll="0"`,
+  `"Product","C"` is `#REF!` alone, with a row item in either argument order and as `"c"`; with `showAll="1"` each is 0.
+  A recordless intersection of two record items (West/B) is 0 under both, a text not in the cache `#REF!`.
+- A **grouped** field follows it too (T-4311, probes/t4311-pivot-showall-grouped): with `showAll="1"` Excel lays out every
+  group, those with no record with a blank value, `<start` and `>end` included (whole numbers -1, 1, 7, 10 by 3 from 0
+  to 9 show `<0`, `0-2`, `3-5` (blank), `6-9`, `>9`; months over 2019 dates in Jan, Mar and Dec show all 14 items), and
+  GETPIVOTDATA on an empty group is 0, by label (`"3-5"`, `"Feb"`, `"<1/1/2019"`, `">1/1/2020"`) or by number (`3`,
+  the month `2`). The `showAll="0"` twin keeps `3-5` hidden and `#REF!` (below).
+Engine (T-4276, T-4311): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll`
+(on when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an item that no record holds, of an
+ungrouped or grouped field on either axis, is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`,
+pivot_index.rs), and `row_layout` lays out a grouped field's empty groups (`LayoutCell::Empty`) under `showAll`. The
+eval adapter appends a spec's `unused_items` and `column_unused_items` to the row and column fields' items after the
+records' own and takes `show_all` and `column_show_all`.
 
 ## Grouped pivot fields import as their group items (T-4225)
 Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
@@ -178,7 +189,8 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk: a step that rounds past the last inner group goes in the **last item** (`>end`), not the last inner group, even
   though the value is below `endNum`: 0.9999999999999999 by 0.1 from 0 to 1 is in `>1` while 1 is in `0.9-1`;
   1.9999999999999998 (from 1 to 2) is in `>2`, 8.999999999999998 (by 3 from 0 to 9) in `>9`.
-- A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`.
+- A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`; with `showAll="1"` it is
+  shown and 0 (T-4311, "GETPIVOTDATA on a recordless item of a pivot field" above).
 - GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
   not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
   rendered label cell works, and an array of labels lifts. A **number** item picks the group whose bound equals it,

@@ -239,18 +239,15 @@ impl Model {
         self.shown_group(pivot, position, u32::try_from(item).ok()?)
     }
 
-    /// `item`, unless it is a group of a numeric range or date-grouped field that holds no record:
-    /// Excel does not show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe
-    /// Calc B3, R1; a date group's `<start` and `>end` labels work only while they hold a record,
-    /// probes/t4236-pivot-date-groups-no-blank).
-    /// An ungrouped field's recordless item (an unused shared item) is `#REF!` with `showAll="0"`
-    /// and shown, so 0, with `showAll="1"` (probes/t4248-getpivotdata-recordless-item, web.md).
+    /// `item`, unless it holds no record and its field's `showAll` is off: Excel does not show
+    /// such an item and GETPIVOTDATA on it is `#REF!` (a numeric or date group, probe Calc B3, R1,
+    /// probes/t4236-pivot-date-groups-no-blank, t4311-pivot-showall-grouped H; an unused shared
+    /// item of an ungrouped row or column field, probes/t4248-getpivotdata-recordless-item,
+    /// t4311-pivot-showall-column). With `showAll` on it is shown, so 0: an empty group, a date
+    /// group's `<start` and `>end` included (t4311-pivot-showall-grouped G, M), or an unused item
+    /// (web.md).
     fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
-        let field = self.pivot_axis_field(pivot, position)?;
-        if field.number_groups.is_none()
-            && field.date_groups.is_none()
-            && self.pivot_axis_shows_all(pivot, position)?
-        {
+        if self.pivot_axis_shows_all(pivot, position)? {
             return Some(item);
         }
         let index = self.evaluation.pivot_indexes.pivots.get(&pivot)?;

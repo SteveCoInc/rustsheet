@@ -30,13 +30,15 @@ pub enum LayoutCell {
     Number(f64),
     /// A value with no number: the aggregate's error.
     Error(Error),
+    /// No value: a shown item that holds no record (`showAll="1"`).
+    Empty,
 }
 
 /// How many columns wide a [`row_layout`] row is: the label and the value.
 pub const LAYOUT_COLUMNS: usize = 2;
 
-/// The most rows [`row_layout`] gives over `record_count` records: the captions, at most one item
-/// per record, and the grand total. [`LAYOUT_COLUMNS`] wide.
+/// The most rows [`row_layout`] gives over `record_count` records with `showAll` off: the
+/// captions, at most one item per record, and the grand total. [`LAYOUT_COLUMNS`] wide.
 #[must_use]
 pub fn max_layout_rows(record_count: u32) -> u32 {
     record_count.saturating_add(2)
@@ -59,13 +61,15 @@ pub fn layout_extent(top: u32, left: u32, rows: u32) -> (u32, u32) {
 /// `caption` summarizing field `data` by `function`, two cells each: the captions, per item of
 /// `row` that holds a record (in item order) its label and value (a date as its serial, the blank
 /// as `(blank)`), then the grand total. An item
-/// with no record is not shown (`showAll="0"`, the builder's and Excel's default for a new pivot;
-/// probes/t4228-pivot-range-groups). `None` when a field is not in the cache, a record is
-/// malformed or a shown item is not text, a date or the blank.
+/// with no record is not shown with `show_all` off (`showAll="0"`, the builder's and Excel's
+/// default for a new pivot; probes/t4228-pivot-range-groups), and shown with an empty value with
+/// it on, a group's `<start` and `>end` items too (probes/t4311-pivot-showall-grouped). `None`
+/// when a field is not in the cache, a record is malformed or a shown item is not text, a date or
+/// the blank.
 #[must_use]
 pub fn row_layout(
     cache: &PivotCache,
-    row: u32,
+    (row, show_all): (u32, bool),
     data: u32,
     function: Aggregate,
     caption: &str,
@@ -88,7 +92,7 @@ pub fn row_layout(
         LayoutCell::Text(caption.to_string()),
     ]];
     for (item, records) in row_field.items.iter().zip(&by_item) {
-        if records.is_empty() {
+        if records.is_empty() && !show_all {
             continue;
         }
         // A date is its serial, as Excel writes the label cell of an ungrouped date field
@@ -99,7 +103,12 @@ pub fn row_layout(
             CacheItem::Missing => LayoutCell::Text(BLANK_ITEM.to_string()),
             _ => return None,
         };
-        rows.push([label, value(records)]);
+        let cell = if records.is_empty() {
+            LayoutCell::Empty
+        } else {
+            value(records)
+        };
+        rows.push([label, cell]);
     }
     let all: Vec<u32> = (0..cache.record_count).collect();
     rows.push([LayoutCell::Text(GRAND_TOTAL.to_string()), value(&all)]);

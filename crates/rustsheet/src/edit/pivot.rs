@@ -102,6 +102,11 @@ pub struct PivotTableInput {
     pub unused_items: Vec<String>,
     /// The row field's `showAll`: whether the pivot shows its items that no record holds.
     pub show_all: bool,
+    /// Text items of the column field that no record holds, appended to its cache items as
+    /// `unused_items` are to the row field's.
+    pub column_unused_items: Vec<String>,
+    /// The column field's `showAll`.
+    pub column_show_all: bool,
 }
 
 /// A row field grouped by numbers or dates (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx
@@ -138,13 +143,43 @@ fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, Pi
     })
 }
 
+/// Adds `input`'s unused items to the cache `builder` of the fields named `names`: the row
+/// field's (refused on a grouped one) and the column field's, each after the records' own items.
+fn add_unused_items(
+    builder: &mut CacheBuilder,
+    names: &[String],
+    input: &PivotTableInput,
+) -> Result<(), PivotError> {
+    let index = |name: &str| {
+        names
+            .iter()
+            .position(|n| n == name)
+            .and_then(|i| u32::try_from(i).ok())
+    };
+    if let Some(row) = index(&input.row) {
+        if input.group.is_some() && !input.unused_items.is_empty() {
+            return Err(PivotError::GroupedWithUnusedItems);
+        }
+        for item in &input.unused_items {
+            builder.add_shared_item(row, CacheItem::Text(item.clone()))?;
+        }
+    }
+    if !input.column_unused_items.is_empty() {
+        let name = input.column.clone().unwrap_or_default();
+        let column = index(&name).ok_or(PivotError::UnknownField(name))?;
+        for item in &input.column_unused_items {
+            builder.add_shared_item(column, CacheItem::Text(item.clone()))?;
+        }
+    }
+    Ok(())
+}
+
 /// The pivot fields of `cache`: `row` on the row axis with `showAll` `show_all`, `column` on
-/// the column axis, the others on none.
+/// the column axis with `showAll` `column_show_all`, the others on none.
 fn pivot_fields(
     cache: &PivotCache,
-    row: u32,
-    column: Option<u32>,
-    show_all: bool,
+    (row, show_all): (u32, bool),
+    (column, column_show_all): (Option<u32>, bool),
 ) -> Vec<PivotField> {
     cache
         .fields
@@ -161,6 +196,8 @@ fn pivot_fields(
             let mut field = PivotField::new(axis, f.items.len());
             if i == row {
                 field.show_all = show_all;
+            } else if Some(i) == column {
+                field.show_all = column_show_all;
             }
             field
         })
@@ -288,17 +325,7 @@ impl Txn<'_> {
             }
             builder.push_record(record).map_err(PivotError::from)?;
         }
-        let row_index = names.iter().position(|n| *n == input.row);
-        if let Some(row) = row_index.and_then(|i| u32::try_from(i).ok()) {
-            if input.group.is_some() && !input.unused_items.is_empty() {
-                return Err(PivotError::GroupedWithUnusedItems.into());
-            }
-            for item in &input.unused_items {
-                builder
-                    .add_shared_item(row, CacheItem::Text(item.clone()))
-                    .map_err(PivotError::from)?;
-            }
-        }
+        add_unused_items(&mut builder, &names, input)?;
         let mut cache = builder.finish();
         // Exact-case match: the builder gives the header's own spelling. Excel's GETPIVOTDATA matches
         // field names ignoring case (web.md); this is not that rule.
@@ -323,7 +350,11 @@ impl Txn<'_> {
                 *field = grouped(field, group)?;
             }
         }
-        let fields = pivot_fields(&cache, row, column, input.show_all);
+        let fields = pivot_fields(
+            &cache,
+            (row, input.show_all),
+            (column, input.column_show_all),
+        );
         let table = PivotTable {
             name: input.name.clone(),
             sheet_id,
@@ -364,8 +395,15 @@ impl Txn<'_> {
         else {
             return Err(bad().into());
         };
-        let rows =
-            row_layout(cache, *row, data.field, data.function, &data.caption).ok_or_else(bad)?;
+        let show_all = table.fields.get(*row as usize).is_some_and(|f| f.show_all);
+        let rows = row_layout(
+            cache,
+            (*row, show_all),
+            data.field,
+            data.function,
+            &data.caption,
+        )
+        .ok_or_else(bad)?;
         let (sheet, top, left) = (
             input.location.sheet,
             input.location.top,
@@ -377,6 +415,8 @@ impl Txn<'_> {
             for (c, cell) in (left..).zip(cells) {
                 // Typed values: a label such as `1-1.1` is text, never parsed as a date.
                 let value = match cell {
+                    // A shown recordless item's value cell stays empty.
+                    LayoutCell::Empty => continue,
                     LayoutCell::Text(text) => Value::Text(text.into()),
                     LayoutCell::Number(n) => Value::Number(n),
                     LayoutCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
@@ -431,6 +471,8 @@ mod tests {
             group: None,
             unused_items: Vec::new(),
             show_all: false,
+            column_unused_items: Vec::new(),
+            column_show_all: false,
         };
         (wb, input)
     }
@@ -588,6 +630,8 @@ mod tests {
             group: Some(group),
             unused_items: Vec::new(),
             show_all: false,
+            column_unused_items: Vec::new(),
+            column_show_all: false,
         }
     }
 
@@ -596,6 +640,100 @@ mod tests {
         (1..=6)
             .map(|row| wb.value(format!("{col}{row}").as_str()).unwrap())
             .collect()
+    }
+
+    /// With `showAll` on, a grouped pivot lays out every group, an empty one with an empty value
+    /// cell, and GETPIVOTDATA on an empty group is 0 (probes/t4311-pivot-showall-grouped G).
+    #[test]
+    fn a_grouped_pivot_with_show_all_shows_and_answers_its_empty_groups() {
+        let mut wb = Workbook::new(&WorkbookOptions::default()).unwrap();
+        let (source, location) = (wb.range_ref("A1:B3").unwrap(), wb.range_ref("D1").unwrap());
+        wb.edit(|tx| {
+            for (a1, input) in [
+                ("A1", Input::from("N")),
+                ("B1", Input::from("S")),
+                ("A2", Input::from(1.0)),
+                ("B2", Input::from(2.0)),
+                ("A3", Input::from(7.0)),
+                ("B3", Input::from(4.0)),
+                ("G1", Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",\"3-5\")")),
+                ("G2", Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",\"<0\")")),
+            ] {
+                tx.set(a1, input)?;
+            }
+            let group = PivotRangeGroup {
+                by: None,
+                start: 0.0,
+                end: 9.0,
+                interval: 3.0,
+                items: ["<x", "x", ">x"].map(String::from).to_vec(),
+            };
+            tx.add_pivot_table(&PivotTableInput {
+                show_all: true,
+                ..grouped_input(source, location, "N", group)
+            })
+        })
+        .unwrap();
+        let text = |s: &str| Value::Text(s.into());
+        assert_eq!(
+            column(&wb, "D"),
+            [
+                text("Row Labels"),
+                text("<0"),
+                text("0-2"),
+                text("3-5"),
+                text("6-9"),
+                text(">9")
+            ]
+        );
+        assert_eq!(
+            column(&wb, "E"),
+            [
+                text("Sum of S"),
+                Value::Empty,
+                2.0.into(),
+                Value::Empty,
+                4.0.into(),
+                Value::Empty
+            ]
+        );
+        assert_eq!(wb.value("G1").unwrap(), 0.0.into());
+        assert_eq!(wb.value("G2").unwrap(), 0.0.into());
+    }
+
+    /// Unused items of the column field are appended to its cache items, and the column field
+    /// takes the input's column `showAll` (probes/t4311-pivot-showall-column).
+    #[test]
+    fn column_unused_items_and_show_all_reach_the_column_field() {
+        let (mut wb, input) = book();
+        wb.edit(|tx| {
+            for (a1, input) in [("C1", "Product"), ("C2", "A"), ("C3", "B"), ("C4", "A")] {
+                tx.set(a1, Input::from(input))?;
+            }
+            Ok(())
+        })
+        .unwrap();
+        let input = PivotTableInput {
+            source: wb.range_ref("A1:C4").unwrap(),
+            location: wb.range_ref("H1:K4").unwrap(),
+            column: Some("Product".into()),
+            column_unused_items: vec!["C".into()],
+            column_show_all: true,
+            ..input
+        };
+        wb.edit(|tx| tx.add_pivot_table(&input)).unwrap();
+        let [cache] = &wb.model.workbook.pivot_caches[..] else {
+            panic!("one cache");
+        };
+        assert_eq!(
+            cache.fields[2].items.last(),
+            Some(&CacheItem::Text("C".into()))
+        );
+        let [pivot] = &wb.model.workbook.pivot_tables[..] else {
+            panic!("one pivot");
+        };
+        assert!(!pivot.fields[0].show_all);
+        assert!(pivot.fields[2].show_all);
     }
 
     /// A pivot grouped by 0.1 from 0 to 1 is laid out as Excel shows it (only the groups holding

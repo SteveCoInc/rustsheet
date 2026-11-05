@@ -123,7 +123,7 @@ def test_malformed_pivots_are_refused(change: dict[str, Any], message: str) -> N
 
 
 def test_rendered_cells_must_match_the_layout() -> None:
-    spec = _spec(_PIVOT, {"H1": "=1"})
+    spec = _spec(dict(_PIVOT), {"H1": "=1"})  # bake_pivots writes `rendered` into the pivot
     baked = bake_pivots(spec)
     assert baked
     rendered = spec["sheets"][1]["pivot_tables"][0]["rendered"]
@@ -274,6 +274,41 @@ def test_unused_row_items(show_all: bool) -> None:
         assert '<location ref="A3:B7"' in table and '<rowItems count="4">' in table
     else:
         assert '<location ref="A3:B6"' in table and '<rowItems count="3">' in table
+
+
+@pytest.mark.parametrize("show_all", [False, True])
+def test_unused_column_items(show_all: bool) -> None:
+    # T-4311: the column field keeps an unused item as the row field does, under its own showAll.
+    pivot = _PIVOT | {"column_unused_items": ["C"], "column_show_all": show_all}
+    spec = _spec(pivot, {"H1": "=1"})
+    parts = _parts(spec)
+    definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<s v="C"/>' in definition
+    assert "refreshOnLoad" not in definition
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert f'<pivotField axis="axisCol" showAll="{int(show_all)}">' in table
+    assert '<pivotField axis="axisRow" showAll="0">' in table
+    rendered = rendered_cells(spec, spec["sheets"][1], pivot)
+    assert ("C" in rendered.values()) is show_all
+    if show_all:
+        assert '<location ref="A3:E7"' in table and '<colItems count="4">' in table
+    else:
+        assert '<location ref="A3:D7"' in table and '<colItems count="3">' in table
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"column_unused_items": ["A"]},
+        {"column_unused_items": ["C", "c"]},
+        {"column": None, "column_unused_items": ["C"]},
+        {"column": None, "column_show_all": True},
+    ],
+)
+def test_malformed_unused_column_items_are_refused(change: dict[str, Any]) -> None:
+    pivot = {k: v for k, v in (_PIVOT | change).items() if v is not None}
+    with pytest.raises(ValueError, match="column_unused_items"):
+        build_xlsx(_spec(pivot, {"H1": "=1"}))
 
 
 def test_pivot_without_unused_items_refreshes_on_load() -> None:

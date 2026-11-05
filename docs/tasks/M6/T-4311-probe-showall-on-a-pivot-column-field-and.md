@@ -3,7 +3,7 @@ id: T-4311
 title: "Probe showAll on a pivot column field and on a grouped field (T-4276 review follow-ups)"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -27,11 +27,26 @@ builder already writes `unused_items` and `show_all` (tools/src/rustsheet_tools/
 `show_all` on a grouped pivot, may need builder support.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe covers a recordless item of an ungrouped column field (`showAll` 0 and 1) and an empty group
+- [x] An excel-graph probe covers a recordless item of an ungrouped column field (`showAll` 0 and 1) and an empty group
       of a numeric range or date-grouped row field with `showAll="1"`; the engine matches it, or owner tasks are
       filed for the off cells.
-- [ ] web.md records both results (column fields; grouped fields under `showAll="1"`).
-- [ ] `make check` green; reviewers approve.
+- [x] web.md records both results (column fields; grouped fields under `showAll="1"`).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Unused items of a grouped field (`PivotError::GroupedWithUnusedItems` stays).
+
+## Outcome
+- Two excel-graph probes (2026-11-05): probes/t4311-pivot-showall-column (20 cells) and t4311-pivot-showall-grouped
+  (129 cells). web.md "GETPIVOTDATA on a recordless item of a pivot field" records them.
+  - Column field: the row-axis rule holds. An unused column item is `#REF!` under the column field's `showAll="0"`
+    (alone, with a row item in either order, in lower case) and 0 under `showAll="1"`. The engine already matched.
+  - Grouped field with `showAll="1"`: Excel lays out every group, empty ones with a blank value (`<start` and `>end`
+    too: 14 month items over 3 dates), and GETPIVOTDATA on an empty group is 0 by label or number. The engine
+    ignored `showAll` here (`#REF!`, groups hidden).
+- Engine: `shown_group` applies `showAll` to grouped fields as to ungrouped ones; `row_layout` takes the row field's
+  `showAll` and lays out a recordless item with `LayoutCell::Empty` (`Txn::add_pivot_table` leaves its value cell
+  empty); the eval input-set extent covers every group of a `showAll` grouped pivot (spill_extent.rs `group_rows`).
+- Builder and adapter: `column_unused_items` and `column_show_all` (tools pivot.py, case.rs, spec_pivots.rs,
+  `PivotTableInput`), with builder tests; a builder test no longer mutates the shared `_PIVOT` fixture.
+- Eval delta: probes known failures 5713 -> 5713, 2 new cases (149 cells) all pass, 0 regressions in every suite.

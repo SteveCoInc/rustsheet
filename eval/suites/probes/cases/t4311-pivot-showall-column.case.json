@@ -1,0 +1,134 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4311: GETPIVOTDATA on a recordless item of an ungrouped pivot column field. The column field Product's cache lists 'C' as a shared item no record uses (refreshOnLoad off so Excel keeps it); pivot P has the column field's showAll=0, Q showAll=1 (the row field's showAll is 0 in both). Calc B (P) and C (Q): 1 the recordless column item, 2 and 3 it with a row item in both argument orders, 4 it in lower case, 5 to 7 control items and a recordless intersection (West/B), 8 a text not in the cache, 9 a row item alone, 10 the grand total.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4311",
+    "M6"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Sales",
+        "A2": "East",
+        "B2": "A",
+        "C2": 1,
+        "A3": "East",
+        "B3": "B",
+        "C3": 2,
+        "A4": "West",
+        "B4": "A",
+        "C4": 4
+      }
+    },
+    {
+      "name": "P",
+      "cells": {
+        "H1": "T-4311 pivot ColShowAll0"
+      },
+      "pivot_tables": [
+        {
+          "name": "ColShowAll0",
+          "source": "Data!A1:C4",
+          "location": "A3",
+          "row": "Region",
+          "column": "Product",
+          "value": "Sales",
+          "column_unused_items": [
+            "C"
+          ],
+          "column_show_all": false,
+          "rendered": {
+            "A3": "Sum of Sales",
+            "B3": "Column Labels",
+            "A4": "Row Labels",
+            "B4": "A",
+            "C4": "B",
+            "D4": "Grand Total",
+            "A5": "East",
+            "B5": 1.0,
+            "C5": 2.0,
+            "D5": 3.0,
+            "A6": "West",
+            "B6": 4.0,
+            "D6": 4.0,
+            "A7": "Grand Total",
+            "B7": 5.0,
+            "C7": 2.0,
+            "D7": 7.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "H1": "T-4311 pivot ColShowAll1"
+      },
+      "pivot_tables": [
+        {
+          "name": "ColShowAll1",
+          "source": "Data!A1:C4",
+          "location": "A3",
+          "row": "Region",
+          "column": "Product",
+          "value": "Sales",
+          "column_unused_items": [
+            "C"
+          ],
+          "column_show_all": true,
+          "rendered": {
+            "A3": "Sum of Sales",
+            "B3": "Column Labels",
+            "A4": "Row Labels",
+            "B4": "A",
+            "C4": "B",
+            "D4": "C",
+            "E4": "Grand Total",
+            "A5": "East",
+            "B5": 1.0,
+            "C5": 2.0,
+            "E5": 3.0,
+            "A6": "West",
+            "B6": 4.0,
+            "E6": 4.0,
+            "A7": "Grand Total",
+            "B7": 5.0,
+            "C7": 2.0,
+            "E7": 7.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "B1": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"C\")",
+        "B2": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"C\",\"Region\",\"East\")",
+        "B3": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "B4": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"c\")",
+        "B5": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"A\")",
+        "B6": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"A\",\"Region\",\"West\")",
+        "B7": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"B\",\"Region\",\"West\")",
+        "B8": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"Nowhere\")",
+        "B9": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Region\",\"East\")",
+        "B10": "=GETPIVOTDATA(\"Sales\",P!$A$3)",
+        "C1": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"C\")",
+        "C2": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"C\",\"Region\",\"East\")",
+        "C3": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "C4": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"c\")",
+        "C5": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"A\")",
+        "C6": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"A\",\"Region\",\"West\")",
+        "C7": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"B\",\"Region\",\"West\")",
+        "C8": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Product\",\"Nowhere\")",
+        "C9": "=GETPIVOTDATA(\"Sales\",Q!$A$3,\"Region\",\"East\")",
+        "C10": "=GETPIVOTDATA(\"Sales\",Q!$A$3)"
+      }
+    }
+  ]
+}

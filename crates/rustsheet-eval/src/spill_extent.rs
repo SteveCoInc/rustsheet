@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-use rustsheet_engine::pivot::{layout_extent, max_layout_rows};
+use rustsheet_engine::pivot::{layout_extent, max_layout_rows, NumberGroups};
 
 use crate::case::{cell_key, split_qualified, CaseSpec, SheetOp};
 use crate::cellref::{parse_range, Addr};
@@ -136,7 +136,13 @@ impl SpillExtent {
                         let source =
                             split_qualified(&p.source).map_or(p.source.clone(), |(_, r)| r);
                         let (first, last) = parse_range(&source)?;
-                        let rows = max_layout_rows(last.row.checked_sub(first.row)?);
+                        let mut rows = max_layout_rows(last.row.checked_sub(first.row)?);
+                        // With `showAll` every group is a row, a recordless one too (T-4311).
+                        if let Some(all) =
+                            p.group.as_ref().filter(|_| p.show_all).and_then(group_rows)
+                        {
+                            rows = rows.max(all);
+                        }
                         let (bottom, right) = layout_extent(top.row, top.col, rows);
                         Some((top, bottom, right))
                     });
@@ -216,6 +222,20 @@ fn unexpected(sheet: &str, addr: Addr, actual: Value) -> CellResult {
         kind: CellKind::SpillExtent,
         math: None,
     }
+}
+
+/// The rows a grouped pivot with `showAll` lays out: the captions, every group and the grand
+/// total. A date group has one group per `<groupItems>` label; a numeric one has Excel's own
+/// labels, its inner groups plus `<start` and `>end`, whatever the list says (web.md).
+fn group_rows(group: &crate::case::PivotGroupSpec) -> Option<u32> {
+    let groups = if group.by.is_some() {
+        group.items.len()
+    } else {
+        NumberGroups::new(group.start, group.end, group.interval, false, &[])?
+            .inner_count()?
+            .checked_add(2)?
+    };
+    u32::try_from(groups.checked_add(2)?).ok()
 }
 
 #[cfg(test)]
