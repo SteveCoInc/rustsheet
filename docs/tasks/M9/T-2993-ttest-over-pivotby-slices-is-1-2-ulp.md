@@ -3,7 +3,7 @@ id: T-2993
 title: "TTEST over PIVOTBY slices misses Excel's last digits (probes/pivotby-ttest-array2 P!A36, A37, A42, A43)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
