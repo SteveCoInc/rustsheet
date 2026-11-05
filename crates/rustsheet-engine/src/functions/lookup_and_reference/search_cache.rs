@@ -70,8 +70,8 @@ pub(crate) struct SearchCache {
     /// Where each linked sheet's cached cells end, built on the first lookup into it: its size is
     /// bounded by the cache it indexes, so it is kept whatever `cells` says.
     line_ends: HashMap<CachedSheet, Arc<CachedLineEnds>, KeyBuild>,
-    /// The extent of each linked sheet's cache, built on first use and kept across passes (the
-    /// cache is only written by import; `external_links.rs`, T-0473).
+    /// The extent of each linked sheet's cache, built on first use in the pass and dropped with
+    /// the rest, so a changed cache is read afresh (`external_links.rs`, T-0473).
     pub(crate) cached_extents: std::sync::OnceLock<crate::external_links::CachedExtents>,
 }
 
@@ -81,6 +81,7 @@ impl SearchCache {
         self.vectors.clear();
         self.cells = 0;
         self.line_ends.clear();
+        self.cached_extents.take();
     }
 }
 

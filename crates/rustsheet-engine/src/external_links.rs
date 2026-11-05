@@ -153,6 +153,29 @@ fn parse_cached_reference(
     .ok()
 }
 
+/// The rows and columns each sheet of `book`'s cache spans, in one walk of its cells.
+fn book_extents(book: &ExternalBook) -> HashMap<u32, ExternalArea> {
+    let mut extents: HashMap<u32, ExternalArea> = HashMap::new();
+    for &(index, row, column) in book.cells.keys() {
+        extents
+            .entry(index)
+            .and_modify(|area| {
+                area.first_row = area.first_row.min(row);
+                area.first_column = area.first_column.min(column);
+                area.last_row = area.last_row.max(row);
+                area.last_column = area.last_column.max(column);
+            })
+            .or_insert(ExternalArea {
+                first_row: row,
+                first_column: column,
+                last_row: row,
+                last_column: column,
+                cache: None,
+            });
+    }
+    extents
+}
+
 impl Model {
     /// The linked workbook formulas call `[book]`: `[1]` is the first `externalReference` of the
     /// workbook part. A book written by file name (`[other.xlsx]`) is not looked up.
@@ -173,33 +196,13 @@ impl Model {
         self.cached_extent(sheet).map(|_| sheet)
     }
 
-    /// The extent of every cached sheet of every linked workbook, built once from the caches.
+    /// The extent of every cached sheet of every linked workbook, built once per pass.
     fn cached_extents(&self) -> &CachedExtents {
         self.evaluation.search_cache.cached_extents.get_or_init(|| {
             self.workbook
                 .external_books
                 .iter()
-                .map(|book| {
-                    let mut extents: HashMap<u32, ExternalArea> = HashMap::new();
-                    for &(index, row, column) in book.cells.keys() {
-                        extents
-                            .entry(index)
-                            .and_modify(|area| {
-                                area.first_row = area.first_row.min(row);
-                                area.first_column = area.first_column.min(column);
-                                area.last_row = area.last_row.max(row);
-                                area.last_column = area.last_column.max(column);
-                            })
-                            .or_insert(ExternalArea {
-                                first_row: row,
-                                first_column: column,
-                                last_row: row,
-                                last_column: column,
-                                cache: None,
-                            });
-                    }
-                    extents
-                })
+                .map(book_extents)
                 .collect()
         })
     }
