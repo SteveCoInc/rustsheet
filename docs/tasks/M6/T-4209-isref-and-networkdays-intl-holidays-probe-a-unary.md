@@ -3,7 +3,7 @@ id: T-4209
 title: "ISREF and NETWORKDAYS.INTL holidays: probe a unary plus over a reference-returning function (+INDEX, +OFFSET, +XLOOKUP)"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
