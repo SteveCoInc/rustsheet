@@ -53,7 +53,7 @@ evaluation does at most 268,435,456 work units".
 - arrays.md "One formula evaluation does at most 268,435,456 work units" (DEVIATION) lists the charge.
 - Eval delta: none (no baseline line changes; no eval formula past the limit).
 
-## Landing notes (2026-11-04 23:10 UTC, end of the run's landing window)
+## Landing notes (resumed 2026-11-05 01:30 UTC; written 2026-11-04 23:10 UTC)
 Data for the run that resumes this branch; check it against the PR and the code.
 - PR #3244 (draft), head 9d7a46638. CI green on that head (every job, eval gate included); `make check-fast` green
   locally (eval-gates: 0 regressions, no baseline change). Review round 1: security APPROVE (MINOR: the charge lands
