@@ -31,4 +31,4 @@ and CONCAT with scalar arguments empty it but with C1:D2 keep it), so probe the 
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
--
+- Further WEEKNUM return_type or ordering work.

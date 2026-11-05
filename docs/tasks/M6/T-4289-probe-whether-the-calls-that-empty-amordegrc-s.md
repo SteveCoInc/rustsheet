@@ -26,10 +26,10 @@ left-over value, or by a dynamic-array formula as such. If the evidence calls fo
 - T-2070 asks whether a formula that spills empties it.
 
 ## Acceptance criteria
-- [ ] Probe cases, one workbook each, put a WEEKNUM reader above a Monday setter with one call between them. Probe
+- [x] Probe cases, one workbook each, put a WEEKNUM reader above a Monday setter with one call between them. Probe
   at least SEQUENCE, SORT, a called LAMBDA, TRANSPOSE, `={1,2}` and LET, in a dynamic-array formula and inside SUM.
   They are filled on excel-graph.
-- [ ] dates.md records the rule. The engine matches the probes, or a follow-up task owns every visibly-off cell.
+- [x] dates.md records the rule. The engine matches the probes, or a follow-up task owns every visibly-off cell.
 - [ ] `make check` green; reviewers approve.
 
 ## Outcome

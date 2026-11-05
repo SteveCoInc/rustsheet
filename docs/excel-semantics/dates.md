@@ -87,7 +87,7 @@ it runs them, and a WEEKNUM with a return_type of 22 or more, or negative, reads
 - **Emptying:** a scalar WEEKNUM with return_type 12-16 (Tuesday to Saturday starts are never
   kept), one with an always-#NUM! return_type (0, 3-10, 18-20; probed 0, 3, 10, 18, 20), and any WEEKNUM that lifts over an
   array, valid types included (`SUM(WEEKNUM(100,{2,2}))`, `SUM(WEEKNUM({100,101},2))`).
-- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21): with a
+- **A dynamic-array formula empties it** (T-2068, gen-m6, excel-graph 2026-10-21; refined by T-4289: not every anchor does, see "Which calls empty WEEKNUM's state" below): with a
   dynamic-array formula between a reader and the setter that runs before it in the order, the
   reader is `#NUM!` (OFFSET, TRANSPOSE, TRIMRANGE, CHOOSEROWS or CHOOSECOLS, none of them
   calling WEEKNUM). In the evidence none of them spilled: each is `#SPILL!`, an error or a 1×1
