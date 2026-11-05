@@ -33,5 +33,5 @@ other regions (number-formats.md "Regional variants": de-AT, es-MX, zh-SG). Foun
 
 ## Outcome
 Filled probes/t4201-indic-regional-variants (142 cells, excel-graph) for 845, 849, 861, 45, 49, 61, bn, bn-BD, ta-LK
-and ne-IN (12 months, AM, Saka and Hebrew digits for the LCIDs). Every tag has its own table, not the language fallback;
-recorded in number-formats.md "Indic regional variants". The 102 off cells are owned by T-4292. No eval baseline change.
+and ne-IN (12 months, AM, Saka and Hebrew digits for the LCIDs). 845, 849, 861 and their neutral/BCP-47 forms have their own tables, not the language fallback;
+recorded in number-formats.md "Indic regional variants". The 102 off cells are owned by T-4292; the eval baseline records them as known failures of the new case. Neutral 49 equals ta-IN and 61 equals ne-NP bar one Saka cell.
