@@ -57,6 +57,11 @@ sides are within 1e-9 of the math, so they are Phase 1b evidence under decision 
 the 15th (A145) and 14th (A146) digit, decision 0267 Tier C/D. The fix is the deferred T-4216:
 - probes/t2982-gamma-inv-huge-shape.case.json (2; GAMMA.DIST): S!A145, Excel 2.8546421399586357e-07, ours ...6256e-07; S!A146, Excel 2.8561234160188864e-07, ours ...894e-07
 
+Added by gap triage 2026-11-05 (`make eval` and `make unowned-off ALL=1` on origin/main b6cf9465). One more
+F.DIST.RT cell of T-4017's huge-df2 sweep, in the 1e10 case the list above lacks, has only deferred owners; it is first
+wrong at the 13th digit (relative 1.7e-13):
+- probes-numeric/t4017-f-huge-df2-above-mean-1e10.case.json (1; F.DIST.RT): Calc!A203, `F.DIST.RT(10,60,1E10)`, Excel 4.421993244304403e-90, ours 4.421993244303664e-90
+
 The 28 BETA.DIST b = 40 cells of probes-numeric/t4080-beta-num-band-edge that only deferred T-3209 owned went to
 T-4214 (decision 0267 Tier A), not here.
 

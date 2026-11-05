@@ -2,8 +2,8 @@
 //! written as constants, then the pivot is registered over its source.
 
 use rustsheet::{
-    CellRef, EditError, Input, PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup,
-    PivotTableInput, RangeRef, SheetId, Txn,
+    CellRef, EditError, Input, PivotDateGroupBy, PivotFunction, PivotRangeGroup, PivotTableInput,
+    RangeRef, SheetId, Txn,
 };
 
 use crate::case::{
@@ -48,14 +48,7 @@ pub fn add_pivots(
     id: SheetId,
 ) -> Result<(), EditError> {
     for pivot in &sheet.pivot_tables {
-        let input = pivot_input(spec, ids, sheet, id, pivot)?;
-        match tx.add_pivot_table(&input) {
-            // Excel drops a date grouping over a blank on refresh, which the engine does not
-            // model yet (T-4260): such a pivot stays unregistered, so GETPIVOTDATA against it is
-            // `#REF!`, a known failure of probes/t4236-pivot-date-groups.
-            Err(EditError::Pivot(PivotError::DateGroupOverBlank)) => {}
-            result => result?,
-        }
+        tx.add_pivot_table(&pivot_input(spec, ids, sheet, id, pivot)?)?;
     }
     Ok(())
 }

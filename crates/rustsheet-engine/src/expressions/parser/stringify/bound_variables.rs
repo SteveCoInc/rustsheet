@@ -28,6 +28,26 @@ pub(crate) fn walk_names<F>(node: &mut Node, bound: &mut Vec<String>, visit: &mu
 where
     F: FnMut(NameSite, &mut String, Option<&str>),
 {
+    walk(node, bound, false, visit);
+}
+
+/// [`walk_names`] of a file's formula before `call_names::settle_lambda_prefixes`, whose uses may
+/// still carry the `_xlpm.` mark they were written with: a use is also bound by the declaration
+/// of its name without one prefix. Only that pass reads names so; anywhere else `_xlpm.` is part
+/// of the name (a typed `=LET(x,2,_xlpm.x*3)` is `#NAME?`, probes/t4224-doubled-xlpm-prefix A9,
+/// T-4288).
+pub(crate) fn walk_marked_names<F>(node: &mut Node, bound: &mut Vec<String>, visit: &mut F)
+where
+    F: FnMut(NameSite, &mut String, Option<&str>),
+{
+    walk(node, bound, true, visit);
+}
+
+/// [`walk_names`], reading the `_xlpm.` mark when `marked` ([`walk_marked_names`]).
+fn walk<F>(node: &mut Node, bound: &mut Vec<String>, marked: bool, visit: &mut F)
+where
+    F: FnMut(NameSite, &mut String, Option<&str>),
+{
     // A run of signs, unary pluses, whitespace and parentheses is peeled in a loop, so it costs
     // no frame: 1,023 spaced signs are about 2,000 wrappers, which overflowed a 2 MiB unoptimized
     // stack at one frame each when a formula was set (T-3691, as T-3253's `Clone` and `PartialEq`).
@@ -47,11 +67,14 @@ where
             }
         };
     }
-    // A use the parser has not settled yet may still carry the `_xlpm.` prefix it was written
+    // A use the parser has not settled yet may still carry the `_xlpm.` mark it was written
     // with; the declaration binding it has none (`call_names::settle_lambda_prefixes`, T-4099).
+    // A name that is itself spelled with the prefix, `_xlpm.x` declared as a file's
+    // `_xlpm._xlpm.x`, is bound by its own spelling (probes/t4224-doubled-xlpm-prefix A8, T-4224).
     let declared = |bound: &[String], name: &str| {
-        let name = name.strip_prefix("_xlpm.").unwrap_or(name);
-        bound.iter().rev().find(|n| same_variable(n, name)).cloned()
+        let find = |name: &str| bound.iter().rev().find(|n| same_variable(n, name)).cloned();
+        let unmarked = || name.strip_prefix("_xlpm.").filter(|_| marked);
+        find(name).or_else(|| unmarked().and_then(find))
     };
     match node {
         Node::NamedVariableKind { name, .. } => {
@@ -62,7 +85,7 @@ where
             let d = declared(bound, name);
             visit(NameSite::Callee, name, d.as_deref());
             for arg in args {
-                walk_names(arg, bound, visit);
+                walk(arg, bound, marked, visit);
             }
         }
         Node::LambdaDefKind { parameters, body } => {
@@ -72,7 +95,7 @@ where
                 let d = parameter.name.clone();
                 visit(NameSite::Parameter, &mut parameter.name, Some(&d));
             }
-            walk_names(body, bound, visit);
+            walk(body, bound, marked, visit);
             bound.truncate(depth);
         }
         Node::FunctionKind {
@@ -90,34 +113,34 @@ where
                     let d = name.clone();
                     visit(NameSite::Declaration, name, Some(&d));
                 }
-                walk_names(&mut args[2 * i + 1], bound, visit);
+                walk(&mut args[2 * i + 1], bound, marked, visit);
             }
-            walk_names(&mut args[2 * pair_count], bound, visit);
+            walk(&mut args[2 * pair_count], bound, marked, visit);
             bound.truncate(depth);
         }
         Node::FunctionKind { args, .. } => {
             for arg in args {
-                walk_names(arg, bound, visit);
+                walk(arg, bound, marked, visit);
             }
         }
         Node::LambdaCallKind { lambda, args } => {
-            walk_names(lambda, bound, visit);
+            walk(lambda, bound, marked, visit);
             for arg in args {
-                walk_names(arg, bound, visit);
+                walk(arg, bound, marked, visit);
             }
         }
         Node::OpRangeKind { left, right }
         | Node::OpIntersectKind { left, right, .. }
         | Node::OpUnionKind { left, right, .. } => {
-            walk_names(left, bound, visit);
-            walk_names(right, bound, visit);
+            walk(left, bound, marked, visit);
+            walk(right, bound, marked, visit);
         }
         Node::OpConcatenateKind { .. }
         | Node::OpSumKind { .. }
         | Node::OpProductKind { .. }
         | Node::OpPowerKind { .. }
         | Node::CompareKind { .. } => {
-            for_each_chain_operand_mut(node, |operand| walk_names(operand, bound, visit));
+            for_each_chain_operand_mut(node, |operand| walk(operand, bound, marked, visit));
         }
         // The peel loop above took every wrapper: none reaches this match.
         Node::UnaryKind { .. }
@@ -168,38 +191,6 @@ fn unquoted_cell_shaped_name(name: &str) -> Option<&str> {
     name.strip_prefix('\'')
         .and_then(|name| name.strip_suffix('\''))
         .filter(|inner| spelled_like_a1_cell(inner))
-}
-
-/// Gives every LET name and LAMBDA parameter spelled like an A1 cell (`f1`, `a1`), at its
-/// declaration and at every use, the `_xlpm.` prefix the parser drops, and an unbound one (the
-/// quoted `'f1'`) two of them, `_xlpm._xlpm.f1`: the A1 text of a formula typed in R1C1 mode, where
-/// such a name is no reference. One prefix would not do for the unbound one: typed in A1 mode, an
-/// unbound `_xlpm.f1` is the name written with its prefix, which FORMULATEXT shows
-/// (probes/t4099-file-xlpm-unbound-names A10, T-4099), so the parser reads the doubled prefix in A1
-/// text as the quoted name instead (`Parser::written_lambda_name`). Excel binds a bound one
-/// (probes/t3897-r1c1-let-cell-names, T-3897), which the typed A1 entry then binds too instead of
-/// refusing it as it refuses `f1` typed in A1 mode (decision 0103); an unbound one is Excel's
-/// undefined name (`#NAME?`, A8:A10, A13), which the typed A1 entry reads back quoted
-/// (`quote_unbound_cell_shaped_names` (`call_names`), T-4040) where bare A1 text would read the
-/// cell, and Excel refuses `='f1'` typed in either mode (probes/t4040-r1c1-unbound-cell-names
-/// A1:A6).
-fn prefix_a1_cell_shaped_variables(node: &mut Node) {
-    walk_names(node, &mut Vec::new(), &mut |_, name, declared| {
-        if let Some(inner) = unquoted_cell_shaped_name(name) {
-            *name = format!("_xlpm._xlpm.{inner}");
-        } else if declared.is_some() && spelled_like_a1_cell(name) {
-            *name = format!("_xlpm.{name}");
-        }
-    });
-}
-
-/// [`super::to_english_string`] of a formula typed in R1C1 mode, as the A1 text the typed A1 entry
-/// reads the same: a name spelled like an A1 cell, bound or not, keeps its `_xlpm.` prefix
-/// ([`prefix_a1_cell_shaped_variables`], T-3897, T-4040).
-pub(crate) fn to_english_string_typed_from_r1c1(node: &Node, context: &CellReferenceRC) -> String {
-    let mut node = node.clone();
-    prefix_a1_cell_shaped_variables(&mut node);
-    super::to_english_string(&node, context)
 }
 
 /// Whether a stored (R1C1) formula would read `name` back as a cell, or as another name: an R1C1

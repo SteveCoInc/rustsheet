@@ -12,9 +12,10 @@
 
 use std::collections::HashMap;
 
-use super::stringify::bound_variables::{walk_names, NameSite};
+use super::stringify::bound_variables::{walk_marked_names, walk_names, NameSite};
 use super::Node;
 use crate::expressions::utils::spelled_like_a1_cell;
+use crate::functions::logical::same_variable;
 use crate::types::DefinedName;
 
 /// Characters Excel keeps apart from their upper-case form in a name, though `to_uppercase` merges them.
@@ -97,9 +98,15 @@ impl CallNameSpellings {
 /// `=LET(x,1,x+_xlpm.f1)` (probes/t4040-r1c1-unbound-cell-names A14:C16,
 /// probes/t4099-file-xlpm-unbound-names, excel-graph, T-4099). The prefixed name is no defined
 /// name either: the defined-name lookup of `name_operand` never matches it.
+///
+/// Only the mark goes: a use spelled like its declaration is that name already, the file's
+/// `_xlpm._xlpm.x` of a declared `_xlpm.x` drops one prefix, and `_xlpm._xlpm.x` where only `x`
+/// is declared binds nothing (`#NAME?`, FORMULATEXT `=LET(x,2,_xlpm._xlpm.x*3)`,
+/// probes/t4224-doubled-xlpm-prefix A8, A13, T-4224).
 pub(super) fn settle_lambda_prefixes(node: &mut Node) {
-    walk_names(node, &mut Vec::new(), &mut |site, name, declared| {
-        if declared.is_some() && matches!(site, NameSite::Use | NameSite::Callee) {
+    walk_marked_names(node, &mut Vec::new(), &mut |site, name, declared| {
+        let Some(declared) = declared else { return };
+        if matches!(site, NameSite::Use | NameSite::Callee) && !same_variable(name, declared) {
             if let Some(bare) = name.strip_prefix("_xlpm.") {
                 *name = bare.to_string();
             }

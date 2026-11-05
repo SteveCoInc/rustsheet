@@ -378,7 +378,10 @@ fn hebrew_or_saka(hebrew: bool, lcid: u16) -> (&'static DateNames, Calendar) {
     match (hebrew, lcid & 0x3FF) {
         (true, 0x0D | 0x01) => (&HEBREW_SCRIPT, Calendar::Hebrew(Some(&HEBREW_SCRIPT_ADARS))),
         (true, _) => (&HEBREW_LATIN, Calendar::Hebrew(Some(&HEBREW_LATIN_ADARS))),
+        // ne-IN 0x861 and neutral 0x61 print native Saka names, ne-NP 0x461 the Latin ones
+        // (probes/t4201-indic-regional-variants C14, F14).
         (false, 0x01 | 0x39) => (&SAKA_HINDI, Calendar::Saka),
+        (false, 0x61) if lcid != 0x461 => (&SAKA_HINDI, Calendar::Saka),
         (false, _) => (&SAKA, Calendar::Saka),
     }
 }
@@ -400,10 +403,19 @@ fn hijri_names(lcid: u16) -> &'static DateNames {
 /// falls back to its language only when it is neutral (below 0x400: `[$-g]` 0x10 is Italian,
 /// `[$-0_]` 0x2F Macedonian). `[$-x_y]` is 0x2412 and prints English, not Korean
 /// (text-locale-calendars A139), so an LCID with a sublanguage and no table has no locale here.
+/// The exception is English: `[$-_409]` is 0x2F409 (calendar 2 over LCID 0xF409) and prints
+/// "6 PM" for `h A/P`, as the plain `[$-F409]` does (probes/t1924-locale-tag-extended-hex S!B22,
+/// probes/text-locale-invalid-sublanguage). Other English sublanguages reached through extended
+/// hex are unprobed.
 fn resolve_extended(value: u32) -> LocaleTag {
     let value = value & 0xFF_FFFF;
     let lcid = (value & 0xFFFF) as u16;
-    if lcid > 0x3FF && lcid != 0x400 && lcid != 0x800 && table(lcid).is_none() {
+    if lcid > 0x3FF
+        && lcid != 0x400
+        && lcid != 0x800
+        && lcid & 0x3FF != 0x09
+        && table(lcid).is_none()
+    {
         return without_locale(value >> 16);
     }
     resolve_lcid(value)

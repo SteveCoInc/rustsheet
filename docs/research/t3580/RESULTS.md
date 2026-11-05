@@ -19,6 +19,21 @@ before scoring: the fit lab's default of 5 points of bit-exact rate. Bit-exact /
 The model beats the correctly rounded value on hold-out (2,879 against 1,407 bit-exact), and its hold-out rate is
 within the 5-point margin of its train rate (+3.4 points). (The CR hold-out counts are T-3567's: bit-exact and 4 ulp.)
 
+### The fit lab's split (T-4029)
+
+The same cells on the fit lab's own hash split (`fitlab/holdout.py` `is_holdout`, salt `rustsheet-fitlab-holdout/v1`,
+30% held out) instead of the dataset split above: cells.tsv's 3,435 F cdf/tail cells together with the 3,532 cells of
+t3567-r5-fdf1-hold whose Excel value is a nonzero number, 6,967 in all (`split.py`; run on origin/main 82b5cd14, the same
+counts as T-3580's excel-fidelity review). Bit-exact / within 4 ulp / within 15 digits:
+
+| side | cells | T-3580 | correctly rounded | T-3580 bit-exact rate |
+|---|---|---|---|---|
+| train | 4,883 | 3,835/4,714/4,794 | 2,004/3,778/4,099 | 78.5% |
+| test | 2,084 | 1,647/2,022/2,052 | 855/1,639/1,762 | 79.0% |
+
+The verdict is the same: the model beats the correctly rounded value on test (1,647 against 855 bit-exact) and its test
+rate is above its train rate (+0.5 points), inside the 5-point margin.
+
 ## Hold-out: probes-numeric t3567-r5-fdf1-hold (T-3567's, 3,578 cells)
 
 Bit-exact / within 4 ulp / within 15 significant digits (`score.py t3567-r5-fdf1-hold`):

@@ -121,6 +121,18 @@ Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674;
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
 
+## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
+Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
+(`refreshOnLoad` off; UNVERIFIED: that Excel drops the item on a refresh, and the `missingItemsLimit` link), over Data East 10, West 20, East 5.
+- `showAll="0"`: the item is not shown and `GETPIVOTDATA("Sales",pivot,"Region","North")` is `#REF!`, as for a group with no
+  record (see below) and for a text absent from the cache ("Nowhere").
+- `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
+  probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
+- Control: the grand total (35) and a record item (East, 15) answer as usual in both.
+Engine: the engine builds a pivot's cache from its records, so it has no recordless item and answers `#REF!` for both
+`showAll` values; the `showAll="1"` cells are off until the importer keeps an unused shared item and the flag
+(follow-up task).
+
 ## Grouped pivot fields import as their group items (T-4225)
 Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
 field. A `<cacheField>` grouped in place carries `<fieldGroup par base>` after its `<sharedItems>`; a grouping field Excel
@@ -167,10 +179,10 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
   not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
   rendered label cell works, and an array of labels lifts. A **number** item picks the group whose bound equals it,
-within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
-1.3000000000000003 from 1; 3 by 3): an inner group's lower bound, `start - interval` for the `<start` item and the
-`>` label's bound for the `>end` item (1 gives the `>1` total). A number inside a group but not its lower bound (0.35,
-4), TRUE, an omitted item and `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
+  within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
+  1.3000000000000003 from 1; 3 by 3): an inner group's lower bound, `start - interval` for the `<start` item and the
+  `>` label's bound for the `>end` item (1 gives the `>1` total). A number inside a group but not its lower bound (0.35,
+  4), TRUE, an omitted item and `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
 - Quirk (T-4249): GETPIVOTDATA's number rule is truncation toward zero. With q the 15-digit quotient and k = q truncated
   toward zero, the number matches item k when q is not above k: k = -1 is `<start`, 0 to n - 1 the inner groups and n
   `>end`; anything else is `#REF!`. So a positive q must be whole, but a negative one truncates up: by 3 from 0, -1, -2,
@@ -262,11 +274,17 @@ item on a seconds or minutes group (taken as 0 to 59, by the hour rule).
   39599.49999978 s into the day, 2.2e-7 s below the half) is in `11 AM` (no-blank pivot H, Calc E45 and F13). The
   engine splits a date as HOUR is modelled to (`time_of_day_parts`, dates.md: an exact half goes whichever way binary
   noise takes it), which puts it in `10 AM`; HOUR of this serial is unprobed. T-4261 probes Excel's rounding model.
-The dropped grouping over a blank is not modelled: the adapter leaves such a spec pivot unregistered (T-4260 owns those cells of probes/t4236-pivot-date-groups).
+Engine (T-4260): `Txn::add_pivot_table` drops a date grouping over a blank as the refresh does (`ungroup_dates`:
+second-rounded `Date` items in record order, by the same `split_serial` rule as the groups), the layout writes a date
+label as its serial and the blank as `(blank)` (`row_layout`), and GETPIVOTDATA picks an ungrouped date item by an
+equal serial and the blank by `"(blank)"` (`pivot_number_item`, `pivot_blank_text`). A serial within the second of
+an item but not equal to it, `"(BLANK)"` in another case, and a field that also holds the text `(blank)` are
+UNVERIFIED. Pivot H's 10:59:59.5 point (Data!D4) rounds down here, as in the no-blank case, which merges it with
+10:59:59 and shifts H's later rows: T-4261 owns those cells too. The importer keeps a saved grouping (59932).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
-functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`).
+functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
 Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
@@ -280,8 +298,8 @@ bits: the 2021 total of the pivot at Pivot!C3 (Year columns only) is 1738748.699
 (SPEC-0015 unknown 11, one data point).
 Evidence: calipers goldens (desktop Excel cached values): pv_goldens/pv23_041 Liability Summary C5:G7 (the pivots on sheet
 Pivot, C3:G5, C9:G13), roundtrip/formula_stress_test Database!B16 (pivot GPD at B32:O45).
-Status: VERIFIED (desktop cached values). UNVERIFIED: whether `""`, a blank cell or `"(blank)"` also pick the blank item
-(ours `#REF!`), and any pair on a pivot with two fields on an axis (ours `#REF!`, SPEC-0015 unknown 10, T-2085).
+Status: VERIFIED (desktop cached values). `"(blank)"` picks the blank item of an ungrouped field too (probes/t4236-pivot-date-groups,
+excel-graph, T-4260; above). UNVERIFIED: whether `""` or a blank cell also pick it (ours `#REF!`), and any pair on a pivot with two fields on an axis (ours `#REF!`, SPEC-0015 unknown 10, T-2085).
 Implemented in: `fn_getpivotdata`, `Model::pivot_blank_item`, `nested_axis`
 (crates/rustsheet-engine/src/functions/lookup_and_reference/getpivotdata.rs, pivot_index.rs, T-2662).
 Tasks: T-2662, T-2085

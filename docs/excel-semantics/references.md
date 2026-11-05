@@ -2381,7 +2381,7 @@ when it is an A1 reference, which is a separate test: `R1`, `C3`, `RC99999`, `C1
   dots (`A1 . B2` prints `A1:B2`), whitespace on one side only (VERIFIED, probes/t4271-lotus-dot-one-side-space-before,
   -space-after, -space-before-dotdot, -space-after-dotdot and -lf-before, excel-graph, 2026-11-05, T-4271: `A1 .B2`,
   `A1. B2`, `A1 ..B2`, `A1.. B2` and a line feed before the dot are each `A1:B2` in SUM (15), ROWS (2), ISREF (TRUE)
-  and FORMULATEXT; ours read `A1. B2` and `A1.. B2` as a name `A1.` intersected with `B2` until T-4271), ISREF (TRUE), an intersection (`A1.B2 B1:B3`) and a colon after
+  and FORMULATEXT (T-4284, probes/t4284-lotus-dot-ws-after-{lf-after,dollar-space-after,dollar-space-after-dotdot}, excel-graph, 2026-11-05: `A1.`&LF&`B2`, `$A$1. B2` and `A$1.. B2` read the same way, printed `A1:B2`, `$A$1:B2`, `A$1:B2`); ours read `A1. B2` and `A1.. B2` as a name `A1.` intersected with `B2` until T-4271), ISREF (TRUE), an intersection (`A1.B2 B1:B3`) and a colon after
   it (`ROWS(A1.B2:C3)` is `A1:B2:C3`, 3) all read the range. Names, kept as typed and `#NAME?`:
   whole columns (`A.B`, `A..B`), `A1.5`, an off-grid second cell (`A1.XFE1`), `A1.B2D`, a name
   as the second part (`A1.foo` with `foo` defined) and a call (`A1.INDEX(B2:B2,1)`, `#NAME?`).

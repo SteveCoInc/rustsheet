@@ -1,14 +1,9 @@
 //! Text a user types, which Excel refuses in places where it reads the same text stored.
 
-use std::collections::HashMap;
-
 use crate::calculated_columns::TableGrowth;
 use crate::expressions::{
     lexer::LexerMode,
-    parser::{
-        is_limit_error, new_parser_english,
-        stringify::bound_variables::to_english_string_typed_from_r1c1, Node,
-    },
+    parser::{is_limit_error, Node},
     types::CellReferenceRC,
 };
 use crate::model::Model;
@@ -19,56 +14,6 @@ mod r1c1;
 /// parse, which Excel refuses typed (Graph PATCH 400 `InvalidArgument`) where it keeps stored text
 /// (T-3213). Callers that replay what a user typed leave such a cell as it was (decision 0179).
 pub const TYPED_FORMULA_DOES_NOT_PARSE: &str = "Formula does not parse";
-
-/// The A1 text of `text` typed in R1C1 mode into the 1-based `row`, `column` of `sheet`, as
-/// Excel's `Range.FormulaR1C1` reads it (`=R1C2+1` in A3 is `=$B$1+1`, `=R[-1]C[1]` is `=B2`);
-/// text without a leading `=` is a constant, the same in both modes. `None` when the formula does
-/// not parse, which Excel refuses. `worksheets` are the workbook's sheet names; defined names are
-/// kept as written and resolve when the A1 text is entered, but a structured reference does not
-/// parse here (no tables), so such a formula is `None` (T-3113). Excel's short forms (`RC[-1]`,
-/// `R[-1]C`, a whole row `R2` or column `C[-1]`, lower case) read as Excel reads them, and a
-/// relative offset wraps around the grid (T-3212); a LET name or LAMBDA parameter `r`, `c`, `rc`
-/// or `r1c1` is then a reference, which Excel refuses there as the A1 entry refuses `f1`. A name
-/// spelled like an A1 cell (`f1`) is no reference in R1C1 mode and Excel binds it, so the A1 text
-/// writes it `_xlpm.f1`, which the typed A1 entry binds (T-3897). Unbound, such a name is
-/// Excel's undefined name (`#NAME?`), which FORMULATEXT shows quoted, `='f1'`: the A1 text writes
-/// it `_xlpm.f1` too, which the typed A1 entry reads as that name (T-4040).
-#[must_use]
-pub fn r1c1_formula_to_a1(
-    text: &str,
-    worksheets: &[String],
-    sheet: &str,
-    row: i32,
-    column: i32,
-) -> Option<String> {
-    let Some(formula) = text.strip_prefix('=') else {
-        return Some(text.to_string());
-    };
-    let formula = r1c1::expand_short_forms(formula, row, column)?;
-    let mut parser = new_parser_english(worksheets.to_vec(), Vec::new(), HashMap::new());
-    parser.set_lexer_mode(LexerMode::R1C1);
-    // Typed, so that what Excel refuses typed is refused here too (a LET name that reads as a
-    // reference in R1C1 mode, T-3212).
-    parser.set_typed(true);
-    let context = CellReferenceRC {
-        sheet: sheet.to_string(),
-        row,
-        column,
-    };
-    let node = parser.parse(&formula, &context);
-    // The A1 text printed below drops the whitespace, so a TAB or NBSP Excel refuses typed
-    // (`=S!` TAB `R1C4`, probes/t3102-r1c1-ws-after-bang, T-3102) is refused here.
-    if matches!(node, Node::ParseErrorKind { .. })
-        || parser.skipped_refused_whitespace()
-        || parser.typed_refusal().is_some()
-    {
-        return None;
-    }
-    Some(format!(
-        "={}",
-        to_english_string_typed_from_r1c1(&node, &context)
-    ))
-}
 
 /// Whether the one `(` that `formula` leaves open opens a call's arguments (`SUM(1`, `LOG10(2`,
 /// `SUM(1,,`) rather than a group (`(1`, `1+(2`): typed, Excel closes the first and refuses the
@@ -116,6 +61,28 @@ impl Model {
     ) -> Result<Node, String> {
         let sheet = self.workbook.worksheet(sheet)?.get_name();
         let cell_reference = &CellReferenceRC { sheet, row, column };
+        if self.parser.is_r1c1_entry() {
+            // Typed in R1C1 mode ([`Model::set_typed_r1c1_user_input`]): the short forms are
+            // written out in the R1C1 grammar the parser reads (T-3212), and the parser reads
+            // that grammar for this one formula only, so that a stored formula re-parsed while
+            // the entry runs is read as ever.
+            let expanded = r1c1::expand_short_forms(formula, row, column).ok_or_else(|| {
+                format!("{TYPED_FORMULA_DOES_NOT_PARSE}: a short R1C1 form Excel refuses")
+            })?;
+            self.parser.set_lexer_mode(LexerMode::R1C1);
+            let parsed = self.parse_typed_text(&expanded, cell_reference);
+            self.parser.set_lexer_mode(LexerMode::A1);
+            return parsed;
+        }
+        self.parse_typed_text(formula, cell_reference)
+    }
+
+    /// [`Model::parse_cell_formula`] of `formula` in the parser's current grammar.
+    fn parse_typed_text(
+        &mut self,
+        formula: &str,
+        cell_reference: &CellReferenceRC,
+    ) -> Result<Node, String> {
         let mut node = self.parser.parse(formula, cell_reference);
         // Typed, Excel closes a call's parenthesis only, not a group's (`=(1` is refused).
         if matches!(&node, Node::ParseErrorKind { message, .. } if !is_limit_error(message))
@@ -237,6 +204,38 @@ impl Model {
             Some(fill) => self.fill_calculated_column(sheet, row, column, &fill),
             None => Ok(()),
         }
+    }
+
+    /// [`Model::set_typed_user_input`] of `value` typed with the workbook in R1C1 reference style,
+    /// as Excel's `Range.FormulaR1C1` reads it: `=R1C2+1` in A3 is `=$B$1+1`, `=R[-1]C[1]` is
+    /// `=B2`, and text without a leading `=` is a constant, the same in both styles. Excel's short
+    /// forms (`RC[-1]`, `R[-1]C`, a whole row `R2` or column `C[-1]`, lower case) read as Excel
+    /// reads them, and a relative offset wraps around the grid (T-3212); a LET name or LAMBDA
+    /// parameter `r`, `c`, `rc` or `r1c1` is then a reference, which Excel refuses. A name spelled
+    /// like an A1 cell (`f1`) is no reference here: a LET or LAMBDA binds it (T-3897), and unbound
+    /// it is Excel's undefined name, which FORMULATEXT shows quoted, `='f1'` (T-4040). The parsed
+    /// formula is stored as it is, with no A1 text in between, so no text typed in A1 mode reads
+    /// as such a name (T-4288). A formula that does not parse is an error starting with
+    /// [`TYPED_FORMULA_DOES_NOT_PARSE`], and the cell keeps its content.
+    pub fn set_typed_r1c1_user_input(
+        &mut self,
+        sheet: u32,
+        row: i32,
+        column: i32,
+        value: String,
+    ) -> Result<(), String> {
+        self.as_r1c1_entry(|model| model.set_typed_user_input(sheet, row, column, value))
+    }
+
+    /// Runs `entry` with typed formulas read as typed in R1C1 reference style
+    /// ([`Model::set_typed_r1c1_user_input`]), then restores A1 style. An embedder that runs its
+    /// own typed-entry steps around the write (the facade's calculated-column log reads
+    /// [`Model::table_expansion`] first) wraps them with it too.
+    pub fn as_r1c1_entry<T>(&mut self, entry: impl FnOnce(&mut Self) -> T) -> T {
+        self.parser.set_r1c1_entry(true);
+        let result = entry(self);
+        self.parser.set_r1c1_entry(false);
+        result
     }
 
     /// [`Model::set_user_input`] for a formula as a file stores it: one naming a table or column
