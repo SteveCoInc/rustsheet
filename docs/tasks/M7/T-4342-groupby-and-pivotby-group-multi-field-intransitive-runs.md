@@ -35,8 +35,9 @@ intransitive. That includes the rows Excel puts in two groups and the groups tha
   docs/research/t4237 did (decision 0188 R4 hold-out for a structural model). T-4241 chose the model after it had
   seen the t4241 probe's values, so that probe is not a hold-out.
 - Owned cells (taken over from T-4241): probes/t4195-groupby-intransitive (24): Calc!C8, C9, C11, C15, C16, C17,
-  C20, C21, C23, C24, E46, E48, E49, E50, F8, F9, F11, F15, F16, F17, F20, F21, F23, F24; probes/t4088-groupby-
-  multifield (2): Calc!B11, B33; probes/t4241-groupby-intransitive-runs (140): Calc!B2:B3, B5, B9:B11, B14:B15,
+  C20, C21, C23, C24, E46, E48, E49, E50, F8, F9, F11, F15, F16, F17, F20, F21, F23, F24;
+  probes/t4088-groupby-multifield (2): Calc!B11, B33;
+  probes/t4241-groupby-intransitive-runs (140): Calc!B2:B3, B5, B9:B11, B14:B15,
   B17:B18, B21:B23, B25, B27, B29, B31:B33, B36:B39, B41, B43, B45, B47, C1:C3, C5:C12, C14:C15, C17:C28, C30:C34,
   C36:C41, C43, C45, C47, D2:D3, D5, D9:D11, D14:D15, D17:D18, D21:D23, D25, D27, D29, D31:D33, D36:D39, D41, D43,
   D45, D47, E3:E5, E9:E11, E13, E16, E22:E23, E25, E29, E32:E33, E36:E39, E43, E46, F2:F3, F5, F9:F11, F14:F15,

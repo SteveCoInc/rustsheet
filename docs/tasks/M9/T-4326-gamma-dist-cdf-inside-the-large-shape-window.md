@@ -7,7 +7,7 @@ status: todo
 priority: P2
 size: M
 tier: opus
-depends_on: [T-4308, T-4325]
+depends_on: [T-4308, T-4325, T-4350]
 campaign: visible
 ---
 
@@ -46,6 +46,14 @@ their current path.
   density, cdf and upper-tail triples at power-of-two shapes 256 to 4096 with a shape-2048 hold-out fixed before
   scoring. It also depends on T-4308, which reads the in-window exponent. Without T-4308 the cdf can only inherit
   the density's present miss.
+- T-4350 (gap triage 2026-11-05, statistics.md T-4350 bullet) found that up to 0.70a Excel's cdf is its own
+  density times x/a times an accurate series. That holds at 49 of 49 cached scale-1 pairs within 6 ulp, and A44 is
+  +0.4 ulp from that product. T-4350 moves P onto the density's chain up to a cut, which the cached cells place
+  in (0.70a, 0.7033a]. So A44 is expected to pass there, and this task then fits the cut with T-4325's sweep and
+  owns the visibly-off cdf just past it:
+  - probes/t3252-gamma-prefactor-sweep.case.json (1): Calc!A54 `GAMMA.DIST(269.8924,383.73,1,TRUE)` (0.7033a):
+    Excel 4.1650721231146273E-11, ours 4.1650721231146435E-11, true 4.1650721231146392E-11. Excel is 126 ulp from
+    its own density times x/a times the series, so the cdf has already left the density's prefactor there.
 - Cells of the same cases that other tasks own, not this one: the window densities A4:A40 (T-4308), the
   within-15-digit window cdfs A45:A60 and the sweep and hold-out cells T-4297 lists (Phase 1b), and POISSON.DIST far
   above the mean (T-4291).
@@ -54,6 +62,8 @@ their current path.
 - [ ] probes/t3252-gamma-prefactor-window Calc!A44 is within half a unit of Excel's 15th significant digit. Its
       known-failure line (`F probes/t3252-gamma-prefactor-window.case.json Calc!A44`) leaves eval/baseline/probes.txt,
       and `make eval-baseline` adds no new line in any suite.
+- [ ] probes/t3252-gamma-prefactor-sweep Calc!A54 is within half a unit of Excel's 15th significant digit, and its
+      known-failure line leaves eval/baseline/probes.txt.
 - [ ] No cell of probes/t3252-gamma-prefactor-window, -holdout, -holdout-2, -sweep, t4255-gamma-window-exact-ratio,
       t4290-gamma-window-large-pow2, t4325-gamma-window-cdf-pairs, or the CHISQ.DIST.RT and POISSON.DIST cells of
       ironcalc-calc becomes visibly off or worse in ulps.
@@ -77,7 +87,7 @@ their current path.
 
 ## Visible-parity stage
 Decision 0083/0114: Calc!A44 of probes/t3252-gamma-prefactor-window is visibly off (Excel 0.009845502476408533,
-ours ...544). The target is that cell within half a unit of Excel's 15th significant digit with no other cell of the
+ours ...544), and so is sweep Calc!A54 (T-4350's triage). The target is those cells within half a unit of Excel's 15th significant digit with no other cell of the
 listed cases newly visibly off. The bit-level residue of the other in-window cdfs stays with T-4297
 (`defer: phase-1b`).
 

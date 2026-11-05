@@ -1281,6 +1281,15 @@ on k/64, exact. Its findings:
   of `GAMMA.DIST(35,50,1,...)`, are -9.1E-16 and -8.7E-16 relative from the 50-digit values, and A44 shows it
   (Excel 0.009845502476408533, true 0.0098455024764085416). So the in-window prefactor (T-4296) also decides the
   cdf's 15th digit there (gap triage 2026-11-05).
+- T-4350 (gap triage 2026-11-05; docs/research/t4350/cdf_pairs.py, no fitted constant). Up to 0.70a, Excel's cdf is
+  its own density times x/a times an accurate series. On every scale-1 t3252 pair (density and cdf at the same x
+  and a, shapes 30 to 500) from 0.60a to 0.70a, 49 of 49, the cdf is within 6 ulp of Excel's density times
+  (x/a) P/(f x/a), where P and f are the 50-digit cdf and density. Against the true P the same cells are up to
+  267 ulp off: holdout A30 `GAMMA.DIST(310,500,1,TRUE)` is +267.3 ulp from P and -2.8 from that product, and
+  window A44 is +0.4 from it. Above 0.70a the product fails: sweep A54 (0.7033a, shape 383.73) +125.9 ulp, sweep
+  A36 (0.7063a) +23.5, holdout A38 (0.72a, shape 500) +56.7. So the cut is in (0.70a, 0.7033a] on these cells,
+  earlier than the 0.72a above. Seven of the cdfs in the band are visibly off in ours (holdout-2 A6, A18, A30, A32,
+  A36; sweep A20, A58), because ours builds P on `gamma_prefactor`, not on the density's chain (T-4350).
 T-4290 (probes/t4290-gamma-window-large-pow2, excel-graph 2026-11-05; docs/research/t4290/score.py) took
 power-of-two shapes 4096, 1024 and 256 at x/a = k/1024 (k 656 to 1556 step 4; A, B, C), the hold-out shape 2048 at
 k + 2 (D), and ladders across x/a = 2/3 at shape 3072 (E) and 3/2 at shape 2048 (F). At shape 4096 one ulp of the
