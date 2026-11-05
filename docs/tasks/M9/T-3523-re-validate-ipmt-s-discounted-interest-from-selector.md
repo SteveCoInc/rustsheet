@@ -3,7 +3,7 @@ id: T-3523
 title: "Re-validate IPMT's DISCOUNTED_INTEREST_FROM selector on a fresh hold-out sweep (decision 0188 R4)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
