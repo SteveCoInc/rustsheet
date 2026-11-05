@@ -470,6 +470,7 @@ C	probes/elapsed-huge-f-1900.case.json	9
 C	probes/elapsed-huge-g-1900.case.json	25
 C	probes/elapsed-huge-h-1900.case.json	21
 C	probes/elapsed-huge-i-1900.case.json	12
+C	probes/elapsed-minutes-fraction.case.json	21
 C	probes/elapsed-no-seconds-boundary.case.json	32
 C	probes/elapsed-positive-large-1900.case.json	17
 C	probes/elapsed-positive-large-1904.case.json	17
@@ -2684,6 +2685,7 @@ F	probes/convert-unit-names.case.json	Sheet1!B33
 F	probes/convert-unit-names.case.json	Sheet1!B961
 F	probes/convert-unit-names.case.json	Sheet1!B969
 F	probes/coup-calendar-edges.case.json	S!J12
+F	probes/elapsed-minutes-fraction.case.json	Sheet1!A21
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A29
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!A7
 F	probes/eng-convert-boolean-unit.case.json	Sheet1!B8
