@@ -3,7 +3,7 @@ id: T-3393
 title: "Explain AMORDEGRC left-over state around dynamic-array formulas (probes -ag, -ah)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -24,8 +24,28 @@ financial.md "AMORDEGRC below period 1".
   Excel 485, ours 132)
 
 ## Acceptance criteria
-- [ ] A probe of an error element in a lifted call (`{1,-1,0.5}`) is added. More probes tell where a dynamic-array formula (and the charges inside it) sits in the order; -ag and -ah pass.
-- [ ] `make check` green; reviewers approve.
+- [x] A probe of an error element in a lifted call (`{1,-1,0.5}`) is added. More probes tell where a dynamic-array formula (and the charges inside it) sits in the order; -ag and -ah pass.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- **Explained:** a dynamic-array formula is not special. Certain function calls empty the left-over value, at the
+  point Excel evaluates them and after they have read their arguments. Among them are SEQUENCE, SORT, UNIQUE,
+  FILTER, XLOOKUP, the array-shaping functions, TEXTJOIN, CONCAT, MMULT, MINVERSE, LINEST, MODE.MULT and a called
+  LAMBDA. TRANSPOSE, `={1,2}`, MDETERM, LET, INDEX, MATCH, SUMPRODUCT, ROWS and RAND keep it. Within a formula the
+  calls run left to right. The full lists are in financial.md "AMORDEGRC below period 1".
+- **Probes:** 70 new excel-graph workbooks, probes/amordegrc-fraction-state-aj to -da (2026-11-05). They include the
+  lifted error element `{1,-1,0.5}` (-as, -at: 776, `#NUM!`, 776, which ours already gave).
+- **-ai does not reproduce:** it was 0 on 2026-10-30. Refilled today from the same input bytes it is 485, and so is
+  its copy -av. It is recorded as not reproducible, like gen-m9 A76.
+- **Engine:** `Function::empties_amor_left_over` (kinds.rs) lists the calls.
+  - `Model::empty_amor_left_over` empties the value after each of those calls. This happens in `evaluate_function`
+    and in the reference-form paths of XLOOKUP, TAKE, DROP and VSTACK, and after a called LAMBDA (`call_prepared`).
+  - The anchors run before the Excel-order chain. Each anchor's run now records the value it left
+    (`Evaluation::anchor_amor`), and `run_excel_order` puts that value back at the anchor's place.
+- **Eval delta:** probes known failures 4662 -> 4661, from 2 fixed (-ag, -ah) and 1 new-coverage failure.
+  - The new failure is -cc A2, `SUM(LINEST({1,2,3},{1,2,4}))`, 1 ulp off and not visibly off.
+  - 0 regressions; every other suite is unchanged.
+- **Follow-up:** T-4289 asks whether the same calls are what empties WEEKNUM's stale state.

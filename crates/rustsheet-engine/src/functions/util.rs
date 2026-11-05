@@ -531,9 +531,18 @@ impl Model {
             // top-left cells (`SUM(TRIMRANGE(A1:B5,{0;1}))` is 10 with A1 = 5;
             // probes/trimrange-lift-sources D27).
             Function::Trimrange => self.trimrange_reference(args, cell, true),
-            // So does a lifted TAKE or DROP over a range (T-1838).
-            Function::Take => self.take_drop_reference(args, cell, Edge::Take, true),
-            Function::Drop => self.take_drop_reference(args, cell, Edge::Drop, true),
+            // So does a lifted TAKE or DROP over a range (T-1838), which still empties
+            // AMORDEGRC's left-over value (probes/amordegrc-fraction-state-bp, -bq).
+            Function::Take | Function::Drop => {
+                let edge = if *kind == Function::Take {
+                    Edge::Take
+                } else {
+                    Edge::Drop
+                };
+                let value = self.take_drop_reference(args, cell, edge, true);
+                self.empty_amor_left_over();
+                value
+            }
             _ if kind.picks_reference() => match self.evaluate_reference_form(kind, args, cell) {
                 Some(result) => RefArg::from(result),
                 None => self.reference_arg_reading(node, blanks, cell),
