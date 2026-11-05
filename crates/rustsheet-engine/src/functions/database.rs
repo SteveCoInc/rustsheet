@@ -205,12 +205,17 @@ impl Model {
 
     /// Whether `field` is a single-cell reference whose cell holds an error, written directly or
     /// reached through a defined name, `INDEX(…)`, `@` or `IF(TRUE,…)`: all give `#VALUE!` in
-    /// Excel (probes/m9-database-field-error-forms, excel-graph 2026-11-04).
+    /// Excel (probes/m9-database-field-error-forms, excel-graph 2026-11-04). Other
+    /// reference-returning functions (OFFSET, CHOOSE, LET variables) are unprobed and keep the
+    /// cell's own error. The IF condition is read once more here than in the main path.
     fn db_field_is_error_cell(&mut self, field: Option<&Node>, cell: CellReferenceIndex) -> bool {
         let Some(
             node @ (Node::ReferenceKind { .. }
             | Node::DefinedNameKind(_)
-            | Node::FunctionKind { .. }
+            | Node::FunctionKind {
+                kind: Function::Index | Function::If,
+                ..
+            }
             | Node::ImplicitIntersection { .. }),
         ) = field.map(Node::ungrouped)
         else {

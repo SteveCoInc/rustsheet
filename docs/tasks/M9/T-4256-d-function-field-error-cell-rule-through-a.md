@@ -18,7 +18,7 @@ T-4247 makes a bare single-cell reference to an error cell `#VALUE!` (`db_field_
 
 ## Acceptance criteria
 - [x] Probe cells for the four forms (and the self-referencing field) exist with oracle values.
-- [x] Ours matches them; eval baseline shrinks, no regressions.
+- [x] Ours matches them; no regressions (baseline gains only the new passing case, no known failure was listed).
 - [x] `make check` green; reviewers approve.
 
 ## Out of scope
