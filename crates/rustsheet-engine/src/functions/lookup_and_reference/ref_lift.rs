@@ -28,8 +28,8 @@ pub(crate) enum ElementCost {
     /// One visit: ROW, COLUMN, AREAS, CELL, ISFORMULA, N and T read no cells or one.
     Unit,
     /// The cells of the element's references inside the used area, times this many walks:
-    /// SUBTOTAL, COUNTIF, SUMIF, AVERAGEIF and COUNTBLANK walk them once, SUMIFS, COUNTIFS and
-    /// MAXIFS once per criteria pair.
+    /// SUBTOTAL, COUNTIF, SUMIF, AVERAGEIF and COUNTBLANK walk them once, SUMIFS, COUNTIFS,
+    /// AVERAGEIFS, MAXIFS and MINIFS once per criteria pair.
     Cells(u64),
 }
 
@@ -49,11 +49,12 @@ impl Function {
     /// (probes/reference-lift-consumers E57-E78, E97, E109, E165, E169, E185; -b1c E85-E93;
     /// -b1d E97; -b2 E125-E133, E177, E193, E197). COUNTIFS, AVERAGEIF and MAXIFS too:
     /// `COUNTIFS(OFFSET(A1,{0;1},0),">0")` spills 1, 1, `AVERAGEIF(OFFSET(A1,0,0,{1;2}),">0")`
-    /// 1, 50.5 (probes/t2065-lift-countifs, -averageif, -maxifs). AVERAGEIFS and MINIFS are
-    /// unprobed and stay the value view.
+    /// 1, 50.5 (probes/t2065-lift-countifs, -averageif, -maxifs). AVERAGEIFS and MINIFS lift
+    /// like SUMIFS and MAXIFS: `MINIFS(OFFSET(A1,{0;1},0),OFFSET(A1,{0;1},0),">0")` spills 1,
+    /// 100, and a criteria range alone lifts too (probes/t4396-lift-*).
     pub(crate) fn per_reference_element(&self, count: usize) -> Option<PerElement> {
         let first: fn(usize) -> bool = |index| index == 0;
-        // One walk per criteria pair (SUMIFS, COUNTIFS, MAXIFS).
+        // One walk per criteria pair (SUMIFS, COUNTIFS, AVERAGEIFS, MAXIFS, MINIFS).
         let per_pair = ElementCost::Cells(u64::try_from(count / 2).unwrap_or(u64::MAX).max(1));
         let (takes_reference, cost): (fn(usize) -> bool, ElementCost) = match self {
             Function::Row
@@ -69,8 +70,10 @@ impl Function {
             Function::Subtotal => (|index| index > 0, ElementCost::Cells(1)),
             // The criteria range and the sum range.
             Function::Sumif | Function::Averageif => (|index| index != 1, ElementCost::Cells(1)),
-            // The sum (max) range and every criteria range.
-            Function::Sumifs | Function::Maxifs => (|index| index == 0 || index % 2 == 1, per_pair),
+            // The sum (average, max, min) range and every criteria range.
+            Function::Sumifs | Function::Averageifs | Function::Maxifs | Function::Minifs => {
+                (|index| index == 0 || index % 2 == 1, per_pair)
+            }
             _ => return None,
         };
         Some(PerElement {
