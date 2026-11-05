@@ -119,3 +119,20 @@ and T.INV's centre estimate.
   in the envelope on both measures, 2 on the math measure only, and 7 are known error-vs-number mismatches (T-3554)
   where t·t overflows, `excel_t_density` returns None and the old fallback runs. The exact constant is plain math, not a
   fit; no keep-matched branch.
+
+## Landing notes
+- PR #3422, head 79b71dddccf69deac509ccdbf3ec1a0a6ce306b9, draft. CI red on one job, `hygiene`, governance step: "protected
+  paths changed without a decision record in docs/decisions/: quality/fitted.json" (run 42111551613, job 127540415990).
+  Everything else was green on the previous head 1f4e8e1. On 79b71dd security and design approved; Excel-fidelity
+  round 2 was still running when the window closed.
+- History: round 1 (head 1f4e8e1): security and design APPROVE; Excel-fidelity REQUEST_CHANGES (two MAJORs, records
+  only): (1) the R4 block (now the "R4" bullet of the Outcome); (2) the log-branch cut `xx > n` is a fitted cut-point,
+  so it is now `T_LOG_BRANCH_CUT` with a `FITTED(T-2513, 2406 cells, ...)` tag, and `check_fitted.py --update` raised
+  quality/fitted.json for loader.rs from 1 to 2. That update is what trips governance.
+- Next step: `make new-decision TITLE="Record T-2585's fitted log-branch cut of the t density"`. Cite decision 0188 R4.3,
+  the cut's evidence (in-sample a1 + a2, 2,406 cells; hold-outs hold2 573 and the verifier's 505 exact for cut 1,
+  against 480/391 for R's 0.2 and 520/417 for no log branch) and the R4 table in the Outcome. Commit it with the PR,
+  push once, get the Excel-fidelity verdict on that head (design and security need re-running only on the new head),
+  then mark the PR ready and enqueue.
+- Do not drop the FITTED tag to dodge the decision record: the reviewer showed the cut was chosen by scoring, so it is
+  a kind (a) fit.
