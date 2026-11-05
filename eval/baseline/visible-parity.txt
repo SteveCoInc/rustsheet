@@ -183,6 +183,7 @@ probes/t2576-error-type-cell-paired.case.json	10
 probes/t2577-indirect-ref-array.case.json	6
 probes/t2657-pv-irr-div0.case.json	22
 probes/t2753-gamma-density-ratio-sweep.case.json	6
+probes/t2775-ztest-single-cell-routes.case.json	3
 probes/t2829-ftest-a306-shapes.case.json	8
 probes/t2829-ftest-ln-beta-grid.case.json	24
 probes/t2982-gamma-inv-huge-shape.case.json	2

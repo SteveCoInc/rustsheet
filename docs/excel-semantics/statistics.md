@@ -6920,3 +6920,6 @@ these:
   `F.DIST.RT(20,2,1E8)`: Excel 2.061161907818132E-9, POWER form 2.061161865881937E-9.
 
 Tasks: decision 0267, T-4053, T-4055, T-4056.
+
+## Z.TEST: a single cell reached through INDEX, OFFSET, IF or parentheses is still a reference (T-2775)
+Rule: the "array with no number is `#N/A`" rule of the T-2256 Z.TEST entry holds for a one-cell reference however it is reached. With A1 text and A2 TRUE, `Z.TEST(A1,1)`, `Z.TEST(A2,1)`, `Z.TEST(INDEX(A1:A5,1),1)`, `Z.TEST(INDEX(A1:A5,2),1)`, `Z.TEST(OFFSET(A1,0,0),1)`, `Z.TEST((A1),1)` and `Z.TEST(IF(TRUE,A1),1)` are all `#N/A`, and an unused extra argument does not change it; a cell holding a number is `#DIV/0!` through any route (one value). Ours is `#VALUE!` or `#DIV/0!` for the INDEX and IF routes (T-4286). Evidence: probes/t2775-ztest-single-cell-routes (excel-graph, 2026-11-05). All 41 gen-m9 cells T-2470 owned already pass.
