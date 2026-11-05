@@ -374,11 +374,36 @@ Tasks: T-0935
 Rule: a `.0`, `.00` or `.000` after a minutes token with no seconds token shows the fraction of the hidden seconds, whatever
 the hours token: for 2:59:59.4, `[h]:mm.0` is "2:59.4", `[h]:mm.00` "2:59.40", `h:mm.0` "2:59.4", `mm.0` "59.4", `[m].0`
 "179.4", `[mm].0` "179.4", `[h].0` and `h.0` "2.4", `[s].0` "10799.4", `d [h]:mm.0` "0 108:59.4", `[h]:mm.0 \h`
-"2:59.4 h". Four digits (`[h]:mm.0000`) and an AM/PM beside it (`[h]:mm.0 AM/PM`) are `#VALUE!`. Engine matches all of it
-except `TEXT(1+0.25/86400,"[h]:mm.0")`: Excel "24:00.2", ours "24:00.3" (T-4323).
+"2:59.4 h". Four digits (`[h]:mm.0000`) and an AM/PM beside it (`[h]:mm.0 AM/PM`) are `#VALUE!`. Engine matches all of it,
+`TEXT(1+0.25/86400,"[h]:mm.0")` "24:00.2" included since T-4323 (see "Fraction digits of a second at a tie").
 Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-seconds-boundary A32, excel-graph 2026-11-05.
 Status: VERIFIED
 Tasks: T-2684, T-4323
+
+## Fraction digits of a second at a tie (T-4323, VERIFIED for serials of 1 or more)
+Rule: with `.0`, `.00` or `.000` shown, the clock (`h`, `mm`, `ss`) and the fraction digits are not the serial rounded to
+the shown digit but the half-step register truncated: `y = x + 0.5/(86400*scale)`, then `floor(frac(y)*86400*scale)` in
+plain doubles (`frac(y)*86400` first, then `*scale`), so the float error of `frac(y)` decides a tie, and not in one
+direction: `1+0.25/86400` under `[h]:mm.0` is "24:00.2" (2.99999999997 units), `1+0.55/86400` "24:00.5", but
+`1+0.05/86400` "24:00.1" and `45000+0.85/86400` under `h:mm:ss.0` "0:00:00.9". It is the same step the `General` register
+uses ("`General` in a date section"). It holds for every probed format (`[h]:mm.0`, `h:mm:ss.0`, `[s].0`, `s.00`,
+`[h]:mm:ss.000`, `[m]:ss.00`, `mm:ss.0`, `h:mm:ss.000`) at serials of 1 or more: the tie probe 100 of 100 such cells,
+fresh sweeps 1-3 (each generated after a freeze) 274 of 276; the engine's earlier rounding of the value got 34 and 139.
+Not settled:
+- Serials below 1 (d = 0): Excel rounds many ties up where the register truncates below (`TEXT(0.015/86400,"s.00")` is
+  "0.02", the register 1.9999999999999998; `TEXT(21.2685/86400,"[h]:mm:ss.000")` is "0:00:21.268" from 21268.999999999996).
+  No operation order, 64-bit intermediate, 15-digit or 1-ulp snap tried fits both (98 of 150 such cells; the engine's
+  earlier rounding 110); fresh sweep 2 refuted the 15-digit snap (`r15`) and the `1+2^-52` snap each fitted before it (T-4332).
+- The elapsed `[s]` count before the fraction is not `floor(y*86400)` nor always the value rounded to the shown digit
+  (the engine's count): 3497.95 s is "3497.9" and `45000+2740.95/86400` "3888002740.9" (sweep-2 A27, A9; ours one more),
+  yet `45000+0.95/86400` is "3888000001.9" (ties A90, which the rounded value gets) (T-4333).
+- A few ties at serials of 1 or more still miss: `TEXT(30+39474.05/86400,"mm:ss.0")` is "57:54.0" while the register is
+  exactly 394741 (sweep-3 A2).
+Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
+t4323-fraction-sweep-3 (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323.
+Status: VERIFIED (serials of 1 or more); OPEN below 1 and for the `[s]` count
+Implemented in: `half_step_split` and `FractionalSeconds` (formatter/elapsed.rs).
+Tasks: T-4323, T-4332, T-4333
 
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):

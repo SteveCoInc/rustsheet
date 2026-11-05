@@ -14,13 +14,20 @@ pub(super) enum ElapsedUnit {
 }
 
 /// A non-negative serial counted in the shown fraction of a second (`.0`, `.00`, `.000`). Excel
-/// rounds the whole value to that precision and splits it from there, so the clock, elapsed and
-/// fraction tokens agree: `[h]:m:s.000` on 3.14159 is "75:23:53.376", `[hh]:mm:ss.0` "75:23:53.4",
-/// `[s].000` "271433.376" (an elapsed count before a fraction truncates instead of rounding);
-/// poi/ElapsedFormatTests A2-A7, number-formats.md "Elapsed-time tokens".
+/// rounds the whole value to that precision for the elapsed counts: `[h]:m:s.000` on 3.14159 is
+/// "75:23:53.376", `[hh]:mm:ss.0` "75:23:53.4", `[s].000` "271433.376" (an elapsed count before a
+/// fraction truncates instead of rounding); poi/ElapsedFormatTests A2-A7, number-formats.md
+/// "Elapsed-time tokens". With fraction digits the clock, the day and the fraction digits come
+/// from the half-step register instead ([`half_step_split`]), whose float error decides a tie:
+/// `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2" (probes/t4323-fraction-ties, number-formats.md
+/// "Fraction digits of a second at a tie").
 pub(super) struct FractionalSeconds {
     /// The value in units of `1/scale` second, rounded.
     units: f64,
+    /// The whole days the clock and date read.
+    days: f64,
+    /// The units within that day the clock and the fraction digits read, whole.
+    day_units: f64,
     scale: f64,
     digits: usize,
 }
@@ -30,8 +37,19 @@ impl FractionalSeconds {
     /// 9999-12-31, so the units stay far below 2^53 and count exactly.
     pub(super) fn new(value: f64, digits: usize) -> Option<Self> {
         let scale = [1.0, 10.0, 100.0, 1000.0].get(digits).copied()?;
+        let units = (value * SECONDS_PER_DAY_F64 * scale).round();
+        let per_day = SECONDS_PER_DAY_F64 * scale;
+        let (days, day_units) = if digits == 0 {
+            // Whole seconds keep the rounded value: only fraction digits have the tie evidence.
+            ((units / per_day).floor(), units % per_day)
+        } else {
+            let (days, day_units) = half_step_split(value, scale);
+            (days, day_units.floor())
+        };
         Some(Self {
-            units: (value * 86400.0 * scale).round(),
+            units,
+            days,
+            day_units,
             scale,
             digits,
         })
@@ -39,7 +57,7 @@ impl FractionalSeconds {
 
     /// Hours, minutes and seconds of the time of day after rounding.
     pub(super) fn clock(&self) -> (f64, f64, f64) {
-        let seconds = (self.units % (86400.0 * self.scale) / self.scale).floor();
+        let seconds = (self.day_units / self.scale).floor();
         (
             (seconds / 3600.0).floor(),
             (seconds % 3600.0 / 60.0).floor(),
@@ -49,7 +67,7 @@ impl FractionalSeconds {
 
     /// The whole days after rounding: a time just short of midnight rolls into the next date.
     pub(super) fn days(&self) -> i64 {
-        (self.units / (86400.0 * self.scale)).floor() as i64
+        self.days as i64
     }
 
     /// The whole elapsed count of `unit` after rounding.
@@ -66,7 +84,7 @@ impl FractionalSeconds {
     pub(super) fn digits_text(&self) -> String {
         format!(
             "{:0>width$.0}",
-            self.units % self.scale,
+            self.day_units % self.scale,
             width = self.digits
         )
     }
@@ -215,15 +233,26 @@ pub(super) fn date_section_register(
         return value;
     }
     let scale = 10f64.powi(i32::try_from(fraction_digits.unwrap_or(0)).unwrap_or(0));
-    let shifted = value + 0.5 / (SECONDS_PER_DAY_F64 * scale);
-    let day_fraction = shifted - shifted.floor();
     // The parser only makes `.0`, `.00` and `.000`, so with fraction digits `scale` is 10 or more.
     let modulus = if fraction_digits.is_some() {
         scale
     } else {
         60.0
     };
-    (day_fraction * SECONDS_PER_DAY_F64 * scale) % modulus
+    half_step_split(value, scale).1 % modulus
+}
+
+/// Excel's half-unit rounding step on a non-negative serial: `y = value + 0.5/(86400*scale)`,
+/// split into its whole days and the units of `1/scale` second within the day, `frac(y)*86400*
+/// scale`, unfloored and with the step's float error left in. The `General` register
+/// ([`date_section_register`]) prints those units; the clock and the fraction digits of a second
+/// truncate them, so at a tie the float error of `frac(y)` decides: `1+0.25/86400` under
+/// `[h]:mm.0` gives 2.99999999997 units and shows ".2" (probes/t4323-fraction-ties: all 100
+/// cells with a serial of 1 or more, excel-graph 2026-11-05, T-4323).
+fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
+    let shifted = value + 0.5 / (SECONDS_PER_DAY_F64 * scale);
+    let days = shifted.floor();
+    (days, (shifted - days) * SECONDS_PER_DAY_F64 * scale)
 }
 
 /// `x` rounded to `1/scale`; a magnitude whose scaled value overflows is already integral, and
