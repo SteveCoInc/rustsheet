@@ -3,7 +3,7 @@ id: T-3641
 title: "Re-probe on excel-graph whether the FORECAST.ETS family computes a number today (unblock check for T-2425)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
