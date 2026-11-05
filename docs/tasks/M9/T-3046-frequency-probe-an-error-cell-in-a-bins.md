@@ -3,7 +3,7 @@ id: T-3046
 title: "FREQUENCY: probe an error cell in a bins range, a referenced numeric-text bin, and re-measure corpus-bench/53062 (T-2636 follow-up)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
