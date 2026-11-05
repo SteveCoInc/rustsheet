@@ -3,7 +3,7 @@ id: T-4383
 title: "Add upstream FINANCIAL/1682.xlsx (coupon dates on the 29th and 30th) to calc_tests"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
