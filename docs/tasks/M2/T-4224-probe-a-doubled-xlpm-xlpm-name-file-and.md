@@ -3,7 +3,7 @@ id: T-4224
 title: "Probe a doubled _xlpm._xlpm. name (file and typed) and a mixed LET(x,2,_xlpm.x*3), then mark the R1C1-typed quoted name on the node, not in its text"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
