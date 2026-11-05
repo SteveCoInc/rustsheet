@@ -3,7 +3,7 @@ id: T-4288
 title: "Typed text reads _xlpm. as part of the name, and a formula typed in R1C1 mode carries its quoted name on the node, not in A1 text"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
