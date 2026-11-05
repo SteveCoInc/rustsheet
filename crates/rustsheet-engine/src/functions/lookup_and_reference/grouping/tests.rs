@@ -628,3 +628,26 @@ fn unreached_names_the_leaf_no_row_reaches() {
     );
     assert_eq!(grouping.unreached(), [2]);
 }
+
+/// T-4378: Bx, Cy, Cy, Ax, By build the classes A{x} and B{x, y}; rows 2 and 3 (C,y) reach class A
+/// (C = A) and then no leaf, so they keep only that class, which a PIVOTBY subtotal of A counts
+/// (probes/t4358-pivotby-unreached-column-leaf Calc!D1: the `ab` subtotal of q is `2, 3`).
+#[test]
+fn reached_classes_keep_a_row_that_reaches_no_leaf() {
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    let keys = vec![
+        vec![b(), x()],
+        vec![c(), y()],
+        vec![c(), y()],
+        vec![a(), x()],
+        vec![b(), y()],
+    ];
+    let grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).ok();
+    let reached = grouping.as_ref().map(|g| g.reached_classes(5));
+    let depths: Option<Vec<usize>> = reached.map(|r| r.iter().map(|path| path.len()).collect());
+    assert_eq!(depths, Some(vec![2, 1, 1, 2, 2]));
+    let a_prefix = grouping.as_ref().map(|g| g.prefix(0, 1).to_vec());
+    let row_2 = grouping.as_ref().map(|g| g.reached_classes(5)[1].to_vec());
+    assert_eq!(a_prefix, row_2);
+}
