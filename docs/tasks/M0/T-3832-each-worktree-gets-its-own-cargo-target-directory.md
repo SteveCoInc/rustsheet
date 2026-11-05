@@ -3,7 +3,7 @@ id: T-3832
 title: "Each worktree gets its own Cargo target directory"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -22,12 +22,24 @@ wrong engine, and decision 0245's new-case-owner gate caught it only by luck bef
 fingerprints by package, and the `rustsheet-eval` release binary and its output paths are shared.
 
 ## Acceptance criteria
-- [ ] `docs/process/agent-workflow.md` (and the work-loop skill where agents run in parallel, e.g.
+- [x] `docs/process/agent-workflow.md` (and the work-loop skill where agents run in parallel, e.g.
       subagents with `isolation: worktree`) says that each worktree uses its own target directory,
       and why.
-- [ ] `make check-fast` / `make eval-gates` refuse, or warn loudly, when `CARGO_TARGET_DIR` points
+- [x] `make check-fast` / `make eval-gates` refuse, or warn loudly, when `CARGO_TARGET_DIR` points
       outside the current worktree. Or record in the Outcome why a guard is not worth it.
-- [ ] A decision record if a protected path changes; `make check-fast` green; reviewers approve.
+- [x] A decision record if a protected path changes; `make check-fast` green; reviewers approve.
 
 ## Out of scope
 - Disk-space tuning of the session containers.
+
+## Outcome
+- `scripts/target_dir_guard.py` (tests in `scripts/test_target_dir_guard.py`) asks Cargo for the
+  workspace's target directory (`cargo metadata --no-deps --offline`, so `CARGO_TARGET_DIR`,
+  `CARGO_BUILD_TARGET_DIR` and `.cargo/config.toml` all count; the environment, then `target/`,
+  when Cargo cannot answer), resolves symlinks and fails loudly when it lies outside the worktree.
+- `make target-dir-guard` runs it; `make build` (so every eval target and `make eval-gates`) and
+  `make check-fast` depend on it. No override switch.
+- `docs/process/agent-workflow.md` gains a "Worktrees" paragraph (one target directory per
+  worktree, and why); the work-loop skill's step 4 points subagents with `isolation: worktree` at
+  it. Decision 0285 records the protected-path change.
+- Eval delta: none (process and tooling only).
