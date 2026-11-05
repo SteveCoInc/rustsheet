@@ -71,7 +71,7 @@ impl Model {
     ///   `C1` and `{1,2}` keep it);
     /// - CONCAT and TEXTJOIN unless a joined argument is a reference (`CONCAT("a",1)` and
     ///   `CONCAT(C1&"")` empty it; `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))` and
-    ///   `TEXTJOIN(",",1,C1,"x")` keep it; TEXTJOIN's delimiter and ignore_empty do not count).
+    ///   `TEXTJOIN(",",1,C1,"x")` keep it; TEXTJOIN's delimiter and `ignore_empty` do not count).
     ///
     /// FILTER, TRANSPOSE, OFFSET, INDEX, SEQUENCE, XLOOKUP, LET and LAMBDA keep it. Whether the
     /// emptying comes before or after the call's own arguments run is unprobed (here: after).
