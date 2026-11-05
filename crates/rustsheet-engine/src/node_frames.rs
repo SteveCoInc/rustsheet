@@ -122,11 +122,9 @@ impl Model {
             // Not bound by LET — look up as a defined-name Lambda.
             // Prefer sheet-local (current sheet) over global (scope = None),
             // matching Excel's name resolution order.
-            let name_lower = name.to_lowercase();
-            let found = self
-                .parsed_defined_names
-                .get(&(Some(cell.sheet), name_lower.clone()))
-                .or_else(|| self.parsed_defined_names.get(&(None, name_lower)))
+            let names = &self.parsed_defined_names;
+            let found = crate::name_key::get_name(names, Some(cell.sheet), name)
+                .or_else(|| crate::name_key::get_name(names, None, name))
                 .cloned();
             match found {
                 Some(ParsedDefinedName::LambdaDefinition(definition)) => {

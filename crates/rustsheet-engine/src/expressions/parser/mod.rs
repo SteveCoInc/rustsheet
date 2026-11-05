@@ -118,7 +118,7 @@ pub struct Parser {
     /// Each defined name's position in `defined_names`, by its scope and lower-cased name (the
     /// key `Model::parsed_defined_names` uses), the first of names that fold alike: a lookup is
     /// one probe, not a scan with two lower-casings per name (T-3195).
-    name_index: HashMap<(Option<u32>, String), usize>,
+    name_index: HashMap<crate::name_key::NameKey, usize>,
     context: CellReferenceRC,
     tables: HashMap<String, Table>,
     locale: &'static Locale,

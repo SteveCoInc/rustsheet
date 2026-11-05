@@ -231,7 +231,7 @@ impl Model {
         scope: Option<u32>,
     ) -> Option<&ParsedDefinedName> {
         let bare = crate::expressions::utils::bare_defined_name(name);
-        self.parsed_defined_names.get(&(scope, bare.to_lowercase()))
+        crate::name_key::get_name(&self.parsed_defined_names, scope, bare)
     }
 
     /// The body of the defined name `node` when it is a formula (T-0158), shared, not copied;
@@ -540,7 +540,7 @@ impl Model {
 
         if name_upper != new_name_upper || scope != new_scope {
             for key in self.parsed_defined_names.keys() {
-                if key.1.to_uppercase() == new_name_upper && key.0 == new_scope {
+                if key.lower().to_uppercase() == new_name_upper && key.scope() == new_scope {
                     return Err("Name: Defined name already exists".to_string());
                 }
             }

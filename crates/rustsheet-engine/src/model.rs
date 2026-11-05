@@ -140,7 +140,7 @@ pub struct Model {
     /// borrowed mutably, without copying it.
     pub parsed_formulas: Vec<Vec<crate::formula_cells::ParsedFormula>>,
     /// A list of parsed defined names
-    pub(crate) parsed_defined_names: HashMap<(Option<u32>, String), ParsedDefinedName>,
+    pub(crate) parsed_defined_names: HashMap<crate::name_key::NameKey, ParsedDefinedName>,
     /// An optimization to lookup strings faster
     pub(crate) shared_strings: HashMap<String, usize>,
     /// An instance of the parser
