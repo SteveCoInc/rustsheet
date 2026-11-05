@@ -1884,6 +1884,8 @@ C	probes/t3299-date-text-glued-month-3.case.json	363
 C	probes/t3302-text-funcs-arrays.case.json	21
 C	probes/t3304-collation-multi-letter-accents.case.json	1896
 C	probes/t3308-intersection-function-operands.case.json	25
+C	probes/t3312-xirr-guess-dates-weibull.case.json	61
+C	probes/t3312-xirr-xnpv-inner-calls.case.json	64
 C	probes/t3317-xlookup-scalar-return.case.json	20
 C	probes/t3334-criteria-operand-forms.case.json	983
 C	probes/t3335-textbefore-overlapping-instances.case.json	78
@@ -2143,6 +2145,11 @@ C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
 C	probes/t4258-collation-lone-mark-astral.case.json	105
 C	probes/t4270-collation-c1-controls.case.json	548
+C	probes/t4271-lotus-dot-one-side-lf-before.case.json	5
+C	probes/t4271-lotus-dot-one-side-space-after-dotdot.case.json	5
+C	probes/t4271-lotus-dot-one-side-space-after.case.json	5
+C	probes/t4271-lotus-dot-one-side-space-before-dotdot.case.json	5
+C	probes/t4271-lotus-dot-one-side-space-before.case.json	5
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -4435,6 +4442,7 @@ F	probes/t3185-m9-statistical-argument-kinds-b.case.json	Calc!A94
 F	probes/t3185-m9-statistical-argument-kinds-b.case.json	Calc!B89
 F	probes/t3185-m9-statistical-argument-kinds-b.case.json	Calc!B94
 F	probes/t3185-m9-statistical-argument-kinds-c.case.json	Calc!A69
+F	probes/t3312-xirr-xnpv-inner-calls.case.json	Calc!A30
 F	probes/t3347-irr-conventional-num.case.json	P!A10
 F	probes/t3347-irr-conventional-num.case.json	P!A11
 F	probes/t3347-irr-conventional-num.case.json	P!A12
