@@ -3,7 +3,7 @@ id: T-4384
 title: "Add upstream TEXT/NUMBERVALUE.xlsx to calc_tests"
 milestone: M5
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -32,10 +32,13 @@ T-1517, T-0965). Check cells against the workbook's own cached values, never aga
 workbook out. Record any new quirk in `docs/excel-semantics/text.md`.
 
 ## Acceptance criteria
-- [ ] The workbook passes in full and is in calc_tests (`rustsheet-eval show` on it shows every cell passing;
+- [x] The workbook passes in full and is in calc_tests (`rustsheet-eval show` on it shows every cell passing;
       baseline updated, 0 regressions), or it is left out with a filed follow-up task naming its failing cells (or
       with a note that it is not Excel-authored).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Porting upstream's code changes (ours already follows Excel's evidence for these classes).
+
+## Outcome
+Added upstream `TEXT/NUMBERVALUE.xlsx` (ironcalc `ae1fccd3`) to calc_tests. It is Excel-authored (Microsoft Macintosh Excel 16.03); all 22 cells pass with no engine change. ironcalc-calc: 22 new cells, 22 passing; no regressions, no new quirk.
