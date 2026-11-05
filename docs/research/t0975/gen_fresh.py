@@ -17,6 +17,20 @@ def lu(rng: random.Random, lo: float, hi: float) -> float:
     return math.exp(rng.uniform(math.log(lo), math.log(hi)))
 
 
+def write_case(path: str, description: str, tags: list[str], cells: dict[str, str]) -> None:
+    """Writes a pending probes case (one `Calc` sheet), as the probe fresh sweeps share (T-1749 reuses it)."""
+    case = {
+        "format": "rustsheet-case/v1",
+        "description": description,
+        "tags": tags,
+        "sheets": [{"name": "Calc", "cells": cells}],
+        "expected": {},
+    }
+    with open(path, "w", encoding="utf-8") as out:
+        json.dump(case, out, indent=1)
+        out.write("\n")
+
+
 def g(v: float) -> str:
     return repr(float(f"{v:.15g}"))
 
@@ -38,17 +52,12 @@ def main() -> None:
         cells[f"A{row}"] = f"=NORM.DIST({g(x)},{g(m)},{g(s)},FALSE)"
         cells[f"B{row}"] = f"=NORMDIST({g(x)},{g(m)},{g(s)},FALSE)"
         row += 1
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": "T-0975 fresh sweep (R4.2, after the freeze): normal densities at log-uniform points.",
-        "tags": ["M9", "probe", "statistics", "T-0975", "sweep", "r4-fresh"],
-        "sheets": [{"name": "Calc", "cells": cells}],
-        "expected": {},
-    }
-    with open(sys.argv[1], "w", encoding="utf-8") as out:
-        json.dump(case, out, indent=1)
-        out.write("\n")
-
+    write_case(
+        sys.argv[1],
+        "T-0975 fresh sweep (R4.2, after the freeze): normal densities at log-uniform points.",
+        ["M9", "probe", "statistics", "T-0975", "sweep", "r4-fresh"],
+        cells,
+    )
 
 if __name__ == "__main__":
     main()

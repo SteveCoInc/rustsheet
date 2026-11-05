@@ -6,14 +6,12 @@ occur. Literals have 15 significant digits (Excel reads a typed literal to 15, T
 Usage: python3 gen_fresh.py OUT.case.json
 """
 
-import json
-import math
 import random
 import sys
+from pathlib import Path
 
-
-def lu(rng: random.Random, lo: float, hi: float) -> float:
-    return math.exp(rng.uniform(math.log(lo), math.log(hi)))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "t0975"))
+from gen_fresh import lu, write_case  # noqa: E402  (T-0975's sweep helpers)
 
 
 def main() -> None:
@@ -25,17 +23,12 @@ def main() -> None:
         n = rng.randint(2, 12)
         xs = [f"{offset + spread * rng.uniform(-1, 1):.15g}" for _ in range(n)]
         cells[f"A{row}"] = f"=DEVSQ({','.join(xs)})"
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": "T-1749 fresh sweep (R4.2, after the freeze): DEVSQ of literal data, with and without cancellation.",
-        "tags": ["M9", "probe", "statistics", "T-1749", "sweep", "r4-fresh"],
-        "sheets": [{"name": "Calc", "cells": cells}],
-        "expected": {},
-    }
-    with open(sys.argv[1], "w", encoding="utf-8") as out:
-        json.dump(case, out, indent=1)
-        out.write("\n")
-
+    write_case(
+        sys.argv[1],
+        "T-1749 fresh sweep (R4.2, after the freeze): DEVSQ of literal data, with and without cancellation.",
+        ["M9", "probe", "statistics", "T-1749", "sweep", "r4-fresh"],
+        cells,
+    )
 
 if __name__ == "__main__":
     main()
