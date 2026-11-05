@@ -3,7 +3,7 @@ id: T-2745
 title: "TEXT: probe aaa weekday runs with several case changes and aaam/pm (follow-up of T-1880)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
