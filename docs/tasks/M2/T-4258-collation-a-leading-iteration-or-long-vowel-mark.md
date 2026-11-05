@@ -3,7 +3,7 @@ id: T-4258
 title: "Collation: where a leading iteration or long-vowel mark sorts against the plane-2 ideographs (M2 exit cells t3465-collation-holdout C313, D313)"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: opus
@@ -53,17 +53,31 @@ t3465-collation-holdout, t3275-collation-width-kana, t3275-collation-width-kana-
 t3559-collation-unprobed-blocks regressing.
 
 ## Acceptance criteria
-- [ ] A new oracle-filled probe case (excel-graph) covers the pairs above. coercion.md records the lone marks' place
+- [x] A new oracle-filled probe case (excel-graph) covers the pairs above. coercion.md records the lone marks' place
       against the astral and compatibility ideographs as VERIFIED and cites its cells.
-- [ ] The two known-failure lines `F probes/t3465-collation-holdout.case.json Sheet1!C313` and `Sheet1!D313` disappear
+- [x] The two known-failure lines `F probes/t3465-collation-holdout.case.json Sheet1!C313` and `Sheet1!D313` disappear
       from eval/baseline/probes.txt with no new ones (`make eval-baseline`). The M2 row of the report's "Milestone exit"
       table reads `0 [0] met` for probes.
-- [ ] Every cell of the new probe case passes, or each one that fails is a known failure that a task filed in this PR
+- [x] Every cell of the new probe case passes, or each one that fails is a known failure that a task filed in this PR
       owns.
-- [ ] A unit test in collation.rs pins `"𠀀" < "々"` and the other probed boundaries.
+- [x] A unit test in collation.rs pins `"𠀀" < "々"` and the other probed boundaries.
 - [ ] `make check-fast` green locally, CI green; reviewers approve.
 
 ## Out of scope
 - T-3381's other choices: voicing against the Latin marks, full-width against superscript, `ー` after `ん`, after an
   ideograph or after a digit, the katakana-only kana, wildcard folds and the half-width `ｰ`.
 - Marks after a Latin letter (the non-transitive `"aー"` rule, T-3321).
+
+## Outcome
+- Probe: probes/t4258-collation-lone-mark-astral (105 cells, excel-graph 2026-11-05). Each lone mark
+  `ー ゝ ゞ ヽ ヾ 々` is greater than every character it was set against: plane 2 (U+20000, U+2A700, U+2FA1D), plane 3
+  (U+30000), Hangul, the BMP ideographs, Extension A, the compatibility ideographs, private use (U+E000, U+F0000),
+  U+1F600, U+1D400, U+FFFD and U+10FFFD (C1:C90). It is also greater than two-character high texts (C104:C105). What
+  follows the leading mark does not change that (C91:C103, including t3465's B313 text as a control).
+- Engine: `LONE_MARK` (collation.rs) moves from one step above U+9FFF to one weight above every script weight
+  (`scripts::ABOVE_SCRIPTS`). `IDEOGRAPHS` is private to scripts.rs again. A new unit test,
+  `lone_mark_sorts_above_every_character` in test_collation.rs, pins the probed boundaries.
+- coercion.md: the lone-mark paragraph records the probed place as VERIFIED, and the T-3465 hold-out note points at
+  the fix.
+- Eval delta: probes/t3465-collation-holdout C313 and D313 now pass, and the new case's 105 cells all pass. This
+  meets the M2 probes exit row.
