@@ -26,4 +26,4 @@ Also probe (excel-probe) whether a single cell reached through a defined name, I
 -
 
 ## Outcome
-None of the 41 T-2470-owned gen-m9 cells is in eval/baseline/gen-m9.txt any more (an earlier change fixed them). The defined-name/INDEX/OFFSET question is probed: probes/t2775-ztest-single-cell-routes. OFFSET and parentheses match a plain reference; INDEX and IF do not (3 cells), filed as T-4286 (opus: needs the evaluator to keep reference origin). Rule recorded in statistics.md.
+None of the 41 T-2470-owned gen-m9 cells is in eval/baseline/gen-m9.txt any more (an earlier change fixed them). The INDEX/OFFSET/IF/parentheses question is probed (defined names are not: no defined-name cell in the probe, left for a later probe): probes/t2775-ztest-single-cell-routes. OFFSET and parentheses match a plain reference; INDEX and IF do not (3 cells), filed as T-4286 (opus: needs the evaluator to keep reference origin). Rule recorded in statistics.md.
