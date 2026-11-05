@@ -3,7 +3,7 @@ id: T-4368
 title: "POISSON.DIST cdf below 1.3a: probe Excel's P and Q at non-integer shapes and the cut's lower edge (T-4357 follow-up)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
