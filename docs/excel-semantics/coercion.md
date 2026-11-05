@@ -889,7 +889,7 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
       "2" (B31:B32). PIVOTBY is the same (B3, B38).
     - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
       second group shows `ab`, which is not the first spelling of either field.
-    - Each field alone groups by first `=` (B35:B36). T-4195's model below passes all but B11 and B33 (T-4241).
+    - Each field alone groups by first `=` (B35:B36). T-4195's model below passes all but B11 and B33 (T-4342).
 
 ### GROUPBY on an intransitive run (T-4195)
 Evidence: probes/t4195-groupby-intransitive (56 blocks of 2 to 4 rows: every order of `ab`, `ab`&U+00AD and
@@ -915,19 +915,40 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
 - **Excel goes further on a multi-field run.** Rows (A,y), (B,x), (C,y) give (`ab`,y): 1, 3; (`ab`&U+00AD,x): 2;
   (`ab`&U+00AD,y): 1, 2, 3 (Calc!C8). Row 2 is in two groups, and the third group's key is no row's. UNIQUE keeps
   all three rows (D8) though (C,y) = (A,y): it keeps or drops (C,y) by the rows around it, as its merge meets them
-  (T-4200), and ours matches every D cell. PIVOTBY's rows are GROUPBY's (F). Unmatched: T-4241 owns those 24
-  cells.
+  (T-4200), and ours matches every D cell. PIVOTBY's rows are GROUPBY's (F).
+- **Excel's rule on a multi-field run: a tree over UNIQUE's sorted keys** (T-4241, probes/t4241-groupby-intransitive-runs,
+  excel-graph, 2026-11-05; 48 blocks: T-4195's 18 three-row blocks again, which repeat its values exactly, and 30
+  seeded four-row runs, each shown ascending (B), with `sort_order` -1 (C), 2 (D) and -2 (E), with a SUM aggregate (F)
+  and through UNIQUE (G)). The model in docs/research/t4241/model.py gives every group, member list and shown key
+  of all 234 blocks of both probes that use only A, B and C (t4195 C and E, t4241 B to E):
+  1. The keys are UNIQUE's kept rows (its merge, T-4200), sorted by SORT's natural merge on whole rows, each field
+     in its sort direction (`sort_order` -1 reverses the first field, -2 the second).
+  2. Classes are built field by field over that sorted list. Under one parent, a key joins the current class when
+     its field `=` the field of the class's first key, else it starts a class. A class shows its first key's
+     spelling, so a group can show a key tuple no row has (C8's (`ab`&U+00AD,y) is the key (C,y)). A class can
+     repeat a shown key: Bx, Ay, Cy, Cx gives (C,x): 1, 4; (C,y): 2, 3; (C,x): 1, 2, 3, 4 (t4241 Calc!B25).
+  3. Each data row descends the tree. At each field, a lower-bound binary search (in that field's direction) over
+     the parent's class keys finds a class. The row joins it when that key `=` the row's field. When the key is
+     not equal, or the search runs off the end, the row is in no group: Cy, Ax, By gives (`ab`,x): 2;
+     (`ab`,y): 1, and row 3 (B = C) is in none (t4241 Calc!B14).
+  4. A leaf class no row reaches aggregates every row of the source. That is the group with all the rows in
+     Calc!C8 and t4241 B25, and SUM counts such a row once in each of its groups (t4241 Calc!F2: (`ab`,y) 5,
+     (`ab`&U+00AD,x) 2, (`ab`&U+00AD,y) 7 of rows worth 1, 2 and 4).
+  `sort_order` 2 gave the ascending result on all 48 blocks (D = B). A table sort (`field_relationship` 1) and a sort
+  by a value column on these runs are unprobed. The model was chosen after seeing these probes' values, so a
+  confirmation probe with predictions committed before its fill is owed (T-4342). Not implemented yet: the engine
+  still takes T-4195's per-row model below, and T-4342 owns the cells it misses (24 of t4195, 140 of t4241).
 
 Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
 its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
 lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
 `coalesce_equal_lines` keeps, as `unique_of` does; only several key fields with a text outside ASCII can drop
 one). `Group::key_order` sorts texts under one parent by their rank in that sort, through `sort_indices_pairwise`.
-UNVERIFIED: every probe cell sorts ascending by the keys; a descending `sort_order` (ours reverses the rank) and a
-table sort naming a later field first (ours ranks texts under one parent, `cmp_text` across parents) on an
-intransitive run are unprobed (T-4241). The model was selected
+A descending `sort_order` on an intransitive run is probed (T-4241, above): it changes the groups, which ours
+does not do (ours only reverses the rank; T-4342). A table sort naming a later field first is still unprobed. The model was selected
 on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
-of -shown-key, with no hold-out, so T-4241's fresh permutations are its confirmation.
+of -shown-key, with no hold-out. T-4241's fresh probe repeats its single-field and three-row cells exactly, but the
+model is superseded on multi-field runs by the tree rule above.
 Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
