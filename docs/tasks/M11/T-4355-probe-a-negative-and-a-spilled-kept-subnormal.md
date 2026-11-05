@@ -27,5 +27,5 @@ T-2211 flushes only `0 < v < MIN_POSITIVE` on save (evidenced: probes/subnormal-
 Probe `probes/subnormal-saved-negative-and-array` (excel-graph 2026-11-05): a negative kept subnormal
 (`=0-EXP(-745)`) and array / range / spilled kept subnormals are all saved as `<v>0</v>`, while the
 in-memory value stays kept. `saved_number` now flushes either sign (the spill/array arms confirmed);
-export test and numbers.md updated. No math sidecar needed (cells are not one-call). Follow-up T-4372 owns the array-context comparison cells (A4 A5 A7 G4 G5 G7). Eval delta: 6 newly visibly-off cells, all in the new probe, owned by T-4372
+export test and numbers.md updated. No math sidecar needed (cells are not one-call). Follow-up T-4372 owns the array-context comparison cells (A4 A5 A7 G4 G5 G7). Eval delta: 6 failing cells (3 counted as visibly off), all in the new probe, owned by T-4372
 (new probe cells are oracle-backed, no scored change). Desktop Excel's save stays an M14 question.

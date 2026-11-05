@@ -795,12 +795,13 @@ pub(crate) fn get_worksheet_xml(
 mod tests {
     use super::*;
 
-    /// Only the evidenced positive domain is flushed (T-2211); the rest is unprobed (T-4355).
+    /// A kept subnormal of either sign is flushed (T-2211, T-4355: probes/subnormal-saved-negative-and-array).
     #[test]
-    fn saved_number_flushes_only_positive_subnormals() {
+    fn saved_number_flushes_subnormals_of_either_sign() {
         assert_eq!(saved_number(f64::from_bits(1)), 0.0);
         assert_eq!(saved_number(f64::MIN_POSITIVE), f64::MIN_POSITIVE);
-        assert_eq!(saved_number(-f64::from_bits(1)), -f64::from_bits(1));
+        assert_eq!(saved_number(-f64::from_bits(1)), 0.0);
+        assert_eq!(saved_number(-f64::MIN_POSITIVE), -f64::MIN_POSITIVE);
         assert!(saved_number(-0.0).is_sign_negative());
     }
 
