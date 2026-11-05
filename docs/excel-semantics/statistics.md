@@ -2826,6 +2826,20 @@ UNVERIFIED.
   bisection uses the cdf, and all 126 BINOM.INV and 126 CRITBINOM probe cells pass. BINOM.DIST.RANGE takes the pmf
   for one point and the cdf from 0, then the double-double walk, then the cdf difference. Its probe misses are those
   of BINOM.DIST's own last digits (T-3447) plus the 21 upper-tail rows (T-3740).
+- Gate A fresh sweep (T-3741; accuracy/BINOM.DIST.RANGE, BINOM.INV and CRITBINOM s1, 200 points each, trials to
+  2^31 - 2, excel-graph, 2026-11-04), scored against 50-digit math:
+  - Ranges above the mean: on the 9 points where ours is off (owner T-3740: A85, A91, A94, A101, A107, A146, A172,
+    A177, A180), Excel stays within 7E-12 relative of the math however deep the range sits, from 1.4E-9 down to
+    1.9E-134 (`BINOM.DIST.RANGE(777228,0.567422582556133,451769,452355)`, s1 A107, 1E-12 off). So past the mean Excel
+    does not take the cdf difference, which cancels to 0 on four of them in ours.
+  - BINOM.INV and CRITBINOM (separate draws): each equals the math's smallest k with P(K <= k) >= alpha on 199 of its
+    200 points, at trial counts up to 2^31 - 2. The other one in each sits at alpha within 3E-14 of 1, where Excel's
+    count is 3 and 4 below the math's: `BINOM.INV(176943131,0.607197940256648,0.999999999999976)` is 107488465 against
+    107488468 (s1 A155), and `CRITBINOM(2147483646,0.722975469966602,0.999999999999981)` 1552734937 against 1552734941
+    (s1 A171). The true cdf at Excel's count is below alpha by under half an ulp of 1 (4.9E-17 at A155): a cdf held
+    as a double near 1 reaches alpha there, as the rule above says the search does.
+  - No trials: `BINOM.INV(0,p,alpha)` and `CRITBINOM(0,p,alpha)` are 0 (BINOM.INV s1 A113, A116, A123, A125, A132;
+    CRITBINOM s1 A139, A140; p and alpha central), and `BINOM.DIST.RANGE(0,0.755198170543338,0)` is 1 (s1 A122).
 Tasks: T-3444, T-3352, T-3447, T-3740, T-3741
 
 ## NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)
