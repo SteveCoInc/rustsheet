@@ -3,7 +3,7 @@ id: T-1194
 title: "Name lookups in reference context: one lowercase lookup per use, and look through formula-bodied names in is_multi_area"
 milestone: M1
 lane: perf
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
@@ -33,7 +33,7 @@ bounded), so `dyn A1` with `dyn` = `=OFFSET(...)` does not build an area list.
 ## Out of scope
 - The value path's lookup in model.rs (same pattern; may share the fix).
 
-## Handoff
+## Handoff (resumed)
 Findings by a sonnet run (no code changed):
 - The `is_multi_area` half is already in place: `may_be_multi_area(node, look_through_names)` in
   `reference_operators/mod.rs` opens a name body once and counts names inside it as multi-area,
