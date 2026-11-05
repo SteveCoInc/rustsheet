@@ -3,7 +3,7 @@ id: T-2898
 title: "Python: move Model, UserModel and their constructors to rustsheet.legacy with a DeprecationWarning; README on the facade (SPEC-0026)"
 milestone: M12
 lane: api
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -30,12 +30,30 @@ The legacy classes keep two entry points that take structured, caller-shaped dat
 the README says the module is not hardened for untrusted input.
 
 ## Acceptance criteria
-- [ ] `rustsheet.__all__` lists only the facade and the helpers (`column_name_from_number`, `column_number_from_name`,
+- [x] `rustsheet.__all__` lists only the facade and the helpers (`column_name_from_number`, `column_number_from_name`,
       `quote_name`, `get_all_timezones`, `get_supported_locales`, `__version__`); a test asserts it.
-- [ ] `import rustsheet.legacy` raises a `DeprecationWarning`, and every moved symbol is importable from it.
-- [ ] The README names neither IronCalc nor `pip install ironcalc`, and its quick start is the facade.
+- [x] `import rustsheet.legacy` raises a `DeprecationWarning`, and every moved symbol is importable from it.
+- [x] The README names neither IronCalc nor `pip install ironcalc`, and its quick start is the facade.
 - [ ] `make check` green (python job included); reviewers approve.
 
 ## Out of scope
 - Removing the legacy classes (at the API v1 freeze, after SPEC-0026's feature table is cleared).
 - New facade features (each is its own M12 task).
+
+## Outcome
+- `rustsheet/__init__.py` exports only the facade, its errors, `open` and the pure helpers. `Model`, `UserModel`,
+  `CellType`, `create`, `create_user_model`, `load_from_xlsx` and `create_user_model_from_xlsx` moved to the new
+  `rustsheet/legacy.py`, which re-exports them from `rustsheet._rustsheet` and warns on import (`DeprecationWarning`
+  naming the API v1 freeze and the skipped load limits; `stacklevel=2` points at the importer, checked by running
+  `docs/examples/simple.py`).
+- Stubs: `_ironcalc.pyi` renamed to `_rustsheet.pyi` (facade + helpers); the legacy classes, `CellType` and the style
+  TypedDicts moved to `legacy.pyi`, re-exported by `_rustsheet.pyi` (the extension still defines them).
+  `mypy --strict python/rustsheet` is clean.
+- Tests: conftest's `um`/`rm` fixtures and every test using a legacy symbol import `rustsheet.legacy`; pytest's
+  `filterwarnings` (pyproject.toml) ignores its warning. New tests in test_io.py assert `rustsheet.__all__` exactly,
+  that each moved symbol left `rustsheet` and is in `rustsheet.legacy.__all__`, and that importing (reloading) the
+  module warns. 182 Python tests pass.
+- README rewritten around `rustsheet.Workbook`, with a legacy section that says the module is not hardened for
+  untrusted input (`paste_from_clipboard`, `paste_csv_string`, no load limits). The examples import `legacy`.
+- Follow-up: T-4257 (Sphinx docs still IronCalc-branded).
+- Eval delta: none (Python surface only).

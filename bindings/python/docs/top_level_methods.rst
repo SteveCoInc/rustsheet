@@ -1,9 +1,11 @@
 Top Level Methods
 -----------------
 
-This module provides a set of top-level methods for creating and loading
-IronCalc models. All ``locale``, ``tz`` and ``language_id`` parameters default
-to ``"en"``, ``"UTC"`` and ``"en"``.
+The model constructors below live in the deprecated ``rustsheet.legacy`` module
+(``from rustsheet import legacy``), which is removed at the API v1 freeze; use
+``rustsheet.Workbook`` and ``rustsheet.open`` for new code. All ``locale``, ``tz``
+and ``language_id`` parameters default to ``"en"``, ``"UTC"`` and ``"en"``.
+The utilities are in ``rustsheet`` itself.
 
 Creating models (raw API)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -23,8 +25,8 @@ The :class:`UserModel` constructor and static methods are the idiomatic way:
 
 .. code-block:: python
 
-   model = ic.UserModel("My Workbook")
-   model = ic.UserModel.from_xlsx("book.xlsx")
+   model = legacy.UserModel("My Workbook")
+   model = legacy.UserModel.from_xlsx("book.xlsx")
 
 The equivalent top-level functions are also available:
 
