@@ -2024,7 +2024,7 @@ C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
 C	probes/t3710-ampm-hour-tokens.case.json	26
 C	probes/t3711-fraction-trailing-placeholders.case.json	57
-C	probes/t3718-cjk-numeral-unprobed.case.json	95
+C	probes/t3718-cjk-numeral-unprobed.case.json	125
 C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14
@@ -2149,6 +2149,7 @@ C	probes/t4235-pivot-range-rounding.case.json	242
 C	probes/t4236-pivot-date-groups-no-blank.case.json	349
 C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
+C	probes/t4245-cjk-numeral-past-1e16.case.json	35
 C	probes/t4258-collation-lone-mark-astral.case.json	105
 C	probes/t4270-collation-c1-controls.case.json	548
 C	probes/t4271-lotus-dot-one-side-lf-before.case.json	5
