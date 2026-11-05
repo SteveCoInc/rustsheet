@@ -971,7 +971,22 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
   - **A PIVOTBY column leaf no record of a row group reaches holds that row group's records** (D39: p `2`, q
     `1, 3, 4, 5`), and whether a record reaches a column leaf depends on its row group: in E38 rows 2 and 3, both
     (C,y), are p and q, and (A,y) holds all of p but only row 3 of q; in D41 the only q record with y reaches (B,y)
-    in the column tree, yet q's (B,y) cell is all of q (T-4358 owns D39, D41, E38, E41).
+    in the column tree, yet q's (B,y) cell is all of q. Each of the four is the column tree's leaf no record
+    reaches, holding every record of the row group as GROUPBY's such group holds every row (step 4): E38's q is
+    only row 3, and D41's (B,y) is reached by no record, row 4 finding class A (C = A) and then no y leaf.
+  - **The hold-out (T-4358, probes/t4358-pivotby-unreached-column-leaf, excel-graph, 2026-11-05).** 25 seeded
+    five-row runs whose column tree has a leaf no record reaches, by p/q rows: ascending (B), `col_sort_order` -1
+    (C), with column subtotals (D) and with x/y as the first column field (E), written with the engine's
+    predictions committed before the fill (docs/research/t4358). The leaf rule gives 74 of the 75 B, C and E
+    cells and every leaf cell of D. Two findings it does not cover:
+    - **A first-field subtotal column holds the row group's records that reached its class**, those that reached
+      no leaf under it included, and not the extra records of a leaf no record reaches: over Bx Cy Cy Ax By of
+      q q q p p the `ab` subtotal of q is `2, 3` while its leaf (`ab`,x) holds nothing for q (D1); over Ax Cx Bx
+      Cy Bx the `ab`&U+00AD subtotal of p is `3, 5` while its unreached (`ab`&U+00AD,y) holds `1, 3, 5` (D10).
+      That rule gives 88 of 88 subtotal cells (docs/research/t4358/score.py), chosen on them (T-4378 owns the 19
+      D cells it would fix and the hold-out it owes).
+    - **Excel can leave such a leaf out**: over Cx Ay Ax Bx Ax (q q p p q) the columns are (`­ab`,x), (`­ab`,y)
+      only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379).
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
@@ -983,13 +998,14 @@ classes with `Tree::build` and descends each row with `Tree::descend`; a leaf no
 row (`Group::reached` false, which `Grouping::group_of` maps only rows in no other group to). Groups come out in
 tree order and sort by their class's rank (`Group::key_order`). While no key text is outside ASCII a row descends as
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
-the parent's first two classes (T-4344). Not implemented: PIVOTBY's column leaves (T-4358) and a value sort's
-parent values (T-4359) on these runs.
+the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
+(`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). Not implemented: a column subtotal's
+records (T-4378), a left-out repeated leaf (T-4379) and a value sort's parent values (T-4359) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342 and t4344 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344 and t4358 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

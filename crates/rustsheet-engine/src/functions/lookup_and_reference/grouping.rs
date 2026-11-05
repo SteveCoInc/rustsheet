@@ -286,7 +286,7 @@ impl Grouping {
     /// For each of `height` source rows, the index of its group (`usize::MAX` for rows in no
     /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
     /// step 4) maps to the group it reached; such a group gets only the rows in no other
-    /// (PIVOTBY's columns differ on such runs: probes/t4344-groupby-descending-search D39, T-4358;
+    /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`];
     /// relative sets unprobed).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
@@ -304,6 +304,16 @@ impl Grouping {
             }
         }
         group_of
+    }
+
+    /// The indices of the groups no row reached ([`Grouping::new`] step 4), which hold every row.
+    pub(crate) fn unreached(&self) -> Vec<usize> {
+        self.groups
+            .iter()
+            .enumerate()
+            .filter(|(_, group)| !group.reached)
+            .map(|(index, _)| index)
+            .collect()
     }
 
     /// Sorts the groups stably by `cmp` with [`sort_indices_pairwise`], which cannot panic: texts
