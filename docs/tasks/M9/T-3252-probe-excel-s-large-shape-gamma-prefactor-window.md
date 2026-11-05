@@ -3,7 +3,7 @@ id: T-3252
 title: "Probe Excel's large-shape gamma prefactor window: near-mode bound, x below a/10, POISSON.DIST and large-shape BETA.DIST"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -30,9 +30,58 @@ steps of 0.05; x/a = 0.002 to 0.05; POISSON.DIST(k,λ,TRUE) for k from 19 to 200
 b in [20, 40) and a/b at most 1E-6.
 
 ## Acceptance criteria
-- [ ] A probe case with oracle values lands, and statistics.md records the bounds it shows (or that the form does not
+- [x] A probe case with oracle values lands, and statistics.md records the bounds it shows (or that the form does not
       apply), with the engine's constants and callers set to match (no regression).
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The shapes below 20 (T-3219).
+
+## Outcome
+- Probes (excel-graph, 2026-11-04, M9): probes/t3252-gamma-prefactor-window (188 cells: GAMMA.DIST densities and
+  cdfs at x/a 0.55 to 1.45 and 0.002 to 0.05, POISSON.DIST cumulative at k 19 to 200, BETA.DIST with b 20.5 to 39 and a
+  1E-5 or 1E-6), with its Gate A math sidecar; probes/t3252-gamma-prefactor-holdout (42) and -holdout-2 (36).
+- Finding: below the mode, Excel takes the ratio form (0 to 2 ulp) at every probed x <= 0.664a for shapes 30 to 500;
+  from 0.668a to 0.99a, and above the mode from 1.05a to 1.45a, it is neither form (follow-up T-4255,
+  campaign visible; the tiny-ratio cells A61:A70, A73:A80, A85:A93 are added to T-3219). POISSON.DIST's cdf is closer to `rcomp` near and above the mean; BETA.DIST's
+  large-shape cells do not depend on the form. The tiny-ratio switch lies in (0.002a, 0.003a), outside the current
+  1/200 (`RATIO_FORM_MIN`); that fit stays with T-3219. statistics.md has the rules with cells.
+- Engine: `gamma_prefactor` takes the ratio form below the mode from (a - x) > 0.334a (`NEAR_MODE_BELOW`, new) at
+  shapes 30 to 500 (`NEAR_MODE_BELOW_SHAPES`, the evidenced range; R4.3), and from 0.4a elsewhere as before; above the
+  mode `NEAR_MODE` 0.4 stays. Decision 0281 records the fitted lock 2 to 3.
+- R4 guards (round 2, after the Excel-fidelity review). Freezes: 0.3 failed -holdout (0.68a: 86 to 208 ulp on the
+  ratio form against 43 on `rcomp`); 0.33 lay outside -holdout-2's bracket (0.332, 0.336). So -holdout and -holdout-2
+  are training data now. 0.334, the bracket's middle, was frozen at becb4501c before the fresh sweep
+  probes/t3252-gamma-prefactor-sweep was written: 40 points, shape log-uniform in [30, 500], x/a uniform in
+  [0.55, 0.75], seed 3252, density and cdf. Margin stated before scoring: the fit must beat correctly rounded at
+  every level on the sweep. Scores (bit-exact / within 4 ulp / within 15 digits; 50-digit mpmath for correctly
+  rounded):
+
+  | case | ours | correctly rounded |
+  |---|---|---|
+  | window, GAMMA.DIST (96) | 17 / 47 / 57 | 9 / 31 / 44 |
+  | holdout (42, train) | 6 / 19 / 27 | 0 / 6 / 15 |
+  | holdout-2 (36, train) | 7 / 14 / 20 | 0 / 7 / 10 |
+  | sweep (80, fresh) | 22 / 61 / 69 | 3 / 15 / 35 |
+
+  The sweep's exact rate (28%) is above training's (17 to 19%). FITTED tag and range are on the constant, and there
+  is no keep-matched branch. `rustsheet-accuracy math` writes no Gate A sidecar for the hold-out and sweep cases (0
+  candidate cells), so the Gate A envelope was checked by hand: 80 of 80 sweep cells are inside it (within 15
+  digits of Excel, or within 1E-9 relative of 50-digit mpmath `gammainc` and `loggamma`), and none is outside. The
+  worst of the 58 that differ from Excel is 1.04E-14 relative to the math (A72).
+- Margin: the rule was "beat correctly rounded at every level", not a tolerance on the exact rate. The sweep's exact
+  rate (28%) is higher than training's (17 to 19%). That points away from overfitting, but the two rates do not
+  measure the same thing: the sweep covers x/a 0.55 to 0.75 only, while training reaches 0.99a and goes above the
+  mode, where Excel is neither form. The freeze and the sweep share commit becb4501c. The sweep is seeded (3252) and
+  can be reproduced.
+- Window A171:A179 (`BETA.DIST(0.01,1E-05,30,FALSE)` and nearby, 10 to 15 ulp, none visibly off) is the algdiv
+  residue for min < 1 < 8 < max, and T-3035's Context now lists it.
+- Eval delta: in the window case 74 of 188 cells pass, against 69 on main's engine. Each newly passing cell was 9 to
+  72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions in any gated suite (`make eval-baseline`
+  against main's lists after merging `origin/main`). The four new cases add 237 known failures, 88 of them visibly
+  off, owned by T-4255 and T-3219. The sweep's 10 visibly-off cells are named in T-4255's Context.
+- The 0.668a tie: at 0.334, holdout-2 A29/A30 (`GAMMA.DIST(200.4,300,1,*)`, x = 0.668a) take `rcomp` (+56/+57 ulp)
+  rather than the ratio form (-55/-54 ulp), so holdout-2 has 16 visibly-off cells against 15 when the cut was 0.33.
+  The evidence at that cell is a tie, both forms are about 55 ulp off, and the cell stays with T-4255. The case is new
+  in this PR, so the lock records it as new coverage, not as a regression against main. The cut stays at 0.334,
+  the value frozen before the sweep was scored.
