@@ -135,7 +135,7 @@ Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1
   A200, 7bd219ec0c0c5e22 A279, c2974c061384fdd9 A55), so the gen-m9 visible-parity box stays open for those 3 lines.
   KURT is already two-pass, and taking s from Excel's STDEV.S did not move the cells I tried.
 
-## Landing notes
+## Landing notes (resumed)
 - PR #3344, head 96f523d5de0cfa48bfe9273c25689475217f2ad8 (draft); this notes commit sits on top of it. CI on
   d2be964 was red only on hygiene: the duplication ratchet hit 2900, because T-0975's merged gen_fresh.py and this
   one sat side by side. Fixed in 96f523d (shared `write_case`; local `check_duplication.py` reports 2878, and
