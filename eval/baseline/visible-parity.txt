@@ -203,6 +203,8 @@ probes/t3012-gamma-dist-at-quantile.case.json	3
 probes/t3012-gamma-inv-small-shape.case.json	4
 probes/t3028-b2-taiwan-cuts.case.json	2
 probes/t3070-gamma-inv-band.case.json	1
+probes/t3185-m9-statistical-argument-kinds-b.case.json	5
+probes/t3185-m9-statistical-argument-kinds-c.case.json	1
 probes/t3211-collation-sort-cycles.case.json	43
 probes/t3297-legacy-if-index-arm-name-table.case.json	5
 probes/t3347-irr-conventional-num.case.json	19

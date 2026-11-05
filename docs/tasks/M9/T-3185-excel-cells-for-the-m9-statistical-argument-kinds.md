@@ -3,7 +3,7 @@ id: T-3185
 title: "Excel cells for the M9 statistical argument kinds no suite covers (573 parameter/kind pairs in 129 functions, mostly empty text and errors)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -59,25 +59,26 @@ unchanged. New cases are oracle-filled with excel-graph.
 - The financial (T-3184), engineering and database argument kinds.
 - Fixing numeric residue of new cells (file it as tasks).
 
-## Landing notes (resumed 2026-11-05, opus run)
-- No PR yet. Branch agent/research/T-3185-m9-stat-argument-kinds, head after this commit; the cases are at 9d71ce249.
-  The session's landing window closed: `rustsheet-accuracy math --suite probes` took about 40 minutes.
-- Done (9d71ce249): scope is the value-mode pairs only (335 of 437 open pairs on main 2026-11-04; the Context's 573
-  had shrunk). The generator is docs/architecture/synthetic-generator.md §6.8.
-  - Three probe cases, probes/t3185-m9-statistical-argument-kinds-a to -c, oracle-filled on excel-graph with no fill
-    failures.
-  - statistics.md "M9 statistical argument kinds of a scalar parameter (T-3185)" records the rules by kind.
-  - Follow-ups filed: T-4222 (owner of the visibly-off const/stats range cells: b A62, A89, B89, A94, B94; c A69),
-    T-4223 (the 102 array, aggregate and criteria pairs left) and T-4224 (T-4099's review follow-up).
-- Math sidecars: the full run wrote none for the t3185 cases, so none is due. It also rewrote t3350 and t3505
-  sidecars that this branch does not touch; those were discarded. Re-check with `make eval-math-check`.
-- Ours against Excel (`rustsheet-eval show`): 317 of 335 pass.
-  - Visibly off: the 6 cells T-4222 owns.
-  - 1-ulp or close residue: a A14, A33, A114; b A6, A65, A68, A76, A79, A82, A86, A87, A91, A93, A119. These are the
-    base calls' own residue, not the kind's.
-- Next steps:
-  1. `make eval`, then `make eval-baseline` (new-coverage known failures only) and confirm report.json
-     argument_coverage has `covered == expected` for the value-mode params.
-  2. `python3 scripts/new_case_owners.py`: if it lists the residue cells, add them to an owner task (or to T-4222).
-  3. Set `status: done` with an Outcome, run `make check-fast`, open the PR and run the review panel.
-- Do not rerun the math step on a 4-core machine inside a session budget; it is the slow step.
+## Outcome
+- Scope: the value-mode parameter/kind pairs, 335 of the 437 pairs still open on main on 2026-11-04 (the Context's
+  573 had shrunk). The 102 array, aggregate and criteria pairs are split out to T-4223 (Out of scope's split rule).
+  The generator is docs/architecture/synthetic-generator.md §6.8.
+- Three probe cases, probes/t3185-m9-statistical-argument-kinds-a to -c, 335 cells, oracle-filled on excel-graph
+  (2026-11-04) with no fill failures. After `make eval`, report.json `argument_coverage` has `covered == expected`
+  for every value-mode parameter of the M9 statistical functions (FORECAST.ETS family excluded); what is left is
+  array 56, aggregate 23, criteria 22 and aggregate_a 1 (T-4223).
+- docs/excel-semantics/statistics.md "M9 statistical argument kinds of a scalar parameter (T-3185)" records the
+  rules by kind, citing the cells.
+- Ours against Excel: 315 of 335 cells match. The 6 visibly-off cells (b A62, A89, B89, A94, B94; c A69: LINEST,
+  LOGEST, GROWTH and TREND given a two-cell `const` or `stats` range) are owned by T-4222; its acceptance criteria
+  now name each case beside its cells, so `scripts/new_case_owners.py` passes. The rest are the base calls'
+  last-digit residue, not the argument kind's (a A14, A33, A114; b A6, A65, A68, A76, A79, A82, A86, A87, A91, A93,
+  A119), out of scope here.
+- `make unowned-off ALL=1` lists no t3185 cell (32 unowned cells, all pre-existing on main).
+- Follow-ups filed: T-4222 (the 6 visibly-off cells), T-4223 (the 102 array, aggregate and criteria pairs) and
+  T-4224 (T-4099's review follow-up).
+- Math sidecars: the full `rustsheet-accuracy math --suite probes` run (2026-11-04) wrote none for the t3185 cases,
+  so none is committed; `make eval-math-check` is current.
+- Eval delta: probes gains 3 cases; 20 new-coverage known failures recorded with `make eval-baseline`
+  (probes known failures 4044 -> 4064, 0 fixed, 0 regressions); visible parity allows 6 more cells, all in the new
+  cases and owned by T-4222.

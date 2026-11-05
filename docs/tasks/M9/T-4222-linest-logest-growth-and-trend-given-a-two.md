@@ -25,7 +25,8 @@ return what Excel returns.
 - Code: the LINEST family in crates/rustsheet-engine/src/functions/statistical/.
 
 ## Acceptance criteria
-- [ ] probes/t3185-m9-statistical-argument-kinds-b A89, B89, A94, B94, A62 and -c A69 match Excel.
+- [ ] probes/t3185-m9-statistical-argument-kinds-b A89, B89, A94, B94 and A62, and
+      probes/t3185-m9-statistical-argument-kinds-c A69, match Excel.
 - [ ] The rule is in docs/excel-semantics/statistics.md, citing the cells.
 - [ ] `make check` green; reviewers approve.
 
