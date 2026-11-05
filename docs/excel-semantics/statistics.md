@@ -1135,9 +1135,28 @@ off there), with its exponent a·phi in double-double: phi from s = (x - a)/(x +
 near the mode, and erfc(sqrt(a phi)) stepped from the rounded root. A rounded a·phi costs about a·phi ulps of the tail
 (10 to 230 at shapes 1E3 to 46041, x from 0.9a to 1.1a), and ln x - ln a loses phi itself at a = 1E12 + 1, x = 1E12
 (phi 5E-25). Within an ulp of mpmath at shapes 1E3 to 1E6 over the band, 2 ulp for P at 1E3 below 0.9a. Not reached:
-shapes 21 and 101 (`POISSON(20,25,TRUE)`, probes-numeric t1048-poisson A9, Excel +1.5 ulp, ours +7.5;
-`POISSON.DIST(100,100,TRUE)`, D19), where the 4-term expansion's dropped term is 3E-13 at 101, and t2982 A146 (Excel
-itself -13.6 ulp).
+t2982 A146 (Excel itself -13.6 ulp).
+From shape 21 to 1E3, within `NEAR_MODE`, the pair is taken in double-double and rounded once for POISSON's cdf and the
+quantiles (T-4000, `incomplete_gamma/near_mode.rs`). The 4-term expansion is no help there: its dropped term is 3E-13 at
+shape 101. The prefactor is exp(ln(a)/2 - ln(2 pi)/2 - a phi - mu(a)), with phi from Temme's double-double form and mu
+Binet's function; then come the series below a + 1 and the backward fraction from it on.
+- Within an ulp of 60-digit mpmath at shapes 21 and 101, x from 0.6a to 1.4a.
+- `POISSON.DIST(100,100,TRUE)` = Q(101, 100) is Excel's 0.5265621985299984, the correctly rounded value (ironcalc-calc
+  POISSON.xlsx D19, and gen-m9 A371 of two cases; the double kernel was +1.5 ulp).
+- `POISSON(20,25,TRUE)` is the correctly rounded 0.18549230269414171, 1.5 ulp below Excel's (probes-numeric
+  t1048-poisson A9, B9; was +7.5).
+- Full eval A/B against origin/main 70d01bb1: 14 POISSON, CHIINV, CHISQ.INV.RT and GAMMAINV cells move. 10 come closer
+  to Excel, 5 of them to bit-exact: D19, the two gen-m9 A371, and probes t3252-gamma-prefactor-window A113 and A114.
+  4 go further:
+  - t3252 window A126 and A137, where Excel is 3.5 and 6.0 ulp from the truth;
+  - the probes-numeric m9-legacy-chiinv A39/A40 pair, which moves from 1 ulp low to 1 ulp high.
+  No cell's verdict changes.
+- Not GAMMA.DIST, CHISQ.DIST or CHISQ.DIST.RT: Excel is not accurate in this band. On the accurate pair 7 of their
+  cells go visibly off, below the mode at 0.67a to 0.8a and at 1.28a: `GAMMA.DIST(360,500,1,TRUE)`, Excel 16.5 ulp from
+  the truth; `GAMMA.DIST(58.4885,87.66,1,TRUE)`, 34.7; probes t3252-gamma-prefactor-holdout A28, A38, -sweep A14,
+  -window A46, t4255-gamma-window-exact-ratio G9, G10, G44. So their prefactor keeps T-3252's open form.
+- Not shape 20: `POISSON.DIST(19,20.9,TRUE)` = Q(20, 20.9) is 0.3925598705719857 in Excel, 2.3 ulp below the truth. That
+  is the double kernel's bits (gated probes t3252-gamma-prefactor-window A103).
 Unit tests (`incomplete_gamma.rs`): within 8 units of 2^-52 of mpmath at a in {0.001, 0.01, 0.3, 0.5, 9, 500}, P + Q = 1
 within 2 of them, the a = 1 identity, the b = 1E6 scale. The 2^19-term cap (section above) is unchanged; the series now
 runs to 2^-54 instead of 1E-15, about 8% more terms near x = a, so an inversion's budget runs out at a somewhat smaller
