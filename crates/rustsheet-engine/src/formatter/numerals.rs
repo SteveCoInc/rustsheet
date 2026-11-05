@@ -138,6 +138,7 @@ static FULLWIDTH_TRADITIONAL: CjkStyle = CjkStyle {
 /// 105-109, 134-137).
 static CHINESE_TRADITIONAL: CjkStyle = CjkStyle {
     myriads: ['萬', '億', '兆'],
+    trailing_zero_gap: false,
     ..CHINESE
 };
 
@@ -146,6 +147,7 @@ static CHINESE_TRADITIONAL: CjkStyle = CjkStyle {
 static CHINESE_FORMAL_TRADITIONAL: CjkStyle = CjkStyle {
     digits: ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'],
     myriads: ['萬', '億', '兆'],
+    trailing_zero_gap: false,
     ..CHINESE_FORMAL
 };
 
@@ -354,7 +356,7 @@ mod tests {
         assert_eq!(fullwidth.number("1000000005"), "１十亿０５");
         assert_eq!(
             Numerals::from_byte(34).number("311040000000"),
-            "參佰壹拾壹億肆仟萬"
+            "參仟壹佰壹拾億肆仟萬"
         );
         assert_eq!(Numerals::from_byte(33).number("1050"), "一千○五十");
     }
