@@ -3,7 +3,7 @@ id: T-4335
 title: "Probe [s] before h or m after a date token, with a fraction, and [ss] (after T-4295)"
 milestone: M10
 lane: functions-text
-status: todo
+status: dropped
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ Use the excel-probe skill; the T-4295 generator is docs/research/t4295/make_prob
 
 ## Out of scope
 - Elapsed tokens without `[s]` (T-4295 and earlier).
+
+## Outcome
+Dropped as a duplicate: T-4341 (filed from PR #3308's second review round) probes the same `[s]` forms, plus `s [s] m`.
