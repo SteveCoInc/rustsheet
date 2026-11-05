@@ -1216,7 +1216,7 @@ the ratio form below 0.666a at shapes 30 to 500 (`NEAR_MODE_BELOW` 0.334, the mi
 (0.332, 0.336), frozen before the fresh sweep probes/t3252-gamma-prefactor-sweep) and `rcomp` above; outside those
 shapes the bound stays 0.4. Above the mode Excel is neither form from 1.05a to 1.45a at shapes 50 and 200 (window A11:A20, A31:A40, 5 to
 90 ulp from each; the forms coincide at 1.4a and 1.45a); it is the ratio form at 1.5a (T-2638), and ours keeps
-`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is still unknown (T-4255, T-4290; open in T-4296).
+`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is still unknown (T-4255, T-4290); its prefactor chain is known (T-4296) and its exponent open (T-4308).
 T-4255 (probes/t4255-gamma-window-exact-ratio, excel-graph 2026-11-05; docs/research/t4255/score_forms.py) put x/a
 on k/64, exact. Its findings:
 - Below the mode the ratio form, built on Excel's own LN(64/x) (column F), is Excel's to 2 ulp at shapes 48, 64, 100
@@ -1279,6 +1279,46 @@ exponent is about 256 density ulps, so Excel's exponent reads out as a double. I
 - Ladder literals with more than 15 significant digits are read cut to 15 ("Formula number literals are read at 15
   significant digits" in numbers.md). E3:E6, E8:E11, F3:F6 and F8:F11 hold such literals, so E5, E6, F5 and F6 are
   x = 2047.99999999999 and 3071.99999999999, and E8, E9, F8 and F9 are the tie itself. score.py reads them that way.
+T-4296 (probes/t4296-gamma-density-at-mode and probes-numeric/t4296-gamma-density-r4-fresh, excel-graph 2026-11-05;
+docs/research/t4296/score.py) read the rest of the window chain at x = a, where the exponent is 0:
+- Excel's large-shape density in the window is exp(-c(a) - B) / sqrt(2 pi a) times (a / x). It is one exponential of
+  the summed exponent, with c(a) = ln Gamma(a) minus Stirling taken exact, then the shape over the raw argument x
+  (not x/scale) last. This is the shape of Loader's dpois_raw(a, y) a/x, but with (a/x) rounded on its own where
+  R writes pr*shape/x.
+- At x = a it is Excel's bit for bit at all 40 fit shapes from 20 to 1E7 (A1:A40), all 40 hold-out shapes (B1:B40,
+  drawn from seed 4296 before scoring), the fit shapes at scale 3 (C1:C40), and the 40 x = a cells of the fresh
+  sweep. Bit-exact counts against it:
+  - sqrt(a/2pi) exp(-c)/x: 22, 22 and 18 of 40, and 20 of 40 on the sweep;
+  - the correctly rounded density: 21, 33 and 21, and 18 on the sweep;
+  - exp(-c)/sqrt(2pi)/sqrt(a), INV_SQRT_2PI/sqrt(a) exp(-c), sqrt(1/(2pi a)) exp(-c) and exp(-c - ln sqrt(2pi a)):
+    9 to 25 of 40.
+- The Stirling error can be the exact value, Loader's stirlerr series (cuts 35, 80 and 500) or the 5-term series:
+  each gives 40/40 at x = a. The 3-term series misses at every probed shape up to 60, and an lgamma-based c misses everywhere.
+- The scale enters as times (a/x) with the raw x, or as times (1/scale): both give 40/40 at scale 3. Dividing by
+  the scale (23/40) and (pr a)/x (24/40) are rejected.
+- Summing the exponent inside one exponential beats a product of exponentials, exp(-c) exp(-B): 119 against 17
+  bit-exact at shape 4096 (t4290 A, on the correctly rounded B).
+- Over 1,441 probed window densities the chain is bit-exact at 371 against 224 for the old one, both on the
+  correctly rounded B. The within-15-digit count is 638 against 628. No case loses (score.py part 2).
+- The exponent B is still not Excel's (T-4308). On this chain Excel's per-unit error is about +-0.5 ulp(ln u), as
+  T-4290 found. It is not on the double grid of B/a: up to 45 ulps of B/a off next to the mode. So the rounding
+  comes in at the size of a ln u. Every form tried scores near the 0.29 of chance, as rms in ulp(ln u), fit t4290
+  A:C then hold-out D:
+  - Loader's bd0(a, y) series 0.31, 0.31;
+  - -a ln(x/a) + (x - a) 0.39, 0.41;
+  - -a log1p((x - a)/a) + (x - a) 0.41, 0.39;
+  - a log1p((a - x)/x) + (x - a) 0.55, 0.54;
+  - a ln(a/x) + (x - a), with a/x rounded, 3.4, 4.0;
+  - a (ln a - ln x) + (x - a) 35.7, 19.6.
+  Folding 1/u into the exponent as (a - 1) ln u + (a - x) is 32 to 500 ulp off at shapes 256 to 4096.
+- Ours takes the chain wherever the density keeps the accurate exponent -a rlog(y/a) at shape 20 and up
+  (density.rs `mode_density`). P and Q keep `gamma_prefactor`'s chain, since the window cdf decouples from the
+  density (T-4255).
+- Seven gated cells the old chain matched by luck now miss by 1 or 2 ulp (decision 0286).
+- Fresh sweep (160 log-uniform cells, frozen code), bit-exact / within 4 ulp / within 15 digits:
+  - at x = a, 40/40/40 against main's 20/40/40;
+  - elsewhere in the window, 38/51/64 against 38/51/63 and the correctly rounded 39/52/57;
+  - Gate A's envelope holds every point.
 The ratio form is Excel's bit for bit at a/21
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
 ratio form (probes/t2753-gamma-density-ratio-sweep A48, B48 `GAMMA.DIST(0.5,50,1,FALSE)`: ratio form 69 ulp off, `rcomp`
@@ -1299,7 +1339,7 @@ Excel is up to 265 ulp from the true Q (G6 `POISSON.DIST(250,750,TRUE)`), about 
 implied exponent is not on the double grid of E either: at G5 (one ulp of E is 238 ulp of Q) it sits -0.65 ulp of
 E from the correctly rounded E. Across the 36 hold-out cells where one ulp of E is at least 8 ulp of Q it is 1.28 ulp
 of E from the accurate exponent and 1.43 from the ratio form. So the prefactor chain itself differs from both forms,
-as T-4290 found inside the gamma window (T-4296). Ours keeps the accurate kernel there. The
+as T-4290 found inside the gamma window (T-4296, T-4308). Ours keeps the accurate kernel there. The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
 (`GAMMA.DIST(0.9,9,1,TRUE)`: Excel 9 ulp below the truth, the ratio form 23 below Excel, the direct one 10 above).
@@ -1325,7 +1365,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4308
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
