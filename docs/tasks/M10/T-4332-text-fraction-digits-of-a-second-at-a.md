@@ -3,7 +3,7 @@ id: T-4332
 title: "TEXT fraction digits of a second at a tie for a serial below 1 (d=0) follow no half-step model yet"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
