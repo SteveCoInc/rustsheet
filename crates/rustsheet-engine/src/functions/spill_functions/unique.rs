@@ -10,7 +10,7 @@ use crate::{
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::util::{
         coalesce_equal_lines,
-        collation::{cmp_text_pairwise, collation_key},
+        collation::{cmp_text_pairwise, collation_key, stoppable},
     },
     model::Model,
 };
@@ -164,13 +164,17 @@ pub(super) fn unique_of(
             &data[line][k]
         }
     };
-    let first = unique_first_lines(
-        count,
-        length,
-        |line, k| Some(at(line, k)),
-        |units| model.spend_work(units, cell),
-        cell,
-    );
+    // The grouping may stop past the run's allowance: what it builds is only this node's value
+    // (`collation::stoppable`, T-4278).
+    let first = stoppable(|| {
+        unique_first_lines(
+            count,
+            length,
+            |line, k| Some(at(line, k)),
+            |units| model.spend_work(units, cell),
+            cell,
+        )
+    });
     let first = match first {
         Ok(first) => first,
         Err(error) => return error,
