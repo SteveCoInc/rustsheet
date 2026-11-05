@@ -67,7 +67,7 @@ fn a_billion_periods_take_milliseconds_and_are_excels_values() {
         ("A4", "=CUMIPMT(0.01,Z5,1,1,Z5,0)", "-1E306"),
         ("A5", "=CUMIPMT(0.01,Z5,1,Z8,Z5,1)", "-8.91089108910891E305"),
     ]);
-    // fin-cumipmt-period-bound A3, an ulp off since T-3524 (decision 0291).
+    // fin-cumipmt-period-bound A4, an ulp off since T-3524 (decision 0291).
     check_within_two_ulps(&[("A3", "=CUMPRINC(1E-9,1E9,1,1,1E9,1)", -1.0)]);
     assert!(started.elapsed() < Duration::from_secs(5));
 }
@@ -309,7 +309,7 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
             "-6.214428680002485E-262",
         ),
     ]);
-    // fin-cumipmt-period-bound A30, an ulp off since T-3524 (decision 0291).
+    // fin-cumipmt-period-bound A6, an ulp off since T-3524 (decision 0291).
     check_within_two_ulps(&[(
         "A10",
         "=CUMPRINC(0.005,100000,1000,2,99999,1)",

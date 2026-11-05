@@ -111,8 +111,8 @@ tag, restated (T-3524), as decision 0295's recorded deviation, with its form cho
   1,024 ulps; 17 over a long one, 16 of them CUMIPMT, worst 256 ulps), the tiny-rate one 475 to the bit and 140
   visibly off (71 short, all CUMIPMT, worst 3,072 ulps; 69 long, 68 CUMIPMT, worst 2,048 ulps), owned by T-4349.
 - Unit tests (crates/rustsheet-engine/src/test/test_fn_cumulative_lift.rs): the five that pinned decision 0291's
-  long-range cells to the bit (fin-cumipmt-period-bound A3, A11, A27, A30) now check them within 2 ulps of Excel's
-  value through `check_within_two_ulps`, which cites 0291; `each_element_is_the_scalar_call` A3 compares the element
-  with its scalar call.
+  long-range cells to the bit (fin-cumipmt-period-bound A4, A6, A11, A27) now check them within 2 ulps of Excel's
+  value through `check_within_two_ulps`, which cites 0291; `each_element_is_the_scalar_call` A3 (A30's INDEX call)
+  compares the element with its scalar call.
 - The `quality/fitted.json` update also lowers annuity.rs from 4 to 3: main already has 3 tags there (a stale lock).
 - Findings: docs/excel-semantics/financial.md, "The two cuts on a fresh sweep". Follow-up: T-4349.

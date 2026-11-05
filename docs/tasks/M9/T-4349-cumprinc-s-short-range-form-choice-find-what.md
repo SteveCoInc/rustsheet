@@ -22,7 +22,7 @@ available rule on a fresh sweep.
   is one test cell better on the old cells (147 vs 146 bit-exact) and 6 better on the fresh sweep (514 vs 508), but
   38 old cells go visibly off (tiny-rate interests: `CUMIPMT(1E-10,296,197540,13,19,1)`, gen-m9 b72d952c5f52cb4d
   A257, 33,554,432 ulps; probes/fin-cumipmt-tiny-rate-structure A1, A3, K3; fin-cumipmt-gate-edges A8, E2)
-  against 20 it fixes, and on the fresh sweep 9 against 13. So the leading exponent alone does not decide which
+  against 20 it fixes, and on the fresh sweep 9 lost against 15 won (short ranges). So the leading exponent alone does not decide which
   form is Excel's over a short range: below 0.095 the old cells favour the cut and the fresh sweep the geometric
   sum (fresh 46 vs 57 bit-exact), from 0.095 to 0.3 both favour the cut. The rate (cells below 1E-3 dominate the
   visible losses) or the type are candidate deciders. `docs/research/t3524/analyze.py` lists each cell either form
@@ -52,6 +52,9 @@ available rule on a fresh sweep.
   same number it brings back on the two fresh sweeps. Below a lead of 1E-3 only old cells back the cut (the fresh
   sweeps start there). This task re-decides it: replace the cut by a decider that wins, or, if none does, ask the
   owner to rule between decision 0083's order and R4.3.
+- The cut's `FITTED` range (T-3524) spans the old probes' rates 1E-300..1E300, so in practice it bounds only the
+  range length (at most 32 periods): whichever way this task decides, tighten that range to what is evidenced or
+  remove the tag with the cut (T-3524 fidelity review, round 3).
 
 ## Acceptance criteria
 - [ ] A ranked comparison (fit lab, two or more engine builds) of candidate short-range selectors on the old and the
