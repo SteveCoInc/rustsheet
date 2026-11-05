@@ -63,8 +63,10 @@ def natural_sort(items, rcmp):
     return runs[0]
 
 
-def unique_kept(rows, rcmp):
-    """UNIQUE's merge (T-4200): equal groups coalesce when they meet; returns kept row indices in input order."""
+def unique_kept(rows, rcmp, t4200=False):
+    """UNIQUE's merge (T-4200): equal groups coalesce when they meet; returns kept row indices in input order.
+    Equal heads of two runs: the right one joins the left, which stays the head and meets the next right group too
+    (T-4380); `t4200`: T-4200's rule, which took both heads out at once."""
     groups = [[i] for i in range(len(rows))]
     runs, cur = [], [groups[0]]
     for g in groups[1:]:
@@ -89,8 +91,10 @@ def unique_kept(rows, rcmp):
                     o.append(g)
             while a and b:
                 c = rcmp(rows[b[0][0]], rows[a[0][0]])
-                if c == 0:
+                if c == 0 and t4200:
                     push(a.pop(0) + b.pop(0))
+                elif c == 0:
+                    a[0] = a[0] + b.pop(0)
                 elif c < 0:
                     push(b.pop(0))
                 else:

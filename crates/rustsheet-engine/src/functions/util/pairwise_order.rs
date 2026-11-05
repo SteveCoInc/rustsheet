@@ -128,10 +128,11 @@ pub(crate) fn coalesce_equal_lines<E>(
                         push(&mut parent, &mut out, a, &mut cmp)?;
                         i += 1;
                     }
+                    // The right group joins the left head, which stays the head: the next
+                    // right group meets it too (T-4380: over Cx Ay Ax Bx, Bx meets the group of
+                    // Cx and Ax and joins it, where taking both heads out left it Ay to meet).
                     Ordering::Equal => {
                         parent[b] = a;
-                        push(&mut parent, &mut out, a, &mut cmp)?;
-                        i += 1;
                         j += 1;
                     }
                 }
