@@ -2105,12 +2105,17 @@ the double t and at the exact t, so the gap is not in the statistic (probes-nume
   of Excel, against 18 for the exact tail at t. The rest are 3 to 6 ulp off: Excel's incomplete beta has its own noise, as in the T.DIST sweep.
 - Welch's df is fractional. There `I_y` needs an accurate Gamma ratio: libm's tgamma ratio is 9 ulp off at
   `T.TEST(D1:D10,F1:F10,2,3)` (B18), and Cephes' plain fraction is 111 ulp off at `T.TEST(D1:D10,F1:F11,2,3)` (B27).
+- The statistic's own rounding cannot reach y where y is near 1 (T-2993): over PIVOTBY slices
+  (probes/pivotby-ttest-array2 P!A36, A37, A42, A43; type 2, one tail, df 7, 13, 22, 41), five sum-of-squares
+  orders and seven ways to form t² all give one y each, yet Excel is 1 to 8 ulp from the exact tail there and on the
+  other side of it from ours at A42 (Excel 0.3571628041352982, exact at fl(y) 0.3571628041352981, true
+  0.35716280413529768), where one ulp of y moves p by about 27 ulp. That is the tail's noise, not the statistic.
 Evidence: probes-numeric `t1048-ttest`, `t1049-ttest`; ironcalc-calc `STATISTICAL/T_TEST.xlsx`. Exact values: mpmath
-`betainc` at 50 digits (T-0969 attempt 5, 2026-10-20).
+`betainc` at 50 digits (T-0969 attempt 5, 2026-10-20; T-2993, 2026-11-05).
 Ours: `student_t.rs` `student_t_tail_at` since T-0969 attempt 5. T.TEST/TTEST visibly-off cells went from 19 to 3:
 t1048-ttest A3/B3 (6 ulp) and t1049-ttest A48 (5 ulp), all Welch.
 Status: VERIFIED (excel-graph)
-Tasks: T-0969
+Tasks: T-0969, T-2993
 
 ## T.DIST.RT follows the rounded y beyond t = 1 (T-0969)
 Rule: away from the deep tail, T.DIST.RT (and so T.DIST, T.DIST.2T and TDIST) takes the tail at
@@ -2837,6 +2842,20 @@ UNVERIFIED.
   bisection uses the cdf, and all 126 BINOM.INV and 126 CRITBINOM probe cells pass. BINOM.DIST.RANGE takes the pmf
   for one point and the cdf from 0, then the double-double walk, then the cdf difference. Its probe misses are those
   of BINOM.DIST's own last digits (T-3447) plus the 21 upper-tail rows (T-3740).
+- Gate A fresh sweep (T-3741; accuracy/BINOM.DIST.RANGE, BINOM.INV and CRITBINOM s1, 200 points each, trials to
+  2^31 - 2, excel-graph, 2026-11-04), scored against 50-digit math:
+  - Ranges above the mean: on the 9 points where ours is off (owner T-3740: A85, A91, A94, A101, A107, A146, A172,
+    A177, A180), Excel stays within 7E-12 relative of the math however deep the range sits, from 1.4E-9 down to
+    1.9E-134 (`BINOM.DIST.RANGE(777228,0.567422582556133,451769,452355)`, s1 A107, 1E-12 off). So past the mean Excel
+    does not take the cdf difference, which cancels to 0 on four of them in ours.
+  - BINOM.INV and CRITBINOM (separate draws): each equals the math's smallest k with P(K <= k) >= alpha on 199 of its
+    200 points, at trial counts up to 2^31 - 2. The other one in each sits at alpha within 3E-14 of 1, where Excel's
+    count is 3 and 4 below the math's: `BINOM.INV(176943131,0.607197940256648,0.999999999999976)` is 107488465 against
+    107488468 (s1 A155), and `CRITBINOM(2147483646,0.722975469966602,0.999999999999981)` 1552734937 against 1552734941
+    (s1 A171). The true cdf at Excel's count is below alpha by under half an ulp of 1 (4.9E-17 at A155): a cdf held
+    as a double near 1 reaches alpha there, as the rule above says the search does.
+  - No trials: `BINOM.INV(0,p,alpha)` and `CRITBINOM(0,p,alpha)` are 0 (BINOM.INV s1 A113, A116, A123, A125, A132;
+    CRITBINOM s1 A139, A140; p and alpha central), and `BINOM.DIST.RANGE(0,0.755198170543338,0)` is 1 (s1 A122).
 Tasks: T-3444, T-3352, T-3447, T-3740, T-3741
 
 ## NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)
@@ -4254,6 +4273,29 @@ within 1E-15 relative / largest relative error:
   (x = 50 at df1 = 40, 60, 79: 4E-395, 5E-591, 4E-777) are correct underflow. `reference.py` prints every such cell.
   The cells with no stable 50-digit reference are these zero/underflow tails and two of the `#NUM!` cells, so the counts
   above do not hide a non-zero Excel value.
+- **Where the exact 0 starts (T-4045)**, probes-numeric t4045-f-dist-rt-zero-cut (192 cells, excel-graph, 2026-11-04):
+  `F.DIST.RT(x,df1,df2)` walked with z = df1 x / 2 from 690 to 770 (by 1 from 700 to 750) at (df1, df2) = (30, 1E8),
+  (20, 1E7) and (31, 1E8). Excel drops straight from a normal number to 0: the last numbers are at z = 714, 715 and 711
+  (`F.DIST.RT(71.5,20,1E7)`, z = 715, is 4.320911961488639E-291 and `F.DIST.RT(71.6,20,1E7)` is 0) and every z above is 0. The rule is on bratio's L140
+  bup+bgrat prefactor, not on the tail: Excel's tail w is 0 when bup's prefactor ret = P·x0·y0/c (P the Beta(c, a0)
+  density at y0, c = b0 - n) is below the smallest normal double, 2.2250738585072014E-308. ln ret (60-digit mpmath)
+  brackets the last number and the first 0 at (-707.42, -708.42), (-708.38, -709.38) and (-707.59, -708.59) for the
+  three families (the third, at c = 1/2, includes ret's 1/c), and the brackets meet only in (-708.42, -708.38), around
+  ln(DBL_MIN) = -708.396. Leaving any one family out, the other two still bracket ln(DBL_MIN), and it predicts the
+  third's edge. The probe's step of about 1 in ln cannot tell ret from ret·c (a factor of 2 at c = 1/2). A plain e^-z
+  cut (z > 708.4 or 745.1) or a cut on the density P itself (z near 726, 724, 722) misses every family.
+  Fresh sweep after the rule froze, at untouched shapes (probes/t4045-f-dist-rt-zero-cut-fresh, 102 cells,
+  excel-graph, 2026-11-04): F.DIST.RT at (df1, df2) = (24, 1E4), (25, 1E4), (24, 1E5), (27, 1E5), (22, 1E6), (23, 1E6),
+  17 cells each, stepping about 0.5 in ln ret around the predicted edge (row 9). Excel's first 0 is row 9 or 10 in
+  every family, within one step of the prediction. Scored once: all 51 zeros exact, all 51 numbers NumericClose
+  (last digits, T-3209), no type or zero mismatch.
+  bgrat's own increment is subnormal there (z > 708) and Excel flushes it. So the true tail can be as large as 4E-291
+  and still read 0, while `F.DIST.RT(20,60,1E8)` (z 600) keeps 1.164E-211. FDIST is the same function: column D (df1 30,
+  df2 1E8, z 716 to 736) is 0 like column A. The df1 = 2 zeros are Excel's closed form (not this path) and stay unexplained.
+  Ours (T-4045): F's tails only (`bratio` `f_closed_or_ported_tails` asks `bup.rs` `l140_bup_prefactor_underflows`,
+  at any a0). That makes every 0 of t4045 and t4017 exact. BETA.DIST and the t are unprobed at this edge (T-4254), and
+  BETA.DIST's cdf keeps today's kernel there: F.INV at a huge df1 searches it, and a 0 there moves
+  `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) 0.6% off the math.
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -4283,10 +4325,9 @@ within 1E-15 relative / largest relative error:
     which is why no rule in b alone (T-4044) separated the earlier cells.
   - **On the probed brackets n_min(a) is n + 2 ln a > T with T in (81.86, 81.95)** (the weight 2 is any value in (1.86,
     2.21): 2E9 at n 39, a number, against 1E10 at n 36, `#NUM!`, needs w > 3/ln 5): in-band minima 82.07 (2.25E9, n 39), 81.95 (3.5E9, 38), 82.03 (6E9, 37), 82.05 (1E10, 36); out-of-band maxima
-    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. This is a separating
-    line fitted to the 14 probed a, not a mechanism: the TOMS quantity it tracks is not identified (bup's term ratio and
-    brcmp1 do not move with a at a fixed tail; the exp(708) scaling runs only at an integer b, yet both kinds share n).
-    UNVERIFIED between the probed a and outside 2E9 to 1E10.
+    81.83 (2E9, 39), 81.86 (5.5E9, 37), 81.64 (3E9, 38), 81.61 (8E9, 36). T-4030's points fit it. The line was fitted
+    to the 14 probed a. The mechanism behind it is bup's running ratio product passing DBL_MAX, whose log the line tracks
+    (the "mechanism" item below; T-4044).
   - **Only the tails that take L140 are cut**: columns A and B (I about 1E-6 and 0.05, where lambda = (a + b)(1 - x) - b
     > 0) have the same band; C (I about 0.5, lambda < 0, so bratio swaps the shapes and takes bfrac) and D (x = 1 - 1E-12)
     are numbers everywhere, and so is the density `BETA.DIST(..,FALSE)` (column E, b = 30, 37.5, 39.5, 40). Between I of
@@ -6530,6 +6571,20 @@ Evidence: probes/t2496-fin-subexpressions P!A90; probes/tbill-error-order-inner-
 Ours: both as Excel since T-2621 ("Statistical argument-domain errors and extreme values (T-2621)").
 Status: VERIFIED (excel-graph), one cell each; the boundaries are not probed.
 Tasks: T-2469, T-2435, T-2621
+
+## WEIBULL.DIST's density at x = 0 still computes beta^alpha (T-3312)
+Rule: the density (cumulative FALSE) at x = 0 is 0 only when its divisor beta^alpha is in range: it is `#NUM!` where
+beta^alpha overflows and `#DIV/0!` where it underflows to 0, as at x > 0. `WEIBULL.DIST(0,309,10,FALSE)` is `#NUM!`
+and `(0,308,10,FALSE)` 0 (10^309 is past the double range, 10^308 is not); `(0,400,0.1,FALSE)` and
+`(0,1E+10,0.9999,FALSE)` are `#DIV/0!`; `(0,2,1E+200,FALSE)`, `(0,1E+10,1.0001,FALSE)`, `(0,1E+300,1E+300,FALSE)` and
+`WEIBULL(0,400,10,FALSE)` are `#NUM!`. The cdf at x = 0 stays 0 (`WEIBULL.DIST(0,400,10,TRUE)`), and the density at
+0 for a shape below 1 is 0 too (`WEIBULL.DIST(0,0.5,1,FALSE)`, though its limit is infinite).
+Evidence: probes/t3312-xirr-xnpv-inner-calls A1-A6, probes/t3312-xirr-guess-dates-weibull A48-A61 (excel-graph,
+2026-11-04); it settles gen-m9/30e20ba3302fea8b A208 (`XIRR(-1.5,WEIBULL.DIST(0,1.5E+10,99999,FALSE))` is the
+WEIBULL.DIST's `#NUM!`).
+Status: VERIFIED
+Implemented in: `weibull_dist_of` and `weibull_divisor` (crates/rustsheet-engine/src/functions/statistical/weibull.rs).
+Tasks: T-3312
 
 ## Statistical argument-domain errors and extreme values (T-2621)
 Rule (probes/t2475-stat-subexpressions, excel-graph, 2026-10-24; each from the probe cell named, with its gen-m9 owner):

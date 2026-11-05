@@ -293,9 +293,9 @@ const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
 /// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
 /// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
 const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
-/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, by code point
-/// (probes/t4039-collation-space-forms Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep
-/// K1:L16; U+0082 to U+008F and U+0091 to U+009D unprobed).
+/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, each by its code point
+/// (probes/t4270-collation-c1-controls Calc!B1:B36, all 32; probes/t4039-collation-space-forms
+/// Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep K1:L16).
 const C1_BASE: u32 = BULLET + 1;
 const DIGIT_BASE: u32 = 0x800;
 const _: () = assert!(C1_BASE + 0x20 <= DIGIT_BASE);
