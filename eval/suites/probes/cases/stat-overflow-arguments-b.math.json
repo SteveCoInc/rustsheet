@@ -8,6 +8,16 @@
  },
  "sheets": {
   "Sheet1": {
+   "A3": {
+    "t": "e",
+    "why": "B - A beyond the double range",
+    "f": "=BETA.DIST(C2,2,3,FALSE,C2,C1)"
+   },
+   "A4": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(C2,2,3,TRUE,C2,C1)"
+   },
    "A5": {
     "t": "n",
     "v": "1.0",

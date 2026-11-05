@@ -98,6 +98,11 @@
     "why": "deg_freedom outside [1, inf)",
     "f": "=T.DIST(2,-1,FALSE)"
    },
+   "A29": {
+    "t": "e",
+    "why": "deg_freedom outside [1, inf)",
+    "f": "=T.DIST(2,0.5,FALSE)"
+   },
    "A3": {
     "t": "n",
     "v": "-6.8688266258812751318210395270110494992443973252164",
@@ -107,6 +112,11 @@
     "t": "e",
     "why": "deg_freedom outside [1, inf)",
     "f": "=T.DIST(2,0,TRUE)"
+   },
+   "A32": {
+    "t": "e",
+    "why": "deg_freedom outside [1, inf)",
+    "f": "=T.DIST(2,0.5,TRUE)"
    },
    "A35": {
     "t": "e",
@@ -127,6 +137,11 @@
     "t": "e",
     "why": "probability outside (0, 2)",
     "f": "=T.INV.2T(2,5)"
+   },
+   "A41": {
+    "t": "e",
+    "why": "deg_freedom outside [1, inf)",
+    "f": "=T.DIST(2,-0.5,FALSE)"
    },
    "A42": {
     "t": "e",

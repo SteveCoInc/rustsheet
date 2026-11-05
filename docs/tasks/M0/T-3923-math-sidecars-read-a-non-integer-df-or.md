@@ -95,3 +95,27 @@ no math value. Most should turn out to be Phase 1b evidence, and the ones that d
   `BINOM.INV`).
 - New Gate A definitions (T-3798, T-3925).
 - Any engine change.
+
+## Landing notes
+- Branch `agent/harness/T-3923-math-sidecars-df-bounds-guess`, draft PR (see the branch). The landing window closed with
+  the work at this head: not yet reviewed, and CI not yet run on it.
+- Done:
+  - `Param.truncates` (model.py), cited on F.DIST's, T.DIST's and CHISQ.INV.RT's df. eval_math `_fit_int` truncates
+    only there.
+  - BETA.DIST and BETA.INV take the optional A and B (`Definition.interval_args` checks x as (x-A)/(B-A)). RATE takes
+    `guess` and ignores it.
+  - The sampler draws only `Definition.required`, so the s1 tables are unchanged.
+  - Unit tests are in tools/tests/test_accuracy_eval_math.py. ruff, mypy and `pytest tests/test_accuracy*.py` pass.
+- Sidecars: the full `rustsheet-accuracy math --suite probes` ran past 30 minutes and rewrote unrelated stale entries
+  (Bessel `why` strings, t2982 values), so it was reverted. Instead, only the 45 cases `math_path`/`check_case` flagged
+  were regenerated, with a small script (case_math + sidecar_bytes per flagged case).
+- Before (`make eval` on origin/main 067ae657, report.md): "probes 1877 counted, 99 Phase 1b evidence ...;
+  probes-numeric 2008 counted, 2891 Phase 1b evidence, 66 R3 passing". `scripts/exit_owners.py --all-off`: 0 unowned,
+  0 `(deferred)`.
+- Next steps:
+  1. `make eval-math-check`.
+  2. `make eval`, then quote the after R1(c) line and the exit_owners count in the Outcome. Name and own every newly
+     gained cell that is outside the envelope.
+  3. `make eval-baseline`, which must record nothing.
+  4. `make check-fast`, then the review panel (design and security; excel-fidelity because eval/suites changes).
+- Do not repeat: the whole-suite `math` regeneration, which brings in unrelated churn.
