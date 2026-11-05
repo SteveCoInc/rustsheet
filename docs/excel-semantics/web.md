@@ -228,8 +228,9 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk (T-4287): **a numeric grouping over a blank, or over date-formatted cells among numbers, is dropped** on refresh,
   as a date grouping over a blank is (below): whole data 0 to 9 by 3 with one blank record shows `-1`, `0`, `3`,
   `(blank)`, `6`, `9`, `10` (record order), and 0 to 9 by 3 over -1, 1, 4, 7, 10 with 1 and 4 formatted `yyyy-mm-dd`
-  shows each value (`4.5` too) as its own item. A numeric grouping over date cells alone is UNVERIFIED (T-4316; the
-  engine keeps it).
+  shows each value (`4.5` too) as its own item. **Over date cells alone it is dropped too** (T-4316): 0 to 9 by 3 over
+  1, 2, 4, 7, 10, all `yyyy-mm-dd`, shows `1`, `2`, `4`, `7`, `10` and GETPIVOTDATA on `0-2` ... `>9` is `#REF!`; so is
+  1, 2, 4.5, 7, 10 (probes/t4316-pivot-group-dates-alone, t4316-pivot-group-dates-alone-frac). So any date cell drops it.
 - Relabel order (T-4253, T-4249): the file's items whose text is one of Excel's labels come first, in the file's order,
   then Excel's other labels in layout order. Excel's five labels for 0 to 9 by 3 listed as `<0`, `3-6`, `0-3`, `>9`,
   `6-9` keep that order; a list one short (`<0`, `0-3`, `3-6`, `>9` over whole data, whose labels are `0-2` ...) shows
@@ -240,8 +241,12 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
   `0.7-0.8`, `0.2-0.3`, `<0`, `0-0.1`, ...; `<0` alone, first or at item 11, and Excel's 12 labels plus one extra keep
   the layout order. The match is on the whole text, ignoring case but not spacing (T-4287): `>3e+20`, `2e+20-3e+20`, ... match Excel's
   `>3E+20`, ... and keep the file's order (Excel still writes `E`), while `6 - 9`, ` 3-5` and `3-5 ` match nothing and
-  come after the matched items. A label the file lists twice (the engine takes its first) and a non-text item (the
-  engine skips it) are UNVERIFIED (T-4316): the case builder writes neither.
+  come after the matched items.
+- Quirk (T-4316): **a label the file lists twice takes its last place**: `6-9`, `3-5`, `6-9`, `w3`, `w4` for 0 to 9 by 3
+  over whole data shows `3-5`, `6-9`, `<0`, `0-2`, `>9` (`<0`, `<0`, `0-2`, ... and five `x` keep the layout order).
+  A **non-text item** (`<n v="0"/>`) matches nothing and is skipped: `<0`, 0, `3-5`, `6-9`, `>9` shows `<0`, `3-5`,
+  `6-9`, `>9`, `0-2`; 3, `6-9`, `3-5`, ... shows `6-9`, `3-5`, `<0`, ...; five numbers -1, 0, 3, 6, 9 the layout order
+  (probes/t4316-pivot-group-label-twice, t4316-pivot-group-number-item). GETPIVOTDATA on each label works as usual.
 - Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>` with the last bound (data not all whole), each bound start + k * interval rounded to 15
   significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
   would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
@@ -261,12 +266,15 @@ rendered labels; probes/t4249-pivot-range-group-edges and probes/t4249-pivot-ran
 2026-11-05, T-4249): thirteen pivots over wrong lists, partial spans and whole data, and GETPIVOTDATA number items
 past `endNum` and below `startNum`; probes/t4287-pivot-group-label-match, -bound-text, -whole-end and
 -dates-as-numbers (excel-graph, 2026-11-05, T-4287): sixteen pivots on label matching, large, tiny and tie bounds,
-fractional ends, a blank and date cells. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253, T-4249): `NumberGroups`
+fractional ends, a blank and date cells; probes/t4316-pivot-group-label-twice, -number-item, -dates-alone and
+-dates-alone-frac (excel-graph, 2026-11-05, T-4316): eight pivots on repeated and number items and date cells alone.
+Status: VERIFIED (excel-graph). Engine (T-4235, T-4253, T-4249): `NumberGroups`
 groups by the rule, picks a number item by the truncation rule, and always writes its own labels in the relabel order
 above (`NumberGroups::new`, `labels`, `lower_bound_index`). T-4287: whole labels need a whole `endNum`
 (`NumberGroups::new`), the label match folds case (`fold_case`), and `Txn::add_pivot_table` leaves the field ungrouped
-over a blank or mixed date and number cells (`grouped`, `mixes_dates`; `row_layout` writes a number item as its value);
-the importer keeps a saved grouping, as for dates. A group with no record
+over a blank or any date cell (`grouped`, `holds_dates`; `row_layout` writes a number item as its value);
+the importer keeps a saved grouping, as for dates. T-4316: a repeated label takes its last place and a number item
+is skipped (`NumberGroups::new`), and any date cell, not only dates among numbers, drops the grouping. A group with no record
 is `#REF!` while its field's `showAll` is off and 0 while it is on (T-4311). The importer and
 the eval adapter share it (`group_by_numbers`); the adapter has the engine lay a grouped spec pivot out (captions, the
 groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model the fresh sweep

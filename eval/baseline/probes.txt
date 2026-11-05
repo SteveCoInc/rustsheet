@@ -2264,6 +2264,10 @@ C	probes/t4299-typed-xlpm-extrapolations.case.json	22
 C	probes/t4302-poisson-cdf-beside-pmf.case.json	336
 C	probes/t4302-poisson-cdf-holdout-2.case.json	48
 C	probes/t4311-pivot-showall-column-and-groups.case.json	68
+C	probes/t4316-pivot-group-dates-alone-frac.case.json	25
+C	probes/t4316-pivot-group-dates-alone.case.json	25
+C	probes/t4316-pivot-group-label-twice.case.json	75
+C	probes/t4316-pivot-group-number-item.case.json	75
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10

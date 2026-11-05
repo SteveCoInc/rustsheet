@@ -76,13 +76,29 @@ impl NumberGroups {
             .enumerate()
             .map(|(k, label)| (fold_case(label), k))
             .collect();
+        // A label the file lists twice takes its last place: `6-9`, `3-5`, `6-9` shows `3-5`
+        // before `6-9`. A non-text item (`<n v="3"/>`) matches nothing and is skipped
+        // (probes/t4316-pivot-group-label-twice, t4316-pivot-group-number-item).
+        let matching: Vec<usize> = file_items
+            .iter()
+            .filter_map(|item| match item {
+                CacheItem::Text(text) => position.get(&fold_case(text)).copied(),
+                _ => None,
+            })
+            .collect();
         let mut seen = vec![false; labels.len()];
         let mut layout: Vec<usize> = Vec::with_capacity(labels.len());
-        let matching = file_items.iter().filter_map(|item| match item {
-            CacheItem::Text(text) => position.get(&fold_case(text)).copied(),
-            _ => None,
-        });
-        for k in matching.chain(0..labels.len()) {
+        let mut last_first: Vec<usize> = Vec::with_capacity(matching.len());
+        for &k in matching.iter().rev() {
+            if let Some(slot) = seen.get_mut(k) {
+                if !*slot {
+                    *slot = true;
+                    last_first.push(k);
+                }
+            }
+        }
+        seen.fill(false);
+        for k in last_first.into_iter().rev().chain(0..labels.len()) {
             if let Some(slot) = seen.get_mut(k) {
                 if !*slot {
                     *slot = true;
@@ -504,6 +520,41 @@ mod tests {
             (11.0, 5),
         ] {
             assert_eq!(g.layout_index(value), Some(index), "{value}");
+        }
+    }
+
+    /// probes/t4316-pivot-group-label-twice and t4316-pivot-group-number-item: a label listed
+    /// twice takes its last place, and a non-text item is skipped.
+    #[test]
+    fn a_repeated_label_takes_its_last_place_and_a_number_is_skipped() {
+        let base = CacheField {
+            name: "N".into(),
+            items: [-1.0, 1.0, 4.0, 7.0, 10.0].map(CacheItem::Number).to_vec(),
+            records: (0..5).collect(),
+            ..CacheField::default()
+        };
+        let layout = ["<0", "0-2", "3-5", "6-9", ">9"];
+        let num = |v: f64| CacheItem::Number(v);
+        let text = |t: &str| CacheItem::Text(t.to_owned());
+        for (file, shown) in [
+            (
+                texts(&["6-9", "3-5", "6-9", "w3", "w4"]),
+                ["3-5", "6-9", "<0", "0-2", ">9"],
+            ),
+            (texts(&["<0", "<0", "0-2", "3-5", "6-9", ">9"]), layout),
+            (texts(&["x", "x", "x", "x", "x"]), layout),
+            (
+                vec![text("<0"), num(0.0), text("3-5"), text("6-9"), text(">9")],
+                ["<0", "3-5", "6-9", ">9", "0-2"],
+            ),
+            (
+                vec![num(3.0), text("6-9"), text("3-5"), text("w3"), text("w4")],
+                ["6-9", "3-5", "<0", "0-2", ">9"],
+            ),
+            ([-1.0, 0.0, 3.0, 6.0, 9.0].map(num).to_vec(), layout),
+        ] {
+            let grouped = group_by_numbers(&base, [0.0, 9.0, 3.0], &file).unwrap();
+            assert_eq!(grouped.items, texts(&shown), "{file:?}");
         }
     }
 

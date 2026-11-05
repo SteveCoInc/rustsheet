@@ -268,12 +268,22 @@ pub struct PivotGroupSpec {
     pub end: f64,
     /// `groupInterval`.
     pub interval: f64,
-    /// The `<groupItems>` labels.
-    pub items: Vec<String>,
+    /// The `<groupItems>` items: labels, or numbers written as `<n>` items (T-4316).
+    pub items: Vec<PivotGroupItem>,
     /// A date group's `groupBy` (`months`, `hours`, ...), whose `start` and `end` are date serials
     /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub by: Option<String>,
+}
+
+/// One `<groupItems>` item of a [`PivotGroupSpec`]: a label (`<s>`) or a number (`<n>`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PivotGroupItem {
+    /// A text label.
+    Text(String),
+    /// A number item, which matches none of Excel's labels.
+    Number(f64),
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine
