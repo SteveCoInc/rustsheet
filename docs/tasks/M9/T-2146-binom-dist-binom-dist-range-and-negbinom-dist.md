@@ -198,14 +198,31 @@ It owns 71 of BINOM.DIST.RANGE's 73 needed cells, 534 BINOM.DIST and 121 NEGBINO
   finding (`NEGBINOMDIST(0,1,1E-200)` = 9.99999999999978E-201). Elsewhere it is p·q^f at r = 1 and p times the shifted
   kernel above. The walk is left only where the kernel is not finite. The cdfs are unchanged.
 - The fit is a structural choice between ranked candidates (reviewer-excel-fidelity check 7 (c)), with no fitted
-  constant:
-  - Loader everywhere against the walk, Loader in the tails only (T = 2 to 60), and for NEGBINOM fl(p·kernel)
-    against EXP(E + LN p) and R's dnbinom.
-  - Counts are failing / visibly-off BINOM-family cells: train walk 11,612 / 4,303, model 10,575 / 3,392; hold-out
-    (the t2513 -hold and verify cases, fixed before scoring) walk 6,892 / 2,065, model 6,163 / 1,442.
-  - Fresh sweep probes-numeric/t2146-binom-negbinom-pmf-fresh (400 cells, seed 2146, drawn and filled after the
-    freeze): bit-exact 96 -> 135, visibly off 168 -> 131.
-  - All in statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere".
+  constant. The R4 guards:
+  - R4.1 hold-out (fit lab `binom-pmf` and `negbinom-pmf`, `tools/.../fitlab/kernels/binom_pmf.py`, cell-hash split,
+    margin 5 points stated in the fit before scoring; the walk is main's build, `--build walk=...`). Columns are
+    bit-exact, <=4 ulp and <=15 digits:
+
+    | fit | candidate | train | test | verdict |
+    |---|---|---|---|---|
+    | binom-pmf (8,390 train / 3,708 test) | Loader (engine) | 2,278 (27.2%) / 6,042 / 6,911 | 986 (26.6%) / 2,671 / 3,032 | accept |
+    | | walk (main) | 1,504 (17.9%) / 5,065 / 6,261 | 687 (18.5%) / 2,245 / 2,750 | accept |
+    | | correctly rounded | 1,445 (17.2%) / 4,993 / 6,198 | 671 (18.1%) / 2,229 / 2,732 | reference |
+    | negbinom-pmf (4,965 train / 2,201 test) | Loader (engine) | 1,153 (23.2%) / 3,785 / 4,167 | 536 (24.4%) / 1,693 / 1,853 | accept |
+    | | walk (main) | 705 (14.2%) / 3,245 / 3,853 | 308 (14.0%) / 1,450 / 1,700 | accept |
+    | | correctly rounded | 704 (14.2%) / 3,244 / 3,852 | 307 (13.9%) / 1,449 / 1,699 | reference |
+
+  - R4.2 fresh sweep: Gate A batches `r4-T-2146` of BINOM.DIST (198 points) and NEGBINOM.DIST (194), generated after
+    the freeze and filled with excel-graph. R2 envelope: all 392 inside, 0 failing (`rustsheet-eval accuracy`: 19,262
+    points, 0 failing). The probes-numeric case t2146-binom-negbinom-pmf-fresh (400 cells, seed 2146, drawn and
+    filled after the freeze) is extra evidence: bit-exact 96 -> 135, visibly off 168 -> 131. Its math sidecar covers
+    the 360 BINOM.DIST and NEGBINOM.DIST cells, all in the envelope. The 40 legacy-name cells (A361:A400) have no
+    math definition; of them, A361:A363, A366, A373:A374, A376, A378, A382, A385, A393, A398 are off by more than
+    15 digits (T-4352 owns them).
+  - Exploration that chose nothing: on the case-level split the tail-only switch (Loader below e^-T, T = 2 to 60)
+    lost to "everywhere" at every T; the T values were not tuned on the hold-out (it is not shipped). For
+    NEGBINOM, fl(p·kernel) ties EXP(E + LN p), and R's dnbinom loses to the walk.
+  - Counts are in statistics.md "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere".
 - Eval delta:
   - gen-m9: 26 known-failure lines fixed, 9 regressed;
   - ironcalc-calc: 7 fixed, 3 regressed, 274 -> 270; BINOM.xlsx lines 28 -> 24 (from 70 when this task was filed);

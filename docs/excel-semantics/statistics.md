@@ -3011,19 +3011,18 @@ f = 0 is EXP(fl(r·LN(p))), not the exact p^r, and like the k = 0 binomial pmf i
   identified (T-2513), and it misses some cells where the exact value happens to be Excel's. For example
   `NEGBINOMDIST(9,3,0.001)`: Excel 5.450697538692308E-08, the exact value's double, the model 9 ulp away (gen-m9
   1db18890916ee643 A10).
-- Still, it beats the walk as a whole. Counts are failing / visibly off; lower is better:
-  - train (t2513-r3-binom-pmf-a and -n, T-2145's sweeps and the other ungated BINOM probes): walk 11,612 / 4,303,
-    model 10,575 / 3,392;
-  - hold-out (t2513-r3-binom-pmf-hold, t2513-verify-r3-binom-pmf-h and the -hold cases): walk 6,892 / 2,065,
-    model 6,163 / 1,442;
-  - fresh sweep probes-numeric/t2146-binom-negbinom-pmf-fresh (400 cells drawn after the freeze): bit-exact walk 96,
-    model 135; visibly off walk 168, model 131.
-- Tail-only switches lost to "everywhere" at every T from 2 to 60, on train and hold-out alike: Loader where the pmf
-  is below e^-T, the walk above. At NEGBINOM.DIST the final step fl(p·kernel) ties EXP(E + LN p) held in a register
-  (train visibly off 1,010 against 1,006, hold-out 874 against 873). R's dnbinom, (r/(f+r))·dbinom_raw(r, f+r), is
-  worse than the walk (1,324 and 1,140).
+- Still, it beats the walk as a whole. The fit lab's hold-out (fits `binom-pmf` and `negbinom-pmf`; T-2513 and T-2145
+  sweeps, cell-hash split, margin 5 points) gives test bit-exact rates:
+  - BINOM.DIST interior: Loader 26.6% (train 27.2%), walk 18.5%, correctly rounded 18.1%;
+  - NEGBINOM.DIST: Loader 24.4% (train 23.2%), walk 14.0%, correctly rounded 13.9%.
+- The fresh sweeps agree: Gate A batches `r4-T-2146` (392 points, all inside the envelope), and
+  probes-numeric/t2146-binom-negbinom-pmf-fresh (400 cells), where bit-exact goes from 96 to 135 and visibly off
+  from 168 to 131.
+- A tail-only switch lost to "everywhere" at every T from 2 to 60: Loader where the pmf is below e^-T, the walk above.
+  At NEGBINOM.DIST the final step fl(p·kernel) ties EXP(E + LN p) held in a register. R's dnbinom,
+  (r/(f+r))·dbinom_raw(r, f+r), is worse than the walk.
 Evidence: gen-m9 and ironcalc-calc BINOM.xlsx cells above; probes-numeric t2146-binom-negbinom-pmf-fresh
-(excel-graph, 2026-11-05) and the T-2513 probes.
+(excel-graph, 2026-11-05), accuracy BINOM.DIST and NEGBINOM.DIST r4-T-2146, and the T-2513 probes.
 Ours: `binom.rs` `excel_binom_pmf` and `excel_negbinom_pmf`. Decision 0293 lists the 15 gated cells the switch
 regressed.
 Status: VERIFIED (excel-graph) for the f = 0 form and for the kernel as the better model; the stored chain is
