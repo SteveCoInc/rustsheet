@@ -632,6 +632,12 @@ impl Model {
         };
         Ok(match &mut aggregator.call {
             Call::One => self.call_lambda_caller(&mut aggregator.caller, [input], cell),
+            // An empty relative set (a PIVOTBY parent subtotal of an intransitive run with no
+            // record of the line) is `#VALUE!`, not a call over nothing
+            // (probes/t4382-pivotby-intransitive-paths Calc!D10; T-4402).
+            Call::Two if relative.rows.is_empty() => {
+                CalcResult::new_error(Error::VALUE, cell, "empty relative set".to_string())
+            }
             Call::Two => {
                 let all = column_of(relative.rows);
                 self.call_lambda_caller(&mut aggregator.caller, [input, all], cell)

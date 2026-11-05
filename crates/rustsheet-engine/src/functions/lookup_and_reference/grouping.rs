@@ -304,25 +304,24 @@ impl Grouping {
         self.groups.first().map_or(0, |group| group.keys.len())
     }
 
-    /// For each group, the id of its first `level` keys (groups sharing them share the id; all
-    /// 0 for level 0): the key prefixes of PIVOTBY's relative sets.
-    pub(crate) fn prefix_ids(&self, level: usize) -> Vec<usize> {
-        let mut index: HashMap<&[usize], usize> = HashMap::new();
-        self.groups
-            .iter()
-            .map(|group| {
-                let prefix = group.cells.get(..level).unwrap_or(group.cells.as_slice());
-                let next = index.len();
-                *index.entry(prefix).or_insert(next)
-            })
-            .collect()
+    /// The class (its id in the tree) of group `group`'s key in field `level` - 1, the class a
+    /// prefix of `level` keys ends in, when some row's descent reached it; `None` for level 0, a
+    /// class no row reached (which holds every row, as such a leaf does) or no such group. The
+    /// classes of PIVOTBY's relative sets.
+    pub(crate) fn reached_class(&self, group: usize, level: usize) -> Option<usize> {
+        let field = level.checked_sub(1)?;
+        let class = *self.groups.get(group)?.cells.get(field)?;
+        self.reached_by
+            .get(field)
+            .is_some_and(|classes| classes.contains_key(&class))
+            .then_some(class)
     }
 
     /// For each of `height` source rows, the index of its group (`usize::MAX` for rows in no
     /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
     /// step 4) maps to the group it reached; such a group gets only the rows in no other
-    /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`];
-    /// relative sets unprobed).
+    /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`], as
+    /// its relative sets do).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
         for reached in [true, false] {

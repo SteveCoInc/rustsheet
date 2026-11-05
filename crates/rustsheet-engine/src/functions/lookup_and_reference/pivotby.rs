@@ -200,7 +200,7 @@ impl Model {
         functions: &mut Functions,
         pivot: &Pivot,
         (rows, cols, lines): (&Grouping, &Grouping, &[Line]),
-        (shown, checked_totals, sets): (&[Shown], &[CheckedTotal], Option<&RelativeSets>),
+        (shown, checked_totals, sets): (&[Shown], &[CheckedTotal], Option<&RelativeSets<'_>>),
         totals: &Totals,
         cell: CellReferenceIndex,
     ) -> (Vec<Vec<ArrayNode>>, bool) {
@@ -827,7 +827,7 @@ struct Grid<'a> {
     merged: Vec<usize>,
     /// The relative sets, when a function takes them, and the row item being laid out (`None`
     /// for the Total row).
-    sets: Option<&'a RelativeSets>,
+    sets: Option<&'a RelativeSets<'a>>,
     row: Item,
     /// The Total column slots of one function over several value columns, whose cells are
     /// computed whether or not they are shown; one that is an error makes the whole result

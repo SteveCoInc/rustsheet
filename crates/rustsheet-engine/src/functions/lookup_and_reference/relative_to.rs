@@ -152,65 +152,66 @@ pub(crate) type Elements = Vec<Vec<ArrayNode>>;
 /// A row or column item of the grid: a group or subtotal line, or the Total (`None`).
 pub(crate) type Item = Option<Line>;
 
-/// The records an item selects on one axis: a key-prefix level and the prefix's id.
-type Class = (usize, usize);
+/// The records an item selects on one axis: a key-prefix level and the class (its id in
+/// [`Grouping::new`]'s tree) the records reached at that level, or `None` for every record (level
+/// 0, or a class no record reached, which holds every record as such a leaf does).
+type Class = (usize, Option<usize>);
 
-/// One axis of the grid for the relative sets: its groups' key prefixes at each level the sets
-/// use, and each record's group.
-struct AxisSets {
+/// One axis of the grid for the relative sets: the classes each record reached.
+struct AxisSets<'g> {
     select: Select,
     fields: usize,
-    group_of: Vec<usize>,
-    /// `prefixes[level][g]`: the id of group g's first `level` keys.
-    prefixes: HashMap<usize, Vec<usize>>,
+    grouping: &'g Grouping,
+    reached: Vec<&'g [usize]>,
 }
 
-impl AxisSets {
-    /// The levels an axis' items select, counted before anything is built.
+impl<'g> AxisSets<'g> {
+    /// The levels an axis' items select, counted before anything is built; level 0 (every
+    /// record) is always among them, as the Total's and an unreached class's.
     fn levels(select: Select, fields: usize, items: &[Line]) -> BTreeSet<usize> {
         let mut levels = BTreeSet::new();
-        levels.insert(level(select, fields, None));
+        levels.insert(0);
         for &line in items {
             levels.insert(level(select, fields, Some(line)));
         }
         levels
     }
 
-    fn new(select: Select, grouping: &Grouping, height: usize, levels: &BTreeSet<usize>) -> Self {
+    fn new(select: Select, grouping: &'g Grouping, height: usize) -> Self {
         AxisSets {
             select,
             fields: grouping.fields(),
-            group_of: grouping.group_of(height),
-            prefixes: levels
-                .iter()
-                .map(|&level| (level, grouping.prefix_ids(level)))
-                .collect(),
+            grouping,
+            reached: grouping.reached_classes(height),
         }
     }
 
-    /// The level of the prefix an item selects: 0 for all records.
-    fn level(&self, item: Item) -> usize {
-        level(self.select, self.fields, item)
-    }
-
-    /// The class (level, prefix id) of the records an item selects.
+    /// The class of the records an item selects: those whose descent reached the item's class at
+    /// its level, a record that reached no leaf under it included, or every record when none did,
+    /// as a subtotal cell's records are (`Grid::cell_rows`, [`Grouping::class_rows`];
+    /// probes/t4382-pivotby-intransitive-paths Calc!D2, E17; T-4402). While `=` is transitive
+    /// these are the records of the item's groups.
     fn class(&self, item: Item) -> Class {
-        let level = self.level(item);
+        let level = level(self.select, self.fields, item);
         let group = match item {
             Some(Line::Group(group)) => group,
             Some(Line::Subtotal { start, .. }) => start,
             None => 0,
         };
-        (level, self.prefix(level, group))
+        match self.grouping.reached_class(group, level) {
+            Some(class) => (level, Some(class)),
+            None => (0, None),
+        }
     }
 
-    /// The id of group `group`'s prefix of `level` keys (0 for level 0).
-    fn prefix(&self, level: usize, group: usize) -> usize {
-        self.prefixes
-            .get(&level)
-            .and_then(|ids| ids.get(group))
-            .copied()
-            .unwrap_or(0)
+    /// The class `record` reached at `level` (`None` at level 0), or nothing when its descent
+    /// stopped above that level.
+    fn class_of_record(&self, record: usize, level: usize) -> Option<Class> {
+        if level == 0 {
+            return Some((0, None));
+        }
+        let path = self.reached.get(record)?;
+        path.get(level - 1).map(|&class| (level, Some(class)))
     }
 }
 
@@ -237,24 +238,25 @@ fn level(select: Select, fields: usize, item: Item) -> usize {
 const MAX_SET_ENTRIES: u64 = 1 << 24;
 
 /// The relative sets of one PIVOTBY call, each built once and shared by its cells: for each pair
-/// of levels the cells use (a row level, a column level), the records bucketed by their row and
-/// column prefixes at those levels, in source order.
-pub(crate) struct RelativeSets {
-    rows: AxisSets,
-    cols: AxisSets,
+/// of levels the cells use (a row level, a column level), the records bucketed by the row and
+/// column classes they reached at those levels, in source order. A cell's set is the records of
+/// its row item's class that are in its column item's class ([`AxisSets::class`]).
+pub(crate) struct RelativeSets<'g> {
+    rows: AxisSets<'g>,
+    cols: AxisSets<'g>,
     index: HashMap<(Class, Class), usize>,
     sets: Vec<Vec<usize>>,
 }
 
-impl RelativeSets {
+impl<'g> RelativeSets<'g> {
     /// The sets of `records` (in source order) for the grid of `rows` and `cols` with the row and
-    /// column lines `row_lines` and `col_lines`. Each level pair holds every record once; past
+    /// column lines `row_lines` and `col_lines`. Each level pair holds each record at most once; past
     /// [`MAX_SET_ENTRIES`] the whole result is `#ERROR!`, checked from the level counts before any
     /// set, prefix table or call is made (only many key fields with subtotals at many levels get
     /// there).
     pub(crate) fn new(
         relative_to: RelativeTo,
-        (rows, cols): (&Grouping, &Grouping),
+        (rows, cols): (&'g Grouping, &'g Grouping),
         (row_lines, col_lines): (&[Line], &[Line]),
         records: &[usize],
         cell: CellReferenceIndex,
@@ -271,20 +273,21 @@ impl RelativeSets {
         }
         let height = records.iter().max().map_or(0, |&row| row + 1);
         let mut sets = RelativeSets {
-            rows: AxisSets::new(relative_to.rows, rows, height, &row_levels),
-            cols: AxisSets::new(relative_to.columns, cols, height, &col_levels),
+            rows: AxisSets::new(relative_to.rows, rows, height),
+            cols: AxisSets::new(relative_to.columns, cols, height),
             index: HashMap::new(),
             sets: Vec::new(),
         };
         for &row_level in &row_levels {
             for &col_level in &col_levels {
                 for &record in records {
-                    let row_group = sets.rows.group_of.get(record).copied().unwrap_or(0);
-                    let col_group = sets.cols.group_of.get(record).copied().unwrap_or(0);
-                    let key = (
-                        (row_level, sets.rows.prefix(row_level, row_group)),
-                        (col_level, sets.cols.prefix(col_level, col_group)),
-                    );
+                    let (Some(row_class), Some(col_class)) = (
+                        sets.rows.class_of_record(record, row_level),
+                        sets.cols.class_of_record(record, col_level),
+                    ) else {
+                        continue;
+                    };
+                    let key = (row_class, col_class);
                     let next = sets.sets.len();
                     let at = *sets.index.entry(key).or_insert(next);
                     if at == next {
