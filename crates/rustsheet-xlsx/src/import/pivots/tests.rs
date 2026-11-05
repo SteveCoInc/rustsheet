@@ -769,10 +769,10 @@ fn malformed_groups_skip_the_cache() {
 }
 
 /// Probe pivot 3 (probes/t4228-pivot-range-groups): a numeric `<groupItems>` list one item longer
-/// than the layout is not refused; Excel relabels the groups with its own labels and lists the end
-/// groups first.
+/// than the layout is not refused; Excel relabels the groups with its own labels and lists the
+/// file's items that are among them (`<0`, `>30`) first (probes/t4253-pivot-relabel-order).
 #[test]
-fn a_numeric_group_of_the_wrong_length_is_relabeled_with_the_ends_first() {
+fn a_numeric_group_of_the_wrong_length_is_relabeled_matching_items_first() {
     let definition = grouped_definition().replace(
         &group_items(&["<0", "0-9", "10-19", "20-30", ">30"]),
         &group_items(&["<0", "0-9", "10-19", "20-29", "30-39", ">30"]),
@@ -785,5 +785,8 @@ fn a_numeric_group_of_the_wrong_length_is_relabeled_with_the_ends_first() {
     );
     // 5 is in 0-10, 10 in 10-20, 31 past endNum, -1 before startNum.
     assert_eq!(bands.records, [2, 3, 1, 0]);
-    assert!(bands.number_groups.is_some_and(|g| g.ends_first));
+    assert!(bands
+        .number_groups
+        .as_ref()
+        .is_some_and(|g| !g.relabeled.is_empty()));
 }

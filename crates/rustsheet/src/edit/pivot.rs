@@ -2,10 +2,10 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    group_by_dates, group_by_numbers, row_layout, Aggregate, Axis, AxisField, CacheBuilder,
-    CacheField, CacheItem, CacheSource, CellArea, DataField, DateGroupError, DateGroups,
-    LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue,
-    MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, layout_extent, row_layout, ungroup_dates, Aggregate, Axis,
+    AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    DateGroupError, DateGroups, LayoutCell, NumberGroupError, PivotCache, PivotCacheError,
+    PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -122,8 +122,10 @@ fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, Pi
     Ok(match group.by {
         None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
         Some(by) => {
+            // Excel's refresh drops a date grouping over a blank (probes/t4236-pivot-date-groups,
+            // web.md): each second-rounded date is its own item.
             if field.items.contains(&CacheItem::Missing) {
-                return Err(PivotError::DateGroupOverBlank);
+                return Ok(ungroup_dates(field)?);
             }
             let groups = DateGroups::new(by, group.start, group.end, labels.len())?;
             group_by_dates(field, groups, labels)?
@@ -157,11 +159,6 @@ pub enum PivotError {
     /// count).
     #[error(transparent)]
     DateGroup(#[from] DateGroupError),
-    /// A date grouping of a field that holds a blank: a refresh makes Excel drop the grouping and
-    /// list each date as its own item (probes/t4236-pivot-date-groups, web.md), which this does
-    /// not model yet (T-4260).
-    #[error("a date grouping over a field that holds a blank")]
-    DateGroupOverBlank,
     /// A grouped pivot with a column field: only a grouped row field is laid out.
     #[error("a grouped pivot has no column field")]
     GroupedWithColumn,
@@ -340,7 +337,8 @@ impl Txn<'_> {
             input.location.top,
             input.location.left,
         );
-        let mut bottom = top;
+        let (bottom, right) =
+            layout_extent(top, left, u32::try_from(rows.len()).unwrap_or(u32::MAX));
         for (r, cells) in (top..).zip(rows) {
             for (c, cell) in (left..).zip(cells) {
                 // Typed values: a label such as `1-1.1` is text, never parsed as a date.
@@ -351,13 +349,12 @@ impl Txn<'_> {
                 };
                 self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
             }
-            bottom = r;
         }
         Ok(CellArea {
             top,
             left,
             bottom,
-            right: left + 1,
+            right,
         })
     }
 }
@@ -493,6 +490,34 @@ mod tests {
         assert!(wb.model.workbook.pivot_caches.is_empty());
     }
 
+    /// A `Sum of S` pivot of row field `row` over `source`, grouped by `group`, laid out from
+    /// `location`.
+    fn grouped_input(
+        source: RangeRef,
+        location: RangeRef,
+        row: &str,
+        group: PivotRangeGroup,
+    ) -> PivotTableInput {
+        PivotTableInput {
+            name: "Pv".into(),
+            source,
+            location,
+            row: row.into(),
+            column: None,
+            value: "S".into(),
+            function: PivotFunction::Sum,
+            caption: "Sum of S".into(),
+            group: Some(group),
+        }
+    }
+
+    /// Rows 1 to 6 of column `col`.
+    fn column(wb: &Workbook, col: &str) -> Vec<Value> {
+        (1..=6)
+            .map(|row| wb.value(format!("{col}{row}").as_str()).unwrap())
+            .collect()
+    }
+
     /// A pivot grouped by 0.1 from 0 to 1 is laid out as Excel shows it (only the groups holding
     /// a record), and GETPIVOTDATA reads a group by its label or its lower bound
     /// (probes/t4228-pivot-range-groups).
@@ -525,33 +550,23 @@ mod tests {
             ] {
                 tx.set(a1, input)?;
             }
-            tx.add_pivot_table(&PivotTableInput {
-                name: "Pv".into(),
+            tx.add_pivot_table(&grouped_input(
                 source,
                 location,
-                row: "N".into(),
-                column: None,
-                value: "S".into(),
-                function: PivotFunction::Sum,
-                caption: "Sum of S".into(),
-                group: Some(PivotRangeGroup {
+                "N",
+                PivotRangeGroup {
                     by: None,
                     start: 0.0,
                     end: 1.0,
                     interval: 0.1,
                     items,
-                }),
-            })
+                },
+            ))
         })
         .unwrap();
         let text = |s: &str| Value::Text(s.into());
-        let column = |col: &str| -> Vec<Value> {
-            (1..=6)
-                .map(|row| wb.value(format!("{col}{row}").as_str()).unwrap())
-                .collect()
-        };
         assert_eq!(
-            column("D"),
+            column(&wb, "D"),
             [
                 text("Row Labels"),
                 text("0.3-0.4"),
@@ -562,7 +577,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            column("E")[..5],
+            column(&wb, "E")[..5],
             [
                 text("Sum of S"),
                 1.0.into(),
@@ -588,5 +603,78 @@ mod tests {
                 right: 4
             }
         );
+    }
+
+    /// A date grouping over a blank is dropped as Excel's refresh drops it: each second-rounded
+    /// date is its own item in record order, the blank is `(blank)`, and GETPIVOTDATA takes a
+    /// date serial or `"(blank)"` but no group label (probes/t4236-pivot-date-groups pivot B).
+    #[test]
+    fn a_date_grouping_over_a_blank_is_dropped() {
+        let mut wb = Workbook::new(&WorkbookOptions::default()).unwrap();
+        let (source, location) = (wb.range_ref("A1:B5").unwrap(), wb.range_ref("D1").unwrap());
+        wb.edit(|tx| {
+            for (a1, input) in [
+                ("A1", Input::from("D")),
+                ("B1", Input::from("S")),
+                ("B2", Input::from(1.0)),
+                ("A3", Input::from(43590.0)),
+                ("B3", Input::from(2.0)),
+                ("A4", Input::from(43_465.999_994_212_965)),
+                ("B4", Input::from(4.0)),
+                ("A5", Input::from(43590.0)),
+                ("B5", Input::from(8.0)),
+                ("F1", Input::from("=GETPIVOTDATA(\"S\",D1,\"D\",43590)")),
+                (
+                    "F2",
+                    Input::from("=GETPIVOTDATA(\"S\",D1,\"D\",\"(blank)\")"),
+                ),
+                ("F3", Input::from("=GETPIVOTDATA(\"S\",D1,\"D\",43466)")),
+                ("F4", Input::from("=GETPIVOTDATA(\"S\",D1,\"D\",\"May\")")),
+            ] {
+                tx.set(a1, input)?;
+            }
+            let months = ["<1/1/2019", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"]
+                .into_iter()
+                .chain(["Aug", "Sep", "Oct", "Nov", "Dec", ">12/31/2019"]);
+            tx.add_pivot_table(&grouped_input(
+                source,
+                location,
+                "D",
+                PivotRangeGroup {
+                    by: Some(PivotDateGroupBy::Months),
+                    start: 43466.0,
+                    end: 43830.0,
+                    interval: 1.0,
+                    items: months.map(String::from).collect(),
+                },
+            ))
+        })
+        .unwrap();
+        let text = |s: &str| Value::Text(s.into());
+        assert_eq!(
+            column(&wb, "D"),
+            [
+                text("Row Labels"),
+                text("(blank)"),
+                43590.0.into(),
+                43466.0.into(),
+                text("Grand Total"),
+                Value::Empty
+            ]
+        );
+        assert_eq!(
+            column(&wb, "E")[..5],
+            [
+                text("Sum of S"),
+                1.0.into(),
+                10.0.into(),
+                4.0.into(),
+                15.0.into()
+            ]
+        );
+        assert_eq!(wb.value("F1").unwrap(), 10.0.into());
+        assert_eq!(wb.value("F2").unwrap(), 1.0.into());
+        assert_eq!(wb.value("F3").unwrap(), 4.0.into());
+        assert!(matches!(wb.value("F4").unwrap(), Value::Error(_)));
     }
 }

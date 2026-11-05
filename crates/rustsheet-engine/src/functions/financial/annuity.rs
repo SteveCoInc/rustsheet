@@ -66,6 +66,10 @@ const ACCURATE_EXPONENT_LIMIT: f64 = 4_294_967_296.0; // 2^32
 const ACCURATE_GROWTH_MIN: f64 = 1e-270;
 const ACCURATE_GROWTH_MAX: f64 = 1e270;
 
+/// Below this positive rate NPER returns the math, not Excel's value (decision 0188 R3, the owner's
+/// region; financial.md "NPER at a tiny positive rate", MATH-OVER-EXCEL).
+const NPER_MATH_RATE: f64 = 1e-14;
+
 /// `(1+rate)^n` in double-double arithmetic, for |n| up to [`ACCURATE_EXPONENT_LIMIT`]: the
 /// integer part of `n` by right-to-left square-and-multiply from the exact `1+rate` (relative
 /// error about n·2^-104), times `1 + expm1(f·ln(1+rate))` for its fraction `f`, whose error is
@@ -827,18 +831,30 @@ impl Model {
         // log1p gives 11 (financial.md "Annuity evaluation order"; fit lab `annuity-nper`, T-1524).
         let k = if period_start { 1.0 + rate } else { 1.0 };
         let payment_k = payment * k;
-        let ratio = (payment_k - future_value * rate) / (payment_k + present_value * rate);
-        if ratio.is_nan() || ratio <= 0.0 || ratio.is_infinite() {
-            return Err(num_error(cell));
-        }
         // A rate so small that 1+rate is 1 divides by ln 1 = 0: `#DIV/0!` (`NPER(1E-300,-236,2766,945)`,
-        // gen-m9/3c06f9298f65a3ba A148; probes/t2475-stat-subexpressions A92).
+        // gen-m9/3c06f9298f65a3ba A148; probes/t2475-stat-subexpressions A92), before a non-positive
+        // ratio's `#NUM!` (`NPER(1E-17,0,100,200,0)`, probes-numeric/t3367-nper-tiny-rate A7, A14, A21).
         let growth_log = (1.0 + rate).ln();
         if growth_log == 0.0 {
             return Err(div_error(cell));
         }
-        // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)
-        let result = extended_quotient(ratio.ln(), growth_log);
+        let ratio = (payment_k - future_value * rate) / (payment_k + present_value * rate);
+        if ratio.is_nan() || ratio <= 0.0 || ratio.is_infinite() {
+            return Err(num_error(cell));
+        }
+        let result = if rate > 0.0 && rate < NPER_MATH_RATE {
+            // Decision 0188 R3 (financial.md "NPER at a tiny positive rate", MATH-OVER-EXCEL): below
+            // 1E-14 Excel's ln of the doubles 1+rate and ratio is up to 46% off the period count
+            // (probes-numeric/t3367-nper-tiny-rate), so the value is the math, from the exact
+            // difference ratio - 1 = -(fv+pv)·rate / (pmt·k + pv·rate) and log1p; Excel's errors
+            // above still decide which cells are errors.
+            let excess =
+                -(future_value + present_value) * rate / (payment_k + present_value * rate);
+            excess.ln_1p() / rate.ln_1p()
+        } else {
+            // The final division is Excel's `/`, rounded twice (A9 `NPER(0.2,-1000,-1000,20000)`)
+            extended_quotient(ratio.ln(), growth_log)
+        };
         if !result.is_finite() {
             return Err(num_error(cell));
         }

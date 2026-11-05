@@ -53,9 +53,11 @@
 //! U+FFFD and a lone high half sorts before a pair it starts, a lone low half after it
 //! (docs/excel-semantics/text.md "Lone surrogates through CODE, comparisons, ...").
 
+use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};
 
 mod accents;
+mod compared;
 mod kana;
 mod lookup_fold;
 mod scripts;
@@ -63,6 +65,8 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use accents::{accents, cmp_accent_units};
+use compared::{cmp_text_in, counted, CHAR_TICKS, ELEMENT_TICKS, FOLD_TICKS, KEY_TICKS};
+pub(crate) use compared::{note_compared, restore_compared_ticks, take_compared_ticks, BYTE_TICKS};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
@@ -73,7 +77,7 @@ use scripts::{script_element, script_order, symbol, unit, ABOVE_SCRIPTS, SYMBOLS
 /// are [`cmp_text_pairwise`].
 #[cfg(test)]
 pub(crate) fn cmp_text_excel(left: &str, right: &str) -> Ordering {
-    cmp_str(left, right, AccentOrder::Total)
+    cmp_str(left, right, AccentOrder::Total, &Cell::new(0))
 }
 
 /// How the accent pass compares two letters' accents.
@@ -87,16 +91,23 @@ enum AccentOrder {
 }
 
 /// [`cmp_text_excel`] or [`cmp_text_pairwise`] for well-formed text.
-fn cmp_str(left: &str, right: &str, order: AccentOrder) -> Ordering {
+/// `read` counts the ticks of what the passes read ([`counted`]).
+fn cmp_str(left: &str, right: &str, order: AccentOrder, read: &Cell<u64>) -> Ordering {
     if left.is_ascii() && right.is_ascii() {
         // ASCII has no accents, so the second pass always ties.
-        return ascii_primaries(left)
-            .cmp(ascii_primaries(right))
+        return ascii_primaries(counted(left.bytes(), read, BYTE_TICKS))
+            .cmp(ascii_primaries(counted(right.bytes(), read, BYTE_TICKS)))
             .then_with(|| {
-                skipped(elements(scalars(left), None)).cmp(skipped(elements(scalars(right), None)))
+                skipped(elements(counted(scalars(left), read, ELEMENT_TICKS), None)).cmp(skipped(
+                    elements(counted(scalars(right), read, ELEMENT_TICKS), None),
+                ))
             });
     }
-    cmp_chars(scalars(left), scalars(right), order)
+    cmp_chars(
+        counted(scalars(left), read, CHAR_TICKS),
+        counted(scalars(right), read, CHAR_TICKS),
+        order,
+    )
 }
 
 /// Excel's `<`, `=`, `>` before the collation (coercion.md "Format characters, U+200B and the C1
@@ -149,20 +160,6 @@ pub(crate) fn cmp_text_pairwise(left: &Text, right: &Text) -> Ordering {
     cmp_text_in(left, right, AccentOrder::Pairwise)
 }
 
-/// [`cmp_text`] or [`cmp_text_pairwise`].
-fn cmp_text_in(left: &Text, right: &Text, order: AccentOrder) -> Ordering {
-    if let AccentOrder::Pairwise = order {
-        if let Some(order) = cmp_prefix(left.chars_lossless(), right.chars_lossless()) {
-            return order;
-        }
-    }
-    if left.has_lone_surrogate() || right.has_lone_surrogate() {
-        cmp_chars(left.chars_lossless(), right.chars_lossless(), order)
-    } else {
-        cmp_str(left, right, order)
-    }
-}
-
 /// What [`cmp_text`] compares: two texts are equal under it exactly when their keys are equal.
 /// The exact-match lookup index of XMATCH and XLOOKUP hashes it (T-0448).
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -179,6 +176,7 @@ pub(crate) struct CollationKey {
 /// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
 /// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
+    note_compared(text.len(), KEY_TICKS);
     let elements = || elements(text.chars_lossless(), None);
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {
         weights
@@ -268,8 +266,8 @@ const fn digit(value: u32) -> u32 {
 }
 
 /// The first pass over ASCII text, through [`ASCII_PRIMARY`].
-fn ascii_primaries(text: &str) -> impl Iterator<Item = u32> + '_ {
-    text.bytes()
+fn ascii_primaries(bytes: impl Iterator<Item = u8>) -> impl Iterator<Item = u32> {
+    bytes
         .map(|byte| ASCII_PRIMARY[usize::from(byte & 0x7F)])
         .filter(|&weight| weight != 0)
 }
@@ -293,9 +291,9 @@ const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
 /// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
 /// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
 const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
-/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, by code point
-/// (probes/t4039-collation-space-forms Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep
-/// K1:L16; U+0082 to U+008F and U+0091 to U+009D unprobed).
+/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, each by its code point
+/// (probes/t4270-collation-c1-controls Calc!B1:B36, all 32; probes/t4039-collation-space-forms
+/// Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep K1:L16).
 const C1_BASE: u32 = BULLET + 1;
 const DIGIT_BASE: u32 = 0x800;
 const _: () = assert!(C1_BASE + 0x20 <= DIGIT_BASE);

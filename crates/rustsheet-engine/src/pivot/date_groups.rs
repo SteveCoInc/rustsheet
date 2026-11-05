@@ -6,10 +6,13 @@
 //! probed with excel-graph (probes/t4236-pivot-date-groups-no-blank;
 //! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
+use std::collections::HashMap;
+
 use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem};
+use crate::formatter::date_clock::SECONDS_PER_DAY_F64 as SECONDS_PER_DAY;
 use crate::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
 
 /// What a date group groups by (ECMA-376 `groupBy`, all but `range`).
@@ -232,6 +235,59 @@ pub fn group_by_dates(
     })
 }
 
+/// Field `base` as Excel's refresh leaves a date-grouped field that holds a blank: the grouping
+/// is dropped, each date rounded to the second ([`split_serial`], the rule [`DateGroups::item`]
+/// groups by) is its own [`CacheItem::Date`], and the blank stays [`CacheItem::Missing`]. The
+/// items are in record (first-appearance) order, not sorted, so dates within a second of each
+/// other are one item at the first one's place (probes/t4236-pivot-date-groups pivot M:
+/// `... 43876, (blank), 43631`; web.md "Grouped pivot fields import as their group items",
+/// T-4260). Used by `Txn::add_pivot_table`; the importer keeps a saved grouping (59932).
+///
+/// # Errors
+/// [`DateGroupError`] for a value that is not a date or is outside the calendar, or a bad record.
+pub fn ungroup_dates(base: &CacheField) -> Result<CacheField, DateGroupError> {
+    let rounded = base
+        .items
+        .iter()
+        .map(|item| match item {
+            CacheItem::Missing => Ok(None),
+            CacheItem::Number(v) | CacheItem::Date(v) => split_serial(*v).map(Some),
+            _ => Err(DateGroupError::NotADate),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut items = Vec::new();
+    let mut seen: HashMap<Option<(i64, usize)>, u32> = HashMap::new();
+    let mut records = Vec::with_capacity(base.records.len());
+    for &record in &base.records {
+        let key = *rounded
+            .get(record as usize)
+            .ok_or(DateGroupError::BadRecord)?;
+        let index = match seen.get(&key) {
+            Some(&index) => index,
+            None => {
+                // At most one item per base item, so the index fits a u32 as theirs do.
+                let index = u32::try_from(items.len()).map_err(|_| DateGroupError::BadRecord)?;
+                items.push(match key {
+                    None => CacheItem::Missing,
+                    Some((day, seconds)) => {
+                        CacheItem::Date(day as f64 + seconds as f64 / SECONDS_PER_DAY)
+                    }
+                });
+                seen.insert(key, index);
+                index
+            }
+        };
+        records.push(index);
+    }
+    Ok(CacheField {
+        name: base.name.clone(),
+        items,
+        records,
+        number_groups: None,
+        date_groups: None,
+    })
+}
+
 /// The calendar parts of a date that groups read.
 struct YearDay {
     month: u32,
@@ -315,6 +371,43 @@ mod tests {
         assert_eq!(years.number_item(2021.0), None);
         assert_eq!(years.number_item(2016.0), None);
         assert_eq!(years.number_item(42736.0), None);
+    }
+
+    /// A dropped grouping over a blank: second-rounded dates in first-appearance order, the
+    /// blank kept at its record's place (probes/t4236-pivot-date-groups pivot M, web.md).
+    #[test]
+    fn an_ungrouped_date_field_rounds_to_the_second_in_record_order() {
+        let base = CacheField {
+            name: "D1".into(),
+            // 2019-02-28 23:59:59.4 and .5, 2018-06-01, a blank, 2019-01-01 00:00.
+            items: vec![
+                CacheItem::Number(43_496.999_993_055_56),
+                CacheItem::Number(43_496.999_994_212_965),
+                CacheItem::Number(43252.0),
+                CacheItem::Missing,
+                CacheItem::Number(43497.0),
+            ],
+            records: vec![2, 0, 1, 3, 4, 2],
+            number_groups: None,
+            date_groups: None,
+        };
+        let field = ungroup_dates(&base).unwrap();
+        assert_eq!(
+            field.items,
+            vec![
+                CacheItem::Date(43252.0),
+                CacheItem::Date(43496.0 + 86399.0 / 86400.0),
+                CacheItem::Date(43497.0),
+                CacheItem::Missing,
+            ]
+        );
+        assert_eq!(field.records, vec![0, 1, 2, 3, 2, 0]);
+        let text = CacheField {
+            items: vec![CacheItem::Text("x".into())],
+            records: vec![0],
+            ..base
+        };
+        assert_eq!(ungroup_dates(&text), Err(DateGroupError::NotADate));
     }
 
     /// The record-to-group rule (probes/t4236-pivot-date-groups-no-blank, web.md).

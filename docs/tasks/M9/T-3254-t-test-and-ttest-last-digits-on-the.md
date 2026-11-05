@@ -60,7 +60,7 @@ Owned cells:
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Visibly-off Student t cells (T-0969, T-2930); TTEST over PIVOTBY slices (T-2993).
+- Visibly-off Student t cells (T-0969, T-2930).
 
 ## Deferred (decision 0114)
 `defer: phase-1b`: the cells this task owns are already within 15 significant digits of Excel, so it waits until Phase 1
@@ -76,3 +76,9 @@ T.DIST.RT, T.DIST.2T at df 3, 5 and 10), the kernel T.TEST runs; and T.TEST/TTES
 probe, 8 ulp (Excel 0.17488420899295304, ours ...326).
 - probes-numeric/t1048-tdist.case.json (16): Calc!A3, B3, A4, B4, A5, B5, A6, B6, B13, A20, A21, A22, B22, A23, B23, A25
 - probes/stat-argument-modes.case.json (4): Sheet1!H535, H536, H541, H542
+
+## Cells moved from T-2993 (2026-11-05)
+T-2993 (dropped) measured TTEST type 2, one tail, over PIVOTBY slices: 1 to 8 ulp, every one within 15 significant
+digits. No reformulation of the statistic moves them (its Outcome has the table and the variants ruled out); the
+residue is the tail's own noise, so they join this owner.
+- probes/pivotby-ttest-array2.case.json (4): P!A36, P!A37, P!A42, P!A43

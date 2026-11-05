@@ -27,8 +27,11 @@ mod date_groups;
 pub(crate) mod layout;
 mod number_groups;
 
-pub use date_groups::{group_by_dates, DateGroupBy, DateGroupError, DateGroups};
-pub use layout::{max_layout_rows, row_layout, LayoutCell, GRAND_TOTAL, ROW_LABELS};
+pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use layout::{
+    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
+    LAYOUT_COLUMNS, ROW_LABELS,
+};
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").

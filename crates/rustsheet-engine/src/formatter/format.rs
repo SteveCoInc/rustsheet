@@ -339,6 +339,18 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
             let (hours, minutes, seconds) = clock.hms;
             let elapsed_fraction = clock.elapsed.as_ref();
             let day_serial = clock.days;
+            // Excel: the cutoff is on the serial rounded to the shown second or fraction digit, and
+            // in a 1904 workbook it is 9999-12-31 there too (2957003): `TEXT(2958465.999999,
+            // "h:mm:ss")` is #VALUE! but `"h:mm:ss.0"` is "23:59:59.9"; in 1904 `TEXT(2957004,
+            // "h:mm:ss")` is #VALUE! (probes/t2135-fractional-second-edges-1900/-1904, T-2135).
+            if clock.elapsed.is_some()
+                && !literals_only
+                && !negative_serial_allowed(tokens, DateSystem::Excel1900)
+                && ctx.date_system.to_1900_serial(clock.days)
+                    > Some(i64::from(MAXIMUM_DATE_SERIAL_NUMBER))
+            {
+                return invalid_date(value_original);
+            }
             // Day/month/year and weekday tokens show Excel's exact components (including the
             // fictitious 1900-02-29) and "1900-01-00" (serial 0). In a 1904 workbook they read the
             // 1904 epoch (`TEXT(0,"yyyy-mm-dd")` is "1904-01-01"; dates.md "The 1904 date system");
@@ -710,7 +722,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                 // `|#.#|E-|#|` on 0 is "|0.|E|0|" (poi/NumberFormatApproxTests.xlsx
                                 // A136), where `#.#` alone gives "."; `##0.0E+0` on 0 is "000.0E+0"
                                 // (gen-m10 659cd5776d423ce3 F!J14; T-2227).
-                                let zero_mantissa = p.is_scientific && ln == 0 && digit.kind == '#';
+                                // A lone `?` does too: `?.?E+0` on 0 is "0. E+0" (probes/text-scientific-edges A41, T-2230).
+                                let zero_mantissa = p.is_scientific && ln == 0 && digit.kind != '0';
                                 if zero_mantissa {
                                     text.push(p.numerals.digit('0'));
                                 } else if !(number_index < 0 && digit.kind == '#') {

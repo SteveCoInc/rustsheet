@@ -1,6 +1,10 @@
 # 0179 — R1C1 typed entry for spec cells
 
-- **Status:** accepted (2026-10-30, T-3113)
+- **Status:** accepted (2026-10-30, T-3113). Implementation note (T-4288): the engine adapter no longer
+  converts the text to A1; it enters it as `Input::ParseR1C1` (`Model::set_typed_r1c1_user_input`), which
+  parses it in the R1C1 grammar with the workbook's names and tables and stores the parsed formula. An R1C1
+  entry the engine refuses therefore follows the A1 rule below: a refusal starting with
+  `TYPED_FORMULA_DOES_NOT_PARSE` leaves the cell blank, any other fails the case.
 - **Context:** A probe could type text into a cell only in A1 mode (`{"entered": ...}`, a Graph
   `values` PATCH, T-0280), so how Excel reads a formula typed in R1C1 mode (T-3102: whitespace
   after `!` in `=S! R1C2`) could not be asked. Excel also refuses some typed text outright (Graph

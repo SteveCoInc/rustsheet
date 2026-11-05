@@ -24,6 +24,10 @@ fn names_follow_the_tag() {
 #[test]
 fn day_halves_follow_the_tag() {
     assert_eq!(text(0.75, "[$-409]h A/P"), "6 PM");
+    // Extended hex: `_409` is 0x2F409, English (probes/t1924-locale-tag-extended-hex S!B22); `x_y` is
+    // 0x2412 with no locale, so the letters stay.
+    assert_eq!(text(0.75, "[$-_409]h A/P"), "6 PM");
+    assert_eq!(text(0.75, "[$-x_y]h A/P"), "6 P");
     assert_eq!(text(0.25, "[$-40C]h a/p"), "6 AM");
     assert_eq!(text(0.75, "[$-411]h:mm am/pm"), "6:00 午後");
     assert_eq!(text(0.25, "[$-411]AM/PM h"), "午前 6");

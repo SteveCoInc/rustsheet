@@ -3,7 +3,7 @@ id: T-4026
 title: "F tails visibly off on the T-3580 fresh sweep: deep tails at general dfs"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P1
 size: M
 tier: opus
@@ -29,9 +29,9 @@ visibly off, or each remaining one is explained by an open, cited Excel quirk.
   `f_beta_arguments`) and route it to the task that owns that branch, if one exists.
 
 ## Acceptance criteria
-- [ ] Each of the 45 cells is within 15 digits of Excel, or named by an open task that owns its branch, with the
+- [x] Each of the 45 cells is within 15 digits of Excel, or named by an open task that owns its branch, with the
       branch recorded here.
-- [ ] No cell of t3580-f-fresh or t3567-r5-fdf1-hold newly visibly off.
+- [x] No cell of t3580-f-fresh or t3567-r5-fdf1-hold newly visibly off.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -46,7 +46,26 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 - probes-numeric/t3567-r5-fdf1-hold.case.json (2): Calc!B1003, B1307
 - probes-numeric/t3580-f-fresh.case.json (4): Calc!B723, B751, B824, B848
 
-- [ ] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
+- [x] Every cell listed above matches Excel within half a unit of the 15th significant digit, or has Excel's type and error. Otherwise the task is blocked under decision 0056 and the rest is accepted (decision 0267).
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Outcome
+- **Tier A (decision 0267), all 6 fixed.** Each was Excel's 0 against our subnormal cdf (8.4E-309 to 1.2E-312). Graph
+  shows a kept subnormal as 0 too (decision 0042), so probes/t4026-f-cdf-subnormal (210 cells, excel-graph,
+  2026-11-05; generator docs/research/t4026/mkprobe.py) put a `=(..)=0` companion on each: TRUE for all 6, so they
+  are true zeros. Walking ln of the cdf from -700 to -716 at (316, 1) and (40, 1), whose bpser prefactors 1/a0
+  differ eightfold, both keep 3.3E-308 and give 0 at 2.0E-308: the cut is DBL_MIN on the final result
+  (statistics.md "F.DIST's cdf flushes a subnormal result to 0 (T-4026)"). `fisher.rs` `f_dist_of` now flushes the
+  cdf with the existing `arithmetic::flush_subnormal`; unit test `test_fn_f_dist_cdf_flushes_a_subnormal_result`.
+  Not a fit: one structural rule read off the probe, no constant scored against oracle cells.
+- **The 45 listed cells, branch-labelled and routed.** All 45 are still visibly off, at the 14th or 15th digit only
+  (0.5 to 13.3 units of the 15th), so they are Tier C/D, which decision 0267 cuts. Branch by `bratio::dispatch` on
+  `f_beta_arguments` at the truncated dfs: bpser with both shapes above 1 (22), bfrac (18), L140 bup+bgrat (B1063,
+  B1185, B1196), w = bpser at b0 <= 1 (A481, df1 1) and the df-of-2 closed form (A1042). The 18 bfrac cells are
+  listed in T-3323 (bfrac bit-level); the other 27 in T-3592 (last-digit stat owner), both `defer: phase-1b`.
+- **Eval delta:** probes-numeric t3580-f-fresh 1,867 to 1,871 passing, t3567-r5-fdf1-hold 2,879 to 2,881; the new
+  probe 174 of 210 (the 36 misses are 1-2 ulp NumericUlp cells of rows 7-105, none visibly off). No cell newly
+  visibly off: the change touches only a cdf below 2.2E-308.
+- Follow-up: T-4282 (sonnet) probes F.DIST.RT, FDIST and BETA.DIST at a subnormal result the same way.

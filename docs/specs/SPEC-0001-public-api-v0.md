@@ -143,9 +143,10 @@ in v0 (every edit recalculates synchronously).
 
 ### Edits and change sets
 ```rust
-pub enum Input { Value(Value), Formula(String), StoredFormula(String), LegacyFormula(String), Parse(String), Clear }
+pub enum Input { Value(Value), Formula(String), StoredFormula(String), LegacyFormula(String), Parse(String), ParseR1C1(String), Clear }
 // Formula and Parse are typed entry; StoredFormula reads xlsx-stored text, where LET/LAMBDA
 // names spelled like a cell bind (typed, they are refused; decision 0103).
+// ParseR1C1: Parse typed with the workbook in R1C1 reference style (`=R[-1]C+1`; T-4288).
 // LegacyFormula: a pre-dynamic-array formula, stored with the implicit intersections xlsx
 // import adds to a plain <f> (`=A1:A2` -> `=@A1:A2`; T-1096).
 impl From<f64>/From<bool>/From<&str> /* = Parse */ /* for Input */;

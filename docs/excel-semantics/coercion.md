@@ -798,8 +798,12 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
   `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
   M11:N13 TRUE, P11:P13 = 12). Against `+ = > ¤ § ° ± × ÷ • → ★ © ¬`, U+0081 is strictly above (-sweep K, M)
-  and U+009F at least as high (L; no `=` column). UNVERIFIED: U+0082 to U+008F and U+0091 to U+009D, taken to
-  keep code-point order.
+  and U+009F at least as high (L; no `=` column). All 32 (probes/t4270-collation-c1-controls, 548 cells,
+  excel-graph, 2026-11-05, T-4270): each is equal only to itself (C1:C32, E1:E32 = 1; XMATCH, COUNTIF and exact
+  MATCH find its own row, F:H), and they rank 3 to 34 in code-point order among them, U+200B (0), `¬` (1), `•` (2)
+  and `0` (35) (B1:B36, the same for a&c&b in D1:D36); every one is below `0` and above `¬`, `•` and U+200B
+  (I:L), `"a"&c&"b"<"ab"` (M), and SORT puts them in code-point order both ways (N1:O32).
+  Implemented in: `collation.rs` `element`'s arm `'\u{80}'..='\u{9f}' => single(C1_BASE + (c - 0x80))`.
 - So `"a"&c&"b"<"ab"` is TRUE for U+200B and the C1 controls (-ignorables R2, R10:R12), and among the 17 a&c&b
   texts U+200B < U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB).
 
