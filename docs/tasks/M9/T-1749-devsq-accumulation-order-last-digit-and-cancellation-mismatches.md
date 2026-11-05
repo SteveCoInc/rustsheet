@@ -134,3 +134,23 @@ Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1
 - Not done, moved to T-4328 (`campaign: visible`): the task's 48 KURT cells, 3 of them visibly off (27601819397dd56e
   A200, 7bd219ec0c0c5e22 A279, c2974c061384fdd9 A55), so the gen-m9 visible-parity box stays open for those 3 lines.
   KURT is already two-pass, and taking s from Excel's STDEV.S did not move the cells I tried.
+
+## Landing notes
+- PR #3344, head 96f523d5de0cfa48bfe9273c25689475217f2ad8 (draft); this notes commit sits on top of it. CI on
+  d2be964 was red only on hygiene: the duplication ratchet hit 2900, because T-0975's merged gen_fresh.py and this
+  one sat side by side. Fixed in 96f523d (shared `write_case`; local `check_duplication.py` reports 2878, and
+  `make check-fast` is green after merging origin/main). CI on 96f523d had not reported when the window closed.
+- Reviewers on 96f523d: design APPROVE (MINOR: the unit test could sum with `fold` like production), security
+  APPROVE, excel-fidelity REQUEST_CHANGES:
+  1. [MAJOR] R4.1 hold-out missing. Run the fit lab (T-3360 split, margin stated before scoring) over the owned DEVSQ
+     cells (probes stat-order-floor-batch, ftest-decomposition, stat-argument-modes H5, poi E/F/I/J392, the 126 gen-m9
+     DEVSQ cells) with three candidates: two-pass around the double mean, one-pass `Σx²-(Σx)²/n`, and the correctly
+     rounded `Σ(x-mean)²`. Report train and test (bit-exact / 4 ulp / 15 digits) side by side, and show that two-pass
+     beats correctly rounded on test within the margin.
+  2. [MINOR] Add "envelope: 200/200 inside, none outside" to the Outcome's fresh-sweep line.
+  3. [MINOR] DEVSQ's subnormal flush (`flush_subnormal` on each square and on the mean) has only VAR/STDEV evidence. Add
+     probe cells (`DEVSQ(0,2.2E-154)`, `DEVSQ(1E-160,-1E-160)`) and fill them, or mark the flush in statistics.md as
+     inferred from VAR.
+- Next step: do 1 to 3, run `make check-fast`, push once, re-run the reviewers whose approval names an older head (all
+  three), then mark the PR ready and enqueue.
+- Do not repeat: taking KURT's s from `excel_variance` moved none of the KURT cells (T-4328 owns KURT).
