@@ -13,7 +13,7 @@ use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem};
 use crate::formatter::date_clock::SECONDS_PER_DAY_F64 as SECONDS_PER_DAY;
-use crate::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
+use crate::formatter::dates::excel_serial_to_ymd;
 
 /// What a date group groups by (ECMA-376 `groupBy`, all but `range`).
 #[derive(Encode, Decode, Debug, Clone, Copy, PartialEq, Eq)]
@@ -315,18 +315,21 @@ fn calendar_parts(serial: f64) -> Result<(YearDay, i32, usize), DateGroupError> 
     ))
 }
 
-/// A serial's whole day and its time of day in seconds, split as YEAR, MONTH, HOUR, MINUTE and
-/// SECOND split it (`carried_day`, `time_of_day_parts`): the time rounds to the nearest second
-/// and 23:59:59.5 or later is the next day, as Excel's pivot cache rounds a date (T-4236).
+/// A serial's whole day and its time of day in seconds, as Excel's pivot cache rounds a date to
+/// the second: the serial divided by the double `1/86400` (not multiplied by 86400), rounded half
+/// up, so 23:59:59.5 is the next day. This is not HOUR's rule (`time_of_day_parts`, dates.md): a
+/// 2019 date 2.2e-7 s below 10:59:59.5 is 11:00:00 here and 10:59:59 to HOUR. Chosen from five
+/// candidates and confirmed by two fresh sweeps, 132 of 132 points
+/// (probes/t4261-pivot-half-second, -fresh, -fresh-2; web.md, T-4261).
 fn split_serial(serial: f64) -> Result<(i64, usize), DateGroupError> {
     // Pivot dates are 1900-01-00 to 9999-12-31, about 3e6 days: well inside an i64.
     if !(0.0..=1e7).contains(&serial) {
         return Err(DateGroupError::Calendar);
     }
-    let day = carried_day(serial) as i64;
-    let [hour, minute, second] = time_of_day_parts(serial);
-    let seconds = (hour * 3600.0 + minute * 60.0 + second) as usize;
-    Ok((day, seconds))
+    // At most 8.64e11 seconds: exact in an f64 and an i64.
+    let total = (serial / (1.0 / SECONDS_PER_DAY) + 0.5).floor() as i64;
+    let day_seconds = SECONDS_PER_DAY as i64;
+    Ok((total / day_seconds, (total % day_seconds) as usize))
 }
 
 #[cfg(test)]
@@ -408,6 +411,26 @@ mod tests {
             ..base
         };
         assert_eq!(ungroup_dates(&text), Err(DateGroupError::NotADate));
+    }
+
+    /// The cache's second rounding divides by the double 1/86400 (probes/t4261-pivot-half-second,
+    /// -fresh, -fresh-2): a hair below the half rounds up where the product would not.
+    #[test]
+    fn a_noise_half_second_rounds_as_the_pivot_cache_does() {
+        // 10:59:59.5 written in 2019, 2.2e-7 s below the half: 11:00:00 (t4236 no-blank H).
+        assert_eq!(
+            split_serial(43_466.458_327_546_294).unwrap(),
+            (43466, 39600)
+        );
+        // 12:34:56.5 less 2.6e-7 s on day 25006: 12:34:57, though serial*86400 is ...96.4999995.
+        assert_eq!(
+            split_serial(25_006.524_265_046_293).unwrap(),
+            (25006, 45297)
+        );
+        // A 1900 date 2.2e-7 s below 10:59:59.5 stays 10:59:59 (t4261-pivot-half-second A10).
+        assert_eq!(split_serial(66.458_327_546_293_75).unwrap(), (66, 39599));
+        // 23:59:59.5 is the next day.
+        assert_eq!(split_serial(43_465.999_994_212_965).unwrap(), (43466, 0));
     }
 
     /// The record-to-group rule (probes/t4236-pivot-date-groups-no-blank, web.md).

@@ -3,7 +3,7 @@ id: T-4261
 title: "Pivot date cache rounding at a binary-noise half second: probe and model it (after T-4246)"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -41,3 +41,28 @@ in. Every cell of probes/t4236-pivot-date-groups-no-blank that T-4246 left visib
 
 ## Out of scope
 - HOUR, MINUTE and SECOND, whose rounding is probed and differs (dates.md).
+
+## Outcome
+Done. Excel's pivot cache rounds a date to the second as `floor(x / (1/86400) + 0.5)`. That is the serial divided by
+the double 1/86400, half up, which is neither `x * 86400` nor HOUR's split. `split_serial`
+(crates/rustsheet-engine/src/pivot/date_groups.rs) now does exactly this. It serves the date groups, `ungroup_dates`,
+the importer, and the `startDate` and `endDate` comparison, and web.md records the rule.
+
+Structural model (decision 0188 R4):
+- probes/t4261-pivot-half-second has 36 points, 1900 to 9998, with deltas of 1e-8 to 0.4 s around 10:59:59.5. The
+  hold-out (odd k) was fixed in the case description before scoring.
+- Five candidates were scored: ms then s, 15 significant digits, the fraction's product, the engine's HOUR split,
+  and the serial's product.
+  - Train: the serial's product 18/18, tied with 15 digits.
+  - Hold-out: the serial's product 18/18, 15 digits 16/18.
+- Slip: I printed the hold-out counts in the same run as the training counts, not after choosing. So the hold-out
+  is not a clean confirmation, and the fresh sweeps carry that weight.
+- First fresh sweep (t4261-pivot-half-second-fresh, seed 4261, 48 points, written after freezing the serial's
+  product): 47/48. That rejects the product.
+- Of eight further orderings scored on all 84 points, only `x / (1/86400)` fits all 84. It was frozen.
+- Second fresh sweep (t4261-pivot-half-second-fresh-2, seed 4262, 48 points; 32 chosen where the frozen model and
+  the product disagree): 48/48, against 14/48 for the product.
+- No numeric constant was fitted. The divisor 1/86400 is the day length, so there is no `FITTED` tag.
+
+Eval delta: probes known failures 4980 -> 4950 (30 fixed, 0 regressions, 3 new cases all passing: 190, 106 and 106
+cells). probes/t4236-pivot-date-groups (335/335) and -no-blank (349/349) now pass in full.
