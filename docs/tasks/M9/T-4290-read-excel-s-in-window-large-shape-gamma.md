@@ -3,7 +3,7 @@ id: T-4290
 title: "Read Excel's in-window large-shape gamma exponent from ulp runs on exact x/a (after T-4255)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -47,9 +47,9 @@ Read docs/research/excel-kernel-playbook.md first. Its suggested next probes:
   may take Temme's expansion there.
 
 ## Acceptance criteria
-- [ ] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and adopted if it is
+- [x] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and adopted if it is
       Excel's on the hold-out. Otherwise each rejected family goes into statistics.md with its scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
@@ -57,3 +57,22 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 ## Out of scope
 - Shapes below 20 (T-3219).
 - POISSON.DIST's far upper tail (T-4291).
+
+## Outcome
+No form is Excel's; the rejected families and their scores are in statistics.md (the T-4290 paragraph under
+"Incomplete gamma: accurate kernel"). The engine is unchanged.
+- New probe probes/t4290-gamma-window-large-pow2 (930 cells, excel-graph), generator and scorer in
+  docs/research/t4290/. It covers shapes 4096, 1024 and 256 on x/a = k/1024, the hold-out shape 2048 (fixed before
+  scoring), and ladders across 2/3 and 3/2.
+- At shape 4096 Excel's exponent reads out as a double. Below the window Excel is the ratio form to the bit once one
+  log offset per shape is allowed for the chain; inside the window that offset is absent near the mode. So the
+  window path differs in the prefactor chain, not only in the exponent.
+- The per-unit error is the same function of x/a at shapes 256 to 4096. Fit (A:C) and hold-out (D) scores of 11
+  families: none is better than chance (0.29 rms). Stored v with an exact atanh scores 0.41, the correctly rounded
+  ln 0.40.
+- The lower end is inclusive at x = 2a/3 (shape 3072). The upper end is past 1.5a(1 + 2^-20) at shape 2048 and is
+  not one threshold.
+- Playbook trap added: formula literals are cut to 15 digits, so a ladder must use at most 15 significant digits.
+  The first ladder lost its finest rungs this way.
+- Eval delta: the new probe passes 78 of 930 cells. The visibly-off cells, and the cells this task owned, pass to
+  T-4296. Regressions 0.
