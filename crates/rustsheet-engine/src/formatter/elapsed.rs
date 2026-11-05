@@ -183,7 +183,9 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
 /// `TEXT(1.7/24+0.3/1440,"[s] m")` is "18 26640", `"[s] h"` "18 444", `"[s] m s"` "18 26640 18".
 /// The rewrite also drops the elapsed flag the parser gave a later `s`. Evidence:
 /// probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295); `[ss]`, and a
-/// second hour or minute token after the first, are UNVERIFIED (not probed).
+/// second hour or minute token after the first, are UNVERIFIED (not probed). A clock token before
+/// the `[s]` leaves the section as parsed, so [`elapsed_after_larger_clock`] keeps `s [s] m` and
+/// `h [s] m` `#VALUE!` like `s [s]` (UNVERIFIED with the `m` after; not probed).
 pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     let Some(start) = tokens
         .iter()
@@ -191,6 +193,9 @@ pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
     else {
         return;
     };
+    if tokens[..start].iter().any(|t| clock_unit(t).is_some()) {
+        return;
+    }
     let Some(target) = tokens[start..].iter().position(|t| {
         matches!(
             t,
