@@ -64,3 +64,15 @@ evaluation does at most 268,435,456 work units".
   the same count.
 - arrays.md "One formula evaluation does at most 268,435,456 work units" (DEVIATION) lists the charge.
 - Eval delta: none (no baseline line changes; no eval formula past the limit).
+
+## Landing notes (2026-11-05 03:14 UTC, end of the run's landing window)
+Data for the run that resumes this branch; check it against the PR and the code.
+- PR #3244 (ready for review). Reviewed head d8fd13fd6: design, security and excel-fidelity all APPROVE (round 3);
+  this notes commit changes only this file. CI on 4d3d12c was green except hygiene (governance refused the
+  quality/duplication.json refresh without a decision record); d8fd13fd6 reverts that file to main's (the ratchet passes,
+  2878 vs 2880; `check_governance.py origin/main` ok locally). CI for d8fd13fd6 had not started when the window closed.
+- Next step: wait for CI green on the head that carries these notes, then enqueue (`enable_pr_auto_merge`, SQUASH). The
+  reviewers' verdicts were on d8fd13fd6; a task-file-only notes commit needs no new review per decision 0248's bookkeeping
+  rule, but re-confirm if in doubt.
+- Do not refresh quality/duplication.json in this PR (protected path). Open MINORs (not blocking) are listed in the PR
+  body; T-4278 is the place for the leftover-ticks assertion and the heaviest-eval-formula units figure.
