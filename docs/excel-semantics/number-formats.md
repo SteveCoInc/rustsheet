@@ -385,7 +385,7 @@ Rule: with `.0`, `.00` or `.000` shown, the clock (`h`, `mm`, `ss`) and the frac
 the shown digit but the half-step register truncated: `y = x + 0.5/(86400*scale)`, then `floor(frac(y)*86400*scale)` in
 plain doubles (`frac(y)*86400` first, then `*scale`), so the float error of `frac(y)` decides a tie, and not in one
 direction: `1+0.25/86400` under `[h]:mm.0` is "24:00.2" (2.99999999997 units), `1+0.55/86400` "24:00.5", but
-`1+0.05/86400` "24:00.1" and `45000+0.85/86400` under `h:mm:ss.0` "0:00:00.9". It is the same step the `General` register
+`1+0.35/86400` "24:00.4". It is the same step the `General` register
 uses ("`General` in a date section"). It holds for every probed format (`[h]:mm.0`, `h:mm:ss.0`, `[s].0`, `s.00`,
 `[h]:mm:ss.000`, `[m]:ss.00`, `mm:ss.0`, `h:mm:ss.000`) at serials of 1 or more: the tie probe 100 of 100 such cells,
 fresh sweeps 1-3 (each generated after a freeze) 274 of 276; the engine's earlier rounding of the value got 34 and 139.
@@ -400,7 +400,7 @@ Not settled:
 - A few ties at serials of 1 or more still miss: `TEXT(30+39474.05/86400,"mm:ss.0")` is "57:54.0" while the register is
   exactly 394741 (sweep-3 A2).
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
-t4323-fraction-sweep-3 (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323.
+t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100: 97 match), excel-graph 2026-11-05; scoring scripts in docs/research/t4323.
 Status: VERIFIED (serials of 1 or more); OPEN below 1 and for the `[s]` count
 Implemented in: `half_step_split` and `FractionalSeconds` (formatter/elapsed.rs).
 Tasks: T-4323, T-4332, T-4333

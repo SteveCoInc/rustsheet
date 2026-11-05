@@ -2264,6 +2264,7 @@ C	probes/t4299-typed-xlpm-extrapolations.case.json	22
 C	probes/t4302-poisson-cdf-beside-pmf.case.json	336
 C	probes/t4302-poisson-cdf-holdout-2.case.json	48
 C	probes/t4311-pivot-showall-column-and-groups.case.json	68
+C	probes/t4323-fraction-holdout.case.json	100
 C	probes/t4323-fraction-sweep-2.case.json	160
 C	probes/t4323-fraction-sweep-3.case.json	120
 C	probes/t4323-fraction-sweep.case.json	96
@@ -8541,6 +8542,9 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
+F	probes/t4323-fraction-holdout.case.json	Sheet1!A26
+F	probes/t4323-fraction-holdout.case.json	Sheet1!A5
+F	probes/t4323-fraction-holdout.case.json	Sheet1!A56
 F	probes/t4323-fraction-sweep-2.case.json	Sheet1!A100
 F	probes/t4323-fraction-sweep-2.case.json	Sheet1!A101
 F	probes/t4323-fraction-sweep-2.case.json	Sheet1!A103

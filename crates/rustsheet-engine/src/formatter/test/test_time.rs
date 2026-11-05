@@ -159,3 +159,25 @@ fn elapsed_token_before_am_pm_marker_is_invalid() {
     assert_eq!(text(1.5, "[mm] AM/PM"), "#VALUE!");
     assert_eq!(text(1.5, "[s] A/P"), "#VALUE!");
 }
+
+/// The clock and fraction digits truncate the half-step register, so its float error decides a tie
+/// (probes/t4323-fraction-ties A11, A13, A14, A16, A60; docs/excel-semantics/number-formats.md "Fraction
+/// digits of a second at a tie").
+#[test]
+fn fraction_digit_ties_follow_the_half_step_register() {
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (1.0 + 0.25 / 86400.0, "[h]:mm.0", "24:00.2"),
+        (1.0 + 0.55 / 86400.0, "[h]:mm.0", "24:00.5"),
+        (1.0 + 0.05 / 86400.0, "[h]:mm.0", "24:00.0"),
+        (1.0 + 0.35 / 86400.0, "[h]:mm.0", "24:00.4"),
+        (45000.0 + 0.95 / 86400.0, "h:mm:ss.0", "0:00:00.9"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_number(value, format, &ctx).text,
+            expected,
+            "{format}"
+        );
+    }
+}
