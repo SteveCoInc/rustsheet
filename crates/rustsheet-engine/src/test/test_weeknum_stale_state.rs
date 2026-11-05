@@ -296,3 +296,11 @@ fn a_cycle_with_a_reader_ends() {
     assert_eq!(model._get_text("C1"), MONDAY);
     assert!(model._is_circular("A1"));
 }
+
+#[test]
+fn a_deep_concat_nest_is_read_once() {
+    // Whether CONCAT joins a reference is read from the formula, not by evaluating its arguments
+    // again: 40 nested `CONCAT(IF(TRUE,...))` stay linear (security review of T-4315).
+    let formula = format!("={}1{}", "CONCAT(IF(TRUE,".repeat(40), "))".repeat(40));
+    assert_eq!(alone(&formula), "1");
+}

@@ -7,6 +7,7 @@ use crate::{
     formatter::dates::from_excel_date,
     functions::Function,
     model::Model,
+    tailed_array::range_corners,
 };
 
 /// WEEKNUM's stale `return_type` state: the start weekday the last WEEKNUM or ISOWEEKNUM of the
@@ -18,34 +19,14 @@ pub(crate) enum WeeknumStart {
     Monday,
 }
 
-/// Whether `node` is a written reference spanning more than one cell (`C1:C2`; `C1` is not), and
+/// Whether `node` is a written range spanning more than one cell (`C1:C2`; `C1` is not), and
 /// whether it spans more than one row and more than one column (`C1:D2`). Other forms (a name,
 /// INDEX) are unprobed and count as neither.
 fn written_extent(node: &Node, cell: CellReferenceIndex) -> (bool, bool) {
-    let Node::RangeKind {
-        absolute_row1,
-        absolute_column1,
-        row1,
-        column1,
-        absolute_row2,
-        absolute_column2,
-        row2,
-        column2,
-        ..
-    } = node.ungrouped()
-    else {
+    let Some((first, last)) = range_corners(node.ungrouped(), cell) else {
         return (false, false);
     };
-    let at = |absolute: bool, value: i32, base: i32| {
-        if absolute {
-            i64::from(value)
-        } else {
-            i64::from(value) + i64::from(base)
-        }
-    };
-    let rows = at(*absolute_row1, *row1, cell.row) != at(*absolute_row2, *row2, cell.row);
-    let columns = at(*absolute_column1, *column1, cell.column)
-        != at(*absolute_column2, *column2, cell.column);
+    let (rows, columns) = (first.row != last.row, first.column != last.column);
     (rows || columns, rows && columns)
 }
 
@@ -54,6 +35,21 @@ fn is_one_cell(node: &Node, cell: CellReferenceIndex) -> bool {
     match node.ungrouped() {
         Node::ReferenceKind { .. } => true,
         Node::RangeKind { .. } => !written_extent(node, cell).0,
+        _ => false,
+    }
+}
+
+/// Whether `node` is, as written, a reference CONCAT and TEXTJOIN join: a cell, a range, or a call
+/// that returns one (`CONCAT(INDEX(C1:D2,1,1))` keeps WEEKNUM's state, probes/weeknum-stale-call-
+/// shapes-2 S26). Read from the formula, never by evaluating the argument again: an argument that
+/// only picks a reference (IF, CHOOSE, LET) or a name is unprobed and counts as no reference.
+fn joins_a_reference(node: &Node) -> bool {
+    match node.ungrouped() {
+        Node::ReferenceKind { .. }
+        | Node::RangeKind { .. }
+        | Node::OpRangeKind { .. }
+        | Node::SheetSpanKind { .. } => true,
+        Node::FunctionKind { kind, .. } => *kind == Function::Index || kind.returns_reference(),
         _ => false,
     }
 }
@@ -71,12 +67,12 @@ impl Model {
     ///   `C1` and `{1,2}` keep it);
     /// - CONCAT and TEXTJOIN unless a joined argument is a reference (`CONCAT("a",1)` and
     ///   `CONCAT(C1&"")` empty it; `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))` and
-    ///   `TEXTJOIN(",",1,C1,"x")` keep it; TEXTJOIN's delimiter and `ignore_empty` do not count).
+    ///   `TEXTJOIN(",",1,C1,"x")` keep it; only TEXTJOIN's joined arguments are read).
     ///
     /// FILTER, TRANSPOSE, OFFSET, INDEX, SEQUENCE, XLOOKUP, LET and LAMBDA keep it. Whether the
     /// emptying comes before or after the call's own arguments run is unprobed (here: after).
     fn weeknum_effect_of_call(&mut self, kind: &Function, args: &[Node], cell: CellReferenceIndex) {
-        let first = args.first().map(|node| written_extent(node, cell));
+        let first = || args.first().map(|node| written_extent(node, cell));
         let empties = match kind {
             Function::Chooserows
             | Function::Choosecols
@@ -89,14 +85,11 @@ impl Model {
             | Function::Trimrange
             | Function::Wraprows
             | Function::Expand => true,
-            Function::Sort | Function::Unique => first.is_some_and(|(multi, _)| multi),
+            Function::Sort | Function::Unique => first().is_some_and(|(multi, _)| multi),
             Function::Sortby => !args.first().is_some_and(|node| is_one_cell(node, cell)),
-            Function::Arraytotext => first.is_some_and(|(_, both)| both),
-            Function::Concat => !args.iter().any(|node| self.is_reference(node, cell)),
-            Function::Textjoin => !args
-                .iter()
-                .skip(2)
-                .any(|node| self.is_reference(node, cell)),
+            Function::Arraytotext => first().is_some_and(|(_, both)| both),
+            Function::Concat => !args.iter().any(joins_a_reference),
+            Function::Textjoin => !args.iter().skip(2).any(joins_a_reference),
             _ => false,
         };
         if empties {

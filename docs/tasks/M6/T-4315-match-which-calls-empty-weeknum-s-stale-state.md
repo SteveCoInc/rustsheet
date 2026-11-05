@@ -45,6 +45,8 @@ and CONCAT with scalar arguments empty it but with C1:D2 keep it), so probe the 
 - Engine:
   - `Model::weeknum_effect_of_call` (weeknum.rs) holds the table and runs after every function call
     (`evaluate_function`).
+  - Whether CONCAT or TEXTJOIN joins a reference is read from the formula (a written reference, INDEX, OFFSET or
+    INDIRECT), never by evaluating an argument again: a 40-deep `CONCAT(IF(TRUE,...))` stays linear (unit test).
   - `run_excel_order` no longer empties the state at every dynamic anchor. An anchor whose run emptied it does so at
     its place in the order. `AnchorAmor` is now `AnchorEffects`, which records that alongside AMORDEGRC's value.
 - Tests: test_weeknum_stale_state.rs replaces "a spilling formula empties the state" (the T-2068 reading that T-4289
