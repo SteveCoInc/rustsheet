@@ -3,7 +3,7 @@ id: T-4292
 title: "Indic regional date names: bn-BD 845 (and 45), ta-LK 849, ne-IN 861 and the neutral 61 Saka row have their own names"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: sonnet
