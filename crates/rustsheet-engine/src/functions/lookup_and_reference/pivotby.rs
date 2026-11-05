@@ -148,7 +148,13 @@ impl Model {
             None
         };
         if parents.is_some() {
-            check_set_entries(pivot.relative_to, (&rows, &cols), lines, &pivot.records, cell)?;
+            check_set_entries(
+                pivot.relative_to,
+                (&rows, &cols),
+                lines,
+                &pivot.records,
+                cell,
+            )?;
         }
         let sets = if functions.needs_relative() && parents.is_none() {
             let sets = RelativeSets::new(
@@ -926,7 +932,7 @@ impl<'a> Grid<'a> {
         let mut parents = self.parents.take()?;
         let shown = self.shown.iter().filter_map(|&shown| match shown {
             Shown::Own(slot) | Shown::Moved(slot) => Some(slot),
-            _ => None,
+            Shown::Empty => None,
         });
         let checked = self.checked_totals.iter().map(|total| total.slot);
         parents.prepare(

@@ -441,9 +441,7 @@ impl<'a> ParentSets<'a> {
                     }
                     let parent = parent_item(item, self.cols.fields());
                     let next = entry.sets.len();
-                    let at = *parents
-                        .entry(item_key(self.cols, parent))
-                        .or_insert(next);
+                    let at = *parents.entry(item_key(self.cols, parent)).or_insert(next);
                     if at == next {
                         let id = self.fresh_id();
                         entry.sets.push((id, column_records(parent, records)));

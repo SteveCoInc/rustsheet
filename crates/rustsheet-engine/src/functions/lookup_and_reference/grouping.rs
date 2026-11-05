@@ -324,7 +324,7 @@ impl Grouping {
     /// group: headers and filtered rows). A row in a group no row reached too ([`Grouping::new`]
     /// step 4) maps to the group it reached; such a group gets only the rows in no other
     /// (PIVOTBY's columns give such a group every record instead, [`Grouping::unreached`];
-    /// relative sets unprobed).
+    /// `relative_to` 0 to 2 sets unprobed; 3 and 4 read the grid's cells instead, `ParentSets`).
     pub(crate) fn group_of(&self, height: usize) -> Vec<usize> {
         let mut group_of = vec![usize::MAX; height];
         for reached in [true, false] {

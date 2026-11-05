@@ -1049,7 +1049,13 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
       column, Total column included (E17). **An empty parent set is an error**: PERCENTOF `#DIV/0!` and the
       two-argument LAMBDA's cell `#VALUE!` (C7, D7: a column leaf no record reaches under an empty subtotal).
-      T-4402 owns the cells.
+      Confirmed on a hold-out (T-4402): probes/t4402-pivotby-parent-sets-holdout, 32 fresh runs (seed "T-4402",
+      none of T-4382's), relative_to 3 in Calc rows 1-16 and 4 in rows 17-32, PERCENTOF and the two-argument
+      LAMBDA, written with the engine's predictions (docs/research/t4402) before the fill: 64 of 64, the empty
+      parent's `#DIV/0!` and `#VALUE!` in 36 cells on both axes. Implemented in (T-4402): `ParentSets`
+      (functions/lookup_and_reference/relative_to.rs) reads each cell's set from its parent's cell by the grid's
+      own rule (`Grid::column_records`, pivotby.rs), and `Model::aggregate_result` makes a two-argument call on
+      an empty set `#VALUE!`.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,

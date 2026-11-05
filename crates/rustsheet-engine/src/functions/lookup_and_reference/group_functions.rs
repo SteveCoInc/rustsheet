@@ -635,11 +635,9 @@ impl Model {
             // An empty set cannot be passed: a PIVOTBY cell whose `relative_to` 3 or 4 parent
             // holds no record of its line is `#VALUE!` (PERCENTOF's is `#DIV/0!`, its total
             // being 0; probes/t4382-pivotby-intransitive-paths Calc!C7, D7; T-4402).
-            Call::Two if relative.rows.is_empty() => CalcResult::new_error(
-                Error::VALUE,
-                cell,
-                "the relative set is empty".to_string(),
-            ),
+            Call::Two if relative.rows.is_empty() => {
+                CalcResult::new_error(Error::VALUE, cell, "the relative set is empty".to_string())
+            }
             Call::Two => {
                 let all = column_of(relative.rows);
                 self.call_lambda_caller(&mut aggregator.caller, [input, all], cell)
