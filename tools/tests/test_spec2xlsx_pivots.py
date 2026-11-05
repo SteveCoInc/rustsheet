@@ -281,7 +281,7 @@ def test_pivot_without_unused_items_refreshes_on_load() -> None:
     assert 'refreshOnLoad="1"' in definition
 
 
-@pytest.mark.parametrize("unused", [["East"], ["North", "North"], [1]])
+@pytest.mark.parametrize("unused", [["East"], ["east"], ["North", "North"], ["North", "NORTH"], [1]])
 def test_malformed_unused_items_are_refused(unused: list[object]) -> None:
     with pytest.raises(ValueError, match="unused_items are distinct texts"):
         build_xlsx(_spec(_ROWS_ONLY | {"unused_items": unused}, {"H1": "=1"}))

@@ -22,4 +22,4 @@ Follow-up of T-4248. Owner of probes/t4248-getpivotdata-recordless-item cells P!
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
--
+- Unused items of a grouped field (the probe covers only an ungrouped row field).

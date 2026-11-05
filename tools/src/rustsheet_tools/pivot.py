@@ -189,10 +189,13 @@ class _Pivot:
                     self.shared[i].append(value)
         self.show_all = bool(pivot.get("show_all", False))
         self.unused: list[str] = list(pivot.get("unused_items", []))
+        # Excel matches pivot items case-insensitively (the probe's "north" finds "North"), so an
+        # unused item must differ from every record's item, and from the others, ignoring case.
+        used = {str(v).casefold() for v in self.shared[self.row]}
         if self.unused and (
             self.group is not None
-            or not all(isinstance(u, str) and u not in self.shared[self.row] for u in self.unused)
-            or len(set(self.unused)) != len(self.unused)
+            or not all(isinstance(u, str) and u.casefold() not in used for u in self.unused)
+            or len({str(u).casefold() for u in self.unused}) != len(self.unused)
         ):
             msg = (
                 f"unused_items are distinct texts no record uses, on an ungrouped row field: {self.unused!r}"
