@@ -211,6 +211,8 @@ impl Model {
             values: &pivot.values,
             shown,
             column_of,
+            cols,
+            reached: cols.reached_classes(pivot.values.len()),
             unreached: cols.unreached(),
             buckets: vec![Vec::new(); cols.groups.len()],
             merged: Vec::new(),
@@ -814,6 +816,10 @@ struct Grid<'a> {
     values: &'a [Vec<ArrayNode>],
     shown: &'a [Shown],
     column_of: Vec<usize>,
+    /// The column grouping, and each record's reached column classes
+    /// ([`Grouping::reached_classes`]), which a subtotal column's records are read from.
+    cols: &'a Grouping,
+    reached: Vec<&'a [usize]>,
     /// The column groups no record reached, each holding every record of the row being laid out
     /// ([`Grouping::unreached`]).
     unreached: Vec<usize>,
@@ -848,17 +854,21 @@ impl<'a> Grid<'a> {
     fn cell_rows<'r>(&'r mut self, slot: Slot, records: &'r [usize]) -> &'r [usize] {
         match slot {
             Slot::Group { group, .. } => self.buckets.get(group).map_or(&[][..], Vec::as_slice),
-            // A subtotal column's records are its groups', in source order
-            // (`LAMBDA(x,ARRAYTOTEXT(x))`, probes/groupby-subtotals G!A1081).
-            Slot::Subtotal { start, end, .. } => {
+            // A subtotal column's records are the line's records that reached its class, in
+            // source order (`LAMBDA(x,ARRAYTOTEXT(x))`, probes/groupby-subtotals G!A1081): its
+            // groups' records while `=` is transitive, but on an intransitive run also those that
+            // reached the class and then no leaf, and not the extra records of a leaf no record
+            // reached (over Bx Cy Cy Ax By of q q q p p the `ab` subtotal of q is `2, 3`, its one
+            // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378).
+            Slot::Subtotal { level, start, .. } => {
+                let prefix = self.cols.prefix(start, level);
                 self.merged.clear();
-                for bucket in self.buckets.get(start..end).unwrap_or_default() {
-                    self.merged.extend_from_slice(bucket);
-                }
-                // A record in a leaf no record reached is in another leaf too: count it once
-                // (unprobed on an intransitive run; T-4358).
-                self.merged.sort_unstable();
-                self.merged.dedup();
+                self.merged
+                    .extend(records.iter().copied().filter(|&record| {
+                        self.reached
+                            .get(record)
+                            .is_some_and(|path| path.get(..level) == Some(prefix))
+                    }));
                 &self.merged
             }
             Slot::Total { .. } => records,

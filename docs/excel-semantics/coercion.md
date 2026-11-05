@@ -983,8 +983,12 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       no leaf under it included, and not the extra records of a leaf no record reaches: over Bx Cy Cy Ax By of
       q q q p p the `ab` subtotal of q is `2, 3` while its leaf (`ab`,x) holds nothing for q (D1); over Ax Cx Bx
       Cy Bx the `ab`&U+00AD subtotal of p is `3, 5` while its unreached (`ab`&U+00AD,y) holds `1, 3, 5` (D10).
-      That rule gives 88 of 88 subtotal cells (docs/research/t4358/score.py), chosen on them (T-4378 owns the 19
-      D cells it would fix and the hold-out it owes).
+      That rule gives 88 of 88 subtotal cells (docs/research/t4358/score.py), chosen on them, and all 75 cells of
+      its hold-out, probes/t4378-pivotby-subtotal-holdout (25 fresh seeded runs with column subtotals ascending,
+      `col_sort_order` -1 and as SUM, predictions committed before the fill; docs/research/t4378; excel-graph,
+      2026-11-05). A structural choice confirmed out of sample (decision 0188 R4), not a fit. Implemented (T-4378):
+      `Tree::descend` returns the classes a row reached, `Grouping::reached_classes` keeps them, and the
+      `Slot::Subtotal` arm of `Grid::cell_rows` (pivotby.rs) takes the records whose classes start with its prefix.
     - **Excel can leave such a leaf out**: over Cx Ay Ax Bx Ax (q q p p q) the columns are (`­ab`,x), (`­ab`,y)
       only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379). The cause is
       UNIQUE, below.
@@ -1009,13 +1013,14 @@ row (`Group::reached` false, which `Grouping::group_of` maps only rows in no oth
 tree order and sort by their class's rank (`Group::key_order`). While no key text is outside ASCII a row descends as
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
-(`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). Not implemented: a column subtotal's
-records (T-4378), UNIQUE's drop of Bx after Cx Ay Ax, which removes a repeated leaf (T-4380) and a value sort's parent values (T-4359) on these runs.
+(`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
+reached its class (T-4378). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a repeated leaf
+(T-4380), and a value sort's parent values (T-4359) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344 and t4358 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358 and t4378 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
