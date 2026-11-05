@@ -3,7 +3,7 @@ id: T-4375
 title: "Probe whether XNPV's later error or out-of-range date beats a refused first value's #VALUE!"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
