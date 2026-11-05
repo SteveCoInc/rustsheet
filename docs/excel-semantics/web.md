@@ -121,6 +121,18 @@ Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674;
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
 
+## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
+Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
+(`refreshOnLoad` off, or Excel drops it on load), over Data East 10, West 20, East 5.
+- `showAll="0"`: the item is not shown and `GETPIVOTDATA("Sales",pivot,"Region","North")` is `#REF!`, as for a group with no
+  record (see below) and for a text absent from the cache ("Nowhere").
+- `showAll="1"`: the item is shown with a blank value and the same call is `0` (like an empty intersection,
+  probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
+- Control: the grand total (35) and a record item (East, 15) answer as usual in both.
+Engine: the engine builds a pivot's cache from its records, so it has no recordless item and answers `#REF!` for both
+`showAll` values; the `showAll="1"` cells are off until the importer keeps an unused shared item and the flag
+(follow-up task).
+
 ## Grouped pivot fields import as their group items (T-4225)
 Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
 field. A `<cacheField>` grouped in place carries `<fieldGroup par base>` after its `<sharedItems>`; a grouping field Excel

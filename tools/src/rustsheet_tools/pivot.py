@@ -32,6 +32,12 @@ case should give a date number format (Excel groups a field by date only when it
 and is cached as dates (truncated to the second; Excel refreshes the cache on load). Only a grouped
 row field may hold blank (absent) cells, cached as `<m/>`.
 
+A pivot may list `"unused_items"` (T-4248), texts the row field's cache keeps as shared items though no
+record uses them (what a refresh that dropped an item's last record leaves, `missingItemsLimit`), and
+`"show_all"` (default false), the row field's `showAll`. Excel rebuilds the cache from `source` on
+load, which would drop such an item, so a pivot with unused items leaves `refreshOnLoad` off; the
+rendered layout then shows an unused item (a blank aggregate) only when `show_all` is true.
+
 Excel stores no record's group, so the builder renders no cells for a grouped pivot (which group a
 record falls in is what such a probe asks): Excel lays the pivot out itself on load (excel-graph,
 T-4228), and the engine adapter has the engine lay it out (T-4235, T-4246), except a date group
@@ -59,7 +65,19 @@ _FUNCTIONS: dict[str, tuple[str, Callable[[list[float]], float]]] = {
     "max": ("Max", max),
     "min": ("Min", min),
 }
-_KEYS = {"name", "source", "location", "row", "column", "value", "function", "rendered", "group"}
+_KEYS = {
+    "name",
+    "source",
+    "location",
+    "row",
+    "column",
+    "value",
+    "function",
+    "rendered",
+    "group",
+    "unused_items",
+    "show_all",
+}
 _GROUP_KEYS = {"start", "end", "interval", "items"}
 _DATE_GROUPS = {"seconds", "minutes", "hours", "days", "months", "quarters", "years"}
 # Pivot caches write a date before March 1900 on the OLE epoch (1899-12-30 is 0), so the same
@@ -169,6 +187,18 @@ class _Pivot:
             for i, value in enumerate(record):
                 if isinstance(value, str) and value not in self.shared[i]:
                     self.shared[i].append(value)
+        self.show_all = bool(pivot.get("show_all", False))
+        self.unused: list[str] = list(pivot.get("unused_items", []))
+        if self.unused and (
+            self.group is not None
+            or not all(isinstance(u, str) and u not in self.shared[self.row] for u in self.unused)
+            or len(set(self.unused)) != len(self.unused)
+        ):
+            msg = (
+                f"unused_items are distinct texts no record uses, on an ungrouped row field: {self.unused!r}"
+            )
+            raise ValueError(msg)
+        self.shared[self.row].extend(self.unused)
         self.top, self.left = xlsxwriter.utility.xl_cell_to_rowcol(str(pivot["location"]).replace("$", ""))
 
     def _field(self, name: Any, *, text: bool) -> int:
@@ -191,6 +221,13 @@ class _Pivot:
             return self.group.items
         return sorted(self.shared[index], key=str.casefold)
 
+    def _shown(self, index: int) -> list[str]:
+        """The items of field `index` laid out: all but a row item without a record, unless `showAll`."""
+        order = self._order(index)
+        if index != self.row or self.show_all:
+            return order
+        return [v for v in order if v not in self.unused]
+
     def _aggregate(self, row_item: str | None, column_item: str | None) -> float | None:
         values = [
             float(r[self.value])
@@ -206,7 +243,7 @@ class _Pivot:
 
     def cells(self) -> dict[tuple[int, int], Cell]:
         """The rendered compact-form layout, by (row, column)."""
-        rows, top, left = self._order(self.row), self.top, self.left
+        rows, top, left = self._shown(self.row), self.top, self.left
         out: dict[tuple[int, int], Cell] = {}
         if self.group is not None:
             return out
@@ -242,7 +279,7 @@ class _Pivot:
         }
 
     def location(self) -> str:
-        rows = len(self._order(self.row)) + 1
+        rows = len(self._shown(self.row)) + 1
         if self.column is None:
             bottom, right, first_data_row = self.top + rows, self.left + 1, 1
         else:
@@ -280,8 +317,9 @@ class _Pivot:
             if i == self.row and self.group is not None:
                 shared += self.group.xml(base=i)
             fields.append(f'<cacheField name={quoteattr(name)} numFmtId="0">{shared}</cacheField>')
+        refresh = "" if self.unused else ' refreshOnLoad="1"'
         return (
-            f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1" refreshOnLoad="1"'
+            f'<pivotCacheDefinition xmlns="{_MAIN_NS}" xmlns:r="{_REL_NS}" r:id="rId1"{refresh}'
             f' createdVersion="6" refreshedVersion="6" minRefreshableVersion="3" recordCount="{len(self.records)}">'
             f'<cacheSource type="worksheet"><worksheetSource ref="{self.source_ref}"'
             f" sheet={quoteattr(self.source_sheet)}/></cacheSource>"
@@ -316,7 +354,10 @@ class _Pivot:
         items = "".join(
             f'<item x="{k if grouped else self.shared[index].index(v)}"/>' for k, v in enumerate(order)
         )
-        lines = "".join("<i><x/></i>" if d == 0 else f'<i><x v="{d}"/></i>' for d in range(len(order)))
+        shown = self._shown(index)
+        lines = "".join(
+            "<i><x/></i>" if d == 0 else f'<i><x v="{d}"/></i>' for d, v in enumerate(order) if v in shown
+        )
         return (
             f'<items count="{len(order) + 1}">{items}<item t="default"/></items>',
             f'{lines}<i t="grand"><x/></i>',
@@ -328,7 +369,7 @@ class _Pivot:
             if i in (self.row, self.column):
                 axis = "axisRow" if i == self.row else "axisCol"
                 pivot_fields.append(
-                    f'<pivotField axis="{axis}" showAll="0">{self._axis_items(i)[0]}</pivotField>'
+                    f'<pivotField axis="{axis}" showAll="{int(self.show_all and i == self.row)}">{self._axis_items(i)[0]}</pivotField>'
                 )
             elif i == self.value:
                 pivot_fields.append('<pivotField dataField="1" showAll="0"/>')
@@ -336,7 +377,7 @@ class _Pivot:
                 pivot_fields.append('<pivotField showAll="0"/>')
         row_lines = self._axis_items(self.row)[1]
         rows = f'<rowFields count="1"><field x="{self.row}"/></rowFields>'
-        rows += f'<rowItems count="{len(self._order(self.row)) + 1}">{row_lines}</rowItems>'
+        rows += f'<rowItems count="{len(self._shown(self.row)) + 1}">{row_lines}</rowItems>'
         if self.column is None:
             columns = '<colItems count="1"><i/></colItems>'
         else:

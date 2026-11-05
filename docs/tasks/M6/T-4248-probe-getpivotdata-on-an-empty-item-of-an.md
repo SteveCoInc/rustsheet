@@ -3,7 +3,7 @@ id: T-4248
 title: "Probe GETPIVOTDATA on an empty item of an ungrouped pivot field"
 milestone: M6
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -33,3 +33,10 @@ match it.
 
 ## Out of scope
 - Date groups (T-4236).
+
+## Outcome
+- Probe `probes/t4248-getpivotdata-recordless-item` (excel-graph filled). Excel: recordless item of an ungrouped field is
+  `#REF!` with `showAll="0"` and `0` with `showAll="1"` (case-insensitive); recorded in web.md.
+- Builder (`tools/src/rustsheet_tools/pivot.py`) gained `unused_items` and `show_all`; `PivotTableSpec` the same keys.
+- Differs from today's engine for `showAll="1"` only: filed T-4276 (owner of P!J1, P!J5). Eval: new probe cells 8 of 10
+  pass; the 2 off are owned by T-4276.

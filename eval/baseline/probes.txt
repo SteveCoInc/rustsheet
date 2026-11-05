@@ -2137,6 +2137,7 @@ C	probes/t4235-pivot-range-rounding.case.json	242
 C	probes/t4236-pivot-date-groups-no-blank.case.json	349
 C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
+C	probes/t4248-getpivotdata-recordless-item.case.json	10
 C	probes/t4258-collation-lone-mark-astral.case.json	105
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
@@ -6809,6 +6810,8 @@ F	probes/t4236-pivot-date-groups.case.json	Calc!Z42
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z43
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z44
 F	probes/t4236-pivot-date-groups.case.json	Calc!Z45
+F	probes/t4248-getpivotdata-recordless-item.case.json	P!J1
+F	probes/t4248-getpivotdata-recordless-item.case.json	P!J5
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
