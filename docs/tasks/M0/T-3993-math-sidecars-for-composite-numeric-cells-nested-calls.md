@@ -78,3 +78,43 @@ choice, recorded in a decision record before any sidecar is written.
   further work.
 - Arithmetic over exact-input cells and outer wrappers (T-3924). Argument forms (T-3923).
 - Any engine change, and the owners of the cells (every listed cell keeps its owner task).
+
+## Landing notes
+Session 2026-11-05 (opus worker) ran out of its window. The branch head before these notes is 3de72c18f. No PR
+was enqueued, and no reviewer has run.
+- **Done:**
+  - `tools/src/rustsheet_tools/accuracy/composite.py` parses composites. A call-free part is read by the fit lab's
+    `arithmetic`/`parse_arg`.
+  - It computes option (b), the default: the outermost node's math at the inner doubles, with inner `+ - * /` under
+    Excel's X87 operator model. It also computes option (a), the exact composition, with `rounded=False`.
+  - `eval_math.candidates` sends a formula to composites when it is not one call, or when its single call has an
+    unparsed (nested) argument.
+  - `tables.compute_value` is the shared dps-60/80 check, and `sweep.ARITH_TOKEN`/`MAX_NESTING` are now public.
+  - There are unit tests in `tools/tests/test_accuracy_eval_math.py`, and 603 accuracy and fitlab tests pass.
+  - The SPEC-0029 bullet is amended. Decision 0297 is drafted with `Status: proposed`, and its score counts are
+    still TODO.
+- **Sidecars, partly regenerated:**
+  - The script used, which writes only the cases that hold a composite candidate, was
+    `uv run python <regen_composites.py> probes-numeric probes`. It loops over `eval_math._spec_entries(suite)` and,
+    for a case with any `Candidate.tree`, calls `case_math` and writes `sidecar_bytes`.
+  - Every probes-numeric case with a composite is committed.
+  - Probes stopped at `probes/t3444-binom-range-inv-large-n`. It has 84 BINOM.DIST composites at n = 1e9, each slow
+    at 80 dps, and they ran past 10 minutes on one worker. That case and any later probes cases still need
+    regenerating. Run it alone, in the background with a long timeout.
+  - A whole-suite `rustsheet-accuracy math --suite probes-numeric` takes over 30 minutes; it spends it on single
+    calls, mostly t3960.
+- **Check before going on:**
+  - The probes-numeric diff also deletes about 17k lines. Rewriting a whole case brings in generator drift on its
+    one-call cells, such as old `"not converged or too slow"` skip entries that are now values. Confirm it is drift
+    only, or keep the old entries.
+  - A killed `ProcessPoolExecutor` leaves its spawn workers running, so `pkill` them as well.
+- **Next:**
+  1. Finish the probes regeneration, then run `make eval-math-check`.
+  2. Run `docs/research/t3993/score.py` from the repository root after `make build`. It reads (b) from the
+     sidecars, computes (a), and writes `cells.tsv`. Fill decision 0297's counts in from it and set the decision
+     to accepted.
+  3. Run `make eval`. The R1(c) line before was: "ironcalc-calc 26 counted, 0 Phase 1b evidence, 0 R3 passing, 0
+     M14-owned; probes 959 counted, 326 Phase 1b evidence, 0 R3 passing, 16 M14-owned; probes-numeric 2581
+     counted, 2925 Phase 1b evidence, 66 R3 passing, 0 M14-owned". `make unowned-off ALL=1` before showed 0 cells
+     with no open owner (0 deferred).
+  4. Write the Outcome, then `make check-fast`, then review.
