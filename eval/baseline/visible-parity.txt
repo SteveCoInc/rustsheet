@@ -225,6 +225,7 @@ probes/t4332-fraction-fresh.case.json	17
 probes/t4333-count-ulp-scan.case.json	6
 probes/t4344-groupby-descending-search.case.json	2
 probes/t4358-pivotby-unreached-column-leaf.case.json	21
+probes/t4379-pivotby-repeated-unreached-leaf.case.json	20
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
