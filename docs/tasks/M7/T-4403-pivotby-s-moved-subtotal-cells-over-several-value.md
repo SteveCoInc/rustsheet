@@ -3,7 +3,7 @@ id: T-4403
 title: "PIVOTBY's moved subtotal cells over several value columns name a column group by its first row, which a leaf no record reaches shares"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -29,9 +29,20 @@ has a leaf no record reaches.
 - Cells: probes/t4382-pivotby-intransitive-paths Calc!B2, B5, B14.
 
 ## Acceptance criteria
-- [ ] probes/t4382-pivotby-intransitive-paths Calc!B2, B5 and B14 pass; a unit test covers a column tree with
+- [x] probes/t4382-pivotby-intransitive-paths Calc!B2, B5 and B14 pass; a unit test covers a column tree with
       a leaf no record reaches under one function over two value columns.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- `Placement` (pivot_placement.rs) names each column group across the sorts by `Group::leaf_id` (grouping.rs),
+  the id of its leaf class in the grouping tree, instead of its first row, which a leaf no record reaches (it
+  holds every record) shares with a reached group. The moved subtotal cells of one function over several value
+  columns are then looked up on their own line.
+- Unit test `moved_subtotal_cell_beside_a_leaf_no_record_reaches` (test_fn_pivotby.rs) is Calc!B2's run.
+- coercion.md's T-4382 gate bullet lists the gate cells and records the fix.
+- Eval delta: probes known failures in the case 42 -> 39 (fixed probes/t4382-pivotby-intransitive-paths Calc!B2, B5,
+  B14), 0 regressions.
+
