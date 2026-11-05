@@ -1,6 +1,6 @@
 use statrs::distribution::FisherSnedecor;
 
-use crate::arithmetic::extended_quotient;
+use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
 use crate::functions::statistical::bratio::{
@@ -457,8 +457,13 @@ impl Model {
             }
         }
         FisherSnedecor::new(df1, df2).map_err(|_| num_error(cell))?;
+        // A subnormal cdf is Excel's exact 0: the last number is 3.3E-308 and the first 0 is
+        // 2.0E-308 at (316, 1) and at (40, 1), whose bpser prefactors 1/a differ eightfold, so the
+        // cut is on the result, not inside the kernel (`=(F.DIST(..))=0` is TRUE there; probes/
+        // t4026-f-cdf-subnormal A24, B24, A57, B57).
+        // Excel: see docs/excel-semantics/statistics.md, "F.DIST's cdf flushes a subnormal result to 0 (T-4026)"
         let result = if cumulative {
-            f_cdf(df1, df2, x)
+            flush_subnormal(f_cdf(df1, df2, x))
         } else {
             f_pdf(df1, df2, x)
         };
