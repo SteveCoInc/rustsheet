@@ -3,7 +3,7 @@ id: T-4347
 title: "Number formats: numeral bytes 0x24-0x27 (Taiwan Chinese, traditional formal, byte-29 variant, Korean hangul)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
