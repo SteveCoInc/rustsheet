@@ -211,6 +211,7 @@ impl Model {
             values: &pivot.values,
             shown,
             column_of,
+            unreached: cols.unreached(),
             buckets: vec![Vec::new(); cols.groups.len()],
             merged: Vec::new(),
             sets,
@@ -260,6 +261,16 @@ impl Model {
             let column = grid.column_of.get(record).copied().unwrap_or(usize::MAX);
             if let Some(bucket) = grid.buckets.get_mut(column) {
                 bucket.push(record);
+            }
+        }
+        // A column leaf no record reaches holds every record of the line, as GROUPBY's such
+        // group holds every row, whether or not a record of this line reached another leaf:
+        // ascending (C,x) after (C,x), (C,y) is p `2`, q `1, 3, 4, 5` over Cx Cx Bx Ay Bx of
+        // q p q q q (probes/t4344-groupby-descending-search Calc!D39; D41, E38, E41; T-4358).
+        for &group in &grid.unreached {
+            if let Some(bucket) = grid.buckets.get_mut(group) {
+                bucket.clear();
+                bucket.extend_from_slice(records);
             }
         }
         let shape = functions.shape();
@@ -803,6 +814,9 @@ struct Grid<'a> {
     values: &'a [Vec<ArrayNode>],
     shown: &'a [Shown],
     column_of: Vec<usize>,
+    /// The column groups no record reached, each holding every record of the row being laid out
+    /// ([`Grouping::unreached`]).
+    unreached: Vec<usize>,
     buckets: Vec<Vec<usize>>,
     merged: Vec<usize>,
     /// The relative sets, when a function takes them, and the row item being laid out (`None`
@@ -841,7 +855,10 @@ impl<'a> Grid<'a> {
                 for bucket in self.buckets.get(start..end).unwrap_or_default() {
                     self.merged.extend_from_slice(bucket);
                 }
+                // A record in a leaf no record reached is in another leaf too: count it once
+                // (unprobed on an intransitive run; T-4358).
                 self.merged.sort_unstable();
+                self.merged.dedup();
                 &self.merged
             }
             Slot::Total { .. } => records,

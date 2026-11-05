@@ -586,3 +586,38 @@ fn a_leaf_no_row_reaches_is_charged_per_row() {
     );
     assert!(refused.is_err());
 }
+
+/// T-4358: Cx, Cx, Bx, Ay, Bx (PIVOTBY's column fields of probes/t4344-groupby-descending-search
+/// Calc!D39) build the leaves (C,x), (C,y), (C,x); no row reaches the second (C,x), which
+/// [`Grouping::unreached`] names so that PIVOTBY gives it every record of a row group.
+#[test]
+fn unreached_names_the_leaf_no_row_reaches() {
+    let (b, c) = (|| text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (a, x, y) = (|| text("ab"), || text("x"), || text("y"));
+    let keys = vec![
+        vec![c(), x()],
+        vec![c(), x()],
+        vec![b(), x()],
+        vec![a(), y()],
+        vec![b(), x()],
+    ];
+    let grouping =
+        Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
+            groups: Vec::new(),
+            ascending: Vec::new(),
+        });
+    let leaves: Vec<(Vec<ArrayNode>, Vec<usize>)> = grouping
+        .groups
+        .iter()
+        .map(|group| (group.keys.clone(), group.rows.clone()))
+        .collect();
+    assert_eq!(
+        leaves,
+        [
+            (vec![c(), x()], vec![0, 1, 2, 4]),
+            (vec![c(), y()], vec![3]),
+            (vec![c(), x()], vec![0, 1, 2, 3, 4]),
+        ]
+    );
+    assert_eq!(grouping.unreached(), [2]);
+}
