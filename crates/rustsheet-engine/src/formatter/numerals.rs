@@ -319,8 +319,8 @@ impl CjkStyle {
             for place in (0..4_u32).rev() {
                 let d = (group / 10_u64.pow(place) % 10) as usize;
                 if d == 0 {
-                    gap |=
-                        started && (self.trailing_zero_gap || group % 10_u64.pow(place + 1) != 0);
+                    gap |= started
+                        && (self.trailing_zero_gap || !group.is_multiple_of(10_u64.pow(place + 1)));
                     continue;
                 }
                 if gap && self.zero_in_gap {
