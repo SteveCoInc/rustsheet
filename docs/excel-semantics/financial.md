@@ -2442,6 +2442,34 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
     the 104 tiny-rate principals. The best geometric sum over all three cases (both types, ranges up to 12 periods) has
     339 of 634 (the task file lists the families). Multi-period values are not the double sum of the probe's own one-period values
     either: they agree up to m = 5 and then drift by 1 to 2 ulps.
+- Where `v^nper` underflows, the principal is one core for both types (T-3141, excel-graph 2026-11-04;
+  probes/fin-cumprinc-underflow-type1, 72 cells, and probes/fin-cumprinc-underflow-fresh, 200 cells). Rule: over a short
+  range with `1 - v^nper` = 1, `C = pv·((1-v^m)·v^(nper-end+1))` in doubles, with `1-v^m` PMT's `1-Q` of `-m·L` (Kahan's
+  expm1 below m·L = 1, `1 - EXP` from 1 on, as PMT's: "PMT is a discounted payment"), `v^(nper-end+1)` Excel's EXP of
+  `-(nper-end+1)·L` and L `growth_log`'s; type 1's CUMPRINC is `-C` and type 0's `-(C·(1+r))`. The `1+r` is a last
+  product: folding it into the power (`v^(nper-end)`, T-3067's balance drop) is what left 38 of 108 type 0 cells an ulp
+  off. Consequences, all in Excel's own values: type 1 is nearly type 0 over `1+r` in doubles (`A/1.01 = F` on all 12
+  near-1e15 pairs and 12 underflow-ends pairs; 34 of 36 pairs of the type1 case, the other two, A8/E8 and C6/G6, are
+  `C·(1+r)/(1+r) ≠ C`; the reciprocal product `A·(1/(1+r))` has 27); the CUMIPMT is `PMT·m - CUMPRINC` as everywhere
+  ("How the interest is built"), so E2-E4 and E7 near 1E15 follow. Past a leading exponent `(nper-end+1)·L` of 0.3 the
+  core is Excel's too on every probed cell where it and the geometric sum differ (type1 C7-C9, G7-G9 at 0.2 ending 2
+  before nper, exponent 0.55; fresh I10, K10; integer rates: gen-m9 `CUMPRINC(10,230,351888,4,21,0)` d0854366830dcdee
+  A98, 67a4c03afd63f988 A208, b73c6cc96e093f03 A111), but no fractional rate is probed deeper than 0.56.
+  How it was found: the 132 principals of near-1e15 and underflow-ends were the fit set and the type1 case the hold-out,
+  split before scoring. Every expression tree over {pv, 1-v^m, v^(nper-end), 1/(1+r)} with optional `r/r` and
+  `(1+r)/(1+r)` pairs (10,343 type 0 and 108,691 type 1 distinct value sets, products and quotients in every
+  association) puts type 1's `pv·((1-v^m)·(v^(nper-end)·(1/(1+r))))` at 24 of 24 and type 0's same core times `1+r` at
+  98 of 108, and the core with the power taken whole as EXP of `-(nper-end+1)·L` is exact on all 132 and on all 72 of
+  the hold-out. Frozen, it was exact on 98 of the fresh sweep's 100 principals (5 rates 0.0004 to 0.15, nper 77777 to
+  2E13, pv 1 to 3.3E6, ranges ending at nper, 1 and 3 before); the 2 misses (I5, J5: 0.15 over 10 periods, m·L 1.40,
+  the largest probed) are `1 - EXP(-m·L)`'s, and Kahan's is right at 0.98 (I4), so the cut sits in 0.98..1.40, which
+  PMT's cut at 1 (T-3014) fits; the kernel reuses that helper. Taking that cut from the fresh case made it fit data,
+  so it is no R4.2 sweep: that sweep is T-4059's `r4-T-3141` batch of a CUMPRINC Gate A table. With the fit lab's split
+  (decision 0188 R4.1, margin 5 points) over all 304 principals, the core is 216/216 bit-exact on train and 88/88 on
+  test (all within 4 ulps and 15 digits), the correctly rounded value 65/216 and 33/88 (all within 4 ulps). Forms that lost on the fit set: x87-register
+  intermediates for Kahan's product and quotient and for the exponent (at most 25 of 36 distinct principals), the
+  extended-precision LN in Kahan's divide (25), libm's expm1 (19 to 21), `1 - EXP` throughout (5), and every per-period
+  and geometric ordering of the T-3067 notes (at most 21).
 Status: PARTLY VERIFIED (excel-graph; visibly right but for A7 (= G2) and A10 near period 1E15, fin-cumipmt-period-bound
 A18, fin-cumprinc-near-1e15 E7, and the CUMIPMT cells that amplify our CUMPRINC's last bits (gate-edges A1-A4, A6, A7,
 E3-E10, H3, gen-m9 A352: T-3413; tiny-rate-structure's other 37: T-3776 (blocked time-boxed after T-3552 and T-3731 found no form); T-3118 moved 7 off the bit, decision 0197: gen-m9 A329,
