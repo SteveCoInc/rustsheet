@@ -1354,10 +1354,3 @@ on 12 is "($12.00)" (-12 "-($12.00)"), `"x"[$€-40C]0` "x€12", `([$$]0)` and 
 `#,##0[$€-40C]` "12€", `0.0[$€-40C]0` "12.0€0", `"a"[$€]0"b"` "a€12b", `[$€]0%` "€1200%", `[$€]0E+0` "€1E+1",
 `0;([$$-409]#,##0.00)` on -12 "($12.00)". A fraction section is not covered (it keeps its symbol in front,
 see "Currency and leading literals" below). Evidence: probes/t4108-currency-tag-position (excel-graph, 2026-11-05).
-
-## Fraction digits round a tie to even (T-4323)
-Quirk: the shown seconds fraction (`.0`, `.00`, `.000`) rounds the serial to that many digits with ties going to the
-even digit, not away from zero: `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2" (0.25 s is the tie 2.5 tenths), where
-half away from zero gave "24:00.3". Evidence: probes/elapsed-minutes-fraction A21 (excel-graph). Seen on one tie only;
-UNVERIFIED: whether other ties (`.00`, `.000`, other seconds) follow, or the Excel float error lands this one just
-below. Engine: `FractionalSeconds::new` uses `round_ties_even`.
