@@ -21,6 +21,9 @@ T-3252 (docs/excel-semantics/statistics.md, "Incomplete gamma: accurate kernel",
   closer: probes/t3252-gamma-prefactor-holdout-2 A5:A12, A17:A24, A29:A36; probes/t3252-gamma-prefactor-holdout
   A5:A14, A19:A28, A33:A42; probes/t3252-gamma-prefactor-window A4:A10, A24:A30, A44:A50. At x <= 0.664a the ratio
   form is exact.
+- The post-freeze sweep probes/t3252-gamma-prefactor-sweep (x/a 0.55 to 0.75, shapes 30 to 500) has 10 visibly-off
+  cells, all in that band or at its edge: A9, A19, A20, A23, A53, A54, A55, A57, A58, A63 (A16 is at the 15th-digit
+  boundary).
 - Above the mode, from 1.05a to 1.45a, Excel is neither form (window A11:A20, A31:A40).
 - POISSON.DIST's cdf far above the mean at k 100 and 200 is closer to the ratio form (window A129, A139, A140),
   while k 50 is not (A117, A118).
