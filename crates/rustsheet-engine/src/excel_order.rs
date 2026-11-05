@@ -11,8 +11,10 @@
 //! observable through those states, so the default pass keeps its own order and this one runs
 //! after it only where a reader ran (`Model::evaluate`).
 
+use std::collections::HashMap;
+
 use crate::{
-    evaluation::{key, CellState, OrderState, Restart},
+    evaluation::{key, CellKey, CellState, KeyBuild, OrderState, Restart},
     expressions::types::CellReferenceIndex,
     model::Model,
     types::{ArrayKind, Cell},
@@ -97,7 +99,32 @@ pub(crate) fn run_chain<C>(
     }
 }
 
+/// What the dynamic-array anchors of an Excel-order pass left of AMORDEGRC's value
+/// (`OrderState::amor_left_over`). The anchors run before the chain, so the chain puts each
+/// anchor's value back at its place (`run_excel_order`; financial.md "AMORDEGRC below period 1",
+/// T-3393).
+#[derive(Default)]
+pub(crate) struct AnchorAmor {
+    /// How many times a call has written the value, so that an anchor's run can tell whether it
+    /// wrote it.
+    pub(crate) writes: u64,
+    /// The value each anchor that wrote it left.
+    pub(crate) left: HashMap<CellKey, f64, KeyBuild>,
+}
+
 impl Model {
+    /// Evaluates a root of a pass; an anchor of an Excel-order pass that wrote AMORDEGRC's value
+    /// records what it left, for the chain to put back at its place (`AnchorAmor`).
+    pub(crate) fn evaluate_pass_root(&mut self, cell: CellReferenceIndex, anchor: bool) {
+        let writes = self.evaluation.anchor_amor.writes;
+        self.evaluate_root_cell(cell);
+        let state = &mut self.evaluation;
+        if anchor && state.excel_order && state.anchor_amor.writes != writes {
+            let left = state.order_state.amor_left_over;
+            state.anchor_amor.left.insert(key(cell), left);
+        }
+    }
+
     /// The formula cells of the workbook in `(load rank, row, column)` order: the chain starts at
     /// the last one. A sheet keeps its load position after a move (SPEC-0017), so the sheets
     /// are ordered by `Worksheet::load_rank`, not by their tab.
@@ -144,8 +171,14 @@ impl Model {
                         ..
                     })
                 ) {
-                    // What it does to AMORDEGRC's left-over value is unprobed: left as it is.
                     model.evaluation.order_state.weeknum_start = None;
+                }
+                // An anchor that wrote AMORDEGRC's left-over value leaves, at its place, what its
+                // run left: `=SEQUENCE(1,2)` empties it and `=SEQUENCE(1,2)+AMORDEGRC(..)` leaves
+                // the charge (financial.md "AMORDEGRC below period 1"; probes/amordegrc-fraction-
+                // state-ag, -ah, -am, T-3393). One that wrote nothing (`={1,2}`, -aq) keeps it.
+                if let Some(&left) = model.evaluation.anchor_amor.left.get(&key(cell)) {
+                    model.evaluation.order_state.amor_left_over = left;
                 }
                 return Outcome::Done;
             }

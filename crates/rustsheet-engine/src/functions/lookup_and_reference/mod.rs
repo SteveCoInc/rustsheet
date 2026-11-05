@@ -90,6 +90,22 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> Option<CalcResult> {
+        let value = self.reference_form_value(kind, args, cell)?;
+        // Evaluated as a reference, XLOOKUP, TAKE and DROP still empty AMORDEGRC's left-over
+        // value (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-bj, -cz).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
+        }
+        Some(value)
+    }
+
+    /// [`Self::evaluate_reference_form`]'s value, before what the call leaves for AMORDEGRC.
+    fn reference_form_value(
+        &mut self,
+        kind: &Function,
+        args: &[Node],
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
         Some(match kind {
             // `INDEX(A1:A2,2) A1:A2` intersects the cell INDEX picks (T-0235).
             Function::Index => self.index_reference(args, cell),

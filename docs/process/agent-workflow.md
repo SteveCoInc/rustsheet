@@ -59,6 +59,16 @@ Work is partitioned into **lanes** so that parallel workers rarely touch the sam
   step 6.5) top it up with the gap-triager or planner, cutting sonnet-sized tasks by the tier rubric.
 - Add the optional worker only after a week with a revert rate under 5%.
 
+**Worktrees** (T-3832): every worktree, including a subagent's `isolation: worktree` copy, builds
+into its own Cargo target directory, its default `target/` inside the worktree. Never share one
+(a common `CARGO_TARGET_DIR`, a `target` symlink to another tree) to save disk: Cargo fingerprints
+by package, not by source tree, and the Makefile runs `target/release/rustsheet-eval` by path, so a
+shared directory runs binaries built from another worktree's sources. In the 2026-11-02 cleanup
+that made FORECAST.ETS return `#N/IMPL!` from an older engine and once recorded a baseline with the
+wrong one. `make build` (so every eval gate) and `make check-fast` refuse a target directory outside
+the worktree (`make target-dir-guard`, `scripts/target_dir_guard.py`). Short of disk, delete stale
+worktrees' `target/` directories instead.
+
 ## Task lifecycle
 
 ```

@@ -47,8 +47,15 @@ test-shard-2: ## CI: the tests matching TEST_SHARD_2 and not TEST_SHARD_1 (a thi
 test-shard-3: ## CI: every test shards 1 and 2 do not run (the last third of make test)
 	$(SHARD_TEST) $(addprefix --skip ,$(TEST_SHARD_1) $(TEST_SHARD_2))
 
-build: ## Release build of the eval harness
+build: target-dir-guard ## Release build of the eval harness
 	$(CARGO) build --release -p rustsheet_eval
+
+# Every eval gate runs target/release/rustsheet-eval by path, so a target directory outside this
+# worktree (a shared CARGO_TARGET_DIR, a `target` symlink) would build one tree and run another's
+# binary: refuse it (T-3832; docs/process/agent-workflow.md, "Worktrees").
+.PHONY: target-dir-guard
+target-dir-guard: ## Refuse a Cargo target directory outside this worktree (make build, make check-fast)
+	@$(PY) scripts/target_dir_guard.py $(CURDIR)
 
 # ---------------------------------------------------------------- Eval (Excel compatibility)
 .PHONY: eval eval-check eval-gates eval-baseline eval-lower-visible-lock eval-show evidence-floor
@@ -144,7 +151,7 @@ governance: ## Protected-path changes need a decision record
 .PHONY: check check-fast ci
 check: fmt-check clippy test eval-gates eval-math-check py-check py-bindings hygiene typos ## Every gate CI runs on a PR (typos too: CI fails on it)
 
-check-fast: ## The local pre-push gate: the gates of `make check` the change can break, never the full test suite (scripts/fast_gates.py; BASE=origin/main)
+check-fast: target-dir-guard ## The local pre-push gate: the gates of `make check` the change can break, never the full test suite (scripts/fast_gates.py; BASE=origin/main)
 	targets="$$($(PY) scripts/fast_gates.py --base $(or $(BASE),origin/main))" && $(MAKE) --no-print-directory $$targets
 
 ci: check deny machete

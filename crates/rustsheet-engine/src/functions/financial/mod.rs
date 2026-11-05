@@ -204,8 +204,8 @@ impl Model {
     /// XNPV's values or dates. A non-number cell refuses the values with `#NUM!`. A text or
     /// boolean date in a range or array is read as NaN, which [`xnpv_flows`] turns into
     /// `#VALUE!` in first place and `#NUM!` later; one that is no range or array is `#VALUE!`. A
-    /// values argument that is one empty cell is a single cash flow of 0, `XNPV(1,A2,B11)` is 0 (probes/xnpv-empty-values-cell C1-C4, T-2599); empty cells in a
-    /// larger range stay refused.
+    /// values argument that is one empty cell is a single cash flow of 0, `XNPV(1,A2,B11)` is 0
+    /// (probes/xnpv-empty-values-cell C1-C4, T-2599); empty cells in a larger range stay refused.
     fn xnpv_numbers(
         &mut self,
         result: CalcResult,

@@ -312,7 +312,7 @@ impl Parser {
                 .unwrap_or((scope, String::new())),
             None => {
                 let formula = self
-                    .defined_name_formula(None, &bare.to_lowercase())
+                    .defined_name_formula(None, bare)
                     .map(str::to_owned)
                     .unwrap_or_default();
                 (None, formula)

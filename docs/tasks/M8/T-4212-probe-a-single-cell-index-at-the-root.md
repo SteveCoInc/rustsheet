@@ -3,7 +3,7 @@ id: T-4212
 title: "Probe a single-cell INDEX at the root over a union, a sheet-qualified range, a 2-D range and a reference-bodied name"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -22,12 +22,17 @@ engine's scalar INDEX shape accepts, and the engine matching it.
 - Excel-fidelity review MINOR on PR #3180.
 
 ## Acceptance criteria
-- [ ] A probe (excel-graph) with legacy formulas and FORMULATEXT beside each: `=INDEX((B1:B6,C1:C6),3,1)`,
+- [x] A probe (excel-graph) with legacy formulas and FORMULATEXT beside each: `=INDEX((B1:B6,C1:C6),3,1)`,
       `=INDEX((B1:B6,C1:C6),3,1,2)`, `=INDEX(Sheet1!B1:B6,3)`, `=INDEX(B1:C6,3)`, `=INDEX(B1:C6,3,1)`, `=INDEX(Rng,3)`
       (Rng = Sheet1!$B$1:$B$6), `=INDEX(One,1)` (One = Sheet1!$B$3), each at the root and under ABS, plus the typed
       (dynamic) twins' values.
-- [ ] The engine matches every cell, or the visibly-off cells have an owner task; references.md records the result.
-- [ ] `make check` green; reviewers approve.
+- [x] The engine matches every cell, or the visibly-off cells have an owner task; references.md records the result.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - INDEX over array-bodied names (kept as before T-3856).
+
+## Outcome
+Added probe `t4212-legacy-index-root-area-kinds` (excel-graph, 42 cells): no `@` for any of the seven INDEX shapes at the
+root or under ABS; values match the typed twins; `INDEX(B1:C6,3)` is `#REF!`. The engine already matches every cell, so
+no engine change. Recorded in docs/excel-semantics/references.md. Eval delta: +42 passing probe cells, no regressions.

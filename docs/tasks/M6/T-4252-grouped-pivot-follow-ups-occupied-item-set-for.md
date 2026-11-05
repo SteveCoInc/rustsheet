@@ -3,7 +3,7 @@ id: T-4252
 title: "Grouped pivot follow-ups: occupied-item set for GETPIVOTDATA and one layout footprint helper"
 milestone: M6
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -37,3 +37,6 @@ has one definition.
 ## Note
 Filed against PR #3238 (T-4235), which is not on `main` yet: `shown_group`, `pivot/layout.rs` and
 `lay_out_grouped` do not exist there. Depends on T-4235 landing; found by a sonnet run on 2026-11-04.
+
+## Outcome
+`shown_group` now answers from a per-axis occupied-item set built with the index (`PivotIndex::occupied`, O(1) per call, unit test with a filled and an empty group). `layout_extent` and `LAYOUT_COLUMNS` in `pivot/layout.rs` are the one footprint definition, used by the eval harness (`spill_extent.rs`, with `max_layout_rows`) and `Txn::add_pivot_table`'s `lay_out_grouped`. `aggregate`'s doc comment re-wrapped. No behaviour change: see the eval check in the PR.

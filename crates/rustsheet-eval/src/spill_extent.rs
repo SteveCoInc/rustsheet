@@ -7,7 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 
-use rustsheet_engine::pivot::max_layout_rows;
+use rustsheet_engine::pivot::{layout_extent, max_layout_rows};
 
 use crate::case::{cell_key, split_qualified, CaseSpec, SheetOp};
 use crate::cellref::{parse_range, Addr};
@@ -128,8 +128,8 @@ impl SpillExtent {
                             (first.col..=last.col).map(move |col| Addr { row, col })
                         })
                     });
-                    // The engine lays out a grouped pivot itself (T-4235): two columns from its
-                    // location, at most `max_layout_rows` of them.
+                    // The engine lays out a grouped pivot itself (T-4235): the area `layout_extent`
+                    // gives from its location, at most `max_layout_rows` rows.
                     let grouped = s.pivot_tables.iter().filter(|p| p.group.is_some());
                     let grouped = grouped.filter_map(|p| {
                         let top = Addr::parse(&p.location.replace('$', ""))?;
@@ -137,11 +137,12 @@ impl SpillExtent {
                             split_qualified(&p.source).map_or(p.source.clone(), |(_, r)| r);
                         let (first, last) = parse_range(&source)?;
                         let rows = max_layout_rows(last.row.checked_sub(first.row)?);
-                        Some((top, rows))
+                        let (bottom, right) = layout_extent(top.row, top.col, rows);
+                        Some((top, bottom, right))
                     });
-                    let grouped = grouped.flat_map(|(top, rows)| {
-                        (top.row..top.row + rows).flat_map(move |row| {
-                            (top.col..=top.col + 1).map(move |col| Addr { row, col })
+                    let grouped = grouped.flat_map(|(top, bottom, right)| {
+                        (top.row..=bottom).flat_map(move |row| {
+                            (top.col..=right).map(move |col| Addr { row, col })
                         })
                     });
                     inputs

@@ -26,7 +26,7 @@ from pathlib import Path
 import mpmath as mp
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "t4255"))
-from score_forms import candidates  # noqa: E402
+from score_forms import candidates  # importable once the path above is set
 
 mp.mp.dps = 50
 M = mp.mpf

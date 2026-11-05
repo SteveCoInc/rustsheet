@@ -108,6 +108,8 @@ fn pivot_input(
         // The caption Excel gives a new data field: `Sum of Sales`.
         caption: format!("{} of {}", function.caption_name(), pivot.value),
         group: pivot.group.as_ref().map(range_group).transpose()?,
+        unused_items: pivot.unused_items.clone(),
+        show_all: pivot.show_all,
     })
 }
 

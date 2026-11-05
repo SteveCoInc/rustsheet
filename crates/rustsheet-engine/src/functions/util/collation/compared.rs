@@ -13,22 +13,27 @@ use std::cmp::Ordering;
 use super::{cmp_chars, cmp_prefix, cmp_str, AccentOrder};
 use crate::text::Text;
 
-/// Ticks of one byte a byte-wise pass reads: the ASCII first pass, [`cmp_prefix`], the ASCII
-/// folds and wildcard matches of the lookups and criteria (1.1 to 1.6 ns a byte).
+/// Ticks of one byte a byte-wise pass reads: the ASCII first pass, the ASCII second pass (equal
+/// or case-only-different texts, [`super::ascii_skipped`]), [`cmp_prefix`], the ASCII folds and
+/// wildcard matches of the lookups and criteria (1.1 to 1.6 ns a byte; the second pass about 1 ns
+/// a byte since T-4279, 14 ns a character before).
 pub(crate) const BYTE_TICKS: u64 = 1;
 
-/// Ticks of one character the ASCII second pass reads (`elements`; about 14 ns, as two equal
-/// ASCII texts in another case walk it to the end).
-pub(super) const ELEMENT_TICKS: u64 = 32;
-
-/// Ticks of one character the full collation reads (non-ASCII text or a lone surrogate: about 95
-/// to 140 ns, `é`, `中`).
-pub(super) const CHAR_TICKS: u64 = 128;
+/// Ticks of one character the full collation reads (non-ASCII text or a lone surrogate). Its first
+/// pass reads each character once and keeps its elements for the later passes (T-4279), so this is
+/// the whole comparison's cost a character: about 70 ns at the worst, two texts equal to the end
+/// (`é`, `中`, release build, 2026-11-05; 95 to 140 ns a character for each of the six passes
+/// before T-4279, weighed 128).
+pub(super) const CHAR_TICKS: u64 = 48;
 
 /// Ticks of one byte a [`super::CollationKey`] is built from (UNIQUE, the exact-match lookup
-/// index, the *IF(S) cache). Its bound-array worst case reaches the limit in about 7 s, as the
-/// other paths' do, while a UNIQUE of a million 27-byte texts still computes (T-4233).
-pub(super) const KEY_TICKS: u64 = 128;
+/// index, the *IF(S) cache): about 50 ns a byte for ASCII and 37 for `é` once the elements are
+/// made once (T-4279; 224 ns and a weight of 128 before). The weight is twice that because a short
+/// key's own costs (its vectors, the hashing) weigh as much again: so a UNIQUE of a million 27-byte
+/// texts still computes, and one of a million 107-byte texts, which runs 13 s at 32 ticks, is
+/// refused as before (T-4233); a bound-array UNIQUE of 32,767-byte texts reaches the limit in
+/// about 3 s.
+pub(super) const KEY_TICKS: u64 = 64;
 
 /// Ticks of one byte [`super::fold_lookup`] folds (non-ASCII: about 31 ns).
 pub(super) const FOLD_TICKS: u64 = 32;

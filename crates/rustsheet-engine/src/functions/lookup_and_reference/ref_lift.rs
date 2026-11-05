@@ -271,6 +271,11 @@ impl Model {
             }
             None => implementation(self, args, cell),
         };
+        // After its arguments ran, the call may empty AMORDEGRC's left-over value
+        // (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-cx to -da).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
+        }
         value.untagged()
     }
 
@@ -505,7 +510,7 @@ impl Model {
         args: &[Node],
         cell: CellReferenceIndex,
     ) -> RefArg {
-        match kind {
+        let value = match kind {
             Function::Indirect => self.indirect_reference(args, cell),
             Function::Trimrange => self.trimrange_reference(args, cell, false),
             Function::Take => self.take_drop_reference(args, cell, Edge::Take, false),
@@ -515,7 +520,13 @@ impl Model {
                 None => RefArg::from(self.fn_vstack(args, cell)),
             },
             _ => self.offset_reference(args, cell),
+        };
+        // Read as a reference, TAKE, DROP and VSTACK still empty AMORDEGRC's left-over value
+        // (`Function::empties_amor_left_over`; probes/amordegrc-fraction-state-bo to -bq).
+        if kind.empties_amor_left_over() {
+            self.empty_amor_left_over();
         }
+        value
     }
 
     /// The values of `args`, held inline (no heap allocation for the scalar call, SPEC-0014

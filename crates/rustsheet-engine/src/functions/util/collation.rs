@@ -57,6 +57,7 @@ use std::cell::Cell;
 use std::cmp::{Ordering, Reverse};
 
 mod accents;
+mod case_fold;
 mod compared;
 mod kana;
 mod lookup_fold;
@@ -65,7 +66,8 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use accents::{accents, cmp_accent_units};
-use compared::{cmp_text_in, counted, CHAR_TICKS, ELEMENT_TICKS, FOLD_TICKS, KEY_TICKS};
+pub(crate) use case_fold::{fold_case, fold_char, fold_exact_lookup, fold_final_sigma};
+use compared::{cmp_text_in, counted, CHAR_TICKS, FOLD_TICKS, KEY_TICKS};
 pub(crate) use compared::{note_compared, restore_compared_ticks, take_compared_ticks, BYTE_TICKS};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
@@ -98,9 +100,11 @@ fn cmp_str(left: &str, right: &str, order: AccentOrder, read: &Cell<u64>) -> Ord
         return ascii_primaries(counted(left.bytes(), read, BYTE_TICKS))
             .cmp(ascii_primaries(counted(right.bytes(), read, BYTE_TICKS)))
             .then_with(|| {
-                skipped(elements(counted(scalars(left), read, ELEMENT_TICKS), None)).cmp(skipped(
-                    elements(counted(scalars(right), read, ELEMENT_TICKS), None),
-                ))
+                ascii_skipped(counted(left.bytes(), read, BYTE_TICKS)).cmp(ascii_skipped(counted(
+                    right.bytes(),
+                    read,
+                    BYTE_TICKS,
+                )))
             });
     }
     cmp_chars(
@@ -177,25 +181,32 @@ pub(crate) struct CollationKey {
 /// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
     note_compared(text.len(), KEY_TICKS);
-    let elements = || elements(text.chars_lossless(), None);
+    // Each pass walks the elements, so they are made once (T-4279).
+    let kept: Vec<Element> = elements(text.chars_lossless(), None).collect();
+    let elements = || kept.iter().copied();
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {
         weights
             .enumerate()
             .filter(|&(_, weight)| weight != default)
             .collect()
     };
+    let kana = sparse(&mut kana_weights(elements()), NORMAL_KANA);
+    let variants = sparse(&mut variants(elements()), 0);
     CollationKey {
         primaries: primaries(elements()).collect(),
         accents: accents(elements()).collect(),
-        kana: sparse(&mut kana_weights(elements()), NORMAL_KANA),
-        variants: sparse(&mut variants(elements()), 0),
+        kana,
+        variants,
         skipped: skipped(elements())
             .map(|(Reverse(at), weight)| (at, weight))
             .collect(),
     }
 }
 
-/// The passes over two character sequences.
+/// The passes over two character sequences. The first pass reads the characters (and so counts
+/// their ticks, [`counted`]) and keeps each text's elements; it decides at the first difference,
+/// and a tie means both texts were read to the end, so the later passes walk the kept elements
+/// instead of decomposing every character again (T-4279).
 fn cmp_chars<L, R>(left: L, right: R, order: AccentOrder) -> Ordering
 where
     L: Iterator<Item = Char> + Clone,
@@ -205,17 +216,22 @@ where
         AccentOrder::Total => None,
         AccentOrder::Pairwise => Some(first_difference(left.clone(), right.clone())),
     };
-    let (left, right) = (elements(left, difference), elements(right, difference));
-    primaries(left.clone())
-        .cmp(primaries(right.clone()))
-        .then_with(|| match order {
-            AccentOrder::Total => accents(left.clone()).cmp(accents(right.clone())),
-            AccentOrder::Pairwise => cmp_accent_units(left.clone(), right.clone()),
-        })
-        .then_with(|| widths(left.clone()).cmp(widths(right.clone())))
-        .then_with(|| kana_weights(left.clone()).cmp(kana_weights(right.clone())))
-        .then_with(|| kana_types(left.clone()).cmp(kana_types(right.clone())))
-        .then_with(|| skipped(left).cmp(skipped(right)))
+    let (mut kept_left, mut kept_right) = (Vec::new(), Vec::new());
+    let first = primaries(elements(left, difference).inspect(|&e| kept_left.push(e))).cmp(
+        primaries(elements(right, difference).inspect(|&e| kept_right.push(e))),
+    );
+    if first.is_ne() {
+        return first;
+    }
+    let (left, right) = (kept_left.iter().copied(), kept_right.iter().copied());
+    match order {
+        AccentOrder::Total => accents(left.clone()).cmp(accents(right.clone())),
+        AccentOrder::Pairwise => cmp_accent_units(left.clone(), right.clone()),
+    }
+    .then_with(|| widths(left.clone()).cmp(widths(right.clone())))
+    .then_with(|| kana_weights(left.clone()).cmp(kana_weights(right.clone())))
+    .then_with(|| kana_types(left.clone()).cmp(kana_types(right.clone())))
+    .then_with(|| skipped(left).cmp(skipped(right)))
 }
 
 /// The position of the first character at which two texts differ, ignoring case (the length of
@@ -270,6 +286,24 @@ fn ascii_primaries(bytes: impl Iterator<Item = u8>) -> impl Iterator<Item = u32>
     bytes
         .map(|byte| ASCII_PRIMARY[usize::from(byte & 0x7F)])
         .filter(|&weight| weight != 0)
+}
+
+/// [`skipped`] of ASCII text, byte-wise: in ASCII every character is one element, a skipped
+/// one exactly where [`ASCII_PRIMARY`] is 0 (the hyphen, the apostrophe and the control
+/// characters other than CHAR(9) to CHAR(13), weighed as [`element`] weighs them), and none is
+/// a mark or weightless (T-4279).
+fn ascii_skipped(bytes: impl Iterator<Item = u8>) -> impl Iterator<Item = (Reverse<usize>, u8)> {
+    bytes
+        .enumerate()
+        .filter(|&(_, byte)| ASCII_PRIMARY[usize::from(byte & 0x7F)] == 0)
+        .map(|(at, byte)| {
+            let weight = match byte {
+                b'\'' => APOSTROPHE,
+                b'-' => HYPHEN,
+                _ => byte & 0x7F,
+            };
+            (Reverse(at), weight)
+        })
 }
 
 /// Primary weights: the space, CHAR(160), CHAR(9) to CHAR(13), the Unicode spaces, punctuation,
@@ -519,86 +553,6 @@ fn punctuation(c: char) -> Option<u32> {
         .map(|index| PUNCTUATION_BASE + index)
 }
 
-/// The final sigma `ς` as `σ`, every other character as is: Excel's `Σ = σ = ς` in comparisons
-/// and in exact MATCH (probes/t3114-collation-beyond-latin1 Calc!B168, B192, B216, D20:E20, H10).
-/// The collation key and [`fold_case`] both fold through it.
-pub(crate) fn fold_final_sigma(c: char) -> char {
-    if c == 'ς' {
-        'σ'
-    } else {
-        c
-    }
-}
-
-/// Lowercases `text` one character at a time (see [`fold_char`]), never changing its length:
-/// the case fold of SEARCH, of exact-match lookup keys (MATCH, VLOOKUP and HLOOKUP with an exact
-/// match, XMATCH in wildcard mode and, inferred, XLOOKUP) and of wildcard and D-function prefix
-/// criteria.
-/// Excel: `SEARCH("x","İx")` is 2 and `SEARCH("i","İx")` is #VALUE!, whereas Rust's
-/// `to_lowercase` turns U+0130 into "i" + U+0307 (probes/text-search-casefold-length A1, A2, A8,
-/// A12, A13); `MATCH("i",{"İ"},0)` is #N/A and `COUNTIF(r,"?")` counts `İ`
-/// (probes/t3133-lookup-criteria-case-fold; docs/excel-semantics/criteria.md "Wildcard escapes,
-/// case and trailing tilde").
-pub(crate) fn fold_case(text: &str) -> String {
-    text.chars().map(fold_char).collect()
-}
-
-/// The two long-vowel and iteration mark equalities of exact MATCH, VLOOKUP and HLOOKUP with a
-/// literal lookup value, applied to case-folded UTF-16 `units` ([`fold_case`]): a `ー` after a
-/// letter or digit that is neither kana nor an ideograph is that character again, and a text
-/// starting with `ゝ`, `ゞ`, `ヽ`, `ヾ` or `々` starts with `ー`. Excel: `MATCH("aー",r,0)` finds
-/// `"aa"` and `MATCH` of each lone mark finds `"ー"`, though `=`, COUNTIF and XMATCH find `"aー"`
-/// equal only to itself (probes/t3275-collation-width-kana Calc!B136:E136, C127:C129). One unit
-/// to one; wildcard patterns and criteria keep [`fold_case`] (how the marks match there is
-/// unprobed).
-pub(crate) fn fold_exact_lookup(units: &[u16]) -> Vec<u16> {
-    let mut previous: Option<char> = None;
-    let mut folded = Vec::with_capacity(units.len());
-    for decoded in char::decode_utf16(units.iter().copied()) {
-        let c = decoded.clone().ok();
-        let c = match (c, previous) {
-            (Some('\u{30fc}'), Some(letter))
-                if letter.is_alphanumeric()
-                    && !('\u{3005}'..='\u{9fff}').contains(&letter)
-                    && !('\u{ff66}'..='\u{ff9f}').contains(&letter) =>
-            {
-                Some(letter)
-            }
-            (Some('\u{309d}' | '\u{309e}' | '\u{30fd}' | '\u{30fe}' | '\u{3005}'), None)
-                if folded.is_empty() =>
-            {
-                Some('\u{30fc}')
-            }
-            _ => c,
-        };
-        match (c, decoded) {
-            (Some(c), _) => {
-                let mut buffer = [0u16; 2];
-                folded.extend_from_slice(c.encode_utf16(&mut buffer));
-            }
-            (None, Err(lone)) => folded.push(lone.unpaired_surrogate()),
-            (None, Ok(_)) => {}
-        }
-        previous = c;
-    }
-    folded
-}
-
-/// [`fold_case`] for one character: always exactly one character out. A character whose full
-/// lowercase is one character takes it (the Kelvin sign is `k`, `ẞ` is `ß`, `ǅ` and `Ǆ` are `ǆ`,
-/// the Ångström sign is `å`, the Ohm sign is `ω`); one whose lowercase is longer (`İ`) stays as
-/// it is; final sigma matches sigma in either case. `ſ`/`s`, `µ`/`μ` and `ϐ`/`β` stay apart: each
-/// is its own lowercase (SEARCH: probes/text-search-casefold-length A14-A24; lookups and criteria:
-/// probes/t3133-lookup-criteria-case-fold).
-pub(crate) fn fold_char(c: char) -> char {
-    let c = fold_final_sigma(c);
-    let mut lower = c.to_lowercase();
-    match (lower.next(), lower.next()) {
-        (Some(single), None) => single,
-        _ => c,
-    }
-}
-
 /// `c` with case removed: ASCII and Latin-1 letters directly, others through `to_lowercase`.
 /// A member of one of Excel's wider classes ([`class_first`]: `ϵ` with `ε`, `ϑ` with `ϴ`, `ϳ`
 /// with `Ͷ`, U+1FBE with `ι`, the Greek Extended psili+varia and dasia+oxia letters, ...) is its
@@ -610,7 +564,11 @@ fn fold(c: char) -> char {
     match c {
         'A'..='Z' => c.to_ascii_lowercase(),
         'À'..='Þ' if c != '×' => char::from_u32(u32::from(c) + 0x20).unwrap_or(c),
+        // Characters that are their own lowercase and in no class ([`class_first`]): the
+        // lower-case Latin-1 letters and `÷`, the kana, CJK and Hangul blocks, and the astral
+        // characters (a fast path, T-4279; `fold_fast_paths_are_identities` checks it).
         _ if c.is_ascii() || u32::from(c) > 0xFFFF => c,
+        'ß'..='ÿ' | '\u{3040}'..='\u{9fff}' | '\u{ac00}'..='\u{d7a3}' => c,
         _ => {
             let lower = |c: char| fold_final_sigma(c.to_lowercase().next().unwrap_or(c));
             let folded = lower(c);
@@ -993,4 +951,37 @@ fn skipped(elements: impl Iterator<Item = Element>) -> impl Iterator<Item = (Rev
             Element::Mark(_) | Element::Weightless => {}
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ascii_skipped, class_first, elements, fold, scalars, skipped};
+
+    /// `fold`'s fast paths (T-4279) return what its general arm would: each character there is
+    /// its own lowercase and in no class.
+    #[test]
+    fn fold_fast_paths_are_identities() {
+        let ranges = [
+            ('ß', 'ÿ'),
+            ('\u{3040}', '\u{9fff}'),
+            ('\u{ac00}', '\u{d7a3}'),
+        ];
+        for c in ranges.into_iter().flat_map(|(first, last)| first..=last) {
+            assert_eq!(fold(c), c, "{c:?}");
+            let mut lower = c.to_lowercase();
+            assert_eq!((lower.next(), lower.next()), (Some(c), None), "{c:?}");
+            assert_eq!(class_first(c), None, "{c:?}");
+        }
+    }
+
+    /// The ASCII skipped pass (T-4279) is the general one over every ASCII character.
+    #[test]
+    fn ascii_skipped_pass_matches_the_general_one() {
+        let all: String = (0u8..0x80).map(char::from).collect();
+        for text in [all.as_str(), "a-b'c", "--''x\u{1}\u{7f}y", "", "'"] {
+            let fast: Vec<_> = ascii_skipped(text.bytes()).collect();
+            let general: Vec<_> = skipped(elements(scalars(text), None)).collect();
+            assert_eq!(fast, general, "{text:?}");
+        }
+    }
 }
