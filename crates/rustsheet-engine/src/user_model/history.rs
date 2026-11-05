@@ -17,6 +17,15 @@ pub(crate) struct RowData {
     pub(crate) data: HashMap<i32, Cell>,
 }
 
+/// A table's extent before a structural edit resized it: what [`Diff::SetTableExtents`] puts
+/// back on undo.
+#[derive(Clone, Encode, Decode, Debug, PartialEq)]
+pub(crate) struct TableExtent {
+    pub(crate) name: String,
+    pub(crate) reference: String,
+    pub(crate) totals_row_count: u32,
+}
+
 #[derive(Clone, Encode, Decode)]
 pub(crate) struct ColumnData {
     pub(crate) column: Option<Col>,
@@ -351,6 +360,16 @@ pub(crate) enum Diff {
         sheet: u32,
         old_value: Vec<MergedCell>,
         new_value: Vec<MergedCell>,
+    },
+    /// The extents of the tables of `sheet` that a row delete resized, as they were before it:
+    /// apply does nothing (replaying the delete resizes them again), undo puts `old_value` back
+    /// once the rows are back. Undo re-inserts the rows at the first deleted row, just below what
+    /// is left of a table whose bottom data rows went, and an insert there does not grow a table
+    /// (Excel's rule, probes/table-edits/table-insert-row-below), so without this the table would
+    /// stay shrunk (T-3634).
+    SetTableExtents {
+        sheet: u32,
+        old_value: Vec<TableExtent>,
     },
     // FIXME: we are missing SetViewDiffs
 }

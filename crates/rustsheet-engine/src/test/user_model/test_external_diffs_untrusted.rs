@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use crate::cf_types::CfRule;
 use crate::expressions::types::Area;
 use crate::types::{Cell, Col, Color, FormulaValue, MergedCell, Row, Style, Workbook};
-use crate::user_model::history::{ColumnData, Diff, DiffType, QueueDiffs, RowData};
+use crate::user_model::history::{ColumnData, Diff, DiffType, QueueDiffs, RowData, TableExtent};
 use crate::UserModel;
 
 const BIG: i32 = i32::MAX;
@@ -410,6 +410,17 @@ fn crafted_diffs_are_refused() {
             },
         ),
         (
+            Undo,
+            Diff::SetTableExtents {
+                sheet: 0,
+                old_value: vec![TableExtent {
+                    name: "Nowhere".to_string(),
+                    reference: "A1:B3".to_string(),
+                    totals_row_count: 0,
+                }],
+            },
+        ),
+        (
             Redo,
             Diff::SetMergedCells {
                 sheet: 0,
@@ -611,4 +622,59 @@ fn undoing_the_clear_of_large_dynamic_spills_still_works() {
         model.get_formatted_cell_value(0, 600000, 2).unwrap(),
         "600000"
     );
+}
+
+/// An undo of [`Diff::SetTableExtents`] only moves a table's bottom edge: an extent that would
+/// move or widen the table, overlap another, leave it no data row, run past the last row or is
+/// no range is refused (T-3634), and a genuine one applies.
+#[test]
+fn table_extents_that_move_a_table_are_refused() {
+    let mut model = crate::Model::new_empty("model", "en", "UTC", "en").unwrap();
+    for (row, column, input) in [
+        (1, 1, "A"),
+        (1, 2, "B"),
+        (2, 1, "1"),
+        (6, 1, "C"),
+        (7, 1, "2"),
+    ] {
+        model
+            .set_user_input(0, row, column, input.to_string())
+            .unwrap();
+    }
+    model
+        .add_table_with_totals(0, "T", (1, 1, 2, 2), false, false)
+        .unwrap();
+    model
+        .add_table_with_totals(0, "U", (6, 1, 7, 1), false, false)
+        .unwrap();
+    let mut model = UserModel::from_model(model);
+    let extent = |name: &str, reference: &str, totals_row_count: u32| {
+        one(
+            DiffType::Undo,
+            Diff::SetTableExtents {
+                sheet: 0,
+                old_value: vec![TableExtent {
+                    name: name.to_string(),
+                    reference: reference.to_string(),
+                    totals_row_count,
+                }],
+            },
+        )
+    };
+    for (reference, totals, what) in [
+        ("A2:B4", 0, "moved down"),
+        ("A1:C4", 0, "widened"),
+        ("A1:B6", 0, "overlapping U"),
+        ("A1:B1", 0, "no data row"),
+        ("A1:B2", 1, "totals over the only data row"),
+        ("A1:B3", 2, "two totals rows"),
+        ("A1:B1048577", 0, "past the last row"),
+        ("Sheet1!A1", 0, "not a range"),
+    ] {
+        assert_refused(&mut model, &extent("T", reference, totals), what);
+    }
+    model
+        .apply_external_diffs(&extent("T", "A1:B4", 0))
+        .unwrap();
+    assert_eq!(model.get_model().workbook.tables["T"].reference, "A1:B4");
 }

@@ -3,7 +3,7 @@ id: T-3634
 title: "Undo of a row delete that shrinks a table at its bottom restores the rows but not the table's extent"
 milestone: M8
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -25,10 +25,25 @@ leaves the workbook exactly as it was.
   follow. A fix records the tables a row delete resized and restores them on undo (and redo re-applies them).
 
 ## Acceptance criteria
-- [ ] Undo of a delete of a table's bottom data rows, and of T-3259's delete of every data row, restores the table's
+- [x] Undo of a delete of a table's bottom data rows, and of T-3259's delete of every data row, restores the table's
       reference; redo shrinks it again. Unit tests in test_structured_references.rs (T-3259's test has a
       `TODO(T-3634)` for this assertion).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
-- Column deletes (check whether they share the gap; file a task if so).
+- Column deletes (they share the gap: T-4360).
+
+## Outcome
+- A row delete in the user model (`delete_rows_diffs`, common.rs) now records the extents (reference, totals row
+  count) of the tables on the sheet that it changed, as a new `Diff::SetTableExtents` placed before the
+  `DeleteRows` diff, like the merged-cells snapshot. Apply is a no-op (replaying the delete resizes the tables
+  again); undo, which runs the list backwards, re-inserts the rows first and then puts the extents back and
+  reparses against the tables (`undo_table_extents`, diff_undo.rs).
+- The diff can come from a peer (`apply_external_diffs`), so the undo refuses an extent that would move or widen the
+  table, overlap another table, leave it no data row, give it more than one totals row or run past the last row,
+  before any table changes (test_external_diffs_untrusted.rs `table_extents_that_move_a_table_are_refused`).
+- Tests: `undoing_a_delete_of_bottom_table_rows_restores_the_table` (bottom data rows with and without a totals row,
+  and the last data row; undo restores the table and its formulas, redo shrinks it again) and T-3259's
+  `deleting_every_data_row_at_once_keeps_one_cleared_row` now asserts B3:C7 after undo (its `TODO(T-3634)` is gone).
+- Eval delta: none (user-model history; no eval case covers undo).
+- Column deletes share the gap and also lose the table's columns: filed T-4360.

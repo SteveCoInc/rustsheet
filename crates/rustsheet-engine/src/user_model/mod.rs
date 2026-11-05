@@ -14,6 +14,7 @@ mod links;
 mod merged_cells;
 mod named_cell_styles;
 mod sequence_detector;
+mod table_extents;
 mod ui;
 mod undo_redo;
 

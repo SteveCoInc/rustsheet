@@ -648,8 +648,10 @@ fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
     assert_eq!(value(model, 0, 4, 3), "");
     user.undo().unwrap();
     let model = user.get_model();
-    // TODO(T-3634): undo restores the rows but not the table's extent (B3:C7), as for any delete
-    // of a table's bottom data rows.
+    // Undo gives the table its extent back with its rows (T-3634).
+    assert_eq!(model.workbook.tables["Sales"].reference, "B3:C7");
+    assert_eq!(value(model, 1, 7, 1), "4");
+    assert_eq!(value(model, 1, 8, 1), "5");
     assert_eq!(value(model, 0, 4, 3), "1");
     assert_eq!(value(model, 0, 5, 3), "2");
     assert_eq!(value(model, 0, 7, 3), "8");
@@ -659,6 +661,33 @@ fn deleting_every_data_row_at_once_keeps_one_cleared_row() {
     assert_eq!(model.workbook.tables["Sales"].reference, "B3:C4");
     assert_eq!(value(model, 0, 4, 3), "");
     assert_eq!(value(model, 0, 7, 3), "99");
+}
+
+/// Undo of a delete of a table's bottom data rows, with or without a totals row, gives the table its
+/// extent back, and redo shrinks it again (T-3634): the undo re-inserts the rows just below what
+/// is left of the table, where an insert alone does not grow it.
+#[test]
+fn undoing_a_delete_of_bottom_table_rows_restores_the_table() {
+    for (totals, row, count) in [(false, 6, 2), (true, 6, 2), (true, 7, 1), (false, 7, 1)] {
+        let what = format!("totals {totals}, delete {count} from row {row}");
+        let model = edge_model(totals);
+        let before = model.workbook.tables["Sales"].clone();
+        let sum = value(&model, 1, 1, 1);
+        let mut user = crate::UserModel::from_model(model);
+        user.delete_rows(0, row, count).unwrap();
+        let after = user.get_model().workbook.tables["Sales"].clone();
+        assert_ne!(after.reference, before.reference, "{what}");
+        let shrunk_sum = value(user.get_model(), 1, 1, 1);
+        user.undo().unwrap();
+        let model = user.get_model();
+        assert!(model.workbook.tables["Sales"] == before, "{what}");
+        assert_eq!(value(model, 1, 1, 1), sum, "{what}");
+        assert_eq!(value(model, 1, 2, 1), "4", "{what}");
+        user.redo().unwrap();
+        let model = user.get_model();
+        assert!(model.workbook.tables["Sales"] == after, "{what}");
+        assert_eq!(value(model, 1, 1, 1), shrunk_sum, "{what}");
+    }
 }
 
 /// A delete of every data row that would cut an array formula is refused before anything

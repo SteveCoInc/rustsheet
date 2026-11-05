@@ -521,6 +521,10 @@ impl UserModel {
                         .set_cell_link(*sheet, *row, *column, link.clone())?,
                     None => self.model.delete_cell_link(*sheet, *row, *column)?,
                 },
+                Diff::SetTableExtents { sheet, old_value } => {
+                    needs_evaluation = true;
+                    self.undo_table_extents(*sheet, old_value)?;
+                }
                 Diff::SetMergedCells {
                     sheet,
                     old_value,
@@ -984,6 +988,8 @@ impl UserModel {
                         .set_cell_link(*sheet, *row, *column, link.clone())?,
                     None => self.model.delete_cell_link(*sheet, *row, *column)?,
                 },
+                // Replaying the row delete that follows resizes the tables again.
+                Diff::SetTableExtents { .. } => {}
                 Diff::SetMergedCells {
                     sheet,
                     old_value: _,

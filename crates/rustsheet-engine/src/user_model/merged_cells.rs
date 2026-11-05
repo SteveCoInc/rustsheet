@@ -5,6 +5,32 @@ use crate::types::{Cell, MergedCell};
 use super::{common::UserModel, history::Diff};
 
 impl UserModel {
+    /// Returns a snapshot diff of the merged cells of the sheet when the
+    /// current list differs from `old_merged_cells`, and nothing otherwise.
+    ///
+    /// Structural actions (insert, delete or move of rows and columns) displace
+    /// merged ranges on their own when they are (re)played, but their undo
+    /// cannot always reconstruct the original ranges (a fully deleted merge is
+    /// gone, deleting rows above a merge and re-inserting them displaces it).
+    /// The snapshot has `old_value == new_value` — a no-op when applied — and
+    /// must go *before* the structural diff in the list, so that on undo
+    /// (replayed in reverse) it runs last and restores the exact original list.
+    pub(super) fn merged_cells_snapshot_diffs(
+        &self,
+        sheet: u32,
+        old_merged_cells: Vec<MergedCell>,
+    ) -> Result<Vec<Diff>, String> {
+        if self.model.get_merged_cells(sheet)? != old_merged_cells.as_slice() {
+            Ok(vec![Diff::SetMergedCells {
+                sheet,
+                old_value: old_merged_cells.clone(),
+                new_value: old_merged_cells,
+            }])
+        } else {
+            Ok(vec![])
+        }
+    }
+
     /// Merges the cells of `range` into a single merged cell anchored at its
     /// top-left corner. At most one cell of the range may have content: its
     /// content, link and style move to the anchor and the style is copied to
