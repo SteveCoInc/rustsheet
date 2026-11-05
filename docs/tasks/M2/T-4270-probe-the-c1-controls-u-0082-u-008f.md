@@ -3,7 +3,7 @@ id: T-4270
 title: "Probe the C1 controls U+0082-U+008F and U+0091-U+009D in the collation and weigh them as Excel does (code-point order is an engine guess)"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -34,14 +34,24 @@ excel-graph cells for each of the 32 code points, not only the five probed so fa
   New probe case name: `t4270-collation-c1-controls`.
 
 ## Acceptance criteria
-- [ ] probes/t4270-collation-c1-controls is filled on excel-graph (rank, equal count and `a&c&b<ab` for each of
+- [x] probes/t4270-collation-c1-controls is filled on excel-graph (rank, equal count and `a&c&b<ab` for each of
       U+0080..U+009F, and the neighbour pairs above) and every cell passes, with no new F line in eval/baseline/probes.txt
       and no other probes cell regressing (`make eval`).
-- [ ] coercion.md replaces the UNVERIFIED sentence with the probed rule (VERIFIED, with the case and cells), and its
+- [x] coercion.md replaces the UNVERIFIED sentence with the probed rule (VERIFIED, with the case and cells), and its
       "Implemented in" names the collation arm.
-- [ ] A unit test in crates/rustsheet-engine/src/test/test_collation.rs pins the order of the 32 controls.
-- [ ] `make check` green; reviewers approve.
+- [x] A unit test in crates/rustsheet-engine/src/test/test_collation.rs pins the order of the 32 controls.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - C0 controls, U+200B, the Unicode spaces and the weightless class (T-3662, T-3904, T-4039, T-4060 settled them).
 - Lone surrogates (probes/text-lone-surrogates).
+
+## Outcome
+Probed all 32 C1 controls on excel-graph (2026-11-05): probes/t4270-collation-c1-controls, 548 cells. Excel's order is
+the engine's guess. Each control is equal only to itself (`=` counts, XMATCH, COUNTIF, exact MATCH), and they sort by
+code point. They rank 3 to 34, with U+200B 0, `¬` 1, `•` 2 and `0` 35, alone and as `a&c&b`. SORT puts them in
+code-point order ascending and descending.
+- No engine change. coercion.md's UNVERIFIED sentence is replaced by the probed rule with its "Implemented in", and
+  the `C1_BASE` doc comment cites the new case.
+- Unit test `t4270_c1_controls_in_code_point_order` (test_collation.rs) pins the 32-control chain and its neighbours.
+- Eval delta: +1 probes case, 548 cells, all passing (0 new known failures).
