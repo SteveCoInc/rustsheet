@@ -2147,6 +2147,7 @@ C	probes/t3870-operand-257-typed.case.json	2
 C	probes/t3870-space-256-stored.case.json	3
 C	probes/t3870-space-256-typed.case.json	3
 C	probes/t3870-space-257-typed.case.json	2
+C	probes/t3874-trimmean-typed-scalar.case.json	9
 C	probes/t3875-snap-groupby-two-arg.case.json	30
 C	probes/t3880-groupby-scalar-filter-edges.case.json	93
 C	probes/t3881-imcsch-band-edge.case.json	80
@@ -2291,7 +2292,9 @@ C	probes/t4332-fraction-fresh.case.json	120
 C	probes/t4333-count-ulp-scan.case.json	56
 C	probes/t4342-groupby-tree-holdout.case.json	1107
 C	probes/t4344-groupby-descending-search.case.json	1200
+C	probes/t4347-numeral-bytes-24-27.case.json	140
 C	probes/t4358-pivotby-unreached-column-leaf.case.json	475
+C	probes/t4375-xnpv-refused-first-and-one-cell.case.json	114
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8

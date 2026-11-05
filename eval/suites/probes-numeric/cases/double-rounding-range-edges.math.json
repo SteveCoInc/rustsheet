@@ -23,6 +23,11 @@
     "why": "a running value is beyond the double range",
     "f": "=PRODUCT(B3,C3)"
    },
+   "D4": {
+    "t": "e",
+    "why": "a running value is beyond the double range",
+    "f": "=PRODUCT(-B4,C4)"
+   },
    "D5": {
     "t": "n",
     "v": "1.7976931348623158078589645751064527870671050185188e+308",

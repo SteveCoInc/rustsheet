@@ -3,7 +3,7 @@ id: T-2555
 title: "Excel's BETA.INV early Newton stop where the quantile is tiny at a huge shape (T-1538 split)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: blocked
 priority: P1
 size: M
 tier: opus
@@ -92,4 +92,18 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
   value at iterate 1, which is 1E-3 to 5E-2 off the root, where an inaccurate tail would move iterate 2 by about
   what the cells show) or the start, not the stop. A second attempt that moves nothing blocks the task as time-boxed
   under decision 0267.
+- Attempt 2 (2026-11-05, opus run; docs/research/t2555/gen_iterates_probe.py, iterates.py, excel_cdf_probe.*.json):
+  Excel's own BETA.DIST at the replay's start and first iterates x0 to x3 of the 8 cells (31 cells, excel-graph
+  2026-11-05). Moved no cell. Ruled out: Excel's CDF as the cause. It is within 2E-14 relative of the mpmath CDF at
+  every iterate, and a Newton step taken on Excel's own value lands where the exact one does: 1E-12 (A133), 2E-13
+  (A135) and 1E-12 (A145) from Excel's BETA.INV at one iterate, but 4E-8 to 9.3E-7 from it at every iterate of A137
+  and A139 and 1E-8 at A153 and A155. Excel's value lies between iterate 2 and the root of its own CDF (for A137,
+  4 percent of the way from x2), so it is on no trajectory of AS 109 from this start, whatever its stop and CDF.
+
+## Blocked because
+Blocked because: time-boxed (decision 0056). Two attempts (Attempts above) moved none of the owned cells. Under
+decision 0267 the cells this task still lists are accepted, and no follow-up is filed for them. What is left to try
+is another start or another search (a secant or bisection that ends inside the last Newton bracket), against the
+8 cells and the 31 CDF values in docs/research/t2555; statistics.md "BETA.INV at a huge shape is AS 109's Newton
+search" records the ruled-out models.
 

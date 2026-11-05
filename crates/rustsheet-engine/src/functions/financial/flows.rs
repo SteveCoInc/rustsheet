@@ -9,6 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
+    functions::Function,
     model::Model,
 };
 
@@ -84,6 +85,24 @@ impl Model {
     }
 }
 
+/// Whether `node` hands XNPV one cell as a reference (a cell, a defined name, or `INDEX` of a
+/// reference), where a literal or computed text is another argument kind.
+fn returns_one_cell_reference(node: &Node) -> bool {
+    match node {
+        Node::ReferenceKind { .. } | Node::DefinedNameKind(_) => true,
+        Node::FunctionKind {
+            kind: Function::Index,
+            args,
+        } => args.first().is_some_and(|arg| {
+            matches!(
+                arg.ungrouped(),
+                Node::ReferenceKind { .. } | Node::RangeKind { .. }
+            )
+        }),
+        _ => false,
+    }
+}
+
 impl Model {
     /// The error of XNPV's element walk (T-3815, probes/t3815-xnpv-element-reading), or `None`.
     /// Over values and dates of the same count, both ranges or arrays of more than one element,
@@ -100,11 +119,10 @@ impl Model {
     ///   one, truncated, and a later one that is negative or past the last serial as given
     ///   (2958465.5 is `#NUM!`, row 9) are `#NUM!` (rows 4-8, 37).
     ///
-    /// A later empty date, a later 0 and one before the first are not walked: they are `#NUM!`
-    /// after the first value's `#VALUE!` (t2603 C1, C7), in [`xnpv_dates`]. When the first value
-    /// is no number the walk does not run and that `#VALUE!` stands: later values are left to it
-    /// (probes/t2603-xnpv-no-number-values C18-C20), and whether a later error value or date or
-    /// an out-of-range date comes first is unprobed.
+    /// A later empty date, a later 0 and one before the first are `#NUM!` at their index too, so
+    /// before a later error value (probes/t4375-xnpv-refused-first-and-one-cell A29-A31). When
+    /// the first value is no number the walk does not run and that `#VALUE!` stands: later
+    /// values, errors and bad dates are left to it (t2603 C18-C20; t4375 rows 1-28).
     pub(super) fn xnpv_walk_error(
         &mut self,
         values: &CalcResult,
@@ -116,9 +134,8 @@ impl Model {
         if count < 2 || count != date_count {
             return None;
         }
-        // Every probed walk has a number as its first value. When it is not, the first value's
-        // `#VALUE!` (T-2603) is kept: whether a later error or out-of-range date comes before it is
-        // unprobed (financial.md, T-3815 entry), so the walk does not run.
+        // Behind a first value that is no number the first value's `#VALUE!` (T-2603) beats every
+        // later error and bad date (probes/t4375-xnpv-refused-first-and-one-cell rows 1-28).
         if !matches!(element_at(&values, 0), FlowElement::Number(_)) {
             return None;
         }
@@ -133,9 +150,20 @@ impl Model {
         {
             indexes.push(gap);
         }
+        if let Some(gap) =
+            (1..count).find(|&index| matches!(element_at(&dates, index), FlowElement::Empty))
+        {
+            indexes.push(gap);
+        }
         indexes.sort_unstable();
         indexes.dedup();
         let error = |error: Error| Some(CalcResult::new_error(error, cell, String::new()));
+        // A later date below the first (0 and an empty cell too) is `#NUM!` at its own index, so
+        // before a later error value (probes/t4375-xnpv-refused-first-and-one-cell A29-A31).
+        let first_day = match element_at(&dates, 0) {
+            FlowElement::Number(date) => date.floor(),
+            _ => f64::NEG_INFINITY,
+        };
         for index in indexes {
             match element_at(&values, index) {
                 FlowElement::Error(value_error) => return error(value_error.clone()),
@@ -147,7 +175,7 @@ impl Model {
                 FlowElement::Other | FlowElement::Empty if index == 0 => {
                     return error(Error::VALUE)
                 }
-                FlowElement::Other => return error(Error::NUM),
+                FlowElement::Other | FlowElement::Empty => return error(Error::NUM),
                 // The first date is checked truncated (as `xnpv_dates`). A later one only when it is
                 // negative or past the last serial as given: a later 0, like one before the first, is
                 // left to `xnpv_dates` (dates 100 and 0 keep the first value's `#VALUE!`,
@@ -157,11 +185,12 @@ impl Model {
                         && (date.floor() < MINIMUM_DATE_SERIAL_NUMBER as f64
                             || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64))
                         || (index > 0
-                            && (*date < 0.0 || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)) =>
+                            && (date.floor() < first_day
+                                || *date > MAXIMUM_DATE_SERIAL_NUMBER as f64)) =>
                 {
                     return error(Error::NUM)
                 }
-                _ => {}
+                FlowElement::Number(_) => {}
             }
         }
         None
@@ -175,14 +204,14 @@ impl Model {
     /// range or array element of numeric text is `#NUM!`. Anything else is left as it is.
     ///
     /// A one-cell reference already evaluates to its value, so text is read this way only when
-    /// `node` is a cell reference: a literal text argument (`XNPV(0.1,"30",39448)`) is unprobed
+    /// `node` is a cell reference, a defined name or an `INDEX` of a reference (rows 38, 39, 42,
+    /// 43 of probes/t4375-xnpv-refused-first-and-one-cell; `OFFSET` and a one-cell range keep a
+    /// range): a literal text argument (`XNPV(0.1,"30",39448)`) is unprobed
     /// and keeps its earlier reading.
     pub(super) fn xnpv_one_cell(&mut self, arg: CalcResult, node: &Node) -> CalcResult {
         let value = match &arg {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(*left),
-            CalcResult::String(_) if matches!(node.ungrouped(), Node::ReferenceKind { .. }) => {
-                arg.clone()
-            }
+            CalcResult::String(_) if returns_one_cell_reference(node.ungrouped()) => arg.clone(),
             _ => return arg,
         };
         match value {
