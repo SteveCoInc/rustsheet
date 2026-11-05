@@ -59,7 +59,7 @@ unchanged. New cases are oracle-filled with excel-graph.
 - The financial (T-3184), engineering and database argument kinds.
 - Fixing numeric residue of new cells (file it as tasks).
 
-## Landing notes
+## Landing notes (resumed 2026-11-05, opus run)
 - No PR yet. Branch agent/research/T-3185-m9-stat-argument-kinds, head after this commit; the cases are at 9d71ce249.
   The session's landing window closed: `rustsheet-accuracy math --suite probes` took about 40 minutes.
 - Done (9d71ce249): scope is the value-mode pairs only (335 of 437 open pairs on main 2026-11-04; the Context's 573
