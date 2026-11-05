@@ -73,7 +73,7 @@ XNPV now reads its values and dates as Excel does, element by element; the probe
   financial.md: "XNPV reads its values and dates element by element (T-3815)", and T-2603's entry's unprobed line
   updated.
 
-## Landing notes
+## Landing notes (resumed)
 - PR #3375 (draft), head dc9dbbda9. CI was queued (run 42052639494) when the window closed. Reviews on dc9dbbda9:
   security APPROVE, design APPROVE (MINOR notes only), Excel fidelity REQUEST_CHANGES. The status is back to
   in-progress because the Outcome is not final.
