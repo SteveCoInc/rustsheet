@@ -3,7 +3,7 @@ id: T-3925
 title: "Gate A slice 4p: reference tables for GAMMA.DIST, CHISQ.DIST and CHISQ.DIST.RT"
 milestone: M0
 lane: harness
-status: blocked
+status: in-progress
 priority: P2
 size: M
 tier: opus
@@ -72,7 +72,7 @@ the math. Every failing table point has an owner.
 - Any engine change.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 - Round 3 (head 54e0c7109): design and security APPROVE; reviewer-excel-fidelity REQUEST_CHANGES. Findings, all
   addressed in the commit that blocks the task (not yet reviewed):
   - [MAJOR] t2982 A117-A120 (Excel 0, math up to about 1, x / beta underflowing to 0) were made valueless without
