@@ -14,10 +14,10 @@ depends_on: []
 The elapsed `[s]` count before a fraction matches Excel at tenths ties: `TEXT(3497.95/86400,"[s].0")` is "3497.9", `TEXT(3733.95/86400,"[s].0")` "3733.9", `TEXT(45000+2740.95/86400,"[s].0")` "3888002740.9" (ours one second more each).
 
 ## Context
-Found by T-4323. The engine counts `[s]` from the value rounded to the shown digit (`FractionalSeconds::elapsed`); visibly-off cells: probes/t4323-fraction-sweep-2 A9, A19, A27. Neither that count nor `floor(y*86400)` of the half-step register fits those and probes/t4323-fraction-ties A80, A90 together. See docs/excel-semantics/number-formats.md "Fraction digits of a second at a tie".
+Found by T-4323. The engine counts `[s]` from the value rounded to the shown digit (`FractionalSeconds::elapsed`); visibly-off cells: probes/t4323-fraction-sweep-2 A9, A19, A27; probes/t4323-carry-ties A9:A11, A13, A15, A17, A18, A20, A24 (`[h]`, `[m]` and `[s]` counts at a tie just short of a whole hour or minute, e.g. `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9" but `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9"; see T-4323's "Blocked because"). Neither that count nor `floor(y*86400)` of the half-step register fits those and probes/t4323-fraction-ties A80, A90 together. See docs/excel-semantics/number-formats.md "Fraction digits of a second at a tie".
 
 ## Acceptance criteria
-- [ ] probes/t4323-fraction-sweep-2 A9, A19, A27 pass without moving another cell.
+- [ ] probes/t4323-fraction-sweep-2 A9, A19, A27 and probes/t4323-carry-ties A9:A11, A13, A15, A17, A18, A20, A24 pass without moving another cell.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

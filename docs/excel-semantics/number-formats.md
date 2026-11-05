@@ -397,6 +397,9 @@ Not settled:
 - The elapsed `[s]` count before the fraction is not `floor(y*86400)` nor always the value rounded to the shown digit
   (the engine's count): 3497.95 s is "3497.9" and `45000+2740.95/86400` "3888002740.9" (sweep-2 A27, A9; ours one more),
   yet `45000+0.95/86400` is "3888000001.9" (ties A90, which the rounded value gets) (T-4333).
+  At a tie just short of a whole hour or minute the `[h]`/`[m]` counts also differ from the rounded value:
+  `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9" but `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9"
+  (probes/t4323-carry-ties).
 - A few ties at serials of 1 or more still miss: `TEXT(30+39474.05/86400,"mm:ss.0")` is "57:54.0" while the register is
   exactly 394741 (sweep-3 A2).
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),

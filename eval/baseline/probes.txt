@@ -2264,6 +2264,7 @@ C	probes/t4299-typed-xlpm-extrapolations.case.json	22
 C	probes/t4302-poisson-cdf-beside-pmf.case.json	336
 C	probes/t4302-poisson-cdf-holdout-2.case.json	48
 C	probes/t4311-pivot-showall-column-and-groups.case.json	68
+C	probes/t4323-carry-ties.case.json	32
 C	probes/t4323-fraction-holdout.case.json	100
 C	probes/t4323-fraction-sweep-2.case.json	160
 C	probes/t4323-fraction-sweep-3.case.json	120
@@ -8542,6 +8543,15 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
+F	probes/t4323-carry-ties.case.json	Sheet1!A10
+F	probes/t4323-carry-ties.case.json	Sheet1!A11
+F	probes/t4323-carry-ties.case.json	Sheet1!A13
+F	probes/t4323-carry-ties.case.json	Sheet1!A15
+F	probes/t4323-carry-ties.case.json	Sheet1!A17
+F	probes/t4323-carry-ties.case.json	Sheet1!A18
+F	probes/t4323-carry-ties.case.json	Sheet1!A20
+F	probes/t4323-carry-ties.case.json	Sheet1!A24
+F	probes/t4323-carry-ties.case.json	Sheet1!A9
 F	probes/t4323-fraction-holdout.case.json	Sheet1!A26
 F	probes/t4323-fraction-holdout.case.json	Sheet1!A5
 F	probes/t4323-fraction-holdout.case.json	Sheet1!A56
