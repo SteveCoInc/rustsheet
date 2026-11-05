@@ -3,7 +3,7 @@ id: T-4283
 title: "Pin XIRR's whole-day date bound (2958465.5 is a date, -0.5 is #NUM!) and point financial.md at flows.rs"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
