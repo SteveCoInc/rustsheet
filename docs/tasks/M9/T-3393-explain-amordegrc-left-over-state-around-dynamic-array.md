@@ -3,7 +3,7 @@ id: T-3393
 title: "Explain AMORDEGRC left-over state around dynamic-array formulas (probes -ag, -ah)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
