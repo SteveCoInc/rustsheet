@@ -3,7 +3,7 @@ id: T-1749
 title: "DEVSQ accumulation order: last-digit and cancellation mismatches (probes/stat-order-floor-batch)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: S
 tier: opus
@@ -107,9 +107,9 @@ Cells:
 ## Acceptance criteria
 - [ ] Visible parity (gen-m9, T-2255): these 4 known-failure lines disappear from eval/baseline/gen-m9.txt
       (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity: the visibly-off cell listed under Context (2026-10-21) has Excel's value to 15 significant digits, or its type, error and text: the 1 line in eval/baseline/probes.txt disappears (`make eval-baseline`), with no new known-failure lines in any baseline.
-- [ ] Visible parity: poi/FormulaEvalTestData_Copy.xlsx EverythingTests!I392 is within half a unit of the 15th significant digit of 0.6666666666666666 (its eval/baseline/poi.txt line may stay only if the last digit is still off; no new known-failure lines).
-- [ ] A277, A278, A280, A290, A294, A295, A300 pass and leave eval/baseline/probes.txt.
+- [x] Visible parity: the visibly-off cell listed under Context (2026-10-21) has Excel's value to 15 significant digits, or its type, error and text: the 1 line in eval/baseline/probes.txt disappears (`make eval-baseline`), with no new known-failure lines in any baseline.
+- [x] Visible parity: poi/FormulaEvalTestData_Copy.xlsx EverythingTests!I392 is within half a unit of the 15th significant digit of 0.6666666666666666 (its eval/baseline/poi.txt line may stay only if the last digit is still off; no new known-failure lines).
+- [x] A277, A278, A280, A290, A294, A295, A300 pass and leave eval/baseline/probes.txt.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -117,3 +117,20 @@ Cells:
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1) is 0, Excel 0.5), so this task is in the campaign. Its target is that every cell it owns is within half a unit of the 15th significant digit of Excel's value (an expected 0 exactly 0), or has Excel's type, error and text; the visible-parity criterion under Acceptance criteria states it. Bit-level criteria still unmet when that target is reached move to a follow-up task filed without the key and named in the Outcome (decision 0083).
+
+## Outcome
+- DEVSQ is now the two-pass sum `Σ(x - mean)²` around the double mean (devsq.rs), through a new
+  `variance::squared_deviations` that VAR/STDEV's two-pass branch now shares, so the definition is not duplicated.
+  The one-pass `Σx² - (Σx)²/n` and its `> -1e-12` clamp are gone. Recorded in docs/excel-semantics/statistics.md "DEVSQ
+  is a two-pass sum (T-1749)" (VERIFIED); coercion.md's open I392 note is updated.
+- R4 (a choice between two structural forms, not a fit). The fresh sweep is probes-numeric t1749-devsq-fresh
+  (docs/research/t1749/gen_fresh.py, seed 1749, 200 cells, generated and filled by excel-graph after the change):
+  200 of 200 bit-exact with the two-pass form, 27 of 200 with the old one-pass form. No hold-out split: no candidate
+  was scored before the change. The task's own cells chose the form, and all of them pass.
+- Eval delta: gen-m9 known failures 1929 -> 1803 (fixed 126, every DEVSQ cell the task owned); probes 5710 -> 5696
+  (fixed 14: stat-order-floor-batch A277, A278, A280, A290, A294, A295, A300, ftest-decomposition B9, C9, C10, D10,
+  F9, F10, stat-argument-modes H5); poi 115 -> 111 (EverythingTests!E392, F392, I392, J392); 0 regressions in every
+  suite. The visible-parity criteria for the probes cell and poi I392 are met.
+- Not done, moved to T-4328 (`campaign: visible`): the task's 48 KURT cells, 3 of them visibly off (27601819397dd56e
+  A200, 7bd219ec0c0c5e22 A279, c2974c061384fdd9 A55), so the gen-m9 visible-parity box stays open for those 3 lines.
+  KURT is already two-pass, and taking s from Excel's STDEV.S did not move the cells I tried.
