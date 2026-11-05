@@ -4708,7 +4708,8 @@ dates of the same count, more than one element, XNPV takes each index in turn, t
   `#N/A`, D32-D38; a dates cell `#N/A`, D19, D22). Numeric and date text in one cell is read as its number:
   `XNPV(0.1,<"30">,<39448>)` is 30 and `<"1/1/2025">` 45658, a dates cell `<"39508">` too (D13, D14, D20, D24, D25,
   D30), where a range or array element of text is `#NUM!`. A one-cell date of 2958465.5 is read truncated
-  (`XNPV(0.1,30,<2958465.5>)` is 30, D9).
+  (`XNPV(0.1,30,<2958465.5>)` is 30, D9). Unprobed: a literal text argument (`XNPV(0.1,"30",39448)`); the
+  engine keeps its earlier reading of one.
 - The rate: -1, -2, -0.5, 0 and an empty cell are `#NUM!`; "0.1" and a text cell "0.1" are 0.1, a date-text cell
   its serial (rows 41-48). A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 array
   constant all read in row-major order with the same result (rows 49-54).

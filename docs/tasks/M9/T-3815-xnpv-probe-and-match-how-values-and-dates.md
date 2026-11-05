@@ -3,7 +3,7 @@ id: T-3815
 title: "XNPV: probe and match how values and dates elements are read (fractional, negative and out-of-range dates, text and booleans in ranges and arrays, shapes) and which error wins"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -72,28 +72,12 @@ XNPV now reads its values and dates as Excel does, element by element; the probe
 - **Eval delta**: gated suites 0 fixed, 0 regressions; probes gains the new case (187 cells, all passing).
   financial.md: "XNPV reads its values and dates element by element (T-3815)", and T-2603's entry's unprobed line
   updated.
-
-## Landing notes (resumed)
-- PR #3375 (draft), head dc9dbbda9. CI was queued (run 42052639494) when the window closed. Reviews on dc9dbbda9:
-  security APPROVE, design APPROVE (MINOR notes only), Excel fidelity REQUEST_CHANGES. The status is back to
-  in-progress because the Outcome is not final.
-- **Blocking, found locally (directive 5):** `Model::flow_elements` (flows.rs) builds one element per cell of the
-  whole range rectangle before walking. `cargo test -p rustsheet_engine --lib -- xnpv` hangs on
-  test_fn_financial::xnpv_first_value_refused_bounded (C4 `XNPV(1,A2:A1048567,B11:B1048576)`) and
-  xnpv_first_value_refused_sparse_dates (`A1:XFD20000`, 327M cells), and the kernel then kills it for memory. CI's
-  rust jobs will fail the same way. Fix: walk lazily with an early exit instead of collecting. Index i maps to a
-  position in each range, row-major, and only the cells needed until the first error are read. Also bound the walk
-  the way `xnpv_first_value_refused` does: read only stored cells (`for_each_existing_cell`) and treat absent cells
-  as Empty, so a sparse range costs its stored cells. `make check-fast` does not run these tests: run
-  `cargo test -p rustsheet_engine --lib -- xnpv` (debug, about 1 minute) before pushing.
-- **Excel-fidelity MAJOR:** `xnpv_one_cell` also reads a *literal* text argument (`XNPV(0.1,"30",39448)`,
-  `XNPV(0.1,30,"39448")`, `XNPV(0.1,30,"1/1/2025")`) as its number, which is unprobed and changes main's
-  `#NUM!`/`#VALUE!`. Either probe those literals (add them to docs/research/t3815/gen_case.py and refill with
-  `--force`), or limit the reading to reference arguments (the `Node` in `fn_xnpv` tells them apart).
-- **MINOR (fix in the same push):** update the stale "unprobed" sentences in `xnpv_first_value_refused`'s doc comment
-  (numeric text, arrays, negative or out-of-range later dates are now evidenced). Note in financial.md that a later
-  date in (-1, 0) is unprobed (or probe it).
-- **Do not repeat:** typed error cells `{"t":"e",...}` in a case read as text in the harness; write errors as `=NA()`
-  and `=1/0` formulas.
-- When the window closed: nothing in progress. Next step: the lazy walk, then the literal question, then
-  `cargo test` on the xnpv tests, `make check-fast`, push, and re-run the panel (round 2).
+- **Resumed (landing notes, opus run 2026-11-05)**: the review blockers are fixed. The element walk
+  (`Model::flow_elements`) now reads a range through `for_each_existing_cell`, keeping only its stored, non-empty
+  elements with their row-major index; the walk visits those indexes, the first one, and the first empty value
+  behind a number, which are the only ones that can stop it, so a sparse range costs its stored cells (directive 5;
+  new unit test `xnpv_walk_reads_stored_cells` over 1,000,000-row ranges). `xnpv_one_cell` reads text as its number
+  only when the argument is a cell reference, so a literal text argument (`XNPV(0.1,"30",39448)`, unprobed) keeps
+  main's reading. `xnpv_first_value_refused_sparse_dates` moved its formulas from B1:B2 to B30001:B30002: they sat
+  inside their own values range, which the walk reads cell by cell (a circular reference); same ranges, same
+  expectations.

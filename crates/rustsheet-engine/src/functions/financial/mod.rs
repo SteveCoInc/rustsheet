@@ -691,13 +691,13 @@ impl Model {
     /// checked first, the scalar order (T-1843).
     pub(crate) fn fn_xnpv(&mut self, args: &[Node], cell: CellReferenceIndex) -> CalcResult {
         // All three are required (docs/excel-semantics/syntax.md, "Minimum argument counts").
-        let [_, values, dates] = args else {
+        let [_, values_node, dates_node] = args else {
             return CalcResult::new_args_number_error(cell);
         };
-        let values = self.evaluate_node_in_context(values, cell);
-        let values = self.xnpv_one_cell(values);
-        let dates = self.evaluate_node_in_context(dates, cell);
-        let dates = self.xnpv_one_cell(dates);
+        let values = self.evaluate_node_in_context(values_node, cell);
+        let values = self.xnpv_one_cell(values, values_node);
+        let dates = self.evaluate_node_in_context(dates_node, cell);
+        let dates = self.xnpv_one_cell(dates, dates_node);
         let size_error = self.xnpv_size_error(&values, &dates, cell);
         let walk_error = self.xnpv_walk_error(&values, &dates, cell);
         let first_value_refused = self.xnpv_first_value_refused(&values, &dates, cell);

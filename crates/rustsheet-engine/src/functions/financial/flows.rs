@@ -2,9 +2,13 @@
 //! `financial/mod.rs`, which reads the arguments and runs the lifted kernels.
 
 use crate::{
-    calc_result::CalcResult,
+    calc_result::{CalcResult, Range},
     constants::{MAXIMUM_DATE_SERIAL_NUMBER, MINIMUM_DATE_SERIAL_NUMBER},
-    expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
+    expressions::{
+        parser::{ArrayNode, Node},
+        token::Error,
+        types::CellReferenceIndex,
+    },
     model::Model,
 };
 
@@ -105,22 +109,37 @@ impl Model {
         dates: &CalcResult,
         cell: CellReferenceIndex,
     ) -> Option<CalcResult> {
-        let values = self.flow_elements(values)?;
-        let dates = self.flow_elements(dates)?;
-        if values.len() < 2 || values.len() != dates.len() {
+        let (count, values) = self.flow_elements(values, cell)?;
+        let (date_count, dates) = self.flow_elements(dates, cell)?;
+        if count < 2 || count != date_count {
             return None;
         }
+        let first_value_is_number = matches!(element_at(&values, 0), FlowElement::Number(_));
+        // Only the stored elements and two more indexes can stop the walk: the first, and the
+        // first empty value after it while the first value is a number. Every other index is an
+        // empty value and an empty later date, which pass. So the walk visits those, in order,
+        // and costs the stored cells, not the area (directive 5).
+        let mut indexes: Vec<usize> = values.iter().chain(&dates).map(|(i, _)| *i).collect();
+        indexes.push(0);
+        if first_value_is_number {
+            if let Some(gap) =
+                (1..count).find(|&index| matches!(element_at(&values, index), FlowElement::Empty))
+            {
+                indexes.push(gap);
+            }
+        }
+        indexes.sort_unstable();
+        indexes.dedup();
         let error = |error: Error| Some(CalcResult::new_error(error, cell, String::new()));
-        let first_value_is_number = matches!(values.first(), Some(FlowElement::Number(_)));
-        for (index, (value, date)) in values.iter().zip(&dates).enumerate() {
-            match value {
+        for index in indexes {
+            match element_at(&values, index) {
                 FlowElement::Error(value_error) => return error(value_error.clone()),
                 FlowElement::Empty | FlowElement::Other if index > 0 && first_value_is_number => {
                     return error(Error::NUM)
                 }
                 _ => {}
             }
-            match date {
+            match element_at(&dates, index) {
                 FlowElement::Error(date_error) => return error(date_error.clone()),
                 FlowElement::Other | FlowElement::Empty if index == 0 => {
                     return error(Error::VALUE)
@@ -152,12 +171,15 @@ impl Model {
     /// is 30, `<"1/1/2025">` 45658, a date `<"39508">` too; D13, D14, D20, D24, D25, D30), where a
     /// range or array element of numeric text is `#NUM!`. Anything else is left as it is.
     ///
-    /// A cell reference already evaluates to its value, so a text argument that is no reference is
-    /// read the same way (unprobed).
-    pub(super) fn xnpv_one_cell(&mut self, arg: CalcResult) -> CalcResult {
+    /// A one-cell reference already evaluates to its value, so text is read this way only when
+    /// `node` is a cell reference: a literal text argument (`XNPV(0.1,"30",39448)`) is unprobed
+    /// and keeps its earlier reading.
+    pub(super) fn xnpv_one_cell(&mut self, arg: CalcResult, node: &Node) -> CalcResult {
         let value = match &arg {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(*left),
-            CalcResult::String(_) => arg.clone(),
+            CalcResult::String(_) if matches!(node.ungrouped(), Node::ReferenceKind { .. }) => {
+                arg.clone()
+            }
             _ => return arg,
         };
         match value {
@@ -170,46 +192,77 @@ impl Model {
         }
     }
 
-    /// The elements of a range (trimmed to the used area, as [`Self::flow_range_end`]) or an
-    /// array; `None` for anything else. The caller already holds the same count of numbers from
-    /// the plain reading, so this allocates no more than it.
-    fn flow_elements(&mut self, arg: &CalcResult) -> Option<Vec<FlowElement>> {
+    /// The count of elements of a range (trimmed to the used area, as [`Self::flow_range_end`])
+    /// or an array, and the elements that are not empty with their row-major index, sorted;
+    /// `None` for anything else. A range is read through its stored cells only, so a sparse
+    /// range costs its stored cells, not its area (directive 5).
+    fn flow_elements(
+        &mut self,
+        arg: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Option<(usize, Vec<(usize, FlowElement)>)> {
         match arg {
             CalcResult::Range { left, right } if left.sheet == right.sheet => {
                 let (row2, column2) = self.flow_range_end(left, right)?;
+                let rows = usize::try_from(row2 - left.row + 1).ok()?;
+                let width = usize::try_from(column2 - left.column + 1).ok()?;
+                let range = Range {
+                    left: *left,
+                    right: CellReferenceIndex {
+                        sheet: left.sheet,
+                        row: row2,
+                        column: column2,
+                    },
+                };
                 let mut elements = Vec::new();
-                for row in left.row..=row2 {
-                    for column in left.column..=column2 {
-                        let position = CellReferenceIndex {
-                            sheet: left.sheet,
-                            row,
-                            column,
-                        };
-                        elements.push(match self.evaluate_cell(position) {
-                            CalcResult::Number(value) => FlowElement::Number(value),
-                            CalcResult::Error { error, .. } => FlowElement::Error(error),
-                            CalcResult::EmptyCell => FlowElement::Empty,
-                            _ => FlowElement::Other,
-                        });
-                    }
-                }
-                Some(elements)
+                self.for_each_existing_cell(&range, cell, &mut |model, position| {
+                    let element = match model.evaluate_cell(position) {
+                        CalcResult::Number(value) => FlowElement::Number(value),
+                        CalcResult::Error { error, .. } => FlowElement::Error(error),
+                        CalcResult::EmptyCell => return Ok(()),
+                        _ => FlowElement::Other,
+                    };
+                    // In the range by the walk's contract, so both offsets are non-negative.
+                    let row = usize::try_from(position.row - left.row).unwrap_or(0);
+                    let column = usize::try_from(position.column - left.column).unwrap_or(0);
+                    elements.push((row * width + column, element));
+                    Ok(())
+                })
+                .ok()?;
+                elements.sort_unstable_by_key(|(index, _)| *index);
+                Some((rows.saturating_mul(width), elements))
             }
-            CalcResult::Array(array) => Some(
-                array
+            CalcResult::Array(array) => {
+                let width = array.first().map_or(0, Vec::len);
+                let elements = array
                     .iter()
                     .flatten()
-                    .map(|node| match node {
-                        ArrayNode::Number(value) => FlowElement::Number(*value),
-                        ArrayNode::Error(error) => FlowElement::Error(error.clone()),
-                        ArrayNode::Empty => FlowElement::Empty,
-                        _ => FlowElement::Other,
+                    .enumerate()
+                    .filter_map(|(index, node)| {
+                        let element = match node {
+                            ArrayNode::Number(value) => FlowElement::Number(*value),
+                            ArrayNode::Error(error) => FlowElement::Error(error.clone()),
+                            ArrayNode::Empty => return None,
+                            _ => FlowElement::Other,
+                        };
+                        Some((index, element))
                     })
-                    .collect(),
-            ),
+                    .collect();
+                Some((array.len().saturating_mul(width), elements))
+            }
             _ => None,
         }
     }
+}
+
+/// The element at `index` of [`Model::flow_elements`]'s sorted non-empty elements: empty when
+/// it is not there.
+fn element_at(elements: &[(usize, FlowElement)], index: usize) -> &FlowElement {
+    elements
+        .binary_search_by_key(&index, |(at, _)| *at)
+        .ok()
+        .and_then(|found| elements.get(found))
+        .map_or(&FlowElement::Empty, |(_, element)| element)
 }
 
 /// XNPV's and XIRR's dates truncated to whole days, with the first: `#NUM!` when there are none
