@@ -63,6 +63,12 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
   - Hold-out (48 points, 40 above 1.5a): new 13/36/36; main 2/5/9; correctly rounded 0/4/10. The hold-out exact rate
     (33%) is above the train rate (19%), and it beats the correctly rounded Q (13 to 0).
   - Fresh sweep (48): new 8/45/44; main 2/15/15; correctly rounded 1/5/9. Gate A's envelope holds 48/48 for each.
+  - Hold-out 2 (review round 1, R4.1). This is a clean hold-out of 48 points from seed 43021,
+    probes/t4302-poisson-cdf-holdout-2, drawn after the range was trimmed to x/a <= 2.9901. The margin was written
+    here and pushed before the case was filled. The form passes if both of these hold:
+    - its bit-exact rate on this hold-out is at least the train rate (6/32 = 19%) minus 15 percentage points;
+    - it beats the correctly rounded Q there on bit-exact count, with ties broken by the within-4-ulp count.
+    Result: HOLDOUT2_RESULT.
   - Reproducibility floor: the rest is Excel's own fraction, a few ulp from the accurate one (up to 8). It is not
     fitted, since it lies within the 4-ulp web-desktop floor.
   - The 1.5a lower end carries `FITTED(T-4302, 96 cells, ...)` (`quality/fitted.json` updated with `--update`).
