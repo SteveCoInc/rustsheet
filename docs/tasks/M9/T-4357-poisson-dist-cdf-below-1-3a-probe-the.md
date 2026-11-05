@@ -3,7 +3,7 @@ id: T-4357
 title: "POISSON.DIST cdf below 1.3a: probe the companion functions at the same points (T-4345 follow-up)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -45,3 +45,20 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 
 ## Out of scope
 - CHISQ.DIST.RT's cells (T-4346, T-4320).
+
+## Outcome
+New probe probes-numeric/t4357-poisson-cdf-companions (144 cells, excel-graph 2026-11-05) puts the pmf,
+GAMMA.DIST (cdf and density), CHISQ.DIST.RT, ERFC.PRECISE of Temme's argument, GAMMALN.PRECISE and 1 - P beside
+the 18 T-4345 cdf points below 1.3a. Recorded in statistics.md (the T-4357 paragraph):
+- CHISQ.DIST.RT is the cdf bit for bit, and P is within 1 ulp of the truth.
+- Q is not 1 - P, and the cdf does not go through Excel's pmf or density. With the split fixed before scoring
+  (rows 1:9 train, 10:18 hold-out), Excel's pmf times the exact ratio scores 1/4/42 and 0/1/73, and Excel's
+  density 1/3/62 and 0/3/86.
+- Excel's own erfc term does not leave Temme's exact remainder.
+- The cdf is backward-accurate to within 0.36 ulp of x at all 18 points, where one ulp of x moves Q by 9 to 119
+  ulp. So the bits come from roundings of x-dependent intermediates, and reproducing them needs Excel's operation
+  order.
+
+No candidate was taken: no fit, no `FITTED` tag, and no fresh sweep. The engine is unchanged. Eval delta: the
+new case is new coverage, and its failing cells are in the baseline. Follow-up T-4367 (operation order) takes
+over the visibly-off cells, the new case's included.
