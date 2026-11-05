@@ -3,7 +3,7 @@ id: T-4049
 title: "A sheet-scoped name added through the API after load is #NAME? to an unqualified reference on its own sheet"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
