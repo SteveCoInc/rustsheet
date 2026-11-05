@@ -3,7 +3,7 @@ id: T-4331
 title: "T-4299 follow-ups: one _xlpm. prefix constant in the parser; probe the remaining typed _XLPM. forms"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -25,11 +25,14 @@ MINOR findings from the PR #3305 review (T-4299):
   `_XLPM.f(3)`. docs/excel-semantics/syntax.md lists them as unprobed. Use the `excel-probe` skill.
 
 ## Acceptance criteria
-- [ ] One prefix constant serves every parser and stringify site; `rg '"_xlpm\."' crates/rustsheet-engine/src`
+- [x] One prefix constant serves every parser and stringify site; `rg '"_xlpm\."' crates/rustsheet-engine/src`
       finds only that definition (and tests).
-- [ ] An excel-graph probe covers the four typed forms above; syntax.md records each result with its cell.
-- [ ] The engine matches every probe cell, or the cells are known failures owned by a task.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe covers the four typed forms above; syntax.md records each result with its cell.
+- [x] The engine matches every probe cell, or the cells are known failures owned by a task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Prefix handling in xlsx-stored formulas (file input is unchanged by T-4299).
+
+## Outcome
+One `XLPM_PREFIX` constant (parser/mod.rs) now serves every parser, stringify and lambda site; `rg '"_xlpm\."'` finds only its definition. Probe `probes/t4331-typed-xlpm-remaining` (excel-graph) covers the four forms; results are in docs/excel-semantics/syntax.md. Engine matches all cells except C2 and C3 (bare `_XLPM.x` and doubled prefix keep their case in Excel), owned by T-4343. A1 and A5 were refused by Excel (blank) and match.
