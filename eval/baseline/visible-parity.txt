@@ -234,6 +234,12 @@ probes/t4255-gamma-window-exact-ratio.case.json	58
 probes/t4290-gamma-window-large-pow2.case.json	669
 probes/t4291-poisson-far-above-mean.case.json	29
 probes/t4302-poisson-cdf-beside-pmf.case.json	95
+probes/t4323-carry-sweep.case.json	3
+probes/t4323-carry-ties.case.json	2
+probes/t4323-fraction-holdout.case.json	3
+probes/t4323-fraction-sweep-2.case.json	45
+probes/t4323-fraction-sweep-3.case.json	3
+probes/t4323-fraction-ties.case.json	10
 probes/t4331-typed-xlpm-remaining.case.json	2
 probes/t4342-groupby-tree-holdout.case.json	1
 probes/weeknum-stale-between-calls.case.json	16

@@ -40,7 +40,11 @@ impl FractionalSeconds {
         let (elapsed_seconds, days, day_units) = if digits == 0 {
             // Whole seconds keep the rounded value: only fraction digits have the tie evidence.
             let units = (value * SECONDS_PER_DAY_F64).round();
-            (units, (units / SECONDS_PER_DAY_F64).floor(), units % SECONDS_PER_DAY_F64)
+            (
+                units,
+                (units / SECONDS_PER_DAY_F64).floor(),
+                units % SECONDS_PER_DAY_F64,
+            )
         } else {
             // The counts read the same register as the clock, so a tie just short of a whole
             // minute or hour carries in neither: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is
