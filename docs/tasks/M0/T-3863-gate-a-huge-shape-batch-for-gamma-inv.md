@@ -3,7 +3,7 @@ id: T-3863
 title: "Gate A huge-shape batch for GAMMA.INV, CHISQ.INV and CHISQ.INV.RT with the R3 points (uniform asymptotic incomplete gamma)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
