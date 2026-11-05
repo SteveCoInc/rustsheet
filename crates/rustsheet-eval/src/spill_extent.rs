@@ -136,7 +136,9 @@ impl SpillExtent {
                         let source =
                             split_qualified(&p.source).map_or(p.source.clone(), |(_, r)| r);
                         let (first, last) = parse_range(&source)?;
-                        let rows = max_layout_rows(last.row.checked_sub(first.row)?);
+                        let shown = p.group.as_ref().filter(|_| p.show_all);
+                        let items = shown.and_then(|g| u32::try_from(g.items.len()).ok());
+                        let rows = max_layout_rows(last.row.checked_sub(first.row)?, items);
                         let (bottom, right) = layout_extent(top.row, top.col, rows);
                         Some((top, bottom, right))
                     });
