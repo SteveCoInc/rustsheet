@@ -1486,6 +1486,20 @@ the cdf inside the window, x/a <= 1.5 with a = k + 1, at k 30 to 300:
   from every other tried prefactor (T-4345).
 - Ours takes the form for POISSON's cdf at integer shapes 31 to 301 from 1.3a to the window's upper end
   (excel_tail.rs `excel_window_upper`); CHISQ.DIST.RT, the same value, does not yet (T-4346).
+T-4345 (docs/research/t4345/score.py) scored models for the cdf below 1.3a, with the split fixed before scoring:
+train is T-4322's 9 fit cells below the cut (t4291 A1:H1, t4302 D19), hold-out the 9 fresh cells (t4322 fresh
+A8:C10). No model is Excel's. Bit-exact / within 4 ulp / max ulp, train then hold-out: the correctly rounded Q
+1/7/9, 1/4/17; Cephes' continued fraction in doubles times the correctly rounded prefactor 0/5/5, 1/4/13, times
+the window form's prefactor 0/3/62, 0/2/83, times the direct-deviance prefactor 1/2/82, 0/0/156, and times Cephes'
+own exp(a ln x - x - lgam(a)) 0/0/822, 0/1/1183; Temme's leading term erfc(sqrt(B))/2 plus the exact remainder,
+with B correctly rounded 1/8/17, 0/6/18, the window B 1/2/76, 0/2/103, the direct B 0/2/97, 0/1/188, and Cephes'
+eta sqrt(a/2) from log1pmx 0/5/35, 0/0/41; SciPy 1.17.1 `gammaincc` (Cephes igamc, which takes the Temme series
+below its `SMALLRATIO` 0.3) 0/7/13, 0/3/28; the pmf sum from k down 1/5/11, 0/3/17, from 0 up 1/4/12, 0/4/23,
+and pmf(k) times the bracket 1 + k/m + ... in doubles 1/6/6, 0/5/18. Every model is 12 to 18 ulp off at
+t4322 fresh A10 (`k = 100`, 1.298a), as is the correctly rounded Q (17), so Excel's error there comes from a
+step none of them shares; T-4357 probes the companion functions at these points. Cephes' continued fraction in
+doubles does not explain the window form's residue either: in place of the exact fraction it is within 4 ulp at
+13/15 fit and 47/57 fresh points (exact fraction 14/15 and 51/57), and G3 stays 62 ulp off.
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -1512,7 +1526,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
