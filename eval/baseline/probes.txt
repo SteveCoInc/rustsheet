@@ -2161,6 +2161,7 @@ C	probes/t4253-pivot-decimal-relabel.case.json	196
 C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4255-gamma-window-exact-ratio.case.json	406
 C	probes/t4258-collation-lone-mark-astral.case.json	105
+C	probes/t4269-pivot-time-group-number-items.case.json	252
 C	probes/t4270-collation-c1-controls.case.json	548
 C	probes/t4271-lotus-dot-one-side-lf-before.case.json	5
 C	probes/t4271-lotus-dot-one-side-space-after-dotdot.case.json	5

@@ -141,7 +141,8 @@ with `<fieldGroup base>` naming the database field it groups; the records part h
 lists its labels in `<groupItems>` (`<s>` items), and a pivot field's `<item x>` indexes those labels, not the base
 field's items. The date layouts are fixed: a first item for values below `startDate` (`<1/1/2019`), the calendar part, and
 a last item for values past `endDate` (`>1/14/2019`):
-- `groupBy="minutes"` 62 items `:00` to `:59`; `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
+- `groupBy="seconds"` and `"minutes"` 62 items each, `:00` to `:59` (seconds: Excel's refresh of
+  probes/t4269-pivot-time-group-number-items renders `:00`, `:03`, `:05` ...); `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
   with `29-Feb` always present (corpus-bench/52379 fields `Date/Time`, `Hours`, `Days`);
 - `months` 14 items `Jan` to `Dec`; `quarters` 6 items `Qtr1` to `Qtr4`; `years` one item per year from `startDate`'s
   to `endDate`'s, 123 items for 1899-12-30 to 2020-03-28 (`1900` to `2020`; corpus-bench/59932 fields `Date`,
@@ -162,7 +163,8 @@ day of a leap year, month, quarter or year counted from `startDate`'s year (the 
 MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
 to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above; UNVERIFIED, see the date-group
 bullets: a refresh drops such a grouping, so no probe can show it). The importer skips the cache
-(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
+(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's
+(checked when the grouping is read, so even over a base field that holds no date; since T-4246),
 a range group over text, a database field after a grouping field, and a base that is not a database field.
 Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
 - Rule: a value below `startNum` goes in the first item and one past `endNum` in the last. A value equal to `endNum`
@@ -246,8 +248,14 @@ Evidence: probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-b
 T-4236): pivots grouped by months, hours, quarters, years and days whose S values are distinct powers of two; the
 second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). Engine (T-4246):
 `DateGroups` groups a record by the rule and picks a number item by its calendar value, shared by the importer, the
-eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field. UNVERIFIED: a number
-item on a seconds or minutes group (taken as 0 to 59, by the hour rule).
+eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field.
+- A number item on a seconds or minutes group is the second or minute, 0 to 59, by the hour rule: `0`, `5`, `30`,
+  `59`, `59.5` and `59.999` pick `:00`, `:05`, `:30` and `:59`; `60`, `61` and `DATE(2019,1,1)` are `#REF!`. The
+  integer part is **truncated toward zero**, not floored, on all three time groups: `-0.5`, `-0.0001`, `0.5`,
+  `TIME(0,0,5)` and `TIME(0,1,0)` are `:00` (seconds and minutes) and `12 AM` (hours), `1.5` is `:01`, while `-1` is
+  `#REF!`. Text items match the label (`":05"`, `":00"`; `":00"` on an hour group, `"5"` and `"-0.5"` are `#REF!`).
+  Evidence: probes/t4269-pivot-time-group-number-items (excel-graph, 2026-11-05, T-4269). Status: VERIFIED
+  (excel-graph); the engine (`DateGroups::number_item`) matches every cell.
 - Quirk: a half second just below the half rounds up. Serial 43466.458327546294 (written 10:59:59.5, but
   39599.49999978 s into the day, 2.2e-7 s below the half) is in `11 AM` (no-blank pivot H, Calc E45 and F13). The
   engine splits a date as HOUR is modelled to (`time_of_day_parts`, dates.md: an exact half goes whichever way binary
