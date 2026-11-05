@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
