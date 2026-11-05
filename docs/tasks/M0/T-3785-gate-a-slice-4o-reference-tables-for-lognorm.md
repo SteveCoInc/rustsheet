@@ -3,7 +3,7 @@ id: T-3785
 title: "Gate A slice 4o: reference tables for LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER and FISHERINV"
 milestone: M0
 lane: harness
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -44,18 +44,54 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   the overflowing square, LN of x at 0) have to be read from the evidence.
 
 ## Acceptance criteria
-- [ ] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, each citing its sources, with unit
+- [x] One definition per function in `tools/src/rustsheet_tools/accuracy/defs/`, each citing its sources, with unit
       tests against Microsoft's published examples or the semantics entries' values. The lognormal definitions call
       `defs/normal.py` and do not copy it.
-- [ ] `eval/accuracy/tables/<FUNCTION>/s1.{case,math,oracle}.json` for each of the six functions, generated, filled
+- [x] `eval/accuracy/tables/<FUNCTION>/s1.{case,math,oracle}.json` for each of the six functions, generated, filled
       (excel-graph) and committed. `rustsheet-eval accuracy` reports `missing tables` lower by 6, with 0 failing points
       and 0 table defects.
-- [ ] Every point outside the envelope is a `known-failures.tsv` line with an open owner task. The FISHER near-zero
+- [x] Every point outside the envelope is a `known-failures.tsv` line with an open owner task. The FISHER near-zero
       choice is stated, and any R3 candidate is listed in the Outcome for an owner ruling and not marked in this PR.
-- [ ] The probes-numeric math sidecars are regenerated with the new definitions and committed.
-- [ ] `make check` green; reviewers approve.
+- [x] The probes-numeric math sidecars are regenerated with the new definitions and committed.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The legacy names LOGNORMDIST, LOGINV, EXPONDIST and WEIBULL (T-3786 rules on legacy names).
 - HARMEAN and the other sample-array statistics (T-3786).
 - Changing any engine kernel.
+
+## Outcome
+- `tools/src/rustsheet_tools/accuracy/defs/continuous.py`: LOGNORM.DIST, LOGNORM.INV, EXPON.DIST, WEIBULL.DIST, FISHER
+  and FISHERINV, each citing its statistics.md entries. The lognormal definitions call normal.py's `cdf`, `density`
+  and `standard_quantile` (and its probability draw, now public as `inverse_probability`); they copy none of it.
+  EXPON.DIST and WEIBULL.DIST are -expm1(-t) and the closed-form densities at the working precision; FISHER is atanh
+  and FISHERINV tanh.
+- Error domain, from the evidence: WEIBULL.DIST is `#NUM!` once t = EXP(alpha*LN(x/beta)) overflows, and its density
+  `#DIV/0!` where beta^alpha underflows to 0 and `#NUM!` where it overflows, x = 0 included (T-2239, T-3312); at
+  x = 0 the value is 0 for every shape (t1048-weibull). LOGNORM.DIST takes x > 0 and sd > 0, LOGNORM.INV p in (0, 1),
+  EXPON.DIST x >= 0 and lambda > 0, FISHER (-1, 1). Excel agrees on every error point drawn: 60 `#NUM!` and 8
+  `#DIV/0!` cells across the six tables, each a domain error of the math too.
+- **FISHER near zero:** left out of the tables, not marked R3. FISHER and FISHERINV points with 0 < |x| < 1E-6 are
+  redrawn (0 itself stays). Excel's 0.5*LN((1+x)/(1-x)) and (EXP(2y)-1)/(EXP(2y)+1) cancel there, about 1E-16/|x|
+  relative; past R3's 1e-4 below about 1E-12 (`FISHER(1.49172367472348E-11)`, `FISHER(1.02759470998055E-16)` = 0,
+  probes/t2437-fit-separators A1, A4). The cut is 1E-6, not 1E-8 as GAUSS's, because at 1E-8 the doubles' error is
+  still 5E-9, above the gate's 1e-9 (FISHER(1E-08) in doubles is 9.999999950247593E-9).
+- Also left out, as unprobed or ill-conditioned (stated in the module doc): points whose relative condition number
+  times 2^-52 passes 1e-10 (LOGNORM.DIST's ln x - mean against a small sd, LOGNORM.INV's mean + sd*z, WEIBULL's
+  alpha*LN(x/beta) and its density's powers); EXP-overflow neighbourhoods; LOGNORM.INV past the double range;
+  LOGNORM.DIST densities whose exp(-z^2/2) underflows before the division by x*sd lifts it back (the engine gives 0,
+  no cell says what Excel does); EXPON.DIST with lambda*x past 1E+300; WEIBULL with x/beta subnormal, a beta^alpha
+  between EXP's underflow and 1E-300, or a density intermediate outside the normal range.
+- **R3 candidates: none.** The worst Excel-vs-math gap in the six tables is 4.0E-11 relative
+  (`FISHER(1.40857451285715E-06)`, at the cut); otherwise WEIBULL.DIST 2.1E-13, LOGNORM.DIST 3.0E-13, EXPON.DIST
+  2.1E-14, LOGNORM.INV 6.4E-14, FISHERINV 1.4E-11.
+- Tables: `eval/accuracy/tables/{LOGNORM.DIST,LOGNORM.INV,EXPON.DIST,WEIBULL.DIST,FISHER,FISHERINV}/s1`, 120 or 200
+  points each (960 in all), filled from excel-graph. `rustsheet-eval accuracy`: 18,032 points in 113 tables, 0 failing,
+  0 table defects, no new known failures; missing tables 144 -> 138. 53 LOGNORM.DIST and 6 LOGNORM.INV points are in
+  the envelope by the math only (the engine is not within 15 digits of Excel there; T-0975 and T-0925 own those last
+  digits), every other point by both.
+- Sidecars: the probes and probes-numeric math sidecars of the cases with one-call cells of the six functions are
+  regenerated (only the cases `make eval-math-check` reported stale).
+- Unit tests: tools/tests/test_accuracy_continuous.py (Microsoft's examples, the T-1040, T-1046, T-0925 and T-2239
+  values, the WEIBULL error domain, and the FISHER draws avoiding the cancellation region).
+- Eval delta: none in the gated suites (tools, tables and sidecars only).
