@@ -12,8 +12,8 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// TRIMMEAN's data, smallest first. Each element averages the values it keeps, so a call is
 /// charged elements × numbers (`LiftCost::Cells`), not the sort alone.
 const TRIMMEAN_DATA: DataArg = DataArg {
-    // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX, OFFSET, IF or
-    // CHOOSE that picks a cell comes back as a range, so a lone cell holding nothing, text or a
+    // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX or IF (probed;
+    // OFFSET and CHOOSE by analogy with T-2344) that picks a cell comes back as a range, so a lone cell holding nothing, text or a
     // boolean is data with no number, `#NUM!` (`TRIMMEAN(Data!B7,1.005)` with B7 TRUE, gen-m9
     // 9735c5ab72fa5ecf A264; `TRIMMEAN(D28!A6,3.14159)` with A6 blank, probes/t2475-stat-
     // subexpressions P!A353; the name, INDEX and IF forms, probes/t2883-stat-name-index-data

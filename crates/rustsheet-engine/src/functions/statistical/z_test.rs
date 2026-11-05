@@ -85,8 +85,8 @@ impl Model {
             return CalcResult::new_args_number_error(cell);
         }
         let data = match args.first() {
-            // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX, OFFSET
-            // or IF that picks a cell comes back as a range like the cell itself (T-2883).
+            // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX
+            // or IF (probed; OFFSET by analogy) that picks a cell comes back as a range like the cell itself (T-2883).
             Some(node) => self
                 .evaluate_picked_reference_arg(node, cell)
                 .into_single_sheet_area(cell),
