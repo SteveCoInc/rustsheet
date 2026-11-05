@@ -14,14 +14,16 @@ mod workbook;
 pub use edit::{ChangeSet, Input, InputChange, SheetChange, Txn, ValueChange};
 #[doc(hidden)]
 pub use edit::{PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput};
-pub use error::{EditError, LoadError, RefError, SaveError};
+pub use error::{EditError, LoadError, RefError, SaveError, UnsupportedKind};
 pub use refs::{
     parse_cell, parse_range, resolve_sheet_by_name, CellRef, RangeRef, SheetId, Target,
 };
 pub use rustsheet_engine::clock::{Clock, ClockError};
 pub use rustsheet_engine::types::{DateSystem, Iteration};
 pub use value::{Array, ArrayShapeError, ErrorKind, ParseErrorKindError, Value, XlError};
-pub use workbook::{CellInfo, LoadOptions, SaveOptions, SheetMeta, Workbook, WorkbookOptions};
+pub use workbook::{
+    CellInfo, LoadOptions, Password, SaveOptions, SheetMeta, Workbook, WorkbookOptions,
+};
 
 /// Every worksheet function the engine implements, by its en-US name (`SUM`, `ERROR.TYPE`), sorted.
 #[must_use]
