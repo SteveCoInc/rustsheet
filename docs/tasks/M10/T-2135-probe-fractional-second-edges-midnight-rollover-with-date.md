@@ -3,7 +3,7 @@ id: T-2135
 title: "Probe fractional-second edges: midnight rollover with date tokens, 9999-12-31 cutoff in 1904, m after [m], s.0000"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
