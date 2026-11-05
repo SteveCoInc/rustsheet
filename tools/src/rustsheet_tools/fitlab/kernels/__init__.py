@@ -8,6 +8,7 @@ from rustsheet_tools.fitlab.kernels import (
     asin,
     beta,
     beta_inv,
+    devsq,
     erfc,
     fisher_expon_harmean,
     ftest,
@@ -36,6 +37,7 @@ MODULES = [
     beta,
     norm_inv,
     beta_inv,
+    devsq,
     mirr,
     asin,
     yield_caret,
@@ -45,6 +47,7 @@ MODULES = [
     fisher_expon_harmean,
     geomean,
     im_hyperbolic,
+    devsq,
 ]
 
 

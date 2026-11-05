@@ -125,8 +125,18 @@ Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1
   is a two-pass sum (T-1749)" (VERIFIED); coercion.md's open I392 note is updated.
 - R4 (a choice between two structural forms, not a fit). The fresh sweep is probes-numeric t1749-devsq-fresh
   (docs/research/t1749/gen_fresh.py, seed 1749, 200 cells, generated and filled by excel-graph after the change):
-  200 of 200 bit-exact with the two-pass form, 27 of 200 with the old one-pass form. No hold-out split: no candidate
-  was scored before the change. The task's own cells chose the form, and all of them pass.
+  200 of 200 bit-exact with the two-pass form, 27 of 200 with the old one-pass form. Gate A envelope: 200 of 200
+  inside (every cell bit-exact against Excel), none outside.
+- R4.1 hold-out (review round 1): `rustsheet-fitlab devsq` (the 290 owned gen-m9 and probes DEVSQ cells the lab
+  parses) and `devsq-fresh` (tools/src/rustsheet_tools/fitlab/kernels/devsq.py), T-3360 split, margin 5 points
+  stated before scoring. Bit-exact train / test: owned, two-pass 201/203 and 87/87 (accept), correctly rounded
+  133/203 and 67/87 (reference), one-pass 120/203 and 61/87 (refused); fresh, two-pass 133/134 and 66/66 (accept),
+  correctly rounded 60/134 and 28/66, one-pass 18/134 and 9/66 (refused). The engine is 290/290 and 200/200; the
+  two-pass candidate's three misses are the lab's argument reader (two one-cell references to a bool or numeric
+  text read as literals; fresh A156's literals rounded correctly where Excel's x87 conversion is not). poi
+  E/F/I/J392 is an xlsx case the lab cannot read; it passes in the eval.
+- The subnormal flush of each square and of the mean is marked inferred from VAR/STDEV in statistics.md (no
+  DEVSQ cell reaches it), not probed.
 - Eval delta: gen-m9 known failures 1929 -> 1803 (fixed 126, every DEVSQ cell the task owned); probes 5710 -> 5696
   (fixed 14: stat-order-floor-batch A277, A278, A280, A290, A294, A295, A300, ftest-decomposition B9, C9, C10, D10,
   F9, F10, stat-argument-modes H5); poi 115 -> 111 (EverythingTests!E392, F392, I392, J392); 0 regressions in every
@@ -135,7 +145,7 @@ Decision 0083: the cells listed under Context are visibly off (DEVSQ(1E15,1E15+1
   A200, 7bd219ec0c0c5e22 A279, c2974c061384fdd9 A55), so the gen-m9 visible-parity box stays open for those 3 lines.
   KURT is already two-pass, and taking s from Excel's STDEV.S did not move the cells I tried.
 
-## Landing notes (resumed)
+## Landing notes (resumed, done)
 - PR #3344, head 96f523d5de0cfa48bfe9273c25689475217f2ad8 (draft); this notes commit sits on top of it. CI on
   d2be964 was red only on hygiene: the duplication ratchet hit 2900, because T-0975's merged gen_fresh.py and this
   one sat side by side. Fixed in 96f523d (shared `write_case`; local `check_duplication.py` reports 2878, and

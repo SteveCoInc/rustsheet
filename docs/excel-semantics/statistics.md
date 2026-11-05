@@ -270,7 +270,14 @@ J392 (Excel-cached); 126 DEVSQ cells of gen-m9 (excel-graph). With this form eve
 for bit, and no cell regressed in any suite. Fresh sweep after the freeze, probes-numeric t1749-devsq-fresh
 (docs/research/t1749/gen_fresh.py, 200 DEVSQ calls of 2 to 12 literals, offsets 1E-3..1E15 and spreads 1E-6..1E3,
 excel-graph): 200 of 200 bit for bit, where the earlier one-pass form matched 27. No constant is fitted: the
-choice was between the two textbook forms.
+choice was between the two textbook forms. Hold-out (decision 0188 R4.1, `rustsheet-fitlab devsq` and `devsq-fresh`,
+margin 5 points stated before scoring): on the owned cells two-pass is 201 of 203 train and 87 of 87 test bit for bit,
+the correctly rounded `Σ(x - mean)²` 133 and 67, one-pass 120 and 61; on the fresh sweep two-pass is 133 of 134 and 66
+of 66, correctly rounded 60 and 28, one-pass 18 and 9. The two-pass misses are the lab's, not the form's: two one-cell
+references to a bool or numeric text the lab reads as literals, and fresh A156, whose literals the lab rounds
+correctly where Excel's x87 conversion does not ("15-digit literal parsing"); the engine passes all three.
+Inferred, not probed for DEVSQ: each square and the mean are flushed to 0 when subnormal, as Excel's `*` and `/` are
+and as VAR/STDEV's two-pass branch is evidenced to be; no DEVSQ cell has a subnormal mean or square.
 Implemented in: functions/statistical/devsq.rs through variance.rs `squared_deviations`, which VAR/STDEV's two-pass
 branch shares.
 Status: VERIFIED
