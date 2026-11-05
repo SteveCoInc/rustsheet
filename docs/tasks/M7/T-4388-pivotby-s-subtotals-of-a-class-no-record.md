@@ -3,7 +3,7 @@ id: T-4388
 title: "PIVOTBY's subtotals of a class no record reached and its row-axis parents on an intransitive run"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
