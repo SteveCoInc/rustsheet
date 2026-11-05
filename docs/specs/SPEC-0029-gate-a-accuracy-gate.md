@@ -240,8 +240,11 @@ same mirroring for a fetched suite), attaches math values to the cells of any ev
 - `rustsheet-accuracy math --suite probes-numeric` reads each case through `rustsheet-eval cases`, selects every checked
   cell whose formula is one call `=FUNC(args)` of a function with a definition, parses its arguments with the fit lab's
   sweep reader (`fitlab/sweep.py`: literals, constant cells, arrays, `DATE`, and arithmetic over literals with Excel's
-  operator model), and writes the math value with its formula text. A cell whose arguments read another formula cell,
-  or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent). A candidate the
+  operator model), and writes the math value with its formula text. Arithmetic may also read constant cells and
+  exact-input cells (a formula cell that is arithmetic over literals): `F.DIST(A112*A112,1,6,FALSE)` (T-3924). A call
+  followed by an exact scale (`*2^k`, `/2^k`, `-0`) gets the scaled math when the call's math and the scaled value are
+  normal doubles or 0 (`eval_math`'s module doc states the rule), and is listed as skipped otherwise. A cell whose
+  arguments read another formula cell, or that the reader leaves unparsed, gets no math value. Strata do not apply (`"s"` absent). A candidate the
   generator drops (no single value, not converged) is listed under an optional top-level `"skipped"` map (sheet → A1
   → `{"f","why"}`), which the runner ignores and `rustsheet-accuracy math --check` (`make eval-math-check`, decision
   0243) reads to tell it from a cell whose sidecar is missing or stale.
