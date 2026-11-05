@@ -13,7 +13,8 @@
     (score.py part 4). The second half is T-4319's finding (T-4302), and this PR takes it in too.
   - Fresh sweep probes-numeric/t4308-gamma-density-r4-fresh: 154 cells drawn after the model was frozen (seed
     43081). Of the 54 numeric cells with a nonzero Excel value, the engine is bit-exact at 52 and the correctly
-    rounded density at 3. Gate A's envelope (decision 0188 R2) holds at every point. On the older
+    rounded density at 3. Gate A's envelope (decision 0188 R2) holds at every numeric point. A152:A154 are outside it:
+    Excel's #DIV/0! past the 2 pi a overflow against our number, unchanged by this PR (T-4340). On the older
     probes-numeric/t4296-gamma-density-r4-fresh the engine is bit-exact at 125 of 126 (score.py part 3).
   - Gated suites: probes fixes 1,168 cells, including the seven of decision 0286, and gen-m9 fixes 1. One gated cell
     that matched now misses: probes/t4290-gamma-window-large-pow2 B223, `GAMMA.DIST(1544,1024,1,FALSE)`, at

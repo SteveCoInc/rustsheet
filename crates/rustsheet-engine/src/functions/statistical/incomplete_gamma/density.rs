@@ -79,9 +79,14 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
 /// across them: at shape 3072, y = 2048 = 2a/3 (and 2a/3 + 1.9E-9) is the window and every y below
 /// it the direct deviance (probes/t4290-gamma-window-large-pow2 E1:E13); at shape 2048, y = 3072 =
 /// 3a/2 is the window and 3072 + 2.8E-9 the direct deviance (F1:F13); at shape 100 the two give
-/// the same double at y = 1.5a (probes/t4255-gamma-window-exact-ratio D58; T-4308).
+/// the same double at y = 1.5a (probes/t4255-gamma-window-exact-ratio D58; T-4308). The 0.2 is read
+/// from Excel, not copied from R, whose bd0 cuts at 0.1; the ends are probed at shapes 2048, 3072
+/// and 100 only (T-4339 probes others). Where y + a overflows the point is far from the mode
+/// (y past 1E308 at a finite shape), so it is outside: an infinite bound would take every such y
+/// in and give the density at the mode (T-4308 review).
 fn in_window(a: f64, y: f64) -> bool {
-    (y - a).abs() <= 0.2 * (y + a)
+    let sum = y + a;
+    sum.is_finite() && (y - a).abs() <= 0.2 * sum
 }
 
 /// Excel's large-shape density exp(-c(a) - B) / sqrt(2 pi a) times (a / x) for the deviance
@@ -92,8 +97,10 @@ fn in_window(a: f64, y: f64) -> bool {
 /// below it, where the prefactor's sqrt(a / 2 pi) exp(-B - c) / x is at 107, 72, 43 and 65
 /// (docs/research/t4308/score.py part 4, excel-graph 2026-11-05).
 ///
-/// `None` where 2 pi a overflows (a above about 2.9E307): the chain would give 0 there, where the
-/// density is about 1E-154, so the caller keeps the prefactor's sqrt(a / 2 pi) form (unprobed).
+/// `None` where 2 pi a overflows (a above about 2.9E307): the chain would give 0 there, so the
+/// caller keeps the prefactor's sqrt(a / 2 pi) form. Excel gives #DIV/0! there at the mode
+/// (probes-numeric/t4308-gamma-density-r4-fresh A152:A154, a = 5E307 to 9.99999999999999E307) and
+/// 8.920620580763855E-155 at a = 2E307 (A151); T-4340 owns the error.
 fn loader_density(a: f64, x: f64, deviance: f64) -> Option<f64> {
     let two_pi_a = 2.0 * std::f64::consts::PI * a;
     if !two_pi_a.is_finite() {
@@ -225,6 +232,14 @@ mod tests {
             gamma_density(3072.0, 2_047.999_999_999_99, 1.0),
             Some(6.287_537_497_079_017e-99)
         );
+    }
+
+    #[test]
+    fn where_y_plus_a_overflows_the_point_is_outside_the_window() {
+        // y = 1.7E308 is 8.5 times the shape: the density underflows to 0, as it does at a shape of
+        // 1E306 where y + a is finite (T-4308 review), not the density at the mode.
+        assert_eq!(gamma_density(2e307, 8.5e307, 0.5), Some(0.0));
+        assert_eq!(gamma_density(1e306, 8.5e307, 0.5), Some(0.0));
     }
 
     #[test]

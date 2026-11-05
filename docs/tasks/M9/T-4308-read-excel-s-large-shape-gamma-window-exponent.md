@@ -97,13 +97,14 @@ exp(-c(a) - B) / sqrt(2 pi a) * (a / x), with B taken from bd0 cut at |y - a| <=
   cell on Excel's side.
 - **Code.** density.rs `density_with`, `in_window`, `loader_density` (it replaces `mode_density`),
   `window_exponent`, `direct_deviance` and `atanh_rounded`. The test for the near mode is now made once for the
-  density (`in_window`), and P and Q keep `excel_away_from_mode`, since the window cdf decouples (T-4255).
+  density (`in_window`), and P and Q keep `excel_away_from_mode`, since the window cdf decouples (T-4255). Where y + a overflows the point is
+  outside the window (review round 1).
 - **R4.2 fresh sweep.** probes-numeric/t4308-gamma-density-r4-fresh: 154 cells drawn after the freeze (seed
   43081, docs/research/t4308/make_sweep.py), excel-graph 2026-11-05. They cover the window at shapes 20 to 1E9,
   outside it, 0.6a to 0.667a at shapes outside 30 to 500, shapes 1E7 to 1E12, and the 2 pi a overflow. Of the
   54 cells with a nonzero Excel value, the engine is bit-exact at 52, within 4 ulp at 53 and within 15 digits at
-  53. The correctly rounded density is at 3, 9 and 12. Gate A's envelope holds every point (score.py part 3,
-  committed as the MINOR item asked). On the t4296 fresh sweep the engine is 125/126 bit-exact.
+  53. The correctly rounded density is at 3, 9 and 12. Gate A's envelope holds every numeric point (score.py part 3,
+  committed as the MINOR item asked). A152:A154, Excel's #DIV/0! and unchanged here, are outside it (T-4340). On the t4296 fresh sweep the engine is 125/126 bit-exact.
 - **New quirk.** Past the 2 pi a overflow Excel's density at the mode is #DIV/0! (A152:A154). It goes to T-4340.
 - **Eval delta.** probes fixed 1,168, gen-m9 fixed 1. That includes the seven cells decision 0286 let regress,
   which come back. One regression, probes/t4290-gamma-window-large-pow2 B223 at x/a = 1.5078125, where Excel

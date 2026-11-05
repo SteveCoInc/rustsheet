@@ -21,7 +21,9 @@ T-4308's fresh sweep (probes-numeric/t4308-gamma-density-r4-fresh A151:A154, exc
 5E-155 there (density.rs `loader_density` returns None, and the caller keeps the prefactor's form). The quirk is
 in statistics.md (the T-4308 paragraph).
 - Probe off the mode (x/a 0.7, 1.3, 2, and 0.1 with a scale) at the same shapes, CHISQ.DIST at 2 df past 5.8E307,
-  and the cdf (TRUE), to bound where the #DIV/0! applies.
+  and the cdf (TRUE), to bound where the #DIV/0! applies. Also probe y far from the mode where y + a overflows
+  (`GAMMA.DIST(8.5E+307,2E+307,0.5,FALSE)`, (8E+307,2.5E+307,0.5) and (8.5E+307,1E+307,0.5)): ours gives 0
+  there since T-4308's review (density.rs `in_window`).
 - Then return the error from the density path (it returns Option<f64> today, so the error needs plumbing).
 
 Visibly-off cells this task owns: probes-numeric/t4308-gamma-density-r4-fresh A152, A153 and A154.

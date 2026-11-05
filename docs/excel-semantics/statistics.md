@@ -1244,7 +1244,7 @@ probes/t3252-gamma-prefactor-window, -holdout and -holdout-2, excel-graph 2026-1
 below the mode the ratio form is Excel's to 0 to 2 ulp at every probed x <= 0.664a, shapes 30 to 500 (window A1:A3,
 A21:A23, A41:A43; holdout A1:A4, A15:A18, A29:A32; holdout-2 A1:A4, A13:A16, A25:A28), where `rcomp` is up to 287 ulp
 off. From 0.668a to 0.99a Excel is neither form: each is 0 to 300 ulp off, with no side consistently closer
-(holdout-2 A5:A12, A17:A24, A29:A36; holdout A5:A14, A19:A28, A33:A42; window A4:A10, A24:A30, A44:A50). Ours takes
+(holdout-2 A5:A12, A17:A24, A29:A36; holdout A5:A14, A19:A28, A33:A42; window A4:A10, A24:A30, A44:A50). For the cdf, ours takes
 the ratio form below 0.666a at shapes 30 to 500 (`NEAR_MODE_BELOW` 0.334, the middle of holdout-2's bracket
 (0.332, 0.336), frozen before the fresh sweep probes/t3252-gamma-prefactor-sweep) and `rcomp` above; outside those
 shapes the bound stays 0.4. Above the mode Excel is neither form from 1.05a to 1.45a at shapes 50 and 200 (window A11:A20, A31:A40, 5 to
@@ -1364,7 +1364,8 @@ Excel's exponent. Its findings:
   2048, where an ulp of the small B moves the density by less than its own ulp). So
   Excel's exponent can be read out exactly, not only as the per-unit error of +-0.5 ulp(ln u) that T-4255 and
   T-4290 measured (score.py part 1).
-- Inside the window |y - a| <= 0.2 (y + a), with y = x/scale, it is Loader's bd0 split into its leading term and
+- Inside the window |y - a| <= 0.2 (y + a), with y = x/scale (the 0.2 read from Excel, not R's 0.1 bd0 cut; its
+  ends probed at shapes 2048, 3072 and 100 only), it is Loader's bd0 split into its leading term and
   odd series: B = (y - a) v - (2a atanh(v) - 2a v), with v = fl((y - a)/(y + a)). Every operation is one double
   rounding as written, and atanh(v) is correctly rounded. The fit was t4290 A:C and the hold-out D, with the split
   and an R4.1 margin pushed before scoring. Against Excel's exact B, fit then hold-out:
@@ -1400,9 +1401,11 @@ Excel's exponent. Its findings:
 - Ours takes the chain at shape 20 and up (density.rs `density_with`: `window_exponent` inside, `direct_deviance`
   outside from a/200 up). P and Q keep `gamma_prefactor`, since the window cdf decouples from the density (T-4255).
   Fresh sweep (154 cells drawn after the freeze, seed 43081): bit-exact at 52 of the 54 cells with a nonzero Excel
-  value, against 3 for the correctly rounded density. Gate A's envelope holds every point. On the earlier
+  value, against 3 for the correctly rounded density. Gate A's envelope holds every numeric point (A152:A154,
+  Excel's #DIV/0!, are T-4340's). On the earlier
   t4296 fresh sweep it is 125 of 126.
-The ratio form is Excel's bit for bit at a/21
+The ratio form is Excel's bit for bit at a/21 (the density now takes Loader's chain there, the same exponent;
+T-4308)
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
 ratio form (probes/t2753-gamma-density-ratio-sweep A48, B48 `GAMMA.DIST(0.5,50,1,FALSE)`: ratio form 69 ulp off, `rcomp`
 350; gen-m9/68d8ffb69ff739d8 A341 `GAMMADIST(0.3,30,1,TRUE)`: 118 against 208), and at a/500 closer to `rcomp` (A47, B47
