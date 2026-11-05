@@ -964,3 +964,20 @@ fn t4234_ascii_pairwise_agrees_with_total_order() {
         }
     }
 }
+
+/// T-4270: the 32 C1 controls U+0080 to U+009F are pairwise distinct and sort by code point, after
+/// U+200B, `¬` and `•` and before `0`, alone and between `a` and `b` (probes/t4270-collation-c1-controls
+/// Calc!B1:B36 ranks 3 to 34 in row order, U+200B 0, `¬` 1, `•` 2, `0` 35; C1:C36 and E1:E36 all 1;
+/// N1:N32 the code points of SORT in order).
+#[test]
+fn t4270_c1_controls_in_code_point_order() {
+    let controls: Vec<String> = ('\u{80}'..='\u{9f}').map(String::from).collect();
+    let mut alone = vec!["\u{200b}", "¬", "•"];
+    alone.extend(controls.iter().map(String::as_str));
+    alone.push("0");
+    assert_increasing(&alone);
+    let wrapped: Vec<String> = controls.iter().map(|c| format!("a{c}b")).collect();
+    let mut wrapped: Vec<&str> = wrapped.iter().map(String::as_str).collect();
+    wrapped.push("ab");
+    assert_increasing(&wrapped);
+}
