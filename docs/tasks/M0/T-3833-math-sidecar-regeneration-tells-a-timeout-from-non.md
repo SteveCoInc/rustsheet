@@ -3,7 +3,7 @@ id: T-3833
 title: "Math sidecar regeneration tells a timeout from non-convergence"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
