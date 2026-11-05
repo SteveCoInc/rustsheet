@@ -3,7 +3,7 @@ id: T-3641
 title: "Re-probe on excel-graph whether the FORECAST.ETS family computes a number today (unblock check for T-2425)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -33,3 +33,6 @@ fill --refresh`, without touching the cached evidence of the old run.
 ## Out of scope
 - Implementing any part of the ETS algorithm (T-2425 and its spec).
 - T-2371's optional-settings probe.
+
+## Outcome
+Fresh excel-graph run 2026-11-05 of a new case, probes/forecast-ets-reprobe-2026-11 (36-point monthly and 28-point daily seasonal series; 16 cells across the four functions, with seasonality, data_completion, aggregation, confidence_level and statistic_type variants): every cell is `#N/A`. None of the four functions computes a number on excel-graph, so nothing is unblocked. statistics.md records the re-check date. T-2425 is already dropped (decision 0266) and T-2371 is unchanged. Old cached evidence untouched. Eval delta: none (probe cases only).
