@@ -1,10 +1,13 @@
-"""T-3815: the XNPV element-reading probe (eval/suites/probes/cases/t3815-xnpv-element-reading.case.json).
+"""T-3815 and T-3816: the XNPV and XIRR element-reading probes (eval/suites/probes/cases/
+t3815-xnpv-element-reading.case.json and t3816-xirr-element-reading.case.json).
 
 Sheet D holds four-row columns: A the values -100, 30, 40, 50 and B the dates 39448, 39508, 39600, 39700; each other
 column changes one element (DATES for the dates against A, VALUES for the values against B). Calc row r takes one
 variant: A the range form, B the array-constant form (blank where the element cannot be written in a constant), C the
 computed-array form (`IF(TRUE,<range>)`), D a one-cell argument (that element alone against the first value or date).
-Rows past the variants probe the rate and the shapes. Deterministic; run with `python3 -I`.
+Rows past the variants probe the rate (XNPV) or the flows' signs (XIRR), then the shapes. One generator for both
+functions keeps their rows aligned, so a row number names the same input in both cases. Deterministic; run with
+`python3 -I`.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parents[3] / "eval/suites/probes/cases/t3815-xnpv-element-reading.case.json"
+CASES = Path(__file__).resolve().parents[3] / "eval/suites/probes/cases"
 VALUES = [-100, 30, 40, 50]
 DATES = [39448, 39508, 39600, 39700]
 NA = "=NA()"
@@ -72,7 +75,12 @@ def constant(items: list[str]) -> str:
     return "{" + ";".join(items) + "}"
 
 
-def main() -> None:
+def call(function: str, values: str, dates: str) -> str:
+    """The formula of `function` (XNPV at rate 0.1, or XIRR with no guess) on `values` and `dates`."""
+    return f"=XNPV(0.1,{values},{dates})" if function == "XNPV" else f"=XIRR({values},{dates})"
+
+
+def build(function: str, task: str, out: Path) -> None:
     data: dict[str, object] = {}
     calc: dict[str, object] = {}
     notes: dict[str, str] = {}
@@ -94,11 +102,11 @@ def main() -> None:
     def emit(label: str, values_rng: str, dates_rng: str, values_const: str | None, dates_const: str | None,
              one_value: str, one_date: str) -> None:
         nonlocal row
-        calc[f"A{row}"] = f"=XNPV(0.1,D!{values_rng},D!{dates_rng})"
+        calc[f"A{row}"] = call(function, f"D!{values_rng}", f"D!{dates_rng}")
         if values_const is not None and dates_const is not None:
-            calc[f"B{row}"] = f"=XNPV(0.1,{values_const},{dates_const})"
-        calc[f"C{row}"] = f"=XNPV(0.1,IF(TRUE,D!{values_rng}),IF(TRUE,D!{dates_rng}))"
-        calc[f"D{row}"] = f"=XNPV(0.1,{one_value},{one_date})"
+            calc[f"B{row}"] = call(function, values_const, dates_const)
+        calc[f"C{row}"] = call(function, f"IF(TRUE,D!{values_rng})", f"IF(TRUE,D!{dates_rng})")
+        calc[f"D{row}"] = call(function, one_value, one_date)
         notes[str(row)] = label
         row += 1
 
@@ -156,16 +164,30 @@ def main() -> None:
          "{-100;TRUE;40;50}", "{39448;39508;#DIV/0!;39700}", f"D!{v_true2}2", f"D!{d_err3}3")
     emit("values TRUE at 2, dates -1 at 2", f"{v_true2}1:{v_true2}4", f"{d_neg2}1:{d_neg2}4",
          "{-100;TRUE;40;50}", "{39448;-1;39600;39700}", f"D!{v_true2}2", f"D!{d_neg2}2")
-    # The rate (A), with the good values and dates.
-    rate_cells = {"text": "0.1", "empty": None, "date text": "1/1/2025"}
-    rates = ["-1", "-2", "-0.5", '"0.1"', "D!ZZ1", "D!ZY1", "D!ZX1", "0"]
-    data["ZY1"] = rate_cells["text"]
-    data["ZX1"] = rate_cells["date text"]
-    for rate in rates:
-        calc[f"A{row}"] = f"=XNPV({rate},D!$A$1:$A$4,D!$B$1:$B$4)"
-        calc[f"B{row}"] = f"=XNPV({rate},{base_values},{base_dates})"
-        notes[str(row)] = f"rate {rate}"
-        row += 1
+    if function == "XNPV":
+        # The rate (A), with the good values and dates.
+        rate_cells = {"text": "0.1", "empty": None, "date text": "1/1/2025"}
+        rates = ["-1", "-2", "-0.5", '"0.1"', "D!ZZ1", "D!ZY1", "D!ZX1", "0"]
+        data["ZY1"] = rate_cells["text"]
+        data["ZX1"] = rate_cells["date text"]
+        for rate in rates:
+            calc[f"A{row}"] = f"=XNPV({rate},D!$A$1:$A$4,D!$B$1:$B$4)"
+            calc[f"B{row}"] = f"=XNPV({rate},{base_values},{base_dates})"
+            notes[str(row)] = f"rate {rate}"
+            row += 1
+    else:
+        # The flows' signs, and a two-flow pair whose only later date is a fraction of the first
+        # day (truncated, it is no later date). The guess is T-3312's.
+        positive = add_column([100, 30, 40, 50])
+        negative = add_column([-100, -30, -40, -50])
+        emit("values: all positive", f"{positive}1:{positive}4", "$B$1:$B$4", "{100;30;40;50}", base_dates,
+             f"D!{positive}1", "D!B1")
+        emit("values: all negative", f"{negative}1:{negative}4", "$B$1:$B$4", "{-100;-30;-40;-50}", base_dates,
+             f"D!{negative}1", "D!B1")
+        pair_values = add_column([-1000, 1100])
+        pair_dates = add_column([45000, 45000.5])
+        emit("two flows, dates 45000 and 45000.5", f"{pair_values}1:{pair_values}2", f"{pair_dates}1:{pair_dates}2",
+             "{-1000;1100}", "{45000;45000.5}", f"D!{pair_values}1", f"D!{pair_dates}2")
     # Shapes.
     for r, v in enumerate(VALUES):
         data[f"{col_name(30 + r)}10"] = v  # a values row
@@ -180,24 +202,30 @@ def main() -> None:
         ("values 2x2 constant, dates column", "{-100,30;40,50}", "D!$B$1:$B$4"),
     ]
     for label, v, d in shapes:
-        calc[f"A{row}"] = f"=XNPV(0.1,{v},{d})"
+        calc[f"A{row}"] = call(function, v, d)
         notes[str(row)] = label
         row += 1
+    tail = "the rate's forms" if function == "XNPV" else "the flows' signs"
     case = {
         "format": "rustsheet-case/v1",
         "description": (
-            "T-3815: how XNPV reads each element of its values and dates (fractional, negative, 0 and out-of-range "
-            "dates, later dates equal, earlier or unsorted, numeric, date and other text, booleans, empty cells and "
-            "errors, in a range (A), an array constant (B), a computed array (C) and as one cell (D)), which error "
-            "wins, the rate's forms and the shapes (docs/research/t3815/gen_case.py; rows: "
+            f"{task}: how {function} reads each element of its values and dates (fractional, negative, 0 and "
+            "out-of-range dates, later dates equal, earlier or unsorted, numeric, date and other text, booleans, "
+            "empty cells and errors, in a range (A), an array constant (B), a computed array (C) and as one cell (D)), "
+            f"which error wins, {tail} and the shapes (docs/research/t3815/gen_case.py; rows: "
             + "; ".join(f"{k} {v}" for k, v in notes.items())
             + ")"
         ),
-        "tags": ["M9", "financial", "xnpv", "probe", "T-3815"],
+        "tags": ["M9", "financial", function.lower(), "probe", task],
         "expected": {},
         "sheets": [{"name": "Calc", "cells": calc}, {"name": "D", "cells": data}],
     }
-    OUT.write_text(json.dumps(case, indent=1) + "\n")
+    out.write_text(json.dumps(case, indent=1) + "\n")
+
+
+def main() -> None:
+    build("XNPV", "T-3815", CASES / "t3815-xnpv-element-reading.case.json")
+    build("XIRR", "T-3816", CASES / "t3816-xirr-element-reading.case.json")
 
 
 if __name__ == "__main__":

@@ -4763,6 +4763,43 @@ Code: `Model::xnpv_walk_error` and `xnpv_dates` (functions/financial/flows.rs), 
 `xnpv_size_error` and `xnpv_first_value_refused` (functions/financial/mod.rs)
 Tasks: T-3815, T-4375
 
+## XIRR reads its values and dates element by element, the date first (T-3816)
+Rule (excel-graph, 2026-11-05, probes/t3816-xirr-element-reading, 175 cells; the rows of T-3815's XNPV probe above,
+each in a range (A), an array constant (B), a computed array `IF(TRUE,<range>)` (C) and as one cell (D), all alike
+unless noted; values `-100, 30, 40, 50` on dates `39448, 39508, 39600, 39700` with one element changed):
+- Numeric and date text is read as its number in a range, an array constant and a computed array alike, as values
+  and as dates: `XIRR({-100;30;40;50},{39448;"39508";39600;39700})` is 0.4881, the same as with 39508, and a value
+  "1/1/2025" is the flow 45658 (rows 13, 14, 20, 24, 25, 30), where XNPV refuses text elements. Non-numeric text and
+  booleans are `#VALUE!` as values and as dates, first or later (rows 15-17, 26, 27, 31).
+- Over values and dates that are both ranges or arrays, XIRR takes each index in turn, the date before the value
+  (XNPV takes the value first), and an error element is that error: values `-100, 30, #N/A, 50` against dates
+  `39448, #DIV/0!, 39600, 39700` is `#DIV/0!`, the errors swapped `#N/A` (rows 35, 38); a TRUE or -1 date at index 2
+  beats a `#N/A` value at index 3 (`#VALUE!`, `#NUM!`; rows 36, 37); a TRUE value at index 2 beats a `#DIV/0!` date
+  at index 3 (`#VALUE!`, row 39), but loses to a -1 date at index 2 (`#NUM!`, row 40).
+- Dates are truncated: a later date of first + 0.5 and 39448.7 then 39448.2 give the same result as the first day
+  (rows 1, 3), first + 1.5 as first + 1 (row 2); a later date equal to the first, before it, or unsorted is fine
+  (rows 10-12), and a first date of 0 or an empty first date is date 0 (0.001681, rows 6, 21). A negative date, first
+  or later, a date past 2958465, a later 0 or empty date and a last date of 2958465.5 are `#NUM!` (rows 4, 5, 7-9,
+  18, 23); for the later 0, the empty date and 2958465.5 this probe does not separate a date check from the solver's
+  `#NUM!` (T-4283 bounds the whole day). `XIRR({-1000;1100},{45000;45000.5})` is `#NUM!`: truncated, no date is later
+  than the first (row 43).
+- A first value of 0, values all 0 and values all of one sign are `#NUM!` (rows 29, 34, 41, 42); a later empty value
+  is a 0 flow (-0.1687, row 28).
+- One value cell and one date cell (D) are the size check's `#N/A`, numeric and date text cells included (D13, D14,
+  D20, D24, D25, D30), except a non-numeric text or boolean cell, `#VALUE!` (D15-D17, D26, D27, D31), and an error
+  cell, its error, the value's first (D19, D22, D32-D38). One TRUE value cell against one `#DIV/0!` date cell is
+  `#VALUE!` (D39), where a values range holding text against an error dates argument is that error
+  (gen-m9/67a4c03afd63f988 A241).
+- A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 or row array constant against a column
+  all read in row-major order with the same result (rows 44-49).
+
+Evidence: probes/t3816-xirr-element-reading (excel-graph, 2026-11-05; generator docs/research/t3815/gen_case.py,
+which writes T-3815's XNPV case too).
+Status: VERIFIED (excel-graph)
+Code: `Model::xirr_walk_error`, `Model::xirr_flows` and `xirr_date_error` (functions/financial/flows.rs),
+`Model::xirr_size_error`, `Model::fn_xirr` and `Model::array_of_numbers_from` (functions/financial/mod.rs)
+Tasks: T-3816
+
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;
 `MDURATION(-1.5,46394,<#N/A>,100,2)`, `ODDFPRICE(2958466,46506,33984,39398,-1,<#N/A>,104,4,2)`,
