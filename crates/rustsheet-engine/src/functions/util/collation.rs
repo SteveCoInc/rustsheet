@@ -66,7 +66,7 @@ use accents::{accents, cmp_accent_units};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
-use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
+use scripts::{script_element, script_order, symbol, unit, ABOVE_SCRIPTS, SYMBOLS};
 
 /// Orders two texts by the module's six passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -311,10 +311,12 @@ fn other(c: char) -> u32 {
 }
 
 /// A long-vowel or iteration mark with no letter before it (`"ー"`, `"ゝ"`, `"ゞ"`, `"々"`, `"ーa"`):
-/// after the ideographs probed (`"ー" > "人人"`), all four equal (probes/t3275-collation-width-kana
-/// Calc!B119 = 4, probes/t3275-collation-width-kana-pairs AC25, AC37). Placed after the last
-/// unified ideograph.
-const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
+/// all equal (probes/t3275-collation-width-kana Calc!B119 = 4, probes/t3275-collation-width-kana-pairs
+/// AC25, AC37), and above every other character: the BMP and plane 2 ideographs, Extension A, the
+/// compatibility ideographs, plane 3, Hangul, private use, U+FFFD and U+10FFFD
+/// (probes/t4258-collation-lone-mark-astral C1:C90, C104:C105). What follows the mark does not
+/// change that (C91:C103), so `"々ヲ" > "𠀀"` (probes/t3465-collation-holdout C313:D313).
+const LONE_MARK: u32 = OTHER_BASE + 2 * ABOVE_SCRIPTS;
 
 /// Punctuation and symbols in Excel's order: the ASCII ones from probes/text-collation-order
 /// ranks 7-36, the others from probes/text-collation-unprobed, which ranks them against `!`, `~`,

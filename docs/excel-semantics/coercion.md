@@ -69,7 +69,8 @@ any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B hold
 19 pairs put a Thai or Lao digit below the letters (refuting the old UNVERIFIED choice "Thai and other digit
 blocks keep code-point order"; fixed by T-3895, "Thai, Lao and the other script digits (T-3895)" below), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
 1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
-T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
+T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; a lone mark is above every
+character, fixed by T-4258). No other
 rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
 T-3276 scripts mixed with Latin all agree.
 CHAR(160) and spaces (T-0244, VERIFIED, probes/text-order-nbsp-space, 333 cells, excel-graph
@@ -408,6 +409,15 @@ VERIFIED (cells cited):
   they sort after the ideographs probed (`"ー" > "人人"`, AC25; `"ーa"`, AC37) and the four lone marks
   are **equal** to each other (case 1 B119 = 4, COUNTIF E119 = 4; MATCH and XMATCH of each find `ー`,
   C127:D129 = 119).
+  **A lone mark is above every character (T-4258, VERIFIED, probes/t4258-collation-lone-mark-astral,
+  105 cells, excel-graph 2026-11-05).** Each of `ー ゝ ゞ ヽ ヾ 々` alone is greater than plane 2 (`𠀀`
+  U+20000, `𪜀` U+2A700, U+2FA1D), plane 3 (`𰀀` U+30000), Hangul (`가`), the BMP ideographs (`一`, U+9FFF),
+  Extension A (`㐀`), the compatibility ideographs (`豈` U+F900), private use (U+E000, U+F0000), `😀`,
+  `𝐀` U+1D400, U+FFFD and U+10FFFD (C1:C90), and than the two-character texts U+10FFFD U+10FFFD and `𪜀𪜀` (C104:C105). What follows
+  the leading mark does not change that: `々` or `ー` followed by a combining mark, a kana, an ideograph,
+  `𠀀`, `A` or another mark is still above `𠀀` (C91:C102), and so is t3465's B313 text (C103). The
+  engine gives a lone mark one weight above every script weight (`LONE_MARK`). Lone surrogates, which
+  UNICHAR cannot make, are not probed against it.
 - **`ー` after a Latin letter is not transitive.** `"aー"` is greater than `"aa"`, `"ab"`, `"AＢ"` and
   `"a゛b"` (C8, F8, G8, T8) but less than `"Ａa"` and `"Ａb"` (E8, H8), although `"Ａa" < "ab"` (F4) and
   `"AＢ" < "Ａb"` (H6). So Excel's `<` here is no sort key; no total order reproduces all cells, and an

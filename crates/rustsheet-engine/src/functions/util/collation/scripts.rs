@@ -8,8 +8,11 @@ use super::{digit, other, single, Element, NORMAL_KANA, NO_ACCENT, OTHER_BASE, S
 const SCRIPTS: u32 = 0x1_0000;
 const SURROGATES: u32 = 0x2_0000;
 const HANGUL: u32 = 0x3_0000;
-pub(super) const IDEOGRAPHS: u32 = 0x4_0000;
+const IDEOGRAPHS: u32 = 0x4_0000;
 const IDEOGRAPH_SURROGATES: u32 = 0x5_0000;
+/// Above every [`script_order`]: the highest is a low surrogate unit, under
+/// `IDEOGRAPH_SURROGATES + 0xE000`.
+pub(super) const ABOVE_SCRIPTS: u32 = IDEOGRAPH_SURROGATES + 0x1_0000;
 
 /// Where a BMP code point or a UTF-16 surrogate unit sorts among the characters after the letters.
 /// Excel's block order is not code-point order. Lowest first: Latin, Greek, Cyrillic, Armenian,
