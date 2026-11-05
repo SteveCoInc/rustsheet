@@ -76,7 +76,7 @@ the math. Every failing table point has an owner.
   statistics.md entries. The cdfs are gamma.py's `lower_tail` and `upper_tail` (P and Q at y = x / beta, x / 2 for the
   chi-squared functions), the tail map is its `quantile`; nothing is copied. The density is y^(a-1) e^-y / (Gamma(a)
   beta) in log space, at log10(a) more digits. The condition-number cut (`ill_conditioned`, `CONDITION_LIMIT`) moved
-  from continuous.py to `_common.py` so both modules share one definition (duplication 2878 -> 2876).
+  from continuous.py to `_common.py` so both modules share one definition (duplicated lines 2878 -> 2876; the protected `quality/duplication.json` baseline is left for the steward to ratchet).
 - Error domain, from the evidence: x < 0, shape or scale <= 0, df outside [1, 1E10] (CHISQ.DIST.RT truncating it,
   T-0971's `CHISQ.DIST.RT(8,3.34)`; CHISQ.DIST has no truncation evidence, so a non-integer df gets no math value);
   x / beta overflowing (both forms); the density at a subnormal x / beta (T-2738), where shape / x overflows (T-3316
