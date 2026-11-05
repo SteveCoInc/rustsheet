@@ -6783,7 +6783,7 @@ Tasks: decision 0267, T-4053, T-4055, T-4056.
 
 ## M9 statistical argument kinds of a scalar parameter (T-3185)
 Rule: a scalar (value-mode) parameter of the M9 distribution, inverse, confidence, test and regression functions
-coerces its argument as a number would, and an error propagates first. In the base calls of
+coerces its argument as a number would, and an error argument propagates. In the base calls of
 probes/t3185-m9-statistical-argument-kinds-a to -c (excel-graph, 2026-11-04, 335 cells), one argument swapped for:
 - `""`: `#VALUE!` in all 174 cells, for every parameter, `cumulative` included (`=NORM.DIST(1.5,1,2,"")`).
 - `#N/A`: `#N/A` in all 122 cells, the cumulative flags and `tails` and `type` included.
@@ -6793,7 +6793,6 @@ probes/t3185-m9-statistical-argument-kinds-a to -c (excel-graph, 2026-11-04, 335
   is `#NUM!`: `=BETA.INV(TRUE,2,3,0,1)` (a probability of 1) and `=BETA.INV(0.4,2,3,TRUE,1)` (A equal to B).
 - A blank cell is 0 and 0 is FALSE as LINEST's and LOGEST's `stats` (`=LOGEST(Data!A1:A5,Data!B1:B5,TRUE,Data!Z1)`).
 - A two-cell range (`Data!Z5:Z6`, 1 and 2) as `const` gives one number in LINEST, LOGEST, GROWTH and TREND
-  (b A62, A86, A91, c A69): TREND's 5.8 is the fit at 6 with `const` TRUE, and LINEST's 0.6 its slope. As `stats`, LINEST and LOGEST are `#SPILL!` (b A89, A94): a larger result than the
-  one with `stats` TRUE. Ours is `#VALUE!` for GROWTH's and TREND's `const` and one 1-by-2 result for `stats`
-  (T-4222).
-
+  (b A62, A86, A91, c A69): TREND's 5.8 is the fit at 6 with `const` TRUE, and LINEST's 0.6 its slope. As
+  `stats`, LINEST and LOGEST are `#SPILL!` (b A89, A94): a result taller than one row, where ours spills 1-by-2. The
+  shape is unprobed (T-4222). Ours is `#VALUE!` for GROWTH's and TREND's `const` (T-4222).

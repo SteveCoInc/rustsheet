@@ -73,10 +73,10 @@ unchanged. New cases are oracle-filled with excel-graph.
   LOGEST, GROWTH and TREND given a two-cell `const` or `stats` range) are owned by T-4222; its acceptance criteria
   now name each case beside its cells, so `scripts/new_case_owners.py` passes. The rest are the base calls'
   last-digit residue, not the argument kind's (a A14, A33, A114; b A6, A65, A68, A76, A79, A82, A86, A87, A91, A93,
-  A119), out of scope here.
+  A119), out of scope here and owned by T-4281.
 - `make unowned-off ALL=1` lists no t3185 cell (32 unowned cells, all pre-existing on main).
-- Follow-ups filed: T-4222 (the 6 visibly-off cells), T-4223 (the 102 array, aggregate and criteria pairs) and
-  T-4224 (T-4099's review follow-up).
+- Follow-ups filed: T-4222 (the 6 visibly-off cells), T-4223 (the 102 array, aggregate and criteria pairs),
+  T-4224 (T-4099's review follow-up) and T-4281 (the 14 residue cells).
 - Math sidecars: the full `rustsheet-accuracy math --suite probes` run (2026-11-04) wrote none for the t3185 cases,
   so none is committed; `make eval-math-check` is current.
 - Eval delta: probes gains 3 cases; 20 new-coverage known failures recorded with `make eval-baseline`
