@@ -1,7 +1,7 @@
 use crate::arithmetic::flush_subnormal;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, number_or_error};
-use crate::functions::statistical::special::{normal_density_overflows, standard_normal_pdf};
+use crate::functions::statistical::special::{normal_density_overflows, normal_pdf};
 use crate::functions::Function;
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 
@@ -24,7 +24,7 @@ impl Model {
                         if normal_density_overflows(x) {
                             return Err(num_error(cell));
                         }
-                        Ok(flush_subnormal(standard_normal_pdf(x)))
+                        Ok(flush_subnormal(normal_pdf(x, 0.0, 1.0)))
                     }),
             )
         })

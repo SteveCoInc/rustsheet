@@ -57,3 +57,76 @@ pub(super) fn excel_far_upper(a: f64, x: f64, terms: &mut Terms) -> Option<f64> 
     let upper = prefactor * (fraction.0 + fraction.1);
     upper.is_normal().then_some(upper)
 }
+
+/// The smallest shape the far-above-the-mean form ([`excel_far_above_mean`]) is applied at:
+/// POISSON's k = 30, the lowest k of the T-4302 probes (probes/t4291-poisson-far-above-mean,
+/// probes/t4302-poisson-cdf-beside-pmf); below it Excel is unprobed on this form.
+const FAR_ABOVE_MIN_SHAPE: f64 = 31.0;
+
+/// The largest shape the far-above-the-mean form was measured at (k = 300).
+const FAR_ABOVE_MAX_SHAPE: f64 = 301.0;
+
+/// The lower end of x / a for the far-above-the-mean form: the upper end of Excel's gamma window
+/// (T-2638, T-4290), inside which its prefactor takes another chain (T-4308). The T-4302 probes
+/// bracket it in (1.495, 1.549): at x / a 1.29 to 1.495 the cdf is up to 82 ulp from this form
+/// (within 4 ulp at 5 of 24 points).
+/// FITTED(T-4302, 96 cells, x/a 1.26..2.99, shape 31..301)
+const FAR_ABOVE_MIN_RATIO: f64 = 1.5;
+
+/// The upper end of x / a measured: the largest probed point is 900/301 = 2.99003a
+/// (`POISSON.DIST(300,900,TRUE)`); past it the accurate kernel stays (decision 0188 R4.3).
+const FAR_ABOVE_MAX_RATIO: f64 = 2.9901;
+
+/// Excel's POISSON cdf Q(a, x) far above the mean (T-4302): at an integer shape from
+/// [`FAR_ABOVE_MIN_SHAPE`] to [`FAR_ABOVE_MAX_SHAPE`] and 1.5a < x <= 2.9901a, the prefactor
+/// sqrt(a / 2 pi) exp(-B - c(a)) with Loader's direct deviance B = a ln(a/x) + (x - a), its
+/// difference x - a taken first, and the exact Stirling error c, times the accurate fraction.
+/// Excel's cdf there is its own gamma density times x times the fraction to a few ulp, and that
+/// density is exp(-c - B) / sqrt(2 pi a) times (a / x) bit for bit at all 120 probed points
+/// (train, hold-out and the fresh sweep; docs/excel-semantics/statistics.md, the T-4302
+/// paragraph). Excel's implied B is within half an ulp of this one at 118 of them, and of the
+/// ratio form a ln(x/a) + (a - x) at 68. `None` elsewhere, where the result is not a normal
+/// double, or past `terms`.
+pub(super) fn excel_far_above_mean(a: f64, x: f64, terms: &mut Terms) -> Option<f64> {
+    let measured = a.fract() == 0.0 && (FAR_ABOVE_MIN_SHAPE..=FAR_ABOVE_MAX_SHAPE).contains(&a);
+    if !(measured && x > a * FAR_ABOVE_MIN_RATIO && x <= a * FAR_ABOVE_MAX_RATIO) {
+        return None;
+    }
+    let fraction = accurate_fraction(a, x, terms)?;
+    let deviance = a * (a / x).ln() + (x - a);
+    let prefactor = stirling_prefactor(a, -deviance, stirlerr_exact(a).0);
+    let upper = prefactor * (fraction.0 + fraction.1);
+    upper.is_normal().then_some(upper)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{gamma_ur, poisson_upper};
+
+    // Excel's cdf far above the mean (T-4302): the prefactor with Loader's direct deviance
+    // times the accurate fraction gives Excel's own bits at these cells
+    // (probes/t4291-poisson-far-above-mean G6, C6; probes/t4302-poisson-cdf-beside-pmf B20,
+    // F19), where Excel is 208 to 265 ulp from the true Q.
+    #[test]
+    fn far_above_the_mean_the_cdf_takes_loader_s_deviance() {
+        let excel = [
+            (250.0, 750.0, 5.134_850_238_125_346e-100_f64),
+            (60.0, 180.0, 2.497_452_789_099_686_4e-25),
+            (173.0, 511.142, 1.595_806_199_959_312_8e-67),
+            (211.0, 620.901, 3.197_252_522_551_427_3e-81),
+        ];
+        for (k, mean, q) in excel {
+            assert_eq!(
+                poisson_upper(k + 1.0, mean).to_bits(),
+                q.to_bits(),
+                "POISSON({k}, {mean}, TRUE)"
+            );
+            assert_ne!(gamma_ur(k + 1.0, mean).to_bits(), q.to_bits());
+        }
+        // Outside the measured range the accurate kernel stays: in the window (x <= 1.5a), past
+        // shape 301, below shape 31, and at a non-integer shape.
+        for (a, x) in [(101.0, 150.0), (302.0, 700.0), (30.0, 70.0), (100.5, 200.0)] {
+            assert_eq!(poisson_upper(a, x).to_bits(), gamma_ur(a, x).to_bits());
+        }
+    }
+}
