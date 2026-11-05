@@ -188,7 +188,7 @@ same layout) give the rule per function. It is neither a number-to-text conversi
 - Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
 - A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
   `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
-Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), called after every function call, holds this table; an
+Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every function call (`call_with_order_effects`), holds this table; an
 Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
 excel_order.rs), and a dynamic-array formula as such no longer does. Unprobed: the functions not listed (WRAPCOLS,
 TEXTSPLIT, GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no

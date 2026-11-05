@@ -75,12 +75,7 @@ impl Model {
     ///
     /// FILTER, TRANSPOSE, OFFSET, INDEX, SEQUENCE, XLOOKUP, LET and LAMBDA keep it. Whether the
     /// emptying comes before or after the call's own arguments run is unprobed (here: after).
-    pub(crate) fn weeknum_effect_of_call(
-        &mut self,
-        kind: &Function,
-        args: &[Node],
-        cell: CellReferenceIndex,
-    ) {
+    fn weeknum_effect_of_call(&mut self, kind: &Function, args: &[Node], cell: CellReferenceIndex) {
         let first = args.first().map(|node| written_extent(node, cell));
         let empties = match kind {
             Function::Chooserows
@@ -107,6 +102,21 @@ impl Model {
         if empties {
             self.empty_weeknum_state();
         }
+    }
+
+    /// Calls `implementation` (through `call_by_reference_elements`), then applies the call's
+    /// effect on WEEKNUM's state (`weeknum_effect_of_call`): every function call goes through it
+    /// (`evaluate_function`).
+    pub(crate) fn call_with_order_effects(
+        &mut self,
+        kind: &Function,
+        args: &[Node],
+        cell: CellReferenceIndex,
+        implementation: fn(&mut Model, &[Node], CellReferenceIndex) -> CalcResult,
+    ) -> CalcResult {
+        let result = self.call_by_reference_elements(kind, args, cell, implementation);
+        self.weeknum_effect_of_call(kind, args, cell);
+        result
     }
 
     /// Empties WEEKNUM's state and counts it, so an Excel-order anchor's run can tell that it did
