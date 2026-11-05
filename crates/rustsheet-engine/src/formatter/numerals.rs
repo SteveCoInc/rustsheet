@@ -31,8 +31,8 @@ pub struct CjkStyle {
     digits: [char; 10],
     /// The signs of ten, hundred and thousand.
     units: [char; 3],
-    /// The signs of 10^4, 10^8 and 10^12 (兆 in every style: `[$-1E000409][s]` of 1E8 is
-    /// "八兆六千四百亿"; probes/t3718-cjk-numeral-unprobed rows 17-19).
+    /// The signs of 10^4, 10^8 and 10^12. Every style takes 兆 for 10^12, the Chinese ones too
+    /// (`[$-1F000409][s]` of 1E8 is "捌兆陆仟肆佰亿"; probes/t3718-cjk-numeral-unprobed rows 17-19).
     myriads: [char; 3],
     /// Whether a spelled-out number writes the one before a unit sign (`一十`, `壱百`); a
     /// myriad always takes it (`[$-1B000409]General` on 10000 is "一万", on 100 "百").
@@ -103,10 +103,12 @@ static CHINESE_FORMAL: CjkStyle = CjkStyle {
     field_tens: true,
 };
 
-/// The largest integer spelled out in units and myriads; past it (unprobed, beyond 兆 groups) the
-/// integer prints digit by digit. Only elapsed counts reach 10^12: `General` is scientific from
-/// 1E+11 (probes/t3718-cjk-numeral-unprobed).
+/// The largest integer spelled out in units and myriads (to 兆 groups). Past it the count of 兆
+/// prints digit by digit before 兆: `[$-1B000409][s]` of 1E11 (8.64E15) is "八千六百四十兆", of
+/// 1.2E11 (1.0368E16) "一〇三六八兆" (probes/t3718-cjk-numeral-unprobed rows 20-25).
 const MAX_SPELLED: u64 = 9_999_999_999_999_999;
+/// The digits below 兆 (10^12).
+const BELOW_TRILLION: usize = 12;
 
 impl Numerals {
     /// The numeral system of byte `byte` (bits 24-31 of a locale tag value).
@@ -193,12 +195,26 @@ impl Numerals {
         let (sign, rest) = text.split_at(sign_len);
         let integer_len = rest.bytes().take_while(u8::is_ascii_digit).count();
         let (integer, tail) = rest.split_at(integer_len);
+        // A padded count (`[hh]` under 10) keeps its zero digit by digit.
+        let padded = integer.len() > 1 && integer.starts_with('0');
         let spelled = match integer.parse::<u64>() {
-            // A padded count (`[hh]` under 10) keeps its zero digit by digit; unprobed.
-            Ok(value)
-                if value <= MAX_SPELLED && !(integer.len() > 1 && integer.starts_with('0')) =>
-            {
-                style.spell(value)
+            Ok(value) if value <= MAX_SPELLED && !padded => style.spell(value),
+            _ if !padded && integer.len() > BELOW_TRILLION => {
+                // The count of 兆 digit by digit, then 兆 and the rest spelled out, with one gap
+                // zero under 30 and 31 when the rest starts below 1000億 (`[s]` of 1.2345E11 is
+                // "一○六六六兆○八百亿"; probes/t3718-cjk-numeral-unprobed rows 21-25). `rest` is
+                // exactly 12 ASCII digits here, so its parse cannot fail.
+                let (trillions, rest) = integer.split_at(integer.len() - BELOW_TRILLION);
+                let rest = rest.parse::<u64>().unwrap_or(0);
+                let mut text = self.digits(trillions);
+                text.push(style.myriads[2]);
+                if rest > 0 {
+                    if style.zero_in_gap && rest < 100_000_000_000 {
+                        text.push(style.digits[0]);
+                    }
+                    text.push_str(&style.spell(rest));
+                }
+                text
             }
             _ => self.digits(integer),
         };
@@ -316,6 +332,47 @@ mod tests {
         assert_eq!(
             Numerals::from_byte(31).number("2400000000000"),
             "贰兆肆仟亿"
+        );
+    }
+
+    #[test]
+    fn spells_trillions_with_zhao() {
+        // probes/t3718-cjk-numeral-unprobed rows 17-20 (`[s]` of 1E8, 1E9, 1E15; `[h]` of 1E11).
+        let japanese = Numerals::from_byte(27);
+        assert_eq!(japanese.number("8640000000000"), "八兆六千四百億");
+        assert_eq!(japanese.number("86400000000000"), "八十六兆四千億");
+        assert_eq!(japanese.number("2400000000000"), "二兆四千億");
+        assert_eq!(
+            japanese.number("86400000000000000000"),
+            "八六四〇〇〇〇〇兆"
+        );
+        assert_eq!(
+            Numerals::from_byte(28).number("8640000000000"),
+            "八兆六阡四百億"
+        );
+        assert_eq!(
+            Numerals::from_byte(30).number("86400000000000"),
+            "八十六兆四千亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("8640000000000"),
+            "捌兆陆仟肆佰亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("86400000000000000000"),
+            "捌陆肆零零零零零兆"
+        );
+        // Rows 21-25: the cut at 10^16 and a nonzero rest below 兆.
+        assert_eq!(japanese.number("8640000000000000"), "八千六百四十兆");
+        assert_eq!(japanese.number("10368000000000000"), "一〇三六八兆");
+        assert_eq!(japanese.number("10666080000000000"), "一〇六六六兆八百億");
+        assert_eq!(
+            Numerals::from_byte(30).number("10666080000000000"),
+            "一○六六六兆○八百亿"
+        );
+        assert_eq!(
+            Numerals::from_byte(31).number("10666080000000000"),
+            "壹零陆陆陆兆零捌佰亿"
         );
     }
 
