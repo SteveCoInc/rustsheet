@@ -3,7 +3,7 @@ id: T-4401
 title: "PIVOTBY column subtotals on intransitive runs: a class no record reached holds every record of the line"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
