@@ -3,7 +3,7 @@ id: T-4299
 title: "T-4288 follow-ups: probe the typed _xlpm. extrapolations; saturating corner order; refusal docs"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
