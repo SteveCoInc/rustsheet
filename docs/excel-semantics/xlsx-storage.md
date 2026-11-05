@@ -76,20 +76,21 @@ crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`)
 ## Password-protected and non-zip packages
 Rule (Excel): a password-protected xlsx is an OLE compound file (signature `D0 CF 11 E0 A1 B1 1A E1`) holding an
 ECMA-376 `EncryptedPackage`, not a zip. Excel asks for the password and then opens it. UNVERIFIED (probe pending,
-T-4243): no oracle run has opened the two poi fixtures with their passwords (POI's own tests publish passtika's). Excel
+T-4263): no oracle run has opened the two poi fixtures with their passwords (POI's own tests publish passtika's). Excel
 also opens a legacy binary workbook (`.xls`, the same container) without a password.
 Ours: a file that starts with that signature is refused before the zip is opened, with `XlsxError::OleCompoundFile`
 ("the file is an OLE compound file (a password-protected or legacy binary workbook), not an xlsx package"). That is
-a known gap, not a deviation (decision 0279). T-4243 specs the password on the load API, the decryption and the
-`.xls` plan. Any other file that is not a zip stays a zip error.
+a known gap, not a deviation (decision 0279). SPEC-0031 (T-4243) plans the close: a password on the load
+API, ECMA-376 Agile and Standard decryption (T-4264 to T-4267) and the `.xls` plan, which waits on an owner ruling
+(T-4268). Any other file that is not a zip stays a zip error.
 - poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`) are refused this
-  way. Their baseline lines stay `!InvalidCase` (now with the typed message), owned by T-4243.
+  way. Their baseline lines stay `!InvalidCase` (now with the typed message), owned by T-4267.
 - poi `deep-data.xlsx` is a corrupt package (17 local headers with garbled names, no end-of-central-directory record),
   not an encrypted one: it stays refused as a zip error (T-0489).
-Status: UNVERIFIED (probe pending); known gap owned by T-4243.
+Status: UNVERIFIED (probe pending, T-4263); known gap owned by T-4264 to T-4267 (SPEC-0031).
 Implemented in: `Package::new`, `is_ole_compound_file` (crates/rustsheet-xlsx/src/import/package.rs),
 `XlsxError::OleCompoundFile` (error.rs); the eval snapshot reader (crates/rustsheet-eval/src/xlsx_snapshot.rs).
-Tasks: T-3972, T-4243
+Tasks: T-3972, T-4243, T-4263, T-4264, T-4265, T-4266, T-4267, T-4268
 
 ## A workbook whose indices dangle is refused outright
 Rule: `Model::from_workbook`, which every load ends in (xlsx import, `Model::from_bytes`,
