@@ -3,7 +3,7 @@ id: T-4258
 title: "Collation: where a leading iteration or long-vowel mark sorts against the plane-2 ideographs (M2 exit cells t3465-collation-holdout C313, D313)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P0
 size: S
 tier: opus
