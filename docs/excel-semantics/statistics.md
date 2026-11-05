@@ -2872,7 +2872,8 @@ forms, still on `incomplete_beta.rs` (T-2847).
   suites or probes-numeric. "Near the math" holds for the x29 region only: in probes-numeric/t2464-w2f-unit-shape
   (a just below 1, x = 0.1, b = 2.5 or 5) the new values are up to 29 ulp from the math, where the old ones were up to
   7. Excel itself is up to 26 ulp off the math there and the new values track it: 6 cells are newly within 15 digits and
-  several are bit-exact.
+  several are bit-exact. Cell examples: A227 (ours 29.5 ulp below the math, Excel 17.3 below) and A211 (Excel 25.6 below,
+  ours 13.4 below).
 Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and argument forms; each branch's
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
