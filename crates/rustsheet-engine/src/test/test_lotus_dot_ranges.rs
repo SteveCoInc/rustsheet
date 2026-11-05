@@ -42,6 +42,10 @@ fn dotted_ranges_read_and_print_as_colon_ranges() {
         ("=SUM(A1 ..B2)", "=SUM(A1:B2)", "15"),
         ("=SUM(a1.. b2)", "=SUM(A1:B2)", "15"),
         ("=SUM(A1\n.B2)", "=SUM(A1:B2)", "15"),
+        // Whitespace after the dots on a line feed or a `$` cell (probes/t4284-lotus-dot-ws-after-*, T-4284).
+        ("=SUM(A1.\nB2)", "=SUM(A1:B2)", "15"),
+        ("=SUM($A$1. B2)", "=SUM($A$1:B2)", "15"),
+        ("=SUM(A$1.. B2)", "=SUM(A$1:B2)", "15"),
         ("=ROWS(A1. B2)", "=ROWS(A1:B2)", "2"),
         ("=ISREF(A1.. B2)", "=ISREF(A1:B2)", "TRUE"),
         ("=SUM(Data!A1.B2)", "=SUM(Data!A1:B2)", "30"),
@@ -63,6 +67,26 @@ fn dotted_ranges_read_and_print_as_colon_ranges() {
             assert_eq!(m._get_text(&cell), *value, "{formula}");
         }
     }
+}
+
+// T-4271 fallback: no second cell after the dots restores the lexer position. Excel refuses `A1. 5` at load
+// (`FileCorruptTryRepair`, so no oracle case); ours keeps the pre-T-4271 reading.
+#[test]
+fn dots_and_whitespace_without_a_second_cell_keep_the_old_reading() {
+    let mut model = model_with_values();
+    for (cell, formula) in [
+        ("F1", "=SUM(A1. 5)"),
+        ("F2", "=SUM(A1. )"),
+        ("F3", "=A1. +1"),
+    ] {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    assert_eq!(model._get_text("F1"), "#ERROR!");
+    // `A1.` stays a name here, so the trailing-dot forms are #NAME? (the task text expected #ERROR!).
+    assert_eq!(model._get_text("F2"), "#NAME?");
+    assert_eq!(model._get_text("F3"), "#NAME?");
+    assert_eq!(model._get_formula("F3"), "=A1. +1");
 }
 
 // probes/lotus-dot-range-{column,column-dotdot,number,offgrid,trailing-letter,name-second}:
