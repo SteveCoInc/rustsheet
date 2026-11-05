@@ -3,7 +3,7 @@ id: T-4408
 title: "WORKDAY and NETWORKDAYS holiday given as text returned by a formula directly as the argument: probe it"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,11 +30,14 @@ ours matches every cell.
   and 13).
 
 ## Acceptance criteria
-- [ ] A probe case `probes/t4408-holiday-formula-text` is committed with its excel-graph oracle sidecar.
-- [ ] Every probe cell passes, or each visibly-off cell has an owner task.
-- [ ] dates.md states the rule for formula-returned text and cites the cells. That includes whether it is a scalar
+- [x] A probe case `probes/t4408-holiday-formula-text` is committed with its excel-graph oracle sidecar.
+- [x] Every probe cell passes, or each visibly-off cell has an owner task.
+- [x] dates.md states the rule for formula-returned text and cites the cells. That includes whether it is a scalar
       holiday for NETWORKDAYS.INTL's weekend rule.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Text literals, cells, arrays and ranges (T-4397).
+
+## Outcome
+Added probes/t4408-holiday-formula-text (120 cells: six function forms x four formula-text forms x Thu/Sat, plus number controls and ERROR.TYPE twins) with its excel-graph sidecar; generator in docs/research/t4408/gen_probe.py. All 120 cells already pass, so no engine change and no follow-up task. dates.md records the rule: formula-returned text reads like the serial it spells and is a scalar holiday for NETWORKDAYS.INTL's weekend rule. Eval delta: +120 passing probe cells, no regressions.
