@@ -3,7 +3,7 @@ id: T-4269
 title: "DateGroups: probe seconds, minutes and negative number items; harden the type (T-4246 review follow-ups)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
