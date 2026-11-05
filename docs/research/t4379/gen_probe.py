@@ -25,24 +25,25 @@ _spec.loader.exec_module(t4241)
 
 OUT = "eval/suites/probes/cases/t4379-pivotby-repeated-unreached-leaf.case.json"
 
-# (run, p/q per row): B6 first, then variants.
-RUNS = [
-    ("Cx Ay Ax Bx Ax", "qqppq"),  # t4358 B6
-    ("Cx Ay Ax Bx", "qqpp"),  # B6 without its last Ax
-    ("Cx Ay Bx Ax", "qqpq"),  # B6 without its first Ax
-    ("Cx Ay Bx", "qqp"),  # B6 without the Ax rows UNIQUE drops
-    ("Cx Ay Bx Ax Ax", "qqppq"),  # B6's Ax rows after Bx
-    ("Ax Cx Ay Bx Ax", "pqqpq"),  # an Ax first
-    ("Cx Ay Cx Bx Cx", "qqppq"),  # B6 with its Ax rows as Cx
-    ("Cx Ay Ax Bx Cx", "qqppq"),  # B6 with its last Ax as Cx
-    ("Cx Ay Ax Bx Bx", "qqppq"),  # B6 with its last Ax as Bx
-    ("Cx Ay Ax Ax Bx", "qqppq"),  # B6 with Bx last
-    ("Cx Ax Ay Bx Ax", "qpqpq"),  # B6 with rows 2 and 3 swapped
-    ("Cx Cx Bx Ay Bx", "qpqqq"),  # t4344 D39: the repeated leaf shown
-    ("Cx Ax Cx Ay Bx", "qpqqq"),  # t4358 B11: shown, with an Ax row
-    ("Cx Ay Bx Bx", "qqpq"),  # D39-like without the second Cx
-    ("Cx Cx Ay Bx", "qpqq"),  # D39 reordered
-]
+# One run per line: the keys, p/q per row, and why it is here. B6 first, then variants.
+_RUNS_TEXT = """
+Cx Ay Ax Bx Ax | qqppq | t4358 B6
+Cx Ay Ax Bx | qqpp | B6 without its last Ax
+Cx Ay Bx Ax | qqpq | B6 without its first Ax
+Cx Ay Bx | qqp | B6 without the Ax rows UNIQUE drops
+Cx Ay Bx Ax Ax | qqppq | B6's Ax rows after Bx
+Ax Cx Ay Bx Ax | pqqpq | an Ax first
+Cx Ay Cx Bx Cx | qqppq | B6 with its Ax rows as Cx
+Cx Ay Ax Bx Cx | qqppq | B6 with its last Ax as Cx
+Cx Ay Ax Bx Bx | qqppq | B6 with its last Ax as Bx
+Cx Ay Ax Ax Bx | qqppq | B6 with Bx last
+Cx Ax Ay Bx Ax | qpqpq | B6 with rows 2 and 3 swapped
+Cx Cx Bx Ay Bx | qpqqq | t4344 D39: the repeated leaf shown
+Cx Ax Cx Ay Bx | qpqqq | t4358 B11: shown, with an Ax row
+Cx Ay Bx Bx | qqpq | D39-like without the second Cx
+Cx Cx Ay Bx | qpqq | D39 reordered
+"""
+RUNS = [tuple(part.strip() for part in line.split("|")[:2]) for line in _RUNS_TEXT.strip().splitlines()]
 
 
 def main() -> None:
