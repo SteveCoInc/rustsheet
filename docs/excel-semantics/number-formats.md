@@ -404,17 +404,25 @@ Below serial 1, and the counts:
   while `TEXT(20.65/86400,"[s].0")` stays "20.6". The seconds field does not carry with them: when `r15` reaches 1
   the digits wrap to zeros, so `TEXT(41.95/86400-2*2^-64,"[s].0")` is "41.0" (probes/t4370-ulp-map-2 A417; the
   same split T-4333's ulp scan saw at `3733.95/86400+1*2^-57` "3733.0"; both are excel-graph only and decided
-  within an ulp, under decision 0188 R4.4's web-vs-desktop floor, so T-4389 confirms them on excel-desktop). The ulp maps probes/t4370-ulp-map and
+  within an ulp, under decision 0188 R4.4's web-vs-desktop floor: they rest on excel-graph alone until excel-desktop is
+  available, M14 Phase 4, decision 0039). The ulp maps probes/t4370-ulp-map and
   t4370-ulp-map-2 step 70 ties up to 64 ulp around their serial: the flip depends on the serial only, not on the
   format, and lands within an ulp of the model's. The model scores 743 of the 746 cells of the six t4323/t4332
   fraction cases (the cut's own digits 706; the three misses are `[s]` counts), 739 of the 802 ulp-map cells (554),
   and 120 of 120 on probes/t4370-fraction-fresh, generated after it was frozen (the cut's digits 54; excel-graph
   2026-11-05; docs/research/t4370/model.py). From serial 1 up it prints what the cut prints on every probed cell.
-  Not settled: `.000` on a remainder below about 0.06 s rounds up further than the 15th digit allows, as if 1.6E-17
-  to 1.9E-17 s were added: `TEXT(0.0045/86400-36*2^-77,"[h]:mm:ss.000")` is "0:00:00.005" (r is 2.2E-17 below
-  0.005), at -40 ulp ".004" (2.3E-17 below); `.0` and `.00` show no such offset (`TEXT(0.005/86400-8*2^-77,"s.00")`
-  ".01", -12 ulp ".00", 0.45 and 0.68 units of the 15th digit below). The engine's 62 ulp-map misses are all of
-  this kind (T-4389).
+  Under `.000` only, the serial is cut as if 2^-72 days (1.83E-17 s) were added after the half step (T-4389), so a
+  tie up to about 1.8E-17 s below rounds up: `TEXT(0.0045/86400-36*2^-77,"[h]:mm:ss.000")` is "0:00:00.005", at
+  -40 ulp ".004" (t4370-ulp-map-2 A76, A75). The offset is in the serial, not in the seconds: once the serial's ulp
+  exceeds it (from 2^-19 days, about 0.16 s) it rounds away, and the 31 cells of probes/t4389-holdout after whole
+  seconds that tell the two apart all follow the serial (`TEXT(5.0605/86400-2^-67,"[h]:mm:ss.000")` "0:00:05.060",
+  A272). `.0` and `.00` show no offset (`TEXT(0.005/86400-8*2^-77,"s.00")` ".01", -12 ulp ".00", 0.45 and 0.68 units
+  of the 15th digit below). The constant is FITTED: every offset from 1.74E-17 to 1.86E-17 s scores all 538 `.000`
+  cells of the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside that window; no
+  operation that would produce it was found (T-4370's refuted list, docs/research/t4370/README.md). Hold-out
+  probes/t4389-holdout 368 of 368 (T-4370's model 337, the correctly rounded value 81); fresh sweep
+  probes/t4389-fraction-fresh, drawn after the freeze, 120 of 120 (42 and 39); excel-graph 2026-11-05,
+  docs/research/t4389. Implemented in `millisecond_offset` (formatter/elapsed.rs).
 - The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
   tie just short of a whole minute or hour carries in neither the count nor the clock:
   `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",

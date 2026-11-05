@@ -237,6 +237,39 @@ fn fraction_digits_read_the_remainder_at_fifteen_digits() {
     }
 }
 
+/// Under `.000` the serial is cut as if 2^-72 days were added after the half step, so a tie up to
+/// about 1.8E-17 s below rounds up; past 2^-19 days the addition rounds away, and `.00` has no
+/// offset (probes/t4370-ulp-map-2 A76, A75, t4389-holdout A272; T-4389).
+#[test]
+fn millisecond_ties_take_the_serial_offset() {
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (
+            0.0045 / 86400.0 - 36.0 * 2f64.powi(-77),
+            "[h]:mm:ss.000",
+            "0:00:00.005",
+        ),
+        (
+            0.0045 / 86400.0 - 40.0 * 2f64.powi(-77),
+            "[h]:mm:ss.000",
+            "0:00:00.004",
+        ),
+        (
+            5.0605 / 86400.0 - 2f64.powi(-67),
+            "[h]:mm:ss.000",
+            "0:00:05.060",
+        ),
+        (0.005 / 86400.0 - 12.0 * 2f64.powi(-77), "s.00", "0.00"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_number(value, format, &ctx).text,
+            expected,
+            "{value:e} {format}"
+        );
+    }
+}
+
 // probes/t4295-elapsed-with-month A1, D1, K1 (excel-graph): `[s]` before an hour or minute token
 // hands it the elapsed count, counted from the date section's register (18.5 days on 1h42m18s).
 #[test]
