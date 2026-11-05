@@ -10,7 +10,7 @@ from typing import Any
 import mpmath
 import pytest
 
-from rustsheet_tools.accuracy import eval_math
+from rustsheet_tools.accuracy import composite, eval_math
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
 from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
@@ -245,3 +245,45 @@ def test_a_timeout_fails_the_run_and_keeps_the_sidecar_a_drop_does_not(
     data = json.loads(math_path(sidecar).read_text())
     assert data["sheets"] == {}
     assert data["skipped"] == {"S": {"A1": {"f": "=T.DIST(1.5,3,TRUE)", "why": "not converged"}}}
+
+
+def test_composite_cells_take_the_outer_math_at_the_inner_doubles(tmp_path: Path) -> None:
+    """T-3993, decision 0297: a nested call and a difference of calls of defined functions get the
+    outer node's math at the doubles the inner nodes round to; an undefined function is skipped."""
+    cells = {
+        "A1": "=T.INV(T.DIST(1.5,3,TRUE),3)",  # a nested call
+        "A2": "=T.DIST(2,3,TRUE)-T.DIST(1.5,3,TRUE)",  # a difference of two calls
+        "A3": "=T.INV(LEN(1),3)",  # LEN has no definition: skipped with its name
+        "A4": "=-T.DIST(1.5,3,TRUE)*2+(1+1)",  # a sign, a product and a call-free part
+        "A5": '=T.DIST(1.5,3,TRUE)&"x"',  # `&` is not read: not a candidate
+    }
+    oracle = {a: {"t": "n", "v": 0.5} for a in cells}
+    case, sidecar = _case(tmp_path, cells, oracle)
+    math = case_math("t/c.case.json", case, sidecar)
+    got = math.cells["S"]
+    assert set(got) == {"A1", "A2", "A4"}
+    assert math.skipped == {"no definition for LEN": 1}
+    with mpmath.workdps(80):
+        inner = mpmath.mpf(float(cdf(mpmath.mpf(1.5), mpmath.mpf(3))))  # the inner call's double
+        nested = T_INV.evaluate([inner, mpmath.mpf(3)])
+        assert abs(mpmath.mpf(got["A1"]["v"]) - nested) < mpmath.mpf("1e-45") * nested
+        # the inner rounding is part of the reference: not the exact composition 1.5
+        assert abs(mpmath.mpf(got["A1"]["v"]) - mpmath.mpf(1.5)) > mpmath.mpf("1e-30")
+        diff = mpmath.mpf(float(cdf(mpmath.mpf(2), mpmath.mpf(3)))) - inner
+        assert abs(mpmath.mpf(got["A2"]["v"]) - diff) < mpmath.mpf("1e-45") * diff
+        assert abs(mpmath.mpf(got["A4"]["v"]) - (2 - 2 * inner)) < mpmath.mpf("1e-45")
+    assert got["A2"]["f"] == cells["A2"]
+
+
+def test_composite_exact_composition_is_the_unrounded_value() -> None:
+    """Option (a), kept for decision 0297's scoring: no inner rounding."""
+    book = eval_math.LiteralBook(sheets={"S": {}}, oracle={})
+    tree = composite.parse("=T.INV(T.DIST(1.5,3,TRUE),3)", "S", book, eval_math.fit_arg)
+    assert tree is not None and tree.root is not None
+    exact = composite.compute(tree.root, rounded=False)
+    assert exact.value is not None
+    assert abs(mpmath.mpf(exact.value) - mpmath.mpf(1.5)) < mpmath.mpf("1e-45")
+    assert (
+        composite.parse("=T.INV(0.5,3)*T.INV(0.5,3)^2", "S", book, eval_math.fit_arg) is None
+    )  # `^` of a call
+    assert composite.parse("=1+2", "S", book, eval_math.fit_arg) is None  # no call
