@@ -3,7 +3,7 @@ id: T-4270
 title: "Probe the C1 controls U+0082-U+008F and U+0091-U+009D in the collation and weigh them as Excel does (code-point order is an engine guess)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
