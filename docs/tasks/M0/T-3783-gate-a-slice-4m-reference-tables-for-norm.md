@@ -3,7 +3,7 @@ id: T-3783
 title: "Gate A slice 4m: reference tables for NORM.DIST, NORM.S.DIST, NORM.INV, NORM.S.INV, PHI and GAUSS"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
