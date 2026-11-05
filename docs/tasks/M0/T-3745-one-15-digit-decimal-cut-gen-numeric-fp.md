@@ -3,7 +3,7 @@ id: T-3745
 title: "One 15-digit decimal cut: gen numeric_fp _cut calls accuracy literal decimal15"
 milestone: M0
 lane: quality
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -27,3 +27,8 @@ One definition of "a double's exact decimal cut to 15 significant digits" in too
 
 ## Out of scope
 - Changing any rounding mode.
+
+## Outcome
+`literal.decimal15(x, rounding=ROUND_HALF_EVEN)` is the one 15-digit cut; `gen/numeric_fp._cut` and
+its unused `SIG_DIGITS` are gone and `_cut_tags`/`_boundary_pairs` call it. Outputs unchanged;
+`tests/test_accuracy_literal.py` covers both rounding modes. No eval delta.
