@@ -3,7 +3,7 @@ id: T-4345
 title: "POISSON.DIST's cdf below the 1.3a window cut (x/a 1 to 1.3), after T-4322"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -46,3 +46,15 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 
 ## Out of scope
 - CHISQ.DIST.RT's cells (T-4346, T-4320).
+
+## Outcome
+No model reproduces Excel below 1.3a; the rejected ones and their scores are in statistics.md (the T-4345
+paragraph), from docs/research/t4345/score.py. The split was fixed before scoring: train is the 9 T-4322 fit cells
+below the cut, hold-out the 9 fresh cells t4322 A8:C10. 14 models were scored: Cephes' continued fraction in
+doubles with four prefactors, Temme's erfc leading term with four exponents, SciPy's `gammaincc` (Cephes igamc
+with its Temme series), and three pmf sums. None is bit-exact on more than 1 of 9 hold-out cells, and none is
+closer than the correctly rounded Q on both splits. No candidate was taken, so no fresh sweep was drawn and there
+is no `FITTED` tag. The window form's residue is not Cephes' continued fraction in doubles (47/57 fresh within 4
+ulp, against 51/57 with the exact fraction). The engine is unchanged, so the eval delta is none. Follow-up T-4357
+probes GAMMA.DIST (cdf and density), the pmf and ERFC.PRECISE at these points, and takes over the visibly-off
+cells this task owned.
