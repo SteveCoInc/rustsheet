@@ -3,7 +3,7 @@ id: T-4399
 title: "Probe 15-digit ordering criteria in AVERAGEIF, AVERAGEIFS, MINIFS, MAXIFS and the D-functions (only COUNTIF, SUMIF, COUNTIFS and SUMIFS have cells)"
 milestone: M9
 lane: functions-criteria
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -44,15 +44,18 @@ Probe (excel-probe skill, excel-graph, tag M9), probes/t4399-criteria-near-equal
   criteria texts, one criteria range per row.
 
 ## Acceptance criteria
-- [ ] probes/t4399-criteria-near-equal-others is committed with excel-graph oracle values.
-- [ ] Every cell passes, or each cell ours gets wrong is fixed here (a small change in the shared matcher's caller in
+- [x] probes/t4399-criteria-near-equal-others is committed with excel-graph oracle values.
+- [x] Every cell passes, or each cell ours gets wrong is fixed here (a small change in the shared matcher's caller in
       functions/criteria.rs, functions/statistical/if_ifs.rs or functions/database.rs, with a unit test) or owned by
       a new functions-criteria task filed with `make new-task` that names the case and cells
       (`campaign: semantics`, with a `## Visible-parity stage` section).
-- [ ] criteria.md's "no oracle cell near a rounding boundary yet" sentence is replaced by the probed result, citing
+- [x] criteria.md's "no oracle cell near a rounding boundary yet" sentence is replaced by the probed result, citing
       the cells; numbers.md's entry names the new functions.
-- [ ] `make eval-baseline` records no regression; `make check` green; reviewers approve.
+- [x] `make eval-baseline` records no regression; `make check` green; reviewers approve.
 
 ## Out of scope
 - Text ordering criteria and dotted dates (criteria.md, their own entries).
 - The `=` and `<>` rule of the operators outside criteria (numbers.md "Comparison tolerance").
+
+## Outcome
+Probes/t4399-criteria-near-equal-others (379 cells, excel-graph) added; every cell matches ours, so no engine change was needed. criteria.md and numbers.md now cite it. Eval delta: +379 bit-exact probe cells, no regressions.

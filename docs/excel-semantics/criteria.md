@@ -200,8 +200,9 @@ operators compare at 15 digits too".
 Status: VERIFIED
 Implemented in: `result_is_less_than_number` and the other three ordering matchers (functions/criteria.rs), on
 `cmp_excel_precision`, and in the indexed *IFS cache (`number_interval`, functions/statistical/ifs_cache.rs).
-AVERAGEIF(S), MINIFS/MAXIFS and the D-functions share these matchers but have no oracle cell near a rounding
-boundary yet. Tasks: T-3084, T-3103
+AVERAGEIF(S), MINIFS/MAXIFS and DCOUNT/DSUM/DAVERAGE/DMIN/DMAX share these matchers and agree: probes/t4399-criteria-near-equal-others
+(excel-graph, 2026-11-05, 379 cells, all bit-exact with ours) runs the same twelve boundary values with all six criteria
+over one-cell and whole ranges and over a database with one criteria range per criterion. Tasks: T-3084, T-3103, T-4399
 
 ## Text `<=` / `>=` criteria, and dotted dates are text in en-US
 Rule: `"<=text"` and `">=text"` compare the cell text with the operand, case-insensitively, like
