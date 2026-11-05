@@ -3,7 +3,7 @@ id: T-4385
 title: "Salvage draft PR #3105's CUMPRINC underflow probes and T-4059 task onto main"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
