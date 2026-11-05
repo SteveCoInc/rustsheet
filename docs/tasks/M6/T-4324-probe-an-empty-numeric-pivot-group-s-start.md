@@ -3,7 +3,7 @@ id: T-4324
 title: "Probe an empty numeric pivot group's start and end items under showAll, and share the unused-item checks (T-4311 review follow-ups)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
