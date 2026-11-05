@@ -181,39 +181,61 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`.
 - GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
   not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
-  rendered label cell works, and an array of labels lifts. A **number** item picks the group whose lower bound equals it,
+  rendered label cell works, and an array of labels lifts. A **number** item picks the group whose bound equals it,
   within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
-  1.3000000000000003 from 1; 3 by 3), and `endNum` itself picks the `>end` item (1 gives the `>1` total); a number
-  inside a group but not its lower bound (0.35, 4), a number inside the `<start` group (-0.5), TRUE, an omitted item and
-  `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
-- Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
-  `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
-  lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
-- Relabel order (T-4253): the file's items whose text is one of Excel's labels come first, in the file's order, then
-  Excel's other labels in layout order. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
+  1.3000000000000003 from 1; 3 by 3): an inner group's lower bound, `start - interval` for the `<start` item and the
+  `>` label's bound for the `>end` item (1 gives the `>1` total). A number inside a group but not its lower bound (0.35,
+  4), TRUE, an omitted item and `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
+- Quirk (T-4249): GETPIVOTDATA's number rule is truncation toward zero. With q the 15-digit quotient and k = q truncated
+  toward zero, the number matches item k when q is not above k: k = -1 is `<start`, 0 to n - 1 the inner groups and n
+  `>end`; anything else is `#REF!`. So a positive q must be whole, but a negative one truncates up: by 3 from 0, -1, -2,
+  -1.5 and -0.000001 give the `0-3` total, -2.9999999999999996, -3, -3.5 and -4.5 the `<0` total, and -6 is `#REF!`
+  (and -0.5 by 0.1 from 0 is `#REF!`, q -5). A number past `endNum` is `#REF!` unless it is the `>` bound: from 0 to
+  10 by 3, 12 is `>12` and 10, 11 and 15 are `#REF!`, 9 and 9.000000000000002 are `9-12`; from 0 to 9, 9 and
+  8.999999999999998 (q rounds to 3) are `>9`, 8.9999999999999 is `#REF!`.
+- Quirk: Excel writes its **own labels whatever the `<groupItems>` list says**, of any length (one, two too long, one
+  or two short) and of the layout's own length too: a list of five wrong texts for 0 to 9 by 3 shows `<0`, `0-3`,
+  `3-6`, `6-9`, `>9`, and a right-length list with `>10` for 0 to 10 by 3 shows `>12`. GETPIVOTDATA on a file label
+  that is not one of Excel's is `#REF!`. (T-4228 saw it first as a list one item too long, 6 items for 0 to 9 by 3,
+  shown as `<0`, `>9`, `0-3`, `3-6`, `6-9`.)
+- Layout (T-4249): a span that is not a whole number of intervals gets `ceil` inner groups and the `>` label names the
+  last inner group's upper bound, not `endNum`, while records still split at `endNum`: 0 to 10 by 3 shows `<0`, `0-3`,
+  `3-6`, `6-9`, `9-12`, `>12`, with 10 in `9-12` and 10.000000000000002, 11 and 12 in `>12`; 0 to 9 by 2.5 ends
+  `7.5-10`, `>10`.
+- Whole-number labels (T-4249): when every value of the base field, `startNum` and `groupInterval` are whole numbers,
+  an inner group reads `lo-(lo + interval - 1)` and the last one ends at `endNum` when that is larger: 0 to 9 by 3
+  over whole data is `0-2`, `3-5`, `6-9`; 0 to 10 by 3 is `0-2`, `3-5`, `6-8`, `9-11`, `>12`. One value that is not
+  whole (2.5, 8.999999999999998) gives the `lo-(lo + interval)` labels below; so do whole data by 2.5 (`0-2.5`, ...)
+  or from 0.5 by 3 (`<0.5`, `0.5-3.5`, ..., `>9.5`).
+- Relabel order (T-4253, T-4249): the file's items whose text is one of Excel's labels come first, in the file's order,
+  then Excel's other labels in layout order. Excel's five labels for 0 to 9 by 3 listed as `<0`, `3-6`, `0-3`, `>9`,
+  `6-9` keep that order; a list one short (`<0`, `0-3`, `3-6`, `>9` over whole data, whose labels are `0-2` ...) shows
+  `<0`, `>9`, `0-2`, `3-5`, `6-9`; two too long (`<0`, `0-2`, `3-5`, `6-8`, `9-11`, `12-14`, `>9`) shows `<0`, `0-2`,
+  `3-5`, `>9`, `6-9`. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
   the 12 of 0 to 1 by 0.1, all wrong text (`w0`, ...), the order is the layout's; with only `>1` (last) it is `>1`,
   `<0`, `0-0.1`, ...; with only `0.5-0.6` (item 3), `0.5-0.6`, `<0`, `0-0.1`, ... (not the file position); with `>1` first and `<0` last, `>1`, `<0`, ...; with `0.7-0.8` (item 2) and `0.2-0.3` (item 5),
   `0.7-0.8`, `0.2-0.3`, `<0`, `0-0.1`, ...; `<0` alone, first or at item 11, and Excel's 12 labels plus one extra keep
   the layout order. The match is on the whole text; its case and spacing, a label the file lists twice (the engine takes its first) and a
-  non-text item (the engine skips it) are UNVERIFIED (T-4249).
-- Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound start + k * interval rounded to 15
+  non-text item (the engine skips it) are UNVERIFIED (T-4287).
+- Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>` with the last bound (data not all whole), each bound start + k * interval rounded to 15
   significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
   would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
   0.1 from 1.1 `<1.1`, `1.1-1.2`, ..., `2-2.1`, `>2.1`, by 0.25 from -1 `<-1`, `-1--0.75`, ..., `-0.25-0`, `0-0.25`, by
   12345678901.2 `49382715604.8-61728394506`, as text coercion writes each number (numbers.md "Number → text
   conversion", `number_to_text`). A bound of 1e15 or more, below 1e-5 or at a 15-digit tie, where that rule's other
-  branches would show, is UNVERIFIED (T-4249).
+  branches would show, is UNVERIFIED (T-4287).
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
 powers of two, so each group's sum names its records; probes/t4253-pivot-decimal-relabel and
 probes/t4253-pivot-relabel-order (excel-graph, 2026-11-05, T-4253): eight relabeled decimal groupings each and the
-rendered labels. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253): `NumberGroups`
-groups by the rule, picks a number item by its lower bound, and relabels a list of the wrong length with its own
-labels in the relabel order above (`NumberGroups::new`, `labels`). UNVERIFIED (T-4249): a
-list of another wrong length than one too long, the group count of a span that is not a whole number of intervals
-(0 to 10 by 3 counted as four groups), a GETPIVOTDATA number past `endNum` (`#REF!` here) or below it with a
-quotient that rounds to the group count (`>end` here); a group with no record
+rendered labels; probes/t4249-pivot-range-group-edges and probes/t4249-pivot-range-group-labels (excel-graph,
+2026-11-05, T-4249): thirteen pivots over wrong lists, partial spans and whole data, and GETPIVOTDATA number items
+past `endNum` and below `startNum`. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253, T-4249): `NumberGroups`
+groups by the rule, picks a number item by the truncation rule, and always writes its own labels in the relabel order
+above (`NumberGroups::new`, `labels`, `lower_bound_index`). UNVERIFIED (T-4287): whole data with an `endNum` that is
+not whole (the engine ends the last group at `max(lo + interval - 1, end)`), a blank among whole data (kept whole),
+and the T-4253 points above. A group with no record
 is `#REF!` on a numeric range field only (an empty item of an ungrouped field keeps its 0, unprobed). The importer and
 the eval adapter share it (`group_by_numbers`); the adapter has the engine lay a grouped spec pivot out (captions, the
 groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model the fresh sweep
@@ -272,7 +294,7 @@ Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
-Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):

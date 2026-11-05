@@ -206,9 +206,10 @@ impl Model {
         self.shown_group(pivot, position, item)
     }
 
-    /// The group of a numeric range field at axis position `position` of pivot `pivot` whose
-    /// lower bound is `value` ([`crate::pivot::NumberGroups::lower_bound_index`]: probes/t4228-pivot-range-groups
-    /// Calc A35, C30:C46), or of a date-grouped field whose calendar value is `value`'s integer
+    /// The group of a numeric range field at axis position `position` of pivot `pivot` that the
+    /// number `value` names ([`crate::pivot::NumberGroups::lower_bound_index`]:
+    /// probes/t4228-pivot-range-groups Calc A35, C30:C46; probes/t4249-pivot-range-group-labels
+    /// Calc P20:U31), or of a date-grouped field whose calendar value is `value`'s integer
     /// part ([`crate::pivot::DateGroups::number_item`]: probes/t4236-pivot-date-groups-no-blank),
     /// or the date item equal to it on an ungrouped field (probes/t4236-pivot-date-groups);
     /// `None` otherwise, where a number is SPEC-0015 unknown 3. Call
@@ -220,7 +221,7 @@ impl Model {
         value: f64,
     ) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        let item = if let Some(groups) = field.number_groups.as_ref() {
+        let item = if let Some(groups) = &field.number_groups {
             groups.item(groups.lower_bound_index(value)?)
         } else if let Some(groups) = field.date_groups {
             groups.number_item(value)?

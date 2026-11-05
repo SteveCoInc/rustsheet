@@ -125,7 +125,7 @@ pub struct PivotRangeGroup {
 fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
     let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
     Ok(match group.by {
-        None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
+        None => group_by_numbers(field, [group.start, group.end, group.interval], &labels)?,
         Some(by) => {
             // Excel's refresh drops a date grouping over a blank (probes/t4236-pivot-date-groups,
             // web.md): each second-rounded date is its own item.

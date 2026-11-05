@@ -2158,6 +2158,8 @@ C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
 C	probes/t4245-cjk-numeral-past-1e16.case.json	35
 C	probes/t4248-getpivotdata-recordless-item.case.json	10
+C	probes/t4249-pivot-range-group-edges.case.json	252
+C	probes/t4249-pivot-range-group-labels.case.json	212
 C	probes/t4253-pivot-decimal-relabel.case.json	196
 C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4255-gamma-window-exact-ratio.case.json	406
