@@ -1185,8 +1185,35 @@ fn xnpv_first_value_refused_sparse_dates() {
     check_cells(
         &[("A300", "100"), ("XFD20299", "5"), ("XFD20298", "FALSE")],
         &[
-            ("B1", "=XNPV(1,A1:XFD20000,A300:XFD20299)", "#NUM!"),
-            ("B2", "=XNPV(1,A1:XFD19998,A300:XFD20297)", "#VALUE!"),
+            // The formulas sit below both ranges: in B1 and B2 they were inside their own values
+            // range, which the element walk (T-3815) reads cell by cell, a circular reference.
+            ("B30001", "=XNPV(1,A1:XFD20000,A300:XFD20299)", "#NUM!"),
+            ("B30002", "=XNPV(1,A1:XFD19998,A300:XFD20297)", "#VALUE!"),
+        ],
+    );
+}
+
+/// T-3815 review: XNPV's element walk reads only the stored cells, so long sparse ranges cost
+/// their stored cells. A later empty value behind a number is the walk's `#NUM!`
+/// (probes/t3815-xnpv-element-reading rows 28, 39). Behind a first value that is no number the
+/// walk does not run: an error date at the end of a long range leaves the first value's
+/// `#VALUE!` (T-2603; which comes first in Excel is unprobed).
+#[test]
+fn xnpv_walk_reads_stored_cells() {
+    check_cells(
+        &[
+            ("A1", "-100"),
+            ("A2", "30"),
+            ("B1", "39448"),
+            ("B2", "39508"),
+            ("D1", "39448"),
+            ("D1000000", "=NA()"),
+        ],
+        &[
+            ("F1", "=XNPV(0.1,A1:A1000000,B1:B1000000)", "#NUM!"),
+            ("F2", "=XNPV(0.1,C1:C1000000,D1:D1000000)", "#VALUE!"),
+            ("F3", "=XNPV(0.1,A2:A1000001,B1:B1000000)", "#NUM!"),
+            ("F4", "=XNPV(0.1,C2:C1000001,{1;2})", "#NUM!"),
         ],
     );
 }
