@@ -863,15 +863,33 @@ impl Grouping {
     /// counts a row that reached the class but no leaf under it, and not the extra rows of a leaf
     /// no row reaches (probes/t4359-groupby-value-sort-holdout Calc!E, F; T-4359).
     fn subtotal_rows(&self, level: usize, start: usize) -> &[usize] {
-        let field = level.saturating_sub(1);
-        match self
-            .groups
-            .get(start)
-            .and_then(|group| group.cells.get(field))
-        {
-            Some(&class) => self.class_rows(field, class),
+        match self.subtotal_class(level, start) {
+            Some((field, class)) => self.class_rows(field, class),
             None => &[],
         }
+    }
+
+    /// The field and class id of the subtotal of the groups from `start` that share their first
+    /// `level` keys: the class of its last key (`None` when there is no such group).
+    fn subtotal_class(&self, level: usize, start: usize) -> Option<(usize, usize)> {
+        let field = level.saturating_sub(1);
+        self.groups
+            .get(start)
+            .and_then(|group| group.cells.get(field))
+            .map(|&class| (field, class))
+    }
+
+    /// Whether any row's descent reached the class of the subtotal of the groups from `start`
+    /// that share their first `level` keys ([`Grouping::class_rows`]). One none reached holds
+    /// every row, as a leaf no row reaches does (PIVOTBY's level-2 column subtotals,
+    /// probes/t4382-pivotby-intransitive-paths Calc!B31:C42; T-4401).
+    pub(crate) fn subtotal_reached(&self, level: usize, start: usize) -> bool {
+        self.subtotal_class(level, start)
+            .is_some_and(|(field, class)| {
+                self.reached_by
+                    .get(field)
+                    .is_some_and(|classes| classes.contains_key(&class))
+            })
     }
 
     /// The key cells of the subtotal of the groups from `start` that share their first `level`

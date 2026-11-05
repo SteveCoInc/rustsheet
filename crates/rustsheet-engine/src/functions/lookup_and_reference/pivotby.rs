@@ -859,7 +859,14 @@ impl<'a> Grid<'a> {
             // groups' records while `=` is transitive, but on an intransitive run also those that
             // reached the class and then no leaf, and not the extra records of a leaf no record
             // reached (over Bx Cy Cy Ax By of q q q p p the `ab` subtotal of q is `2, 3`, its one
-            // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378).
+            // leaf empty; probes/t4358-pivotby-unreached-column-leaf column D; T-4378). A
+            // subtotal whose class no record reached holds every record of the line, as such a
+            // leaf does: over BxC BxB CyA AxB AxB of p q p q p the level-2 (`ab`&U+00AD,y)
+            // subtotal of p is `1, 3, 5` (probes/t4382-pivotby-intransitive-paths Calc!B31;
+            // T-4401).
+            Slot::Subtotal { level, start, .. } if !self.cols.subtotal_reached(level, start) => {
+                records
+            }
             Slot::Subtotal { level, start, .. } => {
                 let prefix = self.cols.prefix(start, level);
                 self.merged.clear();
