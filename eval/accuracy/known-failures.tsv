@@ -88,13 +88,13 @@ accuracy/IRR/r4-T-3411!Calc!A168	T-3548	conventional series: the engine is #NUM!
 accuracy/IRR/r4-T-3411!Calc!A195	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A208	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A212	T-3548	conventional series: Excel is #NUM! where the engine returns the root
-accuracy/IRR/r4-T-3411!Calc!A213	T-3407	Excel #DIV/0! on a long conventional series; the engine is #NUM!
+accuracy/IRR/r4-T-3411!Calc!A213	T-3900	Excel #DIV/0! on a long conventional series; the engine is #NUM!
 accuracy/IRR/r4-T-3411!Calc!A214	T-3548	conventional series: Excel is #NUM! where the engine returns the root
 accuracy/IRR/r4-T-3411!Calc!A217	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A219	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A230	T-3548	conventional series: Excel is #NUM! where the engine returns the root
-accuracy/IRR/r4-T-3411!Calc!A232	T-3407	Excel #DIV/0! on a long conventional series; the engine is #NUM!
-accuracy/IRR/r4-T-3411!Calc!A233	T-3407	Excel #DIV/0! on a long conventional series; the engine is #NUM!
+accuracy/IRR/r4-T-3411!Calc!A232	T-3900	Excel #DIV/0! on a long conventional series; the engine is #NUM!
+accuracy/IRR/r4-T-3411!Calc!A233	T-3900	Excel #DIV/0! on a long conventional series; the engine is #NUM!
 accuracy/IRR/r4-T-3411!Calc!A234	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A235	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A238	T-3548	conventional series: the engine is #NUM! where Excel returns the root
@@ -115,7 +115,42 @@ accuracy/IRR/r4-T-3411!Calc!A286	T-3408	two flows within 5E-10 of a zero root: t
 accuracy/IRR/r4-T-3411!Calc!A288	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A298	T-3548	conventional series: the engine is #NUM! where Excel returns the root
 accuracy/IRR/r4-T-3411!Calc!A300	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A128	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A167	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A175	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A194	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A199	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A206	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A217	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A220	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A231	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A238	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A244	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A250	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A265	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A269	T-3548	conventional series: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A215	T-3548	conventional series: Excel is #NUM! where the engine returns the root
+accuracy/IRR/r4-T-3407!Calc!A257	T-3548	conventional series: Excel is #NUM! where the engine returns the root
+accuracy/IRR/r4-T-3407!Calc!A263	T-3548	conventional series: Excel is #NUM! where the engine returns the root
+accuracy/IRR/r4-T-3407!Calc!A237	T-3900	long conventional series: Excel #DIV/0!, the engine #NUM!, the math a root
+accuracy/IRR/r4-T-3407!Calc!A283	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A286	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A287	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A288	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A293	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A295	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
+accuracy/IRR/r4-T-3407!Calc!A296	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
 accuracy/T.DIST/e-T-3425!Calc!A90	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/e-T-3425!Calc!A103	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.DIST/e-T-3425!Calc!A116	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/e-T-3425!Calc!A74	T-3363	quantile at df 1E10: the engine is 2.5E-6 off the math; Excel matches it
+accuracy/NEGBINOM.DIST/r4-T-3576!Calc!A125	T-4242	cdf at number_s 1 and p 8E-281: the closed form is 9.4E-8 relative off; Excel matches the math
+accuracy/BINOM.DIST.RANGE/s1!Calc!A85	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 8e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A91	T-3740	range above the mean: the engine's cdf difference is 4e-02 relative off the math; Excel's upper-tail form is 1e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A94	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 6e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A101	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 7e-14 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A107	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 1e-12 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A146	T-3740	range above the mean: the engine's cdf difference is 5e-05 relative off the math; Excel's upper-tail form is 7e-14 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A172	T-3740	range above the mean: the engine's cdf difference is 1e-07 relative off the math; Excel's upper-tail form is 2e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A177	T-3740	range above the mean: the engine's cdf difference is 5e-06 relative off the math; Excel's upper-tail form is 7e-12 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A180	T-3740	range above the mean: the engine's cdf difference is 2e-08 relative off the math; Excel's upper-tail form is 6e-13 off it

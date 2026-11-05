@@ -50,3 +50,25 @@ fn nper_divides_plain_logarithms_with_excels_division() {
     let got = results(&["=NPER(0.2,-1000,-1000,20000)"]);
     assert_eq!(got, [7.827_469_119_589_407_5_f64.to_bits()]);
 }
+
+#[test]
+fn fv_and_pv_round_each_operation_twice() {
+    // probes/t3424-rate-noise-trace A132 and probes/t4146-annuity-twice-rounded A1 to A4: a
+    // cancelling sum where plain doubles miss Excel by ulps (financial.md "FV and PV round each
+    // operation twice", T-4146)
+    let got = results(&[
+        "=FV((2.88607473601363e-05+1.01643953670516e-20),321,-2890484105.96678,934408648396.347,1)",
+        "=FV(5.76548179199485e-07,298,6359423665.24359,-1894944918694.86,0)",
+        "=PV(-3.30989944207756e-05,302,9.02116389318385,-2707.16979461553,1)",
+        "=FV(-1.86397153259747e-05,13,225.530751441347,-2932.5765394558,1)",
+        "=PV(3.3027497091378e-06,47,4639.07463263248,-218078.350264974,0)",
+    ]);
+    let expected = [
+        -10_935_378_180.042_114_f64,
+        3_928.559_082_031_25,
+        -3.641_724_285_483_088_7,
+        0.348_759_002_021_324_7,
+        25.275_031_138_019_653,
+    ];
+    assert_eq!(got, expected.map(f64::to_bits));
+}

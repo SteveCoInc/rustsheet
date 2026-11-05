@@ -1,9 +1,11 @@
 Top Level Methods
 -----------------
 
-This module provides a set of top-level methods for creating and loading
-IronCalc models. All ``locale``, ``tz`` and ``language_id`` parameters default
-to ``"en"``, ``"UTC"`` and ``"en"``.
+The model constructors below live in the deprecated ``rustsheet.legacy`` module
+(``from rustsheet import legacy``), which is removed at the API v1 freeze; use
+``rustsheet.Workbook`` and ``rustsheet.open`` for new code. All ``locale``, ``tz``
+and ``language_id`` parameters default to ``"en"``, ``"UTC"`` and ``"en"``.
+The utilities are in ``rustsheet`` itself.
 
 Creating models (raw API)
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16,15 +18,6 @@ Creating models (raw API)
 
    Loads a workbook from an xlsx file.
 
-.. function:: load_from_icalc(file_name, language_id="en") -> Model
-
-   Loads a workbook from a file in the internal binary ic format.
-
-.. function:: load_from_bytes(bytes, language_id="en") -> Model
-
-   Loads a workbook from bytes in the internal binary ic format (the format
-   produced by ``to_bytes`` and ``save_to_icalc``).
-
 Creating models (user API)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -32,17 +25,13 @@ The :class:`UserModel` constructor and static methods are the idiomatic way:
 
 .. code-block:: python
 
-   model = ic.UserModel("My Workbook")
-   model = ic.UserModel.from_xlsx("book.xlsx")
-   model = ic.UserModel.from_icalc("book.ic")
-   model = ic.UserModel.from_bytes(data)
+   model = legacy.UserModel("My Workbook")
+   model = legacy.UserModel.from_xlsx("book.xlsx")
 
 The equivalent top-level functions are also available:
 
 .. function:: create_user_model(name, locale="en", tz="UTC", language_id="en") -> UserModel
 .. function:: create_user_model_from_xlsx(file_path, locale="en", tz="UTC", language_id="en") -> UserModel
-.. function:: create_user_model_from_icalc(file_name, language_id="en") -> UserModel
-.. function:: create_user_model_from_bytes(bytes, language_id="en") -> UserModel
 
 Utilities
 ^^^^^^^^^

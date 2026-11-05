@@ -108,10 +108,17 @@ fn parse_ascii_typed_number(
 
 /// Whether the denominator of the mixed fraction `text` (already read by `mixed_fraction`) is 10
 /// or more, ignoring leading zeros: `3 1/12` and `3 1/10000` take `# ??/??`, `3 1/9` and
-/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27).
+/// `3 1/002` take `# ?/?` (probes/typed-mixed-fraction-number-format A9-A27); a closing `)` or
+/// space is not part of it (`$(1 1/2)` is `# ?/?`, `$(3 1/12)` `# ??/??`, probes/t4117-currency-
+/// parens A21, A34).
 fn mixed_fraction_denominator_is_wide(text: &str) -> bool {
-    text.rsplit_once('/')
-        .is_some_and(|(_, denominator)| denominator.trim_start_matches('0').len() >= 2)
+    text.rsplit_once('/').is_some_and(|(_, denominator)| {
+        denominator
+            .trim_end_matches([')', ' '])
+            .trim_start_matches('0')
+            .len()
+            >= 2
+    })
 }
 
 /// A bare typed 24-hour clock (no date, no AM/PM) as a time of day with the format Excel gives it:
@@ -479,6 +486,33 @@ fn parse_percent_or_currency(
 
     // check if it is a currency in currencies
     for currency in currencies {
+        // A currency sign before a parenthesised amount is negative: `$(12)`, `$ (12)`, `$( 12 )`
+        // and `$(1,234.5)` are -12, -12, -12 and -1234.5, typed with the `$` accounting format
+        // (decimal digits after the point, even `$(12.0)` and `$(12.)`, give the two-decimal one);
+        // `$(1e3)` takes `0.00E+00`. `$(-12)`, `$((12))`, `$(12`, `$12)`, `(12$)`, `-$(12)` and
+        // `$(12)%` are text. `"€(12)"+0`, VALUE and NUMBERVALUE are -12 while typed `€(12)` is
+        // text, because typed input has no `€` among its currencies (probes/t4117-typed-currency-
+        // paren; ENTERED log docs/research/t4117-typed-currency-paren-2026-11-04.md;
+        // docs/excel-semantics/coercion.md "Currency sign before parentheses").
+        if let Some(inner) = Some(currency)
+            .filter(|c| !c.is_empty())
+            .and_then(|c| value.strip_prefix(c))
+            .map(|rest| rest.trim_start_matches(' '))
+            .and_then(|rest| rest.strip_prefix('('))
+            .and_then(|rest| rest.strip_suffix(')'))
+        {
+            let inner = inner.trim_matches(' ');
+            if inner.starts_with(['-', '+', '(']) {
+                return Err("Cannot parse number".to_string());
+            }
+            let (f, options) = parse_number(inner, decimal_separator, group_separator)?;
+            let format = if options.is_scientific {
+                SCIENTIFIC_FORMAT.to_string()
+            } else {
+                prefix_currency_format(currency, options.decimal_digits > 0)
+            };
+            return Ok(Some((0.0 - f, Some(format))));
+        }
         let prefixed = value
             .strip_prefix(&format!("-{currency}"))
             .map(|p| (p, -1.0))
@@ -598,69 +632,70 @@ fn script_digit(c: char) -> Option<(ScriptDigits, char)> {
 struct ScriptDigits {
     zero: u32,
     locale: &'static str,
-    numerals: &'static str,
+    /// The numeral byte of [`Numerals::from_byte`]; the tag suffix is `{byte:X}00`.
+    numeral_byte: u32,
 }
 
 const SCRIPT_DIGITS: [ScriptDigits; 12] = [
     ScriptDigits {
         zero: 0x0660,
         locale: "ar-SA",
-        numerals: "200",
+        numeral_byte: 2,
     },
     ScriptDigits {
         zero: 0x06F0,
         locale: "ar-SA",
-        numerals: "300",
+        numeral_byte: 3,
     },
     ScriptDigits {
         zero: 0x0966,
         locale: "hi-IN",
-        numerals: "400",
+        numeral_byte: 4,
     },
     ScriptDigits {
         zero: 0x09E6,
         locale: "bn-IN",
-        numerals: "500",
+        numeral_byte: 5,
     },
     ScriptDigits {
         zero: 0x0A66,
         locale: "pa-IN",
-        numerals: "600",
+        numeral_byte: 6,
     },
     ScriptDigits {
         zero: 0x0BE6,
         locale: "ta-IN",
-        numerals: "900",
+        numeral_byte: 9,
     },
     ScriptDigits {
         zero: 0x0C66,
         locale: "te-IN",
-        numerals: "A00",
+        numeral_byte: 10,
     },
     ScriptDigits {
         zero: 0x0E50,
         locale: "th-TH",
-        numerals: "D00",
+        numeral_byte: 13,
     },
     ScriptDigits {
         zero: 0x0ED0,
         locale: "lo-LA",
-        numerals: "E00",
+        numeral_byte: 14,
     },
     ScriptDigits {
         zero: 0x0F20,
         locale: "bo-CN",
-        numerals: "F00",
+        numeral_byte: 15,
     },
     ScriptDigits {
         zero: 0x1040,
         locale: "my-MM",
-        numerals: "1000",
+        numeral_byte: 16,
     },
     ScriptDigits {
         zero: 0x17E0,
         locale: "km-KH",
-        numerals: "1200",
+        numeral_byte: 18,
     },
 ];
 
@@ -698,8 +733,11 @@ fn script_digit_format(
     block: ScriptDigits,
 ) -> Option<String> {
     let ScriptDigits {
-        locale, numerals, ..
+        locale,
+        numeral_byte,
+        ..
     } = block;
+    let numerals = format!("{numeral_byte:X}00");
     let tagged = |code: &str| Some(format!("[$-{locale},{numerals}]{code}"));
     let Some(format) = format else {
         // Excel: `١٢٣٤٥٦٧٨٩٠١٢` is `0.#####E+00` (A20); 11 digits and below unprobed.
@@ -874,5 +912,26 @@ fn parse_number(
                 decimal_digits,
             },
         )),
+    }
+}
+
+#[cfg(test)]
+mod script_digits_table_tests {
+    use super::{ScriptDigits, SCRIPT_DIGITS};
+    use crate::formatter::numerals::Numerals;
+
+    /// `SCRIPT_DIGITS` and `Numerals::from_byte` are one table: each block's numeral byte prints
+    /// that block's own zero (Tamil keeps ASCII `0`, which has no zero digit).
+    #[test]
+    fn script_digits_agree_with_numerals() {
+        for ScriptDigits {
+            zero, numeral_byte, ..
+        } in SCRIPT_DIGITS
+        {
+            match Numerals::from_byte(numeral_byte) {
+                Numerals::Positional { zero: z, .. } => assert_eq!(z, zero, "byte {numeral_byte}"),
+                other => panic!("byte {numeral_byte} is {other:?}"),
+            }
+        }
     }
 }

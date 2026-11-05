@@ -341,8 +341,15 @@ impl Model {
                 reference,
                 ..
             } => self.get_sheet_span_reference(*first_index, *last_index, reference, cell),
-            // A variable holds what it was bound to, a reference included.
-            Node::NamedVariableKind { .. } => self.variable_value(node, cell),
+            // A variable holds what it was bound to, a reference included. The read copies the
+            // bound value, so it is charged here as `evaluate_node_in_context` charges it: every
+            // reader of a LET-bound array (XMATCH, LARGE, COUNTIF, TEXTJOIN, INDEX, ...) pays the
+            // cells it copies, and a LAMBDA cannot repeat the read past the formula's work budget
+            // (SPEC-0024 step 3, T-2805).
+            Node::NamedVariableKind { .. } => {
+                let value = self.variable_value(node, cell);
+                self.charged(value, cell)
+            }
             // A defined name that stands for a reference is that reference, to a single cell as
             // well: `MAX(TextCell)` ignores the text in it (upstream MIN_MAX_extras.xlsx A1-A3).
             Node::DefinedNameKind((name, scope, _)) => {
@@ -2024,7 +2031,9 @@ impl Model {
         Ok(())
     }
 
-    /// Sets an array formula in an area (CSE formula)
+    /// Sets an array formula in an area (CSE formula). The text comes from outside the engine,
+    /// so a padded bare column `T[ Col ]` reads as no column, as [`Model::set_user_input`] reads
+    /// it (T-4023).
     pub fn set_user_array_formula(
         &mut self,
         sheet: u32,
@@ -2032,6 +2041,21 @@ impl Model {
         column: i32,
         width: i32,
         height: i32,
+        value: &str,
+    ) -> Result<(), String> {
+        self.as_external(|model| {
+            model.reenter_array_formula(sheet, (row, column), (width, height), value)
+        })
+    }
+
+    /// [`Model::set_user_array_formula`] for text the engine printed itself (a moved array
+    /// formula, or one a row or column insert re-enters), which reads a padded bare column
+    /// `T[ Col ]` as the column, as [`Model::reenter_printed_input`] does (T-4023).
+    pub(crate) fn reenter_array_formula(
+        &mut self,
+        sheet: u32,
+        (row, column): (i32, i32),
+        (width, height): (i32, i32),
         value: &str,
     ) -> Result<(), String> {
         check_block(row, column, width, height)?;

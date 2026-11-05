@@ -7,9 +7,10 @@ the working precision. Definitions register themselves in `REGISTRY` from `defs/
 
 from __future__ import annotations
 
+import contextlib
 import math
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Literal, TypeAlias
 
@@ -30,6 +31,41 @@ class DomainError(ValueError):
 class NoValueError(ValueError):
     """The point has no single math value to record (an overflow, or several roots with no
     evidenced root choice): the sampler redraws or drops it."""
+
+
+class OverBudgetError(Exception):
+    """A point's math spent more than its work budget (`work_budget`): the generator drops it. The
+    budget counts series terms, not seconds, so the same point is dropped on every machine (T-3680)."""
+
+
+_WORK: dict[str, int | None] = {"spent": 0, "limit": None}
+
+
+@contextlib.contextmanager
+def work_budget(limit: int | None) -> Iterator[None]:
+    """Counts the `spend` calls of the block against `limit` (None: count only)."""
+    saved = dict(_WORK)
+    _WORK.update(spent=0, limit=limit)
+    try:
+        yield
+    finally:
+        _WORK.update(saved)
+
+
+def spend(units: int = 1) -> None:
+    """Spends `units` of the current work budget; OverBudgetError once it is exceeded. A summed
+    expansion calls it once per term, so a slow point stops at the same term everywhere."""
+    spent = (_WORK["spent"] or 0) + units
+    _WORK["spent"] = spent
+    limit = _WORK["limit"]
+    if limit is not None and spent > limit:
+        msg = f"over the work budget of {limit} terms"
+        raise OverBudgetError(msg)
+
+
+def work_spent() -> int:
+    """The units spent so far in the current `work_budget` block."""
+    return _WORK["spent"] or 0
 
 
 @dataclass(frozen=True)
@@ -243,3 +279,34 @@ def solve_log_bracket(f: Callable[[mpmath.mpf], mpmath.mpf], lo: float, hi: floa
     except NoValueError as err:
         msg = f"quantile outside the double range ({err})"
         raise NoValueError(msg) from err
+
+
+def solve_smaller_tail(
+    p: mpmath.mpf,
+    lower_tail: Callable[[mpmath.mpf], mpmath.mpf],
+    upper_tail: Callable[[mpmath.mpf], mpmath.mpf] | None,
+    lo: float,
+    hi: float,
+    *,
+    upper: bool = False,
+) -> mpmath.mpf:
+    """The s in [lo, hi] with tail(e^s) = min(p, 1 - p) for a quantile of probability `p` (0 < p < 1): the smaller
+    tail is solved in log scales, ln tail(e^s) = ln q, so a 1E-300 tail is as well conditioned as the centre.
+    `lower_tail` and `upper_tail` map x = e^s to P(X ≤ x) and P(X > x). With `upper`, `p` is itself an upper-tail
+    probability, Q(x) = p. `upper_tail` may be None for a quantile that only ever solves the lower tail.
+    NoValueError when the root is not in the bracket (see `solve_log_bracket`)."""
+    small = p <= mpmath.mpf(1) / 2
+    lower = small != upper
+    target = mpmath.log(p if small else 1 - p)
+
+    def f(s: mpmath.mpf) -> mpmath.mpf:
+        x = mpmath.exp(s)
+        if lower:
+            return mpmath.log(lower_tail(x)) - target
+        if upper_tail is None:
+            msg = "the upper tail is needed here but no upper_tail function was given"
+            raise ValueError(msg)
+        # the lower tail grows with s and the upper falls: f has opposite signs on the bracket ends
+        return target - mpmath.log(upper_tail(x))
+
+    return solve_log_bracket(f, lo, hi)

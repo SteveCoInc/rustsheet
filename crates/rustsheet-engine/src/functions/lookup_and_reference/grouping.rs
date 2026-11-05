@@ -16,7 +16,7 @@ use crate::{
     expressions::{parser::ArrayNode, token::Error, types::CellReferenceIndex},
     functions::{
         spill_functions::{cell_key, first_equal_lines, unique_cell_key, CellKey},
-        util::collation::cmp_text_pairwise,
+        util::{coalesce_equal_lines, collation::cmp_text_pairwise, sort_indices_pairwise},
     },
 };
 
@@ -94,6 +94,39 @@ pub(crate) struct Group {
     /// The keys as they group: per field, the first source row whose key Excel's `=` finds equal
     /// to this group's ([`Grouping::new`]), so that comparing key prefixes later compares no text.
     cells: Vec<usize>,
+    /// Per field, the rank of a text key among the field's sorted text keys ([`Grouping::new`]),
+    /// `usize::MAX` for any other key: texts sort by it, not by comparing them again.
+    ranks: Vec<usize>,
+}
+
+impl Group {
+    /// Orders two groups' keys in `field`: texts under one parent (equal keys in the fields
+    /// before it) by their rank, the `<` order [`classify`] sorted them in (so `"AB"` before
+    /// `"ab"&U+00AD`: probes/t4195-groupby-intransitive Calc!B31:B38), anything else by
+    /// [`key_cmp`].
+    fn key_order(
+        &self,
+        other: &Group,
+        field: usize,
+        ascending: bool,
+        cell: CellReferenceIndex,
+    ) -> Ordering {
+        let (Some(x), Some(y)) = (self.keys.get(field), other.keys.get(field)) else {
+            return Ordering::Equal;
+        };
+        match (x, y, self.ranks.get(field), other.ranks.get(field)) {
+            (ArrayNode::String(_), ArrayNode::String(_), Some(a), Some(b))
+                if self.cells.get(..field) == other.cells.get(..field) =>
+            {
+                if ascending {
+                    a.cmp(b)
+                } else {
+                    b.cmp(a)
+                }
+            }
+            _ => key_cmp(x, y, ascending, cell),
+        }
+    }
 }
 
 /// Rows grouped by a key tuple: the unit GROUPBY lays out as rows and PIVOTBY as a grid.
@@ -105,19 +138,29 @@ impl Grouping {
     /// Groups `rows` (indices into `keys`, one key tuple per row): two keys of a field are one when
     /// Excel's `=` finds them equal (case folded, `ß` with `ss`, the prefix rule:
     /// probes/t4086-groupby-weightless, probes/t4088-groupby-multifield B14:B21; T-4088) and numbers
-    /// compare exactly ([`group_key`]). Each field's keys are classed by [`first_equal_lines`], as
-    /// UNIQUE classes lines, each comparison charged to `spend`, and the rows grouped by the tuple of
-    /// their classes in a hash map. Excel differs on a multi-field intransitive run (it drops a row
-    /// there; probes/t4088-groupby-multifield B1:B12, B30:B38): T-4195. Fails only with `spend`'s
-    /// error or `limit`'s. The groups are in order of first appearance
-    /// until [`Grouping::sort_by_keys`]. `limit(n)` is the error `n` groups would give (the output
-    /// size check, SPEC-0006 step 6); grouping stops at the first group that does not fit, so no
-    /// more groups are built than the output can hold.
+    /// compare exactly ([`group_key`]). Excel's model, from probes/t4195-groupby-intransitive and
+    /// probes/t4195-groupby-shown-key (T-4195; docs/excel-semantics/coercion.md "GROUPBY on an
+    /// intransitive run"):
+    /// - Each field is classed by [`classify`] within its parent, the rows sharing the classes of
+    ///   the fields before it: on an intransitive run a text joins the distinct key a binary search
+    ///   of the sorted distinct keys finds, not its first equal one.
+    /// - The rows are grouped by their tuple of classes, and a group shows each class's distinct key.
+    /// - A group holding none of the rows UNIQUE would keep (whole-row `=`, grouped as Excel's
+    ///   merge meets the rows when a key holds a text outside ASCII: [`coalesce_equal_lines`]) is
+    ///   not shown, and its rows are in no group.
+    ///
+    /// Excel still differs on some multi-field intransitive runs, where it puts a row in two
+    /// groups (T-4241). Every comparison is charged to `spend`. Fails only with `spend`'s error or
+    /// `limit`'s. The groups are in order of first appearance until [`Grouping::sort_by_keys`].
+    /// `limit(n)` is the error `n` groups would give (the output size check, SPEC-0006 step 6);
+    /// grouping stops at the first group that does not fit, before the whole-row pass, so no more
+    /// groups are built than the output can hold (a group that pass drops still counts).
     pub(crate) fn new(
         keys: &[Vec<ArrayNode>],
         rows: impl IntoIterator<Item = usize>,
         limit: impl Fn(usize) -> Option<CalcResult>,
         mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
+        cell: CellReferenceIndex,
     ) -> Result<Self, CalcResult> {
         let rows: Vec<usize> = rows.into_iter().filter(|&row| row < keys.len()).collect();
         let fields = rows
@@ -129,44 +172,41 @@ impl Grouping {
                 .and_then(|&row| keys.get(row))
                 .and_then(|tuple| tuple.get(field))
         };
-        // classes[field][line]: the first line whose key in `field` equals this line's.
-        let mut classes: Vec<Vec<usize>> = Vec::with_capacity(fields);
+        // paths[line]: per field so far, the line of the distinct key this line's key joins and
+        // its rank among its parent's sorted texts; `None`: in no group.
+        let mut paths: Vec<Option<Vec<(usize, usize)>>> = vec![Some(Vec::new()); rows.len()];
         for field in 0..fields {
-            let same = |a: usize, b: usize| match (key_of(a, field), key_of(b, field)) {
-                (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
-                    cmp_text_pairwise(x, y) == Ordering::Equal
+            // A field is classed within each parent: the lines sharing the classes of the fields
+            // before it (probes/t4195-groupby-intransitive "2f swap" rows; gen-m7/8044dce50616cfe9
+            // Calc!C833: `abc` shows itself under a parent other than `ABC`'s).
+            let mut parents: HashMap<Vec<usize>, Vec<usize>> = HashMap::new();
+            for (line, path) in paths.iter().enumerate() {
+                if let Some(path) = path {
+                    let parent = path.iter().map(|&(kept, _)| kept).collect();
+                    parents.entry(parent).or_default().push(line);
                 }
-                _ => true,
-            };
-            let cost = |a: usize, b: usize| match (key_of(a, field), key_of(b, field)) {
-                (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
-                    text_units(x.len() + y.len()).max(1)
+            }
+            for members in parents.values() {
+                let classes = classify(members, |line| key_of(line, field), &mut spend)?;
+                for (&line, class) in members.iter().zip(classes) {
+                    if let Some(entry) = paths.get_mut(line) {
+                        match (entry.as_mut(), class) {
+                            (Some(path), Some(class)) => path.push(class),
+                            _ => *entry = None,
+                        }
+                    }
                 }
-                _ => 1,
-            };
-            classes.push(first_equal_lines(
-                rows.len(),
-                |line| key_of(line, field).map(group_key),
-                same,
-                cost,
-                &mut spend,
-            )?);
+            }
         }
         let mut index: HashMap<Vec<usize>, usize> = HashMap::new();
         let mut groups: Vec<Group> = Vec::new();
-        for (line, &row) in rows.iter().enumerate() {
-            let Some(tuple) = keys.get(row) else {
+        for (path, &row) in paths.iter().zip(&rows) {
+            let Some(tuple) = path else {
                 continue;
             };
-            let cells: Vec<usize> = classes
+            let cells: Vec<usize> = tuple
                 .iter()
-                .map(|class| {
-                    class
-                        .get(line)
-                        .and_then(|&first| rows.get(first))
-                        .copied()
-                        .unwrap_or(row)
-                })
+                .map(|&(kept, _)| rows.get(kept).copied().unwrap_or(row))
                 .collect();
             match index.entry(cells.clone()) {
                 Entry::Occupied(entry) => {
@@ -179,13 +219,67 @@ impl Grouping {
                         return Err(error);
                     }
                     entry.insert(groups.len());
+                    let shown = cells
+                        .iter()
+                        .enumerate()
+                        .map(|(field, &kept)| {
+                            keys.get(kept)
+                                .and_then(|tuple| tuple.get(field))
+                                .map_or_else(empty_text, positive_zero)
+                        })
+                        .collect();
                     groups.push(Group {
-                        keys: tuple.iter().map(positive_zero).collect(),
+                        keys: shown,
                         rows: vec![row],
+                        ranks: tuple.iter().map(|&(_, rank)| rank).collect(),
                         cells,
                     });
                 }
             }
+        }
+        // A group none of UNIQUE's kept rows is in is not shown, and its rows are in no group
+        // (probes/t4088-groupby-multifield B1:B6, B30:B32: over (`ab`,x), (`ab`&U+00AD,y),
+        // (U+00AD&`ab`,y) the third row's (`ab`,y) has no group). While `=` is transitive every
+        // group's first row is one UNIQUE keeps, and as UNIQUE (`unique_of`) has it only texts
+        // outside ASCII compare intransitively, so only several key fields with such a text can
+        // drop a group: their rows group as Excel's merge meets them ([`coalesce_equal_lines`],
+        // T-4200), keys other than texts compare exactly ([`group_key`]).
+        let texts = |line: usize, field: usize| match key_of(line, field) {
+            Some(ArrayNode::String(x)) => Some(x),
+            _ => None,
+        };
+        let intransitive = fields > 1
+            && (0..rows.len()).any(|line| {
+                (0..fields).any(|field| texts(line, field).is_some_and(|x| !x.is_ascii()))
+            });
+        if intransitive {
+            let units = |a: usize, b: usize| {
+                (0..fields)
+                    .map(|field| match (texts(a, field), texts(b, field)) {
+                        (Some(x), Some(y)) => text_units(x.len() + y.len()).max(1),
+                        _ => 1,
+                    })
+                    .fold(0u64, u64::saturating_add)
+            };
+            let whole = coalesce_equal_lines(rows.len(), |a, b| {
+                spend(units(a, b))?;
+                Ok((0..fields)
+                    .map(|field| match (key_of(a, field), key_of(b, field)) {
+                        (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                            cmp_text_pairwise(x, y)
+                        }
+                        (Some(x), Some(y)) if group_key(x) == group_key(y) => Ordering::Equal,
+                        (Some(x), Some(y)) => key_cmp(x, y, true, cell),
+                        _ => Ordering::Equal,
+                    })
+                    .find(|ordering| ordering.is_ne())
+                    .unwrap_or(Ordering::Equal))
+            })?;
+            let kept: std::collections::HashSet<usize> = (0..rows.len())
+                .filter(|&line| whole.get(line) == Some(&line))
+                .filter_map(|line| rows.get(line).copied())
+                .collect();
+            groups.retain(|group| group.rows.iter().any(|row| kept.contains(row)));
         }
         Ok(Grouping { groups })
     }
@@ -223,6 +317,27 @@ impl Grouping {
         group_of
     }
 
+    /// Sorts the groups stably by `cmp` with [`sort_indices_pairwise`], which cannot panic: texts
+    /// compare by rank under one parent and by `cmp_text` across parents ([`Group::key_order`]),
+    /// and a `sort_order` naming a later field first can mix the two into a cycle, which
+    /// `slice::sort_by` may panic on.
+    fn sort_groups(&mut self, mut cmp: impl FnMut(&Group, &Group) -> Ordering) {
+        let mut order: Vec<usize> = (0..self.groups.len()).collect();
+        let groups = &self.groups;
+        sort_indices_pairwise(&mut order, |a, b| match (groups.get(a), groups.get(b)) {
+            (Some(x), Some(y)) => cmp(x, y),
+            _ => Ordering::Equal,
+        });
+        let mut slots: Vec<Option<Group>> = std::mem::take(&mut self.groups)
+            .into_iter()
+            .map(Some)
+            .collect();
+        self.groups = order
+            .into_iter()
+            .filter_map(|index| slots.get_mut(index).and_then(Option::take))
+            .collect();
+    }
+
     /// Sorts the groups by their keys, field by field, `ascending[i]` for field `i` (ascending
     /// when missing). Mixed types sort numbers < text < FALSE < TRUE (G!A193) and the blank key
     /// sorts last in both directions (G!A1, G!A145): that is `sort_key_cmp`. Numbers compare
@@ -230,13 +345,15 @@ impl Grouping {
     /// G!A761), matching the exact `cell_key` grouping. (Errors against text, booleans and the
     /// blank key: unprobed, SPEC-0006.)
     pub(crate) fn sort_by_keys(&mut self, ascending: &[bool], cell: CellReferenceIndex) {
-        self.groups.sort_by(|a, b| {
-            a.keys
-                .iter()
-                .zip(&b.keys)
-                .enumerate()
-                .map(|(field, (x, y))| {
-                    key_cmp(x, y, ascending.get(field).copied().unwrap_or(true), cell)
+        self.sort_groups(|a, b| {
+            (0..a.keys.len().min(b.keys.len()))
+                .map(|field| {
+                    a.key_order(
+                        b,
+                        field,
+                        ascending.get(field).copied().unwrap_or(true),
+                        cell,
+                    )
                 })
                 .find(|ordering| ordering.is_ne())
                 .unwrap_or(Ordering::Equal)
@@ -262,14 +379,11 @@ impl Grouping {
             .copied()
             .chain((0..fields).filter(|field| !named.contains(field)))
             .collect();
-        self.groups.sort_by(|a, b| {
+        self.sort_groups(|a, b| {
             priority
                 .iter()
                 .map(|&field| {
-                    let (Some(x), Some(y)) = (a.keys.get(field), b.keys.get(field)) else {
-                        return Ordering::Equal;
-                    };
-                    let ordering = key_cmp(x, y, true, cell);
+                    let ordering = a.key_order(b, field, true, cell);
                     if ascending.get(field).copied().unwrap_or(true) {
                         ordering
                     } else {
@@ -427,6 +541,81 @@ fn parent_set(axis: Axis, level: usize, rows: &[Vec<usize>], group: usize) -> Op
         id: Some(SetId::Parent { axis, level, group }),
         rows,
     })
+}
+
+/// Classes one field's keys among `members` (lines, ascending) as Excel's GROUPBY does
+/// (probes/t4195-groupby-intransitive; [`Grouping::new`]): the distinct keys are the ones
+/// [`first_equal_lines`] keeps, the texts among them are sorted by `<`
+/// ([`sort_indices_pairwise`]), and a text joins the one a lower-bound binary search of that order
+/// finds equal to it, `None` when it finds none. Returns, per member, the line of the key it joins
+/// and that key's rank among the sorted texts (`usize::MAX` for other keys). Every text
+/// comparison is charged to `spend`.
+fn classify<'a>(
+    members: &[usize],
+    key_of: impl Fn(usize) -> Option<&'a ArrayNode>,
+    mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
+) -> Result<Vec<Option<(usize, usize)>>, CalcResult> {
+    let text = |member: usize| match members.get(member).and_then(|&line| key_of(line)) {
+        Some(ArrayNode::String(x)) => Some(x),
+        _ => None,
+    };
+    let cost = |a: usize, b: usize| match (text(a), text(b)) {
+        (Some(x), Some(y)) => text_units(x.len() + y.len()).max(1),
+        _ => 1,
+    };
+    let first = first_equal_lines(
+        members.len(),
+        |member| {
+            members
+                .get(member)
+                .and_then(|&line| key_of(line))
+                .map(group_key)
+        },
+        |a, b| match (text(a), text(b)) {
+            (Some(x), Some(y)) => cmp_text_pairwise(x, y) == Ordering::Equal,
+            _ => true,
+        },
+        cost,
+        &mut spend,
+    )?;
+    let mut sorted: Vec<usize> = (0..members.len())
+        .filter(|&member| first.get(member) == Some(&member) && text(member).is_some())
+        .collect();
+    let mut sort_cost = 0u64;
+    sort_indices_pairwise(&mut sorted, |a, b| match (text(a), text(b)) {
+        (Some(x), Some(y)) => {
+            sort_cost = sort_cost.saturating_add(cost(a, b));
+            cmp_text_pairwise(x, y)
+        }
+        _ => Ordering::Equal,
+    });
+    spend(sort_cost)?;
+    let mut classes = Vec::with_capacity(members.len());
+    for (member, &kept) in first.iter().enumerate() {
+        let line = |member: usize| members.get(member).copied().unwrap_or(usize::MAX);
+        let Some(x) = text(member) else {
+            classes.push(Some((line(kept), usize::MAX)));
+            continue;
+        };
+        let (mut low, mut high) = (0, sorted.len());
+        while low < high {
+            let middle = low + (high - low) / 2;
+            let Some(&probe) = sorted.get(middle) else {
+                break;
+            };
+            spend(cost(probe, member))?;
+            if text(probe).is_some_and(|y| cmp_text_pairwise(y, x) == Ordering::Less) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        let found = sorted.get(low).copied().filter(|&probe| {
+            text(probe).is_some_and(|y| cmp_text_pairwise(y, x) == Ordering::Equal)
+        });
+        classes.push(found.map(|probe| (line(probe), low)));
+    }
+    Ok(classes)
 }
 
 /// A key cell's bucket as it groups: UNIQUE's (`unique_cell_key`: a text by its collation key),

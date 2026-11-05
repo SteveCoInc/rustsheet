@@ -55,7 +55,7 @@ mod student_t;
 mod t_dist;
 mod trend;
 mod trimmean;
-pub(super) mod variance;
+pub(crate) mod variance;
 mod weibull;
 mod z_test;
 

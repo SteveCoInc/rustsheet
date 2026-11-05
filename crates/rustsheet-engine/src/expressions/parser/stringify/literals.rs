@@ -67,7 +67,7 @@ fn literal_text(number: f64) -> String {
 }
 
 /// The 15-digit scientific text `full` (`1.45500000000000e-11`) as its significant digits with
-/// 0, 1, … trailing zeros, up to the six digits the x87 read covers, over a matching exponent:
+/// 0, 1, … trailing zeros, up to the 15 digits the x87 read covers, over a matching exponent:
 /// `1455e-14`, `14550e-15`, `145500e-16`.
 fn padded_digit_texts(full: &str) -> impl Iterator<Item = String> + '_ {
     let (mantissa, exponent) = full.split_once('e').unwrap_or((full, "0"));
@@ -77,7 +77,7 @@ fn padded_digit_texts(full: &str) -> impl Iterator<Item = String> + '_ {
     let digits = digits.trim_end_matches('0').to_string();
     // `digits` is at most 15 characters, so the conversion holds.
     let length = i64::try_from(digits.len()).unwrap_or(15);
-    (0..=(6 - length).max(-1)).map(move |pad| {
+    (0..=(15 - length).max(-1)).map(move |pad| {
         let zeros = "0".repeat(usize::try_from(pad).unwrap_or(0));
         format!("{sign}{digits}{zeros}e{}", exponent - (length - 1) - pad)
     })

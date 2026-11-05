@@ -3,7 +3,7 @@ id: T-4044
 title: "F.DIST and F.DIST.RT are #NUM! at df1 79, df2 1E10 (16 t4017 cells the engine returns; owned only by deferred T-3209)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P0
 size: S
 tier: opus
@@ -58,12 +58,12 @@ df2 = 1E10, from the rule T-4030 finds, not from a cut at the probed cells.
 - T-4080 pinned the edge (statistics.md "The edge (T-4080)"): probes-numeric/t4080-beta-num-band-edge band cells A41:B41, A62:B62, A83:B83, A104:B104, A123:B125, A144:B146, A165:B167, A186:B188, A207:B209, A226:B230, A247:B251, A268:B272, A287:B293 are `#NUM!` in Excel and numbers in ours.
 
 ## Acceptance criteria
-- [ ] The 16 cells above are `#NUM!`; the other 1,329 t4017 cells keep their verdicts or improve (cell by cell,
+- [x] The 16 cells above are `#NUM!`; the other 1,329 t4017 cells keep their verdicts or improve (cell by cell,
       `rustsheet-eval show --all` on the six cases, before and after).
-- [ ] T-4030's probe cells pass with the right type on both sides of the boundary it finds.
-- [ ] The rule (and its evidence) in docs/excel-semantics/statistics.md, replacing "unprobed (T-4030)".
-- [ ] No gated cell regresses (`make eval-baseline`); new failing cells have owners.
-- [ ] `make check` green; reviewers approve.
+- [x] T-4030's probe cells pass with the right type on both sides of the boundary it finds.
+- [x] The rule (and its evidence) in docs/excel-semantics/statistics.md, replacing "unprobed (T-4030)".
+- [x] No gated cell regresses (`make eval-baseline`); new failing cells have owners.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Excel's digits at huge df2 (T-3209, T-4018) and its exact-0 tails (T-4045).
@@ -73,3 +73,20 @@ Decision 0083 and 0114 (`semantics`): done when every cell this task owns has Ex
 
 ## Decision 0267
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
+
+## Outcome (2026-11-04, opus run)
+- Mechanism found, so no cut: the band is T-3576's L140 bup-sum overflow (`bratio::l140_overflows`). In L140 bup, S's
+  running product of the stored ratios (apb + l)/(ap1 + l) passes DBL_MAX; its log, about
+  (n - 1) ln a - ln(Gamma(n + c)/Gamma(1 + c)), is T-4080's separating line n + 2 ln a > T. A Python run of that
+  predicate with Excel's break rule (scratch, not committed) gives Excel's type at every cell checked: 1,176 BETA.DIST
+  cells of t4080 (82 `#NUM!`), 151 of t4030, and every positive-x F.DIST cdf and F.DIST.RT cell of the six
+  t4017-f-huge-df2-* cases and t4030 (22 `#NUM!`, 1,385 numbers).
+- BETA.DIST already asked it (T-3576), so T-4080's band cells were already `#NUM!` on main. F did not. Now
+  `fisher.rs` `f_bup_sum_overflows` asks it on F's own arguments (shapes df1/2 and df2/2) for F.DIST's cdf,
+  F.DIST.RT and FDIST (FDIST shares F.DIST.RT's path). Unit test `bup_sum_overflows_in_excels_df1_band`.
+- Eval delta: gated suites unchanged (fixed 0, regressions 0; probes-numeric is not gated). On the six t4017 cases,
+  t4030 and t4080, no cell has the wrong type now (`rustsheet-eval show`: 0 cells where Excel or ours alone is
+  `#NUM!`), which covers this task's 16 t4017 and 61 t4030 cells. Their last digits (1E-8 to 1.4E-7 at df1 80 and 100)
+  stay with T-3209 and T-4018.
+- F.INV and F.INV.RT at these shapes are unprobed and left as they are (statistics.md).
+- statistics.md "Incomplete beta at a huge first shape": a new "mechanism" item.

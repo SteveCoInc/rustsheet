@@ -1,4 +1,4 @@
-import rustsheet as ic
+from rustsheet import legacy
 
 
 def test_raw_model_needs_explicit_evaluate(rm):
@@ -63,10 +63,10 @@ def test_cell_types(um):
     um.set_user_input(0, 3, 1, "TRUE")
     um.set_user_input(0, 4, 1, "=1/0")
 
-    assert um.get_cell_type(0, 1, 1) == ic.CellType.Number
-    assert um.get_cell_type(0, 2, 1) == ic.CellType.Text
-    assert um.get_cell_type(0, 3, 1) == ic.CellType.LogicalValue
-    assert um.get_cell_type(0, 4, 1) == ic.CellType.ErrorValue
+    assert um.get_cell_type(0, 1, 1) == legacy.CellType.Number
+    assert um.get_cell_type(0, 2, 1) == legacy.CellType.Text
+    assert um.get_cell_type(0, 3, 1) == legacy.CellType.LogicalValue
+    assert um.get_cell_type(0, 4, 1) == legacy.CellType.ErrorValue
 
 
 def test_get_cell_content_returns_formula(um):
@@ -94,7 +94,7 @@ def test_update_cell_without_parsing(rm):
     rm.evaluate()
 
     assert rm.get_cell_value(0, 1, 1) == "123"
-    assert rm.get_cell_type(0, 1, 1) == ic.CellType.Text
+    assert rm.get_cell_type(0, 1, 1) == legacy.CellType.Text
     assert rm.get_cell_value(0, 2, 1) == 1.5
     assert rm.get_cell_value(0, 3, 1) is False
     assert rm.get_cell_formula(0, 4, 1) == "=A2*2"

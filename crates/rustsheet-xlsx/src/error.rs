@@ -47,6 +47,11 @@ pub enum XlsxError {
     /// The workbook exceeds an import resource limit.
     #[error("Limit Error: more than {max} {limit}")]
     Limit { limit: ImportLimit, max: u64 },
+    /// The file is an OLE compound file, not a zip package: a password-protected xlsx (an
+    /// ECMA-376 `EncryptedPackage`) or a legacy binary workbook (`.xls`). Neither is read
+    /// yet (decision 0279; T-4243 specs reading them).
+    #[error("Encrypted Or Binary Workbook Error: the file is an OLE compound file (a password-protected or legacy binary workbook), not an xlsx package")]
+    OleCompoundFile,
 }
 
 impl From<io::Error> for XlsxError {
@@ -88,9 +93,10 @@ impl From<quick_xml::events::attributes::AttrError> for XlsxError {
 impl XlsxError {
     pub fn user_message(&self) -> String {
         match &self {
-            XlsxError::IO(_) | XlsxError::Workbook(_) | XlsxError::Limit { .. } => {
-                self.to_string()
-            }
+            XlsxError::IO(_)
+            | XlsxError::Workbook(_)
+            | XlsxError::Limit { .. }
+            | XlsxError::OleCompoundFile => self.to_string(),
             XlsxError::Zip(_) | XlsxError::Xml(_) => {
                 "IronCalc can only open workbooks created by Microsoft Excel. \
                 Can you open this file with Excel, save it to a new file, \

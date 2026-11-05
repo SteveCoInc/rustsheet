@@ -115,7 +115,6 @@ impl Function {
             Function::CeilingPrecise => "_xlfn.CEILING.PRECISE".to_string(),
             Function::FloorMath => "_xlfn.FLOOR.MATH".to_string(),
             Function::FloorPrecise => "_xlfn.FLOOR.PRECISE".to_string(),
-            Function::IsoCeiling => "_xlfn.ISO.CEILING".to_string(),
             Function::EcmaCeiling => "_xlfn.ECMA.CEILING".to_string(),
             Function::Base => "_xlfn.BASE".to_string(),
             Function::Decimal => "_xlfn.DECIMAL".to_string(),
@@ -133,7 +132,6 @@ impl Function {
             Function::GammaLnPrecise => "_xlfn.GAMMALN.PRECISE".to_string(),
             Function::Gamma => "_xlfn.GAMMA".to_string(),
             Function::GammaInv => "_xlfn.GAMMA.INV".to_string(),
-            Function::GammaLn => "_xlfn.GAMMALN".to_string(),
             Function::BetaDist => "_xlfn.BETA.DIST".to_string(),
             Function::BetaInv => "_xlfn.BETA.INV".to_string(),
 

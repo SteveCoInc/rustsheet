@@ -69,7 +69,8 @@ any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B hold
 19 pairs put a Thai or Lao digit below the letters (refuting the old UNVERIFIED choice "Thai and other digit
 blocks keep code-point order"; fixed by T-3895, "Thai, Lao and the other script digits (T-3895)" below), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
 1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
-T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
+T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; a lone mark is above every
+character, fixed by T-4258). No other
 rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
 T-3276 scripts mixed with Latin all agree.
 CHAR(160) and spaces (T-0244, VERIFIED, probes/text-order-nbsp-space, 333 cells, excel-graph
@@ -231,16 +232,41 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   - **SORT and SORTBY in detail (T-3211).** Evidence: probes/t3211-collation-sort-cycles, excel-graph 2026-10-31,
     Status: VERIFIED. SORT and SORTBY give the same order in all 88 probed rows (Calc!A = C, B = D). Descending is
     not the reverse of ascending: `SORT` of U+0342 once, twice, U+0327 is once, twice, U+0327 and with -1 twice,
-    once, U+0327 (row 1). Every order of each three-text cycle (rows 1-12) comes out as a natural merge sort
-    gives it: an ascending input run stays, a strictly descending one is reversed, so a cyclic input order is
-    kept and an anti-cyclic one reversed (`ạ, á, ạạạ` gives `ạạạ, á, ạ`, row 8). On shuffles of eight texts
-    holding both cycles (rows 13-44) Excel's order follows no simple algorithm tried (T-3418 lists them). The
-    probed comparison matrix (Calc!L1:T9) is the engine's on all 81 pairs.
+    once, U+0327 (row 1). The order is a bottom-up natural merge sort over maximal non-descending runs only:
+    the input is cut where an element compares less than the one before it (a strictly descending stretch is
+    runs of one element, never reversed), and neighbouring runs are merged pairwise, round by round, a tie
+    taking the left run's element; descending sorts the same way with the comparison flipped (T-3418). It
+    gives every row of rows 1-44 and every row of probes/t3418-sort-cycle-permutations (excel-graph 2026-11-04:
+    all 24 orders of the 4-cycles {A3, A4, A6, A7} and {A5, A6, A7, A8} and all 120 orders of {A4..A8},
+    ascending and descending, 336 cells). Reversing strictly descending runs (T-3211's model) misses 28 of
+    those 168 rows: on a cycle `a<b<c<d<a` with chords `c<a`, `d<b`, the input `a, c, b, d` is one strictly
+    descending chain (c<a, b<c, d<b) but Excel takes it as four one-element runs, merges them into `c, a`
+    and `d, b`, then into `c, d, a, b`. The probed comparison matrix (Calc!L1:T9) is the engine's on all 81
+    pairs.
   - **UNIQUE groups by Excel's `=`** (T-3211, same case, Calc!G1:J15): `"ß"` and `"ss"`, `"á"` and
     `"a"&UNICHAR(769)` are one row (the first kept), as `=` finds them equal; `"Ａ"` and `"A"`, `"coop"` and
     `"co-op"` are two, as `=` finds them unequal; exactly_once drops both of an equal pair (`#CALC!` when none is
     left). On a cycle the grouping follows Excel's sort, not equality with any kept row: U+0327, U+0342, two
     U+0342 is three rows although U+0327 = two U+0342 (G4), while U+0342, two U+0342, U+0327 is two (G3).
+  - **UNIQUE's rule: equal lines become one group as soon as its merge meets them** (T-4200,
+    probes/t4200-unique-cycle-permutations, excel-graph, 2026-11-04: UNIQUE and exactly_once of every order of
+    {A3,A4,A6,A7} and {A4..A8} and of {A3,A4,A5}, A1:B150, and two-column rows A151:B174). UNIQUE runs SORT's
+    natural merge (above), except that two groups `=` finds equal become one group when they meet: as neighbours in
+    a run, as the heads of two runs being merged, or as the last group out of a merge and the next one; a group is
+    compared through the line that started it. Each group keeps its first line, in input order, and exactly_once
+    keeps the one-line groups. Grouping the neighbours of SORT's order fits the 4- and 5-text sets but not
+    {A3,A4,A5}, the cycle A5 < A3 < A4 = A5: SORT puts `{A3;A5;A4}` and `{A5;A4;A3}` in the order A5, A3, A4
+    (t3211 Calc!A2, A6), yet UNIQUE groups A5 with A4 in both (rows 146, 150), since they are equal neighbours of a
+    run before any merge. `{A4;A3;A5}` and `{A5;A3;A4}` keep three rows (rows 147, 149). Lines compare column by
+    column, the first unequal column deciding: rows ("x",A5), ("y",A3), ("x",A4) keep two, ("x",A5) standing for
+    ("x",A4), though the one column A5, A3, A4 keeps three (row 170 against row 149).
+    Which line represents a merged group (its first, its smallest or its last) is not separated by
+    the probe.
+    Confirmed out of sample (T-4237, probes/t4237-unique-cycle-fresh, excel-graph, 2026-11-04; case and the
+    engine's values committed before the fill, docs/research/t4237/): all 240 cells as predicted, on 60 seeded orders
+    of the six texts A3..A8 (the {A3,A4,A5} cycle with A6, A7 and A8), 36 two-column rows where both columns hold an
+    order of the cycle, and 24 rows of a number, boolean or mixed-type first column (`{1;"1";1}`,
+    `{TRUE;"TRUE";TRUE}`, `{0;FALSE;""}` among them) beside an order of the cycle.
   Ours (T-3181): the operators and the criteria compare texts with `cmp_text_pairwise`, which
   applies the rule (the criteria index still hashes the `CollationKey` of the wrapped sums,
   which every pair the rule finds equal shares, and tests each candidate with the rule); so do
@@ -250,11 +276,13 @@ Microsoft's Windows sorting weight table (`Windows Server 2022 Sorting Weight Ta
   index keeps the `CollationKey` but tests the first (last) cell with the key and walks when that
   cell is not equal. Since T-3211 SORT and SORTBY compare texts with `cmp_text_pairwise` too and sort
   with `sort_indices_pairwise`, a stable natural merge sort that cannot panic on a non-total order (`slice::sort_by`
-  may): every t3181 array cell passes, and every three-text cycle of t3211, but 40 cells of its eight-text rows do not
-  (T-3418). UNIQUE keys a text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
+  may): every t3181 array cell passes, and since T-3418 every t3211 and t3418 sort cell. UNIQUE keys a
+  text by its `CollationKey` and keeps a line unless `cmp_text_pairwise` finds it equal to
   a kept line of its bucket, each comparison charged to the formula's work budget (texts can share a key and be
-  unequal): all t3211 UNIQUE cells but G4:I4 pass (T-3418). GROUPBY and PIVOTBY group the same way
-  (T-4088) but still sort with the total `cmp_text`. Open: T-3418.
+  unequal), when every text of its data is ASCII (ASCII texts compare transitively); otherwise, since T-4200, it
+  groups with `coalesce_equal_lines` (functions/util/pairwise_order.rs), the merge above, comparing texts with
+  `cmp_text_pairwise` and other cells by their keys, each comparison charged to the budget: every t3211 and t4200
+  UNIQUE cell passes. GROUPBY and PIVOTBY still group by the buckets (T-4088) and sort with the total `cmp_text`.
 - **Shared leading units are skipped before the sum (T-3201).** Evidence:
   probes/t3201-collation-long-mark-runs (1,000 cells: a ladder of 246 texts `"a"` plus up to three
   marks, one per weight 2, 5, 8, 11 and 14 to 255, self-ranked in order (Calc!A1:A246); `"a"` with
@@ -381,6 +409,15 @@ VERIFIED (cells cited):
   they sort after the ideographs probed (`"ー" > "人人"`, AC25; `"ーa"`, AC37) and the four lone marks
   are **equal** to each other (case 1 B119 = 4, COUNTIF E119 = 4; MATCH and XMATCH of each find `ー`,
   C127:D129 = 119).
+  **A lone mark is above every character (T-4258, VERIFIED, probes/t4258-collation-lone-mark-astral,
+  105 cells, excel-graph 2026-11-05).** Each of `ー ゝ ゞ ヽ ヾ 々` alone is greater than plane 2 (`𠀀`
+  U+20000, `𪜀` U+2A700, U+2FA1D), plane 3 (`𰀀` U+30000), Hangul (`가`), the BMP ideographs (`一`, U+9FFF),
+  Extension A (`㐀`), the compatibility ideographs (`豈` U+F900), private use (U+E000, U+F0000), `😀`,
+  `𝐀` U+1D400, U+FFFD and U+10FFFD (C1:C90), and than the two-character texts U+10FFFD U+10FFFD and `𪜀𪜀` (C104:C105). What follows
+  the leading mark does not change that: `々` or `ー` followed by a combining mark, a kana, an ideograph,
+  `𠀀`, `A` or another mark is still above `𠀀` (C91:C102), and so is t3465's B313 text (C103). The
+  engine gives a lone mark one weight above every script weight (`LONE_MARK`). Lone surrogates, which
+  UNICHAR cannot make, are not probed against it.
 - **`ー` after a Latin letter is not transitive.** `"aー"` is greater than `"aa"`, `"ab"`, `"AＢ"` and
   `"a゛b"` (C8, F8, G8, T8) but less than `"Ａa"` and `"Ａb"` (E8, H8), although `"Ａa" < "ab"` (F4) and
   `"AＢ" < "Ａb"` (H6). So Excel's `<` here is no sort key; no total order reproduces all cells, and an
@@ -602,7 +639,7 @@ tags `pa-IN,600`, `ta-IN,900`, `te-IN,A00`, `km-KH,1200`, the same shapes as the
     `0.#####E+00`, tagged (the ASCII forms are all General; 11 digits and below and long decimals unprobed).
   - **Every percent is `0.00%`** (`١٢.٥%`, `-١٢%`, `١,٢٣٤%` = 12.34); **every currency the long form**
     `[$$-ar-SA,200] #,##0.00_);[Red]([$$-ar-SA,200]#,##0.00)`: `-$١٢`, `$-١٢`, `$١,٢٣٤.٥`, `$١.٥`, `$١٢.٣٤`,
-    `$(١٢)` (= -12; ASCII `$(12)` is unprobed and text in ours, T-4117).
+    `$(١٢)` (= -12; ASCII `$(12)` is -12 too, "Currency sign before parentheses is negative").
   - Groups as ASCII, tagged: `١,٢٣٤.٥` and `١,٢٣٤.٥٦` → `[$-ar-SA,200]#,##0.00`, `(١,٢٣٤)` → `#,##0`.
   - **Dates take the long fields under `[$-,200]`**: `١/٢/٢٠٢٠` → `mm/dd/yyyy`, `١ Jan ٢٠٢٠` and `Jan ١, ٢٠٢٠` →
     `dd-mmm-yyyy` (ASCII gives `m/d/yyyy` and `d-mmm-yy`); a date-time `٢٠٢٠-١-١ ١٢:٣٠` keeps `m/d/yyyy h:mm`,
@@ -761,8 +798,12 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
   `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
   M11:N13 TRUE, P11:P13 = 12). Against `+ = > ¤ § ° ± × ÷ • → ★ © ¬`, U+0081 is strictly above (-sweep K, M)
-  and U+009F at least as high (L; no `=` column). UNVERIFIED: U+0082 to U+008F and U+0091 to U+009D, taken to
-  keep code-point order.
+  and U+009F at least as high (L; no `=` column). All 32 (probes/t4270-collation-c1-controls, 548 cells,
+  excel-graph, 2026-11-05, T-4270): each is equal only to itself (C1:C32, E1:E32 = 1; XMATCH, COUNTIF and exact
+  MATCH find its own row, F:H), and they rank 3 to 34 in code-point order among them, U+200B (0), `¬` (1), `•` (2)
+  and `0` (35) (B1:B36, the same for a&c&b in D1:D36); every one is below `0` and above `¬`, `•` and U+200B
+  (I:L), `"a"&c&"b"<"ab"` (M), and SORT puts them in code-point order both ways (N1:O32).
+  Implemented in: `collation.rs` `element`'s arm `'\u{80}'..='\u{9f}' => single(C1_BASE + (c - 0x80))`.
 - So `"a"&c&"b"<"ab"` is TRUE for U+200B and the C1 controls (-ignorables R2, R10:R12), and among the 17 a&c&b
   texts U+200B < U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB).
 
@@ -836,12 +877,8 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
 
   PIVOTBY gives the same groups under its header row (B2, C4:C7). By the prefix rule (a leading weightless unit
   sends both texts to the collation; no `=` cell here), U+00AD&`ab` equals both `ab` and `ab`&U+00AD, and it joins
-  the first group. Implemented in (T-4088): `Grouping::new` (functions/lookup_and_reference/grouping.rs) gives
-  each key field's values a class through `first_equal_lines` (functions/spill_functions.rs), the one helper UNIQUE
-  groups with. A text joins the first earlier key `cmp_text_pairwise` finds equal in its `CollationKey` bucket, and
-  the groups, the PIVOTBY parents and the subtotal levels compare those classes. The groups still sort with the
-  total `cmp_text`, where a class's members tie, so the stable sort keeps their first-appearance order. Whether
-  Excel's GROUPBY sort is pairwise on an intransitive cycle (as SORT's is, T-3418) is UNVERIFIED.
+  the first group. Implemented in (T-4088, revised by T-4195): `Grouping::new` (functions/lookup_and_reference/
+  grouping.rs); see "GROUPBY on an intransitive run (T-4195)" below.
   - Single-field keys also equate what `=` equates beyond case: `ß`/`ss`, `æ`/`ae` and `á`/`a`&U+0301 make three
     groups, `{"á",48;"æ",12;"ß",3}` (probes/t4088-groupby-multifield Calc!B14:B21, B39; excel-graph, 2026-11-04).
     Ours passes them.
@@ -852,8 +889,46 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
       "2" (B31:B32). PIVOTBY is the same (B3, B38).
     - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
       second group shows `ab`, which is not the first spelling of either field.
-    - Each field alone groups by first `=` (B35:B36). Ours classes each field and groups by the tuple of classes,
-      which gives three groups here. These 10 cells are known failures owned by T-4195.
+    - Each field alone groups by first `=` (B35:B36). T-4195's model below passes all but B11 and B33 (T-4241).
+
+### GROUPBY on an intransitive run (T-4195)
+Evidence: probes/t4195-groupby-intransitive (56 blocks of 2 to 4 rows: every order of `ab`, `ab`&U+00AD and
+U+00AD&`ab`, with `AB` and `ab`&U+00AD&U+00AD, alone, beside a second field that is x in one row, before it,
+and with a third field) and probes/t4195-groupby-shown-key (18 blocks: case, U+00AD, `ß`/`ss` and `á`/`a`&U+0301
+spellings of one key in different groups); excel-graph, 2026-11-04. Each block's GROUPBY lists its groups' rows
+with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`: A = C and B = C, but A < B.
+- **One field: the distinct keys are UNIQUE's, sorted, and a row joins the one a binary search finds.** The
+  distinct keys are the first-`=` ones; they are sorted by `<`; each row joins the key a lower-bound binary
+  search of that order finds equal to it. So over B, C, A (Calc!B4) the keys are B and A, sorted A, B, and C
+  joins A, not its first equal key B: `{"ab","2, 3";"ab­","1"}`. All 56 single-field cells (B1:B56) and the
+  4-text runs (B31:B44; E = `ab`&U+00AD&U+00AD: E, B, C, A gives `ab`: 3, 4 and E: 1, 2, B40) follow it. The groups are in that sorted
+  order: `AB` before `ab`&U+00AD (B32: `AB` < `ab`&U+00AD by the prefix rule), where `cmp_text` puts it after.
+- **A group shows its key's first spelling, field by field.** (`ABC`,x), (`abc`,y) gives (`ABC`,x), (`ABC`,y);
+  (`ab`,x), (U+00AD&`ab`,y) gives (`ab`,x), (`ab`,y); `ß`/`ss` and `á`/`a`&U+0301 the same (-shown-key B1:B18,
+  D1:D18).
+- **A later field is classed within its parent.** The rows sharing the classes of the fields before it are classed
+  apart from the others: with x/y first and the text second, (x,C), (y,A), (y,B) gives (y,`ab`): 2 and
+  (y,`ab`&U+00AD): 3 (B55; B51:B56 are the swap rows). And `abc` under a first key other than `ABC`'s shows `abc`
+  (gen-m7/8044dce50616cfe9 Calc!C833, probes/t2360-array-lambda-holidays G!B6, probes/t2625-nested-consumers P!A30).
+- **A group none of UNIQUE's rows is in is not shown.** Its rows are in no group: probes/t4088-groupby-multifield
+  B1:B6, B30:B32 above, where the third row's (`ab`,y) holds none of UNIQUE's rows (`ab`,x) and (`ab`&U+00AD,y).
+- **Excel goes further on a multi-field run.** Rows (A,y), (B,x), (C,y) give (`ab`,y): 1, 3; (`ab`&U+00AD,x): 2;
+  (`ab`&U+00AD,y): 1, 2, 3 (Calc!C8). Row 2 is in two groups, and the third group's key is no row's. UNIQUE keeps
+  all three rows (D8) though (C,y) = (A,y): it keeps or drops (C,y) by the rows around it, as its merge meets them
+  (T-4200), and ours matches every D cell. PIVOTBY's rows are GROUPBY's (F). Unmatched: T-4241 owns those 24
+  cells.
+
+Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
+its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
+lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
+`coalesce_equal_lines` keeps, as `unique_of` does; only several key fields with a text outside ASCII can drop
+one). `Group::key_order` sorts texts under one parent by their rank in that sort, through `sort_indices_pairwise`.
+UNVERIFIED: every probe cell sorts ascending by the keys; a descending `sort_order` (ours reverses the rank) and a
+table sort naming a later field first (ours ranks texts under one parent, `cmp_text` across parents) on an
+intransitive run are unprobed (T-4241). The model was selected
+on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
+of -shown-key, with no hold-out, so T-4241's fresh permutations are its confirmation.
+Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
@@ -1092,6 +1167,30 @@ Evidence: probes/paren-negative-text, probes/paren-negative-variants, probes/par
 Status: VERIFIED
 Tasks: T-0259, T-0277, T-0280, T-0281, T-0282, T-0283, T-1300, T-1309
 
+## Currency sign before parentheses is negative
+Rule (en-US; probes/t4117-typed-currency-paren, excel-graph 2026-11-04, T-4117; ENTERED log
+docs/research/t4117-typed-currency-paren-2026-11-04.md): `$`, optional spaces, then a parenthesised unsigned amount is a
+negative number, typed or coerced: `$(12)`, `$ (12)`, `$( 12 )`, `$(1,234.5)`, `$(12.5)` and `$(0)` are -12, -12, -12,
+-1234.5, -12.5 and 0 (typed, ISNUMBER, `"..."+0`, VALUE and NUMBERVALUE agree). Typed formats: `$#,##0_);[Red]($#,##0)`
+for an integer amount, `$#,##0.00_);[Red]($#,##0.00)` when the amount has a decimal point with digits or none after it
+(`$(12.0)`, `$(12.)`, `$(.5)`), `0.00E+00` for `$(1e3)`. Text: `(12$)`, `$(12`, `$12)`, `$(-12)`, `-$(12)`, `$((12))`,
+`$(12)%` and `$(1,23)`. Typed `€(12)` is text with General, but `"€(12)"+0`, VALUE and NUMBERVALUE give -12
+(typed input has no `€` among its currencies, as above). (NUMBERVALUE reads `$(12)%` as -0.12 and `$(1,23)` as -123, which the engine matches.)
+`($12)` and `(12)` are the older paren forms above. More rows (probes/t4117-currency-parens A1:A34, excel-graph
+2026-11-04; ENTERED log docs/research/t4117-currency-parens-2026-11-04.md):
+- `€` takes the form only where it is a currency: typed `€(12)`, `€ (12)`, `€(1,234.5)`, `€(1e3)` and `€(1 1/2)`
+  stay text, but VALUE, NUMBERVALUE and `+0` read them as negative (A15:A17, A25, A31). `£(12)` is `#VALUE!`
+  everywhere (A28), as `£12` is.
+- A mixed fraction is negative too: `$(1 1/2)`, `$ (1 1/2)` and `$( 1 1/2 )` are -1.5 typed with `# ?/?`, `$(3 1/12)`
+  is -3.0833… with `# ??/??` (A21, A29, A33:A34), by VALUE and `+0` but not NUMBERVALUE, which drops the spaces
+  (`#VALUE!`). `-$(1 1/2)` is text (A32); typed `$(1 1/2%)` stays text but takes `0.00%`, like `-$3 1/2%` (A30).
+- `$(1.5E+2)` is -150 in `0.00E+00` (A19); `$(12%)`, `$(+12)`, `$()` and `$($12)` are text (A20, A22, A23, A27).
+Implemented in `parse_percent_or_currency` (formatter/parse_formatted.rs) and, for fractions, `read_mixed_fraction`
+(mixed_fraction.rs).
+Evidence: probes/t4117-typed-currency-paren, probes/t4117-currency-parens (excel-graph, 2026-11-04).
+Status: VERIFIED
+Tasks: T-4117
+
 ## Typed currency and percent formats
 Rule (en-US, text typed into a cell; probes/typed-currency-percent-input, excel-graph 2026-10-11, raw `ENTERED` log in docs/research/typed-currency-percent-input-2026-10-11.md, T-0283): a leading `$` (also `-$`, `$-`, and inside parentheses) gives `$#,##0_);[Red]($#,##0)`, or `$#,##0.00_);[Red]($#,##0.00)` when the text has any decimal digits (`$1.50`, `$1.0`, `$1,234.5`); a `%` gives `0%` or `0.00%` with decimals (`1.5%`, `1.0%`, `12.345%` -> `0.00%`, the value keeps all digits) and ignores grouping (`1,000%` is `0%`); scientific text keeps `0.00E+00` whichever symbol is around it (`$1e3`, `1e3%`, `-$1e3`, `($1e3)`); plain grouped text gets `#,##0` / `#,##0.00` (`(1,000.5)` -> `#,##0.00`). `-$1e3` is -1000 (the engine used to return +1000, also through `0+"-$1e3"` and VALUE, which are unprobed). A euro sign is not an en-US currency: `1€`, `1.5€`, `-1€` and `€1` stay text with General. The engine matches the `$` and percent formats (T-0283) and keeps typed euro text as text (T-1335: `set_user_input` no longer lists `€` among the currencies; `0+` coercion of `1€` still reads a number, a separate probed path (paren-number-text-euro-suffix); VALUE shares that code path (cast.rs, text/common.rs) but has no oracle cell of its own). Other prefix symbols keep the plain `{symbol}#,##0` format (unprobed).
 Evidence: probes/typed-currency-percent-input (excel-graph, 2026-10-11).
@@ -1203,3 +1302,4 @@ Implemented in: the engine matches every cell except MULTINOMIAL numeric text (C
 SERIESSUM boolean coefficients fixed in T-1191.
 Status: VERIFIED
 Tasks: T-1082, T-1190, T-1191, T-1261, T-1574, T-1655, T-1661
+

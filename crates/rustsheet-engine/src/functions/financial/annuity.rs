@@ -22,23 +22,19 @@ use crate::{
 };
 
 /// `P = (1+r)^n` as Excel's PV and FV compute it: `1+r` with Excel's `+` and the power with its `^`
-/// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor`] this matches all
+/// (right-to-left square-and-multiply for an integer `n`). With [`annuity_factor_rounded`] this
+/// matches all
 /// 308 PV and 308 FV cells of probes-numeric/m9-fin-pv-fv (docs/excel-semantics/financial.md
 /// "Annuity evaluation order"; fit lab `annuity-pv`, `annuity-fv`, T-1524).
 pub(super) fn annuity_power(rate: f64, nper: f64) -> Result<f64, Error> {
     power(extended_sum(1.0, rate), nper)
 }
 
-/// The annuity factor `k*((P-1)/r)`, `k = 1+r*type`, evaluated in doubles in exactly this
-/// parenthesization: `(pmt*k)*((P-1)/r)` instead misses 38 of the 308 PV cells (financial.md).
-pub(super) fn annuity_factor(rate: f64, p: f64, period_start: bool) -> f64 {
-    let k = if period_start { 1.0 + rate } else { 1.0 };
-    k * ((p - 1.0) / rate)
-}
-
-/// [`annuity_factor`] with each `+`, `*` and `/` Excel's twice-rounded operator: RATE's residual
-/// (`financial_util::rate_residual`), where the once-rounded factor misses 4 of the 782 fit-lab
-/// cells (financial.md "RATE is a secant on the FV residual", T-2527).
+/// The annuity factor `k*((P-1)/r)`, `k = 1+r*type`, in exactly this parenthesization (`(pmt*k)*
+/// ((P-1)/r)` misses 38 of the 308 PV cells), with each `+`, `*` and `/` Excel's twice-rounded
+/// operator: RATE's residual (`financial_util::rate_residual`, T-2527), FV and PV (T-4146: the
+/// once-rounded factor misses all 360 cancelling FV/PV calls of probes/t4146-annuity-twice-*;
+/// financial.md "FV and PV round each operation twice").
 pub(super) fn annuity_factor_rounded(rate: f64, p: f64, period_start: bool) -> f64 {
     let k = if period_start {
         extended_sum(1.0, rate)
@@ -551,9 +547,13 @@ fn compute_future_value(
         return Err(Error::DIV);
     }
 
-    // FV = -(pv*P + pmt*(k*((P-1)/r))), every operation in doubles (financial.md)
+    // FV = -(pv*P + pmt*(k*((P-1)/r))), every `+`, `*` and `/` Excel's twice-rounded operator
+    // (financial.md "FV and PV round each operation twice", T-4146)
     let p = annuity_power(rate, nper)?;
-    let fv = -(pv * p + pmt * annuity_factor(rate, p, period_start));
+    let fv = -extended_sum(
+        extended_product(pv, p),
+        extended_product(pmt, annuity_factor_rounded(rate, p, period_start)),
+    );
     if fv.is_nan() {
         return Err(Error::NUM);
     }
@@ -752,7 +752,8 @@ impl Model {
         if rate == 0.0 {
             return Ok(-future_value - payment * period_count);
         }
-        // PV = -(fv + pmt*(k*((P-1)/r)))/P, every operation in doubles (financial.md). P is Excel's
+        // PV = -(fv + pmt*(k*((P-1)/r)))/P, every `+`, `*` and `/` Excel's twice-rounded operator
+        // (financial.md "FV and PV round each operation twice", T-4146). P is Excel's
         // `^`, with its errors: a rate of -1 with nper 0 is 0^0, `#NUM!` (`PV(-1,0,-713)`), and a P
         // of 0 (a rate of -1, or one so near it that P underflows) is the division's `#DIV/0!`
         // (`PV(-1+2^-52,165,-978,224,0)`; probes/t2475-stat-subexpressions A39, A136).
@@ -760,7 +761,13 @@ impl Model {
         if p == 0.0 {
             return Err(div_error(cell));
         }
-        let result = -(future_value + payment * annuity_factor(rate, p, period_start)) / p;
+        let result = -extended_quotient(
+            extended_sum(
+                future_value,
+                extended_product(payment, annuity_factor_rounded(rate, p, period_start)),
+            ),
+            p,
+        );
         if result.is_nan() || result.is_infinite() {
             return Err(num_error(cell));
         }

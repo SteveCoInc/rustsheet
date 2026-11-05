@@ -436,7 +436,7 @@ fn typed_currency_and_percent_formats() {
 }
 
 #[test]
-fn script_digits_are_mapped_only_by_the_coercion_helper() {
+fn script_digit_coercion_helper_maps_each_block() {
     use crate::formatter::format::ascii_script_digits;
     let map = |s: &str| ascii_script_digits(s).into_owned();
     assert_eq!(map("٣٫"), "3٫");
@@ -711,4 +711,66 @@ fn typed_script_digits_take_tagged_formats() {
     for text in ["١٫٥", "١٬٢٣٤", "١٢٪"] {
         assert!(typed(text).is_err(), "{text}");
     }
+}
+
+/// A currency sign before a parenthesised amount is a negative number with the format Excel types
+/// for it (probes/t4117-currency-parens, ENTERED numberFormat in
+/// docs/research/t4117-currency-parens-2026-11-04.md; docs/excel-semantics/coercion.md).
+#[test]
+fn typed_currency_before_parentheses() {
+    let fmt = |s: &str| {
+        crate::formatter::format::parse_typed_number(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+        .map(|(v, f)| (v, f.unwrap_or_else(|| "General".to_string())))
+    };
+    let cases = [
+        ("$(12)", -12.0, "$#,##0_);[Red]($#,##0)"),
+        ("$( 12 )", -12.0, "$#,##0_);[Red]($#,##0)"),
+        ("$(1,234.5)", -1234.5, "$#,##0.00_);[Red]($#,##0.00)"),
+        ("$(1e3)", -1000.0, "0.00E+00"),
+        ("$(1.5E+2)", -150.0, "0.00E+00"),
+        ("$(1 1/2)", -1.5, "# ?/?"),
+        ("$( 1 1/2 )", -1.5, "# ?/?"),
+        ("$ (1 1/2)", -1.5, "# ?/?"),
+        ("$(3 1/12)", -3.083_333_333_333_333_5, "# ??/??"),
+    ];
+    for (text, value, format) in cases {
+        assert_eq!(fmt(text), Ok((value, format.to_string())), "{text}");
+    }
+    for text in [
+        "$(12%)",
+        "$(+12)",
+        "$()",
+        "$(12",
+        "$(12)%",
+        "$($12)",
+        "-$(1 1/2)",
+        "$(1 1/2%)",
+        "€(12)",
+    ] {
+        assert!(fmt(text).is_err(), "{text}");
+    }
+}
+
+/// Typed `$(1 1/2%)` stays text but takes `0.00%`, like `-$3 1/2%` (probes/t4117-currency-parens
+/// A30, ENTERED numberFormat).
+#[test]
+fn typed_currency_parenthesised_percent_fraction_format() {
+    let format = |s: &str| {
+        crate::formatter::format::rejected_clock_text_format(
+            s,
+            &["$"],
+            get_default_locale(),
+            &|| Some(2026),
+            DateSystem::default(),
+        )
+    };
+    assert_eq!(format("$(1 1/2%)").as_deref(), Some("0.00%"));
+    assert_eq!(format("-$3 1/2%").as_deref(), Some("0.00%"));
+    assert_eq!(format("$3 1/2%"), None);
 }

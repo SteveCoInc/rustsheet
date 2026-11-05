@@ -9,7 +9,7 @@ use xlsx::base::expressions::types::Area;
 use xlsx::base::expressions::utils::{
     column_to_number, number_to_column, quote_name as quote_name_ic,
 };
-use xlsx::base::types::{Color, Workbook};
+use xlsx::base::types::Color;
 use xlsx::base::{Model, UserModel};
 use xlsx::import;
 
@@ -166,24 +166,6 @@ pub fn load_from_xlsx(
     Ok(PyModel { model })
 }
 
-/// Loads a model from a file in the internal binary ic format (raw API)
-#[pyfunction]
-#[pyo3(signature = (file_name, language_id="en"))]
-pub fn load_from_icalc(file_name: &str, language_id: &str) -> PyResult<PyModel> {
-    let model = import::load_from_icalc(file_name, language_id).map_err(to_py_err)?;
-    Ok(PyModel { model })
-}
-
-/// Loads a model from bytes in the internal binary ic format (raw API).
-/// This is the same format produced by `save_to_icalc` and `to_bytes`.
-#[pyfunction]
-#[pyo3(signature = (bytes, language_id="en"))]
-pub fn load_from_bytes(bytes: &[u8], language_id: &str) -> PyResult<PyModel> {
-    let workbook: Workbook = bitcode::decode(bytes).map_err(to_py_err)?;
-    let model = Model::from_workbook(workbook, language_id).map_err(to_py_err)?;
-    Ok(PyModel { model })
-}
-
 /// Creates an empty model (raw API)
 #[pyfunction]
 #[pyo3(signature = (name, locale="en", tz="UTC", language_id="en"))]
@@ -221,32 +203,6 @@ pub fn create_user_model_from_xlsx(
     Ok(PyUserModel { model })
 }
 
-/// Creates a user model from an icalc file
-#[pyfunction]
-#[pyo3(signature = (file_name, language_id="en"))]
-pub fn create_user_model_from_icalc(file_name: &str, language_id: &str) -> PyResult<PyUserModel> {
-    let model = import::load_from_icalc(file_name, language_id).map_err(to_py_err)?;
-    let model = UserModel::from_model(model);
-    Ok(PyUserModel { model })
-}
-
-/// Creates a user model from bytes in the internal binary ic format.
-/// This is the same format produced by `save_to_icalc` and `to_bytes`.
-#[pyfunction]
-#[pyo3(signature = (bytes, language_id="en"))]
-pub fn create_user_model_from_bytes(bytes: &[u8], language_id: &str) -> PyResult<PyUserModel> {
-    let workbook: Workbook = bitcode::decode(bytes).map_err(to_py_err)?;
-    let model = Model::from_workbook(workbook, language_id).map_err(to_py_err)?;
-    let user_model = UserModel::from_model(model);
-    Ok(PyUserModel { model: user_model })
-}
-
-#[pyfunction]
-#[allow(clippy::panic)]
-pub fn test_panic() {
-    panic!("This function panics for testing panic handling");
-}
-
 #[pymodule]
 fn _rustsheet(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
@@ -260,15 +216,10 @@ fn _rustsheet(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Raw API functions
     m.add_function(wrap_pyfunction!(create, m)?)?;
     m.add_function(wrap_pyfunction!(load_from_xlsx, m)?)?;
-    m.add_function(wrap_pyfunction!(load_from_icalc, m)?)?;
-    m.add_function(wrap_pyfunction!(load_from_bytes, m)?)?;
-    m.add_function(wrap_pyfunction!(test_panic, m)?)?;
 
     // User API functions
     m.add_function(wrap_pyfunction!(create_user_model, m)?)?;
-    m.add_function(wrap_pyfunction!(create_user_model_from_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(create_user_model_from_xlsx, m)?)?;
-    m.add_function(wrap_pyfunction!(create_user_model_from_icalc, m)?)?;
 
     // Utilities
     m.add_function(wrap_pyfunction!(column_name_from_number, m)?)?;

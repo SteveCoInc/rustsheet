@@ -195,9 +195,10 @@ fn test_delete_columns() {
     // A long as the borders of the range are not included that's ok.
     assert_eq!(model._get_formula("A2"), *"=SUM(C4:K4)");
 
-    // FIXME: In Excel this would be (lower limit won't change)
-    // assert_eq!(model._get_formula("A3"), *"=SUM(E4:K4)");
-    assert_eq!(model._get_formula("A3"), *"=SUM(#REF!:K4)");
+    // A range whose first column a delete takes shrinks to the columns left, as Excel does for one
+    // column (probes/table-edits table-column-range-delete-start, T-3978) and for rows (plain-range-
+    // delete-rows-across-edge, T-3019); a wider delete across the edge is assumed alike (T-2851).
+    assert_eq!(model._get_formula("A3"), *"=SUM(D4:K4)");
 }
 
 #[test]

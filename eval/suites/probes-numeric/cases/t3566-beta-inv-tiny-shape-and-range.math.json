@@ -274,7 +274,7 @@
    },
    "A151": {
     "f": "=BETA.INV(0.5002,1E-4,0.01)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A154": {
     "f": "=BETA.INV(0.45,1E-4,0.01)",
@@ -282,7 +282,7 @@
    },
    "A157": {
     "f": "=BETA.INV(0.55,1E-4,0.01)",
-    "why": "not converged or too slow"
+    "why": "not converged"
    },
    "A160": {
     "f": "=BETA.INV(0.1,1E-4,0.01)",

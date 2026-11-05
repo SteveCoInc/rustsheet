@@ -88,8 +88,17 @@ eval-show: build ## Show one case: make eval-show CASE=ironcalc-calc/FINANCIAL/I
 py-sync:
 	cd tools && $(UV) sync -q
 
-py-check: py-sync ## Lint, type-check and test tools/ (pytest on every core, decision 0233)
-	cd tools && $(UV) run ruff check src tests && $(UV) run ruff format --check src tests && $(UV) run mypy && $(UV) run pytest -q -n auto
+# Decision 0280 (T-3714): the tests that shell out to rustsheet-eval use a dev build, not the
+# fat-LTO release build `snapshot.eval_binary` makes on demand (about 3 min of CI). A release
+# binary that already exists (`make check` builds one first) is used as is; a caller's
+# RUSTSHEET_EVAL_BIN wins over both.
+PY_EVAL_RELEASE = $(wildcard $(CURDIR)/target/release/rustsheet-eval)
+PY_EVAL_BIN = $(or $(RUSTSHEET_EVAL_BIN),$(PY_EVAL_RELEASE),$(CURDIR)/target/debug/rustsheet-eval)
+
+py-check: py-sync ## Lint, type-check and test tools/ (pytest on every core, decision 0233; dev rustsheet-eval, decision 0280)
+	cd tools && $(UV) run ruff check src tests && $(UV) run ruff format --check src tests && $(UV) run mypy
+	$(if $(RUSTSHEET_EVAL_BIN)$(PY_EVAL_RELEASE),,$(CARGO) build -q -p rustsheet_eval)
+	cd tools && RUSTSHEET_EVAL_BIN="$(PY_EVAL_BIN)" $(UV) run pytest -q -n auto
 
 eval-math-check: build py-sync ## The probe suites' math sidecars are current: every Gate A one-call cell has a math value or a recorded generator skip, and no entry is stale (T-3588, decision 0243)
 	cd tools && $(UV) run rustsheet-accuracy math --check --suite probes --suite probes-numeric
