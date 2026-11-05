@@ -3,7 +3,7 @@ id: T-4278
 title: "Stop a text-comparing node inside its comparisons once the formula work budget runs out (T-4233 follow-up)"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -24,9 +24,26 @@ array `=`, the lookups' scans) to see that the pending ticks already exceed what
 example a check in the readers' loops against a remaining-work snapshot, without a panic or unwinding (directive 5).
 
 ## Acceptance criteria
-- [ ] The two formulas above are `#VALUE!` (`TOO_MUCH_WORK`) after at most about the limit's worth of ticks (an engine
+- [x] The two formulas above are `#VALUE!` (`TOO_MUCH_WORK`) after at most about the limit's worth of ticks (an engine
       test that counts ticks or units, not time).
-- [ ] No eval formula changes value; `make check` green; reviewers approve.
+- [x] No eval formula changes value; `make check` green; reviewers approve.
 
 ## Out of scope
 - Making the comparisons faster (T-4279).
+
+## Outcome
+- `functions/util/collation/compared.rs`: a thread-local allowance, the ticks the run can still pay for at its next
+  charge, set by `Model::spend_compared` after each node (work left x `COMPARED_TICKS_PER_UNIT`, 0 once exceeded) and
+  by `Model::with_area_budget` for each run, which puts the interrupted run's back. `out_of_ticks` is true once the
+  pending ticks pass it: `cmp_text_pairwise` then returns `Equal` without reading, `collation_key` the empty key and
+  `fold_lookup` the empty text. Pending ticks past the allowance make the next charge fail, and a cut-short mark also
+  forces the run's `TOO_MUCH_WORK` in `with_area_budget`, so a value computed from those stand-ins never shows. The
+  total order (`cmp_text`) is not cut: GROUPBY sorts with `slice::sort_by`, which may panic on a comparator that is
+  not an order. SORT/SORTBY use `sort_indices_pairwise`, which takes any comparator.
+- Test: `a_reader_stops_reading_once_its_ticks_pass_what_the_run_has_left` (test_formula_work.rs) counts the ticks
+  read (a test-only counter) under a 2^20-unit limit. UNIQUE of 65,536 105-byte texts, UNIQUE of 200 8,003-byte `é`
+  texts and SORT of 65,536 texts are each `TOO_MUCH_WORK` within twice the allowance plus one key or comparison.
+  Unstopped, they read 100M to 440M ticks; the test fails with the stop disabled.
+- Full size, release build: `=ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))` is `#VALUE!` in 5.3 s (about 30 s
+  before), and a UNIQUE of 1,000 texts of 16,383 `é` in 1.7 s (about 60 s). arrays.md is updated.
+- Eval: no change (`make eval-check`: 0 fixed, 0 regressions in every suite).
