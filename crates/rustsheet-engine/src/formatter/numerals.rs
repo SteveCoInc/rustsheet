@@ -7,18 +7,18 @@
 /// The digits a section prints under its locale tag's numeral byte.
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Default)]
 pub enum Numerals {
-    /// ASCII digits: no numeral byte, or 0, 1, 20-26 and every byte above 31.
+    /// ASCII digits: no numeral byte, or 0, 1, 20-26 and every byte above 35 probed (40, 63).
     #[default]
     Ascii,
     /// Ten consecutive code points for 0-9, digit by digit (`[$-2000409]0` on 12 is "١٢").
     /// Tamil (9) and Ethiopic (17) have no zero: theirs stays ASCII `0` (`[$-9000409]#,##0.00`
     /// on 1020304.05 is "௧,0௨0,௩0௪.0௫").
     Positional { zero: u32, ascii_zero: bool },
-    /// The CJK numerals of bytes 27-31.
+    /// The CJK numerals of bytes 27-35.
     Cjk(&'static CjkStyle),
 }
 
-/// How a CJK numeral byte (27-31) writes numbers. A number section prints its digits one by one
+/// How a CJK numeral byte (27-35) writes numbers. A number section prints its digits one by one
 /// (`[$-1B000409]0.00` on 1234567.89 is "一二三四五六七.八九"). A date or clock field from 10 to 99
 /// is written with the tens sign (`[$-1B000409]dd` of the 15th is "十五", `yy` of 2023 "二十三")
 /// and every other field digit by digit (`yyyy` "二〇二三", `mm` of March "〇三"). `General`, and
@@ -104,7 +104,9 @@ static CHINESE_FORMAL: CjkStyle = CjkStyle {
 };
 
 /// Byte 32: Chinese structure (`一千○一十`) written with fullwidth digits (`１千０１十`), the byte
-/// `,2000` and `[$-20000409]` carry (probes/t4107-numeral-2000-suffix rows 28-34, 70-73).
+/// `,2000` and `[$-20000409]` carry. Date and clock fields are digit by digit (`yy` of 2023 is
+/// "２３", `h` 16 "１６") although General and elapsed counts use the unit signs (probes/t4107-numeral-2000-suffix
+/// rows 1-34, 70-73, 100-104, 130-133).
 static FULLWIDTH_CHINESE: CjkStyle = CjkStyle {
     digits: ['０', '１', '２', '３', '４', '５', '６', '７', '８', '９'],
     units: ['十', '百', '千'],
@@ -112,14 +114,28 @@ static FULLWIDTH_CHINESE: CjkStyle = CjkStyle {
     one_before_unit: true,
     one_before_field_ten: false,
     zero_in_gap: true,
-    field_tens: true,
+    field_tens: false,
 };
 
-/// Byte 35: [`FULLWIDTH_CHINESE`] with the traditional 萬 and 億 (probes/t4107-numeral-2000-suffix
-/// rows 35-41, 74-80).
+/// Byte 35: [`FULLWIDTH_CHINESE`] with the traditional 萬 and 億 (rows 74-80, 115-119, 142-145).
 static FULLWIDTH_TRADITIONAL: CjkStyle = CjkStyle {
     myriads: ['萬', '億', '兆'],
     ..FULLWIDTH_CHINESE
+};
+
+/// Byte 33: [`CHINESE`] with the traditional 萬 and 億 (`[s]` of 100000 is "八十六億四千萬"; rows
+/// 105-109, 134-137).
+static CHINESE_TRADITIONAL: CjkStyle = CjkStyle {
+    myriads: ['萬', '億', '兆'],
+    ..CHINESE
+};
+
+/// Byte 34: formal numerals in traditional characters (`貳參陸`, 拾 佰 仟, 萬 億), the structure of
+/// [`CHINESE_FORMAL`] (rows 110-114, 138-141).
+static CHINESE_FORMAL_TRADITIONAL: CjkStyle = CjkStyle {
+    digits: ['零', '壹', '貳', '參', '肆', '伍', '陸', '柒', '捌', '玖'],
+    myriads: ['萬', '億', '兆'],
+    ..CHINESE_FORMAL
 };
 
 /// The largest integer spelled out in units and myriads (to 兆 groups). Past it the count of 兆
@@ -167,10 +183,11 @@ impl Numerals {
             29 => Numerals::Cjk(&FULLWIDTH),
             30 => Numerals::Cjk(&CHINESE),
             31 => Numerals::Cjk(&CHINESE_FORMAL),
-            // Bytes 32-35 repeat the CJK systems of 29-31 in a new order (probes/t4107-numeral-2000-suffix).
+            // Bytes 32-35: fullwidth Chinese, traditional Chinese, traditional formal, fullwidth traditional
+            // (probes/t4107-numeral-2000-suffix).
             32 => Numerals::Cjk(&FULLWIDTH_CHINESE),
-            33 => Numerals::Cjk(&CHINESE),
-            34 => Numerals::Cjk(&CHINESE_FORMAL),
+            33 => Numerals::Cjk(&CHINESE_TRADITIONAL),
+            34 => Numerals::Cjk(&CHINESE_FORMAL_TRADITIONAL),
             35 => Numerals::Cjk(&FULLWIDTH_TRADITIONAL),
             _ => Numerals::Ascii,
         }
