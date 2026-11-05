@@ -3,7 +3,7 @@ id: T-3925
 title: "Gate A slice 4p: reference tables for GAMMA.DIST, CHISQ.DIST and CHISQ.DIST.RT"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
