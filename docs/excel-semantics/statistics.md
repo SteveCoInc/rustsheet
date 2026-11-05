@@ -2867,7 +2867,12 @@ forms, still on `incomplete_beta.rs` (T-2847).
   the task named, where the Cephes kernel was 4 to 6 ulp off. TOMS's 20 bup terms plus the accurate bgrat increment
   (`bgrat_increment`, double-double Legendre fraction) make all 9 within 15 digits and 7 bit-exact. On probes-numeric
   (main 302bec9b5) that is 16 BETA.DIST cells newly within 15 digits and none newly off, with 626 cells newly bit-exact
-  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed.
+  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed. The arm runs for BETA.DIST's
+  cdf, F's tails and BETA.INV's search (`beta_search_tails` passes `half_bgrat`); no BETA.INV cell changed in the gated
+  suites or probes-numeric. "Near the math" holds for the x29 region only: in probes-numeric/t2464-w2f-unit-shape
+  (a just below 1, x = 0.1, b = 2.5 or 5) the new values are up to 29 ulp from the math, where the old ones were up to
+  7. Excel itself is up to 26 ulp off the math there and the new values track it: 6 cells are newly within 15 digits and
+  several are bit-exact.
 Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and argument forms; each branch's
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
