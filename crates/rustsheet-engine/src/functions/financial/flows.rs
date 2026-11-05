@@ -29,13 +29,18 @@ impl Model {
     /// `#VALUE!`, probes/t3312-xirr-guess-dates-weibull A21-A24, A34; a negative first date
     /// before a third text value is `#NUM!`, A38, but one text value cell before 16 dates holding
     /// a negative one `#VALUE!`, gen-m9/7c20351562a2d71d A40; T-3312). Both come before the
-    /// flows' signs (A39). An argument that is no range or array keeps the plain reading.
+    /// flows' signs (A39). Values and dates that are both ranges or arrays are walked first, with
+    /// their error elements, by [`Self::xirr_walk_error`]. An argument that is no range or array
+    /// keeps the plain reading.
     pub(super) fn xirr_flows(
         &mut self,
         values: CalcResult,
         dates: CalcResult,
         cell: CellReferenceIndex,
     ) -> Result<Flows, CalcResult> {
+        if let Some(error) = self.xirr_walk_error(&values, &dates, cell) {
+            return Err(error);
+        }
         let values = self.xirr_marked_numbers(values, cell)?;
         let error = |error: Error| CalcResult::new_error(error, cell, String::new());
         let dates = match self.xirr_marked_numbers(dates, cell) {
@@ -44,23 +49,67 @@ impl Model {
             Err(_) if values.iter().any(|value| value.is_nan()) => return Err(error(Error::VALUE)),
             Err(dates_error) => return Err(dates_error),
         };
+        // The date before the value at each index, as `xirr_walk_error`.
         for index in 0..values.len().max(dates.len()) {
+            if let Some(date_error) = dates.get(index).and_then(|&date| xirr_date_error(date)) {
+                return Err(error(date_error));
+            }
             if values.get(index).is_some_and(|value| value.is_nan()) {
                 return Err(error(Error::VALUE));
-            }
-            match dates.get(index) {
-                Some(date) if date.is_nan() => return Err(error(Error::VALUE)),
-                // Truncated first, as `xirr_dates` reads them: 2958465.5 is a valid date.
-                Some(&date)
-                    if date.floor() < 0.0 || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64 =>
-                {
-                    return Err(error(Error::NUM))
-                }
-                _ => {}
             }
         }
         let dates = xirr_dates(&values, &dates);
         Ok((values, dates))
+    }
+
+    /// The error of XIRR's element walk over values and dates that are both ranges or arrays
+    /// (T-3816, probes/t3816-xirr-element-reading), or `None`. Excel takes each index in turn,
+    /// the date before the value, and stops at the first that refuses:
+    ///
+    /// - an error date or value is that error, so a later error loses to an earlier one in the
+    ///   other argument (`XIRR(<-100,30,#N/A,50>,<39448,#DIV/0!,39600,39700>)` is `#DIV/0!`,
+    ///   with the errors at 2 and 3 swapped `#N/A`; rows 35, 38), in a range, an array constant
+    ///   and a computed array alike;
+    /// - a date that is non-numeric text or a boolean is `#VALUE!` and one that is negative or
+    ///   past the last serial, truncated, `#NUM!`, before a value at its index (`<-100,TRUE,..>`
+    ///   against `<39448,-1,..>` is `#NUM!`, row 40; an error value later `#VALUE!` or `#NUM!`,
+    ///   rows 36, 37);
+    /// - a value that is non-numeric text or a boolean is `#VALUE!` (row 39, before a later
+    ///   error date).
+    ///
+    /// Numeric and date text read as numbers, in a range and in an array alike (rows 13, 14, 20,
+    /// 24, 25, 30); an empty element reads as 0 and passes. Only the stored elements can stop
+    /// the walk, so it costs them, not the area (directive 5).
+    fn xirr_walk_error(
+        &mut self,
+        values: &CalcResult,
+        dates: &CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Option<CalcResult> {
+        let (_, values) = self.flow_elements(values, cell, true)?;
+        let (_, dates) = self.flow_elements(dates, cell, true)?;
+        let mut indexes: Vec<usize> = values.iter().chain(&dates).map(|(i, _)| *i).collect();
+        indexes.sort_unstable();
+        indexes.dedup();
+        let error = |error: Error| Some(CalcResult::new_error(error, cell, String::new()));
+        for index in indexes {
+            match element_at(&dates, index) {
+                FlowElement::Error(date_error) => return error(date_error.clone()),
+                FlowElement::Other => return error(Error::VALUE),
+                FlowElement::Number(date) => {
+                    if let Some(date_error) = xirr_date_error(*date) {
+                        return error(date_error);
+                    }
+                }
+                FlowElement::Empty => {}
+            }
+            match element_at(&values, index) {
+                FlowElement::Error(value_error) => return error(value_error.clone()),
+                FlowElement::Other => return error(Error::VALUE),
+                FlowElement::Number(_) | FlowElement::Empty => {}
+            }
+        }
+        None
     }
 
     /// XIRR's numbers of a range or array with a text or boolean element as NaN, for
@@ -129,8 +178,8 @@ impl Model {
         dates: &CalcResult,
         cell: CellReferenceIndex,
     ) -> Option<CalcResult> {
-        let (count, values) = self.flow_elements(values, cell)?;
-        let (date_count, dates) = self.flow_elements(dates, cell)?;
+        let (count, values) = self.flow_elements(values, cell, false)?;
+        let (date_count, dates) = self.flow_elements(dates, cell, false)?;
         if count < 2 || count != date_count {
             return None;
         }
@@ -226,12 +275,14 @@ impl Model {
 
     /// The count of elements of a range (trimmed to the used area, as [`Self::flow_range_end`])
     /// or an array, and the elements that are not empty with their row-major index, sorted;
-    /// `None` for anything else. A range is read through its stored cells only, so a sparse
-    /// range costs its stored cells, not its area (directive 5).
+    /// `None` for anything else. With `text_as_number` (XIRR's reading) numeric and date text is
+    /// its number; otherwise (XNPV's) it is [`FlowElement::Other`]. A range is read through its
+    /// stored cells only, so a sparse range costs its stored cells, not its area (directive 5).
     fn flow_elements(
         &mut self,
         arg: &CalcResult,
         cell: CellReferenceIndex,
+        text_as_number: bool,
     ) -> Option<(usize, Vec<(usize, FlowElement)>)> {
         match arg {
             CalcResult::Range { left, right } if left.sheet == right.sheet => {
@@ -252,6 +303,9 @@ impl Model {
                         CalcResult::Number(value) => FlowElement::Number(value),
                         CalcResult::Error { error, .. } => FlowElement::Error(error),
                         CalcResult::EmptyCell => return Ok(()),
+                        CalcResult::String(text) if text_as_number => model
+                            .cast_number(&text)
+                            .map_or(FlowElement::Other, FlowElement::Number),
                         _ => FlowElement::Other,
                     };
                     // In the range by the walk's contract, so both offsets are non-negative.
@@ -275,6 +329,9 @@ impl Model {
                             ArrayNode::Number(value) => FlowElement::Number(*value),
                             ArrayNode::Error(error) => FlowElement::Error(error.clone()),
                             ArrayNode::Empty => return None,
+                            ArrayNode::String(text) if text_as_number => self
+                                .cast_number(text)
+                                .map_or(FlowElement::Other, FlowElement::Number),
                             _ => FlowElement::Other,
                         };
                         Some((index, element))
@@ -360,6 +417,19 @@ fn xnpv_dates(values: &[f64], dates: &[f64]) -> Result<Vec<f64>, Error> {
         }
     }
     Ok(dates)
+}
+
+/// The `#NUM!` of an XIRR date that is negative or past the last serial once truncated
+/// (2958465.5 is a valid date there, as `xirr_dates` reads it), or `#VALUE!` for a text or
+/// boolean date read as NaN; `None` for a valid date.
+fn xirr_date_error(date: f64) -> Option<Error> {
+    if date.is_nan() {
+        Some(Error::VALUE)
+    } else if date.floor() < 0.0 || date.floor() > MAXIMUM_DATE_SERIAL_NUMBER as f64 {
+        Some(Error::NUM)
+    } else {
+        None
+    }
 }
 
 /// XIRR's dates truncated to whole days, with the scalar call's checks in its order: the counts,
