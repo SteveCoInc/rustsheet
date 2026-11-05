@@ -15,7 +15,8 @@
     hold-outs became training data. 0.334, the bracket's middle, was frozen before the fresh sweep
     probes/t3252-gamma-prefactor-sweep (40 log-uniform points, shapes 30 to 500, x/a 0.55 to 0.75, density and cdf).
     On it the fit scores 22 / 61 / 69 of 80 (bit-exact / 4 ulp / 15 digits), against 3 / 15 / 35 for correctly
-    rounded; T-3252's Outcome has the full table.
+    rounded. All 80 are inside the Gate A envelope (worst 1.04E-14 relative to 50-digit mpmath), and none is
+    outside. T-3252's Outcome has the full table.
 - **Decision:** quality/fitted.json rises by one for incomplete_gamma/mod.rs (2 to 3), for this one new fit, written
   by `scripts/check_fitted.py --update`.
 - **Consequences:** one counted tag. The fitted ratchet stays one-way for new fits, each with its own record. No gated

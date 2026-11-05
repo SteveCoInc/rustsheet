@@ -1210,7 +1210,7 @@ not favour the ratio form: k = 19 to 200 at mean/k 0.1 to 3 (window A97:A140) ha
 mean (e.g. A125 `POISSON.DIST(100,110,TRUE)` -5 against 47, A136 -8 against -131, A118 1 against 85), and the ratio form
 closer only far above it at k 100 and 200 (A129, A139, A140: -4, 3, -1 against 115, -115, -327; T-4255). The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
-prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path. Below shape 20 neither this form nor the direct one is Excel's
+prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
 (`GAMMA.DIST(0.9,9,1,TRUE)`: Excel 9 ulp below the truth, the ratio form 23 below Excel, the direct one 10 above).
 Found in T-3147: from shape 3 to 20 the *density* above the mode (x > 1.4a) is the same ratio form, with the exact
 Stirling error (loader.rs `stirlerr_exact`; the 8-term asymptotic series is 2E-13 off at shape 5):

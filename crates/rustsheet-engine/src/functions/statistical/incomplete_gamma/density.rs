@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn below_the_mode_the_ratio_form_starts_at_two_thirds_of_the_shape() {
-        // Excel's GAMMA.DIST(x,a,1,FALSE) bit for bit on the ratio form below 0.67a, where `rcomp`
+        // Excel's GAMMA.DIST(x,a,1,FALSE) bit for bit on the ratio form below 0.666a, where `rcomp`
         // is 24 to 72 ulp off (probes/t3252-gamma-prefactor-window A3, A22, A23; T-3252).
         for (a, x, excel) in [
             (50.0, 32.5, 0.001_526_191_948_114_739_6),

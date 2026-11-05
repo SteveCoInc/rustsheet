@@ -66,7 +66,16 @@ b in [20, 40) and a/b at most 1E-6.
 
   The sweep's exact rate (28%) is above training's (17 to 19%). FITTED tag and range are on the constant, and there
   is no keep-matched branch. `rustsheet-accuracy math` writes no Gate A sidecar for the hold-out and sweep cases (0
-  candidate cells), so the envelope count is from the table above, not from Gate A.
+  candidate cells), so the Gate A envelope was checked by hand: 80 of 80 sweep cells are inside it (within 15
+  digits of Excel, or within 1E-9 relative of 50-digit mpmath `gammainc` and `loggamma`), and none is outside. The
+  worst of the 58 that differ from Excel is 1.04E-14 relative to the math (A72).
+- Margin: the rule was "beat correctly rounded at every level", not a tolerance on the exact rate. The sweep's exact
+  rate (28%) is higher than training's (17 to 19%). That points away from overfitting, but the two rates do not
+  measure the same thing: the sweep covers x/a 0.55 to 0.75 only, while training reaches 0.99a and goes above the
+  mode, where Excel is neither form. The freeze and the sweep share commit becb4501c. The sweep is seeded (3252) and
+  can be reproduced.
+- Window A171:A179 (`BETA.DIST(0.01,1E-05,30,FALSE)` and nearby, 10 to 15 ulp, none visibly off) is the algdiv
+  residue for min < 1 < 8 < max, and T-3035's Context now lists it.
 - Eval delta: in the window case 74 of 188 cells pass, against 69 on main's engine. Each newly passing cell was 9 to
   72 ulp off on `rcomp` (A2, A3, A22, A23, A42, A43). No regressions in any gated suite (`make eval-baseline`
   against main's lists after merging `origin/main`). The four new cases add 237 known failures, 88 of them visibly

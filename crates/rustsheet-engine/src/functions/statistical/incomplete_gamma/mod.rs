@@ -191,7 +191,7 @@ fn gamma_prefactor(a: f64, x: f64, form: Exponent) -> f64 {
         }
         return (a * x.ln() - x - super::special::ln_gamma(a)).exp();
     }
-    let below = if (NEAR_MODE_BELOW_SHAPES).contains(&a) {
+    let below = if NEAR_MODE_BELOW_SHAPES.contains(&a) {
         NEAR_MODE_BELOW
     } else {
         NEAR_MODE
