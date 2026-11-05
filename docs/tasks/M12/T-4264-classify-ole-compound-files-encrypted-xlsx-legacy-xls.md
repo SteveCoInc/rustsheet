@@ -26,8 +26,11 @@ error for each, instead of the one `XlsxError::OleCompoundFile` of decision 0279
 - [ ] `EncryptionInfo` + `EncryptedPackage` give an encrypted-package error, and `Workbook`/`Book` gives
       `LegacyBinaryWorkbook`. Anything else stays `OleCompoundFile`. Tests cover the two poi fixtures and a minimal
       `.xls` container built in the test.
-- [ ] Malformed containers (a directory cycle, a stream past the bounds) give errors, not panics. A `cfb_container`
-      fuzz target exists and runs in the fuzz job.
+- [ ] Malformed containers (a directory cycle, a stream past the bounds, an input over `max_uncompressed_bytes`) give
+      errors, not panics. A `cfb_container` fuzz target exists and runs in the fuzz job. A panic or unbounded allocation
+      it finds in `cfb` that cannot be fixed upstream triggers SPEC-0031's fallback (a minimal reader of our own).
+- [ ] `cfb` is pinned exactly, checked against RustSec, and `cargo deny check` passes; the PR reports `cargo tree`'s
+      transitive count.
 - [ ] xlsx-storage.md updated, and the poi baseline lines keep `!InvalidCase` with the new message.
 - [ ] `make check` green; reviewers approve.
 

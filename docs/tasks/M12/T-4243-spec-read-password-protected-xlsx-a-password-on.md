@@ -37,11 +37,14 @@ A spec in docs/specs/ says how RustSheet will read the workbooks it refuses toda
 
 ## Outcome
 - docs/specs/SPEC-0031-encrypted-xlsx-and-legacy-xls.md (draft): OLE container classification with the `cfb` crate
-  (D1); ECMA-376 Agile and Standard decryption over RustCrypto primitives (D2); limits under directive 5, including
-  the 10,000,000 `spinCount` cap MS-OFFCRYPTO itself sets, so no deviation is needed (D3); `LoadOptions::password` and
-  `max_spin_count`, typed `LoadError` variants and the Python `password=` keyword (D4); HMAC verification (D5); and the
+  (D1); ECMA-376 Agile and Standard decryption over RustCrypto primitives (D2); limits under directive 5: a
+  `max_spin_count` default of 1,000,000, below MS-OFFCRYPTO's 10,000,000 format cap (a `DEVIATION` entry T-4266
+  records), and at most one key derivation per load (D3); `LoadOptions::password` as a zeroizing, `Debug`-redacting
+  `Password`, typed `LoadError` variants with `UnsupportedKind`, and the Python `password=` keyword (D4); HMAC verification (D5); and the
   `.xls` plan (refuse with a typed error until an owner ruling).
 - Tasks filed: T-4263 (probe E1-E4), T-4264 (classification), T-4265 (decryption), T-4266 (load API), T-4267 (poi
   suite passwords) and T-4268 (owner ruling on `.xls`, blocked on the owner). The poi fixtures' known failures are now
   T-4267's, and xlsx-storage.md points at the spec.
+- Review round 1 (security, design): the spin-count default, the password's `Debug` exposure, the SPEC-0001/0026
+  citations, constant-time comparisons and shape checks were fixed in the spec and the task criteria.
 - No probe was run: SPEC-0031's Excel rules are UNVERIFIED until T-4263. Eval delta: none (docs only).

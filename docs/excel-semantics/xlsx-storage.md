@@ -80,8 +80,9 @@ T-4263): no oracle run has opened the two poi fixtures with their passwords (POI
 also opens a legacy binary workbook (`.xls`, the same container) without a password.
 Ours: a file that starts with that signature is refused before the zip is opened, with `XlsxError::OleCompoundFile`
 ("the file is an OLE compound file (a password-protected or legacy binary workbook), not an xlsx package"). That is
-a known gap, not a deviation (decision 0279). SPEC-0031 (T-4243) plans the close: a password on the load API, ECMA-376
-Agile and Standard decryption (T-4264 to T-4267) and the `.xls` plan, which waits on an owner ruling (T-4268). Any other file that is not a zip stays a zip error.
+a known gap, not a deviation (decision 0279). SPEC-0031 (T-4243) plans the close: a password on the load
+API, ECMA-376 Agile and Standard decryption (T-4264 to T-4267) and the `.xls` plan, which waits on an owner ruling
+(T-4268). Any other file that is not a zip stays a zip error.
 - poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`) are refused this
   way. Their baseline lines stay `!InvalidCase` (now with the typed message), owned by T-4267.
 - poi `deep-data.xlsx` is a corrupt package (17 local headers with garbled names, no end-of-central-directory record),

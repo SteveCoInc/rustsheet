@@ -26,6 +26,9 @@ within the limits of SPEC-0031 D3, verifying the Agile HMAC per D5.
 - [ ] The malformed inputs listed in SPEC-0031's test plan each give a typed error. An `encrypted_package` fuzz target
       exists.
 - [ ] `spinCount` above 10,000,000, or above `max_spin_count` once T-4266 lands, is refused before any hashing.
+- [ ] The verifier and HMAC comparisons are constant-time, and the shape checks of SPEC-0031 D3 (ciphertext length a
+      multiple of 16, declared size past the decrypted length, checked segment arithmetic, XML element count and
+      depth, short hash output) each have a malformed-input test.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

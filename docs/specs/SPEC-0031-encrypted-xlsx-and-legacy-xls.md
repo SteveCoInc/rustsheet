@@ -12,7 +12,7 @@ Since T-3972 (decision 0279) the importer refuses any file that starts with the 
 - **Password-protected xlsx.** Excel encrypts an xlsx by wrapping the zip in an OLE compound file (MS-CFB) holding an
   `EncryptionInfo` stream and an `EncryptedPackage` stream (ECMA-376 Part 2 / MS-OFFCRYPTO). Excel asks for the
   password and opens it. Two poi fixtures are such files: `58616.xlsx` and `protected_passtika.xlsx`. Both are known
-  failures (`!InvalidCase` in eval/baseline/poi.txt) owned by T-4243. The SPEC-0026 load API has no way to pass a
+  failures (`!InvalidCase` in eval/baseline/poi.txt) owned by T-4243. The SPEC-0001 load API (`LoadOptions`, `Workbook::open`, `from_xlsx_bytes`) has no way to pass a
   password.
 - **Legacy binary workbooks.** An `.xls` (BIFF8) uses the same container with a `Workbook` (or `Book`) stream. Excel
   opens it with no password. No suite in eval/ has one today.
@@ -60,13 +60,19 @@ The probe's findings go into the xlsx-storage.md entry. The entry's "known gap" 
 
 ### D1. Container: a bounded MS-CFB reader (T-4264)
 Classification runs on the bytes `is_ole_compound_file` already detects (crates/rustsheet-xlsx/src/import/package.rs).
+The call sits in `Package::new`, in the branch that today returns `OleCompoundFile`: the 8-byte signature check runs
+first and only a file that has the signature is handed to `cfb`, so a zip never reaches it.
 - Use the `cfb` crate (MIT; one dependency, `uuid`, with no I/O beyond the `Read + Seek` we hand it, an in-memory
-  `Cursor`) rather than a reader of our own. It is reviewed under cargo-deny like any dependency, and its version is
-  pinned in the workspace. Under it, `Package::new` keeps its 8-byte check, so a zip never reaches `cfb`.
+  `Cursor`) rather than a reader of our own. It is reviewed under cargo-deny like any dependency. Its version is pinned
+  exactly, its default features are off where they pull in extras (`uuid`'s), and T-4264 checks it against RustSec.
+- The OLE bytes are capped before `CompoundFile::open`: `cfb` parses the header, FAT, mini-FAT and directory eagerly,
+  so the input is first bounded by `max_uncompressed_bytes` (the facade's `open` already bounds the file read by it).
 - Bounds, checked before any stream is read: at most 4,096 directory entries; each stream read with
   `take(limit + 1)`, where `limit` is `max_uncompressed_bytes` for `EncryptedPackage`, 1 MiB for `EncryptionInfo`, and
   nothing else is read. `cfb` validates sector chains (cycles, out-of-range sectors) and returns errors, not panics;
-  T-4264 adds the fuzz target `cfb_container` to prove it on our inputs (SPEC-0026 decision 5's corpus).
+  T-4264 adds the fuzz target `cfb_container` to prove it on our inputs, with a corpus built the way
+  the existing bitcode fuzz target's is (T-2895). If it finds a panic or an unbounded allocation in `cfb` that cannot be
+  fixed upstream, T-4264 switches to the minimal reader of "Alternatives considered".
 - Classification, from the root storage's entries:
   - `EncryptionInfo` and `EncryptedPackage` streams: an encrypted package (D2).
   - `Workbook` or `Book` stream: a legacy binary workbook, `XlsxError::LegacyBinaryWorkbook`.
@@ -101,12 +107,15 @@ pub(crate) fn decrypt_package(
     hash `d7 aa 0f 6d 30 61 34 4e`, key value `14 6e 0b e7 ab ac d0 d6`), `K = H(Hn || block)`, truncated to
     `keyBits/8` or padded with `0x36`.
   - Verify the password: decrypt the verifier input and the verifier hash (IV = the key encryptor's salt). A hash of
-    the input that is not the decrypted hash value is `WrongPassword`.
+    the input that is not the decrypted hash value is `WrongPassword`. The comparison is constant-time
+    (`subtle::ConstantTimeEq`, which `hmac` already depends on), and nothing is decrypted with the key before it
+    passes.
   - Decrypt the intermediate key, then the package: 4,096-byte segments, segment i with IV =
     `H(keyData.salt || i_le32)` truncated to `blockSize`. The first 8 bytes of `EncryptedPackage` are the plain size
     (u64 LE), and the output is truncated to it.
   - Integrity (D5): HMAC over the whole `EncryptedPackage` stream, with the HMAC key and value decrypted under the
-    block keys `5f b2 ad 01 0c b9 e1 f6` and `a0 67 7f 02 b2 2c 84 33`.
+    block keys `5f b2 ad 01 0c b9 e1 f6` and `a0 67 7f 02 b2 2c 84 33`, compared with `Mac::verify_slice`
+    (constant-time) before any plain text is returned.
 - **x.2 with `fCryptoAPI` and `fAES` set (x in 2, 3, 4): Standard.** A binary `EncryptionHeader` (AES-128/192/256,
   SHA-1 only) and `EncryptionVerifier`. Key derivation (2.3.4.7): `H0 = SHA1(salt || password_utf16le)`, 50,000
   rounds of `Hi = SHA1(i_le32 || Hi-1)`, `Hfinal = SHA1(Hn || 0_le32)`, then the `0x36` / `0x5c` X1/X2 expansion,
@@ -115,39 +124,56 @@ pub(crate) fn decrypt_package(
 - **Any other version or flag set:** `UnsupportedEncryption`.
 
 Crypto dependencies come from RustCrypto: `aes`, `cbc`, `ecb`, `sha1`, `sha2`, `hmac` (all Apache-2.0 OR MIT,
-already accepted by deny.toml's license list) and `base64` for the XML values. The password is kept in a `Zeroizing`
-buffer (`zeroize`, same licence) while its UTF-16 form and the derived keys live. They add no build scripts and no
-`unsafe` beyond what `aes` uses for its CPU intrinsics, which cargo-deny and the security reviewer check in T-4265.
+already accepted by deny.toml's license list) and `base64` for the XML values. The password's UTF-16 form and the
+derived keys live in `Zeroizing` buffers (`zeroize`, same licence). They add no build scripts and no `unsafe` beyond
+what `aes` uses for its CPU intrinsics (the workspace's `unsafe_code = "deny"` covers our own code only, so no `allow`
+is needed). T-4264 and T-4265 run `cargo deny check` and report `cargo tree`'s transitive count, check which crates
+(`sha2`, `base64`) are already in Cargo.lock, pin exact versions and turn off default features they do not need.
 Hand-rolled crypto is out (see Alternatives).
 
 ### D3. Limits (directive 5)
-- **`spinCount`:** MS-OFFCRYPTO caps it at 10,000,000, and a larger value is refused as a malformed file
-  (`UnsupportedEncryption`), so no deviation from Excel is needed. At 10,000,000 SHA-512 rounds the derivation costs
-  about 2 to 4 s of CPU, once per load (not per segment). Excel writes 100,000. `LoadOptions::max_spin_count`
-  (default 10,000,000) lets a server lower it. A file above a lowered cap is `LoadError::Options`, like the other
-  limits.
+- **`spinCount`:** MS-OFFCRYPTO caps it at 10,000,000, and a larger value is malformed (`UnsupportedEncryption`).
+  That is a format maximum, not a resource policy: 10,000,000 SHA-512 rounds cost about 2 to 4 s of CPU, which any
+  untrusted file could demand without knowing a password. So `LoadOptions::max_spin_count` defaults to **1,000,000**
+  (ten times the 100,000 Excel writes), and a file above it is `LoadError::Options`, like the other limits. A caller
+  who trusts its files may raise it up to 10,000,000. Refusing a file Excel opens (spinCount 1,000,001 to 10,000,000)
+  is a directive-5 deviation: T-4266 records it as a `DEVIATION` entry in xlsx-storage.md (decision 0014).
+- **Work per load:** the `spinCount` check runs before any hashing, and a load runs **at most one** key derivation.
+  With a password given, only that password is tried. With none, the `VelvetSweatshop` attempt (only if T-4263
+  verifies E2) is the one derivation, and its failure is `PasswordRequired`. The Python bindings run the whole load,
+  derivation included, with the GIL released (`py.detach`, as `open` and `from_xlsx_bytes` already do).
 - **Package size:** the declared plain size and the stream are both bounded by `max_uncompressed_bytes`, before any
   allocation. The decrypted zip then goes through the existing zip limits unchanged, so an encrypted bomb is caught
   where a plain one is.
-- **Block sizes:** `blockSize` must be 16 (AES), `keyBits` 128, 192 or 256, and a salt 1 to 64 bytes. Base64 fields
-  are length-checked before decoding.
+- **Block sizes:** `blockSize` must be 16 (AES), `keyBits` 128, 192 or 256, a salt 1 to 64 bytes, and the hash
+  output at least `keyBits/8` bytes or padded per the rule above. Base64 fields are length-checked before decoding.
+- **Shape checks:** the ciphertext length after the 8-byte size must be a multiple of 16; a declared plain size larger
+  than the decrypted length is malformed; the segment index is computed with checked arithmetic; the Agile XML is
+  read with at most 64 elements and nesting depth 8 (the 1 MiB cap bounds its size, not its shape).
 - **Memory:** at most 2 × the package size at once (ciphertext and plain text). The 4,096-byte segments are
   decrypted in place into the output buffer.
 
 ### D4. Load API (T-4266)
-- `LoadOptions` gains `pub password: Option<String>` (default `None`). `LoadOptions` is not `#[non_exhaustive]`, so a
+- `LoadOptions` gains `pub password: Option<Password>` (default `None`) and `pub max_spin_count: u32` (default
+  1,000,000). `Password` is a newtype over `Zeroizing<String>` (zeroized on drop) whose `Debug` prints `Password(***)`
+  and which implements neither `Display` nor `Serialize`, so `{:?}` of `LoadOptions` (it derives `Debug`) cannot print
+  it; a test asserts `format!("{opts:?}")` does not contain the password. `LoadOptions` is not `#[non_exhaustive]`, so a
   caller building it with a struct literal and no `..Default::default()` breaks. This is acceptable before the API v1
-  freeze (SPEC-0026 decision 7), and the CHANGELOG notes it.
+  freeze (docs/milestones.md: "API v1 freeze (semver-checked)"), and the CHANGELOG notes it.
 - `LoadError` (already `#[non_exhaustive]`) gains:
   - `PasswordRequired`: the file is encrypted and no password was given. If E2 holds, it applies only after
     `VelvetSweatshop` also fails.
   - `WrongPassword`;
-  - `Unsupported(String)`: the encryption kind, or a legacy `.xls`, named in the message.
+  - `Unsupported(UnsupportedKind)`, with `UnsupportedKind` a `#[non_exhaustive]` enum: `LegacyBinaryWorkbook`,
+    `Encryption(String)` (the kind, e.g. "extensible 4.3", "RC4") and `OtherOleFile`, so callers and tests match on
+    the kind, not on text.
 - `LoadError::Format` keeps everything else, including a failed HMAC (D5) and a malformed `EncryptionInfo`.
 - Python: `Workbook.open(path, recalc=True, clock=None, name=None, password=None)` and the same keyword on
   `from_xlsx_bytes`. The errors map to new `PasswordRequiredError` and `WrongPasswordError` subclasses of the existing
   `LoadError`, so `except rustsheet.LoadError` still catches them. The `.pyi` stub and README document them.
-- The password is never logged, never put in an error message and never stored on the `Workbook`.
+- The password is never logged, never put in an error message and never stored on the `Workbook`. The Python layer
+  extracts the `str` into a `Password` at once and owns no other copy; the Python `str` object itself cannot be zeroized,
+  which the README states.
 - Saving a workbook opened from an encrypted file writes it unencrypted. The doc comment on `save_xlsx` says so.
 
 ### D5. Integrity
