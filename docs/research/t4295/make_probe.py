@@ -1,6 +1,7 @@
-"""T-4295: write probes/t4295-elapsed-with-month (run once; the case is committed).
+"""T-4295: write probes/t4295-elapsed-with-month and -b (run once; the cases are committed).
 
-Rows: values; columns: formats that put an elapsed token next to a month-or-minute `m`.
+Rows are values, columns formats. The first case puts an elapsed token next to `m`/`mm`; the second asks what
+an elapsed token after a date token counts, across years, months, days and times.
 """
 
 import json
@@ -42,26 +43,6 @@ def write(out: Path, values: tuple[str, ...], formats: tuple[str, ...], what: st
 def main() -> None:
     write(OUT, VALUES, FORMATS, "an elapsed token next to m/mm in TEXT")
     write(OUT_B, VALUES_B, FORMATS_B, "what an elapsed token after a date token counts, by year, month, day and time")
-
-
-def _unused() -> None:
-    cells = {}
-    for col, fmt in zip("ABCDEFGHIJKLMN", FORMATS):
-        for row, v in enumerate(VALUES, start=1):
-            cells[f"{col}{row}"] = f'=TEXT({v},"{fmt}")'
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": (
-            "T-4295: an elapsed token next to m/mm in TEXT. Columns A:N are formats "
-            + ", ".join(f"{c} {f}" for c, f in zip("ABCDEFGHIJKLMN", FORMATS))
-            + "; rows 1:9 the values " + ", ".join(VALUES) + "."
-        ),
-        "tags": ["M10", "probe", "dates", "T-4295"],
-        "expected": {},
-        "check": [f"Calc!{r}" for r in sorted(cells, key=lambda r: (int(r[1:]), r[0]))],
-        "sheets": [{"name": "Calc", "cells": cells}],
-    }
-    OUT.write_text(json.dumps(case, indent=1) + "\n")
 
 
 if __name__ == "__main__":
