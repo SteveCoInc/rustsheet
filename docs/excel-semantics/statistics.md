@@ -1500,7 +1500,7 @@ t4322 fresh A10 (`k = 100`, 1.298a), as is the correctly rounded Q (17), so Exce
 step none of them shares; T-4357 probes the companion functions at these points. Cephes' continued fraction in
 doubles does not explain the window form's residue either: in place of the exact fraction it is within 4 ulp at
 13/15 fit and 47/57 fresh points (exact fraction 14/15 and 51/57), and G3 stays 62 ulp off.
-T-4357 (probes-numeric/t4357-poisson-cdf-companions, excel-graph 2026-11-05) put companions beside the 18 T-4345 cdf
+T-4357 (probes-numeric/t4357-poisson-cdf-companions, excel-graph 2026-11-05; docs/research/t4357/score.py) put companions beside the 18 T-4345 cdf
 points below 1.3a (rows 1:9 train, 10:18 hold-out): `CHISQ.DIST.RT(2m, 2k + 2)` (E) is the cdf bit for bit at all 18;
 `GAMMA.DIST(m, k + 1, 1, TRUE)` (C, the lower tail P) is within 1 ulp of the correctly rounded P at all 18, and P + Q
 is 1 to an ulp of 1; `1 - P` (H) is 1 to 389,215 ulp from the cdf, so Q is not taken from P. Excel's own pmf (B, up

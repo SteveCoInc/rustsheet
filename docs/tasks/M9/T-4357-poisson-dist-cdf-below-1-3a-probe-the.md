@@ -35,10 +35,10 @@ The visibly-off cells this task owns (taken over from T-4345):
 - probes/t4291-poisson-far-above-mean D2 and H2; probes/t4302-poisson-cdf-beside-pmf B21 and E19.
 
 ## Acceptance criteria
-- [ ] The companion probes are committed with oracle values.
-- [ ] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's
+- [x] The companion probes are committed with oracle values.
+- [x] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's
       on the hold-out and a fresh sweep. Otherwise the rejected models go into statistics.md with their scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
@@ -59,6 +59,6 @@ the 18 T-4345 cdf points below 1.3a. Recorded in statistics.md (the T-4357 parag
   ulp. So the bits come from roundings of x-dependent intermediates, and reproducing them needs Excel's operation
   order.
 
-No candidate was taken: no fit, no `FITTED` tag, and no fresh sweep. The engine is unchanged. Eval delta: the
+No candidate was taken, so the second criterion is met by its "otherwise" branch: no fit, no `FITTED` tag, and no fresh sweep (a fresh sweep tests a frozen candidate, and there is none; T-4367 carries it). Scoring script: docs/research/t4357/score.py. The engine is unchanged. Eval delta: the
 new case is new coverage (144 cells, all pass at the gate's tolerance; no baseline change). Follow-up T-4367 (operation order) takes
 over the visibly-off cells, the new case's included.
