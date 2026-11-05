@@ -3,7 +3,7 @@ id: T-4212
 title: "Probe a single-cell INDEX at the root over a union, a sheet-qualified range, a 2-D range and a reference-bodied name"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
