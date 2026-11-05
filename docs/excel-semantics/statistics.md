@@ -1500,6 +1500,16 @@ t4322 fresh A10 (`k = 100`, 1.298a), as is the correctly rounded Q (17), so Exce
 step none of them shares; T-4357 probes the companion functions at these points. Cephes' continued fraction in
 doubles does not explain the window form's residue either: in place of the exact fraction it is within 4 ulp at
 13/15 fit and 47/57 fresh points (exact fraction 14/15 and 51/57), and G3 stays 62 ulp off.
+T-4357 (probes-numeric/t4357-poisson-companions, excel-graph 2026-11-05; docs/research/t4357/score.py) probed the
+functions Excel may share the kernel with at the same 18 points and 24 fresh ones (seed 4357, fixed before scoring),
+a = k + 1, and none explains the cdf. Bit-exact / within 4 ulp / max ulp from Excel's cdf, train, hold-out, fresh: the
+correctly rounded Q 1/7/9, 1/4/17, 7/18/8; Excel's own `1-GAMMA.DIST(m,a,1,TRUE)` 0/2/309836, 0/0/389215, 1/16/6006
+(so the cdf is not 1 - P: P near 1 cancels); Excel's `GAMMA.DIST(m,a,1,FALSE)` times the exact Q/density 1/3/63,
+0/3/86, 3/10/22, and Excel's `POISSON.DIST(k,m,FALSE)` times the exact Q/pmf 2/4/42, 0/1/73, 0/12/26 (so the cdf does
+not take the density's or the pmf's prefactor); Excel's `ERFC.PRECISE` of Temme's argument
+`SQRT(a*(m/a-1-LN(m/a)))`, halved, plus the exact remainder 3/4/56, 0/1/68, 3/10/47 (so it is not Temme's leading
+term on Excel's erfc). Excel's cdf stays closer to the correctly rounded Q (within 4 ulp at 29 of 42 points) than to
+any model built on a companion value.
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's

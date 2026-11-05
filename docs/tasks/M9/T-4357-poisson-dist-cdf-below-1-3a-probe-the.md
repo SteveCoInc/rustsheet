@@ -3,7 +3,7 @@ id: T-4357
 title: "POISSON.DIST cdf below 1.3a: probe the companion functions at the same points (T-4345 follow-up)"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -35,8 +35,8 @@ The visibly-off cells this task owns (taken over from T-4345):
 - probes/t4291-poisson-far-above-mean D2 and H2; probes/t4302-poisson-cdf-beside-pmf B21 and E19.
 
 ## Acceptance criteria
-- [ ] The companion probes are committed with oracle values.
-- [ ] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's
+- [x] The companion probes are committed with oracle values.
+- [x] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's
       on the hold-out and a fresh sweep. Otherwise the rejected models go into statistics.md with their scores.
 - [ ] `make check` green; reviewers approve.
 
@@ -45,3 +45,16 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 
 ## Out of scope
 - CHISQ.DIST.RT's cells (T-4346, T-4320).
+
+## Outcome
+- Probe probes-numeric/t4357-poisson-companions (docs/research/t4357/gen_probe.py; excel-graph, 2026-11-05): at
+  T-4345's 9 train and 9 hold-out points and 24 fresh points (seed 4357, drawn before scoring), the cdf beside
+  `GAMMA.DIST(m,a,1,TRUE)`, `1-GAMMA.DIST(...)`, `GAMMA.DIST(m,a,1,FALSE)`, `POISSON.DIST(k,m,FALSE)` and
+  `ERFC.PRECISE` of Temme's argument, a = k + 1.
+- Scored (docs/research/t4357/score.py, split fixed before scoring): five models that take one Excel companion value
+  and the rest exactly. None is Excel's on the hold-out (best 0/3 of 9 bit-exact/within 4 ulp, against 1/4 for the
+  correctly rounded Q); Excel's `1-GAMMA.DIST` is up to 389215 ulp off (P cancels), and the density, pmf and erfc
+  models are 22 to 86 ulp off at their worst. The rejected models and their scores are in statistics.md after the
+  T-4345 paragraph. No candidate was taken, so no engine change and no post-freeze sweep.
+- Eval delta: the new case's cells (see the eval-check summary in the PR); the visibly-off cells the task owned stay
+  open and move to T-4368 (`campaign: visible`), with any visibly-off cell of the new case's column A.
