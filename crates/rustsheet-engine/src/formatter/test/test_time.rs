@@ -186,6 +186,28 @@ fn fraction_digit_ties_follow_the_half_step_register() {
     }
 }
 
+/// Below serial 1 the clock and the fraction digits are cut from the half-step serial field by field (24, 60, 60,
+/// then the fraction), so Excel rounds some ties up and truncates others (probes/t4323-fraction-ties A92,
+/// t4323-fraction-sweep-2 A3, A4, t4323-fraction-holdout A5, t4332-fraction-fresh A6; T-4332).
+#[test]
+fn fraction_digit_ties_below_one_are_cut_field_by_field() {
+    let ctx = FormatContext::new(get_default_locale());
+    let cases = [
+        (0.015 / 86400.0, "s.00", "0.02"),
+        (21.2685 / 86400.0, "[h]:mm:ss.000", "0:00:21.268"),
+        (28506.75 / 86400.0, "mm:ss.0", "55:06.7"),
+        (20.65 / 86400.0, "[s].0", "20.6"),
+        (8134.55 / 86400.0, "mm:ss.0", "15:34.5"),
+    ];
+    for (value, format, expected) in cases {
+        assert_eq!(
+            format_number(value, format, &ctx).text,
+            expected,
+            "{format}"
+        );
+    }
+}
+
 // probes/t4295-elapsed-with-month A1, D1, K1 (excel-graph): `[s]` before an hour or minute token
 // hands it the elapsed count, counted from the date section's register (18.5 days on 1h42m18s).
 #[test]

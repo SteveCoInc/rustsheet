@@ -3,7 +3,7 @@ id: T-4332
 title: "TEXT fraction digits of a second at a tie for a serial below 1 (d=0) follow no half-step model yet"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -22,3 +22,26 @@ Found by T-4323. The half-step register (`half_step_split`, formatter/elapsed.rs
 
 ## Out of scope
 -
+
+## Outcome
+- `field_split` (formatter/elapsed.rs) gives `FractionalSeconds` the clock and the fraction digits. It adds the half step
+  to the serial as before (`y = x + 0.5/(86400*s)`) and cuts `frac(y)` field by field: multiply by 24, floor, keep the
+  remainder, then the same with 60, 60 and s, in plain doubles. `half_step_split` stays for the `General` register,
+  and the elapsed counts are unchanged (T-4333).
+- This is a structural model, an operation order ranked against T-4323's alternatives (docs/research/t4332/chain.py,
+  README.md), with no fitted constant. It was frozen before the fresh sweep.
+  - Five t4323 cases: 134 of 156 below serial 1, 469 of 470 from 1 up. The register gets 101 and 467; the earlier
+    rounding gets 114 below 1.
+  - R4.1 hold-out: t4323-fraction-holdout 99 of 100 (register 97), train cases 385 of 406 (register 353). The pooled
+    30% hash split of holdout.py: held 184 of 192 (register 171), train 419 of 434 (register 397).
+  - Fresh sweep probes/t4332-fraction-fresh, new in this PR: 120 cells drawn after the freeze (seed 43320; 60 separate
+    the two models), excel-graph 2026-11-05. The cut gets 103, the register 72, the earlier rounding 72.
+- Eval delta (probes): 40 fixed. 5 regressions are allowed by decision 0294 (`update-baseline --allow-regressions`
+  once): t4323-fraction-ties A121, A122, A124; t4323-fraction-sweep-2 A124; t4323-fraction-holdout A100. The new case
+  adds 17 known failures. Every other suite is unchanged.
+- Not every listed cell passes: the acceptance's floor (beat 114 of 156 below serial 1) is met, but 22 tie cells below 1
+  in the five cases and 17 in the fresh sweep still miss. Follow-up T-4370 owns them, the five regressions included.
+  T-4333 keeps the count cells.
+- number-formats.md "Fraction digits of a second at a tie" records the cut, the open cells and the refuted candidates.
+  Unit test: `fraction_digit_ties_below_one_are_cut_field_by_field`.
+
