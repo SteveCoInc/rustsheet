@@ -13,6 +13,9 @@ docs/research/t3524/*.patch against the engine before T-3524) and the correctly 
   docs/research/t3524/gen_sweep.py), rates 1E-4..2.
 - `cumulative-tiny`: the second fresh sweep, rates 1E-12..1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep,
   `gen_sweep.py`).
+- `cumulative-short`: T-4349's fresh sweep, drawn after its short-range selector was frozen, over the cells that
+  selector changes: 1 to 4 periods, rates 1E-3..0.0997, leads below 0.095
+  (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep, docs/research/t4349/gen_sweep.py).
 """
 
 from __future__ import annotations
@@ -151,5 +154,10 @@ FITS = [
         "cumulative-tiny",
         "CUMPRINC/CUMIPMT on T-3524's second fresh sweep, rates 1E-12..1E-4 (decision 0188 R4.2)",
         ["probes-numeric/t3524-cumprinc-tiny-rate-sweep"],
+    ),
+    _fit(
+        "cumulative-short",
+        "CUMPRINC/CUMIPMT on T-4349's fresh sweep, drawn after its short-range selector was frozen (decision 0188 R4.2)",
+        ["probes-numeric/t4349-cumprinc-short-selector-fresh-sweep"],
     ),
 ]

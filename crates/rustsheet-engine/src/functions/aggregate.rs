@@ -18,10 +18,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::{
-        lift::{LiftCost, LiftOptions},
-        Function,
-    },
+    functions::lift::{LiftCost, LiftOptions},
     model::Model,
     reference_operators::{Ranges, RefArg},
 };
@@ -384,7 +381,6 @@ impl Model {
         collected: &mut Collected,
         cell: CellReferenceIndex,
     ) -> Result<(), CalcResult> {
-        let nested = [Function::Subtotal, Function::Aggregate];
         // The hidden rows of each sheet, read once per AGGREGATE call: a per-cell (or per-area)
         // lookup would rescan the sheet's row styles (cells or areas x styled rows).
         if ignore.hidden {
@@ -413,12 +409,7 @@ impl Model {
                 return Ok(());
             }
             if ignore.nested
-                && model.cell_formula_is_one_of(
-                    position.sheet,
-                    position.row,
-                    position.column,
-                    &nested,
-                )
+                && model.cell_formula_calls_subtotal(position.sheet, position.row, position.column)
             {
                 return Ok(());
             }
