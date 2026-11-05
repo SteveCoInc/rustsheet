@@ -8,9 +8,12 @@ mathematical switch points |x - a| = 0.2 (x + a): shape 3072 around x = 2048 (x/
 shape 2048 around x = 3072 (x/a = 3/2), both exact.
 """
 
-import json
 import math
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from sweep_case import write_checked_case  # importable once the path above is set
 
 OUT = Path(__file__).resolve().parents[3] / "eval/suites/probes/cases/t4290-gamma-window-large-pow2.case.json"
 
@@ -38,19 +41,16 @@ def main() -> None:
     for col, a, c in (("E", 3072.0, 2048.0), ("F", 2048.0, 3072.0)):
         for row, x in enumerate(ladder(c), start=1):
             cells[f"{col}{row}"] = dens(x, a)
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": (
+    write_checked_case(
+        OUT,
+        (
             "T-4290: Excel's large-shape gamma density inside the T-3252 window at power-of-two shapes "
             "4096, 1024, 256 (A, B, C; x/a = k/1024 exact, k 656 to 1556 step 4), the hold-out shape 2048 "
             "at k + 2 (D), and ladders across x/a = 2/3 at shape 3072 (E) and x/a = 3/2 at shape 2048 (F)."
         ),
-        "tags": ["M9", "statistical", "probe", "numeric", "T-4290"],
-        "expected": {},
-        "check": [f"Calc!{r}" for r in sorted(cells, key=lambda r: (int(r[1:]), r[0]))],
-        "sheets": [{"name": "Calc", "cells": cells}],
-    }
-    OUT.write_text(json.dumps(case, indent=1) + "\n")
+        ["M9", "statistical", "probe", "numeric", "T-4290"],
+        cells,
+    )
 
 
 if __name__ == "__main__":
