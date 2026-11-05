@@ -3,7 +3,7 @@ id: T-4249
 title: "Probe numeric pivot groups: other wrong item counts, partial last group, GETPIVOTDATA numbers past the end"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
