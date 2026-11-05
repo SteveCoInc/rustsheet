@@ -4,7 +4,7 @@ For the old cells (fit `cumulative`) and the fresh sweep (`cumulative-fresh`) it
 build given as NAME=PATH (docs/research/t3524/*.patch): the cells one gets bit-exact and the other does not, with the
 other's ulp distance and whether it is visibly off (beyond half a unit of Excel's 15th digit), and the exact counts by
 the leading exponent `lead = (nper-end+1)·ln(1+rate)` and the range kind (short: end - start < 32). It writes
-docs/research/t3524/gate_a.tsv for the fresh sweep: per cell the 60-digit value (`kernels.cumulative.exact`), each
+docs/research/t3524/gate_a.tsv for both fresh sweeps (today's engine): per cell the 60-digit value (`kernels.cumulative.exact`), each
 candidate's value and relative error, and its Gate A verdict (`math` within 1e-9 of the 60-digit value, `excel` within
 15 significant digits of Excel, else OUTSIDE).
 
@@ -115,7 +115,7 @@ def gate_a(cells: list[Cell], candidates: dict[str, Candidate]) -> None:
                     out += ["error", "-", "OUTSIDE"]
                     outside[name].append(cell.key)
                     continue
-                rel = abs(mpmath.mpf(v) - exact) / abs(exact)
+                rel = abs(mpmath.mpf(v) - exact) / abs(exact) if exact != 0 else abs(mpmath.mpf(v))
                 verdict = (
                     "math"
                     if rel <= mpmath.mpf("1e-9")
@@ -134,7 +134,10 @@ def main() -> None:
     builds = {s.split("=", 1)[0]: Path(s.split("=", 1)[1]) for s in sys.argv[1:]}
     compare("cumulative", builds)
     cells, candidates = compare("cumulative-fresh", builds)
-    gate_a(cells, candidates)
+    tiny, _ = compare("cumulative-tiny", builds)
+    # Gate A over both fresh sweeps (the second covers rates 1E-12..1E-4).
+    candidates = {"engine": fit.engine_candidate(sorted({c.case for c in [*cells, *tiny]}))}
+    gate_a([*cells, *tiny], candidates)
 
 
 if __name__ == "__main__":

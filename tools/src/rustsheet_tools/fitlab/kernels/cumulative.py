@@ -10,7 +10,9 @@ docs/research/t3524/*.patch against the engine before T-3524) and the correctly 
 - `cumulative`: the CUMPRINC and CUMIPMT cells that existed when the cuts were fitted (T-3067's probes and every
   other probes and gen-m9 case with a literal call).
 - `cumulative-fresh`: the fresh sweep drawn after (probes-numeric/t3524-cumprinc-lead-fresh-sweep,
-  docs/research/t3524/gen_sweep.py).
+  docs/research/t3524/gen_sweep.py), rates 1E-4..2.
+- `cumulative-tiny`: the second fresh sweep, rates 1E-12..1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep,
+  `gen_sweep.py`).
 """
 
 from __future__ import annotations
@@ -126,21 +128,28 @@ _OLD_CASES = [
     "gen-m9/e168be7f6d3f84c2",
 ]
 
+
+def _fit(name: str, description: str, cases: list[str]) -> Fit:
+    """One CUMPRINC/CUMIPMT fit: the shared pattern, reference and notes."""
+    return Fit(
+        name=name, description=description, cases=cases, pattern=PATTERN, candidates=candidates, notes=_NOTES
+    )
+
+
 FITS = [
-    Fit(
-        name="cumulative",
-        description="CUMPRINC/CUMIPMT on the cells that existed when T-3067 fitted the geometric-principal cuts",
-        cases=_OLD_CASES,
-        pattern=PATTERN,
-        candidates=candidates,
-        notes=_NOTES,
+    _fit(
+        "cumulative",
+        "CUMPRINC/CUMIPMT on the cells that existed when T-3067 fitted the geometric-principal cuts",
+        _OLD_CASES,
     ),
-    Fit(
-        name="cumulative-fresh",
-        description="CUMPRINC/CUMIPMT on T-3524's fresh sweep, the leading exponent log-uniform (decision 0188 R4.2)",
-        cases=["probes-numeric/t3524-cumprinc-lead-fresh-sweep"],
-        pattern=PATTERN,
-        candidates=candidates,
-        notes=_NOTES,
+    _fit(
+        "cumulative-fresh",
+        "CUMPRINC/CUMIPMT on T-3524's fresh sweep, the leading exponent log-uniform (decision 0188 R4.2)",
+        ["probes-numeric/t3524-cumprinc-lead-fresh-sweep"],
+    ),
+    _fit(
+        "cumulative-tiny",
+        "CUMPRINC/CUMIPMT on T-3524's second fresh sweep, rates 1E-12..1E-4 (decision 0188 R4.2)",
+        ["probes-numeric/t3524-cumprinc-tiny-rate-sweep"],
     ),
 ]

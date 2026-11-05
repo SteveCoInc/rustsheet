@@ -48,7 +48,7 @@ const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 /// cells go visibly off, tiny-rate interests such as `CUMIPMT(1E-10,296,197540,13,19,1)` (gen-m9
 /// b72d952c5f52cb4d A257, 33,554,432 ulps), against 20 it fixes. So it stays, over a short range
 /// only: the leading exponent alone does not decide Excel's form there (TODO(T-4349)).
-/// FITTED(T-3524, 1614 cells, at most 32 periods, rate 1E-300..1E300; cut a fit in 0.095..0.398)
+/// FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes rate 1E-300..1E300; cut a fit in 0.095..0.398)
 const GEOMETRIC_MIN_LEAD: f64 = 0.3;
 
 /// Which sum the kernel returns.
@@ -159,9 +159,10 @@ impl Periods {
         }
         // A long range takes the geometric sum at any leading exponent. The cut of 3.6 T-3067 fitted
         // there (`LONG_GEOMETRIC_MIN_LEAD`) lost to it on its own held-out cells (146 vs 149
-        // bit-exact) and on the fresh sweep (184 vs 242 of its 500 long-range cells to the bit, 20
-        // visibly off where 3 now are; probes-numeric/t3524-cumprinc-lead-fresh-sweep), so it went
-        // (T-3524, decision 0188 R4).
+        // bit-exact) and on both fresh sweeps: 184 vs 242 of 500 long-range cells at rates 1E-4..2
+        // (probes-numeric/t3524-cumprinc-lead-fresh-sweep) and 71 vs 238 at 1E-12..1E-4
+        // (t3524-cumprinc-tiny-rate-sweep, where below a lead of 3.6 the cut got 2 of 404), so it
+        // went (T-3524, decision 0188 R4).
         let min_lead = if short { GEOMETRIC_MIN_LEAD } else { 0.0 };
         self.geometric_principal(min_lead)
             .or_else(|| self.closed_form(Paid::Principal))

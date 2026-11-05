@@ -8,8 +8,9 @@
     2026-11-05; hold-out split T-3360, margin 5 points).
   - `LONG_GEOMETRIC_MIN_LEAD` (3.6, over more than 32 periods) fails R4: the geometric sum at every leading exponent
     beats it on the old held-out cells (149 vs 146 bit-exact) and on the fresh sweep (566 vs 508 of 1,000; held out
-    184 vs 157; on the 500 long-range cells 242 vs 184, and 3 visibly off against 20). The task's rule then replaces
-    it by the other form.
+    184 vs 157; on the 500 long-range cells 242 vs 184, and 3 visibly off against 20), and on a second fresh sweep
+    at rates 1E-12..1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep: 238 vs 71 of 500 long-range cells). The
+    task's rule then replaces it by the other form.
   - On the gated suites that costs 17 probes cells that matched and fixes 12. Every regressed cell is numeric and 1
     or 2 ulp from Excel, none visibly off: probes/fin-cumipmt-period-bound A3, A4, A6, A11, A27, A30 and
     probes/fin-cumprinc-form-boundaries I2, I4, I7, J4, J5, J7, K1, K2, K3, L2, L4, the long-range cells near nper

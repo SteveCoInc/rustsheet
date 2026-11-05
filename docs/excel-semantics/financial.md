@@ -2319,7 +2319,11 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   between 0 and 0.3 the leading exponent does not decide which form Excel's short principal matches: the old cells
   below 0.095 favour the other forms and the fresh ones the geometric sum (fresh 46 vs 57). Ours since T-3524: the
   geometric sum over any range of more than 32 periods (`LONG_GEOMETRIC_MIN_LEAD` removed); the short-range cut of 0.3
-  stays (T-4349).
+  stays (T-4349). A second sweep at rates 1E-12 to 1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep, 1,000 cells,
+  same draw) bears the long-range rule out where the first sweep had no point: over more than 32 periods the
+  geometric sum is Excel's on 238 of 500 cells against 71 with the cut, and below a lead of 3.6 on 169 of 404 against
+  2 (the per-period and closed forms are visibly off on most of them). Over up to 32 periods there the geometric sum
+  is also ahead (265 vs 237), as on the first sweep: the rate is a candidate decider for T-4349.
 - How the interest is built, measured (T-3067 run 4, probes/fin-cumipmt-tiny-rate-structure, excel-graph 2026-10-29,
   226 cells): Excel's CUMIPMT is its own PMT times the period count less its own CUMPRINC, in doubles and exactly:
   `CUMIPMT(r,n,pv,s,e,t) = PMT(r,n,pv,0,t)·(e-s+1) - CUMPRINC(r,n,pv,s,e,t)`, to the bit on all 60 probed pairs (type 1
