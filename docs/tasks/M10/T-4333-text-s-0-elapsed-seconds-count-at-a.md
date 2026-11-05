@@ -3,7 +3,7 @@ id: T-4333
 title: "TEXT elapsed count before a fraction at a tie where Excel rounds up (45000+0.95/86400 under [s].0 is 3888000001.9)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
