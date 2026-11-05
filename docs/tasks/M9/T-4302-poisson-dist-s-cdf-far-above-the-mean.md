@@ -3,7 +3,7 @@ id: T-4302
 title: "POISSON.DIST's cdf far above the mean: Excel's prefactor chain at k 30 to 300 (after T-4291)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
