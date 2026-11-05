@@ -80,7 +80,7 @@ forms = [
     ("one-cell range", "D!Q{n}:Q{n}"),
     ("OFFSET", "OFFSET(D!Q1,{o},0)"),
     ("INDEX", "INDEX(D!Q1:Q3,{n})"),
-    ("name", "nm{n}"),
+    ("name", "OneCell{n}x"),
 ]
 for n in (1, 2, 3):
     for label, f in forms:
@@ -96,7 +96,7 @@ case = {
     "an error, numeric text or date text (docs/research/t4375/gen_case.py; rows: "
     + "; ".join(f"{k} {v}" for k, v in notes.items()) + ")",
     "tags": ["M9", "financial", "xnpv", "probe", "T-4375"],
-    "names": {f"nm{n}": f"=D!$Q${n}" for n in (1, 2, 3)},
+    "names": {f"OneCell{n}x": f"=D!$Q${n}" for n in (1, 2, 3)},
     "expected": {},
     "sheets": [{"name": "Calc", "cells": calc}, {"name": "D", "cells": data}],
 }

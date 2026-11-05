@@ -9,9 +9,9 @@
   "T-4375"
  ],
  "names": {
-  "nm1": "=D!$Q$1",
-  "nm2": "=D!$Q$2",
-  "nm3": "=D!$Q$3"
+  "OneCell1x": "=D!$Q$1",
+  "OneCell2x": "=D!$Q$2",
+  "OneCell3x": "=D!$Q$3"
  },
  "expected": {},
  "sheets": [
@@ -109,24 +109,24 @@
     "B33": "=XNPV(0.1,D!R1,OFFSET(D!Q1,0,0))",
     "A34": "=XNPV(0.1,INDEX(D!Q1:Q3,1),D!F1)",
     "B34": "=XNPV(0.1,D!R1,INDEX(D!Q1:Q3,1))",
-    "A35": "=XNPV(0.1,nm1,D!F1)",
-    "B35": "=XNPV(0.1,D!R1,nm1)",
+    "A35": "=XNPV(0.1,OneCell1x,D!F1)",
+    "B35": "=XNPV(0.1,D!R1,OneCell1x)",
     "A36": "=XNPV(0.1,D!Q2:Q2,D!F1)",
     "B36": "=XNPV(0.1,D!R1,D!Q2:Q2)",
     "A37": "=XNPV(0.1,OFFSET(D!Q1,1,0),D!F1)",
     "B37": "=XNPV(0.1,D!R1,OFFSET(D!Q1,1,0))",
     "A38": "=XNPV(0.1,INDEX(D!Q1:Q3,2),D!F1)",
     "B38": "=XNPV(0.1,D!R1,INDEX(D!Q1:Q3,2))",
-    "A39": "=XNPV(0.1,nm2,D!F1)",
-    "B39": "=XNPV(0.1,D!R1,nm2)",
+    "A39": "=XNPV(0.1,OneCell2x,D!F1)",
+    "B39": "=XNPV(0.1,D!R1,OneCell2x)",
     "A40": "=XNPV(0.1,D!Q3:Q3,D!F1)",
     "B40": "=XNPV(0.1,D!R1,D!Q3:Q3)",
     "A41": "=XNPV(0.1,OFFSET(D!Q1,2,0),D!F1)",
     "B41": "=XNPV(0.1,D!R1,OFFSET(D!Q1,2,0))",
     "A42": "=XNPV(0.1,INDEX(D!Q1:Q3,3),D!F1)",
     "B42": "=XNPV(0.1,D!R1,INDEX(D!Q1:Q3,3))",
-    "A43": "=XNPV(0.1,nm3,D!F1)",
-    "B43": "=XNPV(0.1,D!R1,nm3)"
+    "A43": "=XNPV(0.1,OneCell3x,D!F1)",
+    "B43": "=XNPV(0.1,D!R1,OneCell3x)"
    }
   },
   {
