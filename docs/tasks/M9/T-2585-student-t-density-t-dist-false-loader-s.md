@@ -120,7 +120,7 @@ and T.INV's centre estimate.
   where t·t overflows, `excel_t_density` returns None and the old fallback runs. The exact constant is plain math, not a
   fit; no keep-matched branch.
 
-## Landing notes
+## Landing notes (resumed)
 - PR #3422, head 79b71dddccf69deac509ccdbf3ec1a0a6ce306b9, draft. CI red on one job, `hygiene`, governance step: "protected
   paths changed without a decision record in docs/decisions/: quality/fitted.json" (run 42111551613, job 127540415990).
   Everything else was green on the previous head 1f4e8e1. On 79b71dd security and design approved; Excel-fidelity
