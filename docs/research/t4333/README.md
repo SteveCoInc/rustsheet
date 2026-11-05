@@ -9,13 +9,16 @@ Run these scripts from this directory with plain `python3`.
   t4323 cases, probes/t4332-fraction-fresh and the ulp scan (590 cells).
 
 ## What the scan shows
-- The round-ups happen only at the double nearest the decimal tie. One ulp below it, Excel truncates the count and the
-  fraction together (`TEXT(45000+0.95/86400-1*2^-37,"[s].0")` is "3888000000.9"). One ulp above, it carries both
-  ("3888000001.0"). Only at offset 0 do the count (rounded up) and the fraction (".9") disagree. The same holds for
-  3+5.95 s, 1+217.95 s and 45000+59.95 s (rows 1 to 4, column D).
-- For the four control seeds the count and the fraction flip together, between offsets 0 and +1, except
-  `TEXT(3733.95/86400+1*2^-57,"[s].0")`. It is "3733.0": the fraction carried to 0 while the count did not (E6). So
-  the count and the fraction thresholds cross both ways.
+- Offset 0 is Excel's computed serial `d+k/86400`. Its distance from the decimal tie, in ulps of x, is -0.20, -0.30,
+  -0.20, -0.26, -0.32, -0.61, -0.24 and -0.15 for rows 1 to 8. So the double nearest the tie is offset 0, except in
+  row 6, where it is +1 (E6, +0.39).
+- Every cell where the count disagrees with the fraction digit is a nearest double. At D1:D4 the count is rounded up
+  beside ".9" (`TEXT(45000+0.95/86400,"[s].0")` is "3888000001.9"). At E6, `TEXT(3733.95/86400+1*2^-57,"[s].0")` is
+  "3733.0": the fraction carried and the count did not.
+- One ulp or more from the nearest double, the count and the fraction always agree: "3888000000.9" at -1 ulp,
+  "3888000001.0" at +1. The other nearest doubles (D5, D7, D8) agree too. D7 truncates where the register carries.
+  This favours a count read from a decimal form of the serial that differs from binary arithmetic only at the
+  nearest double (the first reopen hypothesis of T-4333).
 - Everywhere the fraction digit is T-4332's field-by-field cut (56 of 56). Only the count misses.
 
 ## Candidates (count cells right, of 590)

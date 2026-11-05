@@ -414,12 +414,15 @@ Not settled:
   (y*86400 is 3888000000.9999995), `TEXT(3+5.95/86400,"[s].0")` "259206.9", `TEXT(45000+59.95/86400,"[m]:ss.0")`
   "64800001:59.9" (ties A90, sweep-2 A1, A24, A41, A84, sweep-3 A7, carry-ties A27, A31, carry-sweep A37, A49, A83).
   Neither rounding the value nor any operation order of the register tried fits both sets (T-4333).
-  An ulp scan, probes/t4333-count-ulp-scan, shows these round-ups only at the double nearest the decimal tie. One ulp
-  below it, the count and the fraction both truncate (`TEXT(45000+0.95/86400-1*2^-37,"[s].0")` "3888000000.9"); one
-  ulp above, both carry ("3888000001.0"). Only at the tie itself is the count rounded up beside ".9" (D1:D4). The
-  thresholds also cross the other way: `TEXT(3733.95/86400+1*2^-57,"[s].0")` is "3733.0", the fraction carried and the
-  count not (E6). The fraction digit is the field-by-field cut in all 56 cells. No count model tried beats the
-  register: 573 of 590 count cells; the candidates are in docs/research/t4333.
+  An ulp scan, probes/t4333-count-ulp-scan, steps eight tie serials -3 to +3 ulp from Excel's computed serial
+  (`d+k/86400`). Every cell where the count disagrees with the fraction digit is the double nearest the decimal tie:
+  the count rounded up beside ".9" at D1:D4 (offset 0 is the nearest double there, e.g.
+  `TEXT(45000+0.95/86400,"[s].0")` "3888000001.9"), and `TEXT(3733.95/86400+1*2^-57,"[s].0")` "3733.0" at E6, the
+  fraction carried and the count not (row 6's computed serial is 0.61 ulp below the tie, so its nearest double is
+  +1 ulp). One ulp or more from the nearest double, the count and the fraction always agree
+  (`45000+0.95/86400-1*2^-37` "3888000000.9", `+1*2^-37` "3888000001.0"). The other nearest-double cells (D5, D7, D8)
+  agree too. D7 truncates where the register carries. The fraction digit is the field-by-field cut in all 56 cells.
+  No count model tried beats the register: 573 of 590 count cells; the candidates are in docs/research/t4333.
 - From serial 1 up the field-by-field cut also gives `TEXT(30+39474.05/86400,"mm:ss.0")` "57:54.0" (sweep-3 A2),
   where the register is exactly 394741 and printed "57:54.1".
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),

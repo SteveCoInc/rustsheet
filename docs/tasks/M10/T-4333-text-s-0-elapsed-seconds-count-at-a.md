@@ -40,11 +40,13 @@ the rounded value, `x*86400` plus the half step, whole days plus the field-cut o
 intermediates, a constant other than 0.5 in the half step, a float32 half step, and chains through 24/60/60 or
 1440/60 with the half step at the seconds stage.
 
-New evidence: probes/t4333-count-ulp-scan (excel-graph) steps eight tie serials by -3 to +3 ulp under `[s].0`. The
-round-ups are confined to the double nearest the decimal tie. One ulp either side, the count agrees with the fraction
-digit. At the tie, the count is rounded up beside ".9" (D1:D4). D7 (60000+82799.95 s) truncates where the register
-carries, and E6 (`3733.95/86400` + 1 ulp) is "3733.0": the fraction carried, the count not. These cells are this
-task's: probes/t4333-count-ulp-scan D1, D2, D3, D4, D7, E6, plus the eleven listed in Context.
+New evidence: probes/t4333-count-ulp-scan (excel-graph) steps eight tie serials by -3 to +3 ulp from Excel's
+computed serial under `[s].0`. Every cell where the count disagrees with the fraction digit is the double nearest the
+decimal tie: D1:D4, rounded up beside ".9", and E6. E6 is `3733.95/86400` + 1 ulp, the nearest double in row 6 because
+the computed serial is 0.61 ulp below the tie, and Excel shows "3733.0": the fraction carried, the count not. One ulp
+or more from the nearest double, the count and the fraction agree. D7 (60000+82799.95 s) truncates where the register
+carries. These cells are this task's: probes/t4333-count-ulp-scan D1, D2, D3, D4, D7, E6, plus the eleven listed in
+Context.
 
 Reopen on a new hypothesis recorded here. Two would be worth testing:
 - the count may come from a decimal conversion of the serial that is exact only at the nearest double, such as a
