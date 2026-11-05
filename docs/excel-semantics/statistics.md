@@ -1455,7 +1455,28 @@ sweep 48 points from seed 43020 written after the freeze. Its findings at x = me
 - The pmf `POISSON.DIST(k, m, FALSE)` is a third chain: it is up to 326 ulp from the gamma density at the same
   point, and the cdf does not follow it.
 - The density takes this chain in ours since T-4308 (with T-4319); CHISQ.DIST.RT (T-4320) does not yet. The window rows, x/a 1.29 to
-  1.5, stay with T-4308.
+  1.5, are T-4322's (below).
+T-4322 (docs/research/t4322/score.py; probes-numeric/t4322-poisson-window-r4-fresh, excel-graph 2026-11-05) found
+the cdf inside the window, x/a <= 1.5 with a = k + 1, at k 30 to 300:
+- From 1.3a to 1.5a it is the far form's prefactor with T-4308's window exponent in place of the direct deviance:
+  sqrt(a / 2 pi) exp(-B - c(a)) times the fraction, B = (x - a) v - (2a atanh(v) - 2a v), v = (x - a)/(x + a). So
+  the cdf takes the density's exponent but not its chain (exp(-c - B) / sqrt(2 pi a) * (a/x), times x). Within 4
+  ulp, on the 15 seen T-4302 points (fit) and the 57 fresh-sweep points drawn after the freeze from 1.3a up:
+  this form 14/15 and 51/57; the correctly rounded Q 9/15 and 10/57; the same prefactor with the direct
+  deviance 3/15 (up to 71 ulp); with the correctly rounded B 9/15 (up to 55). Gate A's envelope holds all 57.
+- Below 1.3a it is not that form (up to 62 ulp: probes/t4291-poisson-far-above-mean G1 `POISSON.DIST(250,325,TRUE)`),
+  nor the direct deviance (up to 83), nor the pmf times the exact ratio Q/pmf (up to 42). Excel is 1 to 17 ulp
+  from the correctly rounded Q there (t4291 D1:H1; t4322 fresh A8:C10). The cut is at 1.3a, inclusive: on the
+  fresh ladder at k = 100, 200, 300, x = 1.3a is the form (2, 0 and -5 ulp, where the correctly rounded Q is 14, -5
+  and -63). At 1.298a and below, at k = 100 and 300 Excel is the correctly rounded Q to 17 ulp, where the form is
+  13 to 85 off (at A10, k = 100 at 1.298a, the form's 13 is closer than the correctly rounded Q's 17, but outside
+  the form's 0 to 6 ulp residue); at k = 200 the form is as close (-3, 4, -2 ulp against -9, 10, -1), so the cut is bracketed at k = 100
+  and 300 only. 1.3 is Cephes' `SMALLRATIO`, its
+  igamc's switch to the asymptotic (Temme) series; what Excel computes below it is open (T-4345).
+- One fresh point does not fit: G3 `POISSON.DIST(80,118.464,TRUE)` (1.4625a) is 64 ulp from the form and 27 to 92
+  from every other tried prefactor (T-4345).
+- Ours takes the form for POISSON's cdf at integer shapes 31 to 301 from 1.3a to the window's upper end
+  (excel_tail.rs `excel_window_upper`); CHISQ.DIST.RT, the same value, does not yet (T-4346).
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -1482,7 +1503,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4339, T-4340, T-4334
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is

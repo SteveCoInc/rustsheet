@@ -4636,7 +4636,6 @@ F	probes/t3252-gamma-prefactor-window.case.json	Calc!A107
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A110
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A111
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A115
-F	probes/t3252-gamma-prefactor-window.case.json	Calc!A116
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A122
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A125
 F	probes/t3252-gamma-prefactor-window.case.json	Calc!A126
@@ -7327,7 +7326,6 @@ F	probes/t4291-poisson-far-above-mean.case.json	Calc!E4
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!E5
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!E6
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!F1
-F	probes/t4291-poisson-far-above-mean.case.json	Calc!F2
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!F4
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!F5
 F	probes/t4291-poisson-far-above-mean.case.json	Calc!F6
@@ -7437,7 +7435,6 @@ F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F2
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F20
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F21
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F22
-F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F24
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F26
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F30
 F	probes/t4302-poisson-cdf-beside-pmf.case.json	Calc!F37
