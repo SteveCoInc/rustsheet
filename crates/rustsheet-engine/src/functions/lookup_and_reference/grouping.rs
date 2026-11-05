@@ -40,7 +40,7 @@ pub(crate) enum SortOrder {
 /// The directions [`Grouping::new`] builds its tree in for `sort`: a hierarchy's key directions
 /// (probes/t4241-groupby-intransitive-runs Calc!C, E), ascending for a table relationship
 /// (`order` [`ParentOrder::Flat`]) and for a sort by a value, which match Excel on intransitive
-/// runs but for a value sort's parents (probes/t4344-groupby-descending-search B55:E66; T-4359).
+/// runs (probes/t4344-groupby-descending-search B55:E66, probes/t4359-groupby-value-sort-parents).
 pub(crate) fn tree_directions(sort: &SortOrder, order: ParentOrder) -> &[bool] {
     match sort {
         SortOrder::Keys { ascending, .. } if order != ParentOrder::Flat => ascending,
@@ -327,6 +327,30 @@ impl Grouping {
         classes
     }
 
+    /// The source rows (in source order) that reached each class of field `level`, by class id:
+    /// a parent's rows in [`Grouping::sort_by_aggregate`], those that reached no leaf under it
+    /// included (probes/t4359-groupby-value-sort-parents; T-4359).
+    fn class_rows(&self, level: usize) -> HashMap<usize, Vec<usize>> {
+        let mut rows: HashMap<usize, Vec<usize>> = HashMap::new();
+        for (row, path) in &self.paths {
+            if let Some(&class) = path.get(level) {
+                rows.entry(class).or_default().push(*row);
+            }
+        }
+        for members in rows.values_mut() {
+            members.sort_unstable();
+        }
+        rows
+    }
+
+    /// Every grouped source row, in source order: what a class no row reached holds, as a leaf
+    /// no row reaches does ([`Grouping::new`] step 4).
+    fn all_rows(&self) -> Vec<usize> {
+        let mut rows: Vec<usize> = self.paths.iter().map(|(row, _)| *row).collect();
+        rows.sort_unstable();
+        rows
+    }
+
     /// The class ids of group `group`'s first `level` keys, the prefix a subtotal at that level
     /// covers (empty when there is no such group).
     pub(crate) fn prefix(&self, group: usize, level: usize) -> &[usize] {
@@ -443,7 +467,11 @@ impl Grouping {
     /// key cells: numbers < text < FALSE < TRUE < errors, errors last ascending and first
     /// descending (B34-B37; groupby-sort-filter-args2 B27-B28, B37). A parent's value is the
     /// function of all its rows, not of its children's values (AVERAGE and `100-SUM(x)` over two
-    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21).
+    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21). On an intransitive run
+    /// a parent's rows are those whose descent reached its class, a row that reached no leaf
+    /// under it included, and every row for a class no row reached ([`Grouping::class_rows`];
+    /// probes/t4359-groupby-value-sort-parents, 84 of 84; t4344 Calc!D56): a shown subtotal is the
+    /// same value (Calc!E).
     ///
     /// `aggregate` also gets the group one level up as a relative set (PIVOTBY's `relative_to` 4 sorts
     /// rows by it, 3 columns: `RelativeTo::of_sort`); `None` at the top level. The parents' rows
@@ -476,23 +504,21 @@ impl Grouping {
             // The previous level's parent of each parent.
             let mut above: Vec<usize> = Vec::new();
             let mut parents = Vec::with_capacity(self.groups.len());
+            let mut reached = self.class_rows(level);
             for (group, parent) in self.groups.iter().zip(&previous) {
                 let key = group.cells.get(level).copied().unwrap_or(usize::MAX);
                 let id = *index.entry((*parent, key)).or_insert_with(|| {
-                    parent_rows.push(Vec::new());
+                    // The rows that reached the class, or every row when none did.
+                    parent_rows.push(reached.remove(&key).unwrap_or_else(|| self.all_rows()));
                     above.push(*parent);
                     parent_rows.len() - 1
                 });
-                if let Some(rows) = parent_rows.get_mut(id) {
-                    rows.extend_from_slice(&group.rows);
-                }
                 parents.push(id);
             }
             let values = parent_rows
-                .iter_mut()
+                .iter()
                 .zip(&above)
                 .map(|(rows, &parent)| {
-                    rows.sort_unstable();
                     if !parents_by_value {
                         return ArrayNode::Empty;
                     }
