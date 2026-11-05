@@ -3,7 +3,7 @@ id: T-4327
 title: "Probe showAll=1 on an empty date group; mark the unread pivot layouts UNVERIFIED; builder tests for column unused items (T-4311 review follow-ups)"
 milestone: M6
 lane: engine
-status: in-progress
+status: blocked
 priority: P3
 size: S
 tier: sonnet
@@ -44,3 +44,8 @@ These are the MINOR findings of the PR #3337 (T-4311) reviews, which all approve
 
 ## Out of scope
 - Unused items of a grouped field (`PivotError::GroupedWithUnusedItems` stays).
+
+## Blocked because
+Blocked because: T-4311 (PR #3337) has not merged. The code (`column_unused_items`, `column_show_all`, `shown_group` for
+groups), the probe `t4311-pivot-showall-column-and-groups` and the web.md column/date-group bullets this task edits exist
+only on that PR's branch, not on `origin/main`. Unblock once #3337 is merged, then branch from the new `origin/main`.
