@@ -39,7 +39,7 @@ Open PRs: 11 at 06:24 UTC (7 last run), 6 of them drafts.
 - Duplicate check: no two open PRs carry the same task id.
 
 Queues:
-- `make ready-tasks LANE=functions` printed 0: functions-stat, -financial and -text are busy (114, 30 and 16 unclaimed ready tasks behind their claims), and functions-math, -criteria, -engineering, -lookup, -logic and -date have no ready task. So I ran the gap-triager for those six lanes (GAP_TRIAGE_RESULT).
+- `make ready-tasks LANE=functions` printed 0: functions-stat, -financial and -text are busy (114, 30 and 16 unclaimed ready tasks behind their claims), and functions-math, -criteria, -engineering, -lookup, -logic and -date have no ready task. So I ran the gap-triager for those six lanes. It filed nothing: `exit_owners.py --all-off` and its ownership rule over every non-pass cell calling those lanes' functions (or only operators) find 0 unowned cells. Their own tasks are deferred to Phase 1b or blocked (T-4196 on the owner), and their other failing cells are owned by engine, research, harness, stat or financial tasks (T-4207 holds the dropped-M14 cells, decision 0266). The functions queue is busy lanes, not missing tasks.
 - engine, api and research printed 0 because their lane slots are taken by branches that moved in the last 2 h; 29 engine, 7 api and 157 research tasks are ready and unclaimed on `main`. So I did not run the planner (judgment: new tasks would only queue behind the claims).
 - harness printed 62, perf 18, quality 12, and `TIER=sonnet` 38 (≥ 10).
 
