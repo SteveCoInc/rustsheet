@@ -237,7 +237,7 @@ def prefix_bound_names(formula: str) -> str:
     An optional LAMBDA parameter `[y]` is declared as `_xlop.y`, brackets dropped, and used as
     `_xlpm.y`: Excel for the web stores `=LAMBDA(x,[y],ISOMITTED(y))(1)` as
     `_xlfn.LAMBDA(_xlpm.x,_xlop.y,_xlfn.ISOMITTED(_xlpm.y))(1)`, and refuses `[_xlpm.y]` as a
-    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md).
+    corrupt file (T-1274; docs/excel-semantics/xlsx-storage.md). `_xlpm._xlpm.x` declares `_xlpm.x` (T-4224).
     """
     out: list[str] = []
     scopes: list[tuple[int, set[str]]] = []  # (end index of the call, lower-cased names)
@@ -258,7 +258,7 @@ def prefix_bound_names(formula: str) -> str:
             args, close = _call_args(formula, end)
             decl = args[0:-1:2] if upper == "LET" else args[:-1]
             names = {a.strip().strip("[]").strip().lower() for a in decl}
-            scopes.append((close, {n for n in names if _IDENT.fullmatch(n)}))
+            scopes.append((close, {n for n in names if _IDENT.fullmatch(n) and not n.startswith("_xlpm.")}))
             if upper == "LAMBDA":
                 start = end + 1
                 for arg in args[:-1]:

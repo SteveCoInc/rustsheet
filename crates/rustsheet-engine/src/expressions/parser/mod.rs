@@ -359,7 +359,8 @@ impl Parser {
         let mut node = self.expect_end(node);
         // Only text with `_xlpm.` has a prefixed use to settle (T-4099). `contains` also matches
         // text inside a string literal; that is harmless, the pass touches only prefixed names.
-        if formula.contains("_xlpm.") {
+        // The storage form's mark is dropped as it is read (`Parser::written_lambda_name`).
+        if formula.contains("_xlpm.") && !self.storage_form() {
             call_names::settle_lambda_prefixes(&mut node);
         }
         // Only a bare `f1` typed in R1C1 mode, or the storage form's `_xlpm.f1`, reads a name
