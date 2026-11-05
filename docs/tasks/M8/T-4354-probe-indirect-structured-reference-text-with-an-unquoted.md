@@ -3,7 +3,7 @@ id: T-4354
 title: "Probe INDIRECT structured-reference text with an unquoted sheet prefix Excel's A1 text refuses, and fix lookup.md's Implemented-in path"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -26,10 +26,21 @@ engine matches Excel.
   its Implemented-in line; the function moved to indirect_fallbacks.rs in T-3394.
 
 ## Acceptance criteria
-- [ ] A probe case with excel-graph values covers sheets named `Co A`, `P&L` and `O'B` holding or not holding the
+- [x] A probe case with excel-graph values covers sheets named `Co A`, `P&L` and `O'B` holding or not holding the
       table, each prefix unquoted and quoted, and a prefix naming no sheet; the engine passes it.
-- [ ] The lookup.md entry records the result and names indirect_fallbacks.rs.
-- [ ] `make check` green; reviewers approve.
+- [x] The lookup.md entry records the result and names indirect_fallbacks.rs.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+- Probe probes/t4354-indirect-structref-sheet-prefix (excel-graph 2026-11-05, 19 cells; tables Sales on S, TabA on
+  `Co A`, TabB on `P&L`, TabC on `O'B`): an unquoted prefix Excel's A1 text refuses is `#REF!` even on the sheet that
+  holds the table (`Co A!TabA[Qty]`, `P&L!TabB[Qty]`, `O'B!TabC[Qty]`), the quoted forms resolve, also to another
+  sheet's table (`'Co A'!Sales[Qty]`, `S!TabA[Qty]`), and a prefix naming no sheet is `#REF!` quoted or not.
+- `indirect_structured` (indirect_fallbacks.rs) applies `is_indirect_unquoted_sheet` to an unquoted prefix, as
+  `indirect_defined_name` does; before, the three unquoted shapes resolved (6 cells off). The no-sheet prefix was
+  already `#REF!`, now evidenced.
+- docs/excel-semantics/lookup.md records the rule and names indirect_fallbacks.rs on its Implemented-in line.
+- Eval delta: new case, 19/19 pass; no other change.
