@@ -117,3 +117,6 @@ the math. Every failing table point has an owner.
   security and Excel fidelity. Open MINORs: `NORMAL_MIN` and the second `RT_TRUNC_SOURCE` (T-4395); the protected
   duplication baseline (the steward's); a probe cell between 2.86E307 and 5E307 for the 2 pi `#DIV/0!` cut (T-4340's
   probe).
+- After merging `origin/main` (CI's `make eval-math-check` collision): probes-numeric/t4357-poisson-companions's
+  sidecar is regenerated for its 42 GAMMA.DIST density cells (Calc!D), all within 1.3E-14 of the math; no new R3
+  candidate.
