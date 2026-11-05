@@ -3,7 +3,7 @@ id: T-4222
 title: "LINEST, LOGEST, GROWTH and TREND given a two-cell range as const or stats: Excel's lift and spill, ours #VALUE! or one result"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
