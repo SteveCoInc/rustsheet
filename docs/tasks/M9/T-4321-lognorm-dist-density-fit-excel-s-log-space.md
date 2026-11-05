@@ -31,7 +31,8 @@ then / sigma (T-0975)") but not LOGNORM.DIST's. LOGNORM.DIST is a different kern
   intermediates; `NORM.DIST(ln x, m, s, FALSE) / x`; ln(x) as log10(x)*ln 10, log2(x)*ln 2 and log10(x)/log10(e).
   Untried: Excel's LN (`excel_ln`) in place of libm's, `(ln x - m)^2` through Excel's `^` (POWER), a sigma^2 form
   `exp(-(ln x - m)^2 / (2 s^2))` with POWER, and x^(-1) through POWER.
-- Code: `functions/statistical/log_normal.rs` (the density branch keeps `exp / (x * SQRT_2PI * s)`).
+- Code: `functions/statistical/log_normal.rs` (the density branch keeps `exp / (x * SQRT_2PI * s)`). T-0975's design
+  review: move `FRAC_1_SQRT_2PI` from incomplete_beta.rs into special.rs beside `SQRT_2PI`, the normal kernels' module.
 - Owned cells: the 5 `ironcalc-calc/STATISTICAL/LOGNORM.xlsx` `LOGNORM.DIST LOGNORM.INV` lines (E3, E5, E35, E46,
   E63) and the 4 gen-m9 LOGNORM.DIST lines (b4173fe25109a238 A48, visibly off; 3a25a03eb94fcfbd A220,
   85f48d5cdfb24555 A310, caa1eed48b1883fe A250) that T-0975 owned, plus the m9-normpdf-lognorm-dist probe cells.

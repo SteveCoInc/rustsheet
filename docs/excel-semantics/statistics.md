@@ -177,15 +177,20 @@ Evidence (excel-graph; scored by docs/research/t0975/guards.py over every densit
 the probes, probes-numeric and gen-m9 suites):
 - NORM.S.DIST, PHI and NORM.DIST at (0, 1): 795 of 797 bit for bit; the two misses are one point,
   z = -35.875 (`NORM.S.DIST` and `PHI`, m9-normpdf-norm-s-dist and m9-normpdf-phi), Excel 1.3459162462827747E-280
-  against 1.345916246282775E-280, an EXP near-tie like T-1940's. libm exp times K fits 767, the earlier divisor
+  against 1.345916246282775E-280: Excel's value is K times one ulp under model V6's `EXP(-643.5078125)`
+  (3.3737117182176244E-280). It is not an F2XM1 near-tie of T-1940's kind (2^|f| - 1 lies 0.09 ulp from a 64-bit
+  value, not near a midpoint); the cause is UNVERIFIED and T-1940 owns the point. libm exp times K fits 767, the earlier divisor
   forms 604 and 139.
 - NORM.DIST at s in {0.5, 1.2, 3, 10} and elsewhere: 496 of 496. `(EXP*K)/s` fits 374, `EXP*(K/s)` 375,
   `EXP/(sqrt(2 pi)*s)` 140 to 323 by the constant.
-- R4 guards (decision 0188; split fixed as a sha256 of case and cell, 30% hold-out): train 900 of 903 bit for bit
-  (correctly rounded 457), hold-out 390 of 390 (correctly rounded 195). Fresh sweep after the freeze,
-  probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py, 480 cells, z log-uniform in 1E-3..38 of
-  either sign, s log-uniform in 1E-3..1E3): 480 of 480 bit for bit (correctly rounded 196), all inside the Gate A
-  envelope.
+- R4 guards (decision 0188). The candidates were chosen while seeing every cached cell, so the hold-out below
+  is reported, not blind. On the fit lab's split (T-3360 `is_holdout`, margin 5 points): train 900 of 900 bit for
+  bit (correctly rounded 451), hold-out 390 of 393 (correctly rounded 201). The decisive guard is the fresh sweep,
+  drawn after the freeze: Gate A batches `eval/accuracy/tables/{NORM.DIST,NORM.S.DIST,PHI}/r4-T-0975` (165, 113 and
+  120 points, default strata, excel-graph) are bit for bit on every point and inside the envelope
+  (`rustsheet-eval accuracy`: 0 failing), and probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py,
+  480 density cells, z log-uniform in 1E-3..38 of either sign, s log-uniform in 1E-3..1E3) is 480 of 480 (correctly
+  rounded 196).
 - LOGNORM.DIST's density is not this kernel: `LOGNORM.DIST(1,0,1,FALSE)` is 0.39894228040143265, one ulp under K
   (m9-normpdf-lognorm-dist A4), and Excel's values there are up to 34 ulp off the true density (T-4321).
 Implemented in: functions/statistical/special.rs `normal_pdf`.

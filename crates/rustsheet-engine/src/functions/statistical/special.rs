@@ -24,13 +24,10 @@ pub(crate) fn normal_cdf(x: f64, mean: f64, std_dev: f64) -> f64 {
 
 /// Normal probability density function with the given mean and standard deviation, one kernel
 /// for NORM.DIST, NORMDIST, NORM.S.DIST and PHI: `EXP(-d*d/2) / std_dev * K`, `d = (x - mean) /
-/// std_dev` in doubles, with Excel's own EXP ([`excel_exp`]) and K the correctly rounded
-/// 1/sqrt(2*pi) ([`FRAC_1_SQRT_2PI`]), each step a double. It fits 795 of the 797 cached NORM.S.DIST, PHI
-/// and standard NORM.DIST density cells (the two misses are one EXP near-tie, z = -35.875, like
-/// T-1940's F2XM1 misses), and 496 of 496 NORM.DIST cells at sigma != 1, where libm's exp times K fits 767 and
-/// the earlier `exp / (sqrt(2*pi) * sigma)` 140 (docs/excel-semantics/statistics.md "Normal
-/// density is Excel's EXP times 1/sqrt(2*pi), then / sigma (T-0975)"). At x = mean it is K
-/// itself: `NORM.S.DIST(0,FALSE)` = 0.3989422804014327. LOGNORM.DIST is not this kernel (T-0975).
+/// std_dev`, each step a double, with Excel's own EXP ([`excel_exp`], not libm's) and K the
+/// correctly rounded 1/sqrt(2*pi) ([`FRAC_1_SQRT_2PI`]). So `NORM.S.DIST(0,FALSE)` is K itself.
+/// Evidence and the refuted orders: docs/excel-semantics/statistics.md "Normal density is Excel's
+/// EXP times 1/sqrt(2*pi), then / sigma (T-0975)". LOGNORM.DIST is not this kernel (T-4321).
 pub(crate) fn normal_pdf(x: f64, mean: f64, std_dev: f64) -> f64 {
     let d = (x - mean) / std_dev;
     excel_exp(-(d * d) / 2.0) / std_dev * FRAC_1_SQRT_2PI

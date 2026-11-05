@@ -20,8 +20,6 @@ for case in sorted(glob.glob('/home/user/rustsheet/eval/suites/*/cases/*.case.js
                 if m:
                     v=o.get(s['name'],{}).get(ref)
                     if not v or v.get('t')!='n': continue
-                    args=[float(g) for g in m.groups() if g and g.upper() not in ('FALSE','0') or (g=='0' and False)]
-                    # careful: numeric '0' args
                     g=m.groups()
                     nargs={'S':1,'PHI':1,'N':3,'L':3}[k]
                     args=[float(x) for x in g[:nargs]]

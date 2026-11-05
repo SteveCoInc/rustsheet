@@ -124,17 +124,20 @@ It owns the 4 visibly-off LOGNORM.DIST cells and alone lifts LOGNORM.DIST. Prior
 - Scores (docs/research/t0975/guards.py over every density cell with literal arguments): NORM.S.DIST / PHI /
   standard NORM.DIST 795 of 797 (the miss is z = -35.875, an EXP near-tie, in NORM.S.DIST and PHI), NORM.DIST at
   s != 1 496 of 496. libm exp times K: 767 of 797.
-- R4 guards. Hold-out: split by sha256(case + cell) mod 10 < 3, margin 2 percentage points: train 900/902/902 of 903
-  (bit-exact / 4 ulp / 15 digits), correctly rounded 457/801/854; hold-out 390/390/390 of 390, correctly rounded
-  195/337/365. Caveat for the reviewer: the candidates were scored on all cached cells before the split was written
-  down, so the split is a formality here; the fresh sweep is the real guard. Fresh sweep after the freeze:
-  probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py, seed 975, 480 cells; excel-graph): 480 of
-  480 bit-exact (correctly rounded 196/382/434), every point inside the Gate A envelope, math sidecar added. (A first
-  fill with 17-digit literals was discarded unscored against the model's freeze: Excel reads typed literals to 15
-  digits, T-4077, so it evaluated other arguments; the case was regenerated at 15 digits and refilled.) No FITTED
-  tag: no constant was fitted (K is the correctly rounded constant, EXP the existing model). Reproducibility floor:
-  the targets are exact last bits that 1 ulp web/desktop noise could move, but the model hits them all, and no
-  branch is tuned to cells.
+- R4 guards. Disclosure first: the candidates were scored on every cached density cell before any split was fixed,
+  so the hold-out is reported, not blind; the fresh sweep is the decisive guard. Hold-out on the fit lab's split
+  (T-3360 `is_holdout`, default margin 5 points), bit-exact / within 4 ulp / within 15 digits: train 900/900/900 of
+  900 (correctly rounded 451/794/851), hold-out 390/392/392 of 393 (correctly rounded 201/344/368); the test rate
+  is 0.8 points under train, inside the margin, and beats the correctly rounded one. Fresh sweep, drawn and filled
+  after the freeze: Gate A batches `eval/accuracy/tables/{NORM.DIST,NORM.S.DIST,PHI}/r4-T-0975` (`rustsheet-accuracy
+  generate`, default strata; 165, 113 and 120 points, 86 and 58 of the first two densities) are bit-exact on every
+  point, and `rustsheet-eval accuracy` reports 0 failing and 0 table defects (17,470 points), so every point is
+  inside the Gate A envelope. probes-numeric t0975-normpdf-fresh (docs/research/t0975/gen_fresh.py, 480 density
+  cells including NORMDIST, which has no table) is 480 of 480 (correctly rounded 196/382/434). A first fill of that
+  case with 17-digit literals was discarded: Excel reads typed literals to 15 digits (T-4077), so it evaluated other
+  arguments. The case was regenerated at 15 digits and refilled. No FITTED tag: nothing is fitted (K is the
+  correctly rounded constant and EXP the existing model), and no branch is tuned to cells. The one miss, z = -35.875
+  (Excel one ulp under model V6's EXP, not an F2XM1 near-tie), is recorded as unverified and handed to T-1940.
 - Eval delta: gen-m9 known failures 1929 -> 1913 (the 16 T-2256 NORMDIST lines); ironcalc-calc 282 -> 274 (NORM.DIST
   E3, E5, E7, E35, E46, E61, NORM.S.DIST F24, PHI B5; the 12 NORM.S.DIST C lines were already gone on main); probes
   and every other suite unchanged; 0 regressions. probes-numeric (ungated): t1048-normdist 56/56 (its 16 cells now

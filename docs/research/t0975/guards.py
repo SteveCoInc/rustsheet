@@ -1,5 +1,7 @@
 from lib import *
-import mpmath as mp, math, hashlib, json
+import mpmath as mp, math, json
+from rustsheet_tools.fitlab.holdout import is_holdout
+from rustsheet_tools.fitlab.sweep import Cell
 mp.mp.prec=300
 def E(a): return r53(xexp(a))
 def model(x,m,s):
@@ -23,7 +25,12 @@ def stats(cs,f):
 norm=[c for c in cells if c['k']!='L']
 fresh=[c for c in norm if 't0975' in c['case']]
 old=[c for c in norm if 't0975' not in c['case']]
-hold=[c for c in old if int(hashlib.sha256((c['case']+c['ref']).encode()).hexdigest(),16)%10<3]
+def fitlab_holdout(c):
+    # The fit lab's T-3360 split: case id as `rustsheet-eval cases` names it, key `Sheet!A1`.
+    sheet, address = c['ref'].split('!')
+    case_id = c['case'].replace('/cases/', '/', 1)
+    return is_holdout(Cell(case_id, sheet, address, c['f'], (), c['v']))
+hold=[c for c in old if fitlab_holdout(c)]
 train=[c for c in old if c not in hold]
 for name,cs in [('train',train),('hold-out',hold),('fresh',fresh)]:
     print(name,'model',stats(cs,model),'correctly-rounded',stats(cs,cr))
