@@ -3,7 +3,7 @@ id: T-2684
 title: "A fraction token after minutes with no seconds ([h]:mm.0) shows the tenths of the seconds"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
