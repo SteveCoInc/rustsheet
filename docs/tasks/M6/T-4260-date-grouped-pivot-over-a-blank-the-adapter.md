@@ -3,7 +3,7 @@ id: T-4260
 title: "Date-grouped pivot over a blank: the adapter drops the grouping as Excel's refresh does (after T-4246)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
