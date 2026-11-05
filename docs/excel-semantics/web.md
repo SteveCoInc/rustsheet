@@ -174,15 +174,28 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
   `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
   lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
-  Only pivot 3's relabel shows Excel's own labels (`0-3`, `3-6`, `6-9`). UNVERIFIED: the label format for
-  decimal data (`0.3-0.4`) and that it is formatted General; the probe's decimal labels already equal what Excel would
-  write, so they show nothing. A probe with wrong-text labels of the right count would show them.
+- Relabel order (T-4253): the file's items whose text is one of Excel's labels come first, in the file's order, then
+  Excel's other labels in layout order. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
+  the 12 of 0 to 1 by 0.1, all wrong text (`w0`, ...), the order is the layout's; with only `>1` (last) it is `>1`,
+  `<0`, `0-0.1`, ...; with only `0.5-0.6` (item 3), `0.5-0.6`, `<0`, `0-0.1`, ... (not the file position); with `>1` first and `<0` last, `>1`, `<0`, ...; with `0.7-0.8` (item 2) and `0.2-0.3` (item 5),
+  `0.7-0.8`, `0.2-0.3`, `<0`, `0-0.1`, ...; `<0` alone, first or at item 11, and Excel's 12 labels plus one extra keep
+  the layout order. The match is on the whole text; its case and spacing, a label the file lists twice (the engine takes its first) and a
+  non-text item (the engine skips it) are UNVERIFIED (T-4249).
+- Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound start + k * interval rounded to 15
+  significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
+  would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
+  0.1 from 1.1 `<1.1`, `1.1-1.2`, ..., `2-2.1`, `>2.1`, by 0.25 from -1 `<-1`, `-1--0.75`, ..., `-0.25-0`, `0-0.25`, by
+  12345678901.2 `49382715604.8-61728394506`, as text coercion writes each number (numbers.md "Number → text
+  conversion", `number_to_text`). A bound of 1e15 or more, below 1e-5 or at a 15-digit tie, where that rule's other
+  branches would show, is UNVERIFIED (T-4249).
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
-powers of two, so each group's sum names its records. Status: VERIFIED (excel-graph). Engine (T-4235): `NumberGroups`
+powers of two, so each group's sum names its records; probes/t4253-pivot-decimal-relabel and
+probes/t4253-pivot-relabel-order (excel-graph, 2026-11-05, T-4253): eight relabeled decimal groupings each and the
+rendered labels. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253): `NumberGroups`
 groups by the rule, picks a number item by its lower bound, and relabels a list of the wrong length with its own
-labels (`General(start + k*interval)-General(start + (k+1)*interval)`, the end groups first). UNVERIFIED (T-4249): a
+labels in the relabel order above (`NumberGroups::new`, `labels`). UNVERIFIED (T-4249): a
 list of another wrong length than one too long, the group count of a span that is not a whole number of intervals
 (0 to 10 by 3 counted as four groups), a GETPIVOTDATA number past `endNum` (`#REF!` here) or below it with a
 quotient that rounds to the group count (`>end` here); a group with no record
@@ -232,7 +245,7 @@ Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`).
-Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4260, T-4261
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):

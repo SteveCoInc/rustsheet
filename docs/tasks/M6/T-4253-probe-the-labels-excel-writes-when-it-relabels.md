@@ -3,7 +3,7 @@ id: T-4253
 title: "Probe the labels Excel writes when it relabels a decimal numeric pivot group"
 milestone: M6
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,9 +26,26 @@ relabel (`NumberGroups::relabeled`) is VERIFIED or fixed.
   groups only): retag them with this task.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe shows Excel's relabel labels for at least three decimal groupings; web.md records them.
-- [ ] `relabeled` matches the probe, or its cells are owned by a task; the UNVERIFIED tags name this task.
-- [ ] `make check` green; reviewers approve.
+- [x] An excel-graph probe shows Excel's relabel labels for at least three decimal groupings; web.md records them.
+- [x] `relabeled` matches the probe, or its cells are owned by a task; the UNVERIFIED tags name this task.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Other wrong list lengths and partial last groups (T-4249).
+
+## Outcome
+- Probes (excel-graph, 2026-11-05): probes/t4253-pivot-decimal-relabel (eight decimal groupings, by 0.1, 0.1 from 1.1,
+  0.001, 0.25 from -1, 1e-5, 0.3, 1/3 and 12345678901.2, each with 13 wrong-text items for 12 or fewer layout items)
+  and probes/t4253-pivot-relabel-order (eight lists for 0 to 1 by 0.1 with chosen items equal to Excel's labels).
+- Findings (web.md "Grouped pivot fields"): a relabel bound is the 15-digit start + k * interval in plain decimal,
+  not General (`0.00001`, not `1E-05`); the relabeled items are the file's items that are Excel's labels, in file
+  order, then Excel's other labels in layout order. The "end groups first" of T-4235 was pivot 3's instance of this.
+- Engine: `NumberGroups` keeps the relabel's layout-to-item map (`relabeled`) instead of `ends_first`, `new` takes the
+  file's items, `labels` writes the bounds as text coercion does (`number_to_text`, which matches every probed bound), `relabeled_items` gives the cache items.
+- Not a fit: the order rule is read off the probe (every point a distinct check), no constant chosen by scoring.
+- UNVERIFIED, owned by T-4249 (amended): case and spacing of the label match, a duplicated or non-text file item,
+  bounds of 1e15 or more, below 1e-5 or at a 15-digit tie.
+- The relabel is linear in the labels and file items (a map and a seen-set; security review), so a file-controlled
+  range of `MAX_ITEMS` groups cannot make the import quadratic.
+- Eval delta: new cases t4253-pivot-decimal-relabel 196/196 and t4253-pivot-relabel-order 224/224; no known
+  failure changes, no regressions.
