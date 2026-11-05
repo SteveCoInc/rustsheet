@@ -353,9 +353,9 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// edit: one of its kept criteria is left inside the table. Excel calls a table's hidden rows
 /// filtered only for a filterColumn with a criterion inside the table (T-4003), and once the
 /// edit deletes the last such column the export writes none, so the table stops being filtered
-/// here too. A criterion-less column read from the file ([`crate::types::FilterCriterion::Other`] also holds
-/// top 10 and the other kept-only kinds) counts as a criterion; Excel's own result after
-/// deleting the filtered column in the application is unprobed.
+/// here too. A criterion-less column read from the file counts as a criterion, since
+/// [`crate::types::FilterCriterion::Other`] also holds top 10 and the other kept-only kinds;
+/// Excel's own result after deleting the filtered column in the application is unprobed.
 fn kept_filter_inside(table: &Table) -> bool {
     table
         .filter_columns
