@@ -40,6 +40,10 @@ use crate::locale::get_default_locale;
 use crate::locale::Locale;
 use crate::types::{sheet_names_match, Table};
 
+/// The prefix Excel puts on a stored LET or LAMBDA name (case-sensitive except for the typed-input
+/// check, `has_xlpm_prefix`).
+pub(crate) const XLPM_PREFIX: &str = "_xlpm.";
+
 use super::lexer;
 use super::token;
 use super::token::TokenType;
@@ -383,12 +387,12 @@ impl Parser {
         // text inside a string literal; that is harmless, the pass touches only prefixed names.
         // Only a file's text (A1, not typed) has the mark: the storage form's is dropped as it is
         // read, and typed text has none (`Parser::written_lambda_name`, T-4288).
-        if formula.contains("_xlpm.") && self.lexer.is_a1_mode() && !self.typed {
+        if formula.contains(XLPM_PREFIX) && self.lexer.is_a1_mode() && !self.typed {
             call_names::settle_lambda_prefixes(&mut node);
         }
         // Only a bare `f1` typed in R1C1 mode, or the storage form's `_xlpm.f1`, reads a name
         // spelled like an A1 cell (T-4040); in A1 mode it is the cell.
-        if !self.lexer.is_a1_mode() && (self.typed || formula.contains("_xlpm.")) {
+        if !self.lexer.is_a1_mode() && (self.typed || formula.contains(XLPM_PREFIX)) {
             call_names::quote_unbound_cell_shaped_names(&mut node);
         }
         node

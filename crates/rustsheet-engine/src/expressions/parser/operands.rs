@@ -18,9 +18,6 @@ use crate::functions::kinds::arg_counts;
 use crate::language::get_default_language;
 use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
 
-/// The prefix Excel puts on a stored LET or LAMBDA name.
-const XLPM_PREFIX: &str = "_xlpm.";
-
 /// Whether `name` starts with [`XLPM_PREFIX`] in any letter case (typed, Excel matches it so;
 /// probes/t4299-typed-xlpm-extrapolations).
 fn has_xlpm_prefix(name: &str) -> bool {
@@ -431,7 +428,7 @@ impl Parser {
     /// | 2        | `_xlpm.f1`           | `_xlpm._xlpm.f1` | `_xlpm._xlpm.f1`   |
     fn written_lambda_name(&self, name: &str) -> String {
         if self.storage_form() {
-            return name.strip_prefix("_xlpm.").unwrap_or(name).to_string();
+            return name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string();
         }
         name.to_string()
     }
@@ -515,9 +512,9 @@ impl Parser {
             let name = if self.storage_form() || self.typed {
                 name.clone()
             } else {
-                name.strip_prefix("_xlpm.").unwrap_or(name).to_string()
+                name.strip_prefix(XLPM_PREFIX).unwrap_or(name).to_string()
             };
-            if !text.trim_start().starts_with("_xlpm.") {
+            if !text.trim_start().starts_with(XLPM_PREFIX) {
                 self.bound_names.push(name.clone());
             }
             return Node::NamedVariableKind { name, id: *id };
@@ -676,7 +673,7 @@ impl Parser {
         let display_name = if name.starts_with('_') {
             name.trim_start_matches("_xlfn._xlws.")
                 .trim_start_matches("_xlfn.")
-                .trim_start_matches("_xlpm.")
+                .trim_start_matches(XLPM_PREFIX)
                 .to_string()
         } else {
             name.clone()
