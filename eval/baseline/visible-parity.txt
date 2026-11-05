@@ -228,9 +228,11 @@ probes/t4045-f-dist-rt-zero-cut-fresh.case.json	24
 probes/t4088-groupby-multifield.case.json	10
 probes/t4195-groupby-intransitive.case.json	24
 probes/t4201-indic-regional-variants.case.json	102
+probes/t4224-doubled-xlpm-prefix.case.json	14
 probes/t4228-pivot-range-groups.case.json	122
 probes/t4236-pivot-date-groups-no-blank.case.json	159
 probes/t4236-pivot-date-groups.case.json	149
+probes/t4255-gamma-window-exact-ratio.case.json	58
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	2
 probes/table-edits/table-column-range-delete-end.case.json	2
 probes/table-edits/table-column-range-delete-start.case.json	2

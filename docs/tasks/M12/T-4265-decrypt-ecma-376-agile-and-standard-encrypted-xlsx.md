@@ -20,6 +20,15 @@ within the limits of SPEC-0031 D3, verifying the Agile HMAC per D5.
   `cbc`, `ecb`, `sha1`, `sha2`, `hmac`, `base64`, `zeroize`). No hand-rolled crypto.
 - Before adding them, recheck the crates.io state named in SPEC-0031 "Alternatives considered".
 - New module crates/rustsheet-xlsx/src/import/encryption.rs. Depends on T-4264's container reader.
+- From T-4264's review (PR #3279, MINOR findings deferred here, where the streams are first read):
+  - Read `EncryptionInfo` with `take(1 MiB + 1)` (SPEC-0031 D1); T-4264 checks only `EncryptedPackage`'s declared size.
+  - `cfb` checks a stream's chain against its declared size only on read, so a short read is malformed, not a
+    truncated package (docs/excel-semantics/xlsx-storage.md).
+  - Add the OLE bounds (raw container size against `max_uncompressed_bytes`, the 4,096 directory entries, the
+    declared `EncryptedPackage` size) to the resource-limits DEVIATION entry of xlsx-storage.md, with import/ole.rs in
+    its "Implemented in": once decryption works they change what a caller sees.
+  - `MAX_DIRECTORY_ENTRIES`'s doc comment: the cap bounds the walk, not `cfb`'s eager directory parse, which the byte
+    budget bounds.
 
 ## Acceptance criteria
 - [ ] Known-answer tests for both key derivations, and round trips on fixtures made by an independent tool.

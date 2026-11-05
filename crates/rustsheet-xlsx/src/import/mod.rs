@@ -6,6 +6,7 @@ mod external_links;
 mod iso_date;
 mod merged_cells;
 mod metadata;
+mod ole;
 mod package;
 mod pivots;
 pub(crate) mod relocation_key;
@@ -40,6 +41,7 @@ use rustsheet_engine::{
 use crate::error::XlsxError;
 
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
+pub use ole::classify_ole_compound_file;
 pub use package::{is_ole_compound_file, ImportLimits, PartNames};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;

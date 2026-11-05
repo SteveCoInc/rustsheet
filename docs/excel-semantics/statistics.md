@@ -1197,7 +1197,34 @@ the ratio form below 0.666a at shapes 30 to 500 (`NEAR_MODE_BELOW` 0.334, the mi
 (0.332, 0.336), frozen before the fresh sweep probes/t3252-gamma-prefactor-sweep) and `rcomp` above; outside those
 shapes the bound stays 0.4. Above the mode Excel is neither form from 1.05a to 1.45a at shapes 50 and 200 (window A11:A20, A31:A40, 5 to
 90 ulp from each; the forms coincide at 1.4a and 1.45a); it is the ratio form at 1.5a (T-2638), and ours keeps
-`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is unknown (T-4255).
+`NEAR_MODE` 0.4 there (UNVERIFIED between 1.45a and 1.5a). The model Excel uses inside the window is still unknown (T-4255, open in T-4290).
+T-4255 (probes/t4255-gamma-window-exact-ratio, excel-graph 2026-11-05; docs/research/t4255/score_forms.py) put x/a
+on k/64, exact. Its findings:
+- Below the mode the ratio form, built on Excel's own LN(64/x) (column F), is Excel's to 2 ulp at shapes 48, 64, 100
+  and 256 through x/a 0.65625 (A1:D4). From 0.671875 (row 5) on it is not, so the switch lies in (0.65625, 0.671875],
+  which holds 2/3, the point where |x - a|/(x + a) = 0.2.
+- Above the mode, x/a = 1.5 is still in the window at shapes 64, 256 and 48: A58, B58 and C58 are 10 to 36 ulp from
+  both forms, which coincide there. At shape 100 it is the ratio form (D58). T-2638 saw the ratio form at 1.5a at
+  shapes 25, 50 and 500, so the upper end depends on the shape.
+- Inside, Excel's per-unit exponent error (E_excel - E)/a is the same at shapes 64 and 256 (a power of two apart).
+  It lies within about +-0.5 ulp of ln(x/a), and shapes 48 and 100 add a product rounding.
+- That error is no double logarithm's. Excel's LN(x/a) (column E) is the correctly rounded ln(x/a) at every k, and
+  at x/a 0.75 the implied logarithm sits +0.25 ulp from ln(0.75) at all four shapes, where the correctly rounded
+  value is +0.47 (A10:D10).
+- Rejected, as rms ulp(ln u) from Excel's per-unit error at shape 64 over 46 cells (x/a 0.67 to 0.94 and 1.06 to
+  1.49; an error uniform in +-0.5 ulp scores 0.29): the ratio form 1.13; -a rlog(u) to 50 digits 0.31; a ln(x/a) +
+  (a - x) 0.43; a log1p(w) + (a - x) 0.45; -a((u - 1) - ln u) 0.43; -a(w - log1p(w)) 0.45; a(ln u + 1 - u) 2.43;
+  TOMS 654's rlog rational 0.36; Loader's bd0(a, x) series 0.33; a 2atanh(v) + (a - x) by series 0.31.
+- Also rejected with no better score: ln u as log2(u) ln 2, as log10(u) ln 10, or as ln of the mantissa plus e ln 2;
+  x(1/a) and a(1/x) reciprocal arguments; (u e^(1-u))^a with the base rounded (rms 3.4 to 9.5); 64-bit x87 log and
+  product.
+- On the T-3252 densities in the window (fit = window and holdout, hold-out = holdout-2 and sweep, fixed before
+  scoring), no form is Excel's. Within 2 ulp, fit then hold-out: ratio form 1/47, 4/27; `rcomp` 11/47, 2/27; the best
+  others 14/47, 6/27, which is chance level, since Excel itself is 30.8 ulp rms from the 50-digit density there.
+  Outside the window the ratio form scores 4.8 ulp rms.
+- The cdf decouples from the density from about 0.72a: holdout A23 and A37 (densities at shapes 100 and 500) carry
+  -0.65 ulp of per-unit error, their cdfs A24 and A38 only -0.17 and -0.13. Up to 0.70a they carry about the same error.
+  So the cdf may take another path there (Temme's expansion is one candidate).
 The ratio form is Excel's bit for bit at a/21
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
 ratio form (probes/t2753-gamma-density-ratio-sweep A48, B48 `GAMMA.DIST(0.5,50,1,FALSE)`: ratio form 69 ulp off, `rcomp`
@@ -1234,7 +1261,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
@@ -5617,6 +5644,29 @@ Ours: since T-2455 (`fn_f_test`, `f_test_sample`, `is_blank_one_cell` in functio
 functions' blank-cell `#VALUE!` followed in T-2426.
 Status: VERIFIED (excel-graph)
 Tasks: T-2455, T-2426
+
+## A range as const or stats reads its top-left cell (T-4222)
+Rule (excel-graph, 2026-11-05, probes/t4222-regression-flag-ranges, every formula with room to spill): a range given as
+LINEST's or LOGEST's `const` or `stats`, or TREND's or GROWTH's `const`, is the value of its top-left cell. It does not
+lift and is not an implicit intersection, and the other cells are never read:
+- `stats` = Data!Z1:Z2 (1, 2) or Z21:Z22 (1, 0) is the 5x2 stats block (A1, A21; LOGEST A31); Z11:Z12 (0, 1) is one
+  row (A11, A41). A horizontal Z81:AA81 (0, 1) and a 2x2 Z141:AA142 (0 top-left) are one row (A81, A141).
+- `const`: `LINEST(y,x,Data!Z11:Z12,FALSE)` fits through the origin (1.2, 0; A51), with Z21:Z22 it keeps the
+  intercept (A54); TREND and GROWTH alike (A60, A63, A66, A69, A72; A91 for a row range). So T-3185's
+  `GROWTH(..,6,Data!Z5:Z6)` = 6.597539553864471 and `TREND(..,6,Data!Z5:Z6)` = 5.8 are the TRUE calls, and
+  `LINEST(..,TRUE,Data!Z5:Z6)` is `#SPILL!` because its 5x2 block meets the next formula
+  (probes/t3185-m9-statistical-argument-kinds-b A62, A89, A94; -c A69).
+- Not an intersection: in row 101, `LINEST(y,x,TRUE,Data!Z100:Z102)` with 1, 0, 1 is the stats block (A101), and in row
+  111 `TREND(y,x,6,Data!Z110:Z112)` is 5.8 (A111).
+- The other cells: a text or `#N/A` second cell changes nothing (A121, A124, A133); a text top-left cell is `#VALUE!`
+  (A130).
+- A blank cell is FALSE, not the default: a blank top-left cell (Z127:Z128 blank, 0, and Z157:Z158 blank, 1) and a
+  single blank cell (Data!Z151) as TREND's `const` give 7.2, the call through the origin (A127, A157, A151), and
+  `LINEST(y,x,Data!Z151,FALSE)` is {1.2, 0} (A154). An omitted or empty argument stays the default.
+Ours: matches since T-4222 (`flag_range_value` in crates/rustsheet-engine/src/functions/statistical/linest.rs, used by
+trend.rs; a blank cell in `flag_value`). The cells' last-digit residue is the base calls' (out of scope there).
+Status: VERIFIED (web)
+Tasks: T-3185, T-4222
 
 ## LINEST and LOGEST report error values first (T-2455)
 Rule: LINEST and LOGEST first report an argument that is itself an error value, in argument order (known_y, known_x, const,
