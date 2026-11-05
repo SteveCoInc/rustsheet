@@ -3,7 +3,7 @@ id: T-3993
 title: "Math sidecars for composite numeric cells: nested calls and arithmetic between calls of Gate A-defined functions (F.INV(F.DIST()), BETA.DIST(BETA.INV()), BINOM.DIST differences; LN(GAMMA()) once GAMMA has a definition)"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
