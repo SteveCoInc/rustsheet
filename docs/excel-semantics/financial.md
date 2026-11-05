@@ -1075,10 +1075,28 @@ secant's signed first offset does.
 are within half an ulp of r of a multiple of 2^-53, where chance gives 3.3; on a 2^-52 grid it is 11. So the iterate is
 held as d = 1 - v or in a fixed-point form there.
 Holding v to that grid alone moves the harness from 62 to 66.
-Next evidence: T-3117 scales the same flows by exact powers of two, where only an absolute test sees the scale, and
-negates them.
+7. Scaling by exact powers of two and negating (T-3117, probes-numeric/t3117-irr-pow2, excel-graph 2026-11-05;
+   `=IRR({flows}*2^j)` and `=IRR(-{flows}*2^j)` for j = -30..40, column B with guess 0.5 at j = 0 and 20; roots TSV
+   beside it). A power-of-two scale leaves the bits of every iterate unchanged, so any change with j is an absolute
+   test or a limit, not rounding:
+   - Below a threshold j Excel's bits do not move at all, from j = -30 up to the last j before the change, so no
+     absolute quantity is tested in the small direction. From the threshold up Excel returns a root within 1 ulp of
+     the exact one, which is also what the secant with guess 0.5 gives at every j (column B). The bits change between
+     these j (first j with new bits): positive {4,1,1,-1} 30, {5,..} {6,..} {7,..} {42,..} {70,..} {-400,..} 20,
+     {-284,..} 10 (and again at 20); negated {4,..} {5,..} {6,..} {7,..} {-284,..} 20, {-400,..} 10;
+     {0.3,-2.5,1.005} 30 for both signs. Negated {42,..} and {70,..} never change (already within 0.5 ulp at j = -30).
+   - So Excel's fallback result depends on the scale of the flows from 2^10 to 2^30 times, which an absolute residual
+     test (|P| below a constant, in the flows' units) explains and the pure arithmetic does not.
+   - Negation changes the bits at small j in every family but {-496,..} (e.g. {4,1,1,-1}: -0.5539490909221656 against
+     -0.5539490909221606; {-400,..}: -0.6737366751808405 against -0.6737366751807721; {0.3,-2.5,1.005}: 6.909808543634389
+     against 6.909808543634354, -251 and -290 ulp), and the two agree once the scale is large enough that both are
+     exact. So the step depends on the sign of P (finding 6 of T-2928's attempts stands).
+   - Large scales give `#NUM!`: j = 40 for {5,..}, {6,..}, {7,..}, {70,..}, {-284,..} and {-400,..} (from j = 30), both
+     signs; {4,..}, {42,..} and {0.3,-2.5,1.005} still return at j = 40; {-496,1,1,1,1,1} is `#NUM!` at every j, with
+     and without a guess.
+   - Not run: j between 10 and 20 and 20 and 30 in finer steps, which would place each threshold.
 Evidence: probes/irr-fallback-roots A1-A24 (excel-graph, 2026-10-26); the gen-m9 cells above;
-probes-numeric/t2927-irr-fallback-sweep (excel-graph, 2026-10-27).
+probes-numeric/t2927-irr-fallback-sweep (excel-graph, 2026-10-27); probes-numeric/t3117-irr-pow2 (excel-graph, 2026-11-05).
 Status: VERIFIED (excel-graph) for which flows return; UNVERIFIED for the method (not Newton, finding 6) and the step cap
 (between 29 and 119)
 Implemented in: `irr_fallback`, `IRR_FALLBACK_STEPS` (functions/financial/financial_util.rs)

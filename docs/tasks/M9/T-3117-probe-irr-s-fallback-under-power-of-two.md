@@ -3,7 +3,7 @@ id: T-3117
 title: "Probe IRR's fallback under power-of-two scaling and negation: separate its absolute residual test from its arithmetic"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P0
 size: S
 tier: sonnet
@@ -55,3 +55,13 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 
 ## Visible-parity stage
 Every cell in "Decision 0267 cells" is within half a unit of Excel's 15th significant digit, or has Excel's type, error and text (decisions 0083, 0267).
+
+## Outcome
+Extended tools/.../fitlab/irr_fallback_sweep.py (`pow2-case`, `pow2-roots`); case
+probes-numeric/t3117-irr-pow2 (240 cells: 10 flows x 10 values of j x 2 signs, column B at j = 0 and 20) filled on
+excel-graph, with math sidecar and roots TSV. The flows are written `{flows}*2^j` (exact in the formula) instead of
+literals of the scaled doubles, because Excel cuts a typed literal to 15 digits and a 17-digit literal would change
+the bits. Findings are in financial.md "IRR's fallback when the secant fails", finding 7; T-2928's "Blocked because"
+names them. No engine change, so the 29 decision-0267 cells of the t2927 sweep are unchanged and still owned by
+T-2928 (this probe is its new evidence; the fit is not in this task's scope). Eval: new case only, no fixes, no
+regressions.

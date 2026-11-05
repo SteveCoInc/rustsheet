@@ -609,7 +609,7 @@
   "P": {
    "A106": {
     "f": "=IRR({-4.91,0.49,1.13,0.88,0.9,1.51})",
-    "why": "not converged or too slow"
+    "why": "not converged"
    }
   }
  }
