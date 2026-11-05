@@ -1356,6 +1356,29 @@ docs/research/t4296/score.py) read the rest of the window chain at x = a, where 
   - at x = a, 40/40/40 against main's 20/40/40;
   - elsewhere in the window, 38/51/64 against 38/51/63 and the correctly rounded 39/52/57;
   - Gate A's envelope holds every point.
+T-4308 (docs/research/t4308/score.py, on probes/t4290-gamma-window-large-pow2; no new probe) read Excel's implied
+exponent B = -ln(density / prefactor) - c(a) on the T-4296 chain, to about 1E-16 absolute at shape 4096. Its findings:
+- B is not one double. Where B >= a/128 (B/a >= 2^-7), B sits on the fixed grid a 2^-59 (2^-47 at shape 4096, 2^-48
+  at 2048, 2^-49 at 1024), up to one constant offset per shape: 181 cells of column A with B > 8 have spread 0.13 of
+  that grid about their offset (read-out noise 0.02), and column B 0.05 (noise 0.06). At B 32 to 376 (shape 4096)
+  the coarsest grid that fits is 2^-47 at every binade of B, while ulp(B) is 2^-47 to 2^-44. Below a/128, at B 16 to
+  32, B is on its own double grid. So the exponent's last rounding happens at a magnitude of about a/128, not at B's
+  own size, and an exp argument rounded as one double (grid ulp(c + B)) is ruled out at B >= a/64.
+- Per unit of shape, Excel's ln u (L = (x - a - B)/a) is the same function of u at shapes 1024 and 4096 to about 3
+  units of 2^-59 (one constant per shape apart), within about +-0.5 ulp(ln u) of the true value; at u = 0.75 it is
+  +8 units of 2^-59 (+0.25 ulp), as T-4255 found.
+- Rejected, as rms in ulp(ln u) of Excel's L, fit t4290 A B C then hold-out D (the split fixed before scoring;
+  chance 0.28 to 0.30), and cells within 1/16 ulp:
+  - ln u rounded to the absolute grid 2^-55 0.55, 0.66; to 2^-57 0.32, 0.32 (2^-59 and finer is chance);
+  - ln x - ln a, each rounded to the absolute grid 2^-56 0.40 to 0.52, 0.62; to 2^-57 0.30 to 0.39, 0.34;
+  - (e_x - e_a) ln 2 + ln m_x - ln m_a, the logarithm of each mantissa a double: m in [1/2, 1) 1.84, 2.43; m in
+    [1, 2) 1.68, 1.97; m in [sqrt(1/2), sqrt 2) 0.39, 0.41 (0.43 to 0.46 with ln 2 a double);
+  - (u - 1) - rlog1(u - 1), TOMS 708's rational rlog1 in doubles, 0.42, 0.44;
+  - the correctly rounded ln u 0.39, 0.41 and log1p((x - a)/a) 0.41, 0.39, as before.
+  None is Excel's. The exponent stays the accurate one (T-4334).
+- Gate A on the T-4296 fresh sweep (probes-numeric/t4296-gamma-density-r4-fresh, score.py part 3): 160 of 160
+  inside the envelope; bit-exact / within 4 ulp / within 15 digits 40/40/40 at x = a and 38/51/64 of 120 elsewhere
+  in the window, the numbers T-4296 reported.
 The ratio form is Excel's bit for bit at a/21
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
 ratio form (probes/t2753-gamma-density-ratio-sweep A48, B48 `GAMMA.DIST(0.5,50,1,FALSE)`: ratio form 69 ulp off, `rcomp`
@@ -1429,7 +1452,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4334
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is

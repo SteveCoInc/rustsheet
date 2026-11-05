@@ -3,7 +3,7 @@ id: T-4308
 title: "Read Excel's large-shape gamma window exponent on the mode chain (after T-4296)"
 milestone: M9
 lane: research
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -58,10 +58,10 @@ From the T-4296 review (PR #3315; MINOR, carried here):
   evaluate `excel_away_from_mode` today).
 
 ## Acceptance criteria
-- [ ] A candidate exponent on the T-4296 chain is scored with a hold-out fixed before scoring (decision 0188 R4),
+- [x] A candidate exponent on the T-4296 chain is scored with a hold-out fixed before scoring (decision 0188 R4),
       and adopted if it is Excel's on the hold-out. Otherwise each rejected family goes into statistics.md with its
       scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
@@ -69,3 +69,21 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 ## Out of scope
 - Shapes below 20 (T-3219).
 - The cdf inside the window (it decouples from the density from about 0.72a; T-4255).
+
+## Outcome
+No exponent is Excel's; the task ends on the second branch of its first criterion (rejected families recorded), and
+hands the open question to T-4334 with a new lead.
+- New finding (statistics.md, the T-4308 paragraph): Excel's implied exponent B on the T-4296 chain is not one
+  double. Where B >= a/128 it sits on the fixed grid a 2^-59 (2^-47 at shape 4096) up to one constant per shape,
+  finer than ulp(B); below a/128 it is on its own double grid. So the exponent's last rounding happens at about
+  a/128, which rules out an exp argument rounded as one double at large B.
+- Rejected, scored with t4290's split (fit A B C, hold-out D, fixed before scoring by T-4290). No R4.1 margin was
+  stated before scoring, so none is claimed; no family came near adoption, all at chance: fixed-grid logarithms
+  of u and of x and a (2^-55 to 2^-57), mantissa-and-exponent logarithms in three normalisations, TOMS 708's
+  rlog1. Best hold-out 0.32. Nothing in the engine changes, so there is no fresh sweep and no FITTED tag.
+- The T-4296 review's carry-overs: the Gate A envelope check and the per-engine fresh-sweep counts are now
+  docs/research/t4308/score.py part 3 (160/160 inside; 40/40/40 at x = a and 38/51/64 of 120 elsewhere in the
+  window, bit-exact / 4 ulp / 15 digits). The near-mode and overflow probes and the single near-mode test move to
+  T-4334 with the visibly-off cells.
+- Eval delta: none (docs and research script only).
+- Follow-ups: T-4334 (the exponent, from the grid); T-4335 (T-4295's unprobed `[s]` forms, from PR #3308's review).
