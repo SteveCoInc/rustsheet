@@ -3,7 +3,7 @@ id: T-2900
 title: "Python facade: Transaction.define_name for workbook- and sheet-scoped defined names"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
