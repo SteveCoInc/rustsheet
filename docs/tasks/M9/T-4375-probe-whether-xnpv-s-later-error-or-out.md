@@ -3,7 +3,7 @@ id: T-4375
 title: "Probe whether XNPV's later error or out-of-range date beats a refused first value's #VALUE!"
 milestone: M9
 lane: functions-financial
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -34,10 +34,18 @@ an error value, an error date, or a later date that is negative or past 2958465,
     probes/t3815-xnpv-element-reading is a plain reference).
 
 ## Acceptance criteria
-- [ ] The probe case is filled on excel-graph and passes, the cases above included; financial.md states the rule and
+- [x] The probe case is filled on excel-graph and passes, the cases above included; financial.md states the rule and
       drops the Unprobed lines.
-- [ ] If Excel lets any of these beat the `#VALUE!`, the walk follows it (one walk, no second reader).
-- [ ] `make check` green; reviewers approve.
+- [x] If Excel lets any of these beat the `#VALUE!`, the walk follows it (one walk, no second reader).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR (T-3816); a first value that is a number (T-3815, evidenced).
+
+## Outcome
+Probe probes/t4375-xnpv-refused-first-and-one-cell filled on excel-graph (114 cells). Behind a refused first value
+(text, empty, TRUE) the `#VALUE!` beats every later error value, error date and bad date: already the engine's
+reading, now evidenced. Two engine differences found and fixed in `flows.rs`: with a number first, a later date of 0,
+empty or before the first is `#NUM!` at its own index (before a later error value; the walk visits it), and a
+one-cell `INDEX` or defined name holding numeric or date text reads as its number (`xnpv_one_cell`). The probe passes
+114/114. financial.md states the rules and drops the Unprobed lines (a literal text argument stays unprobed).

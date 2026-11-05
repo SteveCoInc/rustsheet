@@ -4702,8 +4702,10 @@ whatever the later cells hold. `XNPV(1,A4:A5,B11:B12)` with A4 empty and A5 = 5 
   gen-m9/58e3253bbd3a7a82 A189). EXPONDIST does not read "x" first: `EXPONDIST(1,1/0,"x")` is `#DIV/0!` (C15).
 - Numeric text in the first cell and the first element of an array constant are refused too (T-3815, the entry
   below, rows 30, 31).
-- Unprobed (they keep the older reading, `#VALUE!`): behind a first value that is no number, a later error value or
-  date and a later date that is negative or past the last serial (T-3815's walk is evidenced only behind a number).
+- The `#VALUE!` beats every later element behind a first value that is no number (`"x"`, empty or TRUE first): a later
+  error value (`<"x",30,#N/A,50>`), an error date, a date of -1 or 2958466 at index 2 or 4, each as a range, an array
+  constant and a computed array (T-4375, probes/t4375-xnpv-refused-first-and-one-cell rows 1-28). The walk does not
+  run there.
 
 Evidence: probes/t2603-xnpv-no-number-values C1-C24 (excel-graph, 2026-11-03), probes/xnpv-empty-values-cell C8.
 Status: VERIFIED (excel-graph)
@@ -4714,7 +4716,8 @@ Tasks: T-2603
 Rule (excel-graph, 2026-11-05, probes/t3815-xnpv-element-reading, 187 cells; each row in a range (A), an array
 constant (B), a computed array `IF(TRUE,<range>)` (C) and as one cell (D), all alike unless noted): over values and
 dates of the same count, more than one element, with a number as the first value, XNPV takes each index in turn,
-the value before its date (every walk row has a number first; behind one that is no number, T-2603's entry above).
+the value before its date (every walk row has a number first; behind one that is no number, T-2603's entry above,
+which beats every later element, T-4375).
 - An error element is that error, whichever argument holds it: values `-100, 30, #N/A, 50` against dates
   `39448, #DIV/0!, 39600, 39700` is `#DIV/0!`, the errors one place apart the other way `#N/A` (rows 35, 38).
 - A later value that is no number is `#NUM!`: numeric text "30", date text, "x", TRUE, an empty cell (rows 24-28); TRUE
@@ -4724,25 +4727,30 @@ the value before its date (every walk row has a number first; behind one that is
   first one `#VALUE!` (rows 20, 21). Negative dates, date 0 and dates past 2958465 are `#NUM!` (rows 4-8); a later
   date is bounded before it is truncated, so a last date of 2958465.5 is `#NUM!` (row 9), while a fractional date
   is otherwise truncated: first + 0.5 and 39448.7 then 39448.2 discount as the same day (rows 1-3). With a number
-  first, a later negative date beats a later error value (row 37). Behind a first value that is no number, a later
-  0, an empty date and a date before the first leave its `#VALUE!` (T-2603 C1, C7); a later negative or past-the-end
-  date, error value or error date there is unprobed (the engine keeps the `#VALUE!`). A date equal to the first is fine, one before it `#NUM!`
+  first, a later negative date beats a later error value (row 37). A later 0, empty date or date before the first
+  is `#NUM!` at its own index, so before a later error value: `XNPV(0.1,{-100;30;#N/A;50},<39448,0,39600,39700>)` is
+  `#NUM!`, not `#N/A`, with 0, an empty cell and 39400 alike (T-4375 rows 29-31). Behind a first value that is no
+  number the `#VALUE!` beats all of them (T-2603 C1, C7; T-4375). A date equal to the first is fine, one before it `#NUM!`
   (rows 10, 11), and later dates need not be sorted (row 12).
 - One cell: a values or dates cell holding an error is that error, the values' first (`XNPV(0.1,<#N/A>,<TRUE>)` is
   `#N/A`, D32-D38; a dates cell `#N/A`, D19, D22). Numeric and date text in one cell is read as its number:
   `XNPV(0.1,<"30">,<39448>)` is 30 and `<"1/1/2025">` 45658, a dates cell `<"39508">` too (D13, D14, D20, D24, D25,
   D30), where a range or array element of text is `#NUM!`. A one-cell date of 2958465.5 is read truncated
-  (`XNPV(0.1,30,<2958465.5>)` is 30, D9). Unprobed: a literal text argument (`XNPV(0.1,"30",39448)`); the
-  engine keeps its earlier reading of one.
+  (`XNPV(0.1,30,<2958465.5>)` is 30, D9). The same holds through a one-cell range, `OFFSET`, `INDEX` and a defined
+  name for one cell, holding an error, numeric text or date text, as values and as dates (T-4375 rows 32-43; the
+  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). Unprobed: a literal text
+  argument (`XNPV(0.1,"30",39448)`), and a defined name for a constant text; the engine keeps its earlier reading
+  of a literal and reads a name as a cell.
 - The rate: -1, -2, -0.5, 0 and an empty cell are `#NUM!`; "0.1" and a text cell "0.1" are 0.1, a date-text cell
   its serial (rows 41-48). A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 array
   constant all read in row-major order with the same result (rows 49-54).
 
-Evidence: probes/t3815-xnpv-element-reading (excel-graph, 2026-11-05; generator docs/research/t3815/gen_case.py).
+Evidence: probes/t3815-xnpv-element-reading (excel-graph, 2026-11-05; generator docs/research/t3815/gen_case.py),
+probes/t4375-xnpv-refused-first-and-one-cell (excel-graph, 2026-11-05; docs/research/t4375/gen_case.py).
 Status: VERIFIED (excel-graph)
 Code: `Model::xnpv_walk_error` and `xnpv_dates` (functions/financial/flows.rs), `Model::xnpv_one_cell`,
 `xnpv_size_error` and `xnpv_first_value_refused` (functions/financial/mod.rs)
-Tasks: T-3815
+Tasks: T-3815, T-4375
 
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;
