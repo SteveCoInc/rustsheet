@@ -3,7 +3,7 @@
 use std::fs;
 
 use rustsheet_engine::{
-    types::{CustomFilter, FilterColumn, FilterCriterion},
+    types::{CustomFilter, DateGroupItem, Dxf, FilterColumn, FilterCriterion},
     Model,
 };
 
@@ -295,6 +295,8 @@ fn filter_columns_of_every_kind_survive_an_export() {
             criterion: FilterCriterion::Values {
                 values: vec!["1".to_string(), "a<&\"b".to_string()],
                 blank: true,
+                calendar_type: None,
+                date_groups: Vec::new(),
             },
         },
         FilterColumn {
@@ -331,6 +333,136 @@ fn filter_columns_of_every_kind_survive_an_export() {
     assert!(table.has_filters);
 }
 
+/// Top 10, dynamic, color, icon and date-group criteria are written back as the file had them, so
+/// Excel still calls the table's hidden rows filtered after a round trip (T-4004; xlsx-storage.md
+/// "Table parts in the export"). A color filter's `dxfId` is written only for an existing dxf.
+#[test]
+fn top10_dynamic_color_icon_and_date_criteria_survive_an_export() {
+    let mut model = new_empty_model();
+    for column in 1..=6 {
+        for (row, input) in [
+            (1, format!("H{column}")),
+            (2, "1".to_string()),
+            (3, "2".to_string()),
+        ] {
+            model.set_user_input(0, row, column, input).unwrap();
+        }
+    }
+    model.add_table(0, "Sales", (1, 1, 3, 6), true).unwrap();
+    model.workbook.styles.dxfs.push(Dxf::default());
+    let filter_columns = vec![
+        FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Top10 {
+                top: false,
+                percent: true,
+                val: "2".to_string(),
+                filter_val: Some("1.5".to_string()),
+            },
+        },
+        FilterColumn {
+            col_id: 1,
+            criterion: FilterCriterion::Dynamic {
+                kind: "today".to_string(),
+                val: Some("45000".to_string()),
+                max_val: Some("45001".to_string()),
+                val_iso: Some("2023-03-15T00:00:00".to_string()),
+                max_val_iso: Some("2023-03-16T00:00:00".to_string()),
+            },
+        },
+        FilterColumn {
+            col_id: 2,
+            criterion: FilterCriterion::Color {
+                dxf_id: Some(0),
+                cell_color: false,
+            },
+        },
+        FilterColumn {
+            col_id: 3,
+            criterion: FilterCriterion::Icon {
+                icon_set: "3Arrows".to_string(),
+                icon_id: Some(1),
+            },
+        },
+        FilterColumn {
+            col_id: 4,
+            criterion: FilterCriterion::Values {
+                values: vec!["x".to_string()],
+                blank: false,
+                calendar_type: Some("gregorian".to_string()),
+                date_groups: vec![DateGroupItem {
+                    grouping: "day".to_string(),
+                    year: 2024,
+                    month: Some(2),
+                    day: Some(29),
+                    hour: None,
+                    minute: None,
+                    second: None,
+                }],
+            },
+        },
+        FilterColumn {
+            col_id: 5,
+            criterion: FilterCriterion::Top10 {
+                top: true,
+                percent: false,
+                val: "1".to_string(),
+                filter_val: None,
+            },
+        },
+    ];
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns.clone_from(&filter_columns);
+    }
+    let temp_file_name = "temp_file_test_top10_dynamic_color_icon.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    let reloaded = load_from_xlsx(temp_file_name, "en", "UTC", "en").unwrap();
+    fs::remove_file(temp_file_name).unwrap();
+
+    for part in [
+        r#"<filterColumn colId="0"><top10 top="0" percent="1" val="2" filterVal="1.5"/></filterColumn>"#,
+        r#"<filterColumn colId="1"><dynamicFilter type="today" val="45000" valIso="2023-03-15T00:00:00" maxVal="45001" maxValIso="2023-03-16T00:00:00"/></filterColumn>"#,
+        r#"<filterColumn colId="2"><colorFilter dxfId="0" cellColor="0"/></filterColumn>"#,
+        r#"<filterColumn colId="3"><iconFilter iconSet="3Arrows" iconId="1"/></filterColumn>"#,
+        r#"<filterColumn colId="4"><filters calendarType="gregorian"><filter val="x"/><dateGroupItem year="2024" month="2" day="29" dateTimeGrouping="day"/></filters></filterColumn>"#,
+        r#"<filterColumn colId="5"><top10 val="1"/></filterColumn>"#,
+    ] {
+        assert!(xml.contains(part), "{part} not in {xml}");
+    }
+    let table = &reloaded.workbook.tables["Sales"];
+    assert_eq!(table.filter_columns, filter_columns);
+    assert!(table.has_filters);
+}
+
+/// A color filter whose `dxfId` is not one of the workbook's differential formats is written
+/// without it, as the table's own dxf attributes are: Excel refuses a part pointing past the list.
+#[test]
+fn a_color_filter_past_the_dxfs_drops_its_dxf_id() {
+    let mut model = new_empty_model();
+    for (row, input) in [(1, "Qty"), (2, "1"), (3, "2")] {
+        model.set_user_input(0, row, 1, input.to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 3, 1), true).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Color {
+                dxf_id: Some(7),
+                cell_color: true,
+            },
+        }];
+    }
+    let temp_file_name = "temp_file_test_color_filter_past_dxfs.xlsx";
+    save_to_xlsx(&model, temp_file_name).unwrap();
+    let xml = part_text(temp_file_name, "xl/tables/table1.xml");
+    fs::remove_file(temp_file_name).unwrap();
+    assert!(
+        xml.contains(r#"<filterColumn colId="0"><colorFilter/></filterColumn>"#),
+        "{xml}"
+    );
+}
+
 /// A table filtered by a criterion from its file stays filtered while a criterion is left inside
 /// it, and stops being filtered when a column delete takes the last one, as the export then
 /// writes no filterColumn (T-4003).
@@ -353,6 +485,8 @@ fn deleting_the_filtered_column_unfilters_the_table() {
             criterion: FilterCriterion::Values {
                 values: vec!["a".to_string()],
                 blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
             },
         }];
     }

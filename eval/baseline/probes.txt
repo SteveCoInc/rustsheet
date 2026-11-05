@@ -2121,6 +2121,7 @@ C	probes/t3808-m5-aggregate-overflow.case.json	576
 C	probes/t3808-median-geomean-direct-overflow.case.json	18
 C	probes/t3814-lambda-helper-arity.case.json	248
 C	probes/t3815-xnpv-element-reading.case.json	187
+C	probes/t3816-xirr-element-reading.case.json	183
 C	probes/t3820-lower-sigma-next-char.case.json	712
 C	probes/t3836-mmult-blank-range-first-arg.case.json	19
 C	probes/t3838-groupby-option-order.case.json	232
@@ -2306,6 +2307,8 @@ C	probes/t4378-pivotby-subtotal-holdout.case.json	450
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/t4380-unique-keep-head-holdout.case.json	622
 C	probes/t4382-pivotby-intransitive-paths.case.json	819
+C	probes/t4397-days-two-errors.case.json	36
+C	probes/t4397-holiday-text-forms.case.json	516
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
