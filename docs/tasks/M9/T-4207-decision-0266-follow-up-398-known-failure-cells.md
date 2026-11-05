@@ -109,6 +109,19 @@ a blank cell) inside DURATION's yld: excel-graph `#N/A` (the web's ETS answer pa
 from the model steps of decision 0221:
 - gen-m9/a91bad4e84f49739.case.json (1): Calc!A141
 
+Added by gap triage 2026-11-05b (`make eval` on origin/main 8465f6f1; `scripts/exit_owners.py --all-off` and
+`--milestone M9`): the 40 known-failure cells of the excel-graph probe that first showed the family is `#N/A` on the
+web (statistics.md "FORECAST.ETS family: excel-graph never computes it", T-1293). Their owners were T-1553 (dropped by
+decision 0266) and T-3641, which closed on 2026-11-05 after its re-probe, so they are the only unowned visibly-off
+cells of the run (80 lines of `exit_owners.py --milestone M9`: each cell counts once for the probe row and once for
+`rate:`). Excel `#N/A` on every cell; ours the AAA model's numbers (148.0 at K1, 4.0 at K8) or `#NUM!` (K35, K39 to K42):
+- probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, K39:K42
+
+One more cell of the class, owned today only through an incidental mention of its case in T-3485 (an F-quantile task):
+`CORREL(FORECAST.ETS.SEASONALITY(Data!A1:B12,LOG(..),1,(-2.5)),Data!A3:C10)`, excel-graph `#N/A`, ours `#NUM!` from an
+aggregation of -2.5, which the web answers with `#N/A` like every other call:
+- gen-m9/589f42e67f4b4b8d.case.json (1): Calc!A329
+
 The 4 COMPLEXs.xlsx cells the Context counts as owned only by deferred tasks are T-1075's too (Mac 16.0300 cached
 digits: N6 `IMREAL(IMTAN(D6))`, AL12 and AL26 `IMREAL(IMSQRT(..))`, K25 `IMAGINARY(IMCOS(D25))`, decision 0196). Their
 other owner, T-3434, is deferred, so they still show in `make unowned-off ALL=1`; the ruling covers them as well:
