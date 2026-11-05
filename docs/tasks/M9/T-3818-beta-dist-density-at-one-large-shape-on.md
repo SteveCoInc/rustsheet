@@ -3,7 +3,7 @@ id: T-3818
 title: "BETA.DIST density at one large shape on the T-3568 bup-terms probes: 7,026 unowned visibly-off cells (Phase 1b)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: dropped
 priority: P3
 size: M
 tier: opus
@@ -66,3 +66,9 @@ Cells (gap triage 2026-11-02): every cell of these cases:
 ## Visible-parity stage
 Target (decision 0114): every cell above within half a unit of the 15th significant digit of Excel's value. Bit-level
 residue goes to a follow-up with `defer: phase-1b`.
+
+## Outcome (dropped, 2026-11-05, T-3834)
+Duplicate of T-3803: both owned probes-numeric/t3568-r5-bup-terms-tune and -hold whole, with the same intended fix (the
+shared BETA.DIST density kernel). This task's 7,026 visibly-off cells are a subset of T-3803's 11,307 failing cells.
+Its examples, counts, accuracy sample, root-cause notes, statistics.md criterion, `campaign: visible` key and
+visible-parity stage moved to T-3803, which is now the one owner.
