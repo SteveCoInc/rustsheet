@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4245: CJK elapsed counts past 10^16 and the cut's bracket. Row 1 [s] of 1.1E11 (9.504E15, between 2^53 and 10^16); 2 [h] count 10000兆+5万 (empty 億 group); 3 [h] count 12340兆+5億 (兆 count ending in zero); 4 [h] count 12000兆 (no rest); 5 [h] count 1兆+8 (zero gap inside the count below 10^16); 6 [h] count 1010兆+16; 7 `d General` on 5+45/86400 (the T-3378 value with an integer part). Columns A-E = numeral bytes 0x1B-0x1F.",
+  "description": "T-4245: CJK elapsed counts past 10^16 and the cut's bracket. Row 1 [s] of 1.1E11 (9.504E15, between 2^53 and 10^16); 2 [h] count 10000兆+5万 (empty 億 group); 3 [h] count 12340兆+5億 (兆 count ending in zero); 4 [h] count 12000兆 (no rest); 5 [h] count 1兆+8 (zero gap inside the count below 10^16); 6 [h] count 1010000000000016 (16 digits below 2^53: is it rounded to 15?); 7 `d General` on 5+45/86400 (the T-3378 value with an integer part). Columns A-E = numeral bytes 0x1B-0x1F.",
   "tags": [
     "probe",
     "number-format",

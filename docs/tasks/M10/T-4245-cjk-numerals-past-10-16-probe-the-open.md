@@ -49,11 +49,14 @@ it.
 ## Outcome
 - Merged `agent/functions-text/T-3718-cjk-rows-21-25` (c656531) onto `main`: the trillion arm of
   `Numerals::number`, its unit test rows, rows 21-25 of probes/t3718-cjk-numeral-unprobed (now 125/125), and the
-  number-formats.md text. Conflicts were resolved to the branch's side; the unit tests keep both sides' rows.
+  number-formats.md's CJK paragraph. Conflicts in numerals.rs and the CJK paragraph were resolved to the branch's
+  side; the unit tests keep both sides' rows. The rest of number-formats.md stays as on `main` (round 1 had taken
+  the branch's whole file, which reverted the T-4066 and T-4204 entries; review round 2 restored them).
 - New probe probes/t4245-cjk-numeral-past-1e16 (excel-graph, 35 cells, bytes 0x1B-0x1F). The cut is 10^16, not
   2^53 (9.504E15 is spelled). An empty 億 group past 10^16 takes one gap zero under 30 and 31. A count of 兆
   ending in zero keeps its zero digit. A zero gap inside or after the 兆 group below 10^16 is one zero under 30
-  and 31. The T-3378 value with an integer part is spelled with the tens sign. All 35 cells match the existing
+  and 31. The T-3378 value with an integer part is spelled with the tens sign. A count of 16 or more digits is spelled from
+  its 15-significant-digit value even below 2^53 (1010000000000016 prints as 1010兆 + 20, row 6). All 35 cells match the existing
   code, so only the docs change.
 - Tidy-ups: number-formats.md's "CJK General and elapsed counts" paragraph has one Unprobed list, citing T-4245.
   The trillion arm's bindings are renamed (`below`, `count`) and no longer shadow.
