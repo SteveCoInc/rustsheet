@@ -202,7 +202,7 @@ Implemented in: `result_is_less_than_number` and the other three ordering matche
 `cmp_excel_precision`, and in the indexed *IFS cache (`number_interval`, functions/statistical/ifs_cache.rs).
 AVERAGEIF(S), MINIFS/MAXIFS and DCOUNT/DSUM/DAVERAGE/DMIN/DMAX share these matchers and agree: probes/t4399-criteria-near-equal-others
 (excel-graph, 2026-11-05, 379 cells, all bit-exact with ours) runs the same twelve boundary values with all six criteria
-over one-cell and whole ranges and over a database with one criteria range per criterion. Tasks: T-3084, T-3103, T-4399
+over one-cell and whole ranges and over a database with one criteria range per criterion (the D-function `=1` control, BF2, is the number 1, not the text, because the sheet cell "=1" is a formula; the four ordering criteria and `<>1` are text). Anchor cells: AVERAGEIF(B6,">1",B6)-1 = 5.107E-15 (G6) against #DIV/0! for the 22-ulp cell (G5); MAXIFS "<=1" over B1:B12 picks the 22-ulp cell (4.885E-15); DCOUNT ">1" = 1 (BD4), "<=1" = 11 (BC4). Tasks: T-3084, T-3103, T-4399
 
 ## Text `<=` / `>=` criteria, and dotted dates are text in en-US
 Rule: `"<=text"` and `">=text"` compare the cell text with the operand, case-insensitively, like
