@@ -2200,6 +2200,8 @@ C	probes/t4028-groupby-lifted-spent-filter-blank.case.json	24
 C	probes/t4039-collation-space-forms.case.json	322
 C	probes/t4040-r1c1-unbound-cell-names.case.json	42
 C	probes/t4045-f-dist-rt-zero-cut-fresh.case.json	102
+C	probes/t4049-sheet-api-name-over-book.case.json	9
+C	probes/t4049-sheet-api-name-plain.case.json	13
 C	probes/t4060-collation-open-choices.case.json	222
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
@@ -6952,7 +6954,6 @@ F	probes/t3963-rate-keep-r0-fresh.case.json	Calc!A96
 F	probes/t3963-rate-keep-r0-fresh.case.json	Calc!A97
 F	probes/t3963-rate-keep-r0-fresh.case.json	Calc!A98
 F	probes/t3963-rate-keep-r0-fresh.case.json	Calc!A99
-F	probes/t4014-sheet-api-name-65.case.json	S!A1
 F	probes/t4026-f-cdf-subnormal.case.json	Calc!A10
 F	probes/t4026-f-cdf-subnormal.case.json	Calc!A100
 F	probes/t4026-f-cdf-subnormal.case.json	Calc!A104
@@ -7354,8 +7355,6 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
-F	probes/t4331-typed-xlpm-remaining.case.json	S!C2
-F	probes/t4331-typed-xlpm-remaining.case.json	S!C3
 F	probes/t4342-groupby-tree-holdout.case.json	Calc!C40
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9

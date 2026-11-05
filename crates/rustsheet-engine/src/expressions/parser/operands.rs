@@ -324,6 +324,11 @@ impl Parser {
             Some(file) if scope.is_none() && !prefix.is_empty() && !formula.is_empty() => {
                 format!("{}!{bare}", quote_name(file))
             }
+            // An undefined workbook name read through `[0]!` is shown bare: that is how Excel
+            // shows a use that a sheet-scoped add left bound to the workbook name, which is
+            // stored so (`name_binding::pin_unresolved_name`; probes/t4049-sheet-api-name-plain
+            // S!B1, FORMULATEXT `=N`, T-4049).
+            _ if scope.is_none() && formula.is_empty() && prefix == "[0]" => bare.to_string(),
             _ => name.to_string(),
         };
         Some(Node::DefinedNameKind((text, scope, formula)))
@@ -338,9 +343,11 @@ impl Parser {
 
     /// A name that is not called: a defined name, a table or a LAMBDA parameter.
     fn name_operand(&mut self, mut name: String) -> Node {
-        // Typed, the prefix is lowercased: `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in
-        // FORMULATEXT (`#NAME?` either way; probes/t4299-typed-xlpm-extrapolations C2:C3, T-4299).
-        if self.typed && has_xlpm_prefix(&name) {
+        // Typed, Excel lowercases the prefix only before a name an enclosing LET or LAMBDA binds:
+        // `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in FORMULATEXT, while a bare `=_XLPM.x` and
+        // the doubled `_XLPM._XLPM.x` keep their case (`#NAME?` in all of them; probes/
+        // t4299-typed-xlpm-extrapolations C2, probes/t4331-typed-xlpm-remaining C2:C3, T-4343).
+        if self.typed && has_xlpm_prefix(&name) && self.binds_name(&name[XLPM_PREFIX.len()..]) {
             name.replace_range(..XLPM_PREFIX.len(), XLPM_PREFIX);
         }
         // A defined name of a linked workbook, `[1]!Name` or `[1]Sheet!Name` (one identifier to

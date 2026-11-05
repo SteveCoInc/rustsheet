@@ -42,6 +42,15 @@ memory). Loading enforces resource limits, so the facade is the API to use for w
 not write. Failures raise the typed errors `LoadError`, `SaveError`, `EditError` and `RefError`
 (all `RustSheetError`). `docs/examples/facade.py` is a runnable copy of the quick start.
 
+A password-protected xlsx (ECMA-376 Agile or Standard encryption) opens with
+`rs.open("book.xlsx", password="...")`; `Workbook.open` and `Workbook.from_bytes` take the same
+`password=` keyword. Without a password it raises `PasswordRequiredError`, with the wrong one
+`WrongPasswordError` (both subclasses of `LoadError`, so `except rs.LoadError` still catches them).
+A legacy `.xls` raises `LoadError` and should be saved as xlsx first. The password never appears
+in an error message and is not kept on the workbook: the Rust side copies it into a buffer it
+zeroes after the load, but the Python `str` you passed is an ordinary immutable string that Python
+cannot wipe. Saving such a workbook writes an unencrypted file.
+
 ## The legacy module (deprecated)
 
 `rustsheet.legacy` holds the older index-based classes, `UserModel` and `Model`, with `CellType`

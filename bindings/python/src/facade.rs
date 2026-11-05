@@ -17,8 +17,8 @@ use pyo3::{create_exception, IntoPyObjectExt};
 
 use rustsheet::{
     parse_cell, parse_range, resolve_sheet_by_name, ChangeSet, Clock, DateSystem, EditError,
-    ErrorKind, Input, Iteration, LoadOptions, RangeRef, RefError, SaveOptions, SheetChange,
-    SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
+    ErrorKind, Input, Iteration, LoadError, LoadOptions, Password, RangeRef, RefError, SaveOptions,
+    SheetChange, SheetId, Txn, Value, Workbook, WorkbookOptions, XlError,
 };
 
 create_exception!(_rustsheet, RustSheetError, PyException);
@@ -26,6 +26,18 @@ create_exception!(_rustsheet, PyRefError, RustSheetError);
 create_exception!(_rustsheet, PyEditError, RustSheetError);
 create_exception!(_rustsheet, PyLoadError, RustSheetError);
 create_exception!(_rustsheet, PySaveError, RustSheetError);
+create_exception!(_rustsheet, PyPasswordRequiredError, PyLoadError);
+create_exception!(_rustsheet, PyWrongPasswordError, PyLoadError);
+
+/// The Python exception for a load failure: the password errors get their own `LoadError`
+/// subclasses (SPEC-0031 D4). No `LoadError` text contains the password.
+fn load_err(e: &LoadError) -> PyErr {
+    match e {
+        LoadError::PasswordRequired => PyPasswordRequiredError::new_err(e.to_string()),
+        LoadError::WrongPassword => PyWrongPasswordError::new_err(e.to_string()),
+        _ => PyLoadError::new_err(e.to_string()),
+    }
+}
 
 fn ref_err(e: &RefError) -> PyErr {
     PyRefError::new_err(e.to_string())
@@ -291,9 +303,16 @@ fn opt_clock(obj: Option<&Bound<'_, PyAny>>) -> PyResult<Clock> {
     obj.map_or(Ok(Clock::system()), py_to_clock)
 }
 
-fn load_options(recalc: bool, clock: Clock, name: Option<String>) -> LoadOptions {
+fn load_options(
+    recalc: bool,
+    clock: Clock,
+    name: Option<String>,
+    password: Option<String>,
+) -> LoadOptions {
     LoadOptions {
         recalc,
+        // The extracted `String` moves into the zeroizing `Password`; no other copy is kept.
+        password: password.map(Password::new),
         workbook: WorkbookOptions {
             clock,
             name,
@@ -405,35 +424,37 @@ impl PyWorkbook {
 
     /// Opens an xlsx file (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (path, recalc=true, clock=None, name=None))]
+    #[pyo3(signature = (path, recalc=true, clock=None, name=None, password=None))]
     fn open(
         py: Python<'_>,
         path: &str,
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
         name: Option<String>,
+        password: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?, name);
+        let options = load_options(recalc, opt_clock(clock)?, name, password);
         let wb = py
             .detach(|| Workbook::open(path, &options))
-            .map_err(|e| PyLoadError::new_err(e.to_string()))?;
+            .map_err(|e| load_err(&e))?;
         Ok(Self::wrap(wb))
     }
 
     /// Loads a workbook from xlsx bytes (the GIL is released while loading).
     #[staticmethod]
-    #[pyo3(signature = (data, recalc=true, clock=None, name=None))]
+    #[pyo3(signature = (data, recalc=true, clock=None, name=None, password=None))]
     fn from_bytes(
         py: Python<'_>,
         data: &[u8],
         recalc: bool,
         clock: Option<&Bound<'_, PyAny>>,
         name: Option<String>,
+        password: Option<String>,
     ) -> PyResult<Self> {
-        let options = load_options(recalc, opt_clock(clock)?, name);
+        let options = load_options(recalc, opt_clock(clock)?, name, password);
         let wb = py
             .detach(|| Workbook::from_xlsx_bytes(data, &options))
-            .map_err(|e| PyLoadError::new_err(e.to_string()))?;
+            .map_err(|e| load_err(&e))?;
         Ok(Self::wrap(wb))
     }
 
@@ -775,6 +796,11 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("EditError", py.get_type::<PyEditError>())?;
     m.add("LoadError", py.get_type::<PyLoadError>())?;
     m.add("SaveError", py.get_type::<PySaveError>())?;
+    m.add(
+        "PasswordRequiredError",
+        py.get_type::<PyPasswordRequiredError>(),
+    )?;
+    m.add("WrongPasswordError", py.get_type::<PyWrongPasswordError>())?;
     Ok(())
 }
 
