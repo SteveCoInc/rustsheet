@@ -3,7 +3,7 @@ id: T-4284
 title: "Probe Lotus dot ranges with whitespace after the dots on a $ cell or a line feed ($A$1. B2, A1.LF B2) and pin the lexer's fallback"
 milestone: M2
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -36,3 +36,8 @@ evidence, and a lexer test pins the fallback when no second cell follows.
 
 ## Out of scope
 - R1C1-mode dotted forms.
+
+## Outcome
+- Probed on excel-graph (2026-11-05): `A1.`&LF&`B2`, `$A$1. B2` and `A$1.. B2` all read as ranges (SUM 15, ROWS 2, ISREF TRUE; FORMULATEXT `A1:B2`, `$A$1:B2`, `A$1:B2`). The lexer already did this, so no engine change. Cases: probes/t4284-lotus-dot-ws-after-{lf-after,dollar-space-after,dollar-space-after-dotdot}.
+- Unit tests in test_lotus_dot_ranges.rs cover the three forms and pin the no-second-cell fallback. Measured: `=SUM(A1. 5)` is `#ERROR!`; `=SUM(A1. )` and `=A1. +1` are `#NAME?` (name `A1.`), not `#ERROR!` as the task text expected.
+- references.md updated. Eval delta: none expected (probe cases have no expected cells).
