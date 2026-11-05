@@ -403,7 +403,8 @@ Below serial 1, and the counts:
   shown digit rounds up: `TEXT(0.0005/86400,"[h]:mm:ss.000")` "0:00:00.001", `TEXT(3.55/86400,"[s].0")` "3.6",
   while `TEXT(20.65/86400,"[s].0")` stays "20.6". The seconds field does not carry with them: when `r15` reaches 1
   the digits wrap to zeros, so `TEXT(41.95/86400-2*2^-64,"[s].0")` is "41.0" (probes/t4370-ulp-map-2 A417; the
-  same split T-4333's ulp scan saw at `3733.95/86400+1*2^-57` "3733.0"). The ulp maps probes/t4370-ulp-map and
+  same split T-4333's ulp scan saw at `3733.95/86400+1*2^-57` "3733.0"; both are excel-graph only and decided
+  within an ulp, under decision 0188 R4.4's web-vs-desktop floor, so T-4389 confirms them on excel-desktop). The ulp maps probes/t4370-ulp-map and
   t4370-ulp-map-2 step 70 ties up to 64 ulp around their serial: the flip depends on the serial only, not on the
   format, and lands within an ulp of the model's. The model scores 743 of the 746 cells of the six t4323/t4332
   fraction cases (the cut's own digits 706; the three misses are `[s]` counts), 739 of the 802 ulp-map cells (554),

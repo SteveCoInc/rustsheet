@@ -320,8 +320,9 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
 
 /// The whole days and the whole units of `1/scale` second within the day that the clock shows,
 /// and the remainder in [0, 1) of a second the fraction digits read ([`fraction_digits`]): the
-/// half step's serial `y` ([`half_step`]) cut field by field, as Excel does. `frac(y)` is multiplied by 24, floored and its remainder kept, then the same with 60, 60
-/// and `scale`, all in plain doubles. Cutting `frac(y)*86400*scale` at once (the register of
+/// half step's serial `y` ([`half_step`]) cut field by field, as Excel does. `frac(y)` is
+/// multiplied by 24, floored and its remainder kept, then the same with 60, 60 and `scale`, all
+/// in plain doubles. Cutting `frac(y)*86400*scale` at once (the register of
 /// [`half_step_split`]) truncates many ties below serial 1 that Excel rounds up:
 /// `TEXT(0.015/86400,"s.00")` is "0.02" and `TEXT(21.2685/86400,"[h]:mm:ss.000")` "0:00:21.268",
 /// and only the field-by-field cut gives both. It gets 134 of the 156 tie cells below serial 1

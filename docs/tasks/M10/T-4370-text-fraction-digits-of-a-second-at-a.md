@@ -61,8 +61,14 @@ The seconds field is cut on its own and does not carry when `r15` reaches 1: `TE
 - Scores (model / T-4332's cut): the six fraction cases 743/746 against 706/746, so all 37 listed cells pass and no
   other cell moves: the engine still misses only T-4333's six `[s]` count cells (ties A90, sweep-2 A1, A24, A41, A84,
   sweep-3 A7), as before (the Python scorer's simpler count rule misses three others instead); fresh sweep 120/120 against 54/120; ulp
-  maps 739/802 against 554/802 (the engine 740). R4: the model is structural (no fitted constant); it was chosen on the
-  ulp maps and the six cases, and the fresh sweep drawn after the freeze is its out-of-sample check.
+  maps 739/802 against 554/802. The engine gets 740: it also passes t4370-ulp-map-2 A418 (`[s].0`, 1 ulp below
+  41.95 s), where only the Python scorer's simpler `[s]` count rule misses.
+- R4.1 hold-out (structural model, no fitted constant), with T-4323's margin of 10 points; outputs are text, so the
+  within-4-ulp and 15-digit columns do not apply. Pooled 30% sha256 split of every cell of the six fraction cases
+  and the two ulp maps (docs/research/t4370/holdout.py): the 15-digit model gets 1008/1055 (95.5%) on train and
+  474/493 (96.1%) on hold-out; T-4332's cut 864/1055 and 396/493; the correctly rounded value 716/1055 and 336/493.
+  The search ranked its candidates on all of these cells, so the hold-out cells were seen during the search; the
+  guard this PR relies on is the fresh sweep probes/t4370-fraction-fresh, drawn after the freeze (120/120).
 - Left: `.000` on a remainder below about 0.06 s rounds up further than the 15th digit allows (as if 1.6E-17 to 1.9E-17
   s were added): the engine's 62 ulp-map misses, all owned by the follow-up T-4389. Searches refuted on the way are
   in docs/research/t4370/README.md.

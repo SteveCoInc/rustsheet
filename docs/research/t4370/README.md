@@ -12,7 +12,9 @@ Run these scripts from this directory with plain `python3`. They reuse T-4332's 
   are `[s]` counts, T-4333) and 739/802 on the two ulp maps (554).
   `python3 model.py meta9.json:t4370-fraction-fresh` scores the fresh sweep: 120/120 (the cut 54).
 - `sweep.py` generated probes/t4370-fraction-fresh after the freeze (seed 43700, 120 cells, the first 60 separating
-  the model from the cut). `meta9.json` maps its cells.
+  the model from the cut) with T-4332's generator (`../t4332/sweep.py` `generate`). `meta9.json` maps its cells.
+- `holdout.py` is the R4.1 hold-out: a pooled 30% sha256 split of the six fraction cases and the two ulp maps. The
+  model gets 1008/1055 on train and 474/493 on hold-out; the cut 864 and 396; the correctly rounded value 716 and 336.
 
 What the ulp maps showed:
 - The flip depends on the serial only: the same serial gives the same digits under `[s].0`, `h:mm:ss.0`, `s.0`,

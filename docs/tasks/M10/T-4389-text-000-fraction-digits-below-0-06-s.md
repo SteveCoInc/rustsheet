@@ -29,9 +29,15 @@ Visibly-off cells this task owns (all `.000` with a remainder below 0.06 s):
 - probes/t4370-ulp-map A52, A86:A91
 - probes/t4370-ulp-map-2 A1:A15, A18:A29, A47:A50, A52:A63, A76:A83, A243:A244, A313:A314
 
+Also confirm on excel-desktop (M14, Phase 4, decision 0039, when it is available) the wrap points that rest on
+excel-graph alone and on a single ulp: t4370-ulp-map-2 A417 ("41.0") and A418 ("42.0"), and t4333-count-ulp-scan
+E6 ("3733.0").
+
 ## Acceptance criteria
 - [ ] The listed cells pass and no other cell of the t4323, t4332 and t4370 fraction cases moves.
 - [ ] A structural model: the R4 hold-out and a fresh sweep generated after it is frozen confirm it.
+- [ ] t4370-ulp-map-2 A417, A418 and t4333-count-ulp-scan E6 are checked on excel-desktop once it is available, or the
+      semantics entry says they rest on excel-graph alone.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
