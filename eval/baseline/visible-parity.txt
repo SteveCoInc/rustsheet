@@ -166,6 +166,7 @@ probes/irr-guess-edges-2.case.json	4
 probes/irr-guess-edges.case.json	3
 probes/linest-modes.case.json	42
 probes/logest-modes.case.json	51
+probes/m9-database-argument-kinds.case.json	12
 probes/stat-argument-modes.case.json	9
 probes/stat-order-floor-batch.case.json	1
 probes/stat-quantile-lift.case.json	9
@@ -221,6 +222,8 @@ probes/t4014-sheet-api-name-65.case.json	1
 probes/t4088-groupby-multifield.case.json	10
 probes/t4195-groupby-intransitive.case.json	24
 probes/t4228-pivot-range-groups.case.json	122
+probes/t4236-pivot-date-groups-no-blank.case.json	159
+probes/t4236-pivot-date-groups.case.json	149
 probes/table-edits/table-column-range-delete-both-ends-separate.case.json	2
 probes/table-edits/table-column-range-delete-end.case.json	2
 probes/table-edits/table-column-range-delete-start.case.json	2

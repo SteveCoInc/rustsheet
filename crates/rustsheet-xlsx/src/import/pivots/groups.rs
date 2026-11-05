@@ -9,66 +9,22 @@
 //! in place of its values. The importer turns both into ordinary cache fields whose items are the
 //! group items and whose records are each record's group, so the engine model and GETPIVOTDATA
 //! need nothing new: a pivot field's `<item x>` indexes the group items, as Excel writes it.
-//! Which group a value falls in is ECMA-376's layout, read off Excel-authored caches
-//! (corpus-bench 52379, 59932), and UNVERIFIED against Excel's own grouping
+//! Numbers and dates follow Excel's probed rules, [`group_by_numbers`] (T-4235) and
+//! [`group_by_dates`] (T-4236), which also keep the grouping for GETPIVOTDATA's number items
 //! (docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
 
-use rustsheet_engine::formatter::dates::{carried_day, excel_serial_to_ymd, time_of_day_parts};
 use rustsheet_engine::pivot::{
-    CacheField, CacheItem, PivotCache, PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, CacheField, CacheItem, DateGroupBy, DateGroups, PivotCache,
+    PivotCacheError, MAX_ITEMS, MAX_RECORD_VALUES,
 };
 
 use super::{skip, Skip};
 
-/// What a `<rangePr groupBy>` groups by.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum GroupBy {
-    /// Numbers in steps of `groupInterval` (`range`, the default).
-    Range,
-    Seconds,
-    Minutes,
-    Hours,
-    Days,
-    Months,
-    Quarters,
-    Years,
-}
-
-impl GroupBy {
-    /// The `groupBy` attribute; `None` for an unknown one.
-    pub(super) fn parse(text: Option<&str>) -> Option<GroupBy> {
-        Some(match text.unwrap_or("range") {
-            "range" => GroupBy::Range,
-            "seconds" => GroupBy::Seconds,
-            "minutes" => GroupBy::Minutes,
-            "hours" => GroupBy::Hours,
-            "days" => GroupBy::Days,
-            "months" => GroupBy::Months,
-            "quarters" => GroupBy::Quarters,
-            "years" => GroupBy::Years,
-            _ => return None,
-        })
-    }
-
-    /// How many group items a date grouping has: the in-range ones plus the `<start` and `>end`
-    /// items around them. `None` for numbers and years, whose count follows the range.
-    fn fixed_item_count(self) -> Option<usize> {
-        match self {
-            GroupBy::Seconds | GroupBy::Minutes => Some(60 + 2),
-            GroupBy::Hours => Some(24 + 2),
-            // Day of the year on a leap-year calendar: 29-Feb is always an item (52379).
-            GroupBy::Days => Some(366 + 2),
-            GroupBy::Months => Some(12 + 2),
-            GroupBy::Quarters => Some(4 + 2),
-            GroupBy::Range | GroupBy::Years => None,
-        }
-    }
-}
-
-/// A `<rangePr>`: numbers or dates from `start` to `end`, in steps of `interval` (numbers only).
+/// A `<rangePr>`: numbers from `start` to `end` in steps of `interval` (`by` is `None`, ECMA-376's
+/// `range`), or dates from `start` to `end` grouped by `by`.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct RangeGroup {
-    pub(super) by: GroupBy,
+    pub(super) by: Option<DateGroupBy>,
     pub(super) start: f64,
     pub(super) end: f64,
     pub(super) interval: f64,
@@ -139,6 +95,8 @@ pub(super) fn apply_groups(
         if let Some(existing) = cache.fields.get_mut(index) {
             existing.items = field.items;
             existing.records = field.records;
+            existing.number_groups = field.number_groups;
+            existing.date_groups = field.date_groups;
         } else {
             // Sorted, and every grouping field has exactly one group, so this is the next one.
             let Some(name) = names.next() else {
@@ -156,22 +114,31 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     if count == 0 {
         return skip("a fieldGroup without groupItems");
     }
-    // A blank base value goes in item 0: Excel's pivot fields list exactly the group items, with
-    // no blank item of their own (59932: 14, 6 and 123 items over a field holding a blank record),
-    // and 59932 labels its first month item "(blank)". Which item Excel uses is UNVERIFIED (T-4228).
+    // A range: Excel's own rule for numbers, which relabels a `<groupItems>` list of the wrong
+    // length rather than refusing it (`group_by_numbers`; probes/t4228-pivot-range-groups pivot
+    // 3), and for dates (`group_by_dates`, T-4236).
+    match (&group.range, &group.discrete) {
+        (Some(range), None) => {
+            return Ok(match range.by {
+                None => group_by_numbers(
+                    base,
+                    [range.start, range.end, range.interval],
+                    group.items.clone(),
+                )?,
+                Some(by) => {
+                    let groups = DateGroups::new(by, range.start, range.end, count)?;
+                    group_by_dates(base, groups, group.items.clone())?
+                }
+            });
+        }
+        (_, None) => return skip("a fieldGroup without rangePr or discretePr"),
+        (_, Some(_)) => {}
+    }
     let mut map = Vec::with_capacity(base.items.len());
-    for (index, item) in base.items.iter().enumerate() {
-        let target = match (item, &group.discrete, &group.range) {
-            (_, Some(discrete), _) => match discrete.get(index) {
-                Some(&k) if (k as usize) < count => k,
-                _ => return skip("a base item without a valid discrete group"),
-            },
-            (CacheItem::Missing, None, Some(_)) => 0,
-            (CacheItem::Number(v) | CacheItem::Date(v), None, Some(range)) => {
-                group_index(*v, range, count)?
-            }
-            (_, None, Some(_)) => return skip("a range group over a value that is not a number"),
-            (_, None, None) => return skip("a fieldGroup without rangePr or discretePr"),
+    for index in 0..base.items.len() {
+        let target = match group.discrete.as_ref().and_then(|d| d.get(index)) {
+            Some(&k) if (k as usize) < count => k,
+            _ => return skip("a base item without a valid discrete group"),
         };
         map.push(target);
     }
@@ -185,103 +152,6 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
         name: String::new(),
         items: group.items.clone(),
         records,
+        ..CacheField::default()
     })
-}
-
-/// The group item `value` falls in: 0 below the range, `count - 1` above it, and otherwise the
-/// step (numbers) or the calendar part (dates) counted from 1.
-fn group_index(value: f64, range: &RangeGroup, count: usize) -> Result<u32, Skip> {
-    if let Some(expected) = range.by.fixed_item_count() {
-        if count != expected {
-            return skip(format!(
-                "{count} group items where the grouping has {expected}"
-            ));
-        }
-    }
-    if count < 3 {
-        return skip("a range group with fewer than three items");
-    }
-    let last = count - 1;
-    if value < range.start {
-        return Ok(0);
-    }
-    if value > range.end {
-        return Ok(u32::try_from(last).unwrap_or(0));
-    }
-    let inner = match range.by {
-        GroupBy::Range => {
-            let step = ((value - range.start) / range.interval).floor();
-            // Finite and at least 0 here; the clamp below bounds it.
-            if step.is_finite() && step < (count as f64) {
-                step as usize + 1
-            } else {
-                last - 1
-            }
-        }
-        GroupBy::Years => {
-            let ((_, Some(year), _), (_, Some(start), _)) =
-                (calendar_parts(value)?, calendar_parts(range.start)?)
-            else {
-                return skip("a date group outside the calendar");
-            };
-            usize::try_from(year - start).map_or(1, |n| n + 1)
-        }
-        by => {
-            let (Some(year_day), _, seconds) = calendar_parts(value)? else {
-                return skip("a date group outside the calendar");
-            };
-            match by {
-                GroupBy::Seconds => seconds % 60 + 1,
-                GroupBy::Minutes => seconds / 60 % 60 + 1,
-                GroupBy::Hours => seconds / 3600 + 1,
-                GroupBy::Days => year_day.leap_year_day,
-                GroupBy::Months => year_day.month as usize,
-                _ => (year_day.month as usize - 1) / 3 + 1,
-            }
-        }
-    };
-    Ok(u32::try_from(inner.clamp(1, last - 1)).unwrap_or(0))
-}
-
-/// The calendar parts of a date that groups read.
-struct YearDay {
-    month: u32,
-    /// The day's position in a leap year, 1 to 366 (1-Jan is 1, 29-Feb is 60, 1-Mar is 61).
-    leap_year_day: usize,
-}
-
-/// The year of `serial`'s date (`None` past the calendar), its month and leap-year day, and its
-/// time of day in whole seconds. A time rounds to the nearest second, and 24:00:00 is the next day.
-fn calendar_parts(serial: f64) -> Result<(Option<YearDay>, Option<i32>, usize), Skip> {
-    let (day, seconds) = split_serial(serial)?;
-    Ok(match excel_serial_to_ymd(day) {
-        Some((year, month, date)) => {
-            const BEFORE_MONTH: [usize; 12] =
-                [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
-            let before = BEFORE_MONTH.get(month as usize - 1).copied().unwrap_or(0);
-            (
-                Some(YearDay {
-                    month,
-                    leap_year_day: before + (date as usize).max(1),
-                }),
-                Some(year),
-                seconds,
-            )
-        }
-        None => (None, None, seconds),
-    })
-}
-
-/// A serial's whole day and its time of day in seconds, split as YEAR, MONTH, HOUR, MINUTE and
-/// SECOND split it (`carried_day`, `time_of_day_parts`): the time rounds to the nearest second
-/// and 23:59:59.5 or later is the next day. That pivot groups split it so is UNVERIFIED (T-4228).
-fn split_serial(serial: f64) -> Result<(i64, usize), Skip> {
-    // Pivot dates are 1900-01-00 to 9999-12-31, about 3e6 days: well inside an i64.
-    if !(0.0..=1e7).contains(&serial) {
-        return skip("a date group outside the calendar");
-    }
-    let day = carried_day(serial) as i64;
-    let [hour, minute, second] = time_of_day_parts(serial);
-    let seconds = (hour * 3600.0 + minute * 60.0 + second) as usize;
-    Ok((day, seconds))
 }

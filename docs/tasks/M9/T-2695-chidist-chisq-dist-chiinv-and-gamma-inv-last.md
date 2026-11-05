@@ -163,3 +163,17 @@ Four visibly-off gen-m9 cells this task named are handed on so this parked task 
 - probes-numeric/t1049-chisqinv.case.json (1): Calc!A33
 - probes-numeric/t1049-chisqinvrt.case.json (1): Calc!A33
 - probes/t2436/8d3588d8df0812df.case.json (1): Calc!A16
+
+## Cells added by gap triage (2026-11-05)
+`make eval` on origin/main 3c8d8c7d3 (excel-graph), the `owned` rule of `scripts/exit_owners.py` over every failing
+cell against every open task: 24 small-df cells of T-3350's R4 fresh sweep that no open task names (its huge-shape
+cells went to T-4215). All are within 15 digits. 22 are 1 to 3 ulp. A4 `CHISQ.INV(0.997785925917718,7)`
+(Excel 22.345749515520083, ours 22.345749515520133, 14 ulp) and A38 `CHISQ.INV(0.998874171187575,147)` (Excel
+204.97109579301835, ours 204.97109579301866, 11 ulp) are the two points T-3350's Gate A floor table lists as "math
+only": Excel is about 2E-15 off the 50-digit math there and ours is on it. Fitting them would move off the math, so the
+R4 guards apply (decision 0188).
+- probes-numeric/t3350-r4-chisq-inv-sweep.case.json (24; CHISQ.INV 12 and CHISQ.INV.RT 12, df 1 to 33159): Calc!A1, A4, A5, A13, A18, A26, A28, A30, A32, A35, A38, A39, A129, A132, A134, A136, A137, A142, A144, A147, A149, A152, A153, A160
+- [ ] These 24 cells pass bit-exact, or the Outcome lists each one with its ulp and says whether Excel or ours is
+      nearer the math (docs/research/t3350/sweep.py has the reference). Any fit carries the R4 guards of
+      reviewer-excel-fidelity check 7 (decision 0188): hold-out counts, a fresh sweep, the Gate A envelope result, a
+      `FITTED` tag and range, the reproducibility floor, and no keep-matched branch.

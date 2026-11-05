@@ -14,9 +14,9 @@
 use std::collections::HashMap;
 
 use crate::expressions::token::Error;
-use crate::functions::statistical::variance::{excel_variance, VarianceKind};
 use crate::model::Model;
-use crate::pivot::{Aggregate, AxisField, CacheItem, PivotCache, PivotTable};
+use crate::pivot::layout::{aggregate, record_numbers};
+use crate::pivot::{AxisField, CacheField, CacheItem, PivotCache, PivotTable};
 
 /// The indices of every pivot used in the current evaluation.
 #[derive(Default)]
@@ -131,49 +131,6 @@ fn build(cache: &PivotCache, axis: Vec<u32>) -> Option<PivotIndex> {
     })
 }
 
-/// The data field's aggregate over `values` (cache order). A Sum, Count, Average, Max or Min over
-/// nothing is 0 (probes/getpivotdata-real-pivot H13, probes/getpivotdata-empty-intersection);
-/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite result `#NUM!` (unknown 16). Var and `StdDev` reuse
-/// the worksheet functions' algorithm (`excel_variance`); that the pivot computes them alike is
-/// UNVERIFIED (unknown 15).
-fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Error> {
-    let n = values.len();
-    let minimum = match function {
-        Aggregate::Sum
-        | Aggregate::Count
-        | Aggregate::Average
-        | Aggregate::Max
-        | Aggregate::Min => 0,
-        Aggregate::StdDev | Aggregate::Var => 2,
-        _ => 1,
-    };
-    if n < minimum {
-        return Err(Error::REF);
-    }
-    if n == 0 {
-        return Ok(0.0);
-    }
-    let sum = || values.iter().fold(0.0, |acc, x| acc + x);
-    let variance = |kind| excel_variance(values, kind);
-    let value = match function {
-        Aggregate::Sum => sum(),
-        Aggregate::Count | Aggregate::CountNums => n as f64,
-        Aggregate::Average => sum() / n as f64,
-        Aggregate::Max => values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-        Aggregate::Min => values.iter().copied().fold(f64::INFINITY, f64::min),
-        Aggregate::Product => values.iter().fold(1.0, |acc, x| acc * x),
-        Aggregate::Var => variance(VarianceKind::Sample),
-        Aggregate::VarP => variance(VarianceKind::Population),
-        Aggregate::StdDev => variance(VarianceKind::Sample).sqrt(),
-        Aggregate::StdDevP => variance(VarianceKind::Population).sqrt(),
-    };
-    if value.is_finite() {
-        Ok(value)
-    } else {
-        Err(Error::NUM)
-    }
-}
-
 impl Model {
     /// The axis fields of pivot `pivot` (row axis first), building its index on first use; `None`
     /// when the pivot is not one GETPIVOTDATA answers from ([`supported`]) or its cache is
@@ -232,17 +189,56 @@ impl Model {
             }
             *names = Some(map);
         }
-        match names.as_ref()?.get(&name.to_lowercase())? {
-            ItemMatch::One(item) => Some(*item),
-            ItemMatch::Several => None,
-        }
+        let item = match names.as_ref()?.get(&name.to_lowercase())? {
+            ItemMatch::One(item) => *item,
+            ItemMatch::Several => return None,
+        };
+        self.shown_group(pivot, position, item)
     }
 
-    /// The blank item (`<m/>`, shown as `(blank)`) of the field at axis position `position` of
-    /// pivot `pivot`, which an omitted item argument picks (calipers `pv23_041` `Liability Summary`
-    /// G5:G7, `GETPIVOTDATA(...,"Remediation Status",)`); `None` when the field has none. Call
+    /// The group of a numeric range field at axis position `position` of pivot `pivot` whose
+    /// lower bound is `value` ([`crate::pivot::NumberGroups::lower_bound_index`]: probes/t4228-pivot-range-groups
+    /// Calc A35, C30:C46), or of a date-grouped field whose calendar value is `value`'s integer
+    /// part ([`crate::pivot::DateGroups::number_item`]: probes/t4236-pivot-date-groups-no-blank);
+    /// `None` on any other field, where a number is SPEC-0015 unknown 3. Call
     /// [`Model::pivot_axis`] first.
-    pub(crate) fn pivot_blank_item(&self, pivot: usize, position: usize) -> Option<u32> {
+    pub(crate) fn pivot_number_item(
+        &self,
+        pivot: usize,
+        position: usize,
+        value: f64,
+    ) -> Option<u32> {
+        let field = self.pivot_axis_field(pivot, position)?;
+        let item = if let Some(groups) = field.number_groups {
+            let n = groups.inner_count()?;
+            groups.item(groups.lower_bound_index(value)?, n)
+        } else {
+            field.date_groups?.number_item(value)?
+        };
+        self.shown_group(pivot, position, u32::try_from(item).ok()?)
+    }
+
+    /// `item`, unless it is a group of a numeric range or date-grouped field that holds no record:
+    /// Excel does not show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe
+    /// Calc B3, R1; a date group's `<start` and `>end` labels work only while they hold a record,
+    /// probes/t4236-pivot-date-groups-no-blank).
+    /// Whether an empty item of an ungrouped field is `#REF!` too is unprobed, so it keeps its
+    /// answer of 0 (probes/getpivotdata-empty-intersection). TODO(T-4248): probe it.
+    fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
+        let field = self.pivot_axis_field(pivot, position)?;
+        if field.number_groups.is_none() && field.date_groups.is_none() {
+            return Some(item);
+        }
+        let index = self.evaluation.pivot_indexes.pivots.get(&pivot)?;
+        index
+            .tuples
+            .keys()
+            .any(|tuple| tuple.get(position) == Some(&item))
+            .then_some(item)
+    }
+
+    /// The cache field at axis position `position` of pivot `pivot`.
+    fn pivot_axis_field(&self, pivot: usize, position: usize) -> Option<&CacheField> {
         let field = *self
             .evaluation
             .pivot_indexes
@@ -251,13 +247,19 @@ impl Model {
             .axis
             .get(position)?;
         let table = self.workbook.pivot_tables.get(pivot)?;
-        let items = &self
-            .workbook
+        self.workbook
             .pivot_caches
             .get(table.cache as usize)?
             .fields
-            .get(field as usize)?
-            .items;
+            .get(field as usize)
+    }
+
+    /// The blank item (`<m/>`, shown as `(blank)`) of the field at axis position `position` of
+    /// pivot `pivot`, which an omitted item argument picks (calipers `pv23_041` `Liability Summary`
+    /// G5:G7, `GETPIVOTDATA(...,"Remediation Status",)`); `None` when the field has none. Call
+    /// [`Model::pivot_axis`] first.
+    pub(crate) fn pivot_blank_item(&self, pivot: usize, position: usize) -> Option<u32> {
+        let items = &self.pivot_axis_field(pivot, position)?.items;
         let mut blanks = (0u32..)
             .zip(items)
             .filter(|(_, item)| matches!(item, CacheItem::Missing))
@@ -302,18 +304,7 @@ impl Model {
                 }
             }
             records.sort_unstable();
-            let mut values = Vec::with_capacity(records.len());
-            for record in records {
-                let item = field
-                    .records
-                    .get(record as usize)
-                    .and_then(|&i| field.items.get(i as usize));
-                match item {
-                    Some(CacheItem::Number(n)) => values.push(*n),
-                    _ => return Err(Error::REF),
-                }
-            }
-            aggregate(data.function, &values)
+            aggregate(data.function, &record_numbers(field, &records)?)
         })();
         index.memo.insert(query.clone(), answer.clone());
         answer

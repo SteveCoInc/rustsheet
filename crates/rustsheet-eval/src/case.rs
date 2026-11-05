@@ -237,12 +237,12 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub rendered: BTreeMap<String, CellInput>,
     /// A numeric range grouping of the row field (T-4228). The builder renders no cells for a
-    /// grouped pivot and the engine adapter does not register it yet (T-4235).
+    /// grouped pivot: the engine adapter has the engine lay it out from `location` (T-4235).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<PivotGroupSpec>,
 }
 
-/// A pivot row field's range grouping (`<fieldGroup>` with `<rangePr>`), as
+/// A pivot row field's range or date grouping (`<fieldGroup>` with `<rangePr>`), as
 /// `tools/src/rustsheet_tools/pivot.py` writes it: `items` are the group labels in order, the first
 /// for values below `start` and the last for values past `end`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -256,6 +256,10 @@ pub struct PivotGroupSpec {
     pub interval: f64,
     /// The `<groupItems>` labels.
     pub items: Vec<String>,
+    /// A date group's `groupBy` (`months`, `hours`, ...), whose `start` and `end` are date serials
+    /// (`startDate`, `endDate`; T-4236); absent for a numeric range group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub by: Option<String>,
 }
 
 /// A workbook's calculation settings (`<calcPr>`), written by spec2xlsx (T-0428). The engine

@@ -33,6 +33,16 @@ The rest of tiny-rate-structure (37 visibly-off CUMIPMT cells and their CUMPRINC
 T-3731's (gap triage 2026-10-31k, T-3552 until its attempt 1 closed). Both tasks change the same short-range CUMPRINC form, so the one that lands second
 starts by re-measuring its cells on the first one's main.
 
+## Cells added by gap triage (2026-11-04)
+`make eval` on origin/main 3c8d8c7d3. These are two more CUMIPMT cells of the same cancellation, and no open task lists
+them. Both are Mac 16.0300 cached values, and their CUMPRINC partners are in T-3216's list.
+- G29 `CUMIPMT(0.0083,36,8000,3,10,0)`: Excel -459.6252739600568, ours -459.6252739600561. Against the 50-digit math
+  -459.62527396005656, Excel is 4.3 ulp below and ours 7.7 ulp above. The gap of 7E-13 is past half a unit in the
+  15th digit, so the cell is visibly off, but only at the 15th digit (decision 0267 Tier D). Our H29 is 3.5 ulp from
+  Excel's -1604.273009770884, and `PMT·8 - CUMPRINC` carries that gap into the interest.
+- G31 `CUMIPMT(0.0083,36,8000,3,10,1)`: Excel -455.8417871269037, ours -455.84178712690345 (within 15 digits).
+- ironcalc-calc/FINANCIAL/CUMPRINC_CUMIPMT.xlsx (2): Sheet1!G29, G31
+
 ## Acceptance criteria
 - [ ] The listed CUMIPMT cells are bit-exact through a CUMPRINC change, or financial.md records why
       the remaining ones are not.

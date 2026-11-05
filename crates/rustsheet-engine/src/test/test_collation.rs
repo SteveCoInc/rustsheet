@@ -498,6 +498,51 @@ fn width_and_kana_tiebreaks() {
     assert_eq!(cmp("aー", "Ａb"), Ordering::Less);
 }
 
+/// A long-vowel or iteration mark with no letter before it sorts above every other character,
+/// whatever follows it (probes/t4258-collation-lone-mark-astral; t3465-collation-holdout C313:D313).
+#[test]
+fn lone_mark_sorts_above_every_character() {
+    let cmp = |a: &str, b: &str| cmp_text_pairwise(&Text::from(a), &Text::from(b));
+    for mark in ["ー", "ゝ", "ゞ", "ヽ", "ヾ", "々"] {
+        for other in [
+            "𠀀",
+            "𪜀",
+            "\u{2fa1d}",
+            "𰀀",
+            "가",
+            "一",
+            "\u{9fff}",
+            "㐀",
+            "豈",
+            "\u{e000}",
+            "😀",
+            "\u{fffd}",
+            "\u{f0000}",
+            "\u{10fffd}",
+            "𝐀",
+            "𠀀𠀀",
+        ] {
+            assert_eq!(cmp(mark, other), Ordering::Greater, "{mark:?} > {other:?}");
+            assert_eq!(cmp(other, mark), Ordering::Less, "{other:?} < {mark:?}");
+        }
+    }
+    for text in [
+        "々\u{35f}",
+        "々ヲ",
+        "々一",
+        "々𠀀",
+        "々A",
+        "々ー",
+        "ーヲ",
+        "ー𠀀",
+    ] {
+        assert_eq!(cmp(text, "𠀀"), Ordering::Greater, "{text:?} > 𠀀");
+    }
+    let b313 = "々\u{35f}ヲ\u{32b}\u{350}ゞ";
+    assert_eq!(cmp("𠀀", b313), Ordering::Less);
+    assert_eq!(cmp(b313, "𠀀"), Ordering::Greater);
+}
+
 /// Exact MATCH folds `ー` after a letter to that letter and a leading iteration mark to `ー`
 /// (probes/t3275-collation-width-kana Calc!C127:C129, C136), and does not decompose voicing.
 #[test]

@@ -712,6 +712,20 @@ fn time_groups_read_the_time_of_day() {
 }
 
 #[test]
+fn date_groups_compare_the_rounded_date_to_start_and_end() {
+    // T-4236: 10:30:14.6 rounds to startDate (10:30:15), so it is in January, not below the
+    // range; 2020-03-01 00:00:00.4 rounds to endDate, which is inside the range (March).
+    let definition = grouped_definition()
+        .replace("2019-05-20T23:59:59.6", "2019-01-15T10:30:14.6")
+        .replace(
+            r#"<d v="2020-02-29T00:00:00"/>"#,
+            r#"<d v="2020-03-01T00:00:00.4"/>"#,
+        );
+    let (caches, _) = load(&grouped_parts(definition));
+    assert_eq!(caches[0].fields[0].records, [1, 1, 3, 0]);
+}
+
+#[test]
 fn malformed_groups_skip_the_cache() {
     // A month group needs 14 items.
     let short = grouped_definition().replace(r#"<s v="Dec"/>"#, "");
@@ -752,4 +766,24 @@ fn malformed_groups_skip_the_cache() {
         r#"groupBy="days" groupInterval="7""#,
     );
     assert_no_cache(&grouped_parts(weeks));
+}
+
+/// Probe pivot 3 (probes/t4228-pivot-range-groups): a numeric `<groupItems>` list one item longer
+/// than the layout is not refused; Excel relabels the groups with its own labels and lists the end
+/// groups first.
+#[test]
+fn a_numeric_group_of_the_wrong_length_is_relabeled_with_the_ends_first() {
+    let definition = grouped_definition().replace(
+        &group_items(&["<0", "0-9", "10-19", "20-30", ">30"]),
+        &group_items(&["<0", "0-9", "10-19", "20-29", "30-39", ">30"]),
+    );
+    let (caches, _) = load(&grouped_parts(definition));
+    let bands = &caches[0].fields[5];
+    assert_eq!(
+        bands.items,
+        ["<0", ">30", "0-10", "10-20", "20-30"].map(text)
+    );
+    // 5 is in 0-10, 10 in 10-20, 31 past endNum, -1 before startNum.
+    assert_eq!(bands.records, [2, 3, 1, 0]);
+    assert!(bands.number_groups.is_some_and(|g| g.ends_first));
 }

@@ -2,14 +2,19 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    Aggregate, Axis, AxisField, CacheBuilder, CacheItem, CacheSource, CellArea, DataField,
-    PivotCacheError, PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, row_layout, Aggregate, Axis, AxisField, CacheBuilder,
+    CacheField, CacheItem, CacheSource, CellArea, DataField, DateGroupError, DateGroups,
+    LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable, RecordValue,
+    MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
-use super::{Txn, Undo};
+pub use rustsheet_engine::pivot::DateGroupBy as PivotDateGroupBy;
+
+use super::{Input, Txn, Undo};
 use crate::error::{EditError, RefError};
 use crate::refs::RangeRef;
+use crate::value::{ErrorKind, Value};
 use crate::workbook::{engine_rc, sheet_index};
 
 /// A data field's summary function.
@@ -88,6 +93,42 @@ pub struct PivotTableInput {
     pub function: PivotFunction,
     /// The data field's caption (`Sum of Sales`).
     pub caption: String,
+    /// A numeric range or date grouping of the row field, if any. A grouped pivot is laid out by the
+    /// engine (Excel lays one out itself on load): its rendered cells are written from
+    /// `location`'s top-left cell, which is all of `location` that is read.
+    pub group: Option<PivotRangeGroup>,
+}
+
+/// A row field grouped by numbers or dates (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx
+/// importer groups one (`rustsheet_engine::pivot::group_by_numbers`, `group_by_dates`).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PivotRangeGroup {
+    /// What a date group groups by; `None` for numbers (ECMA-376's `range`).
+    pub by: Option<PivotDateGroupBy>,
+    /// `startNum`, or `startDate` as a serial.
+    pub start: f64,
+    /// `endNum`, or `endDate` as a serial.
+    pub end: f64,
+    /// `groupInterval` (1 for a date group).
+    pub interval: f64,
+    /// The `<groupItems>` labels, in order.
+    pub items: Vec<String>,
+}
+
+/// Field `field` grouped by `group`, as the xlsx importer groups one (`group_by_numbers`,
+/// `group_by_dates`).
+fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
+    let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
+    Ok(match group.by {
+        None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
+        Some(by) => {
+            if field.items.contains(&CacheItem::Missing) {
+                return Err(PivotError::DateGroupOverBlank);
+            }
+            let groups = DateGroups::new(by, group.start, group.end, labels.len())?;
+            group_by_dates(field, groups, labels)?
+        }
+    })
 }
 
 /// Why a pivot table could not be registered.
@@ -109,6 +150,21 @@ pub enum PivotError {
     /// The cache exceeds a limit.
     #[error(transparent)]
     Cache(#[from] PivotCacheError),
+    /// The row field's grouping cannot apply (a value that is not a number, a bad range).
+    #[error(transparent)]
+    Group(#[from] NumberGroupError),
+    /// The row field's date grouping cannot apply (a value that is not a date, a wrong item
+    /// count).
+    #[error(transparent)]
+    DateGroup(#[from] DateGroupError),
+    /// A date grouping of a field that holds a blank: a refresh makes Excel drop the grouping and
+    /// list each date as its own item (probes/t4236-pivot-date-groups, web.md), which this does
+    /// not model yet (T-4260).
+    #[error("a date grouping over a field that holds a blank")]
+    DateGroupOverBlank,
+    /// A grouped pivot with a column field: only a grouped row field is laid out.
+    #[error("a grouped pivot has no column field")]
+    GroupedWithColumn,
 }
 
 impl Txn<'_> {
@@ -123,7 +179,10 @@ impl Txn<'_> {
     /// [`EditError::Pivot`] for a malformed source or field, or a cache over a limit.
     #[doc(hidden)]
     pub fn add_pivot_table(&mut self, input: &PivotTableInput) -> Result<(), EditError> {
-        let (cache, table) = self.build_pivot(input)?;
+        let (cache, mut table) = self.build_pivot(input)?;
+        if input.group.is_some() {
+            table.location = self.lay_out_grouped(input, &cache, &table)?;
+        }
         let (caches, tables) = (
             self.model.workbook.pivot_caches.len(),
             self.model.workbook.pivot_tables.len(),
@@ -195,7 +254,7 @@ impl Txn<'_> {
             }
             builder.push_record(record).map_err(PivotError::from)?;
         }
-        let cache = builder.finish();
+        let mut cache = builder.finish();
         // Exact-case match: the builder gives the header's own spelling. Excel's GETPIVOTDATA matches
         // field names ignoring case (web.md); this is not that rule.
         let field = |name: &str| {
@@ -210,6 +269,14 @@ impl Txn<'_> {
         let value = field(&input.value)?;
         if Some(row) == column || row == value || column == Some(value) {
             return Err(PivotError::RepeatedField.into());
+        }
+        if let Some(group) = &input.group {
+            if column.is_some() {
+                return Err(PivotError::GroupedWithColumn.into());
+            }
+            if let Some(field) = cache.fields.get_mut(row as usize) {
+                *field = grouped(field, group)?;
+            }
         }
         let fields = cache
             .fields
@@ -248,6 +315,51 @@ impl Txn<'_> {
         };
         Ok((cache, table))
     }
+
+    /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
+    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, and
+    /// the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
+    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
+    /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
+    fn lay_out_grouped(
+        &mut self,
+        input: &PivotTableInput,
+        cache: &PivotCache,
+        table: &PivotTable,
+    ) -> Result<CellArea, EditError> {
+        let bad = || PivotError::Cache(PivotCacheError::BadRecord);
+        let (Some(AxisField::Field(row)), Some(data)) =
+            (table.row_fields.first(), table.data_fields.first())
+        else {
+            return Err(bad().into());
+        };
+        let rows =
+            row_layout(cache, *row, data.field, data.function, &data.caption).ok_or_else(bad)?;
+        let (sheet, top, left) = (
+            input.location.sheet,
+            input.location.top,
+            input.location.left,
+        );
+        let mut bottom = top;
+        for (r, cells) in (top..).zip(rows) {
+            for (c, cell) in (left..).zip(cells) {
+                // Typed values: a label such as `1-1.1` is text, never parsed as a date.
+                let value = match cell {
+                    LayoutCell::Text(text) => Value::Text(text.into()),
+                    LayoutCell::Number(n) => Value::Number(n),
+                    LayoutCell::Error(error) => Value::Error(ErrorKind::from_engine(&error).into()),
+                };
+                self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
+            }
+            bottom = r;
+        }
+        Ok(CellArea {
+            top,
+            left,
+            bottom,
+            right: left + 1,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -285,6 +397,7 @@ mod tests {
             value: "Sales".into(),
             function: PivotFunction::Sum,
             caption: "Sum of Sales".into(),
+            group: None,
         };
         (wb, input)
     }
@@ -378,5 +491,102 @@ mod tests {
         assert!(failed.is_err());
         assert!(wb.model.workbook.pivot_tables.is_empty());
         assert!(wb.model.workbook.pivot_caches.is_empty());
+    }
+
+    /// A pivot grouped by 0.1 from 0 to 1 is laid out as Excel shows it (only the groups holding
+    /// a record), and GETPIVOTDATA reads a group by its label or its lower bound
+    /// (probes/t4228-pivot-range-groups).
+    #[test]
+    fn a_grouped_pivot_is_laid_out_and_answers_by_label_and_lower_bound() {
+        let mut wb = Workbook::new(&WorkbookOptions::default()).unwrap();
+        let items: Vec<String> = ["<0", "0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5"]
+            .into_iter()
+            .chain(["0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", ">1"])
+            .map(String::from)
+            .collect();
+        let (source, location) = (wb.range_ref("A1:B4").unwrap(), wb.range_ref("D1").unwrap());
+        wb.edit(|tx| {
+            for (a1, input) in [
+                ("A1", Input::from("N")),
+                ("B1", Input::from("S")),
+                ("A2", Input::from(0.3)),
+                ("B2", Input::from(1.0)),
+                ("A3", Input::from(0.999_999_999_999_999_9)),
+                ("B3", Input::from(2.0)),
+                ("A4", Input::from(1.0)),
+                ("B4", Input::from(4.0)),
+                ("F1", Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",0.3)")),
+                (
+                    "F2",
+                    Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",\"0.1-0.2\")"),
+                ),
+                ("F3", Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",1)")),
+                ("F4", Input::from("=GETPIVOTDATA(\"S\",D1,\"N\",0.35)")),
+            ] {
+                tx.set(a1, input)?;
+            }
+            tx.add_pivot_table(&PivotTableInput {
+                name: "Pv".into(),
+                source,
+                location,
+                row: "N".into(),
+                column: None,
+                value: "S".into(),
+                function: PivotFunction::Sum,
+                caption: "Sum of S".into(),
+                group: Some(PivotRangeGroup {
+                    by: None,
+                    start: 0.0,
+                    end: 1.0,
+                    interval: 0.1,
+                    items,
+                }),
+            })
+        })
+        .unwrap();
+        let text = |s: &str| Value::Text(s.into());
+        let column = |col: &str| -> Vec<Value> {
+            (1..=6)
+                .map(|row| wb.value(format!("{col}{row}").as_str()).unwrap())
+                .collect()
+        };
+        assert_eq!(
+            column("D"),
+            [
+                text("Row Labels"),
+                text("0.3-0.4"),
+                text("0.9-1"),
+                text(">1"),
+                text("Grand Total"),
+                Value::Empty
+            ]
+        );
+        assert_eq!(
+            column("E")[..5],
+            [
+                text("Sum of S"),
+                1.0.into(),
+                4.0.into(),
+                2.0.into(),
+                7.0.into()
+            ]
+        );
+        let ref_error = |cell: &str| matches!(wb.value(cell).unwrap(), Value::Error(_));
+        assert_eq!(wb.value("F1").unwrap(), 1.0.into());
+        assert!(ref_error("F2"), "a group without a record is #REF!");
+        assert_eq!(wb.value("F3").unwrap(), 2.0.into());
+        assert!(ref_error("F4"), "0.35 is no group's lower bound");
+        let [pivot] = &wb.model.workbook.pivot_tables[..] else {
+            panic!("one pivot");
+        };
+        assert_eq!(
+            pivot.location,
+            CellArea {
+                top: 0,
+                left: 3,
+                bottom: 4,
+                right: 4
+            }
+        );
     }
 }

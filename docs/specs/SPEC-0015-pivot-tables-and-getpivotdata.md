@@ -250,6 +250,15 @@ A spec case has no xlsx, and its rendered pivot cells exist only in the built fi
   already written: the same snapshot `refreshOnLoad` gives) and the definition from the spec's
   fields. It is test support, not public API: `#[doc(hidden)]`, not mirrored in the Python binding
   (explicitly deferred per api-design.md), and the only engine-side cache building.
+- A grouped spec pivot (`group`, T-4228) has no `rendered`: which group a record falls in is what
+  such a case probes, so the builder cannot lay it out (T-4235). `PivotTableInput::group` groups
+  the row field with the importer's rule (`rustsheet_engine::pivot::group_by_numbers`, which
+  `apply_groups` calls too), and `Txn::add_pivot_table` then writes the layout itself from the
+  location's top-left cell, before the pivot is registered: the builder's compact form with one
+  row field (`Row Labels`, the caption, the groups holding a record, `Grand Total`), in one place,
+  `rustsheet_engine::pivot::row_layout`. This is the Rust layout the alternative below rejects for
+  baking, kept to the one shape the builder cannot bake; oracle reads of Excel's own layout
+  (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding) keep it in step.
 
 ## Alternatives considered
 - Reading the rendered pivot cell instead of aggregating the cache: needs the layout of every

@@ -26,7 +26,7 @@ from rustsheet_tools.accuracy.model import (
     NoValueError,
     Param,
     register,
-    solve_log_bracket,
+    solve_smaller_tail,
     spend,
 )
 
@@ -178,14 +178,9 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
     """The x with I_x(a, b) = p, 0 < p < 1. NoValueError when x underflows or rounds to 1 (no double strictly
     inside (0, 1) to record)."""
     if p <= mpmath.mpf(1) / 2:
-        target = mpmath.log(p)
-        s = solve_log_bracket(
-            lambda s: mpmath.log(lower_tail(mpmath.exp(s), a, b)) - target, LOG_SMALLEST_DOUBLE, 0
-        )
-        return mpmath.exp(s)
-    target = mpmath.log(1 - p)
-    # 1 - x = e^s: the upper tail I_{e^s}(b, a) grows with s
-    s = solve_log_bracket(lambda s: mpmath.log(_betainc(b, a, mpmath.exp(s))) - target, -1500, 0)
+        return mpmath.exp(solve_smaller_tail(p, lambda x: lower_tail(x, a, b), None, LOG_SMALLEST_DOUBLE, 0))
+    # 1 - x = e^s: the upper tail I_{e^s}(b, a) grows with s, so it is the lower tail of 1 - x
+    s = solve_smaller_tail(1 - p, lambda y: _betainc(b, a, y), None, -1500, 0)
     x = 1 - mpmath.exp(s)
     if x >= 1 - mpmath.mpf(2) ** -54:
         msg = "the quantile rounds to 1"

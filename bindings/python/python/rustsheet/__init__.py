@@ -1,16 +1,9 @@
-"""IronCalc: create, edit and evaluate Excel spreadsheets.
+"""RustSheet: create, edit and evaluate Excel spreadsheets.
 
-There are two APIs:
-
-* The **facade API** (:class:`Workbook`): the typed public API. Excel errors are returned as
-  :class:`XlError` values, edits are atomic transactions (``with wb.edit() as tx``) and every edit
-  reports a change set in ``wb.changes``.
-* The **user API** (:class:`UserModel`): the same high level API used by the
-  IronCalc web application. Every action evaluates the workbook, keeps
-  undo/redo history.
-* The **raw API** (:class:`Model`): a low level API. Nothing is evaluated
-  automatically (call :meth:`Model.evaluate` yourself), there is no undo/redo
-  and no diffs. It is faster and more flexible, but easier to get wrong.
+The API is :class:`Workbook`: Excel errors are returned as :class:`XlError` values, edits are
+atomic transactions (``with wb.edit() as tx``) and every edit reports a change set in
+``wb.changes``. The older ``UserModel`` and ``Model`` classes live in the deprecated
+:mod:`rustsheet.legacy` module until the API v1 freeze (SPEC-0026).
 
 Quick start::
 
@@ -26,28 +19,21 @@ Quick start::
 """
 
 from rustsheet._rustsheet import (
-    CellType,
     EditError,
     Formula,
     LoadError,
-    Model,
     RefError,
     RustSheetError,
     SaveError,
     Transaction,
-    UserModel,
     Workbook,
     WorkbookError,
     XlError,
     __version__,
     column_name_from_number,
     column_number_from_name,
-    create,
-    create_user_model,
-    create_user_model_from_xlsx,
     get_all_timezones,
     get_supported_locales,
-    load_from_xlsx,
     quote_name,
 )
 
@@ -58,16 +44,13 @@ def open(path: str, recalc: bool = True) -> Workbook:
 
 
 __all__ = [
-    "CellType",
     "EditError",
     "Formula",
     "LoadError",
-    "Model",
     "RefError",
     "RustSheetError",
     "SaveError",
     "Transaction",
-    "UserModel",
     "Workbook",
     "WorkbookError",
     "XlError",
@@ -75,11 +58,7 @@ __all__ = [
     "__version__",
     "column_name_from_number",
     "column_number_from_name",
-    "create",
-    "create_user_model",
-    "create_user_model_from_xlsx",
     "get_all_timezones",
     "get_supported_locales",
-    "load_from_xlsx",
     "quote_name",
 ]

@@ -13,7 +13,9 @@ mod calculated_column;
 mod diff;
 mod pivot;
 
-pub use self::pivot::{PivotError, PivotFunction, PivotTableInput};
+pub use self::pivot::{
+    PivotDateGroupBy, PivotError, PivotFunction, PivotRangeGroup, PivotTableInput,
+};
 
 use rustsheet_engine::clock::Clock;
 use rustsheet_engine::types::{
@@ -357,9 +359,7 @@ impl Txn<'_> {
                 model.set_typed_user_input(sheet, row, col, text)
             }
             Input::StoredFormula(text) => model.set_loaded_user_input(sheet, row, col, text),
-            Input::LegacyFormula(text) => {
-                model.set_cell_with_legacy_formula(sheet, row, col, &text)
-            }
+            Input::LegacyFormula(text) => model.set_loaded_legacy_formula(sheet, row, col, &text),
             Input::Value(value) => {
                 // Typed setters skip the spill/array/merge checks that `set_user_input` does.
                 model
