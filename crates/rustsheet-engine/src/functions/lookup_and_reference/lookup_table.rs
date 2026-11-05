@@ -8,7 +8,7 @@ use super::array_node_to_calc_result;
 use crate::functions::binary_search::Sequence;
 use crate::functions::criteria::{folded_units, WildcardPattern};
 use crate::functions::util::collation::{
-    collation_key, fold_exact_lookup, note_compared_bytes, CollationKey,
+    collation_key, fold_exact_lookup, note_compared, CollationKey, BYTE_TICKS,
 };
 use crate::functions::util::{compare_values, compare_values_pairwise};
 use std::cmp::Ordering;
@@ -210,7 +210,7 @@ impl ExactKey {
                     .bytes()
                     .zip(units)
                     .position(|(byte, &unit)| u16::from(byte.to_ascii_lowercase()) != unit);
-                note_compared_bytes(differs.map_or(s.len(), |at| at + 1));
+                note_compared(differs.map_or(s.len(), |at| at + 1), BYTE_TICKS);
                 differs.is_none()
             }
             CalcResult::String(s) => fold_exact_lookup(&folded_units(s)) == units,

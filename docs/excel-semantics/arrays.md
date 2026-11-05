@@ -1562,11 +1562,29 @@ COUNTIF, SUMIF, SUMIFS, COUNTIFS, AVERAGEIF, MAXIFS, LARGE, SMALL, PERCENTILE, Q
 and INDEX, ROWS and COLUMNS: these three do O(1) work on the array but the variable read under them copies it, so they
 are charged too. GROUPBY and PIVOTBY hand each call its group as a bound parameter, so `SUM(x)` there pays the copy and
 the aggregate's read. Text elements of an array are not charged by their length at a read: their bytes are shared
-(T-2806), so the copy moves pointers; a reader that compares them pays the characters it reads instead (T-4233):
-each comparison counts what its passes read before they stop (`counted` in collation.rs), and the evaluator charges the
+(T-2806), so the copy moves pointers; a reader that compares them pays the characters it reads instead (T-4233).
+This applies to every text comparison a formula makes, not only over bound arrays: a single SORT, SORTBY, UNIQUE,
+lookup, `=` or criteria match over ranges or arrays of long texts with long shared prefixes pays too. Each comparison
+counts what its passes read before they stop (`counted` in collation.rs), and the evaluator charges the
 count after each node (`Model::spend_compared`), so comparing 32,767-byte texts that differ in their first byte costs no
 more than comparing short ones, while a MAP of `MATCH(REPT("a",32766)&"b",s,0)` over `s` bound to 1E5 such texts runs out
-on its first call. Covered by `every_text_comparing_reader_pays_the_bytes_it_compares`. The criteria functions (COUNTIF,
+on its first call. The count is in ticks, weighted by path because the paths' cost a character differs a
+hundredfold (collation/compared.rs): 1 a byte for the ASCII first pass, the ASCII folds and wildcard matches of the
+lookups and criteria; 32 a character of the ASCII second pass (equal or case-only-different texts); 128 a character of
+the full collation (non-ASCII, lone surrogates); 256 a byte of a collation key (UNIQUE, the exact-match lookup index,
+the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Fitted by time
+(release build, 2026-11-05, 4 cores; each a MAP over 1E5 calls with `s` bound to 1,000 texts of 32,767 bytes, or 16,383
+`é`, run until `#VALUE!`): `XMATCH(REPT("a",32766)&"b",s)` 7.0 s (1.6 ns a tick), MATCH wildcard 4.9 s, `SUM(--(s=REPT("A",32767)))`
+5.7 s, `ROWS(SORT(s))` 5.6 s, XMATCH over the `é` texts 6.2 s, MATCH exact over them 5.1 s. Measured to compute: `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))`
+in 4.1 s (81M compare units), `ROWS(SORT(IF(SEQUENCE(1048576),"Same text, 30 characters long")))` 2.9 s,
+`ROWS(SORT(REPT("a",300)&SEQUENCE(100000)))` 0.6 s; a one-unit-per-4-bytes weight (the first cut) refused the first of
+these. Refused now though they computed before: single nodes whose comparisons alone take longer than the limit's
+worth of time, such as `ROWS(SORT(REPT("a",300)&SEQUENCE(1048576)))` (about 9 s) and `ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`
+(about 30 s, its collation keys); the charge lands after the node, so such a node runs to its end before the formula
+is `#VALUE!` (one UNIQUE of 1,000 texts of 16,383 `é` takes about 60 s; T-4278 stops it inside the node, T-4279 speeds
+the collation up). `rustsheet-eval check` has no formula past the limit. Covered by
+`every_text_comparing_reader_pays_the_bytes_it_compares` and
+`a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit`. The criteria functions (COUNTIF,
 SUMIFS, ...) take ranges, not bound arrays, and their comparisons go through the same count. The calibration figures above were measured before T-2804 charged the aggregates'
 reads, so an aggregate-heavy eval formula now spends more (`rustsheet-eval check` still has no formula past the limit).
 Status: DEVIATION (decision 0014)
@@ -1576,7 +1594,8 @@ crates/rustsheet-engine/src/model.rs (`evaluate_node_in_context`), crates/rustsh
 crates/rustsheet-engine/src/arithmetic.rs (`handle_concatenate`), crates/rustsheet-engine/src/functions/util/aggregate_args.rs
 (`walk_array_items`), crates/rustsheet-engine/src/model.rs (`evaluate_node_with_reference`) and
 crates/rustsheet-engine/src/functions/logical/let.rs (`variable_reference`), crates/rustsheet-engine/src/functions/util/collation.rs
-(`note_compared_bytes`, `cmp_text_in`) and crates/rustsheet-engine/src/area_budget.rs (`Model::spend_compared`).
+and functions/util/collation/compared.rs (`note_compared`, `cmp_text_in`) and crates/rustsheet-engine/src/area_budget.rs
+(`Model::spend_compared`, `COMPARED_TICKS_PER_UNIT`).
 Tasks: T-2712 (SPEC-0024), T-2803, T-2813, T-2923, T-2806, T-2804, T-2805, T-4233
 
 ## Copies of a text share its bytes

@@ -7,7 +7,7 @@
 use crate::{
     calc_result::CalcResult,
     expressions::{parser::Node, token::Error, types::CellReferenceIndex},
-    functions::util::collation::{note_compared_bytes, take_compared_bytes},
+    functions::util::collation::{restore_compared_ticks, take_compared_ticks},
     limits::too_many_visits,
     model::Model,
     recalc_budget::RunBound,
@@ -81,6 +81,16 @@ pub(crate) const CELL_UNITS: u64 = 3;
 
 /// Bytes of a text value charged as one work unit ([`MAX_FORMULA_WORK`]).
 pub(crate) const TEXT_BYTES_PER_UNIT: u64 = 4;
+
+/// Ticks of text comparison charged as one work unit ([`MAX_FORMULA_WORK`],
+/// [`Model::spend_compared`]). A tick is about the time of one byte of the ASCII first pass of a
+/// comparison (about 1.6 ns, release build); the slower paths (the second pass, non-ASCII text,
+/// collation keys, folds) note several ticks a character, each fitted by time
+/// (`functions::util::collation::compared`; SPEC-0024 section 4, T-4233; the timings are in
+/// arrays.md "One formula evaluation does at most 268,435,456 work units"). At 16, each path's
+/// worst case reaches the limit in about 7 s or less, and a single SORT of a million texts
+/// sharing a 100-character prefix still computes.
+pub(crate) const COMPARED_TICKS_PER_UNIT: u64 = 16;
 
 /// Work units of one visit of a per-call cap (`limits::MAX_LIFTED_CELL_VISITS`: a lifted call's
 /// cell visits and kernel units, GROUPBY and PIVOTBY's) ([`MAX_FORMULA_WORK`]). One, the cap's own
@@ -217,10 +227,10 @@ pub(crate) fn text_units(bytes: usize) -> u64 {
         .div_ceil(TEXT_BYTES_PER_UNIT)
 }
 
-/// The units of `bytes` text bytes a reader compared ([`Model::spend_compared`]): one per
-/// [`TEXT_BYTES_PER_UNIT`], rounded up.
-pub(crate) fn compared_units(bytes: u64) -> u64 {
-    bytes.div_ceil(TEXT_BYTES_PER_UNIT)
+/// The units of `ticks` ticks of text comparison ([`Model::spend_compared`]): one per
+/// [`COMPARED_TICKS_PER_UNIT`], rounded up.
+pub(crate) fn compared_units(ticks: u64) -> u64 {
+    ticks.div_ceil(COMPARED_TICKS_PER_UNIT)
 }
 
 /// The units of building a `rows` x `columns` array: [`CELL_UNITS`] per cell, saturating, so an
@@ -261,13 +271,15 @@ impl Model {
         #[cfg(test)]
         let fresh = self.start_run(self.area_budget.limit);
         let outer = std::mem::replace(&mut self.area_budget, fresh);
-        // The outer run's node may have compared texts before it read this cell: those bytes are
-        // its own, so they wait until this run is done ([`Model::spend_compared`]).
-        let outer_compared = take_compared_bytes();
+        // The outer run's node may have compared texts before it read this cell: those ticks are
+        // its own, so they wait until this run is done ([`Model::spend_compared`]). At the top
+        // level this also sets aside ticks noted outside any run (an API sort, say), so no run
+        // ever pays for them.
+        let outer_compared = take_compared_ticks();
         let result = f(self);
-        // Bytes a run compared after its last node (none today) are not charged to the outer one.
-        let _ = take_compared_bytes();
-        note_compared_bytes(usize::try_from(outer_compared).unwrap_or(usize::MAX));
+        // Ticks a run noted after its last node (none today) are not charged to the outer one.
+        let _ = take_compared_ticks();
+        restore_compared_ticks(outer_compared);
         let mut inner = std::mem::replace(&mut self.area_budget, outer);
         // Past the work budget, the run was cut short wherever the charge failed, and `f` may have
         // turned that into a value (`IFERROR`), so the formula's value is the error (SPEC-0024).
@@ -357,16 +369,16 @@ impl Model {
         self.spend_work(units, cell)
     }
 
-    /// Charges the text bytes compared since the last node ([`take_compared_bytes`],
+    /// Charges the text comparison ticks since the last node ([`take_compared_ticks`],
     /// [`compared_units`]): the node that just ran pays for the texts its reader compared, keyed or
     /// folded (MATCH, the lookups, UNIQUE, SORT, the criteria, GROUPBY), which its cell charges do not
     /// cover when it reads a bound array of long texts again and again (SPEC-0024 section 1, "text
     /// values"; T-4233). [`Model::charged`] runs it for each node `evaluate_node_in_context` ends.
     #[inline]
     pub(crate) fn spend_compared(&mut self, cell: CellReferenceIndex) -> Result<(), CalcResult> {
-        match take_compared_bytes() {
+        match take_compared_ticks() {
             0 => Ok(()),
-            bytes => self.spend_work(compared_units(bytes), cell),
+            ticks => self.spend_work(compared_units(ticks), cell),
         }
     }
 

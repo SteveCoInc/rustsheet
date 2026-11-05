@@ -5,7 +5,8 @@
 //! (`AreaBudget::last_spent`) or cell reads, never time (T-2282).
 
 use crate::area_budget::{
-    CELL_UNITS, LAMBDA_UNITS, MAX_FORMULA_WORK, NODE_UNITS, TEXT_BYTES_PER_UNIT, TOO_MUCH_WORK,
+    CELL_UNITS, COMPARED_TICKS_PER_UNIT, LAMBDA_UNITS, MAX_FORMULA_WORK, NODE_UNITS,
+    TEXT_BYTES_PER_UNIT, TOO_MUCH_WORK,
 };
 use crate::model::Model;
 use crate::test::util::new_empty_model;
@@ -277,8 +278,9 @@ fn text_comparer(reader: &str, len: usize) -> String {
 #[test]
 fn every_text_comparing_reader_pays_the_bytes_it_compares() {
     // 4,000 more bytes in each of the 100 texts: each is compared, keyed or folded at least once,
-    // so the reader pays at least 100 * 4,000 bytes more, where the cells alone cost the same. A
-    // binary search (MATCH 1, LOOKUP) compares about log2(100) of them.
+    // at a tick a byte or more, so the reader pays at least 100 * 4,000 ticks more, where the
+    // cells alone cost the same. A binary search (MATCH 1, LOOKUP) compares about log2(100) of
+    // them.
     for reader in TEXT_COMPARERS {
         let compared = if reader.starts_with("MATCH(t,s,1)") || reader.starts_with("LOOKUP") {
             6
@@ -288,7 +290,7 @@ fn every_text_comparing_reader_pays_the_bytes_it_compares() {
         let small = units(&text_comparer(reader, 8));
         let big = units(&text_comparer(reader, 4008));
         assert!(
-            big - small >= compared * 4000 / TEXT_BYTES_PER_UNIT,
+            big - small >= compared * 4000 / COMPARED_TICKS_PER_UNIT,
             "{reader}: {} units for 4,000 more bytes a text",
             big - small
         );
@@ -336,4 +338,19 @@ fn a_lambda_repeating_a_text_comparing_reader_is_bounded() {
     );
     model.evaluate();
     assert_eq!(model._get_text("A1"), "900");
+}
+
+#[test]
+fn a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit() {
+    // The compare weights are fitted so that a SORT of a million texts sharing a 100-character
+    // prefix, which computes without the charge (about 4 s, release build), still does (T-4233).
+    // A sixteenth of it (65,536 texts) spends less than a twentieth of the limit, which leaves
+    // room for the 16-fold rows and the deeper merge of the full size.
+    let formula = r#"=ROWS(SORT(REPT("a",100)&SEQUENCE(65536)))"#;
+    let spent = units(formula);
+    assert!(spent < MAX_FORMULA_WORK / 20, "{spent}");
+    // And 65,536 equal 30-character texts, which each comparison walks to the end of the second
+    // pass.
+    let spent = units(r#"=ROWS(SORT(IF(SEQUENCE(65536),"Same text, 30 characters long")))"#);
+    assert!(spent < MAX_FORMULA_WORK / 20, "{spent}");
 }

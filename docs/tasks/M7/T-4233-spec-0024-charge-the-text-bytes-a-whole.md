@@ -3,7 +3,7 @@ id: T-4233
 title: "SPEC-0024: charge the text bytes a whole-array reader compares (lookups, MATCH, UNIQUE, SORT, the *IF(S)) over a bound array of long texts"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -39,8 +39,18 @@ evaluation does at most 268,435,456 work units".
   iterators, so a comparison pays up to its first difference, not the texts' lengths) and what each collation key or
   lookup fold is built from (`note_compared_bytes`); the ASCII arms that bypass it (`ExactKey::text_is` of MATCH,
   VLOOKUP and HLOOKUP's exact match, `folded_units`, `WildcardPattern::matches`) note theirs too. `Model::spend_compared`
-  (area_budget.rs) charges the count after each node (`Model::charged`, which `evaluate_node_in_context` ends with), one unit per 4 characters, and
-  `with_area_budget` keeps an outer run's pending count apart from a dependency cell's run.
+  (area_budget.rs) charges the count after each node (`Model::charged`, which `evaluate_node_in_context` ends with), and
+  `with_area_budget` keeps an outer run's pending count apart from a dependency cell's run (and, at the top level,
+  ticks noted outside any run).
+- Calibration (round 2, after fidelity's round-1 finding that one unit per 4 bytes refused single SORTs that compute):
+  the count is in ticks weighted by path, as the paths' cost a character differs a hundredfold (collation/compared.rs:
+  `BYTE_TICKS` 1, `ELEMENT_TICKS` 32, `CHAR_TICKS` 128, `KEY_TICKS` 256, `FOLD_TICKS` 32), and
+  `COMPARED_TICKS_PER_UNIT` = 16 (area_budget.rs). Timed on a release build (figures in arrays.md): every path's
+  bound-array worst case reaches the limit in 4.9-7.0 s; `ROWS(SORT(REPT("a",100)&SEQUENCE(1048576)))` computes (4.1 s,
+  81M compare units). Single nodes whose comparisons take longer than the limit's worth still run to their end before
+  they are `#VALUE!` (follow-ups T-4278, stop inside the node; T-4279, speed up the collation).
+- `a_sort_of_texts_with_a_long_shared_prefix_stays_well_inside_the_limit`: 65,536-row SORTs (100-character shared
+  prefix; equal 30-character texts) spend under a twentieth of the limit.
 - Tests (test_formula_work.rs, units not time): `every_text_comparing_reader_pays_the_bytes_it_compares` (MATCH exact,
   wildcard and approximate, XMATCH, XLOOKUP, LOOKUP, VLOOKUP, HLOOKUP, UNIQUE, SORT, SORTBY, GROUPBY, `=`),
   `a_comparison_pays_for_what_it_reads_not_for_the_texts_lengths`, and
@@ -52,30 +62,3 @@ evaluation does at most 268,435,456 work units".
   the same count.
 - arrays.md "One formula evaluation does at most 268,435,456 work units" (DEVIATION) lists the charge.
 - Eval delta: none (no baseline line changes; no eval formula past the limit).
-
-## Landing notes (resumed 2026-11-05 01:30 UTC; written 2026-11-04 23:10 UTC)
-Data for the run that resumes this branch; check it against the PR and the code.
-- PR #3244 (draft), head 9d7a46638. CI green on that head (every job, eval gate included); `make check-fast` green
-  locally (eval-gates: 0 regressions, no baseline change). Review round 1: security APPROVE (MINOR: the charge lands
-  after the node, so one node's compares run before the budget stops it; bounded), design APPROVE (MINOR:
-  `check_duplication.py` reports 2878 vs the 2880 baseline: refresh with `--update` in the next push),
-  excel-fidelity REQUEST_CHANGES.
-- Fidelity's blocking findings (round 1 of 3):
-  1. The weight is uncalibrated: compared characters reuse `TEXT_BYTES_PER_UNIT` (4 per unit), so single formulas
-     that compute on main become `#VALUE!`: `=ROWS(SORT(REPT("a",80)&SEQUENCE(1048576)))` (main: 1048576 in 4.9 s),
-     the same with 100 and 300 a's (6.1 s, 10 s), `ROWS(SORTBY(SEQUENCE(1048576),REPT("a",300)&SEQUENCE(1048576)))`,
-     `ROWS(SORT(REPT("a",3000)&SEQUENCE(100000)))` (6.7 s). Fine: 60-char prefix x 1M, 100-char x 300k.
-     Fix: a constant of its own (compared characters per unit) fitted per SPEC-0024 section 4 (worst case to the
-     limit under 10 s on a release build; heaviest eval formula's units recorded). Rough figure from the timings
-     above: about 0.6-0.7 G compared chars/s, so 16-24 chars a unit puts the all-compare worst case near 7-10 s;
-     time it (a MAP of `XMATCH(REPT("a",32766)&"b",s)` over a bound 32,767-byte array until `#VALUE!`), then add an
-     engine test that a 1M-row SORT with a ~100-char shared prefix still computes (units, not time: assert its
-     spent units stay under the limit).
-  2. arrays.md's DEVIATION entry must say the charge applies to any comparison (single SORT/SORTBY/UNIQUE/lookups over
-     ranges or arrays with long shared prefixes, not only bound arrays), and record the calibration figures.
-  - MINOR: reset the count at the top-level run start (`take_compared_bytes()` when no run encloses), with a comment.
-- The reviewer's scratch probe (one-cell release evaluator, formula as its argument) was in this run's scratchpad and
-  will not survive; rebuild one with a path dependency on crates/rustsheet-engine.
-- Next step: add the constant, time it, adjust tests/docs, push once, re-run all three reviewers (round 2), then mark
-  #3244 ready and enqueue.
-

@@ -65,8 +65,8 @@ mod scripts;
 use super::collation_tables::{COMBINING_LETTERS, DECOMPOSED, MARK_WEIGHT};
 use crate::text::{Char, Text};
 use accents::{accents, cmp_accent_units};
-use compared::{cmp_text_in, counted};
-pub(crate) use compared::{note_compared_bytes, take_compared_bytes};
+use compared::{cmp_text_in, counted, CHAR_TICKS, ELEMENT_TICKS, FOLD_TICKS, KEY_TICKS};
+pub(crate) use compared::{note_compared, restore_compared_ticks, take_compared_ticks, BYTE_TICKS};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
@@ -91,20 +91,21 @@ enum AccentOrder {
 }
 
 /// [`cmp_text_excel`] or [`cmp_text_pairwise`] for well-formed text.
-/// `read` counts the characters (ASCII: bytes) the passes read ([`counted`]).
+/// `read` counts the ticks of what the passes read ([`counted`]).
 fn cmp_str(left: &str, right: &str, order: AccentOrder, read: &Cell<u64>) -> Ordering {
     if left.is_ascii() && right.is_ascii() {
         // ASCII has no accents, so the second pass always ties.
-        return ascii_primaries(counted(left.bytes(), read))
-            .cmp(ascii_primaries(counted(right.bytes(), read)))
+        return ascii_primaries(counted(left.bytes(), read, BYTE_TICKS))
+            .cmp(ascii_primaries(counted(right.bytes(), read, BYTE_TICKS)))
             .then_with(|| {
-                skipped(elements(counted(scalars(left), read), None))
-                    .cmp(skipped(elements(counted(scalars(right), read), None)))
+                skipped(elements(counted(scalars(left), read, ELEMENT_TICKS), None)).cmp(skipped(
+                    elements(counted(scalars(right), read, ELEMENT_TICKS), None),
+                ))
             });
     }
     cmp_chars(
-        counted(scalars(left), read),
-        counted(scalars(right), read),
+        counted(scalars(left), read, CHAR_TICKS),
+        counted(scalars(right), read, CHAR_TICKS),
         order,
     )
 }
@@ -175,7 +176,7 @@ pub(crate) struct CollationKey {
 /// The [`CollationKey`] of `text`: its six passes (the widths and kana types in one variant
 /// byte), lone surrogates kept as [`cmp_text`] keeps them.
 pub(crate) fn collation_key(text: &Text) -> CollationKey {
-    note_compared_bytes(text.len());
+    note_compared(text.len(), KEY_TICKS);
     let elements = || elements(text.chars_lossless(), None);
     let sparse = |weights: &mut dyn Iterator<Item = u8>, default: u8| {
         weights
