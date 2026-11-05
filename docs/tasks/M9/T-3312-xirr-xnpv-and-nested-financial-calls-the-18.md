@@ -89,5 +89,8 @@ new known failure owned by T-4251).
   t3312-xirr-guess-dates-weibull A32). `rustsheet-accuracy math --suite probes` ran 60 minutes in this session without
   finishing (it has no per-case option) and was stopped; run it with a longer budget, commit only the two t3312
   `.math.json` files, and revert any rewrite it makes to unrelated sidecars (it rewrote three Bessel ones: `why` text only).
+- CI on 8f478c998: hygiene failed (financial/mod.rs 1080 lines > 1000); fixed by moving the XIRR/XNPV flow readers
+  to financial/flows.rs (no behavior change; quality/duplication.json ratcheted 2880 -> 2878). The eval gate failed on
+  the missing math sidecars only (above).
 - Verified on this head: `rustsheet-eval check` 0 regressions in every suite (gen-m9 1931); engine tests pass.
 - Next: generate the sidecars, push, re-run the two reviewers, mark the PR ready, enqueue.
