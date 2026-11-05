@@ -34,3 +34,22 @@ fn arguments() {
     assert_eq!(model._get_text("B5"), *"259");
     assert_eq!(model._get_text("B6"), *"#ERROR!");
 }
+
+#[test]
+fn text_literal_holiday_is_a_scalar_holiday() {
+    // probes/t4397-holiday-text-forms (excel-graph; dates.md "WORKDAY and NETWORKDAYS holidays"):
+    // date text given as a literal is a holiday, and NETWORKDAYS.INTL drops a scalar one on a
+    // Saturday whatever the weekend (10), while the same text in a cell is subtracted (9).
+    let mut model = new_empty_model();
+    model._set("C1", "3/18/2023");
+    model._set("A1", "=NETWORKDAYS(45000,45010,\"3/16/2023\")");
+    model._set("A2", "=NETWORKDAYS.INTL(45000,45010,13,\"3/18/2023\")");
+    model._set("A3", "=NETWORKDAYS.INTL(45000,45010,13,C1)");
+    model._set("A4", "=WORKDAY(45000,5,\"$45,001\")");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"7");
+    assert_eq!(model._get_text("A2"), *"10");
+    assert_eq!(model._get_text("A3"), *"9");
+    assert_eq!(model._get_text("A4"), *"45008");
+}
