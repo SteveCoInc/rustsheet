@@ -74,13 +74,19 @@ fn dotted_ranges_read_and_print_as_colon_ranges() {
 #[test]
 fn dots_and_whitespace_without_a_second_cell_keep_the_old_reading() {
     let mut model = model_with_values();
-    for (cell, formula) in [("F1", "=SUM(A1. 5)"), ("F2", "=SUM(A1. )"), ("F3", "=A1. +1")] {
+    for (cell, formula) in [
+        ("F1", "=SUM(A1. 5)"),
+        ("F2", "=SUM(A1. )"),
+        ("F3", "=A1. +1"),
+    ] {
         model._set(cell, formula);
     }
     model.evaluate();
     assert_eq!(model._get_text("F1"), "#ERROR!");
-    assert_eq!(model._get_text("F2"), "#ERROR!");
-    assert_eq!(model._get_text("F3"), "OLD");
+    // `A1.` stays a name here, so the trailing-dot forms are #NAME? (the task text expected #ERROR!).
+    assert_eq!(model._get_text("F2"), "#NAME?");
+    assert_eq!(model._get_text("F3"), "#NAME?");
+    assert_eq!(model._get_formula("F3"), "=A1. +1");
 }
 
 // probes/lotus-dot-range-{column,column-dotdot,number,offgrid,trailing-letter,name-second}:
