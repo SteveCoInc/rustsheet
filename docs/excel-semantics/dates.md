@@ -197,7 +197,7 @@ Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every
 Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
 excel_order.rs), and a dynamic-array formula as such no longer does. T-4330 added WRAPCOLS and TEXTSPLIT, INDEX counting only
 with a reference as its array, and IF, CHOOSE, LET and defined names counting (read from the formula, never evaluated
-again; IF or CHOOSE picking a constant and a name for a constant are unprobed). Unprobed: the functions not listed
+again; IF or CHOOSE picking a constant (`CONCAT(IF(TRUE,1,C1))`), LET binding a reference and returning a constant, and a name for a constant are unprobed). Unprobed: the functions not listed
 (GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
 range), and whether the emptying comes before or after the
 call's own arguments run (we empty after).
