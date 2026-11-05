@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::expressions::token;
-use crate::language::{get_language, Language};
-use crate::locale::{get_locale, Locale};
+use crate::language::{get_default_language, Language};
+use crate::locale::{get_default_locale, Locale};
 
 use super::{Lexer, LexerMode};
 
@@ -48,13 +48,7 @@ pub struct MarkedToken {
 /// assert_eq!(marked_tokens, vec![first_t, second_t, third_t]);
 /// ```
 pub fn get_tokens(formula: &str) -> Vec<MarkedToken> {
-    get_tokens_with_locale(
-        formula,
-        #[allow(clippy::expect_used)]
-        get_locale("en").expect(""),
-        #[allow(clippy::expect_used)]
-        get_language("en").expect(""),
-    )
+    get_tokens_with_locale(formula, get_default_locale(), get_default_language())
 }
 
 /// Returns a list of marked tokens for a formula using the given locale and language

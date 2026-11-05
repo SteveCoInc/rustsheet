@@ -5,8 +5,8 @@ use crate::expressions::lexer::{Lexer, LexerMode};
 use crate::expressions::token::TokenType;
 use crate::expressions::types::ParsedReference;
 use crate::expressions::utils::number_to_column;
-use crate::language::get_language;
-use crate::locale::get_locale;
+use crate::language::get_default_language;
+use crate::locale::get_default_locale;
 
 /// Shifts the relative parts of every cell/range reference in `formula` (no leading `=`) by
 /// `d_row` rows and `d_col` columns, keeping every other character (spacing, case, sheet-name
@@ -16,8 +16,8 @@ use crate::locale::get_locale;
 /// Returns `None` if the formula does not lex (the caller keeps the original text).
 #[must_use]
 pub fn shift_formula_text(formula: &str, d_row: i32, d_col: i32) -> Option<String> {
-    let locale = get_locale("en").ok()?;
-    let language = get_language("en").ok()?;
+    let locale = get_default_locale();
+    let language = get_default_language();
     let mut lexer = Lexer::new(formula, LexerMode::A1, locale, language);
     let chars: Vec<char> = formula.chars().collect();
     let mut out = String::new();
