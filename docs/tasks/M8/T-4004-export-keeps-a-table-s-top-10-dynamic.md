@@ -3,7 +3,7 @@ id: T-4004
 title: "Export keeps a table's top 10, dynamic, date-group, color and icon filter criteria so Excel still calls the rows filtered"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
