@@ -3,7 +3,7 @@ id: T-4380
 title: "UNIQUE drops a later key equal to an earlier kept one over Cx Ay Ax Bx (keeps Cx, Ay), and GROUPBY and PIVOTBY follow it"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
