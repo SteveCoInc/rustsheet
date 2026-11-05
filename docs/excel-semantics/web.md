@@ -129,9 +129,10 @@ Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists
 - `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
   probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
 - Control: the grand total (35) and a record item (East, 15) answer as usual in both.
-Engine: the engine builds a pivot's cache from its records, so it has no recordless item and answers `#REF!` for both
-`showAll` values; the `showAll="1"` cells are off until the importer keeps an unused shared item and the flag
-(follow-up task).
+Engine (T-4276): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll` (on
+when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an ungrouped field's item that no record
+holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs). The eval adapter
+appends a spec's `unused_items` to the row field's items after the records' own and takes its `show_all`.
 
 ## Grouped pivot fields import as their group items (T-4225)
 Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped

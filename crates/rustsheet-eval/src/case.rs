@@ -241,8 +241,8 @@ pub struct PivotTableSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub group: Option<PivotGroupSpec>,
     /// Texts the row field's cache keeps as shared items though no record uses them (T-4248); the
-    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter ignores them: it
-    /// builds the cache from the source records.
+    /// builder leaves `refreshOnLoad` off for such a pivot. The engine adapter appends them to the
+    /// row field's cache items after the records' own (T-4276).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unused_items: Vec<String>,
     /// The row field's `showAll` (T-4248); false when absent.

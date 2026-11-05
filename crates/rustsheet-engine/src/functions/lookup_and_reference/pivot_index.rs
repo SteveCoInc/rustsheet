@@ -242,12 +242,14 @@ impl Model {
     /// Excel does not show such a group (`showAll="0"`) and GETPIVOTDATA on it is `#REF!` (probe
     /// Calc B3, R1; a date group's `<start` and `>end` labels work only while they hold a record,
     /// probes/t4236-pivot-date-groups-no-blank).
-    /// An ungrouped field's recordless item is `#REF!` with `showAll="0"` and 0 with `showAll="1"`
-    /// (probes/t4248-getpivotdata-recordless-item); the engine keeps no such item yet.
-    /// TODO(T-4276): keep an unused shared item and `showAll`.
+    /// An ungrouped field's recordless item (an unused shared item) is `#REF!` with `showAll="0"`
+    /// and shown, so 0, with `showAll="1"` (probes/t4248-getpivotdata-recordless-item, web.md).
     fn shown_group(&self, pivot: usize, position: usize, item: u32) -> Option<u32> {
         let field = self.pivot_axis_field(pivot, position)?;
-        if field.number_groups.is_none() && field.date_groups.is_none() {
+        if field.number_groups.is_none()
+            && field.date_groups.is_none()
+            && self.pivot_axis_shows_all(pivot, position)?
+        {
             return Some(item);
         }
         let index = self.evaluation.pivot_indexes.pivots.get(&pivot)?;
@@ -258,15 +260,22 @@ impl Model {
             .then_some(item)
     }
 
+    /// The `showAll` of the pivot field at axis position `position` of pivot `pivot`.
+    fn pivot_axis_shows_all(&self, pivot: usize, position: usize) -> Option<bool> {
+        let field = self.pivot_axis_index(pivot, position)?;
+        let table = self.workbook.pivot_tables.get(pivot)?;
+        Some(table.fields.get(field as usize)?.show_all)
+    }
+
+    /// The cache field index at axis position `position` of pivot `pivot`.
+    fn pivot_axis_index(&self, pivot: usize, position: usize) -> Option<u32> {
+        let index = self.evaluation.pivot_indexes.pivots.get(&pivot)?;
+        index.axis.get(position).copied()
+    }
+
     /// The cache field at axis position `position` of pivot `pivot`.
     fn pivot_axis_field(&self, pivot: usize, position: usize) -> Option<&CacheField> {
-        let field = *self
-            .evaluation
-            .pivot_indexes
-            .pivots
-            .get(&pivot)?
-            .axis
-            .get(position)?;
+        let field = self.pivot_axis_index(pivot, position)?;
         let table = self.workbook.pivot_tables.get(pivot)?;
         self.workbook
             .pivot_caches

@@ -745,7 +745,13 @@ fn read_pivot_table<B: BufRead>(
                 Some("axisValues") | None => None,
                 Some(other) => return skip(format!("unknown axis {other:?}")),
             };
-            fields.push(PivotField::new(axis, cache_field.items.len()));
+            let mut field = PivotField::new(axis, cache_field.items.len());
+            // ECMA-376's default is on; Excel writes `showAll="0"` (web.md, T-4276).
+            field.show_all = !matches!(
+                attribute(element, "showAll")?.as_deref(),
+                Some("0" | "false")
+            );
+            fields.push(field);
         } else if at(path, &[TABLE, "pivotFields", "pivotField", "items"]) && name == "item" {
             // Subtotal rows (`t="default"`, `t="sum"`, ...) name no cache item.
             if attribute(element, "t")?.is_some_and(|t| t != "data") {
