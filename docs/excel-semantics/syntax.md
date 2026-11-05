@@ -725,8 +725,7 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
 - Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
   1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
 - Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
-  doubled prefix on a LAMBDA parameter, and
-  what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
+  doubled prefix on a LAMBDA parameter, and what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
   FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.

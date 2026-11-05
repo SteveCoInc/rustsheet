@@ -18,6 +18,16 @@ use crate::functions::kinds::arg_counts;
 use crate::language::get_default_language;
 use crate::typed_input::TYPED_FORMULA_DOES_NOT_PARSE;
 
+/// The prefix Excel puts on a stored LET or LAMBDA name.
+const XLPM_PREFIX: &str = "_xlpm.";
+
+/// Whether `name` starts with [`XLPM_PREFIX`] in any letter case (typed, Excel matches it so;
+/// probes/t4299-typed-xlpm-extrapolations).
+fn has_xlpm_prefix(name: &str) -> bool {
+    name.get(..XLPM_PREFIX.len())
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case(XLPM_PREFIX))
+}
+
 impl Parser {
     /// The parse error for a token that cannot start an operand.
     pub(super) fn unexpected_operand(&self, message: String) -> Node {
@@ -333,12 +343,8 @@ impl Parser {
     fn name_operand(&mut self, mut name: String) -> Node {
         // Typed, the prefix is lowercased: `=LET(x,2,_XLPM.x*3)` reads back `_xlpm.x*3` in
         // FORMULATEXT (`#NAME?` either way; probes/t4299-typed-xlpm-extrapolations C2:C3, T-4299).
-        if self.typed {
-            if let Some(prefix) = name.get(.."_xlpm.".len()) {
-                if prefix.eq_ignore_ascii_case("_xlpm.") {
-                    name.replace_range(.."_xlpm.".len(), "_xlpm.");
-                }
-            }
+        if self.typed && has_xlpm_prefix(&name) {
+            name.replace_range(..XLPM_PREFIX.len(), XLPM_PREFIX);
         }
         // A defined name of a linked workbook, `[1]!Name` or `[1]Sheet!Name` (one identifier to
         // the lexer), keeps its prefix: evaluation reads it from the link's cache.
@@ -644,10 +650,7 @@ impl Parser {
     /// typed with the prefix is refused alike (probes/t4299-typed-xlpm-extrapolations A1, A4, T-4299).
     pub(super) fn note_prefixed_declaration(&mut self, text: &str) {
         let name = text.trim();
-        let prefixed = name
-            .get(.."_xlpm.".len())
-            .is_some_and(|prefix| prefix.eq_ignore_ascii_case("_xlpm."));
-        if self.typed && self.prefixed_declaration.is_none() && prefixed {
+        if self.typed && self.prefixed_declaration.is_none() && has_xlpm_prefix(name) {
             self.prefixed_declaration = Some(name.to_string());
         }
     }
