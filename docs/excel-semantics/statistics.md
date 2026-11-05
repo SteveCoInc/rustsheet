@@ -3604,6 +3604,25 @@ F.INV, F.INV.RT and FINV still cross today's kernel on df1 x/(df1 x + df2) (`f_q
 Status: VERIFIED (excel-graph)
 Tasks: T-3567, T-3580
 
+## F.DIST's cdf flushes a subnormal result to 0 (T-4026)
+Rule: `F.DIST(x,m,n,TRUE)` is exactly 0 where its value is below the smallest normal double, 2.2250738585072014E-308;
+a cdf at or above it is returned as computed. The cut is on the final result, not inside bratio's kernel: at
+(m, n) = (316, 1) and (40, 1), both w = bpser with b0 = 1/2 whose prefactor 1/a0 differs about eightfold (1/158 against
+1/20), the last number and the first 0 sit at the same ln of the true cdf, -708.0 (3.3075530040249845E-308) and
+-708.5 (2.0E-308), around ln(DBL_MIN) = -708.40. A cut on bpser's exp(z) before the 1/a0 would move the edge by ln 158
+and ln 20 (to about -713.5 and -711.4). The companion `=(F.DIST(..))=0` is TRUE at every 0, so these are Excel's true
+zeros, not Graph hiding a kept subnormal (decision 0042).
+- probes/t4026-f-cdf-subnormal (210 cells, excel-graph, 2026-11-05): rows 7-39 (316, 1) and 40-72 (40, 1) walk ln of
+  the 60-digit cdf from -700 to -716 by 0.5; rows 1-6 are T-4026's Tier A cells (probes-numeric t3580-f-fresh B723,
+  B751, B824, B848; t3567-r5-fdf1-hold B1003, B1307), all 0 with a TRUE companion. Rows 73-105 at (377, 1.123) were
+  solved for the untruncated df, but F truncates it to (377, 1), so their cdf stays at 1.1E-295 to 1.3E-302 and they
+  only show the engine within a unit of Excel's 15th digit away from the edge.
+- Unprobed: F.DIST.RT and FDIST at a subnormal right tail away from T-4045's L140 prefactor cut, and BETA.DIST's cdf
+  at a subnormal result. The density keeps a subnormal Y ("F density is not the beta density" below).
+Ours: `fisher.rs` `f_dist_of` flushes the cdf with `arithmetic::flush_subnormal`.
+Status: VERIFIED (excel-graph)
+Tasks: T-4026
+
 ## F density is not the beta density, R's df or a GAMMALN formula (T-2513)
 Rule (PARTIAL): F.DIST(x,d1,d2,FALSE) is its own formula. With m = d1, n = d2, a = m/2, b = n/2, h = a + b and
 mx = fl(m·x):

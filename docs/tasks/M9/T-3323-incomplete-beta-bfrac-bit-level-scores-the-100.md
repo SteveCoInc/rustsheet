@@ -28,6 +28,10 @@ The bfrac port reaches the bit-level scores T-2508 carried: at least 185 of 1,02
 - r2-bratio's scores were not measured on the engine in T-2508: score docs/research/t2464/r2-bratio's bfrac cells
   (`score.py`, cells.tsv) against the engine (`rustsheet-eval run` on a case, or a test over the cells).
 - `bratio/tests.rs` `fixture_ported_branches_score` ratchets bfrac at 39 of 82 fixture rows: raise it when this lands.
+- Also owns (T-4026, 2026-11-05): the 18 bfrac cells of T-3580's fresh sweep, visibly off only at the 14th or 15th
+  digit (0.5 to 13 units of the 15th; Tier C/D, decision 0267). Branch from `bratio::dispatch` on `fisher.rs`
+  `f_beta_arguments` at the truncated dfs, all swapped for the right tail:
+  - probes-numeric/t3580-f-fresh.case.json (18): Calc!A905, A933, A1009, A1021, A1029, A1053, A1062, A1086, A1098, A1129, A1161, A1176, B918, B949, B1012, B1036, B1087, B1102
 
 ## Acceptance criteria
 - [ ] The (100, 120) run scores at least 185 of 1,024 bit-exact (`rustsheet-eval run --suite probes-numeric
