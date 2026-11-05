@@ -3,7 +3,7 @@ id: T-4353
 title: "Sheet-scoped defined name: resolve unqualified refs against the name's own sheet"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
