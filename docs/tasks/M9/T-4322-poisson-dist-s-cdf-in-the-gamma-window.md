@@ -3,7 +3,7 @@ id: T-4322
 title: "POISSON.DIST's cdf in the gamma window (x/a 1.29 to 1.5) and its density, after T-4302"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
