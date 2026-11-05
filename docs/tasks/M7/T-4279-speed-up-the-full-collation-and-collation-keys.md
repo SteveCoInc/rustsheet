@@ -3,7 +3,7 @@ id: T-4279
 title: "Speed up the full collation and collation keys on long texts (about 100-250 ns a character; T-4233 follow-up)"
 milestone: M7
 lane: perf
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
