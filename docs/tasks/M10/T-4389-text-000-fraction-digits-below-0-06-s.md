@@ -3,7 +3,7 @@ id: T-4389
 title: "TEXT .000 fraction digits below 0.06 s: the offset past the 15-digit cut"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
