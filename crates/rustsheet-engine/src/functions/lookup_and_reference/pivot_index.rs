@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use crate::expressions::token::Error;
 use crate::model::Model;
 use crate::pivot::layout::{aggregate, record_numbers};
-use crate::pivot::{AxisField, CacheField, CacheItem, PivotCache, PivotTable};
+use crate::pivot::{AxisField, CacheField, CacheItem, PivotCache, PivotTable, BLANK_ITEM};
 
 /// The indices of every pivot used in the current evaluation.
 #[derive(Default)]
@@ -160,8 +160,9 @@ impl Model {
     }
 
     /// The item of the field at axis position `position` of pivot `pivot` whose text equals
-    /// `name` ignoring case; numbers, dates, booleans and blanks never match (SPEC-0015 unknown
-    /// 3). Call [`Model::pivot_axis`] first.
+    /// `name` ignoring case; numbers, dates and booleans never match (SPEC-0015 unknown 3), and
+    /// a blank only as `"(blank)"` on an ungrouped field ([`Model::pivot_blank_text`]). Call
+    /// [`Model::pivot_axis`] first.
     pub(crate) fn pivot_item(&mut self, pivot: usize, position: usize, name: &str) -> Option<u32> {
         let Model {
             workbook,
@@ -189,9 +190,10 @@ impl Model {
             }
             *names = Some(map);
         }
-        let item = match names.as_ref()?.get(&name.to_lowercase())? {
-            ItemMatch::One(item) => *item,
-            ItemMatch::Several => return None,
+        let item = match names.as_ref()?.get(&name.to_lowercase()) {
+            Some(ItemMatch::One(item)) => *item,
+            Some(ItemMatch::Several) => return None,
+            None => return self.pivot_blank_text(pivot, position, name),
         };
         self.shown_group(pivot, position, item)
     }
@@ -199,8 +201,9 @@ impl Model {
     /// The group of a numeric range field at axis position `position` of pivot `pivot` whose
     /// lower bound is `value` ([`crate::pivot::NumberGroups::lower_bound_index`]: probes/t4228-pivot-range-groups
     /// Calc A35, C30:C46), or of a date-grouped field whose calendar value is `value`'s integer
-    /// part ([`crate::pivot::DateGroups::number_item`]: probes/t4236-pivot-date-groups-no-blank);
-    /// `None` on any other field, where a number is SPEC-0015 unknown 3. Call
+    /// part ([`crate::pivot::DateGroups::number_item`]: probes/t4236-pivot-date-groups-no-blank),
+    /// or the date item equal to it on an ungrouped field (probes/t4236-pivot-date-groups);
+    /// `None` otherwise, where a number is SPEC-0015 unknown 3. Call
     /// [`Model::pivot_axis`] first.
     pub(crate) fn pivot_number_item(
         &self,
@@ -211,8 +214,18 @@ impl Model {
         let field = self.pivot_axis_field(pivot, position)?;
         let item = if let Some(groups) = field.number_groups.as_ref() {
             groups.item(groups.lower_bound_index(value)?)
+        } else if let Some(groups) = field.date_groups {
+            groups.number_item(value)?
         } else {
-            field.date_groups?.number_item(value)?
+            // An ungrouped date field (a date grouping over a blank that Excel's refresh
+            // dropped): a serial equal to a second-rounded date item picks it, `DATE(2019,1,1)`
+            // and `DATE(2018,1,1)` (probes/t4236-pivot-date-groups Calc B19, N11); `2018`, which
+            // no item equals, is `#REF!` (N8). A serial within the second but not equal to the
+            // item is unprobed (`#REF!` here).
+            field
+                .items
+                .iter()
+                .position(|item| matches!(item, CacheItem::Date(date) if *date == value))?
         };
         self.shown_group(pivot, position, u32::try_from(item).ok()?)
     }
@@ -265,6 +278,24 @@ impl Model {
             .map(|(i, _)| i);
         let blank = blanks.next()?;
         blanks.next().is_none().then_some(blank)
+    }
+
+    /// The blank item of the ungrouped field at axis position `position` of pivot `pivot` when
+    /// `name` is `"(blank)"`, its row label: GETPIVOTDATA takes it as it takes an omitted item
+    /// (probes/t4236-pivot-date-groups Calc B15, F34, J11, N12, Z15). On a numeric range or
+    /// date-grouped field `"(blank)"` is `#REF!` (probes/t4228-pivot-range-groups,
+    /// t4236-pivot-date-groups-no-blank). Matched ignoring case like any item; another case than
+    /// `(blank)`'s own, and a field that also holds the text `(blank)` (that item wins here), are
+    /// unprobed. Call [`Model::pivot_axis`] first.
+    fn pivot_blank_text(&self, pivot: usize, position: usize, name: &str) -> Option<u32> {
+        let field = self.pivot_axis_field(pivot, position)?;
+        if field.number_groups.is_some()
+            || field.date_groups.is_some()
+            || !name.eq_ignore_ascii_case(BLANK_ITEM)
+        {
+            return None;
+        }
+        self.pivot_blank_item(pivot, position)
     }
 
     /// The answer of pivot `pivot` to `query`, memoized. Every record the query picks must hold
