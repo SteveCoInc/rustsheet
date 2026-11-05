@@ -34,6 +34,12 @@ The visibly-off cells this task owns are these:
 - probes/t3252-gamma-prefactor-holdout-2 A5:A12, A17:A24 and A29:A36; probes/t3252-gamma-prefactor-holdout A5:A14,
   A19:A28 and A33:A42; probes/t3252-gamma-prefactor-window A4:A10, A11:A20, A24:A30 and A31:A40.
 - probes/t3252-gamma-prefactor-sweep A9, A19, A20, A23, A53, A54, A55, A57, A58 and A63.
+- probes/t3252-gamma-prefactor-window A44, the cdf `GAMMA.DIST(35,50,1,TRUE)` (gap triage 2026-11-05): Excel
+  0.009845502476408533, ours 0.009845502476408544, 50-digit value 0.0098455024764085416. Excel is -8.7E-16 off,
+  the same error as the density at that point (A4, -9.1E-16), so it is this task's prefactor carried through
+  `pair_with`'s lower series, not a separate cdf path. A model adopted here is scored on A44 and must not move the
+  window's other cdf cells (A41:A60) further from Excel. It was the only visibly-off cell with no open owner; the
+  deferred T-4297 names sweep A44, a different cell.
 
 ## Acceptance criteria
 - [x] The window path's prefactor chain is identified from probes at x = a, or the rejected chains are recorded

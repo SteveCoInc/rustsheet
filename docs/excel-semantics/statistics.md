@@ -1244,6 +1244,10 @@ on k/64, exact. Its findings:
 - The cdf decouples from the density from about 0.72a: holdout A23 and A37 (densities at shapes 100 and 500) carry
   -0.65 ulp of per-unit error, their cdfs A24 and A38 only -0.17 and -0.13. Up to 0.70a they carry about the same error.
   So the cdf may take another path there (Temme's expansion is one candidate).
+  At 0.70a the shared error reaches the 15th digit: probes/t3252-gamma-prefactor-window A4 and A44, density and cdf
+  of `GAMMA.DIST(35,50,1,...)`, are -9.1E-16 and -8.7E-16 relative from the 50-digit values, and A44 shows it
+  (Excel 0.009845502476408533, true 0.0098455024764085416). So the in-window prefactor (T-4296) also decides the
+  cdf's 15th digit there (gap triage 2026-11-05).
 T-4290 (probes/t4290-gamma-window-large-pow2, excel-graph 2026-11-05; docs/research/t4290/score.py) took
 power-of-two shapes 4096, 1024 and 256 at x/a = k/1024 (k 656 to 1556 step 4; A, B, C), the hold-out shape 2048 at
 k + 2 (D), and ladders across x/a = 2/3 at shape 3072 (E) and 3/2 at shape 2048 (F). At shape 4096 one ulp of the
