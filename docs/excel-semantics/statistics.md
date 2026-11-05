@@ -1145,7 +1145,7 @@ Binet's function; then come the series below a + 1 and the backward fraction fro
   POISSON.xlsx D19, and gen-m9 A371 of two cases; the double kernel was +1.5 ulp).
 - `POISSON(20,25,TRUE)` is the correctly rounded 0.18549230269414171, 1.5 ulp below Excel's (probes-numeric
   t1048-poisson A9, B9; was +7.5).
-- Full eval A/B against origin/main 724319d4: 14 POISSON, CHIINV, CHISQ.INV.RT and GAMMAINV cells move. 10 come closer
+- Full eval A/B against origin/main 70d01bb1: 14 POISSON, CHIINV, CHISQ.INV.RT and GAMMAINV cells move. 10 come closer
   to Excel, 5 of them to bit-exact: D19, the two gen-m9 A371, and probes t3252-gamma-prefactor-window A113 and A114.
   4 go further:
   - t3252 window A126 and A137, where Excel is 3.5 and 6.0 ulp from the truth;
