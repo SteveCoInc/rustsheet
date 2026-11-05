@@ -46,7 +46,7 @@ use std::sync::Arc;
 use crate::calc_result::{range_dims, CalcResult};
 use crate::circular::circular_reference;
 use crate::evaluation_limits::{default_max_depth, stack_address, DEFAULT_MAX_STACK};
-use crate::excel_order::AnchorAmor;
+use crate::excel_order::AnchorEffects;
 use crate::expressions::token::Error;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::date_and_time::weeknum::WeeknumStart;
@@ -312,7 +312,7 @@ pub(crate) struct Evaluation {
     /// Whether a call read that state in this pass, so the pass's values depend on its order.
     pub(crate) order_state_read: bool,
     /// What each anchor left of AMORDEGRC's value, for the chain to put back (`excel_order.rs`).
-    pub(crate) anchor_amor: AnchorAmor,
+    pub(crate) anchor_effects: AnchorEffects,
     /// Passes run in Excel's fresh-load order (`excel_order.rs`): set once a pass had a reader.
     pub(crate) excel_order: bool,
     /// In that order's chain, a read of a formula cell not yet evaluated stops the root's run and
@@ -387,7 +387,7 @@ impl Default for Evaluation {
             pivot_indexes: Default::default(),
             order_state: OrderState::default(),
             order_state_read: false,
-            anchor_amor: AnchorAmor::default(),
+            anchor_effects: AnchorEffects::default(),
             excel_order: false,
             blocking: false,
             blocked_on: None,
@@ -545,7 +545,8 @@ impl Model {
         state.in_pass = true;
         state.order_state = OrderState::default();
         state.order_state_read = false;
-        state.anchor_amor.left.clear();
+        state.anchor_effects.left.clear();
+        state.anchor_effects.emptied_weeknum.clear();
         // dynamic links (HYPERLINK) are rebuilt on every evaluation
         self.links.clear();
         self.clear_variable_stack();

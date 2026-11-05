@@ -11,13 +11,13 @@
 //! observable through those states, so the default pass keeps its own order and this one runs
 //! after it only where a reader ran (`Model::evaluate`).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     evaluation::{key, CellKey, CellState, KeyBuild, OrderState, Restart},
     expressions::types::CellReferenceIndex,
     model::Model,
-    types::{ArrayKind, Cell},
+    types::Cell,
 };
 
 /// How the run of one cell of the chain ended.
@@ -99,29 +99,38 @@ pub(crate) fn run_chain<C>(
     }
 }
 
-/// What the dynamic-array anchors of an Excel-order pass left of AMORDEGRC's value
-/// (`OrderState::amor_left_over`). The anchors run before the chain, so the chain puts each
-/// anchor's value back at its place (`run_excel_order`; financial.md "AMORDEGRC below period 1",
-/// T-3393).
+/// What the dynamic-array anchors of an Excel-order pass did to the order state: the AMORDEGRC
+/// value they left (`OrderState::amor_left_over`; financial.md "AMORDEGRC below period 1",
+/// T-3393) and whether they emptied WEEKNUM's state (dates.md "Which calls empty WEEKNUM's
+/// state", T-4315). The anchors run before the chain, so the chain replays each anchor's effect
+/// at its place (`run_excel_order`).
 #[derive(Default)]
-pub(crate) struct AnchorAmor {
+pub(crate) struct AnchorEffects {
     /// How many times a call has written the value, so that an anchor's run can tell whether it
     /// wrote it.
     pub(crate) writes: u64,
     /// The value each anchor that wrote it left.
     pub(crate) left: HashMap<CellKey, f64, KeyBuild>,
+    /// How many times a call has emptied WEEKNUM's state (`Model::empty_weeknum_state`).
+    pub(crate) weeknum_empties: u64,
+    /// The anchors whose run emptied WEEKNUM's state.
+    pub(crate) emptied_weeknum: HashSet<CellKey, KeyBuild>,
 }
 
 impl Model {
     /// Evaluates a root of a pass; an anchor of an Excel-order pass that wrote AMORDEGRC's value
-    /// records what it left, for the chain to put back at its place (`AnchorAmor`).
+    /// records what it left, for the chain to put back at its place (`AnchorEffects`).
     pub(crate) fn evaluate_pass_root(&mut self, cell: CellReferenceIndex, anchor: bool) {
-        let writes = self.evaluation.anchor_amor.writes;
+        let writes = self.evaluation.anchor_effects.writes;
+        let empties = self.evaluation.anchor_effects.weeknum_empties;
         self.evaluate_root_cell(cell);
         let state = &mut self.evaluation;
-        if anchor && state.excel_order && state.anchor_amor.writes != writes {
+        if anchor && state.excel_order && state.anchor_effects.writes != writes {
             let left = state.order_state.amor_left_over;
-            state.anchor_amor.left.insert(key(cell), left);
+            state.anchor_effects.left.insert(key(cell), left);
+        }
+        if anchor && state.excel_order && state.anchor_effects.weeknum_empties != empties {
+            state.anchor_effects.emptied_weeknum.insert(key(cell));
         }
     }
 
@@ -161,23 +170,23 @@ impl Model {
             let cell = positions[index as usize];
             let state = &mut model.evaluation;
             if state.cells.get(&key(cell)) == Some(&CellState::Evaluated) {
-                // An anchor, or a cell an anchor read. At its place in the order a dynamic-array
-                // formula empties WEEKNUM's state (gen-m6, dates.md "WEEKNUM's stale
-                // `return_type` state"; one that spills is unprobed, T-2070).
-                if matches!(
-                    model.fetch_cell(cell),
-                    Some(Cell::ArrayFormula {
-                        kind: ArrayKind::Dynamic,
-                        ..
-                    })
-                ) {
+                // An anchor, or a cell an anchor read. An anchor whose run called one of the calls
+                // that empty WEEKNUM's state empties it at its place in the order; a dynamic-array
+                // formula as such does not (probes/weeknum-stale-between-calls, -between-ranges,
+                // -call-shapes; dates.md "Which calls empty WEEKNUM's state", T-4289, T-4315).
+                if model
+                    .evaluation
+                    .anchor_effects
+                    .emptied_weeknum
+                    .contains(&key(cell))
+                {
                     model.evaluation.order_state.weeknum_start = None;
                 }
                 // An anchor that wrote AMORDEGRC's left-over value leaves, at its place, what its
                 // run left: `=SEQUENCE(1,2)` empties it and `=SEQUENCE(1,2)+AMORDEGRC(..)` leaves
                 // the charge (financial.md "AMORDEGRC below period 1"; probes/amordegrc-fraction-
                 // state-ag, -ah, -am, T-3393). One that wrote nothing (`={1,2}`, -aq) keeps it.
-                if let Some(&left) = model.evaluation.anchor_amor.left.get(&key(cell)) {
+                if let Some(&left) = model.evaluation.anchor_effects.left.get(&key(cell)) {
                     model.evaluation.order_state.amor_left_over = left;
                 }
                 return Outcome::Done;

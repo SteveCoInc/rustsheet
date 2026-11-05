@@ -1,0 +1,243 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4311: GETPIVOTDATA and showAll beyond an ungrouped row field. Pivot P!A3 and P!A13 have the column field Product with 'C' a shared item no record uses (refreshOnLoad off), showAll 0 and 1. Calc A (P!A3) and B (P!A13): 1 the recordless column item, 2 a control item, 3 the recordless item with a row item, 4 a control intersection, 5 the recordless item in lower case, 6 a text not in the cache, 7 the grand total. G!A3 (showAll 0) and H!A3 (showAll 1) group N by 0.1 from 0 to 0.4, with no record in <0, 0.1-0.2 and >0.4: Calc D (G) and E (H) rows 1-6 read GETPIVOTDATA per group label, row 7 the grand total; G:H and I:J rows 1-10 the cells Excel lays out for G and H (rows 3 on, as text).",
+  "tags": [
+    "probe",
+    "getpivotdata",
+    "pivot",
+    "T-4311",
+    "M6"
+  ],
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "Region",
+        "B1": "Product",
+        "C1": "Sales",
+        "A2": "East",
+        "B2": "A",
+        "C2": 10,
+        "A3": "West",
+        "B3": "B",
+        "C3": 20,
+        "A4": "East",
+        "B4": "B",
+        "C4": 5,
+        "E1": "N",
+        "F1": "S",
+        "E2": 0.05,
+        "F2": 1,
+        "E3": 0.25,
+        "F3": 2,
+        "E4": 0.27,
+        "F4": 4,
+        "E5": 0.35,
+        "F5": 8
+      }
+    },
+    {
+      "name": "P",
+      "cells": {
+        "H1": "T-4311 column field"
+      },
+      "pivot_tables": [
+        {
+          "name": "ColumnShowAll0",
+          "source": "Data!A1:C4",
+          "location": "A3",
+          "row": "Region",
+          "column": "Product",
+          "value": "Sales",
+          "column_unused_items": [
+            "C"
+          ],
+          "column_show_all": false,
+          "rendered": {
+            "A3": "Sum of Sales",
+            "B3": "Column Labels",
+            "A4": "Row Labels",
+            "B4": "A",
+            "C4": "B",
+            "D4": "Grand Total",
+            "A5": "East",
+            "B5": 10.0,
+            "C5": 5.0,
+            "D5": 15.0,
+            "A6": "West",
+            "C6": 20.0,
+            "D6": 20.0,
+            "A7": "Grand Total",
+            "B7": 10.0,
+            "C7": 25.0,
+            "D7": 35.0
+          }
+        },
+        {
+          "name": "ColumnShowAll1",
+          "source": "Data!A1:C4",
+          "location": "A13",
+          "row": "Region",
+          "column": "Product",
+          "value": "Sales",
+          "column_unused_items": [
+            "C"
+          ],
+          "column_show_all": true,
+          "rendered": {
+            "A13": "Sum of Sales",
+            "B13": "Column Labels",
+            "A14": "Row Labels",
+            "B14": "A",
+            "C14": "B",
+            "D14": "C",
+            "E14": "Grand Total",
+            "A15": "East",
+            "B15": 10.0,
+            "C15": 5.0,
+            "E15": 15.0,
+            "A16": "West",
+            "C16": 20.0,
+            "E16": 20.0,
+            "A17": "Grand Total",
+            "B17": 10.0,
+            "C17": 25.0,
+            "E17": 35.0
+          }
+        }
+      ]
+    },
+    {
+      "name": "G",
+      "cells": {
+        "H1": "T-4311 grouped, showAll 0"
+      },
+      "pivot_tables": [
+        {
+          "name": "GroupedShowAll0",
+          "source": "Data!E1:F5",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 0.4,
+            "interval": 0.1,
+            "items": [
+              "<0",
+              "0-0.1",
+              "0.1-0.2",
+              "0.2-0.3",
+              "0.3-0.4",
+              ">0.4"
+            ]
+          },
+          "show_all": false
+        }
+      ]
+    },
+    {
+      "name": "H",
+      "cells": {
+        "H1": "T-4311 grouped, showAll 1"
+      },
+      "pivot_tables": [
+        {
+          "name": "GroupedShowAll1",
+          "source": "Data!E1:F5",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 0.4,
+            "interval": 0.1,
+            "items": [
+              "<0",
+              "0-0.1",
+              "0.1-0.2",
+              "0.2-0.3",
+              "0.3-0.4",
+              ">0.4"
+            ]
+          },
+          "show_all": true
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"C\")",
+        "A2": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"B\")",
+        "A3": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Region\",\"East\",\"Product\",\"C\")",
+        "A4": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Region\",\"East\",\"Product\",\"B\")",
+        "A5": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"c\")",
+        "A6": "=GETPIVOTDATA(\"Sales\",P!$A$3,\"Product\",\"Nowhere\")",
+        "A7": "=GETPIVOTDATA(\"Sales\",P!$A$3)",
+        "B1": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Product\",\"C\")",
+        "B2": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Product\",\"B\")",
+        "B3": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Region\",\"East\",\"Product\",\"C\")",
+        "B4": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Region\",\"East\",\"Product\",\"B\")",
+        "B5": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Product\",\"c\")",
+        "B6": "=GETPIVOTDATA(\"Sales\",P!$A$13,\"Product\",\"Nowhere\")",
+        "B7": "=GETPIVOTDATA(\"Sales\",P!$A$13)",
+        "D1": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\"<0\")",
+        "D2": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\"0-0.1\")",
+        "D3": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\"0.1-0.2\")",
+        "D4": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\"0.2-0.3\")",
+        "D5": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\"0.3-0.4\")",
+        "D6": "=GETPIVOTDATA(\"S\",G!$A$3,\"N\",\">0.4\")",
+        "D7": "=GETPIVOTDATA(\"S\",G!$A$3)",
+        "E1": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\"<0\")",
+        "E2": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\"0-0.1\")",
+        "E3": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\"0.1-0.2\")",
+        "E4": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\"0.2-0.3\")",
+        "E5": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\"0.3-0.4\")",
+        "E6": "=GETPIVOTDATA(\"S\",H!$A$3,\"N\",\">0.4\")",
+        "E7": "=GETPIVOTDATA(\"S\",H!$A$3)",
+        "G1": "=G!A3&\"\"",
+        "H1": "=G!B3&\"\"",
+        "G2": "=G!A4&\"\"",
+        "H2": "=G!B4&\"\"",
+        "G3": "=G!A5&\"\"",
+        "H3": "=G!B5&\"\"",
+        "G4": "=G!A6&\"\"",
+        "H4": "=G!B6&\"\"",
+        "G5": "=G!A7&\"\"",
+        "H5": "=G!B7&\"\"",
+        "G6": "=G!A8&\"\"",
+        "H6": "=G!B8&\"\"",
+        "G7": "=G!A9&\"\"",
+        "H7": "=G!B9&\"\"",
+        "G8": "=G!A10&\"\"",
+        "H8": "=G!B10&\"\"",
+        "G9": "=G!A11&\"\"",
+        "H9": "=G!B11&\"\"",
+        "G10": "=G!A12&\"\"",
+        "H10": "=G!B12&\"\"",
+        "I1": "=H!A3&\"\"",
+        "J1": "=H!B3&\"\"",
+        "I2": "=H!A4&\"\"",
+        "J2": "=H!B4&\"\"",
+        "I3": "=H!A5&\"\"",
+        "J3": "=H!B5&\"\"",
+        "I4": "=H!A6&\"\"",
+        "J4": "=H!B6&\"\"",
+        "I5": "=H!A7&\"\"",
+        "J5": "=H!B7&\"\"",
+        "I6": "=H!A8&\"\"",
+        "J6": "=H!B8&\"\"",
+        "I7": "=H!A9&\"\"",
+        "J7": "=H!B9&\"\"",
+        "I8": "=H!A10&\"\"",
+        "J8": "=H!B10&\"\"",
+        "I9": "=H!A11&\"\"",
+        "J9": "=H!B11&\"\"",
+        "I10": "=H!A12&\"\"",
+        "J10": "=H!B12&\"\""
+      }
+    }
+  ],
+  "expected": {}
+}

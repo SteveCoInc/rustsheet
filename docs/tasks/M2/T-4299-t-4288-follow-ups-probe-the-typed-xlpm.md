@@ -3,7 +3,7 @@ id: T-4299
 title: "T-4288 follow-ups: probe the typed _xlpm. extrapolations; saturating corner order; refusal docs"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -43,3 +43,7 @@ it, and the reviewers' MINOR findings on PR 3292 are closed.
 
 ## Out of scope
 - What Excel writes to a file for these typed formulas.
+
+## Outcome
+Probe probes/t4299-typed-xlpm-extrapolations (22 cells, excel-graph) answered (a) to (d): the `_xlpm.` match is case-insensitive and written back lowercase, a typed LAMBDA parameter spelled with it is refused, a LAMBDA body use is `#NAME?`, the R1C1 doubled prefix is `#NAME?`, and a typed R1C1 structured reference parses. Engine fixed for the first two (`note_prefixed_declaration`, `name_operand`, `parse_lambda_items`); 22/22 pass. Corner ordering uses `saturating_add`; references.md names the blank-cell result.
+No regression test pins the `saturating_add`: the pre-pass `expand_short_forms` bounds every offset, so the overflow is unreachable today and the change is defence in depth.

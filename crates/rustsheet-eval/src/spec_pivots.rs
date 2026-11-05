@@ -110,6 +110,8 @@ fn pivot_input(
         group: pivot.group.as_ref().map(range_group).transpose()?,
         unused_items: pivot.unused_items.clone(),
         show_all: pivot.show_all,
+        column_unused_items: pivot.column_unused_items.clone(),
+        column_show_all: pivot.column_show_all,
     })
 }
 
