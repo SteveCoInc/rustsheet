@@ -818,7 +818,8 @@ RustSheet's export does this for a kept subnormal of either sign in every number
 in export/worksheets.rs). Evidence (probes/subnormal-saved-negative-and-array, excel-graph 2026-11-05): `=0-EXP(-745)`
 and `=0-EXP(-720)` are saved 0 while `(0-EXP(-745))=0` is FALSE and `(0-EXP(-745))*2^1000` is -2^-74; an array constant
 `EXP({-745,-708})`, a range `EXP(D1:E1)` and a spill `EXP(A6#)` save their subnormal element as 0 (the -708 element is
-written in full), and `INDEX(...)*2^1000` still recovers 2^-74. Desktop Excel's save is unprobed (M14).
+written in full), and `INDEX(...)*2^1000` still recovers 2^-74. In array context excel-graph answers `(EXP({-745,-708}))=0`, `(EXP(D1:E1))=0` and `(EXP(A6#))=0` TRUE, unlike the scalar `(EXP(-745))=0` FALSE; not implemented (T-4372).
+Desktop Excel's save is unprobed (M14).
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other

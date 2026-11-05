@@ -77,15 +77,39 @@
    "C3": {
     "t": "n",
     "v": -5.293955920339377e-23
+   },
+   "G4": {
+    "t": "b",
+    "v": true
+   },
+   "G5": {
+    "t": "b",
+    "v": true
+   },
+   "G7": {
+    "t": "b",
+    "v": true
+   },
+   "H4": {
+    "t": "b",
+    "v": false
+   },
+   "H5": {
+    "t": "b",
+    "v": false
+   },
+   "H7": {
+    "t": "b",
+    "v": false
    }
   }
  },
  "source": {
   "application": "Excel for the web (Graph)",
-  "input_sha256": "b6e50586f7dbd9eb2b01dc67bdc5b9ca8f63b8b8d6b492805e03d2600e1542e3",
+  "input_sha256": "653b1e742a7b9fc7c8b5b420ba9d7c14d10e53337faeb90f2e345a1a72b50504",
   "kind": "excel-graph",
-  "produced_at": "2026-11-05T16:51:15+00:00",
+  "produced_at": "2026-11-05T17:12:07+00:00",
   "version": null,
-  "workbook_name": "e3ab5f937ee724bc0209922773fb34b97bf99fd50a28e97b046a22a71520ec9d.xlsx"
+  "workbook_name": "50b3cc8c3c0b0f0bd83e88123d67c75eda12d03515c8a195d5ffdb74cd62fad3.xlsx"
  }
 }
