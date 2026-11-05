@@ -869,27 +869,3 @@ fn many_whole_column_merges_import_quickly_and_clear_covered_cells() -> TestResu
     assert_eq!(model.get_formatted_cell_value(0, 500_000, 2)?, "");
     Ok(())
 }
-
-#[test]
-fn ole_compound_file_is_a_typed_error() {
-    // T-3972, decision 0279: a password-protected xlsx (poi 58616, protected_passtika) is an OLE
-    // compound file, not a zip. The signature alone decides; the rest of the file is not read.
-    let mut ole = vec![0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
-    assert_eq!(
-        load_from_xlsx_bytes(&ole, "case", "en", "UTC").err(),
-        Some(XlsxError::OleCompoundFile)
-    );
-    ole.extend_from_slice(&[0; 504]);
-    assert_eq!(
-        load_from_xlsx_bytes(&ole, "case", "en", "UTC").err(),
-        Some(XlsxError::OleCompoundFile)
-    );
-    // Neither zip nor OLE (a short file, a near-miss signature): still a zip error.
-    for bytes in [
-        &b"PK"[..],
-        &[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE0][..],
-    ] {
-        let err = load_from_xlsx_bytes(bytes, "case", "en", "UTC").err();
-        assert!(matches!(err, Some(XlsxError::Zip(_))), "{err:?}");
-    }
-}

@@ -21,8 +21,8 @@ use crate::value::Value;
 use rustsheet_engine::expressions::utils::shift::shift_formula_text;
 use rustsheet_engine::types::DateSystem;
 use rustsheet_xlsx::import::{
-    date_system_from_attribute, decode_xlsx_escapes, is_ole_compound_file,
-    iso8601_to_date_system_serial, rich_errors, ImportLimits, PartNames,
+    classify_ole_compound_file, date_system_from_attribute, decode_xlsx_escapes,
+    is_ole_compound_file, iso8601_to_date_system_serial, rich_errors, ImportLimits, PartNames,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -174,7 +174,7 @@ struct Zip {
 impl Zip {
     fn new(bytes: &[u8]) -> Result<Self, SnapshotError> {
         if is_ole_compound_file(bytes) {
-            return Err(rustsheet_xlsx::error::XlsxError::OleCompoundFile.into());
+            return Err(classify_ole_compound_file(bytes, &ImportLimits::default()).into());
         }
         let archive = zip::ZipArchive::new(Cursor::new(bytes.to_vec()))?;
         let names = PartNames::from_archive(&archive)?;

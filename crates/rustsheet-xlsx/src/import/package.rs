@@ -59,7 +59,8 @@ impl ImportLimits {
         Ok(())
     }
 
-    fn bytes_exceeded(&self) -> XlsxError {
+    /// The uncompressed-bytes limit error.
+    pub(crate) fn bytes_exceeded(&self) -> XlsxError {
         XlsxError::Limit {
             limit: ImportLimit::UncompressedBytes,
             max: self.max_uncompressed_bytes,
@@ -129,8 +130,9 @@ pub(super) fn part_key(name: &str) -> String {
 const OLE_SIGNATURE: [u8; 8] = [0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1];
 
 /// Whether `bytes` start like an OLE compound file: a password-protected xlsx (an ECMA-376
-/// `EncryptedPackage`) or a legacy binary workbook, which are refused with
-/// [`XlsxError::OleCompoundFile`] (decision 0279).
+/// `EncryptedPackage`) or a legacy binary workbook, which are refused with the error
+/// [`classify_ole_compound_file`](super::classify_ole_compound_file) names (decision 0279,
+/// SPEC-0031 D1).
 #[must_use]
 pub fn is_ole_compound_file(bytes: &[u8]) -> bool {
     bytes.starts_with(&OLE_SIGNATURE)
@@ -158,10 +160,16 @@ impl<R: Read + Seek> Package<R> {
             .by_ref()
             .take(OLE_SIGNATURE.len() as u64)
             .read_to_end(&mut head)?;
-        if is_ole_compound_file(&head) {
-            return Err(XlsxError::OleCompoundFile);
-        }
         reader.seek(SeekFrom::Start(0))?;
+        if is_ole_compound_file(&head) {
+            // Only a file with the signature is handed to the container parser, bounded by the
+            // byte budget before it is parsed (SPEC-0031 D1): one byte over is enough to refuse.
+            let mut ole = Vec::new();
+            reader
+                .take(limits.max_uncompressed_bytes.saturating_add(1))
+                .read_to_end(&mut ole)?;
+            return Err(super::ole::classify_ole_compound_file(&ole, &limits));
+        }
         let archive = zip::ZipArchive::new(reader)?;
         if u32::try_from(archive.len()).map_or(true, |n| n > limits.max_zip_entries) {
             return Err(XlsxError::Limit {

@@ -47,11 +47,19 @@ pub enum XlsxError {
     /// The workbook exceeds an import resource limit.
     #[error("Limit Error: more than {max} {limit}")]
     Limit { limit: ImportLimit, max: u64 },
-    /// The file is an OLE compound file, not a zip package: a password-protected xlsx (an
-    /// ECMA-376 `EncryptedPackage`) or a legacy binary workbook (`.xls`). Neither is read
-    /// yet (decision 0279; T-4243 specs reading them).
-    #[error("Encrypted Or Binary Workbook Error: the file is an OLE compound file (a password-protected or legacy binary workbook), not an xlsx package")]
+    /// The file is an OLE compound file, not a zip package, and holds neither an encrypted xlsx
+    /// nor a binary workbook, or its container is malformed (decision 0279, SPEC-0031 D1).
+    #[error("OLE Compound File Error: the file is an OLE compound file that holds no workbook RustSheet can read, not an xlsx package")]
     OleCompoundFile,
+    /// The file is a password-protected xlsx: an OLE compound file holding the ECMA-376
+    /// `EncryptionInfo` and `EncryptedPackage` streams. Decryption is not implemented yet
+    /// (SPEC-0031 D2, T-4265).
+    #[error("Encrypted Workbook Error: the file is a password-protected xlsx, which cannot be opened yet")]
+    EncryptedPackage,
+    /// The file is a legacy binary Excel workbook (`.xls`, BIFF): an OLE compound file with a
+    /// `Workbook` or `Book` stream. RustSheet reads only xlsx (SPEC-0031, "The .xls plan").
+    #[error("Legacy Binary Workbook Error: the file is a binary Excel workbook (.xls); save it as .xlsx to open it")]
+    LegacyBinaryWorkbook,
 }
 
 impl From<io::Error> for XlsxError {
@@ -96,7 +104,9 @@ impl XlsxError {
             XlsxError::IO(_)
             | XlsxError::Workbook(_)
             | XlsxError::Limit { .. }
-            | XlsxError::OleCompoundFile => self.to_string(),
+            | XlsxError::OleCompoundFile
+            | XlsxError::EncryptedPackage
+            | XlsxError::LegacyBinaryWorkbook => self.to_string(),
             XlsxError::Zip(_) | XlsxError::Xml(_) => {
                 "IronCalc can only open workbooks created by Microsoft Excel. \
                 Can you open this file with Excel, save it to a new file, \
