@@ -1518,6 +1518,7 @@ C	probes/t2771-roundup-subnormal-sign.case.json	121
 C	probes/t2771-roundup-subnormal-threshold.case.json	40
 C	probes/t2772-unary-plus-in-range-rows.case.json	20
 C	probes/t2772-unary-plus-static-readings.case.json	36
+C	probes/t2775-ztest-single-cell-routes.case.json	15
 C	probes/t2776-formula-text-whitespace-shapes.case.json	65
 C	probes/t2776-ws-after-at.case.json	2
 C	probes/t2776-ws-after-bang.case.json	2
@@ -2024,7 +2025,7 @@ C	probes/t3698-rate-flat-restart-fresh.case.json	51
 C	probes/t3698-rate-flat-restart.case.json	54
 C	probes/t3710-ampm-hour-tokens.case.json	26
 C	probes/t3711-fraction-trailing-placeholders.case.json	57
-C	probes/t3718-cjk-numeral-unprobed.case.json	95
+C	probes/t3718-cjk-numeral-unprobed.case.json	125
 C	probes/t3742-value-percent-currency.case.json	40
 C	probes/t3746-numbervalue-nbsp-separator.case.json	12
 C	probes/t3747-indirect-name-whitespace.case.json	14
@@ -2149,6 +2150,7 @@ C	probes/t4235-pivot-range-rounding.case.json	242
 C	probes/t4236-pivot-date-groups-no-blank.case.json	349
 C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
+C	probes/t4245-cjk-numeral-past-1e16.case.json	35
 C	probes/t4255-gamma-window-exact-ratio.case.json	406
 C	probes/t4258-collation-lone-mark-astral.case.json	105
 C	probes/t4270-collation-c1-controls.case.json	548
@@ -3845,7 +3847,6 @@ F	probes/stat-test-lift.case.json	Sheet1!P65
 F	probes/stat-test-lift.case.json	Sheet1!P66
 F	probes/stat-test-lift.case.json	Sheet1!P67
 F	probes/stats-evidence-floor-t1623.case.json	S!Q36
-F	probes/t1924-locale-tag-extended-hex.case.json	S!B22
 F	probes/t2429-hypgeom-huge-count.case.json	Calc!A1
 F	probes/t2429-hypgeom-huge-count.case.json	Calc!A13
 F	probes/t2429-hypgeom-huge-count.case.json	Calc!A19
@@ -4051,6 +4052,9 @@ F	probes/t2753-gamma-density-switch.case.json	S!B4
 F	probes/t2753-gamma-density-switch.case.json	S!B40
 F	probes/t2753-gamma-density-switch.case.json	S!B42
 F	probes/t2753-gamma-density-switch.case.json	S!B5
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B13
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B3
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B4
 F	probes/t2829-ftest-a306-shapes.case.json	S!A1
 F	probes/t2829-ftest-a306-shapes.case.json	S!A10
 F	probes/t2829-ftest-a306-shapes.case.json	S!A11
