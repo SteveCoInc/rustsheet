@@ -177,14 +177,17 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - Relabel order (T-4253): the file's items whose text is one of Excel's labels come first, in the file's order, then
   Excel's other labels in layout order. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
   the 12 of 0 to 1 by 0.1, all wrong text (`w0`, ...), the order is the layout's; with only `>1` (last) it is `>1`,
-  `<0`, `0-0.1`, ...; with `>1` first and `<0` last, `>1`, `<0`, ...; with `0.7-0.8` (item 2) and `0.2-0.3` (item 5),
+  `<0`, `0-0.1`, ...; with only `0.5-0.6` (item 3), `0.5-0.6`, `<0`, `0-0.1`, ... (not the file position); with `>1` first and `<0` last, `>1`, `<0`, ...; with `0.7-0.8` (item 2) and `0.2-0.3` (item 5),
   `0.7-0.8`, `0.2-0.3`, `<0`, `0-0.1`, ...; `<0` alone, first or at item 11, and Excel's 12 labels plus one extra keep
-  the layout order. The match is on the whole text; its case and spacing are UNVERIFIED (T-4249).
+  the layout order. The match is on the whole text; its case and spacing, a label the file lists twice (the engine takes its first) and a
+  non-text item (the engine skips it) are UNVERIFIED (T-4249).
 - Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound start + k * interval rounded to 15
   significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
   would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
   0.1 from 1.1 `<1.1`, `1.1-1.2`, ..., `2-2.1`, `>2.1`, by 0.25 from -1 `<-1`, `-1--0.75`, ..., `-0.25-0`, `0-0.25`, by
-  12345678901.2 `49382715604.8-61728394506`. A bound of 1e15 or more, or below 1e-5, is UNVERIFIED (T-4249).
+  12345678901.2 `49382715604.8-61728394506`, as text coercion writes each number (numbers.md "Number → text
+  conversion", `number_to_text`). A bound of 1e15 or more, below 1e-5 or at a 15-digit tie, where that rule's other
+  branches would show, is UNVERIFIED (T-4249).
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct

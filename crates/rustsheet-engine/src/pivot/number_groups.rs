@@ -11,7 +11,7 @@ use bitcode::{Decode, Encode};
 use thiserror::Error as ThisError;
 
 use super::{CacheField, CacheItem, MAX_ITEMS};
-use crate::number_format::{to_excel_precision, to_excel_precision_str};
+use crate::number_format::{number_to_text, to_excel_precision};
 
 /// A field grouped by numbers from `start` to `end` in steps of `interval`. Its layout is the
 /// `<start` group, the inner groups `[start + k * interval, start + (k + 1) * interval)` and the
@@ -165,14 +165,17 @@ impl NumberGroups {
 
     /// The labels Excel writes for a grouping of `n` inner groups, in layout order (`<0`, `0-3`,
     /// `3-6`, `6-9`, `>9` for 0 to 9 by 3): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound
-    /// `start + k * interval` (probes/t4253-pivot-decimal-relabel).
+    /// `start + k * interval` as text coercion writes it (15 digits, plain decimal: `0.00001`,
+    /// not General's `1E-05`; probes/t4253-pivot-decimal-relabel). That it is the coercion rule
+    /// past the probed bounds (1e15 or more, below 1e-5, a 15-digit tie) is UNVERIFIED (T-4249);
+    /// its 20-character plain limit also keeps a label short for a file-controlled range.
     #[must_use]
     pub fn labels(&self, n: usize) -> Vec<String> {
-        let bound = |k: usize| label_number(self.start + k as f64 * self.interval);
+        let bound = |k: usize| number_to_text(self.start + k as f64 * self.interval);
         let mut labels = Vec::with_capacity(n + 2);
-        labels.push(format!("<{}", label_number(self.start)));
+        labels.push(format!("<{}", number_to_text(self.start)));
         labels.extend((0..n).map(|k| format!("{}-{}", bound(k), bound(k + 1))));
-        labels.push(format!(">{}", label_number(self.end)));
+        labels.push(format!(">{}", number_to_text(self.end)));
         labels
     }
 
@@ -198,21 +201,6 @@ impl NumberGroups {
     fn quotient(&self, value: f64) -> f64 {
         to_excel_precision((value - self.start) / self.interval, 15)
     }
-}
-
-/// A group bound as a relabel writes it: rounded to 15 significant digits and printed in plain
-/// decimal, never in General's scientific form (`0.00001-0.00002` by 1e-5, `0-0.333333333333333`
-/// by 1/3, `49382715604.8-61728394506`; probes/t4253-pivot-decimal-relabel). A bound of 1e15 or
-/// more, or below 1e-5, is UNVERIFIED (T-4249): it is printed as General prints it, which also
-/// bounds a label's length (plain decimal would spell 1e300 in 301 digits, for up to MAX_ITEMS
-/// labels of a file-controlled range).
-fn label_number(value: f64) -> String {
-    let rounded = to_excel_precision(value, 15);
-    if rounded != 0.0 && !(1e-5..1e15).contains(&rounded.abs()) {
-        return to_excel_precision_str(rounded);
-    }
-    // `+ 0.0` turns -0 into 0; Rust's `Display` of an f64 is plain decimal (shortest round trip).
-    format!("{}", rounded + 0.0)
 }
 
 /// Why a field cannot be grouped by numbers.
@@ -456,7 +444,7 @@ mod tests {
         assert_eq!(g.item(1), 3);
     }
 
-    /// A file-controlled range of nearly MAX_ITEMS groups with a wrong item count relabels in
+    /// A file-controlled range of nearly `MAX_ITEMS` groups with a wrong item count relabels in
     /// linear time, and a huge bound keeps a short label.
     #[test]
     fn a_large_relabel_is_linear_and_its_labels_short() {

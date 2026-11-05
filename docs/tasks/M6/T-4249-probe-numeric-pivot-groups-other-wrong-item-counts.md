@@ -20,9 +20,10 @@ engine matches it or the cells are owned.
   - any `<groupItems>` count other than the layout's relabels in T-4253's order (the file's items that are Excel's
     labels first, in file order; only one item too many is probed: probes/t4228-pivot-range-groups pivot 3,
     probes/t4253-pivot-relabel-order), including a list that is too short;
-  - (from T-4253) that order matches a file item to a label on its exact text (case and spacing unprobed), and a
-    relabel bound of 1e15 or more, or below 1e-5, is printed as General prints it, which keeps a label short
-    (probed bounds are plain decimal: probes/t4253-pivot-decimal-relabel);
+  - (from T-4253) that order matches a file item to a label on its exact text (case and spacing unprobed), takes a
+    label the file lists twice at its first place, and skips a non-text item; and a relabel bound of 1e15 or more,
+    below 1e-5 or at a 15-digit tie is written as text coercion writes it (`number_to_text`: `1E+20`; the probed
+    bounds agree with it: probes/t4253-pivot-decimal-relabel); a bound of 1e20 or a tie tells it from plain decimal;
   - a span that is not a whole number of intervals (0 to 10 by 3) has `ceil` groups, the last one `9-12`;
   - GETPIVOTDATA with a number past `endNum` is `#REF!`, and one below `endNum` whose quotient rounds to the group
     count picks `>end`.

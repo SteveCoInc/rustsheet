@@ -41,8 +41,11 @@ relabel (`NumberGroups::relabeled`) is VERIFIED or fixed.
   not General (`0.00001`, not `1E-05`); the relabeled items are the file's items that are Excel's labels, in file
   order, then Excel's other labels in layout order. The "end groups first" of T-4235 was pivot 3's instance of this.
 - Engine: `NumberGroups` keeps the relabel's layout-to-item map (`relabeled`) instead of `ends_first`, `new` takes the
-  file's items, `labels` writes plain-decimal bounds (`label_number`), `relabeled_items` gives the cache items.
+  file's items, `labels` writes the bounds as text coercion does (`number_to_text`, which matches every probed bound), `relabeled_items` gives the cache items.
 - Not a fit: the order rule is read off the probe (every point a distinct check), no constant chosen by scoring.
-- UNVERIFIED, owned by T-4249 (amended): case and spacing of the label match, bounds of 1e15 or more or below 1e-5.
+- UNVERIFIED, owned by T-4249 (amended): case and spacing of the label match, a duplicated or non-text file item,
+  bounds of 1e15 or more, below 1e-5 or at a 15-digit tie.
+- The relabel is linear in the labels and file items (a map and a seen-set; security review), so a file-controlled
+  range of `MAX_ITEMS` groups cannot make the import quadratic.
 - Eval delta: new cases t4253-pivot-decimal-relabel 196/196 and t4253-pivot-relabel-order 224/224; no known
   failure changes, no regressions.
