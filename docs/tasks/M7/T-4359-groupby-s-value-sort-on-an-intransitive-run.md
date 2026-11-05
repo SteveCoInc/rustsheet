@@ -3,7 +3,7 @@ id: T-4359
 title: "GROUPBY's value sort on an intransitive run: a parent's value counts the rows that reached it but no leaf"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
