@@ -136,10 +136,12 @@ def _t_inv(args: Sequence[MathArg]) -> mpmath.mpf:
     return quantile(p, df)
 
 
-def bounded_df(name: str, typical: tuple[float, float], source: str, edges: tuple[float, ...] = ()) -> Param:
+def bounded_df(
+    name: str, typical: tuple[float, float], source: str, edges: tuple[float, ...] = (), truncates: str = ""
+) -> Param:
     """A df parameter the function rejects above DF_CUT, so tables stay inside [1, DF_CUT]: the
     inverses here and every F function (statistics.md, "Student-t sweep" and "F-distribution df
-    limit")."""
+    limit"). `truncates` cites the entry showing Excel truncates a non-integer df (`Param.truncates`)."""
     return Param(
         name,
         "int",
@@ -148,6 +150,7 @@ def bounded_df(name: str, typical: tuple[float, float], source: str, edges: tupl
         extreme=(1e3, DF_CUT),
         edges=edges,
         source=source,
+        truncates=truncates,
     )
 
 
@@ -159,6 +162,8 @@ _DF = Param(
     extreme=(1e3, DF_CUT),
     edges=(DF_CUT, DF_CUT + 1),
     source=DF_SOURCE,
+    # `T.DIST(2,1.999,TRUE)` = `T.DIST(2,1,TRUE)`, and the pdf's df in (-1, 1) is #DIV/0! (truncated to 0)
+    truncates=DF_SOURCE,
 )
 
 T_DIST = register(

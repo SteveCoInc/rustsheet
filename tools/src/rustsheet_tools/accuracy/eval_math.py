@@ -18,7 +18,9 @@ A candidate cell gets no math value when:
 - the case is a 1904 workbook and the definition reads date serials in the 1900 system
   (`Definition.serials_1900`: YEARFRAC, HOUR, MINUTE, SECOND);
 - an integer parameter is given a non-integer (the definitions take integers; whether Excel
-  truncates is per function, so the cell is skipped rather than guessed), a logical parameter is
+  truncates is per function, so the cell is skipped rather than guessed) unless the parameter cites
+  the entry showing Excel truncates it (`Param.truncates`: then the truncated integer is the
+  argument, T-3923), a logical parameter is
   given a number (likewise unevidenced per function), or the call has a
   different number of arguments than the definition (an omitted optional argument the definition
   does not mark `optional`, or an extra one);
@@ -32,6 +34,7 @@ xlsx cases are skipped: tools never parse xlsx values.
 from __future__ import annotations
 
 import json
+import math
 import multiprocessing
 import re
 from collections.abc import Iterable
@@ -161,8 +164,16 @@ def fit_arg(param: Param, value: Any) -> literal.Arg | str:
     if isinstance(value, bool):
         return "logical for a number"
     if param.kind == "int":
-        return int(value) if float(value).is_integer() else "non-integer for an integer parameter"
+        return fit_int(param, float(value))
     return float(value)
+
+
+def fit_int(param: Param, value: float) -> int | str:
+    """A number for an `int` parameter: an integer as is, and a non-integer truncated toward zero
+    where `param.truncates` cites the evidence that Excel does so, or why it does not fit."""
+    if value.is_integer():
+        return int(value)
+    return math.trunc(value) if param.truncates else "non-integer for an integer parameter"
 
 
 def fit_args(definition: Definition, values: list[Any]) -> list[literal.Arg] | str:

@@ -101,6 +101,9 @@ class Param:
     negative POISSON.DIST mean); unlike a domain bound it claims nothing about Excel, so it gets no
     edge points. An `optional` parameter (trailing ones only) may be left out of a call, as ERF's
     `upper_limit`: a point then has fewer arguments, and only a definition's own `draw` omits one.
+    `truncates` cites the semantics entry showing that Excel truncates a non-integer given to this
+    `int` parameter toward zero (F.DIST's and T.DIST's df); without one an eval cell that passes a
+    non-integer gets no math value, since whether Excel truncates is per function.
     """
 
     name: str
@@ -112,6 +115,7 @@ class Param:
     source: str = ""
     draw_hi: float | None = None
     optional: bool = False
+    truncates: str = ""
 
     def finite_bounds(self) -> list[tuple[float, bool, bool]]:
         """The finite domain bounds as (value, open, is_lower)."""
@@ -143,7 +147,12 @@ class Definition:
     is one element of it: the last two parameters are INDEX's row and column, and the cell is
     `=INDEX(FUNC(other args),row,column)` (MINVERSE, MMULT; T-3686). With `literal_arrays` an eval cell
     gets a math value only where every array parameter is written as an array literal: the math does not
-    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693)."""
+    model what a range adds (AGGREGATE's hidden rows and the options that skip them; T-3693).
+    `call_params` are trailing optional parameters an eval cell may pass but the sampler never draws
+    (BETA.DIST's and BETA.INV's bounds, RATE's guess; T-3923): `params_for` accepts them after
+    `params`, and `value` receives them when the call gives them. `rescaled_param` names the parameter
+    they rescale (BETA.DIST's x, which [A, B] moves off [0, 1]): when a call gives call parameters,
+    that parameter's interval is not checked, and `domain` checks it instead."""
 
     function: str
     params: tuple[Param, ...]
@@ -158,8 +167,13 @@ class Definition:
     serials_1900: bool = False
     indexed: bool = False
     literal_arrays: bool = False
+    call_params: tuple[Param, ...] = ()
+    rescaled_param: str | None = None
 
     def __post_init__(self) -> None:
+        if self.call_params and self.variadic:
+            msg = f"{self.function}: a variadic definition takes no call parameters"
+            raise ValueError(msg)
         flags = [p.optional for p in self.params]
         if flags != sorted(flags):
             msg = f"{self.function}: an optional parameter is followed by a required one"
@@ -174,21 +188,22 @@ class Definition:
 
     def params_for(self, count: int) -> tuple[Param, ...]:
         """The parameters a call with `count` arguments passes: every required one and the first
-        optional ones, with a variadic definition's last parameter repeated to fill `count`.
-        ValueError when `count` is fewer than the required, or more than all for a definition
-        that is not variadic."""
+        optional ones (then the first `call_params`), with a variadic definition's last parameter
+        repeated to fill `count`. ValueError when `count` is fewer than the required, or more than
+        all for a definition that is not variadic."""
+        every = self.params + self.call_params
         required = sum(1 for p in self.params if not p.optional)
-        if count < required or (count > len(self.params) and not self.variadic):
+        if count < required or (count > len(every) and not self.variadic):
             if self.variadic:
                 takes = f"at least {required}"
-            elif required == len(self.params):
+            elif required == len(every):
                 takes = f"{required}"
             else:
-                takes = f"{required} to {len(self.params)}"
+                takes = f"{required} to {len(every)}"
             msg = f"{self.function} takes {takes} arguments, not {count}"
             raise ValueError(msg)
-        if count <= len(self.params):
-            return self.params[:count]
+        if count <= len(every):
+            return every[:count]
         return self.params + (self.params[-1],) * (count - len(self.params))
 
     def numeric_arity(self) -> int:
@@ -197,9 +212,10 @@ class Definition:
 
     def check_domain(self, args: Sequence[MathArg]) -> None:
         """Raises `DomainError` when `args` are outside the parameters' intervals or `domain`."""
+        rescaled = self.rescaled_param if len(args) > len(self.params) else None
         for p, a in zip(self.params_for(len(args)), args, strict=True):
-            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)):
-                continue  # an array's or a matrix's rules are the definition's `domain`
+            if p.kind in ("bool", "array", "matrix") or isinstance(a, (bool, tuple)) or p.name == rescaled:
+                continue  # an array's or a matrix's rules, and a rescaled parameter's, are the definition's `domain`
             if not p.domain.contains(float(a)):
                 msg = f"{p.name} outside {p.domain.describe()}"
                 raise DomainError(msg)
