@@ -51,7 +51,7 @@ use super::{
 /// The number written to a cell's `<v>`: a positive kept subnormal is saved as 0, as Excel for the web
 /// does (`EXP(-745)` is saved `<v>0</v>` while `(EXP(-745))=0` stays FALSE in memory; numbers.md
 /// "Worksheet EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). Only the evidenced domain is
-/// flushed: a negative kept subnormal and desktop Excel's save are unprobed (T-4355), and `-0.0` keeps its
+/// flushed: the spill and array arms follow the formula-cell evidence by inference, and a negative kept subnormal and desktop Excel's save are unprobed (T-4355), and `-0.0` keeps its
 /// spelling. A stored positive constant is already 0 once loaded (numbers.md "A subnormal cell constant
 /// reads as 0"), so the constant arm changes nothing observable.
 fn saved_number(v: f64) -> f64 {

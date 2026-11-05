@@ -42,6 +42,10 @@ fn kept_subnormal_is_saved_as_zero() {
     model
         .set_user_input(0, 5, 1, "=-EXP(-745)".to_string())
         .unwrap();
+    // Spill and CSE paths follow the formula-cell evidence by inference (T-4355).
+    model
+        .set_user_input(0, 5, 1, "=EXP({-745,-708})".to_string())
+        .unwrap();
     model.evaluate();
     let path = "temp_subnormal_export.xlsx";
     save_to_xlsx(&model, path).unwrap();
@@ -52,6 +56,11 @@ fn kept_subnormal_is_saved_as_zero() {
         3.307_553_003_638_408e-308
     );
     assert_eq!(cached(path, "A3"), "0");
+    assert_eq!(cached(path, "A5"), "0");
+    assert_eq!(
+        cached(path, "B5").parse::<f64>().unwrap(),
+        3.307_553_003_638_408e-308
+    );
     let mut reloaded = load_from_xlsx(path, "en", "UTC", "en").unwrap();
     std::fs::remove_file(path).unwrap();
     reloaded.evaluate();

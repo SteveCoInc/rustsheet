@@ -815,7 +815,7 @@ reads its values from that file, so every value Excel for the web saves for a ke
 included: ironcalc-calc `EXP_SIGN.xlsx` EXP_SIGN!B44 (`EXP(-745)`, Excel Online) caches 0 for the same reason. A normal
 result is written in full (`EXP(-708)`: `<v>3.3075530036384078E-308</v>`). Desktop Excel's save is not probed.
 RustSheet's export does this for a positive kept subnormal in every number `<v>` (T-2211, `saved_number` in
-export/worksheets.rs). A negative one, a spilled/array one and desktop Excel's save are unprobed and keep today's output (T-4355).
+export/worksheets.rs). A spilled or array kept subnormal is flushed too (inferred from the formula-cell evidence, unprobed); a negative one keeps its value; desktop Excel's save is unprobed (T-4355).
 Range edges (T-2203, probes-numeric/t2203-exp-range-edges, excel-graph 2026-10-22, 527 rows): the last finite
 argument is 709.782712893384 (ln DBL_MAX; EXP = 1.7976931348622732E308, not quite DBL_MAX), and the first
 `#NUM!` is its successor double 709.7827128933841; every argument above it, up to 710.5, is `#NUM!`. At the other
