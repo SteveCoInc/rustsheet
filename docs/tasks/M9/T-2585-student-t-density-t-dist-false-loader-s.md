@@ -136,3 +136,17 @@ and T.INV's centre estimate.
   then mark the PR ready and enqueue.
 - Do not drop the FITTED tag to dodge the decision record: the reviewer showed the cut was chosen by scoring, so it is
   a kind (a) fit.
+- Excel-fidelity round 2 on 79b71dd: REQUEST_CHANGES (arrived after the window closed; review round 2 of 3 used).
+  Its MAJOR findings, which a resumer must address with the decision record:
+  1. R4.3 range: `T_LOG_BRANCH_CUT` (tagged df 3..100, t 0.31..4.3) and the reused `EXCEL_BD0_CUT` (tagged on BETA.DIST
+     a 2.5, b 3.5) run outside their measured ranges; 67 of the 109 Gate A T.DIST density points (e.g. df 1E10,
+     398688) lie outside. Either guard the Loader path to the measured range and fall back to `student_t_density`
+     outside it, or widen the tags with committed evidence (the hold-outs reach df 299 and t 7.7).
+  2. R4.2 fresh sweep: generate an `r4-T-2585` Gate A batch (`rustsheet-accuracy generate T.DIST --batch r4-T-2585`),
+     fill it on excel-graph, and record the envelope count and every point outside it.
+  3. R4.1: say plainly that no margin was stated before scoring (the 10 points was borrowed after the fact), and report
+     the shipped model's (exact constant) train counts on a1 + a2 next to the correctly rounded density; then re-test
+     on fresh data with a margin declared first, or justify it in the decision record.
+  MINOR: name the two math-only Gate A points (T.DIST(-5.2826836804213,1E10,FALSE), T.DIST(5.59272735982579,398688,
+  FALSE)); amend acceptance criterion 1's 19,776 to the 19,793 rows measured.
+  Security and design approved 79b71dd.
