@@ -57,3 +57,15 @@ column subtotal of a class no record of the row group reached, and the row axis'
   the t4358, t4378 and t4379 PIVOTBY cases score as before.
 - Follow-up filed with this PR: T-4404, a probe of a color filter exported without `dxfId` (a minor finding of the
   T-4004 review, PR #3425).
+
+## Landing notes
+- PR #3430. Head before these notes: 9758c440c, a `make catch-up` merge of origin/main (decision 0207) after the
+  queue dropped the PR for a conflict in eval/baseline/probes.txt with #3426 (T-4382, also PIVOTBY). The catch-up's
+  eval run showed no regressions. CI was pending on that head when the session's landing window closed at 23:13 UTC,
+  and this notes commit restarts it.
+- Reviewers: security, design and excel-fidelity all APPROVE on 5f80c34, the reviewed code. Since then the branch has
+  only merged main (two catch-ups), which needs no new review.
+- Next step: once CI is green on the latest head, call `enable_pr_auto_merge` (SQUASH). If the queue drops it again for
+  a baseline-only conflict, run `make catch-up PR=3430` and re-enqueue. If #3426's PIVOTBY change ever conflicts
+  textually with `Grid::cell_rows`'s `Slot::Subtotal` arm, re-run probes/t4388-pivotby-intransitive-subtotals (705
+  cells) and the excel-fidelity reviewer.
