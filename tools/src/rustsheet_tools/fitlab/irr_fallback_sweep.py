@@ -124,6 +124,21 @@ def exact_root(flows: Flows, near: float) -> Decimal | None:
     return (lo + hi) / 2
 
 
+def root_and_offset(flows: Flows, value: object) -> tuple[str, str]:
+    """The exact root near Excel's `value` (30 digits) and Excel's signed offset from it in ulps, as TSV text.
+
+    Both are empty when `value` is an error; the root reads "no sign change" when the NPV has none near `value`.
+    Call inside a 60-digit decimal context.
+    """
+    if not isinstance(value, (int, float)):
+        return "", ""
+    root = exact_root(flows, float(value))
+    if root is None:
+        return "no sign change", ""
+    ulp = Decimal(math.ulp(float(root)))
+    return format(root, ".30g"), format((Decimal(float(value)) - root) / ulp, ".2f")
+
+
 def write_roots() -> None:
     oracle = json.loads(Path(f"{CASE}.oracle.json").read_text(encoding="utf-8"))["sheets"]["P"]
     lines = ["row\tfamily\tflows\texcel\texcel_guess_0.5\texact_root\toffset_ulps"]
@@ -134,15 +149,7 @@ def write_roots() -> None:
             b = oracle.get(f"B{i}", {})
             value = a.get("v", a.get("e"))
             guessed = b.get("v", b.get("e", "")) if b else ""
-            exact, offset = "", ""
-            if isinstance(value, (int, float)):
-                root = exact_root(flows, float(value))
-                if root is None:
-                    exact = "no sign change"
-                else:
-                    exact = format(root, ".30g")
-                    ulp = Decimal(math.ulp(float(root)))
-                    offset = format((Decimal(float(value)) - root) / ulp, ".2f")
+            exact, offset = root_and_offset(flows, value)
             row = (i, family, json.dumps(flows), value, guessed, exact, offset)
             lines.append("\t".join(str(t) for t in row))
     Path(f"{CASE}.roots.tsv").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -218,15 +225,7 @@ def write_pow2_roots() -> None:
             b = oracle.get(f"B{i}", {})
             value = a.get("v", a.get("e"))
             guessed = b.get("v", b.get("e", "")) if b else ""
-            exact, offset = "", ""
-            if isinstance(value, (int, float)):
-                root = exact_root(pow2_flows(base, j, negated), float(value))
-                if root is None:
-                    exact = "no sign change"
-                else:
-                    exact = format(root, ".30g")
-                    ulp = Decimal(math.ulp(float(root)))
-                    offset = format((Decimal(float(value)) - root) / ulp, ".2f")
+            exact, offset = root_and_offset(pow2_flows(base, j, negated), value)
             row = (i, family, j, int(negated), value, guessed, exact, offset)
             lines.append("\t".join(str(t) for t in row))
     Path(f"{CASE_POW2}.roots.tsv").write_text("\n".join(lines) + "\n", encoding="utf-8")
