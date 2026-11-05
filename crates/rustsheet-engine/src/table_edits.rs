@@ -355,8 +355,8 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
 /// edit deletes the last such column the export writes none, so the table stops being filtered
 /// here too. The caller only ever clears the flag with this: a table the import left unfiltered
 /// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
-/// since [`crate::types::FilterCriterion::Other`] also holds top 10 and the other kept-only
-/// kinds; Excel's own result after deleting the filtered column in the application is unprobed
+/// since [`crate::types::FilterCriterion::Other`] also holds a criterion the import read but could
+/// not check; Excel's own result after deleting the filtered column in the application is unprobed
 /// (T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
     table

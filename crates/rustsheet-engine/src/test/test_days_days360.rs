@@ -34,3 +34,17 @@ fn test_days_days360_arguments() {
     assert_eq!(model._get_text("B4"), *"-2");
     assert_eq!(model._get_text("B5"), *"#ERROR!");
 }
+
+#[test]
+fn days_with_two_errors_returns_the_leftmost() {
+    // probes/t4397-days-two-errors A1:A16 (excel-graph; dates.md "DAYS error order").
+    let mut model = new_empty_model();
+    model._set("A1", "=DAYS(NA(),1/0)");
+    model._set("A2", "=DAYS(1/0,NA())");
+    model._set("A3", "=DAYS(\"abc\",NA())");
+    model.evaluate();
+
+    assert_eq!(model._get_text("A1"), *"#N/A");
+    assert_eq!(model._get_text("A2"), *"#DIV/0!");
+    assert_eq!(model._get_text("A3"), *"#N/A");
+}

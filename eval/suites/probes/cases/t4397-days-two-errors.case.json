@@ -1,0 +1,60 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4397: DAYS with an error in both arguments (literals, error-returning calls, one-cell references to error cells, mixed), and an error beside text as a control. A: bare result, B: ERROR.TYPE of it.",
+ "tags": [
+  "M6",
+  "probe",
+  "date",
+  "days",
+  "T-4397"
+ ],
+ "sheets": [
+  {
+   "name": "Sheet1",
+   "cells": {
+    "A1": "=DAYS(NA(),1/0)",
+    "B1": "=ERROR.TYPE(DAYS(NA(),1/0))",
+    "A2": "=DAYS(1/0,NA())",
+    "B2": "=ERROR.TYPE(DAYS(1/0,NA()))",
+    "A3": "=DAYS(#REF!,#NAME?)",
+    "B3": "=ERROR.TYPE(DAYS(#REF!,#NAME?))",
+    "A4": "=DAYS(#NAME?,#REF!)",
+    "B4": "=ERROR.TYPE(DAYS(#NAME?,#REF!))",
+    "A5": "=DAYS(#NULL!,#NUM!)",
+    "B5": "=ERROR.TYPE(DAYS(#NULL!,#NUM!))",
+    "A6": "=DAYS(#NUM!,#NULL!)",
+    "B6": "=ERROR.TYPE(DAYS(#NUM!,#NULL!))",
+    "A7": "=DAYS(Data!A1,Data!A2)",
+    "B7": "=ERROR.TYPE(DAYS(Data!A1,Data!A2))",
+    "A8": "=DAYS(Data!A2,Data!A1)",
+    "B8": "=ERROR.TYPE(DAYS(Data!A2,Data!A1))",
+    "A9": "=DAYS(Data!A3,Data!A4)",
+    "B9": "=ERROR.TYPE(DAYS(Data!A3,Data!A4))",
+    "A10": "=DAYS(Data!A4,Data!A3)",
+    "B10": "=ERROR.TYPE(DAYS(Data!A4,Data!A3))",
+    "A11": "=DAYS(Data!A1,1/0)",
+    "B11": "=ERROR.TYPE(DAYS(Data!A1,1/0))",
+    "A12": "=DAYS(1/0,Data!A1)",
+    "B12": "=ERROR.TYPE(DAYS(1/0,Data!A1))",
+    "A13": "=DAYS(NA(),\"abc\")",
+    "B13": "=ERROR.TYPE(DAYS(NA(),\"abc\"))",
+    "A14": "=DAYS(\"abc\",NA())",
+    "B14": "=ERROR.TYPE(DAYS(\"abc\",NA()))",
+    "A15": "=DAYS(Data!A1,Data!A5)",
+    "B15": "=ERROR.TYPE(DAYS(Data!A1,Data!A5))",
+    "A16": "=DAYS(Data!A5,Data!A1)",
+    "B16": "=ERROR.TYPE(DAYS(Data!A5,Data!A1))"
+   }
+  },
+  {
+   "name": "Data",
+   "cells": {
+    "A1": "=NA()",
+    "A2": "=1/0",
+    "A3": "=#REF!",
+    "A4": "=#NAME?",
+    "A5": "abc"
+   }
+  }
+ ]
+}
