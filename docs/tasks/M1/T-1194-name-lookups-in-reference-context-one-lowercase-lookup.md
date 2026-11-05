@@ -3,7 +3,7 @@ id: T-1194
 title: "Name lookups in reference context: one lowercase lookup per use, and look through formula-bodied names in is_multi_area"
 milestone: M1
 lane: perf
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
