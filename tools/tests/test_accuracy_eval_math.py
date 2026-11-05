@@ -12,7 +12,7 @@ import pytest
 
 from rustsheet_tools.accuracy import eval_math
 from rustsheet_tools.accuracy.defs.cashflow import IRR, XIRR
-from rustsheet_tools.accuracy.defs.student_t import T_DIST, cdf
+from rustsheet_tools.accuracy.defs.student_t import T_DIST, T_INV, cdf
 from rustsheet_tools.accuracy.eval_math import (
     case_math,
     check_suite,
@@ -48,7 +48,8 @@ def test_single_call_takes_one_whole_call_only() -> None:
 def test_fit_args_follows_the_parameters() -> None:
     assert fit_args(T_DIST, [1.5, 3.0, True]) == [1.5, 3, True]
     assert fit_args(T_DIST, [1.5, 3.0, 1.0]) == "number for a logical"
-    assert fit_args(T_DIST, [1.5, 2.5, True]) == "non-integer for an integer parameter"
+    assert fit_args(T_DIST, [1.5, 2.5, True]) == [1.5, 2, True]  # T.DIST's df truncates (Param.truncates)
+    assert fit_args(T_INV, [0.5, 2.5]) == "non-integer for an integer parameter"  # unevidenced: skipped
     assert fit_args(T_DIST, [1.5, 3.0]) == "argument count"
     assert fit_args(T_DIST, ["1", 3.0, True]) == "non-numeric argument"
     assert fit_args(T_DIST, [True, 3.0, True]) == "logical for a number"
@@ -74,7 +75,7 @@ def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -
         "A1": "=T.DIST(1.5,3,TRUE)",  # a value
         "A2": "=T.DIST(B1,3,TRUE)",  # a constant cell: read
         "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
-        "A4": "=T.DIST(1.5,2.5,TRUE)",  # non-integer df: skipped
+        "A4": "=T.INV(0.5,2.5)",  # non-integer df T.INV does not truncate: skipped
         "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
         "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
         "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
@@ -166,7 +167,7 @@ class _InProcessPool:
 def test_check_names_missing_and_stale_sidecars_and_passes_after_regenerating(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.DIST(1.5,2.5,TRUE)"}
+    cells = {"A1": "=T.DIST(1.5,3,TRUE)", "A2": "=T.DIST(2.5,3,TRUE)", "A3": "=T.INV(0.5,2.5)"}
     case, sidecar = _case(tmp_path, cells, {a: {"t": "n", "v": 0.5} for a in cells})
     entries = [{"id": "t/c", "path": str(case), "sidecar": str(sidecar)}]
     monkeypatch.setattr(eval_math, "suite_cases", lambda _suite: entries)

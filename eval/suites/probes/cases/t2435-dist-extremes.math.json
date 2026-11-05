@@ -93,6 +93,11 @@
     "why": "the density's z*z overflows",
     "f": "=NORM.DIST(3,1,2^-512,FALSE)"
    },
+   "A128": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=BETA.DIST(2,2,2,FALSE,2,5)"
+   },
    "A13": {
     "t": "n",
     "v": "0.0",
@@ -103,10 +108,25 @@
     "v": "1.3500000008100000677675479956593807775739642840044e-599",
     "f": "=F.DIST(1E-300,6,1E+10,FALSE)"
    },
+   "A139": {
+    "t": "e",
+    "why": "density at x = 0 with alpha <= 1",
+    "f": "=BETA.DIST(0,0.5,2,FALSE,-1,1)"
+   },
    "A14": {
     "t": "n",
     "v": "0.0000000000000019984014443252797759583706618773441140620691279474",
     "f": "=BINOM.DIST(1,2,0.9999999999999999,FALSE)"
+   },
+   "A140": {
+    "t": "e",
+    "why": "density at x = 1 with beta <= 1",
+    "f": "=BETA.DIST(1,2,0.5,FALSE,0,5)"
+   },
+   "A146": {
+    "t": "n",
+    "v": "0.66666664444444448081286383158941235807206895616319",
+    "f": "=BETA.DIST(2.0000001,1,2,FALSE,2,5)"
    },
    "A15": {
     "t": "n",
@@ -138,10 +158,20 @@
     "v": "0.0",
     "f": "=BINOM.DIST(1,2,1,FALSE)"
    },
+   "A38": {
+    "t": "n",
+    "v": "0.42319008119405605759974288432944922007920514939401",
+    "f": "=F.DIST(1,10000000000.5,6,TRUE)"
+   },
    "A4": {
     "t": "n",
     "v": "0.0",
     "f": "=BINOM.DIST(1,2,1,TRUE)"
+   },
+   "A41": {
+    "t": "n",
+    "v": "0.67212542276452560341528932004094826769865616597651",
+    "f": "=F.DIST(1,6,10000000000.5,FALSE)"
    },
    "A42": {
     "t": "n",
@@ -319,6 +349,50 @@
   "S": {
    "A110": {
     "f": "=BETA.INV(1E-20,1E-300,30)",
+    "why": "no single value"
+   },
+   "A126": {
+    "f": "=BETA.DIST(2,0.5,2,FALSE,2,5)",
+    "why": "no single value"
+   },
+   "A127": {
+    "f": "=BETA.DIST(5,2,0.5,FALSE,2,5)",
+    "why": "no single value"
+   },
+   "A132": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A133": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0)",
+    "why": "no single value"
+   },
+   "A135": {
+    "f": "=BETA.DIST(1,2,0.5,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A136": {
+    "f": "=BETA.DIST(0,1,2,FALSE,0,1)",
+    "why": "no single value"
+   },
+   "A137": {
+    "f": "=BETA.DIST(0,0.5,2,FALSE,0,5)",
+    "why": "no single value"
+   },
+   "A138": {
+    "f": "=BETA.DIST(1,2,0.5,FALSE,-1,1)",
+    "why": "no single value"
+   },
+   "A143": {
+    "f": "=BETA.DIST(2,1,2,FALSE,2,5)",
+    "why": "no single value"
+   },
+   "A144": {
+    "f": "=BETA.DIST(5,2,1,FALSE,2,5)",
+    "why": "no single value"
+   },
+   "A145": {
+    "f": "=BETA.DIST(2,1,2,FALSE,2,3)",
     "why": "no single value"
    },
    "A49": {
