@@ -1524,7 +1524,7 @@ Rule (excel-graph, gen-m6, 2026-10-21):
   `#N/A` (columns F-L of rows 1, 22, 27-29; Q60:Q64).
   T-1954's question: `WORKDAY.INTL(45000,5,"1111111",NA())` is `#N/A` (row 15 column E), and with the holidays in an array or a
   range the all-weekend `#VALUE!` wins.
-Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday, counted rather than skipped (serial 1 in 1aa50086e42bff9a A67 and 752959b8d3db0285 A393 lies outside every range, so skip-vs-count is UNVERIFIED). Also UNVERIFIED: the scalar branch accepts any text `cast_number` reads (a literal `"45001"`, a formula's number text, date, currency or percent text) as a holiday; the cells only show holidays reached through a reference. Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). Unprobed: whether single number text off the calendar (a `"-1"` cell) is step (4) or (6); ours (6) (T-2271 probes it).
+Ours: implemented (T-2270, T-2272): a blank one-cell reference is no holiday; a cell holding number text is a holiday, counted rather than skipped (serial 1 in 1aa50086e42bff9a A67 and 752959b8d3db0285 A393 lies outside every range, so skip-vs-count is UNVERIFIED). A holiday given as text is read the same way in every form: a text literal, a cell holding the text, a one-element array of it, or a range holding it beside a number. Number text (`"45001"`), date text (`"3/16/2023"`, `"March 16, 2023"`), currency text (`"$45,001"`) and percent text (`"4500100%"`) each act as the serial they read as, in WORKDAY, WORKDAY.INTL, NETWORKDAYS and NETWORKDAYS.INTL (probes/t4397-holiday-text-forms rows 3:22 and 24:43, excel-graph; T-4397). A text literal is a scalar holiday for the NETWORKDAYS.INTL weekend rule below: `NETWORKDAYS.INTL(45000,45010,13,"3/18/2023")` drops the Saturday and is 10, as the number 45003 is, while the same text in a cell or `{"3/18/2023"}` is subtracted and gives 9 (G23:G43). Other text is `#VALUE!` as before. The order is `Model::workday_of` and `Model::networkdays_of`, with `HolidaysError::before_weekend` for step (4) (crates/rustsheet-engine/src/functions/date_and_time/). Unprobed: whether single number text off the calendar (a `"-1"` cell) is step (4) or (6); ours (6) (T-2271 probes it).
 Status: VERIFIED
 Tasks: T-2270, T-2272
 
@@ -1616,6 +1616,7 @@ right: unreadable text is `#VALUE!`, a number off the calendar `#NUM!`. `DAYS(-1
 `#NUM!`; `DAYS("abc",#NAME?)` is `#NAME?`; `DAYS(#DIV/0!,"")` is `#DIV/0!` (A403); `DAYS(A1:B2,"abc")` with a
 negative top-left is `#NUM!`; `DAYS("abc",-1)` and `DAYS("",-1)` are `#VALUE!` (A211, A271).
 Evidence: gen-m6/a4a301d00b46acf3 Calc!A79, A82, A85, A88, A241, A244, A307, A310, A493, A499 (excel-graph; T-3536).
-Ours: implemented (T-3536). Two error arguments at once (which one wins) is not probed; the code returns the leftmost.
-Status: VERIFIED (excel-graph) for the cited cells; UNVERIFIED for two simultaneous errors
-Tasks: T-3536
+Two error arguments at once: the leftmost wins, whether the errors are literals, error-returning calls or one-cell references to error cells (`DAYS(NA(),1/0)` `#N/A`, `DAYS(1/0,NA())` `#DIV/0!`, `DAYS(#REF!,#NAME?)` `#REF!`, `DAYS(#NUM!,#NULL!)` `#NUM!`); and an error beats unreadable text in either position (`DAYS("abc",NA())` `#N/A`). Evidence: probes/t4397-days-two-errors A1:A16, with ERROR.TYPE in B1:B16 (excel-graph; T-4397).
+Ours: implemented (T-3536); T-4397 pins the two-error cases.
+Status: VERIFIED (excel-graph)
+Tasks: T-3536, T-4397

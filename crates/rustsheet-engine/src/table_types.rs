@@ -85,19 +85,71 @@ pub struct FilterColumn {
     pub criterion: FilterCriterion,
 }
 
-/// The criterion of a [`FilterColumn`].
+/// The criterion of a [`FilterColumn`]. Each kind is kept as the file wrote it, after the
+/// import checked it against the schema's types and enumerations, so the export writes back the
+/// filter Excel read and Excel still calls the table's hidden rows filtered (T-4004). Nothing
+/// re-applies a criterion.
 #[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
 pub enum FilterCriterion {
-    /// `<filters>`: the rows whose text is one of `values`, plus blank rows when `blank`.
-    Values { values: Vec<String>, blank: bool },
+    /// `<filters>`: the rows whose text is one of `values`, or whose date falls in one of
+    /// `date_groups`, plus blank rows when `blank`; `calendar_type` is the file's `calendarType`.
+    Values {
+        values: Vec<String>,
+        blank: bool,
+        calendar_type: Option<String>,
+        date_groups: Vec<DateGroupItem>,
+    },
     /// `<customFilters>`: one or two conditions, all of which must hold when `and`.
     Custom {
         and: bool,
         conditions: Vec<CustomFilter>,
     },
-    /// Any other kind (top 10, dynamic, color or icon filters): applied, but its criterion is
-    /// not kept, so an export writes the column with no criterion.
+    /// A criterion the import could not check (an unknown element, or a value outside its
+    /// schema type): applied, but not kept, so an export writes the column with no criterion.
     Other,
+    /// `<top10>`: the `val` top (or bottom) items, or percent of items when `percent`;
+    /// `filter_val` is the cut the file recorded. Both numbers are kept as finite `xsd:double`
+    /// text.
+    Top10 {
+        top: bool,
+        percent: bool,
+        val: String,
+        filter_val: Option<String>,
+    },
+    /// `<dynamicFilter>`: `kind` is the file's `type` (one of `ST_DynamicFilterType`); `val` and
+    /// `max_val` finite `xsd:double` text, `val_iso` and `max_val_iso` date-time text.
+    Dynamic {
+        kind: String,
+        val: Option<String>,
+        max_val: Option<String>,
+        val_iso: Option<String>,
+        max_val_iso: Option<String>,
+    },
+    /// `<colorFilter>`: the cell (or, when not `cell_color`, font) color of the differential
+    /// format `dxf_id`.
+    Color {
+        dxf_id: Option<u32>,
+        cell_color: bool,
+    },
+    /// `<iconFilter>`: icon `icon_id` of `icon_set` (one of `ST_IconSetType`); no `icon_id`
+    /// keeps the cells with no icon.
+    Icon {
+        icon_set: String,
+        icon_id: Option<u32>,
+    },
+}
+
+/// One `<dateGroupItem>` of a values filter: the dates in `year` (and the finer fields down to
+/// `grouping`, one of `ST_DateTimeGrouping`).
+#[derive(Encode, Decode, Debug, PartialEq, Eq, Clone)]
+pub struct DateGroupItem {
+    pub grouping: String,
+    pub year: u16,
+    pub month: Option<u16>,
+    pub day: Option<u16>,
+    pub hour: Option<u16>,
+    pub minute: Option<u16>,
+    pub second: Option<u16>,
 }
 
 /// One `<customFilter>`: `operator` is the file's attribute (absent means `equal`) and `val`

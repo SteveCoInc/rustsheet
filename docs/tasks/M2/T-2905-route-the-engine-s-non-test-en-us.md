@@ -3,7 +3,7 @@ id: T-2905
 title: "Route the engine's non-test en-US locale and language lookups through get_default_locale and get_default_language"
 milestone: M2
 lane: quality
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -42,3 +42,11 @@ in expressions/lexer/mod.rs are out of scope: tests may `unwrap`. The helpers th
 ## Out of scope
 - Locale or language selection for non-en workbooks (M10).
 - Test code and the lint-debt allow-lists in Cargo.toml (`quality/lint-debt.json` is a protected path).
+
+## Outcome
+The four non-test sites (structured_reference.rs `parse_range`, lexer/util.rs `get_tokens`, utils.rs
+`parse_anchored_reference_formula`, shift.rs `shift_formula_text`) now call `get_default_locale()` /
+`get_default_language()`; five `#[allow(clippy::expect_used)]` attributes are gone, none added. The old
+`ok()?` in `shift_formula_text` was a dead `None` branch; real lex failures still return `None`. Remaining
+`get_*("en")` hits in the engine are the two helpers, `#[cfg(test)]` code, formatter/date and
+sequence_detector sites outside this task's list, and the lexer doc example. No eval delta.

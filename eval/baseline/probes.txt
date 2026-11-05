@@ -2306,6 +2306,8 @@ C	probes/t4378-pivotby-subtotal-holdout.case.json	450
 C	probes/t4379-pivotby-repeated-unreached-leaf.case.json	351
 C	probes/t4380-unique-keep-head-holdout.case.json	622
 C	probes/t4388-pivotby-intransitive-subtotals.case.json	705
+C	probes/t4397-days-two-errors.case.json	36
+C	probes/t4397-holiday-text-forms.case.json	516
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
