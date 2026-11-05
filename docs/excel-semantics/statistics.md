@@ -4882,7 +4882,11 @@ Where it is tiny (the second shape huge, p <= 1/2) the search stops early, a New
   Excel's own rounding decides, UNVERIFIED (T-2555).
 - Early stop where tiny: the cells A133, A135, A137, A139, A145, A153, A155 (x from 1.3E-12 to 5.3E-10) are 6E-16
   to 9.3E-7 relative off the true root, near AS 109's second Newton iterate from its own start (1E-12 to 4E-8
-  relative), but no fixed acu, statrs' acu, or ln B from a double lgamma reproduces them (T-2555).
+  relative), but no fixed acu, statrs' acu, or ln B from a double lgamma reproduces them (T-2555). Excel's own
+  BETA.DIST at AS 109's iterates is within 2E-14 relative of the true CDF, and Newton steps on it land 4E-8 to 9.3E-7
+  from Excel's BETA.INV at A137, A139 and 1E-8 at A153, A155 at every iterate: Excel's value is on no AS 109
+  trajectory from that start (docs/research/t2555, excel-graph 2026-11-05; T-2555 blocked as time-boxed, decision
+  0267 accepts the cells).
 - Ours: the crossing needs the CDF to about 1E-8 relative to pick Excel's neighbour near 1, and the T-0970 incomplete
   beta was about 1E-7 off there (its fraction does not converge; since T-2528 the CDF takes the large-shape expansion,
   "Incomplete beta at a huge first shape"): 1 ulp off at 4 of 12 near-1 cells. Where
