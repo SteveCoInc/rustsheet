@@ -2736,7 +2736,14 @@ Evidence: probes-numeric t2513-r3-tdensity-a1, -a2, -hold, -hold2, t2513-verify-
 m9-t-dist-pdf; docs/research/t2464/r3-tdensity (`tdlib.py`, `s10_eset.py`, `s11_fsel.py`, `s12_logbr.py`,
 `s17_final.py`, `s21_small.py`), verify-r3-tdensity (`vhold.out`, `hold2.out`, `vconst.out`, `vband.out`, `vsmall.out`,
 `vold_perdf.out`).
-Ours: `student_t.rs` `student_t_density`, a double-double cos^(n+1) times a gamma ratio.
+- bd0's result stays in an x87 register into u (its series sum unstored, its log form `t + (M - k)` summed there),
+  unlike the beta density's stored bd0: storing it moves `T.DIST(2.20146...,11,FALSE)` (hold2) 3 ulp off Excel and
+  hold2 to 572 exact (T-2585).
+Implemented in: `loader.rs` `excel_t_density` (with `loader_t_constant` and `excel_bd0_unstored`), called by T.DIST's
+density; `student_t.rs` `student_t_density` stays the fallback and T.INV's centre estimate (T-2585). On cells.tsv the
+engine gets 7,046 exact and 19,725 within 15 digits of 19,793 cells (df >= 3: 18,646 of 18,714; df 1 and 2: all
+1,079 exact); hold2 573 exact, the verifier's hold-out at least 505 exact and 977 within 15 digits (unit test over
+`test/fixtures/t_density_hold.fixture`).
 Status: PARTIAL (excel-graph): the structure VERIFIED on two hold-outs for df >= 3, df 1 and df 2 VERIFIED; the per-df
 constant UNVERIFIED
 Tasks: T-2585, T-2586, T-0969

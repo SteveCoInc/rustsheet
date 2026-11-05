@@ -38,6 +38,7 @@
 use super::bratio::t_kernel_tails;
 use super::gammaln::excel_gammaln;
 use super::incomplete_beta::{beta_reg_upper, closed_form_tails, incbcf, incbd};
+use super::loader::excel_t_density;
 use crate::arithmetic::flush_subnormal;
 use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul, dd_sqrt, excel_exp};
 
@@ -572,6 +573,11 @@ pub(crate) fn student_t_density(t: f64, n: f64) -> Option<f64> {
         exponent >>= 1;
     }
     Some(dd_div(dd_mul(ratio, power), dd_sqrt((n, 0.0))).0)
+}
+
+/// T.DIST(t, n, FALSE): Excel's own form ([`excel_t_density`], T-2585), else [`student_t_density`].
+pub(crate) fn t_density(t: f64, n: f64) -> Option<f64> {
+    excel_t_density(t, n).or_else(|| student_t_density(t, n))
 }
 
 /// atan of a positive double-double u: the double atan `theta_0`, then one Newton step on

@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -59,13 +59,13 @@ Routed by T-2981 (eval of 2026-10-28 at `main` 9586958b): the T.DIST(t,n,FALSE) 
 - probes-numeric/t2513-r3-tdensity-hold: T.DIST density 49
 
 ## Acceptance criteria
-- [ ] On cells.tsv's 19,776 T.DIST(.,FALSE) cells the engine is within 15 digits on at least 19,708 (df >= 3 at least
+- [x] On cells.tsv's 19,776 T.DIST(.,FALSE) cells the engine is within 15 digits on at least 19,708 (df >= 3 at least
       18,631 of 18,699, df 1 and 2 all 1,077) and bit-exact on at least 7,033.
-- [ ] On t2513-r3-tdensity-hold2 at least 573/960/960 and on t2513-verify-r3-tdensity-hold at least 505 bit-exact and
+- [x] On t2513-r3-tdensity-hold2 at least 573/960/960 and on t2513-verify-r3-tdensity-hold at least 505 bit-exact and
       977 within 15 digits (unit test over a committed fixture).
-- [ ] df 1 and df 2: bit-exact on all 1,077 cells.tsv cells and on verify-r3-tdensity's 27 + 1,050.
-- [ ] The Outcome reports the visible change per suite against today's engine; no gated known-failure line is added.
-- [ ] statistics.md's entry gains an "Implemented in" line.
+- [x] df 1 and df 2: bit-exact on all 1,077 cells.tsv cells and on verify-r3-tdensity's 27 + 1,050.
+- [x] The Outcome reports the visible change per suite against today's engine; no gated known-failure line is added.
+- [x] statistics.md's entry gains an "Implemented in" line.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
@@ -77,3 +77,26 @@ Decision 0083: this task is done when every T.DIST(.,FALSE) cell it owns is with
 digit of Excel's value, or the cells still off are named in the Outcome and handed to T-2586. With the exact constant
 the model leaves 68 of cells.tsv's 19,776 visibly off (CR 229) and 23 of the verifier's 1,000. Bit-level criteria
 still unmet then move to a follow-up task without the campaign key.
+
+## Outcome
+T.DIST(t,n,FALSE) is now Excel's structure (`loader.rs` `excel_t_density`, called by T.DIST's density;
+statistics.md "Student t density is Loader's dt" gains an "Implemented in" line): Loader's saddle point in Excel's x87
+pieces for df >= 3 with the exact constant (`loader_t_constant`: the bd0 part as its series in 1/n, so it keeps its
+digits at large n, plus `stirlerr_exact`), and the df 1 and df 2 closed forms. `student_t_density` stays the fallback
+and T.INV's centre estimate.
+
+- One finding on the way: the t density keeps bd0's result in an x87 register (series sum unstored, log form summed
+  there), unlike the beta density's stored bd0. `excel_bd0` now shares its branch cut with `excel_bd0_unstored`;
+  storing it costs hold2 one exact cell (`T.DIST(2.20146...,11,FALSE)`, 3 ulp), which is where the research model
+  LT1 and the first engine port disagreed.
+- cells.tsv (T.DIST(.,FALSE), 19,793 rows read by a scratch test, not committed: decision 0066): 7,046 exact and 19,725
+  within 15 digits; df >= 3 18,646 of 18,714 within 15 digits; df 1 and df 2 all 1,079 exact.
+- Hold-outs, unit test over `test/fixtures/t_density_hold.fixture` (copied from the probe cases): hold2 at least
+  573 / 960 / 960 (exact / 4 ulp / 15 digits), the verifier's hold-out at least 505 exact, 918 within 4 ulp and 977
+  within 15 digits.
+- Visible change per suite: gen-m9 1 known failure fixed (caa1eed48b1883fe A382, the owned cell); ironcalc-calc 4
+  fixed (T_DIST.xlsx D3, D32, D40, D52); probes 0; 0 regressions anywhere. probes-numeric (not cell-gated), cells
+  passing exactly, before -> after: t2513-r3-tdensity-a1 8,006 -> 8,059, -a2 9,785 -> 10,080, -hold 9,350 -> 9,625,
+  -hold2 1,226 -> 1,533, t2513-verify-r3-tdensity-hold 1,093 -> 1,505. The cells still off are T-2586's (the per-df
+  constant's residual and the bd0 series), with `T.DIST(±10,1E6,FALSE)` and `T.DIST(8,50,FALSE)` as named.
+- No gated known-failure line added.

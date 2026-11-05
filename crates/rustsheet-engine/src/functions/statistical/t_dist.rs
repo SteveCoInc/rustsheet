@@ -10,7 +10,7 @@ use crate::functions::statistical::special::{
     bisect_increasing, ln_gamma, nearest_crossing_from, refine_increasing,
 };
 use crate::functions::statistical::student_t::{
-    student_t_centre, student_t_density, student_t_tail_at, student_t_tails,
+    student_t_centre, student_t_density, student_t_tail_at, student_t_tails, t_density,
 };
 use crate::functions::Function;
 use crate::{
@@ -538,7 +538,7 @@ impl Model {
         }
         let result = if cumulative {
             student_t_tails(x, df).0
-        } else if let Some(density) = student_t_density(x, df) {
+        } else if let Some(density) = t_density(x, df) {
             density
         } else {
             StudentsT::new(0.0, 1.0, df)
