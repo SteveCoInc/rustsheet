@@ -36,7 +36,7 @@ No harness was needed: the deleted T-2464 harness only supplied the engine's val
 | both off ("model's too"; 29 with engine != model) | 141 |
 | not a literal BETA.DIST cdf (cell references, BETA.DIST of a reference, a ratio) | 18 |
 
-- Of the 359 still off, 269 are 1 ulp off, 67 are 2, 15 are 3 or 4 and 4 are 5 or 6.
+- Of the 355 still off, 269 are 1 ulp off, 67 are 2, 15 are 3 or 4 and 4 are 5 or 6.
 - The 196 "port's" cells are all GAMMALN's last digits, not the port:
   - With the engine's GAMMALN in L, the model gives the engine's exact value on 178.
   - The other 18 are at min(a, b) < 1, b0 < 8, where the engine has T-3879's split z and r2-bpser-small's model does
@@ -46,5 +46,6 @@ No harness was needed: the deleted T-2464 harness only supplied the engine's val
   t2464-r2-bratio-x29 2.
 
 ## What would move these cells
-Excel's GAMMALN to the bit at shapes below 2 (T-2122). The engine's model is exact on 1,738 of 2,585 GAMMALN cells
-below 1 in t2464-r2-bpser-small-gl. No bpser, L or algdiv change is indicated.
+Excel's GAMMALN to the bit at shapes below 2 (T-2122). r2-bpser-small found the engine's model exact on 1,738 of
+2,585 GAMMALN cells below 1 in t2464-r2-bpser-small-gl (docs/research/t2464/r5-bpser-lngamma/RESULTS.md, which quotes
+it). That is an older engine: today's eval passes 4,471 of that case's 5,843 cells, over all arguments. No bpser, L or algdiv change is indicated.

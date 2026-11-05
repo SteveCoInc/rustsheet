@@ -180,8 +180,15 @@ pub struct Parser {
     /// embedder or the bindings), not text the engine printed and re-enters itself: a padded bare
     /// column then reads as no column, as typed or loaded text does (see [`Parser::set_external`]).
     external: bool,
+    /// The formula is typed with the workbook in R1C1 reference style
+    /// (`Model::set_typed_r1c1_user_input`): `Model::parse_cell_formula` reads it in the R1C1
+    /// grammar, short forms written out, instead of the A1 grammar (T-4288).
+    r1c1_entry: bool,
     /// The first cell-shaped name the last parse bound (see `typed`).
     cell_shaped_binding: Option<String>,
+    /// The first LET name the last parse declared written with `_xlpm.`, which Excel refuses
+    /// typed (see [`Parser::typed_refusal`]).
+    prefixed_declaration: Option<String>,
     /// The first call of a function with an argument count Excel refuses that the last parse
     /// read (see [`Parser::typed_refusal`]).
     wrong_count_call: Option<String>,
@@ -249,7 +256,9 @@ impl Parser {
             typed: false,
             loaded: false,
             external: false,
+            r1c1_entry: false,
             cell_shaped_binding: None,
+            prefixed_declaration: None,
             wrong_count_call: None,
             spelled_anchorarray: false,
             open_calls: 0,
@@ -279,6 +288,18 @@ impl Parser {
     pub(crate) fn set_typed(&mut self, typed: bool) {
         self.typed = typed;
         self.lexer.set_typed(typed);
+    }
+
+    /// Reads the next typed formulas as typed with the workbook in R1C1 reference style (`true`)
+    /// or in A1 style (`false`, the default); see `Model::set_typed_r1c1_user_input`.
+    pub(crate) fn set_r1c1_entry(&mut self, r1c1_entry: bool) {
+        self.r1c1_entry = r1c1_entry;
+    }
+
+    /// Whether the next typed formulas are typed in R1C1 reference style
+    /// ([`Parser::set_r1c1_entry`]).
+    pub(crate) fn is_r1c1_entry(&self) -> bool {
+        self.r1c1_entry
     }
 
     pub fn set_lexer_mode(&mut self, mode: lexer::LexerMode) {
@@ -349,6 +370,7 @@ impl Parser {
         self.value_operators = 0;
         self.bound_names.clear();
         self.cell_shaped_binding = None;
+        self.prefixed_declaration = None;
         self.wrong_count_call = None;
         self.spelled_anchorarray = false;
         self.open_calls = 0;
@@ -359,8 +381,9 @@ impl Parser {
         let mut node = self.expect_end(node);
         // Only text with `_xlpm.` has a prefixed use to settle (T-4099). `contains` also matches
         // text inside a string literal; that is harmless, the pass touches only prefixed names.
-        // The storage form's mark is dropped as it is read (`Parser::written_lambda_name`).
-        if formula.contains("_xlpm.") && !self.storage_form() {
+        // Only a file's text (A1, not typed) has the mark: the storage form's is dropped as it is
+        // read, and typed text has none (`Parser::written_lambda_name`, T-4288).
+        if formula.contains("_xlpm.") && self.lexer.is_a1_mode() && !self.typed {
             call_names::settle_lambda_prefixes(&mut node);
         }
         // Only a bare `f1` typed in R1C1 mode, or the storage form's `_xlpm.f1`, reads a name

@@ -2,10 +2,10 @@
 
 use rustsheet_engine::cell::CellValue;
 use rustsheet_engine::pivot::{
-    group_by_dates, group_by_numbers, row_layout, ungroup_dates, Aggregate, Axis, AxisField,
-    CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField, DateGroupError,
-    DateGroups, LayoutCell, NumberGroupError, PivotCache, PivotCacheError, PivotField, PivotTable,
-    RecordValue, MAX_RECORD_VALUES,
+    group_by_dates, group_by_numbers, layout_extent, row_layout, ungroup_dates, Aggregate, Axis,
+    AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
+    DateGroupError, DateGroups, LayoutCell, NumberGroupError, PivotCache, PivotCacheError,
+    PivotField, PivotTable, RecordValue, MAX_RECORD_VALUES,
 };
 use rustsheet_engine::Model;
 
@@ -97,6 +97,11 @@ pub struct PivotTableInput {
     /// engine (Excel lays one out itself on load): its rendered cells are written from
     /// `location`'s top-left cell, which is all of `location` that is read.
     pub group: Option<PivotRangeGroup>,
+    /// Text items of the row field that no record holds, appended to its cache items after the
+    /// records' own (a `<sharedItems>` entry no record uses). Only on an ungrouped row field.
+    pub unused_items: Vec<String>,
+    /// The row field's `showAll`: whether the pivot shows its items that no record holds.
+    pub show_all: bool,
 }
 
 /// A row field grouped by numbers or dates (`<fieldGroup>` with `<rangePr>`), grouped as the xlsx
@@ -120,7 +125,7 @@ pub struct PivotRangeGroup {
 fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
     let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
     Ok(match group.by {
-        None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
+        None => group_by_numbers(field, [group.start, group.end, group.interval], &labels)?,
         Some(by) => {
             // Excel's refresh drops a date grouping over a blank (probes/t4236-pivot-date-groups,
             // web.md): each second-rounded date is its own item.
@@ -131,6 +136,35 @@ fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, Pi
             group_by_dates(field, groups, labels)?
         }
     })
+}
+
+/// The pivot fields of `cache`: `row` on the row axis with `showAll` `show_all`, `column` on
+/// the column axis, the others on none.
+fn pivot_fields(
+    cache: &PivotCache,
+    row: u32,
+    column: Option<u32>,
+    show_all: bool,
+) -> Vec<PivotField> {
+    cache
+        .fields
+        .iter()
+        .zip(0u32..)
+        .map(|(f, i)| {
+            let axis = if i == row {
+                Some(Axis::Row)
+            } else if Some(i) == column {
+                Some(Axis::Column)
+            } else {
+                None
+            };
+            let mut field = PivotField::new(axis, f.items.len());
+            if i == row {
+                field.show_all = show_all;
+            }
+            field
+        })
+        .collect()
 }
 
 /// Why a pivot table could not be registered.
@@ -162,6 +196,9 @@ pub enum PivotError {
     /// A grouped pivot with a column field: only a grouped row field is laid out.
     #[error("a grouped pivot has no column field")]
     GroupedWithColumn,
+    /// Unused items on a grouped row field: their place among the group items is unprobed.
+    #[error("a grouped pivot has no unused items")]
+    GroupedWithUnusedItems,
 }
 
 impl Txn<'_> {
@@ -251,6 +288,17 @@ impl Txn<'_> {
             }
             builder.push_record(record).map_err(PivotError::from)?;
         }
+        let row_index = names.iter().position(|n| *n == input.row);
+        if let Some(row) = row_index.and_then(|i| u32::try_from(i).ok()) {
+            if input.group.is_some() && !input.unused_items.is_empty() {
+                return Err(PivotError::GroupedWithUnusedItems.into());
+            }
+            for item in &input.unused_items {
+                builder
+                    .add_shared_item(row, CacheItem::Text(item.clone()))
+                    .map_err(PivotError::from)?;
+            }
+        }
         let mut cache = builder.finish();
         // Exact-case match: the builder gives the header's own spelling. Excel's GETPIVOTDATA matches
         // field names ignoring case (web.md); this is not that rule.
@@ -275,21 +323,7 @@ impl Txn<'_> {
                 *field = grouped(field, group)?;
             }
         }
-        let fields = cache
-            .fields
-            .iter()
-            .zip(0u32..)
-            .map(|(f, i)| {
-                let axis = if i == row {
-                    Some(Axis::Row)
-                } else if Some(i) == column {
-                    Some(Axis::Column)
-                } else {
-                    None
-                };
-                PivotField::new(axis, f.items.len())
-            })
-            .collect();
+        let fields = pivot_fields(&cache, row, column, input.show_all);
         let table = PivotTable {
             name: input.name.clone(),
             sheet_id,
@@ -337,7 +371,8 @@ impl Txn<'_> {
             input.location.top,
             input.location.left,
         );
-        let mut bottom = top;
+        let (bottom, right) =
+            layout_extent(top, left, u32::try_from(rows.len()).unwrap_or(u32::MAX));
         for (r, cells) in (top..).zip(rows) {
             for (c, cell) in (left..).zip(cells) {
                 // Typed values: a label such as `1-1.1` is text, never parsed as a date.
@@ -348,13 +383,12 @@ impl Txn<'_> {
                 };
                 self.set(crate::refs::CellRef::new(sheet, r, c)?, Input::Value(value))?;
             }
-            bottom = r;
         }
         Ok(CellArea {
             top,
             left,
             bottom,
-            right: left + 1,
+            right,
         })
     }
 }
@@ -395,6 +429,8 @@ mod tests {
             function: PivotFunction::Sum,
             caption: "Sum of Sales".into(),
             group: None,
+            unused_items: Vec::new(),
+            show_all: false,
         };
         (wb, input)
     }
@@ -430,6 +466,48 @@ mod tests {
         assert_eq!(pivot.row_fields, vec![AxisField::Field(0)]);
         assert_eq!(pivot.data_fields[0].field, 1);
         assert_eq!(pivot.fields[0].axis, Some(Axis::Row));
+    }
+
+    /// Unused items are appended to the row field's items after the records' own, and the row
+    /// field takes the input's `showAll` (T-4276; probes/t4248-getpivotdata-recordless-item).
+    #[test]
+    fn unused_items_follow_the_records_items_and_show_all_is_the_row_fields() {
+        let (mut wb, input) = book();
+        let input = PivotTableInput {
+            unused_items: vec!["North".into()],
+            show_all: true,
+            ..input
+        };
+        wb.edit(|tx| tx.add_pivot_table(&input)).unwrap();
+        let [cache] = &wb.model.workbook.pivot_caches[..] else {
+            panic!("one cache");
+        };
+        assert_eq!(
+            cache.fields[0].items.last(),
+            Some(&CacheItem::Text("North".into()))
+        );
+        assert!(!cache.fields[0].records.contains(&2));
+        let pivot = &wb.model.workbook.pivot_tables[0];
+        assert!(pivot.fields[0].show_all);
+        assert_eq!(pivot.fields[0].hidden.len(), 1);
+        // On a grouped row field their place among the group items is unprobed: refused.
+        let grouped = PivotTableInput {
+            group: Some(PivotRangeGroup {
+                by: None,
+                start: 0.0,
+                end: 30.0,
+                interval: 10.0,
+                items: ["<0", "0-10", "10-20", "20-30", ">30"]
+                    .map(String::from)
+                    .to_vec(),
+            }),
+            ..input
+        };
+        let err = wb.edit(|tx| tx.add_pivot_table(&grouped)).unwrap_err();
+        assert!(
+            matches!(&err, EditError::Pivot(PivotError::GroupedWithUnusedItems)),
+            "{err:?}"
+        );
     }
 
     #[test]
@@ -508,6 +586,8 @@ mod tests {
             function: PivotFunction::Sum,
             caption: "Sum of S".into(),
             group: Some(group),
+            unused_items: Vec::new(),
+            show_all: false,
         }
     }
 

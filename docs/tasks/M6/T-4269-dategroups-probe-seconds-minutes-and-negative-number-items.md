@@ -3,7 +3,7 @@ id: T-4269
 title: "DateGroups: probe seconds, minutes and negative number items; harden the type (T-4246 review follow-ups)"
 milestone: M6
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -33,10 +33,23 @@ These are the MINOR findings from PR #3258 (T-4246), which all three reviewers a
   dates, where before the check ran only per grouped value. Record that in web.md's importer skip list.
 
 ## Acceptance criteria
-- [ ] A probe case covers number items on seconds and minutes groups and a negative fractional number item; the code
+- [x] A probe case covers number items on seconds and minutes groups and a negative fractional number item; the code
       matches it, and web.md drops the UNVERIFIED note.
-- [ ] `DateGroups` cannot underflow for any value of its fields.
-- [ ] `make check` green; reviewers approve.
+- [x] `DateGroups` cannot underflow for any value of its fields.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - T-4260 (a grouping over a blank) and T-4261 (cache rounding at a half second).
+
+## Outcome
+- Probe `probes/t4269-pivot-time-group-number-items` (excel-graph, 252 cells): GETPIVOTDATA number and text items on
+  pivots grouped by seconds, minutes and hours. A second or minute number item is 0 to 59, like the hour rule, and the
+  integer part is truncated toward zero (`-0.5`, `-0.0001` pick `:00` / `12 AM`; `-1`, `60` are `#REF!`). The engine
+  already matched every cell, so there is no code change for the probe. web.md drops the UNVERIFIED note and records the rule, Excel's
+  `:00` labels for seconds, and the importer's count check over a base field without dates.
+- Hardening: `DateGroups`' fields are private (only `DateGroups::new` builds one). `item` and `number_item` go
+  through a checked `last_inner()`, so a decoded grouping of fewer than three items is `DateGroupError::Count` /
+  `None`, never an underflow or a `clamp` panic. The bounded `as` casts are commented. Unit tests cover both.
+- Not done: renaming `PivotRangeGroup` to `PivotGroup`. The task says "consider"; it is a `#[doc(hidden)]` name, and a
+  rename touches the facade for no behavior change.
+- Eval delta: +1 case (252 cells, all passing); no regressions.

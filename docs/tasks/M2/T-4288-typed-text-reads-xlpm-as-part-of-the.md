@@ -3,7 +3,7 @@ id: T-4288
 title: "Typed text reads _xlpm. as part of the name, and a formula typed in R1C1 mode carries its quoted name on the node, not in A1 text"
 milestone: M2
 lane: engine
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -28,10 +28,25 @@ formula typed in R1C1 mode reaches the typed entry without an A1 spelling a user
 - `walk_names`' `declared` falls back to the name without one prefix; typed names would need an exact match.
 
 ## Acceptance criteria
-- [ ] probes/t4224-doubled-xlpm-prefix S!A3:C6, S!A9:C12 and S!A14:C14 pass; t4040, t4099, t3897 and t3212 still pass.
-- [ ] No A1 or R1C1 text a user can type reads as the quoted name; `r1c1_formula_to_a1` stays correct for its
+- [x] probes/t4224-doubled-xlpm-prefix S!A3:C6, S!A9:C12 and S!A14:C14 pass; t4040, t4099, t3897 and t3212 still pass.
+- [x] No A1 or R1C1 text a user can type reads as the quoted name; `r1c1_formula_to_a1` stays correct for its
       callers or is replaced.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - What Excel writes to a file for these typed formulas (unprobed).
+
+## Outcome
+- Typed text, in A1 and R1C1 mode, keeps every `_xlpm.` as part of the name (`Parser::written_lambda_name`); the end
+  of the parse settles the mark only in a file's text (untyped A1), and `walk_names` no longer binds a use by its
+  name without one prefix outside that pass (`walk_marked_names`, used by `settle_lambda_prefixes` only). A typed LET
+  name written with `_xlpm.` is refused with `TYPED_FORMULA_DOES_NOT_PARSE` (`Parser::note_prefixed_declaration`), as
+  is a cell-shaped binding (now prefixed so too: Excel leaves the cell blank, decision 0179).
+- `r1c1_formula_to_a1` (and its `_xlpm.`/`_xlpm._xlpm.` A1 encoding, `to_english_string_typed_from_r1c1`) is replaced
+  by `Model::set_typed_r1c1_user_input` and the facade's `Input::ParseR1C1`: the R1C1 text is parsed in the R1C1
+  grammar against its cell, with the workbook's names and tables, and the node is stored as parsed, so no A1 text a
+  user can type reads as the quoted name. `rustsheet-eval` enters `entered_r1c1` cells with it. Typed in R1C1 mode a
+  range's corners are ordered by the cells they name, as the A1 hop used to do (t3212 I50).
+- Eval: +14 cells (probes/t4224-doubled-xlpm-prefix 26/40 -> 40/40); t4040, t4099, t3897, t3212 still pass; 0
+  regressions. Docs: syntax.md (rule, Ours), eval-harness.md, SPEC-0001, decision 0179 implementation note.
+- Unprobed, recorded in syntax.md: a LAMBDA parameter typed with `_xlpm.` (ours binds it under that name).

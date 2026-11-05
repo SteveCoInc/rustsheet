@@ -378,7 +378,10 @@ fn hebrew_or_saka(hebrew: bool, lcid: u16) -> (&'static DateNames, Calendar) {
     match (hebrew, lcid & 0x3FF) {
         (true, 0x0D | 0x01) => (&HEBREW_SCRIPT, Calendar::Hebrew(Some(&HEBREW_SCRIPT_ADARS))),
         (true, _) => (&HEBREW_LATIN, Calendar::Hebrew(Some(&HEBREW_LATIN_ADARS))),
+        // ne-IN 0x861 and neutral 0x61 print native Saka names, ne-NP 0x461 the Latin ones
+        // (probes/t4201-indic-regional-variants C14, F14).
         (false, 0x01 | 0x39) => (&SAKA_HINDI, Calendar::Saka),
+        (false, 0x61) if lcid != 0x461 => (&SAKA_HINDI, Calendar::Saka),
         (false, _) => (&SAKA, Calendar::Saka),
     }
 }

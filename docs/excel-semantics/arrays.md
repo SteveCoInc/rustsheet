@@ -1570,8 +1570,14 @@ count after each node (`Model::spend_compared`), so comparing 32,767-byte texts 
 more than comparing short ones, while a MAP of `MATCH(REPT("a",32766)&"b",s,0)` over `s` bound to 1E5 such texts runs out
 on its first call. The count is in ticks, weighted by path because the paths' cost a character differs a
 hundredfold (collation/compared.rs): 1 a byte for the ASCII first pass, the ASCII folds and wildcard matches of the
-lookups and criteria; 32 a character of the ASCII second pass (equal or case-only-different texts); 128 a character of
-the full collation (non-ASCII, lone surrogates); 128 a byte of a collation key (UNIQUE, the exact-match lookup index, the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Fitted by time
+lookups and criteria, and the ASCII second pass (equal or case-only-different texts); 48 a character of
+the full collation (non-ASCII, lone surrogates), read once by its first pass, which keeps the elements for the later passes; 64 a byte of a collation key (UNIQUE, the exact-match lookup index, the *IF(S) cache); 32 a byte of a non-ASCII lookup fold; one unit per 16 ticks (`COMPARED_TICKS_PER_UNIT`). Re-fitted after T-4279 made the
+full collation and the keys 4 to 19 times faster (release build, 2026-11-05, per character of one text: ASCII equal texts
+81 to 3.2 ns, `é` 1,179 to 153, `中` 1,300 to 151, a key of ASCII 203 to 50 and of `é` 488 to 75; the same MAP shapes as below run
+until `#VALUE!` in 4.3 s for `s=REPT("É",16383)` over the `é` texts, 3.1 s for XMATCH over them, 5.2 s for `SUM(--(s=REPT("A",32767)))`,
+7.1 s for the ASCII XMATCH, 5.4 s for SORT, 2.8 s and 3.4 s for the two UNIQUE shapes, 3.2 s for UNIQUE over the `é` texts;
+`ROWS(UNIQUE(REPT("a",20)&SEQUENCE(1048576)))` computes in 5.9 s, and `ROWS(UNIQUE(REPT("a",100)&SEQUENCE(1048576)))`, 13 s at a
+key weight of 32, is refused as before). T-4233's first fit, by time
 (release build, 2026-11-05, 4 cores; each a MAP over 1E5 calls with `s` bound to 1,000 texts of 32,767 bytes, or 16,383
 `é`, run until `#VALUE!`): `XMATCH(REPT("a",32766)&"b",s)` 7.0 s (1.6 ns a tick), MATCH wildcard 4.9 s, `SUM(--(s=REPT("A",32767)))`
 5.7 s, `ROWS(SORT(s))` 5.6 s, XMATCH over the `é` texts 6.2 s, MATCH exact over them 5.1 s; the key path with `s` bound to

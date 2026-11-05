@@ -56,6 +56,9 @@ If the task is bigger than size M, split it (planner) instead of doing it.
 ## 4. Implement (test-first where possible)
 - Add/extend eval spec cases or unit tests that fail first.
 - Implement the smallest change that makes them pass. Keep the diff focused.
+- Parallel subagents (`isolation: worktree`) each build in their own worktree's `target/`: never
+  share a `CARGO_TARGET_DIR` across worktrees, or one runs another's binaries (T-3832;
+  `docs/process/agent-workflow.md`, "Worktrees"). `make build` and `make check-fast` refuse it.
 - `make fmt`, then `make check-fast` and the tests of the code you changed (`cargo test -p
   <crate> <filter>`, or the module's `unittest` for `scripts/`). `make check-fast` runs the gates
   of `make check` your change can break and never the full Rust suite: CI runs every gate on the

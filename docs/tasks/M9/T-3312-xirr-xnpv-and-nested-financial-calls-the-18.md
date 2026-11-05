@@ -46,7 +46,8 @@ show p/x.case.json --all` (how T-2611 traced its cells).
 
 ## Acceptance criteria
 - [x] The 18 lines above disappear from eval/baseline/gen-m9.txt, or each one left is listed in the Outcome with its
-      traced cause and owner task; no new known-failure lines.
+      traced cause and owner task; no new known-failure lines in gen-m9 (the one visibly-off probe cell, A30, is
+      listed in the Outcome and owned by T-4251).
 - [x] Every order changed is backed by a probe of the bare call and recorded in docs/excel-semantics/.
 - [ ] `make check` green; reviewers approve.
 

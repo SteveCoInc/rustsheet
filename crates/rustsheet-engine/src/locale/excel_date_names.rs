@@ -6,7 +6,7 @@
 //! probes/text-locale-six-languages), except the morning "AM" of locales whose afternoon is "PM", which
 //! is probed for fr, de, de-AT, th, sk, uk and he only.
 
-use super::indic_date_names::{BN, KN, KOK, MR, NE, TA, TE};
+use super::indic_date_names::{BN, BN_BD, KN, KOK, MR, NE, NE_IN, TA, TA_LK, TE};
 use super::regional_date_names::{
     AR, DE_AT, DE_LU, EL, ES_419, ES_AR, ES_CL, ES_MX, HE, HI, ID, KK, LT, MK, PT_AO, SK, SL, TG,
     TH, UK, ZH_SG,
@@ -675,7 +675,7 @@ static EN_LOWER_HALVES: DateNames = DateNames {
 
 /// The probed locales: LCID, BCP-47 tag and names. For a fallback by language the first entry
 /// of the language wins, so the order matters: `[$-zh]` and `[$-4]` are Traditional Chinese.
-pub(crate) static LOCALES: [(u16, &str, &DateNames); 58] = [
+pub(crate) static LOCALES: [(u16, &str, &DateNames); 61] = [
     (0x409, "en-US", &EN),
     (0x809, "en-GB", &EN),
     (0x1809, "en-IE", &EN_LOWER_HALVES),
@@ -727,6 +727,8 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 58] = [
     (0x428, "tg-Cyrl-TJ", &TG),
     (0x42F, "mk-MK", &MK),
     (0x43F, "kk-KZ", &KK),
+    // bn-BD first: neutral 0x45 and `bn` resolve to it, not bn-IN (probes/t4201-indic-regional-variants).
+    (0x845, "bn-BD", &BN_BD),
     (0x445, "bn-IN", &BN),
     (0x44E, "mr-IN", &MR),
     (0x449, "ta-IN", &TA),
@@ -734,6 +736,8 @@ pub(crate) static LOCALES: [(u16, &str, &DateNames); 58] = [
     (0x44B, "kn-IN", &KN),
     (0x457, "kok-IN", &KOK),
     (0x461, "ne-NP", &NE),
+    (0x849, "ta-LK", &TA_LK),
+    (0x861, "ne-IN", &NE_IN),
 ];
 
 /// The names of en-US, the locale of the system tags.

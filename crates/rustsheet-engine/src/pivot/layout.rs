@@ -32,11 +32,27 @@ pub enum LayoutCell {
     Error(Error),
 }
 
+/// How many columns wide a [`row_layout`] row is: the label and the value.
+pub const LAYOUT_COLUMNS: usize = 2;
+
 /// The most rows [`row_layout`] gives over `record_count` records: the captions, at most one item
-/// per record, and the grand total. Two columns wide.
+/// per record, and the grand total. [`LAYOUT_COLUMNS`] wide.
 #[must_use]
 pub fn max_layout_rows(record_count: u32) -> u32 {
     record_count.saturating_add(2)
+}
+
+/// The area a layout of `rows` rows covers from the cell `(top, left)`, as `(bottom, right)`: the
+/// one definition of a grouped pivot's footprint, shared by the facade's layout and the eval
+/// harness's input set, which passes [`max_layout_rows`]. Saturates, and `rows` of 0 covers the
+/// top row.
+#[must_use]
+pub fn layout_extent(top: u32, left: u32, rows: u32) -> (u32, u32) {
+    let columns = u32::try_from(LAYOUT_COLUMNS).unwrap_or(u32::MAX);
+    (
+        top.saturating_add(rows.saturating_sub(1)),
+        left.saturating_add(columns - 1),
+    )
 }
 
 /// The rows of a compact-form pivot over `cache` with row field `row` and one data field captioned
@@ -53,7 +69,7 @@ pub fn row_layout(
     data: u32,
     function: Aggregate,
     caption: &str,
-) -> Option<Vec<[LayoutCell; 2]>> {
+) -> Option<Vec<[LayoutCell; LAYOUT_COLUMNS]>> {
     let row_field = cache.fields.get(row as usize)?;
     let data_field = cache.fields.get(data as usize)?;
     let mut by_item: Vec<Vec<u32>> = vec![Vec::new(); row_field.items.len()];
@@ -110,9 +126,9 @@ pub(crate) fn record_numbers(field: &CacheField, records: &[u32]) -> Result<Vec<
 
 /// The data field's aggregate over `values` (cache order). A Sum, Count, Average, Max or Min over
 /// nothing is 0 (probes/getpivotdata-real-pivot H13, probes/getpivotdata-empty-intersection);
-/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite result `#NUM!` (unknown 16). Var and `StdDev` reuse
-/// the worksheet functions' algorithm (`excel_variance`); that the pivot computes them alike is
-/// UNVERIFIED (unknown 15).
+/// any other aggregate with no defined value is `#REF!` (SPEC-0015 unknown 2), and a non-finite
+/// result `#NUM!` (unknown 16). Var and `StdDev` reuse the worksheet functions' algorithm
+/// (`excel_variance`); that the pivot computes them alike is UNVERIFIED (unknown 15).
 pub(crate) fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Error> {
     let n = values.len();
     let minimum = match function {
@@ -148,5 +164,21 @@ pub(crate) fn aggregate(function: Aggregate, values: &[f64]) -> Result<f64, Erro
         Ok(value)
     } else {
         Err(Error::NUM)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_extent_is_the_rows_below_and_the_columns_right_of_the_top_left_cell() {
+        assert_eq!(layout_extent(4, 3, 5), (8, 4));
+        assert_eq!(
+            layout_extent(4, 3, 0),
+            (4, 4),
+            "no rows still covers the top row"
+        );
+        assert_eq!(layout_extent(u32::MAX, u32::MAX, 9), (u32::MAX, u32::MAX));
     }
 }
