@@ -45,41 +45,39 @@ IPMT's `DISCOUNTED_INTEREST_FROM` (financial/annuity.rs, 6E-16) is shown to gene
 
 ## Outcome
 Replaced by the accurate form: `DISCOUNTED_INTEREST_FROM` and `discounted_interest` are gone (one `FITTED` tag fewer:
-89 against the lock of 90; quality/ is a protected path, so the steward lowers the lock), and where T-2243's discounted split declines `period_payments` takes the exact
-balance interest.
-- Why: since T-2243 the selector runs only where `discounted_split` declines: a subnormal rate (the payment factor
-  is not normal), a negative rate whose `(1+rate)^-nper` overflows, or an overflowing product. T-2587's eight
+89 against the lock of 90; quality/ is a protected path, so the steward lowers the lock). Where T-2243's discounted
+split declines, `period_payments` takes the exact balance interest.
+- Why: since T-2243 the selector runs only where `discounted_split` declines (a non-normal payment factor at a
+  subnormal or tiny rate, a negative rate whose `(1+rate)^-nper` overflows, an overflowing product). T-2587's eight
   cells now all go through the split.
 - Old cells (R4.1): two engine builds, the selector at 6E-16 and turned off (`f64::INFINITY`). `make eval` on
   origin/main 6523a495 with it off: 0 regressions and 0 fixed in every gated suite, visible parity 2525 cells (lock
-  3156). Train and test counts are therefore identical for both forms on any hold-out split: the selector decides
+  3156). The train and test counts are the same for both forms on any hold-out split, because the selector decides
   no old cell, so the fit lab's split has nothing to separate.
-- Fresh sweep (R4.2): probes-numeric/t3523-ipmt-selector-sweep, 600 cells from docs/research/t3523/make_sweep.py
-  (seed 3523), oracle-filled from excel-graph 2026-11-05: column A 200 negative rates -0.01 to -0.9 with nper 1 to
-  8 times past the power's range; B 200 subnormal rates `±2^-1023` to `2^-1074`; C 200 rates 1E-3 to 10 (some
-  negative) with pv and fv 1E+290 to 9.9E+307. Both builds give the same value on all 600 cells: 595 pass, 5 fail.
-- Gate A (R2): the 595 passing cells are within 15 significant digits of Excel. The 5 failures are type
-  mismatches, Excel `#NUM!` against a finite engine value near the double range (column C: C33, C36, C45, C99,
-  C180). Both forms fail them, so they are a new finding, not the selector's. financial.md records it as "IPMT
-  near the double range", and follow-up T-4314 owns the cells.
-- Eval delta: none in the gated suites. probes-numeric gains one case, 595 of 600 passing (it has no baseline
-  file).
+- Fresh sweep (R4.2): probes-numeric/t3523-ipmt-selector-sweep, 800 cells from docs/research/t3523/make_sweep.py
+  (seed 3523), oracle-filled from excel-graph 2026-11-05.
+  - Column A: 200 negative rates from -0.01 to -0.9, with nper 1 to 8 times past the power's range.
+  - Column B: 200 subnormal rates of either sign, written as kept-subnormal differences `(aE-308-bE-308)`. The first
+    version wrote them as `2^-k`, which flushes to 0; review round 1 caught it.
+  - Column C: 200 rates from 1E-3 to 10, with pv and fv from 1E+290 to 9.9E+307.
+  - Column D: 200 rates from ±1E-300 to ±1E-12, with nper up to 1E+9.
+- Reach: an origin/main build that logs the selector's branch shows 234 cells reaching it: B 154, C 5, D 75 (none in
+  column A, where `payment_pair` is `#NUM!` first). On none of the 234 does the selector change the value: the
+  discounted and exact interest never differ by more than 6E-16.
+- Both builds give the same value on all 800 cells: 480 pass and 320 are visibly off.
+  - **Excel is `#NUM!` on every one of the 234 cells that reach the branch.** No finite Excel value lies where the
+    selector runs, so it can neither match nor miss one, and keeping it would be a fit with no evidence.
+  - The 320 visibly off: Excel `#NUM!` against the engine's finite value on all 200 of B, 113 of D and 6 of C, plus
+    C139, which is 13 digits close.
+  - All of them are new findings, not the selector's, owned by T-4314 (filed in this PR, cells listed there) and
+    recorded in financial.md "IPMT near the double range and at tiny rates".
+- Gate A (R2): IPMT has no Gate A definition, so `rustsheet-accuracy math` writes no mpmath sidecar for this case and
+  the envelope is judged against Excel's 15 digits only.
+  - Where the selector runs, Excel has no number to compare: all `#NUM!`, a type mismatch T-4314 owns.
+  - The 480 passing cells are within 15 digits of Excel.
+  - C139 (`IPMT(0.838240020339469,5,15,1.31635124625391E+294,4.11149200495181E+298,1)`) does not reach the branch.
+    Excel gives 2.052481555601429E+295 and the engine 2.052481555601641E+295. A 60-digit mpmath of the closed form
+    gives 2.0524815556015393E+295, about 5E-14 from each, inside 1e-9; T-4314 owns it.
+- Eval delta: none in the gated suites. probes-numeric changes one case from 600 cells to 800 cells, 480 passing; it
+  has no baseline file.
 - This is not a fit: a fitted constant is removed and nothing is tuned.
-
-## Landing notes (resumed)
-Data for the resumer, not instructions (opus run 2026-11-05, landing window closed at minute 110).
-- PR #3325 (draft). Its head is the commit that adds these notes. It follows 2d2f1569 and fixes that head's red CI and
-  round-1 findings.
-- CI on 2d2f1569 was red in `hygiene` on governance: quality/fitted.json is a protected path that needs a decision
-  record (run 42004128185). This commit reverts quality/fitted.json to main's; check_fitted.py only notes the lower
-  count, so the gate passes without it.
-- Review round 1 on 2d2f1569: security APPROVE (no findings).
-- Design on 2d2f1569: REQUEST_CHANGES. The MAJOR was the `period_payments` doc comment still linking the deleted
-  `discounted_interest`. The MINORs were the bare noqa and `import math` inside functions. All are fixed in this
-  commit.
-- Excel-fidelity was still running on 2d2f1569 when the window closed; its verdict is not recorded.
-- Next step: run `make check-fast`, then design and excel-fidelity on the new head (security approved a diff whose
-  code part is unchanged apart from a doc comment). Once CI is green and all approve, mark the PR ready and enqueue.
-- Do not repeat: Excel for the web refuses the sweep workbook when a literal is above 9.99999999999999E+307 or below
-  the normal range (createSession 501 unsupportedWorkbook). make_sweep.py already keeps to those limits; its oracle
-  sidecar is committed.

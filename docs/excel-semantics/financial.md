@@ -359,24 +359,29 @@ A227; T-2587 fit over the 1403 IPMT and 441 CUMIPMT cells of gen-m9, probes, pro
   probes/fin-ipmt-ppmt-huge-rate pv-0 cells (`IPMT(2,2,10,0,315)`) visibly off (T-2943).
 Status: VERIFIED to the bit on the four cells (excel-graph); the switch was fitted.
 Removed (T-3523, decision 0188 R4): since T-2243 the engine reaches the switch only where "IPMT and PPMT split Excel's
-discounted payment" declines (a subnormal rate, a negative rate whose `(1+rate)^-nper` overflows, an overflowing
-product). Turned off, it moved no gated cell, and on a fresh 600-cell sweep of exactly those inputs
-(probes-numeric/t3523-ipmt-selector-sweep, excel-graph 2026-11-05: 200 negative-rate, 200 subnormal-rate as
-`2^-1023` to `2^-1074`, 200 near-overflow cells) both builds gave the same value on every cell, 595 passing. So
-`period_payments` takes the exact balance interest there, with no fitted switch.
+discounted payment" declines (a subnormal or tiny rate, a negative rate whose `(1+rate)^-nper` overflows, an
+overflowing product). Turned off, it moved no gated cell. A fresh 800-cell sweep of those inputs
+(probes-numeric/t3523-ipmt-selector-sweep, excel-graph 2026-11-05: 200 negative rates past the power's range, 200
+subnormal rates, 200 near-overflow values, 200 rates from 1E-300 to 1E-12) reaches the switch on 234 cells (B 154,
+C 5, D 75, counted on an instrumented build), it changes none of them, and Excel is `#NUM!` on all 234 (below). So no
+finite Excel value lies where the switch runs, and `period_payments` takes the exact balance interest there, with
+no fitted switch.
 
-## IPMT near the double range: #NUM! where an intermediate overflows
-Rule: with pv and fv near the top of the double range Excel's IPMT can be `#NUM!` although the interest itself is
-well inside it. `IPMT(-0.00370928755867435,15,16,4.70938571164442E+307,0,0)` is `#NUM!` (engine 2.127E+304), and so
-are `IPMT(0.00286322465373438,2,13,1.40355762329685E+305,7.40149559572831E+307,0)`,
-`IPMT(0.0077709833702648,2,3,2.59956670396635E+303,1.22820359711015E+307,0)`,
-`IPMT(0.00799876951004341,3,5,2.71531320084367E+307,1.09784064008143E+306,1)` and
-`IPMT(-0.0140196032744638,2,6,2.58281603156391E+298,1.670798343956E+307,0)`; the other 195 cells drawn with pv and fv
-from 1E+290 to 9.9E+307 have Excel's finite values.
-The sweep keeps its literals inside what Excel reads (numbers.md "Formula literals of 1E+308 or more are invalid";
-and Excel refuses a workbook holding `=1E-310`, so subnormal rates are written as powers of two).
-Evidence: probes-numeric/t3523-ipmt-selector-sweep column C (excel-graph, 2026-11-05, T-3523).
-Status: VERIFIED (excel-graph) for the five cells; which intermediate overflows is UNVERIFIED (T-4314).
+## IPMT near the double range and at tiny rates: #NUM! where the engine has a value
+Rule: Excel's IPMT is `#NUM!` on inputs where the interest itself is a finite double:
+- pv and fv near the top of the double range at ordinary rates, on 6 of 200 cells drawn with pv and fv from 1E+290 to
+  9.9E+307: `IPMT(0.00282609064045807,30,31,2.17430063151056E+307,0,0)` is `#NUM!` (engine -4.13E+303), and so are
+  C46, C55, C114, C179 and C189; the other 194 have finite values, of the same size too.
+- a subnormal rate, on all 200 cells: `IPMT((7.245817E-308-6.217028E-308),27,305,-1.65145744696278E+26,0,0)` is
+  `#NUM!` (engine 1.55E-282). The rate is a kept-subnormal difference of two literals (arrays.md): a literal below
+  the normal range is refused and `2^-1074` is 0 (numbers.md "Subnormal results become 0").
+- a normal rate from 1E-300 to 1E-12 (either sign, nper up to 1E+9, pv and fv up to 9.9E+307), on 113 of 200 cells:
+  `IPMT(-2.53326609425573E-149,206877,274231,4.05556192485415E+114,4.87005200957666E+285,1)` is `#NUM!`, while
+  `IPMT(1.34415723179135E-62,56,89,7.13200119910222E+72,2.0490326468435E+191,0)` has a value.
+Every cell where the engine's T-2243 split declines (234 of the sweep) is among them; which intermediate of Excel's
+form fails is UNVERIFIED (T-4314).
+Evidence: probes-numeric/t3523-ipmt-selector-sweep columns B, C and D (excel-graph, 2026-11-05, T-3523).
+Status: VERIFIED (excel-graph) for these cells; the rule behind them is UNVERIFIED (T-4314).
 Implemented in: not yet; `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) returns the
 finite interest.
 Tasks: T-2587, T-2943, T-3523, T-4314

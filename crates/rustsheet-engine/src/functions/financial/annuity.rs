@@ -613,9 +613,9 @@ fn period_payments(
                 discounted_principal(rate, period_count, period, values, period_start, true)
             });
         // Where T-2243's split declines, the exact balance interest. T-2587's switch to Excel's
-        // own discount past 6E-16 moved no cell once that split landed: no gated cell and none of
-        // the 600 cells of probes-numeric/t3523-ipmt-selector-sweep, a fresh sweep over the inputs
-        // the split declines (T-3523, decision 0188 R4).
+        // own discount past 6E-16 moved no cell once that split landed: no gated cell, and none of
+        // the 234 cells of probes-numeric/t3523-ipmt-selector-sweep that reach this branch, where
+        // Excel is `#NUM!` on every one (T-3523, decision 0188 R4; T-4314 owns the errors).
         interest = match balance_interest(rate, period_count, period, values, period_start) {
             Some((interest, true)) => Some(interest),
             balance => split
