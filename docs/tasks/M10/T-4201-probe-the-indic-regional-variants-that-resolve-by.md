@@ -3,7 +3,7 @@ id: T-4201
 title: "Probe the Indic regional variants that resolve by the language fallback (bn-BD 845, ta-LK 849, ne-IN 861, [$-bn], [$-ne-IN])"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
