@@ -121,6 +121,17 @@ tag, restated (T-3524), with its form choice filed as T-4349.
   the bit, visibly 9 lost / 15 won and 18 / 33. The 40 old cells it would put visibly off are the cut's own training
   cells. Its MINOR findings: restate "fresh: 9 against 13" as 9 / 15, add the tiny sweep's 18 / 33, and note that
   below a lead of 1E-3 only old cells back the cut.
+- CI on 37b9c1b5e is red: `rust (test 3/3)` and `rust (fmt, clippy, test 1/3)`
+  (https://github.com/SteveCoInc/rustsheet/actions/runs/42043776221). Five unit tests in
+  crates/rustsheet-engine/src/test/test_fn_cumulative_lift.rs pin Excel's values for the cells decision 0291 regresses:
+  a_short_principal_at_a_large_rate_is_one_geometric_sum (A10 `CUMPRINC(0.005,100000,1000,2,99999,1)`, 1 ulp),
+  each_element_is_the_scalar_call (A3, the same), extreme_values_from_cells_are_values_without_a_panic
+  (A3 `CUMPRINC(Z6,Z7,Z3,1,Z7,0)`: -1e300 vs -9.999999999999999e299), up_to_32_periods_are_close_to_the_per_period_sum
+  (A3 `CUMPRINC(0.004,1024,1000,1,1024,1)`: -1000.0 vs -999.9999999999999), and
+  a_billion_periods_take_milliseconds_and_are_excels_values. They must be handled together with 0291, by restating
+  each assertion as a 1-2 ulp tolerance that cites 0291 and its probe cell, or by option (a)/(b) below. Do not
+  delete or skip them. `make check-fast` does not run them (decision 0248): run
+  `cargo test -p rustsheet_engine cumulative` before pushing.
 - When the window closed: nothing in progress. Next step: pick option (a) or (b) from the reviewer.
   - (a) Remove the short cut too (the always-geometric build, scratchpad `eval-always-geometric`, patch
     docs/research/t3524/always-geometric.patch). Record its gated regressions in a decision record, extending 0291
