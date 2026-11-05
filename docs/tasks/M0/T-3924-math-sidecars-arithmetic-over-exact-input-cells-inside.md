@@ -3,7 +3,7 @@ id: T-3924
 title: "Math sidecars: arithmetic over exact-input cells inside a call's arguments, and an exact outer power-of-two or -0 wrapper: about 930 counted sweep cells"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
