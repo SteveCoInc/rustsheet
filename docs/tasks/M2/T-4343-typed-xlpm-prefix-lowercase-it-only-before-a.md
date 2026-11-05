@@ -3,7 +3,7 @@ id: T-4343
 title: "Typed _XLPM. prefix: lowercase it only before a name a LET or LAMBDA binds (probes/t4331-typed-xlpm-remaining C2:C3)"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
