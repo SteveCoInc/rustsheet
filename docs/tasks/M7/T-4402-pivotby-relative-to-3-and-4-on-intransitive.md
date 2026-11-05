@@ -3,7 +3,7 @@ id: T-4402
 title: "PIVOTBY relative_to 3 and 4 on intransitive runs: the parent set is the parent subtotal's records, and an empty one is an error"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
