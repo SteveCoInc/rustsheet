@@ -21,6 +21,7 @@ fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     grouping.sort_by_keys(&[ascending], CELL);
     grouping
@@ -85,6 +86,7 @@ fn later_fields_class_within_their_parent() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
             });
         grouping.sort_by_keys(&[], CELL);
         grouping
@@ -264,6 +266,7 @@ fn two_key_fields_sort_lexicographically() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     grouping.sort_by_keys(&[true, false], CELL);
     let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
@@ -285,6 +288,7 @@ fn value_sort_keeps_parents_with_equal_aggregates_together() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     let mut calls = 0;
     let order = (ParentOrder::ByValue, Axis::Rows);
@@ -331,6 +335,7 @@ fn three_keys() -> Grouping {
     Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
         groups: Vec::new(),
         ascending: Vec::new(),
+        paths: Vec::new(),
     })
 }
 
@@ -530,6 +535,7 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
             });
         let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
         grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);
@@ -605,6 +611,7 @@ fn unreached_names_the_leaf_no_row_reaches() {
         Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
         });
     let leaves: Vec<(Vec<ArrayNode>, Vec<usize>)> = grouping
         .groups
