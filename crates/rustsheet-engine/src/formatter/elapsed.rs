@@ -177,6 +177,44 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
     false
 }
 
+/// Excel moves the elapsed count off `[s]`/`[ss]` onto the first hour or minute token after it:
+/// `[s] m` prints like `s [m]`, the seconds field then the elapsed minutes counted from the date
+/// section's register ([`date_section_register`], which a clock token in front selects). So
+/// `TEXT(1.7/24+0.3/1440,"[s] m")` is "18 26640", `"[s] h"` "18 444", `"[s] m s"` "18 26640 18".
+/// The rewrite also drops the elapsed flag the parser gave a later `s`. Evidence:
+/// probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295); `[ss]`, and a
+/// second hour or minute token after the first, are UNVERIFIED (not probed).
+pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
+    let Some(start) = tokens
+        .iter()
+        .position(|t| matches!(t, TextToken::ElapsedSecond | TextToken::ElapsedSecondPadded))
+    else {
+        return;
+    };
+    let Some(target) = tokens[start..].iter().position(|t| {
+        matches!(
+            t,
+            TextToken::Hour | TextToken::HourPadded | TextToken::Minute | TextToken::MinutePadded
+        )
+    }) else {
+        return;
+    };
+    for token in tokens.iter_mut() {
+        *token = match token {
+            TextToken::ElapsedSecond => TextToken::Second,
+            TextToken::ElapsedSecondPadded => TextToken::SecondPadded,
+            _ => continue,
+        };
+    }
+    let moved = &mut tokens[start + target];
+    *moved = match moved {
+        TextToken::Hour => TextToken::ElapsedHour,
+        TextToken::HourPadded => TextToken::ElapsedHourPadded,
+        TextToken::Minute => TextToken::ElapsedMinute,
+        _ => TextToken::ElapsedMinutePadded,
+    };
+}
+
 /// Whether the token reads the serial's date or time of day (`d`, `mmm`, `h`, `ss`, `AM/PM`, an
 /// era): anything in a date section but literals, `General`, elapsed counts and fraction digits.
 pub(super) fn is_date_or_clock(token: &TextToken) -> bool {
