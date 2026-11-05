@@ -49,7 +49,15 @@ from collections.abc import Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.defs._common import DF_CUT, ill_conditioned
-from rustsheet_tools.accuracy.defs.gamma import CHI_SCALE, HUGE_SOURCE, lower_tail, quantile, upper_tail
+from rustsheet_tools.accuracy.defs.gamma import (
+    CHI_SCALE,
+    HUGE_SOURCE,
+    chi_shape,
+    deg_freedom_param,
+    lower_tail,
+    quantile,
+    upper_tail,
+)
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -75,7 +83,7 @@ FLOOR = mpmath.mpf("1e-300")  # the envelope's absolute floor (SPEC-0029)
 HUGE_SHAPE_NUM = 1e55
 # The largest shape drawn: Temme's expansion (gamma.py) is summed at about log10(a) more digits, and the chi-squared
 # functions stop at df 1E10 (shape 5E9).
-MAX_DRAWN_SHAPE = 1e10
+MAX_DRAWN_DIST_SHAPE = 1e10
 # Below e^this a value is 0 to the envelope's 1E-300 floor, and is recorded as 0: summing e^(-1E+67) at 60 and 80
 # digits gives values that differ in every digit, and the generator would drop the point. A tail is at most its
 # y g(y) times 1 / |a - y| from a distance of 1 from the mode, so it is below e^this where y g(y) is (and its
@@ -188,15 +196,10 @@ def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath
     return beta * quantile(q, a, upper=upper)
 
 
-def _chi_shape(df: MathArg) -> mpmath.mpf:
-    assert not isinstance(df, (bool, tuple))
-    return mpmath.floor(df) / 2
-
-
 def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df, cumulative = args
     assert not isinstance(x, (bool, tuple))
-    a = _chi_shape(df)
+    a = chi_shape(df)
     y = x / CHI_SCALE
     if cumulative:
         return _cdf(y, a, upper=False)
@@ -211,7 +214,7 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, df, cumulative = args
     if isinstance(x, (bool, tuple)) or isinstance(df, (bool, tuple)):
         return None
-    if not cumulative and x == 0 and _chi_shape(df) < 1:
+    if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
     return None
 
@@ -219,7 +222,7 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
     assert not isinstance(x, (bool, tuple))
-    return _cdf(x / CHI_SCALE, _chi_shape(df), upper=True)
+    return _cdf(x / CHI_SCALE, chi_shape(df), upper=True)
 
 
 def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
@@ -227,7 +230,7 @@ def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.m
     if isinstance(df, (bool, tuple)):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
-    return CHI_SCALE * quantile(q, _chi_shape(df), upper=upper)
+    return CHI_SCALE * quantile(q, chi_shape(df), upper=upper)
 
 
 def _x(typical: tuple[float, float], source: str) -> Param:
@@ -238,20 +241,6 @@ def _x(typical: tuple[float, float], source: str) -> Param:
         typical=typical,
         extreme=(1e-300, 1e300),
         source=source,
-    )
-
-
-def _df(truncates: str = "") -> Param:
-    """df from 1 to 1E10 (HUGE_SOURCE), drawn as an integer; `truncates` cites the entry showing Excel truncates it."""
-    return Param(
-        "deg_freedom",
-        "int",
-        Interval(1, DF_CUT, lo_open=False, hi_open=False),
-        typical=(1, 60),
-        extreme=(1e3, DF_CUT),
-        edges=(2.0,),
-        source=HUGE_SOURCE,
-        truncates=truncates,
     )
 
 
@@ -269,10 +258,10 @@ GAMMA_DIST = register(
                 "real",
                 Interval(0, float("inf")),
                 typical=(0.1, 50),
-                extreme=(1e-3, MAX_DRAWN_SHAPE),
+                extreme=(1e-3, MAX_DRAWN_DIST_SHAPE),
                 edges=(1.0,),
                 source=HUGE_SHAPE_SOURCE,
-                draw_hi=MAX_DRAWN_SHAPE,
+                draw_hi=MAX_DRAWN_DIST_SHAPE,
             ),
             Param(
                 "beta",
@@ -302,7 +291,7 @@ GAMMA_DIST = register(
 CHISQ_DIST = register(
     Definition(
         function="CHISQ.DIST",
-        params=(_x((0.01, 100), ZERO_SOURCE), _df(), _cumulative()),
+        params=(_x((0.01, 100), ZERO_SOURCE), deg_freedom_param(DF_CUT), _cumulative()),
         value=_chisq_dist,
         domain=_chisq_dist_domain,
         tail=_chi_tail_x,
@@ -314,7 +303,7 @@ CHISQ_DIST = register(
 CHISQ_DIST_RT = register(
     Definition(
         function="CHISQ.DIST.RT",
-        params=(_x((0.01, 100), ZERO_SOURCE), _df(RT_TRUNC_SOURCE)),
+        params=(_x((0.01, 100), ZERO_SOURCE), deg_freedom_param(DF_CUT, RT_TRUNC_SOURCE)),
         value=_chisq_dist_rt,
         tail=_chi_tail_x,
         tail_param="x",
