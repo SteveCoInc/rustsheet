@@ -506,13 +506,28 @@ fn regression_output(
     run().unwrap_or_else(|error| error)
 }
 
-/// The value of a const or stats argument, and whether it is typed (true) or the value of one
+/// The value of a const or stats argument, and whether it is typed (true) or the value of the
 /// cell it refers to, a LAMBDA's result included (`LAMBDA(acc,Data!B3)(..)` with B3 = " x " waits
-/// for the shapes, gen-m9 bbdfc06cae0e0d71 A324).
+/// for the shapes, gen-m9 bbdfc06cae0e0d71 A324). A range is its top-left cell
+/// ([`flag_range_value`]).
 fn flag_input(model: &mut Model, node: &Node, cell: CellReferenceIndex) -> (CalcResult, bool) {
     match model.evaluate_node_with_reference(node, cell) {
-        CalcResult::Range { left, right } if left == right => (model.evaluate_cell(left), false),
+        range @ CalcResult::Range { .. } => (flag_range_value(model, range), false),
         value => (value, true),
+    }
+}
+
+/// What a range given as LINEST's, LOGEST's, TREND's or GROWTH's const or stats reads as: the
+/// value of its top-left cell, whatever the range's size, the other cells, or the formula's row.
+/// It does not lift and is no implicit intersection: `LINEST(y,x,TRUE,Data!Z100:Z102)` in row
+/// 101 with Z100:Z102 = 1, 0, 1 is the 5x2 stats array, `TREND(y,x,6,Data!Z124:Z125)` with
+/// 1, `#N/A` is the TRUE call, and a text top-left cell is `#VALUE!`
+/// (probes/t4222-regression-flag-ranges A101, A124, A130; statistics.md "A range as const or
+/// stats reads its top-left cell"). Any other value is itself.
+pub(super) fn flag_range_value(model: &mut Model, value: CalcResult) -> CalcResult {
+    match value {
+        CalcResult::Range { left, .. } => model.evaluate_cell(left),
+        value => value,
     }
 }
 
@@ -530,7 +545,10 @@ fn flag_value(
     cell: CellReferenceIndex,
 ) -> Flag {
     match value {
-        CalcResult::EmptyArg | CalcResult::EmptyCell => Ok(Ok(default)),
+        CalcResult::EmptyArg => Ok(Ok(default)),
+        // A blank cell is FALSE, not the default: `LINEST(y,x,Data!Z151,FALSE)` with Z151 blank
+        // fits through the origin (probes/t4222-regression-flag-ranges A154).
+        CalcResult::EmptyCell => Ok(Ok(false)),
         CalcResult::Boolean(b) => Ok(Ok(b)),
         CalcResult::Number(n) => Ok(Ok(n != 0.0)),
         err @ CalcResult::Error { .. } => Err(err),
