@@ -2,10 +2,12 @@
 
 Reads dump.py's table (today's engine as `base`, the engine with `GEOMETRIC_MIN_LEAD` 0 as `geo`). A selector is one
 to three conditions, all of which must hold, from these atoms: the type, a rate cut, a lead cut and a period-count
-cut. Where it holds and the two builds differ, a cell takes `geo`'s value, else `base`'s. Selectors that put an old
-cell (fit `cumulative`) newly visibly off are dropped. The rest are ranked by the bit-exact gain over the cut on the
-train side of the old cells, then by the old visibly-off cells fixed, then by fewer conditions; the first is frozen.
-The test side and the two T-3524 sweeps are printed beside it but take no part in the ranking.
+cut. Where it holds and the two builds differ, a cell takes `geo`'s value, else `base`'s. Only the train side of the
+old cells (fit `cumulative`, the fit lab's fixed split) decides: selectors that put a train cell newly visibly off are
+dropped, and the rest are ranked by the bit-exact gain over the cut there, then by the train cells' visibly-off cells
+fixed, then by fewer conditions; the first is frozen. The test side and the two T-3524 sweeps are printed beside it
+but take no part in the filter or the ranking. (T-4349 round 1 filtered on every old cell, the held-out ones too;
+on the train side alone the same selector comes first.)
 
 Run: python3 docs/research/t4349/select.py rows.tsv
 """
@@ -58,13 +60,13 @@ def main() -> None:
                 for side, member in SIDES.items():
                     if member(r):
                         gain[side] += delta
-                if r["fit"] == "cumulative":
+                if SIDES["train"](r):
                     new_visible += r["base_vis"] == "0" and r["geo_vis"] == "1"
                     fixed_visible += r["base_vis"] == "1" and r["geo_vis"] == "0"
             if new_visible == 0 and gain["train"] > 0:
                 ranked.append((-gain["train"], -fixed_visible, k, " & ".join(combo), gain, fixed_visible))
     ranked.sort(key=lambda x: x[:3])
-    print("selector\ttrain\ttest\tfresh\ttiny\told visibly fixed")
+    print("selector\ttrain\ttest\tfresh\ttiny\ttrain visibly fixed")
     for *_, name, gain, fixed in ranked[:20]:
         print(f"{name}\t{gain['train']}\t{gain['test']}\t{gain['fresh']}\t{gain['tiny']}\t{fixed}")
 

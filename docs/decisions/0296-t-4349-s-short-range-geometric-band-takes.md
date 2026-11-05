@@ -1,7 +1,9 @@
-# 0296 — T-4349's short-range geometric band takes decision 0083's ulp allowance for seven CUMPRINC cells
+# 0296 — T-4349's short-range geometric band: seven CUMPRINC cells one ulp off, on decision 0083's conditions
 
-- **Status:** accepted (2026-11-05, T-4349). It applies decision 0188 R4 and decision 0083's standing ulp allowance,
-  answers decision 0295's open question for one band, and adds no rule.
+- **Status:** accepted (2026-11-05, T-4349). It applies decision 0188 R4. T-4349 is not a `campaign: visible` task,
+  so decision 0083's standing allowance does not cover it: this record is its own allowance for the seven cells
+  below, held to 0083's four conditions. It answers decision 0295's question for one band and files the rest as an
+  owner ruling (T-4400).
 - **Context:**
   - Decision 0295 kept CUMPRINC and CUMIPMT's short-range cut `GEOMETRIC_MIN_LEAD` (0.3) and asked T-4349 for a
     decider that beats it on test and on a fresh sweep drawn after its freeze.
@@ -9,13 +11,21 @@
     between the two forms could be scored without another build (docs/research/t4349/dump.py; the live build gave
     the same counts). Over the 923 old and T-3524 cells where the forms differ each is bit-exact on only about 30% (265 and 286), so neither is
     Excel's algorithm there and no selector replaces the cut outright.
-  - Selectors of one to three conditions on the type, the rate, the lead and the period count were ranked on the
-    train side of the old cells (fit `cumulative`, the fit lab's fixed split), keeping only those that put no old cell
-    newly visibly off. The first is the band: at most 4 periods, rate at least 1E-3, lead below 0.095. Against the
+  - Selectors of one to three conditions on the type, the rate, the lead and the period count, at cut-points fixed
+    before scoring, were ranked on the train side of the old cells only (fit `cumulative`, the fit lab's fixed split),
+    keeping only those that put no train cell newly visibly off (round 1 filtered on held-out cells too; on the train
+    side alone the same selector is first). The first is the band: at most 4 periods, rate at least 1E-3, lead below 0.095. Against the
     cut, bit-exact: train 403 vs 386 of 880, held out 156 vs 149 of 358, T-3524's sweeps 574 vs 566 and 475 vs 475
     of 1,000; on the sweep drawn after the freeze (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep) 299 vs
     258 of 800. Visibly off: 45 vs 47 (train), 14 vs 16 (test), 57 vs 61, 140 vs 140 and 190 vs 216 (51 new, 77
-    fixed, all CUMIPMT).
+    fixed, all CUMIPMT). Within 4 ulps (the oracle's reproducibility floor, R4.4): train 825 vs 827, test 340 vs
+    342, T-3524 fresh 922 vs 926, tiny 835 vs 835, the new sweep 542 vs 558; where the forms differ by more than 4
+    ulps the band is closer on 133 cells of the new sweep and the cut on 87.
+  - R4.1 (`rustsheet-fitlab cumulative` and `cumulative-short` at the PR head), bit-exact / within 4 ulps / within 15
+    digits, the engine against the correctly rounded candidate: old train 403/827/835 vs 252/709/723 of 880, old test
+    156/342/344 vs 106/298/303 of 358 (train 45.8%, test 43.6%, within the 5-point margin: accepted); new sweep
+    216/401/435 vs 120/331/390 of 566 and 83/157/176 vs 57/148/167 of 234 (accepted). Gate A on the new sweep: 800 of
+    800 within 1e-9 of the 50-digit value (`kernels.cumulative.exact`), none outside, max 1,024 ulps.
   - The band costs seven gated cells, bit-exact before and 1 ulp off now, each within 15 digits:
     | cell | call | Excel | ours |
     |---|---|---|---|
@@ -36,8 +46,10 @@
     sum below `GEOMETRIC_MIN_LEAD`, with one `FITTED(T-4349, ...)` tag over its three constants; quality/fitted.json
     rises by one for this fit (`scripts/check_fitted.py --update`).
   - `rustsheet-eval update-baseline --allow-regressions` runs once in the T-4349 PR, for the seven cells above alone.
-  - `GEOMETRIC_MIN_LEAD` stays as decision 0295 records it: T-4349 found no decider that replaces it.
+  - `GEOMETRIC_MIN_LEAD` stays as decision 0295 records it: T-4349 found no decider that replaces it, and filed the
+    ruling decision 0295 asks for as T-4400. Its `FITTED` range is tightened to where it decides (a lead below 0.3,
+    so rates below 0.35): 2,241 cells, old probes at rates 1E-300 to 0.1 and the fresh sweeps 1E-12 to 0.35.
 - **Consequences:** eval/baseline/probes.txt gains exactly the seven lines above and loses the fixed cells' lines;
   reviewers confirm the baseline diff adds no other line. T-4390 owns the seven cells and the visibly-off cells of
   the three short-range sweeps. Decision 0295's owner question (decision 0083's order against R4.3 for the cut
-  itself) stays open until T-4390 finds Excel's own form or shows none.
+  itself) is T-4400; T-4390 may make it moot by finding Excel's own form.

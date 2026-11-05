@@ -51,7 +51,9 @@ const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 /// 0295's recorded deviation from R4.3: the leading exponent alone does not decide Excel's form
 /// there. T-4349 found no decider that replaces it; it carved out [`short_takes_geometric`]'s
 /// band below it instead (TODO(T-4390)).
-/// FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes rate 1E-300..1E300; cut a fit in 0.095..0.398)
+/// It decides only below a lead of 0.3, so at rates below 0.35 (`ln 1.35` is 0.3); T-4349 tightened the range to
+/// the cells there.
+/// FITTED(T-3524, 2241 cells, at most 32 periods and lead below 0.3; old probes rate 1E-300..0.1, fresh sweeps 1E-12..0.35; cut a fit in 0.095..0.398)
 const GEOMETRIC_MIN_LEAD: f64 = 0.3;
 
 /// The most periods of [`short_takes_geometric`]'s band (part of its fit).
@@ -66,15 +68,16 @@ const SHORT_GEOMETRIC_MAX_LEAD: f64 = 0.095;
 /// Whether a short range below [`GEOMETRIC_MIN_LEAD`] still takes the geometric sum: at most 4
 /// periods, a rate of at least 1E-3 and a leading exponent below 0.095 (so a rate below about
 /// 0.0997, where `ln(1+rate)` is a lead of one period). A fit (decision 0188 R4, T-4349,
-/// decision 0296): of the selectors built from the type, the rate, the lead and the period count
-/// (one to three conditions), it gained the most bit-exact cells on the train side of the old
-/// cells (+17) with no cell newly visibly off, then +7 on their held-out side and, on a sweep drawn
-/// after it was frozen (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep), 299 against the
-/// cut's 258 of 800 to the bit and 190 against 216 visibly off: `CUMIPMT(0.01,1E6,1,999998,1E6,0)`
-/// (probes/fin-cumprinc-underflow-ends I3) is 64 ulps off with the cut and exact with it. The band
-/// stops below 0.095 because at a rate of 0.1, one period from nper (lead `ln 1.1`), the cut's
-/// forms are Excel's (fin-cumprinc-near-1e15 C2, C4; fin-cumprinc-underflow-ends C2, C4, H2, H4).
-/// FITTED(T-4349, 4038 cells, 1 to 4 periods; rate 1E-3..0.0997; lead ln(1+rate)..0.095; pv 1..1E7 fresh, old probes nper to 1E15)
+/// decision 0296): the selectors were every conjunction of one to three conditions on the type,
+/// the rate, the lead and the period count, at cut-points fixed before scoring (the lead's at
+/// T-3524's bucket edges, 0.095 among them). Ranked on the train side of the old cells only, with
+/// none that puts a train cell newly visibly off, it came first (+17 bit-exact); then +7 on the
+/// held-out side and, on a sweep drawn after it was frozen
+/// (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep), 299 against the cut's 258 of 800
+/// to the bit, 558 against 542 within 4 ulps and 190 against 216 visibly off:
+/// `CUMIPMT(0.01,1E6,100000,1E6-2,1E6,0)` (probes/fin-cumprinc-underflow-ends I3) is 64 ulps off
+/// with the cut and exact with it.
+/// FITTED(T-4349, 4038 cells, where it applies: 1 to 4 periods, rate 1E-3 up and lead below 0.095, so rate below 0.0997)
 fn short_takes_geometric(rate: f64, periods: f64, lead: f64) -> bool {
     periods <= SHORT_GEOMETRIC_MAX_PERIODS
         && rate >= SHORT_GEOMETRIC_MIN_RATE
@@ -265,12 +268,18 @@ impl Periods {
     /// The least leading exponent from which a short range takes the geometric sum:
     /// [`GEOMETRIC_MIN_LEAD`], or 0 inside [`short_takes_geometric`]'s band.
     fn short_min_lead(&self) -> f64 {
-        let lead = (self.nper - self.end + 1.0) * growth_log(self.rate);
+        let lead = self.leading_exponent(growth_log(self.rate));
         if short_takes_geometric(self.rate, self.end - self.start + 1.0, lead) {
             0.0
         } else {
             GEOMETRIC_MIN_LEAD
         }
+    }
+
+    /// The leading discount's exponent `(nper-end+1)·L`, from L ([`growth_log`]): the one power
+    /// of [`Periods::geometric_principal`] and what the form cuts compare.
+    fn leading_exponent(&self, log_growth: f64) -> f64 {
+        (self.nper - self.end + 1.0) * log_growth
     }
 
     /// Type 0's principal over a short range, which its interest's `-pmt·m - principal` shares
@@ -392,7 +401,7 @@ impl Periods {
         } else {
             self.start
         };
-        let lead = (self.nper - self.end + 1.0) * log_growth;
+        let lead = self.leading_exponent(log_growth);
         if self.end < first || lead < min_lead {
             return None;
         }

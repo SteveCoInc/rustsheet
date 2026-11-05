@@ -22,7 +22,7 @@ double-precision form reproduces it.
   (`short_takes_geometric` in functions/financial/cumulative.rs, decision 0296) is the best selector between them it
   found, not Excel's form. The CUMIPMT cells are visibly off because the interest carries an ulp of the principal or
   of PMT as tens to thousands of its own ulps (T-3118).
-- Owns the seven cells T-4349 moved from bit-exact to 1 ulp off under decision 0083's allowance (decision 0296):
+- Owns the seven cells T-4349 moved from bit-exact to 1 ulp off under decision 0296 (decision 0083's conditions):
   probes/fin-cumprinc-near-1e15 Sheet1!B2, B3; probes/fin-cumprinc-single-period-rate-scan Sheet1!K52, K57, K59;
   probes/fin-cumprinc-underflow-ends Sheet1!D2, D3.
 - Owns the visibly-off cells of probes-numeric/t4349-cumprinc-short-selector-fresh-sweep (190, all CUMIPMT):
@@ -33,6 +33,8 @@ double-precision form reproduces it.
   ones may reach them, otherwise file them on.
 - Candidate causes to test first: a per-period PPMT sum built as PMT less IPMT (Excel's ToolPak loop) in doubles,
   the order of `pmt·series·v^lead`, and Excel's own `ln(1+rate)` (an ulp off libm at some rates, T-2521).
+- T-4349's post-freeze sweep drew only inside its band; a fresh sweep here should also take rows just outside it (5
+  periods, rates just below 1E-3, leads in 0.095..0.3), where the band's edges were never probed after the freeze.
 - A new selector or form chosen by scoring oracle cells is a fit: decision 0188 R4 (hold-out, a fresh sweep drawn
   after the freeze, `FITTED` tag).
 

@@ -2330,7 +2330,7 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   cells where the engine's two short-range forms differ (923 of 3,238 old and T-3524 cells), each is bit-exact on only
   about 30%, the per-period and closed forms on 265 and the geometric sum on 286, so Excel computes something else
   there and no selector between the two replaces the cut. The best one found, ranked on the old cells' train side with
-  no old cell newly visibly off, is a band: at most 4 periods, rate at least 1E-3, lead below 0.095 takes the
+  no train cell newly visibly off, is a band: at most 4 periods, rate at least 1E-3, lead below 0.095 takes the
   geometric sum. On a sweep drawn after it was frozen (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep,
   excel-graph 2026-11-05, 800 cells over 1 to 4 periods, rates 1E-3 to 0.0997, leads up to 0.095, both types) it
   is bit-exact on 299 against the cut's 258 and visibly off on 190 against 216 (all CUMIPMT). At a rate of 0.1 one
