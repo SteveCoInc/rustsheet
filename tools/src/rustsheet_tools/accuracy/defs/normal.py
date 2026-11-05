@@ -226,7 +226,9 @@ def inv_cancels(p: float, mean: float, sd: float) -> bool:
         return bool(abs(total) < INV_CANCEL * max(abs(mpmath.mpf(mean)), abs(term)))
 
 
-def _inv_p(stratum: str, rng: random.Random) -> float:
+def inverse_probability(stratum: str, rng: random.Random) -> float:
+    """A quantile's probability for `stratum`: tails down to 1E-300 on either side, the PPND16 region edges, and
+    the evidenced 5E-309 (NORM.INV, NORM.S.INV and LOGNORM.INV share it)."""
     if stratum in ("tail", "extreme"):
         q = log_uniform(rng, 1e-300, 1e-15) if stratum == "extreme" else log_uniform(rng, 1e-15, 1e-3)
         return 1 - q if rng.random() < 0.3 and q > 1e-15 else q
@@ -252,7 +254,7 @@ def _draw_norm_inv(stratum: str, rng: random.Random) -> list[Arg]:
     """NORM.INV's point: p from the stratum's probability range, mean and sd beside it, outside the cancellation
     region; a mean + sd*z beyond the double range is redrawn."""
     for _ in range(REDRAWS):
-        p = float(f"{_inv_p(stratum, rng):.15g}")
+        p = float(f"{inverse_probability(stratum, rng):.15g}")
         mean, sd = _inv_mean_sd(stratum, rng)
         mean, sd = float(f"{mean:.15g}"), float(f"{sd:.15g}")
         if 0 < p < 1 and sd > 0 and not inv_cancels(p, mean, sd):
@@ -261,7 +263,7 @@ def _draw_norm_inv(stratum: str, rng: random.Random) -> list[Arg]:
 
 
 def _draw_norm_s_inv(stratum: str, rng: random.Random) -> list[Arg]:
-    p = float(f"{_inv_p(stratum, rng):.15g}")
+    p = float(f"{inverse_probability(stratum, rng):.15g}")
     return [p if 0 < p < 1 else 0.5]
 
 
