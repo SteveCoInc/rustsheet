@@ -3,7 +3,7 @@ id: T-4003
 title: "A table filterColumn with no criterion or a colId outside the table leaves its hidden rows unfiltered for SUBTOTAL and AGGREGATE"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
