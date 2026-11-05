@@ -71,8 +71,8 @@ Input conventions:
   the first row of `ref` and must hold literal text. With `"filter": true` spec2xlsx gives the table's
   autoFilter a values filter on its first column that keeps exactly the visible data rows (those
   cells must be literal text or whole numbers, and no value may be both kept and hidden), so Excel
-  reads the hidden rows as filtered. `"filter_col_id": 5` writes that values filter under `colId` 5 (0 or past the
-  table's last column) and `"filter_criterion": false` writes a criterion-less `<filterColumn colId="N"/>`; Excel
+  reads the hidden rows as filtered. `"filter_column": {"col_id": 5}` writes that values filter under `colId` 5 (0 or
+  past the table's last column) and `"criterion": false` there writes a criterion-less `<filterColumn colId="N"/>`; Excel
   reads neither as filtered, so the adapter adds such a table unfiltered (T-4003). The engine adapter loads both
   through `Txn::add_table` and `Txn::set_row_hidden`. With `"totals_row": true` the last row of `ref` is the table's totals row; its
   cells must be labels or formulas, which spec2xlsx writes with the totals-row metadata Excel needs. The

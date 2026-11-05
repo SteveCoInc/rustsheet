@@ -77,7 +77,9 @@
           "name": "SalesNC",
           "ref": "A1:B7",
           "filter": true,
-          "filter_criterion": false
+          "filter_column": {
+            "criterion": false
+          }
         }
       ]
     },
@@ -114,8 +116,10 @@
           "name": "SalesNC1",
           "ref": "A1:B7",
           "filter": true,
-          "filter_col_id": 1,
-          "filter_criterion": false
+          "filter_column": {
+            "col_id": 1,
+            "criterion": false
+          }
         }
       ]
     },
@@ -153,7 +157,9 @@
           "name": "SalesPast",
           "ref": "A1:B7",
           "filter": true,
-          "filter_col_id": 5
+          "filter_column": {
+            "col_id": 5
+          }
         }
       ]
     },

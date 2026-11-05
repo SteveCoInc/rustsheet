@@ -546,7 +546,11 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
 /// AGGREGATE over hidden and filtered rows").
 fn filters_hidden_rows(table: &TableSpec, range: RangeRef) -> bool {
     let width = (u64::from(range.right) + 1).saturating_sub(u64::from(range.left));
-    table.filter && table.filter_criterion && u64::from(table.filter_col_id) < width
+    table.filter
+        && table
+            .filter_column
+            .as_ref()
+            .is_none_or(|c| c.criterion && u64::from(c.col_id) < width)
 }
 
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.

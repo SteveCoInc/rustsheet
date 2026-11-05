@@ -46,8 +46,8 @@ Conventions (normative; mirrored by the Rust engine adapter in crates/rustsheet-
     (data from its first row, columns `Column1`, ...; no filter or calculated column, T-3260). With `"filter": true` the table's autoFilter
     gets a values filter on its first column that keeps exactly the visible data rows, so the hidden rows
     inside the table are the rows the filter hides; that column's data cells must be literal numbers or
-    text, and no value may be both kept and hidden. `"filter_col_id": 5` writes that values filter
-    under `colId` 5, which must be 0 or past the table's last column, and `"filter_criterion": false`
+    text, and no value may be both kept and hidden. `"filter_column": {"col_id": 5}` writes that values
+    filter under `colId` 5, which must be 0 or past the table's last column, and `"criterion": false` there
     writes `<filterColumn colId="N"/>` with no criterion; Excel reads neither as filtered, and the
     engine adapter loads such a table unfiltered (T-4003). The engine adapter loads both. With
     `"totals_row": true` the last row of `ref` is the totals row: its cells (labels or formulas) are

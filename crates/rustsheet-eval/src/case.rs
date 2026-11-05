@@ -179,14 +179,10 @@ pub struct TableSpec {
     pub range: String,
     #[serde(default)]
     pub filter: bool,
-    /// The filtered column's `colId` (0-based in the table; default 0). A `colId` past the
-    /// table's width makes a filter Excel does not apply to the hidden rows (T-4003).
-    #[serde(default)]
-    pub filter_col_id: u32,
-    /// `false`: the filter's `<filterColumn>` holds no criterion, which Excel does not call
-    /// filtered (T-4003). Default `true`: spec2xlsx's values filter.
-    #[serde(default = "crate::suite::default_true")]
-    pub filter_criterion: bool,
+    /// How spec2xlsx writes the filter's `<filterColumn>` (T-4003); `None`: a values filter
+    /// under `colId` 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter_column: Option<FilterColumnSpec>,
     /// The last row of `range` is the table's totals row (T-1607; the engine adapter adds it with
     /// `Txn::add_table_with_totals`, T-1671).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -202,6 +198,20 @@ pub struct TableSpec {
     /// each with `Txn::set_table_column_formula` (T-3033).
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub calculated: BTreeMap<String, String>,
+}
+
+/// The `<filterColumn>` of a filtered spec table (T-4003): Excel calls the hidden rows filtered
+/// only for a criterion inside the table.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FilterColumnSpec {
+    /// The column's `colId` (0-based in the table); a values filter's must be 0 or past the
+    /// table's last column, since it lists the first column's values.
+    #[serde(default)]
+    pub col_id: u32,
+    /// `false`: the filterColumn holds no criterion.
+    #[serde(default = "crate::suite::default_true")]
+    pub criterion: bool,
 }
 
 /// A what-if data table in a spec sheet: `ref` holds its result cells; `row_input` alone is a

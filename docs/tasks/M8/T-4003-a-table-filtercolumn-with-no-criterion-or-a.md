@@ -41,7 +41,7 @@ criterion inside the table, as Excel does.
 - Re-applying a filter. Top 10 and other criteria the export drops (T-4004).
 
 ## Outcome
-- Durable evidence: spec2xlsx gains `"filter_col_id"` and `"filter_criterion": false` (TableSpec in
+- Durable evidence: spec2xlsx gains `"filter_column": {"col_id", "criterion"}` (`FilterColumnSpec` in
   crates/rustsheet-eval/src/case.rs, docs/architecture/eval-harness.md), and probes/t4003-filter-column-criterion
   (5 sheets, 30 cells, excel-graph 2026-11-05) covers a values filter, a criterion-less filterColumn on columns 0 and
   1, a values filter under `colId` 5 of a 2-column table, and a table without a filter, each with SUBTOTAL 3, 103, 9,
