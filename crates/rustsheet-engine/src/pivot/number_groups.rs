@@ -176,7 +176,7 @@ impl NumberGroups {
     /// `start + k * interval` as text coercion writes it (15 digits, plain decimal: `0.00001`, not
     /// General's `1E-05`; probes/t4253-pivot-decimal-relabel). That it is the coercion rule past
     /// the probed bounds (1e15 or more, below 1e-5, a 15-digit tie) and the labels of whole data
-    /// with an `end` that is not whole are UNVERIFIED (T-4291); the 20-character plain limit also
+    /// with an `end` that is not whole are UNVERIFIED (T-4287); the 20-character plain limit also
     /// keeps a label short for a file-controlled range.
     #[must_use]
     pub fn labels(&self, n: usize) -> Vec<String> {
@@ -289,6 +289,7 @@ pub fn group_by_numbers(
         date_groups: None,
     })
 }
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, reason = "tests")]
@@ -543,6 +544,7 @@ mod tests {
         );
         assert!(identity.unwrap().number_groups.unwrap().order.is_empty());
     }
+
     /// Pivot 3: six file items for a five-item layout; Excel lists `<0`, `>9`, `0-3`, `3-6`, `6-9`:
     /// the file's `<0` and `>9` are Excel's labels too, so they come first.
     #[test]
