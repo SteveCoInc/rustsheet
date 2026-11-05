@@ -34,6 +34,17 @@ step), which T-2513 left open.
   A202:A203, A206, A209:A212, A215, A218, A220:A221, A224, A226:A229, A233, A236:A237, A239:A240, A245, A251,
   A254:A256, A258, A264, A267:A269, A272, A274, A279, A288, A294, A297:A299, A301, A304, A306, A311,
   A314:A315, A317:A318, A320, A361:A363, A373, A376, A378, A382, A385, A393, A398 (131 cells).
+- Visibly-off gen-m9 pmf cells no task named (`scripts/exit_owners.py --unattributed` on c5fdf6bd3, Excel then engine),
+  owned here: 2138b909d8f810ea Calc!A45 `NEGBINOMDIST(10,DAY(42697),0.999999)` 6.451075625335091E-53 vs ...129E-53;
+  27601819397dd56e Calc!A280 `BINOMDIST(3,6,1E-16,...)` 2.0000000000000043E-47 vs 1.9999999999999905E-47;
+  gen-m9/44a8841352dc48e9 Calc!A157 `STANDARDIZE(...,NEGBINOMDIST(7,9,0.025))` -2042715136323.223 vs ...228;
+  583ca2baea0bb30a Calc!A123 `NEGBINOM.DIST(7,2.5,1-1E-10,...)` 8.000004631861894E-70 vs ...933E-70;
+  607e85cfee83a689 Calc!A258 `NEGBINOM.DIST(SUM(...),9,0.5,...)` 4.0054898597929714E-07 vs ...978E-07;
+  6e18550e9fc9c1b9 Calc!A5 `NEGBINOM.DIST(6,Data!B8,2.5%,...)` 5.4696773655614074E-61 vs ...428E-61;
+  9bc247733a1ca9fa Calc!A340 `NEGBINOMDIST(CEILING.PRECISE(...),8,...)` 1.3262698904326607E-23 vs ...504E-23;
+  b9a32ce9a1fd0d71 Calc!A43 `NEGBINOMDIST(...,100,...)` 1.3139181131891553E-265 vs ...209E-265;
+  c2684066d8df263e Calc!A149 `NEGBINOMDIST(CODE(Data!C1),8,1E-10)` 1.3378455939797276E-72 vs ...6992E-72.
+  They are attributed to no function only because each formula calls a second non-glue function.
 - T-2146's remaining gated pmf cells (gen-m9 NEGBINOMDIST tails at p 1E-20 to 1E-10 and 1 - 1E-10 to 1 - 1E-16)
   and the T-2513 probes are the train set. Keep t2513-r3-binom-pmf-hold and t2513-verify-r3-binom-pmf-h as
   the hold-out, and draw a fresh sweep after the freeze (decision 0188 R4).
