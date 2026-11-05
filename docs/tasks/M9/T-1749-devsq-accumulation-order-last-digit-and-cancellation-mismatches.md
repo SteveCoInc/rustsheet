@@ -3,7 +3,7 @@ id: T-1749
 title: "DEVSQ accumulation order: last-digit and cancellation mismatches (probes/stat-order-floor-batch)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
