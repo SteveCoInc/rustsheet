@@ -375,31 +375,45 @@ impl Parser {
     }
 
     /// The name a use written `name` (used or called) reads, before the end of the parse drops
-    /// the `_xlpm.` prefix from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
-    /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). The R1C1 storage
-    /// form also prefixes a name that would read back as something else (`variable_text`,
-    /// `callee_text`), so there one prefix is the storage's own, dropped, and two are the name's
-    /// own. In A1 text, two prefixes on a name spelled like an A1 cell are the quoted `'f1'` of a
-    /// formula typed in R1C1 mode (`to_english_string_typed_from_r1c1`); otherwise any number
-    /// reads as one.
+    /// the `_xlpm.` mark from the bound ones (`call_names::settle_lambda_prefixes`): an unbound
+    /// name written with its prefix keeps it, as FORMULATEXT shows it (T-4099). In a file (A1
+    /// text, not typed) exactly one prefix is the mark, so a name keeps every prefix it was
+    /// written with until the end of the parse decides whether one of them is the mark: a file's
+    /// `_xlpm._xlpm.f1` is the undefined name FORMULATEXT shows `=_xlpm._xlpm.f1`
+    /// (probes/t4224-doubled-xlpm-prefix A1:C2, T-4224). The R1C1 storage form prefixes a name
+    /// that would read back as something else (`variable_text`, `callee_text`), so there exactly
+    /// one prefix is the storage's own, dropped here, and any more are the name's own. Typed, two
+    /// prefixes on a name spelled like an A1 cell in A1 text are the quoted `'f1'` of a formula
+    /// typed in R1C1 mode (`to_english_string_typed_from_r1c1`); otherwise any number reads as
+    /// one (TODO(T-4288): Excel reads a typed `_xlpm.` as part of the name).
     ///
-    /// | prefixes | R1C1 storage form | typed R1C1 | A1 text                                 |
-    /// |----------|-------------------|------------|-----------------------------------------|
-    /// | 0        | `f1`              | `f1`       | `abc`                                   |
-    /// | 1        | `f1` (its mark)   | `_xlpm.f1` | `_xlpm.f1`                              |
-    /// | 2 or more| `_xlpm.f1`        | `_xlpm.f1` | `'f1'` if spelled like a cell, else one |
+    /// | prefixes | R1C1 storage form    | A1 text (a file) | typed R1C1 | typed A1                   |
+    /// |----------|----------------------|------------------|------------|----------------------------|
+    /// | 0        | `f1`                 | `f1`             | `f1`       | `abc`                      |
+    /// | 1        | `f1` (its mark)      | `_xlpm.f1`       | `_xlpm.f1` | `_xlpm.f1`                 |
+    /// | 2        | `_xlpm.f1`           | `_xlpm._xlpm.f1` | `_xlpm.f1` | `'f1'` if spelled like a cell, else one |
     fn written_lambda_name(&self, name: &str) -> String {
+        if self.storage_form() {
+            return name.strip_prefix("_xlpm.").unwrap_or(name).to_string();
+        }
+        if !self.typed {
+            return name.to_string();
+        }
         let bare = name.trim_start_matches("_xlpm.");
         let prefixes = (name.len() - bare.len()) / "_xlpm.".len();
-        let storage_form = !self.lexer.is_a1_mode() && !self.typed;
         let quoted_from_r1c1 = self.lexer.is_a1_mode() && spelled_like_a1_cell(bare);
         match prefixes {
             0 => bare.to_string(),
-            1 if storage_form => bare.to_string(),
             1 => format!("_xlpm.{bare}"),
             _ if quoted_from_r1c1 => format!("'{bare}'"),
             _ => format!("_xlpm.{bare}"),
         }
+    }
+
+    /// Whether the text being parsed is the R1C1 storage form (R1C1 grammar, not typed), whose
+    /// `_xlpm.` prefix is its own mark ([`Parser::written_lambda_name`]).
+    pub(super) fn storage_form(&self) -> bool {
+        !self.lexer.is_a1_mode() && !self.typed
     }
 
     /// Whether an enclosing LET or LAMBDA binds `name` ([`Parser::bind_name`]),
@@ -468,8 +482,16 @@ impl Parser {
         // the variable is `_xlpm.Sum(` too, and a bare `SUM(` is the function.
         if let (TokenType::Ident(_), Node::NamedVariableKind { name, id }) = (token, &node) {
             // A declaration is bound by definition: it drops the prefix a use keeps until the
-            // end of the parse.
-            let name = name.trim_start_matches("_xlpm.").to_string();
+            // end of the parse. In a file exactly one prefix is the mark: `_xlpm._xlpm.x`
+            // declares `_xlpm.x`, which FORMULATEXT shows (probes/t4224-doubled-xlpm-prefix A8,
+            // T-4224); the storage form's mark is already gone ([`Parser::written_lambda_name`]).
+            let name = if self.storage_form() {
+                name.clone()
+            } else if self.typed {
+                name.trim_start_matches("_xlpm.").to_string()
+            } else {
+                name.strip_prefix("_xlpm.").unwrap_or(name).to_string()
+            };
             if !text.trim_start().starts_with("_xlpm.") {
                 self.bound_names.push(name.clone());
             }
