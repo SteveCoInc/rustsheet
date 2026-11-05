@@ -2368,6 +2368,7 @@ C	probes/text-result-limit-errors-refs.case.json	24
 C	probes/text-result-limit-errors.case.json	11
 C	probes/text-result-limit.case.json	24
 C	probes/text-scalar-edges.case.json	63
+C	probes/text-scientific-edges.case.json	56
 C	probes/text-search-casefold-length.case.json	24
 C	probes/text-surrogate-positions.case.json	68
 C	probes/text-text-value-sections.case.json	20

@@ -3,7 +3,7 @@ id: T-2230
 title: "Probe TEXT scientific edge cases: E+ with no exponent digits, lowercase e, multi-# zero mantissa"
 milestone: M10
 lane: functions-text
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ Unevidenced:
 
 ## Out of scope
 - The CONFLICTING web-vs-desktop lowercase `e` question itself (T-1075).
+
+## Outcome
+Probe probes/text-scientific-edges (56 cells, excel-graph) added. It found 16 cells where `E+`/`E-` with no exponent digit is `#VALUE!` (we printed `E`) and 1 where a `?` integer placeholder prints 0 on a zero mantissa; both fixed in `formatter/parser.rs` and `format.rs`. 56/56 pass. Lowercase `e` already matched (`#VALUE!`).
