@@ -92,3 +92,23 @@ Gate A envelope:
 
 Eval delta: probes known failures 4980 -> 4950 (30 fixed, 0 regressions, 4 new cases all passing: 190, 106, 106 and
 106 cells). probes/t4236-pivot-date-groups (335/335) and -no-blank (349/349) now pass in full.
+
+## Landing notes
+- PR #3299 (draft). Head 0c9bec9d7 is round 1's fix commit, together with this note's commit.
+- Reviews on acbc7ac5f: security APPROVE; design APPROVE (its optional "do not simplify" note is applied); excel-fidelity
+  REQUEST_CHANGES (R4 record). Round 1's fix:
+  - added probes/t4261-pivot-half-second-fresh-3, an unbiased log-uniform sweep written after the freeze (48/48 for
+    the frozen model; 44 for `x*86400`; 27 for exact correct rounding);
+  - rewrote the Outcome's R4 section with the per-case table and the Gate A envelope line;
+  - marked the startDate/endDate path UNVERIFIED in web.md.
+  Excel-fidelity has not re-reviewed this head.
+- Open blocker: `make eval-math-check` fails. probes/t4261-pivot-half-second's HOUR and SECOND cells (Calc D1:E36)
+  have no math sidecar yet. `cd tools && uv run rustsheet-accuracy math --suite probes` regenerates it, but it takes
+  over 20 minutes here, and the window closed before it finished. Commit only
+  `t4261-pivot-half-second.math.json` (and any other t4261 sidecar it writes). The same run also rewrites
+  m9-bessel-order-limits, t2546-bessel-past-cap and t2881-besselj-turning-point `.math.json`: do not commit those,
+  they are unrelated to this task.
+- Next: push the sidecar, wait for CI green, re-run reviewer-excel-fidelity on the new head, mark the PR ready and
+  enqueue.
+- Do not repeat: scoring a hold-out alongside its training counts, or choosing a model on the fresh sweeps. The
+  Outcome records both slips; any further model change needs a new pre-split case.
