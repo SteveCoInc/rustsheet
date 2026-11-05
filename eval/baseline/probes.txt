@@ -2176,6 +2176,10 @@ C	probes/t4283-xirr-whole-day-date-bound.case.json	10
 C	probes/t4284-lotus-dot-ws-after-dollar-space-after-dotdot.case.json	5
 C	probes/t4284-lotus-dot-ws-after-dollar-space-after.case.json	5
 C	probes/t4284-lotus-dot-ws-after-lf-after.case.json	5
+C	probes/t4287-pivot-group-bound-text.case.json	114
+C	probes/t4287-pivot-group-dates-as-numbers.case.json	36
+C	probes/t4287-pivot-group-label-match.case.json	84
+C	probes/t4287-pivot-group-whole-end.case.json	90
 C	probes/t4290-gamma-window-large-pow2.case.json	930
 C	probes/t4291-poisson-far-above-mean.case.json	48
 C	probes/t4296-gamma-density-at-mode.case.json	120

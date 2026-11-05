@@ -1,6 +1,7 @@
 //! [`Txn::add_pivot_table`]: test support that registers a pivot over a source range (SPEC-0015).
 
 use rustsheet_engine::cell::CellValue;
+use rustsheet_engine::formatter::lexer::is_likely_date_number_format;
 use rustsheet_engine::pivot::{
     group_by_dates, group_by_numbers, layout_extent, row_layout, ungroup_dates, Aggregate, Axis,
     AxisField, CacheBuilder, CacheField, CacheItem, CacheSource, CellArea, DataField,
@@ -121,11 +122,26 @@ pub struct PivotRangeGroup {
 }
 
 /// Field `field` grouped by `group`, as the xlsx importer groups one (`group_by_numbers`,
-/// `group_by_dates`).
-fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
+/// `group_by_dates`), or left ungrouped where Excel's refresh drops the grouping. `mixes_dates`
+/// says whether the field's source cells hold numbers both in a date format and not.
+fn grouped(
+    field: &CacheField,
+    group: &PivotRangeGroup,
+    mixes_dates: bool,
+) -> Result<CacheField, PivotError> {
     let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
     Ok(match group.by {
-        None => group_by_numbers(field, [group.start, group.end, group.interval], &labels)?,
+        None => {
+            // Excel's refresh drops a numeric grouping over a blank, and over date cells among
+            // numbers: each value is its own item, in record order, the blank `(blank)`
+            // (probes/t4287-pivot-group-whole-end pivot S, t4287-pivot-group-dates-as-numbers;
+            // web.md "Grouped pivot fields import as their group items").
+            // A numeric grouping over date cells alone is unprobed and stays grouped.
+            if field.items.contains(&CacheItem::Missing) || mixes_dates {
+                return Ok(field.clone());
+            }
+            group_by_numbers(field, [group.start, group.end, group.interval], &labels)?
+        }
         Some(by) => {
             // Excel's refresh drops a date grouping over a blank (probes/t4236-pivot-date-groups,
             // web.md): each second-rounded date is its own item.
@@ -319,8 +335,9 @@ impl Txn<'_> {
             if column.is_some() {
                 return Err(PivotError::GroupedWithColumn.into());
             }
+            let mixes_dates = group.by.is_none() && self.mixes_dates(input, row)?;
             if let Some(field) = cache.fields.get_mut(row as usize) {
-                *field = grouped(field, group)?;
+                *field = grouped(field, group, mixes_dates)?;
             }
         }
         let fields = pivot_fields(&cache, row, column, input.show_all);
@@ -352,6 +369,36 @@ impl Txn<'_> {
     /// the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
     /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
     /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
+    /// Whether the record cells of source column `field` hold a number shown in a date format
+    /// (`is_likely_date_number_format`), which Excel caches as a date, and a number that is not.
+    fn mixes_dates(&self, input: &PivotTableInput, field: u32) -> Result<bool, EditError> {
+        let model: &Model = self.model;
+        let sheet = sheet_index(model, input.source.sheet)?;
+        let col = input.source.left + field;
+        let (mut dates, mut numbers) = (false, false);
+        for row in input.source.top + 1..=input.source.bottom {
+            let (r, c) = engine_rc(row, col).ok_or(RefError::OutOfBounds)?;
+            if !matches!(
+                model.get_cell_value_by_index(sheet, r, c),
+                Ok(CellValue::Number(_))
+            ) {
+                continue;
+            }
+            let style = model
+                .get_style_for_cell(sheet, r, c)
+                .map_err(EditError::Engine)?;
+            if is_likely_date_number_format(&style.num_fmt) {
+                dates = true;
+            } else {
+                numbers = true;
+            }
+            if dates && numbers {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
     fn lay_out_grouped(
         &mut self,
         input: &PivotTableInput,
@@ -683,6 +730,67 @@ mod tests {
                 right: 4
             }
         );
+    }
+
+    /// A numeric grouping over a blank, or over date cells among numbers, is dropped as Excel's
+    /// refresh drops it: each value is its own item in record order and the blank is `(blank)`
+    /// (probes/t4287-pivot-group-whole-end pivot S, t4287-pivot-group-dates-as-numbers pivot P).
+    #[test]
+    fn a_numeric_grouping_over_a_blank_or_mixed_dates_is_dropped() {
+        for date_cell in [None, Some("A3")] {
+            let mut wb = Workbook::new(&WorkbookOptions::default()).unwrap();
+            let (source, location) = (wb.range_ref("A1:B5").unwrap(), wb.range_ref("D1").unwrap());
+            wb.edit(|tx| {
+                for (a1, input) in [
+                    ("A1", Input::from("N")),
+                    ("B1", Input::from("S")),
+                    ("A2", Input::from(-1.0)),
+                    ("B2", Input::from(1.0)),
+                    ("A3", Input::from(4.0)),
+                    ("B3", Input::from(2.0)),
+                    ("B4", Input::from(4.0)),
+                    ("A5", Input::from(7.0)),
+                    ("B5", Input::from(8.0)),
+                ] {
+                    tx.set(a1, input)?;
+                }
+                if let Some(a1) = date_cell {
+                    tx.set("A4", Input::from(10.0))?;
+                    tx.set_number_format(a1, "yyyy-mm-dd")?;
+                }
+                tx.add_pivot_table(&grouped_input(
+                    source,
+                    location,
+                    "N",
+                    PivotRangeGroup {
+                        by: None,
+                        start: 0.0,
+                        end: 9.0,
+                        interval: 3.0,
+                        items: ["<x", "x", ">x"].map(String::from).to_vec(),
+                    },
+                ))
+            })
+            .unwrap();
+            let text = |s: &str| Value::Text(s.into());
+            let third = if date_cell.is_some() {
+                10.0.into()
+            } else {
+                text("(blank)")
+            };
+            assert_eq!(
+                column(&wb, "D")[..6],
+                [
+                    text("Row Labels"),
+                    (-1.0).into(),
+                    4.0.into(),
+                    third,
+                    7.0.into(),
+                    text("Grand Total"),
+                ],
+                "{date_cell:?}"
+            );
+        }
     }
 
     /// A date grouping over a blank is dropped as Excel's refresh drops it: each second-rounded
