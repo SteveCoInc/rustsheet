@@ -3,7 +3,7 @@ id: T-4266
 title: "Load API: LoadOptions::password and max_spin_count, typed password errors, Python password= keyword (SPEC-0031 D4)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
