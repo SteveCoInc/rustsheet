@@ -3,13 +3,11 @@ use std::io::Read;
 use super::package::Package;
 
 use super::xml::XmlNode;
-use rustsheet_engine::types::{
-    CustomFilter, FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo,
-};
+use rustsheet_engine::types::{FilterColumn, FilterCriterion, Table, TableColumn, TableStyleInfo};
 
 use crate::error::XlsxError;
 
-use super::shared_strings::decode_xlsx_escapes;
+use super::filter_criteria;
 use super::util::{get_bool, get_bool_false};
 
 // <table name="Table" displayName="Table" totalsRowCount ref="A1:D6">
@@ -247,38 +245,15 @@ fn has_active_criterion(auto_filter: &XmlNode, width: usize) -> bool {
 }
 
 /// A `<filterColumn>`'s column and criterion; `None` for one without a valid `colId`, which
-/// Excel's schema requires. A values filter with date groups (`<dateGroupItem>`, `calendarType`)
-/// is kept as [`FilterCriterion::Other`], not as a values list that would drop its dates; the
-/// column's `hiddenButton` and `showButton` are not kept. Values are stored decoded from the
-/// file's `_xHHHH_` escapes, as cell text is.
+/// Excel's schema requires. The criterion is its first element, read by
+/// [`filter_criteria::criterion`]; the column's `hiddenButton` and `showButton` are not kept.
 fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
     let col_id = node.attribute("colId")?.parse::<u32>().ok()?;
-    let criterion = if let Some(filters) = node.child("filters").filter(|f| {
-        !f.has_attribute("calendarType") && f.children().all(|n| n.has_tag_name("filter"))
-    }) {
-        FilterCriterion::Values {
-            values: filters
-                .children()
-                .filter(|n| n.has_tag_name("filter"))
-                .filter_map(|n| n.attribute("val").map(decode_xlsx_escapes))
-                .collect(),
-            blank: get_bool_false(filters, "blank"),
-        }
-    } else if let Some(custom) = node.child("customFilters") {
-        FilterCriterion::Custom {
-            and: get_bool_false(custom, "and"),
-            conditions: custom
-                .children()
-                .filter(|n| n.has_tag_name("customFilter"))
-                .map(|n| CustomFilter {
-                    operator: n.attribute("operator").map(str::to_string),
-                    val: decode_xlsx_escapes(n.attribute("val").unwrap_or_default()),
-                })
-                .collect(),
-        }
-    } else {
-        FilterCriterion::Other
-    };
+    let criterion = node
+        .children()
+        .next()
+        .and_then(filter_criteria::criterion)
+        .unwrap_or(FilterCriterion::Other);
     Some(FilterColumn { col_id, criterion })
 }
 
@@ -292,14 +267,18 @@ mod tests {
         filter_column(&node).unwrap().criterion
     }
 
-    /// A values filter with date groups is not read as a bare values list, which an export would
-    /// write as a filter that shows nothing (T-2838).
+    /// A values filter with date groups keeps them, so the export does not write it as a bare
+    /// values list that shows nothing (T-2838, T-4004); an unknown criterion element is
+    /// [`FilterCriterion::Other`].
     #[test]
-    fn date_grouped_values_filters_are_not_kept_as_values() {
+    fn date_grouped_values_filters_keep_their_groups() {
         let dated = r#"<filterColumn colId="1"><filters><dateGroupItem year="2024" dateTimeGrouping="year"/></filters></filterColumn>"#;
-        assert_eq!(criterion(dated), FilterCriterion::Other);
-        let calendar = r#"<filterColumn colId="1"><filters calendarType="gregorian"><filter val="a"/></filters></filterColumn>"#;
-        assert_eq!(criterion(calendar), FilterCriterion::Other);
+        assert!(matches!(
+            criterion(dated),
+            FilterCriterion::Values { values, date_groups, .. } if values.is_empty() && date_groups.len() == 1
+        ));
+        let unknown = r#"<filterColumn colId="1"><unknownFilter/></filterColumn>"#;
+        assert_eq!(criterion(unknown), FilterCriterion::Other);
     }
 
     /// Only a filterColumn with a criterion inside the table makes its hidden rows filtered, as
@@ -337,7 +316,9 @@ mod tests {
             criterion(escaped),
             FilterCriterion::Values {
                 values: vec!["aA".to_string()],
-                blank: false
+                blank: false,
+                calendar_type: None,
+                date_groups: Vec::new(),
             }
         );
         assert!(
