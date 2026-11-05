@@ -1763,7 +1763,7 @@ A legacy (non-dynamic-array) formula gets no implicit intersection on the `field
 An error `field` written as a literal is that error in all twelve (`DSUM(Db!A1:D9,#N/A,Db!F1:F2)` `#N/A`,
 `#DIV/0!` likewise), but a single-cell reference to a cell holding an error is `#VALUE!`, not the error
 (`DSUM(Db!A1:D9,Data!A3,Db!F1:F2)` with Data!A3 `=NA()`; T-3214, probes/m9-database-argument-kinds
-Calc!A1:A36, excel-graph 2026-11-04; a bare single-cell reference is implemented, T-4247; the same field through a defined name, `INDEX`, `@` or `IF` is unprobed and ours still propagates the cell's error, T-4256).
+Calc!A1:A36, excel-graph 2026-11-04; a bare single-cell reference is implemented, T-4247. The same field through a defined name, `INDEX(Data!A3:A4,1)`, `@Data!A3:A4` or `IF(TRUE,Data!A3)` is `#VALUE!` too (`@` evidenced in DSUM only, the other rows of the probe do not intersect; the rest in DSUM, DCOUNT, DCOUNTA and DGET; OFFSET, CHOOSE and LET variables are unprobed), and a `field` that is the formula's own cell gives 0; T-4256, probes/m9-database-field-error-forms, excel-graph 2026-11-04).
 An empty field (`DCOUNT(A1:C6,,E1:E2)`) gives DCOUNT and DCOUNTA the count of
 matching records (4), and `#VALUE!` in every other function.
 A criteria given as an array literal (`{"Qty";">2"}`) lifts elementwise to `#VALUE!` per element, so it
