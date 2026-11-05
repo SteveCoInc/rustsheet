@@ -3,7 +3,7 @@ id: T-4264
 title: "Classify OLE compound files: encrypted xlsx, legacy .xls and other get their own typed errors (cfb crate, fuzz target; SPEC-0031 D1)"
 milestone: M12
 lane: api
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
