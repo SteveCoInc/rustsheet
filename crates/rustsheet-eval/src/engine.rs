@@ -200,7 +200,6 @@ impl Engine for RustSheetEngine {
         let (entered, _) = workbook
             .edit(|tx| {
                 let mut ids = Vec::with_capacity(spec.sheets.len());
-                let sheet_names: Vec<String> = spec.sheets.iter().map(|s| s.name.clone()).collect();
                 for (i, sheet) in spec.sheets.iter().enumerate() {
                     ids.push(if i == 0 {
                         let first = tx.first_sheet()?;
@@ -241,8 +240,7 @@ impl Engine for RustSheetEngine {
                             spec_pivots::write_rendered(tx, sheet, id, spec_input)?;
                         }
                         for (addr, a1, input_spec) in row_major(&sheet.cells)? {
-                            let Some((input, input_phase)) =
-                                cell_input(sheet, &sheet_names, addr, a1, input_spec)
+                            let Some((input, input_phase)) = cell_input(sheet, a1, input_spec)
                             else {
                                 continue;
                             };
@@ -574,19 +572,8 @@ enum Phase {
 
 /// The facade input for spec cell `a1` of `sheet` and the phase it goes in at; `None` leaves the
 /// cell empty.
-fn cell_input(
-    sheet: &SheetSpec,
-    sheet_names: &[String],
-    addr: Addr,
-    a1: &str,
-    input_spec: &CellInput,
-) -> Option<(Input, Phase)> {
-    let mut input = match input_spec {
-        CellInput::EnteredR1c1 { entered_r1c1 } => {
-            r1c1_entry(entered_r1c1, sheet_names, &sheet.name, addr)
-        }
-        _ => spec_input(input_spec),
-    }?;
+fn cell_input(sheet: &SheetSpec, a1: &str, input_spec: &CellInput) -> Option<(Input, Phase)> {
+    let mut input = spec_input(input_spec)?;
     // spec2xlsx writes these as plain `<f>` formulas (T-1077).
     if let Input::StoredFormula(text) = &input {
         if sheet.legacy_formulas.iter().any(|f| f == a1) {
@@ -605,18 +592,10 @@ fn cell_input(
     let phase = match &input {
         Input::StoredFormula(_) | Input::LegacyFormula(_) => Phase::Stored,
         Input::Parse(text) if text.starts_with('=') || typed_entry => Phase::Entered,
+        Input::ParseR1C1(_) => Phase::Entered,
         _ => Phase::Values,
     };
     Some((input, phase))
-}
-
-/// The facade input for `text` typed in R1C1 mode into `addr` of `sheet`: the A1 text it reads as
-/// (`rustsheet_engine::r1c1_formula_to_a1`), typed. `None`, a blank cell, when it does not parse,
-/// as Excel refuses it (decision 0179).
-fn r1c1_entry(text: &str, sheet_names: &[String], sheet: &str, addr: Addr) -> Option<Input> {
-    let row = i32::try_from(addr.row).ok()?;
-    let column = i32::try_from(addr.col).ok()?;
-    rustsheet_engine::r1c1_formula_to_a1(text, sheet_names, sheet, row, column).map(Input::Parse)
 }
 
 /// The facade input for a spec cell; `None` leaves the cell empty.
@@ -645,8 +624,9 @@ fn spec_input(input: &CellInput) -> Option<Input> {
         CellInput::Typed(Value::Error(e)) | CellInput::Entered { entered: e } => {
             Input::Parse(e.clone())
         }
-        // Needs its cell to read relative references: `r1c1_entry`.
-        CellInput::Typed(Value::Empty) | CellInput::EnteredR1c1 { .. } => return None,
+        // Typed in R1C1 mode, read against its cell (`Model::set_typed_r1c1_user_input`).
+        CellInput::EnteredR1c1 { entered_r1c1 } => Input::ParseR1C1(entered_r1c1.clone()),
+        CellInput::Typed(Value::Empty) => return None,
     })
 }
 

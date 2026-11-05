@@ -86,6 +86,7 @@ impl Parser {
         match token {
             Some(token) if *self.lexer.peek() == separator => {
                 let text = self.lexer.source_since(start);
+                self.note_prefixed_declaration(&text);
                 self.bind_name(&token, &text, node)
             }
             _ => node,
