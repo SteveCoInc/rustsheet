@@ -357,10 +357,29 @@ A227; T-2587 fit over the 1403 IPMT and 441 CUMIPMT cells of gen-m9, probes, pro
   -272272.99996209145 is the discounted form with expm1 (the cancelling form's exact `Y` gives ...232986), but taking
   that form for cancelling balances makes `IPMT(0.1,8,291,1,638)` (gen-m9 6376e27be7a05871 A207) and four
   probes/fin-ipmt-ppmt-huge-rate pv-0 cells (`IPMT(2,2,10,0,315)`) visibly off (T-2943).
-Status: VERIFIED to the bit on the four cells (excel-graph); the switch is fitted.
-Implemented in: `discounted_interest`, `DISCOUNTED_INTEREST_FROM` and `period_payments`
-(crates/rustsheet-engine/src/functions/financial/annuity.rs, T-2587).
-Tasks: T-2587, T-2943
+Status: VERIFIED to the bit on the four cells (excel-graph); the switch was fitted.
+Removed (T-3523, decision 0188 R4): since T-2243 the engine reaches the switch only where "IPMT and PPMT split Excel's
+discounted payment" declines (a subnormal rate, a negative rate whose `(1+rate)^-nper` overflows, an overflowing
+product). Turned off, it moved no gated cell, and on a fresh 600-cell sweep of exactly those inputs
+(probes-numeric/t3523-ipmt-selector-sweep, excel-graph 2026-11-05: 200 negative-rate, 200 subnormal-rate as
+`2^-1023` to `2^-1074`, 200 near-overflow cells) both builds gave the same value on every cell, 595 passing. So
+`period_payments` takes the exact balance interest there, with no fitted switch.
+
+## IPMT near the double range: #NUM! where an intermediate overflows
+Rule: with pv and fv near the top of the double range Excel's IPMT can be `#NUM!` although the interest itself is
+well inside it. `IPMT(-0.00370928755867435,15,16,4.70938571164442E+307,0,0)` is `#NUM!` (engine 2.127E+304), and so
+are `IPMT(0.00286322465373438,2,13,1.40355762329685E+305,7.40149559572831E+307,0)`,
+`IPMT(0.0077709833702648,2,3,2.59956670396635E+303,1.22820359711015E+307,0)`,
+`IPMT(0.00799876951004341,3,5,2.71531320084367E+307,1.09784064008143E+306,1)` and
+`IPMT(-0.0140196032744638,2,6,2.58281603156391E+298,1.670798343956E+307,0)`; the other 195 cells drawn with pv and fv
+from 1E+290 to 9.9E+307 have Excel's finite values.
+The sweep keeps its literals inside what Excel reads (numbers.md "Formula literals of 1E+308 or more are invalid";
+and Excel refuses a workbook holding `=1E-310`, so subnormal rates are written as powers of two).
+Evidence: probes-numeric/t3523-ipmt-selector-sweep column C (excel-graph, 2026-11-05, T-3523).
+Status: VERIFIED (excel-graph) for the five cells; which intermediate overflows is UNVERIFIED (T-4314).
+Implemented in: not yet; `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) returns the
+finite interest.
+Tasks: T-2587, T-2943, T-3523, T-4314
 
 ## IPMT and PPMT split Excel's discounted payment
 Rule: IPMT and PPMT split PMT's own discounted payment ("PMT is a discounted payment"). With PMT's `L`, its `1-Q`

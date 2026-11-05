@@ -291,34 +291,6 @@ fn discounted_principal(
     usable.then_some(principal)
 }
 
-/// Where IPMT's exact balance and [`discounted_interest`] differ by more than this relative
-/// amount (about 3 ulp), Excel has the discounted one; below it the exact one matches Excel's bits
-/// more often (financial.md "IPMT follows Excel's own discount where it moves the value"). 3E-16
-/// and 1E-15 each fit fewer cells than 5E-16 to 7E-16 (T-2587).
-/// FITTED(T-2587, 8 cells, IPMT nper 167..1E300, rate -0.05..10)
-const DISCOUNTED_INTEREST_FROM: f64 = 6e-16;
-
-/// IPMT on Excel's own discount, as [`discounted_principal`] has PPMT: `-rate*((pv+fv)*Y - fv)` in
-/// doubles, divided by `1+rate` for type 1, with `Y = expm1((period-1-nper)*L)/expm1(-nper*L)`,
-/// Excel's expm1 and [`growth_log`]'s L. For long terms at negative rates `(1+rate)^-nper` is huge
-/// and carries L's error into the value (`IPMT(-0.05,10,336,1)` is 0.03151246988087522, the exact
-/// value 0.03151246988087528; gen-m9 e168be7f6d3f84c2 A385). `None` where it is not finite.
-fn discounted_interest(
-    rate: f64,
-    nper: f64,
-    period: f64,
-    (pv, fv): (f64, f64),
-    period_start: bool,
-) -> Option<f64> {
-    let log = growth_log(rate);
-    let share = excel_expm1((period - 1.0 - nper) * log) / excel_expm1(-nper * log);
-    let mut interest = -rate * ((pv + fv) * share - fv);
-    if period_start {
-        interest /= 1.0 + rate;
-    }
-    interest.is_finite().then_some(interest)
-}
-
 /// `(1+rate)^x` for `x <= 0` as [`accurate_growth`] has it, and 0 where that declines for a
 /// positive rate (the power is then below 1E-270, which a double near 1 cannot see).
 fn accurate_discount(rate: f64, x: f64) -> Option<Pair> {
@@ -640,24 +612,15 @@ fn period_payments(
             .or_else(|| {
                 discounted_principal(rate, period_count, period, values, period_start, true)
             });
+        // Where T-2243's split declines, the exact balance interest. T-2587's switch to Excel's
+        // own discount past 6E-16 moved no cell once that split landed: no gated cell and none of
+        // the 600 cells of probes-numeric/t3523-ipmt-selector-sweep, a fresh sweep over the inputs
+        // the split declines (T-3523, decision 0188 R4).
         interest = match balance_interest(rate, period_count, period, values, period_start) {
             Some((interest, true)) => Some(interest),
-            balance => {
-                let exact = split
-                    .map(|(interest, _)| interest.0)
-                    .or(balance.map(|(interest, _)| interest));
-                let discounted =
-                    discounted_interest(rate, period_count, period, values, period_start);
-                // An exact 0 makes the ratio NaN (keeps 0) or infinite (takes the finite discount).
-                match (exact, discounted) {
-                    (Some(exact), Some(discounted))
-                        if ((discounted - exact) / exact).abs() > DISCOUNTED_INTEREST_FROM =>
-                    {
-                        Some(discounted)
-                    }
-                    _ => exact,
-                }
-            }
+            balance => split
+                .map(|(interest, _)| interest.0)
+                .or(balance.map(|(interest, _)| interest)),
         };
     }
     if let (Some(interest), Some(principal)) = (interest, principal) {

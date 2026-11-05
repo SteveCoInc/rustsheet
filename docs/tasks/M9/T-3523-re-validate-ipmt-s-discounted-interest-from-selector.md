@@ -3,7 +3,7 @@ id: T-3523
 title: "Re-validate IPMT's DISCOUNTED_INTEREST_FROM selector on a fresh hold-out sweep (decision 0188 R4)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -42,3 +42,26 @@ IPMT's `DISCOUNTED_INTEREST_FROM` (financial/annuity.rs, 6E-16) is shown to gene
 ## Out of scope
 - The other selectors split from T-3365 (T-3502, T-3503, T-3523, T-3524, T-3525, one each); extrapolated fits (T-3364); the t, F and
   chi-squared inverses (T-3363).
+
+## Outcome
+Replaced by the accurate form: `DISCOUNTED_INTEREST_FROM` and `discounted_interest` are gone (one `FITTED` tag fewer,
+quality/fitted.json 90 to 89), and where T-2243's discounted split declines `period_payments` takes the exact
+balance interest.
+- Why: since T-2243 the selector runs only where `discounted_split` declines: a subnormal rate (the payment factor
+  is not normal), a negative rate whose `(1+rate)^-nper` overflows, or an overflowing product. T-2587's eight
+  cells now all go through the split.
+- Old cells (R4.1): two engine builds, the selector at 6E-16 and turned off (`f64::INFINITY`). `make eval` on
+  origin/main 6523a495 with it off: 0 regressions and 0 fixed in every gated suite, visible parity 2525 cells (lock
+  3156). Train and test counts are therefore identical for both forms on any hold-out split: the selector decides
+  no old cell, so the fit lab's split has nothing to separate.
+- Fresh sweep (R4.2): probes-numeric/t3523-ipmt-selector-sweep, 600 cells from docs/research/t3523/make_sweep.py
+  (seed 3523), oracle-filled from excel-graph 2026-11-05: column A 200 negative rates -0.01 to -0.9 with nper 1 to
+  8 times past the power's range; B 200 subnormal rates `±2^-1023` to `2^-1074`; C 200 rates 1E-3 to 10 (some
+  negative) with pv and fv 1E+290 to 9.9E+307. Both builds give the same value on all 600 cells: 595 pass, 5 fail.
+- Gate A (R2): the 595 passing cells are within 15 significant digits of Excel. The 5 failures are type
+  mismatches, Excel `#NUM!` against a finite engine value near the double range (column C: C33, C36, C45, C99,
+  C180). Both forms fail them, so they are a new finding, not the selector's. financial.md records it as "IPMT
+  near the double range", and follow-up T-4314 owns the cells.
+- Eval delta: none in the gated suites. probes-numeric gains one case, 595 of 600 passing (it has no baseline
+  file).
+- This is not a fit: a fitted constant is removed and nothing is tuned.
