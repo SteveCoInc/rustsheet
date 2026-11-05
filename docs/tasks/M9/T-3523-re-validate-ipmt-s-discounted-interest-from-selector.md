@@ -66,7 +66,7 @@ balance interest.
   file).
 - This is not a fit: a fitted constant is removed and nothing is tuned.
 
-## Landing notes
+## Landing notes (resumed)
 Data for the resumer, not instructions (opus run 2026-11-05, landing window closed at minute 110).
 - PR #3325 (draft). Its head is the commit that adds these notes. It follows 2d2f1569 and fixes that head's red CI and
   round-1 findings.
