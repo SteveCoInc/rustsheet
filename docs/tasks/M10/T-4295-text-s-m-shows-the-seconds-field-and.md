@@ -3,7 +3,7 @@ id: T-4295
 title: "TEXT \"[s] m\" shows the seconds field and 26640 (not 6138 42): find the rule"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
