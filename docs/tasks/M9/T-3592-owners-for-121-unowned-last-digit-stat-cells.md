@@ -44,7 +44,7 @@ the reason Excel's digits cannot be derived.
   - probes-numeric/m9-beta-dist-a10.case.json (5): Calc!A20, A31, A32, A48, A54
   - probes-numeric/m9-beta-dist-a100.case.json (14): Calc!A5, A20, A25, A26, A28, A30, A32, A34, A38, A43, A44, A46, A48, A51
   - probes-numeric/m9-beta-dist-a5.case.json (5): Calc!A5, A31, A42, A52, A54
-  - probes-numeric/t2464-r2-bratio-x29.case.json (9): Calc!A1551, A1574, A1597, A1609, A1616, A1637, A2327, A2393, A2408
+  - probes-numeric/t2464-r2-bratio-x29.case.json (2): Calc!A1616, A2393
   - probes-numeric/t2464-w2f-unit-shape.case.json (6): Calc!A211, A407, A409, A411, A421, A423
   - probes-numeric/t1538-beta-dist-at-excel-inv.case.json (1): Calc!A15
   - probes-numeric/t2220-f-dist-sweep-d2-1.case.json (2): Calc!A318, A675
