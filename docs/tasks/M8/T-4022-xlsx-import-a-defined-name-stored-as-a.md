@@ -3,7 +3,7 @@ id: T-4022
 title: "xlsx import: a defined name stored as a padded bare column T[ Col ] loads as #REF!"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
