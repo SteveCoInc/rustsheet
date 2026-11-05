@@ -12,6 +12,7 @@ use crate::expressions::parser::stringify::{
 };
 use crate::expressions::parser::Node;
 use crate::expressions::types::{CellReferenceIndex, CellReferenceRC};
+use crate::functions::Function;
 use crate::language::Language;
 use crate::locale::Locale;
 use crate::model::Model;
@@ -29,6 +30,10 @@ pub struct ParsedFormula {
     pub evaluated: Arc<Node>,
     /// The static analysis of [`evaluated`](Self::evaluated).
     pub static_result: StaticResult,
+    /// Whether [`evaluated`](Self::evaluated) calls SUBTOTAL or AGGREGATE anywhere in its text,
+    /// computed once so SUBTOTAL and AGGREGATE do not walk the tree for every cell sharing the
+    /// formula (T-1195).
+    pub calls_subtotal: bool,
     /// The tree as written, whitespace included, for a formula written with whitespace.
     pub written: Option<Arc<Node>>,
 }
@@ -48,9 +53,11 @@ pub(crate) fn stored_formula(node: Node) -> ParsedFormula {
         node.strip_spaces();
     }
     let static_result = run_static_analysis_on_node(&node);
+    let calls_subtotal = node.contains_function(&[Function::Subtotal, Function::Aggregate]);
     ParsedFormula {
         evaluated: Arc::new(node),
         static_result,
+        calls_subtotal,
         written,
     }
 }

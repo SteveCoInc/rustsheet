@@ -119,23 +119,28 @@ impl Tree {
     /// in the direction the first two of them run in (the field's, unless the run is
     /// intransitive: T-4344), over [0, n-1] so it never runs off the end, then `=` (t4342
     /// Calc!B14, B48: the half-open search over [0, n) puts their rows in the other repeated
-    /// class). `None` when the class found is not `=` to the line's key: Cy, Ax, By leaves row 3
+    /// class). It stops where the class found is not `=` to the line's key: Cy, Ax, By leaves row 3
     /// (B = C) in no group (t4241 Calc!B14).
+    ///
+    /// Returns the ids of the classes the line reached, one per field from the first: all
+    /// `fields` of them when it reached a leaf (the last is the leaf), fewer when a search found a
+    /// class not `=` to it. A PIVOTBY subtotal column counts a line that reached its class but no
+    /// leaf under it (probes/t4358-pivotby-unreached-column-leaf column D; T-4378).
     pub(super) fn descend(
         &self,
         lines: &Keys<'_>,
         line: usize,
         fields: usize,
         mut spend: impl FnMut(u64) -> Result<(), CalcResult>,
-    ) -> Result<Option<usize>, CalcResult> {
+    ) -> Result<Vec<usize>, CalcResult> {
         let (mut start, mut end) = self.roots;
-        let mut found = None;
+        let mut reached = Vec::with_capacity(fields);
         for field in 0..fields {
             let Some(level) = self.levels.get(field) else {
-                return Ok(None);
+                return Ok(reached);
             };
             if start >= end {
-                return Ok(None);
+                return Ok(reached);
             }
             // The search runs in the direction of the first two classes, not the field's: on an
             // intransitive run the merge can leave them the other way round (t4342 Calc!C40;
@@ -165,15 +170,15 @@ impl Tree {
                 }
             }
             let Some(class) = level.get(low) else {
-                return Ok(None);
+                return Ok(reached);
             };
             spend(lines.units(class.key, line, field))?;
             if lines.cmp(class.key, line, field) != Ordering::Equal {
-                return Ok(None);
+                return Ok(reached);
             }
-            found = Some(low);
+            reached.push(low);
             (start, end) = class.children;
         }
-        Ok(found)
+        Ok(reached)
     }
 }

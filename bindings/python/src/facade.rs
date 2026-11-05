@@ -639,6 +639,7 @@ enum Op {
     DeleteSheet(String),
     DefineName(String, String, Option<String>),
     Clock(Clock),
+    NumberFormat(String, String),
     DataTable(String, Option<String>, Option<String>),
 }
 
@@ -684,6 +685,7 @@ fn apply(
         match op {
             Op::Set(r, input) => txn.set(r.as_str(), input)?,
             Op::Clock(clock) => txn.set_clock(clock)?,
+            Op::NumberFormat(r, format) => txn.set_number_format(r.as_str(), &format)?,
             Op::DataTable(range, row_input, column_input) => {
                 let pairs = sheet_pairs(&sheets);
                 let by_name = |n: Option<&str>| resolve_sheet_by_name(&pairs, n);
@@ -755,6 +757,13 @@ impl PyTransaction {
     /// Clears a cell.
     fn clear(&mut self, r: &str) -> PyResult<()> {
         self.push(Op::Set(r.to_owned(), Input::Clear))
+    }
+
+    /// Gives the cell `ref` the number format `format` (e.g. `"0.0%"`), keeping its value and the
+    /// rest of its style; no value changes. A multi-cell target, a target outside the sheet or an
+    /// unknown sheet raises an error when the block exits and rolls the block back.
+    fn set_number_format(&mut self, r: &str, format: &str) -> PyResult<()> {
+        self.push(Op::NumberFormat(r.to_owned(), format.to_owned()))
     }
 
     /// Adds a what-if data table whose result cells are `range`; `row_input` and `column_input`

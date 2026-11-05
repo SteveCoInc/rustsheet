@@ -21,6 +21,9 @@ fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
+            reached_by: Vec::new(),
+            every: Vec::new(),
         });
     grouping.sort_by_keys(&[ascending], CELL);
     grouping
@@ -85,6 +88,9 @@ fn later_fields_class_within_their_parent() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
+                reached_by: Vec::new(),
+                every: Vec::new(),
             });
         grouping.sort_by_keys(&[], CELL);
         grouping
@@ -264,6 +270,9 @@ fn two_key_fields_sort_lexicographically() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
+            reached_by: Vec::new(),
+            every: Vec::new(),
         });
     grouping.sort_by_keys(&[true, false], CELL);
     let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
@@ -285,6 +294,9 @@ fn value_sort_keeps_parents_with_equal_aggregates_together() {
         .unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
+            reached_by: Vec::new(),
+            every: Vec::new(),
         });
     let mut calls = 0;
     let order = (ParentOrder::ByValue, Axis::Rows);
@@ -331,6 +343,9 @@ fn three_keys() -> Grouping {
     Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
         groups: Vec::new(),
         ascending: Vec::new(),
+        paths: Vec::new(),
+        reached_by: Vec::new(),
+        every: Vec::new(),
     })
 }
 
@@ -384,7 +399,7 @@ fn subtotal_lines_after_and_before_their_groups() {
         grouping.lines(0, true),
         (0..4).map(Line::Group).collect::<Vec<_>>()
     );
-    assert_eq!(grouping.rows_of(0, 3), [0, 1, 2]);
+    assert_eq!(grouping.subtotal_rows(1, 0), [0, 1, 2]);
     assert_eq!(
         grouping.subtotal_label_cells(1, 3, 3),
         [text("b"), text(""), text("")]
@@ -530,6 +545,9 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
             .unwrap_or(Grouping {
                 groups: Vec::new(),
                 ascending: Vec::new(),
+                paths: Vec::new(),
+                reached_by: Vec::new(),
+                every: Vec::new(),
             });
         let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
         grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);
@@ -605,6 +623,9 @@ fn unreached_names_the_leaf_no_row_reaches() {
         Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
             groups: Vec::new(),
             ascending: Vec::new(),
+            paths: Vec::new(),
+            reached_by: Vec::new(),
+            every: Vec::new(),
         });
     let leaves: Vec<(Vec<ArrayNode>, Vec<usize>)> = grouping
         .groups
@@ -620,4 +641,91 @@ fn unreached_names_the_leaf_no_row_reaches() {
         ]
     );
     assert_eq!(grouping.unreached(), [2]);
+}
+
+/// T-4378: Bx, Cy, Cy, Ax, By build the classes A{x} and B{x, y}; rows 2 and 3 (C,y) reach class A
+/// (C = A) and then no leaf, so they keep only that class, which a PIVOTBY subtotal of A counts
+/// (probes/t4358-pivotby-unreached-column-leaf Calc!D1: the `ab` subtotal of q is `2, 3`).
+#[test]
+fn reached_classes_keep_a_row_that_reaches_no_leaf() {
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    let keys = vec![
+        vec![b(), x()],
+        vec![c(), y()],
+        vec![c(), y()],
+        vec![a(), x()],
+        vec![b(), y()],
+    ];
+    let grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).ok();
+    let reached = grouping.as_ref().map(|g| g.reached_classes(5));
+    let depths: Option<Vec<usize>> = reached.map(|r| r.iter().map(|path| path.len()).collect());
+    assert_eq!(depths, Some(vec![2, 1, 1, 2, 2]));
+    let a_prefix = grouping.as_ref().map(|g| g.prefix(0, 1).to_vec());
+    let row_2 = grouping.as_ref().map(|g| g.reached_classes(5)[1].to_vec());
+    assert_eq!(a_prefix, row_2);
+}
+
+/// A parent's rows on an intransitive run (A = ab, B = ab&U+00AD, C = U+00AD&ab; A = C = B,
+/// A < B): over Bx Ax Ax By Cy row 5 reaches class A (C = A) and then no y class, so A's value
+/// counts it and sorts after B's, 1 + 8 < 2 + 4 + 16 (probes/t4344-groupby-descending-search
+/// Calc!D56). Over Ax Bx Cy Bx Ay the repeated class A that ends the list holds (A,y), which no
+/// row reaches, so it and its subtotal hold every row (probes/t4359-groupby-value-sort-parents
+/// Calc!E4: `ab` 21, the second `ab` 31).
+#[test]
+fn a_parent_holds_the_rows_that_reached_its_class() {
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    let run = |keys: &[Vec<ArrayNode>]| {
+        let mut grouping =
+            Grouping::new(keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).ok()?;
+        let order = (ParentOrder::ByValue, Axis::Rows);
+        grouping.sort_by_aggregate(true, order, CELL, |rows, _| {
+            ArrayNode::Number(rows.iter().map(|&row| f64::from(1 << row)).sum())
+        });
+        let shown: Vec<(ArrayNode, ArrayNode)> = grouping
+            .groups
+            .iter()
+            .map(|group| (group.keys[0].clone(), group.keys[1].clone()))
+            .collect();
+        let subtotals: Vec<Vec<usize>> = grouping
+            .lines(1, false)
+            .into_iter()
+            .filter_map(|line| match line {
+                Line::Subtotal { level, start, .. } => {
+                    Some(grouping.subtotal_rows(level, start).to_vec())
+                }
+                Line::Group(_) => None,
+            })
+            .collect();
+        Some((shown, subtotals))
+    };
+    let d56 = run(&[
+        vec![b(), x()],
+        vec![a(), x()],
+        vec![a(), x()],
+        vec![b(), y()],
+        vec![c(), y()],
+    ]);
+    assert_eq!(
+        d56,
+        Some((
+            vec![(b(), x()), (b(), y()), (a(), x())],
+            vec![vec![0, 3], vec![1, 2, 4]]
+        ))
+    );
+    let e4 = run(&[
+        vec![a(), x()],
+        vec![b(), x()],
+        vec![c(), y()],
+        vec![b(), x()],
+        vec![a(), y()],
+    ]);
+    assert_eq!(
+        e4,
+        Some((
+            vec![(b(), x()), (b(), y()), (a(), x()), (a(), y())],
+            vec![vec![1, 3], vec![0, 2, 4], vec![0, 1, 2, 3, 4]]
+        ))
+    );
 }

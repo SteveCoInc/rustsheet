@@ -3,7 +3,7 @@ id: T-4378
 title: "PIVOTBY's column subtotal on an intransitive run holds the records that reached its class"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -36,3 +36,18 @@ and not the extra records a leaf no record reaches holds.
 
 ## Out of scope
 -
+
+## Outcome
+- Rule: a PIVOTBY column subtotal cell holds the row line's records that reached its class: `Tree::descend` now
+  returns the class ids a row reached (all `fields` of them for a leaf, fewer where a search found a class not `=`
+  to it), `Grouping::reached_classes` keeps them per source row, and `Grid::cell_rows`' `Slot::Subtotal` arm takes
+  the records whose reached classes start with the subtotal's prefix (`Grouping::prefix`). While `=` is transitive
+  every row reaches a leaf, so this is the union of the subtotal's leaves as before. It replaces T-4358's interim
+  `dedup` of the merged buckets.
+- Chosen-on cells: the 19 owned cells of probes/t4358-pivotby-unreached-column-leaf (D1:D4, D8:D10, D12:D19, D21,
+  D22, D24, D25) now pass; the case is 473 of 475 (B6, D6 stay T-4379's).
+- Hold-out (decision 0188 R4, a structural choice): probes/t4378-pivotby-subtotal-holdout (new, 25 fresh seeded runs,
+  75 formulas), written with the engine's predictions committed before the fill (docs/research/t4378/gen_probe.py,
+  predict_engine.py, predictions.tsv; commit before the oracle sidecar). 75 of 75 predictions match Excel.
+- Eval delta: probes fixed 19 (t4358 D cells), known failures 4814 -> 4795, 0 regressions; the new case t4378-pivotby-subtotal-holdout passes all its cells.
+

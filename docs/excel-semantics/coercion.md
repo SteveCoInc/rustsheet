@@ -983,13 +983,80 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       no leaf under it included, and not the extra records of a leaf no record reaches: over Bx Cy Cy Ax By of
       q q q p p the `ab` subtotal of q is `2, 3` while its leaf (`ab`,x) holds nothing for q (D1); over Ax Cx Bx
       Cy Bx the `ab`&U+00AD subtotal of p is `3, 5` while its unreached (`ab`&U+00AD,y) holds `1, 3, 5` (D10).
-      That rule gives 88 of 88 subtotal cells (docs/research/t4358/score.py), chosen on them (T-4378 owns the 19
-      D cells it would fix and the hold-out it owes).
+      That rule gives 88 of 88 subtotal cells (docs/research/t4358/score.py), chosen on them, and all 75 cells of
+      its hold-out, probes/t4378-pivotby-subtotal-holdout (25 fresh seeded runs with column subtotals ascending,
+      `col_sort_order` -1 and as SUM, predictions committed before the fill; docs/research/t4378; excel-graph,
+      2026-11-05). A structural choice confirmed out of sample (decision 0188 R4), not a fit. Implemented (T-4378):
+      `Tree::descend` returns the classes a row reached, `Grouping::reached_classes` keeps them, and the
+      `Slot::Subtotal` arm of `Grid::cell_rows` (pivotby.rs) takes the records whose classes start with its prefix.
     - **Excel can leave such a leaf out**: over Cx Ay Ax Bx Ax (q q p p q) the columns are (`­ab`,x), (`­ab`,y)
-      only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379).
+      only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379). The cause is
+      UNIQUE, below.
+  - **UNIQUE drops Bx after Cx Ay Ax** (T-4379, probes/t4379-pivotby-repeated-unreached-leaf, excel-graph,
+    2026-11-05; 15 runs of B6's keys through UNIQUE (B), GROUPBY (C), PIVOTBY by p/q (D), by one row group (E) and
+    with `col_sort_order` -1 (F), predictions in docs/research/t4379 committed before the fill). Over Cx Ay Ax Bx
+    UNIQUE is `{"­ab","x";"ab","y"}`: Bx, which `=` Cx only, is dropped, where T-4200's merge keeps it. GROUPBY and
+    PIVOTBY build their trees on those two keys, so no third (C,x) group or column exists: the leaf is not left
+    out, it was never built. The same holds with a fifth row Ax, Cx or Bx after, and over Cx Ay Ax Ax Bx (rows 1,
+    2, 8, 9, 10). Bx is kept over Cx Ay Bx, Cx Ay Bx Ax (Bx before the Ax), Cx Ax Ay Bx Ax (the Ax before the Ay),
+    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. T-4393
+    owns the 20 cells and t4358 B6, D6 (from T-4380, whose rule failed its hold-out, below).
+  - **No coalescing merge explains UNIQUE's two-field runs** (T-4380, probes/t4380-unique-keep-head-holdout,
+    excel-graph, 2026-11-05; 45 runs through UNIQUE (B) and GROUPBY (C), predictions in docs/research/t4380 committed
+    before the fill). The rule chosen on t4379 (equal run heads: the right group joins the left head, which stays the
+    head) fits t4379 but misses 12 of the 45 hold-out runs: over Cy Cx Ay Bx Excel keeps Cy, Cx and Bx (as T-4200's
+    rule does), where the rule merges Bx into Cx. Pushing the joined head out and keeping it (`pushkeep`) misses 5;
+    T-4200's rule misses 28; the right group taking the head misses more; insertion sort then grouping neighbours
+    (MSVC's short `stable_sort`) misses 37 to 44. Over Cy Cx Ay Bx Ay (rows 6, 27) Excel's UNIQUE is Cy, Cx, Bx, Ay: the
+    second Ay is kept apart from the first, which joined Cy, so two identical rows end in different groups. No
+    sort-then-group-neighbours model under the row-by-row field comparison can do that. One-field runs never tell
+    the rules apart (none up to length 7). T-4393 owns the search and these cells.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
-    reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
+    reaches class A (C = A) and then no y class (D56, E56).
+  - **A GROUPBY parent holds the rows that reached its class, and every row when none did** (T-4359,
+    probes/t4359-groupby-value-sort-parents and probes/t4359-groupby-value-sort-holdout, excel-graph, 2026-11-05):
+    a value sort orders the parents by the function of those rows, a row that reached no leaf under the class
+    included and the extra rows of a leaf no row reaches not, and a subtotal line shows the function of the same
+    rows, under a value sort and a key sort alike. A class no row reached (a repeated class that ends the list,
+    whose leaves no row reaches) holds every row, as such a leaf does: over Ax Bx Cy Bx Ay by SUM of 1 to 16 the
+    subtotals are `ab`&U+00AD 10 (rows 2, 4), `ab` 21 (rows 1, 3, 5: row 3 reaches A and no y class under it) and
+    the second `ab` 31, and the parents sort in that order (Calc!B4, E4).
+    - The first probe (28 seeded five-row runs, 14 of two fields and 14 of three, SUM ascending and descending,
+      AVERAGE, and SUM with subtotals at every level) was written with three hypotheses' predictions committed
+      before the fill (docs/research/t4359/model.py: the rows of the parent's groups, R0, 24 of 84; the rows that
+      reached it, R1, 52; both, R2, 65). Its subtotal cells showed the rule, R3 (R1, every row for a class none
+      reached), 84 of 84, chosen after the fill. The hold-out (30 fresh runs, 12 of two fields and 18 of three,
+      seed "T-4359 hold-out") was written with the engine's R3 predictions committed before its fill: 120 of 120
+      value-sort cells (Calc!B:E). Its column F, a key sort with subtotals, predicted with the union of the groups'
+      rows, gave 0 of 30; R3, frozen before the fill, gives 30 of 30. A structural choice confirmed out of sample
+      (decision 0188 R4), not a fit.
+  - **PIVOTBY's other paths on intransitive runs (T-4382)** (probes/t4382-pivotby-intransitive-paths, excel-graph,
+    2026-11-05; 42 seeded five-row runs, the engine's predictions committed before the fill in docs/research/t4382;
+    63 of 129 cells matched them). Findings, scored by docs/research/t4382/score.py (214 of 214 first-field
+    subtotal and parent cells under the rule below, chosen on them, so it owes a hold-out: T-4401, T-4402):
+    - **Row subtotals follow the column rule**: a subtotal row holds the records that reached its row class, those
+      that reached no leaf under it included. Over Bx Cx Ax By Cy (q p p q q), rows the text and x/y, the `ab`
+      subtotal row is p `2, 3`, q `5`, Total `2, 3, 5`: row 5, (C,y), reaches class `ab` and then no y leaf (Calc!B16;
+      every subtotal row of B16:C30, ascending and `row_sort_order` -1), as GROUPBY's subtotal lines do (T-4359,
+      above), whose change gives every one of these cells.
+    - **A subtotal whose class no record reached holds every record of the line**, as such a leaf does (step 4):
+      with three column fields and `col_total_depth` 3, over BxC BxB CyA AxB AxB (p q p q p) the level-2 subtotal
+      (`ab`&U+00AD,y), which no record reaches, is p `1, 3, 5`, q `2, 4` (Calc!B31; B31:C42), as GROUPBY's class
+      none reached does (T-4359). T-4401 owns them.
+    - **relative_to 3 and 4 take the parent subtotal's records by the same rule**: over Ay Ay Bx Cx Cy (q p p q q)
+      the parent column total of q's (`ab`,y) cell is `1, 4, 5`, not `1, 5` (Calc!D2, a two-argument LAMBDA
+      `ARRAYTOTEXT(x)&" / "&ARRAYTOTEXT(a)`); parent row totals read the parent subtotal row's cell in the same
+      column, Total column included (E17). **An empty parent set is an error**: PERCENTOF `#DIV/0!` and the
+      two-argument LAMBDA's cell `#VALUE!` (C7, D7: a column leaf no record reaches under an empty subtotal).
+      T-4402 owns the cells.
+    - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
+      whose records reached its class while every leaf under it is empty for the row group is not computed (its
+      NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,
+      B12, B13, B14 and B15, whose LAMBDA is NA() on exactly that subtotal's records (the record list after `!` in
+      column A). In B2, B5 and B14 the moved subtotal cell of that layout showed `""` where Excel shows the
+      reached-class records (`12` and `11, 14, 15` in B2): `Placement` named each column group by its first row,
+      which a leaf no record reaches shares with a reached group. Fixed (T-4403): `Group::leaf_id` names it.
 
 Implemented in (T-4342): `Grouping::new` (functions/lookup_and_reference/grouping.rs) takes UNIQUE's kept rows
 (`unique_first_lines`, shared with `unique_of`), sorts them with `Keys::sorted` (`sort_indices_pairwise` on whole
@@ -999,13 +1066,16 @@ row (`Group::reached` false, which `Grouping::group_of` maps only rows in no oth
 tree order and sort by their class's rank (`Group::key_order`). While no key text is outside ASCII a row descends as
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
-(`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). Not implemented: a column subtotal's
-records (T-4378), a left-out repeated leaf (T-4379) and a value sort's parent values (T-4359) on these runs.
+(`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
+reached its class (T-4378). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort orders by and a subtotal line
+shows, are `Grouping::class_rows`: the rows that reached the class, every row when none did (T-4359; PIVOTBY's row
+axis and descending key sorts unprobed, T-4388). Not implemented: UNIQUE's drop of Bx after Cx Ay Ax, which removes a
+repeated leaf (T-4380) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344 and t4358 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378 and t4359 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

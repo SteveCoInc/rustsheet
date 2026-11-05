@@ -48,6 +48,10 @@ decision instead of reflecting a mechanism that can no longer fire.
 - Related open work, not duplicated: T-3641 (re-probe whether excel-graph computes the family today). If it finds that
   it does, the cells become fixable, and this decision should say what happens then. T-3994 and T-4076 cover cells
   owned only by deferred tasks, a different rule.
+- Steward 2026-11-05 (second run): T-3641 landed (#3392; excel-graph still `#N/A` for the whole family), so the 40
+  visibly-off cells of probes/forecast-ets-longer-series K1:K42 it owned (all but K37 and K38, all four functions; ours
+  numbers or `#NUM!` from the AAA model against the web's `#N/A`) had no open owner and are the M9 exit cells `make
+  exit-owners MILESTONE=M9` listed. This task owns them too, under the same rule as the 342 above.
 - Code: scripts/desktop_owned.py, scripts/exit_owners.py (`read_desktop_owned`, `counted_in_rate`, `--all-off`), the
   `--desktop-owned` path of crates/rustsheet-eval (v15_checkpoint), eval/milestones/*.tsv (decision 0044 protects
   them: a line changes only in the PR of the decision that names it).
@@ -108,6 +112,19 @@ the same class, which no open task names. `FORECAST.ETS.CONFINT(30,7,Data!C$8,Da
 a blank cell) inside DURATION's yld: excel-graph `#N/A` (the web's ETS answer passed through DURATION), ours `#NUM!`
 from the model steps of decision 0221:
 - gen-m9/a91bad4e84f49739.case.json (1): Calc!A141
+
+Added by gap triage 2026-11-05b (`make eval` on origin/main 8465f6f1; `scripts/exit_owners.py --all-off` and
+`--milestone M9`): the 40 known-failure cells of the excel-graph probe that first showed the family is `#N/A` on the
+web (statistics.md "FORECAST.ETS family: excel-graph never computes it", T-1293). Their owners were T-1553 (dropped by
+decision 0266) and T-3641, which closed on 2026-11-05 after its re-probe, so they are the only unowned visibly-off
+cells of the run (80 lines of `exit_owners.py --milestone M9`: each cell counts once for the probe row and once for
+`rate:`). Excel `#N/A` on every cell; ours the AAA model's numbers (148.0 at K1, 4.0 at K8) or `#NUM!` (K35, K39 to K42):
+- probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, K39:K42
+
+One more cell of the class, owned today only through an incidental mention of its case in T-3485 (an F-quantile task):
+`CORREL(FORECAST.ETS.SEASONALITY(Data!A1:B12,LOG(..),1,(-2.5)),Data!A3:C10)`, excel-graph `#N/A`, ours `#NUM!` from an
+aggregation of -2.5, which the web answers with `#N/A` like every other call:
+- gen-m9/589f42e67f4b4b8d.case.json (1): Calc!A329
 
 The 4 COMPLEXs.xlsx cells the Context counts as owned only by deferred tasks are T-1075's too (Mac 16.0300 cached
 digits: N6 `IMREAL(IMTAN(D6))`, AL12 and AL26 `IMREAL(IMSQRT(..))`, K25 `IMAGINARY(IMCOS(D25))`, decision 0196). Their

@@ -3,7 +3,7 @@ id: T-4041
 title: "T-3665 follow-ups: name BETA.INV's search on bup+bgrat at a0 < 1, state the residual near a = 1, narrow T-3592's x29 cells"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -42,3 +42,12 @@ approved, so they were filed here rather than pushed (work-loop step 5).
 
 ## Out of scope
 - Any change to engine behavior (docs and owner lists only).
+
+## Outcome
+Docs and owner lists only; no engine behavior changed (no eval delta).
+- `beta_search_tails` and `ported_tails_with` docs, and the T-3665 bullet in statistics.md, name BETA.INV's search as a
+  caller of the bup + bgrat arm at a0 < 1; the doc-comment line is rewrapped under 100 columns.
+- The bullet states the residual in t2464-w2f-unit-shape (up to 29 ulp from the math, old up to 7; Excel up to 26 ulp).
+- T-3592's t2464-r2-bratio-x29 line now lists only A1616 and A2393. `scripts/exit_owners.py --milestone M9` reports the
+  same 80 unowned cells before and after (none from these suites). The 53 cells no longer bit-exact are all within
+  15 digits, so they are not exit cells and need no Phase 1b owner; T-3592 does not take them.

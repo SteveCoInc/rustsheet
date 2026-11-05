@@ -35,10 +35,16 @@ impl Model {
         if text.ends_with(char::is_whitespace) {
             return None;
         }
-        // A sheet prefix only has to name a sheet; whether one that does not exist is ignored too
-        // is unprobed, so it stays `#REF!`.
+        // A sheet prefix only has to name a sheet: `'Co A'!TabA[Qty]` and `S!TabA[Qty]` are the
+        // table on another sheet. One naming no sheet is `#REF!` (`Nope!Sales[Qty]`,
+        // `'No Sheet'!Sales[Qty]`), and so is an unquoted one Excel's A1 text refuses, as for a
+        // defined name: `Co A!TabA[Qty]`, `P&L!TabB[Qty]` and `O'B!TabC[Qty]`, while their quoted
+        // forms resolve (probes/t4354-indirect-structref-sheet-prefix).
         let text = match text.split_once('!') {
             Some((prefix, rest)) if !prefix.contains('[') => {
+                if !prefix.starts_with('\'') && !is_indirect_unquoted_sheet(prefix) {
+                    return None;
+                }
                 self.get_sheet_index_by_name(&unquote_sheet_prefix(prefix)?)?;
                 rest
             }

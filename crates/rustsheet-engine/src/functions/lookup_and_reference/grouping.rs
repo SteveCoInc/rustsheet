@@ -40,7 +40,7 @@ pub(crate) enum SortOrder {
 /// The directions [`Grouping::new`] builds its tree in for `sort`: a hierarchy's key directions
 /// (probes/t4241-groupby-intransitive-runs Calc!C, E), ascending for a table relationship
 /// (`order` [`ParentOrder::Flat`]) and for a sort by a value, which match Excel on intransitive
-/// runs but for a value sort's parents (probes/t4344-groupby-descending-search B55:E66; T-4359).
+/// runs (probes/t4344-groupby-descending-search B55:E66, probes/t4359-groupby-value-sort-parents).
 pub(crate) fn tree_directions(sort: &SortOrder, order: ParentOrder) -> &[bool] {
     match sort {
         SortOrder::Keys { ascending, .. } if order != ParentOrder::Flat => ascending,
@@ -116,6 +116,14 @@ pub(crate) struct Group {
 }
 
 impl Group {
+    /// The id of the group's leaf class, which no other group of its grouping has, whether or
+    /// not a row reached it: it names the group across the sorts. (Its first row does not: a
+    /// leaf no row reaches holds every row, so it shares its first row with a reached group;
+    /// probes/t4382-pivotby-intransitive-paths Calc!B2, T-4403.)
+    pub(crate) fn leaf_id(&self) -> usize {
+        self.cells.last().copied().unwrap_or(usize::MAX)
+    }
+
     /// Orders two groups' keys in `field`: texts under one parent (equal keys in the fields
     /// before it) by their rank, the order [`Grouping::new`] sorted them in, `built` (ascending
     /// or not), so `"AB"` before `"ab"&U+00AD` (probes/t4195-groupby-intransitive Calc!B31:B38);
@@ -151,6 +159,15 @@ pub(crate) struct Grouping {
     /// The directions [`Grouping::new`] built the groups in, per field (ascending past the end):
     /// the ranks' order.
     ascending: Vec<bool>,
+    /// Each grouped source row with the ids of the classes it reached, one per field from the
+    /// first (fewer when it reached no leaf; [`Grouping::new`] step 3), as [`Group::cells`] holds
+    /// them.
+    paths: Vec<(usize, Vec<usize>)>,
+    /// Per field, the source rows (in source order) that reached each class of it, by class id:
+    /// a subtotal's and a value sort parent's rows ([`Grouping::class_rows`]).
+    reached_by: Vec<HashMap<usize, Vec<usize>>>,
+    /// Every grouped source row, in source order.
+    every: Vec<usize>,
 }
 
 impl Grouping {
@@ -210,20 +227,23 @@ impl Grouping {
         let tree = Tree::build(&lines, &sorted, fields, limit, &mut spend)?;
         let intransitive =
             has_intransitive_text(rows.len(), fields, |line, field| lines.at(line, field));
-        // members[leaf]: the lines that reach it.
+        // members[leaf]: the lines that reach it; reached[line]: the classes the line reached.
         let mut members: Vec<Vec<usize>> = vec![Vec::new(); tree.leaves()];
-        let mut reached: Vec<Option<usize>> = vec![None; rows.len()];
+        let mut reached: Vec<Vec<usize>> = vec![Vec::new(); rows.len()];
         for line in 0..rows.len() {
             // While `=` is transitive a row descends as the first row equal to it (UNIQUE's).
-            let leaf = match first.get(line) {
-                Some(&kept) if !intransitive && kept < line => reached.get(kept).copied().flatten(),
+            let classes = match first.get(line) {
+                Some(&kept) if !intransitive && kept < line => {
+                    reached.get(kept).cloned().unwrap_or_default()
+                }
                 _ => tree.descend(&lines, line, fields, &mut spend)?,
             };
-            if let Some(slot) = reached.get_mut(line) {
-                *slot = leaf;
-            }
+            let leaf = classes.last().copied().filter(|_| classes.len() == fields);
             if let Some(entry) = leaf.and_then(|leaf| members.get_mut(leaf)) {
                 entry.push(line);
+            }
+            if let Some(slot) = reached.get_mut(line) {
+                *slot = classes;
             }
         }
         let mut groups = Vec::with_capacity(members.len());
@@ -258,9 +278,24 @@ impl Grouping {
                 reached,
             });
         }
+        let mut reached_by: Vec<HashMap<usize, Vec<usize>>> = vec![HashMap::new(); fields];
+        for (&row, path) in rows.iter().zip(&reached) {
+            for (classes, &class) in reached_by.iter_mut().zip(path) {
+                classes.entry(class).or_default().push(row);
+            }
+        }
+        for members in reached_by.iter_mut().flat_map(HashMap::values_mut) {
+            members.sort_unstable();
+        }
+        let paths = rows.iter().copied().zip(reached).collect();
+        let mut every = rows;
+        every.sort_unstable();
         Ok(Grouping {
             groups,
             ascending: ascending.to_vec(),
+            paths,
+            reached_by,
+            every,
         })
     }
 
@@ -304,6 +339,40 @@ impl Grouping {
             }
         }
         group_of
+    }
+
+    /// For each of `height` source rows, the ids of the classes it reached ([`Grouping::paths`]):
+    /// empty for rows in no class (headers, filtered rows, or a first field no class equals).
+    pub(crate) fn reached_classes(&self, height: usize) -> Vec<&[usize]> {
+        let mut classes: Vec<&[usize]> = vec![&[]; height];
+        for (row, path) in &self.paths {
+            if let Some(slot) = classes.get_mut(*row) {
+                *slot = path;
+            }
+        }
+        classes
+    }
+
+    /// The source rows (in source order) of class `class` of field `field` as a parent: those
+    /// whose descent reached it, a row that reached no leaf under it included, and every row
+    /// when none did, as a leaf no row reaches holds every row ([`Grouping::new`] step 4). A
+    /// subtotal's rows, whatever the sort, and a value sort's parent's
+    /// (probes/t4359-groupby-value-sort-parents, probes/t4359-groupby-value-sort-holdout; T-4359).
+    /// While `=` is transitive that is the rows of the class's groups.
+    fn class_rows(&self, field: usize, class: usize) -> &[usize] {
+        self.reached_by
+            .get(field)
+            .and_then(|classes| classes.get(&class))
+            .map_or(&self.every[..], Vec::as_slice)
+    }
+
+    /// The class ids of group `group`'s first `level` keys, the prefix a subtotal at that level
+    /// covers (empty when there is no such group).
+    pub(crate) fn prefix(&self, group: usize, level: usize) -> &[usize] {
+        self.groups
+            .get(group)
+            .and_then(|group| group.cells.get(..level))
+            .unwrap_or_default()
     }
 
     /// The indices of the groups no row reached ([`Grouping::new`] step 4), which hold every row.
@@ -413,7 +482,9 @@ impl Grouping {
     /// key cells: numbers < text < FALSE < TRUE < errors, errors last ascending and first
     /// descending (B34-B37; groupby-sort-filter-args2 B27-B28, B37). A parent's value is the
     /// function of all its rows, not of its children's values (AVERAGE and `100-SUM(x)` over two
-    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21).
+    /// keys, args2 B22-B25), at every level (three keys, args2 B19-B21). On an intransitive run
+    /// a parent's rows are [`Grouping::class_rows`] (t4344 Calc!D56; T-4359), so a shown subtotal
+    /// is the value its parent sorted by.
     ///
     /// `aggregate` also gets the group one level up as a relative set (PIVOTBY's `relative_to` 4 sorts
     /// rows by it, 3 columns: `RelativeTo::of_sort`); `None` at the top level. The parents' rows
@@ -449,20 +520,16 @@ impl Grouping {
             for (group, parent) in self.groups.iter().zip(&previous) {
                 let key = group.cells.get(level).copied().unwrap_or(usize::MAX);
                 let id = *index.entry((*parent, key)).or_insert_with(|| {
-                    parent_rows.push(Vec::new());
+                    parent_rows.push(self.class_rows(level, key).to_vec());
                     above.push(*parent);
                     parent_rows.len() - 1
                 });
-                if let Some(rows) = parent_rows.get_mut(id) {
-                    rows.extend_from_slice(&group.rows);
-                }
                 parents.push(id);
             }
             let values = parent_rows
-                .iter_mut()
+                .iter()
                 .zip(&above)
                 .map(|(rows, &parent)| {
-                    rows.sort_unstable();
                     if !parents_by_value {
                         return ArrayNode::Empty;
                     }
@@ -688,8 +755,9 @@ impl Aggregates {
 
 impl Grouping {
     /// The key cells and the source rows (in source order) of a group or subtotal line: a
-    /// group's keys as shown, or a subtotal's ([`Grouping::subtotal_label_cells`]) over all its
-    /// groups' rows ([`Grouping::rows_of`]). `None` for a group that does not exist.
+    /// group's keys as shown, or a subtotal's ([`Grouping::subtotal_label_cells`]) over the rows
+    /// of the class it subtotals ([`Grouping::subtotal_rows`]). `None` for a group that does not
+    /// exist.
     pub(crate) fn line_parts(
         &self,
         line: Line,
@@ -703,9 +771,9 @@ impl Grouping {
                 let label = group.keys.clone();
                 Some((label, Cow::Borrowed(&group.rows[..])))
             }
-            Line::Subtotal { level, start, end } => Some((
+            Line::Subtotal { level, start, .. } => Some((
                 self.subtotal_label_cells(level, start, key_columns),
-                Cow::Owned(self.rows_of(start, end)),
+                Cow::Borrowed(self.subtotal_rows(level, start)),
             )),
         }
     }
@@ -795,19 +863,23 @@ impl Grouping {
             .unwrap_or(group.cells.len())
     }
 
-    /// The source rows of the groups `start..end`, in source order: a subtotal's function gets
-    /// its values in source order, as a group's does (`LAMBDA(x,ARRAYTOTEXT(x))`: East is
-    /// "10, 30, 5", probes/groupby-subtotals G!A331, G!A1081).
-    pub(crate) fn rows_of(&self, start: usize, end: usize) -> Vec<usize> {
-        let mut rows: Vec<usize> = self
+    /// The source rows, in source order, of the subtotal of the groups from `start` that share
+    /// their first `level` keys: the [`Grouping::class_rows`] of that prefix's class, which while
+    /// `=` is transitive are the rows of those groups. A subtotal's function gets its values in
+    /// source order, as a group's does (`LAMBDA(x,ARRAYTOTEXT(x))`: East is "10, 30, 5",
+    /// probes/groupby-subtotals G!A331, G!A1081). On an intransitive run, whatever the sort, it
+    /// counts a row that reached the class but no leaf under it, and not the extra rows of a leaf
+    /// no row reaches (probes/t4359-groupby-value-sort-holdout Calc!E, F; T-4359).
+    fn subtotal_rows(&self, level: usize, start: usize) -> &[usize] {
+        let field = level.saturating_sub(1);
+        match self
             .groups
-            .get(start..end)
-            .unwrap_or_default()
-            .iter()
-            .flat_map(|group| group.rows.iter().copied())
-            .collect();
-        rows.sort_unstable();
-        rows
+            .get(start)
+            .and_then(|group| group.cells.get(field))
+        {
+            Some(&class) => self.class_rows(field, class),
+            None => &[],
+        }
     }
 
     /// The key cells of the subtotal of the groups from `start` that share their first `level`

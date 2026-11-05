@@ -4,6 +4,7 @@ mod columns;
 mod conditional_formatting;
 mod encryption;
 mod external_links;
+mod filter_criteria;
 mod iso_date;
 mod merged_cells;
 mod metadata;

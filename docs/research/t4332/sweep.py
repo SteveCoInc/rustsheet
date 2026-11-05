@@ -11,30 +11,38 @@ import sys
 
 from chain import as_fields, chain_units, fmt, register_units
 
-seed, count, separating = (int(a) for a in sys.argv[1:4])
-case_path, meta_path = sys.argv[4:6]
-random.seed(seed)
 FMTS = [("[h]:mm.0", 10), ("h:mm:ss.0", 10), ("[s].0", 10), ("s.00", 100), ("[h]:mm:ss.000", 1000),
         ("[m]:ss.00", 100), ("mm:ss.0", 10), ("h:mm:ss.000", 1000)]
 DAYS = [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7, 45000]
-cells, meta, r = {}, {}, 1
-while r <= count:
-    f, s = random.choice(FMTS)
-    d = random.choice(DAYS)
-    sec = 10 ** random.uniform(-3, math.log10(86399))
-    sec = float("%.7g" % ((math.floor(sec * s) + 0.5) / s))
-    x = (d + sec / 86400) if d else sec / 86400
-    outs = {fmt(f, s, as_fields(m)(x, s)) for m in (chain_units, register_units)}
-    if r <= separating and len(outs) == 1:
-        continue
-    dpart = f"{d}+" if d else ""
-    cells[f"A{r}"] = f'=TEXT({dpart}{sec:.7g}/86400,"{f}")'
-    meta[f"A{r}"] = (f, s, d, float(f"{sec:.7g}"))
-    r += 1
-description = ("T-4332 fresh sweep (generated after the field-by-field model of docs/research/t4332/chain.py was "
-               "frozen): rounding ties of the shown fraction of a second, mostly at serials below 1, under elapsed "
-               "and clock formats with .0, .00 and .000; the first 60 cells separate that model from T-4323's register.")
-case = {"format": "rustsheet-case/v1", "description": description, "tags": ["M10", "text", "probe"],
-        "sheets": [{"name": "Sheet1", "cells": cells}], "expected": {}}
-open(case_path, "w").write(json.dumps(case, indent=2) + "\n")
-json.dump(meta, open(meta_path, "w"))
+
+
+def generate(seed, count, separating, texts, description, case_path, meta_path):
+    """Writes the sweep's case and meta; `texts(f, s, x)` gives the candidate models' texts, and a separating cell is
+    one where they differ. T-4370's sweep reuses it."""
+    random.seed(seed)
+    cells, meta, r = {}, {}, 1
+    while r <= count:
+        f, s = random.choice(FMTS)
+        d = random.choice(DAYS)
+        sec = 10 ** random.uniform(-3, math.log10(86399))
+        sec = float("%.7g" % ((math.floor(sec * s) + 0.5) / s))
+        x = (d + sec / 86400) if d else sec / 86400
+        if r <= separating and len(set(texts(f, s, x))) == 1:
+            continue
+        dpart = f"{d}+" if d else ""
+        cells[f"A{r}"] = f'=TEXT({dpart}{sec:.7g}/86400,"{f}")'
+        meta[f"A{r}"] = (f, s, d, float(f"{sec:.7g}"))
+        r += 1
+    case = {"format": "rustsheet-case/v1", "description": description, "tags": ["M10", "text", "probe"],
+            "sheets": [{"name": "Sheet1", "cells": cells}], "expected": {}}
+    open(case_path, "w").write(json.dumps(case, indent=2) + "\n")
+    json.dump(meta, open(meta_path, "w"))
+
+
+if __name__ == "__main__":
+    generate(*(int(a) for a in sys.argv[1:4]),
+             lambda f, s, x: [fmt(f, s, as_fields(m)(x, s)) for m in (chain_units, register_units)],
+             "T-4332 fresh sweep (generated after the field-by-field model of docs/research/t4332/chain.py was "
+             "frozen): rounding ties of the shown fraction of a second, mostly at serials below 1, under elapsed "
+             "and clock formats with .0, .00 and .000; the first 60 cells separate that model from T-4323's register.",
+             *sys.argv[4:6])

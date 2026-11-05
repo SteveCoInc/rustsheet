@@ -197,6 +197,31 @@ def test_formatted_and_number_format(wb):
     assert wb.number_format("A2") is None
 
 
+def test_set_number_format_shows_value_through_format(wb):
+    wb.set("Sheet1!A1", 0.5)
+    with wb.edit() as tx:
+        tx.set_number_format("Sheet1!A1", "0.0%")
+    assert wb.formatted("Sheet1!A1") == "50.0%"
+    assert wb.number_format("Sheet1!A1") == "0.0%"
+    assert wb["Sheet1!A1"] == 0.5
+    # A format-only edit changes no value.
+    assert wb.changes is not None
+    assert wb.changes["values"] == []
+
+
+@pytest.mark.parametrize("target", ["Sheet1!A1:B2", "Nope!A1"])
+def test_set_number_format_bad_target_rolls_back(wb, target):
+    wb.set("Sheet1!A1", 0.5)
+    with wb.edit() as tx:
+        tx.set_number_format("Sheet1!A1", "0.0%")
+    with pytest.raises(rs.RefError):  # EditError::Ref maps to RefError
+        with wb.edit() as tx:
+            tx.set_number_format("Sheet1!A1", "0.00")
+            tx.set_number_format(target, "0.000")
+    assert wb.number_format("Sheet1!A1") == "0.0%"
+    assert wb["Sheet1!A1"] == 0.5
+
+
 def test_used_range(wb):
     assert wb.used_range("Sheet1") is None
     wb.set("B2", 1)

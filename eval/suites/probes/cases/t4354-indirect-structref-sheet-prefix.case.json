@@ -1,0 +1,128 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4354: INDIRECT of structured-reference text behind a sheet prefix whose unquoted form Excel's A1 text refuses. Tables (header Name/Qty/Price, data rows 2-4, Qty in B2:B4) Sales on S!A1:C4, TabA on 'Co A'!A1:C4, TabB on 'P&L'!A1:C4, TabC on 'O''B'!A1:C4. Each probe is LET(r,INDIRECT(text),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r)): P!A1 'Co A!TabA[Qty]'; P!A2 ''Co A'!TabA[Qty]'; P!A3 'Co A!Sales[Qty]'; P!A4 ''Co A'!Sales[Qty]'; P!A5 'P&L!TabB[Qty]'; P!A6 ''P&L'!TabB[Qty]'; P!A7 'P&L!Sales[Qty]'; P!A8 ''P&L'!Sales[Qty]'; P!A9 'O'B!TabC[Qty]'; P!A10 ''O''B'!TabC[Qty]'; P!A11 'O'B!Sales[Qty]'; P!A12 ''O''B'!Sales[Qty]'; P!A13 'S!TabA[Qty]'; P!A14 'Nope!Sales[Qty]'; P!A15 ''Nope'!Sales[Qty]'; P!A16 ''No Sheet'!Sales[Qty]'; P!A17 'No Sheet!Sales[Qty]'; P!A18 'Nope!TabA[Qty]'; P!A19 'S!Sales[Qty]'.",
+  "tags": [
+    "M8",
+    "tables",
+    "probe"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "Name",
+        "B1": "Qty",
+        "C1": "Price",
+        "A2": "a",
+        "A3": "b",
+        "A4": "c",
+        "B2": 1,
+        "B3": 2,
+        "B4": 3,
+        "C2": 10,
+        "C3": 20,
+        "C4": 30
+      },
+      "tables": [
+        {
+          "name": "Sales",
+          "ref": "A1:C4"
+        }
+      ]
+    },
+    {
+      "name": "Co A",
+      "cells": {
+        "A1": "Name",
+        "B1": "Qty",
+        "C1": "Price",
+        "A2": "a",
+        "A3": "b",
+        "A4": "c",
+        "B2": 1,
+        "B3": 2,
+        "B4": 3,
+        "C2": 10,
+        "C3": 20,
+        "C4": 30
+      },
+      "tables": [
+        {
+          "name": "TabA",
+          "ref": "A1:C4"
+        }
+      ]
+    },
+    {
+      "name": "P&L",
+      "cells": {
+        "A1": "Name",
+        "B1": "Qty",
+        "C1": "Price",
+        "A2": "a",
+        "A3": "b",
+        "A4": "c",
+        "B2": 1,
+        "B3": 2,
+        "B4": 3,
+        "C2": 10,
+        "C3": 20,
+        "C4": 30
+      },
+      "tables": [
+        {
+          "name": "TabB",
+          "ref": "A1:C4"
+        }
+      ]
+    },
+    {
+      "name": "O'B",
+      "cells": {
+        "A1": "Name",
+        "B1": "Qty",
+        "C1": "Price",
+        "A2": "a",
+        "A3": "b",
+        "A4": "c",
+        "B2": 1,
+        "B3": 2,
+        "B4": 3,
+        "C2": 10,
+        "C3": 20,
+        "C4": 30
+      },
+      "tables": [
+        {
+          "name": "TabC",
+          "ref": "A1:C4"
+        }
+      ]
+    },
+    {
+      "name": "P",
+      "cells": {
+        "A1": "=LET(r,INDIRECT(\"Co A!TabA[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A2": "=LET(r,INDIRECT(\"'Co A'!TabA[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A3": "=LET(r,INDIRECT(\"Co A!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A4": "=LET(r,INDIRECT(\"'Co A'!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A5": "=LET(r,INDIRECT(\"P&L!TabB[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A6": "=LET(r,INDIRECT(\"'P&L'!TabB[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A7": "=LET(r,INDIRECT(\"P&L!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A8": "=LET(r,INDIRECT(\"'P&L'!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A9": "=LET(r,INDIRECT(\"O'B!TabC[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A10": "=LET(r,INDIRECT(\"'O''B'!TabC[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A11": "=LET(r,INDIRECT(\"O'B!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A12": "=LET(r,INDIRECT(\"'O''B'!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A13": "=LET(r,INDIRECT(\"S!TabA[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A14": "=LET(r,INDIRECT(\"Nope!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A15": "=LET(r,INDIRECT(\"'Nope'!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A16": "=LET(r,INDIRECT(\"'No Sheet'!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A17": "=LET(r,INDIRECT(\"No Sheet!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A18": "=LET(r,INDIRECT(\"Nope!TabA[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))",
+        "A19": "=LET(r,INDIRECT(\"S!Sales[Qty]\"),MIN(ROW(r))&\",\"&MIN(COLUMN(r))&\",\"&ROWS(r)&\",\"&COLUMNS(r))"
+      }
+    }
+  ]
+}

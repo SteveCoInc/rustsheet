@@ -3,7 +3,7 @@ id: T-4370
 title: "TEXT fraction digits of a second at a tie: the cells T-4332's field-by-field cut still misses"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -39,10 +39,38 @@ t4323-fraction-sweep-2 A1, A24, A41, A84; t4323-fraction-sweep-3 A7):
 A structural model: owes the R4 hold-out and a fresh sweep.
 
 ## Acceptance criteria
-- [ ] The listed cells pass, and no other cell of the six fraction cases (five t4323, t4332-fraction-fresh) moves;
+- [x] The listed cells pass, and no other cell of the six fraction cases (five t4323, t4332-fraction-fresh) moves;
       at the least, beat `field_split`'s count on them (`python3 docs/research/t4332/chain.py`).
-- [ ] A fresh sweep generated after the model is frozen confirms it.
+- [x] A fresh sweep generated after the model is frozen confirms it.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The elapsed counts before the fraction (T-4333).
+
+## Outcome
+Excel reads the fraction digits of a second apart from the clock: the remainder `r` of a second that T-4332's
+half-step cut leaves after the second 60 is rounded to 15 significant digits, and the digits are `floor(r15*scale)`
+modulo `scale` (formatter/elapsed.rs `fraction_digits`; number-formats.md "Fraction digits of a second at a tie").
+The seconds field is cut on its own and does not carry when `r15` reaches 1: `TEXT(41.95/86400-2*2^-64,"[s].0")` is
+"41.0" (probes/t4370-ulp-map-2 A417), the clue that split the two paths.
+
+- Evidence: two ulp maps generated for the search, probes/t4370-ulp-map (340 cells) and t4370-ulp-map-2 (462), which
+  step 70 tie serials up to 64 ulp and show the flip depends on the serial only, not the format; and the fresh sweep
+  probes/t4370-fraction-fresh (120 cells, seed 43700, the first 60 separating the model from the cut), generated after
+  docs/research/t4370/model.py was frozen. All excel-graph 2026-11-05.
+- Scores (model / T-4332's cut): the six fraction cases 743/746 against 706/746, so all 37 listed cells pass and no
+  other cell moves: the engine still misses only T-4333's six `[s]` count cells (ties A90, sweep-2 A1, A24, A41, A84,
+  sweep-3 A7), as before (the Python scorer's simpler count rule misses three others instead); fresh sweep 120/120 against 54/120; ulp
+  maps 739/802 against 554/802. The engine gets 740: it also passes t4370-ulp-map-2 A418 (`[s].0`, 1 ulp below
+  41.95 s), where only the Python scorer's simpler `[s]` count rule misses.
+- R4.1 hold-out (structural model, no fitted constant), with T-4323's margin of 10 points; outputs are text, so the
+  within-4-ulp and 15-digit columns do not apply. Pooled 30% sha256 split of every cell of the six fraction cases
+  and the two ulp maps (docs/research/t4370/holdout.py): the 15-digit model gets 1008/1055 (95.5%) on train and
+  474/493 (96.1%) on hold-out; T-4332's cut 864/1055 and 396/493; the correctly rounded value 716/1055 and 336/493.
+  The search ranked its candidates on all of these cells, so the hold-out cells were seen during the search; the
+  guard this PR relies on is the fresh sweep probes/t4370-fraction-fresh, drawn after the freeze (120/120).
+- Left: `.000` on a remainder below about 0.06 s rounds up further than the 15th digit allows (as if 1.6E-17 to 1.9E-17
+  s were added): the engine's 62 ulp-map misses, all owned by the follow-up T-4389. Searches refuted on the way are
+  in docs/research/t4370/README.md.
+- Eval delta: probes 37 cells fixed (the listed ones), 0 regressions; the three new cases add 62 known failures, all owned
+  by T-4389 (visible-parity lock +62 for them, 1838 in-scope cells visibly off).

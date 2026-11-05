@@ -1530,6 +1530,16 @@ t4322 fresh A10 (`k = 100`, 1.298a), as is the correctly rounded Q (17), so Exce
 step none of them shares; T-4357 probes the companion functions at these points. Cephes' continued fraction in
 doubles does not explain the window form's residue either: in place of the exact fraction it is within 4 ulp at
 13/15 fit and 47/57 fresh points (exact fraction 14/15 and 51/57), and G3 stays 62 ulp off.
+T-4357 (probes-numeric/t4357-poisson-companions, excel-graph 2026-11-05; docs/research/t4357/score.py) probed the
+functions Excel may share the kernel with at the same 18 points and 24 fresh ones (seed 4357, fixed before scoring),
+a = k + 1, and none explains the cdf. Bit-exact / within 4 ulp / max ulp from Excel's cdf, train, hold-out, fresh: the
+correctly rounded Q 1/7/9, 1/4/17, 7/18/8; Excel's own `1-GAMMA.DIST(m,a,1,TRUE)` 0/2/309836, 0/0/389215, 1/16/6006
+(so the cdf is not 1 - P: P near 1 cancels); Excel's `GAMMA.DIST(m,a,1,FALSE)` times the exact Q/density 1/3/63,
+0/3/86, 3/10/22, and Excel's `POISSON.DIST(k,m,FALSE)` times the exact Q/pmf 2/4/42, 0/1/73, 0/12/26 (so the cdf does
+not take the density's or the pmf's prefactor); Excel's `ERFC.PRECISE` of Temme's argument
+`SQRT(a*(m/a-1-LN(m/a)))`, halved, plus the exact remainder 3/4/56, 0/1/68, 3/10/47 (so it is not Temme's leading
+term on Excel's erfc). Excel's cdf stays closer to the correctly rounded Q (within 4 ulp at 29 of 42 points) than to
+any model built on a companion value.
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -2871,7 +2881,13 @@ forms, still on `incomplete_beta.rs` (T-2847).
   the task named, where the Cephes kernel was 4 to 6 ulp off. TOMS's 20 bup terms plus the accurate bgrat increment
   (`bgrat_increment`, double-double Legendre fraction) make all 9 within 15 digits and 7 bit-exact. On probes-numeric
   (main 302bec9b5) that is 16 BETA.DIST cells newly within 15 digits and none newly off, with 626 cells newly bit-exact
-  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed.
+  and 53 no longer bit-exact. t2464-r2-bratio-x29 goes from 2,133 to 2,696 of 3,080 passed. The arm runs for BETA.DIST's
+  cdf, F's tails and BETA.INV's search (`beta_search_tails` passes `half_bgrat`); no BETA.INV cell changed in the gated
+  suites or probes-numeric. "Near the math" holds for the x29 region only: in probes-numeric/t2464-w2f-unit-shape
+  (a just below 1, x = 0.1, b = 2.5 or 5) the new values are up to 29 ulp from the math, where the old ones were up to
+  7. Excel itself is up to 26 ulp off the math there and the new values track it: 6 cells are newly within 15 digits and
+  several are bit-exact. Cell examples: A227 (ours 29.5 ulp below the math, Excel 17.3 below) and A211 (Excel 25.6 below,
+  ours 13.4 below).
 Status: VERIFIED (excel-graph) for the dispatch, computed tail, complement and argument forms; each branch's
 arithmetic is in the entries below
 Tasks: T-2464, T-2504, T-2505, T-3665
@@ -7275,7 +7291,8 @@ A range as the percent lifts TRIMMEAN over it, one result per cell: `TRIMMEAN("2
 a FALSE cell percent is 0, the non-numeric text "TRUE" `#VALUE!`, while the numeric text "1" and TRUE read as 1, out of range.
 Evidence: gen-m9/4fc6bdaec0e5583d (T-3781 arg-pairs batch, excel-graph, 2026-11-01) A199-A253 and A391-A439 (the 15 cells in
 T-3790), A259-A385 for the non-numeric text.
-Ours: matches (T-3790): `trimmean.rs` reads a non-cell numeric-text or boolean literal as one number; FALSE as 0 is unprobed.
+T-3874 (probes/t3874-trimmean-typed-scalar, excel-graph, 2026-11-05): `TRIMMEAN(FALSE,0)` is 0 (A1), as TRUE is 1 (A9) and "2.5" 2.5 (A8). A picked cell is no typed scalar: a defined name of a TRUE cell or a text cell, and `INDEX` of a text or boolean cell, is data with no number, `#NUM!` (A2, A3, A5-A7), while a name of a numeric cell is that number (A4: 4).
+Ours: matches (T-3790, T-3874): `trimmean.rs` reads picked cells as ranges and a typed literal through `typed_scalar_numbers` (percentile.rs), the helper PERCENTILE* also uses.
 Status: VERIFIED (excel-graph) for the cited cells
 Tasks: T-3790
 
