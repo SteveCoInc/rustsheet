@@ -3,7 +3,7 @@ id: T-4399
 title: "Probe 15-digit ordering criteria in AVERAGEIF, AVERAGEIFS, MINIFS, MAXIFS and the D-functions (only COUNTIF, SUMIF, COUNTIFS and SUMIFS have cells)"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
