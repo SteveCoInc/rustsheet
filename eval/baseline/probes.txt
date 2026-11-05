@@ -7519,8 +7519,6 @@ F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H3
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H4
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H5
 F	probes/t4302-poisson-cdf-holdout-2.case.json	Calc!H6
-F	probes/t4331-typed-xlpm-remaining.case.json	S!C2
-F	probes/t4331-typed-xlpm-remaining.case.json	S!C3
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
