@@ -16,6 +16,9 @@ Sources:
 - statistics.md, "GAMMA.DIST at a huge shape (T-2435, T-3316)": rule 1, the density of a positive x is `#NUM!` where
   shape / x overflows a double; rule 2, from a shape of about 1E+55 a computed 0 is `#NUM!` at some points and not
   others, with no threshold (decision 0267 accepts those cells), so such a point has no math value.
+- statistics.md, "Incomplete gamma: accurate kernel (T-0971)", the T-4308 finding: past the 2 pi shape overflow (a
+  shape above about 2.9E307) the density at the mode is `#DIV/0!` (`GAMMA.DIST(a,a,1,FALSE)` at 5E307, 9E307 and
+  9.99999999999999E307, a number at 2E307); there it is a domain rule, and off the mode, unprobed, no value.
 - statistics.md, "Thin distribution functions: argument coercion, truncation and error edges (T-1049)", "Density at 0":
   `CHISQ.DIST(0,1,FALSE)` is `#NUM!` (infinite), the df 2 value is 0.5 and higher df give 0, as the math does;
   `CHISQ.DIST.RT(0,..)` is 1. GAMMA.DIST at x = 0 is 0 above shape 1 (`GAMMA.DIST(0,9,2,FALSE)`, Excel's GAMMA.xlsx
@@ -66,6 +69,7 @@ RT_TRUNC_SOURCE = "statistics.md#incomplete-gamma-accurate-kernel-t-0971"
 MATH_SOURCE = "Abramowitz and Stegun 6.5.1, 26.1.32, 26.4.19"
 
 NORMAL_MIN = sys.float_info.min
+TWO_PI = 2 * math.pi
 FLOOR = mpmath.mpf("1e-300")  # the envelope's absolute floor (SPEC-0029)
 # Rule 2 of HUGE_SHAPE_SOURCE: Excel's unexplained #NUM! for a computed 0 starts between shapes 1E+55 and 1E+56.
 HUGE_SHAPE_NUM = 1e55
@@ -159,10 +163,20 @@ def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     ratio = fx / fbeta
     if math.isinf(ratio):
         return "x / beta overflows"
-    if not cumulative and ratio < NORMAL_MIN:
+    return None if cumulative else _density_domain(fx, fa, ratio)
+
+
+def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
+    """GAMMA.DIST's density-only error rules at a positive x (T-2738, T-3316 rule 1, T-4308)."""
+    if ratio < NORMAL_MIN:
         return "the density at a subnormal x / beta"
-    if not cumulative and math.isinf(fa / fx):
+    if math.isinf(fa / fx):
         return "the density where shape / x overflows"
+    if math.isinf(TWO_PI * fa):
+        if ratio == fa:
+            return "the density at the mode where 2 pi shape overflows (#DIV/0!)"
+        msg = "the density where 2 pi shape overflows is probed only at the mode (T-4308)"
+        raise NoValueError(msg)
     return None
 
 
@@ -274,7 +288,14 @@ GAMMA_DIST = register(
         domain=_gamma_dist_domain,
         tail=_gamma_tail_x,
         tail_param="x",
-        sources=(KERNEL_SOURCE, SUBNORMAL_SOURCE, HUGE_SHAPE_SOURCE, ZERO_SOURCE, MATH_SOURCE),
+        sources=(
+            KERNEL_SOURCE,
+            SUBNORMAL_SOURCE,
+            HUGE_SHAPE_SOURCE,
+            ZERO_SOURCE,
+            RT_TRUNC_SOURCE,
+            MATH_SOURCE,
+        ),
     )
 )
 

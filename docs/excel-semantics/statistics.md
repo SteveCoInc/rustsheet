@@ -508,6 +508,10 @@ Still off: shape 50 below a/100 (sweep A46:A48, B46:B48, 32 to 114 ulp; T-3219):
 value, and its error is 50 times LN(y)'s rounding error plus 41 to 52 units of 2^-52 there, a log form with the rest of
 the exponent about 1E-14 high; no tried order of a LN(y), y and GAMMALN(50) in doubles or in an x87 register, nor the
 ratio form, Loader's saddle point or `rcomp`, reproduces it (13 to 435 ulp off).
+Where a*LN(y) is below EXP's underflow the form is 0 though the true density is a normal double: at shape 2,
+`GAMMA.DIST(1E-250,2,1,FALSE)` and `(1E-200,2,1,FALSE)` are 0 against about 1E-250 and 1E-200 (probes/t2753-gamma-density-
+ratio-sweep A14, A15; A13 at 1E-300 too), relative error 1 against the T-3925 math sidecars; an R3 candidate for the owner
+(T-4392), not marked.
 Implemented in: functions/statistical/gamma.rs `log_form_density` (GAMMA.DIST, GAMMADIST, and CHISQ.DIST through
 chisq.rs).
 Status: VERIFIED for the forms (every probed density the form moves ends 0 to 2 ulp from Excel; UNVERIFIED from y = 2

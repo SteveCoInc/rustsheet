@@ -1,0 +1,23 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "8316065809895e6d34472af60db690a0a566b18ed7235d8eff8329a7134541b0"
+ },
+ "sheets": {
+  "Sheet1": {
+   "C5": {
+    "t": "n",
+    "v": "0.0",
+    "f": "=CHISQ.DIST(1,10^10,TRUE)"
+   },
+   "C6": {
+    "t": "e",
+    "why": "deg_freedom outside [1, 1e+10]",
+    "f": "=CHISQ.DIST(1,10^10+1,TRUE)"
+   }
+  }
+ }
+}

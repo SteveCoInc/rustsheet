@@ -68,6 +68,8 @@ def test_semantics_values() -> None:
         (GAMMA_DIST, (5.5626e-300, 1e9, 1.0, False)),
         # incomplete-gamma-cap E6: x / beta overflows, the cdf too
         (GAMMA_DIST, (1e300, 1.0, 1e-10, True)),
+        # T-4308: the density at the mode past the 2 pi shape overflow is #DIV/0!
+        (GAMMA_DIST, (5e307, 5e307, 1.0, False)),
         (CHISQ_DIST, (0.0, 1.0, False)),
         (CHISQ_DIST, (1.0, 0.0, True)),
         (CHISQ_DIST, (1.0, 10000000001.0, True)),
@@ -94,6 +96,9 @@ def test_no_value_regions() -> None:
     # rule 2 of T-3316: a computed 0 from shape 1E+55 can be #NUM!
     with pytest.raises(NoValueError):
         GAMMA_DIST.evaluate([mp(2e-10), mp(1e70), mp(1), True])
+    # off the mode past the 2 pi shape overflow is unprobed
+    with pytest.raises(NoValueError):
+        GAMMA_DIST.evaluate([mp(4e307), mp(5e307), mp(1), False])
     # the density at 0 below shape 1 is unbounded
     with pytest.raises(NoValueError):
         GAMMA_DIST.evaluate([mp(0), mp(0.5), mp(1), False])
