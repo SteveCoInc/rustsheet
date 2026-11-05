@@ -100,3 +100,22 @@ and T.INV's centre estimate.
   -hold2 1,226 -> 1,533, t2513-verify-r3-tdensity-hold 1,093 -> 1,505. The cells still off are T-2586's (the per-df
   constant's residual and the bd0 series), with `T.DIST(±10,1E6,FALSE)` and `T.DIST(8,50,FALSE)` as named.
 - No gated known-failure line added.
+- cells.tsv rows: 19,793 T.DIST(.,FALSE) rows against the task's 19,776; the 17 extra are probes-numeric
+  m9-t-nonint-df (10), m9-t-edges (5) and t1518-t-df-cut (2), which the research's count left out (truncated or edge
+  dfs). The engine still meets each threshold on the larger set.
+- R4 (decision 0188): the structure (LT1: op order, stored/unstored choices, the sw3 denominator) is a model chosen from
+  ranked candidates, and the log-branch cut `xx > n` is a fitted cut-point (now `T_LOG_BRANCH_CUT`, tagged
+  `FITTED(T-2513, 2406 cells, ...)`, quality/fitted.json updated by `check_fitted.py --update`). Both were frozen on the
+  in-sample probes a1 + a2 (2,406 cells) before the hold-outs were scored (r3-tdensity RESULTS.md, `final_insample.out`):
+  | data | LT1 exact / 4 ulp / 15 digits | CR |
+  |---|---|---|
+  | train a1 + a2 (2,406; LT1 with the in-sample per-df constants) | 1,412 / 2,405 / 2,406 (58.7% exact) | 531 / 2,280 / 2,326 |
+  | hold-out hold2 (960, exact constant) | 573 / 960 / 960 (59.7%) | 266 / 776 / 839 |
+  | verifier hold-out (1,000, df 13-50, exact constant) | 505 / 918 / 977 (50.5%) | 93 / 555 / 787 |
+  Margin 10 points (T-4323's): the hold-out exact rates are within it of the train rate (+1.0 and -8.2 points; the
+  train figure carries the fitted per-df constants, which this PR does not use) and 15-digit rates within 2.3 points.
+  Fresh data after the 2026-10-24 freeze: the Gate A tables T.DIST `s1` (2026-10-31, T-3358) and `e-T-3425`
+  (2026-11-01). `make eval-gates` on this head: accuracy passes, 0 failing; of the T.DIST density's 109 points 100 are
+  in the envelope on both measures, 2 on the math measure only, and 7 are known error-vs-number mismatches (T-3554)
+  where t·t overflows, `excel_t_density` returns None and the old fallback runs. The exact constant is plain math, not a
+  fit; no keep-matched branch.

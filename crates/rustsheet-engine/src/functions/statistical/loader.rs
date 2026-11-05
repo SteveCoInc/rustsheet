@@ -224,6 +224,13 @@ pub(crate) fn excel_beta_density(x: f64, a: f64, b: f64) -> Option<f64> {
     density.is_finite().then_some(density)
 }
 
+/// Where Excel's t density leaves Loader's bd0 form for the log form: `xx > T_LOG_BRANCH_CUT * n`
+/// (R 2.x's cut is 0.2). Chosen by scoring the cut on the in-sample probes t2513-r3-tdensity-a1/-a2;
+/// on the verifier's hold-out 1 gives 505 exact cells against 391 for 0.2 and 417 for no log
+/// branch (hold2: 573, 480, 520; statistics.md "Student t density is Loader's dt").
+/// FITTED(T-2513, 2406 cells, df 3..100, t 0.31..4.3)
+const T_LOG_BRANCH_CUT: f64 = 1.0;
+
 /// The bound on [`loader_t_constant`]'s series terms; at n = 3 (ratio 1/3) it reaches 1E-33 in
 /// about 70.
 const T_CONSTANT_MAX_TERMS: u32 = 400;
@@ -260,13 +267,14 @@ fn loader_t_constant(n: f64) -> Dd {
 /// Loader's dt", T-2513, T-2585), every operation an x87 one stored to a double:
 /// - df 1: `fl(1/fl(pi fl(1 + fl(t t))))`; df 2: `EXP(fl(-1.5 LN(fl(2 + fl(t t)))))`;
 /// - df >= 3, Loader's saddle point: xx = fl(t t), q = fl(xx/n), w = fl(1 + q); when xx > n,
-///   u = fl(fl(LN(w) n)/2), otherwise u = fl(-bd0(fl(n/2), fl(fl(n + xx)/2)) + fl(xx/2)) with
+///   u = fl(fl(LN(w) n)/2) ([`T_LOG_BRANCH_CUT`]), otherwise u = fl(-bd0(fl(n/2), fl(fl(n + xx)/2)) + fl(xx/2)) with
 ///   Excel's bd0 held in a register ([`excel_bd0_unstored`]); then E = fl(C - u) with the exact constant C
 ///   ([`loader_t_constant`]) held in an x87 register, and
 ///   `fl(fl(EXP(E)/fl(sqrt(w))) / sqrt(2 pi))`, `1/sqrt(2 pi)` the correctly rounded double.
 ///
-/// On docs/research/t2464/cells.tsv this is within 15 digits on 18,631 of its 18,699 df >= 3
-/// cells and bit-exact on all 1,077 df 1 and df 2 cells. `None` for a non-finite piece (t t
+/// On the 19,793 T.DIST(.,FALSE) rows of docs/research/t2464/cells.tsv (the research's 19,776
+/// plus the 17 rows of m9-t-nonint-df, m9-t-edges and t1518-t-df-cut) the engine is within 15 digits on 18,646 of the
+/// 18,714 df >= 3 rows and bit-exact on all 1,079 df 1 and df 2 rows. `None` for a non-finite piece (t t
 /// overflowing), where the caller keeps its other form.
 pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
     if !(n >= 1.0 && t.is_finite() && n.is_finite()) {
@@ -288,7 +296,7 @@ pub(crate) fn excel_t_density(t: f64, n: f64) -> Option<f64> {
     }
     let q = extended_quotient(xx, n);
     let w = extended_sum(1.0, q);
-    let u = if xx > n {
+    let u = if xx > T_LOG_BRANCH_CUT * n {
         extended_quotient(extended_product(excel_ln(w), n), 2.0)
     } else {
         let mean = extended_quotient(extended_sum(n, xx), 2.0);
