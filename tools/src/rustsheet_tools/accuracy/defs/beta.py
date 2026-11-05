@@ -175,10 +175,11 @@ def density(x: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
 
 
 def quantile(p: mpmath.mpf, a: mpmath.mpf, b: mpmath.mpf) -> mpmath.mpf:
-    """The x with I_x(a, b) = p, 0 < p < 1. NoValueError when x underflows or rounds to 1 (no double strictly
-    inside (0, 1) to record). The sub-double bound (x underflows) applies only for p <= 1/2; above it the flipped
-    branch records x = 0 as a value when 1 - x rounds to 1 (accuracy/BETA.INV/s1 A88, A97, A108, A115), where
-    Excel is 2^-53 or 0.5, not `#NUM!`."""
+    """The x with I_x(a, b) = p, 0 < p < 1. NoValueError when no double strictly inside (0, 1) can be recorded, and
+    each bound applies on one side only. For p <= 1/2 it is x underflowing; a quantile that rounds to 1 is recorded
+    as 1 there (accuracy/BETA.INV/s1 A83, A86, A98, A100, A103, A106 and the huge-alpha points). For p > 1/2 it is
+    x rounding to 1; an underflowing quantile is recorded as 0 (e.g. A88, A97, A108, A115, A125), where Excel is
+    2^-53 or 0.5, not `#NUM!`."""
     if p <= mpmath.mpf(1) / 2:
         return mpmath.exp(solve_smaller_tail(p, lambda x: lower_tail(x, a, b), None, LOG_SMALLEST_DOUBLE, 0))
     # 1 - x = e^s: the upper tail I_{e^s}(b, a) grows with s, so it is the lower tail of 1 - x

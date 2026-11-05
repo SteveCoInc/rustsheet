@@ -29,7 +29,7 @@ statistics.md "BETA.INV's Gate A table", the BETA.INV s1 lines of eval/accuracy/
 - Only the note column of known-failures.tsv changes (no point is added or removed); decision 0199.
 
 ## Acceptance criteria
-- [ ] The three corrections are made; `rustsheet-eval accuracy` still reports 0 failing and the same 86 known failures.
+- [ ] The three corrections are made; `rustsheet-eval accuracy` still reports 0 failing and the same known failures (27 of them BETA.INV/s1).
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

@@ -6334,7 +6334,7 @@ Tasks: T-2435, T-2808
 
 ## BETA.INV's Gate A table: 1 - 2^-53 near 1, 2^-53 by the flip, 0.5 at a DBL_MIN shape, `#NUM!` at a huge alpha (T-3578)
 Rule: on accuracy/BETA.INV/s1 (199 points, excel-graph 2026-11-02) Excel's BETA.INV differs from the engine in four
-classes, all where the quantile is at or beyond the ends of the doubles in (0, 1):
+classes (A123 is listed separately after them), all where the quantile is at or beyond the ends of the doubles in (0, 1):
 - Where the true quantile rounds to 1 (a small second shape: b from 1.2E-3 down to 1.7E-15), Excel is
   0.9999999999999999 = 1 - 2^-53, the largest double below 1, not 1 and not `#NUM!` (A83, A86, A98, A100, A103, A106);
   for example `BETA.INV(0.119217778495381,3.73375717051303,5.34676484504691E-07)`.
