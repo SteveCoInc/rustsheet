@@ -3,7 +3,7 @@ id: T-2230
 title: "Probe TEXT scientific edge cases: E+ with no exponent digits, lowercase e, multi-# zero mantissa"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
