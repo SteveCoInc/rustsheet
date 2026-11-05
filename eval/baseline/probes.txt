@@ -2220,6 +2220,7 @@ C	probes/t4200-unique-cycle-permutations.case.json	356
 C	probes/t4201-indic-regional-variants.case.json	142
 C	probes/t4204-fraction-denominator-mixed.case.json	42
 C	probes/t4208-hyperlink-blank-friendly-name.case.json	31
+C	probes/t4212-legacy-index-root-area-kinds.case.json	42
 C	probes/t4222-regression-flag-ranges.case.json	79
 C	probes/t4224-doubled-xlpm-prefix.case.json	40
 C	probes/t4228-pivot-range-groups.case.json	168
