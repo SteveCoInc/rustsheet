@@ -34,6 +34,11 @@ runs, and a table sort (`field_relationship` 1) or a sort by a value column on t
 ## Acceptance criteria
 - [ ] A probe of descending three-field runs (and PIVOTBY columns on intransitive runs) is filled, and the model
       is revised to fit it and Calc!C40, or the cells stay known failures with the reason recorded.
+- [ ] The probe commits the current model's predictions (the [0, n-1] search, chosen on the t4342 hold-out) before
+      its fill, with blocks shaped like t4342 Calc!B14 and B48 (two leaves showing one key): that confirms the search
+      revision out of sample.
+- [ ] It covers ASCII case-spelling blocks (t4342 Calc!B51:B56's shape) under `sort_order` -1 and -2, `field_relationship`
+      1 and a value sort: the shown spelling in those directions is unprobed though the engine builds the tree in them.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope

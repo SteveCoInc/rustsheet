@@ -966,7 +966,7 @@ The T-4195 per-field model this replaces was selected on its own cells without a
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241 and t4342 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
