@@ -318,7 +318,6 @@ fn fraction_digits_round_into_the_next_day() {
     );
 }
 
-// probes/text-format-aaa-weekday and -b (T-1880): three or more of one `a` are the weekday.
 // probes/text-format-aaa-weekday-d (T-2745): a run's last letter before `m/pm` or `/p` is the AM/PM token's.
 #[test]
 fn a_run_before_am_pm_gives_its_last_letter_to_the_token() {
@@ -338,6 +337,7 @@ fn a_run_before_am_pm_gives_its_last_letter_to_the_token() {
     }
 }
 
+// probes/text-format-aaa-weekday and -b (T-1880): three or more of one `a` are the weekday.
 #[test]
 fn a_runs_are_the_weekday() {
     let cases = [
