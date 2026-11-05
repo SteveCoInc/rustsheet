@@ -75,16 +75,21 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   redrawn (0 itself stays). Excel's 0.5*LN((1+x)/(1-x)) and (EXP(2y)-1)/(EXP(2y)+1) cancel there, about 1E-16/|x|
   relative; past R3's 1e-4 below about 1E-12 (`FISHER(1.49172367472348E-11)`, `FISHER(1.02759470998055E-16)` = 0,
   probes/t2437-fit-separators A1, A4). The cut is 1E-6, not 1E-8 as GAUSS's, because at 1E-8 the doubles' error is
-  still 5E-9, above the gate's 1e-9 (FISHER(1E-08) in doubles is 9.999999950247593E-9).
+  still 5E-9, above the gate's 1e-9: Excel's `FISHER(1E-08)` is 9.999999950247593E-9 (t2437-fit-separators A19).
 - Also left out, as unprobed or ill-conditioned (stated in the module doc): points whose relative condition number
   times 2^-52 passes 1e-10 (LOGNORM.DIST's ln x - mean against a small sd, LOGNORM.INV's mean + sd*z, WEIBULL's
   alpha*LN(x/beta) and its density's powers); EXP-overflow neighbourhoods; LOGNORM.INV past the double range;
   LOGNORM.DIST densities whose exp(-z^2/2) underflows before the division by x*sd lifts it back (the engine gives 0,
   no cell says what Excel does); EXPON.DIST with lambda*x past 1E+300; WEIBULL with x/beta subnormal, a beta^alpha
   between EXP's underflow and 1E-300, or a density intermediate outside the normal range.
-- **R3 candidates: none.** The worst Excel-vs-math gap in the six tables is 4.0E-11 relative
-  (`FISHER(1.40857451285715E-06)`, at the cut); otherwise WEIBULL.DIST 2.1E-13, LOGNORM.DIST 3.0E-13, EXPON.DIST
-  2.1E-14, LOGNORM.INV 6.4E-14, FISHERINV 1.4E-11.
+- **R3 candidates, for an owner ruling (not marked; T-4317):** FISHER and FISHERINV near 0. In
+  probes/t2437-fit-separators, Excel is more than 1e-4 off the math at FISHER A2, A4, A5, A7, A8, A10, A11 (|x| from
+  1E-16 to 1.2E-14, up to 1.0: `FISHER(1.02759470998055E-16)` is 0) and FISHERINV A21 to A32 and A34 to A36 (|y| from
+  1E-16 to 8E-15, 2.2E-3 to 0.20). The engine matches Excel there (T-2437). No other cell of the six functions in the
+  regenerated sidecars, outside these and t2437-fit-separators's other near-0 FISHER and FISHERINV cells (inside
+  R3, listed in T-4317), is more than 1e-9 off the math.
+- In the tables, the worst Excel-vs-math gap is 4.0E-11 relative (`FISHER(1.40857451285715E-06)`, at the cut);
+  otherwise WEIBULL.DIST 2.1E-13, LOGNORM.DIST 3.0E-13, EXPON.DIST 2.1E-14, LOGNORM.INV 6.4E-14, FISHERINV 1.4E-11.
 - Tables: `eval/accuracy/tables/{LOGNORM.DIST,LOGNORM.INV,EXPON.DIST,WEIBULL.DIST,FISHER,FISHERINV}/s1`, 120 or 200
   points each (960 in all), filled from excel-graph. `rustsheet-eval accuracy`: 18,032 points in 113 tables, 0 failing,
   0 table defects, no new known failures; missing tables 144 -> 138. 53 LOGNORM.DIST and 6 LOGNORM.INV points are in
@@ -94,4 +99,5 @@ Gate A table with a cited mpmath definition, and `make check` runs them. Every f
   regenerated (only the cases `make eval-math-check` reported stale).
 - Unit tests: tools/tests/test_accuracy_continuous.py (Microsoft's examples, the T-1040, T-1046, T-0925 and T-2239
   values, the WEIBULL error domain, and the FISHER draws avoiding the cancellation region).
+- Follow-up: T-4317 (owner ruling on R3 for FISHER and FISHERINV near 0, blocked on the owner).
 - Eval delta: none in the gated suites (tools, tables and sidecars only).
