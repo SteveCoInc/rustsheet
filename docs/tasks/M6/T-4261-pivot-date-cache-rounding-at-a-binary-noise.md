@@ -3,7 +3,7 @@ id: T-4261
 title: "Pivot date cache rounding at a binary-noise half second: probe and model it (after T-4246)"
 milestone: M6
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
