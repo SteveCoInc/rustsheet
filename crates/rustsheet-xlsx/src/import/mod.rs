@@ -2,6 +2,7 @@ mod array_refs;
 mod call_cap;
 mod columns;
 mod conditional_formatting;
+mod encryption;
 mod external_links;
 mod iso_date;
 mod merged_cells;
@@ -40,8 +41,11 @@ use rustsheet_engine::{
 
 use crate::error::XlsxError;
 
+pub use encryption::{
+    decrypt_package, MAX_ENCRYPTION_INFO_BYTES, MAX_PASSWORD_UNITS, MAX_SPIN_COUNT,
+};
 pub use iso_date::{iso8601_to_date_system_serial, iso8601_to_serial};
-pub use ole::classify_ole_compound_file;
+pub use ole::{classify_ole_compound_file, decrypt_ole_package};
 pub use package::{is_ole_compound_file, ImportLimits, PartNames};
 pub use shared_strings::decode_xlsx_escapes;
 use shared_strings::read_shared_strings;
