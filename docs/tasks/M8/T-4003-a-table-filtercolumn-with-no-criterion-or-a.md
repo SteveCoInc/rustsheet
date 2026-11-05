@@ -34,8 +34,7 @@ criterion inside the table, as Excel does.
       each with hidden rows and SUBTOTAL 3, 9, 103 and 109; it passes.
 - [x] What the API's filtered table with no criterion and the column-delete fallback should be is decided and written
       in docs/excel-semantics (numbers.md "SUBTOTAL and AGGREGATE over hidden and filtered rows").
-- [ ] `make check` green; reviewers approve.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Re-applying a filter. Top 10 and other criteria the export drops (T-4004).
@@ -49,10 +48,11 @@ criterion inside the table, as Excel does.
 - The xlsx import sets `has_filters` only for a filterColumn with a criterion element and a `colId` inside the table
   (`has_active_criterion`, crates/rustsheet-xlsx/src/import/tables.rs). A column delete that removes a file-read
   table's last kept criterion inside the table unfilters it (`kept_filter_inside`, table_edits.rs), so the engine
-  agrees with its export. The eval adapter adds a criterion-less or out-of-range spec filter unfiltered.
+  agrees with its export; an edit never turns a filter on. The eval adapter adds a criterion-less or out-of-range spec filter unfiltered.
 - Decided (numbers.md "SUBTOTAL and AGGREGATE over hidden and filtered rows"; xlsx-storage.md "Table parts in the
   export" updated): the API's `filtered` flag means a filter with a criterion, so it stays filtered; its export still
   writes a criterion-less filterColumn that Excel and now our import read as unfiltered, pinned by
   `a_filtered_table_without_a_criterion_exports_unfiltered`; follow-up T-4363 writes a criterion instead.
 - Eval delta: +1 probes case, 30/30 cells pass; no other case changed.
-- Follow-up: T-4363.
+- Follow-ups: T-4363 (export criterion for an API-filtered table), T-4371 (probe a column delete of the filtered
+  column in Excel).

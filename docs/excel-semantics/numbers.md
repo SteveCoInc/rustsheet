@@ -2278,7 +2278,7 @@ table whose filter has a criterion that hides its hidden rows (what spec2xlsx wr
 stays filtered in the engine; its xlsx export still writes a criterion-less filterColumn, which Excel and our import
 read as not filtered (T-4363). A column delete that takes the last kept criterion of a filter read from a file
 unfilters the table, so the engine agrees with its own export; whether Excel unfilters the rows when the filtered column
-is deleted in the application is unprobed. A worksheet autoFilter (no table) and an autoFilter holding only a
+is deleted in the application is unprobed (T-4371). A worksheet autoFilter (no table) and an autoFilter holding only a
 `<sortState>` are unprobed; ours reads the latter as not filtered.
 Status: VERIFIED
 Engine gaps: none known. SUBTOTAL 110 and 111 skip hidden rows (T-1185), and SUBTOTAL 7, 8, 10, 11 and 107, 108, 110, 111 use `excel_variance` like VAR/STDEV and AGGREGATE (which gave the one-ulp match for `SUBTOTAL(10,..)`, probes/subtotal-hidden-filtered Hide!C10). The nested-call skip is implemented (T-1183,

@@ -370,6 +370,30 @@ fn deleting_the_filtered_column_unfilters_the_table() {
     assert!(!table_xml.contains("filterColumn"), "{table_xml}");
 }
 
+/// A column edit never makes a table filtered: one whose only filterColumn has no criterion is
+/// not filtered on import (as Excel reads it, T-4003) and stays so after an unrelated delete.
+#[test]
+fn a_column_edit_does_not_filter_a_criterion_less_table() {
+    let mut model = new_empty_model();
+    for (column, header) in [(1, "Cat"), (2, "Val"), (3, "Tag")] {
+        model
+            .set_user_input(0, 1, column, header.to_string())
+            .unwrap();
+        model.set_user_input(0, 2, column, "1".to_string()).unwrap();
+    }
+    model.add_table(0, "Sales", (1, 1, 2, 3), false).unwrap();
+    if let Some(table) = model.workbook.tables.get_mut("Sales") {
+        table.filter_columns = vec![FilterColumn {
+            col_id: 0,
+            criterion: FilterCriterion::Other,
+        }];
+    }
+    model.delete_columns(0, 3, 1).unwrap();
+    let table = &model.workbook.tables["Sales"];
+    assert_eq!(table.filter_columns.len(), 1);
+    assert!(!table.has_filters);
+}
+
 /// A calculated column is written with its `calculatedColumnFormula` in file form and read back
 /// as a calculated column (T-3033; xlsx-storage.md "A calculated column is saved as
 /// `calculatedColumnFormula` plus one formula per row"); a column that was not filled gets none.

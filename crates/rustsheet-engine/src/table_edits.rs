@@ -349,13 +349,15 @@ fn edit_filter_columns(filters: &mut Vec<FilterColumn>, edit: ColumnEdit) {
     }
 }
 
-/// Whether a table whose autoFilter criteria came from its file is still filtered after a column
-/// edit: one of its kept criteria is left inside the table. Excel calls a table's hidden rows
-/// filtered only for a filterColumn with a criterion inside the table (T-4003), and once the
+/// Whether a filtered table whose autoFilter criteria came from its file can stay filtered after
+/// a column edit: one of its kept criteria is left inside the table. Excel calls a table's hidden
+/// rows filtered only for a filterColumn with a criterion inside the table (T-4003), and once the
 /// edit deletes the last such column the export writes none, so the table stops being filtered
-/// here too. A criterion-less column read from the file counts as a criterion, since
-/// [`crate::types::FilterCriterion::Other`] also holds top 10 and the other kept-only kinds;
-/// Excel's own result after deleting the filtered column in the application is unprobed.
+/// here too. The caller only ever clears the flag with this: a table the import left unfiltered
+/// (a criterion-less or out-of-range filterColumn) stays so. A criterion-less column counts here,
+/// since [`crate::types::FilterCriterion::Other`] also holds top 10 and the other kept-only
+/// kinds; Excel's own result after deleting the filtered column in the application is unprobed
+/// (T-4371).
 fn kept_filter_inside(table: &Table) -> bool {
     table
         .filter_columns
@@ -558,7 +560,7 @@ impl Model {
                     edit_columns(&mut table.columns, edit);
                     if !table.filter_columns.is_empty() {
                         edit_filter_columns(&mut table.filter_columns, edit);
-                        table.has_filters = kept_filter_inside(table);
+                        table.has_filters = table.has_filters && kept_filter_inside(table);
                     }
                     headers.extend(inserted_headers(table, edit));
                 }
