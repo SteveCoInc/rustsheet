@@ -38,6 +38,10 @@ fn kept_subnormal_is_saved_as_zero() {
     model
         .set_user_input(0, 4, 1, "=(EXP(-745))=0".to_string())
         .unwrap();
+    // Unprobed (T-4355): a negative kept subnormal keeps its value in the file.
+    model
+        .set_user_input(0, 5, 1, "=-EXP(-745)".to_string())
+        .unwrap();
     model.evaluate();
     let path = "temp_subnormal_export.xlsx";
     save_to_xlsx(&model, path).unwrap();

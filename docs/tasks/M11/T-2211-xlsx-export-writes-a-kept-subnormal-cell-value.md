@@ -38,8 +38,8 @@ written as `<v>0</v>`, as Excel does, so a file RustSheet saves reads back like 
 - Negative zero and other number spellings in the file.
 
 ## Outcome
-`export/worksheets.rs` passes every number `<v>` (constant, spill, formula, array formula) through
-`flush_subnormal`, so a kept subnormal is saved as `<v>0</v>`; in-memory values are untouched. New test
-`tests/subnormal_export.rs` covers `=EXP(-745)`, `=A1`, `=EXP(-708)` and the reload giving 2^-1074. The
-negative-subnormal and constant-subnormal probe in Context was not run (no oracle access in this run): the
-negative case is flushed alike and noted in numbers.md as unprobed. Eval delta: none.
+`export/worksheets.rs` passes every number `<v>` through `saved_number`, which saves a positive kept subnormal
+(`0 < v < MIN_POSITIVE`) as `<v>0</v>`; in-memory values are untouched. Reviewer round 1 narrowed it from
+`flush_subnormal` so unevidenced negatives and `-0` keep their output. New test `tests/subnormal_export.rs`
+covers `=EXP(-745)`, `=A1`, `=EXP(-708)`, an unflushed `=-EXP(-745)` and the reload giving 2^-1074. The
+negative / spilled / desktop probes were not run (no oracle access): filed as T-4355. Eval delta: none.
