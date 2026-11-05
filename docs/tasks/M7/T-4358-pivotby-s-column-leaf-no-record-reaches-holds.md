@@ -3,7 +3,7 @@ id: T-4358
 title: "PIVOTBY's column leaf no record reaches holds every record of its row group"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -38,3 +38,24 @@ the row group reaches, which Excel fills with every record of that row group.
 
 ## Out of scope
 - GROUPBY's own search (T-4344) and value sorts (T-4359).
+
+## Outcome
+- Rule: a PIVOTBY column leaf that no record reaches (the column tree's step 4, `Grouping::unreached`) holds every
+  record of the row line being laid out, in source order, whether or not some of them reached another leaf; a
+  reached leaf keeps the records that reached it. It is GROUPBY's own step 4 seen through a row group, so the
+  task's concatenated-tree model was not needed: E38's q is row 3 alone, which is all of q, and D41's (B,y) is
+  reached by no record (row 4 finds class A, C = A, then no y leaf).
+- Scored on the chosen-on cells: probes/t4344-groupby-descending-search D39, D41, E38, E41 now pass and the other
+  44 PIVOTBY cells of B31:E42 still do (the case is 1198 of 1200; D56, E56 stay T-4359's).
+- Hold-out: probes/t4358-pivotby-unreached-column-leaf (new, 25 seeded runs, 100 formulas, 475 cells), written
+  with the engine's predictions committed before the fill (docs/research/t4358/gen_probe.py, predict_engine.py,
+  predictions.tsv; score.py scores them). Leaf cells: B 24 of 25, C 25, E 25 and every leaf cell of D. The misses
+  are two findings the leaf rule does not cover, recorded in docs/excel-semantics/coercion.md and filed:
+  - T-4378: a column subtotal holds the records that reached its class (19 D cells; a candidate gives 88 of 88
+    subtotal cells, chosen on them, so it owes its own hold-out);
+  - T-4379: Excel leaves out a repeated unreached leaf over Cx Ay Ax Bx Ax (B6, D6).
+- A subtotal column now counts a record that is in an unreached leaf and a reached one once (`dedup`); Excel's
+  subtotal is T-4378's rule, so the D cells stay known failures either way.
+- Unit test: `unreached_names_the_leaf_no_row_reaches` (grouping/tests.rs).
+- Eval delta: probes fixed 4 (t4344 Calc!D39, D41, E38, E41), 0 regressions; the new case adds 21 known failures (owned by T-4378, T-4379); `make eval-baseline` updated eval/baseline.
+
