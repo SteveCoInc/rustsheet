@@ -114,17 +114,15 @@ fn group_field(base: &CacheField, group: &FieldGroup) -> Result<CacheField, Skip
     if count == 0 {
         return skip("a fieldGroup without groupItems");
     }
-    // A range: Excel's own rule for numbers, which relabels a `<groupItems>` list of the wrong
-    // length rather than refusing it (`group_by_numbers`; probes/t4228-pivot-range-groups pivot
-    // 3), and for dates (`group_by_dates`, T-4236).
+    // A range: Excel's own rule for numbers, which writes its own labels whatever the
+    // `<groupItems>` list says rather than refusing it (`group_by_numbers`;
+    // probes/t4249-pivot-range-group-edges), and for dates (`group_by_dates`, T-4236).
     match (&group.range, &group.discrete) {
         (Some(range), None) => {
             return Ok(match range.by {
-                None => group_by_numbers(
-                    base,
-                    [range.start, range.end, range.interval],
-                    group.items.clone(),
-                )?,
+                None => {
+                    group_by_numbers(base, [range.start, range.end, range.interval], &group.items)?
+                }
                 Some(by) => {
                     let groups = DateGroups::new(by, range.start, range.end, count)?;
                     group_by_dates(base, groups, group.items.clone())?

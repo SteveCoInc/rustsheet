@@ -2140,6 +2140,8 @@ C	probes/t4235-pivot-range-rounding.case.json	242
 C	probes/t4236-pivot-date-groups-no-blank.case.json	349
 C	probes/t4236-pivot-date-groups.case.json	335
 C	probes/t4237-unique-cycle-fresh.case.json	248
+C	probes/t4249-pivot-range-group-edges.case.json	252
+C	probes/t4249-pivot-range-group-labels.case.json	212
 C	probes/t4253-pivot-decimal-relabel.case.json	196
 C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4258-collation-lone-mark-astral.case.json	105

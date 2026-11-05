@@ -2,8 +2,9 @@
 //!
 //! One rule decides which group a value falls in, shared by the xlsx importer (which turns the
 //! grouped field into its group items) and by GETPIVOTDATA (which picks a group by its lower
-//! bound). The rule is Excel's own, probed with excel-graph (probes/t4228-pivot-range-groups;
-//! docs/excel-semantics/web.md "Grouped pivot fields import as their group items").
+//! bound). The rule is Excel's own, probed with excel-graph (probes/t4228-pivot-range-groups,
+//! t4253-*, t4249-*; docs/excel-semantics/web.md "Grouped pivot fields import as their group
+//! items").
 
 use std::collections::HashMap;
 
@@ -24,37 +25,41 @@ pub struct NumberGroups {
     pub end: f64,
     /// `groupInterval`.
     pub interval: f64,
-    /// The cache item of each layout position when Excel relabeled the file's `<groupItems>`
-    /// ([`NumberGroups::new`]); empty when it kept them, where position k is item k.
-    pub relabeled: Vec<u32>,
+    /// Whether the labels are whole-number ones ([`NumberGroups::labels`]): the base data,
+    /// `start` and `interval` are all whole numbers.
+    pub whole: bool,
+    /// The cache item of each layout position ([`NumberGroups::new`]); empty when position k is
+    /// item k.
+    pub order: Vec<u32>,
 }
 
 impl NumberGroups {
-    /// A grouping whose file lists `file_items` as its `<groupItems>`, or `None` for a range no
-    /// grouping can have (an interval that is not positive and finite, an end below the start,
-    /// too many groups). When the file's item count is not the layout's, Excel keeps the grouping
-    /// and relabels it with its own labels ([`NumberGroups::labels`]): the file's items that are
-    /// one of those labels come first, in the file's order, then the other labels in layout
-    /// order (probes/t4253-pivot-relabel-order; probe pivot 3 of t4228, whose `<0` and `>9`
-    /// match, lists `<0`, `>9`, `0-3`, `3-6`, `6-9`). Only a list one item too long is probed;
-    /// any other wrong length is UNVERIFIED (T-4249).
+    /// A grouping whose file lists `file_items` as its `<groupItems>` over base data that are all
+    /// whole numbers when `whole_data`, or `None` for a range no grouping can have (an interval
+    /// that is not positive and finite, an end below the start, too many groups). Whatever the
+    /// file lists, Excel writes its own labels ([`NumberGroups::labels`]): the file's items that
+    /// are one of those labels keep the file's order and come first, then Excel's other labels
+    /// in layout order. A list of the layout's length in wrong text shows the layout order, and
+    /// one of Excel's labels permuted keeps the permutation (probes/t4249-pivot-range-group-labels
+    /// pivots L and M); a list too short (A, C), two too long (B), a `>10` the layout writes as
+    /// `>12` (D) and pivot 3 of t4228, whose `<0` and `>9` match and come first, all follow it
+    /// (probes/t4249-pivot-range-group-edges, t4253-pivot-relabel-order).
     #[must_use]
     pub fn new(
         start: f64,
         end: f64,
         interval: f64,
+        whole_data: bool,
         file_items: &[CacheItem],
     ) -> Option<NumberGroups> {
         let mut groups = NumberGroups {
             start,
             end,
             interval,
-            relabeled: Vec::new(),
+            whole: whole_data && start.fract() == 0.0 && interval.fract() == 0.0,
+            order: Vec::new(),
         };
         let n = groups.inner_count()?;
-        if file_items.len() == n + 2 {
-            return Some(groups);
-        }
         let labels = groups.labels(n);
         // A map and a seen-set keep this linear: both counts come from the file and reach
         // MAX_ITEMS.
@@ -64,7 +69,7 @@ impl NumberGroups {
             .map(|(k, label)| (label.as_str(), k))
             .collect();
         let mut seen = vec![false; labels.len()];
-        let mut order: Vec<usize> = Vec::with_capacity(labels.len());
+        let mut layout: Vec<usize> = Vec::with_capacity(labels.len());
         let matching = file_items.iter().filter_map(|item| match item {
             CacheItem::Text(text) => position.get(text.as_str()).copied(),
             _ => None,
@@ -73,26 +78,29 @@ impl NumberGroups {
             if let Some(slot) = seen.get_mut(k) {
                 if !*slot {
                     *slot = true;
-                    order.push(k);
+                    layout.push(k);
                 }
             }
         }
-        let mut relabeled = vec![0; labels.len()];
-        for (item, &k) in order.iter().enumerate() {
+        if layout.iter().enumerate().all(|(item, &k)| item == k) {
+            return Some(groups);
+        }
+        let mut order = vec![0; labels.len()];
+        for (item, &k) in layout.iter().enumerate() {
             // At most MAX_ITEMS labels (`inner_count`), so an item index fits a u32.
-            let (Some(slot), Ok(item)) = (relabeled.get_mut(k), u32::try_from(item)) else {
+            let (Some(slot), Ok(item)) = (order.get_mut(k), u32::try_from(item)) else {
                 return None;
             };
             *slot = item;
         }
-        groups.relabeled = relabeled;
+        groups.order = order;
         Some(groups)
     }
 
     /// How many inner groups the range has: the steps from `start` that reach `end`, counted on
-    /// the 15-digit quotient as values are (`0` to `1` by `0.1` has 10). At least one. Probed
-    /// only for spans that are whole multiples of the interval; the count for another span (0
-    /// to 10 by 3 as four groups, the last `9-12`) is UNVERIFIED (T-4249).
+    /// the 15-digit quotient as values are (`0` to `1` by `0.1` has 10), a partial last step
+    /// counting as one (0 to 10 by 3 has four, the last `9-12`: probes/t4249-pivot-range-group-edges
+    /// pivot D). At least one.
     #[must_use]
     pub fn inner_count(&self) -> Option<usize> {
         let span = self.end - self.start;
@@ -100,13 +108,14 @@ impl NumberGroups {
             return None;
         }
         let steps = to_excel_precision(span / self.interval, 15).ceil().max(1.0);
-        // Two more items for the end groups; MAX_ITEMS bounds the labels a relabel allocates.
+        // Two more items for the end groups; MAX_ITEMS bounds the labels a grouping allocates.
         (steps <= (MAX_ITEMS - 2) as f64).then_some(steps as usize)
     }
 
     /// The layout position of `value`: 0 for the `<start` group, 1 to `n` for the inner groups and
     /// `n + 1` for `>end`, where `n` is [`NumberGroups::inner_count`]. Below `start` is the
-    /// first group and past `end` the last; `end` itself is the last inner group; any other value
+    /// first group and past `end` the last, even inside a partial last step (11 by 3 from 0 to 10
+    /// is in `>12`, probe pivot D); `end` itself is the last inner group; any other value
     /// is in step `floor(q)` with q = (value - start) / interval rounded to 15 significant digits
     /// (0.3 by 0.1 is q 2.9999999999999996, step 3), and a step that rounds past the last inner
     /// group is `>end`, not clamped (0.9999999999999999 by 0.1 from 0 to 1 is in `>1`).
@@ -133,59 +142,66 @@ impl NumberGroups {
         })
     }
 
-    /// The layout position of the group whose lower bound is `value`, as GETPIVOTDATA picks a
-    /// number item: within the same 15-digit rounding (0.6000000000000001 by 0.1 is `0.6-0.7`),
-    /// and `end` is the `>end` group. A number inside a group but not its lower bound, or below
-    /// `start` (the `<start` group has none), is `None` (`#REF!`). UNVERIFIED (T-4249): a number
-    /// past `end` (`#REF!` here) and one below `end` whose rounded q is the group count (`>end`
-    /// here).
+    /// The layout position GETPIVOTDATA picks for a number item. With q the 15-digit quotient
+    /// and k = q truncated toward zero, the number matches when q is not above k: a positive q
+    /// must be whole (0.6000000000000001 by 0.1 is `0.6-0.7`; 0.35, and 4 by 3, are `#REF!`),
+    /// while a negative one truncates up (by 3 from 0, -1 and -1.5 are `0-3`, -3 and -4.5 are
+    /// `<0` and -6 is `#REF!`: probes/t4249-pivot-range-group-labels Calc P20:Q31). k = -1 is the
+    /// `<start` group and k = n the `>end` one (its label's bound: 12 for 0 to 10 by 3, where 10
+    /// and 11 are `#REF!`, edges Calc P40:Q50); anything else is `None` (`#REF!`).
     #[must_use]
     pub fn lower_bound_index(&self, value: f64) -> Option<usize> {
         let n = self.inner_count()?;
-        if value == self.end {
-            return Some(n + 1);
-        }
-        if value.is_nan() || value < self.start {
-            return None;
-        }
         let q = self.quotient(value);
-        if q.fract() != 0.0 || q > n as f64 {
+        let k = q.trunc();
+        if q.is_nan() || q > k || k < -1.0 || k > n as f64 {
             return None;
         }
-        Some(q as usize + 1)
+        // -1 <= k <= n <= MAX_ITEMS, so k + 1 is a small whole number.
+        Some((k + 1.0) as usize)
     }
 
-    /// The cache item holding layout position `index` of a grouping of `n` inner groups.
+    /// The cache item holding layout position `index`.
     #[must_use]
     pub fn item(&self, index: usize) -> usize {
-        self.relabeled
-            .get(index)
-            .map_or(index, |&item| item as usize)
+        self.order.get(index).map_or(index, |&item| item as usize)
     }
 
-    /// The labels Excel writes for a grouping of `n` inner groups, in layout order (`<0`, `0-3`,
-    /// `3-6`, `6-9`, `>9` for 0 to 9 by 3): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound
-    /// `start + k * interval` as text coercion writes it (15 digits, plain decimal: `0.00001`,
-    /// not General's `1E-05`; probes/t4253-pivot-decimal-relabel). That it is the coercion rule
-    /// past the probed bounds (1e15 or more, below 1e-5, a 15-digit tie) is UNVERIFIED (T-4249);
-    /// its 20-character plain limit also keeps a label short for a file-controlled range.
+    /// The labels Excel writes for a grouping of `n` inner groups, in layout order: `<start`, the
+    /// inner groups, and `>` followed by the last inner group's upper bound (`>12` for 0 to 10 by
+    /// 3, `>10` for 0 to 9 by 2.5). An inner group of a [`NumberGroups::whole`] grouping reads
+    /// `lo-(lo + interval - 1)`, the last one ending at `end` when that is larger (`0-2`, `3-5`,
+    /// `6-9` for 0 to 9 by 3; `9-11` for 0 to 10); any other reads `lo-(lo + interval)` (`0-3`,
+    /// `7.5-10`; probes t4249-pivot-range-group-edges and -labels). Each bound is
+    /// `start + k * interval` as text coercion writes it (15 digits, plain decimal: `0.00001`, not
+    /// General's `1E-05`; probes/t4253-pivot-decimal-relabel). That it is the coercion rule past
+    /// the probed bounds (1e15 or more, below 1e-5, a 15-digit tie) and the labels of whole data
+    /// with an `end` that is not whole are UNVERIFIED (T-4291); the 20-character plain limit also
+    /// keeps a label short for a file-controlled range.
     #[must_use]
     pub fn labels(&self, n: usize) -> Vec<String> {
-        let bound = |k: usize| number_to_text(self.start + k as f64 * self.interval);
+        let bound = |k: usize| self.start + k as f64 * self.interval;
+        let upper = |k: usize| {
+            if !self.whole {
+                bound(k + 1)
+            } else if k + 1 == n {
+                (bound(k + 1) - 1.0).max(self.end)
+            } else {
+                bound(k + 1) - 1.0
+            }
+        };
         let mut labels = Vec::with_capacity(n + 2);
         labels.push(format!("<{}", number_to_text(self.start)));
-        labels.extend((0..n).map(|k| format!("{}-{}", bound(k), bound(k + 1))));
-        labels.push(format!(">{}", number_to_text(self.end)));
+        labels.extend(
+            (0..n).map(|k| format!("{}-{}", number_to_text(bound(k)), number_to_text(upper(k)))),
+        );
+        labels.push(format!(">{}", number_to_text(bound(n))));
         labels
     }
 
-    /// The labels of a relabeled grouping in cache-item order ([`NumberGroups::new`]), or `None`
-    /// when Excel kept the file's.
+    /// The labels in cache-item order ([`NumberGroups::new`]).
     #[must_use]
-    pub fn relabeled_items(&self) -> Option<Vec<CacheItem>> {
-        if self.relabeled.is_empty() {
-            return None;
-        }
+    pub fn items(&self) -> Option<Vec<CacheItem>> {
         let n = self.inner_count()?;
         let mut items = vec![CacheItem::Missing; n + 2];
         for (k, label) in self.labels(n).into_iter().enumerate() {
@@ -220,34 +236,43 @@ pub enum NumberGroupError {
 }
 
 /// Field `base` grouped by numbers from `start` to `end` in steps of `interval`, `labels` being
-/// the `<groupItems>` labels: the grouped field's items are the labels (Excel's own, in the order
-/// [`NumberGroups::new`] gives, when their count is not the layout's) and each record's item is
-/// the group its value falls in ([`NumberGroups::layout_index`]). A blank value goes in the first
-/// item, as the importer's other groups put it (web.md; UNVERIFIED, T-4236). The one grouping
-/// step for numbers, shared by the xlsx importer (`apply_groups`) and `Txn::add_pivot_table`.
+/// the `<groupItems>` labels: the grouped field's items are Excel's own labels, in the order
+/// [`NumberGroups::new`] gives, and each record's item is the group its value falls in
+/// ([`NumberGroups::layout_index`]). A blank value goes in the `<start` item, as the importer's
+/// other groups put it (web.md; UNVERIFIED, T-4236). The one grouping step for numbers, shared by
+/// the xlsx importer (`apply_groups`) and `Txn::add_pivot_table`.
 ///
 /// # Errors
 /// [`NumberGroupError`] for a bad range, a value that is not a number, or a bad record.
 pub fn group_by_numbers(
     base: &CacheField,
     [start, end, interval]: [f64; 3],
-    labels: Vec<CacheItem>,
+    labels: &[CacheItem],
 ) -> Result<CacheField, NumberGroupError> {
-    let groups = NumberGroups::new(start, end, interval, &labels).ok_or(NumberGroupError::Range)?;
-    let items = groups.relabeled_items().unwrap_or(labels);
+    let mut whole = true;
+    for item in &base.items {
+        match item {
+            CacheItem::Missing => {}
+            CacheItem::Number(v) | CacheItem::Date(v) => whole &= v.fract() == 0.0,
+            _ => return Err(NumberGroupError::NotANumber),
+        }
+    }
+    let groups =
+        NumberGroups::new(start, end, interval, whole, labels).ok_or(NumberGroupError::Range)?;
+    let items = groups.items().ok_or(NumberGroupError::Range)?;
     let map = base
         .items
         .iter()
-        .map(|item| match item {
-            CacheItem::Missing => Ok(0),
-            CacheItem::Number(v) | CacheItem::Date(v) => {
-                let index = groups
+        .map(|item| {
+            let index = match item {
+                CacheItem::Number(v) | CacheItem::Date(v) => groups
                     .layout_index(*v)
-                    .ok_or(NumberGroupError::NotANumber)?;
-                // At most MAX_ITEMS groups (`inner_count`), so the item index fits a u32.
-                u32::try_from(groups.item(index)).map_err(|_| NumberGroupError::Range)
-            }
-            _ => Err(NumberGroupError::NotANumber),
+                    .ok_or(NumberGroupError::NotANumber)?,
+                // A blank, the only other item the loop above lets through.
+                _ => 0,
+            };
+            // At most MAX_ITEMS groups (`inner_count`), so the item index fits a u32.
+            u32::try_from(groups.item(index)).map_err(|_| NumberGroupError::Range)
         })
         .collect::<Result<Vec<u32>, _>>()?;
     let records = base
@@ -264,7 +289,6 @@ pub fn group_by_numbers(
         date_groups: None,
     })
 }
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, reason = "tests")]
@@ -276,7 +300,8 @@ mod tests {
             start,
             end,
             interval,
-            relabeled: Vec::new(),
+            whole: false,
+            order: Vec::new(),
         }
     }
 
@@ -288,7 +313,7 @@ mod tests {
     }
 
     fn relabeled(g: &NumberGroups) -> Vec<String> {
-        g.relabeled_items()
+        g.items()
             .unwrap()
             .into_iter()
             .map(|item| match item {
@@ -371,7 +396,8 @@ mod tests {
         }
     }
 
-    /// GETPIVOTDATA number items (probe Calc C30:C46, A35:A36).
+    /// GETPIVOTDATA number items (t4228 probe Calc C30:C46, A35:A36; t4249 edges N40:Q50 and
+    /// labels L20:Q27).
     #[test]
     fn a_number_item_picks_the_group_of_that_lower_bound() {
         let g = groups(0.0, 1.0, 0.1);
@@ -396,23 +422,149 @@ mod tests {
         assert_eq!(g.lower_bound_index(1.1), Some(2));
         assert_eq!(g.lower_bound_index(1.0), Some(1));
         let g = groups(0.0, 9.0, 3.0);
-        assert_eq!(g.lower_bound_index(3.0), Some(2));
-        assert_eq!(g.lower_bound_index(4.0), None);
+        for (value, index) in [
+            (3.0, Some(2)),
+            (4.0, None),
+            (9.0, Some(4)),
+            (8.999_999_999_999_998, Some(4)),
+            (8.999_999_999_999_9, None),
+            (9.5, None),
+            (12.0, None),
+            (-1.0, Some(1)),
+            (-1e-6, Some(1)),
+            (-1.5, Some(1)),
+            (-2.999_999_999_999_999_6, Some(0)),
+            (-3.0, Some(0)),
+            (-4.5, Some(0)),
+            (-6.0, None),
+            (f64::NAN, None),
+        ] {
+            assert_eq!(g.lower_bound_index(value), index, "{value}");
+        }
+        // A partial last step: `>12` is 12, and `end` (10) is no lower bound.
+        let g = groups(0.0, 10.0, 3.0);
+        for (value, index) in [
+            (9.0, Some(4)),
+            (9.000_000_000_000_002, Some(4)),
+            (10.0, None),
+            (11.0, None),
+            (12.0, Some(5)),
+            (15.0, None),
+            (9.999_999_999_999_998, None),
+        ] {
+            assert_eq!(g.lower_bound_index(value), index, "{value}");
+        }
     }
 
+    /// Excel's own labels: whole-number data (t4249 pivots A, G, K) and the rest (D, H, I, J).
+    #[test]
+    fn labels_follow_the_data_kind_and_the_last_step() {
+        let labels = |s, e, i, whole: bool| {
+            let g = NumberGroups::new(s, e, i, whole, &[]).unwrap();
+            g.labels(g.inner_count().unwrap())
+        };
+        assert_eq!(
+            labels(0.0, 9.0, 3.0, true),
+            ["<0", "0-2", "3-5", "6-9", ">9"]
+        );
+        assert_eq!(
+            labels(0.0, 10.0, 3.0, true),
+            ["<0", "0-2", "3-5", "6-8", "9-11", ">12"]
+        );
+        assert_eq!(
+            labels(0.0, 9.0, 3.0, false),
+            ["<0", "0-3", "3-6", "6-9", ">9"]
+        );
+        assert_eq!(
+            labels(0.0, 10.0, 3.0, false),
+            ["<0", "0-3", "3-6", "6-9", "9-12", ">12"]
+        );
+        assert_eq!(
+            labels(0.0, 9.0, 2.5, true),
+            ["<0", "0-2.5", "2.5-5", "5-7.5", "7.5-10", ">10"]
+        );
+        assert_eq!(
+            labels(0.5, 9.5, 3.0, true),
+            ["<0.5", "0.5-3.5", "3.5-6.5", "6.5-9.5", ">9.5"]
+        );
+        let g = groups(0.0, 10.0, 3.0);
+        assert_eq!(g.inner_count(), Some(4));
+        for (value, index) in [
+            (8.999_999_999_999_998, 4),
+            (10.0, 4),
+            (10.000_000_000_000_002, 5),
+            (11.0, 5),
+        ] {
+            assert_eq!(g.layout_index(value), Some(index), "{value}");
+        }
+    }
+
+    /// t4249 pivots A, B, C and E: the file's labels that Excel writes keep their place, and
+    /// Excel's others follow in layout order.
+    #[test]
+    fn excel_keeps_the_file_place_of_its_own_labels() {
+        let base = CacheField {
+            name: "N".into(),
+            items: [-1.0, 0.0, 2.0, 3.0, 5.0, 6.0, 8.0, 9.0, 10.0]
+                .map(CacheItem::Number)
+                .to_vec(),
+            records: (0..9).collect(),
+            ..CacheField::default()
+        };
+        for (file, shown) in [
+            (
+                &["<0", "0-3", "3-6", ">9"][..],
+                ["<0", ">9", "0-2", "3-5", "6-9"],
+            ),
+            (&["<0", "0-3", ">9"][..], ["<0", ">9", "0-2", "3-5", "6-9"]),
+            (
+                &["<0", "0-2", "3-5", "6-8", "9-11", "12-14", ">9"][..],
+                ["<0", "0-2", "3-5", ">9", "6-9"],
+            ),
+            (
+                &["<0", "0-2", "3-5", "6-9", ">9"][..],
+                ["<0", "0-2", "3-5", "6-9", ">9"],
+            ),
+        ] {
+            let grouped = group_by_numbers(&base, [0.0, 9.0, 3.0], &texts(file)).unwrap();
+            assert_eq!(grouped.items, texts(&shown), "{file:?}");
+            let by_record: Vec<&CacheItem> = grouped
+                .records
+                .iter()
+                .map(|&r| &grouped.items[r as usize])
+                .collect();
+            let want = texts(&["<0", "0-2", "0-2", "3-5", "3-5", "6-9", "6-9", "6-9", ">9"]);
+            assert_eq!(by_record, want.iter().collect::<Vec<_>>(), "{file:?}");
+        }
+        let identity = group_by_numbers(
+            &base,
+            [0.0, 9.0, 3.0],
+            &texts(&["<0", "0-2", "3-5", "6-9", ">9"]),
+        );
+        assert!(identity.unwrap().number_groups.unwrap().order.is_empty());
+    }
     /// Pivot 3: six file items for a five-item layout; Excel lists `<0`, `>9`, `0-3`, `3-6`, `6-9`:
     /// the file's `<0` and `>9` are Excel's labels too, so they come first.
     #[test]
     fn a_wrong_item_count_relabels_matching_items_first() {
         let file = texts(&["<0", "0-2", "3-5", "6-8", "9-11", ">9"]);
-        let g = NumberGroups::new(0.0, 9.0, 3.0, &file).unwrap();
+        let g = NumberGroups::new(0.0, 9.0, 3.0, false, &file).unwrap();
         assert_eq!(relabeled(&g), ["<0", ">9", "0-3", "3-6", "6-9"]);
         assert_eq!(g.item(0), 0);
         assert_eq!(g.item(4), 1);
         assert_eq!(g.item(1), 2);
-        let kept = NumberGroups::new(0.0, 9.0, 3.0, &file[1..]).unwrap();
-        assert!(kept.relabeled.is_empty());
+        // The layout's length in Excel's own labels keeps them; in another text (t4249 labels
+        // pivot L) it shows Excel's labels in layout order; Excel's labels permuted (pivot M) keep
+        // the file's order.
+        let own = texts(&["<0", "0-3", "3-6", "6-9", ">9"]);
+        let kept = NumberGroups::new(0.0, 9.0, 3.0, false, &own).unwrap();
+        assert!(kept.order.is_empty());
         assert_eq!(kept.item(4), 4);
+        let wrong = NumberGroups::new(0.0, 9.0, 3.0, false, &texts(&["a"; 5])).unwrap();
+        assert!(wrong.order.is_empty());
+        let permuted = texts(&["<0", "3-6", "0-3", ">9", "6-9"]);
+        let g = NumberGroups::new(0.0, 9.0, 3.0, false, &permuted).unwrap();
+        assert_eq!(g.items().unwrap(), permuted);
     }
 
     /// probes/t4253-pivot-relabel-order: by 0.1 from 0 to 1 with 13 file items, all wrong text
@@ -423,13 +575,13 @@ mod tests {
         let own = groups(0.0, 1.0, 0.1).labels(10);
         let natural = own.clone();
         assert_eq!(
-            relabeled(&NumberGroups::new(0.0, 1.0, 0.1, &file).unwrap()),
+            relabeled(&NumberGroups::new(0.0, 1.0, 0.1, false, &file).unwrap()),
             natural
         );
         file[0] = CacheItem::Text(">1".into());
         file[12] = CacheItem::Text("<0".into());
         file[5] = CacheItem::Text("0.2-0.3".into());
-        let g = NumberGroups::new(0.0, 1.0, 0.1, &file).unwrap();
+        let g = NumberGroups::new(0.0, 1.0, 0.1, false, &file).unwrap();
         let first = [">1", "0.2-0.3", "<0"];
         let mut expected = first.to_vec();
         expected.extend(
@@ -452,7 +604,7 @@ mod tests {
         let n = MAX_ITEMS - 2;
         let mut file = texts(&["w"; 4]);
         file.push(CacheItem::Text(format!(">{n}")));
-        let g = NumberGroups::new(0.0, n as f64, 1.0, &file).unwrap();
+        let g = NumberGroups::new(0.0, n as f64, 1.0, false, &file).unwrap();
         assert_eq!(g.item(n + 1), 0);
         assert_eq!(g.item(0), 1);
         let huge = groups(0.0, 1e300, 1e299).labels(10);
@@ -505,7 +657,7 @@ mod tests {
             (0.0, 1.0, f64::NAN),
             (0.0, 1e300, 1e-300),
         ] {
-            assert_eq!(NumberGroups::new(start, end, interval, &[]), None);
+            assert_eq!(NumberGroups::new(start, end, interval, false, &[]), None);
         }
         assert_eq!(groups(5.0, 5.0, 1.0).inner_count(), Some(1));
     }
@@ -522,11 +674,21 @@ mod tests {
             records: vec![0, 2, 1, 0],
             ..CacheField::default()
         };
-        let labels = |n: usize| (0..n).map(|i| CacheItem::Text(i.to_string())).collect();
-        let grouped = group_by_numbers(&base, [0.0, 1.0, 0.1], labels(12)).unwrap();
+        let labels = |n: usize| -> Vec<CacheItem> {
+            (0..n).map(|i| CacheItem::Text(i.to_string())).collect()
+        };
+        // Placeholder labels give way to Excel's own: 0.3 is in `0.3-0.4`, 1.5 past the end.
+        let grouped = group_by_numbers(&base, [0.0, 1.0, 0.1], &labels(12)).unwrap();
         assert_eq!(grouped.records, [4, 11, 0, 4]);
-        assert_eq!(grouped.items, labels(12));
-        let relabeled = group_by_numbers(&base, [0.0, 1.0, 0.5], labels(3)).unwrap();
+        assert_eq!(
+            grouped.items.get(4),
+            Some(&CacheItem::Text("0.3-0.4".into()))
+        );
+        // A blank follows `<0` to its cache item when the file lists that label later.
+        let moved = group_by_numbers(&base, [0.0, 1.0, 0.5], &texts(&[">1", "<0"])).unwrap();
+        assert_eq!(moved.items, texts(&[">1", "<0", "0-0.5", "0.5-1"]));
+        assert_eq!(moved.records, [2, 0, 1, 2]);
+        let relabeled = group_by_numbers(&base, [0.0, 1.0, 0.5], &labels(3)).unwrap();
         // No file label is one of Excel's, so the relabel keeps the layout order.
         assert_eq!(
             relabeled.items,
@@ -539,11 +701,11 @@ mod tests {
             ..base.clone()
         };
         assert_eq!(
-            group_by_numbers(&text, [0.0, 1.0, 0.1], labels(12)),
+            group_by_numbers(&text, [0.0, 1.0, 0.1], &labels(12)),
             Err(NumberGroupError::NotANumber)
         );
         assert_eq!(
-            group_by_numbers(&base, [0.0, 1.0, 0.0], labels(3)),
+            group_by_numbers(&base, [0.0, 1.0, 0.0], &labels(3)),
             Err(NumberGroupError::Range)
         );
     }

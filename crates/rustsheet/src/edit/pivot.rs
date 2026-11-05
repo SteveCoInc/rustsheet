@@ -120,7 +120,7 @@ pub struct PivotRangeGroup {
 fn grouped(field: &CacheField, group: &PivotRangeGroup) -> Result<CacheField, PivotError> {
     let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
     Ok(match group.by {
-        None => group_by_numbers(field, [group.start, group.end, group.interval], labels)?,
+        None => group_by_numbers(field, [group.start, group.end, group.interval], &labels)?,
         Some(by) => {
             if field.items.contains(&CacheItem::Missing) {
                 return Err(PivotError::DateGroupOverBlank);
