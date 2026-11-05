@@ -3,7 +3,7 @@ id: T-4331
 title: "T-4299 follow-ups: one _xlpm. prefix constant in the parser; probe the remaining typed _XLPM. forms"
 milestone: M2
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
