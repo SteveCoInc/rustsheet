@@ -993,7 +993,24 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       only, where t4344 D39's runs of the same key tree show the repeated (C,x) (B6, D6; T-4379).
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
-    reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
+    reaches class A (C = A) and then no y class (D56, E56).
+  - **A GROUPBY parent holds the rows that reached its class, and every row when none did** (T-4359,
+    probes/t4359-groupby-value-sort-parents and probes/t4359-groupby-value-sort-holdout, excel-graph, 2026-11-05):
+    a value sort orders the parents by the function of those rows, a row that reached no leaf under the class
+    included and the extra rows of a leaf no row reaches not, and a subtotal line shows the function of the same
+    rows, under a value sort and a key sort alike. A class no row reached (a repeated class that ends the list,
+    whose leaves no row reaches) holds every row, as such a leaf does: over Ax Bx Cy Bx Ay by SUM of 1 to 16 the
+    subtotals are `ab`&U+00AD 10 (rows 2, 4), `ab` 21 (rows 1, 3, 5: row 3 reaches A and no y class under it) and
+    the second `ab` 31, and the parents sort in that order (Calc!B4, E4).
+    - The first probe (28 seeded five-row runs, 14 of two fields and 14 of three, SUM ascending and descending,
+      AVERAGE, and SUM with subtotals at every level) was written with three hypotheses' predictions committed
+      before the fill (docs/research/t4359/model.py: the rows of the parent's groups, R0, 24 of 84; the rows that
+      reached it, R1, 52; both, R2, 65). Its subtotal cells showed the rule, R3 (R1, every row for a class none
+      reached), 84 of 84, chosen after the fill. The hold-out (30 fresh runs, 12 of two fields and 18 of three,
+      seed "T-4359 hold-out") was written with the engine's R3 predictions committed before its fill: 120 of 120
+      value-sort cells (Calc!B:E). Its column F, a key sort with subtotals, predicted with the union of the groups'
+      rows, gave 0 of 30; R3, frozen before the fill, gives 30 of 30. A structural choice confirmed out of sample
+      (decision 0188 R4), not a fit.
 
 Implemented in (T-4342): `Grouping::new` (functions/lookup_and_reference/grouping.rs) takes UNIQUE's kept rows
 (`unique_first_lines`, shared with `unique_of`), sorts them with `Keys::sorted` (`sort_indices_pairwise` on whole
@@ -1004,12 +1021,14 @@ tree order and sort by their class's rank (`Group::key_order`). While no key tex
 its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
 the parent's first two classes (T-4344). PIVOTBY's column leaf no record reaches holds every record of the row line
 (`Grouping::unreached`, the bucket fill of `grid_row` in pivotby.rs; T-4358). A column subtotal holds the records that
-reached its class (T-4378). Not implemented: a left-out repeated leaf (T-4379) and a value sort's parent values (T-4359) on these runs.
+reached its class (T-4378). A GROUPBY (or PIVOTBY row) parent's rows, which a value sort orders by and a subtotal line
+shows, are `Grouping::class_rows`: the rows that reached the class, every row when none did (T-4359). Not
+implemented: a left-out repeated leaf (T-4379) on these runs.
 The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
 chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
 was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
 not a fit).
-Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358 and t4378 fills, 2026-11-05) for the cells cited.
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342, t4344, t4358, t4378 and t4359 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless

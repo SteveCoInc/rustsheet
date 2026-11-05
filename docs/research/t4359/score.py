@@ -1,6 +1,7 @@
 """T-4359: score the hypotheses of model.py (hypotheses.tsv) and the engine's predictions (predictions.tsv)
 against probes/t4359-groupby-value-sort-parents' oracle values. Run from the repo root after the fill:
-python3 -I docs/research/t4359/score.py.
+python3 -I docs/research/t4359/score.py. Also scores the engine's predictions for the hold-out
+(probes/t4359-groupby-value-sort-holdout, holdout_predictions.tsv), committed before its fill.
 """
 
 import importlib.util
@@ -68,6 +69,23 @@ def main() -> None:
     for cell, value in rows:
         engine += json.loads(value) == oracle[cell]
     print({h: f"{n}/{lines}" for h, n in hits.items()}, f"engine {engine}/{len(rows)}")
+    holdout()
+
+
+def holdout() -> None:
+    """The engine's committed predictions (R3) for probes/t4359-groupby-value-sort-holdout, per column."""
+    with open("eval/suites/probes/cases/t4359-groupby-value-sort-holdout.oracle.json") as fh:
+        oracle = {c: v["v"] for c, v in json.load(fh)["sheets"]["Calc"].items()}
+    score: dict[str, list[int]] = {}
+    with open("docs/research/t4359/holdout_predictions.tsv") as fh:
+        for line in fh:
+            if line.startswith("#"):
+                continue
+            cell, value = line.rstrip("\n").split("\t")
+            hit = score.setdefault(cell[0], [0, 0])
+            hit[0] += json.loads(value) == oracle[cell]
+            hit[1] += 1
+    print("hold-out (engine with R3):", {c: f"{a}/{n}" for c, (a, n) in sorted(score.items())})
 
 
 if __name__ == "__main__":

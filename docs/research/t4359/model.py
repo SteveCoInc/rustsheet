@@ -16,7 +16,7 @@ Texts: A = ab, B = ab&U+00AD, C = U+00AD&ab (A = C, B = C, A < B).
 """
 
 import importlib.util
-from typing import Callable
+from collections.abc import Callable
 
 _spec = importlib.util.spec_from_file_location("t4344_gen_probe", "docs/research/t4344/gen_probe.py")
 assert _spec and _spec.loader

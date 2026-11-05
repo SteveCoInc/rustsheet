@@ -47,7 +47,7 @@ COLUMNS = {"B": (total, True), "C": (total, False), "D": (average, True)}
 def predict(rows, column: str, hyp: str) -> list:
     agg, ascending = COLUMNS[column]
     groups, _ = model.value_sort(rows, agg, ascending, hyp)
-    return [[*(gen.t4342.SHOW[k] if k in gen.t4342.SHOW else k for k in shown), value] for shown, value in groups]
+    return [[*(gen.t4342.SHOW.get(k, k) for k in shown), value] for shown, value in groups]
 
 
 def pick(rng: random.Random, fields: int, count: int, seen: set) -> list:
