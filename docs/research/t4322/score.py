@@ -70,7 +70,7 @@ def fresh_points():
 
 def engine(stem, suite):
     text = subprocess.run([ROOT / "target/release/rustsheet-eval", "--root", ROOT, "show",
-                           f"{suite}/{stem}.case.json"], capture_output=True, text=True).stdout
+                           f"{suite}/{stem}.case.json", "--all"], capture_output=True, text=True).stdout
     vals, ref = {}, None
     for line in text.splitlines():
         if m := re.match(r"^Calc!(\S+)", line):

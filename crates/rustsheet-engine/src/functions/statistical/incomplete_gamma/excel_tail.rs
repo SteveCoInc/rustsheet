@@ -19,8 +19,8 @@
 
 use super::super::half_integer_beta::is_half_integer_shape;
 use super::super::loader::stirlerr_exact;
-use super::fraction::accurate_fraction;
 use super::density::{direct_deviance, in_window, window_exponent};
+use super::fraction::accurate_fraction;
 use super::{excel_ratio_exponent, stirling_prefactor, Terms};
 
 /// The x above which Excel takes the ratio form. Bracketed by the T-3269 boundary probe
@@ -112,12 +112,15 @@ fn loader_upper(a: f64, x: f64, deviance: f64, terms: &mut Terms) -> Option<f64>
 
 /// The smallest x / a at which POISSON's cdf takes the window exponent ([`excel_window_upper`]).
 /// Bracketed by the T-4302 probes in (1.2957, 1.3068): from 1.3068 to 1.495 Excel's cdf is the
-/// window form to 0 to 6 ulp at 21 of 21 points (probes/t4302-poisson-cdf-beside-pmf B21, F24, A19,
+/// window form to 0 to 6 ulp at 15 of 15 points (probes/t4302-poisson-cdf-beside-pmf B21, F24, A19,
 /// E21, F20, H24, A22 and probes/t4291-poisson-far-above-mean row 2), and at 1.258 to 1.2957 it is
-/// 9 to 62 ulp from it at shapes 81 to 301 (t4291 D1:H1, probes/t3252-gamma-prefactor-window A137),
-/// where the correctly rounded Q is 1 to 9 ulp off (T-4322 owns what Excel takes there). 1.3 is
-/// Cephes' `SMALLRATIO`, the cut of its asymptotic igamc series, inside the bracket.
-/// FITTED(T-4322, 30 cells, x/a 1.26..1.5, shape 31..301)
+/// up to 62 ulp from it at shapes 81 to 301 (t4291 D1:H1, probes/t3252-gamma-prefactor-window A137).
+/// 1.3 (Cephes' `SMALLRATIO`, the cut of its asymptotic igamc series) was frozen inside that
+/// bracket; the ladder of the fresh sweep then put Excel's cut in (1.298, 1.3] at k = 100, 200
+/// and 300 (probes-numeric/t4322-poisson-window-r4-fresh A8:C13: at 1.3 the form is 2, 0 and 5 ulp
+/// off where the correctly rounded Q is 14, -5 and -63, and at 1.298 Excel is not the form).
+/// What Excel takes below the cut is T-4345's.
+/// FITTED(T-4322, 24 cells, x/a 1.26..1.5, shape 31..301)
 const WINDOW_MIN_RATIO: f64 = 1.3;
 
 /// Excel's POISSON cdf Q(a, x) in the upper part of its gamma window (T-4322): at an integer shape
@@ -158,9 +161,35 @@ mod tests {
             );
             assert_ne!(gamma_ur(k + 1.0, mean).to_bits(), q.to_bits());
         }
-        // Outside the measured range the accurate kernel stays: in the window (x <= 1.5a), past
-        // shape 301, below shape 31, and at a non-integer shape.
-        for (a, x) in [(101.0, 150.0), (302.0, 700.0), (30.0, 70.0), (100.5, 200.0)] {
+        // Outside the measured range the accurate kernel stays: past shape 301, below shape 31,
+        // and at a non-integer shape.
+        for (a, x) in [(302.0, 700.0), (30.0, 70.0), (100.5, 200.0)] {
+            assert_eq!(poisson_upper(a, x).to_bits(), gamma_ur(a, x).to_bits());
+        }
+    }
+
+    // Excel's cdf in the upper gamma window (T-4322): the prefactor with the density's window
+    // exponent times the accurate fraction gives Excel's own bits at these cells, from the 1.3a cut
+    // (`POISSON.DIST(200,261.3,TRUE)`) to 1.49a (probes-numeric/t4322-poisson-window-r4-fresh B11,
+    // D2, H4; probes/t4302-poisson-cdf-beside-pmf F24; probes/t4291-poisson-far-above-mean F2).
+    #[test]
+    fn in_the_upper_window_the_cdf_takes_the_window_exponent() {
+        let excel = [
+            (200.0, 261.3, 4.564_449_907_593_518e-5_f64),
+            (174.0, 256.207, 3.169_584_283_420_252_6e-8),
+            (162.0, 217.186, 5.360_543_525_047_952_4e-5),
+            (58.0, 78.4329, 0.009_691_412_009_331_235),
+            (150.0, 225.0, 6.617_514_047_185_189e-8),
+        ];
+        for (k, mean, q) in excel {
+            assert_eq!(
+                poisson_upper(k + 1.0, mean).to_bits(),
+                q.to_bits(),
+                "POISSON({k}, {mean}, TRUE)"
+            );
+        }
+        // Below the 1.3a cut Excel is not the window form, so the accurate kernel stays.
+        for (a, x) in [(101.0, 130.0), (301.0, 389.0)] {
             assert_eq!(poisson_upper(a, x).to_bits(), gamma_ur(a, x).to_bits());
         }
     }

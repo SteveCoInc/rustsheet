@@ -3,7 +3,7 @@ id: T-4322
 title: "POISSON.DIST's cdf in the gamma window (x/a 1.29 to 1.5) and its density, after T-4302"
 milestone: M9
 lane: research
-status: in-progress
+status: done
 priority: P3
 size: M
 tier: opus
@@ -33,12 +33,30 @@ The visibly-off cells this task owns are these:
   window density, which T-4308's exponent decides).
 
 ## Acceptance criteria
-- [ ] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's on the
+- [x] A candidate is scored with a hold-out fixed before scoring (decision 0188 R4) and taken if it is Excel's on the
       hold-out. Otherwise the rejected models go into statistics.md with their scores.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Visible-parity stage
 Decision 0083: the cells listed under Context are visibly off, so this task is in the campaign.
 
 ## Out of scope
 - Above the window (T-4302 took the cdf; T-4319 the density; T-4320 CHISQ.DIST.RT).
+
+## Outcome
+- From 1.3a to 1.5a (a = k + 1, integer shapes 31 to 301) POISSON's cdf now takes Excel's form there:
+  sqrt(a / 2 pi) exp(-B - c) times the accurate fraction with T-4308's window exponent B (excel_tail.rs
+  `excel_window_upper`; the far form's product shared as `loader_upper`). A structural model (the window
+  exponent was T-4308's) plus one cut, 1.3, `FITTED` and frozen (commit ff265dc32) before the fresh sweep
+  probes-numeric/t4322-poisson-window-r4-fresh (seed 43220, 48 points at 1.3a to 1.5a plus a ladder across the
+  cut at k = 100, 200, 300) was written and filled (excel-graph 2026-11-05).
+- Within 4 ulp of Excel (docs/research/t4322/score.py): fit (the 15 seen T-4302 points from 1.3a) the form 14/15
+  against the correctly rounded Q 9/15; fresh 51/57 against 10/57, bit-exact 8 against 2. Gate A's envelope holds
+  all 57. The ladder puts Excel's cut in (1.298a, 1.3a].
+- Below 1.3a Excel is none of the tried prefactors (window, direct, correctly rounded B, pmf times Q/pmf) and 1 to
+  17 ulp from the correctly rounded Q: T-4345. G3 of the fresh sweep is a lone 64-ulp miss (T-4345).
+- The window densities this task listed (A8 ... H36) already pass since T-4308. CHISQ.DIST.RT's window cells,
+  the same values, go to T-4346.
+- Eval delta: probes known failures -3 (t4291 F2, t4302 F24, t3252-gamma-prefactor-window A116); probes-numeric
+  gains the 66-cell fresh case. statistics.md has the T-4322 paragraph.
+- Follow-ups: T-4345 (below the cut, the residue), T-4346 (CHISQ.DIST.RT in the window).
