@@ -37,6 +37,6 @@ ISREF and the NETWORKDAYS.INTL holidays split give Excel's answer for a unary pl
 
 ## Outcome
 Probe `networkdays-intl-holiday-unary-fn` (M6) filled from excel-graph: a unary plus over INDEX, OFFSET, XLOOKUP and IF
-makes a scalar holiday (87 / 86) and ISREF FALSE, as `written_reference` already answered; no engine change was needed.
+makes a scalar holiday (87 / 86) and ISREF FALSE, as `written_reference` already answered. The engine gave the wrong holiday kind for `+OFFSET` and `+IF` (the evaluator hands on the cell's range), fixed in `holiday_serials`.
 Also found `T(+INDEX(D1:D2,1))` = "abc" (vs `T(+D1)` `#VALUE!`), recorded in references.md. dates.md `Tasks:` names T-4190.
 Eval delta: new probe cells only; see PR.

@@ -1816,7 +1816,7 @@ A unary plus over a reference-returning function ends the reference the same way
 `ISREF(+OFFSET(C1,0,0))`, `ISREF(+XLOOKUP(1,{1},C1:C1))` and `ISREF(+IF(TRUE,C1))` are FALSE, while the bare calls are TRUE
 (probes/networkdays-intl-holiday-unary-fn G1:H4, excel-graph 2026-11-05, T-4209). Quirk: `T(+INDEX(D1:D2,1))` over text "abc"
 is "abc" (G5, H5 the same without the plus), although `T(+D1)` is `#VALUE!` (text.md): the function-returned value is text, not a
-reference to it. Ours: `written_reference` already answers FALSE for every unary plus, whatever its operand.
+reference to it. Ours: `written_reference` already answers FALSE for every unary plus, whatever its operand; NETWORKDAYS.INTL's `holiday_serials` also treats a unary plus over one cell as scalar.
 Status: VERIFIED (web).
 
 ## Legacy formulas intersect the ranges in value arguments
