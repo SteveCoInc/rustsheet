@@ -3,7 +3,7 @@ id: T-4022
 title: "xlsx import: a defined name stored as a padded bare column T[ Col ] loads as #REF!"
 milestone: M8
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -24,9 +24,15 @@ stores the text, which the engine later re-parses as its own text (the column). 
 text once the tables exist (reuse the parser's `set_loaded`; do not copy the lexer rule).
 
 ## Acceptance criteria
-- [ ] An xlsx with `<definedName name="N">T[ Col ]</definedName>` over a table `T` loads `N` as `#REF!` (test for each
+- [x] An xlsx with `<definedName name="N">T[ Col ]</definedName>` over a table `T` loads `N` as `#REF!` (test for each
       of the three spellings); `T[ [Col] ]` still loads as the column.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Names defined through the API (Name Manager typing is unprobed).
+
+## Outcome
+The importer's name re-parse (`reparse_formula_hack`) confirmed to read the padded column as the column
+(round-trip test failed first: `SUM(N)` gave 5935). It now gets the loaded tables and reads the body as loaded
+text (`Parser::set_loaded(true)`), so the three padded spellings load as `#REF!` and `T[ [Col] ]` / `T[Col]` still
+load as the column. Test: `crates/rustsheet-xlsx/tests/padded_column_name.rs`. Eval delta: none.
