@@ -9,30 +9,52 @@
 
 use std::time::{Duration, Instant};
 
-use crate::test::util::{check_cells, new_empty_model, round_trip_value};
+use crate::test::util::{check_cells, new_empty_model, round_trip_value, ulps};
 
-/// Evaluates `cells` on a sheet whose G1:G2 is 0.01 (a rate), G3:G4 is 360 (an nper) and
-/// Z1:Z8 hold the extreme values of probes/fin-cumipmt-period-bound (1E308 as a product: the
-/// literal is past Excel's 9.99E307), and checks each cell's
-/// value (an expected number is compared bit for bit).
+/// The sheet [`check`] evaluates on: G1:G2 is 0.01 (a rate), G3:G4 is 360 (an nper) and Z1:Z8
+/// hold the extreme values of probes/fin-cumipmt-period-bound (1E308 as a product: the literal is
+/// past Excel's 9.99E307).
+const INPUTS: [(&str, &str); 12] = [
+    ("G1", "0.01"),
+    ("G2", "0.01"),
+    ("G3", "360"),
+    ("G4", "360"),
+    ("Z1", "1E-300"),
+    ("Z2", "1E300"),
+    ("Z3", "1E300"),
+    ("Z4", "1E300"),
+    ("Z5", "=1E307*10"),
+    ("Z6", "1E-12"),
+    ("Z7", "1E12"),
+    ("Z8", "1E307"),
+];
+
+/// Evaluates `cells` on [`INPUTS`] and checks each cell's value (an expected number is compared
+/// bit for bit).
 fn check(cells: &[(&str, &str, &str)]) {
-    check_cells(
-        &[
-            ("G1", "0.01"),
-            ("G2", "0.01"),
-            ("G3", "360"),
-            ("G4", "360"),
-            ("Z1", "1E-300"),
-            ("Z2", "1E300"),
-            ("Z3", "1E300"),
-            ("Z4", "1E300"),
-            ("Z5", "=1E307*10"),
-            ("Z6", "1E-12"),
-            ("Z7", "1E12"),
-            ("Z8", "1E307"),
-        ],
-        cells,
-    );
+    check_cells(&INPUTS, cells);
+}
+
+/// Evaluates `cells` on [`INPUTS`] and checks each is within 2 ulps of Excel's value, never
+/// visibly off. Only for the long-range cells decision 0291 lets go of the bit: since T-3524 a
+/// range of more than 32 periods is the geometric sum at any leading exponent, which is Excel's
+/// more often on fresh cells but 1 or 2 ulps from these probe cells, which T-3067's cut held.
+fn check_within_two_ulps(cells: &[(&str, &str, f64)]) {
+    let mut model = new_empty_model();
+    for (cell, input) in INPUTS {
+        model._set(cell, input);
+    }
+    for (cell, formula, _) in cells {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, excel) in cells {
+        let ours = round_trip_value(&model, cell).parse::<f64>().unwrap();
+        assert!(
+            ulps(ours, *excel) <= 2,
+            "{cell}: {formula}: ours {ours:e}, Excel {excel:e}"
+        );
+    }
 }
 
 #[test]
@@ -42,10 +64,11 @@ fn a_billion_periods_take_milliseconds_and_are_excels_values() {
     check(&[
         ("A1", "=CUMIPMT(1E-9,1E9,1,1,1E9,0)", "-0.5819767073296636"),
         ("A2", "=CUMPRINC(1E-9,1E9,1,1,1E9,0)", "-1"),
-        ("A3", "=CUMPRINC(1E-9,1E9,1,1,1E9,1)", "-1"),
         ("A4", "=CUMIPMT(0.01,Z5,1,1,Z5,0)", "-1E306"),
         ("A5", "=CUMIPMT(0.01,Z5,1,Z8,Z5,1)", "-8.91089108910891E305"),
     ]);
+    // fin-cumipmt-period-bound A3, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[("A3", "=CUMPRINC(1E-9,1E9,1,1,1E9,1)", -1.0)]);
     assert!(started.elapsed() < Duration::from_secs(5));
 }
 
@@ -82,7 +105,6 @@ fn extreme_values_from_cells_are_values_without_a_panic() {
     check(&[
         ("A1", "=CUMIPMT(Z1,Z2,Z3,1,Z2,0)", "-5.819767068693264E299"),
         ("A2", "=CUMPRINC(Z4,Z2,Z1,1,Z2,1)", "-1E-300"),
-        ("A3", "=CUMPRINC(Z6,Z7,Z3,1,Z7,0)", "-9.999999999999999E299"),
         // A payment that overflows: CUMIPMT is #NUM! as in Excel (probes/fin-cumipmt-overflow-and-forms
         // A1, A3), while type 1's CUMPRINC is still the loan, -1E300 (A2; T-2192).
         ("A4", "=CUMIPMT(Z2,Z5,Z3,1,Z5,0)", "#NUM!"),
@@ -98,6 +120,12 @@ fn extreme_values_from_cells_are_values_without_a_panic() {
             "#NUM!",
         ),
     ]);
+    // fin-cumipmt-period-bound A27, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[(
+        "A3",
+        "=CUMPRINC(Z6,Z7,Z3,1,Z7,0)",
+        -9.999_999_999_999_999E299,
+    )]);
 }
 
 #[test]
@@ -156,7 +184,6 @@ fn up_to_32_periods_are_close_to_the_per_period_sum() {
             "=CUMIPMT(0.004,1024,1000,1,1024,0)",
             "-3165.8852276668513",
         ),
-        ("A3", "=CUMPRINC(0.004,1024,1000,1,1024,1)", "-1000"),
         // A large rate over a short range, where expm1 of the range overflows: the difference
         // of powers (probes/fin-cumipmt-overflow-and-forms A15-A19).
         ("A5", "=CUMPRINC(1E10,40,1,10,40,0)", "-1.0000000000000013"),
@@ -168,6 +195,8 @@ fn up_to_32_periods_are_close_to_the_per_period_sum() {
             "-1339.6579298169904",
         ),
     ]);
+    // fin-cumipmt-period-bound A11, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[("A3", "=CUMPRINC(0.004,1024,1000,1,1024,1)", -1000.0)]);
 }
 
 #[test]
@@ -268,7 +297,7 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
         ),
         // Past 32 periods a range that ends a deep discount before nper is the geometric sum
         // too (gen-m9 b73c6cc96e093f03 A62, probes/fin-cumprinc-form-boundaries A2; T-3067), and
-        // one that ends near nper keeps the closed form (fin-cumipmt-period-bound A6).
+        // since T-3524 so is one that ends near nper (below).
         (
             "A8",
             "=CUMPRINC(2,151,319288,3,42,1)",
@@ -279,12 +308,13 @@ fn a_short_principal_at_a_large_rate_is_one_geometric_sum() {
             "=CUMPRINC(2,600,319288,3,42,1)",
             "-6.214428680002485E-262",
         ),
-        (
-            "A10",
-            "=CUMPRINC(0.005,100000,1000,2,99999,1)",
-            "-990.0745031063589",
-        ),
     ]);
+    // fin-cumipmt-period-bound A30, an ulp off since T-3524 (decision 0291).
+    check_within_two_ulps(&[(
+        "A10",
+        "=CUMPRINC(0.005,100000,1000,2,99999,1)",
+        -990.074_503_106_358_9,
+    )]);
 }
 
 #[test]
@@ -400,10 +430,11 @@ fn each_element_is_the_scalar_call() {
             "=INDEX(CUMIPMT(1E-9,{1E9;1E8},1,1,1E8,0),2)",
             "-0.0508331949770886",
         ),
+        // fin-cumipmt-period-bound A30's call, as the scalar call has it (decision 0291).
         (
             "A3",
-            "=INDEX(CUMPRINC(0.005,100000,1000,{2;3},99999,1),2)",
-            "-990.0745031063589",
+            "=INDEX(CUMPRINC(0.005,100000,1000,{2;3},99999,1),2)=CUMPRINC(0.005,100000,1000,3,99999,1)",
+            "TRUE",
         ),
         // An element error stays in its position: type 2 is #NUM!, a boolean #VALUE!.
         (

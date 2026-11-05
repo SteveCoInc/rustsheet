@@ -2315,11 +2315,13 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   1 ulp each) but loses on the held-out side (146 vs 149). Over up to 32 periods the geometric sum at every exponent
   is a little closer too (fresh 514 vs 508 of 1,000), but there the other forms keep 38 old cells visible that it
   loses (tiny-rate interests, where an ulp of the principal is thousands of the interest's: gen-m9 b72d952c5f52cb4d
-  A257, fin-cumipmt-tiny-rate-structure A1, A3), against 20 the other way; on the fresh sweep 9 against 13. So
+  A257, fin-cumipmt-tiny-rate-structure A1, A3), against 20 the other way; over a short range on the fresh sweep 9 against 15, and 18 against 33 on the tiny-rate
+  sweep below. Removing it puts 21 more gated cells visibly off, the 21 it brings back on the two sweeps, and below a
+  lead of 1E-3 only old cells back it. So
   between 0 and 0.3 the leading exponent does not decide which form Excel's short principal matches: the old cells
   below 0.095 favour the other forms and the fresh ones the geometric sum (fresh 46 vs 57). Ours since T-3524: the
   geometric sum over any range of more than 32 periods (`LONG_GEOMETRIC_MIN_LEAD` removed); the short-range cut of 0.3
-  stays (T-4349). A second sweep at rates 1E-12 to 1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep, 1,000 cells,
+  stays (decision 0295, T-4349). A second sweep at rates 1E-12 to 1E-4 (probes-numeric/t3524-cumprinc-tiny-rate-sweep, 1,000 cells,
   same draw) bears the long-range rule out where the first sweep had no point: over more than 32 periods the
   geometric sum is Excel's on 238 of 500 cells against 71 with the cut, and below a lead of 3.6 on 169 of 404 against
   2 (the per-period and closed forms are visibly off on most of them). Over up to 32 periods there the geometric sum

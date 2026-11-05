@@ -26,5 +26,5 @@
 - **Decision:** run `rustsheet-eval update-baseline --allow-regressions` once in the T-3524 PR, for exactly these 17
   cells.
 - **Consequences:** `eval/baseline/probes.txt` gains the 17 lines above and loses the 12 fixed ones; reviewers confirm
-  that the baseline diff adds no other line. The short-range cut `GEOMETRIC_MIN_LEAD` is unchanged (T-3524 kept it:
+  that the baseline diff adds no other line. The short-range cut `GEOMETRIC_MIN_LEAD` is unchanged (T-3524 kept it, decision 0295:
   removing it puts 38 old cells visibly off) and its form choice is T-4349.

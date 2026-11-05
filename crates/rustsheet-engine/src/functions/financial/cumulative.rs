@@ -31,6 +31,28 @@ const CUMULATIVE_LOOP_PERIODS: f64 = 32.0;
 /// 2^53: below it every period is an exact integer, so `start + offset` is a distinct period.
 const EXACT_INTEGER_LIMIT: f64 = 9_007_199_254_740_992.0;
 
+/// The leading discount's exponent `(nper-end+1)·L`, the one power of
+/// [`Periods::geometric_principal`], from which a short principal is that geometric sum. Below it
+/// the range ends near nper and the per-period sum (type 0) or the closed form (type 1) is as
+/// close or closer: `CUMPRINC(1E-9,192,2707,8,24,0)` is -239.68227237224258 to the bit with the
+/// sum and 2 ulps off with the geometric form (exponent 2E-7, gen-m9 d912671baa1364aa A300),
+/// and so are the last periods of nper 1E15 at 0.1 (exponent 0.095, probes/fin-cumprinc-near-1e15
+/// C6, C10) and `CUMPRINC(0.1,6,100000,2,6,0)` (probes/fin-cumprinc-form-boundaries G1). From
+/// 0.398 up the geometric sum is exact on 22 of the 32 cells of E1-H8 (rates 0.01 and 0.1,
+/// leading exponents 0.4 to 3.6) and within 2 ulps on the rest, where the other forms are exact
+/// on 7 and up to 5 ulps off; between 0.095 and 0.398 the cut is a fit (T-3067). The deepest
+/// discount `(nper-first+1)·L`, the cut before T-3067, misses those near-1E15 cells.
+/// T-3524 re-validated the cut (decision 0188 R4): without it, the geometric sum at every leading
+/// exponent, the engine gets one more held-out old cell (147 vs 146) and 6 more fresh-sweep cells
+/// (514 vs 508 of 1,000, probes-numeric/t3524-cumprinc-lead-fresh-sweep) to the bit, but 38 old
+/// cells go visibly off, tiny-rate interests such as `CUMIPMT(1E-10,296,197540,13,19,1)` (gen-m9
+/// b72d952c5f52cb4d A257, 33,554,432 ulps), against 20 it fixes; the two fresh sweeps gain as many
+/// visible cells as the gated suites lose (21). So it stays, over a short range only, as decision
+/// 0295's recorded deviation from R4.3: the leading exponent alone does not decide Excel's form
+/// there (TODO(T-4349)).
+/// FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes rate 1E-300..1E300; cut a fit in 0.095..0.398)
+const GEOMETRIC_MIN_LEAD: f64 = 0.3;
+
 /// Which sum the kernel returns.
 #[derive(Clone, Copy)]
 enum Paid {
@@ -124,11 +146,11 @@ impl Periods {
     /// exact integer: past 2^53 `period + 1` is `period`, and the closed form takes over. Type 0
     /// has its own short forms ([`Periods::short_principal`]), within 4 ulps of Excel on every
     /// probed cell where the closed form and the PPMT sum were up to 343 ulps off (T-2192). Type
-    /// 1's principal is the geometric sum, else the closed form: summing PPMT
+    /// 1's principal is the geometric sum at a large discount, else the closed form: summing PPMT
     /// loses a small principal's digits to the payment it is taken from (`CUMPRINC_CUMIPMT.xlsx`
     /// H5 had 8 right digits, H7 7; T-1890), and the per-period `exp` form misses H22 and H25 by
-    /// an ulp or two (T-2514). Every range takes the geometric sum at any leading exponent
-    /// (T-3524). `None` where no form is finite.
+    /// an ulp or two (T-2514). A range of more than 32 periods is the geometric sum at any
+    /// leading exponent (T-3067, T-3524). `None` where no form is finite.
     fn principal(&self) -> Option<f64> {
         let short =
             self.end - self.start < CUMULATIVE_LOOP_PERIODS && self.end < EXACT_INTEGER_LIMIT;
@@ -137,12 +159,14 @@ impl Periods {
                 return Some(principal);
             }
         }
-        // The geometric sum at any leading exponent. T-3067's cuts on that exponent (0.3 over a
-        // short range, 3.6 over a long one) lost to it on their own held-out cells and on both
-        // fresh sweeps (probes-numeric/t3524-cumprinc-lead-fresh-sweep, rates 1E-4..2, and
-        // t3524-cumprinc-tiny-rate-sweep, 1E-12..1E-4), so they went (T-3524, decision 0188 R4;
-        // the old cells they held are decisions 0291 and the short cut's record).
-        self.geometric_principal()
+        // A long range takes the geometric sum at any leading exponent. The cut of 3.6 T-3067 fitted
+        // there (`LONG_GEOMETRIC_MIN_LEAD`) lost to it on its own held-out cells (146 vs 149
+        // bit-exact) and on both fresh sweeps: 184 vs 242 of 500 long-range cells at rates 1E-4..2
+        // (probes-numeric/t3524-cumprinc-lead-fresh-sweep) and 71 vs 238 at 1E-12..1E-4
+        // (t3524-cumprinc-tiny-rate-sweep, where below a lead of 3.6 the cut got 2 of 404), so it
+        // went (T-3524, decision 0188 R4).
+        let min_lead = if short { GEOMETRIC_MIN_LEAD } else { 0.0 };
+        self.geometric_principal(min_lead)
             .or_else(|| self.closed_form(Paid::Principal))
     }
 
@@ -221,7 +245,7 @@ impl Periods {
         let principal = if 1.0 + self.rate == 1.0 {
             self.remaining_principal()
         } else {
-            self.geometric_principal()
+            self.geometric_principal(GEOMETRIC_MIN_LEAD)
                 .or_else(|| self.underflowed_principal())
                 .or_else(|| self.discounted_principal())
         };
@@ -237,7 +261,8 @@ impl Periods {
     /// sum missed visibly (fin-cumipmt-overflow-and-forms A9, A11; fin-remaining-later-argument-ranges
     /// K3). It is exact on 70 of the 108 underflowed principals probed and within an ulp of the rest
     /// (the per-period sum: 16 of the 36 near 1E15), not on all: decision 0160, TODO(T-3141). Only
-    /// where [`Periods::geometric_principal`]'s leading power is not normal (T-3524). `None` for type 1, where `v^nper` has not underflowed or where
+    /// below [`GEOMETRIC_MIN_LEAD`]: above it the geometric sum is Excel's, at a rate of 1E10 and at
+    /// integer rates too (T-3067). `None` for type 1, where `v^nper` has not underflowed or where
     /// the result is not finite.
     fn underflowed_principal(&self) -> Option<f64> {
         let log_growth = growth_log(self.rate);
@@ -315,11 +340,12 @@ impl Periods {
     /// an ulp off the correctly rounded log at some rates (-1 at 0.1, +1 at 2 against libm's
     /// `log1p`), and a deep discount carries that, so `CUMPRINC(0.1,1023,478581,7,24,1)` and
     /// `CUMPRINC(2,151,319288,3,42,1)` are to the bit with it and 67 and 245 ulps off with `log1p`
-    /// (gen-m9 9d9ceba257f8001b A372, b73c6cc96e093f03 A62; T-2521). It is
-    /// the principal at any leading exponent and over any range (T-3524). `None` where the
-    /// leading power is not normal or the result is not finite: the per-period sum or the closed
-    /// form decides there.
-    fn geometric_principal(&self) -> Option<f64> {
+    /// (gen-m9 9d9ceba257f8001b A372, b73c6cc96e093f03 A62; T-2521). Over a long range it is
+    /// the principal at any leading exponent (T-3067, T-3524). `None` where the
+    /// leading exponent `(nper-end+1)·L` is below `min_lead` ([`GEOMETRIC_MIN_LEAD`] over a short
+    /// range, 0 over a long one), the leading power is not normal or the result is not finite:
+    /// the per-period sum or the closed form decides there.
+    fn geometric_principal(&self, min_lead: f64) -> Option<f64> {
         let log_growth = growth_log(self.rate);
         // Type 1 pays no interest in period 1, so its principal is the whole payment.
         let first = if self.period_start {
@@ -328,7 +354,7 @@ impl Periods {
             self.start
         };
         let lead = (self.nper - self.end + 1.0) * log_growth;
-        if self.end < first {
+        if self.end < first || lead < min_lead {
             return None;
         }
         let payment = self.interest_payment(log_growth);

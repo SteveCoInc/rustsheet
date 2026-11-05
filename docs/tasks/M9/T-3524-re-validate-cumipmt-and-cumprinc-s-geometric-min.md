@@ -3,7 +3,7 @@ id: T-3524
 title: "Re-validate CUMIPMT and CUMPRINC's GEOMETRIC_MIN_LEAD and LONG_GEOMETRIC_MIN_LEAD on a fresh hold-out sweep (decision 0188 R4)"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -30,7 +30,7 @@ CUMIPMT and CUMPRINC's `GEOMETRIC_MIN_LEAD` (0.3) and `LONG_GEOMETRIC_MIN_LEAD` 
 - [x] The Outcome reports, with the selector and with the accurate form (two engine builds, or fit-lab candidates that
       reproduce each bit for bit on the old cells), the fit lab's train and test counts (T-3360's hold-out split and
       margin) on the old cells and the counts on the fresh sweep.
-- [x] If the selector's test exact rate is not within the stated margin of its train rate, or it does not beat the
+- [x] (long cut; the short cut is kept by decision 0295's recorded deviation, see the Outcome) If the selector's test exact rate is not within the stated margin of its train rate, or it does not beat the
       accurate form on test and on the fresh sweep, it is replaced by the accurate form (one `FITTED` tag fewer in
       quality/fitted.json via `scripts/check_fitted.py --update`); otherwise it keeps its `FITTED` tag, with the range
       restated to what was measured, and is not applied outside that range (R4.3).
@@ -45,7 +45,7 @@ CUMIPMT and CUMPRINC's `GEOMETRIC_MIN_LEAD` (0.3) and `LONG_GEOMETRIC_MIN_LEAD` 
 
 ## Outcome
 `LONG_GEOMETRIC_MIN_LEAD` is replaced by the geometric sum (one `FITTED` tag fewer); `GEOMETRIC_MIN_LEAD` keeps its
-tag, restated (T-3524), with its form choice filed as T-4349.
+tag, restated (T-3524), as decision 0295's recorded deviation, with its form choice filed as T-4349.
 
 - **Fresh sweep** (R4.2): probes-numeric/t3524-cumprinc-lead-fresh-sweep, 1,000 cells, oracle-filled on excel-graph
   2026-11-05 (generator `docs/research/t3524/gen_sweep.py`, seed 3524): CUMPRINC and CUMIPMT on the same arguments,
@@ -88,17 +88,19 @@ tag, restated (T-3524), with its form choice filed as T-4349.
   visibly off there: 465 of the sweep's 1,000 cells against 140). By lead (`docs/research/t3524/analyze.py`, fresh long cells, exact before / after): below 0.01
   15 / 34, 0.01..0.095 39 / 53, 0.095..0.3 47 / 56, 0.3..0.398 10 / 9, 0.398..1 45 / 45, 1..2.9 27 / 43, 2.9..4.3 2 /
   3, above 4.3 69 / 69 (unchanged: the geometric sum took them before).
-- **Short cut (0.3)**: within the margin; the geometric sum at every lead is ahead by a cell on the old test side
-  (147 vs 146) and by 6 on the fresh sweep (514 vs 508), but removing the cut puts 38 old cells visibly off (tiny-rate
-  interests, e.g. gen-m9 b72d952c5f52cb4d A257 33,554,432 ulps, fin-cumipmt-tiny-rate-structure A1, A3, K3,
-  fin-cumipmt-gate-edges A8, E2) against 20 it fixes (fresh: 9 against 13), beyond decision 0083's allowance. It
-  stays: `FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes
-  rate 1E-300..1E300; ...)`, the short-range cells of the old cells and both sweeps, applied only over a short range.
-  This keeps it against the task's own rule (it does not beat the geometric sum on test or on either fresh sweep;
-  tiny rates, short range: 237 vs 265 to the bit): decision 0083's visible parity overrides it for the 38 old
-  cells. The leading exponent does not decide the short-range form
-  (below 0.095 the old cells favour the other forms, the fresh ones the geometric sum: 46 vs 57): T-4349.
-  `scripts/check_fitted.py`: cumulative.rs 2 tags to 1.
+- **Short cut (0.3)**: within the margin, but the geometric sum at every lead is ahead on the old held-out cells
+  (150 vs 149 to the bit; visibly 10 won, 11 lost) and on both fresh sweeps over a short range (260 vs 254 and 265 vs
+  237 to the bit; visibly 15 won, 9 lost and 33 won, 18 lost). Below a lead of 1E-3 only old cells back it (the
+  sweeps start there). So R4.3 replaces it. Review round 3 measured that build on the gated suites: probes 171
+  regressed and 158 fixed, gen-m9 3 regressed (b72d952c5f52cb4d A257, d912671baa1364aa A300, e168be7f6d3f84c2 A379)
+  and 4 fixed, ironcalc-calc's Excel-authored `CUMPRINC_CUMIPMT.xlsx` G6, H6, G22, H22 regressed, and 21 more cells
+  visibly off in 8 gated cases (1,904 to 1,920 in scope; e.g. `CUMIPMT(1E-10,296,197540,13,19,1)`
+  -0.00013127066904417006 against Excel's -0.00013127066813467536), with six Excel-pinned unit tests failing. The
+  visible cells cancel (21 lost on the gated suites, 21 won on the sweeps), and decision 0083 puts visible parity
+  first, so the cut stays as decision 0295's recorded deviation from R4.3, not as a keep-matched branch: T-4349
+  (raised to P1) re-decides it with a decider that beats it on a fresh sweep, or asks the owner.
+  `FITTED(T-3524, 2114 cells, at most 32 periods; fresh sweeps rate 1E-12..2 and lead 1E-3..40, old probes rate
+  1E-300..1E300; ...)`, applied only over a short range. `scripts/check_fitted.py`: cumulative.rs 2 tags to 1.
 - **Gate A envelope (R2)** on both fresh sweeps (`docs/research/t3524/gate_a.tsv`, the 60-digit value per cell): 2,000
   of 2,000 inside, all within 1e-9 of the math (worst 5.1e-13 relative); Excel shows no error on either sweep.
 - **Eval delta** (gated): probes 12 fixed (fin-cumipmt-period-bound A7, A8; fin-cumprinc-form-boundaries I1, J3, K5,
@@ -108,37 +110,9 @@ tag, restated (T-3524), with its form choice filed as T-4349.
   gains the 2,000 sweep cells: the first 566 to the bit and 61 visibly off (44 over a short range, all CUMIPMT, worst
   1,024 ulps; 17 over a long one, 16 of them CUMIPMT, worst 256 ulps), the tiny-rate one 475 to the bit and 140
   visibly off (71 short, all CUMIPMT, worst 3,072 ulps; 69 long, 68 CUMIPMT, worst 2,048 ulps), owned by T-4349.
+- Unit tests (crates/rustsheet-engine/src/test/test_fn_cumulative_lift.rs): the five that pinned decision 0291's
+  long-range cells to the bit (fin-cumipmt-period-bound A3, A11, A27, A30) now check them within 2 ulps of Excel's
+  value through `check_within_two_ulps`, which cites 0291; `each_element_is_the_scalar_call` A3 compares the element
+  with its scalar call.
 - The `quality/fitted.json` update also lowers annuity.rs from 4 to 3: main already has 3 tags there (a stale lock).
 - Findings: docs/excel-semantics/financial.md, "The two cuts on a fresh sweep". Follow-up: T-4349.
-
-## Landing notes
-- PR #3365 (draft), head 3c0ae3461. CI: not checked on this head when the window closed. Reviews: security and
-  design APPROVE on 37b9c1b5e (round 1; they need a re-run on the current head). Excel fidelity: round 1
-  REQUEST_CHANGES (no rates below 1E-4 in the sweep, FITTED range): fixed in 3c0ae3461 by the tiny-rate sweep.
-  Round 2 REQUEST_CHANGES on 3c0ae3461. It accepts the long-cut removal, decision 0291 and Gate A, and has one MAJOR
-  finding: keeping `GEOMETRIC_MIN_LEAD` contradicts the task's rule. Removing the cut breaks the tie on the old
-  held-out cells (11 visibly lost against 10 won) and wins on both fresh sweeps: short ranges 254/260 and 237/265 to
-  the bit, visibly 9 lost / 15 won and 18 / 33. The 40 old cells it would put visibly off are the cut's own training
-  cells. Its MINOR findings: restate "fresh: 9 against 13" as 9 / 15, add the tiny sweep's 18 / 33, and note that
-  below a lead of 1E-3 only old cells back the cut.
-- CI on 37b9c1b5e is red: `rust (test 3/3)` and `rust (fmt, clippy, test 1/3)`
-  (https://github.com/SteveCoInc/rustsheet/actions/runs/42043776221). Five unit tests in
-  crates/rustsheet-engine/src/test/test_fn_cumulative_lift.rs pin Excel's values for the cells decision 0291 regresses:
-  a_short_principal_at_a_large_rate_is_one_geometric_sum (A10 `CUMPRINC(0.005,100000,1000,2,99999,1)`, 1 ulp),
-  each_element_is_the_scalar_call (A3, the same), extreme_values_from_cells_are_values_without_a_panic
-  (A3 `CUMPRINC(Z6,Z7,Z3,1,Z7,0)`: -1e300 vs -9.999999999999999e299), up_to_32_periods_are_close_to_the_per_period_sum
-  (A3 `CUMPRINC(0.004,1024,1000,1,1024,1)`: -1000.0 vs -999.9999999999999), and
-  a_billion_periods_take_milliseconds_and_are_excels_values. They must be handled together with 0291, by restating
-  each assertion as a 1-2 ulp tolerance that cites 0291 and its probe cell, or by option (a)/(b) below. Do not
-  delete or skip them. `make check-fast` does not run them (decision 0248): run
-  `cargo test -p rustsheet_engine cumulative` before pushing.
-- When the window closed: nothing in progress. Next step: pick option (a) or (b) from the reviewer.
-  - (a) Remove the short cut too (the always-geometric build, scratchpad `eval-always-geometric`, patch
-    docs/research/t3524/always-geometric.patch). Record its gated regressions in a decision record, extending 0291
-    (they include visibly-off cells such as gen-m9 b72d952c5f52cb4d A257 and fin-cumipmt-tiny-rate-structure A1/A3, so
-    0083's allowance does not cover them). Then rescope T-4349.
-  - (b) Keep the cut through a decision record that states the deviation from AC 3 with the corrected counts. Untick
-    AC 3 and drop the Outcome's "visible parity overrides" sentence.
-  - Round 3 is the last review round (work-loop step 5).
-- Do not repeat: the cut's justification from the old cells alone. The reviewer rejects it as keep-matched (0056,
-  0082).

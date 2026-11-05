@@ -4,7 +4,7 @@ title: "CUMPRINC's short-range form choice: find what decides it where the leadi
 milestone: M9
 lane: functions-financial
 status: todo
-priority: P2
+priority: P1
 size: M
 tier: opus
 depends_on: [T-3524]
@@ -46,6 +46,12 @@ available rule on a fresh sweep.
   B376, B377, B378, B393, B395, B396, B410, B412, B420, B426, B428, B429, B435, B437, B446, B452, B453, B457, B462,
   B464, B465, B470, B474, B475, B480, B482, B486, B487, B488, B490, B493, B494, B496, B499, B500.
 - A new cut or selector is a fit: decision 0188 R4 (hold-out split, a fresh sweep drawn after the freeze).
+- Decision 0295 keeps the cut against R4.3 for now: removing it (measured in T-3524's round 3) regresses probes 171
+  cells and fixes 158, regresses gen-m9 b72d952c5f52cb4d A257, d912671baa1364aa A300, e168be7f6d3f84c2 A379 and
+  ironcalc-calc `CUMPRINC_CUMIPMT.xlsx` G6, H6, G22, H22, and puts 21 more gated cells visibly off (8 cases), the
+  same number it brings back on the two fresh sweeps. Below a lead of 1E-3 only old cells back the cut (the fresh
+  sweeps start there). This task re-decides it: replace the cut by a decider that wins, or, if none does, ask the
+  owner to rule between decision 0083's order and R4.3.
 
 ## Acceptance criteria
 - [ ] A ranked comparison (fit lab, two or more engine builds) of candidate short-range selectors on the old and the
