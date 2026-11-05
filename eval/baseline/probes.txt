@@ -2192,6 +2192,7 @@ C	probes/t3983-time-argument-below-131072.case.json	24
 C	probes/t3985-groupby-two-lifted-spent-filter.case.json	44
 C	probes/t3991-percent-shapes.case.json	21
 C	probes/t3995-dfunction-fold-final-forms.case.json	228
+C	probes/t4003-filter-column-criterion.case.json	30
 C	probes/t4013-class-equality-order.case.json	108
 C	probes/t4014-sheet-api-name-65.case.json	3
 C	probes/t4014-sheet-api-name-66.case.json	3
