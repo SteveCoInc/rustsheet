@@ -64,23 +64,13 @@ def pick(rng: random.Random, fields: int, count: int, seen: set) -> list:
         )
         if any(len(p) > 1 for p in pattern):
             pool.setdefault(pattern, []).append((rows, preds))
-    out: list = []
-    queues = [pool[p] for p in sorted(pool)]
-    while len(out) < count and any(queues):
-        for q in queues:
-            if q and len(out) < count:
-                out.append(q.pop(0))
-    return out
+    return gen.round_robin(pool, count)
 
 
-def main() -> None:
-    rng = random.Random("T-4359")
-    data: dict[str, object] = {}
-    calc: dict[str, str] = {}
-    hyps: list[tuple[str, dict[str, list]]] = []
-    seen: set = set()
-    blocks = pick(rng, 2, PER, seen) + pick(rng, 3, PER, seen)
-    for r, (rows, preds) in enumerate(blocks, start=1):
+def write_blocks(blocks: list, data: dict[str, object], calc: dict[str, str], key_sort: bool) -> None:
+    """One Calc row per block (rows, _) with its Data rows (columns as the module docstring says); `key_sort` adds
+    column F, SUM with subtotals at every level sorted by the keys ascending (gen_holdout.py)."""
+    for r, (rows, _) in enumerate(blocks, start=1):
         a, b = 5 * r - 4, 5 * r
         nf = len(rows[0])
         for i, key in enumerate(rows):
@@ -99,6 +89,19 @@ def main() -> None:
         calc[f"C{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,0,{-(nf + 1)}),1)"
         calc[f"D{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{av},0,0,{nf + 1}),1)"
         calc[f"E{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,{nf},{nf + 1}),1)"
+        if key_sort:
+            calc[f"F{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,{nf},1),1)"
+
+
+def main() -> None:
+    rng = random.Random("T-4359")
+    data: dict[str, object] = {}
+    calc: dict[str, str] = {}
+    hyps: list[tuple[str, dict[str, list]]] = []
+    seen: set = set()
+    blocks = pick(rng, 2, PER, seen) + pick(rng, 3, PER, seen)
+    write_blocks(blocks, data, calc, key_sort=False)
+    for r, (_, preds) in enumerate(blocks, start=1):
         for c in COLUMNS:
             hyps.append((f"{c}{r}", preds[c]))
     gen.t4342.t4241_probe.write_case(

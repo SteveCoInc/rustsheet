@@ -1,8 +1,8 @@
 """T-4359: GROUPBY's sort by a value on intransitive runs: the hypotheses for a parent's value.
 
-The tree, the search and the leaves are docs/research/t4344/gen_probe.py's (`groupby` with H3, the model the engine
-implements); this adds each row's descent path, the classes it reached from the first field (fewer than the fields
-when it reached no leaf). A value sort builds its tree ascending and orders hierarchically: the parents (key
+The tree, the search, the leaves and each row's descent path (the classes it reached from the first field, fewer than
+the fields when it reached no leaf) are docs/research/t4344/gen_probe.py's `descents` with H3, the model the engine
+implements. A value sort builds its tree ascending and orders hierarchically: the parents (key
 prefixes) by their value, the groups by their own value inside each parent, ties in key (tree) order. The
 hypotheses differ only in the rows a parent's value is the function of:
 - R0: the rows of its groups (a leaf no row reaches holds every row): the engine before T-4359.
@@ -27,44 +27,8 @@ tcmp = gen.tcmp
 
 
 def tree_of(rows: list[tuple[str, ...]]):
-    """The ascending tree (a value sort's), its leaves (path, shown keys) in tree order, and each row's path."""
-    nf = len(rows[0])
-    m = gen.model
-    keys = m.natural_sort([rows[i] for i in m.unique_kept(rows, m.make_rcmp([1] * nf))], m.make_rcmp([1] * nf))
-
-    def build(ks, f):
-        if f == nf:
-            return None
-        classes: list = []
-        for k in ks:
-            if classes and tcmp(classes[-1][0][f], k[f]) == 0:
-                classes[-1][1].append(k)
-            else:
-                classes.append((k, [k]))
-        return [(c[0][f], build(c[1], f + 1)) for c in classes]
-
-    tree = build(keys, 0)
-    leaves: list = []
-
-    def walk(t, path, shown):
-        for i, (rep, sub) in enumerate(t):
-            if sub is None:
-                leaves.append((path + (i,), shown + (rep,)))
-            else:
-                walk(sub, path + (i,), shown + (rep,))
-
-    walk(tree, (), ())
-    paths = []
-    for row in rows:
-        t, path = tree, ()
-        for f in range(nf):
-            reps = [x[0] for x in t]
-            i = gen.h3(reps, row[f], 1)
-            if tcmp(reps[i], row[f]) != 0:
-                break
-            path, t = path + (i,), t[i][1]
-        paths.append(path)
-    return leaves, paths
+    """The ascending tree (a value sort's): its leaves (path, shown keys) in tree order, and each row's path."""
+    return gen.descents(rows, [1] * len(rows[0]), gen.h3)
 
 
 def value_sort(

@@ -32,26 +32,7 @@ def main() -> None:
     blocks = probe.pick(rng, 2, 12, seen) + probe.pick(rng, 3, 18, seen)
     data: dict[str, object] = {}
     calc: dict[str, str] = {}
-    for r, (rows, _) in enumerate(blocks, start=1):
-        a, b = 5 * r - 4, 5 * r
-        nf = len(rows[0])
-        for i, key in enumerate(rows):
-            n = a + i
-            data[f"A{n}"] = gen.t4342.TEXTS[key[0]]
-            data[f"B{n}"] = f'="{key[1]}"'
-            if nf == 3:
-                data[f"C{n}"] = gen.t4342.TEXTS[key[2]]
-            data[f"D{n}"] = i + 1
-            data[f"E{n}"] = 2**i
-        last = "C" if nf == 3 else "B"
-        keys, pw = f"Data!A{a}:{last}{b}", f"Data!E{a}:E{b}"
-        calc[f"A{r}"] = f"{nf}f " + " ".join("".join(k) for k in rows)
-        sm, av = "LAMBDA(v,SUM(v))", "LAMBDA(v,AVERAGE(v))"
-        calc[f"B{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,0,{nf + 1}),1)"
-        calc[f"C{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,0,{-(nf + 1)}),1)"
-        calc[f"D{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{av},0,0,{nf + 1}),1)"
-        calc[f"E{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,{nf},{nf + 1}),1)"
-        calc[f"F{r}"] = f"=ARRAYTOTEXT(_xlfn.GROUPBY({keys},{pw},{sm},0,{nf},1),1)"
+    probe.write_blocks(blocks, data, calc, key_sort=True)
     gen.t4342.t4241_probe.write_case(
         OUT,
         "T-4359: the hold-out for R3 (docs/research/t4359/model.py), a value sort's parent holding the rows that "

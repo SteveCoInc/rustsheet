@@ -96,8 +96,10 @@ def h4(reps: list[str], x: str, d: int) -> int:
 HYPS = {"H0": h0, "H1": h1, "H2": h2, "H3": h3, "H4": h4}
 
 
-def groupby(rows: list[tuple[str, ...]], dirs: list[int], search) -> list[tuple[tuple[str, ...], list[int]]]:
-    """docs/research/t4241/model.py's tree with the search of step 3 replaced by `search`."""
+def descents(rows: list[tuple[str, ...]], dirs: list[int], search) -> tuple[list, list[tuple[int, ...]]]:
+    """docs/research/t4241/model.py's tree with the search of step 3 replaced by `search`: its leaves (class path,
+    shown keys) in tree order, and each row's descent, the classes it reached from the first field (fewer than the
+    fields when it reached no leaf; T-4359)."""
     nf = len(rows[0])
     keys = model.natural_sort(
         [rows[i] for i in model.unique_kept(rows, model.make_rcmp([1] * nf))], model.make_rcmp(dirs)
@@ -125,17 +127,26 @@ def groupby(rows: list[tuple[str, ...]], dirs: list[int], search) -> list[tuple[
                 walk(sub, path + (i,), shown + (rep,))
 
     walk(tree, (), ())
-    members: dict = {}
-    for r, row in enumerate(rows, 1):
+    paths: list[tuple[int, ...]] = []
+    for row in rows:
         t, path = tree, ()
         for f in range(nf):
             reps = [x[0] for x in t]
             i = search(reps, row[f], dirs[f])
             if tcmp(reps[i], row[f]) != 0:
-                path = None
                 break
             path, t = path + (i,), t[i][1]
-        if path is not None:
+        paths.append(path)
+    return leaves, paths
+
+
+def groupby(rows: list[tuple[str, ...]], dirs: list[int], search) -> list[tuple[tuple[str, ...], list[int]]]:
+    """The groups of `descents`' tree: each leaf with the rows that reached it, or every row when none did."""
+    nf = len(rows[0])
+    leaves, paths = descents(rows, dirs, search)
+    members: dict = {}
+    for r, path in enumerate(paths, 1):
+        if len(path) == nf:
             members.setdefault(path, []).append(r)
     return [(shown, members.get(p) or list(range(1, len(rows) + 1))) for p, shown in leaves]
 
@@ -191,6 +202,11 @@ def discriminating(rng: random.Random, fields: int, orders: list[str], count: in
         pattern = tuple(sorted({tuple(k for k in HYPS if preds[k] == v) for v in preds.values()}))
         if len(pattern) > 1:
             pool.setdefault(pattern, []).append((rows, order, preds))
+    return round_robin(pool, count)
+
+
+def round_robin(pool: dict, count: int) -> list:
+    """Up to `count` items of `pool`'s lists, one from each list (in key order) in turn."""
     out: list = []
     queues = [pool[p] for p in sorted(pool)]
     while len(out) < count and any(queues):
