@@ -3,7 +3,7 @@ id: T-4379
 title: "PIVOTBY leaves out a repeated column leaf no record reaches on some intransitive runs"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
