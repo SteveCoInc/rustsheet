@@ -722,7 +722,8 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                 // `|#.#|E-|#|` on 0 is "|0.|E|0|" (poi/NumberFormatApproxTests.xlsx
                                 // A136), where `#.#` alone gives "."; `##0.0E+0` on 0 is "000.0E+0"
                                 // (gen-m10 659cd5776d423ce3 F!J14; T-2227).
-                                let zero_mantissa = p.is_scientific && ln == 0 && digit.kind == '#';
+                                // A lone `?` does too: `?.?E+0` on 0 is "0. E+0" (probes/text-scientific-edges A41, T-2230).
+                                let zero_mantissa = p.is_scientific && ln == 0 && digit.kind != '0';
                                 if zero_mantissa {
                                     text.push(p.numerals.digit('0'));
                                 } else if !(number_index < 0 && digit.kind == '#') {

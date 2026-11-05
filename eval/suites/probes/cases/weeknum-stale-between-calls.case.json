@@ -1,0 +1,228 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4289: a reader (A1, WEEKNUM return_type 99) above one call or formula (A2) above a Monday setter (A3); the reader is 16 when A2 keeps WEEKNUM's start-weekday state and #NUM! when A2 empties it. One sheet per A2.",
+  "tags": [
+    "M2",
+    "dates",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S01",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=1",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S02",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SEQUENCE(1,2)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S03",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(SEQUENCE(2))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S04",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORT({3,1})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S05",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(SORT({3,1}))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S06",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TRANSPOSE({1,2})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S07",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(TRANSPOSE({1,2}))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S08",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "={1,2}",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S09",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM({1,2})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S10",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=LET(x,{1,2},x)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S11",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(LET(x,{1,2},x))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S12",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=LET(x,1,x)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S13",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=LAMBDA(x,x)(1)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S14",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(LAMBDA(x,x)(1))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S15",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=LAMBDA(x,x)({1,2})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S16",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=XLOOKUP(1,{1,2},{5,6})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S17",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(XLOOKUP(1,{1,2},{5,6}))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S18",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SEQUENCE(1)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S19",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(SEQUENCE(1))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S20",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SORT({3})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S21",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=UNIQUE({1,1})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S22",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=TEXTJOIN(\",\",1,1,2)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S23",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=MMULT({1,2},{3;4})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S24",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=INDEX({1,2},1)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S25",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SUM(INDEX({1,2},0))",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S26",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=MDETERM({1,2;3,4})",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    },
+    {
+      "name": "S27",
+      "cells": {
+        "A1": "=WEEKNUM(100,99)",
+        "A2": "=SEQUENCE(2,1)",
+        "A3": "=WEEKNUM(100,2)"
+      }
+    }
+  ],
+  "expected": {}
+}

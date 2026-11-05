@@ -68,10 +68,22 @@ fewer than scalar values, so this bound is never stricter than Excel's), but wha
 longer string in a file (truncate, repair or refuse) is not probed (T-0004); xlsx parts never
 declare entities, and OPC forbids DTDs in package parts. Entity references in attribute values were
 already rejected.
+A password-protected xlsx (an OLE compound file, SPEC-0031) has bounds of its own. The whole
+container is refused past the byte budget (`max_uncompressed_bytes`, before `cfb` parses it), and a
+container with more than 4,096 directory entries is refused as an unreadable OLE file. Its
+`EncryptedPackage` may declare at most the byte budget, both as a stream and as the plain size in its
+first 8 bytes, and `EncryptionInfo` at most 1 MiB, its Agile XML at most 64 elements nested 8 deep.
+The key derivation may ask for at most `max_spin_count` rounds (`spinCount`), 1,000,000 by default,
+before any hashing: MS-OFFCRYPTO allows 10,000,000 (about 2 to 4 s of SHA-512 that any file could
+demand without knowing the password) and Excel writes 100,000, so a file with 1,000,001 to
+10,000,000 rounds that Excel opens is refused with the `SpinCount` limit until the caller raises the
+limit (SPEC-0031 D3). Past 10,000,000 a file is malformed for the format, not a limit.
 Evidence: none for Excel; these are resource limits (CLAUDE.md directive 5), not Excel observations.
 Status: DEVIATION (decision 0014)
 Implemented in: crates/rustsheet-xlsx/src/import/package.rs (`ImportLimits`, `Package`),
-crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`)
+crates/rustsheet-xlsx/src/import/xml.rs (`reference_of`), crates/rustsheet-xlsx/src/import/ole.rs
+(`classify_ole_compound_file`, `decrypt_ole_package`, `MAX_DIRECTORY_ENTRIES`),
+crates/rustsheet-xlsx/src/import/encryption.rs (`decrypt_package`, `MAX_SPIN_COUNT`)
 
 ## Password-protected and non-zip packages
 Rule (Excel): a password-protected xlsx is an OLE compound file (signature `D0 CF 11 E0 A1 B1 1A E1`) holding an
@@ -93,6 +105,17 @@ stream size is 32 bits (MS-CFB 2.6.3: the high half is ignored).
 That is a known gap, not a deviation (decision 0279). SPEC-0031 (T-4243) plans the close: a password on the load
 API, ECMA-376 Agile and Standard decryption (T-4265 to T-4267) and the `.xls` plan, which waits on an owner ruling
 (T-4268). Any other file that is not a zip stays a zip error.
+Since T-4265 the decryption exists below the load API: `decrypt_ole_package` reads the two streams (a stream that
+ends before its declared size is `MalformedEncryption`, never a shorter package) and `decrypt_package` decrypts
+Agile (4.4: AES-CBC with SHA-1 or SHA-2, its HMAC verified before any plain text is returned) and Standard (2.2,
+3.2, 4.2 with `fCryptoAPI` and `fAES`: AES-ECB, SHA-1) packages. A password that does not open the package, or one
+longer than 255 UTF-16 code units (refused, not truncated; E3 is UNVERIFIED), is `WrongPassword`; Extensible
+encryption, RC4, a certificate-only key encryptor, a cipher other than AES-CBC and a hash other than SHA-1/SHA-2
+are `UnsupportedEncryption`; a broken descriptor or package, and an Agile package whose HMAC does not match, are
+`MalformedEncryption` (SPEC-0031 D5, until T-4263 shows whether Excel opens such a file). With the passwords
+POI's tests use, `protected_passtika.xlsx` (`tika`) and `58616.xlsx` (`VelvetSweatshop`, the default password of
+E2) both decrypt with msoffcrypto-tool 6.1.0, and both are Standard encryption (`EncryptionInfo` 4.2, AES-128).
+The load API does not call it yet (T-4266).
 - poi `58616.xlsx` and `protected_passtika.xlsx` (Apache POI's encrypted fixtures, `CDFV2 Encrypted`, version 3
   containers with the `\x06DataSpaces` storage, `EncryptionInfo` of 248 bytes and `EncryptedPackage`) are refused as
   `EncryptedPackage`. Their baseline lines stay `!InvalidCase` (now with that message), owned by T-4267.
@@ -100,9 +123,10 @@ API, ECMA-376 Agile and Standard decryption (T-4265 to T-4267) and the `.xls` pl
   not an encrypted one: it stays refused as a zip error (T-0489).
 Status: UNVERIFIED (probe pending, T-4263); known gap owned by T-4265 to T-4267 (SPEC-0031).
 Implemented in: `Package::new`, `is_ole_compound_file` (crates/rustsheet-xlsx/src/import/package.rs),
-`classify_ole_compound_file` (import/ole.rs), the `XlsxError` variants (error.rs); the eval snapshot reader
-(crates/rustsheet-eval/src/xlsx_snapshot.rs). Tests: crates/rustsheet-xlsx/tests/ole_container.rs; fuzz target
-`cfb_container`.
+`classify_ole_compound_file` and `decrypt_ole_package` (import/ole.rs), `decrypt_package` (import/encryption.rs),
+the `XlsxError` variants (error.rs); the eval snapshot reader (crates/rustsheet-eval/src/xlsx_snapshot.rs). Tests:
+crates/rustsheet-xlsx/tests/ole_container.rs, crates/rustsheet-xlsx/tests/encrypted_package.rs; fuzz targets
+`cfb_container`, `encrypted_package`.
 Tasks: T-3972, T-4243, T-4263, T-4264, T-4265, T-4266, T-4267, T-4268
 
 ## A workbook whose indices dangle is refused outright

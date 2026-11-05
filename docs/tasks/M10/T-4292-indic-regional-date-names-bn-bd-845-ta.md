@@ -3,7 +3,7 @@ id: T-4292
 title: "Indic regional date names: bn-BD 845 (and 45), ta-LK 849, ne-IN 861 and the neutral 61 Saka row have their own names"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: M
 tier: sonnet
@@ -29,3 +29,6 @@ locale/indic_date_names.rs.
 
 ## Out of scope
 - Other Indic LCIDs and regions.
+
+## Outcome
+Added bn-BD, ta-LK and ne-IN tables, registered 0x845/0x849/0x861 (bn-BD first so neutral 0x45 and `bn` resolve to it), and native Saka names for 0x861/0x61. probes/t4201-indic-regional-variants: 142/142 (102 cells fixed). Only Phalguna was probed under Saka; other months are inferred from hi-IN.

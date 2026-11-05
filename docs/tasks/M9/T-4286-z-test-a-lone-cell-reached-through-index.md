@@ -3,7 +3,7 @@ id: T-4286
 title: "Z.TEST: a lone cell reached through INDEX or IF is #N/A when it holds text or a boolean (INDEX(A1:A5,1), IF(TRUE,A1))"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: M
 tier: opus
@@ -20,8 +20,11 @@ Cells:
 - probes/t2775-ztest-single-cell-routes.case.json (3): Sheet1!B3, B4, B13
 
 ## Acceptance criteria
-- [ ] probes/t2775-ztest-single-cell-routes B3, B4 and B13 pass (`make eval-baseline`).
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t2775-ztest-single-cell-routes B3, B4 and B13 pass (`make eval-baseline`).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Fixed by T-2883: Z.TEST reads its data once in reference context (`evaluate_picked_reference_arg`), so t2775-ztest-single-cell-routes B3, B4 and B13 pass and their baseline lines are gone.

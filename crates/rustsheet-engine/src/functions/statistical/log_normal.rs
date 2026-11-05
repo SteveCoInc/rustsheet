@@ -47,8 +47,10 @@ impl Model {
         let result = if cumulative {
             normal_cdf(x.ln(), mean, std_dev)
         } else {
-            // Same kernel as `normal_pdf` with the extra `x` factor; this order reproduces
-            // the cached last digits in LOGNORM.xlsx.
+            // Not `normal_pdf`'s kernel: `LOGNORM.DIST(1,0,1,FALSE)` is 0.39894228040143265,
+            // one ulp under the K that `NORM.S.DIST(0,FALSE)` returns (probes-numeric
+            // m9-normpdf-lognorm-dist A4), and no form T-0975 scored fits the grid. This order
+            // keeps the cached last digits it matched in LOGNORM.xlsx until T-4321 finds Excel's.
             let d = (x.ln() - mean) / std_dev;
             (-0.5 * d * d).exp() / (x * SQRT_2PI * std_dev)
         };

@@ -151,6 +151,8 @@ ironcalc-calc/STATISTICAL/LINEST_LOGEST.xlsx	5
 ironcalc-calc/STATISTICAL/NORM_DIST.xlsx	9
 probes/amordegrc-fraction-state-ag.case.json	1
 probes/amordegrc-fraction-state-ah.case.json	1
+probes/amordegrc-fraction-state-ai.case.json	1
+probes/elapsed-minutes-fraction.case.json	1
 probes/fin-cumipmt-gate-edges.case.json	14
 probes/fin-cumipmt-overflow-and-forms.case.json	2
 probes/fin-cumipmt-period-bound.case.json	1
@@ -226,7 +228,13 @@ probes/t4201-indic-regional-variants.case.json	102
 probes/t4224-doubled-xlpm-prefix.case.json	14
 probes/t4236-pivot-date-groups-no-blank.case.json	15
 probes/t4236-pivot-date-groups.case.json	105
+probes/t4248-getpivotdata-recordless-item.case.json	2
 probes/t4255-gamma-window-exact-ratio.case.json	58
+probes/t4290-gamma-window-large-pow2.case.json	669
+probes/t4291-poisson-far-above-mean.case.json	29
+probes/t4302-poisson-cdf-beside-pmf.case.json	95
+probes/weeknum-stale-between-calls.case.json	16
+probes/weeknum-stale-between-ranges.case.json	10
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

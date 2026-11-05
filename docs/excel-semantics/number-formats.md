@@ -370,6 +370,16 @@ Status: VERIFIED
 Implemented in: `consume_string` (formatter/lexer.rs) ends the literal at every `"`.
 Tasks: T-0935
 
+## Fraction after minutes with no seconds (T-2684, VERIFIED)
+Rule: a `.0`, `.00` or `.000` after a minutes token with no seconds token shows the fraction of the hidden seconds, whatever
+the hours token: for 2:59:59.4, `[h]:mm.0` is "2:59.4", `[h]:mm.00` "2:59.40", `h:mm.0` "2:59.4", `mm.0` "59.4", `[m].0`
+"179.4", `[mm].0` "179.4", `[h].0` and `h.0` "2.4", `[s].0` "10799.4", `d [h]:mm.0` "0 108:59.4", `[h]:mm.0 \h`
+"2:59.4 h". Four digits (`[h]:mm.0000`) and an AM/PM beside it (`[h]:mm.0 AM/PM`) are `#VALUE!`. Engine matches all of it
+except `TEXT(1+0.25/86400,"[h]:mm.0")`: Excel "24:00.2", ours "24:00.3" (T-4323).
+Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-seconds-boundary A32, excel-graph 2026-11-05.
+Status: VERIFIED
+Tasks: T-2684, T-4323
+
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):
 - Fractional elapsed seconds work: `[h]:m:s.000` on 3.14159 → "75:23:53.376" (A2), `[m]:s.000` →
@@ -538,8 +548,11 @@ Evidence: poi/NumberFormatApproxTests.xlsx A40, A41, A96, A97, A136, A137, A176,
 Ours: `formatter/parser.rs` pushes the `E` as a literal at the format's `E+`/`E-`; `formatter/format.rs`
 prints the sign before the first exponent digit and a `0` for the last `#` integer placeholder of a zero
 mantissa (T-0937).
+- **No exponent digit is `#VALUE!`** (probes/text-scientific-edges, 56 cells, excel-graph, 2026-11-05, T-2230): `E+` or `E-` with no digit after it (`0E+`, `0E-`, `0.00E+`, `0.0E-"x"`) makes `TEXT` return `#VALUE!` for every value (0, 1.5, -123456.789, 1.23E-5).
+- **Lowercase `e+`/`e-`** (`0e+0`, `0.0e-0`, `0.0e+00`) is `#VALUE!` here too, as the CONFLICTING lowercase `e` entry says for Excel for the web (T-1075 keeps the desktop question).
+- **A `?` integer placeholder also prints 0 on a zero mantissa**: `?.?E+0` on 0 is "0. E+0" (the fractional `?` stays a space). `##0.0E+0`, `###.#E+0` and `##E+0` on 0 follow the `#` rule above. Several `?` placeholders are unprobed and are taken to follow the same rule.
 Status: VERIFIED
-Tasks: T-0937 (implemented)
+Tasks: T-0937 (implemented), T-2230
 
 ## `TEXT(x,"General")` uses an 11-character fixed-notation limit
 Rule: General prints fixed notation, with at most 9 decimals ("0." plus 9 decimals is 11
@@ -849,8 +862,7 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
   "आइतवार"). Neutral `[$-49]` is identical to ta-IN `[$-449]` in all 15 rows, and neutral `[$-61]` equals ne-NP `[$-461]`
   except under Saka digits, where it prints native names ("फल्गुण|फल्गुण|बुधवार|बुधवार"). Under calendar digits 10 (Saka)
   and 8 (Hebrew) every other LCID prints the Latin Saka ("Phalguna|Budh|Budhavara") and Hebrew ("Adar|Yom Revi'i")
-  names, except 861, which prints native Saka names too. Ours: 845, 45, 849, 861 and the BCP-47 tags are wrong (102 off
-  cells), owned by T-4292.
+  names, except 861, which prints native Saka names too. Implemented in T-4292 (all 142 cells pass; tables `BN_BD`, `TA_LK`, `NE_IN` in locale/indic_date_names.rs; native Saka names for 861/61 via `hebrew_or_saka`, Phalguna and Wednesday probed only, other Saka months inferred from hi-IN).
 - **System tags.** `[$-F800]` and `[$-x-sysdate]` replace the whole section with the system long date, en-US "dddd, mmmm d, yyyy", whatever else it holds (`TEXT(45000.75,"x[$-F800]0")` is "Wednesday, March 15, 2023", 0.5 "Saturday, January 0, 1900", -1 and 3e6 `#VALUE!`); `[$-F400]`/`[$-x-systime]` likewise give "h:mm:ss AM/PM". Only a first section shows it: `TEXT(-1,"0;[$-F800]")`, `TEXT(0,"0;0;[$-F800]")` and `TEXT("abc","0;0;0;[$-F800]")` are "". With `@` the section is a text section as usual (`[$-F800]@` of 45000.75 is "45000.75").
 - **One tag per section.** A second tag in a section is `#VALUE!`, even the same one or a system tag (`[$-40C]mmmm [$-40C]mmmm`, `[$-40C]mmmm [$€-407]mmmm`, `[$-F800][$-F400]`); tags in different sections are fine.
 - **Regional variants and more languages** (probes/text-locale-regional-lcids, 252 cells, T-1858). The language fallback does not hold across regions: `[$-C07]` de-AT has "Jän"/"Jänner" for January, "Mär" for March, and `ddd` "Mi."/"Do." (de-DE differs in all three); `[$-1004]` zh-SG mixes the two: short months as zh-TW ("一月"), days as zh-CN ("周三"); `[$-C04]` zh-HK equals zh-TW ("週三"); `[$-80A]` es-MX and `[$-2C0A]` es-AR differ from es-ES in `ddd` and the day halves ("a. m."/"p. m."), and es-AR's halves use a non-breaking space where es-MX's use a plain one. Languages that now resolve: `[$-408]` Greek ("Ιαν", "πμ"/"μμ"), `[$-41E]` Thai (Thai names, AM/PM stay Latin), `[$-41B]` Slovak (short months are the numerals "1"…"12", like Japanese), `[$-422]` Ukrainian (AM/PM stay Latin), `[$-401]` Arabic ("ص"/"م"), `[$-40D]` Hebrew (AM/PM stay Latin), `[$-439]` Hindi ("पूर्वाह्न"/"अपराह्न"). Calendar and digit switches of Thai, Arabic and Hebrew are T-1859's.

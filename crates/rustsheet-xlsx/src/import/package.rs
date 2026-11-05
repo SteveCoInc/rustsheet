@@ -24,6 +24,12 @@ pub struct ImportLimits {
     /// code units, so this count is never stricter); what Excel does with a longer one in a file
     /// is not probed yet (T-0004).
     pub max_text_chars: usize,
+    /// Most rounds (`spinCount`) an encrypted package's password key derivation may ask for
+    /// (SPEC-0031 D3). MS-OFFCRYPTO allows up to 10,000,000, about 2 to 4 s of SHA-512 that any
+    /// untrusted file could demand without a password; Excel writes 100,000. The default,
+    /// 1,000,000, refuses files Excel opens (a directive-5 deviation, docs/excel-semantics/
+    /// xlsx-storage.md); a caller that trusts its files may raise it to 10,000,000.
+    pub max_spin_count: u32,
 }
 
 impl Default for ImportLimits {
@@ -32,6 +38,7 @@ impl Default for ImportLimits {
             max_uncompressed_bytes: 256 << 20,
             max_zip_entries: 5_000,
             max_text_chars: 32_767,
+            max_spin_count: 1_000_000,
         }
     }
 }

@@ -27,8 +27,11 @@ mod date_groups;
 pub(crate) mod layout;
 mod number_groups;
 
-pub use date_groups::{group_by_dates, DateGroupBy, DateGroupError, DateGroups};
-pub use layout::{max_layout_rows, row_layout, LayoutCell, GRAND_TOTAL, ROW_LABELS};
+pub use date_groups::{group_by_dates, ungroup_dates, DateGroupBy, DateGroupError, DateGroups};
+pub use layout::{
+    layout_extent, max_layout_rows, row_layout, LayoutCell, BLANK_ITEM, GRAND_TOTAL,
+    LAYOUT_COLUMNS, ROW_LABELS,
+};
 pub use number_groups::{group_by_numbers, NumberGroupError, NumberGroups};
 
 /// Most records in one cache (SPEC-0015 "Untrusted-input limits").
@@ -123,15 +126,21 @@ pub struct PivotField {
     pub axis: Option<Axis>,
     /// A bitset over the cache field's `items`: bit `i` set means item `i` is hidden.
     pub hidden: Vec<u64>,
+    /// `showAll`: whether the pivot shows the field's items that no record holds. ECMA-376's
+    /// default is on; Excel writes `showAll="0"`. GETPIVOTDATA on such an item of an ungrouped
+    /// field is 0 when on and `#REF!` when off (probes/t4248-getpivotdata-recordless-item).
+    pub show_all: bool,
 }
 
 impl PivotField {
-    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden.
+    /// A field on `axis` with a hidden bitset sized for `item_count` items, none hidden, and
+    /// `showAll` on (ECMA-376's default).
     #[must_use]
     pub fn new(axis: Option<Axis>, item_count: usize) -> Self {
         PivotField {
             axis,
             hidden: vec![0; item_count.div_ceil(64)],
+            show_all: true,
         }
     }
 

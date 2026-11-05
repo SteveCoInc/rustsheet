@@ -58,15 +58,16 @@ def ulps(got: float, want: float) -> float:
 def excel(name: str, xs: list[float]) -> list[float]:
     """Excel's NAME(x) for each double x: NAME in EXP, LN, LOG10, GAMMALN, GAMMA (the engine's bit-exact models),
     evaluated as `=NAME(x)` through the engine's python bindings (`import rustsheet`), one workbook per call. Each x
-    is set as a number, so the engine sees the exact double (T-2977 replaced the T-2464 test harness with this)."""
+    is set as a number, so the engine sees the exact double (T-2977 replaced the T-2464 test harness with this; T-4070
+    moved it to today's `rustsheet.Workbook` API)."""
     import rustsheet
 
-    m = rustsheet.create("excelmath")
-    for i, x in enumerate(xs):
-        m.update_cell_with_number(0, i + 1, 1, float(x))
-        m.update_cell_with_formula(0, i + 1, 2, f"={name}(A{i + 1})")
-    m.evaluate()
-    values = [m.get_cell_value(0, i + 1, 2) for i in range(len(xs))]
+    wb = rustsheet.Workbook()
+    with wb.edit() as tx:
+        for i, x in enumerate(xs):
+            tx[f"Sheet1!A{i + 1}"] = float(x)
+            tx[f"Sheet1!B{i + 1}"] = rustsheet.Formula(f"={name}(A{i + 1})")
+    values = [wb[f"Sheet1!B{i + 1}"] for i in range(len(xs))]
     # An error (#NUM! at LN(0), say) comes back as text: NaN, as the harness had no error values either.
     return [float(v) if isinstance(v, (int, float)) else math.nan for v in values]
 

@@ -121,6 +121,19 @@ Excel on gen-m6 8641fa604c5b8e14, b304d8cf05adcc5e and df85bc699c7e87bc (T-2674;
 Max, Min, Product, Var and StdDev pivots are unprobed (UNVERIFIED: the worksheet functions' algorithms over the picked numbers).
 Structural edits: see "Pivot tables and structural edits" below. xlsx export drops pivots.
 
+## GETPIVOTDATA on a recordless item of an ungrouped pivot field (T-4248)
+Probed (probes/t4248-getpivotdata-recordless-item, excel-graph): the cache lists "North" as a shared item no record uses
+(`refreshOnLoad` off; UNVERIFIED: that Excel drops the item on a refresh, and the `missingItemsLimit` link), over Data East 10, West 20, East 5.
+- `showAll="0"`: the item is not shown and `GETPIVOTDATA("Sales",pivot,"Region","North")` is `#REF!`, as for a group with no
+  record (see below) and for a text absent from the cache ("Nowhere").
+- `showAll="1"`: the item is shown with a blank value (UNVERIFIED: the layout is the builder's, no read-back cell) and the same call is `0` (like an empty intersection,
+  probes/getpivotdata-empty-intersection); the item text matches case-insensitively (`"north"` is 0).
+- Control: the grand total (35) and a record item (East, 15) answer as usual in both.
+Engine (T-4276): the importer keeps every `<sharedItems>` entry, used or not, and each `<pivotField>`'s `showAll` (on
+when absent, ECMA-376's default; Excel writes `showAll="0"`). GETPIVOTDATA on an ungrouped field's item that no record
+holds is `#REF!` when its field's `showAll` is off and 0 when on (`shown_group`, pivot_index.rs). The eval adapter
+appends a spec's `unused_items` to the row field's items after the records' own and takes its `show_all`.
+
 ## Grouped pivot fields import as their group items (T-4225)
 Observed (Excel-authored caches, docProps/app.xml Microsoft Excel 16.0300): Excel stores no record values for a grouped
 field. A `<cacheField>` grouped in place carries `<fieldGroup par base>` after its `<sharedItems>`; a grouping field Excel
@@ -129,7 +142,8 @@ with `<fieldGroup base>` naming the database field it groups; the records part h
 lists its labels in `<groupItems>` (`<s>` items), and a pivot field's `<item x>` indexes those labels, not the base
 field's items. The date layouts are fixed: a first item for values below `startDate` (`<1/1/2019`), the calendar part, and
 a last item for values past `endDate` (`>1/14/2019`):
-- `groupBy="minutes"` 62 items `:00` to `:59`; `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
+- `groupBy="seconds"` and `"minutes"` 62 items each, `:00` to `:59` (seconds: Excel's refresh of
+  probes/t4269-pivot-time-group-number-items renders `:00`, `:03`, `:05` ...); `hours` 26 items `12 AM` to `11 PM`; `days` 368 items `1-Jan` to `31-Dec`
   with `29-Feb` always present (corpus-bench/52379 fields `Date/Time`, `Hours`, `Days`);
 - `months` 14 items `Jan` to `Dec`; `quarters` 6 items `Qtr1` to `Qtr4`; `years` one item per year from `startDate`'s
   to `endDate`'s, 123 items for 1899-12-30 to 2020-03-28 (`1900` to `2020`; corpus-bench/59932 fields `Date`,
@@ -150,7 +164,8 @@ day of a leap year, month, quarter or year counted from `startDate`'s year (the 
 MINUTE, SECOND split a serial: `carried_day`, `time_of_day_parts`), and a `<discretePr>` list maps base shared item i
 to its i-th `<x v>`. A blank base value goes in item 0 (the `(blank)` label above; UNVERIFIED, see the date-group
 bullets: a refresh drops such a grouping, so no probe can show it). The importer skips the cache
-(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's,
+(logged) for a day group of more than one day, a date group in a 1904 workbook, an item count other than the layout's
+(checked when the grouping is read, so even over a base field that holds no date; since T-4246),
 a range group over text, a database field after a grouping field, and a base that is not a database field.
 Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228):
 - Rule: a value below `startNum` goes in the first item and one past `endNum` in the last. A value equal to `endNum`
@@ -166,39 +181,77 @@ Numeric range groups (`<rangePr startNum endNum groupInterval>`), probed (T-4228
 - A group with no record is not shown (`showAll="0"`) and GETPIVOTDATA on its label is `#REF!`.
 - GETPIVOTDATA on the grouped field: a text item is the label (`"0.3-0.4"`), case-folded for the field name (`"n1"`),
   not trimmed (`" 0.3-0.4"` is `#REF!`) and not read as numbers (`"0.30-0.40"`, `"0.3"` are `#REF!`); a reference to a
-  rendered label cell works, and an array of labels lifts. A **number** item picks the group whose lower bound equals it,
+  rendered label cell works, and an array of labels lifts. A **number** item picks the group whose bound equals it,
   within the same rounding (0, 0.2, 0.6, 0.6000000000000001, 0.7, 0.7000000000000001 and 0.9 by 0.1; 1.1, 1.3,
-  1.3000000000000003 from 1; 3 by 3), and `endNum` itself picks the `>end` item (1 gives the `>1` total); a number
-  inside a group but not its lower bound (0.35, 4), a number inside the `<start` group (-0.5), TRUE, an omitted item and
-  `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
-- Quirk: a `<groupItems>` list one item longer than the layout (6 items for 0 to 9 by 3, whose layout is `<0`, `0-3`,
-  `3-6`, `6-9`, `>9`) is not refused: Excel relabels the groups with its own labels (`0-3`, not the file's `0-2`) and
-  lists them as `<0`, `>9`, `0-3`, `3-6`, `6-9`; GETPIVOTDATA on the file's labels is then `#REF!` except `<0` and `>9`.
-- Relabel order (T-4253): the file's items whose text is one of Excel's labels come first, in the file's order, then
-  Excel's other labels in layout order. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
+  1.3000000000000003 from 1; 3 by 3): an inner group's lower bound, `start - interval` for the `<start` item and the
+  `>` label's bound for the `>end` item (1 gives the `>1` total). A number inside a group but not its lower bound (0.35,
+  4), TRUE, an omitted item and `"(blank)"` are `#REF!`. `"Sum of S1"` works as data_field as on an ungrouped pivot.
+- Quirk (T-4249): GETPIVOTDATA's number rule is truncation toward zero. With q the 15-digit quotient and k = q truncated
+  toward zero, the number matches item k when q is not above k: k = -1 is `<start`, 0 to n - 1 the inner groups and n
+  `>end`; anything else is `#REF!`. So a positive q must be whole, but a negative one truncates up: by 3 from 0, -1, -2,
+  -1.5 and -0.000001 give the `0-3` total, -2.9999999999999996, -3, -3.5 and -4.5 the `<0` total, and -6 is `#REF!`
+  (and -0.5 by 0.1 from 0 is `#REF!`, q -5). A number past `endNum` is `#REF!` unless it is the `>` bound: from 0 to
+  10 by 3, 12 is `>12` and 10, 11 and 15 are `#REF!`, 9 and 9.000000000000002 are `9-12`; from 0 to 9, 9 and
+  8.999999999999998 (q rounds to 3) are `>9`, 8.9999999999999 is `#REF!`.
+- Quirk: Excel writes its **own labels whatever the `<groupItems>` list says**, of any length (one, two too long, one
+  or two short) and of the layout's own length too: a list of five wrong texts for 0 to 9 by 3 shows `<0`, `0-3`,
+  `3-6`, `6-9`, `>9`, and a right-length list with `>10` for 0 to 10 by 3 shows `>12`. GETPIVOTDATA on a file label
+  that is not one of Excel's is `#REF!`. (T-4228 saw it first as a list one item too long, 6 items for 0 to 9 by 3,
+  shown as `<0`, `>9`, `0-3`, `3-6`, `6-9`.)
+- Layout (T-4249): a span that is not a whole number of intervals gets `ceil` inner groups and the `>` label names the
+  last inner group's upper bound, not `endNum`, while records still split at `endNum`: 0 to 10 by 3 shows `<0`, `0-3`,
+  `3-6`, `6-9`, `9-12`, `>12`, with 10 in `9-12` and 10.000000000000002, 11 and 12 in `>12`; 0 to 9 by 2.5 ends
+  `7.5-10`, `>10`.
+- Whole-number labels (T-4249, T-4287): when every value of the base field, `startNum`, `endNum` and `groupInterval`
+  are whole numbers,
+  an inner group reads `lo-(lo + interval - 1)` and the last one ends at `endNum` when that is larger: 0 to 9 by 3
+  over whole data is `0-2`, `3-5`, `6-9`; 0 to 10 by 3 is `0-2`, `3-5`, `6-8`, `9-11`, `>12`. One value that is not
+  whole (2.5, 8.999999999999998) gives the `lo-(lo + interval)` labels below; so do whole data by 2.5 (`0-2.5`, ...)
+  or from 0.5 by 3 (`<0.5`, `0.5-3.5`, ..., `>9.5`), and whole data with an `endNum` that is not whole (T-4287): 0 to 9.5
+  by 3 is `0-3`, `3-6`, `6-9`, `9-12`, `>12` (9 in `9-12`; 10, 11, 12 in `>12`), 0 to 8.5 and 0 to 7.5 by 3 end `6-9`,
+  `>9` (records still split at `endNum`: 8 is in `>9` for 0 to 7.5).
+- Quirk (T-4287): **a numeric grouping over a blank, or over date-formatted cells among numbers, is dropped** on refresh,
+  as a date grouping over a blank is (below): whole data 0 to 9 by 3 with one blank record shows `-1`, `0`, `3`,
+  `(blank)`, `6`, `9`, `10` (record order), and 0 to 9 by 3 over -1, 1, 4, 7, 10 with 1 and 4 formatted `yyyy-mm-dd`
+  shows each value (`4.5` too) as its own item. A numeric grouping over date cells alone is UNVERIFIED (T-4316; the
+  engine keeps it).
+- Relabel order (T-4253, T-4249): the file's items whose text is one of Excel's labels come first, in the file's order,
+  then Excel's other labels in layout order. Excel's five labels for 0 to 9 by 3 listed as `<0`, `3-6`, `0-3`, `>9`,
+  `6-9` keep that order; a list one short (`<0`, `0-3`, `3-6`, `>9` over whole data, whose labels are `0-2` ...) shows
+  `<0`, `>9`, `0-2`, `3-5`, `6-9`; two too long (`<0`, `0-2`, `3-5`, `6-8`, `9-11`, `12-14`, `>9`) shows `<0`, `0-2`,
+  `3-5`, `>9`, `6-9`. Pivot 3 lists `<0`, `>9` first because the file has both; with 13 items for
   the 12 of 0 to 1 by 0.1, all wrong text (`w0`, ...), the order is the layout's; with only `>1` (last) it is `>1`,
   `<0`, `0-0.1`, ...; with only `0.5-0.6` (item 3), `0.5-0.6`, `<0`, `0-0.1`, ... (not the file position); with `>1` first and `<0` last, `>1`, `<0`, ...; with `0.7-0.8` (item 2) and `0.2-0.3` (item 5),
   `0.7-0.8`, `0.2-0.3`, `<0`, `0-0.1`, ...; `<0` alone, first or at item 11, and Excel's 12 labels plus one extra keep
-  the layout order. The match is on the whole text; its case and spacing, a label the file lists twice (the engine takes its first) and a
-  non-text item (the engine skips it) are UNVERIFIED (T-4249).
-- Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>end`, each bound start + k * interval rounded to 15
+  the layout order. The match is on the whole text, ignoring case but not spacing (T-4287): `>3e+20`, `2e+20-3e+20`, ... match Excel's
+  `>3E+20`, ... and keep the file's order (Excel still writes `E`), while `6 - 9`, ` 3-5` and `3-5 ` match nothing and
+  come after the matched items. A label the file lists twice (the engine takes its first) and a non-text item (the
+  engine skips it) are UNVERIFIED (T-4316): the case builder writes neither.
+- Relabel text (T-4253): `<start`, `bound(k)-bound(k+1)` and `>` with the last bound (data not all whole), each bound start + k * interval rounded to 15
   significant digits and printed in plain decimal, not General: by 1e-5 the labels are `0-0.00001` ... `>0.0001` (General
   would print `1E-05`), by 1/3 `0-0.333333333333333`, `0.333333333333333-0.666666666666667`, `0.666666666666667-1`, by
   0.1 from 1.1 `<1.1`, `1.1-1.2`, ..., `2-2.1`, `>2.1`, by 0.25 from -1 `<-1`, `-1--0.75`, ..., `-0.25-0`, `0-0.25`, by
   12345678901.2 `49382715604.8-61728394506`, as text coercion writes each number (numbers.md "Number → text
-  conversion", `number_to_text`). A bound of 1e15 or more, below 1e-5 or at a 15-digit tie, where that rule's other
-  branches would show, is UNVERIFIED (T-4249).
+  conversion", `number_to_text`). T-4287 agrees past those points: by 1e15 the bounds are plain (`0-1000000000000000`,
+  `>4000000000000000`), by 1e20 they are `0-1E+20`, ..., `>3E+20` (whole data too, where `lo + interval - 1` is
+  `lo + interval` in binary), by 1e-6 and 1e-15 plain (`0.000001-0.000002`, `0.000000000000001-0.000000000000002`), and
+  from 100000000000000.5 by 1 (each bound a 15-digit tie) `<100000000000000`, `100000000000000-100000000000001`, ...,
+  `>100000000000003`: each tie writes its lower neighbour.
 - excel-graph lays a grouped pivot out itself on load (the case builder writes no rendered cells for one, and the
   probe's `=P!A3&""` reads show Excel's layout), so these are Excel's own groupings, not the file's.
 Evidence: probes/t4228-pivot-range-groups (excel-graph, 2026-11-04, T-4228): five pivots whose S values are distinct
 powers of two, so each group's sum names its records; probes/t4253-pivot-decimal-relabel and
 probes/t4253-pivot-relabel-order (excel-graph, 2026-11-05, T-4253): eight relabeled decimal groupings each and the
-rendered labels. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253): `NumberGroups`
-groups by the rule, picks a number item by its lower bound, and relabels a list of the wrong length with its own
-labels in the relabel order above (`NumberGroups::new`, `labels`). UNVERIFIED (T-4249): a
-list of another wrong length than one too long, the group count of a span that is not a whole number of intervals
-(0 to 10 by 3 counted as four groups), a GETPIVOTDATA number past `endNum` (`#REF!` here) or below it with a
-quotient that rounds to the group count (`>end` here); a group with no record
+rendered labels; probes/t4249-pivot-range-group-edges and probes/t4249-pivot-range-group-labels (excel-graph,
+2026-11-05, T-4249): thirteen pivots over wrong lists, partial spans and whole data, and GETPIVOTDATA number items
+past `endNum` and below `startNum`; probes/t4287-pivot-group-label-match, -bound-text, -whole-end and
+-dates-as-numbers (excel-graph, 2026-11-05, T-4287): sixteen pivots on label matching, large, tiny and tie bounds,
+fractional ends, a blank and date cells. Status: VERIFIED (excel-graph). Engine (T-4235, T-4253, T-4249): `NumberGroups`
+groups by the rule, picks a number item by the truncation rule, and always writes its own labels in the relabel order
+above (`NumberGroups::new`, `labels`, `lower_bound_index`). T-4287: whole labels need a whole `endNum`
+(`NumberGroups::new`), the label match folds case (`fold_case`), and `Txn::add_pivot_table` leaves the field ungrouped
+over a blank or mixed date and number cells (`grouped`, `mixes_dates`; `row_layout` writes a number item as its value);
+the importer keeps a saved grouping, as for dates. A group with no record
 is `#REF!` on a numeric range field only (an empty item of an ungrouped field keeps its 0, unprobed). The importer and
 the eval adapter share it (`group_by_numbers`); the adapter has the engine lay a grouped spec pivot out (captions, the
 groups that hold a record, grand total). The 15-digit rounding of q, not of v, is a structural model the fresh sweep
@@ -234,18 +287,42 @@ Evidence: probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-b
 T-4236): pivots grouped by months, hours, quarters, years and days whose S values are distinct powers of two; the
 second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). Engine (T-4246):
 `DateGroups` groups a record by the rule and picks a number item by its calendar value, shared by the importer, the
-eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field. UNVERIFIED: a number
-item on a seconds or minutes group (taken as 0 to 59, by the hour rule).
-- Quirk: a half second just below the half rounds up. Serial 43466.458327546294 (written 10:59:59.5, but
-  39599.49999978 s into the day, 2.2e-7 s below the half) is in `11 AM` (no-blank pivot H, Calc E45 and F13). The
-  engine splits a date as HOUR is modelled to (`time_of_day_parts`, dates.md: an exact half goes whichever way binary
-  noise takes it), which puts it in `10 AM`; HOUR of this serial is unprobed. T-4261 probes Excel's rounding model.
-The dropped grouping over a blank is not modelled: the adapter leaves such a spec pivot unregistered (T-4260 owns those cells of probes/t4236-pivot-date-groups).
+eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field.
+- A number item on a seconds or minutes group is the second or minute, 0 to 59, by the hour rule: `0`, `5`, `30`,
+  `59`, `59.5` and `59.999` pick `:00`, `:05`, `:30` and `:59`; `60`, `61` and `DATE(2019,1,1)` are `#REF!`. The
+  integer part is **truncated toward zero**, not floored, on all three time groups: `-0.5`, `-0.0001`, `0.5`,
+  `TIME(0,0,5)` and `TIME(0,1,0)` are `:00` (seconds and minutes) and `12 AM` (hours), `1.5` is `:01`, while `-1` is
+  `#REF!`. Text items match the label (`":05"`, `":00"`; `":00"` on an hour group, `"5"` and `"-0.5"` are `#REF!`).
+  Evidence: probes/t4269-pivot-time-group-number-items (excel-graph, 2026-11-05, T-4269). Status: VERIFIED
+  (excel-graph); the engine (`DateGroups::number_item`) matches every cell.
+- Quirk: the cache's rounding to the second divides the serial by the double 1/86400 and rounds half up:
+  `floor(x / (1/86400) + 0.5)` seconds, not `x * 86400` and not HOUR's rule. A date a hair below a half second can
+  therefore round up. Serial 43466.458327546294 (written 10:59:59.5, but 2.2e-7 s below the half) is in `11 AM`
+  (no-blank pivot H, Calc E45 and F13), while HOUR and SECOND of it give 10 and 59. 25006.524265046293 (2.6e-7 s
+  below 12:34:56.5) is 12:34:57, though its double product with 86400 is ...96.4999995. A 1900 date 2.2e-7 s or
+  1e-8 s below the half stays down, because a small serial keeps that much precision. Of five candidates (ms then s,
+  15 significant digits, the fraction's product, the engine's HOUR split, the serial's product), the serial's
+  product fit the 36 points of probes/t4261-pivot-half-second. The first fresh sweep rejected it (47 of 48), and
+  dividing by 1/86400, which fits all 84, was frozen. A second fresh sweep confirmed it at 48 of 48 (32 of them
+  points where the two disagree; the product gets 14), and an unbiased log-uniform third sweep at 48 of 48 (the
+  product 44, exact correct rounding 27). The R4 record, with its spent first hold-out, is in the T-4261 Outcome.
+  UNVERIFIED: a `startDate` or `endDate` within half a second of such a point, which uses the same rule.
+Evidence: probes/t4261-pivot-half-second, t4261-pivot-half-second-fresh, -fresh-2 and -fresh-3
+(excel-graph, 2026-11-05, T-4261): dates a delta of 1e-9 to 0.4 s either side of a half second, from 1900 to 9998,
+in an ungrouped pivot (a blank drops the grouping), whose rendered labels show each record's rounded second.
+Status: VERIFIED (excel-graph). Engine: `split_serial` (pivot/date_groups.rs), shared by the groups,
+`ungroup_dates`, the importer and the `startDate` and `endDate` comparisons.
+Engine (T-4260): `Txn::add_pivot_table` drops a date grouping over a blank as the refresh does (`ungroup_dates`:
+second-rounded `Date` items in record order, by the same `split_serial` rule as the groups), the layout writes a date
+label as its serial and the blank as `(blank)` (`row_layout`), and GETPIVOTDATA picks an ungrouped date item by an
+equal serial and the blank by `"(blank)"` (`pivot_number_item`, `pivot_blank_text`). A serial within the second of
+an item but not equal to it, `"(BLANK)"` in another case, and a field that also holds the text `(blank)` are
+UNVERIFIED. The importer keeps a saved grouping (59932).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
 crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
 (`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
-functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`).
-Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261
+functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`, `pivot_blank_text`).
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261, T-4287, T-4316
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):
@@ -258,8 +335,8 @@ bits: the 2021 total of the pivot at Pivot!C3 (Year columns only) is 1738748.699
 (SPEC-0015 unknown 11, one data point).
 Evidence: calipers goldens (desktop Excel cached values): pv_goldens/pv23_041 Liability Summary C5:G7 (the pivots on sheet
 Pivot, C3:G5, C9:G13), roundtrip/formula_stress_test Database!B16 (pivot GPD at B32:O45).
-Status: VERIFIED (desktop cached values). UNVERIFIED: whether `""`, a blank cell or `"(blank)"` also pick the blank item
-(ours `#REF!`), and any pair on a pivot with two fields on an axis (ours `#REF!`, SPEC-0015 unknown 10, T-2085).
+Status: VERIFIED (desktop cached values). `"(blank)"` picks the blank item of an ungrouped field too (probes/t4236-pivot-date-groups,
+excel-graph, T-4260; above). UNVERIFIED: whether `""` or a blank cell also pick it (ours `#REF!`), and any pair on a pivot with two fields on an axis (ours `#REF!`, SPEC-0015 unknown 10, T-2085).
 Implemented in: `fn_getpivotdata`, `Model::pivot_blank_item`, `nested_axis`
 (crates/rustsheet-engine/src/functions/lookup_and_reference/getpivotdata.rs, pivot_index.rs, T-2662).
 Tasks: T-2662, T-2085

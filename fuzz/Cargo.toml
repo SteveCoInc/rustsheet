@@ -19,6 +19,8 @@ libfuzzer-sys = "0.4"
 # Public APIs only: the facade for evaluation and import, the engine's public parser module.
 rustsheet = { path = "../crates/rustsheet" }
 rustsheet_engine = { path = "../crates/rustsheet-engine" }
+# Only for `encrypted_package`: decryption has no facade entry point until T-4266.
+rustsheet_xlsx = { path = "../crates/rustsheet-xlsx" }
 # Only for `cfb_seeds`, which writes `cfb_container`'s corpus; the same pin as rustsheet_xlsx.
 cfb = "=0.16.0"
 
@@ -53,6 +55,13 @@ bench = false
 [[bin]]
 name = "cfb_container"
 path = "fuzz_targets/cfb_container.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "encrypted_package"
+path = "fuzz_targets/encrypted_package.rs"
 test = false
 doc = false
 bench = false

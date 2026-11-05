@@ -1,0 +1,142 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4287: does a date-formatted cell among whole numbers count as a number for the whole-number label test? P groups 0 to 9 by 3 over whole numbers, two of them date-formatted (whole serials); Q the same with one date-formatted cell at serial 4.5 (not whole), so its labels show whether the date's fraction counts. Each <groupItems> list is wrong text, so Excel writes its own labels. S values are distinct powers of two. Calc reads the rendered pivots as text, two columns per pivot.",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4287",
+    "M6"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "NP",
+        "B1": "SP",
+        "A2": -1,
+        "B2": 1,
+        "A3": 1,
+        "B3": 2,
+        "A4": 4,
+        "B4": 4,
+        "A5": 7,
+        "B5": 8,
+        "A6": 10,
+        "B6": 16,
+        "D1": "NQ",
+        "E1": "SQ",
+        "D2": -1,
+        "E2": 1,
+        "D3": 1,
+        "E3": 2,
+        "D4": 4.5,
+        "E4": 4,
+        "D5": 7,
+        "E5": 8,
+        "D6": 10,
+        "E6": 16
+      },
+      "number_formats": {
+        "A3": "yyyy-mm-dd",
+        "A4": "yyyy-mm-dd",
+        "D4": "yyyy-mm-dd"
+      }
+    },
+    {
+      "name": "P",
+      "cells": {
+        "H1": "T-4287 pivot WholeDates"
+      },
+      "pivot_tables": [
+        {
+          "name": "WholeDates",
+          "source": "Data!A1:B6",
+          "location": "A3",
+          "row": "NP",
+          "value": "SP",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "w0",
+              "w1",
+              "w2",
+              "w3",
+              "w4"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Q",
+      "cells": {
+        "H1": "T-4287 pivot FracDate"
+      },
+      "pivot_tables": [
+        {
+          "name": "FracDate",
+          "source": "Data!D1:E6",
+          "location": "A3",
+          "row": "NQ",
+          "value": "SQ",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "w0",
+              "w1",
+              "w2",
+              "w3",
+              "w4"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=P!A3&\"\"",
+        "B1": "=P!B3&\"\"",
+        "A2": "=P!A4&\"\"",
+        "B2": "=P!B4&\"\"",
+        "A3": "=P!A5&\"\"",
+        "B3": "=P!B5&\"\"",
+        "A4": "=P!A6&\"\"",
+        "B4": "=P!B6&\"\"",
+        "A5": "=P!A7&\"\"",
+        "B5": "=P!B7&\"\"",
+        "A6": "=P!A8&\"\"",
+        "B6": "=P!B8&\"\"",
+        "A7": "=P!A9&\"\"",
+        "B7": "=P!B9&\"\"",
+        "A8": "=P!A10&\"\"",
+        "B8": "=P!B10&\"\"",
+        "A9": "=P!A11&\"\"",
+        "B9": "=P!B11&\"\"",
+        "C1": "=Q!A3&\"\"",
+        "D1": "=Q!B3&\"\"",
+        "C2": "=Q!A4&\"\"",
+        "D2": "=Q!B4&\"\"",
+        "C3": "=Q!A5&\"\"",
+        "D3": "=Q!B5&\"\"",
+        "C4": "=Q!A6&\"\"",
+        "D4": "=Q!B6&\"\"",
+        "C5": "=Q!A7&\"\"",
+        "D5": "=Q!B7&\"\"",
+        "C6": "=Q!A8&\"\"",
+        "D6": "=Q!B8&\"\"",
+        "C7": "=Q!A9&\"\"",
+        "D7": "=Q!B9&\"\"",
+        "C8": "=Q!A10&\"\"",
+        "D8": "=Q!B10&\"\"",
+        "C9": "=Q!A11&\"\"",
+        "D9": "=Q!B11&\"\""
+      }
+    }
+  ]
+}

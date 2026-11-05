@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from rustsheet_tools.pivot import rendered_cells
 from rustsheet_tools.spec2xlsx import build_xlsx
 from rustsheet_tools.spec_cli import bake_pivots
 
@@ -249,4 +250,45 @@ def test_only_a_grouped_row_field_may_hold_blanks() -> None:
     spec = _spec(_PIVOT)
     del spec["sheets"][0]["cells"]["A3"]
     with pytest.raises(ValueError, match="has a blank cell"):
+        build_xlsx(spec)
+
+
+_ROWS_ONLY = {k: v for k, v in _PIVOT.items() if k != "column"}
+
+
+@pytest.mark.parametrize("show_all", [False, True])
+def test_unused_row_items(show_all: bool) -> None:
+    # T-4248: a shared item no record uses stays in the cache; refreshOnLoad is left off so Excel
+    # keeps it, and the layout shows it (with a blank aggregate) only under showAll.
+    pivot = _ROWS_ONLY | {"unused_items": ["North"], "show_all": show_all}
+    spec = _spec(pivot, {"H1": "=1"})
+    parts = _parts(spec)
+    definition = parts["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert '<s v="North"/>' in definition
+    assert "refreshOnLoad" not in definition
+    table = parts["xl/pivotTables/pivotTable1.xml"]
+    assert f'<pivotField axis="axisRow" showAll="{int(show_all)}">' in table
+    rendered = rendered_cells(spec, spec["sheets"][1], pivot)
+    assert ("North" in rendered.values()) is show_all
+    if show_all:
+        assert '<location ref="A3:B7"' in table and '<rowItems count="4">' in table
+    else:
+        assert '<location ref="A3:B6"' in table and '<rowItems count="3">' in table
+
+
+def test_pivot_without_unused_items_refreshes_on_load() -> None:
+    definition = _parts(_spec(_ROWS_ONLY, {"H1": "=1"}))["xl/pivotCache/pivotCacheDefinition1.xml"]
+    assert 'refreshOnLoad="1"' in definition
+
+
+@pytest.mark.parametrize("unused", [["East"], ["east"], ["North", "North"], ["North", "NORTH"], [1]])
+def test_malformed_unused_items_are_refused(unused: list[object]) -> None:
+    with pytest.raises(ValueError, match="unused_items are distinct texts"):
+        build_xlsx(_spec(_ROWS_ONLY | {"unused_items": unused}, {"H1": "=1"}))
+
+
+def test_unused_items_on_a_grouped_field_are_refused() -> None:
+    spec = _grouped_spec(_GROUP)
+    spec["sheets"][1]["pivot_tables"][0]["unused_items"] = ["x"]
+    with pytest.raises(ValueError, match="unused_items are distinct texts"):
         build_xlsx(spec)

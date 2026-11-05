@@ -12,18 +12,19 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// TRIMMEAN's data, smallest first. Each element averages the values it keeps, so a call is
 /// charged elements × numbers (`LiftCost::Cells`), not the sort alone.
 const TRIMMEAN_DATA: DataArg = DataArg {
-    // An error value is that error, not `#VALUE!`: `TRIMMEAN(NA(),2)` is `#N/A`, the data's
-    // error before the bad `percent` (probes/stat-test-lift P82, T-1982).
-    read: |model, node, cell| match model.evaluate_node_in_context(node, cell) {
+    // Read once in reference context, as PERCENTILE's data (T-2344): a name, INDEX or IF (probed;
+    // OFFSET and CHOOSE by analogy with T-2344) that picks a cell comes back as a range, so a lone cell holding nothing, text or a
+    // boolean is data with no number, `#NUM!` (`TRIMMEAN(Data!B7,1.005)` with B7 TRUE, gen-m9
+    // 9735c5ab72fa5ecf A264; `TRIMMEAN(D28!A6,3.14159)` with A6 blank, probes/t2475-stat-
+    // subexpressions P!A353; the name, INDEX and IF forms, probes/t2883-stat-name-index-data
+    // A2-A12, T-2883).
+    read: |model, node, cell| match model
+        .evaluate_picked_reference_arg(node, cell)
+        .into_single_sheet_area(cell)
+    {
+        // An error value is that error, not `#VALUE!`: `TRIMMEAN(NA(),2)` is `#N/A`, the data's
+        // error before the bad `percent` (probes/stat-test-lift P82, T-1982).
         error @ CalcResult::Error { .. } => Err(error),
-        // A single cell holding nothing, text or a boolean is data with no number, so `#NUM!`
-        // (`TRIMMEAN(Data!B7,1.005)` with B7 TRUE, gen-m9 9735c5ab72fa5ecf A264;
-        // `TRIMMEAN(D28!A6,3.14159)` with A6 blank, probes/t2475-stat-subexpressions P!A353).
-        CalcResult::EmptyCell | CalcResult::String(_) | CalcResult::Boolean(_)
-            if matches!(*node.ungrouped_at(cell.row), Node::ReferenceKind { .. }) =>
-        {
-            Ok(Vec::new())
-        }
         // A typed numeric-text or boolean literal is one number, unlike a cell holding one
         // (`TRIMMEAN("2.5",0)` is 2.5, `TRIMMEAN(TRUE,0)` is 1, gen-m9/4fc6bdaec0e5583d A199-A253,
         // A391-A439, T-3781); other text stays `#VALUE!` (`TRIMMEAN("abc",0)`, A259-A385).
