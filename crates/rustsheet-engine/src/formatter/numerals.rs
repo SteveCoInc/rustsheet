@@ -43,6 +43,11 @@ pub struct CjkStyle {
     /// Whether a run of zeros before a nonzero digit prints one zero digit (`[$-1E000409]General`
     /// on 105 is "一百○五"); the Japanese styles drop it ("百五").
     zero_in_gap: bool,
+    /// Whether trailing zeros of a group count towards that gap: the Chinese styles of 30 and 31
+    /// are unprobed for it, while bytes 32-35 write no zero between `3110億` and `4000万` but one
+    /// before a group's leading or inner zeros (`[$-20000409][s]` of 3.1104E11 s is "３千１百１十亿４千万",
+    /// of 31104000000 s "３百１十１亿０４百万"; probes/t4107-numeral-2000-suffix rows 183-200).
+    trailing_zero_gap: bool,
     /// Whether date fields use the tens sign; fullwidth digits (29) print fields digit by digit
     /// (`[$-1D000409]dd` of the 15th is "１５") though General spells them ("十５").
     field_tens: bool,
@@ -56,6 +61,7 @@ static JAPANESE: CjkStyle = CjkStyle {
     one_before_unit: false,
     one_before_field_ten: false,
     zero_in_gap: false,
+    trailing_zero_gap: true,
     field_tens: true,
 };
 
@@ -67,6 +73,7 @@ static JAPANESE_FORMAL: CjkStyle = CjkStyle {
     one_before_unit: true,
     one_before_field_ten: true,
     zero_in_gap: false,
+    trailing_zero_gap: true,
     field_tens: true,
 };
 
@@ -78,6 +85,7 @@ static FULLWIDTH: CjkStyle = CjkStyle {
     one_before_unit: false,
     one_before_field_ten: false,
     zero_in_gap: false,
+    trailing_zero_gap: true,
     field_tens: false,
 };
 
@@ -89,6 +97,7 @@ static CHINESE: CjkStyle = CjkStyle {
     one_before_unit: true,
     one_before_field_ten: false,
     zero_in_gap: true,
+    trailing_zero_gap: true,
     field_tens: true,
 };
 
@@ -100,6 +109,7 @@ static CHINESE_FORMAL: CjkStyle = CjkStyle {
     one_before_unit: true,
     one_before_field_ten: true,
     zero_in_gap: true,
+    trailing_zero_gap: true,
     field_tens: true,
 };
 
@@ -114,6 +124,7 @@ static FULLWIDTH_CHINESE: CjkStyle = CjkStyle {
     one_before_unit: true,
     one_before_field_ten: false,
     zero_in_gap: true,
+    trailing_zero_gap: false,
     field_tens: false,
 };
 
@@ -306,7 +317,7 @@ impl CjkStyle {
             for place in (0..4_u32).rev() {
                 let d = (group / 10_u64.pow(place) % 10) as usize;
                 if d == 0 {
-                    gap |= started;
+                    gap |= started && (self.trailing_zero_gap || group % 10_u64.pow(place + 1) != 0);
                     continue;
                 }
                 if gap && self.zero_in_gap {
@@ -332,6 +343,17 @@ impl CjkStyle {
 #[cfg(test)]
 mod tests {
     use super::Numerals;
+
+    #[test]
+    fn bytes_32_to_35_drop_the_gap_zero_after_trailing_zeros() {
+        // probes/t4107-numeral-2000-suffix A133, A131, A183, A151.
+        let fullwidth = Numerals::from_byte(32);
+        assert_eq!(fullwidth.number("311040000000"), "３千１百１十亿４千万");
+        assert_eq!(fullwidth.number("31104000000"), "３百１十１亿０４百万");
+        assert_eq!(fullwidth.number("1000000005"), "１十亿０５");
+        assert_eq!(Numerals::from_byte(34).number("311040000000"), "參佰壹拾壹億肆仟萬");
+        assert_eq!(Numerals::from_byte(33).number("1050"), "一千○五十");
+    }
 
     #[test]
     fn spells_general_as_excel() {
