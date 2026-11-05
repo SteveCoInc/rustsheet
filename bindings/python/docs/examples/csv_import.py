@@ -1,8 +1,8 @@
 """Import tab separated data and add formulas over it."""
 
-import rustsheet as ic
+from rustsheet import legacy
 
-model = ic.UserModel("csv-import")
+model = legacy.UserModel("csv-import")
 
 rows = [
     "month\trevenue\tcosts",

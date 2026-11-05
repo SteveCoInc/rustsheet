@@ -1,14 +1,14 @@
-import rustsheet as ic
+from rustsheet import legacy
 import pytest
 
 
 @pytest.fixture
-def um() -> ic.UserModel:
+def um() -> legacy.UserModel:
     """An empty workbook with the user API"""
-    return ic.UserModel("workbook")
+    return legacy.UserModel("workbook")
 
 
 @pytest.fixture
-def rm() -> ic.Model:
+def rm() -> legacy.Model:
     """An empty workbook with the raw API"""
-    return ic.create("workbook")
+    return legacy.create("workbook")
