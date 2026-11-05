@@ -3,7 +3,7 @@ id: T-4397
 title: "WORKDAY and NETWORKDAYS holidays given as text (literal, cell, array; number, date and currency text) and DAYS with two error arguments: probe the rules ours guesses"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
