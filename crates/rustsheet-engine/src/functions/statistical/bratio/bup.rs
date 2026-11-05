@@ -77,6 +77,32 @@ pub(super) fn l140_bup_bpser(a0: f64, b0: f64, x0: f64, y0: f64, sum: BupSum) ->
     Some(up + series)
 }
 
+/// bup's prefactor in L140, ret = x87(P·fl(x0·y0)/c) held in a register, P the Beta(c, a0) density at
+/// y0 ([`l140_bup_bgrat`] multiplies it by S; [`l140_bup_prefactor_underflows`] reads its size).
+fn l140_bup_ret(density: f64, c: f64, x0: f64, y0: f64) -> Register {
+    Register::load(density)
+        .mul(Register::load(x0 * y0))
+        .div(Register::load(c))
+}
+
+/// Whether Excel's L140 bup+bgrat tail w is exactly 0 because bup's prefactor ([`l140_bup_ret`]) is
+/// below the smallest normal double: Excel's ret is then 0, and bgrat's increment, at z > 708 there,
+/// is subnormal and flushed. A density below the normal range gives a smaller ret, so it is 0 too.
+/// It holds at any a0 (it reads only the prefactor, not [`MAX_BUP_A0`]'s port). On probes-numeric
+/// t4045-f-dist-rt-zero-cut, ln(x0^a0·y0^c/B(c, a0)) brackets Excel's last number and first 0 at
+/// (-707.42, -708.42), (-708.38, -709.38) and (-708.28, -709.28) in its three families (df1 30, 20
+/// and 31 at df2 1E8, 1E7 and 1E8), which meet only around `ln(DBL_MIN)` = -708.396:
+/// `F.DIST.RT(47.6,30,1E8)` is a number and `F.DIST.RT(47.6666666667,30,1E8)` is 0 (statistics.md
+/// "Incomplete beta at a huge first shape", T-4045). Only F's tails ask it: BETA.DIST and the t are
+/// unprobed at this edge (T-4254), and BETA.DIST's cdf under F.INV's search must keep today's
+/// kernel there (`F.INV(1.43795578761177E-262,107702,58)`, accuracy/F.INV/s1 A146).
+pub(super) fn l140_bup_prefactor_underflows(a0: f64, b0: f64, x0: f64, y0: f64) -> bool {
+    let (_, c) = bup_split(b0);
+    beta_density_small_shape(y0, c, a0).is_some_and(|density| {
+        !density.is_normal() || !l140_bup_ret(density, c, x0, y0).store().is_normal()
+    })
+}
+
 /// bratio's L140 for x0 > 0.7 and a0 > 15 (b0 < 40): w = bgrat(a0, c, x0, y0, bup(c, a0, y0, x0, n))
 /// with n and c = b0 - n from [`bup_split`], as Excel computes it, RN(W + D) (statistics.md "Incomplete
 /// beta: the integrated model", L140 bup+bgrat at 1 < b < 2 (T-3382) and with n >= 2 bup terms
@@ -103,10 +129,7 @@ pub(super) fn l140_bup_bgrat(a0: f64, b0: f64, x0: f64, y0: f64) -> Option<f64> 
     // A density at or past the subnormal edge has lost the digits W needs (it underflows to 0
     // while W, times S's large powers, is still a normal double): today's kernel keeps those.
     let density = beta_density_small_shape(y0, c, a0).filter(|p| p.is_normal())?;
-    let ret = Register::load(density)
-        .mul(Register::load(x0 * y0))
-        .div(Register::load(c));
-    let up = ret
+    let up = l140_bup_ret(density, c, x0, y0)
         .mul(Register::load(bup_power_sum(c, a0, y0, x0, n)))
         .store();
     let increment = if c == 1.0 {

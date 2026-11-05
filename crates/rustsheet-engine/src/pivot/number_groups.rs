@@ -261,6 +261,7 @@ pub fn group_by_numbers(
         items,
         records,
         number_groups: Some(groups),
+        date_groups: None,
     })
 }
 
@@ -519,7 +520,7 @@ mod tests {
                 CacheItem::Number(1.5),
             ],
             records: vec![0, 2, 1, 0],
-            number_groups: None,
+            ..CacheField::default()
         };
         let labels = |n: usize| (0..n).map(|i| CacheItem::Text(i.to_string())).collect();
         let grouped = group_by_numbers(&base, [0.0, 1.0, 0.1], labels(12)).unwrap();

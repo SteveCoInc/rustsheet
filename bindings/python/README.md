@@ -1,42 +1,69 @@
-# IronCalc python bindings
+# RustSheet Python bindings
 
-With IronCalc you can create, read, evaluate and manipulate xlsx files:
-cell values and formulas, styles and named styles, conditional formatting,
-sheets, rows and columns, defined names and more.
+`import rustsheet` gives you a headless, Excel-compatible spreadsheet engine: open, edit, evaluate
+and save xlsx workbooks from Python, with Excel's values, errors and number formats.
 
 ## Installation
 
+The package is not on PyPI yet. Build it from this directory with
+[maturin](https://www.maturin.rs/) (see "Compile and test" below):
+
 ```bash
-pip install ironcalc
+pip install maturin
+maturin develop
 ```
 
 ## Quick start
 
-There are two APIs:
-
-* The **user API** (`UserModel`): the same high level API used by the IronCalc
-  web application. Every action evaluates the workbook, keeps undo/redo
-  history.
-* The **raw API** (`Model`): a low level API. Nothing is evaluated
-  automatically (call `evaluate()` yourself), there is no undo/redo and no
-  diffs. Faster and more flexible, but easier to get wrong.
+The API is `rustsheet.Workbook`. Cells are addressed by A1 references, values are
+`None | float | str | bool | XlError`, and edits are atomic transactions:
 
 ```python
-import rustsheet as ic
+import rustsheet as rs
 
-model = ic.UserModel("my-workbook")
-model.set_user_input(0, 1, 1, "150")
-model.set_user_input(0, 2, 1, "=A1*2")
-print(model.get_formatted_cell_value(0, 2, 1))  # "300"
+wb = rs.Workbook()
 
-# style a range: bold with a yellow background
-model.update_range_style(0, 1, 1, 2, 1, "font.b", "true")
-model.update_range_style(0, 1, 1, 2, 1, "fill.color", "#FFFF00")
+# Edits apply on a clean exit of the block and are discarded if it raises.
+with wb.edit() as tx:
+    tx["Sheet1!A1"] = 10
+    tx["Sheet1!A2"] = rs.Formula("=A1*2")
+    tx["Sheet1!A3"] = "=1/0"
 
-model.save_to_xlsx("my-workbook.xlsx")
+print(wb["Sheet1!A2"])            # 20.0
+print(wb["Sheet1!A3"])            # #DIV/0!  (an rs.XlError value, not an exception)
+print(wb.formatted("Sheet1!A2"))  # "20"
+print(wb.changes["values"])       # the cells whose value changed in the last edit
+
+wb.save_xlsx("my-workbook.xlsx")
 ```
 
-More examples (styled reports, conditional formatting, CSV import) live in `docs/examples`.
+Open an existing file with `rs.open("book.xlsx")` (or `rs.Workbook.from_bytes(data)` for bytes in
+memory). Loading enforces resource limits, so the facade is the API to use for workbooks you did
+not write. Failures raise the typed errors `LoadError`, `SaveError`, `EditError` and `RefError`
+(all `RustSheetError`). `docs/examples/facade.py` is a runnable copy of the quick start.
+
+## The legacy module (deprecated)
+
+`rustsheet.legacy` holds the older index-based classes, `UserModel` and `Model`, with `CellType`
+and the constructors `create`, `create_user_model`, `load_from_xlsx` and
+`create_user_model_from_xlsx`. They carry features the facade does not have yet (styles and named
+styles, undo/redo, conditional formatting, the clipboard, links, frozen panes, row and column
+sizes). Importing the module raises a `DeprecationWarning`: it is removed at the API v1 freeze,
+once each of those features has moved to the facade or been dropped.
+
+The legacy module is not hardened for untrusted input. Its loaders skip the facade's load limits,
+and `UserModel.paste_from_clipboard` and `UserModel.paste_csv_string` take caller-shaped data.
+
+```python
+from rustsheet import legacy
+
+model = legacy.UserModel("my-workbook")
+model.set_user_input(0, 1, 1, "150")  # sheet index, row, column (1-based)
+model.update_range_style(0, 1, 1, 1, 1, "font.b", "true")
+model.save_to_xlsx("styled.xlsx")
+```
+
+The other examples in `docs/examples` (styled report, conditional formatting, CSV import) use it.
 
 ## Removed legacy surface (pre-v1, no warning release)
 
@@ -44,7 +71,7 @@ The bitcode/icalc loaders and writers (`load_from_bytes`, `load_from_icalc`,
 `create_user_model_from_bytes`, `create_user_model_from_icalc`, `UserModel.from_bytes`,
 `UserModel.from_icalc`, `save_to_icalc`, `to_bytes`), the diff exchange
 (`UserModel.apply_external_diffs`, `UserModel.flush_send_queue`) and `test_panic` are gone
-(SPEC-0026). Use xlsx (`load_from_xlsx`, `save_to_xlsx`, `Workbook.from_bytes`).
+(SPEC-0026). Use xlsx (`rustsheet.open`, `Workbook.from_bytes`, `save_xlsx`).
 
 ## Compile and test
 

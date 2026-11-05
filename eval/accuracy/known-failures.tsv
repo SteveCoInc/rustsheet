@@ -47,18 +47,6 @@ accuracy/BETA.INV/s1!Calc!A194	T-3862	huge alpha, tiny p: Excel #NUM!, the engin
 accuracy/BETA.INV/s1!Calc!A196	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
 accuracy/BETA.INV/s1!Calc!A197	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
 accuracy/BETA.INV/s1!Calc!A198	T-3862	huge alpha, tiny p: Excel #NUM!, the engine and the math 1-2^-53
-accuracy/NPER/s1!Calc!A121	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A130	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A133	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A135	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A142	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A143	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A151	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A152	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A153	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A156	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A158	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
-accuracy/NPER/s1!Calc!A162	T-3367	R3 point: the engine reproduces Excel's tiny-rate NPER, not the math
 accuracy/RATE/s1!Calc!A278	T-3424	Excel #NUM! on a noise-floor hold; the engine returns the held iterate (probes/t3585-rate-num-near-minus-one G, H)
 accuracy/RATE/s1!Calc!A291	T-3424	Excel #NUM! on a noise-floor hold; the engine returns the held iterate (probes/t3585-rate-num-near-minus-one G, H)
 accuracy/IRR/s1!Calc!A271	T-3347	conventional series, root near 0: the engine is #NUM! where Excel returns the root
@@ -145,3 +133,12 @@ accuracy/T.DIST/e-T-3425!Calc!A103	T-3554	Excel #NUM! for the density at a huge 
 accuracy/T.DIST/e-T-3425!Calc!A116	T-3554	Excel #NUM! for the density at a huge x; the engine returns 0
 accuracy/T.INV/e-T-3425!Calc!A74	T-3363	quantile at df 1E10: the engine is 2.5E-6 off the math; Excel matches it
 accuracy/NEGBINOM.DIST/r4-T-3576!Calc!A125	T-4242	cdf at number_s 1 and p 8E-281: the closed form is 9.4E-8 relative off; Excel matches the math
+accuracy/BINOM.DIST.RANGE/s1!Calc!A85	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 8e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A91	T-3740	range above the mean: the engine's cdf difference is 4e-02 relative off the math; Excel's upper-tail form is 1e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A94	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 6e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A101	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 7e-14 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A107	T-3740	range above the mean: the engine's cdf difference cancels to 0; Excel's upper-tail form is 1e-12 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A146	T-3740	range above the mean: the engine's cdf difference is 5e-05 relative off the math; Excel's upper-tail form is 7e-14 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A172	T-3740	range above the mean: the engine's cdf difference is 1e-07 relative off the math; Excel's upper-tail form is 2e-13 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A177	T-3740	range above the mean: the engine's cdf difference is 5e-06 relative off the math; Excel's upper-tail form is 7e-12 off it
+accuracy/BINOM.DIST.RANGE/s1!Calc!A180	T-3740	range above the mean: the engine's cdf difference is 2e-08 relative off the math; Excel's upper-tail form is 6e-13 off it

@@ -3,7 +3,7 @@ id: T-4118
 title: "Extended-hex tag [$-_409] (0x2F409) keeps English day halves: h A/P is \"6 PM\", not \"6 P\" (t1924 S!B22)"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -53,3 +53,6 @@ of its English LCID instead of falling to "no locale" and printing the `A/P` let
 - Probing other extended-hex tags over English sublanguages (file a research task if the doc comment's unprobed
   note matters for a failing cell).
 - The lowercase en-IE/en-BZ/en-HK halves (T-4066).
+
+## Outcome
+`resolve_extended` now resolves an extended-hex LCID whose language is English (`lcid & 0x3FF == 0x09`) like `resolve_lcid`, so `[$-_409]h A/P` is "6 PM"; `[$-x_y]` keeps the letters. Unit test added; number-formats.md corrected to 0x2F409. Eval delta: probes/t1924-locale-tag-extended-hex S!B22 F removed from baseline, no new failures. Other English sublanguages via extended hex remain unprobed.

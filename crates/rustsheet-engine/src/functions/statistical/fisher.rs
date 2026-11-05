@@ -1,6 +1,6 @@
 use statrs::distribution::FisherSnedecor;
 
-use crate::arithmetic::extended_quotient;
+use crate::arithmetic::{extended_quotient, flush_subnormal};
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{div_error, num_error, number_or_error};
 use crate::functions::statistical::bratio::{
@@ -457,8 +457,13 @@ impl Model {
             }
         }
         FisherSnedecor::new(df1, df2).map_err(|_| num_error(cell))?;
+        // A subnormal cdf is Excel's exact 0: the last number is 3.3E-308 and the first 0 is
+        // 2.0E-308 at (316, 1) and at (40, 1), whose bpser prefactors 1/a differ eightfold, so the
+        // cut is on the result, not inside the kernel (`=(F.DIST(..))=0` is TRUE there; probes/
+        // t4026-f-cdf-subnormal A24, B24, A57, B57).
+        // Excel: see docs/excel-semantics/statistics.md, "F.DIST's cdf flushes a subnormal result to 0 (T-4026)"
         let result = if cumulative {
-            f_cdf(df1, df2, x)
+            flush_subnormal(f_cdf(df1, df2, x))
         } else {
             f_pdf(df1, df2, x)
         };
@@ -790,6 +795,17 @@ mod tests {
         assert!(!f_bup_sum_overflows(76.0, 1E10, 1.5));
         assert!(!f_bup_sum_overflows(80.0, 1E10, 1.5));
         assert!(!f_bup_sum_overflows(79.0, 1E9, 1.5));
+    }
+
+    // Excel's upper tail is exactly 0 once bup's prefactor in L140 leaves the normal range (T-4045):
+    // probes-numeric t4045-f-dist-rt-zero-cut B18 `F.DIST.RT(71.5,20,1E7)` is 4.320911961488639E-291
+    // and B19 `F.DIST.RT(71.6,20,1E7)` is 0; A17 `F.DIST.RT(47.6,30,1E8)` is a number, A18 0.
+    #[test]
+    fn upper_tail_is_zero_where_bups_prefactor_underflows() {
+        assert!(f_tail(20.0, 1E7, 71.5, true) > 0.0);
+        assert_eq!(f_tail(20.0, 1E7, 71.6, true), 0.0);
+        assert!(f_tail(30.0, 1E8, 47.6, true) > 0.0);
+        assert_eq!(f_tail(30.0, 1E8, 47.666_666_666_7, true), 0.0);
     }
 
     // A df of 1 takes bgrat at b = 1/2 on those arguments (T-3580): probes-numeric

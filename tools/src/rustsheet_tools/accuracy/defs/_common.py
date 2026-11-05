@@ -15,6 +15,8 @@ from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import DomainError, Draw, MathArg
 from rustsheet_tools.accuracy.sampler import log_uniform
 
+DF_CUT = 1e10  # the cumulative functions' last valid (truncated) df (statistics.md Student-t df limits)
+
 
 def scalars(args: Sequence[MathArg]) -> list[mpmath.mpf]:
     """The numeric arguments of a definition that takes no logical or array (its sampler draws numbers only)."""

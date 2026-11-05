@@ -4330,7 +4330,8 @@ with both TRUE, bc40d37cb4d8301d A392) and `#NUM!` for a number against a range 
 Evidence: gen-m9 (excel-graph, 2026-10-22, T-2255), 51 cells listed in T-2428.
 Order (XIRR, T-2428, from 198 gen-m9 cells now passing): an error dates argument, then (beside a number or omitted guess;
 a text, boolean or error guess keeps the element reading's `#VALUE!` or that error) one value with one date is `#N/A`
-unless either is a text, boolean or empty cell (`#VALUE!`; an array element such as BYROW's `{FALSE}` is not a cell, so
+unless either is a text or boolean cell (`#VALUE!`; an empty cell is a number here since T-3312, see "XIRR's guess,
+date and empty-cell order (T-3312)"; an array element such as BYROW's `{FALSE}` is not a cell, so
 `#N/A`); a single date that is a text, boolean or empty cell is `#VALUE!`; a single text or boolean value cell against
 several dates is `#VALUE!`; then different counts are `#NUM!` whatever a larger range holds (gen-m9/0a957119475760c5 A47);
 then the element reading. T-2611 (gen-m9, excel-graph, 2026-10-24; 42 top-level cells): an error values argument comes
@@ -4339,17 +4340,16 @@ first (`XIRR(<#VALUE!>,<#DIV/0!>,..)` is `#VALUE!`, 79d87fc527927626 A228; an `I
 cells (`XIRR(1E+21,<#VALUE!>,<#NUM!>)` is `#NUM!`, 1dce4774f5c0e736 A189; `XIRR({-1000,300,400,500},<16 dates>,<#N/A>)`
 `#N/A`, 1b60bf99d71424e7 A29; `XIRR(<text cells>,<5 dates>,<#VALUE!>)` `#VALUE!`, b72d952c5f52cb4d A50, whose guess is
 itself `#VALUE!`); then an error dates argument, before the values' cells are read (`XIRR(Data!B11:E11,<#N/A>)` with E11
-the text `" x "` is `#N/A`, 67a4c03afd63f988 A241). Ours reads a non-numeric text guess as its `#VALUE!` at the guess's
-point too. A boolean guess beside values and dates of different counts is `#VALUE!` (a guess cell holding TRUE beside 6
-values and 3 dates, b6a02893a8d6b151 A226); beside equal counts it is read as 1 or 0 as before T-2611 (unprobed), and a
-literal TRUE guess is unprobed too (T-3267). In the size checks one empty or numeric-text cell is not "a text, boolean
+the text `" x "` is `#N/A`, 67a4c03afd63f988 A241). T-3312 moved the guess before the error values argument and
+made every boolean guess `#VALUE!` (see "XIRR's guess, date and empty-cell order (T-3312)"). A boolean guess beside values
+and dates of different counts is `#VALUE!` (a guess cell holding TRUE beside 6 values and 3 dates, b6a02893a8d6b151 A226). In the size checks one empty or numeric-text cell is not "a text, boolean
 or empty cell": one empty values cell against several dates (`XIRR(Data!D10:D10,Data!B7:E8)`, 1dce4774f5c0e736 A91;
 89f0aee953a55a45 A36; ba4ddb817a8e700e A339), one empty date cell against several values (`XIRR(Data!B6:C11,<empty>,0.5)`,
 89f0aee953a55a45 A330; d0854366830dcdee A133) and one numeric-text date `"1"` against 14 values (c0681a8b150ce301 A266) are
 the count's `#NUM!`; one FALSE date stays `#VALUE!` (1cd3096e3e87c965 A48). 1db18890916ee643 A108, once cited for an
 empty date cell's `#VALUE!`, is a nested cell with a FALSE guess and other `#VALUE!` arguments, so it does not show
-the empty date's error (unconfirmed which argument decides it). Unprobed: an error values argument beside an error guess
-(ours: the values'); a numeric-text guess beside different counts (ours: the old reading); numeric text inside a values
+the empty date's error (unconfirmed which argument decides it). Settled by T-3312: an error guess beats an error values argument,
+and a numeric-text guess keeps the count's `#NUM!`. Unprobed: numeric text inside a values
 range, array or typed argument (T-3312). Settled for range cells (T-3267): numeric text reads as its number, in both
 the values and the dates (`XIRR(G1:G13,H1:H13)` over text cells equals the number flows, probes/xirr-back-dated-stop
 A31; `XIRR(Data!C9:C11,{39448,39508,39859},0.1)` with C11 `"1"` is `#NUM!`, 31474c20fc1dafd6 A351); non-numeric text is
@@ -4364,14 +4364,76 @@ A334), while numeric text there is not refused (`DB(XNPV(0.1,<"1.5">,Data!C5:C6)
 5c6a23c4f6597f1c A111; four cells with a `#VALUE!` dates expression beside a values range holding text); then one dates cell
 that is non-numeric text or a boolean is `#VALUE!` (d0854366830dcdee A274); then values and dates of different counts are
 `#NUM!` whatever they hold, an error value included (`XNPV(0.1,{-100,#N/A,60},<5 dates>)`, bc04c1f478c9896c A313;
-`XNPV(10,{100,200,300},<6 cells with text>)`, 1b60bf99d71424e7 A24); then the element reading. Open (T-2611): equal counts
-with text in both (1b60bf99d71424e7 A171 `#VALUE!`) and a boolean date inside a range (5ded7594e597e31e A12 `#NUM!`).
+`XNPV(10,{100,200,300},<6 cells with text>)`, 1b60bf99d71424e7 A24); then the element reading. A boolean date inside a range
+(5ded7594e597e31e A12 `#NUM!`) is settled by T-3312 ("XNPV's rate, first date and later dates (T-3312)").
 Evidence: 38 of the 48 gen-m9 cells whose formula is a bare XNPV or FVSCHEDULE call (excel-graph, direct), and the
 nested cells listed in T-2428.
 Ours: XIRR follows its order (`xirr_size_error`) and XNPV its (`xnpv_size_error`, the rate read without booleans) since
 T-2428; the error-guess cells are T-2611's.
 Status: VERIFIED (excel-graph; direct for the bare XIRR and XNPV cells, inferred through the enclosing call otherwise)
 Tasks: T-2428, T-2611
+
+## XIRR's guess, date and empty-cell order (T-3312)
+Rule: XIRR checks, in this order: (1) the guess: an error guess is that error, a text guess that is no number and a
+boolean guess (a literal TRUE or FALSE or a cell holding TRUE, beside equal or different counts) `#VALUE!`; (2) an error values
+argument; (3) an error dates argument; (4) the size checks of "XIRR and XNPV under the gen-m9 statistical cells", where
+one empty cell counts as a number: `XIRR(<empty>,39448)`, `XIRR(5,<empty>)` and `XIRR(<empty>,<empty>)` are `#N/A`, as
+is `XIRR(5,39448)`, while a text or boolean single cell stays `#VALUE!` (`XIRR(5,"x")`, `XIRR(5,TRUE)`). A guess at or
+below -1 turns those size errors into `#NUM!` (`XIRR(5,39448,-1)`, `XIRR(<empty>,1E+15,-1)`, `XIRR(5,-5,-1)`; -0.5
+and 0 keep `#N/A`), but not a single text or boolean date's `#VALUE!` (`XIRR(5,"x",-1)`). A numeric-text guess reads as
+its number, so the counts' `#NUM!` stands beside it (`XIRR(<-100,110,"x">,<2 dates>,"0.1")` is `#NUM!`). (5) The
+values and dates, pair by pair from the first: a text or boolean value or date is `#VALUE!`, a negative date or one
+past 9999-12-31 `#NUM!`, whichever comes first (`{-2.5,39448,"x"}` and `{39448,-2.5,"x"}` dates are `#NUM!`,
+`{39448,"x",-2.5}` and `{"x",39448,39508}` `#VALUE!`; values `{-100,110,"x"}` on `{-2.5,39448,39508}` are `#NUM!`;
+gen-m9/7c20351562a2d71d A40, one text value cell before 16 dates holding a negative one, is `#VALUE!`). (6) The flows'
+signs: all-negative values are `#NUM!` only after the dates read clean (`XIRR({-100,-200,-300},{39448,39508,"x"})` is
+`#VALUE!`, with `{-2.5,39448,"x"}` `#NUM!`). An equal-count call with a guess at or below -1 is `#NUM!`
+(`XIRR({-100,110},{39448,39508},-1)`), the solver's check, which was `#VALUE!` in the engine before.
+Evidence: probes/t3312-xirr-xnpv-inner-calls A18-A31, A39-A64 and probes/t3312-xirr-guess-dates-weibull A1-A47
+(excel-graph, 2026-11-04). Error order: `XIRR(NA(),{2 dates},1/0)` is `#DIV/0!`, `XIRR(1/0,{2 dates},NA())` `#N/A`,
+`XIRR(1/0,NA(),"x")`, `XIRR(NA(),{2 dates},TRUE)` and `XIRR({-100,110},NA(),TRUE)` `#VALUE!`; `XIRR(NA(),{2 dates},-1)`
+and `XIRR({-100,110},NA(),-1)` `#N/A`. These settle gen-m9/4bad303d32cc3f46 A364 (`XIRR(<empty>,1E+15,-1)`),
+5919660b7bb4d195 A144 (`-2.5`, empty, `"TRUE"` dates) and b72d952c5f52cb4d A38 (`XIRR(MONTH(59085),<empty>)`).
+Unprobed: a FALSE guess cell (literal TRUE and FALSE and a TRUE cell are probed; ours: `#VALUE!` for every boolean);
+the -1 guess beside one text or boolean values cell against several dates (ours: that `#VALUE!` stands, as for one text
+date); which of a pair is read first when both the value and the date are bad; a text value against an error element
+in the dates (ours: the value's `#VALUE!` whatever the positions, the order before T-3312); an error element inside the
+values against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text
+(ours: the negative date's rule, on the date truncated to a whole day). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
+Status: VERIFIED
+Implemented in: `fn_xirr`, `xirr_size_error`, `xirr_flows` (crates/rustsheet-engine/src/functions/financial/mod.rs),
+`compute_xirr`'s guess check.
+Tasks: T-3312
+
+## XNPV's rate, first date and later dates (T-3312)
+Rule: after the rate's own checks and the size checks of "XIRR and XNPV under the gen-m9 statistical cells", XNPV is
+(1) the error of a values argument that is itself an error; (2) `#NUM!` for a rate at or below 0, before any element
+(`XNPV(0,{-100,#N/A,60},<TRUE,0,1.005>)` and `XNPV(-1,{-100;30;40;50},<7,TRUE,8,9>)` are `#NUM!`); (3) `#VALUE!` when
+the first date of a range or array is text or a boolean (`XNPV(0.1,{-100,60,70},<TRUE,0,1.005>)`, and before an error
+value: `XNPV(0.1,{-100,#N/A,60},<TRUE,39448,39508>)`); (4) an error among the values (`XNPV(0.1,{-100,#N/A,60},
+<39448,TRUE,39508>)` is `#N/A`); (5) `#NUM!` for a text or boolean date after the first, as for a date that is no
+valid serial or precedes the first (`XNPV(0.1,{-100;30;40;50},{7;TRUE;8;9})` and its range form, also with rate 1E+15;
+with -0.0001 or 123456789.123 among the dates `#NUM!` too). Excel's documentation names `#VALUE!` for a non-date; only
+the first date gives it.
+Evidence: probes/t3312-xirr-xnpv-inner-calls A9-A17, A32-A38 (excel-graph, 2026-11-04); the error-argument order from
+gen-m9/7d2979fba2c95d64 A84 (`XNPV(-1+2^-52,<#VALUE!>,..)` is `#VALUE!`), c0681a8b150ce301 A112, d0854366830dcdee A127,
+e168be7f6d3f84c2 A88 (excel-graph). Settles gen-m9/5ded7594e597e31e A12 and 8f2ac25945af87da A137.
+Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule), an error element in the dates
+against a non-number first date, and a non-number first date against a text, boolean or empty values element (ours:
+the first date's `#VALUE!`; only error value elements are probed, A33, A36).
+Status: VERIFIED
+Implemented in: `fn_xnpv`, `xnpv_flows`, `xnpv_dates` (crates/rustsheet-engine/src/functions/financial/mod.rs).
+Tasks: T-3312
+
+## FVSCHEDULE whose running product overflows: excel-graph cannot open it
+Rule (unsettled): `FVSCHEDULE(5916,{-1E+300,1E+300})` is 0 on excel-graph inside gen-m9/89f0aee953a55a45 (A349, filled
+2026-10-23 and again 2026-11-04), but every smaller workbook holding an overflowing FVSCHEDULE fails to open there
+(`createSession` 501 FileCorruptTryRepair): the formula alone, beside 58 other formulas, with the case's own Data sheet,
+with the schedule in cells, and `FVSCHEDULE(1,{1E+300,1E+300})`. The 0 is likely a non-finite result the Graph read
+cannot carry. Ours is `#DIV/0!`. Desktop Excel decides it (T-4250, decision 0039).
+Evidence: T-3312 oracle attempts (2026-11-04); gen-m9/89f0aee953a55a45 A349.
+Status: OPEN
+Tasks: T-4250
 
 ## FVSCHEDULE with one empty schedule cell is the principal
 Rule: a schedule that is one empty cell is an empty schedule, so FVSCHEDULE returns the principal: `FVSCHEDULE(6527,D1)`
@@ -4704,11 +4766,14 @@ they isolate: 11eb3ab4f4f8104c A109, 1b31092a0d79e5f1 A260, 31f09e6c48ca245c A23
 3c06f9298f65a3ba A50, A148 (T-2698's list).
 Ours: `pv_of` and `nper_of` (functions/financial/annuity.rs), `fn_db` (functions/financial/financial_depreciation.rs), T-2620.
 Inferred from the same formulas, unprobed: PV's `#DIV/0!` covers every P that underflows to 0 (a rate in (-2,-1)
-with a large even nper too, `#NUM!` before), and NPER's LN of a non-positive ratio is `#NUM!` before the ln(1+rate)
-`#DIV/0!` (`NPER(1E-300,0,100,200)` is `#NUM!`).
-Status: VERIFIED for the probed cells; DB's boolean month beyond the FALSE pair and the inferred lines are UNVERIFIED
+with a large even nper too, `#NUM!` before).
+Probed (T-3367): NPER's 1 + rate = 1 `#DIV/0!` comes before a non-positive ratio's `#NUM!`, the reverse of what
+this entry inferred earlier: `NPER(1E-17,0,100,200,0)`, `NPER(5E-17,0,100,200,0)` and `NPER(1.1E-16,0,100,200,0)`
+are `#DIV/0!`, while `NPER(1.2E-16,0,100,200,0)`, where 1 + rate is not 1, is `#NUM!`
+(probes-numeric/t3367-nper-tiny-rate A7, A14, A21, A28; excel-graph, 2026-11-05).
+Status: VERIFIED for the probed cells; DB's boolean month beyond the FALSE pair and PV's inferred line are UNVERIFIED
 (T-2749 probes them).
-Tasks: T-2620, T-2698, T-2749
+Tasks: T-2620, T-2698, T-2749, T-3367
 
 ## NPER at a tiny positive rate: Excel is far off, RustSheet returns the math (MATH-OVER-EXCEL)
 Rule: NPER at 0 < rate < 1e-14 is far off the true period count in Excel, above G = 1e-4, so RustSheet returns the
@@ -4720,7 +4785,17 @@ Evidence:
 - The owner's 2026-10-31 assessment (decision 0188), 50-digit mpmath against Excel for the web.
 - The R3-marked points of the Gate A table: accuracy/NPER/s1 A121, A130, A133, A135, A142, A143, A151, A152, A153,
   A156, A158 and A162, at rates 3.0E-16 to 7.6E-15 (excel-graph, T-3535, decision 0220).
+- probes-numeric/t3367-nper-tiny-rate, seven argument sets at each of 20 rates from 1E-17 to 1E-12 (excel-graph,
+  2026-11-05, with a 50-digit math sidecar). The 66 numeric cells inside the region are R3-marked (decision 0282).
+  Excel's relative error against the math there runs from 6.5E-3 to 4.7E-1, the largest just above the cut:
+  `NPER(1.2E-16,-100,10000,0,0)` is 54.0 in Excel against a true 100.0.
+
+Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells at 1E-14, 1.5E-14, 3E-14 and 1E-13
+(A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
+about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
+stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. T-4285 asks the owner whether to widen it.
 Status: MATH-OVER-EXCEL (decision 0188)
-Ours: today the engine matches Excel bit for bit; T-3367 moves it to the math in the region. Until then the marked
-points are Gate A known failures owned by T-3367.
-Tasks: T-3367, T-3535
+Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
+log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's
+errors still decide which cells are errors (T-3367).
+Tasks: T-3367, T-3535, T-4285

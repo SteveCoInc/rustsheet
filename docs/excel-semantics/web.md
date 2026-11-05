@@ -232,13 +232,20 @@ Date groups (`<rangePr groupBy startDate endDate>`), probed (T-4236):
   `"January"`, `"01-Mar"`, `"2/29/1900"`), `TRUE`, `"(blank)"` and an omitted item are `#REF!`.
 Evidence: probes/t4236-pivot-date-groups and probes/t4236-pivot-date-groups-no-blank (excel-graph, 2026-11-04,
 T-4236): pivots grouped by months, hours, quarters, years and days whose S values are distinct powers of two; the
-second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). The importer follows
-the record-to-group rule; GETPIVOTDATA number items, the dropped grouping over a blank, and the eval adapter's date
-groups are T-4246's (it owns both probes' visibly-off cells).
+second case is the first with every blank replaced by a date. Status: VERIFIED (excel-graph). Engine (T-4246):
+`DateGroups` groups a record by the rule and picks a number item by its calendar value, shared by the importer, the
+eval adapter and GETPIVOTDATA; a group with no record is `#REF!`, as on a numeric range field. UNVERIFIED: a number
+item on a seconds or minutes group (taken as 0 to 59, by the hour rule).
+- Quirk: a half second just below the half rounds up. Serial 43466.458327546294 (written 10:59:59.5, but
+  39599.49999978 s into the day, 2.2e-7 s below the half) is in `11 AM` (no-blank pivot H, Calc E45 and F13). The
+  engine splits a date as HOUR is modelled to (`time_of_day_parts`, dates.md: an exact half goes whichever way binary
+  noise takes it), which puts it in `10 AM`; HOUR of this serial is unprobed. T-4261 probes Excel's rounding model.
+The dropped grouping over a blank is not modelled: the adapter leaves such a spec pivot unregistered (T-4260 owns those cells of probes/t4236-pivot-date-groups).
 Implemented in: crates/rustsheet-xlsx/src/import/pivots/groups.rs (`apply_groups`), import/pivots.rs (`read_definition`),
-crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/layout.rs (`row_layout`),
+crates/rustsheet-engine/src/pivot/number_groups.rs (`NumberGroups`, `group_by_numbers`), pivot/date_groups.rs
+(`DateGroups`, `group_by_dates`), pivot/layout.rs (`row_layout`),
 functions/lookup_and_reference/pivot_index.rs (`pivot_number_item`, `shown_group`).
-Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253
+Tasks: T-4225, T-4228, T-4235, T-4236, T-4246, T-4249, T-4253, T-4260, T-4261
 
 ## GETPIVOTDATA on real-model pivots: an omitted item is the blank item, nested axes' grand total (T-2662)
 Rule: an omitted item argument picks the field's blank item, the `(blank)` row of records whose value is missing (`<m/>`):

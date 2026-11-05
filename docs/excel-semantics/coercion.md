@@ -69,7 +69,8 @@ any fix. Excel is antisymmetric on every pair (exactly one of A<B, B<A, A=B hold
 19 pairs put a Thai or Lao digit below the letters (refuting the old UNVERIFIED choice "Thai and other digit
 blocks keep code-point order"; fixed by T-3895, "Thai, Lao and the other script digits (T-3895)" below), 9 pairs ignore an inserted soft hyphen U+00AD (`"¡" = "¡"&UNICHAR(173)`; T-3662),
 1 pair ignores U+034F after `»` (C237, E237; T-3305), 1 pair ranks the middle dot `·` below `Æ` (C110, D110;
-T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; T-3381). No other
+T-3896) and 1 pair puts U+20000 below a leading `々` followed by marks and kana (C313, D313; a lone mark is above every
+character, fixed by T-4258). No other
 rule failed: kana with skipped hyphens, expansions next to marks, full-width against accented letters and the
 T-3276 scripts mixed with Latin all agree.
 CHAR(160) and spaces (T-0244, VERIFIED, probes/text-order-nbsp-space, 333 cells, excel-graph
@@ -408,6 +409,15 @@ VERIFIED (cells cited):
   they sort after the ideographs probed (`"ー" > "人人"`, AC25; `"ーa"`, AC37) and the four lone marks
   are **equal** to each other (case 1 B119 = 4, COUNTIF E119 = 4; MATCH and XMATCH of each find `ー`,
   C127:D129 = 119).
+  **A lone mark is above every character (T-4258, VERIFIED, probes/t4258-collation-lone-mark-astral,
+  105 cells, excel-graph 2026-11-05).** Each of `ー ゝ ゞ ヽ ヾ 々` alone is greater than plane 2 (`𠀀`
+  U+20000, `𪜀` U+2A700, U+2FA1D), plane 3 (`𰀀` U+30000), Hangul (`가`), the BMP ideographs (`一`, U+9FFF),
+  Extension A (`㐀`), the compatibility ideographs (`豈` U+F900), private use (U+E000, U+F0000), `😀`,
+  `𝐀` U+1D400, U+FFFD and U+10FFFD (C1:C90), and than the two-character texts U+10FFFD U+10FFFD and `𪜀𪜀` (C104:C105). What follows
+  the leading mark does not change that: `々` or `ー` followed by a combining mark, a kana, an ideograph,
+  `𠀀`, `A` or another mark is still above `𠀀` (C91:C102), and so is t3465's B313 text (C103). The
+  engine gives a lone mark one weight above every script weight (`LONE_MARK`). Lone surrogates, which
+  UNICHAR cannot make, are not probed against it.
 - **`ー` after a Latin letter is not transitive.** `"aー"` is greater than `"aa"`, `"ab"`, `"AＢ"` and
   `"a゛b"` (C8, F8, G8, T8) but less than `"Ａa"` and `"Ａb"` (E8, H8), although `"Ａa" < "ab"` (F4) and
   `"AＢ" < "Ａb"` (H6). So Excel's `<` here is no sort key; no total order reproduces all cells, and an
@@ -788,8 +798,12 @@ them equal to anything but themselves (-ignorables rows 2, 10:12; -prefix H10:H1
   U+0090, U+009E and U+009F rank 18 to 22 above U+200B (t4039 B19:B23), above `¬` and `•` (K19:L23) and below
   `0` (J19:J23). U+0081, U+0085 and U+009F are above `! # $ & * . _ ~ ¡ ¿` and CHAR(1) (-prefix B11:L13 FALSE,
   M11:N13 TRUE, P11:P13 = 12). Against `+ = > ¤ § ° ± × ÷ • → ★ © ¬`, U+0081 is strictly above (-sweep K, M)
-  and U+009F at least as high (L; no `=` column). UNVERIFIED: U+0082 to U+008F and U+0091 to U+009D, taken to
-  keep code-point order.
+  and U+009F at least as high (L; no `=` column). All 32 (probes/t4270-collation-c1-controls, 548 cells,
+  excel-graph, 2026-11-05, T-4270): each is equal only to itself (C1:C32, E1:E32 = 1; XMATCH, COUNTIF and exact
+  MATCH find its own row, F:H), and they rank 3 to 34 in code-point order among them, U+200B (0), `¬` (1), `•` (2)
+  and `0` (35) (B1:B36, the same for a&c&b in D1:D36); every one is below `0` and above `¬`, `•` and U+200B
+  (I:L), `"a"&c&"b"<"ab"` (M), and SORT puts them in code-point order both ways (N1:O32).
+  Implemented in: `collation.rs` `element`'s arm `'\u{80}'..='\u{9f}' => single(C1_BASE + (c - 0x80))`.
 - So `"a"&c&"b"<"ab"` is TRUE for U+200B and the C1 controls (-ignorables R2, R10:R12), and among the 17 a&c&b
   texts U+200B < U+0081 < U+0085 < U+009F < the weightless ones (Calc!AB).
 

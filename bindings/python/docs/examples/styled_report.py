@@ -3,9 +3,9 @@
 import os
 import tempfile
 
-import rustsheet as ic
+from rustsheet import legacy
 
-model = ic.UserModel("sales-report")
+model = legacy.UserModel("sales-report")
 
 sales = [
     ("Apples", 1500, 0.45),

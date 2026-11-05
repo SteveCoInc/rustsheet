@@ -66,7 +66,7 @@ use accents::{accents, cmp_accent_units};
 use kana::{kana, vowel};
 pub(crate) use lookup_fold::fold_lookup;
 use lookup_fold::{class_first, is_weightless};
-use scripts::{script_element, script_order, symbol, unit, IDEOGRAPHS, SYMBOLS};
+use scripts::{script_element, script_order, symbol, unit, ABOVE_SCRIPTS, SYMBOLS};
 
 /// Orders two texts by the module's six passes, the accents by their wrapped sums: a total
 /// order, the one sorts, the sorted lookups and the collation key use. Excel's own `<`, `=`, `>`
@@ -293,9 +293,9 @@ const SYMBOL_BASE: u32 = PUNCTUATION_BASE + PUNCTUATION.len() as u32;
 /// `•` sorts after every symbol of [`symbol`] and before the digits (`"⇿" < "•"`, `"☀" < "•" <
 /// "0"`; probes/t3559-collation-unprobed-blocks ranks 22 to 29, G16, G18).
 const BULLET: u32 = SYMBOL_BASE + SYMBOLS;
-/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, by code point
-/// (probes/t4039-collation-space-forms Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep
-/// K1:L16; U+0082 to U+008F and U+0091 to U+009D unprobed).
+/// The C1 controls U+0080 to U+009F sort after `•` and before the digits, each by its code point
+/// (probes/t4270-collation-c1-controls Calc!B1:B36, all 32; probes/t4039-collation-space-forms
+/// Calc!B19:B23, J19:L23; probes/t3662-collation-ignorables-sweep K1:L16).
 const C1_BASE: u32 = BULLET + 1;
 const DIGIT_BASE: u32 = 0x800;
 const _: () = assert!(C1_BASE + 0x20 <= DIGIT_BASE);
@@ -311,10 +311,12 @@ fn other(c: char) -> u32 {
 }
 
 /// A long-vowel or iteration mark with no letter before it (`"ー"`, `"ゝ"`, `"ゞ"`, `"々"`, `"ーa"`):
-/// after the ideographs probed (`"ー" > "人人"`), all four equal (probes/t3275-collation-width-kana
-/// Calc!B119 = 4, probes/t3275-collation-width-kana-pairs AC25, AC37). Placed after the last
-/// unified ideograph.
-const LONE_MARK: u32 = OTHER_BASE + 2 * (IDEOGRAPHS + 0x9FFF) + 1;
+/// all equal (probes/t3275-collation-width-kana Calc!B119 = 4, probes/t3275-collation-width-kana-pairs
+/// AC25, AC37), and above every other character: the BMP and plane 2 ideographs, Extension A, the
+/// compatibility ideographs, plane 3, Hangul, private use, U+FFFD and U+10FFFD
+/// (probes/t4258-collation-lone-mark-astral C1:C90, C104:C105). What follows the mark does not
+/// change that (C91:C103), so `"々ヲ" > "𠀀"` (probes/t3465-collation-holdout C313:D313).
+const LONE_MARK: u32 = OTHER_BASE + 2 * ABOVE_SCRIPTS;
 
 /// Punctuation and symbols in Excel's order: the ASCII ones from probes/text-collation-order
 /// ranks 7-36, the others from probes/text-collation-unprobed, which ranks them against `!`, `~`,
