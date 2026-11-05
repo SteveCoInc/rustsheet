@@ -3,7 +3,7 @@ id: T-3832
 title: "Each worktree gets its own Cargo target directory"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
