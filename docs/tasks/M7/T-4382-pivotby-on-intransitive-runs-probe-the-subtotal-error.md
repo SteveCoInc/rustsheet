@@ -3,7 +3,7 @@ id: T-4382
 title: "PIVOTBY on intransitive runs: probe the subtotal error gate, three-field column subtotals, row-axis subtotals and PERCENTOF parents"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
