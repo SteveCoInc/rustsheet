@@ -34,20 +34,26 @@ impl Txn<'_> {
     /// the cell: the other rows of its table column that it fills as a calculated column, and the
     /// table as it was, which the fill marks as a calculated column or the text grows by a
     /// column when typed just right of it, or by a row when typed just below it (T-3273). They
-    /// are part of this edit and its undo.
+    /// are part of this edit and its undo. `r1c1` when `text` is typed in R1C1 reference style
+    /// ([`crate::Input::ParseR1C1`]).
     pub(super) fn log_typed_fill(
         &mut self,
         sheet: u32,
         key: Key,
         cell: CellRef,
         text: &str,
+        r1c1: bool,
     ) -> Result<(), EditError> {
         let (_, row, col) = key;
         // Typed just right of a table, a formula or a constant grows the table by a column first
         // (T-2968, T-3218), and typed just below it by a row (T-3273): the table, the new column's
         // header and the rows it fills are this edit's too.
-        let expansion =
-            (self.model.table_expansion(sheet, row, col, text)).map_err(EditError::Engine)?;
+        let expansion = if r1c1 {
+            (self.model).as_r1c1_entry(|model| model.table_expansion(sheet, row, col, text))
+        } else {
+            self.model.table_expansion(sheet, row, col, text)
+        };
+        let expansion = expansion.map_err(EditError::Engine)?;
         let targets = match expansion {
             Some(expansion) => {
                 self.sheet_op = true;

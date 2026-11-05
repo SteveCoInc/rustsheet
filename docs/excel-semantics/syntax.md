@@ -714,9 +714,12 @@ Rule: typed in R1C1 mode (`Range.formulasR1C1`), Excel reads Excel's short forms
 - Typed, `_xlpm.` is no mark but part of the name, in A1 and in R1C1 mode: `=_xlpm._xlpm.f1` and `=_xlpm._xlpm.abc`
   are `#NAME?` with that FORMULATEXT; `=LET(x,2,_xlpm.x*3)` is `#NAME?`, FORMULATEXT `=LET(x,2,_xlpm.x*3)` (the use
   is not `x`), as is `=LET(x,2,_xlpm._xlpm.x*3)`; and a declaration written with it, `=LET(_xlpm.x,1,_xlpm.x+1)`, is
-  refused (the cell stays blank) (T-4224). Ours still reads a typed `_xlpm.` as the mark (T-4288).
+  refused (the cell stays blank) (T-4224). Ours matches (T-4288).
+- Typed in R1C1 mode, a range's corners are ordered by the cells they name: `=ROWS(R[-50]:R[-49])` in row 50 names rows
+  1048576 and 1 after the wrap, and FORMULATEXT shows `=ROWS(1:1048576)` (probes/t3212-r1c1-bare-offsets I50).
 - Unprobed: a file's `_xlfn.LET(_xlpm._xlpm.x,2,_xlpm.x*3)` (one prefix on the use of a `_xlpm.x`; ours binds it), a
-  doubled prefix on a LAMBDA parameter, and what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
+  doubled prefix on a LAMBDA parameter, a LAMBDA parameter typed with `_xlpm.` (ours binds it under that name), and
+  what Excel writes to a file for a typed `=LET(x,2,_xlpm.x*3)`, whose
   FORMULATEXT is also the text of a file formula that binds the use.
 Evidence: probes/t3212-r1c1-bare-offsets (excel-graph, 2026-11-03), S!H10:J55: the typed cell, its FORMULATEXT and
 ISBLANK. The ISBLANK of its two circular cells (J39, J50) is TRUE, a recalc rule that T-3898 owns.
@@ -731,17 +734,18 @@ probes/t4224-doubled-xlpm-prefix (excel-graph, 2026-11-05), S!A1:C14: a doubled 
 in A1 mode (3, 4) and R1C1 mode (5, 6); LETs whose declaration and use differ in the prefix from a file (7, 8, 13) and
 typed (9 to 12, 14). The case's A1 text is the builder's input: it adds the mark to a bare declared name only
 (`spec2xlsx.prefix_bound_names`), so row 8 is written `_xlpm._xlpm.x`.
-Ours: `rustsheet_engine::r1c1_formula_to_a1` rewrites the short forms into the storage grammar before it parses
-(`typed_input/r1c1.rs`, `expand_short_forms`) and parses them as typed. In R1C1 mode the parser records a binding that
-reads as a reference for `Parser::typed_refusal`. Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA
-parameters still re-parse from storage. A structured reference typed in R1C1 mode does not parse (no tables, T-3113).
-The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`), and the A1 text
-writes a bound one `_xlpm.f1` (`stringify::to_english_string_typed_from_r1c1`), which the typed A1 entry binds where it
-refuses a bare `f1`. An unbound one becomes the quoted name `'f1'` when the formula is parsed
+Ours: `Model::set_typed_r1c1_user_input` (the facade's `Input::ParseR1C1`) rewrites the short forms into the storage
+grammar (`typed_input/r1c1.rs`, `expand_short_forms`), parses them as typed in the R1C1 grammar with the workbook's
+names and tables, and stores the parsed formula, with no A1 text in between (T-4288). In R1C1 mode the parser records
+a binding that reads as a reference for `Parser::typed_refusal`, and orders a typed range's corners
+(`Parser::range_operand`). Stored R1C1 text is not rewritten, so `r`, `c` and `rc` LAMBDA parameters still re-parse
+from storage. The R1C1 lexer reads a name spelled like an A1 cell as a name in any case (`is_valid_r1c1_identifier`),
+so a LET binds it. An unbound one becomes the quoted name `'f1'` when the formula is parsed
 (`call_names::quote_unbound_cell_shaped_names`, on R1C1 typed text and on storage text with `_xlpm.`): no LET
 binds it and no defined name matches it, so it is `#NAME?`, and A1 output prints it quoted. The R1C1 storage form and
-a file write it `_xlpm.f1`, which the storage reads back quoted, and the A1 text `_xlpm._xlpm.f1`, which the typed A1
-parser reads back quoted (T-4040, T-4099; a clash with a typed `_xlpm._xlpm.f1`, which T-4288 removes). A file's
+a file write it `_xlpm.f1`, which the storage reads back quoted (T-4040, T-4099). Typed text, in either mode, keeps
+every `_xlpm.` as part of the name, and a typed LET name written with it is refused
+(`Parser::note_prefixed_declaration`, T-4288). A file's
 (untyped A1) use keeps every prefix it was written with until the end of the parse, and
 `call_names::settle_lambda_prefixes` drops one, the mark, from the ones a LET or LAMBDA binds after it; an unbound one
 keeps them all and prints them (`Parser::written_lambda_name`). A declaration drops one (T-4224). The storage form
