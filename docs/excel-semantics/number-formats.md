@@ -830,8 +830,8 @@ Rule: a `[$-tag]` with no currency symbol prints nothing, but in its own section
 - **Indic regional variants** (T-4201, probes/t4201-indic-regional-variants, 142 cells, excel-graph, 2026-11-05). The
   language fallback to bn-IN, ta-IN and ne-NP is wrong for 845, 849, 861 (and their neutral/BCP-47 forms) but right for
   neutral 49 and, bar one cell, 61. `[$-845]` bn-BD, neutral `[$-45]`, `[$-bn]` and `[$-bn-BD]` print March
-  `mmm|mmmm|ddd|dddd|AM/PM` as "মার্চ|মার্চ|বুধ|বুধবার|PM": full month names for `mmm` (bn-IN's differ in all twelve months),
-  undotted short days, AM `mmmmm` "জ". `[$-849]` ta-LK and `[$-ta-LK]` give "மார்.|மார்ச்|புத.|புதன்|பிற்பகல்" (morning
+  `mmm|mmmm|ddd|dddd|AM/PM` as "মার্চ|মার্চ|বুধ|বুধবার|PM": full month names for `mmm` (bn-IN abbreviates seven: January, February, August to December),
+  undotted short days (bn-IN's always have a dot); the day halves stay Latin "AM"/"PM" and `mmmmm` of January is "জ", as in bn-IN. `[$-849]` ta-LK and `[$-ta-LK]` give "மார்.|மார்ச்|புத.|புதன்|பிற்பகல்" (morning
   "முற்பகல்"; ta-IN's halves are "காலை"/"மாலை"; most short months and days carry a dot, "மே", "ஜூன்", "ஜூலை" and "சனி" do
   not). `[$-861]` ne-IN and `[$-ne-IN]` print "मार्च|मार्च|बुध|बुधबार|अपराह्न": ne-IN differs from ne-NP in the month names
   (January "जनवरी", May "मे|मई", December "डिसे|दिसम्बर") and the weekdays (Wednesday ends "-बार", Sunday "आइतबार"; ne-NP's is
