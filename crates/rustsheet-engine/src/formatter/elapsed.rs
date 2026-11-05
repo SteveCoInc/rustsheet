@@ -31,7 +31,9 @@ impl FractionalSeconds {
     pub(super) fn new(value: f64, digits: usize) -> Option<Self> {
         let scale = [1.0, 10.0, 100.0, 1000.0].get(digits).copied()?;
         Some(Self {
-            units: (value * 86400.0 * scale).round(),
+            // A tie goes to the even unit: 1 + 0.25/86400 under `[h]:mm.0` is "24:00.2", not .3
+            // (probes/elapsed-minutes-fraction A21; T-4323).
+            units: (value * 86400.0 * scale).round_ties_even(),
             scale,
             digits,
         })
@@ -301,6 +303,7 @@ mod tests {
     use super::{
         elapsed_text,
         ElapsedUnit::{Hour, Minute, Second},
+        FractionalSeconds,
     };
 
     #[test]
@@ -314,6 +317,13 @@ mod tests {
             format!("24{}", "0".repeat(100))
         );
         assert_eq!(elapsed_text(1e10, false, Second, None), "864000000000000");
+    }
+
+    #[test]
+    fn fraction_ties_round_to_even() {
+        let tenths = |v: f64| FractionalSeconds::new(v, 1).map(|f| f.digits_text());
+        assert_eq!(tenths(1.0 + 0.25 / 86400.0).as_deref(), Some("2"));
+        assert_eq!(tenths(0.5 / 86400.0).as_deref(), Some("5"));
     }
 
     #[test]
