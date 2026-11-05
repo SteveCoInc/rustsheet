@@ -71,7 +71,9 @@ is listed.
   NORM.S.DIST and PHI. A standard_dev of 0 or below is `#NUM!`. p is in (0, 1). A cumulative NORM.DIST point whose
   (x - mean)/sd overflows a double is redrawn: no Excel cell says what the cdf is there.
 - Left out of the tables, as the ERF slice left out its cancellation region, so the gate does not wait on an R3 ruling:
-  - GAUSS on 1E-15 < |z| < 1E-8, where Excel's Phi(z) - 0.5 in doubles is up to 2.6% off. That is gen-m9/146b46e74f2dac3b
+  - GAUSS on 1E-15 < |z| < 1E-8, where Excel's Phi(z) - 0.5 in doubles is up to 2.6% off. The 1E-8 cut is a
+    sampler choice that keeps Excel's error near 1.4E-8, well inside R3's 1e-4. It is not the R3 region: Excel's
+    error passes 1e-4 only below about |z| = 1.4E-12 (T-4277). That is gen-m9/146b46e74f2dac3b
     A46, `GAUSS(4E-15)`, Excel 1.5543122344752192E-15 against the math 1.5957691216057308E-15.
   - NORM.INV where mean + sd*z cancels to below 1E-9 of its terms.
 - **R3 candidates, for an owner ruling (not marked):** the GAUSS region above, evidenced by gen-m9/146b46e74f2dac3b A46.
@@ -81,9 +83,12 @@ is listed.
   filled from excel-graph. `rustsheet-eval accuracy`: 16,472 points in 104 tables, 0 failing, 0 table defects, no new
   known failures. Missing tables went from 153 to 147. The worst Excel-vs-math gap in the six tables is 4.1E-12
   relative (GAUSS(5.69E-06)); the lower tails are within 2.9E-13.
-- Sidecars: the probes-numeric math sidecars are regenerated. 19 normal-family cases gain one, and t1543 and t1916
-  gain their NORM.INV and NORM.S.DIST cells. An unrelated "why" text drift in t3347-irr-conventional-sweep was not
-  committed.
+- Sidecars: the probes and probes-numeric math sidecars are regenerated for the normal-family cells, so
+  `make eval-math-check` is current. In probes-numeric, 19 normal-family cases gain one, and t1543 and t1916 gain
+  their NORM.INV and NORM.S.DIST cells. In probes, the cases with one-call NORM, PHI or GAUSS cells gain theirs (among
+  them t2435-dist-extremes, the t2436 cases, stat-argument-modes, subnormal-function-boundaries and
+  catalog/normsdist-stored-form). Unrelated drift was not committed: t3347-irr-conventional-sweep's "why" text and
+  the Bessel sidecars.
 - Unit tests: tools/tests/test_accuracy_normal.py (A&S and Microsoft examples, the T-2255, T-1041 and T-2435
   values, and the draws avoiding both excluded regions).
 - Follow-up: T-4277 (owner ruling on R3 for the GAUSS cancellation region, blocked on the owner).
