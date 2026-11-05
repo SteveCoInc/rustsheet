@@ -3,7 +3,7 @@ id: T-4041
 title: "T-3665 follow-ups: name BETA.INV's search on bup+bgrat at a0 < 1, state the residual near a = 1, narrow T-3592's x29 cells"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
