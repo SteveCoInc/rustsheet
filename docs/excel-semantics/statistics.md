@@ -3272,6 +3272,23 @@ eval cells (ironcalc-calc T_DIST.xlsx F18 and BETADIST_BETAINV.xlsx G25-G26 amon
 take bpser through `t_kernel_tails`). L is GL53/glalgdiv's for min(a, b) < 1
 and the extended GAMMALN sum for min >= 1, max <= 8.
 Its algdiv (b0 >= 8) is `beta_density::algdiv` in doubles, where the model runs TOMS algdiv x87 stored.
+The b0 >= 8 shortfall against the model is GAMMALN's, not L's (T-4070, negative result; docs/research/t4070
+`l_diff.py`, `l_diff.out`, origin/main 724319d4). On t2464-r2-bpser-small-shapes' 2,868 w_bpser cells with
+max(a, b) >= 8 (2,081 direct, 787 after bratio's swap), the model scores 1,489/2,840/2,861 (ex/u4/w15) and the engine
+1,484/2,842/2,859, T-2977's figures. The two differ on 145 cells, and on every one Excel's probed GAMMALN(a0)
+(t2464-r2-bpser-small-gl, all 45 a0 on file) differs from the engine's. With the engine's GAMMALN(a0) put into the
+model, model and engine agree on 2,868 of 2,868. So L's form, fl(GL(a0) + algdiv(a0, b0)), is the model's already, and
+algdiv in doubles never differs from the model's x87-stored algdiv here. The two cells where the model is within 15
+digits and the engine is not, A9491 and A9492 (a = 8.789, b = 0.186), have the engine's GAMMALN(0.186) 1 ulp above
+Excel's. They close with GAMMALN's last digits below 1 (T-1529, T-2122), not with a bpser change.
+T-2505's 987 moved cells, rebuilt from the T-2505 parent (1d3ea444) and T-2505 (81c3d27e) probes-numeric reports
+(T-4070, negative result; `moved_cells.py`, `moved_cells.out`):
+- 632 are bit-exact again today.
+- 196 have the model bit-exact and the engine off. All 196 are GAMMALN's: with the engine's GAMMALN in L, the model
+  gives the engine's value on 178. The other 18 sit at min(a, b) < 1, b0 < 8, where r7's split-z form gives the
+  engine's value with the engine's GAMMALN and Excel's with Excel's GAMMALN, 18 of 18 each.
+- 141 are off in the model too, and 18 are not literal cdf cells.
+- None is a port bug. Excel's GAMMALN to the bit at shapes below 2 (T-2122) is what moves them.
 A caller's shape of exactly 1 stays on Cephes' fractions (both shapes > 1 with max > 8 did until T-3007, below); L140's bpser(a0, 1, x0) at a whole b0 takes L = -LN(a0) (T-2506 above a0 = 8, T-2847 at every a0). On
 probes-numeric it moves a net 12,408 cells to bit-exact and takes visibly-off numbers from 104,206 to 100,013; 987
 bit-exact cells moved off and 7 became visibly off (listed in T-2847). T-2847 moved F, BINOM and NEGBINOM onto it: gen-m9
@@ -3309,7 +3326,7 @@ TOMS `betaln` at every shape (half-integers included) scores bit-exact +150, vis
 A9 (A18 is now within 4 ulp): T-2924's k plus whole fl(a·LN x) steps, as above.
 Status: PARTIAL (excel-graph): within 15 digits in every bpser sub-branch of the shapes probe (2,861 of 2,868 at
 b0 >= 8, all others); bit-exact 52-75%; both > 1 with max > 8 a provisional form (T-3007)
-Tasks: T-2505, T-2512, T-2122, T-3007, T-3331, T-3570, T-3771
+Tasks: T-2505, T-2512, T-2122, T-3007, T-3331, T-3570, T-3771, T-4070
 
 ## BETA.DIST at a = b = 1/2 is an arctangent closed form, reflected above x = 0.9 (T-3192)
 Rule: BETA.DIST's cdf (and BETADIST's) at a = b = 1/2 is not bratio's bpser but, in doubles with libm's atan,
