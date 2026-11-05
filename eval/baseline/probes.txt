@@ -1518,6 +1518,7 @@ C	probes/t2771-roundup-subnormal-sign.case.json	121
 C	probes/t2771-roundup-subnormal-threshold.case.json	40
 C	probes/t2772-unary-plus-in-range-rows.case.json	20
 C	probes/t2772-unary-plus-static-readings.case.json	36
+C	probes/t2775-ztest-single-cell-routes.case.json	15
 C	probes/t2776-formula-text-whitespace-shapes.case.json	65
 C	probes/t2776-ws-after-at.case.json	2
 C	probes/t2776-ws-after-bang.case.json	2
@@ -4050,6 +4051,9 @@ F	probes/t2753-gamma-density-switch.case.json	S!B4
 F	probes/t2753-gamma-density-switch.case.json	S!B40
 F	probes/t2753-gamma-density-switch.case.json	S!B42
 F	probes/t2753-gamma-density-switch.case.json	S!B5
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B13
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B3
+F	probes/t2775-ztest-single-cell-routes.case.json	Sheet1!B4
 F	probes/t2829-ftest-a306-shapes.case.json	S!A1
 F	probes/t2829-ftest-a306-shapes.case.json	S!A10
 F	probes/t2829-ftest-a306-shapes.case.json	S!A11

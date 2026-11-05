@@ -1,0 +1,36 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "Z.TEST over a single cell reached through INDEX, OFFSET, IF and parentheses (T-2775): does a lone text/boolean/empty cell give #N/A as a plain reference does. A1 text, A2 TRUE, A3:A5 numbers.",
+  "tags": [
+    "M9",
+    "probe",
+    "T-2775"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "text",
+        "A2": true,
+        "A3": 5,
+        "A4": 7,
+        "A5": 9,
+        "B1": "=Z.TEST(A1,1)",
+        "B2": "=Z.TEST(A2,1)",
+        "B3": "=Z.TEST(INDEX(A1:A5,1),1)",
+        "B4": "=Z.TEST(INDEX(A1:A5,2),1)",
+        "B5": "=Z.TEST(OFFSET(A1,0,0),1)",
+        "B6": "=Z.TEST(OFFSET(A2,0,0),1)",
+        "B7": "=Z.TEST(OFFSET(A1,0,0,1,1),1)",
+        "B8": "=Z.TEST(A6,1)",
+        "B9": "=Z.TEST(INDEX(A1:A5,6-1),1,1)",
+        "B10": "=Z.TEST(INDEX(A1:A5,3),1)",
+        "B11": "=Z.TEST(A3,1)",
+        "B12": "=Z.TEST(A1:A2,1)",
+        "B13": "=Z.TEST(IF(TRUE,A1),1)",
+        "B14": "=Z.TEST((A1),1)",
+        "B15": "=Z.TEST(A1,1,1)"
+      }
+    }
+  ]
+}
