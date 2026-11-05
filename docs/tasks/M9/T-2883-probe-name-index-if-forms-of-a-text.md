@@ -3,7 +3,7 @@ id: T-2883
 title: "Probe name/INDEX/IF forms of a text or boolean cell as data of TRIMMEAN, MODE, paired stats"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
