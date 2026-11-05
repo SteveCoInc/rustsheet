@@ -1,0 +1,59 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4049: name N scoped to sheet S, defined through the API (Graph worksheets('S')/names/add) with the body =1 after load. Does an unqualified =N on S, loaded from the file or typed before the add, see it; does a qualified S!N, a computed INDIRECT(\"N\") or a cell on another sheet? FORMULATEXT shows how each reference reads after the add.",
+  "tags": [
+    "M8",
+    "syntax",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "S",
+      "cells": {
+        "A1": "=N",
+        "A2": "=N+1",
+        "A3": {
+          "entered": "=N"
+        },
+        "A4": "=S!N",
+        "A5": "=INDIRECT(\"N\")",
+        "A6": "=ISERROR(N)",
+        "B1": "=FORMULATEXT(A1)",
+        "B3": "=FORMULATEXT(A3)",
+        "B4": "=FORMULATEXT(A4)"
+      }
+    },
+    {
+      "name": "T",
+      "cells": {
+        "A1": "=S!N",
+        "A2": "=N",
+        "A3": "=INDIRECT(\"S!N\")",
+        "B1": "=FORMULATEXT(A1)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "S!A1",
+    "S!A2",
+    "S!A3",
+    "S!A4",
+    "S!A5",
+    "S!A6",
+    "T!A1",
+    "T!A2",
+    "T!A3",
+    "S!B1",
+    "S!B3",
+    "S!B4",
+    "T!B1"
+  ],
+  "api_names": [
+    {
+      "name": "N",
+      "formula": "=1",
+      "sheet": "S"
+    }
+  ]
+}

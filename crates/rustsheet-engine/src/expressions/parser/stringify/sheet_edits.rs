@@ -6,7 +6,7 @@ use crate::types::sheet_names_match;
 
 /// Calls `f` on every node of `node` that names a sheet (a reference, a 3-D span, a wrong
 /// reference or a defined name) and walks through every other node to reach them.
-fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) {
+pub(super) fn for_each_sheet_reference_mut(node: &mut Node, f: &mut impl FnMut(&mut Node)) {
     match node {
         Node::ReferenceKind { .. }
         | Node::RangeKind { .. }
