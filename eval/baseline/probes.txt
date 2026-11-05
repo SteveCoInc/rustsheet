@@ -2161,6 +2161,7 @@ C	probes/t4253-pivot-relabel-order.case.json	224
 C	probes/t4255-gamma-window-exact-ratio.case.json	406
 C	probes/t4258-collation-lone-mark-astral.case.json	105
 C	probes/t4261-pivot-half-second-fresh-2.case.json	106
+C	probes/t4261-pivot-half-second-fresh-3.case.json	106
 C	probes/t4261-pivot-half-second-fresh.case.json	106
 C	probes/t4261-pivot-half-second.case.json	190
 C	probes/t4270-collation-c1-controls.case.json	548

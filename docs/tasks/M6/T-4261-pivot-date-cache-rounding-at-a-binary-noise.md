@@ -48,21 +48,47 @@ the double 1/86400, half up, which is neither `x * 86400` nor HOUR's split. `spl
 (crates/rustsheet-engine/src/pivot/date_groups.rs) now does exactly this. It serves the date groups, `ungroup_dates`,
 the importer, and the `startDate` and `endDate` comparison, and web.md records the rule.
 
-Structural model (decision 0188 R4):
-- probes/t4261-pivot-half-second has 36 points, 1900 to 9998, with deltas of 1e-8 to 0.4 s around 10:59:59.5. The
-  hold-out (odd k) was fixed in the case description before scoring.
-- Five candidates were scored: ms then s, 15 significant digits, the fraction's product, the engine's HOUR split,
-  and the serial's product.
-  - Train: the serial's product 18/18, tied with 15 digits.
-  - Hold-out: the serial's product 18/18, 15 digits 16/18.
-- Slip: I printed the hold-out counts in the same run as the training counts, not after choosing. So the hold-out
-  is not a clean confirmation, and the fresh sweeps carry that weight.
-- First fresh sweep (t4261-pivot-half-second-fresh, seed 4261, 48 points, written after freezing the serial's
-  product): 47/48. That rejects the product.
-- Of eight further orderings scored on all 84 points, only `x / (1/86400)` fits all 84. It was frozen.
-- Second fresh sweep (t4261-pivot-half-second-fresh-2, seed 4262, 48 points; 32 chosen where the frozen model and
-  the product disagree): 48/48, against 14/48 for the product.
-- No numeric constant was fitted. The divisor 1/86400 is the day length, so there is no `FITTED` tag.
+Structural model (decision 0188 R4; kind (c), no fitted constant, so no `FITTED` tag):
 
-Eval delta: probes known failures 4980 -> 4950 (30 fixed, 0 regressions, 3 new cases all passing: 190, 106 and 106
-cells). probes/t4236-pivot-date-groups (335/335) and -no-blank (349/349) now pass in full.
+How the first choice failed:
+- probes/t4261-pivot-half-second has 36 points from 1900 to 9998, deltas 1e-8 to 0.4 s around 10:59:59.5. Its
+  hold-out (odd k) was fixed in the case description. Five candidates were scored: ms then s, 15 significant
+  digits, the fraction's product, the engine's HOUR split, and the serial's product `x*86400`.
+- `x*86400` scored 18/18 on train, tied with 15 digits, and 18/18 on the hold-out. Slip: the hold-out counts were
+  printed in the same run as the training counts.
+- `x*86400` was frozen. The first fresh sweep (t4261-pivot-half-second-fresh, seed 4261, 48 points sampled with no
+  selection) rejected it at 47/48.
+
+How the frozen model was chosen:
+- Eight further orderings were scored on all 84 points of the first two cases. That spends both the original
+  hold-out and the first fresh sweep as training data.
+- `floor(x / (1/86400) + 0.5)` (the double 1/86400 as divisor) fit 84/84. It was frozen with no margin stated in
+  advance.
+- Its train is therefore those 84 points. Its untouched hold-outs are the two cases written after the freeze:
+  - fresh-2 (seed 4262): 32 of its 48 points were selected where the frozen model and `x*86400` disagree, so it
+    discriminates but is not an unbiased sample;
+  - fresh-3 (seed 4263): 48 points log-uniform in delta (1e-9 to 1e-5 s either way), random seconds, days 1 to
+    2958465, with no selection. This is the R4.2 fresh sweep.
+- The cases were filled one at a time, each after the step before it, which is why the oracle stamps are close
+  together (06:19, 06:20, 06:21 UTC; fresh-3 later, after the review).
+
+Counts per case: the record's second from Excel's rendered label, each record found by its power-of-two S sum.
+
+| candidate | half-second (36) | fresh (48) | fresh-2 (48) | fresh-3 (48) |
+|---|---|---|---|---|
+| `x / (1/86400)`, frozen | 36 | 48 | 48 | 48 |
+| `x * 86400` | 36 | 47 | 14 | 44 |
+| correctly rounded `floor(x*86400 + 1/2)`, exact | 27 | 47 | 10 | 27 |
+
+The rounded second is an integer, so bit-exact, within 4 ulp and 15 digits are the same count here.
+
+Gate A envelope:
+- Every cell of the four cases is within the envelope (15 digits of Excel): fresh-3 106/106 cells, fresh-2
+  106/106, fresh 106/106, half-second 190/190 (`rustsheet-eval show`).
+- No point is outside it, and no cell is fit below the reproducibility floor.
+- There is no keep-matched branch: one rule serves every date.
+- UNVERIFIED: a `startDate` or `endDate` within half a second of a noise point. That comparison uses the same
+  `split_serial`, but no probe puts a bound there (web.md).
+
+Eval delta: probes known failures 4980 -> 4950 (30 fixed, 0 regressions, 4 new cases all passing: 190, 106, 106 and
+106 cells). probes/t4236-pivot-date-groups (335/335) and -no-blank (349/349) now pass in full.

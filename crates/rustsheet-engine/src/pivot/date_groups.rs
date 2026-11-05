@@ -318,14 +318,15 @@ fn calendar_parts(serial: f64) -> Result<(YearDay, i32, usize), DateGroupError> 
 /// A serial's whole day and its time of day in seconds, as Excel's pivot cache rounds a date to
 /// the second: the serial divided by the double `1/86400` (not multiplied by 86400), rounded half
 /// up, so 23:59:59.5 is the next day. This is not HOUR's rule (`time_of_day_parts`, dates.md): a
-/// 2019 date 2.2e-7 s below 10:59:59.5 is 11:00:00 here and 10:59:59 to HOUR. Chosen from five
-/// candidates and confirmed by two fresh sweeps, 132 of 132 points
-/// (probes/t4261-pivot-half-second, -fresh, -fresh-2; web.md, T-4261).
+/// 2019 date 2.2e-7 s below 10:59:59.5 is 11:00:00 here and 10:59:59 to HOUR. Chosen among 13
+/// candidates, then confirmed by two sweeps written after the freeze, 180 of 180 points
+/// (probes/t4261-pivot-half-second, -fresh, -fresh-2, -fresh-3; web.md, T-4261).
 fn split_serial(serial: f64) -> Result<(i64, usize), DateGroupError> {
     // Pivot dates are 1900-01-00 to 9999-12-31, about 3e6 days: well inside an i64.
     if !(0.0..=1e7).contains(&serial) {
         return Err(DateGroupError::Calendar);
     }
+    // Divide, do not multiply by 86400: the two differ by an ulp at noise points (the unit test).
     // At most 8.64e11 seconds: exact in an f64 and an i64.
     let total = (serial / (1.0 / SECONDS_PER_DAY) + 0.5).floor() as i64;
     let day_seconds = SECONDS_PER_DAY as i64;

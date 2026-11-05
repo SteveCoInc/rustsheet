@@ -245,9 +245,10 @@ item on a seconds or minutes group (taken as 0 to 59, by the hour rule).
   15 significant digits, the fraction's product, the engine's HOUR split, the serial's product), the serial's
   product fit the 36 points of probes/t4261-pivot-half-second. The first fresh sweep rejected it (47 of 48), and
   dividing by 1/86400, which fits all 84, was frozen. A second fresh sweep confirmed it at 48 of 48 (32 of them
-  points where the two disagree; the product gets 14). The hold-out of the first case was printed with its
-  training score, not after the choice; the two fresh sweeps are the confirmation (T-4261 Outcome).
-Evidence: probes/t4261-pivot-half-second, t4261-pivot-half-second-fresh and t4261-pivot-half-second-fresh-2
+  points where the two disagree; the product gets 14), and an unbiased log-uniform third sweep at 48 of 48 (the
+  product 44, exact correct rounding 27). The R4 record, with its spent first hold-out, is in the T-4261 Outcome.
+  UNVERIFIED: a `startDate` or `endDate` within half a second of such a point, which uses the same rule.
+Evidence: probes/t4261-pivot-half-second, t4261-pivot-half-second-fresh, -fresh-2 and -fresh-3
 (excel-graph, 2026-11-05, T-4261): dates a delta of 1e-9 to 0.4 s either side of a half second, from 1900 to 9998,
 in an ungrouped pivot (a blank drops the grouping), whose rendered labels show each record's rounded second.
 Status: VERIFIED (excel-graph). Engine: `split_serial` (pivot/date_groups.rs), shared by the groups,
