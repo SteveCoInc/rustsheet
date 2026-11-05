@@ -3,7 +3,7 @@ id: T-4354
 title: "Probe INDIRECT structured-reference text with an unquoted sheet prefix Excel's A1 text refuses, and fix lookup.md's Implemented-in path"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
