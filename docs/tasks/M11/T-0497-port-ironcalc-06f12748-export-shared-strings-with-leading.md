@@ -3,7 +3,7 @@ id: T-0497
 title: "Port ironcalc 06f12748: export shared strings with leading or trailing whitespace as xml:space=\"preserve\""
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
