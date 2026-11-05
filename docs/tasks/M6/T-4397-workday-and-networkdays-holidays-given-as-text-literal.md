@@ -3,7 +3,7 @@ id: T-4397
 title: "WORKDAY and NETWORKDAYS holidays given as text (literal, cell, array; number, date and currency text) and DAYS with two error arguments: probe the rules ours guesses"
 milestone: M6
 lane: functions-date
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -51,15 +51,27 @@ Probe (excel-probe skill, excel-graph, tag M6), probes/t4397-holiday-text-forms 
   `DAYS(NA(),"abc")` / `DAYS("abc",NA())` as controls.
 
 ## Acceptance criteria
-- [ ] The two probe cases are committed with excel-graph oracle sidecars.
-- [ ] Every probe cell passes: the holiday text forms through the functions' holiday reader, the scalar/reference split
+- [x] The two probe cases are committed with excel-graph oracle sidecars.
+- [x] Every probe cell passes: the holiday text forms through the functions' holiday reader, the scalar/reference split
       of NETWORKDAYS.INTL included, and DAYS's choice between two errors in `fn_days`. Unit tests pin one text-literal
       holiday and one two-error DAYS call.
-- [ ] dates.md's two UNVERIFIED statements above are replaced by the probed rules, citing the cells.
-- [ ] `make eval-baseline` records no regression; no cell of probes/networkdays-intl-holiday-* or
+- [x] dates.md's two UNVERIFIED statements above are replaced by the probed rules, citing the cells.
+- [x] `make eval-baseline` records no regression; no cell of probes/networkdays-intl-holiday-* or
       probes/t2360-array-lambda-holidays changes.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The weekend argument (T-2591) and the lift controls (T-1954).
 - Empty text and errors as date arguments (T-2864).
+
+## Outcome
+- Two probe cases, filled by excel-graph: probes/t4397-holiday-text-forms (516 cells: WORKDAY, WORKDAY.INTL weekend 1
+  and 13, NETWORKDAYS, NETWORKDAYS.INTL weekend 1 and 13, with a Thursday or Saturday holiday as a number, text literal,
+  cell, one-element array or two-cell range, for number, m/d/yyyy, long-date, currency and percent text, each also under
+  ERROR.TYPE) and probes/t4397-days-two-errors (36 cells). Generator: docs/research/t4397/gen_probe.py.
+- Excel: every text form is a holiday, read as the serial its text gives; a text literal is a scalar holiday for
+  NETWORKDAYS.INTL's weekend rule (a Saturday is dropped, 10), while a cell or array holding the text follows the weekend
+  (9). DAYS with two errors returns the leftmost, and an error beats unreadable text in either position.
+- Ours already matched every cell (552/552), so there is no engine change. Two unit tests pin a text-literal holiday and
+  DAYS's two-error order. dates.md: the two UNVERIFIED statements are replaced by the probed rules.
+- Eval delta: +552 passing probe cells (new coverage, probes has no baseline); no other cell changes; no regression.
