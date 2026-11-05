@@ -1,6 +1,6 @@
 ---
 id: T-4284
-title: "Probe Lotus dot ranges with whitespace after the dots on a cell or a line feed (. B2, A1.LF B2) and pin the lexer's fallback"
+title: "Probe Lotus dot ranges with whitespace after the dots on a $ cell or a line feed ($A$1. B2, A1.LF B2) and pin the lexer's fallback"
 milestone: M2
 lane: engine
 status: todo
