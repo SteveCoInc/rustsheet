@@ -3,7 +3,7 @@ id: T-4324
 title: "Probe an empty numeric pivot group's start and end items under showAll, and share the unused-item checks (T-4311 review follow-ups)"
 milestone: M6
 lane: engine
-status: in-progress
+status: blocked
 priority: P3
 size: S
 tier: opus
@@ -35,3 +35,9 @@ MINOR findings of the T-4311 reviews (PR #3334), which all approved:
 
 ## Out of scope
 - Unused items of a grouped field (`PivotError::GroupedWithUnusedItems` stays).
+
+## Blocked because
+The code this task changes is in PR #3334 (T-4311's engine change: `row_layout`'s `LayoutCell::Empty`,
+`spill_extent::group_rows`, `add_unused_items`, the test `a_grouped_pivot_with_show_all_shows_and_answers_its_empty_groups`,
+probes/t4311-pivot-showall-grouped), which is approved but not merged as of 2026-11-05 13:56 UTC; on main T-4311 shows
+done because its probe PR (#3337) merged. Unblock once #3334 merges.
