@@ -49,7 +49,7 @@ E6 ("3733.0").
   FITTED constant: every offset in [1.74E-17, 1.86E-17] s scores all 538 `.000` cells of the t4323/t4332/t4370
   fraction cases (T-4370's model 476), and 2^-72 days is the power of two inside that window. No operation that
   would produce it was found. Code: `millisecond_offset` in formatter/elapsed.rs, tagged
-  `FITTED(T-4389, 538, [1.74E-17, 1.86E-17] s)`.
+  `FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-19 days, .000 only)`.
 - Seconds or days: the hold-out answers it, in serial days. probes/t4389-holdout has 368 cells, generated after both
   candidates were written down, with the margin of 10 points fixed before scoring. Its 31 cells after whole seconds
   tell the two apart, and Excel follows the serial in all of them.

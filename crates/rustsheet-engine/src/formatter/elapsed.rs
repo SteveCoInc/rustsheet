@@ -325,12 +325,13 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
 /// seconds: past about 0.16 s (`y` of 2^-19 days, whose ulp is 2^-71) the addition rounds away,
 /// and the 31 cells of probes/t4389-holdout after whole seconds that tell the two apart all
 /// follow the serial. `.0` and `.00` show no offset (`TEXT(0.005/86400-12*2^-77,"s.00")` is
-/// "0.00"). FITTED(T-4389, 538, [1.74E-17, 1.86E-17] s): every constant in that window scores
-/// the 538 `.000` cells of the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power
-/// of two inside it; applied to serials below 2^-19 days, the only ones it can move. Hold-out
+/// "0.00"). The constant is a fit: every offset from 1.74E-17 to 1.86E-17 s scores the 538 `.000`
+/// cells of the t4323, t4332 and t4370 fraction cases, and 2^-72 days is the power of two inside
+/// that window; it is applied to serials below 2^-19 days, the only ones it can move. Hold-out
 /// probes/t4389-holdout 368 of 368 (T-4370's model 337, the correctly rounded value 81); fresh
 /// sweep probes/t4389-fraction-fresh, drawn after the freeze, 120 of 120 (42 and 39; excel-graph
 /// 2026-11-05; docs/research/t4389). number-formats.md "Fraction digits of a second at a tie".
+/// FITTED(T-4389, 538 cells, offset 1.74E-17..1.86E-17 s, serial below 2^-19 days, `.000` only)
 fn millisecond_offset(shifted: f64, scale: f64) -> f64 {
     /// 2^-72 days.
     const OFFSET: f64 = 1.0 / 4_722_366_482_869_645_213_696.0;
