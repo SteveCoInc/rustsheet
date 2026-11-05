@@ -3,7 +3,7 @@ id: T-4308
 title: "Read Excel's large-shape gamma window exponent on the mode chain (after T-4296)"
 milestone: M9
 lane: research
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
