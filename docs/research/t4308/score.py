@@ -10,10 +10,18 @@ known exactly, where T-4255 and T-4290 could only read it as a per-unit error of
 Part 2, the families, scored on that B (the split and the margin were fixed before scoring, see
 the task file): the count of cells where a candidate's B is Excel's exactly, then the rms of its
 distance in ulp(B). Fit = t4290 columns A:C, hold-out = column D.
+Part 3, the fresh sweeps (decision 0188 R4.2 and R2): the engine's values (`rustsheet-eval show`, from a
+release build) against Excel and the 50-digit density on probes-numeric/t4296-gamma-density-r4-fresh and
+t4308-gamma-density-r4-fresh (written after the freeze): bit-exact / within 4 ulp / within 15 digits, for the
+engine and the correctly rounded density, and the cells outside Gate A's envelope (neither within 1E-9
+relative of the math nor within 15 digits of Excel).
 """
 
 import importlib.util
+import json
 import math
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -119,7 +127,33 @@ def candidates(x, a):
         "(x - a) v - 2a(atanh(v) - v)": (x - a) * v - 2 * a * (math.atanh(v) - v),
         "a ln(a/x) - (a - x)": a * math.log(a / x) - (a - x),
         "(a ln(a/x) + x) - a": (a * math.log(a / x) + x) - a,
+        "(x - a) v - 2a(atanh(v) - v), atanh rounded": (x - a) * v - 2 * a * (atanh_rounded(v) - v),
+        "(x - a) v - (2a atanh(v) - 2a v), rounded": window_b(a, x),
     }
+
+
+def atanh_rounded(v):
+    return float(mp.atanh(M(v)))
+
+
+def window_b(a, y):
+    """The adopted form (density.rs `window_exponent`): Loader's bd0 split, atanh correctly rounded."""
+    v = (y - a) / (y + a)
+    return (y - a) * v - (2 * a * atanh_rounded(v) - 2 * a * v)
+
+
+def direct_b(a, y):
+    """Loader's direct deviance outside the window (density.rs `direct_deviance`)."""
+    return a * math.log(a / y) + (y - a)
+
+
+def stirling_series(z):
+    """incomplete_beta.rs `stirling_correction`, the 8-term series the prefactor takes."""
+    coeffs = [1 / 12, -1 / 360, 1 / 1260, -1 / 1680, 1 / 1188, -691 / 360360, 1 / 156, -3617 / 122400]
+    w, acc = 1 / (z * z), coeffs[-1]
+    for c in reversed(coeffs[:-1]):
+        acc = acc * w + c
+    return acc / z
 
 
 def points():
@@ -169,7 +203,106 @@ def part2(pts):
         print(f"  {name:40} {cols}")
 
 
+def all_densities():
+    """(case, x, a, y, Excel) for every probed large-shape GAMMA.DIST density with an oracle value."""
+    num = r"(-?[0-9.]+(?:E[-+]?[0-9]+)?)"
+    pat = re.compile(rf"=(?:GAMMA\.DIST|GAMMADIST)\({num},{num},{num},(?:FALSE|0)\)")
+    for path in sorted((ROOT / "eval/suites").glob("*/cases/*.case.json")):
+        sidecar = path.with_name(path.name.replace(".case.json", ".oracle.json"))
+        if not sidecar.exists():
+            continue
+        oracle = json.loads(sidecar.read_text())["sheets"]
+        for sheet in json.loads(path.read_text())["sheets"]:
+            values = oracle.get(sheet["name"], {})
+            for ref, formula in sheet.get("cells", {}).items():
+                m = pat.fullmatch(formula) if isinstance(formula, str) else None
+                if not m or values.get(ref, {}).get("t") != "n" or values[ref]["v"] == 0:
+                    continue
+                x, a, b = t4290.literal(m[1]), float(m[2]), float(m[3])
+                if a >= 20:
+                    yield path.name[: -len(".case.json")], x, a, x / b, values[ref]["v"]
+
+
+def part4():
+    print("\nPart 4: every probed density at shapes 20 and up, bit-exact counts")
+    groups = {}
+    for case, x, a, y, excel in all_densities():
+        if abs(y - a) <= 0.2 * (y + a):
+            where = "window, at the mode" if y == a else "window"
+        elif y >= 0.005 * a:
+            where = "below the window" if y < a else "above the window"
+        else:
+            continue
+        c = corr(a)
+        old = math.sqrt(a / TWO_PI) * math.exp(t4290.ratio_form(y, a) - stirling_series(a)) / x
+        cr = chain(float(true_b(y, a)), a, x, c)
+        new = chain(window_b(a, y) if where.startswith("window") else direct_b(a, y), a, x, c)
+        g = groups.setdefault(where, [0, 0, 0, 0])
+        g[0] += 1
+        g[1] += new == excel
+        g[2] += cr == excel
+        g[3] += old == excel
+    print("  region: cells, adopted chain, chain on the correctly rounded B, the ratio prefactor")
+    for where, (n, new, cr, old) in groups.items():
+        print(f"  {where:20} {n:5} {new:5} {cr:5} {old:5}")
+
+
+ROOT = HERE.parents[2]
+SHOW = re.compile(r"(Calc!A\d+) .*\n\s+formula : (.*)\n\s+expected: (.*)\n\s+actual  : (.*)")
+NUM = r"(-?[0-9.]+(?:E[-+]?[0-9]+)?)"
+
+
+def true_density(x, a, scale):
+    X, A, S = M(t4290.literal(x)), M(a), M(scale)
+    y = X / S
+    return mp.exp((A - 1) * mp.log(y) - y - mp.loggamma(A)) / S
+
+
+def tally(stem):
+    out = subprocess.run(
+        [str(ROOT / "target/release/rustsheet-eval"), "show", "--all", f"probes-numeric/{stem}.case.json"],
+        capture_output=True, text=True, check=True, cwd=ROOT,
+    ).stdout
+    counts = {"engine": [0, 0, 0], "correctly rounded": [0, 0, 0]}
+    outside, n = [], 0
+    for ref, formula, expected, actual in SHOW.findall(out):
+        m = re.fullmatch(rf"=GAMMA\.DIST\({NUM},{NUM},{NUM},FALSE\)", formula)
+        try:
+            excel = float(expected)
+        except ValueError:
+            continue
+        if not m or excel == 0:
+            continue
+        n += 1
+        truth = true_density(m[1], float(m[2]), float(m[3]))
+        values = {"correctly rounded": float(truth)}
+        try:
+            values["engine"] = float(actual)
+        except ValueError:
+            values["engine"] = math.nan
+        for name, v in values.items():
+            c = counts[name]
+            c[0] += v == excel
+            c[1] += abs(v - excel) <= 4 * math.ulp(excel)
+            c[2] += f"{v:.15g}" == f"{excel:.15g}"
+        v = values["engine"]
+        if not (abs(M(v) - truth) <= M("1e-9") * abs(truth) or f"{v:.15g}" == f"{excel:.15g}"):
+            outside.append(ref)
+    print(f"  {stem}: {n} numeric cells with a nonzero Excel value")
+    for name, (exact, four, fifteen) in counts.items():
+        print(f"    {name:18} bit-exact {exact:3}, within 4 ulp {four:3}, within 15 digits {fifteen:3}")
+    print(f"    outside Gate A's envelope: {outside or 'none'}")
+
+
+def part3():
+    print("\nPart 3: the fresh sweeps")
+    for stem in ("t4296-gamma-density-r4-fresh", "t4308-gamma-density-r4-fresh"):
+        tally(stem)
+
+
 if __name__ == "__main__":
     PTS, MISSING = points()
     part1(PTS, MISSING)
     part2(PTS)
+    part3()
+    part4()
