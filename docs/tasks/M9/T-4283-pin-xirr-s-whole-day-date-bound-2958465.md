@@ -3,7 +3,7 @@ id: T-4283
 title: "Pin XIRR's whole-day date bound (2958465.5 is a date, -0.5 is #NUM!) and point financial.md at flows.rs"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -29,12 +29,15 @@ These are the MINORs from T-3312's (#3247) round-2 reviews, raised after approva
   note so the two do not contradict each other.
 
 ## Acceptance criteria
-- [ ] A unit test: XIRR whose last date is 2958465.5 gives a number, and one with a date of -0.5 gives `#NUM!`.
-- [ ] A probe cell for each of those two inputs, oracle-filled (excel-probe skill). If Excel differs, record the
+- [x] A unit test: XIRR whose last date is 2958465.5 gives a number, and one with a date of -0.5 gives `#NUM!`.
+- [x] A probe cell for each of those two inputs, oracle-filled (excel-probe skill). If Excel differs, record the
       quirk in financial.md and match it.
-- [ ] financial.md's "Implemented in" lines name `flows.rs`, the doc comment is re-wrapped, and T-3312's Outcome
+- [x] financial.md's "Implemented in" lines name `flows.rs`, the doc comment is re-wrapped, and T-3312's Outcome
       note no longer contradicts its criterion.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - `XIRR({-100,200,-300},{1,2,3})` (T-4251).
+
+## Outcome
+Probed `probes/t4283-xirr-whole-day-date-bound` (10 cells, excel-graph): Excel checks XIRR's date bound on the truncated date, so 2958465.5 and 0.5 are dates and 2958466 and -0.5 are `#NUM!`; the engine already matched. Added `fn_xirr_date_bound_is_checked_on_the_whole_day`, a financial.md entry, and re-pointed the two T-3312 "Implemented in" lines at `flows.rs`. Re-wrapped the `xnpv_numbers` doc comment and reworded T-3312's criterion so it no longer contradicts its Outcome (A30, owned by T-4251). Eval delta: +10 passing probe cells, no regressions.

@@ -4401,9 +4401,22 @@ in the dates (ours: the value's `#VALUE!` whatever the positions, the order befo
 values against a bad date earlier in the dates (ours: the values' error); a date past 9999-12-31 against later text
 (ours: the negative date's rule, on the date truncated to a whole day). `XIRR({-100,200,-300},{1,2,3})` is 2.9802322387695314E-09 in Excel, ours `#NUM!` (T-4251).
 Status: VERIFIED
-Implemented in: `fn_xirr`, `xirr_size_error`, `xirr_flows` (crates/rustsheet-engine/src/functions/financial/mod.rs),
-`compute_xirr`'s guess check.
+Implemented in: `fn_xirr`, `xirr_size_error` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xirr_flows`
+(functions/financial/flows.rs), `compute_xirr`'s guess check.
 Tasks: T-3312
+
+## XIRR's date bound is checked on the whole day (T-4283)
+Rule: XIRR truncates a date to a whole day before checking it against 0 and 9999-12-31 (2958465): 2958465.5 is a valid
+date and 2958466 is `#NUM!`; 0.5 is a valid date and -0.5 is `#NUM!` (it truncates to -1, like -1 itself), as for XNPV's
+fractional dates.
+Evidence: probes/t4283-xirr-whole-day-date-bound A1-A10 (excel-graph, 2026-11-05): `XIRR({-100,100.001},{2958464,2958465.5})`
+and with 2958465 are 0.003656652569770813, with 2958466 `#NUM!`; `XIRR({-100,200},{-0.5,43831})` and with -1 are `#NUM!`,
+with 0.5 or 0 0.005788829922676086; the range forms agree (A8-A10). A span to the date bound from the epoch is a solver
+`#NUM!` whatever the date (`XIRR({-100,200},{43831,2958465.5})`), so the cells start 1 day before the bound.
+Ours: matches (`xirr_flows`, pinned by `fn_xirr_date_bound_is_checked_on_the_whole_day`).
+Status: VERIFIED (excel-graph)
+Implemented in: `xirr_flows` (functions/financial/flows.rs).
+Tasks: T-4283
 
 ## XNPV's rate, first date and later dates (T-3312)
 Rule: after the rate's own checks and the size checks of "XIRR and XNPV under the gen-m9 statistical cells", XNPV is
@@ -4422,7 +4435,8 @@ Unprobed: a first date that is an empty cell (ours `#NUM!`, the empty-date rule)
 against a non-number first date, and a non-number first date against a text, boolean or empty values element (ours:
 the first date's `#VALUE!`; only error value elements are probed, A33, A36).
 Status: VERIFIED
-Implemented in: `fn_xnpv`, `xnpv_flows`, `xnpv_dates` (crates/rustsheet-engine/src/functions/financial/mod.rs).
+Implemented in: `fn_xnpv` (crates/rustsheet-engine/src/functions/financial/mod.rs), `xnpv_flows`, `xnpv_dates`
+(functions/financial/flows.rs).
 Tasks: T-3312
 
 ## FVSCHEDULE whose running product overflows: excel-graph cannot open it

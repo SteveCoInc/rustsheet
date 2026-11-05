@@ -1139,6 +1139,27 @@ fn fn_xirr_reads_numeric_text_in_range_cells() {
     assert_eq!(model._get_text("A3"), *"#VALUE!");
 }
 
+/// XIRR checks a date's bound on the date truncated to a whole day: 2958465.5 is a date, 2958466
+/// is `#NUM!`, -0.5 is `#NUM!` and 0.5 a date (probes/t4283-xirr-whole-day-date-bound A1-A7,
+/// T-4283). A later change that compares the raw date fails here.
+#[test]
+fn fn_xirr_date_bound_is_checked_on_the_whole_day() {
+    check_cells(
+        &[],
+        &[
+            (
+                "A1",
+                "=ISNUMBER(XIRR({-100,100.001},{2958464,2958465.5}))",
+                "TRUE",
+            ),
+            ("A2", "=XIRR({-100,100.001},{2958464,2958466})", "#NUM!"),
+            ("A3", "=XIRR({-100,200},{-0.5,43831})", "#NUM!"),
+            ("A4", "=XIRR({-100,200},{-1,43831})", "#NUM!"),
+            ("A5", "=ISNUMBER(XIRR({-100,200},{0.5,43831}))", "TRUE"),
+        ],
+    );
+}
+
 /// T-2603: a values range whose first cell is no number is `#VALUE!` (probes/t2603-xnpv-no-number-values),
 /// and the dates scan behind it stops at the used area, so a dates range to the sheet's last cell is
 /// read at once.
