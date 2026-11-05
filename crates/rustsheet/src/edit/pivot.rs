@@ -136,7 +136,8 @@ fn grouped(
             // numbers: each value is its own item, in record order, the blank `(blank)`
             // (probes/t4287-pivot-group-whole-end pivot S, t4287-pivot-group-dates-as-numbers;
             // web.md "Grouped pivot fields import as their group items").
-            // A numeric grouping over date cells alone is unprobed and stays grouped.
+            // A numeric grouping over date cells alone is unprobed and stays grouped. The xlsx
+            // importer keeps a saved grouping: only this refresh-like path drops one.
             if field.items.contains(&CacheItem::Missing) || mixes_dates {
                 return Ok(field.clone());
             }
@@ -364,11 +365,6 @@ impl Txn<'_> {
         Ok((cache, table))
     }
 
-    /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
-    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, and
-    /// the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
-    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
-    /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
     /// Whether the record cells of source column `field` hold a number shown in a date format
     /// (`is_likely_date_number_format`), which Excel caches as a date, and a number that is not.
     fn mixes_dates(&self, input: &PivotTableInput, field: u32) -> Result<bool, EditError> {
@@ -399,6 +395,11 @@ impl Txn<'_> {
         Ok(false)
     }
 
+    /// Writes the compact-form layout of grouped pivot `table` from `input.location`'s top-left
+    /// cell ([`row_layout`]: the captions, each group that holds a record with its value, and
+    /// the grand total) and returns the area it covers. Excel lays out a grouped pivot itself on
+    /// load (probes/t4228-pivot-range-groups reads it back), and the case builder renders none
+    /// (SPEC-0015 "Spec cases in the eval adapter", T-4235).
     fn lay_out_grouped(
         &mut self,
         input: &PivotTableInput,

@@ -538,9 +538,6 @@ pub(crate) fn range_ref(id: SheetId, a1: &str) -> Result<RangeRef, rustsheet::Ed
     )?)
 }
 
-/// A spec table's calculated column in column `letter` of table range `a1`: its 0-based index in
-/// the table and its formula without `=`. The text is exported as is, so a `[@Col]` shorthand
-/// (not file form) is refused.
 /// Gives each cell of `sheet` (sheet `id`) its spec number format.
 fn set_number_formats(
     tx: &mut rustsheet::Txn<'_>,
@@ -555,6 +552,9 @@ fn set_number_formats(
     Ok(())
 }
 
+/// A spec table's calculated column in column `letter` of table range `a1`: its 0-based index in
+/// the table and its formula without `=`. The text is exported as is, so a `[@Col]` shorthand
+/// (not file form) is refused.
 fn calculated_column<'f>(
     a1: &str,
     letter: &str,
