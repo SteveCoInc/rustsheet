@@ -3,8 +3,8 @@ id: T-4241
 title: "GROUPBY and PIVOTBY on a multi-field intransitive run: rows Excel puts in two groups (probes/t4195-groupby-intransitive)"
 milestone: M7
 lane: engine
-status: todo
-priority: P3
+status: done
+priority: P0
 size: S
 tier: opus
 depends_on: []
@@ -33,15 +33,33 @@ groups.
   confirmation T-4195's model (selected on its own probe's cells) lacks.
 - Review notes from T-4195 (design, MINOR): `Grouping::new` is about 130 lines; when this task changes it, split
   the whole-row filter and the group building into helpers, and share the text-pair `=`/cost closures.
-- Owned cells: probes/t4195-groupby-intransitive (24): Calc!C8, C9, C11, C15, C16, C17, C20, C21, C23, C24,
-  E46, E48, E49, E50, F8, F9, F11, F15, F16, F17, F20, F21, F23, F24; probes/t4088-groupby-multifield
-  (2): Calc!B11, B33.
+- Owned cells: none since this task's outcome. The 24 t4195 cells, the 2 t4088 cells and the 140 cells of
+  probes/t4241-groupby-intransitive-runs moved to T-4342, the engine change.
 
 ## Acceptance criteria
-- [ ] The owned cells pass and leave eval/baseline/probes.txt with 0 regressions, or the task records, with probe
+- [x] The owned cells pass and leave eval/baseline/probes.txt with 0 regressions, or the task records, with probe
       evidence, which of them stay known failures and why.
-- [ ] coercion.md states the rule (VERIFIED) and "Implemented in".
+- [x] coercion.md states the rule (VERIFIED) and "Implemented in".
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - SORT's order on intransitive cycles (T-3418).
+
+## Outcome
+- New probe probes/t4241-groupby-intransitive-runs: 48 blocks, 336 formula cells (excel-graph, 2026-11-05), from
+  docs/research/t4241/gen_probe.py. It holds T-4195's 18 three-row blocks again and 30 seeded four-row runs. Each
+  block is shown ascending, with `sort_order` -1, 2 and -2, with a SUM aggregate, and through UNIQUE. The fresh
+  three-row cells repeat T-4195's Excel values exactly.
+- Excel's rule was found and recorded in coercion.md, "GROUPBY on an intransitive run" (VERIFIED for the cells
+  cited). UNIQUE's kept rows are sorted, then classed field by field, chaining each key to its class's first key.
+  Each row descends that tree with a lower-bound search in the field's sort direction. A leaf no row reaches
+  aggregates every row. docs/research/t4241/model.py fits 234 of 234 blocks (36 + 6 of t4195, 4 x 48 of t4241),
+  the shown keys and the sort directions included.
+- Rejected models are scored in docs/research/t4241/sim.py and brute_ranges.py (run with PYTHONPATH=docs/research/t4241).
+  A per-row single membership cannot double a row. Whole-row
+  binary-search ranges, over any row order, fit only 33 of t4241's 48 ascending blocks.
+- Selection: the model was chosen after looking at the t4241 values, so neither probe is a hold-out. T-4342 owes a
+  confirmation probe whose predictions are committed before the fill (decision 0188 R4, a structural model).
+- No engine change, which moves to T-4342 (P0, opus). The sort direction has to enter `Grouping::new`.
+- Eval delta: the new case checks 636 cells. 496 pass as the engine stands, and 140 are known failures owned by
+  T-4342. 0 regressions; every other suite is unchanged.

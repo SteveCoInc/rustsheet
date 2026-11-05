@@ -15,7 +15,7 @@ campaign: visible
 Excel's GAMMA.DIST density above its window (x > 1.5a) at shapes 31 to 301 is the engine's, bit for bit.
 
 ## Context
-T-4302 (docs/excel-semantics/statistics.md, the T-4302 paragraph; docs/research/t4302/score.py part 3) found
+T-4302 (docs/excel-semantics/statistics.md, the T-4302 paragraph; docs/research/t4302/read_out.py part 3) found
 Excel's density there to be exp(-c(a) - B) / sqrt(2 pi a) * (a / x): the T-4296 chain with Loader's direct
 deviance B = a ln(a/x) + (x - a), the difference x - a taken first, and c the exact Stirling error. It is
 bit-exact at all 120 probed points above 1.5a: train 32/32, hold-out 40/40 and the fresh sweep 48/48 (probes/
@@ -48,6 +48,6 @@ Done in T-4308's PR, since it is the same chain as the window: density.rs `densi
 the direct deviance a ln(a/y) + (y - a) at every shape from 20 and every y from a/200 outside the window, not only
 at integer shapes 31 to 301 above 1.5a. All 29 listed cells pass (probes/t4302-poisson-cdf-beside-pmf). Before
 widening the range, the chain was scored on the T-2638, T-4290 and below-the-window cells: 156/160 above the window
-and 119/155 below it are bit-exact, against 43 and 65 for the old ratio prefactor (docs/research/t4308/score.py
+and 119/155 below it are bit-exact, against 43 and 65 for the old ratio prefactor (docs/research/t4308/read_out.py
 part 4). The R4 guards are T-4302's splits and T-4308's fresh sweep. One regression, t4290 B223, is decision 0290
 (T-4339).

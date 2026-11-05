@@ -98,6 +98,11 @@ impl CachedLineEnds {
     }
 }
 
+/// The rows and columns each sheet of each linked workbook's cache spans, by book then sheet
+/// index; a sheet that holds no cached cell has no entry. Built in one walk of each cache so
+/// [`Model::cached_sheet`] and [`Model::cached_extent`] cost O(1) per reference (T-0473).
+pub(crate) type CachedExtents = Vec<HashMap<u32, ExternalArea>>;
+
 /// The book index and sheet name of an external sheet prefix, `[1]Sheet` → (`1`, `Sheet`).
 fn split_book_prefix(sheet_name: &str) -> Option<(&str, &str)> {
     sheet_name.strip_prefix('[')?.split_once(']')
@@ -148,6 +153,29 @@ fn parse_cached_reference(
     .ok()
 }
 
+/// The rows and columns each sheet of `book`'s cache spans, in one walk of its cells.
+fn book_extents(book: &ExternalBook) -> HashMap<u32, ExternalArea> {
+    let mut extents: HashMap<u32, ExternalArea> = HashMap::new();
+    for &(index, row, column) in book.cells.keys() {
+        extents
+            .entry(index)
+            .and_modify(|area| {
+                area.first_row = area.first_row.min(row);
+                area.first_column = area.first_column.min(column);
+                area.last_row = area.last_row.max(row);
+                area.last_column = area.last_column.max(column);
+            })
+            .or_insert(ExternalArea {
+                first_row: row,
+                first_column: column,
+                last_row: row,
+                last_column: column,
+                cache: None,
+            });
+    }
+    extents
+}
+
 impl Model {
     /// The linked workbook formulas call `[book]`: `[1]` is the first `externalReference` of the
     /// workbook part. A book written by file name (`[other.xlsx]`) is not looked up.
@@ -160,14 +188,23 @@ impl Model {
     /// cached either: `=[1]Sort!$B$2` and `SUM([1]Sort!$B$2:$C$3)` are `#BLOCKED!` and ISBLANK
     /// FALSE (fixtures/external-link-uncached-lookups Refs!B26, B37, B40-B43, T-0457).
     fn cached_sheet(&self, sheet_name: &str) -> Option<CachedSheet> {
-        let (book_index, book, sheet) = self.linked_sheet(sheet_name)?;
-        book.cells
-            .keys()
-            .any(|&(index, ..)| index == sheet)
-            .then_some(CachedSheet {
-                book: book_index,
-                sheet,
-            })
+        let (book_index, _, sheet) = self.linked_sheet(sheet_name)?;
+        let sheet = CachedSheet {
+            book: book_index,
+            sheet,
+        };
+        self.cached_extent(sheet).map(|_| sheet)
+    }
+
+    /// The extent of every cached sheet of every linked workbook, built once per pass.
+    fn cached_extents(&self) -> &CachedExtents {
+        self.evaluation.search_cache.cached_extents.get_or_init(|| {
+            self.workbook
+                .external_books
+                .iter()
+                .map(book_extents)
+                .collect()
+        })
     }
 
     /// Whether `[book]Sheet` is a linked sheet the cache holds no cell of and whose `sheetData` is
@@ -533,26 +570,11 @@ impl Model {
 
     /// The rows and columns of `sheet` its cached cells span, `None` when it holds none.
     fn cached_extent(&self, sheet: CachedSheet) -> Option<ExternalArea> {
-        let book = self.workbook.external_books.get(sheet.book)?;
-        let mut cells = book
-            .cells
-            .keys()
-            .filter(|(index, ..)| *index == sheet.sheet);
-        let &(_, row, column) = cells.next()?;
-        let first = ExternalArea {
-            first_row: row,
-            first_column: column,
-            last_row: row,
-            last_column: column,
+        let area = self.cached_extents().get(sheet.book)?.get(&sheet.sheet)?;
+        Some(ExternalArea {
             cache: Some(sheet),
-        };
-        Some(cells.fold(first, |area, &(_, row, column)| ExternalArea {
-            first_row: area.first_row.min(row),
-            first_column: area.first_column.min(column),
-            last_row: area.last_row.max(row),
-            last_column: area.last_column.max(column),
-            cache: area.cache,
-        }))
+            ..*area
+        })
     }
 
     /// The cells of `areas` an aggregate reads, as reference cells: an array that skips text,

@@ -290,3 +290,37 @@ fn short_r1c1_forms_typed_in_r1c1_mode() {
         Some("=\"RC\"&T!A1")
     );
 }
+
+// T-4299: typed, a LET name or a LAMBDA parameter written with the `_xlpm.` prefix is refused in
+// any letter case, and a use of it spelled with the prefix is the undefined name, its prefix
+// written back lowercase (probes/t4299-typed-xlpm-extrapolations A1:A5).
+#[test]
+fn typed_xlpm_declarations_are_refused_in_any_case_and_uses_read_back_lowercase() {
+    let mut model = new_empty_model();
+    for formula in [
+        "=LET(_xlpm.x,1,_xlpm.x+1)",
+        "=LET(_XLPM.x,1,_XLPM.x+1)",
+        "=LAMBDA(_xlpm.x,_xlpm.x*2)(3)",
+    ] {
+        let result = model.set_typed_user_input(0, 1, 1, formula.to_string());
+        let message = result.err().unwrap_or_default();
+        assert!(
+            message.starts_with(TYPED_FORMULA_DOES_NOT_PARSE),
+            "{formula}: {message}"
+        );
+    }
+    for (row, formula) in [
+        (2, "=LET(x,2,_XLPM.x*3)"),
+        (3, "=LAMBDA(x,_xlpm.x*2)(3)"),
+        (4, "=LAMBDA(x,x*2)(3)"),
+    ] {
+        let result = model.set_typed_user_input(0, row, 1, formula.to_string());
+        assert_eq!(result, Ok(()), "{formula}");
+    }
+    model._set("B2", "=FORMULATEXT(A2)");
+    model.evaluate();
+    assert_eq!(model._get_text("A2"), "#NAME?");
+    assert_eq!(model._get_text("B2"), "=LET(x,2,_xlpm.x*3)");
+    assert_eq!(model._get_text("A3"), "#NAME?");
+    assert_eq!(model._get_text("A4"), "6");
+}

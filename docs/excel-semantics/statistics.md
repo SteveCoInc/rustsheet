@@ -1356,14 +1356,14 @@ docs/research/t4296/score.py) read the rest of the window chain at x = a, where 
   - at x = a, 40/40/40 against main's 20/40/40;
   - elsewhere in the window, 38/51/64 against 38/51/63 and the correctly rounded 39/52/57;
   - Gate A's envelope holds every point.
-T-4308 (docs/research/t4308/score.py; probes-numeric/t4308-gamma-density-r4-fresh, excel-graph 2026-11-05) found
+T-4308 (docs/research/t4308/read_out.py; probes-numeric/t4308-gamma-density-r4-fresh, excel-graph 2026-11-05) found
 Excel's exponent. Its findings:
 - On the T-4296 chain exp(-c(a) - B) / sqrt(2 pi a) * (a / x), a single double B within 128 ulp of the true one
   gives Excel's density bit for bit at 746 of 809 window cells of probes/t4290-gamma-window-large-pow2. The rest
   have none (11 cells) or 2 to 18 that fit (52 cells near the mode at shapes 256 to
   2048, where an ulp of the small B moves the density by less than its own ulp). So
   Excel's exponent can be read out exactly, not only as the per-unit error of +-0.5 ulp(ln u) that T-4255 and
-  T-4290 measured (score.py part 1).
+  T-4290 measured (read_out.py part 1).
 - Inside the window |y - a| <= 0.2 (y + a), with y = x/scale (the 0.2 read from Excel, not R's 0.1 bd0 cut; its
   ends probed at shapes 2048, 3072 and 100 only), it is Loader's bd0 split into its leading term and
   odd series: B = (y - a) v - (2a atanh(v) - 2a v), with v = fl((y - a)/(y + a)). Every operation is one double
@@ -1379,7 +1379,7 @@ Excel's exponent. Its findings:
     part 2).
 - Over every probed large-shape density in the window it is bit-exact at 1,333 of 1,351 away from the mode and at
   all 138 at it. On the correctly rounded B the chain is at 211 and 138, and the old prefactor
-  sqrt(a/2pi) exp(-B - c) / x at 107 and 72 (score.py part 4). The misses are 1 to 3 ulp, except
+  sqrt(a/2pi) exp(-B - c) / x at 107 and 72 (read_out.py part 4). The misses are 1 to 3 ulp, except
   probes/t4290-gamma-window-large-pow2 D21 and D24, at 565 and 568 ulp, and E12 (2a/3 + 2^-9 at shape 3072).
 - Both ends of the window are inclusive and fall where the test in doubles puts them. At shape 3072,
   y = 2048 = 2a/3 and 2a/3 + 1.9E-9 are the window, and every y below is outside it (t4290 E1:E13). At shape 2048,
@@ -1404,6 +1404,10 @@ Excel's exponent. Its findings:
   value, against 3 for the correctly rounded density. Gate A's envelope holds every numeric point (A152:A154,
   Excel's #DIV/0!, are T-4340's). On the earlier
   t4296 fresh sweep it is 125 of 126.
+- A first reading (PR #3349, T-4334's context) took B as not one double, on an a 2^-59 grid with one offset per
+  shape. The exact read-out above supersedes it: one double B gives Excel's density bit for bit through the chain
+  in doubles, and the adopted form ends in a double rounding. Its rejected families (fixed-grid logarithms,
+  mantissa logarithms, TOMS 708's rlog1) stay rejected; docs/research/t4308/score.py keeps that scorer.
 The ratio form is Excel's bit for bit at a/21 (the density now takes Loader's chain there, the same exponent;
 T-4308)
 (gen-m9/8dd2312c96effb1b A333 `GAMMA.DIST(3.14159,42,ACOS(0),FALSE)`); at a/100 Excel is neither but closer to the
@@ -1478,7 +1482,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4339, T-4340
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4339, T-4340, T-4334
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is

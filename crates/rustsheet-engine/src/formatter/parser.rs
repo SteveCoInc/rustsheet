@@ -819,6 +819,7 @@ impl Parser {
         if bare_digit && tokens.iter().any(is_calendar_or_clock) {
             return ParsePart::Error(ErrorPart { whole_code: true });
         }
+        super::elapsed::move_elapsed_second(&mut tokens);
         // Excel: a section with two bracketed elapsed tokens is #VALUE! for any value (`[h]:[mm]`,
         // `[mm]:[ss]`; probes/negative-date-sections-1900 and -1904 A9, A21, A22; dates.md "Negative
         // serials under an explicit negative section"). A bare `h` after `[h]` is not bracketed.
