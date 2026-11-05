@@ -3,7 +3,7 @@ id: T-2211
 title: "xlsx export writes a kept subnormal cell value as 0, as Excel does"
 milestone: M11
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -36,3 +36,10 @@ written as `<v>0</v>`, as Excel does, so a file RustSheet saves reads back like 
 
 ## Out of scope
 - Negative zero and other number spellings in the file.
+
+## Outcome
+`export/worksheets.rs` passes every number `<v>` (constant, spill, formula, array formula) through
+`flush_subnormal`, so a kept subnormal is saved as `<v>0</v>`; in-memory values are untouched. New test
+`tests/subnormal_export.rs` covers `=EXP(-745)`, `=A1`, `=EXP(-708)` and the reload giving 2^-1074. The
+negative-subnormal and constant-subnormal probe in Context was not run (no oracle access in this run): the
+negative case is flushed alike and noted in numbers.md as unprobed. Eval delta: none.

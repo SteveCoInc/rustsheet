@@ -48,6 +48,12 @@ use super::{
     xml_constants::XML_DECLARATION,
 };
 
+/// The number written to a cell's `<v>`: a kept subnormal is saved as 0, as Excel for the web does
+/// (`EXP(-745)` is saved `<v>0</v>` while `(EXP(-745))=0` stays FALSE in memory; numbers.md "Worksheet
+/// EXP (T-1931)", decision 0089, probes/subnormal-saved-as-zero). Only the cached value changes. A negative
+/// subnormal and desktop Excel's save are unprobed; `flush_subnormal` treats them alike.
+use rustsheet_engine::flush_subnormal as saved_number;
+
 /// The literal an error cell is written with. Excel's stored form ([`Error::stored_literal`]),
 /// except the kinds Excel rejects as stored literals, which are saved as `#VALUE!`:
 /// - `#SPILL!`, `#CALC!`, `#CONNECT!`, `#BLOCKED!` and `#FIELD!` (T-0999). Excel keeps the kind in
@@ -345,6 +351,7 @@ pub(crate) fn get_worksheet_xml(
                     //     <v>3</v>
                     // </c>
                     let style = get_cell_style_attribute(*s);
+                    let v = saved_number(*v);
                     row_data_str.push(format!("<c r=\"{cell_name}\"{style}><v>{v}</v></c>"));
                 }
                 Cell::ErrorCell { ei, s }
@@ -415,6 +422,7 @@ pub(crate) fn get_worksheet_xml(
                         continue;
                     };
                     let style = get_cell_style_attribute(*s);
+                    let v = saved_number(*v);
                     row_data_str.push(format!(
                         "<c r=\"{cell_name}\"{style}{cm}>{formula}<v>{v}</v></c>"
                     ));
@@ -537,6 +545,7 @@ pub(crate) fn get_worksheet_xml(
                     } else {
                         ""
                     };
+                    let v = saved_number(*v);
                     row_data_str.push(format!(
                         r#"<c r="{cell_name}"{style}{cm}><f t="array" ref="{range}">{formula}</f><v>{v}</v></c>"#
                     ));
