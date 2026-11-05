@@ -2326,6 +2326,17 @@ T-3067 notes (float64 fit, 2026-10-28; nothing changed in the kernel):
   geometric sum is Excel's on 238 of 500 cells against 71 with the cut, and below a lead of 3.6 on 169 of 404 against
   2 (the per-period and closed forms are visibly off on most of them). Over up to 32 periods there the geometric sum
   is also ahead (265 vs 237), as on the first sweep: the rate is a candidate decider for T-4349.
+- Neither short-range form is Excel's below a lead of 0.3 (T-4349, decision 0296; docs/research/t4349). Over the
+  cells where the engine's two short-range forms differ (923 of 3,238 old and T-3524 cells), each is bit-exact on only
+  about 30%, the per-period and closed forms on 265 and the geometric sum on 286, so Excel computes something else
+  there and no selector between the two replaces the cut. The best one found, ranked on the old cells' train side with
+  no train cell newly visibly off, is a band: at most 4 periods, rate at least 1E-3, lead below 0.095 takes the
+  geometric sum. On a sweep drawn after it was frozen (probes-numeric/t4349-cumprinc-short-selector-fresh-sweep,
+  excel-graph 2026-11-05, 800 cells over 1 to 4 periods, rates 1E-3 to 0.0997, leads up to 0.095, both types) it
+  is bit-exact on 299 against the cut's 258 and visibly off on 190 against 216 (all CUMIPMT). At a rate of 0.1 one
+  period from nper (lead `ln 1.1` = 0.0953) the cut's forms are Excel's on the probed cells
+  (fin-cumprinc-near-1e15 C2, C4; fin-cumprinc-underflow-ends C2, C4, H2, H4) and the geometric sum is 1 to 2 ulps
+  off, which is why the band stops at 0.095. Ours since T-4349: the band; Excel's own short-range form is T-4390.
 - How the interest is built, measured (T-3067 run 4, probes/fin-cumipmt-tiny-rate-structure, excel-graph 2026-10-29,
   226 cells): Excel's CUMIPMT is its own PMT times the period count less its own CUMPRINC, in doubles and exactly:
   `CUMIPMT(r,n,pv,s,e,t) = PMT(r,n,pv,0,t)·(e-s+1) - CUMPRINC(r,n,pv,s,e,t)`, to the bit on all 60 probed pairs (type 1
