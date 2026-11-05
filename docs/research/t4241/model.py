@@ -104,7 +104,9 @@ def unique_kept(rows, rcmp):
     return sorted(min(g) for g in runs[0])
 
 
-def groupby(rows, dirs):
+def groupby(rows, dirs, inclusive=False, ascending_search=False):
+    """`inclusive`: T-4342's revision, the lower-bound search runs over [0, n-1] (it never probes past the last
+    class); False is T-4241's frozen half-open search over [0, n)."""
     nf = len(rows[0])
     rcmp = make_rcmp(dirs)
     keys = natural_sort([rows[i] for i in unique_kept(rows, make_rcmp([1] * nf))], rcmp)
@@ -135,10 +137,10 @@ def groupby(rows, dirs):
         t, path = tree, ()
         for f in range(nf):
             reps = [x[0] for x in t]
-            lo, hi = 0, len(reps)
+            lo, hi = 0, len(reps) - 1 if inclusive else len(reps)
             while lo < hi:
                 m = (lo + hi) // 2
-                if tcmp(reps[m], row[f]) * dirs[f] < 0:
+                if tcmp(reps[m], row[f]) * (1 if ascending_search else dirs[f]) < 0:
                     lo = m + 1
                 else:
                     hi = m

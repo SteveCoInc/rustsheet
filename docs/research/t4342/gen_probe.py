@@ -15,12 +15,19 @@ Calc rows:
   when a later spelling sorts first on the whole row.
 """
 
+import importlib.util
 import json
 import random
 import sys
 
 sys.path.insert(0, "docs/research/t4241")
 import model  # noqa: E402  (the frozen T-4241 model)
+
+# T-4241's generator by path: both are named gen_probe.
+_spec = importlib.util.spec_from_file_location("t4241_gen_probe", "docs/research/t4241/gen_probe.py")
+assert _spec and _spec.loader
+t4241_probe = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(t4241_probe)
 
 TEXTS = {
     "A": '="ab"',
@@ -45,6 +52,8 @@ def tcmp(a: str, b: str) -> int:
 
 
 model.tcmp = tcmp
+# T-4342's revision (after the fill): the lower-bound search over [0, n-1]. False for the frozen predictions.
+INCLUSIVE = False
 
 
 def runs(rng: random.Random, count: int, fields: int) -> list[list[tuple[str, ...]]]:
@@ -71,7 +80,7 @@ def shown(key: tuple[str, ...]) -> list[str]:
 
 
 def predict_groupby(rows: list[tuple[str, ...]], dirs: list[int], total: bool) -> str:
-    groups = model.groupby(rows, dirs)
+    groups = model.groupby(rows, dirs, INCLUSIVE)
     if total:
         return json.dumps(
             [shown(k) + [sum(2 ** (m - 1) for m in ms)] for k, ms in groups], ensure_ascii=False
@@ -80,7 +89,7 @@ def predict_groupby(rows: list[tuple[str, ...]], dirs: list[int], total: bool) -
 
 
 def predict_pivotby(rows: list[tuple[str, ...]], pq: list[str]) -> str:
-    groups = model.groupby(rows, [1] * len(rows[0]))
+    groups = model.groupby(rows, [1] * len(rows[0]), INCLUSIVE)
     cols = sorted(set(pq))
     out = []
     for k, ms in groups:
@@ -138,20 +147,16 @@ def main() -> None:
             )
             preds.append((f"E{r}", predict_pivotby(rows, pq)))
         row = b + 1
-    case = {
-        "format": "rustsheet-case/v1",
-        "description": "T-4342: a hold-out for T-4241's GROUPBY tree model on intransitive runs (A = ab, "
+    t4241_probe.write_case(
+        OUT,
+        "T-4342: a hold-out for T-4241's GROUPBY tree model on intransitive runs (A = ab, "
         "B = ab&U+00AD, C = U+00AD&ab; A = C = B, A < B). Rows 1-30: seeded five-row runs, two fields; rows 31-50: "
         "three fields (text, x/y, text); rows 51-56: ASCII case spellings beside x/y. B: GROUPBY ascending, "
         "ARRAYTOTEXT of the member positions; C: sort_order -1; D: SUM of 2^(position-1); E: PIVOTBY by a p/q "
         "column field, no totals. Written with the model's predictions (docs/research/t4342) before the fill.",
-        "tags": ["M7", "probe", "text"],
-        "expected": {},
-        "sheets": [{"name": "Calc", "cells": calc}, {"name": "Data", "cells": data}],
-    }
-    with open(OUT, "w") as fh:
-        json.dump(case, fh, indent=1, ensure_ascii=False)
-        fh.write("\n")
+        calc,
+        data,
+    )
     with open(PRED, "w") as fh:
         fh.write(
             "# T-4342: docs/research/t4241/model.py's predictions for probes/t4342-groupby-tree-holdout, "

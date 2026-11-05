@@ -17,8 +17,11 @@ fn text(s: &str) -> ArrayNode {
 /// The first key of each group and its rows, after sorting with `ascending`.
 fn sorted(keys: &[ArrayNode], ascending: bool) -> Vec<(ArrayNode, Vec<usize>)> {
     let keys: Vec<Vec<ArrayNode>> = keys.iter().map(|key| vec![key.clone()]).collect();
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-        .unwrap_or(Grouping { groups: Vec::new() });
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL)
+        .unwrap_or(Grouping {
+            groups: Vec::new(),
+            ascending: Vec::new(),
+        });
     grouping.sort_by_keys(&[ascending], CELL);
     grouping
         .groups
@@ -78,8 +81,11 @@ fn intransitive_keys_join_the_key_a_binary_search_finds() {
 #[test]
 fn later_fields_class_within_their_parent() {
     let group = |keys: Vec<Vec<ArrayNode>>| {
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-            .unwrap_or(Grouping { groups: Vec::new() });
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL)
+            .unwrap_or(Grouping {
+                groups: Vec::new(),
+                ascending: Vec::new(),
+            });
         grouping.sort_by_keys(&[], CELL);
         grouping
             .groups
@@ -117,6 +123,72 @@ fn later_fields_class_within_their_parent() {
         [
             (vec![text("ABC"), x()], vec![0]),
             (vec![text("ABC"), y()], vec![1]),
+        ]
+    );
+}
+
+/// The tree over UNIQUE's sorted keys (T-4241, T-4342; docs/excel-semantics/coercion.md "GROUPBY on
+/// an intransitive run"): A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`.
+#[test]
+fn multi_field_keys_group_by_the_tree_over_sorted_unique_keys() {
+    let group = |keys: Vec<Vec<ArrayNode>>, ascending: &[bool]| {
+        Grouping::new(&keys, 0..keys.len(), ascending, |_| None, |_| Ok(()), CELL)
+            .map(|grouping| {
+                grouping
+                    .groups
+                    .into_iter()
+                    .map(|group| (group.keys, group.rows))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    };
+    let (a, b, c) = (|| text("ab"), || text("ab\u{ad}"), || text("\u{ad}ab"));
+    let (x, y) = (|| text("x"), || text("y"));
+    // (A,y), (B,x), (C,y): row 1 is in two groups, and the leaf no row reaches, (C,y) shown as
+    // (B,y), holds every row (probes/t4195-groupby-intransitive Calc!C8).
+    assert_eq!(
+        group(vec![vec![a(), y()], vec![b(), x()], vec![c(), y()]], &[]),
+        [
+            (vec![a(), y()], vec![0, 2]),
+            (vec![b(), x()], vec![1]),
+            (vec![b(), y()], vec![0, 1, 2]),
+        ]
+    );
+    // Cx, Ay, Cy, Bx, By: the leaves repeat (C,x), (C,y), and the search over [0, n-1] puts the
+    // y rows in the first (C,y) (probes/t4342-groupby-tree-holdout Calc!B14).
+    assert_eq!(
+        group(
+            vec![
+                vec![c(), x()],
+                vec![a(), y()],
+                vec![c(), y()],
+                vec![b(), x()],
+                vec![b(), y()],
+            ],
+            &[],
+        ),
+        [
+            (vec![c(), x()], vec![0, 3]),
+            (vec![c(), y()], vec![1, 2, 4]),
+            (vec![c(), x()], vec![0, 1, 2, 3, 4]),
+            (vec![c(), y()], vec![0, 1, 2, 3, 4]),
+        ]
+    );
+    // A group shows the first spelling in whole-row sorted order, ASCII too: (ABC,y), (abc,x)
+    // shows `abc` twice (t4342 Calc!B51).
+    assert_eq!(
+        group(vec![vec![text("ABC"), y()], vec![text("abc"), x()]], &[]),
+        [
+            (vec![text("abc"), x()], vec![1]),
+            (vec![text("abc"), y()], vec![0]),
+        ]
+    );
+    // A descending first field reverses the whole-row sort the tree is built on (t4241 Calc!C).
+    assert_eq!(
+        group(vec![vec![text("p"), x()], vec![text("q"), y()]], &[false]),
+        [
+            (vec![text("q"), y()], vec![1]),
+            (vec![text("p"), x()], vec![0])
         ]
     );
 }
@@ -167,8 +239,11 @@ fn two_key_fields_sort_lexicographically() {
         vec![text("b"), ArrayNode::Number(1.0)],
         vec![text("a"), ArrayNode::Number(3.0)],
     ];
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-        .unwrap_or(Grouping { groups: Vec::new() });
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL)
+        .unwrap_or(Grouping {
+            groups: Vec::new(),
+            ascending: Vec::new(),
+        });
     grouping.sort_by_keys(&[true, false], CELL);
     let rows: Vec<Vec<usize>> = grouping.groups.into_iter().map(|g| g.rows).collect();
     assert_eq!(rows, [vec![1, 3], vec![0], vec![2]]);
@@ -185,8 +260,11 @@ fn value_sort_keeps_parents_with_equal_aggregates_together() {
         vec![text("b"), text("w")],
     ];
     let values = [1.0, 2.0, 3.0, 2.0];
-    let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-        .unwrap_or(Grouping { groups: Vec::new() });
+    let mut grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL)
+        .unwrap_or(Grouping {
+            groups: Vec::new(),
+            ascending: Vec::new(),
+        });
     let mut calls = 0;
     let order = (ParentOrder::ByValue, Axis::Rows);
     let sums = grouping.sort_by_aggregate(true, order, CELL, |rows, _| {
@@ -229,8 +307,10 @@ fn three_keys() -> Grouping {
     .iter()
     .map(|(a, b, c)| vec![text(a), text(b), ArrayNode::Number(*c)])
     .collect();
-    Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-        .unwrap_or(Grouping { groups: Vec::new() })
+    Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL).unwrap_or(Grouping {
+        groups: Vec::new(),
+        ascending: Vec::new(),
+    })
 }
 
 #[test]
@@ -425,8 +505,11 @@ fn table_sort_by_a_later_field_mixing_ranks_does_not_panic() {
         })
         .collect();
     for ascending in [true, false] {
-        let mut grouping = Grouping::new(&keys, 0..keys.len(), |_| None, |_| Ok(()), CELL)
-            .unwrap_or(Grouping { groups: Vec::new() });
+        let mut grouping = Grouping::new(&keys, 0..keys.len(), &[], |_| None, |_| Ok(()), CELL)
+            .unwrap_or(Grouping {
+                groups: Vec::new(),
+                ascending: Vec::new(),
+            });
         let before: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();
         grouping.sort_table_by_keys(&[true, ascending], &[1], CELL);
         let after: usize = grouping.groups.iter().map(|group| group.rows.len()).sum();

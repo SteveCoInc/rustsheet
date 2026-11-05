@@ -23,7 +23,7 @@ use crate::{
 /// (probes/t4086-groupby-weightless Calc!B4, T-4088). Each comparison is charged to `spend` first
 /// (`cost` units; directive 5, SPEC-0024), so a crafted bucket ends as the budget's error instead
 /// of running quadratically.
-pub(crate) fn first_equal_lines<K: std::hash::Hash + Eq, E>(
+fn first_equal_lines<K: std::hash::Hash + Eq, E>(
     count: usize,
     key: impl Fn(usize) -> K,
     same: impl Fn(usize, usize) -> bool,
@@ -48,6 +48,72 @@ pub(crate) fn first_equal_lines<K: std::hash::Hash + Eq, E>(
         }));
     }
     Ok(first)
+}
+
+/// For each of `count` lines of `length` cells (`at(line, k)`, `None` past the data), the line
+/// UNIQUE keeps for it: the smallest line of its group. Two texts are one value when Excel's `=`
+/// finds them equal ([`cmp_text_pairwise`]). Only texts outside ASCII compare intransitively
+/// (accents, weightless characters), so lines without one group by equality through the hash
+/// buckets ([`first_equal_lines`]); with one, lines group as Excel's merge meets them
+/// ([`coalesce_equal_lines`]; probes/t4200-unique-cycle-permutations). Every comparison is
+/// charged to `spend` ([`text_units`] of the texts compared, at least one unit): [`unique_of`],
+/// and GROUPBY's and PIVOTBY's keys (`Grouping::new`, T-4342).
+pub(crate) fn unique_first_lines<'a, E>(
+    count: usize,
+    length: usize,
+    at: impl Fn(usize, usize) -> Option<&'a ArrayNode>,
+    mut spend: impl FnMut(u64) -> Result<(), E>,
+    cell: CellReferenceIndex,
+) -> Result<Vec<usize>, E> {
+    let same_texts = |a: usize, b: usize| {
+        (0..length).all(|k| match (at(a, k), at(b, k)) {
+            (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                cmp_text_pairwise(x, y) == Ordering::Equal
+            }
+            _ => true,
+        })
+    };
+    let compare_units = |a: usize, b: usize| {
+        (0..length)
+            .map(|k| match (at(a, k), at(b, k)) {
+                (Some(ArrayNode::String(x)), Some(ArrayNode::String(y))) => {
+                    text_units(x.len() + y.len())
+                }
+                _ => 0,
+            })
+            .fold(1, u64::saturating_add)
+    };
+    let intransitive = (0..count).any(|line| {
+        (0..length)
+            .any(|k| matches!(at(line, k), Some(ArrayNode::String(text)) if !text.is_ascii()))
+    });
+    if intransitive {
+        let compare_lines = |a: usize, b: usize| {
+            (0..length)
+                .map(|k| match (at(a, k), at(b, k)) {
+                    (Some(x), Some(y)) => unique_cell_cmp(x, y, cell),
+                    _ => Ordering::Equal,
+                })
+                .find(|ordering| *ordering != Ordering::Equal)
+                .unwrap_or(Ordering::Equal)
+        };
+        coalesce_equal_lines(count, |a, b| {
+            spend(compare_units(a, b))?;
+            Ok(compare_lines(a, b))
+        })
+    } else {
+        first_equal_lines(
+            count,
+            |line| {
+                (0..length)
+                    .map(|k| at(line, k).map(unique_cell_key))
+                    .collect::<Vec<_>>()
+            },
+            same_texts,
+            compare_units,
+            spend,
+        )
+    }
 }
 
 /// One UNIQUE call over `data`: its distinct rows (or columns), or those that occur once.
@@ -88,53 +154,13 @@ pub(super) fn unique_of(
             &data[line][k]
         }
     };
-    let same_texts = |a: usize, b: usize| {
-        (0..length).all(|k| match (at(a, k), at(b, k)) {
-            (ArrayNode::String(x), ArrayNode::String(y)) => {
-                cmp_text_pairwise(x, y) == Ordering::Equal
-            }
-            _ => true,
-        })
-    };
-    let compare_units = |a: usize, b: usize| {
-        (0..length)
-            .map(|k| match (at(a, k), at(b, k)) {
-                (ArrayNode::String(x), ArrayNode::String(y)) => text_units(x.len() + y.len()),
-                _ => 0,
-            })
-            .fold(1, u64::saturating_add)
-    };
-    // Only texts outside ASCII compare intransitively (accents, weightless characters), so data
-    // without one groups by equality through the hash buckets; with one, lines group as Excel's
-    // merge meets them ([`coalesce_equal_lines`]; probes/t4200-unique-cycle-permutations).
-    let intransitive = data
-        .iter()
-        .flatten()
-        .any(|node| matches!(node, ArrayNode::String(text) if !text.is_ascii()));
-    let first = if intransitive {
-        let compare_lines = |a: usize, b: usize| {
-            (0..length)
-                .map(|k| unique_cell_cmp(at(a, k), at(b, k), cell))
-                .find(|ordering| *ordering != Ordering::Equal)
-                .unwrap_or(Ordering::Equal)
-        };
-        coalesce_equal_lines(count, |a, b| {
-            model.spend_work(compare_units(a, b), cell)?;
-            Ok(compare_lines(a, b))
-        })
-    } else {
-        first_equal_lines(
-            count,
-            |line| {
-                (0..length)
-                    .map(|k| unique_cell_key(at(line, k)))
-                    .collect::<Vec<_>>()
-            },
-            same_texts,
-            compare_units,
-            |units| model.spend_work(units, cell),
-        )
-    };
+    let first = unique_first_lines(
+        count,
+        length,
+        |line, k| Some(at(line, k)),
+        |units| model.spend_work(units, cell),
+        cell,
+    );
     let first = match first {
         Ok(first) => first,
         Err(error) => return error,
