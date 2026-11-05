@@ -69,3 +69,12 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 ## Out of scope
 - Shapes below 20 (T-3219).
 - The cdf inside the window (it decouples from the density from about 0.72a; T-4255).
+
+## Pre-registration (written before any candidate was scored, decision 0188 R4.1)
+- Target: Excel's exponent read out as a double. For each window cell (0.6668 < x/a < 1.4999, |x/a - 1| >= 0.02)
+  of probes/t4290-gamma-window-large-pow2, the double B within 128 ulp of the true exponent whose T-4296 chain
+  exp(-c(a) - B) / sqrt(2 pi a) * (a / x) is Excel's value bit for bit (cells with no such B are reported and left out).
+- Split: fit = columns A:C (shapes 4096, 1024, 256), hold-out = column D (shape 2048, x/a on the k + 2 grid).
+- Score: the count of cells where the candidate's B is Excel's B exactly, then rms in ulp(B).
+- Margin: a candidate is adopted only if its hold-out exact rate is within 10 percentage points of its fit rate and
+  beats the correctly rounded B's hold-out exact rate by at least 10 points.
