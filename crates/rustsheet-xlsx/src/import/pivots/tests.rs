@@ -790,3 +790,28 @@ fn a_numeric_group_of_the_wrong_length_is_relabeled_matching_items_first() {
         .as_ref()
         .is_some_and(|g| !g.relabeled.is_empty()));
 }
+
+/// A pivot field's `showAll`: on unless written `0` or `false` (ECMA-376's default; Excel writes
+/// `showAll="0"`), which decides GETPIVOTDATA on an unused shared item (T-4276, web.md).
+#[test]
+fn show_all_is_on_unless_written_off() {
+    for (attribute, show_all) in [
+        ("", true),
+        (r#" showAll="1""#, true),
+        (r#" showAll="0""#, false),
+        (r#" showAll="false""#, false),
+    ] {
+        let body = TABLE_BODY.replacen(
+            r#"<pivotField axis="axisRow">"#,
+            &format!(r#"<pivotField axis="axisRow"{attribute}>"#),
+            1,
+        );
+        let parts = with(parts(), "xl/pivotTables/pivotTable1.xml", table(&body));
+        let (_, tables) = load(&parts);
+        let [pivot] = &tables[..] else {
+            panic!("one pivot for {attribute:?}");
+        };
+        assert_eq!(pivot.fields[0].show_all, show_all, "{attribute:?}");
+        assert!(pivot.fields[1].show_all, "{attribute:?}");
+    }
+}

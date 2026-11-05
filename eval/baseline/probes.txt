@@ -7143,8 +7143,6 @@ F	probes/t4236-pivot-date-groups.case.json	Calc!F47
 F	probes/t4236-pivot-date-groups.case.json	Calc!F48
 F	probes/t4236-pivot-date-groups.case.json	Calc!F49
 F	probes/t4236-pivot-date-groups.case.json	Calc!F50
-F	probes/t4248-getpivotdata-recordless-item.case.json	P!J1
-F	probes/t4248-getpivotdata-recordless-item.case.json	P!J5
 F	probes/t4255-gamma-window-exact-ratio.case.json	Calc!A1
 F	probes/t4255-gamma-window-exact-ratio.case.json	Calc!A10
 F	probes/t4255-gamma-window-exact-ratio.case.json	Calc!A11
