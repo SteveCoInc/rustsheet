@@ -12,6 +12,11 @@
     "t": "e",
     "why": "probability outside (0, 1)",
     "f": "=T.INV(1,0)"
+   },
+   "A181": {
+    "t": "e",
+    "why": "the density's z*z overflows",
+    "f": "=NORM.S.DIST(1E+300,FALSE)"
    }
   }
  }

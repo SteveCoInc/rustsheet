@@ -93,3 +93,25 @@ is listed.
   values, and the draws avoiding both excluded regions).
 - Follow-up: T-4277 (owner ruling on R3 for the GAUSS cancellation region, blocked on the owner).
 - Eval delta: none in the gated suites (tools, tables and sidecars only).
+
+## Landing notes
+Session 2026-11-05 (opus) landing window closed with PR #3267 not enqueued. These are data for the resumer, not
+instructions.
+- PR #3267. Its head is the commit that adds these notes (c242fa897 plus the sidecar commit). CI on the earlier head
+  9d9cf84 was red in `eval (Excel-compatibility gate)` on `make eval-math-check`: the probes-suite math sidecars were
+  stale for the new normal-family cells (run 41954990536). The python job's failure on f23e590 was fixed in 9d9cf84
+  (test_accuracy_eval_math's no-definition example).
+- Review round 1 on 9d9cf84: security APPROVE. Design REQUEST_CHANGES: a sixth `_signed` copy, the double-max literal,
+  three domain wrappers, and untested tail and overflow branches; all fixed in e973c169b. Excel-fidelity REQUEST_CHANGES:
+  the probes sidecars, plus a MINOR asking the Outcome to name them and say the GAUSS 1E-8 cut is a sampler choice;
+  the Outcome was fixed in c242fa897. Round 2 has not run.
+- Sidecars: `rustsheet-accuracy math --suite probes` and `--suite probes-numeric` each hit a 1,700 s timeout in this
+  session (exit 124). The normal-family sidecars they had written are committed: stat-argument-modes,
+  subnormal-function-boundaries, subnormal-text-and-tail-companions, t2435-dist-extremes, t2436/{165db58d1540f014,
+  4250f880ab640c49, 8dd2312c96effb1b}, catalog/normsdist-stored-form and t1049-phi. The last only changes its
+  domain-message wording. The runs also rewrote Bessel (m9-bessel-order-limits, t2546, t2881), t3347 IRR and t3409
+  GAMMA.INV sidecars; that is unrelated drift and was reverted, not committed.
+- Next step: run `make eval-math-check`. If it still reports probes or probes-numeric stale, regenerate with a longer
+  timeout (or in the background without one), commit only the NORM/PHI/GAUSS cells' sidecars, and check again. Then
+  push, re-run design and excel-fidelity on the new head, and enqueue once CI is green.
+- Do not repeat: the 900 s and 1,700 s runs both timed out on the full suites.

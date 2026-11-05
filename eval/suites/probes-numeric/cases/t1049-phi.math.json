@@ -95,12 +95,12 @@
    },
    "A25": {
     "t": "e",
-    "why": "z*z overflows",
+    "why": "the density's z*z overflows",
     "f": "=PHI(1E300)"
    },
    "A26": {
     "t": "e",
-    "why": "z*z overflows",
+    "why": "the density's z*z overflows",
     "f": "=PHI(-1E300)"
    },
    "A27": {
