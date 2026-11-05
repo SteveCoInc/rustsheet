@@ -3,7 +3,7 @@ id: T-2901
 title: "Python facade: Transaction.set_number_format gives a cell a number format"
 milestone: M12
 lane: api
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -39,3 +39,10 @@ a format by loading an xlsx. The cell ops pass their A1 string straight to the `
 - Other style properties (fonts, fills, borders): SPEC-0001 non-goals; T-2882 decides their Python future.
 - Other missing mirrors (T-2916, T-2900, T-2902 to T-2904, T-0460, T-2054); any change to crates/rustsheet or
   the engine.
+
+## Outcome
+Added `Transaction.set_number_format(ref, format)` (`Op::NumberFormat`, applied as `txn.set_number_format`),
+its doc comment and `.pyi` stub, and tests in `test_facade.py` (format shown through `formatted`, value
+unchanged, `changes["values"]` empty; multi-cell and unknown-sheet targets roll the block back). Both bad
+targets raise `rs.RefError` (the Rust `EditError::Ref` maps to it), not `EditError` as the criterion said.
+No eval delta (bindings only).
