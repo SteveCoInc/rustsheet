@@ -4,10 +4,11 @@ use crate::{
     calc_result::{CalcResult, Range},
     evaluation_limits::stack_address,
     expressions::{
-        lexer::LexerMode,
         parser::{
             is_multi_sheet_span,
-            stringify::{rename_defined_name_in_node, to_rc_format},
+            stringify::{
+                pin_unresolved_name, rebind_workbook_name_to_sheet, rename_defined_name_in_node,
+            },
             Node, TOO_MANY_NESTED_CALLS_MESSAGE,
         },
         token::Error,
@@ -400,6 +401,9 @@ impl Model {
         if source == NameSource::Api && self.parser.nests_too_many_calls() {
             return Err(format!("Formula: {TOO_MANY_NESTED_CALLS_MESSAGE}"));
         }
+        if let (NameSource::Api, Some(sheet)) = (source, scope) {
+            self.bind_added_sheet_name(name, sheet);
+        }
         self.workbook.defined_names.push(DefinedName {
             name: name.to_string(),
             formula: internal_formula,
@@ -408,6 +412,34 @@ impl Model {
         self.reset_parsed_structures();
 
         Ok(())
+    }
+
+    /// Rewrites the formulas of sheet `sheet` that a sheet-scoped `name` added through the API
+    /// must not re-bind by their text alone (T-4049; docs/excel-semantics/syntax.md "A
+    /// sheet-scoped name added after load"). Excel binds a formula's names when it is entered or
+    /// loaded. With no workbook-scoped `name`, an unqualified use on the sheet stays bound to the
+    /// undefined workbook name and is `#NAME?` (probes/t4049-sheet-api-name-plain S!A1:A3, as
+    /// probes/t4014-sheet-api-name-65 S!A1); with one, the sheet's uses of it move to the new name,
+    /// `S!N` included, while other sheets keep the workbook name
+    /// (probes/t4049-sheet-api-name-over-book). An unqualified use of a defined workbook name
+    /// needs no rewrite: its text already reads the new sheet-scoped name.
+    fn bind_added_sheet_name(&mut self, name: &str, sheet: u32) {
+        let name_upper = name.to_uppercase();
+        let workbook_name_defined = self
+            .workbook
+            .defined_names
+            .iter()
+            .any(|df| df.sheet_id.is_none() && df.name.to_uppercase() == name_upper);
+        let Ok(sheet_name) = self.workbook.worksheet(sheet).map(|ws| ws.get_name()) else {
+            return;
+        };
+        self.rewrite_shared_formulas(Some(sheet), |node| {
+            if workbook_name_defined {
+                rebind_workbook_name_to_sheet(node, name, sheet, &sheet_name);
+            } else {
+                pin_unresolved_name(node, name);
+            }
+        });
     }
 
     /// The context used to parse/stringify defined-name formulas. Defined names
@@ -576,31 +608,18 @@ impl Model {
         let context = self.defined_name_context();
         let internal_formula = self.user_formula_to_internal(new_formula, &context)?;
         if let Some(i) = index {
+            let renamed = self
+                .workbook
+                .defined_names
+                .get(i)
+                .is_some_and(|df| df.name != new_name);
+            if renamed {
+                // Every formula that uses the old name is rewritten to the new one.
+                self.rewrite_shared_formulas(None, |t| {
+                    rename_defined_name_in_node(t, name, scope, new_name);
+                });
+            }
             if let Some(df) = self.workbook.defined_names.get_mut(i) {
-                if new_name != df.name {
-                    // We need to rename the name in every formula:
-
-                    // Parse all formulas with the old name
-                    // All internal formulas are R1C1
-                    self.parser.set_lexer_mode(LexerMode::R1C1);
-                    let worksheets = &mut self.workbook.worksheets;
-                    for worksheet in worksheets {
-                        let cell_reference = CellReferenceRC {
-                            sheet: worksheet.get_name(),
-                            row: 1,
-                            column: 1,
-                        };
-                        let mut formulas = Vec::new();
-                        for formula in &worksheet.shared_formulas {
-                            let mut t = self.parser.parse(formula, &cell_reference);
-                            rename_defined_name_in_node(&mut t, name, scope, new_name);
-                            formulas.push(to_rc_format(&t));
-                        }
-                        worksheet.shared_formulas = formulas;
-                    }
-                    // Se the mode back to A1
-                    self.parser.set_lexer_mode(LexerMode::A1);
-                }
                 df.name = new_name.to_string();
                 df.sheet_id = new_sheet_id;
                 df.formula = internal_formula;

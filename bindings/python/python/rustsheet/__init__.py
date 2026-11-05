@@ -22,12 +22,14 @@ from rustsheet._rustsheet import (
     EditError,
     Formula,
     LoadError,
+    PasswordRequiredError,
     RefError,
     RustSheetError,
     SaveError,
     Transaction,
     Workbook,
     WorkbookError,
+    WrongPasswordError,
     XlError,
     __version__,
     column_name_from_number,
@@ -38,21 +40,23 @@ from rustsheet._rustsheet import (
 )
 
 
-def open(path: str, recalc: bool = True) -> Workbook:
+def open(path: str, recalc: bool = True, password: str | None = None) -> Workbook:
     """Open an xlsx file as a :class:`Workbook` (shorthand for ``Workbook.open``)."""
-    return Workbook.open(path, recalc)
+    return Workbook.open(path, recalc, password=password)
 
 
 __all__ = [
     "EditError",
     "Formula",
     "LoadError",
+    "PasswordRequiredError",
     "RefError",
     "RustSheetError",
     "SaveError",
     "Transaction",
     "Workbook",
     "WorkbookError",
+    "WrongPasswordError",
     "XlError",
     "open",
     "__version__",

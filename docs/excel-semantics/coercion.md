@@ -889,7 +889,7 @@ probes/t4086-groupby-weightless, M7, 28 cells; excel-graph, 2026-11-04):
       "2" (B31:B32). PIVOTBY is the same (B3, B38).
     - Reversed, the shown keys are `{"ab","x",4;"ab","y",1}` (B8:B12, B33): the `ab`&U+00AD row drops out, and the
       second group shows `ab`, which is not the first spelling of either field.
-    - Each field alone groups by first `=` (B35:B36). T-4195's model below passes all but B11 and B33 (T-4342).
+    - Each field alone groups by first `=` (B35:B36). The tree model below (T-4342) passes them all.
 
 ### GROUPBY on an intransitive run (T-4195)
 Evidence: probes/t4195-groupby-intransitive (56 blocks of 2 to 4 rows: every order of `ab`, `ab`&U+00AD and
@@ -903,7 +903,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
   joins A, not its first equal key B: `{"ab","2, 3";"ab­","1"}`. All 56 single-field cells (B1:B56) and the
   4-text runs (B31:B44; E = `ab`&U+00AD&U+00AD: E, B, C, A gives `ab`: 3, 4 and E: 1, 2, B40) follow it. The groups are in that sorted
   order: `AB` before `ab`&U+00AD (B32: `AB` < `ab`&U+00AD by the prefix rule), where `cmp_text` puts it after.
-- **A group shows its key's first spelling, field by field.** (`ABC`,x), (`abc`,y) gives (`ABC`,x), (`ABC`,y);
+- **A group shows its key's first spelling, field by field** (first in whole-row sorted order, which is not always
+  source order: T-4342's hold-out below). (`ABC`,x), (`abc`,y) gives (`ABC`,x), (`ABC`,y);
   (`ab`,x), (U+00AD&`ab`,y) gives (`ab`,x), (`ab`,y); `ß`/`ss` and `á`/`a`&U+0301 the same (-shown-key B1:B18,
   D1:D18).
 - **A later field is classed within its parent.** The rows sharing the classes of the fields before it are classed
@@ -927,29 +928,68 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
      its field `=` the field of the class's first key, else it starts a class. A class shows its first key's
      spelling, so a group can show a key tuple no row has (C8's (`ab`&U+00AD,y) is the key (C,y)). A class can
      repeat a shown key: Bx, Ay, Cy, Cx gives (C,x): 1, 4; (C,y): 2, 3; (C,x): 1, 2, 3, 4 (t4241 Calc!B25).
-  3. Each data row descends the tree. At each field, a lower-bound binary search (in that field's direction) over
-     the parent's class keys finds a class. The row joins it when that key `=` the row's field. When the key is
-     not equal, or the search runs off the end, the row is in no group: Cy, Ax, By gives (`ab`,x): 2;
-     (`ab`,y): 1, and row 3 (B = C) is in none (t4241 Calc!B14).
+  3. Each data row descends the tree. At each field, a lower-bound binary search over the parent's class keys
+     finds a class, searching [0, n-1] (it never probes past the last class; T-4342, below), in the direction the
+     parent's first two classes run in (the field's, unless the merge left them the other way round; T-4344,
+     below). The row joins it when that key `=` the row's field. When the key is not equal the row is in no
+     group: Cy, Ax, By gives (`ab`,x): 2; (`ab`,y): 1, and row 3 (B = C) is in none (t4241 Calc!B14).
   4. A leaf class no row reaches aggregates every row of the source. That is the group with all the rows in
      Calc!C8 and t4241 B25, and SUM counts such a row once in each of its groups (t4241 Calc!F2: (`ab`,y) 5,
      (`ab`&U+00AD,x) 2, (`ab`&U+00AD,y) 7 of rows worth 1, 2 and 4).
   `sort_order` 2 gave the ascending result on all 48 blocks (D = B). A table sort (`field_relationship` 1) and a sort
-  by a value column on these runs are unprobed. The model was chosen after seeing these probes' values, so a
-  confirmation probe with predictions committed before its fill is owed (T-4342). Not implemented yet: the engine
-  still takes T-4195's per-row model below, and T-4342 owns the cells it misses (24 of t4195, 140 of t4241).
+  by a value column on these runs: T-4344, below.
+- **The hold-out (T-4342, probes/t4342-groupby-tree-holdout, excel-graph, 2026-11-05).** Written with the T-4241
+  model's predictions committed before the fill (docs/research/t4342: gen_probe.py, predictions.tsv, compare.py):
+  30 seeded five-row runs of two fields and 20 of three (text, x/y, text), each ascending (B), with `sort_order` -1
+  (C), as SUM (D) and as PIVOTBY by a p/q column field (E); and 6 ASCII case-spelling blocks. 206 cells:
+  - The frozen model scores 199. Six misses are one shape (t4342 Calc!B14, D14, E14, B48, D48, E48): two leaves
+    show one key, and Excel puts the rows in the first of them where the half-open search over [0, n) finds the
+    second. A search over [0, n-1] (`model.groupby(..., inclusive=True)`) gives all six and still all 234 blocks
+    of t4195 and t4241, so it is step 3's search: 205 of 206.
+  - The miss left is Calc!C40, three fields with `sort_order` -1: Excel puts row 1, (B,y,A), alone in (B,y,A),
+    where the search finds class A first and the row in no group (T-4344 explains it, below).
+  - PIVOTBY's rows are GROUPBY's groups on every block: a cell is its row group's rows in that column, and the
+    group no row reaches has every row in each column (E).
+  - **The shown spelling is the first in sorted order, not in source order, even in ASCII**: (`ABC`,y), (`abc`,x)
+    gives (`abc`,x): 2; (`abc`,y): 1 (Calc!B51), because (`abc`,x) sorts first on the whole row; (`abc`,y),
+    (`Abc`,x), (`ABC`,y), (`abc`,x) shows `Abc` (B56). With one field, or while the first spelling also sorts first,
+    that is the first spelling (`East` for `East`, `east`, G!A1; -shown-key).
+- **The search runs in the direction of the first two classes (T-4344, probes/t4344-groupby-descending-search,
+  excel-graph, 2026-11-05).** On an intransitive run SORT's merge can leave a descending field's classes ascending:
+  t4342 Calc!C40's first field has classes A, B under `sort_order` -1, and Excel's search finds B for row 1, which
+  a search in the field's direction (descending) does not. Five search directions fit or nearly fit the 434 earlier
+  blocks (docs/research/t4344/gen_probe.py: H0 the field's, 433; H1 first class to last, 434; H2 the same with
+  ascending on a tie, 433; H3 the first two classes, 434; H4 the first class to the first later one not `=` to it,
+  434, which is H3, since two adjacent classes are never `=`). The probe was written with each one's predictions
+  and the engine's (hypotheses.tsv, predictions.tsv) committed before the fill, on 30 seeded five-row three-field
+  runs with `sort_order` -1, -2, -3 or {-1,-3} picked where they disagree: H3 gives all 30 (H0 7, H1 15, H2 16).
+  Of 4000 seeded five-row two-field runs under -1 or -2 none tells them apart. A structural choice confirmed out of
+  sample (decision 0188 R4), not a fit.
+  - The same probe's ASCII case-spelling blocks under `sort_order` -1 and -2 (Calc!B43:B54), PIVOTBY by x/y with
+    the text as the column field ascending and `col_sort_order` -1 (B31:C42), and GROUPBY with `field_relationship`
+    1 ascending and -1 (B55:C66) all match the engine, as do 22 of the 24 value sorts.
+  - **A PIVOTBY column leaf no record of a row group reaches holds that row group's records** (D39: p `2`, q
+    `1, 3, 4, 5`), and whether a record reaches a column leaf depends on its row group: in E38 rows 2 and 3, both
+    (C,y), are p and q, and (A,y) holds all of p but only row 3 of q; in D41 the only q record with y reaches (B,y)
+    in the column tree, yet q's (B,y) cell is all of q (T-4358 owns D39, D41, E38, E41).
+  - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
+    16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
+    reaches class A (C = A) and then no y class (T-4359 owns D56, E56).
 
-Implemented in (T-4195): `Grouping::new` (functions/lookup_and_reference/grouping.rs) classes each field within
-its parent by `classify` (`first_equal_lines`, `sort_indices_pairwise` with `cmp_text_pairwise`, then a
-lower-bound search), shows each class's first key, and drops a group none of UNIQUE's kept rows is in (the rows
-`coalesce_equal_lines` keeps, as `unique_of` does; only several key fields with a text outside ASCII can drop
-one). `Group::key_order` sorts texts under one parent by their rank in that sort, through `sort_indices_pairwise`.
-A descending `sort_order` on an intransitive run is probed (T-4241, above): it changes the groups, which ours
-does not do (ours only reverses the rank; T-4342). A table sort naming a later field first is still unprobed. The model was selected
-on these cells: a simulator of candidate models scores 98 of the 112 GROUPBY cells of -intransitive and all 18
-of -shown-key, with no hold-out. T-4241's fresh probe repeats its single-field and three-row cells exactly, but the
-model is superseded on multi-field runs by the tree rule above.
-Status: VERIFIED (excel-graph, 2026-11-04) for the cells cited.
+Implemented in (T-4342): `Grouping::new` (functions/lookup_and_reference/grouping.rs) takes UNIQUE's kept rows
+(`unique_first_lines`, shared with `unique_of`), sorts them with `Keys::sorted` (`sort_indices_pairwise` on whole
+rows in the directions `tree_directions` gives: a hierarchy's, ascending for a table or a value sort), builds the
+classes with `Tree::build` and descends each row with `Tree::descend`; a leaf no row reaches is a group of every
+row (`Group::reached` false, which `Grouping::group_of` maps only rows in no other group to). Groups come out in
+tree order and sort by their class's rank (`Group::key_order`). While no key text is outside ASCII a row descends as
+its first equal row does, so the search runs once per distinct key. `Tree::descend` searches in the direction of
+the parent's first two classes (T-4344). Not implemented: PIVOTBY's column leaves (T-4358) and a value sort's
+parent values (T-4359) on these runs.
+The T-4195 per-field model this replaces was selected on its own cells without a hold-out; the tree model was
+chosen by T-4241 on seen values and confirmed by T-4342's hold-out (205 of 206 after the search revision, which
+was chosen on the hold-out and checked against all 234 earlier blocks; a structural choice, decision 0188 R4,
+not a fit).
+Status: VERIFIED (excel-graph, 2026-11-04; the t4241, t4342 and t4344 fills, 2026-11-05) for the cells cited.
 
 Implemented in (T-3904, T-4039, one PR, since the -ignorables Calc!AB ranks need both):
 - the collation's `elements` (crates/rustsheet-engine/src/functions/util/collation.rs) drops every weightless
@@ -1114,9 +1154,9 @@ G1448, K1448, G1456, K1456, I392, L176, M1332, N1332; `#NUM!`: F176, G176, H392;
 F1448, F1456, H1288.
 Status: VERIFIED (Excel-cached)
 Implemented in: `Model::for_each_value` users `fn_stdev_s`/`fn_stdev_p`, `fn_var_s`/`fn_var_p`,
-`fn_devsq`, `fn_avedev`, `fn_sumsq`. Open: I392 (`DEVSQ("1","2",2)`) and K1456
-(`VARP(TRUE,FALSE,TRUE)`) differ in the last digit (accumulation order, like E392/F392/J392; DEVSQ is
-probably the two-pass sum, T-1749).
+`fn_devsq`, `fn_avedev`, `fn_sumsq`. I392 (`DEVSQ("1","2",2)`) and E392/F392/J392
+pass since DEVSQ became the two-pass sum (statistics.md "DEVSQ is a two-pass sum (T-1749)"). Open: K1456
+(`VARP(TRUE,FALSE,TRUE)`) differs in the last digit (accumulation order).
 An empty argument is counted as 0 by DEVSQ and AVEDEV (`DEVSQ(1,)` = `AVEDEV(1,)` = 0.5; probes/stat-order-floor-batch
 A274, A299; T-1748) and by STDEV/VAR (probes/average-value-args); SUMSQ(1,) is 1 either way, T-1748.
 Tasks: T-0945

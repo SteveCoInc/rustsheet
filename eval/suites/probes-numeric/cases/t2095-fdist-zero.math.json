@@ -18,6 +18,11 @@
     "v": "1.0",
     "f": "=F.DIST(0,2,100,FALSE)"
    },
+   "A4": {
+    "t": "n",
+    "v": "1.0",
+    "f": "=F.DIST(0,2.9,7,FALSE)"
+   },
    "A6": {
     "t": "n",
     "v": "0.0",
@@ -29,6 +34,10 @@
   "Calc": {
    "A1": {
     "f": "=F.DIST(0,1,1,FALSE)",
+    "why": "no single value"
+   },
+   "A5": {
+    "f": "=F.DIST(0,1.5,3,FALSE)",
     "why": "no single value"
    }
   }

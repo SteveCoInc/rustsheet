@@ -272,8 +272,9 @@ def _probability(source: str, lo_open: bool, hi_open: bool) -> Param:
     )
 
 
-def _df(hi: float) -> Param:
-    """df from 1 to `hi` (CHISQ.INV's 1E10, CHISQ.INV.RT's none); the extreme draws reach `hi` or MAX_DRAWN_DF."""
+def _df(hi: float, truncates: str = "") -> Param:
+    """df from 1 to `hi` (CHISQ.INV's 1E10, CHISQ.INV.RT's none); the extreme draws reach `hi` or MAX_DRAWN_DF.
+    `truncates` cites the entry showing Excel truncates a non-integer df (`Param.truncates`)."""
     return Param(
         "deg_freedom",
         "int",
@@ -282,6 +283,7 @@ def _df(hi: float) -> Param:
         extreme=(1e3, min(hi, MAX_DRAWN_DF)),
         edges=(2.0,),
         source=HUGE_SOURCE,
+        truncates=truncates,
     )
 
 
@@ -322,12 +324,15 @@ CHISQ_INV = register(
     )
 )
 
+# `CHISQ.INV.RT(1E-9,1.5)` equals the df-1 value (df truncation; probes t3336-chisq-df1-right-tail).
+RT_TRUNC_SOURCE = "statistics.md#inverse-cdf-functions-at-a-tiny-or-near-1-probability-t-1543"
+
 # CHISQ.INV.RT takes any df (statistics.md, the huge-shape entry). The s1 batches of all three stop at a shape of
 # 1E7 (df 2E7); e-T-3863 draws the huge shapes, with Temme's expansion.
 CHISQ_INV_RT = register(
     Definition(
         function="CHISQ.INV.RT",
-        params=(_probability(CLOSED_SOURCE, lo_open=True, hi_open=False), _df(float("inf"))),
+        params=(_probability(CLOSED_SOURCE, lo_open=True, hi_open=False), _df(float("inf"), RT_TRUNC_SOURCE)),
         value=_chisq(upper=True),
         sources=(HUGE_SOURCE, CLOSED_SOURCE, "Abramowitz and Stegun 26.4.19"),
     )

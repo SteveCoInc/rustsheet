@@ -257,6 +257,32 @@ Evidence: `ironcalc-calc/STATISTICAL/BETA_GAMMA.xlsx` BETA_DIST!G3, G4.
 Status: VERIFIED (observation); algorithm UNVERIFIED (T-0970)
 Tasks: T-0970
 
+## DEVSQ is a two-pass sum (T-1749)
+Rule: DEVSQ is always the two-pass sum `Σ(x - mean)²`: mean = Σx / n as a double (a left-to-right sum), then the
+squared deviations summed left to right, every step a double. It never uses the one-pass `Σx² - (Σx)²/n` and has no
+switch like VAR/STDEV's below. So it does not cancel: `DEVSQ(1E15,1E15+1)` = 0.5 (one-pass 0) and
+`DEVSQ({100000000.1,100000000.2,100000000.3})` = 0.020000000596046563 (one-pass -4; the value carries the error of the
+double mean). In the last digit, `DEVSQ(0.1,0.2,0.3)` = 0.019999999999999997 (one-pass 0.019999999999999976) and
+`DEVSQ("1","2",2)` = 0.6666666666666666 (one-pass ...661).
+Evidence: probes/stat-order-floor-batch A277, A278, A280, A290, A294, A295, A300; probes/ftest-decomposition B9, C9,
+C10, D10, F9, F10; probes/stat-argument-modes H5; poi FormulaEvalTestData_Copy.xlsx EverythingTests!E392, F392, I392,
+J392 (Excel-cached); 126 DEVSQ cells of gen-m9 (excel-graph). With this form every DEVSQ cell T-1749 owned passes bit
+for bit, and no cell regressed in any suite. Fresh sweep after the freeze, probes-numeric t1749-devsq-fresh
+(docs/research/t1749/gen_fresh.py, 200 DEVSQ calls of 2 to 12 literals, offsets 1E-3..1E15 and spreads 1E-6..1E3,
+excel-graph): 200 of 200 bit for bit, where the earlier one-pass form matched 27. No constant is fitted: the
+choice was between the two textbook forms. Hold-out (decision 0188 R4.1, `rustsheet-fitlab devsq` and `devsq-fresh`,
+margin 5 points stated before scoring): on the owned cells two-pass is 201 of 203 train and 87 of 87 test bit for bit,
+the correctly rounded `Σ(x - mean)²` 133 and 67, one-pass 120 and 61; on the fresh sweep two-pass is 133 of 134 and 66
+of 66, correctly rounded 60 and 28, one-pass 18 and 9. The two-pass misses are the lab's, not the form's: two one-cell
+references to a bool or numeric text the lab reads as literals, and fresh A156, whose literals the lab rounds
+correctly where Excel's x87 conversion does not ("15-digit literal parsing"); the engine passes all three.
+Inferred, not probed for DEVSQ: each square and the mean are flushed to 0 when subnormal, as Excel's `*` and `/` are
+and as VAR/STDEV's two-pass branch is evidenced to be; no DEVSQ cell has a subnormal mean or square.
+Implemented in: functions/statistical/devsq.rs through variance.rs `squared_deviations`, which VAR/STDEV's two-pass
+branch shares.
+Status: VERIFIED
+Tasks: T-1749
+
 ## VAR/STDEV switch between a one-pass and a two-pass formula
 Rule: VAR.P/VARP/VARPA first compute the one-pass form V = `(n*Σx² - (Σx)²)/(n*n)`, and
 VAR.S/VAR/VARA compute V = `(Σx² - (Σx)²/n)/(n-1)` (plain left-to-right double sums). Excel keeps
@@ -1281,6 +1307,15 @@ on k/64, exact. Its findings:
   of `GAMMA.DIST(35,50,1,...)`, are -9.1E-16 and -8.7E-16 relative from the 50-digit values, and A44 shows it
   (Excel 0.009845502476408533, true 0.0098455024764085416). So the in-window prefactor (T-4296) also decides the
   cdf's 15th digit there (gap triage 2026-11-05).
+- T-4350 (gap triage 2026-11-05; docs/research/t4350/cdf_pairs.py, no fitted constant). Up to 0.70a, Excel's cdf is
+  its own density times x/a times an accurate series. On every scale-1 t3252 pair (density and cdf at the same x
+  and a, shapes 30 to 500) from 0.60a to 0.70a, 49 of 49, the cdf is within 6 ulp of Excel's density times
+  (x/a) P/(f x/a), where P and f are the 50-digit cdf and density. Against the true P the same cells are up to
+  267 ulp off: holdout A30 `GAMMA.DIST(310,500,1,TRUE)` is +267.3 ulp from P and -2.8 from that product, and
+  window A44 is +0.4 from it. Above 0.70a the product fails: sweep A54 (0.7033a, shape 383.73) +125.9 ulp, sweep
+  A36 (0.7063a) +23.5, holdout A38 (0.72a, shape 500) +56.7. So the cut is in (0.70a, 0.7033a] on these cells,
+  earlier than the 0.72a above. Seven of the cdfs in the band are visibly off in ours (holdout-2 A6, A18, A30, A32,
+  A36; sweep A20, A58), because ours builds P on `gamma_prefactor`, not on the density's chain (T-4350).
 T-4290 (probes/t4290-gamma-window-large-pow2, excel-graph 2026-11-05; docs/research/t4290/score.py) took
 power-of-two shapes 4096, 1024 and 256 at x/a = k/1024 (k 656 to 1556 step 4; A, B, C), the hold-out shape 2048 at
 k + 2 (D), and ladders across x/a = 2/3 at shape 3072 (E) and 3/2 at shape 2048 (F). At shape 4096 one ulp of the
@@ -1455,7 +1490,42 @@ sweep 48 points from seed 43020 written after the freeze. Its findings at x = me
 - The pmf `POISSON.DIST(k, m, FALSE)` is a third chain: it is up to 326 ulp from the gamma density at the same
   point, and the cdf does not follow it.
 - The density takes this chain in ours since T-4308 (with T-4319); CHISQ.DIST.RT (T-4320) does not yet. The window rows, x/a 1.29 to
-  1.5, stay with T-4308.
+  1.5, are T-4322's (below).
+T-4322 (docs/research/t4322/score.py; probes-numeric/t4322-poisson-window-r4-fresh, excel-graph 2026-11-05) found
+the cdf inside the window, x/a <= 1.5 with a = k + 1, at k 30 to 300:
+- From 1.3a to 1.5a it is the far form's prefactor with T-4308's window exponent in place of the direct deviance:
+  sqrt(a / 2 pi) exp(-B - c(a)) times the fraction, B = (x - a) v - (2a atanh(v) - 2a v), v = (x - a)/(x + a). So
+  the cdf takes the density's exponent but not its chain (exp(-c - B) / sqrt(2 pi a) * (a/x), times x). Within 4
+  ulp, on the 15 seen T-4302 points (fit) and the 57 fresh-sweep points drawn after the freeze from 1.3a up:
+  this form 14/15 and 51/57; the correctly rounded Q 9/15 and 10/57; the same prefactor with the direct
+  deviance 3/15 (up to 71 ulp); with the correctly rounded B 9/15 (up to 55). Gate A's envelope holds all 57.
+- Below 1.3a it is not that form (up to 62 ulp: probes/t4291-poisson-far-above-mean G1 `POISSON.DIST(250,325,TRUE)`),
+  nor the direct deviance (up to 83), nor the pmf times the exact ratio Q/pmf (up to 42). Excel is 1 to 17 ulp
+  from the correctly rounded Q there (t4291 D1:H1; t4322 fresh A8:C10). The cut is at 1.3a, inclusive: on the
+  fresh ladder at k = 100, 200, 300, x = 1.3a is the form (2, 0 and -5 ulp, where the correctly rounded Q is 14, -5
+  and -63). At 1.298a and below, at k = 100 and 300 Excel is the correctly rounded Q to 17 ulp, where the form is
+  13 to 85 off (at A10, k = 100 at 1.298a, the form's 13 is closer than the correctly rounded Q's 17, but outside
+  the form's 0 to 6 ulp residue); at k = 200 the form is as close (-3, 4, -2 ulp against -9, 10, -1), so the cut is bracketed at k = 100
+  and 300 only. 1.3 is Cephes' `SMALLRATIO`, its
+  igamc's switch to the asymptotic (Temme) series; what Excel computes below it is open (T-4345).
+- One fresh point does not fit: G3 `POISSON.DIST(80,118.464,TRUE)` (1.4625a) is 64 ulp from the form and 27 to 92
+  from every other tried prefactor (T-4345).
+- Ours takes the form for POISSON's cdf at integer shapes 31 to 301 from 1.3a to the window's upper end
+  (excel_tail.rs `excel_window_upper`); CHISQ.DIST.RT, the same value, does not yet (T-4346).
+T-4345 (docs/research/t4345/score.py) scored models for the cdf below 1.3a, with the split fixed before scoring:
+train is T-4322's 9 fit cells below the cut (t4291 A1:H1, t4302 D19), hold-out the 9 fresh cells (t4322 fresh
+A8:C10). No model is Excel's. Bit-exact / within 4 ulp / max ulp, train then hold-out: the correctly rounded Q
+1/7/9, 1/4/17; Cephes' continued fraction in doubles times the correctly rounded prefactor 0/5/5, 1/4/13, times
+the window form's prefactor 0/3/62, 0/2/83, times the direct-deviance prefactor 1/2/82, 0/0/156, and times Cephes'
+own exp(a ln x - x - lgam(a)) 0/0/822, 0/1/1183; Temme's leading term erfc(sqrt(B))/2 plus the exact remainder,
+with B correctly rounded 1/8/17, 0/6/18, the window B 1/2/76, 0/2/103, the direct B 0/2/97, 0/1/188, and Cephes'
+eta sqrt(a/2) from log1pmx 0/5/35, 0/0/41; SciPy 1.17.1 `gammaincc` (Cephes igamc, which takes the Temme series
+below its `SMALLRATIO` 0.3) 0/7/13, 0/3/28; the pmf sum from k down 1/5/11, 0/3/17, from 0 up 1/4/12, 0/4/23,
+and pmf(k) times the bracket 1 + k/m + ... in doubles 1/6/6, 0/5/18. Every model is 12 to 18 ulp off at
+t4322 fresh A10 (`k = 100`, 1.298a), as is the correctly rounded Q (17), so Excel's error there comes from a
+step none of them shares; T-4357 probes the companion functions at these points. Cephes' continued fraction in
+doubles does not explain the window form's residue either: in place of the exact fraction it is within 4 ulp at
+13/15 fit and 47/57 fresh points (exact fraction 14/15 and 51/57), and G3 stays 62 ulp off.
 The
 large-shape BETA.DIST cdf and density with b 20.5 to 39 and a 1E-5 or 1E-6 (window A141:A188) do not change with the
 prefactor form; 9 of those densities (A171:A179) are 10 to 15 ulp off on another path (the algdiv residue, T-3035). Below shape 20 neither this form nor the direct one is Excel's
@@ -1482,7 +1552,7 @@ and Q keep the direct form below 20 (T-3219). The bounds are fits inside their b
 (`CHISQ.DIST(50,5,FALSE)` against `CHISQ.DIST(37.5,6,FALSE)`); the lower end 1.4a is the large-shape `NEAR_MODE` bound,
 unbracketed below 20 (UNVERIFIED: no probed density between a and 1.5a changes with the form).
 Status: VERIFIED (excel-graph)
-Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4339, T-4340, T-4334
+Tasks: T-0971, T-0972, T-2638, T-3147, T-3219, T-3252, T-4255, T-4290, T-4291, T-4296, T-4302, T-4308, T-4319, T-4320, T-4322, T-4339, T-4340, T-4334, T-4345, T-4346, T-4357
 Deep upper tail sweep (T-3289): probes-numeric/t3284-gamma-deep-upper-tail (343 cells: POISSON cdf at mean 4(k+1) to 100(k+1),
 its CHISQ.DIST.RT twin, half-integer shapes at x = 4 to 100 df, and 32-double ulp runs at POISSON(2,100) and CHISQ.DIST.RT(200,5)).
 Excel is within 1 ulp of the 50-digit value in 64 of the 343 cells (docs/research/t3284/ulp_vs_exact.py), and today's engine is
@@ -2976,7 +3046,7 @@ docs/research/t2464/cells.tsv; docs/research/t2464/r3-binom-pmf (`a1_survey.out`
 `b19_cfit_mul.out`, `c1_hold.out`), verify-r3-binom-pmf (`vscore_v.out`, `vstruct_v.out`).
 Implemented in: `binom_dist_of` in `crates/rustsheet-engine/src/functions/statistical/binom.rs` (T-2645): k = 0, pmf and
 cdf, is `excel_exp(n * excel_ln_one_minus(p))`; the pmf at k = n is `excel_exp(n * excel_ln(p))`. Ours: the interior pmf
-is `discrete.rs` `binomial_pmf`, a double-double walk, and past its budget this kernel (`binom.rs` `loader_pmf`, T-3352).
+is this kernel (`binom.rs` `loader_pmf`, T-3352, T-2146), and `discrete.rs` `binomial_pmf`'s walk only where it is not finite.
 Status: VERIFIED (excel-graph) for k = 0, k = n and the shared kernel; the interior pmf UNVERIFIED
 Tasks: T-2645, T-2146, T-2586
 
@@ -2992,10 +3062,42 @@ dnbinom (r/(f+r))·dbinom_raw(r, f+r, p, q).
   beats R's two forms (hold-out 328/2,316/2,541 against 233-275/1,775-1,779/2,203-2,211 of 3,072).
 Evidence: probes-numeric t2513-r3-binom-pmf-n, -hold, t2513-verify-r3-binom-pmf-h; docs/research/t2464/r3-binom-pmf
 (`b21_neg.out`, `b3_reg_neg_shift.out`, `b3_reg_neg.out`), verify-r3-binom-pmf (`vneg1.out`, `vneg2.out`).
-Ours: `discrete.rs`, a double-double walk, and past its budget p times this shifted kernel (T-3352).
+Ours: p times this shifted kernel everywhere off f = 0 (T-3352, T-2146; "BINOM.DIST and NEGBINOM.DIST pmfs take Loader's
+kernel everywhere" below), `discrete.rs`'s walk only where the kernel is not finite.
 Status: VERIFIED (excel-graph) for the shifted kernel; the final step UNVERIFIED
 Tasks: T-2146, T-2586
 
+
+## BINOM.DIST and NEGBINOM.DIST pmfs take Loader's kernel everywhere (T-2146)
+Rule: off their closed forms, BINOM.DIST's pmf (and BINOMDIST's, and BINOM.DIST.RANGE's one-point range) is Loader's
+kernel at every interior k, and NEGBINOM.DIST's pmf (and NEGBINOMDIST's) is p times the shifted kernel at every f >= 1.
+Neither is the exact value rounded, even where the exact value is a short binary fraction. NEGBINOM.DIST's pmf at
+f = 0 is EXP(fl(r·LN(p))), not the exact p^r, and like the k = 0 binomial pmf it keeps a subnormal result:
+- `NEGBINOMDIST(0,1,1E-200)` is 9.99999999999978E-201 and `NEGBINOMDIST(0,3,0.5)` 0.12500000000000003
+  (gen-m9 d8f44d556674c2fd A281, 11eb3ab4f4f8104c A374). This form fixes 11 gated f = 0 cells and regresses none.
+- `BINOM.DIST(10,20,0.5,FALSE)` is 0.17619705200195307, where C(20,10)/2^20 rounds to ...312 (ironcalc-calc
+  BINOM.xlsx BINOM.DIST!E76).
+- The kernel's model (`loader.rs` `excel_dbinom_exponent`, model M4) is not bit-exact. Its stored chain is not
+  identified (T-2513), and it misses some cells where the exact value happens to be Excel's. For example
+  `NEGBINOMDIST(9,3,0.001)`: Excel 5.450697538692308E-08, the exact value's double, the model 9 ulp away (gen-m9
+  1db18890916ee643 A10).
+- Still, it beats the walk as a whole. The fit lab's hold-out (fits `binom-pmf` and `negbinom-pmf`; T-2513 and T-2145
+  sweeps, cell-hash split, margin 5 points) gives test bit-exact rates:
+  - BINOM.DIST interior: Loader 26.6% (train 27.2%), walk 18.5%, correctly rounded 18.1%;
+  - NEGBINOM.DIST: Loader 24.4% (train 23.2%), walk 14.0%, correctly rounded 13.9%.
+- The fresh sweeps agree: Gate A batches `r4-T-2146` (392 points, all inside the envelope), and
+  probes-numeric/t2146-binom-negbinom-pmf-fresh (400 cells), where bit-exact goes from 96 to 135 and visibly off
+  from 168 to 131.
+- A tail-only switch lost to "everywhere" at every T from 2 to 60: Loader where the pmf is below e^-T, the walk above.
+  At NEGBINOM.DIST the final step fl(p·kernel) ties EXP(E + LN p) held in a register. R's dnbinom,
+  (r/(f+r))·dbinom_raw(r, f+r), is worse than the walk.
+Evidence: gen-m9 and ironcalc-calc BINOM.xlsx cells above; probes-numeric t2146-binom-negbinom-pmf-fresh
+(excel-graph, 2026-11-05), accuracy BINOM.DIST and NEGBINOM.DIST r4-T-2146, and the T-2513 probes.
+Ours: `binom.rs` `excel_binom_pmf` and `excel_negbinom_pmf`. Decision 0293 lists the 15 gated cells the switch
+regressed.
+Status: VERIFIED (excel-graph) for the f = 0 form and for the kernel as the better model; the stored chain is
+UNVERIFIED (T-4352)
+Tasks: T-2146, T-2513
 ## BINOM.DIST and NEGBINOM.DIST at a large n: basym and Loader, within 1E-11 of the math except at small p (T-3352, T-3960)
 Rule: at a large trial count (or number of failures) Excel's BINOM.DIST and NEGBINOM.DIST stay close to the exact value:
 on probes/t3352-binom-negbinom-large-n (208 cells: n 1E4 to 1E9 with p 0.3, 0.5 and 0.001; failures 1E3 to 1E9 with

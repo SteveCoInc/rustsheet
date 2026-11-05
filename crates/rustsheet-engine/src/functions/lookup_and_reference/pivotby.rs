@@ -10,8 +10,8 @@ use super::groupby::{
     FieldHeaders,
 };
 use super::grouping::{
-    at, effective_depth, empty_text, subtotal_levels, value_error, Aggregates, Axis, Grouping,
-    Line, ParentOrder, Relative, SortOrder,
+    at, effective_depth, empty_text, subtotal_levels, tree_directions, value_error, Aggregates,
+    Axis, Grouping, Line, ParentOrder, Relative, SortOrder,
 };
 use super::lifted_options::Bound;
 use super::pivot_placement::{CheckedTotal, Placement, Shown, Slot};
@@ -606,6 +606,7 @@ fn pivot_groupings(
     let mut rows = Grouping::new(
         &pivot.row_keys,
         pivot.records.iter().copied(),
+        tree_directions(&pivot.row_sort, ParentOrder::ByKey),
         row_limit,
         &mut spend,
         cell,
@@ -621,6 +622,7 @@ fn pivot_groupings(
     let mut cols = Grouping::new(
         &pivot.col_keys,
         pivot.records.iter().copied(),
+        tree_directions(&pivot.col_sort, ParentOrder::ByKey),
         col_limit,
         &mut spend,
         cell,
