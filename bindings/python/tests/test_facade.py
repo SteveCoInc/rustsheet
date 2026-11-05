@@ -2,6 +2,7 @@
 
 import threading
 import time
+from pathlib import Path
 
 import pytest
 import rustsheet as rs
@@ -468,3 +469,52 @@ def test_unnamed_workbook_cell_address_is_an_error(tmp_path):
     unnamed = _cell_address_workbook()
     assert isinstance(unnamed["A1"], rs.XlError)
     assert isinstance(rs.Workbook.from_bytes(unnamed.to_xlsx_bytes())["A1"], rs.XlError)
+
+
+# Password-protected xlsx (SPEC-0031 D4, T-4266). The encrypted fixtures are T-4265's; their
+# provenance is in crates/rustsheet-xlsx/tests/encrypted_package.rs.
+_REPO = Path(__file__).resolve().parents[3]
+_ENCRYPTED = _REPO / "crates" / "rustsheet-xlsx" / "tests" / "encrypted"
+_AGILE = _ENCRYPTED / "agile_sha512.xlsx"
+_AGILE_PASSWORD = "Pässwörd🔑"
+_STANDARD = _ENCRYPTED / "standard_aes128_passtika.xlsx"
+_XLS = _REPO / "crates" / "rustsheet" / "tests" / "fixtures" / "biff_container.xls"
+
+
+def test_password_opens_encrypted_workbooks():
+    wb = rs.Workbook.open(str(_AGILE), password=_AGILE_PASSWORD)
+    plain = rs.Workbook.open(str(_REPO / "crates" / "rustsheet-xlsx" / "tests" / "basic_text.xlsx"))
+    assert wb.sheet_names == plain.sheet_names
+    assert wb["A1"] == plain["A1"]
+    assert rs.open(str(_STANDARD), password="tika").sheet_names
+    assert rs.Workbook.from_bytes(_STANDARD.read_bytes(), password="tika").sheet_names
+
+
+def test_missing_password_is_password_required_error():
+    with pytest.raises(rs.PasswordRequiredError):
+        rs.Workbook.open(str(_AGILE))
+    with pytest.raises(rs.LoadError):
+        rs.Workbook.from_bytes(_STANDARD.read_bytes())
+
+
+def test_wrong_password_is_wrong_password_error_without_the_password():
+    secret = "not-the-password-x9"
+    for call in (
+        lambda: rs.Workbook.open(str(_AGILE), password=secret),
+        lambda: rs.Workbook.from_bytes(_STANDARD.read_bytes(), password=secret),
+    ):
+        with pytest.raises(rs.WrongPasswordError) as info:
+            call()
+        assert isinstance(info.value, rs.LoadError)
+        assert secret not in str(info.value)
+        assert secret not in repr(info.value)
+
+
+def test_xls_is_load_error_without_the_password():
+    secret = "xls-secret-y7"
+    for password in (None, secret):
+        with pytest.raises(rs.LoadError) as info:
+            rs.Workbook.from_bytes(_XLS.read_bytes(), password=password)
+        assert not isinstance(info.value, (rs.PasswordRequiredError, rs.WrongPasswordError))
+        assert ".xls" in str(info.value)
+        assert secret not in str(info.value)

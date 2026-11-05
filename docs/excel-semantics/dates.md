@@ -169,33 +169,37 @@ argument shape matters (SORT/UNIQUE of a constant keep, of a range empty; TEXTJO
 is not known. Evidence: probes/weeknum-stale-between-calls (27 sheets) and -between-ranges (23 sheets), excel-graph
 2026-11-05.
 
-The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, excel-graph 2026-11-05,
+The shape probes (T-4315; probes/weeknum-stale-call-shapes and -call-shapes-2, 30 sheets each, and -call-shapes-3, 24 sheets, excel-graph 2026-11-05,
 same layout) give the rule per function. It is neither a number-to-text conversion (`=1&2`, `TEXT(1,"0")`,
 `FIXED(1)` and `VALUE("1")` keep it; `CONCAT("a","b")` empties it) nor "a range argument" alone:
 - Always empty: CHOOSEROWS, CHOOSECOLS, TOCOL, VSTACK and TAKE with a constant array, one cell and a range
   (`CHOOSEROWS({1,2;3,4},1)`, `CHOOSEROWS(C1,1)`, `TOCOL({1,2})`, `TAKE(C1,1)`, ...); TRIMRANGE with one cell and
-  ranges (`TRIMRANGE(C1)`, `C1:C2`, `C1:D2`); HSTACK, DROP, TOROW, WRAPROWS and EXPAND probed with `C1:D2` only (their
-  other shapes are taken to empty it too, unprobed).
+  ranges (`TRIMRANGE(C1)`, `C1:C2`, `C1:D2`); HSTACK, DROP, TOROW, WRAPROWS and EXPAND with `C1:D2`, a constant array and
+  one cell (T-4330, probes/weeknum-stale-call-shapes-3 S01:S10, excel-graph 2026-11-05); WRAPCOLS with a range, a
+  constant array and one cell (S11:S13); TEXTSPLIT of a constant text and of a cell (S14:S15).
 - SORT and UNIQUE empty it with a multi-cell range (`SORT(C1:C2)`, `UNIQUE(C1:C2)`, `SORT(E1:F2)` of texts,
   `SORT(C1:D2,1,-1)`); a constant array or one cell keeps it (`SORT({3,1})`, `SORT(C1)`, `UNIQUE(C1)`).
 - SORTBY empties it unless its array is one cell: `SORTBY({1,2},{2,1})` and `SORTBY(C1:C2,{2;1})` empty it,
   `SORTBY(C1,1)` keeps it.
 - ARRAYTOTEXT empties it only with a range of more than one row and more than one column: `ARRAYTOTEXT(C1:D2)`
-  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (a one-row range is unprobed; we keep it).
+  empties it; `C1:C2`, `C1`, `{1,2}`, `{"a","b"}` and `1` keep it (`ARRAYTOTEXT(C1:D1)`, a one-row range, keeps it: shapes-3 S16).
 - CONCAT and TEXTJOIN empty it unless one of the joined arguments is a reference: `CONCAT("a","b")`, `CONCAT(1)`,
   `CONCAT({1,2})`, `CONCAT("a",1)`, `CONCAT(C1&"")` and `TEXTJOIN(",",1,{1,2})` empty it; `CONCAT(C1)`,
   `CONCAT(C1:D2,"x")`, `CONCAT(INDEX(C1:D2,1,1))`, `TEXTJOIN(",",1,C1,"x")`, `TEXTJOIN(",",1,C1:D2,C1)` and
-  `TEXTJOIN(C1,1,C1)` keep it. That TEXTJOIN's delimiter and ignore_empty do not count is unprobed (no case has a
-  reference delimiter and no joined reference, such as `TEXTJOIN(C1,1,"a")`); we read only the joined arguments.
+  `TEXTJOIN(C1,1,C1)` keep it. Probed in T-4330 (shapes-3 S17:S24): `CONCAT(OFFSET(C1,0,0))`,
+  `CONCAT(INDIRECT("C1"))`, `CONCAT(IF(TRUE,C1))`, `CONCAT(CHOOSE(1,C1))`, `CONCAT(LET(x,C1,x))` and `CONCAT(name)`
+  of a defined name for `C1:D2` keep it; `CONCAT(INDEX({1,2},1))` (INDEX of a constant array) empties it, and so
+  does `TEXTJOIN(C1,1,"a")`: only TEXTJOIN's joined arguments count, not its delimiter.
 - Keep: FILTER (`FILTER(C1:D2,{TRUE;FALSE})`, `FILTER(C1:C2,{TRUE;TRUE})`), with the T-4289 list.
 - A nested call empties it as an anchor does (`SUM(CHOOSEROWS(C1:D2,1))`, `COUNT(...)`, `CHOOSEROWS(C1:D2,1)+0`,
   `SUM(SORT(C1:D2))`); one in an IF branch that does not run does not (`IF(FALSE,CHOOSEROWS(C1:D2,1),1)`).
 Ours (T-4315): `Model::weeknum_effect_of_call` (weeknum.rs), applied after every function call (`call_with_order_effects`), holds this table; an
 Excel-order anchor whose run emptied the state empties it at its place in the order (`AnchorEffects::emptied_weeknum`,
-excel_order.rs), and a dynamic-array formula as such no longer does. Unprobed: the functions not listed (WRAPCOLS,
-TEXTSPLIT, GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
-range), a CONCAT or TEXTJOIN argument that only picks a reference (IF, CHOOSE, LET) or is a name (read from
-the formula, never evaluated again, and counted as no reference), and whether the emptying comes before or after the
+excel_order.rs), and a dynamic-array formula as such no longer does. T-4330 added WRAPCOLS and TEXTSPLIT, INDEX counting only
+with a reference as its array, and IF, CHOOSE, LET and defined names counting (read from the formula, never evaluated
+again; IF or CHOOSE picking a constant (`CONCAT(IF(TRUE,1,C1))`), LET binding a reference and returning a constant, and a name for a constant are unprobed). Unprobed: the functions not listed
+(GROUPBY, ...), a name or a reference-returning call as SORT's or ARRAYTOTEXT's argument (counted as no
+range), and whether the emptying comes before or after the
 call's own arguments run (we empty after).
 Status: VERIFIED (excel-graph); implemented
 

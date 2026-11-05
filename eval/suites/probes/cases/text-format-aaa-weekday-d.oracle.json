@@ -1,0 +1,43 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "sheets": {
+  "Sheet1": {
+   "A1": {
+    "t": "s",
+    "v": "Sunday"
+   },
+   "A2": {
+    "t": "s",
+    "v": "Sunday"
+   },
+   "A3": {
+    "t": "s",
+    "v": "Sundaya"
+   },
+   "A4": {
+    "t": "s",
+    "v": "Sunday"
+   },
+   "A5": {
+    "t": "s",
+    "v": "aaPM"
+   },
+   "A6": {
+    "t": "s",
+    "v": "SatPM"
+   },
+   "A7": {
+    "t": "s",
+    "v": "Satp"
+   }
+  }
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "a664e584f0116c550c3c74ca81907626ed60e28bd858ab3628662500595d01b1",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-05T11:22:00+00:00",
+  "version": null,
+  "workbook_name": "f2cbc1d2234f776b62ca0f75d7ead7eda335e36ab8d48f1c106855818e09dcae.xlsx"
+ }
+}

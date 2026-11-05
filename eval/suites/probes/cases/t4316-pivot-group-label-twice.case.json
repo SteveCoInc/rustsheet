@@ -1,0 +1,192 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4316: a <groupItems> label listed twice. Each pivot groups N (-1, 1, 4, 7, 10, whole) 0 to 9 by 3, whose labels are <0, 0-2, 3-5, 6-9, >9. P1 lists 6-9, 3-5, 6-9, w3, w4 (a matching label twice, right length); P2 lists <0, <0, 0-2, 3-5, 6-9, >9 (one too long by a repeat); P3 lists x, x, x, x, x (one wrong text five times). S values are distinct powers of two. Calc reads each rendered pivot as text, two columns per pivot (rows 1-10), and GETPIVOTDATA on each Excel label (rows 12-16).",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4316",
+    "M6"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "N",
+        "B1": "S",
+        "A2": -1,
+        "B2": 1,
+        "A3": 1,
+        "B3": 2,
+        "A4": 4,
+        "B4": 4,
+        "A5": 7,
+        "B5": 8,
+        "A6": 10,
+        "B6": 16
+      }
+    },
+    {
+      "name": "P1",
+      "cells": {
+        "H1": "T-4316 pivot P1"
+      },
+      "pivot_tables": [
+        {
+          "name": "P1",
+          "source": "Data!A1:B6",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "6-9",
+              "3-5",
+              "6-9",
+              "w3",
+              "w4"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "P2",
+      "cells": {
+        "H1": "T-4316 pivot P2"
+      },
+      "pivot_tables": [
+        {
+          "name": "P2",
+          "source": "Data!A1:B6",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "<0",
+              "<0",
+              "0-2",
+              "3-5",
+              "6-9",
+              ">9"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "P3",
+      "cells": {
+        "H1": "T-4316 pivot P3"
+      },
+      "pivot_tables": [
+        {
+          "name": "P3",
+          "source": "Data!A1:B6",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "x",
+              "x",
+              "x",
+              "x",
+              "x"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=P1!A3&\"\"",
+        "B1": "=P1!B3&\"\"",
+        "A2": "=P1!A4&\"\"",
+        "B2": "=P1!B4&\"\"",
+        "A3": "=P1!A5&\"\"",
+        "B3": "=P1!B5&\"\"",
+        "A4": "=P1!A6&\"\"",
+        "B4": "=P1!B6&\"\"",
+        "A5": "=P1!A7&\"\"",
+        "B5": "=P1!B7&\"\"",
+        "A6": "=P1!A8&\"\"",
+        "B6": "=P1!B8&\"\"",
+        "A7": "=P1!A9&\"\"",
+        "B7": "=P1!B9&\"\"",
+        "A8": "=P1!A10&\"\"",
+        "B8": "=P1!B10&\"\"",
+        "A9": "=P1!A11&\"\"",
+        "B9": "=P1!B11&\"\"",
+        "A10": "=P1!A12&\"\"",
+        "B10": "=P1!B12&\"\"",
+        "A12": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"<0\")",
+        "A13": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"0-2\")",
+        "A14": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"3-5\")",
+        "A15": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"6-9\")",
+        "A16": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\">9\")",
+        "C1": "=P2!A3&\"\"",
+        "D1": "=P2!B3&\"\"",
+        "C2": "=P2!A4&\"\"",
+        "D2": "=P2!B4&\"\"",
+        "C3": "=P2!A5&\"\"",
+        "D3": "=P2!B5&\"\"",
+        "C4": "=P2!A6&\"\"",
+        "D4": "=P2!B6&\"\"",
+        "C5": "=P2!A7&\"\"",
+        "D5": "=P2!B7&\"\"",
+        "C6": "=P2!A8&\"\"",
+        "D6": "=P2!B8&\"\"",
+        "C7": "=P2!A9&\"\"",
+        "D7": "=P2!B9&\"\"",
+        "C8": "=P2!A10&\"\"",
+        "D8": "=P2!B10&\"\"",
+        "C9": "=P2!A11&\"\"",
+        "D9": "=P2!B11&\"\"",
+        "C10": "=P2!A12&\"\"",
+        "D10": "=P2!B12&\"\"",
+        "C12": "=GETPIVOTDATA(\"Sum of S\",P2!A3,\"N\",\"<0\")",
+        "C13": "=GETPIVOTDATA(\"Sum of S\",P2!A3,\"N\",\"0-2\")",
+        "C14": "=GETPIVOTDATA(\"Sum of S\",P2!A3,\"N\",\"3-5\")",
+        "C15": "=GETPIVOTDATA(\"Sum of S\",P2!A3,\"N\",\"6-9\")",
+        "C16": "=GETPIVOTDATA(\"Sum of S\",P2!A3,\"N\",\">9\")",
+        "E1": "=P3!A3&\"\"",
+        "F1": "=P3!B3&\"\"",
+        "E2": "=P3!A4&\"\"",
+        "F2": "=P3!B4&\"\"",
+        "E3": "=P3!A5&\"\"",
+        "F3": "=P3!B5&\"\"",
+        "E4": "=P3!A6&\"\"",
+        "F4": "=P3!B6&\"\"",
+        "E5": "=P3!A7&\"\"",
+        "F5": "=P3!B7&\"\"",
+        "E6": "=P3!A8&\"\"",
+        "F6": "=P3!B8&\"\"",
+        "E7": "=P3!A9&\"\"",
+        "F7": "=P3!B9&\"\"",
+        "E8": "=P3!A10&\"\"",
+        "F8": "=P3!B10&\"\"",
+        "E9": "=P3!A11&\"\"",
+        "F9": "=P3!B11&\"\"",
+        "E10": "=P3!A12&\"\"",
+        "F10": "=P3!B12&\"\"",
+        "E12": "=GETPIVOTDATA(\"Sum of S\",P3!A3,\"N\",\"<0\")",
+        "E13": "=GETPIVOTDATA(\"Sum of S\",P3!A3,\"N\",\"0-2\")",
+        "E14": "=GETPIVOTDATA(\"Sum of S\",P3!A3,\"N\",\"3-5\")",
+        "E15": "=GETPIVOTDATA(\"Sum of S\",P3!A3,\"N\",\"6-9\")",
+        "E16": "=GETPIVOTDATA(\"Sum of S\",P3!A3,\"N\",\">9\")"
+      }
+    }
+  ]
+}

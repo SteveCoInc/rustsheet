@@ -766,3 +766,21 @@ fn whole_column_lookups_share_the_cached_vector() {
     assert_eq!(model._get_text("C6"), "#N/A");
     assert_eq!(model._get_text("C7"), "1");
 }
+
+// Each cached sheet has its own extent, a sheet without cells is uncached, and a changed cache is
+// read afresh on the next evaluation (T-0473).
+#[test]
+fn cached_extents_are_per_sheet_and_follow_the_cache() {
+    let mut model = linked();
+    assert_eq!(eval(&mut model, "=COUNTA([1]Uses!$A:$A)"), "3");
+    assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "142");
+    model.workbook.external_books[0]
+        .sheet_names
+        .push("Empty".into());
+    assert_eq!(eval(&mut model, "=SUM([1]Empty!$B$2)"), "#BLOCKED!");
+    model.workbook.external_books[0]
+        .cells
+        .insert((1, 5, 2), SpillValue::Number(8.0));
+    model.set_user_input(0, 1, 1, "x".into()).unwrap();
+    assert_eq!(eval(&mut model, "=SUM([1]Defines!$B:$B)"), "150");
+}

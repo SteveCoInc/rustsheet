@@ -95,3 +95,9 @@ pushed since 2026-10-29) found these cells named by no open task. All are within
 array forms) on the stat argument-modes probe, 1 to 6 ulp: `INDEX(TREND(A1:A8),1,1)` Excel 1.4999999999999996, ours
 1.5000000000000009.
 - probes/stat-argument-modes.case.json (8): Sheet1!H318, H319, H321, H322, H324, H325, H327, H328
+
+## Cells added by gap triage (2026-11-05)
+`make eval` on origin/main 4e3993c9e: the same ownership check over every failing Excel cell found one more LINEST
+cell no open task names, 4 ulp and within 15 digits (Phase 1b). It sits in an AMORDEGRC state probe but calls
+LINEST alone: `SUM(LINEST({1,2,3},{1,2,4}))` is Excel 1.1428571428571428, ours 1.1428571428571437.
+- probes/amordegrc-fraction-state-cc.case.json (1): Sheet1!A2

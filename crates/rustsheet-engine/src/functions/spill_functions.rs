@@ -18,7 +18,7 @@ use super::util::{compare_values_pairwise, sort_indices_pairwise};
 
 mod unique;
 use unique::unique_of;
-pub(crate) use unique::{first_equal_lines, unique_cell_key};
+pub(crate) use unique::{has_intransitive_text, unique_cell_key, unique_first_lines};
 
 /// Compare two sort keys following Excel's rules:
 ///   Numbers < Strings < Booleans < Errors < Empty cells

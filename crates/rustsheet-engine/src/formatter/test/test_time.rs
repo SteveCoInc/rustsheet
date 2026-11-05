@@ -181,3 +181,16 @@ fn fraction_digit_ties_follow_the_half_step_register() {
         );
     }
 }
+
+// probes/t4295-elapsed-with-month A1, D1, K1 (excel-graph): `[s]` before an hour or minute token
+// hands it the elapsed count, counted from the date section's register (18.5 days on 1h42m18s).
+#[test]
+fn elapsed_second_moves_onto_a_later_hour_or_minute() {
+    let value = 1.7 / 24.0 + 0.3 / 1440.0;
+    assert_eq!(text(value, "[s] m"), "18 26640");
+    assert_eq!(text(value, "[s] h"), "18 444");
+    assert_eq!(text(value, "[s] m s"), "18 26640 18");
+    assert_eq!(text(value, "[s] d"), "6138 0");
+    // A clock token before `[s]` keeps the section as parsed: `s [s]` is #VALUE! (T-3419).
+    assert_eq!(text(value, "s [s] m"), "#VALUE!");
+}

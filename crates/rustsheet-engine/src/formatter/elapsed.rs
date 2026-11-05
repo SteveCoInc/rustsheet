@@ -13,17 +13,17 @@ pub(super) enum ElapsedUnit {
     Hour,
 }
 
-/// A non-negative serial counted in the shown fraction of a second (`.0`, `.00`, `.000`). Excel
-/// rounds the whole value to that precision for the elapsed counts: `[h]:m:s.000` on 3.14159 is
-/// "75:23:53.376", `[hh]:mm:ss.0` "75:23:53.4", `[s].000` "271433.376" (an elapsed count before a
-/// fraction truncates instead of rounding); poi/ElapsedFormatTests A2-A7, number-formats.md
-/// "Elapsed-time tokens". With fraction digits the clock, the day and the fraction digits come
-/// from the half-step register instead ([`half_step_split`]), whose float error decides a tie:
-/// `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2" (probes/t4323-fraction-ties, number-formats.md
-/// "Fraction digits of a second at a tie").
+/// A non-negative serial counted in the shown fraction of a second (`.0`, `.00`, `.000`), so the
+/// clock, elapsed and fraction tokens agree: `[h]:m:s.000` on 3.14159 is "75:23:53.376",
+/// `[hh]:mm:ss.0` "75:23:53.4", `[s].000` "271433.376" (poi/ElapsedFormatTests A2-A7,
+/// number-formats.md "Elapsed-time tokens"). With fraction digits every token truncates the
+/// half-step register ([`half_step`]), whose float error decides a tie:
+/// `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2" (probes/t4323-fraction-ties, -carry-ties,
+/// number-formats.md "Fraction digits of a second at a tie"). Whole seconds round the value.
 pub(super) struct FractionalSeconds {
-    /// The value in units of `1/scale` second, rounded.
-    units: f64,
+    /// The seconds the elapsed counts truncate: the value rounded to whole seconds, or with
+    /// fraction digits the half-step register's seconds, unfloored.
+    elapsed_seconds: f64,
     /// The whole days the clock and date read.
     days: f64,
     /// The units within that day the clock and the fraction digits read, whole.
@@ -37,17 +37,23 @@ impl FractionalSeconds {
     /// 9999-12-31, so the units stay far below 2^53 and count exactly.
     pub(super) fn new(value: f64, digits: usize) -> Option<Self> {
         let scale = [1.0, 10.0, 100.0, 1000.0].get(digits).copied()?;
-        let units = (value * SECONDS_PER_DAY_F64 * scale).round();
-        let per_day = SECONDS_PER_DAY_F64 * scale;
-        let (days, day_units) = if digits == 0 {
+        let (elapsed_seconds, days, day_units) = if digits == 0 {
             // Whole seconds keep the rounded value: only fraction digits have the tie evidence.
-            ((units / per_day).floor(), units % per_day)
+            let units = (value * SECONDS_PER_DAY_F64).round();
+            (units, (units / SECONDS_PER_DAY_F64).floor(), units % SECONDS_PER_DAY_F64)
         } else {
+            // The counts read the same register as the clock, so a tie just short of a whole
+            // minute or hour carries in neither: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is
+            // "24:59:59.9", `TEXT(2+3599.95/86400,...)` "49:59:59.9" (probes/t4323-carry-ties).
             let (days, day_units) = half_step_split(value, scale);
-            (days, day_units.floor())
+            (
+                half_step(value, scale) * SECONDS_PER_DAY_F64,
+                days,
+                day_units.floor(),
+            )
         };
         Some(Self {
-            units,
+            elapsed_seconds,
             days,
             day_units,
             scale,
@@ -72,11 +78,11 @@ impl FractionalSeconds {
 
     /// The whole elapsed count of `unit` after rounding.
     fn elapsed(&self, unit: ElapsedUnit) -> f64 {
-        let seconds = (self.units / self.scale).floor();
+        let seconds = self.elapsed_seconds;
         match unit {
             ElapsedUnit::Hour => (seconds / 3600.0).floor(),
             ElapsedUnit::Minute => (seconds / 60.0).floor(),
-            ElapsedUnit::Second => seconds,
+            ElapsedUnit::Second => seconds.floor(),
         }
     }
 
@@ -195,6 +201,49 @@ pub(super) fn elapsed_after_larger_clock(tokens: &[TextToken]) -> bool {
     false
 }
 
+/// Excel moves the elapsed count off `[s]`/`[ss]` onto the first hour or minute token after it:
+/// `[s] m` prints like `s [m]`, the seconds field then the elapsed minutes counted from the date
+/// section's register ([`date_section_register`], which a clock token in front selects). So
+/// `TEXT(1.7/24+0.3/1440,"[s] m")` is "18 26640", `"[s] h"` "18 444", `"[s] m s"` "18 26640 18".
+/// The rewrite also drops the elapsed flag the parser gave a later `s`. Evidence:
+/// probes/t4295-elapsed-with-month A1:D9, K1:K9 (excel-graph, 2026-11-05, T-4295); `[ss]`, and a
+/// second hour or minute token after the first, are UNVERIFIED (not probed). A clock token before
+/// the `[s]` leaves the section as parsed, so [`elapsed_after_larger_clock`] keeps `s [s] m` and
+/// `h [s] m` `#VALUE!` like `s [s]` (UNVERIFIED with the `m` after; not probed).
+pub(super) fn move_elapsed_second(tokens: &mut [TextToken]) {
+    let Some(start) = tokens
+        .iter()
+        .position(|t| matches!(t, TextToken::ElapsedSecond | TextToken::ElapsedSecondPadded))
+    else {
+        return;
+    };
+    if tokens[..start].iter().any(|t| clock_unit(t).is_some()) {
+        return;
+    }
+    let Some(target) = tokens[start..].iter().position(|t| {
+        matches!(
+            t,
+            TextToken::Hour | TextToken::HourPadded | TextToken::Minute | TextToken::MinutePadded
+        )
+    }) else {
+        return;
+    };
+    for token in tokens.iter_mut() {
+        *token = match token {
+            TextToken::ElapsedSecond => TextToken::Second,
+            TextToken::ElapsedSecondPadded => TextToken::SecondPadded,
+            _ => continue,
+        };
+    }
+    let moved = &mut tokens[start + target];
+    *moved = match moved {
+        TextToken::Hour => TextToken::ElapsedHour,
+        TextToken::HourPadded => TextToken::ElapsedHourPadded,
+        TextToken::Minute => TextToken::ElapsedMinute,
+        _ => TextToken::ElapsedMinutePadded,
+    };
+}
+
 /// Whether the token reads the serial's date or time of day (`d`, `mmm`, `h`, `ss`, `AM/PM`, an
 /// era): anything in a date section but literals, `General`, elapsed counts and fraction digits.
 pub(super) fn is_date_or_clock(token: &TextToken) -> bool {
@@ -242,6 +291,11 @@ pub(super) fn date_section_register(
     half_step_split(value, scale).1 % modulus
 }
 
+/// The serial moved up half a unit of `1/scale` second: `value + 0.5/(86400*scale)`.
+fn half_step(value: f64, scale: f64) -> f64 {
+    value + 0.5 / (SECONDS_PER_DAY_F64 * scale)
+}
+
 /// Excel's half-unit rounding step on a non-negative serial: `y = value + 0.5/(86400*scale)`,
 /// split into its whole days and the units of `1/scale` second within the day, `frac(y)*86400*
 /// scale`, unfloored and with the step's float error left in. The `General` register
@@ -250,7 +304,7 @@ pub(super) fn date_section_register(
 /// `[h]:mm.0` gives 2.99999999997 units and shows ".2" (probes/t4323-fraction-ties: all 100
 /// cells with a serial of 1 or more, excel-graph 2026-11-05, T-4323).
 fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
-    let shifted = value + 0.5 / (SECONDS_PER_DAY_F64 * scale);
+    let shifted = half_step(value, scale);
     let days = shifted.floor();
     (days, (shifted - days) * SECONDS_PER_DAY_F64 * scale)
 }

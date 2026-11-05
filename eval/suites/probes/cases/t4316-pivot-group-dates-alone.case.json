@@ -1,0 +1,94 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4316: a numeric grouping (rangePr without groupBy) 0 to 9 by 3 over date-formatted cells only (yyyy-mm-dd), N = 1, 2, 4, 7, 10 (whole serials). The <groupItems> list is wrong text, so Excel writes its own labels if it keeps the grouping (0-2, 3-5, 6-9 for whole data) or shows each date if it drops it. S values are distinct powers of two. Calc reads the rendered pivot as text (rows 1-10) and GETPIVOTDATA on the whole-data labels (rows 12-16).",
+  "tags": [
+    "probe",
+    "pivot",
+    "T-4316",
+    "M6"
+  ],
+  "expected": {},
+  "sheets": [
+    {
+      "name": "Data",
+      "cells": {
+        "A1": "N",
+        "B1": "S",
+        "A2": 1,
+        "B2": 1,
+        "A3": 2,
+        "B3": 2,
+        "A4": 4,
+        "B4": 4,
+        "A5": 7,
+        "B5": 8,
+        "A6": 10,
+        "B6": 16
+      },
+      "number_formats": {
+        "A2": "yyyy-mm-dd",
+        "A3": "yyyy-mm-dd",
+        "A4": "yyyy-mm-dd",
+        "A5": "yyyy-mm-dd",
+        "A6": "yyyy-mm-dd"
+      }
+    },
+    {
+      "name": "P1",
+      "cells": {
+        "H1": "T-4316 pivot P1"
+      },
+      "pivot_tables": [
+        {
+          "name": "P1",
+          "source": "Data!A1:B6",
+          "location": "A3",
+          "row": "N",
+          "value": "S",
+          "group": {
+            "start": 0,
+            "end": 9,
+            "interval": 3,
+            "items": [
+              "w0",
+              "w1",
+              "w2",
+              "w3",
+              "w4"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=P1!A3&\"\"",
+        "B1": "=P1!B3&\"\"",
+        "A2": "=P1!A4&\"\"",
+        "B2": "=P1!B4&\"\"",
+        "A3": "=P1!A5&\"\"",
+        "B3": "=P1!B5&\"\"",
+        "A4": "=P1!A6&\"\"",
+        "B4": "=P1!B6&\"\"",
+        "A5": "=P1!A7&\"\"",
+        "B5": "=P1!B7&\"\"",
+        "A6": "=P1!A8&\"\"",
+        "B6": "=P1!B8&\"\"",
+        "A7": "=P1!A9&\"\"",
+        "B7": "=P1!B9&\"\"",
+        "A8": "=P1!A10&\"\"",
+        "B8": "=P1!B10&\"\"",
+        "A9": "=P1!A11&\"\"",
+        "B9": "=P1!B11&\"\"",
+        "A10": "=P1!A12&\"\"",
+        "B10": "=P1!B12&\"\"",
+        "A12": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"<0\")",
+        "A13": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"0-2\")",
+        "A14": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"3-5\")",
+        "A15": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\"6-9\")",
+        "A16": "=GETPIVOTDATA(\"Sum of S\",P1!A3,\"N\",\">9\")"
+      }
+    }
+  ]
+}
