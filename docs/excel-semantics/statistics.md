@@ -5880,9 +5880,9 @@ argument's wins (`SLOPE({1,#N/A,3},{1,#DIV/0!,3})` is `#N/A`). A scalar bins err
 `ROWS(FREQUENCY(0,ABS({13,15,17,""}-13)))` is 4 (A1, A2, A4), as desktop Excel's cached value for corpus-bench/53062 shows.
 A typed or computed boolean as data or bins, and numeric text `"2"` as a bin, are skipped (A8-A11). `FREQUENCY({1;2},{#N/A})` is
 `#SPILL!` on the web (A3): bins made only of errors are no numeric bin, so the two-row `{0;n}` result spills into the occupied
-A4 (as gen-m9/06b4e8f5de409d5e A239). Still unprobed: an error cell in a bins range (ours: that error; a one-cell reference to an error cell is skipped, see
-"FREQUENCY with no numeric bin: a bin at 0; an error cell as the bins is skipped (T-3781)"), a data-array error element
-against an error cell in a bins range, and an empty argument in the other position of the paired functions (T-2636 follow-up).
+A4 (as gen-m9/06b4e8f5de409d5e A239). T-3046 (probes/frequency-bins-ref-cells): an error cell in a bins *range* is skipped like an error element of a bins array
+(`1,#N/A,3` gives 3 rows, the first 1; A1-A2), a data-array error element wins over an error cell in a bins range
+(A3: `#DIV/0!`, A4: `#N/A`), and numeric text in a bins range cell is skipped (`1,2,"3"` gives 3 rows; A5-A7). Still unprobed: an empty argument in the other position of the paired functions (T-2636 follow-up).
 Ours: T-2430 implements it for LARGE, SMALL, PERCENTILE*, QUARTILE*, PERCENTRANK*, TRIMMEAN, MODE*, Z.TEST and the paired functions
 (COVAR, COVARIANCE.*, CORREL, PEARSON, T.TEST); PROB since T-2636; FREQUENCY's data array since T-2427 and its bins array
 skips an error element since T-2636; F.TEST and FTEST since T-2692 (`f_test_sample`, fisher.rs). The other argument's error winning is verified only for
