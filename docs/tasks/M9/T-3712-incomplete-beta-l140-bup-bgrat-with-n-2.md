@@ -38,6 +38,11 @@ Today's engine is visibly off on 1,371 of the 1,650 column-A cells of t3568-r5-b
   `Branch::L140BupBgrat`) to n terms, do not copy it (directive 3). Excel's EXP and LN are `x87_exp.rs` and the
   engine's LN model.
 - Cases: probes-numeric t3568-r5-bup-tune, -hold and -fresh (column A; columns B and C are Excel's D and P there).
+- F cells on this branch that T-3580 moved from within 15 digits to visibly off (T-4029; old and new F arguments give
+  the same value there, so the bratio port, not the argument form, moved them; `bratio::dispatch` on
+  `fisher.rs` `f_beta_arguments`, unswapped): probes-numeric t2220-f-dist-sweep-rt A974 `F.DIST.RT(1,100,20)` and
+  t2220-f-dist-sweep-cdf A974 `F.DIST(1,100,20,TRUE)` (a0 = 50, b0 = 10, x0 = 0.833), t3568-r5-bup-fresh A565
+  `F.DIST(0.18346881378692,1762,13,TRUE)` (b0 = 6.5) and A612 `F.DIST(0.8624684307,1676,19,TRUE)` (b0 = 9.5).
 
 ## Acceptance criteria
 - [ ] L140 bup+bgrat with n >= 2 takes the composition above for BETA.DIST, F, BINOM and NEGBINOM cdf cells. The

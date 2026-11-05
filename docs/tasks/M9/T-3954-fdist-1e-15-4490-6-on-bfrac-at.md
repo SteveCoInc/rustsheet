@@ -42,6 +42,9 @@ sweep shows it.
 
 Cells this task owns:
 - gen-m9/8f2ac25945af87da.case.json (1): Calc!A92
+- probes-numeric/t3953-f-tail-bfrac-tiny.case.json (6, T-4029: Bfrac at x0 = v as above, moved from within 15 digits to
+  visibly off when T-3580 sent F through the bratio port; old and new F arguments give the same value): Calc!A515,
+  B515 (a0 = 1.5, b0 = 126), A704, B704 (a0 = 5.5, b0 = 140), A997, B997 (a0 = 2.5, b0 = 3260.5)
 
 Once T-3953 adds probes-numeric `t3953-f-tail-bfrac-tiny`, every visibly-off cell of that case is this task's too.
 Fit on that case's column A (F.DIST.RT) only, on the fit lab's per-cell hold-out (369 A cells, marked `/hold/` in the
