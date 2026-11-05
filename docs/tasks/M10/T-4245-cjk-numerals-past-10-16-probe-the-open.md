@@ -3,7 +3,7 @@ id: T-4245
 title: "CJK numerals past 10^16: probe the open rest shapes and the 2^53 bracket (after T-3718)"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
