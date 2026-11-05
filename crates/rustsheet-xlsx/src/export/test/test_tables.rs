@@ -323,7 +323,13 @@ fn filter_columns_of_every_kind_survive_an_export() {
     fs::remove_file(temp_file_name).unwrap();
 
     let table = &reloaded.workbook.tables["Sales"];
-    assert_eq!(table.filter_columns, filter_columns);
+    // An `Other` criterion is written criterion-less and so reads back `Unset`, as Excel reads the
+    // file: no longer filtered by it (T-4003; the criterion the export drops is T-4004's).
+    let mut expected = filter_columns;
+    if let Some(last) = expected.last_mut() {
+        last.criterion = FilterCriterion::Unset;
+    }
+    assert_eq!(table.filter_columns, expected);
     assert!(table.has_filters);
 }
 
