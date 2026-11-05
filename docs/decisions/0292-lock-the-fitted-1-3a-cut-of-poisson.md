@@ -14,7 +14,11 @@
     - On the fresh sweep, 51 of 57 points are within 4 ulp of Excel, against 10 of 57 for the correctly rounded Q.
       Gate A's envelope holds all 57 points, and every point of the Gate A batch accuracy/POISSON.DIST/r4-T-4322
       (120 points, drawn after the freeze).
-    - The ladder puts Excel's cut in (1.298a, 1.3a]: at 1.3a the form is 2, 0 and -5 ulp off.
+    - The ladder puts Excel's cut in (1.298a, 1.3a] at k = 100 and 300, not at k = 200, where the form is as close
+      as the correctly rounded Q just below it. At 1.3a the form is 2, 0 and -5 ulp off.
+    - The hold-out is the fresh sweep, not the fit lab's hash split (T-3360): it was drawn after the freeze and
+      never tuned on. No margin was fixed in advance. Any margin passes, the fit lab's default of 5 points
+      included, because the hold-out exact rate (8/57) is at least the train rate (2/15).
     - The tag is `FITTED(T-4322, 24 cells, x/a 1.26..1.5, shape 31..301)`, and the form applies only in that range.
   - `scripts/check_fitted.py --update` also lowers annuity.rs's count from 4 to 3. That is the file's actual
     count on main: an earlier PR removed a tag without updating the lock.

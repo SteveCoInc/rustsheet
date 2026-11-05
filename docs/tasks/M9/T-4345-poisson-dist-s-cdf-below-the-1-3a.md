@@ -18,7 +18,7 @@ ruled out are recorded; the few-ulp residue of T-4322's window form is explained
 ## Context
 T-4322 (docs/excel-semantics/statistics.md, the T-4322 paragraph; docs/research/t4322/score.py) found that from
 1.3a to 1.5a (a = k + 1) Excel's cdf is sqrt(a/2 pi) exp(-B - c) times the fraction with T-4308's window
-exponent B, and that the cut is in (1.298a, 1.3a] at k = 100, 200 and 300. Below the cut Excel is none of the
+exponent B, and that the cut is in (1.298a, 1.3a] at k = 100 and 300. Below the cut Excel is none of the
 tried prefactors: it is 1 to 17 ulp from the correctly rounded Q (probes-numeric/t4322-poisson-window-r4-fresh
 A8:C10, probes/t4291-poisson-far-above-mean D1:H1), and the window form is up to 62 ulp off. 1.3 is Cephes'
 `SMALLRATIO`, the cut of its asymptotic (Temme) igamc series: score that series computed in doubles first. The

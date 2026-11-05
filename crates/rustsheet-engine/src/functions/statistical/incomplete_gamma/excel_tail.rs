@@ -116,9 +116,11 @@ fn loader_upper(a: f64, x: f64, deviance: f64, terms: &mut Terms) -> Option<f64>
 /// E21, F20, H24, A22 and probes/t4291-poisson-far-above-mean row 2), and at 1.258 to 1.2957 it is
 /// up to 62 ulp from it at shapes 81 to 301 (t4291 D1:H1, probes/t3252-gamma-prefactor-window A137).
 /// 1.3 (Cephes' `SMALLRATIO`, the cut of its asymptotic igamc series) was frozen inside that
-/// bracket; the ladder of the fresh sweep then put Excel's cut in (1.298, 1.3] at k = 100, 200
-/// and 300 (probes-numeric/t4322-poisson-window-r4-fresh A8:C13: at 1.3 the form is 2, 0 and 5 ulp
-/// off where the correctly rounded Q is 14, -5 and -63, and at 1.298 Excel is not the form).
+/// bracket; the ladder of the fresh sweep then put Excel's cut in (1.298, 1.3] at k = 100 and 300
+/// (probes-numeric/t4322-poisson-window-r4-fresh A8:C13: at 1.3 the form is 2, 0 and -5 ulp off at
+/// k = 100, 200 and 300 where the correctly rounded Q is 14, -5 and -63, and at 1.298 and below it
+/// is 13 to 85 ulp off at k = 100 and 300). At k = 200 the form is as close as the correctly rounded
+/// Q just below 1.3 (B8:B10), so the cut is not bracketed there.
 /// What Excel takes below the cut is T-4345's.
 /// FITTED(T-4322, 24 cells, x/a 1.26..1.5, shape 31..301)
 const WINDOW_MIN_RATIO: f64 = 1.3;

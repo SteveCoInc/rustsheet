@@ -63,7 +63,10 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
   Gate A's envelope holds all 57 fresh points, and all 9 below the cut.
 - Gate A batch: accuracy/POISSON.DIST/r4-T-4322 (120 points, 15 of them domain errors, generated after the freeze
   and filled by excel-graph on 2026-11-05). `rustsheet-eval accuracy` puts every point inside the envelope, 0
-  failing.
+  failing. None of its points falls in the fitted region (integer shape 31 to 301, x/a 1.3 to 1.5), so the in-region
+  out-of-sample evidence is the probes-numeric sweep alone.
+- The fresh sweep stands in for the fit lab's hash split (T-3360): it is stricter, drawn after the freeze. The
+  fit lab's default margin of 5 points passes too.
 - The ladder puts Excel's cut in (1.298a, 1.3a] at k = 100 and 300. At k = 200 the form is as close to Excel as the
   correctly rounded Q just below the cut (-3, 4 and -2 ulp at 1.29a, 1.295a and 1.298a, against -9, 10 and -1), so
   the cut is not bracketed there (T-4345).
