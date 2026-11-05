@@ -380,7 +380,7 @@ Evidence: probes/elapsed-minutes-fraction (21 cells) and probes/elapsed-no-secon
 Status: VERIFIED
 Tasks: T-2684, T-4323
 
-## Fraction digits of a second at a tie (T-4323, VERIFIED for serials of 1 or more)
+## Fraction digits of a second at a tie (T-4323, T-4332)
 Rule: with `.0`, `.00` or `.000` shown, the clock (`h`, `mm`, `ss`), the elapsed counts and the fraction digits are not the serial rounded to
 the shown digit but the half-step register truncated: `y = x + 0.5/(86400*scale)`, then `floor(frac(y)*86400*scale)` in
 plain doubles (`frac(y)*86400` first, then `*scale`), so the float error of `frac(y)` decides a tie, and not in one
@@ -390,10 +390,20 @@ uses ("`General` in a date section"). It holds for every probed format (`[h]:mm.
 `[h]:mm:ss.000`, `[m]:ss.00`, `mm:ss.0`, `h:mm:ss.000`) at serials of 1 or more: the tie probe 100 of 100 such cells,
 fresh sweeps 1-3 (each generated after a freeze) 274 of 276; the engine's earlier rounding of the value got 34 and 139.
 Not settled:
-- Serials below 1 (d = 0): Excel rounds many ties up where the register truncates below (`TEXT(0.015/86400,"s.00")` is
-  "0.02", the register 1.9999999999999998; `TEXT(21.2685/86400,"[h]:mm:ss.000")` is "0:00:21.268" from 21268.999999999996).
-  No operation order, 64-bit intermediate, 15-digit or 1-ulp snap tried fits both (98 of 150 such cells; the engine's
-  earlier rounding 110); fresh sweep 2 refuted the 15-digit snap (`r15`) and the `1+2^-52` snap each fitted before it (T-4332).
+- Serials below 1 (d = 0), T-4332: the clock and fraction digits are cut from `frac(y)` field by field, not at once:
+  multiply by 24, floor, keep the remainder, then the same with 60, 60 and `scale`, in plain doubles. Excel then
+  rounds `TEXT(0.015/86400,"s.00")` up to "0.02" (the register 1.9999999999999998, the cut 2) and truncates
+  `TEXT(21.2685/86400,"[h]:mm:ss.000")` to "0:00:21.268". The cut gets 134 of the 156 tie cells below 1 and 469 of
+  470 from 1 up in the five t4323 cases (the register 101 and 467; the engine's earlier rounding 114 below 1). On the
+  fresh sweep probes/t4332-fraction-fresh it gets 103 of 120, against 72 for the register and 72 for the earlier
+  rounding (120 cells drawn after the cut was frozen; excel-graph 2026-11-05).
+  Still open (T-4370): Excel rounds up some ties whose last remainder lies 1 to 11 ulp below a whole unit
+  (`TEXT(0.0005/86400,"[h]:mm:ss.000")` "0:00:00.001", `TEXT(3.55/86400,"[s].0")` "3.6"), yet truncates others 8 ulp
+  below (`TEXT(20.65/86400,"[s].0")` "20.6"). Refuted below 1: every operation order of the one-step register,
+  64-bit intermediates, the 15-digit snap (`r15`) and the `1+2^-52` snap (fresh sweep 2), cuts through 24 and 3600
+  or 1440 and 60 (117 and 107 of 156), the fraction cut digit by digit (131), whole milliseconds first (115 to 125,
+  but they lose most cells from 1 up), and keeping the register wherever it is above the cut (84 of 120 on the fresh
+  sweep).
 - The elapsed `[h]`/`[m]`/`[s]` counts before the fraction mostly read the same register, `floor(y*86400/unit)`, so a
   tie just short of a whole minute or hour carries in neither the count nor the clock:
   `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is "24:59:59.9", `TEXT(2+3599.95/86400,"[h]:mm:ss.0")` "49:59:59.9",
@@ -404,14 +414,14 @@ Not settled:
   (y*86400 is 3888000000.9999995), `TEXT(3+5.95/86400,"[s].0")` "259206.9", `TEXT(45000+59.95/86400,"[m]:ss.0")`
   "64800001:59.9" (ties A90, sweep-2 A1, A24, A41, A84, sweep-3 A7, carry-ties A27, A31, carry-sweep A37, A49, A83).
   Neither rounding the value nor any operation order of the register tried fits both sets (T-4333).
-- A few ties at serials of 1 or more still miss: `TEXT(30+39474.05/86400,"mm:ss.0")` is "57:54.0" while the register is
-  exactly 394741 (sweep-3 A2).
+- From serial 1 up the field-by-field cut also gives `TEXT(30+39474.05/86400,"mm:ss.0")` "57:54.0" (sweep-3 A2),
+  where the register is exactly 394741 and printed "57:54.1".
 Evidence: probes/t4323-fraction-ties (150 cells), probes/t4323-fraction-sweep (96), t4323-fraction-sweep-2 (160),
-t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100: 97 match), t4323-carry-ties (32), t4323-carry-sweep (120),
-excel-graph 2026-11-05; scoring scripts in docs/research/t4323.
-Status: VERIFIED (serials of 1 or more); OPEN below 1 and for the `[s]` count
-Implemented in: `half_step_split` and `FractionalSeconds` (formatter/elapsed.rs).
-Tasks: T-4323, T-4332, T-4333
+t4323-fraction-sweep-3 (120), t4323-fraction-holdout (100), t4323-carry-ties (32), t4323-carry-sweep (120),
+t4332-fraction-fresh (120), excel-graph 2026-11-05; scoring scripts in docs/research/t4323 and docs/research/t4332.
+Status: VERIFIED (serials of 1 or more); PARTIAL below 1 (T-4370) and OPEN for the `[s]` count (T-4333)
+Implemented in: `field_split`, `half_step_split` (the `General` register) and `FractionalSeconds` (formatter/elapsed.rs).
+Tasks: T-4323, T-4332, T-4333, T-4370
 
 ## Elapsed-time tokens
 Rule (observed, ElapsedFormatTests, a 1904-date-system workbook):

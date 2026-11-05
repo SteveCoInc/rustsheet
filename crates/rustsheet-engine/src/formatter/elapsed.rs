@@ -17,9 +17,10 @@ pub(super) enum ElapsedUnit {
 /// clock, elapsed and fraction tokens agree: `[h]:m:s.000` on 3.14159 is "75:23:53.376",
 /// `[hh]:mm:ss.0` "75:23:53.4", `[s].000` "271433.376" (poi/ElapsedFormatTests A2-A7,
 /// number-formats.md "Elapsed-time tokens"). With fraction digits every token truncates the
-/// half-step register ([`half_step`]), whose float error decides a tie:
-/// `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2" (probes/t4323-fraction-ties, -carry-ties,
-/// number-formats.md "Fraction digits of a second at a tie"). Whole seconds round the value.
+/// half-step serial ([`half_step`]), the clock and fraction cut field by field ([`field_split`]),
+/// so float error decides a tie: `TEXT(1+0.25/86400,"[h]:mm.0")` is "24:00.2"
+/// (probes/t4323-fraction-ties, -carry-ties, t4332-fraction-fresh, number-formats.md "Fraction
+/// digits of a second at a tie"). Whole seconds round the value.
 pub(super) struct FractionalSeconds {
     /// The seconds the elapsed counts truncate: the value rounded to whole seconds, or with
     /// fraction digits the half-step register's seconds, unfloored.
@@ -49,11 +50,11 @@ impl FractionalSeconds {
             // The counts read the same register as the clock, so a tie just short of a whole
             // minute or hour carries in neither: `TEXT(1+3599.95/86400,"[h]:mm:ss.0")` is
             // "24:59:59.9", `TEXT(2+3599.95/86400,...)` "49:59:59.9" (probes/t4323-carry-ties).
-            let (days, day_units) = half_step_split(value, scale);
+            let (days, day_units) = field_split(value, scale);
             (
                 half_step(value, scale) * SECONDS_PER_DAY_F64,
                 days,
-                day_units.floor(),
+                day_units,
             )
         };
         Some(Self {
@@ -311,6 +312,30 @@ fn half_step_split(value: f64, scale: f64) -> (f64, f64) {
     let shifted = half_step(value, scale);
     let days = shifted.floor();
     (days, (shifted - days) * SECONDS_PER_DAY_F64 * scale)
+}
+
+/// The whole days and the whole units of `1/scale` second within the day that the clock and the
+/// fraction digits show: the half step's serial `y` ([`half_step`]) cut field by field, as Excel
+/// does. `frac(y)` is multiplied by 24, floored and its remainder kept, then the same with 60, 60
+/// and `scale`, all in plain doubles. Cutting `frac(y)*86400*scale` at once (the register of
+/// [`half_step_split`]) truncates many ties below serial 1 that Excel rounds up:
+/// `TEXT(0.015/86400,"s.00")` is "0.02" and `TEXT(21.2685/86400,"[h]:mm:ss.000")` "0:00:21.268",
+/// and only the field-by-field cut gives both. It gets 134 of the 156 tie cells below serial 1
+/// and 469 of 470 from 1 up in the five t4323 probes (the register 101 and 467), and 103 of 120
+/// in the fresh sweep generated after it was frozen (probes/t4332-fraction-fresh, excel-graph
+/// 2026-11-05; the register 72). T-4332, number-formats.md "Fraction digits of a second at a tie".
+fn field_split(value: f64, scale: f64) -> (f64, f64) {
+    let shifted = half_step(value, scale);
+    let days = shifted.floor();
+    let mut rest = shifted - days;
+    let mut units = 0.0;
+    for field in [24.0, 60.0, 60.0, scale] {
+        rest *= field;
+        let whole = rest.floor();
+        units = units * field + whole;
+        rest -= whole;
+    }
+    (days, units)
 }
 
 /// `x` rounded to `1/scale`; a magnitude whose scaled value overflows is already integral, and
