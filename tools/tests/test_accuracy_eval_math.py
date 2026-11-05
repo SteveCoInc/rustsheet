@@ -76,7 +76,7 @@ def test_case_math_writes_values_and_skips_what_it_cannot_read(tmp_path: Path) -
         "A3": "=T.DIST(A1,3,TRUE)",  # a formula cell: never read
         "A4": "=T.DIST(1.5,2.5,TRUE)",  # non-integer df: skipped
         "A5": "=T.INV(0,3)",  # outside the domain: a math domain error
-        "A6": "=NORM.DIST(1,0,1,TRUE)",  # no definition: not a candidate
+        "A6": '=LEN("abcd")',  # no definition (a text function): not a candidate
         "A7": "=T.DIST(1.5,3,TRUE)",  # not scored (no oracle value): not a candidate
         "A8": "=T.DIST(B2,3,TRUE)",  # an arithmetic-over-literals formula cell: read
         "B1": 1.5,
