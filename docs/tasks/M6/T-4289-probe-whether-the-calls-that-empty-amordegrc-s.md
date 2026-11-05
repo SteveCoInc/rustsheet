@@ -3,7 +3,7 @@ id: T-4289
 title: "Probe whether the calls that empty AMORDEGRC's left-over value (SEQUENCE, SORT, XLOOKUP, LAMBDA, ...) are what empties WEEKNUM's stale state"
 milestone: M6
 lane: functions-date
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
