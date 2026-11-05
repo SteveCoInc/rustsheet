@@ -185,7 +185,9 @@ fn filter_column(column: &FilterColumn) -> String {
             }
             xml.push_str("</customFilters>");
         }
-        FilterCriterion::Other => return format!("<filterColumn colId=\"{col_id}\"/>"),
+        FilterCriterion::Other | FilterCriterion::Unset => {
+            return format!("<filterColumn colId=\"{col_id}\"/>");
+        }
     }
     xml.push_str("</filterColumn>");
     xml

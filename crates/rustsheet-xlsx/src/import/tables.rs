@@ -258,6 +258,8 @@ fn filter_column(node: &XmlNode) -> Option<FilterColumn> {
                 })
                 .collect(),
         }
+    } else if node.children().next().is_none() {
+        FilterCriterion::Unset
     } else {
         FilterCriterion::Other
     };
@@ -282,6 +284,18 @@ mod tests {
         assert_eq!(criterion(dated), FilterCriterion::Other);
         let calendar = r#"<filterColumn colId="1"><filters calendarType="gregorian"><filter val="a"/></filters></filterColumn>"#;
         assert_eq!(criterion(calendar), FilterCriterion::Other);
+    }
+
+    /// A `<filterColumn>` with no criterion element is read as unset, which Excel does not call
+    /// filtered; any other element is a criterion (T-4003).
+    #[test]
+    fn criterion_less_filter_columns_are_unset() {
+        assert_eq!(
+            criterion(r#"<filterColumn colId="0"/>"#),
+            FilterCriterion::Unset
+        );
+        let top = r#"<filterColumn colId="1"><top10 val="2"/></filterColumn>"#;
+        assert_eq!(criterion(top), FilterCriterion::Other);
     }
 
     /// Filter values are decoded from the file's `_xHHHH_` escapes, so the export's encoding

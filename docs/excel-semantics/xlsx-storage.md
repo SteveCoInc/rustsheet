@@ -492,10 +492,11 @@ those two kinds survive a round trip with the same meaning (Excel's own tables.x
 byte; `blank="true"` is written `blank="1"`, `and="0"` is dropped, and a `<filter>` without `val` is dropped); column inserts and deletes inside the table move them with their
 columns. Every other kind (top 10, dynamic, color, icon, and a values filter with date groups or a `calendarType`)
 keeps only its column and is written back as a criterion-less `<filterColumn colId="N"/>`; a `<filterColumn>`
-without a valid `colId` is dropped, and the `hiddenButton`/`showButton` attributes are not kept. `has_filters`
-still makes SUBTOTAL call the sheet's hidden rows filtered. A table filtered through the API with no criterion is
-written as `<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid and our own import reads them
-back as filtered.
+without a valid `colId` is dropped, and the `hiddenButton`/`showButton` attributes are not kept. Kept as `Other`,
+such a column still makes SUBTOTAL call the sheet's hidden rows filtered in the workbook it was read into, as
+Excel's original does. A table filtered through the API with no criterion is written as `<filterColumn colId="0"/>`.
+Both criterion-less forms are schema-valid; since T-4003 our import reads a `<filterColumn>` with no criterion
+element as `FilterCriterion::Unset`, which, as in Excel, does not make the rows filtered (`Table::filters_hidden_rows`).
 Excel (excel-graph uploads of our export, 2026-11-04, T-3081) opens every one of these filter forms without repair,
 but calls the hidden rows filtered only for a filterColumn with a criterion inside the table. On `Sales` (A1:B7,
 `Cat` a,b,a,c,a,b and `Val` 1-6) with rows hidden as the filter would:
@@ -503,11 +504,14 @@ but calls the hidden rows filtered only for a filterColumn with a criterion insi
   `SUBTOTAL(103,Sales[Cat])` and `SUBTOTAL(3,Sales[Cat])` both 3, the same as ours; a custom filter (`Val` > 3, rows
   2-4 hidden) 15, 15, 3, 3, also ours; two filterColumns with the same `colId` 0 behave as the values filter;
 - a criterion-less `<filterColumn colId="0"/>` (rows 3 and 5 hidden): SUBTOTAL 109 15 but SUBTOTAL 9 21, SUBTOTAL 103
-  4 but SUBTOTAL 3 6, as for rows hidden by hand. Ours calls them filtered (9 = 15, 3 = 4; T-4003). The same holds for
-  a top 10 filter exported criterion-less (rows 2-5 hidden: 11 and 21, 2 and 6; ours 11 and 11, 2 and 2), so the round
-  trip changes Excel's SUBTOTAL 9 from the original filter's 11 to 21 (T-4004); for a values filter whose `colId` is
-  past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
-  export writes after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15).
+  4 but SUBTOTAL 3 6, as for rows hidden by hand. The same holds for a top 10 filter exported criterion-less (rows
+  2-5 hidden: 11 and 21, 2 and 6), so the round trip changes Excel's SUBTOTAL 9 from the original filter's 11 to 21
+  (T-4004); for a values filter whose `colId` is past the table's width (5 on 2 columns: 9 and 21, 3 and 6); and for
+  the `colId="0"` fallback our export writes after the filtered column is deleted (15 and 21, 3 and 6). Ours called
+  all of these filtered before T-4003 (9 = 109, 3 = 103); it now gives Excel's values for the files as read
+  (`Table::filters_hidden_rows`: a criterion that is not `Unset`, on a `colId` below the table's column count), and a
+  column delete that removes the last kept criterion leaves the table's filter `Unset` on `colId` 0, the file the
+  export writes, so the workbook reads as Excel reads that file. A durable probe case is T-4364's.
 A totals-row cell holding a number, boolean or error constant gets no metadata (T-1607 covered label and formula
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as

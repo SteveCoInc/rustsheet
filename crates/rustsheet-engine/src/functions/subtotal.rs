@@ -63,7 +63,7 @@ impl Model {
         self.workbook
             .tables
             .values()
-            .any(|table| table.has_filters && table.sheet_name == worksheet.name)
+            .any(|table| table.filters_hidden_rows() && table.sheet_name == worksheet.name)
     }
 
     /// `sheet_filtered` is [`Self::sheet_has_filtered_table`] of the sheet, decided once per area walk.

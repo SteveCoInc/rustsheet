@@ -13,7 +13,7 @@ use crate::expressions::parser::stringify::{DataBlock, DisplaceData, Displacemen
 use crate::expressions::types::Area;
 use crate::expressions::utils::number_to_column;
 use crate::model::Model;
-use crate::types::{FilterColumn, Table, TableColumn};
+use crate::types::{FilterColumn, FilterCriterion, Table, TableColumn};
 
 /// What a structural edit does to the tables of the edited sheet.
 #[derive(Debug, Default, PartialEq)]
@@ -542,7 +542,16 @@ impl Model {
                 }
                 if let Some(edit) = resized.columns {
                     edit_columns(&mut table.columns, edit);
+                    let had_criteria = !table.filter_columns.is_empty();
                     edit_filter_columns(&mut table.filter_columns, edit);
+                    if had_criteria && table.filter_columns.is_empty() {
+                        // The delete took the last criterion: what the export writes, a
+                        // criterion-less `colId="0"`, which Excel does not call filtered (T-4003).
+                        table.filter_columns.push(FilterColumn {
+                            col_id: 0,
+                            criterion: FilterCriterion::Unset,
+                        });
+                    }
                     headers.extend(inserted_headers(table, edit));
                 }
             }

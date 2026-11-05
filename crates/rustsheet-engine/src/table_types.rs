@@ -27,6 +27,23 @@ pub struct Table {
 }
 
 impl Table {
+    /// Whether the table's filter makes the hidden rows of its sheet filtered rows, which SUBTOTAL
+    /// 1-11 skips: Excel calls them filtered only when a filterColumn has a criterion and a
+    /// `colId` inside the table. A criterion-less `<filterColumn colId="0"/>` or a values filter
+    /// with `colId` past the table's width leaves them hidden by hand (excel-graph, 2026-11-04;
+    /// docs/excel-semantics/xlsx-storage.md, "Table parts in the export"; T-4003). A table
+    /// filtered with no kept column (the API's `filtered`, an autoFilter without filterColumns)
+    /// stays filtered: docs/excel-semantics/numbers.md, "SUBTOTAL and AGGREGATE over hidden and
+    /// filtered rows".
+    pub fn filters_hidden_rows(&self) -> bool {
+        self.has_filters
+            && (self.filter_columns.is_empty()
+                || self.filter_columns.iter().any(|filter| {
+                    filter.criterion != FilterCriterion::Unset
+                        && usize::try_from(filter.col_id).is_ok_and(|col| col < self.columns.len())
+                }))
+    }
+
     /// Whether the table is on the sheet `sheet_name` (sheet names match ignoring case).
     pub fn is_on_sheet(&self, sheet_name: &str) -> bool {
         sheet_names_match(&self.sheet_name, sheet_name)
@@ -98,6 +115,10 @@ pub enum FilterCriterion {
     /// Any other kind (top 10, dynamic, color or icon filters): applied, but its criterion is
     /// not kept, so an export writes the column with no criterion.
     Other,
+    /// A `<filterColumn>` with no criterion element: Excel opens it but does not call the rows
+    /// it hides filtered (docs/excel-semantics/xlsx-storage.md, "Table parts in the export";
+    /// T-4003). Written back as it was read.
+    Unset,
 }
 
 /// One `<customFilter>`: `operator` is the file's attribute (absent means `equal`) and `val`

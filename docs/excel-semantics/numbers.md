@@ -2260,7 +2260,14 @@ Examples (A1:A8 = 1, 2, 4, ..., 128, rows 2 and 5 hidden by hand): `SUBTOTAL(9,A
 `SUBTOTAL(10,..)` = 2444.7.
 How the probe makes a filtered row: the table's autoFilter holds a values filter on its first column that keeps
 exactly the visible rows, and the hidden rows are written `hidden="1"`; Excel reads such a file as filtered without
-re-applying the filter. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
+re-applying the filter. **A filtered table is one whose filter has a criterion inside the table** (T-4003): a
+criterion-less `<filterColumn colId="0"/>` or a values filter on a `colId` past the table's width leaves the sheet's
+hidden rows hidden by hand (SUBTOTAL 9 reads them; excel-graph uploads, 2026-11-04, docs/excel-semantics/xlsx-storage.md
+"Table parts in the export"). Two engine-side choices, which no Excel file has: a table the API adds as `filtered`
+(no criterion kept) counts as filtered, since the caller states that its hidden rows are filtered rows (its export
+writes `<filterColumn colId="0"/>`, which Excel reads as unfiltered: a known export gap, no criterion to write); and
+a column delete that removes the table's last criterion leaves it unfiltered, as the file the export then writes
+reads in Excel. Excel's own behaviour when its user deletes the filtered column is unprobed. A worksheet-level autoFilter (no table), a manual hide inside a filtered table made in the
 application, and hidden columns are unprobed.
 Evidence: probes/subtotal-hidden-filtered (150 cells; oracle: excel-graph, 2026-10-08, T-1036); probes/t4194-subtotal-nested-skip (90 cells, excel-graph, 2026-11-04, T-4194).
 Status: VERIFIED
