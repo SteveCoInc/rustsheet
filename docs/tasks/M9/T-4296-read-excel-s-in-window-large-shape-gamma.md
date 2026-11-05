@@ -59,7 +59,10 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
 - **Engine**: density.rs `mode_density` takes the chain wherever the density keeps the accurate exponent at shape
   20 and up. P and Q are unchanged. This is a structural model (check 7 (c)), so it owes the R4 guards and no
   FITTED tag. Counts are bit-exact / within 4 ulp / within 15 digits.
-  - Hold-out (B): new 40/40/40; main 22/40/40; correctly rounded 33/40/40.
+  - Hold-out (B): new 40/40/40; main 22/40/40; correctly rounded 33/40/40. The split is by column: B is
+    probed for the purpose (40 shapes from seed 4296, a third of the case), drawn and fixed before any scoring,
+    in place of the fit lab's cell split (T-3360). No margin was stated before scoring (a review finding).
+    Train and hold-out are both 100% exact, so any margin passes.
   - Train (A): new 40/40/40; main 22/40/40; correctly rounded 21/40/40.
   - Fresh sweep probes-numeric/t4296-gamma-density-r4-fresh (160 log-uniform cells, generated and filled after the
     freeze, since GAMMA.DIST has no Gate A table yet, T-3925): at x = a new 40/40/40, main 20/40/40, correctly
@@ -70,5 +73,7 @@ Decision 0083: the cells listed under Context are visibly off, so this task is i
     decision 0286 through `update-baseline --allow-regressions`.
   - Visible parity: 2530 cells visibly off, against an allowance of 3156.
   - The new case t4296-gamma-density-at-mode is 120/120 bit-exact.
+- Where 2 pi a overflows (a above about 2.9E307) the density keeps the old chain instead of returning 0
+  (unprobed; review finding).
 - **Exponent still open**: it is moved to T-4308, with the rejected families and the visibly-off cells this task
   owned plus the fresh sweep's.

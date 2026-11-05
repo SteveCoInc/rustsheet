@@ -55,7 +55,9 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
         return Some(stirling_prefactor(a, excel_ratio_exponent(a, y), stirlerr_exact(a).0) / x);
     }
     if form == Exponent::Excel && a >= DIRECT_SHAPE_MAX && !excel_away_from_mode(a, y, form) {
-        return Some(mode_density(a, x, y));
+        if let Some(density) = mode_density(a, x, y) {
+            return Some(density);
+        }
     }
     Some(gamma_prefactor(a, y, form) / x)
 }
@@ -69,9 +71,16 @@ fn density_with(a: f64, x: f64, scale: f64, form: Exponent) -> Option<f64> {
 /// differs from Excel's by about half an ulp of ln(x/a) per unit of shape (T-4290), so most
 /// cells there stay a few ulp off; the chain is bit-exact at 288 of 1,281 probed window densities
 /// against 162 for the prefactor's (docs/research/t4296/score.py).
-fn mode_density(a: f64, x: f64, y: f64) -> f64 {
+///
+/// `None` where 2 pi a overflows (a above about 2.9E307): the chain would give 0 there, where the
+/// density is about 1E-154, so the caller keeps the prefactor's sqrt(a / 2 pi) form (unprobed).
+fn mode_density(a: f64, x: f64, y: f64) -> Option<f64> {
+    let two_pi_a = 2.0 * std::f64::consts::PI * a;
+    if !two_pi_a.is_finite() {
+        return None;
+    }
     let exponent = -a * rlog(a, y) - stirlerr_exact(a).0;
-    exponent.exp() / (2.0 * std::f64::consts::PI * a).sqrt() * (a / x)
+    Some(exponent.exp() / two_pi_a.sqrt() * (a / x))
 }
 
 #[cfg(test)]
@@ -111,5 +120,12 @@ mod tests {
                 "GAMMA.DIST({x},{a},{scale},FALSE)"
             );
         }
+    }
+
+    #[test]
+    fn a_shape_past_the_two_pi_overflow_keeps_a_nonzero_density() {
+        // 2 pi a is infinite here, so the window chain would give 0 (T-4296 review).
+        let density = gamma_density(1e308, 1e308, 1.0).unwrap_or(0.0);
+        assert!(density > 0.0 && density.is_finite(), "{density}");
     }
 }
