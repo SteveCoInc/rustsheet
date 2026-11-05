@@ -45,6 +45,15 @@ From the T-4296 review (PR #3315; MINOR, carried over by T-4308):
 - Once the exponent moves, make the near-mode test once (density.rs `density_with` and `gamma_prefactor` both
   evaluate `excel_away_from_mode` today).
 
+From the T-4308 review (PR #3349; MINOR, excel-fidelity, carried here):
+- docs/research/t4308/score.py part 1 takes every cell with B > 8, which mixes in cells below a/128 that sit on their
+  own double grid. Split it at a/128: restricted to B >= a/128 the spread is 0.013 g at shape 4096 (noise 0.016),
+  0.053 at 1024 (noise 0.062) and 0.028 at 2048 (noise 0.031), and quote those in statistics.md.
+- The cross-shape claim in statistics.md ("the same function of u at shapes 1024 and 4096 to about 3 units of
+  2^-59") is rms 2.5 and max 5.5 units over 213 common u, and score.py does not print it. Add that comparison to
+  score.py and correct the wording. The largest gaps sit at both ends of u (0.67 to 0.68 and 1.40 to 1.41), which may
+  be a trend worth reading.
+
 ## Acceptance criteria
 - [ ] A candidate exponent that reproduces the a 2^-59 grid is scored on the T-4296 chain with a hold-out fixed before
       scoring (decision 0188 R4), and adopted if it is Excel's on the hold-out. Otherwise each rejected family goes
