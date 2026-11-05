@@ -12,7 +12,7 @@ mod database;
 pub(crate) mod date_and_time;
 mod engineering;
 mod financial;
-mod information;
+pub(crate) mod information;
 pub(crate) mod kinds;
 pub(crate) mod lift;
 pub(crate) mod logical;

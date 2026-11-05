@@ -1604,8 +1604,11 @@ Evidence: probes/networkdays-intl-holiday-kinds A1:H38 (M6), networkdays-intl-ho
 networkdays-intl-holiday-kinds-names A1:F7 (M8; names in the case's `names`).
 Ours: implemented (T-3537, T-4190): `Holidays::scalar` is "neither an array nor `Model::is_reference`" of the argument (on the
 arm IF picked), set in `holiday_serials`, read by `networkdays_of`.
+A unary plus over a reference-returning function is scalar too: `+INDEX(C1:C2,n)`, `+OFFSET(Cn,0,0)`,
+`+XLOOKUP(1,{1},Cn:Cn)`, `+IF(TRUE,Cn)` give 87 for the Saturday holiday and 86 for the Tuesday one
+(probes/networkdays-intl-holiday-unary-fn A1:B4, excel-graph 2026-11-05, T-4209).
 Status: VERIFIED
-Tasks: T-3537
+Tasks: T-3537, T-4190, T-4209
 
 ## DAYS error order
 Rule: DAYS reports an error-valued argument first, then goes through the arguments left to

@@ -974,6 +974,7 @@ C	probes/networkdays-intl-holiday-forms.case.json	22
 C	probes/networkdays-intl-holiday-kinds-let.case.json	21
 C	probes/networkdays-intl-holiday-kinds-names.case.json	13
 C	probes/networkdays-intl-holiday-kinds.case.json	87
+C	probes/networkdays-intl-holiday-unary-fn.case.json	18
 C	probes/networkdays-intl-holiday-weekend-dedupe.case.json	112
 C	probes/networkdays-intl-holiday-weekend-masks.case.json	45
 C	probes/networkdays-intl-serial-zero-holiday.case.json	120

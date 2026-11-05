@@ -9,7 +9,7 @@ use crate::{
         token::Error,
         types::CellReferenceIndex,
     },
-    functions::Function,
+    functions::{information::written_reference, Function},
     model::Model,
     reference_operators::Picked,
 };
@@ -42,6 +42,8 @@ impl Model {
             error,
             before_weekend: true,
         };
+        // `Node::ungrouped` sees through a unary plus, so read it off the argument as written.
+        let written_plus = written_reference(arg) == Some(false);
         let (mut arg, mut picked) = (arg, false);
         let value = loop {
             if is_multi_sheet_span(arg) {
@@ -78,8 +80,13 @@ impl Model {
         // `XLOOKUP(1,{1},C1:C1)` and a name bound to a cell are references; `IF(TRUE,45003)`
         // and `XLOOKUP(1,{1},{45003})` are scalar (probes/networkdays-intl-holiday-kinds,
         // -kinds-let, -kinds-names; T-4190). An array is never scalar.
-        let scalar = !matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
-            && !self.is_reference(arg, cell);
+        // A unary plus over a function that returns one cell (`+OFFSET(C1,0,0)`, `+IF(TRUE,C1)`)
+        // is a value as well, though the evaluator hands the cell's range on
+        // (probes/networkdays-intl-holiday-unary-fn A1:B4, T-4209).
+        let plus_of_one_cell = written_plus && one_value;
+        let scalar = plus_of_one_cell
+            || (!matches!(value, CalcResult::Array(_) | CalcResult::Range { .. })
+                && !self.is_reference(arg, cell));
         let date_system = self.workbook.settings.date_system;
         let (mut serials, mut out_of_range) = (Vec::new(), false);
         self.collect_serial_numbers(value, cell, |serial| {
