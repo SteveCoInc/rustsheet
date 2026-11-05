@@ -126,23 +126,23 @@ pub struct PivotRangeGroup {
 }
 
 /// Field `field` grouped by `group`, as the xlsx importer groups one (`group_by_numbers`,
-/// `group_by_dates`), or left ungrouped where Excel's refresh drops the grouping. `mixes_dates`
-/// says whether the field's source cells hold numbers both in a date format and not.
+/// `group_by_dates`), or left ungrouped where Excel's refresh drops the grouping. `holds_dates`
+/// says whether the field's source cells hold a number in a date format.
 fn grouped(
     field: &CacheField,
     group: &PivotRangeGroup,
-    mixes_dates: bool,
+    holds_dates: bool,
 ) -> Result<CacheField, PivotError> {
     let labels: Vec<CacheItem> = group.items.iter().cloned().map(CacheItem::Text).collect();
     Ok(match group.by {
         None => {
-            // Excel's refresh drops a numeric grouping over a blank, and over date cells among
-            // numbers: each value is its own item, in record order, the blank `(blank)`
-            // (probes/t4287-pivot-group-whole-end pivot S, t4287-pivot-group-dates-as-numbers;
-            // web.md "Grouped pivot fields import as their group items").
-            // A numeric grouping over date cells alone is unprobed and stays grouped. The xlsx
-            // importer keeps a saved grouping: only this refresh-like path drops one.
-            if field.items.contains(&CacheItem::Missing) || mixes_dates {
+            // Excel's refresh drops a numeric grouping over a blank and over any date cell,
+            // among numbers or alone: each value is its own item, in record order, the blank
+            // `(blank)` (probes/t4287-pivot-group-whole-end pivot S,
+            // t4287-pivot-group-dates-as-numbers, t4316-pivot-group-dates-alone; web.md "Grouped
+            // pivot fields import as their group items"). The xlsx importer keeps a saved
+            // grouping: only this refresh-like path drops one.
+            if field.items.contains(&CacheItem::Missing) || holds_dates {
                 return Ok(field.clone());
             }
             group_by_numbers(field, [group.start, group.end, group.interval], &labels)?
@@ -347,9 +347,9 @@ impl Txn<'_> {
             if column.is_some() {
                 return Err(PivotError::GroupedWithColumn.into());
             }
-            let mixes_dates = group.by.is_none() && self.mixes_dates(input, row)?;
+            let holds_dates = group.by.is_none() && self.holds_dates(input, row)?;
             if let Some(field) = cache.fields.get_mut(row as usize) {
-                *field = grouped(field, group, mixes_dates)?;
+                *field = grouped(field, group, holds_dates)?;
             }
         }
         let fields = pivot_fields(&cache, row, column, [input.show_all, input.column_show_all]);
@@ -377,12 +377,11 @@ impl Txn<'_> {
     }
 
     /// Whether the record cells of source column `field` hold a number shown in a date format
-    /// (`is_likely_date_number_format`), which Excel caches as a date, and a number that is not.
-    fn mixes_dates(&self, input: &PivotTableInput, field: u32) -> Result<bool, EditError> {
+    /// (`is_likely_date_number_format`), which Excel caches as a date.
+    fn holds_dates(&self, input: &PivotTableInput, field: u32) -> Result<bool, EditError> {
         let model: &Model = self.model;
         let sheet = sheet_index(model, input.source.sheet)?;
         let col = input.source.left + field;
-        let (mut dates, mut numbers) = (false, false);
         for row in input.source.top + 1..=input.source.bottom {
             let (r, c) = engine_rc(row, col).ok_or(RefError::OutOfBounds)?;
             if !matches!(
@@ -395,11 +394,6 @@ impl Txn<'_> {
                 .get_style_for_cell(sheet, r, c)
                 .map_err(EditError::Engine)?;
             if is_likely_date_number_format(&style.num_fmt) {
-                dates = true;
-            } else {
-                numbers = true;
-            }
-            if dates && numbers {
                 return Ok(true);
             }
         }

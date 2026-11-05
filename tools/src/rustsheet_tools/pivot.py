@@ -25,7 +25,8 @@ A pivot may group its row field by numeric ranges (T-4228), the `<fieldGroup>` o
 
 The row field must then hold numbers and the pivot has no column field. `items` are the group
 labels in order, written as the `<groupItems>`: the first for values below `start`, the last for
-values past `end`. A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hours`, `days`,
+values past `end`. A label may repeat and a number is written as an `<n>` item (T-4316 probes both;
+Excel writes its own labels on load). A date group (T-4236) adds `"by"` (`seconds`, `minutes`, `hours`, `days`,
 `months`, `quarters` or `years`, ECMA-376's `groupBy`) with `interval` 1, and `start` and `end` are
 date serials (written as `startDate` and `endDate`); its row field holds date serials, which the
 case should give a date number format (Excel groups a field by date only when its cells are dates),
@@ -239,7 +240,8 @@ class _Pivot:
 
     def _order(self, index: int) -> list[str]:
         if index == self.row and self.group is not None:
-            return self.group.items
+            # Only the items' positions matter here: a grouped pivot renders no cells.
+            return [str(v) for v in self.group.items]
         return sorted(self.shared[index], key=str.casefold)
 
     def _shows_all(self, index: int) -> bool:
@@ -433,11 +435,13 @@ class _Group:
     start: float
     end: float
     interval: float
-    items: list[str]
+    items: list[str | float]
     by: str | None = None  # `groupBy` of a date group; None groups numbers
 
     def xml(self, *, base: int) -> str:
-        items = "".join(f"<s v={quoteattr(v)}/>" for v in self.items)
+        items = "".join(
+            f"<s v={quoteattr(v)}/>" if isinstance(v, str) else f'<n v="{_number(v)}"/>' for v in self.items
+        )
         if self.by is None:
             bounds = (
                 f'startNum="{_number(self.start)}" endNum="{_number(self.end)}"'
@@ -482,10 +486,11 @@ def _group(raw: Any) -> _Group | None:
     if (
         not isinstance(items, list)
         or len(items) < 3
-        or not all(isinstance(v, str) for v in items)
-        or len(set(items)) != len(items)
+        or not all(
+            isinstance(v, str) or (isinstance(v, int | float) and not isinstance(v, bool)) for v in items
+        )
     ):
-        msg = f"a pivot group's items are three or more distinct texts: {items!r}"
+        msg = f"a pivot group's items are three or more texts or numbers: {items!r}"
         raise ValueError(msg)
     if by is not None:
         for bound in (start, end):
