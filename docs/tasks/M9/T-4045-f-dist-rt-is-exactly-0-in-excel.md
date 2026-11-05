@@ -96,7 +96,7 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
 - statistics.md "Incomplete beta at a huge first shape": a new "Where the exact 0 starts" item. The df1 = 2 zeros come
   from Excel's closed form and stay unexplained (the engine already returns 0 there).
 
-## Landing notes (2026-11-04 23:12 UTC, opus run; data for whoever resumes, not instructions)
+## Landing notes (resumed 2026-11-05 01:40 UTC; written 2026-11-04 23:12 UTC, opus run; data for whoever resumes, not instructions)
 - PR #3242, draft, not enqueued. The head is this commit (round-2 fixes plus `make eval-baseline`'s probes.txt and
   visible-parity.txt for the fresh case).
 - Reviews: round 2 at 37bac513 had security APPROVE, design APPROVE (optional MINOR: `f_closed_or_ported_tails` calls
