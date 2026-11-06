@@ -2462,6 +2462,7 @@ C	probes/t4534-desktop-golden-web-values.case.json	36
 C	probes/t4538-indirect-a1-cells.case.json	50
 C	probes/t4539-rows-columns-scalar-kinds.case.json	58
 C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
+C	probes/t4553-sequence-extent-top.case.json	56
 C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
 C	probes/t4554-api-name-scoped-name-choice-last.case.json	27
