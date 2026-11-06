@@ -349,6 +349,20 @@ fn a_source_without_metadata_takes_the_exports_for_rich_errors_and_dynamic_array
         (value(&out, (9, 2)), value(&out, (10, 2))),
         ("1".into(), "2".into())
     );
+    // An untouched cell whose `vm` has no metadata loads as a plain #VALUE!. Under the export's
+    // metadata `vm="1"` would name #SPILL!, so that source regenerates instead.
+    let dangling = rezip(
+        &src,
+        SHEET,
+        "</sheetData>",
+        r#"<row r="12"><c r="A12" t="e" vm="1"><v>#VALUE!</v></c></row></sheetData>"#,
+    );
+    let (out, tier) = save_after(&dangling, |m| {
+        m.set_user_input(0, 7, 1, "block".into()).unwrap();
+        m.set_user_input(0, 6, 1, "=SEQUENCE(2)".into()).unwrap();
+    });
+    assert!(matches!(tier, SaveTier::Regenerated { .. }), "{tier:?}");
+    assert_eq!(value(&out, (12, 1)), "#VALUE!");
     // Without any rich value or dynamic array, no part is added.
     let (out, tier) = save_after(&src, |m| m.set_user_input(0, 1, 1, "5".into()).unwrap());
     assert_patched(&tier);

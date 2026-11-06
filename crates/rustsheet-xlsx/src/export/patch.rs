@@ -31,14 +31,12 @@ use rustsheet_engine::types::{Cell, FormulaValue, Worksheet};
 use rustsheet_engine::Model;
 
 use super::escape::escape_xml;
-use super::rich_errors::{get_metadata_xml, has_rich_errors, rich_value_parts};
+use super::rich_errors::{has_rich_errors, metadata_parts};
 use super::worksheets::{cell_xml, CellWriter};
 use crate::error::XlsxError;
 use crate::import::rich_errors::{METADATA_PART, RICH_VALUE_PART, RICH_VALUE_STRUCTURE_PART};
-use crate::import::{part_paths, ImportLimits, PartNames};
-use package::{
-    add_parts, read_entry, remove_part, rewrite_zip, NewPart, CONTENT_TYPES, WORKBOOK_RELS,
-};
+use crate::import::{part_paths, ImportLimits, PartNames, CONTENT_TYPES_PART, WORKBOOK_RELS_PART};
+use package::{add_parts, read_entry, remove_part, rewrite_zip, NewPart};
 use strings::{append_strings, count_si, shared_refs};
 
 mod package;
@@ -51,12 +49,6 @@ const MAX_DEPTH: usize = 256;
 
 /// The calculation chain, which lists every formula cell (SPEC-0034 E2).
 const CALC_CHAIN_PART: &str = "xl/calcChain.xml";
-
-/// The content type and workbook relationship of `xl/metadata.xml`, as the export writes them.
-const METADATA_CONTENT_TYPE: &str =
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheetMetadata+xml";
-const METADATA_RELATIONSHIP: &str =
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sheetMetadata";
 
 /// A patched package and the sheets it patched, or why the source cannot be patched.
 pub(super) type Patch = Result<(Vec<u8>, Vec<String>), String>;
@@ -106,6 +98,7 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
     let in_part = source_strings.as_deref().map_or(Ok(0), count_si)?;
     let strings_line_up = base.shared_strings.len() == in_part;
     let mut replaced: BTreeMap<String, Vec<u8>> = BTreeMap::new();
+    let mut sheet_entries = Vec::new();
     let mut patched_sheets = Vec::new();
     for (index, (sheet, before)) in live.worksheets.iter().zip(&base.worksheets).enumerate() {
         let changed = changed_cells(sheet, before);
@@ -141,7 +134,8 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             export_layout,
         )
         .map_err(|reason| format!("sheet {}: {reason}", sheet.name))?;
-        replaced.insert(entry, patched.into_bytes());
+        replaced.insert(entry.clone(), patched.into_bytes());
+        sheet_entries.push(entry);
         patched_sheets.push(sheet.name.clone());
     }
     let added = &live.shared_strings[base.shared_strings.len()..];
@@ -155,21 +149,36 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             .ok_or("the shared-string part has no closing </sst>")?;
         replaced.insert(entry, text.into_bytes());
     }
-    let mut removed = BTreeSet::new();
-    let mut added = Vec::new();
     // Only a source with no metadata of its own takes the export's; one that has its own keeps
     // it, and its cells' `vm`/`cm` were checked against it while splicing.
-    let needs_metadata = export_layout
-        && replaced
-            .values()
-            .any(|xml| contains(xml, b" vm=") || contains(xml, b" cm="));
+    let mut needs_metadata = false;
+    if export_layout {
+        for entry in &sheet_entries {
+            let xml = replaced.get(entry).map(|b| String::from_utf8_lossy(b));
+            needs_metadata |= xml.is_some_and(|xml| cells_carry(&xml, &["vm", "cm"]));
+        }
+    }
+    if needs_metadata {
+        // A `vm` the source already holds, with no part to resolve it, loads as a plain error;
+        // under the export's metadata it would name a rich error, so such a source falls back.
+        for path in &paths.worksheets {
+            let Some(entry) = names.entry(path) else {
+                continue;
+            };
+            if cells_carry(&read_entry(&mut archive, entry)?, &["vm"]) {
+                return Err("a source cell holds a vm with no metadata to resolve it".into());
+            }
+        }
+    }
+    let mut removed = BTreeSet::new();
+    let mut added = Vec::new();
     if needs_metadata || drop_calc_chain {
         let rels_entry = names
-            .entry(WORKBOOK_RELS)
+            .entry(WORKBOOK_RELS_PART)
             .ok_or("the source has no workbook relationships")?
             .to_string();
         let types_entry = names
-            .entry(CONTENT_TYPES)
+            .entry(CONTENT_TYPES_PART)
             .ok_or("the source has no content types")?
             .to_string();
         let mut rels = read_entry(&mut archive, &rels_entry)?;
@@ -178,37 +187,27 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
             let calc_chain = names.entry(CALC_CHAIN_PART).unwrap_or(CALC_CHAIN_PART);
             removed.insert(calc_chain.to_string());
             (rels, types) = remove_part(&rels, &types, "calcChain", CALC_CHAIN_PART)
-                .ok_or("the relationships or content types do not parse")?;
+                .ok_or("the calcChain relationship or override cannot be removed exactly")?;
         }
         if needs_metadata {
-            let rich = has_rich_errors(live);
-            let rich_parts = if rich {
-                rich_value_parts().to_vec()
-            } else {
-                Vec::new()
-            };
-            let mut parts = vec![NewPart {
-                name: METADATA_PART,
-                content_type: METADATA_CONTENT_TYPE,
-                relationship: METADATA_RELATIONSHIP,
-            }];
-            added.push((
-                METADATA_PART.to_string(),
-                get_metadata_xml(rich).into_bytes(),
-            ));
-            for (name, content_type, relationship, xml) in &rich_parts {
-                parts.push(NewPart {
+            let new = metadata_parts(has_rich_errors(live));
+            if new.iter().any(|(name, ..)| names.entry(name).is_some()) {
+                return Err("a metadata part to add is already in the source".into());
+            }
+            let parts: Vec<NewPart<'_>> = new
+                .iter()
+                .map(|(name, content_type, relationship, _)| NewPart {
                     name,
                     content_type,
                     relationship,
-                });
-                added.push(((*name).to_string(), xml.clone().into_bytes()));
-            }
-            if added.iter().any(|(name, _)| names.entry(name).is_some()) {
-                return Err("a metadata part to add is already in the source".into());
-            }
+                })
+                .collect();
             (rels, types) = add_parts(&rels, &types, &parts)
-                .ok_or("the relationships or content types have no closing tag")?;
+                .ok_or("the metadata parts cannot be linked exactly")?;
+            added.extend(
+                new.into_iter()
+                    .map(|(name, _, _, xml)| (name.to_string(), xml.into_bytes())),
+            );
         }
         replaced.insert(rels_entry, rels.into_bytes());
         replaced.insert(types_entry, types.into_bytes());
@@ -217,8 +216,22 @@ fn try_patch(model: &Model, pristine: &Model, source: &[u8]) -> Patch {
     Ok((package, patched_sheets))
 }
 
-fn contains(haystack: &[u8], needle: &[u8]) -> bool {
-    haystack.windows(needle.len()).any(|w| w == needle)
+/// Whether some `<c>` start tag of a worksheet's XML carries one of `keys`. A part that does not
+/// parse counts as carrying them, so the caller falls back.
+fn cells_carry(xml: &str, keys: &[&str]) -> bool {
+    let mut reader = Reader::from_str(xml);
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e) | Event::Empty(e)) if e.local_name().as_ref() == "c" => {
+                if keys.iter().any(|k| attr(&e, k).is_some()) {
+                    return true;
+                }
+            }
+            Ok(Event::Eof) => return false,
+            Err(_) => return true,
+            _ => {}
+        }
+    }
 }
 
 /// Why the workbook's structure differs between `model` and `pristine`, if it does: everything
@@ -544,8 +557,11 @@ fn value_parts(xml: &str) -> Option<(Option<String>, Option<String>, String)> {
 /// ([`rich_value`]).
 fn patch_value(old: &str, new: &str, export_vm: bool) -> Option<String> {
     let (t, vm, v) = value_parts(new)?;
-    let vm = export_vm.then_some(vm);
-    let vm = vm.as_ref();
+    let vm = if export_vm {
+        Vm::Set(vm.as_deref())
+    } else {
+        Vm::Keep
+    };
     let mut reader = Reader::from_str(old);
     let mut out = String::with_capacity(old.len() + v.len());
     let mut had_v = false;
@@ -592,14 +608,15 @@ fn patch_value(old: &str, new: &str, export_vm: bool) -> Option<String> {
 /// or added last), every other attribute kept in its order and spelling. With `vm` given, `vm` is
 /// set the same way; without it, the source's `vm` is kept. A value is re-quoted with `"`, so one
 /// that held a `"` inside `'...'` gets it as `&quot;`. `None` for a malformed attribute.
-fn rewrite_start_tag(
-    e: &BytesStart<'_>,
-    t: Option<&str>,
-    vm: Option<&Option<String>>,
-) -> Option<String> {
+fn rewrite_start_tag(e: &BytesStart<'_>, t: Option<&str>, vm: Vm<'_>) -> Option<String> {
     let mut out = String::from("<c");
+    // `Some(new)` is an attribute to rewrite (`new` its value, or `None` to remove it); `None`
+    // leaves the source's as it is.
     let mut t = Some(t.map(|t| escape_xml(t).into_owned()));
-    let mut vm = vm.map(|vm| vm.as_deref().map(|v| escape_xml(v).into_owned()));
+    let mut vm = match vm {
+        Vm::Keep => None,
+        Vm::Set(v) => Some(v.map(|v| escape_xml(v).into_owned())),
+    };
     for a in e.attributes() {
         let a = a.ok()?;
         let key = a.key.as_ref();
@@ -624,6 +641,15 @@ fn rewrite_start_tag(
         }
     }
     Some(out)
+}
+
+/// What a value patch does with a cell's `vm`.
+#[derive(Clone, Copy)]
+enum Vm<'a> {
+    /// The source's `vm`, unchanged.
+    Keep,
+    /// The export's: this value, or none.
+    Set(Option<&'a str>),
 }
 
 /// Whether a value patch may keep the source cell's `vm`. The source's `vm` indexes its own

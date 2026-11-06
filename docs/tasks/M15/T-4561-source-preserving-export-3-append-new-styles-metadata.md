@@ -60,3 +60,14 @@ becomes a rich error, and those sources have no `metadata.xml`.
 
 - The fixtures' three failing cases now hold only `added` parts: the metadata parts their new rich errors need. No
   source item is lost.
+- Review round 1:
+  - Fidelity: a source with no metadata whose cells already hold a dangling `vm` falls back, because the added
+    metadata would make them name rich errors. Stale overrides or links for an added part also fall back.
+    SPEC-0034 D3.1 and D3.4 now say what the patch does.
+  - Security: the rels and content-types edits are rebuilt on one parser scan. That scan requires the right root,
+    refuses long-form children, inserts before the real closing tag (never a substring match) and cuts in one
+    linear pass. calcChain relationships are matched by type suffix and must target the part.
+  - Design: the metadata content type and relationship, `metadata_parts`, `WORKBOOK_RELS_PART` and
+    `CONTENT_TYPES_PART` each have one definition, shared by the export and the patcher. `Vm` replaces the nested
+    `Option`.
+
