@@ -274,6 +274,7 @@ probes/t4456-beta-t-zero-cut.case.json	43
 probes/t4456-beta-t-zero-reach.case.json	29
 probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
+probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1

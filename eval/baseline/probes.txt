@@ -2427,6 +2427,7 @@ C	probes/t4485-groupby-function-array-error-order.case.json	31
 C	probes/t4492-comma-suffix-reading.case.json	29
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
 C	probes/t4538-indirect-a1-cells.case.json	50
+C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
 C	probes/table-edits/plain-range-delete-row-first.case.json	8
 C	probes/table-edits/plain-range-delete-row-last.case.json	8
 C	probes/table-edits/plain-range-delete-rows-across-edge.case.json	10
@@ -16323,6 +16324,8 @@ F	probes/t4456-beta-t-zero-reach.case.json	Calc!F7
 F	probes/t4456-beta-t-zero-reach.case.json	Calc!F8
 F	probes/t4456-beta-t-zero-reach.case.json	Calc!F9
 F	probes/t4458-bessely-tiny-x-cuts.case.json	Calc!D32
+F	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	Calc!W45
+F	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	Calc!W46
 F	probes/yield-below-par-sweep.case.json	Y!A10
 F	probes/yield-below-par-sweep.case.json	Y!A9
 F	probes/yield-below-par-sweep.case.json	Y!B10
