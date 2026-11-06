@@ -412,8 +412,8 @@ Evidence (excel-graph, 2026-11-06):
     (25408.249999999996), record order (25408.250000000015) and row-major record accumulation
     (25408.25000000001).
   - S4 E8 is 25408.249999999993, the sum of S4's own row totals E5:E7 in display order. Of the
-    12 readings S1 E8 leaves standing, only that one gives 25408.249999999993 in S4. The others give
-    25408.25000000001, 25408.250000000007 or 25408.249999999996. S5 E8 (14276.83) and
+    readings tried that fit S1 E8, only that one gives 25408.249999999993 in S4. The others give
+    25408.25, 25408.25000000001, 25408.250000000007 or 25408.249999999996. S5 E8 (14276.83) and
     S6 E11 (32198.6) also equal the sum of their row totals in display order. Of the candidates, only
     "row totals in display order" fits all four pivots.
   - Grand-grand total, mixed. S2 H9 is 25408.25. Among the readings that fit it are the sum of
