@@ -1,0 +1,53 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4501: PERMUTATIONA's number_chosen cut (#NUM!) between 1000 and 1E10, at number 1 and 0",
+  "tags": [
+    "M9",
+    "statistical",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Sheet1",
+      "cells": {
+        "A1": "=PERMUTATIONA(1,1000)",
+        "A2": "=PERMUTATIONA(1,1001)",
+        "A3": "=PERMUTATIONA(1,1024)",
+        "A4": "=PERMUTATIONA(1,32767)",
+        "A5": "=PERMUTATIONA(1,32768)",
+        "A6": "=PERMUTATIONA(1,65535)",
+        "A7": "=PERMUTATIONA(1,65536)",
+        "A8": "=PERMUTATIONA(1,1000000)",
+        "A9": "=PERMUTATIONA(1,16777215)",
+        "A10": "=PERMUTATIONA(1,16777216)",
+        "A11": "=PERMUTATIONA(1,1000000000)",
+        "A12": "=PERMUTATIONA(1,2147483646)",
+        "A13": "=PERMUTATIONA(1,2147483646.9)",
+        "A14": "=PERMUTATIONA(1,2147483647)",
+        "A15": "=PERMUTATIONA(1,2147483647.5)",
+        "A16": "=PERMUTATIONA(1,2147483648)",
+        "A17": "=PERMUTATIONA(1,4294967296)",
+        "A18": "=PERMUTATIONA(1,10000000000)",
+        "A19": "=PERMUTATIONA(0,1000)",
+        "A20": "=PERMUTATIONA(0,1001)",
+        "A21": "=PERMUTATIONA(0,1024)",
+        "A22": "=PERMUTATIONA(0,32767)",
+        "A23": "=PERMUTATIONA(0,32768)",
+        "A24": "=PERMUTATIONA(0,65535)",
+        "A25": "=PERMUTATIONA(0,65536)",
+        "A26": "=PERMUTATIONA(0,1000000)",
+        "A27": "=PERMUTATIONA(0,16777215)",
+        "A28": "=PERMUTATIONA(0,16777216)",
+        "A29": "=PERMUTATIONA(0,1000000000)",
+        "A30": "=PERMUTATIONA(0,2147483646)",
+        "A31": "=PERMUTATIONA(0,2147483646.9)",
+        "A32": "=PERMUTATIONA(0,2147483647)",
+        "A33": "=PERMUTATIONA(0,2147483647.5)",
+        "A34": "=PERMUTATIONA(0,2147483648)",
+        "A35": "=PERMUTATIONA(0,4294967296)",
+        "A36": "=PERMUTATIONA(0,10000000000)"
+      }
+    }
+  ],
+  "expected": {}
+}
