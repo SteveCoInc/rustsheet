@@ -3,7 +3,7 @@ id: T-2585
 title: "Student t density T.DIST(.,FALSE): Loader's dt for df >= 3 and the df 1 and df 2 closed forms (T-2513)"
 milestone: M9
 lane: functions-stat
-status: blocked
+status: in-progress
 priority: P1
 size: M
 tier: opus
@@ -171,7 +171,7 @@ and T.INV's centre estimate.
   cell count on `EXCEL_BD0_CUT`'s T.DIST range. Security and design approved 9156e71.
 
 ## Blocked because
-Blocked because: review-round limit
+Resumed after the review-round limit (step 5c).
 - Three review rounds are used (1f4e8e1, 79b71dd, 9156e71). Round 3's only MAJOR (A138's subnormal flush) and its
   MINORs are fixed on the head that carries this section, but none of the three reviewers has seen that head.
 - Next (work-loop step 5c): run the full panel on the current head. Security and design approved 9156e71; since then
