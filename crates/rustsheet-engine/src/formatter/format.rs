@@ -445,10 +445,14 @@ pub fn format_number(value_original: f64, format: &str, ctx: &FormatContext) -> 
                                 token,
                                 TextToken::DayName(..) | TextToken::DayNameShort(..)
                             );
-                            if month_name && leap_months.is_some() && ymd_year > HEBREW_LAST_NAMED_YEAR {
+                            if month_name
+                                && leap_months.is_some()
+                                && ymd_year > HEBREW_LAST_NAMED_YEAR
+                            {
                                 return invalid_date(value);
                             }
-                            if let Some(name) = hebrew_month_name(token, names, leap_months, serial_1900)
+                            if let Some(name) =
+                                hebrew_month_name(token, names, leap_months, serial_1900)
                             {
                                 text.push_str(name);
                                 continue;

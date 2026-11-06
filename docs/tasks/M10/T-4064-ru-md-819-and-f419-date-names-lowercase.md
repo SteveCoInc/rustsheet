@@ -3,7 +3,7 @@ id: T-4064
 title: "ru-MD [819] and [F419] date names: lowercase month (and weekday under 819) where ru-RU capitalises"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -18,8 +18,12 @@ Found by T-3666/T-4480 (number-formats.md "LCIDs with no table of their own"). B
   Owns probes/t4480-lcid-sublanguage-fallback.case.json S!A17 and S!A91.
 
 ## Acceptance criteria
-- [ ] probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass; a probe covers the other names.
-- [ ] `make check` green; reviewers approve.
+- [x] probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass; a probe covers the other names.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 -
+
+## Outcome
+Done by T-4508: the generated locale tables hold Excel's names and day halves for every LCID, so probes/t4480-lcid-sublanguage-fallback S!A17 and S!A91 pass;
+probes/t3666-locale-names (T-4507) covers every name and day half of the LCID and its neighbours.
