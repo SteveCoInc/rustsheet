@@ -3,7 +3,7 @@ id: T-3337
 title: "CHIINV and CHISQ.INV.RT at one degree of freedom land where Excel's search on its double cdf lands (CHIINV(1E-9,1) = 37.324892889999234, ours 37.324893106518715)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P1
 size: M
 tier: opus
