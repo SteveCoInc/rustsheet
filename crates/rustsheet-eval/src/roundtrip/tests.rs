@@ -576,6 +576,7 @@ mod semantic_items {
 
     #[test]
     fn a_needless_xlfn_prefix_is_no_difference_and_a_needed_one_is() {
+        // Also proves the static pattern compiles (its initializer's `unreachable!` cannot fire).
         let a = base();
         let prefixed = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>_xlfn.SUM(1,1)</f>")]);
         let bare = edit(&a, &[(SHEET, "<f>1+1</f>", "<f>SUM(1,1)</f>")]);

@@ -19,8 +19,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use rustsheet::{CellRef, Value, Workbook};
-use rustsheet_engine::expressions::utils::number_to_column;
+use rustsheet::{Value, Workbook};
 use rustsheet_engine::language::get_default_language;
 use rustsheet_engine::types::Cell;
 use rustsheet_engine::Model;
@@ -28,14 +27,20 @@ use rustsheet_engine::Model;
 use super::package::Problem;
 use super::xmldiff::clip;
 use super::Verdict;
+use crate::cellref::Addr;
 use crate::xlsx_snapshot::{FormulaKind, WorkbookSnapshot};
 
 /// A workbook's facts: key → canonical text.
 pub(crate) type Facts = BTreeMap<String, String>;
 
-/// `A1` for 1-based `row` and `column`.
+/// `A1` for 1-based `row` and `column`, through the harness's one address formatter (`Addr`). A
+/// coordinate outside `u32` cannot come from a loaded sheet; it prints as row or column 0.
 fn a1(row: i32, column: i32) -> String {
-    format!("{}{row}", number_to_column(column).unwrap_or_default())
+    Addr {
+        row: u32::try_from(row).unwrap_or(0),
+        col: u32::try_from(column).unwrap_or(0),
+    }
+    .to_string()
 }
 
 /// Loads `bytes` into the engine's model the way the facade does, without recalculating.
@@ -195,7 +200,7 @@ pub(crate) fn value_facts(workbook: &Workbook, facts_of: &Facts) -> Facts {
             continue;
         };
         for r in cells {
-            let at = format!("{}!{}", meta.name, cell_a1(r));
+            let at = format!("{}!{r}", meta.name);
             if !facts_of.contains_key(&format!("cell {at} computed")) {
                 continue;
             }
@@ -209,14 +214,6 @@ pub(crate) fn value_facts(workbook: &Workbook, facts_of: &Facts) -> Facts {
         }
     }
     facts
-}
-
-fn cell_a1(r: CellRef) -> String {
-    let (row, col) = (
-        i32::try_from(r.row).unwrap_or(i32::MAX - 1),
-        i32::try_from(r.col).unwrap_or(i32::MAX - 1),
-    );
-    a1(row + 1, col + 1)
 }
 
 /// The differences between two fact sets: `(key, verdict, detail)`, and how many source facts
