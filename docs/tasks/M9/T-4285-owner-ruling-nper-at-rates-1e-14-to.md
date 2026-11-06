@@ -14,6 +14,7 @@ depends_on: []
 The owner rules whether decision 0188 R3's NPER region (0 < rate < 1E-14) extends to the rates up to 1E-13 where
 Excel is still more than G = 1e-4 off the math; the engine then follows the ruling.
 
+
 ## Context
 - Found by T-3367 (probes-numeric/t3367-nper-tiny-rate, excel-graph 2026-11-05, 50-digit math sidecar). Excel's
   relative error against the math, per rate (seven argument sets each, six numeric):
@@ -29,15 +30,15 @@ Excel is still more than G = 1e-4 off the math; the engine then follows the ruli
   must not widen the region on its own.
 
 ## Acceptance criteria
-- [ ] The owner's ruling is recorded in a decision record (widen the region to a stated bound, or keep it).
-- [ ] If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
+- [x] The owner's ruling is recorded in a decision record (widen the region to a stated bound, or keep it).
+- [x] n/a (decision 0300 keeps Excel): If widened: `NPER_MATH_RATE` moves to the ruled bound, the cells in the new region are R3-marked in
       eval/accuracy/math-over-excel.tsv, and financial.md's "NPER at a tiny positive rate" entry states the new region.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Negative tiny rates (unprobed).
 
 ## Outcome
-Owner ruling (decision 0301, 2026-11-06): keep the region. NPER's R3 region stays 0 < rate < 1E-14, and from 1E-14
-up the engine keeps matching Excel. It is bit-exact on the 24 cells today. `NPER_MATH_RATE`, the marks and financial.md
-are unchanged.
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

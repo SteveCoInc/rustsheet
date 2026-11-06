@@ -3,7 +3,7 @@ id: T-4277
 title: "Owner ruling on R3 for GAUSS between 1E-15 and 1E-8, where Excel's Phi(z)-0.5 cancels (T-3783 follow-up)"
 milestone: M0
 lane: harness
-status: blocked
+status: done
 priority: P2
 size: S
 tier: opus
@@ -14,8 +14,6 @@ depends_on: []
 Record the owner's ruling on whether Excel's GAUSS(z) for 1E-15 < |z| < 1E-8, where it is the cancelled Phi(z) - 0.5
 in doubles, is a decision 0188 R3 (`MATH-OVER-EXCEL`) case. Until the owner rules, the engine keeps matching Excel.
 
-## Blocked because
-Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward included, adds a case on its own").
 
 ## Context
 - statistics.md "GAUSS of a tiny argument is x times phi(0) (T-2255)": GAUSS keeps its leading term z*phi(0) up to
@@ -31,11 +29,16 @@ Blocked because: needs an owner ruling (decision 0188 R3: "no agent, steward inc
   - (b) an R3 case over a bounded region of z, with a decision record.
 
 ## Acceptance criteria
-- [ ] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
+- [x] A decision record carrying the owner's ruling, or the owner's "keep matching Excel" written into the
       statistics.md T-2255 entry.
-- [ ] If (b): a follow-up implementation task with its region, and the region's evidence committed first
+- [x] n/a (decision 0300 keeps Excel): If (b): a follow-up implementation task with its region, and the region's evidence committed first
       (decision 0188 R3).
 
 ## Out of scope
 - Changing the engine before the ruling.
 - ERF's two-argument cancellation (T-3794).
+
+## Outcome
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

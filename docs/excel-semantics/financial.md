@@ -722,8 +722,7 @@ Evidence (excel-graph, 2026-10-14, T-1525; from `tools/`: `uv run rustsheet-fitl
   that was item 6 of decision 0188's list. Excel's own XIRR is about 1e-8 off the math at a root away from 0, and
   1e-7 to 2.4e-6 off at roots near 1e-3 (row 6: 2.0e-6). That is the step test's absolute 5e-9 term, and below G it
   stays Excel's value. Near a zero root (|root| below about 2e-5) the same term puts Excel 1e-4 to 2.1e-3 off the
-  math (9 sweep cells, rows 94-104). Owner ruling (decision 0301, 2026-11-06): no R3 region, so Excel's bisection result
-stays the target. The engine matches it bit for bit on all 15 near-zero cells (rows 91-105, main c97e0b9c).
+  math (9 sweep cells, rows 94-104): an R3 candidate the owner ruled to keep Excel's (decision 0300, T-3484).
 Ours: this model (`xirr_bracket`, `compute_xirr`, functions/financial/financial_util.rs,
 T-0916), with T-3268's stop (the XNPV bound on a negative midpoint only, unscaled): 227/227 on the fit set and 80/81 on
 the 81-cell `xirr-oos` (T-1583's span-scaled form before it: 69/81; the Newton code it replaced: 9/22 and 11/22 on the
@@ -733,7 +732,7 @@ caps" below). A trial rate where a power overflows or underflows to 0 has no XNP
 Status: VERIFIED (excel-graph) for the bracket, the midpoint and the step test. The XNPV part of the stop test
 (T-3268's form: unscaled, on a negative midpoint only) fits every numeric cell probed once XNPV uses Excel's `^`
 (T-2328), flows dated before the first included. It is a fitted rule, not a known mechanism.
-Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329, T-2728, T-2045, T-3268 (the negative-root stop), T-3353 (unscaled over long spans), T-3484 (near-zero roots; ruled Excel, decision 0301)
+Tasks: T-1525, T-0916, T-1533, T-1583, T-1591, T-2328, T-2329, T-2728, T-2045, T-3268 (the negative-root stop), T-3353 (unscaled over long spans), T-3484 (near-zero roots, R3 candidate)
 
 ## IRR is a secant in d = 1 - v = r/(1 + r) from d0 and d0 -+ 0.001 (fitted, 263/263 bit-exact)
 Rule: IRR runs the secant method on NPV as a function of d = 1 - v = r/(1 + r), v = 1/(1 + r) (T-3120 moved
@@ -5025,8 +5024,7 @@ Evidence:
 Where Excel's error exceeds G: from the cut up to 1E-13 on the probe. The cells at 1E-14, 1.5E-14, 3E-14 and 1E-13
 (A99 to A125) are 7.0E-4 to 6.9E-3 off. At 3E-13 and 1E-12 the error falls below G (5.8E-5 to 9.1E-5). The error is
 about 1E-16/rate, from the rounding of the doubles 1 + rate and ratio before their logarithms. The approved region
-stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. Owner ruling (decision 0301, 2026-11-06): the region stays
-0 < rate < 1E-14. The engine matches Excel bit for bit on A99 to A125 (main c97e0b9c).
+stops at 1E-14, so the engine keeps Excel's value from 1E-14 up. The owner ruled not to widen it (decision 0300, T-4285).
 Status: MATH-OVER-EXCEL (decision 0188)
 Ours: below 1E-14, and where 1 + rate is not 1, `nper_of` (functions/financial/annuity.rs, `NPER_MATH_RATE`) returns
 log1p(-(fv+pv)·rate/(pmt·k+pv·rate)) / log1p(rate). That is within 1e-14 of the math on every probe cell. Excel's

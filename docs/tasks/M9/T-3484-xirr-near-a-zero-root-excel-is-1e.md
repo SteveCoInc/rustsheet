@@ -15,6 +15,7 @@ The owner rules whether XIRR roots with |root| below about 2e-5 become a decisio
 region, and the engine follows that ruling. Without the ruling, the engine keeps matching Excel's value bit for bit,
 as it does today.
 
+
 ## Context
 - Found by T-3353's Gate A fresh sweep (probes-numeric/xirr-two-flow-gate-a-sweep, excel-graph, 2026-10-31,
   stratum near-zero, rows 91-105). Excel's XIRR stops once the bisection half-width is below 5e-9 + 1e-8·|m|
@@ -28,14 +29,15 @@ as it does today.
   the math. It would also need `math-over-excel.tsv` entries once eval/accuracy has an XIRR table (SPEC-0029).
 
 ## Acceptance criteria
-- [ ] A decision record carries the owner's ruling (R3 region or not).
-- [ ] If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
+- [x] A decision record carries the owner's ruling (R3 region or not).
+- [x] n/a (decision 0300 keeps Excel): If R3: the engine converges near zero roots, a `MATH-OVER-EXCEL` entry in financial.md lists the region with
       the cells above as evidence, and every other XIRR cell still matches Excel.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - XIRR's stop rule away from zero roots (T-3353, T-3287).
 
 ## Outcome
-Owner ruling (decision 0301, 2026-11-06): XIRR gets no R3 region. The engine keeps matching Excel's bisection result,
-bit-exact on the 15 near-zero cells today. No engine change.
+- Owner ruling 2026-11-06, decision 0300: keep matching Excel. This is not an R3 case: no `MATH-OVER-EXCEL`
+  entry, no R3 mark, no engine change (the engine already matches Excel here).
+- Eval delta: none.

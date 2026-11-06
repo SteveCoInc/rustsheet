@@ -1120,9 +1120,15 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
   G!A301-A361, G!A441, G!A681). So `LAMBDA(x,y,SUM(x)/SUM(y))` equals PERCENTOF (G!A281), also sorted by it (G!A661).
 - A LAMBDA whose result is a reference, written (`Data!D2`, `Data!D2:D3`), picked by IF or returned by INDEX, is `#VALUE!` in
   every cell (functions G!A541-A581; PIVOTBY P!A841).
-Unprobed (T-1325): mismatched heights inside a function array (the engine pads with `#N/A`, so the result is `#N/A`); which of
-several error elements wins (the engine: the first evaluated); a labelled row of several functions with detected headers (the
-engine does not show them); a LAMBDA without parameters (the engine: `#VALUE!`). CORREL, PEARSON and RSQ over arrays of different sizes
+- Function-array edges (probes/t4449-groupby-function-array-edges, excel-graph, 2026-11-06, T-4449; every cell GROUPBY and
+  PIVOTBY alike, over one value column and two): a ragged array of functions (`HSTACK(VSTACK(SUM,MAX),MIN)`,
+  `VSTACK(HSTACK(SUM,MAX),MIN)`) is `#VALUE!`, not the `#N/A` its padding holds: the stack is a 2-D array of functions (G!C1,
+  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in reading order is the result (`HSTACK(NA(),1/0)`
+  `#N/A`, `HSTACK(1/0,NA())` `#DIV/0!`, `VSTACK(SUM,NA(),1/0)` `#N/A`, `HSTACK(SUM,#REF!,NA())` `#REF!`: G!C3:C6), and an error
+  beats a plain value on either side of it (`HSTACK(NA(),5)` and `HSTACK(5,NA())` are both `#N/A`: G!C7, G!C8). A LAMBDA without
+  parameters is `#VALUE!` for the whole result: `LAMBDA(1)`, `LAMBDA(SUM(Data!D2:D3))`, `HSTACK(SUM,LAMBDA(1))` and
+  `LET(f,LAMBDA(1),f)` (G!C9:C12, G!C21:C24, G!C33:C36, G!C45:C48).
+Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
 T-1706: every function passed by name gets its catalog minimum argument count (1 or 2; 0 or 3+ is `#VALUE!` overall):
