@@ -108,7 +108,7 @@ def _rate_power(r: mpmath.mpf, k: int) -> mpmath.mpf:
 
 def _npv(args: Sequence[MathArg]) -> mpmath.mpf:
     r, flows = args[0], _array(args[1])
-    assert not isinstance(r, (bool, tuple))
+    assert not isinstance(r, (bool, str, tuple))
     if r == -1:
         msg = "1 + rate is 0: #DIV/0!"
         raise DomainError(msg)
@@ -150,7 +150,7 @@ def _days(dates: Sequence[mpmath.mpf]) -> list[int]:
 
 def _xnpv(args: Sequence[MathArg]) -> mpmath.mpf:
     r, flows, dates = args[0], _array(args[1]), _array(args[2])
-    assert not isinstance(r, (bool, tuple))
+    assert not isinstance(r, (bool, str, tuple))
     if len(flows) != len(dates):
         msg = "values and dates differ in size: #NUM!"
         raise DomainError(msg)
@@ -180,8 +180,8 @@ def _mirr_powers(r: mpmath.mpf, n: int) -> None:
 
 def _mirr(args: Sequence[MathArg]) -> mpmath.mpf:
     flows, fr, rr = _array(args[0]), args[1], args[2]
-    assert not isinstance(fr, (bool, tuple))
-    assert not isinstance(rr, (bool, tuple))
+    assert not isinstance(fr, (bool, str, tuple))
+    assert not isinstance(rr, (bool, str, tuple))
     n = len(flows)
     if n < 2 or not any(v < 0 for v in flows):
         msg = "one flow, or no negative flow: #DIV/0!"
@@ -216,7 +216,7 @@ def _mirr(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _fvschedule(args: Sequence[MathArg]) -> mpmath.mpf:
     principal, schedule = args[0], _array(args[1])
-    assert not isinstance(principal, (bool, tuple))
+    assert not isinstance(principal, (bool, str, tuple))
     factors = mpmath.mpf(1)
     value = principal
     for s in schedule:

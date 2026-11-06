@@ -408,7 +408,7 @@ _DRAWS: StratumDraws = {
 }
 
 
-def _forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
+def forecast_x(rng: random.Random, xs: Sequence[float]) -> float:
     """FORECAST's x: inside the x data's range mostly, at a data point or the mean, or extrapolated."""
     lo, hi = min(xs), max(xs)
     width = (hi - lo) or abs(lo) or 1.0
@@ -429,7 +429,7 @@ def _forecast_draws() -> Callable[[str, random.Random], list[Arg]]:
             known_x = args[1]
             assert isinstance(known_x, tuple)
             xs = [v for v in known_x if isinstance(v, (int, float))]
-            return [_forecast_x(rng, xs), *args]
+            return [forecast_x(rng, xs), *args]
 
         return drawn
 
