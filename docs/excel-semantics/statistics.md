@@ -7886,11 +7886,23 @@ Rule:
   the quantile is a finite double (about 3.2E+22 to 6.9E+38). T.INV accepts p down to 1E-300 (T-1531).
   `CONFIDENCE.T(2.22507385850721E-308,sd,n)`, which is T.INV.2T at df n - 1, is `#NUM!` too, at n 38, 68 and 79 (df 37,
   67 and 78), where the margin is finite (5.5E+8 at `CONFIDENCE.T(2.22507385850721E-308,2.85657486076017,38)`; T-4102).
+  T-4541 pins the cut: the two-tailed quantile is an error exactly when p/2 is below the smallest normal double
+  (p < 2·DBL_MIN = 4.4501477170144028E-308), the half Excel flushes to 0, and it then answers as at p = 0. At df 1
+  T.INV.2T is `#DIV/0!` (the p = 0, df 1 rule in "Student t quantile at p = 0 with df below 2 is #DIV/0!"), from df 2
+  `#NUM!`; CONFIDENCE.T is `#NUM!` at every n, df 1 (n = 2) included. `T.INV.2T(4.4501477170144E-308,df)` (just below
+  2·DBL_MIN) is `#DIV/0!` at df 1 and `#NUM!` at df 2, 9 and 30, and `T.INV.2T(4.45014771701441E-308,df)` (just above)
+  is a number at all four (`T.INV.2T(4.45014771701441E-308,9)` = 3.648002741446659E+34), as are 4.4502E-308 to 1E-300;
+  3E-308 and 4.45E-308 are errors like 2.22507385850721E-308. TINV (df 2, 30) and CONFIDENCE.T (sd 1, n 2, 3, 31) cut at
+  the same p. T.INV at those p is a number (`T.INV(2.22507385850721E-308,2)` = -4.74037595...E+153), so the cut is the
+  halving, not the tail. A computed subnormal p (`2.22507385850721E-308/2`, `1E-300/1E10`, `1E-300*1E-23`) is 0 before
+  it reaches the function (column J), so those rows are the p = 0 errors. A subnormal number literal in a formula makes
+  Excel (excel-graph) reject the whole workbook, so the probe computes them. Evidence: probes/t4541-t-inv-2t-tiny-p
+  (excel-graph, 2026-11-06; A1:L15, M1:M5, written with these predictions before the fill).
 - `F.INV(0,d1,d2)` is 0, the lower end of the support.
 
 - The legacy `FINV(0,2,5)` is `#NUM!` (probes-numeric/m9-legacy-finv A65), so the 0 is F.INV's only.
 
-The exact x where T.DIST's density turns `#NUM!` and the p below which the two-tailed quantile does are not yet probed.
+The exact x where T.DIST's density turns `#NUM!` is not yet probed; the two-tailed quantile's p cut is 2·DBL_MIN (T-4541).
 Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A85, A95, A105 and A110, and accuracy/T.DIST/e-T-3425 A90, A103 and A116 (T-3425);
 - accuracy/T.INV.2T/s1 A68 and A78, and accuracy/TINV/s1 A68 and A78;
@@ -7898,9 +7910,9 @@ Evidence: Gate A tables, excel-graph:
 - accuracy/T.DIST/s1 A94 and A97 (density 0 below the cut);
 - accuracy/T.DIST/r4-T-2585 A236 (density 0), and A266 and A267 (`#NUM!`; T-4580);
 - accuracy/F.INV/s1 A111 (`F.INV(0,38,10)`) and A125 (`F.INV(0,9,50)`), and probes-numeric/t1049-finv A16 (`F.INV(0,3,7)`).
-Status: VERIFIED (excel-graph) for the cited cells; the cut points are UNVERIFIED.
-Ours: T.DIST returns 0, and T.INV.2T, TINV and CONFIDENCE.T return the quantile or margin. These are Gate A known
-failures owned by T-3554 and T-4541 (moved from T-3386).
+Status: VERIFIED (excel-graph) for the cited cells and the two-tailed quantile's p cut (T-4541); T.DIST's x cut points are UNVERIFIED.
+Ours: T.DIST returns 0, a Gate A known failure owned by T-3554. T.INV.2T, TINV and CONFIDENCE.T as Excel since T-4541
+(`two_tailed_half_underflows`: a p whose half `flush_subnormal` makes 0 is p = 0).
 Tasks: T-3554, T-3386, T-3358, T-4541, T-4102, T-4580
 
 ## A text scalar argument is #VALUE! before an error cell as the data (T-3781)
