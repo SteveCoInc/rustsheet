@@ -722,12 +722,20 @@ trailing `,` still scales by 1000.
   fraction a comma run neither groups nor scales either (`# ?/?|#,##0` on 1234567.89 is "1234567 8/9|0000"); a run of
   two (`0.0,,0`) is still fraction digits ("1234567.89"); after a decimal-part literal the `,` prints, also last
   (`0.00|,0` is "1234567.89|,0", `0.0|,` "1234567.9|,", `0.0 ,0` "1234567.8 ,9"); one right after the point does not
-  print (`0.,0` is "1234567.9"). Ours: not yet for those (rows 23, 24, 26 and A7:A12 are known failures; T-4515).
+  print (`0.,0` is "1234567.9").
+- Refined by the T-4515 hold-out and fresh sweep (probes/t4515-fraction-tail-holdout rows 15-21,
+  t4515-fresh-sweep rows 9-18, excel-graph 2026-11-06). A `,` after a placeholder, or right after the point, is inert
+  whenever a placeholder follows *anywhere* later in the section, so a literal may stand between them (`0.00,|0` on
+  1234567.891 is "1234567.89|1"). With no placeholder after it, it scales (`0.,` "1235.", `0.0,0,` scales by 1000).
+  After a decimal-part literal, a `,` run prints a single `,` (`0.0|,,0` "1234567.8|,9", `0.0|,,,0` alike).
+  `0.,|0` is "1234567.|9", where ours prints "1234567|.9", as it already does for `0.|0` (a literal right after the
+  point, not a comma rule; T-4595).
+Ours: matches (T-4515), in the `Token::Comma` arm of formatter/parser.rs.
 Evidence: probes/t3598-comma-after-decimal-point A1:A20, probes/t1925-numeral-digits C1:C32,
 probes/t3598-decimal-part-commas (108 cells), t3666-review-followups A7:A12 (excel-graph, 2026-11-04).
 Status: VERIFIED (excel-graph)
-Implemented in: crates/rustsheet-engine/src/formatter/parser.rs (`Token::Comma`); the forms above are T-4515's
-Tasks: T-3598, T-4515
+Implemented in: crates/rustsheet-engine/src/formatter/parser.rs (`Token::Comma`; T-3598, T-4515)
+Tasks: T-3598, T-4515, T-4595
 
 ## Commas in scientific formats (T-4062)
 Rule: in a scientific format, a `,` between exponent placeholders is ignored when the mantissa has a decimal point and
@@ -1563,10 +1571,15 @@ unused placeholders in place" above, which this model does not fit). A `.` among
   slots the same way; any other denominator hands on nothing.
 - **The placeholders after it**, left to right, with the zeros owed and whether a `?` with nothing to print shows a
   space (at first, and after a `?` that printed something):
-  - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else a space if one is due
-    (within a run of adjacent `?` it stays due; a literal ends the run), else a zero (and owes one);
+  - a `?` prints the next spilled digit (and owes a zero), else a zero for a lacking digit, else a space if one is due,
+    else a zero (and owes one);
   - a `0` or `#` prints every spilled digit left, then its own zero and the zeros owed; for a lacking digit instead a
-    `0` prints a zero and a `#` nothing.
+    `0` prints a zero and a `#` nothing (either way it uses the lacking digit up);
+  - a space is due at first; a `0` or `#` ends that, a `?` that prints a spilled digit or an owed zero starts it again,
+    a `?` that prints a lacking zero leaves it as it was, and a literal after a `?` that printed a space ends it
+    (`# ?/16|?|?` on 0.5 is " 1/1 |0| ", `# ?/100|#|?|?` " 1/1  ||0|0"; t4043-separated-slots A36, A71).
+  A placeholder denominator lacks, against its `?` slots, the digits the picked denominator leaves unfilled, under a `?`
+  numerator; it spills nothing.
   Examples: `# ?/?|0` on 12.5 is "12 1/2|0", `# ?/? ?` "12 1/2  ", `# ?/?|#,##0` "12 1/2|0000"; `# ?/4|0` on 0.0625
   " 1/4|60", `# ?/4 ? 0` " 1/4 6 00", `# ?/4 0 0` " 1/4 60 0", `# ?/4|??` on 0.5 " 1/4|  " but `# ?/4|?|?` " 1/4| |0",
   `# ?/4|#?0#` on 0.5 " 1/4|00000", `# ?/16|#` on 0.5 " 1/1 |", `# ?/100|##` on 0.3 " 3/10 |0", on 0.5 " 1/1  |".
@@ -1583,8 +1596,16 @@ t4043-placeholder-denominator-slots, t3711-fixed-denominator-then-placeholder, t
 t3532-numeral-digit-fields row 14 (the zeros take the numeral digits). The model matched every cell of those probes in an
 engine that was not merged; its placeholder-denominator part does not fit the mixed denominators of "Fraction formats"
 above (`# ?/#0` on 12.5 is "12 1/2", the model gives "12 1/02"; probes/t4204-fraction-denominator-mixed), so a
-placeholder denominator follows that entry, not this one. Ours: the T-3711/T-4204 rules above; the rest of these probes
-are known failures (T-4515, which also covers T-4069). Status: VERIFIED (excel-graph). Tasks: T-3711, T-4507, T-4515
+placeholder denominator prints its own text by that entry and hands on only its lacking digits by this one. Not
+covered: a tail with a `.` among its placeholders. `# ?/7 ?.?` on 0.0123 is " 123/7 0000. " (the `?` before the point
+takes every spilled digit), and after the point the owed zeros are not paid (`# ?/7 ?.0` " 123/7 0000.0";
+probes/t4515-fraction-tail-holdout E6, t4515-fresh-sweep rows 1-8, excel-graph 2026-11-06; T-4594). A first guess at
+this, "take all before the point and owe one", was falsified by that sweep.
+Ours: matches (T-4515): `picked_denominator` and `trailing_digits` in formatter/fraction.rs, which now pick a fixed
+denominator followed by placeholders up to 9999999, as for one past 32768. Hold-out: probes/t4515-fraction-tail-holdout
+(147 cells, written after the model froze: denominators 8, 32, 3, 50, 1000, 7, 5, `??` and `???`, quoted text and
+commas in the tail, no integer part, blanks, negatives) passes everything except E6, the `.` above.
+Status: VERIFIED (excel-graph). Tasks: T-3711, T-4507, T-4515, T-4594
 
 ## Fill characters (`*x`) add nothing to the text
 A `*x` fill (repeat) character contributes nothing to the displayed text or to TEXT(): `TEXT(7,"0*""a")` is "7a",

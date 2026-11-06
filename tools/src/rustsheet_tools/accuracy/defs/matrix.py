@@ -53,7 +53,7 @@ DOUBLE_MAX = Fraction(1.7976931348623157e308)
 Exact = list[list[Fraction]]
 
 
-def _exact(a: MathArg) -> Exact:
+def exact(a: MathArg) -> Exact:
     """A matrix argument's doubles as exact rationals (the literal's double is exact at any working precision)."""
     if not isinstance(a, tuple) or not all(isinstance(row, tuple) for row in a):
         msg = "a matrix argument is not a matrix"
@@ -65,7 +65,8 @@ def _exact(a: MathArg) -> Exact:
     return rows
 
 
-def _index(args: Sequence[MathArg]) -> tuple[int, int]:
+def index_of(args: Sequence[MathArg]) -> tuple[int, int]:
+    """INDEX's row and column, the last two arguments of an indexed definition (shared by the array regression)."""
     row, column = args[-2], args[-1]
     assert not isinstance(row, (bool, tuple)) and not isinstance(column, (bool, tuple))
     return int(row), int(column)
@@ -73,7 +74,7 @@ def _index(args: Sequence[MathArg]) -> tuple[int, int]:
 
 def _element(m: Exact, args: Sequence[MathArg]) -> Fraction:
     """The INDEX row and column of `m` (1-based); NoValueError outside it (INDEX's #REF! is not claimed)."""
-    r, c = _index(args)
+    r, c = index_of(args)
     if not (1 <= r <= len(m) and 1 <= c <= len(m[0])):
         msg = f"INDEX({r},{c}) is outside the {len(m)}x{len(m[0])} result"
         raise NoValueError(msg)
@@ -142,7 +143,7 @@ def product(a: Exact, b: Exact) -> Exact:
 
 
 def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
-    det = determinant(_exact(args[0]))
+    det = determinant(exact(args[0]))
     if abs(det) > DOUBLE_MAX:
         msg = "the pivot product is beyond the double range"
         raise DomainError(msg)
@@ -150,7 +151,7 @@ def _mdeterm(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
-    inv = inverse(_exact(args[0]))
+    inv = inverse(exact(args[0]))
     if any(abs(x) > DOUBLE_MAX for row in inv for x in row):
         msg = "an inverse element is beyond the double range"
         raise DomainError(msg)
@@ -158,7 +159,7 @@ def _minverse(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _mmult(args: Sequence[MathArg]) -> mpmath.mpf:
-    prod = product(_exact(args[0]), _exact(args[1]))
+    prod = product(exact(args[0]), exact(args[1]))
     if any(abs(x) > DOUBLE_MAX for row in prod for x in row):
         msg = "a product element is beyond the double range (not claimed)"
         raise NoValueError(msg)
@@ -325,7 +326,7 @@ def _mmult_draws() -> Callable[[str, random.Random], list[Arg]]:
     )
 
 
-def _row_column(source: str) -> tuple[Param, Param]:
+def row_column(source: str) -> tuple[Param, Param]:
     """INDEX's row and column of an indexed definition (not the catalog's parameters: the function's own end
     before them)."""
     whole = Interval(1, float("inf"), lo_open=False)
@@ -348,7 +349,7 @@ MDETERM = register(
 MINVERSE = register(
     Definition(
         function="MINVERSE",
-        params=(Param("array", "matrix", source=MINVERSE_SOURCE), *_row_column(MINVERSE_SOURCE)),
+        params=(Param("array", "matrix", source=MINVERSE_SOURCE), *row_column(MINVERSE_SOURCE)),
         value=_minverse,
         domain=domain_of(_minverse),
         draw=_square_draw("MINVERSE", indexed=True),
@@ -363,7 +364,7 @@ MMULT = register(
         params=(
             Param("array1", "matrix", source=MDETERM_SOURCE),
             Param("array2", "matrix", source=MDETERM_SOURCE),
-            *_row_column(MDETERM_SOURCE),
+            *row_column(MDETERM_SOURCE),
         ),
         value=_mmult,
         domain=domain_of(_mmult),

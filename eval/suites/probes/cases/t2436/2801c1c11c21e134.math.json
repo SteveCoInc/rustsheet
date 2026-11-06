@@ -12,6 +12,11 @@
     "t": "e",
     "why": "BESSELI past |x| = 709.7",
     "f": "=BESSELI(Data!B$10,2)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "BESSELI past |x| = 709.7",
+    "f": "=AVERAGEA(BESSELI(Data!B$10,2))"
    }
   }
  }

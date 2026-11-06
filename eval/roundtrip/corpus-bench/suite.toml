@@ -1,0 +1,12 @@
+name = "roundtrip-corpus-bench"
+description = "Round-trip fidelity (SPEC-0033) of the SpreadsheetBench input workbooks, read from the corpus-bench suite's fetched cache"
+kind = "roundtrip"
+# The corpus-bench cell suite's cache (`rustsheet-eval fetch --suite corpus-bench`); skipped while absent.
+root = "../../.cache/suites/corpus-bench"
+include = ["**/1_*_input.xlsx"]
+license = "CC-BY-SA-4.0"
+origin = "https://github.com/RUCKBReasoning/SpreadsheetBench"
+scenarios = ["R0"]
+gate = false
+baseline = "cases"
+milestone = ["M15"]

@@ -30,7 +30,7 @@ Cells: probes/forecast-ets-reprobe-2026-11 Sheet1!I1:I8 and Sheet1!J1:J8. Deskto
   arguments (K35, K39:K42). K37 and K38 already match. statistics.md cites this case (K3, K8, K14, K19, K25, K30).
 - probes/forecast-ets-longer-series.case.json (40): Sheet1!K1:K36, Sheet1!K39:K42
 
-Owns only decision 0308's cells: the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
+Owns only decision 0308's and 0315's cells: the desktop-only CELL cells listed in eval/milestones/phase1-exceptions.tsv (calipers goldens,
 info types color, filename, format, parentheses, prefix, protect, width), and every FORECAST.ETS-family line there.
 
 Cell lists. The ownership check (scripts/exit_owners.py) reads the cells a task names, so they are listed here once.
@@ -98,7 +98,10 @@ Phase 1 rate exceptions under decision 0308 (eval/milestones/phase1-exceptions.t
 - probes/forecast-ets-optional-settings-shape.case.json (12): Sheet1!M29, M30, M31, M32, M33, M34, M41, M42, M43, M44, M45, M46
 - probes/forecast-ets-reprobe-2026-11.case.json (16): Sheet1!I1, I2, I3, I4, I5, I6, I7, I8, J1, J2, J3, J4, J5, J6, J7, J8
 - probes/stat-argument-modes.case.json (8): Sheet1!H266, H267, H270, H271, H274, H275, H277, H278
-
+Phase 1 rate exceptions under decision 0315 (calipers Mac goldens the web answers as the engine does):
+- calipers/roundtrip/formulas_math_trig/golden.xlsx (16): Sheet1!C23, C25, D22, D24, E22, E23, E24, E25, F22, F24, G23, G25, H22, H23, H24, H25
+- calipers/roundtrip/formulas_text/golden.xlsx (1): Text Functions!C190
+- calipers/roundtrip/formula_stress_test/golden.xlsx (1): Information!B3
 
 ## Acceptance criteria
 - [ ] If a desktop or web oracle ever returns numbers for the family, refill both cases and compare the cells
