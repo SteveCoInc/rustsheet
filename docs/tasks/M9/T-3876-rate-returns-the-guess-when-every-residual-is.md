@@ -3,7 +3,7 @@ id: T-3876
 title: "RATE returns the guess when every residual is rounding noise (T-3698 fresh sweep A201)"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
