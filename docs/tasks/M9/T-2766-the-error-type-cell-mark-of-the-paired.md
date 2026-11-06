@@ -3,7 +3,7 @@ id: T-2766
 title: "The ERROR.TYPE/CELL mark of the paired functions passes through LET, IF, CHOOSE, IFERROR, a LAMBDA call and INDEX (probes/t2576, 8 cells)"
 milestone: M9
 lane: functions-stat
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
