@@ -40,3 +40,19 @@ Case probes/t3862-beta-inv-huge-alpha (row r: alpha = 1E+(109+r), r = 1..51, alp
 - P3 (AS 109's flip): G, `BETA.INV(0.9,1E-100,alpha)`, is 1 minus column J's mirror and errors where the
   unflipped call does.
 A refutation of P1 (a row that depends on p or beta) means the rule is not in alpha alone.
+
+First fill of t3862-beta-inv-huge-alpha (rows 1, 6, ..., 51 of A-D; excel-graph, 2026-11-06): with beta 1E-100 or
+0.5, Excel is a number up to alpha 1E+150 and `#NUM!` from 1E+155 (0.999999 at p = 1E-10, 1 - 1/e at p = 1E-100);
+with beta 10 it is `#NUM!` from 1E+110 already. So P1 is refuted as stated (beta above 1 fails lower), and for
+beta below 1 the boundary lies in (1E+150, 1E+155), which holds sqrt(DBL_MAX) = 1.3407807929942596E+154.
+
+## Probe predictions, second case (committed before its fill)
+Case probes/t3862-beta-inv-sqrt-dbl-max. Hypothesis Q: BETA.INV is `#NUM!` once fl(pp*pp) overflows, pp AS 109's
+first shape after its flip (alpha for p <= 1/2, beta above).
+- Q1: A, B, C (alpha in rows 1-6, beta 1E-100 or 0.5) and D (`BETA.INV(0.6,0.5,a)`, flipped so pp = a) are numbers in
+  rows 1-3 and `#NUM!` in rows 4-6: the change is between the literals 1.34078079299425E+154 (a*a finite) and
+  1.34078079299426E+154 (a*a = inf).
+- Q2: E (`BETA.INV(0.1,0.5,a)`, a the second shape, not squared) is a number in all six rows (as accuracy/BETA.INV/s1
+  A186 at beta 3.8E+157 is).
+- Q3 (exploratory, beta above 1): G (beta 10, p 1E-10) and H (beta 2, p 0.1) turn to `#NUM!` from about alpha 1E+18,
+  where AS 109's start pp/(pp + qq*exp(2w)) rounds to 1.
