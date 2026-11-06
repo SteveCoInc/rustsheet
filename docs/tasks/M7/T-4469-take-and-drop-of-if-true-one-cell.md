@@ -22,11 +22,20 @@ TAKE and DROP read `IF(TRUE,Z1)` (an IF that returns a one-cell reference) as a 
   read through `value_or_grid` or `evaluate_picked_source`, so the result is a 1x1 array.
 - Adding `Function::If` to that match did not change B9 (T-4448 tried it), so the value path of IF's picked branch is
   where to look.
+- Review MINORs on #3492 (T-4448), to fix in this PR:
+  - arrays.md's "TAKE, DROP and CHOOSEROWS of the reference itself already kept it (A6:D8, A10:D10)" names
+    CHOOSEROWS, but those rows are TAKE and DROP only; CHOOSEROWS(Z1,1) (row 11) read 0 before T-4448. Drop
+    CHOOSEROWS there, or cite the controls (rows 18 and 22).
+  - arrays.md says TAKE/DROP of a value keep the blank, but no cell probes DROP of a value: add
+    `DROP(IF(TRUE,Z1),0)` (and its TYPE) to this task's probe.
+  - The SORTBY comment in spill_functions.rs cites SORT's cells (`SORT(Z1)&"x"`, A1:D5); cite rows 3 and 4
+    (`SORTBY(Z1,Z1)`, `SORTBY(Z1,5)`), and narrow SORT's comment to A1:D2.
 - Opus: this touches the reference-or-value reading shared with CHOOSE and the other picked sources (T-3072, T-3085).
 
 ## Acceptance criteria
 - [ ] probes/t4448-lone-blank-reshapers B9 passes, and its baseline line drops the cell.
 - [ ] arrays.md records the rule with the cell.
+- [ ] The #3492 review MINORs above are fixed, with the DROP cell in the probe.
 - [ ] 0 regressions; `make check` green; reviewers approve.
 
 ## Out of scope

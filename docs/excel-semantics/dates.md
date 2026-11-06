@@ -1148,6 +1148,31 @@ Ours: matches. `carried_day` (`floor(v + 0.5/86400)`, negatives only floored) se
 MINUTE and SECOND (T-3176; all 223 cells of the probe pass).
 Status: VERIFIED (web)
 
+## Other date functions floor a serial just below midnight; their counts take no near-integer snap but WEEKNUM's return_type
+Rule: unlike YEAR, MONTH, DAY and WEEKDAY (the half-second carry above), every other probed serial argument floors
+plainly: EDATE and EOMONTH start, WORKDAY and WORKDAY.INTL start, NETWORKDAYS and NETWORKDAYS.INTL start and end,
+WEEKNUM, ISOWEEKNUM, DAYS (both), DATEDIF (both) and YEARFRAC basis 1. N-0.4 s, `fl(N-0.5/86400)` and even
+N-(2^-22+2^-33) day read as day N-1, and only N itself is day N: `EOMONTH(45017-0.4/86400,0)` is 45016,
+`WEEKNUM(45018-(2^-22+2^-33))` 13 (the Saturday's week), `YEARFRAC(44927,45292-0.4/86400,1)` 0.997260274 (A1:O7).
+DAYS360 alone rounds the serial to the nearest second before flooring. The observed cut: `fl(N-0.5/86400)` is day N
+and one ulp below it (2^-37 at N = 45020) is day N-1 (P1:Q7), for its start and end alike.
+The count arguments, except WEEKNUM's return_type, take no near-integer snap either: they truncate or floor exactly,
+unlike DATE's and TIME's arguments (`near_integer_whole`). EDATE and EOMONTH months truncate toward zero (`EDATE(45000,1-(2^-22+2^-33))` is
+45000, `EDATE(45000,-1+2^-23)` 45000, `-1-2^-23` 44972; the same below 12 and -12: S1:T10, Z1:Z10). WORKDAY and
+WORKDAY.INTL days floor (`WORKDAY(45019,1-(2^-22+2^-33))` is 45019; `-1+2^-23` and `-1E-10` are a day back, 45016;
+`-1-2^-23` two days, 45015: U1:V10). The .INTL weekend number truncates: NETWORKDAYS.INTL's 2 just below is weekend 1
+(Y1:Y4) and WORKDAY.INTL's 7 just below is weekend 6 (`WORKDAY.INTL(45021,1,7-2^-23)` is 45024, AC1:AC4).
+WEEKNUM's return_type snaps like LEFT's count: within 2^-22 + 2^-33 below an integer it is that integer
+(`WEEKNUM(45019,2-2^-23)` is 15, type 2's week; `WEEKNUM(45017,17-(2^-22+2^-33))` is 13, type 17's), and
+2^-22 + 9*2^-36 or 1E-6 below truncates (14, type 1's or 16's; AA1:AB4). W1:X4 sit on a Sunday where every type gives
+14, so they do not tell the models apart. A negative return_type's snap is unprobed (it truncates in the engine).
+Evidence: probes/t4454-near-midnight-date-args A1:AD10 (serials built exactly in formulas; excel-graph, 2026-11-06,
+T-4454).
+Ours: matches, all 197 cells (plain `floor` in month_shift.rs, workday.rs, networkdays.rs, weeknum.rs, yearfrac.rs and
+`datedif_value`/`fn_days`; `days360_serial` rounds to the second; the counts' `trunc`/`floor` and `weekend_mask`;
+WEEKNUM's positive return_type through `near_integer_count`, T-4454).
+Status: VERIFIED (web)
+
 ## HOUR, MINUTE and SECOND round to the nearest second
 Rule: HOUR, MINUTE and SECOND take the time of day rounded to the nearest second, and the carry goes all the way up:
 - `SECOND(TIME(10,59,59)+0.6/86400)` is 0, MINUTE 0 and HOUR 11.
