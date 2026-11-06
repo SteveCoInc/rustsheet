@@ -2410,6 +2410,7 @@ C	probes/t4448-lone-blank-reshapers.case.json	135
 C	probes/t4449-groupby-function-array-edges.case.json	145
 C	probes/t4450-eta-special-forms.case.json	152
 C	probes/t4453-near-integer-text-args.case.json	168
+C	probes/t4454-near-midnight-date-args.case.json	197
 C	probes/t4455-near-integer-eng-args.case.json	260
 C	probes/t4456-beta-t-zero-cut.case.json	130
 C	probes/t4456-beta-t-zero-reach.case.json	81
