@@ -384,4 +384,12 @@ impl Model {
     pub(crate) fn is_grid_variable(&self, node: &Node) -> bool {
         matches!(self.variable_binding(node), Some(Binding::Grid(_)))
     }
+
+    /// Whether `node` is a LET variable or LAMBDA parameter bound to a union's areas.
+    pub(crate) fn is_areas_variable(&self, node: &Node) -> bool {
+        matches!(
+            self.variable_binding(node).map(Binding::resolved),
+            Some(Binding::Areas(_))
+        )
+    }
 }

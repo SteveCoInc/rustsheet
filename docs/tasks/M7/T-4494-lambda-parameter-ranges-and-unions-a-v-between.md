@@ -3,7 +3,7 @@ id: T-4494
 title: "LAMBDA parameter ranges and unions: a:v between two parameters is their range (not columns A:V), (a,v) is a union, AREAS of a REDUCE result, and a union REDUCE initial value stays a reference"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -33,9 +33,23 @@ The cells of probes/t4478-reduce-scan-reference-accumulator that T-4478 left fai
   Ours reads it (`lambda_initial_value`, crates/rustsheet-engine/src/functions/logical/map_reduce.rs).
 
 ## Acceptance criteria
-- [ ] Every cell named above passes; no regressions.
-- [ ] arrays.md "REDUCE keeps a returned reference" and the `lambda_initial_value` comment are updated.
-- [ ] `make check` green; reviewers approve.
+- [x] Every cell named above passes; no regressions.
+- [x] arrays.md "REDUCE keeps a returned reference" and the `lambda_initial_value` comment are updated.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - SCAN's and REDUCE's accumulator rule itself (T-4478).
+
+## Outcome
+- The parser reads `a:v`, text the lexer took for a column range, as the range between two names an enclosing LET
+  or LAMBDA binds (`Parser::bound_names_range`). Only when both sides are bound; `a:C` stays a column range (not
+  probed, pinned by a unit test).
+- REDUCE is in `Function::may_be_reference`, so AREAS and SUBTOTAL accept it as a reference operand. In reference
+  context it is `Model::reduce_reference`, which keeps a union accumulator as its areas from step to step and a
+  union initial value as its areas (`lambda_initial_reference`); `fn_reduce` is its single-area view.
+  `call_lambda_caller_binding` is the one step call both share.
+- ISREF of a parameter bound to a union is TRUE (`Model::is_areas_variable`).
+- arrays.md "REDUCE keeps a returned reference" and the `lambda_initial_value` comment are updated.
+- Eval delta: probes/t4478-reduce-scan-reference-accumulator 90/117 -> 117/117 (27 cells fixed: every cell the task
+  names plus the F6:H6 and G9 forms); probes known failures 8312 -> 8285; 0 regressions in any suite.
+- Not probed, left as is: SCAN with a union initial value; `a:C` with one bound name.

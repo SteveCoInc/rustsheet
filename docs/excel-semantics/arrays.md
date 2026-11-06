@@ -1749,10 +1749,12 @@ Status: VERIFIED (excel-graph)
 Ours: since T-4478, `fn_reduce` calls its LAMBDA with a reference-keeping caller, and ISREF evaluates a REDUCE in
 reference context. SCAN is unchanged (`lambda_result_value` reads each step). A 3-D initial value is `#VALUE!`. BYROW and BYCOL read a
 one-cell reference result on both their range and array paths (`by_slices_result`).
-Still off, owned by T-4494:
-- the parser reads `a:v` with parameter names as columns A:V (Calc!F5, H5, F6:H6, F9:H9, H14, G15, H15, J1:J3);
-- AREAS of a REDUCE call is `#ERROR!` (Calc!E7:H7, E16:H16, E22:H22);
-- a union initial value is read, not kept (Calc!H17).
+Since T-4494 the parser reads `a:v` as the range between two names an enclosing LET or LAMBDA binds
+(`Parser::bound_names_range`; a column label against one bound name, `a:C`, is not probed and stays a column
+range). REDUCE counts as a call that may return a reference (`Function::may_be_reference`), so AREAS and SUBTOTAL
+take it, and in reference context it is `Model::reduce_reference`, which keeps a union accumulator's areas from
+step to step and a union initial value as its areas; ISREF of a parameter bound to a union is TRUE. SCAN's union
+initial value is not probed and is still read.
 Tasks: T-4478, T-4494
 
 ## BYROW and BYCOL: a LAMBDA result that is an array

@@ -71,3 +71,36 @@ fn bycol_reads_a_one_cell_reference_reduce_returns() {
     let actual = results(&["=BYCOL(A1:A2,LAMBDA(y,REDUCE(y,y,LAMBDA(acc,v,A3))))"]);
     assert_eq!(actual, ["3"]);
 }
+
+#[test]
+fn parameter_ranges_and_unions_stay_references() {
+    // Calc!H5, H9 (`a:v` is the range between the parameters, not columns A:V; step 2's `a` is
+    // a value, so its `a:v` is `#VALUE!`), H7, H16, H22
+    // (AREAS of a union REDUCE returns) and H17 (a union initial value is a reference).
+    let actual = results(&[
+        "=ARRAYTOTEXT(REDUCE(A1,A2:A3,LAMBDA(a,v,a:v)),1)",
+        "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))",
+        "=AREAS(REDUCE(A1,A2:A3,LAMBDA(a,v,(a,v))))",
+        "=AREAS(REDUCE((A1,A3),{1},LAMBDA(a,v,a)))",
+        "=AREAS(REDUCE(A1,A2:A3,LAMBDA(p_a,p_v,(p_a,p_v))))",
+        "=REDUCE((A1,A3),{1},LAMBDA(a,v,ISREF(a)))",
+    ]);
+    assert_eq!(actual, ["{1;2;3}", "#VALUE!", "3", "2", "3", "TRUE"]);
+}
+
+#[test]
+fn a_range_between_parameters_keeps_its_text() {
+    // The names are not read as column labels, so the text shows them as written, and a column
+    // label next to one bound name stays a column range (not probed: this pins the current reading).
+    let mut model = new_empty_model();
+    model._set("A1", "1");
+    model._set("E1", "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))");
+    model._set("E2", "=LAMBDA(a,COLUMNS(a:C))(A1)");
+    model.evaluate();
+    assert_eq!(
+        model._get_formula("E1"),
+        "=REDUCE(A1,A2:A3,LAMBDA(a,v,ROWS(a:v)))"
+    );
+    assert_eq!(model._get_formula("E2"), "=LAMBDA(a,COLUMNS(A:C))(A1)");
+    assert_eq!(model._get_text("E2"), "3");
+}
