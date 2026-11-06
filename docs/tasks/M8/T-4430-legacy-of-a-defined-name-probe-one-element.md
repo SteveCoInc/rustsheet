@@ -3,7 +3,7 @@ id: T-4430
 title: "Legacy @ of a defined name: probe one-element, 1-D and out-of-range INDEX over array bodies, #REF! and #DIV/0! bodies, +3 and --3 bodies"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
