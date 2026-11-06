@@ -213,6 +213,21 @@ impl RefArg {
         }
     }
 
+    /// The argument's areas where it is a union or a 3-D range, else its single-area value as
+    /// [`RefArg::into_single_area`] gives it. A function that takes both reads the areas as
+    /// written, an overlap counting twice and a 3-D range every sheet of its span: Excel accepts
+    /// both as the data of TRIMMEAN, Z.TEST and the PERCENTILE/QUARTILE/PERCENTRANK family
+    /// (probes/t4309-3d-union-trimmean-percentile, T-4309).
+    pub(crate) fn into_areas_or_single(self, cell: CellReferenceIndex) -> Result<Ranges, CalcResult> {
+        match self {
+            RefArg::Ranges(areas @ Ranges::Areas(_)) => Ok(areas),
+            RefArg::Ranges(Ranges::One(range)) if range.left.sheet != range.right.sheet => {
+                Ok(Ranges::One(range))
+            }
+            other => Err(other.into_single_area(cell)),
+        }
+    }
+
     /// The argument's reference, or its value: an array of references as its value view
     /// ([`RefGrid::to_values`]), for a consumer that reads no element of one yet (SPEC-0014
     /// Rollout steps 4-5, T-2063 and T-2064).
