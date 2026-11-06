@@ -2270,6 +2270,7 @@ C	probes/t4069-fixed-denominator-tail.case.json	26
 C	probes/t4086-collation-later-passes.case.json	75
 C	probes/t4086-groupby-weightless.case.json	28
 C	probes/t4088-groupby-multifield.case.json	50
+C	probes/t4093-percentrank-tied-neighbour.case.json	27
 C	probes/t4099-file-xlpm-unbound-names.case.json	39
 C	probes/t4107-numeral-2000-suffix.case.json	135
 C	probes/t4108-currency-tag-position.case.json	34
