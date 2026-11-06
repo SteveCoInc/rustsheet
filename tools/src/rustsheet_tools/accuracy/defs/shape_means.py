@@ -90,6 +90,7 @@ from rustsheet_tools.accuracy.defs.aggregate_array import (
 )
 from rustsheet_tools.accuracy.defs.dispersion import (
     deviation_power_sum,
+    variadic_definition,
     variance_draws,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
@@ -367,17 +368,7 @@ def _variadic(
     *,
     param: str = "number",
 ) -> Definition:
-    return register(
-        Definition(
-            function=function,
-            params=(Param(param, "real", source=sources[0]),),
-            value=value,
-            domain=domain,
-            draw=draw,
-            variadic=True,
-            sources=(*sources, TABLES_SOURCE, "decision 0271"),
-        )
-    )
+    return variadic_definition(function, value, domain, (*sources, TABLES_SOURCE), draw=draw, param=param)
 
 
 _positive_draw = by_stratum_with_edge(
