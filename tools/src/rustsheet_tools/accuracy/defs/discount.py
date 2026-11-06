@@ -94,13 +94,20 @@ def _positive(*amounts: mpmath.mpf) -> None:
         raise _num("an amount at most 0")
 
 
-def _security(args: Sequence[MathArg]) -> tuple[int, int, mpmath.mpf, mpmath.mpf, int, Fraction]:
+def _security(
+    args: Sequence[MathArg], *, zero_second_unprobed: bool = False
+) -> tuple[int, int, mpmath.mpf, mpmath.mpf, int, Fraction]:
     """(settlement, maturity, first amount, second amount, D, B) of a discount security's arguments, both amounts
-    positive (the basis is read first: "Discount securities check order")."""
+    positive (the basis is read first: "Discount securities check order"). With `zero_second_unprobed`, a second
+    amount of exactly 0 beside a positive first one has no math value (DISC's redemption 0), once the basis and the
+    dates are valid."""
     a = scalars(args)
     basis = int(a[4]) if len(a) > 4 else 0
     check_basis(basis)
     s, m = _dates(a[0], a[1])
+    if zero_second_unprobed and a[3] == 0 and a[2] > 0:
+        msg = "a redemption of 0 (unprobed)"
+        raise NoValueError(msg)
     _positive(a[2], a[3])
     days, year = day_count_parts(s, m, basis)
     return s, m, a[2], a[3], days, year
@@ -120,11 +127,7 @@ def _cancels(value: mpmath.mpf, scale: mpmath.mpf) -> None:
 
 
 def _disc(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
-    if a[3] == 0 and a[2] > 0:
-        msg = "DISC at redemption 0 (unprobed)"
-        raise NoValueError(msg)
-    _s, _m, pr, red, days, year = _security(args)
+    _s, _m, pr, red, days, year = _security(args, zero_second_unprobed=True)
     _per_day_count(days)
     gap = 1 - pr / red
     _cancels(gap, mpmath.mpf(1))

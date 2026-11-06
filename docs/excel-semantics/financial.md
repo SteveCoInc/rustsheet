@@ -3006,7 +3006,7 @@ Rule: INTRATE, PRICEDISC and YIELDDISC accept settlement serial 0 and compute wi
 0.00044227185222223174), whereas RECEIVED, PRICEMAT and YIELDMAT return #NUM! for settlement 0 (PRICEMAT and
 YIELDMAT possibly because issue > settlement: inferred, the probe cannot tell it from a rejection of settlement 0 itself). All six: basis 5 and -1 are #NUM!, a fractional basis truncates (1.9 is 1) and any negative basis is #NUM! ("Day-count basis: a negative basis is #NUM!"), a text
 basis "1" is coerced, a boolean basis is #VALUE!, text dates are parsed, fractional dates truncate, settlement >= maturity
-is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 (the "< 0" side is inferred, not probed) (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
+is #NUM!, and a zero or negative investment, price or redemption (probed for INTRATE, PRICEDISC and YIELDDISC; RECEIVED's investment) is #NUM!, as is a zero or negative PRICEDISC discount; RECEIVED is #NUM! once 1 - discount*yearfrac = 0 and below it (the "< 0" side since gen-m9 01523d247594952e A152, A222 and accuracy/RECEIVED/s1: "Discount securities and T-bills: amount domains (T-4112)") (`RECEIVED(...,1000,1)` is #NUM!, `...,0.99` is 99999.99999999991); a negative PRICEMAT/YIELDMAT rate or yield price is #NUM! (PRICEMAT and YIELDMAT accept a
 zero rate; issue on or after settlement is #NUM!, issue = settlement included: probes/matdisc-serial-0-60 A9, A14, A25, A30). Basis 2 is the only mode whose result differs on a one-year span
 (actual/360); bases 0, 1, 3 and 4 agree there.
 PRICEMAT and YIELDMAT count the settlement-to-maturity days as DSM = YEARFRAC-days(issue,maturity) - days(issue,settlement), not
@@ -4069,6 +4069,9 @@ Equal dates: TBILLEQ, TBILLPRICE and TBILLYIELD all give `#NUM!` when settlement
 reaches the division (`TBILLYIELD(45366,45366,98)`, `TBILLEQ(45366,45366,0.05)`, `TBILLPRICE(45366,45366,0.05)`,
 and `TBILLYIELD(45366,45366,100)`, `TBILLEQ(45366,45366,0)`; one day later is a number: probes/tbill-equal-dates,
 excel-graph, 2026-10-14, T-1539).
+The long-branch form is not Excel's to the bit everywhere. On accuracy/TBILLEQ/s1, A39 and A127 are about 30 ulp off
+it, and A39 is matched by a price of `100 - rate*100*DSM/360` (see "Discount securities and T-bills: amount domains
+(T-4112)"; the order is open in T-4521).
 Evidence: ironcalc-calc/FINANCIAL/TBILLs.xlsx D2:D31, R2:R31 and L5:L26 (Excel-cached, Microsoft
 Macintosh Excel; all 273 cells bit-exact, T-1475); the same formulation is bit-exact on the excel-graph
 probes fin-argument-modes H313, date-system-1904-financial A29:A30 and -shift A32.
@@ -4772,18 +4775,27 @@ price (defs/discount.py `_price_share`), and a math value of 0 or `#NUM!` only w
 From 183 days, TBILLEQ's form in "TBILLEQ and TBILLYIELD" (`-t + sqrt(...)`) cancels at a tiny discount, so Excel is
 off the math by about 1E-16/discount relative: `TBILLEQ(53457,53640,5.56066541833896E-10)` is 5.63838975509136E-10
 against 5.637896884071863E-10 (8.7E-5), `TBILLEQ(1438166,1438350,8.54032607528415E-11)` 5.7E-5 off
-(accuracy/TBILLEQ/s1 A110, A175; A81, A87, A88, A100, A106, A108, A109, A163 and A189 are smaller). The engine follows
-Excel's form and is bit-exact on all of them. Below 183 days the plain quotient does not cancel.
-Unprobed: a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns `#DIV/0!`.
+(accuracy/TBILLEQ/s1 A110, A175; A81, A87, A88, A100, A106, A108, A109, A163 and A189 are smaller). The engine is
+bit-exact with Excel on all of these. Below 183 days the plain quotient does not cancel.
+The documented long-branch form is not quite Excel's: two table points are about 30 ulp (15th digit) from Excel, and
+pass Gate A only through the math envelope. accuracy/TBILLEQ/s1 A39 `TBILLEQ(33842,34067,0.213177283226975)` (225
+days) is 0.24375066975421497 in Excel and 0.24375066975421592 in the form above (and the engine). Excel's value comes
+out exactly when the price is computed as `100 - rate*100*DSM/360`. A127 `TBILLEQ(45351,45716,0.178249140751279)` (365
+days, 2024-02-29 to 2025-02-28) is 0.20960730738258349 in Excel and 0.20960730738258393 in the engine, and no price
+variant tried explains it, Y = 366 included. Over the table's 38 long-branch numeric points, `rate*100*DSM/360` matches
+37 and the documented form 36. Excel's exact operation order is open (T-4521).
+Unprobed (T-4522): a day count of 0 (30/360 from the 30th to the 31st of one month), where the engine returns
+`#DIV/0!`; DISC at a redemption of exactly 0; a T-bill discount of exactly 0 (the engine's `#NUM!`).
 Evidence: gen-m9 1dce4774f5c0e736 A227, A276; 31474c20fc1dafd6 A376, A241; 5c6a23c4f6597f1c A113; 30e20ba3302fea8b A49;
 6376e27be7a05871 A152, A8; 79d87fc527927626 A225; bc04c1f478c9896c A216; 01523d247594952e A152, A222, A278, A219, A163;
 probes/discount-serial-zero; accuracy/DISC/s1 A113, A122, A123, A129, A132; accuracy/RECEIVED/s1 A6, A8, A13, A14,
 A15, A22, A24, A30, A38, A67, A79, A112, A116, A118, A120, A131, A144 (1 - discount*DIM/B below 0, and amounts at most
 0); accuracy/PRICEDISC/s1 A112, A120, A125, A131, A132; accuracy/TBILLEQ/s1 A111, A135; accuracy/TBILLPRICE/s1 A128,
 A129 (excel-graph, 2026-11-06, T-4112). All 1,400 table points of the seven functions match these rules.
-Ours: matches (`discount_days`, `received_of`, `tbill_arguments` in functions/financial/discount.rs).
+Ours: matches the domains (`discount_days`, `received_of`, `tbill_arguments` in functions/financial/discount.rs); the
+TBILLEQ long-branch digits above are T-4521's.
 Status: VERIFIED (excel-graph)
-Tasks: T-4112
+Tasks: T-4112, T-4521, T-4522
 
 ## Booleans in ACCRINT, ACCRINTM, AMORLINC and AMORDEGRC (T-2455)
 Rule: a boolean is `#VALUE!`, typed or from a cell, in ACCRINTM's par (`ACCRINTM(34825,37622,1E-9,TRUE,4)`, A41, A54; text "2"

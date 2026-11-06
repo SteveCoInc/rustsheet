@@ -104,6 +104,8 @@ def test_excel_values_of_the_semantics_entries() -> None:
         (RECEIVED, (36767, 46418, 285642, 0.05)),  # 1 - discount*D/B below 0 (gen-m9 01523d247594952e A152)
         (RECEIVED, (38015, 45886, 14389, 0)),  # discount 0 (gen-m9 30e20ba3302fea8b A49)
         (DISC, (43831, 45494, 0, 104, 0)),  # price 0 (gen-m9 1dce4774f5c0e736 A227)
+        (DISC, (43466, 43831, 95, 0, 5)),  # redemption 0 is unprobed, but the basis is read first
+        (DISC, (43831, 43466, 95, 0)),  # and so are the dates
     ],
 )
 def test_domain_errors_follow_excel(definition: Definition, args: tuple[float, ...]) -> None:

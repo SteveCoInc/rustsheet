@@ -61,15 +61,23 @@ Every failing table point has an owner.
   (1,400), filled from excel-graph with 0 failures. Every error point in Excel matches a coded domain, and each is `#NUM!`.
 - `rustsheet-eval accuracy`: all 1,400 points inside the envelope (1,388 on both sides, 11 TBILLEQ points through
   Excel's 15 digits only, 1 through the math only), 0 failing, 0 known failures added. `missing tables` lower by 7
-  (121 to 114 at the first merge of origin/main, 100 after the final one, which brought other groups' tables). The engine is bit-exact with Excel on 1,398 of 1,400. The other two are TBILLEQ from 183 days, a few ulps
-  apart and both near the math (A39 `TBILLEQ(33842,34067,0.213177283226975)`, A127 `TBILLEQ(45351,45716,0.178249140751279)`).
+  (121 to 114 at the first merge of origin/main, 100 after the final one, which brought other groups' tables). The engine is bit-exact with Excel on 1,398 of 1,400. The other two are TBILLEQ from 183 days, about
+  30 ulp (15th digit) from Excel, inside Gate A only through the math envelope: A39 `TBILLEQ(33842,34067,0.213177283226975)`
+  and A127 `TBILLEQ(45351,45716,0.178249140751279)`. The documented long-branch form ("TBILLEQ and TBILLYIELD") is not
+  Excel's there. A39 comes out exactly with a price of `100 - rate*100*DSM/360`, which matches 37 of the 38 long-branch
+  points against 36 for the documented form. No variant tried explains A127 (365 days from 2024-02-29), Y = 366 included.
+  Recorded in financial.md, with follow-up T-4521 (functions-financial) to find Excel's order.
 - **Excel kept as the target (decision 0300):** no point is more than 1e-4 relative off the math. The largest are
   TBILLEQ from 183 days at tiny discounts (A110 8.7E-5, A175 5.7E-5), where Excel's `-t + sqrt(...)` cancels. The engine
   is bit-exact there.
+- Review round 1: DISC's redemption-0 no-value check now runs after the basis and date checks, so an invalid basis
+  or reversed dates still give `#NUM!` (no committed math changed; `verify` 0 differences). T-4522 (research) probes the
+  three points left without a math value.
 - New quirks and domain rules, in financial.md "Discount securities and T-bills: amount domains (T-4112)": DISC's
   price and negative-redemption domain, RECEIVED's zero and negative discount and its 1 - r·D/B below 0 (until now
   only inferred), PRICEDISC's negative discount and overflow, the T-bills' negative discount, DISC at settlement 0, the
-  zero-price rounding, and TBILLEQ's cancellation at tiny discounts.
+  zero-price rounding, TBILLEQ's cancellation at tiny discounts, and the two TBILLEQ long-branch cells that the
+  documented form misses.
 - Math sidecars: `rustsheet-accuracy math --function` over the seven functions, for probes (probes-numeric has no cell
   of them), run after the final merge of origin/main. That gives 9 new sidecars and 107 cells added to 9 existing ones, with no
   existing cell changed. `make eval-math-check` prints "current".
