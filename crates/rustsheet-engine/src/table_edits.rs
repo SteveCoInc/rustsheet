@@ -434,9 +434,10 @@ impl Model {
     /// Rewrites the stored `calculatedColumnFormula` of every table column for the structural
     /// edit `displacement`, as its cells' formulas are: the text is file-form A1 read at the
     /// column's first data row, so its references follow the cells they point at (excel-graph,
-    /// T-4274 t4274-calc-column-*: `A2*2` reads `B2*2` after insert_column A, `A3*2` after
-    /// insert_row 1, and stays `A2*2` after insert_row 3 inside the table and delete_column B;
-    /// `T[[#This Row],[Col]]*2` keeps its text after insert_column A). Run before the tables
+    /// T-4274 `t4274-calc-column-*`: `A2*2` reads `B2*2` after an `insert_column` at A, `A3*2`
+    /// after an `insert_row` at 1, and stays `A2*2` after an `insert_row` at 3 inside the table
+    /// and a `delete_column` of B; `T[[#This Row],[Col]]*2` keeps its text after the column
+    /// insert). Run before the tables
     /// are resized, so the parse sees the tables the text was written against; a text the edit
     /// does not change is left as stored, byte for byte.
     fn displace_column_formulas(&mut self, displacement: Displacement) {
@@ -529,8 +530,8 @@ impl Model {
     /// left of `column`: a formula the insert moves is parsed in the table it moves with
     /// ([`Model::kept_table_holding`]), as a row insert's is ([`Model::row_edit`]), so an
     /// unqualified `[@Col]` in a calculated column still names its table (T-4274
-    /// t4274-calc-column-structured-insert-column-a: FORMULATEXT `=[@Col]*2` and `SUM` 14 after
-    /// insert_column A; before, the moved cells did not parse). A column delete keeps no tables:
+    /// `t4274-calc-column-structured-insert-column-a`: FORMULATEXT `=[@Col]*2` and `SUM` 14
+    /// after an `insert_column` at A; before, the moved cells did not parse). A column delete keeps no tables:
     /// Excel's rule there is unprobed (T-3739).
     pub(crate) fn column_insert_kept(&self, sheet: u32, column: i32, count: i32) -> Vec<String> {
         self.table_edits(&DisplaceData::Column {
