@@ -669,7 +669,8 @@ as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see 
 near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
-Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
+Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281); probes/t4453-near-integer-text-args
+G1:J21 (excel-graph, 2026-11-06, T-4453); probes/t4468-near-integer-text-caps B1:C6 (`128-2^-23` is `#VALUE!`, T-4468).
 FIXED of a value that rounds to zero drops the sign (`FIXED(-0.004,2)` "0.00", `FIXED(-0.4,0)` "0"; DOLLAR keeps
 parentheses: `DOLLAR(-0.004)` "($0.00)"). Implemented (T-1257), see "FIXED drops the sign of a value that rounds to zero".
 Tasks: T-1281, T-4453

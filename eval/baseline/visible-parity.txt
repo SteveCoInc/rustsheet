@@ -275,7 +275,6 @@ probes/t4448-lone-blank-reshapers.case.json	1
 probes/t4450-eta-special-forms.case.json	11
 probes/t4456-beta-t-zero-cut.case.json	43
 probes/t4456-beta-t-zero-reach.case.json	29
-probes/t4468-near-integer-text-caps.case.json	7
 probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/t4515-fraction-tail-holdout.case.json	1

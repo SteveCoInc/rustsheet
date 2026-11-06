@@ -59,7 +59,9 @@ between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (ut
   digits (round to nearest, `to_excel_precision`) before `near_integer_count`. Candidates ranked on the train cells
   (t4468-near-integer-text-caps A, F, G: 32 cells): absolute 2^-22+2^-33 bound 25/32; 15-digit cut 32/32; a
   relative bound 2^-48 also fits train (32/32) and predicts `#VALUE!` up to d ≈ 7.6E-6.
-- Hold-out, registered before the fill (predictions computed before `rustsheet-oracle fill`): probes/
+- Hold-out, a separate case rather than a hash split (predictions for both new cases were computed by a scratch script
+  in the session before `rustsheet-oracle fill` ran; that record is not in git, the commits only show the fill and the
+  model landing together; no margin was stated before scoring, and both rates are 100%, so any margin holds): probes/
   t4468-substitute-cap-window, 21 cells, decimal d from 4E-6 to 9E-6, literals and text. 15-digit cut 21/21 (with
   the engine's existing 15-digit literal truncation; B5 and C1 show a literal 2147483646.999999 reads
   2147483646.99999), absolute 19/21, relative 2^-48 11/21. The edge sits between 4.5E-6 and 4.9E-6 of the double, at
@@ -70,4 +72,5 @@ between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (ut
   Gate A envelope: not applicable (the results are text or `#VALUE!`, no numeric point); reproducibility floor: not involved (the edge is 5E-6 wide).
 - Citation nits fixed (char_code.rs "D1:D21, E1:E14"; text.md DOLLAR/FIXED Tasks line). text.md's near-integer
   entry records the caps, the model and the literal-vs-computed split.
-- Eval delta: probes +3 cases (137 cells), all pass; the 7 failing cells the handoff baselined now pass.
+- Eval delta: probes +3 cases (137 cells), all pass; the 7 failing cells the handoff baselined now pass, and the
+  case's 7-cell visible-parity lock line is gone (re-recorded from main's file by `make eval-baseline`).
