@@ -57,3 +57,15 @@ as `#REF!` then `(1)`).
   also runs over workbook names). The export's `#REF!C4:C7` text is inferred from Excel's FORMULATEXT.
 - Eval delta: probes +2 cases (15 cells), all pass.
 - Follow-up: T-4628 (a loaded `#REF!C4:C7` loses its range in the lexer; probe first).
+
+## Landing notes
+- PR #3653 (draft), code head 4289946e6 (the commit before this note). Session landing window closed at 15:09 UTC.
+- CI: red on 10288e7's predecessor daa6e3e (`test_shared_formulas::a_formula_twice_in_the_list_does_not_slow_down_adding_formulas`
+  relied on the old revival to build a duplicate shared formula); fixed in 10288e7 (two deleted sheets give the duplicate),
+  and the full engine and xlsx test suites passed locally. CI on 4289946e6 has not been seen yet.
+- Review on 10288e7: design APPROVE, security APPROVE, excel-fidelity REQUEST_CHANGES (round 2): defined names are
+  rewritten too with no evidence, and the export's file text is inferred. 4289946e6 answers both: the new probe
+  t2612-delete-sheet-then-add-names (excel-graph: names stay #REF!, engine 5/5) and the references.md wording.
+- Next: run the full panel on 4289946e6 (round 3 of 3; design and security see a docs/probe-only delta), wait for green CI,
+  mark the PR ready and enqueue. Do not reintroduce the old shared-formula test setup (delete then rename), which
+  depended on revival.
