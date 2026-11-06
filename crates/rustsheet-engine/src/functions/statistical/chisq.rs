@@ -86,6 +86,41 @@ fn right_tail_beyond_edge(df: f64, p: f64) -> bool {
         .is_some_and(|&p_min| p < p_min)
 }
 
+/// Decision 0188 R3's G: where Excel is more than this relative distance off the 50-digit math,
+/// decision 0267 item 3 rules the math the target for CHISQ.INV.RT and CHIINV at df 1.
+const R3_GAP: f64 = 1e-4;
+
+/// From this p up, rounding `1 - p` to a double moves the df-1 quantile by at most about
+/// 2^-54 / p * 2 / x, under 3E-6 relative (x > 50 at p 1E-12), so the quantile of `1 - p` is
+/// always within [`R3_GAP`] of the math and the second search is skipped. Not a fit: no result
+/// depends on where between 1E-12 and the first point above G (about 1.5E-15) the bound sits.
+const ONE_DEGREE_EXACT_P_MIN: f64 = 1e-12;
+
+/// CHISQ.INV.RT and CHIINV at one degree of freedom. Excel's value is the lower quantile of
+/// `1 - p` (`CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, T-1543,
+/// T-1634), and `#NUM!` where that has none (1 - p rounds to 1). At a tiny p, rounding `1 - p`
+/// to a double can move the tail it stands for by a large part of p: `CHISQ.INV.RT(1.5E-16,1)`
+/// is Excel's 67.39648382445009 and the quantile of 1 - 2^-53 68.7632522116684, both more than
+/// 8E-3 off the math 68.169874129795366 (probes-numeric/t3336-chisq-df1-right-tail A220 and its
+/// math sidecar). Decision 0267 item 3 rules the math there (decision 0188 R3), so where the
+/// quantile of `1 - p` is more than [`R3_GAP`] off the right-tail quantile of `p` itself (the
+/// accurate upper-tail search, which keeps the digits `1 - p` loses), that one is returned:
+/// every evidenced point where Excel is more than G off has the quantile of `1 - p` more than G
+/// off as well, and no point where it is within G has (docs/excel-semantics/statistics.md,
+/// "CHISQ.INV.RT and CHIINV quirks", T-3337). Two bounded searches at most.
+fn one_degree_right_tail_quantile(p: f64) -> f64 {
+    let excel = gamma_quantile(0.5, CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower);
+    if p >= ONE_DEGREE_EXACT_P_MIN || !excel.is_finite() {
+        return excel;
+    }
+    let math = gamma_quantile(0.5, CHI_SQUARED_SCALE, p, Tail::Upper);
+    if math.is_finite() && (excel - math).abs() > R3_GAP * math {
+        math
+    } else {
+        excel
+    }
+}
+
 /// A distribution value as a cell value: `#NUM!` unless finite and not negative.
 fn non_negative(value: f64, cell: CellReferenceIndex) -> Result<f64, CalcResult> {
     if value.is_finite() && value >= 0.0 {
@@ -254,10 +289,7 @@ impl Model {
         // `CHISQ.INV.RT(1E-10,1)` is `CHISQ.INV(0.9999999999,1)`, 41.82145620298276, and below
         // 1.1E-16 (1 - p rounds to 1) it is `#NUM!` (T-1543 probe, T-1634).
         if is_one_degree(&dist) {
-            return non_negative(
-                gamma_quantile(dist.shape(), CHI_SQUARED_SCALE, 1.0 - p, Tail::Lower),
-                cell,
-            );
+            return non_negative(one_degree_right_tail_quantile(p), cell);
         }
         if right_tail_beyond_edge(dist.shape() * 2.0, p) {
             return Err(num_error(cell));

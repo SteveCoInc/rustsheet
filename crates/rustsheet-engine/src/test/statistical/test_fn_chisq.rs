@@ -183,6 +183,60 @@ fn chisq_inv_rt_num_edge() {
     }
 }
 
+/// T-3337 (decision 0267 item 3, decision 0188 R3): at one degree of freedom the quantile of
+/// `1 - p` is more than G = 1e-4 off the right-tail quantile where rounding `1 - p` to a double
+/// moves the tail by a large part of `p`, and there CHISQ.INV.RT and CHIINV return the 50-digit
+/// math within 1e-9 (probes-numeric/t3336-chisq-df1-right-tail.math.json). Elsewhere they keep
+/// Excel's quantile of `1 - p`, and `#NUM!` stays `#NUM!`.
+#[test]
+fn chisq_inv_rt_one_degree_follows_the_math_where_one_minus_p_rounds_far() {
+    let mut model = new_empty_model();
+    // (formula, math from the committed sidecar, or Excel's exact double where Excel is within G)
+    let math = [
+        ("A1", "=CHISQ.INV.RT(1.5E-16,1)", 68.169_874_129_795_366),
+        ("A2", "=CHIINV(1.5E-16,1)", 68.169_874_129_795_366),
+        ("A3", "=CHISQ.INV.RT(3E-16,1)", 66.803_270_472_991_037),
+        ("A4", "=CHIINV(3E-16,1)", 66.803_270_472_991_037),
+        ("A5", "=CHISQ.INV.RT(5E-16,1)", 65.796_379_466_286_038),
+        ("A6", "=CHISQ.INV.RT(1E-16,1)", 68.969_460_958_516_575),
+        ("A7", "=CHISQ.INV.RT(1.5E-15,1)", 63.631_646_601_411_051),
+    ];
+    let kept = [
+        ("B1", "=CHISQ.INV.RT(1E-15,1)", "64.43203896936356"),
+        ("B2", "=CHISQ.INV.RT(1E-9,1)", "37.324893106518715"),
+        (
+            "B3",
+            "=CHISQ.INV.RT(2.220446049250313E-16,1)",
+            "67.39648382445012",
+        ),
+        ("B4", "=CHISQ.INV.RT(1E-20,1)", "#NUM!"),
+        ("B5", "=CHISQ.INV.RT(1,1)", "0.0"),
+    ];
+    for (cell, formula, _) in math {
+        model._set(cell, formula);
+    }
+    for (cell, formula, _) in kept {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, expected) in math {
+        let actual: f64 = crate::test::util::round_trip_value(&model, cell)
+            .parse()
+            .unwrap();
+        assert!(
+            ((actual - expected) / expected).abs() < 1e-9,
+            "{formula}: {actual} against the math {expected}"
+        );
+    }
+    for (cell, formula, expected) in kept {
+        assert_eq!(
+            crate::test::util::round_trip_value(&model, cell),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
 #[test]
 fn test_booleans() {
     let mut model = new_empty_model();
