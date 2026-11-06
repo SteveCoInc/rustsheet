@@ -1,9 +1,11 @@
-"""T-4458: generate probes/t4458-bessely-tiny-x-cuts.
+"""T-4458: generate probes/t4458-bessely-tiny-x-cuts (main) and probes/t4458-bessely-tiny-x-bisect
+(--bisect). The first fill's workbook (docs/research/t4458/fill1) came from this script at commit
+f40d71ab6, which also held subnormal order-1 cells.
 
 One column per BESSELY order 1..7, x descending, bracketing the engine's predicted #NUM! cut
 (the first x at which a stored double overflows: 1/x for order 1, the upward recurrence's
 product for orders 2..7) at decade, 1-digit, 3-digit and 4-digit resolution. Order 1's cut
-(1/x overflows below 1/DBL_MAX, a subnormal) is left out: see bisect() and fill1/.
+(1/x overflows below 1/DBL_MAX, a subnormal) is left out: see fill1/ and engineering.md.
 Usage: python3 gen_probe.py OUT.case.json, or --bisect OUT.case.json for the second fill
 """
 
@@ -91,8 +93,6 @@ def main() -> None:
         json.dump(case, f, indent=1)
         f.write("\n")
     print(len(cells), "cells")
-
-
 
 
 def bisect(path: str) -> None:

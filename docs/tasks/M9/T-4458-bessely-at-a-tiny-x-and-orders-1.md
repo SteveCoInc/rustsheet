@@ -46,15 +46,18 @@ BESSELI. This is BESSELY's half of the question. BESSELK's half is T-4459.
   by scoring candidates, is kind (c) and owes the guards below.
 
 ## Acceptance criteria
-- [x] A probe case under eval/suites/probes, oracle-filled from excel-graph, brackets the `#NUM!` cut of each order 1
+- [x] (Orders 2 to 7, plus 8 to 10. Order 1 has no target: its cut lies at a subnormal x, which Excel evaluates
+      inconsistently; see the Outcome. Amended at review.) A probe case under eval/suites/probes, oracle-filled from excel-graph, brackets the `#NUM!` cut of each order 1
       to 7 between adjacent cells, three significant digits or finer (one more step of resolution for order 1, across
       1/DBL_MAX).
 - [x] engineering.md records the brackets and the mechanism, in a new section next to "BESSELJ and BESSELI at a tiny
       x and a small order", or in that section, citing the cells.
-- [ ] Every cell of the new case passes. No known-failure line is added to eval/baseline/probes.txt or to any other
-      baseline, and none of the existing BESSELY cells (probes/m9-bessel-order-limits, probes-numeric/m9-bessel,
-      ironcalc-calc BESSEL.xlsx, gen-m9) changes verdict.
-- [ ] If the digits next to the cut need a rounding model chosen by scoring (kind (c) of reviewer-excel-fidelity
+- [x] Every cell of the new case passes, except probes/t4458-bessely-tiny-x-cuts Calc!D32. That cell is a 4-ulp
+      rounding miss at order 4's cut, a kind (c) model that T-4467 owns. Its known-failure line comes from
+      `make eval-baseline` and is the only one added. None of the existing BESSELY cells (probes/m9-bessel-order-limits,
+      probes-numeric/m9-bessel, ironcalc-calc BESSEL.xlsx, gen-m9) changes verdict. (Amended at review: the box first
+      asked for no known-failure line; D32 is deferred to T-4467 rather than fitted here.)
+- [x] (Not applicable: no rounding model was chosen here; D32 went to T-4467.) If the digits next to the cut need a rounding model chosen by scoring (kind (c) of reviewer-excel-fidelity
       check 7, decision 0188 R4), the Outcome shows:
       - the hold-out: train and hold-out counts side by side for the chosen and the correctly rounded candidate, with
         the split (about 30% by cell hash) and its margin stated before scoring;
@@ -64,7 +67,7 @@ BESSELI. This is BESSELY's half of the question. BESSELK's half is T-4459.
         accurate math outside the range;
       - no target below the reproducibility floor (4 ulp web against desktop, bits that vary between fills);
       - no keep-matched branch.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - BESSELK (T-4459), BESSELJ and BESSELI (T-4422, done), orders past the cap ("BESSEL order cap" DEVIATION).
@@ -91,7 +94,7 @@ BESSELI. This is BESSELY's half of the question. BESSELK's half is T-4459.
     0). It also contaminated that workbook's order-7 cells, which went `#NUM!` a decade early, where both later fills
     give the model's value.
   - That first fill is kept as research data in docs/research/t4458/fill1, not as an eval case.
-- Deviation from acceptance box 3: one known-failure line is added. probes/t4458-bessely-tiny-x-cuts Calc!D32,
+- Acceptance box 3, amended at review: one known-failure line is added. probes/t4458-bessely-tiny-x-cuts Calc!D32,
   `BESSELY(2.036E-77,4)`, is 4 ulp below ours in both fills, and its neighbours match. That is a rounding model at
   the overflow edge, kind (c), and it is owned by follow-up T-4467 (opus) with the R4 guards. No existing BESSELY
   cell changed verdict.

@@ -1438,6 +1438,7 @@ Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083
 probes/t4422-bessel-tiny-x-bisect (432 cells, the 3-digit brackets above, excel-graph, 2026-11-06).
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_excel.rs (`jn_miller`), bessel_i.rs (`in_miller`)
+Tasks: T-4083, T-4422
 
 ## BESSELY at a tiny x and a small order (T-4458)
 Rule: at a tiny x, BESSELY of orders 2 to 10 is `#NUM!` exactly from the first x at which the upward recurrence
@@ -1478,7 +1479,7 @@ resolution around each cut) and probes/t4458-bessely-tiny-x-bisect (263 cells: o
 to 10), both from excel-graph, 2026-11-06. Generator: docs/research/t4458/gen_probe.py.
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_excel.rs (`excel_bessel_y`)
-Tasks: T-4083, T-4422
+Tasks: T-4458, T-4467
 
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.
