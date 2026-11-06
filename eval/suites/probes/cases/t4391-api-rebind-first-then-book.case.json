@@ -1,0 +1,65 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4391, First active: as -first-no-first-add, then a workbook-scoped W =$B$1 (T-4353 ends so): does a workbook add re-bind the sheet-scoped uses? T-4353's book (First, S2, Last; B1 = 1, 7, 9; B2 = 10, 70, 90); every cell is loaded from the file before the adds (Graph worksheets('S')/names/add, workbook/names/add for W). Predictions (written before the fill): a workbook add re-binds every unresolved use (as t3264 fills an unresolved =N): Qa, Rate, Ql 1, =W 1.",
+ "tags": [
+  "M8",
+  "syntax",
+  "probe"
+ ],
+ "active_sheet": "First",
+ "sheets": [
+  {
+   "name": "First",
+   "cells": {
+    "B1": 1,
+    "B2": 10,
+    "A1": "=W"
+   }
+  },
+  {
+   "name": "S2",
+   "cells": {
+    "B1": 7,
+    "B2": 70,
+    "A1": "=Qa",
+    "A2": "=Rate"
+   }
+  },
+  {
+   "name": "Last",
+   "cells": {
+    "B1": 9,
+    "B2": 90,
+    "A1": "=Ql"
+   }
+  }
+ ],
+ "expected": {},
+ "check": [
+  "S2!A1",
+  "S2!A2",
+  "Last!A1",
+  "First!A1"
+ ],
+ "api_names": [
+  {
+   "name": "Qa",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Rate",
+   "formula": "=$B$1",
+   "sheet": "S2"
+  },
+  {
+   "name": "Ql",
+   "formula": "=$B$1",
+   "sheet": "Last"
+  },
+  {
+   "name": "W",
+   "formula": "=$B$1"
+  }
+ ]
+}
