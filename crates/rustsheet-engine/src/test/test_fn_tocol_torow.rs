@@ -114,6 +114,24 @@ fn torow_lone_blank_cell_is_ignored() {
     assert_eq!(model._get_text("B3"), "5");
 }
 
+// T-4448: SORT, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE of a value keep a lone blank cell blank too
+// (probes/t4448-lone-blank-reshapers A1, A11, A12, A15, A9).
+#[test]
+fn reshapers_keep_a_lone_blank_cell_blank() {
+    let mut model = new_empty_model();
+    model._set("B1", "=SORT(Z1)&\"x\"");
+    model._set("B2", "=CHOOSEROWS(Z1,1)&\"x\"");
+    model._set("B3", "=CHOOSECOLS(Z1,1)&\"x\"");
+    model._set("B4", "=TEXTJOIN(\"|\",FALSE,EXPAND(Z1,2,1,\"p\")&\"x\")");
+    model._set("B5", "=TAKE(IF(TRUE,Z1),1)&\"x\"");
+    model.evaluate();
+    assert_eq!(model._get_text("B1"), "x");
+    assert_eq!(model._get_text("B2"), "x");
+    assert_eq!(model._get_text("B3"), "x");
+    assert_eq!(model._get_text("B4"), "x|px");
+    assert_eq!(model._get_text("B5"), "x");
+}
+
 // T-3506: a one-cell reference to an error cell is a 1x1 array holding the error, so the other
 // arguments are checked first (gen-m7 arg-pairs, excel-graph; docs/excel-semantics/arrays.md "A
 // one-cell error reference is a 1x1 array in TOCOL, TOROW and FILTER").

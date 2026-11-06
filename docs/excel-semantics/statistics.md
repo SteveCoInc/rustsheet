@@ -4784,6 +4784,26 @@ within 1E-15 relative / largest relative error:
     Excel's 0 wherever ln ret is below ln(DBL_MIN) (the rule above); it still keeps a number at the n = 3 zeros above
     that (t4254-beta-t-l140-zero-cut B1:B11, D1:D11, and t4254-beta-t-zero-wide A30, B30, C30) and the t's (owned by
     T-4437).
+  - More shapes (T-4456, probes/t4456-beta-t-zero-cut, 130 cells, and probes/t4456-beta-t-zero-reach, 81 cells,
+    excel-graph, 2026-11-06):
+    - The rule holds at n = 25 and 29 bup terms. At (5E6, 25.5) and (5E6, 30), ln ret -708.0 is a number
+      (`BETA.DIST(0.999857729248015,5e+06,25.5,TRUE)` is 2.7722115421194987E-264) and -709.0 is 0 (cut C9, C10;
+      D9, D10), though the math there is 1.05E-264.
+    - The earlier cut reaches n = 5. `BETA.DIST(x,2E6,5.5|6,TRUE)` is 0 at every ln ret from -700 (cut A1:B17). Walking
+      up at b = 5.5, Excel is the math to 14 digits from 7.8E-209 down to 8.5E-291 (ln ret -690), and 0 at 4.1E-295
+      (reach A1:A21).
+    - At one x (ln ret -690, a = 2E6), b = 2.5 and 3.5 are 0 (the math 1.0E-297 and 2.8E-295), and b = 5.5 to 39.5
+      are numbers from 8.5E-291 up (reach B1:B12).
+    - At ln ret -690, every a from 3000 to 5E7 is a number at b = 5.5 and 25.5 (reach C1:D9).
+    - So at every shape probed, the earlier cut lies in the tail w between 2.8E-295 and 8.5E-291, which brackets
+      DBL_MIN/eps = 2^-970.
+    - The t's cut moves with df. At ln tail -690 (2.17E-300), df 5 to 1E6 are numbers and df 1E8 is 0 (reach F2:F9).
+      At df 1E6, Excel is a number down to 2.1717382813896547E-300 and 0 at 9.9E-305 (reach E20, E21).
+      `T.DIST.RT(1.46569174062763E+299,1)` is `#NUM!` (reach F1, where t² overflows).
+    - F.INV: Excel's F.DIST at (107702, 58) is 0 from x = 0.02 to 0.04, and a number from 0.0425 (cut G2:G14). Both
+      Excel's `F.INV(1.43795578761177E-262,107702,58)` root, 0.02386747293188499 (G1, ln ret -1194), and the math's,
+      0.040061361917045 (G3, ln ret -712.5), lie in that flat 0. So Excel's search returns a point where its own cdf
+      never reaches p (T-4442).
 - `F.DIST.RT(x,79,1E10)` and `F.DIST(x,79,1E10,TRUE)` are `#NUM!` for every x tested (16 cells; 8 `F.DIST.RT`), while df1 up
   to 60 at df2 = 1E10 returns numbers. T-1530's per-df cut ("F-distribution df limit": a df above 1E10 is `#NUM!`, 1E10
   itself is accepted) does not explain it, so it is a new quirk whose boundary (df1 in 61 to 78 at df2 1E10) and mechanism
@@ -5172,7 +5192,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     `CHISQ.INV.RT(1E-10,1)` = 41.82145620298276 = `CHISQ.INV(0.9999999999,1)` (the true right-tail quantile is
     41.82145636476129), and a p of 2^-54 (about 5.55E-17) or less, where 1 - p rounds to 1, is `#NUM!`
     (`CHISQ.INV.RT(1E-20,1)`); but `#NUM!` also reaches p where 1 - p is 1 - 2^-53, so "1 - p rounds to 1" is not
-    the whole mechanism (the T-3336 sweep below puts the edge between 8E-17 and 9E-17). The rule is exact only to Excel's search
+    the whole mechanism (the T-3858 probe below pins the edge between 8.3253E-17 and 8.3254E-17). The rule is exact only to Excel's search
     on its double-valued lower cdf: `CHIINV(1E-9,1)` (probes-numeric/m9-legacy-chiinv A1, A2) is 37.324892889999234
     in Excel, about 2.2E-7 (one step of the cdf's resolution near 1) below the complement crossing
     37.324893106518715 (ours) and the true quantile 37.32489305136234 (T-2561). At 50 digits (gap triage
@@ -5217,10 +5237,25 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     plateau offsets, not single steps). CHISQ.INV.RT(1E-9,1.5) equals the df 1 value (df truncation). The `#NUM!`
     edge, probed here: 9E-17 and 2^-53 give 68.7632522116684, while 8E-17, 7E-17, 6E-17 and 2^-54 are `#NUM!`.
     In doubles 1 - 6E-17, 1 - 7E-17, 1 - 8E-17 and 1 - 9E-17 are all 1 - 2^-53, not 1, so the cutoff is not
-    "1 - p rounds to 1" and our engine, which follows that rule, returns 68.7632522116684 at 6E-17 to 8E-17 (A250 to
-    A252). `CHISQ.INV(1-8E-17,1)` is unprobed, so whether the cutoff sits in INV.RT's own p check or in its search is open.
+    "1 - p rounds to 1"; our engine followed that rule and returned 68.7632522116684 at 6E-17 to 8E-17 (A250 to
+    A252) until T-3858 (next item).
     CHISQ.DIST(x,1,TRUE) is 0.9999999989999999 at Excel's 37.324892889999234 and 0.999999999 at ours. Full cells in
     the case's oracle sidecar.
+  - The df 1 `#NUM!` cutoff (T-3858, probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph, 264 cells):
+    `CHISQ.INV.RT(p,1)` and `CHIINV(p,1)` are `#NUM!` for p <= 8.3253E-17 and 68.7632522116684 for p >= 8.3254E-17
+    (every p from 8E-17 to 9E-17 in steps of 1E-18 and from 8.3200E-17 to 8.3270E-17 in steps of 1E-21; also
+    `3*2^-55-2^-106`, `3*2^-55`, `3*2^-55+2^-106`, `2^-53-2^-106`, `2^-53` and `2^-53+2^-105`, all values).
+    `CHISQ.INV(1-p,1)` is 68.7632522116684 at every one of these p, `#NUM!` side included, and 1 - p is the double
+    1 - 2^-53 at all of them, so the cutoff is in the right-tail functions' own check on p, not in the search on
+    1 - p. CHIINV takes the same edge as CHISQ.INV.RT at every p. df 1.5 is unprobed here (df is truncated, so
+    the engine gives it the same edge). The edge is about 0.74988 * 2^-53, close to but below 3 * 2^-55
+    (0.75 * 2^-53, a value), so it is not the double rounding of (0.5 - p) + 0.5 (whose edge would be
+    3 * 2^-55 itself), and it is not the upper tail at a round x (erfc(sqrt(x/2)) = 8.32535E-17 at x about
+    69.33093). No closed form found; the engine takes the midpoint 8.32535E-17 (chisq.rs
+    `ONE_DEGREE_RIGHT_TAIL_P_MIN`), and a fresh sweep after that choice (t3858-chisq-df1-num-cutoff-fresh, 40
+    log-uniform p in [5.6E-17, 1.1E-16], CHISQ.INV.RT and CHIINV) agrees at all 80 cells. Mind the literals: a p literal with more than 15 significant digits is cut to 15
+    (numbers.md), so ulp-level p must be built from powers of two, as here. Above the edge Excel's 68.7632522116684 is 0.3% to
+    0.8% off the math, so there the engine returns the math under T-3337's rule (marks: T-4555).
   - T-3337 (2026-11-06; time-boxed under decision 0056). Where rounding 1 - p moves the quantile by more than G
     (evidenced from 9E-17 to 3.5E-15), the engine returns the math (decision 0267 item 3; see "Tiny-p quantiles"
     below). Everywhere else Excel's own landing is the target and stays unmatched:
@@ -5811,11 +5846,30 @@ Unequal sizes and single points follow "Array arguments given a scalar, a single
   0.6423163656267105, SLOPE 1.0213333333333334, INTERCEPT and FORECAST -2.1333333333333018E158 are finite and only STEYX is
   `#NUM!` (its variance subtracts sxy*sxy/sxx, which overflows). Ours gave STEYX `#DIV/0!` for the y-only case until T-4047.
   Unprobed: y's overflow alone for STEYX with two or three points (ours is `#DIV/0!` for two).
+- Gate A tables (T-4094; accuracy/{FORECAST,FORECAST.LINEAR,INTERCEPT,SLOPE,RSQ,PEARSON,CORREL}/s1, excel-graph
+  2026-11-06, one-row array literals): every error cell is one of the rules above (unequal lengths `#N/A`, one pair or a
+  constant x `#DIV/0!`, a constant y `#DIV/0!` for the correlations only, a sum about the mean past the double range
+  `#NUM!`), and a constant y gives SLOPE 0 and INTERCEPT and FORECAST its mean.
+  - Last digits: the sums of the values are x87-accumulated and the slope Sxy/Sxx is rounded to a 64-bit significand and
+    then to a double (the sums about the means and a + b*x stay plain doubles). That model fits all 597 numeric points of
+    the FORECAST, FORECAST.LINEAR, SLOPE and INTERCEPT tables. Plain doubles fit 595 and miss
+    FORECAST A67 (`FORECAST(0.838499859843194,{-0.109514844082525,-3.34908202370414},{0.838499859843194,50.1841931039674})`
+    is -0.1095148440825254, plain doubles -0.10951484408252497: the division's double rounding, amplified by the
+    cancelling line) and A79 (568833.0148482913, the x87 sum). Ours is plain doubles: T-4550.
+  - Cancellation: INTERCEPT is ȳ - SLOPE*x̄ and FORECAST INTERCEPT + SLOPE*x in doubles. Over data spanning 1E-150 to
+    1E+150 these cancel far from the exact value. Examples: `INTERCEPT({3.6982834462689E+67,1.76799207788302E+128},
+    {-7.50118897397527E-141,7.65430059879691E+81})` is 0, where the exact value is 3.70E+67 (INTERCEPT A109), and
+    FORECAST.LINEAR A184 is -4.21E+65 where it is exactly -7.85E-40. Nine points are more than 1E-4 relative off the
+    exact value: INTERCEPT A109, A110, A112, A116, A117, A119, A120; FORECAST A192; FORECAST.LINEAR A184. Ours computes
+    in the same order and matches Excel to the bit on all nine. CORREL, PEARSON, RSQ and SLOPE are within 1E-9 of the
+    exact value on every table point. The probe data a few ulps apart near 1E+160 is the exception, as Excel's double
+    mean decides there: probes/t4047-paired-overflow J1 and J7 (CORREL, PEARSON) are 1.1E-4 off the exact value, J6
+    (RSQ) 2.3E-4, and J3 and J5 (INTERCEPT, FORECAST) 6.7E-4; ours matches Excel on all five.
 Evidence: probes/regression-pairs-a, regression-pairs-b, regression-forecast (excel-graph, 2026-10-16, T-1620); the
 error cells in these cases are `#DIV/0!`, so whether a range error propagates or is replaced is unprobed.
 Ours: the unequal-size `#N/A` matches since T-1292, single points since T-1401; CORREL, PEARSON, RSQ, SLOPE, INTERCEPT, STEYX and FORECAST compute from the sums about the means in Excel's order, a typed text or boolean argument is one value with no number, and STEYX of a negative difference is `#NUM!` (T-1723). COVAR with text, blank or boolean cells (`#N/A` in ours) is still open.
 Status: VERIFIED (web)
-Tasks: T-1723, T-1724, T-1725, T-2080, T-4047 (overlaps T-1292, T-1707, T-1401, T-1290)
+Tasks: T-1723, T-1724, T-1725, T-2080, T-4047, T-4094, T-4550 (overlaps T-1292, T-1707, T-1401, T-1290)
 
 ## TREND: defaults, shapes, single points and error inputs
 Rule: TREND treats an empty known_x or new_x argument as the default (`TREND(A1:A6,B1:B6,,FALSE)` fits the known x's: 6 rows,

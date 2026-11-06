@@ -1123,11 +1123,18 @@ same Data sheet, excel-graph, 2026-10-16; "functions", "functions2", "functions3
 - Function-array edges (probes/t4449-groupby-function-array-edges, excel-graph, 2026-11-06, T-4449; every cell GROUPBY and
   PIVOTBY alike, over one value column and two): a ragged array of functions (`HSTACK(VSTACK(SUM,MAX),MIN)`,
   `VSTACK(HSTACK(SUM,MAX),MIN)`) is `#VALUE!`, not the `#N/A` its padding holds: the stack is a 2-D array of functions (G!C1,
-  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in reading order is the result (`HSTACK(NA(),1/0)`
+  G!C2, G!C13, G!C14, G!C25, G!C26). Of several error elements the first in argument order is the result (`HSTACK(NA(),1/0)`
   `#N/A`, `HSTACK(1/0,NA())` `#DIV/0!`, `VSTACK(SUM,NA(),1/0)` `#N/A`, `HSTACK(SUM,#REF!,NA())` `#REF!`: G!C3:C6), and an error
   beats a plain value on either side of it (`HSTACK(NA(),5)` and `HSTACK(5,NA())` are both `#N/A`: G!C7, G!C8). A LAMBDA without
   parameters is `#VALUE!` for the whole result: `LAMBDA(1)`, `LAMBDA(SUM(Data!D2:D3))`, `HSTACK(SUM,LAMBDA(1))` and
   `LET(f,LAMBDA(1),f)` (G!C9:C12, G!C21:C24, G!C33:C36, G!C45:C48).
+  Which error wins in a 2-D array (probes/t4485-groupby-function-array-error-order, excel-graph, 2026-11-06, T-4485; GROUPBY and
+  PIVOTBY alike): an explicit error beats the `#VALUE!` of a 2-D array of functions, and of several errors the first one is the
+  first in argument order, depth first, not in reading order or column-major order. `VSTACK(HSTACK(SUM,1/0),HSTACK(NA(),MAX))`
+  and `HSTACK(VSTACK(SUM,1/0),VSTACK(NA(),MAX))` are `#DIV/0!` (G!C1, G!C2; reading order would give `#N/A` for the second);
+  `VSTACK(HSTACK(NA(),SUM),HSTACK(MAX,1/0))` and `VSTACK(HSTACK(SUM,NA()),HSTACK(1/0,MAX))` are `#N/A` (G!C3, G!C9; column-major
+  order would give `#DIV/0!` for the second); a ragged `HSTACK(VSTACK(SUM,MAX),NA())` is `#N/A`, not `#VALUE!` (G!C4).
+  The whole result is the error (`ROWS&"x"&COLUMNS` is `ERR`, `ERROR.TYPE` 2 or 7). The engine already matches (31 of 31 cells).
 Unprobed (T-1325): a labelled row of several functions with detected headers (the engine does not show them). CORREL, PEARSON and RSQ over arrays of different sizes
 are `#N/A` per group in Excel, `#VALUE!` here, and their total rows differ in the last digit (functions G!B421, functions2
 G!B281, G!B301): a CORREL/PEARSON/RSQ gap, T-1707.
@@ -1407,8 +1414,8 @@ Also: an error pad_with is an ordinary pad value: it fills the padded cells (WRA
 `WRAPCOLS(B5:H5,100,NA())` is 7x1, unpadded. wrap_count is `#NUM!` below 1 for WRAPROWS too (gen-m9/50f10c4062fb2e98 A21;
 the full set is under "WRAPROWS and WRAPCOLS" below).
 Evidence: probes/wrapcols-wraprows-pad-with (excel-graph, 2026-10-18, T-1840).
-Unprobed: an omitted vector (`WRAPCOLS(,2)`) and an empty cell reached indirectly (`WRAPCOLS(IF(TRUE,Z1),2)`,
-`WRAPCOLS(INDEX(Z1:Z2,1),2)`); the engine treats the omitted vector like an empty cell (`#VALUE!`).
+An omitted vector and an empty cell reached indirectly are `#VALUE!` too: `WRAPCOLS(,2)`, `WRAPCOLS(IF(TRUE,Z1),2)` and
+`WRAPCOLS(INDEX(Z1:Z2,1),2)` (probes/t4448-lone-blank-reshapers A24:E26, excel-graph 2026-11-06, T-4448).
 Ours: all of the above since T-1786, T-1348 and T-1840 (wrap_count is read before truncation, so 0.5 is `#NUM!`).
 Status: VERIFIED (excel-graph).
 Tasks: T-1348, T-1840
@@ -2237,10 +2244,18 @@ Rule: a one-cell reference to a blank cell stays blank in TOROW and UNIQUE: `TOR
 left; gen-m7/9bb61f6ae34c7e20 Calc!A3029), and `UNIQUE(Data!Z1,TRUE)&..` joins as "" (`TEXTAFTER(UNIQUE(Data!Z1,Data!A$2)&IF(TRUE,
 Data!E5,"a"),"")` is "1000000000000000": gen-m7/f7e94a817e5385ac A2942), as a blank range cell would.
 Evidence: gen-m7 (excel-graph, 2026-10-22, T-2254 triage).
-Ours (T-2409): TOROW, TOCOL and UNIQUE keep a lone blank reference blank (`Model::eval_to_array_keep_blank`); before, it was read as 0;
-TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`); SORT and TAKE still read it as 0 and are unprobed (T-2409).
+Ours (T-2409, T-4448): TOROW, TOCOL, UNIQUE, SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP's value path
+keep a lone blank reference blank (`Model::eval_to_array_keep_blank` and its wrappers); before, it was read as 0;
+TOCOL keeps a lone blank too (gen-m9/8dd2312c96effb1b Calc!A399 `TOCOL(Data!Z1,3,..)` is `#CALC!`; gen-m9/928d08e3e1eecb5f A333 `TOROW(Data!E1,1)`; gen-m9/7980ffb6095a340d A294 `UNIQUE(Data!D$4)`).
+SORT, SORTBY's array, CHOOSEROWS, CHOOSECOLS, EXPAND and TAKE/DROP of a value keep it blank too
+(probes/t4448-lone-blank-reshapers, excel-graph 2026-11-06, T-4448; Z1, Z2 blank): `SORT(Z1)&"x"`, `SORT(Z1,1,-1)&"x"`,
+`SORTBY(Z1,Z1)&"x"`, `SORTBY(Z1,5)&"x"`, `CHOOSEROWS(Z1,1)&"x"`, `CHOOSECOLS(Z1,1)&"x"`, `CHOOSEROWS(Z1,-1)&"x"` and
+`TAKE(IF(TRUE,Z1),1)&"x"` are "x"; `TOCOL(X,1)` of each is `#CALC!` and `ISBLANK(INDEX(X,1,1))` is TRUE (A1:D4, A9:D9,
+A11:D13). `EXPAND(Z1,2,1,"p")` is a blank and "p" (A15:D15). TAKE, DROP and CHOOSEROWS of the reference itself
+already kept it (A6:D8, A10:D10). `TYPE(TAKE(IF(TRUE,Z1),1))` is 1 (B9): TAKE keeps IF's one-cell reference a
+reference. Ours gives 64 (a 1x1 array); T-4469 owns that cell.
 Status: VERIFIED (excel-graph)
-Tasks: T-2409
+Tasks: T-2409, T-4448
 
 ## GROUPBY and PIVOTBY lift over an array field_headers or total depth
 Rule: an array (or a multi-cell range) given as GROUPBY's `field_headers` or `total_depth`, or PIVOTBY's `field_headers`,
