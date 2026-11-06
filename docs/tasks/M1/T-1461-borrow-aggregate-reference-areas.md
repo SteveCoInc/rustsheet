@@ -3,7 +3,7 @@ id: T-1461
 title: "Borrow AGGREGATE's reference areas instead of copying a LET-bound union"
 milestone: M1
 lane: perf
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
