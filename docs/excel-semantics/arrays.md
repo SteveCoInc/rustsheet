@@ -813,6 +813,10 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   `=SUMPRODUCT(EDATE(A1:A60,1))` is `#VALUE!`, and `=SUMPRODUCT(EDATE(A1:A60+0,1))` and
   `=SUMPRODUCT(NORM.DIST(E1:E60,0,1,TRUE))` lift. Legacy `=SUM(PMT({0.1;0.2},10,100))` sums both
   elements (-40.12681517653708), like the dynamic formula. Its FORMULATEXT is the written text, with no `@` (`=SUM(PMT({0.1;0.2},10,100))`; probes/scalar-lift-open-a AA1, AB1, T-1777).
+  An array constant in a legacy ATP argument at a value position takes the `@` of a scalar argument,
+  whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+  `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
+  G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,

@@ -7,6 +7,7 @@ use super::legacy::{
     leaves_call_whole, legacy_array_context, legacy_context_intersects, remove_array_at,
     remove_in_array_context, removes_automatic_at,
 };
+use super::lifted::array_constant_context;
 use super::operand_array::remove_operand_array_at;
 use super::{
     add_legacy_intersection, for_each_chain_operand_mut, get_function_args_signature,
@@ -116,9 +117,11 @@ pub(super) fn remove_redundant_legacy_intersection(node: &mut Node, add: bool, a
         Node::FunctionKind { kind, args } => {
             let signature = get_function_args_signature(kind, args.len());
             for index in 0..args.len() {
+                let (constant_signature, constant_arrays) =
+                    array_constant_context(kind, signature.get(index), index, args, arrays);
                 let arrays = legacy_array_context(kind, signature.get(index), index, args, arrays);
                 let arg = &mut args[index];
-                remove_array_at(kind, signature.get(index), index, arg, arrays);
+                remove_array_at(kind, constant_signature, index, arg, constant_arrays);
                 // Scalar arguments are an intersecting context; vector arguments
                 // (ranges/arrays) are not (`legacy_context_intersects`).
                 let child_add = legacy_context_intersects(kind, signature.get(index), index, arg)
