@@ -55,7 +55,7 @@ fastest route to the owner's 99% goal (decision 0275 D3):
   - Structural: today's regeneration.
 
 Scope change: the ownership matrix, closure rule, fragment slots, invalidation table and limits this task's title
-names became stage 4, preservation under regeneration (SPEC-0034 D5). Their spec is T-4567, which is blocked on M4.
+names became stage 5, preservation under regeneration (SPEC-0034 D5). Their spec is T-4567, which is blocked on M4.
 The source-preserving tiers need none of them and cover every save without a structural change.
 
 Implementation tasks: T-4559 (retain the source, verbatim tier), T-4560 (cell patcher, shared-string

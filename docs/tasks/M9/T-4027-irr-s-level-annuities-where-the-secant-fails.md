@@ -54,3 +54,38 @@ agrees with "most returning annuities are not Newton iterates from v = 0". The `
 
 ## Out of scope
 - The last digits (T-3408) and `#DIV/0!` (T-3407).
+
+## Progress notes
+2026-11-06, opus run, attempt 1 of 2 (decision 0056; no code changed). The replica was a scratch test inside the engine
+crate that called `irr_npv` and `extended_quotient` directly, so its arithmetic is the engine's twice-rounded one. It
+scored t3406 A1-A96 on Excel's digits (the returning cells) and on type.
+- Main's secant from 0.1, by cell: A1-A4 and A25 converge. A5-A9, A26-A29 and A49-A51 hit the 50-step cap, oscillating
+  between d of about 0.0919 and a far point. The rest stall flat at step 6: the far point's NPV (1.3E+20 at A11) makes
+  d3 equal d4 at 0.091909 with the same NPV. Uncapped, the secant gives Excel's digits on A5 (138 steps) and A26 (120).
+  It gives other digits on A6 (1719 steps, 9E-14 off), A7, A27 and A49, it never converges on A8, A9, A28, A29 and A50,
+  and it stalls flat on A10. So Excel's path leaves the plain secant somewhere after step 138 on these cells.
+- Exact digits: no candidate reproduces Excel on A6, A7, A9, A27-A30, A33, A49, A51, A54, A76 or A77. The candidates
+  were Newton in v (from 0, 1/(1 + guess), 1 or the far point) and Newton in d (from the guess or the far point). They
+  also include a secant in d, r or v from 200 guesses in -0.99..1 with offsets ±1E-3, 1E-4 and 1E-2, and a secant
+  restarted from its last or best iterate after a cap of 20 to 500. Every Newton variant converges to the exact root.
+  Excel's returns are 1E-15 to 9E-12 from it, so they are secant-like iterates stopped on a 1E-7 step, not
+  Newton-converged roots. The digit route is therefore unlikely to find the path; T-3408 owns the digits anyway.
+- Type, Newton step counts at each n's cut (last returning cell | first `#NUM!` cell). From v = 0: 126|134, 224|242,
+  314|345, 578|650 for n = 20, 30, 40, 60. From v = 1/1.1: 45|52, 91|109, 130|160, 295|366. From v = 1: 27|33, 49|64,
+  58|84, 137|205. From the far point: 44|51, 90|108, 129|160, 294|366. No constant cap separates all four n for any
+  start. A cap of C·n^p fits for p in 1.33..1.45 from v = 0, but that is numerology on 4 brackets, not a rule.
+- Type, other cut quantities (none is common to all four n): the root (-0.22|-0.24, -0.18|-0.20, -0.14|-0.16,
+  -0.12|-0.14), P/n, P/n^1.5, P/n^2, log P/n, P^n (Newton's first iterate from v = 0 is v = P), the far point v (10.1|15.1,
+  23.4|43.5, 28.4|62.8, 153|519) and its NPV (refuted in T-3411).
+- Bracketing stage, tried in the same run. Every failed run from 0.1 on A5-A68 and A73-A83 leaves a sign change
+  between its last negative point (d of about 0.0919) and its last positive point (the far point). Regula falsi on
+  that bracket does not converge on A6-A68 or A73-A83, even in 100,000 steps. Bisection to a width or |NPV| of 1E-7
+  takes, at each n's cut (last return | first `#NUM!`), 28|29, 29|30, 30|31 and 32|34 steps. That is the closest so
+  far, but no single cap fits all four n, because the bracket width is the far point's |d|: 9.1|14.1, 22.4|42.5,
+  27.4|61.8 and 152|519. Width alone does not separate the four n either: n = 20 is `#NUM!` at 14.1, n = 30 returns
+  at 22.4.
+- For attempt 2: A8-A10 return in Excel although no secant run converges on them. So Excel has a second stage after
+  the secant fails, and how far it reaches decides the type. The four t3406 brackets cannot pin that stage. A probe
+  would help: annuities whose far point and root are moved independently, for example the same P and n with a
+  guess other than 0.1, which moves the far point, or a level annuity with flows of 2. Score candidates on type
+  over A1-A96 first, then over every IRR cell in eval, cell by cell.
