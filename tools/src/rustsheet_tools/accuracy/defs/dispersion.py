@@ -57,10 +57,10 @@ MAX_MAGNITUDE = 1e150  # every square and the one-pass sum of 255 squares stay i
 MIN_MAGNITUDE = 1e-60  # every nonzero deviation of a draw stays far above the subnormal squares Excel flushes
 
 
-def deviation_power_sum(xs: Sequence[mpmath.mpf], power: int) -> mpmath.mpf:
+def deviation_power_sum(xs: Sequence[mpmath.mpf], power: int, mean: mpmath.mpf | None = None) -> mpmath.mpf:
     """The exact sum of the deviations from the exact mean raised to `power` (2: DEVSQ's S; 3 and 4: the
-    skewness and kurtosis moments, T-4091)."""
-    m = mpmath.fsum(xs) / len(xs)
+    skewness and kurtosis moments, T-4091). A caller summing several powers passes the exact `mean` once."""
+    m = mpmath.fsum(xs) / len(xs) if mean is None else mean
     return mpmath.fsum((x - m) ** power for x in xs)
 
 

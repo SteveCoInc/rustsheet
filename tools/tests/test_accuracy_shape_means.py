@@ -95,6 +95,9 @@ def test_trimmean_percent_domain(percent: float) -> None:
         (KURT, [9e307, 9e307, 1.0, 2.0]),  # the sum of the numbers overflows
         (HARMEAN, [1e-310, 1.0]),  # a reciprocal overflows
         (AVERAGEA, [9e307, 9e307, -9e307]),  # a running total overflows (unprobed for AVERAGEA)
+        (HARMEAN, [1.0, -2.0]),  # negative and positive numbers with no 0
+        (KURT, [1e154, -1e154, 1e154, -1e154]),  # every square finite, their sum not
+        (SKEW, [1.7e308, -1.7e308, -1.7e308, 1.0]),  # a deviation x - mean itself overflows
     ],
 )
 def test_unprobed_regions_have_no_value(definition: Definition, args: list[float]) -> None:

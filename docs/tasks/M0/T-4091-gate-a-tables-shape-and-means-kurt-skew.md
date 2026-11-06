@@ -37,7 +37,7 @@ Every failing table point has an owner.
       entries' values.
 - [x] A committed, oracle-filled `s1` table per function; `rustsheet-eval accuracy` reports `missing tables` lower by
       their number. Every point outside the envelope has a `known-failures.tsv` owner.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The other sample-statistics groups of decision 0271.
@@ -51,12 +51,15 @@ Every failing table point has an owner.
     `average_value` for this.
   - TRIMMEAN drops floor(n * percent / 2) values from each end and is the exact mean of the rest.
   - Domain (Excel's error): SKEW and SKEW.P of fewer than 3 numbers, and KURT of fewer than 4, are `#DIV/0!`.
-    Equal numbers are `#DIV/0!` where Excel's double sum of them is exact. Overflowing squared deviations are
-    `#DIV/0!` (T-2432). GEOMEAN and HARMEAN with a number at or below 0 are `#NUM!`. TRIMMEAN with a percent outside
-    [0, 1) is `#NUM!`.
+    Equal numbers are `#DIV/0!` where Excel's double sum of them is exact. A squared deviation that overflows on its
+    own is `#DIV/0!` (T-2432's `{1E+200,1E+200,-1E+200}`). GEOMEAN with a number at or below 0 is `#NUM!`. HARMEAN
+    is `#NUM!` with a 0 or with only negative numbers. TRIMMEAN with a percent outside [0, 1) is `#NUM!`.
   - Unprobed regions get no value (NoValueError), so the draws never keep them:
     - equal numbers whose double sum is inexact;
-    - an overflowing sum of the numbers in the three moments;
+    - an overflowing sum of the numbers in the three moments (the count is checked first; that order is unprobed);
+    - a deviation that itself overflows, or finite squares whose sum overflows, in the three moments (review round
+      1: dispersion's own `deviations_overflow` and its tables are unchanged);
+    - HARMEAN of negative and positive numbers with no 0;
     - an overflowing reciprocal or reciprocal sum in HARMEAN;
     - an overflowing running total in AVERAGEA;
     - a TRIMMEAN point where the double n * percent and the exact one floor to different trim counts;
@@ -109,5 +112,9 @@ Every failing table point has an owner.
   - Every new cell agrees with Excel's oracle value within 1E-4 or as an error on both sides, except the subnormal
     A8 above.
   - `rustsheet-accuracy math --check` reports current.
-- **Eval delta:** none (tools, tables, docs and sidecars only). `scripts/check_duplication.py` reports 2836 (baseline
-  2876).
+- **Review round 1:** the HARMEAN and squared-deviation rules above were narrowed to their evidence, the T-4091
+  entry now records that S_3 and S_4 overflowing the double range is no error (KURT A109-A119, SKEW A109-A115 and
+  A117-A119, SKEW.P A68, A70-A72 and A111-A120 are finite in Excel), and `_moment_inputs` computes the exact mean
+  once. `verify` shows 0 differences for the seven tables and all fourteen dispersion tables.
+- **Eval delta:** none (tools, tables, docs and sidecars only). `scripts/check_duplication.py` reports 2856 after the
+  last merge of origin/main (baseline 2876).

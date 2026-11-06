@@ -20,16 +20,22 @@ S_p = sum((x[i] - m)^p) (`deviation_power_sum`, the dispersion module's DEVSQ ke
 Domain (an Excel error region, never a math value):
 - SKEW and SKEW.P of fewer than three numbers, and KURT of fewer than four, are `#DIV/0!` (statistics.md "SKEW.P of
   two numbers is #DIV/0!"; "SKEW, SKEW.P, KURT, HARMEAN ... edge pools": `KURT(A1:A3)` is `#DIV/0!`, `KURT(A1:A4)` a
-  number, probes/stats-evidence-floor-t1623 Q29, Q28).
+  number, probes/stats-evidence-floor-t1623 Q29, Q28). The count is checked before an overflowing sum of the
+  numbers; that order is unprobed.
 - The three moments of equal numbers are `#DIV/0!` (`SKEW.P(5,5,5)`, `SKEW(N1:N3)` over 2, 2, 2, and
   `KURT({0,0,0},{0,0,0},{0,0,0})`, gen-m9/f34f66fb7f81e673 A391: zero variance).
   That is evidenced where Excel's double sum of the numbers is exact (so its double mean is the number); where it
   is not, Excel's deviations from its mean are not all 0 and its result is unprobed, so such a point gets no value.
-- The three moments over squared deviations beyond the double range are `#DIV/0!` (statistics.md "Overflowing
-  squares (T-2432)"); an overflowing sum of the numbers themselves is unprobed and gets no value.
-- GEOMEAN and HARMEAN of a number at or below 0 are `#NUM!` (`GEOMEAN(4,)`, coercion.md "AVERAGE, MEDIAN, GEOMEAN,
-  HARMEAN, SKEW, KURT, STDEV/VAR, COUNT value arguments"; ironcalc-calc/STATISTICAL/GEOMEAN.xlsx D11 and D16 over
-  -4, 3 and 2; `HARMEAN(0)` and `HARMEAN(-1,-2)`, probes/stats-evidence-floor-t1623 Q51, Q52).
+- The three moments are `#DIV/0!` where one of Excel's double squared deviations overflows on its own, every
+  deviation finite (statistics.md "Overflowing squares (T-2432)": `{1E+200,1E+200,-1E+200}`). Unprobed, and given no
+  value: an overflowing sum of the numbers, a deviation x - mean that itself overflows, and finite squares whose sum
+  overflows. The cubes and fourth powers in S_3 and S_4 may pass the double range with no error: Excel gives finite
+  values there (statistics.md "KURT, SKEW, SKEW.P, GEOMEAN, HARMEAN and TRIMMEAN domain cells of the Gate A tables").
+- GEOMEAN of a number at or below 0 is `#NUM!` (`GEOMEAN(4,)`, coercion.md "AVERAGE, MEDIAN, GEOMEAN, HARMEAN, SKEW,
+  KURT, STDEV/VAR, COUNT value arguments"; ironcalc-calc/STATISTICAL/GEOMEAN.xlsx D11 and D16 over -4, 3 and 2).
+  HARMEAN is `#NUM!` with a 0 among the numbers or with only negative numbers (accuracy/HARMEAN/s1 A71; `HARMEAN(0)`
+  and `HARMEAN(-1,-2)`, probes/stats-evidence-floor-t1623 Q51, Q52); negative and positive numbers with no 0
+  (`HARMEAN(1,-2)`) are unprobed and get no value.
 - GEOMEAN's other `#NUM!`, a product of the numbers' [1, 2) significands beyond the double range, and its exponent
   wrap below the double range (numbers.md "GEOMEAN is #NUM! when the product of significands overflows") both need
   more than 1000 numbers, beyond the 255 arguments of a call, so they are not part of this definition.
@@ -84,7 +90,6 @@ from rustsheet_tools.accuracy.defs.aggregate_array import (
 )
 from rustsheet_tools.accuracy.defs.dispersion import (
     deviation_power_sum,
-    deviations_overflow,
     variance_draws,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
@@ -112,8 +117,9 @@ POOLS_EVIDENCE = "probes/stats-evidence-floor-t1623"
 
 
 def _moment_domain(least: int) -> Callable[[Sequence[MathArg]], str | None]:
-    """The `#DIV/0!` rules of a moment of at least `least` numbers: too few numbers, equal numbers whose double sum is
-    exact, or squared deviations beyond the double range (with the numbers' own sum in range)."""
+    """The `#DIV/0!` rules of a moment of at least `least` numbers: too few numbers (checked first, before an
+    overflowing sum of the numbers: that order is unprobed), equal numbers whose double sum is exact, or a squared
+    deviation that overflows on its own (with the numbers' sum and every deviation in range)."""
 
     def domain(args: Sequence[MathArg]) -> str | None:
         xs = scalars(args)
@@ -123,10 +129,31 @@ def _moment_domain(least: int) -> Callable[[Sequence[MathArg]], str | None]:
             return None  # unprobed: `_moment_inputs` gives it no value
         if all(x == xs[0] for x in xs) and _exact_double_sum(xs):
             return "#DIV/0!: equal numbers (zero variance)"
-        why = deviations_overflow(args)
-        return None if why is None else f"#DIV/0!: {why}"
+        if _squares_overflow(xs) == EACH_SQUARE:
+            return "#DIV/0!: a squared deviation is beyond the double range"
+        return None
 
     return domain
+
+
+EACH_SQUARE = "a squared deviation overflows on its own"
+UNPROBED_SQUARES = "a deviation, or only the sum of the squared deviations, overflows"
+
+
+def _squares_overflow(xs: Sequence[mpmath.mpf]) -> str | None:
+    """How Excel's double squared deviations from its double mean overflow, for numbers whose sum is in range:
+    `EACH_SQUARE` when a square overflows on its own with every deviation finite (the evidenced `#DIV/0!`,
+    statistics.md "Overflowing squares (T-2432)": `{1E+200,1E+200,-1E+200}`), `UNPROBED_SQUARES` when a deviation
+    itself overflows or every square is finite but their sum is not, else None."""
+    doubles = [float(x) for x in xs]
+    mean = running_total(doubles)[1] / len(doubles)
+    deviations = [x - mean for x in doubles]
+    if not all(math.isfinite(d) for d in deviations):
+        return UNPROBED_SQUARES
+    squares = [d * d for d in deviations]
+    if not all(math.isfinite(q) for q in squares):
+        return EACH_SQUARE
+    return None if math.isfinite(running_total(squares)[1]) else UNPROBED_SQUARES
 
 
 def _exact_double_sum(xs: Sequence[mpmath.mpf]) -> bool:
@@ -145,7 +172,11 @@ def _moment_inputs(args: Sequence[MathArg]) -> tuple[int, Callable[[int], mpmath
     if all(x == xs[0] for x in xs):
         msg = "equal numbers whose double sum is inexact: Excel's deviations are not all 0 (unprobed)"
         raise NoValueError(msg)
-    return len(xs), lambda p: deviation_power_sum(xs, p)
+    if _squares_overflow(xs) == UNPROBED_SQUARES:
+        msg = f"{UNPROBED_SQUARES} (unprobed for the moments)"
+        raise NoValueError(msg)
+    mean = mpmath.fsum(xs) / len(xs)
+    return len(xs), lambda p: deviation_power_sum(xs, p, mean)
 
 
 def _skew(args: Sequence[MathArg]) -> mpmath.mpf:
@@ -175,6 +206,18 @@ def _positive(xs: Sequence[mpmath.mpf]) -> None:
         raise DomainError(msg)
 
 
+def _harmean_positive(xs: Sequence[mpmath.mpf]) -> None:
+    """HARMEAN's `#NUM!`, as far as it is evidenced: a 0 among the numbers (accuracy/HARMEAN/s1 A71, `HARMEAN(0)`) or
+    numbers that are all negative (`HARMEAN(-1,-2)`). Negative and positive numbers with no 0 (`HARMEAN(1,-2)`) are
+    unprobed: NoValueError."""
+    if any(x == 0 for x in xs) or all(x < 0 for x in xs):
+        msg = "#NUM!: a 0, or only negative numbers"
+        raise DomainError(msg)
+    if any(x < 0 for x in xs):
+        msg = "negative and positive numbers with no 0 (unprobed for HARMEAN)"
+        raise NoValueError(msg)
+
+
 def _geomean(args: Sequence[MathArg]) -> mpmath.mpf:
     xs = scalars(args)
     _positive(xs)
@@ -183,7 +226,7 @@ def _geomean(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _harmean(args: Sequence[MathArg]) -> mpmath.mpf:
     xs = scalars(args)
-    _positive(xs)
+    _harmean_positive(xs)
     reciprocals = [1.0 / float(x) for x in xs]  # inf where it overflows
     if not math.isfinite(running_total(reciprocals)[1]):
         msg = "a reciprocal or the sum of the reciprocals is beyond the double range (unprobed)"
