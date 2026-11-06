@@ -3,472 +3,472 @@
 # known failures. Removing an F line = a fix. Adding an F line to an unchanged case = a regression
 # and requires --allow-regressions plus a justification in the PR (docs/process/quality-gates.md).
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
-C	roundtrip-calipers/default/add_sheet_sparse_ids/golden.xlsx	1815
-C	roundtrip-calipers/default/chart_titles/golden.xlsx	1851
-C	roundtrip-calipers/default/multi_row_formulas/golden.xlsx	1827
-C	roundtrip-calipers/default/names_add_defined_names_order/golden.xlsx	1802
-C	roundtrip-calipers/default/simple_set_a1/golden.xlsx	743
-C	roundtrip-calipers/officejs/align_center/golden.xlsx	702
-C	roundtrip-calipers/officejs/align_wrap/golden.xlsx	701
-C	roundtrip-calipers/officejs/api_cf_at/golden.xlsx	722
-C	roundtrip-calipers/officejs/api_cf_clear/golden.xlsx	707
-C	roundtrip-calipers/officejs/api_cf_count/golden.xlsx	716
-C	roundtrip-calipers/officejs/api_cf_delete/golden.xlsx	700
-C	roundtrip-calipers/officejs/api_cf_item/golden.xlsx	722
-C	roundtrip-calipers/officejs/api_cf_null/golden.xlsx	716
-C	roundtrip-calipers/officejs/api_cf_range/golden.xlsx	722
-C	roundtrip-calipers/officejs/api_cf_range_null/golden.xlsx	722
-C	roundtrip-calipers/officejs/api_comment_at/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_cell/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_count/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_delete/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_item/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_location/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_null/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_reply_add/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_reply_at/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_reply_count/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_reply_delete/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_reply_id/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_reply_item/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_reply_location/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_comment_reply_null/golden.xlsx	692
-C	roundtrip-calipers/officejs/api_comment_reply_parent/golden.xlsx	694
-C	roundtrip-calipers/officejs/api_filter_apply/golden.xlsx	851
-C	roundtrip-calipers/officejs/api_filter_bottom_items/golden.xlsx	851
-C	roundtrip-calipers/officejs/api_filter_bottom_percent/golden.xlsx	852
-C	roundtrip-calipers/officejs/api_filter_cell_color/golden.xlsx	856
-C	roundtrip-calipers/officejs/api_filter_clear/golden.xlsx	845
-C	roundtrip-calipers/officejs/api_filter_custom/golden.xlsx	855
-C	roundtrip-calipers/officejs/api_filter_dynamic/golden.xlsx	850
-C	roundtrip-calipers/officejs/api_filter_font_color/golden.xlsx	857
-C	roundtrip-calipers/officejs/api_filter_table_clear/golden.xlsx	845
-C	roundtrip-calipers/officejs/api_filter_table_reapply/golden.xlsx	851
-C	roundtrip-calipers/officejs/api_filter_top_items/golden.xlsx	850
-C	roundtrip-calipers/officejs/api_filter_top_percent/golden.xlsx	851
-C	roundtrip-calipers/officejs/api_filter_values/golden.xlsx	852
-C	roundtrip-calipers/officejs/api_function_abs/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_acos/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_acosh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_asin/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_asinh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_atan/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_atan2/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_atanh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_average/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_concatenate/golden.xlsx	751
-C	roundtrip-calipers/officejs/api_function_cos/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_cosh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_count/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_countA/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_degrees/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_exact/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_exp/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_int/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_left/golden.xlsx	746
-C	roundtrip-calipers/officejs/api_function_len/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_ln/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_log/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_log10/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_lower/golden.xlsx	746
-C	roundtrip-calipers/officejs/api_function_max/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_median/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_mid/golden.xlsx	744
-C	roundtrip-calipers/officejs/api_function_min/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_mod/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_pi/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_power/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_product/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_quotient/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_radians/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_right/golden.xlsx	746
-C	roundtrip-calipers/officejs/api_function_round/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_roundDown/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_roundUp/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sign/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sin/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sinh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sqrt/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sqrtPi/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sum/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_sumSq/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_tan/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_tanh/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_trim/golden.xlsx	740
-C	roundtrip-calipers/officejs/api_function_trunc/golden.xlsx	742
-C	roundtrip-calipers/officejs/api_function_upper/golden.xlsx	746
-C	roundtrip-calipers/officejs/api_range_adjust_indent/golden.xlsx	750
-C	roundtrip-calipers/officejs/api_range_find/golden.xlsx	729
-C	roundtrip-calipers/officejs/api_range_find_null/golden.xlsx	727
-C	roundtrip-calipers/officejs/api_range_freeze_location/golden.xlsx	736
-C	roundtrip-calipers/officejs/api_range_freeze_location_null/golden.xlsx	727
-C	roundtrip-calipers/officejs/api_range_intersection_null/golden.xlsx	729
-C	roundtrip-calipers/officejs/api_range_range_replace/golden.xlsx	725
-C	roundtrip-calipers/officejs/api_range_range_used/golden.xlsx	729
-C	roundtrip-calipers/officejs/api_range_range_used_null/golden.xlsx	727
-C	roundtrip-calipers/officejs/api_range_sheet_replace/golden.xlsx	725
-C	roundtrip-calipers/officejs/api_range_sheet_used/golden.xlsx	729
-C	roundtrip-calipers/officejs/api_range_sheet_used_null/golden.xlsx	749
-C	roundtrip-calipers/officejs/autofilter_apply/golden.xlsx	732
-C	roundtrip-calipers/officejs/autofilter_clear_column_criteria/golden.xlsx	743
-C	roundtrip-calipers/officejs/autofilter_clear_criteria/golden.xlsx	743
-C	roundtrip-calipers/officejs/autofilter_get_range/golden.xlsx	737
-C	roundtrip-calipers/officejs/autofilter_reapply/golden.xlsx	747
-C	roundtrip-calipers/officejs/autofilter_remove/golden.xlsx	731
-C	roundtrip-calipers/officejs/autofilter_values/golden.xlsx	747
-C	roundtrip-calipers/officejs/big_formulas_400/golden.xlsx	5479
-C	roundtrip-calipers/officejs/big_grid_200x12/golden.xlsx	10475
-C	roundtrip-calipers/officejs/big_multi_sheet/golden.xlsx	8529
-C	roundtrip-calipers/officejs/big_values_500/golden.xlsx	8179
-C	roundtrip-calipers/officejs/borders_get_item_at/golden.xlsx	702
-C	roundtrip-calipers/officejs/borders_inside/golden.xlsx	769
-C	roundtrip-calipers/officejs/borders_outline/golden.xlsx	849
-C	roundtrip-calipers/officejs/cf_cell_value/golden.xlsx	716
-C	roundtrip-calipers/officejs/cf_color_scale/golden.xlsx	720
-C	roundtrip-calipers/officejs/cf_data_bar/golden.xlsx	735
-C	roundtrip-calipers/officejs/cf_icon_set/golden.xlsx	716
-C	roundtrip-calipers/officejs/cf_preset/golden.xlsx	719
-C	roundtrip-calipers/officejs/cf_text/golden.xlsx	720
-C	roundtrip-calipers/officejs/chart_area/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_axes/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_bar/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_column/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_doughnut/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_legend/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_line/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_pie/golden.xlsx	741
-C	roundtrip-calipers/officejs/chart_scatter/golden.xlsx	733
-C	roundtrip-calipers/officejs/chart_title/golden.xlsx	741
-C	roundtrip-calipers/officejs/col_row_size/golden.xlsx	697
-C	roundtrip-calipers/officejs/comment_add/golden.xlsx	699
-C	roundtrip-calipers/officejs/delete_rows/golden.xlsx	690
-C	roundtrip-calipers/officejs/fill_clear/golden.xlsx	693
-C	roundtrip-calipers/officejs/fill_solid/golden.xlsx	720
-C	roundtrip-calipers/officejs/font_bold_italic/golden.xlsx	730
-C	roundtrip-calipers/officejs/font_color/golden.xlsx	728
-C	roundtrip-calipers/officejs/font_name_size/golden.xlsx	702
-C	roundtrip-calipers/officejs/font_underline/golden.xlsx	705
-C	roundtrip-calipers/officejs/freeze_at/golden.xlsx	747
-C	roundtrip-calipers/officejs/freeze_columns/golden.xlsx	720
-C	roundtrip-calipers/officejs/freeze_rows/golden.xlsx	735
-C	roundtrip-calipers/officejs/freeze_unfreeze/golden.xlsx	713
-C	roundtrip-calipers/officejs/hide_rows_cols/golden.xlsx	721
-C	roundtrip-calipers/officejs/hyperlink_url/golden.xlsx	725
-C	roundtrip-calipers/officejs/insert_cols/golden.xlsx	701
-C	roundtrip-calipers/officejs/insert_rows/golden.xlsx	695
-C	roundtrip-calipers/officejs/merge_cells/golden.xlsx	706
-C	roundtrip-calipers/officejs/names_delete/golden.xlsx	690
-C	roundtrip-calipers/officejs/names_formula/golden.xlsx	684
-C	roundtrip-calipers/officejs/names_formula_local/golden.xlsx	729
-C	roundtrip-calipers/officejs/names_lookup/golden.xlsx	705
-C	roundtrip-calipers/officejs/names_range/golden.xlsx	689
-C	roundtrip-calipers/officejs/names_sheet_scoped/golden.xlsx	690
-C	roundtrip-calipers/officejs/numfmt_accounting/golden.xlsx	697
-C	roundtrip-calipers/officejs/numfmt_currency/golden.xlsx	702
-C	roundtrip-calipers/officejs/numfmt_date/golden.xlsx	704
-C	roundtrip-calipers/officejs/numfmt_percent/golden.xlsx	697
-C	roundtrip-calipers/officejs/pivot_count/golden.xlsx	850
-C	roundtrip-calipers/officejs/pivot_filter/golden.xlsx	887
-C	roundtrip-calipers/officejs/pivot_hierarchy_get_item/golden.xlsx	876
-C	roundtrip-calipers/officejs/pivot_name/golden.xlsx	850
-C	roundtrip-calipers/officejs/pivot_row_col_data/golden.xlsx	931
-C	roundtrip-calipers/officejs/pivot_row_data/golden.xlsx	876
-C	roundtrip-calipers/officejs/pivot_two_data/golden.xlsx	909
-C	roundtrip-calipers/officejs/range_bounding_rect/golden.xlsx	714
-C	roundtrip-calipers/officejs/range_by_indexes/golden.xlsx	693
-C	roundtrip-calipers/officejs/range_clear/golden.xlsx	686
-C	roundtrip-calipers/officejs/range_cols_before_after/golden.xlsx	709
-C	roundtrip-calipers/officejs/range_copy_from/golden.xlsx	702
-C	roundtrip-calipers/officejs/range_formulas_if/golden.xlsx	715
-C	roundtrip-calipers/officejs/range_formulas_lookup/golden.xlsx	740
-C	roundtrip-calipers/officejs/range_formulas_nested/golden.xlsx	720
-C	roundtrip-calipers/officejs/range_formulas_sum/golden.xlsx	713
-C	roundtrip-calipers/officejs/range_get_cell/golden.xlsx	693
-C	roundtrip-calipers/officejs/range_get_column/golden.xlsx	690
-C	roundtrip-calipers/officejs/range_get_last/golden.xlsx	722
-C	roundtrip-calipers/officejs/range_get_row/golden.xlsx	688
-C	roundtrip-calipers/officejs/range_intersection/golden.xlsx	693
-C	roundtrip-calipers/officejs/range_offset/golden.xlsx	690
-C	roundtrip-calipers/officejs/range_resized/golden.xlsx	709
-C	roundtrip-calipers/officejs/range_rows_above_below/golden.xlsx	719
-C	roundtrip-calipers/officejs/range_set_booleans/golden.xlsx	695
-C	roundtrip-calipers/officejs/range_set_dates/golden.xlsx	702
-C	roundtrip-calipers/officejs/range_set_mixed/golden.xlsx	709
-C	roundtrip-calipers/officejs/range_set_numbers/golden.xlsx	701
-C	roundtrip-calipers/officejs/range_set_text/golden.xlsx	705
-C	roundtrip-calipers/officejs/range_unmerge/golden.xlsx	695
-C	roundtrip-calipers/officejs/sheet_activate/golden.xlsx	715
-C	roundtrip-calipers/officejs/sheet_add/golden.xlsx	697
-C	roundtrip-calipers/officejs/sheet_copy/golden.xlsx	714
-C	roundtrip-calipers/officejs/sheet_delete/golden.xlsx	686
-C	roundtrip-calipers/officejs/sheet_get_first/golden.xlsx	708
-C	roundtrip-calipers/officejs/sheet_get_item/golden.xlsx	708
-C	roundtrip-calipers/officejs/sheet_get_last/golden.xlsx	708
-C	roundtrip-calipers/officejs/sheet_get_next/golden.xlsx	715
-C	roundtrip-calipers/officejs/sheet_get_previous/golden.xlsx	714
-C	roundtrip-calipers/officejs/sheet_gridlines/golden.xlsx	687
-C	roundtrip-calipers/officejs/sheet_hidden/golden.xlsx	709
-C	roundtrip-calipers/officejs/sheet_lookup/golden.xlsx	731
-C	roundtrip-calipers/officejs/sheet_position/golden.xlsx	697
-C	roundtrip-calipers/officejs/sheet_rename/golden.xlsx	686
-C	roundtrip-calipers/officejs/sheet_tab_color/golden.xlsx	688
-C	roundtrip-calipers/officejs/small_three_cells/golden.xlsx	695
-C	roundtrip-calipers/officejs/sort_asc/golden.xlsx	723
-C	roundtrip-calipers/officejs/spill_chooserows/golden.xlsx	733
-C	roundtrip-calipers/officejs/spill_filter/golden.xlsx	811
-C	roundtrip-calipers/officejs/spill_sequence/golden.xlsx	745
-C	roundtrip-calipers/officejs/spill_sort/golden.xlsx	775
-C	roundtrip-calipers/officejs/spill_sortby/golden.xlsx	799
-C	roundtrip-calipers/officejs/spill_take_drop/golden.xlsx	807
-C	roundtrip-calipers/officejs/spill_transpose/golden.xlsx	746
-C	roundtrip-calipers/officejs/spill_unique/golden.xlsx	794
-C	roundtrip-calipers/officejs/spill_vstack/golden.xlsx	755
-C	roundtrip-calipers/officejs/spill_xlookup/golden.xlsx	738
-C	roundtrip-calipers/officejs/spill_xmatch/golden.xlsx	722
-C	roundtrip-calipers/officejs/style_good/golden.xlsx	721
-C	roundtrip-calipers/officejs/style_input/golden.xlsx	732
-C	roundtrip-calipers/officejs/table_add/golden.xlsx	782
-C	roundtrip-calipers/officejs/table_banded/golden.xlsx	782
-C	roundtrip-calipers/officejs/table_column_add/golden.xlsx	765
-C	roundtrip-calipers/officejs/table_column_lookup/golden.xlsx	788
-C	roundtrip-calipers/officejs/table_columns_delete/golden.xlsx	756
-C	roundtrip-calipers/officejs/table_convert_to_range/golden.xlsx	966
-C	roundtrip-calipers/officejs/table_delete/golden.xlsx	686
-C	roundtrip-calipers/officejs/table_header_body_total_write/golden.xlsx	804
-C	roundtrip-calipers/officejs/table_highlight/golden.xlsx	782
-C	roundtrip-calipers/officejs/table_lookup/golden.xlsx	792
-C	roundtrip-calipers/officejs/table_name/golden.xlsx	782
-C	roundtrip-calipers/officejs/table_resize/golden.xlsx	797
-C	roundtrip-calipers/officejs/table_row_get_range/golden.xlsx	786
-C	roundtrip-calipers/officejs/table_rows_add/golden.xlsx	795
-C	roundtrip-calipers/officejs/table_rows_delete/golden.xlsx	767
-C	roundtrip-calipers/officejs/table_rows_delete_at/golden.xlsx	767
-C	roundtrip-calipers/officejs/table_rows_delete_many/golden.xlsx	752
-C	roundtrip-calipers/officejs/table_sort/golden.xlsx	784
-C	roundtrip-calipers/officejs/table_style/golden.xlsx	782
-C	roundtrip-calipers/officejs/table_totals/golden.xlsx	802
-C	roundtrip-calipers/officejs/validation_clear/golden.xlsx	675
-C	roundtrip-calipers/officejs/validation_invalid_cells/golden.xlsx	695
-C	roundtrip-calipers/officejs/validation_list/golden.xlsx	678
-C	roundtrip-calipers/officejs/validation_whole/golden.xlsx	679
-C	roundtrip-calipers/pv_goldens/pv23_001/golden.xlsx	71965
-C	roundtrip-calipers/pv_goldens/pv23_002/golden.xlsx	69832
-C	roundtrip-calipers/pv_goldens/pv23_003/golden.xlsx	4175
-C	roundtrip-calipers/pv_goldens/pv23_004/golden.xlsx	6479
-C	roundtrip-calipers/pv_goldens/pv23_005/golden.xlsx	12565
-C	roundtrip-calipers/pv_goldens/pv23_006/golden.xlsx	768920
-C	roundtrip-calipers/pv_goldens/pv23_007/golden.xlsx	16289
-C	roundtrip-calipers/pv_goldens/pv23_008/golden.xlsx	26502
-C	roundtrip-calipers/pv_goldens/pv23_009/golden.xlsx	60041
-C	roundtrip-calipers/pv_goldens/pv23_010/golden.xlsx	162926
-C	roundtrip-calipers/pv_goldens/pv23_011/golden.xlsx	10105
-C	roundtrip-calipers/pv_goldens/pv23_012/golden.xlsx	10104
-C	roundtrip-calipers/pv_goldens/pv23_013/golden.xlsx	10104
-C	roundtrip-calipers/pv_goldens/pv23_014/golden.xlsx	10105
-C	roundtrip-calipers/pv_goldens/pv23_015/golden.xlsx	10105
-C	roundtrip-calipers/pv_goldens/pv23_016/golden.xlsx	17130
-C	roundtrip-calipers/pv_goldens/pv23_017/golden.xlsx	17057
-C	roundtrip-calipers/pv_goldens/pv23_018/golden.xlsx	17132
-C	roundtrip-calipers/pv_goldens/pv23_019/golden.xlsx	25370
-C	roundtrip-calipers/pv_goldens/pv23_020/golden.xlsx	9636
-C	roundtrip-calipers/pv_goldens/pv23_021/golden.xlsx	18056
-C	roundtrip-calipers/pv_goldens/pv23_022/golden.xlsx	20139
-C	roundtrip-calipers/pv_goldens/pv23_023/golden.xlsx	20200
-C	roundtrip-calipers/pv_goldens/pv23_024/golden.xlsx	22512
-C	roundtrip-calipers/pv_goldens/pv23_025/golden.xlsx	22522
-C	roundtrip-calipers/pv_goldens/pv23_026/golden.xlsx	23025
-C	roundtrip-calipers/pv_goldens/pv23_027/golden.xlsx	24557
-C	roundtrip-calipers/pv_goldens/pv23_028/golden.xlsx	4634
-C	roundtrip-calipers/pv_goldens/pv23_029/golden.xlsx	5973
-C	roundtrip-calipers/pv_goldens/pv23_030/golden.xlsx	5975
-C	roundtrip-calipers/pv_goldens/pv23_031/golden.xlsx	4690
-C	roundtrip-calipers/pv_goldens/pv23_032/golden.xlsx	5298
-C	roundtrip-calipers/pv_goldens/pv23_033/golden.xlsx	5298
-C	roundtrip-calipers/pv_goldens/pv23_034/golden.xlsx	2539
-C	roundtrip-calipers/pv_goldens/pv23_035/golden.xlsx	3895
-C	roundtrip-calipers/pv_goldens/pv23_036/golden.xlsx	10596
-C	roundtrip-calipers/pv_goldens/pv23_037/golden.xlsx	1399
-C	roundtrip-calipers/pv_goldens/pv23_038/golden.xlsx	12691
-C	roundtrip-calipers/pv_goldens/pv23_039/golden.xlsx	13137
-C	roundtrip-calipers/pv_goldens/pv23_040/golden.xlsx	12714
-C	roundtrip-calipers/pv_goldens/pv23_041/golden.xlsx	81881
-C	roundtrip-calipers/pv_goldens/pv23_042/golden.xlsx	1672298
-C	roundtrip-calipers/pv_goldens/pv23_043/golden.xlsx	4716
-C	roundtrip-calipers/pv_goldens/pv23_044/golden.xlsx	6738
-C	roundtrip-calipers/pv_goldens/pv23_045/golden.xlsx	850880
-C	roundtrip-calipers/pv_goldens/pv23_046/golden.xlsx	45585
-C	roundtrip-calipers/pv_goldens/pv23_047/golden.xlsx	26935
-C	roundtrip-calipers/pv_goldens/pv23_048/golden.xlsx	33757
-C	roundtrip-calipers/pv_goldens/pv23_049/golden.xlsx	40010
-C	roundtrip-calipers/pv_goldens/pv23_050/golden.xlsx	39411
-C	roundtrip-calipers/pv_goldens/pv23_051/golden.xlsx	47127
-C	roundtrip-calipers/pv_goldens/pv23_052/golden.xlsx	45801
-C	roundtrip-calipers/pv_goldens/pv23_053/golden.xlsx	43153
-C	roundtrip-calipers/pv_goldens/pv23_054/golden.xlsx	44944
-C	roundtrip-calipers/pv_goldens/pv23_055/golden.xlsx	44944
-C	roundtrip-calipers/pv_goldens/pv23_056/golden.xlsx	38401
-C	roundtrip-calipers/pv_goldens/pv23_057/golden.xlsx	668432
-C	roundtrip-calipers/pv_goldens/pv23_058/golden.xlsx	4972
-C	roundtrip-calipers/pv_goldens/pv23_059/golden.xlsx	668432
-C	roundtrip-calipers/pv_goldens/pv23_060/golden.xlsx	267387
-C	roundtrip-calipers/pv_goldens/pv23_061/golden.xlsx	40145
-C	roundtrip-calipers/pv_goldens/pv23_062/golden.xlsx	68002
-C	roundtrip-calipers/pv_goldens/pv23_063/golden.xlsx	11131
-C	roundtrip-calipers/pv_goldens/pv23_064/golden.xlsx	9916
-C	roundtrip-calipers/pv_goldens/pv23_065/golden.xlsx	9914
-C	roundtrip-calipers/pv_goldens/pv23_066/golden.xlsx	802497
-C	roundtrip-calipers/pv_goldens/pv26_001/golden.xlsx	1436591
+C	roundtrip-calipers/default/add_sheet_sparse_ids/golden.xlsx	1825
+C	roundtrip-calipers/default/chart_titles/golden.xlsx	2565
+C	roundtrip-calipers/default/multi_row_formulas/golden.xlsx	1841
+C	roundtrip-calipers/default/names_add_defined_names_order/golden.xlsx	1812
+C	roundtrip-calipers/default/simple_set_a1/golden.xlsx	753
+C	roundtrip-calipers/officejs/align_center/golden.xlsx	712
+C	roundtrip-calipers/officejs/align_wrap/golden.xlsx	711
+C	roundtrip-calipers/officejs/api_cf_at/golden.xlsx	732
+C	roundtrip-calipers/officejs/api_cf_clear/golden.xlsx	717
+C	roundtrip-calipers/officejs/api_cf_count/golden.xlsx	726
+C	roundtrip-calipers/officejs/api_cf_delete/golden.xlsx	710
+C	roundtrip-calipers/officejs/api_cf_item/golden.xlsx	732
+C	roundtrip-calipers/officejs/api_cf_null/golden.xlsx	726
+C	roundtrip-calipers/officejs/api_cf_range/golden.xlsx	732
+C	roundtrip-calipers/officejs/api_cf_range_null/golden.xlsx	732
+C	roundtrip-calipers/officejs/api_comment_at/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_cell/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_count/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_delete/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_item/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_location/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_null/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_reply_add/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_reply_at/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_reply_count/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_reply_delete/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_reply_id/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_reply_item/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_reply_location/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_comment_reply_null/golden.xlsx	703
+C	roundtrip-calipers/officejs/api_comment_reply_parent/golden.xlsx	705
+C	roundtrip-calipers/officejs/api_filter_apply/golden.xlsx	861
+C	roundtrip-calipers/officejs/api_filter_bottom_items/golden.xlsx	861
+C	roundtrip-calipers/officejs/api_filter_bottom_percent/golden.xlsx	862
+C	roundtrip-calipers/officejs/api_filter_cell_color/golden.xlsx	866
+C	roundtrip-calipers/officejs/api_filter_clear/golden.xlsx	855
+C	roundtrip-calipers/officejs/api_filter_custom/golden.xlsx	865
+C	roundtrip-calipers/officejs/api_filter_dynamic/golden.xlsx	860
+C	roundtrip-calipers/officejs/api_filter_font_color/golden.xlsx	867
+C	roundtrip-calipers/officejs/api_filter_table_clear/golden.xlsx	855
+C	roundtrip-calipers/officejs/api_filter_table_reapply/golden.xlsx	861
+C	roundtrip-calipers/officejs/api_filter_top_items/golden.xlsx	860
+C	roundtrip-calipers/officejs/api_filter_top_percent/golden.xlsx	861
+C	roundtrip-calipers/officejs/api_filter_values/golden.xlsx	862
+C	roundtrip-calipers/officejs/api_function_abs/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_acos/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_acosh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_asin/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_asinh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_atan/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_atan2/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_atanh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_average/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_concatenate/golden.xlsx	761
+C	roundtrip-calipers/officejs/api_function_cos/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_cosh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_count/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_countA/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_degrees/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_exact/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_exp/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_int/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_left/golden.xlsx	756
+C	roundtrip-calipers/officejs/api_function_len/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_ln/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_log/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_log10/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_lower/golden.xlsx	756
+C	roundtrip-calipers/officejs/api_function_max/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_median/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_mid/golden.xlsx	754
+C	roundtrip-calipers/officejs/api_function_min/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_mod/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_pi/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_power/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_product/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_quotient/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_radians/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_right/golden.xlsx	756
+C	roundtrip-calipers/officejs/api_function_round/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_roundDown/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_roundUp/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sign/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sin/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sinh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sqrt/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sqrtPi/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sum/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_sumSq/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_tan/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_tanh/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_trim/golden.xlsx	750
+C	roundtrip-calipers/officejs/api_function_trunc/golden.xlsx	752
+C	roundtrip-calipers/officejs/api_function_upper/golden.xlsx	756
+C	roundtrip-calipers/officejs/api_range_adjust_indent/golden.xlsx	760
+C	roundtrip-calipers/officejs/api_range_find/golden.xlsx	739
+C	roundtrip-calipers/officejs/api_range_find_null/golden.xlsx	737
+C	roundtrip-calipers/officejs/api_range_freeze_location/golden.xlsx	746
+C	roundtrip-calipers/officejs/api_range_freeze_location_null/golden.xlsx	737
+C	roundtrip-calipers/officejs/api_range_intersection_null/golden.xlsx	739
+C	roundtrip-calipers/officejs/api_range_range_replace/golden.xlsx	735
+C	roundtrip-calipers/officejs/api_range_range_used/golden.xlsx	739
+C	roundtrip-calipers/officejs/api_range_range_used_null/golden.xlsx	737
+C	roundtrip-calipers/officejs/api_range_sheet_replace/golden.xlsx	735
+C	roundtrip-calipers/officejs/api_range_sheet_used/golden.xlsx	739
+C	roundtrip-calipers/officejs/api_range_sheet_used_null/golden.xlsx	759
+C	roundtrip-calipers/officejs/autofilter_apply/golden.xlsx	742
+C	roundtrip-calipers/officejs/autofilter_clear_column_criteria/golden.xlsx	753
+C	roundtrip-calipers/officejs/autofilter_clear_criteria/golden.xlsx	753
+C	roundtrip-calipers/officejs/autofilter_get_range/golden.xlsx	747
+C	roundtrip-calipers/officejs/autofilter_reapply/golden.xlsx	757
+C	roundtrip-calipers/officejs/autofilter_remove/golden.xlsx	741
+C	roundtrip-calipers/officejs/autofilter_values/golden.xlsx	757
+C	roundtrip-calipers/officejs/big_formulas_400/golden.xlsx	5890
+C	roundtrip-calipers/officejs/big_grid_200x12/golden.xlsx	10485
+C	roundtrip-calipers/officejs/big_multi_sheet/golden.xlsx	8539
+C	roundtrip-calipers/officejs/big_values_500/golden.xlsx	8189
+C	roundtrip-calipers/officejs/borders_get_item_at/golden.xlsx	712
+C	roundtrip-calipers/officejs/borders_inside/golden.xlsx	779
+C	roundtrip-calipers/officejs/borders_outline/golden.xlsx	859
+C	roundtrip-calipers/officejs/cf_cell_value/golden.xlsx	726
+C	roundtrip-calipers/officejs/cf_color_scale/golden.xlsx	730
+C	roundtrip-calipers/officejs/cf_data_bar/golden.xlsx	745
+C	roundtrip-calipers/officejs/cf_icon_set/golden.xlsx	726
+C	roundtrip-calipers/officejs/cf_preset/golden.xlsx	729
+C	roundtrip-calipers/officejs/cf_text/golden.xlsx	730
+C	roundtrip-calipers/officejs/chart_area/golden.xlsx	1370
+C	roundtrip-calipers/officejs/chart_axes/golden.xlsx	1438
+C	roundtrip-calipers/officejs/chart_bar/golden.xlsx	1363
+C	roundtrip-calipers/officejs/chart_column/golden.xlsx	1362
+C	roundtrip-calipers/officejs/chart_doughnut/golden.xlsx	1344
+C	roundtrip-calipers/officejs/chart_legend/golden.xlsx	1384
+C	roundtrip-calipers/officejs/chart_line/golden.xlsx	1370
+C	roundtrip-calipers/officejs/chart_pie/golden.xlsx	1343
+C	roundtrip-calipers/officejs/chart_scatter/golden.xlsx	1380
+C	roundtrip-calipers/officejs/chart_title/golden.xlsx	1379
+C	roundtrip-calipers/officejs/col_row_size/golden.xlsx	707
+C	roundtrip-calipers/officejs/comment_add/golden.xlsx	721
+C	roundtrip-calipers/officejs/delete_rows/golden.xlsx	700
+C	roundtrip-calipers/officejs/fill_clear/golden.xlsx	703
+C	roundtrip-calipers/officejs/fill_solid/golden.xlsx	730
+C	roundtrip-calipers/officejs/font_bold_italic/golden.xlsx	740
+C	roundtrip-calipers/officejs/font_color/golden.xlsx	738
+C	roundtrip-calipers/officejs/font_name_size/golden.xlsx	712
+C	roundtrip-calipers/officejs/font_underline/golden.xlsx	715
+C	roundtrip-calipers/officejs/freeze_at/golden.xlsx	757
+C	roundtrip-calipers/officejs/freeze_columns/golden.xlsx	730
+C	roundtrip-calipers/officejs/freeze_rows/golden.xlsx	745
+C	roundtrip-calipers/officejs/freeze_unfreeze/golden.xlsx	723
+C	roundtrip-calipers/officejs/hide_rows_cols/golden.xlsx	731
+C	roundtrip-calipers/officejs/hyperlink_url/golden.xlsx	735
+C	roundtrip-calipers/officejs/insert_cols/golden.xlsx	711
+C	roundtrip-calipers/officejs/insert_rows/golden.xlsx	705
+C	roundtrip-calipers/officejs/merge_cells/golden.xlsx	716
+C	roundtrip-calipers/officejs/names_delete/golden.xlsx	700
+C	roundtrip-calipers/officejs/names_formula/golden.xlsx	694
+C	roundtrip-calipers/officejs/names_formula_local/golden.xlsx	741
+C	roundtrip-calipers/officejs/names_lookup/golden.xlsx	715
+C	roundtrip-calipers/officejs/names_range/golden.xlsx	699
+C	roundtrip-calipers/officejs/names_sheet_scoped/golden.xlsx	700
+C	roundtrip-calipers/officejs/numfmt_accounting/golden.xlsx	707
+C	roundtrip-calipers/officejs/numfmt_currency/golden.xlsx	712
+C	roundtrip-calipers/officejs/numfmt_date/golden.xlsx	714
+C	roundtrip-calipers/officejs/numfmt_percent/golden.xlsx	707
+C	roundtrip-calipers/officejs/pivot_count/golden.xlsx	917
+C	roundtrip-calipers/officejs/pivot_filter/golden.xlsx	970
+C	roundtrip-calipers/officejs/pivot_hierarchy_get_item/golden.xlsx	951
+C	roundtrip-calipers/officejs/pivot_name/golden.xlsx	917
+C	roundtrip-calipers/officejs/pivot_row_col_data/golden.xlsx	1019
+C	roundtrip-calipers/officejs/pivot_row_data/golden.xlsx	951
+C	roundtrip-calipers/officejs/pivot_two_data/golden.xlsx	993
+C	roundtrip-calipers/officejs/range_bounding_rect/golden.xlsx	724
+C	roundtrip-calipers/officejs/range_by_indexes/golden.xlsx	703
+C	roundtrip-calipers/officejs/range_clear/golden.xlsx	696
+C	roundtrip-calipers/officejs/range_cols_before_after/golden.xlsx	719
+C	roundtrip-calipers/officejs/range_copy_from/golden.xlsx	712
+C	roundtrip-calipers/officejs/range_formulas_if/golden.xlsx	729
+C	roundtrip-calipers/officejs/range_formulas_lookup/golden.xlsx	752
+C	roundtrip-calipers/officejs/range_formulas_nested/golden.xlsx	733
+C	roundtrip-calipers/officejs/range_formulas_sum/golden.xlsx	726
+C	roundtrip-calipers/officejs/range_get_cell/golden.xlsx	703
+C	roundtrip-calipers/officejs/range_get_column/golden.xlsx	700
+C	roundtrip-calipers/officejs/range_get_last/golden.xlsx	732
+C	roundtrip-calipers/officejs/range_get_row/golden.xlsx	698
+C	roundtrip-calipers/officejs/range_intersection/golden.xlsx	703
+C	roundtrip-calipers/officejs/range_offset/golden.xlsx	700
+C	roundtrip-calipers/officejs/range_resized/golden.xlsx	719
+C	roundtrip-calipers/officejs/range_rows_above_below/golden.xlsx	729
+C	roundtrip-calipers/officejs/range_set_booleans/golden.xlsx	705
+C	roundtrip-calipers/officejs/range_set_dates/golden.xlsx	712
+C	roundtrip-calipers/officejs/range_set_mixed/golden.xlsx	719
+C	roundtrip-calipers/officejs/range_set_numbers/golden.xlsx	711
+C	roundtrip-calipers/officejs/range_set_text/golden.xlsx	715
+C	roundtrip-calipers/officejs/range_unmerge/golden.xlsx	705
+C	roundtrip-calipers/officejs/sheet_activate/golden.xlsx	725
+C	roundtrip-calipers/officejs/sheet_add/golden.xlsx	707
+C	roundtrip-calipers/officejs/sheet_copy/golden.xlsx	724
+C	roundtrip-calipers/officejs/sheet_delete/golden.xlsx	696
+C	roundtrip-calipers/officejs/sheet_get_first/golden.xlsx	718
+C	roundtrip-calipers/officejs/sheet_get_item/golden.xlsx	718
+C	roundtrip-calipers/officejs/sheet_get_last/golden.xlsx	718
+C	roundtrip-calipers/officejs/sheet_get_next/golden.xlsx	725
+C	roundtrip-calipers/officejs/sheet_get_previous/golden.xlsx	724
+C	roundtrip-calipers/officejs/sheet_gridlines/golden.xlsx	697
+C	roundtrip-calipers/officejs/sheet_hidden/golden.xlsx	719
+C	roundtrip-calipers/officejs/sheet_lookup/golden.xlsx	741
+C	roundtrip-calipers/officejs/sheet_position/golden.xlsx	707
+C	roundtrip-calipers/officejs/sheet_rename/golden.xlsx	696
+C	roundtrip-calipers/officejs/sheet_tab_color/golden.xlsx	698
+C	roundtrip-calipers/officejs/small_three_cells/golden.xlsx	707
+C	roundtrip-calipers/officejs/sort_asc/golden.xlsx	733
+C	roundtrip-calipers/officejs/spill_chooserows/golden.xlsx	745
+C	roundtrip-calipers/officejs/spill_filter/golden.xlsx	823
+C	roundtrip-calipers/officejs/spill_sequence/golden.xlsx	757
+C	roundtrip-calipers/officejs/spill_sort/golden.xlsx	787
+C	roundtrip-calipers/officejs/spill_sortby/golden.xlsx	811
+C	roundtrip-calipers/officejs/spill_take_drop/golden.xlsx	821
+C	roundtrip-calipers/officejs/spill_transpose/golden.xlsx	758
+C	roundtrip-calipers/officejs/spill_unique/golden.xlsx	806
+C	roundtrip-calipers/officejs/spill_vstack/golden.xlsx	767
+C	roundtrip-calipers/officejs/spill_xlookup/golden.xlsx	750
+C	roundtrip-calipers/officejs/spill_xmatch/golden.xlsx	734
+C	roundtrip-calipers/officejs/style_good/golden.xlsx	731
+C	roundtrip-calipers/officejs/style_input/golden.xlsx	742
+C	roundtrip-calipers/officejs/table_add/golden.xlsx	792
+C	roundtrip-calipers/officejs/table_banded/golden.xlsx	792
+C	roundtrip-calipers/officejs/table_column_add/golden.xlsx	775
+C	roundtrip-calipers/officejs/table_column_lookup/golden.xlsx	798
+C	roundtrip-calipers/officejs/table_columns_delete/golden.xlsx	766
+C	roundtrip-calipers/officejs/table_convert_to_range/golden.xlsx	976
+C	roundtrip-calipers/officejs/table_delete/golden.xlsx	696
+C	roundtrip-calipers/officejs/table_header_body_total_write/golden.xlsx	814
+C	roundtrip-calipers/officejs/table_highlight/golden.xlsx	792
+C	roundtrip-calipers/officejs/table_lookup/golden.xlsx	802
+C	roundtrip-calipers/officejs/table_name/golden.xlsx	792
+C	roundtrip-calipers/officejs/table_resize/golden.xlsx	807
+C	roundtrip-calipers/officejs/table_row_get_range/golden.xlsx	796
+C	roundtrip-calipers/officejs/table_rows_add/golden.xlsx	805
+C	roundtrip-calipers/officejs/table_rows_delete/golden.xlsx	777
+C	roundtrip-calipers/officejs/table_rows_delete_at/golden.xlsx	777
+C	roundtrip-calipers/officejs/table_rows_delete_many/golden.xlsx	762
+C	roundtrip-calipers/officejs/table_sort/golden.xlsx	794
+C	roundtrip-calipers/officejs/table_style/golden.xlsx	792
+C	roundtrip-calipers/officejs/table_totals/golden.xlsx	814
+C	roundtrip-calipers/officejs/validation_clear/golden.xlsx	685
+C	roundtrip-calipers/officejs/validation_invalid_cells/golden.xlsx	705
+C	roundtrip-calipers/officejs/validation_list/golden.xlsx	688
+C	roundtrip-calipers/officejs/validation_whole/golden.xlsx	689
+C	roundtrip-calipers/pv_goldens/pv23_001/golden.xlsx	106003
+C	roundtrip-calipers/pv_goldens/pv23_002/golden.xlsx	70054
+C	roundtrip-calipers/pv_goldens/pv23_003/golden.xlsx	4364
+C	roundtrip-calipers/pv_goldens/pv23_004/golden.xlsx	6950
+C	roundtrip-calipers/pv_goldens/pv23_005/golden.xlsx	12566
+C	roundtrip-calipers/pv_goldens/pv23_006/golden.xlsx	772617
+C	roundtrip-calipers/pv_goldens/pv23_007/golden.xlsx	17285
+C	roundtrip-calipers/pv_goldens/pv23_008/golden.xlsx	28987
+C	roundtrip-calipers/pv_goldens/pv23_009/golden.xlsx	67661
+C	roundtrip-calipers/pv_goldens/pv23_010/golden.xlsx	176817
+C	roundtrip-calipers/pv_goldens/pv23_011/golden.xlsx	10738
+C	roundtrip-calipers/pv_goldens/pv23_012/golden.xlsx	10737
+C	roundtrip-calipers/pv_goldens/pv23_013/golden.xlsx	10737
+C	roundtrip-calipers/pv_goldens/pv23_014/golden.xlsx	10738
+C	roundtrip-calipers/pv_goldens/pv23_015/golden.xlsx	10738
+C	roundtrip-calipers/pv_goldens/pv23_016/golden.xlsx	17977
+C	roundtrip-calipers/pv_goldens/pv23_017/golden.xlsx	17896
+C	roundtrip-calipers/pv_goldens/pv23_018/golden.xlsx	17979
+C	roundtrip-calipers/pv_goldens/pv23_019/golden.xlsx	26753
+C	roundtrip-calipers/pv_goldens/pv23_020/golden.xlsx	9941
+C	roundtrip-calipers/pv_goldens/pv23_021/golden.xlsx	18927
+C	roundtrip-calipers/pv_goldens/pv23_022/golden.xlsx	21182
+C	roundtrip-calipers/pv_goldens/pv23_023/golden.xlsx	21254
+C	roundtrip-calipers/pv_goldens/pv23_024/golden.xlsx	23748
+C	roundtrip-calipers/pv_goldens/pv23_025/golden.xlsx	23758
+C	roundtrip-calipers/pv_goldens/pv23_026/golden.xlsx	24314
+C	roundtrip-calipers/pv_goldens/pv23_027/golden.xlsx	25925
+C	roundtrip-calipers/pv_goldens/pv23_028/golden.xlsx	4803
+C	roundtrip-calipers/pv_goldens/pv23_029/golden.xlsx	6373
+C	roundtrip-calipers/pv_goldens/pv23_030/golden.xlsx	6375
+C	roundtrip-calipers/pv_goldens/pv23_031/golden.xlsx	4870
+C	roundtrip-calipers/pv_goldens/pv23_032/golden.xlsx	5567
+C	roundtrip-calipers/pv_goldens/pv23_033/golden.xlsx	5567
+C	roundtrip-calipers/pv_goldens/pv23_034/golden.xlsx	2738
+C	roundtrip-calipers/pv_goldens/pv23_035/golden.xlsx	4122
+C	roundtrip-calipers/pv_goldens/pv23_036/golden.xlsx	11091
+C	roundtrip-calipers/pv_goldens/pv23_037/golden.xlsx	1404
+C	roundtrip-calipers/pv_goldens/pv23_038/golden.xlsx	13501
+C	roundtrip-calipers/pv_goldens/pv23_039/golden.xlsx	13971
+C	roundtrip-calipers/pv_goldens/pv23_040/golden.xlsx	13524
+C	roundtrip-calipers/pv_goldens/pv23_041/golden.xlsx	106472
+C	roundtrip-calipers/pv_goldens/pv23_042/golden.xlsx	1793965
+C	roundtrip-calipers/pv_goldens/pv23_043/golden.xlsx	9246
+C	roundtrip-calipers/pv_goldens/pv23_044/golden.xlsx	7255
+C	roundtrip-calipers/pv_goldens/pv23_045/golden.xlsx	1110657
+C	roundtrip-calipers/pv_goldens/pv23_046/golden.xlsx	49843
+C	roundtrip-calipers/pv_goldens/pv23_047/golden.xlsx	28470
+C	roundtrip-calipers/pv_goldens/pv23_048/golden.xlsx	35820
+C	roundtrip-calipers/pv_goldens/pv23_049/golden.xlsx	42436
+C	roundtrip-calipers/pv_goldens/pv23_050/golden.xlsx	41591
+C	roundtrip-calipers/pv_goldens/pv23_051/golden.xlsx	49808
+C	roundtrip-calipers/pv_goldens/pv23_052/golden.xlsx	48527
+C	roundtrip-calipers/pv_goldens/pv23_053/golden.xlsx	45879
+C	roundtrip-calipers/pv_goldens/pv23_054/golden.xlsx	47901
+C	roundtrip-calipers/pv_goldens/pv23_055/golden.xlsx	47901
+C	roundtrip-calipers/pv_goldens/pv23_056/golden.xlsx	41039
+C	roundtrip-calipers/pv_goldens/pv23_057/golden.xlsx	721748
+C	roundtrip-calipers/pv_goldens/pv23_058/golden.xlsx	5378
+C	roundtrip-calipers/pv_goldens/pv23_059/golden.xlsx	721748
+C	roundtrip-calipers/pv_goldens/pv23_060/golden.xlsx	267415
+C	roundtrip-calipers/pv_goldens/pv23_061/golden.xlsx	45590
+C	roundtrip-calipers/pv_goldens/pv23_062/golden.xlsx	68023
+C	roundtrip-calipers/pv_goldens/pv23_063/golden.xlsx	11892
+C	roundtrip-calipers/pv_goldens/pv23_064/golden.xlsx	9992
+C	roundtrip-calipers/pv_goldens/pv23_065/golden.xlsx	9990
+C	roundtrip-calipers/pv_goldens/pv23_066/golden.xlsx	804340
+C	roundtrip-calipers/pv_goldens/pv26_001/golden.xlsx	1603193
 C	roundtrip-calipers/pv_goldens/pv26_002/golden.xlsx	11183735
-C	roundtrip-calipers/pv_goldens/pv26_003/golden.xlsx	597885
-C	roundtrip-calipers/pv_goldens/pv26_004/golden.xlsx	15467
-C	roundtrip-calipers/pv_goldens/pv26_005/golden.xlsx	2217
-C	roundtrip-calipers/pv_goldens/pv26_006/golden.xlsx	17677
-C	roundtrip-calipers/pv_goldens/pv26_007/golden.xlsx	71982
-C	roundtrip-calipers/pv_goldens/pv26_008/golden.xlsx	482379
-C	roundtrip-calipers/pv_goldens/pv26_009/golden.xlsx	156911
-C	roundtrip-calipers/pv_goldens/pv26_010/golden.xlsx	668431
-C	roundtrip-calipers/pv_goldens/pv26_011/golden.xlsx	1767177
-C	roundtrip-calipers/pv_goldens/pv26_012/golden.xlsx	60770
-C	roundtrip-calipers/pv_goldens/pv26_013/golden.xlsx	60770
-C	roundtrip-calipers/pv_goldens/pv26_014/golden.xlsx	28214
-C	roundtrip-calipers/pv_goldens/pv26_015/golden.xlsx	1830130
-C	roundtrip-calipers/pv_goldens/pv26_016/golden.xlsx	1014539
-C	roundtrip-calipers/pv_goldens/pv26_017/golden.xlsx	512791
-C	roundtrip-calipers/pv_goldens/pv26_018/golden.xlsx	716968
-C	roundtrip-calipers/pv_goldens/pv26_019/golden.xlsx	31144
-C	roundtrip-calipers/pv_goldens/pv26_020/golden.xlsx	39368
-C	roundtrip-calipers/pv_goldens/pv26_2_001/golden.xlsx	1436591
+C	roundtrip-calipers/pv_goldens/pv26_003/golden.xlsx	643625
+C	roundtrip-calipers/pv_goldens/pv26_004/golden.xlsx	16963
+C	roundtrip-calipers/pv_goldens/pv26_005/golden.xlsx	2335
+C	roundtrip-calipers/pv_goldens/pv26_006/golden.xlsx	19510
+C	roundtrip-calipers/pv_goldens/pv26_007/golden.xlsx	106047
+C	roundtrip-calipers/pv_goldens/pv26_008/golden.xlsx	516324
+C	roundtrip-calipers/pv_goldens/pv26_009/golden.xlsx	163972
+C	roundtrip-calipers/pv_goldens/pv26_010/golden.xlsx	721747
+C	roundtrip-calipers/pv_goldens/pv26_011/golden.xlsx	1882995
+C	roundtrip-calipers/pv_goldens/pv26_012/golden.xlsx	65755
+C	roundtrip-calipers/pv_goldens/pv26_013/golden.xlsx	65755
+C	roundtrip-calipers/pv_goldens/pv26_014/golden.xlsx	30616
+C	roundtrip-calipers/pv_goldens/pv26_015/golden.xlsx	1922814
+C	roundtrip-calipers/pv_goldens/pv26_016/golden.xlsx	1088124
+C	roundtrip-calipers/pv_goldens/pv26_017/golden.xlsx	544984
+C	roundtrip-calipers/pv_goldens/pv26_018/golden.xlsx	789351
+C	roundtrip-calipers/pv_goldens/pv26_019/golden.xlsx	34651
+C	roundtrip-calipers/pv_goldens/pv26_020/golden.xlsx	43157
+C	roundtrip-calipers/pv_goldens/pv26_2_001/golden.xlsx	1603193
 C	roundtrip-calipers/pv_goldens/pv26_2_002/golden.xlsx	11183735
-C	roundtrip-calipers/pv_goldens/pv26_2_003/golden.xlsx	597885
-C	roundtrip-calipers/pv_goldens/pv26_2_004/golden.xlsx	15467
-C	roundtrip-calipers/pv_goldens/pv26_2_005/golden.xlsx	2217
-C	roundtrip-calipers/pv_goldens/pv26_2_006/golden.xlsx	17677
-C	roundtrip-calipers/pv_goldens/pv26_2_007/golden.xlsx	71982
-C	roundtrip-calipers/pv_goldens/pv26_2_008/golden.xlsx	482379
-C	roundtrip-calipers/pv_goldens/pv26_2_009/golden.xlsx	156911
-C	roundtrip-calipers/pv_goldens/pv26_2_010/golden.xlsx	664496
-C	roundtrip-calipers/pv_goldens/pv26_2_011/golden.xlsx	1767177
-C	roundtrip-calipers/pv_goldens/pv26_2_012/golden.xlsx	60770
-C	roundtrip-calipers/pv_goldens/pv26_2_013/golden.xlsx	60770
-C	roundtrip-calipers/pv_goldens/pv26_2_014/golden.xlsx	28214
-C	roundtrip-calipers/pv_goldens/pv26_2_015/golden.xlsx	1830130
-C	roundtrip-calipers/pv_goldens/pv26_2_016/golden.xlsx	993566
-C	roundtrip-calipers/pv_goldens/pv26_2_017/golden.xlsx	512791
-C	roundtrip-calipers/pv_goldens/pv26_2_018/golden.xlsx	716968
-C	roundtrip-calipers/pv_goldens/pv26_2_019/golden.xlsx	31144
-C	roundtrip-calipers/pv_goldens/pv26_2_020/golden.xlsx	39368
-C	roundtrip-calipers/pv_goldens/pv26_2_021/golden.xlsx	60770
-C	roundtrip-calipers/recalculate/offset_controls/golden.xlsx	880
-C	roundtrip-calipers/recalculate/offset_index_bases/golden.xlsx	856
-C	roundtrip-calipers/recalculate/offset_lookup/golden.xlsx	848
-C	roundtrip-calipers/recalculate/offset_named_bases/golden.xlsx	864
-C	roundtrip-calipers/recalculate/offset_period_counts/golden.xlsx	854
+C	roundtrip-calipers/pv_goldens/pv26_2_003/golden.xlsx	643625
+C	roundtrip-calipers/pv_goldens/pv26_2_004/golden.xlsx	16963
+C	roundtrip-calipers/pv_goldens/pv26_2_005/golden.xlsx	2335
+C	roundtrip-calipers/pv_goldens/pv26_2_006/golden.xlsx	19510
+C	roundtrip-calipers/pv_goldens/pv26_2_007/golden.xlsx	106047
+C	roundtrip-calipers/pv_goldens/pv26_2_008/golden.xlsx	516324
+C	roundtrip-calipers/pv_goldens/pv26_2_009/golden.xlsx	163972
+C	roundtrip-calipers/pv_goldens/pv26_2_010/golden.xlsx	717811
+C	roundtrip-calipers/pv_goldens/pv26_2_011/golden.xlsx	1882995
+C	roundtrip-calipers/pv_goldens/pv26_2_012/golden.xlsx	65755
+C	roundtrip-calipers/pv_goldens/pv26_2_013/golden.xlsx	65755
+C	roundtrip-calipers/pv_goldens/pv26_2_014/golden.xlsx	30616
+C	roundtrip-calipers/pv_goldens/pv26_2_015/golden.xlsx	1922814
+C	roundtrip-calipers/pv_goldens/pv26_2_016/golden.xlsx	1063398
+C	roundtrip-calipers/pv_goldens/pv26_2_017/golden.xlsx	544984
+C	roundtrip-calipers/pv_goldens/pv26_2_018/golden.xlsx	789351
+C	roundtrip-calipers/pv_goldens/pv26_2_019/golden.xlsx	34651
+C	roundtrip-calipers/pv_goldens/pv26_2_020/golden.xlsx	43157
+C	roundtrip-calipers/pv_goldens/pv26_2_021/golden.xlsx	65755
+C	roundtrip-calipers/recalculate/offset_controls/golden.xlsx	888
+C	roundtrip-calipers/recalculate/offset_index_bases/golden.xlsx	861
+C	roundtrip-calipers/recalculate/offset_lookup/golden.xlsx	852
+C	roundtrip-calipers/recalculate/offset_named_bases/golden.xlsx	870
+C	roundtrip-calipers/recalculate/offset_period_counts/golden.xlsx	859
 C	roundtrip-calipers/roundtrip/autofilter/golden.xlsx	5636
 C	roundtrip-calipers/roundtrip/autofilter/init.xlsx	5636
-C	roundtrip-calipers/roundtrip/bg_color_ranges/golden.xlsx	895
-C	roundtrip-calipers/roundtrip/bg_color_ranges/init.xlsx	896
-C	roundtrip-calipers/roundtrip/booleans/golden.xlsx	658
-C	roundtrip-calipers/roundtrip/booleans/init.xlsx	658
+C	roundtrip-calipers/roundtrip/bg_color_ranges/golden.xlsx	908
+C	roundtrip-calipers/roundtrip/bg_color_ranges/init.xlsx	909
+C	roundtrip-calipers/roundtrip/booleans/golden.xlsx	661
+C	roundtrip-calipers/roundtrip/booleans/init.xlsx	661
 C	roundtrip-calipers/roundtrip/border_colours/golden.xlsx	670
 C	roundtrip-calipers/roundtrip/border_colours/init.xlsx	670
-C	roundtrip-calipers/roundtrip/cf_samples/golden.xlsx	24548
-C	roundtrip-calipers/roundtrip/cf_samples/init.xlsx	24548
-C	roundtrip-calipers/roundtrip/comment_test/golden.xlsx	894
-C	roundtrip-calipers/roundtrip/comment_test/init.xlsx	894
-C	roundtrip-calipers/roundtrip/comments/golden.xlsx	2622
-C	roundtrip-calipers/roundtrip/comments/init.xlsx	2622
-C	roundtrip-calipers/roundtrip/conditional_formatting/golden.xlsx	783
-C	roundtrip-calipers/roundtrip/conditional_formatting/init.xlsx	783
-C	roundtrip-calipers/roundtrip/custom_properties/golden.xlsx	591
-C	roundtrip-calipers/roundtrip/custom_properties/init.xlsx	591
-C	roundtrip-calipers/roundtrip/custom_view_printer_settings/golden.xlsx	1840
-C	roundtrip-calipers/roundtrip/custom_view_printer_settings/init.xlsx	740
-C	roundtrip-calipers/roundtrip/data_validation/golden.xlsx	1674
-C	roundtrip-calipers/roundtrip/data_validation/init.xlsx	1674
-C	roundtrip-calipers/roundtrip/date_cells/golden.xlsx	814
-C	roundtrip-calipers/roundtrip/date_cells/init.xlsx	814
-C	roundtrip-calipers/roundtrip/date_formats/golden.xlsx	1935
-C	roundtrip-calipers/roundtrip/date_formats/init.xlsx	1935
-C	roundtrip-calipers/roundtrip/drawing/golden.xlsx	596
-C	roundtrip-calipers/roundtrip/drawing/init.xlsx	596
+C	roundtrip-calipers/roundtrip/cf_samples/golden.xlsx	29367
+C	roundtrip-calipers/roundtrip/cf_samples/init.xlsx	29367
+C	roundtrip-calipers/roundtrip/comment_test/golden.xlsx	1136
+C	roundtrip-calipers/roundtrip/comment_test/init.xlsx	1136
+C	roundtrip-calipers/roundtrip/comments/golden.xlsx	3273
+C	roundtrip-calipers/roundtrip/comments/init.xlsx	3273
+C	roundtrip-calipers/roundtrip/conditional_formatting/golden.xlsx	785
+C	roundtrip-calipers/roundtrip/conditional_formatting/init.xlsx	785
+C	roundtrip-calipers/roundtrip/custom_properties/golden.xlsx	602
+C	roundtrip-calipers/roundtrip/custom_properties/init.xlsx	602
+C	roundtrip-calipers/roundtrip/custom_view_printer_settings/golden.xlsx	1842
+C	roundtrip-calipers/roundtrip/custom_view_printer_settings/init.xlsx	742
+C	roundtrip-calipers/roundtrip/data_validation/golden.xlsx	1690
+C	roundtrip-calipers/roundtrip/data_validation/init.xlsx	1690
+C	roundtrip-calipers/roundtrip/date_cells/golden.xlsx	892
+C	roundtrip-calipers/roundtrip/date_cells/init.xlsx	892
+C	roundtrip-calipers/roundtrip/date_formats/golden.xlsx	1981
+C	roundtrip-calipers/roundtrip/date_formats/init.xlsx	1981
+C	roundtrip-calipers/roundtrip/drawing/golden.xlsx	802
+C	roundtrip-calipers/roundtrip/drawing/init.xlsx	802
 C	roundtrip-calipers/roundtrip/empty/golden.xlsx	673
 C	roundtrip-calipers/roundtrip/empty/init.xlsx	673
-C	roundtrip-calipers/roundtrip/excel_tables/golden.xlsx	770
-C	roundtrip-calipers/roundtrip/excel_tables/init.xlsx	770
+C	roundtrip-calipers/roundtrip/excel_tables/golden.xlsx	777
+C	roundtrip-calipers/roundtrip/excel_tables/init.xlsx	777
 C	roundtrip-calipers/roundtrip/font_theme_colours/golden.xlsx	664
 C	roundtrip-calipers/roundtrip/font_theme_colours/init.xlsx	664
 C	roundtrip-calipers/roundtrip/formatting/golden.xlsx	844
 C	roundtrip-calipers/roundtrip/formatting/init.xlsx	844
-C	roundtrip-calipers/roundtrip/formula_eval/golden.xlsx	702
-C	roundtrip-calipers/roundtrip/formula_eval/init.xlsx	702
-C	roundtrip-calipers/roundtrip/formula_stress_test/golden.xlsx	11453
-C	roundtrip-calipers/roundtrip/formula_stress_test/init.xlsx	11453
-C	roundtrip-calipers/roundtrip/formulas/golden.xlsx	739
-C	roundtrip-calipers/roundtrip/formulas/init.xlsx	739
-C	roundtrip-calipers/roundtrip/formulas_conditional/golden.xlsx	5282
-C	roundtrip-calipers/roundtrip/formulas_conditional/init.xlsx	5283
-C	roundtrip-calipers/roundtrip/formulas_database/golden.xlsx	5520
-C	roundtrip-calipers/roundtrip/formulas_database/init.xlsx	5521
-C	roundtrip-calipers/roundtrip/formulas_datetime/golden.xlsx	20188
-C	roundtrip-calipers/roundtrip/formulas_datetime/init.xlsx	20189
-C	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/golden.xlsx	10473
-C	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/init.xlsx	10474
-C	roundtrip-calipers/roundtrip/formulas_engineering/golden.xlsx	6982
-C	roundtrip-calipers/roundtrip/formulas_engineering/init.xlsx	6983
-C	roundtrip-calipers/roundtrip/formulas_financial/golden.xlsx	5282
-C	roundtrip-calipers/roundtrip/formulas_financial/init.xlsx	5283
-C	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	8909
-C	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	8910
-C	roundtrip-calipers/roundtrip/formulas_logical/golden.xlsx	9775
-C	roundtrip-calipers/roundtrip/formulas_logical/init.xlsx	9776
-C	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	9492
-C	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	9493
-C	roundtrip-calipers/roundtrip/formulas_math_basic/golden.xlsx	10046
-C	roundtrip-calipers/roundtrip/formulas_math_basic/init.xlsx	10047
-C	roundtrip-calipers/roundtrip/formulas_math_trig/golden.xlsx	5199
-C	roundtrip-calipers/roundtrip/formulas_math_trig/init.xlsx	5200
-C	roundtrip-calipers/roundtrip/formulas_nested/golden.xlsx	192159
-C	roundtrip-calipers/roundtrip/formulas_nested/init.xlsx	192160
-C	roundtrip-calipers/roundtrip/formulas_statistical/golden.xlsx	6543
-C	roundtrip-calipers/roundtrip/formulas_statistical/init.xlsx	6544
-C	roundtrip-calipers/roundtrip/formulas_text/golden.xlsx	8065
-C	roundtrip-calipers/roundtrip/formulas_text/init.xlsx	8066
+C	roundtrip-calipers/roundtrip/formula_eval/golden.xlsx	704
+C	roundtrip-calipers/roundtrip/formula_eval/init.xlsx	704
+C	roundtrip-calipers/roundtrip/formula_stress_test/golden.xlsx	12110
+C	roundtrip-calipers/roundtrip/formula_stress_test/init.xlsx	12110
+C	roundtrip-calipers/roundtrip/formulas/golden.xlsx	745
+C	roundtrip-calipers/roundtrip/formulas/init.xlsx	745
+C	roundtrip-calipers/roundtrip/formulas_conditional/golden.xlsx	5376
+C	roundtrip-calipers/roundtrip/formulas_conditional/init.xlsx	5377
+C	roundtrip-calipers/roundtrip/formulas_database/golden.xlsx	5943
+C	roundtrip-calipers/roundtrip/formulas_database/init.xlsx	5944
+C	roundtrip-calipers/roundtrip/formulas_datetime/golden.xlsx	22185
+C	roundtrip-calipers/roundtrip/formulas_datetime/init.xlsx	22186
+C	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/golden.xlsx	10640
+C	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/init.xlsx	10641
+C	roundtrip-calipers/roundtrip/formulas_engineering/golden.xlsx	7512
+C	roundtrip-calipers/roundtrip/formulas_engineering/init.xlsx	7513
+C	roundtrip-calipers/roundtrip/formulas_financial/golden.xlsx	5774
+C	roundtrip-calipers/roundtrip/formulas_financial/init.xlsx	5775
+C	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	9569
+C	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	9570
+C	roundtrip-calipers/roundtrip/formulas_logical/golden.xlsx	10503
+C	roundtrip-calipers/roundtrip/formulas_logical/init.xlsx	10504
+C	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	9880
+C	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	9881
+C	roundtrip-calipers/roundtrip/formulas_math_basic/golden.xlsx	10938
+C	roundtrip-calipers/roundtrip/formulas_math_basic/init.xlsx	10939
+C	roundtrip-calipers/roundtrip/formulas_math_trig/golden.xlsx	5632
+C	roundtrip-calipers/roundtrip/formulas_math_trig/init.xlsx	5633
+C	roundtrip-calipers/roundtrip/formulas_nested/golden.xlsx	214671
+C	roundtrip-calipers/roundtrip/formulas_nested/init.xlsx	214672
+C	roundtrip-calipers/roundtrip/formulas_statistical/golden.xlsx	7032
+C	roundtrip-calipers/roundtrip/formulas_statistical/init.xlsx	7033
+C	roundtrip-calipers/roundtrip/formulas_text/golden.xlsx	8832
+C	roundtrip-calipers/roundtrip/formulas_text/init.xlsx	8833
 C	roundtrip-calipers/roundtrip/header_footer/golden.xlsx	596
 C	roundtrip-calipers/roundtrip/header_footer/init.xlsx	596
 C	roundtrip-calipers/roundtrip/hidden_sheet/golden.xlsx	597
 C	roundtrip-calipers/roundtrip/hidden_sheet/init.xlsx	597
 C	roundtrip-calipers/roundtrip/hyperlinks/golden.xlsx	651
 C	roundtrip-calipers/roundtrip/hyperlinks/init.xlsx	651
-C	roundtrip-calipers/roundtrip/i18n_hebrew/golden.xlsx	190340
-C	roundtrip-calipers/roundtrip/i18n_hebrew/init.xlsx	190340
-C	roundtrip-calipers/roundtrip/inline_strings/golden.xlsx	939
-C	roundtrip-calipers/roundtrip/inline_strings/init.xlsx	939
-C	roundtrip-calipers/roundtrip/large_strings/golden.xlsx	355836
-C	roundtrip-calipers/roundtrip/large_strings/init.xlsx	355836
-C	roundtrip-calipers/roundtrip/lbo_model/golden.xlsx	11397
-C	roundtrip-calipers/roundtrip/lbo_model/init.xlsx	11397
-C	roundtrip-calipers/roundtrip/legacy_indexed_colors/golden.xlsx	4314
-C	roundtrip-calipers/roundtrip/legacy_indexed_colors/init.xlsx	4315
-C	roundtrip-calipers/roundtrip/lonumbers_2010/golden.xlsx	3514
-C	roundtrip-calipers/roundtrip/lonumbers_2010/init.xlsx	3514
-C	roundtrip-calipers/roundtrip/lonumbers_2011/golden.xlsx	3540
-C	roundtrip-calipers/roundtrip/lonumbers_2011/init.xlsx	3540
+C	roundtrip-calipers/roundtrip/i18n_hebrew/golden.xlsx	231260
+C	roundtrip-calipers/roundtrip/i18n_hebrew/init.xlsx	231260
+C	roundtrip-calipers/roundtrip/inline_strings/golden.xlsx	946
+C	roundtrip-calipers/roundtrip/inline_strings/init.xlsx	946
+C	roundtrip-calipers/roundtrip/large_strings/golden.xlsx	377329
+C	roundtrip-calipers/roundtrip/large_strings/init.xlsx	377329
+C	roundtrip-calipers/roundtrip/lbo_model/golden.xlsx	11967
+C	roundtrip-calipers/roundtrip/lbo_model/init.xlsx	11967
+C	roundtrip-calipers/roundtrip/legacy_indexed_colors/golden.xlsx	4415
+C	roundtrip-calipers/roundtrip/legacy_indexed_colors/init.xlsx	4416
+C	roundtrip-calipers/roundtrip/lonumbers_2010/golden.xlsx	3848
+C	roundtrip-calipers/roundtrip/lonumbers_2010/init.xlsx	3848
+C	roundtrip-calipers/roundtrip/lonumbers_2011/golden.xlsx	3874
+C	roundtrip-calipers/roundtrip/lonumbers_2011/init.xlsx	3874
 C	roundtrip-calipers/roundtrip/merge_cells/golden.xlsx	667
 C	roundtrip-calipers/roundtrip/merge_cells/init.xlsx	667
 C	roundtrip-calipers/roundtrip/mixed_sheets/golden.xlsx	1507
 C	roundtrip-calipers/roundtrip/mixed_sheets/init.xlsx	1507
-C	roundtrip-calipers/roundtrip/multi_sheet/golden.xlsx	831
-C	roundtrip-calipers/roundtrip/multi_sheet/init.xlsx	831
-C	roundtrip-calipers/roundtrip/named_ranges/golden.xlsx	925
-C	roundtrip-calipers/roundtrip/named_ranges/init.xlsx	925
-C	roundtrip-calipers/roundtrip/number_formats/golden.xlsx	7745
-C	roundtrip-calipers/roundtrip/number_formats/init.xlsx	7745
-C	roundtrip-calipers/roundtrip/picture/golden.xlsx	1088
-C	roundtrip-calipers/roundtrip/picture/init.xlsx	1088
-C	roundtrip-calipers/roundtrip/pivot/golden.xlsx	989
-C	roundtrip-calipers/roundtrip/pivot/init.xlsx	989
-C	roundtrip-calipers/roundtrip/pivot_named_range/golden.xlsx	2539
-C	roundtrip-calipers/roundtrip/pivot_named_range/init.xlsx	2539
+C	roundtrip-calipers/roundtrip/multi_sheet/golden.xlsx	833
+C	roundtrip-calipers/roundtrip/multi_sheet/init.xlsx	833
+C	roundtrip-calipers/roundtrip/named_ranges/golden.xlsx	948
+C	roundtrip-calipers/roundtrip/named_ranges/init.xlsx	948
+C	roundtrip-calipers/roundtrip/number_formats/golden.xlsx	8071
+C	roundtrip-calipers/roundtrip/number_formats/init.xlsx	8071
+C	roundtrip-calipers/roundtrip/picture/golden.xlsx	1122
+C	roundtrip-calipers/roundtrip/picture/init.xlsx	1122
+C	roundtrip-calipers/roundtrip/pivot/golden.xlsx	1135
+C	roundtrip-calipers/roundtrip/pivot/init.xlsx	1135
+C	roundtrip-calipers/roundtrip/pivot_named_range/golden.xlsx	3115
+C	roundtrip-calipers/roundtrip/pivot_named_range/init.xlsx	3115
 C	roundtrip-calipers/roundtrip/print_repeating/golden.xlsx	828
 C	roundtrip-calipers/roundtrip/print_repeating/init.xlsx	828
 C	roundtrip-calipers/roundtrip/rich_text/golden.xlsx	1704
@@ -477,42 +477,42 @@ C	roundtrip-calipers/roundtrip/rk_number/golden.xlsx	677
 C	roundtrip-calipers/roundtrip/rk_number/init.xlsx	677
 C	roundtrip-calipers/roundtrip/row_col_groups/golden.xlsx	692
 C	roundtrip-calipers/roundtrip/row_col_groups/init.xlsx	692
-C	roundtrip-calipers/roundtrip/rtl/golden.xlsx	813
-C	roundtrip-calipers/roundtrip/rtl/init.xlsx	813
-C	roundtrip-calipers/roundtrip/sample_ss/golden.xlsx	755
-C	roundtrip-calipers/roundtrip/sample_ss/init.xlsx	755
-C	roundtrip-calipers/roundtrip/scatter_chart/golden.xlsx	619
-C	roundtrip-calipers/roundtrip/scatter_chart/init.xlsx	619
-C	roundtrip-calipers/roundtrip/shared_formulas/golden.xlsx	1322
-C	roundtrip-calipers/roundtrip/shared_formulas/init.xlsx	1323
+C	roundtrip-calipers/roundtrip/rtl/golden.xlsx	835
+C	roundtrip-calipers/roundtrip/rtl/init.xlsx	835
+C	roundtrip-calipers/roundtrip/sample_ss/golden.xlsx	757
+C	roundtrip-calipers/roundtrip/sample_ss/init.xlsx	757
+C	roundtrip-calipers/roundtrip/scatter_chart/golden.xlsx	1908
+C	roundtrip-calipers/roundtrip/scatter_chart/init.xlsx	1908
+C	roundtrip-calipers/roundtrip/shared_formulas/golden.xlsx	1363
+C	roundtrip-calipers/roundtrip/shared_formulas/init.xlsx	1364
 C	roundtrip-calipers/roundtrip/sheet_protection/golden.xlsx	590
 C	roundtrip-calipers/roundtrip/sheet_protection/init.xlsx	590
 C	roundtrip-calipers/roundtrip/sheet_tab_colors/golden.xlsx	596
 C	roundtrip-calipers/roundtrip/sheet_tab_colors/init.xlsx	596
 C	roundtrip-calipers/roundtrip/simple/golden.xlsx	741
 C	roundtrip-calipers/roundtrip/simple/init.xlsx	741
-C	roundtrip-calipers/roundtrip/simple_comments/golden.xlsx	648
-C	roundtrip-calipers/roundtrip/simple_comments/init.xlsx	648
+C	roundtrip-calipers/roundtrip/simple_comments/golden.xlsx	697
+C	roundtrip-calipers/roundtrip/simple_comments/init.xlsx	697
 C	roundtrip-calipers/roundtrip/simple_multi_cell/golden.xlsx	658
 C	roundtrip-calipers/roundtrip/simple_multi_cell/init.xlsx	658
-C	roundtrip-calipers/roundtrip/structured_refs/golden.xlsx	923
-C	roundtrip-calipers/roundtrip/structured_refs/init.xlsx	923
+C	roundtrip-calipers/roundtrip/structured_refs/golden.xlsx	933
+C	roundtrip-calipers/roundtrip/structured_refs/init.xlsx	933
 C	roundtrip-calipers/roundtrip/styled/golden.xlsx	798
 C	roundtrip-calipers/roundtrip/styled/init.xlsx	798
 C	roundtrip-calipers/roundtrip/styles/golden.xlsx	968
 C	roundtrip-calipers/roundtrip/styles/init.xlsx	968
 C	roundtrip-calipers/roundtrip/table_50867/golden.xlsx	681
 C	roundtrip-calipers/roundtrip/table_50867/init.xlsx	681
-C	roundtrip-calipers/roundtrip/tables/golden.xlsx	16440
-C	roundtrip-calipers/roundtrip/tables/init.xlsx	16439
-C	roundtrip-calipers/roundtrip/textbox/golden.xlsx	599
-C	roundtrip-calipers/roundtrip/textbox/init.xlsx	599
+C	roundtrip-calipers/roundtrip/tables/golden.xlsx	16462
+C	roundtrip-calipers/roundtrip/tables/init.xlsx	16461
+C	roundtrip-calipers/roundtrip/textbox/golden.xlsx	672
+C	roundtrip-calipers/roundtrip/textbox/init.xlsx	672
 C	roundtrip-calipers/roundtrip/theme_linked_colors/golden.xlsx	262
 C	roundtrip-calipers/roundtrip/theme_linked_colors/init.xlsx	262
 C	roundtrip-calipers/roundtrip/themes/golden.xlsx	846
 C	roundtrip-calipers/roundtrip/themes/init.xlsx	846
-C	roundtrip-calipers/roundtrip/three_charts/golden.xlsx	746
-C	roundtrip-calipers/roundtrip/three_charts/init.xlsx	746
+C	roundtrip-calipers/roundtrip/three_charts/golden.xlsx	1164
+C	roundtrip-calipers/roundtrip/three_charts/init.xlsx	1164
 C	roundtrip-calipers/roundtrip/types/golden.xlsx	761
 C	roundtrip-calipers/roundtrip/types/init.xlsx	761
 C	roundtrip-calipers/roundtrip/unicode/golden.xlsx	742
@@ -521,567 +521,567 @@ C	roundtrip-calipers/roundtrip/unicode_sheet_name/golden.xlsx	725
 C	roundtrip-calipers/roundtrip/unicode_sheet_name/init.xlsx	725
 C	roundtrip-calipers/roundtrip/widths_heights/golden.xlsx	731
 C	roundtrip-calipers/roundtrip/widths_heights/init.xlsx	731
-C	roundtrip-calipers/roundtrip/with_chart/golden.xlsx	651
-C	roundtrip-calipers/roundtrip/with_chart/init.xlsx	651
+C	roundtrip-calipers/roundtrip/with_chart/golden.xlsx	797
+C	roundtrip-calipers/roundtrip/with_chart/init.xlsx	797
 C	roundtrip-calipers/roundtrip/with_table/golden.xlsx	653
 C	roundtrip-calipers/roundtrip/with_table/init.xlsx	653
 C	roundtrip-calipers/roundtrip/workbook_protection/golden.xlsx	614
 C	roundtrip-calipers/roundtrip/workbook_protection/init.xlsx	614
-C	roundtrip-calipers/roundtrip/xlookup/golden.xlsx	1312
-C	roundtrip-calipers/roundtrip/xlookup/init.xlsx	1312
-C	roundtrip-calipers/scratch/add_sheet/golden.xlsx	697
-C	roundtrip-calipers/scratch/autofilter/golden.xlsx	721
-C	roundtrip-calipers/scratch/chart/golden.xlsx	719
-C	roundtrip-calipers/scratch/column_row_sizes/golden.xlsx	682
-C	roundtrip-calipers/scratch/conditional_formatting/golden.xlsx	716
-C	roundtrip-calipers/scratch/data_validation/golden.xlsx	678
-C	roundtrip-calipers/scratch/freeze_panes/golden.xlsx	705
-C	roundtrip-calipers/scratch/merge/golden.xlsx	706
-C	roundtrip-calipers/scratch/named_range/golden.xlsx	689
-C	roundtrip-calipers/scratch/number_format/golden.xlsx	687
-C	roundtrip-calipers/scratch/numbers/golden.xlsx	693
-C	roundtrip-calipers/scratch/pivot_table/golden.xlsx	850
-C	roundtrip-calipers/scratch/spill/golden.xlsx	739
-C	roundtrip-calipers/scratch/table/golden.xlsx	747
-C	roundtrip-calipers/scratch/text/golden.xlsx	705
-F	roundtrip-calipers/default/add_sheet_sparse_ids/golden.xlsx	* 187
-F	roundtrip-calipers/default/chart_titles/golden.xlsx	* 183
-F	roundtrip-calipers/default/multi_row_formulas/golden.xlsx	* 181
-F	roundtrip-calipers/default/names_add_defined_names_order/golden.xlsx	* 180
-F	roundtrip-calipers/default/simple_set_a1/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/align_center/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/align_wrap/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_cf_at/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/api_cf_clear/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/api_cf_count/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/api_cf_delete/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_cf_item/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/api_cf_null/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/api_cf_range/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/api_cf_range_null/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/api_comment_at/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_cell/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_count/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_delete/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_item/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_location/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_null/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_add/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_at/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_count/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_delete/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_id/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_item/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_location/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_null/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_comment_reply_parent/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_filter_apply/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_bottom_items/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_bottom_percent/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_cell_color/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/api_filter_clear/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_custom/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_dynamic/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_font_color/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/api_filter_table_clear/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_table_reapply/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_top_items/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_top_percent/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_filter_values/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/api_function_abs/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_acos/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_acosh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_asin/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_asinh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_atan/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_atan2/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_atanh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_average/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_concatenate/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_cos/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_cosh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_count/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_countA/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_degrees/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_exact/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_exp/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_int/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_left/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_len/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_ln/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_log/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_log10/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_lower/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_max/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_median/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_mid/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_min/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_mod/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_pi/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_power/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_product/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_quotient/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_radians/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_right/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_round/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_roundDown/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_roundUp/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sign/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sin/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sinh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sqrt/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sqrtPi/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sum/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_sumSq/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_tan/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_tanh/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_trim/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_trunc/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_function_upper/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_adjust_indent/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_range_find/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_find_null/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_freeze_location/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_range_freeze_location_null/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_intersection_null/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_range_replace/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_range_range_used/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_range_used_null/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_sheet_replace/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/api_range_sheet_used/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/api_range_sheet_used_null/golden.xlsx	* 57
-F	roundtrip-calipers/officejs/autofilter_apply/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/autofilter_clear_column_criteria/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/autofilter_clear_criteria/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/autofilter_get_range/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/autofilter_reapply/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/autofilter_remove/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/autofilter_values/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/big_formulas_400/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/big_grid_200x12/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/big_multi_sheet/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/big_values_500/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/borders_get_item_at/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/borders_inside/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/borders_outline/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/cf_cell_value/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/cf_color_scale/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/cf_data_bar/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/cf_icon_set/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/cf_preset/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/cf_text/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/chart_area/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_axes/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_bar/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_column/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_doughnut/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_legend/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_line/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_pie/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_scatter/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/chart_title/golden.xlsx	* 56
-F	roundtrip-calipers/officejs/col_row_size/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/comment_add/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/delete_rows/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/fill_clear/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/fill_solid/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/font_bold_italic/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/font_color/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/font_name_size/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/font_underline/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/freeze_at/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/freeze_columns/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/freeze_rows/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/freeze_unfreeze/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/hide_rows_cols/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/hyperlink_url/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/insert_cols/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/insert_rows/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/merge_cells/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/names_delete/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/names_formula/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/names_formula_local/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/names_lookup/golden.xlsx	* 50
-F	roundtrip-calipers/officejs/names_range/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/names_sheet_scoped/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/numfmt_accounting/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/numfmt_currency/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/numfmt_date/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/numfmt_percent/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/pivot_count/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/pivot_filter/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/pivot_hierarchy_get_item/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/pivot_name/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/pivot_row_col_data/golden.xlsx	* 66
-F	roundtrip-calipers/officejs/pivot_row_data/golden.xlsx	* 64
-F	roundtrip-calipers/officejs/pivot_two_data/golden.xlsx	* 65
-F	roundtrip-calipers/officejs/range_bounding_rect/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_by_indexes/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_clear/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_cols_before_after/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_copy_from/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_formulas_if/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/range_formulas_lookup/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/range_formulas_nested/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/range_formulas_sum/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/range_get_cell/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/range_get_column/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_get_last/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/range_get_row/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_intersection/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_offset/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_resized/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_rows_above_below/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/range_set_booleans/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_set_dates/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_set_mixed/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/range_set_numbers/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/range_set_text/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/range_unmerge/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/sheet_activate/golden.xlsx	* 57
-F	roundtrip-calipers/officejs/sheet_add/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/sheet_copy/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/sheet_delete/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/sheet_get_first/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/sheet_get_item/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/sheet_get_last/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/sheet_get_next/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/sheet_get_previous/golden.xlsx	* 57
-F	roundtrip-calipers/officejs/sheet_gridlines/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/sheet_hidden/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/sheet_lookup/golden.xlsx	* 57
-F	roundtrip-calipers/officejs/sheet_position/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/sheet_rename/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/sheet_tab_color/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/small_three_cells/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/sort_asc/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/spill_chooserows/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_filter/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_sequence/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_sort/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_sortby/golden.xlsx	* 51
-F	roundtrip-calipers/officejs/spill_take_drop/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_transpose/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_unique/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_vstack/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/spill_xlookup/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/spill_xmatch/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/style_good/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/style_input/golden.xlsx	* 55
-F	roundtrip-calipers/officejs/table_add/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_banded/golden.xlsx	* 61
-F	roundtrip-calipers/officejs/table_column_add/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/table_column_lookup/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_columns_delete/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/table_convert_to_range/golden.xlsx	* 71
-F	roundtrip-calipers/officejs/table_delete/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/table_header_body_total_write/golden.xlsx	* 58
-F	roundtrip-calipers/officejs/table_highlight/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/table_lookup/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_name/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_resize/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_row_get_range/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/table_rows_add/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_rows_delete/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_rows_delete_at/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_rows_delete_many/golden.xlsx	* 59
-F	roundtrip-calipers/officejs/table_sort/golden.xlsx	* 61
-F	roundtrip-calipers/officejs/table_style/golden.xlsx	* 60
-F	roundtrip-calipers/officejs/table_totals/golden.xlsx	* 62
-F	roundtrip-calipers/officejs/validation_clear/golden.xlsx	* 53
-F	roundtrip-calipers/officejs/validation_invalid_cells/golden.xlsx	* 52
-F	roundtrip-calipers/officejs/validation_list/golden.xlsx	* 54
-F	roundtrip-calipers/officejs/validation_whole/golden.xlsx	* 54
-F	roundtrip-calipers/pv_goldens/pv23_001/golden.xlsx	* 408
-F	roundtrip-calipers/pv_goldens/pv23_002/golden.xlsx	* 657
-F	roundtrip-calipers/pv_goldens/pv23_003/golden.xlsx	* 234
-F	roundtrip-calipers/pv_goldens/pv23_004/golden.xlsx	* 228
-F	roundtrip-calipers/pv_goldens/pv23_005/golden.xlsx	* 234
-F	roundtrip-calipers/pv_goldens/pv23_006/golden.xlsx	* 422
-F	roundtrip-calipers/pv_goldens/pv23_007/golden.xlsx	* 209
-F	roundtrip-calipers/pv_goldens/pv23_008/golden.xlsx	* 157
-F	roundtrip-calipers/pv_goldens/pv23_009/golden.xlsx	* 451
-F	roundtrip-calipers/pv_goldens/pv23_010/golden.xlsx	* 1328
-F	roundtrip-calipers/pv_goldens/pv23_011/golden.xlsx	* 89
-F	roundtrip-calipers/pv_goldens/pv23_012/golden.xlsx	* 88
-F	roundtrip-calipers/pv_goldens/pv23_013/golden.xlsx	* 88
-F	roundtrip-calipers/pv_goldens/pv23_014/golden.xlsx	* 89
-F	roundtrip-calipers/pv_goldens/pv23_015/golden.xlsx	* 89
-F	roundtrip-calipers/pv_goldens/pv23_016/golden.xlsx	* 225
-F	roundtrip-calipers/pv_goldens/pv23_017/golden.xlsx	* 223
-F	roundtrip-calipers/pv_goldens/pv23_018/golden.xlsx	* 227
-F	roundtrip-calipers/pv_goldens/pv23_019/golden.xlsx	* 280
-F	roundtrip-calipers/pv_goldens/pv23_020/golden.xlsx	* 192
-F	roundtrip-calipers/pv_goldens/pv23_021/golden.xlsx	* 213
-F	roundtrip-calipers/pv_goldens/pv23_022/golden.xlsx	* 227
-F	roundtrip-calipers/pv_goldens/pv23_023/golden.xlsx	* 240
-F	roundtrip-calipers/pv_goldens/pv23_024/golden.xlsx	* 253
-F	roundtrip-calipers/pv_goldens/pv23_025/golden.xlsx	* 251
-F	roundtrip-calipers/pv_goldens/pv23_026/golden.xlsx	* 252
-F	roundtrip-calipers/pv_goldens/pv23_027/golden.xlsx	* 268
-F	roundtrip-calipers/pv_goldens/pv23_028/golden.xlsx	* 241
-F	roundtrip-calipers/pv_goldens/pv23_029/golden.xlsx	* 236
-F	roundtrip-calipers/pv_goldens/pv23_030/golden.xlsx	* 234
-F	roundtrip-calipers/pv_goldens/pv23_031/golden.xlsx	* 240
-F	roundtrip-calipers/pv_goldens/pv23_032/golden.xlsx	* 250
-F	roundtrip-calipers/pv_goldens/pv23_033/golden.xlsx	* 250
-F	roundtrip-calipers/pv_goldens/pv23_034/golden.xlsx	* 184
-F	roundtrip-calipers/pv_goldens/pv23_035/golden.xlsx	* 226
-F	roundtrip-calipers/pv_goldens/pv23_036/golden.xlsx	* 176
-F	roundtrip-calipers/pv_goldens/pv23_037/golden.xlsx	* 64
-F	roundtrip-calipers/pv_goldens/pv23_038/golden.xlsx	* 103
-F	roundtrip-calipers/pv_goldens/pv23_039/golden.xlsx	* 93
-F	roundtrip-calipers/pv_goldens/pv23_040/golden.xlsx	* 105
-F	roundtrip-calipers/pv_goldens/pv23_041/golden.xlsx	* 777
-F	roundtrip-calipers/pv_goldens/pv23_042/golden.xlsx	* 603
-F	roundtrip-calipers/pv_goldens/pv23_043/golden.xlsx	* 117
-F	roundtrip-calipers/pv_goldens/pv23_044/golden.xlsx	* 90
-F	roundtrip-calipers/pv_goldens/pv23_045/golden.xlsx	* 257
-F	roundtrip-calipers/pv_goldens/pv23_046/golden.xlsx	* 577
-F	roundtrip-calipers/pv_goldens/pv23_047/golden.xlsx	* 289
-F	roundtrip-calipers/pv_goldens/pv23_048/golden.xlsx	* 293
-F	roundtrip-calipers/pv_goldens/pv23_049/golden.xlsx	* 557
-F	roundtrip-calipers/pv_goldens/pv23_050/golden.xlsx	* 558
-F	roundtrip-calipers/pv_goldens/pv23_051/golden.xlsx	* 565
-F	roundtrip-calipers/pv_goldens/pv23_052/golden.xlsx	* 564
-F	roundtrip-calipers/pv_goldens/pv23_053/golden.xlsx	* 565
-F	roundtrip-calipers/pv_goldens/pv23_054/golden.xlsx	* 567
-F	roundtrip-calipers/pv_goldens/pv23_055/golden.xlsx	* 567
-F	roundtrip-calipers/pv_goldens/pv23_056/golden.xlsx	* 219
-F	roundtrip-calipers/pv_goldens/pv23_057/golden.xlsx	* 620
-F	roundtrip-calipers/pv_goldens/pv23_058/golden.xlsx	* 68
-F	roundtrip-calipers/pv_goldens/pv23_059/golden.xlsx	* 620
-F	roundtrip-calipers/pv_goldens/pv23_060/golden.xlsx	* 195
-F	roundtrip-calipers/pv_goldens/pv23_061/golden.xlsx	* 122
-F	roundtrip-calipers/pv_goldens/pv23_062/golden.xlsx	* 647
-F	roundtrip-calipers/pv_goldens/pv23_063/golden.xlsx	* 235
-F	roundtrip-calipers/pv_goldens/pv23_064/golden.xlsx	* 510
-F	roundtrip-calipers/pv_goldens/pv23_065/golden.xlsx	* 508
-F	roundtrip-calipers/pv_goldens/pv23_066/golden.xlsx	* 336
-F	roundtrip-calipers/pv_goldens/pv26_001/golden.xlsx	* 2404
-F	roundtrip-calipers/pv_goldens/pv26_002/golden.xlsx	* 671
-F	roundtrip-calipers/pv_goldens/pv26_003/golden.xlsx	* 1318
-F	roundtrip-calipers/pv_goldens/pv26_004/golden.xlsx	* 481
-F	roundtrip-calipers/pv_goldens/pv26_005/golden.xlsx	* 174
-F	roundtrip-calipers/pv_goldens/pv26_006/golden.xlsx	* 509
-F	roundtrip-calipers/pv_goldens/pv26_007/golden.xlsx	* 403
-F	roundtrip-calipers/pv_goldens/pv26_008/golden.xlsx	* 1636
-F	roundtrip-calipers/pv_goldens/pv26_009/golden.xlsx	* 190
-F	roundtrip-calipers/pv_goldens/pv26_010/golden.xlsx	* 620
-F	roundtrip-calipers/pv_goldens/pv26_011/golden.xlsx	* 1231
-F	roundtrip-calipers/pv_goldens/pv26_012/golden.xlsx	* 417
-F	roundtrip-calipers/pv_goldens/pv26_013/golden.xlsx	* 417
-F	roundtrip-calipers/pv_goldens/pv26_014/golden.xlsx	* 556
-F	roundtrip-calipers/pv_goldens/pv26_015/golden.xlsx	* 2849
-F	roundtrip-calipers/pv_goldens/pv26_016/golden.xlsx	* 1344
-F	roundtrip-calipers/pv_goldens/pv26_017/golden.xlsx	* 1333
-F	roundtrip-calipers/pv_goldens/pv26_018/golden.xlsx	* 1355
-F	roundtrip-calipers/pv_goldens/pv26_019/golden.xlsx	* 659
-F	roundtrip-calipers/pv_goldens/pv26_020/golden.xlsx	* 990
-F	roundtrip-calipers/pv_goldens/pv26_2_001/golden.xlsx	* 2404
-F	roundtrip-calipers/pv_goldens/pv26_2_002/golden.xlsx	* 671
-F	roundtrip-calipers/pv_goldens/pv26_2_003/golden.xlsx	* 1318
-F	roundtrip-calipers/pv_goldens/pv26_2_004/golden.xlsx	* 482
-F	roundtrip-calipers/pv_goldens/pv26_2_005/golden.xlsx	* 174
-F	roundtrip-calipers/pv_goldens/pv26_2_006/golden.xlsx	* 509
-F	roundtrip-calipers/pv_goldens/pv26_2_007/golden.xlsx	* 403
-F	roundtrip-calipers/pv_goldens/pv26_2_008/golden.xlsx	* 1636
-F	roundtrip-calipers/pv_goldens/pv26_2_009/golden.xlsx	* 190
-F	roundtrip-calipers/pv_goldens/pv26_2_010/golden.xlsx	* 603
-F	roundtrip-calipers/pv_goldens/pv26_2_011/golden.xlsx	* 1231
-F	roundtrip-calipers/pv_goldens/pv26_2_012/golden.xlsx	* 417
-F	roundtrip-calipers/pv_goldens/pv26_2_013/golden.xlsx	* 417
-F	roundtrip-calipers/pv_goldens/pv26_2_014/golden.xlsx	* 556
-F	roundtrip-calipers/pv_goldens/pv26_2_015/golden.xlsx	* 2849
-F	roundtrip-calipers/pv_goldens/pv26_2_016/golden.xlsx	* 1174
-F	roundtrip-calipers/pv_goldens/pv26_2_017/golden.xlsx	* 1333
-F	roundtrip-calipers/pv_goldens/pv26_2_018/golden.xlsx	* 1355
-F	roundtrip-calipers/pv_goldens/pv26_2_019/golden.xlsx	* 659
-F	roundtrip-calipers/pv_goldens/pv26_2_020/golden.xlsx	* 990
-F	roundtrip-calipers/pv_goldens/pv26_2_021/golden.xlsx	* 417
-F	roundtrip-calipers/recalculate/offset_controls/golden.xlsx	* 49
-F	roundtrip-calipers/recalculate/offset_index_bases/golden.xlsx	* 49
-F	roundtrip-calipers/recalculate/offset_lookup/golden.xlsx	* 49
-F	roundtrip-calipers/recalculate/offset_named_bases/golden.xlsx	* 49
-F	roundtrip-calipers/recalculate/offset_period_counts/golden.xlsx	* 49
-F	roundtrip-calipers/roundtrip/autofilter/golden.xlsx	* 244
-F	roundtrip-calipers/roundtrip/autofilter/init.xlsx	* 244
-F	roundtrip-calipers/roundtrip/bg_color_ranges/golden.xlsx	* 49
-F	roundtrip-calipers/roundtrip/bg_color_ranges/init.xlsx	* 50
-F	roundtrip-calipers/roundtrip/booleans/golden.xlsx	* 157
-F	roundtrip-calipers/roundtrip/booleans/init.xlsx	* 157
-F	roundtrip-calipers/roundtrip/border_colours/golden.xlsx	* 164
-F	roundtrip-calipers/roundtrip/border_colours/init.xlsx	* 164
-F	roundtrip-calipers/roundtrip/cf_samples/golden.xlsx	* 1118
-F	roundtrip-calipers/roundtrip/cf_samples/init.xlsx	* 1118
-F	roundtrip-calipers/roundtrip/comment_test/golden.xlsx	* 184
-F	roundtrip-calipers/roundtrip/comment_test/init.xlsx	* 184
-F	roundtrip-calipers/roundtrip/comments/golden.xlsx	* 240
-F	roundtrip-calipers/roundtrip/comments/init.xlsx	* 240
-F	roundtrip-calipers/roundtrip/conditional_formatting/golden.xlsx	* 168
-F	roundtrip-calipers/roundtrip/conditional_formatting/init.xlsx	* 168
-F	roundtrip-calipers/roundtrip/custom_properties/golden.xlsx	* 147
-F	roundtrip-calipers/roundtrip/custom_properties/init.xlsx	* 147
-F	roundtrip-calipers/roundtrip/custom_view_printer_settings/golden.xlsx	* 189
-F	roundtrip-calipers/roundtrip/custom_view_printer_settings/init.xlsx	* 57
-F	roundtrip-calipers/roundtrip/data_validation/golden.xlsx	* 78
-F	roundtrip-calipers/roundtrip/data_validation/init.xlsx	* 78
-F	roundtrip-calipers/roundtrip/date_cells/golden.xlsx	* 158
-F	roundtrip-calipers/roundtrip/date_cells/init.xlsx	* 158
-F	roundtrip-calipers/roundtrip/date_formats/golden.xlsx	* 173
-F	roundtrip-calipers/roundtrip/date_formats/init.xlsx	* 173
-F	roundtrip-calipers/roundtrip/drawing/golden.xlsx	* 164
-F	roundtrip-calipers/roundtrip/drawing/init.xlsx	* 164
-F	roundtrip-calipers/roundtrip/empty/golden.xlsx	* 51
-F	roundtrip-calipers/roundtrip/empty/init.xlsx	* 51
-F	roundtrip-calipers/roundtrip/excel_tables/golden.xlsx	* 158
-F	roundtrip-calipers/roundtrip/excel_tables/init.xlsx	* 158
-F	roundtrip-calipers/roundtrip/font_theme_colours/golden.xlsx	* 164
-F	roundtrip-calipers/roundtrip/font_theme_colours/init.xlsx	* 164
-F	roundtrip-calipers/roundtrip/formatting/golden.xlsx	* 156
-F	roundtrip-calipers/roundtrip/formatting/init.xlsx	* 156
-F	roundtrip-calipers/roundtrip/formula_eval/golden.xlsx	* 47
-F	roundtrip-calipers/roundtrip/formula_eval/init.xlsx	* 47
-F	roundtrip-calipers/roundtrip/formula_stress_test/golden.xlsx	* 223
-F	roundtrip-calipers/roundtrip/formula_stress_test/init.xlsx	* 223
-F	roundtrip-calipers/roundtrip/formulas/golden.xlsx	* 51
-F	roundtrip-calipers/roundtrip/formulas/init.xlsx	* 51
-F	roundtrip-calipers/roundtrip/formulas_conditional/golden.xlsx	* 56
-F	roundtrip-calipers/roundtrip/formulas_conditional/init.xlsx	* 57
-F	roundtrip-calipers/roundtrip/formulas_database/golden.xlsx	* 58
-F	roundtrip-calipers/roundtrip/formulas_database/init.xlsx	* 59
-F	roundtrip-calipers/roundtrip/formulas_datetime/golden.xlsx	* 71
-F	roundtrip-calipers/roundtrip/formulas_datetime/init.xlsx	* 72
-F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/golden.xlsx	* 80
-F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/init.xlsx	* 81
-F	roundtrip-calipers/roundtrip/formulas_engineering/golden.xlsx	* 65
-F	roundtrip-calipers/roundtrip/formulas_engineering/init.xlsx	* 66
-F	roundtrip-calipers/roundtrip/formulas_financial/golden.xlsx	* 59
-F	roundtrip-calipers/roundtrip/formulas_financial/init.xlsx	* 60
-F	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	* 108
-F	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	* 109
-F	roundtrip-calipers/roundtrip/formulas_logical/golden.xlsx	* 60
-F	roundtrip-calipers/roundtrip/formulas_logical/init.xlsx	* 61
-F	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	* 102
-F	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	* 103
-F	roundtrip-calipers/roundtrip/formulas_math_basic/golden.xlsx	* 59
-F	roundtrip-calipers/roundtrip/formulas_math_basic/init.xlsx	* 60
-F	roundtrip-calipers/roundtrip/formulas_math_trig/golden.xlsx	* 64
-F	roundtrip-calipers/roundtrip/formulas_math_trig/init.xlsx	* 65
-F	roundtrip-calipers/roundtrip/formulas_nested/golden.xlsx	* 82
-F	roundtrip-calipers/roundtrip/formulas_nested/init.xlsx	* 83
-F	roundtrip-calipers/roundtrip/formulas_statistical/golden.xlsx	* 66
-F	roundtrip-calipers/roundtrip/formulas_statistical/init.xlsx	* 67
-F	roundtrip-calipers/roundtrip/formulas_text/golden.xlsx	* 56
-F	roundtrip-calipers/roundtrip/formulas_text/init.xlsx	* 57
-F	roundtrip-calipers/roundtrip/header_footer/golden.xlsx	* 164
-F	roundtrip-calipers/roundtrip/header_footer/init.xlsx	* 164
-F	roundtrip-calipers/roundtrip/hidden_sheet/golden.xlsx	* 157
-F	roundtrip-calipers/roundtrip/hidden_sheet/init.xlsx	* 157
-F	roundtrip-calipers/roundtrip/hyperlinks/golden.xlsx	* 91
-F	roundtrip-calipers/roundtrip/hyperlinks/init.xlsx	* 91
-F	roundtrip-calipers/roundtrip/i18n_hebrew/golden.xlsx	* 1645
-F	roundtrip-calipers/roundtrip/i18n_hebrew/init.xlsx	* 1645
-F	roundtrip-calipers/roundtrip/inline_strings/golden.xlsx	* 70
-F	roundtrip-calipers/roundtrip/inline_strings/init.xlsx	* 70
-F	roundtrip-calipers/roundtrip/large_strings/golden.xlsx	* 155
-F	roundtrip-calipers/roundtrip/large_strings/init.xlsx	* 155
-F	roundtrip-calipers/roundtrip/lbo_model/golden.xlsx	* 107
-F	roundtrip-calipers/roundtrip/lbo_model/init.xlsx	* 107
-F	roundtrip-calipers/roundtrip/legacy_indexed_colors/golden.xlsx	* 66
-F	roundtrip-calipers/roundtrip/legacy_indexed_colors/init.xlsx	* 67
-F	roundtrip-calipers/roundtrip/lonumbers_2010/golden.xlsx	* 151
-F	roundtrip-calipers/roundtrip/lonumbers_2010/init.xlsx	* 151
-F	roundtrip-calipers/roundtrip/lonumbers_2011/golden.xlsx	* 146
-F	roundtrip-calipers/roundtrip/lonumbers_2011/init.xlsx	* 146
-F	roundtrip-calipers/roundtrip/merge_cells/golden.xlsx	* 141
-F	roundtrip-calipers/roundtrip/merge_cells/init.xlsx	* 141
-F	roundtrip-calipers/roundtrip/mixed_sheets/golden.xlsx	* 253
-F	roundtrip-calipers/roundtrip/mixed_sheets/init.xlsx	* 253
-F	roundtrip-calipers/roundtrip/multi_sheet/golden.xlsx	* 60
-F	roundtrip-calipers/roundtrip/multi_sheet/init.xlsx	* 60
-F	roundtrip-calipers/roundtrip/named_ranges/golden.xlsx	* 151
-F	roundtrip-calipers/roundtrip/named_ranges/init.xlsx	* 151
-F	roundtrip-calipers/roundtrip/number_formats/golden.xlsx	* 180
-F	roundtrip-calipers/roundtrip/number_formats/init.xlsx	* 180
-F	roundtrip-calipers/roundtrip/picture/golden.xlsx	* 105
-F	roundtrip-calipers/roundtrip/picture/init.xlsx	* 105
-F	roundtrip-calipers/roundtrip/pivot/golden.xlsx	* 119
-F	roundtrip-calipers/roundtrip/pivot/init.xlsx	* 119
-F	roundtrip-calipers/roundtrip/pivot_named_range/golden.xlsx	* 276
-F	roundtrip-calipers/roundtrip/pivot_named_range/init.xlsx	* 276
-F	roundtrip-calipers/roundtrip/print_repeating/golden.xlsx	* 166
-F	roundtrip-calipers/roundtrip/print_repeating/init.xlsx	* 166
-F	roundtrip-calipers/roundtrip/rich_text/golden.xlsx	* 214
-F	roundtrip-calipers/roundtrip/rich_text/init.xlsx	* 214
-F	roundtrip-calipers/roundtrip/rk_number/golden.xlsx	* 144
-F	roundtrip-calipers/roundtrip/rk_number/init.xlsx	* 144
-F	roundtrip-calipers/roundtrip/row_col_groups/golden.xlsx	* 146
-F	roundtrip-calipers/roundtrip/row_col_groups/init.xlsx	* 146
-F	roundtrip-calipers/roundtrip/rtl/golden.xlsx	* 60
-F	roundtrip-calipers/roundtrip/rtl/init.xlsx	* 60
-F	roundtrip-calipers/roundtrip/sample_ss/golden.xlsx	* 156
-F	roundtrip-calipers/roundtrip/sample_ss/init.xlsx	* 156
-F	roundtrip-calipers/roundtrip/scatter_chart/golden.xlsx	* 97
-F	roundtrip-calipers/roundtrip/scatter_chart/init.xlsx	* 97
-F	roundtrip-calipers/roundtrip/shared_formulas/golden.xlsx	* 157
-F	roundtrip-calipers/roundtrip/shared_formulas/init.xlsx	* 158
-F	roundtrip-calipers/roundtrip/sheet_protection/golden.xlsx	* 158
-F	roundtrip-calipers/roundtrip/sheet_protection/init.xlsx	* 158
-F	roundtrip-calipers/roundtrip/sheet_tab_colors/golden.xlsx	* 160
-F	roundtrip-calipers/roundtrip/sheet_tab_colors/init.xlsx	* 160
-F	roundtrip-calipers/roundtrip/simple/golden.xlsx	* 49
-F	roundtrip-calipers/roundtrip/simple/init.xlsx	* 49
-F	roundtrip-calipers/roundtrip/simple_comments/golden.xlsx	* 175
-F	roundtrip-calipers/roundtrip/simple_comments/init.xlsx	* 175
-F	roundtrip-calipers/roundtrip/simple_multi_cell/golden.xlsx	* 164
-F	roundtrip-calipers/roundtrip/simple_multi_cell/init.xlsx	* 164
-F	roundtrip-calipers/roundtrip/structured_refs/golden.xlsx	* 62
-F	roundtrip-calipers/roundtrip/structured_refs/init.xlsx	* 62
-F	roundtrip-calipers/roundtrip/styled/golden.xlsx	* 161
-F	roundtrip-calipers/roundtrip/styled/init.xlsx	* 161
-F	roundtrip-calipers/roundtrip/styles/golden.xlsx	* 202
-F	roundtrip-calipers/roundtrip/styles/init.xlsx	* 202
-F	roundtrip-calipers/roundtrip/table_50867/golden.xlsx	* 166
-F	roundtrip-calipers/roundtrip/table_50867/init.xlsx	* 166
-F	roundtrip-calipers/roundtrip/tables/golden.xlsx	* 341
-F	roundtrip-calipers/roundtrip/tables/init.xlsx	* 340
-F	roundtrip-calipers/roundtrip/textbox/golden.xlsx	* 159
-F	roundtrip-calipers/roundtrip/textbox/init.xlsx	* 159
-F	roundtrip-calipers/roundtrip/theme_linked_colors/golden.xlsx	* 170
-F	roundtrip-calipers/roundtrip/theme_linked_colors/init.xlsx	* 170
-F	roundtrip-calipers/roundtrip/themes/golden.xlsx	* 147
-F	roundtrip-calipers/roundtrip/themes/init.xlsx	* 147
-F	roundtrip-calipers/roundtrip/three_charts/golden.xlsx	* 162
-F	roundtrip-calipers/roundtrip/three_charts/init.xlsx	* 162
-F	roundtrip-calipers/roundtrip/types/golden.xlsx	* 49
-F	roundtrip-calipers/roundtrip/types/init.xlsx	* 49
-F	roundtrip-calipers/roundtrip/unicode/golden.xlsx	* 49
-F	roundtrip-calipers/roundtrip/unicode/init.xlsx	* 49
-F	roundtrip-calipers/roundtrip/unicode_sheet_name/golden.xlsx	* 52
-F	roundtrip-calipers/roundtrip/unicode_sheet_name/init.xlsx	* 52
-F	roundtrip-calipers/roundtrip/widths_heights/golden.xlsx	* 45
-F	roundtrip-calipers/roundtrip/widths_heights/init.xlsx	* 45
-F	roundtrip-calipers/roundtrip/with_chart/golden.xlsx	* 159
-F	roundtrip-calipers/roundtrip/with_chart/init.xlsx	* 159
-F	roundtrip-calipers/roundtrip/with_table/golden.xlsx	* 166
-F	roundtrip-calipers/roundtrip/with_table/init.xlsx	* 166
-F	roundtrip-calipers/roundtrip/workbook_protection/golden.xlsx	* 155
-F	roundtrip-calipers/roundtrip/workbook_protection/init.xlsx	* 155
-F	roundtrip-calipers/roundtrip/xlookup/golden.xlsx	* 57
-F	roundtrip-calipers/roundtrip/xlookup/init.xlsx	* 57
-F	roundtrip-calipers/scratch/add_sheet/golden.xlsx	* 59
-F	roundtrip-calipers/scratch/autofilter/golden.xlsx	* 52
-F	roundtrip-calipers/scratch/chart/golden.xlsx	* 56
-F	roundtrip-calipers/scratch/column_row_sizes/golden.xlsx	* 53
-F	roundtrip-calipers/scratch/conditional_formatting/golden.xlsx	* 54
-F	roundtrip-calipers/scratch/data_validation/golden.xlsx	* 54
-F	roundtrip-calipers/scratch/freeze_panes/golden.xlsx	* 52
-F	roundtrip-calipers/scratch/merge/golden.xlsx	* 51
-F	roundtrip-calipers/scratch/named_range/golden.xlsx	* 52
-F	roundtrip-calipers/scratch/number_format/golden.xlsx	* 53
-F	roundtrip-calipers/scratch/numbers/golden.xlsx	* 52
-F	roundtrip-calipers/scratch/pivot_table/golden.xlsx	* 64
-F	roundtrip-calipers/scratch/spill/golden.xlsx	* 52
-F	roundtrip-calipers/scratch/table/golden.xlsx	* 58
-F	roundtrip-calipers/scratch/text/golden.xlsx	* 51
+C	roundtrip-calipers/roundtrip/xlookup/golden.xlsx	1317
+C	roundtrip-calipers/roundtrip/xlookup/init.xlsx	1317
+C	roundtrip-calipers/scratch/add_sheet/golden.xlsx	707
+C	roundtrip-calipers/scratch/autofilter/golden.xlsx	731
+C	roundtrip-calipers/scratch/chart/golden.xlsx	1332
+C	roundtrip-calipers/scratch/column_row_sizes/golden.xlsx	692
+C	roundtrip-calipers/scratch/conditional_formatting/golden.xlsx	726
+C	roundtrip-calipers/scratch/data_validation/golden.xlsx	688
+C	roundtrip-calipers/scratch/freeze_panes/golden.xlsx	715
+C	roundtrip-calipers/scratch/merge/golden.xlsx	716
+C	roundtrip-calipers/scratch/named_range/golden.xlsx	699
+C	roundtrip-calipers/scratch/number_format/golden.xlsx	697
+C	roundtrip-calipers/scratch/numbers/golden.xlsx	703
+C	roundtrip-calipers/scratch/pivot_table/golden.xlsx	917
+C	roundtrip-calipers/scratch/spill/golden.xlsx	751
+C	roundtrip-calipers/scratch/table/golden.xlsx	757
+C	roundtrip-calipers/scratch/text/golden.xlsx	715
+F	roundtrip-calipers/default/add_sheet_sparse_ids/golden.xlsx	* 213 c427516da2d4f993
+F	roundtrip-calipers/default/chart_titles/golden.xlsx	* 910 040529806ad37f29
+F	roundtrip-calipers/default/multi_row_formulas/golden.xlsx	* 217 058326c84f2730c0
+F	roundtrip-calipers/default/names_add_defined_names_order/golden.xlsx	* 210 00f2f86a2c5ca028
+F	roundtrip-calipers/default/simple_set_a1/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/align_center/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/align_wrap/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/api_cf_at/golden.xlsx	* 84 06223ec954979c18
+F	roundtrip-calipers/officejs/api_cf_clear/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/officejs/api_cf_count/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/officejs/api_cf_delete/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/api_cf_item/golden.xlsx	* 84 06223ec954979c18
+F	roundtrip-calipers/officejs/api_cf_null/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/officejs/api_cf_range/golden.xlsx	* 84 06223ec954979c18
+F	roundtrip-calipers/officejs/api_cf_range_null/golden.xlsx	* 84 06223ec954979c18
+F	roundtrip-calipers/officejs/api_comment_at/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_cell/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_count/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_delete/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_item/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_location/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_null/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_add/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_at/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_count/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_delete/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_id/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_item/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_location/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_null/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_comment_reply_parent/golden.xlsx	* 84 d48a498f26ff8971
+F	roundtrip-calipers/officejs/api_filter_apply/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_bottom_items/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_bottom_percent/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_cell_color/golden.xlsx	* 93 cad5f7ccd62d0aa8
+F	roundtrip-calipers/officejs/api_filter_clear/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_custom/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_dynamic/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_font_color/golden.xlsx	* 93 cad5f7ccd62d0aa8
+F	roundtrip-calipers/officejs/api_filter_table_clear/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_table_reapply/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_top_items/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_top_percent/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_filter_values/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/officejs/api_function_abs/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_acos/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_acosh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_asin/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_asinh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_atan/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_atan2/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_atanh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_average/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_concatenate/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_cos/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_cosh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_count/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_countA/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_degrees/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_exact/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_exp/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_int/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_left/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_len/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_ln/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_log/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_log10/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_lower/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_max/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_median/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_mid/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_min/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_mod/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_pi/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_power/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_product/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_quotient/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_radians/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_right/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_round/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_roundDown/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_roundUp/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sign/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sin/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sinh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sqrt/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sqrtPi/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sum/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_sumSq/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_tan/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_tanh/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_trim/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_trunc/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_function_upper/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_adjust_indent/golden.xlsx	* 83 7419111000d571fd
+F	roundtrip-calipers/officejs/api_range_find/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_find_null/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_freeze_location/golden.xlsx	* 83 8e6902c5686dd087
+F	roundtrip-calipers/officejs/api_range_freeze_location_null/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_intersection_null/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_range_replace/golden.xlsx	* 83 82c3e2f8f4d68a5d
+F	roundtrip-calipers/officejs/api_range_range_used/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_range_used_null/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_sheet_replace/golden.xlsx	* 83 82c3e2f8f4d68a5d
+F	roundtrip-calipers/officejs/api_range_sheet_used/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/api_range_sheet_used_null/golden.xlsx	* 89 0ce6b67a487e3f0b
+F	roundtrip-calipers/officejs/autofilter_apply/golden.xlsx	* 83 e130cfa555310a05
+F	roundtrip-calipers/officejs/autofilter_clear_column_criteria/golden.xlsx	* 83 e130cfa555310a05
+F	roundtrip-calipers/officejs/autofilter_clear_criteria/golden.xlsx	* 83 e130cfa555310a05
+F	roundtrip-calipers/officejs/autofilter_get_range/golden.xlsx	* 82 d4755b1ca521530d
+F	roundtrip-calipers/officejs/autofilter_reapply/golden.xlsx	* 87 e92f107c4f4642db
+F	roundtrip-calipers/officejs/autofilter_remove/golden.xlsx	* 82 d4755b1ca521530d
+F	roundtrip-calipers/officejs/autofilter_values/golden.xlsx	* 87 e92f107c4f4642db
+F	roundtrip-calipers/officejs/big_formulas_400/golden.xlsx	* 488 fad0f25596861e8b
+F	roundtrip-calipers/officejs/big_grid_200x12/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/big_multi_sheet/golden.xlsx	* 95 e455f8c21a90caad
+F	roundtrip-calipers/officejs/big_values_500/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/borders_get_item_at/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/borders_inside/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/borders_outline/golden.xlsx	* 95 f6e5d3cc7cc93ba4
+F	roundtrip-calipers/officejs/cf_cell_value/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/officejs/cf_color_scale/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/cf_data_bar/golden.xlsx	* 89 244ac85cc9746c0e
+F	roundtrip-calipers/officejs/cf_icon_set/golden.xlsx	* 84 4c4708ad081ac6d4
+F	roundtrip-calipers/officejs/cf_preset/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/officejs/cf_text/golden.xlsx	* 85 a6fe87a0678e3218
+F	roundtrip-calipers/officejs/chart_area/golden.xlsx	* 706 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_axes/golden.xlsx	* 774 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_bar/golden.xlsx	* 699 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_column/golden.xlsx	* 698 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_doughnut/golden.xlsx	* 680 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_legend/golden.xlsx	* 720 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_line/golden.xlsx	* 706 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_pie/golden.xlsx	* 679 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_scatter/golden.xlsx	* 724 94cc40a89331683c
+F	roundtrip-calipers/officejs/chart_title/golden.xlsx	* 715 94cc40a89331683c
+F	roundtrip-calipers/officejs/col_row_size/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/comment_add/golden.xlsx	* 105 004fc0aa560bbf5f
+F	roundtrip-calipers/officejs/delete_rows/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/fill_clear/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/fill_solid/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/font_bold_italic/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/font_color/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/font_name_size/golden.xlsx	* 84 8db158437a6ffb43
+F	roundtrip-calipers/officejs/font_underline/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/freeze_at/golden.xlsx	* 93 6baa48e62f7b3ce9
+F	roundtrip-calipers/officejs/freeze_columns/golden.xlsx	* 83 8e6902c5686dd087
+F	roundtrip-calipers/officejs/freeze_rows/golden.xlsx	* 83 8e6902c5686dd087
+F	roundtrip-calipers/officejs/freeze_unfreeze/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/hide_rows_cols/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/hyperlink_url/golden.xlsx	* 85 07e1f7197e5a24bf
+F	roundtrip-calipers/officejs/insert_cols/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/insert_rows/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/merge_cells/golden.xlsx	* 82 236685582506f228
+F	roundtrip-calipers/officejs/names_delete/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/names_formula/golden.xlsx	* 83 786cf17f8dad05b3
+F	roundtrip-calipers/officejs/names_formula_local/golden.xlsx	* 87 f95e156e7ca9e37b
+F	roundtrip-calipers/officejs/names_lookup/golden.xlsx	* 86 391246706d73865b
+F	roundtrip-calipers/officejs/names_range/golden.xlsx	* 88 786cf17f8dad05b3
+F	roundtrip-calipers/officejs/names_sheet_scoped/golden.xlsx	* 88 786cf17f8dad05b3
+F	roundtrip-calipers/officejs/numfmt_accounting/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/numfmt_currency/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/numfmt_date/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/numfmt_percent/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/pivot_count/golden.xlsx	* 154 b2cd48e202896a2b
+F	roundtrip-calipers/officejs/pivot_filter/golden.xlsx	* 170 b2cd48e202896a2b
+F	roundtrip-calipers/officejs/pivot_hierarchy_get_item/golden.xlsx	* 162 b2cd48e202896a2b
+F	roundtrip-calipers/officejs/pivot_name/golden.xlsx	* 154 b2cd48e202896a2b
+F	roundtrip-calipers/officejs/pivot_row_col_data/golden.xlsx	* 177 bfb024f403b60529
+F	roundtrip-calipers/officejs/pivot_row_data/golden.xlsx	* 162 b2cd48e202896a2b
+F	roundtrip-calipers/officejs/pivot_two_data/golden.xlsx	* 172 27d61c873e2017d2
+F	roundtrip-calipers/officejs/range_bounding_rect/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_by_indexes/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_clear/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/range_cols_before_after/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_copy_from/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_formulas_if/golden.xlsx	* 91 fad0f25596861e8b
+F	roundtrip-calipers/officejs/range_formulas_lookup/golden.xlsx	* 89 ffaab0a37dd241e1
+F	roundtrip-calipers/officejs/range_formulas_nested/golden.xlsx	* 90 fad0f25596861e8b
+F	roundtrip-calipers/officejs/range_formulas_sum/golden.xlsx	* 90 fad0f25596861e8b
+F	roundtrip-calipers/officejs/range_get_cell/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/range_get_column/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_get_last/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/range_get_row/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_intersection/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_offset/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_resized/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_rows_above_below/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/range_set_booleans/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_set_dates/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_set_mixed/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/range_set_numbers/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/officejs/range_set_text/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/range_unmerge/golden.xlsx	* 82 236685582506f228
+F	roundtrip-calipers/officejs/sheet_activate/golden.xlsx	* 89 364ef791bdc3c291
+F	roundtrip-calipers/officejs/sheet_add/golden.xlsx	* 91 4c56359e790e884f
+F	roundtrip-calipers/officejs/sheet_copy/golden.xlsx	* 91 78eb55c38ca56d73
+F	roundtrip-calipers/officejs/sheet_delete/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/sheet_get_first/golden.xlsx	* 90 0fcdb7b66fc14d16
+F	roundtrip-calipers/officejs/sheet_get_item/golden.xlsx	* 90 0fcdb7b66fc14d16
+F	roundtrip-calipers/officejs/sheet_get_last/golden.xlsx	* 90 0fcdb7b66fc14d16
+F	roundtrip-calipers/officejs/sheet_get_next/golden.xlsx	* 90 07d3fd86a28c8532
+F	roundtrip-calipers/officejs/sheet_get_previous/golden.xlsx	* 89 bc81b9a266bba368
+F	roundtrip-calipers/officejs/sheet_gridlines/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/sheet_hidden/golden.xlsx	* 90 34ff854863874879
+F	roundtrip-calipers/officejs/sheet_lookup/golden.xlsx	* 89 bc81b9a266bba368
+F	roundtrip-calipers/officejs/sheet_position/golden.xlsx	* 91 ae1c521d5255b22b
+F	roundtrip-calipers/officejs/sheet_rename/golden.xlsx	* 83 e8a89a1a2cb69076
+F	roundtrip-calipers/officejs/sheet_tab_color/golden.xlsx	* 86 234271ce686b589c
+F	roundtrip-calipers/officejs/small_three_cells/golden.xlsx	* 89 fad0f25596861e8b
+F	roundtrip-calipers/officejs/sort_asc/golden.xlsx	* 82 ebb57683e92ce524
+F	roundtrip-calipers/officejs/spill_chooserows/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_filter/golden.xlsx	* 88 34ce0aff67e91a57
+F	roundtrip-calipers/officejs/spill_sequence/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_sort/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_sortby/golden.xlsx	* 87 2cc8390e21dcd155
+F	roundtrip-calipers/officejs/spill_take_drop/golden.xlsx	* 90 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_transpose/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_unique/golden.xlsx	* 88 34ce0aff67e91a57
+F	roundtrip-calipers/officejs/spill_vstack/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/officejs/spill_xlookup/golden.xlsx	* 89 ffaab0a37dd241e1
+F	roundtrip-calipers/officejs/spill_xmatch/golden.xlsx	* 89 ffaab0a37dd241e1
+F	roundtrip-calipers/officejs/style_good/golden.xlsx	* 85 171f1c954963b639
+F	roundtrip-calipers/officejs/style_input/golden.xlsx	* 86 795c3745274ab428
+F	roundtrip-calipers/officejs/table_add/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_banded/golden.xlsx	* 92 408500662e02fd74
+F	roundtrip-calipers/officejs/table_column_add/golden.xlsx	* 90 51795ac93eb25632
+F	roundtrip-calipers/officejs/table_column_lookup/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_columns_delete/golden.xlsx	* 90 8932f0fd2c401836
+F	roundtrip-calipers/officejs/table_convert_to_range/golden.xlsx	* 102 1db9259da8aaebcc
+F	roundtrip-calipers/officejs/table_delete/golden.xlsx	* 83 a64acfbe1d2e299b
+F	roundtrip-calipers/officejs/table_header_body_total_write/golden.xlsx	* 92 2aede1298920af05
+F	roundtrip-calipers/officejs/table_highlight/golden.xlsx	* 93 20dbb0ee77537146
+F	roundtrip-calipers/officejs/table_lookup/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_name/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_resize/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_row_get_range/golden.xlsx	* 90 51795ac93eb25632
+F	roundtrip-calipers/officejs/table_rows_add/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_rows_delete/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_rows_delete_at/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_rows_delete_many/golden.xlsx	* 90 51795ac93eb25632
+F	roundtrip-calipers/officejs/table_sort/golden.xlsx	* 93 987844c80d01e6e8
+F	roundtrip-calipers/officejs/table_style/golden.xlsx	* 91 3d4ab59e9a0189bc
+F	roundtrip-calipers/officejs/table_totals/golden.xlsx	* 98 f0ca56e5784f4aae
+F	roundtrip-calipers/officejs/validation_clear/golden.xlsx	* 84 47b00946fc7627bc
+F	roundtrip-calipers/officejs/validation_invalid_cells/golden.xlsx	* 85 7cbb0947486c0934
+F	roundtrip-calipers/officejs/validation_list/golden.xlsx	* 87 7af35fd93c0dfa7d
+F	roundtrip-calipers/officejs/validation_whole/golden.xlsx	* 88 7af35fd93c0dfa7d
+F	roundtrip-calipers/pv_goldens/pv23_001/golden.xlsx	* 37454 5d2ff18b3a6290fa
+F	roundtrip-calipers/pv_goldens/pv23_002/golden.xlsx	* 12131 4554a665cbc88f2d
+F	roundtrip-calipers/pv_goldens/pv23_003/golden.xlsx	* 503 95574355677d4979
+F	roundtrip-calipers/pv_goldens/pv23_004/golden.xlsx	* 775 30f8117cdc0d2473
+F	roundtrip-calipers/pv_goldens/pv23_005/golden.xlsx	* 243 d2052c59f56a3a0b
+F	roundtrip-calipers/pv_goldens/pv23_006/golden.xlsx	* 4209 b3f5c7117d37e60f
+F	roundtrip-calipers/pv_goldens/pv23_007/golden.xlsx	* 1236 7d10ed2c206e9f63
+F	roundtrip-calipers/pv_goldens/pv23_008/golden.xlsx	* 2673 5fd416687a5d887a
+F	roundtrip-calipers/pv_goldens/pv23_009/golden.xlsx	* 8096 e37b6a66c927d525
+F	roundtrip-calipers/pv_goldens/pv23_010/golden.xlsx	* 15888 41d1ea7ebef38b48
+F	roundtrip-calipers/pv_goldens/pv23_011/golden.xlsx	* 774 e4b9cfa6ead5d3f9
+F	roundtrip-calipers/pv_goldens/pv23_012/golden.xlsx	* 773 6ddb6add7aacfc53
+F	roundtrip-calipers/pv_goldens/pv23_013/golden.xlsx	* 773 6ddb6add7aacfc53
+F	roundtrip-calipers/pv_goldens/pv23_014/golden.xlsx	* 774 e4b9cfa6ead5d3f9
+F	roundtrip-calipers/pv_goldens/pv23_015/golden.xlsx	* 774 e4b9cfa6ead5d3f9
+F	roundtrip-calipers/pv_goldens/pv23_016/golden.xlsx	* 1108 002faed581215e93
+F	roundtrip-calipers/pv_goldens/pv23_017/golden.xlsx	* 1098 c77212bb8184aa47
+F	roundtrip-calipers/pv_goldens/pv23_018/golden.xlsx	* 1110 df49626c80d4fd3e
+F	roundtrip-calipers/pv_goldens/pv23_019/golden.xlsx	* 1737 d16fe7590d6ecde1
+F	roundtrip-calipers/pv_goldens/pv23_020/golden.xlsx	* 549 5f2dd4719dad6edf
+F	roundtrip-calipers/pv_goldens/pv23_021/golden.xlsx	* 1138 89bb565f29481410
+F	roundtrip-calipers/pv_goldens/pv23_022/golden.xlsx	* 1332 ced00b2bd7e5e605
+F	roundtrip-calipers/pv_goldens/pv23_023/golden.xlsx	* 1356 44e1f4566ca2204e
+F	roundtrip-calipers/pv_goldens/pv23_024/golden.xlsx	* 1555 2791d0910b041b57
+F	roundtrip-calipers/pv_goldens/pv23_025/golden.xlsx	* 1553 4165056a4b36fadf
+F	roundtrip-calipers/pv_goldens/pv23_026/golden.xlsx	* 1607 7b4fc76a9e4db06b
+F	roundtrip-calipers/pv_goldens/pv23_027/golden.xlsx	* 1707 6d40bc72d5b63412
+F	roundtrip-calipers/pv_goldens/pv23_028/golden.xlsx	* 539 7967ac93b13d1af5
+F	roundtrip-calipers/pv_goldens/pv23_029/golden.xlsx	* 788 a6b6aa9e3f6fb0e0
+F	roundtrip-calipers/pv_goldens/pv23_030/golden.xlsx	* 786 bf9a7179c9be57b1
+F	roundtrip-calipers/pv_goldens/pv23_031/golden.xlsx	* 549 e53499bcf06671f0
+F	roundtrip-calipers/pv_goldens/pv23_032/golden.xlsx	* 663 364298986bce8a5c
+F	roundtrip-calipers/pv_goldens/pv23_033/golden.xlsx	* 663 364298986bce8a5c
+F	roundtrip-calipers/pv_goldens/pv23_034/golden.xlsx	* 458 3e7dff12af72ee35
+F	roundtrip-calipers/pv_goldens/pv23_035/golden.xlsx	* 596 4e3d8016aa3bc847
+F	roundtrip-calipers/pv_goldens/pv23_036/golden.xlsx	* 708 0dd6f78ffd3e25d6
+F	roundtrip-calipers/pv_goldens/pv23_037/golden.xlsx	* 96 2eede87211eee5ef
+F	roundtrip-calipers/pv_goldens/pv23_038/golden.xlsx	* 961 1ba8e3984bcf2b07
+F	roundtrip-calipers/pv_goldens/pv23_039/golden.xlsx	* 967 4be1aab58c855cb9
+F	roundtrip-calipers/pv_goldens/pv23_040/golden.xlsx	* 963 600ceea45e3e48b9
+F	roundtrip-calipers/pv_goldens/pv23_041/golden.xlsx	* 28539 5604bfa2aed5f8b4
+F	roundtrip-calipers/pv_goldens/pv23_042/golden.xlsx	* 123384 7d0d3f7a1f071882
+F	roundtrip-calipers/pv_goldens/pv23_043/golden.xlsx	* 4670 0165847e265de6da
+F	roundtrip-calipers/pv_goldens/pv23_044/golden.xlsx	* 634 20c40db3bc26a2b4
+F	roundtrip-calipers/pv_goldens/pv23_045/golden.xlsx	* 260119 16987ac717113fc0
+F	roundtrip-calipers/pv_goldens/pv23_046/golden.xlsx	* 4938 b7de693ff4a310a9
+F	roundtrip-calipers/pv_goldens/pv23_047/golden.xlsx	* 1926 db0b6d85f93c733f
+F	roundtrip-calipers/pv_goldens/pv23_048/golden.xlsx	* 2458 8ad97a1175227fd4
+F	roundtrip-calipers/pv_goldens/pv23_049/golden.xlsx	* 3086 9b9b9e5fa5f37ad6
+F	roundtrip-calipers/pv_goldens/pv23_050/golden.xlsx	* 2841 015d52f0298294fc
+F	roundtrip-calipers/pv_goldens/pv23_051/golden.xlsx	* 3349 3f58bbfaa1717b8d
+F	roundtrip-calipers/pv_goldens/pv23_052/golden.xlsx	* 3393 eefe12e1872477ca
+F	roundtrip-calipers/pv_goldens/pv23_053/golden.xlsx	* 3394 a86884c3d591e63a
+F	roundtrip-calipers/pv_goldens/pv23_054/golden.xlsx	* 3627 be7c5ad395b8c32a
+F	roundtrip-calipers/pv_goldens/pv23_055/golden.xlsx	* 3627 011dcfe3b4bd3973
+F	roundtrip-calipers/pv_goldens/pv23_056/golden.xlsx	* 2890 e6290a8d9661f52f
+F	roundtrip-calipers/pv_goldens/pv23_057/golden.xlsx	* 94480 fb5b45db90eb0c1e
+F	roundtrip-calipers/pv_goldens/pv23_058/golden.xlsx	* 499 6f521a7e2fed7c4a
+F	roundtrip-calipers/pv_goldens/pv23_059/golden.xlsx	* 94480 fb5b45db90eb0c1e
+F	roundtrip-calipers/pv_goldens/pv23_060/golden.xlsx	* 249 4dbdd6e6cf1d470e
+F	roundtrip-calipers/pv_goldens/pv23_061/golden.xlsx	* 5592 1fa77a0a9af1b4c6
+F	roundtrip-calipers/pv_goldens/pv23_062/golden.xlsx	* 11922 cf467dc99fc041b6
+F	roundtrip-calipers/pv_goldens/pv23_063/golden.xlsx	* 1076 37f2c88bb099ce96
+F	roundtrip-calipers/pv_goldens/pv23_064/golden.xlsx	* 612 d1af36c75ba82bcf
+F	roundtrip-calipers/pv_goldens/pv23_065/golden.xlsx	* 609 5c1a5eb450aa56d3
+F	roundtrip-calipers/pv_goldens/pv23_066/golden.xlsx	* 2220 f254668624292de9
+F	roundtrip-calipers/pv_goldens/pv26_001/golden.xlsx	* 186124 40a1a8e10345dada
+F	roundtrip-calipers/pv_goldens/pv26_002/golden.xlsx	* 818 b496c2feb99264f4
+F	roundtrip-calipers/pv_goldens/pv26_003/golden.xlsx	* 50147 98f92a5ed3964277
+F	roundtrip-calipers/pv_goldens/pv26_004/golden.xlsx	* 2133 48125f30e5a65955
+F	roundtrip-calipers/pv_goldens/pv26_005/golden.xlsx	* 335 66f7efba0b22dcbe
+F	roundtrip-calipers/pv_goldens/pv26_006/golden.xlsx	* 2485 c4ffd92befcc1c8b
+F	roundtrip-calipers/pv_goldens/pv26_007/golden.xlsx	* 37476 5b82cda8c4d8f7b5
+F	roundtrip-calipers/pv_goldens/pv26_008/golden.xlsx	* 49013 357b5d1d0b07bb25
+F	roundtrip-calipers/pv_goldens/pv26_009/golden.xlsx	* 7305 93987a716b89069d
+F	roundtrip-calipers/pv_goldens/pv26_010/golden.xlsx	* 94480 fb5b45db90eb0c1e
+F	roundtrip-calipers/pv_goldens/pv26_011/golden.xlsx	* 202486 6ec2d9a2d6c301f4
+F	roundtrip-calipers/pv_goldens/pv26_012/golden.xlsx	* 5492 985f2f9173088b05
+F	roundtrip-calipers/pv_goldens/pv26_013/golden.xlsx	* 5492 985f2f9173088b05
+F	roundtrip-calipers/pv_goldens/pv26_014/golden.xlsx	* 3158 7461a54d2b8bb05e
+F	roundtrip-calipers/pv_goldens/pv26_015/golden.xlsx	* 98728 97a3dc4caf14fffa
+F	roundtrip-calipers/pv_goldens/pv26_016/golden.xlsx	* 79222 c0eb9f947313b5be
+F	roundtrip-calipers/pv_goldens/pv26_017/golden.xlsx	* 44802 1832e2e8ce91801e
+F	roundtrip-calipers/pv_goldens/pv26_018/golden.xlsx	* 76125 233f7916c2f6aa4f
+F	roundtrip-calipers/pv_goldens/pv26_019/golden.xlsx	* 4534 b3ff646ae4199723
+F	roundtrip-calipers/pv_goldens/pv26_020/golden.xlsx	* 5738 7621a869456248fb
+F	roundtrip-calipers/pv_goldens/pv26_2_001/golden.xlsx	* 186124 40a1a8e10345dada
+F	roundtrip-calipers/pv_goldens/pv26_2_002/golden.xlsx	* 818 b496c2feb99264f4
+F	roundtrip-calipers/pv_goldens/pv26_2_003/golden.xlsx	* 50147 98f92a5ed3964277
+F	roundtrip-calipers/pv_goldens/pv26_2_004/golden.xlsx	* 2134 4b04948d657334fd
+F	roundtrip-calipers/pv_goldens/pv26_2_005/golden.xlsx	* 335 66f7efba0b22dcbe
+F	roundtrip-calipers/pv_goldens/pv26_2_006/golden.xlsx	* 2485 c4ffd92befcc1c8b
+F	roundtrip-calipers/pv_goldens/pv26_2_007/golden.xlsx	* 37476 5b82cda8c4d8f7b5
+F	roundtrip-calipers/pv_goldens/pv26_2_008/golden.xlsx	* 49013 357b5d1d0b07bb25
+F	roundtrip-calipers/pv_goldens/pv26_2_009/golden.xlsx	* 7305 93987a716b89069d
+F	roundtrip-calipers/pv_goldens/pv26_2_010/golden.xlsx	* 93725 b2192bd8ae849b1a
+F	roundtrip-calipers/pv_goldens/pv26_2_011/golden.xlsx	* 202486 6ec2d9a2d6c301f4
+F	roundtrip-calipers/pv_goldens/pv26_2_012/golden.xlsx	* 5492 985f2f9173088b05
+F	roundtrip-calipers/pv_goldens/pv26_2_013/golden.xlsx	* 5492 985f2f9173088b05
+F	roundtrip-calipers/pv_goldens/pv26_2_014/golden.xlsx	* 3158 7461a54d2b8bb05e
+F	roundtrip-calipers/pv_goldens/pv26_2_015/golden.xlsx	* 98728 97a3dc4caf14fffa
+F	roundtrip-calipers/pv_goldens/pv26_2_016/golden.xlsx	* 71980 752b26bb0f0f0816
+F	roundtrip-calipers/pv_goldens/pv26_2_017/golden.xlsx	* 44802 1832e2e8ce91801e
+F	roundtrip-calipers/pv_goldens/pv26_2_018/golden.xlsx	* 76125 233f7916c2f6aa4f
+F	roundtrip-calipers/pv_goldens/pv26_2_019/golden.xlsx	* 4534 b3ff646ae4199723
+F	roundtrip-calipers/pv_goldens/pv26_2_020/golden.xlsx	* 5738 7621a869456248fb
+F	roundtrip-calipers/pv_goldens/pv26_2_021/golden.xlsx	* 5492 985f2f9173088b05
+F	roundtrip-calipers/recalculate/offset_controls/golden.xlsx	* 88 23f8f25d54172aa3
+F	roundtrip-calipers/recalculate/offset_index_bases/golden.xlsx	* 85 23f8f25d54172aa3
+F	roundtrip-calipers/recalculate/offset_lookup/golden.xlsx	* 84 23f8f25d54172aa3
+F	roundtrip-calipers/recalculate/offset_named_bases/golden.xlsx	* 86 23f8f25d54172aa3
+F	roundtrip-calipers/recalculate/offset_period_counts/golden.xlsx	* 85 23f8f25d54172aa3
+F	roundtrip-calipers/roundtrip/autofilter/golden.xlsx	* 353 f1bd6dc24922a8f4
+F	roundtrip-calipers/roundtrip/autofilter/init.xlsx	* 353 f1bd6dc24922a8f4
+F	roundtrip-calipers/roundtrip/bg_color_ranges/golden.xlsx	* 86 fa8b09b5b27fac65
+F	roundtrip-calipers/roundtrip/bg_color_ranges/init.xlsx	* 87 16fea7da35ac975f
+F	roundtrip-calipers/roundtrip/booleans/golden.xlsx	* 205 fdfc44e38865e408
+F	roundtrip-calipers/roundtrip/booleans/init.xlsx	* 205 fdfc44e38865e408
+F	roundtrip-calipers/roundtrip/border_colours/golden.xlsx	* 198 987ca30b91c0d7c8
+F	roundtrip-calipers/roundtrip/border_colours/init.xlsx	* 198 987ca30b91c0d7c8
+F	roundtrip-calipers/roundtrip/cf_samples/golden.xlsx	* 6284 21dd78d587217187
+F	roundtrip-calipers/roundtrip/cf_samples/init.xlsx	* 6284 21dd78d587217187
+F	roundtrip-calipers/roundtrip/comment_test/golden.xlsx	* 476 99050c60d8ad8f9c
+F	roundtrip-calipers/roundtrip/comment_test/init.xlsx	* 476 99050c60d8ad8f9c
+F	roundtrip-calipers/roundtrip/comments/golden.xlsx	* 960 9dc30ac18e4e102c
+F	roundtrip-calipers/roundtrip/comments/init.xlsx	* 960 9dc30ac18e4e102c
+F	roundtrip-calipers/roundtrip/conditional_formatting/golden.xlsx	* 216 1a97a3ee49416f4f
+F	roundtrip-calipers/roundtrip/conditional_formatting/init.xlsx	* 216 1a97a3ee49416f4f
+F	roundtrip-calipers/roundtrip/custom_properties/golden.xlsx	* 208 fe81811fc78eb7e4
+F	roundtrip-calipers/roundtrip/custom_properties/init.xlsx	* 208 fe81811fc78eb7e4
+F	roundtrip-calipers/roundtrip/custom_view_printer_settings/golden.xlsx	* 222 5600e2019b86d554
+F	roundtrip-calipers/roundtrip/custom_view_printer_settings/init.xlsx	* 90 1bd8b252a7c6294c
+F	roundtrip-calipers/roundtrip/data_validation/golden.xlsx	* 162 a97c64a3403db507
+F	roundtrip-calipers/roundtrip/data_validation/init.xlsx	* 162 a97c64a3403db507
+F	roundtrip-calipers/roundtrip/date_cells/golden.xlsx	* 279 0019b9b09a32ae1b
+F	roundtrip-calipers/roundtrip/date_cells/init.xlsx	* 279 0019b9b09a32ae1b
+F	roundtrip-calipers/roundtrip/date_formats/golden.xlsx	* 281 bc6509fe6bbe9c05
+F	roundtrip-calipers/roundtrip/date_formats/init.xlsx	* 281 bc6509fe6bbe9c05
+F	roundtrip-calipers/roundtrip/drawing/golden.xlsx	* 404 3a98c85639fdf5fb
+F	roundtrip-calipers/roundtrip/drawing/init.xlsx	* 404 3a98c85639fdf5fb
+F	roundtrip-calipers/roundtrip/empty/golden.xlsx	* 72 ddac78c3f696df85
+F	roundtrip-calipers/roundtrip/empty/init.xlsx	* 72 ddac78c3f696df85
+F	roundtrip-calipers/roundtrip/excel_tables/golden.xlsx	* 212 3479dab1537fc55a
+F	roundtrip-calipers/roundtrip/excel_tables/init.xlsx	* 212 3479dab1537fc55a
+F	roundtrip-calipers/roundtrip/font_theme_colours/golden.xlsx	* 198 9efac9a26803f1aa
+F	roundtrip-calipers/roundtrip/font_theme_colours/init.xlsx	* 198 9efac9a26803f1aa
+F	roundtrip-calipers/roundtrip/formatting/golden.xlsx	* 192 4894289752868493
+F	roundtrip-calipers/roundtrip/formatting/init.xlsx	* 192 4894289752868493
+F	roundtrip-calipers/roundtrip/formula_eval/golden.xlsx	* 69 db1d4aeeb68d90b9
+F	roundtrip-calipers/roundtrip/formula_eval/init.xlsx	* 69 db1d4aeeb68d90b9
+F	roundtrip-calipers/roundtrip/formula_stress_test/golden.xlsx	* 965 64d2ff69ee53b2b5
+F	roundtrip-calipers/roundtrip/formula_stress_test/init.xlsx	* 965 64d2ff69ee53b2b5
+F	roundtrip-calipers/roundtrip/formulas/golden.xlsx	* 81 fc1b558b76ed8568
+F	roundtrip-calipers/roundtrip/formulas/init.xlsx	* 81 fc1b558b76ed8568
+F	roundtrip-calipers/roundtrip/formulas_conditional/golden.xlsx	* 174 2258ec3e22d0365d
+F	roundtrip-calipers/roundtrip/formulas_conditional/init.xlsx	* 175 e7292d7f58519f74
+F	roundtrip-calipers/roundtrip/formulas_database/golden.xlsx	* 505 162837acc95119fa
+F	roundtrip-calipers/roundtrip/formulas_database/init.xlsx	* 506 264f978f5c45a166
+F	roundtrip-calipers/roundtrip/formulas_datetime/golden.xlsx	* 2093 136e12e02658968c
+F	roundtrip-calipers/roundtrip/formulas_datetime/init.xlsx	* 2094 9b4d602300c1e85d
+F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/golden.xlsx	* 271 238fe06ab41b3549
+F	roundtrip-calipers/roundtrip/formulas_dynamic_arrays/init.xlsx	* 272 cfbe8554ed245f54
+F	roundtrip-calipers/roundtrip/formulas_engineering/golden.xlsx	* 619 011959a2efab2785
+F	roundtrip-calipers/roundtrip/formulas_engineering/init.xlsx	* 620 9019a947d995ba2f
+F	roundtrip-calipers/roundtrip/formulas_financial/golden.xlsx	* 575 98290533975907e5
+F	roundtrip-calipers/roundtrip/formulas_financial/init.xlsx	* 576 fa6152689d562bb7
+F	roundtrip-calipers/roundtrip/formulas_information/golden.xlsx	* 792 7bd4464149ae6f63
+F	roundtrip-calipers/roundtrip/formulas_information/init.xlsx	* 793 018c7dc72497bb35
+F	roundtrip-calipers/roundtrip/formulas_logical/golden.xlsx	* 812 cde93d466bd9d6dc
+F	roundtrip-calipers/roundtrip/formulas_logical/init.xlsx	* 813 ae5c32b8061a6c7e
+F	roundtrip-calipers/roundtrip/formulas_lookup/golden.xlsx	* 550 d0d1022c42c62836
+F	roundtrip-calipers/roundtrip/formulas_lookup/init.xlsx	* 551 5b2607f5fb89cedb
+F	roundtrip-calipers/roundtrip/formulas_math_basic/golden.xlsx	* 975 5dc8f0396266fd3c
+F	roundtrip-calipers/roundtrip/formulas_math_basic/init.xlsx	* 976 d1f69ce1c442df15
+F	roundtrip-calipers/roundtrip/formulas_math_trig/golden.xlsx	* 521 5ee58865ba5fcbd7
+F	roundtrip-calipers/roundtrip/formulas_math_trig/init.xlsx	* 522 54412e72e845de76
+F	roundtrip-calipers/roundtrip/formulas_nested/golden.xlsx	* 22624 e5fe97e97a07ce10
+F	roundtrip-calipers/roundtrip/formulas_nested/init.xlsx	* 22625 6c80ac66242d3776
+F	roundtrip-calipers/roundtrip/formulas_statistical/golden.xlsx	* 579 1e693dd16aa49736
+F	roundtrip-calipers/roundtrip/formulas_statistical/init.xlsx	* 580 3c2014ad5d2e049f
+F	roundtrip-calipers/roundtrip/formulas_text/golden.xlsx	* 847 bb0936a7d468bb81
+F	roundtrip-calipers/roundtrip/formulas_text/init.xlsx	* 848 f1c3938687f856d2
+F	roundtrip-calipers/roundtrip/header_footer/golden.xlsx	* 202 0cff56e4cfb813e4
+F	roundtrip-calipers/roundtrip/header_footer/init.xlsx	* 202 0cff56e4cfb813e4
+F	roundtrip-calipers/roundtrip/hidden_sheet/golden.xlsx	* 192 949001e32f48f663
+F	roundtrip-calipers/roundtrip/hidden_sheet/init.xlsx	* 192 949001e32f48f663
+F	roundtrip-calipers/roundtrip/hyperlinks/golden.xlsx	* 106 4d05c3a1c0ecafc1
+F	roundtrip-calipers/roundtrip/hyperlinks/init.xlsx	* 106 4d05c3a1c0ecafc1
+F	roundtrip-calipers/roundtrip/i18n_hebrew/golden.xlsx	* 43335 0aa1ea67a5ed09b8
+F	roundtrip-calipers/roundtrip/i18n_hebrew/init.xlsx	* 43335 0aa1ea67a5ed09b8
+F	roundtrip-calipers/roundtrip/inline_strings/golden.xlsx	* 107 d5b75edd27e7dfa1
+F	roundtrip-calipers/roundtrip/inline_strings/init.xlsx	* 107 d5b75edd27e7dfa1
+F	roundtrip-calipers/roundtrip/large_strings/golden.xlsx	* 21711 c4937cba7cfd7a5a
+F	roundtrip-calipers/roundtrip/large_strings/init.xlsx	* 21711 c4937cba7cfd7a5a
+F	roundtrip-calipers/roundtrip/lbo_model/golden.xlsx	* 727 fc5dcc093f5d35a7
+F	roundtrip-calipers/roundtrip/lbo_model/init.xlsx	* 727 fc5dcc093f5d35a7
+F	roundtrip-calipers/roundtrip/legacy_indexed_colors/golden.xlsx	* 192 ebc2866e510015ee
+F	roundtrip-calipers/roundtrip/legacy_indexed_colors/init.xlsx	* 193 42e0d95ff308ecfd
+F	roundtrip-calipers/roundtrip/lonumbers_2010/golden.xlsx	* 530 6232002222d87ff4
+F	roundtrip-calipers/roundtrip/lonumbers_2010/init.xlsx	* 530 6232002222d87ff4
+F	roundtrip-calipers/roundtrip/lonumbers_2011/golden.xlsx	* 539 125f6a4f542b83ba
+F	roundtrip-calipers/roundtrip/lonumbers_2011/init.xlsx	* 539 125f6a4f542b83ba
+F	roundtrip-calipers/roundtrip/merge_cells/golden.xlsx	* 189 cd5f7f6cc5ff0b93
+F	roundtrip-calipers/roundtrip/merge_cells/init.xlsx	* 189 cd5f7f6cc5ff0b93
+F	roundtrip-calipers/roundtrip/mixed_sheets/golden.xlsx	* 309 63abc5d391ecab98
+F	roundtrip-calipers/roundtrip/mixed_sheets/init.xlsx	* 309 63abc5d391ecab98
+F	roundtrip-calipers/roundtrip/multi_sheet/golden.xlsx	* 88 21d614216ff784a6
+F	roundtrip-calipers/roundtrip/multi_sheet/init.xlsx	* 88 21d614216ff784a6
+F	roundtrip-calipers/roundtrip/named_ranges/golden.xlsx	* 243 0ea428a5536b65dd
+F	roundtrip-calipers/roundtrip/named_ranges/init.xlsx	* 243 0ea428a5536b65dd
+F	roundtrip-calipers/roundtrip/number_formats/golden.xlsx	* 568 423b2d9b056d7c9a
+F	roundtrip-calipers/roundtrip/number_formats/init.xlsx	* 568 423b2d9b056d7c9a
+F	roundtrip-calipers/roundtrip/picture/golden.xlsx	* 154 65233598ee85f26d
+F	roundtrip-calipers/roundtrip/picture/init.xlsx	* 154 65233598ee85f26d
+F	roundtrip-calipers/roundtrip/pivot/golden.xlsx	* 284 0ac2cc8b82d4e5c9
+F	roundtrip-calipers/roundtrip/pivot/init.xlsx	* 284 0ac2cc8b82d4e5c9
+F	roundtrip-calipers/roundtrip/pivot_named_range/golden.xlsx	* 927 7edfba366d9648a6
+F	roundtrip-calipers/roundtrip/pivot_named_range/init.xlsx	* 927 7edfba366d9648a6
+F	roundtrip-calipers/roundtrip/print_repeating/golden.xlsx	* 210 39af5a1d747cc9a9
+F	roundtrip-calipers/roundtrip/print_repeating/init.xlsx	* 210 39af5a1d747cc9a9
+F	roundtrip-calipers/roundtrip/rich_text/golden.xlsx	* 262 5d78003f04ac5f5c
+F	roundtrip-calipers/roundtrip/rich_text/init.xlsx	* 262 5d78003f04ac5f5c
+F	roundtrip-calipers/roundtrip/rk_number/golden.xlsx	* 192 b7b1aa62a0c3b06d
+F	roundtrip-calipers/roundtrip/rk_number/init.xlsx	* 192 b7b1aa62a0c3b06d
+F	roundtrip-calipers/roundtrip/row_col_groups/golden.xlsx	* 180 d94978581f9f43fd
+F	roundtrip-calipers/roundtrip/row_col_groups/init.xlsx	* 180 d94978581f9f43fd
+F	roundtrip-calipers/roundtrip/rtl/golden.xlsx	* 103 00220d542e2e43f8
+F	roundtrip-calipers/roundtrip/rtl/init.xlsx	* 103 00220d542e2e43f8
+F	roundtrip-calipers/roundtrip/sample_ss/golden.xlsx	* 203 7d7b02158209c56e
+F	roundtrip-calipers/roundtrip/sample_ss/init.xlsx	* 203 7d7b02158209c56e
+F	roundtrip-calipers/roundtrip/scatter_chart/golden.xlsx	* 1406 228658533779a24f
+F	roundtrip-calipers/roundtrip/scatter_chart/init.xlsx	* 1406 228658533779a24f
+F	roundtrip-calipers/roundtrip/shared_formulas/golden.xlsx	* 241 51333954392da0f9
+F	roundtrip-calipers/roundtrip/shared_formulas/init.xlsx	* 242 659cbf642dbccb71
+F	roundtrip-calipers/roundtrip/sheet_protection/golden.xlsx	* 194 f1adcbd5bae0c0e4
+F	roundtrip-calipers/roundtrip/sheet_protection/init.xlsx	* 194 f1adcbd5bae0c0e4
+F	roundtrip-calipers/roundtrip/sheet_tab_colors/golden.xlsx	* 198 6f2e4836606c6a2a
+F	roundtrip-calipers/roundtrip/sheet_tab_colors/init.xlsx	* 198 6f2e4836606c6a2a
+F	roundtrip-calipers/roundtrip/simple/golden.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/simple/init.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/simple_comments/golden.xlsx	* 260 cd8eec83f9bbdfff
+F	roundtrip-calipers/roundtrip/simple_comments/init.xlsx	* 260 cd8eec83f9bbdfff
+F	roundtrip-calipers/roundtrip/simple_multi_cell/golden.xlsx	* 200 1315dcc4ac9ac55f
+F	roundtrip-calipers/roundtrip/simple_multi_cell/init.xlsx	* 200 1315dcc4ac9ac55f
+F	roundtrip-calipers/roundtrip/structured_refs/golden.xlsx	* 97 4c0e197942cf3dbc
+F	roundtrip-calipers/roundtrip/structured_refs/init.xlsx	* 97 4c0e197942cf3dbc
+F	roundtrip-calipers/roundtrip/styled/golden.xlsx	* 195 887af849c4322ac5
+F	roundtrip-calipers/roundtrip/styled/init.xlsx	* 195 887af849c4322ac5
+F	roundtrip-calipers/roundtrip/styles/golden.xlsx	* 238 597c35fef7d99d50
+F	roundtrip-calipers/roundtrip/styles/init.xlsx	* 238 597c35fef7d99d50
+F	roundtrip-calipers/roundtrip/table_50867/golden.xlsx	* 202 856259ca4664639c
+F	roundtrip-calipers/roundtrip/table_50867/init.xlsx	* 202 856259ca4664639c
+F	roundtrip-calipers/roundtrip/tables/golden.xlsx	* 431 b029807acd2c1d85
+F	roundtrip-calipers/roundtrip/tables/init.xlsx	* 430 1ebbb2aadaabdab6
+F	roundtrip-calipers/roundtrip/textbox/golden.xlsx	* 272 4d8e9571472ce546
+F	roundtrip-calipers/roundtrip/textbox/init.xlsx	* 272 4d8e9571472ce546
+F	roundtrip-calipers/roundtrip/theme_linked_colors/golden.xlsx	* 186 d79ecdaef09d4fca
+F	roundtrip-calipers/roundtrip/theme_linked_colors/init.xlsx	* 186 d79ecdaef09d4fca
+F	roundtrip-calipers/roundtrip/themes/golden.xlsx	* 185 b1b3a3ac608fa671
+F	roundtrip-calipers/roundtrip/themes/init.xlsx	* 185 b1b3a3ac608fa671
+F	roundtrip-calipers/roundtrip/three_charts/golden.xlsx	* 630 57ac6c882e81a587
+F	roundtrip-calipers/roundtrip/three_charts/init.xlsx	* 630 57ac6c882e81a587
+F	roundtrip-calipers/roundtrip/types/golden.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/types/init.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/unicode/golden.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/unicode/init.xlsx	* 70 cc6851a36ff8e2d1
+F	roundtrip-calipers/roundtrip/unicode_sheet_name/golden.xlsx	* 72 da778f74d73672a1
+F	roundtrip-calipers/roundtrip/unicode_sheet_name/init.xlsx	* 72 da778f74d73672a1
+F	roundtrip-calipers/roundtrip/widths_heights/golden.xlsx	* 65 0d6673036e846147
+F	roundtrip-calipers/roundtrip/widths_heights/init.xlsx	* 65 0d6673036e846147
+F	roundtrip-calipers/roundtrip/with_chart/golden.xlsx	* 341 3e5ce7375da34046
+F	roundtrip-calipers/roundtrip/with_chart/init.xlsx	* 341 3e5ce7375da34046
+F	roundtrip-calipers/roundtrip/with_table/golden.xlsx	* 202 382ccf483a26ba6b
+F	roundtrip-calipers/roundtrip/with_table/init.xlsx	* 202 382ccf483a26ba6b
+F	roundtrip-calipers/roundtrip/workbook_protection/golden.xlsx	* 205 fae7d5b654dd1905
+F	roundtrip-calipers/roundtrip/workbook_protection/init.xlsx	* 205 fae7d5b654dd1905
+F	roundtrip-calipers/roundtrip/xlookup/golden.xlsx	* 84 f4f9b0ddf2f5409b
+F	roundtrip-calipers/roundtrip/xlookup/init.xlsx	* 84 f4f9b0ddf2f5409b
+F	roundtrip-calipers/scratch/add_sheet/golden.xlsx	* 91 4c56359e790e884f
+F	roundtrip-calipers/scratch/autofilter/golden.xlsx	* 83 e130cfa555310a05
+F	roundtrip-calipers/scratch/chart/golden.xlsx	* 690 94cc40a89331683c
+F	roundtrip-calipers/scratch/column_row_sizes/golden.xlsx	* 84 47b00946fc7627bc
+F	roundtrip-calipers/scratch/conditional_formatting/golden.xlsx	* 85 fe86ca6a4bc04c4c
+F	roundtrip-calipers/scratch/data_validation/golden.xlsx	* 87 7af35fd93c0dfa7d
+F	roundtrip-calipers/scratch/freeze_panes/golden.xlsx	* 83 8e6902c5686dd087
+F	roundtrip-calipers/scratch/merge/golden.xlsx	* 82 236685582506f228
+F	roundtrip-calipers/scratch/named_range/golden.xlsx	* 88 786cf17f8dad05b3
+F	roundtrip-calipers/scratch/number_format/golden.xlsx	* 84 47b00946fc7627bc
+F	roundtrip-calipers/scratch/numbers/golden.xlsx	* 83 900bab614ba68866
+F	roundtrip-calipers/scratch/pivot_table/golden.xlsx	* 154 b2cd48e202896a2b
+F	roundtrip-calipers/scratch/spill/golden.xlsx	* 88 c1ab2bf68a932148
+F	roundtrip-calipers/scratch/table/golden.xlsx	* 89 aca1979408c7db95
+F	roundtrip-calipers/scratch/text/golden.xlsx	* 82 ebb57683e92ce524

@@ -4,13 +4,13 @@
 # and requires --allow-regressions plus a justification in the PR (docs/process/quality-gates.md).
 # `TC` and `TF` lines do the same for displayed text (decision 0070).
 C	roundtrip-fixtures/circular-keeps-cached-values.xlsx	638
-C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	723
-C	roundtrip-fixtures/external-link-cached-index-array.xlsx	728
-C	roundtrip-fixtures/external-link-cached-lookups.xlsx	905
-C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1824
-C	roundtrip-fixtures/external-link-cached-text.xlsx	840
-C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1256
-C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	892
+C	roundtrip-fixtures/external-link-cached-3d-span.xlsx	761
+C	roundtrip-fixtures/external-link-cached-index-array.xlsx	766
+C	roundtrip-fixtures/external-link-cached-lookups.xlsx	943
+C	roundtrip-fixtures/external-link-cached-ranges.xlsx	1862
+C	roundtrip-fixtures/external-link-cached-text.xlsx	880
+C	roundtrip-fixtures/external-link-uncached-lookups.xlsx	1297
+C	roundtrip-fixtures/external-link-unsorted-approx-lookups.xlsx	947
 C	roundtrip-fixtures/ifs-legacy-range-criteria.xlsx	738
 C	roundtrip-fixtures/rich-error-export-formulas.xlsx	976
 C	roundtrip-fixtures/rich-error-export.xlsx	989
