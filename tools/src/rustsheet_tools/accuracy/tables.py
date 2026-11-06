@@ -26,7 +26,15 @@ import mpmath
 
 from rustsheet_tools.accuracy import literal
 from rustsheet_tools.accuracy.model import Definition, DomainError, NoValueError, OverBudgetError, work_budget
-from rustsheet_tools.accuracy.sampler import STRATA, Sampler, math_arg, point_count, seed, stratum_counts
+from rustsheet_tools.accuracy.sampler import (
+    AIMED,
+    STRATA,
+    Sampler,
+    math_arg,
+    point_count,
+    seed,
+    stratum_counts,
+)
 from rustsheet_tools.fitlab.sweep import is_array_literal, number_literal, split_args, string_literal
 
 VERSION = "1"  # bump when a definition or the sampler changes what a batch would contain
@@ -172,7 +180,7 @@ def draw_points(
     counts = {stratum: total} if stratum is not None else stratum_counts(total)
     sampler = Sampler(definition, random.Random(seed(definition.function, batch)))
     points: list[Point] = []
-    for name in STRATA:
+    for name in (*STRATA, AIMED):
         for index in range(counts.get(name, 0)):
             for _ in range(MAX_REDRAWS):
                 args = sampler.draw(name, index)

@@ -3,6 +3,7 @@
   rustsheet-accuracy list                                  functions with a definition
   rustsheet-accuracy generate T.INV [--batch s1]           write a batch's case and math sidecar
   rustsheet-accuracy generate RATE --batch e-T-1234 --count 40 --stratum tail
+  rustsheet-accuracy generate CUMPRINC --batch e-T-4059 --count 200 --stratum aimed
   rustsheet-accuracy verify T.INV                          recompute committed math at dps 80
   rustsheet-accuracy math --suite probes-numeric           math sidecars for an eval suite's cells
   rustsheet-accuracy math --check --suite probes            fail when a suite's sidecars are missing or stale
@@ -21,7 +22,7 @@ from rustsheet_tools import repo_root
 from rustsheet_tools.accuracy import defs
 from rustsheet_tools.accuracy.eval_math import check_suite, write_suite
 from rustsheet_tools.accuracy.model import REGISTRY, Definition
-from rustsheet_tools.accuracy.sampler import STRATA
+from rustsheet_tools.accuracy.sampler import AIMED, STRATA
 from rustsheet_tools.accuracy.tables import draw_points, verify_batch, write_batch
 
 _ = defs  # importing the package registers the definitions
@@ -68,7 +69,11 @@ def main(argv: list[str] | None = None) -> int:
     gen.add_argument("function")
     gen.add_argument("--batch", default="s1", help="batch name: s1, r4-T-XXXX, e-T-XXXX (default s1)")
     gen.add_argument("--count", type=int, help="points (default 120/200/300 by arity)")
-    gen.add_argument("--stratum", choices=STRATA, help="draw every point from one stratum")
+    gen.add_argument(
+        "--stratum",
+        choices=(*STRATA, AIMED),
+        help="draw every point from one stratum (aimed: the definition's own region draw, T-4059)",
+    )
     ver = sub.add_parser("verify", help="recompute a function's committed math values")
     ver.add_argument("function")
     mth = sub.add_parser("math", help="write math sidecars for an eval suite's one-call cells (T-3380)")
@@ -95,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "generate":
         if args.count is not None and args.count < 1:
             raise SystemExit("--count must be at least 1")
+        if args.stratum == AIMED and definition.aimed is None:
+            raise SystemExit(f"{definition.function} has no aimed draw")
         points = draw_points(definition, args.batch, args.count, stratum=args.stratum)
         case_path, math_path = write_batch(tables, definition, args.batch, points)
         domain = sum(1 for p in points if p.math.value is None)
