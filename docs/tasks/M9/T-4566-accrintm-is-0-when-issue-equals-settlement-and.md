@@ -3,7 +3,7 @@ id: T-4566
 title: "ACCRINTM is 0 when issue equals settlement; ACCRINT's basis-2 issue period and its 0 at the calendar's start"
 milestone: M9
 lane: functions-financial
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
