@@ -3,7 +3,7 @@ id: T-4114
 title: "Gate A tables, interest at maturity: ACCRINT, ACCRINTM, PRICEMAT, YIELDMAT and TBILLYIELD"
 milestone: M0
 lane: harness
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
