@@ -40,7 +40,7 @@ const NEGLIGIBLE_BITS: i32 = 110;
 /// `2^RESCALE_BITS`, `2^-RESCALE_BITS` and `2^-NEGLIGIBLE_BITS`, hoisted out of the walks' loops.
 const RESCALE_LIMIT: f64 = f64::from_bits(((1023 + RESCALE_BITS) as u64) << 52);
 const RESCALE_FACTOR: f64 = f64::from_bits(((1023 - RESCALE_BITS) as u64) << 52);
-const NEGLIGIBLE: f64 = f64::from_bits(((1023 - NEGLIGIBLE_BITS) as u64) << 52);
+pub(super) const NEGLIGIBLE: f64 = f64::from_bits(((1023 - NEGLIGIBLE_BITS) as u64) << 52);
 
 /// `x * 2^k` for any `k`, exact unless the result leaves the double range.
 fn scale_by_power_of_two(mut x: f64, k: i64) -> f64 {

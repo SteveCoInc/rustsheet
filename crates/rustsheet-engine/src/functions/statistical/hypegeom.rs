@@ -2,20 +2,24 @@
 //! security rule, T-1873).
 //!
 //! Both are the exact value rounded once where `discrete.rs`' double-double walk reaches it (at most
-//! 2^12 steps and a population of 2^52, T-0977); statrs' pmf and the capped port of its cdf below
-//! are the fallback beyond.
+//! 2^12 steps and a population of 2^52, T-0977). Beyond it they are the math in log space (T-4502):
+//! the pmf is Loader's saddle point as R's `dhyper` forms it ([`ln_pmf`]), and the cdf
+//! ([`hypergeometric_cdf`]) the capped sum below. Excel is within 1E-10 of the math there
+//! (statistics.md "HYPGEOM.DIST of an empty population is 1, and a deep-tail pmf can be 0"), so
+//! the target is the Gate A envelope, not Excel's last digits (T-2481).
 //!
-//! [`hypergeometric_cdf`] is statrs 0.18.0's `Hypergeometric::cdf`: the sum of the pmf from 0 to
-//! x, one `exp` of three `ln_binomial`s a term, in that order, so that every call that ends in
-//! statrs ends here with the same double. statrs' sum is open: it takes x + 1 terms whatever the
-//! distribution, so `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took about 4 s in
-//! release, and x near 2^64 would not finish. Most of those terms are exactly 0: below
-//! max(0, n + K - N) a term is `exp(-inf)`, and far from the mode its exponent is below about
-//! -745 and `exp` underflows to 0. Adding +0.0 to the running sum (itself +0.0 or more) leaves it
-//! unchanged, so the port skips those terms and sums the rest in statrs' order. Past
-//! [`MAX_TERMS`] terms that are not known to be 0 the cdf is NaN, which HYPGEOM.DIST turns into
-//! `#NUM!` (docs/excel-semantics/statistics.md "HYPGEOM.DIST: per-call cap and lifting", a
-//! DEVIATION).
+//! [`hypergeometric_cdf`] began as a port of statrs 0.18.0's `Hypergeometric::cdf`, the sum of the
+//! pmf from 0 to x, one `exp` of three `ln_binomial`s a term (T-1873). statrs' sum is open: it
+//! takes x + 1 terms whatever the distribution, so
+//! `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took about 4 s in release, and x near
+//! 2^64 would not finish. Most of those terms are 0 as doubles: below max(0, n + K - N) a term is
+//! `exp(-inf)`, and far from the mode its exponent is below about -745 and `exp` underflows to 0.
+//! The port skips those terms, found from statrs' exponents as before, and past [`MAX_TERMS`]
+//! terms that are not known to be 0 the cdf is NaN, which HYPGEOM.DIST turns into `#NUM!`
+//! (docs/excel-semantics/statistics.md "HYPGEOM.DIST: per-call cap and lifting", a DEVIATION).
+//! Since T-4502 it sums the rest from the largest of them by the exact ratio of consecutive
+//! terms ([`sum_of_terms`]), not statrs' terms, which were up to 1.2E-6 off the math at large
+//! populations.
 //!
 //! statrs is distributed under this notice:
 //!
@@ -38,16 +42,17 @@
 //! > DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 //! > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-use statrs::distribution::{Discrete, Hypergeometric};
-// statrs' own `ln_binomial` and `ln_factorial`: bit-for-bit parity with statrs needs the same
-// functions.
+// statrs' own `ln_binomial` and `ln_factorial`: the skip and the cap count the terms statrs' sum
+// counted, with the same exponents (T-1873).
 use statrs::function::factorial::{ln_binomial, ln_factorial};
 
-use super::discrete::{hypergeometric_cdf_sum, hypergeometric_pmf};
+use super::discrete::{hypergeometric_cdf_sum, hypergeometric_pmf, NEGLIGIBLE};
+use super::loader::loader_ln_binomial;
 use crate::expressions::types::CellReferenceIndex;
 use crate::functions::lift::{num_error, number_or_error};
 use crate::functions::Function;
 use crate::limits::COUNT_LIMIT_EXCLUSIVE;
+use crate::x87_exp::{dd_add, dd_div, dd_div_small, dd_mul};
 use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 
 /// The most terms one cdf may sum once the terms known to be 0 are skipped. The terms that do
@@ -60,9 +65,10 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// which 95,942 are not 0).
 ///
 /// What the cap costs, which the lifting table charges (lift/kinds/statistical.rs
-/// `HYPGEOM_DIST_WEIGHT`, 2^22 units an element at most; since T-2433 less by the counts): one
-/// term is three statrs `ln_binomial`s and an `exp` (six Lanczos `ln_gamma`s above 170). Measured
-/// in release (T-1873, load 1 to 2 on 4 cores): 167 to 193 ns a term where the terms are normal
+/// `HYPGEOM_DIST_WEIGHT`, 2^22 units an element at most; since T-2433 less by the counts): until
+/// T-4502 one term was three statrs `ln_binomial`s and an `exp` (six Lanczos `ln_gamma`s above
+/// 170). Measured in release (T-1873, load 1 to 2 on 4 cores): 167 to 193 ns a term where the terms
+/// were normal
 /// (statrs' own sum over the 25,000,001 terms of
 /// `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)`, 4.8 s as on main; 32 elements of
 /// `HYPGEOM.DIST(45500000,90000000,90000000,180000000,TRUE)`, the widest distribution at a
@@ -72,7 +78,10 @@ use crate::{calc_result::CalcResult, expressions::parser::Node, model::Model};
 /// whose window at the cap is 262,144 terms, 96,639 of them exactly 0 and 153,739 subnormal, took
 /// 1.73 to 1.96 s, 54 to 61 ms an element). The bound of an element is 2^18 + 131 terms at 250 ns
 /// (above the slowest measured), about 66 ms, so the weight caps a lifted call at 2^27 / 2^22 = 32
-/// elements: about 2.1 s at the bound. The cdfs the suites check sum at most 501 terms.
+/// elements: about 2.1 s at the bound. The cdfs the suites check sum at most 501 terms. Since
+/// T-4502 a term is one ratio step of [`sum_of_terms`], the double-double step of `discrete.rs`'
+/// walk (4,095 steps in 78 us in release, about 19 ns a step), which also stops once its terms are
+/// negligible, so the bound charged stays an upper one.
 const MAX_TERMS: u64 = 1 << 18;
 
 /// An exponent at or below which `exp` is exactly 0. e^-750 is about 1.9E-326, far below half
@@ -98,14 +107,15 @@ const EXPONENT_RELATIVE_ERROR: f64 = 1.0 / (1u64 << 40) as f64;
 /// `ln_factorial` is small (an error of about 1E-13 at most).
 const EXPONENT_ABSOLUTE_ERROR: f64 = 1.0 / (1u64 << 20) as f64;
 
-/// statrs' `Hypergeometric::cdf(x)` for a population N, K successes and n draws: its double
-/// wherever its terms other than the skipped zeros number at most [`MAX_TERMS`], NaN past that.
+/// P(X <= x) for a hypergeometric X (population N, K successes, n draws), the math to within about
+/// 1E-12 ([`sum_of_terms`]) wherever the terms other than the skipped zeros number at most
+/// [`MAX_TERMS`], NaN past that.
 pub(super) fn hypergeometric_cdf(population: u64, successes: u64, draws: u64, x: u64) -> f64 {
     cdf_within(population, successes, draws, x, MAX_TERMS)
 }
 
 /// [`hypergeometric_cdf`] with a cap of `max_terms`, so that tests can reach the cap with sums
-/// statrs finishes quickly.
+/// that finish quickly.
 fn cdf_within(population: u64, successes: u64, draws: u64, x: u64, max_terms: u64) -> f64 {
     // statrs' `min()` is `(draws + successes).saturating_sub(population)`, which overflows a u64
     // near 2^64 (a panic in a debug build); in u128 it is exact.
@@ -122,11 +132,12 @@ fn cdf_within(population: u64, successes: u64, draws: u64, x: u64, max_terms: u6
         return f64::NAN;
     };
     let ln_denom = ln_binomial(population, draws);
-    // statrs' term i, as its fold writes it. For i in [min, max] neither `ln_binomial` is -inf.
+    // statrs' exponent of term i, which decides the skip and so the cap (T-1873). For i in
+    // [min, max] neither `ln_binomial` is -inf.
     let exponent = |i: u64| {
         ln_binomial(successes, i) + ln_binomial(population - successes, draws - i) - ln_denom
     };
-    // Terms below `min` are exp(-inf) = 0 in statrs' sum, so it starts at `min`.
+    // Terms below `min` are 0, so the sum starts at `min`.
     let (first, end) = if x - min < max_terms {
         (min, x + 1)
     } else {
@@ -138,7 +149,100 @@ fn cdf_within(population: u64, successes: u64, draws: u64, x: u64, max_terms: u6
     if end - first > max_terms {
         return f64::NAN;
     }
-    (first..end).fold(0.0, |acc, i| acc + exponent(i).exp())
+    // A cdf is at most 1; the sum's last rounding could pass it beside 1.
+    sum_of_terms(population, successes, draws, first, end).min(1.0)
+}
+
+/// A double-double `hi + lo`.
+type Dd = (f64, f64);
+
+/// floor((n + 1)(K + 1) / (N + 2)), a mode of the hypergeometric pmf: p(i) / p(i - 1) =
+/// (K - i + 1)(n - i + 1) / (i (N - K - n + i)) is at least 1 exactly for i up to it. In u128, so
+/// the product does not overflow; it is at most n.
+fn mode(population: u64, successes: u64, draws: u64) -> u64 {
+    let mode = (u128::from(draws) + 1) * (u128::from(successes) + 1) / (u128::from(population) + 2);
+    u64::try_from(mode).unwrap_or(draws)
+}
+
+/// `trials * draws / population` as a double-double: the mean successes of `trials` Bernoulli
+/// trials at p = draws / population, without p's rounding.
+fn binomial_mean(trials: u64, draws: u64, population: u64) -> Dd {
+    dd_div(
+        dd_mul((trials as f64, 0.0), (draws as f64, 0.0)),
+        (population as f64, 0.0),
+    )
+}
+
+/// ln P(X = k) for a hypergeometric X (population N, K successes, n draws), k in its support, in
+/// log space: R nmath's `dhyper` (Loader 2000), ln b(k; K, p) + ln b(n - k; N - K, p) -
+/// ln b(n; N, p) for p = n / N, each binomial term Loader's saddle point
+/// ([`loader_ln_binomial`]). A ratio of binomial coefficients (statrs' `pmf`) overflows to
+/// inf / inf from populations of about 2E4, and differences of ln-gamma lose about |ln C(N, n)|
+/// times 2^-52 (1E-5 relative at a population of 2E9); here the three logs are each at most about
+/// 750 in magnitude wherever the pmf is a normal double (the last is the pmf of n draws at its own
+/// mean, near 1 / sqrt(2 pi n p q)), each within a few ulp of that, so the pmf is within a few
+/// units of 2^-52 times |ln pmf| of the exact value, under 1E-12 relative (T-4502).
+pub(super) fn ln_pmf(population: u64, successes: u64, draws: u64, k: u64) -> f64 {
+    let others = population - draws;
+    let ln_term = |x: u64, trials: u64| {
+        loader_ln_binomial(
+            x as f64,
+            trials as f64,
+            binomial_mean(trials, draws, population),
+            binomial_mean(trials, others, population),
+        )
+    };
+    ln_term(k, successes) + ln_term(draws - k, population - successes) - ln_term(draws, population)
+}
+
+/// The hypergeometric terms over `[first, end)`, with `max(0, n + K - N) <= first` and `end - 1 <=
+/// min(n, K)`: the largest term of the range (at the mode, or the end nearer it) in log space
+/// ([`ln_pmf`]), times the sum of every term relative to it, each from the last by the exact ratio
+/// of consecutive terms in double-double. The relative terms fall away from the anchor on both
+/// sides, so each side stops once a term is below 2^-110 of the sum; the anchor's ln is the only
+/// rounding that matters, so the sum keeps [`ln_pmf`]'s accuracy, which a sum of terms each
+/// anchored at a tail would not. 0 for an empty range.
+fn sum_of_terms(population: u64, successes: u64, draws: u64, first: u64, end: u64) -> f64 {
+    if end <= first {
+        return 0.0;
+    }
+    let last = end - 1;
+    let anchor = mode(population, successes, draws).clamp(first, last);
+    let mut sum: Dd = (1.0, 0.0);
+    // Upward: p(i + 1) / p(i) = (K - i)(n - i) / ((i + 1)(N - K - n + i + 1)).
+    let mut term: Dd = (1.0, 0.0);
+    for i in anchor..last {
+        let next = i + 1;
+        term = dd_mul(
+            dd_mul(term, ((successes - i) as f64, 0.0)),
+            ((draws - i) as f64, 0.0),
+        );
+        term = dd_div_small(
+            dd_div_small(term, next as f64),
+            (population + next - successes - draws) as f64,
+        );
+        sum = dd_add(sum, term);
+        if term.0 < sum.0 * NEGLIGIBLE {
+            break;
+        }
+    }
+    // Downward: p(i - 1) / p(i) = i (N - K - n + i) / ((K - i + 1)(n - i + 1)).
+    let mut term: Dd = (1.0, 0.0);
+    for i in (first + 1..=anchor).rev() {
+        term = dd_mul(
+            dd_mul(term, (i as f64, 0.0)),
+            ((population + i - successes - draws) as f64, 0.0),
+        );
+        term = dd_div_small(
+            dd_div_small(term, (successes - i + 1) as f64),
+            (draws - i + 1) as f64,
+        );
+        sum = dd_add(sum, term);
+        if term.0 < sum.0 * NEGLIGIBLE {
+            break;
+        }
+    }
+    (ln_pmf(population, successes, draws, anchor) + sum.0.ln()).exp()
 }
 
 /// The terms `[first, end)` of the sum over `[min, x]` outside which every term is exactly 0, or
@@ -153,7 +257,10 @@ fn cdf_within(population: u64, successes: u64, draws: u64, x: u64, max_terms: u6
 /// Each side is a bisection over the computed exponents themselves: the index it keeps is one
 /// whose exponent it evaluated and found below the threshold (so the skip holds even where the
 /// computed exponents are not monotone): at most 131 exponents in all (`min`, up to 64 halvings,
-/// the right side's start and x, and up to 64 more halvings).
+/// the right side's start and x, and up to 64 more halvings). Since T-4502 the terms left are
+/// summed in log space ([`sum_of_terms`]), not as statrs' doubles: the ones skipped are each below
+/// e^-750 (1.9E-326), so fewer than 2^64 of them leave out under 1E-306 in all, below the
+/// 1E-300 floor of the Gate A envelope.
 fn nonzero_terms(
     population: u64,
     successes: u64,
@@ -169,9 +276,7 @@ fn nonzero_terms(
     let margin = 2.0 * error;
     // Written as a positive condition, so a NaN exponent is never skipped.
     let is_zero = |i: u64| exponent(i) + margin < ZERO_EXPONENT;
-    // n and K are at most 2^52 here, so the product fits a u128, and the mode is at most n.
-    let mode = (u128::from(draws) + 1) * (u128::from(successes) + 1) / (u128::from(population) + 2);
-    let mode = u64::try_from(mode).ok()?;
+    let mode = mode(population, successes, draws);
 
     // The left side: the largest j in [min, min(x, m)] whose term is known 0 starts the sum at
     // j + 1.
@@ -224,7 +329,7 @@ impl Model {
     /// `HYPGEOM.DIST(sample_s, number_sample, population_s, number_pop, cumulative)`: every
     /// argument lifts over an array and a range (SPEC-0011; probes/stat-argument-modes
     /// H330-H336, probes/stat-quantile-lift H51-H52). The cdf is the double-double walk's sum or,
-    /// past its budget, the capped port of statrs' sum (`hypergeometric_cdf`), which the lifting
+    /// past its budget, the capped log-space sum (`hypergeometric_cdf`), which the lifting
     /// table charges (lift/kinds/statistical.rs `HYPGEOM_DIST_WEIGHT`).
     pub(crate) fn fn_hyp_geom_dist(
         &mut self,
@@ -245,8 +350,8 @@ impl Model {
 
     /// `HYPGEOMDIST(sample_s, number_sample, population_s, number_pop)`, HYPGEOM.DIST's pmf: every
     /// argument lifts over an array and a range (probes/stat-argument-modes H337-H342,
-    /// probes/stat-quantile-lift H53-H54). The pmf is the double-double walk, statrs' closed form past
-    /// its budget.
+    /// probes/stat-quantile-lift H53-H54). The pmf is the double-double walk, Loader's log-space
+    /// form past its budget (`ln_pmf`).
     pub(crate) fn fn_hypgeomdist_compat(
         &mut self,
         args: &[Node],
@@ -305,10 +410,12 @@ impl Model {
         }
         let [sample_s, number_sample, population_s, number_pop] = counts.map(f64::trunc);
 
-        // number_sample <= number_pop and population_s <= number_pop, with number_pop > 0; anything
-        // else is #NUM!. A zero number_sample or population_s is valid (t1049-hypgeomdist A44,
-        // A46, A55, A56).
-        let valid = number_sample <= number_pop && population_s <= number_pop && number_pop > 0.0;
+        // number_sample <= number_pop and population_s <= number_pop; anything else is #NUM!. A
+        // zero number_sample or population_s is valid (t1049-hypgeomdist A44, A46, A55, A56), and
+        // so is an empty population: an empty sample of it is 1 (`HYPGEOMDIST(0,0,0,0)`,
+        // accuracy/HYPGEOMDIST/s1 A115; `HYPGEOM.DIST(0,0,0,0,FALSE)`, accuracy/HYPGEOM.DIST/s1
+        // A138; statistics.md "HYPGEOM.DIST of an empty population is 1 ...", T-4502).
+        let valid = number_sample <= number_pop && population_s <= number_pop;
         if !valid {
             return Err(num_error(cell));
         }
@@ -337,7 +444,8 @@ impl Model {
 
         // The exact value rounded once, from a double-double walk (T-0977): statrs' ln_binomial
         // sums miss Excel's 15 digits (`HYPGEOM.DIST(1,4,8,20,TRUE)` is Excel's
-        // 0.46542827657378727, statrs' 0.46542827657378827). statrs stays past the walk's budget.
+        // 0.46542827657378727, statrs' 0.46542827657378827). Past the walk's budget the log-space
+        // forms (T-4502).
         let prob = if cumulative {
             match hypergeometric_cdf_sum(n_pop, k_pop, n_sample, k) {
                 Some(prob) => prob,
@@ -346,9 +454,7 @@ impl Model {
         } else {
             match hypergeometric_pmf(n_pop, k_pop, n_sample, k) {
                 Some(prob) => prob,
-                None => Hypergeometric::new(n_pop, k_pop, n_sample)
-                    .map_err(|_| num_error(cell))?
-                    .pmf(k),
+                None => ln_pmf(n_pop, k_pop, n_sample, k).exp(),
             }
         };
         if !prob.is_finite() {
@@ -360,8 +466,8 @@ impl Model {
 
 #[cfg(test)]
 mod tests {
-    use super::{cdf_within, hypergeometric_cdf, nonzero_terms, MAX_TERMS, ZERO_EXPONENT};
-    use statrs::distribution::{DiscreteCDF, Hypergeometric};
+    use super::{cdf_within, hypergeometric_cdf, ln_pmf, nonzero_terms, MAX_TERMS, ZERO_EXPONENT};
+    use crate::functions::statistical::discrete::{hypergeometric_cdf_sum, hypergeometric_pmf};
     use statrs::function::factorial::ln_binomial;
 
     /// A small xorshift, so the sweep is the same on every run.
@@ -375,11 +481,9 @@ mod tests {
         }
     }
 
-    fn statrs_cdf(population: u64, successes: u64, draws: u64, x: u64) -> f64 {
-        match Hypergeometric::new(population, successes, draws) {
-            Ok(dist) => dist.cdf(x),
-            Err(_) => f64::NAN,
-        }
+    /// |ours / exact - 1|.
+    fn relative_error(ours: f64, exact: f64) -> f64 {
+        (ours / exact - 1.0).abs()
     }
 
     #[test]
@@ -389,30 +493,155 @@ mod tests {
         assert!((-745.0f64).exp() > 0.0);
     }
 
-    // Where statrs' sum has at most `MAX_TERMS` terms from max(0, n + K - N), the port sums the
-    // same terms and gives its double, bit for bit.
+    // Past the double-double walk the pmf is Loader's log-space form, within 1E-12 of the math (the
+    // Gate A tables' 50-digit values, eval/accuracy/tables/HYPGEOM.DIST/s1 and HYPGEOMDIST/s1),
+    // where statrs' ratio of binomial coefficients was inf / inf (T-4502). A95's math is 8.1E-186
+    // where Excel's is 0 (statistics.md "HYPGEOM.DIST of an empty population is 1, and a
+    // deep-tail pmf can be 0").
     #[test]
-    fn the_port_is_statrs_within_the_cap() {
-        let mut sweep = Sweep(0x1873);
-        for _ in 0..3_000 {
-            let population = 1 + sweep.below(5_000);
-            let successes = 1 + sweep.below(population);
-            let draws = 1 + sweep.below(population);
-            let x = sweep.below(successes.min(draws) + 1);
-            assert_eq!(
-                hypergeometric_cdf(population, successes, draws, x).to_bits(),
-                statrs_cdf(population, successes, draws, x).to_bits(),
-                "({population},{successes},{draws},{x})"
+    fn the_pmf_past_the_walk_is_the_math() {
+        // (N, K, n, x, the math), a table cell each: HYPGEOM.DIST A95, A102, A146, A180, A173,
+        // then HYPGEOMDIST A93, A199, A146, A90.
+        let points: [(u64, u64, u64, u64, f64); 9] = [
+            (74726, 65797, 46221, 41966, 8.103_803_254_140_631e-186),
+            (
+                336_802,
+                151_580,
+                185_471,
+                86981,
+                5.408_183_689_198_940_5e-133,
+            ),
+            (
+                191_146_706,
+                99_383_970,
+                55_839_627,
+                29_057_116,
+                2.049_810_936_294_359e-17,
+            ),
+            (
+                2_147_483_646,
+                202_463,
+                1_626_691_102,
+                153_800,
+                0.000_158_574_363_945_441_74,
+            ),
+            (
+                2_147_483_646,
+                2_020_698_260,
+                408_905_297,
+                384_794_728,
+                5.719_022_428_552_983e-16,
+            ),
+            (20136, 14952, 8625, 7352, 6.403_537_788_578_344e-219),
+            (27873, 21568, 5613, 4478, 1.112_885_693_049_682_3e-7),
+            (
+                2_147_483_646,
+                615_755_436,
+                1_150_251_057,
+                329_764_023,
+                2.085_877_792_939_491_7e-10,
+            ),
+            (182_949, 55462, 103_344, 32779, 2.695_046_427_588_282_7e-51),
+        ];
+        for (population, successes, draws, x, exact) in points {
+            assert!(hypergeometric_pmf(population, successes, draws, x).is_none());
+            let ours = ln_pmf(population, successes, draws, x).exp();
+            let error = relative_error(ours, exact);
+            assert!(
+                error < 1E-12,
+                "({population},{successes},{draws},{x}): {ours} {error:e}"
             );
         }
     }
 
-    // Past the cap the port skips the terms far from the mode that are exactly 0, and the sum is
-    // still statrs' double, bit for bit: 300 sums with a cap of 2^12, populations up to 1E6 with
-    // 5,000 to 25,000 successes (a spread of about 35 to 80, so the terms not 0 number about 2,700
-    // to 6,100), at x on both sides of the mode. Where more than the cap are left it is NaN.
+    // Past the walk the cdf is within 1E-12 of the math (the Gate A table's 50-digit values),
+    // where statrs' sum of ln-binomial terms was up to 1.2E-6 off (T-4502).
     #[test]
-    fn skipping_the_zero_terms_keeps_statrs_double() {
+    fn the_cdf_past_the_walk_is_the_math() {
+        // HYPGEOM.DIST A148, A151, A157, A164, A172, A188.
+        let points: [(u64, u64, u64, u64, f64); 6] = [
+            (
+                2_147_483_646,
+                16594,
+                878_117_309,
+                6756,
+                0.324_362_116_942_324_3,
+            ),
+            (10_879_025, 33321, 8_811_051, 27201, 0.998_694_135_757_809_9),
+            (
+                73_480_449,
+                29_690_062,
+                269_566,
+                108_560,
+                0.079_181_122_958_671_55,
+            ),
+            (643_257_045, 29261, 976_865, 43, 0.453_832_565_060_763_47),
+            (
+                91_036_189,
+                14417,
+                53_649_874,
+                8185,
+                7.632_023_152_003_808e-8,
+            ),
+            (6_020_848, 4_541_543, 6669, 5417, 1.0),
+        ];
+        for (population, successes, draws, x, exact) in points {
+            assert!(hypergeometric_cdf_sum(population, successes, draws, x).is_none());
+            let ours = hypergeometric_cdf(population, successes, draws, x);
+            let error = relative_error(ours, exact);
+            assert!(
+                error < 1E-12,
+                "({population},{successes},{draws},{x}): {ours} {error:e}"
+            );
+        }
+    }
+
+    // Where the walk reaches, the log-space pmf and the anchored sum are within 1E-12 of its
+    // value, the exact value rounded once: 3,000 random points of populations up to 5,000.
+    #[test]
+    fn the_log_space_forms_are_the_walk_s_value_within_its_budget() {
+        let mut sweep = Sweep(0x4502);
+        let mut checked = 0;
+        for _ in 0..3_000 {
+            let population = 1 + sweep.below(5_000);
+            let successes = 1 + sweep.below(population);
+            let draws = 1 + sweep.below(population);
+            let first = (successes + draws).saturating_sub(population);
+            let x = first + sweep.below(successes.min(draws) - first + 1);
+            let (Some(pmf), Some(cdf)) = (
+                hypergeometric_pmf(population, successes, draws, x),
+                hypergeometric_cdf_sum(population, successes, draws, x),
+            ) else {
+                continue;
+            };
+            checked += 1;
+            let ours = ln_pmf(population, successes, draws, x).exp();
+            if pmf > 1E-300 {
+                let error = relative_error(ours, pmf);
+                assert!(
+                    error < 1E-12,
+                    "pmf({population},{successes},{draws},{x}) {error:e}"
+                );
+            }
+            let ours = cdf_within(population, successes, draws, x, MAX_TERMS);
+            if cdf > 1E-300 {
+                let error = relative_error(ours, cdf);
+                assert!(
+                    error < 1E-12,
+                    "cdf({population},{successes},{draws},{x}) {error:e}"
+                );
+            }
+        }
+        assert!(checked > 2_000, "{checked} points within the walk");
+    }
+
+    // Past the cap the sum skips the terms far from the mode whose statrs exponent is below the
+    // zero threshold; what it leaves out is below 1E-300 in all, so the cdf is the full sum's:
+    // 300 sums with a cap of 2^12, populations up to 1E6 with 5,000 to 25,000 successes (a spread
+    // of about 35 to 80, so the terms not 0 number about 2,700 to 6,100), at x on both sides of
+    // the mode. Where more than the cap are left it is NaN.
+    #[test]
+    fn skipping_the_zero_terms_keeps_the_full_sum() {
         let max_terms = 1 << 12;
         let mut sweep = Sweep(0x18_73_02);
         let (mut skipped, mut past_cap) = (0, 0);
@@ -422,50 +651,48 @@ mod tests {
             let draws = population / 4 + sweep.below(population / 2);
             let x = max_terms + sweep.below(successes - max_terms);
             let ours = cdf_within(population, successes, draws, x, max_terms);
-            let theirs = statrs_cdf(population, successes, draws, x);
+            let full = cdf_within(population, successes, draws, x, u64::MAX);
             if ours.is_nan() {
                 past_cap += 1;
                 continue;
             }
             skipped += 1;
-            assert_eq!(
-                ours.to_bits(),
-                theirs.to_bits(),
-                "({population},{successes},{draws},{x})"
+            assert!(
+                (ours - full).abs() <= 1E-300 || relative_error(ours, full) < 1E-15,
+                "({population},{successes},{draws},{x}): {ours} {full}"
             );
         }
         assert!(skipped > 150, "{skipped} sums skipped zero terms");
         assert!(past_cap > 50, "{past_cap} sums past the cap");
     }
 
-    // `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took about 4.8 s on main (statrs
-    // sums 25,000,001 terms, 192.9 ns each in release); 95,942 of them are not 0, and the port
-    // sums only those, to the same double (statrs' value, measured in release).
+    // `HYPGEOM.DIST(25000000,50000000,50000000,100000000,TRUE)` took about 4.8 s before T-1873
+    // (statrs summed 25,000,001 terms). The distribution is symmetric about its mode 25,000,000
+    // (K = n = N / 2), so the cdf there is exactly 1/2 + pmf(mode) / 2.
     #[test]
-    fn the_slowest_call_on_main_keeps_its_double() {
-        let ours = hypergeometric_cdf(100_000_000, 50_000_000, 50_000_000, 25_000_000);
-        assert_eq!(ours.to_bits(), 0x3fe0_00a7_2983_49b1, "{ours}");
+    fn the_slowest_call_on_main_is_half_and_half_the_mode() {
+        let (population, half) = (100_000_000, 50_000_000);
+        let ours = hypergeometric_cdf(population, half, half, half / 2);
+        let exact = 0.5 + ln_pmf(population, half, half, half / 2).exp() / 2.0;
+        assert!(relative_error(ours, exact) < 1E-14, "{ours} {exact}");
     }
 
-    // The widest distribution at a population of 1.8E8, 258,239 terms that are not known to
-    // be 0, just under the cap (the lift bench's case): statrs' double (measured in release).
+    // The widest distribution at a population of 1.8E8, 258,239 terms that are not known to be 0,
+    // just under the cap (the lift bench's case): x is 149 standard deviations above the mode, so
+    // the cdf is 1 to far below an ulp, where statrs' sum gave 0.99999977.
     #[test]
-    fn a_sum_near_the_cap_keeps_statrs_double() {
+    fn a_sum_near_the_cap_is_one() {
         let ours = hypergeometric_cdf(180_000_000, 90_000_000, 90_000_000, 45_500_000);
-        assert_eq!(ours.to_bits(), 0x3fef_fffe_147e_ac9c, "{ours}");
+        assert!(ours <= 1.0 && 1.0 - ours < 1E-14, "{ours}");
     }
 
-    // Both sides of the cap: a sum of exactly `max_terms` terms is statrs' double and one more is
-    // NaN, counted from max(0, n + K - N) where nothing is skipped (a population above 2^52) and
-    // after the skip.
+    // Both sides of the cap: a sum of exactly `max_terms` terms is a number and one more is NaN,
+    // counted from max(0, n + K - N) where nothing is skipped (a population above 2^52) and after
+    // the skip.
     #[test]
     fn the_cap_counts_the_terms_summed() {
         let (population, successes, draws) = (1u64 << 60, 1u64 << 59, 1u64 << 20);
-        let at_cap = cdf_within(population, successes, draws, 63, 64);
-        assert_eq!(
-            at_cap.to_bits(),
-            statrs_cdf(population, successes, draws, 63).to_bits()
-        );
+        assert!(!cdf_within(population, successes, draws, 63, 64).is_nan());
         assert!(cdf_within(population, successes, draws, 64, 64).is_nan());
 
         let (population, successes, draws, x) = (400_000, 20_000, 200_000, 13_500);
@@ -477,10 +704,8 @@ mod tests {
         let summed = end - first;
         assert!(first > 0 && end <= x && summed < x, "[{first}, {end})");
         let at_cap = cdf_within(population, successes, draws, x, summed);
-        assert_eq!(
-            at_cap.to_bits(),
-            statrs_cdf(population, successes, draws, x).to_bits()
-        );
+        let full = cdf_within(population, successes, draws, x, u64::MAX);
+        assert!(relative_error(at_cap, full) < 1E-15, "{at_cap} {full}");
         assert!(cdf_within(population, successes, draws, x, summed - 1).is_nan());
     }
 
@@ -493,10 +718,9 @@ mod tests {
         // A population above 2^52 skips nothing.
         let n = 1u64 << 60;
         assert!(hypergeometric_cdf(n, n / 2, 1 << 20, 1 << 19).is_nan());
-        // Within the cap counted from max(0, n + K - N), and at the ends, the cdf is statrs'.
-        assert_eq!(hypergeometric_cdf(n, n / 2, 1 << 20, 0).to_bits(), {
-            statrs_cdf(n, n / 2, 1 << 20, 0).to_bits()
-        });
+        // Within the cap counted from max(0, n + K - N), and at the ends, the cdf is a number:
+        // P(X = 0) is about 2^-(2^20), 0 as a double.
+        assert_eq!(hypergeometric_cdf(n, n / 2, 1 << 20, 0), 0.0);
         assert_eq!(hypergeometric_cdf(n, n / 2, 1 << 20, 1 << 20), 1.0);
         // The 2^19 + 1 terms above are past the cap.
         const { assert!(MAX_TERMS < 1 << 19) };
