@@ -134,11 +134,13 @@ impl Model {
     }
 }
 
-/// Whether `node` hands XNPV one cell as a reference (a cell, a defined name, or `INDEX` of a
-/// reference), where a literal or computed text is another argument kind.
-fn returns_one_cell_reference(node: &Node) -> bool {
+/// Whether XNPV reads numeric or date text from `node` as its number: a one-cell reference (a
+/// cell, a defined name, or `INDEX` of a reference) or a text literal (`XNPV(0.1,"30",39448)`
+/// is 30 and `XNPV(0.1,30,"1/1/2025")` too, probes/t4381-xnpv-literal-and-named-text A1:A3).
+/// Computed text is unprobed and keeps its earlier reading.
+fn reads_text_as_number(node: &Node) -> bool {
     match node {
-        Node::ReferenceKind { .. } | Node::DefinedNameKind(_) => true,
+        Node::ReferenceKind { .. } | Node::DefinedNameKind(_) | Node::StringKind(_) => true,
         Node::FunctionKind {
             kind: Function::Index,
             args,
@@ -188,10 +190,11 @@ impl Model {
         if !matches!(element_at(&values, 0), FlowElement::Number(_)) {
             return None;
         }
-        // Only the stored elements and two more indexes can stop the walk: the first, and the
-        // first empty value after it. Every other index is an
-        // empty value and an empty later date, which pass. So the walk visits those, in order,
-        // and costs the stored cells, not the area (directive 5).
+        // Only the stored elements and three more indexes can stop the walk: the first, the first
+        // empty value after it and the first empty date after it (an empty later date is `#NUM!`
+        // too, so it is the third index visited). Every other index repeats an error one of those
+        // already gives. So the walk visits those, in order, and costs the stored cells, not the
+        // area (directive 5).
         let mut indexes: Vec<usize> = values.iter().chain(&dates).map(|(i, _)| *i).collect();
         indexes.push(0);
         if let Some(gap) =
@@ -225,10 +228,9 @@ impl Model {
                     return error(Error::VALUE)
                 }
                 FlowElement::Other | FlowElement::Empty => return error(Error::NUM),
-                // The first date is checked truncated (as `xnpv_dates`). A later one only when it is
-                // negative or past the last serial as given: a later 0, like one before the first, is
-                // left to `xnpv_dates` (dates 100 and 0 keep the first value's `#VALUE!`,
-                // probes/t2603-xnpv-no-number-values C1).
+                // The first date is checked truncated (as `xnpv_dates`). A later one is `#NUM!` when
+                // it is below the first (a 0 or a negative too, `first_day` above) or past the last
+                // serial as given.
                 FlowElement::Number(date)
                     if (index == 0
                         && (date.floor() < MINIMUM_DATE_SERIAL_NUMBER as f64
@@ -253,14 +255,15 @@ impl Model {
     /// range or array element of numeric text is `#NUM!`. Anything else is left as it is.
     ///
     /// A one-cell reference already evaluates to its value, so text is read this way only when
-    /// `node` is a cell reference, a defined name or an `INDEX` of a reference (rows 38, 39, 42,
+    /// `node` is a cell reference, a defined name, an `INDEX` of a reference (rows 38, 39, 42,
     /// 43 of probes/t4375-xnpv-refused-first-and-one-cell; `OFFSET` and a one-cell range keep a
-    /// range): a literal text argument (`XNPV(0.1,"30",39448)`) is unprobed
+    /// range) or a text literal (`XNPV(0.1,"30",39448)` is 30, and a defined name for a constant
+    /// text reads the same; probes/t4381-xnpv-literal-and-named-text). Computed text is unprobed
     /// and keeps its earlier reading.
     pub(super) fn xnpv_one_cell(&mut self, arg: CalcResult, node: &Node) -> CalcResult {
         let value = match &arg {
             CalcResult::Range { left, right } if left == right => self.evaluate_cell(*left),
-            CalcResult::String(_) if returns_one_cell_reference(node.ungrouped()) => arg.clone(),
+            CalcResult::String(_) if reads_text_as_number(node.ungrouped()) => arg.clone(),
             _ => return arg,
         };
         match value {

@@ -3,7 +3,7 @@ id: T-4481
 title: "@ and # operand forms still UNVERIFIED in references.md: @(INDEX(..)), @(D1#), @(name), (@(A1 B1))#, a typed (1/0)#, @TRUE and two error operands of :, probe and match"
 milestone: M7
 lane: engine
-status: todo
+status: done
 priority: P3
 size: S
 tier: opus
@@ -42,16 +42,36 @@ them, or the gap is recorded and owned.
 - Write the engine's values and FORMULATEXT as predictions before the fill (docs/research/t4481/).
 
 ## Acceptance criteria
-- [ ] probes/t4481-at-spill-operand-edges (excel-graph, canary-verified) holds every loadable form in Context, with
+- [x] probes/t4481-at-spill-operand-edges (excel-graph, canary-verified) holds every loadable form in Context, with
       FORMULATEXT and value cells. Each refused form is listed with its load error in the Outcome and in
       references.md.
-- [ ] Every cell of the case passes, or each one that does not is recorded in references.md and owned by a filed task
+- [x] Every cell of the case passes, or each one that does not is recorded in references.md and owned by a filed task
       named in the Outcome.
-- [ ] references.md: the "not probed", "still inferred" and "UNVERIFIED" clauses quoted in Context are replaced by the
+- [x] references.md: the "not probed", "still inferred" and "UNVERIFIED" clauses quoted in Context are replaced by the
       evidenced behavior, with cells cited. The parser accepts or refuses each refused form as Excel does, and a
       parser unit test covers each such form.
-- [ ] No regressions in any baseline; `make check` green; reviewers approve.
+- [x] No regressions in any baseline; `make check` green; reviewers approve.
 
 ## Out of scope
 - Legacy (no `cm`) formulas' automatic `@` and the implicit intersection of a defined name's body (T-3856, T-4273).
 - Move and paste text (`to_string_moved`).
+
+## Outcome
+Probed; the engine already matches every cell, so only a parser test and the docs changed.
+- probes/t4481-at-spill-operand-edges (excel-graph, filled by `rustsheet-oracle fill`, which canary-verifies every
+  workbook): the 17 loadable forms in Context, each with FORMULATEXT and ERROR.TYPE (51 cells, plus D1's spill).
+  `docs/research/t4481/gen_probe.py` writes it, and the engine's predictions (`docs/research/t4481/predictions.tsv`)
+  were committed before the fill. 51/51 match.
+- Refused forms: `=(1/0)#` and `=(NA())#`, stored as `_xlfn.ANCHORARRAY((1/0))` and `_xlfn.ANCHORARRAY((NA()))`. Excel
+  for the web refuses each one (createSession 501 `FileCorruptTryRepair`, one scratch workbook each), while
+  `=ANCHORARRAY((A1:A2))` loads in the same shape. The parser already refused `(1/0)#`.
+  `range_and_anchorarray_refuse_value_operands` now also covers `(NA())#` and both stored spellings. spec2xlsx copies
+  a `#` written after a parenthesis into the file as is, which Excel also refuses, so the case writes these forms as
+  `ANCHORARRAY((…))`.
+- Findings (references.md):
+  - `@(INDEX(…))`, `@(D1#)`, `@(name)` and `(@name)` keep their written parentheses.
+  - `@TRUE` and `@(TRUE)` are TRUE, not `#VALUE!`.
+  - An `@` error passes through `#`.
+  - With two error operands, `:` returns the left one.
+  - The "not probed", "still inferred" and two "UNVERIFIED" clauses are replaced with cited cells.
+- Eval delta: +1 passing probe case (54 cells; eval/baseline/probes.txt records it), 0 regressions.

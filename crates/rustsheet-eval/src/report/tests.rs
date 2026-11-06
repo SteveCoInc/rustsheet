@@ -20,6 +20,7 @@ pub(crate) fn case(id: &str, millis: u64) -> CaseResult {
         defined_names: BTreeMap::new(),
         arguments: Vec::new(),
         reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+        pivot_layout: Vec::new(),
     }
 }
 
@@ -79,6 +80,7 @@ pub(crate) fn cell(formula: &str, verdict: Verdict) -> CellResult {
         graph_subnormal: false,
         kind: crate::runner::CellKind::Scored,
         math: None,
+        target: crate::runner::Target::Excel,
     }
 }
 
@@ -158,6 +160,7 @@ fn function_closeness_buckets_sum_to_the_scored_cells() {
         ulp4: 1,
         digits15: 1,
         residue13: 0,
+        r3_math: 0,
         visible_numeric: 1,
         visible_other: 1,
     };

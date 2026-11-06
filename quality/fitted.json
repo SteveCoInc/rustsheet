@@ -1,4 +1,5 @@
 {
+  "crates/rustsheet-engine/src/formatter/elapsed.rs": 1,
   "crates/rustsheet-engine/src/functions/engineering/complex/trig.rs": 4,
   "crates/rustsheet-engine/src/functions/engineering/transcendental/bessel_excel.rs": 3,
   "crates/rustsheet-engine/src/functions/financial/annuity.rs": 3,
@@ -8,7 +9,7 @@
   "crates/rustsheet-engine/src/functions/math_and_trigonometry/hyperbolic.rs": 3,
   "crates/rustsheet-engine/src/functions/statistical/bratio/bfrac.rs": 1,
   "crates/rustsheet-engine/src/functions/statistical/bratio/bgrat.rs": 1,
-  "crates/rustsheet-engine/src/functions/statistical/chisq.rs": 1,
+  "crates/rustsheet-engine/src/functions/statistical/chisq.rs": 2,
   "crates/rustsheet-engine/src/functions/statistical/exponential.rs": 1,
   "crates/rustsheet-engine/src/functions/statistical/f_density.rs": 7,
   "crates/rustsheet-engine/src/functions/statistical/fisher.rs": 1,

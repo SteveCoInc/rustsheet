@@ -134,6 +134,22 @@ pub(crate) fn retarget_unqualified_references(node: &mut Node, to: u32) {
     });
 }
 
+/// Writes `sheet` as the prefix of every reference of `node` written without one, so the text
+/// keeps reading that sheet from any other context: an API-added name's body read on the active
+/// sheet is stored as the defined-name context would write it (T-4445).
+pub(crate) fn qualify_unqualified_references(node: &mut Node, sheet: &str) {
+    for_each_sheet_reference_mut(node, &mut |node| {
+        if let Node::ReferenceKind { sheet_name, .. }
+        | Node::RangeKind { sheet_name, .. }
+        | Node::ThisRowKind { sheet_name, .. } = node
+        {
+            if sheet_name.is_none() {
+                *sheet_name = Some(sheet.to_owned());
+            }
+        }
+    });
+}
+
 /// Rewrites the 3-D spans of `node` for moving the sheet at `from` to `to`. Both indices and
 /// `sheet_names` (in tab order) are from before the move.
 ///

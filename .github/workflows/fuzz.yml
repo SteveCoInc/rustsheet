@@ -1,8 +1,9 @@
 name: Nightly fuzz
 
 # Fuzzes untrusted formulas and workbooks (CLAUDE.md directive 5; T-0021, decision 0035).
-# A crash, timeout or out-of-memory fails the job and uploads only the offending inputs; the
-# steward files one task per distinct crash (docs/process/agent-workflow.md).
+# A crash, timeout or out-of-memory fails the job and uploads only the offending inputs. A failed
+# scheduled run on main then opens (or comments on) one issue per failed target, which the issue
+# intake works (decision 0302; docs/process/agent-workflow.md).
 on:
   schedule:
     - cron: "37 3 * * *"
@@ -35,6 +36,8 @@ jobs:
           - target: cfb_container
             args: -max_len=65536
           - target: encrypted_package
+            args: -max_len=65536
+          - target: pivot_import
             args: -max_len=65536
     steps:
       - uses: actions/checkout@v4
@@ -95,3 +98,51 @@ jobs:
           path: fuzz/artifacts/${{ matrix.target }}/
           if-no-files-found: ignore
           retention-days: 30
+
+  # A failed scheduled run on main opens an issue per failed target, or comments on the open one,
+  # so the issue intake routine takes it in at once (decision 0302). Only this job may write
+  # issues; the fuzz jobs keep `contents: read`. It runs our own script on our own run's job names
+  # and artifacts, never a pull request's code.
+  report:
+    name: report failures as issues
+    needs: fuzz
+    if: failure() && github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fuzz-crash-*-${{ github.run_id }}
+          path: artifacts
+      - name: open or update one issue per failed target
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPO/actions/runs/${{ github.run_id }}/jobs" --paginate \
+            --jq '.jobs[] | {name, conclusion}' | jq -s '{jobs: .}' > jobs.json
+          gh label create fuzz-failure --force --color B60205 \
+            --description "A nightly fuzz run failed (decision 0302)"
+          targets="$(python3 scripts/fuzz_issue.py targets jobs.json)"
+          for target in $targets; do
+            title="$(python3 scripts/fuzz_issue.py title "$target")"
+            dir="artifacts/fuzz-crash-$target-${{ github.run_id }}"
+            open="$(gh issue list --label fuzz-failure --state open --limit 100 \
+              --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n1)"
+            if [ -n "$open" ]; then
+              python3 scripts/fuzz_issue.py body "$target" "$RUN_URL" "$dir" --again > body.md
+              gh issue comment "$open" --body-file body.md
+            else
+              python3 scripts/fuzz_issue.py body "$target" "$RUN_URL" "$dir" > body.md
+              gh issue create --title "$title" --label fuzz-failure --body-file body.md
+            fi
+          done

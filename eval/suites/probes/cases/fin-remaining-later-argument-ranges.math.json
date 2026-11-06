@@ -1,0 +1,55 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "5fadec0282eb5e80adb22efddf90af208d05089928ce63d0e7c8f0732a0ad23a"
+ },
+ "sheets": {
+  "Sheet1": {
+   "K1": {
+    "t": "n",
+    "v": "-999900000.00000002081668171172168513294309377670288",
+    "f": "=CUMIPMT(0.01,1000000,100000,1,1000000,0)"
+   },
+   "K2": {
+    "t": "n",
+    "v": "-100000.0",
+    "f": "=CUMPRINC(0.01,1000000,100000,1,1000000,0)"
+   },
+   "K3": {
+    "t": "n",
+    "v": "-632.37175178052351815209510735753054330717730611767",
+    "f": "=CUMIPMT(0.01,1E15,100000,1E15-10,1E15,0)"
+   },
+   "K7": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=PRICE(1,2958465,0.05,0.06,100,4,0)"
+   },
+   "K8": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=YIELD(1,2958465,0.05,90,100,4,0)"
+   },
+   "K9": {
+    "t": "e",
+    "why": "the previous coupon date is before 1900-01-01: #NUM!",
+    "f": "=DURATION(1,2958465,0.05,0.06,4,0)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "K4": {
+    "f": "=AMORLINC(2400,39679,39813,300,1E9,0.15,1)",
+    "why": "no single value"
+   },
+   "K5": {
+    "f": "=AMORDEGRC(2400,39679,39813,300,1E9,0.15,1)",
+    "why": "no single value"
+   }
+  }
+ }
+}

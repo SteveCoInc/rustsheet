@@ -183,6 +183,89 @@ fn chisq_inv_rt_num_edge() {
     }
 }
 
+/// T-3337 (decision 0267 item 3, decision 0188 R3): at one degree of freedom the quantile of
+/// `1 - p` is more than G = 1e-4 off the right-tail quantile where rounding `1 - p` to a double
+/// moves the tail by a large part of `p`, and there CHISQ.INV.RT and CHIINV return the 50-digit
+/// math within 1e-9 (probes-numeric/t3336-chisq-df1-right-tail.math.json). Elsewhere they keep
+/// Excel's quantile of `1 - p`, and `#NUM!` stays `#NUM!`.
+#[test]
+fn chisq_inv_rt_one_degree_follows_the_math_where_one_minus_p_rounds_far() {
+    let mut model = new_empty_model();
+    // (formula, math from the committed sidecar, or the engine's unchanged value where Excel is within G;
+    // that value is within 15 digits of Excel, not always Excel's double)
+    let math = [
+        ("A1", "=CHISQ.INV.RT(1.5E-16,1)", 68.169_874_129_795_37),
+        ("A2", "=CHIINV(1.5E-16,1)", 68.169_874_129_795_37),
+        ("A3", "=CHISQ.INV.RT(3E-16,1)", 66.803_270_472_991_04),
+        ("A4", "=CHIINV(3E-16,1)", 66.803_270_472_991_04),
+        ("A5", "=CHISQ.INV.RT(5E-16,1)", 65.796_379_466_286_04),
+        ("A6", "=CHISQ.INV.RT(1E-16,1)", 68.969_460_958_516_58),
+        ("A7", "=CHISQ.INV.RT(1.5E-15,1)", 63.631_646_601_411_05),
+    ];
+    let kept = [
+        ("B1", "=CHISQ.INV.RT(1E-15,1)", "64.43203896936356"),
+        ("B2", "=CHISQ.INV.RT(1E-9,1)", "37.324893106518715"),
+        (
+            "B3",
+            "=CHISQ.INV.RT(2.220446049250313E-16,1)",
+            "67.39648382445012",
+        ),
+        ("B4", "=CHISQ.INV.RT(1E-20,1)", "#NUM!"),
+        ("B5", "=CHISQ.INV.RT(1,1)", "0.0"),
+    ];
+    for (cell, formula, _) in math {
+        model._set(cell, formula);
+    }
+    for (cell, formula, _) in kept {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, expected) in math {
+        let actual: f64 = crate::test::util::round_trip_value(&model, cell)
+            .parse()
+            .unwrap();
+        assert!(
+            ((actual - expected) / expected).abs() < 1e-9,
+            "{formula}: {actual} against the math {expected}"
+        );
+    }
+    for (cell, formula, expected) in kept {
+        assert_eq!(
+            crate::test::util::round_trip_value(&model, cell),
+            *expected,
+            "{formula}"
+        );
+    }
+}
+
+/// T-3858: at one degree of freedom CHISQ.INV.RT and CHIINV are `#NUM!` from 8.3253E-17 down and
+/// a value from 8.3254E-17 up, though 1 - p is 1 - 2^-53 on both sides and CHISQ.INV(1-p,1) is a
+/// value at every such p (probes-numeric/t3858-chisq-df1-num-cutoff, excel-graph). Above the edge
+/// Excel's 68.7632522116684 is 0.8% off the 50-digit math, so A4 to A6 expect the math (T-3337,
+/// decision 0267 item 3); A7 is the lower tail, which keeps Excel's value.
+#[test]
+fn chisq_inv_rt_one_degree_num_edge() {
+    let mut model = new_empty_model();
+    let cells = [
+        ("A1", "=CHISQ.INV.RT(8E-17,1)", "#NUM!"),
+        ("A2", "=CHISQ.INV.RT(8.3253E-17,1)", "#NUM!"),
+        ("A3", "=CHIINV(8.3253E-17,1)", "#NUM!"),
+        ("A4", "=CHISQ.INV.RT(8.3254E-17,1)", "69.33092305"),
+        ("A5", "=CHIINV(8.3254E-17,1)", "69.33092305"),
+        ("A6", "=CHISQ.INV.RT(3*2^-55-2^-106,1)", "69.33062157"),
+        ("A7", "=CHISQ.INV(1-8E-17,1)", "68.76325221"),
+        ("A8", "=CHISQ.INV.RT(0,1)", "#NUM!"),
+        ("A9", "=CHISQ.INV.RT(8.3253E-17,1.5)", "#NUM!"),
+    ];
+    for (cell, formula, _) in cells {
+        model._set(cell, formula);
+    }
+    model.evaluate();
+    for (cell, formula, expected) in cells {
+        assert_eq!(model._get_text(cell), *expected, "{formula}");
+    }
+}
+
 #[test]
 fn test_booleans() {
     let mut model = new_empty_model();

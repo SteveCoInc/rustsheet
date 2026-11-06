@@ -263,6 +263,20 @@ Ours: matches since T-3030 (`cell_info` reads the top-left cell on the reference
 Also: `CELL({1,"row"},B2)` is `#VALUE!` (a non-string element) and `CELL({"row",1},B2)` spills 2, `#VALUE!`; `N(range)` with an error top-left cell is that error (Calc!J1, K1); the info_type array lifts per element.
 Tasks: T-1230
 
+## CELL("color"|"parentheses"|"prefix"|"protect"|"format"|"filename"|"width") is #VALUE! on Excel for the web
+Rule (excel-graph, 2026-11-06, T-3011): Excel for the web returns `#VALUE!` for `CELL(info_type, ref)` with info_type
+"color", "parentheses", "prefix", "protect" or "format", on a blank cell, a number, a text, a cell formatted
+`0.00;[Red]-0.00`, a cell formatted `0;(0)`, a reference on another sheet, a range, in upper or mixed case, and with no
+reference. "width" is `#VALUE!` on the web too (decision 0019: the POI fill saw `#VALUE!` on 9 `CELL("width")` cells where
+poi/47804.xlsx caches 10 and 11; no committed sidecar, since the oracle canary now refuses the call), and "filename" is `#VALUE!` (T-2052). Desktop Excel returns values for all seven (the calipers goldens
+formulas_information Sheet1 E140:N160 cache color 0, filename a path, format "G", parentheses 0, prefix "",
+protect 1, width 15 on General cells), so these cells are web-vs-desktop conflicts.
+Evidence: probes/t3011-cell-format-info-types A1:A38 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph); desktop values are out of scope (decision 0266).
+Ours: `cell_info` returns `#VALUE!` for all seven, matching the web. The calipers cells are Phase 1 rate exceptions
+(decision 0308).
+Tasks: T-3011, T-4207
+
 ## CELL("row"/"col"/"address"/"type", range): no intersection; "type" reads the named sheet since 2026-10-28
 Rule (excel-graph, 2026-10-15): a legacy (non-array) `CELL(info_type, range)` gives the same value as its dynamic twin and is never implicitly intersected, whether the formula row or column is inside the range or not. `CELL("row",A1:A5)` is 1 and `CELL("address",A1:A5)` is `$A$1` in rows 3 and 8; `CELL("col",B20:D20)` is 2 in columns C, D (inside) and F, G (outside); `CELL("type",A1:A5)` is "v" (the top-left cell; the probe cannot tell it from an intersected cell, since both are numbers, so no-intersection for "type" rests on the vector signature, UNVERIFIED). `row`, `col` and `address` use the reference's own address (`CELL("row",Data!A2:A5)` is 2, `CELL("col",Data!C20:D20)` is 3). Since 2026-10-28 `"type"` reads the named sheet, like `"contents"` (previous entry, T-3030). The 2026-10-15 fill read the formula's own sheet: `CELL("type",Data!A7)` is "b" when Data!A7 is text but Calc!A7 is blank, `Data!A8` is "l" (Calc!A8 is text, Data!A8 blank) and `Data!A9` is "b" (Data!A9 a number, Calc!A9 blank).
 Cross-sheet `CELL("address",Data!A2)` was observed as `[<file>.xlsx]Data!$A$2` with the oracle's temporary file name in the T-1433 oracle run (scored since T-2042 in its own case, next entry but one).
@@ -400,6 +414,21 @@ Rule (probes/volatile-and-info-rand-true-false-sheet D1-D28, excel-graph, 2026-1
 `SHEET("Nope")`, `SHEET("")`, `SHEET(" T")` and `SHEET("S!A1")` are `#N/A`. A number, a boolean, an error and `ROW(A1)` are
 `#N/A`. A reference returned by OFFSET (1), INDIRECT (2), INDEX (`SHEET(INDEX(T!A1:B2,1,1))` 2), IF (`SHEET(IF(TRUE,U!A1))` 3)
 and a union of two areas on sheet T (`SHEET((T!A1,T!B2))` 2) all resolve to their sheet. Ours matches (T-1631).
+
+## SHEET and SHEETS of a LET variable or LAMBDA parameter
+Rule (probes/t4518-sheet-sheets-bound-variable D1:D26, excel-graph, 2026-11-06, T-4518; sheets Sheet1..Sheet3):
+SHEET of a bound variable is SHEET of what it is bound to. A reference gives its sheet, written or passed in by
+MAP, BYROW, BYCOL or a LAMBDA call (`LET(x,Sheet3!A1:B2,SHEET(x))` 3, `MAP(Sheet2!A1:A3,LAMBDA(r,SHEET(r)))` 2, 2, 2,
+`BYCOL(Sheet3!A1:B3,_xleta.SHEET)` 3, 3), and so does a union (`LET(x,(Sheet2!A1,Sheet2!B2),SHEET(x))` 2) or a
+variable bound to another (`LET(x,A1,y,x,SHEET(y))` 1). Text is a sheet name (`LET(x,"Sheet2",SHEET(x))` 2,
+`MAP({"Sheet2";"Sheet3"},_xleta.SHEET)` 2, 3; `"Sheet9"` `#N/A`). A number or a boolean is `#N/A`. A whole array is
+one `#N/A`, not lifted (`LET(x,{1,2},SHEET(x))`; a GROUPBY group, `GROUPBY(A1:A3,B1:B3,LAMBDA(v,SHEET(v)))` `#N/A`
+in each value cell). A bound error is that error: `LET(x,1/0,SHEET(x))` is `#DIV/0!`, while a written error
+argument is `#N/A` (section above). SHEETS of a parameter bound to a one-sheet reference is 1
+(`MAP(A1:A3,_xleta.SHEETS)` 1, 1, 1, `BYCOL(Sheet2!A1:B3,_xleta.SHEETS)` 1, 1), and of a GROUPBY group `#N/A`
+(probes/t4450-eta-special-forms J59). SHEETS of a parameter bound to anything else is unprobed: the oracle's
+canary sheet guard refuses `SHEETS(<parameter>)`, because a count of sheets would include the canary. Ours matches
+every cell; SHEETS of any other bound value stays `#N/IMPL!`.
 Volatile functions through shape-stable formulas (probes/volatile-now-today-shapes, probes/volatile-and-info-rand-true-false-sheet):
 NOW, TODAY and RAND are numbers (`TYPE` 1, never text or boolean), `NOW()-NOW()` is 0 within one recalculation,
 `INT(NOW())=TODAY()`, `RAND()` is in [0,1) and two calls differ, `TRUE()` and `FALSE()` behave as the literals in

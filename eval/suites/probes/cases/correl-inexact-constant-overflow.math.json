@@ -1,0 +1,401 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "f36cd8bb64120252ab7c1f264a6e4ca7bbb82c7e4fc56d2084401bf0bbcb02e7"
+ },
+ "sheets": {
+  "Calc": {
+   "Z10": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(M1:M3,B1:B3)"
+   },
+   "Z11": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(B1:B3,M1:M3)"
+   },
+   "Z12": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(M1:M3,B1:B3)"
+   },
+   "Z13": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(C1:C3,N1:N3)"
+   },
+   "Z14": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(N1:N3,C1:C3)"
+   },
+   "Z15": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(C1:C3,N1:N3)"
+   },
+   "Z16": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(N1:N3,C1:C3)"
+   },
+   "Z17": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(C1:C3,N1:N3)"
+   },
+   "Z18": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(N1:N3,C1:C3)"
+   },
+   "Z19": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(D1:D3,O1:O3)"
+   },
+   "Z20": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(O1:O3,D1:D3)"
+   },
+   "Z21": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(D1:D3,O1:O3)"
+   },
+   "Z22": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(O1:O3,D1:D3)"
+   },
+   "Z23": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(D1:D3,O1:O3)"
+   },
+   "Z24": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(O1:O3,D1:D3)"
+   },
+   "Z25": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(E1:E5,P1:P5)"
+   },
+   "Z26": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(P1:P5,E1:E5)"
+   },
+   "Z27": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(E1:E5,P1:P5)"
+   },
+   "Z28": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(P1:P5,E1:E5)"
+   },
+   "Z29": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(E1:E5,P1:P5)"
+   },
+   "Z30": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=RSQ(P1:P5,E1:E5)"
+   },
+   "Z31": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(F1:F3,Q1:Q3)"
+   },
+   "Z32": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(Q1:Q3,F1:F3)"
+   },
+   "Z33": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(F1:F3,Q1:Q3)"
+   },
+   "Z34": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(Q1:Q3,F1:F3)"
+   },
+   "Z35": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(F1:F3,Q1:Q3)"
+   },
+   "Z36": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(Q1:Q3,F1:F3)"
+   },
+   "Z37": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(G1:G3,R1:R3)"
+   },
+   "Z38": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(R1:R3,G1:G3)"
+   },
+   "Z39": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(G1:G3,R1:R3)"
+   },
+   "Z40": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(R1:R3,G1:G3)"
+   },
+   "Z41": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(G1:G3,R1:R3)"
+   },
+   "Z42": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(R1:R3,G1:G3)"
+   },
+   "Z43": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(H1:H4,S1:S4)"
+   },
+   "Z44": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(S1:S4,H1:H4)"
+   },
+   "Z45": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(H1:H4,S1:S4)"
+   },
+   "Z46": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(S1:S4,H1:H4)"
+   },
+   "Z47": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(H1:H4,S1:S4)"
+   },
+   "Z48": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(S1:S4,H1:H4)"
+   },
+   "Z49": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(I1:I4,T1:T4)"
+   },
+   "Z50": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(T1:T4,I1:I4)"
+   },
+   "Z51": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(I1:I4,T1:T4)"
+   },
+   "Z52": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(T1:T4,I1:I4)"
+   },
+   "Z53": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(I1:I4,T1:T4)"
+   },
+   "Z54": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(T1:T4,I1:I4)"
+   },
+   "Z55": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(V1:V3,W1:W3)"
+   },
+   "Z56": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=PEARSON(V1:V3,W1:W3)"
+   },
+   "Z57": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(V1:V3,W1:W3)"
+   },
+   "Z58": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(AA1:AA3,AB1:AB3)"
+   },
+   "Z59": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(AB1:AB3,AA1:AA3)"
+   },
+   "Z60": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(AA1:AA3,AB1:AB3)"
+   },
+   "Z62": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=SLOPE(AC1:AC3,AA1:AA3)"
+   },
+   "Z63": {
+    "t": "n",
+    "v": "9.9999999999999996973312221251036165947450327545502e+199",
+    "f": "=SLOPE(AA1:AA3,AC1:AC3)"
+   },
+   "Z64": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=INTERCEPT(AC1:AC3,AA1:AA3)"
+   },
+   "Z65": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=STEYX(AC1:AC3,AA1:AA3)"
+   },
+   "Z66": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(AC1:AC3,AA1:AA3)"
+   },
+   "Z67": {
+    "t": "n",
+    "v": "6.6666666666666664648874814167357443964966885030335e+199",
+    "f": "=COVARIANCE.P(AA1:AA3,AC1:AC3)"
+   },
+   "Z68": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=FORECAST(1,AC1:AC3,AA1:AA3)"
+   },
+   "Z69": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=STEYX(AI1:AI2,AH1:AH2)"
+   },
+   "Z7": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(B1:B3,M1:M3)"
+   },
+   "Z70": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=CORREL(AI1:AI2,AH1:AH2)"
+   },
+   "Z71": {
+    "t": "e",
+    "why": "#NUM!: the sum about x's mean is beyond the double range",
+    "f": "=SLOPE(AI1:AI2,AH1:AH2)"
+   },
+   "Z72": {
+    "t": "e",
+    "why": "#NUM!: a sum about a mean is beyond the double range",
+    "f": "=RSQ(AI1:AI2,AH1:AH2)"
+   },
+   "Z73": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(AF1:AF3,AC1:AC3)"
+   },
+   "Z74": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(AC1:AC3,AF1:AF3)"
+   },
+   "Z75": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant x",
+    "f": "=SLOPE(AC1:AC3,AF1:AF3)"
+   },
+   "Z76": {
+    "t": "n",
+    "v": "0.99999999999999999999999999999409112569301213050979",
+    "f": "=CORREL(AG1:AG3,AC1:AC3)"
+   },
+   "Z77": {
+    "t": "n",
+    "v": "1.0000000000000013027615909335942735586815608200113e-153",
+    "f": "=SLOPE(AC1:AC3,AG1:AG3)"
+   },
+   "Z78": {
+    "t": "n",
+    "v": "9.9999999999999869723840906639560588046727528381431e+152",
+    "f": "=SLOPE(AG1:AG3,AC1:AC3)"
+   },
+   "Z79": {
+    "t": "n",
+    "v": "0.0000000000000048616352421743322269585435027466662413383249622933",
+    "f": "=STEYX(AC1:AC3,AG1:AG3)"
+   },
+   "Z8": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=CORREL(M1:M3,B1:B3)"
+   },
+   "Z9": {
+    "t": "e",
+    "why": "#DIV/0!: one pair or a constant series",
+    "f": "=PEARSON(B1:B3,M1:M3)"
+   }
+  }
+ },
+ "skipped": {
+  "Calc": {
+   "Z1": {
+    "f": "=CORREL(A1:A3,L1:L3)",
+    "why": "no single value"
+   },
+   "Z2": {
+    "f": "=CORREL(L1:L3,A1:A3)",
+    "why": "no single value"
+   },
+   "Z3": {
+    "f": "=PEARSON(A1:A3,L1:L3)",
+    "why": "no single value"
+   },
+   "Z4": {
+    "f": "=PEARSON(L1:L3,A1:A3)",
+    "why": "no single value"
+   },
+   "Z5": {
+    "f": "=RSQ(A1:A3,L1:L3)",
+    "why": "no single value"
+   },
+   "Z6": {
+    "f": "=RSQ(L1:L3,A1:A3)",
+    "why": "no single value"
+   }
+  }
+ }
+}

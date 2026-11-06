@@ -999,8 +999,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     PIVOTBY build their trees on those two keys, so no third (C,x) group or column exists: the leaf is not left
     out, it was never built. The same holds with a fifth row Ax, Cx or Bx after, and over Cx Ay Ax Ax Bx (rows 1,
     2, 8, 9, 10). Bx is kept over Cx Ay Bx, Cx Ay Bx Ax (Bx before the Ax), Cx Ax Ay Bx Ax (the Ax before the Ay),
-    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. T-4393
-    owns the 20 cells and t4358 B6, D6 (from T-4380, whose rule failed its hold-out, below).
+    Cx Cx Bx Ay Bx and Cx Ax Cx Ay Bx, as the engine keeps it; every F cell (`col_sort_order` -1) matches. The 20
+    cells and t4358 B6, D6 pass since T-4471 implemented T-4393's merge (below).
   - **No coalescing merge explains UNIQUE's two-field runs** (T-4380, probes/t4380-unique-keep-head-holdout,
     excel-graph, 2026-11-05; 45 runs through UNIQUE (B) and GROUPBY (C), predictions in docs/research/t4380 committed
     before the fill). The rule chosen on t4379 (equal run heads: the right group joins the left head, which stays the
@@ -1025,9 +1025,10 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
     insertion and red-black or plain BSTs with equal-stop or lower-bound lookups, 34 to 42; docs/research/t4393/tree_search.py). Confirmed out of
     sample: 60 fresh runs of lengths 5 to 7 (seed 4393; 36 where it and `pushkeep` keep different rows, 18 where it
     and T-4200's rule do, 6 controls), 60 of 60 UNIQUE predictions committed before the fill. A structural choice
-    (decision 0188 R4), not a fit. It leaves docs/research/t4241/model.py's 234 GROUPBY blocks unchanged. GROUPBY
-    on top of it still misses: t4380 column C 38 of 45, the hold-out's column C 32 of 60 (its key tree and descent;
-    T-4472). Not implemented: T-4471.
+    (decision 0188 R4), not a fit. It leaves docs/research/t4241/model.py's 234 GROUPBY blocks unchanged. Implemented
+    in `coalesce_equal_lines` (T-4471): the engine's GROUPBY and PIVOTBY on it pass every cell of t4379, t4358,
+    t4380 and the hold-out (884 of 884), though docs/research/t4241/model.py's Python tree on the same UNIQUE gives
+    the GROUPBY columns only 38 of 45 and 32 of 60: that model's descent, not Excel's, is what falls short.
   - **A value sort's parent counts the rows that reached it but no leaf**: Bx, Ax, Ax, By, Cy by SUM of 1, 2, 4, 8,
     16 orders ascending (B,x) 1, (B,y) 8, (A,x) 6 (D56), B's 9 before A's 22, where 22 counts row 5, (C,y), which
     reaches class A (C = A) and then no y class (D56, E56).
@@ -1088,8 +1089,8 @@ with an ARRAYTOTEXT aggregate. Write A = `ab`, B = `ab`&U+00AD, C = U+00AD&`ab`:
       reached under a level-2 subtotal no record reached: **such a parent subtotal holds every record of the
       line**, as its own cell does (T-4401's rule), so the leaf's parent set is every record. Over BxC AyB BxC
       BxB CyB (p p q p p) the (`ab`&U+00AD,y,`ab`&U+00AD) cell of p is `1, 2, 4, 5 / 1, 2, 4, 5` (C3), where the
-      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. T-4428 owns them (it waits on
-      T-4401); with T-4401 merged and that rule in `Grid::column_records`, a scratch run gives 528 of 528.
+      engine reads the subtotal's reached-class records (none) and gives `#VALUE!`. Implemented
+      (T-4428): `Grid::column_records` gives such a subtotal every record; the probe is 528 of 528.
     - **The subtotal error gate is the leaf buckets'**: with one function over two value columns, a subtotal
       whose records reached its class while every leaf under it is empty for the row group is not computed (its
       NA() makes no `#VALUE!`), as `Grid::has_records` decides. The gate cells are Calc!B1, B3, B4, B6, B8, B9,

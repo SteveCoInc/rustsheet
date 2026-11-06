@@ -353,6 +353,7 @@ mod tests {
                 graph_subnormal: false,
                 kind: crate::runner::CellKind::Scored,
                 math: None,
+                target: crate::runner::Target::Excel,
             })
             .collect();
         CaseResult {
@@ -376,6 +377,7 @@ mod tests {
             defined_names: BTreeMap::new(),
             arguments: Vec::new(),
             reference_forms: crate::poi_m8_subset::ReferenceFormCells::default(),
+            pivot_layout: Vec::new(),
         }
     }
 

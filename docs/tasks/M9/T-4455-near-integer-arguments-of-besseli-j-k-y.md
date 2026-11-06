@@ -3,7 +3,7 @@ id: T-4455
 title: "Near-integer arguments of BESSELI/J/K/Y order, DEC2*/BIN2*/HEX2*/OCT2* places and number, and BITLSHIFT/BITRSHIFT shift: probe the 2^-22 snap against truncation, and match"
 milestone: M9
 lane: functions-engineering
-status: todo
+status: done
 priority: P3
 size: M
 tier: opus
@@ -47,22 +47,36 @@ the existing cells cannot tell apart from a snap.
   question the cells must settle.
 
 ## Acceptance criteria
-- [ ] A committed probe case (excel-probe skill, excel-graph sidecar) gives, for the Bessel order
+- [x] A committed probe case (excel-probe skill, excel-graph sidecar) gives, for the Bessel order
       (all four functions), `places` (DEC2BIN, DEC2HEX, HEX2BIN, OCT2BIN at least), the DEC2*
       number (positive and negative) and the BITLSHIFT/BITRSHIFT shift (positive and negative):
       the values `n-2^-22-2^-33`, `n-2^-22-9*2^-36` and `n-1E-15` at two bases (one small, one at
       least 100 where the range allows), plus `-n+2^-23` and `-n+2^-22` for the signed arguments,
       and the BIT* number at `n-2^-22-2^-33` and `n-1E-15`.
-- [ ] docs/excel-semantics/engineering.md records the model of every probed argument with its
+- [x] docs/excel-semantics/engineering.md records the model of every probed argument with its
       cells, next to the existing truncation entries.
-- [ ] The engine reads each argument with its model through the existing near_integer helpers
+- [x] The engine reads each argument with its model through the existing near_integer helpers
       (no new tolerance constant); every probe cell passes bit-exact, and the cited existing cells
       (eng-gen-sample-edges E1:E10, gen-m9/7c7e5bff12d93365 Calc!A145,
       gen-m9/f8bc18a0e45a0e1a Calc!A61) keep passing.
-- [ ] No new known-failure line in eval/baseline/; `make check` green; reviewers approve.
+- [x] No new known-failure line in eval/baseline/; `make check` green; reviewers approve.
 
 ## Out of scope
 - CONVERT, ERF/ERFC and the IM* functions (no whole-number arguments besides IMPOWER's power,
   which is real).
 - BESSEL order caps and the BESSELI/BESSELK range edges (engineering.md "BESSEL order cap",
   T-2421, T-2550).
+
+## Outcome
+- Probe `probes/t4455-near-integer-eng-args` (260 cells, excel-graph, 2026-11-06) settles the model. It covers the
+  four Bessel orders, the `places` of DEC2BIN, DEC2HEX, HEX2BIN and OCT2BIN, the DEC2* number on both signs, the
+  BITLSHIFT and BITRSHIFT shift on both signs, and the BIT* number. Each is read at seven gaps below n, from
+  2^-22+2^-33 to 1E-15, at a small and a large base, plus `-n+2^-22`. **None of them snaps: every argument
+  truncates exactly**, toward zero for the signed ones. The BIT* number is `#NUM!` at every gap (its fraction check).
+- docs/excel-semantics/engineering.md has a new section, "Engineering whole-number arguments truncate exactly, with
+  no snap near an integer". The Bessel truncation bullet cross-references it.
+- Engine: no change. It already truncates every one of these arguments, and all 260 cells pass bit-exact. No
+  `near_integer` helper applies. The cited existing cells are untouched (eng-gen-sample-edges E1:E10,
+  gen-m9/7c7e5bff12d93365 Calc!A145, gen-m9/f8bc18a0e45a0e1a Calc!A61).
+- Eval delta: +260 cells, all passing; no baseline change. The cells are IF-wrapped comparisons, not
+  Gate A one-call cells, so the case has no math sidecar (`make eval-math-check` is current).

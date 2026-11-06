@@ -110,7 +110,9 @@ fn test_range_inverse_order() {
 
 /// Excel for the web refuses a workbook holding any of these (`FileCorruptTryRepair`, one scratch
 /// workbook per formula, T-1111): the operands of `:` and ANCHORARRAY must be references, as for
-/// the intersection and the union (docs/excel-semantics/references.md, T-1117).
+/// the intersection and the union (docs/excel-semantics/references.md, T-1117). The typed `#` of a
+/// value, stored `ANCHORARRAY((1/0))` and `ANCHORARRAY((NA()))`, is refused too (excel-graph,
+/// 2026-11-06, T-4481).
 #[test]
 fn range_and_anchorarray_refuse_value_operands() {
     let worksheets = vec!["Sheet1".to_string()];
@@ -127,6 +129,9 @@ fn range_and_anchorarray_refuse_value_operands() {
         "ANCHORARRAY(1)",
         "_xlfn.ANCHORARRAY(1)",
         "(1/0)#",
+        "(NA())#",
+        "ANCHORARRAY((1/0))",
+        "_xlfn.ANCHORARRAY((NA()))",
         "A1:\"a\"",
         "A1:#N/A",
         "A1:SUM(B1)",
