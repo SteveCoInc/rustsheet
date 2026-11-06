@@ -138,7 +138,7 @@ def _edge(rng: random.Random) -> list[float]:
     return [signed_log_uniform(rng, 1e-3, 1e6) for _ in range(MAX_ARGS)]
 
 
-def _draw(stratum: str, rng: random.Random) -> list[Arg]:
+def draw_numbers(stratum: str, rng: random.Random) -> list[Arg]:
     if stratum == "tail":
         return list(_cancelling(rng))
     if stratum == "edge":
@@ -159,7 +159,7 @@ def _definition(function: str, value: Callable[[Sequence[MathArg]], mpmath.mpf])
             params=(Param("number", "real", source=SNAP_SOURCE),),
             value=value,
             domain=overflow,
-            draw=_draw,
+            draw=draw_numbers,
             variadic=True,
             sources=(SNAP_SOURCE, OVERFLOW_SOURCE, "decision 0237"),
         )
