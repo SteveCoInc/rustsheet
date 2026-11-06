@@ -50,8 +50,6 @@ DATES = [
 ]
 vcols = [column(1 + i, v[1]) for i, v in enumerate(VALUES)]  # B..E
 dcols = [column(5 + i, d[1]) for i, d in enumerate(DATES)]  # F..O
-ncol = column(12 + 5, [NA, None, None])  # placeholder to keep Q free below
-data.pop("R1", None)
 ncol = col(16)
 data[f"{ncol}1"], data[f"{ncol}2"], data[f"{ncol}3"] = NA, "30", "1/1/2025"
 numfirst = column(17, [-100, 30, NA, 50])  # R

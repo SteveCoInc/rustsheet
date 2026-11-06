@@ -5088,9 +5088,11 @@ which beats every later element, T-4375).
   D30), where a range or array element of text is `#NUM!`. A one-cell date of 2958465.5 is read truncated
   (`XNPV(0.1,30,<2958465.5>)` is 30, D9). The same holds through a one-cell range, `OFFSET`, `INDEX` and a defined
   name for one cell, holding an error, numeric text or date text, as values and as dates (T-4375 rows 32-43; the
-  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). Unprobed: a literal text
-  argument (`XNPV(0.1,"30",39448)`), and a defined name for a constant text; the engine keeps its earlier reading
-  of a literal and reads a name as a cell.
+  engine reads a cell, a defined name and `INDEX` of a reference this way, `xnpv_one_cell`). A text literal and a defined
+  name for a constant text read the same: `XNPV(0.1,"30",39448)`, `XNPV(0.1,30,"1/1/2025")`, `XNPV(0.1,"30",
+  "1/1/2025")`, a name `="30"` as values, `="1/1/2025"` or `="39448"` as dates are all 30, and non-numeric text
+  (`"x"`, a name `="x"`) is `#VALUE!` (probes/t4381-xnpv-literal-and-named-text A1:A10, excel-graph, T-4381). Computed
+  text (`"3"&"0"`) is unprobed and keeps its earlier reading.
 - The rate: -1, -2, -0.5, 0 and an empty cell are `#NUM!`; "0.1" and a text cell "0.1" are 0.1, a date-text cell
   its serial (rows 41-48). A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 array
   constant all read in row-major order with the same result (rows 49-54).
