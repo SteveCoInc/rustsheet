@@ -1,0 +1,885 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4616: accumulation order of pivot totals in a 2-D pivot, StdDev/Var totals, Product order, and Count/CountNums at inner-field subtotals and beside each other. D1 (27 records, R first seen Q X B, K first seen M Z A, three records per cell) and D2 (18 records) are searched with Python doubles so that the candidate row, column and grand totals differ (cell sums in display, reverse or ascending order; item-by-item record accumulation in display, reverse or ascending item order; record order and reverse). S1 Sum, S2 Sum+Average, S3 Average, S4 Sum transposed (K on rows), S5 Sum over D2, S6 Sum over D4. D4 (36 records, R first seen Q X B F N C) separates Var algorithms and orders: V1 Var and V2 StdDev 2-D, V3 rows K and V4 rows R one-axis. D5/D6: Product over K, P1/P2, separating display item order from ascending value order and record order. D3: East A (Err 10), East B (#N/A), East A (3), West A (7), West B (5). I1-I4: rows Region and Kind, Count or CountNums of Err with or without Sum of Num. M1-M3: Count beside CountNums. Candidate values are in the task's Outcome and docs/excel-semantics/pivots.md. Pivot cells are in the sidecar's `pivots` section; Q!A1 makes the case scored.",
+ "tags": [
+  "probe",
+  "pivot",
+  "T-4616",
+  "M16"
+ ],
+ "sheets": [
+  {
+   "name": "D1",
+   "cells": {
+    "A1": "R",
+    "B1": "K",
+    "C1": "V",
+    "A2": "Q",
+    "B2": "M",
+    "C2": 52.9,
+    "A3": "Q",
+    "B3": "M",
+    "C3": 2.9,
+    "A4": "X",
+    "B4": "Z",
+    "C4": 75.7,
+    "A5": "X",
+    "B5": "Z",
+    "C5": 33.68,
+    "A6": "Q",
+    "B6": "A",
+    "C6": 0.7,
+    "A7": "B",
+    "B7": "A",
+    "C7": 0.5,
+    "A8": "Q",
+    "B8": "A",
+    "C8": 0.49,
+    "A9": "Q",
+    "B9": "A",
+    "C9": 6942.03,
+    "A10": "Q",
+    "B10": "Z",
+    "C10": 9978.82,
+    "A11": "B",
+    "B11": "M",
+    "C11": 394.8,
+    "A12": "B",
+    "B12": "Z",
+    "C12": 77.9,
+    "A13": "B",
+    "B13": "A",
+    "C13": 50.81,
+    "A14": "X",
+    "B14": "A",
+    "C14": 4.33,
+    "A15": "B",
+    "B15": "A",
+    "C15": 13.9,
+    "A16": "X",
+    "B16": "A",
+    "C16": 963.4,
+    "A17": "X",
+    "B17": "A",
+    "C17": 456.5,
+    "A18": "Q",
+    "B18": "M",
+    "C18": 22.11,
+    "A19": "B",
+    "B19": "M",
+    "C19": 50.09,
+    "A20": "X",
+    "B20": "M",
+    "C20": 3669.4,
+    "A21": "X",
+    "B21": "Z",
+    "C21": 14.3,
+    "A22": "X",
+    "B22": "M",
+    "C22": 6.2,
+    "A23": "B",
+    "B23": "Z",
+    "C23": 69.4,
+    "A24": "X",
+    "B24": "M",
+    "C24": 0.29,
+    "A25": "Q",
+    "B25": "Z",
+    "C25": 46.49,
+    "A26": "B",
+    "B26": "Z",
+    "C26": 6.3,
+    "A27": "B",
+    "B27": "M",
+    "C27": 207.61,
+    "A28": "Q",
+    "B28": "Z",
+    "C28": 2266.7
+   }
+  },
+  {
+   "name": "D2",
+   "cells": {
+    "A1": "R",
+    "B1": "K",
+    "C1": "V",
+    "A2": "Q",
+    "B2": "M",
+    "C2": 2908.21,
+    "A3": "X",
+    "B3": "M",
+    "C3": 3.42,
+    "A4": "X",
+    "B4": "Z",
+    "C4": 730.53,
+    "A5": "X",
+    "B5": "A",
+    "C5": 4.2,
+    "A6": "Q",
+    "B6": "A",
+    "C6": 9.7,
+    "A7": "X",
+    "B7": "A",
+    "C7": 60.6,
+    "A8": "B",
+    "B8": "A",
+    "C8": 7828.1,
+    "A9": "Q",
+    "B9": "A",
+    "C9": 34.1,
+    "A10": "B",
+    "B10": "A",
+    "C10": 9.1,
+    "A11": "X",
+    "B11": "Z",
+    "C11": 0.69,
+    "A12": "X",
+    "B12": "M",
+    "C12": 913.79,
+    "A13": "Q",
+    "B13": "Z",
+    "C13": 85.1,
+    "A14": "B",
+    "B14": "Z",
+    "C14": 56.7,
+    "A15": "B",
+    "B15": "M",
+    "C15": 90.6,
+    "A16": "Q",
+    "B16": "M",
+    "C16": 0.93,
+    "A17": "Q",
+    "B17": "Z",
+    "C17": 597.9,
+    "A18": "B",
+    "B18": "Z",
+    "C18": 1.2,
+    "A19": "B",
+    "B19": "M",
+    "C19": 941.96
+   }
+  },
+  {
+   "name": "D3",
+   "cells": {
+    "A1": "Region",
+    "B1": "Kind",
+    "C1": "Err",
+    "D1": "Num",
+    "A2": "East",
+    "B2": "A",
+    "C2": 10,
+    "D2": 10,
+    "A3": "East",
+    "B3": "B",
+    "C3": {
+     "t": "e",
+     "v": "#N/A"
+    },
+    "D3": 4,
+    "A4": "East",
+    "B4": "A",
+    "C4": 3,
+    "D4": 3,
+    "A5": "West",
+    "B5": "A",
+    "C5": 7,
+    "D5": 7,
+    "A6": "West",
+    "B6": "B",
+    "C6": 5,
+    "D6": 5
+   }
+  },
+  {
+   "name": "D4",
+   "cells": {
+    "A1": "R",
+    "B1": "K",
+    "C1": "V",
+    "A2": "Q",
+    "B2": "M",
+    "C2": 5170.8,
+    "A3": "X",
+    "B3": "Z",
+    "C3": 85.73,
+    "A4": "B",
+    "B4": "Z",
+    "C4": 6.8,
+    "A5": "X",
+    "B5": "A",
+    "C5": 7.5,
+    "A6": "F",
+    "B6": "Z",
+    "C6": 350.07,
+    "A7": "F",
+    "B7": "Z",
+    "C7": 6.1,
+    "A8": "F",
+    "B8": "A",
+    "C8": 7.09,
+    "A9": "Q",
+    "B9": "Z",
+    "C9": 83.9,
+    "A10": "N",
+    "B10": "Z",
+    "C10": 1970.3,
+    "A11": "C",
+    "B11": "A",
+    "C11": 3615.2,
+    "A12": "C",
+    "B12": "M",
+    "C12": 0.9,
+    "A13": "X",
+    "B13": "A",
+    "C13": 238.6,
+    "A14": "Q",
+    "B14": "A",
+    "C14": 35.14,
+    "A15": "F",
+    "B15": "M",
+    "C15": 288.4,
+    "A16": "F",
+    "B16": "M",
+    "C16": 278.44,
+    "A17": "Q",
+    "B17": "M",
+    "C17": 733.4,
+    "A18": "C",
+    "B18": "Z",
+    "C18": 1.1,
+    "A19": "N",
+    "B19": "Z",
+    "C19": 9296.4,
+    "A20": "B",
+    "B20": "M",
+    "C20": 0.47,
+    "A21": "N",
+    "B21": "A",
+    "C21": 0.5,
+    "A22": "N",
+    "B22": "M",
+    "C22": 6661.1,
+    "A23": "F",
+    "B23": "A",
+    "C23": 0.9,
+    "A24": "B",
+    "B24": "A",
+    "C24": 2177.39,
+    "A25": "N",
+    "B25": "A",
+    "C25": 95.49,
+    "A26": "C",
+    "B26": "Z",
+    "C26": 0.86,
+    "A27": "Q",
+    "B27": "Z",
+    "C27": 0.9,
+    "A28": "Q",
+    "B28": "A",
+    "C28": 2.68,
+    "A29": "B",
+    "B29": "A",
+    "C29": 618.7,
+    "A30": "B",
+    "B30": "M",
+    "C30": 2.9,
+    "A31": "X",
+    "B31": "Z",
+    "C31": 0.8,
+    "A32": "N",
+    "B32": "M",
+    "C32": 40.16,
+    "A33": "B",
+    "B33": "Z",
+    "C33": 0.31,
+    "A34": "C",
+    "B34": "A",
+    "C34": 318.47,
+    "A35": "C",
+    "B35": "M",
+    "C35": 28.8,
+    "A36": "X",
+    "B36": "M",
+    "C36": 65.1,
+    "A37": "X",
+    "B37": "M",
+    "C37": 7.2
+   }
+  },
+  {
+   "name": "D5",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "M",
+    "B2": 9.4,
+    "A3": "M",
+    "B3": 2.7,
+    "A4": "Z",
+    "B4": 9.3,
+    "A5": "A",
+    "B5": 1.9,
+    "A6": "A",
+    "B6": 7.2,
+    "A7": "Z",
+    "B7": 7.3,
+    "A8": "A",
+    "B8": 7.2,
+    "A9": "Z",
+    "B9": 4.3,
+    "A10": "M",
+    "B10": 8,
+    "A11": "Z",
+    "B11": 7.9,
+    "A12": "M",
+    "B12": 5.5,
+    "A13": "A",
+    "B13": 7.1
+   }
+  },
+  {
+   "name": "D6",
+   "cells": {
+    "A1": "K",
+    "B1": "V",
+    "A2": "M",
+    "B2": 9,
+    "A3": "Z",
+    "B3": 7.5,
+    "A4": "A",
+    "B4": 3.1,
+    "A5": "M",
+    "B5": 8.7,
+    "A6": "Z",
+    "B6": 3.8,
+    "A7": "A",
+    "B7": 3.1,
+    "A8": "Z",
+    "B8": 4.6,
+    "A9": "M",
+    "B9": 2.8,
+    "A10": "A",
+    "B10": 1.5,
+    "A11": "Z",
+    "B11": 7.8,
+    "A12": "M",
+    "B12": 8.1,
+    "A13": "A",
+    "B13": 5
+   }
+  },
+  {
+   "name": "S1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS1",
+     "source": "D1!A1:C28",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS2",
+     "source": "D1!A1:C28",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       },
+       {
+        "field": "V",
+        "subtotal": "average",
+        "name": "average V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS3",
+     "source": "D1!A1:C28",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "average",
+        "name": "average V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS4",
+     "source": "D1!A1:C28",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "columns": [
+       "R"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S5",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS5",
+     "source": "D2!A1:C19",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "S6",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PS6",
+     "source": "D4!A1:C37",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "sum",
+        "name": "sum V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "V1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PV1",
+     "source": "D4!A1:C37",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "var",
+        "name": "var V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "V2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PV2",
+     "source": "D4!A1:C37",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "columns": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "stdDev",
+        "name": "stdDev V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "V3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PV3",
+     "source": "D4!A1:C37",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "var",
+        "name": "var V"
+       },
+       {
+        "field": "V",
+        "subtotal": "stdDev",
+        "name": "stdDev V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "V4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PV4",
+     "source": "D4!A1:C37",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "R"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "var",
+        "name": "var V"
+       },
+       {
+        "field": "V",
+        "subtotal": "stdDev",
+        "name": "stdDev V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PP1",
+     "source": "D5!A1:B13",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "product",
+        "name": "product V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "P2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PP2",
+     "source": "D6!A1:B13",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "K"
+      ],
+      "data": [
+       {
+        "field": "V",
+        "subtotal": "product",
+        "name": "product V"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "I1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PI1",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Num",
+        "subtotal": "sum",
+        "name": "sum Num"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "I2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PI2",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       },
+       {
+        "field": "Num",
+        "subtotal": "sum",
+        "name": "sum Num"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "I3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PI3",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "I4",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PI4",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "M1",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PM1",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "M2",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PM2",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Num",
+        "subtotal": "countNums",
+        "name": "countNums Num"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "M3",
+   "cells": {},
+   "pivot_tables": [
+    {
+     "name": "PM3",
+     "source": "D3!A1:D6",
+     "location": "A3",
+     "definition": {
+      "rows": [
+       "Region",
+       "Kind"
+      ],
+      "data": [
+       {
+        "field": "Err",
+        "subtotal": "count",
+        "name": "count Err"
+       },
+       {
+        "field": "Err",
+        "subtotal": "countNums",
+        "name": "countNums Err"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Q",
+   "cells": {
+    "A1": "=SUM(D1!C2:C28)"
+   }
+  }
+ ]
+}

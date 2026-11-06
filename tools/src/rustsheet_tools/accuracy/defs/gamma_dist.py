@@ -57,7 +57,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT, NORMAL_MIN, ill_conditioned, scalar
+from rustsheet_tools.accuracy.defs._common import DF_CUT, NORMAL_MIN, ill_conditioned, is_real, real_arg
 from rustsheet_tools.accuracy.defs.gamma import (
     CHI_SCALE,
     HUGE_SOURCE,
@@ -67,14 +67,7 @@ from rustsheet_tools.accuracy.defs.gamma import (
     quantile,
     upper_tail,
 )
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
 
 KERNEL_SOURCE = (
     "statistics.md#one-incomplete-gamma-kernel-under-erf-erfc-norm-chisq-gammadist-and-poisson-t-1778"
@@ -107,7 +100,7 @@ DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the lo
 
 
 def _floats(*args: MathArg) -> list[float]:
-    return [float(scalar(a)) for a in args]
+    return [float(real_arg(a)) for a in args]
 
 
 def log_density_y(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
@@ -165,7 +158,7 @@ def _huge_shape_zero(a: float, value: mpmath.mpf) -> None:
 
 
 def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, a, beta = (scalar(v) for v in args[:3])
+    x, a, beta = (real_arg(v) for v in args[:3])
     cumulative = args[3]
     fx, fa, fbeta = _floats(x, a, beta)
     y = x / beta
@@ -181,7 +174,7 @@ def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, beta, cumulative = args
-    if any(isinstance(v, (bool, str, tuple)) for v in (x, a, beta)):
+    if any(not is_real(v) for v in (x, a, beta)):
         return None
     fx, fa, fbeta = _floats(x, a, beta)
     if fx <= 0 or fbeta <= 0:
@@ -214,14 +207,14 @@ def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
 
 def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, beta = args[1], args[2]
-    if isinstance(a, (bool, str, tuple)) or isinstance(beta, (bool, str, tuple)):
+    if not is_real(a) or not is_real(beta):
         msg = "no tail map for a logical shape or scale"
         raise ValueError(msg)
     return beta * quantile(q, a, upper=upper)
 
 
 def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, df, cumulative = scalar(args[0]), args[1], args[2]
+    x, df, cumulative = real_arg(args[0]), args[1], args[2]
     a = chi_shape(df)
     y = x / CHI_SCALE
     fx = float(x)
@@ -237,7 +230,7 @@ def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, df, cumulative = args
-    if isinstance(x, (bool, str, tuple)) or isinstance(df, (bool, str, tuple)):
+    if not is_real(x) or not is_real(df):
         return None
     if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
@@ -246,12 +239,12 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    return _cdf(scalar(x) / CHI_SCALE, chi_shape(df), upper=True)
+    return _cdf(real_arg(x) / CHI_SCALE, chi_shape(df), upper=True)
 
 
 def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, str, tuple)):
+    if not is_real(df):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
     return CHI_SCALE * quantile(q, chi_shape(df), upper=upper)

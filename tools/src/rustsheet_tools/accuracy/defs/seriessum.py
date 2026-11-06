@@ -29,7 +29,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, one_of
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, by_stratum, is_real, one_of
 from rustsheet_tools.accuracy.defs.aggregate import running_total
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, Param, register
@@ -39,13 +39,12 @@ X_ZERO_SOURCE = "numbers.md#seriessum-with-x--0"
 NEGATIVE_X_SOURCE = "numbers.md#seriessum-a-negative-x-to-a-non-integer-power-is-a-term-of-0-t-2380"
 OVERFLOW_SOURCE = "numbers.md#seriessum-blank-coefficient-cells-are-dropped-an-overflowing-term-beats-a-text-coefficient-t-2163"
 MAX_DOUBLE = sys.float_info.max
-MIN_NORMAL = sys.float_info.min
 
 
 def _parts(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf, mpmath.mpf, tuple[mpmath.mpf, ...]]:
     x, n, m, coefficients = args
-    assert not isinstance(x, (bool, tuple)) and not isinstance(n, (bool, tuple))
-    assert not isinstance(m, (bool, tuple)) and isinstance(coefficients, tuple)
+    assert is_real(x) and is_real(n)
+    assert is_real(m) and isinstance(coefficients, tuple)
     return x, n, m, coefficients
 
 
@@ -69,7 +68,7 @@ def terms(args: Sequence[MathArg]) -> list[mpmath.mpf]:
             raise DomainError("a power or a term is beyond the double range")
         term = c * power
         # "Subnormal results become 0": a power or term below the smallest normal is 0
-        out.append(mpmath.mpf(0) if abs(power) < MIN_NORMAL or abs(term) < MIN_NORMAL else term)
+        out.append(mpmath.mpf(0) if abs(power) < NORMAL_MIN or abs(term) < NORMAL_MIN else term)
     return out
 
 

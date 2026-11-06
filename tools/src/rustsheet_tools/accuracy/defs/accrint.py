@@ -47,7 +47,7 @@ from rustsheet_tools.accuracy.defs._common import (
     fraction_to_mpf,
     ill_conditioned,
     one_of,
-    scalars,
+    real_args,
 )
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
@@ -171,7 +171,7 @@ def _calc_method(args: Sequence[MathArg]) -> bool:
 
 def _accrint(args: Sequence[MathArg]) -> mpmath.mpf:
     calc = _calc_method(args)
-    numbers = scalars(args[:7])
+    numbers = real_args(args[:7])
     issue, first = whole_serial(float(numbers[0])), whole_serial(float(numbers[1]))
     settlement = whole_serial(float(numbers[2]))
     rate, par, frequency = numbers[3], numbers[4], int(numbers[5])

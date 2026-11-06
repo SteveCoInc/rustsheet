@@ -927,9 +927,8 @@ gen-m9/c2684066d8df263e Calc!A214), while a spilled blank element still displays
 element as 0, as they read a blank cell of a multi-cell range: `TEXTJOIN("|",FALSE,IFERROR(GROUPBY(..),"#"))` shows the blank
 key as "0" (probes/groupby-sort-filter-args G!B15, B55, groupby-sort-filter-args2 G!B10; `if_error_like`, logical/mod.rs).
 IF passes a blank element through as a blank: `TTEST(..,IF(TRUE,PIVOTBY(..)),1,2)` equals the TTEST without the IF
-(probes/pivotby-ttest-array2 P!A41, P!A31). Whether IFERROR reads blanks of other arrays (FILTER, INDEX lifted over blank
-cells, VSTACK) as 0, and what N and arithmetic do with a blank element, is unprobed (T-2999); ours reads every array's
-blank as 0 in IFERROR and IFNA.
+(probes/pivotby-ttest-array2 P!A41, P!A31). Blanks of other arrays (FILTER, INDEX, VSTACK), N and arithmetic: see "IFERROR, IFNA, N and
+arithmetic over blank array elements (T-2999)".
 T-2592 (probes/t2592-nested-groupby-cells, excel-graph, 2026-10-24; `GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))` is 3x3: keys a, b, Total by
 key, C, D; group a `{1;2}`/`{10;20}`, b `{3;4}`/`{30;40}`, Total 4x1; the shown headers are off). Nested cells in practice:
 - A LAMBDA whose body is a one-cell reference (`LAMBDA(x,D!D2)`) still displays `#VALUE!` in every spilled cell (probes/groupby-lambda-forms
@@ -1508,7 +1507,8 @@ probes/eta-reduced-names E93; probes/t2475-stat-subexpressions (excel-graph, 202
 probes/t2622-take-let-reference-lambda-text Q1-Q10 (excel-graph, 2026-10-29, T-2622).
 Ours: `value_extent` (cast.rs), `is_predicate` and `parity_of` (information/mod.rs), `index_select` (index.rs) since T-1511; `&` of
 one is `#VALUE!` in `handle_concatenate` (arithmetic.rs) since T-2622. CONCATENATE, CONCAT and TEXTJOIN of one are unprobed.
-INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar, which is unprobed (T-1946).
+INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar (probes/map-later-array-error-blank A17; see "MAP over
+single values").
 Status: VERIFIED (excel-graph)
 Tasks: T-1511, T-2622
 

@@ -47,7 +47,7 @@ from collections.abc import Callable, Sequence
 import mpmath
 
 from rustsheet_tools.accuracy.defs import annuity
-from rustsheet_tools.accuracy.defs._common import Shape, any_edge, by_stratum_with_edge, scalars
+from rustsheet_tools.accuracy.defs._common import Shape, any_edge, by_stratum_with_edge, real_args
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -62,7 +62,7 @@ EXTRA_DIGITS = 15  # beyond the digits nper·L cancels
 
 def cumulative(args: Sequence[MathArg]) -> tuple[mpmath.mpf, mpmath.mpf]:
     """(interest, principal) of the periods ceil(start)..floor(end): CUMIPMT's and CUMPRINC's values."""
-    r, nper, pv, start, end, kind = scalars(args)
+    r, nper, pv, start, end, kind = real_args(args)
     if r == 0:
         msg = "a rate of 0: #NUM!"
         raise DomainError(msg)

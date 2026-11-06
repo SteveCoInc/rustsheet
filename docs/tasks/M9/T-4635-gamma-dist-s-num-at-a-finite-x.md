@@ -26,9 +26,15 @@ oracle evidence brackets, and the Gate A definition gives those points a value o
 ## Acceptance criteria
 - [ ] A probe brackets the region: shapes between 1 and 2.5 (e.g. 1.1, 1.25, 1.75, 2.25, 2.4) and x / beta between
       1E200 and 1.7E308 at shape 2 and 1.5, both forms; the rule is recorded in statistics.md.
+- [ ] The bracket also finds the ratio threshold at shape 1.5 and at the other shapes listed (the 1E200 bound of
+      `HUGE_RATIO_MIN` is evidenced only at shape 2), and covers CHISQ.DIST and CHIDIST at df 3 and 4 (shapes 1.5 and
+      2 at x / 2), which may share the `#NUM!` if it comes from the shared incomplete gamma (T-4625 excel-fidelity
+      review, PR #3672).
 - [ ] The engine matches every cell of probes/t4625-gamma-dist-ratio-overflow and the new probe (B9, F9, B10, B11
       included), and the Gate A definition's `HUGE_RATIO_*` no-value region narrows to what the rule cannot cover.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The overflowing x / beta rule (T-4625; the engine already matches it).
+- The overflowing x / beta rule's low end: below shape 0.01 only the cdf is evidenced (GAMMADIST/s1 A182); a density
+  cell there would settle it, but that is not this task's.

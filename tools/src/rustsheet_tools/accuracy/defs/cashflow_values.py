@@ -53,7 +53,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import Shape, signed
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, Shape, is_real, signed
 from rustsheet_tools.accuracy.defs.annuity_values import (
     LOG2_MAX,
     LOG2_NORMAL,
@@ -64,14 +64,7 @@ from rustsheet_tools.accuracy.defs.annuity_values import (
 from rustsheet_tools.accuracy.defs.cashflow import DAYS_PER_YEAR, FIRST_DATE, _array, _irr_draw, _xirr_draw
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 NPV_ORDER_SOURCE = "financial.md#npvs-residue-at-irrs-root-is-not-the-double-sum"
@@ -97,7 +90,6 @@ FVSCHEDULE_OVERFLOW_SOURCE = (
     "financial.md#fvschedule-whose-running-product-overflows-excel-graph-cannot-open-it"
 )
 
-SMALLEST_NORMAL = 2.0**-1022
 MIRR_SQRT_FLOWS = 3  # MIRR's root is a square root here: a negative ratio is #NUM! (fin-mirr-edges A23)
 
 
@@ -108,7 +100,7 @@ def _rate_power(r: mpmath.mpf, k: int) -> mpmath.mpf:
 
 def _npv(args: Sequence[MathArg]) -> mpmath.mpf:
     r, flows = args[0], _array(args[1])
-    assert not isinstance(r, (bool, str, tuple))
+    assert is_real(r)
     if r == -1:
         msg = "1 + rate is 0: #DIV/0!"
         raise DomainError(msg)
@@ -150,7 +142,7 @@ def _days(dates: Sequence[mpmath.mpf]) -> list[int]:
 
 def _xnpv(args: Sequence[MathArg]) -> mpmath.mpf:
     r, flows, dates = args[0], _array(args[1]), _array(args[2])
-    assert not isinstance(r, (bool, str, tuple))
+    assert is_real(r)
     if len(flows) != len(dates):
         msg = "values and dates differ in size: #NUM!"
         raise DomainError(msg)
@@ -180,8 +172,8 @@ def _mirr_powers(r: mpmath.mpf, n: int) -> None:
 
 def _mirr(args: Sequence[MathArg]) -> mpmath.mpf:
     flows, fr, rr = _array(args[0]), args[1], args[2]
-    assert not isinstance(fr, (bool, str, tuple))
-    assert not isinstance(rr, (bool, str, tuple))
+    assert is_real(fr)
+    assert is_real(rr)
     n = len(flows)
     if n < 2 or not any(v < 0 for v in flows):
         msg = "one flow, or no negative flow: #DIV/0!"
@@ -216,14 +208,14 @@ def _mirr(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _fvschedule(args: Sequence[MathArg]) -> mpmath.mpf:
     principal, schedule = args[0], _array(args[1])
-    assert not isinstance(principal, (bool, str, tuple))
+    assert is_real(principal)
     factors = mpmath.mpf(1)
     value = principal
     for s in schedule:
         factors *= 1 + s
         value *= 1 + s
         for x in (factors, value):
-            if abs(x) > NORMAL_MAX or (x != 0 and abs(x) < SMALLEST_NORMAL):
+            if abs(x) > NORMAL_MAX or (x != 0 and abs(x) < NORMAL_MIN):
                 msg = "a running product past the double range or below the normal range (unprobed)"
                 raise NoValueError(msg)
     return value

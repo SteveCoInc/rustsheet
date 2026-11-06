@@ -24,17 +24,9 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, scalars, sum_away_from_mode
+from rustsheet_tools.accuracy.defs._common import by_stratum, real_args, sum_away_from_mode
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    Draw,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, Draw, Interval, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 TRIALS_SOURCE = "statistics.md#binomdist-is-num-from-231---1-trials-t-2464-t-2645"
@@ -67,7 +59,7 @@ _CUMULATIVE = Param("cumulative", "bool", source="catalog")
 def _reals(args: Sequence[MathArg]) -> list[mpmath.mpf]:
     """The numeric arguments: every argument but the cumulative flag, which the legacy pmf-only names (NEGBINOMDIST,
     HYPGEOMDIST) do not take."""
-    return scalars([a for a in args if not isinstance(a, bool)])
+    return real_args([a for a in args if not isinstance(a, bool)])
 
 
 def _cumulative(args: Sequence[MathArg]) -> bool:

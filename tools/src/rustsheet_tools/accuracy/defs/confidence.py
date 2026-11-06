@@ -37,7 +37,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, confidence_margin, scalars
+from rustsheet_tools.accuracy.defs._common import CONDITION_LIMIT, confidence_margin, real_args
 from rustsheet_tools.accuracy.defs.continuous import LEGACY_FIRST_SOURCE
 from rustsheet_tools.accuracy.defs.normal import INV_SOURCE, density, standard_quantile
 from rustsheet_tools.accuracy.literal import Arg
@@ -67,14 +67,14 @@ def confidence_cancels(alpha: float) -> bool:
 
 
 def _domain(args: Sequence[MathArg]) -> str | None:
-    alpha = float(scalars(args[:1])[0])
+    alpha = float(real_args(args[:1])[0])
     if 0 < alpha < 1 and p_rounds_to_one(alpha):
         return "1 - alpha/2 rounds to 1 in doubles (NORM.S.INV(1) is #NUM!)"
     return None
 
 
 def _confidence(args: Sequence[MathArg]) -> mpmath.mpf:
-    alpha, sd, size = scalars(args)
+    alpha, sd, size = real_args(args)
     return confidence_margin(standard_quantile(1 - alpha / 2), sd, size)
 
 
