@@ -3,7 +3,7 @@ id: T-3556
 title: "SPEC: gate the fetched suites (poi, calipers, corpus-bench) so a regression in them fails a PR, and make eval runs them when they are not fetched"
 milestone: M2
 lane: harness
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -41,7 +41,7 @@ every `make eval` measures what Phase 1's exit reads.
   (`run --fetch-missing`, an independent CLI flag this spec may wire in).
 
 ## Acceptance criteria
-- [ ] `docs/specs/SPEC-NNNN-fetched-suite-gate.md` (next free number, from the template) exists with status
+- [x] `docs/specs/SPEC-NNNN-fetched-suite-gate.md` (next free number, from the template) exists with status
       `accepted` and decides each of these, with the measured numbers behind each choice:
   - [ ] which fetched suites gate a PR, and where (the required `eval` job, a separate required job, a
         path-filtered job, or the merge train's batch run). It states the measured fetch time, eval time and cache
@@ -56,11 +56,29 @@ every `make eval` measures what Phase 1's exit reads.
         start counting fetched suites (decisions 0062, 0088), or why not.
   - [ ] a rollout of S/M tasks, each naming the protected paths it changes (`.github/`, `Makefile`, `scripts/`,
         `docs/process/`) and the decision record each needs.
-- [ ] The rollout's implementation tasks are filed with `make new-task`, depend on this task and link the spec.
-- [ ] `nightly.yml`'s stale T-0006 comment is listed as part of a rollout task, not fixed here (protected path).
-- [ ] `make check` green; reviewers approve.
+- [x] The rollout's implementation tasks are filed with `make new-task`, depend on this task and link the spec.
+- [x] `nightly.yml`'s stale T-0006 comment is listed as part of a rollout task, not fixed here (protected path).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Changing `.github/`, `Makefile`, `scripts/` or any baseline: the rollout tasks do that.
 - Fixing any cell of the fetched suites.
 - The `run --fetch-missing` flag itself (T-3557).
+
+## Outcome
+- docs/specs/SPEC-0035-fetched-suite-gate.md, status `accepted`:
+  - poi and corpus-bench (cells and `roundtrip-*`) gate in the required `eval` job and the merge group. The cache is
+    keyed on their suite.toml files, a failed fetch fails the job, and `--require-fetched` guards against a skip.
+  - Local `make eval*` targets pass `--fetch-missing`.
+  - calipers stays `gate = false`. The nightly job checks its cells with `--regressions-only`.
+  - The evidence floor and visible-parity lock are unchanged.
+- Measured on 826c44290:
+  - fetch on the runner: 16 s for all three suites;
+  - caches: 22, 33 and 103 MB;
+  - `check`, local: poi 1.8 s, corpus-bench 4.3 s, calipers 463 s. Runner ≈ 1.25 × local, from the same vendored
+    check: 76 s vs 61 s;
+  - calipers' baseline is out of date on main (5 fixed cells unrecorded).
+- Rollout filed: T-4725 and T-4727 (sonnet, crate-only flags); T-4726 (opus, CI and Makefile, decision record); T-4728
+  (opus, nightly, amends 0323). The stale nightly.yml T-0006 comment is already gone (decision 0323); T-4728
+  re-checks it.
+- Eval delta: none (docs and tasks only).
