@@ -17,7 +17,7 @@ tables generated from the T-4507 probes, so no language needs code of its own.
 ## Context
 probes/t3666-* and t4061-* (T-4507) hold Excel's names for all 853 LCIDs of the locale map, 1122 tags and every calendar
 digit. Main covers the languages probed one by one (hand-written tables in locale/excel_date_names.rs,
-locale/indic_date_names.rs) and bounds four languages' sublanguages (`sublanguage_defined`). The unmerged branch of
+locale/indic_date_names.rs) and falls back to a language's names for the LCIDs Windows assigns (`locale/lcids.rs`, T-4480). The unmerged branch of
 T-4507 generated the tables with a tool (`rustsheet-excel-locales`) and passed every probe of main's that names a
 locale. number-formats.md "Which LCIDs have a locale", "Calendar names per locale".
 
@@ -42,7 +42,7 @@ Every visibly-off cell of these probes (decision 0245):
 
 ## Acceptance criteria
 - [ ] The locale and calendar tables are generated from the probes by a tool, and a test checks they are current.
-- [ ] `sublanguage_defined` and the per-language name tables are gone; no regression in any suite.
+- [ ] The language fallback (`by_language`, locale/lcids.rs) and the per-language name tables are gone; no regression in any suite.
 - [ ] The t3666-* and t4061-* probes pass (calendar digits 0x16 and 0x17 included).
 - [ ] `make check` green; reviewers approve.
 
