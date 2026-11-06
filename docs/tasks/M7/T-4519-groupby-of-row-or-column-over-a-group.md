@@ -3,7 +3,7 @@ id: T-4519
 title: "GROUPBY of ROW or COLUMN over a group's values: ARRAYTOTEXT of the result is #CALC!, and RANDARRAY's group value is a scalar"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: opus
