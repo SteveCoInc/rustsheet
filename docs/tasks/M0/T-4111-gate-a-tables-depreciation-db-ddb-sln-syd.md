@@ -64,7 +64,7 @@ Every failing table point has an owner.
 - Tables `eval/accuracy/tables/{SLN,SYD,DB,DDB,VDB,AMORLINC,AMORDEGRC}/s1`, 200 points each (1,400), filled from
   excel-graph with 0 failures.
 - `rustsheet-eval accuracy`: 1,387 points inside the envelope (all on both sides), 13 known failures added, 0 failing,
-  0 table defects. `missing tables` 121 to 114. The engine is bit-exact with Excel on 1,364 of 1,400; 23 more are 1-2
+  0 table defects. `missing tables` 107 to 100 (on main after T-4109 and T-4092). The engine is bit-exact with Excel on 1,364 of 1,400; 23 more are 1-2
   ulp off Excel inside the envelope (DB 12, VDB 9, SYD 1, DDB 1).
 - New quirks, recorded in financial.md (the first draft of each definition encoded the old reading, and the oracle
   check flagged the points):
@@ -76,8 +76,8 @@ Every failing table point has an owner.
     A189, A200; up to 10.7% from the fractional-grid model the engine keeps). Known failures owned by new task T-4510.
 - **Excel kept as the target (decision 0300):** none. With the two rules above in the definitions, no point is more
   than 1e-4 relative off the math (before them, the six VDB points were, by 5.5E-5 to 0.107).
-- Math sidecars: `rustsheet-accuracy math --function` over the seven functions, for probes and probes-numeric, after
-  merging origin/main: 124 new probes sidecars (725 cells of these functions, 141 of them math domain errors) and 118
-  cells added to 14 existing ones, none changed; probes-numeric has no such cell. `make eval-math-check` prints
+- Math sidecars: `rustsheet-accuracy math --function` over the seven functions, for probes and probes-numeric, rerun
+  after merging origin/main: 121 new probes sidecars and 17 existing ones extended (7,406 lines added, none removed or
+  changed; 933 math cells in the 123 regenerated cases); probes-numeric has no such cell. `make eval-math-check` prints
   "current".
 - Eval delta: none in the gated suites (tools, tables, sidecars and docs only).
