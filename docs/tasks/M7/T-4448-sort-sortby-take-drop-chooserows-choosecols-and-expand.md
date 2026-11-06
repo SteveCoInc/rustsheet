@@ -3,7 +3,7 @@ id: T-4448
 title: "SORT, SORTBY, TAKE, DROP, CHOOSEROWS, CHOOSECOLS and EXPAND of a lone blank cell: probe whether it stays blank as in TOROW and UNIQUE, and match (ours reads 0)"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
