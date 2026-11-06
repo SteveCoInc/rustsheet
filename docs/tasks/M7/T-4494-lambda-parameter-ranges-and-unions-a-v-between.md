@@ -3,7 +3,7 @@ id: T-4494
 title: "LAMBDA parameter ranges and unions: a:v between two parameters is their range (not columns A:V), (a,v) is a union, AREAS of a REDUCE result, and a union REDUCE initial value stays a reference"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: M
 tier: opus
