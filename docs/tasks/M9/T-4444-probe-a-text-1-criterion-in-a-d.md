@@ -3,7 +3,7 @@ id: T-4444
 title: "Probe a text =1 criterion in a D-function criteria range near 1; tidy T-4399's tag and numbers.md evidence line"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
