@@ -56,7 +56,7 @@ az-Arab-IQ	-	41
 az-Arab-IR	-	41
 az-Arab-TR	-	41
 az-Cyrl	742C	152
-az-Cyrl-AZ	-	152
+az-Cyrl-AZ	82C	152
 az-Latn	782C	41
 az-Latn-AZ	42C	41
 ba	6D	104
@@ -159,6 +159,7 @@ el-GR	408	5
 el-POLYTON	-	5
 en	9	6
 en-001	-	175
+en-029	2409	6
 en-150	-	175
 en-AE	4C09	6
 en-AG	-	175
@@ -284,7 +285,7 @@ en-ZW	3009	175
 eo	-	249
 eo-001	-	249
 es	A	7
-es-419	-	194
+es-419	580A	194
 es-AR	2C0A	171
 es-BO	400A	171
 es-BR	-	194
@@ -346,9 +347,10 @@ ff-Latn-GW	-	251
 ff-Latn-LR	-	251
 ff-Latn-MR	-	251
 ff-Latn-NE	-	251
-ff-Latn-NG	-	141
+ff-Latn-NG	467	141
 ff-Latn-SL	-	251
 ff-Latn-SN	867	161
+ff-NG	467	141
 fi	B	8
 fi-FI	40B	8
 fil	64	97
@@ -595,7 +597,7 @@ mn	50	77
 mn-Cyrl	7850	77
 mn-MN	450	137
 mn-Mong	7C50	159
-mn-Mong-CN	-	159
+mn-Mong-CN	850	159
 mn-Mong-MN	C50	167
 mni	-	85
 mni-Beng	-	85
@@ -707,6 +709,7 @@ qps-ploca	5FE	14
 qps-plocm	9FF	131
 quc	-	125
 quc-GT	-	125
+quc-Latn-GT	486	125
 qut	86	125
 quz	6B	102
 quz-BO	46B	102
@@ -778,7 +781,7 @@ sms	743B	184
 sms-FI	203B	184
 sn	-	312
 sn-ZW	-	312
-so	-	113
+so	77	113
 so-DJ	-	113
 so-ET	-	113
 so-KE	-	113
@@ -875,7 +878,7 @@ uz	43	64
 uz-Arab	-	325
 uz-Arab-AF	-	325
 uz-Cyrl	7843	156
-uz-Cyrl-UZ	-	156
+uz-Cyrl-UZ	843	156
 uz-Latn	7C43	64
 uz-Latn-UZ	443	64
 vai	-	326

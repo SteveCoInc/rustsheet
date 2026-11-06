@@ -61,3 +61,8 @@ cases (`hebrew_or_saka`, `hijri_names`). Eval: probes known failures fall by 718
 suite; every t3666-* and t4061-* cell passes except the comma cells of t3666-review-followups (T-4515), and so do
 main's per-language probes (t2959-indic-lcid-names, t4201-indic-regional-variants, t4480-lcid-sublanguage-fallback,
 text-locale-invalid-sublanguage). T-4064 and T-4065, fixed on main by hand in #3538 (locale/variant_date_names.rs) while this was in review, now come from the tables too, so that file is gone as well; #3538's comma-suffix reading (`numeral_suffix`, a BCP-47 locale before the comma) is kept in `resolve_with` and `numerals`.
+Review round 3: the [MS-LCID] tag list (tools/src/rustsheet_tools/ms_lcid_tags.tsv) missed 8 rows of the spec (so,
+ff-NG, ff-Latn-NG, quc-Latn-GT, az-Cyrl-AZ, uz-Cyrl-UZ, mn-Mong-CN, en-029, es-419), so those tags lost their LCID's
+calendar names after `B2`. With the rows added, probes/t4508-ms-lcid-tags-after-b2 (27 cells, excel-graph 2026-11-06)
+shows each tag after `B2` printing what its LCID prints, and the three [MS-LCID] tags the tag probe never tried (ff-NG,
+quc-Latn-GT, en-029) printing their LCID's names, which the generator now takes from it (`confirmed_tags`). All 27 pass.

@@ -113,6 +113,7 @@
 0073	ti
 0074	gn
 0075	haw
+0077	so
 0078	ii
 007A	arn
 007C	moh
@@ -227,6 +228,8 @@
 0463	ps-AF
 0464	fil-PH
 0465	dv-MV
+0467	ff-NG
+0467	ff-Latn-NG
 0468	ha-Latn-NG
 046A	yo-NG
 046B	quz-BO
@@ -252,6 +255,7 @@
 0483	co-FR
 0484	gsw-FR
 0485	sah-RU
+0486	quc-Latn-GT
 0487	rw-RW
 0488	wo-SN
 048C	prs-AF
@@ -275,14 +279,17 @@
 081A	sr-Latn-CS
 081D	sv-FI
 0820	ur-IN
+082C	az-Cyrl-AZ
 082E	dsb-DE
 0832	tn-BW
 083B	se-SE
 083C	ga-IE
 083E	ms-BN
+0843	uz-Cyrl-UZ
 0845	bn-BD
 0846	pa-Arab-PK
 0849	ta-LK
+0850	mn-Mong-CN
 0859	sd-Arab-PK
 085D	iu-Latn-CA
 085F	tzm-Latn-DZ
@@ -339,6 +346,7 @@
 201A	bs-Cyrl-BA
 203B	sms-FI
 2401	ar-YE
+2409	en-029
 240A	es-CO
 240C	fr-CD
 241A	sr-Latn-RS
@@ -380,6 +388,7 @@
 4C0A	es-NI
 500A	es-PR
 540A	es-US
+580A	es-419
 5C0A	es-CU
 641A	bs-Cyrl
 681A	bs-Latn

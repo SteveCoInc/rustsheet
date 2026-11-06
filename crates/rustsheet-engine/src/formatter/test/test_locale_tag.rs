@@ -377,7 +377,7 @@ fn numeral_suffix_tags_print_script_digits() {
 }
 
 #[test]
-fn only_lcids_with_a_locale_fall_back_to_their_language() {
+fn only_lcids_with_a_locale_print_a_language() {
     // probes/t3666-lcid-sublanguage-sweep: 0x2412 and 0x812 have no locale, 0x412, 0xF412 and
     // 0xF409 have one; 0xC00 is en-US.
     let v = 45000.75;
@@ -400,7 +400,7 @@ fn a_weekday_written_with_a_has_its_own_code_after_b2() {
 
 // probes/t4480-lcid-sublanguage-fallback and text-locale-invalid-sublanguage (T-4480).
 #[test]
-fn an_lcid_without_a_table_falls_back_to_its_language_only_when_assigned_or_high() {
+fn assigned_and_high_sublanguage_lcids_have_a_locale() {
     let code = "mmmm|ddd|h AM/PM|h A/P|h a/p";
     let english = "March|Wed|6 PM|6 P|6 p";
     // Unassigned sublanguages below 0x20, and all of 0x20 to 0x3C, have no locale.

@@ -6,6 +6,7 @@ which is neither CLDR nor stable across products, so the tables are read off Exc
 - probes/t3666-lcid-locale-map: which LCIDs (languages 0x01-0xFF x sublanguages 0-63) have a locale;
 - probes/t3666-locale-names: the names under each of them (and 0x400, 0x800, 0xC00);
 - probes/t3666-locale-tag-names: the names under every BCP-47 tag of [MS-LCID] and CLDR.
+- probes/t4508-ms-lcid-tags-after-b2: the [MS-LCID] tags the tag probe left out ([`confirmed_tags`]).
 
 `ms_lcid_tags.tsv` (from [MS-LCID] 2.2) gives the LCID a tag names, so a tag keeps its LCID's
 calendar rules (`[$-ja-JP]g`). The output, read by `locale::excel_date_names` and
@@ -289,6 +290,27 @@ def known_tags(documented: dict[str, int]) -> list[tuple[str, int | None, tuple[
     return tags
 
 
+def confirmed_tags(
+    documented: dict[str, int], by_lcid: dict[int, tuple[str, ...]], probed: set[str]
+) -> list[tuple[str, int | None, tuple[str, ...]]]:
+    """The [MS-LCID] tags the tag probe left out (`ff-NG`, `quc-Latn-GT`, `en-029`), each with its
+    LCID's names where probes/t4508-ms-lcid-tags-after-b2 shows the tag printing them: column C is
+    `mmmm|ddd|h A/P` of 2023-03-15 18:00 under the tag alone."""
+    sheet = json.loads((CASES / "t4508-ms-lcid-tags-after-b2.oracle.json").read_text(encoding="utf-8"))
+    case = json.loads((CASES / "t4508-ms-lcid-tags-after-b2.case.json").read_text(encoding="utf-8"))
+    tags: list[tuple[str, int | None, tuple[str, ...]]] = []
+    for key, formula in case["sheets"][0]["cells"].items():
+        tag = formula.split("[$-")[1].split("]")[0]
+        lcid = documented.get(tag.lower())
+        if not key.startswith("C") or tag.lower() in probed or lcid not in by_lcid:
+            continue
+        names = by_lcid[lcid]
+        # 12 `mmm`, 12 `mmmm`, 7 `ddd`, 7 `dddd`, AM, PM: March, a Wednesday, the PM half.
+        if sheet["sheets"]["S"][key]["v"] == f"{names[14]}|{names[27]}|6 {names[39]}":
+            tags.append((tag, lcid, names))
+    return tags
+
+
 def generate() -> dict[Path, str]:
     """Every generated table, by path, from the probes alone (no file is written)."""
     with_locale = lcids_with_locale()
@@ -301,7 +323,12 @@ def generate() -> dict[Path, str]:
     for row in sorted(oracle_rows("t3666-locale-names"), key=lambda r: int(r[0])):
         if int(row[0]) in with_locale:
             by_lcid[int(row[0])] = name_set(row)
-    tags = known_tags(documented_lcids())
+    documented = documented_lcids()
+    tags = known_tags(documented)
+    tags = sorted(
+        tags + confirmed_tags(documented, by_lcid, {tag.lower() for tag, _, _ in tags}),
+        key=lambda t: t[0].lower(),
+    )
     # A hex LCID that is really a tag (`[$-CA]` is Catalan by its tag "ca", 0xCA has no locale):
     # its probe row measured the tag, so it is not evidence about the LCID. This only reads the
     # probe; which spelling wins is the engine's resolution order (`locale_tag::resolve_with`).
