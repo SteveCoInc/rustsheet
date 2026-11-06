@@ -14,5 +14,17 @@
     "f": "=IMABS(\"2i\")"
    }
   }
+ },
+ "skipped": {
+  "Calc": {
+   "A1": {
+    "f": "=F.INV.RT(1E-200,1,1.999)",
+    "why": "no single value"
+   },
+   "A16": {
+    "f": "=CHIDIST(F.INV.RT(1E-200,1,1.999),10)",
+    "why": "no single value"
+   }
+  }
  }
 }

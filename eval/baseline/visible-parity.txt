@@ -281,6 +281,7 @@ probes/t4480-lcid-sublanguage-fallback.case.json	3
 probes/t4492-locale-comma-tag-shapes.case.json	5
 probes/t4515-fraction-tail-holdout.case.json	1
 probes/t4515-fresh-sweep.case.json	29
+probes/t4519-row-column-randarray-over-arrays.case.json	29
 probes/t4543-xlookup-not-found-address-sheet-lift.case.json	2
 probes/t4554-api-name-local-name-body.case.json	5
 probes/t4554-api-name-scoped-name-choice-first.case.json	9
@@ -293,6 +294,7 @@ probes/t4585-pivot-field-names.case.json	8
 probes/t4589-pivot-total-order.case.json	80
 probes/t4614-pivot-total-order-2.case.json	97
 probes/t4616-pivot-total-order-3.case.json	477
+probes/t4625-gamma-dist-ratio-overflow.case.json	4
 probes/yield-below-par-sweep.case.json	3
 probes/yield-deep-discount-cut.case.json	1
 probes/yield-start-one-input.case.json	1
