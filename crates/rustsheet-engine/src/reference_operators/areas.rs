@@ -218,7 +218,10 @@ impl RefArg {
     /// written, an overlap counting twice and a 3-D range every sheet of its span: Excel accepts
     /// both as the data of TRIMMEAN, Z.TEST and the PERCENTILE/QUARTILE/PERCENTRANK family
     /// (probes/t4309-3d-union-trimmean-percentile, T-4309).
-    pub(crate) fn into_areas_or_single(self, cell: CellReferenceIndex) -> Result<Ranges, CalcResult> {
+    pub(crate) fn into_areas_or_single(
+        self,
+        cell: CellReferenceIndex,
+    ) -> Result<Ranges, CalcResult> {
         match self {
             RefArg::Ranges(areas @ Ranges::Areas(_)) => Ok(areas),
             RefArg::Ranges(Ranges::One(range)) if range.left.sheet != range.right.sheet => {
