@@ -64,13 +64,15 @@ def _interpolate(xs: tuple[mpmath.mpf, ...], rank: mpmath.mpf) -> mpmath.mpf:
     return low if h == 0 else low + h * (xs[j] - low)
 
 
-def _percentile_inc(xs: tuple[mpmath.mpf, ...], k: mpmath.mpf) -> mpmath.mpf:
+def percentile_inc(xs: tuple[mpmath.mpf, ...], k: mpmath.mpf) -> mpmath.mpf:
+    """PERCENTILE.INC of the sorted `xs`: the exact interpolation at the one-based rank 1 + k(n - 1)."""
     if k < 0 or k > 1:
         raise DomainError("PERCENTILE.INC: k outside [0, 1]")
     return _interpolate(xs, 1 + k * (len(xs) - 1))
 
 
-def _percentile_exc(xs: tuple[mpmath.mpf, ...], k: mpmath.mpf) -> mpmath.mpf:
+def percentile_exc(xs: tuple[mpmath.mpf, ...], k: mpmath.mpf) -> mpmath.mpf:
+    """PERCENTILE.EXC of the sorted `xs`: the exact interpolation at the rank k(n + 1), in [1, n]."""
     n = len(xs)
     rank = k * (n + 1)
     if k <= 0 or k >= 1 or rank < 1 or rank > n:
@@ -78,7 +80,8 @@ def _percentile_exc(xs: tuple[mpmath.mpf, ...], k: mpmath.mpf) -> mpmath.mpf:
     return _interpolate(xs, rank)
 
 
-def _quart(k: mpmath.mpf, lo: int, hi: int) -> mpmath.mpf:
+def quart_k(k: mpmath.mpf, lo: int, hi: int) -> mpmath.mpf:
+    """QUARTILE's percentile quart/4 for quart = floor(k), which must lie in lo-hi."""
     quart = int(mpmath.floor(k))
     if not lo <= quart <= hi:
         msg = f"quart {quart} outside {lo}-{hi}"
@@ -94,13 +97,13 @@ def _value(args: Sequence[MathArg]) -> mpmath.mpf:
             raise DomainError("k below 1 or ceil(k) above the count")
         return xs[n - int(mpmath.ceil(k))] if function_num == LARGE else xs[int(mpmath.floor(k)) - 1]
     if function_num == PERCENTILE_INC:
-        return _percentile_inc(xs, k)
+        return percentile_inc(xs, k)
     if function_num == QUARTILE_INC:
-        return _percentile_inc(xs, _quart(k, 0, 4))
+        return percentile_inc(xs, quart_k(k, 0, 4))
     if function_num == PERCENTILE_EXC:
-        return _percentile_exc(xs, k)
+        return percentile_exc(xs, k)
     if function_num == QUARTILE_EXC:
-        return _percentile_exc(xs, _quart(k, 1, 3))
+        return percentile_exc(xs, quart_k(k, 1, 3))
     msg = f"function_num {function_num} is not an array form"
     raise ValueError(msg)
 
@@ -108,7 +111,10 @@ def _value(args: Sequence[MathArg]) -> mpmath.mpf:
 # -- draws -------------------------------------------------------------------------------------
 
 
-def _array(rng: random.Random, count: int, lo: float, hi: float, negative: float = 0.3) -> tuple[float, ...]:
+def array_of(
+    rng: random.Random, count: int, lo: float, hi: float, negative: float = 0.3
+) -> tuple[float, ...]:
+    """`count` signed log-uniform magnitudes in [lo, hi], each written to 15 digits."""
     return tuple(round15(signed_log_uniform(rng, lo, hi, negative)) for _ in range(count))
 
 
@@ -117,7 +123,7 @@ def _decimals(rng: random.Random, lo: float, hi: float) -> float:
     return round(rng.uniform(lo, hi), rng.choice((1, 2, 3, 15)))
 
 
-def _k(rng: random.Random, function_num: int, n: int) -> float:
+def valid_k(rng: random.Random, function_num: int, n: int) -> float:
     """A valid k for `function_num` over n values, away from the bounds Excel compares in doubles."""
     if function_num in (LARGE, SMALL):
         whole = rng.randint(1, n)
@@ -135,16 +141,24 @@ def _k(rng: random.Random, function_num: int, n: int) -> float:
     return min(hi - margin, max(lo + margin, round15(rng.uniform(lo + margin, hi - margin))))
 
 
-def _min_count(function_num: int) -> int:
+def min_count(function_num: int) -> int:
     """The smallest count every valid k needs: PERCENTILE.EXC's rank needs 2, QUARTILE.EXC's quart 1 needs 3."""
     return {PERCENTILE_EXC: 2, QUARTILE_EXC: 3}.get(function_num, 1)
 
 
+def valid_point(
+    rng: random.Random, function_num: int, lo: float, hi: float, sizes: tuple[int, int]
+) -> tuple[tuple[float, ...], float]:
+    """An array of `sizes[0]` to `sizes[1]` magnitudes in [lo, hi] (at least `min_count`) and a valid k for
+    `function_num` (shared with the order-statistics definitions, T-4092)."""
+    n = rng.randint(max(sizes[0], min_count(function_num)), max(sizes[1], min_count(function_num)))
+    array = array_of(rng, n, lo, hi)
+    return array, valid_k(rng, function_num, n)
+
+
 def _point(rng: random.Random, lo: float, hi: float, sizes: tuple[int, int]) -> list[Arg]:
     function_num = rng.randint(LARGE, QUARTILE_EXC)
-    n = rng.randint(max(sizes[0], _min_count(function_num)), max(sizes[1], _min_count(function_num)))
-    array = _array(rng, n, lo, hi)
-    k = _k(rng, function_num, n)
+    array, k = valid_point(rng, function_num, lo, hi, sizes)
     return [function_num, rng.randint(0, 7), array, k]
 
 
@@ -152,22 +166,33 @@ def _near_bound(rng: random.Random) -> list[Arg]:
     """k near the bounds that are not compared in doubles, and arrays straddling 0 (cancelling interpolation)."""
     n = rng.randint(2, 12)
     function_num = rng.choice((LARGE, SMALL, PERCENTILE_INC, PERCENTILE_EXC))
-    array = _array(rng, n, 1e-3, 1e3, negative=0.5)
+    array, k = near_bound_point(rng, function_num, n)
+    return [function_num, rng.randint(0, 7), array, k]
+
+
+def near_bound_point(rng: random.Random, function_num: int, n: int) -> tuple[tuple[float, ...], float]:
+    """`n` values straddling 0 (cancelling interpolation) and a k for `function_num` near the bounds that are not
+    compared in doubles; QUARTILE.INC and QUARTILE.EXC (n >= 3) take a whole valid quart (T-4092)."""
+    array = array_of(rng, n, 1e-3, 1e3, negative=0.5)
     if function_num in (LARGE, SMALL):
         whole = rng.randint(1, n - 1)
         k = whole + rng.choice((1e-10, 1e-6, 0.5, 1 - 1e-6))  # LARGE takes whole + 1, SMALL whole
     elif function_num == PERCENTILE_INC:
         tiny = 10.0 ** rng.uniform(-6, -2)
         k = rng.choice((tiny, 1 - tiny, 0.5 + tiny))
+    elif function_num == QUARTILE_INC:
+        k = float(rng.randint(0, 4))
+    elif function_num == QUARTILE_EXC:
+        k = float(rng.randint(1, 3))
     else:
         lo, hi = 1 / (n + 1), n / (n + 1)
         k = rng.choice((lo + (hi - lo) * 1e-5, hi - (hi - lo) * 1e-5, rng.uniform(lo, hi)))
-    return [function_num, rng.randint(0, 7), array, round15(k)]
+    return array, round15(k)
 
 
 def _edge(rng: random.Random) -> list[Arg]:
     n = rng.randint(1, 8)
-    array = _array(rng, n, 1e-3, 1e6)
+    array = array_of(rng, n, 1e-3, 1e6)
     o = rng.randint(0, 7)
     three = (1.0, 3.0, 2.0)  # n + 1 = 4: the EXC bounds 0.25 and 0.75 are exact doubles
     seven = tuple(float(x) for x in (5, 2, 8, 1, 9, 3, 7))  # n + 1 = 8: 0.125 and 0.875 exact

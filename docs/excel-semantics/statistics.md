@@ -363,6 +363,11 @@ half the gap. It does not return `(a + b)/2`. The two differ by an ulp or two wh
   21 more cells of the pv23_046..055 goldens, Mac desktop cached values).
 Evidence: every gen-m* MEDIAN cell over plain Data ranges with an even count (50 cells, excel-graph). `a + (b - a)/2`
 matches all 50. `(a + b)/2`, `a/2 + b/2`, `b - (b - a)/2` and `(a + b)*0.5` match 44 each (gap triage 2026-10-28, T-3017).
+Gate A table (eval/accuracy/tables/MEDIAN/s1, excel-graph 2026-11-06, T-4092): `a + (b - a)/2` matches all 48
+even-count points bit for bit, and `(a + b)/2` misses 10 of them. In a near-cancelling pair the form is far from the
+exact midpoint. `MEDIAN(87.01,-87.0099999999999)` is 5.684341886080802E-14, while the midpoint is 4.973799150320701E-14,
+14% lower (A52). `MEDIAN(0.9311,-0.931100000000003)` is -1.4432899320127035E-15, against -1.4988010832439613E-15, 3.7%
+off (A53). Excel stays the target there (decision 0300).
 Two 9E+307 values give 9E+307 (probes/aggregate-overflow A48, numbers.md), which this form also gives. A pair whose
 `b - a` overflows is unprobed.
 Status: VERIFIED (cells above). Ours: not implemented. `fn_median` (count_and_average.rs) computes `(a + b)/2`; T-3017.
