@@ -3,7 +3,7 @@ id: T-4621
 title: "Probe which sheet's definition a bare name binds to in a sheet-scoped API-added name's body: its own sheet or the first sheet by name"
 milestone: M8
 lane: api
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -26,10 +26,10 @@ defining sheet by name" (T-4587's rule).
   sheet, and add the same on Last with `Dup` defined on First and Last.
 
 ## Acceptance criteria
-- [ ] The probe above (excel-graph, predictions committed first) is filled and its cells pass, changing
+- [x] The probe above (excel-graph, predictions committed first) is filled and its cells pass, changing
       `api_body_sheet_name` for sheet-scoped adds if Excel prefers the own sheet.
-- [ ] syntax.md's UNVERIFIED note on a sheet-scoped add's body becomes VERIFIED or is corrected.
-- [ ] `make check` green; reviewers approve.
+- [x] syntax.md's UNVERIFIED note on a sheet-scoped add's body becomes VERIFIED or is corrected.
+- [x] `make check` green; reviewers approve.
 
 ## Predictions (committed before the fill)
 probes/t4621-api-sheet-name-body (S2 active), -first, -last. Rows 1-4 read SD (S2, `=Dup`), LD (Last, `=DupB`), SW (S2,
@@ -47,3 +47,14 @@ is expected `#NAME?` per "A sheet-scoped name added after load" (T-4618's area).
 
 ## Out of scope
 - probes/t4554-api-name-local-name-body Last!D3 (T-4618).
+
+## Outcome
+- Probes (excel-graph 2026-11-06, predictions committed first): probes/t4621-api-sheet-name-body (S2 active), -first,
+  -last, 19 cells each. Every column-D cell matches the "first defining sheet by name" prediction (1, 2, 93, 94, 1), on
+  every sheet and for every active sheet; none matches "own sheet first" (7, 90, 74). So `api_body_sheet_name` stays as
+  T-4587 left it; only its doc comment now cites the new probes.
+- New quirk recorded: `=INDIRECT("SD")` on a sheet-scoped name's own sheet is `#REF!` in Excel (ours too).
+- syntax.md: the UNVERIFIED note on a sheet-scoped add's body is now VERIFIED, with the cells.
+- Column E (bare own-sheet uses typed before the add) resolves in Excel by active sheet; ours stays `#NAME?` (8 cells).
+  T-4618's open PR's load-order model predicts all of them; follow-up T-4674 owns them.
+- Eval delta: +49 new passing cells (3 new cases, 49/57 pass), 0 regressions; the 8 off cells are owned by T-4674.
