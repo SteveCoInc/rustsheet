@@ -394,13 +394,20 @@ does the same); a blank does not count as 0. `MDETERM` of a single numeric cell 
 number either: MDETERM, MINVERSE and MMULT give `#VALUE!` for a boolean cell (`MINVERSE(E1)`, E1 = FALSE;
 gen-m7/7c48e2456500644f Calc!A19, T-1275), a boolean value (`MDETERM(TRUE)`, `MINVERSE(FALSE)`), and a boolean
 element of a larger matrix (`MDETERM({TRUE,2;3,4})`, `MMULT(D1:E2,...)` with D1 = TRUE)
-(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358).
+(probes/matrix-boolean-elements G1-G13, excel-graph 2026-10-15, T-1358). Text is not a number either, a text number
+included: all three give `#VALUE!` for a text element of an array literal (`MDETERM({1,"2";3,4})`, `{1,"a";3,4}`,
+`{"5"}`), a text cell in a matrix range (`MDETERM(B1:C2)` with C1 the text "2"), a one-cell text range (`MDETERM(A1)`,
+A1 the text "5") and a direct text argument (`MINVERSE("5")`, `MMULT("5",1)`), in either MMULT argument
+(probes/t4626-matrix-text-elements M1-M26, excel-graph 2026-11-06, T-4626). The error is one scalar `#VALUE!`, not an
+array with errors at the affected elements: `SUM(IFERROR(MINVERSE(B1:C2),100))` and
+`SUM(IFERROR(MMULT(F1:F2,G1:H1),100))` (a 2x2 product whose text element touches only one column) are 100, not 400
+(M16, M17, M27).
 Evidence: poi/MatrixFormulaEvalTestData.xlsx (Excel-cached, Excel 16) Sheet1!H10 `MDETERM(B10:D12)`
 and H30 `MDETERM(B30:D32)` (all blank / only B30 = 1) are `#VALUE!`; H14:J16 `MINVERSE(B14:D16)` and
 H34:J36 `MINVERSE(B34:D36)` are `#VALUE!` in every cell; H50 `MDETERM(B50)` = 1.
 Implemented in: `coerce_to_f64` (crates/rustsheet-engine/src/functions/math_and_trigonometry/matrix.rs, T-0943)
 Status: VERIFIED (Excel-cached; the boolean rule excel-graph)
-Tasks: T-0943, T-1358
+Tasks: T-0943, T-1358, T-4626
 A single blank cell is a blank matrix too: `MINVERSE(B4)`, `MDETERM(D$1)`, `MMULT(100,C$9)` and `MMULT(1E-15,B11)`
 with the cell blank are `#VALUE!`. Implemented in `Model::eval_matrix_arg` (matrix.rs, T-2164); any blank result, not only a direct reference, stays blank (a blank through INDEX or CHOOSE is unprobed). So does the empty value a lookup gives for a blank result cell: `MMULT(LOOKUP(TRUE,Data!B2:B10,Data!E11:E11),2.5)` is `#VALUE!` (probes/lookup-short-result-vector A20, T-2278; lookup.md "LOOKUP past a short result vector"), as do `MMULT(,2)`, IFERROR of a blank and `IF(TRUE,<blank>)` (probes/lookup-t2278-followups A1-A5). Evidence (excel-graph, 2026-10-20): gen-m5/cf893ec19f53a7fc
 Calc!A204, gen-m5/fc81c2f704bef138 Calc!A381, gen-m5/3e134e52393061b1 Calc!A10, gen-m5/d9fb1e918971111b Calc!A213 (T-2164).

@@ -257,9 +257,9 @@ def matrix_rows(value: Any) -> literal.Matrix | str:
     it, or why it does not fit. A number is a 1x1 matrix: `MDETERM(5)` is 5 (probes/stats-evidence-floor-t1623
     S!Q112), and MDETERM of a single numeric cell is that number (arrays.md "MDETERM / MINVERSE: a blank
     cell in the matrix is #VALUE!"). A blank or a logical, as the matrix or one of its elements, is `#VALUE!`
-    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. A text is
-    refused with no math value: a direct text argument is `#VALUE!` (`MDETERM("5")`, S!Q113), but a text or
-    text-number element of an array literal or range is unprobed for MDETERM, MINVERSE and MMULT (T-4626).
+    in Excel (same entry; probes/matrix-boolean-elements G1-G13), which the math does not model. So is a text,
+    a text number included, as a direct argument (`MDETERM("5")`, S!Q113) or as an element of an array literal
+    or range, in MDETERM, MINVERSE and MMULT (probes/t4626-matrix-text-elements M1-M27, T-4626).
     A flat list (a range `parse_arg` read without its shape), ragged rows and a matrix over
     `MAX_MATRIX_SIDE` rows or columns (the exact rational elimination's cost; no oracle cell is that large)
     are refused too."""
