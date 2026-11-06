@@ -30,11 +30,19 @@ use crate::{
     variable_stack::Binding,
 };
 
-/// The bracket running now: its serial and whether it was handed a mark.
+/// The bracket running now: its serial, shifted left one bit, and in the low bit whether it was
+/// handed a mark. One word, as it is saved across every `evaluate_node_in_context` call.
 #[derive(Clone, Copy, Default)]
-pub(crate) struct Frame {
-    serial: u64,
-    handed: bool,
+pub(crate) struct Frame(u64);
+
+impl Frame {
+    fn serial(self) -> u64 {
+        self.0 >> 1
+    }
+
+    fn handed(self) -> bool {
+        self.0 & 1 == 1
+    }
 }
 
 /// The bracket that finished last.
@@ -53,6 +61,11 @@ pub(crate) struct NumberMark {
     next: u64,
     current: Frame,
     last: Finished,
+    /// Whether a bracket carrying the mark has finished in this calculation pass. Until one has,
+    /// no value is marked, so a bracket's end only looks for one that makes the mark and keeps
+    /// no record: a workbook without ERROR.TYPE, `CELL("col"|"row")` or a LET-bound array of
+    /// references pays two counter updates a node.
+    armed: bool,
 }
 
 fn address(node: &Node) -> usize {
@@ -121,11 +134,9 @@ impl MarkCarrier for RefArg {
 
 impl NumberMark {
     /// Starts a bracket; returns the one it interrupts, for [`Model::end_number_mark`].
+    #[inline]
     pub(crate) fn begin(&mut self) -> Frame {
-        let frame = Frame {
-            serial: self.next,
-            handed: false,
-        };
+        let frame = Frame(self.next << 1);
         self.next += 1;
         std::mem::replace(&mut self.current, frame)
     }
@@ -146,29 +157,46 @@ impl NumberMark {
 impl Model {
     /// Ends the bracket [`NumberMark::begin`] started for `node`, whose value `can_carry` says
     /// may carry the mark, and resumes `outer`.
+    #[inline]
     pub(crate) fn end_number_mark(&mut self, node: &Node, can_carry: bool, outer: Frame) {
-        let node = node.ungrouped();
-        let at = address(node);
         let frame = std::mem::replace(&mut self.number_mark.current, outer);
-        let last = self.number_mark.last;
-        // Only a number or an array is ever marked, so most brackets stop at the first test.
+        // Only a number or an array is ever marked.
+        if can_carry || self.number_mark.armed {
+            self.record_number_mark(node, can_carry, frame);
+        }
+    }
+
+    /// [`Self::end_number_mark`] of a bracket that may carry the mark or may need recording.
+    #[inline(never)]
+    fn record_number_mark(&mut self, node: &Node, can_carry: bool, frame: Frame) {
+        let node = node.ungrouped();
         let marked = can_carry
             && match node {
                 Node::NamedVariableKind { id: Some(id), .. } => {
                     self.variable_stack.is_marked(*id as usize)
                 }
+                // Nothing was handed on before the first mark.
+                _ if !self.number_mark.armed => makes_mark(node),
                 // Read twice over (a reference-context entry point, then
                 // `evaluate_node_in_context`), the inner bracket's mark is this one's.
                 _ if passes_mark(node) => {
-                    frame.handed || (last.marked && last.node == at && last.serial > frame.serial)
+                    let last = self.number_mark.last;
+                    frame.handed()
+                        || (last.marked
+                            && last.node == address(node)
+                            && last.serial > frame.serial())
                 }
                 _ => makes_mark(node),
             };
-        self.number_mark.last = Finished {
-            serial: frame.serial,
-            node: at,
-            marked,
-        };
+        let mark = &mut self.number_mark;
+        mark.armed |= marked;
+        if mark.armed {
+            mark.last = Finished {
+                serial: frame.serial(),
+                node: address(node),
+                marked,
+            };
+        }
     }
 
     /// `evaluate(self)`, the evaluation of `node`, bracketed (module docs).
@@ -208,7 +236,7 @@ impl Model {
     /// Hands the running bracket the mark of `node`, read since `since`, if it carries it.
     fn hand_on_mark(&mut self, since: u64, node: &Node) {
         if self.number_mark.was_marked(since, node) {
-            self.number_mark.current.handed = true;
+            self.number_mark.current.0 |= 1;
         }
     }
 
