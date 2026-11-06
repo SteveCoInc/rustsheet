@@ -2,7 +2,8 @@
 
 - **Status:** draft (accepted on merge of T-1955)
 - **Milestone / lane:** M6 / engine
-- **Tasks:** T-1955 (this spec), T-1956, T-1957, T-1838, T-2063, T-2064, T-2065
+- **Tasks:** T-1955 (this spec), T-1956, T-1957, T-1838, T-2063, T-2064, T-2065; amendment "Mixed grids": T-4569 (spec),
+  T-4570 (implementation)
 
 ## Problem
 A multi-cell range or an array in OFFSET's rows/cols/height/width, INDIRECT's ref_text or a1, or
@@ -85,7 +86,9 @@ b2; E1 holds the formula):
   result is 0: not 5 and not 1, but which elements count is open, as the data holds no number (follow-up task).
 - Failed to open on Excel for the web on 2026-10-26 (createSession "retries exhausted", two runs, alone in a
   workbook): MEDIAN, LARGE and SMALL over a lifted OFFSET. Desktop question T-1075 item 18 (decision 0039); until
-  answered they keep today's value view.
+  answered they keep today's value view. Answered on the web since (T-4569, probes/t4569-xlookup-ref-element-max-min
+  A31, A32): `LARGE(OFFSET(G1,{0;1},0),1)` and `SMALL(..)` are `#N/A`, and MEDIAN over a mixed grid is too (A22);
+  the amendment below gives these three the `#N/A` reading.
 
 ## Design
 
@@ -186,6 +189,89 @@ A `RefGrid` is the result of OFFSET/INDIRECT (volatile) or TAKE/DROP/TRIMRANGE (
 are their arguments'), so it adds no static dependency: the per-element consumers of a TAKE, DROP or
 TRIMRANGE grid read cells inside the argument's static range, and an OFFSET or INDIRECT grid depends
 through volatility. T-0401 carries a pointer to this paragraph.
+
+## Amendment: mixed grids, value elements beside references (T-4569)
+
+### Problem
+XLOOKUP with an array lookup_value and a range if_not_found returns a grid whose hits are values and whose misses
+are the range itself, a real reference (lookup.md "XLOOKUP's if_not_found and ADDRESS's sheet_text over an array";
+probes/t4563-xlookup-not-found-ref-element, probes/t4569-xlookup-ref-element-max-min, excel-graph, 2026-11-06).
+`RefElement` holds only references and errors, and SPEC-0018's nested cell is not a reference (ISREF, TYPE, AREAS,
+CELL fail), so neither carrier can hold this result. The driver turns a kernel's non-reference value into
+`#VALUE!` (`functions/lift/driver.rs`, `CallResult::Reference`).
+
+### Excel behavior to match
+`X(r)` is `XLOOKUP({2;9},A1:A3,B1:B3,r)`: element 1 is the hit 20, and element 2 is `r`. Cells are t4563's unless
+marked t4569. Every rule of this spec holds for the reference element unchanged. The value element is read as
+an array value. In detail:
+1. **Value view** (rule 2). The grid shows 20, `#VALUE!`. A lifted operator gives 20, `#VALUE!`, even for a one-cell
+   `r` (A46, A57:A70). ISERROR is FALSE, TRUE; ISNUMBER TRUE, FALSE (t4569 C30:D30); ISTEXT FALSE, FALSE; TYPE of
+   the result 64; ISREF FALSE (A85-A105, t4569 A29).
+2. **INDEX** (rule 3). `INDEX(X(r),2,1)` is the reference: ISREF TRUE, TYPE 64 or 1, AREAS 1, CELL names its cell,
+   SUM 7, it spills (A1:A53), and `MAX(INDEX(..,2,1))` is 60 (t4569 A17). `INDEX(X(r),1,1)` is 20. One-argument
+   `INDEX(X(r),2)` is a 1x1 grid holding the element: it shows `#VALUE!`, and `INDEX(that,1,1)` hands the range back
+   (A25, V25:W25). Rule 3's "`INDEX(r,2)` over a column of elements is `#VALUE!`" is this case seen through the value
+   view.
+3. **Top-left aggregates** (rule 4, extended). SUM, AVERAGE, MIN, MAX, MINA, MAXA, PRODUCT, SUMSQ and STDEV.S read
+   the reference element's top-left cell as a range cell and the value element as an array value: SUM 23 = 20 + F1,
+   25 = 20 + E1 (A73, A109); over G1:G2 = 50, 60 MAX 50, AVERAGE 35, SUM 70, STDEV.S 21.2132…; over H1:H2 = 1, 2
+   MIN 1, PRODUCT 20, SUMSQ 401 (t4569 A1-A15, A20, A23).
+4. **Not numbers** (rule 5). COUNT 1 (the value 20 counts, the reference element does not), COUNTA 2, SUMPRODUCT 20:
+   the reference element is 0 (A77, A81, t4569 A9, A10, A21).
+5. **Order statistics.** LARGE, SMALL and MEDIAN over a grid that holds a reference element are `#N/A` (t4569 A12,
+   A13, A22), and so is a grid of references alone (t4569 A31, A32).
+6. **Per-element callers** (rule 6). They lift over every element. A value element is passed as the scalar
+   non-reference argument it is: ROW, AREAS, COUNTIF, SUBTOTAL, COUNTBLANK and CELL give `#VALUE!` for it, and N
+   gives 20. The reference element is the call on the range: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110,
+   COUNTBLANK 0, CELL 1 (t4569 C24:D34).
+
+### Design
+- **Representation.** One more variant, `RefElement::Value(ArrayNode)`. The node is a scalar: `Boolean`, `Number`,
+  `String` or `Empty`. An error stays `RefElement::Error`. A `Lambda` or `Nested` value is stored as `Error(VALUE)`,
+  as the driver stores every non-reference value today. `RefElement` must stay within its 32-byte size assertion
+  (T-1956). If `ArrayNode` makes it larger, box the value (`Value(Box<ArrayNode>)`), since value elements are rare.
+  T-4570 measures this and keeps the assertion. `RefGrid` and its `Arc<[RefElement]>` are otherwise unchanged. It is still not a `CalcResult`, and it
+  still never reaches storage. Rejected alternatives: `ArrayNode::Reference`, for the reasons above; and a separate
+  `MixedGrid` type, which would duplicate every consumer (directive 3).
+- **Producer.** The driver's `CallResult::Reference` mode keeps a scalar value as `Value`, replacing today's
+  `#VALUE!` (driver.rs). OFFSET, INDIRECT, TRIMRANGE, TAKE and DROP never return a non-reference value, so their
+  grids are unchanged. T-4570 confirms this by running their probes unchanged. XLOOKUP gets a reference form
+  (`evaluate_reference_form` dispatch), used only when lookup_value lifts and if_not_found is a `CalcResult::Range`.
+  There `xlookup_if_not_found` keeps the range, and each miss returns it, so the grid gets one `Reference` element
+  per miss. Otherwise XLOOKUP stays on its value path. When every element is a hit, the reference form returns
+  today's `CalcResult::Array` and builds no grid: a grid always holds at least one `Reference` element.
+- **Readers.** Each consumer adds one arm, and none needs a new walker.
+  - `to_values`: `Value(v)` gives `v`. This is the only value view (rule 1).
+  - INDEX (`index_grid`): `Value(v)` gives `v` as a value, not a reference. The one-index form is still a 1x1
+    sub-grid, so `INDEX(INDEX(X(r),2),1,1)` gives the range (rule 2).
+  - The aggregate walker (`GridReading`): `TopLeft` reads `Value(v)` as an array element, so text and booleans are
+    skipped as they are in an array argument, not read as range cells. `NotANumber` counts a number value for COUNT
+    and reads it for SUMPRODUCT. `TopLeftElements` follows `TopLeft`.
+  - Order statistics: LARGE, SMALL and MEDIAN given a `RefArg::Grid` with a reference element return `#N/A`. This is
+    one check in their argument reader, not a per-element walk. An error element comes first, as for the other
+    aggregates; this is unprobed and follows rule 4.
+  - Per-element callers (`ref_lift.rs`): `Value(v)` calls the scalar function with `v` as a value argument. That is
+    `#VALUE!` where a reference is required, and N reads the value. `put_back` keeps the result.
+  - ROWS/COLUMNS, ISREF and the pass-throughs (IF, CHOOSE, LET, VSTACK, TAKE, DROP) need no change: they handle
+    elements without reading them.
+  - **Unprobed readers** fall back to the value view, as rule 2 makes every reader that does not opt in. This
+    covers VAR.S, STDEV.P, AVERAGEA, MODE, PERCENTILE, QUARTILE, RANK, the IFS family's criteria ranges, and
+    TEXTJOIN. Each is a probe task before it opts in.
+- **Bounds** (directive 5). No new budget. An XLOOKUP grid has the lifted lookup_value's shape, which the lift
+  already passes through `check_array_size`. Each element is one `xlookup_one` call charged to
+  `MAX_LIFTED_CELL_VISITS`, as today. A miss stores one `Range` (the shared if_not_found) and copies no cells. A
+  top-left aggregate reads one cell per reference element, and a value element costs O(1). The order-statistic
+  check scans the elements once, bounded by the grid's checked size. A per-element caller charges
+  `LiftCost::Cells` for a reference element, as rule 6 does, and `LiftCost::Unit` for a value element. A
+  `Value(String)` holds a text the kernel already built, so there is no extra allocation beyond today's
+  `ArrayNode`.
+- **What changes.** XLOOKUP under a lifted lookup_value with a range if_not_found, and LARGE, SMALL and MEDIAN over
+  any grid (`#N/A` replaces today's `#VALUE!`). Nothing else.
+
+### Test plan and rollout
+T-4570 implements it: the t4543 W45:W46, t4563 and t4569 cells it owns leave eval/baseline. Unit tests: a mixed
+grid never reaches storage; the size assertion holds; an all-hit lift builds no grid. Metamorphic tests:
+`SUM(X(r))` equals `SUM(hits) + top-left(r)` times the misses; `COUNTA(X(r))` equals the element count.
 
 ## Alternatives considered
 - **A `CalcResult::References` variant.** Every match on `CalcResult` would need an arm and every

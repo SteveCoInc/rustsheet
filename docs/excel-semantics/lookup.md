@@ -957,14 +957,32 @@ out-of-range index: VERIFIED, see the T-2273 entry; ours returns uncoercible tex
     one-argument form keeps the element wrapped in a 1x1 array, while `INDEX(..,2,1)` hands the reference back.
   - A lifted operator reads it as `#VALUE!`, even a one-cell range: `XLOOKUP(..)+0`, `&""` and `*{1;1}` are
     20, `#VALUE!` (A57:A70).
-  - Over the whole result, SUM walks the reference: `SUM(..F1:F2)` is 23 = 20 + 3 + 4 and `SUM(..E1)` is 25 (A73,
-    A109). COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
+  - Over the whole result, SUM reads the reference element's top-left cell, as SPEC-0014 rule 4 does for an array
+    of references: `SUM(..F1:F2)` is 23 = 20 + F1 (not 20 + 3 + 4, which is 27), and `SUM(..E1)` is 25 (A73, A109).
+    COUNT is 1 and COUNTA 2 (A77, A81). ISERROR is FALSE, TRUE and ISTEXT over D1:D2 is FALSE, FALSE (A85,
     A93). TYPE of the result is 64 and ISREF FALSE (A105, A89). MAX is 20 (A113), which cannot
-  tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20).
+    tell whether MAX walks the reference (F1:F2 = 3, 4 are below 20); T-4569 settles it.
+  - Every aggregate reads the top-left cell, and an order statistic is `#N/A` (probes/t4569-xlookup-ref-element-max-min,
+    excel-graph, 2026-11-06, T-4569; G1:G2 = 50, 60 above the hit 20, H1:H2 = 1, 2 below it).
+    - Top-left cell: MAX 50, not 60 (A1, A14 with a 0 beside it); MIN 1 (A2, A15), and MAXA and MINA alike (A3, A4).
+      A one-cell range gives the same (A5, A6). AVERAGE is 35 = (20 + 50) / 2 (A7). PRODUCT is 20 = 20 x 1 (A8).
+      SUMSQ is 401 = 20^2 + 1 (A11). STDEV.S is 21.2132…, from 20 and 50 (A23). SUM is 70 (A20).
+    - Opaque: COUNT counts the reference element as no number, so 1 (A10). COUNTA counts it, so 2 (A9).
+      SUMPRODUCT reads it as 0, so 20 (A21).
+    - `#N/A`: LARGE, SMALL and MEDIAN (A12, A13, A22). An array of references alone is the same:
+      `LARGE(OFFSET(G1,{0;1},0),1)` and SMALL are `#N/A` (A31, A32). That answers SPEC-0014's open question, which
+      Excel for the web could not open on 2026-10-26.
+    - Value view: `MAX(..+0)` is `#VALUE!` (A16). `MAX(INDEX(..,2,1))` reads the whole range, 60 (A17).
+    - Per-element callers lift over both elements. The value element is a non-reference argument: ROW, AREAS,
+      COUNTIF, SUBTOTAL(9), COUNTBLANK and `CELL("row")` are `#VALUE!` there, and N is 20. The reference element
+      is the call on G1:G2: ROW 1, AREAS 1, COUNTIF 2, N 50, SUBTOTAL 110, COUNTBLANK 0, CELL 1 (C24:D34). Each
+      result is 2x1 (B24:B34): it is `#SPILL!` in A, where the next row's formula blocks it, and the last one,
+      `CELL("row",..)`, spills `#VALUE!`, 1 (A34:A35). ISREF of the whole result is FALSE (A29), and
+      ISNUMBER lifts to TRUE, FALSE (C30:D30).
   Ours gives `#VALUE!` for the element, so every reader above differs (106 cells). SPEC-0018's nested cell would
   fail ISREF, TYPE, AREAS, CELL and the aggregates, and SPEC-0014's `RefGrid` holds no values, so matching this
-  needs an array that mixes values and references: spec T-4569, implementation T-4570 (it owns t4543 W45, W46
-  and the t4563 cells).
+  needs an array that mixes values and references: SPEC-0014's "Mixed grids" amendment (T-4569); implementation
+  T-4570 (it owns t4543 W45, W46, the t4563 cells and the t4569 cells).
   ADDRESS's sheet_text lifts like its other arguments: `ADDRESS(1,1,1,TRUE,{"S1";"S2"})` is 2x1 `'S1'!$A$1`,
   `'S2'!$A$1` (a name that reads as a cell reference is quoted), a 1x2 and the range D1:D2 (`x!$A$1`, `y!$A$1`) alike,
   beside a lifted row_num it pairs by position and pads with `#N/A` (`ADDRESS({1;2;3},1,1,TRUE,{"S1";"S2"})` third
