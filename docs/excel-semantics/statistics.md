@@ -3344,7 +3344,21 @@ UNVERIFIED.
     as a double near 1 reaches alpha there, as the rule above says the search does.
   - No trials: `BINOM.INV(0,p,alpha)` and `CRITBINOM(0,p,alpha)` are 0 (BINOM.INV s1 A113, A116, A123, A125, A132;
     CRITBINOM s1 A139, A140; p and alpha central), and `BINOM.DIST.RANGE(0,0.755198170543338,0)` is 1 (s1 A122).
-Tasks: T-3444, T-3352, T-3447, T-3740, T-3741
+- The same holds at a small n (gap triage 2026-11-06, read from the excel-graph sidecars of
+  probes-numeric/t2145-binom-range-sweep and t2145-binomial-sweep, n 1 to 12, same n and p in both; no new probe).
+  Every interior range there (0 < s1 < s2) whose s1 - 1 is not past the mean (s1 - 1 <= n·p) is Excel's own
+  `BINOM.DIST(s2,n,p,TRUE) - BINOM.DIST(s1-1,n,p,TRUE)` to the bit: 156 of 156. The exact sum rounded once is not
+  Excel's value. For example `BINOM.DIST.RANGE(5,0.99,1,3)` (Calc!A291) is 0.0009801495000000006, the difference of
+  Excel's t2145-binomial-sweep A384 and A378. The exact value is 0.0009801495000000017. `BINOM.DIST.RANGE(8,0.9,2,5)`
+  (A494) is 0.03809106000000007, A838 - A830, where the exact value is 0.038091059999999975. Past the mean
+  (s1 - 1 > n·p) only 23 of the 54 interior ranges are the cdf difference: 14 of the 39 that end at n and 9 of the 15
+  that do not. One that is not: `BINOM.DIST.RANGE(8,0.1,4,8)` (A467), Excel 0.00502435000000002, cdf difference
+  0.005024350000000011, exact 0.005024350000000001. That is the small-n side of T-3740's band, still UNVERIFIED.
+  Ours: every interior range inside the walk's budget is the exact sum rounded once (`binomial_range`, tried before
+  the cdf difference in binom.rs `binom_dist_range_of`). T-4641 owns moving the ranges not past the mean to the cdf
+  difference.
+  Status: VERIFIED (excel-graph, 2026-11-06) for the 156 interior ranges not past the mean.
+Tasks: T-3444, T-3352, T-3447, T-3740, T-3741, T-4641
 
 ## NEGBINOM.DIST's cdf is #NUM! at a huge number_s (T-3553)
 Rule: `NEGBINOM.DIST(f,s,p,TRUE)` is `#NUM!` at a huge number_s with enough failures, where the true cdf underflows
