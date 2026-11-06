@@ -3,7 +3,7 @@ id: T-4539
 title: "ROWS and COLUMNS of a scalar argument: probe empty text, a text cell and an error cell (ROWS.array empty_text coverage gap), and match"
 milestone: M6
 lane: functions-lookup
-status: in-progress
+status: done
 priority: P2
 size: S
 tier: opus
@@ -33,12 +33,23 @@ COLUMNS, called directly (not nested), each argument as a literal and as a singl
 cell. Wrap every error-valued cell in `ERROR.TYPE` too. Record ours in docs/research/t4539 before the fill.
 
 ## Acceptance criteria
-- [ ] probes/t4539-rows-columns-scalar-kinds is committed with excel-graph oracle values; after `make eval`,
+- [x] probes/t4539-rows-columns-scalar-kinds is committed with excel-graph oracle values; after `make eval`,
       report.json `argument_coverage` shows `covered == expected` (11 of 11) for ROWS.array.
-- [ ] Every cell of it passes; a rule ours did not follow is fixed in `rows_columns_extent` with a unit test citing
+- [x] Every cell of it passes; a rule ours did not follow is fixed in `rows_columns_extent` with a unit test citing
       the probe cells.
-- [ ] Any rule not already in docs/excel-semantics/lookup.md is recorded there citing the cells.
-- [ ] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
+- [x] Any rule not already in docs/excel-semantics/lookup.md is recorded there citing the cells.
+- [x] No new known-failure lines in any eval/baseline/*.txt; `make check-fast` green, CI green; reviewers approve.
 
 ## Out of scope
 - ROWS/COLUMNS of arrays of references or lifted calls (T-2577, T-2436 cells), and the empty value of T-3087.
+
+## Outcome
+- probes/t4539-rows-columns-scalar-kinds (58 cells, excel-graph, 2026-11-06): ROWS (A) and COLUMNS (B) of `""`, "x",
+  "1", 0, -1, 0.5, TRUE, `#DIV/0!`, `1/0`, `NA()` as literals (rows 1-10) and of single-cell references to D1:D11
+  holding each kind, D1 `=""` and D11 blank (rows 11-21), with ERROR.TYPE wraps of the error-valued ones (E8:F10,
+  E18:F20). Ours, recorded before the fill in docs/research/t4539/ours-before-fill.txt, matches all 58: a scalar
+  literal is 1, an error literal is the error, and a reference is counted, never read (1, including an error cell).
+  No engine change.
+- The rule extends arrays.md's "ROWS/COLUMNS of a scalar" entry (where T-0237's rule already lives), citing the cells.
+- Eval delta: probes +58 cells, 58 bit-exact, 0 failing; no baseline change. ROWS.array empty text now has a direct
+  Excel cell (A1, A11), so argument_coverage reaches 11 of 11 after `make eval`.

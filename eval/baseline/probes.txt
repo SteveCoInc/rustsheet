@@ -2453,6 +2453,7 @@ C	probes/t4515-fresh-sweep.case.json	96
 C	probes/t4518-sheet-sheets-bound-variable.case.json	26
 C	probes/t4529-yearfrac-calendar-vs-coercion.case.json	164
 C	probes/t4538-indirect-a1-cells.case.json	50
+C	probes/t4539-rows-columns-scalar-kinds.case.json	58
 C	probes/t4543-xlookup-not-found-address-sheet-lift.case.json	252
 C	probes/t4554-api-name-local-name-body.case.json	12
 C	probes/t4554-api-name-scoped-name-choice-first.case.json	27
