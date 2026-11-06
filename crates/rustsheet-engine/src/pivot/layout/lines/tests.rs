@@ -152,6 +152,16 @@ fn the_caption_and_row_label_probes_lines_and_locations_are_excels() {
 }
 
 #[test]
+fn the_layout_option_probes_lines_and_locations_are_excels() {
+    // F1 to F3: several custom subtotals per field, tabular and compact; BR, BR2: insertBlankRow;
+    // SD, SD2: a collapsed item.
+    check_all(
+        "t4168-pivot-layout-options",
+        &["F1", "F2", "F3", "BR", "BR2", "SD", "SD2"],
+    );
+}
+
+#[test]
 fn the_item_and_aggregate_probes_lines_and_locations_are_excels() {
     check_all("t4134-pivot-items", &["I1", "I2", "I4", "I5"]);
     check_all(
