@@ -487,16 +487,29 @@ name, `[#This Row]` for `@`). Excel itself writes `totalsRowFunction="sum"` (and
 totals cell it built, with the cell formula `SUBTOTAL(109,Table1[Feb])` (calc_test_tables/tables.xlsx
 `xl/tables/table1.xml`); `custom` with that formula is the form the T-1607 uploads showed Excel loads.
 The import keeps a table's `<filterColumn>` criteria (`filter_columns`: values filters with their blank choice,
-custom filters with `and`, values decoded from `_xHHHH_` escapes) and the export writes them back (T-2838), so
-those two kinds survive a round trip with the same meaning (Excel's own tables.xlsx filters come back byte for
-byte; `blank="true"` is written `blank="1"`, `and="0"` is dropped, and a `<filter>` without `val` is dropped); column inserts and deletes inside the table move them with their
-columns. Every other kind (top 10, dynamic, color, icon, and a values filter with date groups or a `calendarType`)
-keeps only its column and is written back as a criterion-less `<filterColumn colId="N"/>`; a `<filterColumn>`
-without a valid `colId` is dropped, and the `hiddenButton`/`showButton` attributes are not kept. Only a
-kept criterion inside the table makes SUBTOTAL call the sheet's hidden rows filtered (T-4003). A table filtered
-through the API with no criterion is written as `<filterColumn colId="0"/>`. Both criterion-less forms are
-schema-valid, and since T-4003 our own import reads them back as not filtered, as Excel does (T-4363 tracks the API
-case).
+date groups and `calendarType`, custom filters with `and`, values decoded from `_xHHHH_` escapes; T-2838) and, since
+T-4004, top 10 (`top`, `percent`, `val`, `filterVal`), dynamic (`type`, `val`, `valIso`, `maxVal`, `maxValIso`), color
+(`dxfId`, `cellColor`) and icon (`iconSet`, `iconId`) filters, each checked against its schema type (enumerations,
+finite doubles, ISO dates, `unsignedShort` date fields; `filter_criteria.rs`). The export writes them back, so every
+kind survives a round trip with the same meaning (Excel's own tables.xlsx filters come back byte for
+byte; `blank="true"` is written `blank="1"`, `and="0"`, `top="1"`, `percent="0"` and `cellColor="1"` are dropped as
+schema defaults, a `<filter>` without `val` is dropped, and a color filter's `dxfId` past the workbook's dxfs is
+dropped, as the table's own dxf attributes are); column inserts and deletes inside the table move them with their
+columns. A criterion that fails its check (an unknown element such as an `extLst`-only column, an enumeration
+outside the schema, a non-finite number) keeps only its column and is written back as a criterion-less
+`<filterColumn colId="N"/>`; a `<filterColumn>` without a valid `colId` is dropped, and the
+`hiddenButton`/`showButton` attributes are not kept. Only a kept criterion inside the table makes SUBTOTAL call the
+sheet's hidden rows filtered (T-4003). A table filtered through the API with no criterion is written as
+`<filterColumn colId="0"/>`. Both criterion-less forms are schema-valid, and since T-4003 our own import reads them
+back as not filtered, as Excel does (T-4363 tracks the API case).
+Excel keeps the kept criteria's meaning after our round trip (excel-graph, 2026-11-05, T-4004): on `Sales`-shaped
+tables (A1:B7, `Cat` a,b,a,c,a,b and `Val` 1-6, rows hidden as the filter would, no re-application) an
+openpyxl-written file and our import-then-export of it give the same `SUBTOTAL(3,[Cat])`, `SUBTOTAL(103,[Cat])`,
+`SUBTOTAL(9,[Val])` and `SUBTOTAL(109,[Val])`: a top 10 filter (top 2 of `Val`, rows 2-5 hidden) 2, 2, 11, 11; a
+dynamic `aboveAverage` filter (rows 2-4 hidden) 3, 3, 15, 15; a color filter (`dxfId="0"`, rows 3 and 5 hidden) and
+an icon filter (`3Arrows` icon 0, rows 3 and 5 hidden) 4, 4, 15, 15; a values filter holding only a `dateGroupItem`
+(rows 3-7 hidden) 1, 1, 1, 1; and the criterion-less control (rows 3 and 5 hidden) 6, 4, 21, 15 in both. Before
+T-4004 the first five exported criterion-less and read as manual hides.
 Excel (excel-graph uploads of our export, 2026-11-04, T-3081) opens every one of these filter forms without repair,
 but calls the hidden rows filtered only for a filterColumn with a criterion inside the table. On `Sales` (A1:B7,
 `Cat` a,b,a,c,a,b and `Val` 1-6) with rows hidden as the filter would:
@@ -507,7 +520,7 @@ but calls the hidden rows filtered only for a filterColumn with a criterion insi
   4 but SUBTOTAL 3 6, as for rows hidden by hand; ours called them filtered (9 = 15, 3 = 4) until T-4003, which reads
   every form in this list as Excel does (probes/t4003-filter-column-criterion). The same holds for
   a top 10 filter exported criterion-less (rows 2-5 hidden: 11 and 21, 2 and 6; ours 11 and 11, 2 and 2), so the round
-  trip changes Excel's SUBTOTAL 9 from the original filter's 11 to 21 (T-4004); for a values filter whose `colId` is
+  trip changed Excel's SUBTOTAL 9 from the original filter's 11 to 21 until T-4004 kept the criterion; for a values filter whose `colId` is
   past the table's width (5 on 2 columns: 9 and 21, 3 and 6; ours 9 and 9); and for the `colId="0"` fallback our
   export wrote after the filtered column is deleted (15 and 21, 3 and 6; ours 15 and 15; since T-4003 that delete
   unfilters the table and the export writes no filterColumn).
@@ -515,20 +528,32 @@ A totals-row cell holding a number, boolean or error constant gets no metadata (
 cells only), and Excel refuses that file (`createSession` 501 `FileCorruptTryRepair` / `unsupportedWorkbook`): a
 totals row with the label "Total" and the number 42 is refused, and so is the same file with 42 written as
 `totalsRowLabel="42"` or as a custom `<totalsRowFormula>42</totalsRowFormula>`, while it loads with a SUBTOTAL formula
-in that cell (T-4005).
+in that cell. **The form Excel loads for a constant is `totalsRowFunction="custom"` with no `<totalsRowFormula>`**
+(excel-graph uploads, 2026-11-06, T-4005; `Sales` A1:B8 with `Cat`/`Val` data rows, A8 "Total" as `totalsRowLabel`,
+`=Sales[[#Totals],[Val]]` read in D1): the number 42 loads and reads 42, TRUE (`t="b"`) TRUE and `#N/A` (`t="e"`)
+`#N/A`, the cell kept a constant. Also loading, but changing the cell: the cell written as the formula `=42`
+(`=TRUE`, `=#N/A`) with `<totalsRowFormula>` of the same text reads the same values; the text `"42"` with
+`totalsRowLabel="42"` reads as text. Still refused: the number with `totalsRowLabel="42"`, and the number with
+`custom` and `<totalsRowFormula>42</totalsRowFormula>`. The export writes the bare `custom` for a number, boolean or
+error totals cell (T-4005); an upload of our export of such a table (`Item`, `N`, `B`, `E` with totals "Total", 42,
+TRUE, `#N/A`) loads and `Sales[[#Totals],[N]]`, `[B]`, `[E]` read 42, TRUE, `#N/A`.
 Recipe (throwaway, not kept, as T-1607's): openpyxl writes each table (`Table`, `AutoFilter`, `FilterColumn` with
-`Filters`, `CustomFilters` or `Top10`, hidden rows through `row_dimensions`), the engine imports and exports it
+`Filters`, `CustomFilters` or `Top10`, and for T-4004 `DynamicFilter`, `ColorFilter` with a
+`DifferentialStyle` in `wb._differential_styles`, `IconFilter` and `Filters` of `DateGroupItem`s, hidden rows through
+`row_dimensions`), the engine imports and exports it
 (`rustsheet_xlsx::import::load_from_xlsx`, `Model::delete_columns` for the deleted-column case,
-`rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export. A
-table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`.
+`rustsheet_xlsx::export::save_to_xlsx`), and `rustsheet-oracle recalc -b excel-graph <file>` uploads the export
+(T-4004 also uploaded the openpyxl file, to compare). A
+table named `T1` reads as a cell reference, not a table (`T1[Val]` is `#VALUE!`); the uploads used `Sales`. T-4005's
+variants set openpyxl's `TableColumn` `totalsRowLabel`, `totalsRowFunction` and `totalsRowFormula` (`TableFormula`), with B8's `<c>` patched in the zip to `t="b"` or `t="e"` for the boolean and error.
 A structured reference that lowers to an
 error because the table's metadata does not fit (an unparsable `ref`, an overflowing row count; directive 5) is
 written as that error.
 Evidence: crates/rustsheet-xlsx/tests/calc_test_tables/tables.xlsx (Excel-authored, 9 tables) now round-trips
 (import, export, import) with the same values (generated test `test_tables_tables`) and the same formula text
 (`excel_authored_tables_keep_their_formula_text`, export/test/test_tables.rs).
-Status: VERIFIED (web, T-3081): Excel loads every filter form and refuses a constant totals cell; T-4003, T-4004
-and T-4005 own the differences.
+Status: VERIFIED (web, T-3081, T-4005): Excel loads every filter form, and a constant totals cell with bare
+`custom` metadata; T-4003 and T-4004 own the filter differences.
 Implemented in: crates/rustsheet-xlsx/src/export/tables.rs
 Tasks: T-2196, T-2838, T-3081, T-4003, T-4004, T-4005
 

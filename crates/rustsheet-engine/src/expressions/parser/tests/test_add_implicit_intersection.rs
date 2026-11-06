@@ -281,7 +281,8 @@ fn defined_names_by_their_body() {
         ("ABS(INDEX(Z1:Z6,3,1))", "ABS(INDEX(Z1:Z6,3,1))"),
         ("INDEX(Z1:Z6,A20)", "@INDEX(Z1:Z6,A20)"),
         ("INDEX(Z1:Z6,0)", "@INDEX(Z1:Z6,0)"),
-        // Over a 2-D array-bodied name INDEX is a row, not one cell (unprobed; kept as before).
+        // Over a 2-D array-bodied name one index is a row, not one cell
+        // (probes/t4273-legacy-at-name-body-more A45).
         ("INDEX(n2d,1)", "@INDEX(n2d,1)"),
         ("INDEX(n2d,2)+0", "@INDEX(n2d,2)+0"),
         ("INDEX(nRng,3)", "INDEX(nRng,3)"),
@@ -304,6 +305,71 @@ fn defined_names_by_their_body() {
         ),
         ("SUM(nRng)", "SUM(nRng)"),
         ("INDEX(Z1:Z6,3)", "INDEX(Z1:Z6,3)"),
+    ];
+    for (formula, expected) in cases {
+        let mut t = parser.parse(formula, &cell_reference);
+        add_implicit_intersection(&mut t, true);
+        assert_eq!(
+            to_english_localized_string(&t, &cell_reference),
+            expected,
+            "{formula}"
+        );
+    }
+}
+
+// T-4273: a negative number or an error literal reads as that body, without the `@`; a
+// parenthesized body and a body that is another name take it; spaces around one token are
+// trimmed; a relative one-cell body reads as a cell; INDEX over an array-bodied name with a row
+// and a column index is one element (probes/t4273-legacy-at-name-body-more rows 30-36 and 45).
+#[test]
+fn defined_names_by_their_body_more() {
+    let worksheets = vec!["Sheet1".to_string()];
+    let names = [
+        ("nNum", "3"),
+        ("nRng", "Sheet1!$Z$1:$Z$6"),
+        ("n2d", "{1,2;3,4}"),
+        ("nRel", "Sheet1!Z3"),
+        ("nNeg", "-3"),
+        ("nErr", "#N/A"),
+        ("nPar", "(3)"),
+        ("nPad", " 3 "),
+        ("nName", "nNum"),
+        ("nNameRng", "nRng"),
+    ]
+    .map(|(name, body)| (name.to_string(), None, body.to_string()))
+    .to_vec();
+    let mut parser = new_parser(worksheets, names, HashMap::new());
+    let cell_reference = CellReferenceRC {
+        sheet: "Sheet1".to_string(),
+        row: 30,
+        column: 1,
+    };
+    let cases = [
+        ("nRel", "nRel"),
+        ("INDEX(Z1:Z6,nRel)", "@INDEX(Z1:Z6,nRel)"),
+        ("nNeg", "nNeg"),
+        ("ABS(nNeg)", "ABS(nNeg)"),
+        ("IF(TRUE,nNeg)", "IF(TRUE,nNeg)"),
+        ("INDEX(Z1:Z6,nNeg)", "@INDEX(Z1:Z6,nNeg)"),
+        (
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nNeg)))",
+            "SUM(IF(TRUE,INDEX(Z1:Z6,nNeg)))",
+        ),
+        ("nErr", "nErr"),
+        ("ABS(IF(TRUE,nErr))", "ABS(IF(TRUE,nErr))"),
+        ("IF(TRUE,INDEX(Z1:Z6,nErr))", "@IF(TRUE,INDEX(Z1:Z6,nErr))"),
+        ("nPar", "@nPar"),
+        ("INDEX(Z1:Z6,nPar)", "@INDEX(Z1:Z6,@nPar)"),
+        ("nPad", "nPad"),
+        ("INDEX(Z1:Z6,nPad)", "INDEX(Z1:Z6,nPad)"),
+        ("nName", "@nName"),
+        ("SUM(nName)", "SUM(nName)"),
+        ("ABS(nNameRng)", "ABS(@nNameRng)"),
+        ("INDEX(n2d,1,1)", "INDEX(n2d,1,1)"),
+        ("ABS(INDEX(n2d,1,1))", "ABS(INDEX(n2d,1,1))"),
+        ("INDEX(n2d,1,1)+0", "INDEX(n2d,1,1)+0"),
+        ("IF(TRUE,INDEX(n2d,1,1))", "IF(TRUE,INDEX(n2d,1,1))"),
+        ("ABS(INDEX(n2d,1))", "ABS(@INDEX(n2d,1))"),
     ];
     for (formula, expected) in cases {
         let mut t = parser.parse(formula, &cell_reference);

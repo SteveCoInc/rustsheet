@@ -3,7 +3,7 @@ id: T-4203
 title: "Tidy T-3710's leftovers: stale number-formats.md lines and the duplicated parser hour comment"
 milestone: M10
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -32,3 +32,6 @@ MINOR review findings on PR #3134 (T-3710), deferred after every reviewer approv
 
 ## Out of scope
 -
+
+## Outcome
+Corrected the two stale number-formats.md passages (cite t3710-ampm-hour-tokens B3/B14; point t3532 note at "Hours with AM/PM"); kept the parser comment once, in the `Token::Hour` arm. No behavior change; eval delta none.
