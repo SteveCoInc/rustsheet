@@ -427,6 +427,27 @@ impl Model {
         Ranges::from_list(areas, cell)
     }
 
+    /// [`Model::reference_ranges`], but an array value that a name, IF, CHOOSE or LET gives in
+    /// place of a reference comes back whole as `Err`, not as `#VALUE!`: ROW and COLUMN lift over
+    /// it (`LET(x,{1;2},ROW(x))` is a 2x1 of `#VALUE!`; probes/t4519-row-column-randarray-over-arrays
+    /// D1:H1, T-4610). The argument is evaluated once.
+    pub(crate) fn reference_ranges_or_array(
+        &mut self,
+        node: &Node,
+        cell: CellReferenceIndex,
+    ) -> Result<Ranges, CalcResult> {
+        let node = node.ungrouped();
+        let areas = if picks_a_reference(node) {
+            match self.evaluate_reference_arg(node, cell) {
+                RefArg::Value(array @ CalcResult::Array(_)) => return Err(array),
+                other => bound_areas(other, cell)?,
+            }
+        } else {
+            self.evaluate_areas(node, cell)?
+        };
+        Ranges::from_list(areas, cell)
+    }
+
     /// The areas of a reference argument: several for a union, one for any other reference. The
     /// list derefs to `&[Range]`, so a union shared with a LET binding is read without a copy.
     /// `Err` holds the error the argument evaluates to, or `#VALUE!` if it is not a reference
@@ -477,18 +498,9 @@ impl Model {
                 self.union_areas(left, right, cell).map(AreaList::Owned)
             }
             Node::OpIntersectKind { left, right, .. } => self.intersect_areas(left, right, cell),
-            Node::NamedVariableKind { .. }
-            | Node::DefinedNameKind(_)
-            | Node::FunctionKind {
-                kind: Function::If | Function::Choose | Function::Let,
-                ..
-            } => match self.evaluate_reference_arg(node, cell) {
-                RefArg::Ranges(Ranges::Areas(Areas(areas))) => Ok(AreaList::Shared(areas)),
-                other => Ok(AreaList::One(single_sheet_area(
-                    other.into_single_area(cell),
-                    cell,
-                )?)),
-            },
+            _ if picks_a_reference(node) => {
+                bound_areas(self.evaluate_reference_arg(node, cell), cell)
+            }
             _ => Ok(AreaList::One(
                 self.evaluate_intersection_operand(node, cell)?,
             )),
@@ -591,6 +603,32 @@ impl Model {
         let operand =
             reference_form.unwrap_or_else(|| self.evaluate_node_with_reference(node, cell));
         single_sheet_area(operand, cell)
+    }
+}
+
+/// Whether `node` (ungrouped) is a name, IF, CHOOSE or LET: a form whose reference, or value,
+/// [`Model::evaluate_reference_arg`] reads.
+fn picks_a_reference(node: &Node) -> bool {
+    matches!(
+        node,
+        Node::NamedVariableKind { .. }
+            | Node::DefinedNameKind(_)
+            | Node::FunctionKind {
+                kind: Function::If | Function::Choose | Function::Let,
+                ..
+            }
+    )
+}
+
+/// The areas of what a name, IF, CHOOSE or LET read ([`picks_a_reference`]): a union's areas,
+/// else one area on one sheet.
+fn bound_areas(arg: RefArg, cell: CellReferenceIndex) -> Result<AreaList, CalcResult> {
+    match arg {
+        RefArg::Ranges(Ranges::Areas(Areas(areas))) => Ok(AreaList::Shared(areas)),
+        other => Ok(AreaList::One(single_sheet_area(
+            other.into_single_area(cell),
+            cell,
+        )?)),
     }
 }
 

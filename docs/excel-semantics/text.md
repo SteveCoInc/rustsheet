@@ -248,15 +248,17 @@ symmetric with the positive side: `FIXED(1234.5678,-1+2^-23)` is "1230", `-1+2^-
 "1235" (not -1), `-3+2^-23` "1000" and `-3+1E-6` "1200" (I1:J21). REPT's number_times and UNICHAR do **not** snap:
 they truncate exactly like MID, so `REPT("a",1-1E-15)` is "" and `UNICHAR(66-2^-23)` is "A" (A1:A14, E1:E14; the
 n-1E-15 cells at 1000 and 66 read n only because that value rounds to n in binary). The cutoff is known to 2^-36: 2^-22 + 8·2^-36 (= 2^-22 + 2^-33) rounds up, 2^-22 + 9·2^-36 does not;
-the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. Unprobed: REPLACE start_num 32767.9999999 (rounds
+the engine takes the bound as exactly 2^-22 + 2^-33, inclusive. At the upper caps (probes/t4468-near-integer-text-caps, excel-graph 2026-11-06, T-4468): `FIXED(1,128-2^-23)`, `DOLLAR(1,128-2^-23)`, `CODE(CHAR(256-2^-23))` and `FIND("","abc",5-2^-23)` snap up to the cap and are `#VALUE!` (B1:E2), while 2^-22 + 9*2^-36 below floors to 127 (digits printed), 255 (CODE 255) and 4 (FIND 4) (B4:E4); cap-1 is accepted (row 6). SUBSTITUTE instance_num at 2^31-1 snaps over a far wider window than 2^-22 + 2^-33: `2147483647-d` is `#VALUE!` for every d up to 2^-18 (3.8E-6; F1:F6, A1:A5) and "aaa" (no such instance) from d = 5*2^-19 (G1:G11) and 2^-16 (F7:F12). The model: instance_num is **cut to 15 significant digits (round to nearest) before** the near-integer floor, so at ten integer digits anything within 5E-6 of 2147483647 reads 2147483647. `2147483647-4.5E-6` is `#VALUE!` and `2147483647-4.9E-6` (the double 2147483646.99999499…) is "aaa" (probes/t4468-substitute-cap-window A1:A14, registered before the fill; 21 of 21 cells). A literal or text instance_num is cut by truncation first ("15-digit literal parsing", numbers.md), so `SUBSTITUTE("aaa","a","b",2147483646.999999)` and `"2147483646.999996"` read 2147483646.99999 and give "aaa" while `2147483647-1E-6`, the same double as that literal's full parse, is `#VALUE!` (B5, C1). A fresh log-uniform sweep frozen after the model (probes/t4468-substitute-cap-sweep, 60 cells, d in [1E-7,1E-4] at the cap and [1E-8,1E-5] at 3) matches 60 of 60; the absolute bound alone matches 48. Below 1E+8 the cut's window (at most 5E-8) is inside the 2^-22 snap, so no other snapping argument can show it; the engine applies it to SUBSTITUTE only.
+Unprobed: REPLACE start_num 32767.9999999 (rounds
 up to 32,768, so the engine gives `#VALUE!`).
 Evidence: probes/text-count-argument-bounds A-D, N-S, T-V, X-Y, Z, AA (excel-graph, 2026-10-11, T-0219);
-probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453).
+probes/t4453-near-integer-text-args A1:J21 (excel-graph, 2026-11-06, T-4453);
+probes/t4468-near-integer-text-caps, t4468-substitute-cap-window, t4468-substitute-cap-sweep (excel-graph, 2026-11-06, T-4468).
 Status: VERIFIED
 Implemented in: functions/util/near_integer.rs (`near_integer_count`, `near_integer_trunc`), used by `left_element`,
 `right_element` (common.rs), `replace_element` (string_format.rs), `find_element` (position.rs), `fn_char`
 (char_code.rs), `substitute_element` (util.rs) and `decimals_arg` (string_format.rs).
-Tasks: T-0219, T-4453
+Tasks: T-0219, T-4453, T-4468
 
 ## Text function argument modes
 Rule: the M5 text functions take scalar arguments that lift over a range or array (one result per cell, a spill;
@@ -545,13 +547,13 @@ is only `ς`), the delimiter `ς` gives {"aΣb","cσd"}, the lone delimiter `Σ`
 Evidence: probes/textsplit-casefold-length A1-A8 (excel-graph, 2026-10-17, T-1794); probes/t4473-textsplit-fold-gaps A1:A6, A12:A25
 and, in A27:A104, the first two of every three cells (excel-graph, 2026-11-06, T-4473; each TEXTSPLIT is read through ARRAYTOTEXT and
 COLUMNS; match_mode 0 controls in A1:A2, A12:A13, A24:A26).
-Ours: `fold_for_split` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin and Angstrom exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
+Ours: `fold_for_match` (text/casefold.rs) folds char by char (one char in, one char out) with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions and `fold_sigma_by_position`'s sigma rule; positions are mapped back to
 byte offsets of the original text. Before T-1794 the code sliced the original at byte offsets found in `to_lowercase()`, which panicked on
 `TEXTSPLIT("İİİ,a",",",,,1)`. Before T-4473 TEXTSPLIT folded sigma and U+212B as SEARCH does; both now share `fold_sigma_by_position` and
-`fold_match_char` with TEXTBEFORE. UNVERIFIED for TEXTSPLIT: `ẞ` against the delimiter `ß` (TEXTBEFORE does not match them; TEXTSPLIT
-keeps SEARCH's fold, which does).
+`fold_match_char` with TEXTBEFORE. `ẞ` and `ß` do not match each other in either direction (`TEXTSPLIT("assbẞc","ß",,,1)` is {"assbẞc"},
+`TEXTSPLIT("aßbẞc","ẞ",,,1)` is {"aßb","c"}, `TEXTSPLIT("aẞb","ẞ",,,1)` is {"a","b"}; probes/t4499-textsplit-sharp-s A3:A10, T-4499).
 Status: VERIFIED (web) for the listed forms
-Tasks: T-1794, T-4473
+Tasks: T-1794, T-4473, T-4499
 
 ## TEXTBEFORE and TEXTAFTER match_mode 1 case folding
 Rule: with match_mode 1 TEXTBEFORE and TEXTAFTER fold case like TEXTSPLIT, never changing the length of the text: `İ` (U+0130) matches `i`
@@ -571,11 +573,11 @@ and the titlecase digraphs fold as in TEXTSPLIT (above): U+212B, `ſ` and `µ` m
 and lower forms.
 Evidence: probes/textbefore-casefold-length A1-A25 (excel-graph, 2026-10-17, T-1796); probes/textbefore-sigma-contexts A1-A18 (excel-graph, 2026-10-19, T-1799);
 probes/t4473-textsplit-fold-gaps A7:A11, A29, A35, A41, A47, A53, A59, A65, A71, A77, A83, A89, A95, A101 (one direction; the reverse is
-the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473).
-Ours: `fold_for_before_after` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin and Angstrom exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT) and the `ẞ` rule,
+the cell three below each) and A105:A117 (excel-graph, 2026-11-06, T-4473), probes/t4499-textsplit-sharp-s A1:A12 (excel-graph, 2026-11-06, T-4499).
+Ours: `fold_for_match` (text/casefold.rs) folds char by char with `fold_match_char`'s İ, Kelvin, Angstrom and `ẞ` exceptions, `fold_sigma_by_position`'s sigma rule (shared with TEXTSPLIT),
 and `match_text` (util.rs) maps the match back to byte offsets of the original with `str::get`. Before T-1796 it searched `to_lowercase()` of the text
-and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it), `ẞ` against the delimiter `ß`'s mirror (text `ß`,
-delimiter `ẞ`), and whether TEXTSPLIT shares the `ẞ` rule (TEXTSPLIT shares the sigma rule: probes/t4473-textsplit-fold-gaps A14:A23).
+and sliced the original at those offsets, which panicked on `TEXTBEFORE("İİİ,a",",",1,1)`. Ours: the final-sigma rule is `sigma_is_final` (string_format.rs), shared with LOWER. UNVERIFIED: whether a letter must precede the `Σ` (the code ignores what precedes it). The mirror (text `ß`, delimiter `ẞ`) is also `#N/A`
+(`TEXTBEFORE("aßb","ẞ",1,1)`, probes/t4499-textsplit-sharp-s A12), and TEXTSPLIT shares the `ẞ` rule and the sigma rule (probes/t4473-textsplit-fold-gaps A14:A23).
 Status: VERIFIED (web) for the listed forms
 Tasks: T-1796, T-4473
 
@@ -667,9 +669,11 @@ as that integer on either side of zero (`FIXED(1234.5678,-1+2^-23)` "1230"; see 
 near an integer", T-4453). A `decimals` of 128 or more (also 128.5) is `#VALUE!`;
 127 is fine and prints 127 fraction digits; large negatives just give "0" (`FIXED(1,-400)`, `DOLLAR(1,-129)`).
 `FIXED(1234,0,"x")` is `#VALUE!`; a numeric no_commas is a boolean (`FIXED(1234,0,2)` = "1234").
-Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281).
+Evidence: probes/dollar-fixed-unichar-edges A1-A29, A46-A50, D69-D75 (excel-graph, T-1281); probes/t4453-near-integer-text-args
+G1:J21 (excel-graph, 2026-11-06, T-4453); probes/t4468-near-integer-text-caps B1:C6 (`128-2^-23` is `#VALUE!`, T-4468).
 FIXED of a value that rounds to zero drops the sign (`FIXED(-0.004,2)` "0.00", `FIXED(-0.4,0)` "0"; DOLLAR keeps
 parentheses: `DOLLAR(-0.004)` "($0.00)"). Implemented (T-1257), see "FIXED drops the sign of a value that rounds to zero".
+Tasks: T-1281, T-4453
 Status: VERIFIED (excel-graph); desktop confirmation pending (T-1081)
 
 ## FIXED, DOLLAR and BAHTTEXT cut to 15 significant digits first (T-2148, T-2149)
@@ -1290,7 +1294,7 @@ is `#N/A`, `5` `#VALUE!`; `TEXTBEFORE("ab","xyz",1)` is `#VALUE!`; a number deli
 also from a cell, is `#VALUE!` (gen-m9 8d3588d8df0812df A313) but `-1` `#N/A`; `TEXTAFTER("😀b","😀😀",2)` is `#VALUE!` (probes/
 t2581-textsplit-textbefore A30-A50, excel-graph, 2026-10-24; T-2581). Both this bound and the
 every-delimiter-longer check before it (`#VALUE!` with more than two arguments, `#N/A` with two) measure the text and each delimiter
-in UTF-16 units of the delimiter as written, never its case fold, under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
+in UTF-16 units, the delimiter as written (never its case fold), under match_mode 1 too (probes/t4474-textbefore-utf16-bounds,
 excel-graph, 2026-11-06; T-4474). So `TEXTBEFORE("a","é",1)`, `TEXTBEFORE("ab","😀",1)` and `TEXTBEFORE("a",{"é","bb"},1)` are
 `#N/A` (B1, B5, B6; equal lengths), and `TEXTAFTER("a","é",1,0,0,"nf")` is `nf` (A10); `TEXTBEFORE("é","ab")` and
 `TEXTBEFORE("😀","abc")` are `#N/A` with two arguments and `#VALUE!` with three, also with an if_not_found (A2, B2, A3, B3, B10, C10),

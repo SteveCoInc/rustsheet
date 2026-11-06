@@ -41,7 +41,7 @@ IRR returns Excel's value to 15 significant digits on the conventional cash-flow
 - [x] A fresh hold-out sweep (decision 0188 R4.1) shows the same, and the Gate A floor still holds.
 - [ ] ~~Oracle cells for the shapes the stage takes~~: obsolete, the Newton stage from v = 1 never landed.
 - [x] No gated cell regresses.
-- [ ] `make check` green; reviewers approve.
+- [x] `make check` green; reviewers approve.
 
 ## Cells of T-3411's fresh sweeps
 T-3411's R4 sweeps 3 and 4 (cases added by PR #3063, scored on its round-4 model), where the engine returns the root on digits other than Excel's:
@@ -63,6 +63,7 @@ A53 Excel -0.00016023194079306524, engine -0.00016023193850578377). Lifting the 
 The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, worked first: its cells have the wrong type or error, or are first wrong at the 11th digit or earlier. Decision 0056's time-box applies. If two attempts do not move the cells, block the task as time-boxed, and decision 0267 accepts the cells that are left.
 
 ## R4 plan (frozen 2026-11-06, before the fresh sweep)
+Superseded in round 3: the shipped range is narrower (see the Outcome).
 - Diagnosis (engine replay of every IRR literal cell with an oracle value, 3,233 cells of eval/suites and Gate A):
   21 of the in-scope digit cells are runs from the guess that reach the residual stop after their 50th step, and
   Excel's value is that run's stop iterate bit for bit; the engine's 50-step cap sent them to the retry from 0.1.
@@ -90,7 +91,7 @@ The owner's cut-loss plan (decision 0267, 2026-11-04) makes this a Tier A task, 
 - **Review rounds 1 to 3 (fidelity, R4.1):**
   - The R4 plan's bracket was read off all cells, and round 1's "train bracket 200..216" used a step filter derived
     from test cells.
-  - Past 200 steps Excel's outcome is not a clean function of the step count. Train runs of 241, 281 and 291 steps
+  - Past 200 steps Excel's outcome is not a clean function of the step count. Train runs of 241, 256, 281 and 291 steps
     return their own value (t3411-irr-r4-fresh A2, t2927-irr-fallback-sweep A97 at 256, t3411-irr-r4-fresh-4 A63,
     t3411-irr-r4-fresh A70), while train
     runs of 217..287 steps give the retry's value.

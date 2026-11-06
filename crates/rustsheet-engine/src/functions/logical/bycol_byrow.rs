@@ -128,7 +128,7 @@ impl Model {
                         &[Node::ArrayKind(column)],
                         cell,
                     );
-                    (!makes_calc_error(&result)).then(|| lambda_result_to_array_node(result))
+                    self.by_slices_result(result, cell)
                 })
                 .collect::<Option<Vec<_>>>(),
         };
@@ -166,7 +166,7 @@ impl Model {
                         &[Node::ArrayKind(vec![row])],
                         cell,
                     );
-                    (!makes_calc_error(&result)).then(|| vec![lambda_result_to_array_node(result)])
+                    self.by_slices_result(result, cell).map(|node| vec![node])
                 })
                 .collect::<Option<Vec<_>>>(),
         };
@@ -212,6 +212,27 @@ impl Model {
             right: slice.right,
         };
         let result = self.call_lambda_caller(caller, [reference], cell);
+        self.by_slices_result(result, cell)
+    }
+
+    /// One BYROW or BYCOL result as its cell of the output, or `None` for the call's `#CALC!`.
+    /// A one-cell reference a function in the body returns is that cell's value, as a written
+    /// one is, whether the array is a range or an array:
+    /// `BYCOL(D6:E11,LAMBDA(y,REDUCE(y,y,LAMBDA(acc,v,D1))))` is D1's value
+    /// (gen-m7/611ce3bbfab27cef A1421) and `BYROW({1;2},LAMBDA(r,REDUCE(A1,r,LAMBDA(a,v,A3))))`
+    /// is A3's twice (probes/t4478-reduce-reference-in-callers D1:D3, D5), now that REDUCE
+    /// returns the reference (T-4478).
+    fn by_slices_result(
+        &mut self,
+        result: CalcResult,
+        cell: CellReferenceIndex,
+    ) -> Option<ArrayNode> {
+        let result = match result {
+            reference @ CalcResult::Range { .. } if !reference.is_multi_value() => self
+                .lambda_result_value(reference, cell)
+                .unwrap_or_else(|error| error),
+            result => result,
+        };
         (!makes_calc_error(&result)).then(|| lambda_result_to_array_node(result))
     }
 

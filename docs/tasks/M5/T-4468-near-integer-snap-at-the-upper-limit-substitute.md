@@ -3,10 +3,10 @@ id: T-4468
 title: "Near-integer snap at the upper limit: SUBSTITUTE instance_num, FIXED/DOLLAR decimals, CHAR and FIND start just below their caps; tidy T-4453's citations"
 milestone: M5
 lane: functions-text
-status: todo
+status: done
 priority: P3
 size: S
-tier: sonnet
+tier: opus
 depends_on: []
 ---
 
@@ -31,12 +31,54 @@ nits are fixed in the same PR.
     probes/t4453-near-integer-text-args G1:J21 and T-4453.
 
 ## Acceptance criteria
-- [ ] A committed excel-graph probe case covers each cap above: n - 2^-23 (snaps) and n - 2^-22 - 9*2^-36 (does not).
-- [ ] text.md's "LEFT, RIGHT and REPLACE round counts up near an integer" entry records the result. If Excel differs
+- [x] A committed excel-graph probe case covers each cap above: n - 2^-23 (snaps) and n - 2^-22 - 9*2^-36 (does not).
+- [x] text.md's "LEFT, RIGHT and REPLACE round counts up near an integer" entry records the result. If Excel differs
       from the engine, the engine is fixed and every probe cell passes.
-- [ ] Both citation nits above are fixed.
-- [ ] `make check` green; reviewers approve.
+- [x] Both citation nits above are fixed.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Interior bases (T-4453 has them).
 - TEXTBEFORE/TEXTAFTER and REGEX occurrence arguments (M7).
+
+## Handoff (resumed)
+Done: committed probes/t4468-near-integer-text-caps (oracle filled, excel-graph 2026-11-06), the two citation nits, and the
+text.md result. FIXED/DOLLAR(128-2^-23), CHAR(256-2^-23) and FIND start at the cap already match the engine (all
+bit-exact). Only SUBSTITUTE instance_num at 2^31-1 differs: Excel snaps over a far wider window there (`#VALUE!` for
+d <= 2^-18, "aaa" from 5*2^-19; cells A5, F1:F6 fail, 7 cells), the engine keeps the absolute 2^-22+2^-33 bound.
+Why I stopped: finding the real bound model (absolute vs scale-dependent, and between 2^-18 and 5*2^-19) is numeric fitting
+(work-loop step 4 numeric-fits guards, hold-out and fresh sweep), beyond a sonnet run. Next: one more bisection round
+between 2^-18 and 5*2^-19, pick a structural model, fix `substitute_element` (util.rs) / `near_integer.rs`, then
+`make eval-baseline`, run the reviewers, enqueue. Add the owner line for A5 and F1:F6 in the PR.
+
+## Outcome
+- probes/t4468-near-integer-text-caps (sonnet run): FIXED/DOLLAR(1,128-2^-23), CODE(CHAR(256-2^-23)) and
+  FIND("","abc",5-2^-23) snap to the cap and are `#VALUE!` as the engine had it; only SUBSTITUTE's 2^31-1 cap
+  differed (A5, F1:F6).
+- Structural model (kind (c), a rounding model, no `FITTED` tag): SUBSTITUTE's instance_num is cut to 15 significant
+  digits (round to nearest, `to_excel_precision`) before `near_integer_count`. Candidates ranked on the train cells
+  (t4468-near-integer-text-caps A, F, G: 32 cells): absolute 2^-22+2^-33 bound 25/32; 15-digit cut 32/32; a
+  relative bound 2^-48 also fits train (32/32) and predicts `#VALUE!` up to d ≈ 7.6E-6.
+- Hold-out, a separate case rather than a hash split (predictions for both new cases were computed by a scratch script
+  in the session before `rustsheet-oracle fill` ran; that record is not in git, the commits only show the fill and the
+  model landing together; no margin was stated before scoring, and both rates are 100%, so any margin holds): probes/
+  t4468-substitute-cap-window, 21 cells, decimal d from 4E-6 to 9E-6, literals and text. 15-digit cut 21/21 (with
+  the engine's existing 15-digit literal truncation; B5 and C1 show a literal 2147483646.999999 reads
+  2147483646.99999), absolute 19/21, relative 2^-48 11/21. The edge sits between 4.5E-6 and 4.9E-6 of the double, at
+  the decimal 2147483646.999995, which only the 15-digit cut puts there.
+- Second hold-out (review round 2), probes/t4468-substitute-cap-holdout2: 30 cells, seed 44682, d log-uniform in
+  [3E-6,1.2E-5], committed with these predictions before its fill. Margin, stated before scoring: the chosen model passes
+  if it scores at least 29/30 (within 1 cell of its 100% train rate) and beats the relative 2^-48 bound. Predicted:
+  the 15-digit cut gives `#VALUE!` at A6 A8 A20 A22 A28 A29 A30 and "aaa" elsewhere; the relative bound differs
+  at A2 A3 A4 A5 A9 A11 A12 A14 A15 A16 A17 A18 A19 A26 (14 cells);
+  the absolute bound gives "aaa" everywhere. Result (excel-graph, filled in a later commit): 15-digit cut 30/30,
+  relative 2^-48 bound 16/30, absolute bound 23/30, so the cut meets the margin and beats both.
+- Fresh sweep, generated after the freeze (seed 4468): probes/t4468-substitute-cap-sweep, 60 cells (d log-uniform in
+  [1E-7,1E-4] at the cap, [1E-8,1E-5] at 3): 60/60 (absolute alone 48/60; the relative bound, already ruled out
+  by the hold-out, also 60/60). Scores: scratch script over the case and oracle files, one candidate per model.
+  The sweeps sit in `probes`, not `probes-numeric`, because their results are text or errors, not numbers.
+  Gate A envelope: not applicable (the results are text or `#VALUE!`, no numeric point); reproducibility floor: not involved (the edge is 5E-6 wide).
+- Citation nits fixed (char_code.rs "D1:D21, E1:E14"; text.md DOLLAR/FIXED Tasks line). text.md's near-integer
+  entry records the caps, the model and the literal-vs-computed split.
+- Eval delta: probes +4 cases (167 cells), all pass; the 7 failing cells the handoff baselined now pass, and the
+  case's 7-cell visible-parity lock line is gone (re-recorded from main's file by `make eval-baseline`).

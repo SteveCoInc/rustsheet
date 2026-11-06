@@ -130,7 +130,11 @@ impl Model {
             (data.at(0, 0), 1)
         };
 
-        let mut caller = caller.keeping_trimrange_references();
+        // A reference the LAMBDA returns stays one, as the next step's accumulator and as the
+        // result: `REDUCE(A1,A2:A3,LAMBDA(a,v,IF(ISREF(a),v,"no")))` is A3 (3), and ISREF of a
+        // REDUCE that ends on a reference is TRUE (probes/t4478-reduce-scan-reference-accumulator
+        // Calc!E2:E3, H2, E8, E11, E20:H21). SCAN reads it instead (`fn_scan`, Calc!H13).
+        let mut caller = caller.keeping_trimrange_references().keeping_references();
         for index in start..count {
             accumulator = self.call_lambda_caller(
                 &mut caller,
@@ -148,14 +152,23 @@ impl Model {
     /// forms are not taken here): `REDUCE(Data!C7,Data!E12,COUNT)` with C7 the text "1" is 1, and
     /// `REDUCE(Data!A12,Data!C11,PRODUCT)` with both cells TRUE is 0 (gen-m7/2c5ea078f25443a2
     /// A1767, 18b80d3fd292d63a A467; docs/excel-semantics/arrays.md "SCAN and REDUCE keep errors
-    /// in the LAMBDA", T-2307). An error goes to the LAMBDA like any value (same entry). A union
-    /// and a 3-D span are read as before (unprobed).
+    /// in the LAMBDA", T-2307). An error goes to the LAMBDA like any value (same entry). A 3-D
+    /// span is `#VALUE!` (`REDUCE(Sheet2:Sheet3!A1,{1},LAMBDA(a,v,a))`, and ISREF of it FALSE:
+    /// probes/t4478-reduce-scan-reference-accumulator Calc!G18:H19). A union is read as before,
+    /// though Excel keeps it a reference (Calc!H17; T-4494).
     pub(super) fn lambda_initial_value(
         &mut self,
         node: &Node,
         cell: CellReferenceIndex,
     ) -> CalcResult {
-        if self.is_multi_area(node) || matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
+        if matches!(node.ungrouped(), Node::SheetSpanKind { .. }) {
+            return CalcResult::new_error(
+                Error::VALUE,
+                cell,
+                "a 3-D reference is not an initial value".to_string(),
+            );
+        }
+        if self.is_multi_area(node) {
             return self.evaluate_node_in_context(node, cell);
         }
         self.eval_ref_or_index(node, cell)

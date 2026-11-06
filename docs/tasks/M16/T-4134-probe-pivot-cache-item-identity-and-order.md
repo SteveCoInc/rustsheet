@@ -39,3 +39,5 @@ order for docs/excel-semantics/pivots.md:
 
 The case-variant refusal and the flag rules stay builder observations (T-4122 runs): a file Excel
 refuses cannot be committed as a filled probe.
+
+Resolved since: T-4582 answers the casing and append-order questions above (pivots.md "Item casing when cache and source disagree, and date items").

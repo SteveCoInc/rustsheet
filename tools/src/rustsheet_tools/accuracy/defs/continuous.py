@@ -57,12 +57,11 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import ill_conditioned, scalars, signed
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, ill_conditioned, is_real, real_args, signed
 from rustsheet_tools.accuracy.defs.exp_log import EXP_BAND
 from rustsheet_tools.accuracy.defs.normal import (
     LEGACY_SOURCE,
@@ -74,14 +73,7 @@ from rustsheet_tools.accuracy.defs.normal import (
 )
 from rustsheet_tools.accuracy.defs.normal import standard_quantile as normal_quantile
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, MIN_LITERAL, Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 KERNEL_SOURCE = (
@@ -106,7 +98,6 @@ MICROSOFT_SOURCE = (
 FISHER_CANCEL_HI = 1e-6  # FISHER and FISHERINV points with 0 < |x| below this are redrawn (the cancellation)
 EXP_MAX = EXP_BAND[0]  # an EXP argument from here up overflows or is in the unpinned band
 EXP_ZERO = -745.2  # EXP of an argument below this is 0 (gradual underflow ends near -745.13)
-NORMAL_MIN = sys.float_info.min
 NORMAL_RANGE = (1e-300, 1e300)  # an intermediate inside this is a normal double with room to spare
 EXPON_PRODUCT_MAX = 1e300  # lambda*x past this is unprobed
 REDRAWS = 50
@@ -125,8 +116,8 @@ def _exp_or_inf(y: float) -> float:
 
 def _lognorm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, mean, sd, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(mean, (bool, str, tuple))
-    assert not isinstance(sd, (bool, str, tuple))
+    assert is_real(x) and is_real(mean)
+    assert is_real(sd)
     fx, fmean, fsd = float(x), float(mean), float(sd)
     ln_x = math.log(fx)
     z = (ln_x - fmean) / fsd
@@ -151,7 +142,7 @@ def _lognorm_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _lognorm_inv(args: Sequence[MathArg]) -> mpmath.mpf:
-    p, mean, sd = scalars(args)
+    p, mean, sd = real_args(args)
     z = normal_quantile(p)
     exponent = mean + sd * z
     if exponent >= EXP_MAX:
@@ -226,7 +217,7 @@ def _draw_lognorm_inv(stratum: str, rng: random.Random) -> list[Arg]:
 
 def _expon_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, lam, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(lam, (bool, str, tuple))
+    assert is_real(x) and is_real(lam)
     if float(x) * float(lam) > EXPON_PRODUCT_MAX:
         msg = "lambda*x past 1E+300 (unprobed)"
         raise NoValueError(msg)
@@ -276,7 +267,7 @@ def _draw_expon(stratum: str, rng: random.Random) -> list[Arg]:
 def _weibull_domain(args: Sequence[MathArg]) -> str | None:
     """The evidenced errors (T-2239, T-3312): t = EXP(alpha*LN(x/beta)) overflows, or the density's
     beta^alpha = EXP(alpha*LN(beta)) underflows to 0 or overflows. Next to a cut no cell pins, NoValueError."""
-    x, alpha, beta = (float(a) for a in scalars(args[:3]))
+    x, alpha, beta = (float(a) for a in real_args(args[:3]))
     cumulative = args[3]
     if x < 0 or alpha <= 0 or beta <= 0:
         return None  # the parameters' intervals say it
@@ -303,8 +294,8 @@ def _weibull_domain(args: Sequence[MathArg]) -> str | None:
 
 def _weibull_dist(args: Sequence[MathArg]) -> mpmath.mpf:
     x, alpha, beta, cumulative = args
-    assert not isinstance(x, (bool, str, tuple)) and not isinstance(alpha, (bool, str, tuple))
-    assert not isinstance(beta, (bool, str, tuple))
+    assert is_real(x) and is_real(alpha)
+    assert is_real(beta)
     if x == 0:
         if cumulative or alpha > 1:
             return mpmath.mpf(0)
@@ -444,12 +435,12 @@ def _cancel_free(
 
 
 def _fisher(args: Sequence[MathArg]) -> mpmath.mpf:
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return mpmath.atanh(x)
 
 
 def _fisherinv(args: Sequence[MathArg]) -> mpmath.mpf:
-    (y,) = scalars(args)
+    (y,) = real_args(args)
     return mpmath.tanh(y)
 
 

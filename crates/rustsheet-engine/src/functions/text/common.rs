@@ -1,5 +1,5 @@
 use super::text_kernel::{lambda_argument_error, text_result};
-use super::util::substitute_element;
+use super::util::{substitute_element, utf16_len};
 use crate::cast::value_number_text;
 use crate::{
     calc_result::CalcResult,
@@ -99,7 +99,7 @@ fn mid_element(
 fn len_element(text: &CalcResult) -> Result<ArrayNode, Error> {
     let s = calc_result_to_string(text)?;
     // Excel: LEN counts UTF-16 code units, so an emoji counts two (probes/text-surrogate-positions A1).
-    Ok(ArrayNode::Number(s.encode_utf16().count() as f64))
+    Ok(ArrayNode::Number(utf16_len(&s) as f64))
 }
 
 /// Computes a single REPT result from one element of each argument.

@@ -2066,10 +2066,11 @@ Tasks: T-1822, T-1844, T-2124, T-2125
 Rule: ACCRINT reads its dates as Excel 1900 serials too, and is `#NUM!` when a coupon date it accrues over falls before
 1900-01-01 (serial 0): the coupon date before settlement (the regular one, `first_interest` less a period, when
 settlement is not past `first_interest` or calc_method is FALSE) or any period start on the walk back to the issue.
-With calc_method TRUE and the settlement after `first_interest` this is no longer stable: those cells were `#NUM!` in
-the fills below, but 0 on 2026-11-06 (probes/accrint-zero-results A1:A9, A12, A14, A16:A19; "ACCRINT, ACCRINTM,
-PRICEMAT and YIELDMAT: amount domains (T-4114)"), pending a re-fill (T-4566). The `#NUM!` stands, re-confirmed that day,
-for calc_method FALSE and for a settlement before `first_interest` (A10, A11).
+**Unstable in Excel for the web**: the fills of 2026-10-20 to 10-27 gave the `#NUM!` this rule and the bullets below
+record; two fresh fills on 2026-11-06 gave 0 (and numbers past the basis-1 and 1904 cuts) for about 140 of the same
+cells. One cell has flipped twice: fin-coupon-walk-bounds-b A9 was 0 on 2026-10-17 (the only fill that day), `#NUM!` on
+10-24 and 0 again on 11-06; see the last bullets. The engine keeps the `#NUM!` rule, and the cells where Excel last gave 0 stay known
+failures, until fills agree over time (T-4566 decided not to follow either answer).
 - `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),S,0.05,1000,4,0,TRUE)` is `#NUM!` for every settlement S from 1900-05-01 to
   9999-12-31 (the issue's period starts 1899-12-31), with calc_method FALSE, on bases 0, 1, 3 and 4 and with semiannual
   or annual coupons; `ACCRINT(DATE(1900,3,1),DATE(1900,3,31),DATE(1900,3,15),...)` too (the regular period starts
@@ -2120,14 +2121,36 @@ for calc_method FALSE and for a settlement before `first_interest` (A10, A11).
 - On 2026-11-06 Excel for the web gave 0, not `#NUM!`, for this shape with calc_method TRUE and a settlement after
   first_interest, `ACCRINT(61,182,45000,0.05,1000,4,0,TRUE)` included (probes/accrint-zero-results A1:A19; "ACCRINT,
   ACCRINTM, PRICEMAT and YIELDMAT: amount domains (T-4114)"); with calc_method FALSE or a settlement before
-  first_interest it stayed `#NUM!`. A re-fill of this entry's probes is T-4566's.
+  first_interest it stayed `#NUM!` (A10, A11).
+- Re-fill of 2026-11-06 (T-4566): probes/accrint-zero-results, fin-accrint-1900-calendar, fin-coupon-walk-bounds-b and
+  -c, accrint-calendar-start-1900, accrint-calendar-start-1904 and accrint-eom-1900, filled twice with `--force` and an
+  emptied oracle cache (15:08 and 15:10 UTC), gave the same values both times, and 140 of their cells differ from the
+  committed 2026-10-20 to 10-27 fills:
+  - Every cell whose walk back to the issue reaches a period start before 1900-01-01 is **0**, not `#NUM!`, with
+    calc_method TRUE or FALSE and a settlement before or after first_interest: fin-accrint-1900-calendar A1:A14, B1:B5,
+    B9, C10:C12, D1:D10, E1:E7 (`ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(1950,6,30),0.05,1000,4,0,TRUE)` and its
+    FALSE twin), fin-coupon-walk-bounds-b A9, -c O1:O4, O6, O8, O9, O11, O12, accrint-calendar-start-1900 B2, B3, B6,
+    B7, B10, B11, B14, B15, B18, B19, B22, B23, B26, B27, B30, B31, accrint-eom-1900 A1:A8, A13:A16.
+  - A settlement's own period that starts before 1900-01-01 stays `#NUM!`: `ACCRINT(DATE(1900,3,1),DATE(1900,3,31),
+    DATE(1900,3,15),...)` (-c O13), `ACCRINT(30,59,45,0.05,1000,2,0,TRUE)` (accrint-calendar-start-1900 B1, B4 and the
+    rest of its B column with the settlement before first_interest), accrint-zero-results A10, A11.
+  - Basis 1 no longer reads the regular period's start: `ACCRINT(33853,1,37554,1,9888,1,1)` is 3028888.918032787
+    (accrint-calendar-start-1900 A2, A7, A12, A17, A22, A27, A32, A37, A42), `ACCRINT(33853,366,37554,1,9888,1,1)`
+    100176.78688524592 (accrint-eom-1900 B1, B3, B4, B7), `ACCRINT(59,59,242,0.05,1000,2,1,TRUE)` 77.54237288135593
+    (accrint-eom-1900 A10, A12, A18, A20, A22, A24).
+  - The 1904 cut is gone except for a settlement's own period before 1904-01-01: `ACCRINT(DATE(1904,1,1),DATE(1904,3,31),
+    DATE(1950,6,30),0.05,1000,4,0,TRUE)` is 2324.861111111111 and an issue of serial 0 or 1 computes
+    (accrint-calendar-start-1904 A1:A16, A20, A25:A40, B1:B10); A17, A18, A21, A22 stay `#NUM!`.
+  The committed sidecars keep the earlier fills: with the multi-cell answer moving from `#NUM!` (10-20 to 10-27) to 0
+  (11-06), and -b A9 going 0, `#NUM!`, 0 (10-17, 10-24, 11-06), neither is followed, and the cells where the committed oracle already says 0
+  (accrint-zero-results A1:A9, A12, A14, A16:A19) stay known failures for that reason.
 - Excel for the web returned 0 for `ACCRINT(DATE(1900,3,1),DATE(1900,6,30),DATE(9990,6,30),0.05,1000,4,0,TRUE)`
   (fin-coupon-walk-bounds-b A9) on 2026-10-17 and `#NUM!` on 2026-10-24, in a re-fill of -b and in
   fin-accrint-1900-calendar D1; the oracle now records `#NUM!`.
 Evidence: probes/fin-accrint-1900-calendar (52 cells), fin-coupon-walk-bounds-c O1-O14, -b A9 (excel-graph, 2026-10-24);
 accrint-calendar-start-1900 (92 cells) (excel-graph, 2026-10-26); accrint-calendar-start-1904 (50 cells, excel-graph,
 2026-10-27, T-2835, landed by T-2337).
-Status: VERIFIED (excel-graph)
+Status: VERIFIED (excel-graph); unstable since 2026-11-06, re-decided by T-4631
 Implemented (T-2124): `compute_accrint` in functions/financial/accrint.rs.
 Tasks: T-2124, T-2562, T-2835, T-2337, T-4114, T-4566
 
@@ -4098,6 +4121,76 @@ Status: VERIFIED for the cell values (the mechanism is the engine's T-2007 model
 Tasks: T-3990, T-3031.
 Evidence: probes/oddfyield-extreme-price (T-3990), all 72 cells matching the engine in type and value (T-3031 follow-up).
 
+## ODDFYIELD is #NUM! at a price and redemption far from par
+Rule: ODDFYIELD can be `#NUM!` where ODDFPRICE has a root (every flow is positive and comes after the dirty price, so
+there is exactly one), with a redemption far from 100 or a price far below it. On the Gate A table 15 points are
+`#NUM!` with a root:
+- a price far below a redemption near 100, roots in the hundreds:
+  `ODDFYIELD(44927,45040,44903,44950,0.00105291760193462,0.0201046452468288,104.806177882375,4,1)` (A188, root 3216.2)
+  and `ODDFYIELD(35531,35635,35502,35544,0.137503628270339,0.0901795679194373,100,4)` (A197, root 524.93);
+- a redemption from 0.037 to 3441, with the price near it or a few times it (roots 7.3E-7 to 1.46):
+  A218 (redemption 0.350456807761596), A221 (0.036925299804218), A229 (0.558045732426464), A235 (11.9845303447765),
+  A237 (6.33993775602189), A243 (1.62199180104625), A251 (3441.41032295667), A277 (1.43681184856485), A280
+  (2.43718966572268), A285 (8.36657840509682), A292 (2.29511375165819), A297 (917.902213204161) and A299
+  (4.63735536111899), e.g. `ODDFYIELD(49922,50428,49884,49971,2.22723839884459E-06,4.63765939631562,4.63735536111899,4,0)`
+  (root 7.29E-7).
+It is not the scale alone: the table's 247 numeric ODDFYIELD points include redemptions from 0.030 to 8.3E5 and prices
+from 5.9E-5 to 6.6E3 times the redemption, and a price near a redemption far from 100 often computes. Where the cut lies
+is unprobed.
+Inferred, not observed: Excel's Newton runs from YIELD's start fitted on par bonds ("ODDFYIELD stops short of
+ODDFPRICE's root") and leaves ODDFPRICE's domain, as YIELD's does ("YIELD is #NUM! at a price and redemption far from
+par"). The evidence for this mechanism is that the engine's model of that Newton (`odd_first_yield`) gives `#NUM!` at
+all 15 points.
+At a root near 0, Excel's absolute step test leaves a large relative gap ("ODDFYIELD stops short of ODDFPRICE's
+root"): table points A129, A132, A143, A150, A153, A170, A174 and A202 (roots from -1.1E-15 to 4.6E-10), A291 and A295
+(roots 1.4E-7 and 2.9E-8, 1.1E-4 and 1.6E-4 relative), and probes/oddfyield-solver-sweep S!E1 and S!F1 (roots 5.0E-18
+and 6.8E-18).
+Excel kept as the target (decision 0300): Excel is more than 1E-4 relative off the math at:
+- accuracy/ODDFYIELD/s1: A126 (next entry), A129 (Excel 4.533275529406585E-16, root 4.388E-16), A132
+  (2.8002528713848925E-10, 2.817E-10), A143 (4.6355090386611066E-10, 4.633E-10), A150 (-7.717045174648507E-18,
+  -5.928E-18), A153 (-5.974504409461947E-15, root 0), A170 (8.906550524312836E-12, -1.25E-16), A174
+  (9.116830996141099E-11, -1.11E-15), A202 (-1.8167704768983512E-12, -7.09E-15), A291 (1.4084037213640614E-7,
+  1.40855E-7) and A295 (2.9357184518689303E-8, 2.93524E-8);
+- the math sidecars: probes/odd-yield-far-from-par F1-F16 (redemption 1E300: Excel 235.95 to 302.53, the 100th iterates
+  of "ODDFYIELD and ODDLYIELD at a price far from par", roots 3.6E14 to 2.1E15) and G4 (price 3E4:
+  -3.5048035053499063, root -0.48894); probes/oddfyield-extreme-price K5 (2.8858649274745423, root 2.7686), K6
+  (5.502269165947319, root 6.0316) and L6 (4.275092925366498, root 4.2951); probes/oddfyield-solver-sweep S!E1
+  (5.716981438845498E-18, root 4.958E-18) and S!F1 (-3.3959306358422327E-12, root 6.82E-18); and
+  probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (next entry).
+No R3 marks.
+Evidence: accuracy/ODDFYIELD/s1 (excel-graph, 2026-11-06, T-4115); the probes named above (excel-graph).
+Ours: matches on all 15 `#NUM!` points and bit-exact on every point listed. Two table points are off Excel, owned by
+T-4551: A272 (a root near 0, 1.1E-11 relative off Excel) and A289 (an extra-quasi-period point, next entry; 2E-13).
+Status: VERIFIED (excel-graph)
+Tasks: T-4115, T-4551
+
+## ODDFYIELD off ODDFPRICE's root when ODDFPRICE counts a quasi period too many
+Rule: on a long first period with a month-end first coupon, oddbonds.fs' `coupNumber` moves the settlement to its
+month's end and so counts one quasi-coupon period more than lies between settlement and first coupon ("ODDFYIELD stops
+short of ODDFPRICE's root", T-3988). ODDFYIELD's value can then be far from ODDFPRICE's root.
+Observed (excel-graph):
+- ODDFPRICE keeps the extra period: the 7 table points with the extra count, accuracy/ODDFPRICE/s1 A83, A92, A101,
+  A145, A152, A166 and A194, are bit-exact in the engine (which counts it) and within 1E-15 of the math with it.
+- `ODDFYIELD(DATE(2030,2,4),DATE(2031,4,30),DATE(2026,4,7),DATE(2030,4,30),0.0943,102.489,100,1,0)`
+  (probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46) is 0.19995383929563632.
+- `ODDFYIELD(46782,47149,46148,46783,0.00872796956994154,121.065357690152,100,1,4)` (accuracy/ODDFYIELD/s1 A126:
+  settlement 2028-01-30, first coupon 2028-01-31, basis 4) is -0.5526841759064842.
+- The engine is bit-exact on both.
+- Not every such point is far off: the other 9 ODDFYIELD table points with the extra count (A17, A76, A80, A115, A121,
+  A123, A138, A157, A289) are within 2E-7 of the root. "Can be far" is observed only at A126 and S!A46.
+Computed (not Excel cells): at S!A46, ODDFPRICE at Excel's yield is 67.2665427726564 (the definition and the engine
+agree), and the root of ODDFPRICE = 102.489 is 0.0330399456396704 (nq 1, the lead 1.24 periods away where 0.24 is the
+truth). At A126 the root is -0.0866553525315469 (nq 1 and DSC 0: the lead a whole period away instead of one day).
+Inferred, from the engine's model reproducing both cells bit-exact: ODDFYIELD's Newton slope counts the true periods
+and its price the extra one, so the Newton stops away from the price's root.
+Excel kept as the target (decision 0300): both cells, 5.05 and 5.38 relative off the math. No R3 marks.
+Evidence: accuracy/ODDFPRICE/s1 A83, A92, A101, A145, A152, A166, A194 and accuracy/ODDFYIELD/s1 A126 (excel-graph,
+2026-11-06, T-4115); probes-numeric/t3988-r4-oddfyield-fresh-2 S!A46 (excel-graph, 2026-11-06, T-3988).
+Ours: matches both bit-exact (`odd_first_yield`: `OddFirstSchedule::price` with `coup_number`, `dprice` on the true
+schedule).
+Status: VERIFIED (excel-graph) for the cells; UNVERIFIED for the mechanism
+Tasks: T-4115, T-3988
+
 ## YIELD's #NUM! cells and its 100-step cap
 Rule: with more than one coupon left, YIELD is analytic Newton on PRICE from the fitted start ("YIELD stops short of
 PRICE's root") with no fallback. An iterate where the step is not finite (PRICE or its slope leaves its domain) makes
@@ -4581,6 +4674,37 @@ Also: probes-numeric/t3478-irr-r4-wide (T-3478) adds 33 conventional series wher
 is `#NUM!`, 21 of them with 42 to 150 flows; a 100-step cap recovers 12 of the 33 and a 1000-step one 15, but only 2
 of the 21 long ones (T-3548).
 Tasks: T-3406, T-3411 (the model), T-3407 (`#DIV/0!`), T-3347, T-3548
+
+## IRR on level annuities where the secant fails: the type cut ignores the flows' scale and guesses 0 to 0.3
+Rule (partial; the mechanism is still unknown): on the level annuities `IRR({-P,1,...,1})` where the secant from 0.1
+fails, Excel's number-or-`#NUM!` cut depends on the root and n only. Multiplying every flow by 2, 1000 or 0.001 moves
+no cell's type, and neither does a guess of 0 or 0.3. probes/t4027-irr-annuity-scale-guess (excel-graph, 2026-11-06;
+T-4027):
+- The cuts, refined from t3406's 0.02 grid to 0.01: n = 20 returns down to r = -0.23 (A4) and is `#NUM!` from -0.24
+  (A5, A6). n = 40 returns down to -0.15 (A51) and is `#NUM!` from -0.16 (A52, A53).
+- Scale (A1-A24, A54-A58): the type is the same at x1, x2, x1000 and x0.001. So no absolute tolerance on NPV decides
+  it, unlike the fallback's 1E-4 residual cut ("IRR's fallback is `#NUM!` when NPV at its root is 1E-4 or more"), which
+  Excel follows across scales on other series. The digits at x2 are bit-identical to x1. At x1000 and x0.001 some move
+  in the last digits (A14, A16, A19, A20). A16 (x1000, root -0.23) is bit for bit the converged secant from guess -0.2
+  (A40), not the x1 value (A4).
+- Guess (A25-A48, A59-A68): guesses 0 and 0.3 give bit for bit the default guess's value or `#NUM!` on every n = 20
+  cell, and guess 0 does the same at n = 40. This is consistent with a failed run being retried from 0.1 and then
+  handed to a stage that does not see the guess. Guess -0.1 returns at -0.23 and -0.24 (A34, A35), but not at -0.25. Its
+  digits there differ from the default's (A34 -0.22999993443769884, A4 -0.22999993443767364). Guess -0.2 (n = 20) and
+  -0.15 (n = 40) return everywhere: the engine's secant converges there, and its digits match Excel's bit for bit.
+- Refuted on these cells: a secant restart from any one fixed guess. Over the guesses -0.6 to 0.7 in steps of 0.005,
+  the engine's secant never gives Excel's digits on A1, A2, A4 or A49. Also refuted: any cap on the engine's secant
+  from 50 to 100000 steps (t4027 type mismatches 35 to 33, t3406 54 to 48), and any fallback cap of 100 to 100000 with
+  the secant capped at 50 or 200. Uncapping the fallback fixes A1-A4 but also returns the -0.24 and -0.25 cells, where
+  Excel is `#NUM!`, as on t3406.
+Evidence: probes/t4027-irr-annuity-scale-guess (inputs and 50-digit roots in its `.roots.tsv`,
+docs/research/t4027_irr_annuity_probe.py; the engine's predictions before the fill in docs/research/t4027/predictions.md).
+The guess sweep and the caps were run on a scratch build of the engine (not committed).
+Status: VERIFIED (excel-graph) for the cells; the rule is UNVERIFIED (unknown)
+Ours: `#NUM!` on 33 of the 68 cells, all where Excel returns the root (A1-A4, A7-A10, A13-A16, A19-A22, A25-A28,
+A43-A46, A49-A51, A54-A56, A59-A61); every returned value matches. A34 and A35 (guess -0.1) match Excel's digits since
+T-3408's longer secant run ("IRR's secant runs longer than 50 steps" below).
+Tasks: T-4027
 
 ## IRR's secant runs longer than 50 steps: up to 200 always finish, and past that the step count does not decide
 Rule (T-3408, 2026-11-06): an IRR secant run in Excel (from the guess, then the retry from 0.1) returns its own stop
@@ -5127,14 +5251,15 @@ Rule: with valid dates and basis:
 ACCRINT counts the issue's period on basis 2 as basis 0 does, US 30/360 moving both dates, not plain US 30/360:
 `ACCRINT(49107,49552,49782,0.1,1000,2,2,FALSE)` (issue 2034-06-12, first_interest 2035-08-31, so the issue's period
 runs from 2034-02-28 to 2034-08-31) is 137.22222222222223, the stub 80/180, where plain 30/360 gives 80/181 and
-137.09944751381215 (the engine). 360/frequency would give the same there, but not when that period runs from 2034-02-28
+137.09944751381215 (the engine before T-4566). 360/frequency would give the same there, but not when that period runs from 2034-02-28
 to 2034-08-28 (first_interest 2035-08-28 or 08-30): Excel's 136.62921348314606 is 80/178, US 30/360 moving both dates.
 With calc_method TRUE, a settlement after first_interest and a coupon date on the walk back before 1900-01-01, Excel
 for the web gave **0** on 2026-11-06: quarterly on bases 0 to 4 (`ACCRINT(61,91,45000,0.05,1000,4,b,TRUE)`, A1:A5),
 semiannual on bases 0 and 1 (A6, A7, A17) and annual on basis 0 (A16); other bases at those frequencies are unprobed. Issue 61,
 62 or 90, first_interest 90, 91 or 182, settlement 92 to 45000. "ACCRINT at the calendar's start" records `#NUM!` for the
-same shape from earlier fills, so the result there is not stable; the Gate A definition gives those points no math
-value. With calc_method FALSE or a settlement before first_interest they are `#NUM!` (A10, A11).
+same shape from earlier fills, and a re-fill on 2026-11-06 (T-4566) gave 0 again, so the result there is not stable over
+time; the engine keeps `#NUM!` and the Gate A definition gives those points no math value. With calc_method FALSE or a
+settlement before first_interest they are `#NUM!` (A10, A11).
 Evidence: probes/accrint-zero-results A1:A19 (ACCRINT at the calendar's start), B1:B40 (ACCRINTM with equal dates),
 C1:C26 (the issue's period on bases 0, 2 and 4) (excel-graph, 2026-11-06; columns A and B filled twice the same day,
 with the same values);
@@ -5144,8 +5269,10 @@ A115 and A134 (equal dates), A111, A112, A118, A129, A140 (rate 0); accuracy/PRI
 A140; accuracy/YIELDMAT/s1 A123, A124, A130, A137 (excel-graph, 2026-11-06, T-4114); gen-m9 0a957119475760c5 A92,
 1cd3096e3e87c965 A123, A140, 290180acf017709c A147, A177, A312, 67a4c03afd63f988 A179, 9a1fa5366bc50918 A180,
 9d9ceba257f8001b A381, b73c6cc96e093f03 A333; probes/date-system-1900-accrint-settlement-bound A1:A20.
-Ours: the amount domains match. ACCRINTM's equal dates, ACCRINT's basis-2 issue period and its 0 at the calendar's
-start do not (T-4566; accuracy/ACCRINTM/s1 A115, A134 and accuracy/ACCRINT/s1 A21 are known failures).
+Ours: the amount domains match, and since T-4566 so do ACCRINTM's 0 for equal dates (`accrintm_of`) and ACCRINT's
+basis-2 issue period (`stub_denominator`). ACCRINT's 0 at the calendar's start does not: it is unstable across fills
+("ACCRINT at the calendar's start"), so the engine keeps `#NUM!` and probes/accrint-zero-results A1:A9, A12, A14,
+A16:A19 stay known failures.
 Status: VERIFIED (excel-graph)
 Tasks: T-4114, T-4566
 
@@ -5303,7 +5430,10 @@ unless noted; values `-100, 30, 40, 50` on dates `39448, 39508, 39600, 39700` wi
   D20, D24, D25, D30), except a non-numeric text or boolean cell, `#VALUE!` (D15-D17, D26, D27, D31), and an error
   cell, its error, the value's first (D19, D22, D32-D38). One TRUE value cell against one `#DIV/0!` date cell is
   `#VALUE!` (D39), where a values range holding text against an error dates argument is that error
-  (gen-m9/67a4c03afd63f988 A241).
+  (gen-m9/67a4c03afd63f988 A241). The same `#VALUE!` holds for a literal TRUE, FALSE or "x", a one-cell range
+  `A1:A1` holding TRUE or "x", and a TRUE cell with guess -1 or -2 (not T-3312's `#NUM!`), each against a literal
+  `1/0` or `NA()` dates argument and a `#DIV/0!` or `#N/A` dates cell (probes/t4415-xirr-error-dates-scalar-forms,
+  excel-graph, 2026-11-06, 28 cells, T-4415; the engine already matched).
 - A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 or row array constant against a column
   all read in row-major order with the same result (rows 44-49).
 
@@ -5312,7 +5442,7 @@ which writes T-3815's XNPV case too).
 Status: VERIFIED (excel-graph)
 Code: `Model::xirr_walk_error`, `Model::xirr_flows` and `xirr_date_error` (functions/financial/flows.rs),
 `Model::xirr_size_error`, `Model::fn_xirr` and `Model::array_of_numbers_from` (functions/financial/mod.rs)
-Tasks: T-3816
+Tasks: T-3816, T-4415
 
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;

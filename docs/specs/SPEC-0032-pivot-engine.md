@@ -73,10 +73,12 @@ design depends on:
   - with the Values field on columns, the `Values` caption sits above the first data column. With one
     data field and no column field there is no Values row (t4137 K5). With Values on rows, the grand
     total reads `Total <data field>` (t4138 G6);
-  - in tabular form the first row header is `Row Labels` while a non-axis field is compact, and which
-    fields decide is open (T-4583). Compact pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);
-  - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` beside a real
-    column field is T-4583's), and so do `missingCaption` and `errorCaption` (under Sum);
+  - in tabular form the first row header is the field's name only when every pivotField has
+    `compact="0"`, and `Row Labels` otherwise (t4583 R1–R6). Column and page fields are T-4609's. An
+    outer row field left at the default moves its subtotals onto the item line (t4583 R1). Compact
+    pivots left at the default show `Row Labels` (t4123 C, t4128 K, t4138);
+  - `rowHeaderCaption`, `grandTotalCaption` and `dataCaption` apply (`colHeaderCaption` replaces `Column Labels` in compact
+    form, t4583 C1), and so do `missingCaption` and `errorCaption` (under Sum);
   - page fields are laid out with `pageWrap`; the sidecar capture window is confirmed by T-4584.
 - **Values:**
   - a calculated field applies to the sums at every level (t4128 K);
@@ -107,8 +109,13 @@ catalog row (T-4125) whose `affects` is not `none`:
   `showAll`, `insertBlankRow`, the items with `h`, `sd`, `s` and `t`, and `numFmtId` (T-4169);
 - per data field: `subtotal`, `showDataAs`, `baseField`/`baseItem`, `numFmtId`.
 
+- page fields: `PageField` (`fld`, `item`, `hier`); items: `PivotItem` (`t` as `ItemType`, whose custom subtotal
+  lines carry their `Aggregate`, `x`, `sd`, `s`; `h` stays in the field's hidden bitset).
+
 Everything else in the parts is kept verbatim (an `Opaque` list of the definition's unread elements and
-attributes) for export (T-4176). The SPEC-0015 limits stay, and the importer fills both forms. A model
+attributes, each `OpaqueEntry` owned by an `OpaqueOwner`: the typed element it was read in) for export (T-4176).
+The SPEC-0015 limits stay, and the importer fills both forms. It also caps a field's items at its cache items
+plus 14 and the workbook's verbatim stores at `MAX_OPAQUE_BYTES` (T-4139, web.md's DEVIATION entry). A model
 change is bitcode-encoded like the rest (no stored format depends on it).
 
 ### Refresh (T-4141, T-4171, T-4506)
@@ -136,17 +143,23 @@ refresh is ordered after that calculation.
 - Auto Refresh is added only as T-4182 evidences it.
 
 ### PivotResult (T-4142, T-4163, T-4165, T-4174, T-4175)
-`fn compute(table: &PivotTable, cache: &PivotCache, budget: &mut AreaBudget) -> Result<PivotResult, PivotComputeError>`
-runs in fixed stages. The order is Excel's where a probe shows one (Top-N totals: t4128 K), and LibreOffice's
+`fn compute(table: &PivotTable, cache: &PivotCache, work: &mut u64) -> Result<PivotResult, PivotComputeError>`
+runs in fixed stages. It takes the work units left rather than an `AreaBudget`, which is crate-private,
+so it stays a public pure function: T-4149 and T-4154 pass the run budget's units (`MAX_PIVOT_WORK` for
+a standalone call) and mark the run exceeded on `Limit`. The order is Excel's where a probe shows one (Top-N totals: t4128 K), and LibreOffice's
 otherwise as a hypothesis to probe:
 1. **Record filter:** page field selections, hidden items (`h`), slicer state (T-4188).
 2. **Groups:** each record's group item per grouped field (precomputed in the cache).
 3. **Accumulate:** a result tree keyed by tuples of item indices. Each (row tuple, column tuple, data
-   field) holds an accumulator, and so do subtotal and grand-total nodes. Aggregates reuse the
-   GETPIVOTDATA folds and `excel_variance` (SPEC-0015), so a cell and GETPIVOTDATA read one accumulator.
-   Mixed values follow pivots.md "Aggregates over text, blanks, booleans and errors" (T-4135). The
-   order in which a total accumulates its records is Excel's own: it is neither record order nor the
-   sum of the children (pivots.md "Summation order...", T-4589).
+   field) holds an accumulator, and so do subtotal and grand-total nodes (T-4142: `pivot/result.rs`,
+   `pivot/accumulate.rs`). Once T-4154 moves GETPIVOTDATA onto the result, a cell and GETPIVOTDATA read
+   one accumulator. Mixed values follow pivots.md "Aggregates over text, blanks, booleans and errors"
+   (T-4135). The order is Excel's own (pivots.md "Summation order...", probes/t4616-pivot-total-order-3):
+   an item cell accumulates its records in record order; a total accumulates them item by item in
+   display order (Average, Product, Var, StdDev, and Sum beside other aggregates), except that in a
+   pivot whose data fields are all Sum a total sums its child cells. Var and StdDev use the textbook
+   one-pass formula over those sums, not `excel_variance`, which GETPIVOTDATA's fold keeps until
+   T-4154.
    Where Excel shows them differently, the difference is a rule on the reading side: an empty
    intersection renders blank but GETPIVOTDATA answers 0 (web.md); a caption substitute renders as text.
 4. **Calculated items** (T-4175, solve order) and **calculated fields** (T-4174). Calculated fields are

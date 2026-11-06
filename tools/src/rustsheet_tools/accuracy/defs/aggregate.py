@@ -20,13 +20,12 @@ from __future__ import annotations
 
 import math
 import random
-import sys
 from collections.abc import Callable, Sequence
 from fractions import Fraction
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import NORMAL_MIN, real_args, signed_log_uniform
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg, round15
 from rustsheet_tools.accuracy.model import Definition, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -61,7 +60,7 @@ def snaps(before: float, last: float, total: float) -> bool:
         return False
     exponent = math.frexp(abs(before))[1] - 1
     bound = math.ldexp(1.0, exponent - SNAP_ULPS_LOG2)
-    if bound < sys.float_info.min:  # 2^-1022: a subnormal bound is flushed (T-2714)
+    if bound < NORMAL_MIN:  # 2^-1022: a subnormal bound is flushed (T-2714)
         return False
     return abs(total) < bound
 
@@ -78,16 +77,16 @@ def sum_value(xs: Sequence[mpmath.mpf]) -> mpmath.mpf:
 
 def overflow(args: Sequence[MathArg]) -> str | None:
     """Why the point is a domain error: a running total beyond the double range."""
-    _, total = running_total([float(x) for x in scalars(args)])
+    _, total = running_total([float(x) for x in real_args(args)])
     return None if math.isfinite(total) else "a running total is beyond the double range"
 
 
 def _sum(args: Sequence[MathArg]) -> mpmath.mpf:
-    return sum_value(scalars(args))
+    return sum_value(real_args(args))
 
 
 def average_value(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = scalars(args)
+    xs = real_args(args)
     return sum_value(xs) / len(xs)
 
 

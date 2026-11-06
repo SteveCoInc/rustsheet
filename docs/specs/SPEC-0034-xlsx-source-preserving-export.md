@@ -112,8 +112,13 @@ engine change that alters how a feature is modelled cannot make the diff disagre
 ### D3. The patcher
 **D3.1. Package.**
 - Copy every zip entry of the source unchanged, except the parts D3.2–D3.4 rewrite, with their contents replaced.
-- Relationships and `[Content_Types].xml` are copied as they are, except for the calcChain removal of E2.
-- No part is added, so no relationship is added.
+- Relationships and `[Content_Types].xml` are copied as they are, except for two edits (T-4561):
+  - the calcChain removal of E2;
+  - the metadata parts D3.4 adds, each with one workbook relationship and one `<Override>`.
+
+  Both are splices of whole elements found by the parser. A stale override or link for an added part, a child
+  written with start and end tags, or a calcChain relationship pointing elsewhere makes the patcher fall back.
+- No other part is added.
 
 **D3.2. Worksheets.** A sheet with changed cells is rewritten by a streaming pass over its XML:
 - every event is copied through unchanged;
@@ -122,8 +127,10 @@ engine change that alters how a feature is modelled cannot make the diff disagre
 - a changed cell with no `<c>` is inserted in column order into its `<row>`, and a missing `<row>` in row order;
 - a cell that became empty, with the default style, is removed.
 
-Row attributes (`spans`, height, style) are kept. `<dimension>` is updated when the used range grew or shrank,
-written as the regenerating export writes it.
+Row attributes (`spans`, height, style) are kept. `<dimension>` is grown to cover a new cell outside it, written as
+the regenerating export writes it. It is never shrunk (T-4560): a range larger than the cells is what Excel keeps for
+formatted rows, and Excel's tolerance of a stale range is UNVERIFIED (docs/excel-semantics/xlsx-storage.md, "A
+patched package keeps the source's hints").
 
 The pass is bounded (directive 5):
 - `ImportLimits`' byte budget, as the importer's read was;
@@ -148,8 +155,14 @@ The pass is bounded (directive 5):
 - A shared-formula group whose master's formula changed, or whose master was cleared or replaced by a constant,
   breaks: every member is written with its own formula. Otherwise the patch would change cells it was not asked to.
 - An edited member leaves the group and is written with its own formula. The other members keep `t="shared"`.
-- Dynamic-array anchors and their spill ranges follow the regenerating export's rules for `cm` and `metadata.xml`.
-  If the source had no `metadata.xml` and one is needed, the patcher falls back.
+- Dynamic-array anchors and their spill ranges, and rich-value errors (`vm`), follow the regenerating export's rules
+  for `cm`, `vm` and `metadata.xml` (T-4561). Which rule applies depends on the source's metadata parts:
+  - **None** (`xl/metadata.xml` and the two rich-value parts all absent): the package takes the export's layout.
+    Patched cells carry the export's `cm`/`vm`, and once one does, the export's metadata parts are added. A
+    source cell that already holds a `vm` with nothing to resolve it loads as a plain error. Under the added
+    metadata it would name a rich error, so such a source falls back.
+  - **Its own:** a value patch keeps a cell's `vm` only for the same rich-error kind, because the two layouts
+    number their blocks differently. Any other `cm`/`vm` change falls back.
 
 **D3.5. calcChain** follows E2.
 

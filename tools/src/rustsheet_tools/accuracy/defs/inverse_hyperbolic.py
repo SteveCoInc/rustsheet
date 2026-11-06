@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, signed, square_overflows
+from rustsheet_tools.accuracy.defs._common import real_args, signed, square_overflows
 from rustsheet_tools.accuracy.literal import MAX_LITERAL, Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -38,13 +38,13 @@ SQUARE_SAFE = SQUARE_BAND[0]
 
 def _square_overflow(args: Sequence[MathArg]) -> str | None:
     """ASINH and ACOSH: `#NUM!` once x*x overflows a double (the formula's own square)."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "x*x overflows a double" if square_overflows(float(x)) else None
 
 
 def _outside_unit(args: Sequence[MathArg]) -> str | None:
     """ACOTH: |x| > 1 (`ACOTH(1)`, `ACOTH(-1)` and |x| < 1 are `#NUM!`)."""
-    (x,) = scalars(args)
+    (x,) = real_args(args)
     return "ACOTH needs |x| > 1" if abs(x) <= 1 else None
 
 
@@ -124,7 +124,7 @@ def _definition(
     domain_check: Callable[[Sequence[MathArg]], str | None] | None = None,
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(

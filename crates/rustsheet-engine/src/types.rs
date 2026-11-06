@@ -6,6 +6,7 @@ pub use crate::external_links::ExternalBook;
 pub use crate::iteration::Iteration;
 use crate::{
     cf_types::ConditionalFormatting,
+    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     expressions::token::Error,
     pivot::{PivotCache, PivotTable},
     text::Text,
@@ -151,6 +152,17 @@ pub struct WorkbookView {
     pub window_height: i64,
 }
 
+impl WorkbookView {
+    /// A view of `sheet` with the default window size.
+    pub(crate) fn new(sheet: u32) -> Self {
+        Self {
+            sheet,
+            window_width: DEFAULT_WINDOW_WIDTH,
+            window_height: DEFAULT_WINDOW_HEIGHT,
+        }
+    }
+}
+
 /// An internal representation of an IronCalc Workbook
 #[derive(Encode, Decode, Debug, PartialEq, Clone)]
 pub struct Workbook {
@@ -178,6 +190,11 @@ pub struct DefinedName {
     pub name: String,
     pub formula: String,
     pub sheet_id: Option<u32>,
+    /// `<definedName hidden="1">`: Excel's Name Manager does not list the name, but formulas
+    /// still evaluate it. Kept so a saved workbook does not unhide it (T-3301).
+    pub hidden: bool,
+    /// `<definedName comment="...">`, the Name Manager comment, kept through a round trip.
+    pub comment: Option<String>,
 }
 
 /// * state:

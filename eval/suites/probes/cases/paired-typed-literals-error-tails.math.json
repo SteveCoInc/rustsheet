@@ -1,0 +1,18 @@
+{
+ "format": "rustsheet-math/v1",
+ "source": {
+  "generator": "rustsheet-accuracy",
+  "version": "1",
+  "dps": 80,
+  "input_sha256": "91d7f0d2f585d14736760aff1548d9edf858d58a670b4136320271d9d359f842"
+ },
+ "sheets": {
+  "Sheet1": {
+   "E16": {
+    "t": "e",
+    "why": "tails outside [1, 2]",
+    "f": "=T.TEST(A1:A2,B1:B2,0.1,3)"
+   }
+  }
+ }
+}

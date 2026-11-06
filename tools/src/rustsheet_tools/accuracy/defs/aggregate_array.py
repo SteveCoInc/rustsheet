@@ -30,7 +30,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of, signed_log_uniform
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, is_real, one_of, signed_log_uniform
 from rustsheet_tools.accuracy.literal import Arg, round15
 from rustsheet_tools.accuracy.model import Definition, DomainError, Interval, MathArg, Param, register
 
@@ -48,11 +48,7 @@ LARGE, SMALL, PERCENTILE_INC, QUARTILE_INC, PERCENTILE_EXC, QUARTILE_EXC = range
 
 def _point_args(args: Sequence[MathArg]) -> tuple[int, tuple[mpmath.mpf, ...], mpmath.mpf]:
     function_num, _options, array, k = args
-    assert (
-        isinstance(array, tuple)
-        and not isinstance(function_num, (bool, tuple))
-        and not isinstance(k, (bool, tuple))
-    )
+    assert isinstance(array, tuple) and is_real(function_num) and is_real(k)
     return int(function_num), sorted_values(array), k
 
 

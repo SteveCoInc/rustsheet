@@ -261,7 +261,8 @@ impl Model {
                     | crate::functions::Function::Choose
                     | crate::functions::Function::Ifs
                     | crate::functions::Function::Switch
-                    | crate::functions::Function::Let,
+                    | crate::functions::Function::Let
+                    | crate::functions::Function::Reduce,
                 ..
             } => matches!(
                 self.evaluate_picked_reference_arg(node, cell),

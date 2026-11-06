@@ -3,7 +3,9 @@
 use std::io::{Cursor, Write};
 
 use rustsheet_engine::expressions::token::Error;
-use rustsheet_engine::pivot::{MAX_FIELDS, MAX_ITEMS, MAX_RECORDS};
+use rustsheet_engine::pivot::{
+    Aggregate, Axis, AxisField, CellArea, DataField, MAX_FIELDS, MAX_ITEMS, MAX_RECORDS,
+};
 
 use super::super::package::ImportLimits;
 use super::*;
@@ -245,7 +247,10 @@ fn shared_and_inline_values_load_into_the_cache_and_the_pivot() {
         [DataField {
             caption: "Sum of Sales".into(),
             field: 2,
-            function: Aggregate::Sum
+            function: Aggregate::Sum,
+            base_field: 0,
+            base_item: 0,
+            ..DataField::default()
         }]
     );
 }

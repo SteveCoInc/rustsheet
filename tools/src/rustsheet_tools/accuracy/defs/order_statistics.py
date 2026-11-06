@@ -36,7 +36,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, one_of, scalars
+from rustsheet_tools.accuracy.defs._common import by_stratum, domain_of, is_real, one_of, real_args
 from rustsheet_tools.accuracy.defs.aggregate import draw_numbers
 from rustsheet_tools.accuracy.defs.aggregate_array import (
     DOMAIN_SOURCE,
@@ -69,7 +69,7 @@ QUARTILE_EXC_EXAMPLE = (6.0, 7.0, 15.0, 36.0, 39.0, 40.0, 41.0, 42.0, 43.0, 47.0
 
 
 def _median(args: Sequence[MathArg]) -> mpmath.mpf:
-    xs = sorted(scalars(args))
+    xs = sorted(real_args(args))
     n = len(xs)
     if n % 2:
         return xs[n // 2]
@@ -82,7 +82,7 @@ def _median(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _data(args: Sequence[MathArg]) -> tuple[tuple[mpmath.mpf, ...], mpmath.mpf]:
     array, k = args
-    if not isinstance(k, mpmath.mpf):
+    if not is_real(k):
         msg = "k must be a number"
         raise TypeError(msg)
     return sorted_values(array), k

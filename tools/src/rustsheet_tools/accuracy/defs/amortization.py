@@ -45,18 +45,11 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import ill_conditioned, one_of, scalars, trunc
+from rustsheet_tools.accuracy.defs._common import ill_conditioned, one_of, real_args, trunc
 from rustsheet_tools.accuracy.defs.depreciation import stratified
 from rustsheet_tools.accuracy.defs.yearfrac import displayed_date, eu_30_360, us_30_360, whole_serial
 from rustsheet_tools.accuracy.literal import Arg
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 from rustsheet_tools.fitlab.sweep import EPOCH
 
@@ -118,7 +111,7 @@ class _Asset:
     """Checked arguments (module docstring)."""
 
     def __init__(self, args: Sequence[MathArg], *, degressive: bool) -> None:
-        a = scalars(args)
+        a = real_args(args)
         self.cost, self.salvage, self.period, self.rate = a[0], a[3], a[4], a[5]
         self.fully_salvaged = False
         purchased, first = whole_serial(float(a[1])), whole_serial(float(a[2]))
