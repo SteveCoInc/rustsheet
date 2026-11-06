@@ -199,7 +199,8 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 ///   |z| = 1, `1 - EXP(z)` from there on. Kahan's form at |z| >= 1 put w one 2^-53 step off Excel's
 ///   on 47 of the 508 such BETA.DIST cells of probes-numeric t3568-r5-bup-tune, -hold and -fresh
 ///   (`BETA.DIST(0.9094554,241.0,1.0,TRUE)` is 1.1649814446457185E-10, t3568-r5-bup-tune B856;
-///   T-3764), where the switch matches all 508. Below |z| = 1, `F.DIST.RT(10,6,2)` = 0.09368601255412709 (gen-m9/146b46e74f2dac3b A329) and
+///   T-3764), where the switch matches all 508. Below |z| = 1, `F.DIST.RT(10,6,2)` =
+///   0.09368601255412709 (gen-m9/146b46e74f2dac3b A329) and
 ///   `FDIST(40,8,2)` (gen-m9/abc2939ebd1e2365 A318) are then bit-exact; libm's expm1 and log1p miss
 ///   71 eval cells this form gets, and get 6 it misses (T-3170). `BETA.DIST(1.9999999998999996E-10,
 ///   1,0.5,TRUE)` is 9.999999999999999E-11 (probes-numeric/t1745-beta-inv-roundtrip G35), which
@@ -207,9 +208,9 @@ pub(crate) fn half_half_cdf(x: f64, y: f64) -> f64 {
 /// - w1 from w: `F.DIST(5,20,2,TRUE)` = 0.8203482998751552 (probes-numeric/t2220-f-dist-sweep-cdf
 ///   A718), which y0^b0 puts 3 ulp low.
 ///
-/// `None` for other shapes and points. A w1 below 2^-53 is 0 or 2^-53 by the complement, as Excel's is
-/// on the four such t3568-r5-bup cells (`BETA.DIST(0.95591070645675,826.0,1.0,TRUE)` is 2^-53,
-/// t3568-r5-bup-fresh B744); the rest of that region has no evidence (TODO(T-3150)).
+/// `None` for other shapes and points. A w1 below 2^-53 is 0 or 2^-53 by the complement, as
+/// Excel's is on the four such t3568-r5-bup cells (`BETA.DIST(0.95591070645675,826.0,1.0,TRUE)`
+/// is 2^-53, t3568-r5-bup-fresh B744); the rest of that region has no evidence (TODO(T-3150)).
 fn shape_one_tails(x: f64, y: f64, a: f64, b: f64) -> Option<(f64, f64)> {
     let swap = x > 0.5;
     let (a0, b0, x0, y0) = if swap { (b, a, y, x) } else { (a, b, x, y) };

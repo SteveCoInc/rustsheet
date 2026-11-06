@@ -80,11 +80,11 @@ pub(crate) fn excel_expm1(x: f64) -> f64 {
 const ONE_MINUS_EXP_EXPM1_TO: f64 = 1.0;
 
 /// Excel's 1 - e^x: minus Excel's expm1 ([`excel_expm1`], Kahan's form) for |x| below
-/// [`ONE_MINUS_EXP_EXPM1_TO`], and `1 - EXP(x)` with Excel's EXP from there on. The incomplete beta's
-/// w = 1 - (1 - x0)^b0 at a0 = 1 takes it (`incomplete_beta.rs` `shape_one_tails`, T-3764): at
-/// |x| >= 1 Kahan's product and quotient round w one 2^-53 step off Excel's on 47 BETA.DIST cells of
-/// probes-numeric t3568-r5-bup (statistics.md "Incomplete beta at a shape of 1 outside the closed
-/// forms").
+/// [`ONE_MINUS_EXP_EXPM1_TO`], and `1 - EXP(x)` with Excel's EXP from there on. The incomplete
+/// beta's w = 1 - (1 - x0)^b0 at a0 = 1 takes it (`incomplete_beta.rs` `shape_one_tails`, T-3764):
+/// at |x| >= 1 Kahan's product and quotient round w one 2^-53 step off Excel's on 47 BETA.DIST
+/// cells of probes-numeric t3568-r5-bup (statistics.md "Incomplete beta at a shape of 1 outside
+/// the closed forms").
 pub(crate) fn excel_one_minus_exp(x: f64) -> f64 {
     if x.abs() < ONE_MINUS_EXP_EXPM1_TO {
         -excel_expm1(x)

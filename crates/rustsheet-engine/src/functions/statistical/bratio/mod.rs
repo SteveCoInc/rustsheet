@@ -223,11 +223,12 @@ pub(crate) fn beta_dist_lower_tail(x: f64, y: f64, a: f64, b: f64) -> f64 {
 }
 
 /// BETA.DIST's worksheet cdf: [`beta_dist_lower_tail`], and Excel's exact 0 where L140 bup+bgrat's
-/// prefactor underflows ([`l140_prefactor_zero_tails`], T-4045's rule). On 23 of the 24 Tier A cells
-/// of probes-numeric t3568-r5-bup-tune, -hold and -fresh column A Excel is 0 where the true tail is
-/// 1E-307 to 1E-257 (`BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291), and the
-/// rule gives all 23 and probes/t4254-beta-t-l140-zero-cut's shapes at n = 9 and 10 bup terms
-/// (T-3764). The quantile searches keep [`beta_dist_lower_tail`]: with the 0 under F.INV's search
+/// prefactor underflows ([`l140_prefactor_zero_tails`], T-4045's rule). Column A of probes-numeric
+/// t3568-r5-bup-tune, -hold and -fresh has 47 Excel zeros where the true tail is up to 2E-257
+/// (`BETA.DIST(0.7115070068952,2160.0,30.5,TRUE)`, t3568-r5-bup-fresh A291): the rule gives all 47
+/// (28 before), zeroes none of the column's Excel numbers, and gives the 44 zeros of
+/// probes/t4254-beta-t-l140-zero-cut below `ln(DBL_MIN)` (T-3764). The quantile searches keep
+/// [`beta_dist_lower_tail`]: with the 0 under F.INV's search
 /// `F.INV(1.43795578761177E-262,107702,58)` (accuracy/F.INV/s1 A146) leaves Gate A's envelope.
 pub(crate) fn beta_dist_cdf(x: f64, y: f64, a: f64, b: f64) -> f64 {
     l140_prefactor_zero_tails(a, b, x, y).map_or_else(|| beta_dist_lower_tail(x, y, a, b), |t| t.0)
