@@ -2510,9 +2510,18 @@ its digits below, -expm1(b*ln1p(-x)) as far as the cells tell, the same cut as T
   B450) bit for bit, 1 ulp from the closed form.
 Ours: `incomplete_beta.rs` `shape_one_tails` (oriented, x0 < 0.1 there) for BETA.DIST's cdf, BETA.INV and the F tails,
 and `fisher.rs` `unoriented_shape_one_tail` with the cut `A1_EXPM1_MAX_X` for F.TEST and the F quantiles' search (T-2977).
-Status: VERIFIED (excel-graph) at x from 1E-11 to 4E-4 below the cut and at 0.1; the cut itself between 4E-4 and 0.1
-is UNVERIFIED (assumed T.DIST.RT's).
-Tasks: T-0974, T-2119
+- F.TEST at a = 1 (T-4497, probes-numeric t4497-f-a1-cut-sweep and t4497-f-a1-cut-dense, x 4E-4 to 0.2): the cut lies
+  between x = 0.0996048 (dense A15, the uncancelled form) and x = 0.100089 (dense A12, 1 - exp), so 0.1 stands; and
+  below it F.TEST takes Excel's own kernels, 1 - e^y by its Kahan expm1 of y = b times its stored-atanh ln(1 - x)
+  (`x87_exp::excel_one_minus_exp`, `x87_log1p::excel_ln_one_minus`): with them all 220 F.TEST cells are bit-exact
+  (71 of 71 held out), against 142 with libm's `exp_m1`/`ln_1p`, the engine's form today (T-4498 applies it).
+  The df 2 quantiles' cells do not place the cut: their search stops a few ulps from the crossing whatever the tail's
+  form. Below 0.1 they agree that the cancelling form is wrong (168 of 334 cells visibly off with it). From 0.1 up they
+  lean slightly against cancelling (8 of 106 off against 4), which T-4498 checks. Their 9 visibly-off cells are T-3485's.
+  Details: docs/research/t4497/README.md.
+Status: VERIFIED (excel-graph) at x from 1E-11 to 4E-4 below the cut and at 0.1; the cut between 0.0996048 and
+0.100089 and Excel's kernels below it VERIFIED (excel-graph) for F.TEST's a = 1 tail (T-4497).
+Tasks: T-0974, T-2119, T-4497, T-4498
 
 ## F.INV is a crossing of F.DIST's tails (T-0974)
 Rule: as BETA.INV (T-1745), F.INV and F.INV.RT/FINV return a double where Excel's own cdf crosses p. The smaller tail is
