@@ -393,6 +393,16 @@ impl Parser {
                         comma += 1;
                     } else if after_percent || (fraction.is_some() && !last_token_is_digit) {
                         tokens.push(TextToken::Literal(','));
+                    } else if last_token_is_digit
+                        && next_token_is_digit
+                        && is_scientific
+                        && !found_decimal_dot
+                    {
+                        // Excel: a `,` between exponent placeholders is #VALUE! when the mantissa
+                        // has no decimal point (`0E+0,0`, `0E+00,0`), and ignored when it has one
+                        // (`0.00E+0,0` is "1.23E+06"; probes/t4062-comma-in-exponent A1, A2, A16;
+                        // number-formats.md "Commas in scientific formats").
+                        return ParsePart::Error(ErrorPart::default());
                     } else if last_token_is_digit && next_token_is_digit && found_decimal_dot {
                         // Excel: a `,` between placeholders after the decimal point neither groups
                         // nor scales, even after a literal (`0.00|#,##0` on 1234567.89 is
