@@ -30,7 +30,7 @@ fn ragged_function_array_is_value_error_not_its_padding() {
 }
 
 #[test]
-fn first_error_element_in_reading_order_is_the_result() {
+fn first_error_element_in_argument_order_is_the_result() {
     // G!C3:C8, G!C42: the first error wins; an error beats a value before it.
     let actual = results(&[
         "=GROUPBY(A2:A11,D2:D11,HSTACK(NA(),1/0))",
