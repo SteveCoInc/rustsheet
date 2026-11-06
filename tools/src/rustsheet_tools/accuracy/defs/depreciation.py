@@ -55,7 +55,7 @@ from rustsheet_tools.accuracy.defs._common import (
     by_stratum,
     ill_conditioned,
     one_of,
-    scalars,
+    real_args,
     trunc,
 )
 from rustsheet_tools.accuracy.literal import Arg
@@ -116,7 +116,7 @@ def _num_if(condition: bool, why: str) -> None:
 
 
 def _sln(args: Sequence[MathArg]) -> mpmath.mpf:
-    cost, salvage, life = scalars(args)
+    cost, salvage, life = real_args(args)
     if life == 0:
         msg = "life 0: #DIV/0!"
         raise DomainError(msg)
@@ -126,7 +126,7 @@ def _sln(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _syd(args: Sequence[MathArg]) -> mpmath.mpf:
-    cost, salvage, life, per = scalars(args)
+    cost, salvage, life, per = real_args(args)
     if salvage < 0:
         msg = "a negative salvage: #NUM!"
         raise DomainError(msg)
@@ -162,7 +162,7 @@ def db_rate(cost: mpmath.mpf, salvage: mpmath.mpf, life: mpmath.mpf) -> mpmath.m
 
 
 def _db(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     cost, salvage, life, period = a[0], a[1], a[2], a[3]
     month = mpmath.mpf(trunc(a[4])) if len(a) > 4 else mpmath.mpf(12)
     huge_period = period > DB_INTEGER_MAX
@@ -208,7 +208,7 @@ def _db(args: Sequence[MathArg]) -> mpmath.mpf:
 
 
 def _ddb(args: Sequence[MathArg]) -> mpmath.mpf:
-    a = scalars(args)
+    a = real_args(args)
     cost, salvage, life, period = a[0], a[1], a[2], a[3]
     factor = a[4] if len(a) > 4 else mpmath.mpf(2)
     _num_if(period > life, "a period above the life")
@@ -320,7 +320,7 @@ def _vdb_switching(
 
 def _vdb(args: Sequence[MathArg]) -> mpmath.mpf:
     numbers = [a for a in args if not isinstance(a, bool)]
-    a = scalars(numbers)
+    a = real_args(numbers)
     cost, salvage, life, start, end = a[0], a[1], a[2], a[3], a[4]
     factor = a[5] if len(a) > 5 else mpmath.mpf(2)
     no_switch = len(args) > 6 and bool(args[6])

@@ -644,3 +644,72 @@ fn test_workbook_theme_colors() {
         "#C9211E".to_string()
     );
 }
+
+/// One `<i>` of `rowItems`/`colItems` as Excel writes it: `t` (unless data), `r` and `i` (unless
+/// 0), and each `x` as `<x/>` for 0 or `<x v="n"/>`.
+fn item_xml(line: &rustsheet_engine::pivot::AxisLine) -> String {
+    use rustsheet_engine::pivot::ItemType;
+    let kind = match line.kind {
+        ItemType::Data => "",
+        ItemType::Default => " t=\"default\"",
+        ItemType::Grand => " t=\"grand\"",
+        other => panic!("no such line in the corpus: {other:?}"),
+    };
+    let mut xml = format!("<i{kind}");
+    for (name, value) in [("r", line.repeat), ("i", line.data_field)] {
+        if value != 0 {
+            xml.push_str(&format!(" {name}=\"{value}\""));
+        }
+    }
+    if line.items.is_empty() {
+        return xml + "/>";
+    }
+    xml.push('>');
+    for &x in &line.items {
+        xml.push_str(&if x == 0 {
+            "<x/>".to_string()
+        } else {
+            format!("<x v=\"{x}\"/>")
+        });
+    }
+    xml + "</i>"
+}
+
+// The Excel-saved pivot of example.xlsx (three compact row fields whose items are listed out of
+// cache order): the engine's layout lines are the `rowItems`/`colItems` Excel saved, and its
+// location and geometry the saved `<location>` (T-4147).
+#[test]
+fn example_pivot_lines_are_the_saved_ones() {
+    use rustsheet_engine::pivot::{compute, lay_out, OpaqueNode, MAX_PIVOT_WORK};
+    let model = load_from_xlsx("tests/example.xlsx", "en", "UTC", "en").unwrap();
+    let workbook = &model.workbook;
+    let [table] = workbook.pivot_tables.as_slice() else {
+        panic!("one pivot");
+    };
+    let cache = &workbook.pivot_caches[table.cache as usize];
+    let mut work = MAX_PIVOT_WORK;
+    let result = compute(table, cache, &mut work).unwrap();
+    let layout = lay_out(table, cache, &result, &mut work).unwrap();
+    let saved: String = table
+        .opaque
+        .iter()
+        .filter_map(|entry| match &entry.node {
+            OpaqueNode::Element(xml)
+                if xml.starts_with("<rowItems") || xml.starts_with("<colItems") =>
+            {
+                Some(xml.as_str())
+            }
+            _ => None,
+        })
+        .collect();
+    let axis = |name: &str, lines: &[rustsheet_engine::pivot::AxisLine]| {
+        let items: String = lines.iter().map(item_xml).collect();
+        format!("<{name} count=\"{}\">{items}</{name}>", lines.len())
+    };
+    assert_eq!(
+        axis("rowItems", &layout.rows) + &axis("colItems", &layout.columns),
+        saved
+    );
+    assert_eq!(layout.location, table.location);
+    assert_eq!(layout.geometry, table.geometry);
+}

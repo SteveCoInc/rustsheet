@@ -73,8 +73,9 @@ from rustsheet_tools.accuracy.defs._common import (
     below_normal,
     by_stratum,
     domain_of,
+    is_real,
     one_of,
-    scalars,
+    real_args,
 )
 from rustsheet_tools.accuracy.defs.aggregate_array import array_of
 from rustsheet_tools.accuracy.defs.dispersion import deviations_overflow, squared_deviations, squares_overflow
@@ -85,14 +86,7 @@ from rustsheet_tools.accuracy.defs.paired_regression import (
     offset_series,
 )
 from rustsheet_tools.accuracy.literal import Arg, round15
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    DomainError,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, DomainError, MathArg, NoValueError, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
 
 TTEST_Y_SOURCE = "statistics.md#ttest-rounds-y--dfdft2-to-a-double-before-the-tail-t-0969"
@@ -125,7 +119,7 @@ def _samples(args: Sequence[MathArg]) -> tuple[list[float], list[float]]:
     out: list[list[float]] = []
     for a in args[:2]:
         assert isinstance(a, tuple)
-        out.append([float(v) for v in scalars(a)])
+        out.append([float(v) for v in real_args(a)])
     xs, ys = out
     if below_normal(*xs, *ys):
         msg = "a subnormal literal (Excel reads it as 0; unprobed here)"
@@ -249,7 +243,7 @@ _TESTS: dict[int, Callable[[Sequence[float], Sequence[float]], tuple[mpmath.mpf,
 
 def _t_test(args: Sequence[MathArg]) -> mpmath.mpf:
     tails, test_type = args[2], args[3]
-    assert not isinstance(tails, (bool, tuple)) and not isinstance(test_type, (bool, tuple))
+    assert is_real(tails) and is_real(test_type)
     if int(tails) not in (1, 2) or int(test_type) not in _TESTS:
         msg = "#NUM!: tails or type out of range"
         raise DomainError(msg)

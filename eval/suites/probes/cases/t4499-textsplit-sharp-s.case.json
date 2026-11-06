@@ -1,0 +1,30 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4499 TEXTSPLIT/TEXTBEFORE match_mode 1 with U+1E9E (capital sharp s) vs U+00DF, both directions, match_mode 0 controls",
+  "tags": [
+    "M7",
+    "text",
+    "dynamic-arrays",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Calc",
+      "cells": {
+        "A1": "=ARRAYTOTEXT(TEXTSPLIT(\"assbẞc\",\"ß\",,,0),1)",
+        "A2": "=COLUMNS(TEXTSPLIT(\"assbẞc\",\"ß\",,,0))",
+        "A3": "=ARRAYTOTEXT(TEXTSPLIT(\"assbẞc\",\"ß\",,,1),1)",
+        "A4": "=COLUMNS(TEXTSPLIT(\"assbẞc\",\"ß\",,,1))",
+        "A5": "=ARRAYTOTEXT(TEXTSPLIT(\"aßbẞc\",\"ẞ\",,,0),1)",
+        "A6": "=COLUMNS(TEXTSPLIT(\"aßbẞc\",\"ẞ\",,,0))",
+        "A7": "=ARRAYTOTEXT(TEXTSPLIT(\"aßbẞc\",\"ẞ\",,,1),1)",
+        "A8": "=COLUMNS(TEXTSPLIT(\"aßbẞc\",\"ẞ\",,,1))",
+        "A9": "=ARRAYTOTEXT(TEXTSPLIT(\"aẞb\",\"ẞ\",,,1),1)",
+        "A10": "=COLUMNS(TEXTSPLIT(\"aẞb\",\"ẞ\",,,1))",
+        "A11": "=TEXTBEFORE(\"aßb\",\"ẞ\",1,0)",
+        "A12": "=TEXTBEFORE(\"aßb\",\"ẞ\",1,1)"
+      }
+    }
+  ],
+  "expected": {}
+}

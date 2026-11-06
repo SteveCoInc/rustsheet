@@ -256,7 +256,7 @@ A spec case has no xlsx, and its rendered pivot cells exist only in the built fi
   `apply_groups` calls too), and `Txn::add_pivot_table` then writes the layout itself from the
   location's top-left cell, before the pivot is registered: the builder's compact form with one
   row field (`Row Labels`, the caption, the groups holding a record, `Grand Total`), in one place,
-  `rustsheet_engine::pivot::row_layout`. This is the Rust layout the alternative below rejects for
+  `rustsheet_engine::pivot::render` over `compute` and `lay_out` (SPEC-0032, T-4149). This is the Rust layout the alternative below rejects for
   baking, kept to the one shape the builder cannot bake; oracle reads of Excel's own layout
   (probes/t4228-pivot-range-groups, probes/t4235-pivot-range-rounding) keep it in step.
 

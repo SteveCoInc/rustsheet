@@ -61,10 +61,11 @@ import random
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
+from typing import Protocol
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import OVERFLOW_POINT, fraction_to_mpf, scalars
+from rustsheet_tools.accuracy.defs._common import OVERFLOW_POINT, fraction_to_mpf, real_args
 from rustsheet_tools.accuracy.defs.annuity import unique_rate
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
@@ -120,7 +121,7 @@ class Coupons:
         return (self.e - self.a) / self.e
 
 
-def _date_serial(d: datetime.date) -> int:
+def date_serial(d: datetime.date) -> int:
     """A schedule date from 1900-01-01 on as Excel's 1900 serial (the fictitious 1900-02-29 counts from March)."""
     if d < MARCH_1900:
         return (d - datetime.date(1899, 12, 31)).days
@@ -133,7 +134,7 @@ def coupons(settlement: int, maturity: int, frequency: int, basis: int) -> Coupo
     if pcd_date < CALENDAR_START:
         msg = "the previous coupon date is before 1900-01-01: #NUM!"
         raise DomainError(msg)
-    pcd, ncd = _date_serial(pcd_date), _date_serial(ncd_date)
+    pcd, ncd = date_serial(pcd_date), date_serial(ncd_date)
     a = basis_days(pcd, settlement, basis)
     e = {0: Fraction(360, frequency), 1: Fraction(ncd - pcd), 3: Fraction(365, frequency)}.get(
         basis, Fraction(360, frequency)
@@ -158,7 +159,7 @@ class Bond:
 def bond(args: Sequence[MathArg], *, redemption: bool, price_given: bool) -> Bond:
     """The arguments read and checked in the domain order of "PRICE, YIELD, DURATION and MDURATION check order"
     (the error code is `#NUM!` for every one of these checks)."""
-    a = scalars(args)
+    a = real_args(args)
     if redemption:
         s, m, rate, fourth, red, f = a[:6]
         rest = a[6:]
@@ -182,7 +183,7 @@ def bond(args: Sequence[MathArg], *, redemption: bool, price_given: bool) -> Bon
     return Bond(settlement, maturity, rate, fourth, red, int(f), basis)
 
 
-def _top(ln_x: mpmath.mpf, what: str) -> bool:
+def past_double_top(ln_x: mpmath.mpf, what: str) -> bool:
     """Whether ln x is past ln of the double range's top; NoValueError within `BAND` of it."""
     if abs(ln_x - LN_OVERFLOW) <= BAND * LN_OVERFLOW:
         msg = f"{what} at the double range's top"
@@ -190,7 +191,8 @@ def _top(ln_x: mpmath.mpf, what: str) -> bool:
     return bool(ln_x > LN_OVERFLOW)
 
 
-def _ln(x: mpmath.mpf) -> mpmath.mpf:
+def ln_or_minus_inf(x: mpmath.mpf) -> mpmath.mpf:
+    """ln x, or -inf for x <= 0 (no value to overflow)."""
     return mpmath.log(x) if x > 0 else mpmath.mpf("-inf")
 
 
@@ -205,7 +207,7 @@ def _sums(b: Bond, c: Coupons, cf: mpmath.mpf, weighted: bool) -> tuple[mpmath.m
     s, n = fraction_to_mpf(c.s), c.n
     u = mpmath.log1p(b.fourth / b.frequency)
     big_t = s + n - 1
-    if n > 1 and _top(big_t * u, "(1 + yld/f)^(s+N-1)"):
+    if n > 1 and past_double_top(big_t * u, "(1 + yld/f)^(s+N-1)"):
         msg = "(1 + yld/f)^(s+N-1) past the double range: #NUM!"
         raise DomainError(msg)
     extra = 10 + (2 * int(-mpmath.log10(abs(u))) if u != 0 else 0) + 2 * len(str(n))
@@ -228,13 +230,13 @@ def _dirty(coupon_sum: mpmath.mpf, red_term: mpmath.mpf, rate: mpmath.mpf, n: in
     NoValueError with one (unprobed: PRICE's one-period form is linear, DURATION's s/f); NoValueError for an infinite
     100·rate below it."""
     dirty = coupon_sum + red_term
-    if _top(_ln(dirty), "the dirty sum"):
+    if past_double_top(ln_or_minus_inf(dirty), "the dirty sum"):
         if n == 1:
             msg = "the one-period flows' sum past the double range (unprobed)"
             raise NoValueError(msg)
         msg = "the discounted flows' sum past the double range: #NUM!"
         raise DomainError(msg)
-    if _top(_ln(100 * rate), "100·rate"):
+    if past_double_top(ln_or_minus_inf(100 * rate), "100·rate"):
         msg = "100·rate past the double range (unprobed)"
         raise NoValueError(msg)
     return dirty
@@ -254,7 +256,7 @@ def price_of(b: Bond, c: Coupons) -> mpmath.mpf:
     else:
         coupon_sum, red_term, _ = _sums(b, c, cf, weighted=False)
         value = _dirty(coupon_sum, red_term, b.rate, c.n) - accrued
-    if _top(_ln(abs(value)), "PRICE"):
+    if past_double_top(ln_or_minus_inf(abs(value)), "PRICE"):
         if c.n == 1:  # a near-zero linear discount: unprobed
             msg = "the one-period PRICE past the double range (unprobed)"
             raise NoValueError(msg)
@@ -267,7 +269,7 @@ def duration_of(b: Bond, c: Coupons) -> mpmath.mpf:
     """DURATION (module docstring)."""
     coupon_sum, red_term, weighted = _sums(b, c, _coupon(b), weighted=True)
     dirty = _dirty(coupon_sum, red_term, b.rate, c.n)
-    if _top(_ln(abs(weighted)), "the weighted sum"):
+    if past_double_top(ln_or_minus_inf(abs(weighted)), "the weighted sum"):
         msg = "the weighted sum past the double range while the dirty sum is not (unprobed)"
         raise NoValueError(msg)
     return weighted / dirty / b.frequency
@@ -377,7 +379,7 @@ def _month_end_maturity(rng: random.Random, settlement: int, years: int) -> int:
     month = rng.randint(1, 12)
     last = calendar.monthrange(year, month)[1]
     day = rng.choice((last, min(last, 29), min(last, 30), last - 1))
-    return _date_serial(datetime.date(year, month, day))
+    return date_serial(datetime.date(year, month, day))
 
 
 def _base(stratum: str, rng: random.Random) -> Draft:
@@ -420,6 +422,70 @@ def _base(stratum: str, rng: random.Random) -> Draft:
     return Draft(settlement, maturity, rate, yld, redemption, frequency, _basis(rng))
 
 
+class BondDraft(Protocol):
+    """A drawn bond's value arguments, which `value_edge` breaks."""
+
+    rate: float
+    fourth: float
+    redemption: float
+    frequency: int
+    basis: int | None
+
+
+VALUE_EDGES = 5  # the shapes of `value_edge`
+
+
+def value_edge(d: BondDraft, shape: int, rng: random.Random, *, price_given: bool) -> None:
+    """Breaks one value argument of a bond function, each `#NUM!` (`shape` 0..4): a negative rate, a negative yld or a
+    pr of 0, a redemption of 0 or below, a frequency other than 1, 2 or 4, a basis outside 0..4 ("PRICE, YIELD,
+    DURATION and MDURATION check order", "ODDFPRICE, ODDFYIELD, ODDLPRICE and ODDLYIELD check order")."""
+    if shape == 0:
+        d.rate = -rng.choice((1e-9, 0.01, 0.5))
+    elif shape == 1:
+        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
+    elif shape == 2:
+        d.redemption = rng.choice((0.0, -100.0))
+    elif shape == 3:
+        d.frequency = rng.choice((0, 3, 6, 12))
+    else:
+        d.basis = rng.choice((-1, 5))
+
+
+def price_or_par(pr: float, redemption: float, rng: random.Random) -> float:
+    """A yield function's drawn price: `pr` (the price at a drawn yld) when it is from 1E-3 to 1E4 of the redemption,
+    else one within half the redemption of it (the sampler cuts it to 15 digits)."""
+    if 1e-3 * redemption <= pr <= 1e4 * redemption:
+        return pr
+    return redemption * rng.uniform(0.5, 1.5)
+
+
+def bond_definition(
+    function: str,
+    names: Sequence[str],
+    value: Callable[[Sequence[MathArg]], mpmath.mpf],
+    draw: Callable[[str, random.Random], list[Arg]],
+    sources: Sequence[str],
+    *,
+    solver: bool = False,
+) -> Definition:
+    """A bond function's registered definition: real arguments, then the frequency and an optional basis (`int`);
+    every domain rule is the value's (Excel reads the arguments in its own order), so no interval checks."""
+    params = [Param(name, "real", source=sources[0]) for name in names[:-2]]
+    params.append(Param(names[-2], "int", source=sources[0]))
+    params.append(Param(names[-1], "int", source=sources[0], optional=True))
+    return register(
+        Definition(
+            function=function,
+            params=tuple(params),
+            value=value,
+            draw=draw,
+            solver=solver,
+            serials_1900=True,
+            sources=tuple(sources),
+        )
+    )
+
+
 def _edge(rng: random.Random, *, price_given: bool) -> Draft:
     """Domain edges: reversed or equal dates, a settlement below 1, a negative rate or yld, a price or redemption of
     0, frequency 3, basis 5 or -1, a PCD before 1900, the yld at which q^(s+N-1) overflows and coupons whose sum
@@ -430,16 +496,8 @@ def _edge(rng: random.Random, *, price_given: bool) -> Draft:
         d.maturity = int(d.settlement) - rng.choice((0, 1, 400))
     elif shape == 1:
         d.settlement = rng.choice((0.0, 0.5))
-    elif shape == 2:
-        d.rate = -rng.choice((1e-9, 0.01, 0.5))
-    elif shape == 3:
-        d.fourth = 0.0 if price_given else -rng.choice((1e-9, 0.01))
-    elif shape == 4:
-        d.redemption = rng.choice((0.0, -100.0))
-    elif shape == 5:
-        d.frequency = rng.choice((0, 3, 6, 12))
-    elif shape == 6:
-        d.basis = rng.choice((-1, 5))
+    elif shape < 2 + VALUE_EDGES:
+        value_edge(d, shape - 2, rng, price_given=price_given)
     elif shape == 7:  # a PCD before 1900-01-01 (#NUM!) or on 1900-01-01 (serial 1)
         d.settlement = rng.randint(1, 120)
         d.maturity = rng.choice((1000, 43831, 43830, 54788, 47484))
@@ -452,7 +510,7 @@ def _edge(rng: random.Random, *, price_given: bool) -> Draft:
     else:  # settlement on a coupon date
         d.settlement = d.maturity - round(rng.randint(1, 40) * YEAR / d.frequency)
         pcd, _, _ = schedule(real_date(d.settlement), real_date(d.maturity), d.frequency)
-        d.settlement = max(1, _date_serial(pcd))
+        d.settlement = max(1, date_serial(pcd))
     return d
 
 
@@ -498,9 +556,7 @@ def _yield_draw(stratum: str, rng: random.Random) -> list[Arg]:
         )
         with mpmath.workdps(30), contextlib.suppress(DomainError, NoValueError):
             pr = float(price_of(b, coupons(b.settlement, b.maturity, b.frequency, b.basis)))
-    if not (1e-3 * d.redemption <= pr <= 1e4 * d.redemption):
-        pr = d.redemption * rng.uniform(0.5, 1.5)  # the sampler cuts it to 15 digits
-    d.fourth = pr
+    d.fourth = price_or_par(pr, d.redemption, rng)
     return d.args(with_redemption=True)
 
 
@@ -512,32 +568,19 @@ def _bond_definition(
     solver: bool = False,
 ) -> Definition:
     draw = _yield_draw if function == "YIELD" else _price_draw if len(names) == 7 else _duration_draw
-    # every domain rule is the value's (Excel reads the arguments in its own order): no interval checks
-    params = [Param(name, "real", source=ORDER_SOURCE) for name in names[:-2]]
-    params.append(Param(names[-2], "int", source=ORDER_SOURCE))
-    params.append(Param(names[-1], "int", source=ORDER_SOURCE, optional=True))
-    return register(
-        Definition(
-            function=function,
-            params=tuple(params),
-            value=value,
-            draw=draw,
-            solver=solver,
-            serials_1900=True,
-            sources=(
-                ORDER_SOURCE,
-                CALENDAR_SOURCE,
-                EDGES_SOURCE,
-                DAY_SOURCE,
-                COUPDAYS_SOURCE,
-                CARET_SOURCE,
-                SUM_SOURCE,
-                HUGE_SOURCE,
-                ENGINE_SOURCE,
-                *((ONE_PERIOD_SOURCE, SHORT_SOURCE, NEWTON_SOURCE, WORK_SOURCE) if solver else ()),
-            ),
-        )
+    sources = (
+        ORDER_SOURCE,
+        CALENDAR_SOURCE,
+        EDGES_SOURCE,
+        DAY_SOURCE,
+        COUPDAYS_SOURCE,
+        CARET_SOURCE,
+        SUM_SOURCE,
+        HUGE_SOURCE,
+        ENGINE_SOURCE,
+        *((ONE_PERIOD_SOURCE, SHORT_SOURCE, NEWTON_SOURCE, WORK_SOURCE) if solver else ()),
     )
+    return bond_definition(function, names, value, draw, sources, solver=solver)
 
 
 _PRICE_NAMES = ("settlement", "maturity", "rate", "yld", "redemption", "frequency", "basis")

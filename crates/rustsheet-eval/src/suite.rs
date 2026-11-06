@@ -89,6 +89,11 @@ pub struct SuiteManifest {
     /// Round-trip suites: the scenarios to run (SPEC-0033 D1). Only `R0` exists yet (T-4514 adds R1).
     #[serde(default = "default_scenarios")]
     pub scenarios: Vec<String>,
+    /// Round-trip suites: the cell suite of `eval/suites/` whose fetched cache holds the cases.
+    /// The suite takes that suite's `[fetch]` and cache directory, so it is fetched, skipped
+    /// while not fetched, and gated exactly as that suite is (T-4629).
+    #[serde(default)]
+    pub cases_of: Option<String>,
 }
 
 /// Pinned download of a suite too large or not redistributable to vendor.
@@ -281,10 +286,23 @@ impl Suite {
             if entry.file_name() != "suite.toml" {
                 continue;
             }
-            let suite = Self::load_manifest(entry.path(), &root.join("eval/suites"))?;
+            let mut suite = Self::load_manifest(entry.path(), &root.join("eval/suites"))?;
             let at = entry.path().display();
             if suite.manifest.kind != SuiteKind::Roundtrip {
                 bail!("{at}: suites under {ROUNDTRIP_DIR}/ must be of kind roundtrip");
+            }
+            if let Some(name) = suite.manifest.cases_of.clone() {
+                if suite.manifest.fetch.is_some() {
+                    bail!("{at}: a suite with cases_of takes that suite's [fetch]; give only one");
+                }
+                let Some(cells) = cell_suites.iter().find(|c| c.manifest.name == name) else {
+                    bail!("{at}: cases_of names {name}, which is no suite of eval/suites/");
+                };
+                let Some(fetch) = cells.manifest.fetch.clone() else {
+                    bail!("{at}: cases_of names {name}, which is not a fetched suite");
+                };
+                suite.manifest.fetch = Some(fetch);
+                suite.cache_dir.clone_from(&cells.cache_dir);
             }
             let unknown = |s: &&String| !ROUNDTRIP_SCENARIOS.contains(&s.as_str());
             if let Some(s) = suite.manifest.scenarios.iter().find(unknown) {
@@ -516,6 +534,46 @@ mod tests {
         assert!(spec("-oProxy=x", "ok").validate().is_err());
         assert!(spec("https://x.org/a", "../up").validate().is_err());
         assert!(spec("https://x.org/a", "/abs").validate().is_err());
+    }
+
+    #[test]
+    fn a_round_trip_suite_takes_the_fetch_and_cache_of_the_suite_its_cases_are_of() {
+        let root = std::env::temp_dir().join(format!("rs-cases-of-{}", std::process::id()));
+        let write = |rel: &str, text: &str| {
+            let path = root.join(rel);
+            std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+            std::fs::write(path, text).expect("write");
+        };
+        write(
+            "eval/suites/ext/suite.toml",
+            &format!("name = \"ext\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n[fetch]\nurl = \"https://x.org/a\"\nrev = \"{REV}\"\n"),
+        );
+        write(
+            "eval/suites/local/suite.toml",
+            "name = \"local\"\nkind = \"xlsx\"\nlicense = \"MIT\"\n",
+        );
+        let rt = |of: &str| {
+            write(
+                "eval/roundtrip/rt/suite.toml",
+                &format!(
+                    "name = \"rt\"\nkind = \"roundtrip\"\nlicense = \"MIT\"\ncases_of = \"{of}\"\n"
+                ),
+            );
+            Suite::load_roundtrip(&root)
+        };
+        let suites = rt("ext").expect("loads");
+        let cells = Suite::load_all(&root.join("eval/suites")).expect("cell suites");
+        let ext = cells
+            .iter()
+            .find(|c| c.manifest.name == "ext")
+            .expect("ext");
+        assert_eq!(suites[0].cache_dir, ext.cache_dir);
+        assert_eq!(suites[0].root(), ext.root());
+        assert_eq!(suites[0].fetch_state(), FetchState::NotFetched);
+        // A name that is no cell suite, or one that is not fetched, is refused.
+        assert!(rt("nope").is_err());
+        assert!(rt("local").is_err());
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

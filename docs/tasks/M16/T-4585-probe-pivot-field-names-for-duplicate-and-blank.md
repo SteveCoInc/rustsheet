@@ -3,7 +3,7 @@ id: T-4585
 title: "Probe pivot field names for duplicate and blank source headers"
 milestone: M16
 lane: research
-status: todo
+status: done
 priority: P2
 size: S
 tier: opus
@@ -17,8 +17,21 @@ docs/excel-semantics/pivots.md states, with a filled probe, how Excel names the 
 SPEC-0032 Refresh and T-4141 rebuild a cache from its source, and field names come from the header row. No probe shows Excel's renaming yet. Build a source whose cache the builder leaves for Excel to rebuild (refreshOnLoad), fill it with excel-graph, and read the saved `cacheField` names from the sidecar's `pivots` section (`cache_fields`). Context: MS-OI29500 18.10.1.3 (cacheField names are unique and case-insensitive).
 
 ## Acceptance criteria
-- [ ] A filled probe covers duplicate, blank and case-variant header names. pivots.md records each saved name, or the refusal, if Excel refuses the file.
-- [ ] `make check` green; reviewers approve.
+- [x] A filled probe covers duplicate, blank and case-variant header names. pivots.md records each saved name, or the refusal, if Excel refuses the file.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - The engine rename (T-4141).
+
+## Outcome
+probes/t4585-pivot-field-names (excel-graph, 2026-11-06) holds one builder-v2 pivot over the headers
+Region, Sales, `="Sales"`, `=""`, `="region"` and `="Sales"&""`. Excel saves the cache fields as Region,
+Sales, Sales2, Field4, region2 and Sales3:
+- a repeated name, compared case-insensitively, gets the next number from 2 and keeps its own casing;
+- an empty-text header (`=""`) becomes `Field4` in column 4 of a source starting at column A.
+
+Recorded in docs/excel-semantics/pivots.md. T-4627 owns the rest:
+- source position versus sheet column;
+- a truly empty cell;
+- constant duplicates;
+- collisions.

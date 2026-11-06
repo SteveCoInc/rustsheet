@@ -3,7 +3,7 @@ id: T-4574
 title: "DATEDIF, YEARFRAC and DAYS360 just below midnight at serials 59, 60 and 61 (the fictitious 1900-02-29): probe and match"
 milestone: M6
 lane: functions-date
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,12 +26,29 @@ DAYS360 at the bases around Excel's fictitious 1900-02-29 (serial 60), and the e
 - Excel-fidelity review MINOR on #3490.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe covers DATEDIF (units "d", "m", "y", "md", "ym", "yd"), YEARFRAC (bases 0 to 4) and
+- [x] An excel-graph probe covers DATEDIF (units "d", "m", "y", "md", "ym", "yd"), YEARFRAC (bases 0 to 4) and
   DAYS360 (both methods) with a start or end of 59, 60 or 61 minus 0.4 s and minus 2^-22+2^-33, against the integer
   controls.
-- [ ] dates.md records the result with cells.
-- [ ] The engine matches every probe cell (or each gap has a filed task).
-- [ ] `make check` green; reviewers approve.
+- [x] dates.md records the result with cells.
+- [x] The engine matches every probe cell (or each gap has a filed task).
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Negative WEEKNUM return types (T-4470).
+
+## Outcome
+- Probe `probes/t4574-feb29-near-midnight-date-args` (504 cells, excel-graph): DATEDIF (all six units, start and
+  end), YEARFRAC (bases 0-4, start and end) and DAYS360 (both methods, start and end) at N = 59, 60, 61 minus 0.4 s,
+  2^-22+2^-33, 0.6 s, `fl(N-0.5/86400)` and one ulp below it, against the integer controls.
+- Found: DATEDIF's "M", "Y", "MD", "YM" and "YD" read each date with YEAR's half-second carry, while "D" floors
+  (`DATEDIF(60-0.4/86400,425,"M")` is 11, from 1900-02-29; its "D" 366, from 1900-02-28). YEARFRAC basis 4 floors
+  like the other bases (it does not round to the second as DAYS360 does). DAYS360 already matched.
+- Review round 1 (excel-fidelity) added A20:F25: where floor and carry disagree, the floors decide a reversed pair's
+  `#NUM!` and the carried dates feed the units; a date that carries past 9999-12-31 is `#NUM!` for every unit, "D"
+  included.
+- Engine: `datedif_value` reads the calendar units through `carried_day`; `year_fraction_parts`'s basis 4 takes the
+  floored dates (the discount securities share it; no eval cell moved there). dates.md has the new entry
+  "DATEDIF's calendar units carry half a second; YEARFRAC floors on every basis (around serial 60)" and the
+  T-4454 entry is narrowed to DATEDIF's "D". The YEARFRAC Gate A docstring no longer says basis 4 rounds.
+- Eval delta: +504 passing probe cells (91 of them off on main: 73 DATEDIF, 18 YEARFRAC basis 4); no other
+  suite moved (`make eval-baseline`: 0 regressions, 0 fixed elsewhere).

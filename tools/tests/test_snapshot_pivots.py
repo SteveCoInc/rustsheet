@@ -68,3 +68,21 @@ def test_a_malformed_location_skips_that_pivot_only() -> None:
     snap = {"sheets": [{"name": "P", "cells": {}}], "pivots": [_pivot("nonsense"), _pivot("A1:A1")]}
     (kept,) = pivot_areas(snap)
     assert kept["location"] == "A1:A1"
+
+
+def test_cache_fields_keep_shared_item_types_and_flags() -> None:
+    # T-4612: the sidecar records each shared item's type (`<d>` apart from `<n>`) and the
+    # `<sharedItems>` flags exactly as the snapshot read them.
+    fields = [
+        {
+            "name": "K",
+            "shared_items": [{"t": "n", "v": "45000"}, {"t": "d", "v": "2023-03-15T00:00:00"}, {"t": "m"}],
+            "shared_flags": {"containsDate": "1", "containsSemiMixedTypes": "0"},
+        }
+    ]
+    snap: dict[str, Any] = {
+        "sheets": [{"name": "P", "cells": {}}],
+        "pivots": [_pivot("A3:A3", cache_fields=fields)],
+    }
+    (pivot,) = pivot_areas(snap)
+    assert pivot["cache_fields"] == fields

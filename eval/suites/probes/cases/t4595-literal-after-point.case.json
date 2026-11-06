@@ -1,0 +1,30 @@
+{
+ "format": "rustsheet-case/v1",
+ "description": "T-4595: a literal written right after a number section's decimal point prints after the point. Rows 1-4 are 0.|0, 0.\"x\"0, #.\\-#, 0.| on 1234567.891, -0.5, 0. Predictions committed before filling: row 1 \"1234567.|9\" \"-0.|5\" \"0.|0\"; row 2 \"1234567.x9\" \"-0.x5\" \"0.x0\"; row 3 \"1234567.-9\" \"-.-5\" \".-\"; row 4 \"1234568.|\" \"-1.|\" \"0.|\".",
+ "tags": [
+  "M10",
+  "probe",
+  "number-format",
+  "T-4595"
+ ],
+ "sheets": [
+  {
+   "name": "S",
+   "cells": {
+    "A1": "=TEXT(1234567.891,\"0.|0\")",
+    "B1": "=TEXT(-0.5,\"0.|0\")",
+    "C1": "=TEXT(0,\"0.|0\")",
+    "A2": "=TEXT(1234567.891,\"0.\"\"x\"\"0\")",
+    "B2": "=TEXT(-0.5,\"0.\"\"x\"\"0\")",
+    "C2": "=TEXT(0,\"0.\"\"x\"\"0\")",
+    "A3": "=TEXT(1234567.891,\"#.\\-#\")",
+    "B3": "=TEXT(-0.5,\"#.\\-#\")",
+    "C3": "=TEXT(0,\"#.\\-#\")",
+    "A4": "=TEXT(1234567.891,\"0.|\")",
+    "B4": "=TEXT(-0.5,\"0.|\")",
+    "C4": "=TEXT(0,\"0.|\")"
+   }
+  }
+ ],
+ "expected": {}
+}

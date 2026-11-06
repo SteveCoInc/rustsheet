@@ -3,7 +3,7 @@ id: T-4573
 title: "criteria.md T-4540 entry: say FALSE does not match the number 0, not that it matches nothing"
 milestone: M9
 lane: functions-criteria
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -26,3 +26,6 @@ claims only what probes/t4540-averageif-criteria-average-range shows about a FAL
 
 ## Out of scope
 -
+
+## Outcome
+The T-4540 entry now says FALSE does not match the number 0 (A1), citing H7:M7. Docs only; eval delta none.

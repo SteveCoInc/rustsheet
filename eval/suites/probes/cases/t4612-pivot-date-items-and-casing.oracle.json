@@ -1,0 +1,940 @@
+{
+ "format": "rustsheet-oracle/v1",
+ "pivots": [
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsBlank": "1",
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "EAST"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "EAST"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 2.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "PC1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "C1"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsBlank": "1",
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "PC2",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "C2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsBlank": "1",
+      "count": "2"
+     },
+     "shared_items": [
+      {
+       "t": "s",
+       "v": "East"
+      },
+      {
+       "t": "m"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "East"
+    },
+    "A5": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 3.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B5",
+   "name": "PC3",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "C3"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "4",
+      "maxDate": "1900-01-10T12:50:04",
+      "minDate": "2023-03-15T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2023-03-15T00:00:00"
+      },
+      {
+       "t": "d",
+       "v": "2023-03-16T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45000"
+      },
+      {
+       "t": "n",
+       "v": "45001"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 45000.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 45001.0
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PT1",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "T1"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "4",
+      "maxDate": "1899-12-31T03:45:03",
+      "minDate": "1899-12-30T06:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "1899-12-30T06:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1899-12-30T12:00:00"
+      },
+      {
+       "t": "n",
+       "v": "0.25"
+      },
+      {
+       "t": "n",
+       "v": "0.5"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 0.25
+    },
+    "A5": {
+     "t": "n",
+     "v": 0.5
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PT2",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "T2"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsNonDate": "0",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "4",
+      "maxDate": "1899-12-31T00:03:04",
+      "minDate": "1899-12-31T12:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "1899-12-31T12:00:00"
+      },
+      {
+       "t": "d",
+       "v": "1900-01-01T06:00:00"
+      },
+      {
+       "t": "n",
+       "v": "1.5"
+      },
+      {
+       "t": "n",
+       "v": "2.25"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 1.5
+    },
+    "A5": {
+     "t": "n",
+     "v": 2.25
+    },
+    "A6": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 2.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B6",
+   "name": "PT3",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "T3"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "count": "5",
+      "maxDate": "1900-01-10T12:50:04",
+      "minDate": "2023-03-15T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2023-03-15T00:00:00"
+      },
+      {
+       "t": "s",
+       "v": "x"
+      },
+      {
+       "t": "d",
+       "v": "2023-03-16T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45000"
+      },
+      {
+       "t": "n",
+       "v": "45001"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "s",
+     "v": "x"
+    },
+    "A5": {
+     "t": "n",
+     "v": 45000.0
+    },
+    "A6": {
+     "t": "n",
+     "v": 45001.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "PT4",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      3
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      4
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "T4"
+  },
+  {
+   "cache_fields": [
+    {
+     "name": "K",
+     "shared_flags": {
+      "containsDate": "1",
+      "containsMixedTypes": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "count": "3",
+      "maxDate": "1900-01-10T12:50:04",
+      "minDate": "2023-03-15T00:00:00"
+     },
+     "shared_items": [
+      {
+       "t": "d",
+       "v": "2023-03-15T00:00:00"
+      },
+      {
+       "t": "n",
+       "v": "45000"
+      },
+      {
+       "t": "n",
+       "v": "45001"
+      }
+     ]
+    },
+    {
+     "name": "V",
+     "shared_flags": {
+      "containsInteger": "1",
+      "containsNumber": "1",
+      "containsSemiMixedTypes": "0",
+      "containsString": "0",
+      "maxValue": "1",
+      "minValue": "1"
+     }
+    }
+   ],
+   "cells": {
+    "A3": {
+     "t": "s",
+     "v": "Row Labels"
+    },
+    "A4": {
+     "t": "n",
+     "v": 45000.0
+    },
+    "A5": {
+     "t": "n",
+     "v": 45001.0
+    },
+    "A6": {
+     "t": "n",
+     "v": 45000.0
+    },
+    "A7": {
+     "t": "s",
+     "v": "Grand Total"
+    },
+    "B3": {
+     "t": "s",
+     "v": "Count of V"
+    },
+    "B4": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B5": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B6": {
+     "t": "n",
+     "v": 1.0
+    },
+    "B7": {
+     "t": "n",
+     "v": 3.0
+    }
+   },
+   "col_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": []
+    }
+   ],
+   "col_page_count": 0,
+   "first_data_col": 1,
+   "first_data_row": 1,
+   "first_header_row": 1,
+   "location": "A3:B7",
+   "name": "PT5",
+   "row_items": [
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      0
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      1
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "x": [
+      2
+     ]
+    },
+    {
+     "i": 0,
+     "r": 0,
+     "t": "grand",
+     "x": [
+      0
+     ]
+    }
+   ],
+   "row_page_count": 0,
+   "sheet": "T5"
+  }
+ ],
+ "sheets": {
+  "C1": {},
+  "C2": {},
+  "C3": {},
+  "DC1": {
+   "A2": {
+    "t": "s",
+    "v": "EAST"
+   }
+  },
+  "DC2": {
+   "A2": {
+    "t": "s",
+    "v": "East"
+   }
+  },
+  "DC3": {
+   "A2": {
+    "t": "s",
+    "v": "East"
+   }
+  },
+  "DT1": {},
+  "DT2": {},
+  "DT3": {},
+  "DT4": {},
+  "DT5": {},
+  "Q": {
+   "A1": {
+    "t": "n",
+    "v": 2.0
+   }
+  },
+  "T1": {},
+  "T2": {},
+  "T3": {},
+  "T4": {},
+  "T5": {}
+ },
+ "source": {
+  "application": "Excel for the web (Graph)",
+  "input_sha256": "4e0999e251bda0b3ba699ba0d9be00260893d473dd9605caeb338f22085202db",
+  "kind": "excel-graph",
+  "produced_at": "2026-11-06T17:45:39+00:00",
+  "version": null,
+  "workbook_name": "e7fdba5156c02693a21611ff921a98c3d8be6ec593c2f8c0329eaae01acbb118.xlsx"
+ }
+}

@@ -1,8 +1,8 @@
 name = "roundtrip-calipers"
 description = "Round-trip fidelity (SPEC-0033) of Calipers' Excel goldens and the authored round-trip inputs, read from the calipers suite's fetched cache"
 kind = "roundtrip"
-# The calipers cell suite's cache (`rustsheet-eval fetch --suite calipers`); skipped while absent.
-root = "../../.cache/suites/calipers"
+# The calipers cell suite's fetched cache: fetched, skipped while not fetched, and gated as that suite is (T-4629).
+cases_of = "calipers"
 # Every Excel golden, and the authored `roundtrip/*/init.xlsx` inputs Excel's goldens were saved from.
 include = ["**/golden.xlsx", "roundtrip/**/init.xlsx"]
 # `_disabled/`: hostile files Calipers itself never loads.

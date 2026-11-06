@@ -205,6 +205,10 @@ The lbf factor is 444822.16152605
 (`CONVERT(1,"lbf","dyn")` is exactly that).
 Open gap: `CONVERT(1,"m","ft")` is 3.2808398950131235 in Excel and one ulp low in ours (probes/scalar-lift-open-a,
 probes/eng-convert-boolean-unit A7; T-2046, T-2047).
+Open gap: `CONVERT(255,"mi","km")` is 410.38272 and `CONVERT(255,"in","cm")` 647.7 in Excel for the web (the desktop
+calipers formulas_engineering golden agrees, D26:J27), and the engine is one ulp off (410.38272000000006,
+647.6999999999999); the negatives mirror them (probes/t4534-bessel-convert-web-values B1:B4, D1:D4, excel-graph,
+2026-11-06; T-4630).
 Overflow: `value * F_from` is not allowed to overflow when the answer is representable:
 `CONVERT(1E290,"m2","m2")` is 1E+290, `CONVERT(1E300,"ha","m2")` 1.0000000000000001E+304,
 `CONVERT(1E302,"J","J")` 1E+302. The engine divides first (`value / F_to * F_from`) when the
@@ -276,19 +280,24 @@ Status: VERIFIED
 Implemented in: `parse_unit` and `fn_convert` in functions/engineering/convert.rs (T-3817)
 Tasks: T-3817, T-3861
 
-## CONVERT from a micro-prefixed Kelvin to Réaumur drops the prefix (T-4085)
-Rule: with a micro prefix on a Kelvin source and `Reau` as the target, Excel converts the unprefixed number:
+## CONVERT drops a Kelvin prefix toward Rank and Reau (T-4085, T-4615)
+Rule: of the temperature units only `K` and `kel` take a decimal prefix, and Excel ignores that prefix in three
+directions: from a prefixed Kelvin to `Rank` or `Reau`, and from `Reau` to a prefixed Kelvin. The written number is
+converted as if the unit were plain `K`. From `Rank` to a prefixed Kelvin, and between a prefixed Kelvin and `C` or `F`
+in either direction, the prefix applies as "CONVERT temperature" reads it (the value is scaled by the source prefix
+before the formula and the result divided by the target prefix after it).
+Examples: `CONVERT(1000,"YK","Rank")` and `CONVERT(1000,"yK","Rank")` are both 1800, `CONVERT(1000,"mkel","Reau")`
+581.48, `CONVERT(1000,"Reau","YK")` 1523.15, but `CONVERT(1000,"Rank","YK")` is 5.555555555555556E-22 and
+`CONVERT(1000,"mK","C")` -272.15. The asymmetry between Rank to K (kept) and K to Rank (dropped) holds for every one of
+the 21 decimal prefixes, on `K` and `kel` alike. T-4085's Gate A cells are this rule:
 `CONVERT(-56.8944444765809,"ukel","Reau")` is -264.03555558126476 and `CONVERT(-68268277991730.8,"uK","Reau")`
--54614622393603.16, which are `(v - 273.15)*0.8` of the written v, not of v × 1E-6 (-218.52004551555558 and
--54614840.91338464). The same table applies a prefix to the other targets it drew: `CONVERT(-101.399620892439,"Ykel","C")`
-is -1.01399620892439E+26 and `CONVERT(-1.19864311078515E-11,"F","hkel")` 2.5537222222221554, as "CONVERT temperature"
-reads them. Only these two cells show the drop; the mechanism (whether any prefix is dropped toward `Reau`, or only
-`u`, and what a prefixed `Reau` side or `Rank` does) is unprobed.
-Evidence: accuracy/CONVERT/s1 Calc!A65, A81 (Excel's values), A2 to A200 for the other temperature cells
-(excel-graph, 2026-11-06, T-4085).
-Ours: scales by the prefix first, so both cells are off by the prefix. Gate A does not fail on them (the engine is
-inside the envelope through the math), but Excel is the target (decision 0300): T-4615 probes the rule and matches it.
-Status: VERIFIED (excel-graph, the two cells; the rule beyond them is unprobed)
+-54614622393603.16, `(v - 273.15)*0.8` of the written v. The math, which scales by the prefix, differs; Excel is the
+target (decision 0300).
+Evidence: probes/t4615-convert-prefixed-kelvin (346 cells: the 21 decimal prefixes on `K` and `kel` against `C`, `F`,
+`Rank` and `Reau` in both directions at 1000, plus S!A23:J23 at other values), excel-graph 2026-11-06;
+accuracy/CONVERT/s1 Calc!A65, A81 (T-4085).
+Ours: follows it (`convert_of`'s temperature branch, T-4615).
+Status: VERIFIED (excel-graph)
 Tasks: T-4085, T-4615
 
 ## Gate A tables for IMABS, IMARGUMENT and CONVERT (T-4085)
@@ -1376,7 +1385,13 @@ show about Excel. Each item names the task that matches it. "Ours" is what RustS
   excel-graph, 2026-11-02): `IMREAL("1.2345678901234567+2.2345678901234567i")` is 1.23456789012345 and its IMSUM
   "1.23456789012345+2.23456789012345i", "0.30000000000000004" is 0.3, "123456789012345678" 1.23456789012345E+17 and
   "9007199254740993+9007199254740993i" "9007199254740990+9007199254740990i" (matched since T-3644; the lexer-based
-  reader before it kept the 17-digit double). Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
+  reader before it kept the 17-digit double). Negative parts are cut too, in either position (T-4593, from existing
+  excel-graph cells): `IMCSCH("-354.00000000000006+i")` and `IMCSCH("-354.0000000000005+i")` are the same text
+  (probes/t3912-imcsch-band-edges A40, A42), and `IMSECH("-1.000000000000001-1.000000000000001i")` equals
+  `IMSECH("-1-1i")` (probes/t3643-imsech-grid Q17, P16); over the IM*SINH/COSH/SIN/COS/CSCH/SECH cells of the suites
+  whose parts the cut changes, a correctly rounded reference matches Excel on 34 cells only when it reads the cut
+  parts and on none only when it reads the 17-digit doubles. Exponent-form parts and `j` texts past 15 digits have
+  no IM* cell; they are taken to follow VALUE. Unprobed (ours in brackets): a lone sign after spaces ("1+ i", " i") [1, as "i"];
   a tab before the suffix ("2"&tab&"i") [`#NUM!`]; year-less dates in a part ("1/2+2i"; no case keeps one, as its
   value moves with the current year) [read as VALUE reads it].
 - **Large parts in plain notation.** An IM* part is written in plain notation up to a decimal exponent of 20, zero-padded
@@ -1411,7 +1426,7 @@ Evidence: gen-m9 cases of seeds 2258, 22580 and 22581 (excel-graph, 2026-10-22/2
 Excel cell of eval/suites/gen-m9 with its case id in the owning task. The engine-side formulas (SIN, (EXP(4)-EXP(-4))/2,
 COS(ATAN2(-1,0)/2), ln|z|/0.693147180559945) were evaluated in RustSheet's own worksheet functions, which match Excel.
 Status: VERIFIED (excel-graph) for the observed values. The mechanisms (IM trig of a real as SIN/COS/TAN, exp-based sinh/cosh, IMSQRT through COS and ATAN2) are fitted against RustSheet's own kernels and reproduce every cited cell; T-2534, T-2535 and T-2536 re-confirm them on the cells. The IMLOG2 and IMCSC formulations are UNVERIFIED candidates.
-Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966
+Tasks: T-2258, T-2532 to T-2551, T-2420, T-2421, T-2335, T-2389, T-2044, T-2117, T-1966, T-4593
 
 ## Leading plus in IM*, 11-digit OCT/HEX text and booleans in OCT2*/HEX2* (T-2420)
 Rule: IM* read one leading `+` like a leading `-`: `IMABS("+i")` 1, `IMABS("+3+4i")` 5, `IMABS("+4i")` 4, `IMSUB("+i","1")` "-1+i", `IMDIV("2i","+i")` "2"; a second sign (`"++i"`, `"+-i"`, `"-+i"`, `"1++i"`) is `#NUM!` (probes/eng-leading-plus-oct-bool A1:A26).
@@ -1570,8 +1585,10 @@ Each order's last answering x and first `#NUM!` x:
   to 4 ulps all ask 4.4501477170144E-308 (below 2^-1021, `#NUM!`) and plus 8 and 16 ulps ask 4.45014771701441E-308
   (above it; K1 = 2.2471164185778914E+307). Read as full doubles, the cells would suggest a cut 5 to 8 ulps above
   2^-1021.
-- `x/2` going subnormal is the mechanism these cells fit. x = 2^-1021 itself, reachable only as a computed value, is
-  unprobed (T-4552). A subnormal x is not a target: excel-graph refuses a workbook holding a subnormal literal ("BESSELY
+- `x/2` going subnormal is the mechanism these cells fit, and x = 2^-1021 itself answers: `BESSELK(2^-1021,0)` is
+  707.8192028722641 and order 1 2.247116418577895E+307, built as `2^-1021` or `2^-1000/2^21` (both exactly 2^-1021:
+  `2^-1021*2^1021` is 1). So the test is `x < 2^-1021` (probes/t4552-bessel-tiny-x-cut A1:A5, B1:B4, T-4552). A
+  subnormal x is not a target: excel-graph refuses a workbook holding a subnormal literal ("BESSELY
   at a tiny x and a small order").
 - Order 0 from 1E-10 to 1E-307 gives `-ln(x/2) I0(x) + poly` (`BESSELK(1E-307,0)` = 707.009555069732).
 RustSheet matches: `bessel_k` returns `#NUM!` below `2 * f64::MIN_POSITIVE` and otherwise runs the double recurrence.
@@ -1581,6 +1598,21 @@ to 7 at decade, 1-digit and 4-digit steps around each cut), probes/t4459-besselk
 Status: VERIFIED (excel-graph)
 Implemented in: functions/engineering/transcendental/bessel_k.rs (`bessel_k`)
 Tasks: T-4459, T-4552
+
+## BESSELJ, BESSELI and BESSELY at the bottom of the normal range (T-4552)
+Rule: BESSELJ, BESSELI and BESSELY of orders 0 and 1 are never `#NUM!` at a tiny normal x (unlike BESSELK, whose cut is
+`x < 2^-1021`), but BESSELJ and BESSELI return 0 for a subnormal result. Order 1 is about x/2 there, so it is 0 once
+x/2 drops below 2^-1022: `BESSELI(4.4501477170144E-308,1)` (x/2 = 2.2250738585072E-308, just below 2^-1022) is 0, but
+`BESSELI(4.45014771701441E-308,1)` is 2.225073858507205E-308 and `BESSELI(2^-1021,1)` exactly 2^-1022;
+`BESSELJ(2^-1022,1)` and `BESSELI(2^-1022,1)` are 0. BESSELJ's order 1 stays a little above x/2 (`BESSELJ(4.4501477170144E-308,1)`
+is 2.225073858845438E-308, NR's rational form), so it keeps its value at 4.4501477170144E-308. Order 0 is
+1.00000000283141 (J) and 1 (I) throughout; BESSELY order 0 is -450.6117008295493 at 2^-1021 and -451.0529720308492 at
+2^-1022, order 1 -1.430558742052516E+307 and -2.861117484105032E+307.
+Evidence: probes/t4552-bessel-tiny-x-cut C1:E8 (excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/bessel.rs (`fn_besselj` and `fn_besseli` flush a subnormal result with
+`flush_subnormal`, as BESSELK and ERFC do; ours returned the subnormal before T-4552).
+Tasks: T-4552
 
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.

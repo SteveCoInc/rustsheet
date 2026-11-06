@@ -248,20 +248,21 @@ mod tests {
             .iter()
             .map(|((case, key), e)| format!("{case}!{key} {} {}", e.decision, e.task))
             .collect();
-        // The earlier rows; their M14 owner T-1075 was dropped (decision 0266), so decision 0308
-        // re-owns them to T-4534.
+        // The earlier rows; their M14 owner T-1075 was dropped (decision 0266), and decision 0324
+        // re-owns them to T-4373 and adds J1328 (Excel 15's #VALUE!, Microsoft 365's 0).
         assert_eq!(
             cells,
             [
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-4534",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-4534",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-4534",
-                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-4534",
-                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-4534",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-4534",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-4534",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-4534",
-                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-4534",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL12 0188 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!AL26 0188 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!K25 0196 T-4373",
+                "ironcalc-calc/ENGINEERING/COMPLEXs.xlsx!Sheet1!N6 0188 T-4373",
+                "ironcalc-calc/FINANCIAL/IRR.xlsx!Two Values!C4 0196 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!G936 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!H936 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J1328 0324 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!J136 0134 T-4373",
+                "poi/FormulaEvalTestData_Copy.xlsx!EverythingTests!K936 0134 T-4373",
             ]
         );
     }

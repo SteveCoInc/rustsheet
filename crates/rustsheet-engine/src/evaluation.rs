@@ -550,6 +550,8 @@ impl Model {
         // dynamic links (HYPERLINK) are rebuilt on every evaluation
         self.links.clear();
         self.clear_variable_stack();
+        // No value carries the ERROR.TYPE/CELL mark yet (`number_mark.rs`).
+        self.number_mark = crate::number_mark::NumberMark::default();
         self.clear_lambdas();
         self.begin_pass_budget();
 
