@@ -317,8 +317,10 @@ timevalue-component-limits and timevalue-ampm-limits (oracle: excel-graph, 2026-
   value-clock-text C14, C34-C37). Only the space character U+0020 counts, for trimming and before
   an AM/PM suffix: a tab, a no-break space (U+00A0) or an ideographic space (U+3000) is #VALUE! in
   all three (`"10:00\t"`, `"10:00\u00a0"`, `"10:00\u00a0AM"`, `"\u300010:00"`, and
-  `VALUE("1/2/2020\u00a0")`; value-clock-text rows 38, 42-45). Unprobed: such characters inside the fraction of `H:M.f:S` text (inferred from this rule) and between
-  the date and the clock of date-clock text.
+  `VALUE("1/2/2020\u00a0")`; value-clock-text rows 38, 42-45). A tab, no-break space or ideographic space before, inside or after the fraction of `H:M.f:S` and
+  `H:M:S.f` text (`"10:11:12"&CHAR(9)&".5"`, `"10:11.5:12"&UNICHAR(160)`) is #VALUE! in VALUE, TIMEVALUE and `0+text`, and so is such a character between
+  the date and the clock (`"1/2/2020"&CHAR(9)&"10:00"`, also DATEVALUE), while two ordinary spaces there parse
+  (43832.416666666664; probes/t4602-clock-text-colon-am-pm-and-spaces A26-A95, T-4602).
 - **VALUE of clock text** is the coercion serial of the trimmed text, unwrapped like coercion
   (`VALUE("25:00")` = 1.0416666666666667, `VALUE("24:00")` = 1, `VALUE("10:11.5")` =
   0.007077546296296296, `VALUE("1/2/2020 6 PM")` = 43832.75, `VALUE("Jan 2, 2020 10:00")` =
@@ -373,7 +375,9 @@ timevalue-component-limits and timevalue-ampm-limits (oracle: excel-graph, 2026-
   416.625, `VALUE("12: ")` is 0.5, `VALUE("12:30:45:")` is 0.5213541666666667 and `VALUE("2024-01-01 12:")` is
   45292.5; `"10000:"`, `"12::"`, `"1.5:"`, `"-12:"`, `":30"`, `"12:PM"` and `"12: PM"` (a bare hour, `:`, then an
   AM/PM suffix) are #VALUE! (probes/t2352-time-text-trailing-colon, excel-graph, 2026-10-22, T-2352;
-  implemented in `parse_clock_text`). Unprobed: `H:M:` before an AM/PM suffix (`"10:30: PM"`; the engine reads it as 10:30 PM).
+  implemented in `parse_clock_text`). `H:M:` before an AM/PM suffix is #VALUE! as well: `"10:30: PM"`, `"10:30:PM"`, `"10:30:  PM"`,
+  `"10:30:45: PM"`, `"10:30: AM"`, `"12:00: AM"`, `"13:30: PM"` and `"1/2/2020 10:30: PM"` through VALUE, TIMEVALUE, `0+text` and
+  DATEVALUE (probes/t4602-clock-text-colon-am-pm-and-spaces A1-A25, excel-graph, 2026-11-06, T-4602).
   Evidence for these bullets: probes/clock-text-oddities, clock-text-oddities2 to -7 (excel-graph, 2026-10-06, T-0153), TIMEVALUE, `0+text` and VALUE agree.
 - **DATEVALUE of a bare clock is the whole days of its serial**, in both date systems: `DATEVALUE("10:00")`,
   `"10 AM"`, `"10 A."`, `"10 P."`, `"10:00:30"`, `"12:00 AM"` and `"0:00"` are 0, and `"25:00"` and `"24:00"` are 1
