@@ -3,7 +3,7 @@ id: T-4428
 title: "PIVOTBY relative_to 3: a parent column subtotal no record reached holds every record of the line"
 milestone: M7
 lane: engine
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: sonnet
