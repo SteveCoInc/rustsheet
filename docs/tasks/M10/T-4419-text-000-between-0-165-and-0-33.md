@@ -3,7 +3,7 @@ id: T-4419
 title: "TEXT .000 between 0.165 and 0.33 s: which half-ulp ties of the 2^-72-day offset Excel rounds up"
 milestone: M10
 lane: functions-text
-status: todo
+status: in-progress
 priority: P3
 size: M
 tier: opus
