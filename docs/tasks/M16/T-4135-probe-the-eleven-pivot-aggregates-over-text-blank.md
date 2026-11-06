@@ -42,5 +42,5 @@ over six value fields, and an errorCaption pivot. Recorded in docs/excel-semanti
 - **errorCaption:** replaces every error value, `#DIV/0!` included.
 
 **Left open:** T-4589 and T-4614 showed that EC's Count grand totals carry a real error when the data
-fields mix aggregates; the caption only displays it. The Sum order across a column field, StdDev and Var totals are settled by T-4616 (Sum alone sums the cells; beside Average it accumulates the records); what remains is T-4634's.
+fields mix aggregates; the caption only displays it. The Sum order across a column field, StdDev and Var totals are settled by T-4616 (Sum alone sums the cells; beside Average it accumulates the records); T-4634 settled the mixes and the grand totals; what remains is T-4678's.
 

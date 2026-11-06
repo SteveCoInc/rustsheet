@@ -22,7 +22,7 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::expressions::token::get_error_by_english_name;
-use crate::pivot::probe_cases::{address, probe_pivot, read};
+use crate::pivot::probe_cases::{address, probe_pivot, read, T4634_SHEETS};
 use crate::pivot::{compute, lay_out, MAX_PIVOT_WORK};
 
 fn rendered(table: &PivotTable, cache: &PivotCache) -> HashMap<String, PivotCell> {
@@ -173,6 +173,7 @@ fn the_item_and_aggregate_probes_cells_are_excels() {
             "I3", "I4", "M1", "M2", "M3",
         ],
     );
+    check_all("t4634-pivot-total-order-4", T4634_SHEETS);
 }
 
 #[test]

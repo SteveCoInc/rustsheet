@@ -69,12 +69,13 @@ from typing import Any
 
 import mpmath
 
-from rustsheet_tools.accuracy import composite, defs, literal
+from rustsheet_tools.accuracy import composite, defs, fingerprint, literal
 from rustsheet_tools.accuracy.model import REGISTRY, Definition, NoValueError, Param, Unfit
 from rustsheet_tools.accuracy.tables import (
     DIGITS,
     DPS,
     MATH_FORMAT,
+    VERSION,
     DroppedError,
     MathValue,
     compute,
@@ -145,6 +146,8 @@ class CaseMath:
     skipped: dict[str, int] = field(default_factory=dict)  # reason → count
     # The candidates the generator dropped: sheet → A1 → {"f", "why"}, written to the sidecar.
     dropped: dict[str, dict[str, dict[str, str]]] = field(default_factory=dict)
+    # What the values were computed from (`fingerprint.fingerprints`), written to the sidecar's `source`.
+    inputs: dict[str, Any] = field(default_factory=dict)
 
     def skip(self, reason: str) -> None:
         """Counts one candidate cell left without a math value."""
@@ -457,7 +460,9 @@ def _range_for_literal(definition: Definition, texts: list[str]) -> bool:
 def case_math(case_id: str, case_path: Path, sidecar: Path) -> CaseMath:
     """The math cells of one spec case (see the module doc for what is skipped)."""
     out = CaseMath(case_id)
-    for c in candidates(case_path, sidecar):
+    found = candidates(case_path, sidecar)
+    out.inputs = fingerprint.fingerprints(found)
+    for c in found:
         if isinstance(c.args, str):
             out.skip(c.args)
             continue
@@ -486,7 +491,7 @@ def sidecar_bytes(case_path: Path, math: CaseMath) -> bytes:
     """The math sidecar for `math`, keyed to the case file's hash."""
     sheets = {s: dict(sorted(c.items())) for s, c in sorted(math.cells.items())}
     dropped = {s: dict(sorted(c.items())) for s, c in sorted(math.dropped.items())}
-    return math_sidecar_bytes(case_path.read_bytes(), sheets, skipped=dropped)
+    return math_sidecar_bytes(case_path.read_bytes(), sheets, skipped=dropped, inputs=math.inputs)
 
 
 def _pool(workers: int | None = None) -> ProcessPoolExecutor:
@@ -538,7 +543,9 @@ def _spec_entries(suite: str) -> list[dict[str, Any]]:
 def check_case(case_id: str, case_path: Path, sidecar: Path) -> list[str]:
     """Why the case's math sidecar is not what `math` would write for its cells, without running
     mpmath: a candidate cell the sidecar neither holds nor lists as skipped by the generator, or a
-    sidecar entry whose `f` is not the cell's formula (or whose cell is no candidate any more)."""
+    sidecar entry whose `f` is not the cell's formula (or whose cell is no candidate any more), or
+    values computed by other code or from other arguments than the current ones would give
+    (`stale_inputs`, T-4231)."""
     path = math_path(sidecar)
     data: dict[str, Any] = {}
     if path.exists():
@@ -553,7 +560,8 @@ def check_case(case_id: str, case_path: Path, sidecar: Path) -> list[str]:
             for a1, cell in cells.items():
                 held[(sheet, a1)] = cell.get("f") if isinstance(cell, dict) else None
     problems: list[str] = []
-    wanted = {(c.sheet, c.a1): c.text for c in candidates(case_path, sidecar) if not isinstance(c.args, str)}
+    found = candidates(case_path, sidecar)
+    wanted = {(c.sheet, c.a1): c.text for c in found if not isinstance(c.args, str)}
     for (sheet, a1), text in sorted(wanted.items()):
         if (sheet, a1) not in held:
             problems.append(f"{case_id}: {sheet}!{a1} {text} has no math value and is not listed as skipped")
@@ -562,7 +570,31 @@ def check_case(case_id: str, case_path: Path, sidecar: Path) -> list[str]:
             problems.append(
                 f"{case_id}: {sheet}!{a1} math sidecar entry {f} is stale (the cell is {wanted.get((sheet, a1))})"
             )
+    if path.exists():
+        # a changed formula also changes the argument fingerprint: the cell line above says it already
+        inputs = stale_inputs(data.get("source") or {}, found, arguments=not problems)
+        problems += [f"{case_id}: {why}" for why in inputs]
     return problems
+
+
+def stale_inputs(source: dict[str, Any], found: list[Candidate], *, arguments: bool = True) -> list[str]:
+    """Why a sidecar's `source` says its values came from other code or other arguments than
+    `found` would give now (`fingerprint`): another generator version, a definition whose code
+    changed (named, to regenerate with `--function`), or, with `arguments`, other parsed arguments."""
+    if str(source.get("version")) != VERSION:
+        return [f"math sidecar version {source.get('version')} is not the generator's {VERSION}"]
+    now = fingerprint.fingerprints(found)
+    held = source.get("definitions")
+    if not isinstance(held, dict) or "arguments_sha256" not in source:
+        return ["math sidecar has no input fingerprints (written before T-4231)"]
+    out = [
+        f"math values of {name} were computed by other code (regenerate with --function {name})"
+        for name, digest in now["definitions"].items()
+        if held.get(name) != digest
+    ]
+    if arguments and source["arguments_sha256"] != now["arguments_sha256"]:
+        out.append("math values were computed from other arguments than the argument reader gives now")
+    return out
 
 
 def _check_job(entry: dict[str, Any]) -> list[str]:
