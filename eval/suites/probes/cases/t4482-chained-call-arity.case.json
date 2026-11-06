@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4482: chained LAMBDA calls whose later or earlier link has too few, too many or no arguments (rows 1-9; row 10 the right count, a control). `MYFN` = `=LAMBDA(x,LAMBDA(y,x*y))`. Row r holds X: 1 LAMBDA(x,LAMBDA(y,x+y))(1)(), 2 LAMBDA(x,LAMBDA(y,x+y))(1)(2,3), 3 LAMBDA(x,LAMBDA(y,x+y))(1,2)(3), 4 LAMBDA(x,LAMBDA(y,x+y))()(3), 5 LAMBDA(x,LAMBDA(y,x+y))(1/0)(), 6 LAMBDA(x,LAMBDA(y,x+y))(1)(NA(),2), 7 LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)()), 8 MYFN(3)(4,5), 9 MYFN(3)(), 10 LAMBDA(x,LAMBDA(y,x+y))(1)(2). Columns: A ERROR.TYPE(X), B IFERROR(X,\"e\"), C ISERROR(X), D TEXTJOIN(\",\",FALSE,MAP({1;2},LAMBDA(v,ERROR.TYPE(X)))); E the bare X, unscored (not in `check`) in case the oracle decodes it.",
+  "description": "T-4482: chained LAMBDA calls whose later or earlier link has too few, too many or no arguments (rows 1-9; row 10 the right count, a control). `MYFN` = `=LAMBDA(x,LAMBDA(y,x*y))`. Row r holds X: 1 LAMBDA(x,LAMBDA(y,x+y))(1)(), 2 LAMBDA(x,LAMBDA(y,x+y))(1)(2,3), 3 LAMBDA(x,LAMBDA(y,x+y))(1,2)(3), 4 LAMBDA(x,LAMBDA(y,x+y))()(3), 5 LAMBDA(x,LAMBDA(y,x+y))(1/0)(), 6 LAMBDA(x,LAMBDA(y,x+y))(1)(NA(),2), 7 LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)()), 8 MYFN(3)(4,5), 9 MYFN(3)(), 10 LAMBDA(x,LAMBDA(y,x+y))(1)(2). Columns: A ERROR.TYPE(X), B IFERROR(X,\"e\"), C ISERROR(X), D TEXTJOIN(\",\",FALSE,MAP({1;2},LAMBDA(v,ERROR.TYPE(X)))); E the bare X (scored: excel-graph decodes it).",
   "tags": [
     "M7",
     "lambda",
@@ -107,6 +107,16 @@
     "Sheet1!A10",
     "Sheet1!B10",
     "Sheet1!C10",
-    "Sheet1!D10"
+    "Sheet1!D10",
+    "Sheet1!E1",
+    "Sheet1!E2",
+    "Sheet1!E3",
+    "Sheet1!E4",
+    "Sheet1!E5",
+    "Sheet1!E6",
+    "Sheet1!E7",
+    "Sheet1!E8",
+    "Sheet1!E9",
+    "Sheet1!E10"
   ]
 }

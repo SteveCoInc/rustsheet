@@ -1,6 +1,6 @@
 {
   "format": "rustsheet-case/v1",
-  "description": "T-4482: a chained LAMBDA call whose later link has an optional parameter: 1 given the required one only, 2 none (too few, not omitted), 3 both. Its own case because Excel for the web may refuse a workbook with an optional parameter (T-1224). Row r holds X: 1 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2), 2 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(), 3 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2,3). Columns: A ERROR.TYPE(X), B IFERROR(X,\"e\"), C ISERROR(X), D TEXTJOIN(\",\",FALSE,MAP({1;2},LAMBDA(v,ERROR.TYPE(X)))); E the bare X, unscored (not in `check`) in case the oracle decodes it.",
+  "description": "T-4482: a chained LAMBDA call whose later link has an optional parameter: 1 given the required one only, 2 none (too few, not omitted), 3 both. Its own case because Excel for the web may refuse a workbook with an optional parameter (T-1224). Row r holds X: 1 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2), 2 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(), 3 LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2,3). Columns: A ERROR.TYPE(X), B IFERROR(X,\"e\"), C ISERROR(X), D TEXTJOIN(\",\",FALSE,MAP({1;2},LAMBDA(v,ERROR.TYPE(X)))); E the bare X (scored: excel-graph decodes it).",
   "tags": [
     "M7",
     "lambda",
@@ -41,6 +41,9 @@
     "Sheet1!A3",
     "Sheet1!B3",
     "Sheet1!C3",
-    "Sheet1!D3"
+    "Sheet1!D3",
+    "Sheet1!E1",
+    "Sheet1!E2",
+    "Sheet1!E3"
   ]
 }

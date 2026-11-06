@@ -3,7 +3,7 @@ id: T-4482
 title: "Chained LAMBDA calls with the wrong argument count at a later link: LAMBDA(x,LAMBDA(y,x+y))(1)(), (1)(2,3) and an outer link with too many, probe and match"
 milestone: M7
 lane: engine
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: opus
@@ -42,15 +42,30 @@ excel-graph.
 - Write the engine's values as predictions before the fill (docs/research/t4482/).
 
 ## Acceptance criteria
-- [ ] probes/t4482-chained-call-arity (excel-graph, canary-verified) covers every loadable form in Context through
+- [x] probes/t4482-chained-call-arity (excel-graph, canary-verified) covers every loadable form in Context through
       the wrappers. Its predictions are committed before the fill, and each refused form is named in the Outcome.
-- [ ] Every scored cell passes, or each one that does not is recorded in references.md and owned by a filed task
+- [x] Every scored cell passes, or each one that does not is recorded in references.md and owned by a filed task
       named in the Outcome.
-- [ ] references.md: "gives an error the oracle could not decode (unprobed)" is replaced by the evidenced rule, with
+- [x] references.md: "gives an error the oracle could not decode (unprobed)" is replaced by the evidenced rule, with
       cells cited. A unit test pins each wrong-count link.
-- [ ] No regressions in any baseline; the chained-calls-* and let-name-call-forms cases still pass; `make check`
+- [x] No regressions in any baseline; the chained-calls-* and let-name-call-forms cases still pass; `make check`
       green; reviewers approve.
 
 ## Out of scope
 - Chained calls of built-ins (`IF(TRUE,LAMBDA(..))(3)`, T-2405) and calls of non-LAMBDA values (`LET(f,{1,2},f(2))`).
 - Decoding the rich error type in the oracle client (harness lane).
+
+## Outcome
+- Probes probes/t4482-chained-call-arity (10 forms, 50 cells) and probes/t4482-chained-call-arity-optional (3 forms, 15
+  cells), filled on excel-graph 2026-11-06 (canary-verified fill). Excel for the web loaded both workbooks, the
+  optional-parameter one included, so no form was refused. The engine's predictions
+  (docs/research/t4482/predictions.md) were committed before the fill.
+- Excel: a wrong argument count at any link is `#VALUE!` (ERROR.TYPE 3, caught by IFERROR, ISERROR and inside MAP). That covers a
+  later link with none or too many, an outer link with too many or none, a LET name and a defined name. The count wins over an error
+  argument (`(1/0)()` and `(1)(NA(),2)` are `#VALUE!`). An optional parameter at a later link may be omitted
+  (`..(1)(2)` is 3), but `..(1)()` is `#VALUE!`. The bare cells decode as `#VALUE!`, so column E is scored too.
+- Engine: already matched every cell (65 of 65), so no code change was needed. references.md replaces "an error the oracle
+  could not decode (unprobed)" with the rule and its cells. Unit test
+  `a_chained_call_with_a_wrong_count_at_a_link_is_value_error` pins each link.
+- Eval delta: probes +2 cases, all passing; 0 regressions.
+- Also files T-4596 (MINORs from the #3610 T-4469 review).
