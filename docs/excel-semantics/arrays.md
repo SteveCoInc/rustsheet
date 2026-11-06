@@ -824,6 +824,12 @@ NETWORKDAYS.INTL is the exception: it lifts over a range (`INDEX(WORKDAY.INTL(45
   whatever its size and under a sign, and the call none: `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
   `=BIN2DEC(@{101})`, `=QUOTIENT(@{7},2)`, `=ISEVEN(-@{5})` (probes/iseven-isodd-range-derived-arrays Leg!G3:N3,
   G41:N41, excel-graph, T-4528; information.md "ISEVEN/ISODD over a range").
+  The `@` follows the argument slot of the enclosing call, not nesting: the same constants as the
+  argument of a call that takes arrays show none (legacy `=SUM(EDATE({45000},1))`,
+  `=SUM(EDATE({45000;45031},1))` and `=SUMPRODUCT(ISEVEN({5}))` show their written text, the
+  first is 45031, the second 90092), and under a scalar-argument call they do (legacy
+  `=ABS(QUOTIENT({7},2))` shows `=ABS(QUOTIENT(@{7},2))`, 3; probes/nested-legacy-atp-array-constant
+  A1:A8, excel-graph, 2026-11-06, T-4591).
 Evidence: probes/scalar-lift-shapes H1-H50, J1-J8, K1-K8; probes/scalar-lift-shapes-b (each
 question on row 3 and row 70); probes/scalar-lift-shapes-c (legacy formulas and their FORMULATEXT).
 All three: excel-graph, 2026-10-17, T-1767. The per-family argument lists are in statistics.md,

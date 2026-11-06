@@ -66,7 +66,7 @@ the evidence.
   `ISEVEN(-@{5})`. The extra cells show this holds for every Analysis ToolPak (`LiftArrays`)
   argument, not just ISEVEN's: EDATE, YEARFRAC, BIN2DEC, QUOTIENT. The engine showed `ISEVEN({5})`
   and `@ISEVEN({2;3})`; the values matched either way.
-- Fix: `array_constant_context` (static_analysis/legacy.rs) gives a `LiftArrays` argument the
+- Fix: `array_constant_context` (static_analysis/lifted.rs) gives a `LiftArrays` argument the
   scalar signature and value position for its array constants. Both the `@` insertion (import)
   and its removal (export) use it. Ranges in those arguments keep their own rule.
 - Tests: `lift_arrays_arguments_intersect_array_constants` (test_implicit_intersection_export.rs).

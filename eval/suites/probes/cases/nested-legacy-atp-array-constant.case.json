@@ -1,0 +1,42 @@
+{
+  "format": "rustsheet-case/v1",
+  "description": "T-4591: FORMULATEXT of legacy formulas with a one- or two-element array constant inside a nested legacy ATP call (EDATE, ISEVEN, QUOTIENT) under SUM, SUMPRODUCT and ABS; where Excel puts the @.",
+  "tags": [
+    "M2",
+    "information",
+    "arrays",
+    "probe"
+  ],
+  "sheets": [
+    {
+      "name": "Leg",
+      "legacy_formulas": [
+        "A1",
+        "A3",
+        "A5",
+        "A7"
+      ],
+      "cells": {
+        "A1": "=SUM(EDATE({45000},1))",
+        "A2": "=FORMULATEXT(A1)",
+        "A3": "=SUM(EDATE({45000;45031},1))",
+        "A4": "=FORMULATEXT(A3)",
+        "A5": "=SUMPRODUCT(ISEVEN({5}))",
+        "A6": "=FORMULATEXT(A5)",
+        "A7": "=ABS(QUOTIENT({7},2))",
+        "A8": "=FORMULATEXT(A7)"
+      }
+    }
+  ],
+  "expected": {},
+  "check": [
+    "Leg!A1",
+    "Leg!A2",
+    "Leg!A3",
+    "Leg!A4",
+    "Leg!A5",
+    "Leg!A6",
+    "Leg!A7",
+    "Leg!A8"
+  ]
+}

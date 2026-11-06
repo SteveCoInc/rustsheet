@@ -6,6 +6,7 @@ pub use crate::external_links::ExternalBook;
 pub use crate::iteration::Iteration;
 use crate::{
     cf_types::ConditionalFormatting,
+    constants::{DEFAULT_WINDOW_HEIGHT, DEFAULT_WINDOW_WIDTH},
     expressions::token::Error,
     pivot::{PivotCache, PivotTable},
     text::Text,
@@ -149,6 +150,17 @@ pub struct WorkbookView {
     pub window_width: i64,
     /// The current height of the window
     pub window_height: i64,
+}
+
+impl WorkbookView {
+    /// A view of `sheet` with the default window size.
+    pub(crate) fn new(sheet: u32) -> Self {
+        Self {
+            sheet,
+            window_width: DEFAULT_WINDOW_WIDTH,
+            window_height: DEFAULT_WINDOW_HEIGHT,
+        }
+    }
 }
 
 /// An internal representation of an IronCalc Workbook
