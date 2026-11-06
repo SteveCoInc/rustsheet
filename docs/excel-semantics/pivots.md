@@ -87,8 +87,47 @@ Rule: when a pivot's new layout would overwrite cells it does not own, Excel for
 Evidence: oracle-spike.md run 3.
 Status: UNVERIFIED (probe pending: T-4128)
 
+## A tabular pivot's first row header is `Row Labels` unless the data field is not compact
+Rule: in a tabular pivot (`outline="0"`, `compact="0"` on the table and on both row fields), the header
+cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) when the data
+field's `pivotField` (Sales, which is on no axis) carries `compact="0"`; its `outline` makes no
+difference. The second row field's header is its name (`Product`) in every variant.
+Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The four tabular sheets
+differ only in the Sales field:
+- T (no attributes): `Row Labels`;
+- T2 (`compact="0" outline="0"`): `Region`;
+- T3 (`compact="0"` only): `Region`;
+- T4 (`outline="0"` only): `Row Labels`.
+
+oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
+`Region` too, which this rule likely explains. Probed with one source field (three data fields over Sales) on one shape only;
+whether several source fields used as data need all of them non-compact is open.
+Status: VERIFIED (excel-graph)
+
+## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
+Rule:
+- A row and column intersection with no records is a blank cell, not 0 (compact C!D6, West/C).
+- In tabular form an outer item's label shows on its first line only; the lines below it leave the
+  outer cell blank (T!A6, A7, A10).
+- A subtotal line reads `<item> Total` in the outer field's column, with the inner field's cell blank
+  (T!A8 `East Total`, B8 blank; A11 `West Total`), and the grand total line reads `Grand Total`
+  (T!A12).
+- With the Values field on columns, `Values` sits above the first data field's column (T!C3), and the
+  cells above the row fields (A3, B3) are blank.
+- A compact pivot with a column field puts the data field's caption (`Sum of Sales`) at the
+  location's corner and `Column Labels` beside it (C!A3, B3), with `Row Labels` below (C!A4).
+
+Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-graph, 2026-11-06,
+T-4123). Scored once T-4124 lands; the engine renders none of these yet.
+Status: VERIFIED (excel-graph)
+
 ## Page fields render above the location
 Rule: page fields render in the rows above the pivot's location, each as `<field name>` beside its
 selected item, or `(All)` when none is selected.
 Evidence: T-4122 runs (sheet Pg: `Region | East`, `Product | (All)`, location A5).
 Status: UNVERIFIED (probe pending: T-4138)
+Capture assumption (T-4123): oracle sidecars capture the page area as the `rowPageCount` rows above
+the location, ending one blank row before it, and `3 * colPageCount - 1` columns wide but at least as
+wide as the location (`snapshot.py` `pivot_area`). Only the one-page, one-column shape is evidenced
+(Calipers officejs/pivot_filter: one page field at A1:B1, body from A3). T-4138 must confirm the
+multi-page offset and the `colPageCount > 1` width, and widen the window if Excel differs.

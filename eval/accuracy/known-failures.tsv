@@ -380,3 +380,4 @@ accuracy/CUMIPMT/s1!Calc!A189	T-4390	tiny rate 4.9E-10, 3 periods: PMT·m - CUMP
 accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 0^k
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
+accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
