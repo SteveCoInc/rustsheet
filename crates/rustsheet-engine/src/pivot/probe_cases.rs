@@ -80,6 +80,8 @@ pub(crate) fn cache_item(value: Option<&Json>) -> CacheItem {
 struct CaseCells<'a> {
     cells: &'a Json,
     area: SourceArea,
+    /// Whether a formula cell reads as empty, as the case builder caches it, rather than panics.
+    formulas_blank: bool,
 }
 
 impl SourceCells for CaseCells<'_> {
@@ -88,7 +90,14 @@ impl SourceCells for CaseCells<'_> {
     }
 
     fn value(&self, _: u32, row: u32, column: u32) -> CacheItem {
-        cache_item(self.cells.get(address(column, row)))
+        let cell = self.cells.get(address(column, row));
+        let formula = cell
+            .and_then(Json::as_str)
+            .is_some_and(|t| t.starts_with('='));
+        if self.formulas_blank && formula {
+            return CacheItem::Missing;
+        }
+        cache_item(cell)
     }
 }
 
@@ -97,6 +106,28 @@ impl SourceCells for CaseCells<'_> {
 /// builder lists them (`pivot_definition.py` `_Field.items`). A formula in the source panics:
 /// the case file holds no evaluated value for it.
 pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
+    case_cache(case, source, false)
+}
+
+/// The cache the case builder saves for `source` (`pivot_definition.py`): [`source_cache`] with
+/// each formula cell, header or record, read as empty, and each field named after its header
+/// cell's text, a formula header under its formula, or `names` when the spec gives them
+/// (`cache_names`). Excel's refresh on open renames such fields and appends the formula cells'
+/// items.
+pub(crate) fn builder_cache(case: &Json, source: &str, names: Option<&Json>) -> PivotCache {
+    let mut cache = case_cache(case, source, true);
+    let (sheet_name, range) = source.split_once('!').unwrap();
+    let (left, top) = position(range.split_once(':').unwrap().0);
+    let cells = &sheet(case, sheet_name)["cells"];
+    for (column, field) in (left..).zip(&mut cache.fields) {
+        let given = names.map(|n| &n[(column - left) as usize]);
+        let header = given.unwrap_or(&cells[address(column, top)]);
+        field.name = header.as_str().unwrap().to_string();
+    }
+    cache
+}
+
+fn case_cache(case: &Json, source: &str, formulas_blank: bool) -> PivotCache {
     let (name, range) = source.split_once('!').unwrap();
     let (from, to) = range.split_once(':').unwrap();
     let ((left, top), (right, bottom)) = (position(from), position(to));
@@ -111,6 +142,7 @@ pub(crate) fn source_cache(case: &Json, source: &str) -> PivotCache {
                 right,
             },
         },
+        formulas_blank,
     };
     let prior = PivotCache {
         source: Some(CacheSource {

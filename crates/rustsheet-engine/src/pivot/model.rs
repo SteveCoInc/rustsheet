@@ -536,4 +536,106 @@ impl OpaqueEntry {
         };
         text.saturating_add(std::mem::size_of::<OpaqueEntry>())
     }
+
+    /// Whether the entry may hold a cache field index, which a refresh that renumbers the fields
+    /// cannot remap (T-4694). An element holds one when any attribute in it is named like a field
+    /// index: `field`, `fld` or a name ending in either, ignoring case and prefix. ECMA-376's are
+    /// `pivotArea@field` and `reference@field` (in `formats`, `conditionalFormats`,
+    /// `chartFormats` and a field's `autoSortScope`), `filter@fld`, `@mpFld` and `@iMeasureFld`,
+    /// and `mp@field` (`pivotHierarchies`); an unknown attribute so named counts too. `rowItems`
+    /// and `colItems` hold none: their `x@v` are item indices of the axis's n-th field and
+    /// `i@i` a data field's, and a renumbering moves neither. Kept attributes hold none:
+    /// ECMA-376 names no field index among the root's, `location`'s, a `pivotField`'s
+    /// (`dataField` is a flag, `rankBy` a data field's index) or an item's, and the importer
+    /// types every one a `pageField` or `dataField` has (`fld`, `baseField`); the same name
+    /// rule still catches one it does not know.
+    #[must_use]
+    pub fn holds_field_index(&self) -> bool {
+        match &self.node {
+            OpaqueNode::Element(xml) => names_a_field(xml, false, |_| false),
+            OpaqueNode::Attributes(xml) => {
+                let flag = matches!(self.owner, OpaqueOwner::Field(_));
+                names_a_field(xml, true, |name| flag && name == "dataField")
+            }
+        }
+    }
+}
+
+impl OpaqueOwner {
+    /// The pivot field the owner belongs to: a `<pivotField>`, its `<items>` or one of them.
+    #[must_use]
+    pub fn field(self) -> Option<u32> {
+        match self {
+            OpaqueOwner::Field(field)
+            | OpaqueOwner::Items(field)
+            | OpaqueOwner::Item { field, .. } => Some(field),
+            _ => None,
+        }
+    }
+
+    /// The owner moved to pivot field `to`, when it belongs to one ([`OpaqueOwner::field`]).
+    #[must_use]
+    pub fn with_field(self, to: u32) -> Self {
+        match self {
+            OpaqueOwner::Field(_) => OpaqueOwner::Field(to),
+            OpaqueOwner::Items(_) => OpaqueOwner::Items(to),
+            OpaqueOwner::Item { item, .. } => OpaqueOwner::Item { field: to, item },
+            other => other,
+        }
+    }
+}
+
+/// Whether verbatim `xml` has an attribute whose local name is `field` or `fld` or ends in one,
+/// ignoring case, other than one `allowed` names. `in_tag` is whether the text starts inside a
+/// tag (a kept attribute list). One pass, so linear in the text (directive 5); a value is
+/// skipped by its quotes, and text between tags is not read.
+fn names_a_field(xml: &str, mut in_tag: bool, allowed: impl Fn(&str) -> bool) -> bool {
+    let is_name =
+        |b: u8| b.is_ascii_alphanumeric() || matches!(b, b':' | b'_' | b'-' | b'.') || b >= 0x80;
+    let mut quote = None;
+    // The last name read in the tag, as a byte range, and whether the previous byte was in it.
+    let mut name: Option<(usize, usize)> = None;
+    let mut in_name = false;
+    for (at, b) in xml.bytes().enumerate() {
+        if let Some(q) = quote {
+            if b == q {
+                quote = None;
+            }
+            continue;
+        }
+        let was_in_name = std::mem::replace(&mut in_name, false);
+        if !in_tag {
+            in_tag = b == b'<';
+            continue;
+        }
+        match b {
+            b'"' | b'\'' => quote = Some(b),
+            b'>' => {
+                in_tag = false;
+                name = None;
+            }
+            b'=' => {
+                let local = name
+                    .and_then(|(start, end)| xml.get(start..end))
+                    .map(|n| n.rsplit(':').next().unwrap_or(n));
+                if let Some(local) = local {
+                    let lower = local.to_ascii_lowercase();
+                    if (lower.ends_with("field") || lower.ends_with("fld")) && !allowed(local) {
+                        return true;
+                    }
+                }
+                name = None;
+            }
+            b if is_name(b) => {
+                in_name = true;
+                name = match name {
+                    Some((start, _)) if was_in_name => Some((start, at + 1)),
+                    _ => Some((at, at + 1)),
+                };
+            }
+            b if b.is_ascii_whitespace() => {}
+            _ => name = None,
+        }
+    }
+    false
 }

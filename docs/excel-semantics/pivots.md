@@ -311,9 +311,15 @@ Rule (the engine's, not probed): a pivot owns its location and its page area, an
   anchor (the location's top-left cell).
 - A pivot's field indices follow its fields by case-folded name. A field new to the source joins
   on no axis. A field the pivot shows (row, column, page or data) that left the source refuses the
-  refresh, and the pivot keeps its cells. So does any renumbering of a pivot that keeps unread
-  parts verbatim, which may hold field indices (every imported pivot keeps some). A data field's
-  base field that left the source falls back to the first field.
+  refresh, and the pivot keeps its cells. So does a renumbering of a pivot that keeps a verbatim
+  part holding a field index: one with an attribute named `field` or `fld` or ending in either
+  (ECMA-376's `pivotArea@field` and `reference@field` in `formats`, `conditionalFormats`,
+  `chartFormats` and `autoSortScope`, `filter@fld`, `mp@field`, an extension's `sourceField`).
+  The other verbatim parts renumber: the root's and the fields' attributes (`pivotField@dataField`
+  is a flag), `pivotTableStyleInfo`, and `rowItems`/`colItems`, whose `x@v` index the items of the
+  axis's n-th field, which moves with it. A field's own parts (its attributes, its items') follow
+  its new index, and a dropped field's go with it (T-4694). A data field's base field that left
+  the source falls back to the first field.
 - A refresh that cannot be planned (a source that does not resolve, such as a Table or defined
   name until T-4506; a field gone; past the shared budget) leaves the pivot and its cells as they
   were. On load each cache is planned on its own, so a cache that does not plan keeps only its own

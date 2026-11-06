@@ -10,7 +10,7 @@ use serde_json::Value as Json;
 
 use super::*;
 use crate::pivot::probe_cases::{
-    address, position, probe_model, probe_pivot, probe_pivot_over, read, sheet,
+    address, builder_cache, position, probe_model, probe_pivot, probe_pivot_over, read, sheet,
 };
 use crate::pivot::{
     Axis, CacheField, CacheItem, CacheSource, OpaqueEntry, OpaqueNode, OpaqueOwner,
@@ -62,10 +62,15 @@ fn area(range: &str) -> CellArea {
     }
 }
 
-/// Checks sheet `name` of `model` against the sidecar's pivot there: every cell of its capture
-/// window, the location and the geometry.
+/// Checks sheet `name` of `model` against the spike sidecar's pivot there ([`assert_probe`]).
 fn assert_excels(model: &Model, name: &str) {
-    let oracle = read(SPIKE, "oracle");
+    assert_probe(model, SPIKE, name);
+}
+
+/// Checks sheet `name` of `model` against the pivot there in the sidecar of probe `stem`: every
+/// cell of its capture window, the location and the geometry of the model's first pivot.
+fn assert_probe(model: &Model, stem: &str, name: &str) {
+    let oracle = read(stem, "oracle");
     let pivots = oracle["pivots"].as_array().unwrap();
     let pivot: &Json = pivots.iter().find(|p| p["sheet"] == name).unwrap();
     let sheet = sheet_of(model, name);
@@ -289,6 +294,57 @@ fn cache_of(names: &[&str]) -> PivotCache {
     }
 }
 
+fn element(xml: &str) -> OpaqueNode {
+    OpaqueNode::Element(xml.into())
+}
+
+fn attributes(xml: &str) -> OpaqueNode {
+    OpaqueNode::Attributes(xml.into())
+}
+
+const STYLE: &str = r#"<pivotTableStyleInfo name="PivotStyleLight16" showRowHeaders="1"/>"#;
+/// `x@v` and `i@i` are item and data field indices (ECMA-376 §18.10.1.96), not field indices.
+const ROW_ITEMS: &str =
+    r#"<rowItems count="2"><i><x v="1"/></i><i t="grand" i="0"><x/></i></rowItems>"#;
+const FILTERS: &str = r#"<filters count="1"><filter fld="0" type="count" evalOrder="-1" id="1" iMeasureFld="0"><autoFilter ref="A1"><filterColumn colId="0"><top10 val="2" filterVal="2"/></filterColumn></autoFilter></filter></filters>"#;
+/// A value in quotes (`'>'`) and a prefix do not hide the `reference@field`.
+const FORMATS: &str = r#"<formats count="1"><format dxfId="0"><pivotArea type="data" outline="0" fieldPosition="0" x:note='a>b'><references count="1"><x:reference FIELD = "1" count="1"><x v="0"/></x:reference></references></pivotArea></format></formats>"#;
+const SORT_SCOPE: &str = r#"<autoSortScope><pivotArea dataOnly="0" outline="0" field="2" axis="axisRow"/></autoSortScope>"#;
+
+#[test]
+fn which_unread_parts_hold_field_indices() {
+    let kept = |owner, node| OpaqueEntry { owner, node }.holds_field_index();
+    let definition = OpaqueOwner::Definition;
+    assert!(!kept(definition, element(STYLE)));
+    assert!(!kept(definition, element(ROW_ITEMS)));
+    assert!(!kept(
+        definition,
+        element(r#"<format dxfId="0"><pivotArea type="all" fieldPosition="0"/></format>"#)
+    ));
+    // A field name in a value or between tags is not an attribute.
+    assert!(!kept(
+        definition,
+        element(r#"<ext uri="field=1">fld="2"</ext>"#)
+    ));
+    assert!(kept(definition, element(FILTERS)));
+    assert!(kept(definition, element(FORMATS)));
+    assert!(kept(OpaqueOwner::Field(0), element(SORT_SCOPE)));
+    // `pivotField@dataField` is a flag; anywhere else the name counts.
+    assert!(!kept(
+        OpaqueOwner::Field(0),
+        attributes(r#" dataField="1" rankBy="0""#)
+    ));
+    assert!(kept(
+        OpaqueOwner::DataField(0),
+        attributes(r#" dataField="1""#)
+    ));
+    assert!(kept(definition, attributes(r#" x14:sourceField="1""#)));
+    assert!(!kept(
+        definition,
+        attributes(r#" fieldPrintTitles="1" disableFieldList="0""#)
+    ));
+}
+
 #[test]
 fn field_indices_follow_their_names() {
     let (_, mut table) = probe_pivot(&read(SPIKE, "case"), "S");
@@ -308,15 +364,56 @@ fn field_indices_follow_their_names() {
         remap(&table, &old, &gone),
         Err(PivotRefreshError::FieldGone("Product".into()))
     );
-    // Unread parts may hold field indices: no renumbering under them.
-    table.opaque.push(OpaqueEntry {
-        owner: OpaqueOwner::Definition,
-        node: OpaqueNode::Element("<filters/>".into()),
-    });
+    // Unread parts that hold no field index renumber; a field's own follow it.
+    let kept = |owner, node| OpaqueEntry { owner, node };
+    table.opaque = vec![
+        kept(
+            OpaqueOwner::Definition,
+            attributes(r#" updatedVersion="6""#),
+        ),
+        kept(OpaqueOwner::Definition, element(STYLE)),
+        kept(OpaqueOwner::Definition, element(ROW_ITEMS)),
+        kept(OpaqueOwner::Definition, element("<filters/>")),
+        kept(OpaqueOwner::Field(0), attributes(r#" dataField="1""#)),
+        kept(OpaqueOwner::Items(1), attributes(r#" x14:extra="1""#)),
+        kept(
+            OpaqueOwner::Item { field: 2, item: 0 },
+            attributes(r#" n="Total""#),
+        ),
+    ];
+    let remapped = remap(&table, &old, &new).unwrap();
+    let owners: Vec<OpaqueOwner> = remapped.opaque.iter().map(|e| e.owner).collect();
     assert_eq!(
-        remap(&table, &old, &new),
-        Err(PivotRefreshError::FieldsMoved)
+        owners[4..],
+        [
+            OpaqueOwner::Field(2),
+            OpaqueOwner::Items(3),
+            OpaqueOwner::Item { field: 1, item: 0 }
+        ]
     );
+    assert_eq!(remapped.opaque[..4], table.opaque[..4]);
+    // A dropped field's entries go with it.
+    let without_sales = cache_of(&["Product", "Region", "Day"]);
+    table.data_fields.clear();
+    let dropped = remap(&table, &old, &without_sales).unwrap();
+    assert_eq!(dropped.opaque.len(), 6);
+    let (_, mut table) = probe_pivot(&read(SPIKE, "case"), "S");
+    // Unread parts that hold a field index: no renumbering under them.
+    for (owner, node) in [
+        (OpaqueOwner::Definition, element(FILTERS)),
+        (OpaqueOwner::Definition, element(FORMATS)),
+        (OpaqueOwner::Field(1), element(SORT_SCOPE)),
+        (
+            OpaqueOwner::DataField(0),
+            attributes(r#" x14:sourceField="2""#),
+        ),
+    ] {
+        table.opaque = vec![kept(owner, node)];
+        assert_eq!(
+            remap(&table, &old, &new),
+            Err(PivotRefreshError::FieldsMoved)
+        );
+    }
     // Appending a field renumbers nothing.
     let appended = cache_of(&["Region", "Product", "Sales", "Day"]);
     assert_eq!(remap(&table, &old, &appended).unwrap().fields.len(), 4);
@@ -522,4 +619,61 @@ fn a_merged_range_in_the_pivots_own_area_refuses_the_refresh() {
         model.plan_pivot_refresh(0, &mut PivotBudget::default()),
         Err(PivotRefreshError::MergedArea)
     );
+}
+
+/// The pivots of probes/t4585-pivot-field-names (N1) and t4627-pivot-field-name-collisions (the
+/// P_ sheets) as the case builder saves them ([`builder_cache`]), with the verbatim parts
+/// it writes (the root's attributes, the data field's `dataField` flag, `pivotTableStyleInfo`).
+/// Excel's refresh on open renames the repeated, formula and blank headers, so the fields
+/// renumber; the parts hold no field index, so the pivot renders, as the sidecar has it.
+#[test]
+fn a_renamed_field_renders_the_pivot_under_its_unread_parts() {
+    let probes: [(&str, &[&str]); 2] = [
+        ("t4585-pivot-field-names", &["N1"]),
+        (
+            "t4627-pivot-field-name-collisions",
+            &[
+                "P_SufA", "P_SufB", "P_FldA", "P_FldB", "P_Off", "P_Empty", "P_Const", "P_Space",
+                "P_Fold",
+            ],
+        ),
+    ];
+    for (stem, names) in probes {
+        let case = read(stem, "case");
+        for &name in names {
+            let mut model = probe_model(&case);
+            model.evaluate();
+            let spec = &sheet(&case, name)["pivot_tables"][0];
+            let names = spec["definition"].get("cache_names");
+            let stale = builder_cache(&case, spec["source"].as_str().unwrap(), names);
+            let (cache, mut table) = probe_pivot_over(&case, name, stale);
+            let data_field = table.data_fields[0].field;
+            table.opaque = vec![
+                OpaqueEntry {
+                    owner: OpaqueOwner::Definition,
+                    node: attributes(
+                        r#" applyNumberFormats="0" createdVersion="6" indent="0" itemPrintTitles="1" minRefreshableVersion="3" updatedVersion="6" useAutoFormatting="1""#,
+                    ),
+                },
+                OpaqueEntry {
+                    owner: OpaqueOwner::Field(data_field),
+                    node: attributes(r#" dataField="1""#),
+                },
+                OpaqueEntry {
+                    owner: OpaqueOwner::Definition,
+                    node: element(STYLE),
+                },
+            ];
+            let index = sheet_of(&model, name);
+            table.sheet_id = model.workbook.worksheet(index).unwrap().sheet_id;
+            model.workbook.pivot_caches.push(cache);
+            model.workbook.pivot_tables.push(table);
+            refreshed(&mut model);
+            assert_probe(&model, stem, name);
+            // The flag followed its field to the refreshed cache's same-named one.
+            let refreshed = &model.workbook.pivot_tables[0];
+            let sales = refreshed.data_fields[0].field;
+            assert_eq!(refreshed.opaque[1].owner, OpaqueOwner::Field(sales));
+        }
+    }
 }

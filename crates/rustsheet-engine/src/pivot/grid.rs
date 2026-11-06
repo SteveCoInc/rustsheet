@@ -34,8 +34,8 @@ use super::layout::{lay_out, render, PivotCell, RenderedCell, MAX_PIVOT_CELLS};
 use super::refresh::{field_map, refresh, SourceCells};
 use super::result::{compute, PivotComputeError, MAX_PIVOT_WORK};
 use super::{
-    AxisField, CellArea, PivotCache, PivotCacheError, PivotField, PivotGeometry, PivotTable,
-    MAX_RECORD_VALUES,
+    AxisField, CellArea, OpaqueEntry, PivotCache, PivotCacheError, PivotField, PivotGeometry,
+    PivotTable, MAX_RECORD_VALUES,
 };
 use crate::expressions::parser::parse_range;
 use crate::expressions::token::Error;
@@ -56,9 +56,12 @@ pub enum PivotRefreshError {
     /// (probe pending: T-4664).
     #[error("the pivot field {0:?} is no longer in the source")]
     FieldGone(String),
-    /// The refresh would renumber the fields of a pivot that keeps parts of its definition
-    /// verbatim ([`PivotTable::opaque`]), whose field indices nothing can remap.
-    #[error("a refresh would renumber the fields of a pivot with unread parts")]
+    /// The refresh would renumber the fields of a pivot that keeps a part of its definition
+    /// verbatim ([`PivotTable::opaque`]) holding a field index, which nothing can remap
+    /// ([`OpaqueEntry::holds_field_index`]: `formats`, `filters`, ...).
+    #[error(
+        "a refresh would renumber the fields of a pivot whose unread parts hold field indices"
+    )]
     FieldsMoved,
     /// The cache, the pivot or its sheet is not in the workbook.
     #[error("no such pivot, cache or sheet")]
@@ -257,7 +260,9 @@ fn overlaps(a: &CellArea, b: &CellArea) -> bool {
 
 /// `pivot` over `new`, a refresh of its cache `old`: each field index follows its field by name
 /// ([`field_map`]), a field new to the source joins on no axis, and a field gone from it is
-/// dropped unless the pivot shows it ([`PivotRefreshError::FieldGone`]).
+/// dropped unless the pivot shows it ([`PivotRefreshError::FieldGone`]). The verbatim parts a
+/// field owns follow it; a renumbering under one that holds a field index is refused
+/// ([`PivotRefreshError::FieldsMoved`]).
 fn remap(
     pivot: &PivotTable,
     old: &PivotCache,
@@ -272,7 +277,7 @@ fn remap(
         }
         return Ok(pivot);
     }
-    if !pivot.opaque.is_empty() {
+    if pivot.opaque.iter().any(OpaqueEntry::holds_field_index) {
         return Err(PivotRefreshError::FieldsMoved);
     }
     let to = |from: u32| {
@@ -317,6 +322,20 @@ fn remap(
         .map(|(field, from)| {
             from.and_then(|from| pivot.fields.get(from).cloned())
                 .unwrap_or_else(|| PivotField::new(None, field.items.len()))
+        })
+        .collect();
+    // What a field owns follows it; what a dropped field owned goes with it.
+    out.opaque = (pivot.opaque.iter())
+        .filter_map(|entry| match entry.owner.field() {
+            None => Some(entry.clone()),
+            Some(from) => map
+                .get(from as usize)
+                .copied()
+                .flatten()
+                .map(|to| OpaqueEntry {
+                    owner: entry.owner.with_field(to),
+                    node: entry.node.clone(),
+                }),
         })
         .collect();
     Ok(out)
