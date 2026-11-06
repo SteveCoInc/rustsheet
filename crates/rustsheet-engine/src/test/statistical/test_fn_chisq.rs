@@ -191,7 +191,8 @@ fn chisq_inv_rt_num_edge() {
 #[test]
 fn chisq_inv_rt_one_degree_follows_the_math_where_one_minus_p_rounds_far() {
     let mut model = new_empty_model();
-    // (formula, math from the committed sidecar, or Excel's exact double where Excel is within G)
+    // (formula, math from the committed sidecar, or the engine's unchanged value where Excel is within G;
+    // that value is within 15 digits of Excel, not always Excel's double)
     let math = [
         ("A1", "=CHISQ.INV.RT(1.5E-16,1)", 68.169_874_129_795_37),
         ("A2", "=CHIINV(1.5E-16,1)", 68.169_874_129_795_37),

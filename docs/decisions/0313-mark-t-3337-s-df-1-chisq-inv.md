@@ -29,7 +29,9 @@
   test agrees with "Excel is more than G off". Of the 225 numeric df 1 cells with a math value in t3336 and the fresh
   sweep, the test fires on exactly the 45 where Excel is more than G off. It also fires at t3336 A250 to A252, where
   Excel is `#NUM!` and the engine already returned a number (T-3858's cut). This applies the owner's
-  rulings point by point. It adds no R3 case, rules no band and widens nothing beyond 0267 item 3 as 0301 left it, so
+  rulings point by point. The fresh-sweep cells are not in the case list decision 0301 names; they are in scope
+  because 0267 item 3 rules on each evidenced point of the same functions at df 1 in probes-numeric, and 0301
+  removed only Gate A points. T-4555 relies on the same reading. It adds no R3 case, rules no band and widens nothing beyond 0267 item 3 as 0301 left it, so
   no new owner ruling is needed.
 - **Consequences:** R1(c) classes the 45 cells `r3_pass`. Eval pass/fail changes as follows: probes-numeric is
   ungated, so no baseline file changes. In t3336, A217, A218 and A253 passed against Excel and now fail against it,

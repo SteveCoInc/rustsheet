@@ -103,6 +103,8 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
     from excel-graph after the rule was committed (aede4ec4f). The rule fires at A1:A30, and Excel is more than G
     off at exactly those cells (3.9E-4 to 7.8E-3). It keeps Excel's route at A31:A52, where Excel is within
     2.8E-5. That is 52 of 52 in agreement.
+    The sweep covers p 1.2E-16 to 1.2E-12, not the full domain (R4.2), because the rule cannot act from p
+    1E-12 up: there the engine returns the same computation as before.
   - Over t3336 and the fresh sweep (225 numeric cells with a math value), the rule fires at exactly the 45 cells
     where Excel is more than G off. It also fires at t3336 A250:A252, where Excel is `#NUM!` (T-3858's cut).
   - Gate A: `rustsheet-eval accuracy` reports 0 failing, 0 bad marks and 0 table defects.
