@@ -235,6 +235,12 @@ def quantile(p: mpmath.mpf, a: mpmath.mpf, upper: bool) -> mpmath.mpf:
     lo, hi = -1500.0, 710.0
     if a > TEMME_SHAPE_MIN:
         lo, hi = (float(mpmath.log(a * bound)) for bound in TEMME_BRACKET)
+    # At a tiny shape (about 1E-266, drawn for GAMMAINV's s1, T-4104) P(a, y) rounds to 1 at every y of the bracket,
+    # so Q = 1 - P loses all its digits and its log is not real: no math value, as for any root the bracket misses.
+    q_lo = upper_tail(mpmath.exp(lo), a)
+    if isinstance(q_lo, mpmath.mpc) or q_lo <= 0:
+        msg = f"Q(a, e^{lo}) has no digits at shape {mpmath.nstr(a, 3)}"
+        raise NoValueError(msg)
     s = solve_smaller_tail(p, lambda y: lower_tail(y, a), lambda y: upper_tail(y, a), lo, hi, upper=upper)
     return mpmath.exp(s)
 

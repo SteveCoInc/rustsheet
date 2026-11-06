@@ -368,3 +368,39 @@ accuracy/PERMUTATIONA/s1!Calc!A71	T-4501	Excel #NUM! at a number_chosen of 2^31-
 accuracy/PERMUTATIONA/s1!Calc!A76	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/PERMUTATIONA/s1!Calc!A79	T-4501	Excel #NUM! at a number_chosen of 2^31-1 or more; the engine returns 1^k
 accuracy/MIRR/s1!Calc!A125	T-4537	Excel #DIV/0! for a finance power overflow beside a later negative flow; the engine gives #NUM!
+accuracy/BETADIST/s1!Calc!A183	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETADIST/s1!Calc!A184	T-3577	BETADIST (as BETA.DIST) cdf at a huge beta: Excel #NUM!, the engine and the math 0
+accuracy/BETADIST/s1!Calc!A187	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETADIST/s1!Calc!A193	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETADIST/s1!Calc!A198	T-3577	BETADIST (as BETA.DIST) cdf at tiny shapes: the engine is 0; Excel matches the math
+accuracy/BETAINV/s1!Calc!A100	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A103	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A105	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A106	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A108	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A109	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A115	T-2808	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETAINV/s1!Calc!A118	T-2808	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETAINV/s1!Calc!A128	T-2808	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETAINV/s1!Calc!A135	T-2808	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETAINV/s1!Calc!A138	T-2808	BETAINV (as BETA.INV) at a shape of 2.2E-308: Excel 0.5 (its search stops at the start), the engine #NUM!
+accuracy/BETAINV/s1!Calc!A179	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A180	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A181	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A182	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A183	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A184	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A185	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A186	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A187	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A188	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A189	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A190	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A193	T-3862	BETAINV (as BETA.INV) at a huge alpha and a tiny p: Excel #NUM!, the math 1, the engine a number
+accuracy/BETAINV/s1!Calc!A85	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A88	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A89	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A94	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A97	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/BETAINV/s1!Calc!A99	T-3351	BETAINV (as BETA.INV): the quantile rounds to 1 or p is above 1/2 at a tiny alpha; Excel 1-2^-53 or 2^-53, the engine #NUM!
+accuracy/CHIINV/s1!Calc!A93	T-3364	CHIINV (as CHISQ.INV.RT) R3 closed-form point: Excel's Wilson-Hilferty start, about 2.7e-4 off the math; the engine 14 digits from it
