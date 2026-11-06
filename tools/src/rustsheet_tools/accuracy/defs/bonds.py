@@ -69,11 +69,9 @@ from rustsheet_tools.accuracy.defs.annuity import unique_rate
 from rustsheet_tools.accuracy.defs.clock import LAST_DAY
 from rustsheet_tools.accuracy.defs.yearfrac import (
     FICTITIOUS_DAY,
-    displayed_date,
-    eu_30_360,
+    basis_days,
     real_date,
     serial_of,
-    us_30_360,
     whole_serial,
 )
 from rustsheet_tools.accuracy.literal import Arg
@@ -127,16 +125,6 @@ def _date_serial(d: datetime.date) -> int:
     if d < MARCH_1900:
         return (d - datetime.date(1899, 12, 31)).days
     return int(serial_of(d.year, d.month, d.day))
-
-
-def basis_days(start: int, end: int, basis: int) -> Fraction:
-    """Days from serial `start` to `end` on the basis: 30/360 on Excel's displayed days (bases 0 and 4), serial days
-    otherwise."""
-    if basis == 0:
-        return Fraction(us_30_360(displayed_date(start), displayed_date(end)))
-    if basis == 4:
-        return Fraction(eu_30_360(displayed_date(start), displayed_date(end)))
-    return Fraction(end - start)
 
 
 def coupons(settlement: int, maturity: int, frequency: int, basis: int) -> Coupons:

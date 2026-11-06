@@ -136,25 +136,29 @@ Evidence: probes/t4128-pivot-spike S (excel-graph, 2026-11-06, T-4128): the cons
 the layout, and the pivot is saved with location A3, where S!A3 is `#SPILL!`.
 Status: VERIFIED (excel-graph); GETPIVOTDATA against such a pivot is in T-4130
 
-## A tabular pivot's first row header is `Row Labels` unless the data field is not compact
-Rule: in a tabular pivot (`outline="0"`, `compact="0"` on the table and on both row fields), the header
-cell of the first row field reads `Row Labels`. It reads the field's own name (`Region`) when the data
-field's `pivotField` (Sales, which is on no axis) carries `compact="0"`; its `outline` makes no
-difference. The second row field's header is its name (`Product`) in every variant.
-Evidence: probes/t4123-pivot-capture A4 (excel-graph, 2026-11-06, T-4123). The four tabular sheets
-differ only in the Sales field:
-- T (no attributes): `Row Labels`;
-- T2 (`compact="0" outline="0"`): `Region`;
-- T3 (`compact="0"` only): `Region`;
-- T4 (`outline="0"` only): `Row Labels`.
+## A tabular pivot's first row header is `Row Labels` while a non-axis field is compact
+Rule: in a tabular pivot, the header cell of the first row field reads `Row Labels` whenever some
+`pivotField` on no axis (a data-only field, an unused source field or a calculated field) is at the
+default `compact`. In every probe that showed the field's own name (`Region`), every `pivotField`
+carried `compact="0"`. `outline` on the non-axis field makes no difference. The second row field's
+header is its name (`Product`) in every variant probed. Open (T-4583): whether the rule is "every
+field", "every non-axis field" or "the last field". In every probe the default field was also the
+pivot's last field, and no probe left an axis field at the default.
+Evidence (excel-graph, 2026-11-06):
+- probes/t4123-pivot-capture A4 (T-4123), whose source has three fields, all on an axis or used as data:
+  - T, with Sales compact by default: `Row Labels`;
+  - T2 and T3, with Sales `compact="0"`, every field non-compact: `Region`;
+  - T4, with Sales outline off only: `Row Labels`.
+- probes/t4128-pivot-spike K!A4 (T-4128): a calculated field at the default gives `Row Labels`.
+- probes/t4137-pivot-captions K6!A4 (T-4137): every axis and data field non-compact, but the unused
+  source field `Risky` at the default, gives `Row Labels`. K5!A3 (two unused fields at the default)
+  gives `Row Labels` too.
 
-oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on that field, showed
-`Region` too, which this rule likely explains. Probed with one source field, Sales, behind every data field of T to T4. Observation, cause not
-isolated: probes/t4128-pivot-spike K!A4 is `Row Labels` with Sales `compact="0"` and the calculated
-field Double at the default (T-4128). K also has a Top-N filter and a
-sort, so whether every data field must be non-compact, and the layout without a Values axis, are left
-to T-4137 and T-4138.
-Status: VERIFIED (excel-graph)
+oracle-spike.md run 4, whose uncommitted hand-written XML set `compact="0"` on the Sales field, showed
+`Region` too.
+Correction: T-4123 first read the rule as "the data field's `compact`". K5 and K6 show that an unused
+field counts too.
+Status: VERIFIED (excel-graph) as stated; which fields count is UNVERIFIED (probe pending: T-4583)
 
 ## Rendered pivot cells: blanks, repeated labels, subtotals and the Values caption
 Rule:
@@ -173,13 +177,78 @@ Evidence: probes/t4123-pivot-capture, the `pivots` cells of its sidecar (excel-g
 T-4123). Scored once T-4124 lands; the engine renders none of these yet.
 Status: VERIFIED (excel-graph)
 
+## Caption attributes, empty and error captions, page captions, custom subtotal labels
+Rule:
+- `rowHeaderCaption` replaces `Row Labels` (K1!A4 `Regions`).
+- `grandTotalCaption` replaces `Grand Total` (K1!A7 `All of it`).
+- `dataCaption` replaces the `Values` caption over the data fields (K1!B3 `Measures`).
+- `colHeaderCaption` (`Products`) shows nowhere in K1, whose column axis holds only Values; whether it
+  replaces `Column Labels` beside a real column field is open (T-4583).
+- With `showMissing` and `missingCaption`, an empty intersection shows the caption (K2!D6 `n/a`).
+- With `showError` and `errorCaption`, under Sum, every value cell whose aggregate is an error shows
+  the caption as text: the cell, its row and column totals and the grand total (K3!C5, E5, C7 and E7 `ERR`; the
+  data hold one `#DIV/0!` at East/B). The empty West/C stays blank (K3!D6).
+- Page fields show `(All)` with no selection, the item with one (`A`), and `(Multiple Items)` when
+  several items stay visible (K4!B2:B4).
+- Custom subtotal functions label each subtotal line `<item> <Function>`: `East Sum`, `East Count`
+  (K5!A7:A8), with Count counting records (4).
+- With a single data field and no column field (tabular, K5) there is no Values row. `Row Labels` is
+  at the location's corner (K5!A3), the inner row field's name beside it (B3 `Product`), and the data
+  field's caption above the data column (C3 `Sum of Sales`). With a column field the corner holds the
+  data caption instead (K2!A3, K3!A3; previous entry).
+
+Evidence: probes/t4137-pivot-captions (excel-graph, 2026-11-06, T-4137). Default data-field names
+(`Sum of`, `Count of`...) are written by the file, not chosen by Excel, so a file cannot probe them;
+creating a pivot in the UI is where Excel picks them (T-2327 keeps that question). Other error kinds
+and aggregates under `errorCaption` are not probed.
+Status: VERIFIED (excel-graph)
+
 ## Page fields render above the location
-Rule: page fields render in the rows above the pivot's location, each as `<field name>` beside its
-selected item, or `(All)` when none is selected.
-Evidence: T-4122 runs (sheet Pg: `Region | East`, `Product | (All)`, location A5).
-Status: UNVERIFIED (probe pending: T-4138)
-Capture assumption (T-4123): oracle sidecars capture the page area as the `rowPageCount` rows above
-the location, ending one blank row before it, and `3 * colPageCount - 1` columns wide but at least as
-wide as the location (`snapshot.py` `pivot_area`). Only the one-page, one-column shape is evidenced
-(Calipers officejs/pivot_filter: one page field at A1:B1, body from A3). T-4138 must confirm the
-multi-page offset and the `colPageCount > 1` width, and widen the window if Excel differs.
+Rule: page fields render in the rows above the pivot's `location`, ending one blank row before it. Each
+shows `<field name>` beside its selection: `(All)`, the item, or `(Multiple Items)`. With
+`pageWrap="n"` and `pageOverThenDown`, the fields fill a row n at a time, each field-item pair two
+columns wide with a blank column between pairs. The saved `rowPageCount` and `colPageCount` give the
+grid (here 2 by 2).
+Evidence:
+- probes/t4137-pivot-captions K4 (T-4137): three page fields in A2:B4 above location A6.
+- probes/t4138-pivot-geometry G8 (T-4138): three page fields wrapped two per row, `Region | (All)` in
+  B5:C5, `Product | (All)` in E5:F5 and `Channel | (All)` in B6:C6, row 7 blank, location B8,
+  `rowPageCount=2`, `colPageCount=2`.
+
+Capture window (T-4123, `snapshot.py` `pivot_area`): the `rowPageCount` rows above the location, minus
+one blank row, and `3 * colPageCount - 1` columns wide. Both shapes above are consistent with it. In G8
+the second pair starts at E, three columns after B, and the five-column window ends at F. A capture
+cannot see past its own window, though, so a page cell outside it would go unseen (row 1 of K4,
+rows 1–4 of G8).
+Status: VERIFIED (excel-graph) for the rendering; the window is consistent with both probes, not
+independently confirmed (probe pending: T-4584)
+
+## Pivot geometry: location and header offsets per layout
+Rule: Excel writes the pivot's `location` as the body's bounding box (page fields excluded), with
+`firstHeaderRow`, `firstDataRow` and `firstDataCol` measured from its top left. With the location's top
+left at B4 (probes/t4138-pivot-geometry, T-4138):
+
+| sheet | layout | location | fhr, fdr, fdc | rowItems, colItems |
+|---|---|---|---|---|
+| G1 | compact, 1 row field | B4:C7 | 1, 1, 1 | 3, 1 |
+| G2 | compact, 2 row fields, 1 column field | B4:E13 | 1, 2, 1 | 8, 3 |
+| G3 | outline, 2 row fields, 2 data fields | B4:E13 | 1, 2, 2 | 8, 2 |
+| G4 | tabular, 3 row fields | B4:E18 | 1, 1, 3 | 14, 1 |
+| G5 | compact, 1 row field, 2 column fields | B4:J9 | 1, 3, 1 | 3, 8 |
+| G6 | compact, Values on rows | B4:C12 | 1, 1, 1 | 8, 1 |
+| G7 | 1 column field only | B4:F6 | 1, 2, 1 | 1, 4 |
+| G9 | 3 data fields, no axis field | B4:D6 | 1, 2, 0 | 1, 3 |
+
+In compact form all row fields share one column (fdc 1). Outline and tabular give each row field its own
+column (fdc = number of row fields), but each rests on one probe (G3, G4). With no row field, fdc is 1
+when there is a column field (G7) and 0 when there is no axis field at all (G9, and G8 in the page-field entry above). fdr is 1
+plus the number of `colFields`, and the Values field counts when it is on columns: G3 and G9 (Values
+only) have fdr 2, as does G2 (one column field and one data field), and G5 has 3. With Values on rows,
+each item is followed by one line per data field, and the grand total reads `Total <data field>`
+(G6!B11:B12).
+
+A Values field on rows needs `dataOnRows="1"` on the definition: without it Excel for the web refuses
+the file as corrupt (`FileCorruptTryRepair`). Case builder v2 now writes it. This comes from scratch
+excel-graph runs of T-4138, not committed: G6's package was refused without the attribute and opened
+with it, all else equal.
+Status: VERIFIED (excel-graph) for the table; the refusal is a builder observation

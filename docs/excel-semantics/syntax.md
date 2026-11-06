@@ -318,10 +318,29 @@ Last, spec2xlsx `"active_sheet"`, excel-graph 2026-11-06): every use reads the a
 S2!A1; T-4391's). Ours since T-4445: `Txn::define_name` and `Txn::define_sheet_name` bind to `Workbook::active_sheet` (set with
 `Workbook::set_active_sheet`; an xlsx import takes the sheet marked `tabSelected`, else the first). The engine reads an
 API-added body on the active sheet and stores it qualified (`Model::formula_to_internal_between`;
-`an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests.rs), and the eval adapter sets a
-case's `active_sheet` before its `api_names`. The same probe shows
+`an_unqualified_name_reference_binds_to_the_active_sheet`, crates/rustsheet/src/edit/tests/name_binding.rs), and the eval
+adapter sets a case's `active_sheet` before its `api_names`. The same probe shows
 an exception to the rule above: of the uses typed before the adds, S2's `=Rate` stays `#NAME?` but S2's `=SUM(Span)`
 and Last's `=Rate2` resolve (T-4391 owns S2!A3 and Last!A1, which the engine leaves `#NAME?`).
+A bare *name* in such a body does not follow the active sheet. A sheet-scoped definition beats the
+workbook-scoped one, and among sheet-scoped definitions Excel takes the one on the alphabetically first sheet
+name. The result is the same on every sheet and with First, S2 or Last active. With `W_x` = `=Dupx`:
+- workbook + S2 reads S2's;
+- workbook + Last, workbook + S2 + Last, and S2 + Last read Last's;
+- workbook + First + S2, First + Last, and workbook + First read First's;
+- a name only one sheet defines reads that sheet's.
+
+First < Last < S2 is alphabetical, not sheet order (First, S2, Last), and not "the active sheet first"
+(probes/t4554-api-name-scoped-name-choice, -first, -last D1:D9; t4554-api-name-local-name-body, where `=LocLoc`,
+S2's only, is 7 and `=Dup` is Last's 90; excel-graph 2026-11-06, T-4554). Whether the name order is case-insensitive
+is unprobed. Ours reads the active sheet's definition, else the workbook one, and stores the name bare, so a name
+only another sheet defines is `#NAME?` (T-4587 owns the cells).
+Our choices that no probe covers yet, all UNVERIFIED:
+- (a) the body is stored qualified, so making another sheet active later does not move an existing name;
+- (b) renaming the bound sheet rewrites the body, and deleting it makes the body `#REF!`. A case cannot yet edit a
+  sheet after its `api_names` (T-4588);
+- (c) an xlsx import takes the sheet marked `tabSelected` as the active sheet (else the first), not
+  `<workbookView activeTab>`, which is what the probes set.
 Conditional formats and data validation (T-3263, probes/t3263-*, excel-graph 2026-10-31): a formula
 conditional format (`<cfRule type="expression">`) and a custom data validation (`<dataValidation
 type="custom">`, `<formula1>`) on S!A1 whose formula nests 65 ABS calls load (t3263-cf-abs-65,

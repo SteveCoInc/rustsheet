@@ -28,6 +28,26 @@
     "why": "date -1.0 is outside 1900-01-00..9999-12-31",
     "f": "=MDURATION(-1,43831,0.05,0.06,2)"
    },
+   "A14": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(-1,39264,39448,0.1,1000,2,0)"
+   },
+   "A15": {
+    "t": "e",
+    "why": "date -1000000000000000.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(-1E15,39264,39448,0.1,1000,2,0)"
+   },
+   "A16": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(39083,39264,-1,0.1,1000,2,0)"
+   },
+   "A17": {
+    "t": "e",
+    "why": "date -1.0 is outside 1900-01-00..9999-12-31",
+    "f": "=ACCRINT(39083,-1,39448,0.1,1000,2,0)"
+   },
    "A20": {
     "t": "e",
     "why": "settlement below 1 or not before the maturity",
@@ -42,6 +62,18 @@
     "t": "e",
     "why": "the previous coupon date is before 1900-01-01: #NUM!",
     "f": "=DURATION(1,2958435,0.05,0.06,4)"
+   }
+  }
+ },
+ "skipped": {
+  "Sheet1": {
+   "A27": {
+    "f": "=ACCRINT(1,2958300,2958435,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
+   },
+   "A28": {
+    "f": "=ACCRINT(1,40000,2958435,0.05,1000,4,0,TRUE)",
+    "why": "no single value"
    }
   }
  }

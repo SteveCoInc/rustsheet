@@ -233,6 +233,7 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         verdict,
         detail: None,
         candidate: None,
+        weight: super::xmldiff::unit_weight(verdict),
     };
     let case = |items: Vec<Item>| CaseResult {
         id: "rt/a.xlsx".into(),
@@ -255,13 +256,149 @@ fn a_new_loss_in_an_unchanged_case_is_a_regression() {
         item("/a[0]", Verdict::Kept),
         item("/b[0]", Verdict::Lost),
     ]);
-    let delta = baseline::diff(&baseline(&[&before]), &baseline(&[&after]));
+    let delta = baseline::diff(
+        &baseline(&[&before], BaselineMode::Cells),
+        &baseline(&[&after], BaselineMode::Cells),
+    );
     assert_eq!(
         delta.regressions,
         vec!["rt/a.xlsx\tR0 part /b[0] lost".to_string()]
     );
-    let fixed = baseline::diff(&baseline(&[&after]), &baseline(&[&before]));
+    let fixed = baseline::diff(
+        &baseline(&[&after], BaselineMode::Cells),
+        &baseline(&[&before], BaselineMode::Cells),
+    );
     assert_eq!(fixed.fixed.len(), 1);
+}
+
+/// A failing case of `checked` items with `(key, weight)` items lost.
+fn lossy(checked: usize, lost: &[(&str, usize)]) -> CaseResult {
+    CaseResult {
+        id: "rt/a.xlsx".into(),
+        suite: "rt".into(),
+        status: if lost.is_empty() {
+            CaseStatus::Pass
+        } else {
+            CaseStatus::Fail
+        },
+        message: None,
+        millis: 0,
+        checked,
+        items: lost
+            .iter()
+            .map(|(key, weight)| Item {
+                scenario: "R0",
+                kind: "element",
+                key: (*key).into(),
+                verdict: Verdict::Lost,
+                detail: None,
+                candidate: None,
+                weight: *weight,
+            })
+            .collect(),
+    }
+}
+
+fn cases(c: &CaseResult) -> Baseline {
+    baseline(&[c], BaselineMode::Cases)
+}
+
+#[test]
+fn a_cases_baseline_ratchets_each_cases_weight_and_item_set() {
+    let two = cases(&lossy(100, &[("/a", 1), ("/b", 1)]));
+    let line = two.failing.iter().next().map(|(_, i)| i.clone());
+    assert!(
+        line.as_deref().is_some_and(|l| l.starts_with("* 2 ")),
+        "{line:?}"
+    );
+    // One more loss.
+    let worse = diff(
+        &two,
+        &cases(&lossy(100, &[("/a", 1), ("/b", 1), ("/c", 1)])),
+    );
+    assert_eq!(worse.regressions.len(), 1, "{worse:?}");
+    // One loss fixed: a fix, listed once.
+    let better = diff(&two, &cases(&lossy(100, &[("/a", 1)])));
+    assert!(better.regressions.is_empty(), "{better:?}");
+    assert_eq!(better.fixed.len(), 1, "{better:?}");
+    // A loss traded for a fix: the same n, another set of keys.
+    let swapped = diff(&two, &cases(&lossy(100, &[("/a", 1), ("/c", 1)])));
+    assert_eq!(swapped.regressions.len(), 1, "{swapped:?}");
+    // Thirty changed children, then their parent lost whole: fewer items, more weight.
+    let children: Vec<String> = (0..30).map(|n| format!("/p/c[{n}]")).collect();
+    let changed: Vec<(&str, usize)> = children.iter().map(|k| (k.as_str(), 1)).collect();
+    let collapsed = diff(
+        &cases(&lossy(100, &changed)),
+        &cases(&lossy(100, &[("/p", 31)])),
+    );
+    assert_eq!(collapsed.regressions.len(), 1, "{collapsed:?}");
+    // A passing case that fails, and a failing one that passes.
+    assert_eq!(diff(&cases(&lossy(100, &[])), &two).regressions.len(), 1);
+    let fixed = diff(&two, &cases(&lossy(100, &[])));
+    assert!(fixed.regressions.is_empty() && fixed.fixed.len() == 1);
+}
+
+#[test]
+fn a_round_trip_that_compares_less_or_stops_running_regresses() {
+    let two = cases(&lossy(100, &[("/a", 1), ("/b", 1)]));
+    // The output became unreadable: one V8 item, one item compared.
+    let unreadable = diff(&two, &cases(&lossy(1, &[("V8", 0)])));
+    assert!(
+        unreadable
+            .regressions
+            .iter()
+            .any(|r| r.contains("checked fell from 100 to 1")),
+        "{unreadable:?}"
+    );
+    // The case no longer runs.
+    let errored = CaseResult {
+        status: CaseStatus::EngineError,
+        ..lossy(100, &[])
+    };
+    for mode in [BaselineMode::Cases, BaselineMode::Cells] {
+        let before = baseline(&[&lossy(100, &[("/a", 1)])], mode);
+        let after = baseline(&[&errored], mode);
+        let delta = diff(&before, &after);
+        assert_eq!(
+            delta.regressions,
+            vec!["rt/a.xlsx\t!EngineError".to_string()],
+            "{mode:?}"
+        );
+    }
+}
+
+#[test]
+fn the_kept_rate_weighs_lost_subtrees_and_skips_cases_that_did_not_run() {
+    let mut case = lossy(200, &[("/x", 1), ("/tree", 9)]);
+    case.items.push(Item {
+        verdict: Verdict::Added,
+        weight: 0,
+        ..case.items[0].clone()
+    });
+    let errored = CaseResult {
+        status: CaseStatus::Timeout,
+        ..lossy(0, &[])
+    };
+    let rate = KeptRate::of(&[&case, &errored]);
+    assert_eq!((rate.checked, rate.not_kept, rate.unscored), (200, 10, 1));
+    assert!((rate.percent() - 95.0).abs() < 1e-9);
+    assert!((KeptRate::default().percent() - 100.0).abs() < 1e-9);
+}
+
+#[test]
+fn a_lost_subtree_and_the_truncated_rest_carry_their_weight() {
+    let src = "<r><keep/><gone><a/><b/></gone></r>";
+    let d = super::xmldiff::diff(src, "<r><keep/></r>").unwrap_or_default();
+    let lost: Vec<usize> = d.differences.iter().map(|x| x.weight).collect();
+    assert_eq!(lost, vec![3]);
+    let many = (0..600).fold(String::new(), |mut acc, n| {
+        let _ = write!(acc, "<i n=\"{n}\"/>");
+        acc
+    });
+    let d = super::xmldiff::diff(&format!("<r>{many}</r>"), "<r/>").unwrap_or_default();
+    assert_eq!(d.differences.len() + d.truncated, 600);
+    // Each lost `<i n=".."/>` is an element and an attribute.
+    assert_eq!(d.truncated_weight, 2 * d.truncated);
 }
 
 mod xml {

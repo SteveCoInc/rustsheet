@@ -22,17 +22,33 @@ reference is an ordinary value.
 Evidence: probes/is-functions-array-lift (Calc!A15, B15, D15, E15, J2, K2, L3, M30:N30, M32:N32;
 excel-graph oracle sidecar, 2026-10-06). Desktop Excel was not checked.
 Also covered by M34:P34 (`{4.5,-7,"3",TRUE}` -> TRUE, FALSE, FALSE, #VALUE!: parity of the truncated
-absolute value, text cast, boolean #VALUE!). UNVERIFIED sub-rules (no probe yet): an array
-expression derived from a range (`ISEVEN(Data!C1:C5+0)`), and the
-dynamic-array flag Excel writes for the range form. Magnitude >= 2^63 is settled below (T-2165).
-Legacy (pre-dynamic-array) formulas, UNVERIFIED for ISEVEN/ISODD (T-1774 moved them onto the
-SPEC-0011 `LiftArrays` table entry, so they follow the Analysis ToolPak rule probed for EDATE and
-YEARFRAC, probes/scalar-lift-shapes-c E, F, H, Q): a bare range gets no `@` and is `#VALUE!`, a
-value operation over a range (`ISEVEN(C1:C5+0)`) gets `@`, and `{5}` gets no `@`. Before T-1774 the
-hand-written arm gave the argument a scalar signature (`@` on the range and on `{5}`).
+absolute value, text cast, boolean #VALUE!). Magnitude >= 2^63 is settled below (T-2165).
+The refusal is of a reference, not of anything range-derived: a value operation over a range is an
+array and lifts, while every form that still yields a reference is refused like the bare range.
+Over Data!E1:E7 = 2, 3, "x", TRUE, #N/A, empty, -7.5, a dynamic `=ISEVEN(Data!E1:E7+0)` spills
+TRUE, FALSE, #VALUE!, FALSE, #N/A, TRUE, FALSE (the text is `#VALUE!`, TRUE is 1, the empty cell 0, the
+error passes through), and so do `-Data!E1:E7` and the 2-D `Data!E1:F7*1` (7x2); ISODD is the
+complement on the numbers. `IF(TRUE,Data!E1:E7)`, `INDEX(Data!E1:E7,0,1)`, `TAKE(Data!E1:E7,3)`,
+`(Data!E1:E7)`, a defined name for the range and `LET(x,Data!E1:E7,ISEVEN(x))` are each one `#VALUE!`
+with no spill. Each holds on a row inside the range's rows (row 2) and outside it (row 40): there is
+no implicit intersection in a dynamic formula. Evidence: probes/iseven-isodd-range-derived-arrays
+Calc!A2:V8, A40:V46 (excel-graph, 2026-11-06, T-4528).
+Legacy (pre-dynamic-array) formulas follow the Analysis ToolPak (`LiftArrays`) rule: a bare range
+gets no `@` and is `#VALUE!` on and off its rows (`=ISEVEN(Data!E1:E7)`), and a value operation over a
+range gets `@` (`=ISEVEN(@Data!E1:E7+0)`, FALSE on row 2, which reads E2 = 3, and `#VALUE!` on row 40).
+An array constant gets `@` as in a scalar argument, with one element or several and under a sign:
+`=ISEVEN(@{5})`, `=ISEVEN(@{2;3})` (TRUE, its first element), `=ISODD(@{2,3})`, `=ISEVEN(-@{5})`. This
+is not ISEVEN's own: `=EDATE(@{45000},1)`, `=EDATE(@{45000;45031},1)`, `=YEARFRAC(@{45000},46000)`,
+`=BIN2DEC(@{101})` and `=QUOTIENT(@{7},2)` show the same, so every `LiftArrays` argument reads an
+array constant as a scalar argument does and the call takes no `@` of its own. Evidence:
+probes/iseven-isodd-range-derived-arrays Leg!A2:N3, A40:N41 (excel-graph, 2026-11-06, T-4528). Ours
+put no `@` on the constant (and `@` on the call for a multi-element one) before T-4528, which changed
+only the shown text, as the values agree either way; `array_constant_context` in
+static_analysis/legacy.rs now gives a `LiftArrays` argument the scalar signature for its array
+constants. The dynamic-array flag Excel writes for the range form is not probed.
 Implemented in: `Model::lifted_parity` and the `ARRAYS_1` entry in functions/lift/kinds/general.rs.
 Status: VERIFIED (excel-graph)
-Tasks: T-0247, T-0248
+Tasks: T-0247, T-0248, T-4528
 
 ## IS* and TYPE over every scalar value kind
 Only a truly empty cell is blank: `ISBLANK` is FALSE for a formula returning `""`, a single space,
