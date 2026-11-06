@@ -36,7 +36,7 @@ states what Excel does, with the cells, and ours matches every cell.
   - `IMCSCH("1E-200i")` and `IMCSC("1E-200i")` are `#NUM!`.
   - The real-argument path is SIN/COS's kernel (T-2534, `real_trig`).
   - Excel's `IMCSC("1E-20i")` is `#NUM!` (probes-numeric/im-csc-cot-tiny-imag, T-2531), so `#NUM!` for 1E-200i is
-    plausible but unprobed. `IMCSCH("1E-200i")` is csch(iy) = -i·csc y, whose true value -1E+200i is finite.
+    plausible but unprobed. `IMCSCH("1E-200i")` is csch(i·y) = -i·csc(y), whose true value -1E+200i is finite.
 - Code: `imcsc`, `imcot`, `imsec`, `imcsch`, `imsech` and `real_trig` in
   crates/rustsheet-engine/src/functions/engineering/complex/trig.rs.
 
