@@ -3,7 +3,7 @@ id: T-4558
 title: "Probe case for color-filter tables (T-4404): spec2xlsx writes a colorFilter, with excel-graph oracle sidecar, and a dangling dxfId in memory vs export"
 milestone: M8
 lane: engine
-status: todo
+status: in-progress
 priority: P3
 size: S
 tier: sonnet
