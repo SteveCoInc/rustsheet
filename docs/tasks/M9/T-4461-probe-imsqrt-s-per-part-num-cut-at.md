@@ -41,7 +41,8 @@ for both signs. The engine either matches every new cell or a follow-up task is 
 - IMSQRT's digits away from the cut, and the other IM* overflow edges (T-2631, T-4425).
 
 ## Outcome
-Probe `probes/t4461-imsqrt-cut` (36 cells, excel-graph): the doubles around sqrt(DBL_MAX) are all accepted per part
-(real, imaginary, negated, with a `+-1i` other part); `1.3408E154` and above are `#NUM!`. The cut lies between
-`1.3407807929942597E154` and `1.3408E154`; the engine matches all 36 cells, so no baseline change and no follow-up.
-engineering.md updated. IMSQRT has no Gate A definition, so no `.math.json` sidecar.
+Probe `probes/t4461-imsqrt-cut` (41 cells, excel-graph). Complex text keeps 15 significant digits, so the three
+17-digit doubles around sqrt(DBL_MAX) all read as `1.34078079299425E154` and are accepted; `1.34078079299426E154`
+and above (`1.3408E154` ...) are `#NUM!`. The cut lies between those two 15-digit texts, the finest text can show.
+The engine matches all 41 cells: no engine change, no follow-up. The only baseline change is the new `C` line for
+the case in `eval/baseline/probes.txt`. engineering.md updated. IMSQRT has no Gate A definition, so no sidecar.
