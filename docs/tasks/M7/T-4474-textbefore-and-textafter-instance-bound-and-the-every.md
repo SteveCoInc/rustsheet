@@ -3,7 +3,7 @@ id: T-4474
 title: "TEXTBEFORE and TEXTAFTER instance bound and the every-delimiter-too-long check in UTF-16 units: probe a multi-byte text or delimiter and a match_mode 1 delimiter whose full fold is longer, and match"
 milestone: M7
 lane: functions-text
-status: todo
+status: in-progress
 priority: P2
 size: S
 tier: opus
