@@ -71,5 +71,5 @@ matches it.
   last-first so a formula rewritten twice (table refs, then spans) gets its original back. Row and
   column edits needed no change (the engine already kept spans).
 - Unit tests in test/user_model/test_move_sheet.rs, with undo/redo for the deletes and the name.
-- Eval delta: probes +15 cases, 94 cells, all passing (5 cases, 18 cells, failed before the
+- Eval delta: probes +15 cases, 97 cells, all passing (5 cases, 22 cells, failed before the
   fix); known failures 5233 -> 5233, no regressions.
