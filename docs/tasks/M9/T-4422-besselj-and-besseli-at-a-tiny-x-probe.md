@@ -3,7 +3,7 @@ id: T-4422
 title: "BESSELJ and BESSELI at a tiny x: probe where each order 2 to 7 turns #NUM! and match Excel's cut (the engine's cuts and its 0 results are unevidenced)"
 milestone: M9
 lane: functions-engineering
-status: in-progress
+status: done
 priority: P2
 size: M
 tier: opus
@@ -53,15 +53,15 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4422-bessel-tiny-x
   0042).
 
 ## Acceptance criteria
-- [ ] probes/t4422-bessel-tiny-x-cuts is committed with excel-graph oracle values. Every order 2 to 7 of both functions
+- [x] probes/t4422-bessel-tiny-x-cuts is committed with excel-graph oracle values. Every order 2 to 7 of both functions
       has its cut bracketed by two adjacent cells, one answering and one `#NUM!`, or it is shown never to error above
       1E-306.
-- [ ] Every cell of the case passes. The engine change is a model of Excel's mechanism, stated in the PR, and it also
+- [x] Every cell of the case passes. The engine change is a model of Excel's mechanism, stated in the PR, and it also
       keeps the six #NUM! cells and three answering cells of eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 listed
       above. If no mechanism reproduces every bracket, the cells left over get a functions-engineering follow-up made
       with `make new-task`. That task names the cells and carries `campaign: semantics` and a `## Visible-parity stage`
       section.
-- [ ] If any cut or constant is chosen by scoring candidates against oracle cells (check 7 kind (a) or (c)), the
+- [x] If any cut or constant is chosen by scoring candidates against oracle cells (check 7 kind (a) or (c)), the
       Outcome shows these decision 0188 R4 guards:
       - hold-out: train and hold-out counts side by side, about 30% of the cells by cell hash, never tuned on;
       - fresh sweep: a new log-uniform probes-numeric case oracle-filled after the freeze;
@@ -69,10 +69,36 @@ excel-probe skill, excel-graph, tag M9. Name the case probes/t4422-bessel-tiny-x
       - a `FITTED(T-4422, n_cells, range)` tag, applied only inside `range`;
       - the reproducibility floor respected (no target below 4 ulp web against desktop);
       - no keep-matched branch.
-- [ ] engineering.md "BESSELJ and BESSELI at a tiny x" replaces "where each cut lies is unprobed" with the bracketing
+- [x] engineering.md "BESSELJ and BESSELI at a tiny x" replaces "where each cut lies is unprobed" with the bracketing
       cells, and says whether Excel ever returns 0 there.
-- [ ] `make eval-baseline` records no regression; `rustsheet-eval accuracy` passes; `make check` green; reviewers approve.
+- [x] `make eval-baseline` records no regression; `rustsheet-eval accuracy` passes; `make check` green; reviewers approve.
 
 ## Out of scope
 - BESSELK and BESSELY at a tiny x, and orders above 7 (file a follow-up if the mechanism generalizes and cells differ).
 - BESSELI at a large x past R3's 1e-4 (T-4196).
+
+## Outcome
+- Probes (excel-graph, 2026-11-06): probes/t4422-bessel-tiny-x-cuts (2,736 cells: x = 10^-k, k = 4 to 306 step 2,
+  BESSELJ and BESSELI orders 2 to 7, -x for the odd orders) and probes/t4422-bessel-tiny-x-bisect (432 cells: mantissas
+  9..1 over the two bracketing decades plus 3-digit steps around each cut). Every order of both functions, at +x and
+  -x, has its cut bracketed by adjacent 3-digit cells (engineering.md table). Every x below a cut is `#NUM!` to 1E-306;
+  Excel never returns 0 there.
+- Mechanism: the cut is exactly the first x at which the order's Miller recurrence overflows, and any overflow is
+  `#NUM!`. All 18 Excel brackets equal the engine's own first non-number x. BESSELJ already matched. BESSELI flushed an
+  overflow after the step j = n to 0 (`i0 / inf`), a band up to two decades wide below each cut; `in_miller` now returns
+  NaN when its last term is not finite. No cut is chosen by scoring, so it is not a fit.
+- BESSELI's values: plain doubles missed 8 cells by 1 ulp (`BESSELI(±1E-6,7)` and six order-6 cells). The model is a
+  structural choice from three ranked candidates (decision 0188 R4, check 7 kind (b)): double rounding at every step and
+  rescale (fixed 3 cells), then also a double-rounded `ans * (i0/bi)` (fixed all 8). An 80-bit `i0/bi` held in a register
+  missed 58. Hold-out: no split was made before scoring. The candidates were scored on both whole cases, so the
+  fresh sweep below is the only held-out evidence.
+  - Fresh sweep, built after the model was frozen: probes-numeric/t4422-besseli-fresh-sweep (400 cells,
+    log-uniform |x| in [1E-15, 700], a third negative, orders 2 to 20, seed 4422, excel-graph). It passes 400/400
+    bit for bit.
+  - Gate A (`rustsheet-eval accuracy`): 0 failing, BESSELI/s1 included. No `FITTED` tag: no constant was fitted.
+  - Reproducibility floor: not engaged, since every target is bit-exact. Keep-matched branch: none.
+- engineering.md "BESSELJ and BESSELI at a tiny x and a small order" now carries the brackets and the rounding rule. The
+  "undetermined" note on BESSELI's double rounding in "BESSEL order cap" is resolved.
+- Eval delta: +3,568 cells, all passing (3 new cases). No other cell changed: 0 fixed, 0 regressions. The engine's 0 cells
+  that used to fall in the gaps between Excel's cells are now `#NUM!`, as Excel gives.
+- Follow-ups: none. Every cell passes.

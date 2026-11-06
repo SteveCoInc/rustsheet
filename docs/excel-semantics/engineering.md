@@ -106,7 +106,7 @@ Excel past 100,000 (probes/t2546-bessel-past-cap, 83 cells, excel-graph, 2026-10
 - BESSELI's I0(x) and I1(x) (I0 is also the normalizer of its Miller recurrence) at |x| >= 3.75 are `e^x / sqrt(x) * poly(3.75/x)` with Excel's own
   x87 EXP (`excel_exp`, numbers.md "EXP is an x87 2^(a*log2 e) evaluation"), not the correctly rounded exp:
   `BESSELI(100.21..,5)` is 1.177055823943151E+42, which the platform exp misses by 2 ulps (gen-m9/59a16b5ab566ee5c
-  Calc!A299, excel-graph; T-2548). Whether BESSELI's Miller steps round twice is undetermined: that cell is the same either way (ours keep plain doubles).
+  Calc!A299, excel-graph; T-2548). BESSELI's Miller steps, rescales and final `ans * (i0/bi)` round twice too (x87 code stored to doubles; T-4422, "BESSELJ and BESSELI at a tiny x and a small order"); that cell is the same either way.
 - BESSELI is 0 where I_n(x) underflows (`BESSELI(100,100001)`, `(700,100001)`, `(1E-3,100001)`, `(8,1E+6)`, `(-2.5,100001)`),
   `#NUM!` above x = 709.7 (T-2613, "BESSELI overflow point"), even though I_n(x) underflows (`BESSELI(713,100001)`,
   `(1E+4,100001)`, `(2E+5,100001)`), and `#NUM!` for a tiny x, as J (`BESSELI(2E-5,100001)`; `(5E-5,100001)` is 0: BESSELI
@@ -1404,14 +1404,38 @@ between these cells (Gate A tables `accuracy/BESSELJ/s1` and `BESSELI/s1`, excel
   `BESSELJ(1.90005396436845E-196,4)` are `#NUM!`;
 - BESSELI order 4: `BESSELI(-1.02514099090909E-10,4)` is 2.876094643484432E-43, `BESSELI(-3.53342392064674E-38,4)` is
   `#NUM!` (the math is about 4.06E-153). BESSELI order 2 answers at 4.45682724521062E-17.
-Orders 0 and 1 answer at every tiny x drawn (down to 1.5E-46 for J0, 5.3E-74 for J1, 2.7E-268 for I0). The likely cause
-is the recurrence's own overflow at a huge 2/x, as for the order 100,001 case, but where each cut lies is unprobed.
-The engine is `#NUM!` at all six cells and matches the answering ones bit for bit. Excel's error is matched (decision
-0188 R3 never applies to an error against a number), so Gate A holds through Excel's side.
-Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083).
-Status: VERIFIED (excel-graph, these cells) / UNVERIFIED (each order's cut)
-Implemented in: functions/engineering/transcendental/bessel_excel.rs, bessel_i.rs (unchanged; they already match)
-Tasks: T-4083
+Orders 0 and 1 answer at every tiny x drawn (down to 1.5E-46 for J0, 5.3E-74 for J1, 2.7E-268 for I0).
+Rule (T-4422): the cut is exactly the first x at which the order's Miller downward recurrence (Numerical Recipes
+`bessj` / `bessi`, terms stored as doubles and scaled by 1E-10 once a term passes 1E+10) overflows, and an overflow
+anywhere in the recurrence is `#NUM!`, also where it comes only after the step j = n. Excel never returns 0 there,
+though the book's `ans *= bessi0(x)/bi` would give 0 for an infinite `bi` and a finite `ans`. Each order's last answering
+and first `#NUM!` x, to 3 significant digits (|x|; the odd orders were also probed at -x, with the same cut):
+
+| order | BESSELJ answers / `#NUM!` | BESSELI answers / `#NUM!` |
+|---|---|---|
+| 2 | 1.36E-39 / 1.35E-39 | 2.04E-24 / 2.03E-24 |
+| 3 | 1.48E-34 / 1.47E-34 | 7.13E-21 / 7.12E-21 |
+| 4 | 3.11E-28 / 3.10E-28 | 1.23E-18 / 1.22E-18 |
+| 5 | 4.07E-26 / 4.06E-26 | 4.26E-17 / 4.25E-17 |
+| 6 | 2.04E-24 / 2.03E-24 | 2.62E-16 / 2.61E-16 |
+| 7 | 5.03E-23 / 5.02E-23 | 1.19E-15 / 1.18E-15 |
+
+Every x below a cut is `#NUM!` down to 1E-306 (the 10^-k grid), and no probed cell is 0. The true values there are
+ordinary doubles (I_4(1E-18) is about 2.6E-75), so the error is the algorithm's, not the value's.
+BESSELI's values there round twice at every step, the rescales and the final `ans * (i0/bi)` (x87 code stored to
+doubles, as BESSELJ's, T-2548): plain doubles miss `BESSELI(1E-6,7)` (1.550099206349255E-48), `(7E-15,6)`,
+`(1E-15,6)`, `(2E-15,6)`, `(4E-15,6)`, `(8E-15,6)` and `(5E-16,6)` by 1 ulp, and an 80-bit `i0/bi` misses 58 cells.
+Ours: `in_miller` returns NaN when its last term is not finite, and `jn_miller`'s ratio is NaN once a term overflows;
+`in_miller` rounds twice as above. Both match every cell. Before T-4422 BESSELI flushed an overflow after j = n to 0, in a band below each cut that
+reached two decades at some orders (7.12E-21 to 2.87E-22 at order 3; `BESSELI(1E-24,2)`, `(1E-18,4)`, `(1E-16,6)`).
+Excel's error is matched (decision 0188 R3 never applies to an error against a number), so Gate A holds through
+Excel's side.
+Evidence: eval/accuracy/tables/BESSELJ/s1 and BESSELI/s1 oracle sidecars (T-4083); probes/t4422-bessel-tiny-x-cuts
+(2,736 cells, x = 10^-k for k = 4 to 306 step 2, orders 2 to 7, excel-graph, 2026-11-06) and
+probes/t4422-bessel-tiny-x-bisect (432 cells, the 3-digit brackets above, excel-graph, 2026-11-06).
+Status: VERIFIED (excel-graph)
+Implemented in: functions/engineering/transcendental/bessel_excel.rs (`jn_miller`), bessel_i.rs (`in_miller`)
+Tasks: T-4083, T-4422
 
 ## BESSELI overflow point (T-2613)
 Evidence: probes/besseli-overflow-cut-sweep (x = 709.50 to 709.78 step 0.01, orders 0 and 1), -fine (709.700 to 709.710 step 0.001, orders 0, 1 and 5), -finest (709.7001 to 709.7009, 709.70001, 709.70005, 709.70009, order 0), excel-graph.
