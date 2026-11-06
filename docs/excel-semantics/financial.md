@@ -388,7 +388,7 @@ TRUE, where the double product is about 2.2E-318.
 
 The same inputs make PMT, PPMT and CUMIPMT `#NUM!` (`PMT(0.5,2,2*5E+307)`, `PPMT(0.5,1,2,2*5E+307)`,
 `CUMIPMT(0.5,2,2*5E+307,1,1,0)`, `PPMT((7.245817E-308-6.217028E-308),2,1E+9,1E-10,0,0)`,
-`PPMT(1E-300,1,1E-10,1E-300)`); the engine does not follow that yet (T-4488).
+`PPMT(1E-300,1,1E-10,1E-300)`); the engine follows that for all three (T-4488). CUMPRINC is unprobed there and keeps its values.
 
 The boundary is A's own overflow: the largest Excel-finite `|A|` in the sweep is 1.43E+308 (column C) and 1.36E+308
 (column D), and every `#NUM!` cell of columns C and D has A past the double range; of column B (all `#NUM!`), 188
@@ -404,8 +404,8 @@ Evidence:
 
 Status: VERIFIED (excel-graph).
 Implemented in: `period_payments` (crates/rustsheet-engine/src/functions/financial/annuity.rs) errs IPMT where
-`discounted_balance` or `payment_factor` declines; `discounted_split` flushes its interest. PMT, PPMT and CUMIPMT:
-not yet (T-4488).
+`discounted_balance` or `payment_factor` declines (`discounted_fails`); `discounted_split` flushes its interest.
+PMT (`compute_payment`), PPMT (`period_payments`) and CUMIPMT (`cumulative_of`) err on the same test (T-4488).
 Tasks: T-2587, T-2943, T-3523, T-4314, T-4488
 
 ## IPMT and PPMT split Excel's discounted payment
