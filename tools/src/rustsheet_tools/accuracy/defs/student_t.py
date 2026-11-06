@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT
+from rustsheet_tools.accuracy.defs._common import DF_CUT, confidence_margin, scalars
 from rustsheet_tools.accuracy.model import (
     Definition,
     Interval,
@@ -464,30 +464,16 @@ TDIST = register(
 # 0, 1, -0.1 or 1.5 are #NUM! (T-1043), so alpha is in (0, 1), unlike T.INV.2T's (0, 2). The df n - 1 is cut at 1E10:
 # n = 10000000001 is a number and 10000000002 #NUM! (T-1043, `t1518-t-df-cut`). A tiny alpha has a finite margin
 # (`CONFIDENCE.T(1E-300,1,2)` = 4.50158158078553E299; statistics.md T-1531). sd 0 is #NUM! (T-1043), but no cell shows
-# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error.
-CONFIDENCE_RANGE = (2.2250738585072014e-308, 1e300)  # a normal double, clear of the overflow
-
-
-def confidence_margin(alpha: mpmath.mpf, sd: mpmath.mpf, n: mpmath.mpf) -> mpmath.mpf:
-    """T.INV.2T(alpha, n - 1)·sd/√n. NoValueError where sd·t, sd/√n, t/√n or the margin leaves the normal double
-    range: no cell shows where Excel's products overflow or underflow, so such a point is unprobed."""
-    t = two_tailed_quantile(alpha, n - 1)
-    root = mpmath.sqrt(n)
-    for intermediate in (sd * t, sd / root, t / root, sd * t / root):
-        if not CONFIDENCE_RANGE[0] <= abs(intermediate) <= CONFIDENCE_RANGE[1]:
-            msg = "an intermediate leaves the normal double range (unprobed)"
-            raise NoValueError(msg)
-    return sd * t / root
+# a negative sd, so a negative sd has no value (NoValueError, unprobed) rather than an assumed error. The margin and its
+# range check are `_common.confidence_margin`, shared with CONFIDENCE.NORM and CONFIDENCE (T-4581).
 
 
 def _confidence_t(args: Sequence[MathArg]) -> mpmath.mpf:
-    alpha, sd, n = args
-    assert not isinstance(alpha, (bool, str, tuple)) and not isinstance(sd, (bool, str, tuple))
-    assert not isinstance(n, (bool, str, tuple))
+    alpha, sd, n = scalars(args)
     if sd < 0:
         msg = "a negative standard_dev is unprobed"
         raise NoValueError(msg)
-    return confidence_margin(alpha, sd, n)
+    return confidence_margin(two_tailed_quantile(alpha, n - 1), sd, n)
 
 
 def _confidence_t_domain(args: Sequence[MathArg]) -> str | None:
