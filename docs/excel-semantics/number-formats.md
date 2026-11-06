@@ -1080,6 +1080,14 @@ Evidence: probes/t1925-numeral-digits (cell row = N + 1; D: `#,##0.00` of 102030
   A1:A30 (excel-graph, 2026-11-04). Status: VERIFIED. Implemented (T-3891): `locale_tag::numerals`
   (`numeral_suffix`); the locale part still resolves as the whole tag (`[$-40C,1]` is English, A106 of
   probes/text-locale-date-names).
+  - **Suffix shapes and the part before the comma** (probes/t4492-locale-comma-tag-shapes A1:A24, excel-graph,
+    2026-11-04; T-4492). On 45000.75: `,2`, `,20`, `,0`, `,x` and `,200,1` give ASCII, `,201` Arabic-Indic (the low
+    byte is ignored), `[$-409,200]0` and `[$-40C,200]0` Arabic-Indic. Spaces matter in an odd way: `, 200`, `,  200`,
+    `[$-ar-SA ,200]` and `[$-, 200]` are Arabic-Indic, while `,200 ` is "肆伍零零壹" (Chinese financial digits).
+    A hex LCID before the comma is not a locale: `[$-40C,1]mmmm`, `[$-40C,200]mmmm` and `[$-40C, 200]mmmm` are
+    "March", while a BCP-47 name is: `[$-fr-FR,200]mmmm` and `[$-fr-FR,1]mmmm` are "mars", and
+    `[$-ar-SA,200]mmmm|dddd` is "مارس|الأربعاء". `[$-ar-SA,200]h:mm AM/PM` is "٦:٠٠ م" and `[$-,200]h:mm AM/PM`
+    "٦:٠٠ PM". Not modelled (T-4492): the spaced suffixes (A16, A20:A22) and `[$-40C,200]mmmm` (A2).
 
 **Unrelated quirks probes/t3532-numeral-digit-fields found.** (1) Rule: with `AM/PM` at the end, only some hour tokens take the 12-hour clock: `TEXT(45000.5432,"h|hh|mm|ss|h:mm:ss.00 AM/PM")` is "13|13|02|12|1:02:12.48 PM" (row 10, every numeral byte); we print "1|01|..."; which hours switch is in the "Hours with AM/PM" entry (T-3710). (2) Rule: a `0` after a fraction prints its zero: `TEXT(12.5,"# ?/?|0 ""12""|\5")` is "12 1/2|0 12|5" (row 14); we drop the `0`; filed as T-3711.
 
@@ -1118,7 +1126,7 @@ Tasks: T-1610, T-1711, T-2030, T-2206
 Rule: suite gen-m10 records Excel's displayed text (`Range.text`) of 135 format codes (every built-in,
 custom codes with 1-4 sections, conditions, colors, literals, `*`/`_`, `@`, elapsed and fractional
 seconds, fractions, scientific, scaling commas, percent) over 44 edge values, 10,400 cells, plus
-TEXT() with the same codes. Points the earlier probes did not show: **Spacing and bad suffixes** (probes/t3891-script-digits-typed-shapes F1:F18, excel-graph, 2026-11-04): a space after the comma still reads (`[$-ar-SA, 200]0` on 45000.75 is "٤٥٠٠١"; ours "45001", T-4492); `,2`, `,20`, `,0`, `,x` and `,200,1` give ASCII, `,201` Arabic-Indic (the low byte is ignored), `[$-409,200]0` Arabic-Indic, and `[$-ar-SA,200]mmmm|dddd` the Arabic names ("مارس|الأربعاء"); `[$-ar-SA,200]h:mm AM/PM` is "٦:٠٠ م" and `[$-,200]h:mm AM/PM` "٦:٠٠ PM".
+TEXT() with the same codes. Points the earlier probes did not show:
 - A `*x` fill adds nothing to the text: `_("$"* #,##0.00_);...` on 36.5 is " $36.50 ", `*.0.00` and
   `0.00*-` on PI() "3.14"; `_x` still adds one space (`_(* #,##0_)` on 1000 " 1,000 ").
 - A date or clock format over a serial it cannot show (negative, or 1234567890 past 9999-12-31) is
@@ -1395,7 +1403,8 @@ denominator kinds over 0, ±0.75, ±1, T-0982):
   `# ?/? ?` "12 1/2  ", `# ?/? 00` "12 1/2 00", `# ?/? 0#` "12 1/2 00", `# ?/? 0.0` "12 1/2 0.0" and
   `# ?/?|0 "12"|\5` "12 1/2|0 12|5". A blank fraction (12, no fractional part) turns everything from the integer's
   separator up to the last of them into spaces: `# ?/? 0` on 12 is "12" and six spaces, `# ?/?|0 "12"|\5` "12" and
-  seven spaces then "12|5". Not modelled: with a fixed denominator, `# ?/4|0` on 12.5 is "12 1/4|0", not "12 2/4|0" (probes/t3711-placeholder-after-fraction A13, excel-graph, 2026-11-04; T-4069).
+  seven spaces then "12|5".
+  - Not modelled: with a fixed denominator, `# ?/4|0` on 12.5 is "12 1/4|0", not "12 2/4|0" (probes/t3711-placeholder-after-fraction A13, excel-graph, 2026-11-04; T-4069).
 - **A placeholder denominator prints its unused placeholders in place** (T-4204; probes/t3711-fraction-trailing-placeholders
   rows 5, 9-19 and probes/t4204-fraction-denominator-mixed A1:C14, excel-graph, at 12.5, 0.5, 12.125, 0.123, PI() and 0.3).
   The whole run bounds the denominator's digits (`# ?/?0` on 0.123 is " 8/65", `# ?/#0` on PI() "3 1/7", `# ?/??0` on
