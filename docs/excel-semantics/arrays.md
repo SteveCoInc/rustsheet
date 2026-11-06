@@ -934,9 +934,8 @@ gen-m9/c2684066d8df263e Calc!A214), while a spilled blank element still displays
 element as 0, as they read a blank cell of a multi-cell range: `TEXTJOIN("|",FALSE,IFERROR(GROUPBY(..),"#"))` shows the blank
 key as "0" (probes/groupby-sort-filter-args G!B15, B55, groupby-sort-filter-args2 G!B10; `if_error_like`, logical/mod.rs).
 IF passes a blank element through as a blank: `TTEST(..,IF(TRUE,PIVOTBY(..)),1,2)` equals the TTEST without the IF
-(probes/pivotby-ttest-array2 P!A41, P!A31). Whether IFERROR reads blanks of other arrays (FILTER, INDEX lifted over blank
-cells, VSTACK) as 0, and what N and arithmetic do with a blank element, is unprobed (T-2999); ours reads every array's
-blank as 0 in IFERROR and IFNA.
+(probes/pivotby-ttest-array2 P!A41, P!A31). Blanks of other arrays (FILTER, INDEX, VSTACK), N and arithmetic: see "IFERROR, IFNA, N and
+arithmetic over blank array elements (T-2999)".
 T-2592 (probes/t2592-nested-groupby-cells, excel-graph, 2026-10-24; `GROUPBY(D!A1:A5,D!C1:D5,LAMBDA(v,v))` is 3x3: keys a, b, Total by
 key, C, D; group a `{1;2}`/`{10;20}`, b `{3;4}`/`{30;40}`, Total 4x1; the shown headers are off). Nested cells in practice:
 - A LAMBDA whose body is a one-cell reference (`LAMBDA(x,D!D2)`) still displays `#VALUE!` in every spilled cell (probes/groupby-lambda-forms
@@ -1294,6 +1293,29 @@ to one cell, as `{FALSE}` is in followup G!A921).
 Status: VERIFIED (web)
 Tasks: T-1276, T-1328, T-1322, T-1323, T-1326, T-1324, T-1700, T-1325, T-1327, T-3838
 
+## ROW, COLUMN and RANDARRAY over an array value (GROUPBY's per-group function)
+Rule: ROW and COLUMN of an array value (no reference) give an array of `#VALUE!` in that value's shape, not one `#VALUE!`. RANDARRAY
+lifts over an array `rows` or `columns`, one call per element, each element a number (that it is the call's top-left is
+assumed, not probed; T-4611). So GROUPBY with `_xleta.ROW`,
+`_xleta.COLUMN` or `LAMBDA(v,ROW(v))` holds a nested array of `#VALUE!` in each value cell: it displays `#VALUE!` (ERROR.TYPE 3,
+probes/t4450-eta-special-forms H109:H112), but ARRAYTOTEXT of the whole result is `#CALC!` (F109, F115, J65), as for any nested cell
+("GROUPBY and PIVOTBY" above). SHEET's `#N/A` is a scalar and prints (F121). With `_xleta.RANDARRAY`, each cell holds one number per
+record: the cell of a one-record group is a 1x1 array, so `ERROR.TYPE(INDEX(..,1,2))` is one `#N/A` cell (J63).
+- probes/t4519-row-column-randarray-over-arrays (excel-graph, 2026-11-06, T-4519; A1:A3 1, 3, 5, B1:B3 2, 4, 6):
+  - `LET(x,{1;2},ROW(x))` is 2x1, TYPE 64, ARRAYTOTEXT "#VALUE!, #VALUE!", and each element's ERROR.TYPE is 3 (D1:H1).
+  - `ROW(LET(x,{7},x))` is a 1x1 array (D11:H11).
+  - `INDEX(GROUPBY(..,_xleta.ROW),4,2)`, the Total cell, is a 3x1 of `#VALUE!`, and `..,1,2` a 1x1 (D5:H6). `LAMBDA(v,ROW(v))` and
+    `_xleta.COLUMN` give the same (D9:H10).
+  - `RANDARRAY({2})` is 1x1, `RANDARRAY({2;3})` 2x1 and `RANDARRAY({2},{3})` 1x1 (D2:H4). The RANDARRAY Total cell is a 3x1 of numbers
+    and a group cell 1x1 (D7:H8).
+- Excel for the web refuses a workbook holding ROW or COLUMN of an array constant, a function call or an operator:
+  `ROW({1;2})`, `ROW({1,2,3})`, `ROW({7})`, `COLUMN({1,2,3})`, `COLUMN({1;2})`, `ROW(SEQUENCE(2,2))`, `COLUMN(SEQUENCE(1,3))` and `ROW(A1:A3*1)` (FileCorruptTryRepair,
+  one single-formula workbook each, T-4519). So an array reaches ROW only as a LET-bound value, a LAMBDA parameter or a pick.
+Ours: ROW and COLUMN of an array value are one `#VALUE!` (T-4610 owns D1:F1, D5:F6, D9:F11 and t4450 F109, F115, J65). RANDARRAY
+does not lift: `RANDARRAY({2})` is 2x1 and over `{2;4;6}` `#N/IMPL!` (T-4611 owns D2, D3, E3, G3, H3, D4, D7, D8, E8, G8, H8 and t4450 J64).
+Status: VERIFIED (excel-graph)
+Tasks: T-4519, T-4610, T-4611
+
 ## GROUPBY and PIVOTBY: column totals over several value columns
 Rule: with one function over two or more value columns (`width` w), PIVOTBY puts its column subtotal and total cells as
 if a subtotal spanned one column per line it covers instead of w. Lay the column lines out with every subtotal after
@@ -1484,7 +1506,8 @@ probes/eta-reduced-names E93; probes/t2475-stat-subexpressions (excel-graph, 202
 probes/t2622-take-let-reference-lambda-text Q1-Q10 (excel-graph, 2026-10-29, T-2622).
 Ours: `value_extent` (cast.rs), `is_predicate` and `parity_of` (information/mod.rs), `index_select` (index.rs) since T-1511; `&` of
 one is `#VALUE!` in `handle_concatenate` (arithmetic.rs) since T-2622. CONCATENATE, CONCAT and TEXTJOIN of one are unprobed.
-INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar, which is unprobed (T-1946).
+INDEX of a LAMBDA with an index of 2 is `#REF!` there, as for a scalar (probes/map-later-array-error-blank A17; see "MAP over
+single values").
 Status: VERIFIED (excel-graph)
 Tasks: T-1511, T-2622
 

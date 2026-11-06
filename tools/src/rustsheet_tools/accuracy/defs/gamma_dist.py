@@ -11,10 +11,13 @@ Sources:
   `CHISQ.DIST(x,k,TRUE)` = `GAMMA.DIST(x/2,k/2,1,TRUE)` = `GAMMA.DIST(x,k/2,2,TRUE)` and
   `GAMMA.DIST(x,a,b,TRUE)` = `GAMMA.DIST(x/b,a,1,TRUE)`: one P(a, y) and Q(a, y).
 - statistics.md, "GAMMA.DIST's density is #NUM! at a subnormal x / beta (T-2738)": the density of a positive x is
-  `#NUM!` where x / beta (in doubles) is subnormal; an x / beta that overflows is `#NUM!` for both forms
-  (probes/incomplete-gamma-cap E6, E18, cited by `gamma_dist_of`). Both of those cells are at shape 1
-  (`GAMMA.DIST(1E300,1,1E-10,..)`); `_gamma_dist_domain` applies the rule at every shape, as `gamma_dist_of` does,
-  unprobed at the others.
+  `#NUM!` where x / beta (in doubles) is subnormal; an x / beta that overflows is `#NUM!` for both forms at every
+  probed shape, 3.7E-188 to 1E300 (probes/incomplete-gamma-cap E6, E18 at shape 1; probes/t4625-gamma-dist-ratio-overflow
+  rows 1-8 at 0.01, 0.5, 2, 10, 1E5, 1E10 and 1E300, T-4625; Gate A tables GAMMADIST/s1 A182 at 3.7490322860808E-188,
+  A118 and GAMMA.DIST/s1 A141). `_gamma_dist_domain` applies it in that shape range
+  (`OVERFLOW_SHAPES`); outside it the point has no value. The same probe found an unexplained `#NUM!` at a finite
+  x / beta of 1E308 at shapes 1.5 and 2 (B9, F9, B10, B11), not at 0.5, 1, 2.5, 2.9, 3, 10 or 1E5, and not at shape 2
+  from 1E200 down (F10-I11): a ratio above 1E200 between shapes 1 and 2.5 (`HUGE_RATIO_*`) has no value.
 - statistics.md, "GAMMA.DIST at a huge shape (T-2435, T-3316)": rule 1, the density of a positive x is `#NUM!` where
   shape / x overflows a double; rule 2, from a shape of about 1E+55 a computed 0 is `#NUM!` at some points and not
   others, with no threshold (decision 0267 accepts those cells), so such a point has no math value.
@@ -54,7 +57,7 @@ from collections.abc import Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import DF_CUT, NORMAL_MIN, ill_conditioned, scalar
+from rustsheet_tools.accuracy.defs._common import DF_CUT, NORMAL_MIN, ill_conditioned, is_real, real_arg
 from rustsheet_tools.accuracy.defs.gamma import (
     CHI_SCALE,
     HUGE_SOURCE,
@@ -64,14 +67,7 @@ from rustsheet_tools.accuracy.defs.gamma import (
     quantile,
     upper_tail,
 )
-from rustsheet_tools.accuracy.model import (
-    Definition,
-    Interval,
-    MathArg,
-    NoValueError,
-    Param,
-    register,
-)
+from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, NoValueError, Param, register
 
 KERNEL_SOURCE = (
     "statistics.md#one-incomplete-gamma-kernel-under-erf-erfc-norm-chisq-gammadist-and-poisson-t-1778"
@@ -94,11 +90,17 @@ MAX_DRAWN_DIST_SHAPE = 1e10
 # y g(y) times 1 / |a - y| from a distance of 1 from the mode, so it is below e^this where y g(y) is (and its
 # complement is 1 to the working precision).
 DEEP_TAIL_LOG = -2000
+# T-4625: the shapes at which an overflowing x / beta is #NUM! in Excel's cells (probes/t4625-gamma-dist-ratio-overflow;
+# the low end is GAMMADIST/s1 A182).
+OVERFLOW_SHAPES = (3.7490322860808e-188, 1e300)
+# T-4625: finite x / beta above HUGE_RATIO_MIN is #NUM! at shapes 1.5 and 2 and a number at 1 and 2.5 (no rule found).
+HUGE_RATIO_MIN = 1e200
+HUGE_RATIO_SHAPES = (1.0, 2.5)  # open interval
 DENSITY_GUARD_DPS = 10  # digits added to the density's exponent, besides the log10(a) it cancels
 
 
 def _floats(*args: MathArg) -> list[float]:
-    return [float(scalar(a)) for a in args]
+    return [float(real_arg(a)) for a in args]
 
 
 def log_density_y(y: mpmath.mpf, a: mpmath.mpf) -> mpmath.mpf:
@@ -156,7 +158,7 @@ def _huge_shape_zero(a: float, value: mpmath.mpf) -> None:
 
 
 def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, a, beta = (scalar(v) for v in args[:3])
+    x, a, beta = (real_arg(v) for v in args[:3])
     cumulative = args[3]
     fx, fa, fbeta = _floats(x, a, beta)
     y = x / beta
@@ -172,14 +174,20 @@ def _gamma_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _gamma_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, a, beta, cumulative = args
-    if any(isinstance(v, (bool, str, tuple)) for v in (x, a, beta)):
+    if any(not is_real(v) for v in (x, a, beta)):
         return None
     fx, fa, fbeta = _floats(x, a, beta)
     if fx <= 0 or fbeta <= 0:
         return None
     ratio = fx / fbeta
     if math.isinf(ratio):
+        if not OVERFLOW_SHAPES[0] <= fa <= OVERFLOW_SHAPES[1]:
+            msg = "an overflowing x / beta is probed #NUM! only at shapes 3.7E-188 to 1E300 (T-4625)"
+            raise NoValueError(msg)
         return "x / beta overflows"
+    if ratio > HUGE_RATIO_MIN and HUGE_RATIO_SHAPES[0] < fa < HUGE_RATIO_SHAPES[1]:
+        msg = "Excel's #NUM! at a finite x / beta of 1E308 at shapes 1.5 and 2 has no rule (T-4625)"
+        raise NoValueError(msg)
     return None if cumulative else _density_domain(fx, fa, ratio)
 
 
@@ -199,14 +207,14 @@ def _density_domain(fx: float, fa: float, ratio: float) -> str | None:
 
 def _gamma_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     a, beta = args[1], args[2]
-    if isinstance(a, (bool, str, tuple)) or isinstance(beta, (bool, str, tuple)):
+    if not is_real(a) or not is_real(beta):
         msg = "no tail map for a logical shape or scale"
         raise ValueError(msg)
     return beta * quantile(q, a, upper=upper)
 
 
 def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
-    x, df, cumulative = scalar(args[0]), args[1], args[2]
+    x, df, cumulative = real_arg(args[0]), args[1], args[2]
     a = chi_shape(df)
     y = x / CHI_SCALE
     fx = float(x)
@@ -222,7 +230,7 @@ def _chisq_dist(args: Sequence[MathArg]) -> mpmath.mpf:
 
 def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
     x, df, cumulative = args
-    if isinstance(x, (bool, str, tuple)) or isinstance(df, (bool, str, tuple)):
+    if not is_real(x) or not is_real(df):
         return None
     if not cumulative and x == 0 and chi_shape(df) < 1:
         return "the density at 0 with one degree of freedom is infinite"
@@ -231,12 +239,12 @@ def _chisq_dist_domain(args: Sequence[MathArg]) -> str | None:
 
 def _chisq_dist_rt(args: Sequence[MathArg]) -> mpmath.mpf:
     x, df = args
-    return _cdf(scalar(x) / CHI_SCALE, chi_shape(df), upper=True)
+    return _cdf(real_arg(x) / CHI_SCALE, chi_shape(df), upper=True)
 
 
 def _chi_tail_x(q: mpmath.mpf, upper: bool, args: Sequence[MathArg]) -> mpmath.mpf:
     df = args[1]
-    if isinstance(df, (bool, str, tuple)):
+    if not is_real(df):
         msg = "no tail map for a logical df"
         raise ValueError(msg)
     return CHI_SCALE * quantile(q, chi_shape(df), upper=upper)

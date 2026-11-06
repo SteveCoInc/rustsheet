@@ -69,6 +69,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 - I5: the number 1 counts 2 and the text `1` counts 1.
 
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`ItemKey::identity`)
 
 ## Item casing when cache and source disagree, and date items
 Rule (as observed):
@@ -98,6 +99,8 @@ Evidence: probes/t4582-pivot-item-edges (excel-graph, 2026-11-06, T-4582):
 
 Status: VERIFIED (excel-graph) for the cells and items above. The casing rule's deciding property and
 the appended items' type are UNVERIFIED (probe pending: T-4612).
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader::push` relabels the reused
+slot; `ItemKey::identity` keeps date items apart from cached numbers)
 
 ## Shared-item flags Excel accepts for mixed fields
 Rule: Excel for the web refuses a cache whose `sharedItems` flags contradict its items. The flags that
@@ -113,6 +116,7 @@ these); Excel-saved caches in the LibreOffice fixtures (oss-engines.md §5).
 Status: builder observation (T-4122 runs), not committable as a probe: Excel saves nothing for a
 file it refuses. The builder writes these flags (pivot_definition.py `shared_items`), and every
 filled pivot probe opens with them.
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`SharedItemsFlags`, written by the export, T-4176)
 
 ## Items show in the order the pivot field lists them; new items are appended
 Rule: on refresh Excel keeps the order of a pivot field's `<items>`. An item the refresh finds that the
@@ -138,6 +142,7 @@ Evidence: probes/t4134-pivot-items (excel-graph, 2026-11-06, T-4134):
 The default order of a newly created pivot (ascending, by type) is a UI action and not reachable from a
 file.
 Status: VERIFIED (excel-graph)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`FieldReader`; the rendering is T-4142's)
 
 ## A calculated field applies its formula to the field sums
 Rule: a calculated field `Sales*2+0.1` shows, at every level including subtotals and the grand total,
@@ -345,46 +350,139 @@ Status: VERIFIED (excel-graph)
 
 ## Summation order of Sum, Average and Product totals
 Rule:
-- **Totals over one axis field.** A Sum, Average or Product total over the items of a pivot's only
-  axis field accumulates the records item by item, in the field's display (first-seen) item order,
-  and in record order within each item. Average then divides by the count. This is neither record
-  order, nor reverse record order, nor ascending item order, nor the sum of the children. For Product
-  only one cell separates the orders (P2 B6), and ascending value order fits it too (T-4616).
-- **Sum across a column field.** In t4135, a row's Sum total across the column field Kind does not
-  follow display-order accumulation, which gives 0.6 there. Three readings fit A_sum!S6 and S8:
-  - the sum of the row's cells;
-  - ascending column-item order;
-  - reverse record order.
+- **Item cells.** A cell accumulates its records in record order.
+- **Sum, when Sum is the only aggregate (2-D).** A row total adds the row's cells in the column
+  field's display (first-seen) item order. A column total adds the column's cells in the row field's
+  display order. The grand-grand total adds the row totals (the Grand Total column) down the rows, in
+  display order. These are sums of the child cells, not of the records.
+- **Sum beside Average (2-D).** The row and column totals accumulate the records item by item, in the
+  display item order of the field being totalled and in record order within each item. Child cells are
+  not used. So the same data can give a different Sum total once an Average field is added.
+- **Average (alone or beside Sum, 2-D).** A row or column total divides the same item-by-item
+  accumulation by the count.
+- **Var and StdDev, alone or together.** Every Var cell and total is the textbook formula
+  (Σx² − (Σx)²/n) / (n − 1). Its two sums accumulate the records item by item in display item order,
+  in record order within each item. StdDev is the square root of that Var.
+- **Product (alone, one axis field).** The total multiplies the records item by item in display
+  item order, in record order within each item.
+- **Totals over one axis field in mixed pivots.** In a pivot that mixes Sum with other aggregates,
+  a total over a pivot's only axis field accumulates the records item by item in display item order
+  (T-4614 S2, T-4589 S1).
 
-  In the same pivot, Average does follow display order: A_sum!S8 is 1.3, while A_average!S8 is
-  0.32499999999999996 = 1.2999999999999998 / 4. Which reading holds, and why Sum and Average
-  differ, is open (T-4616).
+What is open (T-4634):
+- which mixes switch Sum from the cells to the records;
+- whether a Sum-only total over one axis field sums the item cells or accumulates the records (no
+  probe separates them);
+- the grand-grand total of a mixed 2-D pivot (one data point);
+- which of several fitting readings gives the 2-D Var grand-grand total.
 
 Evidence (excel-graph, 2026-11-06):
-- probes/t4614-pivot-total-order-2 (T-4614). D1 holds the records Z 6.5, A 0.1, Z 2.3, A 8.9, Z 2.4,
-  A 9.4, with Z first seen. The candidate sums are:
-  - record order 29.599999999999994;
-  - reverse 29.600000000000005;
-  - ascending item order (A, then Z) 29.599999999999998;
-  - display item order (Z, then A) 29.6.
-- The cells:
-  - S2 (rows K): Grand Total Sum 29.6 (B7), and Average 4.933333333333334 = 29.6 / 6 (C7).
-  - S3 (K on columns): Grand Total 29.6 (D5).
-  - P2 (D2, Product): Grand Total 15743.706264 (B6). Display item order gives that; record order gives
-    15743.706264000002.
-- probes/t4589-pivot-total-order S1 (T-4589): records A 0.2, B 0.7, A 3.3, B 1.1, with A shown first.
-  Its Sum Grand Total is 5.300000000000001 (B7), the display-item-order sum. The children's sum would
-  be 5.3, and record order 5.299999999999999.
-- probes/t4135-pivot-aggregates (T-4135), field Dec: East records 0.3 (B), 0.2 (A) and 0.1 (A), with
-  Kind on columns shown B, then A.
-  - A_sum!S6, East's total, is 0.6000000000000001. That is the sum of East's cells
-    (0.3 + 0.30000000000000004); item order would give 0.6.
-  - A_average!S6 is 0.19999999999999998 = 0.6 / 3, in item order.
+- probes/t4616-pivot-total-order-3 (T-4616). D1 has 27 records, three per cell: R items first seen
+  Q, X, B, and K items first seen M, Z, A. Python doubles were used to choose values for which the
+  candidate totals differ. The candidates are:
+  - the row's cells added in display, reverse or ascending item order;
+  - records accumulated item by item in display, reverse or ascending item order;
+  - record order, and reverse record order.
 
-Correction: T-4135 first recorded Sum as the sum of the children, and T-4589 left two candidates. The
-T-4614 probes settle totals over one axis field.
-Status: VERIFIED (excel-graph) for totals over one axis field. UNVERIFIED (probe pending: T-4616): the
-order of a Sum total across a column field.
+  | Total | cells, display | cells, reverse | cells, ascending | items, display | items, reverse | items, ascending | records | records, reverse |
+  |---|---|---|---|---|---|---|---|---|
+  | row Q | 19313.14 | 19313.139999999996 | 19313.14 | 19313.14 | 19313.140000000007 | 19313.14 | 19313.140000000003 | 19313.140000000003 |
+  | row X | 5223.799999999999 | 5223.8 | 5223.8 | 5223.799999999999 | 5223.8 | 5223.8 | 5223.8 | 5223.8 |
+  | row B | 871.3100000000001 | 871.3100000000001 | 871.3100000000001 | 871.3099999999998 | 871.3100000000001 | 871.31 | 871.31 | 871.3100000000002 |
+  | column M | 4406.299999999999 | 4406.299999999999 | 4406.3 | 4406.299999999999 | 4406.299999999998 | 4406.3 | 4406.299999999999 | 4406.299999999999 |
+  | column Z | 12569.289999999999 | 12569.289999999999 | 12569.289999999999 | 12569.289999999997 | 12569.29 | 12569.29 | 12569.289999999997 | 12569.29 |
+  | column A | 8432.659999999998 | 8432.66 | 8432.66 | 8432.659999999998 | 8432.66 | 8432.66 | 8432.66 | 8432.66 |
+
+  - S1 (Sum alone) shows the cells-in-display-order column: E5:E7 are 19313.14, 5223.799999999999 and
+    871.3100000000001, and B8:D8 are 4406.299999999999, 12569.289999999999 and 8432.659999999998. No
+    other candidate fits all six.
+  - S2 (Sum beside Average, Values inside K) shows the items-in-display-order column: H6:H8 are
+    19313.14, 5223.799999999999 and 871.3099999999998, and B9, D9 and F9 are 4406.299999999999,
+    12569.289999999997 and 8432.659999999998. No other candidate fits all six.
+  - S2's Average totals (I6:I8, C9, E9, G9) and S3's (Average alone, E5:E7, B8:D8) equal the
+    items-in-display-order sums divided by 9; for example, S3 E7 is 96.8122222222222 = 871.3099999999998 / 9.
+    No other candidate fits.
+  - S4 (S1 transposed, K on rows) gives the same cells-in-display-order totals (E5:E7, B8:D8).
+  - S5 (Sum alone over D2, 18 records) and S6 (Sum alone over D4, 36 records, six R items): cells in
+    display order is the only candidate that fits every row total (S5 E5:E7, S6 E5:E10) and every
+    column total in S6 (B11:D11). In S5's column totals, two other candidates also fit.
+  - Grand-grand total, Sum alone. S1 E8 is 25408.25, the sum of E5:E7 in display order. On its own,
+    S1 E8 fits many readings, among them the row totals added in any order and several cell and record
+    orders. It refutes the sum of the column totals (25408.249999999993), the cells added row by row
+    (25408.249999999996), record order (25408.250000000015) and row-major record accumulation
+    (25408.25000000001).
+  - S4 E8 is 25408.249999999993, the sum of S4's own row totals E5:E7 in display order. Of the
+    readings tried that fit S1 E8, only that one gives 25408.249999999993 in S4. The others give
+    25408.25, 25408.25000000001, 25408.250000000007 or 25408.249999999996. S5 E8 (14276.83) and
+    S6 E11 (32198.6) also equal the sum of their row totals in display order. Of the candidates, only
+    "row totals in display order" fits all four pivots.
+  - Grand-grand total, mixed. S2 H9 is 25408.25. Among the readings that fit it are the sum of
+    H6:H8 (in any order), reverse-row-item record accumulation, and several cell and record orders.
+    It is not record order (25408.250000000015) or row-major accumulation in display
+    order (25408.25000000001). Average's I9 is 941.0462962962963 = 25408.25 / 27 (S3 E8 too).
+  - Cells: X/Z of D1 (three records) is 123.67999999999999 in S1 C6, S2 D7 and S4 B6, the record-order
+    sum. Reverse order would give 123.68.
+  - Var (D4, V1): V1's row totals E5:E10 and column totals B11:D11 fit only the textbook formula with
+    item-by-item display-order sums. The two-pass, n·Σx² variant and Welford's update, each in display,
+    reverse or ascending item order or in record or reverse record order, are refuted. Every V1 cell
+    (B5:D10, two records each) fits the textbook formula.
+  - Var's grand-grand total (V1 E11, 4337674.527019682) fits textbook Var over row-major (R, then K)
+    display-order accumulation. About 38 other readings also fit: textbook, n·Σx², two-pass and
+    Welford's update over many orders, and textbook over per-row or per-column partial sums.
+    Column-major display order gives
+    4337674.5270196805.
+  - Var over one axis field: V3 (rows K) B8 is 4337674.52701968 and V4 (rows R) B11 is
+    4337674.527019681. Each equals textbook Var accumulated item by item in its own field's display
+    order. For V3 that is the only fitting candidate. The item cells V3 B5:B7 and V4 B5:B10 are
+    textbook Var in record order. So the same 36 records give three different Var grand totals in V1,
+    V3 and V4.
+  - StdDev (V2, and V3/V4 column C): each cell and total is the square root of the textbook Var. In V3
+    (C8, 2082.7084594392177), display-order textbook is the only fitting candidate. V2's grand-grand
+    total E11 is 2082.7084594392186 = sqrt(V1 E11).
+  - Product: P1 (D5) Grand Total B7 is 1801036823.2874622 and P2 (D6) B7 is 130884059.83325395. Each
+    is the item-by-item display-order product. These were the candidates:
+    - ascending value order, 1801036823.2874618 and 130884059.83325396;
+    - record order, 1801036823.2874625 and 130884059.83325398;
+    - the product of the item cells, 1801036823.2874613 and 130884059.83325401;
+    - reverse and ascending item order, and descending value order.
+
+    Each of those differs from the actual value in P1 or P2. This settles T-4614's P2 B6, where
+    ascending value order also fitted.
+- probes/t4614-pivot-total-order-2 (T-4614). D1 holds the records Z 6.5, A 0.1, Z 2.3, A 8.9, Z 2.4,
+  A 9.4, with Z first seen.
+  - S2 (rows K, Sum beside Average): Grand Total Sum 29.6 (B7), and Average 4.933333333333334 = 29.6 / 6
+    (C7). The candidates were record order 29.599999999999994, reverse 29.600000000000005, ascending
+    item order 29.599999999999998, and display item order 29.6.
+  - S3 (Sum alone, K on columns): Grand Total 29.6 (D5). The sum of the item cells,
+    11.200000000000001 + 18.4, is also 29.6, so S3 does not separate cells from records.
+  - P2 (D2, Product alone): Grand Total 15743.706264 (B6), display item order. Record order gives
+    15743.706264000002.
+- probes/t4589-pivot-total-order S1 (T-4589): seven aggregates over records A 0.2, B 0.7, A 3.3, B 1.1.
+  - The Sum Grand Total is 5.300000000000001 (B7), display item order. The item cells would give 5.3,
+    and record order 5.299999999999999.
+  - The Var Grand Total is 1.8691666666666658 (F7), textbook Var in display item order. Record order
+    gives 1.8691666666666673, and two-pass 1.8691666666666664. StdDev (E7) is 1.3671747023210552.
+- probes/t4135-pivot-aggregates (T-4135). On the A_sum sheet every data field is a Sum. East's records
+  in Dec are 0.3 (B), 0.2 (A) and 0.1 (A), with Kind on columns shown B, then A.
+  - A_sum!S6 is 0.6000000000000001, the sum of East's cells (0.3 + 0.30000000000000004). Display item
+    accumulation would give 0.6. This fits the Sum-alone rule.
+  - A_average!S6 is 0.19999999999999998 = 0.6 / 3, the item-by-item accumulation, which fits the
+    Average rule.
+
+Correction: T-4135 first recorded Sum as the sum of the children. T-4614 then recorded item-by-item
+accumulation for totals over one axis field. T-4616 shows that both happen, depending on the pivot's
+data fields: Sum alone in 2-D uses the cells, and Sum beside Average uses the records.
+
+Status: VERIFIED (excel-graph) for these totals:
+- 2-D Sum totals over one field, Sum alone and beside Average;
+- the Sum-alone grand-grand total;
+- Average, Var and StdDev row and column totals;
+- Var and StdDev over one axis field;
+- Product over one axis field;
+- totals over one axis field in mixed pivots.
+
+UNVERIFIED (probe pending: T-4634): which data-field mixes switch Sum to the records, a Sum-only total
+over one axis field, and the mixed and Var grand-grand totals.
 
 ## errorCaption replaces every error value
 Rule: with `showError` and `errorCaption`, every error value a pivot cell would show becomes the
@@ -398,12 +496,23 @@ Status: VERIFIED (excel-graph)
 
 ## A Count total over an error field is the error when the pivot mixes aggregates
 Rule: Count and CountNums never show an error in an item's cell. When the pivot's data fields mix
-aggregates (Count or CountNums beside Sum or Average), though, every row or column grand total of a
-Count or CountNums that covers a record holding an error is that error: `#N/A`, or the errorCaption
-when one is set. Grand totals that cover no such record stay counts. With one data field, or only
-Count fields, the totals are counts. A column field makes no difference. Two cases are not probed:
-inner-field subtotals, and Count beside CountNums (T-4616).
+aggregates (Count or CountNums beside Sum or Average), though, every total of a Count or CountNums
+that covers a record holding an error is that error: `#N/A`, or the errorCaption when one is set.
+This covers subtotals of an outer row field over an inner one, row and column grand totals, and the
+grand total. Totals that cover no such record stay counts. With one data field, with only Count fields,
+or with Count beside CountNums, every total is a count. A column field makes no difference.
 Evidence (excel-graph, 2026-11-06):
+- probes/t4616-pivot-total-order-3 (T-4616), over D3: East A (Err 10), East B (Err `#N/A`), East A
+  (3), West A (7), West B (5); rows Region, then Kind; no showError:
+  - I1, Count of Err beside Sum of Num: East's subtotal is `#N/A` (B5), while its items A and B are 2
+    and 1 (B6, B7). West's subtotal is 2 (B8), and the Grand Total is `#N/A` (B11).
+  - I2, CountNums of Err beside Sum of Num: East's subtotal is `#N/A` (B5), with B at 0 (B7). West
+    is 2 (B8), and the Grand Total is `#N/A` (B11).
+  - I3, Count of Err alone: East 3 (B4), Grand Total 5 (B10). I4, CountNums of Err alone: East 2 (B4),
+    Grand Total 4 (B10).
+  - M1, Count of Err beside CountNums of Err, rows Region: East 3 and 2 (B5, C5), Grand Totals 5 and
+    4 (B7, C7). M2, Count of Err beside CountNums of Num: Grand Totals 5 and 5 (B7, C7). M3, M1's
+    fields with rows Region and Kind: East's subtotal 3 and 2 (B5, C5), Grand Totals 5 and 4 (B11, C11).
 - probes/t4614-pivot-total-order-2 (T-4614), over D3 (East A Err 10, East B `#N/A`, West A 7), without
   showError:
   - C1, Count of Err and Count of Num, no column field: Grand Totals 3 and 3 (B7, C7).
@@ -451,3 +560,5 @@ Open (T-4627):
 
 Status: VERIFIED (excel-graph) for the names above; the open points are UNVERIFIED (probe pending:
 T-4627)
+Implemented in: crates/rustsheet-engine/src/pivot/refresh.rs (T-4141) (`field_names`, position-in-source
+reading of n)

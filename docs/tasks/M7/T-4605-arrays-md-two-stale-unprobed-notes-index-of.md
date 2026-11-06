@@ -3,7 +3,7 @@ id: T-4605
 title: "arrays.md: two stale unprobed notes (INDEX of a LAMBDA out of range, IFERROR over blank FILTER/INDEX/VSTACK elements) now answered by T-1946 and T-2999"
 milestone: M7
 lane: functions-logic
-status: todo
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -38,3 +38,6 @@ points to the section that holds the rule and its cells.
 
 ## Out of scope
 - The other unprobed notes in arrays.md, which have open tasks (T-2463, T-2609, T-3087).
+
+## Outcome
+Both arrays.md notes now point to the sections holding the answered rules (T-1946, T-2999). Docs only; eval delta none.

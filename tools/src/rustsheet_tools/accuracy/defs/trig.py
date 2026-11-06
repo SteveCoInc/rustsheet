@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 
 import mpmath
 
-from rustsheet_tools.accuracy.defs._common import scalars, zero_pole
+from rustsheet_tools.accuracy.defs._common import real_args, zero_pole
 from rustsheet_tools.accuracy.literal import Arg
 from rustsheet_tools.accuracy.model import Definition, Interval, MathArg, Param, register
 from rustsheet_tools.accuracy.sampler import log_uniform
@@ -69,7 +69,7 @@ def _definition(
     function: str, kernel: Callable[[mpmath.mpf], mpmath.mpf], pole_at_zero: bool = False
 ) -> Definition:
     def value(args: Sequence[MathArg]) -> mpmath.mpf:
-        (x,) = scalars(args)
+        (x,) = real_args(args)
         return kernel(x)
 
     return register(

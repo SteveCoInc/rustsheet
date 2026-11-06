@@ -57,6 +57,8 @@ fn read_external_book(book: &XmlNode) -> ExternalBook {
                 name: n.attribute("name")?.to_string(),
                 formula: n.attribute("refersTo").unwrap_or_default().to_string(),
                 sheet_id: n.attribute("sheetId").and_then(|id| id.parse().ok()),
+                hidden: false,
+                comment: None,
             })
         })
         .collect();
