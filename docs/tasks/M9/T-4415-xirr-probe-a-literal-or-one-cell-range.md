@@ -3,7 +3,7 @@ id: T-4415
 title: "XIRR: probe a literal or one-cell-range boolean or text value against an error dates argument, and with guess -1"
 milestone: M9
 lane: functions-financial
-status: in-progress
+status: done
 priority: P3
 size: S
 tier: sonnet
@@ -30,3 +30,6 @@ excel-probe skill.
 
 ## Out of scope
 - Values ranges of more than one cell (gen-m9/67a4c03afd63f988 A241 already evidences them).
+
+## Outcome
+Probe probes/t4415-xirr-error-dates-scalar-forms (excel-graph, 28 formula cells): every literal, one-cell-range and guess -1/-2 form is `#VALUE!` against an error dates argument; the engine already matched, so no code change. Recorded in financial.md (T-3816 entry). Eval delta: 28 new passing cells, 0 regressions.

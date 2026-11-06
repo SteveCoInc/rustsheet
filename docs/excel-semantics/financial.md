@@ -5353,7 +5353,10 @@ unless noted; values `-100, 30, 40, 50` on dates `39448, 39508, 39600, 39700` wi
   D20, D24, D25, D30), except a non-numeric text or boolean cell, `#VALUE!` (D15-D17, D26, D27, D31), and an error
   cell, its error, the value's first (D19, D22, D32-D38). One TRUE value cell against one `#DIV/0!` date cell is
   `#VALUE!` (D39), where a values range holding text against an error dates argument is that error
-  (gen-m9/67a4c03afd63f988 A241).
+  (gen-m9/67a4c03afd63f988 A241). The same `#VALUE!` holds for a literal TRUE, FALSE or "x", a one-cell range
+  `A1:A1` holding TRUE or "x", and a TRUE cell with guess -1 or -2 (not T-3312's `#NUM!`), each against a literal
+  `1/0` or `NA()` dates argument and a `#DIV/0!` or `#N/A` dates cell (probes/t4415-xirr-error-dates-scalar-forms,
+  excel-graph, 2026-11-06, 28 cells, T-4415; the engine already matched).
 - A values row against a dates column, 2x2 against a column or 2x2, and a 2x2 or row array constant against a column
   all read in row-major order with the same result (rows 44-49).
 
@@ -5362,7 +5365,7 @@ which writes T-3815's XNPV case too).
 Status: VERIFIED (excel-graph)
 Code: `Model::xirr_walk_error`, `Model::xirr_flows` and `xirr_date_error` (functions/financial/flows.rs),
 `Model::xirr_size_error`, `Model::fn_xirr` and `Model::array_of_numbers_from` (functions/financial/mod.rs)
-Tasks: T-3816
+Tasks: T-3816, T-4415
 
 ## Financial cells of the T-2436 sub-expression probe
 Rule (excel-graph, 2026-10-24, probes/t2436): `YIELD(36563,45559,999999999999995,107,107,2,1)` (a huge rate) is `#NUM!`;
