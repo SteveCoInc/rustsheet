@@ -3,7 +3,7 @@ id: T-4555
 title: "Mark T-3858's df 1 CHISQ.INV.RT cells where Excel is more than G off once T-3858 and T-3337 have both landed"
 milestone: M9
 lane: functions-stat
-status: todo
+status: done
 priority: P2
 size: S
 tier: sonnet
@@ -28,9 +28,17 @@ decision 0313 sets the rule.
   `.math.json` value shows Excel more than G off and the engine within 1e-9. Never mark a `#NUM!` cell.
 
 ## Acceptance criteria
-- [ ] Each such t3858 cell is marked, one line each, under the statistics.md "Tiny-p quantiles" entry, whose T-3337
+- [x] Each such t3858 cell is marked, one line each, under the statistics.md "Tiny-p quantiles" entry, whose T-3337
       region names them. `rustsheet-eval accuracy` reports no bad mark.
 - [ ] `make check` green; reviewers approve.
 
 ## Out of scope
 - The `#NUM!` cut itself (T-3858).
+
+## Outcome
+Folded into T-3337's PR (#3563), since T-3858 (#3535) merged first and the merge put the two rules together. 88
+marks, one per value cell above the `#NUM!` edge: t3858-chisq-df1-num-cutoff 54 (CHISQ.INV.RT column A and CHIINV
+column C at rows 5 to 11, 15 to 17 and 72 to 88) and -fresh 34 (columns A and B). At each, the committed math shows
+Excel 9.4E-4 to 8.2E-3 off and the engine within 1e-9; no `#NUM!` cell is marked. CHIINV math entries were added to
+both sidecars (`rustsheet-accuracy math --suite probes-numeric --function CHIINV`, additions only).
+`rustsheet-eval accuracy`: 0 failing, 0 table defects.

@@ -5255,7 +5255,7 @@ Tasks: T-1543, T-1634, T-2561, T-3336, T-3337
     `ONE_DEGREE_RIGHT_TAIL_P_MIN`), and a fresh sweep after that choice (t3858-chisq-df1-num-cutoff-fresh, 40
     log-uniform p in [5.6E-17, 1.1E-16], CHISQ.INV.RT and CHIINV) agrees at all 80 cells. Mind the literals: a p literal with more than 15 significant digits is cut to 15
     (numbers.md), so ulp-level p must be built from powers of two, as here. Above the edge Excel's 68.7632522116684 is 0.3% to
-    0.8% off the math, so there the engine returns the math under T-3337's rule (marks: T-4555).
+    0.8% off the math, so there the engine returns the math under T-3337's rule (marked under "Tiny-p quantiles", T-4555).
   - T-3337 (2026-11-06; time-boxed under decision 0056). Where rounding 1 - p moves the quantile by more than G
     (evidenced from 9E-17 to 3.5E-15), the engine returns the math (decision 0267 item 3; see "Tiny-p quantiles"
     below). Everywhere else Excel's own landing is the target and stays unmatched:
@@ -7422,6 +7422,12 @@ to 3.5E-15:
 - t3337-chisq-df1-r3-fresh, A1 to A30: both functions at p 1.2E-16 to 3.5E-15, with Excel 3.9E-4 to 7.8E-3 off. The
   case is the fresh sweep, taken after the engine rule was frozen. Its other 22 cells (p 4E-15 to 1.2E-12) have Excel
   within 2.8E-5, so Excel stays the target there.
+- t3858-chisq-df1-num-cutoff (T-3858's case, marked by T-4555 in T-3337's PR): CHISQ.INV.RT in column A and CHIINV
+  in column C at A5:A11, A15:A17 and A72:A88, the value cells above the `#NUM!` edge (p 8.3254E-17 to 1.1E-16), where
+  Excel is 68.7632522116684 and 9.4E-4 to 8.2E-3 off. 54 cells. CHIINV's math values were added to this case's
+  sidecar and to the fresh case's.
+- t3858-chisq-df1-num-cutoff-fresh: both functions (columns A and B) at rows 1, 2, 6, 8, 10 to 14, 19, 21, 25, 27,
+  31 to 33 and 38, the value cells of that fresh sweep. 34 cells.
 - Not marked: t3336 A250 to A252 (p 6E-17 to 8E-17), where Excel is `#NUM!`. No mark is ever given to an error.
 
 How the engine picks these points: Excel's value is the lower quantile of the double 1 - p, or one cdf step from it.

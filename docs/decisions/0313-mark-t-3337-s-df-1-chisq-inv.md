@@ -37,5 +37,6 @@
   ungated, so no baseline file changes. In t3336, A217, A218 and A253 passed against Excel and now fail against it,
   and A202, A203, A223, A224, A232 and A233 were within 15 digits and now fail too. All of them pass as R3 cells. The
   new CHIINV math values also give the other CHIINV cells of those cases an R1(c) class, where before they counted
-  for want of a math value. A later T-3858 merge brings Excel values at p 8.3254E-17 to 1.1E-16 that are more than G
-  off. The engine returns the math there, so those cells need marks by the same rule (follow-up T-4555).
+  for want of a math value. T-3858 merged first and brought Excel values at p 8.3254E-17 to 1.1E-16 that are 9.4E-4
+  to 8.2E-3 off. The engine returns the math there, so its 88 value cells in t3858-chisq-df1-num-cutoff and -fresh
+  take marks by the same rule in this PR (T-4555, folded in). The marks become 133 in all.

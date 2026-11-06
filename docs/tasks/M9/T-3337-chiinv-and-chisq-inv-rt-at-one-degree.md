@@ -140,10 +140,11 @@ Decision 0056's time-box applies. If two attempts do not move these cells, block
 
   The details are in statistics.md, "CHISQ.INV.RT and CHIINV quirks". The scratch scripts were mpmath erfinv at 60
   digits over the oracle and math sidecars. They are not committed.
-- **Follow-up:** T-4555 marks T-3858's df 1 cells once T-3858 and this task have both landed. T-3858's unmerged
-  branch adds Excel values at p 8.3254E-17 to 1.12E-16 that are more than G off, where the engine now returns the
-  math. Both branches also edit chisq.rs's df 1 branch and the statistics.md entries, and T-3386's branch appends to
-  math-over-excel.tsv as this one does. Whichever lands second resolves the text conflicts.
+- **Merged with T-3858** (main at 0db7e8ac9, #3535): its `#NUM!` cut runs first, then this task's rule. Above the cut
+  Excel's 68.7632522116684 is more than G off, so T-3858's unit-test rows A4 to A6 now expect the math, and T-4555's
+  marks are folded in here: 88 cells of t3858-chisq-df1-num-cutoff (54) and -fresh (34), with CHIINV math added to
+  both sidecars. Those cases pass 210/264 and 46/80 against Excel, all 88 failures R3 cells; `rustsheet-eval
+  accuracy` 0 failing.
 
 ## Blocked because: time-boxed (decision 0056)
 Two landing rules (H1, H2 above), plus the refuted cdf-last-bit idea, do not move the Excel-target cells (H0, the
