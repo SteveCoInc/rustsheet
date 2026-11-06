@@ -11,22 +11,25 @@ depends_on: []
 ---
 
 ## Goal
-DATEDIF matches Excel when its two dates fall on the same floored day but in a different order once rounded to the
-second (e.g. start N-0.4 s, end N-0.6 s), and near the top of the calendar where rounding carries past 9999-12-31.
+Settle what is still unevidenced about DATEDIF's near-midnight reads on `main`: "Y"'s reading (floored or carried), the
+reversed order when start and end share a floored day but the carried dates are reversed (e.g. start N-0.4 s,
+end N-0.6 s), and any past-the-calendar cell not covered by probes/t4574-feb29-near-midnight-date-args A20:F25.
 
 ## Context
-- T-4574 found that DATEDIF "D" floors its serials while "M", "YM", "MD" and "YD" read them rounded to the nearest
-  second (`days360_serial`; dates.md "Other date functions floor a serial just below midnight").
-- `datedif_value` (crates/rustsheet-engine/src/functions/date_and_time.rs) checks the order and the calendar range on
-  the floored serials and computes the calendar units from the rounded ones, so `DATEDIF(N-0.4/86400,N-0.6/86400,"m")`
-  computes from a reversed pair (-1 months in the engine today), and `DATEDIF(1,2958465.99999999,"m")` is #NUM!
-  because the rounded end is off the calendar ("D" keeps its floored count, 2958464). Neither is evidenced.
+- On `main` (T-4574, #3647) `datedif_value` (crates/rustsheet-engine/src/functions/date_and_time.rs) checks the
+  reversed pair on the floored serials and reads the calendar units, "Y" included, and the calendar check through
+  `carried_day` (`floor(x + 0.5/86400)`). This is the same cut as rounding to the nearest second (dates.md "DATEDIF's
+  calendar units carry half a second"). "D" past the calendar is #NUM! and is evidenced
+  (`DATEDIF(1,2958466-0.4/86400,"D")`, A24:F25 of that probe); do not restore a floored "D" count there.
+- Not evidenced: "Y" (every cell of probes/t4574-near-midnight-calendar-units gives one value either way, I1:J8);
+  `DATEDIF(N-0.4/86400,N-0.6/86400,u)` (floors equal, carried dates reversed) at other N than 59/60/45020; an end
+  just below 2958466 for the units other than "D" at the top of the calendar.
 
 ## Acceptance criteria
-- [ ] An excel-graph probe covers every unit with start and end on one floored day in reversed rounded order, and
+- [ ] An excel-graph probe covers every unit with start and end on one floored day in reversed carried order, and
   with an end just below 2958466, against integer controls.
-- [ ] The probe tells "Y"'s reading apart (floored or rounded), e.g. `DATEDIF(44927,45292-0.4/86400,"y")`: 0 if
-  floored, 1 if rounded; the engine reads it rounded today, unevidenced.
+- [ ] The probe tells "Y"'s reading apart, e.g. `DATEDIF(44927,45292-0.4/86400,"y")`: 0 if floored, 1 if carried
+  (the engine carries it today, unevidenced).
 - [ ] dates.md records the result with cells; the engine matches every probe cell.
 - [ ] `make check` green; reviewers approve.
 
