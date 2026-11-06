@@ -41,7 +41,20 @@ Current suites:
   adds R1.
 - The output is checked by the package validator, checks V1–V6 and V8 of SPEC-0033 D6.
 - The source's parts are scored as `part` fidelity items, matched by a key built from the relationship graph, never
-  by part name (D2). An item is kept, changed (content type), lost, added, or package-invalid.
+  by part name (D2). An item is kept, changed (content type or bytes), lost, added, or package-invalid.
+- Each kept XML part pair is diffed structurally (`roundtrip/xmldiff.rs`, D4; T-4509):
+  - names compare by namespace URI;
+  - children compare in order, except at the listed unordered paths and inside `extLst`, which match by key;
+  - an absent attribute equals its schema default, and xsd:boolean spellings compare equal;
+  - `mc:Ignorable` compares as a set of URIs.
+
+  This yields `element` and `attribute` items keyed `<part key>:<path>`. A lost element absorbs its descendants.
+  The children of `worksheet/sheetData` and of the shared-string table are left to the semantic items (T-4513).
+  Items that fall under a candidate normalization N1–N12 carry a `candidate-N<k>` tag, and are never normalized
+  until T-4503's evidence. A part pair reports at most 500 items; the rest are counted in a `<truncated>` item.
+- A package is read once, every part under one inflated-byte budget (the importer's default).
+- A case's checked count is the number of source parts, elements and attributes compared. Only failing element and
+  attribute items are listed.
 
 Round-trip suites live outside `eval/suites/`, as Gate A's tables do, so no cell report, milestone row or gate counts
 them. `Suite::load_all` refuses a `roundtrip` manifest under `eval/suites/`, and a round-trip suite may not reuse an

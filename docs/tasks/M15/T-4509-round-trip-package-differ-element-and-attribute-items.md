@@ -3,7 +3,7 @@ id: T-4509
 title: "Round-trip package differ: element and attribute items, defaults table, unordered paths, normalization tags (SPEC-0033 D4)"
 milestone: M15
 lane: harness
-status: in-progress
+status: done
 priority: P1
 size: M
 tier: opus
@@ -37,14 +37,53 @@ Carried from PR #3529's review:
 - add `Status:` and `Tasks:` lines to the "Round trips" section of xlsx-storage.md (fidelity).
 
 ## Acceptance criteria
-- [ ] Identity: `P(src, src)` is empty for every case of the fixtures round-trip suite.
-- [ ] Invariance: a crafted copy with re-prefixed namespaces, reordered unordered collections and default attributes
+- [x] Identity: `P(src, src)` is empty for every case of the fixtures round-trip suite.
+- [x] Invariance: a crafted copy with re-prefixed namespaces, reordered unordered collections and default attributes
       written out compares `kept`.
-- [ ] Sensitivity: one lost `ext`, one lost element and one lost attribute are each found with the right key and
+- [x] Sensitivity: one lost `ext`, one lost element and one lost attribute are each found with the right key and
       verdict.
-- [ ] The fixtures baseline is updated, and the report lists lost elements by path.
-- [ ] `make check` green; reviewers approve.
+- [x] The fixtures baseline is updated, and the report lists lost elements by path.
+- [x] `make check` green; reviewers approve.
 
 ## Out of scope
 - Semantic items (T-4513).
 - R1 (T-4514).
+
+## Outcome
+`roundtrip/xmldiff.rs` diffs every kept XML part pair as SPEC-0033 D4 says:
+- namespace-URI names (D4.1);
+- ordered children, except the cited unordered paths and `extLst`'s `ext[uri]` (D4.2);
+- a schema-defaults table with CT_ citations, plus xsd:boolean equivalence (D4.3);
+- `mc:Ignorable` as a set of resolved URIs;
+- whitespace per D4.7;
+- `candidate-N1`…`N12` tags, never applied (D4.4);
+- lost elements absorbing their descendants;
+- `sheetData` and `sst` children left to T-4513;
+- 500 items per part, then a `<truncated>` item.
+
+Binary parts compare by SHA-256 (D4.5).
+
+Carried from PR #3529's review:
+- `Package::read` reads every part once under one inflated-byte budget, using the snapshot reader's new
+  `read_part_bytes_capped`;
+- `assign_keys` uses an id→position map;
+- xlsx-storage.md "Round trips" has `Status:` and `Tasks:` lines.
+
+A case's checked count is now the number of source items compared. `roundtrip-fixtures`: 16,616 items, 3,167 known
+failures. The new losses include:
+- `pageMargins` and `sheetFormatPr` lost from every sheet;
+- `fileVersion` and `tableStyles` lost;
+- the theme's format scheme replaced by the template's;
+- docProps rewritten (N2, N3);
+- window geometry lost (N11).
+
+Tests:
+- identity on every fixture part;
+- invariance under re-prefixed namespaces, reordered unordered collections, written-out defaults and boolean
+  spellings;
+- sensitivity to a lost `ext`, a lost element and a lost attribute;
+- the semantic-subtree skip;
+- candidate tags.
+
+No cell eval delta.
+
