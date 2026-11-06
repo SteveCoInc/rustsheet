@@ -63,7 +63,11 @@ without the key and with `defer: phase-1b`.
 
 `defer: phase-1b` (decision 0114) parks a task whose cells are all already within 15 digits
 (last-digit fits, ulp residue): `next` and `ready` never pick it until the steward removes the key
-when Phase 1 exits.
+when Phase 1 exits. A deferred task never owns a visibly-off cell that decision 0188 R1(c) counts
+(decision 0326): `make phase1-exit`, `make unowned-off ALL=1` and `scripts/new_case_owners.py` all
+read it as unowned. A visibly-off number counted only because it has no math value is owned by an
+open task that attaches its math value (a Gate A table task, or a math-sidecar task for nested
+formulas), not by a `visible` fit task.
 
 Rules:
 - One task produces exactly one PR. If it needs more, split it.

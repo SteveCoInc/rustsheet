@@ -43,4 +43,6 @@ right: if the answer looks wrong, arbitrary or inconsistent, record it and match
    File or amend an owner task for every visibly-off cell the probe's cases add (name the case,
    and its cells as single cells or colon spans, never hyphen spans); `make check` fails a branch
    whose added or refilled cases have an unowned one (`scripts/new_case_owners.py`, decision
-   0245). `make unowned-off ALL=1` after `make eval` lists them.
+   0245). A `defer:` task does not own one (decision 0326): a visibly-off number counted only
+   because it has no math value is owned by a task that attaches its math value (decision 0188
+   R1(c)). `make unowned-off ALL=1` after `make eval` lists them.

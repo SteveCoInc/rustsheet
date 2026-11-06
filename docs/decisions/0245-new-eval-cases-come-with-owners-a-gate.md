@@ -1,6 +1,7 @@
 # 0245 — New eval cases come with owners: a gate on visibly-off cells of added or refilled cases
 
 - **Status:** accepted (2026-11-01, T-3793).
+  Amended by decision 0326 (2026-11-06): a cell owned only by an open `defer:` task no longer passes.
 - **Context:**
   - Gap triage on 2026-11-01 (origin/main fafb6c6f, `scripts/exit_owners.py --all-off`) found every
     non-deferred unowned visibly-off cell came from a PR that added its case with no owner the

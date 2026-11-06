@@ -229,7 +229,8 @@ description: Repo-specific conventions for driving RustSheet PRs to merge autono
   clean tree) and you have checked each of its `manual` lines by hand (decision 0187). It measures
   `v15_checkpoint.phase1_met` and the rest of docs/milestones.md's Phase 1 exit; no Phase 1 line in
   docs/status.md is read for this. In the same PR, remove `defer: phase-1b` from
-  every task.
+  every task. Its `owners` line never counts a `defer:` task as an owner (decision 0326): a
+  visibly-off number counted only for want of a math value gets an owner that attaches the value.
 - **Time-boxed numeric fits** (decision 0056): a task "Blocked because: time-boxed (decision 0056)"
   is not reopened when its dependencies land, only when a new hypothesis is recorded there.
   Read with decision 0188 R4.1, an attempt raises the bit-exact count only if it raises the

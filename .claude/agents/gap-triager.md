@@ -20,7 +20,11 @@ wrong type, error or text. Each such group's task gets a `campaign:` stage and a
 wrong types, errors, text and semantic rules; `accuracy` when a high-precision reference (mpmath)
 shows Excel is close to correctly rounded and the engine is not; `visible` for the rest. Exotic
 locales and calendars are the exception: they never get the key. A group whose cells are all within
-15 digits already (last digits, ulps) gets `defer: phase-1b` instead. Within that first band and among all other groups, rank
+15 digits already (last digits, ulps) gets `defer: phase-1b` instead. A deferred task never owns a
+visibly-off cell that decision 0188 R1(c) counts (decision 0326): for a visibly-off number counted only
+because it has no math value, name its case in an open task that attaches the math value (amend a
+Gate A table task or a math-sidecar task, or file one), never a `visible` fit task; once it has its
+math value, R1(c) either leaves it out as Phase 1b evidence or it gets a `campaign:` task. Within that first band and among all other groups, rank
 by the function's `milestone` in eval/catalog/functions.yaml, earliest first, then
 by failing cells × its `prior` (decision 0026): a current-milestone function comes before any M9
 last-digit tail, however many cells the tail has. Create each task with `--milestone` set to that

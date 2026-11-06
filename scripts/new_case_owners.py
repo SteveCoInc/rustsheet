@@ -5,7 +5,8 @@ T-3793, decision 0245. A case the branch adds, or whose `.case.json` / workbook 
 sidecar it changes (a refill counts), is new. Each new case is run alone
 (`rustsheet-eval run --suite S --filter F --out <tmp>`, under a second), and its visibly-off cells
 (decision 0188 R1(c): `exit_owners.all_off_cells`) must each be owned by an open task by
-`exit_owners`' rule; a cell owned only by a `defer:` task passes. A branch with no new case runs
+`exit_owners`' rule. A cell owned only by a `defer:` task fails, as it counts as unowned in
+`phase1_exit.py` (decision 0326). A branch with no new case runs
 nothing, so `main` always passes.
 
 Usage: new_case_owners.py [--base origin/main] [--eval target/release/rustsheet-eval]
@@ -125,13 +126,9 @@ def run_case(eval_bin: Path, root: Path, case_id: str, out: Path) -> dict[str, o
 def unowned_new(
     report: dict[str, object], tasks_dir: Path, new: set[str], names: dict[str, tuple[str, ...]]
 ) -> list[exit_owners.OffCell]:
-    """The visibly-off cells of the `new` cases in `report` that no open task owns (a cell owned
-    by a deferred task only is owned)."""
-    return [
-        o
-        for o, deferred in exit_owners.unowned_off(report, tasks_dir, names)
-        if o.cell.case in new and not deferred
-    ]
+    """The visibly-off cells of the `new` cases in `report` that no open, non-deferred task owns
+    (decision 0326: a deferred task never owns one)."""
+    return [o for o, _ in exit_owners.unowned_off(report, tasks_dir, names) if o.cell.case in new]
 
 
 def main(argv: list[str]) -> int:

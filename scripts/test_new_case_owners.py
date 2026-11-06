@@ -56,14 +56,16 @@ class UnownedNew(TaskDir):
         self.task("probes/new-probe B1-B3")
         self.assertEqual(self.listed(), [f"{NEW}!P!B2"])
 
-    def test_a_deferred_owner_passes_and_a_done_one_does_not(self) -> None:
+    def test_neither_a_deferred_nor_a_done_owner_owns_it(self) -> None:
+        # Decision 0326: a `defer:` task never owns a counted visibly-off cell, here as in
+        # phase1_exit.py's owners line and `exit_owners.py --all-off`.
         self.task("probes/new-probe", status="done")
         self.assertEqual(len(self.listed()), 3)
         self.n += 1
         (self.tasks / "M5" / "T-9999-d.md").write_text(
             "---\nid: T-9999\nmilestone: M5\nstatus: todo\ndefer: phase-1b\n---\n\nprobes/new-probe\n"
         )
-        self.assertEqual(self.listed(), [])
+        self.assertEqual(len(self.listed()), 3)
 
     def test_an_old_case_is_not_checked(self) -> None:
         self.assertNotIn(f"{OLD}!P!B1", self.listed())

@@ -8,7 +8,7 @@ priority: P3
 size: M
 tier: opus
 depends_on: []
-defer: phase-1b
+campaign: visible
 ---
 
 ## Goal
@@ -37,6 +37,17 @@ Cells (known failures):
 - gen-m9/01523d247594952e Calc!A377 `=SYD(15023,(AVEDEV(Data!A11:A11,{1;2;3;4;5})*F.INV.RT(1E-20,9,3)),33,1)`
 - probes/t2435-dist-extremes A78, A80, A81 (df2 = 2, df1 = df2 = 1, F.INV at 1 - 1E-16) are numerically close
   but not bit-exact.
+
+## Visible-parity stage
+Decision 0083: this task is done when every cell it owns is within half a unit of the 15th significant digit of
+Excel's value, or has Excel's type and error (an expected 0 must be exactly 0). Bit-level criteria still unmet then
+move to a follow-up task with `defer: phase-1b`, named in the Outcome.
+
+Decision 0326 (T-3994) took the `defer: phase-1b` key off: two of its cells are visibly off in gen-m9, a Gate B suite
+(`make unowned-off ALL=1` on origin/main 9d793da6 listed them as owned only by this deferred task):
+gen-m9/abc2939ebd1e2365 Calc!A11 (Excel 0, ours #NUM!) and gen-m9/01523d247594952e Calc!A377 (Excel
+-1987062826671.328, ours -1987062826671.3352). It stays under decision 0056's time-box and the owner's "do not
+overfit" rule above.
 
 ## Acceptance criteria
 - [ ] A derivation of the saturation from the search's structure, reproducing both constants exactly, recorded
