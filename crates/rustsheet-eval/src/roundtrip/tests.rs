@@ -456,3 +456,143 @@ fn every_fixture_part_diffs_empty_against_itself() {
     }
     assert!(parts > 100, "{parts} parts");
 }
+
+mod semantic_items {
+    use std::io::{Cursor, Read as _, Write as _};
+
+    use super::super::semantic::{
+        compare, load_model, model_facts, stored_facts, validate_indexes, Facts,
+    };
+    use crate::xlsx_snapshot::read_snapshot;
+
+    /// A1 "hello", A2 "world", A3 `=1+1`, as the export writes them.
+    fn base() -> Vec<u8> {
+        let mut m = rustsheet_engine::Model::new_empty("w", "en", "UTC", "en").expect("model");
+        m.set_user_input(0, 1, 1, "hello".into()).expect("A1");
+        m.set_user_input(0, 2, 1, "world".into()).expect("A2");
+        m.set_user_input(0, 3, 1, "=1+1".into()).expect("A3");
+        m.evaluate();
+        rustsheet_xlsx::export::save_xlsx_to_writer(&m, Cursor::new(Vec::new()))
+            .expect("save")
+            .into_inner()
+    }
+
+    /// `bytes` with each `(part, from, to)` text replacement applied (each must match).
+    fn edit(bytes: &[u8], edits: &[(&str, &str, &str)]) -> Vec<u8> {
+        let mut src = zip::ZipArchive::new(Cursor::new(bytes)).expect("zip");
+        let mut out = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        for i in 0..src.len() {
+            let mut f = src.by_index(i).expect("entry");
+            let name = f.name().expect("entry name").to_string();
+            if name.ends_with('/') {
+                continue;
+            }
+            let mut text = String::new();
+            f.read_to_string(&mut text).expect("utf-8");
+            for (part, from, to) in edits.iter().filter(|e| e.0 == name) {
+                assert!(text.contains(from), "{part}: {from}");
+                text = text.replacen(from, to, 1);
+            }
+            out.start_file(name, zip::write::SimpleFileOptions::default())
+                .expect("start");
+            out.write_all(text.as_bytes()).expect("write");
+        }
+        out.finish().expect("finish").into_inner()
+    }
+
+    fn facts(bytes: &[u8]) -> Facts {
+        let mut f = model_facts(&load_model(bytes, "w").expect("loads"));
+        f.extend(stored_facts(&read_snapshot(bytes).expect("snapshot")));
+        f
+    }
+
+    const SST: &str = "xl/sharedStrings.xml";
+    const SHEET: &str = "xl/worksheets/sheet1.xml";
+    const STYLES: &str = "xl/styles.xml";
+    const XF: &str = r#"<xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="0"/>"#;
+
+    #[test]
+    fn shuffled_strings_and_renumbered_styles_are_kept() {
+        let a = base();
+        let b = edit(
+            &a,
+            &[
+                (
+                    SST,
+                    "<si><t>hello</t></si><si><t>world</t></si>",
+                    "<si><t>world</t></si><si><t>hello</t></si>",
+                ),
+                (
+                    SHEET,
+                    r#"<c r="A1" t="s"><v>0</v>"#,
+                    r#"<c r="A1" t="s"><v>1</v>"#,
+                ),
+                (
+                    SHEET,
+                    r#"<c r="A2" t="s"><v>1</v>"#,
+                    r#"<c r="A2" t="s"><v>0</v>"#,
+                ),
+                (
+                    STYLES,
+                    &format!(r#"<cellXfs count="1">{XF}"#),
+                    &format!(r#"<cellXfs count="2">{XF}{XF}"#),
+                ),
+                (SHEET, r#"<c r="A3">"#, r#"<c r="A3" s="1">"#),
+            ],
+        );
+        let (diffs, n) = compare(&facts(&a), &facts(&b));
+        assert!(n > 0);
+        assert_eq!(diffs, vec![]);
+    }
+
+    #[test]
+    fn a_changed_value_formula_and_style_are_found() {
+        let a = base();
+        let date = r#"<xf xfId="0" borderId="0" fillId="0" fontId="0" numFmtId="14" applyNumberFormat="1"/>"#;
+        let b = edit(
+            &a,
+            &[
+                (SST, "<t>world</t>", "<t>wor</t>"),
+                (SHEET, "<f>1+1</f>", "<f>1+2</f>"),
+                (
+                    STYLES,
+                    &format!(r#"<cellXfs count="1">{XF}"#),
+                    &format!(r#"<cellXfs count="2">{XF}{date}"#),
+                ),
+                (SHEET, r#"<c r="A1" t="s">"#, r#"<c r="A1" s="1" t="s">"#),
+            ],
+        );
+        let (diffs, _) = compare(&facts(&a), &facts(&b));
+        let keys: Vec<&str> = diffs.iter().map(|d| d.0.as_str()).collect();
+        assert_eq!(
+            keys,
+            vec![
+                "cell Sheet1!A1 style",
+                "cell Sheet1!A2 input",
+                "cell Sheet1!A3 formula"
+            ]
+        );
+    }
+
+    #[test]
+    fn v7_an_out_of_range_shared_string_index() {
+        // An out-of-range style index is refused by the importer itself, so V8 already fails it.
+        let bad_style = edit(
+            &base(),
+            &[(SHEET, r#"<c r="A1" t="s">"#, r#"<c r="A1" s="9" t="s">"#)],
+        );
+        assert!(load_model(&bad_style, "w").is_err());
+        let bad_string = edit(
+            &base(),
+            &[(
+                SHEET,
+                r#"<c r="A1" t="s"><v>0</v>"#,
+                r#"<c r="A1" t="s"><v>9</v>"#,
+            )],
+        );
+        match load_model(&bad_string, "w") {
+            Ok(model) => assert_eq!(validate_indexes(&model).len(), 1, "V7 names the string"),
+            Err(e) => panic!("{e}"),
+        }
+    }
+}
