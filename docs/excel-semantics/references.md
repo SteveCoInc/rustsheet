@@ -864,13 +864,13 @@ Excel for the web refuses a workbook holding `=SUM(1)(2)`, `=ABS(1)(2)`, `=IFERR
 `=IFNA(LAMBDA(x,x*2),0)(3)` (FileCorruptTryRepair, one single-formula workbook each, T-2038, T-2405), so IFERROR, though it
 passes a LAMBDA through, is not callable; the engine reads these as syntax errors. With a space,
 `=LAMBDA(a,LAMBDA(b,a*b))(3) (4)` is refused the same way (no intersection), and the engine reads it as a syntax error too.
-`LAMBDA(x,LAMBDA(y,x+y))(1)()` gives an error the oracle could not decode (unprobed). An unknown name's call chained,
+A wrong argument count at any link of a chain is `#VALUE!` (ERROR.TYPE 3, an ordinary error: IFERROR and ISERROR catch it, and so does ERROR.TYPE inside a MAP LAMBDA). That holds for a later link with none, `LAMBDA(x,LAMBDA(y,x+y))(1)()`, or too many, `(1)(2,3)`, and for an outer link with too many, `(1,2)(3)`, or none, `()(3)`. It also holds through a LET name, `LET(f,LAMBDA(x,LAMBDA(y,x*y)),f(3)())`, and a defined name, `MYFN(3)(4,5)`, `MYFN(3)()`. The count wins over an error argument: `(1/0)()` and `(1)(NA(),2)` are `#VALUE!`, not `#DIV/0!` or `#N/A` (probes/t4482-chained-call-arity A1:E9; row 10, `(1)(2)`, is 3). An optional parameter at the later link can be omitted but not left with no arguments: `LAMBDA(x,LAMBDA(y,[z],x+y+IF(ISOMITTED(z),0,z)))(1)(2)` is 3, `(1)(2,3)` 6 and `(1)()` `#VALUE!` (probes/t4482-chained-call-arity-optional A1:E3). Excel for the web loaded both workbooks, so no form was refused. The bare cells (column E) decode as `#VALUE!` (excel-graph, 2026-11-06, T-4482). An unknown name's call chained,
 `=FOO(1)(2)`, is `#NAME?`, and a parenthesized value a function returned, `=(IF(TRUE,1))(2)`, is called like a LET-bound
 value, `#NAME?`. These are exactly the built-ins an intersection accepts (`is_reference_operand`). A defined-name LAMBDA's call chains
 like a LET name's: with `MYFN` = `=LAMBDA(x,LAMBDA(y,x*y))`, `=MYFN(3)(4)` is 12, and with `MYFN` = `=LAMBDA(x,x)`,
 `=MYFN(1)(2)` calls the returned number, which is `#NAME?` as for a LET-bound value (T-2501).
 Evidence: probes/lambda-escaping-closures H3, H8, H10; probes/chained-calls-lambda B1:B10; probes/chained-calls-ref-1..4, -6
-(oracle: excel-graph, 2026-10-22, T-2038); probes/chained-calls-builtin-* (excel-graph, 2026-10-23, T-2405); probes/chained-calls-name-curried, -value (excel-graph, 2026-10-25, T-2501); the refused
+(oracle: excel-graph, 2026-10-22, T-2038); probes/chained-calls-builtin-* (excel-graph, 2026-10-23, T-2405); probes/chained-calls-name-curried, -value (excel-graph, 2026-10-25, T-2501); probes/t4482-chained-call-arity, -optional (excel-graph, 2026-11-06, T-4482); the refused
 forms were single-formula workbooks, not kept as cases (a refused workbook gives no values).
 Status: VERIFIED (Excel for the web)
 Implemented in: expressions/parser/lambda.rs (`Parser::chain_calls`, after a call and a name call), parser/operands.rs

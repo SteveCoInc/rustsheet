@@ -2444,6 +2444,8 @@ C	probes/t4479-sort-bad-argument-holdout.case.json	70
 C	probes/t4479-sort-bad-argument-order.case.json	93
 C	probes/t4480-lcid-sublanguage-fallback.case.json	98
 C	probes/t4481-at-spill-operand-edges.case.json	54
+C	probes/t4482-chained-call-arity-optional.case.json	15
+C	probes/t4482-chained-call-arity.case.json	50
 C	probes/t4485-groupby-function-array-error-order.case.json	31
 C	probes/t4492-comma-suffix-reading.case.json	29
 C	probes/t4492-locale-comma-tag-shapes.case.json	24
