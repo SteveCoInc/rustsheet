@@ -3,7 +3,7 @@ id: T-4140
 title: "xlsx export writes external-workbook references as [1]Sheet!A1, not '[1]Sheet'!A1"
 milestone: M11
 lane: engine
-status: todo
+status: in-progress
 priority: P1
 size: S
 tier: opus
